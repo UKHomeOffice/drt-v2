@@ -63,6 +63,9 @@ class CrunchStateActor(val snapshotInterval: Int,
   }
 
   override def receiveCommand: Receive = {
+    case PortStateWithDiff(_, CrunchDiffMessage(_, _, fr, fu, cu, su, _)) if fr.isEmpty && fu.isEmpty && cu.isEmpty && su.isEmpty =>
+      log.info(s"Received port state with empty diff")
+
     case PortStateWithDiff(portState, diff) =>
       logInfo(s"Received port state with diff")
       updateStateFromPortState(portState)
@@ -78,6 +81,7 @@ class CrunchStateActor(val snapshotInterval: Int,
       sender() ! state
 
     case GetPortState(start: MillisSinceEpoch, end: MillisSinceEpoch) =>
+      logInfo(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       sender() ! stateForPeriod(start, end)
 
     case GetUpdatesSince(millis, start, end) =>
@@ -135,20 +139,21 @@ class CrunchStateActor(val snapshotInterval: Int,
     }
   }
 
-  def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = state.map {
-    case PortState(fs, ms, ss) => PortState(
-      flights = fs.filter {
-        case (_, f) => start <= f.apiFlight.PcpTime && f.apiFlight.PcpTime < end
-      },
-      crunchMinutes = ms.filter {
-        case (_, m) =>
-          start <= m.minute && m.minute < end
-      },
-      staffMinutes = ss.filter {
-        case (_, m) =>
-          start <= m.minute && m.minute < end
-      }
-    )
+  def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = {
+    logInfo(s"PortState contains: (cms, fs, sms) ${state.map(s => (s.crunchMinutes.size, s.flights.size, s.staffMinutes.size).toString()).getOrElse("Nothing")}")
+    state.map {
+      case PortState(fs, ms, ss) => PortState(
+        flights = fs.filter {
+          case (_, f) => start <= f.apiFlight.PcpTime && f.apiFlight.PcpTime < end
+        },
+        crunchMinutes = ms.filter {
+          case (_, m) => start <= m.minute && m.minute < end
+        },
+        staffMinutes = ss.filter {
+          case (_, m) => start <= m.minute && m.minute < end
+        }
+      )
+    }
   }
 
   def setStateFromSnapshot(snapshot: Any, timeWindowEnd: Option[SDateLike] = None): Unit = {

@@ -104,7 +104,6 @@ object CSVData {
     }).mkString(",") +
       ",Staff req,Avail,Req"
 
-
     headingsLine1 + lineEnding + headingsLine2
   }
 
@@ -115,36 +114,52 @@ object CSVData {
 
   def terminalCrunchMinutesToCsvData(cms: Set[CrunchMinute], staffMinutes: Set[StaffMinute], terminalName: TerminalName, queues: Seq[QueueName]): String = {
 
-    val crunchMilliMinutes = CrunchApi.terminalMinutesByMinute(cms, terminalName)
+    val crunchMilliMinutes: Seq[(MillisSinceEpoch, Set[CrunchMinute])] = CrunchApi.terminalMinutesByMinute(cms, terminalName)
     val staffMilliMinutes = CrunchApi
       .terminalMinutesByMinute(staffMinutes, terminalName)
       .map { case (minute, sms) => (minute, sms.head) }
 
-    val crunchMinutes = CrunchApi.groupCrunchMinutesByX(15)(crunchMilliMinutes, terminalName, queues.toList)
-      .collect {
-        case (min, cm) =>
-          val queueMinutes = cm.groupBy(_.queueName)
-          val terminalData = queues.flatMap(qn => {
-            queueMinutes.getOrElse(qn, Nil).toList.flatMap(cm => {
+    val staffBy15Minutes: Map[MillisSinceEpoch, StaffMinute] = groupStaffMinutesByX(15)(staffMilliMinutes, terminalName).toMap
+
+    val groupCrunchMinutesBy15 = CrunchApi.groupCrunchMinutesByX(15)(crunchMilliMinutes, terminalName, queues.toList)
+    val terminalCrunchMinuteRowsByMinute: Seq[(MillisSinceEpoch, Seq[String])] = groupCrunchMinutesBy15
+      .collect { case (min, cm) =>
+        val byQueue: Map[QueueName, Seq[CrunchMinute]] = cm.groupBy(_.queueName)
+        val terminalQueuesRow: Seq[String] = queues.flatMap(qn => {
+          byQueue.get(qn).map(thisQMinutes => {
+            thisQMinutes.flatMap(cm => {
               List(
-                Math.round(cm.paxLoad).toString,
-                Math.round(cm.waitTime).toString,
-                cm.deskRec.toString,
-                cm.actWait.getOrElse(""),
-                cm.actDesks.getOrElse("")
+                s"${Math.round(cm.paxLoad)}",
+                s"${Math.round(cm.waitTime)}",
+                s"${cm.deskRec}",
+                cm.actWait.map(aw => s"$aw").getOrElse(""),
+                cm.actDesks.map(ad => s"$ad").getOrElse("")
               )
             })
-          })
+          }).getOrElse(Nil)
+        })
 
-          (min, terminalData)
+        (min, terminalQueuesRow)
       }
       .toList
       .sortBy(m => m._1)
+    val crunchMinutes: Seq[String] = addStaffMinutes(terminalCrunchMinuteRowsByMinute, staffBy15Minutes, crunchMilliMinutes)
+
+    crunchMinutes.mkString(lineEnding)
+  }
+
+  def addStaffMinutes(
+                       terminalCrunchMinuteRowsByMinute: Seq[(MillisSinceEpoch, Seq[String])],
+                       staffMinutesByMinute: Map[MillisSinceEpoch, StaffMinute],
+                       crunchMilliMinutes: Seq[(MillisSinceEpoch, Set[CrunchMinute])]
+                     ) = {
+    terminalCrunchMinuteRowsByMinute
       .map {
         case (minute, queueData) =>
-          val staffBy15Minutes: Map[MillisSinceEpoch, StaffMinute] = groupStaffMinutesByX(15)(staffMilliMinutes, terminalName).toMap
-          val staffMinute = staffBy15Minutes.getOrElse(minute, StaffMinute.empty)
-          val staffData: Seq[String] = List(staffMinute.fixedPoints.toString, (staffMinute.shifts - staffMinute.movements).toString)
+
+          val staffMinute = staffMinutesByMinute.getOrElse(minute, StaffMinute.empty)
+
+          val staffData: Seq[String] = List(staffMinute.fixedPoints.toString, staffMinute.available.toString)
           val reqForMinute = crunchMilliMinutes
             .toList
             .find { case (minuteMilli, _) => minuteMilli == minute }
@@ -158,8 +173,6 @@ object CSVData {
 
           dateString + "," + hoursAndMinutes + "," + queueFields + "," + pcpFields + "," + reqForMinute
       }
-
-    crunchMinutes.mkString(lineEnding)
   }
 
   def flightsWithSplitsToCSVWithHeadings(flightsWithSplits: List[ApiFlightWithSplits]): String =
@@ -224,16 +237,13 @@ object CSVData {
       .mkString(",")
   }
 
-  def multiDayToSingleExport(exportDays: Seq[Future[Option[String]]]): Future[String] = {
-
-    Future.sequence(
-      exportDays.map(fd => fd.recoverWith {
-        case e =>
-          log.error(s"Failed to recover data for day ${e.getMessage}")
-          Future(None)
-      }
-      )).map(_.collect {
-      case Some(s) => s
-    }.mkString(lineEnding))
-  }
+  def multiDayToSingleExport(exportDays: Seq[Future[Option[String]]]): Future[String] = Future.sequence(
+    exportDays.map(fd => fd.recoverWith {
+      case e =>
+        log.error(s"Failed to recover data for day ${e.getMessage}")
+        Future(None)
+    }
+    )).map(_.collect {
+    case Some(s) => s
+  }.mkString(lineEnding))
 }

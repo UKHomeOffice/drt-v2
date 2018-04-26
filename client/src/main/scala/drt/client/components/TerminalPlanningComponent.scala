@@ -55,20 +55,20 @@ object TerminalPlanningComponent {
             drawSelect(
               forecastWeeks.map(_.ddMMyyString),
               forecastWeeks.map(_.toISOString()).toList,
-              defaultStartDate(props.page.date).toISOString())
+              defaultStartDate(props.page.dateFromUrlOrNow).toISOString())
           )
         ),
         <.div(^.className := "export-links",
           <.a(
             "Export Headlines",
             ^.className := "btn btn-link",
-            ^.href := s"${dom.window.location.pathname}/export/headlines/${defaultStartDate(props.page.date).millisSinceEpoch}/${props.page.terminal}",
+            ^.href := s"${dom.window.location.pathname}/export/headlines/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}",
             ^.target := "_blank"
           ),
           <.a(
             "Export Week",
             ^.className := "btn btn-link",
-            ^.href := s"${dom.window.location.pathname}/export/planning/${defaultStartDate(props.page.date).millisSinceEpoch}/${props.page.terminal}",
+            ^.href := s"${dom.window.location.pathname}/export/planning/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}",
             ^.target := "_blank"
           )
         ),
@@ -123,9 +123,7 @@ object TerminalPlanningComponent {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def defaultStartDate(dateStringOption: Option[String]) = {
-    dateStringOption.map(SDate(_)).getOrElse(getLastSunday(SDate.now()))
-  }
+  def defaultStartDate(date: SDateLike) = getLastSunday(date)
 
   def apply(props: Props): VdomElement = component(props)
 }

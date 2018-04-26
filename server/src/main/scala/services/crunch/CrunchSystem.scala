@@ -52,17 +52,22 @@ case class CrunchProps[MS](logLabel: String = "",
                            voyageManifestsActor: ActorRef,
                            cruncher: TryCrunch,
                            simulator: Simulator,
-                           initialPortState: Option[PortState] = None
+                           initialPortState: Option[PortState] = None,
+                           initialBaseArrivals: Set[Arrival] = Set(),
+                           initialFcstArrivals: Set[Arrival] = Set(),
+                           initialLiveArrivals: Set[Arrival] = Set()
                           )
 
 object CrunchSystem {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
+  def crunchStartWithOffset(offsetMinutes: Int)(minuteInQuestion: SDateLike): SDateLike = {
+    val adjustedMinute = minuteInQuestion.addMinutes(-offsetMinutes)
+    Crunch.getLocalLastMidnight(adjustedMinute).addMinutes(offsetMinutes)
+  }
+
   def apply[MS](props: CrunchProps[MS]): CrunchSystem[MS] = {
-    val baseArrivalsActor: ActorRef = props.system.actorOf(Props(classOf[ForecastBaseArrivalsActor], props.now, props.expireAfterMillis), name = "base-arrivals-actor")
-    val forecastArrivalsActor: ActorRef = props.system.actorOf(Props(classOf[ForecastPortArrivalsActor], props.now, props.expireAfterMillis), name = "forecast-arrivals-actor")
-    val liveArrivalsActor: ActorRef = props.system.actorOf(Props(classOf[LiveArrivalsActor], props.now, props.expireAfterMillis), name = "live-arrivals-actor")
 
     val initialShifts = initialShiftsLikeState(props.actors("shifts"))
     val initialFixedPoints = initialShiftsLikeState(props.actors("fixed-points"))
@@ -79,16 +84,16 @@ object CrunchSystem {
 
     val splitsCalculator = SplitsCalculator(props.airportConfig.portCode, props.historicalSplitsProvider, props.airportConfig.defaultPaxSplits.splits.toSet)
     val groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight) _
-    val crunchStartDateProvider: (SDateLike) => SDateLike = s => Crunch.getLocalLastMidnight(s).addMinutes(props.airportConfig.crunchOffsetMinutes)
+    val crunchStartDateProvider: (SDateLike) => SDateLike = crunchStartWithOffset(props.airportConfig.crunchOffsetMinutes)
 
     val maybeStaffMinutes = initialStaffMinutesFromPortState(props.initialPortState)
     val maybeCrunchMinutes = initialCrunchMinutesFromPortState(props.initialPortState)
 
     val arrivalsStage = new ArrivalsGraphStage(
       name = props.logLabel,
-      initialBaseArrivals = initialArrivals(baseArrivalsActor),
-      initialForecastArrivals = initialArrivals(forecastArrivalsActor),
-      initialLiveArrivals = initialArrivals(liveArrivalsActor),
+      initialBaseArrivals = props.initialBaseArrivals,
+      initialForecastArrivals = props.initialFcstArrivals,
+      initialLiveArrivals = props.initialLiveArrivals,
       pcpArrivalTime = props.pcpArrival,
       validPortTerminals = props.airportConfig.terminalNames.toSet,
       expireAfterMillis = props.expireAfterMillis,
@@ -116,7 +121,7 @@ object CrunchSystem {
       numberOfDays = props.maxDaysToCrunch)
 
     val staffBatcher = new StaffBatchUpdateGraphStage(props.now, props.expireAfterMillis)
-    val loadBatcher = new LoadBatchUpdateGraphStage(props.now, props.expireAfterMillis, crunchStartDateProvider)
+    val loadBatcher = new BatchLoadsByCrunchPeriodGraphStage(props.now, props.expireAfterMillis, crunchStartDateProvider)
 
     val workloadGraphStage = new WorkloadGraphStage(
       name = props.logLabel,
@@ -159,7 +164,7 @@ object CrunchSystem {
     val crunchSystem = RunnableCrunch(
       baseArrivals, forecastArrivals, liveArrivals, manifests, shiftsSource, fixedPointsSource, staffMovementsSource, actualDesksAndQueuesSource,
       arrivalsStage, arrivalSplitsGraphStage, splitsPredictorStage, workloadGraphStage, loadBatcher, crunchLoadGraphStage, staffGraphStage, staffBatcher, simulationGraphStage, portStateGraphStage,
-      baseArrivalsActor, forecastArrivalsActor, liveArrivalsActor,
+      props.actors("base-arrivals").actorRef, props.actors("forecast-arrivals").actorRef, props.actors("live-arrivals").actorRef,
       props.voyageManifestsActor,
       props.liveCrunchStateActor, props.forecastCrunchStateActor,
       crunchStartDateProvider, props.now
@@ -209,20 +214,5 @@ object CrunchSystem {
         log.info(s"Got no initial state from ${askableStaffMovementsActor.toString}")
         Seq()
     }, 5 minutes)
-  }
-
-  def initialArrivals(arrivalsActor: AskableActorRef): Set[Arrival] = {
-    val canWaitMinutes = 5
-    val arrivalsFuture: Future[Set[Arrival]] = arrivalsActor.ask(GetState)(new Timeout(canWaitMinutes minutes)).map {
-      case ArrivalsState(arrivals) => arrivals.values.toSet
-      case _ => Set[Arrival]()
-    }
-    arrivalsFuture.onComplete {
-      case Success(arrivals) => arrivals
-      case Failure(t) =>
-        log.warn(s"Failed to get an initial ArrivalsState: $t")
-        Set[Arrival]()
-    }
-    Await.result(arrivalsFuture, canWaitMinutes minutes)
   }
 }

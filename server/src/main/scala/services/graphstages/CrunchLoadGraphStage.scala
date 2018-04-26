@@ -14,67 +14,6 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 
-class LoadBatchUpdateGraphStage(now: () => SDateLike,
-                                expireAfterMillis: MillisSinceEpoch,
-                                crunchPeriodStartMillis: SDateLike => SDateLike
-                               ) extends GraphStage[FlowShape[Loads, Loads]] {
-  val inLoads: Inlet[Loads] = Inlet[Loads]("Loads.in")
-  val outLoads: Outlet[Loads] = Outlet[Loads]("Loads.out")
-
-  override def shape: FlowShape[Loads, Loads] = new FlowShape(inLoads, outLoads)
-
-  override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var loadMinutesQueue: List[(MillisSinceEpoch, Loads)] = List[(MillisSinceEpoch, Loads)]()
-
-    val log: Logger = LoggerFactory.getLogger(getClass)
-
-    setHandler(inLoads, new InHandler {
-      override def onPush(): Unit = {
-        val start = SDate.now()
-        val incomingLoads = grab(inLoads)
-        val changedDays = incomingLoads.loadMinutes.groupBy(sm => crunchPeriodStartMillis(SDate(sm.minute, europeLondonTimeZone)).millisSinceEpoch)
-
-        val updatedMinutes = changedDays.foldLeft(loadMinutesQueue.toMap) {
-          case (soFar, (dayMillis, loadMinutes)) => soFar.updated(dayMillis, Loads(loadMinutes))
-        }.toList.sortBy(_._1)
-
-        loadMinutesQueue = Crunch.purgeExpired(updatedMinutes, now, expireAfterMillis)
-
-        pushIfAvailable()
-
-        pull(inLoads)
-        log.info(s"inLoads Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
-      }
-    })
-
-    setHandler(outLoads, new OutHandler {
-      override def onPull(): Unit = {
-        val start = SDate.now()
-        log.info(s"onPull called. ${loadMinutesQueue.length} sets of minutes in the queue")
-
-        pushIfAvailable()
-
-        if (!hasBeenPulled(inLoads)) pull(inLoads)
-        log.info(s"outLoads Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
-      }
-    })
-
-    def pushIfAvailable(): Unit = {
-      loadMinutesQueue match {
-        case Nil => log.info(s"Queue is empty. Nothing to push")
-        case _ if !isAvailable(outLoads) =>
-          log.info(s"outLoads not available to push")
-        case (millis, loadMinutes) :: queueTail =>
-          log.info(s"Pushing ${SDate(millis).toLocalDateTimeString()} ${loadMinutes.loadMinutes.size} load minutes for ${loadMinutes.loadMinutes.groupBy(_.terminalName).keys.mkString(", ")}")
-          push(outLoads, loadMinutes)
-
-          loadMinutesQueue = queueTail
-          log.info(s"Queue length now ${loadMinutesQueue.length}")
-      }
-    }
-  }
-}
-
 class CrunchLoadGraphStage(name: String = "",
                            optionalInitialCrunchMinutes: Option[CrunchMinutes],
                            airportConfig: AirportConfig,
@@ -118,18 +57,22 @@ class CrunchLoadGraphStage(name: String = "",
         val firstMinute = crunchPeriodStartMillis(SDate(allMinuteMillis.min))
         val lastMinute = firstMinute.addMinutes(minutesToCrunch)
         log.info(s"Crunch ${firstMinute.toLocalDateTimeString()} - ${lastMinute.toLocalDateTimeString()}")
-
         val affectedTerminals = incomingLoads.loadMinutes.map(_.terminalName)
 
         val updatedLoads: Map[Int, LoadMinute] = mergeLoads(incomingLoads.loadMinutes, loadMinutes)
         loadMinutes = purgeExpired(updatedLoads, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
 
-        val deskRecMinutes: Set[DeskRecMinute] = crunchLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, affectedTerminals)
-        val deskRecMinutesByKey = deskRecMinutes.map(cm => (cm.key, cm)).toMap
+        val deskRecMinutes: Map[Int, DeskRecMinute] = crunchLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, affectedTerminals)
 
-        val diff = deskRecMinutes -- existingDeskRecMinutes.values.toSet
+        val diff = deskRecMinutes.foldLeft(Map[Int, DeskRecMinute]()) {
+          case (soFar, (key, drm)) =>
+            existingDeskRecMinutes.get(key) match {
+              case Some(existingDrm) if existingDrm == drm => soFar
+              case _ => soFar.updated(key, drm)
+            }
+        }
 
-        existingDeskRecMinutes = purgeExpired(deskRecMinutesByKey, (cm: DeskRecMinute) => cm.minute, now, expireAfterMillis)
+        existingDeskRecMinutes = purgeExpired(deskRecMinutes, (cm: DeskRecMinute) => cm.minute, now, expireAfterMillis)
 
         val mergedDeskRecMinutes = mergeDeskRecMinutes(diff, deskRecMinutesToPush)
         deskRecMinutesToPush = purgeExpired(mergedDeskRecMinutes, (cm: DeskRecMinute) => cm.minute, now, expireAfterMillis)
@@ -141,7 +84,7 @@ class CrunchLoadGraphStage(name: String = "",
       }
     })
 
-    def crunchLoads(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToCrunch: Set[TerminalName]): Set[DeskRecMinute] = {
+    def crunchLoads(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToCrunch: Set[TerminalName]): Map[Int, DeskRecMinute] = {
       val filteredLoads = filterTerminalQueueMinutes(firstMinute, lastMinute, terminalsToCrunch, loadMinutes)
 
       filteredLoads
@@ -168,14 +111,15 @@ class CrunchLoadGraphStage(name: String = "",
                       case (minute, idx) =>
                         val wl = fullWorkMinutes(idx)
                         val pl = fullPaxMinutes(idx)
-                        DeskRecMinute(tn, qn, minute, pl, wl, desks(idx), waits(idx))
+                        val drm = DeskRecMinute(tn, qn, minute, pl, wl, desks(idx), waits(idx))
+                        (drm.key, drm)
                     }
                   case Failure(t) =>
                     log.warn(s"failed to crunch: $t")
-                    Set()
+                    Map()
                 }
             }
-        }.toSet
+        }
     }
 
     def filterTerminalQueueMinutes[A <: TerminalQueueMinute](firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Set[TerminalName], toFilter: Map[Int, A]): Set[A] = {
@@ -199,9 +143,9 @@ class CrunchLoadGraphStage(name: String = "",
       (minDesks, maxDesks)
     }
 
-    def mergeDeskRecMinutes(updatedCms: Set[DeskRecMinute], existingCms: Map[Int, DeskRecMinute]): Map[Int, DeskRecMinute] = {
+    def mergeDeskRecMinutes(updatedCms: Map[Int, DeskRecMinute], existingCms: Map[Int, DeskRecMinute]): Map[Int, DeskRecMinute] = {
       updatedCms.foldLeft(existingCms) {
-        case (soFar, newLoadMinute) => soFar.updated(newLoadMinute.key, newLoadMinute)
+        case (soFar, (newId, newLoadMinute)) => soFar.updated(newId, newLoadMinute)
       }
     }
 

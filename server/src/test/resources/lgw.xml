@@ -1,0 +1,167 @@
+<ns0:IATA_AIDX_FlightLegNotifRQ xmlns:ns0="http://www.iata.org/IATA/2007/00" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" EchoToken="0" TimeStamp="2018-03-22T16:03:54" Target="Test" Version="12.1" TransactionIdentifier="FlightData" SequenceNmbr="1" TransactionStatusCode="Continuation">
+    <ns0:Originator CompanyShortName="Idaho" />
+    <ns0:DeliveringSystem CompanyShortName="Idaho" />
+    <ns0:FlightLeg>
+        <ns0:LegIdentifier>
+            <ns0:Airline>DY</ns0:Airline>
+            <ns0:FlightNumber>1314</ns0:FlightNumber>
+            <ns0:DepartureAirport>BGO</ns0:DepartureAirport>
+            <ns0:ArrivalAirport>LGW</ns0:ArrivalAirport>
+            <ns0:OriginDate>2018-03-22</ns0:OriginDate>
+        </ns0:LegIdentifier>
+        <ns0:LegData InternationalStatus="International">
+            <ns0:OperationalStatus CodeContext="9750" RepeatIndex="1">LAN</ns0:OperationalStatus>
+            <ns0:ServiceType>J</ns0:ServiceType>
+            <ns0:IrregularityDelay DepartureOrArrival="Arrival" RepeatIndex="1">
+                <ns0:ReasonCode>FS</ns0:ReasonCode>
+            </ns0:IrregularityDelay>
+            <ns0:IrregularityDelay DepartureOrArrival="Arrival" RepeatIndex="2">
+                <ns0:ReasonCode>RA</ns0:ReasonCode>
+                <ns0:Duration>PT3H51M</ns0:Duration>
+            </ns0:IrregularityDelay>
+            <ns0:IrregularityDelay DepartureOrArrival="Arrival" RepeatIndex="3">
+                <ns0:ReasonCode>RO</ns0:ReasonCode>
+                <ns0:Duration>PT2H5M</ns0:Duration>
+            </ns0:IrregularityDelay>
+            <ns0:CabinClass RepeatIndex="1" Class="F">
+                <ns0:PaxCount Qualifier="70A" Usage="Actual" DestinationType="Local">0</ns0:PaxCount>
+            </ns0:CabinClass>
+            <ns0:CabinClass RepeatIndex="2" Class="C">
+                <ns0:PaxCount Qualifier="70A" Usage="Actual" DestinationType="Local">0</ns0:PaxCount>
+            </ns0:CabinClass>
+            <ns0:CabinClass RepeatIndex="3" Class="Y">
+                <ns0:PaxCount Qualifier="70A" Usage="Actual" DestinationType="Local">80</ns0:PaxCount>
+            </ns0:CabinClass>
+            <ns0:CabinClass RepeatIndex="4" Class="V">
+                <ns0:PaxCount Qualifier="70A" Usage="Actual" DestinationType="Local">0</ns0:PaxCount>
+            </ns0:CabinClass>
+            <ns0:CabinClass RepeatIndex="5">
+                <ns0:PaxCount Qualifier="70A" Usage="Actual" DestinationType="Local">80</ns0:PaxCount>
+                <ns0:SeatCapacity>186</ns0:SeatCapacity>
+            </ns0:CabinClass>
+            <ns0:AssociatedFlightLegAircraft>
+                <ns0:Airline CodeContext="3">DY</ns0:Airline>
+                <ns0:FlightNumber>1315</ns0:FlightNumber>
+                <ns0:DepartureAirport>LGW</ns0:DepartureAirport>
+                <ns0:ArrivalAirport>BGO</ns0:ArrivalAirport>
+                <ns0:OriginDate>2018-03-22</ns0:OriginDate>
+            </ns0:AssociatedFlightLegAircraft>
+            <ns0:AssociatedFlightLegSchedule RepeatIndex="1">
+                <ns0:DepartureAirport CodeContext="3">BGO</ns0:DepartureAirport>
+                <ns0:ArrivalAirport>LGW</ns0:ArrivalAirport>
+            </ns0:AssociatedFlightLegSchedule>
+            <ns0:AirportResources Usage="Planned">
+                <ns0:Resource DepartureOrArrival="Arrival">
+                    <ns0:Runway>26L</ns0:Runway>
+                    <ns0:AircraftTerminal>1</ns0:AircraftTerminal>
+                </ns0:Resource>
+            </ns0:AirportResources>
+            <ns0:OperationTime OperationQualifier="ONB" CodeContext="9750" RepeatIndex="1" TimeType="ACT">2018-03-22T16:03:00Z</ns0:OperationTime>
+            <ns0:OperationTime OperationQualifier="TDN" CodeContext="9750" RepeatIndex="2" TimeType="EST">2018-03-22T15:50:00Z</ns0:OperationTime>
+            <ns0:OperationTime OperationQualifier="ONB" CodeContext="9750" RepeatIndex="3" TimeType="EST">2018-03-22T15:58:00Z</ns0:OperationTime>
+            <ns0:OperationTime OperationQualifier="TDN" CodeContext="9750" RepeatIndex="4" TimeType="ACT">2018-03-22T15:48:00Z</ns0:OperationTime>
+            <ns0:OperationTime OperationQualifier="ONB" CodeContext="9750" RepeatIndex="5" TimeType="SCT">2018-03-22T10:15:00Z</ns0:OperationTime>
+            <ns0:AircraftInfo>
+                <ns0:AircraftType>73H</ns0:AircraftType>
+                <ns0:Registration>LNNGP</ns0:Registration>
+                <ns0:AgentInfo DepartureOrArrival="Arrival" Qualifier="AGT" RepeatIndex="1">SVR</ns0:AgentInfo>
+                <ns0:AgentInfo DepartureOrArrival="Arrival" Qualifier="AGT" RepeatIndex="2">SVR</ns0:AgentInfo>
+                <ns0:AgentInfo DepartureOrArrival="Arrival" Qualifier="AGT" RepeatIndex="3">SVR</ns0:AgentInfo>
+                <ns0:AgentInfo DepartureOrArrival="Arrival" Qualifier="AGT" RepeatIndex="4">SVR</ns0:AgentInfo>
+                <ns0:CallSign>NAX14X</ns0:CallSign>
+                <ns0:DeadLoad>
+                    <ns0:Type>M</ns0:Type>
+                    <ns0:Weight MeasurementUnit="Kilogram">0</ns0:Weight>
+                </ns0:DeadLoad>
+            </ns0:AircraftInfo>
+            <ns0:PublicFlightDisplay>
+                <ns0:AirlineType>DY</ns0:AirlineType>
+                <ns0:FlightNumber>1314</ns0:FlightNumber>
+            </ns0:PublicFlightDisplay>
+        </ns0:LegData>
+        <ns0:TPA_Extension>
+            <ns2:ControlData xmlns:ns2="http://GAL.ESB.DataHub.BizTalk.Interfaces.AIDX.TPA_Extensions.1_01" DataOperationType="Amend">
+                <ns2:FIDSBagggeHallActive>1</ns2:FIDSBagggeHallActive>
+                <ns2:FIDSBaggageRollOffDateTime>2018-03-22T18:48:00Z</ns2:FIDSBaggageRollOffDateTime>
+                <ns2:FIDSBaggageRollOnDateTime>2018-03-22T15:49:16Z</ns2:FIDSBaggageRollOnDateTime>
+                <ns2:FIDSFlightActive>1</ns2:FIDSFlightActive>
+                <ns2:FIDSRollOffDateTime>2018-03-22T16:49:16Z</ns2:FIDSRollOffDateTime>
+                <ns2:FIDSRollOnDatetime>2018-03-21T22:15:00Z</ns2:FIDSRollOnDatetime>
+                <ns2:FIDSOperationType>A</ns2:FIDSOperationType>
+            </ns2:ControlData>
+            <ns2:GroundMovementData xmlns:ns2="http://GAL.ESB.DataHub.BizTalk.Interfaces.AIDX.TPA_Extensions.1_01">
+                <ns2:GroundMovement GroundMovementStatus="Confirmed" GroundMovementType="L">
+                    <ns2:GroundMovementOnDateTime>2018-03-22T15:48:00Z</ns2:GroundMovementOnDateTime>
+                    <ns2:GroundMovementUniqueID>10598835</ns2:GroundMovementUniqueID>
+                    <ns2:DataOperationType>A</ns2:DataOperationType>
+                </ns2:GroundMovement>
+            </ns2:GroundMovementData>
+            <ns2:FlightLegExtension xmlns:ns2="http://GAL.ESB.DataHub.BizTalk.Interfaces.AIDX.TPA_Extensions.1_01">
+                <ns2:AODBUniqueField>6739740</ns2:AODBUniqueField>
+                <ns2:FlightPlanID>AA73507958</ns2:FlightPlanID>
+                <ns2:AirlineData>
+                    <ns2:AirlineIATA>DY</ns2:AirlineIATA>
+                    <ns2:AirlineICAO>NAX</ns2:AirlineICAO>
+                    <ns2:STTT>1800</ns2:STTT>
+                </ns2:AirlineData>
+                <ns2:AircraftData>
+                    <ns2:AircraftTypeICAO>B738</ns2:AircraftTypeICAO>
+                    <ns2:WakeVortexClassification>H</ns2:WakeVortexClassification>
+                    <ns2:FlightTypeIdentifierICAO>NAX1314</ns2:FlightTypeIdentifierICAO>
+                    <ns2:AircraftRegistrationUser>LNNGP</ns2:AircraftRegistrationUser>
+                </ns2:AircraftData>
+                <ns2:ResourceData>
+                    <ns2:EstimatedROT>TODO</ns2:EstimatedROT>
+                    <ns2:EXIT>10</ns2:EXIT>
+                    <ns2:ZonedTimeToRunway>TODO</ns2:ZonedTimeToRunway>
+                    <ns2:FinalTimeToRunway>TODO</ns2:FinalTimeToRunway>
+                    <ns2:PreviousGate>TODO</ns2:PreviousGate>
+                    <ns2:AXIT>900</ns2:AXIT>
+                    <ns2:TOBTchangeCount>TODO</ns2:TOBTchangeCount>
+                    <ns2:Franchiseflight>DY1314</ns2:Franchiseflight>
+                    <ns2:VariableTaxiTime>10</ns2:VariableTaxiTime>
+                </ns2:ResourceData>
+            </ns2:FlightLegExtension>
+            <ns2:PortsOfCallExtras xmlns:ns2="http://GAL.ESB.DataHub.BizTalk.Interfaces.AIDX.TPA_Extensions.1_01">
+                <ns2:PortOfCall RepeatIndex="1">
+                    <ns2:IATACountryCode>NO</ns2:IATACountryCode>
+                    <ns2:PublicLocationName>Bergen</ns2:PublicLocationName>
+                    <ns2:ICAOLocationCode>ENBR</ns2:ICAOLocationCode>
+                    <ns2:IATALocationCode>BGO</ns2:IATALocationCode>
+                </ns2:PortOfCall>
+            </ns2:PortsOfCallExtras>
+            <ns2:PublicDisplayData xmlns:ns2="http://GAL.ESB.DataHub.BizTalk.Interfaces.AIDX.TPA_Extensions.1_01">
+                <ns2:PublicCarrierCode>DY</ns2:PublicCarrierCode>
+                <ns2:PublicFlightNumber>1314</ns2:PublicFlightNumber>
+                <ns2:PublicOperatedDateTime>2018-03-22T15:48:00Z</ns2:PublicOperatedDateTime>
+                <ns2:PublicScheduledDateTime>2018-03-22T10:15:00Z</ns2:PublicScheduledDateTime>
+                <ns2:StatusMessage RepeatIndex="1">
+                    <ns2:StatusMessage>Awaiting bags</ns2:StatusMessage>
+                    <ns2:AirportZone>STAsIntArr67</ns2:AirportZone>
+                    <ns2:AirSideFlag>true</ns2:AirSideFlag>
+                </ns2:StatusMessage>
+                <ns2:StatusMessage RepeatIndex="2">
+                    <ns2:StatusMessage>Arrived 16:03</ns2:StatusMessage>
+                    <ns2:AirportZone>STDisLS</ns2:AirportZone>
+                    <ns2:AirSideFlag>true</ns2:AirSideFlag>
+                </ns2:StatusMessage>
+                <ns2:StatusMessage RepeatIndex="3">
+                    <ns2:StatusMessage>Arrived 16:03</ns2:StatusMessage>
+                    <ns2:AirportZone>STLsIntArr</ns2:AirportZone>
+                    <ns2:AirSideFlag>true</ns2:AirSideFlag>
+                </ns2:StatusMessage>
+                <ns2:StatusMessage RepeatIndex="4">
+                    <ns2:StatusMessage>Awaiting bags</ns2:StatusMessage>
+                    <ns2:AirportZone>STAsIntArr</ns2:AirportZone>
+                    <ns2:AirSideFlag>true</ns2:AirSideFlag>
+                </ns2:StatusMessage>
+            </ns2:PublicDisplayData>
+            <ns2:ExtensionFields xmlns:ns2="http://GAL.ESB.DataHub.BizTalk.Interfaces.AIDX.TPA_Extensions.1_01">
+                <ns2:ExtensionInteger Name="PAXChildrenCount">3</ns2:ExtensionInteger>
+                <ns2:ExtensionInteger Name="PAXMaleCount">77</ns2:ExtensionInteger>
+                <ns2:ExtensionInteger Name="PAXinfantsCount">0</ns2:ExtensionInteger>
+                <ns2:ExtensionInteger Name="PAXLocation1">80</ns2:ExtensionInteger>
+            </ns2:ExtensionFields>
+        </ns0:TPA_Extension>
+    </ns0:FlightLeg>
+</ns0:IATA_AIDX_FlightLegNotifRQ>

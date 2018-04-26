@@ -7,7 +7,7 @@ import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentCo
 import drt.client.components.FlightComponents.paxComp
 import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{SPACircuit, TimeRangeHours, ViewMode}
+import drt.client.services.{SPACircuit, ViewMode}
 import drt.shared.CrunchApi.{CrunchState, MillisSinceEpoch}
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
@@ -31,7 +31,7 @@ object TerminalContentComponent {
                     airportConfig: AirportConfig,
                     terminalPageTab: TerminalPageTabLoc,
                     airportInfoPot: Pot[AirportInfo],
-                    timeRangeHours: TimeRangeHours,
+                    defaultTimeRangeHours: TimeRangeHours,
                     router: RouterCtl[Loc],
                     showActuals: Boolean,
                     viewMode: ViewMode,
@@ -58,7 +58,7 @@ object TerminalContentComponent {
         )
       }))
 
-      (depsHash, flightsHash, timeRangeHours.start, timeRangeHours.end, minuteTicker)
+      (depsHash, flightsHash, minuteTicker)
     }
   }
 
@@ -93,16 +93,8 @@ object TerminalContentComponent {
   }
 
   def timeFallsBetween(minute: MillisSinceEpoch, start: SDateLike, end: SDateLike): Boolean = {
-//    log.info(s"${start.toLocalDateTimeString()} <= ${SDate(minute).toLocalDateTimeString()} < ${end.toLocalDateTimeString()}")
     start.millisSinceEpoch <= minute && minute < end.millisSinceEpoch
   }
-
-//  def timeFallsBetweenHours(range: TimeRangeHours, minute: MillisSinceEpoch): Boolean = {
-//    if (range.end < 24)
-//      SDate(MilliDate(minute)).getHours() >= range.start && SDate(MilliDate(minute)).getHours() < range.end
-//    else
-//      SDate(MilliDate(minute)).getHours() >= range.start
-//  }
 
   val timelineComp: Option[(Arrival) => html_<^.VdomElement] = Some(FlightTableComponents.timelineCompFunc _)
 
@@ -141,6 +133,11 @@ object TerminalContentComponent {
       val staffingPanelActive = if (state.activeTab == "staffing") "active" else "fade"
       val viewModeStr = props.terminalPageTab.viewMode.getClass.getSimpleName.toLowerCase
 
+      val timeRangeHours = TimeRangeHours(
+        props.terminalPageTab.timeRangeStart.getOrElse(props.defaultTimeRangeHours.start),
+        props.terminalPageTab.timeRangeEnd.getOrElse(props.defaultTimeRangeHours.end)
+      )
+
       <.div(^.className := s"view-mode-content $viewModeStr",
         <.div(^.className := "tabs-with-export",
           <.ul(^.className := "nav nav-tabs",
@@ -155,8 +152,17 @@ object TerminalContentComponent {
             })
           ),
           <.div(^.className := "exports",
-            <.a("Export Arrivals", ^.className := "btn btn-default", ^.href := s"${dom.window.location.pathname}/export/arrivals/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}?startHour=${props.timeRangeHours.start}&endHour=${props.timeRangeHours.end}", ^.target := "_blank"),
-            <.a("Export Desks", ^.className := "btn btn-default", ^.href := s"${dom.window.location.pathname}/export/desks/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}?startHour=${props.timeRangeHours.start}&endHour=${props.timeRangeHours.end}", ^.target := "_blank"),
+            <.a("Export Arrivals",
+              ^.className := "btn btn-default",
+              ^.href := s"${dom.window.location.pathname}/export/arrivals/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}",
+              ^.target := "_blank"
+            ),
+            <.a(
+              "Export Desks",
+              ^.className := "btn btn-default",
+              ^.href := s"${dom.window.location.pathname}/export/desks/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}",
+              ^.target := "_blank"
+            ),
             MultiDayExportComponent(props.terminalPageTab.terminal, props.terminalPageTab.dateFromUrlOrNow)
           )
         ),
@@ -166,7 +172,11 @@ object TerminalContentComponent {
               log.info(s"Rendering desks and queue $state")
               props.crunchStatePot.render(crunchState => {
                 log.info(s"rendering ready d and q")
-                val filteredPortState = filterCrunchStateByRange(SDate.now(), props.timeRangeHours, crunchState)
+                val range = TimeRangeHours(
+                  props.terminalPageTab.timeRangeStart.getOrElse(props.defaultTimeRangeHours.start),
+                  props.terminalPageTab.timeRangeEnd.getOrElse(props.defaultTimeRangeHours.end)
+                )
+                val filteredPortState = filterCrunchStateByRange(SDate.now(), range, crunchState)
                 TerminalDesksAndQueues(
                   TerminalDesksAndQueues.Props(
                     filteredPortState,
@@ -183,7 +193,7 @@ object TerminalContentComponent {
               log.info(s"Rendering arrivals $state")
 
               <.div(props.crunchStatePot.render((crunchState: CrunchState) => {
-                val filteredPortState = filterCrunchStateByRange(SDate.now(), props.timeRangeHours, crunchState)
+                val filteredPortState = filterCrunchStateByRange(SDate.now(), props.defaultTimeRangeHours, crunchState)
                 val flightsWithSplits = crunchState.flights
 
                 arrivalsTableComponent(FlightsWithSplitsTable.Props(filteredPortState.flights.toList, queueOrder, props.airportConfig.hasEstChox))
