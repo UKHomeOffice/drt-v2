@@ -73,7 +73,7 @@ object TerminalContentComponent {
     val endOfView = startOfDay.addHours(range.end)
     state.window(startOfView, endOfView)
   }
-  
+
   val timelineComp: Option[(Arrival) => html_<^.VdomElement] = Some(FlightTableComponents.timelineCompFunc _)
 
   def airportWrapper(portCode: String): ReactConnectProxy[Pot[AirportInfo]] = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
@@ -147,7 +147,7 @@ object TerminalContentComponent {
               log.info(s"Rendering desks and queue $state")
               props.crunchStatePot.render(crunchState => {
                 log.info(s"rendering ready d and q")
-                val filteredPortState = filterCrunchStateByRange(SDate.now(), timeRangeHours, crunchState)
+                val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState)
                 TerminalDesksAndQueues(
                   TerminalDesksAndQueues.Props(
                     filteredPortState,
@@ -164,7 +164,7 @@ object TerminalContentComponent {
               log.info(s"Rendering arrivals $state")
 
               <.div(props.crunchStatePot.render((crunchState: CrunchState) => {
-                val filteredPortState = filterCrunchStateByRange(SDate.now(), timeRangeHours, crunchState)
+                val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState)
                 arrivalsTableComponent(FlightsWithSplitsTable.Props(filteredPortState.flights.toList, queueOrder, props.airportConfig.hasEstChox))
               }))
             } else ""
