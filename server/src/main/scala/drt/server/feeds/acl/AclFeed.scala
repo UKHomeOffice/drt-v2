@@ -5,7 +5,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.util.zip.{ZipEntry, ZipInputStream}
 
 import drt.shared.Arrival
-import drt.shared.FlightsApi.Flights
+import drt.shared.FlightsApi.{Flights, TerminalName}
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
@@ -18,11 +18,11 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.util.{Success, Try}
 
-case class AclFeed(ftpServer: String, username: String, path: String, portCode: String) {
+case class AclFeed(ftpServer: String, username: String, path: String, portCode: String, terminalMapping: TerminalName => TerminalName) {
   def sftp: SFTPClient = sftpClient(ftpServer, username, path)
 
   def arrivals: Flights = {
-    Flights(arrivalsFromCsvContent(contentFromFileName(sftp, latestFileForPort(sftp, portCode))))
+    Flights(arrivalsFromCsvContent(contentFromFileName(sftp, latestFileForPort(sftp, portCode)), terminalMapping))
   }
 }
 
@@ -57,7 +57,7 @@ object AclFeed {
     latestFile.getPath
   }
 
-  def arrivalsFromCsvContent(csvContent: String): List[Arrival] = {
+  def arrivalsFromCsvContent(csvContent: String, terminalMapping: TerminalName => TerminalName): List[Arrival] = {
     val flightEntries = csvContent
       .split("\n")
       .drop(1)
@@ -72,7 +72,7 @@ object AclFeed {
       })
 
     val arrivals = arrivalEntries
-      .map(aclFieldsToArrival)
+      .map(fields => aclFieldsToArrival(fields, terminalMapping))
       .collect { case Success(a) => a }
       .toList
 
@@ -99,7 +99,7 @@ object AclFeed {
     dropFileNameFromContent(csvContent)
   }
 
-  def dropFileNameFromContent(content: String) = content
+  def dropFileNameFromContent(content: String): String = content
     .split("\n")
     .drop(1)
     .mkString("\n")
@@ -147,7 +147,7 @@ object AclFeed {
     case (hour, minute) => s"$hour:$minute:00Z"
   }
 
-  def aclFieldsToArrival(fields: List[String]): Try[Arrival] = {
+  def aclFieldsToArrival(fields: List[String], terminalMapping: TerminalName => TerminalName): Try[Arrival] = {
     Try {
       Arrival(
         Operator = fields(AclColIndex.Operator),
@@ -165,9 +165,7 @@ object AclFeed {
         BaggageReclaimId = "",
         FlightID = (fields(AclColIndex.FlightNumber) + fields(AclColIndex.Date) + fields(AclColIndex.Time) + fields(AclColIndex.Origin)).hashCode,
         AirportID = fields(AclColIndex.Airport),
-        Terminal = s"T${
-          fields(AclColIndex.Terminal).take(1)
-        }",
+        Terminal = terminalMapping(fields(AclColIndex.Terminal)),
         rawICAO = fields(AclColIndex.FlightNumber),
         rawIATA = fields(AclColIndex.FlightNumber),
         Origin = fields(AclColIndex.Origin),
