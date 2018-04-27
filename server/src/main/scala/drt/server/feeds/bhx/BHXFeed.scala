@@ -38,12 +38,12 @@ object BHXFeed {
     val receiveTimeout = 30000
     val pollFrequency = 4 minutes
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
-    val endPointUrl = config.getString("feeds.birmingham.soap.endPointUrl")
+    val endPointUrl = config.getString("feeds.bhx.soap.endPointUrl")
 
     val serviceSoap: FlightInformationSoap =
       Try {
         val service: FlightInformation = new FlightInformation(this.getClass.getClassLoader.getResource("FlightInformation.wsdl"))
-        log.debug(s"Initialising Birmingham Feed with ${service.getWSDLDocumentLocation.toString} [connectionTimeout: $connectionTimeout, receiveTimeout: $receiveTimeout]")
+        log.debug(s"Initialising BHX Feed with ${service.getWSDLDocumentLocation.toString} [connectionTimeout: $connectionTimeout, receiveTimeout: $receiveTimeout]")
         service.getFlightInformationSoap match {
           case binder: BindingProvider =>
             binder.getRequestContext.put("javax.xml.ws.client.connectionTimeout", connectionTimeout.toString)
@@ -53,21 +53,21 @@ object BHXFeed {
             binder
           case flightInformationSoap => flightInformationSoap
         }
-      }.recoverWith { case t => log.error(s"Failure starting Birmingham feed: ${t.getMessage}", t); null }.get
+      }.recoverWith { case t => log.error(s"Failure starting BHX feed: ${t.getMessage}", t); null }.get
 
     val feed = BHXFeed(serviceSoap)
 
     val tickingSource: Source[List[Arrival], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
       .map(_ => {
         Try {
-          log.info("About to get arrivals for Birmingham.")
+          log.info("About to get arrivals for BHX.")
           feed.getArrivals
         } match {
           case Success(arrivals) =>
-            log.info(s"Got ${arrivals.size} Birmingham arrivals.")
+            log.info(s"Got ${arrivals.size} BHX arrivals.")
             arrivals
           case Failure(t) =>
-            log.info(s"Failed to fetch Birmingham arrivals.", t)
+            log.info(s"Failed to fetch BHX arrivals.", t)
             List.empty[Arrival]
         }
       })

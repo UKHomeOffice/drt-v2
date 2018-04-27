@@ -18,7 +18,7 @@ import scala.collection.JavaConversions._
 
 class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.parseMap(
   Map(
-    "feeds.birmingham.soap.endPointUrl" -> ""
+    "feeds.bhx.soap.endPointUrl" -> ""
   )))) with SpecificationLike with Mockito {
   sequential
   isolated
@@ -86,7 +86,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
     serviceSoap.bfGetScheduledFlights() returns arrayOfScheduledFlightRecords
   }
 
-  "Given a Birmingham feed exists" should {
+  "Given a BHX feed exists" should {
     "we can read live flight data" in new Context {
       val feed = BHXFeed(serviceSoap)
       val arrivals: List[Arrival] = feed.getArrivals
@@ -167,7 +167,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
       println(s"We got ${arrivals.size} Arrivals.")
       arrivals.foreach(println)
       ok
-    }.pendingUntilFixed("used to test if the Birmingham feed is working locally given you can ssh into a whitelisted IP address")
+    }.pendingUntilFixed("used to test if the BHX feed is working locally given you can ssh into a whitelisted IP address")
   }
 
 }
