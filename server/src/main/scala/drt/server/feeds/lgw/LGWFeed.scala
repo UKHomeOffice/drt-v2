@@ -24,7 +24,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import spray.client.pipelining
 import spray.client.pipelining.{Delete, Post, addHeader, _}
 import spray.http.{FormData, HttpRequest, HttpResponse, MediaTypes}
-import spray.http.HttpHeaders.{Accept, RawHeader}
+import spray.http.HttpHeaders.Accept
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
@@ -158,7 +158,7 @@ case class LGWFeed(certPath: String, privateCertPath: String, namespace: String,
     }
 
     val resultPipeline: pipelining.WithTransformerConcatenation[HttpRequest, Future[List[Arrival]]] = (
-      addHeaders(List(RawHeader("Authorization", wrapHeader), RawHeader("MessageId", UUID.randomUUID().toString)))
+      addHeader("Authorization", wrapHeader)
         ~> sendAndReceive
         ~> toArrivals
         ~> processDeleteIfApplicable
