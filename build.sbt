@@ -93,6 +93,7 @@ lazy val server = (project in file("server"))
   testFrameworks += new TestFramework("utest.runner.Framework"),
   resolvers ++= Seq(
     "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
+    "Artifactory Release Realm" at "http://artifactory.registered-traveller.homeoffice.gov.uk/artifactory/libs-release-local/",
 
     Resolver.bintrayRepo("mfglabs", "maven"),
     Resolver.bintrayRepo("dwhjames", "maven"),
