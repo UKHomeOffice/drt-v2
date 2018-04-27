@@ -2,25 +2,30 @@ package drt.client.components
 
 import diode.data.Pot
 import drt.client.actions.Actions._
+import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.FixedPoints._
 import drt.client.services.JSDateConversions._
 import drt.client.services._
 import drt.shared.FlightsApi.TerminalName
 import drt.shared.{AirportConfig, MilliDate, SDateLike, StaffMovement}
 import japgolly.scalajs.react._
+import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.vdom.html_<^._
-import org.scalajs.dom.html.Div
+import org.scalajs.dom.html.{Div, Table}
 
+import scala.collection.immutable
 import scala.collection.immutable.{NumericRange, Seq}
 import scala.scalajs.js.Date
 import scala.util.{Success, Try}
 
 object DateRange {
-  val start = SDate.midnightThisMorning()
-  val end = start.addDays(1)
+  val start: SDateLike = SDate.midnightThisMorning()
+  val end: SDateLike = start.addDays(1)
 }
 
 object TerminalStaffing {
+  val log: Logger = LoggerFactory.getLogger(getClass.getName)
+
   val oneMinute = 60000L
 
   case class Props(
@@ -32,13 +37,13 @@ object TerminalStaffing {
                     roles: Pot[List[String]]
                   )
 
-  def todaysMovements(movements: Seq[StaffMovement], start: MilliDate, end: MilliDate) = {
+  def todaysMovements(movements: Seq[StaffMovement], start: MilliDate, end: MilliDate): Seq[StaffMovement] = {
     movements.filter(m => m.time > start && m.time < end)
   }
 
   class Backend($: BackendScope[Props, Unit]) {
 
-    def render(props: Props) = {
+    def render(props: Props): VdomTagOf[Div] = {
 
       <.div(
         props.potShifts.render((rawShifts: String) => {
@@ -60,7 +65,7 @@ object TerminalStaffing {
       )
     }
 
-    def filterByTerminal(fixedPoints: String, terminalName: String) = {
+    def filterByTerminal(fixedPoints: String, terminalName: String): String = {
       fixedPoints.split("\n").filter(line => {
         val cells = line.split(",").map(cell => cell.trim())
         cells(1) == terminalName
@@ -87,7 +92,7 @@ object TerminalStaffing {
           val ss = StaffAssignmentServiceWithDates(successfulTerminalShifts)
           val fps = StaffAssignmentServiceWithoutDates(successfulTerminalFixedPoints)
           val staffWithShiftsAndMovementsAt = StaffMovements.terminalStaffAt(ss, fps)(movements) _
-          staffingTableHourPerColumn(terminalName, daysWorthOf15Minutes(SDate.midnightThisMorning), staffWithShiftsAndMovementsAt)
+          staffingTableHourPerColumn(terminalName, daysWorthOf15Minutes(SDate.midnightThisMorning()), staffWithShiftsAndMovementsAt)
         }
       )
     }
@@ -96,12 +101,24 @@ object TerminalStaffing {
       val terminalMovements = movements.filter(_.terminalName == terminalName)
       <.div(
         <.h2("Movements"),
-        if (terminalMovements.nonEmpty)
-          <.ul(^.className := "list-unstyled", terminalMovements.map(movement => {
-            val remove = <.a(Icon.remove, ^.key := movement.uUID.toString, ^.onClick ==> ((e: ReactEventFromInput) => Callback(SPACircuit.dispatch(RemoveStaffMovement(0, movement.uUID)))))
-            <.li(remove, " ", MovementDisplay.toCsv(movement))
-          }).toTagMod)
-        else
+        
+        if (terminalMovements.nonEmpty) {
+          val iterable: immutable.Iterable[TagMod] = terminalMovements.groupBy(_.uUID).map {
+            case (_, movementPair) =>
+              movementPair.toList.sortBy(_.time) match {
+                case first :: second :: Nil =>
+                  val remove = <.a(Icon.remove, ^.key := first.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) => Callback(SPACircuit.dispatch(RemoveStaffMovement(0, first.uUID)))))
+                  <.li(remove, " ", MovementDisplay.displayPair(first, second))
+                case mm :: Nil =>
+                  val remove = <.a(Icon.remove, ^.key := mm.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) => Callback(SPACircuit.dispatch(RemoveStaffMovement(0, mm.uUID)))))
+                  <.li(remove, " ", MovementDisplay.displaySingle(mm))
+                case x =>
+                  log.info(s"didn't get a pair: $x")
+                  TagMod()
+              }
+          }
+          <.ul(^.className := "list-unstyled", iterable.toTagMod)
+        } else
           <.p("No movements recorded")
       )
     }
@@ -151,7 +168,7 @@ object TerminalStaffing {
             ))
         }).build
 
-      def apply(props: FixedPointsProps) = component(props)
+      def apply(props: FixedPointsProps): Unmounted[FixedPointsProps, FixedPointsState, Unit] = component(props)
     }
 
     def daysWorthOf15Minutes(startOfDay: SDateLike): NumericRange[Long] = {
@@ -160,7 +177,7 @@ object TerminalStaffing {
       daysWorthOf15Minutes
     }
 
-    def staffingTableHourPerColumn(terminalName: TerminalName, daysWorthOf15Minutes: NumericRange[Long], staffWithShiftsAndMovements: (TerminalName, MilliDate) => Int) = {
+    def staffingTableHourPerColumn(terminalName: TerminalName, daysWorthOf15Minutes: NumericRange[Long], staffWithShiftsAndMovements: (TerminalName, MilliDate) => Int): VdomTagOf[Table] = {
       <.table(
         ^.className := "table table-striped table-xcondensed table-sm",
         <.tbody(
@@ -192,18 +209,40 @@ object TerminalStaffing {
     .build
 
   object MovementDisplay {
-    def toCsv(movement: StaffMovement) = {
+    def toCsv(movement: StaffMovement): String = {
       s"${movement.terminalName}, ${movement.reason}, ${displayDate(movement.time)}, ${displayTime(movement.time)}, ${movement.delta} staff"
+    }
+
+    def displayPair(start: StaffMovement, end: StaffMovement): String = {
+      val startDate = displayDate(start.time)
+      val endDate = displayDate(end.time)
+      val startDateForDisplay = if (startDate != displayDate(SDate.now().millisSinceEpoch)) startDate else ""
+      val endDateForDisplay = if (startDate != endDate) endDate else ""
+      val reasonForDisplay = start.reason.replace(" start", "") match {
+        case "" => " (no reason given) "
+        case r => r
+      }
+      s"${start.delta} @ $startDateForDisplay ${displayTime(start.time)} -> $endDateForDisplay ${displayTime(end.time)} $reasonForDisplay"
+    }
+
+    def displaySingle(movement: StaffMovement): String = {
+      val startDate = displayDate(movement.time)
+      val startDateForDisplay = if (startDate != displayDate(SDate.now().millisSinceEpoch)) startDate else ""
+      val reasonForDisplay = movement.reason.replace(" start", "") match {
+        case "" => " - "
+        case r => r
+      }
+      s"${movement.delta} @ $startDateForDisplay ${displayTime(movement.time)} -> ongoing $reasonForDisplay"
     }
 
     def displayTime(time: MilliDate): String = {
       val startDate: SDateLike = SDate(time)
-      f"${startDate.getHours}%02d:${startDate.getMinutes}%02d"
+      f"${startDate.getHours()}%02d:${startDate.getMinutes()}%02d"
     }
 
     def displayDate(time: MilliDate): String = {
       val startDate: SDateLike = SDate(time)
-      f"${startDate.getDate}%02d/${startDate.getMonth}%02d/${startDate.getFullYear - 2000}%02d"
+      f"${startDate.getDate()}%02d/${startDate.getMonth()}%02d/${startDate.getFullYear - 2000}%02d"
     }
   }
 
