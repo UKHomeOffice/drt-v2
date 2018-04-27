@@ -5,6 +5,8 @@ import javax.xml.datatype.XMLGregorianCalendar
 import org.joda.time.DateTime
 import services.SDate
 import uk.co.bhx.online.flightinformation.{FlightRecord, ScheduledFlightRecord}
+import org.joda.time.DateTimeZone
+import org.joda.time.format.ISODateTimeFormat
 
 sealed trait BHXArrivals {
 
@@ -15,10 +17,6 @@ sealed trait BHXArrivals {
       case 0L => None
       case _ =>
         val datetime = new DateTime(date.getTime)
-
-        import org.joda.time.DateTimeZone
-        import org.joda.time.format.ISODateTimeFormat
-
         Some(datetime.withZone(DateTimeZone.UTC).toString(ISODateTimeFormat.dateTime))
     }
   }
@@ -29,12 +27,7 @@ trait BHXLiveArrivals extends BHXArrivals {
 
   def toLiveArrival(flightRecord: FlightRecord): Arrival =
     new Arrival(Operator = "",
-      Status = flightRecord.getFlightStatus match {
-        case "Arrived" => "A"
-        case "Expected" => "E"
-        case "Cancelled" => "C"
-        case _ => "U"
-      },
+      Status = flightRecord.getFlightStatus,
       EstDT = convertToUTC(flightRecord.getEstimatedTime).getOrElse(""),
       ActDT = convertToUTC(flightRecord.getTouchdownTime).getOrElse(""),
       EstChoxDT = convertToUTC(flightRecord.getEstimatedChoxTime).getOrElse(""),
@@ -62,7 +55,7 @@ trait BHXForecastArrivals extends BHXArrivals {
 
   def toForecastArrival(flightRecord: ScheduledFlightRecord) : Arrival =
     new Arrival(Operator = "",
-      Status = "S",
+      Status = "Scheduled",
       EstDT = "",
       ActDT = "",
       EstChoxDT = "",

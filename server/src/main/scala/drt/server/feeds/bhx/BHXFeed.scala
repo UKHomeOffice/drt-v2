@@ -3,7 +3,6 @@ package drt.server.feeds.bhx
 import akka.NotUsed
 import akka.actor.{ActorSystem, Cancellable}
 import akka.stream.scaladsl.Source
-import drt.server.feeds.lgw.GatwickAzureToken
 import drt.shared.Arrival
 import javax.xml.ws.BindingProvider
 import org.slf4j.{Logger, LoggerFactory}
@@ -31,7 +30,6 @@ case class BHXFeed(serviceSoap: FlightInformationSoap) extends BHXLiveArrivals w
 
 object BHXFeed {
   val log: Logger = LoggerFactory.getLogger(getClass)
-  var tokenFuture: Future[GatwickAzureToken] = _
 
   def apply()(implicit actorSystem: ActorSystem): Source[Seq[Arrival], Cancellable] = {
     val config = actorSystem.settings.config
@@ -60,7 +58,7 @@ object BHXFeed {
     val feed = BHXFeed(serviceSoap)
 
     val tickingSource: Source[List[Arrival], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
-      .map((_) => {
+      .map(_ => {
         Try {
           log.info("About to get arrivals for Birmingham.")
           feed.getArrivals
@@ -69,7 +67,7 @@ object BHXFeed {
             log.info(s"Got ${arrivals.size} Birmingham arrivals.")
             arrivals
           case Failure(t) =>
-            log.info(s"Failed to fetch BHX arrivals.", t)
+            log.info(s"Failed to fetch Birmingham arrivals.", t)
             List.empty[Arrival]
         }
       })

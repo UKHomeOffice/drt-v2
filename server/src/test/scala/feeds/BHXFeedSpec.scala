@@ -94,7 +94,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
       arrivals.size mustEqual 1
       arrivals.head mustEqual new Arrival(
         Operator = "",
-        Status = "A",
+        Status = "Arrived",
         EstDT = "2012-06-02T06:46:53.123Z",
         ActDT = "2012-06-02T06:46:53.123Z",
         EstChoxDT = "2012-06-02T06:46:53.123Z",
@@ -108,7 +108,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
         BaggageReclaimId = "7A",
         FlightID = 0,
         AirportID = "BHX",
-        Terminal = "1",
+        Terminal = "T1",
         rawICAO = "AF1164",
         rawIATA = "AF1164",
         Origin = "CPH",
@@ -125,7 +125,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
       arrivals.size mustEqual 1
       arrivals.head mustEqual new Arrival(
         Operator = "",
-        Status = "S",
+        Status = "Scheduled",
         EstDT = "",
         ActDT = "",
         EstChoxDT = "",
@@ -139,7 +139,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
         BaggageReclaimId = "",
         FlightID = 0,
         AirportID = "BHX",
-        Terminal = "1",
+        Terminal = "T1",
         rawICAO = "AF1164",
         rawIATA = "AF1164",
         Origin = "CPH",
