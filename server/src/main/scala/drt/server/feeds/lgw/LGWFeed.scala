@@ -274,13 +274,12 @@ object LGWFeed {
 
     val feed = LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId, actorSystem)
 
-    val pollFrequency = 3 seconds
+    val pollFrequency = 1 seconds
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
 
     tokenFuture = feed.requestToken()
 
     val tickingSource: Source[List[Arrival], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
-      .throttle(elements = 1, per = 30 seconds, maximumBurst = 1, ThrottleMode.shaping)
       .withAttributes(ActorAttributes.supervisionStrategy(Supervision.restartingDecider))
       .map(_ => {
         Try {
