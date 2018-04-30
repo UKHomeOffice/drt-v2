@@ -55,7 +55,8 @@ case class CrunchProps[MS](logLabel: String = "",
                            initialPortState: Option[PortState] = None,
                            initialBaseArrivals: Set[Arrival] = Set(),
                            initialFcstArrivals: Set[Arrival] = Set(),
-                           initialLiveArrivals: Set[Arrival] = Set()
+                           initialLiveArrivals: Set[Arrival] = Set(),
+                           recrunchOnStart: Boolean = false
                           )
 
 object CrunchSystem {
@@ -125,7 +126,7 @@ object CrunchSystem {
 
     val workloadGraphStage = new WorkloadGraphStage(
       name = props.logLabel,
-      optionalInitialLoads = initialLoadsFromPortState(props.initialPortState),
+      optionalInitialLoads = if (props.recrunchOnStart) None else initialLoadsFromPortState(props.initialPortState),
       optionalInitialFlightsWithSplits = initialFlightsFromPortState(props.initialPortState),
       airportConfig = props.airportConfig,
       natProcTimes = AirportConfigs.nationalityProcessingTimes,
