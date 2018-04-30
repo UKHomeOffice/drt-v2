@@ -313,7 +313,7 @@ object Crunch {
   def mergeUpdatedLoads(maybeExistingDayLoads: Option[Loads], dayMillis: MillisSinceEpoch, dayLoadMinutes: Set[LoadMinute]): Set[LoadMinute] = {
     maybeExistingDayLoads match {
       case None =>
-        log.info(s"Adding ${SDate(dayMillis).toISOString()} to queue with ${dayLoadMinutes.size} loads (${dayLoadMinutes.toSeq.count(_.paxLoad != 0)} non-zero pax minutes")
+        log.info(s"Adding ${SDate(dayMillis).toISOString()} to queue with ${dayLoadMinutes.size} loads (${dayLoadMinutes.toSeq.count(_.paxLoad != 0)} non-zero pax minutes)")
         dayLoadMinutes
       case Some(existingDayLoads) =>
         val existingByKey = existingDayLoads
