@@ -274,7 +274,7 @@ object LGWFeed {
 
     val feed = LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId, actorSystem)
 
-    val pollFrequency = 3 seconds
+    val pollFrequency = 1 seconds
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
 
     tokenFuture = feed.requestToken()
