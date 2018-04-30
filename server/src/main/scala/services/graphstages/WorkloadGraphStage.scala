@@ -89,7 +89,7 @@ class WorkloadGraphStage(name: String = "",
         loadMinutes = purgeExpired(updatedLoads, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
 
         loadsToPush = purgeExpired(mergeLoadMinutes(diff, loadsToPush), (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
-        log.info(s"Now have ${loadsToPush.size} load minutes to push")
+        log.info(s"Now have ${loadsToPush.size} load minutes to push (${loadsToPush.values.count(_.paxLoad == 0d)} zero pax minutes)")
 
         pushStateIfReady()
 

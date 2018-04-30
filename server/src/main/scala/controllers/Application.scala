@@ -109,7 +109,7 @@ trait SystemActors {
   val username: String = ConfigFactory.load.getString("acl.username")
   val path: String = ConfigFactory.load.getString("acl.keypath")
 
-  val recrunchOnStart = config.getBoolean("crunch.recrunch-on-start").getOrElse(false)
+  val recrunchOnStart: Boolean = config.getBoolean("crunch.recrunch-on-start").getOrElse(false)
   system.log.info(s"recrunchOnStart: $recrunchOnStart")
 
   val aclFeed = AclFeed(ftpServer, username, path, airportConfig.portCode, aclTerminalMapping(airportConfig.portCode))
