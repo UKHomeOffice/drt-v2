@@ -20,7 +20,7 @@ import services.graphstages.Crunch._
 import services.graphstages.{ActualDeskStats, Crunch, DqManifests, DummySplitsPredictor}
 
 import scala.concurrent.Await
-//import scala.language.postfixOps
+import scala.language.postfixOps
 import scala.concurrent.duration._
 
 
@@ -154,6 +154,10 @@ class CrunchTestLike
     val forecastCrunchActor = forecastCrunchStateActor(logLabel, forecastProbe, now)
 
     val manifestsSource: Source[DqManifests, SourceQueueWithComplete[DqManifests]] = Source.queue[DqManifests](0, OverflowStrategy.backpressure)
+    val liveArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
+    val fcstArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
+    val baseArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
+
 
     val crunchInputs = CrunchSystem(CrunchProps(
       logLabel = logLabel,
@@ -184,7 +188,10 @@ class CrunchTestLike
       initialPortState = initialPortState,
       initialBaseArrivals = initialBaseArrivals,
       initialFcstArrivals = initialForecastArrivals,
-      initialLiveArrivals = initialLiveArrivals
+      initialLiveArrivals = initialLiveArrivals,
+      arrivalsBaseSource = baseArrivals,
+      arrivalsFcstSource = fcstArrivals,
+      arrivalsLiveSource = liveArrivals
     ))
 
     if (initialShifts.nonEmpty) offerAndWait(crunchInputs.shifts, initialShifts)
