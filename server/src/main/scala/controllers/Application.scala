@@ -109,7 +109,7 @@ trait SystemActors {
   val username: String = ConfigFactory.load.getString("acl.username")
   val path: String = ConfigFactory.load.getString("acl.keypath")
 
-  val aclFeed = AclFeed(ftpServer, username, path, airportConfig.portCode)
+  val aclFeed = AclFeed(ftpServer, username, path, airportConfig.portCode, aclTerminalMapping(airportConfig.portCode))
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
 
@@ -171,6 +171,11 @@ trait SystemActors {
           subscribeStaffingActors(crunchInputs)
           startScheduledFeedImports(crunchInputs)
       }
+  }
+
+  def aclTerminalMapping(portCode: String): TerminalName => TerminalName = portCode match {
+    case "LGW" => (tIn: TerminalName) => Map("1I" -> "N", "2I" -> "S").getOrElse(tIn, "")
+    case _ => (tIn: TerminalName) => s"T${tIn.take(1)}"
   }
 
   def startScheduledFeedImports(crunchInputs: CrunchSystem[NotUsed]): Unit = {
