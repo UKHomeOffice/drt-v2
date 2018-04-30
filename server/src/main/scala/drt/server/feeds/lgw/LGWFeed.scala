@@ -280,7 +280,6 @@ object LGWFeed {
     tokenFuture = feed.requestToken()
 
     val tickingSource: Source[List[Arrival], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
-      .throttle(elements = 1, per = 30 seconds, maximumBurst = 1, ThrottleMode.shaping)
       .withAttributes(ActorAttributes.supervisionStrategy(Supervision.restartingDecider))
       .map(_ => {
         Try {
