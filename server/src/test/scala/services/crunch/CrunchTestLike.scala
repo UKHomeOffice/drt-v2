@@ -8,7 +8,7 @@ import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, OverflowStrategy, QueueOfferResult}
 import akka.testkit.{TestKit, TestProbe}
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
+import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
@@ -17,10 +17,9 @@ import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
 import services._
 import services.graphstages.Crunch._
-import services.graphstages.{ActualDeskStats, Crunch, DqManifests, DummySplitsPredictor}
+import services.graphstages.{ActualDeskStats, DqManifests, DummySplitsPredictor}
 
 import scala.concurrent.Await
-//import scala.language.postfixOps
 import scala.concurrent.duration._
 
 
@@ -154,6 +153,10 @@ class CrunchTestLike
     val forecastCrunchActor = forecastCrunchStateActor(logLabel, forecastProbe, now)
 
     val manifestsSource: Source[DqManifests, SourceQueueWithComplete[DqManifests]] = Source.queue[DqManifests](0, OverflowStrategy.backpressure)
+    val liveArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
+    val fcstArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
+    val baseArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
+
 
     val crunchInputs = CrunchSystem(CrunchProps(
       logLabel = logLabel,
@@ -184,7 +187,10 @@ class CrunchTestLike
       initialPortState = initialPortState,
       initialBaseArrivals = initialBaseArrivals,
       initialFcstArrivals = initialForecastArrivals,
-      initialLiveArrivals = initialLiveArrivals
+      initialLiveArrivals = initialLiveArrivals,
+      arrivalsBaseSource = baseArrivals,
+      arrivalsFcstSource = fcstArrivals,
+      arrivalsLiveSource = liveArrivals
     ))
 
     if (initialShifts.nonEmpty) offerAndWait(crunchInputs.shifts, initialShifts)

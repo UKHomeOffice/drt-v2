@@ -19,9 +19,9 @@ object RunnableCrunch {
 
   def groupByCodeShares(flights: Seq[ApiFlightWithSplits]): Seq[(ApiFlightWithSplits, Set[Arrival])] = flights.map(f => (f, Set(f.apiFlight)))
 
-  def apply[SA, SVM, SS, SFP, SMM, SAD](baseArrivalsSource: Source[Flights, SA],
-                                        fcstArrivalsSource: Source[Flights, SA],
-                                        liveArrivalsSource: Source[Flights, SA],
+  def apply[AL, SVM, SS, SFP, SMM, SAD](baseArrivalsSource: Source[Flights, AL],
+                                        fcstArrivalsSource: Source[Flights, AL],
+                                        liveArrivalsSource: Source[Flights, AL],
                                         manifestsSource: Source[DqManifests, SVM],
                                         shiftsSource: Source[String, SS],
                                         fixedPointsSource: Source[String, SFP],
@@ -49,7 +49,7 @@ object RunnableCrunch {
                                         fcstCrunchStateActor: ActorRef,
                                         crunchPeriodStartMillis: SDateLike => SDateLike,
                                         now: () => SDateLike
-                                       ): RunnableGraph[(SA, SA, SA, SVM, SS, SFP, SMM, SAD)] = {
+                                       ): RunnableGraph[(AL, AL, AL, SVM, SS, SFP, SMM, SAD)] = {
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
@@ -120,15 +120,7 @@ object RunnableCrunch {
           fixedPoints ~> staff.in1
           staffMovements ~> staff.in2
 
-          arrivals.out.conflate[ArrivalsDiff] {
-            case (diffSoFar, diffNew) =>
-              log.warn(s"Conflating arrivals diffs")
-              val toUpdate = diffNew.toUpdate.foldLeft(diffSoFar.toUpdate.map(f => (f.uniqueId, f)).toMap) {
-                case (soFar, arrival) => soFar.updated(arrival.uniqueId, arrival)
-              }.values.toSet
-              val toRemove = diffNew.toRemove ++ diffSoFar.toRemove
-              ArrivalsDiff(toUpdate, toRemove)
-          } ~> arrivalsFanOut
+          arrivals.out ~> arrivalsFanOut
 
           arrivalsFanOut.map(_.toUpdate.toSeq) ~> splitsPredictor
           arrivalsFanOut.map(diff => FlightRemovals(diff.toRemove)) ~> portState.in0
@@ -191,7 +183,7 @@ object RunnableCrunch {
   def forecastSimulations(now: () => SDateLike): SimulationMinutes => SimulationMinutes = (sims: SimulationMinutes) => SimulationMinutes(sims.minutes.filter(drm => drm.minute >= tomorrowStartMillis(now)))
 
   def forecastFlights(now: () => SDateLike): FlightsWithSplits => FlightsWithSplits = (fs: FlightsWithSplits) => FlightsWithSplits(fs.flights.filter(_.apiFlight.PcpTime >= tomorrowStartMillis(now)))
-  
+
   def tomorrowStartMillis(now: () => SDateLike): MillisSinceEpoch = Crunch.getLocalNextMidnight(now()).millisSinceEpoch
 }
 

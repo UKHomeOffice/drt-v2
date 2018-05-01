@@ -170,34 +170,25 @@ trait SystemActors {
       (maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals) match {
         case (initialLiveState: Option[PortState], initialForecastState: Option[PortState], initialBaseArrivals: Option[Set[Arrival]], initialForecastArrivals: Option[Set[Arrival]], initialLiveArrivals: Option[Set[Arrival]]) =>
           val initialPortState: Option[PortState] = mergePortStates(initialLiveState, initialForecastState)
-          val crunchInputs: CrunchSystem[NotUsed] = startCrunchSystem(initialPortState, initialBaseArrivals, initialForecastArrivals, initialLiveArrivals, recrunchOnStart)
+          val crunchInputs: CrunchSystem[NotUsed, Cancellable] = startCrunchSystem(initialPortState, initialBaseArrivals, initialForecastArrivals, initialLiveArrivals, recrunchOnStart)
           subscribeStaffingActors(crunchInputs)
           startScheduledFeedImports(crunchInputs)
       }
   }
 
   def aclTerminalMapping(portCode: String): TerminalName => TerminalName = portCode match {
-    case "LGW" => (tIn: TerminalName) => Map("1I" -> "N", "2I" -> "S").getOrElse(tIn, "")
+    case "LGW" => (tIn: TerminalName) => Map("1I" -> "S", "2I" -> "N").getOrElse(tIn, "")
     case _ => (tIn: TerminalName) => s"T${tIn.take(1)}"
   }
 
-  def startScheduledFeedImports(crunchInputs: CrunchSystem[NotUsed]): Unit = {
-    liveArrivalsSource(airportConfig.portCode)
-      .runForeach(f => crunchInputs.liveArrivals.offer(f))(actorMaterializer)
-    forecastArrivalsSource(airportConfig.portCode)
-      .runForeach(f => crunchInputs.forecastArrivals.offer(f))(actorMaterializer)
-
-    system.scheduler.schedule(0 milliseconds, aclPollMinutes minutes) {
-      crunchInputs.baseArrivals.offer(aclFeed.arrivals)
-    }
-
+  def startScheduledFeedImports(crunchInputs: CrunchSystem[NotUsed, Cancellable]): Unit = {
     if (portCode == "LHR") config.getString("lhr.blackjack_url").map(csvUrl => {
       val requestIntervalMillis = 5 * oneMinuteMillis
       Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, requestIntervalMillis milliseconds, SDate.now().addDays(-1))
     })
   }
 
-  def subscribeStaffingActors(crunchInputs: CrunchSystem[NotUsed]): Unit = {
+  def subscribeStaffingActors(crunchInputs: CrunchSystem[NotUsed, Cancellable]): Unit = {
     shiftsActor ! AddShiftLikeSubscribers(List(crunchInputs.shifts))
     fixedPointsActor ! AddShiftLikeSubscribers(List(crunchInputs.fixedPoints))
     staffMovementsActor ! AddStaffMovementsSubscribers(List(crunchInputs.staffMovements))
@@ -208,7 +199,7 @@ trait SystemActors {
                         initialForecastArrivals: Option[Set[Arrival]],
                         initialLiveArrivals: Option[Set[Arrival]],
                         recrunchOnStart: Boolean
-                       ): CrunchSystem[NotUsed] = {
+                       ): CrunchSystem[NotUsed, Cancellable] = {
     val crunchInputs = CrunchSystem(CrunchProps(
       system = system,
       airportConfig = airportConfig,
@@ -236,6 +227,9 @@ trait SystemActors {
       initialBaseArrivals = initialBaseArrivals.getOrElse(Set()),
       initialFcstArrivals = initialForecastArrivals.getOrElse(Set()),
       initialLiveArrivals = initialLiveArrivals.getOrElse(Set()),
+      arrivalsBaseSource = baseArrivalsSource(),
+      arrivalsFcstSource = forecastArrivalsSource(airportConfig.portCode),
+      arrivalsLiveSource = liveArrivalsSource(airportConfig.portCode),
       recrunchOnStart = recrunchOnStart
     ))
     crunchInputs
@@ -338,6 +332,11 @@ trait SystemActors {
     }
     feed.map(Flights)
   }
+
+  def baseArrivalsSource(): Source[Flights, Cancellable] = Source.tick(1 second, 60 minutes, NotUsed).map(_ => {
+    system.log.info(s"Requesting ACL feed")
+    aclFeed.arrivals
+  })
 
   def walkTimeProvider(flight: Arrival): MillisSinceEpoch =
     gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, airportConfig.defaultWalkTimeMillis.getOrElse(flight.Terminal, 300000L))(flight)
