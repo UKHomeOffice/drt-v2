@@ -268,6 +268,7 @@ object AirportConfigs {
       EGate -> 10,
       NonEeaDesk -> 45
     ),
+    hasEstChox = true,
     terminalNames = Seq("N", "S"),
     defaultWalkTimeMillis = Map("N" -> 180000L, "S" -> 180000L),
     defaultPaxSplits = SplitRatios(

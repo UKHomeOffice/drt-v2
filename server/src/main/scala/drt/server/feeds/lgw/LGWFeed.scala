@@ -115,8 +115,8 @@ case class LGWFeed(certPath: String, privateCertPath: String, namespace: String,
           Status = parseStatus(n),
           EstDT = parseDateTime(n, "TDN", "EST").getOrElse(""),
           ActDT = parseDateTime(n, "TDN", "ACT").getOrElse(""),
-          EstChoxDT = parseDateTime(n, "OBN", "EST").getOrElse(""),
-          ActChoxDT = parseDateTime(n, "OBN", "ACT").getOrElse(""),
+          EstChoxDT = parseDateTime(n, "ONB", "EST").getOrElse(""),
+          ActChoxDT = parseDateTime(n, "ONB", "ACT").getOrElse(""),
           Gate = (n \\ "PassengerGate").headOption.map(n => n text).getOrElse(""),
           Stand = (n \\ "ArrivalStand").headOption.map(n => n text).getOrElse(""),
           MaxPax = (n \\ "SeatCapacity").headOption.map(n => (n text).toInt).getOrElse(0),
@@ -274,7 +274,7 @@ object LGWFeed {
 
     val feed = LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId, actorSystem)
 
-    val pollFrequency = 1 seconds
+    val pollFrequency = 100 milliseconds
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
 
     tokenFuture = feed.requestToken()
