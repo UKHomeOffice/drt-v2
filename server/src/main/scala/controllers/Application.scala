@@ -109,6 +109,9 @@ trait SystemActors {
   val username: String = ConfigFactory.load.getString("acl.username")
   val path: String = ConfigFactory.load.getString("acl.keypath")
 
+  val recrunchOnStart: Boolean = config.getBoolean("crunch.recrunch-on-start").getOrElse(false)
+  system.log.info(s"recrunchOnStart: $recrunchOnStart")
+
   val aclFeed = AclFeed(ftpServer, username, path, airportConfig.portCode, aclTerminalMapping(airportConfig.portCode))
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
@@ -167,7 +170,7 @@ trait SystemActors {
       (maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals) match {
         case (initialLiveState: Option[PortState], initialForecastState: Option[PortState], initialBaseArrivals: Option[Set[Arrival]], initialForecastArrivals: Option[Set[Arrival]], initialLiveArrivals: Option[Set[Arrival]]) =>
           val initialPortState: Option[PortState] = mergePortStates(initialLiveState, initialForecastState)
-          val crunchInputs: CrunchSystem[NotUsed, Cancellable] = startCrunchSystem(initialPortState, initialBaseArrivals, initialForecastArrivals, initialLiveArrivals)
+          val crunchInputs: CrunchSystem[NotUsed, Cancellable] = startCrunchSystem(initialPortState, initialBaseArrivals, initialForecastArrivals, initialLiveArrivals, recrunchOnStart)
           subscribeStaffingActors(crunchInputs)
           startScheduledFeedImports(crunchInputs)
       }
@@ -191,7 +194,12 @@ trait SystemActors {
     staffMovementsActor ! AddStaffMovementsSubscribers(List(crunchInputs.staffMovements))
   }
 
-  def startCrunchSystem(initialPortState: Option[PortState], initialBaseArrivals: Option[Set[Arrival]], initialForecastArrivals: Option[Set[Arrival]], initialLiveArrivals: Option[Set[Arrival]]): CrunchSystem[NotUsed, Cancellable] = {
+  def startCrunchSystem(initialPortState: Option[PortState],
+                        initialBaseArrivals: Option[Set[Arrival]],
+                        initialForecastArrivals: Option[Set[Arrival]],
+                        initialLiveArrivals: Option[Set[Arrival]],
+                        recrunchOnStart: Boolean
+                       ): CrunchSystem[NotUsed, Cancellable] = {
     val crunchInputs = CrunchSystem(CrunchProps(
       system = system,
       airportConfig = airportConfig,
@@ -221,7 +229,8 @@ trait SystemActors {
       initialLiveArrivals = initialLiveArrivals.getOrElse(Set()),
       arrivalsBaseSource = baseArrivalsSource(),
       arrivalsFcstSource = forecastArrivalsSource(airportConfig.portCode),
-      arrivalsLiveSource = liveArrivalsSource(airportConfig.portCode)
+      arrivalsLiveSource = liveArrivalsSource(airportConfig.portCode),
+      recrunchOnStart = recrunchOnStart
     ))
     crunchInputs
   }

@@ -19,9 +19,9 @@ object FilterCrunchByRangeTests extends TestSuite {
       "When a CrunchState contains minutes within the range, then they should remain after the filter" - {
         val crunchMinuteWithinRange = CrunchMinute("T1", Queues.EeaDesk, dateWithinRange.millisSinceEpoch, 0, 0, 0, 0)
         val staffMinuteWithinRange = StaffMinute("T1", dateWithinRange.millisSinceEpoch, 0, 0, 0)
-        val flightWithinRange = ApiFlightWithSplits(apiFlight(SchDT = dateWithinRange.toISOString(), PcpTime = dateWithinRange.millisSinceEpoch), Set())
+        val flightWithinRange = ApiFlightWithSplits(apiFlight(Terminal = "T1", SchDT = dateWithinRange.toISOString(), PcpTime = dateWithinRange.millisSinceEpoch), Set())
 
-        val result = filterCrunchStateByRange(dateWithinRange, range, CrunchState(Set(flightWithinRange), Set(crunchMinuteWithinRange), Set(staffMinuteWithinRange)))
+        val result = filterCrunchStateByRange(dateWithinRange, range, CrunchState(Set(flightWithinRange), Set(crunchMinuteWithinRange), Set(staffMinuteWithinRange)), "T1")
         val expected = CrunchState(Set(flightWithinRange), Set(crunchMinuteWithinRange), Set(staffMinuteWithinRange))
 
         assert(result == expected)
@@ -30,9 +30,9 @@ object FilterCrunchByRangeTests extends TestSuite {
       "When a CrunchState contains nothing within the range then it should have empty sets for all values" - {
         val crunchMinuteNotWithinRange = CrunchMinute("T1", Queues.EeaDesk, dateOutsideRange.millisSinceEpoch, 0, 0, 0, 0)
         val staffMinuteNotWithinRange = StaffMinute("T1", dateOutsideRange.millisSinceEpoch, 0, 0, 0)
-        val flightNotWithinRange = ApiFlightWithSplits(apiFlight(SchDT = dateOutsideRange.toISOString(), PcpTime = dateOutsideRange.millisSinceEpoch), Set())
+        val flightNotWithinRange = ApiFlightWithSplits(apiFlight(Terminal = "T1", SchDT = dateOutsideRange.toISOString(), PcpTime = dateOutsideRange.millisSinceEpoch), Set())
 
-        val result = filterCrunchStateByRange(dateWithinRange, range, CrunchState(Set(flightNotWithinRange), Set(crunchMinuteNotWithinRange), Set(staffMinuteNotWithinRange)))
+        val result = filterCrunchStateByRange(dateWithinRange, range, CrunchState(Set(flightNotWithinRange), Set(crunchMinuteNotWithinRange), Set(staffMinuteNotWithinRange)), "T1")
 
         val expected = CrunchState(Set(),Set(),Set())
 
@@ -42,16 +42,16 @@ object FilterCrunchByRangeTests extends TestSuite {
       "When a CrunchState contains some minutes within the range and some without it should retain the ones within range" - {
         val crunchMinuteWithinRange = CrunchMinute("T1", Queues.EeaDesk, dateWithinRange.millisSinceEpoch, 0, 0, 0, 0)
         val staffMinuteWithinRange = StaffMinute("T1", dateWithinRange.millisSinceEpoch, 0, 0, 0)
-        val flightWithinRange = ApiFlightWithSplits(apiFlight(SchDT = dateWithinRange.toISOString(), PcpTime = dateWithinRange.millisSinceEpoch), Set())
+        val flightWithinRange = ApiFlightWithSplits(apiFlight(Terminal = "T1", SchDT = dateWithinRange.toISOString(), PcpTime = dateWithinRange.millisSinceEpoch), Set())
 
         val crunchMinuteNotWithinRange = CrunchMinute("T1", Queues.EeaDesk, dateOutsideRange.millisSinceEpoch, 0, 0, 0, 0)
         val staffMinuteNotWithinRange = StaffMinute("T1", dateOutsideRange.millisSinceEpoch, 0, 0, 0)
-        val flightNotWithinRange = ApiFlightWithSplits(apiFlight(SchDT = dateOutsideRange.toISOString(), PcpTime = dateOutsideRange.millisSinceEpoch), Set())
+        val flightNotWithinRange = ApiFlightWithSplits(apiFlight(Terminal = "T1", SchDT = dateOutsideRange.toISOString(), PcpTime = dateOutsideRange.millisSinceEpoch), Set())
 
         val result = filterCrunchStateByRange(dateWithinRange, range, CrunchState(
                   Set(flightNotWithinRange, flightWithinRange),
                   Set(crunchMinuteNotWithinRange, crunchMinuteWithinRange),
-                  Set(staffMinuteNotWithinRange, staffMinuteWithinRange)))
+                  Set(staffMinuteNotWithinRange, staffMinuteWithinRange)), "T1")
 
         val expected = CrunchState(Set(flightWithinRange), Set(crunchMinuteWithinRange), Set(staffMinuteWithinRange))
 

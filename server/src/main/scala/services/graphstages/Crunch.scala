@@ -301,9 +301,10 @@ object Crunch {
 
     changedDays
       .foldLeft(loadMinutesQueue.toMap) {
-        case (soFar, (dayStartMillis, dayLoadMinutes)) =>
-          val mergedDayMinutes = mergeUpdatedLoads(soFar.get(dayStartMillis), dayStartMillis, dayLoadMinutes)
-          soFar.updated(dayStartMillis, Loads(mergedDayMinutes))
+        case (existingQueue, (dayStartMillis, newLoadsForDay)) =>
+          val existingLoadsForDay = existingQueue.get(dayStartMillis)
+          val mergedDayMinutes = mergeUpdatedLoads(existingLoadsForDay, dayStartMillis, newLoadsForDay)
+          existingQueue.updated(dayStartMillis, Loads(mergedDayMinutes))
       }
       .toList
       .sortBy { case (dayStartMillis, _) => dayStartMillis }
@@ -311,7 +312,9 @@ object Crunch {
 
   def mergeUpdatedLoads(maybeExistingDayLoads: Option[Loads], dayMillis: MillisSinceEpoch, dayLoadMinutes: Set[LoadMinute]): Set[LoadMinute] = {
     maybeExistingDayLoads match {
-      case None => dayLoadMinutes
+      case None =>
+        log.info(s"Adding ${SDate(dayMillis).toISOString()} to queue with ${dayLoadMinutes.size} loads (${dayLoadMinutes.toSeq.count(_.paxLoad != 0)} non-zero pax minutes)")
+        dayLoadMinutes
       case Some(existingDayLoads) =>
         val existingByKey = existingDayLoads
           .loadMinutes
