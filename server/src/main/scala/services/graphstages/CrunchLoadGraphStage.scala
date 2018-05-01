@@ -94,29 +94,35 @@ class CrunchLoadGraphStage(name: String = "",
             .groupBy(_.queueName)
             .flatMap {
               case (qn, qLms) =>
-                log.info(s"Crunching $tn $qn")
                 val sla = airportConfig.slaByQueue.getOrElse(qn, 15)
                 val sortedLms = qLms.toSeq.sortBy(_.minute)
-                val workMinutes: Map[MillisSinceEpoch, Double] = sortedLms.map(m => (m.minute, m.workLoad)).toMap
                 val paxMinutes: Map[MillisSinceEpoch, Double] = sortedLms.map(m => (m.minute, m.paxLoad)).toMap
-                val minuteMillis = firstMinute until lastMinute by 60000
-                val fullWorkMinutes = minuteMillis.map(m => workMinutes.getOrElse(m, 0d))
-                val adjustedWorkMinutes = if (qn == Queues.EGate) fullWorkMinutes.map(_ / airportConfig.eGateBankSize) else fullWorkMinutes
-                val fullPaxMinutes = minuteMillis.map(m => paxMinutes.getOrElse(m, 0d))
-                val (minDesks, maxDesks) = minMaxDesksForQueue(minuteMillis, tn, qn)
-                val triedResult: Try[OptimizerCrunchResult] = crunch(adjustedWorkMinutes, minDesks, maxDesks, OptimizerConfig(sla))
-                triedResult match {
-                  case Success(OptimizerCrunchResult(desks, waits)) =>
-                    minuteMillis.zipWithIndex.map {
-                      case (minute, idx) =>
-                        val wl = fullWorkMinutes(idx)
-                        val pl = fullPaxMinutes(idx)
-                        val drm = DeskRecMinute(tn, qn, minute, pl, wl, desks(idx), waits(idx))
-                        (drm.key, drm)
-                    }
-                  case Failure(t) =>
-                    log.warn(s"failed to crunch: $t")
-                    Map()
+                val nonZeroMinutes = paxMinutes.values.count(_ != 0d)
+                if (nonZeroMinutes > 0) {
+                  log.info(s"Crunching $tn $qn ($nonZeroMinutes non-zero pax minutes)")
+                  val workMinutes: Map[MillisSinceEpoch, Double] = sortedLms.map(m => (m.minute, m.workLoad)).toMap
+                  val minuteMillis = firstMinute until lastMinute by 60000
+                  val fullWorkMinutes = minuteMillis.map(m => workMinutes.getOrElse(m, 0d))
+                  val adjustedWorkMinutes = if (qn == Queues.EGate) fullWorkMinutes.map(_ / airportConfig.eGateBankSize) else fullWorkMinutes
+                  val fullPaxMinutes = minuteMillis.map(m => paxMinutes.getOrElse(m, 0d))
+                  val (minDesks, maxDesks) = minMaxDesksForQueue(minuteMillis, tn, qn)
+                  val triedResult: Try[OptimizerCrunchResult] = crunch(adjustedWorkMinutes, minDesks, maxDesks, OptimizerConfig(sla))
+                  triedResult match {
+                    case Success(OptimizerCrunchResult(desks, waits)) =>
+                      minuteMillis.zipWithIndex.map {
+                        case (minute, idx) =>
+                          val wl = fullWorkMinutes(idx)
+                          val pl = fullPaxMinutes(idx)
+                          val drm = DeskRecMinute(tn, qn, minute, pl, wl, desks(idx), waits(idx))
+                          (drm.key, drm)
+                      }
+                    case Failure(t) =>
+                      log.warn(s"failed to crunch: $t")
+                      Map()
+                  }
+                } else {
+                  log.warn(s"All zero pax minutes.. Skipped crunch")
+                  Map()
                 }
             }
         }
