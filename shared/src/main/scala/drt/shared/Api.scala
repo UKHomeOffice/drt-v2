@@ -171,7 +171,8 @@ case class Arrival(
 
   lazy val manifestKey: Int = s"$voyageNumberPadded-${this.Scheduled}".hashCode
 
-  lazy val uniqueId: Int = s"$Terminal$Scheduled$flightNumber}".hashCode
+  lazy val uniqueId: Int = uniqueStr.hashCode
+  lazy val uniqueStr: String = s"$Terminal$Scheduled$flightNumber"
 
   def hasPcpDuring(start: SDateLike, end: SDateLike): Boolean = {
     val firstPcpMilli = PcpTime
@@ -339,6 +340,13 @@ object CrunchApi {
       val windowedFlights = flights.filter(f => f.apiFlight.hasPcpDuring(start, end))
       val windowedCrunchMinutes = crunchMinutes.filter(cm => start.millisSinceEpoch <= cm.minute && cm.minute <= end.millisSinceEpoch)
       val windowsStaffMinutes = staffMinutes.filter(sm => start.millisSinceEpoch <= sm.minute && sm.minute <= end.millisSinceEpoch)
+      CrunchState(windowedFlights, windowedCrunchMinutes, windowsStaffMinutes)
+    }
+
+    def window(start: SDateLike, end: SDateLike, terminalName: TerminalName): CrunchState = {
+      val windowedFlights = flights.filter(f => f.apiFlight.hasPcpDuring(start, end) && f.apiFlight.Terminal == terminalName)
+      val windowedCrunchMinutes = crunchMinutes.filter(cm => start.millisSinceEpoch <= cm.minute && cm.minute <= end.millisSinceEpoch && cm.terminalName == terminalName)
+      val windowsStaffMinutes = staffMinutes.filter(sm => start.millisSinceEpoch <= sm.minute && sm.minute <= end.millisSinceEpoch && sm.terminalName == terminalName)
       CrunchState(windowedFlights, windowedCrunchMinutes, windowsStaffMinutes)
     }
   }

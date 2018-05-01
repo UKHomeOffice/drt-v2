@@ -174,7 +174,7 @@ trait SystemActors {
   }
 
   def aclTerminalMapping(portCode: String): TerminalName => TerminalName = portCode match {
-    case "LGW" => (tIn: TerminalName) => Map("1I" -> "N", "2I" -> "S").getOrElse(tIn, "")
+    case "LGW" => (tIn: TerminalName) => Map("1I" -> "S", "2I" -> "N").getOrElse(tIn, "")
     case _ => (tIn: TerminalName) => s"T${tIn.take(1)}"
   }
 

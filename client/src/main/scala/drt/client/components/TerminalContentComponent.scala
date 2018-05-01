@@ -9,6 +9,7 @@ import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, ViewMode}
 import drt.shared.CrunchApi.{CrunchState, MillisSinceEpoch}
+import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -67,11 +68,11 @@ object TerminalContentComponent {
   implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).hash)
   implicit val stateReuse: Reusability[State] = Reusability.derive[State]
 
-  def filterCrunchStateByRange(day: SDateLike, range: TimeRangeHours, state: CrunchState): CrunchState = {
+  def filterCrunchStateByRange(day: SDateLike, range: TimeRangeHours, state: CrunchState, terminalName: TerminalName): CrunchState = {
     val startOfDay = SDate(day.getFullYear(), day.getMonth(), day.getDate())
     val startOfView = startOfDay.addHours(range.start)
     val endOfView = startOfDay.addHours(range.end)
-    state.window(startOfView, endOfView)
+    state.window(startOfView, endOfView, terminalName)
   }
 
   val timelineComp: Option[(Arrival) => html_<^.VdomElement] = Some(FlightTableComponents.timelineCompFunc _)
@@ -147,7 +148,7 @@ object TerminalContentComponent {
               log.info(s"Rendering desks and queue $state")
               props.crunchStatePot.render(crunchState => {
                 log.info(s"rendering ready d and q")
-                val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState)
+                val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState, props.terminalPageTab.terminal)
                 TerminalDesksAndQueues(
                   TerminalDesksAndQueues.Props(
                     filteredPortState,
@@ -164,7 +165,7 @@ object TerminalContentComponent {
               log.info(s"Rendering arrivals $state")
 
               <.div(props.crunchStatePot.render((crunchState: CrunchState) => {
-                val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState)
+                val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState, props.terminalPageTab.terminal)
                 arrivalsTableComponent(FlightsWithSplitsTable.Props(filteredPortState.flights.toList, queueOrder, props.airportConfig.hasEstChox))
               }))
             } else ""

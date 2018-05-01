@@ -120,15 +120,7 @@ object RunnableCrunch {
           fixedPoints ~> staff.in1
           staffMovements ~> staff.in2
 
-          arrivals.out.conflate[ArrivalsDiff] {
-            case (diffSoFar, diffNew) =>
-              log.warn(s"Conflating arrivals diffs")
-              val toUpdate = diffNew.toUpdate.foldLeft(diffSoFar.toUpdate.map(f => (f.uniqueId, f)).toMap) {
-                case (soFar, arrival) => soFar.updated(arrival.uniqueId, arrival)
-              }.values.toSet
-              val toRemove = diffNew.toRemove ++ diffSoFar.toRemove
-              ArrivalsDiff(toUpdate, toRemove)
-          } ~> arrivalsFanOut
+          arrivals.out ~> arrivalsFanOut
 
           arrivalsFanOut.map(_.toUpdate.toSeq) ~> splitsPredictor
           arrivalsFanOut.map(diff => FlightRemovals(diff.toRemove)) ~> portState.in0
