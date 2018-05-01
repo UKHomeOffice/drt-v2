@@ -327,6 +327,7 @@ trait SystemActors {
       case "LHR" => config.getString("lhr.forecast_path")
         .map(path => createForecastLHRFeed(path))
         .getOrElse(forecastNoOp)
+      case "BHX" => BHXFeed(forecast = true)
       case _ =>
         forecastNoOp
     }

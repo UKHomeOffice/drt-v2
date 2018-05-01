@@ -31,8 +31,10 @@ case class BHXFeed(serviceSoap: FlightInformationSoap) extends BHXLiveArrivals w
 object BHXFeed {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply()(implicit actorSystem: ActorSystem): Source[Seq[Arrival], Cancellable] = {
+  def apply(forecast: Boolean = false)(implicit actorSystem: ActorSystem): Source[Seq[Arrival], Cancellable] = {
     val config = actorSystem.settings.config
+
+    val forecastOrLive = if (forecast) "forecast" else "live"
 
     val connectionTimeout = 25000
     val receiveTimeout = 30000
@@ -43,7 +45,7 @@ object BHXFeed {
     val serviceSoap: FlightInformationSoap =
       Try {
         val service: FlightInformation = new FlightInformation(this.getClass.getClassLoader.getResource("FlightInformation.wsdl"))
-        log.debug(s"Initialising BHX Feed with ${service.getWSDLDocumentLocation.toString} [connectionTimeout: $connectionTimeout, receiveTimeout: $receiveTimeout]")
+        log.debug(s"Initialising BHX $forecastOrLive Feed with ${service.getWSDLDocumentLocation.toString} [connectionTimeout: $connectionTimeout, receiveTimeout: $receiveTimeout]")
         service.getFlightInformationSoap match {
           case binder: BindingProvider =>
             binder.getRequestContext.put("javax.xml.ws.client.connectionTimeout", connectionTimeout.toString)
@@ -53,21 +55,21 @@ object BHXFeed {
             binder
           case flightInformationSoap => flightInformationSoap
         }
-      }.recoverWith { case t => log.error(s"Failure starting BHX feed: ${t.getMessage}", t); null }.get
+      }.recoverWith { case t => log.error(s"Failure starting BHX $forecastOrLive feed: ${t.getMessage}", t); null }.get
 
     val feed = BHXFeed(serviceSoap)
 
     val tickingSource: Source[List[Arrival], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
       .map(_ => {
         Try {
-          log.info("About to get arrivals for BHX.")
-          feed.getArrivals
+          log.info(s"About to get arrivals for BHX $forecastOrLive.")
+          if (forecast) feed.getForecastArrivals else  feed.getArrivals
         } match {
           case Success(arrivals) =>
-            log.info(s"Got ${arrivals.size} BHX arrivals.")
+            log.info(s"Got ${arrivals.size} BHX arrivals $forecastOrLive.")
             arrivals
           case Failure(t) =>
-            log.info(s"Failed to fetch BHX arrivals.", t)
+            log.info(s"Failed to fetch BHX arrivals $forecastOrLive.", t)
             List.empty[Arrival]
         }
       })
