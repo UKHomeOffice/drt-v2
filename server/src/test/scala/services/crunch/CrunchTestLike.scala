@@ -157,7 +157,6 @@ class CrunchTestLike
     val fcstArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
     val baseArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
 
-
     val crunchInputs = CrunchSystem(CrunchProps(
       logLabel = logLabel,
       system = actorSystem,
@@ -190,7 +189,8 @@ class CrunchTestLike
       initialLiveArrivals = initialLiveArrivals,
       arrivalsBaseSource = baseArrivals,
       arrivalsFcstSource = fcstArrivals,
-      arrivalsLiveSource = liveArrivals
+      arrivalsLiveSource = liveArrivals,
+      minCrunchLoadThreshold = 0
     ))
 
     if (initialShifts.nonEmpty) offerAndWait(crunchInputs.shifts, initialShifts)

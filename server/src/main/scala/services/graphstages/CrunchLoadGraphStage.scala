@@ -21,7 +21,8 @@ class CrunchLoadGraphStage(name: String = "",
                            now: () => SDateLike,
                            crunch: TryCrunch,
                            crunchPeriodStartMillis: SDateLike => SDateLike,
-                           minutesToCrunch: Int)
+                           minutesToCrunch: Int,
+                           minCrunchLoadThreshold: Int)
   extends GraphStage[FlowShape[Loads, DeskRecMinutes]] {
 
   val inLoads: Inlet[Loads] = Inlet[Loads]("inLoads.in")
@@ -98,7 +99,7 @@ class CrunchLoadGraphStage(name: String = "",
                 val sortedLms = qLms.toSeq.sortBy(_.minute)
                 val paxMinutes: Map[MillisSinceEpoch, Double] = sortedLms.map(m => (m.minute, m.paxLoad)).toMap
                 val nonZeroMinutes = paxMinutes.values.count(_ != 0d)
-                if (nonZeroMinutes > 50) {
+                if (nonZeroMinutes >= minCrunchLoadThreshold) {
                   log.info(s"Crunching $tn $qn ($nonZeroMinutes non-zero pax minutes)")
                   val workMinutes: Map[MillisSinceEpoch, Double] = sortedLms.map(m => (m.minute, m.workLoad)).toMap
                   val minuteMillis = firstMinute until lastMinute by 60000
@@ -121,7 +122,7 @@ class CrunchLoadGraphStage(name: String = "",
                       Map()
                   }
                 } else {
-                  log.warn(s"All zero pax minutes.. Skipped crunch")
+                  log.warn(s"$nonZeroMinutes non-zero loads < $minCrunchLoadThreshold.. Skipped crunch")
                   Map()
                 }
             }

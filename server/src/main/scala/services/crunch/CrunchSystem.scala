@@ -58,7 +58,8 @@ case class CrunchProps[MS, AL](logLabel: String = "",
                                arrivalsBaseSource: Source[Flights, AL],
                                arrivalsFcstSource: Source[Flights, AL],
                                arrivalsLiveSource: Source[Flights, AL],
-                               recrunchOnStart: Boolean = false
+                               recrunchOnStart: Boolean = false,
+                               minCrunchLoadThreshold: Int
                               )
 
 object CrunchSystem {
@@ -141,7 +142,8 @@ object CrunchSystem {
       now = props.now,
       crunch = props.cruncher,
       crunchPeriodStartMillis = crunchStartDateProvider,
-      minutesToCrunch = props.minutesToCrunch)
+      minutesToCrunch = props.minutesToCrunch,
+      minCrunchLoadThreshold = props.minCrunchLoadThreshold)
 
     val simulationGraphStage = new SimulationGraphStage(
       name = props.logLabel,

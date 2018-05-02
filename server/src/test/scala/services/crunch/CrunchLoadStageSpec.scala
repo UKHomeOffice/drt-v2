@@ -31,7 +31,8 @@ object TestableCrunchLoadStage {
       now = now,
       crunch = mockCrunch,
       crunchPeriodStartMillis = Crunch.getLocalLastMidnight,
-      minutesToCrunch = minutesToCrunch)
+      minutesToCrunch = minutesToCrunch,
+      minCrunchLoadThreshold = 0)
 
     val loadSource = Source.queue[Loads](1, OverflowStrategy.backpressure)
 
