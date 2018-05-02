@@ -4,6 +4,7 @@ import akka.actor.ActorSystem
 import spray.http.{HttpResponse, HttpRequest}
 import spray.client.pipelining._
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 trait WithSendAndReceive {
  // sendAndReceive gives us a position where we can mock out interaction
@@ -13,6 +14,6 @@ trait WithSendAndReceive {
 trait ProdSendAndReceive extends WithSendAndReceive {
   implicit val system: ActorSystem
   import system.dispatcher
-  override def sendAndReceive: SendReceive = sendReceive
+  override def sendAndReceive: SendReceive = sendReceive(system, system.dispatcher, 60.seconds)
 }
 
