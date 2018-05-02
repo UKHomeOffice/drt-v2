@@ -2,7 +2,6 @@ package services.graphstages
 
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
@@ -32,8 +31,8 @@ class WorkloadGraphStage(name: String = "",
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var workloadByFlightId: Map[Int, Set[FlightSplitMinute]] = Map()
-    var loadMinutes: Map[Int, LoadMinute] = Map()
-    var updatedLoadsToPush: Map[Int, LoadMinute] = Map()
+    var loadMinutes: Map[TQM, LoadMinute] = Map()
+    var updatedLoadsToPush: Map[TQM, LoadMinute] = Map()
 
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
@@ -87,7 +86,7 @@ class WorkloadGraphStage(name: String = "",
         log.info(s"Purging expired workloads")
         workloadByFlightId = purgeExpired(updatedWorkloads, (fsms: Set[FlightSplitMinute]) => if (fsms.nonEmpty) fsms.map(_.minute).min else 0, now, expireAfterMillis)
         log.info(s"Flatten flight workloads into loads by queue & minute")
-        val updatedLoads: Map[Int, LoadMinute] = flightSplitMinutesToQueueLoadMinutes(updatedWorkloads)
+        val updatedLoads = flightSplitMinutesToQueueLoadMinutes(updatedWorkloads)
         log.info(s"Calculating load diff from updated flights")
         val latestDiff = loadDiff(updatedLoads, loadMinutes)
         log.info(s"${latestDiff.size} updated loads. ${updatedLoads.size} loads after updates. Purging expired loads")
@@ -104,12 +103,12 @@ class WorkloadGraphStage(name: String = "",
       }
     })
 
-    def mergeLoadMinutes(updatedLoads: Map[Int, LoadMinute], existingLoads: Map[Int, LoadMinute]): Map[Int, LoadMinute] = updatedLoads.foldLeft(existingLoads) {
+    def mergeLoadMinutes(updatedLoads: Map[TQM, LoadMinute], existingLoads: Map[TQM, LoadMinute]): Map[TQM, LoadMinute] = updatedLoads.foldLeft(existingLoads) {
       case (soFar, (key, newLoadMinute)) => soFar.updated(key, newLoadMinute)
     }
 
-    def loadDiff(updatedLoads: Map[Int, LoadMinute], existingLoads: Map[Int, LoadMinute]): Map[Int, LoadMinute] = {
-      val updates: Map[Int, LoadMinute] = updatedLoads.foldLeft(Map[Int, LoadMinute]()) {
+    def loadDiff(updatedLoads: Map[TQM, LoadMinute], existingLoads: Map[TQM, LoadMinute]): Map[TQM, LoadMinute] = {
+      val updates: Map[TQM, LoadMinute] = updatedLoads.foldLeft(Map[TQM, LoadMinute]()) {
         case (soFar, (key, updatedLoad)) =>
           existingLoads.get(key) match {
             case Some(existingLoadMinute) if existingLoadMinute == updatedLoad => soFar
@@ -175,7 +174,7 @@ class WorkloadGraphStage(name: String = "",
       else log.info(s"outLoads not available to push")
     }
 
-    def flightSplitMinutesToQueueLoadMinutes(flightToFlightSplitMinutes: Map[Int, Set[FlightSplitMinute]]): Map[Int, LoadMinute] = {
+    def flightSplitMinutesToQueueLoadMinutes(flightToFlightSplitMinutes: Map[Int, Set[FlightSplitMinute]]): Map[TQM, LoadMinute] = {
       flightToFlightSplitMinutes
         .values
         .flatten

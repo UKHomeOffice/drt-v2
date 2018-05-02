@@ -31,9 +31,9 @@ class CrunchLoadGraphStage(name: String = "",
   override val shape = new FlowShape(inLoads, outDeskRecMinutes)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var loadMinutes: Map[Int, LoadMinute] = Map()
-    var existingDeskRecMinutes: Map[Int, DeskRecMinute] = Map()
-    var deskRecMinutesToPush: Map[Int, DeskRecMinute] = Map()
+    var loadMinutes: Map[TQM, LoadMinute] = Map()
+    var existingDeskRecMinutes: Map[TQM, DeskRecMinute] = Map()
+    var deskRecMinutesToPush: Map[TQM, DeskRecMinute] = Map()
 
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
@@ -60,12 +60,12 @@ class CrunchLoadGraphStage(name: String = "",
         log.info(s"Crunch ${firstMinute.toLocalDateTimeString()} - ${lastMinute.toLocalDateTimeString()}")
         val affectedTerminals = incomingLoads.loadMinutes.map(_.terminalName)
 
-        val updatedLoads: Map[Int, LoadMinute] = mergeLoads(incomingLoads.loadMinutes, loadMinutes)
+        val updatedLoads = mergeLoads(incomingLoads.loadMinutes, loadMinutes)
         loadMinutes = purgeExpired(updatedLoads, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
 
-        val deskRecMinutes: Map[Int, DeskRecMinute] = crunchLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, affectedTerminals)
+        val deskRecMinutes = crunchLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, affectedTerminals)
 
-        val diff = deskRecMinutes.foldLeft(Map[Int, DeskRecMinute]()) {
+        val diff = deskRecMinutes.foldLeft(Map[TQM, DeskRecMinute]()) {
           case (soFar, (key, drm)) =>
             existingDeskRecMinutes.get(key) match {
               case Some(existingDrm) if existingDrm == drm => soFar
@@ -85,7 +85,7 @@ class CrunchLoadGraphStage(name: String = "",
       }
     })
 
-    def crunchLoads(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToCrunch: Set[TerminalName]): Map[Int, DeskRecMinute] = {
+    def crunchLoads(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToCrunch: Set[TerminalName]): Map[TQM, DeskRecMinute] = {
       val filteredLoads = filterTerminalQueueMinutes(firstMinute, lastMinute, terminalsToCrunch, loadMinutes)
 
       filteredLoads
@@ -129,13 +129,15 @@ class CrunchLoadGraphStage(name: String = "",
         }
     }
 
-    def filterTerminalQueueMinutes[A <: TerminalQueueMinute](firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Set[TerminalName], toFilter: Map[Int, A]): Set[A] = {
+    def filterTerminalQueueMinutes[A <: TerminalQueueMinute](firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Set[TerminalName], toFilter: Map[TQM, A]): Set[A] = {
+      log.info(s"filtering tqm ${SDate(firstMinute).toISOString()} -> ${SDate(lastMinute).toISOString()}")
       val maybeThings = for {
         terminalName <- terminalsToUpdate
         queueName <- airportConfig.queues.getOrElse(terminalName, Seq())
         minute <- firstMinute until lastMinute by oneMinuteMillis
       } yield {
-        toFilter.get(MinuteHelper.key(terminalName, queueName, minute))
+        val key = MinuteHelper.key(terminalName, queueName, minute)
+        toFilter.get(key)
       }
 
       val minutesFound = maybeThings.collect { case Some(thing) => thing }
@@ -161,7 +163,7 @@ class CrunchLoadGraphStage(name: String = "",
       (minDesks, maxDesks)
     }
 
-    def mergeDeskRecMinutes(updatedCms: Map[Int, DeskRecMinute], existingCms: Map[Int, DeskRecMinute]): Map[Int, DeskRecMinute] = {
+    def mergeDeskRecMinutes(updatedCms: Map[TQM, DeskRecMinute], existingCms: Map[TQM, DeskRecMinute]): Map[TQM, DeskRecMinute] = {
       updatedCms.foldLeft(existingCms) {
         case (soFar, (newId, newLoadMinute)) => soFar.updated(newId, newLoadMinute)
       }
@@ -174,7 +176,7 @@ class CrunchLoadGraphStage(name: String = "",
       loadDiff
     }
 
-    def mergeLoads(incomingLoads: Set[LoadMinute], existingLoads: Map[Int, LoadMinute]): Map[Int, LoadMinute] = {
+    def mergeLoads(incomingLoads: Set[LoadMinute], existingLoads: Map[TQM, LoadMinute]): Map[TQM, LoadMinute] = {
       incomingLoads
         .groupBy(_.terminalName)
         .foreach {
@@ -223,7 +225,7 @@ case class DeskRecMinute(terminalName: TerminalName,
                          workLoad: Double,
                          deskRec: Int,
                          waitTime: Int) extends DeskRecMinuteLike {
-  lazy val key: Int = MinuteHelper.key(terminalName, queueName, minute)
+  lazy val key: TQM = MinuteHelper.key(terminalName, queueName, minute)
 }
 
 case class DeskRecMinutes(minutes: Set[DeskRecMinute]) extends PortStateMinutes {
@@ -242,7 +244,7 @@ case class DeskRecMinutes(minutes: Set[DeskRecMinute]) extends PortStateMinutes 
     }
   }
 
-  def newCrunchMinutes: Map[Int, CrunchMinute] = minutes
+  def newCrunchMinutes: Map[TQM, CrunchMinute] = minutes
     .map(CrunchMinute(_))
     .map(cm => (cm.key, cm))
     .toMap

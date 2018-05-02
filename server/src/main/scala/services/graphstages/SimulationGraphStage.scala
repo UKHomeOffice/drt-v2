@@ -37,11 +37,11 @@ class SimulationGraphStage(name: String = "",
   override val shape = new FanInShape2[Loads, StaffMinutes, SimulationMinutes](inLoads, inStaffMinutes, outSimulationMinutes)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var loadMinutes: Map[Int, LoadMinute] = Map()
-    var staffMinutes: Map[Int, StaffMinute] = Map()
+    var loadMinutes: Map[TQM, LoadMinute] = Map()
+    var staffMinutes: Map[TM, StaffMinute] = Map()
     var deployments: Map[(TerminalName, QueueName, MillisSinceEpoch), Int] = Map()
-    var simulationMinutes: Map[Int, SimulationMinute] = Map()
-    var simulationMinutesToPush: Map[Int, SimulationMinute] = Map()
+    var simulationMinutes: Map[TQM, SimulationMinute] = Map()
+    var simulationMinutesToPush: Map[TQM, SimulationMinute] = Map()
 
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
@@ -92,7 +92,7 @@ class SimulationGraphStage(name: String = "",
 
         val affectedTerminals = incomingLoads.loadMinutes.map(_.terminalName)
 
-        val updatedLoads: Map[Int, LoadMinute] = mergeLoads(incomingLoads.loadMinutes, loadMinutes)
+        val updatedLoads: Map[TQM, LoadMinute] = mergeLoads(incomingLoads.loadMinutes, loadMinutes)
         loadMinutes = purgeExpired(updatedLoads, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
 
         val allMinuteMillis = incomingLoads.loadMinutes.map(_.minute)
@@ -189,7 +189,7 @@ class SimulationGraphStage(name: String = "",
       log.info(s"Now have ${simulationMinutesToPush.size} simulation minutes to push")
     }
 
-    def updateStaffMinutes(existingStaffMinutes: Map[Int, StaffMinute], incomingStaffMinutes: StaffMinutes): Map[Int, StaffMinute] = incomingStaffMinutes
+    def updateStaffMinutes(existingStaffMinutes: Map[TM, StaffMinute], incomingStaffMinutes: StaffMinutes): Map[TM, StaffMinute] = incomingStaffMinutes
       .minutes
       .foldLeft(existingStaffMinutes) {
         case (soFar, sm) => soFar.updated(sm.key, sm)
@@ -312,7 +312,7 @@ class SimulationGraphStage(name: String = "",
         .toMap
     }
 
-    def filterTerminalQueueMinutes[A <: TerminalQueueMinute](firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Set[TerminalName], toFilter: Map[Int, A]): Set[A] = {
+    def filterTerminalQueueMinutes[A <: TerminalQueueMinute](firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Set[TerminalName], toFilter: Map[TQM, A]): Set[A] = {
       val maybeThings = for {
         terminalName <- terminalsToUpdate
         queueName <- airportConfig.queues.getOrElse(terminalName, Seq())
@@ -325,7 +325,7 @@ class SimulationGraphStage(name: String = "",
       maybeThings.collect { case Some(thing) => thing }
     }
 
-    def filterTerminalMinutes[A <: TerminalMinute](firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Set[TerminalName], toFilter: Map[Int, A]): Set[A] = {
+    def filterTerminalMinutes[A <: TerminalMinute](firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Set[TerminalName], toFilter: Map[TM, A]): Set[A] = {
       val maybeThings = for {
         terminalName <- terminalsToUpdate
         minute <- firstMinute until lastMinute by oneMinuteMillis
@@ -381,7 +381,7 @@ class SimulationGraphStage(name: String = "",
       (minDesks, maxDesks)
     }
 
-    def mergeSimulationMinutes(updatedCms: Set[SimulationMinute], existingCms: Map[Int, SimulationMinute]): Map[Int, SimulationMinute] = updatedCms.foldLeft(existingCms) {
+    def mergeSimulationMinutes(updatedCms: Set[SimulationMinute], existingCms: Map[TQM, SimulationMinute]): Map[TQM, SimulationMinute] = updatedCms.foldLeft(existingCms) {
       case (soFar, newLoadMinute) => soFar.updated(newLoadMinute.key, newLoadMinute)
     }
 
@@ -392,7 +392,7 @@ class SimulationGraphStage(name: String = "",
       loadDiff
     }
 
-    def mergeLoads(incomingLoads: Set[LoadMinute], existingLoads: Map[Int, LoadMinute]): Map[Int, LoadMinute] = incomingLoads.foldLeft(existingLoads) {
+    def mergeLoads(incomingLoads: Set[LoadMinute], existingLoads: Map[TQM, LoadMinute]): Map[TQM, LoadMinute] = incomingLoads.foldLeft(existingLoads) {
       case (soFar, load) => soFar.updated(load.uniqueId, load)
     }
 
@@ -430,7 +430,7 @@ case class SimulationMinute(terminalName: TerminalName,
                             minute: MillisSinceEpoch,
                             desks: Int,
                             waitTime: Int) extends SimulationMinuteLike {
-  lazy val key: Int = MinuteHelper.key(terminalName, queueName, minute)
+  lazy val key: TQM = MinuteHelper.key(terminalName, queueName, minute)
 }
 
 case class SimulationMinutes(minutes: Set[SimulationMinute]) extends PortStateMinutes {
@@ -449,7 +449,7 @@ case class SimulationMinutes(minutes: Set[SimulationMinute]) extends PortStateMi
     }
   }
 
-  def newCrunchMinutes: Map[Int, CrunchMinute] = minutes
+  def newCrunchMinutes: Map[TQM, CrunchMinute] = minutes
     .map(CrunchMinute(_))
     .map(cm => (cm.key, cm))
     .toMap

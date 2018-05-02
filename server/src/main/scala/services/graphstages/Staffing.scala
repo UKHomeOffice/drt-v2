@@ -2,24 +2,20 @@ package services.graphstages
 
 import java.util.UUID
 
-import actors.{GetState, StaffMovements}
 import actors.pointInTime.{FixedPointsReadActor, ShiftsReadActor, StaffMovementsReadActor}
+import actors.{GetState, StaffMovements}
 import akka.actor.{ActorContext, ActorRef, PoisonPill, Props}
 import akka.pattern.AskableActorRef
-import akka.stream._
-import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
-import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
-import services.graphstages.Crunch.{desksForHourOfDayInUKLocalTime, europeLondonTimeZone, getLocalLastMidnight}
-import services.graphstages.StaffDeploymentCalculator.{addDeployments, queueRecsToDeployments}
-import services.{OptimizerConfig, SDate, TryRenjin}
+import services.SDate
+import services.graphstages.Crunch.{desksForHourOfDayInUKLocalTime, europeLondonTimeZone}
 
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
@@ -49,7 +45,7 @@ object Staffing {
     }
   }
 
-  def staffMinutesForCrunchMinutes(crunchMinutes: Map[Int, CrunchMinute], maybeSources: Option[StaffSources]): Map[Int, StaffMinute] = {
+  def staffMinutesForCrunchMinutes(crunchMinutes: Map[TQM, CrunchMinute], maybeSources: Option[StaffSources]): Map[TM, StaffMinute] = {
     val staff = maybeSources
     crunchMinutes
       .values
@@ -77,7 +73,7 @@ object Staffing {
       }
   }
 
-  def reconstructStaffMinutes(pointInTime: SDateLike, context: ActorContext, fl: Map[Int, ApiFlightWithSplits], cm: Map[Int, CrunchApi.CrunchMinute]): PortState = {
+  def reconstructStaffMinutes(pointInTime: SDateLike, context: ActorContext, fl: Map[Int, ApiFlightWithSplits], cm: Map[TQM, CrunchApi.CrunchMinute]): PortState = {
     val uniqueSuffix = pointInTime.toISOString + UUID.randomUUID.toString
     val shiftsActor: ActorRef = context.actorOf(Props(classOf[ShiftsReadActor], pointInTime), name = s"ShiftsReadActor-$uniqueSuffix")
     val askableShiftsActor: AskableActorRef = shiftsActor
@@ -114,15 +110,15 @@ object StaffDeploymentCalculator {
 
   type Deployer = (Seq[(String, Int)], Int, Map[String, (Int, Int)]) => Seq[(String, Int)]
 
-  def addDeployments(crunchMinutes: Map[Int, CrunchMinute],
+  def addDeployments(crunchMinutes: Map[TQM, CrunchMinute],
                      deployer: Deployer,
                      optionalStaffSources: Option[StaffSources],
-                     minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]]): Map[Int, CrunchMinute] = crunchMinutes
+                     minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]]): Map[TQM, CrunchMinute] = crunchMinutes
     .values
     .groupBy(_.terminalName)
     .flatMap {
       case (tn, tCrunchMinutes) =>
-        val terminalByMinute: Map[Int, CrunchMinute] = tCrunchMinutes
+        val terminalByMinute: Map[TQM, CrunchMinute] = tCrunchMinutes
           .groupBy(_.minute)
           .flatMap {
             case (minute, mCrunchMinutes) =>

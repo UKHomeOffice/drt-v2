@@ -4,7 +4,7 @@ import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.stream._
 import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute, StaffMinutes}
 import drt.shared.FlightsApi.TerminalName
-import drt.shared.{AirportConfig, SDateLike, StaffMovement}
+import drt.shared.{AirportConfig, SDateLike, StaffMovement, TM}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch.{europeLondonTimeZone, getLocalLastMidnight, purgeExpired}
@@ -92,8 +92,8 @@ class StaffGraphStage(name: String = "",
     var shiftsOption: Option[String] = None
     var fixedPointsOption: Option[String] = None
     var movementsOption: Option[Seq[StaffMovement]] = None
-    var staffMinutes: Map[Int, StaffMinute] = Map()
-    var staffMinuteUpdates: Map[Int, StaffMinute] = Map()
+    var staffMinutes: Map[TM, StaffMinute] = Map()
+    var staffMinuteUpdates: Map[TM, StaffMinute] = Map()
 
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
@@ -153,7 +153,7 @@ class StaffGraphStage(name: String = "",
       }
     })
 
-    def mergeStaffMinuteUpdates(latestUpdates: Map[Int, StaffMinute], existingUpdates: Map[Int, StaffMinute]): Map[Int, StaffMinute] = latestUpdates
+    def mergeStaffMinuteUpdates(latestUpdates: Map[TM, StaffMinute], existingUpdates: Map[TM, StaffMinute]): Map[TM, StaffMinute] = latestUpdates
       .foldLeft(existingUpdates) {
         case (soFar, (id, updatedMinute)) => soFar.updated(id, updatedMinute)
       }
@@ -170,7 +170,7 @@ class StaffGraphStage(name: String = "",
       }
     })
 
-    def updatesFromSources(maybeSources: Option[StaffSources], updateCriteria: UpdateCriteria): Map[Int, StaffMinute] = {
+    def updatesFromSources(maybeSources: Option[StaffSources], updateCriteria: UpdateCriteria): Map[TM, StaffMinute] = {
       val staff = maybeSources
 
       val updatedMinutes: Set[StaffMinute] = updateCriteria.minuteMillis
@@ -195,7 +195,7 @@ class StaffGraphStage(name: String = "",
       mergeMinutes(updatedMinutes, staffMinuteUpdates)
     }
 
-    def mergeMinutes(updatedMinutes: Set[StaffMinute], existingMinutes: Map[Int, StaffMinute]): Map[Int, StaffMinute] = {
+    def mergeMinutes(updatedMinutes: Set[StaffMinute], existingMinutes: Map[TM, StaffMinute]): Map[TM, StaffMinute] = {
       updatedMinutes.foldLeft(existingMinutes) {
         case (soFar, updatedMinute) =>
           soFar.get(updatedMinute.key) match {
