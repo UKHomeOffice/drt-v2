@@ -58,7 +58,10 @@ class BatchLoadsByCrunchPeriodGraphStage(now: () => SDateLike,
         case _ if !isAvailable(outLoads) =>
           log.info(s"outLoads not available to push")
         case (millis, loadMinutes) :: queueTail =>
-          log.info(s"Pushing ${SDate(millis).toLocalDateTimeString()} ${loadMinutes.loadMinutes.size} load minutes for ${loadMinutes.loadMinutes.groupBy(_.terminalName).keys.mkString(", ")}")
+          val terminalNames = loadMinutes.loadMinutes.groupBy(_.terminalName).keys.mkString(", ")
+          val loadMinutesCount = loadMinutes.loadMinutes.size
+          val zeroPaxLoadMinutesCount = loadMinutes.loadMinutes.count(_.paxLoad == 0)
+          log.info(s"Pushing ${SDate(millis).toLocalDateTimeString()} $loadMinutesCount load minutes ($zeroPaxLoadMinutesCount with zero pax) for $terminalNames")
           push(outLoads, loadMinutes)
 
           loadMinutesQueue = queueTail

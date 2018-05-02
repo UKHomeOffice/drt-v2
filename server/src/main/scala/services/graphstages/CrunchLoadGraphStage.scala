@@ -171,6 +171,16 @@ class CrunchLoadGraphStage(name: String = "",
     }
 
     def mergeLoads(incomingLoads: Set[LoadMinute], existingLoads: Map[Int, LoadMinute]): Map[Int, LoadMinute] = {
+      incomingLoads
+        .groupBy(_.terminalName)
+        .foreach {
+          case (tn, tlms) => tlms
+            .groupBy(_.queueName)
+            .foreach {
+              case (qn, qlms) => log.info(s"incoming loads for $tn / $qn -> ${qlms.size} - ${qlms.count(_.paxLoad == 0)} zero pax loads")
+            }
+        }
+
       incomingLoads.foldLeft(existingLoads) {
         case (soFar, load) => soFar.updated(load.uniqueId, load)
       }
