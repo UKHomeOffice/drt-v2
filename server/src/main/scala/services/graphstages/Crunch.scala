@@ -297,13 +297,17 @@ object Crunch {
   }
 
   def mergeLoadsIntoQueue(incomingLoads: Loads, loadMinutesQueue: List[(MillisSinceEpoch, Loads)], crunchPeriodStartMillis: SDateLike => SDateLike): List[(MillisSinceEpoch, Loads)] = {
-    val changedDays = incomingLoads.loadMinutes.groupBy(sm => crunchPeriodStartMillis(SDate(sm.minute, europeLondonTimeZone)).millisSinceEpoch)
+    val changedDays = incomingLoads.loadMinutes
+      .groupBy(sm => crunchPeriodStartMillis(SDate(sm.minute, europeLondonTimeZone)).millisSinceEpoch)
 
     changedDays
       .foldLeft(loadMinutesQueue.toMap) {
         case (existingQueue, (dayStartMillis, newLoadsForDay)) =>
           val existingLoadsForDay = existingQueue.get(dayStartMillis)
+          log.info(s"${newLoadsForDay.count(_.paxLoad == 0)}/${newLoadsForDay.size} zero pax loads")
+          log.info(s"Adding ${newLoadsForDay.size} new loads to ${existingLoadsForDay.map(_.loadMinutes.size).getOrElse(0)} existing loads for ${SDate(dayStartMillis, europeLondonTimeZone).toISOString()}")
           val mergedDayMinutes = mergeUpdatedLoads(existingLoadsForDay, dayStartMillis, newLoadsForDay)
+          log.info(s"${mergedDayMinutes.size} loads after merge")
           existingQueue.updated(dayStartMillis, Loads(mergedDayMinutes))
       }
       .toList
@@ -316,13 +320,13 @@ object Crunch {
         log.info(s"Adding ${SDate(dayMillis).toISOString()} to queue with ${dayLoadMinutes.size} loads (${dayLoadMinutes.toSeq.count(_.paxLoad != 0)} non-zero pax minutes)")
         dayLoadMinutes
       case Some(existingDayLoads) =>
-        val existingByKey = existingDayLoads
+        val existingDayLoadsByKey = existingDayLoads
           .loadMinutes
           .toSeq
           .map(lm => (lm.uniqueId, lm))
           .toMap
         dayLoadMinutes
-          .foldLeft(existingByKey) {
+          .foldLeft(existingDayLoadsByKey) {
             case (daySoFar, loadMinute) => daySoFar.updated(loadMinute.uniqueId, loadMinute)
           }
           .values

@@ -98,7 +98,7 @@ class CrunchLoadGraphStage(name: String = "",
                 val sortedLms = qLms.toSeq.sortBy(_.minute)
                 val paxMinutes: Map[MillisSinceEpoch, Double] = sortedLms.map(m => (m.minute, m.paxLoad)).toMap
                 val nonZeroMinutes = paxMinutes.values.count(_ != 0d)
-                if (nonZeroMinutes > 0) {
+                if (nonZeroMinutes > 50) {
                   log.info(s"Crunching $tn $qn ($nonZeroMinutes non-zero pax minutes)")
                   val workMinutes: Map[MillisSinceEpoch, Double] = sortedLms.map(m => (m.minute, m.workLoad)).toMap
                   val minuteMillis = firstMinute until lastMinute by 60000
@@ -134,11 +134,18 @@ class CrunchLoadGraphStage(name: String = "",
         queueName <- airportConfig.queues.getOrElse(terminalName, Seq())
         minute <- firstMinute until lastMinute by oneMinuteMillis
       } yield {
-        toFilter
-          .get(MinuteHelper.key(terminalName, queueName, minute))
+        toFilter.get(MinuteHelper.key(terminalName, queueName, minute))
       }
 
-      maybeThings.collect { case Some(thing) => thing }
+      val minutesFound = maybeThings.collect { case Some(thing) => thing }
+
+      terminalsToUpdate.foreach(t =>
+        airportConfig.queues.getOrElse(t, Seq()).foreach(q => {
+          log.info(s"found ${minutesFound.count(l => l.terminalName == t && l.queueName == q)} loads for $t/$q")
+        })
+      )
+
+      minutesFound
     }
 
     def minMaxDesksForQueue(deskRecMinutes: Seq[MillisSinceEpoch], tn: TerminalName, qn: QueueName): (Seq[Int], Seq[Int]) = {
