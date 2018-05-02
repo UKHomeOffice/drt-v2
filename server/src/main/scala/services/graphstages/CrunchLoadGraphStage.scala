@@ -142,7 +142,11 @@ class CrunchLoadGraphStage(name: String = "",
 
       terminalsToUpdate.foreach(t =>
         airportConfig.queues.getOrElse(t, Seq()).foreach(q => {
-          log.info(s"found ${minutesFound.count(l => l.terminalName == t && l.queueName == q)} loads for $t/$q")
+          val minutes = minutesFound.filter(l => l.terminalName == t && l.queueName == q)
+          val found = minutesFound.count(l => l.terminalName == t && l.queueName == q)
+          log.info(s"found $found loads for $t/$q")
+          if (found > 0)
+            log.info(s"min: ${SDate(minutes.map(_.minute).min).toISOString()}, max: ${SDate(minutes.map(_.minute).max).toISOString()}")
         })
       )
 
