@@ -18,7 +18,7 @@ import com.typesafe.config.ConfigFactory
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
 import drt.chroma.{ChromaFeedType, ChromaForecast, ChromaLive, DiffingStage}
 import drt.http.ProdSendAndReceive
-import drt.server.feeds.bhx.BHXFeed
+import drt.server.feeds.bhx.{BHXForecastFeed, BHXLiveFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.lgw.LGWFeed
 import drt.server.feeds.lhr.live.LHRLiveFeed
@@ -314,7 +314,7 @@ trait SystemActors {
         else LHRFlightFeed()
       case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
       case "LGW" => LGWFeed()
-      case "BHX" => BHXFeed()
+      case "BHX" => BHXLiveFeed()
       case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
     }
     feed.map(Flights)
@@ -327,7 +327,7 @@ trait SystemActors {
       case "LHR" => config.getString("lhr.forecast_path")
         .map(path => createForecastLHRFeed(path))
         .getOrElse(forecastNoOp)
-      case "BHX" => BHXFeed(forecast = true)
+      case "BHX" => BHXForecastFeed()
       case _ =>
         forecastNoOp
     }
