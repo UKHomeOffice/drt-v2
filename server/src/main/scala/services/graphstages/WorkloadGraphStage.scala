@@ -2,7 +2,6 @@ package services.graphstages
 
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
@@ -32,8 +31,8 @@ class WorkloadGraphStage(name: String = "",
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var workloadByFlightId: Map[Int, Set[FlightSplitMinute]] = Map()
-    var loadMinutes: Map[Int, LoadMinute] = Map()
-    var loadsToPush: Map[Int, LoadMinute] = Map()
+    var loadMinutes: Map[TQM, LoadMinute] = Map()
+    var updatedLoadsToPush: Map[TQM, LoadMinute] = Map()
 
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
@@ -84,12 +83,12 @@ class WorkloadGraphStage(name: String = "",
 
         val updatedWorkloads: Map[Int, Set[FlightSplitMinute]] = mergeWorkloadByFlightId(incomingFlights, workloadByFlightId)
         workloadByFlightId = purgeExpired(updatedWorkloads, (fsms: Set[FlightSplitMinute]) => if (fsms.nonEmpty) fsms.map(_.minute).min else 0, now, expireAfterMillis)
-        val updatedLoads: Map[Int, LoadMinute] = flightSplitMinutesToQueueLoadMinutes(updatedWorkloads)
-        val diff = loadDiff(updatedLoads, loadMinutes)
+        val updatedLoads = flightSplitMinutesToQueueLoadMinutes(updatedWorkloads)
+        val latestDiff = loadDiff(updatedLoads, loadMinutes)
         loadMinutes = purgeExpired(updatedLoads, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
 
-        loadsToPush = purgeExpired(mergeLoadMinutes(diff, loadsToPush), (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
-        log.info(s"Now have ${loadsToPush.size} load minutes to push (${loadsToPush.values.count(_.paxLoad == 0d)} zero pax minutes)")
+        updatedLoadsToPush = purgeExpired(mergeLoadMinutes(latestDiff, updatedLoadsToPush), (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
+        log.info(s"${updatedLoadsToPush.size} load minutes to push (${updatedLoadsToPush.values.count(_.paxLoad == 0d)} zero pax minutes)")
 
         pushStateIfReady()
 
@@ -98,12 +97,12 @@ class WorkloadGraphStage(name: String = "",
       }
     })
 
-    def mergeLoadMinutes(updatedLoads: Map[Int, LoadMinute], existingLoads: Map[Int, LoadMinute]): Map[Int, LoadMinute] = updatedLoads.foldLeft(existingLoads) {
+    def mergeLoadMinutes(updatedLoads: Map[TQM, LoadMinute], existingLoads: Map[TQM, LoadMinute]): Map[TQM, LoadMinute] = updatedLoads.foldLeft(existingLoads) {
       case (soFar, (key, newLoadMinute)) => soFar.updated(key, newLoadMinute)
     }
 
-    def loadDiff(updatedLoads: Map[Int, LoadMinute], existingLoads: Map[Int, LoadMinute]): Map[Int, LoadMinute] = {
-      val updates: Map[Int, LoadMinute] = updatedLoads.foldLeft(Map[Int, LoadMinute]()) {
+    def loadDiff(updatedLoads: Map[TQM, LoadMinute], existingLoads: Map[TQM, LoadMinute]): Map[TQM, LoadMinute] = {
+      val updates: Map[TQM, LoadMinute] = updatedLoads.foldLeft(Map[TQM, LoadMinute]()) {
         case (soFar, (key, updatedLoad)) =>
           existingLoads.get(key) match {
             case Some(existingLoadMinute) if existingLoadMinute == updatedLoad => soFar
@@ -159,16 +158,17 @@ class WorkloadGraphStage(name: String = "",
     }
 
     def pushStateIfReady(): Unit = {
-      if (loadsToPush.isEmpty) log.info(s"We have no load minutes. Nothing to push")
+      if (updatedLoadsToPush.isEmpty)
+        log.info(s"We have no load minutes. Nothing to push")
       else if (isAvailable(outLoads)) {
-        log.info(s"Pushing ${loadsToPush.size} load minutes")
-        push(outLoads, Loads(loadsToPush.values.toSet))
-        loadsToPush = Map()
+        log.info(s"Pushing ${updatedLoadsToPush.size} load minutes")
+        push(outLoads, Loads(updatedLoadsToPush.values.toSet))
+        updatedLoadsToPush = Map()
       }
-      else log.info(s" outLoads not available to push")
+      else log.info(s"outLoads not available to push")
     }
 
-    def flightSplitMinutesToQueueLoadMinutes(flightToFlightSplitMinutes: Map[Int, Set[FlightSplitMinute]]): Map[Int, LoadMinute] = {
+    def flightSplitMinutesToQueueLoadMinutes(flightToFlightSplitMinutes: Map[Int, Set[FlightSplitMinute]]): Map[TQM, LoadMinute] = {
       flightToFlightSplitMinutes
         .values
         .flatten

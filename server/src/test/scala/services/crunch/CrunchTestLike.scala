@@ -157,7 +157,6 @@ class CrunchTestLike
     val fcstArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
     val baseArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
 
-
     val crunchInputs = CrunchSystem(CrunchProps(
       logLabel = logLabel,
       system = actorSystem,

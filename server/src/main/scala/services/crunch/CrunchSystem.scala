@@ -58,8 +58,7 @@ case class CrunchProps[MS, AL](logLabel: String = "",
                                arrivalsBaseSource: Source[Flights, AL],
                                arrivalsFcstSource: Source[Flights, AL],
                                arrivalsLiveSource: Source[Flights, AL],
-                               recrunchOnStart: Boolean = false
-                              )
+                               recrunchOnStart: Boolean = false)
 
 object CrunchSystem {
 

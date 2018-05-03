@@ -336,11 +336,11 @@ class ForecastCrunchSpec extends CrunchTestLike {
     true
   }
 
-  def interestingPaxLoads(cms: Map[Int, CrunchApi.CrunchMinute]): Map[MillisSinceEpoch, Double] = {
+  def interestingPaxLoads(cms: Map[TQM, CrunchApi.CrunchMinute]): Map[MillisSinceEpoch, Double] = {
     cms.values.filter(cm => cm.paxLoad != 0).map(cm => (cm.minute, cm.paxLoad)).toMap
   }
 
-  def interestingDeployments(cms: Map[Int, CrunchApi.CrunchMinute]): scala.Seq[(MillisSinceEpoch, TerminalName, QueueName, Option[Int])] = {
+  def interestingDeployments(cms: Map[TQM, CrunchApi.CrunchMinute]): scala.Seq[(MillisSinceEpoch, TerminalName, QueueName, Option[Int])] = {
     cms.values
       .filter(cm => cm.deployedDesks.getOrElse(0) != 0)
       .toSeq

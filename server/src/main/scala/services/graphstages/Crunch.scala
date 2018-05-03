@@ -8,7 +8,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import services._
 
 import scala.collection.immutable.Map
-import scala.reflect.runtime.universe.{typeOf, TypeTag}
+import scala.reflect.runtime.universe.{TypeTag, typeOf}
 
 object Crunch {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -18,7 +18,7 @@ object Crunch {
   case class FlightSplitDiff(flightId: Int, paxType: PaxType, terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
 
   case class LoadMinute(terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch) extends TerminalQueueMinute {
-    lazy val uniqueId: Int = MinuteHelper.key(terminalName, queueName, minute)
+    lazy val uniqueId: TQM = MinuteHelper.key(terminalName, queueName, minute)
   }
 
   object LoadMinute {
@@ -32,7 +32,7 @@ object Crunch {
   }
 
   case class RemoveCrunchMinute(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch) {
-    lazy val key: Int = MinuteHelper.key(terminalName, queueName, minute)
+    lazy val key: TQM = MinuteHelper.key(terminalName, queueName, minute)
   }
 
   case class RemoveFlight(flightId: Int)
@@ -105,7 +105,7 @@ object Crunch {
     Tuple2(toRemove, toUpdate)
   }
 
-  def crunchMinutesDiff(oldTqmToCm: Map[Int, CrunchMinute], newTqmToCm: Map[Int, CrunchMinute]): Set[CrunchMinute] = {
+  def crunchMinutesDiff(oldTqmToCm: Map[TQM, CrunchMinute], newTqmToCm: Map[TQM, CrunchMinute]): Set[CrunchMinute] = {
     val toUpdate = newTqmToCm.collect {
       case (k, cm) if oldTqmToCm.get(k).isEmpty || !cm.equals(oldTqmToCm(k)) => cm
     }.toSet
@@ -113,7 +113,7 @@ object Crunch {
     toUpdate
   }
 
-  def staffMinutesDiff(oldTqmToCm: Map[Int, StaffMinute], newTqmToCm: Map[Int, StaffMinute]): Set[StaffMinute] = {
+  def staffMinutesDiff(oldTqmToCm: Map[TM, StaffMinute], newTqmToCm: Map[TM, StaffMinute]): Set[StaffMinute] = {
     val toUpdate = newTqmToCm.collect {
       case (k, cm) if oldTqmToCm.get(k).isEmpty || !cm.equals(oldTqmToCm(k)) => cm
     }.toSet
@@ -125,7 +125,7 @@ object Crunch {
     Tuple2(Tuple3(cm.terminalName, cm.queueName, cm.minute), cm)
   }
 
-  def applyCrunchDiff(diff: CrunchDiff, crunchMinutes: Map[Int, CrunchMinute]): Map[Int, CrunchMinute] = {
+  def applyCrunchDiff(diff: CrunchDiff, crunchMinutes: Map[TQM, CrunchMinute]): Map[TQM, CrunchMinute] = {
     val nowMillis = SDate.now().millisSinceEpoch
     val withUpdates = diff.crunchMinuteUpdates.foldLeft(crunchMinutes) {
       case (soFar, ncm) => soFar.updated(ncm.key, ncm.copy(lastUpdated = Option(nowMillis)))
@@ -133,7 +133,7 @@ object Crunch {
     withUpdates
   }
 
-  def applyStaffDiff(diff: CrunchDiff, staffMinutes: Map[Int, StaffMinute]): Map[Int, StaffMinute] = {
+  def applyStaffDiff(diff: CrunchDiff, staffMinutes: Map[TM, StaffMinute]): Map[TM, StaffMinute] = {
     val nowMillis = SDate.now().millisSinceEpoch
     val withUpdates = diff.staffMinuteUpdates.foldLeft(staffMinutes) {
       case (soFar, newStaffMinute) => soFar.updated(newStaffMinute.key, newStaffMinute.copy(lastUpdated = Option(nowMillis)))
@@ -192,7 +192,7 @@ object Crunch {
     updated
   }
 
-  def purgeExpired[A: TypeTag](expireable: Map[Int, A], timeAccessor: A => MillisSinceEpoch, now: () => SDateLike, expireAfter: MillisSinceEpoch): Map[Int, A] = {
+  def purgeExpired[I, A: TypeTag](expireable: Map[I, A], timeAccessor: A => MillisSinceEpoch, now: () => SDateLike, expireAfter: MillisSinceEpoch): Map[I, A] = {
     val expired = hasExpiredForType(timeAccessor, now, expireAfter)
     val updated = expireable.filterNot { case (_, a) => expired(a) }
 
@@ -259,7 +259,7 @@ object Crunch {
     }
   }
 
-  def mergeMapOfIndexedThings[X](things1: Map[Int, X], things2: Map[Int, X]): Map[Int, X] = things2.foldLeft(things1) {
+  def mergeMapOfIndexedThings[I, X](things1: Map[I, X], things2: Map[I, X]): Map[I, X] = things2.foldLeft(things1) {
     case (soFar, (id, newThing)) => soFar.updated(id, newThing)
   }
 
@@ -297,12 +297,14 @@ object Crunch {
   }
 
   def mergeLoadsIntoQueue(incomingLoads: Loads, loadMinutesQueue: List[(MillisSinceEpoch, Loads)], crunchPeriodStartMillis: SDateLike => SDateLike): List[(MillisSinceEpoch, Loads)] = {
-    val changedDays = incomingLoads.loadMinutes.groupBy(sm => crunchPeriodStartMillis(SDate(sm.minute, europeLondonTimeZone)).millisSinceEpoch)
+    val changedDays = incomingLoads.loadMinutes
+      .groupBy(sm => crunchPeriodStartMillis(SDate(sm.minute, europeLondonTimeZone)).millisSinceEpoch)
 
     changedDays
       .foldLeft(loadMinutesQueue.toMap) {
         case (existingQueue, (dayStartMillis, newLoadsForDay)) =>
           val existingLoadsForDay = existingQueue.get(dayStartMillis)
+          log.info(s"Adding ${newLoadsForDay.size} new loads to ${existingLoadsForDay.map(_.loadMinutes.size).getOrElse(0)} existing loads for ${SDate(dayStartMillis, europeLondonTimeZone).toISOString()}")
           val mergedDayMinutes = mergeUpdatedLoads(existingLoadsForDay, dayStartMillis, newLoadsForDay)
           existingQueue.updated(dayStartMillis, Loads(mergedDayMinutes))
       }
@@ -316,13 +318,13 @@ object Crunch {
         log.info(s"Adding ${SDate(dayMillis).toISOString()} to queue with ${dayLoadMinutes.size} loads (${dayLoadMinutes.toSeq.count(_.paxLoad != 0)} non-zero pax minutes)")
         dayLoadMinutes
       case Some(existingDayLoads) =>
-        val existingByKey = existingDayLoads
+        val existingDayLoadsByKey = existingDayLoads
           .loadMinutes
           .toSeq
           .map(lm => (lm.uniqueId, lm))
           .toMap
         dayLoadMinutes
-          .foldLeft(existingByKey) {
+          .foldLeft(existingDayLoadsByKey) {
             case (daySoFar, loadMinute) => daySoFar.updated(loadMinute.uniqueId, loadMinute)
           }
           .values

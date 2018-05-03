@@ -83,9 +83,9 @@ class ArrivalSplitsGraphStage(name: String = "",
         log.info(s"Grabbed ${arrivalsDiff.toUpdate.size} updates, ${arrivalsDiff.toRemove.size} removals")
 
         val updatedFlights = purgeExpiredArrivals(updateFlightsFromIncoming(arrivalsDiff, flightsByFlightId))
-        log.info(s"We now have ${updatedFlights.size} arrivals")
         val latestDiff = updatedFlights.values.toSet -- flightsByFlightId.values.toSet
         arrivalsWithSplitsDiff = mergeDiffSets(latestDiff, arrivalsWithSplitsDiff)
+        log.info(s"${arrivalsWithSplitsDiff.size} updated arrivals waiting to push")
         flightsByFlightId = updatedFlights
 
         pushStateIfReady()

@@ -1,5 +1,6 @@
 package drt.shared
 
+import drt.shared
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, _}
 import drt.shared.SplitRatiosNs.SplitSources
@@ -96,9 +97,7 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[ApiSplits], lastU
     List(apiSplitsDc, apiSplitsCi, predictedSplits, historicalSplits, terminalSplits).find {
       case Some(_) => true
       case _ => false
-    }.getOrElse {
-      None
-    }
+    }.flatten
   }
 
   def apiSplits: Option[ApiSplits] = {
@@ -108,18 +107,19 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[ApiSplits], lastU
     List(apiSplitsDc, apiSplitsCi).find {
       case Some(_) => true
       case _ => false
-    }.getOrElse {
-      None
-    }
+    }.flatten
   }
 
   def hasPcpPaxIn(start: SDateLike, end: SDateLike): Boolean = apiFlight.hasPcpDuring(start, end)
 }
 
-object MinuteHelper {
-  def key(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch): Int = (terminalName, queueName, minute).hashCode
+case class TQM(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch)
+case class TM(terminalName: TerminalName, minute: MillisSinceEpoch)
 
-  def key(terminalName: TerminalName, minute: MillisSinceEpoch): Int = (terminalName, minute).hashCode
+object MinuteHelper {
+  def key(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch): TQM = TQM(terminalName, queueName, minute)
+
+  def key(terminalName: TerminalName, minute: MillisSinceEpoch): TM = TM(terminalName, minute)
 }
 
 case class FlightsNotReady()
@@ -352,8 +352,8 @@ object CrunchApi {
   }
 
   case class PortState(flights: Map[Int, ApiFlightWithSplits],
-                       crunchMinutes: Map[Int, CrunchMinute],
-                       staffMinutes: Map[Int, StaffMinute]) {
+                       crunchMinutes: Map[TQM, CrunchMinute],
+                       staffMinutes: Map[TM, StaffMinute]) {
     def window(start: SDateLike, end: SDateLike): PortState = {
       val windowedFlights = flights.filter {
         case (_, f) => f.apiFlight.hasPcpDuring(start, end)
@@ -394,7 +394,7 @@ object CrunchApi {
     def equals(candidate: StaffMinute): Boolean =
       this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
 
-    lazy val key: Int = MinuteHelper.key(terminalName, minute)
+    lazy val key: TM = MinuteHelper.key(terminalName, minute)
     lazy val available: Int = shifts + movements match {
       case sa if sa >= 0 => sa
       case _ => 0
@@ -426,7 +426,7 @@ object CrunchApi {
   }
 
   object StaffMinutes {
-    def apply(minutesByKey: Map[Int, StaffMinute]): StaffMinutes = {
+    def apply(minutesByKey: Map[TM, StaffMinute]): StaffMinutes = {
       StaffMinutes(minutesByKey.values.toSeq)
     }
   }
@@ -446,7 +446,7 @@ object CrunchApi {
     def equals(candidate: CrunchMinute): Boolean =
       this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
 
-    lazy val key: Int = MinuteHelper.key(terminalName, queueName, minute)
+    lazy val key: TQM = MinuteHelper.key(terminalName, queueName, minute)
   }
 
   trait DeskRecMinuteLike {

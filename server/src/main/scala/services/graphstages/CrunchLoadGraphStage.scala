@@ -30,9 +30,9 @@ class CrunchLoadGraphStage(name: String = "",
   override val shape = new FlowShape(inLoads, outDeskRecMinutes)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var loadMinutes: Map[Int, LoadMinute] = Map()
-    var existingDeskRecMinutes: Map[Int, DeskRecMinute] = Map()
-    var deskRecMinutesToPush: Map[Int, DeskRecMinute] = Map()
+    var loadMinutes: Map[TQM, LoadMinute] = Map()
+    var existingDeskRecMinutes: Map[TQM, DeskRecMinute] = Map()
+    var deskRecMinutesToPush: Map[TQM, DeskRecMinute] = Map()
 
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
@@ -59,12 +59,12 @@ class CrunchLoadGraphStage(name: String = "",
         log.info(s"Crunch ${firstMinute.toLocalDateTimeString()} - ${lastMinute.toLocalDateTimeString()}")
         val affectedTerminals = incomingLoads.loadMinutes.map(_.terminalName)
 
-        val updatedLoads: Map[Int, LoadMinute] = mergeLoads(incomingLoads.loadMinutes, loadMinutes)
+        val updatedLoads = mergeLoads(incomingLoads.loadMinutes, loadMinutes)
         loadMinutes = purgeExpired(updatedLoads, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
 
-        val deskRecMinutes: Map[Int, DeskRecMinute] = crunchLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, affectedTerminals)
+        val deskRecMinutes = crunchLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, affectedTerminals)
 
-        val diff = deskRecMinutes.foldLeft(Map[Int, DeskRecMinute]()) {
+        val diff = deskRecMinutes.foldLeft(Map[TQM, DeskRecMinute]()) {
           case (soFar, (key, drm)) =>
             existingDeskRecMinutes.get(key) match {
               case Some(existingDrm) if existingDrm == drm => soFar
@@ -84,7 +84,7 @@ class CrunchLoadGraphStage(name: String = "",
       }
     })
 
-    def crunchLoads(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToCrunch: Set[TerminalName]): Map[Int, DeskRecMinute] = {
+    def crunchLoads(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToCrunch: Set[TerminalName]): Map[TQM, DeskRecMinute] = {
       val filteredLoads = filterTerminalQueueMinutes(firstMinute, lastMinute, terminalsToCrunch, loadMinutes)
 
       filteredLoads
@@ -97,45 +97,38 @@ class CrunchLoadGraphStage(name: String = "",
                 val sla = airportConfig.slaByQueue.getOrElse(qn, 15)
                 val sortedLms = qLms.toSeq.sortBy(_.minute)
                 val paxMinutes: Map[MillisSinceEpoch, Double] = sortedLms.map(m => (m.minute, m.paxLoad)).toMap
-                val nonZeroMinutes = paxMinutes.values.count(_ != 0d)
-                if (nonZeroMinutes > 0) {
-                  log.info(s"Crunching $tn $qn ($nonZeroMinutes non-zero pax minutes)")
-                  val workMinutes: Map[MillisSinceEpoch, Double] = sortedLms.map(m => (m.minute, m.workLoad)).toMap
-                  val minuteMillis = firstMinute until lastMinute by 60000
-                  val fullWorkMinutes = minuteMillis.map(m => workMinutes.getOrElse(m, 0d))
-                  val adjustedWorkMinutes = if (qn == Queues.EGate) fullWorkMinutes.map(_ / airportConfig.eGateBankSize) else fullWorkMinutes
-                  val fullPaxMinutes = minuteMillis.map(m => paxMinutes.getOrElse(m, 0d))
-                  val (minDesks, maxDesks) = minMaxDesksForQueue(minuteMillis, tn, qn)
-                  val triedResult: Try[OptimizerCrunchResult] = crunch(adjustedWorkMinutes, minDesks, maxDesks, OptimizerConfig(sla))
-                  triedResult match {
-                    case Success(OptimizerCrunchResult(desks, waits)) =>
-                      minuteMillis.zipWithIndex.map {
-                        case (minute, idx) =>
-                          val wl = fullWorkMinutes(idx)
-                          val pl = fullPaxMinutes(idx)
-                          val drm = DeskRecMinute(tn, qn, minute, pl, wl, desks(idx), waits(idx))
-                          (drm.key, drm)
-                      }
-                    case Failure(t) =>
-                      log.warn(s"failed to crunch: $t")
-                      Map()
-                  }
-                } else {
-                  log.warn(s"All zero pax minutes.. Skipped crunch")
-                  Map()
+                val workMinutes: Map[MillisSinceEpoch, Double] = sortedLms.map(m => (m.minute, m.workLoad)).toMap
+                val minuteMillis = firstMinute until lastMinute by 60000
+                val fullWorkMinutes = minuteMillis.map(m => workMinutes.getOrElse(m, 0d))
+                val adjustedWorkMinutes = if (qn == Queues.EGate) fullWorkMinutes.map(_ / airportConfig.eGateBankSize) else fullWorkMinutes
+                val fullPaxMinutes = minuteMillis.map(m => paxMinutes.getOrElse(m, 0d))
+                val (minDesks, maxDesks) = minMaxDesksForQueue(minuteMillis, tn, qn)
+                val triedResult: Try[OptimizerCrunchResult] = crunch(adjustedWorkMinutes, minDesks, maxDesks, OptimizerConfig(sla))
+                triedResult match {
+                  case Success(OptimizerCrunchResult(desks, waits)) =>
+                    minuteMillis.zipWithIndex.map {
+                      case (minute, idx) =>
+                        val wl = fullWorkMinutes(idx)
+                        val pl = fullPaxMinutes(idx)
+                        val drm = DeskRecMinute(tn, qn, minute, pl, wl, desks(idx), waits(idx))
+                        (drm.key, drm)
+                    }
+                  case Failure(t) =>
+                    log.warn(s"failed to crunch: $t")
+                    Map()
                 }
             }
         }
     }
 
-    def filterTerminalQueueMinutes[A <: TerminalQueueMinute](firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Set[TerminalName], toFilter: Map[Int, A]): Set[A] = {
+    def filterTerminalQueueMinutes[A <: TerminalQueueMinute](firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Set[TerminalName], thingsToFilter: Map[TQM, A]): Set[A] = {
       val maybeThings = for {
         terminalName <- terminalsToUpdate
         queueName <- airportConfig.queues.getOrElse(terminalName, Seq())
         minute <- firstMinute until lastMinute by oneMinuteMillis
       } yield {
-        toFilter
-          .get(MinuteHelper.key(terminalName, queueName, minute))
+        val key = MinuteHelper.key(terminalName, queueName, minute)
+        thingsToFilter.get(key)
       }
 
       maybeThings.collect { case Some(thing) => thing }
@@ -149,7 +142,7 @@ class CrunchLoadGraphStage(name: String = "",
       (minDesks, maxDesks)
     }
 
-    def mergeDeskRecMinutes(updatedCms: Map[Int, DeskRecMinute], existingCms: Map[Int, DeskRecMinute]): Map[Int, DeskRecMinute] = {
+    def mergeDeskRecMinutes(updatedCms: Map[TQM, DeskRecMinute], existingCms: Map[TQM, DeskRecMinute]): Map[TQM, DeskRecMinute] = {
       updatedCms.foldLeft(existingCms) {
         case (soFar, (newId, newLoadMinute)) => soFar.updated(newId, newLoadMinute)
       }
@@ -162,11 +155,10 @@ class CrunchLoadGraphStage(name: String = "",
       loadDiff
     }
 
-    def mergeLoads(incomingLoads: Set[LoadMinute], existingLoads: Map[Int, LoadMinute]): Map[Int, LoadMinute] = {
-      incomingLoads.foldLeft(existingLoads) {
+    def mergeLoads(incomingLoads: Set[LoadMinute], existingLoads: Map[TQM, LoadMinute]): Map[TQM, LoadMinute] = incomingLoads
+      .foldLeft(existingLoads) {
         case (soFar, load) => soFar.updated(load.uniqueId, load)
       }
-    }
 
     setHandler(outDeskRecMinutes, new OutHandler {
       override def onPull(): Unit = {
@@ -201,7 +193,7 @@ case class DeskRecMinute(terminalName: TerminalName,
                          workLoad: Double,
                          deskRec: Int,
                          waitTime: Int) extends DeskRecMinuteLike {
-  lazy val key: Int = MinuteHelper.key(terminalName, queueName, minute)
+  lazy val key: TQM = MinuteHelper.key(terminalName, queueName, minute)
 }
 
 case class DeskRecMinutes(minutes: Set[DeskRecMinute]) extends PortStateMinutes {
@@ -220,7 +212,7 @@ case class DeskRecMinutes(minutes: Set[DeskRecMinute]) extends PortStateMinutes 
     }
   }
 
-  def newCrunchMinutes: Map[Int, CrunchMinute] = minutes
+  def newCrunchMinutes: Map[TQM, CrunchMinute] = minutes
     .map(CrunchMinute(_))
     .map(cm => (cm.key, cm))
     .toMap
