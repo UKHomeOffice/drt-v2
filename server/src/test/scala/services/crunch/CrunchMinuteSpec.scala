@@ -20,7 +20,6 @@ class CrunchMinuteSpec extends CrunchTestLike {
         minute <- (1525222800000L to (1525222800000L + daysInMillis) by 60000).take(daysInMinutes)
       } yield (terminal, queue, minute)
 
-      println(s"Got ${tqms.length} minutes")
       val dupes = tqms
         .groupBy { case (t, q, m) => MinuteHelper.key(t, q, m) }
         .collect { case (id, values) if values.length > 1 => (id, values) }
@@ -42,7 +41,6 @@ class CrunchMinuteSpec extends CrunchTestLike {
         minute <- (1525222800000L to (1525222800000L + daysInMillis) by 60000).take(daysInMinutes)
       } yield (terminal, minute)
 
-      println(s"Got ${tms.length} minutes")
       val dupes = tms
         .groupBy { case (t, m) => MinuteHelper.key(t, m) }
         .collect { case (id, values) if values.length > 1 => (id, values) }

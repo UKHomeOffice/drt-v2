@@ -189,8 +189,7 @@ class CrunchTestLike
       initialLiveArrivals = initialLiveArrivals,
       arrivalsBaseSource = baseArrivals,
       arrivalsFcstSource = fcstArrivals,
-      arrivalsLiveSource = liveArrivals,
-      minCrunchLoadThreshold = 0
+      arrivalsLiveSource = liveArrivals
     ))
 
     if (initialShifts.nonEmpty) offerAndWait(crunchInputs.shifts, initialShifts)

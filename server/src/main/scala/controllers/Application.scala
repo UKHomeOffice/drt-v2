@@ -230,8 +230,7 @@ trait SystemActors {
       arrivalsBaseSource = baseArrivalsSource(),
       arrivalsFcstSource = forecastArrivalsSource(airportConfig.portCode),
       arrivalsLiveSource = liveArrivalsSource(airportConfig.portCode),
-      recrunchOnStart = recrunchOnStart,
-      minCrunchLoadThreshold = 50
+      recrunchOnStart = recrunchOnStart
     ))
     crunchInputs
   }
