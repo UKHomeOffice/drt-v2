@@ -304,10 +304,8 @@ object Crunch {
       .foldLeft(loadMinutesQueue.toMap) {
         case (existingQueue, (dayStartMillis, newLoadsForDay)) =>
           val existingLoadsForDay = existingQueue.get(dayStartMillis)
-          log.info(s"${newLoadsForDay.count(_.paxLoad == 0)}/${newLoadsForDay.size} zero pax loads")
           log.info(s"Adding ${newLoadsForDay.size} new loads to ${existingLoadsForDay.map(_.loadMinutes.size).getOrElse(0)} existing loads for ${SDate(dayStartMillis, europeLondonTimeZone).toISOString()}")
           val mergedDayMinutes = mergeUpdatedLoads(existingLoadsForDay, dayStartMillis, newLoadsForDay)
-          log.info(s"${mergedDayMinutes.size} loads after merge")
           existingQueue.updated(dayStartMillis, Loads(mergedDayMinutes))
       }
       .toList

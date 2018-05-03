@@ -121,30 +121,17 @@ class CrunchLoadGraphStage(name: String = "",
         }
     }
 
-    def filterTerminalQueueMinutes[A <: TerminalQueueMinute](firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Set[TerminalName], toFilter: Map[TQM, A]): Set[A] = {
-      log.info(s"filtering tqm ${SDate(firstMinute).toISOString()} -> ${SDate(lastMinute).toISOString()}")
+    def filterTerminalQueueMinutes[A <: TerminalQueueMinute](firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Set[TerminalName], thingsToFilter: Map[TQM, A]): Set[A] = {
       val maybeThings = for {
         terminalName <- terminalsToUpdate
         queueName <- airportConfig.queues.getOrElse(terminalName, Seq())
         minute <- firstMinute until lastMinute by oneMinuteMillis
       } yield {
         val key = MinuteHelper.key(terminalName, queueName, minute)
-        toFilter.get(key)
+        thingsToFilter.get(key)
       }
 
-      val minutesFound = maybeThings.collect { case Some(thing) => thing }
-
-      terminalsToUpdate.foreach(t =>
-        airportConfig.queues.getOrElse(t, Seq()).foreach(q => {
-          val minutes = minutesFound.filter(l => l.terminalName == t && l.queueName == q)
-          val found = minutesFound.count(l => l.terminalName == t && l.queueName == q)
-          log.info(s"found $found loads for $t/$q")
-          if (found > 0)
-            log.info(s"min: ${SDate(minutes.map(_.minute).min).toISOString()}, max: ${SDate(minutes.map(_.minute).max).toISOString()}")
-        })
-      )
-
-      minutesFound
+      maybeThings.collect { case Some(thing) => thing }
     }
 
     def minMaxDesksForQueue(deskRecMinutes: Seq[MillisSinceEpoch], tn: TerminalName, qn: QueueName): (Seq[Int], Seq[Int]) = {
@@ -168,21 +155,10 @@ class CrunchLoadGraphStage(name: String = "",
       loadDiff
     }
 
-    def mergeLoads(incomingLoads: Set[LoadMinute], existingLoads: Map[TQM, LoadMinute]): Map[TQM, LoadMinute] = {
-      incomingLoads
-        .groupBy(_.terminalName)
-        .foreach {
-          case (tn, tlms) => tlms
-            .groupBy(_.queueName)
-            .foreach {
-              case (qn, qlms) => log.info(s"incoming loads for $tn / $qn -> ${qlms.size} - ${qlms.count(_.paxLoad == 0)} zero pax loads")
-            }
-        }
-
-      incomingLoads.foldLeft(existingLoads) {
+    def mergeLoads(incomingLoads: Set[LoadMinute], existingLoads: Map[TQM, LoadMinute]): Map[TQM, LoadMinute] = incomingLoads
+      .foldLeft(existingLoads) {
         case (soFar, load) => soFar.updated(load.uniqueId, load)
       }
-    }
 
     setHandler(outDeskRecMinutes, new OutHandler {
       override def onPull(): Unit = {

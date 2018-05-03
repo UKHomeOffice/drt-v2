@@ -81,20 +81,14 @@ class WorkloadGraphStage(name: String = "",
         val incomingFlights = grab(inFlightsWithSplits)
         log.info(s"Received ${incomingFlights.flights.size} arrivals")
 
-        log.info(s"Merging new flight workloads into existing flight workloads")
         val updatedWorkloads: Map[Int, Set[FlightSplitMinute]] = mergeWorkloadByFlightId(incomingFlights, workloadByFlightId)
-        log.info(s"Purging expired workloads")
         workloadByFlightId = purgeExpired(updatedWorkloads, (fsms: Set[FlightSplitMinute]) => if (fsms.nonEmpty) fsms.map(_.minute).min else 0, now, expireAfterMillis)
-        log.info(s"Flatten flight workloads into loads by queue & minute")
         val updatedLoads = flightSplitMinutesToQueueLoadMinutes(updatedWorkloads)
-        log.info(s"Calculating load diff from updated flights")
         val latestDiff = loadDiff(updatedLoads, loadMinutes)
-        log.info(s"${latestDiff.size} updated loads. ${updatedLoads.size} loads after updates. Purging expired loads")
         loadMinutes = purgeExpired(updatedLoads, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
 
-        log.info(s"Merging ${latestDiff.size} new load diffs with ${updatedLoadsToPush.size} existing load diffs")
         updatedLoadsToPush = purgeExpired(mergeLoadMinutes(latestDiff, updatedLoadsToPush), (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
-        log.info(s"Now have ${updatedLoadsToPush.size} load minutes to push (${updatedLoadsToPush.values.count(_.paxLoad == 0d)} zero pax minutes)")
+        log.info(s"${updatedLoadsToPush.size} load minutes to push (${updatedLoadsToPush.values.count(_.paxLoad == 0d)} zero pax minutes)")
 
         pushStateIfReady()
 
@@ -121,7 +115,7 @@ class WorkloadGraphStage(name: String = "",
         .collect { case Some(lm) if lm.workLoad != 0 => (lm.uniqueId, lm.copy(paxLoad = 0, workLoad = 0)) }
 
       val diff = updates ++ removes
-      log.info(s"${diff.size} updated load minutes (${updates.size} updates + ${removes.size} removes) - ${updates.values.count(_.paxLoad == 0)} zero pax minutes")
+      log.info(s"${diff.size} updated load minutes (${updates.size} updates + ${removes.size} removes)")
 
       diff
     }
@@ -167,7 +161,7 @@ class WorkloadGraphStage(name: String = "",
       if (updatedLoadsToPush.isEmpty)
         log.info(s"We have no load minutes. Nothing to push")
       else if (isAvailable(outLoads)) {
-        log.info(s"Pushing ${updatedLoadsToPush.size} load minutes - ${updatedLoadsToPush.values.count(_.paxLoad == 0)} zero pax minutes")
+        log.info(s"Pushing ${updatedLoadsToPush.size} load minutes")
         push(outLoads, Loads(updatedLoadsToPush.values.toSet))
         updatedLoadsToPush = Map()
       }
