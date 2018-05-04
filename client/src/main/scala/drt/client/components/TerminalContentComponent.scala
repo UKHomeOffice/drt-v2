@@ -179,7 +179,8 @@ object TerminalContentComponent {
                 props.potFixedPoints,
                 props.potStaffMovements,
                 props.airportConfig,
-                props.roles
+                props.roles,
+                props.viewMode
               ))
             } else ""
           ))

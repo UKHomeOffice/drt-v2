@@ -47,7 +47,6 @@ class ShiftsActor extends ShiftsActorBase {
   override def receiveCommand: Receive = {
     subsReceive orElse super.receiveCommand
   }
-
 }
 
 class ShiftsActorBase extends PersistentActor with ActorLogging {

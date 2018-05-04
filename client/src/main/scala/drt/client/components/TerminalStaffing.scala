@@ -18,10 +18,6 @@ import scala.collection.immutable.{NumericRange, Seq}
 import scala.scalajs.js.Date
 import scala.util.{Success, Try}
 
-object DateRange {
-  val start: SDateLike = SDate.midnightThisMorning()
-  val end: SDateLike = start.addDays(1)
-}
 
 object TerminalStaffing {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
@@ -34,12 +30,12 @@ object TerminalStaffing {
                     potFixedPoints: Pot[String],
                     potStaffMovements: Pot[Seq[StaffMovement]],
                     airportConfig: AirportConfig,
-                    roles: Pot[List[String]]
+                    roles: Pot[List[String]],
+                    viewMode: ViewMode
                   )
 
-  def todaysMovements(movements: Seq[StaffMovement], start: MilliDate, end: MilliDate): Seq[StaffMovement] = {
-    movements.filter(m => m.time > start && m.time < end)
-  }
+  def movementsForDay(movements: Seq[StaffMovement], day: SDateLike): Seq[StaffMovement] = movements
+    .filter(m => m.time > startOfDay(day).millisSinceEpoch && m.time < endOfDay(day).millisSinceEpoch)
 
   class Backend($: BackendScope[Props, Unit]) {
 
@@ -47,14 +43,21 @@ object TerminalStaffing {
 
       <.div(
         props.potShifts.render((rawShifts: String) => {
+          log.info(s"Staffing: shifts changed, rerendering")
           props.potFixedPoints.render((rawFixedPoints: String) => {
+            log.info(s"Staffing: fixedPoints changed, rerendering")
             props.potStaffMovements.render((movements: Seq[StaffMovement]) => {
+              log.info(s"Staffing: staffMovements changed, rerendering $movements")
               val shifts: List[Try[StaffAssignment]] = StaffAssignmentParser(rawShifts).parsedAssignments.toList
               val fixedPoints: List[Try[StaffAssignment]] = StaffAssignmentParser(rawFixedPoints).parsedAssignments.toList
               <.div(
                 <.div(^.className := "container",
                   <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(rawFixedPoints, props.airportConfig, props.terminalName, props.roles))),
-                  <.div(^.className := "col-md-3", movementsEditor(todaysMovements(movements, DateRange.start, DateRange.end), props.terminalName))
+                  <.div(^.className := "col-md-3", {
+                    log.info(s"Staffing: calling with $movements")
+
+                    movementsEditor(movementsForDay(movements, props.viewMode.time), props.terminalName)
+                  })
                 ),
                 <.div(^.className := "container",
                   <.div(^.className := "col-md-10", staffOverTheDay(movements, shifts, fixedPoints, props.terminalName)))
@@ -98,28 +101,34 @@ object TerminalStaffing {
     }
 
     def movementsEditor(movements: Seq[StaffMovement], terminalName: TerminalName): VdomTagOf[Div] = {
+      log.info(s"Staffing: Got called with $movements")
       val terminalMovements = movements.filter(_.terminalName == terminalName)
       <.div(
         <.h2("Movements"),
-        
+
         if (terminalMovements.nonEmpty) {
+          log.info(s"Staffing: Rendering the movements")
           val iterable: immutable.Iterable[TagMod] = terminalMovements.groupBy(_.uUID).map {
             case (_, movementPair) =>
               movementPair.toList.sortBy(_.time) match {
                 case first :: second :: Nil =>
+                  log.info(s"Staffing: got movements to render")
                   val remove = <.a(Icon.remove, ^.key := first.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) => Callback(SPACircuit.dispatch(RemoveStaffMovement(0, first.uUID)))))
                   <.li(remove, " ", MovementDisplay.displayPair(first, second))
                 case mm :: Nil =>
+                  log.info(s"Staffing: got a movement to render")
                   val remove = <.a(Icon.remove, ^.key := mm.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) => Callback(SPACircuit.dispatch(RemoveStaffMovement(0, mm.uUID)))))
                   <.li(remove, " ", MovementDisplay.displaySingle(mm))
                 case x =>
-                  log.info(s"didn't get a pair: $x")
+                  log.info(s"Staffing: didn't get a pair: $x")
                   TagMod()
               }
           }
           <.ul(^.className := "list-unstyled", iterable.toTagMod)
-        } else
+        } else {
+          log.info(s"Staffing: Got no movements for terminal: $terminalMovements but got $movements")
           <.p("No movements recorded")
+        }
       )
     }
 

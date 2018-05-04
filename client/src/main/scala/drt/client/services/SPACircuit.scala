@@ -14,6 +14,7 @@ import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 import org.scalajs.dom
 import org.scalajs.dom.ext.AjaxException
+
 import scala.collection.immutable.{Map, Seq}
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -452,33 +453,46 @@ class ApplicationVersionHandler[M](modelRW: ModelRW[M, Pot[ClientServerVersions]
   }
 }
 
-class StaffMovementsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[Seq[StaffMovement]]]) extends LoggingActionHandler(modelRW) {
+class StaffMovementsHandler[M](modelRW: ModelRW[M, (Pot[Seq[StaffMovement]], ViewMode)]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case AddStaffMovement(staffMovement) =>
-      if (value.isReady) {
-        val v: Seq[StaffMovement] = value.get
-        val updatedValue: Seq[StaffMovement] = (v :+ staffMovement).sortBy(_.time)
-        updated(Ready(updatedValue))
-      } else noChange
+    case (AddStaffMovement(staffMovement)) =>
+      value match {
+        case (Ready(sms), vm) =>
+
+          val updatedValue: Seq[StaffMovement] = (sms :+ staffMovement).sortBy(_.time)
+          updated((Ready(updatedValue), vm))
+        case _ => noChange
+      }
+
 
     case RemoveStaffMovement(_, uUID) =>
-      if (value.isReady) {
-        val terminalAffectedOption = value.get.find(_.uUID == uUID).map(_.terminalName)
-        if (terminalAffectedOption.isDefined) {
-          val updatedValue = value.get.filter(_.uUID != uUID)
-          updated(Ready(updatedValue), Effect(Future(SaveStaffMovements(terminalAffectedOption.get))))
-        } else noChange
-      } else noChange
+      value match {
+        case (Ready(sms), vm) if sms.exists(_.uUID == uUID) =>
+
+          sms.find(_.uUID == uUID).map(_.terminalName).map(terminal => {
+            val updatedValue = sms.filter(_.uUID != uUID)
+            updated((Ready(updatedValue), vm), Effect(Future(SaveStaffMovements(terminal))))
+          })
+            .getOrElse(noChange)
+
+        case _ => noChange
+      }
+
 
     case SetStaffMovements(staffMovements: Seq[StaffMovement]) =>
       val scheduledRequest = Effect(Future(GetStaffMovements())).after(60 seconds)
-      updated(Ready(staffMovements), scheduledRequest)
+      updated((Ready(staffMovements), value._2), scheduledRequest)
 
     case GetStaffMovements() =>
-      log.info(s"Calling getStaffMovements")
+      val (_, viewMode) = value
+      log.info(s"Calling getStaffMovements with ${SDate(viewMode.millis).toISOString()}")
 
-      val apiCallEffect = Effect(AjaxClient[Api].getStaffMovements(viewMode().millis).call()
-        .map(res => SetStaffMovements(res))
+
+      val apiCallEffect = Effect(AjaxClient[Api].getStaffMovements(viewMode.millis).call()
+        .map(res => {
+          log.info(s"Got these StaffMovements from the server: $res")
+          SetStaffMovements(res)
+        })
         .recoverWith {
           case _ =>
             log.error(s"Failed to get Staff Movements. Re-requesting after ${PollDelay.recoveryDelay}")
@@ -488,17 +502,20 @@ class StaffMovementsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot
       effectOnly(apiCallEffect)
 
     case SaveStaffMovements(t) =>
-      if (value.isReady) {
-        log.info(s"Calling saveStaffMovements")
-        val responseFuture = AjaxClient[Api].saveStaffMovements(value.get).call()
-          .map(_ => DoNothing())
-          .recoverWith {
-            case _ =>
-              log.error(s"Failed to save Staff Movements. Re-requesting after ${PollDelay.recoveryDelay}")
-              Future(RetryActionAfter(SaveStaffMovements(t), PollDelay.recoveryDelay))
-          }
-        effectOnly(Effect(responseFuture))
-      } else noChange
+      value match {
+        case (Ready(sms), vm) =>
+          log.info(s"Calling saveStaffMovements")
+          val responseFuture = AjaxClient[Api].saveStaffMovements(sms).call()
+            .map(_ => DoNothing())
+            .recoverWith {
+              case _ =>
+                log.error(s"Failed to save Staff Movements. Re-requesting after ${PollDelay.recoveryDelay}")
+                Future(RetryActionAfter(SaveStaffMovements(t), PollDelay.recoveryDelay))
+            }
+          effectOnly(Effect(responseFuture))
+        case _ =>
+          noChange
+      }
   }
 }
 
@@ -518,7 +535,7 @@ class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[Crunch
         case (_, _, cs@PendingStale(_, _)) =>
           updated((newViewMode, cs, latestUpdateMillis))
         case _ =>
-          updated((newViewMode, Pending(), latestUpdateMillis), Effect(Future(GetCrunchState())))
+          updated((newViewMode, Pending(), latestUpdateMillis), Effect(Future(GetCrunchState())) + Effect(Future(GetStaffMovements())))
       }
   }
 }
@@ -650,7 +667,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ShiftsHandler(currentViewMode, zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v))),
       new ShiftsForMonthHandler(zoomRW(_.monthOfShifts)((m, v) => m.copy(monthOfShifts = v))),
       new FixedPointsHandler(currentViewMode, zoomRW(_.fixedPointsRaw)((m, v) => m.copy(fixedPointsRaw = v))),
-      new StaffMovementsHandler(currentViewMode, zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
+      new StaffMovementsHandler(zoomRW(m => (m.staffMovements, m.viewMode))((m, v) => m.copy(staffMovements = v._1))),
       new ViewModeHandler(zoomRW(m => (m.viewMode, m.crunchStatePot, m.latestUpdateMillis))((m, v) => m.copy(viewMode = v._1, crunchStatePot = v._2, latestUpdateMillis = v._3)), zoom(_.crunchStatePot)),
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v))),
       new ShowActualDesksAndQueuesHandler(zoomRW(_.showActualIfAvailable)((m, v) => m.copy(showActualIfAvailable = v))),
