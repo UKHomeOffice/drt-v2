@@ -154,7 +154,8 @@ object TerminalContentComponent {
                     filteredPortState,
                     props.airportConfig,
                     props.terminalPageTab.terminal,
-                    props.showActuals
+                    props.showActuals,
+                    props.viewMode
                   )
                 )
               })

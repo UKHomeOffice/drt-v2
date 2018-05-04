@@ -535,7 +535,8 @@ class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[Crunch
         case (_, _, cs@PendingStale(_, _)) =>
           updated((newViewMode, cs, latestUpdateMillis))
         case _ =>
-          updated((newViewMode, Pending(), latestUpdateMillis), Effect(Future(GetCrunchState())) + Effect(Future(GetStaffMovements())))
+          val effects = Effect(Future(GetCrunchState())) + Effect(Future(GetStaffMovements())) + Effect(Future(GetShifts()))
+          updated((newViewMode, Pending(), latestUpdateMillis), effects)
       }
   }
 }
