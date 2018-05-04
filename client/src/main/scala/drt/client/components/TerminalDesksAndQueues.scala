@@ -4,7 +4,7 @@ import drt.client.actions.Actions.UpdateShowActualDesksAndQueues
 import drt.client.components.TerminalDesksAndQueues.{NodeListSeq, ViewDeps, ViewRecs, ViewType, documentScrollHeight, documentScrollTop, queueActualsColour, queueColour}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions._
-import drt.client.services.SPACircuit
+import drt.client.services.{SPACircuit, ViewMode}
 import drt.shared.CrunchApi.{CrunchMinute, CrunchState, MillisSinceEpoch, StaffMinute}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
@@ -35,7 +35,9 @@ object TerminalDesksAndQueuesRow {
                    terminalName: TerminalName,
                    showActuals: Boolean,
                    viewType: ViewType,
-                   hasActualDeskStats: Boolean)
+                   hasActualDeskStats: Boolean,
+                   viewMode: ViewMode
+                  )
 
   implicit val rowPropsReuse: Reusability[Props] = Reusability.by(_.hashCode())
 
@@ -82,12 +84,20 @@ object TerminalDesksAndQueuesRow {
       val downMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "-", "Staff decrease...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "-")()
       val upMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "+", "Staff increase...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "+")()
 
+      def allowAdjustments = props.viewMode.time.millisSinceEpoch > SDate.midnightThisMorning().millisSinceEpoch
+
+
       val pcpTds = List(
         <.td(^.className := s"non-pcp", fixedPoints),
         <.td(^.className := s"non-pcp", movements),
         <.td(^.className := s"total-deployed $ragClass", totalRequired),
         <.td(^.className := s"total-deployed $ragClass", totalDeployed),
-        <.td(^.className := s"total-deployed staff-adjustments", ^.colSpan := 2, <.span(downMovementPopup, <.span(^.className := "deployed", available), upMovementPopup)))
+        if(allowAdjustments)
+          <.td(^.className := s"total-deployed staff-adjustments", ^.colSpan := 2, <.span(downMovementPopup, <.span(^.className := "deployed", available), upMovementPopup))
+        else
+          <.td(^.className := s"total-deployed staff-adjustments", ^.colSpan := 2, <.span(^.className := "deployed", available)))
+
+
       <.tr((<.td(SDate(MilliDate(props.minuteMillis)).toHoursAndMinutes()) :: queueTds.toList ++ pcpTds).toTagMod)
     })
     .componentDidMount((p) => Callback.log("TerminalDesksAndQueuesRow did mount"))
@@ -107,7 +117,12 @@ object TerminalDesksAndQueues {
 
   def queueActualsColour(queueName: String): String = s"${queueColour(queueName)} actuals"
 
-  case class Props(crunchState: CrunchState, airportConfig: AirportConfig, terminalName: TerminalName, showActuals: Boolean)
+  case class Props(crunchState: CrunchState,
+                   airportConfig: AirportConfig,
+                   terminalName: TerminalName,
+                   showActuals: Boolean,
+                   viewMode: ViewMode
+                  )
 
   sealed trait ViewType
 
@@ -267,7 +282,17 @@ object TerminalDesksAndQueues {
             ^.id := "sticky-body",
             terminalCrunchMinutes.map {
               case (millis, minutes) =>
-                val rowProps = TerminalDesksAndQueuesRow.Props(millis, minutes, terminalStaffMinutes.getOrElse(millis, StaffMinute.empty), props.airportConfig, props.terminalName, state.showActuals, state.viewType, props.airportConfig.hasActualDeskStats)
+                val rowProps = TerminalDesksAndQueuesRow.Props(
+                  millis,
+                  minutes,
+                  terminalStaffMinutes.getOrElse(millis, StaffMinute.empty),
+                  props.airportConfig,
+                  props.terminalName,
+                  state.showActuals,
+                  state.viewType,
+                  props.airportConfig.hasActualDeskStats,
+                  props.viewMode
+                )
                 TerminalDesksAndQueuesRow(rowProps)
             }.toTagMod))
       )

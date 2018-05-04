@@ -68,9 +68,7 @@ object SPAMain extends js.JSApp {
       GetUserRoles,
       GetLoggedInStatus,
       GetAirportConfig(),
-      GetShifts(),
       GetFixedPoints(),
-      GetStaffMovements(),
       UpdateMinuteTicker
     )
 

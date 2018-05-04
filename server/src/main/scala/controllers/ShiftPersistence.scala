@@ -33,10 +33,10 @@ trait ShiftPersistence {
       case shifts: String =>
         log.info(s"Shifts: Retrieved shifts from actor")
         val shiftLines = shifts.split("\n")
-        val today = Crunch.getLocalLastMidnight(SDate.now())
-        val twoDigitYear = today.getFullYear().toString.substring(2, 4)
-        val filterDate2DigitYear = f"${today.getDate()}%02d/${today.getMonth()}%02d/$twoDigitYear"
-        val filterDate4DigitYear = f"${today.getDate()}%02d/${today.getMonth()}%02d/${today.getFullYear()}"
+        val forDay = Crunch.getLocalLastMidnight(SDate(pointInTime))
+        val twoDigitYear = forDay.getFullYear().toString.substring(2, 4)
+        val filterDate2DigitYear = f"${forDay.getDate()}%02d/${forDay.getMonth()}%02d/$twoDigitYear"
+        val filterDate4DigitYear = f"${forDay.getDate()}%02d/${forDay.getMonth()}%02d/${forDay.getFullYear()}"
         val todaysShifts = shiftLines.filter(l => {
           l.contains(filterDate2DigitYear) || l.contains(filterDate4DigitYear)
         })

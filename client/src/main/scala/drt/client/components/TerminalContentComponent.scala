@@ -154,7 +154,8 @@ object TerminalContentComponent {
                     filteredPortState,
                     props.airportConfig,
                     props.terminalPageTab.terminal,
-                    props.showActuals
+                    props.showActuals,
+                    props.viewMode
                   )
                 )
               })
@@ -179,7 +180,8 @@ object TerminalContentComponent {
                 props.potFixedPoints,
                 props.potStaffMovements,
                 props.airportConfig,
-                props.roles
+                props.roles,
+                props.viewMode
               ))
             } else ""
           ))

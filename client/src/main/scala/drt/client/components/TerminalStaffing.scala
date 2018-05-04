@@ -18,10 +18,6 @@ import scala.collection.immutable.{NumericRange, Seq}
 import scala.scalajs.js.Date
 import scala.util.{Success, Try}
 
-object DateRange {
-  val start: SDateLike = SDate.midnightThisMorning()
-  val end: SDateLike = start.addDays(1)
-}
 
 object TerminalStaffing {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
@@ -34,12 +30,12 @@ object TerminalStaffing {
                     potFixedPoints: Pot[String],
                     potStaffMovements: Pot[Seq[StaffMovement]],
                     airportConfig: AirportConfig,
-                    roles: Pot[List[String]]
+                    roles: Pot[List[String]],
+                    viewMode: ViewMode
                   )
 
-  def todaysMovements(movements: Seq[StaffMovement], start: MilliDate, end: MilliDate): Seq[StaffMovement] = {
-    movements.filter(m => m.time > start && m.time < end)
-  }
+  def movementsForDay(movements: Seq[StaffMovement], day: SDateLike): Seq[StaffMovement] = movements
+    .filter(m => m.time > startOfDay(day).millisSinceEpoch && m.time < endOfDay(day).millisSinceEpoch)
 
   class Backend($: BackendScope[Props, Unit]) {
 
@@ -54,10 +50,10 @@ object TerminalStaffing {
               <.div(
                 <.div(^.className := "container",
                   <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(rawFixedPoints, props.airportConfig, props.terminalName, props.roles))),
-                  <.div(^.className := "col-md-3", movementsEditor(todaysMovements(movements, DateRange.start, DateRange.end), props.terminalName))
+                  <.div(^.className := "col-md-3", movementsEditor(movementsForDay(movements, props.viewMode.time), props.terminalName))
                 ),
                 <.div(^.className := "container",
-                  <.div(^.className := "col-md-10", staffOverTheDay(movements, shifts, fixedPoints, props.terminalName)))
+                  <.div(^.className := "col-md-10", staffOverTheDay(movementsForDay(movements, props.viewMode.time), shifts, fixedPoints, props.terminalName)))
               )
             })
           })
@@ -101,7 +97,7 @@ object TerminalStaffing {
       val terminalMovements = movements.filter(_.terminalName == terminalName)
       <.div(
         <.h2("Movements"),
-        
+
         if (terminalMovements.nonEmpty) {
           val iterable: immutable.Iterable[TagMod] = terminalMovements.groupBy(_.uUID).map {
             case (_, movementPair) =>
@@ -118,8 +114,9 @@ object TerminalStaffing {
               }
           }
           <.ul(^.className := "list-unstyled", iterable.toTagMod)
-        } else
+        } else {
           <.p("No movements recorded")
+        }
       )
     }
 

@@ -5,14 +5,14 @@ import java.util.UUID
 import drt.client.services.JSDateConversions._
 import drt.shared.StaffMovement
 import utest.{TestSuite, _}
-import TerminalStaffing.todaysMovements
+import TerminalStaffing.movementsForDay
 import scala.collection.immutable._
 
 object TerminalStaffingTests extends TestSuite {
 
   def tests = TestSuite {
     "Staff Movements" - {
-      "should only display movements within the date range provided" - {
+      "should only display movements for the day provided" - {
         val uid = UUID.randomUUID()
         val yesterday = StaffMovement("T1", "reason", SDate(2017, 7, 20, 12, 0), 1, uid, None)
         val today = StaffMovement("T1", "reason", SDate(2017, 7, 21, 12, 0), 1, uid, None)
@@ -22,7 +22,7 @@ object TerminalStaffingTests extends TestSuite {
         )
 
         val expected = Seq(today)
-        val result = todaysMovements(sm, SDate(2017, 7, 21, 0, 0), SDate(2017, 7, 22, 0, 0))
+        val result = movementsForDay(sm, SDate(2017, 7, 21, 0, 0))
 
         assert(expected == result)
       }

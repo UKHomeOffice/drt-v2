@@ -118,4 +118,8 @@ object JSDateConversions {
     }
   }
 
+  def startOfDay(d: SDateLike): SDateLike = SDate(d.getFullYear(), d.getMonth(), d.getDate())
+
+  def endOfDay(d: SDateLike): SDateLike = SDate(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59)
+
 }
