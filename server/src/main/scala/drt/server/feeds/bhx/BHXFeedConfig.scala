@@ -5,7 +5,7 @@ import org.slf4j.Logger
 import uk.co.bhx.online.flightinformation.{FlightInformation, FlightInformationSoap}
 import scala.concurrent.duration.{FiniteDuration, _}
 import scala.language.postfixOps
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 trait BHXFeedConfig {
   val log: Logger
@@ -27,7 +27,12 @@ trait BHXFeedConfig {
           binder
         case flightInformationSoap => flightInformationSoap
       }
-    }.recoverWith { case t => log.error(s"Failure starting BHX feed: ${t.getMessage}", t); throw new RuntimeException("Failure starting BHX feed.", t) }.get
+    } match {
+      case Success(flightInformationSoap) => flightInformationSoap
+      case Failure(t) =>
+        log.error(s"Failed to start BHX feed: ${t.getMessage}", t)
+        throw new RuntimeException("Failed to start BHX feed.", t)
+    }
   }
 
 }
