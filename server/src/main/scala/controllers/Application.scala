@@ -314,7 +314,7 @@ trait SystemActors {
         else LHRFlightFeed()
       case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
       case "LGW" => LGWFeed()
-      case "BHX" => BHXLiveFeed()
+      case "BHX" => BHXLiveFeed(config.getString("feeds.bhx.soap.endPointUrl").get)
       case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
     }
     feed.map(Flights)
@@ -327,7 +327,7 @@ trait SystemActors {
       case "LHR" => config.getString("lhr.forecast_path")
         .map(path => createForecastLHRFeed(path))
         .getOrElse(forecastNoOp)
-      case "BHX" => BHXForecastFeed()
+      case "BHX" => BHXForecastFeed(config.getString("feeds.bhx.soap.endPointUrl").get)
       case _ =>
         forecastNoOp
     }
