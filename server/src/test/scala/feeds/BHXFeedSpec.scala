@@ -89,7 +89,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
   "Given a BHX feed exists" should {
     "we can read live flight data" in new Context {
       val feed = BHXFeed(serviceSoap)
-      val arrivals: List[Arrival] = feed.getArrivals
+      val arrivals: List[Arrival] = feed.getLiveArrivals
       verify(serviceSoap).bfGetFlights
       arrivals.size mustEqual 1
       arrivals.head mustEqual new Arrival(
@@ -163,7 +163,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
         case flightInformationSoap => flightInformationSoap
       }
       val feed = BHXFeed(soapService)
-      val arrivals: List[Arrival] = feed.getArrivals
+      val arrivals: List[Arrival] = feed.getLiveArrivals
       println(s"We got ${arrivals.size} Arrivals.")
       arrivals.foreach(println)
       ok
