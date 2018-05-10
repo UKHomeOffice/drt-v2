@@ -60,7 +60,7 @@ object TerminalStaffing {
         val firstInWindow = isInWindow(startOfDayMillis, endOfDayMillis, start.time.millisSinceEpoch)
         val lastInWindow = isInWindow(startOfDayMillis, endOfDayMillis, end.time.millisSinceEpoch)
         firstInWindow || lastInWindow
-        
+
       case _ => false
     }
   }
@@ -131,20 +131,26 @@ object TerminalStaffing {
         <.h2("Movements"),
 
         if (terminalMovements.nonEmpty) {
-          val iterable: Iterable[TagMod] = terminalMovements.groupBy(_.uUID).map {
-            case (_, movementPair) =>
-              movementPair.toList.sortBy(_.time) match {
-                case first :: second :: Nil =>
-                  val remove = <.a(Icon.remove, ^.key := first.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) => Callback(SPACircuit.dispatch(RemoveStaffMovement(0, first.uUID)))))
-                  <.li(remove, " ", MovementDisplay.displayPair(first, second))
-                case mm :: Nil =>
-                  val remove = <.a(Icon.remove, ^.key := mm.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) => Callback(SPACircuit.dispatch(RemoveStaffMovement(0, mm.uUID)))))
-                  <.li(remove, " ", MovementDisplay.displaySingle(mm))
-                case x =>
-                  log.info(s"didn't get a pair: $x")
-                  TagMod()
-              }
-          }
+          val iterable: Iterable[TagMod] = terminalMovements
+            .groupBy(_.uUID)
+            .toSeq
+            .sortBy {
+              case (_, head :: _) => head.time
+            }
+            .map {
+              case (_, movementPair) =>
+                movementPair.toList.sortBy(_.time) match {
+                  case first :: second :: Nil =>
+                    val remove = <.a(Icon.remove, ^.key := first.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) => Callback(SPACircuit.dispatch(RemoveStaffMovement(0, first.uUID)))))
+                    <.li(remove, " ", MovementDisplay.displayPair(first, second))
+                  case mm :: Nil =>
+                    val remove = <.a(Icon.remove, ^.key := mm.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) => Callback(SPACircuit.dispatch(RemoveStaffMovement(0, mm.uUID)))))
+                    <.li(remove, " ", MovementDisplay.displaySingle(mm))
+                  case x =>
+                    log.info(s"didn't get a pair: $x")
+                    TagMod()
+                }
+            }
           <.ul(^.className := "list-unstyled", iterable.toTagMod)
         } else {
           <.p("No movements recorded")
