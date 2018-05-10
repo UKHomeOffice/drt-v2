@@ -146,4 +146,24 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     val arrivals: List[Arrival] = Await.result(futureArrivals, Duration(10, TimeUnit.SECONDS))
     arrivals.size mustEqual 0
   }
+
+  "will return an empty Arrival when given dodgy response" in new Context {
+    val mockResponse: HttpResponse = mock[HttpResponse]
+    val body: HttpEntity = HttpEntity(MediaTypes.`application/xml`, "This is not XML".getBytes)
+    mockResponse.entity returns body
+    mockResponse.status returns StatusCode.int2StatusCode(200)
+    mockResponse.headers returns List(RawHeader("Location", "blah.example.com/delete/messageId"))
+    var deleteCalled = false
+    val feed: LGWFeed = new LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId, system = system) {
+      override def sendAndReceive: HttpRequest => Future[HttpResponse] = (req: HttpRequest) => {
+        deleteCalled = req.method.equals(HttpMethods.DELETE)
+        Promise.successful(mockResponse).future
+      }
+      override lazy val assertion = "assertion"
+    }
+
+    val futureArrivals: Future[List[Arrival]] = feed.requestArrivals(GatwickAzureToken("type", "access_token", "0", "scope"))
+    val arrivals: List[Arrival] = Await.result(futureArrivals, Duration(10, TimeUnit.SECONDS))
+    arrivals.size mustEqual 0
+  }
 }

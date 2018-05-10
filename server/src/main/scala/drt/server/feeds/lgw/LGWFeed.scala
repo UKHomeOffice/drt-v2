@@ -112,8 +112,6 @@ case class LGWFeed(certPath: String, privateCertPath: String, namespace: String,
         ~> processDeleteIfApplicable
       )
 
-    println(wrapHeader)
-    println(serviceBusUri)
     resultPipeline(Post(serviceBusUri))
       .recoverWith {
         case t: Throwable =>

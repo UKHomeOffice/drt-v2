@@ -1,11 +1,13 @@
 package drt.server.feeds.lgw
 
 import java.io.ByteArrayInputStream
+
 import drt.shared.Arrival
 import org.apache.commons.io.IOUtils
 import org.slf4j.{Logger, LoggerFactory}
+
 import scala.util.{Failure, Success, Try}
-import scala.xml.Node
+import scala.xml.{Elem, Node}
 
 case class ResponseToArrivals(data: Array[Byte], locationOption: Option[String] ) {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -13,18 +15,21 @@ case class ResponseToArrivals(data: Array[Byte], locationOption: Option[String] 
   def getArrivals: List[(Arrival, Option[String])] = {
     val is = new ByteArrayInputStream(data)
     val xmlTry = Try(scala.xml.XML.load(is)).recoverWith {
-      case e: Throwable => log.error(s"Cannot load Gatwick XML from the response ${data.toString}", e); null
+      case e: Throwable =>
+        log.error(s"Cannot load Gatwick XML from the response: ${new String(data)}.", e)
+        throw e
     }
     IOUtils.closeQuietly(is)
     Try {
-      val xmlSeq = xmlTry.map(scala.xml.Utility.trimProper(_)).get
-      lazy val result = xmlSeq map nodeToArrival
-      result.toList
+      for {
+        xml <- xmlTry.toOption.toSeq
+        node <- scala.xml.Utility.trimProper(xml)
+      } yield nodeToArrival(node)
     } match {
-      case Success(arrivalsAndLocation) => arrivalsAndLocation
+      case Success(arrivalsAndLocation) => arrivalsAndLocation.toList
       case Failure(t) =>
-        log.error(s"Failed to get an Arrival from the Gatwick XML. ${t.getMessage}. $xmlTry.")
-        throw t
+        log.error(s"Failed to get an Arrival from the Gatwick XML. ${t.getMessage}. ${xmlTry.getOrElse("")}.", t)
+        List.empty[(Arrival, Option[String])]
     }
   }
 
