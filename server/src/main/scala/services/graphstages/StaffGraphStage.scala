@@ -139,7 +139,7 @@ class StaffGraphStage(name: String = "",
       override def onPush(): Unit = {
         val start = SDate.now()
         val incomingMovements = grab(inMovements)
-        log.info(s"Grabbed available inMovements: $incomingMovements")
+        log.info(s"Grabbed available inMovements")
         val existingMovements = movementsOption.map(_.toSet).getOrElse(Set())
         val updateCriteria: UpdateCriteria = movementsUpdateCriteria(existingMovements, incomingMovements)
         movementsOption = Option(incomingMovements)

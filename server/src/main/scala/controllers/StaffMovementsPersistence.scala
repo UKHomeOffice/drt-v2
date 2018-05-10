@@ -53,7 +53,6 @@ trait StaffMovementsPersistence {
         log.info(s"Got no movements")
         List()
       case sm: Seq[StaffMovement] =>
-        log.info(s"Got these movements: $sm")
         actorSystem.log.info(s"Retrieved staff movements from actor for ${forDate.toISOString()}")
         sm
     }
