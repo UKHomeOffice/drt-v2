@@ -41,22 +41,19 @@ object TerminalStaffing {
     movements
       .groupBy(_.uUID)
       .filter {
-        case (_, pair) =>
-          val movementsChronological = pair.sortBy(_.time.millisSinceEpoch).toList
+        case (_, movementsPair) =>
+          val chronologicalMovementsPair = movementsPair.sortBy(_.time.millisSinceEpoch).toList
 
-          val value = movementsChronological match {
+          chronologicalMovementsPair match {
             case singleMovement :: Nil =>
               val movementMillis = singleMovement.time.millisSinceEpoch
               isInWindow(startOfDayMillis, endOfDayMillis, movementMillis)
             case start :: end :: Nil =>
-              val firstMilli = start.time.millisSinceEpoch
-              val lastMilli = end.time.millisSinceEpoch
-              val firstInWindow = isInWindow(startOfDayMillis, endOfDayMillis, firstMilli)
-              val lastInWindow = isInWindow(startOfDayMillis, endOfDayMillis, lastMilli)
+              val firstInWindow = isInWindow(startOfDayMillis, endOfDayMillis, start.time.millisSinceEpoch)
+              val lastInWindow = isInWindow(startOfDayMillis, endOfDayMillis, end.time.millisSinceEpoch)
               firstInWindow || lastInWindow
             case _ => false
           }
-          value
       }
       .values
       .flatten
