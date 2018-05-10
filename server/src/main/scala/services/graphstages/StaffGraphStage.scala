@@ -7,7 +7,7 @@ import drt.shared.FlightsApi.TerminalName
 import drt.shared.{AirportConfig, SDateLike, StaffMovement, TM}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.graphstages.Crunch.{europeLondonTimeZone, getLocalLastMidnight, purgeExpired}
+import services.graphstages.Crunch.{europeLondonTimeZone, getLocalLastMidnight, movementsUpdateCriteria, purgeExpired}
 
 import scala.util.Success
 
@@ -198,16 +198,6 @@ class StaffGraphStage(name: String = "",
       UpdateCriteria(minuteMillis, terminalNames)
     }
 
-    def movementsUpdateCriteria(existingMovements: Set[StaffMovement], incomingMovements: Seq[StaffMovement]): UpdateCriteria = {
-      val updatedMovements = incomingMovements.toSet -- existingMovements
-      val deletedMovements = existingMovements -- incomingMovements.toSet
-      val affectedMovements = updatedMovements ++ deletedMovements
-      val minutesToUpdate = allMinuteMillis(affectedMovements.toSeq)
-      val terminalsToUpdate = affectedMovements.map(_.terminalName)
-      val updateCriteria = UpdateCriteria(minutesToUpdate, terminalsToUpdate)
-      updateCriteria
-    }
-
     def mergeStaffMinuteUpdates(latestUpdates: Map[TM, StaffMinute], existingUpdates: Map[TM, StaffMinute]): Map[TM, StaffMinute] = latestUpdates
       .foldLeft(existingUpdates) {
         case (soFar, (id, updatedMinute)) => soFar.updated(id, updatedMinute)
@@ -287,18 +277,6 @@ class StaffGraphStage(name: String = "",
       .toList
       .collect {
         case Success(assignment) => assignment
-      }
-      .toSet
-  }
-
-  def allMinuteMillis(movements: Seq[StaffMovement]): Set[MillisSinceEpoch] = {
-    movements
-      .groupBy(_.uUID)
-      .flatMap {
-        case (_, mmPair) =>
-          val startMillis = mmPair.map(_.time.millisSinceEpoch).min
-          val endMillis = mmPair.map(_.time.millisSinceEpoch).max
-          startMillis until endMillis by 60000
       }
       .toSet
   }
