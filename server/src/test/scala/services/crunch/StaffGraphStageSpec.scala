@@ -8,7 +8,7 @@ import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{StaffMinute, StaffMinutes}
 import drt.shared.{MilliDate, StaffMovement}
 import services.SDate
-import services.graphstages.StaffGraphStage
+import services.graphstages.{Crunch, StaffGraphStage, UpdateCriteria}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -45,6 +45,46 @@ object TestableStaffGraphStage {
 
 class StaffGraphStageSpec extends CrunchTestLike {
   val oneDayMillis: Int = 60 * 60 * 24 * 1000
+
+  "Given no existing staff movements and one new pair of staff movements " +
+    "When I ask for the update criteria " +
+    "Then I should see the terminal from the new movements and a start and end time matching the new movement pair" >> {
+    val existingMovements = Set[StaffMovement]()
+    val movementStart = MilliDate(SDate("2018-01-01T00:05").millisSinceEpoch)
+    val movementEnd = MilliDate(SDate("2018-01-01T00:10").millisSinceEpoch)
+    val terminal = "T1"
+    val uuid = UUID.randomUUID()
+    val incomingMovements = Seq(
+      StaffMovement(terminal, "", movementStart, -1, uuid, None),
+      StaffMovement(terminal, "", movementEnd, 1, uuid, None)
+    )
+
+    val result = Crunch.movementsUpdateCriteria(existingMovements, incomingMovements)
+    val affectedMinuteMillis = movementStart.millisSinceEpoch until movementEnd.millisSinceEpoch by 60000
+    val expected = UpdateCriteria(affectedMinuteMillis.toSet, Set(terminal))
+
+    result === expected
+  }
+
+  "Given a pair of existing staff movements and empty incoming staff movements " +
+    "When I ask for the update criteria " +
+    "Then I should see the terminal from the existing movements and a start and end time matching the existing pair" >> {
+    val movementStart = MilliDate(SDate("2018-01-01T00:05").millisSinceEpoch)
+    val movementEnd = MilliDate(SDate("2018-01-01T00:10").millisSinceEpoch)
+    val terminal = "T1"
+    val uuid = UUID.randomUUID()
+    val existingMovements = Set(
+      StaffMovement(terminal, "", movementStart, -1, uuid, None),
+      StaffMovement(terminal, "", movementEnd, 1, uuid, None)
+    )
+    val incomingMovements = Seq[StaffMovement]()
+
+    val result = Crunch.movementsUpdateCriteria(existingMovements, incomingMovements)
+    val affectedMinuteMillis = movementStart.millisSinceEpoch until movementEnd.millisSinceEpoch by 60000
+    val expected = UpdateCriteria(affectedMinuteMillis.toSet, Set(terminal))
+
+    result === expected
+  }
 
   "Given a staff stage for 1 days " +
     "When I send a shift of 3 minutes with 2 staff" +

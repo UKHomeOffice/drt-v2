@@ -11,6 +11,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.StaffMovement
 import org.slf4j.LoggerFactory
 import services.SDate
+import services.graphstages.Crunch
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -36,11 +37,16 @@ trait StaffMovementsPersistence {
 
     log.info(s"getStaffMovements(${forDate.toISOString()})")
 
-    val actorName = "staff-movements-read-actor-" + UUID.randomUUID().toString
-    val staffMovementsReadActor: AskableActorRef = actorSystem.actorOf(Props(classOf[StaffMovementsReadActor], forDate), actorName)
+    val staffMovementsFuture: Future[Seq[StaffMovement]] = if (forDate.millisSinceEpoch < Crunch.getLocalLastMidnight(SDate.now).millisSinceEpoch) {
+      val actorName = "staff-movements-read-actor-" + UUID.randomUUID().toString
+      val staffMovementsReadActor: AskableActorRef = actorSystem.actorOf(Props(classOf[StaffMovementsReadActor], forDate), actorName)
 
-    val staffMovementsFuture: Future[Seq[StaffMovement]] = staffMovementsReadActor.ask(GetState)
-      .map { case StaffMovements(sm) => sm }.recoverWith { case _ => Future(Seq()) }
+      staffMovementsReadActor.ask(GetState)
+        .map { case StaffMovements(sm) => sm }.recoverWith { case _ => Future(Seq()) }
+    } else {
+      staffMovementsActor.ask(GetState)
+        .map { case StaffMovements(sm) => sm }.recoverWith { case _ => Future(Seq()) }
+    }
 
     val eventualStaffMovements = staffMovementsFuture.collect {
       case Nil =>
