@@ -6,6 +6,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.FixedPoints._
 import drt.client.services.JSDateConversions._
 import drt.client.services._
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.TerminalName
 import drt.shared.{AirportConfig, MilliDate, SDateLike, StaffMovement}
 import japgolly.scalajs.react._
@@ -13,8 +14,7 @@ import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html.{Div, Table}
 
-import scala.collection.immutable
-import scala.collection.immutable.{NumericRange, Seq}
+import scala.collection.immutable.NumericRange
 import scala.scalajs.js.Date
 import scala.util.{Success, Try}
 
@@ -34,8 +34,38 @@ object TerminalStaffing {
                     viewMode: ViewMode
                   )
 
-  def movementsForDay(movements: Seq[StaffMovement], day: SDateLike): Seq[StaffMovement] = movements
-    .filter(m => m.time > startOfDay(day).millisSinceEpoch && m.time < endOfDay(day).millisSinceEpoch)
+  def movementsForDay(movements: Seq[StaffMovement], day: SDateLike): Seq[StaffMovement] = {
+    val startOfDayMillis = startOfDay(day).millisSinceEpoch
+    val endOfDayMillis = endOfDay(day).millisSinceEpoch
+
+    movements
+      .groupBy(_.uUID)
+      .filter {
+        case (_, pair) =>
+          val movementsChronological = pair.sortBy(_.time.millisSinceEpoch).toList
+
+          val value = movementsChronological match {
+            case singleMovement :: Nil =>
+              val movementMillis = singleMovement.time.millisSinceEpoch
+              isInWindow(startOfDayMillis, endOfDayMillis, movementMillis)
+            case start :: end :: Nil =>
+              val firstMilli = start.time.millisSinceEpoch
+              val lastMilli = end.time.millisSinceEpoch
+              val firstInWindow = isInWindow(startOfDayMillis, endOfDayMillis, firstMilli)
+              val lastInWindow = isInWindow(startOfDayMillis, endOfDayMillis, lastMilli)
+              firstInWindow || lastInWindow
+            case _ => false
+          }
+          value
+      }
+      .values
+      .flatten
+      .toSeq
+  }
+
+  private def isInWindow(startOfDayMillis: MillisSinceEpoch, endOfDayMillis: MillisSinceEpoch, movementMillis: MillisSinceEpoch) = {
+    startOfDayMillis <= movementMillis && movementMillis <= endOfDayMillis
+  }
 
   class Backend($: BackendScope[Props, Unit]) {
 
@@ -99,7 +129,8 @@ object TerminalStaffing {
         <.h2("Movements"),
 
         if (terminalMovements.nonEmpty) {
-          val iterable: immutable.Iterable[TagMod] = terminalMovements.groupBy(_.uUID).map {
+          log.info(s"movements: $terminalMovements")
+          val iterable: Iterable[TagMod] = terminalMovements.groupBy(_.uUID).map {
             case (_, movementPair) =>
               movementPair.toList.sortBy(_.time) match {
                 case first :: second :: Nil =>
