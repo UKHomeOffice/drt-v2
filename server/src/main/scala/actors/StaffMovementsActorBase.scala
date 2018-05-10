@@ -9,6 +9,9 @@ import drt.shared.{MilliDate, StaffMovement}
 import server.protobuf.messages.StaffMovementMessages.{StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
 import services.SDate
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.{Failure, Success}
+
 case class StaffMovements(staffMovements: Seq[StaffMovement])
 
 case class StaffMovementsState(staffMovements: StaffMovements) {
@@ -21,8 +24,14 @@ class StaffMovementsActor extends StaffMovementsActorBase {
   var subscribers: List[SourceQueueWithComplete[Seq[StaffMovement]]] = List()
 
   override def onUpdateState(data: StaffMovements): Unit = {
-    log.info(s"Telling subscribers about updated staff movements")
-    subscribers.map(_.offer(data.staffMovements))
+    log.info(s"Telling subscribers ($subscribers) about updated staff movements")
+
+    subscribers.foreach(s => {
+      s.offer(data.staffMovements).onComplete {
+        case Success(qor) => log.info(s"update queued successfully with subscriber: $qor")
+        case Failure(t) => log.info(s"update failed to queue with subscriber: $t")
+      }
+    })
   }
 
   val subsReceive: Receive = {

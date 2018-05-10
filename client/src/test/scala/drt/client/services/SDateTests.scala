@@ -135,7 +135,7 @@ object SDateTests extends TestSuite {
         }
       }
       "When Parsing a Date String as Local Time" - {
-         "Given 2018-04-26T23:59 then I should get an ISO Date String of 2018-04-26T21:59:00.000Z" - {
+         "Given 2018-04-26T23:59 then I should get an ISO Date String of 2018-04-26T22:59:00.000Z" - {
            val localDate = "2018-04-26T23:59"
            val expected =  "2018-04-26T22:59:00.000Z"
            val result = SDate.parseAsLocalDateTime(localDate).toISOString()

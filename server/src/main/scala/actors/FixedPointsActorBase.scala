@@ -10,7 +10,8 @@ import server.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPoint
 import services.SDate
 
 import scala.collection.immutable
-import scala.util.Try
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.{Failure, Success, Try}
 
 case class FixedPointsState(fixedPoints: String) {
   def updated(data: String): FixedPointsState = copy(fixedPoints = data)
@@ -20,8 +21,14 @@ class FixedPointsActor extends FixedPointsActorBase {
   var subscribers: List[SourceQueueWithComplete[String]] = List()
 
   override def onUpdateState(data: String): Unit = {
-    log.info(s"Telling subscribers about updated fixed points: $data")
-    subscribers.map(_.offer(data))
+    log.info(s"Telling subscribers ($subscribers) about updated fixed points: $data")
+
+    subscribers.foreach(s => {
+      s.offer(data).onComplete {
+        case Success(qor) => log.info(s"update queued successfully with subscriber: $qor")
+        case Failure(t) => log.info(s"update failed to queue with subscriber: $t")
+      }
+    })
   }
 
   val subsReceive: Receive = {

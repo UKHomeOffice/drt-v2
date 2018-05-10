@@ -10,7 +10,8 @@ import org.slf4j.LoggerFactory
 import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
 import services.SDate
 
-import scala.util.Try
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.{Failure, Success, Try}
 
 case class ShiftsState(shifts: String) {
   def updated(data: String): ShiftsState = copy(shifts = data)
@@ -30,8 +31,14 @@ class ShiftsActor extends ShiftsActorBase {
   var subscribers: List[SourceQueueWithComplete[String]] = List()
 
   override def onUpdateState(data: String): Unit = {
-    log.info(s"Telling subscribers about updated shifts")
-    subscribers.map(_.offer(data))
+    log.info(s"Telling subscribers ($subscribers) about updated shifts")
+
+    subscribers.foreach(s => {
+      s.offer(data).onComplete {
+        case Success(qor) => log.info(s"update queued successfully with subscriber: $qor")
+        case Failure(t) => log.info(s"update failed to queue with subscriber: $t")
+      }
+    })
   }
 
   val subsReceive: Receive = {
