@@ -8,6 +8,8 @@ import drt.server.feeds.lgw.{GatwickAzureToken, LGWFeed}
 import drt.shared.Arrival
 import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecificationLike
+import org.specs2.specification.Scope
+import spray.http.HttpHeaders.RawHeader
 import spray.http._
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -26,7 +28,7 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     "When I ask for some arrivals " +
     "Then I should get some arrivals" >> {
 
-    skipped("exploratory test for the LGW live feed")
+  skipped("exploratory test for the LGW live feed")
 
     val certPath = ""
     val privateCertPath = ""
@@ -55,31 +57,37 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     arrivals mustNotEqual Seq()
   }.pendingUntilFixed("This is not a test")
 
-  "Can convert an XML into an Arrival" in {
-    val certPath = getClass.getClassLoader.getResource("lgw.xml").getPath
-    val privateCertPath = certPath
+  trait Context extends Scope {
+    val certPath: String = getClass.getClassLoader.getResource("lgw.xml").getPath
+    val privateCertPath: String = certPath
     val azureServiceNamespace = "Gat"
     val issuer = "issuer"
     val nameId = "nameId"
+  }
 
-    val mockResponse = mock[HttpResponse]
-    val xml = Source.fromInputStream(getClass.getClassLoader.getResourceAsStream("lgw.xml")).mkString
-    val body = HttpEntity(MediaTypes.`application/xml`, xml.getBytes)
+  "Can convert an XML into an Arrival" in new Context {
+    val mockResponse: HttpResponse = mock[HttpResponse]
+    val xml: String = Source.fromInputStream(getClass.getClassLoader.getResourceAsStream("lgw.xml")).mkString
+    val body: HttpEntity = HttpEntity(MediaTypes.`application/xml`, xml.getBytes)
     mockResponse.entity returns body
     mockResponse.status returns StatusCode.int2StatusCode(200)
-    mockResponse.headers returns List.empty[HttpHeader]
+    mockResponse.headers returns List(RawHeader("Location", "blah.example.com/delete/messageId"))
+    var deleteCalled = false
 
-    val feed = new LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId, system = system) {
-      override def sendAndReceive = (req: HttpRequest) => Promise.successful(mockResponse).future
-
-      override def createAzureSamlAssertionAsString(privateKey: Array[Byte], certificate: Array[Byte]) = "assertion"
+    val feed: LGWFeed = new LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId, system = system) {
+      override def sendAndReceive: HttpRequest => Future[HttpResponse] = (req: HttpRequest) => {
+        deleteCalled = req.method.equals(HttpMethods.DELETE)
+        Promise.successful(mockResponse).future
+      }
+      override lazy val assertion = "assertion"
     }
 
-    val futureArrivals = feed.requestArrivals(GatwickAzureToken("type", "access_token", "0", "scope"))
-    val arrivals = Await.result(futureArrivals, Duration(10, TimeUnit.SECONDS))
+    val futureArrivals: Future[List[Arrival]] = feed.requestArrivals(GatwickAzureToken("type", "access_token", "0", "scope"))
+    val arrivals: List[Arrival] = Await.result(futureArrivals, Duration(10, TimeUnit.SECONDS))
 
     arrivals.size mustEqual 1
-    arrivals.head mustEqual new Arrival("",
+    arrivals.head mustEqual new Arrival(
+      Operator = "",
       Status = "LAN",
       EstDT = "2018-03-22T15:50:00Z",
       ActDT = "2018-03-22T15:48:00Z",
@@ -94,7 +102,68 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       BaggageReclaimId = "1",
       FlightID = 0,
       AirportID = "LGW",
-      Terminal = "S", "NAX1314", "DY1314", "BGO", "2018-03-22T10:15:00Z", 1521713700000L, 0, None)
+      Terminal = "S", rawICAO = "NAX1314", rawIATA = "DY1314", Origin = "BGO", SchDT = "2018-03-22T10:15:00Z",
+      Scheduled = 1521713700000L, PcpTime = 0, LastKnownPax = None)
 
+    deleteCalled must beTrue
+  }
+
+  "A response of 204 does not return an Arrival" in new Context {
+    val mockResponse: HttpResponse = mock[HttpResponse]
+    mockResponse.headers returns List.empty[HttpHeader]
+    mockResponse.status returns StatusCode.int2StatusCode(204)
+    var deleteCalled = false
+
+    val feed: LGWFeed = new LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId, system = system) {
+      override def sendAndReceive: HttpRequest => Future[HttpResponse] = (req: HttpRequest) => {
+        deleteCalled = req.method.equals(HttpMethods.DELETE)
+        Promise.successful(mockResponse).future
+      }
+      override lazy val assertion: String = "assertion"
+    }
+    val futureArrivals: Future[List[Arrival]] = feed.requestArrivals(GatwickAzureToken("type", "access_token", "0", "scope"))
+    val arrivals: List[Arrival] = Await.result(futureArrivals, Duration(10, TimeUnit.SECONDS))
+    arrivals.size mustEqual 0
+    deleteCalled must beFalse
+  }
+
+  "will return an empty Arrival when given dodgy XML" in new Context {
+    val mockResponse: HttpResponse = mock[HttpResponse]
+    val body: HttpEntity = HttpEntity(MediaTypes.`application/xml`, "<ns0:hello><title>This XML is dodgy</title></ns0:hello>".getBytes)
+    mockResponse.entity returns body
+    mockResponse.status returns StatusCode.int2StatusCode(200)
+    mockResponse.headers returns List(RawHeader("Location", "blah.example.com/delete/messageId"))
+    var deleteCalled = false
+    val feed: LGWFeed = new LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId, system = system) {
+      override def sendAndReceive: HttpRequest => Future[HttpResponse] = (req: HttpRequest) => {
+        deleteCalled = req.method.equals(HttpMethods.DELETE)
+        Promise.successful(mockResponse).future
+      }
+      override lazy val assertion = "assertion"
+    }
+
+    val futureArrivals: Future[List[Arrival]] = feed.requestArrivals(GatwickAzureToken("type", "access_token", "0", "scope"))
+    val arrivals: List[Arrival] = Await.result(futureArrivals, Duration(10, TimeUnit.SECONDS))
+    arrivals.size mustEqual 0
+  }
+
+  "will return an empty Arrival when given dodgy response" in new Context {
+    val mockResponse: HttpResponse = mock[HttpResponse]
+    val body: HttpEntity = HttpEntity(MediaTypes.`application/xml`, "This is not XML".getBytes)
+    mockResponse.entity returns body
+    mockResponse.status returns StatusCode.int2StatusCode(200)
+    mockResponse.headers returns List(RawHeader("Location", "blah.example.com/delete/messageId"))
+    var deleteCalled = false
+    val feed: LGWFeed = new LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId, system = system) {
+      override def sendAndReceive: HttpRequest => Future[HttpResponse] = (req: HttpRequest) => {
+        deleteCalled = req.method.equals(HttpMethods.DELETE)
+        Promise.successful(mockResponse).future
+      }
+      override lazy val assertion = "assertion"
+    }
+
+    val futureArrivals: Future[List[Arrival]] = feed.requestArrivals(GatwickAzureToken("type", "access_token", "0", "scope"))
+    val arrivals: List[Arrival] = Await.result(futureArrivals, Duration(10, TimeUnit.SECONDS))
+    arrivals.size mustEqual 0
   }
 }
