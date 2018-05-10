@@ -41,23 +41,28 @@ object TerminalStaffing {
     movements
       .groupBy(_.uUID)
       .filter {
-        case (_, movementsPair) =>
-          val chronologicalMovementsPair = movementsPair.sortBy(_.time.millisSinceEpoch).toList
-
-          chronologicalMovementsPair match {
-            case singleMovement :: Nil =>
-              val movementMillis = singleMovement.time.millisSinceEpoch
-              isInWindow(startOfDayMillis, endOfDayMillis, movementMillis)
-            case start :: end :: Nil =>
-              val firstInWindow = isInWindow(startOfDayMillis, endOfDayMillis, start.time.millisSinceEpoch)
-              val lastInWindow = isInWindow(startOfDayMillis, endOfDayMillis, end.time.millisSinceEpoch)
-              firstInWindow || lastInWindow
-            case _ => false
-          }
+        case (_, movementsPair) => areInWindow(startOfDayMillis, endOfDayMillis, movementsPair)
       }
       .values
       .flatten
       .toSeq
+  }
+
+  def areInWindow(startOfDayMillis: MillisSinceEpoch, endOfDayMillis: MillisSinceEpoch, movementsPair: Seq[StaffMovement]): Boolean = {
+    val chronologicalMovementsPair = movementsPair.sortBy(_.time.millisSinceEpoch).toList
+
+    chronologicalMovementsPair match {
+      case singleMovement :: Nil =>
+        val movementMillis = singleMovement.time.millisSinceEpoch
+        isInWindow(startOfDayMillis, endOfDayMillis, movementMillis)
+
+      case start :: end :: Nil =>
+        val firstInWindow = isInWindow(startOfDayMillis, endOfDayMillis, start.time.millisSinceEpoch)
+        val lastInWindow = isInWindow(startOfDayMillis, endOfDayMillis, end.time.millisSinceEpoch)
+        firstInWindow || lastInWindow
+        
+      case _ => false
+    }
   }
 
   private def isInWindow(startOfDayMillis: MillisSinceEpoch, endOfDayMillis: MillisSinceEpoch, movementMillis: MillisSinceEpoch) = {
