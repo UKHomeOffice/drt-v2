@@ -126,7 +126,6 @@ object TerminalStaffing {
         <.h2("Movements"),
 
         if (terminalMovements.nonEmpty) {
-          log.info(s"movements: $terminalMovements")
           val iterable: Iterable[TagMod] = terminalMovements.groupBy(_.uUID).map {
             case (_, movementPair) =>
               movementPair.toList.sortBy(_.time) match {
