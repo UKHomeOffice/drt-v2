@@ -95,7 +95,8 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
   }
 }
 
-class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
+class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
+                              viewMode: () => ViewMode,
                               latestUpdate: ModelR[M, MillisSinceEpoch],
                               modelRW: ModelRW[M, (Pot[CrunchState], MillisSinceEpoch)]) extends LoggingActionHandler(modelRW) {
   val crunchUpdatesRequestFrequency: FiniteDuration = 2 seconds
@@ -105,49 +106,11 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetCrunchState() =>
       val eventualAction = viewMode() match {
-        case ViewLive() =>
-          log.info(s"Calling getCrunchUpdates")
-          implicit val pickler = generatePickler[ApiPaxTypeAndQueueCount]
-          AjaxClient[Api].getCrunchUpdates(latestUpdateMillis).call()
-            .map {
-              case Some(cu) =>
-                log.info(s"Got ${cu.flights.size} flights, ${cu.minutes.size} minutes")
-                UpdateCrunchStateFromUpdatesAndContinuePolling(cu)
-              case None =>
-                RetryActionAfter(GetCrunchState(), crunchUpdatesRequestFrequency)
-            }
-            .recoverWith {
-              case f =>
-                log.error(s"Update request failed. Re-requesting after ${PollDelay.recoveryDelay} (${f.getMessage})")
-                Future(RetryActionAfter(GetCrunchState(), PollDelay.recoveryDelay))
-            }
+        case vm@ViewLive() => requestCrunchUpdates(vm.time)
 
-        case vm =>
-          log.info(s"Requesting crunchState for point in time ${vm.time.prettyDateTime()}")
+        case ViewDay(time) if time.millisSinceEpoch >= midnightThisMorning.millisSinceEpoch => requestCrunchUpdates(time)
 
-          implicit val pickler = generatePickler[ApiPaxTypeAndQueueCount]
-
-          val call = vm match {
-            case ViewPointInTime(time) =>
-              log.info(s"Calling getCrunchStateForPointInTime ${time.prettyDateTime()}")
-              AjaxClient[Api].getCrunchStateForPointInTime(time.millisSinceEpoch).call()
-            case ViewDay(time) =>
-              log.info(s"Calling getCrunchStateForDay ${time.prettyDateTime()}")
-              AjaxClient[Api].getCrunchStateForDay(time.millisSinceEpoch).call()
-            case _ => Future(None)
-          }
-          call.map {
-            case Some(cs) =>
-              log.info(s"Got ${cs.flights.size} flights, ${cs.crunchMinutes.size} minutes")
-              UpdateCrunchStateFromCrunchState(cs)
-            case None =>
-              log.info(s"CrunchState not available")
-              RetryActionAfter(GetCrunchState(), crunchUpdatesRequestFrequency)
-          }.recoverWith {
-            case f =>
-              log.error(s"CrunchState request failed. Re-requesting after ${PollDelay.recoveryDelay}")
-              Future(RetryActionAfter(GetCrunchState(), PollDelay.recoveryDelay))
-          }
+        case vm => requestHistoricCrunchState(vm)
       }
       val crunchState = modelRW.value._1
 
@@ -155,6 +118,7 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
         Effect(eventualAction)
       else
         Effect(Future(ShowLoader())) + Effect(eventualAction)
+
       crunchState match {
         case Ready(thing) =>
           updated((PendingStale(thing), latestUpdateMillis), effects)
@@ -175,6 +139,7 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
       updated((Ready(crunchState), 0L), allEffects)
 
     case UpdateCrunchStateFromUpdatesAndContinuePolling(crunchUpdates: CrunchUpdates) =>
+      log.info(s"UpdateCrunchStateFromUpdatesAndContinuePolling ")
       val getCrunchStateAfterDelay = Effect(Future(GetCrunchState())).after(crunchUpdatesRequestFrequency)
       val updateCrunchState = Effect(Future(UpdateCrunchStateFromUpdates(crunchUpdates)))
       val effects = getCrunchStateAfterDelay + updateCrunchState
@@ -206,8 +171,64 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
       updated((PendingStale(newState), crunchUpdates.latest), Effect(Future(HideLoader())))
   }
 
-  def isPollingForUpdates = {
-    viewMode() == ViewLive() && latestUpdateMillis != 0L
+  def requestHistoricCrunchState(viewMode: ViewMode): Future[Action] = {
+    log.info(s"Requesting CrunchState for point in time ${viewMode.time.prettyDateTime()}")
+
+    implicit val pickler = generatePickler[ApiPaxTypeAndQueueCount]
+
+    val futureCrunchState = viewMode match {
+      case ViewPointInTime(time) =>
+        log.info(s"Calling getCrunchStateForPointInTime ${time.prettyDateTime()}")
+        AjaxClient[Api].getCrunchStateForPointInTime(time.millisSinceEpoch).call()
+      case ViewDay(time) =>
+        log.info(s"Calling getCrunchStateForDay ${time.prettyDateTime()}")
+        AjaxClient[Api].getCrunchStateForDay(time.millisSinceEpoch).call()
+      case _ => Future(None)
+    }
+
+    processFutureCrunch(futureCrunchState)
+  }
+
+  def processFutureCrunch[U](call: Future[Option[U]]): Future[Action] = {
+    call.map {
+      case Some(cs: CrunchState) =>
+        log.info(s"Got CrunchState with ${cs.flights.size} flights, ${cs.crunchMinutes.size} minutes")
+        UpdateCrunchStateFromCrunchState(cs)
+      case Some(cu: CrunchUpdates) =>
+        log.info(s"Got CrunchUpdates with ${cu.flights.size} flights, ${cu.minutes.size} minutes")
+        UpdateCrunchStateFromUpdatesAndContinuePolling(cu)
+      case None =>
+        RetryActionAfter(GetCrunchState(), crunchUpdatesRequestFrequency)
+    }.recoverWith {
+      case _ =>
+        log.error(s"Failed to GetCrunchState. Re-requesting after ${PollDelay.recoveryDelay}")
+        Future(RetryActionAfter(GetCrunchState(), PollDelay.recoveryDelay))
+    }
+  }
+
+  def requestCrunchUpdates(pointInTime: SDateLike): Future[Action] = {
+    implicit val pickler = generatePickler[ApiPaxTypeAndQueueCount]
+
+    val startOfDay = dayStart(pointInTime)
+    val endOfDay = dayEnd(pointInTime)
+
+    log.info(s"Calling getCrunchUpdates for ${startOfDay.toISOString()} to ${endOfDay.toISOString()}")
+
+    val futureCrunchUpdates = AjaxClient[Api].getCrunchUpdates(latestUpdateMillis, startOfDay.millisSinceEpoch, endOfDay.millisSinceEpoch).call()
+
+    processFutureCrunch(futureCrunchUpdates)
+  }
+
+  def isPollingForUpdates: Boolean = {
+    val liveModeUpdating = viewMode() == ViewLive() && latestUpdateMillis != 0L
+    val dayModeUpdating = viewMode() match {
+      case ViewDay(time) =>
+        val notPastDay = time.millisSinceEpoch > midnightThisMorning.millisSinceEpoch
+        notPastDay && latestUpdateMillis != 0L
+      case _ => false
+    }
+
+    liveModeUpdating || dayModeUpdating
   }
 
   def newStateFromUpdates(crunchUpdates: CrunchUpdates): CrunchState = {
@@ -215,12 +236,19 @@ class CrunchUpdatesHandler[M](viewMode: () => ViewMode,
   }
 
   def updateStateFromUpdates(crunchUpdates: CrunchUpdates, existingState: CrunchState): CrunchState = {
-    val lastMidnightMillis = SDate.midnightThisMorning().millisSinceEpoch
+    val lastMidnightMillis = midnightThisMorning.millisSinceEpoch
     val flights = updateAndTrimFlights(crunchUpdates, existingState, lastMidnightMillis)
     val minutes = updateAndTrimCrunch(crunchUpdates, existingState, lastMidnightMillis)
     val staff = updateAndTrimStaff(crunchUpdates, existingState, lastMidnightMillis)
     CrunchState(flights = flights, crunchMinutes = minutes, staffMinutes = staff)
   }
+
+  def midnightThisMorning: SDateLike = dayStart(SDate.now())
+
+  def dayStart(pointInTime: SDateLike): SDateLike = SDate.dayStart(pointInTime)
+
+  def dayEnd(pointInTime: SDateLike): SDateLike = dayStart(pointInTime)
+    .addHours(airportConfigPot().map(_.dayLengthHours).getOrElse(24))
 
   def updateAndTrimCrunch(crunchUpdates: CrunchUpdates, existingState: CrunchState, keepFromMillis: MillisSinceEpoch): Set[CrunchApi.CrunchMinute] = {
     val relevantMinutes = existingState.crunchMinutes.filter(_.minute >= keepFromMillis)
@@ -490,7 +518,7 @@ class StaffMovementsHandler[M](modelRW: ModelRW[M, (Pot[Seq[StaffMovement]], Vie
 
       val apiCallEffect = Effect(AjaxClient[Api].getStaffMovements(viewMode.millis).call()
         .map(res => {
-          log.info(s"Got these StaffMovements from the server: $res")
+          log.info(s"Got StaffMovements from the server")
           SetStaffMovements(res)
         })
         .recoverWith {
@@ -524,7 +552,12 @@ class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[Crunch
     case SetViewMode(newViewMode) =>
       val (currentViewMode, _, currentLatestUpdateMillis) = value
 
-      val latestUpdateMillis = if (currentViewMode != ViewLive() && newViewMode == ViewLive()) 0L else currentLatestUpdateMillis
+      val latestUpdateMillis = (newViewMode, currentViewMode) match {
+        case (newVm, oldVm) if newVm != oldVm => 0L
+        case (ViewDay(newTime), ViewDay(oldTime)) if newTime != oldTime => 0L
+        case _ => currentLatestUpdateMillis
+      }
+//      val latestUpdateMillis = if (newViewMode == currentViewMode) currentLatestUpdateMillis else 0L
 
       log.info(s"VM: Set client newViewMode from $currentViewMode to $newViewMode. latestUpdateMillis: $latestUpdateMillis")
       (currentViewMode, newViewMode, crunchStateMP.value) match {
@@ -658,9 +691,13 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
 
   def currentViewMode(): ViewMode = zoom(_.viewMode).value
 
+  def airportConfigPot(): Pot[AirportConfig] = zoomTo(_.airportConfig).value
+
+  def pointInTimeMillis: MillisSinceEpoch = zoom(_.viewMode).value.millis
+
   override val actionHandler: HandlerFunction = {
     val composedhandlers: HandlerFunction = composeHandlers(
-      new CrunchUpdatesHandler(currentViewMode, zoom(_.latestUpdateMillis), zoomRW(m => (m.crunchStatePot, m.latestUpdateMillis))((m, v) => m.copy(crunchStatePot = v._1, latestUpdateMillis = v._2))),
+      new CrunchUpdatesHandler(airportConfigPot, currentViewMode, zoom(_.latestUpdateMillis), zoomRW(m => (m.crunchStatePot, m.latestUpdateMillis))((m, v) => m.copy(crunchStatePot = v._1, latestUpdateMillis = v._2))),
       new ForecastHandler(zoomRW(_.forecastPeriodPot)((m, v) => m.copy(forecastPeriodPot = v))),
       new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
@@ -681,8 +718,6 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
 
     composedhandlers
   }
-
-  def pointInTimeMillis: MillisSinceEpoch = zoom(_.viewMode).value.millis
 }
 
 object SPACircuit extends DrtCircuit
