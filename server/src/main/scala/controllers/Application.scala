@@ -481,14 +481,10 @@ class Application @Inject()(implicit val config: Configuration,
 
       def getApplicationVersion(): String = BuildInfo.version
 
-      override def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]] = {
-        crunchStateAtPointInTime(pointInTime)
-      }
+      override def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]] = crunchStateAtPointInTime(pointInTime)
 
-      def getCrunchUpdates(sinceMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]] = {
-        val startMillis = midnightThisMorning
-        val endMillis = midnightThisMorning + oneHourMillis * airportConfig.dayLengthHours
-        val crunchStateFuture = liveCrunchStateActor.ask(GetUpdatesSince(sinceMillis, startMillis, endMillis))(new Timeout(30 seconds))
+      def getCrunchUpdates(sinceMillis: MillisSinceEpoch, windowStartMillis: MillisSinceEpoch, windowEndMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]] = {
+        val crunchStateFuture = liveCrunchStateActor.ask(GetUpdatesSince(sinceMillis, windowStartMillis, windowEndMillis))(new Timeout(30 seconds))
 
         crunchStateFuture.map {
           case Some(cu: CrunchUpdates) => Option(cu)

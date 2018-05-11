@@ -90,7 +90,7 @@ abstract class ApiService(val airportConfig: AirportConfig,
 
   def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]]
 
-  def getCrunchUpdates(sinceMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]]
+  def getCrunchUpdates(sinceMillis: MillisSinceEpoch, windowStartMillis: MillisSinceEpoch, windowEndMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]]
 
   def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]]
 
