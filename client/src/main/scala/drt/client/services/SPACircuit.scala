@@ -139,7 +139,6 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
       updated((Ready(crunchState), 0L), allEffects)
 
     case UpdateCrunchStateFromUpdatesAndContinuePolling(crunchUpdates: CrunchUpdates) =>
-      log.info(s"UpdateCrunchStateFromUpdatesAndContinuePolling ")
       val getCrunchStateAfterDelay = Effect(Future(GetCrunchState())).after(crunchUpdatesRequestFrequency)
       val updateCrunchState = Effect(Future(UpdateCrunchStateFromUpdates(crunchUpdates)))
       val effects = getCrunchStateAfterDelay + updateCrunchState
@@ -557,7 +556,6 @@ class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[Crunch
         case (ViewDay(newTime), ViewDay(oldTime)) if newTime != oldTime => 0L
         case _ => currentLatestUpdateMillis
       }
-//      val latestUpdateMillis = if (newViewMode == currentViewMode) currentLatestUpdateMillis else 0L
 
       log.info(s"VM: Set client newViewMode from $currentViewMode to $newViewMode. latestUpdateMillis: $latestUpdateMillis")
       (currentViewMode, newViewMode, crunchStateMP.value) match {
