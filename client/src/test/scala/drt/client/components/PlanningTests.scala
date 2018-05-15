@@ -14,7 +14,7 @@ object PlanningTests extends TestSuite {
 
         val result = getLastSunday(start)
 
-        val expected = SDate("2017-10-22T02:00:00")
+        val expected = SDate("2017-10-22T00:00:00")
 
         assert(result.toISOString() == expected.toISOString())
       }
@@ -23,7 +23,7 @@ object PlanningTests extends TestSuite {
 
         val result = getLastSunday(start)
 
-        val expected = SDate("2017-10-22T02:00:00")
+        val expected = SDate("2017-10-22T00:00:00")
 
         assert(result.toISOString() == expected.toISOString())
       }
@@ -32,7 +32,7 @@ object PlanningTests extends TestSuite {
 
         val result = getLastSunday(start)
 
-        val expected = SDate("2017-10-22T02:00:00")
+        val expected = SDate("2017-10-22T00:00:00")
 
         assert(result.toISOString() == expected.toISOString())
       }
@@ -41,7 +41,7 @@ object PlanningTests extends TestSuite {
 
         val result = getLastSunday(start)
 
-        val expected = SDate("2017-10-22T02:00:00")
+        val expected = SDate("2017-10-22T00:00:00")
 
         assert(result.toISOString() == expected.toISOString())
       }

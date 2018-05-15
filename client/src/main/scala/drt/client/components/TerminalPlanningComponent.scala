@@ -17,7 +17,7 @@ object TerminalPlanningComponent {
   def getLastSunday(start: SDateLike) = {
     val sunday = if (start.getDayOfWeek() == 7) start else start.addDays(-1 * start.getDayOfWeek())
 
-    SDate(sunday.getFullYear(), sunday.getMonth(), sunday.getDate(), 2)
+    SDate(f"${sunday.getFullYear()}-${sunday.getMonth()}%02d-${sunday.getDate()}%02dT00:00:00")
   }
 
   case class Props(forecastPeriod: ForecastPeriodWithHeadlines, page: TerminalPageTabLoc, router: RouterCtl[Loc]) {
@@ -38,7 +38,7 @@ object TerminalPlanningComponent {
       val sortedDays = props.forecastPeriod.forecast.days.toList.sortBy(_._1)
       val byTimeSlot: Iterable[Iterable[ForecastTimeSlot]] = sortedDays.transpose(_._2.take(96))
 
-      def drawSelect(names: Seq[String], values: Seq[String], value: String) = {
+      def drawSelect(names: Seq[String], values: List[String], value: String) = {
         <.select(^.className := "form-control", ^.value := value.toString,
           ^.onChange ==> ((e: ReactEventFromInput) => {
             props.router.set(props.page.copy(date = Option(SDate(e.target.value).toLocalDateTimeString())))
@@ -47,26 +47,27 @@ object TerminalPlanningComponent {
             case (value, name) => <.option(^.value := value.toString, name)
           }.toTagMod)
       }
+
       <.div(
         <.div(^.className := "form-group row planning-week",
           <.div(^.className := "col-sm-3 no-gutters", <.label(^.className := "col-form-label", "Select week start day")),
           <.div(^.className := "col-sm-2 no-gutters",
             drawSelect(
               forecastWeeks.map(_.ddMMyyString),
-              forecastWeeks.map(_.toISOString()),
+              forecastWeeks.map(_.toISOString()).toList,
               defaultStartDate(props.page.dateFromUrlOrNow).toISOString())
           )
         ),
-        <.div(^.className := "exports",
+        <.div(^.className := "export-links",
           <.a(
             "Export Headlines",
-            ^.className := "btn btn-default",
+            ^.className := "btn btn-link",
             ^.href := s"${dom.window.location.pathname}/export/headlines/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}",
             ^.target := "_blank"
           ),
           <.a(
             "Export Week",
-            ^.className := "btn btn-default",
+            ^.className := "btn btn-link",
             ^.href := s"${dom.window.location.pathname}/export/planning/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}",
             ^.target := "_blank"
           )
