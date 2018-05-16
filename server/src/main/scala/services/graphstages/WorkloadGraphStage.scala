@@ -172,13 +172,17 @@ class WorkloadGraphStage(name: String = "",
       flightToFlightSplitMinutes
         .values
         .flatten
-        .groupBy(s => (s.terminalName, s.queueName, s.minute)).map {
-        case ((terminalName, queueName, minute), fsms) =>
-          val paxLoad = fsms.map(_.paxLoad).sum
-          val workLoad = fsms.map(_.workLoad).sum
-          val newLoadMinute = LoadMinute(terminalName, queueName, paxLoad, workLoad, minute)
-          (newLoadMinute.uniqueId, newLoadMinute)
-      }
+        .groupBy(s => {
+          val finalQueueName = airportConfig.divertedQueues.getOrElse(s.queueName, s.queueName)
+          (s.terminalName, finalQueueName, s.minute)
+        })
+        .map {
+          case ((terminalName, queueName, minute), fsms) =>
+            val paxLoad = fsms.map(_.paxLoad).sum
+            val workLoad = fsms.map(_.workLoad).sum
+            val loadMinute = LoadMinute(terminalName, queueName, paxLoad, workLoad, minute)
+            (loadMinute.uniqueId, loadMinute)
+        }
     }
   }
 }

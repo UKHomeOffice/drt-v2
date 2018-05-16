@@ -77,6 +77,7 @@ object PaxTypeAndQueue {
 case class AirportConfig(
                           portCode: String = "n/a",
                           queues: Map[TerminalName, Seq[QueueName]],
+                          divertedQueues: Map[QueueName, QueueName] = Map(),
                           slaByQueue: Map[String, Int],
                           terminalNames: Seq[TerminalName],
                           timeToChoxMillis: Long = 300000L,
@@ -494,18 +495,36 @@ object AirportConfigs {
   val ema = AirportConfig(
     portCode = "EMA",
     queues = Map(
-      "T1" -> Seq(EeaDesk, EGate, NonEeaDesk)
+      "T1" -> Seq(EeaDesk, EGate)
     ),
-    slaByQueue = defaultSlas,
+    divertedQueues = Map(
+      NonEeaDesk -> EeaDesk
+    ),
+    slaByQueue = Map(
+      EeaDesk -> 20,
+      EGate -> 25
+    ),
     terminalNames = Seq("T1"),
     defaultWalkTimeMillis = Map("T1" -> 780000L),
-    defaultPaxSplits = defaultPaxSplits,
-    defaultProcessingTimes = Map("T1" -> defaultProcessingTimes),
+    defaultPaxSplits = SplitRatios(
+      SplitSources.TerminalAverage,
+      SplitRatio(eeaMachineReadableToDesk, 0.99 * 0.8),
+      SplitRatio(eeaMachineReadableToEGate, 0.99 * 0.2),
+      SplitRatio(eeaNonMachineReadableToDesk, 0),
+      SplitRatio(visaNationalToDesk, 0.0),
+      SplitRatio(nonVisaNationalToDesk, 0.01)
+    ),
+    defaultProcessingTimes = Map("T1" -> Map(
+      eeaMachineReadableToDesk -> 20d / 60,
+      eeaMachineReadableToEGate -> 30d / 60,
+      eeaNonMachineReadableToDesk -> 50d / 60,
+      visaNationalToDesk -> 100d / 60,
+      nonVisaNationalToDesk -> 80d / 60
+    )),
     minMaxDesksByTerminalQueue = Map(
       "T1" -> Map(
         "eGate" -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)),
-        "eeaDesk" -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5)),
-        "nonEeaDesk" -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1))
+        "eeaDesk" -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5))
       )
     )
   )
@@ -518,14 +537,14 @@ object AirportConfigs {
     slaByQueue = defaultSlas,
     terminalNames = Seq("T1", "T2"),
     defaultWalkTimeMillis = Map("T1" -> 230000L, "T2" -> 65000L),
-    defaultPaxSplits =  SplitRatios(
-    SplitSources.TerminalAverage,
-    SplitRatio(eeaMachineReadableToDesk, 0.92*0.7),
-    SplitRatio(eeaMachineReadableToEGate, 0.92*0.3),
-    SplitRatio(eeaNonMachineReadableToDesk, 0),
-    SplitRatio(visaNationalToDesk, 0.04),
-    SplitRatio(nonVisaNationalToDesk, 0.04)
-  ),
+    defaultPaxSplits = SplitRatios(
+      SplitSources.TerminalAverage,
+      SplitRatio(eeaMachineReadableToDesk, 0.92 * 0.7),
+      SplitRatio(eeaMachineReadableToEGate, 0.92 * 0.3),
+      SplitRatio(eeaNonMachineReadableToDesk, 0),
+      SplitRatio(visaNationalToDesk, 0.04),
+      SplitRatio(nonVisaNationalToDesk, 0.04)
+    ),
     defaultProcessingTimes = Map("T1" -> Map(
       eeaMachineReadableToDesk -> 16d / 60,
       eeaMachineReadableToEGate -> 20d / 60,
@@ -576,6 +595,6 @@ object AirportConfigs {
     "KNA" -> 83.8, "SOM" -> 90.6, "LCA" -> 89.3, "GRD" -> 105.9
   )
 
-  val allPorts: List[AirportConfig] = ema :: edi :: stn :: man :: ltn :: lhr :: lgw :: bhx:: Nil
+  val allPorts: List[AirportConfig] = ema :: edi :: stn :: man :: ltn :: lhr :: lgw :: bhx :: Nil
   val confByPort: Map[String, AirportConfig] = allPorts.map(c => (c.portCode, c)).toMap
 }
