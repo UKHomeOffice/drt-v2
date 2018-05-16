@@ -88,7 +88,13 @@ object PcpArrival {
                                     standWalkTimesProvider: GateOrStandWalkTime,
                                     defaultWalkTimeMillis: MillisSinceEpoch)(flight: Arrival): MillisSinceEpoch = {
     val walkTime = standWalkTimesProvider(flight.Stand, flight.Terminal).getOrElse(
-      gateWalkTimesProvider(flight.Gate, flight.Terminal).getOrElse(defaultWalkTimeMillis))
+      {
+        log.info(s"Falling back to GATE walk time for ${flight.Gate} in ${flight.Terminal}")
+        gateWalkTimesProvider(flight.Gate, flight.Terminal).getOrElse({
+          log.info(s"Falling back to DEFAULT walk time for ${flight.Gate} in ${flight.Terminal}")
+          defaultWalkTimeMillis
+        })
+      })
     log.debug(s"walkTimeForFlight ${Arrival.summaryString(flight)} is $walkTime millis ${walkTime / 60000} mins default is $defaultWalkTimeMillis")
     walkTime
   }
