@@ -23,6 +23,7 @@ import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.lgw.LGWFeed
 import drt.server.feeds.lhr.live.LHRLiveFeed
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
+import drt.server.feeds.test.TestFixtureFeed
 import drt.shared.CrunchApi.{groupCrunchMinutesByX, _}
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared.SplitRatiosNs.SplitRatios
@@ -317,6 +318,7 @@ trait SystemActors {
       case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
       case "LGW" => LGWFeed()
       case "BHX" => BHXLiveFeed(config.getString("feeds.bhx.soap.endPointUrl").get)
+      case "TEST" => TestFixtureFeed(system)
       case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
     }
     feed.map(Flights)
@@ -331,6 +333,7 @@ trait SystemActors {
         .getOrElse(forecastNoOp)
       case "BHX" => BHXForecastFeed(config.getString("feeds.bhx.soap.endPointUrl").get)
       case _ =>
+        system.log.info(s"No Forecast Feed defined.")
         forecastNoOp
     }
     feed.map(Flights)
@@ -338,7 +341,14 @@ trait SystemActors {
 
   def baseArrivalsSource(): Source[Flights, Cancellable] = Source.tick(1 second, 60 minutes, NotUsed).map(_ => {
     system.log.info(s"Requesting ACL feed")
-    aclFeed.arrivals
+    Try {
+      aclFeed.arrivals
+    } match {
+      case Success(a) => a
+      case Failure(f) =>
+        system.log.error(s"Failed to get flights from ACL: $f")
+        Flights(List())
+    }
   })
 
   def walkTimeProvider(flight: Arrival): MillisSinceEpoch =
