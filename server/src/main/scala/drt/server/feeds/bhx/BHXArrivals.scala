@@ -21,6 +21,11 @@ sealed trait BHXArrivals {
     }
   }
 
+  def convertToUTCPlusOneHour(feedDate: XMLGregorianCalendar): String = {
+    val utcDatePlusOneHour = new DateTime(feedDate.toGregorianCalendar.getTimeInMillis, DateTimeZone.UTC).plusHours(1)
+    utcDatePlusOneHour.toString(ISODateTimeFormat.dateTime)
+  }
+
 }
 
 trait BHXLiveArrivals extends BHXArrivals {
@@ -55,7 +60,7 @@ trait BHXForecastArrivals extends BHXArrivals {
 
   def toForecastArrival(flightRecord: ScheduledFlightRecord) : Arrival =
     new Arrival(Operator = "",
-      Status = "Scheduled",
+      Status = "Port Forecast",
       EstDT = "",
       ActDT = "",
       EstChoxDT = "",
@@ -73,8 +78,8 @@ trait BHXForecastArrivals extends BHXArrivals {
       rawICAO = flightRecord.getFlightNumber,
       rawIATA = flightRecord.getFlightNumber,
       Origin = flightRecord.getOrigin,
-      SchDT= convertToUTC(flightRecord.getScheduledTime).getOrElse(""),
-      Scheduled = convertToUTC(flightRecord.getScheduledTime).map(SDate(_).millisSinceEpoch).getOrElse(0),
+      SchDT= convertToUTCPlusOneHour(flightRecord.getScheduledTime),
+      Scheduled = SDate(convertToUTCPlusOneHour(flightRecord.getScheduledTime)).millisSinceEpoch,
       PcpTime = 0,
       None)
 }
