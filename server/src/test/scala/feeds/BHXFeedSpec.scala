@@ -125,7 +125,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
       arrivals.size mustEqual 1
       arrivals.head mustEqual new Arrival(
         Operator = "",
-        Status = "Scheduled",
+        Status = "Port Forecast",
         EstDT = "",
         ActDT = "",
         EstChoxDT = "",
@@ -143,8 +143,8 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
         rawICAO = "AF1164",
         rawIATA = "AF1164",
         Origin = "CPH",
-        SchDT = "2012-06-02T06:46:53.123Z",
-        Scheduled = 1338619613123L,
+        SchDT = "2012-06-02T07:46:53.123Z", // BHX Forecast is incorrect. It should be 2012-06-02T06:46:53.123Z
+        Scheduled = 1338623213123L, // BHX Forecast is incorrect. This should be 1338619613123L
         PcpTime = 0,
         LastKnownPax = None)
     }
