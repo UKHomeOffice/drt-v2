@@ -28,3 +28,5 @@ POST        /logging                                      controllers.Applicatio
 
 POST        /data/staff                                   controllers.Application.saveStaff
 
+POST        /test/arrival                                 controllers.Test.addArrival
+
