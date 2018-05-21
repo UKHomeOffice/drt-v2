@@ -20,7 +20,7 @@ import drt.chroma.{ChromaFeedType, ChromaForecast, ChromaLive, DiffingStage}
 import drt.http.ProdSendAndReceive
 import drt.server.feeds.bhx.{BHXForecastFeed, BHXLiveFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
-import drt.server.feeds.lgw.LGWFeed
+import drt.server.feeds.lgw.{LGWFeed, LGWForecastFeed}
 import drt.server.feeds.lhr.live.LHRLiveFeed
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.server.feeds.test.TestFixtureFeed
@@ -334,6 +334,7 @@ trait SystemActors {
         .map(path => createForecastLHRFeed(path))
         .getOrElse(forecastNoOp)
       case "BHX" => BHXForecastFeed(config.getString("feeds.bhx.soap.endPointUrl").get)
+      case "LGW" => LGWForecastFeed()
       case _ =>
         system.log.info(s"No Forecast Feed defined.")
         forecastNoOp

@@ -135,7 +135,11 @@ object Settings {
     "org.specs2" %% "specs2-scalacheck" % "3.8.4" % Test,
 
     "org.webjars" % "font-awesome" % "4.3.0-1" % Provided,
-    "org.webjars" % "bootstrap" % bootstrap % Provided
+    "org.webjars" % "bootstrap" % bootstrap % Provided,
+
+    "com.box" % "box-java-sdk" % "2.19.0",
+    "com.eclipsesource.minimal-json" % "minimal-json" % "0.9.1",
+    "org.bitbucket.b_c" % "jose4j" % "0.4.4"
 
   ))
 
