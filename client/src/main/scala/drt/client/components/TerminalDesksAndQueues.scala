@@ -80,7 +80,7 @@ object TerminalDesksAndQueuesRow {
       val crunchMinutes = crunchMinutesByQueue.values.toSet
       val totalRequired = DesksAndQueues.totalRequired(props.staffMinute, crunchMinutes)
       val totalDeployed = DesksAndQueues.totalDeployed(props.staffMinute, crunchMinutes)
-      val ragClass = ragStatus(totalRequired, totalDeployed)
+      val ragClass = ragStatus(totalRequired, available)
       val downMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "-", "Staff decrease...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "-")()
       val upMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "+", "Staff increase...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "+")()
 
@@ -90,7 +90,7 @@ object TerminalDesksAndQueuesRow {
       val pcpTds = List(
         <.td(^.className := s"non-pcp", fixedPoints),
         <.td(^.className := s"non-pcp", movements),
-        <.td(^.className := s"total-deployed $ragClass", totalRequired),
+        <.td(^.className := s"total-deployed", totalRequired),
         <.td(^.className := s"total-deployed $ragClass", totalDeployed),
         if(allowAdjustments)
           <.td(^.className := s"total-deployed staff-adjustments", ^.colSpan := 2, <.span(downMovementPopup, <.span(^.className := "deployed", available), upMovementPopup))
