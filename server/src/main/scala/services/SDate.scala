@@ -45,6 +45,8 @@ object SDate {
     override def toISOString(): String = jodaSDateToIsoString(dateTime)
 
     def getZone(): String = dateTime.getZone.getID
+
+    override def getTimeZoneOffsetMillis() = dateTime.getZone.getOffset(millisSinceEpoch)
   }
 
   object implicits {
