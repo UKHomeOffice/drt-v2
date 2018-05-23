@@ -19,7 +19,7 @@ class FixedPointsAssignmentsSpec extends Specification {
       result === 2
     }
 
-  "Given 2 fixed points starting at 00:00 and ending at 02:00 then I should expect 2018-05-22T01:00:00Z to return 2 during UTC" >> {
+  "Given 2 fixed points starting at 00:00 and ending at 02:00 then I should expect 2018-01-22T01:00:00Z to return 2 during UTC" >> {
       val fixedPointsString = "Roving Officer, T1, 22/01/18, 00:00, 02:00, 2"
       val parsedAssignments = StaffAssignmentParser(fixedPointsString).parsedAssignments
       val fixedPointsAssignmentService = StaffAssignmentServiceWithoutDates(parsedAssignments).get

@@ -245,16 +245,16 @@ trait StaffAssignmentService {
 case class StaffAssignmentServiceWithoutDates(assignments: Seq[StaffAssignment])
   extends StaffAssignmentService {
   def terminalStaffAt(terminalName: TerminalName, dateMillis: MillisSinceEpoch): Int = {
-    val currentTime = SDate(dateMillis, Crunch.europeLondonTimeZone).toHoursAndMinutes()
+    val hoursAndMinutesToCheck = SDate(dateMillis, Crunch.europeLondonTimeZone).toHoursAndMinutes()
 
     assignments.filter(assignment => {
 
       val startSDate = SDate(assignment.startDt.millisSinceEpoch, Crunch.europeLondonTimeZone)
       val endSDate = SDate(assignment.endDt.millisSinceEpoch, Crunch.europeLondonTimeZone)
-      val startMinutes = startSDate.toHoursAndMinutes()
-      val endMinutes = endSDate.toHoursAndMinutes()
+      val fpStartTime = startSDate.toHoursAndMinutes()
+      val fpEndTime = endSDate.toHoursAndMinutes()
 
-      assignment.terminalName == terminalName && startMinutes <= currentTime && currentTime <= endMinutes
+      assignment.terminalName == terminalName && fpStartTime <= hoursAndMinutesToCheck && hoursAndMinutesToCheck <= fpEndTime
     }).map(_.numberOfStaff).sum
   }
 }
