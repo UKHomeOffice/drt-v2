@@ -72,6 +72,8 @@ object JSDateConversions {
       def getUtcMillis(): MillisSinceEpoch = addMinutes(-1 * date.getTimezoneOffset()).millisSinceEpoch
 
       def getZone(): String = date.getZone()
+
+      override def getTimeZoneOffsetMillis() = date.getTimezoneOffset() * 60000L
     }
 
     def apply(milliDate: MilliDate): SDateLike = new Date(milliDate.millisSinceEpoch)
