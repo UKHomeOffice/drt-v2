@@ -31,7 +31,11 @@ class AclFeedSpec extends CrunchTestLike {
         """.stripMargin
 
       val arrivals = arrivalsFromCsvContent(csvContent, regularTerminalMapping)
-      val expected = List(Arrival("4U", "ACL Forecast", "", "", "", "", "", "", 180, 149, 0, "", "", -904483842, "LHR", "T2", "4U0460", "4U0460", "CGN", "2017-10-13T07:10:00Z", 1507878600000L, 0, None))
+      val expected = List(Arrival(Operator = "4U", Status = "ACL Forecast", EstDT = "", Estimated = 0, ActDT = "", Actual = 0,
+        EstChoxDT = "", EstimatedChox = 0, ActChoxDT = "", ActualChox = 0, Gate = "", Stand = "", MaxPax = 180, ActPax = 149,
+        TranPax = 0, RunwayID = "", BaggageReclaimId = "", FlightID = -904483842, AirportID = "LHR", Terminal = "T2",
+        rawICAO = "4U0460", rawIATA = "4U0460", Origin = "CGN", SchDT = "2017-10-13T07:10:00Z",
+        Scheduled = 1507878600000L, PcpTime = 0, LastKnownPax = None))
 
       arrivals === expected
     }
@@ -73,7 +77,11 @@ class AclFeedSpec extends CrunchTestLike {
         """.stripMargin
 
       val arrivals = arrivalsFromCsvContent(csvContent, lgwTerminalMapping)
-      val expected = List(Arrival("4U", "ACL Forecast", "", "", "", "", "", "", 180, 149, 0, "", "", -904483842, "LHR", "S", "4U0460", "4U0460", "CGN", "2017-10-13T07:10:00Z", 1507878600000L, 0, None))
+      val expected = List(Arrival(Operator = "4U", Status = "ACL Forecast", EstDT = "", Estimated = 0,
+        ActDT = "", Actual = 0, EstChoxDT = "", EstimatedChox = 0, ActChoxDT = "", ActualChox = 0, Gate = "",
+        Stand = "", MaxPax = 180, ActPax = 149, TranPax = 0, RunwayID = "", BaggageReclaimId = "",
+        FlightID = -904483842, AirportID = "LHR", Terminal = "S", rawICAO = "4U0460", rawIATA = "4U0460",
+        Origin = "CGN", SchDT = "2017-10-13T07:10:00Z", Scheduled = 1507878600000L, PcpTime = 0, LastKnownPax = None))
 
       arrivals === expected
     }

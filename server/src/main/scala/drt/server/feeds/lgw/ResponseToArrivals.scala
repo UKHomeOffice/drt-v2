@@ -39,9 +39,13 @@ case class ResponseToArrivals(data: Array[Byte], locationOption: Option[String] 
       Operator = (n \ "AirlineIATA") text,
       Status = parseStatus(n),
       EstDT = parseDateTime(n, "TDN", "EST").getOrElse(""),
+      Estimated = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("TDN") && (n \ "@TimeType" text).equals("EST")).map(n => services.SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
       ActDT = parseDateTime(n, "TDN", "ACT").getOrElse(""),
+      Actual  = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("TDN") && (n \ "@TimeType" text).equals("ACT")).map(n => services.SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
       EstChoxDT = parseDateTime(n, "ONB", "EST").getOrElse(""),
+      EstimatedChox = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("EST")).map(n => services.SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
       ActChoxDT = parseDateTime(n, "ONB", "ACT").getOrElse(""),
+      ActualChox = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("ACT")).map(n => services.SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
       Gate = (n \\ "PassengerGate").headOption.map(n => n text).getOrElse(""),
       Stand = (n \\ "ArrivalStand").headOption.map(n => n text).getOrElse(""),
       MaxPax = (n \\ "SeatCapacity").headOption.map(n => (n text).toInt).getOrElse(0),
@@ -94,7 +98,6 @@ case class ResponseToArrivals(data: Array[Byte], locationOption: Option[String] 
   }
 
   def parseDateTime(n: Node, operationQualifier: String, timeType: String): Option[String] = {
-    (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("SCT")).map(n => n text)
     (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals(operationQualifier) && (n \ "@TimeType" text).equals(timeType)).map(n => n text)
   }
 

@@ -21,7 +21,11 @@ class LhrForecastSpec extends Specification {
 
     val arrival = LhrForecastArrivals(arrivalLines).head
 
-    val expected = Arrival("BA", "Forecast", "", "", "", "", "", "", 337, 333, 142, "", "", 0, "", "T3", "BA0058", "BA0058", "CPT", "2018-02-22T04:45:00", 1519274700000L, 0, None)
+    val expected = Arrival(Operator = "BA", Status = "Forecast", EstDT = "", Estimated = 0, ActDT = "", Actual = 0,
+      EstChoxDT = "", EstimatedChox = 0, ActChoxDT = "", ActualChox = 0, Gate = "", Stand = "", MaxPax = 337,
+      ActPax = 333, TranPax = 142, RunwayID = "", BaggageReclaimId = "", FlightID = 0, AirportID = "", Terminal = "T3",
+      rawICAO = "BA0058", rawIATA = "BA0058", Origin = "CPT", SchDT = "2018-02-22T04:45:00",
+      Scheduled = 1519274700000L, PcpTime = 0, LastKnownPax = None)
 
     arrival === expected
   }

@@ -8,6 +8,7 @@ import drt.chroma.DiffingStage
 import drt.http.{ProdSendAndReceive, WithSendAndReceive}
 import drt.shared.Arrival
 import org.slf4j.{Logger, LoggerFactory}
+import org.springframework.util.StringUtils
 import services.SDate
 import services.graphstages.Crunch
 import spray.client.pipelining.{Get, addHeader, unmarshal, _}
@@ -36,35 +37,39 @@ object LHRLiveFeed {
 
     val tryArrival = Try {
       Arrival(
-        lhrArrival.OPERATOR,
-        statusCodesToDesc.getOrElse(lhrArrival.FLIGHTSTATUS, lhrArrival.FLIGHTSTATUS),
-        localTimeDateStringToIsoString(lhrArrival.ESTIMATEDFLIGHTOPERATIONTIME),
-        "",
-        localTimeDateStringToIsoString(lhrArrival.ESTIMATEDFLIGHTCHOXTIME),
-        localTimeDateStringToIsoString(lhrArrival.ACTUALFLIGHTCHOXTIME),
-        "",
-        lhrArrival.STAND,
-        lhrPax.map(_.MAXPASSENGERCOUNT.toInt).getOrElse(0),
-        lhrPax.map(_.TOTALPASSENGERCOUNT.toInt).getOrElse(0),
-        lhrPax.map(_.ACTUALTRANSFERPASSENGERCOUNT.toInt).getOrElse(0),
-        "",
-        "",
-        0,
-        "LHR",
-        lhrArrival.TERMINAL,
-        lhrArrival.FLIGHTNUMBER,
-        lhrArrival.FLIGHTNUMBER,
-        lhrArrival.AIRPORTCODE,
-        localTimeDateStringToIsoString(lhrArrival.SCHEDULEDFLIGHTOPERATIONTIME),
-        SDate(localTimeDateStringToIsoString(lhrArrival.SCHEDULEDFLIGHTOPERATIONTIME)).millisSinceEpoch,
-        0,
-        None
+        Operator = lhrArrival.OPERATOR,
+        Status = statusCodesToDesc.getOrElse(lhrArrival.FLIGHTSTATUS, lhrArrival.FLIGHTSTATUS),
+        EstDT = localTimeDateStringToIsoString(lhrArrival.ESTIMATEDFLIGHTOPERATIONTIME),
+        Estimated = if (!StringUtils.isEmpty(lhrArrival.ESTIMATEDFLIGHTOPERATIONTIME)) Try(SDate(localTimeDateStringToIsoString(lhrArrival.ESTIMATEDFLIGHTOPERATIONTIME)).millisSinceEpoch).getOrElse(0) else 0,
+        ActDT = "",
+        Actual = 0,
+        EstChoxDT = localTimeDateStringToIsoString(lhrArrival.ESTIMATEDFLIGHTCHOXTIME),
+        EstimatedChox = if (!StringUtils.isEmpty(lhrArrival.ESTIMATEDFLIGHTCHOXTIME)) Try(SDate(localTimeDateStringToIsoString(lhrArrival.ESTIMATEDFLIGHTCHOXTIME)).millisSinceEpoch).getOrElse(0) else 0,
+        ActChoxDT = localTimeDateStringToIsoString(lhrArrival.ACTUALFLIGHTCHOXTIME),
+        ActualChox = if (!StringUtils.isEmpty(lhrArrival.ACTUALFLIGHTCHOXTIME)) Try(SDate(localTimeDateStringToIsoString(lhrArrival.ACTUALFLIGHTCHOXTIME)).millisSinceEpoch).getOrElse(0) else  0,
+        Gate = "",
+        Stand = lhrArrival.STAND,
+        MaxPax = lhrPax.map(_.MAXPASSENGERCOUNT.toInt).getOrElse(0),
+        ActPax = lhrPax.map(_.TOTALPASSENGERCOUNT.toInt).getOrElse(0),
+        TranPax = lhrPax.map(_.ACTUALTRANSFERPASSENGERCOUNT.toInt).getOrElse(0),
+        RunwayID = "",
+        BaggageReclaimId = "",
+        FlightID = 0,
+        AirportID = "LHR",
+        Terminal = lhrArrival.TERMINAL,
+        rawICAO = lhrArrival.FLIGHTNUMBER,
+        rawIATA = lhrArrival.FLIGHTNUMBER,
+        Origin = lhrArrival.AIRPORTCODE,
+        SchDT = localTimeDateStringToIsoString(lhrArrival.SCHEDULEDFLIGHTOPERATIONTIME),
+        Scheduled = Try(SDate(localTimeDateStringToIsoString(lhrArrival.SCHEDULEDFLIGHTOPERATIONTIME)).millisSinceEpoch).getOrElse(0),
+        PcpTime = 0,
+        LastKnownPax = None
       )
     }
 
     tryArrival match {
       case Failure(t: Throwable) =>
-        log.warn(s"Failed to parse LHR+Pax into Arrival $lhrArrival $lhrPax: ${t.getMessage}")
+        log.warn(s"Failed to parse LHR+Pax into Arrival $lhrArrival $lhrPax: ${t.getMessage}", t)
       case _ =>
     }
 

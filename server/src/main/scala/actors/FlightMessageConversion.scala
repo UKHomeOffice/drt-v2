@@ -58,11 +58,11 @@ object FlightMessageConversion {
       origin = Some(apiFlight.Origin),
       pcpTime = Some(apiFlight.PcpTime),
 
-      scheduled = millisOptionFromArrivalDateString(apiFlight.SchDT),
-      estimated = millisOptionFromArrivalDateString(apiFlight.EstDT),
-      touchdown = millisOptionFromArrivalDateString(apiFlight.ActDT),
-      estimatedChox = millisOptionFromArrivalDateString(apiFlight.EstChoxDT),
-      actualChox = millisOptionFromArrivalDateString(apiFlight.ActChoxDT)
+      scheduled = Some(apiFlight.Scheduled),
+      estimated = Some(apiFlight.Estimated),
+      touchdown = Some(apiFlight.Actual),
+      estimatedChox = Some(apiFlight.EstimatedChox),
+      actualChox = Some(apiFlight.ActualChox)
     )
   }
 
@@ -82,9 +82,13 @@ object FlightMessageConversion {
       Operator = flightMessage.operator.getOrElse(""),
       Status = flightMessage.status.getOrElse(""),
       EstDT = apiFlightDateTime(flightMessage.estimated),
+      Estimated = flightMessage.estimated.getOrElse(0),
       ActDT = apiFlightDateTime(flightMessage.touchdown),
+      Actual = flightMessage.touchdown.getOrElse(0),
       EstChoxDT = apiFlightDateTime(flightMessage.estimatedChox),
+      EstimatedChox = flightMessage.estimatedChox.getOrElse(0),
       ActChoxDT = apiFlightDateTime(flightMessage.actualChox),
+      ActualChox = flightMessage.actualChox.getOrElse(0),
       Gate = flightMessage.gate.getOrElse(""),
       Stand = flightMessage.stand.getOrElse(""),
       MaxPax = flightMessage.maxPax.getOrElse(0),
