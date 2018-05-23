@@ -292,7 +292,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     crunch.forecastTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val crunchForecastArrivals = ps.flights.values.map(_.apiFlight).toSet
-        val expectedForecastArrivals = Set(baseArrival.copy(ActPax = forecastArrival.ActPax, TranPax = forecastArrival.TranPax, EstDT = liveScheduled))
+        val expectedForecastArrivals = Set(baseArrival.copy(ActPax = forecastArrival.ActPax, TranPax = forecastArrival.TranPax, EstDT = liveScheduled, Estimated = SDate(liveScheduled).millisSinceEpoch))
 
         crunchForecastArrivals == expectedForecastArrivals
     }

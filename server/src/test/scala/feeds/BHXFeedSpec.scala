@@ -1,6 +1,7 @@
 package feeds
 
 import java.util.{Calendar, GregorianCalendar, TimeZone}
+
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import com.typesafe.config.ConfigFactory
@@ -8,10 +9,12 @@ import drt.server.feeds.bhx.BHXFeed
 import drt.shared.Arrival
 import javax.xml.datatype.DatatypeFactory
 import javax.xml.ws.BindingProvider
+import org.joda.time.DateTimeZone
 import org.mockito.Mockito.verify
 import org.specs2.matcher.Scope
 import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecificationLike
+import services.SDate
 import uk.co.bhx.online.flightinformation._
 
 import scala.collection.JavaConversions._
@@ -96,9 +99,13 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
         Operator = "",
         Status = "Arrived",
         EstDT = "2012-06-02T06:46:53.123Z",
+        Estimated = SDate("2012-06-02T06:46:53.123Z", DateTimeZone.UTC).millisSinceEpoch,
         ActDT = "2012-06-02T06:46:53.123Z",
+        Actual = SDate("2012-06-02T06:46:53.123Z", DateTimeZone.UTC).millisSinceEpoch,
         EstChoxDT = "2012-06-02T06:46:53.123Z",
+        EstimatedChox = SDate("2012-06-02T06:46:53.123Z", DateTimeZone.UTC).millisSinceEpoch,
         ActChoxDT = "2012-06-02T06:46:53.123Z",
+        ActualChox = SDate("2012-06-02T06:46:53.123Z", DateTimeZone.UTC).millisSinceEpoch,
         Gate = "44",
         Stand = "57R",
         MaxPax = 80,
@@ -127,9 +134,13 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
         Operator = "",
         Status = "Port Forecast",
         EstDT = "",
+        Estimated = 0,
         ActDT = "",
+        Actual = 0,
         EstChoxDT = "",
+        EstimatedChox = 0,
         ActChoxDT = "",
+        ActualChox = 0,
         Gate = "",
         Stand = "",
         MaxPax = 80,

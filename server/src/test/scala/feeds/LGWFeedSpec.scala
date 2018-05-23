@@ -1,6 +1,7 @@
 package feeds
 
 import java.util.concurrent.TimeUnit
+
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import com.typesafe.config.{Config, ConfigFactory}
@@ -9,8 +10,10 @@ import drt.shared.Arrival
 import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.Scope
+import services.SDate
 import spray.http.HttpHeaders.RawHeader
 import spray.http._
+
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -90,9 +93,13 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       Operator = "",
       Status = "LAN",
       EstDT = "2018-03-22T15:50:00Z",
+      Estimated = SDate("2018-03-22T15:50:00Z").millisSinceEpoch,
       ActDT = "2018-03-22T15:48:00Z",
+      Actual =  SDate("2018-03-22T15:48:00Z").millisSinceEpoch,
       EstChoxDT = "2018-03-22T15:58:00Z",
+      EstimatedChox =  SDate("2018-03-22T15:58:00Z").millisSinceEpoch,
       ActChoxDT = "2018-03-22T16:03:00Z",
+      ActualChox =  SDate("2018-03-22T16:03:00Z").millisSinceEpoch,
       Gate = "",
       Stand = "",
       MaxPax = 186,
