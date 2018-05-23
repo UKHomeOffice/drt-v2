@@ -61,7 +61,7 @@ class StaffGraphStageSpec extends CrunchTestLike {
 
     val result = Crunch.movementsUpdateCriteria(existingMovements, incomingMovements)
     val affectedMinuteMillis = movementStart.millisSinceEpoch until movementEnd.millisSinceEpoch by 60000
-    val expected = UpdateCriteria(affectedMinuteMillis.toSet, Set(terminal))
+    val expected = UpdateCriteria(affectedMinuteMillis, Set(terminal))
 
     result === expected
   }
@@ -81,7 +81,7 @@ class StaffGraphStageSpec extends CrunchTestLike {
 
     val result = Crunch.movementsUpdateCriteria(existingMovements, incomingMovements)
     val affectedMinuteMillis = movementStart.millisSinceEpoch until movementEnd.millisSinceEpoch by 60000
-    val expected = UpdateCriteria(affectedMinuteMillis.toSet, Set(terminal))
+    val expected = UpdateCriteria(affectedMinuteMillis, Set(terminal))
 
     result === expected
   }

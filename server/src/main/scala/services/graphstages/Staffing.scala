@@ -23,24 +23,30 @@ import scala.util.{Failure, Success, Try}
 object Staffing {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def staffAvailableByTerminalAndQueue(optionalShifts: Option[String], optionalFixedPoints: Option[String], optionalMovements: Option[Seq[StaffMovement]]): Option[StaffSources] = {
+  def staffAvailableByTerminalAndQueue(dropBeforeMillis: MillisSinceEpoch, optionalShifts: Option[String], optionalFixedPoints: Option[String], optionalMovements: Option[Seq[StaffMovement]]): Option[StaffSources] = {
     val rawShiftsString = optionalShifts.getOrElse("")
     val rawFixedPointsString = optionalFixedPoints.getOrElse("")
-    val myMovements = optionalMovements.getOrElse(Seq())
+    val movements = optionalMovements.getOrElse(Seq())
 
-    val myShifts = StaffAssignmentParser(rawShiftsString).parsedAssignments.toList
-    val myFixedPoints = StaffAssignmentParser(rawFixedPointsString).parsedAssignments.toList
+    val shifts = StaffAssignmentParser(rawShiftsString).parsedAssignments.toList
+    val fixedPoints = StaffAssignmentParser(rawFixedPointsString).parsedAssignments.toList
 
-    if (myShifts.exists(s => s.isFailure) || myFixedPoints.exists(s => s.isFailure)) {
+    if (shifts.exists(s => s.isFailure) || fixedPoints.exists(s => s.isFailure)) {
       None
     } else {
-      val successfulShifts = myShifts.collect { case Success(s) => s }
+      val successfulShifts = shifts.collect { case Success(s) if s.endDt.millisSinceEpoch > dropBeforeMillis => s }
       val ss: StaffAssignmentServiceWithDates = StaffAssignmentServiceWithDates(successfulShifts)
 
-      val successfulFixedPoints = myFixedPoints.collect { case Success(s) => s }
+      val successfulFixedPoints = fixedPoints.collect { case Success(s) => s }
       val fps = StaffAssignmentServiceWithoutDates(successfulFixedPoints)
-      val mm = StaffMovementsService(myMovements)
-      val available = StaffMovementsHelper.terminalStaffAt(ss, fps)(myMovements) _
+      val relevantMovements = movements
+        .groupBy(_.uUID)
+        .values
+        .filter(_.exists(_.time.millisSinceEpoch > dropBeforeMillis))
+        .flatten
+        .toSeq
+      val mm = StaffMovementsService(relevantMovements)
+      val available = StaffMovementsHelper.terminalStaffAt(ss, fps)(movements) _
       Option(StaffSources(ss, fps, mm, available))
     }
   }
@@ -97,7 +103,7 @@ object Staffing {
     fixedPointsActor ! PoisonPill
     staffMovementsActor ! PoisonPill
 
-    val staffSources = Staffing.staffAvailableByTerminalAndQueue(Option(shifts), Option(fixedPoints), Option(movements))
+    val staffSources = Staffing.staffAvailableByTerminalAndQueue(0L, Option(shifts), Option(fixedPoints), Option(movements))
     val staffMinutes = Staffing.staffMinutesForCrunchMinutes(cm, staffSources)
 
     PortState(fl, cm, staffMinutes)
