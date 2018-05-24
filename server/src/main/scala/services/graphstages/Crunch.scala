@@ -343,7 +343,7 @@ object Crunch {
     UpdateCriteria(minutesToUpdate, terminalsToUpdate)
   }
 
-  def allMinuteMillis(movements: Seq[StaffMovement]): Set[MillisSinceEpoch] = {
+  def allMinuteMillis(movements: Seq[StaffMovement]): Seq[MillisSinceEpoch] = {
     movements
       .groupBy(_.uUID)
       .flatMap {
@@ -352,6 +352,6 @@ object Crunch {
           val endMillis = mmPair.map(_.time.millisSinceEpoch).max
           startMillis until endMillis by 60000
       }
-      .toSet
+      .toSeq
   }
 }

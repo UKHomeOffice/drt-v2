@@ -69,7 +69,7 @@ class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: Millis
   }
 }
 
-case class UpdateCriteria(minuteMillis: Set[MillisSinceEpoch], terminalNames: Set[TerminalName])
+case class UpdateCriteria(minuteMillis: Seq[MillisSinceEpoch], terminalNames: Set[TerminalName])
 
 class StaffGraphStage(name: String = "",
                       optionalInitialShifts: Option[String],
@@ -97,7 +97,9 @@ class StaffGraphStage(name: String = "",
 
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
-    def maybeStaffSources: Option[StaffSources] = Staffing.staffAvailableByTerminalAndQueue(shiftsOption, fixedPointsOption, movementsOption)
+    val expireBefore = now().millisSinceEpoch - expireAfterMillis
+
+    def maybeStaffSources: Option[StaffSources] = Staffing.staffAvailableByTerminalAndQueue(expireBefore, shiftsOption, fixedPointsOption, movementsOption)
 
     override def preStart(): Unit = {
       shiftsOption = optionalInitialShifts
@@ -161,7 +163,7 @@ class StaffGraphStage(name: String = "",
         val startMillis = a.startDt.millisSinceEpoch
         val endMillis = a.endDt.millisSinceEpoch
         startMillis to endMillis by 60000
-      })
+      }).toSeq
       val terminalNames = diff.map(_.terminalName)
 
       UpdateCriteria(minuteMillis, terminalNames)
@@ -188,7 +190,7 @@ class StaffGraphStage(name: String = "",
                 .addMinutes(m)
               date.millisSinceEpoch
             })
-        ).toSet
+        )
 
       val oldAssignments = assignmentsFromRawShifts(oldFixedPoints)
       val newAssignments = assignmentsFromRawShifts(newFixedPoints)
@@ -218,7 +220,9 @@ class StaffGraphStage(name: String = "",
     def updatesFromSources(maybeSources: Option[StaffSources], updateCriteria: UpdateCriteria): Map[TM, StaffMinute] = {
       val staff = maybeSources
 
-      val updatedMinutes: Set[StaffMinute] = updateCriteria.minuteMillis
+      log.info(s"about to update ${updateCriteria.minuteMillis.size} staff minutes for ${updateCriteria.terminalNames}")
+
+      val updatedMinutes = updateCriteria.minuteMillis
         .flatMap(m => {
           updateCriteria.terminalNames.map(tn => {
             val staffMinute = staff match {
@@ -240,7 +244,7 @@ class StaffGraphStage(name: String = "",
       mergeMinutes(updatedMinutes, staffMinuteUpdates)
     }
 
-    def mergeMinutes(updatedMinutes: Set[StaffMinute], existingMinutes: Map[TM, StaffMinute]): Map[TM, StaffMinute] = {
+    def mergeMinutes(updatedMinutes: Seq[StaffMinute], existingMinutes: Map[TM, StaffMinute]): Map[TM, StaffMinute] = {
       updatedMinutes.foldLeft(existingMinutes) {
         case (soFar, updatedMinute) =>
           soFar.get(updatedMinute.key) match {
