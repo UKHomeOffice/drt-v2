@@ -14,6 +14,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch.{desksForHourOfDayInUKLocalTime, europeLondonTimeZone}
 
+import scala.collection.immutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
@@ -34,22 +35,31 @@ object Staffing {
     if (shifts.exists(s => s.isFailure) || fixedPoints.exists(s => s.isFailure)) {
       None
     } else {
-      val successfulShifts = shifts.collect { case Success(s) if s.endDt.millisSinceEpoch > dropBeforeMillis => s }
-      val ss: StaffAssignmentServiceWithDates = StaffAssignmentServiceWithDates(successfulShifts)
-
+      val successfulShifts = removeOldShifts(dropBeforeMillis, shifts)
       val successfulFixedPoints = fixedPoints.collect { case Success(s) => s }
-      val fps = StaffAssignmentServiceWithoutDates(successfulFixedPoints)
-      val relevantMovements = movements
-        .groupBy(_.uUID)
-        .values
-        .filter(_.exists(_.time.millisSinceEpoch > dropBeforeMillis))
-        .flatten
-        .toSeq
-      val mm = StaffMovementsService(relevantMovements)
-      val available = StaffMovementsHelper.terminalStaffAt(ss, fps)(movements) _
-      Option(StaffSources(ss, fps, mm, available))
+      val relevantMovements = removeOldMovements(dropBeforeMillis, movements)
+
+      val shiftsService = StaffAssignmentServiceWithDates(successfulShifts)
+      val fixedPointsService = StaffAssignmentServiceWithoutDates(successfulFixedPoints)
+      val movementsService = StaffMovementsService(relevantMovements)
+      
+      val available = StaffMovementsHelper.terminalStaffAt(shiftsService, fixedPointsService)(movements) _
+
+      Option(StaffSources(shiftsService, fixedPointsService, movementsService, available))
     }
   }
+
+  def removeOldShifts(dropBeforeMillis: MillisSinceEpoch, shifts: List[Try[StaffAssignment]]): Seq[StaffAssignment] = shifts
+    .collect {
+      case Success(s) if s.endDt.millisSinceEpoch > dropBeforeMillis => s
+    }
+
+  def removeOldMovements(dropBeforeMillis: MillisSinceEpoch, movements: Seq[StaffMovement]): Seq[StaffMovement] = movements
+    .groupBy(_.uUID)
+    .values
+    .filter(_.exists(_.time.millisSinceEpoch > dropBeforeMillis))
+    .flatten
+    .toSeq
 
   def staffMinutesForCrunchMinutes(crunchMinutes: Map[TQM, CrunchMinute], maybeSources: Option[StaffSources]): Map[TM, StaffMinute] = {
     val staff = maybeSources
