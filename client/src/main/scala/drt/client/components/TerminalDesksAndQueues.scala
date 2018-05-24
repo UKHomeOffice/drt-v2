@@ -90,8 +90,8 @@ object TerminalDesksAndQueuesRow {
       val pcpTds = List(
         <.td(^.className := s"non-pcp", fixedPoints),
         <.td(^.className := s"non-pcp", movements),
-        <.td(^.className := s"total-deployed", totalRequired),
-        <.td(^.className := s"total-deployed $ragClass", totalDeployed),
+        <.td(^.className := s"total-deployed $ragClass", totalRequired),
+        <.td(^.className := s"total-deployed", totalDeployed),
         if(allowAdjustments)
           <.td(^.className := s"total-deployed staff-adjustments", ^.colSpan := 2, <.span(downMovementPopup, <.span(^.className := "deployed", available), upMovementPopup))
         else
