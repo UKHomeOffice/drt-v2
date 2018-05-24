@@ -92,13 +92,9 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     arrivals.head mustEqual new Arrival(
       Operator = "",
       Status = "LAN",
-      EstDT = "2018-03-22T15:50:00Z",
       Estimated = SDate("2018-03-22T15:50:00Z").millisSinceEpoch,
-      ActDT = "2018-03-22T15:48:00Z",
       Actual =  SDate("2018-03-22T15:48:00Z").millisSinceEpoch,
-      EstChoxDT = "2018-03-22T15:58:00Z",
       EstimatedChox =  SDate("2018-03-22T15:58:00Z").millisSinceEpoch,
-      ActChoxDT = "2018-03-22T16:03:00Z",
       ActualChox =  SDate("2018-03-22T16:03:00Z").millisSinceEpoch,
       Gate = "",
       Stand = "",
@@ -109,8 +105,8 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       BaggageReclaimId = "1",
       FlightID = 0,
       AirportID = "LGW",
-      Terminal = "S", rawICAO = "NAX1314", rawIATA = "DY1314", Origin = "BGO", SchDT = "2018-03-22T10:15:00Z",
-      Scheduled = 1521713700000L, PcpTime = 0, LastKnownPax = None)
+      Terminal = "S", rawICAO = "NAX1314", rawIATA = "DY1314", Origin = "BGO",
+      Scheduled = SDate("2018-03-22T10:15:00Z").millisSinceEpoch, PcpTime = 0, LastKnownPax = None)
 
     deleteCalled must beTrue
   }

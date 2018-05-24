@@ -33,13 +33,9 @@ trait BHXLiveArrivals extends BHXArrivals {
   def toLiveArrival(flightRecord: FlightRecord): Arrival =
     new Arrival(Operator = "",
       Status = flightRecord.getFlightStatus,
-      EstDT = convertToUTC(flightRecord.getEstimatedTime).getOrElse(""),
       Estimated = convertToUTC(flightRecord.getEstimatedTime).map(SDate(_).millisSinceEpoch).getOrElse(0),
-      ActDT = convertToUTC(flightRecord.getTouchdownTime).getOrElse(""),
       Actual = convertToUTC(flightRecord.getTouchdownTime).map(SDate(_).millisSinceEpoch).getOrElse(0),
-      EstChoxDT = convertToUTC(flightRecord.getEstimatedChoxTime).getOrElse(""),
       EstimatedChox = convertToUTC(flightRecord.getEstimatedChoxTime).map(SDate(_).millisSinceEpoch).getOrElse(0),
-      ActChoxDT = convertToUTC(flightRecord.getChoxTime).getOrElse(""),
       ActualChox = convertToUTC(flightRecord.getChoxTime).map(SDate(_).millisSinceEpoch).getOrElse(0),
       Gate = flightRecord.getGate,
       Stand = flightRecord.getStand,
@@ -54,7 +50,6 @@ trait BHXLiveArrivals extends BHXArrivals {
       rawICAO = flightRecord.getFlightNumber,
       rawIATA = flightRecord.getFlightNumber,
       Origin = flightRecord.getOrigin,
-      SchDT = convertToUTC(flightRecord.getScheduledTime).getOrElse(""),
       Scheduled = convertToUTC(flightRecord.getScheduledTime).map(SDate(_).millisSinceEpoch).getOrElse(0),
       PcpTime = 0,
       None)
@@ -65,13 +60,9 @@ trait BHXForecastArrivals extends BHXArrivals {
   def toForecastArrival(flightRecord: ScheduledFlightRecord) : Arrival =
     new Arrival(Operator = "",
       Status = "Port Forecast",
-      EstDT = "",
       Estimated = 0L,
-      ActDT = "",
       Actual = 0L,
-      EstChoxDT = "",
       EstimatedChox = 0L,
-      ActChoxDT = "",
       ActualChox = 0L,
       Gate = "",
       Stand = "",
@@ -86,7 +77,6 @@ trait BHXForecastArrivals extends BHXArrivals {
       rawICAO = flightRecord.getFlightNumber,
       rawIATA = flightRecord.getFlightNumber,
       Origin = flightRecord.getOrigin,
-      SchDT= convertToUTCPlusOneHour(flightRecord.getScheduledTime),
       Scheduled = SDate(convertToUTCPlusOneHour(flightRecord.getScheduledTime)).millisSinceEpoch,
       PcpTime = 0,
       None)

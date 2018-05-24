@@ -99,13 +99,9 @@ case class LHRFlightFeed(csvRecords: Iterator[(Int) => String]) {
         Arrival(
           Operator = flight.operator,
           Status = "UNK",
-          EstDT = dateOptToStringOrEmptyString(flight.estimated),
           Estimated =  flight.estimated.map(_.toDate.getTime).getOrElse(0),
-          ActDT = dateOptToStringOrEmptyString(flight.touchdown),
           Actual =  flight.touchdown.map(_.toDate.getTime).getOrElse(0),
-          EstChoxDT = dateOptToStringOrEmptyString(flight.estChox),
           EstimatedChox = flight.estChox.map(_.toDate.getTime).getOrElse(0),
-          ActChoxDT = dateOptToStringOrEmptyString(flight.actChox),
           ActualChox = flight.actChox.map(_.toDate.getTime).getOrElse(0),
           Gate = "",
           Stand = flight.stand.getOrElse(""),
@@ -120,7 +116,6 @@ case class LHRFlightFeed(csvRecords: Iterator[(Int) => String]) {
           rawICAO = flight.flightCode,
           rawIATA = flight.flightCode,
           Origin = flight.from,
-          SchDT = schDtIso,
           PcpTime = pcpTime,
           Scheduled = SDate(schDtIso).millisSinceEpoch)
       }).toList))

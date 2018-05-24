@@ -38,13 +38,9 @@ object LHRForecastFeed {
       Arrival(
         Operator = "",
         Status = "Port Forecast",
-        EstDT = "",
         Estimated = 0,
-        ActDT = "",
         Actual = 0,
-        EstChoxDT = "",
         EstimatedChox = 0,
-        ActChoxDT = "",
         ActualChox = 0,
         Gate = "",
         Stand = "",
@@ -59,7 +55,6 @@ object LHRForecastFeed {
         rawICAO = flightRow.flightCode.replace(" ", ""),
         rawIATA = flightRow.flightCode.replace(" ", ""),
         Origin = flightRow.origin,
-        SchDT = flightRow.scheduledDate.toISOString(),
         Scheduled = flightRow.scheduledDate.millisSinceEpoch,
         PcpTime = 0,
         None

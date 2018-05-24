@@ -27,7 +27,7 @@ object BigSummaryBoxTests extends TestSuite {
 
             "Then we can get a number of flights arriving in that period" - {
               val countOfFlights = rootModel.crunchStatePot.map(_.flights.count(f => {
-                val flightDt = SDate.parse(f.apiFlight.SchDT)
+                val flightDt = SDate(f.apiFlight.Scheduled)
                 now.millisSinceEpoch <= flightDt.millisSinceEpoch && flightDt.millisSinceEpoch <= nowPlus3Hours.millisSinceEpoch
               }))
               assert(countOfFlights == Ready(0))
@@ -356,13 +356,9 @@ object ApiFlightGenerator {
     Arrival(
       Operator = Operator,
       Status = Status,
-      EstDT = EstDT,
       Estimated = if (EstDT != "") SDate(EstDT).millisSinceEpoch else 0,
-      ActDT = ActDT,
       Actual = if (ActDT != "") SDate(ActDT).millisSinceEpoch else 0,
-      EstChoxDT = EstChoxDT,
       EstimatedChox = if (EstChoxDT != "") SDate(EstChoxDT).millisSinceEpoch else 0,
-      ActChoxDT = ActChoxDT,
       ActualChox = if (ActChoxDT != "") SDate(ActChoxDT).millisSinceEpoch else 0,
       Gate = Gate,
       Stand = Stand,
@@ -378,7 +374,6 @@ object ApiFlightGenerator {
       rawIATA = iataFlightCode,
       Origin = Origin,
       PcpTime = if (PcpTime != 0) PcpTime else SDate.parse(SchDT).millisSinceEpoch,
-      SchDT = SchDT,
       Scheduled = if (SchDT != "") SDate.parse(SchDT).millisSinceEpoch else 0L
     )
 

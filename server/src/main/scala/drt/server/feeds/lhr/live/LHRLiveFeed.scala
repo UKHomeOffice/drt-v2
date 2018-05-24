@@ -39,13 +39,9 @@ object LHRLiveFeed {
       Arrival(
         Operator = lhrArrival.OPERATOR,
         Status = statusCodesToDesc.getOrElse(lhrArrival.FLIGHTSTATUS, lhrArrival.FLIGHTSTATUS),
-        EstDT = localTimeDateStringToIsoString(lhrArrival.ESTIMATEDFLIGHTOPERATIONTIME),
         Estimated = if (!StringUtils.isEmpty(lhrArrival.ESTIMATEDFLIGHTOPERATIONTIME)) Try(SDate(localTimeDateStringToIsoString(lhrArrival.ESTIMATEDFLIGHTOPERATIONTIME)).millisSinceEpoch).getOrElse(0) else 0,
-        ActDT = "",
         Actual = 0,
-        EstChoxDT = localTimeDateStringToIsoString(lhrArrival.ESTIMATEDFLIGHTCHOXTIME),
         EstimatedChox = if (!StringUtils.isEmpty(lhrArrival.ESTIMATEDFLIGHTCHOXTIME)) Try(SDate(localTimeDateStringToIsoString(lhrArrival.ESTIMATEDFLIGHTCHOXTIME)).millisSinceEpoch).getOrElse(0) else 0,
-        ActChoxDT = localTimeDateStringToIsoString(lhrArrival.ACTUALFLIGHTCHOXTIME),
         ActualChox = if (!StringUtils.isEmpty(lhrArrival.ACTUALFLIGHTCHOXTIME)) Try(SDate(localTimeDateStringToIsoString(lhrArrival.ACTUALFLIGHTCHOXTIME)).millisSinceEpoch).getOrElse(0) else  0,
         Gate = "",
         Stand = lhrArrival.STAND,
@@ -60,7 +56,6 @@ object LHRLiveFeed {
         rawICAO = lhrArrival.FLIGHTNUMBER,
         rawIATA = lhrArrival.FLIGHTNUMBER,
         Origin = lhrArrival.AIRPORTCODE,
-        SchDT = localTimeDateStringToIsoString(lhrArrival.SCHEDULEDFLIGHTOPERATIONTIME),
         Scheduled = Try(SDate(localTimeDateStringToIsoString(lhrArrival.SCHEDULEDFLIGHTOPERATIONTIME)).millisSinceEpoch).getOrElse(0),
         PcpTime = 0,
         LastKnownPax = None

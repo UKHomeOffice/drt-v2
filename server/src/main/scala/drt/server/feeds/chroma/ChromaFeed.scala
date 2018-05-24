@@ -36,10 +36,10 @@ case class ChromaLiveFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcher) {
         Arrival(
           Operator = flight.Operator,
           Status = flight.Status,
-          EstDT = flight.EstDT, Estimated = SDate(flight.EstDT).millisSinceEpoch,
-          ActDT = flight.ActDT, Actual = SDate(flight.ActDT).millisSinceEpoch,
-          EstChoxDT = flight.EstChoxDT, EstimatedChox = SDate(flight.EstChoxDT).millisSinceEpoch,
-          ActChoxDT = flight.ActChoxDT, ActualChox = SDate(flight.ActChoxDT).millisSinceEpoch,
+          Estimated = SDate(flight.EstDT).millisSinceEpoch,
+          Actual = SDate(flight.ActDT).millisSinceEpoch,
+          EstimatedChox = SDate(flight.EstChoxDT).millisSinceEpoch,
+          ActualChox = SDate(flight.ActChoxDT).millisSinceEpoch,
           Gate = flight.Gate,
           Stand = flight.Stand,
           MaxPax = flight.MaxPax,
@@ -53,7 +53,6 @@ case class ChromaLiveFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcher) {
           rawICAO = flight.ICAO,
           rawIATA = flight.IATA,
           Origin = flight.Origin,
-          SchDT = flight.SchDT,
           PcpTime = pcpTime,
           Scheduled = SDate(flight.SchDT).millisSinceEpoch
         )
@@ -91,13 +90,9 @@ case class ChromaForecastFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherF
         Arrival(
           Operator = "",
           Status = "Port Forecast",
-          EstDT = "",
           Estimated = 0L,
-          ActDT = "",
           Actual = 0L,
-          EstChoxDT = "",
           EstimatedChox = 0L,
-          ActChoxDT = "",
           ActualChox = 0L,
           Gate = "",
           Stand = "",
@@ -112,7 +107,6 @@ case class ChromaForecastFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherF
           rawICAO = flight.ICAO,
           rawIATA = flight.IATA,
           Origin = flight.Origin,
-          SchDT = flight.SchDT,
           PcpTime = pcpTime,
           Scheduled = SDate(flight.SchDT).millisSinceEpoch
         )

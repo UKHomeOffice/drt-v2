@@ -101,13 +101,13 @@ class LHRLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFacto
       val result: Arrival = LHRLiveFeed.flightAndPaxToArrival(lhrArrival, Option(lhrPax)).get
 
       val expected = Arrival(
-        Operator = "FL", Status = "Last Bag", EstDT = "2018-02-12T09:53:43Z",
-        Estimated = SDate("2018-02-12T09:53:43Z").millisSinceEpoch, ActDT = "", Actual = 0,
-        EstChoxDT = "2018-02-12T10:03:00Z", EstimatedChox = SDate("2018-02-12T10:03:00Z").millisSinceEpoch,
-        ActChoxDT = "2018-02-12T10:02:00Z", ActualChox = SDate("2018-02-12T10:02:00Z").millisSinceEpoch, Gate = "",
+        Operator = "FL", Status = "Last Bag",
+        Estimated = SDate("2018-02-12T09:53:43Z").millisSinceEpoch, Actual = 0,
+        EstimatedChox = SDate("2018-02-12T10:03:00Z").millisSinceEpoch,
+        ActualChox = SDate("2018-02-12T10:02:00Z").millisSinceEpoch, Gate = "",
         Stand = "1", MaxPax = 469, ActPax = 414, TranPax = 218, RunwayID = "", BaggageReclaimId = "", FlightID = 0,
         AirportID = "LHR", Terminal = "T2", rawICAO = "FL002", rawIATA = "FL002", Origin = "JNB",
-        SchDT = "2018-02-12T10:20:00Z", Scheduled = SDate("2018-02-12T10:20:00").millisSinceEpoch,
+        Scheduled = SDate("2018-02-12T10:20:00").millisSinceEpoch,
         PcpTime = 0, LastKnownPax = None
       )
 
@@ -123,13 +123,13 @@ class LHRLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFacto
       val result: Arrival = LHRLiveFeed.flightAndPaxToArrival(lhrArrival, None).get
 
       val expected = Arrival(
-        Operator = "FL", Status = "Last Bag", EstDT = "2018-04-12T08:53:43Z",
-        Estimated = SDate("2018-04-12T08:53:43Z").millisSinceEpoch, ActDT = "", Actual = 0,
-        EstChoxDT = "2018-04-12T09:03:00Z", EstimatedChox = SDate("2018-04-12T09:03:00Z").millisSinceEpoch,
-        ActChoxDT = "2018-04-12T09:02:00Z", ActualChox = SDate("2018-04-12T09:02:00Z").millisSinceEpoch,
+        Operator = "FL", Status = "Last Bag",
+        Estimated = SDate("2018-04-12T08:53:43Z").millisSinceEpoch, Actual = 0,
+        EstimatedChox = SDate("2018-04-12T09:03:00Z").millisSinceEpoch,
+        ActualChox = SDate("2018-04-12T09:02:00Z").millisSinceEpoch,
         Gate = "", Stand = "1", MaxPax = 0, ActPax = 0, TranPax = 0, RunwayID = "", BaggageReclaimId = "",
         FlightID = 0, AirportID = "LHR", Terminal = "T2", rawICAO = "FL002", rawIATA = "FL002", Origin = "JNB",
-        SchDT = "2018-04-12T09:20:00Z", Scheduled = SDate("2018-04-12T09:20:00Z").millisSinceEpoch, PcpTime = 0,
+        Scheduled = SDate("2018-04-12T09:20:00Z").millisSinceEpoch, PcpTime = 0,
         LastKnownPax = None
       )
 
@@ -146,13 +146,13 @@ class LHRLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFacto
 
       val expected = Arrival(
         Operator = "FL", Status = "Last Bag",
-        EstDT = "2018-02-12T09:53:43Z", Estimated = SDate("2018-02-12T09:53:43Z").millisSinceEpoch,
-        ActDT = "", Actual = 0, EstChoxDT = "2018-02-12T10:03:00Z",
+        Estimated = SDate("2018-02-12T09:53:43Z").millisSinceEpoch,
+        Actual = 0,
         EstimatedChox = SDate("2018-02-12T10:03:00Z").millisSinceEpoch,
-        ActChoxDT = "2018-02-12T10:02:00Z", ActualChox = SDate("2018-02-12T10:02:00Z").millisSinceEpoch,
+        ActualChox = SDate("2018-02-12T10:02:00Z").millisSinceEpoch,
         Gate = "", Stand = "1", MaxPax = 0, ActPax = 0, TranPax = 0, RunwayID = "", BaggageReclaimId = "",
         FlightID = 0, AirportID = "LHR", Terminal = "T2", rawICAO = "FL002", rawIATA = "FL002", Origin = "JNB",
-        SchDT = "2018-02-12T10:20:00Z", Scheduled = SDate("2018-02-12T10:20:00").millisSinceEpoch,
+        Scheduled = SDate("2018-02-12T10:20:00").millisSinceEpoch,
         PcpTime = 0, LastKnownPax = None
       )
 
@@ -171,21 +171,21 @@ class LHRLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFacto
       val expected = List(
         Arrival(
           Operator = "FL", Status = "Last Bag",
-          EstDT = SDate("2018-02-12T09:53:43").toISOString, Estimated = SDate("2018-02-12T09:53:43").millisSinceEpoch,
-          ActDT = "", Actual = 0,
-          EstChoxDT = SDate("2018-02-12T10:03:00").toISOString, EstimatedChox = SDate("2018-02-12T10:03:00").millisSinceEpoch,
-          ActChoxDT = SDate("2018-02-12T10:02:00").toISOString, ActualChox = SDate("2018-02-12T10:02:00").millisSinceEpoch,
+          Estimated = SDate("2018-02-12T09:53:43").millisSinceEpoch,
+          Actual = 0,
+          EstimatedChox = SDate("2018-02-12T10:03:00").millisSinceEpoch,
+          ActualChox = SDate("2018-02-12T10:02:00").millisSinceEpoch,
           Gate = "", Stand = "1", MaxPax = 469, ActPax = 414, TranPax = 218, RunwayID = "", BaggageReclaimId = "",
           FlightID = 0, AirportID = "LHR", Terminal = "T2", rawICAO = "FL002", rawIATA = "FL002",
-          Origin = "JNB", SchDT = SDate("2018-02-12T10:20:00").toISOString,
+          Origin = "JNB",
           Scheduled = SDate("2018-02-12T10:20:00").millisSinceEpoch, PcpTime = 0, LastKnownPax = None
         ),
         Arrival(
-          Operator = "FL", Status = "Scheduled", EstDT = "", Estimated = 0, ActDT = "", Actual = 0,
-          EstChoxDT = "", EstimatedChox = 0, ActChoxDT = "", ActualChox = 0, Gate = "", Stand = "2",
+          Operator = "FL", Status = "Scheduled", Estimated = 0, Actual = 0,
+          EstimatedChox = 0, ActualChox = 0, Gate = "", Stand = "2",
           MaxPax = 214, ActPax = 163, TranPax = 104, RunwayID = "", BaggageReclaimId = "", FlightID = 0,
           AirportID = "LHR", Terminal = "T2", rawICAO = "FL001", rawIATA = "FL001", Origin = "JNB",
-          SchDT = "2018-02-12T18:20:00Z", Scheduled = SDate("2018-02-12T18:20:00").millisSinceEpoch,
+          Scheduled = SDate("2018-02-12T18:20:00").millisSinceEpoch,
           PcpTime = 0, LastKnownPax = None
         )
       )
@@ -205,18 +205,17 @@ class LHRLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFacto
       val expected = List(
         Arrival(
           Operator = "FL", Status = "Last Bag",
-          EstDT = SDate("2018-02-12T09:53:43").toISOString, Estimated = SDate("2018-02-12T09:53:43").millisSinceEpoch,
-          ActDT = "", Actual = 0, EstChoxDT = SDate("2018-02-12T10:03:00").toISOString,
+          Estimated = SDate("2018-02-12T09:53:43").millisSinceEpoch,
+          Actual = 0,
           EstimatedChox = SDate("2018-02-12T10:03:00").millisSinceEpoch,
-          ActChoxDT = SDate("2018-02-12T10:02:00").toISOString, ActualChox = SDate("2018-02-12T10:02:00").millisSinceEpoch,
+          ActualChox = SDate("2018-02-12T10:02:00").millisSinceEpoch,
           Gate = "", Stand = "1", MaxPax = 0, ActPax = 0, TranPax = 0, RunwayID = "", BaggageReclaimId = "",
           FlightID = 0, AirportID = "LHR", Terminal = "T2", rawICAO = "FL002", rawIATA = "FL002", Origin = "JNB",
-          SchDT = SDate("2018-02-12T10:20:00").toISOString(),
           Scheduled = SDate("2018-02-12T10:20:00").millisSinceEpoch, PcpTime = 0, LastKnownPax = None
         ),
         Arrival(
-          Operator = "FL", Status = "Scheduled", EstDT = "",Estimated = 0, ActDT = "", Actual = 0, EstChoxDT = "", EstimatedChox = 0, ActChoxDT = "", ActualChox = 0, Gate = "", Stand = "2", MaxPax = 0, ActPax = 0, TranPax = 0, RunwayID = "", BaggageReclaimId = "", FlightID = 0, AirportID = "LHR", Terminal = "T2", rawICAO = "FL001", rawIATA = "FL001", Origin = "JNB",
-          SchDT = SDate("2018-02-12T18:20:00").toISOString, Scheduled = SDate("2018-02-12T18:20:00").millisSinceEpoch, PcpTime = 0, LastKnownPax = None
+          Operator = "FL", Status = "Scheduled", Estimated = 0, Actual = 0, EstimatedChox = 0, ActualChox = 0, Gate = "", Stand = "2", MaxPax = 0, ActPax = 0, TranPax = 0, RunwayID = "", BaggageReclaimId = "", FlightID = 0, AirportID = "LHR", Terminal = "T2", rawICAO = "FL001", rawIATA = "FL001", Origin = "JNB",
+          Scheduled = SDate("2018-02-12T18:20:00").millisSinceEpoch, PcpTime = 0, LastKnownPax = None
         )
       )
 

@@ -31,10 +31,10 @@ class AclFeedSpec extends CrunchTestLike {
         """.stripMargin
 
       val arrivals = arrivalsFromCsvContent(csvContent, regularTerminalMapping)
-      val expected = List(Arrival(Operator = "4U", Status = "ACL Forecast", EstDT = "", Estimated = 0, ActDT = "", Actual = 0,
-        EstChoxDT = "", EstimatedChox = 0, ActChoxDT = "", ActualChox = 0, Gate = "", Stand = "", MaxPax = 180, ActPax = 149,
+      val expected = List(Arrival(Operator = "4U", Status = "ACL Forecast", Estimated = 0, Actual = 0,
+        EstimatedChox = 0, ActualChox = 0, Gate = "", Stand = "", MaxPax = 180, ActPax = 149,
         TranPax = 0, RunwayID = "", BaggageReclaimId = "", FlightID = -904483842, AirportID = "LHR", Terminal = "T2",
-        rawICAO = "4U0460", rawIATA = "4U0460", Origin = "CGN", SchDT = "2017-10-13T07:10:00Z",
+        rawICAO = "4U0460", rawIATA = "4U0460", Origin = "CGN",
         Scheduled = 1507878600000L, PcpTime = 0, LastKnownPax = None))
 
       arrivals === expected
@@ -77,11 +77,11 @@ class AclFeedSpec extends CrunchTestLike {
         """.stripMargin
 
       val arrivals = arrivalsFromCsvContent(csvContent, lgwTerminalMapping)
-      val expected = List(Arrival(Operator = "4U", Status = "ACL Forecast", EstDT = "", Estimated = 0,
-        ActDT = "", Actual = 0, EstChoxDT = "", EstimatedChox = 0, ActChoxDT = "", ActualChox = 0, Gate = "",
+      val expected = List(Arrival(Operator = "4U", Status = "ACL Forecast", Estimated = 0,
+        Actual = 0, EstimatedChox = 0, ActualChox = 0, Gate = "",
         Stand = "", MaxPax = 180, ActPax = 149, TranPax = 0, RunwayID = "", BaggageReclaimId = "",
         FlightID = -904483842, AirportID = "LHR", Terminal = "S", rawICAO = "4U0460", rawIATA = "4U0460",
-        Origin = "CGN", SchDT = "2017-10-13T07:10:00Z", Scheduled = 1507878600000L, PcpTime = 0, LastKnownPax = None))
+        Origin = "CGN", Scheduled = 1507878600000L, PcpTime = 0, LastKnownPax = None))
 
       arrivals === expected
     }
@@ -260,7 +260,7 @@ class AclFeedSpec extends CrunchTestLike {
     val aclArrivals: List[Arrival] = arrivalsFromCsvContent(contentFromFileName(sftp, latestFile), regularTerminalMapping)
 
     val todayArrivals = aclArrivals
-      .filter(_.SchDT < "2017-10-05T23:00")
+      .filter(_.Scheduled < SDate("2017-10-05T23:00").millisSinceEpoch)
       .groupBy(_.Terminal)
 
     todayArrivals.foreach {

@@ -27,7 +27,7 @@ object BigSummaryBoxes {
 
   def bestTime(f: ApiFlightWithSplits) = {
     val bestTime = {
-      val flightDt = SDate.parse(f.apiFlight.SchDT)
+      val flightDt = SDate(f.apiFlight.Scheduled)
 
       if (f.apiFlight.PcpTime != 0) f.apiFlight.PcpTime else {
         flightDt.millisSinceEpoch

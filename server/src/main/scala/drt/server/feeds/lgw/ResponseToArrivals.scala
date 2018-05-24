@@ -38,13 +38,9 @@ case class ResponseToArrivals(data: Array[Byte], locationOption: Option[String] 
     val arrival = new Arrival(
       Operator = (n \ "AirlineIATA") text,
       Status = parseStatus(n),
-      EstDT = parseDateTime(n, "TDN", "EST").getOrElse(""),
       Estimated = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("TDN") && (n \ "@TimeType" text).equals("EST")).map(n => services.SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
-      ActDT = parseDateTime(n, "TDN", "ACT").getOrElse(""),
       Actual  = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("TDN") && (n \ "@TimeType" text).equals("ACT")).map(n => services.SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
-      EstChoxDT = parseDateTime(n, "ONB", "EST").getOrElse(""),
       EstimatedChox = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("EST")).map(n => services.SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
-      ActChoxDT = parseDateTime(n, "ONB", "ACT").getOrElse(""),
       ActualChox = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("ACT")).map(n => services.SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
       Gate = (n \\ "PassengerGate").headOption.map(n => n text).getOrElse(""),
       Stand = (n \\ "ArrivalStand").headOption.map(n => n text).getOrElse(""),
@@ -59,7 +55,6 @@ case class ResponseToArrivals(data: Array[Byte], locationOption: Option[String] 
       rawICAO = (n \\ "AirlineICAO" text) + parseFlightNumber(n),
       rawIATA = (n \\ "AirlineIATA" text) + parseFlightNumber(n),
       Origin = parseOrigin(n),
-      SchDT = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("SCT")).map(n => n text).getOrElse(""),
       Scheduled = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("SCT")).map(n => services.SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
       PcpTime = 0,
       LastKnownPax = None)

@@ -63,13 +63,9 @@ object LhrForecastArrival {
       Arrival(
         Operator = carrierCode(fields),
         Status = "Forecast",
-        EstDT = "",
         Estimated = 0L,
-        ActDT = "",
         Actual = 0L,
-        EstChoxDT = "",
         EstimatedChox = 0L,
-        ActChoxDT = "",
         ActualChox = 0L,
         Gate = "",
         Stand = "",
@@ -84,7 +80,6 @@ object LhrForecastArrival {
         rawIATA = flightCode(fields),
         rawICAO = flightCode(fields),
         Origin = origin(fields),
-        SchDT = scheduledStr(fields),
         Scheduled = scheduled(fields).millisSinceEpoch,
         PcpTime = 0L,
         LastKnownPax = None

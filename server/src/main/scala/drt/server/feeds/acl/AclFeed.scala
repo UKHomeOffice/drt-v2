@@ -152,13 +152,9 @@ object AclFeed {
       Arrival(
         Operator = fields(AclColIndex.Operator),
         Status = "ACL Forecast",
-        EstDT = "",
         Estimated = 0,
-        ActDT = "",
         Actual = 0,
-        EstChoxDT = "",
         EstimatedChox = 0,
-        ActChoxDT = "",
         ActualChox = 0,
         Gate = "",
         Stand = "",
@@ -173,7 +169,6 @@ object AclFeed {
         rawICAO = fields(AclColIndex.FlightNumber),
         rawIATA = fields(AclColIndex.FlightNumber),
         Origin = fields(AclColIndex.Origin),
-        SchDT = dateAndTimeToDateTimeIso(fields(AclColIndex.Date), fields(AclColIndex.Time)),
         Scheduled = SDate(dateAndTimeToDateTimeIso(fields(AclColIndex.Date), fields(AclColIndex.Time))).millisSinceEpoch,
         PcpTime = 0,
         None

@@ -94,14 +94,14 @@ object PcpArrival {
   }
 
   def bestChoxTime(timeToChoxMillis: Long, flight: Arrival): Option[MillisSinceEpoch] = {
-    def parseMillis(s: => String) = if (s != "") Option(SDate.parseString(s).millisSinceEpoch) else None
+    def parseMillis(s: => MillisSinceEpoch) = if (s != 0) Some(s) else None
 
-    def addTimeToChox(s: String) = parseMillis(s).map(_ + timeToChoxMillis)
+    def addTimeToChox(s: MillisSinceEpoch) = parseMillis(s).map(_ + timeToChoxMillis)
 
-    parseMillis(flight.ActChoxDT)
-      .orElse(parseMillis(flight.EstChoxDT)
-        .orElse(addTimeToChox(flight.ActDT)
-          .orElse(addTimeToChox(flight.EstDT)
-            .orElse(addTimeToChox(flight.SchDT)))))
+    parseMillis(flight.ActualChox)
+      .orElse(parseMillis(flight.EstimatedChox)
+        .orElse(addTimeToChox(flight.Actual)
+          .orElse(addTimeToChox(flight.Estimated)
+            .orElse(addTimeToChox(flight.Scheduled)))))
   }
 }

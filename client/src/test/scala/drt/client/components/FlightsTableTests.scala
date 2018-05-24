@@ -3,6 +3,7 @@ package drt.client.components
 import diode.data.{Pot, Ready}
 import drt.client.components.FlightsWithSplitsTable.tableHead
 import drt.client.services.JSDateConversions.SDate
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
@@ -25,6 +26,13 @@ object FlightsTableTests extends TestSuite {
       .renderP((_, p) => <.div(p)).build
 
 
+    def date(dt: MillisSinceEpoch, className: Option[String] = None) = className match {
+      case Some(cn) => <.td(flightDate(if (dt == 0) "" else SDate(dt).toISOString().replaceFirst(":00.000Z", "")), ^.className := cn)
+      case _ => <.td(flightDate(if (dt == 0) "" else SDate(dt).toISOString().replaceFirst(":00.000Z", "")))
+    }
+
+    def flightDate(dt: String) = <.span(^.title := dt.replace("T", " "), dt.split("T")(1))
+
     "How do we test" - {
       "Compare static rendered vdom to actual component for readability" - {
         'Equal - {
@@ -32,18 +40,12 @@ object FlightsTableTests extends TestSuite {
         }
       }
 
-
       val testFlight = Arrival(
         Operator = "Op",
         Status = "scheduled",
-        SchDT = "2016-01-01T13:00",
-        EstDT = "2016-01-01T13:05",
         Estimated = SDate("2016-01-01T13:05").millisSinceEpoch,
-        ActDT = "2016-01-01T13:10",
         Actual =  SDate("2016-01-01T13:10").millisSinceEpoch,
-        EstChoxDT = "2016-01-01T13:15",
         EstimatedChox =  SDate("2016-01-01T13:15").millisSinceEpoch,
-        ActChoxDT = "2016-01-01T13:20",
         ActualChox =  SDate("2016-01-01T13:20").millisSinceEpoch,
         Gate = "10",
         Stand = "10A",
@@ -122,35 +124,37 @@ object FlightsTableTests extends TestSuite {
             ArrivalsTable(timelineComponent = None)()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), PaxTypesAndQueues.inOrderSansFastTrack, hasEstChox = true)),
             staticComponent(expected)())
         }
+
         "ArrivalsTableComponent has a hook for a timeline column" - {
           val timelineComponent: (Arrival) => VdomNode = (f: Arrival) => <.span("herebecallback")
-          val expected = <.div(
-            <.div(^.id := "toStick", ^.className := "container sticky",
+          val expected =
+            <.div(
+              <.div(^.id := "toStick", ^.className := "container sticky",
+                <.table(
+                  ^.id := "sticky",
+                  classesAttr,
+                  thead(timeline = true))),
               <.table(
-                ^.id := "sticky",
+                ^.id := "sticky-body",
+                dataStickyAttr,
                 classesAttr,
-                thead(timeline = true))),
-            <.table(
-              ^.id := "sticky-body",
-              dataStickyAttr,
-              classesAttr,
-              thead(timeline = true),
-              <.tbody(
-                <.tr(^.className := " before-now",
-                  <.td(<.span("herebecallback")),
-                  <.td(testFlight.ICAO), <.td(testFlight.Origin),
-                  <.td(s"${testFlight.Gate}/${testFlight.Stand}"),
-                  <.td(testFlight.Status),
-                  date(testFlight.SchDT),
-                  date(testFlight.EstDT),
-                  date(testFlight.ActDT),
-                  date(testFlight.EstChoxDT, Option("est-chox")),
-                  date(testFlight.ActChoxDT),
-                  <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:37", "13:37"))), //pcp
-                  <.td(testFlight.ActPax, ^.className := "right"),
-                  <.td(0, ^.className := "right"),
-                  <.td(0, ^.className := "right"),
-                  <.td(0, ^.className := "right")))))
+                thead(timeline = true),
+                <.tbody(
+                  <.tr(^.className := " before-now",
+                    <.td(<.span("herebecallback")),
+                    <.td(testFlight.ICAO), <.td(testFlight.Origin),
+                    <.td(s"${testFlight.Gate}/${testFlight.Stand}"),
+                    <.td(testFlight.Status),
+                    date(testFlight.Scheduled),
+                    date(testFlight.Estimated),
+                    date(testFlight.Actual),
+                    date(testFlight.EstimatedChox, Option("est-chox")),
+                    date(testFlight.ActualChox),
+                    <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:37", "13:37"))), //pcp
+                    <.td(testFlight.ActPax, ^.className := "right"),
+                    <.td(0, ^.className := "right"),
+                    <.td(0, ^.className := "right"),
+                    <.td(0, ^.className := "right")))))
 
           //          val timelineComponent = ScalaComponent.builder[Arrival]("TimeLine")
           //            .renderStatic(<.span("herebecallback")).build
@@ -158,13 +162,6 @@ object FlightsTableTests extends TestSuite {
             ArrivalsTable(Some(timelineComponent))()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), PaxTypesAndQueues.inOrderSansFastTrack, hasEstChox = true)),
             staticComponent(expected)())
         }
-
-        def date(dt: String, className: Option[String] = None) = className match {
-          case Some(cn) => <.td(flightDate(dt), ^.className := cn)
-          case _ => <.td(flightDate(dt))
-        }
-
-        def flightDate(dt: String) = <.span(^.title := dt.replace("T", " "), dt.split("T")(1))
 
         "ArrivalsTableComponent has a hook for an origin portCode mapper" - {
           "Simple hook " - {
@@ -185,11 +182,11 @@ object FlightsTableTests extends TestSuite {
                     <.td(<.span(^.title := "JFK, New York, USA", testFlight.Origin)),
                     <.td(s"${testFlight.Gate}/${testFlight.Stand}"),
                     <.td(testFlight.Status),
-                    date(testFlight.SchDT),
-                    date(testFlight.EstDT),
-                    date(testFlight.ActDT),
-                    date(testFlight.EstChoxDT, Option("est-chox")),
-                    date(testFlight.ActChoxDT),
+                    date(testFlight.Scheduled),
+                    date(testFlight.Estimated),
+                    date(testFlight.Actual),
+                    date(testFlight.EstimatedChox, Option("est-chox")),
+                    date(testFlight.ActualChox),
                     <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:37", "13:37"))), //pcp
                     <.td(testFlight.ActPax, ^.className := "right"),
                     <.td(0, ^.className := "right"),
@@ -251,11 +248,11 @@ object FlightsTableTests extends TestSuite {
                   <.td(testFlightT.Origin),
                   <.td(s"${testFlightT.Gate}/${testFlightT.Stand}"),
                   <.td(testFlightT.Status),
-                  date(testFlightT.SchDT),
-                  date(testFlightT.EstDT),
-                  date(testFlightT.ActDT),
-                  date(testFlightT.EstChoxDT, Option("est-chox")),
-                  date(testFlightT.ActChoxDT),
+                  date(testFlightT.Scheduled),
+                  date(testFlightT.Estimated),
+                  date(testFlightT.Actual),
+                  date(testFlightT.EstimatedChox, Option("est-chox")),
+                  date(testFlightT.ActualChox),
                   <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:36", "13:36"))), //pcp
                   <.td(<.div(paxToDisplay, ^.className := "pax-portfeed", ^.width := s"$width%"), ^.className := "right"),
                   <.td(0, ^.className := "right"),

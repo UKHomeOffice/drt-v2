@@ -156,7 +156,7 @@ class ArrivalsGraphStage(name: String = "",
       arrivals
         .filterNot {
           case f if !isFlightRelevant(f) =>
-            log.debug(s"Filtering out irrelevant arrival: ${f.IATA}, ${f.SchDT}, ${f.Origin}")
+            log.debug(s"Filtering out irrelevant arrival: ${f.IATA}, ${SDate(f.Scheduled).toISOString()}, ${f.Origin}")
             true
           case _ => false
         }

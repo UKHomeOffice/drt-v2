@@ -143,10 +143,11 @@ object FlightTableRow {
   implicit val stateReuse: Reusability[RowState] = Reusability.derive[RowState]
 
   def bestArrivalTime(f: Arrival): MillisSinceEpoch = {
+    def toSDateLikeOption(s: MillisSinceEpoch): Option[SDateLike] = if (s==0) None else Try(SDate(s)).toOption
     val best = (
-      SDate.stringToSDateLikeOption(f.SchDT),
-      SDate.stringToSDateLikeOption(f.EstDT),
-      SDate.stringToSDateLikeOption(f.ActDT)
+      toSDateLikeOption(f.Scheduled),
+      toSDateLikeOption(f.Estimated),
+      toSDateLikeOption(f.Actual)
     ) match {
       case (Some(sd), None, None) => sd
       case (_, Some(est), None) => est
@@ -192,11 +193,11 @@ object FlightTableRow {
           (None, props.originMapper(flight.Origin)),
           (None, s"${flight.Gate}/${flight.Stand}"),
           (None, flight.Status),
-          (None, localDateTimeWithPopup(flight.SchDT)),
-          (None, localDateTimeWithPopup(flight.EstDT)),
-          (None, localDateTimeWithPopup(flight.ActDT)),
-          (Option("est-chox"), localDateTimeWithPopup(flight.EstChoxDT)),
-          (None, localDateTimeWithPopup(flight.ActChoxDT)),
+          (None, localDateTimeWithPopup(flight.Scheduled)),
+          (None, localDateTimeWithPopup(flight.Estimated)),
+          (None, localDateTimeWithPopup(flight.Actual)),
+          (Option("est-chox"), localDateTimeWithPopup(flight.EstimatedChox)),
+          (None, localDateTimeWithPopup(flight.ActualChox)),
           (None, pcpTimeRange(flight, ArrivalHelper.bestPax)),
           (Option("right"), props.paxComponent(flightWithSplits)))
           .filterNot {
@@ -230,7 +231,7 @@ object FlightTableRow {
 
   def offScheduleClass(arrival: Arrival): String = {
     val eta = bestArrivalTime(arrival)
-    val differenceFromScheduled = eta - SDate(arrival.SchDT).millisSinceEpoch
+    val differenceFromScheduled = eta - arrival.Scheduled
     val hourInMillis = 3600000
     val offScheduleClass = if (differenceFromScheduled > hourInMillis || differenceFromScheduled < -1 * hourInMillis)
       "danger"

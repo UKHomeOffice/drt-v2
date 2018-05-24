@@ -1,6 +1,5 @@
 package drt.shared
 
-import drt.shared
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, _}
 import drt.shared.SplitRatiosNs.SplitSources
@@ -127,13 +126,9 @@ case class FlightsNotReady()
 case class Arrival(
                     Operator: String,
                     Status: String,
-                    EstDT: String,
                     Estimated: MillisSinceEpoch,
-                    ActDT: String,
                     Actual: MillisSinceEpoch,
-                    EstChoxDT: String,
                     EstimatedChox: MillisSinceEpoch,
-                    ActChoxDT: String,
                     ActualChox: MillisSinceEpoch,
                     Gate: String,
                     Stand: String,
@@ -148,7 +143,6 @@ case class Arrival(
                     rawICAO: String,
                     rawIATA: String,
                     Origin: String,
-                    SchDT: String,
                     Scheduled: MillisSinceEpoch,
                     PcpTime: MillisSinceEpoch,
                     LastKnownPax: Option[Int] = None) {
@@ -196,7 +190,7 @@ case class Arrival(
 object Arrival {
   val flightCodeRegex: Regex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r
 
-  def summaryString(arrival: Arrival): TerminalName = arrival.AirportID + "/" + arrival.Terminal + "@" + arrival.SchDT + "!" + arrival.IATA
+  def summaryString(arrival: Arrival): TerminalName = arrival.AirportID + "/" + arrival.Terminal + "@" + arrival.Scheduled + "!" + arrival.IATA
 
   def standardiseFlightCode(flightCode: String): String = {
     val flightCodeRegex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r

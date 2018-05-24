@@ -81,13 +81,9 @@ object FlightMessageConversion {
     Arrival(
       Operator = flightMessage.operator.getOrElse(""),
       Status = flightMessage.status.getOrElse(""),
-      EstDT = apiFlightDateTime(flightMessage.estimated),
       Estimated = flightMessage.estimated.getOrElse(0),
-      ActDT = apiFlightDateTime(flightMessage.touchdown),
       Actual = flightMessage.touchdown.getOrElse(0),
-      EstChoxDT = apiFlightDateTime(flightMessage.estimatedChox),
       EstimatedChox = flightMessage.estimatedChox.getOrElse(0),
-      ActChoxDT = apiFlightDateTime(flightMessage.actualChox),
       ActualChox = flightMessage.actualChox.getOrElse(0),
       Gate = flightMessage.gate.getOrElse(""),
       Stand = flightMessage.stand.getOrElse(""),
@@ -102,7 +98,6 @@ object FlightMessageConversion {
       rawICAO = flightMessage.iCAO.getOrElse(""),
       rawIATA = flightMessage.iATA.getOrElse(""),
       Origin = flightMessage.origin.getOrElse(""),
-      SchDT = apiFlightDateTime(flightMessage.scheduled),
       PcpTime = flightMessage.pcpTime.getOrElse(0),
       LastKnownPax = flightMessage.lastKnownPax,
       Scheduled = flightMessage.scheduled.getOrElse(0)

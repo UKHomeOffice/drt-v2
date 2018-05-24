@@ -105,7 +105,7 @@ class ApplicationRestartSpec extends CrunchTestLike {
       initialLiveArrivals = initialLiveArrivals
     )
 
-    offerAndWait(crunch.liveArrivalsInput, Flights(Seq(arrivalDay1.copy(EstDT = "2018-01-01T00:05"))))
+    offerAndWait(crunch.liveArrivalsInput, Flights(Seq(arrivalDay1.copy(Estimated = SDate("2018-01-01T00:05").millisSinceEpoch))))
 
     crunch.forecastTestProbe.expectNoMsg(250 milliseconds)
 
