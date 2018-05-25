@@ -47,15 +47,15 @@ object TerminalContentComponent {
       val flightsHash: Option[List[(Int, String, String, String, Long, Long, Long, Long, Long, Long, Int)]] = crunchStatePot.toOption.map(_.flights.toList.map(f => {
         (f.splits.hashCode,
           f.apiFlight.Status,
-          f.apiFlight.Gate,
-          f.apiFlight.Stand,
+          f.apiFlight.Gate.getOrElse(""),
+          f.apiFlight.Stand.getOrElse(""),
           f.apiFlight.Scheduled,
-          f.apiFlight.Estimated,
-          f.apiFlight.Actual,
-          f.apiFlight.EstimatedChox,
-          f.apiFlight.ActualChox,
-          f.apiFlight.PcpTime,
-          f.apiFlight.ActPax
+          f.apiFlight.Estimated.getOrElse(0L),
+          f.apiFlight.Actual.getOrElse(0L),
+          f.apiFlight.EstimatedChox.getOrElse(0L),
+          f.apiFlight.ActualChox.getOrElse(0L),
+          f.apiFlight.PcpTime.getOrElse(0L),
+          f.apiFlight.ActPax.getOrElse(0)
         )
       }))
 

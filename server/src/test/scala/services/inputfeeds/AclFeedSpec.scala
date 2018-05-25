@@ -31,11 +31,11 @@ class AclFeedSpec extends CrunchTestLike {
         """.stripMargin
 
       val arrivals = arrivalsFromCsvContent(csvContent, regularTerminalMapping)
-      val expected = List(Arrival(Operator = "4U", Status = "ACL Forecast", Estimated = 0, Actual = 0,
-        EstimatedChox = 0, ActualChox = 0, Gate = "", Stand = "", MaxPax = 180, ActPax = 149,
-        TranPax = 0, RunwayID = "", BaggageReclaimId = "", FlightID = -904483842, AirportID = "LHR", Terminal = "T2",
+      val expected = List(Arrival(Operator = Some("4U"), Status = "ACL Forecast", Estimated = None, Actual = None,
+        EstimatedChox = None, ActualChox = None, Gate = None, Stand = None, MaxPax = Some(180), ActPax = Some(149),
+        TranPax = None, RunwayID = None, BaggageReclaimId = None, FlightID = Some(-904483842), AirportID = "LHR", Terminal = "T2",
         rawICAO = "4U0460", rawIATA = "4U0460", Origin = "CGN",
-        Scheduled = 1507878600000L, PcpTime = 0, LastKnownPax = None))
+        Scheduled = 1507878600000L, PcpTime = None, LastKnownPax = None))
 
       arrivals === expected
     }
@@ -77,11 +77,11 @@ class AclFeedSpec extends CrunchTestLike {
         """.stripMargin
 
       val arrivals = arrivalsFromCsvContent(csvContent, lgwTerminalMapping)
-      val expected = List(Arrival(Operator = "4U", Status = "ACL Forecast", Estimated = 0,
-        Actual = 0, EstimatedChox = 0, ActualChox = 0, Gate = "",
-        Stand = "", MaxPax = 180, ActPax = 149, TranPax = 0, RunwayID = "", BaggageReclaimId = "",
-        FlightID = -904483842, AirportID = "LHR", Terminal = "S", rawICAO = "4U0460", rawIATA = "4U0460",
-        Origin = "CGN", Scheduled = 1507878600000L, PcpTime = 0, LastKnownPax = None))
+      val expected = List(Arrival(Operator = Some("4U"), Status = "ACL Forecast", Estimated = None,
+        Actual = None, EstimatedChox = None, ActualChox = None, Gate = None,
+        Stand = None, MaxPax = Some(180), ActPax = Some(149), TranPax = None, RunwayID = None, BaggageReclaimId = None,
+        FlightID = Some(-904483842), AirportID = "LHR", Terminal = "S", rawICAO = "4U0460", rawIATA = "4U0460",
+        Origin = "CGN", Scheduled = 1507878600000L, PcpTime = None, LastKnownPax = None))
 
       arrivals === expected
     }

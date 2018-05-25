@@ -198,16 +198,16 @@ object CSVData {
         fws.apiFlight.IATA,
         fws.apiFlight.ICAO,
         fws.apiFlight.Origin,
-        fws.apiFlight.Gate + "/" + fws.apiFlight.Stand,
+        fws.apiFlight.Gate.getOrElse("") + "/" + fws.apiFlight.Stand.getOrElse(""),
         fws.apiFlight.Status,
         Try(if (fws.apiFlight.Scheduled == 0) "" else SDate(fws.apiFlight.Scheduled, europeLondonTimeZone).toISODateOnly).getOrElse(""),
         Try(if (fws.apiFlight.Scheduled == 0) "" else SDate(fws.apiFlight.Scheduled, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
-        Try(if (fws.apiFlight.Estimated == 0) "" else SDate(fws.apiFlight.Estimated, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
-        Try(if (fws.apiFlight.Actual == 0) "" else SDate(fws.apiFlight.Actual, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
-        Try(if (fws.apiFlight.EstimatedChox == 0) "" else SDate(fws.apiFlight.EstimatedChox, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
-        Try(if (fws.apiFlight.ActualChox == 0) "" else SDate(fws.apiFlight.ActualChox, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
-        Try(if (fws.apiFlight.PcpTime == 0) "" else SDate(fws.apiFlight.PcpTime, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
-        fws.apiFlight.ActPax,
+        Try(fws.apiFlight.Estimated.map(SDate(_, europeLondonTimeZone).toHoursAndMinutes()).getOrElse("")).getOrElse(""),
+        Try(fws.apiFlight.Actual.map(SDate(_, europeLondonTimeZone).toHoursAndMinutes()).getOrElse("")).getOrElse(""),
+        Try(fws.apiFlight.EstimatedChox.map(SDate(_, europeLondonTimeZone).toHoursAndMinutes()).getOrElse("")).getOrElse(""),
+        Try(fws.apiFlight.ActualChox.map(SDate(_, europeLondonTimeZone).toHoursAndMinutes()).getOrElse("")).getOrElse(""),
+        Try(fws.apiFlight.PcpTime.map(SDate(_, europeLondonTimeZone).toHoursAndMinutes()).getOrElse("")).getOrElse(""),
+        fws.apiFlight.ActPax.getOrElse(0),
         ArrivalHelper.bestPax(fws.apiFlight)
       ) ++
         queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages).getOrElse(q, "")}") ++

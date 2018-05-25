@@ -29,7 +29,7 @@ object FlightsWithSplitsTable {
   def ArrivalsTable(timelineComponent: Option[(Arrival) => VdomNode] = None,
                     originMapper: (String) => VdomNode = (portCode) => portCode,
                     splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
-                   )(paxComponent: (ApiFlightWithSplits) => TagMod = (f) => f.apiFlight.ActPax) = ScalaComponent.builder[Props]("ArrivalsTable")
+                   )(paxComponent: (ApiFlightWithSplits) => TagMod = (f) => f.apiFlight.ActPax.getOrElse(0).toInt) = ScalaComponent.builder[Props]("ArrivalsTable")
     .render_P((props) => {
 
       val flightsWithSplits = props.flightsWithSplits
@@ -131,7 +131,7 @@ object FlightTableRow {
                    idx: Int,
                    timelineComponent: Option[(Arrival) => VdomNode],
                    originMapper: OriginMapperF = (portCode) => portCode,
-                   paxComponent: (ApiFlightWithSplits) => TagMod = (f) => f.apiFlight.ActPax,
+                   paxComponent: (ApiFlightWithSplits) => TagMod = (f) => f.apiFlight.ActPax.getOrElse(0).toInt,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                    splitsQueueOrder: List[PaxTypeAndQueue],
                    hasEstChox: Boolean
@@ -143,9 +143,9 @@ object FlightTableRow {
   implicit val stateReuse: Reusability[RowState] = Reusability.derive[RowState]
 
   def bestArrivalTime(f: Arrival): MillisSinceEpoch = {
-    def toSDateLikeOption(s: MillisSinceEpoch): Option[SDateLike] = if (s==0) None else Try(SDate(s)).toOption
+    def toSDateLikeOption(s: Option[MillisSinceEpoch]): Option[SDateLike] = s.flatMap(millis=>Try(SDate(millis)).toOption)
     val best = (
-      toSDateLikeOption(f.Scheduled),
+      toSDateLikeOption(Some(f.Scheduled)),
       toSDateLikeOption(f.Estimated),
       toSDateLikeOption(f.Actual)
     ) match {
@@ -184,7 +184,7 @@ object FlightTableRow {
         }
 
         val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
-        val timeIndicatorClass = if (flight.PcpTime < SDate.now().millisSinceEpoch) "before-now" else "from-now"
+        val timeIndicatorClass = if (flight.PcpTime.getOrElse(0L) < SDate.now().millisSinceEpoch) "before-now" else "from-now"
 
         val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(props.splitsQueueOrder)
         val queuePax: Map[QueueName, Int] = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(flightWithSplits).getOrElse(Map())
@@ -193,7 +193,7 @@ object FlightTableRow {
           (None, props.originMapper(flight.Origin)),
           (None, s"${flight.Gate}/${flight.Stand}"),
           (None, flight.Status),
-          (None, localDateTimeWithPopup(flight.Scheduled)),
+          (None, localDateTimeWithPopup(Some(flight.Scheduled))),
           (None, localDateTimeWithPopup(flight.Estimated)),
           (None, localDateTimeWithPopup(flight.Actual)),
           (Option("est-chox"), localDateTimeWithPopup(flight.EstimatedChox)),

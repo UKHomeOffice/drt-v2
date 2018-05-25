@@ -36,28 +36,29 @@ object LHRLiveFeed {
   def flightAndPaxToArrival(lhrArrival: LHRLiveArrival, lhrPax: Option[LHRFlightPax]): Try[Arrival] = {
 
     val tryArrival = Try {
+      val actPax = lhrPax.map(_.TOTALPASSENGERCOUNT.toInt).filter(_!=0)
       Arrival(
-        Operator = lhrArrival.OPERATOR,
+        Operator = if (lhrArrival.OPERATOR.equals("")) None else Some(lhrArrival.OPERATOR),
         Status = statusCodesToDesc.getOrElse(lhrArrival.FLIGHTSTATUS, lhrArrival.FLIGHTSTATUS),
-        Estimated = if (!StringUtils.isEmpty(lhrArrival.ESTIMATEDFLIGHTOPERATIONTIME)) Try(SDate(localTimeDateStringToIsoString(lhrArrival.ESTIMATEDFLIGHTOPERATIONTIME)).millisSinceEpoch).getOrElse(0) else 0,
-        Actual = 0,
-        EstimatedChox = if (!StringUtils.isEmpty(lhrArrival.ESTIMATEDFLIGHTCHOXTIME)) Try(SDate(localTimeDateStringToIsoString(lhrArrival.ESTIMATEDFLIGHTCHOXTIME)).millisSinceEpoch).getOrElse(0) else 0,
-        ActualChox = if (!StringUtils.isEmpty(lhrArrival.ACTUALFLIGHTCHOXTIME)) Try(SDate(localTimeDateStringToIsoString(lhrArrival.ACTUALFLIGHTCHOXTIME)).millisSinceEpoch).getOrElse(0) else  0,
-        Gate = "",
-        Stand = lhrArrival.STAND,
-        MaxPax = lhrPax.map(_.MAXPASSENGERCOUNT.toInt).getOrElse(0),
-        ActPax = lhrPax.map(_.TOTALPASSENGERCOUNT.toInt).getOrElse(0),
-        TranPax = lhrPax.map(_.ACTUALTRANSFERPASSENGERCOUNT.toInt).getOrElse(0),
-        RunwayID = "",
-        BaggageReclaimId = "",
-        FlightID = 0,
+        Estimated = if (!StringUtils.isEmpty(lhrArrival.ESTIMATEDFLIGHTOPERATIONTIME)) Try(SDate(localTimeDateStringToIsoString(lhrArrival.ESTIMATEDFLIGHTOPERATIONTIME)).millisSinceEpoch).toOption.filter(_!= 0) else None,
+        Actual = None,
+        EstimatedChox = if (!StringUtils.isEmpty(lhrArrival.ESTIMATEDFLIGHTCHOXTIME)) Try(SDate(localTimeDateStringToIsoString(lhrArrival.ESTIMATEDFLIGHTCHOXTIME)).millisSinceEpoch).toOption.filter(_!= 0) else None,
+        ActualChox = if (!StringUtils.isEmpty(lhrArrival.ACTUALFLIGHTCHOXTIME)) Try(SDate(localTimeDateStringToIsoString(lhrArrival.ACTUALFLIGHTCHOXTIME)).millisSinceEpoch).toOption.filter(_!=0) else  None,
+        Gate = None,
+        Stand = if (lhrArrival.STAND.equals("")) None else Some(lhrArrival.STAND),
+        MaxPax = lhrPax.map(_.MAXPASSENGERCOUNT.toInt).filter(_!=0),
+        ActPax = actPax,
+        TranPax = if (actPax.isEmpty) None else lhrPax.map(_.ACTUALTRANSFERPASSENGERCOUNT.toInt),
+        RunwayID = None,
+        BaggageReclaimId = None,
+        FlightID = None,
         AirportID = "LHR",
         Terminal = lhrArrival.TERMINAL,
         rawICAO = lhrArrival.FLIGHTNUMBER,
         rawIATA = lhrArrival.FLIGHTNUMBER,
         Origin = lhrArrival.AIRPORTCODE,
         Scheduled = Try(SDate(localTimeDateStringToIsoString(lhrArrival.SCHEDULEDFLIGHTOPERATIONTIME)).millisSinceEpoch).getOrElse(0),
-        PcpTime = 0,
+        PcpTime = None,
         LastKnownPax = None
       )
     }

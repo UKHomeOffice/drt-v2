@@ -33,27 +33,31 @@ case class ChromaLiveFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcher) {
       flights.map(flight => {
         val walkTimeMinutes = 4
         val pcpTime: Long = org.joda.time.DateTime.parse(flight.SchDT).plusMinutes(walkTimeMinutes).getMillis
+        val est = SDate(flight.EstDT).millisSinceEpoch
+        val act = SDate(flight.ActDT).millisSinceEpoch
+        val estChox = SDate(flight.EstChoxDT).millisSinceEpoch
+        val actChox = SDate(flight.ActChoxDT).millisSinceEpoch
         Arrival(
-          Operator = flight.Operator,
+          Operator = if (flight.Operator== "") None else Some(flight.Operator),
           Status = flight.Status,
-          Estimated = SDate(flight.EstDT).millisSinceEpoch,
-          Actual = SDate(flight.ActDT).millisSinceEpoch,
-          EstimatedChox = SDate(flight.EstChoxDT).millisSinceEpoch,
-          ActualChox = SDate(flight.ActChoxDT).millisSinceEpoch,
-          Gate = flight.Gate,
-          Stand = flight.Stand,
-          MaxPax = flight.MaxPax,
-          ActPax = flight.ActPax,
-          TranPax = flight.TranPax,
-          RunwayID = flight.RunwayID,
-          BaggageReclaimId = flight.BaggageReclaimId,
-          FlightID = flight.FlightID,
+          Estimated = if (est == 0) None else Some(est),
+          Actual = if (act == 0) None else Some(act),
+          EstimatedChox = if (estChox == 0) None else Some(estChox),
+          ActualChox = if (actChox!= 0) None else Some(actChox),
+          Gate = if (flight.Gate.isEmpty) None else Some(flight.Gate),
+          Stand = if (flight.Stand.isEmpty) None else Some(flight.Stand),
+          MaxPax = if (flight.MaxPax == 0) None else Some(flight.MaxPax),
+          ActPax = if (flight.ActPax == 0) None else Some(flight.ActPax),
+          TranPax = if (flight.ActPax == 0) None else Some(flight.TranPax),
+          RunwayID = if (flight.RunwayID == "") None else Some(flight.RunwayID),
+          BaggageReclaimId = if (flight.BaggageReclaimId == "") None else Some(flight.BaggageReclaimId),
+          FlightID = if (flight.FlightID == 0) None else Some(flight.FlightID),
           AirportID = flight.AirportID,
           Terminal = flight.Terminal,
           rawICAO = flight.ICAO,
           rawIATA = flight.IATA,
           Origin = flight.Origin,
-          PcpTime = pcpTime,
+          PcpTime = Some(pcpTime),
           Scheduled = SDate(flight.SchDT).millisSinceEpoch
         )
       }).toList)
@@ -88,26 +92,26 @@ case class ChromaForecastFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherF
         val walkTimeMinutes = 4
         val pcpTime: Long = org.joda.time.DateTime.parse(flight.SchDT).plusMinutes(walkTimeMinutes).getMillis
         Arrival(
-          Operator = "",
+          Operator = None,
           Status = "Port Forecast",
-          Estimated = 0L,
-          Actual = 0L,
-          EstimatedChox = 0L,
-          ActualChox = 0L,
-          Gate = "",
-          Stand = "",
-          MaxPax = 0,
-          ActPax = flight.EstPax,
-          TranPax = flight.EstTranPax,
-          RunwayID = "",
-          BaggageReclaimId = "",
-          FlightID = flight.FlightID,
+          Estimated = None,
+          Actual = None,
+          EstimatedChox = None,
+          ActualChox = None,
+          Gate = None,
+          Stand = None,
+          MaxPax = None,
+          ActPax = if (flight.EstPax == 0) None else Some(flight.EstPax),
+          TranPax = if (flight.EstPax == 0) None else Some(flight.EstTranPax),
+          RunwayID = None,
+          BaggageReclaimId = None,
+          FlightID = if (flight.FlightID == 0) None else Some(flight.FlightID),
           AirportID = flight.AirportID,
           Terminal = flight.Terminal,
           rawICAO = flight.ICAO,
           rawIATA = flight.IATA,
           Origin = flight.Origin,
-          PcpTime = pcpTime,
+          PcpTime = Some(pcpTime),
           Scheduled = SDate(flight.SchDT).millisSinceEpoch
         )
       }).toList)

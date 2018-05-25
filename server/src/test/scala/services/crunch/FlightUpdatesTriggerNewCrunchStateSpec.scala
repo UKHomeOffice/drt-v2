@@ -29,7 +29,7 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
 
     val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 21)
     val inputFlightsBefore = Flights(List(flight))
-    val updatedArrival = flight.copy(ActPax = 50)
+    val updatedArrival = flight.copy(ActPax = Some(50))
     val inputFlightsAfter = Flights(List(updatedArrival))
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
@@ -66,7 +66,7 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
 
     val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 21)
     val inputFlightsBefore = Flights(List(flight))
-    val updatedArrival = flight.copy(ActPax = 50)
+    val updatedArrival = flight.copy(ActPax = Some(50))
     val inputFlightsAfter = Flights(List(updatedArrival))
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),

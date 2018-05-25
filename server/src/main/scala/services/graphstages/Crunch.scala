@@ -74,7 +74,7 @@ object Crunch {
     val latestPcpTimes = differences
       .toList
       .sortBy(_.apiFlight.PcpTime)
-      .map(_.apiFlight.PcpTime)
+      .flatMap(_.apiFlight.PcpTime)
 
     if (latestPcpTimes.nonEmpty) {
       Option((SDate(latestPcpTimes.head), SDate(latestPcpTimes.reverse.head))) match {

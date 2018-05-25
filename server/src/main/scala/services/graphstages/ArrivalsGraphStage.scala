@@ -114,14 +114,14 @@ class ArrivalsGraphStage(name: String = "",
     }
 
     def purgeExpired(flightsById: Map[Int, Arrival]): Map[Int, Arrival] = {
-      val expired: Arrival => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (a: Arrival) => a.PcpTime)
+      val expired: Arrival => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (a: Arrival) => a.PcpTime.getOrElse(0L))
       flightsById.filterNot {
         case (_, arrival) => expired(arrival)
       }
     }
 
     def purgeExpired(flights: Set[Arrival]): Set[Arrival] = {
-      val expired: Arrival => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (a: Arrival) => a.PcpTime)
+      val expired: Arrival => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (a: Arrival) => a.PcpTime.getOrElse(0L))
       flights.filterNot(expired)
     }
 
@@ -160,7 +160,7 @@ class ArrivalsGraphStage(name: String = "",
             true
           case _ => false
         }
-        .map(f => (f.uniqueId, f.copy(PcpTime = pcpArrivalTime(f).millisSinceEpoch)))
+        .map(f => (f.uniqueId, f.copy(PcpTime = Some(pcpArrivalTime(f).millisSinceEpoch))))
         .toMap
     }
 
@@ -190,7 +190,7 @@ class ArrivalsGraphStage(name: String = "",
             case None =>
               (notFoundSoFar + 1, mergedSoFar)
             case Some(baseArrival) =>
-              val actPax = if (forecastArrival.ActPax > 0) forecastArrival.ActPax else baseArrival.ActPax
+              val actPax = forecastArrival.ActPax.filter(_>0).orElse(baseArrival.ActPax)
               val mergedArrival = baseArrival.copy(ActPax = actPax, TranPax = forecastArrival.TranPax, Status = forecastArrival.Status)
               (notFoundSoFar, mergedSoFar.updated(fcstId, mergedArrival))
           }
@@ -204,8 +204,8 @@ class ArrivalsGraphStage(name: String = "",
           val mergedArrival = liveArrival.copy(
             rawIATA = baseArrival.rawIATA,
             rawICAO = baseArrival.rawICAO,
-            ActPax = if (liveArrival.ActPax > 0) liveArrival.ActPax else mergedSoFarArrival.ActPax,
-            TranPax = if (liveArrival.ActPax > 0) liveArrival.TranPax else mergedSoFarArrival.TranPax)
+            ActPax = liveArrival.ActPax.filter(_>0).orElse(mergedSoFarArrival.ActPax),
+            TranPax = liveArrival.ActPax.filter(_ > 0).flatMap(actPax=> liveArrival.TranPax).orElse(mergedSoFarArrival.TranPax))
 
           mergedSoFar.updated(liveId, mergedArrival)
       }

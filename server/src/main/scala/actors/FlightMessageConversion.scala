@@ -41,28 +41,28 @@ object FlightMessageConversion {
 
   def apiFlightToFlightMessage(apiFlight: Arrival): FlightMessage = {
     FlightMessage(
-      operator = Some(apiFlight.Operator),
-      gate = Some(apiFlight.Gate),
-      stand = Some(apiFlight.Stand),
+      operator = apiFlight.Operator,
+      gate = apiFlight.Gate,
+      stand = apiFlight.Stand,
       status = Some(apiFlight.Status),
-      maxPax = Some(apiFlight.MaxPax),
-      actPax = Some(apiFlight.ActPax),
-      tranPax = Some(apiFlight.TranPax),
-      runwayID = Some(apiFlight.RunwayID),
-      baggageReclaimId = Some(apiFlight.BaggageReclaimId),
-      flightID = Some(apiFlight.FlightID),
+      maxPax = apiFlight.MaxPax,
+      actPax = apiFlight.ActPax,
+      tranPax = apiFlight.TranPax,
+      runwayID = apiFlight.RunwayID,
+      baggageReclaimId = apiFlight.BaggageReclaimId,
+      flightID = apiFlight.FlightID,
       airportID = Some(apiFlight.AirportID),
       terminal = Some(apiFlight.Terminal),
       iCAO = Some(apiFlight.rawICAO),
       iATA = Some(apiFlight.rawIATA),
       origin = Some(apiFlight.Origin),
-      pcpTime = Some(apiFlight.PcpTime),
+      pcpTime = apiFlight.PcpTime,
 
       scheduled = Some(apiFlight.Scheduled),
-      estimated = Some(apiFlight.Estimated),
-      touchdown = Some(apiFlight.Actual),
-      estimatedChox = Some(apiFlight.EstimatedChox),
-      actualChox = Some(apiFlight.ActualChox)
+      estimated = apiFlight.Estimated,
+      touchdown = apiFlight.Actual,
+      estimatedChox = apiFlight.EstimatedChox,
+      actualChox = apiFlight.ActualChox
     )
   }
 
@@ -79,28 +79,28 @@ object FlightMessageConversion {
 
   def flightMessageToApiFlight(flightMessage: FlightMessage): Arrival = {
     Arrival(
-      Operator = flightMessage.operator.getOrElse(""),
+      Operator = flightMessage.operator.filter(_ != ""),
       Status = flightMessage.status.getOrElse(""),
-      Estimated = flightMessage.estimated.getOrElse(0),
-      Actual = flightMessage.touchdown.getOrElse(0),
-      EstimatedChox = flightMessage.estimatedChox.getOrElse(0),
-      ActualChox = flightMessage.actualChox.getOrElse(0),
-      Gate = flightMessage.gate.getOrElse(""),
-      Stand = flightMessage.stand.getOrElse(""),
-      MaxPax = flightMessage.maxPax.getOrElse(0),
-      ActPax = flightMessage.actPax.getOrElse(0),
-      TranPax = flightMessage.tranPax.getOrElse(0),
-      RunwayID = flightMessage.runwayID.getOrElse(""),
-      BaggageReclaimId = flightMessage.baggageReclaimId.getOrElse(""),
-      FlightID = flightMessage.flightID.getOrElse(0),
+      Estimated = flightMessage.estimated.filter(_!= 0),
+      Actual = flightMessage.touchdown.filter(_!=0),
+      EstimatedChox = flightMessage.estimatedChox.filterNot(_!=0),
+      ActualChox = flightMessage.actualChox.filter(_!=0),
+      Gate = flightMessage.gate.filter(_ != ""),
+      Stand = flightMessage.stand.filter(_ != ""),
+      MaxPax = flightMessage.maxPax.filter(_ != 0),
+      ActPax = flightMessage.actPax.filter(_ != 0),
+      TranPax = flightMessage.tranPax,
+      RunwayID = flightMessage.runwayID.filter(_ != ""),
+      BaggageReclaimId = flightMessage.baggageReclaimId.filter(_ != ""),
+      FlightID = flightMessage.flightID.filter(_ != ""),
       AirportID = flightMessage.airportID.getOrElse(""),
       Terminal = flightMessage.terminal.getOrElse(""),
       rawICAO = flightMessage.iCAO.getOrElse(""),
       rawIATA = flightMessage.iATA.getOrElse(""),
       Origin = flightMessage.origin.getOrElse(""),
-      PcpTime = flightMessage.pcpTime.getOrElse(0),
+      PcpTime = flightMessage.pcpTime.filter(_ != 0),
       LastKnownPax = flightMessage.lastKnownPax,
-      Scheduled = flightMessage.scheduled.getOrElse(0)
+      Scheduled = flightMessage.scheduled.getOrElse(0L)
     )
   }
 

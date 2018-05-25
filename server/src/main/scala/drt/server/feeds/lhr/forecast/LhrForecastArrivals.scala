@@ -60,28 +60,32 @@ object LhrForecastArrival {
     val fields = line.split(",")
 
     Try {
+      val operator = carrierCode(fields)
+      val maxPaxField = maxPax(fields)
+      val actPax = paxTotal(fields)
+      val transPax = paxTransit(fields)
       Arrival(
-        Operator = carrierCode(fields),
+        Operator = if (operator.equals("")) None else Some(operator),
         Status = "Forecast",
-        Estimated = 0L,
-        Actual = 0L,
-        EstimatedChox = 0L,
-        ActualChox = 0L,
-        Gate = "",
-        Stand = "",
-        MaxPax = maxPax(fields),
-        ActPax = paxTotal(fields),
-        TranPax = paxTransit(fields),
-        RunwayID = "",
-        BaggageReclaimId = "",
-        FlightID = 0,
-        AirportID = "",
+        Estimated = None,
+        Actual = None,
+        EstimatedChox = None,
+        ActualChox = None,
+        Gate = None,
+        Stand = None,
+        MaxPax = if (maxPaxField==0) None else Some(maxPaxField),
+        ActPax = if (actPax==0) None else Some(actPax),
+        TranPax = if (actPax==0) None else Some(transPax),
+        RunwayID = None,
+        BaggageReclaimId = None,
+        FlightID = None,
+        AirportID = "LHR",
         Terminal = terminal(fields),
         rawIATA = flightCode(fields),
         rawICAO = flightCode(fields),
         Origin = origin(fields),
         Scheduled = scheduled(fields).millisSinceEpoch,
-        PcpTime = 0L,
+        PcpTime = None,
         LastKnownPax = None
       )
     } match {

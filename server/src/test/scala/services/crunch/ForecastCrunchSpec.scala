@@ -260,7 +260,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     crunch.forecastTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val crunchForecastArrivals = ps.flights.values.map(_.apiFlight).toSet
-        val expectedForecastArrivals = Set(baseArrival.copy(ActPax = 50, TranPax = 25))
+        val expectedForecastArrivals = Set(baseArrival.copy(ActPax = Some(50), TranPax = Some(25)))
 
         crunchForecastArrivals == expectedForecastArrivals
     }
@@ -292,7 +292,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     crunch.forecastTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val crunchForecastArrivals = ps.flights.values.map(_.apiFlight).toSet
-        val expectedForecastArrivals = Set(baseArrival.copy(ActPax = forecastArrival.ActPax, TranPax = forecastArrival.TranPax, Estimated = SDate(liveScheduled).millisSinceEpoch))
+        val expectedForecastArrivals = Set(baseArrival.copy(ActPax = forecastArrival.ActPax, TranPax = forecastArrival.TranPax, Estimated = Some(SDate(liveScheduled).millisSinceEpoch)))
 
         crunchForecastArrivals == expectedForecastArrivals
     }
@@ -327,8 +327,8 @@ class ForecastCrunchSpec extends CrunchTestLike {
       case ps: PortState =>
         val crunchForecastArrivals = ps.flights.values.map(_.apiFlight).toSet
         val expectedForecastArrivals = Set(
-          baseArrival1.copy(ActPax = 51, Status = "Port Forecast"),
-          baseArrival2.copy(ActPax = 52, Status = "Port Forecast"))
+          baseArrival1.copy(ActPax = Some(51), Status = "Port Forecast"),
+          baseArrival2.copy(ActPax = Some(52), Status = "Port Forecast"))
 
         crunchForecastArrivals == expectedForecastArrivals
     }

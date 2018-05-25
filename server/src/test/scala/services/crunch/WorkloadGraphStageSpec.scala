@@ -201,7 +201,7 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
 
     val flight1 = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, Set(historicSplits), None)))
     val flight2 = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival2, Set(historicSplits), None)))
-    val flight1Update = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival.copy(PcpTime = arrival.PcpTime + 60000), Set(historicSplits), None)))
+    val flight1Update = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival.copy(PcpTime = arrival.PcpTime.map(_+ 60000)), Set(historicSplits), None)))
 
     Await.ready(flightsWithSplits.offer(flight1), 1 second)
     Await.ready(flightsWithSplits.offer(flight2), 1 second)

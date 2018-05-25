@@ -893,7 +893,7 @@ class Application @Inject()(implicit val config: Configuration,
 
         val flightsForTerminalInRange = fs.toList
           .filter(_.apiFlight.Terminal == terminalName)
-          .filter(f => isInRange(SDate(f.apiFlight.PcpTime, europeLondonTimeZone)))
+          .filter(f => isInRange(SDate(f.apiFlight.PcpTime.getOrElse(0L), europeLondonTimeZone)))
 
         Option(flightsForTerminalInRange)
       case unexpected =>

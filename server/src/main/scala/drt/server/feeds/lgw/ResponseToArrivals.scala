@@ -35,28 +35,31 @@ case class ResponseToArrivals(data: Array[Byte], locationOption: Option[String] 
 
   def nodeToArrival: Node => (Arrival, Option[String]) = (n: Node) => {
 
+    val operator = (n \ "AirlineIATA") text
+    val actPax = parsePaxCount(n, "70A").filter(_!= 0).orElse(None)
+    val transPax = parsePaxCount(n, "TIP")
     val arrival = new Arrival(
-      Operator = (n \ "AirlineIATA") text,
+      Operator = if (operator.isEmpty) None else Some(operator) ,
       Status = parseStatus(n),
-      Estimated = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("TDN") && (n \ "@TimeType" text).equals("EST")).map(n => services.SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
-      Actual  = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("TDN") && (n \ "@TimeType" text).equals("ACT")).map(n => services.SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
-      EstimatedChox = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("EST")).map(n => services.SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
-      ActualChox = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("ACT")).map(n => services.SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
-      Gate = (n \\ "PassengerGate").headOption.map(n => n text).getOrElse(""),
-      Stand = (n \\ "ArrivalStand").headOption.map(n => n text).getOrElse(""),
-      MaxPax = (n \\ "SeatCapacity").headOption.map(n => (n text).toInt).getOrElse(0),
-      ActPax = parsePaxCount(n, "70A").getOrElse(0),
-      TranPax = parsePaxCount(n, "TIP").getOrElse(0),
-      RunwayID = parseRunwayId(n).getOrElse(""),
-      BaggageReclaimId = Try(n \\ "FIDSBagggeHallActive" text).getOrElse(""),
-      FlightID = 0,
+      Estimated = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("TDN") && (n \ "@TimeType" text).equals("EST")).map(n => services.SDate.parseString(n text).millisSinceEpoch),
+      Actual  = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("TDN") && (n \ "@TimeType" text).equals("ACT")).map(n => services.SDate.parseString(n text).millisSinceEpoch),
+      EstimatedChox = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("EST")).map(n => services.SDate.parseString(n text).millisSinceEpoch),
+      ActualChox = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("ACT")).map(n => services.SDate.parseString(n text).millisSinceEpoch),
+      Gate = (n \\ "PassengerGate").headOption.map(n => n text),
+      Stand = (n \\ "ArrivalStand").headOption.map(n => n text),
+      MaxPax = (n \\ "SeatCapacity").headOption.map(n => (n text).toInt),
+      ActPax = actPax,
+      TranPax = if (actPax.isEmpty) None else transPax,
+      RunwayID = parseRunwayId(n),
+      BaggageReclaimId = Try(n \\ "FIDSBagggeHallActive" text).toOption,
+      FlightID = None,
       AirportID = "LGW",
       Terminal = parseTerminal(n),
       rawICAO = (n \\ "AirlineICAO" text) + parseFlightNumber(n),
       rawIATA = (n \\ "AirlineIATA" text) + parseFlightNumber(n),
       Origin = parseOrigin(n),
       Scheduled = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("SCT")).map(n => services.SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
-      PcpTime = 0,
+      PcpTime = None,
       LastKnownPax = None)
     log.info(s"parsed arrival: $arrival")
     (arrival, locationOption)
