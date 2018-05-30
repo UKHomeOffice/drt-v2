@@ -49,35 +49,12 @@ object FlightTableComponents {
     <.span(props.data.toString(), mod).render
   }
 
-  def dateTimeComponent(): js.Function = (props: js.Dynamic) => {
-    val dt = props.data.toString
-    if (dt != "" && dt != "0") {
-      Try {
-        val sdate = SDate.parse(dt)
-        sdateLocalTimePopup(sdate)
-      }.recover {
-        case f =>
-        localDateTimeWithPopup(Some(dt.toLong))
-      }
-    } else {
-      <.div.render
-    }
-  }
-
   def localDateTimeWithPopup(dt: Option[MillisSinceEpoch]): TagMod = {
     dt.map(millis=> localTimePopup(millis)).getOrElse(<.span())
   }
 
   def localTimePopup(dt: MillisSinceEpoch): VdomElement = {
-    val p = Try {
-      val sdate = SDate(dt)
-      sdateLocalTimePopup(sdate)
-    }.recover {
-      case f =>
-        log.error(s"$f from $dt")
-        <.div("n/a")
-    }.get
-    p.render
+    sdateLocalTimePopup(SDate(dt)).render
   }
 
   def millisToDisembark(pax: Int): Long = {
@@ -86,26 +63,25 @@ object FlightTableComponents {
     (minutesToDisembark * oneMinuteInMillis).toLong
   }
 
-  def pcpTimeRange(arrival: Arrival, bestPax: Arrival => Int): TagOf[Div] = {
-    val sdateFrom = SDate(MilliDate(arrival.PcpTime.getOrElse(0L)))
-    val sdateTo = SDate(MilliDate(arrival.PcpTime.getOrElse(0L) + millisToDisembark(bestPax(arrival))))
-    <.div(
-      sdateLocalTimePopup(sdateFrom),
-      " \u2192 ",
-      sdateLocalTimePopup(sdateTo)
-    )
-  }
+  def pcpTimeRange(arrival: Arrival, bestPax: Arrival => Int): TagOf[Div] =
+    arrival.PcpTime.map { pcpTime : MillisSinceEpoch =>
+      val sdateFrom = SDate(MilliDate(pcpTime))
+      val sdateTo = SDate(MilliDate(pcpTime + millisToDisembark(bestPax(arrival))))
+      <.div(
+        sdateLocalTimePopup(sdateFrom),
+        " \u2192 ",
+        sdateLocalTimePopup(sdateTo)
+      )
+    } getOrElse {
+       <.div()
+    }
+
 
   def sdateLocalTimePopup(sdate: SDateLike): TagOf[Span] = {
     val hhmm = f"${sdate.getHours()}%02d:${sdate.getMinutes()}%02d"
     val titlePopup: TagMod = ^.title := sdate.toLocalDateTimeString()
     <.span(hhmm, titlePopup)
   }
-
-  def millisDelta(time1: MillisSinceEpoch, time2: MillisSinceEpoch): Long = {
-    time1 - time2
-  }
-
 
   def asOffset(delta: Long, range: Double): Double = {
     if (delta == 0) 0d else {
@@ -123,8 +99,8 @@ object FlightTableComponents {
   }
 
   def dateStringAsLocalDisplay(dt: Option[MillisSinceEpoch]): String = dt match {
-    case None| Some(0) => ""
-    case Some(millis) => Try(SDate(millis).toLocalDateTimeString()).getOrElse("")
+    case None => ""
+    case Some(millis) => SDate(millis).toLocalDateTimeString()
   }
 
   def timelineCompFunc(flight: Arrival): VdomElement = {
@@ -153,23 +129,21 @@ object FlightTableComponents {
          |EstChox: ${dateStringAsLocalDisplay(estChoxDt)}
         """.stripMargin
 
-    val actChoxDot = actChox.filter(_!= 0).map{ millis=>
+    val actChoxDot = actChox.map{ millis=>
       <.i(^.className :=
         "dot act-chox-dot " + actChoxClass,
         ^.title := s"ActChox: $millis $actChoxToolTip",
-        ^.left := s"${millis}px")
+        ^.left := s"${actChoxPct}px")
     }.getOrElse{
       <.span()
     }
-
-
 
     val actWidth = (actChoxPct + 24) - actPct
 
     val schDot = <.i(^.className := "dot sch-dot",
       ^.title := s"Scheduled\n$longToolTip", ^.left := s"${schPct}px")
 
-    val actDot = act.filter(_!= 0).map{ millis=>
+    val actDot = act.map{ millis=>
       <.i(^.className := "dot act-dot "
         + actClass,
         ^.title
@@ -179,7 +153,7 @@ object FlightTableComponents {
     } getOrElse <.span()
 
 
-    val estDot = estDt.filter(_!= 0).map { millis =>
+    val estDot = estDt.map { millis =>
       <.i(^.className := "dot est-dot "
         + estClass,
         ^.title
@@ -187,7 +161,7 @@ object FlightTableComponents {
         ^.left := s"${estPct}px")
     } getOrElse <.span()
 
-    val estChoxDot = estChoxDt.filter(_!= 0).map { millis=>
+    val estChoxDot = estChoxDt.map { millis=>
       <.i(^.className := "dot est-chox-dot "
         + estClass,
         ^.title
@@ -201,7 +175,7 @@ object FlightTableComponents {
 
   private def pctAndClass(sch: MillisSinceEpoch, act: Option[MillisSinceEpoch], schPct: Int) = {
     act.map{actMillis=>
-      val delta = millisDelta(sch, actMillis)
+      val delta = sch - actMillis
       val deltaTooltip = {
         val dm = delta / 60000
         Math.abs(dm) + s"mins ${deltaMessage(delta)}"

@@ -153,7 +153,7 @@ object AclFeed {
       val maxPax = fields(AclColIndex.MaxPax).toInt
       val actPax = (fields(AclColIndex.MaxPax).toInt * fields(AclColIndex.LoadFactor).toDouble).round.toInt
       Arrival(
-        Operator = if (operator!= "") Some(operator) else None,
+        Operator = if (operator!= "") Option(operator) else None,
         Status = "ACL Forecast",
         Estimated = None,
         Actual = None,
@@ -161,12 +161,12 @@ object AclFeed {
         ActualChox = None,
         Gate = None,
         Stand = None,
-        MaxPax = if (maxPax == 0) None else Some(maxPax),
-        ActPax = if (actPax == 0) None else Some(actPax),
+        MaxPax = if (maxPax == 0) None else Option(maxPax),
+        ActPax = if (actPax == 0) None else Option(actPax),
         TranPax = None,
         RunwayID = None,
         BaggageReclaimId = None,
-        FlightID = Some((fields(AclColIndex.FlightNumber) + fields(AclColIndex.Date) + fields(AclColIndex.Time) + fields(AclColIndex.Origin)).hashCode),
+        FlightID = Option((fields(AclColIndex.FlightNumber) + fields(AclColIndex.Date) + fields(AclColIndex.Time) + fields(AclColIndex.Origin)).hashCode),
         AirportID = fields(AclColIndex.Airport),
         Terminal = terminalMapping(fields(AclColIndex.Terminal)),
         rawICAO = fields(AclColIndex.FlightNumber),

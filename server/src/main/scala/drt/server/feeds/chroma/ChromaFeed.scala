@@ -4,9 +4,10 @@ import akka.actor.Cancellable
 import akka.event.LoggingAdapter
 import akka.stream.scaladsl.Source
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveFlight}
-import drt.chroma.chromafetcher.{ChromaFetcherForecast, ChromaFetcher}
+import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
 import drt.chroma.{DiffingStage, StreamingChromaFlow}
 import drt.shared.Arrival
+import org.springframework.util.StringUtils
 import services.SDate
 
 import scala.concurrent.duration._
@@ -38,20 +39,20 @@ case class ChromaLiveFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcher) {
         val estChox = SDate(flight.EstChoxDT).millisSinceEpoch
         val actChox = SDate(flight.ActChoxDT).millisSinceEpoch
         Arrival(
-          Operator = if (flight.Operator== "") None else Some(flight.Operator),
+          Operator = if (StringUtils.isEmpty(flight.Operator)) None else Option(flight.Operator),
           Status = flight.Status,
-          Estimated = if (est == 0) None else Some(est),
-          Actual = if (act == 0) None else Some(act),
-          EstimatedChox = if (estChox == 0) None else Some(estChox),
-          ActualChox = if (actChox!= 0) None else Some(actChox),
-          Gate = if (flight.Gate.isEmpty) None else Some(flight.Gate),
-          Stand = if (flight.Stand.isEmpty) None else Some(flight.Stand),
-          MaxPax = if (flight.MaxPax == 0) None else Some(flight.MaxPax),
-          ActPax = if (flight.ActPax == 0) None else Some(flight.ActPax),
-          TranPax = if (flight.ActPax == 0) None else Some(flight.TranPax),
-          RunwayID = if (flight.RunwayID == "") None else Some(flight.RunwayID),
-          BaggageReclaimId = if (flight.BaggageReclaimId == "") None else Some(flight.BaggageReclaimId),
-          FlightID = if (flight.FlightID == 0) None else Some(flight.FlightID),
+          Estimated = if (est == 0) None else Option(est),
+          Actual = if (act == 0) None else Option(act),
+          EstimatedChox = if (estChox == 0) None else Option(estChox),
+          ActualChox = if (actChox!= 0) None else Option(actChox),
+          Gate = if (StringUtils.isEmpty(flight.Gate)) None else Option(flight.Gate),
+          Stand = if (StringUtils.isEmpty(flight.Stand)) None else Option(flight.Stand),
+          MaxPax = if (flight.MaxPax == 0) None else Option(flight.MaxPax),
+          ActPax = if (flight.ActPax == 0) None else Option(flight.ActPax),
+          TranPax = if (flight.ActPax == 0) None else Option(flight.TranPax),
+          RunwayID = if (StringUtils.isEmpty(flight.RunwayID)) None else Option(flight.RunwayID),
+          BaggageReclaimId = if (StringUtils.isEmpty(flight.BaggageReclaimId)) None else Option(flight.BaggageReclaimId),
+          FlightID = if (flight.FlightID == 0) None else Option(flight.FlightID),
           AirportID = flight.AirportID,
           Terminal = flight.Terminal,
           rawICAO = flight.ICAO,
@@ -101,17 +102,17 @@ case class ChromaForecastFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherF
           Gate = None,
           Stand = None,
           MaxPax = None,
-          ActPax = if (flight.EstPax == 0) None else Some(flight.EstPax),
-          TranPax = if (flight.EstPax == 0) None else Some(flight.EstTranPax),
+          ActPax = if (flight.EstPax == 0) None else Option(flight.EstPax),
+          TranPax = if (flight.EstPax == 0) None else Option(flight.EstTranPax),
           RunwayID = None,
           BaggageReclaimId = None,
-          FlightID = if (flight.FlightID == 0) None else Some(flight.FlightID),
+          FlightID = if (flight.FlightID == 0) None else Option(flight.FlightID),
           AirportID = flight.AirportID,
           Terminal = flight.Terminal,
           rawICAO = flight.ICAO,
           rawIATA = flight.IATA,
           Origin = flight.Origin,
-          PcpTime = Some(pcpTime),
+          PcpTime = Option(pcpTime),
           Scheduled = SDate(flight.SchDT).millisSinceEpoch
         )
       }).toList)

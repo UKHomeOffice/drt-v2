@@ -44,18 +44,18 @@ object TerminalContentComponent {
         cs => cs.crunchMinutes.toSeq.map(_.hashCode())
       ).toList.mkString("|")
 
-      val flightsHash: Option[List[(Int, String, String, String, Long, Long, Long, Long, Long, Long, Int)]] = crunchStatePot.toOption.map(_.flights.toList.map(f => {
+      val flightsHash: Option[List[(Int, String, Option[String], Option[String], MillisSinceEpoch, Option[MillisSinceEpoch], Option[MillisSinceEpoch], Option[MillisSinceEpoch], Option[MillisSinceEpoch], Option[MillisSinceEpoch], Option[Int])]] = crunchStatePot.toOption.map(_.flights.toList.map(f => {
         (f.splits.hashCode,
           f.apiFlight.Status,
-          f.apiFlight.Gate.getOrElse(""),
-          f.apiFlight.Stand.getOrElse(""),
+          f.apiFlight.Gate,
+          f.apiFlight.Stand,
           f.apiFlight.Scheduled,
-          f.apiFlight.Estimated.getOrElse(0L),
-          f.apiFlight.Actual.getOrElse(0L),
-          f.apiFlight.EstimatedChox.getOrElse(0L),
-          f.apiFlight.ActualChox.getOrElse(0L),
-          f.apiFlight.PcpTime.getOrElse(0L),
-          f.apiFlight.ActPax.getOrElse(0)
+          f.apiFlight.Estimated,
+          f.apiFlight.Actual,
+          f.apiFlight.EstimatedChox,
+          f.apiFlight.ActualChox,
+          f.apiFlight.PcpTime,
+          f.apiFlight.ActPax
         )
       }))
 

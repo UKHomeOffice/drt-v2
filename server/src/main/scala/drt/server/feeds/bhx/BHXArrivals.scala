@@ -7,6 +7,7 @@ import services.SDate
 import uk.co.bhx.online.flightinformation.{FlightRecord, ScheduledFlightRecord}
 import org.joda.time.DateTimeZone
 import org.joda.time.format.ISODateTimeFormat
+import org.springframework.util.StringUtils
 
 sealed trait BHXArrivals {
 
@@ -39,13 +40,13 @@ trait BHXLiveArrivals extends BHXArrivals {
       Actual = convertToUTC(flightRecord.getTouchdownTime).map(SDate(_).millisSinceEpoch),
       EstimatedChox = convertToUTC(flightRecord.getEstimatedChoxTime).map(SDate(_).millisSinceEpoch),
       ActualChox = convertToUTC(flightRecord.getChoxTime).map(SDate(_).millisSinceEpoch),
-      Gate = Some(flightRecord.getGate),
-      Stand = Some(flightRecord.getStand),
-      MaxPax = Some(flightRecord.getCapacity),
-      ActPax = if (actPax == 0) None else Some(actPax),
-      TranPax = if (actPax == 0) None else Some(transPax),
-      RunwayID = Some(flightRecord.getRunway),
-      BaggageReclaimId = Some(flightRecord.getBelt),
+      Gate = if (StringUtils.isEmpty(flightRecord.getGate)) None else Option(flightRecord.getGate),
+      Stand = if (StringUtils.isEmpty(flightRecord.getStand)) None else Option(flightRecord.getStand),
+      MaxPax = if (flightRecord.getCapacity == 0) None else Option(flightRecord.getCapacity),
+      ActPax = if (actPax == 0) None else Option(actPax),
+      TranPax = if (actPax == 0) None else Option(transPax),
+      RunwayID = if (StringUtils.isEmpty(flightRecord.getRunway)) None else Option(flightRecord.getRunway),
+      BaggageReclaimId = Option(flightRecord.getBelt),
       FlightID = None,
       AirportID = "BHX",
       Terminal = s"T${flightRecord.getTerminal}",
@@ -72,9 +73,9 @@ trait BHXForecastArrivals extends BHXArrivals {
       ActualChox = None,
       Gate = None,
       Stand = None,
-      MaxPax = if (maxPax == 0) None else Some(maxPax),
-      ActPax = if (actPax==0) None else Some(actPax),
-      TranPax = if (actPax==0) None else Some(transPax),
+      MaxPax = if (maxPax == 0) None else Option(maxPax),
+      ActPax = if (actPax==0) None else Option(actPax),
+      TranPax = if (actPax==0) None else Option(transPax),
       RunwayID = None,
       BaggageReclaimId = None,
       FlightID = None,

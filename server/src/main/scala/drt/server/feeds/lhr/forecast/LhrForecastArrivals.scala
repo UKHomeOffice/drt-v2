@@ -3,6 +3,7 @@ package drt.server.feeds.lhr.forecast
 import drt.shared.{Arrival, SDateLike}
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
+import org.springframework.util.StringUtils
 import services.SDate
 import services.graphstages.Crunch
 import services.graphstages.Crunch.europeLondonTimeZone
@@ -65,7 +66,7 @@ object LhrForecastArrival {
       val actPax = paxTotal(fields)
       val transPax = paxTransit(fields)
       Arrival(
-        Operator = if (operator.equals("")) None else Some(operator),
+        Operator = if (StringUtils.isEmpty(operator)) None else Option(operator),
         Status = "Forecast",
         Estimated = None,
         Actual = None,
@@ -73,9 +74,9 @@ object LhrForecastArrival {
         ActualChox = None,
         Gate = None,
         Stand = None,
-        MaxPax = if (maxPaxField==0) None else Some(maxPaxField),
-        ActPax = if (actPax==0) None else Some(actPax),
-        TranPax = if (actPax==0) None else Some(transPax),
+        MaxPax = if (maxPaxField==0) None else Option(maxPaxField),
+        ActPax = if (actPax==0) None else Option(actPax),
+        TranPax = if (actPax==0) None else Option(transPax),
         RunwayID = None,
         BaggageReclaimId = None,
         FlightID = None,

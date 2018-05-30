@@ -102,6 +102,6 @@ object PcpArrival {
       .orElse(parseMillis(flight.EstimatedChox)
         .orElse(addTimeToChox(flight.Actual)
           .orElse(addTimeToChox(flight.Estimated)
-            .orElse(addTimeToChox(Some(flight.Scheduled))))))
+            .orElse(addTimeToChox(Option(flight.Scheduled))))))
   }
 }

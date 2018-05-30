@@ -7,6 +7,7 @@ import akka.util.Timeout
 import drt.chroma.DiffingStage
 import drt.http.{ProdSendAndReceive, WithSendAndReceive}
 import drt.shared.Arrival
+import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.util.StringUtils
 import services.SDate
@@ -38,14 +39,14 @@ object LHRLiveFeed {
     val tryArrival = Try {
       val actPax = lhrPax.map(_.TOTALPASSENGERCOUNT.toInt).filter(_!=0)
       Arrival(
-        Operator = if (lhrArrival.OPERATOR.equals("")) None else Some(lhrArrival.OPERATOR),
+        Operator = if (StringUtils.isEmpty(lhrArrival.OPERATOR)) None else Option(lhrArrival.OPERATOR),
         Status = statusCodesToDesc.getOrElse(lhrArrival.FLIGHTSTATUS, lhrArrival.FLIGHTSTATUS),
-        Estimated = if (!StringUtils.isEmpty(lhrArrival.ESTIMATEDFLIGHTOPERATIONTIME)) Try(SDate(localTimeDateStringToIsoString(lhrArrival.ESTIMATEDFLIGHTOPERATIONTIME)).millisSinceEpoch).toOption.filter(_!= 0) else None,
+        Estimated = if (!StringUtils.isEmpty(lhrArrival.ESTIMATEDFLIGHTOPERATIONTIME)) localTimeDateStringToMaybeMillis(lhrArrival.ESTIMATEDFLIGHTOPERATIONTIME).filter(_!= 0) else None,
         Actual = None,
-        EstimatedChox = if (!StringUtils.isEmpty(lhrArrival.ESTIMATEDFLIGHTCHOXTIME)) Try(SDate(localTimeDateStringToIsoString(lhrArrival.ESTIMATEDFLIGHTCHOXTIME)).millisSinceEpoch).toOption.filter(_!= 0) else None,
-        ActualChox = if (!StringUtils.isEmpty(lhrArrival.ACTUALFLIGHTCHOXTIME)) Try(SDate(localTimeDateStringToIsoString(lhrArrival.ACTUALFLIGHTCHOXTIME)).millisSinceEpoch).toOption.filter(_!=0) else  None,
+        EstimatedChox = if (!StringUtils.isEmpty(lhrArrival.ESTIMATEDFLIGHTCHOXTIME)) localTimeDateStringToMaybeMillis(lhrArrival.ESTIMATEDFLIGHTCHOXTIME).filter(_!= 0) else None,
+        ActualChox = if (!StringUtils.isEmpty(lhrArrival.ACTUALFLIGHTCHOXTIME)) localTimeDateStringToMaybeMillis(lhrArrival.ACTUALFLIGHTCHOXTIME).filter(_!=0) else  None,
         Gate = None,
-        Stand = if (lhrArrival.STAND.equals("")) None else Some(lhrArrival.STAND),
+        Stand = if (StringUtils.isEmpty(lhrArrival.STAND)) None else Option(lhrArrival.STAND),
         MaxPax = lhrPax.map(_.MAXPASSENGERCOUNT.toInt).filter(_!=0),
         ActPax = actPax,
         TranPax = if (actPax.isEmpty) None else lhrPax.map(_.ACTUALTRANSFERPASSENGERCOUNT.toInt),
@@ -57,7 +58,7 @@ object LHRLiveFeed {
         rawICAO = lhrArrival.FLIGHTNUMBER,
         rawIATA = lhrArrival.FLIGHTNUMBER,
         Origin = lhrArrival.AIRPORTCODE,
-        Scheduled = Try(SDate(localTimeDateStringToIsoString(lhrArrival.SCHEDULEDFLIGHTOPERATIONTIME)).millisSinceEpoch).getOrElse(0),
+        Scheduled = localTimeDateStringToMaybeMillis(lhrArrival.SCHEDULEDFLIGHTOPERATIONTIME).getOrElse(0L),
         PcpTime = None,
         LastKnownPax = None
       )
@@ -84,10 +85,10 @@ object LHRLiveFeed {
     SDate.tryParseString(fixedDate).toOption.map(sd => sd.toISOString())
   }
 
-  def localTimeDateStringToIsoString(date: String): String =
+  def localTimeDateStringToMaybeMillis(date: String): Option[MillisSinceEpoch] =
     dateStringToIsoStringOption(date).map(
-      s => SDate(SDate(s.dropRight(1), Crunch.europeLondonTimeZone).millisSinceEpoch).toISOString()
-    ).getOrElse("")
+      s => SDate(s.dropRight(1), Crunch.europeLondonTimeZone).millisSinceEpoch
+    )
 
   case class LHRLiveArrival(
                              FLIGHTNUMBER: String,

@@ -143,11 +143,10 @@ object FlightTableRow {
   implicit val stateReuse: Reusability[RowState] = Reusability.derive[RowState]
 
   def bestArrivalTime(f: Arrival): MillisSinceEpoch = {
-    def toSDateLikeOption(s: Option[MillisSinceEpoch]): Option[SDateLike] = s.flatMap(millis=>Try(SDate(millis)).toOption)
     val best = (
-      toSDateLikeOption(Some(f.Scheduled)),
-      toSDateLikeOption(f.Estimated),
-      toSDateLikeOption(f.Actual)
+      Option(SDate(f.Scheduled)),
+      f.Estimated.map(SDate(_)),
+      f.Actual.map(SDate(_))
     ) match {
       case (Some(sd), None, None) => sd
       case (_, Some(est), None) => est
@@ -191,9 +190,9 @@ object FlightTableRow {
         val flightFields = List[(Option[String], TagMod)](
           (None, allCodes.mkString(" - ")),
           (None, props.originMapper(flight.Origin)),
-          (None, s"${flight.Gate}/${flight.Stand}"),
+          (None, s"${flight.Gate.getOrElse("")}/${flight.Stand.getOrElse("")}"),
           (None, flight.Status),
-          (None, localDateTimeWithPopup(Some(flight.Scheduled))),
+          (None, localDateTimeWithPopup(Option(flight.Scheduled))),
           (None, localDateTimeWithPopup(flight.Estimated)),
           (None, localDateTimeWithPopup(flight.Actual)),
           (Option("est-chox"), localDateTimeWithPopup(flight.EstimatedChox)),

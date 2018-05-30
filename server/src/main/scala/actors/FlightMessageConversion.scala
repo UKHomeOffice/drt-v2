@@ -1,6 +1,7 @@
 package actors
 
 import drt.shared._
+import org.apache.commons.lang3.StringUtils
 import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, PaxTypeAndQueueCountMessage, SplitMessage}
 import server.protobuf.messages.FlightsMessage.{FlightMessage, FlightStateSnapshotMessage}
 import services.{ArrivalsState, SDate}
@@ -41,28 +42,28 @@ object FlightMessageConversion {
 
   def apiFlightToFlightMessage(apiFlight: Arrival): FlightMessage = {
     FlightMessage(
-      operator = apiFlight.Operator,
-      gate = apiFlight.Gate,
-      stand = apiFlight.Stand,
-      status = Some(apiFlight.Status),
-      maxPax = apiFlight.MaxPax,
-      actPax = apiFlight.ActPax,
+      operator = apiFlight.Operator.filter(StringUtils.isNotBlank(_)),
+      gate = apiFlight.Gate.filter(StringUtils.isNotBlank(_)),
+      stand = apiFlight.Stand.filter(StringUtils.isNotBlank(_)),
+      status = Option(StringUtils.trimToNull(apiFlight.Status)),
+      maxPax = apiFlight.MaxPax.filter(_ != 0),
+      actPax = apiFlight.ActPax.filter(_!= 0),
       tranPax = apiFlight.TranPax,
-      runwayID = apiFlight.RunwayID,
-      baggageReclaimId = apiFlight.BaggageReclaimId,
-      flightID = apiFlight.FlightID,
-      airportID = Some(apiFlight.AirportID),
-      terminal = Some(apiFlight.Terminal),
-      iCAO = Some(apiFlight.rawICAO),
-      iATA = Some(apiFlight.rawIATA),
-      origin = Some(apiFlight.Origin),
-      pcpTime = apiFlight.PcpTime,
+      runwayID = apiFlight.RunwayID.filter(StringUtils.isNotBlank(_)),
+      baggageReclaimId = apiFlight.BaggageReclaimId.filter(StringUtils.isNotBlank(_)),
+      flightID = apiFlight.FlightID.filter(_!= 0),
+      airportID = Option(StringUtils.trimToNull(apiFlight.AirportID)),
+      terminal = Option(StringUtils.trimToNull(apiFlight.Terminal)),
+      iCAO = Option(StringUtils.trimToNull(apiFlight.rawICAO)),
+      iATA = Option(StringUtils.trimToNull(apiFlight.rawIATA)),
+      origin = Option(StringUtils.trimToNull(apiFlight.Origin)),
+      pcpTime = apiFlight.PcpTime.filter(_ != 0),
 
-      scheduled = Some(apiFlight.Scheduled),
-      estimated = apiFlight.Estimated,
-      touchdown = apiFlight.Actual,
-      estimatedChox = apiFlight.EstimatedChox,
-      actualChox = apiFlight.ActualChox
+      scheduled = Option(apiFlight.Scheduled).filter(_!= 0),
+      estimated = apiFlight.Estimated.filter(_!= 0),
+      touchdown = apiFlight.Actual.filter(_!= 0),
+      estimatedChox = apiFlight.EstimatedChox.filter(_!= 0),
+      actualChox = apiFlight.ActualChox.filter(_!= 0)
     )
   }
 
