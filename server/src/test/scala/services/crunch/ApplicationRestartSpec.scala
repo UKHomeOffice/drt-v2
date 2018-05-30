@@ -19,9 +19,9 @@ class ApplicationRestartSpec extends CrunchTestLike {
     val scheduledLive = "2018-01-01T00:00"
     val scheduledBase = "2018-01-01T00:05"
     val scheduledFcst = "2018-01-01T00:10"
-    val arrivalLive = ArrivalGenerator.apiFlight(actPax = 1, iata = "BA1010", schDt = scheduledLive)
-    val arrivalBase = ArrivalGenerator.apiFlight(actPax = 1, iata = "BA2010", schDt = scheduledBase)
-    val arrivalFcst = ArrivalGenerator.apiFlight(actPax = 1, iata = "BA3010", schDt = scheduledFcst)
+    val arrivalLive = ArrivalGenerator.apiFlight(actPax = Option(1), iata = "BA1010", schDt = scheduledLive)
+    val arrivalBase = ArrivalGenerator.apiFlight(actPax = Option(1), iata = "BA2010", schDt = scheduledBase)
+    val arrivalFcst = ArrivalGenerator.apiFlight(actPax = Option(1), iata = "BA3010", schDt = scheduledFcst)
     val splits = Set(
       ApiSplits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None)),
@@ -62,8 +62,8 @@ class ApplicationRestartSpec extends CrunchTestLike {
     "Then I should not see any new crunch data in the forecast" >> {
     val scheduledDay1 = "2018-01-01T00:00"
     val scheduledDay2 = "2018-01-02T00:00"
-    val arrivalDay1 = ArrivalGenerator.apiFlight(actPax = 1, iata = "BA1010", schDt = scheduledDay1)
-    val arrivalDay2 = ArrivalGenerator.apiFlight(actPax = 1, iata = "BA1010", schDt = scheduledDay2)
+    val arrivalDay1 = ArrivalGenerator.apiFlight(actPax = Option(1), iata = "BA1010", schDt = scheduledDay1)
+    val arrivalDay2 = ArrivalGenerator.apiFlight(actPax = Option(1), iata = "BA1010", schDt = scheduledDay2)
     val splits = Set(
       ApiSplits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None)),

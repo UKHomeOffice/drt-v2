@@ -24,8 +24,8 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
 
     val flights = Flights(List(
-      ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled00, iata = "BA0001", terminal = "T1", actPax = 15),
-      ArrivalGenerator.apiFlight(flightId = 2, schDt = scheduled01, iata = "FR8819", terminal = "XXX", actPax = 10)
+      ArrivalGenerator.apiFlight(flightId = Option(1), schDt = scheduled00, iata = "BA0001", terminal = "T1", actPax = Option(15)),
+      ArrivalGenerator.apiFlight(flightId = Option(2), schDt = scheduled01, iata = "FR8819", terminal = "XXX", actPax = Option(10))
     ))
 
     val fiveMinutes = 600d / 60
@@ -60,8 +60,8 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
 
     val flights = Flights(List(
-      ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled00, iata = "BA0001", terminal = "T1", actPax = 15),
-      ArrivalGenerator.apiFlight(flightId = 2, schDt = scheduled01, iata = "FR8819", terminal = "T1", actPax = 10, status = "Cancelled")
+      ArrivalGenerator.apiFlight(flightId = Option(1), schDt = scheduled00, iata = "BA0001", terminal = "T1", actPax = Option(15)),
+      ArrivalGenerator.apiFlight(flightId = Option(2), schDt = scheduled01, iata = "FR8819", terminal = "T1", actPax = Option(10), status = "Cancelled")
     ))
 
     val fiveMinutes = 600d / 60

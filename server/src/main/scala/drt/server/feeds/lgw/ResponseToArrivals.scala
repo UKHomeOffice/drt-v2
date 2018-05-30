@@ -3,6 +3,7 @@ package drt.server.feeds.lgw
 import java.io.ByteArrayInputStream
 
 import drt.shared.Arrival
+import drt.shared.CrunchApi.MillisSinceEpoch
 import org.apache.commons.io.IOUtils
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -41,10 +42,10 @@ case class ResponseToArrivals(data: Array[Byte], locationOption: Option[String] 
     val arrival = new Arrival(
       Operator = if (operator.isEmpty) None else Some(operator) ,
       Status = parseStatus(n),
-      Estimated = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("TDN") && (n \ "@TimeType" text).equals("EST")).map(n => services.SDate.parseString(n text).millisSinceEpoch),
-      Actual  = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("TDN") && (n \ "@TimeType" text).equals("ACT")).map(n => services.SDate.parseString(n text).millisSinceEpoch),
-      EstimatedChox = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("EST")).map(n => services.SDate.parseString(n text).millisSinceEpoch),
-      ActualChox = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("ACT")).map(n => services.SDate.parseString(n text).millisSinceEpoch),
+      Estimated = parseDateTime(n, operationQualifier = "TDN", timeType = "EST"),
+      Actual  = parseDateTime(n, operationQualifier = "TDN", timeType = "ACT"),
+      EstimatedChox = parseDateTime(n, operationQualifier = "ONB", timeType = "EST") ,
+      ActualChox = parseDateTime(n, operationQualifier = "ONB", timeType = "ACT"),
       Gate = (n \\ "PassengerGate").headOption.map(n => n text),
       Stand = (n \\ "ArrivalStand").headOption.map(n => n text),
       MaxPax = (n \\ "SeatCapacity").headOption.map(n => (n text).toInt),
@@ -95,8 +96,8 @@ case class ResponseToArrivals(data: Array[Byte], locationOption: Option[String] 
     (n \\ "PaxCount").find(n => (n \ "@Qualifier" text).equals(qualifier) && (n \ "@Class").isEmpty).map(n => (n text).toInt)
   }
 
-  def parseDateTime(n: Node, operationQualifier: String, timeType: String): Option[String] = {
-    (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals(operationQualifier) && (n \ "@TimeType" text).equals(timeType)).map(n => n text)
+  def parseDateTime(n: Node, operationQualifier: String, timeType: String): Option[MillisSinceEpoch] = {
+    (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals(operationQualifier) && (n \ "@TimeType" text).equals(timeType)).map(n => services.SDate.parseString(n text).millisSinceEpoch)
   }
 
 }

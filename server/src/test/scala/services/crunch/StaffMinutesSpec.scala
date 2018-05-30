@@ -104,7 +104,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     val initialFixedPoints =
       """egate monitor,T1,01/01/17,00:00,00:14,2
       """.stripMargin
-    val flight = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = scheduled, actPax = 100)
+    val flight = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = scheduled, actPax = Option(100))
 
     val crunch = runCrunchGraph(
       airportConfig = airportConfig.copy(
@@ -162,7 +162,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     val initialFixedPoints =
       """egate monitor,T1,01/01/17,00:00,00:14,2
       """.stripMargin
-    val flight = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = scheduled, actPax = 100)
+    val flight = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = scheduled, actPax = Option(100))
 
     val crunch = runCrunchGraph(
       airportConfig = airportConfig.copy(

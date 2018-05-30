@@ -28,8 +28,8 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val scheduled = "2017-01-01T00:00Z"
 
       val flights = Flights(List(
-        ArrivalGenerator.apiFlight(flightId = 1, actPax = 10, schDt = scheduled, iata = "BA0001"),
-        ArrivalGenerator.apiFlight(flightId = 2, actPax = 10, schDt = scheduled, iata = "FR8819")
+        ArrivalGenerator.apiFlight(flightId = Option(1), actPax = Option(10), schDt = scheduled, iata = "BA0001"),
+        ArrivalGenerator.apiFlight(flightId = Option(2), actPax = Option(10), schDt = scheduled, iata = "FR8819")
       ))
 
       val crunch = runCrunchGraph(
@@ -57,9 +57,9 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val scheduled = "2017-01-01T00:00Z"
 
       val flights = Flights(List(
-        ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled00, iata = "BA0001", terminal = "T1", actPax = 15),
-        ArrivalGenerator.apiFlight(flightId = 2, schDt = scheduled00, iata = "FR8819", terminal = "T1", actPax = 10),
-        ArrivalGenerator.apiFlight(flightId = 2, schDt = scheduled15, iata = "EZ1010", terminal = "T2", actPax = 12)
+        ArrivalGenerator.apiFlight(flightId = Option(1), schDt = scheduled00, iata = "BA0001", terminal = "T1", actPax = Option(15)),
+        ArrivalGenerator.apiFlight(flightId = Option(2), schDt = scheduled00, iata = "FR8819", terminal = "T1", actPax = Option(10)),
+        ArrivalGenerator.apiFlight(flightId = Option(2), schDt = scheduled15, iata = "EZ1010", terminal = "T2", actPax = Option(12))
       ))
 
       val crunch = runCrunchGraph(
