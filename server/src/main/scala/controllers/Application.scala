@@ -175,6 +175,8 @@ trait SystemActors {
           subscribeStaffingActors(crunchInputs)
           startScheduledFeedImports(crunchInputs)
       }
+    case Failure(error) =>
+      system.log.error(s"Failed to restore initial state for App", error)
   }
 
   def aclTerminalMapping(portCode: String): TerminalName => TerminalName = portCode match {
