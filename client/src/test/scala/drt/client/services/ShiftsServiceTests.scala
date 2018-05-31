@@ -2,7 +2,6 @@ package drt.client.services
 
 import java.util.UUID
 
-import diode.data.Ready
 import drt.shared.StaffMovement
 import utest._
 
@@ -259,32 +258,29 @@ object ShiftsServiceTests extends TestSuite {
           "Staff movements" - {
             import StaffMovements._
             val shiftService = StaffAssignmentServiceWithoutDates(parsedShifts.toList).get
-            val fixedPointService = StaffAssignmentServiceWithoutDates(parseRawTsv("").toList).get
-
 
             "Shifts can be represented as staff movements" - {
               val movements = (StaffMovement("T1", "IS81", SDate(2016, 12, 10, 10, 0), -2, UUID.randomUUID) :: Nil).sortBy(_.time)
               val sDate = SDate(2016, 12, 10, 10, 0)
-              assert(terminalStaffAt(shiftService, fixedPointService)(movements)("T1", sDate) == shiftService.terminalStaffAt("T1", sDate) - 2)
+              assert(terminalStaffAt(shiftService)(movements)("T1", sDate) == shiftService.terminalStaffAt("T1", sDate) - 2)
             }
 
             "Movements from after the asked for date are not included" - {
-
               val movements = (StaffMovement("T1", "IS81", SDate(2016, 12, 10, 10, 0), -2, UUID.randomUUID) :: Nil).sortBy(_.time)
               val sDate = SDate(2016, 12, 10, 9, 0)
-              assert(terminalStaffAt(shiftService, fixedPointService)(movements)("T1", sDate) == shiftService.terminalStaffAt("T1", sDate))
+              assert(terminalStaffAt(shiftService)(movements)("T1", sDate) == shiftService.terminalStaffAt("T1", sDate))
             }
-            "Two movements at the same time are both taken into account" - {
 
+            "Two movements at the same time are both taken into account" - {
               val movements = (
                 StaffMovement("T1", "IS81", SDate(2016, 12, 11, 0, 0), -1, UUID.randomUUID) ::
                   StaffMovement("T1", "IS81", SDate(2016, 12, 11, 0, 0), -1, UUID.randomUUID) :: Nil
                 ).sortBy(_.time)
 
               val sDate = SDate(2016, 12, 11, 0, 0)
-              assert(terminalStaffAt(shiftService, fixedPointService)(movements)("T1", sDate) == -2)
-
+              assert(terminalStaffAt(shiftService)(movements)("T1", sDate) == -2)
             }
+
             "Two movements at the same time as a shift entry are all taken into account" - {
               val shiftServiceWithOneShift = StaffAssignmentServiceWithoutDates(List(StaffAssignment("blah", "T1", SDate(2016, 12, 11, 0, 0), SDate(2016, 12, 11, 1, 0), 10)))
               val movements = (
@@ -295,9 +291,10 @@ object ShiftsServiceTests extends TestSuite {
                 ).sortBy(_.time)
 
               val sDate = SDate(2016, 12, 11, 0, 0)
-              val staff: Int = terminalStaffAt(shiftServiceWithOneShift, fixedPointService)(movements)("T1", sDate)
+              val staff: Int = terminalStaffAt(shiftServiceWithOneShift)(movements)("T1", sDate)
               assert(staff == 8)
             }
+
             "escaped commas are allowed in shift name" - {
               val shiftsRawCsv =
                 """
@@ -311,38 +308,7 @@ object ShiftsServiceTests extends TestSuite {
               }
             }
           }
-          "Staff movements with fixed points" - {
-            import StaffMovements._
-            val shiftsRaw =
-              """
-                |Alpha,T1,10/12/16,08:00,16:00,10
-              """.stripMargin
 
-            val fixedPointRaw =
-              """
-                |eGate Monitor,T1,10/12/16,08:00,14:00,1
-              """.stripMargin
-
-
-            val shiftService = StaffAssignmentServiceWithDates(StaffAssignmentParser(shiftsRaw).parsedAssignments.toList).get
-            val fixedPointService = StaffAssignmentServiceWithoutDates(StaffAssignmentParser(fixedPointRaw).parsedAssignments.toList).get
-
-            "Fixed Points should be subtracted from available staff" - {
-
-              val sDate = SDate(2016, 12, 10, 10, 0)
-              val result = terminalStaffAt(shiftService, fixedPointService)(Nil)("T1", sDate)
-
-              val fps = fixedPointService.terminalStaffAt("T1", sDate)
-              assert(result == 9)
-            }
-            "Fixed Points should only be included for the time specified" - {
-
-              val sDate = SDate(2016, 12, 10, 15, 0)
-              val result = terminalStaffAt(shiftService, fixedPointService)(Nil)("T1", sDate)
-
-              assert(result == 10)
-            }
-          }
           "Staff for a terminal should" - {
             import StaffMovements._
             val shiftsRaw =
@@ -355,23 +321,18 @@ object ShiftsServiceTests extends TestSuite {
                 |eGate Monitor,T1,10/12/16,08:00,14:00,1
               """.stripMargin
 
-
             val shiftService = StaffAssignmentServiceWithDates(StaffAssignmentParser(shiftsRaw).parsedAssignments.toList).get
-            val fixedPointService = StaffAssignmentServiceWithoutDates(StaffAssignmentParser(fixedPointRaw).parsedAssignments.toList).get
-
 
             "Contain staff for a terminal shift" - {
-
               val sDate = SDate(2016, 12, 10, 10, 0)
-              val result = terminalStaffAt( shiftService, fixedPointService)(Nil)("T1", sDate)
+              val result = terminalStaffAt(shiftService)(Nil)("T1", sDate)
 
-              assert(result == 9)
+              assert(result == 10)
             }
 
             "Fixed Points should only be included for the time specified" - {
-
               val sDate = SDate(2016, 12, 10, 15, 0)
-              val result = terminalStaffAt(shiftService, fixedPointService)(Nil)("T1", sDate)
+              val result = terminalStaffAt(shiftService)(Nil)("T1", sDate)
 
               assert(result == 10)
             }

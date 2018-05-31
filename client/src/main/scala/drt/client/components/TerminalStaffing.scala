@@ -115,11 +115,8 @@ object TerminalStaffing {
         else {
           val successfulShifts: List[StaffAssignment] = shifts.collect { case Success(s) => s }
           val successfulTerminalShifts = successfulShifts.filter(_.terminalName == terminalName)
-          val successfulFixedPoints: List[StaffAssignment] = fixedPoints.collect { case Success(s) => s }
-          val successfulTerminalFixedPoints = successfulFixedPoints.filter(_.terminalName == terminalName)
           val ss = StaffAssignmentServiceWithDates(successfulTerminalShifts)
-          val fps = StaffAssignmentServiceWithoutDates(successfulTerminalFixedPoints)
-          val staffWithShiftsAndMovementsAt = StaffMovements.terminalStaffAt(ss, fps)(movements) _
+          val staffWithShiftsAndMovementsAt = StaffMovements.terminalStaffAt(ss)(movements) _
           staffingTableHourPerColumn(terminalName, daysWorthOf15Minutes(SDate.midnightThisMorning()), staffWithShiftsAndMovementsAt)
         }
       )
