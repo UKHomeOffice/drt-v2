@@ -1,11 +1,13 @@
 package feeds
 
-import com.box.sdk.{BoxConfig, BoxDeveloperEditionAPIConnection}
+import com.box.sdk.{BoxAPIResponse, BoxAPIResponseException, BoxConfig, BoxDeveloperEditionAPIConnection}
 import drt.server.feeds.lgw.LGWForecastFeed
 import drt.shared.Arrival
 import org.specs2.mock.Mockito
 import org.specs2.mutable.Specification
 import org.specs2.specification.Scope
+import scala.collection.JavaConverters._
+import scala.util.{Failure, Success, Try}
 
 class LGWForecastFeedSpec extends Specification with Mockito {
 
@@ -30,7 +32,7 @@ class LGWForecastFeedSpec extends Specification with Mockito {
     "Can parse the arrivals given a CSV" in new ExampleContext {
       val feed: LGWForecastFeed = new LGWForecastFeed(filePath, userId, ukBfGalForecastFolderId) {
         override def getBoxConfig: BoxConfig = mock[BoxConfig]
-        override def getApiConnection: BoxDeveloperEditionAPIConnection = mock[BoxDeveloperEditionAPIConnection]
+        override def getApiConnection: Try[BoxDeveloperEditionAPIConnection] = Try(mock[BoxDeveloperEditionAPIConnection])
       }
 
       val arrivals: List[Arrival] = feed.getArrivalsFromData("aFile.csv", exampleData)
@@ -61,11 +63,23 @@ class LGWForecastFeedSpec extends Specification with Mockito {
         LastKnownPax = None)
     }
 
+    "Can return the exception if we cannot get the latest file" in new Context {
+      val expectedError = "an error"
+      val feed: LGWForecastFeed = new LGWForecastFeed(filePath, userId, ukBfGalForecastFolderId) {
+        override def getBoxConfig: BoxConfig = mock[BoxConfig]
+        override def getApiConnection: Try[BoxDeveloperEditionAPIConnection] = Try(throw new Exception(expectedError))
+      }
+
+      feed.getArrivals must beLike {
+        case Failure(e) => e.getMessage mustEqual expectedError
+      }
+    }
+
     "Can parse the arrivals in the latest file" in new Context {
       skipped("exploratory test for the LGW forecast feed")
       val feed = new LGWForecastFeed(filePath, userId, ukBfGalForecastFolderId)
 
-      val arrivals: List[Arrival] = feed.getArrivals
+      val Success(arrivals: List[Arrival]) = feed.getArrivals
 
       arrivals.foreach(println)
 

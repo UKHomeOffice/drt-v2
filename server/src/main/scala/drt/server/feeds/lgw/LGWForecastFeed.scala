@@ -27,11 +27,9 @@ class LGWForecastFeed(boxConfigFilePath: String, userId: String, ukBfGalForecast
   val LGW = "LGW"
   val PORT_FORECAST = "Port Forecast"
   val regex: Regex = """(([^,^\"])*(\".*\")*([^,^\"])*)(,|$)""".r
-  // Set cache info// Set cache info
   val MAX_CACHE_ENTRIES = 100
   val accessTokenCache = new InMemoryLRUAccessTokenCache(MAX_CACHE_ENTRIES)
-  val `dd/mm/yyyy HH:mm`: DateTimeFormatter = DateTimeFormat.forPattern("dd/MM/yyyy HH:mm")
-
+  val ddMMYYYHHMMFormat : DateTimeFormatter = DateTimeFormat.forPattern("dd/MM/yyyy HH:mm")
 
   val boxConfig: BoxConfig = getBoxConfig
 
@@ -46,20 +44,20 @@ class LGWForecastFeed(boxConfigFilePath: String, userId: String, ukBfGalForecast
     BoxConfig.readFrom(new FileReader(boxFile))
   }
 
-  def getArrivals: List[Arrival] = {
-    val client: BoxDeveloperEditionAPIConnection = getApiConnection
-    val galFileToDownload = getTheLatestFileInfo(client)
-    val theData = downloadTheData(client, galFileToDownload)
-    getArrivalsFromData(galFileToDownload.getName, theData)
-  }
+  def getArrivals: Try[List[Arrival]] =
+    for {
+      client <- getApiConnection
+      galFileToDownload <- getTheLatestFileInfo(client)
+      theData <- downloadTheData(client, galFileToDownload)
+    } yield getArrivalsFromData(galFileToDownload.getName, theData)
 
   def getArrivalsFromData(fileName: String, theData: String): List[Arrival] = {
     val rows = theData.split("\n")
-    if (rows.length < 1) throw new Exception(s"The latest forecast file '$fileName' has no data.")
+    if (rows.length <= 1) throw new Exception(s"The latest forecast file '$fileName' has no data.")
     val header = rows.head
     log.debug(s"The header of the CSV file $fileName is: '$header'.")
     if (header.split(",").size != TOTAL_COLUMNS) {
-      log.warn(s"The CSV file header has does not have ${TOTAL_COLUMNS}, This is the header [$header].")
+      log.warn(s"The CSV file header has does not have $TOTAL_COLUMNS, This is the header [$header].")
     }
     val body = rows.tail.filterNot(row => StringUtils.isBlank(row.replaceAll(",", "")))
     log.debug(s"The latest forecast file has ${body.length} rows.")
@@ -72,7 +70,7 @@ class LGWForecastFeed(boxConfigFilePath: String, userId: String, ukBfGalForecast
 
     def scheduledDateAsIsoString = Try {
       val dateTimeField = StringUtils.trimToEmpty(fields(DATE_TIME))
-      `dd/mm/yyyy HH:mm`.parseDateTime(dateTimeField).toString(ISODateTimeFormat.dateTime)
+      ddMMYYYHHMMFormat.parseDateTime(dateTimeField).toString(ISODateTimeFormat.dateTime)
     } match {
       case Success(value) => value
       case Failure(exception) => throw new Exception(s"""Cannot get the scheduled date from "$row".""", exception)
@@ -115,7 +113,7 @@ class LGWForecastFeed(boxConfigFilePath: String, userId: String, ukBfGalForecast
 
   }
 
-  private def downloadTheData(boxAPIConnection: BoxAPIConnection, latestFile: BoxFile#Info): String =
+  private def downloadTheData(boxAPIConnection: BoxAPIConnection, latestFile: BoxFile#Info): Try[String] =
     Try {
       val file = new BoxFile(boxAPIConnection, latestFile.getID)
       val stream = new ByteArrayOutputStream()
@@ -123,14 +121,9 @@ class LGWForecastFeed(boxConfigFilePath: String, userId: String, ukBfGalForecast
       stream.flush()
       stream.close()
       new String(stream.toByteArray, "UTF-8")
-    } match {
-      case Success(string) => string
-      case Failure(e: BoxAPIResponseException) => log.error(e.getResponse, e)
-        throw e
-      case Failure(exception) => throw exception
     }
 
-  private def getTheLatestFileInfo(boxAPIConnection: BoxAPIConnection): BoxFile#Info = {
+  private def getTheLatestFileInfo(boxAPIConnection: BoxAPIConnection): Try[BoxFile#Info] =
     Try {
       val folder = new BoxFolder(boxAPIConnection, ukBfGalForecastFolderId)
 
@@ -144,38 +137,16 @@ class LGWForecastFeed(boxConfigFilePath: String, userId: String, ukBfGalForecast
           case _ =>
         }
       }
-      csvFiles.sortBy(f => f.getName).reverse.headOption
-    } match {
-      case Success(option) => option match {
-        case Some(fileInfo) =>
-          log.info(s"The latest file name is ${fileInfo.getName}")
-          fileInfo
-        case None => log.error("Cannot find the latest Forecast CSV File.")
-          throw new Exception("Cannot find the latest Forecast CSV File")
-      }
-      case Failure(e) => e match {
-        case e: BoxAPIResponseException =>
-          log.error(s"Cannot get the latest Forecast CSV File: ${e.getResponse}.", e)
-          throw new Exception("Cannot get the latest Forecast CSV File", e)
-        case t => log.error("Cannot get the latest Forecast CSV File.", t)
-          throw new Exception("Cannot get the latest Forecast CSV File", t)
+      csvFiles.sortBy(f => f.getName).reverse.headOption.getOrElse {
+        log.error("Cannot find the latest Forecast CSV file")
+        throw new Exception("Cannot find the latest Forecast CSV file.")
       }
     }
-  }
 
-  def getApiConnection: BoxDeveloperEditionAPIConnection = {
+  def getApiConnection: Try[BoxDeveloperEditionAPIConnection] =
     Try {
       BoxDeveloperEditionAPIConnection.getAppUserConnection(userId, boxConfig, accessTokenCache)
-    } match {
-      case Success(apiConnection) => apiConnection
-      case Failure(e: BoxAPIResponseException) =>
-        log.error(e.getResponse, e)
-        throw e
-      case Failure(error) =>
-        log.error("Could not get the Box API Connection.", error)
-        throw error
     }
-  }
 }
 
 trait BoxFileConstants {
@@ -202,12 +173,13 @@ object LGWForecastFeed {
     val tickingSource: Source[List[Arrival], Cancellable] = Source.tick(initialDelayImmediately, pollInterval, NotUsed)
       .withAttributes(ActorAttributes.supervisionStrategy(Supervision.restartingDecider))
       .map(_ => {
-        Try {
-         feed.getArrivals
-        } match {
+         feed.getArrivals match {
           case Success(arrivals) =>
             log.info(s"Got forecast Arrivals ${arrivals.size}.")
             arrivals
+          case Failure(e: BoxAPIResponseException) =>
+            log.error(e.getResponse, e)
+            List.empty[Arrival]
           case Failure(t) =>
             log.info(s"Failed to fetch LGW forecast arrivals. $t")
             List.empty[Arrival]
