@@ -131,11 +131,10 @@ object StaffMovements {
 
   def adjustmentsAt(movements: Seq[StaffMovement])(dateTime: MilliDate): Int = movements.takeWhile(_.time <= dateTime).map(_.delta).sum
 
-  def terminalStaffAt(assignmentService: StaffAssignmentService, fixedPointService: StaffAssignmentServiceWithoutDates)(movements: Seq[StaffMovement])(terminalName: TerminalName, dateTime: MilliDate): Int = {
+  def terminalStaffAt(assignmentService: StaffAssignmentService)(movements: Seq[StaffMovement])(terminalName: TerminalName, dateTime: MilliDate): Int = {
     val baseStaff = assignmentService.terminalStaffAt(terminalName, dateTime)
-    val fixedPointStaff = fixedPointService.terminalStaffAt(terminalName, dateTime)
 
     val movementAdjustments = adjustmentsAt(movements.filter(_.terminalName == terminalName))(dateTime)
-    baseStaff - fixedPointStaff + movementAdjustments
+    baseStaff + movementAdjustments
   }
 }
