@@ -163,6 +163,7 @@ class VoyageManifestsGraphStage(bucketName: String, portCode: String, initialLas
       }
       .collect {
         case (zipFilename, _, Success(vm)) if maybePort.isEmpty || vm.ArrivalPortCode == maybePort.get =>
+          log.info(s"Successfully parsed manifest for ${vm.CarrierCode}${vm.VoyageNumber} scheduled for ${vm.ScheduledDateOfArrival} with ${vm.PassengerList.length} Pax")
           (zipFilename, vm)
       }
     vmStream.toList
