@@ -119,7 +119,7 @@ object CrunchSystem {
       airportConfig = props.airportConfig,
       numberOfDays = props.maxDaysToCrunch)
 
-    val staffBatcher = new StaffBatchUpdateGraphStage(props.now, props.expireAfterMillis)
+    val staffBatcher = new StaffBatchUpdateGraphStage(props.now, props.expireAfterMillis, props.airportConfig.crunchOffsetMinutes)
     val loadBatcher = new BatchLoadsByCrunchPeriodGraphStage(props.now, props.expireAfterMillis, crunchStartDateProvider)
 
     val workloadGraphStage = new WorkloadGraphStage(

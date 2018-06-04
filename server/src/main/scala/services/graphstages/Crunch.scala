@@ -57,6 +57,11 @@ object Crunch {
     crunchStartDate
   }
 
+  def changedDays(offsetMinutes: Int, staffMinutes: StaffMinutes): Map[MillisSinceEpoch, Seq[StaffMinute]] =
+    staffMinutes.minutes.groupBy(minutes => {
+    getLocalNextMidnight(SDate(minutes.minute - offsetMinutes * 60000, europeLondonTimeZone)).millisSinceEpoch
+  })
+
   def getLocalLastMidnight(now: SDateLike): SDateLike = {
     val localNow = SDate(now, europeLondonTimeZone)
     val localMidnight = s"${localNow.getFullYear()}-${localNow.getMonth()}-${localNow.getDate()}T00:00"
