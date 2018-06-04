@@ -3,8 +3,7 @@ package drt.client.components
 import drt.client.SPAMain.{Loc, TerminalsDashboardLoc}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.shared.CrunchApi.CrunchMinute
-import drt.shared.{ApiFlightWithSplits, ArrivalHelper, SDateLike}
+import drt.shared.{ApiFlightWithSplits, SDateLike}
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{ReactEventFromInput, ScalaComponent}
@@ -27,13 +26,13 @@ object TerminalsDashboardPage {
     .render_P(p => {
 
       val portCodeQueueOrderTerminals = SPACircuit.connect(_.airportConfig.map(ac => (ac.queueOrder, ac.terminalNames)))
-      val flightsAndMinutes = SPACircuit.connect(_.crunchStatePot)
+      val crunchStateRCP = SPACircuit.connect(_.crunchStatePot)
 
       portCodeQueueOrderTerminals { portMP =>
         <.div(
           portMP().render(portConfig => {
             val (queueOrder, terminals) = portConfig
-            flightsAndMinutes(flightsAndMinutesMP => {
+            crunchStateRCP(crunchStateMP => {
               val currentPeriodStart = DashboardTerminalSummary.windowStart(SDate.now())
               val periods = List(
                 DisplayPeriod(currentPeriodStart),
@@ -45,7 +44,6 @@ object TerminalsDashboardPage {
 
               def flightWithinPeriod(flight: ApiFlightWithSplits) = DashboardTerminalSummary.flightPcpInPeriod(flight, displayPeriod.start, displayPeriod.end)
 
-              def minuteWithinPeriod(cm: CrunchMinute) = cm.minute >= displayPeriod.start.millisSinceEpoch && cm.minute < displayPeriod.end.millisSinceEpoch
 
               def switchDashboardPeriod(period: Int) = (_: ReactEventFromInput) => p.router.set(p.dashboardPage.copy(period = Option(period)))
 
@@ -58,23 +56,36 @@ object TerminalsDashboardPage {
                         s"${p.start.prettyTime()}-${p.end.prettyTime()}", ^.onClick ==> switchDashboardPeriod(index)
                       )
                     }.toTagMod)),
-                  terminals.map { terminalName =>
-                    <.div(
-                      <.h3(s"Terminal $terminalName"),
-                      flightsAndMinutesMP().render(crunchState => {
-                        val flightsInTerminal: List[ApiFlightWithSplits] = crunchState
-                          .flights
-                          .toList
-                          .filter(_.apiFlight.Terminal == terminalName)
-                          .filter(flightWithinPeriod)
-                        val minutesInTerminal =
-                          crunchState.crunchMinutes.toList.filter(minuteWithinPeriod).filter(_.terminalName == terminalName)
+                terminals.map { terminalName =>
+                  <.div(
+                    <.h3(s"Terminal $terminalName"),
+                    crunchStateMP().render(crunchState => {
+                      val flightsInTerminal: List[ApiFlightWithSplits] = crunchState
+                        .flights
+                        .toList
+                        .filter(_.apiFlight.Terminal == terminalName)
+                        .filter(flightWithinPeriod)
+                      val crunchMinutesInTerminal = crunchState.crunchMinutes.toList
+                        .filter(cm => cm.minute >= displayPeriod.start.millisSinceEpoch && cm.minute < displayPeriod.end.millisSinceEpoch)
+                        .filter(_.terminalName == terminalName)
 
-                        DashboardTerminalSummary(DashboardTerminalSummary.Props(flightsInTerminal, minutesInTerminal, terminalName, queueOrder, displayPeriod.start, displayPeriod.end))
-                      })
-                    )
-                  }.toTagMod
-                )
+                      val staffMinutesInTerminal = crunchState.staffMinutes.toList
+                        .filter(sm => sm.minute >= displayPeriod.start.millisSinceEpoch && sm.minute < displayPeriod.end.millisSinceEpoch)
+                        .filter(_.terminalName == terminalName)
+
+                      DashboardTerminalSummary(DashboardTerminalSummary.Props(
+                        flightsInTerminal,
+                        crunchMinutesInTerminal,
+                        staffMinutesInTerminal,
+                        terminalName,
+                        queueOrder,
+                        displayPeriod.start,
+                        displayPeriod.end
+                      ))
+                    })
+                  )
+                }.toTagMod
+              )
             })
           }
           ))
