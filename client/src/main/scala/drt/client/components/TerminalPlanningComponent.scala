@@ -94,7 +94,7 @@ object TerminalPlanningComponent {
             }
           )
         ),
-        <.h3("Total desks required at each hour of the day"),
+        <.h3("Total staff required at each hour of the day"),
         <.table(^.className := "forecast",
           <.thead(
             <.tr(
