@@ -60,6 +60,7 @@ object Staffing {
     .filter(_.exists(_.time.millisSinceEpoch > dropBeforeMillis))
     .flatten
     .toSeq
+    .sortBy(_.time)
 
   def staffMinutesForCrunchMinutes(crunchMinutes: Map[TQM, CrunchMinute], maybeSources: Option[StaffSources]): Map[TM, StaffMinute] = {
     val staff = maybeSources
