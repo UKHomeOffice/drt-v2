@@ -178,7 +178,7 @@ object TerminalStaffing {
             defaultExamples
 
           <.div(
-            <.h2("Fixed Points"),
+            <.h2("Miscelaneous Staff"),
             props.roles.render(r => {
               if (r.contains("staff:edit")) {
                 <.div(
