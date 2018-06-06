@@ -73,7 +73,7 @@ class PortStateGraphStage(name: String = "",
             case incoming: PortStateMinutes =>
               log.info(s"Incoming ${inlet.toString}")
               val startTime = SDate.now().millisSinceEpoch
-              val newState = incoming.applyTo(mayBePortState, SDate.now)
+              val newState = incoming.applyTo(mayBePortState, now())
               val elapsedSeconds = (SDate.now().millisSinceEpoch - startTime).toDouble / 1000
               log.info(f"Finished processing $inlet data in $elapsedSeconds%.2f seconds")
               newState

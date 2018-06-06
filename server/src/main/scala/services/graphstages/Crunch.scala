@@ -59,7 +59,7 @@ object Crunch {
 
   def changedDays(offsetMinutes: Int, staffMinutes: StaffMinutes): Map[MillisSinceEpoch, Seq[StaffMinute]] =
     staffMinutes.minutes.groupBy(minutes => {
-    getLocalNextMidnight(SDate(minutes.minute - offsetMinutes * 60000, europeLondonTimeZone)).millisSinceEpoch
+    getLocalLastMidnight(SDate(minutes.minute - offsetMinutes * 60000, europeLondonTimeZone)).millisSinceEpoch
   })
 
   def getLocalLastMidnight(now: SDateLike): SDateLike = {

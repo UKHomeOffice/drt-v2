@@ -196,6 +196,52 @@ class StaffMinutesSpec extends CrunchTestLike {
     true
   }
 
+  "Given one initial fixed point " +
+    "When I remove the fixed point " +
+    "Then I should not see zero fixed points in the staff minutes" >> {
+    val scheduled = "2017-01-01T00:00Z"
+    val shiftStart = SDate(scheduled)
+
+    val initialFixedPoints =
+      """egate monitor,T1,01/01/17,00:00,00:14,2
+      """.stripMargin
+
+    val crunch = runCrunchGraph(
+      airportConfig = airportConfig.copy(
+        terminalNames = Seq("T1")
+      ),
+      now = () => shiftStart
+    )
+
+    offerAndWait(crunch.liveFixedPointsInput, initialFixedPoints)
+
+    offerAndWait(crunch.liveFixedPointsInput, "")
+
+    val expectedFixedPoints = Seq(
+      shiftStart.addMinutes(0).millisSinceEpoch -> 0,
+      shiftStart.addMinutes(1).millisSinceEpoch -> 0,
+      shiftStart.addMinutes(2).millisSinceEpoch -> 0,
+      shiftStart.addMinutes(3).millisSinceEpoch -> 0,
+      shiftStart.addMinutes(4).millisSinceEpoch -> 0,
+      shiftStart.addMinutes(5).millisSinceEpoch -> 0,
+      shiftStart.addMinutes(6).millisSinceEpoch -> 0,
+      shiftStart.addMinutes(7).millisSinceEpoch -> 0,
+      shiftStart.addMinutes(8).millisSinceEpoch -> 0,
+      shiftStart.addMinutes(9).millisSinceEpoch -> 0
+    )
+
+    crunch.liveTestProbe.fishForMessage(10 seconds) {
+      case ps: PortState  =>
+        val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute).take(10)
+        val fixedPoints = minutesInOrder.map(sm => (sm.minute, sm.fixedPoints))
+
+        fixedPoints == expectedFixedPoints
+    }
+
+    true
+  }
+
+
   "Given a shift with 10 staff and passengers split to Eea desk & egates " +
     "When I ask for the PortState " +
     "Then I should see deployed staff totalling the number on shift" >> {

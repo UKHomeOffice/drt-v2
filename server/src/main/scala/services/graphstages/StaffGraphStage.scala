@@ -109,7 +109,7 @@ class StaffGraphStage(name: String = "",
     }
 
     def fixedPointsUpdateCriteria(oldFixedPoints: String, newFixedPoints: String): UpdateCriteria = {
-      val fpMinutesToUpdate = allMinuteMillis(newFixedPoints)
+      val fpMinutesToUpdate = allMinuteMillis(newFixedPoints) union allMinuteMillis(oldFixedPoints)
       val fpMinutesOfDayToUpdate = fpMinutesToUpdate.map(m => {
         val date = SDate(m)
         val hours = date.getHours()
@@ -134,7 +134,7 @@ class StaffGraphStage(name: String = "",
       val oldAssignments = assignmentsFromRawShifts(oldFixedPoints)
       val newAssignments = assignmentsFromRawShifts(newFixedPoints)
 
-      val terminalNames = (newAssignments -- oldAssignments).map(_.terminalName)
+      val terminalNames = ((newAssignments -- oldAssignments) union (oldAssignments -- newAssignments )).map(_.terminalName)
 
       UpdateCriteria(minuteMillis, terminalNames)
     }
