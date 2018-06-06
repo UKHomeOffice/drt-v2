@@ -129,7 +129,7 @@ class SimulationGraphStage(name: String = "",
         val firstMinute = crunchPeriodStartMillis(SDate(incomingStaffMinutes.minutes.map(_.minute).min))
         val lastMinute = firstMinute.addDays(1)
 
-        log.info(s"Got first and last minutes")
+        log.info(s"Got first ${firstMinute.toLocalDateTimeString()} and last minutes ${lastMinute.toLocalDateTimeString()}")
 
         deployments = updateDeployments(affectedTerminals, firstMinute, lastMinute, deployments)
 
