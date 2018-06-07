@@ -12,6 +12,7 @@ import services.SDate
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
+import scala.util.Try
 
 case class ChromaLiveFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcher) {
   flightFeed =>
@@ -34,17 +35,17 @@ case class ChromaLiveFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcher) {
       flights.map(flight => {
         val walkTimeMinutes = 4
         val pcpTime: Long = org.joda.time.DateTime.parse(flight.SchDT).plusMinutes(walkTimeMinutes).getMillis
-        val est = SDate(flight.EstDT).millisSinceEpoch
-        val act = SDate(flight.ActDT).millisSinceEpoch
-        val estChox = SDate(flight.EstChoxDT).millisSinceEpoch
-        val actChox = SDate(flight.ActChoxDT).millisSinceEpoch
+        val est = Try(SDate(flight.EstDT).millisSinceEpoch).getOrElse(0L)
+        val act = Try(SDate(flight.ActDT).millisSinceEpoch).getOrElse(0L)
+        val estChox = Try(SDate(flight.EstChoxDT).millisSinceEpoch).getOrElse(0L)
+        val actChox = Try(SDate(flight.ActChoxDT).millisSinceEpoch).getOrElse(0L)
         Arrival(
           Operator = if (StringUtils.isEmpty(flight.Operator)) None else Option(flight.Operator),
           Status = flight.Status,
           Estimated = if (est == 0) None else Option(est),
           Actual = if (act == 0) None else Option(act),
           EstimatedChox = if (estChox == 0) None else Option(estChox),
-          ActualChox = if (actChox!= 0) None else Option(actChox),
+          ActualChox = if (actChox == 0) None else Option(actChox),
           Gate = if (StringUtils.isEmpty(flight.Gate)) None else Option(flight.Gate),
           Stand = if (StringUtils.isEmpty(flight.Stand)) None else Option(flight.Stand),
           MaxPax = if (flight.MaxPax == 0) None else Option(flight.MaxPax),
