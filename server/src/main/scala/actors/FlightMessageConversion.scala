@@ -92,7 +92,7 @@ object FlightMessageConversion {
       TranPax = flightMessage.tranPax,
       RunwayID = flightMessage.runwayID.filter(StringUtils.isNotBlank(_)),
       BaggageReclaimId = flightMessage.baggageReclaimId.filter(StringUtils.isNotBlank(_)),
-      FlightID = flightMessage.flightID.filter(StringUtils.isNotBlank(_)),
+      FlightID = flightMessage.flightID.filter(_ != 0),
       AirportID = flightMessage.airportID.getOrElse(""),
       Terminal = flightMessage.terminal.getOrElse(""),
       rawICAO = flightMessage.iCAO.getOrElse(""),
