@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream
 import drt.shared.Arrival
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.apache.commons.io.IOUtils
+import org.apache.commons.lang3.StringUtils
 import org.slf4j.{Logger, LoggerFactory}
 import scala.util.{Failure, Success, Try}
 import scala.xml.Node
@@ -45,13 +46,13 @@ case class ResponseToArrivals(data: Array[Byte], locationOption: Option[String] 
       Actual  = parseDateTime(n, operationQualifier = "TDN", timeType = "ACT"),
       EstimatedChox = parseDateTime(n, operationQualifier = "ONB", timeType = "EST") ,
       ActualChox = parseDateTime(n, operationQualifier = "ONB", timeType = "ACT"),
-      Gate = (n \\ "PassengerGate").headOption.map(n => n text),
-      Stand = (n \\ "ArrivalStand").headOption.map(n => n text),
+      Gate = (n \\ "PassengerGate").headOption.map(n => n text).filter(StringUtils.isNotBlank(_)),
+      Stand = (n \\ "ArrivalStand").headOption.map(n => n text).filter(StringUtils.isNotBlank(_)),
       MaxPax = (n \\ "SeatCapacity").headOption.map(n => (n text).toInt),
       ActPax = actPax,
       TranPax = if (actPax.isEmpty) None else transPax,
-      RunwayID = parseRunwayId(n),
-      BaggageReclaimId = Try(n \\ "BaggageClaimUnit" text).toOption,
+      RunwayID = parseRunwayId(n).filter(StringUtils.isNotBlank(_)),
+      BaggageReclaimId = Try(n \\ "BaggageClaimUnit" text).toOption.filter(StringUtils.isNotBlank(_)),
       FlightID = None,
       AirportID = "LGW",
       Terminal = parseTerminal(n),

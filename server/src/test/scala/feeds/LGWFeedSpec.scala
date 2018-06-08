@@ -102,7 +102,7 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       ActPax = Some(120),
       TranPax = None,
       RunwayID = Some("08R"),
-      BaggageReclaimId = Some("1"),
+      BaggageReclaimId = None,
       FlightID = None,
       AirportID = "LGW",
       Terminal = "N", rawICAO = "VIR808", rawIATA = "VS808", Origin = "LHR",
