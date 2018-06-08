@@ -89,21 +89,21 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     arrivals.head mustEqual new Arrival(
       Operator = "",
       Status = "LAN",
-      EstDT = "2018-03-22T15:50:00Z",
-      ActDT = "2018-03-22T15:48:00Z",
-      EstChoxDT = "2018-03-22T15:58:00Z",
-      ActChoxDT = "2018-03-22T16:03:00Z",
+      EstDT = "2018-06-03T19:28:00Z",
+      ActDT = "2018-06-03T19:30:00Z",
+      EstChoxDT = "2018-06-03T19:37:00Z",
+      ActChoxDT = "2018-06-03T19:36:00Z",
       Gate = "",
       Stand = "",
-      MaxPax = 186,
-      ActPax = 0,
+      MaxPax = 308,
+      ActPax = 120,
       TranPax = 0,
-      RunwayID = "26L",
-      BaggageReclaimId = "1",
+      RunwayID = "08R",
+      BaggageReclaimId = "",
       FlightID = 0,
       AirportID = "LGW",
-      Terminal = "S", rawICAO = "NAX1314", rawIATA = "DY1314", Origin = "BGO", SchDT = "2018-03-22T10:15:00Z",
-      Scheduled = 1521713700000L, PcpTime = 0, LastKnownPax = None)
+      Terminal = "N", rawICAO = "VIR808", rawIATA = "VS808", Origin = "LHR", SchDT = "2018-06-03T19:50:00Z",
+      Scheduled = 1528055400000L, PcpTime = 0, LastKnownPax = None)
 
     deleteCalled must beTrue
   }
