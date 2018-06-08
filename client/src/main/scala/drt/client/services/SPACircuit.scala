@@ -196,7 +196,7 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
       case Some(cu: CrunchUpdates) =>
         log.info(s"Got CrunchUpdates with ${cu.flights.size} flights, ${cu.minutes.size} minutes")
         UpdateCrunchStateFromUpdatesAndContinuePolling(cu)
-      case None =>
+      case _ =>
         RetryActionAfter(GetCrunchState(), crunchUpdatesRequestFrequency)
     }.recoverWith {
       case _ =>

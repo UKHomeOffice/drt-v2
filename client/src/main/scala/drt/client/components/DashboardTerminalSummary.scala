@@ -1,7 +1,7 @@
 package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, groupCrunchMinutesByX}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute, groupCrunchMinutesByX}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import japgolly.scalajs.react.ScalaComponent
@@ -112,6 +112,7 @@ object DashboardTerminalSummary {
   case class Props(
                     flights: List[ApiFlightWithSplits],
                     crunchMinutes: List[CrunchMinute],
+                    staffMinutes: List[StaffMinute],
                     terminal: TerminalName,
                     queues: List[PaxTypeAndQueue],
                     timeWindowStart: SDateLike,
@@ -140,6 +141,9 @@ object DashboardTerminalSummary {
 
         val pcpLowestTimeSlot = pcpLowest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, p.terminal)).minute
         val pcpHighestTimeSlot = pcpHighest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, p.terminal)).minute
+
+        def pressureStaffMinute = p.staffMinutes.find(_.minute == pressurePoint.minute)
+
         <.div(^.className := "dashboard-summary container-fluid",
           <.div(^.className := s"$ragClass summary-box-container rag-summary col-sm-1",
             <.span(^.className := "flights-total", f"${p.flights.size}%,d Flights"),
@@ -152,7 +156,8 @@ object DashboardTerminalSummary {
                   <.td("Staff"), <.td("Desks")
                 ),
                 <.tr(
-                  <.td(s"${pressurePoint.deployedDesks.getOrElse(0)}"), <.td(s"${pressurePoint.deskRec}")
+                  <.td(s"${pressureStaffMinute.map(sm => sm.available).getOrElse(0) }"),
+                  <.td(s"${pressurePoint.deskRec + pressureStaffMinute.map(_.fixedPoints).getOrElse(0)}")
                 )
               )
             )),

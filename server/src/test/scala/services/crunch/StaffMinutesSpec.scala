@@ -93,6 +93,51 @@ class StaffMinutesSpec extends CrunchTestLike {
     true
   }
 
+  "Given two staff movement covering the same time period" +
+    "When I ask for the PortState " +
+    "Then I should see the sum of the movements for the minute they cover" >> {
+    val shiftStart = SDate("2017-01-01T00:00Z")
+
+    val uuid1 = UUID.randomUUID()
+    val uuid2 = UUID.randomUUID()
+    val initialMovements = Seq(
+      StaffMovement("T1", "lunch start", MilliDate(shiftStart.millisSinceEpoch), -1, uuid1),
+      StaffMovement("T1", "lunch end", MilliDate(shiftStart.addMinutes(15).millisSinceEpoch), 1, uuid1),
+      StaffMovement("T1", "lunch start", MilliDate(shiftStart.millisSinceEpoch), -5, uuid2),
+      StaffMovement("T1", "lunch end", MilliDate(shiftStart.addMinutes(15).millisSinceEpoch), 5, uuid2)
+    )
+
+    val crunch = runCrunchGraph(
+      airportConfig = airportConfig.copy(terminalNames = Seq("T1")),
+      now = () => shiftStart
+    )
+
+    offerAndWait(crunch.liveStaffMovementsInput, initialMovements)
+
+    val expectedStaffMovements = Seq(
+      shiftStart.addMinutes(0).millisSinceEpoch -> -6,
+      shiftStart.addMinutes(1).millisSinceEpoch -> -6,
+      shiftStart.addMinutes(2).millisSinceEpoch -> -6,
+      shiftStart.addMinutes(3).millisSinceEpoch -> -6,
+      shiftStart.addMinutes(4).millisSinceEpoch -> -6,
+      shiftStart.addMinutes(5).millisSinceEpoch -> -6,
+      shiftStart.addMinutes(6).millisSinceEpoch -> -6,
+      shiftStart.addMinutes(7).millisSinceEpoch -> -6,
+      shiftStart.addMinutes(8).millisSinceEpoch -> -6,
+      shiftStart.addMinutes(9).millisSinceEpoch -> -6
+    )
+
+    crunch.liveTestProbe.fishForMessage(2 seconds) {
+      case ps: PortState  =>
+        val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute).take(10)
+        val staffMovements = minutesInOrder.map(sm => (sm.minute, sm.movements))
+
+        staffMovements === expectedStaffMovements
+    }
+
+    true
+  }
+
   "Given a shift with 10 staff and passengers split to 2 queues " +
     "When I ask for the PortState " +
     "Then I should see deployed staff totalling the number on shift" >> {
@@ -150,6 +195,52 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     true
   }
+
+  "Given one initial fixed point " +
+    "When I remove the fixed point " +
+    "Then I should not see zero fixed points in the staff minutes" >> {
+    val scheduled = "2017-01-01T00:00Z"
+    val shiftStart = SDate(scheduled)
+
+    val initialFixedPoints =
+      """egate monitor,T1,01/01/17,00:00,00:14,2
+      """.stripMargin
+
+    val crunch = runCrunchGraph(
+      airportConfig = airportConfig.copy(
+        terminalNames = Seq("T1")
+      ),
+      now = () => shiftStart
+    )
+
+    offerAndWait(crunch.liveFixedPointsInput, initialFixedPoints)
+
+    offerAndWait(crunch.liveFixedPointsInput, "")
+
+    val expectedFixedPoints = Seq(
+      shiftStart.addMinutes(0).millisSinceEpoch -> 0,
+      shiftStart.addMinutes(1).millisSinceEpoch -> 0,
+      shiftStart.addMinutes(2).millisSinceEpoch -> 0,
+      shiftStart.addMinutes(3).millisSinceEpoch -> 0,
+      shiftStart.addMinutes(4).millisSinceEpoch -> 0,
+      shiftStart.addMinutes(5).millisSinceEpoch -> 0,
+      shiftStart.addMinutes(6).millisSinceEpoch -> 0,
+      shiftStart.addMinutes(7).millisSinceEpoch -> 0,
+      shiftStart.addMinutes(8).millisSinceEpoch -> 0,
+      shiftStart.addMinutes(9).millisSinceEpoch -> 0
+    )
+
+    crunch.liveTestProbe.fishForMessage(10 seconds) {
+      case ps: PortState  =>
+        val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute).take(10)
+        val fixedPoints = minutesInOrder.map(sm => (sm.minute, sm.fixedPoints))
+
+        fixedPoints == expectedFixedPoints
+    }
+
+    true
+  }
+
 
   "Given a shift with 10 staff and passengers split to Eea desk & egates " +
     "When I ask for the PortState " +

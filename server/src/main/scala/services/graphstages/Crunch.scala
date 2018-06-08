@@ -57,6 +57,11 @@ object Crunch {
     crunchStartDate
   }
 
+  def changedDays(offsetMinutes: Int, staffMinutes: StaffMinutes): Map[MillisSinceEpoch, Seq[StaffMinute]] =
+    staffMinutes.minutes.groupBy(minutes => {
+    getLocalLastMidnight(SDate(minutes.minute - offsetMinutes * 60000, europeLondonTimeZone)).millisSinceEpoch
+  })
+
   def getLocalLastMidnight(now: SDateLike): SDateLike = {
     val localNow = SDate(now, europeLondonTimeZone)
     val localMidnight = s"${localNow.getFullYear()}-${localNow.getMonth()}-${localNow.getDate()}T00:00"
@@ -343,7 +348,7 @@ object Crunch {
     UpdateCriteria(minutesToUpdate, terminalsToUpdate)
   }
 
-  def allMinuteMillis(movements: Seq[StaffMovement]): Set[MillisSinceEpoch] = {
+  def allMinuteMillis(movements: Seq[StaffMovement]): Seq[MillisSinceEpoch] = {
     movements
       .groupBy(_.uUID)
       .flatMap {
@@ -352,6 +357,6 @@ object Crunch {
           val endMillis = mmPair.map(_.time.millisSinceEpoch).max
           startMillis until endMillis by 60000
       }
-      .toSet
+      .toSeq
   }
 }

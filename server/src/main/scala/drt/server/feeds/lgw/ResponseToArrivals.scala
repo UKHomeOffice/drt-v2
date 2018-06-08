@@ -1,14 +1,13 @@
 package drt.server.feeds.lgw
 
 import java.io.ByteArrayInputStream
-
 import drt.shared.Arrival
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.apache.commons.io.IOUtils
 import org.slf4j.{Logger, LoggerFactory}
-
 import scala.util.{Failure, Success, Try}
-import scala.xml.{Elem, Node}
+import scala.xml.Node
+import scala.language.postfixOps
 
 case class ResponseToArrivals(data: Array[Byte], locationOption: Option[String] ) {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -52,7 +51,7 @@ case class ResponseToArrivals(data: Array[Byte], locationOption: Option[String] 
       ActPax = actPax,
       TranPax = if (actPax.isEmpty) None else transPax,
       RunwayID = parseRunwayId(n),
-      BaggageReclaimId = Try(n \\ "FIDSBagggeHallActive" text).toOption,
+      BaggageReclaimId = Try(n \\ "BaggageClaimUnit" text).toOption,
       FlightID = None,
       AirportID = "LGW",
       Terminal = parseTerminal(n),
@@ -93,7 +92,7 @@ case class ResponseToArrivals(data: Array[Byte], locationOption: Option[String] 
   }
 
   def parsePaxCount(n: Node, qualifier: String): Option[Int] = {
-    (n \\ "PaxCount").find(n => (n \ "@Qualifier" text).equals(qualifier) && (n \ "@Class").isEmpty).map(n => (n text).toInt)
+    (n \\ "CabinClass").find(n =>  (n \ "@Class").isEmpty).flatMap(n=> (n \ "PaxCount").find(n=> (n \ "@Qualifier" text).equals(qualifier)).map(n => (n text).toInt ) )
   }
 
   def parseDateTime(n: Node, operationQualifier: String, timeType: String): Option[MillisSinceEpoch] = {

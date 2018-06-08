@@ -39,7 +39,7 @@ class Test @Inject()(implicit val config: Configuration,
   def addArrival() = Action {
     implicit request =>
 
-      request.body.asText.map(s => s.parseJson.convertTo[ChromaLiveFlight]) match {
+      request.body.asJson.map(s => s.toString.parseJson.convertTo[ChromaLiveFlight]) match {
         case Some(flight) =>
           val walkTimeMinutes = 4
           val pcpTime: Long = org.joda.time.DateTime.parse(flight.SchDT).plusMinutes(walkTimeMinutes).getMillis
@@ -70,7 +70,7 @@ class Test @Inject()(implicit val config: Configuration,
           saveArrival(arrival)
           Created
         case None =>
-          BadRequest("Unable to parse JSON")
+          BadRequest(s"Unable to parse JSON: ${request.body.asText}")
       }
   }
 }

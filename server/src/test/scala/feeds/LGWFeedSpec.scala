@@ -92,21 +92,21 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     arrivals.head mustEqual new Arrival(
       Operator = None,
       Status = "LAN",
-      Estimated = Some(SDate("2018-03-22T15:50:00Z").millisSinceEpoch),
-      Actual =  Some(SDate("2018-03-22T15:48:00Z").millisSinceEpoch),
-      EstimatedChox =  Some(SDate("2018-03-22T15:58:00Z").millisSinceEpoch),
-      ActualChox =  Some(SDate("2018-03-22T16:03:00Z").millisSinceEpoch),
+      Estimated = Some(SDate("2018-06-03T19:28:00Z").millisSinceEpoch),
+      Actual =  Some(SDate("2018-06-03T19:30:00Z").millisSinceEpoch),
+      EstimatedChox =  Some(SDate("2018-06-03T19:37:00Z").millisSinceEpoch),
+      ActualChox =  Some(SDate("2018-06-03T19:36:00Z").millisSinceEpoch),
       Gate = None,
       Stand = None,
-      MaxPax = Some(186),
-      ActPax = None,
+      MaxPax = Some(308),
+      ActPax = Some(120),
       TranPax = None,
-      RunwayID = Some("26L"),
+      RunwayID = Some("08R"),
       BaggageReclaimId = Some("1"),
       FlightID = None,
       AirportID = "LGW",
-      Terminal = "S", rawICAO = "NAX1314", rawIATA = "DY1314", Origin = "BGO",
-      Scheduled = SDate("2018-03-22T10:15:00Z").millisSinceEpoch, PcpTime = None, LastKnownPax = None)
+      Terminal = "N", rawICAO = "VIR808", rawIATA = "VS808", Origin = "LHR",
+      Scheduled = SDate("2018-06-03T19:50:00Z").millisSinceEpoch, PcpTime = None, LastKnownPax = None)
 
     deleteCalled must beTrue
   }

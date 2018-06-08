@@ -1,75 +1,14 @@
 package services.graphstages
 
-import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.stream._
+import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute, StaffMinutes}
 import drt.shared.FlightsApi.TerminalName
 import drt.shared.{AirportConfig, SDateLike, StaffMovement, TM}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.graphstages.Crunch.{europeLondonTimeZone, getLocalLastMidnight, movementsUpdateCriteria, purgeExpired}
-
+import services.graphstages.Crunch.{getLocalLastMidnight, movementsUpdateCriteria, purgeExpired}
 import scala.util.Success
-
-class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: MillisSinceEpoch) extends GraphStage[FlowShape[StaffMinutes, StaffMinutes]] {
-  val inStaffMinutes: Inlet[StaffMinutes] = Inlet[StaffMinutes]("StaffMinutes.in")
-  val outStaffMinutes: Outlet[StaffMinutes] = Outlet[StaffMinutes]("StaffMinutes.out")
-
-  override def shape: FlowShape[StaffMinutes, StaffMinutes] = new FlowShape(inStaffMinutes, outStaffMinutes)
-
-  override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var staffMinutesQueue: List[(MillisSinceEpoch, StaffMinutes)] = List[(MillisSinceEpoch, StaffMinutes)]()
-
-    val log: Logger = LoggerFactory.getLogger(getClass)
-
-    setHandler(inStaffMinutes, new InHandler {
-      override def onPush(): Unit = {
-        val start = SDate.now()
-        val incomingStaffMinutes = grab(inStaffMinutes)
-        val changedDays = incomingStaffMinutes.minutes.groupBy(sm => getLocalLastMidnight(SDate(sm.minute, europeLondonTimeZone)).millisSinceEpoch)
-
-        val updatedMinutes = changedDays.foldLeft(staffMinutesQueue.toMap) {
-          case (soFar, (dayMillis, staffMinutes)) => soFar.updated(dayMillis, StaffMinutes(staffMinutes))
-        }.toList.sortBy(_._1)
-
-        staffMinutesQueue = Crunch.purgeExpired(updatedMinutes, now, expireAfterMillis)
-
-        pushIfAvailable()
-
-        pull(inStaffMinutes)
-        log.info(s"inStaffMinutes Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
-      }
-    })
-
-    setHandler(outStaffMinutes, new OutHandler {
-      override def onPull(): Unit = {
-        val start = SDate.now()
-        log.info(s"onPull called. ${staffMinutesQueue.length} sets of minutes in the queue")
-
-        pushIfAvailable()
-
-        if (!hasBeenPulled(inStaffMinutes)) pull(inStaffMinutes)
-        log.info(s"outStaffMinutes Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
-      }
-    })
-
-    def pushIfAvailable(): Unit = {
-      staffMinutesQueue match {
-        case Nil => log.info(s"Queue is empty. Nothing to push")
-        case _ if !isAvailable(outStaffMinutes) =>
-          log.info(s"outStaffMinutes not available to push")
-        case (millis, staffMinutes) :: queueTail =>
-          log.info(s"Pushing ${SDate(millis).toLocalDateTimeString()} ${staffMinutes.minutes.length} staff minutes for ${staffMinutes.minutes.groupBy(_.terminalName).keys.mkString(", ")}")
-          push(outStaffMinutes, staffMinutes)
-
-          staffMinutesQueue = queueTail
-          log.info(s"Queue length now ${staffMinutesQueue.length}")
-      }
-    }
-  }
-}
-
-case class UpdateCriteria(minuteMillis: Set[MillisSinceEpoch], terminalNames: Set[TerminalName])
 
 class StaffGraphStage(name: String = "",
                       optionalInitialShifts: Option[String],
@@ -97,7 +36,9 @@ class StaffGraphStage(name: String = "",
 
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
-    def maybeStaffSources: Option[StaffSources] = Staffing.staffAvailableByTerminalAndQueue(shiftsOption, fixedPointsOption, movementsOption)
+    val expireBefore = now().millisSinceEpoch - expireAfterMillis
+
+    def maybeStaffSources: Option[StaffSources] = Staffing.staffAvailableByTerminalAndQueue(expireBefore, shiftsOption, fixedPointsOption, movementsOption)
 
     override def preStart(): Unit = {
       shiftsOption = optionalInitialShifts
@@ -161,14 +102,14 @@ class StaffGraphStage(name: String = "",
         val startMillis = a.startDt.millisSinceEpoch
         val endMillis = a.endDt.millisSinceEpoch
         startMillis to endMillis by 60000
-      })
+      }).toSeq
       val terminalNames = diff.map(_.terminalName)
 
       UpdateCriteria(minuteMillis, terminalNames)
     }
 
     def fixedPointsUpdateCriteria(oldFixedPoints: String, newFixedPoints: String): UpdateCriteria = {
-      val fpMinutesToUpdate = allMinuteMillis(newFixedPoints)
+      val fpMinutesToUpdate = allMinuteMillis(newFixedPoints) union allMinuteMillis(oldFixedPoints)
       val fpMinutesOfDayToUpdate = fpMinutesToUpdate.map(m => {
         val date = SDate(m)
         val hours = date.getHours()
@@ -188,12 +129,12 @@ class StaffGraphStage(name: String = "",
                 .addMinutes(m)
               date.millisSinceEpoch
             })
-        ).toSet
+        )
 
       val oldAssignments = assignmentsFromRawShifts(oldFixedPoints)
       val newAssignments = assignmentsFromRawShifts(newFixedPoints)
 
-      val terminalNames = (newAssignments -- oldAssignments).map(_.terminalName)
+      val terminalNames = ((newAssignments -- oldAssignments) union (oldAssignments -- newAssignments )).map(_.terminalName)
 
       UpdateCriteria(minuteMillis, terminalNames)
     }
@@ -218,7 +159,9 @@ class StaffGraphStage(name: String = "",
     def updatesFromSources(maybeSources: Option[StaffSources], updateCriteria: UpdateCriteria): Map[TM, StaffMinute] = {
       val staff = maybeSources
 
-      val updatedMinutes: Set[StaffMinute] = updateCriteria.minuteMillis
+      log.info(s"about to update ${updateCriteria.minuteMillis.size} staff minutes for ${updateCriteria.terminalNames}")
+
+      val updatedMinutes = updateCriteria.minuteMillis
         .flatMap(m => {
           updateCriteria.terminalNames.map(tn => {
             val staffMinute = staff match {
@@ -240,7 +183,7 @@ class StaffGraphStage(name: String = "",
       mergeMinutes(updatedMinutes, staffMinuteUpdates)
     }
 
-    def mergeMinutes(updatedMinutes: Set[StaffMinute], existingMinutes: Map[TM, StaffMinute]): Map[TM, StaffMinute] = {
+    def mergeMinutes(updatedMinutes: Seq[StaffMinute], existingMinutes: Map[TM, StaffMinute]): Map[TM, StaffMinute] = {
       updatedMinutes.foldLeft(existingMinutes) {
         case (soFar, updatedMinute) =>
           soFar.get(updatedMinute.key) match {
@@ -281,3 +224,5 @@ class StaffGraphStage(name: String = "",
       .toSet
   }
 }
+
+case class UpdateCriteria(minuteMillis: Seq[MillisSinceEpoch], terminalNames: Set[TerminalName])
