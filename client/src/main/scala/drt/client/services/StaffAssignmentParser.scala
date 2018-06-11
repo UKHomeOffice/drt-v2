@@ -129,7 +129,7 @@ object StaffMovements {
     }).sortBy(_.time)
   }
 
-  def adjustmentsAt(movements: Seq[StaffMovement])(dateTime: MilliDate): Int = movements.takeWhile(_.time <= dateTime).map(_.delta).sum
+  def adjustmentsAt(movements: Seq[StaffMovement])(dateTime: MilliDate): Int = movements.sortBy(_.time).takeWhile(_.time <= dateTime).map(_.delta).sum
 
   def terminalStaffAt(assignmentService: StaffAssignmentService)(movements: Seq[StaffMovement])(terminalName: TerminalName, dateTime: MilliDate): Int = {
     val baseStaff = assignmentService.terminalStaffAt(terminalName, dateTime)
