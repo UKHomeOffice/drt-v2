@@ -342,16 +342,16 @@ class SimulationGraphStage(name: String = "",
     var deploymentCache: Map[Int, Seq[(String, Int)]] = Map()
 
     @scala.annotation.tailrec
-    def addOneDeskToQueueAtIndex(deployments : List[(String, Int, Int)], index: Int, numberOfQueues: Int, staffAvailable: Int): List[(String, Int, Int)] = {
+    def addOneStaffToQueueAtIndex(deployments : List[(String, Int, Int)], index: Int, numberOfQueues: Int, staffAvailable: Int): List[(String, Int, Int)] = {
       val safeIndex = if (index > numberOfQueues - 1) 0 else index
       val deployedStaff = deployments.map(_._2).sum
       val maxStaff = deployments.map(_._3).sum
       val freeStaff = staffAvailable - deployedStaff
 
       if (deployedStaff != maxStaff && freeStaff > 0) {
-        val (queue, dr, maxStaff) = deployments(safeIndex)
-        val newDeployments = if (dr < maxStaff) deployments.updated(safeIndex, Tuple3(queue, dr + 1, maxStaff)) else deployments
-        addOneDeskToQueueAtIndex(newDeployments, safeIndex + 1, numberOfQueues, staffAvailable)
+        val (queue, staffDeployments, maxStaff) = deployments(safeIndex)
+        val newDeployments = if (staffDeployments < maxStaff) deployments.updated(safeIndex, Tuple3(queue, staffDeployments + 1, maxStaff)) else deployments
+        addOneStaffToQueueAtIndex(newDeployments, safeIndex + 1, numberOfQueues, staffAvailable)
       } else {
         deployments
       }
@@ -372,16 +372,16 @@ class SimulationGraphStage(name: String = "",
               val ideal = round(staffAvailable * (deskRec.toDouble / totalStaffRec))
               val totalRecommended = agg.map(_._2).sum
               val maxStaff = minMaxDesks.getOrElse(queue, (0, 10))._2
-              val dr = deploymentWithinBounds(minMaxDesks.getOrElse(queue, (0, 10))._1, maxStaff, ideal, staffAvailable - totalRecommended)
-              agg :+ Tuple3(queue, dr, maxStaff)
+              val staffDeployments = deploymentWithinBounds(minMaxDesks.getOrElse(queue, (0, 10))._1, maxStaff, ideal, staffAvailable - totalRecommended)
+              agg :+ Tuple3(queue, staffDeployments, maxStaff)
             case (agg, (queue, _)) =>
               val totalRecommended = agg.map(_._2).sum
               val ideal = staffAvailable - totalRecommended
               val maxStaff = minMaxDesks.getOrElse(queue, (0, 10))._2
-              val dr = deploymentWithinBounds(minMaxDesks.getOrElse(queue, (0, 10))._1, maxStaff, ideal, staffAvailable - totalRecommended)
-              agg :+ Tuple3(queue, dr, maxStaff)
+              val staffDeployments = deploymentWithinBounds(minMaxDesks.getOrElse(queue, (0, 10))._1, maxStaff, ideal, staffAvailable - totalRecommended)
+              agg :+ Tuple3(queue, staffDeployments, maxStaff)
           }
-          val newDeployments = addOneDeskToQueueAtIndex(deployments, index=0, queueRecsCorrected.length, staffAvailable)
+          val newDeployments = addOneStaffToQueueAtIndex(deployments, index=0, queueRecsCorrected.length, staffAvailable)
           newDeployments.map(tuple3 => Tuple2(tuple3._1, tuple3._2))
       }
     }
