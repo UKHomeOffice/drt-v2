@@ -57,8 +57,10 @@ describe('Staff movements', function () {
       cy.get('tbody > :nth-child(2) > td').eq(2).contains("2");
       cy.get('tbody > :nth-child(2) > td').eq(3).contains("2");
       cy.get('tbody > :nth-child(2) > td').eq(4).contains("0");
-      cy.get('.fa-remove').click()
-      cy.get('.fa-remove').click()
+      cy.get('.fa-remove').each(function (el) {
+        el.click()
+      })
+
     });
   });
 
