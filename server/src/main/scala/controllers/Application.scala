@@ -23,7 +23,7 @@ import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.lgw.{LGWFeed, LGWForecastFeed}
 import drt.server.feeds.lhr.live.LHRLiveFeed
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
-import drt.server.feeds.test.TestFixtureFeed
+import drt.server.feeds.test.{TestAPIManifestFeedGraphStage, TestFixtureFeed}
 import drt.shared.CrunchApi.{groupCrunchMinutesByX, _}
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared.SplitRatiosNs.SplitRatios
@@ -141,19 +141,30 @@ trait SystemActors {
   val useNationalityBasedProcessingTimes: Boolean = config.getString("feature-flags.nationality-based-processing-times").isDefined
   val useSplitsPrediction: Boolean = config.getString("feature-flags.use-splits-prediction").isDefined
   val rawSplitsUrl: String = config.getString("crunch.splits.raw-data-path").getOrElse("/dev/null")
-  val dqZipBucketName: String = config.getString("dq.s3.bucket").getOrElse(throw new Exception("You must set DQ_S3_BUCKET for us to poll for AdvPaxInfo"))
   val askableVoyageManifestsActor: AskableActorRef = voyageManifestsActor
-
   val splitsPredictorStage: SplitsPredictorBase = createSplitsPredictionStage(useSplitsPrediction, rawSplitsUrl)
-  val apiS3PollFrequencyMillis: MillisSinceEpoch = config.getInt("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
-  val voyageManifestsStage: Source[DqManifests, NotUsed] = Source.fromGraph(
-    new VoyageManifestsGraphStage(
-      dqZipBucketName,
-      airportConfig.portCode,
-      getLastSeenManifestsFileName,
-      apiS3PollFrequencyMillis
-    )
-  )
+
+  val voyageManifestsStage: Source[DqManifests, NotUsed] = voyageManifestsSourceForEnvironment()
+
+  def voyageManifestsSourceForEnvironment(): Source[DqManifests, NotUsed] = {
+    config.getString("env") match {
+      case Some("test") =>
+        system.log.warning(s"Using test Manifest Provider")
+        Source.fromGraph(new TestAPIManifestFeedGraphStage(system))
+      case _ =>
+        val dqZipBucketName: String = config.getString("dq.s3.bucket").getOrElse(throw new Exception("You must set DQ_S3_BUCKET for us to poll for AdvPaxInfo"))
+        val apiS3PollFrequencyMillis: MillisSinceEpoch = config.getInt("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
+        Source.fromGraph(
+          new VoyageManifestsGraphStage(
+            dqZipBucketName,
+            airportConfig.portCode,
+            getLastSeenManifestsFileName,
+            apiS3PollFrequencyMillis
+          )
+        )
+    }
+
+  }
 
   system.log.info(s"useNationalityBasedProcessingTimes: $useNationalityBasedProcessingTimes")
   system.log.info(s"useSplitsPrediction: $useSplitsPrediction")

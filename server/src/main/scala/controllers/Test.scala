@@ -6,8 +6,10 @@ import akka.util.Timeout
 import com.google.inject.Inject
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
-import drt.shared.Arrival
-import org.slf4j.LoggerFactory
+import passengersplits.parsing.VoyageManifestParser.FlightPassengerInfoProtocol._
+import drt.shared.{Arrival, SDateLike}
+import org.slf4j.{Logger, LoggerFactory}
+import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import play.api.mvc.{Action, Controller}
 import play.api.{Configuration, Environment}
 import services.SDate
@@ -24,15 +26,23 @@ class Test @Inject()(implicit val config: Configuration,
                      ec: ExecutionContext) extends Controller {
   implicit val timeout: Timeout = Timeout(250 milliseconds)
 
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
-  val baseTime = SDate.now()
+  val baseTime: SDateLike = SDate.now()
 
   def saveArrival(arrival: Arrival) = {
     system.actorSelection("akka://application/user/TestActor-LiveArrivals").resolveOne().map(actor => {
 
       actor ! arrival
+    })
+  }
 
+  def saveVoyageManifest(voyageManifest: VoyageManifest) = {
+    system.actorSelection("akka://application/user/TestActor-APIManifests").resolveOne().map(actor => {
+
+      log.info(s"Sending Splits: $voyageManifest to Test Actor")
+
+      actor ! VoyageManifests(Set(voyageManifest))
     })
   }
 
@@ -68,6 +78,19 @@ class Test @Inject()(implicit val config: Configuration,
             Scheduled = SDate(flight.SchDT).millisSinceEpoch
           )
           saveArrival(arrival)
+          Created
+        case None =>
+          BadRequest(s"Unable to parse JSON: ${request.body.asText}")
+      }
+  }
+
+  def addManifest() = Action {
+    implicit request =>
+
+      request.body.asJson.map(s => s.toString.parseJson.convertTo[VoyageManifest]) match {
+        case Some(vm) =>
+          log.info(s"Got a manifest to save $vm")
+          saveVoyageManifest(vm)
           Created
         case None =>
           BadRequest(s"Unable to parse JSON: ${request.body.asText}")

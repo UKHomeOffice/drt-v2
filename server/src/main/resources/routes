@@ -30,3 +30,5 @@ POST        /data/staff                                   controllers.Applicatio
 
 POST        /test/arrival                                 controllers.Test.addArrival
 
+POST        /test/manifest                                 controllers.Test.addManifest
+
