@@ -27,7 +27,7 @@ lazy val sharedJS = shared.js.settings(name := "sharedJS")
 // use eliding to drop some debug code in the production build
 lazy val elideOptions = settingKey[Seq[String]]("Set limit for elidable functions")
 
-// instantiate the JS project for SBT with some additional settings
+// instantiate the JS project for SBT wpipelineStagesith some additional settings
 lazy val client: Project = (project in file("client"))
   .settings(
     name := "client",
@@ -35,18 +35,22 @@ lazy val client: Project = (project in file("client"))
     scalaVersion := Settings.versions.scala,
     scalacOptions ++= Settings.scalacOptions,
     libraryDependencies ++= Settings.scalajsDependencies.value,
+    scalaJSUseMainModuleInitializer := true,
+    mainClass in Compile := Some("drt.client.SPAMain"),
+    webpackBundlingMode := BundlingMode.LibraryOnly(),
+    version in webpack := "4.8.1",
     // by default we do development build, no eliding
     elideOptions := Seq(),
     scalacOptions ++= elideOptions.value,
     jsDependencies ++= Settings.jsDependencies.value,
     // reactjs testing
-    requiresDOM := true,
+    jsEnv := new org.scalajs.jsenv.jsdomnodejs.JSDOMNodeJSEnv(),
     scalaJSStage in Test := FastOptStage,
     // 'new style js dependencies with scalaBundler'
     npmDependencies in Compile ++= Settings.clientNpmDependences,
     npmDevDependencies in Compile += Settings.clientNpmDevDependencies,
     // RuntimeDOM is needed for tests
-    jsDependencies += RuntimeDOM % "test",
+    jsEnv in Test := new org.scalajs.jsenv.jsdomnodejs.JSDOMNodeJSEnv(),
     useYarn := true,
     // yes, we want to package JS dependencies
     skip in packageJSDependencies := false,
