@@ -16,8 +16,7 @@ import scala.scalajs.js
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 import scalacss.ProdDefaults._
 
-@JSExportTopLevel("SPAMain")
-object SPAMain extends js.JSApp {
+object SPAMain  {
 
   sealed trait Loc
 
@@ -120,6 +119,9 @@ object SPAMain extends js.JSApp {
   def layout(c: RouterCtl[Loc], r: Resolution[Loc]) = Layout(c, r)
 
   def pathToThisApp: String = dom.document.location.pathname
+
+  @JSExportTopLevel("SPAMain")
+  protected def getInstance(): this.type = this
 
   @JSExport
   def main(): Unit = {

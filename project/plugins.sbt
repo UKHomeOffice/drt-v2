@@ -11,7 +11,7 @@ libraryDependencies += "com.trueaccord.scalapb" %% "compilerplugin" % "0.6.0-pre
 
 addSbtPlugin("org.scala-js" % "sbt-scalajs" % "0.6.19")
 
-addSbtPlugin("ch.epfl.scala" % "sbt-web-scalajs-bundler" % "0.9.0")
+addSbtPlugin("ch.epfl.scala" % "sbt-web-scalajs-bundler" % "0.13.0")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-js-engine" % "1.2.2")
 
