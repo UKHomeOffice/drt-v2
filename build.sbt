@@ -27,7 +27,7 @@ lazy val sharedJS = shared.js.settings(name := "sharedJS")
 // use eliding to drop some debug code in the production build
 lazy val elideOptions = settingKey[Seq[String]]("Set limit for elidable functions")
 
-// instantiate the JS project for SBT wpipelineStagesith some additional settings
+// instantiate the JS project for SBT with some additional settings
 lazy val client: Project = (project in file("client"))
   .settings(
     name := "client",
