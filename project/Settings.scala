@@ -67,7 +67,6 @@ object Settings {
     val drtBirminghamSchema = "1.0.0"
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
-    val xmlApis = "2.0.2"
   }
 
   import versions._
@@ -125,14 +124,13 @@ object Settings {
     "io.spray" %% "spray-json" % sprayVersion,
 
     "joda-time" % "joda-time" % jodaTime,
-    "org.opensaml" % "opensaml" % openSaml excludeAll ExclusionRule("org.bouncycastle"),
+    "org.opensaml" % "opensaml" % openSaml excludeAll (ExclusionRule("org.bouncycastle"), ExclusionRule("xerces")),
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
     "org.apache.spark" % "spark-mllib_2.11" % sparkMlLib,
     "org.apache.spark" % "spark-sql_2.11" % "2.2.1",
     "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
     "org.codehaus.janino" % "janino" % "3.0.7",
-    "xml-apis" % "xml-apis" % xmlApis,
     "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
     "org.iq80.leveldb" % "leveldb" % levelDb,
     "org.renjin" % "renjin-script-engine" % renjin,
