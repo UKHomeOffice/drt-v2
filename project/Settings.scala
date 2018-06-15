@@ -67,6 +67,7 @@ object Settings {
     val drtBirminghamSchema = "1.0.0"
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
+    val xmlApis = "2.0.2"
   }
 
   import versions._
@@ -131,6 +132,7 @@ object Settings {
     "org.apache.spark" % "spark-sql_2.11" % "2.2.1",
     "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
     "org.codehaus.janino" % "janino" % "3.0.7",
+    "xml-apis" % "xml-apis" % xmlApis,
     "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
     "org.iq80.leveldb" % "leveldb" % levelDb,
     "org.renjin" % "renjin-script-engine" % renjin,
