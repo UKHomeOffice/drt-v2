@@ -92,12 +92,9 @@ object PaxFlow {
                              (flight: Arrival): MilliDate = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeProvider)(flight)
 }
 
-trait SystemActors {
-  self: AirportConfProvider =>
+abstract case class SystemActors(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig) {
 
-  implicit val system: ActorSystem
-
-  val config: Configuration
+  implicit val system: ActorSystem = actorSystem
 
   val minutesToCrunch: Int = 1440
   val maxDaysToCrunch: Int = config.getInt("crunch.forecast.max_days").getOrElse(360)
@@ -144,27 +141,7 @@ trait SystemActors {
   val askableVoyageManifestsActor: AskableActorRef = voyageManifestsActor
   val splitsPredictorStage: SplitsPredictorBase = createSplitsPredictionStage(useSplitsPrediction, rawSplitsUrl)
 
-  val voyageManifestsStage: Source[DqManifests, NotUsed] = voyageManifestsSourceForEnvironment()
-
-  def voyageManifestsSourceForEnvironment(): Source[DqManifests, NotUsed] = {
-    config.getString("env") match {
-      case Some("test") =>
-        system.log.warning(s"Using test Manifest Provider")
-        Source.fromGraph(new TestAPIManifestFeedGraphStage(system))
-      case _ =>
-        val dqZipBucketName: String = config.getString("dq.s3.bucket").getOrElse(throw new Exception("You must set DQ_S3_BUCKET for us to poll for AdvPaxInfo"))
-        val apiS3PollFrequencyMillis: MillisSinceEpoch = config.getInt("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
-        Source.fromGraph(
-          new VoyageManifestsGraphStage(
-            dqZipBucketName,
-            airportConfig.portCode,
-            getLastSeenManifestsFileName,
-            apiS3PollFrequencyMillis
-          )
-        )
-    }
-
-  }
+  val voyageManifestsStage: Source[DqManifests, NotUsed]
 
   system.log.info(s"useNationalityBasedProcessingTimes: $useNationalityBasedProcessingTimes")
   system.log.info(s"useSplitsPrediction: $useSplitsPrediction")
@@ -198,7 +175,7 @@ trait SystemActors {
   }
 
   def startScheduledFeedImports(crunchInputs: CrunchSystem[NotUsed, Cancellable, Cancellable]): Unit = {
-    if (portCode == "LHR") config.getString("lhr.blackjack_url").map(csvUrl => {
+    if (airportConfig.portCode == "LHR") config.getString("lhr.blackjack_url").map(csvUrl => {
       val requestIntervalMillis = 5 * oneMinuteMillis
       Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, requestIntervalMillis milliseconds, SDate.now().addDays(-1))
     })
@@ -305,7 +282,7 @@ trait SystemActors {
   }
 
   def createSplitsPredictionStage(predictSplits: Boolean, rawSplitsUrl: String): SplitsPredictorBase = if (predictSplits)
-    new SplitsPredictorStage(SparkSplitsPredictorFactory(createSparkSession(), rawSplitsUrl, portCode))
+    new SplitsPredictorStage(SparkSplitsPredictorFactory(createSparkSession(), rawSplitsUrl, airportConfig.portCode))
   else
     new DummySplitsPredictor()
 
@@ -387,6 +364,29 @@ trait SystemActors {
   }
 }
 
+trait ProdSystemActors {
+  self: SystemActors =>
+
+  val dqZipBucketName: String = config.getString("dq.s3.bucket").getOrElse(throw new Exception("You must set DQ_S3_BUCKET for us to poll for AdvPaxInfo"))
+  val apiS3PollFrequencyMillis: MillisSinceEpoch = config.getInt("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
+
+  val voyageManifestsStage: Source[DqManifests, NotUsed] = Source.fromGraph(
+    new VoyageManifestsGraphStage(
+      dqZipBucketName,
+      airportConfig.portCode,
+      getLastSeenManifestsFileName,
+      apiS3PollFrequencyMillis
+    )
+  )
+}
+
+trait TestSystemActors {
+  val system: ActorSystem
+
+  system.log.warning(s"Using test Manifest Provider")
+  val voyageManifestsStage: Source[DqManifests, NotUsed] = Source.fromGraph(new TestAPIManifestFeedGraphStage(system))
+}
+
 trait AirportConfiguration {
   def airportConfig: AirportConfig
 }
@@ -410,7 +410,7 @@ trait AirportConfProvider extends AirportConfiguration {
 }
 
 trait ProdPassengerSplitProviders {
-  self: AirportConfiguration with SystemActors =>
+  self: AirportConfiguration =>
 
   val csvSplitsProvider: SplitsProvider.SplitProvider = SplitsProvider.csvProvider
 
@@ -451,30 +451,51 @@ trait AvailableUserRoles {
   val availableRoles = List("staff:edit")
 }
 
+trait HasActorSystem {
+  implicit val system: ActorSystem
+  val config: Configuration
+}
+
 class Application @Inject()(implicit val config: Configuration,
                             implicit val mat: Materializer,
                             env: Environment,
-                            override val system: ActorSystem,
+                            val system: ActorSystem,
                             ec: ExecutionContext)
   extends Controller
     with AirportConfProvider
+    //    with HasActorSystem
     with ProdPassengerSplitProviders
-    with SystemActors
+    //    with SystemActors
+    //    with ProdSystemActors
     with ImplicitTimeoutProvider
     with AvailableUserRoles {
-  ctrl =>
-  val log: LoggingAdapter = system.log
+
+  val ctrl = Try {
+    config.getString("env") match {
+      case Some("test") =>
+        new SystemActors(system, config, getPortConfFromEnvVar) with TestSystemActors
+      case _ =>
+        new SystemActors(system, config, getPortConfFromEnvVar) with ProdSystemActors
+    }
+  } match {
+    case Success(s) => s
+    case Failure(e) =>
+      log.info(s"Got this exception ${e.getMessage}, ${e.printStackTrace()}")
+      throw e
+  }
+
+  def log: LoggingAdapter = system.log
 
   log.info(s"Starting DRTv2 build ${BuildInfo.version}")
 
   log.info(s"ISOChronology.getInstance: ${ISOChronology.getInstance}")
-  private val systemTimeZone = System.getProperty("user.timezone")
+  private def systemTimeZone = System.getProperty("user.timezone")
   log.info(s"System.getProperty(user.timezone): $systemTimeZone")
   assert(systemTimeZone == "UTC")
 
   log.info(s"Application using airportConfig $airportConfig")
 
-  val cacheActorRef: AskableActorRef = system.actorOf(Props(classOf[CachingCrunchReadActor]), name = "cache-actor")
+  def cacheActorRef: AskableActorRef = system.actorOf(Props(classOf[CachingCrunchReadActor]), name = "cache-actor")
 
   def previousDay(date: MilliDate): SDateLike = {
     val oneDayInMillis = 60 * 60 * 24 * 1000L
@@ -501,7 +522,7 @@ class Application @Inject()(implicit val config: Configuration,
       override def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]] = crunchStateAtPointInTime(pointInTime)
 
       def getCrunchUpdates(sinceMillis: MillisSinceEpoch, windowStartMillis: MillisSinceEpoch, windowEndMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]] = {
-        val liveStateCutOff = getLocalNextMidnight(now()).addDays(1).millisSinceEpoch
+        val liveStateCutOff = getLocalNextMidnight(ctrl.now()).addDays(1).millisSinceEpoch
 
         val stateActor = if (windowStartMillis < liveStateCutOff) liveCrunchStateActor else forecastCrunchStateActor
 
@@ -617,7 +638,7 @@ class Application @Inject()(implicit val config: Configuration,
     val firstMinute = getLocalLastMidnight(SDate(day)).millisSinceEpoch
     val lastMinute = SDate(firstMinute).addHours(airportConfig.dayLengthHours).millisSinceEpoch
 
-    val crunchStateFuture = forecastCrunchStateActor.ask(GetPortState(firstMinute, lastMinute))(new Timeout(30 seconds))
+    val crunchStateFuture = ctrl.forecastCrunchStateActor.ask(GetPortState(firstMinute, lastMinute))(new Timeout(30 seconds))
 
     crunchStateFuture.map {
       case Some(PortState(f, m, s)) => Option(CrunchState(f.values.toSet, m.values.toSet, s.values.toSet))
@@ -731,7 +752,7 @@ class Application @Inject()(implicit val config: Configuration,
       getLocalNextMidnight(now)
     } else startOfWeekMidnight
 
-    val crunchStateFuture = forecastCrunchStateActor.ask(
+    val crunchStateFuture = ctrl.forecastCrunchStateActor.ask(
       GetPortState(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch)
     )(new Timeout(30 seconds))
 
@@ -763,7 +784,7 @@ class Application @Inject()(implicit val config: Configuration,
       getLocalNextMidnight(now)
     } else startOfWeekMidnight
 
-    val crunchStateFuture = forecastCrunchStateActor.ask(
+    val crunchStateFuture = ctrl.forecastCrunchStateActor.ask(
       GetPortState(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch)
     )(new Timeout(30 seconds))
 
@@ -868,11 +889,11 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   def fetchAclFeed(portCode: String): Action[AnyContent] = Action.async {
-    val fileName = AclFeed.latestFileForPort(aclFeed.sftp, portCode.toUpperCase)
+    val fileName = AclFeed.latestFileForPort(ctrl.aclFeed.sftp, portCode.toUpperCase)
 
     log.info(s"Latest ACL file for $portCode: $fileName. Fetching..")
 
-    val zipContent = AclFeed.contentFromFileName(aclFeed.sftp, fileName)
+    val zipContent = AclFeed.contentFromFileName(ctrl.aclFeed.sftp, fileName)
     val csvFileName = fileName.replace(".zip", ".csv")
 
     val result = Result(
@@ -922,7 +943,7 @@ class Application @Inject()(implicit val config: Configuration,
       maybeShifts match {
         case Some(shiftsString) =>
           log.info(s"Received ${shiftsString.split("\n").length} shifts. Sending to actor")
-          shiftsActor ! shiftsString
+          ctrl.shiftsActor ! shiftsString
           Created
         case _ =>
           BadRequest("{\"error\": \"Unable to parse data\"}")
@@ -939,7 +960,7 @@ class Application @Inject()(implicit val config: Configuration,
       // call Autowire route
 
       implicit val pickler = generatePickler[ApiPaxTypeAndQueueCount]
-      val router = Router.route[Api](ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor, request.headers))
+      val router = Router.route[Api](ApiService(airportConfig, ctrl.shiftsActor, ctrl.fixedPointsActor, ctrl.staffMovementsActor, request.headers))
 
       router(
         autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))
