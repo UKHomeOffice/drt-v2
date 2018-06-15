@@ -54,6 +54,8 @@ object Settings {
     val pprint = "0.4.3"
     val scalaCheck = "1.13.4"
     val akkaPersistenceInmemory = "2.4.18.1"
+    val akkaPersistenceJdbc = "3.4.0"
+    val postgres = "42.2.2"
     val sshJ = "0.24.0"
     val jodaTime = "2.9.4"
     val exposeLoader = "0.7.1"
@@ -126,6 +128,9 @@ object Settings {
     "org.codehaus.janino" % "janino" % "3.0.7",
     "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
     "org.iq80.leveldb" % "leveldb" % levelDb,
+    "com.github.dnvriend" %% "akka-persistence-jdbc" % akkaPersistenceJdbc,
+    "org.postgresql" % "postgresql" % postgres,
+
     "org.renjin" % "renjin-script-engine" % renjin,
     "org.scalacheck" %% "scalacheck" % scalaCheck % "test",
 
