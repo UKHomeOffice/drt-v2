@@ -106,18 +106,18 @@ object LHRLiveFeed {
   case class LHRFlightPax(
                            FLIGHTNUMBER: String,
                            SCHEDULEDFLIGHTOPERATIONTIME: String,
-                           MAXPASSENGERCOUNT: String,
-                           TOTALPASSENGERCOUNT: String,
-                           ACTUALDIRECTPASSENGERCOUNT: String,
-                           ACTUALTRANSFERPASSENGERCOUNT: String,
-                           ACTUALT2INTCOUNT: String,
-                           ACTUALT2DOMCOUNT: String,
-                           ACTUALT3INTCOUNT: String,
-                           ACTUALT3DOMCOUNT: String,
-                           ACTUALT4INTCOUNT: String,
-                           ACTUALT4DOMCOUNT: String,
-                           ACTUALT5INTCOUNT: String,
-                           ACTUALT5DOMCOUNT: String
+                           MAXPASSENGERCOUNT: Int,
+                           TOTALPASSENGERCOUNT: Int,
+                           ACTUALDIRECTPASSENGERCOUNT: Int,
+                           ACTUALTRANSFERPASSENGERCOUNT: Int,
+                           ACTUALT2INTCOUNT: Int,
+                           ACTUALT2DOMCOUNT: Int,
+                           ACTUALT3INTCOUNT: Int,
+                           ACTUALT3DOMCOUNT: Int,
+                           ACTUALT4INTCOUNT: Int,
+                           ACTUALT4DOMCOUNT: Int,
+                           ACTUALT5INTCOUNT: Int,
+                           ACTUALT5DOMCOUNT: Int
                          )
 
   val statusCodesToDesc = Map(
