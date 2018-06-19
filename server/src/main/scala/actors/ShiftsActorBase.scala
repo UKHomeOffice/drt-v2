@@ -70,7 +70,7 @@ class ShiftsActorBase extends PersistentActor with ActorLogging {
     state = state.updated(data = shifts)
   }
 
-  def onUpdateState(data: String) = {}
+  def onUpdateState(data: String): Unit = {}
 
   val receiveRecover: Receive = {
     case shiftsMessage: ShiftsMessage =>
@@ -79,11 +79,10 @@ class ShiftsActorBase extends PersistentActor with ActorLogging {
       updateState(shifts)
 
     case SnapshotOffer(md, snapshot: ShiftStateSnapshotMessage) =>
-      log.info(s"Recovery: received SnapshotOffer from ${SDate(md.timestamp).toLocalDateTimeString()} with ${snapshot.shifts.length} shifts")
+      log.info(s"${RecoveryLog.snapshotOffer(md)} with ${snapshot.shifts.length} shifts")
       state = ShiftsState(shiftMessagesToShiftsString(snapshot.shifts.toList))
 
-    case RecoveryCompleted =>
-      log.info("RecoveryCompleted")
+    case RecoveryCompleted => log.info(RecoveryLog.completed)
 
     case u =>
       log.info(s"Recovery: received unexpected ${u.getClass}")

@@ -22,7 +22,7 @@ class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, queues
 
   override val receiveRecover: Receive = {
     case SnapshotOffer(metadata, snapshot) =>
-      log.info(s"Received SnapshotOffer ${metadata.timestamp} with ${snapshot.getClass}")
+      log.info(RecoveryLog.snapshotOffer(metadata))
       setStateFromSnapshot(snapshot, Option(pointInTime.addDays(2)))
 
     case cdm@CrunchDiffMessage(createdAtOption, _, _, _, _, _, _) =>
@@ -36,7 +36,7 @@ class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, queues
       }
 
     case RecoveryCompleted =>
-      log.info(s"Recovered successfully")
+      log.info(RecoveryLog.pointInTimeCompleted(pointInTime))
       state = state.map {
         case PortState(fl, cm, sm) if staffReconstructionRequired =>
           log.info(s"Staff minutes require reconstructing for PortState before 2017-12-04. Attempting to reconstruct")

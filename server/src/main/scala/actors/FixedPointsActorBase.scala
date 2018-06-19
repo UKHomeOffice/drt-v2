@@ -61,11 +61,10 @@ class FixedPointsActorBase extends PersistentActor with ActorLogging {
       updateState(fp)
 
     case SnapshotOffer(md, snapshot: FixedPointsStateSnapshotMessage) =>
-      log.info(s"Recovery: received SnapshotOffer from ${SDate(md.timestamp).toLocalDateTimeString()} with ${snapshot.fixedPoints.length} fixed points")
+      log.info(s"${RecoveryLog.snapshotOffer(md)} with ${snapshot.fixedPoints.length} fixed points")
       state = FixedPointsState(fixedPointMessagesToFixedPointsString(snapshot.fixedPoints.toList))
 
-    case RecoveryCompleted =>
-      log.info(s"Recovered successfully")
+    case RecoveryCompleted => log.info(RecoveryLog.completed)
   }
 
   def receiveCommand: Receive = {

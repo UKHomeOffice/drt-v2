@@ -68,11 +68,11 @@ class StaffMovementsActorBase extends PersistentActor
       val sm = staffMovementMessagesToStaffMovements(smm.staffMovements.toList)
       updateState(sm)
 
-    case SnapshotOffer(_, snapshot: StaffMovementsStateSnapshotMessage) =>
+    case SnapshotOffer(md, snapshot: StaffMovementsStateSnapshotMessage) =>
+      log.info(RecoveryLog.snapshotOffer(md))
       state = StaffMovementsState(staffMovementMessagesToStaffMovements(snapshot.staffMovements.toList))
 
-    case RecoveryCompleted =>
-      log.info("RecoveryCompleted")
+    case RecoveryCompleted => log.info(RecoveryLog.completed)
   }
 
   def receiveCommand: Receive = {

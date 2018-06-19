@@ -31,7 +31,7 @@ class CrunchStateActor(val snapshotInterval: Int,
 
   override def receiveRecover: Receive = {
     case SnapshotOffer(metadata, snapshot) =>
-      logInfo(s"Recovery: received SnapshotOffer ${metadata.timestamp} with ${snapshot.getClass}")
+      logInfo(RecoveryLog.snapshotOffer(metadata))
       setStateFromSnapshot(snapshot)
 
     case cdm: CrunchDiffMessage =>
@@ -40,8 +40,7 @@ class CrunchStateActor(val snapshotInterval: Int,
       logRecoveryState(newState)
       state = newState
 
-    case RecoveryCompleted =>
-      logInfo("Recovery: Finished restoring crunch state")
+    case RecoveryCompleted => log.info(RecoveryLog.completed)
 
     case u =>
       logInfo(s"Recovery: received unexpected ${u.getClass}")

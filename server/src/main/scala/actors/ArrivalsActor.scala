@@ -1,7 +1,7 @@
 package services
 
 import actors.FlightMessageConversion._
-import actors.GetState
+import actors.{GetState, RecoveryLog}
 import akka.persistence._
 import drt.shared.{Arrival, ArrivalHelper, SDateLike}
 import drt.shared.FlightsApi.Flights
@@ -55,7 +55,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
     case diffsMessage: FlightsDiffMessage => arrivalsState = consumeDiffsMessage(diffsMessage, arrivalsState)
 
     case SnapshotOffer(md, ss) =>
-      log.info(s"Recovery received SnapshotOffer($md)")
+      log.info(RecoveryLog.snapshotOffer(md))
       ss match {
         case snMessage: FlightStateSnapshotMessage =>
           arrivalsState = arrivalsStateFromSnapshotMessage(snMessage)
@@ -63,8 +63,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
         case u => log.info(s"Received unexpected snapshot data: $u")
       }
 
-    case RecoveryCompleted =>
-      log.info(s"Recovery completed")
+    case RecoveryCompleted => log.info(RecoveryLog.completed)
   }
 
   def consumeDiffsMessage(message: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState

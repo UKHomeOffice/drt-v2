@@ -47,7 +47,7 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapsh
       persistCounter += 1
 
     case SnapshotOffer(md, ss) =>
-      log.info(s"Recovery received SnapshotOffer($md)")
+      log.info(RecoveryLog.snapshotOffer(md))
       ss match {
         case VoyageManifestStateSnapshotMessage(Some(latestFilename), manifests) =>
           log.info(s"Updating state from VoyageManifestStateSnapshotMessage")
@@ -61,8 +61,7 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapsh
         case u => log.info(s"Received unexpected snapshot data: $u")
       }
 
-    case RecoveryCompleted =>
-      log.info(s"Recovery completed")
+    case RecoveryCompleted => log.info(RecoveryLog.completed)
   }
 
   def newStateManifests(existing: Set[VoyageManifest], updates: Set[VoyageManifest]): Set[VoyageManifest] = {

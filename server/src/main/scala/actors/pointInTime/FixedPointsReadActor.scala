@@ -1,20 +1,18 @@
 package actors.pointInTime
 
 import actors.FixedPointsMessageParser.fixedPointMessagesToFixedPointsString
-import actors.{FixedPointsActorBase, FixedPointsState}
+import actors.{FixedPointsActorBase, FixedPointsState, RecoveryLog}
 import akka.persistence.{Recovery, RecoveryCompleted, SnapshotOffer, SnapshotSelectionCriteria}
 import drt.shared.SDateLike
 import server.protobuf.messages.FixedPointMessage.FixedPointsStateSnapshotMessage
-import services.SDate
 
 class FixedPointsReadActor(pointInTime: SDateLike) extends FixedPointsActorBase {
   override val receiveRecover: Receive = {
     case SnapshotOffer(md, snapshot: FixedPointsStateSnapshotMessage) =>
-      log.info(s"Recovery: received SnapshotOffer from ${SDate(md.timestamp).toLocalDateTimeString()} with ${snapshot.fixedPoints.length} fixed points")
+      log.info(s"${RecoveryLog.snapshotOffer(md)} with ${snapshot.fixedPoints.length} fixed points")
       state = FixedPointsState(fixedPointMessagesToFixedPointsString(snapshot.fixedPoints.toList))
 
-    case RecoveryCompleted =>
-      log.info(s"Recovered successfully")
+    case RecoveryCompleted => log.info(RecoveryLog.pointInTimeCompleted(pointInTime))
 
     case u =>
       log.info(s"Recovery: received unexpected ${u.getClass}")
