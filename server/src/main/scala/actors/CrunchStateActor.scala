@@ -38,6 +38,7 @@ class CrunchStateActor(val snapshotInterval: Int,
       val newState = stateFromDiff(diff, state)
       logRecoveryState(newState)
       state = newState
+      bytesSinceSnapshotCounter += diff.serializedSize
   }
 
   def logRecoveryState(optionalState: Option[PortState]): Unit = optionalState match {
@@ -116,8 +117,9 @@ class CrunchStateActor(val snapshotInterval: Int,
 
   def persistSnapshot(portState: PortState): Unit = {
     val snapshotMessage: CrunchStateSnapshotMessage = portStateToSnapshotMessage(portState)
-    logInfo(s"Saving PortState snapshot: ${snapshotMessage.crunchMinutes.length} cms, ${snapshotMessage.flightWithSplits.length} fs, ${snapshotMessage.staffMinutes.length} sms")
     saveSnapshot(snapshotMessage)
+    logInfo(s"Saved ${snapshotMessage.serializedSize} bytes of PortState snapshot: ${snapshotMessage.crunchMinutes.length} cms, ${snapshotMessage.flightWithSplits.length} fs, ${snapshotMessage.staffMinutes.length} sms")
+    bytesSinceSnapshotCounter = 0
     if (purgePreviousSnapshots) {
       val maxSequenceNr = lastSequenceNr
       logInfo(s"Purging snapshots with sequence number < $maxSequenceNr")
@@ -127,8 +129,11 @@ class CrunchStateActor(val snapshotInterval: Int,
 
   def persistDiff(diff: CrunchDiffMessage): Unit = {
     persist(diff) { (diff: CrunchDiffMessage) =>
-      logInfo(s"Persisting ${diff.getClass}: ${diff.crunchMinutesToUpdate.length} cms, ${diff.flightsToUpdate.length} fs, ${diff.staffMinutesToUpdate.length} sms, ${diff.flightIdsToRemove.length} removed fms")
+      val messageBytes = diff.serializedSize
+      logInfo(s"Persisting $messageBytes bytes of ${diff.getClass}: ${diff.crunchMinutesToUpdate.length} cms, ${diff.flightsToUpdate.length} fs, ${diff.staffMinutesToUpdate.length} sms, ${diff.flightIdsToRemove.length} removed fms")
       context.system.eventStream.publish(diff)
+      bytesSinceSnapshotCounter += messageBytes
+      logPersistedBytesCounter(bytesSinceSnapshotCounter)
     }
   }
 

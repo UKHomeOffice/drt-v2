@@ -57,7 +57,9 @@ abstract class ArrivalsActor(now: () => SDateLike,
   }
 
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case diff: FlightsDiffMessage => arrivalsState = consumeDiffsMessage(diff, arrivalsState)
+    case diff: FlightsDiffMessage =>
+      arrivalsState = consumeDiffsMessage(diff, arrivalsState)
+      bytesSinceSnapshotCounter += diff.serializedSize
   }
 
   def consumeDiffsMessage(message: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState
@@ -142,12 +144,17 @@ abstract class ArrivalsActor(now: () => SDateLike,
     val diffMessage = FlightsDiffMessage(Option(SDate.now().millisSinceEpoch), removalKeys.toSeq, updateMessages)
 
     persist(diffMessage) { dm =>
-      log.info(s"Persisting FlightsDiff with ${diffMessage.removals.length} removals & ${diffMessage.updates.length} updates")
+      val messageBytes = diffMessage.serializedSize
+      log.info(s"Persisting $messageBytes bytes of FlightsDiff with ${diffMessage.removals.length} removals & ${diffMessage.updates.length} updates")
       context.system.eventStream.publish(dm)
+      bytesSinceSnapshotCounter += messageBytes
+      logPersistedBytesCounter(bytesSinceSnapshotCounter)
+
       if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
-        log.info(s"Saving ArrivalsState snapshot")
         val snapshotMessage: FlightStateSnapshotMessage = FlightStateSnapshotMessage(arrivalsState.arrivals.values.map(apiFlightToFlightMessage).toSeq)
         saveSnapshot(snapshotMessage)
+        log.info(s"Saved {${snapshotMessage.serializedSize} bytes of ArrivalsState snapshot. Reset byte counter to zero")
+        bytesSinceSnapshotCounter = 0
       }
     }
   }

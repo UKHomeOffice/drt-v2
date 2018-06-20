@@ -26,10 +26,17 @@ trait RecoveryLogging {
   def logPointInTimeCompleted(pit: SDateLike): Unit = log.info(s"$prefix completed to point-in-time ${pit.toISOString()}")
 
   def logUnknown(unknown: Any): Unit = log.warn(s"$prefix received unknown message ${unknown.getClass}")
+
+  def logPersistedBytesCounter(bytes: Int): Unit = {
+    val megaBytes = bytes.toDouble / (1024 * 1024)
+    log.info(f"${megaBytes}%.2fMB persisted since last snapshot")
+  }
 }
 
 trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   val log: Logger
+
+  var bytesSinceSnapshotCounter = 0
 
   def unknownMessage: PartialFunction[Any, Unit] = {
     case unknown => logUnknown(unknown)
@@ -57,6 +64,6 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
     case event =>
       logEvent(event)
       playEventMessage(event)
+      logPersistedBytesCounter(bytesSinceSnapshotCounter)
   }
-
 }
