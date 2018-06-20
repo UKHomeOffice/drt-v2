@@ -3,6 +3,7 @@ package actors
 import akka.actor.ActorLogging
 import akka.persistence._
 import drt.shared.SDateLike
+import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import server.protobuf.messages.VoyageManifest._
 import services.SDate
@@ -14,7 +15,9 @@ case class VoyageManifestState(manifests: Set[VoyageManifest], latestZipFilename
 
 case object GetLatestZipFilename
 
-class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapshotInterval: Int) extends PersistentActor with ActorLogging {
+class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapshotInterval: Int) extends PersistentActor with RecoveryActorLike {
+  val log: Logger = LoggerFactory.getLogger(getClass)
+
   var state = VoyageManifestState(
     manifests = Set(),
     latestZipFilename = defaultLatestZipFilename)
@@ -28,7 +31,18 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapsh
 
   override def persistenceId: String = "arrival-manifests"
 
-  override def receiveRecover: Receive = {
+  def processSnapshotMessage: PartialFunction[Any, Unit] = {
+    case VoyageManifestStateSnapshotMessage(Some(latestFilename), manifests) =>
+      log.info(s"Updating state from VoyageManifestStateSnapshotMessage")
+      val updatedManifests = newStateManifests(state.manifests, manifests.map(voyageManifestFromMessage).toSet)
+      state = VoyageManifestState(latestZipFilename = latestFilename, manifests = updatedManifests)
+
+    case lzf: String =>
+      log.info(s"Updating state from latestZipFilename $lzf")
+      state = state.copy(latestZipFilename = lzf)
+  }
+
+  def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case recoveredLZF: String =>
       log.info(s"Recovery received $recoveredLZF")
       state = state.copy(latestZipFilename = recoveredLZF)
@@ -45,23 +59,6 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapsh
 
       state = state.copy(manifests = newStateManifests(state.manifests, updatedManifests))
       persistCounter += 1
-
-    case SnapshotOffer(md, ss) =>
-      log.info(RecoveryLog.snapshotOffer(md))
-      ss match {
-        case VoyageManifestStateSnapshotMessage(Some(latestFilename), manifests) =>
-          log.info(s"Updating state from VoyageManifestStateSnapshotMessage")
-          val updatedManifests = newStateManifests(state.manifests, manifests.map(voyageManifestFromMessage).toSet)
-          state = VoyageManifestState(latestZipFilename = latestFilename, manifests = updatedManifests)
-
-        case lzf: String =>
-          log.info(s"Updating state from latestZipFilename $lzf")
-          state = state.copy(latestZipFilename = lzf)
-
-        case u => log.info(s"Received unexpected snapshot data: $u")
-      }
-
-    case RecoveryCompleted => log.info(RecoveryLog.completed)
   }
 
   def newStateManifests(existing: Set[VoyageManifest], updates: Set[VoyageManifest]): Set[VoyageManifest] = {

@@ -1,10 +1,10 @@
 package services
 
 import actors.FlightMessageConversion._
-import actors.{GetState, RecoveryLog}
+import actors.{GetState, RecoveryActorLike}
 import akka.persistence._
-import drt.shared.{Arrival, ArrivalHelper, SDateLike}
 import drt.shared.FlightsApi.Flights
+import drt.shared.{Arrival, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.FlightsMessage.{FlightStateSnapshotMessage, FlightsDiffMessage}
 import services.graphstages.Crunch
@@ -46,30 +46,24 @@ class LiveArrivalsActor(now: () => SDateLike,
 }
 
 abstract class ArrivalsActor(now: () => SDateLike,
-                             expireAfterMillis: Long) extends PersistentActor {
+                             expireAfterMillis: Long) extends RecoveryActorLike {
   var arrivalsState: ArrivalsState = ArrivalsState(Map())
   val snapshotInterval = 500
-  val log: Logger
 
-  override def receiveRecover: Receive = {
-    case diffsMessage: FlightsDiffMessage => arrivalsState = consumeDiffsMessage(diffsMessage, arrivalsState)
+  def processSnapshotMessage: PartialFunction[Any, Unit] = {
+    case stateMessage: FlightStateSnapshotMessage =>
+      arrivalsState = arrivalsStateFromSnapshotMessage(stateMessage)
+      logRecoveryMessage(s"restored state to snapshot. ${arrivalsState.arrivals.size} arrivals")
+  }
 
-    case SnapshotOffer(md, ss) =>
-      log.info(RecoveryLog.snapshotOffer(md))
-      ss match {
-        case snMessage: FlightStateSnapshotMessage =>
-          arrivalsState = arrivalsStateFromSnapshotMessage(snMessage)
-          log.info(s"Recovery restored state to snapshot. ${arrivalsState.arrivals.size} arrivals")
-        case u => log.info(s"Received unexpected snapshot data: $u")
-      }
-
-    case RecoveryCompleted => log.info(RecoveryLog.completed)
+  def processRecoveryMessage: PartialFunction[Any, Unit] = {
+    case diff: FlightsDiffMessage => arrivalsState = consumeDiffsMessage(diff, arrivalsState)
   }
 
   def consumeDiffsMessage(message: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState
 
   def consumeRemovals(diffsMessage: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState = {
-    log.info(s"Consuming ${diffsMessage.removals.length} removals")
+    logRecoveryMessage(s"Consuming ${diffsMessage.removals.length} removals")
     val updatedArrivals = existingState.arrivals
       .filterNot { case (id, _) => diffsMessage.removals.contains(id) }
 
@@ -78,7 +72,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
   def consumeUpdates(diffsMessage: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState = {
     val withoutExpired = Crunch.purgeExpired(existingState.arrivals, (a: Arrival) => a.PcpTime, now, expireAfterMillis)
-    log.info(s"Consuming ${diffsMessage.updates.length} updates")
+    logRecoveryMessage(s"Consuming ${diffsMessage.updates.length} updates")
     val updatedArrivals = diffsMessage.updates
       .foldLeft(withoutExpired) {
         case (soFar, fm) =>

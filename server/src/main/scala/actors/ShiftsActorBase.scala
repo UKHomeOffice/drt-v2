@@ -6,7 +6,7 @@ import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{MilliDate, SDateLike}
 import org.joda.time.format.DateTimeFormat
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
 import services.SDate
 
@@ -56,7 +56,8 @@ class ShiftsActor extends ShiftsActorBase {
   }
 }
 
-class ShiftsActorBase extends PersistentActor with ActorLogging {
+class ShiftsActorBase extends PersistentActor with RecoveryActorLike {
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def persistenceId = "shifts-store"
 
@@ -72,20 +73,15 @@ class ShiftsActorBase extends PersistentActor with ActorLogging {
 
   def onUpdateState(data: String): Unit = {}
 
-  val receiveRecover: Receive = {
+  def processSnapshotMessage: PartialFunction[Any, Unit] = {
+    case snapshot: ShiftStateSnapshotMessage => state = ShiftsState(shiftMessagesToShiftsString(snapshot.shifts.toList))
+  }
+
+  def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case shiftsMessage: ShiftsMessage =>
       log.info(s"Recovery: ShiftsMessage received with ${shiftsMessage.shifts.length} shifts")
       val shifts = shiftMessagesToShiftsString(shiftsMessage.shifts.toList)
       updateState(shifts)
-
-    case SnapshotOffer(md, snapshot: ShiftStateSnapshotMessage) =>
-      log.info(s"${RecoveryLog.snapshotOffer(md)} with ${snapshot.shifts.length} shifts")
-      state = ShiftsState(shiftMessagesToShiftsString(snapshot.shifts.toList))
-
-    case RecoveryCompleted => log.info(RecoveryLog.completed)
-
-    case u =>
-      log.info(s"Recovery: received unexpected ${u.getClass}")
   }
 
   def receiveCommand: Receive = {

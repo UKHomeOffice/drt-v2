@@ -1,11 +1,11 @@
 package actors.pointInTime
 
 import actors._
-import akka.persistence.{RecoveryCompleted, _}
+import akka.persistence._
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
-import server.protobuf.messages.CrunchState.CrunchDiffMessage
+import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchStateSnapshotMessage}
 import services.SDate
 import services.graphstages.Crunch
 import services.graphstages.Staffing._
@@ -20,11 +20,11 @@ class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, queues
 
   val staffReconstructionRequired: Boolean = pointInTime.millisSinceEpoch <= SDate("2017-12-04").millisSinceEpoch
 
-  override val receiveRecover: Receive = {
-    case SnapshotOffer(metadata, snapshot) =>
-      log.info(RecoveryLog.snapshotOffer(metadata))
-      setStateFromSnapshot(snapshot, Option(pointInTime.addDays(2)))
+  override def processSnapshotMessage: PartialFunction[Any, Unit] = {
+    case snapshot: CrunchStateSnapshotMessage => setStateFromSnapshot(snapshot, Option(pointInTime.addDays(2)))
+  }
 
+  override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case cdm@CrunchDiffMessage(createdAtOption, _, _, _, _, _, _) =>
       createdAtOption match {
         case Some(createdAt) if createdAt <= pointInTime.millisSinceEpoch =>
@@ -34,20 +34,19 @@ class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, queues
         case Some(createdAt) =>
           log.info(s"Ignoring crunch diff with createdAt ($createdAt) > point in time requested: ${pointInTime.millisSinceEpoch}")
       }
+  }
 
-    case RecoveryCompleted =>
-      log.info(RecoveryLog.pointInTimeCompleted(pointInTime))
-      state = state.map {
-        case PortState(fl, cm, sm) if staffReconstructionRequired =>
-          log.info(s"Staff minutes require reconstructing for PortState before 2017-12-04. Attempting to reconstruct")
-          val updatedPortState = reconstructStaffMinutes(pointInTime, context, fl, cm)
-          log.info(s"Updating port state with ${updatedPortState.staffMinutes.size} staff minutes")
-          updatedPortState
-        case ps => ps
-      }
+  override def postRecoveryComplete(): Unit = {
+    logPointInTimeCompleted(pointInTime)
 
-    case u =>
-      log.warn(s"unexpected message: $u")
+    state = state.map {
+      case PortState(fl, cm, sm) if staffReconstructionRequired =>
+        log.info(s"Staff minutes require reconstructing for PortState before 2017-12-04. Attempting to reconstruct")
+        val updatedPortState = reconstructStaffMinutes(pointInTime, context, fl, cm)
+        log.info(s"Updating port state with ${updatedPortState.staffMinutes.size} staff minutes")
+        updatedPortState
+      case ps => ps
+    }
   }
 
   override def receiveCommand: Receive = {

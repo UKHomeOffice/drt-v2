@@ -2,10 +2,10 @@ package actors
 
 import java.util.UUID
 
-import akka.actor.DiagnosticActorLogging
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.{MilliDate, StaffMovement}
+import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.StaffMovementMessages.{StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
 import services.SDate
 
@@ -48,8 +48,8 @@ class StaffMovementsActor extends StaffMovementsActorBase {
   }
 }
 
-class StaffMovementsActorBase extends PersistentActor
-  with DiagnosticActorLogging {
+class StaffMovementsActorBase extends PersistentActor with RecoveryActorLike {
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def persistenceId = "staff-movements-store"
 
@@ -63,16 +63,14 @@ class StaffMovementsActorBase extends PersistentActor
 
   def staffMovementMessagesToStaffMovements(messages: List[StaffMovementMessage]): StaffMovements = StaffMovements(messages.map(staffMovementMessageToStaffMovement))
 
-  val receiveRecover: Receive = {
+  def processSnapshotMessage: PartialFunction[Any, Unit] = {
+    case snapshot: StaffMovementsStateSnapshotMessage => state = StaffMovementsState(staffMovementMessagesToStaffMovements(snapshot.staffMovements.toList))
+  }
+
+  def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case smm: StaffMovementsMessage =>
       val sm = staffMovementMessagesToStaffMovements(smm.staffMovements.toList)
       updateState(sm)
-
-    case SnapshotOffer(md, snapshot: StaffMovementsStateSnapshotMessage) =>
-      log.info(RecoveryLog.snapshotOffer(md))
-      state = StaffMovementsState(staffMovementMessagesToStaffMovements(snapshot.staffMovements.toList))
-
-    case RecoveryCompleted => log.info(RecoveryLog.completed)
   }
 
   def receiveCommand: Receive = {

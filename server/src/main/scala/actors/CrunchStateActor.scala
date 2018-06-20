@@ -20,7 +20,7 @@ class CrunchStateActor(val snapshotInterval: Int,
                        portQueues: Map[TerminalName, Seq[QueueName]],
                        now: () => SDateLike,
                        expireAfterMillis: Long,
-                       purgePreviousSnapshots: Boolean) extends PersistentActor {
+                       purgePreviousSnapshots: Boolean) extends PersistentActor with RecoveryActorLike {
   override def persistenceId: String = name
 
   val log: Logger = LoggerFactory.getLogger(s"$name-$getClass")
@@ -29,21 +29,15 @@ class CrunchStateActor(val snapshotInterval: Int,
 
   var state: Option[PortState] = None
 
-  override def receiveRecover: Receive = {
-    case SnapshotOffer(metadata, snapshot) =>
-      logInfo(RecoveryLog.snapshotOffer(metadata))
-      setStateFromSnapshot(snapshot)
+  def processSnapshotMessage: PartialFunction[Any, Unit] = {
+    case snapshot: CrunchStateSnapshotMessage => setStateFromSnapshot(snapshot)
+  }
 
-    case cdm: CrunchDiffMessage =>
-      logInfo(s"Recovery: received CrunchDiffMessage")
-      val newState = stateFromDiff(cdm, state)
+  def processRecoveryMessage: PartialFunction[Any, Unit] = {
+    case diff: CrunchDiffMessage =>
+      val newState = stateFromDiff(diff, state)
       logRecoveryState(newState)
       state = newState
-
-    case RecoveryCompleted => log.info(RecoveryLog.completed)
-
-    case u =>
-      logInfo(s"Recovery: received unexpected ${u.getClass}")
   }
 
   def logRecoveryState(optionalState: Option[PortState]): Unit = optionalState match {
@@ -155,14 +149,8 @@ class CrunchStateActor(val snapshotInterval: Int,
     }
   }
 
-  def setStateFromSnapshot(snapshot: Any, timeWindowEnd: Option[SDateLike] = None): Unit = {
-    snapshot match {
-      case sm: CrunchStateSnapshotMessage =>
-        logInfo(s"Using snapshot to restore")
-        state = Option(snapshotMessageToState(sm, timeWindowEnd))
-      case somethingElse =>
-        logInfo(s"Ignoring unexpected snapshot ${somethingElse.getClass}")
-    }
+  def setStateFromSnapshot(snapshot: CrunchStateSnapshotMessage, timeWindowEnd: Option[SDateLike] = None): Unit = {
+    state = Option(snapshotMessageToState(snapshot, timeWindowEnd))
   }
 
   def stateFromDiff(cdm: CrunchDiffMessage, existingState: Option[PortState]): Option[PortState] = {
