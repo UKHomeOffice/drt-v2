@@ -46,14 +46,16 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapsh
 
     case m@VoyageManifestLatestFileNameMessage(_, Some(latestFilename)) =>
       state = state.copy(latestZipFilename = latestFilename)
+      bytesSinceSnapshotCounter += m.serializedSize
 
-    case VoyageManifestsMessage(_, manifestMessages) =>
+    case m@VoyageManifestsMessage(_, manifestMessages) =>
       val updatedManifests = manifestMessages
         .map(voyageManifestFromMessage)
         .toSet -- state.manifests
 
       state = state.copy(manifests = newStateManifests(state.manifests, updatedManifests))
       persistCounter += 1
+      bytesSinceSnapshotCounter += m.serializedSize
   }
 
   def newStateManifests(existing: Set[VoyageManifest], updates: Set[VoyageManifest]): Set[VoyageManifest] = {
@@ -109,18 +111,23 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapsh
 
   def snapshotIfRequired(stateToSnapshot: VoyageManifestState): Unit = {
     if (persistCounter >= snapshotInterval) {
-      log.info(s"Saving VoyageManifests snapshot ${stateToSnapshot.latestZipFilename}, ${stateToSnapshot.manifests.size} manifests")
-      saveSnapshot(stateToMessage(stateToSnapshot))
+      val stateMessage = stateToMessage(stateToSnapshot)
+      saveSnapshot(stateMessage)
+      log.info(s"Saved ${stateMessage.serializedSize} bytes of VoyageManifests snapshot ${stateToSnapshot.latestZipFilename}, ${stateToSnapshot.manifests.size} manifests")
       persistCounter = 0
+      bytesSinceSnapshotCounter = 0
     }
   }
 
   def persistManifests(updatedManifests: Set[VoyageManifest]): Unit = {
     persist(voyageManifestsToMessage(updatedManifests)) {
       vmm =>
-        log.info(s"Persisting ${vmm.manifestMessages.size} manifest updates")
+        val messageBytes = vmm.serializedSize
+        log.info(s"Persisting ${vmm.serializedSize} bytes of  ${vmm.manifestMessages.size} manifest updates")
         context.system.eventStream.publish(vmm)
         persistCounter += 1
+        bytesSinceSnapshotCounter += messageBytes
+        logPersistedBytesCounter(bytesSinceSnapshotCounter)
     }
   }
 

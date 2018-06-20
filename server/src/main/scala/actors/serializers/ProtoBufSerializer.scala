@@ -47,10 +47,7 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
 
   override def fromBinary(bytes: Array[Byte], manifest: String): AnyRef = {
     manifest match {
-      case CrunchDiff =>
-        val m = CrunchDiffMessage.parseFrom(bytes)
-        log.info(s"CrunchDiffMessage: ${bytes.length} bytes, ${m.staffMinutesToUpdate.length} staff, ${m.flightsToUpdate.length} flight, ${m.crunchMinutesToUpdate.length} crunch, ${SDate(m.createdAt.getOrElse(0L)).toLocalDateTimeString()}")
-        m
+      case CrunchDiff => CrunchDiffMessage.parseFrom(bytes)
       case FlightsDiff => FlightsDiffMessage.parseFrom(bytes)
       case CrunchStateSnapshot => CrunchStateSnapshotMessage.parseFrom(bytes)
       case ShiftStateSnapshot => ShiftStateSnapshotMessage.parseFrom(bytes)
@@ -59,9 +56,7 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case FlightStateSnapshot => FlightStateSnapshotMessage.parseFrom(bytes)
       case VoyageManifestStateSnapshot => VoyageManifestStateSnapshotMessage.parseFrom(bytes)
       case VoyageManifestLatestFileName => VoyageManifestLatestFileNameMessage.parseFrom(bytes)
-      case VoyageManifests =>
-        log.info(s"VoyageManifestsMessage: ${bytes.length} bytes")
-        VoyageManifestsMessage.parseFrom(bytes)
+      case VoyageManifests => VoyageManifestsMessage.parseFrom(bytes)
       case VoyageManifest => VoyageManifestMessage.parseFrom(bytes)
     }
   }
