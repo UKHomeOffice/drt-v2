@@ -1,6 +1,5 @@
 package actors
 
-import akka.actor.ActorLogging
 import akka.persistence._
 import drt.shared.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
@@ -33,7 +32,6 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapsh
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case VoyageManifestStateSnapshotMessage(Some(latestFilename), manifests) =>
-      log.info(s"Updating state from VoyageManifestStateSnapshotMessage")
       val updatedManifests = newStateManifests(state.manifests, manifests.map(voyageManifestFromMessage).toSet)
       state = VoyageManifestState(latestZipFilename = latestFilename, manifests = updatedManifests)
 
@@ -44,15 +42,12 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapsh
 
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case recoveredLZF: String =>
-      log.info(s"Recovery received $recoveredLZF")
       state = state.copy(latestZipFilename = recoveredLZF)
 
     case m@VoyageManifestLatestFileNameMessage(_, Some(latestFilename)) =>
-      log.info(s"Recovery received $m")
       state = state.copy(latestZipFilename = latestFilename)
 
     case VoyageManifestsMessage(_, manifestMessages) =>
-      log.info(s"Recovery received ${manifestMessages.length} updated manifests")
       val updatedManifests = manifestMessages
         .map(voyageManifestFromMessage)
         .toSet -- state.manifests
