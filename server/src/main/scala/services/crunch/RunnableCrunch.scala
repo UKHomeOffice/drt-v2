@@ -49,7 +49,9 @@ object RunnableCrunch {
                                         fcstCrunchStateActor: ActorRef,
                                         crunchPeriodStartMillis: SDateLike => SDateLike,
                                         now: () => SDateLike
-                                       ): RunnableGraph[(OAL, AL, AL, SVM, SS, SFP, SMM, SAD)] = {
+                                       ): RunnableGraph[(OAL, AL, AL, SVM, SS, SFP, SMM, SAD, UniqueKillSwitch)] = {
+
+    val killSwitch = KillSwitches.single
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
@@ -63,8 +65,9 @@ object RunnableCrunch {
       shiftsSource.async,
       fixedPointsSource.async,
       staffMovementsSource.async,
-      actualDesksAndWaitTimesSource.async
-    )((_, _, _, _, _, _, _, _)) {
+      actualDesksAndWaitTimesSource.async,
+      killSwitch
+    )((_, _, _, _, _, _, _, _, _)) {
 
       implicit builder =>
         (
@@ -75,7 +78,8 @@ object RunnableCrunch {
           shifts,
           fixedPoints,
           staffMovements,
-          actualDesksAndWaitTimes
+          actualDesksAndWaitTimes,
+          graphKillSwitch
         ) =>
           val arrivals = builder.add(arrivalsGraphStage.async)
           val arrivalSplits = builder.add(arrivalSplitsStage.async)

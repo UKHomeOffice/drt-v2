@@ -3,20 +3,21 @@ package actors
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
 import akka.pattern.AskableActorRef
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
+import akka.stream.{ActorMaterializer, KillSwitch}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import controllers.{Deskstats, PaxFlow}
-import drt.chroma.{ChromaFeedType, ChromaForecast, ChromaLive, DiffingStage}
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
+import drt.chroma.{ChromaFeedType, ChromaForecast, ChromaLive, DiffingStage}
 import drt.http.ProdSendAndReceive
 import drt.server.feeds.bhx.{BHXForecastFeed, BHXLiveFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
+import drt.server.feeds.lgw.LGWFeed
 import drt.server.feeds.lgw.{LGWFeed, LGWForecastFeed}
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.server.feeds.lhr.live.LHRLiveFeed
-import drt.server.feeds.test.TestFixtureFeed
+import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared.{AirportConfig, Arrival, MilliDate, SDateLike}
@@ -27,14 +28,17 @@ import services.PcpArrival.{GateOrStand, GateOrStandWalkTime, gateOrStandWalkTim
 import services.SplitsProvider.SplitProvider
 import services._
 import services.crunch.{CrunchProps, CrunchSystem}
+import services.graphstages.Crunch.{oneDayMillis, oneMinuteMillis}
 import services.graphstages._
 import services.prediction.SparkSplitsPredictorFactory
+
 import Crunch.{oneDayMillis, oneMinuteMillis}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.postfixOps
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 trait DrtSystemInterface {
@@ -119,6 +123,8 @@ case class DrtSystem (actorSystem: ActorSystem, config: Configuration, airportCo
     initialArrivals(forecastArrivalsActor),
     initialArrivals(liveArrivalsActor)))
 
+  var crunchKillSwitch: Option[KillSwitch] = None
+  crunchKillSwitch.map(_.shutdown())
 
   futurePortStates.onComplete {
     case Success(maybeLiveState :: maybeForecastState :: maybeBaseArrivals :: maybeForecastArrivals :: maybeLiveArrivals :: Nil) =>
@@ -128,9 +134,11 @@ case class DrtSystem (actorSystem: ActorSystem, config: Configuration, airportCo
           val crunchInputs: CrunchSystem[NotUsed, Cancellable] = startCrunchSystem(initialPortState, initialBaseArrivals, initialForecastArrivals, initialLiveArrivals, recrunchOnStart)
           subscribeStaffingActors(crunchInputs)
           startScheduledFeedImports(crunchInputs)
+          crunchKillSwitch = Option(crunchInputs.killSwitch)
       }
     case Failure(error) =>
       system.log.error(s"Failed to restore initial state for App", error)
+      None
   }
 
   def aclTerminalMapping(portCode: String): TerminalName => TerminalName = portCode match {
