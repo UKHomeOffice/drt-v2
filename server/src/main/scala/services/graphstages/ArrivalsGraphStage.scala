@@ -20,9 +20,9 @@ class ArrivalsGraphStage(name: String = "",
                          validPortTerminals: Set[String],
                          expireAfterMillis: Long,
                          now: () => SDateLike)
-  extends GraphStage[FanInShape3[Flights, Flights, Flights, ArrivalsDiff]] {
+  extends GraphStage[FanInShape3[Option[Flights], Flights, Flights, ArrivalsDiff]] {
 
-  val inBaseArrivals: Inlet[Flights] = Inlet[Flights]("inFlightsBase.in")
+  val inBaseArrivals: Inlet[Option[Flights]] = Inlet[Option[Flights]]("inFlightsBase.in")
   val inForecastArrivals: Inlet[Flights] = Inlet[Flights]("inFlightsForecast.in")
   val inLiveArrivals: Inlet[Flights] = Inlet[Flights]("inFlightsLive.in")
   val outArrivalsDiff: Outlet[ArrivalsDiff] = Outlet[ArrivalsDiff]("outArrivalsDiff.in")
@@ -57,14 +57,19 @@ class ArrivalsGraphStage(name: String = "",
       override def onPush(): Unit = {
         val start = SDate.now()
         log.info(s"inBaseArrivals onPush() grabbing base flights")
-        val grabbedArrivals = grab(inBaseArrivals)
-        log.info(s"Grabbed ${grabbedArrivals.flights.length} base arrivals")
-        baseArrivals = filterAndSetPcp(grabbedArrivals.flights)
 
-        mergeAllSourcesAndPush(baseArrivals, forecastArrivals, liveArrivals)
+        grab(inBaseArrivals) match {
+          case None =>
+            log.info(s"No arrivals from ACL. Nothing to do")
 
-        if (!hasBeenPulled(inBaseArrivals)) pull(inBaseArrivals)
-        log.info(s"inBaseArrivals Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+          case Some(grabbedArrivals) =>
+            log.info(s"Grabbed ${grabbedArrivals.flights.length} base arrivals")
+            baseArrivals = filterAndSetPcp(grabbedArrivals.flights)
+            mergeAllSourcesAndPush(baseArrivals, forecastArrivals, liveArrivals)
+
+            if (!hasBeenPulled(inBaseArrivals)) pull(inBaseArrivals)
+            log.info(s"inBaseArrivals Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        }
       }
     })
 

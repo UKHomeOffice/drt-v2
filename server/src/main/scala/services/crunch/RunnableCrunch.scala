@@ -19,7 +19,7 @@ object RunnableCrunch {
 
   def groupByCodeShares(flights: Seq[ApiFlightWithSplits]): Seq[(ApiFlightWithSplits, Set[Arrival])] = flights.map(f => (f, Set(f.apiFlight)))
 
-  def apply[AL, SVM, SS, SFP, SMM, SAD](baseArrivalsSource: Source[Flights, AL],
+  def apply[AL, SVM, SS, SFP, SMM, SAD](baseArrivalsSource: Source[Option[Flights], AL],
                                         fcstArrivalsSource: Source[Flights, AL],
                                         liveArrivalsSource: Source[Flights, AL],
                                         manifestsSource: Source[DqManifests, SVM],
@@ -66,7 +66,7 @@ object RunnableCrunch {
 
       implicit builder =>
         (
-          baseArrivals,
+          baseMaybeArrivals,
           fcstArrivals,
           liveArrivals,
           manifests,
@@ -86,7 +86,7 @@ object RunnableCrunch {
           val simulation = builder.add(simulationGraphStage.async)
           val portState = builder.add(portStateGraphStage.async)
 
-          val baseArrivalsFanOut = builder.add(Broadcast[Flights](2))
+          val baseMaybeArrivalsFanOut = builder.add(Broadcast[Option[Flights]](2))
           val fcstArrivalsFanOut = builder.add(Broadcast[Flights](2))
           val liveArrivalsFanOut = builder.add(Broadcast[Flights](2))
           val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](3))
@@ -106,8 +106,8 @@ object RunnableCrunch {
           val fcstSink = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
 
 
-          baseArrivals ~> baseArrivalsFanOut ~> arrivals.in0
-          baseArrivalsFanOut.map(f => ArrivalsState(f.flights.map(x => (x.uniqueId, x)).toMap)) ~> baseArrivalsSink
+          baseMaybeArrivals ~> baseMaybeArrivalsFanOut ~> arrivals.in0
+          baseMaybeArrivalsFanOut.map(fs => fs.map(f => ArrivalsState(f.flights.map(x => (x.uniqueId, x)).toMap))) ~> baseArrivalsSink
           fcstArrivals ~> fcstArrivalsFanOut ~> arrivals.in1
           fcstArrivalsFanOut ~> fcstArrivalsSink
           liveArrivals ~> liveArrivalsFanOut ~> arrivals.in2

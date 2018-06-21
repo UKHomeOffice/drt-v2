@@ -55,7 +55,7 @@ case class CrunchProps[MS, AL](logLabel: String = "",
                                initialBaseArrivals: Set[Arrival] = Set(),
                                initialFcstArrivals: Set[Arrival] = Set(),
                                initialLiveArrivals: Set[Arrival] = Set(),
-                               arrivalsBaseSource: Source[Flights, AL],
+                               arrivalsBaseSource: Source[Option[Flights], AL],
                                arrivalsFcstSource: Source[Flights, AL],
                                arrivalsLiveSource: Source[Flights, AL],
                                recrunchOnStart: Boolean = false)

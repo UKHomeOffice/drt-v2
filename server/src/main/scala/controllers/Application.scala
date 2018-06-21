@@ -341,15 +341,16 @@ trait SystemActors {
     feed.map(Flights)
   }
 
-  def baseArrivalsSource(): Source[Flights, Cancellable] = Source.tick(1 second, 60 minutes, NotUsed).map(_ => {
+  def baseArrivalsSource(): Source[Option[Flights], Cancellable] = Source.tick(1 second, 60 minutes, NotUsed).map(_ => {
     system.log.info(s"Requesting ACL feed")
     Try {
       aclFeed.arrivals
     } match {
-      case Success(a) => a
+      case Success(a) =>
+        Some(a)
       case Failure(f) =>
         system.log.error(s"Failed to get flights from ACL: $f")
-        Flights(List())
+        None
     }
   })
 
