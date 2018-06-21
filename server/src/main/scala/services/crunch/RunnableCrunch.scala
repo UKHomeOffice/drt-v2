@@ -53,6 +53,8 @@ object RunnableCrunch {
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
+    log.info(s"Manifests Source: $manifestsSource")
+
     val graph = GraphDSL.create(
       baseArrivalsSource.async,
       fcstArrivalsSource.async,

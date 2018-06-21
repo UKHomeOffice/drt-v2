@@ -18,6 +18,7 @@ import spray.json._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.language.postfixOps
+import test.ResetData
 
 class Test @Inject()(implicit val config: Configuration,
                      implicit val mat: Materializer,
@@ -43,6 +44,15 @@ class Test @Inject()(implicit val config: Configuration,
       log.info(s"Sending Splits: $voyageManifest to Test Actor")
 
       actor ! VoyageManifests(Set(voyageManifest))
+    })
+  }
+
+  def resetData() = {
+    system.actorSelection("akka://application/user/TestActor-ResetData").resolveOne().map(actor => {
+
+      log.info(s"Sending reset message")
+
+      actor ! ResetData
     })
   }
 
@@ -95,5 +105,13 @@ class Test @Inject()(implicit val config: Configuration,
         case None =>
           BadRequest(s"Unable to parse JSON: ${request.body.asText}")
       }
+  }
+
+  def deleteAllData() = Action {
+    implicit request =>
+
+      resetData()
+
+      Accepted
   }
 }

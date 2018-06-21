@@ -80,8 +80,6 @@ abstract class ApiService(val airportConfig: AirportConfig,
 
   def actorSystem: ActorSystem
 
-  def askableCacheActorRef: AskableActorRef
-
   def getApplicationVersion(): String
 
   def airportConfiguration(): AirportConfig = airportConfig
