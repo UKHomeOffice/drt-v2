@@ -41,7 +41,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
         queues = Map("T1" -> Seq(EeaDesk, EGate)))
     )
 
-    offerAndWait(crunch.baseArrivalsInput, Flights(initialBaseArrivals.toSeq))
+    offerAndWait(crunch.baseArrivalsInput, Option(Flights(initialBaseArrivals.toSeq)))
     Thread.sleep(1500)
     offerAndWait(crunch.actualDesksAndQueuesInput, deskStats)
 
@@ -87,7 +87,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
         queues = Map("T1" -> Seq(EeaDesk, EGate)))
     )
 
-    offerAndWait(crunch.baseArrivalsInput, Flights(initialBaseArrivals.toSeq))
+    offerAndWait(crunch.baseArrivalsInput, Option(Flights(initialBaseArrivals.toSeq)))
     Thread.sleep(1500)
     offerAndWait(crunch.actualDesksAndQueuesInput, deskStats)
 

@@ -277,7 +277,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           ))
         ))
 
-        offerAndWait(crunch.baseArrivalsInput, flights)
+        offerAndWait(crunch.baseArrivalsInput, Option(flights))
         offerAndWait(crunch.manifestsInput, voyageManifests)
 
         val expected = Map("T1" -> Map(
