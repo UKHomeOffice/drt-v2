@@ -43,21 +43,25 @@ class ForecastCrunchStateTestActor(name: String = "", queues: Map[TerminalName, 
   }
 }
 
-case class CrunchGraph(baseArrivalsInput: SourceQueueWithComplete[Option[Flights]],
-                       forecastArrivalsInput: SourceQueueWithComplete[Flights],
-                       liveArrivalsInput: SourceQueueWithComplete[Flights],
-                       manifestsInput: SourceQueueWithComplete[DqManifests],
-                       liveShiftsInput: SourceQueueWithComplete[String],
-                       liveFixedPointsInput: SourceQueueWithComplete[String],
-                       liveStaffMovementsInput: SourceQueueWithComplete[Seq[StaffMovement]],
-                       forecastShiftsInput: SourceQueueWithComplete[String],
-                       forecastFixedPointsInput: SourceQueueWithComplete[String],
-                       forecastStaffMovementsInput: SourceQueueWithComplete[Seq[StaffMovement]],
-                       actualDesksAndQueuesInput: SourceQueueWithComplete[ActualDeskStats],
-                       liveCrunchActor: ActorRef,
-                       forecastCrunchActor: ActorRef,
-                       liveTestProbe: TestProbe,
-                       forecastTestProbe: TestProbe)
+case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete[Option[Flights]],
+                                      forecastArrivalsInput: SourceQueueWithComplete[Flights],
+                                      liveArrivalsInput: SourceQueueWithComplete[Flights],
+                                      manifestsInput: SourceQueueWithComplete[DqManifests],
+                                      liveShiftsInput: SourceQueueWithComplete[String],
+                                      liveFixedPointsInput: SourceQueueWithComplete[String],
+                                      liveStaffMovementsInput: SourceQueueWithComplete[Seq[StaffMovement]],
+                                      forecastShiftsInput: SourceQueueWithComplete[String],
+                                      forecastFixedPointsInput: SourceQueueWithComplete[String],
+                                      forecastStaffMovementsInput: SourceQueueWithComplete[Seq[StaffMovement]],
+                                      actualDesksAndQueuesInput: SourceQueueWithComplete[ActualDeskStats],
+                                      liveCrunchActor: ActorRef,
+                                      forecastCrunchActor: ActorRef,
+                                      liveTestProbe: TestProbe,
+                                      forecastTestProbe: TestProbe,
+                                      baseArrivalsTestProbe: TestProbe,
+                                      forecastArrivalsTestProbe: TestProbe,
+                                      liveArrivalsTestProbe: TestProbe
+                      )
 
 class CrunchTestLike
   extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPersistTestConfig.inMemoryAkkaPersistConfig))
@@ -133,7 +137,7 @@ class CrunchTestLike
                      logLabel: String = "",
                      cruncher: TryCrunch = TestableCrunchLoadStage.mockCrunch,
                      simulator: Simulator = TestableCrunchLoadStage.mockSimulator
-                    ): CrunchGraph = {
+                    ): CrunchGraphInputsAndProbes = {
 
     val maxDaysToCrunch = 5
     val expireAfterMillis = 2 * oneDayMillis
@@ -196,7 +200,7 @@ class CrunchTestLike
     if (initialFixedPoints.nonEmpty) offerAndWait(crunchInputs.fixedPoints, initialFixedPoints)
     if (initialManifests.manifests.nonEmpty) offerAndWait(crunchInputs.manifests, initialManifests)
 
-    CrunchGraph(
+    CrunchGraphInputsAndProbes(
       crunchInputs.baseArrivals,
       crunchInputs.forecastArrivals,
       crunchInputs.liveArrivals,
@@ -211,7 +215,10 @@ class CrunchTestLike
       liveCrunchActor,
       forecastCrunchActor,
       liveProbe,
-      forecastProbe
+      forecastProbe,
+      baseArrivalsProbe,
+      forecastArrivalsProbe,
+      liveArrivalsProbe
     )
   }
 

@@ -14,7 +14,7 @@ import services.graphstages.Crunch._
 import scala.collection.immutable.{List, Seq}
 
 
-class CrunchGraphStageFunctionsSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPersistTestConfig.inMemoryAkkaPersistConfig)) with SpecificationLike {
+class CrunchGraphInputsAndProbesStageFunctionsSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPersistTestConfig.inMemoryAkkaPersistConfig)) with SpecificationLike {
   isolated
   sequential
 

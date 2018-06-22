@@ -86,7 +86,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         PassengerInfoGenerator.passengerInfoJson("USA", "P", "USA")
       ))
     ))
-    val crunch: CrunchGraph = runCrunchGraph(
+    val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
         defaultProcessingTimes = Map("T1" -> Map(

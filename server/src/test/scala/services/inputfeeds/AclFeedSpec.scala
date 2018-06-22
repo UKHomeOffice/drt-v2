@@ -8,9 +8,8 @@ import drt.shared.PaxTypesAndQueues._
 import drt.shared._
 import net.schmizz.sshj.sftp.SFTPClient
 import server.feeds.acl.AclFeed.{arrivalsFromCsvContent, contentFromFileName, latestFileForPort, sftpClient}
-import services.SDate
 import services.crunch.CrunchTestLike
-import services.graphstages.Crunch._
+import services.{ArrivalsState, SDate}
 
 import scala.collection.immutable.List
 import scala.concurrent.duration._
@@ -237,6 +236,30 @@ class AclFeedSpec extends CrunchTestLike {
       }
 
       true
+    }
+
+    "Given two ACL arrival sets with a None in between " +
+      "When I ask check the acl arrivals test probe " +
+      "Then I should not see any empty arrival states" >> {
+      val scheduledLive = "2017-01-01T00:00Z"
+
+      val initialAcl1 = ArrivalGenerator.apiFlight(actPax = 150, schDt = "2017-01-01T00:05Z", iata = "BA0001", status = "forecast")
+      val initialAcl2 = ArrivalGenerator.apiFlight(actPax = 151, schDt = "2017-01-01T00:15Z", iata = "BA0002", status = "forecast")
+      val initialAcl = Flights(Seq(initialAcl1, initialAcl2))
+
+      val crunch = runCrunchGraph(now = () => SDate(scheduledLive))
+
+      offerAndWait(crunch.baseArrivalsInput, Option(initialAcl))
+      offerAndWait(crunch.baseArrivalsInput, None)
+      offerAndWait(crunch.baseArrivalsInput, Option(initialAcl))
+
+      val expected = Seq(initialAcl.flights.toSet, initialAcl.flights.toSet)
+
+      val arrivalStates = crunch.baseArrivalsTestProbe.receiveN(3, 2 seconds) collect {
+        case Some(ArrivalsState(arrivalsMap)) => arrivalsMap.values.toSet
+      }
+
+      arrivalStates === expected
     }
   }
 
