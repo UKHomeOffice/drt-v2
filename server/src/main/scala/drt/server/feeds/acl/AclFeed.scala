@@ -16,13 +16,23 @@ import services.SDate
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 
 case class AclFeed(ftpServer: String, username: String, path: String, portCode: String, terminalMapping: TerminalName => TerminalName) {
+  val log: Logger = LoggerFactory.getLogger(getClass)
+
   def sftp: SFTPClient = sftpClient(ftpServer, username, path)
 
-  def arrivals: Flights = {
-    Flights(arrivalsFromCsvContent(contentFromFileName(sftp, latestFileForPort(sftp, portCode)), terminalMapping))
+  def arrivals: Option[Flights] = {
+    Try {
+      Flights(arrivalsFromCsvContent(contentFromFileName(sftp, latestFileForPort(sftp, portCode)), terminalMapping))
+    } match {
+      case Success(a) =>
+        Some(a)
+      case Failure(f) =>
+        log.error(s"Failed to get flights from ACL: $f")
+        None
+    }
   }
 }
 
