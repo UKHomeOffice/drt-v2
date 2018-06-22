@@ -327,7 +327,6 @@ trait SystemActors {
   }
 
   def forecastArrivalsSource(portCode: String): Source[Flights, Cancellable] = {
-    val forecastNoOp = Source.tick[List[Arrival]](0 seconds, 30 minutes, List())
     val feed = portCode match {
       case "STN" => createForecastChromaFlightFeed(ChromaForecast).chromaVanillaFlights(30 minutes)
       case "LHR" => config.getString("lhr.forecast_path")
@@ -340,6 +339,8 @@ trait SystemActors {
     }
     feed.map(Flights)
   }
+
+  def forecastNoOp = Source.tick[List[Arrival]](0 seconds, 30 minutes, List())
 
   def baseArrivalsSource(): Source[Option[Flights], Cancellable] = Source.tick(1 second, 60 minutes, NotUsed).map(_ => {
     system.log.info(s"Requesting ACL feed")
