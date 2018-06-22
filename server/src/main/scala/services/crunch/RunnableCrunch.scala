@@ -19,7 +19,7 @@ object RunnableCrunch {
 
   def groupByCodeShares(flights: Seq[ApiFlightWithSplits]): Seq[(ApiFlightWithSplits, Set[Arrival])] = flights.map(f => (f, Set(f.apiFlight)))
 
-  def apply[AL, SVM, SS, SFP, SMM, SAD](baseArrivalsSource: Source[Option[Flights], AL],
+  def apply[OAL, AL, SVM, SS, SFP, SMM, SAD](baseArrivalsSource: Source[Option[Flights], OAL],
                                         fcstArrivalsSource: Source[Flights, AL],
                                         liveArrivalsSource: Source[Flights, AL],
                                         manifestsSource: Source[DqManifests, SVM],
@@ -49,7 +49,7 @@ object RunnableCrunch {
                                         fcstCrunchStateActor: ActorRef,
                                         crunchPeriodStartMillis: SDateLike => SDateLike,
                                         now: () => SDateLike
-                                       ): RunnableGraph[(AL, AL, AL, SVM, SS, SFP, SMM, SAD)] = {
+                                       ): RunnableGraph[(OAL, AL, AL, SVM, SS, SFP, SMM, SAD)] = {
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
 

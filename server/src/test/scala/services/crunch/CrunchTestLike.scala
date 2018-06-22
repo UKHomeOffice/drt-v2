@@ -43,7 +43,7 @@ class ForecastCrunchStateTestActor(name: String = "", queues: Map[TerminalName, 
   }
 }
 
-case class CrunchGraph(baseArrivalsInput: SourceQueueWithComplete[Flights],
+case class CrunchGraph(baseArrivalsInput: SourceQueueWithComplete[Option[Flights]],
                        forecastArrivalsInput: SourceQueueWithComplete[Flights],
                        liveArrivalsInput: SourceQueueWithComplete[Flights],
                        manifestsInput: SourceQueueWithComplete[DqManifests],
@@ -155,7 +155,7 @@ class CrunchTestLike
     val manifestsSource: Source[DqManifests, SourceQueueWithComplete[DqManifests]] = Source.queue[DqManifests](0, OverflowStrategy.backpressure)
     val liveArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
     val fcstArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
-    val baseArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
+    val baseArrivals: Source[Option[Flights], SourceQueueWithComplete[Option[Flights]]] = Source.queue[Option[Flights]](0, OverflowStrategy.backpressure)
 
     val crunchInputs = CrunchSystem(CrunchProps(
       logLabel = logLabel,

@@ -94,7 +94,7 @@ class AclFeedSpec extends CrunchTestLike {
         now = () => SDate(scheduled),
         airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))))
 
-      offerAndWait(crunch.baseArrivalsInput, aclFlight)
+      offerAndWait(crunch.baseArrivalsInput, Option(aclFlight))
 
       val expected = Set(ArrivalGenerator.apiFlight(flightId = 1, actPax = 10, schDt = scheduled, iata = "BA0001"))
 
@@ -122,7 +122,7 @@ class AclFeedSpec extends CrunchTestLike {
         now = () => SDate(scheduled),
         airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))))
 
-      offerAndWait(crunch.baseArrivalsInput, aclFlights)
+      offerAndWait(crunch.baseArrivalsInput, Option(aclFlights))
       offerAndWait(crunch.liveArrivalsInput, liveFlights)
 
       val expected = Set(liveFlight.copy(rawIATA = aclFlight.rawIATA, rawICAO = aclFlight.rawICAO))
@@ -152,11 +152,11 @@ class AclFeedSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(now = () => SDate(scheduledLive))
 
-      offerAndWait(crunch.baseArrivalsInput, initialACL)
+      offerAndWait(crunch.baseArrivalsInput, Option(initialACL))
       offerAndWait(crunch.liveArrivalsInput, initialLive)
 
       Thread.sleep(1000) // Let the initial arrivals work their way through the system
-      offerAndWait(crunch.baseArrivalsInput, Flights(newAcl.toList))
+      offerAndWait(crunch.baseArrivalsInput, Option(Flights(newAcl.toList)))
 
       val expected = initialLive.flights.toSet ++ newAcl
 
@@ -185,7 +185,7 @@ class AclFeedSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(now = () => SDate(scheduledLive))
 
-      offerAndWait(crunch.baseArrivalsInput, initialAcl)
+      offerAndWait(crunch.baseArrivalsInput, Option(initialAcl))
       offerAndWait(crunch.liveArrivalsInput, initialLive)
 
       Thread.sleep(1000) // Let the initial arrivals work their way through the system
@@ -220,12 +220,12 @@ class AclFeedSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(now = () => SDate(scheduledLive))
 
-      offerAndWait(crunch.baseArrivalsInput, initialAcl)
+      offerAndWait(crunch.baseArrivalsInput, Option(initialAcl))
       offerAndWait(crunch.liveArrivalsInput, initialLive)
 
       Thread.sleep(1000) // Let the initial arrivals work their way through the system
 
-      offerAndWait(crunch.baseArrivalsInput, newAcl)
+      offerAndWait(crunch.baseArrivalsInput, Option(newAcl))
       offerAndWait(crunch.liveArrivalsInput, newLive)
 
       val expected = newAcl.flights.toSet ++ newLive.flights.toSet ++ initialLive.flights.toSet
