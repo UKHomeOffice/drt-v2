@@ -78,20 +78,20 @@ class LGWForecastFeed(boxConfigFilePath: String, userId: String, ukBfGalForecast
 
     val scheduledDate = scheduledDateAsIsoString
 
-    new Arrival(Operator = "",
+    new Arrival(Operator = None,
       Status = PORT_FORECAST,
-      EstDT = "",
-      ActDT = "",
-      EstChoxDT = "",
-      ActChoxDT = "",
-      Gate = "",
-      Stand = "",
-      MaxPax = fields(MAX_PAX).toInt,
-      ActPax = fields(ACTUAL_PAX).toInt,
-      TranPax = fields(TRANSFER_PAX).toInt,
-      RunwayID = "",
-      BaggageReclaimId = "",
-      FlightID = 0,
+      Estimated = None,
+      Actual = None,
+      EstimatedChox = None,
+      ActualChox = None,
+      Gate = None,
+      Stand = None,
+      MaxPax = Option(fields(MAX_PAX)).map(_.toInt),
+      ActPax = Option(fields(ACTUAL_PAX)).map(_.toInt),
+      TranPax = Option(fields(TRANSFER_PAX)).map(_.toInt),
+      RunwayID = None,
+      BaggageReclaimId = None,
+      FlightID = None,
       AirportID = LGW,
       Terminal = fields(5) match {
         case "South" => "S"
@@ -101,9 +101,8 @@ class LGWForecastFeed(boxConfigFilePath: String, userId: String, ukBfGalForecast
       rawICAO = fields(FLIGHT_NUMBER),
       rawIATA = fields(FLIGHT_NUMBER),
       Origin = fields(AIRPORT_CODE),
-      SchDT = scheduledDate,
       Scheduled = SDate.parseString(scheduledDate).millisSinceEpoch,
-      PcpTime = 0,
+      PcpTime = None,
       None)
   } match {
     case Success(arrival) => Some(arrival)
