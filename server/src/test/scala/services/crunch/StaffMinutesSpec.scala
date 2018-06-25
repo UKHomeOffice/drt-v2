@@ -342,7 +342,7 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     offerAndWait(crunch.liveShiftsInput, initialShifts)
 
-    val flight = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = scheduled, actPax = 100)
+    val flight = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = scheduled, actPax = Option(100))
     offerAndWait(crunch.liveArrivalsInput, Flights(Seq(flight)))
 
     val expectedCrunchDeployments = Set(
