@@ -35,18 +35,22 @@ lazy val client: Project = (project in file("client"))
     scalaVersion := Settings.versions.scala,
     scalacOptions ++= Settings.scalacOptions,
     libraryDependencies ++= Settings.scalajsDependencies.value,
+    scalaJSUseMainModuleInitializer := true,
+    mainClass in Compile := Some("drt.client.SPAMain"),
+    webpackBundlingMode := BundlingMode.LibraryOnly(),
+    version in webpack := "4.8.1",
     // by default we do development build, no eliding
     elideOptions := Seq(),
     scalacOptions ++= elideOptions.value,
     jsDependencies ++= Settings.jsDependencies.value,
     // reactjs testing
-    requiresDOM := true,
+    jsEnv := new org.scalajs.jsenv.jsdomnodejs.JSDOMNodeJSEnv(),
     scalaJSStage in Test := FastOptStage,
     // 'new style js dependencies with scalaBundler'
     npmDependencies in Compile ++= Settings.clientNpmDependences,
     npmDevDependencies in Compile += Settings.clientNpmDevDependencies,
     // RuntimeDOM is needed for tests
-    jsDependencies += RuntimeDOM % "test",
+    jsEnv in Test := new org.scalajs.jsenv.jsdomnodejs.JSDOMNodeJSEnv(),
     useYarn := true,
     // yes, we want to package JS dependencies
     skip in packageJSDependencies := false,
@@ -129,3 +133,7 @@ fork in Test := true
 
 // loads the Play server project at sbt startup
 onLoad in Global := (Command.process("project server", _: State)) compose (onLoad in Global).value
+
+// Docker Plugin 
+enablePlugins(DockerPlugin)
+

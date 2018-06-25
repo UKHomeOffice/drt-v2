@@ -21,17 +21,17 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 
-case class CrunchSystem[MS, AL](shifts: SourceQueueWithComplete[String],
+case class CrunchSystem[MS, OAL, AL](shifts: SourceQueueWithComplete[String],
                                 fixedPoints: SourceQueueWithComplete[String],
                                 staffMovements: SourceQueueWithComplete[Seq[StaffMovement]],
-                                baseArrivals: AL,
+                                baseArrivals: OAL,
                                 forecastArrivals: AL,
                                 liveArrivals: AL,
                                 manifests: MS,
                                 actualDeskStats: SourceQueueWithComplete[ActualDeskStats]
                                )
 
-case class CrunchProps[MS, AL](logLabel: String = "",
+case class CrunchProps[MS, OAL, AL](logLabel: String = "",
                                system: ActorSystem,
                                airportConfig: AirportConfig,
                                pcpArrival: Arrival => MilliDate,
@@ -55,7 +55,7 @@ case class CrunchProps[MS, AL](logLabel: String = "",
                                initialBaseArrivals: Set[Arrival] = Set(),
                                initialFcstArrivals: Set[Arrival] = Set(),
                                initialLiveArrivals: Set[Arrival] = Set(),
-                               arrivalsBaseSource: Source[Flights, AL],
+                               arrivalsBaseSource: Source[Option[Flights], OAL],
                                arrivalsFcstSource: Source[Flights, AL],
                                arrivalsLiveSource: Source[Flights, AL],
                                recrunchOnStart: Boolean = false)
@@ -69,7 +69,7 @@ object CrunchSystem {
     Crunch.getLocalLastMidnight(adjustedMinute).addMinutes(offsetMinutes)
   }
 
-  def apply[MS, AL](props: CrunchProps[MS, AL]): CrunchSystem[MS, AL] = {
+  def apply[MS, OAL, AL](props: CrunchProps[MS, OAL, AL]): CrunchSystem[MS, OAL, AL] = {
 
     val initialShifts = initialShiftsLikeState(props.actors("shifts"))
     val initialFixedPoints = initialShiftsLikeState(props.actors("fixed-points"))

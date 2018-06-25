@@ -20,7 +20,7 @@ class CrunchStateActor(val snapshotInterval: Int,
                        portQueues: Map[TerminalName, Seq[QueueName]],
                        now: () => SDateLike,
                        expireAfterMillis: Long,
-                       purgePreviousSnapshots: Boolean) extends PersistentActor {
+                       purgePreviousSnapshots: Boolean) extends PersistentActor with RecoveryActorLike {
   override def persistenceId: String = name
 
   val log: Logger = LoggerFactory.getLogger(s"$name-$getClass")
@@ -29,22 +29,16 @@ class CrunchStateActor(val snapshotInterval: Int,
 
   var state: Option[PortState] = None
 
-  override def receiveRecover: Receive = {
-    case SnapshotOffer(metadata, snapshot) =>
-      logInfo(s"Recovery: received SnapshotOffer ${metadata.timestamp} with ${snapshot.getClass}")
-      setStateFromSnapshot(snapshot)
+  def processSnapshotMessage: PartialFunction[Any, Unit] = {
+    case snapshot: CrunchStateSnapshotMessage => setStateFromSnapshot(snapshot)
+  }
 
-    case cdm: CrunchDiffMessage =>
-      logInfo(s"Recovery: received CrunchDiffMessage")
-      val newState = stateFromDiff(cdm, state)
+  def processRecoveryMessage: PartialFunction[Any, Unit] = {
+    case diff: CrunchDiffMessage =>
+      val newState = stateFromDiff(diff, state)
       logRecoveryState(newState)
       state = newState
-
-    case RecoveryCompleted =>
-      logInfo("Recovery: Finished restoring crunch state")
-
-    case u =>
-      logInfo(s"Recovery: received unexpected ${u.getClass}")
+      bytesSinceSnapshotCounter += diff.serializedSize
   }
 
   def logRecoveryState(optionalState: Option[PortState]): Unit = optionalState match {
@@ -123,8 +117,9 @@ class CrunchStateActor(val snapshotInterval: Int,
 
   def persistSnapshot(portState: PortState): Unit = {
     val snapshotMessage: CrunchStateSnapshotMessage = portStateToSnapshotMessage(portState)
-    logInfo(s"Saving PortState snapshot: ${snapshotMessage.crunchMinutes.length} cms, ${snapshotMessage.flightWithSplits.length} fs, ${snapshotMessage.staffMinutes.length} sms")
     saveSnapshot(snapshotMessage)
+    logInfo(s"Saved ${snapshotMessage.serializedSize} bytes of PortState snapshot: ${snapshotMessage.crunchMinutes.length} cms, ${snapshotMessage.flightWithSplits.length} fs, ${snapshotMessage.staffMinutes.length} sms")
+    bytesSinceSnapshotCounter = 0
     if (purgePreviousSnapshots) {
       val maxSequenceNr = lastSequenceNr
       logInfo(s"Purging snapshots with sequence number < $maxSequenceNr")
@@ -134,8 +129,11 @@ class CrunchStateActor(val snapshotInterval: Int,
 
   def persistDiff(diff: CrunchDiffMessage): Unit = {
     persist(diff) { (diff: CrunchDiffMessage) =>
-      logInfo(s"Persisting ${diff.getClass}: ${diff.crunchMinutesToUpdate.length} cms, ${diff.flightsToUpdate.length} fs, ${diff.staffMinutesToUpdate.length} sms, ${diff.flightIdsToRemove.length} removed fms")
+      val messageBytes = diff.serializedSize
+      logInfo(s"Persisting $messageBytes bytes of ${diff.getClass}: ${diff.crunchMinutesToUpdate.length} cms, ${diff.flightsToUpdate.length} fs, ${diff.staffMinutesToUpdate.length} sms, ${diff.flightIdsToRemove.length} removed fms")
       context.system.eventStream.publish(diff)
+      bytesSinceSnapshotCounter += messageBytes
+      logPersistedBytesCounter(bytesSinceSnapshotCounter)
     }
   }
 
@@ -156,14 +154,8 @@ class CrunchStateActor(val snapshotInterval: Int,
     }
   }
 
-  def setStateFromSnapshot(snapshot: Any, timeWindowEnd: Option[SDateLike] = None): Unit = {
-    snapshot match {
-      case sm: CrunchStateSnapshotMessage =>
-        logInfo(s"Using snapshot to restore")
-        state = Option(snapshotMessageToState(sm, timeWindowEnd))
-      case somethingElse =>
-        logInfo(s"Ignoring unexpected snapshot ${somethingElse.getClass}")
-    }
+  def setStateFromSnapshot(snapshot: CrunchStateSnapshotMessage, timeWindowEnd: Option[SDateLike] = None): Unit = {
+    state = Option(snapshotMessageToState(snapshot, timeWindowEnd))
   }
 
   def stateFromDiff(cdm: CrunchDiffMessage, existingState: Option[PortState]): Option[PortState] = {

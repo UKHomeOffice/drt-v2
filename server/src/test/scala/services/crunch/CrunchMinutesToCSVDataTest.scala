@@ -72,7 +72,7 @@ class CrunchMinutesToCSVDataTest extends Specification {
       StaffMinute("T1", startDateTime.millisSinceEpoch, 5, fixedPoints = 1, movements = -1)
     )
 
-    val expected = """|Date,,EEA,EEA,EEA,EEA,EEA,NON-EEA,NON-EEA,NON-EEA,NON-EEA,NON-EEA,E-GATES,E-GATES,E-GATES,E-GATES,E-GATES,Misc,PCP Staff,PCP Staff
+    val expected = """|Date,,EEA,EEA,EEA,EEA,EEA,Non-EEA,Non-EEA,Non-EEA,Non-EEA,Non-EEA,e-Gates,e-Gates,e-Gates,e-Gates,e-Gates,Misc,PCP Staff,PCP Staff
                       |,Start,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Staff req,Act. wait time,Act. desks,Staff req,Avail,Req
                       |2017-11-10,00:00,1,100,1,100,2,1,100,1,100,2,1,100,1,100,2,1,4,4""".stripMargin
 

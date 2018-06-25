@@ -7,10 +7,10 @@ import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared._
 import net.schmizz.sshj.sftp.SFTPClient
+import server.feeds.acl.AclFeed
 import server.feeds.acl.AclFeed.{arrivalsFromCsvContent, contentFromFileName, latestFileForPort, sftpClient}
 import services.SDate
 import services.crunch.CrunchTestLike
-import services.graphstages.Crunch._
 
 import scala.collection.immutable.List
 import scala.concurrent.duration._
@@ -19,6 +19,16 @@ import scala.concurrent.duration._
 class AclFeedSpec extends CrunchTestLike {
   val regularTerminalMapping: TerminalName => TerminalName = (t: TerminalName) => s"T${t.take(1)}"
   val lgwTerminalMapping: TerminalName => TerminalName = (t: TerminalName) => Map("2I" -> "S").getOrElse(t, "")
+
+  "ACL feed failures" >> {
+    val aclFeed = AclFeed("nowhere.nowhere", "badusername", "badpath", "BAD", (t: TerminalName) => "T1")
+
+    val result = aclFeed.arrivals
+
+    val expected = None
+
+    result === expected
+  }
 
   "ACL feed parsing" >> {
 
@@ -102,7 +112,7 @@ class AclFeedSpec extends CrunchTestLike {
         now = () => SDate(scheduled),
         airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))))
 
-      offerAndWait(crunch.baseArrivalsInput, aclFlight)
+      offerAndWait(crunch.baseArrivalsInput, Option(aclFlight))
 
       val expected = Set(ArrivalGenerator.apiFlight(flightId = Option(1), actPax = Option(10), schDt = scheduled, iata = "BA0001"))
 
@@ -130,7 +140,7 @@ class AclFeedSpec extends CrunchTestLike {
         now = () => SDate(scheduled),
         airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))))
 
-      offerAndWait(crunch.baseArrivalsInput, aclFlights)
+      offerAndWait(crunch.baseArrivalsInput, Option(aclFlights))
       offerAndWait(crunch.liveArrivalsInput, liveFlights)
 
       val expected = Set(liveFlight.copy(rawIATA = aclFlight.rawIATA, rawICAO = aclFlight.rawICAO))
@@ -160,11 +170,11 @@ class AclFeedSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(now = () => SDate(scheduledLive))
 
-      offerAndWait(crunch.baseArrivalsInput, initialACL)
+      offerAndWait(crunch.baseArrivalsInput, Option(initialACL))
       offerAndWait(crunch.liveArrivalsInput, initialLive)
 
       Thread.sleep(1000) // Let the initial arrivals work their way through the system
-      offerAndWait(crunch.baseArrivalsInput, Flights(newAcl.toList))
+      offerAndWait(crunch.baseArrivalsInput, Option(Flights(newAcl.toList)))
 
       val expected = initialLive.flights.toSet ++ newAcl
 
@@ -193,7 +203,7 @@ class AclFeedSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(now = () => SDate(scheduledLive))
 
-      offerAndWait(crunch.baseArrivalsInput, initialAcl)
+      offerAndWait(crunch.baseArrivalsInput, Option(initialAcl))
       offerAndWait(crunch.liveArrivalsInput, initialLive)
 
       Thread.sleep(1000) // Let the initial arrivals work their way through the system
@@ -228,12 +238,12 @@ class AclFeedSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(now = () => SDate(scheduledLive))
 
-      offerAndWait(crunch.baseArrivalsInput, initialAcl)
+      offerAndWait(crunch.baseArrivalsInput, Option(initialAcl))
       offerAndWait(crunch.liveArrivalsInput, initialLive)
 
       Thread.sleep(1000) // Let the initial arrivals work their way through the system
 
-      offerAndWait(crunch.baseArrivalsInput, newAcl)
+      offerAndWait(crunch.baseArrivalsInput, Option(newAcl))
       offerAndWait(crunch.liveArrivalsInput, newLive)
 
       val expected = newAcl.flights.toSet ++ newLive.flights.toSet ++ initialLive.flights.toSet

@@ -39,5 +39,6 @@ node_modules/
 client/src/main/resources/bundle.js
 project/
 e2e/cypress/videos/*
+e2e/cypress/screenshots/*
 .ensime_cache/
 runsbt.sh

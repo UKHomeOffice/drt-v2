@@ -49,10 +49,10 @@ class LHRLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFacto
 
     val expected = List(
       LHRFlightPax(
-        "FL002", "2018-02-12 10:20:00", "469", "414", "200", "218", "0", "1", "58", "0", "0", "0", "125", "32"
+        "FL002", "2018-02-12 10:20:00", 469, 414, 200, 218, 0, 1, 58, 0, 0, 0, 125, 32
       ),
       LHRFlightPax(
-        "FL001", "2018-02-12 18:20:00", "214", "163", "63", "104", "2", "1", "10", "0", "1", "0", "82", "6"
+        "FL001", "2018-02-12 18:20:00", 214, 163, 63, 104, 2, 1, 10, 0, 1, 0, 82, 6
       )
     )
 
@@ -95,7 +95,7 @@ class LHRLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFacto
       )
 
       val lhrPax = LHRFlightPax(
-        "FL002", "2018-02-12T10:20:00", "469", "414", "200", "218", "0", "1", "58", "0", "0", "0", "125", "32"
+        "FL002", "2018-02-12T10:20:00", 469, 414, 200, 218, 0, 1, 58, 0, 0, 0, 125, 32
       )
 
       val result: Arrival = LHRLiveFeed.flightAndPaxToArrival(lhrArrival, Option(lhrPax)).get
@@ -367,34 +367,34 @@ val successFullBSTFlightsResponse =
       |    {
       |      "FLIGHTNUMBER": "FL002",
       |      "SCHEDULEDFLIGHTOPERATIONTIME": "2018-02-12 10:20:00",
-      |      "MAXPASSENGERCOUNT": "469",
-      |      "TOTALPASSENGERCOUNT": "414",
-      |      "ACTUALDIRECTPASSENGERCOUNT": "200",
-      |      "ACTUALTRANSFERPASSENGERCOUNT": "218",
-      |      "ACTUALT2INTCOUNT": "0",
-      |      "ACTUALT2DOMCOUNT": "1",
-      |      "ACTUALT3INTCOUNT": "58",
-      |      "ACTUALT3DOMCOUNT": "0",
-      |      "ACTUALT4INTCOUNT": "0",
-      |      "ACTUALT4DOMCOUNT": "0",
-      |      "ACTUALT5INTCOUNT": "125",
-      |      "ACTUALT5DOMCOUNT": "32"
+      |      "MAXPASSENGERCOUNT": 469,
+      |      "TOTALPASSENGERCOUNT": 414,
+      |      "ACTUALDIRECTPASSENGERCOUNT": 200,
+      |      "ACTUALTRANSFERPASSENGERCOUNT": 218,
+      |      "ACTUALT2INTCOUNT": 0,
+      |      "ACTUALT2DOMCOUNT": 1,
+      |      "ACTUALT3INTCOUNT": 58,
+      |      "ACTUALT3DOMCOUNT": 0,
+      |      "ACTUALT4INTCOUNT": 0,
+      |      "ACTUALT4DOMCOUNT": 0,
+      |      "ACTUALT5INTCOUNT": 125,
+      |      "ACTUALT5DOMCOUNT": 32
       |    },
       |    {
       |      "FLIGHTNUMBER": "FL001",
       |      "SCHEDULEDFLIGHTOPERATIONTIME": "2018-02-12 18:20:00",
-      |      "MAXPASSENGERCOUNT": "214",
-      |      "TOTALPASSENGERCOUNT": "163",
-      |      "ACTUALDIRECTPASSENGERCOUNT": "63",
-      |      "ACTUALTRANSFERPASSENGERCOUNT": "104",
-      |      "ACTUALT2INTCOUNT": "2",
-      |      "ACTUALT2DOMCOUNT": "1",
-      |      "ACTUALT3INTCOUNT": "10",
-      |      "ACTUALT3DOMCOUNT": "0",
-      |      "ACTUALT4INTCOUNT": "1",
-      |      "ACTUALT4DOMCOUNT": "0",
-      |      "ACTUALT5INTCOUNT": "82",
-      |      "ACTUALT5DOMCOUNT": "6"
+      |      "MAXPASSENGERCOUNT": 214,
+      |      "TOTALPASSENGERCOUNT": 163,
+      |      "ACTUALDIRECTPASSENGERCOUNT": 63,
+      |      "ACTUALTRANSFERPASSENGERCOUNT": 104,
+      |      "ACTUALT2INTCOUNT": 2,
+      |      "ACTUALT2DOMCOUNT": 1,
+      |      "ACTUALT3INTCOUNT": 10,
+      |      "ACTUALT3DOMCOUNT": 0,
+      |      "ACTUALT4INTCOUNT": 1,
+      |      "ACTUALT4DOMCOUNT": 0,
+      |      "ACTUALT5INTCOUNT": 82,
+      |      "ACTUALT5DOMCOUNT": 6
       |    }
       |]]
     """.stripMargin

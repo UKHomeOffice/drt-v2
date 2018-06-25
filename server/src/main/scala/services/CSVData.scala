@@ -95,7 +95,7 @@ object CSVData {
     val eGatesHeadings = List("Pax", "Wait", "Staff req", "Act. wait time", "Act. desks")
     val relevantQueues = queues
       .filterNot(_ == Queues.Transfer)
-    val queueHeadings = relevantQueues
+    val queueHeadings = relevantQueues.map(queue=> Queues.queueDisplayNames.getOrElse(queue, queue))
       .flatMap(qn => List.fill(colHeadings.length)(Queues.exportQueueDisplayNames.getOrElse(qn, qn))).mkString(",")
     val headingsLine1 = "Date,," + queueHeadings +
       ",Misc,PCP Staff,PCP Staff"

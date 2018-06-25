@@ -43,7 +43,7 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
       cruncher = TryRenjin.crunch
     )
 
-    Await.ready(crunch.baseArrivalsInput.offer(Flights(forecastFlights.toSeq)), 1 second)
+    Await.ready(crunch.baseArrivalsInput.offer(Option(Flights(forecastFlights.toSeq))), 1 second)
     Await.ready(crunch.forecastShiftsInput.offer(shifts), 1 second)
 
     val expected = List(

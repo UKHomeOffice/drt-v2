@@ -30,7 +30,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(now = () => SDate(scheduled))
 
     offerAndWait(crunch.liveArrivalsInput, liveFlights)
-    offerAndWait(crunch.baseArrivalsInput, baseFlights)
+    offerAndWait(crunch.baseArrivalsInput, Option(baseFlights))
 
     val expectedForecast = Map(SDate(base).millisSinceEpoch -> 20, SDate(base).addMinutes(1).millisSinceEpoch -> 1)
 
@@ -69,7 +69,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     )
 
     offerAndWait(crunch.liveArrivalsInput, liveFlights)
-    offerAndWait(crunch.baseArrivalsInput, baseFlights)
+    offerAndWait(crunch.baseArrivalsInput, Option(baseFlights))
 
     val shift1Millis = (firstMinute.millisSinceEpoch to firstMinute.addMinutes(14).millisSinceEpoch by 60000)
       .map(m => (m, "T1", Queues.EeaDesk, Some(1)))
@@ -110,7 +110,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
       cruncher = TryRenjin.crunch
     )
 
-    offerAndWait(crunch.baseArrivalsInput, baseFlights)
+    offerAndWait(crunch.baseArrivalsInput, Option(baseFlights))
 
     crunch.forecastTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
@@ -152,7 +152,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     val forecastStaffNumber = 5
 
-    offerAndWait(crunch.baseArrivalsInput, baseFlights)
+    offerAndWait(crunch.baseArrivalsInput, Option(baseFlights))
     offerAndWait(crunch.forecastShiftsInput, s"shift a,T1,03/01/17,00:00,00:29,$forecastStaffNumber")
 
     val shiftMinuteMillis = (SDate(base).millisSinceEpoch until SDate(base).addMinutes(30).millisSinceEpoch by 60000).toList
@@ -182,7 +182,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(now = () => SDate(today))
 
-    offerAndWait(crunch.baseArrivalsInput, baseFlights)
+    offerAndWait(crunch.baseArrivalsInput, Option(baseFlights))
 
     val expectedForecast = Map(SDate(baseScheduled).millisSinceEpoch -> 20, SDate(baseScheduled).addMinutes(1).millisSinceEpoch -> 1)
 
@@ -227,7 +227,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(now = () => SDate(baseScheduled).addDays(-1))
 
     offerAndWait(crunch.forecastArrivalsInput, forecastArrivals)
-    offerAndWait(crunch.baseArrivalsInput, baseArrivals)
+    offerAndWait(crunch.baseArrivalsInput, Option(baseArrivals))
 
     crunch.forecastTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
@@ -255,7 +255,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(now = () => SDate(baseScheduled).addDays(-1))
 
     offerAndWait(crunch.forecastArrivalsInput, forecastArrivals)
-    offerAndWait(crunch.baseArrivalsInput, baseArrivals)
+    offerAndWait(crunch.baseArrivalsInput, Option(baseArrivals))
 
     crunch.forecastTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
@@ -285,7 +285,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(now = () => SDate(baseScheduled).addDays(-1))
 
-    offerAndWait(crunch.baseArrivalsInput, baseArrivals)
+    offerAndWait(crunch.baseArrivalsInput, Option(baseArrivals))
     offerAndWait(crunch.forecastArrivalsInput, forecastArrivals)
     offerAndWait(crunch.liveArrivalsInput, liveArrivals)
 
@@ -317,7 +317,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(now = () => SDate(baseScheduled).addDays(-1))
 
-    offerAndWait(crunch.baseArrivalsInput, baseArrivals)
+    offerAndWait(crunch.baseArrivalsInput, Option(baseArrivals))
     crunch.forecastTestProbe.receiveOne(2 seconds)
     offerAndWait(crunch.forecastArrivalsInput, forecastArrivals1st)
     crunch.forecastTestProbe.receiveOne(2 seconds)

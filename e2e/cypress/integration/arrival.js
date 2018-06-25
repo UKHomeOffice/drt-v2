@@ -1,5 +1,4 @@
-describe('Arrivals page',
-  function () {
+describe('Arrivals page', function () {
     it('Displays a flight after it has been ingested via the live feed',
       function () {
 
@@ -9,10 +8,10 @@ describe('Arrivals page',
           {
             "Operator": "Flybe",
             "Status": "On Chocks",
-            "EstDT": schDT + "T10:55:00Z",
-            "ActDT": schDT + "T10:55:00Z",
-            "EstChoxDT": schDT + "T11:01:00Z",
-            "ActChoxDT": schDT + "T11:05:00Z",
+            "EstDT": schDT + "T00:55:00Z",
+            "ActDT": schDT + "T00:55:00Z",
+            "EstChoxDT": schDT + "T01:01:00Z",
+            "ActChoxDT": schDT + "T01:05:00Z",
             "Gate": "46",
             "Stand": "44R",
             "MaxPax": 78,
@@ -26,9 +25,9 @@ describe('Arrivals page',
             "ICAO": "SA123",
             "IATA": "SA123",
             "Origin": "AMS",
-            "SchDT": schDT + "T09:55:00Z"
+            "SchDT": schDT + "T00:15:00Z"
           });
-        cy.visit('http://localhost:9000/v2/test/live#terminal/T1/current/arrivals//0/24');
+        cy.visit('/v2/test/live#terminal/T1/current/arrivals//0/24');
         cy.get("#arrivals").contains("SA0123")
       });
   });

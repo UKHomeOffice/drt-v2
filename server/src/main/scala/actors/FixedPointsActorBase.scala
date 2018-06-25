@@ -45,7 +45,8 @@ class FixedPointsActor extends FixedPointsActorBase {
   }
 }
 
-class FixedPointsActorBase extends PersistentActor with ActorLogging {
+class FixedPointsActorBase extends RecoveryActorLike {
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def persistenceId = "fixedPoints-store"
 
@@ -55,17 +56,14 @@ class FixedPointsActorBase extends PersistentActor with ActorLogging {
 
   import FixedPointsMessageParser._
 
-  val receiveRecover: Receive = {
+  def processSnapshotMessage: PartialFunction[Any, Unit] = {
+    case snapshot: FixedPointsStateSnapshotMessage => state = FixedPointsState(fixedPointMessagesToFixedPointsString(snapshot.fixedPoints.toList))
+  }
+
+  def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case fixedPointsMessage: FixedPointsMessage =>
       val fp = fixedPointMessagesToFixedPointsString(fixedPointsMessage.fixedPoints.toList)
       updateState(fp)
-
-    case SnapshotOffer(md, snapshot: FixedPointsStateSnapshotMessage) =>
-      log.info(s"Recovery: received SnapshotOffer from ${SDate(md.timestamp).toLocalDateTimeString()} with ${snapshot.fixedPoints.length} fixed points")
-      state = FixedPointsState(fixedPointMessagesToFixedPointsString(snapshot.fixedPoints.toList))
-
-    case RecoveryCompleted =>
-      log.info(s"Recovered successfully")
   }
 
   def receiveCommand: Receive = {

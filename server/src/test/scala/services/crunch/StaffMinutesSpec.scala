@@ -301,4 +301,71 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     true
   }
+
+  "Given a shift with 50 staff and a max of 45 split to Eea desk, egates and fastrack " +
+    "When I ask for the PortState " +
+    "Then I should see deployed staff maxed out on each desk" >> {
+    val scheduled = "2017-01-01T00:00Z"
+    val shiftStart = SDate(scheduled)
+    val initialShifts =
+      """shift a,T1,01/01/17,00:00,00:14,50
+      """.stripMargin
+
+    val crunch = runCrunchGraph(
+      airportConfig = airportConfig.copy(
+        terminalNames = Seq("T1"),
+        queues = Map("T1" -> Seq(Queues.EeaDesk, Queues.FastTrack, Queues.NonEeaDesk)),
+        slaByQueue = Map(Queues.EeaDesk -> 25, Queues.FastTrack -> 30, Queues.NonEeaDesk -> 20),
+        defaultPaxSplits = SplitRatios(
+          SplitSources.TerminalAverage,
+          SplitRatio(eeaMachineReadableToDesk, 0.45),
+          SplitRatio(visaNationalToDesk, 0.45),
+          SplitRatio(visaNationalToFastTrack, 0.1)
+        ),
+        defaultProcessingTimes = Map(
+          "T1" -> Map(
+            eeaMachineReadableToDesk -> 20d / 60,
+            visaNationalToDesk -> 20d / 60,
+            visaNationalToFastTrack -> 5d / 60
+          )
+        ),
+        minMaxDesksByTerminalQueue = Map(
+          "T1" -> Map(
+            Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
+            Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
+            Queues.FastTrack -> ((List.fill[Int](24)(1), List.fill[Int](24)(5)))
+        ))
+    ),
+      now = () => shiftStart
+    )
+
+
+    offerAndWait(crunch.liveShiftsInput, initialShifts)
+
+    val flight = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = scheduled, actPax = 100)
+    offerAndWait(crunch.liveArrivalsInput, Flights(Seq(flight)))
+
+    val expectedCrunchDeployments = Set(
+      (Queues.EeaDesk, shiftStart.addMinutes(0), 20),
+      (Queues.EeaDesk, shiftStart.addMinutes(1), 20),
+      (Queues.EeaDesk, shiftStart.addMinutes(2), 20),
+      (Queues.FastTrack, shiftStart.addMinutes(0), 5),
+      (Queues.FastTrack, shiftStart.addMinutes(1), 5),
+      (Queues.FastTrack, shiftStart.addMinutes(2), 5),
+      (Queues.NonEeaDesk, shiftStart.addMinutes(0), 20),
+      (Queues.NonEeaDesk, shiftStart.addMinutes(1), 20),
+      (Queues.NonEeaDesk, shiftStart.addMinutes(2), 20)
+    )
+
+    crunch.liveTestProbe.fishForMessage(5 seconds) {
+      case ps: PortState =>
+        val minutesInOrder = ps.crunchMinutes.values.toList.sortBy(cm => (cm.minute, cm.queueName)).take(9)
+        val deployments = minutesInOrder.map(cm => (cm.queueName, SDate(cm.minute), cm.deployedDesks.getOrElse(0))).toSet
+
+        deployments == expectedCrunchDeployments
+    }
+
+    true
+  }
+
 }

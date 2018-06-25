@@ -1,8 +1,8 @@
 package actors
 
-import akka.actor.ActorLogging
 import akka.persistence._
 import drt.shared.SDateLike
+import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import server.protobuf.messages.VoyageManifest._
 import services.SDate
@@ -14,7 +14,9 @@ case class VoyageManifestState(manifests: Set[VoyageManifest], latestZipFilename
 
 case object GetLatestZipFilename
 
-class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapshotInterval: Int) extends PersistentActor with ActorLogging {
+class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapshotInterval: Int) extends PersistentActor with RecoveryActorLike {
+  val log: Logger = LoggerFactory.getLogger(getClass)
+
   var state = VoyageManifestState(
     manifests = Set(),
     latestZipFilename = defaultLatestZipFilename)
@@ -28,41 +30,32 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapsh
 
   override def persistenceId: String = "arrival-manifests"
 
-  override def receiveRecover: Receive = {
+  def processSnapshotMessage: PartialFunction[Any, Unit] = {
+    case VoyageManifestStateSnapshotMessage(Some(latestFilename), manifests) =>
+      val updatedManifests = newStateManifests(state.manifests, manifests.map(voyageManifestFromMessage).toSet)
+      state = VoyageManifestState(latestZipFilename = latestFilename, manifests = updatedManifests)
+
+    case lzf: String =>
+      log.info(s"Updating state from latestZipFilename $lzf")
+      state = state.copy(latestZipFilename = lzf)
+  }
+
+  def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case recoveredLZF: String =>
-      log.info(s"Recovery received $recoveredLZF")
       state = state.copy(latestZipFilename = recoveredLZF)
 
     case m@VoyageManifestLatestFileNameMessage(_, Some(latestFilename)) =>
-      log.info(s"Recovery received $m")
       state = state.copy(latestZipFilename = latestFilename)
+      bytesSinceSnapshotCounter += m.serializedSize
 
-    case VoyageManifestsMessage(_, manifestMessages) =>
-      log.info(s"Recovery received ${manifestMessages.length} updated manifests")
+    case m@VoyageManifestsMessage(_, manifestMessages) =>
       val updatedManifests = manifestMessages
         .map(voyageManifestFromMessage)
         .toSet -- state.manifests
 
       state = state.copy(manifests = newStateManifests(state.manifests, updatedManifests))
       persistCounter += 1
-
-    case SnapshotOffer(md, ss) =>
-      log.info(s"Recovery received SnapshotOffer($md)")
-      ss match {
-        case VoyageManifestStateSnapshotMessage(Some(latestFilename), manifests) =>
-          log.info(s"Updating state from VoyageManifestStateSnapshotMessage")
-          val updatedManifests = newStateManifests(state.manifests, manifests.map(voyageManifestFromMessage).toSet)
-          state = VoyageManifestState(latestZipFilename = latestFilename, manifests = updatedManifests)
-
-        case lzf: String =>
-          log.info(s"Updating state from latestZipFilename $lzf")
-          state = state.copy(latestZipFilename = lzf)
-
-        case u => log.info(s"Received unexpected snapshot data: $u")
-      }
-
-    case RecoveryCompleted =>
-      log.info(s"Recovery completed")
+      bytesSinceSnapshotCounter += m.serializedSize
   }
 
   def newStateManifests(existing: Set[VoyageManifest], updates: Set[VoyageManifest]): Set[VoyageManifest] = {
@@ -118,18 +111,23 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapsh
 
   def snapshotIfRequired(stateToSnapshot: VoyageManifestState): Unit = {
     if (persistCounter >= snapshotInterval) {
-      log.info(s"Saving VoyageManifests snapshot ${stateToSnapshot.latestZipFilename}, ${stateToSnapshot.manifests.size} manifests")
-      saveSnapshot(stateToMessage(stateToSnapshot))
+      val stateMessage = stateToMessage(stateToSnapshot)
+      saveSnapshot(stateMessage)
+      log.info(s"Saved ${stateMessage.serializedSize} bytes of VoyageManifests snapshot ${stateToSnapshot.latestZipFilename}, ${stateToSnapshot.manifests.size} manifests")
       persistCounter = 0
+      bytesSinceSnapshotCounter = 0
     }
   }
 
   def persistManifests(updatedManifests: Set[VoyageManifest]): Unit = {
     persist(voyageManifestsToMessage(updatedManifests)) {
       vmm =>
-        log.info(s"Persisting ${vmm.manifestMessages.size} manifest updates")
+        val messageBytes = vmm.serializedSize
+        log.info(s"Persisting ${vmm.serializedSize} bytes of  ${vmm.manifestMessages.size} manifest updates")
         context.system.eventStream.publish(vmm)
         persistCounter += 1
+        bytesSinceSnapshotCounter += messageBytes
+        logPersistedBytesCounter(bytesSinceSnapshotCounter)
     }
   }
 

@@ -1,10 +1,10 @@
 package services
 
 import actors.FlightMessageConversion._
-import actors.GetState
+import actors.{GetState, RecoveryActorLike}
 import akka.persistence._
-import drt.shared.{Arrival, ArrivalHelper, SDateLike}
 import drt.shared.FlightsApi.Flights
+import drt.shared.{Arrival, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.FlightsMessage.{FlightStateSnapshotMessage, FlightsDiffMessage}
 import services.graphstages.Crunch
@@ -46,31 +46,26 @@ class LiveArrivalsActor(now: () => SDateLike,
 }
 
 abstract class ArrivalsActor(now: () => SDateLike,
-                             expireAfterMillis: Long) extends PersistentActor {
+                             expireAfterMillis: Long) extends RecoveryActorLike {
   var arrivalsState: ArrivalsState = ArrivalsState(Map())
   val snapshotInterval = 500
-  val log: Logger
 
-  override def receiveRecover: Receive = {
-    case diffsMessage: FlightsDiffMessage => arrivalsState = consumeDiffsMessage(diffsMessage, arrivalsState)
+  def processSnapshotMessage: PartialFunction[Any, Unit] = {
+    case stateMessage: FlightStateSnapshotMessage =>
+      arrivalsState = arrivalsStateFromSnapshotMessage(stateMessage)
+      logRecoveryMessage(s"restored state to snapshot. ${arrivalsState.arrivals.size} arrivals")
+  }
 
-    case SnapshotOffer(md, ss) =>
-      log.info(s"Recovery received SnapshotOffer($md)")
-      ss match {
-        case snMessage: FlightStateSnapshotMessage =>
-          arrivalsState = arrivalsStateFromSnapshotMessage(snMessage)
-          log.info(s"Recovery restored state to snapshot. ${arrivalsState.arrivals.size} arrivals")
-        case u => log.info(s"Received unexpected snapshot data: $u")
-      }
-
-    case RecoveryCompleted =>
-      log.info(s"Recovery completed")
+  def processRecoveryMessage: PartialFunction[Any, Unit] = {
+    case diff: FlightsDiffMessage =>
+      arrivalsState = consumeDiffsMessage(diff, arrivalsState)
+      bytesSinceSnapshotCounter += diff.serializedSize
   }
 
   def consumeDiffsMessage(message: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState
 
   def consumeRemovals(diffsMessage: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState = {
-    log.info(s"Consuming ${diffsMessage.removals.length} removals")
+    logRecoveryMessage(s"Consuming ${diffsMessage.removals.length} removals")
     val updatedArrivals = existingState.arrivals
       .filterNot { case (id, _) => diffsMessage.removals.contains(id) }
 
@@ -79,7 +74,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
   def consumeUpdates(diffsMessage: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState = {
     val withoutExpired = Crunch.purgeExpired(existingState.arrivals, (a: Arrival) => a.PcpTime.getOrElse(0L), now, expireAfterMillis)
-    log.info(s"Consuming ${diffsMessage.updates.length} updates")
+    logRecoveryMessage(s"Consuming ${diffsMessage.updates.length} updates")
     val updatedArrivals = diffsMessage.updates
       .foldLeft(withoutExpired) {
         case (soFar, fm) =>
@@ -106,7 +101,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
         persistOrSnapshot(Set(), updatedArrivals)
       }
 
-    case ArrivalsState(incomingArrivals) if incomingArrivals != arrivalsState.arrivals =>
+    case Some(ArrivalsState(incomingArrivals)) if incomingArrivals != arrivalsState.arrivals =>
       log.info(s"Received updated ArrivalsState")
       val currentKeys = arrivalsState.arrivals.keys.toSet
       val newKeys = incomingArrivals.keys.toSet
@@ -121,8 +116,11 @@ abstract class ArrivalsActor(now: () => SDateLike,
         persistOrSnapshot(removalKeys, updatedArrivals)
       }
 
-    case ArrivalsState(incomingArrivals) if incomingArrivals == arrivalsState.arrivals =>
+    case Some(ArrivalsState(incomingArrivals)) if incomingArrivals == arrivalsState.arrivals =>
       log.info(s"Received updated ArrivalsState. No changes")
+
+    case None =>
+      log.info(s"Received None. Presumably feed connection failed")
 
     case GetState =>
       log.info(s"Received GetState request. Sending ArrivalsState with ${arrivalsState.arrivals.size} arrivals")
@@ -135,7 +133,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
       log.info(s"Save snapshot failure: $md, $cause")
 
     case other =>
-      log.info(s"Received unexpected message $other")
+      log.info(s"Received unexpected message ${other.getClass}")
   }
 
   def mergeArrivals(incomingArrivals: Seq[Arrival], existingArrivals: Map[Int, Arrival]): Map[Int, Arrival] = {
@@ -149,12 +147,17 @@ abstract class ArrivalsActor(now: () => SDateLike,
     val diffMessage = FlightsDiffMessage(Option(SDate.now().millisSinceEpoch), removalKeys.toSeq, updateMessages)
 
     persist(diffMessage) { dm =>
-      log.info(s"Persisting FlightsDiff with ${diffMessage.removals.length} removals & ${diffMessage.updates.length} updates")
+      val messageBytes = diffMessage.serializedSize
+      log.info(s"Persisting $messageBytes bytes of FlightsDiff with ${diffMessage.removals.length} removals & ${diffMessage.updates.length} updates")
       context.system.eventStream.publish(dm)
+      bytesSinceSnapshotCounter += messageBytes
+      logPersistedBytesCounter(bytesSinceSnapshotCounter)
+
       if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
-        log.info(s"Saving ArrivalsState snapshot")
         val snapshotMessage: FlightStateSnapshotMessage = FlightStateSnapshotMessage(arrivalsState.arrivals.values.map(apiFlightToFlightMessage).toSeq)
         saveSnapshot(snapshotMessage)
+        log.info(s"Saved {${snapshotMessage.serializedSize} bytes of ArrivalsState snapshot. Reset byte counter to zero")
+        bytesSinceSnapshotCounter = 0
       }
     }
   }
