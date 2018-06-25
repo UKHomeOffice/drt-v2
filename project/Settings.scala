@@ -47,7 +47,7 @@ object Settings {
     val sprayVersion = "1.3.4"
     val levelDb = "0.7"
     val levelDbJni = "1.8"
-    val renjin = "0.8.2195"
+    val renjin = "0.9.2646"
     val awsSdk = "1.11.89"
     val awsCommons = "0.10.0"
     val csvCommons = "1.4"
