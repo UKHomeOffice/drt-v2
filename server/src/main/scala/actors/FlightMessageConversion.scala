@@ -1,10 +1,10 @@
 package actors
 
 import drt.shared._
+import org.apache.commons.lang3.StringUtils
 import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, PaxTypeAndQueueCountMessage, SplitMessage}
 import server.protobuf.messages.FlightsMessage.{FlightMessage, FlightStateSnapshotMessage}
 import services.{ArrivalsState, SDate}
-
 import scala.util.{Success, Try}
 
 object FlightMessageConversion {
@@ -41,28 +41,28 @@ object FlightMessageConversion {
 
   def apiFlightToFlightMessage(apiFlight: Arrival): FlightMessage = {
     FlightMessage(
-      operator = Some(apiFlight.Operator),
-      gate = Some(apiFlight.Gate),
-      stand = Some(apiFlight.Stand),
-      status = Some(apiFlight.Status),
-      maxPax = Some(apiFlight.MaxPax),
-      actPax = Some(apiFlight.ActPax),
-      tranPax = Some(apiFlight.TranPax),
-      runwayID = Some(apiFlight.RunwayID),
-      baggageReclaimId = Some(apiFlight.BaggageReclaimId),
-      flightID = Some(apiFlight.FlightID),
-      airportID = Some(apiFlight.AirportID),
-      terminal = Some(apiFlight.Terminal),
-      iCAO = Some(apiFlight.rawICAO),
-      iATA = Some(apiFlight.rawIATA),
-      origin = Some(apiFlight.Origin),
-      pcpTime = Some(apiFlight.PcpTime),
+      operator = apiFlight.Operator.filter(StringUtils.isNotBlank(_)),
+      gate = apiFlight.Gate.filter(StringUtils.isNotBlank(_)),
+      stand = apiFlight.Stand.filter(StringUtils.isNotBlank(_)),
+      status = Option(StringUtils.trimToNull(apiFlight.Status)),
+      maxPax = apiFlight.MaxPax.filter(_ != 0),
+      actPax = apiFlight.ActPax.filter(_ != 0),
+      tranPax = apiFlight.TranPax,
+      runwayID = apiFlight.RunwayID.filter(StringUtils.isNotBlank(_)),
+      baggageReclaimId = apiFlight.BaggageReclaimId.filter(StringUtils.isNotBlank(_)),
+      flightID = apiFlight.FlightID.filter(_ != 0),
+      airportID = Option(StringUtils.trimToNull(apiFlight.AirportID)),
+      terminal = Option(StringUtils.trimToNull(apiFlight.Terminal)),
+      iCAO = Option(StringUtils.trimToNull(apiFlight.rawICAO)),
+      iATA = Option(StringUtils.trimToNull(apiFlight.rawIATA)),
+      origin = Option(StringUtils.trimToNull(apiFlight.Origin)),
+      pcpTime = apiFlight.PcpTime.filter(_ != 0),
 
-      scheduled = millisOptionFromArrivalDateString(apiFlight.SchDT),
-      estimated = millisOptionFromArrivalDateString(apiFlight.EstDT),
-      touchdown = millisOptionFromArrivalDateString(apiFlight.ActDT),
-      estimatedChox = millisOptionFromArrivalDateString(apiFlight.EstChoxDT),
-      actualChox = millisOptionFromArrivalDateString(apiFlight.ActChoxDT)
+      scheduled = Option(apiFlight.Scheduled).filter(_ != 0),
+      estimated = apiFlight.Estimated.filter(_ != 0),
+      touchdown = apiFlight.Actual.filter(_ != 0),
+      estimatedChox = apiFlight.EstimatedChox.filter(_ != 0),
+      actualChox = apiFlight.ActualChox.filter(_ != 0)
     )
   }
 
@@ -79,29 +79,28 @@ object FlightMessageConversion {
 
   def flightMessageToApiFlight(flightMessage: FlightMessage): Arrival = {
     Arrival(
-      Operator = flightMessage.operator.getOrElse(""),
+      Operator = flightMessage.operator.filter(StringUtils.isNotBlank(_)),
       Status = flightMessage.status.getOrElse(""),
-      EstDT = apiFlightDateTime(flightMessage.estimated),
-      ActDT = apiFlightDateTime(flightMessage.touchdown),
-      EstChoxDT = apiFlightDateTime(flightMessage.estimatedChox),
-      ActChoxDT = apiFlightDateTime(flightMessage.actualChox),
-      Gate = flightMessage.gate.getOrElse(""),
-      Stand = flightMessage.stand.getOrElse(""),
-      MaxPax = flightMessage.maxPax.getOrElse(0),
-      ActPax = flightMessage.actPax.getOrElse(0),
-      TranPax = flightMessage.tranPax.getOrElse(0),
-      RunwayID = flightMessage.runwayID.getOrElse(""),
-      BaggageReclaimId = flightMessage.baggageReclaimId.getOrElse(""),
-      FlightID = flightMessage.flightID.getOrElse(0),
+      Estimated = flightMessage.estimated.filter(_ != 0),
+      Actual = flightMessage.touchdown.filter(_ != 0),
+      EstimatedChox = flightMessage.estimatedChox.filterNot(_ != 0),
+      ActualChox = flightMessage.actualChox.filter(_ != 0),
+      Gate = flightMessage.gate.filter(StringUtils.isNotBlank(_)),
+      Stand = flightMessage.stand.filter(StringUtils.isNotBlank(_)),
+      MaxPax = flightMessage.maxPax.filter(_ != 0),
+      ActPax = flightMessage.actPax.filter(_ != 0),
+      TranPax = flightMessage.tranPax,
+      RunwayID = flightMessage.runwayID.filter(StringUtils.isNotBlank(_)),
+      BaggageReclaimId = flightMessage.baggageReclaimId.filter(StringUtils.isNotBlank(_)),
+      FlightID = flightMessage.flightID.filter(_ != 0),
       AirportID = flightMessage.airportID.getOrElse(""),
       Terminal = flightMessage.terminal.getOrElse(""),
       rawICAO = flightMessage.iCAO.getOrElse(""),
       rawIATA = flightMessage.iATA.getOrElse(""),
       Origin = flightMessage.origin.getOrElse(""),
-      SchDT = apiFlightDateTime(flightMessage.scheduled),
-      PcpTime = flightMessage.pcpTime.getOrElse(0),
+      PcpTime = flightMessage.pcpTime.filter(_ != 0),
       LastKnownPax = flightMessage.lastKnownPax,
-      Scheduled = flightMessage.scheduled.getOrElse(0)
+      Scheduled = flightMessage.scheduled.getOrElse(0L)
     )
   }
 

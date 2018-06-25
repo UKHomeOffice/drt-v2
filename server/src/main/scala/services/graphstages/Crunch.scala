@@ -79,7 +79,7 @@ object Crunch {
     val latestPcpTimes = differences
       .toList
       .sortBy(_.apiFlight.PcpTime)
-      .map(_.apiFlight.PcpTime)
+      .flatMap(_.apiFlight.PcpTime)
 
     if (latestPcpTimes.nonEmpty) {
       Option((SDate(latestPcpTimes.head), SDate(latestPcpTimes.reverse.head))) match {
@@ -99,10 +99,10 @@ object Crunch {
 
     toUpdate.map(_.apiFlight).foreach(ua => {
       oldFlightsById.get(ua.uniqueId).map(_.apiFlight).foreach(oa => {
-        if (ua.EstDT != oa.EstDT) log.info(s"${ua.IATA} changed estimated ${oa.EstDT} -> ${ua.EstDT}")
-        if (ua.ActDT != oa.ActDT) log.info(s"${ua.IATA} changed touchdown ${oa.ActDT} -> ${ua.ActDT}")
-        if (ua.EstChoxDT != oa.EstChoxDT) log.info(s"${ua.IATA} changed estchox   ${oa.EstChoxDT} -> ${ua.EstChoxDT}")
-        if (ua.ActChoxDT != oa.ActChoxDT) log.info(s"${ua.IATA} changed actchox   ${oa.ActChoxDT} -> ${ua.ActChoxDT}")
+        if (ua.Estimated != oa.Estimated) log.info(s"${ua.IATA} changed estimated ${oa.Estimated} -> ${ua.Estimated}")
+        if (ua.Actual != oa.Actual) log.info(s"${ua.IATA} changed touchdown ${oa.Actual} -> ${ua.Actual}")
+        if (ua.EstimatedChox != oa.EstimatedChox) log.info(s"${ua.IATA} changed estchox   ${oa.EstimatedChox} -> ${ua.EstimatedChox}")
+        if (ua.ActualChox != oa.ActualChox) log.info(s"${ua.IATA} changed actchox   ${oa.ActualChox} -> ${ua.ActualChox}")
         if (ua.ActPax != oa.ActPax) log.info(s"${ua.IATA} changed actpax   ${oa.ActPax} -> ${ua.ActPax}")
       })
     })

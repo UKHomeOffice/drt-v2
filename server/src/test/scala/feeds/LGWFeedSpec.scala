@@ -1,6 +1,7 @@
 package feeds
 
 import java.util.concurrent.TimeUnit
+
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import com.typesafe.config.{Config, ConfigFactory}
@@ -9,8 +10,10 @@ import drt.shared.Arrival
 import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.Scope
+import services.SDate
 import spray.http.HttpHeaders.RawHeader
 import spray.http._
+
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -87,23 +90,23 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
 
     arrivals.size mustEqual 1
     arrivals.head mustEqual new Arrival(
-      Operator = "",
+      Operator = None,
       Status = "LAN",
-      EstDT = "2018-06-03T19:28:00Z",
-      ActDT = "2018-06-03T19:30:00Z",
-      EstChoxDT = "2018-06-03T19:37:00Z",
-      ActChoxDT = "2018-06-03T19:36:00Z",
-      Gate = "",
-      Stand = "",
-      MaxPax = 308,
-      ActPax = 120,
-      TranPax = 0,
-      RunwayID = "08R",
-      BaggageReclaimId = "",
-      FlightID = 0,
+      Estimated = Some(SDate("2018-06-03T19:28:00Z").millisSinceEpoch),
+      Actual =  Some(SDate("2018-06-03T19:30:00Z").millisSinceEpoch),
+      EstimatedChox =  Some(SDate("2018-06-03T19:37:00Z").millisSinceEpoch),
+      ActualChox =  Some(SDate("2018-06-03T19:36:00Z").millisSinceEpoch),
+      Gate = None,
+      Stand = None,
+      MaxPax = Some(308),
+      ActPax = Some(120),
+      TranPax = None,
+      RunwayID = Some("08R"),
+      BaggageReclaimId = None,
+      FlightID = None,
       AirportID = "LGW",
-      Terminal = "N", rawICAO = "VIR808", rawIATA = "VS808", Origin = "LHR", SchDT = "2018-06-03T19:50:00Z",
-      Scheduled = 1528055400000L, PcpTime = 0, LastKnownPax = None)
+      Terminal = "N", rawICAO = "VIR808", rawIATA = "VS808", Origin = "LHR",
+      Scheduled = SDate("2018-06-03T19:50:00Z").millisSinceEpoch, PcpTime = None, LastKnownPax = None)
 
     deleteCalled must beTrue
   }

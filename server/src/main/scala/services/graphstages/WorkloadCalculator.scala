@@ -36,7 +36,7 @@ object WorkloadCalculator {
 
       val totalPaxWithNationality = splitsWithoutTransit.toList.flatMap(_.nationalities.map(_.values.sum)).sum
 
-      minutesForHours(flight.PcpTime, 1)
+      minutesForHours(flight.PcpTime.getOrElse(0), 1)
         .zip(paxDeparturesPerMinutes(totalPax.toInt, paxOffFlowRate))
         .flatMap {
           case (minuteMillis, flightPaxInMinute) =>

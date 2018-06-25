@@ -73,7 +73,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
   }
 
   def consumeUpdates(diffsMessage: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState = {
-    val withoutExpired = Crunch.purgeExpired(existingState.arrivals, (a: Arrival) => a.PcpTime, now, expireAfterMillis)
+    val withoutExpired = Crunch.purgeExpired(existingState.arrivals, (a: Arrival) => a.PcpTime.getOrElse(0L), now, expireAfterMillis)
     logRecoveryMessage(s"Consuming ${diffsMessage.updates.length} updates")
     val updatedArrivals = diffsMessage.updates
       .foldLeft(withoutExpired) {

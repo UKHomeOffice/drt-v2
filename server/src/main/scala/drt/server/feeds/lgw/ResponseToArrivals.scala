@@ -2,7 +2,9 @@ package drt.server.feeds.lgw
 
 import java.io.ByteArrayInputStream
 import drt.shared.Arrival
+import drt.shared.CrunchApi.MillisSinceEpoch
 import org.apache.commons.io.IOUtils
+import org.apache.commons.lang3.StringUtils
 import org.slf4j.{Logger, LoggerFactory}
 import scala.util.{Failure, Success, Try}
 import scala.xml.Node
@@ -34,29 +36,31 @@ case class ResponseToArrivals(data: Array[Byte], locationOption: Option[String] 
 
   def nodeToArrival: Node => (Arrival, Option[String]) = (n: Node) => {
 
+    val operator = (n \ "AirlineIATA") text
+    val actPax = parsePaxCount(n, "70A").filter(_!= 0).orElse(None)
+    val transPax = parsePaxCount(n, "TIP")
     val arrival = new Arrival(
-      Operator = (n \ "AirlineIATA") text,
+      Operator = if (operator.isEmpty) None else Some(operator) ,
       Status = parseStatus(n),
-      EstDT = parseDateTime(n, "TDN", "EST").getOrElse(""),
-      ActDT = parseDateTime(n, "TDN", "ACT").getOrElse(""),
-      EstChoxDT = parseDateTime(n, "ONB", "EST").getOrElse(""),
-      ActChoxDT = parseDateTime(n, "ONB", "ACT").getOrElse(""),
-      Gate = (n \\ "PassengerGate").headOption.map(n => n text).getOrElse(""),
-      Stand = (n \\ "ArrivalStand").headOption.map(n => n text).getOrElse(""),
-      MaxPax = (n \\ "SeatCapacity").headOption.map(n => (n text).toInt).getOrElse(0),
-      ActPax = parsePaxCount(n, "70A").getOrElse(0),
-      TranPax = parsePaxCount(n, "TIP").getOrElse(0),
-      RunwayID = parseRunwayId(n).getOrElse(""),
-      BaggageReclaimId = Try(n \\ "BaggageClaimUnit" text).getOrElse(""),
-      FlightID = 0,
+      Estimated = parseDateTime(n, operationQualifier = "TDN", timeType = "EST"),
+      Actual  = parseDateTime(n, operationQualifier = "TDN", timeType = "ACT"),
+      EstimatedChox = parseDateTime(n, operationQualifier = "ONB", timeType = "EST") ,
+      ActualChox = parseDateTime(n, operationQualifier = "ONB", timeType = "ACT"),
+      Gate = (n \\ "PassengerGate").headOption.map(n => n text).filter(StringUtils.isNotBlank(_)),
+      Stand = (n \\ "ArrivalStand").headOption.map(n => n text).filter(StringUtils.isNotBlank(_)),
+      MaxPax = (n \\ "SeatCapacity").headOption.map(n => (n text).toInt),
+      ActPax = actPax,
+      TranPax = if (actPax.isEmpty) None else transPax,
+      RunwayID = parseRunwayId(n).filter(StringUtils.isNotBlank(_)),
+      BaggageReclaimId = Try(n \\ "BaggageClaimUnit" text).toOption.filter(StringUtils.isNotBlank(_)),
+      FlightID = None,
       AirportID = "LGW",
       Terminal = parseTerminal(n),
       rawICAO = (n \\ "AirlineICAO" text) + parseFlightNumber(n),
       rawIATA = (n \\ "AirlineIATA" text) + parseFlightNumber(n),
       Origin = parseOrigin(n),
-      SchDT = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("SCT")).map(n => n text).getOrElse(""),
       Scheduled = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("SCT")).map(n => services.SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
-      PcpTime = 0,
+      PcpTime = None,
       LastKnownPax = None)
     log.info(s"parsed arrival: $arrival")
     (arrival, locationOption)
@@ -92,9 +96,8 @@ case class ResponseToArrivals(data: Array[Byte], locationOption: Option[String] 
     (n \\ "CabinClass").find(n =>  (n \ "@Class").isEmpty).flatMap(n=> (n \ "PaxCount").find(n=> (n \ "@Qualifier" text).equals(qualifier)).map(n => (n text).toInt ) )
   }
 
-  def parseDateTime(n: Node, operationQualifier: String, timeType: String): Option[String] = {
-    (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("SCT")).map(n => n text)
-    (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals(operationQualifier) && (n \ "@TimeType" text).equals(timeType)).map(n => n text)
+  def parseDateTime(n: Node, operationQualifier: String, timeType: String): Option[MillisSinceEpoch] = {
+    (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals(operationQualifier) && (n \ "@TimeType" text).equals(timeType)).map(n => services.SDate.parseString(n text).millisSinceEpoch)
   }
 
 }

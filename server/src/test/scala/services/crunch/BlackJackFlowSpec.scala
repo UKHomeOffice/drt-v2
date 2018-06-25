@@ -21,7 +21,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
     "Then the updated blackjack numbers should appear in the PortState" >> {
     val scheduled = "2017-01-01T00:00Z"
 
-    val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 21)
+    val flight = ArrivalGenerator.apiFlight(flightId = Option(1), schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(21))
     val initialBaseArrivals = Set(flight)
     val deskStats = ActualDeskStats(Map(
       "T1" -> Map(
@@ -67,7 +67,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
 
     val scheduled = "2017-01-01T00:00Z"
 
-    val flight = ArrivalGenerator.apiFlight(flightId = 1, schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = 21)
+    val flight = ArrivalGenerator.apiFlight(flightId = Option(1), schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(21))
     val initialBaseArrivals = Set(flight)
     val deskStats = ActualDeskStats(Map(
       "T1" -> Map(

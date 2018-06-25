@@ -10,27 +10,26 @@ class ApiFlightsToProtoBufSpec extends Specification {
   "apiFlightToFlightMessage" should {
     "take a single Arrival and return a FlightMessage representing it" in {
       val apiFlight = Arrival(
-        Operator = "Op",
+        Operator = Some("Op"),
         Status = "scheduled",
-        SchDT = "2016-01-01T13:00:00Z",
-        EstDT = "2016-01-01T13:05:00Z",
-        ActDT = "2016-01-01T13:10:00Z",
-        EstChoxDT = "2016-01-01T13:15:00Z",
-        ActChoxDT = "2016-01-01T13:20:00Z",
-        Gate = "10",
-        Stand = "10A",
-        MaxPax = 200,
-        ActPax = 150,
-        TranPax = 10,
-        RunwayID = "1",
-        BaggageReclaimId = "A",
-        FlightID = 1000,
+        Estimated = Some(SDate("2016-01-01T13:05:00Z").millisSinceEpoch),
+        Actual = Some(SDate("2016-01-01T13:10:00Z").millisSinceEpoch),
+        EstimatedChox = Some(SDate("2016-01-01T13:15:00Z").millisSinceEpoch),
+        ActualChox = Some(SDate("2016-01-01T13:20:00Z").millisSinceEpoch),
+        Gate = Some("10"),
+        Stand = Some("10A"),
+        MaxPax = Some(200),
+        ActPax = Some(150),
+        TranPax = Some(10),
+        RunwayID = Some("1"),
+        BaggageReclaimId = Some("A"),
+        FlightID = Some(1000),
         AirportID = "LHR",
         Terminal = "T2",
         rawICAO = "BA0001",
         rawIATA = "BAA0001",
         Origin = "JFK",
-        PcpTime = 1451655000000L, // 2016-01-01 13:30:00 UTC
+        PcpTime = Some(1451655000000L), // 2016-01-01 13:30:00 UTC
         Scheduled = SDate("2016-01-01T13:00:00Z").millisSinceEpoch
       )
       val flightMessage = apiFlightToFlightMessage(apiFlight)

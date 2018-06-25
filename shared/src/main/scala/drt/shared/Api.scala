@@ -1,6 +1,5 @@
 package drt.shared
 
-import drt.shared
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, _}
 import drt.shared.SplitRatiosNs.SplitSources
@@ -125,28 +124,27 @@ object MinuteHelper {
 case class FlightsNotReady()
 
 case class Arrival(
-                    Operator: String,
+                    Operator: Option[String],
                     Status: String,
-                    EstDT: String,
-                    ActDT: String,
-                    EstChoxDT: String,
-                    ActChoxDT: String,
-                    Gate: String,
-                    Stand: String,
-                    MaxPax: Int,
-                    ActPax: Int,
-                    TranPax: Int,
-                    RunwayID: String,
-                    BaggageReclaimId: String,
-                    FlightID: Int,
+                    Estimated: Option[MillisSinceEpoch],
+                    Actual: Option[MillisSinceEpoch],
+                    EstimatedChox: Option[MillisSinceEpoch],
+                    ActualChox: Option[MillisSinceEpoch],
+                    Gate: Option[String],
+                    Stand: Option[String],
+                    MaxPax: Option[Int],
+                    ActPax: Option[Int],
+                    TranPax: Option[Int],
+                    RunwayID: Option[String],
+                    BaggageReclaimId: Option[String],
+                    FlightID: Option[Int],
                     AirportID: String,
                     Terminal: String,
                     rawICAO: String,
                     rawIATA: String,
                     Origin: String,
-                    SchDT: String,
                     Scheduled: MillisSinceEpoch,
-                    PcpTime: MillisSinceEpoch,
+                    PcpTime: Option[MillisSinceEpoch],
                     LastKnownPax: Option[Int] = None) {
   lazy val ICAO: String = Arrival.standardiseFlightCode(rawICAO)
   lazy val IATA: String = Arrival.standardiseFlightCode(rawIATA)
@@ -175,8 +173,8 @@ case class Arrival(
   lazy val uniqueStr: String = s"$Terminal$Scheduled$flightNumber"
 
   def hasPcpDuring(start: SDateLike, end: SDateLike): Boolean = {
-    val firstPcpMilli = PcpTime
-    val lastPcpMilli = PcpTime + millisToDisembark(ActPax)
+    val firstPcpMilli = PcpTime.getOrElse(0L)
+    val lastPcpMilli = firstPcpMilli + millisToDisembark(ActPax.getOrElse(0))
     val firstInRange = start.millisSinceEpoch <= firstPcpMilli && firstPcpMilli <= end.millisSinceEpoch
     val lastInRange = start.millisSinceEpoch <= lastPcpMilli && lastPcpMilli <= end.millisSinceEpoch
     firstInRange || lastInRange
@@ -192,7 +190,7 @@ case class Arrival(
 object Arrival {
   val flightCodeRegex: Regex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r
 
-  def summaryString(arrival: Arrival): TerminalName = arrival.AirportID + "/" + arrival.Terminal + "@" + arrival.SchDT + "!" + arrival.IATA
+  def summaryString(arrival: Arrival): TerminalName = arrival.AirportID + "/" + arrival.Terminal + "@" + arrival.Scheduled + "!" + arrival.IATA
 
   def standardiseFlightCode(flightCode: String): String = {
     val flightCodeRegex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r

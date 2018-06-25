@@ -61,17 +61,17 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
 //      }
 
       flights.toList === List(List(Arrival(
-        "Qatar Airways",
-        "UNK",
-        "2017-03-09T21:32:00.000Z",
-        "2017-03-09T21:33:00.000Z",
-        "2017-03-09T21:43:00.000Z",
-        "2017-03-09T21:45:00.000Z",
-        "", "10", 795, 142, 1, "", "", -54860421, "LHR", "T4", "QR005", "QR005", "DOH",
-        "2017-03-09T22:00:00.000Z",
-        SDate("2017-03-09T22:00:00.000Z").millisSinceEpoch,
-        SDate("2017-03-09T22:04:00.000Z").millisSinceEpoch,
-        None)))
+        Operator = Some("Qatar Airways"),
+        Status = "UNK",
+        Estimated = Some(SDate("2017-03-09T21:32:00.000Z").millisSinceEpoch),
+        Actual = Some(SDate("2017-03-09T21:33:00.000Z").millisSinceEpoch),
+        EstimatedChox = Some(SDate("2017-03-09T21:43:00.000Z").millisSinceEpoch),
+        ActualChox = Some(SDate("2017-03-09T21:45:00.000Z").millisSinceEpoch),
+        Gate = None, Stand = Some("10"), MaxPax = Some(795), ActPax = Some(142), TranPax = Some(1), RunwayID = None, BaggageReclaimId = None,
+        FlightID = Some(-54860421), AirportID = "LHR", Terminal = "T4", rawICAO = "QR005", rawIATA = "QR005", Origin = "DOH",
+        Scheduled = SDate("2017-03-09T22:00:00.000Z").millisSinceEpoch,
+        PcpTime = Some(SDate("2017-03-09T22:04:00.000Z").millisSinceEpoch),
+        LastKnownPax = None)))
     }
 
     "Produce an Arrival source with one flight based on a line with missing values from the LHR csv" in {

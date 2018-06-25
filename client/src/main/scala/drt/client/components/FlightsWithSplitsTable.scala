@@ -29,7 +29,7 @@ object FlightsWithSplitsTable {
   def ArrivalsTable(timelineComponent: Option[(Arrival) => VdomNode] = None,
                     originMapper: (String) => VdomNode = (portCode) => portCode,
                     splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
-                   )(paxComponent: (ApiFlightWithSplits) => TagMod = (f) => f.apiFlight.ActPax) = ScalaComponent.builder[Props]("ArrivalsTable")
+                   )(paxComponent: (ApiFlightWithSplits) => TagMod = (f) => f.apiFlight.ActPax.getOrElse(0).toInt) = ScalaComponent.builder[Props]("ArrivalsTable")
     .render_P((props) => {
 
       val flightsWithSplits = props.flightsWithSplits
@@ -131,7 +131,7 @@ object FlightTableRow {
                    idx: Int,
                    timelineComponent: Option[(Arrival) => VdomNode],
                    originMapper: OriginMapperF = (portCode) => portCode,
-                   paxComponent: (ApiFlightWithSplits) => TagMod = (f) => f.apiFlight.ActPax,
+                   paxComponent: (ApiFlightWithSplits) => TagMod = (f) => f.apiFlight.ActPax.getOrElse(0).toInt,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                    splitsQueueOrder: List[PaxTypeAndQueue],
                    hasEstChox: Boolean
@@ -144,9 +144,9 @@ object FlightTableRow {
 
   def bestArrivalTime(f: Arrival): MillisSinceEpoch = {
     val best = (
-      SDate.stringToSDateLikeOption(f.SchDT),
-      SDate.stringToSDateLikeOption(f.EstDT),
-      SDate.stringToSDateLikeOption(f.ActDT)
+      Option(SDate(f.Scheduled)),
+      f.Estimated.map(SDate(_)),
+      f.Actual.map(SDate(_))
     ) match {
       case (Some(sd), None, None) => sd
       case (_, Some(est), None) => est
@@ -183,20 +183,20 @@ object FlightTableRow {
         }
 
         val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
-        val timeIndicatorClass = if (flight.PcpTime < SDate.now().millisSinceEpoch) "before-now" else "from-now"
+        val timeIndicatorClass = if (flight.PcpTime.getOrElse(0L) < SDate.now().millisSinceEpoch) "before-now" else "from-now"
 
         val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(props.splitsQueueOrder)
         val queuePax: Map[QueueName, Int] = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(flightWithSplits).getOrElse(Map())
         val flightFields = List[(Option[String], TagMod)](
           (None, allCodes.mkString(" - ")),
           (None, props.originMapper(flight.Origin)),
-          (None, s"${flight.Gate}/${flight.Stand}"),
+          (None, s"${flight.Gate.getOrElse("")}/${flight.Stand.getOrElse("")}"),
           (None, flight.Status),
-          (None, localDateTimeWithPopup(flight.SchDT)),
-          (None, localDateTimeWithPopup(flight.EstDT)),
-          (None, localDateTimeWithPopup(flight.ActDT)),
-          (Option("est-chox"), localDateTimeWithPopup(flight.EstChoxDT)),
-          (None, localDateTimeWithPopup(flight.ActChoxDT)),
+          (None, localDateTimeWithPopup(Option(flight.Scheduled))),
+          (None, localDateTimeWithPopup(flight.Estimated)),
+          (None, localDateTimeWithPopup(flight.Actual)),
+          (Option("est-chox"), localDateTimeWithPopup(flight.EstimatedChox)),
+          (None, localDateTimeWithPopup(flight.ActualChox)),
           (None, pcpTimeRange(flight, ArrivalHelper.bestPax)),
           (Option("right"), props.paxComponent(flightWithSplits)))
           .filterNot {
@@ -230,7 +230,7 @@ object FlightTableRow {
 
   def offScheduleClass(arrival: Arrival): String = {
     val eta = bestArrivalTime(arrival)
-    val differenceFromScheduled = eta - SDate(arrival.SchDT).millisSinceEpoch
+    val differenceFromScheduled = eta - arrival.Scheduled
     val hourInMillis = 3600000
     val offScheduleClass = if (differenceFromScheduled > hourInMillis || differenceFromScheduled < -1 * hourInMillis)
       "danger"
