@@ -56,12 +56,14 @@ class ShiftsActor extends ShiftsActorBase {
   }
 }
 
-class ShiftsActorBase extends PersistentActor with RecoveryActorLike {
+class ShiftsActorBase extends RecoveryActorLike with PersistentDrtActor[ShiftsState] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def persistenceId = "shifts-store"
 
-  var state = ShiftsState("")
+  var state = initialState
+
+  def initialState = ShiftsState ("")
 
   val snapshotInterval = 1
 

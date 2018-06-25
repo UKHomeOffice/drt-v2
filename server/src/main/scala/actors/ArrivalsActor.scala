@@ -1,7 +1,7 @@
 package services
 
 import actors.FlightMessageConversion._
-import actors.{GetState, RecoveryActorLike}
+import actors.{GetState, PersistentDrtActor, RecoveryActorLike}
 import akka.persistence._
 import drt.shared.FlightsApi.Flights
 import drt.shared.{Arrival, SDateLike}
@@ -46,19 +46,22 @@ class LiveArrivalsActor(now: () => SDateLike,
 }
 
 abstract class ArrivalsActor(now: () => SDateLike,
-                             expireAfterMillis: Long) extends RecoveryActorLike {
-  var arrivalsState: ArrivalsState = ArrivalsState(Map())
+                             expireAfterMillis: Long) extends RecoveryActorLike with PersistentDrtActor[ArrivalsState] {
+
+  var state: ArrivalsState = initialState
+  override def initialState = ArrivalsState(Map())
+
   val snapshotInterval = 500
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case stateMessage: FlightStateSnapshotMessage =>
-      arrivalsState = arrivalsStateFromSnapshotMessage(stateMessage)
-      logRecoveryMessage(s"restored state to snapshot. ${arrivalsState.arrivals.size} arrivals")
+      state = arrivalsStateFromSnapshotMessage(stateMessage)
+      logRecoveryMessage(s"restored state to snapshot. ${state.arrivals.size} arrivals")
   }
 
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case diff: FlightsDiffMessage =>
-      arrivalsState = consumeDiffsMessage(diff, arrivalsState)
+      state = consumeDiffsMessage(diff, state)
       bytesSinceSnapshotCounter += diff.serializedSize
   }
 
@@ -89,11 +92,11 @@ abstract class ArrivalsActor(now: () => SDateLike,
     case Flights(incomingArrivals) =>
       log.info(s"Received flights")
 
-      val newStateArrivals = mergeArrivals(incomingArrivals, arrivalsState.arrivals)
+      val newStateArrivals = mergeArrivals(incomingArrivals, state.arrivals)
 
-      val updatedArrivals = newStateArrivals.values.toSet -- arrivalsState.arrivals.values.toSet
+      val updatedArrivals = newStateArrivals.values.toSet -- state.arrivals.values.toSet
 
-      arrivalsState = ArrivalsState(newStateArrivals)
+      state = ArrivalsState(newStateArrivals)
 
       if (updatedArrivals.isEmpty) {
         log.info(s"No updates to persist")
@@ -103,12 +106,12 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
     case Some(ArrivalsState(incomingArrivals)) if incomingArrivals != arrivalsState.arrivals =>
       log.info(s"Received updated ArrivalsState")
-      val currentKeys = arrivalsState.arrivals.keys.toSet
+      val currentKeys = state.arrivals.keys.toSet
       val newKeys = incomingArrivals.keys.toSet
       val removalKeys = currentKeys -- newKeys
-      val updatedArrivals = incomingArrivals.values.toSet -- arrivalsState.arrivals.values.toSet
+      val updatedArrivals = incomingArrivals.values.toSet -- state.arrivals.values.toSet
 
-      arrivalsState = ArrivalsState(incomingArrivals)
+      state = ArrivalsState(incomingArrivals)
 
       if (removalKeys.isEmpty && updatedArrivals.isEmpty) {
         log.info(s"No removals or updates to persist")
@@ -123,8 +126,8 @@ abstract class ArrivalsActor(now: () => SDateLike,
       log.info(s"Received None. Presumably feed connection failed")
 
     case GetState =>
-      log.info(s"Received GetState request. Sending ArrivalsState with ${arrivalsState.arrivals.size} arrivals")
-      sender() ! arrivalsState
+      log.info(s"Received GetState request. Sending ArrivalsState with ${state.arrivals.size} arrivals")
+      sender() ! state
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")
@@ -154,7 +157,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
       logPersistedBytesCounter(bytesSinceSnapshotCounter)
 
       if (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0) {
-        val snapshotMessage: FlightStateSnapshotMessage = FlightStateSnapshotMessage(arrivalsState.arrivals.values.map(apiFlightToFlightMessage).toSeq)
+        val snapshotMessage: FlightStateSnapshotMessage = FlightStateSnapshotMessage(state.arrivals.values.map(apiFlightToFlightMessage).toSeq)
         saveSnapshot(snapshotMessage)
         log.info(s"Saved {${snapshotMessage.serializedSize} bytes of ArrivalsState snapshot. Reset byte counter to zero")
         bytesSinceSnapshotCounter = 0

@@ -14,10 +14,12 @@ case class VoyageManifestState(manifests: Set[VoyageManifest], latestZipFilename
 
 case object GetLatestZipFilename
 
-class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapshotInterval: Int) extends PersistentActor with RecoveryActorLike {
+class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapshotInterval: Int) extends RecoveryActorLike with PersistentDrtActor[VoyageManifestState]{
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  var state = VoyageManifestState(
+  var state = initialState
+
+  def initialState = VoyageManifestState(
     manifests = Set(),
     latestZipFilename = defaultLatestZipFilename)
   var persistCounter = 0

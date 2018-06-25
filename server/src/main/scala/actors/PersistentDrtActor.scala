@@ -1,8 +1,6 @@
 package actors
 
-import akka.persistence.PersistentActor
-
-trait PersistentDrtActor[T] extends PersistentActor {
+trait PersistentDrtActor[T] {
 
   var state: T
 
