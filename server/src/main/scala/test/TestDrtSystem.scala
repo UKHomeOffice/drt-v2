@@ -4,14 +4,18 @@ import actors._
 import akka.NotUsed
 import akka.actor.Actor.Receive
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props}
-import akka.stream.ActorMaterializer
+import akka.stream.{ActorMaterializer, KillSwitch}
 import akka.stream.scaladsl.Source
 import drt.server.feeds.test.{TestAPIManifestFeedGraphStage, TestFixtureFeed}
-import drt.shared.AirportConfig
+import drt.shared.{AirportConfig, Arrival}
+import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import play.api.Configuration
+import services.crunch.CrunchSystem
 import services.graphstages.DqManifests
 import test.TestActors.{TestStaffMovementsActor, _}
+
+import scala.util.{Failure, Success}
 
 class TestDrtSystem(override val actorSystem: ActorSystem, override val config: Configuration, override val airportConfig: AirportConfig)
   extends DrtSystem(actorSystem, config, airportConfig){
@@ -32,25 +36,26 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
   override lazy val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[TestFixedPointsActor]))
   override lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[TestStaffMovementsActor]))
 
-  val restartActor: ActorRef = system.actorOf(Props(classOf[RestartActor], actorMaterializer), name="TestActor-ResetData")
 
   system.log.warning(s"Using test System")
+  val graph: Source[DqManifests, NotUsed] = Source.fromGraph(new TestAPIManifestFeedGraphStage(system))
 
-  val graph = Source.fromGraph(new TestAPIManifestFeedGraphStage(system))
   system.log.info(s"Here's the Graph $graph")
   override lazy val voyageManifestsStage: Source[DqManifests, NotUsed] = graph
+  val testFeed = TestFixtureFeed(system).map(Flights)
+  override def liveArrivalsSource(portCode: String): Source[Flights, Cancellable] = testFeed
 
-  override def liveArrivalsSource(portCode: String): Source[Flights, Cancellable] = TestFixtureFeed(system).map(Flights)
 
-
+//
+//  val restartActor: ActorRef = system.actorOf(Props(classOf[RestartActor], cs.baseArrivals), name="TestActor-ResetData")
 
 }
-case class RestartActor(mat: ActorMaterializer) extends Actor with ActorLogging {
+case class RestartActor(feed: Cancellable) extends Actor with ActorLogging {
   override def receive: Receive = {
     case ResetData =>
       log.info(s"About to shut down everything")
 
-      mat.shutdown()
+      feed.cancel()
       log.info(s"Shutdown triggered")
   }
 }

@@ -51,7 +51,7 @@ object RunnableCrunch {
                                         now: () => SDateLike
                                        ): RunnableGraph[(OAL, AL, AL, SVM, SS, SFP, SMM, SAD, UniqueKillSwitch)] = {
 
-    val killSwitch = KillSwitches.single
+    val killSwitch = KillSwitches.single[ArrivalsDiff]
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
@@ -95,6 +95,7 @@ object RunnableCrunch {
           val baseMaybeArrivalsFanOut = builder.add(Broadcast[Option[Flights]](2))
           val fcstArrivalsFanOut = builder.add(Broadcast[Flights](2))
           val liveArrivalsFanOut = builder.add(Broadcast[Flights](2))
+          val killer = builder.add(killSwitch)
           val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](3))
           val manifestsFanOut = builder.add(Broadcast[DqManifests](2))
           val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](2))
@@ -119,40 +120,42 @@ object RunnableCrunch {
           liveArrivals ~> liveArrivalsFanOut ~> arrivals.in2
           liveArrivalsFanOut ~> liveArrivalsSink
 
-          manifests ~> manifestsFanOut
-          manifestsFanOut.map(dqm => VoyageManifests(dqm.manifests)) ~> arrivalSplits.in1
-          manifestsFanOut ~> manifestsSink
-          shifts ~> staff.in0
-          fixedPoints ~> staff.in1
-          staffMovements ~> staff.in2
+            manifests ~> manifestsFanOut
+            manifestsFanOut.map(dqm => VoyageManifests(dqm.manifests)) ~> arrivalSplits.in1
+            manifestsFanOut ~> manifestsSink
+            shifts ~> staff.in0
+            fixedPoints ~> staff.in1
+            staffMovements ~> staff.in2
 
-          arrivals.out ~> arrivalsFanOut
 
-          arrivalsFanOut.map(_.toUpdate.toSeq) ~> splitsPredictor
-          arrivalsFanOut.map(diff => FlightRemovals(diff.toRemove)) ~> portState.in0
-          arrivalsFanOut ~> arrivalSplits.in0
-          splitsPredictor.out ~> arrivalSplits.in2
+            arrivals.out ~> killer ~> arrivalsFanOut
 
-          arrivalSplits.out ~> arrivalSplitsFanOut
-          arrivalSplitsFanOut ~> workload
+            arrivalsFanOut.map(_.toUpdate.toSeq) ~> splitsPredictor
+            arrivalsFanOut.map(diff => FlightRemovals(diff.toRemove)) ~> portState.in0
+            arrivalsFanOut ~> arrivalSplits.in0
+            splitsPredictor.out ~> arrivalSplits.in2
 
-          workload.out ~> batchLoad ~> workloadFanOut
-          workloadFanOut ~> crunch
-          workloadFanOut ~> simulation.in0
+            arrivalSplits.out ~> arrivalSplitsFanOut
+            arrivalSplitsFanOut ~> workload
 
-          arrivalSplitsFanOut ~> portState.in1
-          crunch ~> portState.in2
-          actualDesksAndWaitTimes ~> portState.in3
+            workload.out ~> batchLoad ~> workloadFanOut
+            workloadFanOut ~> crunch
+            workloadFanOut ~> simulation.in0
 
-          staff.out ~> batchStaff ~> staffFanOut
-          staffFanOut ~> simulation.in1
-          staffFanOut ~> portState.in4
+            arrivalSplitsFanOut ~> portState.in1
+            crunch ~> portState.in2
+            actualDesksAndWaitTimes ~> portState.in3
 
-          simulation.out ~> portState.in5
+            staff.out ~> batchStaff ~> staffFanOut
+            staffFanOut ~> simulation.in1
+            staffFanOut ~> portState.in4
 
-          portState.out ~> portStateFanOut
-          portStateFanOut.map(_.window(liveStart(now), liveEnd(now))) ~> liveSink
-          portStateFanOut.map(_.window(forecastStart(now), forecastEnd(now))) ~> fcstSink
+            simulation.out ~> portState.in5
+
+            portState.out ~> portStateFanOut
+            portStateFanOut.map(_.window(liveStart(now), liveEnd(now))) ~> liveSink
+            portStateFanOut.map(_.window(forecastStart(now), forecastEnd(now))) ~> fcstSink
+
 
           ClosedShape
     }

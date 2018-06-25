@@ -126,19 +126,21 @@ case class DrtSystem (actorSystem: ActorSystem, config: Configuration, airportCo
   var crunchKillSwitch: Option[KillSwitch] = None
   crunchKillSwitch.map(_.shutdown())
 
-  futurePortStates.onComplete {
-    case Success(maybeLiveState :: maybeForecastState :: maybeBaseArrivals :: maybeForecastArrivals :: maybeLiveArrivals :: Nil) =>
-      (maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals) match {
-        case (initialLiveState: Option[PortState], initialForecastState: Option[PortState], initialBaseArrivals: Option[Set[Arrival]], initialForecastArrivals: Option[Set[Arrival]], initialLiveArrivals: Option[Set[Arrival]]) =>
-          val initialPortState: Option[PortState] = mergePortStates(initialLiveState, initialForecastState)
-          val crunchInputs: CrunchSystem[NotUsed, Cancellable] = startCrunchSystem(initialPortState, initialBaseArrivals, initialForecastArrivals, initialLiveArrivals, recrunchOnStart)
-          subscribeStaffingActors(crunchInputs)
-          startScheduledFeedImports(crunchInputs)
-          crunchKillSwitch = Option(crunchInputs.killSwitch)
-      }
-    case Failure(error) =>
-      system.log.error(s"Failed to restore initial state for App", error)
-      None
+  def run() = {
+    futurePortStates.onComplete {
+      case Success(maybeLiveState :: maybeForecastState :: maybeBaseArrivals :: maybeForecastArrivals :: maybeLiveArrivals :: Nil) =>
+        (maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals) match {
+          case (initialLiveState: Option[PortState], initialForecastState: Option[PortState], initialBaseArrivals: Option[Set[Arrival]], initialForecastArrivals: Option[Set[Arrival]], initialLiveArrivals: Option[Set[Arrival]]) =>
+            val initialPortState: Option[PortState] = mergePortStates(initialLiveState, initialForecastState)
+            val crunchInputs: CrunchSystem[NotUsed, Cancellable] = startCrunchSystem(initialPortState, initialBaseArrivals, initialForecastArrivals, initialLiveArrivals, recrunchOnStart)
+            subscribeStaffingActors(crunchInputs)
+            startScheduledFeedImports(crunchInputs)
+            crunchKillSwitch = Option(crunchInputs.killSwitch)
+        }
+      case Failure(error) =>
+        system.log.error(s"Failed to restore initial state for App", error)
+        None
+    }
   }
 
   def aclTerminalMapping(portCode: String): TerminalName => TerminalName = portCode match {
@@ -343,5 +345,12 @@ case class DrtSystem (actorSystem: ActorSystem, config: Configuration, airportCo
       lhrForecastFeed.arrivals
     }).via(DiffingStage.DiffLists[Arrival]()).map(_.toList)
   }
-}
 
+  try {
+    run()
+  } catch {
+    case e: Exception =>
+      system.log.info(s"We got this exception: $e")
+      system.log.info(s"We got this exception Trace: ${e.printStackTrace()}")
+  }
+}
