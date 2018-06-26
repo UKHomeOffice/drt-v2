@@ -1,6 +1,7 @@
 import sbt._
 import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport._
 import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport._
+import sbt.Keys.libraryDependencies
 
 /**
   * Application settings. Configure the build for your application here.
@@ -34,8 +35,8 @@ object Settings {
     val diode = "1.1.3"
     val uTest = "0.4.7"
 
-    val akka = "2.4.16"
-    val akkaStreamContrib = "0.2"
+    val akka = "2.5.13"
+    val akkaStreamContrib = "0.9"
 
     val specs2 = "3.7"
     val react = "15.5.4"
@@ -64,6 +65,8 @@ object Settings {
     val pac4jSaml = "2.0.0-RC1"
     val openSaml = "2.6.1"
     val drtBirminghamSchema = "1.0.0"
+    val playJson = "2.6.0"
+    val playIteratees = "2.6.1"
   }
 
   import versions._
@@ -108,6 +111,10 @@ object Settings {
     "com.typesafe.akka" %% "akka-stream-contrib" % akkaStreamContrib,
     "com.typesafe.akka" %% "akka-slf4j" % akka,
 
+    "com.typesafe.play" %% "play-json" % playJson,
+    "com.typesafe.play" %% "play-iteratees" % playIteratees,
+    "com.typesafe.play" %% "play-iteratees-reactive-streams" % playIteratees,
+
     "com.vmunier" %% "play-scalajs-scripts" % playScripts,
     "com.vmunier" %% "scalajs-scripts" % scalaJsScripts,
 
@@ -117,7 +124,7 @@ object Settings {
     "io.spray" %% "spray-json" % sprayVersion,
 
     "joda-time" % "joda-time" % jodaTime,
-    "org.opensaml" % "opensaml" % openSaml excludeAll ExclusionRule("org.bouncycastle"),
+    "org.opensaml" % "opensaml" % openSaml excludeAll (ExclusionRule("org.bouncycastle"), ExclusionRule("xerces")),
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
     "org.apache.spark" % "spark-mllib_2.11" % sparkMlLib,
