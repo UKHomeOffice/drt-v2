@@ -1,7 +1,7 @@
 pipeline:
 
   build:
-    image: quay.io/ukhomeofficedigital/scala-sbt:v0.2.1
+    image: quay.io/ukhomeofficedigital/scala-sbt:v0.2.2
     commands:
       - /root/entrypoint.sh
       - sbt clean test release
