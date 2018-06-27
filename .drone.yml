@@ -5,6 +5,8 @@ pipeline:
     commands:
       - /root/entrypoint.sh
       - sbt clean test release
+    environment:
+      - ARTIFACTORY_USERNAME=drt_ci
     when:
       event:
         - push
@@ -12,7 +14,7 @@ pipeline:
 
   build_docker:
     environment:
-      - DOCKER_USERNAME=drt_build_bot
+      - DOCKER_USERNAME=drt_ci
     image: quay.io/ukhomeofficedigital/drone-docker
     registry: docker.digital.homeoffice.gov.uk
     repo: docker.digital.homeoffice.gov.uk/drt/drt
@@ -25,7 +27,7 @@ pipeline:
 
   build_tag:
     environment:
-      - DOCKER_USERNAME=drt_build_bot
+      - DOCKER_USERNAME=drt_ci
     image: quay.io/ukhomeofficedigital/drone-docker
     registry: docker.digital.homeoffice.gov.uk
     repo: docker.digital.homeoffice.gov.uk/drt/drt
