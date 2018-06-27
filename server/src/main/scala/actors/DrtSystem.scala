@@ -13,7 +13,6 @@ import drt.chroma.{ChromaFeedType, ChromaForecast, ChromaLive, DiffingStage}
 import drt.http.ProdSendAndReceive
 import drt.server.feeds.bhx.{BHXForecastFeed, BHXLiveFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
-import drt.server.feeds.lgw.LGWFeed
 import drt.server.feeds.lgw.{LGWFeed, LGWForecastFeed}
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.server.feeds.lhr.live.LHRLiveFeed
@@ -51,9 +50,11 @@ trait DrtSystemInterface {
   val staffMovementsActor: ActorRef
 
   val aclFeed: AclFeed
+
+  def run(): Unit
 }
 
-case class DrtSystem (actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig) extends DrtSystemInterface {
+case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig) extends DrtSystemInterface {
 
   implicit val system: ActorSystem = actorSystem
 
@@ -116,17 +117,14 @@ case class DrtSystem (actorSystem: ActorSystem, config: Configuration, airportCo
   system.log.info(s"useNationalityBasedProcessingTimes: $useNationalityBasedProcessingTimes")
   system.log.info(s"useSplitsPrediction: $useSplitsPrediction")
 
-  val futurePortStates: Future[Seq[Option[Any]]] = Future.sequence(Seq(
-    initialPortState(liveCrunchStateActor),
-    initialPortState(forecastCrunchStateActor),
-    initialArrivals(baseArrivalsActor),
-    initialArrivals(forecastArrivalsActor),
-    initialArrivals(liveArrivalsActor)))
-
-  var crunchKillSwitch: Option[KillSwitch] = None
-  crunchKillSwitch.map(_.shutdown())
 
   def run() = {
+    val futurePortStates: Future[Seq[Option[Any]]] = Future.sequence(Seq(
+      initialPortState(liveCrunchStateActor),
+      initialPortState(forecastCrunchStateActor),
+      initialArrivals(baseArrivalsActor),
+      initialArrivals(forecastArrivalsActor),
+      initialArrivals(liveArrivalsActor)))
     futurePortStates.onComplete {
       case Success(maybeLiveState :: maybeForecastState :: maybeBaseArrivals :: maybeForecastArrivals :: maybeLiveArrivals :: Nil) =>
         (maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals) match {
@@ -135,7 +133,6 @@ case class DrtSystem (actorSystem: ActorSystem, config: Configuration, airportCo
             val crunchInputs: CrunchSystem[NotUsed, Cancellable] = startCrunchSystem(initialPortState, initialBaseArrivals, initialForecastArrivals, initialLiveArrivals, recrunchOnStart)
             subscribeStaffingActors(crunchInputs)
             startScheduledFeedImports(crunchInputs)
-            crunchKillSwitch = Option(crunchInputs.killSwitch)
         }
       case Failure(error) =>
         system.log.error(s"Failed to restore initial state for App", error)
@@ -344,13 +341,5 @@ case class DrtSystem (actorSystem: ActorSystem, config: Configuration, airportCo
       system.log.info(s"LHR Forecast: ticking")
       lhrForecastFeed.arrivals
     }).via(DiffingStage.DiffLists[Arrival]()).map(_.toList)
-  }
-
-  try {
-    run()
-  } catch {
-    case e: Exception =>
-      system.log.info(s"We got this exception: $e")
-      system.log.info(s"We got this exception Trace: ${e.printStackTrace()}")
   }
 }

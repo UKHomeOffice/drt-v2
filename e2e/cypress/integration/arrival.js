@@ -1,7 +1,7 @@
 describe('Arrivals page', function () {
   const schDT = new Date().toISOString().split("T")[0];
 
-  before(function () {
+  function addFlight() {
     cy.request('POST',
       '/v2/test/live/test/arrival',
       {
@@ -26,7 +26,10 @@ describe('Arrivals page', function () {
         "Origin": "AMS",
         "SchDT": schDT + "T00:15:00Z"
       });
-    cy.visit('/v2/test/live#terminal/T1/current/arrivals//0/24');
+  }
+
+  before(function () {
+    cy.request('DELETE', '/v2/test/live/test/data');
   });
 
   const manifest = {
@@ -91,6 +94,8 @@ describe('Arrivals page', function () {
   };
 
   it('Displays a flight after it has been ingested via the live feed', function () {
+    addFlight();
+    cy.visit('/v2/test/live#terminal/T1/current/arrivals//0/24');
     cy.get("#arrivals").contains("TS0123")
   });
 
@@ -99,6 +104,4 @@ describe('Arrivals page', function () {
       '/v2/test/live/test/manifest',
       manifest);
   });
-
-
 });

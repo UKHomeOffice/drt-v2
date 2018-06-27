@@ -1,5 +1,6 @@
 describe('Staff movements', function () {
   before(function () {
+    cy.request('DELETE', '/v2/test/live/test/data');
     var schDT = new Date().toISOString().split("T")[0];
     cy.request('POST',
       '/v2/test/live/test/arrival',
@@ -32,7 +33,7 @@ describe('Staff movements', function () {
   }
 
   describe('When adding staff movements on the desks and queues page', function () {
-    it("Should update the available staff when 1 staff member is added for 1 hour", function () {
+    xit("Should update the available staff when 1 staff member is added for 1 hour", function () {
       cy.visit('/v2/test/live#terminal/T1/current/desksAndQueues//0/24');
       addMovementFor1Hour()
       var staffDeployedSelector = '#sticky-body > :nth-child(1) > :nth-child(14)';
@@ -45,7 +46,7 @@ describe('Staff movements', function () {
       cy.get('tbody > :nth-child(2) > td').eq(4).contains("0");
       cy.get('.fa-remove').click()
     });
-    it("Should update the available staff when 1 staff member is added for 1 hour twice", function () {
+    xit("Should update the available staff when 1 staff member is added for 1 hour twice", function () {
       cy.visit('/v2/test/live#terminal/T1/current/desksAndQueues//0/24');
       addMovementFor1Hour();
       addMovementFor1Hour();

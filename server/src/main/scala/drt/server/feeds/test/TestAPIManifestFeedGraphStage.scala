@@ -10,6 +10,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.SDate
 import services.graphstages.DqManifests
+import test.TestActors.ResetActor
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -84,6 +85,9 @@ class TestManifestsActor extends Actor with ActorLogging {
     case GetManifests =>
 
       sender ! VoyageManifests(testManifests.manifests)
+
+    case ResetActor =>
+      testManifests = VoyageManifests(Set())
   }
 }
 

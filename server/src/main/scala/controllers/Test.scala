@@ -1,6 +1,6 @@
 package controllers
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.Materializer
 import akka.util.Timeout
 import com.google.inject.Inject
@@ -15,10 +15,11 @@ import play.api.{Configuration, Environment}
 import services.SDate
 import spray.json._
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import test.ResetData
+import test.TestActors.ResetActor
 
 class Test @Inject()(implicit val config: Configuration,
                      implicit val mat: Materializer,
@@ -31,15 +32,18 @@ class Test @Inject()(implicit val config: Configuration,
 
   val baseTime: SDateLike = SDate.now()
 
+  val liveArrivalsTestActor: Future[ActorRef] = system.actorSelection("akka://application/user/TestActor-LiveArrivals").resolveOne()
+  val apiManifestsTestActor: Future[ActorRef] = system.actorSelection("akka://application/user/TestActor-APIManifests").resolveOne()
+
   def saveArrival(arrival: Arrival) = {
-    system.actorSelection("akka://application/user/TestActor-LiveArrivals").resolveOne().map(actor => {
+    liveArrivalsTestActor.map(actor => {
 
       actor ! arrival
     })
   }
 
   def saveVoyageManifest(voyageManifest: VoyageManifest) = {
-    system.actorSelection("akka://application/user/TestActor-APIManifests").resolveOne().map(actor => {
+    apiManifestsTestActor.map(actor => {
 
       log.info(s"Sending Splits: $voyageManifest to Test Actor")
 
@@ -54,6 +58,9 @@ class Test @Inject()(implicit val config: Configuration,
 
       actor ! ResetData
     })
+
+    liveArrivalsTestActor.map(a => a ! ResetActor)
+    apiManifestsTestActor.map(a => a ! ResetActor)
   }
 
   def addArrival() = Action {

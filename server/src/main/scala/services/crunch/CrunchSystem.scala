@@ -29,7 +29,7 @@ case class CrunchSystem[MS, OAL, AL](shifts: SourceQueueWithComplete[String],
                                 liveArrivals: AL,
                                 manifests: MS,
                                 actualDeskStats: SourceQueueWithComplete[ActualDeskStats],
-                                killSwitch: KillSwitch
+                                killSwitches: List[KillSwitch]
                                )
 
 case class CrunchProps[MS, OAL, AL](logLabel: String = "",
@@ -161,38 +161,30 @@ object CrunchSystem {
       expireAfterMillis = props.expireAfterMillis,
       now = props.now)
 
-    try {
+    val crunchSystem: RunnableGraph[(AL, AL, AL, MS, SourceQueueWithComplete[String], SourceQueueWithComplete[String], SourceQueueWithComplete[Seq[StaffMovement]], SourceQueueWithComplete[ActualDeskStats], UniqueKillSwitch, UniqueKillSwitch)] = RunnableCrunch(
+      props.arrivalsBaseSource, props.arrivalsFcstSource, props.arrivalsLiveSource, manifests, shiftsSource, fixedPointsSource, staffMovementsSource, actualDesksAndQueuesSource,
+      arrivalsStage, arrivalSplitsGraphStage, splitsPredictorStage, workloadGraphStage, loadBatcher, crunchLoadGraphStage, staffGraphStage, staffBatcher, simulationGraphStage, portStateGraphStage,
+      props.actors("base-arrivals").actorRef, props.actors("forecast-arrivals").actorRef, props.actors("live-arrivals").actorRef,
+      props.voyageManifestsActor,
+      props.liveCrunchStateActor, props.forecastCrunchStateActor,
+      crunchStartDateProvider, props.now
+    )
 
-      val crunchSystem: RunnableGraph[(AL, AL, AL, MS, SourceQueueWithComplete[String], SourceQueueWithComplete[String], SourceQueueWithComplete[Seq[StaffMovement]], SourceQueueWithComplete[ActualDeskStats], UniqueKillSwitch)] = RunnableCrunch(
-        props.arrivalsBaseSource, props.arrivalsFcstSource, props.arrivalsLiveSource, manifests, shiftsSource, fixedPointsSource, staffMovementsSource, actualDesksAndQueuesSource,
-        arrivalsStage, arrivalSplitsGraphStage, splitsPredictorStage, workloadGraphStage, loadBatcher, crunchLoadGraphStage, staffGraphStage, staffBatcher, simulationGraphStage, portStateGraphStage,
-        props.actors("base-arrivals").actorRef, props.actors("forecast-arrivals").actorRef, props.actors("live-arrivals").actorRef,
-        props.voyageManifestsActor,
-        props.liveCrunchStateActor, props.forecastCrunchStateActor,
-        crunchStartDateProvider, props.now
-      )
+    implicit val actorSystem: ActorSystem = props.system
+    implicit val materializer: ActorMaterializer = ActorMaterializer()
+    val (baseIn, fcstIn, liveIn, manifestsIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch) = crunchSystem.run
 
-      implicit val actorSystem: ActorSystem = props.system
-      implicit val materializer: ActorMaterializer = ActorMaterializer()
-      val (baseIn, fcstIn, liveIn, manifestsIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, killSwitch) = crunchSystem.run
-
-      CrunchSystem(
-        shifts = shiftsIn,
-        fixedPoints = fixedPointsIn,
-        staffMovements = movementsIn,
-        baseArrivals = baseIn,
-        forecastArrivals = fcstIn,
-        liveArrivals = liveIn,
-        manifests = manifestsIn,
-        actualDeskStats = actDesksIn,
-        killSwitch
-      )
-
-    } catch {
-      case e: Exception =>
-        log.info(s"Maybe this is it? $e ", e)
-        throw e
-    }
+    CrunchSystem(
+      shifts = shiftsIn,
+      fixedPoints = fixedPointsIn,
+      staffMovements = movementsIn,
+      baseArrivals = baseIn,
+      forecastArrivals = fcstIn,
+      liveArrivals = liveIn,
+      manifests = manifestsIn,
+      actualDeskStats = actDesksIn,
+      List(arrivalsKillSwitch, manifestsKillSwitch)
+    )
   }
 
   def initialStaffMinutesFromPortState(initialPortState: Option[PortState]): Option[StaffMinutes] = initialPortState.map(ps => StaffMinutes(ps.staffMinutes))

@@ -8,6 +8,7 @@ import akka.util.Timeout
 import drt.chroma.DiffingStage
 import drt.shared.Arrival
 import org.slf4j.{Logger, LoggerFactory}
+import test.TestActors.ResetActor
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -65,5 +66,7 @@ class TestArrivalsActor extends Actor with ActorLogging{
     case GetArrivals =>
 
       sender ! TestArrivals(testArrivals)
+    case ResetActor =>
+      testArrivals = List()
   }
 }

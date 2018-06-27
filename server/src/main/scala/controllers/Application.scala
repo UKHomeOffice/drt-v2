@@ -4,18 +4,15 @@ import java.nio.ByteBuffer
 
 import actors._
 import actors.pointInTime.CrunchStateReadActor
-import akka.NotUsed
 import akka.actor._
 import akka.event.LoggingAdapter
 import akka.pattern.{AskableActorRef, _}
 import akka.stream._
-import akka.stream.scaladsl.Source
 import akka.util.{ByteString, Timeout}
 import boopickle.Default._
 import buildinfo.BuildInfo
 import com.google.inject.{Inject, Singleton}
 import com.typesafe.config.ConfigFactory
-import drt.server.feeds.test.TestAPIManifestFeedGraphStage
 import drt.shared.CrunchApi.{groupCrunchMinutesByX, _}
 import drt.shared.FlightsApi.TerminalName
 import drt.shared.SplitRatiosNs.SplitRatios
@@ -31,7 +28,6 @@ import services.PcpArrival._
 import services.SDate.implicits._
 import services.SplitsProvider.SplitProvider
 import services.graphstages.Crunch._
-import services.graphstages._
 import services.shifts.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
@@ -44,7 +40,6 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.matching.Regex
-import scala.util.{Failure, Success, Try}
 //import scala.collection.immutable.Seq // do not import this here, it would break autowire.
 import services.PcpArrival.pcpFrom
 
@@ -157,19 +152,13 @@ class Application @Inject()(implicit val config: Configuration,
     with ImplicitTimeoutProvider
     with AvailableUserRoles {
 
-  val ctrl: DrtSystemInterface = Try {
-    config.getString("env") match {
+  val ctrl: DrtSystemInterface = config.getString("env") match {
       case Some("test") =>
         new TestDrtSystem(system, config, getPortConfFromEnvVar)
       case _ =>
         new DrtSystem(system, config, getPortConfFromEnvVar)
     }
-  } match {
-    case Success(s) => s
-    case Failure(e) =>
-      log.info(s"Got this exception ${e.getMessage}, ${e.printStackTrace()}")
-      throw e
-  }
+  ctrl.run()
 
   def log: LoggingAdapter = system.log
 
