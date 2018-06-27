@@ -5,7 +5,7 @@ pipeline:
 
   build:
     commands:
-       - "/root/entrypoint.sh 'sbt clean update test assembly'"
+       - sbt clean test release
     image: hseeberger/scala-sbt
     when:
       event:
