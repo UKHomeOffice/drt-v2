@@ -1,11 +1,19 @@
 pipeline:
+  drone_s3_cache_pull:
+     image: quay.io/ukhomeofficedigital/drone-s3cache:v0.1.0
+     drone_s3_cache_mode: "pull"
 
-  my-build:
-    image: docker:18.03
-    environment:
-      - DOCKER_HOST=tcp://172.17.0.1:2375
+  build:
     commands:
-      - docker build -t drt-v2 ./server/target/docker/stage
+       - "/root/entrypoint.sh 'sbt clean update test assembly'"
+    image: quay.io/ukhomeofficedigital/scala-sbt:v0.2.0
     when:
-      branch: master
-      event: push
+      event:
+        - push
+        - pull_request
+
+  drone_s3_cache_push:
+    image: quay.io/ukhomeofficedigital/drone-s3cache:v0.1.0
+    drone_s3_cache_folders:
+      - .ivy2
+    drone_s3_cache_mode: "push"
