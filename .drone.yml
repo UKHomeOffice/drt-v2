@@ -7,6 +7,8 @@ pipeline:
       - sbt clean test release
     environment:
       - ARTIFACTORY_USERNAME=drt_ci
+    secrets:
+      - ARTIFACTORY_PASSWORD
     when:
       event:
         - push
