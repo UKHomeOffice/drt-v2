@@ -10,7 +10,6 @@ pipeline:
     when:
       event:
         - push
-        - pull_request
 
   build_docker:
     environment:
