@@ -85,6 +85,7 @@ class TestManifestsActor extends Actor with ActorLogging {
     case GetManifests =>
 
       sender ! VoyageManifests(testManifests.manifests)
+      testManifests.copy(manifests = Set())
 
     case ResetActor =>
       testManifests = VoyageManifests(Set())
