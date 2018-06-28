@@ -10,6 +10,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import server.feeds.FeedResponse
 import services.{ArrivalsState, SDate}
+import services.ArrivalsState
 import services.graphstages.Crunch.Loads
 import services.graphstages._
 
@@ -46,13 +47,19 @@ object RunnableCrunch {
 
                                              manifestsActor: ActorRef,
 
-                                             liveCrunchStateActor: ActorRef,
-                                             fcstCrunchStateActor: ActorRef,
-                                             crunchPeriodStartMillis: SDateLike => SDateLike,
-                                             now: () => SDateLike
-                                       ): RunnableGraph[(OAL, FR, FR, SVM, SS, SFP, SMM, SAD)] = {
+                                        liveCrunchStateActor: ActorRef,
+                                        fcstCrunchStateActor: ActorRef,
+                                        crunchPeriodStartMillis: SDateLike => SDateLike,
+                                        now: () => SDateLike
+                                       ): RunnableGraph[(OAL, FR, FR, SVM, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch)] = {
+
+    val arrivalsKillSwitch = KillSwitches.single[ArrivalsDiff]
+
+    val manifestsKillSwitch = KillSwitches.single[DqManifests]
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
+
+    log.info(s"Manifests Source: $manifestsSource")
 
     val graph = GraphDSL.create(
       baseArrivalsSource.async,
@@ -62,8 +69,10 @@ object RunnableCrunch {
       shiftsSource.async,
       fixedPointsSource.async,
       staffMovementsSource.async,
-      actualDesksAndWaitTimesSource.async
-    )((_, _, _, _, _, _, _, _)) {
+      actualDesksAndWaitTimesSource.async,
+      arrivalsKillSwitch,
+      manifestsKillSwitch
+    )((_, _, _, _, _, _, _, _, _, _)) {
 
       implicit builder =>
         (
@@ -74,7 +83,9 @@ object RunnableCrunch {
           shifts,
           fixedPoints,
           staffMovements,
-          actualDesksAndWaitTimes
+          actualDesksAndWaitTimes,
+          arrivalsGraphKillSwitch,
+          manifestGraphKillSwitch
         ) =>
           val arrivals = builder.add(arrivalsGraphStage.async)
           val arrivalSplits = builder.add(arrivalSplitsStage.async)
@@ -114,14 +125,14 @@ object RunnableCrunch {
           liveArrivals ~> liveArrivalsFanOut ~> arrivals.in2
           liveArrivalsFanOut ~> liveArrivalsSink
 
-          manifests ~> manifestsFanOut
+          manifests ~> manifestGraphKillSwitch ~> manifestsFanOut
           manifestsFanOut.map(dqm => VoyageManifests(dqm.manifests)) ~> arrivalSplits.in1
           manifestsFanOut ~> manifestsSink
           shifts ~> staff.in0
           fixedPoints ~> staff.in1
           staffMovements ~> staff.in2
 
-          arrivals.out ~> arrivalsFanOut
+          arrivals.out ~> arrivalsGraphKillSwitch ~> arrivalsFanOut
 
           arrivalsFanOut.map(_.toUpdate.toSeq) ~> splitsPredictor
           arrivalsFanOut.map(diff => FlightRemovals(diff.toRemove)) ~> portState.in0
@@ -148,6 +159,7 @@ object RunnableCrunch {
           portState.out ~> portStateFanOut
           portStateFanOut.map(_.window(liveStart(now), liveEnd(now))) ~> liveSink
           portStateFanOut.map(_.window(forecastStart(now), forecastEnd(now))) ~> fcstSink
+
 
           ClosedShape
     }

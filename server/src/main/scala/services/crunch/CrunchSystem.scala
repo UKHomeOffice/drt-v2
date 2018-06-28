@@ -4,7 +4,7 @@ import actors.{GetState, StaffMovements}
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.{RunnableGraph, Source, SourceQueueWithComplete}
-import akka.stream.{ActorMaterializer, OverflowStrategy}
+import akka.stream.{ActorMaterializer, KillSwitch, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import drt.shared.CrunchApi.{CrunchMinutes, PortState, StaffMinutes}
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
@@ -23,14 +23,15 @@ import scala.language.postfixOps
 
 
 case class CrunchSystem[MS, OAL, FR](shifts: SourceQueueWithComplete[String],
-                                         fixedPoints: SourceQueueWithComplete[String],
-                                         staffMovements: SourceQueueWithComplete[Seq[StaffMovement]],
-                                         baseArrivals: OAL,
-                                         forecastArrivalsResponse: FR,
-                                         liveArrivalsResponse: FR,
-                                         manifests: MS,
-                                         actualDeskStats: SourceQueueWithComplete[ActualDeskStats]
-                               )
+                                     fixedPoints: SourceQueueWithComplete[String],
+                                     staffMovements: SourceQueueWithComplete[Seq[StaffMovement]],
+                                     baseArrivals: OAL,
+                                     forecastArrivalsResponse: FR,
+                                     liveArrivalsResponse: FR,
+                                     manifests: MS,
+                                     actualDeskStats: SourceQueueWithComplete[ActualDeskStats],
+                                     killSwitches: List[KillSwitch]
+                                    )
 
 case class CrunchProps[MS, OAL, FR](logLabel: String = "",
                                     system: ActorSystem,
@@ -161,7 +162,7 @@ object CrunchSystem {
       expireAfterMillis = props.expireAfterMillis,
       now = props.now)
 
-    val crunchSystem = RunnableCrunch(
+    val crunchSystem: RunnableGraph[(OAL, AL, AL, MS, SourceQueueWithComplete[String], SourceQueueWithComplete[String], SourceQueueWithComplete[Seq[StaffMovement]], SourceQueueWithComplete[ActualDeskStats], UniqueKillSwitch, UniqueKillSwitch)] = RunnableCrunch(
       props.arrivalsBaseSource, props.arrivalsFcstSource, props.arrivalsLiveSource, manifests, shiftsSource, fixedPointsSource, staffMovementsSource, actualDesksAndQueuesSource,
       arrivalsStage, arrivalSplitsGraphStage, splitsPredictorStage, workloadGraphStage, loadBatcher, crunchLoadGraphStage, staffGraphStage, staffBatcher, simulationGraphStage, portStateGraphStage,
       props.actors("base-arrivals").actorRef, props.actors("forecast-arrivals").actorRef, props.actors("live-arrivals").actorRef,
@@ -172,7 +173,7 @@ object CrunchSystem {
 
     implicit val actorSystem: ActorSystem = props.system
     implicit val materializer: ActorMaterializer = ActorMaterializer()
-    val (baseIn, fcstIn, liveIn, manifestsIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn) = crunchSystem.run
+    val (baseIn, fcstIn, liveIn, manifestsIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch) = crunchSystem.run
 
     CrunchSystem(
       shifts = shiftsIn,
@@ -182,7 +183,8 @@ object CrunchSystem {
       forecastArrivalsResponse = fcstIn,
       liveArrivalsResponse = liveIn,
       manifests = manifestsIn,
-      actualDeskStats = actDesksIn
+      actualDeskStats = actDesksIn,
+      List(arrivalsKillSwitch, manifestsKillSwitch)
     )
   }
 
