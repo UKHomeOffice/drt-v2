@@ -45,12 +45,14 @@ class FixedPointsActor extends FixedPointsActorBase {
   }
 }
 
-class FixedPointsActorBase extends RecoveryActorLike {
+class FixedPointsActorBase extends RecoveryActorLike with PersistentDrtActor[FixedPointsState]{
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def persistenceId = "fixedPoints-store"
 
-  var state = FixedPointsState("")
+  var state = initialState
+
+  def initialState = FixedPointsState("")
 
   val snapshotInterval = 1
 

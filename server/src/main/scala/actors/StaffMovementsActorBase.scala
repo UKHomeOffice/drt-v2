@@ -48,12 +48,14 @@ class StaffMovementsActor extends StaffMovementsActorBase {
   }
 }
 
-class StaffMovementsActorBase extends PersistentActor with RecoveryActorLike {
+class StaffMovementsActorBase extends RecoveryActorLike with PersistentDrtActor[StaffMovementsState] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def persistenceId = "staff-movements-store"
 
-  var state = StaffMovementsState(StaffMovements(List()))
+  var state = initialState
+
+  def initialState = StaffMovementsState(StaffMovements(List()))
 
   val snapshotInterval = 1
 

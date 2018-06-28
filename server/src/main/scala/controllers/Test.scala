@@ -1,21 +1,25 @@
 package controllers
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.Materializer
 import akka.util.Timeout
 import com.google.inject.Inject
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
-import drt.shared.Arrival
-import org.slf4j.LoggerFactory
+import passengersplits.parsing.VoyageManifestParser.FlightPassengerInfoProtocol._
+import drt.shared.{Arrival, SDateLike}
+import org.slf4j.{Logger, LoggerFactory}
+import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import play.api.mvc.{Action, Controller}
 import play.api.{Configuration, Environment}
 import services.SDate
 import spray.json._
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.language.postfixOps
+import test.ResetData
+import test.TestActors.ResetActor
 
 class Test @Inject()(implicit val config: Configuration,
                      implicit val mat: Materializer,
@@ -24,16 +28,39 @@ class Test @Inject()(implicit val config: Configuration,
                      ec: ExecutionContext) extends Controller {
   implicit val timeout: Timeout = Timeout(250 milliseconds)
 
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
-  val baseTime = SDate.now()
+  val baseTime: SDateLike = SDate.now()
+
+  val liveArrivalsTestActor: Future[ActorRef] = system.actorSelection("akka://application/user/TestActor-LiveArrivals").resolveOne()
+  val apiManifestsTestActor: Future[ActorRef] = system.actorSelection("akka://application/user/TestActor-APIManifests").resolveOne()
 
   def saveArrival(arrival: Arrival) = {
-    system.actorSelection("akka://application/user/TestActor-LiveArrivals").resolveOne().map(actor => {
+    liveArrivalsTestActor.map(actor => {
 
       actor ! arrival
-
     })
+  }
+
+  def saveVoyageManifest(voyageManifest: VoyageManifest) = {
+    apiManifestsTestActor.map(actor => {
+
+      log.info(s"Sending Splits: $voyageManifest to Test Actor")
+
+      actor ! VoyageManifests(Set(voyageManifest))
+    })
+  }
+
+  def resetData() = {
+    system.actorSelection("akka://application/user/TestActor-ResetData").resolveOne().map(actor => {
+
+      log.info(s"Sending reset message")
+
+      actor ! ResetData
+    })
+
+    liveArrivalsTestActor.map(a => a ! ResetActor)
+    apiManifestsTestActor.map(a => a ! ResetActor)
   }
 
   def addArrival() = Action {
@@ -72,5 +99,26 @@ class Test @Inject()(implicit val config: Configuration,
         case None =>
           BadRequest(s"Unable to parse JSON: ${request.body.asText}")
       }
+  }
+
+  def addManifest() = Action {
+    implicit request =>
+
+      request.body.asJson.map(s => s.toString.parseJson.convertTo[VoyageManifest]) match {
+        case Some(vm) =>
+          log.info(s"Got a manifest to save $vm")
+          saveVoyageManifest(vm)
+          Created
+        case None =>
+          BadRequest(s"Unable to parse JSON: ${request.body.asText}")
+      }
+  }
+
+  def deleteAllData() = Action {
+    implicit request =>
+
+      resetData()
+
+      Accepted
   }
 }

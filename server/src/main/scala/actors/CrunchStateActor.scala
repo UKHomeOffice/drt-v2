@@ -20,14 +20,16 @@ class CrunchStateActor(val snapshotInterval: Int,
                        portQueues: Map[TerminalName, Seq[QueueName]],
                        now: () => SDateLike,
                        expireAfterMillis: Long,
-                       purgePreviousSnapshots: Boolean) extends PersistentActor with RecoveryActorLike {
+                       purgePreviousSnapshots: Boolean) extends PersistentActor with RecoveryActorLike with PersistentDrtActor[Option[PortState]] {
   override def persistenceId: String = name
 
   val log: Logger = LoggerFactory.getLogger(s"$name-$getClass")
 
   def logInfo(msg: String): Unit = if (name.isEmpty) log.info(msg) else log.info(s"$name $msg")
 
-  var state: Option[PortState] = None
+  var state: Option[PortState] = initialState
+
+  def initialState = None
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: CrunchStateSnapshotMessage => setStateFromSnapshot(snapshot)

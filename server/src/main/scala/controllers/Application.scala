@@ -4,32 +4,20 @@ import java.nio.ByteBuffer
 
 import actors._
 import actors.pointInTime.CrunchStateReadActor
-import akka.NotUsed
 import akka.actor._
 import akka.event.LoggingAdapter
 import akka.pattern.{AskableActorRef, _}
 import akka.stream._
-import akka.stream.scaladsl.Source
 import akka.util.{ByteString, Timeout}
 import boopickle.Default._
 import buildinfo.BuildInfo
 import com.google.inject.{Inject, Singleton}
 import com.typesafe.config.ConfigFactory
-import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
-import drt.chroma.{ChromaFeedType, ChromaForecast, ChromaLive, DiffingStage}
-import drt.http.ProdSendAndReceive
-import drt.server.feeds.bhx.{BHXForecastFeed, BHXLiveFeed}
-import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
-import drt.server.feeds.lgw.{LGWFeed, LGWForecastFeed}
-import drt.server.feeds.lhr.live.LHRLiveFeed
-import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
-import drt.server.feeds.test.TestFixtureFeed
 import drt.shared.CrunchApi.{groupCrunchMinutesByX, _}
-import drt.shared.FlightsApi.{Flights, TerminalName}
+import drt.shared.FlightsApi.TerminalName
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
 import drt.staff.ImportStaff
-import org.apache.spark.sql.SparkSession
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.{HeaderNames, HttpEntity}
@@ -39,24 +27,21 @@ import server.feeds.acl.AclFeed
 import services.PcpArrival._
 import services.SDate.implicits._
 import services.SplitsProvider.SplitProvider
-import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.Crunch._
-import services.graphstages._
-import services.prediction.SparkSplitsPredictorFactory
 import services.shifts.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import services.{SDate, _}
+import test.TestDrtSystem
 
 import scala.collection.immutable.{IndexedSeq, Map}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.matching.Regex
-import scala.util.{Failure, Success, Try}
 //import scala.collection.immutable.Seq // do not import this here, it would break autowire.
-import services.PcpArrival.{gateOrStandWalkTimeCalculator, pcpFrom, walkTimeMillisProviderFromCsv}
+import services.PcpArrival.pcpFrom
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
 
@@ -92,290 +77,6 @@ object PaxFlow {
                              (flight: Arrival): MilliDate = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeProvider)(flight)
 }
 
-trait SystemActors {
-  self: AirportConfProvider =>
-
-  implicit val system: ActorSystem
-
-  val config: Configuration
-
-  val minutesToCrunch: Int = 1440
-  val maxDaysToCrunch: Int = config.getInt("crunch.forecast.max_days").getOrElse(360)
-  val aclPollMinutes: Int = config.getInt("crunch.forecast.poll_minutes").getOrElse(120)
-  val snapshotIntervalVm: Int = config.getInt("persistence.snapshot-interval.voyage-manifest").getOrElse(1000)
-  val expireAfterMillis: MillisSinceEpoch = 2 * oneDayMillis
-  val now: () => SDateLike = () => SDate.now()
-
-  val ftpServer: String = ConfigFactory.load.getString("acl.host")
-  val username: String = ConfigFactory.load.getString("acl.username")
-  val path: String = ConfigFactory.load.getString("acl.keypath")
-
-  val recrunchOnStart: Boolean = config.getBoolean("crunch.recrunch-on-start").getOrElse(false)
-  system.log.info(s"recrunchOnStart: $recrunchOnStart")
-
-  val aclFeed = AclFeed(ftpServer, username, path, airportConfig.portCode, aclTerminalMapping(airportConfig.portCode))
-
-  system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
-
-  val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
-  val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
-  val actorMaterializer = ActorMaterializer()
-
-  val purgeOldLiveSnapshots = false
-  val purgeOldForecastSnapshots = true
-
-  val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastBaseArrivalsActor], now, expireAfterMillis), name = "base-arrivals-actor")
-  val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastPortArrivalsActor], now, expireAfterMillis), name = "forecast-arrivals-actor")
-  val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor], now, expireAfterMillis), name = "live-arrivals-actor")
-
-  val liveCrunchStateProps = Props(classOf[CrunchStateActor], airportConfig.portStateSnapshotInterval, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots)
-  val forecastCrunchStateProps = Props(classOf[CrunchStateActor], 100, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots)
-
-  val liveCrunchStateActor: ActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
-  val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], now, expireAfterMillis, snapshotIntervalVm), name = "voyage-manifests-actor")
-  val forecastCrunchStateActor: ActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
-  val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
-  val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor]))
-  val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor]))
-  val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor]))
-  val useNationalityBasedProcessingTimes: Boolean = config.getString("feature-flags.nationality-based-processing-times").isDefined
-  val useSplitsPrediction: Boolean = config.getString("feature-flags.use-splits-prediction").isDefined
-  val rawSplitsUrl: String = config.getString("crunch.splits.raw-data-path").getOrElse("/dev/null")
-  val dqZipBucketName: String = config.getString("dq.s3.bucket").getOrElse(throw new Exception("You must set DQ_S3_BUCKET for us to poll for AdvPaxInfo"))
-  val askableVoyageManifestsActor: AskableActorRef = voyageManifestsActor
-
-  val splitsPredictorStage: SplitsPredictorBase = createSplitsPredictionStage(useSplitsPrediction, rawSplitsUrl)
-  val apiS3PollFrequencyMillis: MillisSinceEpoch = config.getInt("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
-  val voyageManifestsStage: Source[DqManifests, NotUsed] = Source.fromGraph(
-    new VoyageManifestsGraphStage(
-      dqZipBucketName,
-      airportConfig.portCode,
-      getLastSeenManifestsFileName,
-      apiS3PollFrequencyMillis
-    )
-  )
-
-  system.log.info(s"useNationalityBasedProcessingTimes: $useNationalityBasedProcessingTimes")
-  system.log.info(s"useSplitsPrediction: $useSplitsPrediction")
-
-  val futurePortStates: Future[Seq[Option[Any]]] = Future.sequence(Seq(
-    initialPortState(liveCrunchStateActor),
-    initialPortState(forecastCrunchStateActor),
-    initialArrivals(baseArrivalsActor),
-    initialArrivals(forecastArrivalsActor),
-    initialArrivals(liveArrivalsActor)))
-
-
-  futurePortStates.onComplete {
-    case Success(maybeLiveState :: maybeForecastState :: maybeBaseArrivals :: maybeForecastArrivals :: maybeLiveArrivals :: Nil) =>
-      (maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals) match {
-        case (initialLiveState: Option[PortState], initialForecastState: Option[PortState], initialBaseArrivals: Option[Set[Arrival]], initialForecastArrivals: Option[Set[Arrival]], initialLiveArrivals: Option[Set[Arrival]]) =>
-          val initialPortState: Option[PortState] = mergePortStates(initialLiveState, initialForecastState)
-          val crunchInputs: CrunchSystem[NotUsed, Cancellable, Cancellable] = startCrunchSystem(initialPortState, initialBaseArrivals, initialForecastArrivals, initialLiveArrivals, recrunchOnStart)
-          subscribeStaffingActors(crunchInputs)
-          startScheduledFeedImports(crunchInputs)
-      }
-    case Failure(error) =>
-      system.log.error(s"Failed to restore initial state for App", error)
-  }
-
-  def aclTerminalMapping(portCode: String): TerminalName => TerminalName = portCode match {
-    case "LGW" => (tIn: TerminalName) => Map("1I" -> "S", "2I" -> "N").getOrElse(tIn, "")
-    case "MAN" => (tIn: TerminalName) => Map("T1" -> "T1", "T2" -> "T2", "T3" -> "T3").getOrElse(tIn, "")
-    case "EMA" => (tIn: TerminalName) => Map("1I" -> "T1", "1D" -> "T1").getOrElse(tIn, "")
-    case _ => (tIn: TerminalName) => s"T${tIn.take(1)}"
-  }
-
-  def startScheduledFeedImports(crunchInputs: CrunchSystem[NotUsed, Cancellable, Cancellable]): Unit = {
-    if (portCode == "LHR") config.getString("lhr.blackjack_url").map(csvUrl => {
-      val requestIntervalMillis = 5 * oneMinuteMillis
-      Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, requestIntervalMillis milliseconds, SDate.now().addDays(-1))
-    })
-  }
-
-  def subscribeStaffingActors(crunchInputs: CrunchSystem[NotUsed, Cancellable, Cancellable]): Unit = {
-    shiftsActor ! AddShiftLikeSubscribers(List(crunchInputs.shifts))
-    fixedPointsActor ! AddShiftLikeSubscribers(List(crunchInputs.fixedPoints))
-    staffMovementsActor ! AddStaffMovementsSubscribers(List(crunchInputs.staffMovements))
-  }
-
-  def startCrunchSystem(initialPortState: Option[PortState],
-                        initialBaseArrivals: Option[Set[Arrival]],
-                        initialForecastArrivals: Option[Set[Arrival]],
-                        initialLiveArrivals: Option[Set[Arrival]],
-                        recrunchOnStart: Boolean
-                       ): CrunchSystem[NotUsed, Cancellable, Cancellable] = {
-    val crunchInputs = CrunchSystem(CrunchProps(
-      system = system,
-      airportConfig = airportConfig,
-      pcpArrival = pcpArrivalTimeCalculator,
-      historicalSplitsProvider = historicalSplitsProvider,
-      liveCrunchStateActor = liveCrunchStateActor,
-      forecastCrunchStateActor = forecastCrunchStateActor,
-      maxDaysToCrunch = maxDaysToCrunch,
-      expireAfterMillis = expireAfterMillis,
-      actors = Map(
-        "shifts" -> shiftsActor,
-        "fixed-points" -> fixedPointsActor,
-        "staff-movements" -> staffMovementsActor,
-        "base-arrivals" -> baseArrivalsActor,
-        "forecast-arrivals" -> forecastArrivalsActor,
-        "live-arrivals" -> liveArrivalsActor
-      ),
-      useNationalityBasedProcessingTimes = useNationalityBasedProcessingTimes,
-      splitsPredictorStage = splitsPredictorStage,
-      manifestsSource = voyageManifestsStage,
-      voyageManifestsActor = voyageManifestsActor,
-      cruncher = TryRenjin.crunch,
-      simulator = TryRenjin.runSimulationOfWork,
-      initialPortState = initialPortState,
-      initialBaseArrivals = initialBaseArrivals.getOrElse(Set()),
-      initialFcstArrivals = initialForecastArrivals.getOrElse(Set()),
-      initialLiveArrivals = initialLiveArrivals.getOrElse(Set()),
-      arrivalsBaseSource = baseArrivalsSource(),
-      arrivalsFcstSource = forecastArrivalsSource(airportConfig.portCode),
-      arrivalsLiveSource = liveArrivalsSource(airportConfig.portCode),
-      recrunchOnStart = recrunchOnStart
-    ))
-    crunchInputs
-  }
-
-  def initialPortState(askableCrunchStateActor: AskableActorRef): Future[Option[PortState]] = {
-    askableCrunchStateActor.ask(GetState)(new Timeout(5 minutes)).map {
-      case Some(ps: PortState) =>
-        system.log.info(s"Got an initial port state from ${askableCrunchStateActor.toString} with ${ps.staffMinutes.size} staff minutes, ${ps.crunchMinutes.size} crunch minutes, and ${ps.flights.size} flights")
-        Option(ps)
-      case _ =>
-        system.log.info(s"Got no initial port state from ${askableCrunchStateActor.toString}")
-        None
-    }
-  }
-
-  def initialArrivals(arrivalsActor: AskableActorRef): Future[Option[Set[Arrival]]] = {
-    val canWaitMinutes = 5
-    val arrivalsFuture: Future[Option[Set[Arrival]]] = arrivalsActor.ask(GetState)(new Timeout(canWaitMinutes minutes)).map {
-      case ArrivalsState(arrivals) => Option(arrivals.values.toSet)
-      case _ => None
-    }
-
-    arrivalsFuture.onComplete {
-      case Success(arrivals) => arrivals
-      case Failure(t) =>
-        system.log.warning(s"Failed to get an initial ArrivalsState: $t")
-        None
-    }
-
-    arrivalsFuture
-  }
-
-  def mergePortStates(maybeForecastPs: Option[PortState], maybeLivePs: Option[PortState]): Option[PortState] = (maybeForecastPs, maybeLivePs) match {
-    case (None, None) => None
-    case (Some(fps), None) => Option(fps)
-    case (None, Some(lps)) => Option(lps)
-    case (Some(fps), Some(lps)) =>
-      Option(PortState(
-        fps.flights ++ lps.flights,
-        fps.crunchMinutes ++ lps.crunchMinutes,
-        fps.staffMinutes ++ lps.staffMinutes))
-  }
-
-  def getLastSeenManifestsFileName: GateOrStand = {
-    val futureLastSeenManifestFileName = askableVoyageManifestsActor.ask(GetState)(new Timeout(1 minute)).map {
-      case VoyageManifestState(_, lastSeenFileName) => lastSeenFileName
-    }
-    Try {
-      Await.result(futureLastSeenManifestFileName, 1 minute)
-    } match {
-      case Success(lastSeen) => lastSeen
-      case Failure(t) =>
-        system.log.warning(s"Failed to get last seen file name for DQ manifests: $t")
-        ""
-    }
-  }
-
-  def createSplitsPredictionStage(predictSplits: Boolean, rawSplitsUrl: String): SplitsPredictorBase = if (predictSplits)
-    new SplitsPredictorStage(SparkSplitsPredictorFactory(createSparkSession(), rawSplitsUrl, portCode))
-  else
-    new DummySplitsPredictor()
-
-  def createSparkSession(): SparkSession = {
-    SparkSession
-      .builder
-      .appName("DRT Predictor")
-      .config("spark.master", "local")
-      .getOrCreate()
-  }
-
-  def liveArrivalsSource(portCode: String): Source[Flights, Cancellable] = {
-    val feed = portCode match {
-      case "LHR" =>
-        if (config.getString("feature-flags.lhr.use-new-lhr-feed").isDefined) {
-          val apiUri = config.getString("lhr.live.api_url").get
-          val token = config.getString("lhr.live.token").get
-          system.log.info(s"Connecting to $apiUri using $token")
-
-          LHRLiveFeed(apiUri, token, system)
-        }
-        else LHRFlightFeed()
-      case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
-      case "LGW" => LGWFeed()
-      case "BHX" => BHXLiveFeed(config.getString("feeds.bhx.soap.endPointUrl").get)
-      case "TEST" => TestFixtureFeed(system)
-      case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
-    }
-    feed.map(Flights)
-  }
-
-  def forecastArrivalsSource(portCode: String): Source[Flights, Cancellable] = {
-    val forecastNoOp = Source.tick[List[Arrival]](0 seconds, 30 minutes, List())
-    val feed = portCode match {
-      case "STN" => createForecastChromaFlightFeed(ChromaForecast).chromaVanillaFlights(30 minutes)
-      case "LHR" => config.getString("lhr.forecast_path")
-        .map(path => createForecastLHRFeed(path))
-        .getOrElse(forecastNoOp)
-      case "BHX" => BHXForecastFeed(config.getString("feeds.bhx.soap.endPointUrl").get)
-      case "LGW" => LGWForecastFeed()
-      case _ =>
-        system.log.info(s"No Forecast Feed defined.")
-        forecastNoOp
-    }
-    feed.map(Flights)
-  }
-
-  def baseArrivalsSource(): Source[Option[Flights], Cancellable] = Source.tick(1 second, 60 minutes, NotUsed).map(_ => {
-    system.log.info(s"Requesting ACL feed")
-    aclFeed.arrivals
-  })
-
-  def walkTimeProvider(flight: Arrival): MillisSinceEpoch =
-    gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, airportConfig.defaultWalkTimeMillis.getOrElse(flight.Terminal, 300000L))(flight)
-
-  def pcpArrivalTimeCalculator: (Arrival) => MilliDate =
-    PaxFlow.pcpArrivalTimeForFlight(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis)(walkTimeProvider)
-
-  def createLiveChromaFlightFeed(feedType: ChromaFeedType): ChromaLiveFeed = {
-    ChromaLiveFeed(system.log, new ChromaFetcher(feedType, system) with ProdSendAndReceive)
-  }
-
-  def createForecastChromaFlightFeed(feedType: ChromaFeedType): ChromaForecastFeed = {
-    ChromaForecastFeed(system.log, new ChromaFetcherForecast(feedType, system) with ProdSendAndReceive)
-  }
-
-  def createForecastLHRFeed(lhrForecastPath: String): Source[List[Arrival], Cancellable] = {
-    val imapServer = ConfigFactory.load().getString("lhr.forecast.imap_server")
-    val imapPort = ConfigFactory.load().getInt("lhr.forecast.imap_port")
-    val imapUsername = ConfigFactory.load().getString("lhr.forecast.imap_username")
-    val imapPassword = ConfigFactory.load().getString("lhr.forecast.imap_password")
-    val imapFromAddress = ConfigFactory.load().getString("lhr.forecast.from_address")
-    val lhrForecastFeed = LHRForecastFeed(imapServer, imapUsername, imapPassword, imapFromAddress, imapPort)
-    system.log.info(s"LHR Forecast: about to start ticking")
-    Source.tick(10 seconds, 1 hour, {
-      system.log.info(s"LHR Forecast: ticking")
-      lhrForecastFeed.arrivals
-    }).via(DiffingStage.DiffLists[Arrival]()).map(_.toList)
-  }
-}
-
 trait AirportConfiguration {
   def airportConfig: AirportConfig
 }
@@ -399,7 +100,7 @@ trait AirportConfProvider extends AirportConfiguration {
 }
 
 trait ProdPassengerSplitProviders {
-  self: AirportConfiguration with SystemActors =>
+  self: AirportConfiguration =>
 
   val csvSplitsProvider: SplitsProvider.SplitProvider = SplitsProvider.csvProvider
 
@@ -443,27 +144,36 @@ trait AvailableUserRoles {
 class Application @Inject()(implicit val config: Configuration,
                             implicit val mat: Materializer,
                             env: Environment,
-                            override val system: ActorSystem,
+                            val system: ActorSystem,
                             ec: ExecutionContext)
   extends Controller
     with AirportConfProvider
     with ProdPassengerSplitProviders
-    with SystemActors
     with ImplicitTimeoutProvider
     with AvailableUserRoles {
-  ctrl =>
-  val log: LoggingAdapter = system.log
+
+  val ctrl: DrtSystemInterface = config.getString("env") match {
+      case Some("test") =>
+        new TestDrtSystem(system, config, getPortConfFromEnvVar)
+      case _ =>
+        new DrtSystem(system, config, getPortConfFromEnvVar)
+    }
+  ctrl.run()
+
+  def log: LoggingAdapter = system.log
 
   log.info(s"Starting DRTv2 build ${BuildInfo.version}")
 
   log.info(s"ISOChronology.getInstance: ${ISOChronology.getInstance}")
-  private val systemTimeZone = System.getProperty("user.timezone")
+
+  private def systemTimeZone = System.getProperty("user.timezone")
+
   log.info(s"System.getProperty(user.timezone): $systemTimeZone")
   assert(systemTimeZone == "UTC")
 
   log.info(s"Application using airportConfig $airportConfig")
 
-  val cacheActorRef: AskableActorRef = system.actorOf(Props(classOf[CachingCrunchReadActor]), name = "cache-actor")
+  def cacheActorRef: AskableActorRef = system.actorOf(Props(classOf[CachingCrunchReadActor]), name = "cache-actor")
 
   def previousDay(date: MilliDate): SDateLike = {
     val oneDayInMillis = 60 * 60 * 24 * 1000L
@@ -490,7 +200,7 @@ class Application @Inject()(implicit val config: Configuration,
       override def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]] = crunchStateAtPointInTime(pointInTime)
 
       def getCrunchUpdates(sinceMillis: MillisSinceEpoch, windowStartMillis: MillisSinceEpoch, windowEndMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]] = {
-        val liveStateCutOff = getLocalNextMidnight(now()).addDays(1).millisSinceEpoch
+        val liveStateCutOff = getLocalNextMidnight(ctrl.now()).addDays(1).millisSinceEpoch
 
         val stateActor = if (windowStartMillis < liveStateCutOff) liveCrunchStateActor else forecastCrunchStateActor
 
@@ -581,8 +291,6 @@ class Application @Inject()(implicit val config: Configuration,
       else
         roles
 
-      override def askableCacheActorRef: AskableActorRef = cacheActorRef
-
       override def liveCrunchStateActor: AskableActorRef = ctrl.liveCrunchStateActor
 
       override def forecastCrunchStateActor: AskableActorRef = ctrl.forecastCrunchStateActor
@@ -606,7 +314,7 @@ class Application @Inject()(implicit val config: Configuration,
     val firstMinute = getLocalLastMidnight(SDate(day)).millisSinceEpoch
     val lastMinute = SDate(firstMinute).addHours(airportConfig.dayLengthHours).millisSinceEpoch
 
-    val crunchStateFuture = forecastCrunchStateActor.ask(GetPortState(firstMinute, lastMinute))(new Timeout(30 seconds))
+    val crunchStateFuture = ctrl.forecastCrunchStateActor.ask(GetPortState(firstMinute, lastMinute))(new Timeout(30 seconds))
 
     crunchStateFuture.map {
       case Some(PortState(f, m, s)) => Option(CrunchState(f.values.toSet, m.values.toSet, s.values.toSet))
@@ -720,7 +428,7 @@ class Application @Inject()(implicit val config: Configuration,
       getLocalNextMidnight(now)
     } else startOfWeekMidnight
 
-    val crunchStateFuture = forecastCrunchStateActor.ask(
+    val crunchStateFuture = ctrl.forecastCrunchStateActor.ask(
       GetPortState(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch)
     )(new Timeout(30 seconds))
 
@@ -752,7 +460,7 @@ class Application @Inject()(implicit val config: Configuration,
       getLocalNextMidnight(now)
     } else startOfWeekMidnight
 
-    val crunchStateFuture = forecastCrunchStateActor.ask(
+    val crunchStateFuture = ctrl.forecastCrunchStateActor.ask(
       GetPortState(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch)
     )(new Timeout(30 seconds))
 
@@ -857,11 +565,11 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   def fetchAclFeed(portCode: String): Action[AnyContent] = Action.async {
-    val fileName = AclFeed.latestFileForPort(aclFeed.sftp, portCode.toUpperCase)
+    val fileName = AclFeed.latestFileForPort(ctrl.aclFeed.sftp, portCode.toUpperCase)
 
     log.info(s"Latest ACL file for $portCode: $fileName. Fetching..")
 
-    val zipContent = AclFeed.contentFromFileName(aclFeed.sftp, fileName)
+    val zipContent = AclFeed.contentFromFileName(ctrl.aclFeed.sftp, fileName)
     val csvFileName = fileName.replace(".zip", ".csv")
 
     val result = Result(
@@ -911,7 +619,7 @@ class Application @Inject()(implicit val config: Configuration,
       maybeShifts match {
         case Some(shiftsString) =>
           log.info(s"Received ${shiftsString.split("\n").length} shifts. Sending to actor")
-          shiftsActor ! shiftsString
+          ctrl.shiftsActor ! shiftsString
           Created
         case _ =>
           BadRequest("{\"error\": \"Unable to parse data\"}")
@@ -928,7 +636,7 @@ class Application @Inject()(implicit val config: Configuration,
       // call Autowire route
 
       implicit val pickler = generatePickler[ApiPaxTypeAndQueueCount]
-      val router = Router.route[Api](ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor, request.headers))
+      val router = Router.route[Api](ApiService(airportConfig, ctrl.shiftsActor, ctrl.fixedPointsActor, ctrl.staffMovementsActor, request.headers))
 
       router(
         autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))
