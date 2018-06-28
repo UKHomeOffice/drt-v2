@@ -7,6 +7,8 @@ import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveF
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
 import drt.chroma.{DiffingStage, StreamingChromaFlow}
 import drt.shared.Arrival
+import drt.shared.FlightsApi.Flights
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 //<<<<<<< Updated upstream
 import org.springframework.util.StringUtils
 //=======
@@ -29,24 +31,26 @@ case class ChromaLiveFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcher) {
       "T2" -> ArrivalsHall2
     )
 
-    def ediBaggageTerminalHack(csf: ChromaLiveFlight): ChromaLiveFlight = {
-      if (csf.BaggageReclaimId == "7") csf.copy(Terminal = ArrivalsHall2) else csf
+    def ediBaggageTerminalHack(csf: Arrival): Arrival = {
+      if (csf.BaggageReclaimId.getOrElse("") == "7") csf.copy(Terminal = ArrivalsHall2) else csf
     }
   }
 
-//  def chromaEdiFlights(): Source[List[Arrival], Cancellable] = {
-//    val chromaFlow = StreamingChromaFlow.chromaPollingSourceLive(log, chromaFetcher, 30 seconds)
-//
-//    def ediMapping = chromaFlow.via(DiffingStage.DiffLists[ChromaLiveFlight]()).map(csfs =>
-//      csfs.map(EdiChroma.ediBaggageTerminalHack(_)).map(csf => EdiChroma.ediMapTerminals.get(csf.Terminal) match {
-//        case Some(renamedTerminal) =>
-//          csf.copy(Terminal = renamedTerminal)
-//        case None => csf
-//      })
-//    )
-//
-//    apiFlightCopy(ediMapping)
-//  }
+  def chromaEdiFlights(): Source[FeedResponse, Cancellable] = {
+    val chromaFlow = StreamingChromaFlow.chromaPollingSourceLive(log, chromaFetcher, 30 seconds)
+
+    chromaFlow.via(DiffingStage.DiffLists).map {
+      case aff: ArrivalsFeedFailure => aff
+      case afs: ArrivalsFeedSuccess => afs.copy(arrivals = Flights(correctEdiTerminals(afs)))
+    }
+  }
+
+  def correctEdiTerminals(afs: ArrivalsFeedSuccess): Seq[Arrival] = afs.arrivals.flights
+    .map(EdiChroma.ediBaggageTerminalHack(_))
+    .map(csf => EdiChroma.ediMapTerminals.get(csf.Terminal) match {
+      case Some(renamedTerminal) => csf.copy(Terminal = renamedTerminal)
+      case None => csf
+    })
 
   def chromaVanillaFlights(frequency: FiniteDuration): Source[FeedResponse, Cancellable] = {
     val chromaFlow = StreamingChromaFlow.chromaPollingSourceLive(log, chromaFetcher, frequency)
