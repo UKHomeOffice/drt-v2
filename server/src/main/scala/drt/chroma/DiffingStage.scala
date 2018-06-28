@@ -92,22 +92,26 @@ final class ArrivalsDiffingStage(diff: (Seq[Arrival], Seq[Arrival]) => Seq[Arriv
         grab(in) match {
           case ArrivalsFeedSuccess(Flights(arrivals), createdAt) =>
             val newDiff = diff(currentValue, arrivals)
+            log.info(s"${newDiff.length} updated arrivals from diff")
             if (newDiff.nonEmpty) {
               maybeLatestDiff = maybeLatestDiff match {
-                case Some(ArrivalsFeedSuccess(Flights(existingArrivalsDiff), existingCreatedAt)) =>
+                case Some(ArrivalsFeedSuccess(Flights(existingArrivalsDiff), _)) =>
                   val updatedDiff = newDiff
                     .foldLeft(existingArrivalsDiff.map(a => (a.uniqueId, a)).toMap) {
                       case (soFar, newArrivalUpdate) => soFar.updated(newArrivalUpdate.uniqueId, newArrivalUpdate)
                     }
                     .values
                     .toSeq
-                  log.info(s"${newDiff.length} newly updated arrivals")
+                  log.info(s"Merged ${newDiff.length} updated arrivals with existing diff")
                   Option(ArrivalsFeedSuccess(Flights(updatedDiff), createdAt))
+                case _ =>
+                  Option(ArrivalsFeedSuccess(Flights(newDiff), createdAt))
               }
               currentValue = arrivals
             }
-          case ArrivalsFeedFailure(_, _) =>
+          case aff@ArrivalsFeedFailure(_, _) =>
             log.info("Feed failure. No updated arrivals")
+            Option(aff)
         }
       }
     }
