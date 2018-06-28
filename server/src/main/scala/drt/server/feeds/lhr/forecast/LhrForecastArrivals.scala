@@ -3,6 +3,7 @@ package drt.server.feeds.lhr.forecast
 import drt.shared.{Arrival, SDateLike}
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
+import org.springframework.util.StringUtils
 import services.SDate
 import services.graphstages.Crunch
 import services.graphstages.Crunch.europeLondonTimeZone
@@ -60,29 +61,32 @@ object LhrForecastArrival {
     val fields = line.split(",")
 
     Try {
+      val operator = carrierCode(fields)
+      val maxPaxField = maxPax(fields)
+      val actPax = paxTotal(fields)
+      val transPax = paxTransit(fields)
       Arrival(
-        Operator = carrierCode(fields),
+        Operator = if (StringUtils.isEmpty(operator)) None else Option(operator),
         Status = "Forecast",
-        EstDT = "",
-        ActDT = "",
-        EstChoxDT = "",
-        ActChoxDT = "",
-        Gate = "",
-        Stand = "",
-        MaxPax = maxPax(fields),
-        ActPax = paxTotal(fields),
-        TranPax = paxTransit(fields),
-        RunwayID = "",
-        BaggageReclaimId = "",
-        FlightID = 0,
-        AirportID = "",
+        Estimated = None,
+        Actual = None,
+        EstimatedChox = None,
+        ActualChox = None,
+        Gate = None,
+        Stand = None,
+        MaxPax = if (maxPaxField==0) None else Option(maxPaxField),
+        ActPax = if (actPax==0) None else Option(actPax),
+        TranPax = if (actPax==0) None else Option(transPax),
+        RunwayID = None,
+        BaggageReclaimId = None,
+        FlightID = None,
+        AirportID = "LHR",
         Terminal = terminal(fields),
         rawIATA = flightCode(fields),
         rawICAO = flightCode(fields),
         Origin = origin(fields),
-        SchDT = scheduledStr(fields),
         Scheduled = scheduled(fields).millisSinceEpoch,
-        PcpTime = 0L,
+        PcpTime = None,
         LastKnownPax = None
       )
     } match {

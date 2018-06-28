@@ -212,7 +212,7 @@ object PaxSplitsDisplayTests extends TestSuite {
       }
 
       "Given a flight with all splits when I ask for pax per queue I should see the total broken down per queue" - {
-        val flight = ArrivalGenerator.apiFlight(1, actPax = 152)
+        val flight = ArrivalGenerator.apiFlight(Option(1), actPax = Option(152))
         val splits = ApiSplits(
           Set(
             ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, "nonEeaDesk", 11.399999999999999, None),

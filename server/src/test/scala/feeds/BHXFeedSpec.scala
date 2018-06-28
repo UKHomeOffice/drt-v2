@@ -1,6 +1,7 @@
 package feeds
 
 import java.util.{Calendar, GregorianCalendar, TimeZone}
+
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import com.typesafe.config.ConfigFactory
@@ -8,10 +9,12 @@ import drt.server.feeds.bhx.BHXFeed
 import drt.shared.Arrival
 import javax.xml.datatype.DatatypeFactory
 import javax.xml.ws.BindingProvider
+import org.joda.time.DateTimeZone
 import org.mockito.Mockito.verify
 import org.specs2.matcher.Scope
 import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecificationLike
+import services.SDate
 import uk.co.bhx.online.flightinformation._
 
 import scala.collection.JavaConversions._
@@ -93,28 +96,27 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
       verify(serviceSoap).bfGetFlights
       arrivals.size mustEqual 1
       arrivals.head mustEqual new Arrival(
-        Operator = "",
+        Operator = None,
         Status = "Arrived",
-        EstDT = "2012-06-02T06:46:53.123Z",
-        ActDT = "2012-06-02T06:46:53.123Z",
-        EstChoxDT = "2012-06-02T06:46:53.123Z",
-        ActChoxDT = "2012-06-02T06:46:53.123Z",
-        Gate = "44",
-        Stand = "57R",
-        MaxPax = 80,
-        ActPax = 40,
-        TranPax = 35,
-        RunwayID = "R1",
-        BaggageReclaimId = "7A",
-        FlightID = 0,
+        Estimated = Some(SDate("2012-06-02T06:46:53.123Z", DateTimeZone.UTC).millisSinceEpoch),
+        Actual = Some(SDate("2012-06-02T06:46:53.123Z", DateTimeZone.UTC).millisSinceEpoch),
+        EstimatedChox = Some(SDate("2012-06-02T06:46:53.123Z", DateTimeZone.UTC).millisSinceEpoch),
+        ActualChox = Some(SDate("2012-06-02T06:46:53.123Z", DateTimeZone.UTC).millisSinceEpoch),
+        Gate = Some("44"),
+        Stand = Some("57R"),
+        MaxPax = Some(80),
+        ActPax = Some(40),
+        TranPax = Some(35),
+        RunwayID = Some("R1"),
+        BaggageReclaimId = Some("7A"),
+        FlightID = None,
         AirportID = "BHX",
         Terminal = "T1",
         rawICAO = "AF1164",
         rawIATA = "AF1164",
         Origin = "CPH",
-        SchDT = "2012-06-02T06:46:53.123Z",
         Scheduled = 1338619613123L,
-        PcpTime = 0,
+        PcpTime = None,
         LastKnownPax = None)
     }
 
@@ -124,28 +126,27 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
       verify(serviceSoap).bfGetScheduledFlights()
       arrivals.size mustEqual 1
       arrivals.head mustEqual new Arrival(
-        Operator = "",
+        Operator = None,
         Status = "Port Forecast",
-        EstDT = "",
-        ActDT = "",
-        EstChoxDT = "",
-        ActChoxDT = "",
-        Gate = "",
-        Stand = "",
-        MaxPax = 80,
-        ActPax = 40,
-        TranPax = 35,
-        RunwayID = "",
-        BaggageReclaimId = "",
-        FlightID = 0,
+        Estimated = None,
+        Actual = None,
+        EstimatedChox = None,
+        ActualChox = None,
+        Gate = None,
+        Stand = None,
+        MaxPax = Some(80),
+        ActPax = Some(40),
+        TranPax = Some(35),
+        RunwayID = None,
+        BaggageReclaimId = None,
+        FlightID = None,
         AirportID = "BHX",
         Terminal = "T1",
         rawICAO = "AF1164",
         rawIATA = "AF1164",
         Origin = "CPH",
-        SchDT = "2012-06-02T07:46:53.123Z", // BHX Forecast is incorrect. It should be 2012-06-02T06:46:53.123Z
-        Scheduled = 1338623213123L, // BHX Forecast is incorrect. This should be 1338619613123L
-        PcpTime = 0,
+        Scheduled = 1338623213123L, // BHX Forecast is incorrect. This should be 1338619613123L or 2012-06-02T06:46:53.123Z
+        PcpTime = None,
         LastKnownPax = None)
     }
 

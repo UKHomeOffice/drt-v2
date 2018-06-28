@@ -20,7 +20,7 @@ import drt.chroma.{ChromaFeedType, ChromaForecast, ChromaLive, DiffingStage}
 import drt.http.ProdSendAndReceive
 import drt.server.feeds.bhx.{BHXForecastFeed, BHXLiveFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
-import drt.server.feeds.lgw.LGWFeed
+import drt.server.feeds.lgw.{LGWFeed, LGWForecastFeed}
 import drt.server.feeds.lhr.live.LHRLiveFeed
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.server.feeds.test.TestFixtureFeed
@@ -35,6 +35,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.{HeaderNames, HttpEntity}
 import play.api.mvc._
 import play.api.{Configuration, Environment}
+import server.feeds.FeedResponse
 import server.feeds.acl.AclFeed
 import services.PcpArrival._
 import services.SDate.implicits._
@@ -306,38 +307,38 @@ trait SystemActors {
       .getOrCreate()
   }
 
-  def liveArrivalsSource(portCode: String): Source[Flights, Cancellable] = {
+  def liveArrivalsSource(portCode: String): Source[FeedResponse, Cancellable] = {
     val feed = portCode match {
-      case "LHR" =>
-        if (config.getString("feature-flags.lhr.use-new-lhr-feed").isDefined) {
-          val apiUri = config.getString("lhr.live.api_url").get
-          val token = config.getString("lhr.live.token").get
-          system.log.info(s"Connecting to $apiUri using $token")
-
-          LHRLiveFeed(apiUri, token, system)
-        }
-        else LHRFlightFeed()
-      case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
-      case "LGW" => LGWFeed()
-      case "BHX" => BHXLiveFeed(config.getString("feeds.bhx.soap.endPointUrl").get)
-      case "TEST" => TestFixtureFeed(system)
+//      case "LHR" =>
+//        if (config.getString("feature-flags.lhr.use-new-lhr-feed").isDefined) {
+//          val apiUri = config.getString("lhr.live.api_url").get
+//          val token = config.getString("lhr.live.token").get
+//          system.log.info(s"Connecting to $apiUri using $token")
+//
+//          LHRLiveFeed(apiUri, token, system)
+//        }
+//        else LHRFlightFeed()
+//      case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
+//      case "LGW" => LGWFeed()
+//      case "BHX" => BHXLiveFeed(config.getString("feeds.bhx.soap.endPointUrl").get)
+//      case "TEST" => TestFixtureFeed(system)
       case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
     }
-    feed.map(Flights)
+    feed
   }
 
-  def forecastArrivalsSource(portCode: String): Source[Flights, Cancellable] = {
+  def forecastArrivalsSource(portCode: String): Source[FeedResponse, Cancellable] = {
     val feed = portCode match {
       case "STN" => createForecastChromaFlightFeed(ChromaForecast).chromaVanillaFlights(30 minutes)
-      case "LHR" => config.getString("lhr.forecast_path")
-        .map(path => createForecastLHRFeed(path))
-        .getOrElse(forecastNoOp)
-      case "BHX" => BHXForecastFeed(config.getString("feeds.bhx.soap.endPointUrl").get)
-      case _ =>
-        system.log.info(s"No Forecast Feed defined.")
-        forecastNoOp
+//      case "LHR" => config.getString("lhr.forecast_path")
+//        .map(path => createForecastLHRFeed(path))
+//        .getOrElse(forecastNoOp)
+//      case "BHX" => BHXForecastFeed(config.getString("feeds.bhx.soap.endPointUrl").get)
+//      case _ =>
+//        system.log.info(s"No Forecast Feed defined.")
+//        forecastNoOp
     }
-    feed.map(Flights)
+    feed
   }
 
   def forecastNoOp = Source.tick[List[Arrival]](0 seconds, 30 minutes, List())
@@ -361,19 +362,19 @@ trait SystemActors {
     ChromaForecastFeed(system.log, new ChromaFetcherForecast(feedType, system) with ProdSendAndReceive)
   }
 
-  def createForecastLHRFeed(lhrForecastPath: String): Source[List[Arrival], Cancellable] = {
-    val imapServer = ConfigFactory.load().getString("lhr.forecast.imap_server")
-    val imapPort = ConfigFactory.load().getInt("lhr.forecast.imap_port")
-    val imapUsername = ConfigFactory.load().getString("lhr.forecast.imap_username")
-    val imapPassword = ConfigFactory.load().getString("lhr.forecast.imap_password")
-    val imapFromAddress = ConfigFactory.load().getString("lhr.forecast.from_address")
-    val lhrForecastFeed = LHRForecastFeed(imapServer, imapUsername, imapPassword, imapFromAddress, imapPort)
-    system.log.info(s"LHR Forecast: about to start ticking")
-    Source.tick(10 seconds, 1 hour, {
-      system.log.info(s"LHR Forecast: ticking")
-      lhrForecastFeed.arrivals
-    }).via(DiffingStage.DiffLists[Arrival]()).map(_.toList)
-  }
+//  def createForecastLHRFeed(lhrForecastPath: String): Source[List[Arrival], Cancellable] = {
+//    val imapServer = ConfigFactory.load().getString("lhr.forecast.imap_server")
+//    val imapPort = ConfigFactory.load().getInt("lhr.forecast.imap_port")
+//    val imapUsername = ConfigFactory.load().getString("lhr.forecast.imap_username")
+//    val imapPassword = ConfigFactory.load().getString("lhr.forecast.imap_password")
+//    val imapFromAddress = ConfigFactory.load().getString("lhr.forecast.from_address")
+//    val lhrForecastFeed = LHRForecastFeed(imapServer, imapUsername, imapPassword, imapFromAddress, imapPort)
+//    system.log.info(s"LHR Forecast: about to start ticking")
+//    Source.tick(10 seconds, 1 hour, {
+//      system.log.info(s"LHR Forecast: ticking")
+//      lhrForecastFeed.arrivals
+//    }).via(DiffingStage.DiffLists[Arrival]()).map(_.toList)
+//  }
 }
 
 trait AirportConfiguration {
@@ -893,7 +894,8 @@ class Application @Inject()(implicit val config: Configuration,
 
         val flightsForTerminalInRange = fs.toList
           .filter(_.apiFlight.Terminal == terminalName)
-          .filter(f => isInRange(SDate(f.apiFlight.PcpTime, europeLondonTimeZone)))
+          .filter(_.apiFlight.PcpTime.isDefined)
+          .filter(f => isInRange(SDate(f.apiFlight.PcpTime.getOrElse(0L), europeLondonTimeZone)))
 
         Option(flightsForTerminalInRange)
       case unexpected =>

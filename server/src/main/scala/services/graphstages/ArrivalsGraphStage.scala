@@ -6,6 +6,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedResponse}
 import services.SDate
 import services.graphstages.Crunch.midnightThisMorning
 
@@ -20,11 +21,11 @@ class ArrivalsGraphStage(name: String = "",
                          validPortTerminals: Set[String],
                          expireAfterMillis: Long,
                          now: () => SDateLike)
-  extends GraphStage[FanInShape3[Option[Flights], Flights, Flights, ArrivalsDiff]] {
+  extends GraphStage[FanInShape3[Option[Flights], FeedResponse, FeedResponse, ArrivalsDiff]] {
 
   val inBaseArrivals: Inlet[Option[Flights]] = Inlet[Option[Flights]]("inFlightsBase.in")
-  val inForecastArrivals: Inlet[Flights] = Inlet[Flights]("inFlightsForecast.in")
-  val inLiveArrivals: Inlet[Flights] = Inlet[Flights]("inFlightsLive.in")
+  val inForecastArrivals: Inlet[FeedResponse] = Inlet[FeedResponse]("inFlightsForecast.in")
+  val inLiveArrivals: Inlet[FeedResponse] = Inlet[FeedResponse]("inFlightsLive.in")
   val outArrivalsDiff: Outlet[ArrivalsDiff] = Outlet[ArrivalsDiff]("outArrivalsDiff.in")
   override val shape = new FanInShape3(inBaseArrivals, inForecastArrivals, inLiveArrivals, outArrivalsDiff)
 
@@ -77,11 +78,22 @@ class ArrivalsGraphStage(name: String = "",
       override def onPush(): Unit = {
         val start = SDate.now()
         log.info(s"inForecastArrivals onPush() grabbing forecast flights")
-        val grabbedArrivals = grab(inForecastArrivals)
-        log.info(s"Grabbed ${grabbedArrivals.flights.length} forecast arrivals")
-        forecastArrivals = mergeUpdatesAndPurge(filterAndSetPcp(grabbedArrivals.flights), forecastArrivals)
+//        val grabbedArrivals = grab(inForecastArrivals)
+//        log.info(s"Grabbed ${grabbedArrivals.flights.length} forecast arrivals")
+//        forecastArrivals = mergeUpdatesAndPurge(filterAndSetPcp(grabbedArrivals.flights), forecastArrivals)
+//
+//        mergeAllSourcesAndPush(baseArrivals, forecastArrivals, liveArrivals)
 
-        mergeAllSourcesAndPush(baseArrivals, forecastArrivals, liveArrivals)
+        grab(inForecastArrivals) match {
+          case ArrivalsFeedSuccess(Flights(flights), connectedAt) =>
+            log.info(s"Grabbed ${flights.length} forecast arrivals from connection at ${connectedAt.toISOString()}")
+            forecastArrivals = mergeUpdatesAndPurge(filterAndSetPcp(flights), forecastArrivals)
+
+            mergeAllSourcesAndPush(baseArrivals, forecastArrivals, liveArrivals)
+
+          case ArrivalsFeedFailure(message, failedAt) =>
+            log.info(s"$inLiveArrivals failed at ${failedAt.toISOString()}: $message")
+        }
 
         if (!hasBeenPulled(inForecastArrivals)) pull(inForecastArrivals)
         log.info(s"inForecastArrivals Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
@@ -93,11 +105,16 @@ class ArrivalsGraphStage(name: String = "",
         val start = SDate.now()
         log.info(s"inLiveArrivals onPush() grabbing live flights")
 
-        val grabbedArrivals = grab(inLiveArrivals)
-        log.info(s"Grabbed ${grabbedArrivals.flights.length} live arrivals")
-        liveArrivals = mergeUpdatesAndPurge(filterAndSetPcp(grabbedArrivals.flights), liveArrivals)
+        grab(inLiveArrivals) match {
+          case ArrivalsFeedSuccess(Flights(flights), connectedAt) =>
+            log.info(s"Grabbed ${flights.length} live arrivals from connection at ${connectedAt.toISOString()}")
+            liveArrivals = mergeUpdatesAndPurge(filterAndSetPcp(flights), liveArrivals)
 
-        mergeAllSourcesAndPush(baseArrivals, forecastArrivals, liveArrivals)
+            mergeAllSourcesAndPush(baseArrivals, forecastArrivals, liveArrivals)
+
+          case ArrivalsFeedFailure(message, failedAt) =>
+            log.info(s"$inLiveArrivals failed at ${failedAt.toISOString()}: $message")
+        }
 
         if (!hasBeenPulled(inLiveArrivals)) pull(inLiveArrivals)
         log.info(s"inLiveArrivals Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
@@ -119,14 +136,14 @@ class ArrivalsGraphStage(name: String = "",
     }
 
     def purgeExpired(flightsById: Map[Int, Arrival]): Map[Int, Arrival] = {
-      val expired: Arrival => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (a: Arrival) => a.PcpTime)
+      val expired: Arrival => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (a: Arrival) => a.PcpTime.getOrElse(0L))
       flightsById.filterNot {
         case (_, arrival) => expired(arrival)
       }
     }
 
     def purgeExpired(flights: Set[Arrival]): Set[Arrival] = {
-      val expired: Arrival => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (a: Arrival) => a.PcpTime)
+      val expired: Arrival => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (a: Arrival) => a.PcpTime.getOrElse(0L))
       flights.filterNot(expired)
     }
 
@@ -161,11 +178,11 @@ class ArrivalsGraphStage(name: String = "",
       arrivals
         .filterNot {
           case f if !isFlightRelevant(f) =>
-            log.debug(s"Filtering out irrelevant arrival: ${f.IATA}, ${f.SchDT}, ${f.Origin}")
+            log.debug(s"Filtering out irrelevant arrival: ${f.IATA}, ${SDate(f.Scheduled).toISOString()}, ${f.Origin}")
             true
           case _ => false
         }
-        .map(f => (f.uniqueId, f.copy(PcpTime = pcpArrivalTime(f).millisSinceEpoch)))
+        .map(f => (f.uniqueId, f.copy(PcpTime = Some(pcpArrivalTime(f).millisSinceEpoch))))
         .toMap
     }
 
@@ -195,7 +212,7 @@ class ArrivalsGraphStage(name: String = "",
             case None =>
               (notFoundSoFar + 1, mergedSoFar)
             case Some(baseArrival) =>
-              val actPax = if (forecastArrival.ActPax > 0) forecastArrival.ActPax else baseArrival.ActPax
+              val actPax = forecastArrival.ActPax.filter(_>0).orElse(baseArrival.ActPax)
               val mergedArrival = baseArrival.copy(ActPax = actPax, TranPax = forecastArrival.TranPax, Status = forecastArrival.Status)
               (notFoundSoFar, mergedSoFar.updated(fcstId, mergedArrival))
           }
@@ -209,8 +226,8 @@ class ArrivalsGraphStage(name: String = "",
           val mergedArrival = liveArrival.copy(
             rawIATA = baseArrival.rawIATA,
             rawICAO = baseArrival.rawICAO,
-            ActPax = if (liveArrival.ActPax > 0) liveArrival.ActPax else mergedSoFarArrival.ActPax,
-            TranPax = if (liveArrival.ActPax > 0) liveArrival.TranPax else mergedSoFarArrival.TranPax)
+            ActPax = liveArrival.ActPax.filter(_>0).orElse(mergedSoFarArrival.ActPax),
+            TranPax = liveArrival.ActPax.filter(_ > 0).flatMap(actPax=> liveArrival.TranPax).orElse(mergedSoFarArrival.TranPax))
 
           mergedSoFar.updated(liveId, mergedArrival)
       }

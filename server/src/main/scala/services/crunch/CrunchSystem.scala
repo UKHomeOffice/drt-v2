@@ -11,6 +11,7 @@ import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared.{SDateLike, _}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.SplitsCalculator
+import server.feeds.FeedResponse
 import services._
 import services.graphstages.Crunch._
 import services.graphstages._
@@ -21,44 +22,44 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 
-case class CrunchSystem[MS, OAL, AL](shifts: SourceQueueWithComplete[String],
-                                fixedPoints: SourceQueueWithComplete[String],
-                                staffMovements: SourceQueueWithComplete[Seq[StaffMovement]],
-                                baseArrivals: OAL,
-                                forecastArrivals: AL,
-                                liveArrivals: AL,
-                                manifests: MS,
-                                actualDeskStats: SourceQueueWithComplete[ActualDeskStats]
+case class CrunchSystem[MS, OAL, FR](shifts: SourceQueueWithComplete[String],
+                                         fixedPoints: SourceQueueWithComplete[String],
+                                         staffMovements: SourceQueueWithComplete[Seq[StaffMovement]],
+                                         baseArrivals: OAL,
+                                         forecastArrivalsResponse: FR,
+                                         liveArrivalsResponse: FR,
+                                         manifests: MS,
+                                         actualDeskStats: SourceQueueWithComplete[ActualDeskStats]
                                )
 
-case class CrunchProps[MS, OAL, AL](logLabel: String = "",
-                               system: ActorSystem,
-                               airportConfig: AirportConfig,
-                               pcpArrival: Arrival => MilliDate,
-                               historicalSplitsProvider: SplitsProvider.SplitProvider,
-                               liveCrunchStateActor: ActorRef,
-                               forecastCrunchStateActor: ActorRef,
-                               maxDaysToCrunch: Int,
-                               expireAfterMillis: Long,
-                               minutesToCrunch: Int = 1440,
-                               crunchOffsetMillis: Long = 0,
-                               actors: Map[String, AskableActorRef],
-                               useNationalityBasedProcessingTimes: Boolean,
-                               now: () => SDateLike = () => SDate.now(),
-                               initialFlightsWithSplits: Option[FlightsWithSplits] = None,
-                               splitsPredictorStage: SplitsPredictorBase,
-                               manifestsSource: Source[DqManifests, MS],
-                               voyageManifestsActor: ActorRef,
-                               cruncher: TryCrunch,
-                               simulator: Simulator,
-                               initialPortState: Option[PortState] = None,
-                               initialBaseArrivals: Set[Arrival] = Set(),
-                               initialFcstArrivals: Set[Arrival] = Set(),
-                               initialLiveArrivals: Set[Arrival] = Set(),
-                               arrivalsBaseSource: Source[Option[Flights], OAL],
-                               arrivalsFcstSource: Source[Flights, AL],
-                               arrivalsLiveSource: Source[Flights, AL],
-                               recrunchOnStart: Boolean = false)
+case class CrunchProps[MS, OAL, FR](logLabel: String = "",
+                                    system: ActorSystem,
+                                    airportConfig: AirportConfig,
+                                    pcpArrival: Arrival => MilliDate,
+                                    historicalSplitsProvider: SplitsProvider.SplitProvider,
+                                    liveCrunchStateActor: ActorRef,
+                                    forecastCrunchStateActor: ActorRef,
+                                    maxDaysToCrunch: Int,
+                                    expireAfterMillis: Long,
+                                    minutesToCrunch: Int = 1440,
+                                    crunchOffsetMillis: Long = 0,
+                                    actors: Map[String, AskableActorRef],
+                                    useNationalityBasedProcessingTimes: Boolean,
+                                    now: () => SDateLike = () => SDate.now(),
+                                    initialFlightsWithSplits: Option[FlightsWithSplits] = None,
+                                    splitsPredictorStage: SplitsPredictorBase,
+                                    manifestsSource: Source[DqManifests, MS],
+                                    voyageManifestsActor: ActorRef,
+                                    cruncher: TryCrunch,
+                                    simulator: Simulator,
+                                    initialPortState: Option[PortState] = None,
+                                    initialBaseArrivals: Set[Arrival] = Set(),
+                                    initialFcstArrivals: Set[Arrival] = Set(),
+                                    initialLiveArrivals: Set[Arrival] = Set(),
+                                    arrivalsBaseSource: Source[Option[Flights], OAL],
+                                    arrivalsFcstSource: Source[FeedResponse, FR],
+                                    arrivalsLiveSource: Source[FeedResponse, FR],
+                                    recrunchOnStart: Boolean = false)
 
 object CrunchSystem {
 
@@ -69,7 +70,7 @@ object CrunchSystem {
     Crunch.getLocalLastMidnight(adjustedMinute).addMinutes(offsetMinutes)
   }
 
-  def apply[MS, OAL, AL](props: CrunchProps[MS, OAL, AL]): CrunchSystem[MS, OAL, AL] = {
+  def apply[MS, OAL, FR](props: CrunchProps[MS, OAL, FR]): CrunchSystem[MS, OAL, FR] = {
 
     val initialShifts = initialShiftsLikeState(props.actors("shifts"))
     val initialFixedPoints = initialShiftsLikeState(props.actors("fixed-points"))
@@ -178,8 +179,8 @@ object CrunchSystem {
       fixedPoints = fixedPointsIn,
       staffMovements = movementsIn,
       baseArrivals = baseIn,
-      forecastArrivals = fcstIn,
-      liveArrivals = liveIn,
+      forecastArrivalsResponse = fcstIn,
+      liveArrivalsResponse = liveIn,
       manifests = manifestsIn,
       actualDeskStats = actDesksIn
     )

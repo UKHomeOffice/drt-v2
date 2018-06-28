@@ -15,7 +15,9 @@ class ArrivalsToCSVDataTest extends Specification {
 
   val flights = List(
     ApiFlightWithSplits(
-      apiFlight(1, "SA324", "SA0324", "2017-01-01T20:00:00Z", 100, 100, None, "T1", "JHB", "SA", "UNK", "2017-01-01T20:00:00Z"),
+      apiFlight(flightId = Option(1), iata = "SA324", icao = "SA0324", schDt = "2017-01-01T20:00:00Z",
+        actPax = Option(100), maxPax = Option(100), lastKnownPax = None, terminal = "T1",
+        origin = "JHB", operator = Option("SA"), status = "UNK", estDt = "2017-01-01T20:00:00Z"),
       Set(ApiSplits(
         Set(
           ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None),
@@ -38,7 +40,9 @@ class ArrivalsToCSVDataTest extends Specification {
           ), SplitRatiosNs.SplitSources.Historical, None))
     ),
     ApiFlightWithSplits(
-      apiFlight(2, "SA325", "SA0325", "2017-01-01T20:00:00Z", 100, 100, None, "T1", "JHB", "SA", "UNK", "2017-01-01T20:00:00Z"),
+      apiFlight(flightId = Option(2), iata = "SA325", icao = "SA0325", schDt = "2017-01-01T20:00:00Z",
+        actPax = Option(100), maxPax = Option(100), lastKnownPax = None, terminal = "T1", origin = "JHB",
+        operator = Option("SA"), status = "UNK", estDt = "2017-01-01T20:00:00Z"),
       Set(ApiSplits(
         Set(
           ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 30, None),
@@ -48,7 +52,9 @@ class ArrivalsToCSVDataTest extends Specification {
         ), SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.DepartureConfirmed)))
     ),
     ApiFlightWithSplits(
-      apiFlight(3, "SA326", "SA0326", "2017-01-01T20:00:00Z", 100, 100, None, "T1", "JHB", "SA", "UNK", "2017-01-01T20:00:00Z"),
+      apiFlight(flightId = Option(3), iata = "SA326", icao = "SA0326", schDt = "2017-01-01T20:00:00Z",
+        actPax = Option(100), maxPax = Option(100), lastKnownPax = None, terminal = "T1", origin = "JHB",
+        operator = Option("SA"), status = "UNK", estDt = "2017-01-01T20:00:00Z"),
       Set(ApiSplits(
         Set(
           ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 30, None),

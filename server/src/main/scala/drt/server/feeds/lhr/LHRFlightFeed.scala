@@ -96,28 +96,28 @@ case class LHRFlightFeed(csvRecords: Iterator[(Int) => String]) {
       successfulFlights.map(flight => {
         val pcpTime: Long = flight.scheduled.plusMinutes(walkTimeMinutes).getMillis
         val schDtIso = flight.scheduled.toDateTimeISO.toString()
+        val actPax = flight.actPax.filter(_!=0)
         Arrival(
-          Operator = flight.operator,
+          Operator = if (flight.operator.equals("")) None else Some(flight.operator),
           Status = "UNK",
-          EstDT = dateOptToStringOrEmptyString(flight.estimated),
-          ActDT = dateOptToStringOrEmptyString(flight.touchdown),
-          EstChoxDT = dateOptToStringOrEmptyString(flight.estChox),
-          ActChoxDT = dateOptToStringOrEmptyString(flight.actChox),
-          Gate = "",
-          Stand = flight.stand.getOrElse(""),
-          MaxPax = flight.maxPax.getOrElse(0),
-          ActPax = flight.actPax.getOrElse(0),
-          TranPax = flight.connPax.getOrElse(0),
-          RunwayID = "",
-          BaggageReclaimId = "",
-          FlightID = flight.flightId(),
+          Estimated =  flight.estimated.map(_.toDate.getTime),
+          Actual =  flight.touchdown.map(_.toDate.getTime),
+          EstimatedChox = flight.estChox.map(_.toDate.getTime),
+          ActualChox = flight.actChox.map(_.toDate.getTime),
+          Gate = None,
+          Stand = flight.stand,
+          MaxPax = flight.maxPax.filter(_!=0),
+          ActPax = actPax,
+          TranPax = if (actPax.isEmpty) None else flight.connPax,
+          RunwayID = None,
+          BaggageReclaimId = None,
+          FlightID = if (flight.flightId() == 0) None else Some(flight.flightId()),
           AirportID = "LHR",
           Terminal = flight.term,
           rawICAO = flight.flightCode,
           rawIATA = flight.flightCode,
           Origin = flight.from,
-          SchDT = schDtIso,
-          PcpTime = pcpTime,
+          PcpTime = if (pcpTime == 0) None else Some(pcpTime),
           Scheduled = SDate(schDtIso).millisSinceEpoch)
       }).toList))
 }
@@ -163,8 +163,9 @@ object LHRFlightFeed {
 
     val recoverableTicking: Source[List[Arrival], Cancellable] = tickingSource.flatMapConcat(s => s.map(x => x))
 
-    val diffedArrivals: Source[immutable.Seq[Arrival], Cancellable] = recoverableTicking.via(DiffingStage.DiffLists[Arrival]())
-
-    diffedArrivals.map(_.toList)
+//    val diffedArrivals: Source[immutable.Seq[Arrival], Cancellable] = recoverableTicking.via(DiffingStage.DiffLists[Arrival]())
+//
+//    diffedArrivals.map(_.toList)
+    recoverableTicking
   }
 }

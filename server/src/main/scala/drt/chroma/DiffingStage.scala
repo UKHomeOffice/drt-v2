@@ -2,47 +2,113 @@ package drt.chroma
 
 import akka.stream._
 import akka.stream.stage._
-
-import scala.collection.immutable.Seq
+import drt.shared.Arrival
+import drt.shared.FlightsApi.Flights
+import org.slf4j.{Logger, LoggerFactory}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedResponse}
 
 object DiffingStage {
-  def DiffLists[T]() = new DiffingStage[Seq[T]](Nil)(diffLists)
+  def DiffLists = new ArrivalsDiffingStage(diffLists)
 
   def diffLists[T](a: Seq[T], b: Seq[T]): Seq[T] = {
     val aSet = a.toSet
     val bSet = b.toSet
+
     (bSet -- aSet).toList
   }
 }
 
-final class DiffingStage[T](initialValue: T)(diff: (T, T) => T) extends GraphStage[FlowShape[T, T]] {
-  val in = Inlet[T]("DiffingStage.in")
-  val out = Outlet[T]("DiffingStage.out")
+//final class DiffingStage[T](initialValue: T)(diff: (T, T) => T) extends GraphStage[FlowShape[T, T]] {
+//  val in = Inlet[T]("DiffingStage.in")
+//  val out = Outlet[T]("DiffingStage.out")
+//
+//  override val shape = FlowShape.of(in, out)
+//
+//  override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
+//    private var currentValue: T = initialValue
+//    private var maybeLatestDiff: T = initialValue
+//
+//    setHandlers(in, out, new InHandler with OutHandler {
+//      override def onPush(): Unit = {
+//        doADiff()
+//        push(out, maybeLatestDiff)
+//      }
+//
+//      override def onPull(): Unit = {
+//        pull(in)
+//        doADiff()
+//      }
+//    })
+//
+//    def doADiff(): Unit = {
+//      if (isAvailable(in)) {
+//        val newValue = grab(in)
+//        val diff1: T = diff(currentValue, newValue)
+//        maybeLatestDiff = diff1
+//        currentValue = newValue
+//      }
+//    }
+//  }
+//}
 
-  override val shape = FlowShape.of(in, out)
+final class ArrivalsDiffingStage(diff: (Seq[Arrival], Seq[Arrival]) => Seq[Arrival]) extends GraphStage[FlowShape[FeedResponse, FeedResponse]] {
+  val in: Inlet[FeedResponse] = Inlet[FeedResponse]("DiffingStage.in")
+  val out: Outlet[FeedResponse] = Outlet[FeedResponse]("DiffingStage.out")
+
+  val log: Logger = LoggerFactory.getLogger(getClass)
+
+  override val shape: FlowShape[FeedResponse, FeedResponse] = FlowShape.of(in, out)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    private var currentValue: T = initialValue
-    private var latestDiff: T = initialValue
+    private var currentValue: Seq[Arrival] = Seq()
+    private var maybeLatestDiff: Option[FeedResponse] = None
 
     setHandlers(in, out, new InHandler with OutHandler {
       override def onPush(): Unit = {
-        doADiff()
-        push(out, latestDiff)
+        grabAndDiff()
+        pushIfPossible()
+        pullIfPossible()
       }
 
       override def onPull(): Unit = {
-        pull(in)
-        doADiff()
+        pushIfPossible()
+        pullIfPossible()
       }
     })
 
-    def doADiff(): Unit = {
+    def pullIfPossible(): Unit = {
+      if (!hasBeenPulled(in)) pull(in)
+    }
+
+    def pushIfPossible(): Unit = {
+      maybeLatestDiff.foreach(latestDiff => {
+        push(out, latestDiff)
+        maybeLatestDiff = None
+      })
+    }
+
+    def grabAndDiff(): Unit = {
       if (isAvailable(in)) {
-        val newValue = grab(in)
-        val diff1: T = diff(currentValue, newValue)
-        latestDiff = diff1
-        currentValue = newValue
+        grab(in) match {
+          case ArrivalsFeedSuccess(Flights(arrivals), createdAt) =>
+            val newDiff = diff(currentValue, arrivals)
+            if (newDiff.nonEmpty) {
+              maybeLatestDiff = maybeLatestDiff match {
+                case Some(ArrivalsFeedSuccess(Flights(existingArrivalsDiff), existingCreatedAt)) =>
+                  val updatedDiff = newDiff
+                    .foldLeft(existingArrivalsDiff.map(a => (a.uniqueId, a)).toMap) {
+                      case (soFar, newArrivalUpdate) => soFar.updated(newArrivalUpdate.uniqueId, newArrivalUpdate)
+                    }
+                    .values
+                    .toSeq
+                  log.info(s"${newDiff.length} newly updated arrivals")
+                  Option(ArrivalsFeedSuccess(Flights(updatedDiff), createdAt))
+              }
+              currentValue = arrivals
+            }
+          case ArrivalsFeedFailure(_, _) =>
+            log.info("Feed failure. No updated arrivals")
+        }
       }
     }
   }

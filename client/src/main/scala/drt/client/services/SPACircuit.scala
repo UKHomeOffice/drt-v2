@@ -269,7 +269,7 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
 
   def updateAndTrimFlights(crunchUpdates: CrunchUpdates, existingState: CrunchState, keepFromMillis: MillisSinceEpoch): Set[ApiFlightWithSplits] = {
     val thirtyMinutesMillis = 30 * 60000
-    val relevantFlights = existingState.flights.filter(keepFromMillis - thirtyMinutesMillis <= _.apiFlight.PcpTime)
+    val relevantFlights = existingState.flights.filter(_.apiFlight.PcpTime.isDefined).filter(keepFromMillis - thirtyMinutesMillis <= _.apiFlight.PcpTime.getOrElse(0L))
     val flights = crunchUpdates.flights.foldLeft(relevantFlights) {
       case (soFar, newFlight) =>
         val withoutOldFlight = soFar.filterNot(_.apiFlight.uniqueId == newFlight.apiFlight.uniqueId)

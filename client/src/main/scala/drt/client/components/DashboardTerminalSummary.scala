@@ -67,8 +67,8 @@ object DashboardTerminalSummary {
 
   def groupFlightsByHour(flights: List[ApiFlightWithSplits], startMin: SDateLike): Seq[(MillisSinceEpoch, Set[ApiFlightWithSplits])] = {
     val hourInMillis = 3600000
-    flights.sortBy(_.apiFlight.PcpTime).groupBy(fws => {
-      val hoursSinceStart = ((fws.apiFlight.PcpTime - startMin.millisSinceEpoch) / hourInMillis).toInt
+    flights.filter{ f=> f.apiFlight.PcpTime.isDefined}.sortBy(_.apiFlight.PcpTime.getOrElse(0L)).groupBy(fws => {
+      val hoursSinceStart = ((fws.apiFlight.PcpTime.getOrElse(0L) - startMin.millisSinceEpoch) / hourInMillis).toInt
       startMin.addHours(hoursSinceStart).millisSinceEpoch
     }).mapValues(_.toSet).toList.sortBy(_._1)
   }
@@ -82,7 +82,8 @@ object DashboardTerminalSummary {
   }
 
   def flightPcpInPeriod(f: ApiFlightWithSplits, start: SDateLike, end: SDateLike): Boolean =
-    start.millisSinceEpoch <= f.apiFlight.PcpTime && f.apiFlight.PcpTime <= end.millisSinceEpoch
+    f.apiFlight.PcpTime.exists( millis=> start.millisSinceEpoch <= millis && millis <= end.millisSinceEpoch )
+
 
   def windowStart(time: SDateLike): SDateLike = {
 

@@ -43,26 +43,28 @@ class Test @Inject()(implicit val config: Configuration,
         case Some(flight) =>
           val walkTimeMinutes = 4
           val pcpTime: Long = org.joda.time.DateTime.parse(flight.SchDT).plusMinutes(walkTimeMinutes).getMillis
+          val actPax = Some(flight.ActPax).filter(_ != 0)
           val arrival = Arrival(
-            Operator = flight.Operator,
-            Status = flight.Status, EstDT = flight.EstDT,
-            ActDT = flight.ActDT, EstChoxDT = flight.EstChoxDT,
-            ActChoxDT = flight.ActChoxDT,
-            Gate = flight.Gate,
-            Stand = flight.Stand,
-            MaxPax = flight.MaxPax,
-            ActPax = flight.ActPax,
-            TranPax = flight.TranPax,
-            RunwayID = flight.RunwayID,
-            BaggageReclaimId = flight.BaggageReclaimId,
-            FlightID = flight.FlightID,
+            Operator = if (flight.Operator.contains("")) None else Some(flight.Operator),
+            Status = flight.Status,
+            Estimated = Some(SDate(flight.EstDT).millisSinceEpoch),
+            Actual = Some(SDate(flight.ActDT).millisSinceEpoch),
+            EstimatedChox = Some(SDate(flight.EstChoxDT).millisSinceEpoch),
+            ActualChox = Some(SDate(flight.ActChoxDT).millisSinceEpoch),
+            Gate = Some(flight.Gate),
+            Stand = Some(flight.Stand),
+            MaxPax = Some(flight.MaxPax).filter(_ != 0),
+            ActPax = actPax,
+            TranPax = if (actPax.isEmpty) None else Some(flight.TranPax),
+            RunwayID = Some(flight.RunwayID),
+            BaggageReclaimId = Some(flight.BaggageReclaimId),
+            FlightID = if (flight.FlightID == 0) None else Some(flight.FlightID),
             AirportID = flight.AirportID,
             Terminal = flight.Terminal,
             rawICAO = flight.ICAO,
             rawIATA = flight.IATA,
             Origin = flight.Origin,
-            SchDT = flight.SchDT,
-            PcpTime = pcpTime,
+            PcpTime = Some(pcpTime),
             Scheduled = SDate(flight.SchDT).millisSinceEpoch
           )
           saveArrival(arrival)

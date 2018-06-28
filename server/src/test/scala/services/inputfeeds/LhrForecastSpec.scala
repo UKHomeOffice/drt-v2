@@ -3,6 +3,7 @@ package services.inputfeeds
 import drt.server.feeds.lhr.forecast.{LhrForecastArrival, LhrForecastArrivals}
 import drt.shared.Arrival
 import org.specs2.mutable.Specification
+import services.SDate
 
 import scala.io.Source
 import scala.util.{Failure, Success}
@@ -21,7 +22,11 @@ class LhrForecastSpec extends Specification {
 
     val arrival = LhrForecastArrivals(arrivalLines).head
 
-    val expected = Arrival("BA", "Forecast", "", "", "", "", "", "", 337, 333, 142, "", "", 0, "", "T3", "BA0058", "BA0058", "CPT", "2018-02-22T04:45:00", 1519274700000L, 0, None)
+    val expected = Arrival(Operator = Some("BA"), Status = "Forecast", Estimated = None, Actual = None,
+      EstimatedChox = None, ActualChox = None, Gate = None, Stand = None, MaxPax = Some(337),
+      ActPax = Some(333), TranPax = Some(142), RunwayID = None, BaggageReclaimId = None, FlightID = None, AirportID = "LHR", Terminal = "T3",
+      rawICAO = "BA0058", rawIATA = "BA0058", Origin = "CPT",
+      Scheduled = SDate("2018-02-22T04:45:00").millisSinceEpoch, PcpTime = None, LastKnownPax = None)
 
     arrival === expected
   }

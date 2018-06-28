@@ -73,7 +73,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
   }
 
   def consumeUpdates(diffsMessage: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState = {
-    val withoutExpired = Crunch.purgeExpired(existingState.arrivals, (a: Arrival) => a.PcpTime, now, expireAfterMillis)
+    val withoutExpired = Crunch.purgeExpired(existingState.arrivals, (a: Arrival) => a.PcpTime.getOrElse(0L), now, expireAfterMillis)
     logRecoveryMessage(s"Consuming ${diffsMessage.updates.length} updates")
     val updatedArrivals = diffsMessage.updates
       .foldLeft(withoutExpired) {
@@ -101,7 +101,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
         persistOrSnapshot(Set(), updatedArrivals)
       }
 
-    case ArrivalsState(incomingArrivals) if incomingArrivals != arrivalsState.arrivals =>
+    case Some(ArrivalsState(incomingArrivals)) if incomingArrivals != arrivalsState.arrivals =>
       log.info(s"Received updated ArrivalsState")
       val currentKeys = arrivalsState.arrivals.keys.toSet
       val newKeys = incomingArrivals.keys.toSet
@@ -116,8 +116,11 @@ abstract class ArrivalsActor(now: () => SDateLike,
         persistOrSnapshot(removalKeys, updatedArrivals)
       }
 
-    case ArrivalsState(incomingArrivals) if incomingArrivals == arrivalsState.arrivals =>
+    case Some(ArrivalsState(incomingArrivals)) if incomingArrivals == arrivalsState.arrivals =>
       log.info(s"Received updated ArrivalsState. No changes")
+
+    case None =>
+      log.info(s"Received None. Presumably feed connection failed")
 
     case GetState =>
       log.info(s"Received GetState request. Sending ArrivalsState with ${arrivalsState.arrivals.size} arrivals")
@@ -130,7 +133,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
       log.info(s"Save snapshot failure: $md, $cause")
 
     case other =>
-      log.info(s"Received unexpected message $other")
+      log.info(s"Received unexpected message ${other.getClass}")
   }
 
   def mergeArrivals(incomingArrivals: Seq[Arrival], existingArrivals: Map[Int, Arrival]): Map[Int, Arrival] = {

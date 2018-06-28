@@ -42,7 +42,7 @@ object TestFixtureFeed {
       testArrivals
     })
 
-    tickingSource.via(DiffingStage.DiffLists[Arrival]())
+    tickingSource//.via(DiffingStage.DiffLists[Arrival]())
   }
 }
 

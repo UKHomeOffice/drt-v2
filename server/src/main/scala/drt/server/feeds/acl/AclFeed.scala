@@ -159,29 +159,31 @@ object AclFeed {
 
   def aclFieldsToArrival(fields: List[String], terminalMapping: TerminalName => TerminalName): Try[Arrival] = {
     Try {
+      val operator = fields(AclColIndex.Operator)
+      val maxPax = fields(AclColIndex.MaxPax).toInt
+      val actPax = (fields(AclColIndex.MaxPax).toInt * fields(AclColIndex.LoadFactor).toDouble).round.toInt
       Arrival(
-        Operator = fields(AclColIndex.Operator),
+        Operator = if (operator!= "") Option(operator) else None,
         Status = "ACL Forecast",
-        EstDT = "",
-        ActDT = "",
-        EstChoxDT = "",
-        ActChoxDT = "",
-        Gate = "",
-        Stand = "",
-        MaxPax = fields(AclColIndex.MaxPax).toInt,
-        ActPax = (fields(AclColIndex.MaxPax).toInt * fields(AclColIndex.LoadFactor).toDouble).round.toInt,
-        TranPax = 0,
-        RunwayID = "",
-        BaggageReclaimId = "",
-        FlightID = (fields(AclColIndex.FlightNumber) + fields(AclColIndex.Date) + fields(AclColIndex.Time) + fields(AclColIndex.Origin)).hashCode,
+        Estimated = None,
+        Actual = None,
+        EstimatedChox = None,
+        ActualChox = None,
+        Gate = None,
+        Stand = None,
+        MaxPax = if (maxPax == 0) None else Option(maxPax),
+        ActPax = if (actPax == 0) None else Option(actPax),
+        TranPax = None,
+        RunwayID = None,
+        BaggageReclaimId = None,
+        FlightID = Option((fields(AclColIndex.FlightNumber) + fields(AclColIndex.Date) + fields(AclColIndex.Time) + fields(AclColIndex.Origin)).hashCode),
         AirportID = fields(AclColIndex.Airport),
         Terminal = terminalMapping(fields(AclColIndex.Terminal)),
         rawICAO = fields(AclColIndex.FlightNumber),
         rawIATA = fields(AclColIndex.FlightNumber),
         Origin = fields(AclColIndex.Origin),
-        SchDT = dateAndTimeToDateTimeIso(fields(AclColIndex.Date), fields(AclColIndex.Time)),
         Scheduled = SDate(dateAndTimeToDateTimeIso(fields(AclColIndex.Date), fields(AclColIndex.Time))).millisSinceEpoch,
-        PcpTime = 0,
+        PcpTime = None,
         None
       )
     }

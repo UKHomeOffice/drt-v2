@@ -81,8 +81,8 @@ class CrunchStateActor(val snapshotInterval: Int,
     case GetUpdatesSince(millis, start, end) =>
       val updates = state match {
         case Some(cs) =>
-          val updatedFlights = cs.flights.filter {
-            case (_, f) => f.lastUpdated.getOrElse(1L) > millis && start <= f.apiFlight.PcpTime && f.apiFlight.PcpTime < end
+          val updatedFlights = cs.flights.filter(_._2.apiFlight.PcpTime.isDefined).filter {
+            case (_, f) => f.lastUpdated.getOrElse(1L) > millis && start <= f.apiFlight.PcpTime.getOrElse(0L) && f.apiFlight.PcpTime.getOrElse(0L) < end
           }.values.toSet
           val updatedCrunch = cs.crunchMinutes.filter {
             case (_, cm) => cm.lastUpdated.getOrElse(1L) > millis && start <= cm.minute && cm.minute < end
@@ -141,8 +141,8 @@ class CrunchStateActor(val snapshotInterval: Int,
     logInfo(s"PortState contains: (cms, fs, sms) ${state.map(s => (s.crunchMinutes.size, s.flights.size, s.staffMinutes.size).toString()).getOrElse("Nothing")}")
     state.map {
       case PortState(fs, ms, ss) => PortState(
-        flights = fs.filter {
-          case (_, f) => start <= f.apiFlight.PcpTime && f.apiFlight.PcpTime < end
+        flights = fs.filter(_._2.apiFlight.PcpTime.isDefined).filter {
+          case (_, f) => start <= f.apiFlight.PcpTime.getOrElse(0L) && f.apiFlight.PcpTime.getOrElse(0L) < end
         },
         crunchMinutes = ms.filter {
           case (_, m) => start <= m.minute && m.minute < end
