@@ -13,6 +13,12 @@ import services.graphstages.Crunch.midnightThisMorning
 import scala.collection.immutable.Map
 import scala.language.postfixOps
 
+
+sealed trait ArrivalsSourceType
+case object LiveArrivals extends ArrivalsSourceType
+case object ForecastArrivals extends ArrivalsSourceType
+case object BaseArrivals extends ArrivalsSourceType
+
 class ArrivalsGraphStage(name: String = "",
                          initialBaseArrivals: Set[Arrival],
                          initialForecastArrivals: Set[Arrival],
@@ -75,51 +81,37 @@ class ArrivalsGraphStage(name: String = "",
     })
 
     setHandler(inForecastArrivals, new InHandler {
-      override def onPush(): Unit = {
-        val start = SDate.now()
-        log.info(s"inForecastArrivals onPush() grabbing forecast flights")
-//        val grabbedArrivals = grab(inForecastArrivals)
-//        log.info(s"Grabbed ${grabbedArrivals.flights.length} forecast arrivals")
-//        forecastArrivals = mergeUpdatesAndPurge(filterAndSetPcp(grabbedArrivals.flights), forecastArrivals)
-//
-//        mergeAllSourcesAndPush(baseArrivals, forecastArrivals, liveArrivals)
-
-        grab(inForecastArrivals) match {
-          case ArrivalsFeedSuccess(Flights(flights), connectedAt) =>
-            log.info(s"Grabbed ${flights.length} forecast arrivals from connection at ${connectedAt.toISOString()}")
-            forecastArrivals = mergeUpdatesAndPurge(filterAndSetPcp(flights), forecastArrivals)
-
-            mergeAllSourcesAndPush(baseArrivals, forecastArrivals, liveArrivals)
-
-          case ArrivalsFeedFailure(message, failedAt) =>
-            log.info(s"$inLiveArrivals failed at ${failedAt.toISOString()}: $message")
-        }
-
-        if (!hasBeenPulled(inForecastArrivals)) pull(inForecastArrivals)
-        log.info(s"inForecastArrivals Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
-      }
+      override def onPush(): Unit = onPushArrivals(inForecastArrivals, ForecastArrivals)
     })
 
     setHandler(inLiveArrivals, new InHandler {
-      override def onPush(): Unit = {
-        val start = SDate.now()
-        log.info(s"inLiveArrivals onPush() grabbing live flights")
-
-        grab(inLiveArrivals) match {
-          case ArrivalsFeedSuccess(Flights(flights), connectedAt) =>
-            log.info(s"Grabbed ${flights.length} live arrivals from connection at ${connectedAt.toISOString()}")
-            liveArrivals = mergeUpdatesAndPurge(filterAndSetPcp(flights), liveArrivals)
-
-            mergeAllSourcesAndPush(baseArrivals, forecastArrivals, liveArrivals)
-
-          case ArrivalsFeedFailure(message, failedAt) =>
-            log.info(s"$inLiveArrivals failed at ${failedAt.toISOString()}: $message")
-        }
-
-        if (!hasBeenPulled(inLiveArrivals)) pull(inLiveArrivals)
-        log.info(s"inLiveArrivals Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
-      }
+      override def onPush(): Unit = onPushArrivals(inLiveArrivals, LiveArrivals)
     })
+
+    def onPushArrivals(arrivalsInlet: Inlet[FeedResponse], sourceType: ArrivalsSourceType): Unit = {
+      val start = SDate.now()
+      log.info(s"$arrivalsInlet onPush() grabbing flights")
+
+      grab(arrivalsInlet) match {
+        case ArrivalsFeedSuccess(Flights(flights), connectedAt) =>
+          log.info(s"Grabbed ${flights.length} arrivals from connection at ${connectedAt.toISOString()}")
+          handleIncomingArrivals(sourceType, flights)
+          mergeAllSourcesAndPush(baseArrivals, forecastArrivals, liveArrivals)
+        case ArrivalsFeedFailure(message, failedAt) =>
+          log.info(s"$arrivalsInlet failed at ${failedAt.toISOString()}: $message")
+      }
+
+      if (!hasBeenPulled(arrivalsInlet)) pull(arrivalsInlet)
+      log.info(s"$arrivalsInlet Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+    }
+
+    def handleIncomingArrivals(sourceType: ArrivalsSourceType, flights: Seq[Arrival]): Unit = {
+      sourceType match {
+        case LiveArrivals => liveArrivals = mergeUpdatesAndPurge(filterAndSetPcp(flights), liveArrivals)
+        case ForecastArrivals => forecastArrivals = mergeUpdatesAndPurge(filterAndSetPcp(flights), forecastArrivals)
+        case BaseArrivals => baseArrivals = filterAndSetPcp(flights)
+      }
+    }
 
     def mergeUpdatesAndPurge(updates: Map[Int, Arrival], existingArrivals: Map[Int, Arrival]): Map[Int, Arrival] = {
       val updated = updates
