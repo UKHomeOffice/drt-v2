@@ -9,7 +9,6 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import server.feeds.FeedResponse
-import services.{ArrivalsState, SDate}
 import services.ArrivalsState
 import services.graphstages.Crunch.Loads
 import services.graphstages._
@@ -47,11 +46,11 @@ object RunnableCrunch {
 
                                              manifestsActor: ActorRef,
 
-                                        liveCrunchStateActor: ActorRef,
-                                        fcstCrunchStateActor: ActorRef,
-                                        crunchPeriodStartMillis: SDateLike => SDateLike,
-                                        now: () => SDateLike
-                                       ): RunnableGraph[(OAL, FR, FR, SVM, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch)] = {
+                                             liveCrunchStateActor: ActorRef,
+                                             fcstCrunchStateActor: ActorRef,
+                                             crunchPeriodStartMillis: SDateLike => SDateLike,
+                                             now: () => SDateLike
+                                            ): RunnableGraph[(OAL, FR, FR, SVM, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch)] = {
 
     val arrivalsKillSwitch = KillSwitches.single[ArrivalsDiff]
 
