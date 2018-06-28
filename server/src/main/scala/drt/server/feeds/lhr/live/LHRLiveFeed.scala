@@ -8,8 +8,10 @@ import drt.chroma.DiffingStage
 import drt.http.{ProdSendAndReceive, WithSendAndReceive}
 import drt.shared.Arrival
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.util.StringUtils
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedResponse}
 import services.SDate
 import services.graphstages.Crunch
 import spray.client.pipelining.{Get, addHeader, unmarshal, _}
@@ -225,28 +227,26 @@ object LHRLiveFeed {
     }
   }
 
-  def apply(apiEndpoint: String, apiSecurityToken: String, actorSystem: ActorSystem): Source[List[Arrival], Cancellable] = {
+  def apply(apiEndpoint: String, apiSecurityToken: String, actorSystem: ActorSystem): Source[FeedResponse, Cancellable] = {
     log.info(s"Preparing to stream LHR Live feed")
 
     val LHRFetcher = new LHRLiveFeedConsumer(apiEndpoint, apiSecurityToken, actorSystem) with ProdSendAndReceive
 
     val pollFrequency = 6 minutes
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
-    val tickingSource: Source[List[Arrival], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
+    val tickingSource: Source[FeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
       .map((_) => {
         log.info(s"About to poll for LHR live flights")
-        val flights = Await.result(LHRFetcher.arrivals, 3 minutes)
-        log.info(s"Got LHR live ${flights.length} flights")
-        flights
+        Try(Await.result(LHRFetcher.arrivals, 3 minutes)) match {
+          case Success(arrivals) =>
+            log.info(s"Got LHR live ${arrivals.length} flights")
+            ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
+          case Failure(exception) =>
+            ArrivalsFeedFailure(exception.toString, SDate.now())
+        }
       })
 
-    tickingSource
-//    val diffedArrivals: Source[immutable.Seq[Arrival], Cancellable] = tickingSource.via(DiffingStage.DiffLists[Arrival]())
-//
-//    diffedArrivals.map(a => {
-//      log.info(s"LHR Feed After Diffing: ${a.length}")
-//      a.toList
-//    })
+    tickingSource.via(DiffingStage.DiffLists)
   }
 
 }

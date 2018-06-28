@@ -270,15 +270,15 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   def liveArrivalsSource(portCode: String): Source[FeedResponse, Cancellable] = {
     val feed = portCode match {
-//      case "LHR" =>
-//        if (config.getString("feature-flags.lhr.use-new-lhr-feed").isDefined) {
-//          val apiUri = config.getString("lhr.live.api_url").get
-//          val token = config.getString("lhr.live.token").get
-//          system.log.info(s"Connecting to $apiUri using $token")
-//
-//          LHRLiveFeed(apiUri, token, system)
-//        }
-//        else LHRFlightFeed()
+      case "LHR" =>
+        if (config.getString("feature-flags.lhr.use-new-lhr-feed").isDefined) {
+          val apiUri = config.getString("lhr.live.api_url").get
+          val token = config.getString("lhr.live.token").get
+          system.log.info(s"Connecting to $apiUri using $token")
+
+          LHRLiveFeed(apiUri, token, system)
+        }
+        else LHRFlightFeed()
 //      case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
 //      case "LGW" => LGWFeed()
 //      case "BHX" => BHXLiveFeed(config.getString("feeds.bhx.soap.endPointUrl").get)

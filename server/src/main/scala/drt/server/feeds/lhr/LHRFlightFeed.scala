@@ -7,14 +7,15 @@ import com.typesafe.config.ConfigFactory
 import drt.chroma.DiffingStage
 import drt.server.feeds.lhr.LHRFlightFeed.{emptyStringToOption, parseDateTime}
 import drt.shared.Arrival
+import drt.shared.FlightsApi.Flights
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import org.slf4j.{Logger, LoggerFactory}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedResponse}
 import services.SDate
 
 import scala.collection.JavaConverters._
-import scala.collection.immutable
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.sys.process._
@@ -91,35 +92,34 @@ case class LHRFlightFeed(csvRecords: Iterator[(Int) => String]) {
 
   def dateOptToStringOrEmptyString: (Option[DateTime]) => String = (dto: Option[DateTime]) => dto.map(_.toDateTimeISO.toString()).getOrElse("")
 
-  lazy val copiedToApiFlights: Source[List[Arrival], NotUsed] = Source(
-    List(
-      successfulFlights.map(flight => {
-        val pcpTime: Long = flight.scheduled.plusMinutes(walkTimeMinutes).getMillis
-        val schDtIso = flight.scheduled.toDateTimeISO.toString()
-        val actPax = flight.actPax.filter(_!=0)
-        Arrival(
-          Operator = if (flight.operator.equals("")) None else Some(flight.operator),
-          Status = "UNK",
-          Estimated =  flight.estimated.map(_.toDate.getTime),
-          Actual =  flight.touchdown.map(_.toDate.getTime),
-          EstimatedChox = flight.estChox.map(_.toDate.getTime),
-          ActualChox = flight.actChox.map(_.toDate.getTime),
-          Gate = None,
-          Stand = flight.stand,
-          MaxPax = flight.maxPax.filter(_!=0),
-          ActPax = actPax,
-          TranPax = if (actPax.isEmpty) None else flight.connPax,
-          RunwayID = None,
-          BaggageReclaimId = None,
-          FlightID = if (flight.flightId() == 0) None else Some(flight.flightId()),
-          AirportID = "LHR",
-          Terminal = flight.term,
-          rawICAO = flight.flightCode,
-          rawIATA = flight.flightCode,
-          Origin = flight.from,
-          PcpTime = if (pcpTime == 0) None else Some(pcpTime),
-          Scheduled = SDate(schDtIso).millisSinceEpoch)
-      }).toList))
+  lazy val copiedToApiFlights: List[Arrival] =
+    successfulFlights.map(flight => {
+      val pcpTime: Long = flight.scheduled.plusMinutes(walkTimeMinutes).getMillis
+      val schDtIso = flight.scheduled.toDateTimeISO.toString()
+      val actPax = flight.actPax.filter(_ != 0)
+      Arrival(
+        Operator = if (flight.operator.equals("")) None else Some(flight.operator),
+        Status = "UNK",
+        Estimated = flight.estimated.map(_.toDate.getTime),
+        Actual = flight.touchdown.map(_.toDate.getTime),
+        EstimatedChox = flight.estChox.map(_.toDate.getTime),
+        ActualChox = flight.actChox.map(_.toDate.getTime),
+        Gate = None,
+        Stand = flight.stand,
+        MaxPax = flight.maxPax.filter(_ != 0),
+        ActPax = actPax,
+        TranPax = if (actPax.isEmpty) None else flight.connPax,
+        RunwayID = None,
+        BaggageReclaimId = None,
+        FlightID = if (flight.flightId() == 0) None else Some(flight.flightId()),
+        AirportID = "LHR",
+        Terminal = flight.term,
+        rawICAO = flight.flightCode,
+        rawIATA = flight.flightCode,
+        Origin = flight.from,
+        PcpTime = if (pcpTime == 0) None else Some(pcpTime),
+        Scheduled = SDate(schDtIso).millisSinceEpoch)
+    }).toList
 }
 
 object LHRFlightFeed {
@@ -134,11 +134,11 @@ object LHRFlightFeed {
     if (s.isEmpty) None else Option(t(s))
   }
 
-  def csvContentsProviderProd(): String = {
-    Seq(
+  def csvContentsProviderProd(): Try[String] = {
+    Try(Seq(
       "/usr/local/bin/lhr-live-fetch-latest-feed.sh",
       "-u", ConfigFactory.load.getString("lhr.live.username"),
-      "-p", ConfigFactory.load.getString("lhr.live.password")).!!
+      "-p", ConfigFactory.load.getString("lhr.live.password")).!!)
   }
 
   val pattern: DateTimeFormatter = DateTimeFormat.forPattern("HH:mm dd/MM/YYYY")
@@ -146,26 +146,23 @@ object LHRFlightFeed {
 
   def parseDateTime(dateString: String): DateTime = pattern.parseDateTime(dateString)
 
-  def apply(csvContentsProvider: () => String = csvContentsProviderProd): Source[List[Arrival], Cancellable] = {
-    log.info(s"preparing lhrfeed")
-
+  def apply(csvContentsProvider: () => Try[String] = csvContentsProviderProd): Source[FeedResponse, Cancellable] = {
     val pollFrequency = 1 minute
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
-    val tickingSource: Source[Source[List[Arrival], NotUsed], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
+    val tickingSource: Source[FeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
       .map((_) => {
-        log.info(s"about to request csv")
-        val csvContents: String = csvContentsProvider()
-        log.info(s"got csv content")
-        val f = LHRFlightFeed(csvParserAsIteratorOfColumnGetter(csvContents)).copiedToApiFlights
-        log.info(s"copied to api flights")
-        f
+        log.info(s"Requesting CSV")
+        csvContentsProvider() match {
+          case Success(csvContents) =>
+            log.info(s"Got CSV content")
+            val feedArrivals = LHRFlightFeed(csvParserAsIteratorOfColumnGetter(csvContents)).copiedToApiFlights
+            ArrivalsFeedSuccess(Flights(feedArrivals), SDate.now())
+          case Failure(exception) =>
+            log.info(s"Failed to get data from LHR live")
+            ArrivalsFeedFailure(exception.toString, SDate.now())
+        }
       })
 
-    val recoverableTicking: Source[List[Arrival], Cancellable] = tickingSource.flatMapConcat(s => s.map(x => x))
-
-//    val diffedArrivals: Source[immutable.Seq[Arrival], Cancellable] = recoverableTicking.via(DiffingStage.DiffLists[Arrival]())
-//
-//    diffedArrivals.map(_.toList)
-    recoverableTicking
+    tickingSource.via(DiffingStage.DiffLists)
   }
 }
