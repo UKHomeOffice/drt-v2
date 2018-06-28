@@ -104,7 +104,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
         persistOrSnapshot(Set(), updatedArrivals)
       }
 
-    case Some(ArrivalsState(incomingArrivals)) if incomingArrivals != arrivalsState.arrivals =>
+    case Some(ArrivalsState(incomingArrivals)) if incomingArrivals != state.arrivals =>
       log.info(s"Received updated ArrivalsState")
       val currentKeys = state.arrivals.keys.toSet
       val newKeys = incomingArrivals.keys.toSet
@@ -119,7 +119,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
         persistOrSnapshot(removalKeys, updatedArrivals)
       }
 
-    case Some(ArrivalsState(incomingArrivals)) if incomingArrivals == arrivalsState.arrivals =>
+    case Some(ArrivalsState(incomingArrivals)) if incomingArrivals == state.arrivals =>
       log.info(s"Received updated ArrivalsState. No changes")
 
     case None =>

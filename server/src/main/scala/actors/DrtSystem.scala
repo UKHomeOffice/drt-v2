@@ -130,7 +130,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         (maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals) match {
           case (initialLiveState: Option[PortState], initialForecastState: Option[PortState], initialBaseArrivals: Option[Set[Arrival]], initialForecastArrivals: Option[Set[Arrival]], initialLiveArrivals: Option[Set[Arrival]]) =>
             val initialPortState: Option[PortState] = mergePortStates(initialLiveState, initialForecastState)
-            val crunchInputs: CrunchSystem[NotUsed, Cancellable] = startCrunchSystem(initialPortState, initialBaseArrivals, initialForecastArrivals, initialLiveArrivals, recrunchOnStart)
+            val crunchInputs: CrunchSystem[NotUsed, Cancellable, Cancellable] = startCrunchSystem(initialPortState, initialBaseArrivals, initialForecastArrivals, initialLiveArrivals, recrunchOnStart)
             subscribeStaffingActors(crunchInputs)
             startScheduledFeedImports(crunchInputs)
         }
@@ -147,14 +147,14 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     case _ => (tIn: TerminalName) => s"T${tIn.take(1)}"
   }
 
-  def startScheduledFeedImports(crunchInputs: CrunchSystem[NotUsed, Cancellable]): Unit = {
+  def startScheduledFeedImports(crunchInputs: CrunchSystem[NotUsed, Cancellable, Cancellable]): Unit = {
     if (airportConfig.portCode == "LHR") config.getString("lhr.blackjack_url").map(csvUrl => {
       val requestIntervalMillis = 5 * oneMinuteMillis
       Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, requestIntervalMillis milliseconds, SDate.now().addDays(-1))
     })
   }
 
-  def subscribeStaffingActors(crunchInputs: CrunchSystem[NotUsed, Cancellable]): Unit = {
+  def subscribeStaffingActors(crunchInputs: CrunchSystem[NotUsed, Cancellable, Cancellable]): Unit = {
     shiftsActor ! AddShiftLikeSubscribers(List(crunchInputs.shifts))
     fixedPointsActor ! AddShiftLikeSubscribers(List(crunchInputs.fixedPoints))
     staffMovementsActor ! AddStaffMovementsSubscribers(List(crunchInputs.staffMovements))
@@ -165,7 +165,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
                         initialForecastArrivals: Option[Set[Arrival]],
                         initialLiveArrivals: Option[Set[Arrival]],
                         recrunchOnStart: Boolean
-                       ): CrunchSystem[NotUsed, Cancellable] = {
+                       ): CrunchSystem[NotUsed, Cancellable, Cancellable] = {
 
     val crunchInputs = CrunchSystem(CrunchProps(
       system = system,
@@ -303,16 +303,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     feed.map(Flights)
   }
 
-  def baseArrivalsSource(): Source[Flights, Cancellable] = Source.tick(1 second, 60 minutes, NotUsed).map(_ => {
+  def baseArrivalsSource(): Source[Option[Flights], Cancellable] = Source.tick(1 second, 60 minutes, NotUsed).map(_ => {
     system.log.info(s"Requesting ACL feed")
-    Try {
-      aclFeed.arrivals
-    } match {
-      case Success(a) => a
-      case Failure(f) =>
-        system.log.error(s"Failed to get flights from ACL: $f")
-        Flights(List())
-    }
+    aclFeed.arrivals
   })
 
   def walkTimeProvider(flight: Arrival): MillisSinceEpoch =
