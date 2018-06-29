@@ -6,6 +6,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
+import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.graphstages.Crunch._
 
@@ -40,7 +41,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
           defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))
         ))
 
-      offerAndWait(crunch.liveArrivalsInput, flights)
+      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
       val expected = Set(Queues.EeaDesk)
 
@@ -73,7 +74,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
         defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))
       ))
 
-    offerAndWait(crunch.liveArrivalsInput, flights)
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
     val expected = Map("T1" -> Map(Queues.EeaDesk -> List(15.0)))
 

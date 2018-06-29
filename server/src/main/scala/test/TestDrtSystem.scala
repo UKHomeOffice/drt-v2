@@ -9,6 +9,7 @@ import drt.server.feeds.test.{TestAPIManifestFeedGraphStage, TestFixtureFeed}
 import drt.shared.AirportConfig
 import drt.shared.FlightsApi.Flights
 import play.api.Configuration
+import server.feeds.FeedResponse
 import services.graphstages.DqManifests
 import test.TestActors.{TestStaffMovementsActor, _}
 
@@ -36,9 +37,9 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
 
   system.log.info(s"Here's the Graph $voyageManifestTestSourceGraph")
   override lazy val voyageManifestsStage: Source[DqManifests, NotUsed] = voyageManifestTestSourceGraph
-  val testFeed = TestFixtureFeed(system).map(Flights)
+  val testFeed = TestFixtureFeed(system)
 
-  override def liveArrivalsSource(portCode: String): Source[Flights, Cancellable] = testFeed
+  override def liveArrivalsSource(portCode: String): Source[FeedResponse, Cancellable] = testFeed
 
   override def run(): Unit = {
 

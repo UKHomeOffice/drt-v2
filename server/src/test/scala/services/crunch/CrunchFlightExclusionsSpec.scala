@@ -5,6 +5,7 @@ import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared._
+import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.graphstages.Crunch._
 
@@ -35,7 +36,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
       airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))),
       minutesToCrunch = 120)
 
-    offerAndWait(crunch.liveArrivalsInput, flights)
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
     val expected = Map(
       "T1" -> Map(Queues.EeaDesk -> Seq(
@@ -71,7 +72,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
       airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))),
       minutesToCrunch = 120)
 
-    offerAndWait(crunch.liveArrivalsInput, flights)
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
     val expected = Map(
       "T1" -> Map(Queues.EeaDesk -> Seq(

@@ -3,8 +3,8 @@ package actors
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
 import akka.pattern.AskableActorRef
+import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
-import akka.stream.{ActorMaterializer, KillSwitch}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import controllers.{Deskstats, PaxFlow}
@@ -14,7 +14,6 @@ import drt.http.ProdSendAndReceive
 import drt.server.feeds.bhx.{BHXForecastFeed, BHXLiveFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.lgw.{LGWFeed, LGWForecastFeed}
-import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.server.feeds.lhr.live.LHRLiveFeed
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
@@ -23,6 +22,7 @@ import drt.shared.{AirportConfig, Arrival, MilliDate, SDateLike}
 import org.apache.spark.sql.SparkSession
 import play.api.Configuration
 import server.feeds.acl.AclFeed
+import server.feeds.{ArrivalsFeedSuccess, FeedResponse}
 import services.PcpArrival.{GateOrStand, GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services.SplitsProvider.SplitProvider
 import services._
@@ -31,10 +31,7 @@ import services.graphstages.Crunch.{oneDayMillis, oneMinuteMillis}
 import services.graphstages._
 import services.prediction.SparkSplitsPredictorFactory
 
-import Crunch.{oneDayMillis, oneMinuteMillis}
-
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.language.postfixOps
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
@@ -118,7 +115,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   system.log.info(s"useSplitsPrediction: $useSplitsPrediction")
 
 
-  def run() = {
+  def run(): Unit = {
     val futurePortStates: Future[Seq[Option[Any]]] = Future.sequence(Seq(
       initialPortState(liveCrunchStateActor),
       initialPortState(forecastCrunchStateActor),
@@ -268,7 +265,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       .getOrCreate()
   }
 
-  def liveArrivalsSource(portCode: String): Source[Flights, Cancellable] = {
+  def liveArrivalsSource(portCode: String): Source[FeedResponse, Cancellable] = {
     val feed = portCode match {
       case "LHR" =>
         if (config.getString("feature-flags.lhr.use-new-lhr-feed").isDefined) {
@@ -281,26 +278,26 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         else LHRFlightFeed()
       case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
       case "LGW" => LGWFeed()
-      case "BHX" => BHXLiveFeed(config.getString("feeds.bhx.soap.endPointUrl").get)
+      case "BHX" => BHXLiveFeed(config.getString("feeds.bhx.soap.endPointUrl").getOrElse(throw new Exception("Missing BHX live feed URL")))
       case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
     }
-    feed.map(Flights)
+    feed
   }
 
-  def forecastArrivalsSource(portCode: String): Source[Flights, Cancellable] = {
-    val forecastNoOp = Source.tick[List[Arrival]](0 seconds, 30 minutes, List())
+  def forecastArrivalsSource(portCode: String): Source[FeedResponse, Cancellable] = {
+    val forecastNoOp = Source.tick[FeedResponse](0 seconds, 30 minutes, ArrivalsFeedSuccess(Flights(Seq()), SDate.now()))
     val feed = portCode match {
       case "STN" => createForecastChromaFlightFeed(ChromaForecast).chromaVanillaFlights(30 minutes)
       case "LHR" => config.getString("lhr.forecast_path")
         .map(path => createForecastLHRFeed(path))
         .getOrElse(forecastNoOp)
-      case "BHX" => BHXForecastFeed(config.getString("feeds.bhx.soap.endPointUrl").get)
+      case "BHX" => BHXForecastFeed(config.getString("feeds.bhx.soap.endPointUrl").getOrElse(throw new Exception("Missing BHX forecast feed URL")))
       case "LGW" => LGWForecastFeed()
       case _ =>
         system.log.info(s"No Forecast Feed defined.")
         forecastNoOp
     }
-    feed.map(Flights)
+    feed
   }
 
   def baseArrivalsSource(): Source[Option[Flights], Cancellable] = Source.tick(1 second, 60 minutes, NotUsed).map(_ => {
@@ -322,7 +319,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     ChromaForecastFeed(system.log, new ChromaFetcherForecast(feedType, system) with ProdSendAndReceive)
   }
 
-  def createForecastLHRFeed(lhrForecastPath: String): Source[List[Arrival], Cancellable] = {
+  def createForecastLHRFeed(lhrForecastPath: String): Source[FeedResponse, Cancellable] = {
     val imapServer = ConfigFactory.load().getString("lhr.forecast.imap_server")
     val imapPort = ConfigFactory.load().getInt("lhr.forecast.imap_port")
     val imapUsername = ConfigFactory.load().getString("lhr.forecast.imap_username")
@@ -332,7 +329,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     system.log.info(s"LHR Forecast: about to start ticking")
     Source.tick(10 seconds, 1 hour, {
       system.log.info(s"LHR Forecast: ticking")
-      lhrForecastFeed.arrivals
-    }).via(DiffingStage.DiffLists[Arrival]()).map(_.toList)
+      lhrForecastFeed.requestFeed
+    }).via(DiffingStage.DiffLists)
   }
 }

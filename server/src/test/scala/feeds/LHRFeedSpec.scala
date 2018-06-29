@@ -36,7 +36,7 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
 
       val probe = TestProbe()
 
-      val flightsSource: Source[List[Arrival], NotUsed] = lhrFeed.copiedToApiFlights
+      val flightsSource: Source[List[Arrival], NotUsed] = Source(List(lhrFeed.copiedToApiFlights))
 
       val futureFlightsSeq: Future[Seq[List[Arrival]]] = flightsSource.runWith(Sink.seq).pipeTo(probe.ref)
 
@@ -90,7 +90,7 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
 
 
       val probe = TestProbe()
-      val flightsSource: Source[List[Arrival], NotUsed] = lhrFeed.copiedToApiFlights
+      val flightsSource: Source[List[Arrival], NotUsed] = Source(List(lhrFeed.copiedToApiFlights))
       val futureFlightsSeq: Future[Seq[List[Arrival]]] = flightsSource.runWith(Sink.seq).pipeTo(probe.ref)
 
       val flights = Await.result(futureFlightsSeq, 3 seconds)

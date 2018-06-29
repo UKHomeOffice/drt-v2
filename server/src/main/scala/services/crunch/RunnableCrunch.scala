@@ -8,6 +8,7 @@ import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
+import server.feeds.FeedResponse
 import services.ArrivalsState
 import services.graphstages.Crunch.Loads
 import services.graphstages._
@@ -19,37 +20,37 @@ object RunnableCrunch {
 
   def groupByCodeShares(flights: Seq[ApiFlightWithSplits]): Seq[(ApiFlightWithSplits, Set[Arrival])] = flights.map(f => (f, Set(f.apiFlight)))
 
-  def apply[OAL, AL, SVM, SS, SFP, SMM, SAD](baseArrivalsSource: Source[Option[Flights], OAL],
-                                        fcstArrivalsSource: Source[Flights, AL],
-                                        liveArrivalsSource: Source[Flights, AL],
-                                        manifestsSource: Source[DqManifests, SVM],
-                                        shiftsSource: Source[String, SS],
-                                        fixedPointsSource: Source[String, SFP],
-                                        staffMovementsSource: Source[Seq[StaffMovement], SMM],
-                                        actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
+  def apply[OAL, FR, SVM, SS, SFP, SMM, SAD](baseArrivalsSource: Source[Option[Flights], OAL],
+                                             fcstArrivalsSource: Source[FeedResponse, FR],
+                                             liveArrivalsSource: Source[FeedResponse, FR],
+                                             manifestsSource: Source[DqManifests, SVM],
+                                             shiftsSource: Source[String, SS],
+                                             fixedPointsSource: Source[String, SFP],
+                                             staffMovementsSource: Source[Seq[StaffMovement], SMM],
+                                             actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
 
-                                        arrivalsGraphStage: ArrivalsGraphStage,
-                                        arrivalSplitsStage: ArrivalSplitsGraphStage,
-                                        splitsPredictorStage: SplitsPredictorBase,
-                                        workloadGraphStage: WorkloadGraphStage,
-                                        loadBatchUpdateGraphStage: BatchLoadsByCrunchPeriodGraphStage,
-                                        crunchLoadGraphStage: CrunchLoadGraphStage,
-                                        staffGraphStage: StaffGraphStage,
-                                        staffBatchUpdateGraphStage: StaffBatchUpdateGraphStage,
-                                        simulationGraphStage: SimulationGraphStage,
-                                        portStateGraphStage: PortStateGraphStage,
+                                             arrivalsGraphStage: ArrivalsGraphStage,
+                                             arrivalSplitsStage: ArrivalSplitsGraphStage,
+                                             splitsPredictorStage: SplitsPredictorBase,
+                                             workloadGraphStage: WorkloadGraphStage,
+                                             loadBatchUpdateGraphStage: BatchLoadsByCrunchPeriodGraphStage,
+                                             crunchLoadGraphStage: CrunchLoadGraphStage,
+                                             staffGraphStage: StaffGraphStage,
+                                             staffBatchUpdateGraphStage: StaffBatchUpdateGraphStage,
+                                             simulationGraphStage: SimulationGraphStage,
+                                             portStateGraphStage: PortStateGraphStage,
 
-                                        baseArrivalsActor: ActorRef,
-                                        fcstArrivalsActor: ActorRef,
-                                        liveArrivalsActor: ActorRef,
+                                             baseArrivalsActor: ActorRef,
+                                             fcstArrivalsActor: ActorRef,
+                                             liveArrivalsActor: ActorRef,
 
-                                        manifestsActor: ActorRef,
+                                             manifestsActor: ActorRef,
 
-                                        liveCrunchStateActor: ActorRef,
-                                        fcstCrunchStateActor: ActorRef,
-                                        crunchPeriodStartMillis: SDateLike => SDateLike,
-                                        now: () => SDateLike
-                                       ): RunnableGraph[(OAL, AL, AL, SVM, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch)] = {
+                                             liveCrunchStateActor: ActorRef,
+                                             fcstCrunchStateActor: ActorRef,
+                                             crunchPeriodStartMillis: SDateLike => SDateLike,
+                                             now: () => SDateLike
+                                            ): RunnableGraph[(OAL, FR, FR, SVM, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch)] = {
 
     val arrivalsKillSwitch = KillSwitches.single[ArrivalsDiff]
 
@@ -97,8 +98,8 @@ object RunnableCrunch {
           val portState = builder.add(portStateGraphStage.async)
 
           val baseMaybeArrivalsFanOut = builder.add(Broadcast[Option[Flights]](2))
-          val fcstArrivalsFanOut = builder.add(Broadcast[Flights](2))
-          val liveArrivalsFanOut = builder.add(Broadcast[Flights](2))
+          val fcstArrivalsFanOut = builder.add(Broadcast[FeedResponse](2))
+          val liveArrivalsFanOut = builder.add(Broadcast[FeedResponse](2))
           val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](3))
           val manifestsFanOut = builder.add(Broadcast[DqManifests](2))
           val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](2))
