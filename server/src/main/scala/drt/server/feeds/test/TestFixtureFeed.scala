@@ -47,7 +47,7 @@ object TestFixtureFeed {
       ArrivalsFeedSuccess(Flights(testArrivals), SDate.now())
     })
 
-    tickingSource//.via(DiffingStage.DiffLists[Arrival]())
+    tickingSource
   }
 }
 
