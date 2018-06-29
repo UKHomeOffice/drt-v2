@@ -6,6 +6,7 @@ import drt.shared.CrunchApi.{CrunchMinute, PortState}
 import drt.shared.FlightsApi.Flights
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
+import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 
 import scala.collection.immutable.Seq
@@ -50,7 +51,7 @@ class ApplicationRestartSpec extends CrunchTestLike {
       initialBaseArrivals = initialBaseArrivals
     )
 
-    offerAndWait(crunch.liveArrivalsInput, Flights(Seq(arrivalLive)))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrivalLive)), SDate.now()))
 
     crunch.liveTestProbe.expectNoMsg(250 milliseconds)
 
@@ -105,7 +106,7 @@ class ApplicationRestartSpec extends CrunchTestLike {
       initialLiveArrivals = initialLiveArrivals
     )
 
-    offerAndWait(crunch.liveArrivalsInput, Flights(Seq(arrivalDay1.copy(Estimated = Some(SDate("2018-01-01T00:05").millisSinceEpoch)))))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrivalDay1.copy(Estimated = Some(SDate("2018-01-01T00:05").millisSinceEpoch)))), SDate.now()))
 
     crunch.forecastTestProbe.expectNoMsg(250 milliseconds)
 

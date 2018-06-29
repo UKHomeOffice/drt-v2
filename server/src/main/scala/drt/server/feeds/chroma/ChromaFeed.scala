@@ -3,22 +3,14 @@ package drt.server.feeds.chroma
 import akka.actor.Cancellable
 import akka.event.LoggingAdapter
 import akka.stream.scaladsl.Source
-import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveFlight}
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
 import drt.chroma.{DiffingStage, StreamingChromaFlow}
 import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
-//<<<<<<< Updated upstream
-import org.springframework.util.StringUtils
-//=======
 import server.feeds.FeedResponse
-//>>>>>>> Stashed changes
-import services.SDate
-
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import scala.util.Try
 
 case class ChromaLiveFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcher) {
   flightFeed =>

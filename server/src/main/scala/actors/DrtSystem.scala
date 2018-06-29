@@ -3,8 +3,8 @@ package actors
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
 import akka.pattern.AskableActorRef
+import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
-import akka.stream.{ActorMaterializer, KillSwitch}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import controllers.{Deskstats, PaxFlow}
@@ -14,7 +14,6 @@ import drt.http.ProdSendAndReceive
 import drt.server.feeds.bhx.{BHXForecastFeed, BHXLiveFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.lgw.{LGWFeed, LGWForecastFeed}
-import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.server.feeds.lhr.live.LHRLiveFeed
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
@@ -23,6 +22,7 @@ import drt.shared.{AirportConfig, Arrival, MilliDate, SDateLike}
 import org.apache.spark.sql.SparkSession
 import play.api.Configuration
 import server.feeds.acl.AclFeed
+import server.feeds.{ArrivalsFeedSuccess, FeedResponse}
 import services.PcpArrival.{GateOrStand, GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services.SplitsProvider.SplitProvider
 import services._
@@ -30,11 +30,8 @@ import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.Crunch.{oneDayMillis, oneMinuteMillis}
 import services.graphstages._
 import services.prediction.SparkSplitsPredictorFactory
-import Crunch.{oneDayMillis, oneMinuteMillis}
-import server.feeds.{ArrivalsFeedSuccess, FeedResponse}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.language.postfixOps
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
@@ -118,7 +115,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   system.log.info(s"useSplitsPrediction: $useSplitsPrediction")
 
 
-  def run() = {
+  def run(): Unit = {
     val futurePortStates: Future[Seq[Option[Any]]] = Future.sequence(Seq(
       initialPortState(liveCrunchStateActor),
       initialPortState(forecastCrunchStateActor),
@@ -280,8 +277,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         }
         else LHRFlightFeed()
       case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
-//      case "LGW" => LGWFeed()
-//      case "BHX" => BHXLiveFeed(config.getString("feeds.bhx.soap.endPointUrl").get)
+      case "LGW" => LGWFeed()
+      case "BHX" => BHXLiveFeed(config.getString("feeds.bhx.soap.endPointUrl").getOrElse(""))
       case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
     }
     feed
@@ -294,8 +291,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       case "LHR" => config.getString("lhr.forecast_path")
         .map(path => createForecastLHRFeed(path))
         .getOrElse(forecastNoOp)
-//      case "BHX" => BHXForecastFeed(config.getString("feeds.bhx.soap.endPointUrl").get)
-//      case "LGW" => LGWForecastFeed()
+      case "BHX" => BHXForecastFeed(config.getString("feeds.bhx.soap.endPointUrl").getOrElse(""))
+      case "LGW" => LGWForecastFeed()
       case _ =>
         system.log.info(s"No Forecast Feed defined.")
         forecastNoOp

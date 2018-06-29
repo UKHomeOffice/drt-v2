@@ -12,6 +12,7 @@ import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.SplitSources._
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
+import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.crunch.VoyageManifestGenerator._
 import services.graphstages.DqManifests
@@ -46,7 +47,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
       ))
 
     offerAndWait(crunch.manifestsInput, inputManifests)
-    offerAndWait(crunch.liveArrivalsInput, inputFlights)
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlights))
 
     val expectedSplits = Set(
       ApiSplits(Set(
@@ -100,7 +101,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     offerAndWait(crunch.manifestsInput, inputManifestsCi)
     offerAndWait(crunch.manifestsInput, inputManifestsDc)
-    offerAndWait(crunch.liveArrivalsInput, inputFlights)
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlights))
 
     val expectedSplits = Set(
       ApiSplits(Set(
@@ -152,7 +153,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
       ))
 
     offerAndWait(crunch.manifestsInput, inputManifests)
-    offerAndWait(crunch.liveArrivalsInput, inputFlights)
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlights))
 
     val expected = Map(Queues.EeaDesk -> 0.0, Queues.EGate -> 10.0)
 
@@ -199,7 +200,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
       ))
 
     offerAndWait(crunch.manifestsInput, inputManifests)
-    offerAndWait(crunch.liveArrivalsInput, inputFlights)
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlights))
 
     val expected = Map(Queues.EeaDesk -> 0.0, Queues.EGate -> 5.0)
 
@@ -251,7 +252,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
       ))
 
     offerAndWait(crunch.manifestsInput, inputManifests)
-    offerAndWait(crunch.liveArrivalsInput, inputFlights)
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlights))
 
     val expected = Map(Queues.EeaDesk -> 1.0, Queues.EGate -> 1.0, Queues.NonEeaDesk -> 2.0)
 

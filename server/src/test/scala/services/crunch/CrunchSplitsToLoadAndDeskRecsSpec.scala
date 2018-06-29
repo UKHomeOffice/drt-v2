@@ -7,6 +7,7 @@ import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
+import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.graphstages.Crunch.getLocalLastMidnight
 import services.graphstages.DqManifests
@@ -46,7 +47,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             eeaMachineReadableToEGate -> 35d / 60))
         ))
 
-      offerAndWait(crunch.liveArrivalsInput, flights)
+      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
       val expected = Map("T1" -> Map(
         Queues.EeaDesk -> Seq(20 * edSplit, 1 * edSplit),
@@ -75,7 +76,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(now = () => SDate(scheduled))
 
-      offerAndWait(crunch.liveArrivalsInput, flights)
+      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
       val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(1.0, 1.0, 0.0, 0.0, 0.0)))
 
@@ -115,7 +116,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             )
           )
         ))
-      offerAndWait(crunch.liveArrivalsInput, flights)
+      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
       val expected = Map("T1" -> Map(
         "eeaDesk" -> List(5.25, 5.25, 5.25, 5.25, 5.25),
@@ -153,7 +154,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             SplitRatio(eeaMachineReadableToDesk, 0.25)
           )))
 
-        offerAndWait(crunch.liveArrivalsInput, flights)
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
         val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(5.0, 0.0, 0.0, 0.0, 0.0)))
 
@@ -191,7 +192,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         )
 
         // Make a change to the arrival to force a crunch
-        offerAndWait(crunch.liveArrivalsInput, Flights(List(flight.copy(Status = "In the air"))))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(flight.copy(Status = "In the air")))))
 
         val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(5.0, 0.0, 0.0, 0.0, 0.0)))
 
@@ -232,7 +233,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         )
 
         // Make a change to the arrival to force a crunch
-        offerAndWait(crunch.liveArrivalsInput, Flights(List(flight.copy(Status = "In the air"))))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(flight.copy(Status = "In the air")))))
 
         val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(10.0, 0.0, 0.0, 0.0, 0.0)))
 

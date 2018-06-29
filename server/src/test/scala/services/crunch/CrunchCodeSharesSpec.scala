@@ -5,6 +5,7 @@ import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared._
+import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.graphstages.Crunch._
 
@@ -36,7 +37,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
         now = () => SDate(scheduled),
         airportConfig = airportConfig.copy(defaultProcessingTimes = procTimes))
 
-      offerAndWait(crunch.liveArrivalsInput, flights)
+      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
       val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
 
@@ -66,7 +67,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
         now = () => SDate(scheduled),
         airportConfig = airportConfig.copy(defaultProcessingTimes = procTimes))
 
-      offerAndWait(crunch.liveArrivalsInput, flights)
+      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
       val expected = Map(
         "T1" -> Map(Queues.EeaDesk -> Seq(

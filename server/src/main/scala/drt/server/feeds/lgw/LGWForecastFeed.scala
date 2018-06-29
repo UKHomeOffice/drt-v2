@@ -2,6 +2,7 @@ package drt.server.feeds.lgw
 
 import java.io.{ByteArrayOutputStream, File, FileReader}
 import java.nio.file.FileSystems
+
 import akka.NotUsed
 import akka.actor.{ActorSystem, Cancellable}
 import akka.stream.scaladsl.Source
@@ -9,10 +10,13 @@ import akka.stream.{ActorAttributes, Supervision}
 import com.box.sdk.{BoxFile, BoxFolder, _}
 import drt.server.feeds.lgw.LGWFeed.log
 import drt.shared.Arrival
+import drt.shared.FlightsApi.Flights
 import org.apache.commons.lang3.StringUtils
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter, ISODateTimeFormat}
 import org.slf4j.{Logger, LoggerFactory}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedResponse}
 import services.SDate
+
 import scala.collection.JavaConversions._
 import scala.collection.immutable.Seq
 import scala.collection.mutable.ListBuffer
@@ -161,7 +165,7 @@ trait BoxFileConstants {
 
 object LGWForecastFeed {
 
-  def apply()(implicit actorSystem: ActorSystem): Source[Seq[Arrival], Cancellable] = {
+  def apply()(implicit actorSystem: ActorSystem): Source[FeedResponse, Cancellable] = {
     val config = actorSystem.settings.config
     val boxConfigFilePath = config.getString("feeds.gatwick.forecast.boxConfigFile")
     val userId = config.getString("feeds.gatwick.forecast.userId")
@@ -169,20 +173,20 @@ object LGWForecastFeed {
     val initialDelayImmediately = 100 milliseconds
     val pollInterval = 1 hours
     val feed = new LGWForecastFeed(boxConfigFilePath, userId = userId, ukBfGalForecastFolderId = folderId)
-    val tickingSource: Source[List[Arrival], Cancellable] = Source.tick(initialDelayImmediately, pollInterval, NotUsed)
+    val tickingSource: Source[FeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollInterval, NotUsed)
       .withAttributes(ActorAttributes.supervisionStrategy(Supervision.restartingDecider))
       .map(_ => {
          feed.getArrivals match {
           case Success(arrivals) =>
             log.info(s"Got forecast Arrivals ${arrivals.size}.")
-            arrivals
+            ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
           case Failure(e: BoxAPIResponseException) =>
             log.error(e.getResponse, e)
-            List.empty[Arrival]
+            ArrivalsFeedFailure(e.toString, SDate.now())
           case Failure(t) =>
             log.info(s"Failed to fetch LGW forecast arrivals. $t")
-            List.empty[Arrival]
-        }
+            ArrivalsFeedFailure(t.toString, SDate.now())
+         }
       })
 
     tickingSource

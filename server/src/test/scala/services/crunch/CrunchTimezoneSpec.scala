@@ -6,6 +6,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
 import drt.shared._
 import org.joda.time.DateTimeZone
+import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.graphstages.Crunch
 import services.graphstages.Crunch._
@@ -60,7 +61,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
           ),
           minutesToCrunch = 120)
 
-        offerAndWait(crunch.liveArrivalsInput, flights)
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
         val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(
           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
