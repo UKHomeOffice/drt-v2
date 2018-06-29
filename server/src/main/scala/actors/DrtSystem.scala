@@ -213,7 +213,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   def initialArrivals(arrivalsActor: AskableActorRef): Future[Option[Set[Arrival]]] = {
     val canWaitMinutes = 5
     val arrivalsFuture: Future[Option[Set[Arrival]]] = arrivalsActor.ask(GetState)(new Timeout(canWaitMinutes minutes)).map {
-      case ArrivalsState(arrivals) => Option(arrivals.values.toSet)
+      case ArrivalsState(arrivals, _) => Option(arrivals.values.toSet)
       case _ => None
     }
 

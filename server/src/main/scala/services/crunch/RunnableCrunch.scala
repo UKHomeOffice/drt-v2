@@ -118,7 +118,7 @@ object RunnableCrunch {
 
 
           baseMaybeArrivals ~> baseMaybeArrivalsFanOut ~> arrivals.in0
-          baseMaybeArrivalsFanOut.map(fs => fs.map(f => ArrivalsState(f.flights.map(x => (x.uniqueId, x)).toMap))) ~> baseArrivalsSink
+          baseMaybeArrivalsFanOut.map(fs => fs.map(f => ArrivalsState(f.flights.map(x => (x.uniqueId, x)).toMap, List()))) ~> baseArrivalsSink
           fcstArrivals ~> fcstArrivalsFanOut ~> arrivals.in1
           fcstArrivalsFanOut ~> fcstArrivalsSink
           liveArrivals ~> liveArrivalsFanOut ~> arrivals.in2

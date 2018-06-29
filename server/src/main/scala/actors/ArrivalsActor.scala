@@ -6,10 +6,19 @@ import akka.persistence._
 import drt.shared.FlightsApi.Flights
 import drt.shared.{Arrival, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import server.protobuf.messages.FlightsMessage.{FlightStateSnapshotMessage, FlightsDiffMessage}
 import services.graphstages.Crunch
 
-case class ArrivalsState(arrivals: Map[Int, Arrival])
+sealed trait ArrivalsFeedStatus {
+  val date: SDateLike
+}
+
+case class ArrivalsFeedStatusSuccess(date: SDateLike, updateCount: Int) extends ArrivalsFeedStatus
+
+case class ArrivalsFeedStatusFailure(date: SDateLike, message: String) extends ArrivalsFeedStatus
+
+case class ArrivalsState(arrivals: Map[Int, Arrival], feedStatuses: List[ArrivalsFeedStatus])
 
 class ForecastBaseArrivalsActor(now: () => SDateLike,
                                 expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis) {
@@ -49,7 +58,8 @@ abstract class ArrivalsActor(now: () => SDateLike,
                              expireAfterMillis: Long) extends RecoveryActorLike with PersistentDrtActor[ArrivalsState] {
 
   var state: ArrivalsState = initialState
-  override def initialState = ArrivalsState(Map())
+
+  override def initialState = ArrivalsState(Map(), List())
 
   val snapshotInterval = 500
 
@@ -89,29 +99,45 @@ abstract class ArrivalsActor(now: () => SDateLike,
   }
 
   override def receiveCommand: Receive = {
-    case Flights(incomingArrivals) =>
+    case ArrivalsFeedSuccess(Flights(incomingArrivals), createdAt) =>
       log.info(s"Received flights")
 
       val newStateArrivals = mergeArrivals(incomingArrivals, state.arrivals)
 
       val updatedArrivals = newStateArrivals.values.toSet -- state.arrivals.values.toSet
 
-      state = ArrivalsState(newStateArrivals)
+      val statuses: List[ArrivalsFeedStatus] = addStatus(createdAt, updatedArrivals)
+
+      state = ArrivalsState(newStateArrivals, statuses)
 
       if (updatedArrivals.isEmpty) {
         log.info(s"No updates to persist")
       } else {
         persistOrSnapshot(Set(), updatedArrivals)
       }
+      val strings = state.feedStatuses.map {
+        case ArrivalsFeedStatusSuccess(date, updates) => s"status ${date.toISOString()}: $updates updates"
+        case ArrivalsFeedStatusFailure(date, message) => s"status ${date.toISOString()}: $message"
+      }
+      log.info(s"statuses:\n${strings.mkString("\n")}")
 
-    case Some(ArrivalsState(incomingArrivals)) if incomingArrivals != state.arrivals =>
+    case ArrivalsFeedFailure(message, createdAt) =>
+      val statuses: List[ArrivalsFeedStatus] = addStatus(createdAt, message)
+      state = state.copy(feedStatuses = statuses)
+      val strings = state.feedStatuses.map {
+        case ArrivalsFeedStatusSuccess(date, updates) => s"status ${date.toISOString()}: $updates updates"
+        case ArrivalsFeedStatusFailure(date, msg) => s"status ${date.toISOString()}: $msg"
+      }
+      log.info(s"statuses:\n${strings.mkString("\n")}")
+
+    case Some(ArrivalsState(incomingArrivals, _)) if incomingArrivals != state.arrivals =>
       log.info(s"Received updated ArrivalsState")
       val currentKeys = state.arrivals.keys.toSet
       val newKeys = incomingArrivals.keys.toSet
       val removalKeys = currentKeys -- newKeys
       val updatedArrivals = incomingArrivals.values.toSet -- state.arrivals.values.toSet
 
-      state = ArrivalsState(incomingArrivals)
+      state = ArrivalsState(incomingArrivals, state.feedStatuses)
 
       if (removalKeys.isEmpty && updatedArrivals.isEmpty) {
         log.info(s"No removals or updates to persist")
@@ -119,7 +145,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
         persistOrSnapshot(removalKeys, updatedArrivals)
       }
 
-    case Some(ArrivalsState(incomingArrivals)) if incomingArrivals == state.arrivals =>
+    case Some(ArrivalsState(incomingArrivals, _)) if incomingArrivals == state.arrivals =>
       log.info(s"Received updated ArrivalsState. No changes")
 
     case None =>
@@ -137,6 +163,20 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
     case other =>
       log.info(s"Received unexpected message ${other.getClass}")
+  }
+
+  def addStatus(createdAt: SDateLike, updatedArrivals: Set[Arrival]): List[ArrivalsFeedStatus] = {
+    if (state.feedStatuses.length >= 10)
+      ArrivalsFeedStatusSuccess(createdAt, updatedArrivals.size) :: state.feedStatuses.dropRight(1)
+    else
+      ArrivalsFeedStatusSuccess(createdAt, updatedArrivals.size) :: state.feedStatuses
+  }
+
+  def addStatus(createdAt: SDateLike, failureMessage: String): List[ArrivalsFeedStatus] = {
+    if (state.feedStatuses.length >= 10)
+      ArrivalsFeedStatusFailure(createdAt, failureMessage) :: state.feedStatuses.dropRight(1)
+    else
+      ArrivalsFeedStatusFailure(createdAt, failureMessage) :: state.feedStatuses
   }
 
   def mergeArrivals(incomingArrivals: Seq[Arrival], existingArrivals: Map[Int, Arrival]): Map[Int, Arrival] = {
