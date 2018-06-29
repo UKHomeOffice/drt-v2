@@ -278,7 +278,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         else LHRFlightFeed()
       case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
       case "LGW" => LGWFeed()
-      case "BHX" => BHXLiveFeed(config.getString("feeds.bhx.soap.endPointUrl").getOrElse(""))
+      case "BHX" => BHXLiveFeed(config.getString("feeds.bhx.soap.endPointUrl").getOrElse(throw new Exception("Missing BHX live feed URL")))
       case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
     }
     feed
@@ -291,7 +291,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       case "LHR" => config.getString("lhr.forecast_path")
         .map(path => createForecastLHRFeed(path))
         .getOrElse(forecastNoOp)
-      case "BHX" => BHXForecastFeed(config.getString("feeds.bhx.soap.endPointUrl").getOrElse(""))
+      case "BHX" => BHXForecastFeed(config.getString("feeds.bhx.soap.endPointUrl").getOrElse(throw new Exception("Missing BHX live feed URL")))
       case "LGW" => LGWForecastFeed()
       case _ =>
         system.log.info(s"No Forecast Feed defined.")
