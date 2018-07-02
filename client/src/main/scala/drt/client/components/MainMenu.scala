@@ -22,9 +22,9 @@ object MainMenu {
 
   case class MenuItem(idx: Int, label: (Props) => VdomNode, icon: Icon, location: Loc)
 
-  val staticMenuItems = List(
-    MenuItem(0, _ => "Dashboard", Icon.dashboard, TerminalsDashboardLoc(None))
-  )
+  val dashboardMenuItem = MenuItem(0, _ => "Dashboard", Icon.dashboard, TerminalsDashboardLoc(None))
+
+  def statusMenuItem(position: Int): MenuItem = MenuItem(position, _ => "Status", Icon.exclamationTriangle, StatusLoc)
 
   def menuItems(airportConfig: AirportConfig, currentLoc: Loc): List[MenuItem] = {
     val terminalDepsMenuItems = airportConfig.terminalNames.zipWithIndex.map {
@@ -34,10 +34,12 @@ object MainMenu {
             TerminalPageTabLoc(tn, tptl.mode, tptl.subMode, tptl.date, tptl.timeRangeStartString, tptl.timeRangeEndString)
           case _ => TerminalPageTabLoc(tn)
         }
-        MenuItem(idx + staticMenuItems.length, _ => tn, Icon.calculator, targetLoc)
+        MenuItem(idx + 1, _ => tn, Icon.calculator, targetLoc)
     }.toList
 
-    staticMenuItems ::: terminalDepsMenuItems
+    val dashAndTerminals = dashboardMenuItem :: terminalDepsMenuItems
+
+    dashAndTerminals :+ statusMenuItem(dashAndTerminals.length + 1)
   }
 
   private class Backend($: BackendScope[Props, Unit]) {

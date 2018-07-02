@@ -4,24 +4,17 @@ import actors.FlightMessageConversion._
 import actors.{GetState, PersistentDrtActor, RecoveryActorLike}
 import akka.persistence._
 import drt.shared.FlightsApi.Flights
-import drt.shared.{Arrival, SDateLike}
+import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import server.protobuf.messages.FlightsMessage.{FlightStateSnapshotMessage, FlightsDiffMessage}
 import services.graphstages.Crunch
 
-sealed trait ArrivalsFeedStatus {
-  val date: SDateLike
-}
-
-case class ArrivalsFeedStatusSuccess(date: SDateLike, updateCount: Int) extends ArrivalsFeedStatus
-
-case class ArrivalsFeedStatusFailure(date: SDateLike, message: String) extends ArrivalsFeedStatus
-
-case class ArrivalsState(arrivals: Map[Int, Arrival], feedStatuses: List[ArrivalsFeedStatus])
+case class ArrivalsState(arrivals: Map[Int, Arrival], feedStatuses: List[FeedStatus])
 
 class ForecastBaseArrivalsActor(now: () => SDateLike,
                                 expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis) {
+  val name = "ACL forecast"
   override def persistenceId: String = s"${getClass.getName}-forecast-base"
 
   override val snapshotInterval = 100
@@ -37,6 +30,7 @@ class ForecastBaseArrivalsActor(now: () => SDateLike,
 
 class ForecastPortArrivalsActor(now: () => SDateLike,
                                 expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis) {
+  val name = "Port forecast"
   override def persistenceId: String = s"${getClass.getName}-forecast-port"
 
   override val snapshotInterval = 100
@@ -47,6 +41,7 @@ class ForecastPortArrivalsActor(now: () => SDateLike,
 
 class LiveArrivalsActor(now: () => SDateLike,
                         expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis) {
+  val name = "Port live"
   override def persistenceId: String = s"${getClass.getName}-live"
 
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -57,6 +52,7 @@ class LiveArrivalsActor(now: () => SDateLike,
 abstract class ArrivalsActor(now: () => SDateLike,
                              expireAfterMillis: Long) extends RecoveryActorLike with PersistentDrtActor[ArrivalsState] {
 
+  val name: String
   var state: ArrivalsState = initialState
 
   override def initialState = ArrivalsState(Map(), List())
@@ -106,7 +102,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
       val updatedArrivals = newStateArrivals.values.toSet -- state.arrivals.values.toSet
 
-      val statuses: List[ArrivalsFeedStatus] = addStatus(createdAt, updatedArrivals)
+      val statuses: List[FeedStatus] = addStatus(createdAt, updatedArrivals)
 
       state = ArrivalsState(newStateArrivals, statuses)
 
@@ -116,17 +112,17 @@ abstract class ArrivalsActor(now: () => SDateLike,
         persistOrSnapshot(Set(), updatedArrivals)
       }
       val strings = state.feedStatuses.map {
-        case ArrivalsFeedStatusSuccess(date, updates) => s"status ${date.toISOString()}: $updates updates"
-        case ArrivalsFeedStatusFailure(date, message) => s"status ${date.toISOString()}: $message"
+        case FeedStatusSuccess(_, date, updates) => s"$name status ${date.toISOString()}: $updates updates"
+        case FeedStatusFailure(_, date, msg) => s"$name status ${date.toISOString()}: $msg"
       }
       log.info(s"statuses:\n${strings.mkString("\n")}")
 
     case ArrivalsFeedFailure(message, createdAt) =>
-      val statuses: List[ArrivalsFeedStatus] = addStatus(createdAt, message)
+      val statuses: List[FeedStatus] = addStatus(createdAt, message)
       state = state.copy(feedStatuses = statuses)
       val strings = state.feedStatuses.map {
-        case ArrivalsFeedStatusSuccess(date, updates) => s"status ${date.toISOString()}: $updates updates"
-        case ArrivalsFeedStatusFailure(date, msg) => s"status ${date.toISOString()}: $msg"
+        case FeedStatusSuccess(_, date, updates) => s"$name status ${date.toISOString()}: $updates updates"
+        case FeedStatusFailure(_, date, msg) => s"$name status ${date.toISOString()}: $msg"
       }
       log.info(s"statuses:\n${strings.mkString("\n")}")
 
@@ -165,18 +161,18 @@ abstract class ArrivalsActor(now: () => SDateLike,
       log.info(s"Received unexpected message ${other.getClass}")
   }
 
-  def addStatus(createdAt: SDateLike, updatedArrivals: Set[Arrival]): List[ArrivalsFeedStatus] = {
+  def addStatus(createdAt: SDateLike, updatedArrivals: Set[Arrival]): List[FeedStatus] = {
     if (state.feedStatuses.length >= 10)
-      ArrivalsFeedStatusSuccess(createdAt, updatedArrivals.size) :: state.feedStatuses.dropRight(1)
+      FeedStatusSuccess(name, createdAt, updatedArrivals.size) :: state.feedStatuses.dropRight(1)
     else
-      ArrivalsFeedStatusSuccess(createdAt, updatedArrivals.size) :: state.feedStatuses
+      FeedStatusSuccess(name, createdAt, updatedArrivals.size) :: state.feedStatuses
   }
 
-  def addStatus(createdAt: SDateLike, failureMessage: String): List[ArrivalsFeedStatus] = {
+  def addStatus(createdAt: SDateLike, failureMessage: String): List[FeedStatus] = {
     if (state.feedStatuses.length >= 10)
-      ArrivalsFeedStatusFailure(createdAt, failureMessage) :: state.feedStatuses.dropRight(1)
+      FeedStatusFailure(name, createdAt, failureMessage) :: state.feedStatuses.dropRight(1)
     else
-      ArrivalsFeedStatusFailure(createdAt, failureMessage) :: state.feedStatuses
+      FeedStatusFailure(name, createdAt, failureMessage) :: state.feedStatuses
   }
 
   def mergeArrivals(incomingArrivals: Seq[Arrival], existingArrivals: Map[Int, Arrival]): Map[Int, Arrival] = {
