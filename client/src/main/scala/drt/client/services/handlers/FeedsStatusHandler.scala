@@ -16,10 +16,10 @@ import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 case class GetFeedStatuses() extends Action
-case class SetFeedStatuses(statuses: FeedStatuses) extends Action
+case class SetFeedStatuses(statuses: Seq[FeedStatuses]) extends Action
 
 
-class FeedsStatusHandler[M](modelRW: ModelRW[M, Pot[FeedStatuses]]) extends LoggingActionHandler(modelRW) {
+class FeedsStatusHandler[M](modelRW: ModelRW[M, Pot[Seq[FeedStatuses]]]) extends LoggingActionHandler(modelRW) {
   implicit val pickler = compositePickler[FeedStatus].
     addConcreteType[FeedStatusSuccess].
     addConcreteType[FeedStatusFailure]

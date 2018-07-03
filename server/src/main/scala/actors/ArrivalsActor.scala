@@ -10,7 +10,7 @@ import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import server.protobuf.messages.FlightsMessage.{FlightStateSnapshotMessage, FlightsDiffMessage}
 import services.graphstages.Crunch
 
-case class ArrivalsState(arrivals: Map[Int, Arrival], feedStatuses: List[FeedStatus])
+case class ArrivalsState(arrivals: Map[Int, Arrival], feedStatuses: FeedStatuses)
 
 class ForecastBaseArrivalsActor(now: () => SDateLike,
                                 expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis) {
@@ -55,7 +55,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
   val name: String
   var state: ArrivalsState = initialState
 
-  override def initialState = ArrivalsState(Map(), List())
+  override def initialState = ArrivalsState(Map(), FeedStatuses(name, List(), None, None, None))
 
   val snapshotInterval = 500
 
@@ -102,7 +102,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
       val updatedArrivals = newStateArrivals.values.toSet -- state.arrivals.values.toSet
 
-      val statuses: List[FeedStatus] = addStatus(createdAt, updatedArrivals)
+      val statuses: FeedStatuses = state.feedStatuses.addStatus(createdAt, updatedArrivals)
 
       state = ArrivalsState(newStateArrivals, statuses)
 
@@ -111,20 +111,10 @@ abstract class ArrivalsActor(now: () => SDateLike,
       } else {
         persistOrSnapshot(Set(), updatedArrivals)
       }
-      val strings = state.feedStatuses.map {
-        case FeedStatusSuccess(_, date, updates) => s"$name status ${SDate(date).toISOString()}: $updates updates"
-        case FeedStatusFailure(_, date, msg) => s"$name status ${SDate(date).toISOString()}: $msg"
-      }
-      log.info(s"statuses:\n${strings.mkString("\n")}")
 
     case ArrivalsFeedFailure(message, createdAt) =>
-      val statuses: List[FeedStatus] = addStatus(createdAt, message)
+      val statuses: FeedStatuses = state.feedStatuses.addStatus(createdAt, message)
       state = state.copy(feedStatuses = statuses)
-      val strings = state.feedStatuses.map {
-        case FeedStatusSuccess(_, date, updates) => s"$name status ${SDate(date).toISOString()}: $updates updates"
-        case FeedStatusFailure(_, date, msg) => s"$name status ${SDate(date).toISOString()}: $msg"
-      }
-      log.info(s"statuses:\n${strings.mkString("\n")}")
 
     case Some(ArrivalsState(incomingArrivals, _)) if incomingArrivals != state.arrivals =>
       log.info(s"Received updated ArrivalsState")
@@ -153,7 +143,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
     case GetFeedStatuses =>
       log.info(s"Received GetFeedStatuses request")
-      sender() ! FeedStatuses(state.feedStatuses)
+      sender() ! state.feedStatuses
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")
@@ -163,20 +153,6 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
     case other =>
       log.info(s"Received unexpected message ${other.getClass}")
-  }
-
-  def addStatus(createdAt: SDateLike, updatedArrivals: Set[Arrival]): List[FeedStatus] = {
-    if (state.feedStatuses.length >= 10)
-      FeedStatusSuccess(name, createdAt.millisSinceEpoch, updatedArrivals.size) :: state.feedStatuses.dropRight(1)
-    else
-      FeedStatusSuccess(name, createdAt.millisSinceEpoch, updatedArrivals.size) :: state.feedStatuses
-  }
-
-  def addStatus(createdAt: SDateLike, failureMessage: String): List[FeedStatus] = {
-    if (state.feedStatuses.length >= 10)
-      FeedStatusFailure(name, createdAt.millisSinceEpoch, failureMessage) :: state.feedStatuses.dropRight(1)
-    else
-      FeedStatusFailure(name, createdAt.millisSinceEpoch, failureMessage) :: state.feedStatuses
   }
 
   def mergeArrivals(incomingArrivals: Seq[Arrival], existingArrivals: Map[Int, Arrival]): Map[Int, Arrival] = {

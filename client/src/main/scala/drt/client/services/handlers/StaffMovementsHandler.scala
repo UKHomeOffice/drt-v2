@@ -12,7 +12,6 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{AjaxClient, PollDelay, ViewMode}
 import drt.shared.{Api, StaffMovement}
 
-import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps

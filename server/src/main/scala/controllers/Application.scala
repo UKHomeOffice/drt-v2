@@ -9,6 +9,7 @@ import akka.event.LoggingAdapter
 import akka.pattern.{AskableActorRef, _}
 import akka.stream._
 import akka.util.{ByteString, Timeout}
+import boopickle.CompositePickler
 import boopickle.Default._
 import buildinfo.BuildInfo
 import com.google.inject.{Inject, Singleton}
@@ -222,7 +223,7 @@ class Application @Inject()(implicit val config: Configuration,
         true
       }
 
-      def getFeedStatuses(): Future[FeedStatuses] = {
+      def getFeedStatuses(): Future[Seq[FeedStatuses]] = {
         ctrl.getFeedStatus()
       }
 
@@ -652,7 +653,11 @@ class Application @Inject()(implicit val config: Configuration,
 
       // call Autowire route
 
-      implicit val pickler = generatePickler[ApiPaxTypeAndQueueCount]
+      implicit val apiPaxTypeAndQueueCountPickler = generatePickler[ApiPaxTypeAndQueueCount]
+      implicit val feedStatusPickler: CompositePickler[FeedStatus] = compositePickler[FeedStatus].
+        addConcreteType[FeedStatusSuccess].
+        addConcreteType[FeedStatusFailure]
+
       val router = Router.route[Api](ApiService(airportConfig, ctrl.shiftsActor, ctrl.fixedPointsActor, ctrl.staffMovementsActor, request.headers))
 
       router(

@@ -50,7 +50,7 @@ trait DrtSystemInterface {
 
   def run(): Unit
 
-  def getFeedStatus(): Future[FeedStatuses]
+  def getFeedStatus(): Future[Seq[FeedStatuses]]
 }
 
 case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig) extends DrtSystemInterface {
@@ -139,14 +139,14 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     }
   }
 
-  override def getFeedStatus(): Future[FeedStatuses] = {
-    val askable: AskableActorRef = liveArrivalsActor
+  override def getFeedStatus(): Future[Seq[FeedStatuses]] = {
+    val actors: Seq[AskableActorRef] = Seq(liveArrivalsActor, forecastArrivalsActor)
 
-    val statuses = askable.ask(GetFeedStatuses)(new Timeout(5 seconds)).map {
+    val statuses = actors.map(askable => askable.ask(GetFeedStatuses)(new Timeout(5 seconds)).map {
       case statuses: FeedStatuses => statuses
-    }
+    })
 
-    statuses
+    Future.sequence(statuses)
   }
 
   def aclTerminalMapping(portCode: String): TerminalName => TerminalName = portCode match {

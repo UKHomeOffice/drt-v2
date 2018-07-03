@@ -9,7 +9,6 @@ import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom
 
-import scala.collection.immutable.Seq
 import scala.scalajs.js
 
 object Debug {

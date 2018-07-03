@@ -100,6 +100,6 @@ abstract class ApiService(val airportConfig: AirportConfig,
 
   def isLoggedIn(): Boolean
 
-  def getFeedStatuses(): Future[FeedStatuses]
+  def getFeedStatuses(): Future[Seq[FeedStatuses]]
 }
 

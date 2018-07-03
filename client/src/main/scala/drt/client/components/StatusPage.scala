@@ -1,8 +1,9 @@
 package drt.client.components
 
 import drt.client.logger.{Logger, LoggerFactory}
+import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.shared.FeedStatuses
+import drt.shared.{FeedStatusSuccess, FeedStatuses}
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.vdom.html_<^._
 
@@ -19,14 +20,24 @@ object StatusPage {
 
       feedsRCP { feedsMP =>
         <.div(
-          <.ul(
-            feedsMP().render((statuses: FeedStatuses) => {
-              statuses.statuses.map(fs => {
-                log.info(s"feed status: ${fs.name}")
-                <.li(s"feed ${fs.name}")
-              }).toVdomArray
-            })
-          )
+          <.h2("Feed statuses"),
+          feedsMP().render((allFeedStatuses: Seq[FeedStatuses]) => {
+            allFeedStatuses.map(feed =>
+              <.div(
+                <.h2(feed.name),
+                <.ul(
+                  <.li(s"Last successful connection: ${feed.lastSuccess.map(lu => SDate(lu).prettyDateTime()).getOrElse("n/a")}"),
+                  <.li(s"Last updates: ${feed.lastUpdatesAt.map(lu => SDate(lu).prettyDateTime()).getOrElse("n/a")}"),
+                  <.li(s"Last failed connection: ${feed.lastFailure.map(lu => SDate(lu).prettyDateTime()).getOrElse("n/a")}")
+                ),
+                <.ul(
+                  feed.statuses.sortBy(_.date).reverse.map {
+                    case FeedStatusSuccess(_, date, updates) => <.li(s"${SDate(date).hms()}: $updates updates")
+                  }.toVdomArray
+                )
+              )
+            ).toVdomArray
+          })
         )
       }
     })

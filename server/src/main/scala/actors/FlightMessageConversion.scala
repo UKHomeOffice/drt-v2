@@ -13,7 +13,7 @@ object FlightMessageConversion {
     ArrivalsState(snMessage.flightMessages.map(fm => {
       val arrival = FlightMessageConversion.flightMessageToApiFlight(fm)
       (arrival.uniqueId, arrival)
-    }).toMap, List())
+    }).toMap, FeedStatuses("", List(), None, None, None))
   }
 
   def flightWithSplitsToMessage(f: ApiFlightWithSplits): FlightWithSplitsMessage = {

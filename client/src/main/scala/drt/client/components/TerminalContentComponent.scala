@@ -19,7 +19,6 @@ import japgolly.scalajs.react.{BackendScope, Callback, ScalaComponent}
 import org.scalajs.dom
 import org.scalajs.dom.html.Div
 
-import scala.collection.immutable
 import scala.util.Try
 
 object TerminalContentComponent {
@@ -28,7 +27,7 @@ object TerminalContentComponent {
                     crunchStatePot: Pot[CrunchState],
                     potShifts: Pot[String],
                     potFixedPoints: Pot[String],
-                    potStaffMovements: Pot[immutable.Seq[StaffMovement]],
+                    potStaffMovements: Pot[Seq[StaffMovement]],
                     airportConfig: AirportConfig,
                     terminalPageTab: TerminalPageTabLoc,
                     airportInfoPot: Pot[AirportInfo],
