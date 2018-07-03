@@ -138,7 +138,9 @@ class NoCacheFilter @Inject()(
 }
 
 trait AvailableUserRoles {
-  val availableRoles = List("staff:edit")
+  val availableRoles = List("staff:edit", "drt:team")
+
+  def userRolesFromHeader(headers: Headers): List[String] = headers.get("X-Auth-Roles").map(_.split(",").toList).getOrElse(List())
 }
 
 class Application @Inject()(implicit val config: Configuration,
@@ -153,11 +155,11 @@ class Application @Inject()(implicit val config: Configuration,
     with AvailableUserRoles {
 
   val ctrl: DrtSystemInterface = config.getString("env") match {
-      case Some("test") =>
-        new TestDrtSystem(system, config, getPortConfFromEnvVar)
-      case _ =>
-        new DrtSystem(system, config, getPortConfFromEnvVar)
-    }
+    case Some("test") =>
+      new TestDrtSystem(system, config, getPortConfFromEnvVar)
+    case _ =>
+      new DrtSystem(system, config, getPortConfFromEnvVar)
+  }
   ctrl.run()
 
   def log: LoggingAdapter = system.log
@@ -482,22 +484,33 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   def exportFlightsWithSplitsAtPointInTimeCSV(pointInTime: String, terminalName: TerminalName, startHour: Int, endHour: Int): Action[AnyContent] = Action.async {
-    val pit = MilliDate(pointInTime.toLong)
+    implicit request =>
+      val pit = MilliDate(pointInTime.toLong)
 
-    val portCode = airportConfig.portCode
-    val fileName = f"$portCode-$terminalName-arrivals-${pit.getFullYear()}-${pit.getMonth()}%02d-${pit.getDate()}%02dT" +
-      f"${pit.getHours()}%02d-${pit.getMinutes()}%02d-hours-$startHour%02d-to-$endHour%02d"
+      val portCode = airportConfig.portCode
+      val fileName = f"$portCode-$terminalName-arrivals-${pit.getFullYear()}-${pit.getMonth()}%02d-${pit.getDate()}%02dT" +
+        f"${pit.getHours()}%02d-${pit.getMinutes()}%02d-hours-$startHour%02d-to-$endHour%02d"
 
-    val crunchStateForPointInTime = loadBestCrunchStateForPointInTime(pit.millisSinceEpoch)
-    flightsForCSVExportWithinRange(terminalName, pit, startHour, endHour, crunchStateForPointInTime).map {
-      case Some(csvFlights) =>
-        val csvData = CSVData.flightsWithSplitsToCSVWithHeadings(csvFlights)
-        Result(
-          ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
-          HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
-        )
-      case None => NotFound("No data for this date")
-    }
+      val crunchStateForPointInTime = loadBestCrunchStateForPointInTime(pit.millisSinceEpoch)
+      flightsForCSVExportWithinRange(terminalName, pit, startHour, endHour, crunchStateForPointInTime).map {
+        case Some(csvFlights) =>
+          val csvData = if (userRolesFromHeader(request.headers).contains("drt:team")) {
+            log.info(s"Sending Flights CSV with ACL data to DRT Team member")
+            CSVData.flightsWithSplitsWithAPIActualsToCSVWithHeadings(csvFlights)
+          }
+          else {
+            log.info(s"Sending Flights CSV with no ACL data")
+            CSVData.flightsWithSplitsToCSVWithHeadings(csvFlights)
+          }
+          Result(
+            ResponseHeader(200, Map(
+              "Content-Disposition" -> s"attachment; filename='$fileName.csv'",
+              HeaderNames.CACHE_CONTROL -> "no-cache")
+            ),
+            HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
+          )
+        case None => NotFound("No data for this date")
+      }
   }
 
   def exportFlightsWithSplitsBetweenTimeStampsCSV(start: String, end: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
