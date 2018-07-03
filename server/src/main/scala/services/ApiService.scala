@@ -76,6 +76,7 @@ abstract class ApiService(val airportConfig: AirportConfig,
   def roles: List[String] = headers.get("X-Auth-Roles").map(_.split(",").toList).getOrElse(List())
 
   def liveCrunchStateActor: AskableActorRef
+
   def forecastCrunchStateActor: AskableActorRef
 
   def actorSystem: ActorSystem
@@ -97,5 +98,7 @@ abstract class ApiService(val airportConfig: AirportConfig,
   def getShiftsForMonth(month: MillisSinceEpoch, terminalName: TerminalName): Future[String]
 
   def isLoggedIn(): Boolean
+
+  def getFeedStatuses(): Future[FeedStatuses]
 }
 

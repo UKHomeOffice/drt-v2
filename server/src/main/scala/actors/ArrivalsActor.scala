@@ -1,7 +1,7 @@
 package services
 
 import actors.FlightMessageConversion._
-import actors.{GetState, PersistentDrtActor, RecoveryActorLike}
+import actors.{GetFeedStatuses, GetState, PersistentDrtActor, RecoveryActorLike}
 import akka.persistence._
 import drt.shared.FlightsApi.Flights
 import drt.shared._
@@ -112,8 +112,8 @@ abstract class ArrivalsActor(now: () => SDateLike,
         persistOrSnapshot(Set(), updatedArrivals)
       }
       val strings = state.feedStatuses.map {
-        case FeedStatusSuccess(_, date, updates) => s"$name status ${date.toISOString()}: $updates updates"
-        case FeedStatusFailure(_, date, msg) => s"$name status ${date.toISOString()}: $msg"
+        case FeedStatusSuccess(_, date, updates) => s"$name status ${SDate(date).toISOString()}: $updates updates"
+        case FeedStatusFailure(_, date, msg) => s"$name status ${SDate(date).toISOString()}: $msg"
       }
       log.info(s"statuses:\n${strings.mkString("\n")}")
 
@@ -121,8 +121,8 @@ abstract class ArrivalsActor(now: () => SDateLike,
       val statuses: List[FeedStatus] = addStatus(createdAt, message)
       state = state.copy(feedStatuses = statuses)
       val strings = state.feedStatuses.map {
-        case FeedStatusSuccess(_, date, updates) => s"$name status ${date.toISOString()}: $updates updates"
-        case FeedStatusFailure(_, date, msg) => s"$name status ${date.toISOString()}: $msg"
+        case FeedStatusSuccess(_, date, updates) => s"$name status ${SDate(date).toISOString()}: $updates updates"
+        case FeedStatusFailure(_, date, msg) => s"$name status ${SDate(date).toISOString()}: $msg"
       }
       log.info(s"statuses:\n${strings.mkString("\n")}")
 
@@ -151,6 +151,10 @@ abstract class ArrivalsActor(now: () => SDateLike,
       log.info(s"Received GetState request. Sending ArrivalsState with ${state.arrivals.size} arrivals")
       sender() ! state
 
+    case GetFeedStatuses =>
+      log.info(s"Received GetFeedStatuses request")
+      sender() ! FeedStatuses(state.feedStatuses)
+
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")
 
@@ -163,16 +167,16 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
   def addStatus(createdAt: SDateLike, updatedArrivals: Set[Arrival]): List[FeedStatus] = {
     if (state.feedStatuses.length >= 10)
-      FeedStatusSuccess(name, createdAt, updatedArrivals.size) :: state.feedStatuses.dropRight(1)
+      FeedStatusSuccess(name, createdAt.millisSinceEpoch, updatedArrivals.size) :: state.feedStatuses.dropRight(1)
     else
-      FeedStatusSuccess(name, createdAt, updatedArrivals.size) :: state.feedStatuses
+      FeedStatusSuccess(name, createdAt.millisSinceEpoch, updatedArrivals.size) :: state.feedStatuses
   }
 
   def addStatus(createdAt: SDateLike, failureMessage: String): List[FeedStatus] = {
     if (state.feedStatuses.length >= 10)
-      FeedStatusFailure(name, createdAt, failureMessage) :: state.feedStatuses.dropRight(1)
+      FeedStatusFailure(name, createdAt.millisSinceEpoch, failureMessage) :: state.feedStatuses.dropRight(1)
     else
-      FeedStatusFailure(name, createdAt, failureMessage) :: state.feedStatuses
+      FeedStatusFailure(name, createdAt.millisSinceEpoch, failureMessage) :: state.feedStatuses
   }
 
   def mergeArrivals(incomingArrivals: Seq[Arrival], existingArrivals: Map[Int, Arrival]): Map[Int, Arrival] = {

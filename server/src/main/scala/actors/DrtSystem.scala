@@ -18,7 +18,7 @@ import drt.server.feeds.lhr.live.LHRLiveFeed
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{Flights, TerminalName}
-import drt.shared.{AirportConfig, Arrival, MilliDate, SDateLike}
+import drt.shared._
 import org.apache.spark.sql.SparkSession
 import play.api.Configuration
 import server.feeds.acl.AclFeed
@@ -49,6 +49,8 @@ trait DrtSystemInterface {
   val aclFeed: AclFeed
 
   def run(): Unit
+
+  def getFeedStatus(): Future[FeedStatuses]
 }
 
 case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig) extends DrtSystemInterface {
@@ -135,6 +137,16 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         system.log.error(s"Failed to restore initial state for App", error)
         None
     }
+  }
+
+  override def getFeedStatus(): Future[FeedStatuses] = {
+    val askable: AskableActorRef = liveArrivalsActor
+
+    val statuses = askable.ask(GetFeedStatuses)(new Timeout(5 seconds)).map {
+      case statuses: FeedStatuses => statuses
+    }
+
+    statuses
   }
 
   def aclTerminalMapping(portCode: String): TerminalName => TerminalName = portCode match {

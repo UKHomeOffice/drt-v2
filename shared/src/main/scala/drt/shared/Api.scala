@@ -619,6 +619,8 @@ trait Api {
   def getUserRoles(): List[String]
 
   def isLoggedIn(): Boolean
+
+  def getFeedStatuses(): Future[FeedStatuses]
 }
 
 object ApiSplitsToSplitRatio {

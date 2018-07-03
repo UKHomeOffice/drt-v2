@@ -6,6 +6,7 @@ import drt.client.components.{GlobalStyles, Layout, StatusPage, TerminalComponen
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
+import drt.client.services.handlers.GetFeedStatuses
 import drt.shared.SDateLike
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
@@ -68,7 +69,8 @@ object SPAMain  {
       GetLoggedInStatus,
       GetAirportConfig(),
       GetFixedPoints(),
-      UpdateMinuteTicker
+      UpdateMinuteTicker,
+      GetFeedStatuses()
     )
 
     initActions.foreach(SPACircuit.dispatch(_))

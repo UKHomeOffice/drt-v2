@@ -10,6 +10,7 @@ import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 
 import scala.collection.immutable.{Map, Seq}
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.scalajs.js.Date
@@ -48,7 +49,7 @@ case class RootModel(
                       showActualIfAvailable: Boolean = true,
                       userRoles: Pot[List[String]] = Empty,
                       minuteTicker: Int = 0,
-                      feedStatuses: Pot[Map[String, Int]] = Empty
+                      feedStatuses: Pot[FeedStatuses] = Empty
                     )
 
 object PollDelay {
@@ -88,7 +89,8 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new LoggedInStatusHandler(zoomRW(identity)((m, v) => m)),
       new NoopHandler(zoomRW(identity)((m, v) => m)),
       new UserRolesHandler(zoomRW(_.userRoles)((m, v) => m.copy(userRoles = v))),
-      new MinuteTickerHandler(zoomRW(_.minuteTicker)((m, v) => m.copy(minuteTicker = v)))
+      new MinuteTickerHandler(zoomRW(_.minuteTicker)((m, v) => m.copy(minuteTicker = v))),
+      new FeedsStatusHandler(zoomRW(_.feedStatuses)((m, v) => m.copy(feedStatuses = v)))
     )
 
     composedhandlers
