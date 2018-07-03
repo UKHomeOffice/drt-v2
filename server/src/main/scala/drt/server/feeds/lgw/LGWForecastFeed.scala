@@ -48,23 +48,25 @@ class LGWForecastFeed(boxConfigFilePath: String, userId: String, ukBfGalForecast
     BoxConfig.readFrom(new FileReader(boxFile))
   }
 
-  def getArrivals: Try[List[Arrival]] =
+  def getArrivals: Try[List[Arrival]] = {
+    log.info(s"About to get Arrivals from box.com")
     for {
       client <- getApiConnection
       galFileToDownload <- getTheLatestFileInfo(client)
       theData <- downloadTheData(client, galFileToDownload)
     } yield getArrivalsFromData(galFileToDownload.getName, theData)
+  }
 
   def getArrivalsFromData(fileName: String, theData: String): List[Arrival] = {
     val rows = theData.split("\n")
     if (rows.length <= 1) throw new Exception(s"The latest forecast file '$fileName' has no data.")
     val header = rows.head
-    log.debug(s"The header of the CSV file $fileName is: '$header'.")
+    log.info(s"The header of the CSV file $fileName is: '$header'.")
     if (header.split(",").size != TOTAL_COLUMNS) {
       log.warn(s"The CSV file header has does not have $TOTAL_COLUMNS, This is the header [$header].")
     }
     val body = rows.tail.filterNot(row => StringUtils.isBlank(row.replaceAll(",", "")))
-    log.debug(s"The latest forecast file has ${body.length} rows.")
+    log.info(s"The latest forecast file has ${body.length} rows.")
     body.flatMap(toArrival).toList
   }
 
@@ -171,17 +173,20 @@ object LGWForecastFeed {
     val userId = config.getString("feeds.gatwick.forecast.userId")
     val folderId = config.getString("feeds.gatwick.forecast.folderId")
     val initialDelayImmediately = 100 milliseconds
-    val pollInterval = 1 hours
+    val pollInterval = 1.hours
+    log.info(s"About to connect to box.com for LGW forecast feed")
     val feed = new LGWForecastFeed(boxConfigFilePath, userId = userId, ukBfGalForecastFolderId = folderId)
+    log.info(s"We created a feed: $feed")
     val tickingSource: Source[FeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollInterval, NotUsed)
       .withAttributes(ActorAttributes.supervisionStrategy(Supervision.restartingDecider))
       .map(_ => {
+         log.info(s"LGW forecast feed tick.")
          feed.getArrivals match {
           case Success(arrivals) =>
             log.info(s"Got forecast Arrivals ${arrivals.size}.")
             ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
           case Failure(e: BoxAPIResponseException) =>
-            log.error(e.getResponse, e)
+            log.error(s"BOX API Exception: ${e.getResponse}", e)
             ArrivalsFeedFailure(e.toString, SDate.now())
           case Failure(t) =>
             log.info(s"Failed to fetch LGW forecast arrivals. $t")
