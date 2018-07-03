@@ -18,7 +18,7 @@ pipeline:
       - DOCKER_USERNAME=drt_ci
     image: quay.io/ukhomeofficedigital/drone-docker
     registry: docker.digital.homeoffice.gov.uk
-    repo: docker.digital.homeoffice.gov.uk/drt/drt
+    repo: docker.digital.homeoffice.gov.uk/drt/drt-dev
     secrets: [ docker_password ]
     tags:
       - ${DRONE_COMMIT_SHA}
