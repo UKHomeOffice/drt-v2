@@ -4,10 +4,10 @@ pipeline:
      drone_s3_cache_mode: "pull"
 
   build:
-    image: hseeberger/scala-sbt
-    #image: quay.io/ukhomeofficedigital/scala-sbt:latest
+          #image: hseeberger/scala-sbt
+    image: quay.io/ukhomeofficedigital/scala-sbt:latest
     commands:
-            # - /root/entrypoint.sh
+             - /root/entrypoint.sh
       - sbt clean test docker:stage
     environment:
       - ARTIFACTORY_USERNAME=drt_ci
