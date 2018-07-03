@@ -4,7 +4,7 @@ pipeline:
     image: quay.io/ukhomeofficedigital/scala-sbt:latest
     commands:
       - /root/entrypoint.sh
-      - sbt clean test release
+      - sbt clean test docker:stage
     environment:
       - ARTIFACTORY_USERNAME=drt_ci
     secrets:
