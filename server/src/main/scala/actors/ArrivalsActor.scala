@@ -6,6 +6,7 @@ import akka.persistence._
 import drt.shared.FlightsApi.Flights
 import drt.shared.{Arrival, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
+import server.feeds.ArrivalsFeedSuccess
 import server.protobuf.messages.FlightsMessage.{FlightStateSnapshotMessage, FlightsDiffMessage}
 import services.graphstages.Crunch
 
@@ -89,8 +90,8 @@ abstract class ArrivalsActor(now: () => SDateLike,
   }
 
   override def receiveCommand: Receive = {
-    case Flights(incomingArrivals) =>
-      log.info(s"Received flights")
+    case ArrivalsFeedSuccess(Flights(incomingArrivals), _) =>
+      log.info(s"Received ${incomingArrivals.length} arrivals")
 
       val newStateArrivals = mergeArrivals(incomingArrivals, state.arrivals)
 
