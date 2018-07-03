@@ -1,4 +1,7 @@
 pipeline:
+  drone_s3_cache_pull:
+     image: quay.io/ukhomeofficedigital/drone-s3cache:v0.1.0
+     drone_s3_cache_mode: "pull"
 
   build:
     image: quay.io/ukhomeofficedigital/scala-sbt:latest
@@ -12,6 +15,12 @@ pipeline:
     when:
       event:
         - push
+  
+  drone_s3_cache_push:
+    image: quay.io/ukhomeofficedigital/drone-s3cache:v0.1.0
+    drone_s3_cache_folders:
+      - .ivy2
+    drone_s3_cache_mode: "push"
 
   build_docker:
     environment:
