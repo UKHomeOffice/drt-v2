@@ -3,9 +3,7 @@ package services
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
-import org.joda.time.DateTimeZone
 import org.slf4j.LoggerFactory
-import services.graphstages.Crunch
 import services.graphstages.Crunch.europeLondonTimeZone
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -95,7 +93,7 @@ object CSVData {
     val eGatesHeadings = List("Pax", "Wait", "Staff req", "Act. wait time", "Act. desks")
     val relevantQueues = queues
       .filterNot(_ == Queues.Transfer)
-    val queueHeadings = relevantQueues.map(queue=> Queues.queueDisplayNames.getOrElse(queue, queue))
+    val queueHeadings = relevantQueues.map(queue => Queues.queueDisplayNames.getOrElse(queue, queue))
       .flatMap(qn => List.fill(colHeadings.length)(Queues.exportQueueDisplayNames.getOrElse(qn, qn))).mkString(",")
     val headingsLine1 = "Date,," + queueHeadings +
       ",Misc,PCP Staff,PCP Staff"
@@ -178,9 +176,33 @@ object CSVData {
   def flightsWithSplitsToCSVWithHeadings(flightsWithSplits: List[ApiFlightWithSplits]): String =
     flightsWithSplitsToCSVHeadings + lineEnding + flightsWithSplitsToCSV(flightsWithSplits)
 
+  def actualAPIHeadings(flightsWithSplits: List[ApiFlightWithSplits]): Seq[String] =
+    flightsWithSplits.flatMap(f => actualAPISplitsAndHeadingsFromFlight(f).map(_._1)).distinct.sorted
 
+  def actualAPISplitsAndHeadingsFromFlight(flightWithSplits: ApiFlightWithSplits): Set[(String, Double)] = flightWithSplits
+    .splits
+    .collect {
+      case s: ApiSplits if s.source == SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages =>
+        s.splits.map(s => {
+          val ptaq = PaxTypeAndQueue(s.passengerType, s.queueType)
+          (s"API Actual - ${PaxTypesAndQueues.displayName(ptaq)}", s.paxCount)
+        })
+    }
+    .flatten
+
+  def actualAPISplitsForFlightInHeadingOrder(flight: ApiFlightWithSplits, headings: Seq[String]) =
+    headings.map(h => actualAPISplitsAndHeadingsFromFlight(flight).toMap.getOrElse(h, 0.0))
+
+  def actualAPIDataForFlights(flights: List[ApiFlightWithSplits], headings: Seq[String]) = flights
+    .map(f => actualAPISplitsForFlightInHeadingOrder(f, headings))
+
+
+  val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrderWithFastTrack)
+
+
+  def flightsWithSplitsToCSVIncludingAPIDataWithHeadings(flightsWithSplits: List[ApiFlightWithSplits]): String =
+    flightsWithSplitsToCSVHeadings + "," + actualAPIHeadings(flightsWithSplits) + lineEnding + flightsWithSplitsToCSV(flightsWithSplits)
   def flightsWithSplitsToCSVHeadings: String = {
-    val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrderWithFastTrack)
     val headings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax," +
       headingsForSplitSource(queueNames, "API") + "," +
       headingsForSplitSource(queueNames, "Historical") + "," +
@@ -194,31 +216,45 @@ object CSVData {
 
     val csvData = flightsWithSplits.sortBy(_.apiFlight.PcpTime).map(fws => {
 
-      val flightCsvFields = List(
-        fws.apiFlight.IATA,
-        fws.apiFlight.ICAO,
-        fws.apiFlight.Origin,
-        fws.apiFlight.Gate.getOrElse("") + "/" + fws.apiFlight.Stand.getOrElse(""),
-        fws.apiFlight.Status,
-        Try(SDate(fws.apiFlight.Scheduled, europeLondonTimeZone).toISODateOnly).getOrElse(""),
-        Try(SDate(fws.apiFlight.Scheduled, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
-        fws.apiFlight.Estimated.map(SDate(_, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
-        fws.apiFlight.Actual.map(SDate(_, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
-        fws.apiFlight.EstimatedChox.map(SDate(_, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
-        fws.apiFlight.ActualChox.map(SDate(_, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
-        fws.apiFlight.PcpTime.map(SDate(_, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
-        fws.apiFlight.ActPax.getOrElse(0),
-        ArrivalHelper.bestPax(fws.apiFlight)
-      ) ++
-        queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages).getOrElse(q, "")}") ++
-        queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, SplitRatiosNs.SplitSources.Historical).getOrElse(q, "")}") ++
-        queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, SplitRatiosNs.SplitSources.TerminalAverage).getOrElse(q, "")}")
+      flightToCsvRow(queueNames, fws)
+    })
+    asCSV(csvData)
+  }
 
-      flightCsvFields
-    }).map(_.mkString(",")).mkString(lineEnding)
+  def asCSV(csvData: List[List[Any]]) = csvData.map(_.mkString(",")).mkString(lineEnding)
+
+  def flightsWithSplitsWithAPIActualsToCSVWithHeadings(flights: List[ApiFlightWithSplits]) = {
+    val apiHeadings = actualAPIHeadings(flights)
+    val headings = flightsWithSplitsToCSVHeadings + "," + apiHeadings.mkString(",")
+    val csvData = flights.map(f => {
+      flightToCsvRow(queueNames, f).mkString(",") + "," + actualAPISplitsForFlightInHeadingOrder(f, apiHeadings).mkString(",")
+
+    })
+
+    headings + lineEnding + csvData.mkString(lineEnding)
+  }
 
 
-    csvData
+  def flightToCsvRow(queueNames: Seq[String], fws: ApiFlightWithSplits) = {
+    List(
+      fws.apiFlight.IATA,
+      fws.apiFlight.ICAO,
+      fws.apiFlight.Origin,
+      fws.apiFlight.Gate.getOrElse("") + "/" + fws.apiFlight.Stand.getOrElse(""),
+      fws.apiFlight.Status,
+      Try(SDate(fws.apiFlight.Scheduled, europeLondonTimeZone).toISODateOnly).getOrElse(""),
+      Try(SDate(fws.apiFlight.Scheduled, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
+      fws.apiFlight.Estimated.map(SDate(_, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
+      fws.apiFlight.Actual.map(SDate(_, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
+      fws.apiFlight.EstimatedChox.map(SDate(_, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
+      fws.apiFlight.ActualChox.map(SDate(_, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
+      fws.apiFlight.PcpTime.map(SDate(_, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
+      fws.apiFlight.ActPax.getOrElse(0),
+      ArrivalHelper.bestPax(fws.apiFlight)
+    ) ++
+      queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages).getOrElse(q, "")}") ++
+      queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, SplitRatiosNs.SplitSources.Historical).getOrElse(q, "")}") ++
+      queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, SplitRatiosNs.SplitSources.TerminalAverage).getOrElse(q, "")}")
   }
 
   def queuePaxForFlightUsingSplits(fws: ApiFlightWithSplits, splitSource: String): Map[QueueName, Int] =
@@ -228,22 +264,19 @@ object CSVData {
       .map(splits => ApiSplitsToSplitRatio.flightPaxPerQueueUsingSplitsAsRatio(splits, fws.apiFlight))
       .getOrElse(Map())
 
-  def headingsForSplitSource(queueNames: Seq[String], source: String): String = {
-    queueNames
-      .map(q => {
-        val queueName = Queues.queueDisplayNames(q)
-        s"$source $queueName"
-      })
-      .mkString(",")
-  }
+  def headingsForSplitSource(queueNames: Seq[String], source: String): String = queueNames
+    .map(q => {
+      val queueName = Queues.queueDisplayNames(q)
+      s"$source $queueName"
+    })
+    .mkString(",")
 
   def multiDayToSingleExport(exportDays: Seq[Future[Option[String]]]): Future[String] = Future.sequence(
     exportDays.map(fd => fd.recoverWith {
       case e =>
         log.error(s"Failed to recover data for day ${e.getMessage}")
         Future(None)
-    }
-    )).map(_.collect {
+    })).map(_.collect {
     case Some(s) => s
   }.mkString(lineEnding))
 }
