@@ -11,6 +11,8 @@ pipeline:
       event:
         - push
         - pull_request
+      branch: 
+        - drone        
 
   drone_s3_cache_push:
     image: quay.io/ukhomeofficedigital/drone-s3cache:v0.1.0

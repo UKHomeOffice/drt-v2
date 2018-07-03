@@ -1,5 +1,8 @@
-describe('Arrivals page', function () {
-  const schDT = new Date().toISOString().split("T")[0];
+describe('Arrivals page', () => {
+
+  const currentDateTime = new Date();
+  const schDT = currentDateTime.toISOString().split("T")[0];
+  const currentMillis = currentDateTime.getTime();
 
   function addFlight() {
     cy.request('POST',
@@ -28,7 +31,13 @@ describe('Arrivals page', function () {
       });
   }
 
-  before(function () {
+  function loadManifestFixture() {
+    cy.request('POST', '/v2/test/live/test/manifest', manifest);
+    cy.request('GET', '/v2/test/live/export/arrivals/' + currentMillis + '/T1?startHour=0&endHour=24')
+    cy.get('.pax-api');
+  }
+
+  before(() => {
     cy.request('DELETE', '/v2/test/live/test/data');
   });
 
@@ -61,7 +70,7 @@ describe('Arrivals page', function () {
         "NationalityCountryCode": "GBR"
       },
       {
-        "DocumentIssuingCountryCode": "ZIM",
+        "DocumentIssuingCountryCode": "ZWE",
         "PersonType": "P",
         "DocumentLevel": "Primary",
         "Age": "30",
@@ -72,7 +81,7 @@ describe('Arrivals page', function () {
         "PassengerIdentifier": "",
         "DocumentType": "P",
         "PoavKey": "2",
-        "NationalityCountryCode": "GBR"
+        "NationalityCountryCode": "ZWE"
       },
       {
         "DocumentIssuingCountryCode": "AUS",
@@ -86,22 +95,50 @@ describe('Arrivals page', function () {
         "PassengerIdentifier": "",
         "DocumentType": "P",
         "PoavKey": "3",
-        "NationalityCountryCode": "GBR"
+        "NationalityCountryCode": "AUS"
       }
     ],
     "ScheduledTimeOfArrival": "00:15:00",
     "FileId": "fileID"
   };
 
-  it('Displays a flight after it has been ingested via the live feed', function () {
+  const csvWithNoApiSplits = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est " +
+    "Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical " +
+    "EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal " +
+    "Average Non-EEA,Terminal Average Fast Track" + "\n" +
+    "TS0123,TS0123,AMS,46/44R,On Chocks," + schDT + ",01:15,01:55,01:55,02:01,02:05,02:18,51,51,17,0,34,,,,,,13,37,1,";
+
+  const csvWithhAPISplits = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival," +
+    "Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates," +
+    "Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal " +
+    "Average Non-EEA,Terminal Average Fast Track,API Actual - EEA (Machine Readable),API Actual - Non EEA (Non Visa)," +
+    "API Actual - Non EEA (Visa),API Actual - eGates" + "\n" +
+    "TS0123,TS0123,AMS,46/44R,On Chocks," + schDT + ",01:15,01:55,01:55,02:01,02:05,02:18,51,51,17,0,34,,,,,,13,37,1,,0.0,1.0,1.0,1.0";
+
+  it('Displays a flight after it has been ingested via the live feed', () => {
     addFlight();
     cy.visit('/v2/test/live#terminal/T1/current/arrivals//0/24');
     cy.get("#arrivals").contains("TS0123")
   });
 
-  it('Allows you to view API splits in the flights export', function () {
-    cy.request('POST',
-      '/v2/test/live/test/manifest',
-      manifest);
+  it('Does not show API splits in the flights export for regular users', () => {
+    loadManifestFixture();
+    cy.request('POST', '/v2/test/live/test/manifest', manifest);
+    cy.request('GET', '/v2/test/live/export/arrivals/' + currentMillis + '/T1?startHour=0&endHour=24').then((resp) => {
+      expect(resp.body).to.equal(csvWithNoApiSplits)
+    });
+  });
+
+  it('Allows you to view API splits in the flights export for super users', () => {
+    loadManifestFixture();
+    cy.request({
+      method: 'GET',
+      url: '/v2/test/live/export/arrivals/' + currentMillis + '/T1?startHour=0&endHour=24',
+      headers: {
+        "X-Auth-Roles": "drt:team"
+      }
+    }).then((resp) => {
+      expect(resp.body).to.equal(csvWithhAPISplits)
+    })
   });
 });

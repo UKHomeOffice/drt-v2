@@ -45,6 +45,8 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
 
     val startSystem = () => {
       val cs = startCrunchSystem(None, None, None, None, true)
+      subscribeStaffingActors(cs)
+      startScheduledFeedImports(cs)
       cs.killSwitches
     }
     val testActors = List(

@@ -170,7 +170,8 @@ object PaxTypesAndQueues {
     visaNationalToDesk -> "Non EEA (Visa)",
     nonVisaNationalToDesk -> "Non EEA (Non Visa)",
     visaNationalToFastTrack -> "Fast Track (Visa)",
-    nonVisaNationalToFastTrack -> "Fast Track (Non Visa)"
+    nonVisaNationalToFastTrack -> "Fast Track (Non Visa)",
+    transitToTransfer -> "Transfer"
   )
 
   /*todo - we should move the usages of this to airportConfig */
