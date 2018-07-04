@@ -59,7 +59,6 @@ case class LtnLiveFeed(endPoint: String, token: String, username: String, passwo
               val arrivals = flights.filter(_.DepartureArrivalType == Option("A"))
               log.info(s"parsed ${arrivals.length} arrivals from ${flights.length} flights")
               ArrivalsFeedSuccess(Flights(arrivals.map(f => {
-                log.info(s"ltnflight: ${f.AirlineIATA}${f.FlightNumber}: ${f.ScheduledDateTime}")
                 toArrival(f)
               })))
             case Failure(t) =>
