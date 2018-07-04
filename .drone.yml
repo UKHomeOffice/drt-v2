@@ -1,11 +1,11 @@
 pipeline:
   
   build:
-    #image: hseeberger/scala-sbt
-    image: quay.io/ukhomeofficedigital/scala-sbt:latest
+    image massimodanieli/docker-scala-sbtjs
+    #image: quay.io/ukhomeofficedigital/scala-sbt:latest
     commands:
       - /root/entrypoint.sh
-      - sbt clean package
+      - sbt clean test package
     environment:
       - ARTIFACTORY_USERNAME=drt_ci
     secrets:
