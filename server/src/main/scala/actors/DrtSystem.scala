@@ -21,6 +21,7 @@ import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared.{AirportConfig, Arrival, MilliDate, SDateLike}
 import org.apache.spark.sql.SparkSession
+import org.joda.time.DateTimeZone
 import play.api.Configuration
 import server.feeds.acl.AclFeed
 import server.feeds.{ArrivalsFeedSuccess, FeedResponse}
@@ -285,8 +286,11 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         val username = config.getString("feeds.ltn.live.username").getOrElse(throw new Exception("Missing live feed username"))
         val password = config.getString("feeds.ltn.live.password").getOrElse(throw new Exception("Missing live feed password"))
         val token = config.getString("feeds.ltn.live.token").getOrElse(throw new Exception("Missing live feed token"))
-        println(s"details: $url, $username, $password, $token")
-        LtnLiveFeed(url, token, username, password).tickingSource
+        val timeZone = config.getString("feeds.ltn.live.timezone") match {
+          case Some(tz) => DateTimeZone.forID(tz)
+          case None => DateTimeZone.UTC
+        }
+        LtnLiveFeed(url, token, username, password, timeZone).tickingSource
       case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
     }
     feed

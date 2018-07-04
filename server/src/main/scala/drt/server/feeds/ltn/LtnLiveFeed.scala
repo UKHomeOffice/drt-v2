@@ -8,7 +8,9 @@ import akka.http.scaladsl.model.headers.RawHeader
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import drt.shared.Arrival
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
+import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedResponse}
 import services.SDate
@@ -19,7 +21,7 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
-case class LtnLiveFeed(endPoint: String, token: String, username: String, password: String) {
+case class LtnLiveFeed(endPoint: String, token: String, username: String, password: String, timeZone: DateTimeZone) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def tickingSource: Source[FeedResponse, Cancellable] = Source
@@ -56,7 +58,10 @@ case class LtnLiveFeed(endPoint: String, token: String, username: String, passwo
             case Success(flights) =>
               val arrivals = flights.filter(_.DepartureArrivalType == Option("A"))
               log.info(s"parsed ${arrivals.length} arrivals from ${flights.length} flights")
-              ArrivalsFeedSuccess(Flights(arrivals.map(_.toArrival)))
+              ArrivalsFeedSuccess(Flights(arrivals.map(f => {
+                log.info(s"ltnflight: ${f.AirlineIATA}${f.FlightNumber}: ${f.ScheduledDateTime}")
+                toArrival(f)
+              })))
             case Failure(t) =>
               log.info(s"Failed to parse: $t")
               ArrivalsFeedFailure(t.toString)
@@ -65,6 +70,37 @@ case class LtnLiveFeed(endPoint: String, token: String, username: String, passwo
       }
 
     Await.result(responseFuture, 5 seconds)
+  }
+
+  def toArrival(ltnFeedFlight: LtnLiveFlight): Arrival = Arrival(
+    Operator = ltnFeedFlight.AirlineDesc,
+    Status = ltnFeedFlight.FlightStatusDesc.getOrElse("Scheduled"),
+    Estimated = ltnFeedFlight.EstimatedDateTime.map(sdateWithTimeZoneApplied),
+    Actual = ltnFeedFlight.ActualDateTime.map(sdateWithTimeZoneApplied),
+    EstimatedChox = None,
+    ActualChox = ltnFeedFlight.AIBT.map(sdateWithTimeZoneApplied),
+    Gate = ltnFeedFlight.GateCode,
+    Stand = ltnFeedFlight.StandCode,
+    MaxPax = ltnFeedFlight.MaxPax,
+    ActPax = ltnFeedFlight.TotalPassengerCount,
+    TranPax = None,
+    RunwayID = ltnFeedFlight.Runway,
+    BaggageReclaimId = ltnFeedFlight.BaggageClaimUnit,
+    FlightID = None,
+    AirportID = "LTN",
+    Terminal = ltnFeedFlight.TerminalCode.getOrElse(throw new Exception("Missing terminal")),
+    rawICAO = ltnFeedFlight.AirlineICAO.getOrElse(throw new Exception("Missing ICAO carrier code")) + ltnFeedFlight.FlightNumber.getOrElse(throw new Exception("Missing flight number")),
+    rawIATA = ltnFeedFlight.AirlineIATA.getOrElse(throw new Exception("Missing IATA carrier code")) + ltnFeedFlight.FlightNumber.getOrElse(throw new Exception("Missing flight number")),
+    Origin = ltnFeedFlight.OriginDestAirportIATA.getOrElse(throw new Exception("Missing origin IATA port code")),
+    Scheduled = sdateWithTimeZoneApplied(ltnFeedFlight.ScheduledDateTime.getOrElse(throw new Exception("Missing scheduled date time"))),
+    PcpTime = None,
+    LastKnownPax = None
+  )
+
+  def sdateWithTimeZoneApplied(dt: String): MillisSinceEpoch = {
+    val rawDate = SDate(dt)
+    val offsetMillis = timeZone.getOffset(rawDate.millisSinceEpoch)
+    rawDate.millisSinceEpoch - offsetMillis
   }
 }
 
@@ -89,33 +125,7 @@ case class LtnLiveFlight(TotalPassengerCount: Option[Int],
                          AIBT: Option[String],
                          ActualDateTime: Option[String],
                          OriginDestAirportIATA: Option[String]
-                        ) {
-  def toArrival: Arrival = Arrival(
-    Operator = AirlineDesc,
-    Status = FlightStatusDesc.getOrElse("Scheduled"),
-    Estimated = EstimatedDateTime.map(est => SDate.parseString(est).millisSinceEpoch),
-    Actual = ActualDateTime.map(act => SDate.parseString(act).millisSinceEpoch),
-    EstimatedChox = None,
-    ActualChox = AIBT.map(act => SDate.parseString(act).millisSinceEpoch),
-    Gate = GateCode,
-    Stand = StandCode,
-    MaxPax = MaxPax,
-    ActPax = TotalPassengerCount,
-    TranPax = None,
-    RunwayID = Runway,
-    BaggageReclaimId = BaggageClaimUnit,
-    FlightID = None,
-    AirportID = "LTN",
-    Terminal = TerminalCode.getOrElse(throw new Exception("Missing terminal")),
-    rawICAO = AirlineICAO.getOrElse(throw new Exception("Missing ICAO carrier code")) + FlightNumber.getOrElse(throw new Exception("Missing flight number")),
-    rawIATA = AirlineIATA.getOrElse(throw new Exception("Missing IATA carrier code")) + FlightNumber.getOrElse(throw new Exception("Missing flight number")),
-    Origin = OriginDestAirportIATA.getOrElse(throw new Exception("Missing origin IATA port code")),
-    Scheduled = SDate.parseString(ScheduledDateTime.getOrElse(throw new Exception("Missing scheduled date time"))).millisSinceEpoch,
-    PcpTime = None,
-    LastKnownPax = None
-  )
-
-}
+                        )
 
 object LtnLiveFlightProtocol extends DefaultJsonProtocol {
   implicit val ltnLiveFlightConverter: RootJsonFormat[LtnLiveFlight] = jsonFormat21(LtnLiveFlight)
