@@ -4,25 +4,24 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 
 
 sealed trait FeedStatus {
-  val name: String
   val date: MillisSinceEpoch
 }
 
-case class FeedStatusSuccess(name: String, date: MillisSinceEpoch, updateCount: Int) extends FeedStatus
+case class FeedStatusSuccess(date: MillisSinceEpoch, updateCount: Int) extends FeedStatus
 
-case class FeedStatusFailure(name: String, date: MillisSinceEpoch, message: String) extends FeedStatus
+case class FeedStatusFailure(date: MillisSinceEpoch, message: String) extends FeedStatus
 
 case class FeedStatuses(name: String,
                         statuses: List[FeedStatus],
-                        lastSuccess: Option[MillisSinceEpoch],
-                        lastFailure: Option[MillisSinceEpoch],
+                        lastSuccessAt: Option[MillisSinceEpoch],
+                        lastFailureAt: Option[MillisSinceEpoch],
                         lastUpdatesAt: Option[MillisSinceEpoch]) {
   def addStatus(createdAt: SDateLike, updatedArrivals: Set[Arrival]): FeedStatuses = {
-    add(FeedStatusSuccess(name, createdAt.millisSinceEpoch, updatedArrivals.size))
+    add(FeedStatusSuccess(createdAt.millisSinceEpoch, updatedArrivals.size))
   }
 
   def addStatus(createdAt: SDateLike, failureMessage: String): FeedStatuses = {
-    add(FeedStatusFailure(name, createdAt.millisSinceEpoch, failureMessage))
+    add(FeedStatusFailure(createdAt.millisSinceEpoch, failureMessage))
   }
 
   def add(newStatus: FeedStatus): FeedStatuses = {
@@ -32,10 +31,10 @@ case class FeedStatuses(name: String,
     newStatus match {
       case fss: FeedStatusSuccess =>
         val newLastUpdatesAt = if (fss.updateCount > 0) Option(newStatus.date) else lastUpdatesAt
-        this.copy(statuses = statusesLimited, lastSuccess = Option(newStatus.date), lastUpdatesAt = newLastUpdatesAt)
+        this.copy(statuses = statusesLimited, lastSuccessAt = Option(newStatus.date), lastUpdatesAt = newLastUpdatesAt)
 
       case fsf: FeedStatusFailure =>
-        this.copy(statuses = statusesLimited, lastFailure = Option(newStatus.date))
+        this.copy(statuses = statusesLimited, lastFailureAt = Option(newStatus.date))
     }
   }
 }

@@ -26,14 +26,14 @@ object StatusPage {
               <.div(
                 <.h2(feed.name),
                 <.ul(
-                  <.li(s"Last successful connection: ${feed.lastSuccess.map(lu => SDate(lu).prettyDateTime()).getOrElse("n/a")}"),
+                  <.li(s"Last successful connection: ${feed.lastSuccessAt.map(lu => SDate(lu).prettyDateTime()).getOrElse("n/a")}"),
                   <.li(s"Last updates: ${feed.lastUpdatesAt.map(lu => SDate(lu).prettyDateTime()).getOrElse("n/a")}"),
-                  <.li(s"Last failed connection: ${feed.lastFailure.map(lu => SDate(lu).prettyDateTime()).getOrElse("n/a")}")
+                  <.li(s"Last failed connection: ${feed.lastFailureAt.map(lu => SDate(lu).prettyDateTime()).getOrElse("n/a")}")
                 ),
                 <.ul(
                   feed.statuses.sortBy(_.date).reverse.map {
-                    case FeedStatusSuccess(_, date, updates) => <.li(s"${SDate(date).hms()}: $updates updates")
-                    case FeedStatusFailure(_, date, msg) => <.li(s"${SDate(date).hms()}: Connection failed")
+                    case FeedStatusSuccess(date, updates) => <.li(s"${SDate(date).hms()}: $updates updates")
+                    case FeedStatusFailure(date, msg) => <.li(s"${SDate(date).hms()}: Connection failed")
                   }.toVdomArray
                 )
               )

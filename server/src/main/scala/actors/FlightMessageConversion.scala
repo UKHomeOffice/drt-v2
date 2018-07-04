@@ -3,8 +3,9 @@ package actors
 import drt.shared._
 import org.apache.commons.lang3.StringUtils
 import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, PaxTypeAndQueueCountMessage, SplitMessage}
-import server.protobuf.messages.FlightsMessage.{FlightMessage, FlightStateSnapshotMessage}
+import server.protobuf.messages.FlightsMessage.{FeedStatusMessage, FeedStatusesMessage, FlightMessage, FlightStateSnapshotMessage}
 import services.{ArrivalsState, SDate}
+
 import scala.util.{Success, Try}
 
 object FlightMessageConversion {
@@ -14,6 +15,23 @@ object FlightMessageConversion {
       val arrival = FlightMessageConversion.flightMessageToApiFlight(fm)
       (arrival.uniqueId, arrival)
     }).toMap, FeedStatuses("", List(), None, None, None))
+  }
+
+  def feedStatusesFromFeedStatusesMessage(message: FeedStatusesMessage) = {
+    FeedStatuses(
+      name = message.name.getOrElse("n/a"),
+      statuses = message.statuses.map(feedStatusFromFeedStatusMessage).toList,
+      lastSuccessAt = message.lastSuccessAt,
+      lastFailureAt = message.lastFailureAt,
+      lastUpdatesAt = message.lastUpdatesAt
+    )
+  }
+
+  def feedStatusFromFeedStatusMessage(message: FeedStatusMessage): FeedStatus = {
+    if (message.updates.isDefined)
+      FeedStatusSuccess(message.date.getOrElse(0L), message.updates.getOrElse(0))
+    else
+      FeedStatusFailure(message.date.getOrElse(0L), message.message.getOrElse("n/a"))
   }
 
   def flightWithSplitsToMessage(f: ApiFlightWithSplits): FlightWithSplitsMessage = {

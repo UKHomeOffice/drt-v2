@@ -2,6 +2,7 @@ package server.protobuf.messages;
 
 message FlightStateSnapshotMessage {
     repeated FlightMessage flightMessages = 1;
+    optional FeedStatusesMessage statuses = 2;
 }
 
 message FlightMessage {
@@ -33,4 +34,19 @@ message FlightsDiffMessage {
     optional int64 createdAt = 1;
     repeated int32 removals = 2;
     repeated FlightMessage updates = 3;
+}
+
+message FeedStatusesMessage {
+    optional string name = 1;
+    repeated FeedStatusMessage statuses = 2;
+    optional int64 lastSuccessAt = 3;
+    optional int64 lastFailureAt = 4;
+    optional int64 lastUpdatesAt = 5;
+}
+
+message FeedStatusMessage {
+    optional string name = 1;
+    optional int64 date = 2;
+    optional int32 updates = 3;
+    optional string message = 4;
 }

@@ -101,7 +101,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
       val newStateArrivals = mergeArrivals(incomingArrivals, state.arrivals)
 
       val updatedArrivals = newStateArrivals.values.toSet -- state.arrivals.values.toSet
-
+//println(s"statuses name: ${state.feedStatuses.name}")
       val statuses: FeedStatuses = state.feedStatuses.addStatus(createdAt, updatedArrivals)
 
       state = ArrivalsState(newStateArrivals, statuses)
