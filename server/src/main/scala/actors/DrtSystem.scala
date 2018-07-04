@@ -16,10 +16,12 @@ import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.lgw.{LGWFeed, LGWForecastFeed}
 import drt.server.feeds.lhr.live.LHRLiveFeed
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
+import drt.server.feeds.ltn.LtnLiveFeed
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared._
 import org.apache.spark.sql.SparkSession
+import org.joda.time.DateTimeZone
 import play.api.Configuration
 import server.feeds.acl.AclFeed
 import server.feeds.{ArrivalsFeedSuccess, FeedResponse}
@@ -291,6 +293,16 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
       case "LGW" => LGWFeed()
       case "BHX" => BHXLiveFeed(config.getString("feeds.bhx.soap.endPointUrl").getOrElse(throw new Exception("Missing BHX live feed URL")))
+      case "LTN" =>
+        val url = config.getString("feeds.ltn.live.url").getOrElse(throw new Exception("Missing live feed url"))
+        val username = config.getString("feeds.ltn.live.username").getOrElse(throw new Exception("Missing live feed username"))
+        val password = config.getString("feeds.ltn.live.password").getOrElse(throw new Exception("Missing live feed password"))
+        val token = config.getString("feeds.ltn.live.token").getOrElse(throw new Exception("Missing live feed token"))
+        val timeZone = config.getString("feeds.ltn.live.timezone") match {
+          case Some(tz) => DateTimeZone.forID(tz)
+          case None => DateTimeZone.UTC
+        }
+        LtnLiveFeed(url, token, username, password, timeZone).tickingSource
       case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
     }
     feed
