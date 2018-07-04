@@ -3,7 +3,7 @@ package drt.client.components
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.shared.{FeedStatusSuccess, FeedStatuses}
+import drt.shared.{FeedStatusFailure, FeedStatusSuccess, FeedStatuses}
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.vdom.html_<^._
 
@@ -33,6 +33,7 @@ object StatusPage {
                 <.ul(
                   feed.statuses.sortBy(_.date).reverse.map {
                     case FeedStatusSuccess(_, date, updates) => <.li(s"${SDate(date).hms()}: $updates updates")
+                    case FeedStatusFailure(_, date, msg) => <.li(s"${SDate(date).hms()}: Connection failed")
                   }.toVdomArray
                 )
               )
