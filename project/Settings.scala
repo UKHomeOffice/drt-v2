@@ -98,7 +98,7 @@ object Settings {
     "com.hierynomus" % "sshj" % sshJ,
     "com.lihaoyi" %% "pprint" % pprint,
     "com.lihaoyi" %%% "utest" % uTest % Test,
-    "com.mfglabs" %% "commons-aws" % awsCommons,
+    "com.mfglabs" %% "commons-aws" % "0.12.2",
 
     "javax.mail" % "mail" % "1.4.7",
     "info.folone" %% "poi-scala" % "0.18",
@@ -129,7 +129,7 @@ object Settings {
     "org.apache.commons" % "commons-csv" % csvCommons,
     "org.apache.spark" % "spark-mllib_2.11" % sparkMlLib,
     "org.apache.spark" % "spark-sql_2.11" % "2.2.1",
-    "uk.gov.homeoffice" %% "drt-birmingham-schema_2.12" % "1.0.1",
+    "uk.gov.homeoffice" %% "drt-birmingham-schema" % "1.0.1",
     "org.codehaus.janino" % "janino" % "3.0.7",
     "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
     "org.iq80.leveldb" % "leveldb" % levelDb,
