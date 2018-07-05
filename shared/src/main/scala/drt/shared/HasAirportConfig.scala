@@ -316,7 +316,8 @@ object AirportConfigs {
       "Morning shift, N, {date}, 07:00, 13:59, 15",
       "Afternoon shift, N, {date}, 14:00, 16:59, 10",
       "Evening shift, N, {date}, 17:00, 23:59, 17"
-    )
+    ),
+    eGateBankSize = 10
   )
   val stn = AirportConfig(
     portCode = "STN",
