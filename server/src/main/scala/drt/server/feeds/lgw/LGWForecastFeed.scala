@@ -16,9 +16,9 @@ import org.joda.time.format.{DateTimeFormat, DateTimeFormatter, ISODateTimeForma
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedResponse}
 import services.SDate
+import services.graphstages.Crunch
 
 import scala.collection.JavaConversions._
-import scala.collection.immutable.Seq
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -33,7 +33,7 @@ class LGWForecastFeed(boxConfigFilePath: String, userId: String, ukBfGalForecast
   val regex: Regex = """(([^,^\"])*(\".*\")*([^,^\"])*)(,|$)""".r
   val MAX_CACHE_ENTRIES = 100
   val accessTokenCache = new InMemoryLRUAccessTokenCache(MAX_CACHE_ENTRIES)
-  val ddMMYYYHHMMFormat : DateTimeFormatter = DateTimeFormat.forPattern("dd/MM/yyyy HH:mm")
+  val ddMMYYYHHMMFormat: DateTimeFormatter = DateTimeFormat.forPattern("dd/MM/yyyy HH:mm")
 
   val boxConfig: BoxConfig = getBoxConfig
 
@@ -70,21 +70,20 @@ class LGWForecastFeed(boxConfigFilePath: String, userId: String, ukBfGalForecast
     body.flatMap(toArrival).toList
   }
 
-  private def toArrival(row: String): Option[Arrival] = Try {
+  def toArrival(row: String): Option[Arrival] = Try {
 
-    val fields = regex.findAllIn(row).map(field => StringUtils.removeEnd(StringUtils.removeStart(StringUtils.removeEnd(field, ","), "\"" ), "\"")).toList
+    val fields = regex.findAllIn(row).map(field => StringUtils.removeEnd(StringUtils.removeStart(StringUtils.removeEnd(field, ","), "\""), "\"")).toList
 
-    def scheduledDateAsIsoString = Try {
-      val dateTimeField = StringUtils.trimToEmpty(fields(DATE_TIME))
-      ddMMYYYHHMMFormat.parseDateTime(dateTimeField).toString(ISODateTimeFormat.dateTime)
+    def dateAsISOStringWithoutZone(dateString: String): String = Try {
+      val dateTimeField = StringUtils.trimToEmpty(dateString)
+      ddMMYYYHHMMFormat.parseDateTime(dateTimeField).toString(ISODateTimeFormat.dateHourMinuteSecond)
     } match {
       case Success(value) => value
       case Failure(exception) => throw new Exception(s"""Cannot get the scheduled date from "$row".""", exception)
     }
 
-    val scheduledDate = scheduledDateAsIsoString
-
-    new Arrival(Operator = None,
+    Arrival(
+      Operator = None,
       Status = PORT_FORECAST,
       Estimated = None,
       Actual = None,
@@ -107,15 +106,15 @@ class LGWForecastFeed(boxConfigFilePath: String, userId: String, ukBfGalForecast
       rawICAO = fields(FLIGHT_NUMBER),
       rawIATA = fields(FLIGHT_NUMBER),
       Origin = fields(AIRPORT_CODE),
-      Scheduled = SDate.parseString(scheduledDate).millisSinceEpoch,
+      Scheduled = SDate(dateAsISOStringWithoutZone(fields(DATE_TIME)), Crunch.europeLondonTimeZone).millisSinceEpoch,
       PcpTime = None,
-      None)
+      None
+    )
   } match {
     case Success(arrival) => Some(arrival)
     case Failure(error) =>
       log.error(s"""Cannot parse arrival from "$row".""", error)
       None
-
   }
 
   private def downloadTheData(boxAPIConnection: BoxAPIConnection, latestFile: BoxFile#Info): Try[String] =
@@ -180,8 +179,8 @@ object LGWForecastFeed {
     val tickingSource: Source[FeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollInterval, NotUsed)
       .withAttributes(ActorAttributes.supervisionStrategy(Supervision.restartingDecider))
       .map(_ => {
-         log.info(s"LGW forecast feed tick.")
-         feed.getArrivals match {
+        log.info(s"LGW forecast feed tick.")
+        feed.getArrivals match {
           case Success(arrivals) =>
             log.info(s"Got forecast Arrivals ${arrivals.size}.")
             ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
@@ -191,7 +190,7 @@ object LGWForecastFeed {
           case Failure(t) =>
             log.info(s"Failed to fetch LGW forecast arrivals. $t")
             ArrivalsFeedFailure(t.toString, SDate.now())
-         }
+        }
       })
 
     tickingSource

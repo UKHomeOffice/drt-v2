@@ -176,7 +176,7 @@ class Application @Inject()(implicit val config: Configuration,
 
   log.info(s"Application using airportConfig $airportConfig")
 
-  def cacheActorRef: AskableActorRef = system.actorOf(Props(classOf[CachingCrunchReadActor]), name = "cache-actor")
+  val cacheActorRef: AskableActorRef = system.actorOf(Props(classOf[CachingCrunchReadActor]), name = "cache-actor")
 
   def previousDay(date: MilliDate): SDateLike = {
     val oneDayInMillis = 60 * 60 * 24 * 1000L
