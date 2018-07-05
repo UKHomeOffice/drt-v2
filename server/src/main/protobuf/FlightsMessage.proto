@@ -45,8 +45,7 @@ message FeedStatusesMessage {
 }
 
 message FeedStatusMessage {
-    optional string name = 1;
-    optional int64 date = 2;
-    optional int32 updates = 3;
-    optional string message = 4;
+    optional int64 date = 1;
+    optional int32 updates = 2;
+    optional string message = 3;
 }

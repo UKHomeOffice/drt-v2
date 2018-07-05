@@ -36,6 +36,7 @@ trait RecoveryLogging {
 trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   val log: Logger
 
+  val oneMegaByte = 1024 * 1024
   var bytesSinceSnapshotCounter = 0
 
   def unknownMessage: PartialFunction[Any, Unit] = {

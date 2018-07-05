@@ -11,6 +11,11 @@ case class FeedStatusSuccess(date: MillisSinceEpoch, updateCount: Int) extends F
 
 case class FeedStatusFailure(date: MillisSinceEpoch, message: String) extends FeedStatus
 
+object FeedStatus {
+  def apply(date: MillisSinceEpoch, updateCount: Int): FeedStatusSuccess = FeedStatusSuccess(date, updateCount)
+  def apply(date: MillisSinceEpoch, message: String): FeedStatusFailure = FeedStatusFailure(date, message)
+}
+
 case class FeedStatuses(name: String,
                         statuses: List[FeedStatus],
                         lastSuccessAt: Option[MillisSinceEpoch],

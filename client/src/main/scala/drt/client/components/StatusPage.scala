@@ -24,12 +24,13 @@ object StatusPage {
           feedsMP().render((allFeedStatuses: Seq[FeedStatuses]) => {
             allFeedStatuses.map(feed =>
               <.div(
-                <.h2(feed.name),
+                <.h3(feed.name),
                 <.ul(
                   <.li(s"Last successful connection: ${feed.lastSuccessAt.map(lu => SDate(lu).prettyDateTime()).getOrElse("n/a")}"),
                   <.li(s"Last updates: ${feed.lastUpdatesAt.map(lu => SDate(lu).prettyDateTime()).getOrElse("n/a")}"),
                   <.li(s"Last failed connection: ${feed.lastFailureAt.map(lu => SDate(lu).prettyDateTime()).getOrElse("n/a")}")
                 ),
+                <.h4("Recent connections"),
                 <.ul(
                   feed.statuses.sortBy(_.date).reverse.map {
                     case FeedStatusSuccess(date, updates) => <.li(s"${SDate(date).hms()}: $updates updates")

@@ -10,14 +10,38 @@ import scala.util.{Success, Try}
 
 object FlightMessageConversion {
 
-  def arrivalsStateFromSnapshotMessage(snMessage: FlightStateSnapshotMessage) = {
-    ArrivalsState(snMessage.flightMessages.map(fm => {
-      val arrival = FlightMessageConversion.flightMessageToApiFlight(fm)
-      (arrival.uniqueId, arrival)
-    }).toMap, FeedStatuses("", List(), None, None, None))
+  def arrivalsStateToSnapshotMessage(state: ArrivalsState): FlightStateSnapshotMessage = {
+    val maybeStatusMessages = state.maybeFeedStatuses.flatMap(feedStatuses => feedStatusesToMessage(feedStatuses))
+
+    FlightStateSnapshotMessage(
+      state.arrivals.values.map(apiFlightToFlightMessage).toSeq,
+      maybeStatusMessages
+    )
   }
 
-  def feedStatusesFromFeedStatusesMessage(message: FeedStatusesMessage) = {
+  def feedStatusesToMessage(statuses: FeedStatuses): Option[FeedStatusesMessage] = {
+    val statusMessages = statuses.statuses.map(feedStatusToMessage)
+
+    Option(FeedStatusesMessage(Option(statuses.name), statusMessages, statuses.lastSuccessAt, statuses.lastFailureAt, statuses.lastUpdatesAt))
+  }
+
+  def feedStatusToMessage(feedStatus: FeedStatus): FeedStatusMessage = feedStatus match {
+    case s: FeedStatusSuccess => FeedStatusMessage(Option(s.date), Option(s.updateCount), None)
+    case s: FeedStatusFailure => FeedStatusMessage(Option(s.date), None, Option(s.message))
+  }
+
+  def arrivalsStateFromSnapshotMessage(snMessage: FlightStateSnapshotMessage): ArrivalsState = {
+    val arrivalsMap = snMessage.flightMessages.map(fm => {
+      val arrival = FlightMessageConversion.flightMessageToApiFlight(fm)
+      (arrival.uniqueId, arrival)
+    }).toMap
+
+    val maybeStatuses = snMessage.statuses.map(feedStatusesFromFeedStatusesMessage)
+
+    ArrivalsState(arrivalsMap, maybeStatuses)
+  }
+
+  def feedStatusesFromFeedStatusesMessage(message: FeedStatusesMessage): FeedStatuses = {
     FeedStatuses(
       name = message.name.getOrElse("n/a"),
       statuses = message.statuses.map(feedStatusFromFeedStatusMessage).toList,
@@ -49,7 +73,7 @@ object FlightMessageConversion {
     )
   }
 
-  def paxTypeAndQueueCountToMessage(ptqc: ApiPaxTypeAndQueueCount) = {
+  def paxTypeAndQueueCountToMessage(ptqc: ApiPaxTypeAndQueueCount): PaxTypeAndQueueCountMessage = {
     PaxTypeAndQueueCountMessage(
       Option(ptqc.passengerType.name),
       Option(ptqc.queueType),

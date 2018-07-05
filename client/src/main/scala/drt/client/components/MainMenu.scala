@@ -24,7 +24,7 @@ object MainMenu {
 
   val dashboardMenuItem = MenuItem(0, _ => "Dashboard", Icon.dashboard, TerminalsDashboardLoc(None))
 
-  def statusMenuItem(position: Int): MenuItem = MenuItem(position, _ => "Status", Icon.exclamationTriangle, StatusLoc)
+  def statusMenuItem(position: Int): MenuItem = MenuItem(position, _ => "Status", Icon.barChart, StatusLoc)
 
   def menuItems(airportConfig: AirportConfig, currentLoc: Loc): List[MenuItem] = {
     val terminalDepsMenuItems = airportConfig.terminalNames.zipWithIndex.map {

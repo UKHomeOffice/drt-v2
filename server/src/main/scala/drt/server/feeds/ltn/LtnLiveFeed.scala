@@ -16,7 +16,7 @@ import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedResponse}
 import services.SDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
@@ -58,15 +58,15 @@ case class LtnLiveFeed(endPoint: String, token: String, username: String, passwo
             case Success(flights) =>
               val arrivals = flights.filter(_.DepartureArrivalType == Option("A"))
               log.info(s"parsed ${arrivals.length} arrivals from ${flights.length} flights")
-              ArrivalsFeedSuccess(Flights(arrivals.map(f => {
-                log.info(s"ltnflight: ${f.AirlineIATA}${f.FlightNumber}: ${f.ScheduledDateTime}")
-                toArrival(f)
-              })))
+              ArrivalsFeedSuccess(Flights(arrivals.map(toArrival)))
             case Failure(t) =>
               log.info(s"Failed to parse: $t")
               ArrivalsFeedFailure(t.toString)
           }
         case HttpResponse(status, _, _, _) => ArrivalsFeedFailure(status.defaultMessage())
+      }
+      .recoverWith {
+        case throwable => Future(ArrivalsFeedFailure(throwable.toString))
       }
 
     Await.result(responseFuture, 5 seconds)

@@ -144,11 +144,15 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   override def getFeedStatus(): Future[Seq[FeedStatuses]] = {
     val actors: Seq[AskableActorRef] = Seq(liveArrivalsActor, forecastArrivalsActor)
 
-    val statuses = actors.map(askable => askable.ask(GetFeedStatuses)(new Timeout(5 seconds)).map {
-      case statuses: FeedStatuses => statuses
-    })
+    val statuses = actors
+      .map(askable => askable.ask(GetFeedStatuses)(new Timeout(5 seconds)).map {
+        case Some(fs: FeedStatuses) => Option(fs)
+        case _ => None
+      })
 
-    Future.sequence(statuses)
+    Future
+      .sequence(statuses)
+      .map(maybeStatuses => maybeStatuses.collect { case Some(fs) => fs })
   }
 
   def aclTerminalMapping(portCode: String): TerminalName => TerminalName = portCode match {
