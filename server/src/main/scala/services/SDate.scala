@@ -28,6 +28,8 @@ object SDate {
 
     def getMinutes(): Int = dateTime.getMinuteOfHour
 
+    def getSeconds(): Int = dateTime.getSecondOfMinute
+
     def addDays(daysToAdd: Int): SDateLike = dateTime.plusDays(daysToAdd)
 
     def addMonths(monthsToAdd: Int): SDateLike = dateTime.plusMonths(monthsToAdd)

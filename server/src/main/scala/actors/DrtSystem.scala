@@ -19,7 +19,7 @@ import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.server.feeds.ltn.LtnLiveFeed
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{Flights, TerminalName}
-import drt.shared.{AirportConfig, Arrival, MilliDate, SDateLike}
+import drt.shared._
 import org.apache.spark.sql.SparkSession
 import org.joda.time.DateTimeZone
 import play.api.Configuration
@@ -51,6 +51,8 @@ trait DrtSystemInterface {
   val aclFeed: AclFeed
 
   def run(): Unit
+
+  def getFeedStatus(): Future[Seq[FeedStatuses]]
 }
 
 case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig) extends DrtSystemInterface {
@@ -139,6 +141,20 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     }
   }
 
+  override def getFeedStatus(): Future[Seq[FeedStatuses]] = {
+    val actors: Seq[AskableActorRef] = Seq(liveArrivalsActor, forecastArrivalsActor)
+
+    val statuses = actors
+      .map(askable => askable.ask(GetFeedStatuses)(new Timeout(5 seconds)).map {
+        case Some(fs: FeedStatuses) => Option(fs)
+        case _ => None
+      })
+
+    Future
+      .sequence(statuses)
+      .map(maybeStatuses => maybeStatuses.collect { case Some(fs) => fs })
+  }
+
   def aclTerminalMapping(portCode: String): TerminalName => TerminalName = portCode match {
     case "LGW" => (tIn: TerminalName) => Map("1I" -> "S", "2I" -> "N").getOrElse(tIn, "")
     case "MAN" => (tIn: TerminalName) => Map("T1" -> "T1", "T2" -> "T2", "T3" -> "T3").getOrElse(tIn, "")
@@ -215,7 +231,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   def initialArrivals(arrivalsActor: AskableActorRef): Future[Option[Set[Arrival]]] = {
     val canWaitMinutes = 5
     val arrivalsFuture: Future[Option[Set[Arrival]]] = arrivalsActor.ask(GetState)(new Timeout(canWaitMinutes minutes)).map {
-      case ArrivalsState(arrivals) => Option(arrivals.values.toSet)
+      case ArrivalsState(arrivals, _) => Option(arrivals.values.toSet)
       case _ => None
     }
 

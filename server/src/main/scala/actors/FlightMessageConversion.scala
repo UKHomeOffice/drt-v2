@@ -3,17 +3,59 @@ package actors
 import drt.shared._
 import org.apache.commons.lang3.StringUtils
 import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, PaxTypeAndQueueCountMessage, SplitMessage}
-import server.protobuf.messages.FlightsMessage.{FlightMessage, FlightStateSnapshotMessage}
+import server.protobuf.messages.FlightsMessage.{FeedStatusMessage, FeedStatusesMessage, FlightMessage, FlightStateSnapshotMessage}
 import services.{ArrivalsState, SDate}
+
 import scala.util.{Success, Try}
 
 object FlightMessageConversion {
 
-  def arrivalsStateFromSnapshotMessage(snMessage: FlightStateSnapshotMessage) = {
-    ArrivalsState(snMessage.flightMessages.map(fm => {
+  def arrivalsStateToSnapshotMessage(state: ArrivalsState): FlightStateSnapshotMessage = {
+    val maybeStatusMessages = state.maybeFeedStatuses.flatMap(feedStatuses => feedStatusesToMessage(feedStatuses))
+
+    FlightStateSnapshotMessage(
+      state.arrivals.values.map(apiFlightToFlightMessage).toSeq,
+      maybeStatusMessages
+    )
+  }
+
+  def feedStatusesToMessage(statuses: FeedStatuses): Option[FeedStatusesMessage] = {
+    val statusMessages = statuses.statuses.map(feedStatusToMessage)
+
+    Option(FeedStatusesMessage(Option(statuses.name), statusMessages, statuses.lastSuccessAt, statuses.lastFailureAt, statuses.lastUpdatesAt))
+  }
+
+  def feedStatusToMessage(feedStatus: FeedStatus): FeedStatusMessage = feedStatus match {
+    case s: FeedStatusSuccess => FeedStatusMessage(Option(s.date), Option(s.updateCount), None)
+    case s: FeedStatusFailure => FeedStatusMessage(Option(s.date), None, Option(s.message))
+  }
+
+  def arrivalsStateFromSnapshotMessage(snMessage: FlightStateSnapshotMessage): ArrivalsState = {
+    val arrivalsMap = snMessage.flightMessages.map(fm => {
       val arrival = FlightMessageConversion.flightMessageToApiFlight(fm)
       (arrival.uniqueId, arrival)
-    }).toMap)
+    }).toMap
+
+    val maybeStatuses = snMessage.statuses.map(feedStatusesFromFeedStatusesMessage)
+
+    ArrivalsState(arrivalsMap, maybeStatuses)
+  }
+
+  def feedStatusesFromFeedStatusesMessage(message: FeedStatusesMessage): FeedStatuses = {
+    FeedStatuses(
+      name = message.name.getOrElse("n/a"),
+      statuses = message.statuses.map(feedStatusFromFeedStatusMessage).toList,
+      lastSuccessAt = message.lastSuccessAt,
+      lastFailureAt = message.lastFailureAt,
+      lastUpdatesAt = message.lastUpdatesAt
+    )
+  }
+
+  def feedStatusFromFeedStatusMessage(message: FeedStatusMessage): FeedStatus = {
+    if (message.updates.isDefined)
+      FeedStatusSuccess(message.date.getOrElse(0L), message.updates.getOrElse(0))
+    else
+      FeedStatusFailure(message.date.getOrElse(0L), message.message.getOrElse("n/a"))
   }
 
   def flightWithSplitsToMessage(f: ApiFlightWithSplits): FlightWithSplitsMessage = {
@@ -31,7 +73,7 @@ object FlightMessageConversion {
     )
   }
 
-  def paxTypeAndQueueCountToMessage(ptqc: ApiPaxTypeAndQueueCount) = {
+  def paxTypeAndQueueCountToMessage(ptqc: ApiPaxTypeAndQueueCount): PaxTypeAndQueueCountMessage = {
     PaxTypeAndQueueCountMessage(
       Option(ptqc.passengerType.name),
       Option(ptqc.queueType),

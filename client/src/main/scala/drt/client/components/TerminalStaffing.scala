@@ -3,7 +3,7 @@ package drt.client.components
 import diode.data.Pot
 import drt.client.actions.Actions._
 import drt.client.logger.{Logger, LoggerFactory}
-import drt.client.services.FixedPoints._
+import FixedPoints._
 import drt.client.services.JSDateConversions._
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -278,4 +278,53 @@ object TerminalStaffing {
     }
   }
 
+}
+
+object FixedPoints {
+  def filterTerminal(terminalName: TerminalName, rawFixedPoints: String): String = {
+    rawFixedPoints.split("\n").toList.filter(line => {
+      val terminal = line.split(",").toList.map(_.trim) match {
+        case _ :: t :: _ => t
+        case _ => Nil
+      }
+      terminal == terminalName
+    }).mkString("\n")
+  }
+
+  def filterOtherTerminals(terminalName: TerminalName, rawFixedPoints: String): String = {
+    rawFixedPoints.split("\n").toList.filter(line => {
+      val terminal = line.split(",").toList.map(_.trim) match {
+        case _ :: t :: _ => t
+        case _ => Nil
+      }
+      terminal != terminalName
+    }).mkString("\n")
+  }
+
+  def removeTerminalNameAndDate(rawFixedPoints: String): String = {
+    val lines = rawFixedPoints.split("\n").toList.map(line => {
+      val withTerminal = line.split(",").toList.map(_.trim)
+      val withOutTerminal = withTerminal match {
+        case fpName :: _ :: _ :: tail => fpName.toString :: tail
+        case _ => Nil
+      }
+      withOutTerminal.mkString(", ")
+    })
+    lines.mkString("\n")
+  }
+
+  def addTerminalNameAndDate(rawFixedPoints: String, terminalName: String): String = {
+    val today: SDateLike = SDate.midnightThisMorning()
+    val todayString = today.ddMMyyString
+
+    val lines = rawFixedPoints.split("\n").toList.map(line => {
+      val withoutTerminal = line.split(",").toList.map(_.trim)
+      val withTerminal = withoutTerminal match {
+        case fpName :: tail => fpName.toString :: terminalName :: todayString :: tail
+        case _ => Nil
+      }
+      withTerminal.mkString(", ")
+    })
+    lines.mkString("\n")
+  }
 }

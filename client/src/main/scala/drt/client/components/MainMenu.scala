@@ -22,33 +22,38 @@ object MainMenu {
 
   case class MenuItem(idx: Int, label: (Props) => VdomNode, icon: Icon, location: Loc)
 
-  val staticMenuItems = List(
-    MenuItem(0, _ => "Dashboard", Icon.dashboard, TerminalsDashboardLoc(None))
-  )
+  val dashboardMenuItem = MenuItem(0, _ => "Dashboard", Icon.dashboard, TerminalsDashboardLoc(None))
 
-  def menuItems(airportConfig: AirportConfig, currentLoc: Loc): List[MenuItem] = {
-    val terminalDepsMenuItems = airportConfig.terminalNames.zipWithIndex.map {
+  def statusMenuItem(position: Int): MenuItem = MenuItem(position, _ => "Status", Icon.barChart, StatusLoc)
+
+  def menuItems(airportConfig: AirportConfig, currentLoc: Loc, userRoles: List[String]): List[MenuItem] = {
+    def terminalDepsMenuItems(idxOffset: Int): List[MenuItem] = airportConfig.terminalNames.zipWithIndex.map {
       case (tn, idx) =>
         val targetLoc = currentLoc match {
           case tptl: TerminalPageTabLoc =>
             TerminalPageTabLoc(tn, tptl.mode, tptl.subMode, tptl.date, tptl.timeRangeStartString, tptl.timeRangeEndString)
           case _ => TerminalPageTabLoc(tn)
         }
-        MenuItem(idx + staticMenuItems.length, _ => tn, Icon.calculator, targetLoc)
+        MenuItem(idx + idxOffset, _ => tn, Icon.calculator, targetLoc)
     }.toList
 
-    staticMenuItems ::: terminalDepsMenuItems
+    val items = if (userRoles.contains("drt:team"))
+      dashboardMenuItem :: statusMenuItem(1) :: Nil
+    else
+      dashboardMenuItem :: Nil
+
+    items ::: terminalDepsMenuItems(items.length)
   }
 
   private class Backend($: BackendScope[Props, Unit]) {
     def render(props: Props) = {
-      val airportConfigPotRCP: ReactConnectProxy[Pot[AirportConfig]] = SPACircuit.connect(_.airportConfig)
+      val airportConfigAndRoles = SPACircuit.connect(m => (m.airportConfig, m.userRoles))
 
-      airportConfigPotRCP(airportConfigPotMP => {
+      airportConfigAndRoles(airportConfigAndRolesPotMP => {
+        val (airportConfigPot, userRolesPot) = airportConfigAndRolesPotMP()
         <.div(
-          airportConfigPotMP().render(airportConfig => {
-
-            val children: immutable.Seq[TagOf[LI]] = for (item <- menuItems(airportConfig, props.currentLoc)) yield {
+          airportConfigPot.render(airportConfig => {
+            val children: immutable.Seq[TagOf[LI]] = for (item <- menuItems(airportConfig, props.currentLoc, userRolesPot.getOrElse(List()))) yield {
               val active = (props.currentLoc, item.location) match {
                 case (TerminalPageTabLoc(tn, _, _, _, _, _), TerminalPageTabLoc(tni, _, _, _, _, _)) => tn == tni
                 case (current, itemLoc) => current == itemLoc
