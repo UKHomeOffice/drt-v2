@@ -50,7 +50,7 @@ object Settings {
     val levelDbJni = "1.8"
     val renjin = "0.9.2646"
     val awsSdk = "1.11.89"
-    val awsCommons = "0.10.0"
+    val awsCommons = "0.12.2"
     val csvCommons = "1.4"
     val pprint = "0.4.3"
     val scalaCheck = "1.13.4"
@@ -64,7 +64,7 @@ object Settings {
     val sparkMlLib = "2.2.1"
     val pac4jSaml = "2.0.0-RC1"
     val openSaml = "2.6.1"
-    val drtBirminghamSchema = "1.0.0"
+    val drtBirminghamSchema = "1.0.1"
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
   }
@@ -129,7 +129,7 @@ object Settings {
     "org.apache.commons" % "commons-csv" % csvCommons,
     "org.apache.spark" % "spark-mllib_2.11" % sparkMlLib,
     "org.apache.spark" % "spark-sql_2.11" % "2.2.1",
-    "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
+    "uk.gov.homeoffice" %% "drt-birmingham-schema_2.12" % "1.0.1",
     "org.codehaus.janino" % "janino" % "3.0.7",
     "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
     "org.iq80.leveldb" % "leveldb" % levelDb,
