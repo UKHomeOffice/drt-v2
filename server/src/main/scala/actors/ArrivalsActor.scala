@@ -27,6 +27,29 @@ class ForecastBaseArrivalsActor(now: () => SDateLike,
 
     withRemovalsAndUpdates
   }
+
+  override def handleFeedSuccess(incomingArrivals: Seq[Arrival], createdAt: SDateLike): Unit = {
+    log.info(s"Received arrivals (base)")
+    val incomingArrivalsWithKeys = incomingArrivals.map(a => (a.uniqueId, a)).toMap
+    val (removals: Set[Int], updates: Set[Arrival]) = removalsAndUpdates(incomingArrivalsWithKeys, state.arrivals)
+
+    val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, updates.size)
+    val statuses: FeedStatuses = updateFeedStatuses(newStatus, state.maybeFeedStatuses)
+
+    state = state.copy(arrivals = incomingArrivalsWithKeys, maybeFeedStatuses = Option(statuses))
+
+    if (removals.nonEmpty || updates.nonEmpty) persistArrivalUpdates(removals, updates)
+
+    snapshotIfNeeded(state)
+  }
+
+  def removalsAndUpdates(incomingArrivalsWithKeys: Map[Int, Arrival], existingArrivalsWithKeys: Map[Int, Arrival]): (Set[Int], Set[Arrival]) = {
+    val currentKeys = existingArrivalsWithKeys.keys.toSet
+    val newKeys = incomingArrivalsWithKeys.keys.toSet
+    val removalKeys = currentKeys -- newKeys
+    val updatedArrivals = incomingArrivalsWithKeys.values.toSet -- existingArrivalsWithKeys.values.toSet
+    (removalKeys, updatedArrivals)
+  }
 }
 
 class ForecastPortArrivalsActor(now: () => SDateLike,
@@ -38,7 +61,8 @@ class ForecastPortArrivalsActor(now: () => SDateLike,
   override val snapshotInterval = 100
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def consumeDiffsMessage(diffsMessage: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState = consumeUpdates(diffsMessage, existingState)
+  def consumeDiffsMessage(diffsMessage: FlightsDiffMessage,
+                          existingState: ArrivalsState): ArrivalsState = consumeUpdates(diffsMessage, existingState)
 }
 
 class LiveArrivalsActor(now: () => SDateLike,
@@ -49,7 +73,8 @@ class LiveArrivalsActor(now: () => SDateLike,
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def consumeDiffsMessage(diffsMessage: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState = consumeUpdates(diffsMessage, existingState)
+  def consumeDiffsMessage(diffsMessage: FlightsDiffMessage,
+                          existingState: ArrivalsState): ArrivalsState = consumeUpdates(diffsMessage, existingState)
 }
 
 abstract class ArrivalsActor(now: () => SDateLike,
@@ -106,52 +131,9 @@ abstract class ArrivalsActor(now: () => SDateLike,
   }
 
   override def receiveCommand: Receive = {
-    case ArrivalsFeedSuccess(Flights(incomingArrivals), createdAt) =>
-      log.info(s"Received flights")
+    case ArrivalsFeedSuccess(Flights(incomingArrivals), createdAt) => handleFeedSuccess(incomingArrivals, createdAt)
 
-      val newStateArrivals = mergeArrivals(incomingArrivals, state.arrivals)
-
-      val updatedArrivals = newStateArrivals.values.toSet -- state.arrivals.values.toSet
-
-      val statuses: FeedStatuses = state.maybeFeedStatuses match {
-        case Some(feedStatuses) => feedStatuses.addStatus(createdAt, updatedArrivals)
-        case None => FeedStatuses(name, List(), None, None, None).addStatus(createdAt, updatedArrivals)
-      }
-
-      state = state.copy(arrivals = newStateArrivals, maybeFeedStatuses = Option(statuses))
-
-      persistFeedStatus(FeedStatusSuccess(createdAt.millisSinceEpoch, updatedArrivals.size))
-      if (updatedArrivals.nonEmpty) persistArrivalUpdates(Set(), updatedArrivals)
-
-      snapshotIfNeeded(state)
-
-
-    case ArrivalsFeedFailure(message, createdAt) =>
-      val statuses: FeedStatuses = state.maybeFeedStatuses match {
-        case Some(feedStatuses) => feedStatuses.addStatus(createdAt, message)
-        case None => FeedStatuses(name, List(), None, None, None).addStatus(createdAt, message)
-      }
-      state = state.copy(maybeFeedStatuses = Option(statuses))
-      persistFeedStatus(FeedStatusFailure(createdAt.millisSinceEpoch, message))
-
-    case Some(ArrivalsState(incomingArrivals, _)) if incomingArrivals != state.arrivals =>
-      log.info(s"Received updated ArrivalsState")
-      val currentKeys = state.arrivals.keys.toSet
-      val newKeys = incomingArrivals.keys.toSet
-      val removalKeys = currentKeys -- newKeys
-      val updatedArrivals = incomingArrivals.values.toSet -- state.arrivals.values.toSet
-
-      state = state.copy(arrivals = incomingArrivals, state.maybeFeedStatuses)
-
-      if (removalKeys.nonEmpty || updatedArrivals.nonEmpty) persistArrivalUpdates(removalKeys, updatedArrivals)
-
-      snapshotIfNeeded(state)
-
-    case Some(ArrivalsState(incomingArrivals, _)) if incomingArrivals == state.arrivals =>
-      log.info(s"Received updated ArrivalsState. No changes")
-
-    case None =>
-      log.info(s"Received None. Presumably feed connection failed")
+    case ArrivalsFeedFailure(message, createdAt) => handleFeedFailure(message, createdAt)
 
     case GetState =>
       log.info(s"Received GetState request. Sending ArrivalsState with ${state.arrivals.size} arrivals")
@@ -169,6 +151,40 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
     case other =>
       log.info(s"Received unexpected message ${other.getClass}")
+  }
+
+  def handleFeedFailure(message: String, createdAt: SDateLike): Unit = {
+    log.info("Received feed failure")
+    val newStatus = FeedStatusFailure(createdAt.millisSinceEpoch, message)
+    val statuses: FeedStatuses = updateFeedStatuses(newStatus, state.maybeFeedStatuses)
+
+    state = state.copy(maybeFeedStatuses = Option(statuses))
+    persistFeedStatus(FeedStatusFailure(createdAt.millisSinceEpoch, message))
+  }
+
+  def handleFeedSuccess(incomingArrivals: Seq[Arrival], createdAt: SDateLike): Unit = {
+    log.info(s"Received arrivals")
+
+    val newStateArrivals = mergeArrivals(incomingArrivals, state.arrivals)
+    val updatedArrivals = newStateArrivals.values.toSet -- state.arrivals.values.toSet
+    val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, updatedArrivals.size)
+
+    val statuses: FeedStatuses = updateFeedStatuses(newStatus, state.maybeFeedStatuses)
+
+    state = state.copy(arrivals = newStateArrivals, maybeFeedStatuses = Option(statuses))
+
+    persistFeedStatus(FeedStatusSuccess(createdAt.millisSinceEpoch, updatedArrivals.size))
+    if (updatedArrivals.nonEmpty) persistArrivalUpdates(Set(), updatedArrivals)
+
+    snapshotIfNeeded(state)
+  }
+
+  def updateFeedStatuses(newStatus: FeedStatus, maybeFeedStatuses: Option[FeedStatuses]): FeedStatuses = {
+    val feedStatuses = maybeFeedStatuses match {
+      case Some(fs) => fs
+      case None => FeedStatuses(name, List(), None, None, None)
+    }
+    feedStatuses.add(newStatus)
   }
 
   def mergeArrivals(incomingArrivals: Seq[Arrival], existingArrivals: Map[Int, Arrival]): Map[Int, Arrival] = {
@@ -194,8 +210,8 @@ abstract class ArrivalsActor(now: () => SDateLike,
     val message = feedStatusToMessage(feedStatus)
 
     persist(message) { msg =>
-      val messageBytes = message.serializedSize
-      log.info(s"Persisting $messageBytes bytes of $feedStatus")
+      val messageBytes = msg.serializedSize
+      log.info(s"Persisting $messageBytes bytes of ${msg.getClass}")
       context.system.eventStream.publish(msg)
       bytesSinceSnapshotCounter += messageBytes
       logPersistedBytesCounter(bytesSinceSnapshotCounter)

@@ -21,8 +21,8 @@ case class FeedStatuses(name: String,
                         lastSuccessAt: Option[MillisSinceEpoch],
                         lastFailureAt: Option[MillisSinceEpoch],
                         lastUpdatesAt: Option[MillisSinceEpoch]) {
-  def addStatus(createdAt: SDateLike, updatedArrivals: Set[Arrival]): FeedStatuses = {
-    add(FeedStatusSuccess(createdAt.millisSinceEpoch, updatedArrivals.size))
+  def addStatus(createdAt: SDateLike, updateCount: Int): FeedStatuses = {
+    add(FeedStatusSuccess(createdAt.millisSinceEpoch, updateCount))
   }
 
   def addStatus(createdAt: SDateLike, failureMessage: String): FeedStatuses = {

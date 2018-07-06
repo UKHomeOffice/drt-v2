@@ -2,6 +2,7 @@ package actors
 
 import drt.shared._
 import org.apache.commons.lang3.StringUtils
+import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, PaxTypeAndQueueCountMessage, SplitMessage}
 import server.protobuf.messages.FlightsMessage.{FeedStatusMessage, FeedStatusesMessage, FlightMessage, FlightStateSnapshotMessage}
 import services.{ArrivalsState, SDate}
@@ -9,6 +10,7 @@ import services.{ArrivalsState, SDate}
 import scala.util.{Success, Try}
 
 object FlightMessageConversion {
+  val log: Logger = LoggerFactory.getLogger(getClass.toString)
 
   def arrivalsStateToSnapshotMessage(state: ArrivalsState): FlightStateSnapshotMessage = {
     val maybeStatusMessages = state.maybeFeedStatuses.flatMap(feedStatuses => feedStatusesToMessage(feedStatuses))

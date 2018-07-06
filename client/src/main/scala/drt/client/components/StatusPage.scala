@@ -22,8 +22,9 @@ object StatusPage {
         <.div(
           <.h2("Feed statuses"),
           feedsMP().render((allFeedStatuses: Seq[FeedStatuses]) => {
-            allFeedStatuses.map(feed =>
-              <.div(
+            allFeedStatuses.map(feed => {
+              val rag = if (feed.lastSuccessAt.getOrElse(0L) > feed.lastFailureAt.getOrElse(0L)) "green" else "red"
+              <.div(^.className := s"feed-status $rag",
                 <.h3(feed.name),
                 <.ul(
                   <.li(s"Last successful connection: ${feed.lastSuccessAt.map(lu => SDate(lu).prettyDateTime()).getOrElse("n/a")}"),
@@ -38,7 +39,7 @@ object StatusPage {
                   }.toVdomArray
                 )
               )
-            ).toVdomArray
+            }).toVdomArray
           })
         )
       }

@@ -3,6 +3,7 @@ package services.crunch
 import controllers.{ArrivalGenerator, Forecast}
 import drt.shared.FlightsApi.Flights
 import drt.shared.{CrunchApi, Queues}
+import server.feeds.ArrivalsFeedSuccess
 import services.{SDate, TryRenjin}
 import services.graphstages.Crunch._
 
@@ -22,7 +23,7 @@ class PlanningPageSpec() extends CrunchTestLike {
     val weekBeginning = "2017-01-02T00:00Z"
 
     val forecastArrivalDay1 = ArrivalGenerator.apiFlight(flightId = Option(1), schDt = day1, iata = "BA0001", terminal = "T1", actPax = Option(5))
-    val forecastFlights = Flights(List(forecastArrivalDay1))
+    val baseFlights = Flights(List(forecastArrivalDay1))
 
     val crunch = runCrunchGraph(
       now = () => SDate(weekBeginning).addDays(-1),
@@ -38,7 +39,7 @@ class PlanningPageSpec() extends CrunchTestLike {
 
     crunch.forecastTestProbe.receiveOne(5 seconds)
 
-    offerAndWait(crunch.baseArrivalsInput, Option(forecastFlights))
+    offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseFlights))
 
     val expected = List(
       ForecastTimeSlot(SDate("2017-01-02T00:00Z").millisSinceEpoch, 20, 1),
