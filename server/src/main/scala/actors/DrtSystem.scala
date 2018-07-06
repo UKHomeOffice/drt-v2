@@ -313,7 +313,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   }
 
   def forecastArrivalsSource(portCode: String): Source[FeedResponse, Cancellable] = {
-    val forecastNoOp = Source.tick[FeedResponse](1000 days, 1000 days, ArrivalsFeedSuccess(Flights(Seq()), SDate.now()))
+    val forecastNoOp = Source.tick[FeedResponse](100 days, 100 days, ArrivalsFeedSuccess(Flights(Seq()), SDate.now()))
     val feed = portCode match {
       case "STN" => createForecastChromaFlightFeed(ChromaForecast).chromaVanillaFlights(30 minutes)
       case "LHR" => config.getString("lhr.forecast_path")
