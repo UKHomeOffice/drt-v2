@@ -28,6 +28,7 @@ import server.feeds.acl.AclFeed
 import services.PcpArrival._
 import services.SDate.implicits._
 import services.SplitsProvider.SplitProvider
+import services.graphstages.Crunch
 import services.graphstages.Crunch._
 import services.shifts.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
@@ -288,8 +289,8 @@ class Application @Inject()(implicit val config: Configuration,
 
         shiftsFuture.collect {
           case shifts: String =>
-            log.info(s"Shifts: Retrieved shifts from actor")
-            StaffTimeSlots.getShiftsForMonth(shifts, SDate(month), terminalName)
+            log.info(s"Shifts: Retrieved shifts from actor for month starting: ${SDate(month).toISOString()}")
+            StaffTimeSlots.getShiftsForMonth(shifts, SDate(month, Crunch.europeLondonTimeZone), terminalName)
         }
       }
 
