@@ -131,7 +131,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         (maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals) match {
           case (initialLiveState: Option[PortState], initialForecastState: Option[PortState], initialBaseArrivals: Option[Set[Arrival]], initialForecastArrivals: Option[Set[Arrival]], initialLiveArrivals: Option[Set[Arrival]]) =>
             val initialPortState: Option[PortState] = mergePortStates(initialLiveState, initialForecastState)
-            val crunchInputs: CrunchSystem[NotUsed, Cancellable, Cancellable] = startCrunchSystem(initialPortState, initialBaseArrivals, initialForecastArrivals, initialLiveArrivals, recrunchOnStart)
+            val crunchInputs: CrunchSystem[NotUsed, Cancellable] = startCrunchSystem(initialPortState, initialBaseArrivals, initialForecastArrivals, initialLiveArrivals, recrunchOnStart)
             subscribeStaffingActors(crunchInputs)
             startScheduledFeedImports(crunchInputs)
         }
@@ -142,7 +142,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   }
 
   override def getFeedStatus(): Future[Seq[FeedStatuses]] = {
-    val actors: Seq[AskableActorRef] = Seq(liveArrivalsActor, forecastArrivalsActor)
+    val actors: Seq[AskableActorRef] = Seq(liveArrivalsActor, forecastArrivalsActor, baseArrivalsActor)
 
     val statuses = actors
       .map(askable => askable.ask(GetFeedStatuses)(new Timeout(5 seconds)).map {
@@ -162,14 +162,14 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     case _ => (tIn: TerminalName) => s"T${tIn.take(1)}"
   }
 
-  def startScheduledFeedImports(crunchInputs: CrunchSystem[NotUsed, Cancellable, Cancellable]): Unit = {
+  def startScheduledFeedImports(crunchInputs: CrunchSystem[NotUsed, Cancellable]): Unit = {
     if (airportConfig.portCode == "LHR") config.getString("lhr.blackjack_url").map(csvUrl => {
       val requestIntervalMillis = 5 * oneMinuteMillis
       Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, requestIntervalMillis milliseconds, SDate.now().addDays(-1))
     })
   }
 
-  def subscribeStaffingActors(crunchInputs: CrunchSystem[NotUsed, Cancellable, Cancellable]): Unit = {
+  def subscribeStaffingActors(crunchInputs: CrunchSystem[NotUsed, Cancellable]): Unit = {
     shiftsActor ! AddShiftLikeSubscribers(List(crunchInputs.shifts))
     fixedPointsActor ! AddShiftLikeSubscribers(List(crunchInputs.fixedPoints))
     staffMovementsActor ! AddStaffMovementsSubscribers(List(crunchInputs.staffMovements))
@@ -180,7 +180,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
                         initialForecastArrivals: Option[Set[Arrival]],
                         initialLiveArrivals: Option[Set[Arrival]],
                         recrunchOnStart: Boolean
-                       ): CrunchSystem[NotUsed, Cancellable, Cancellable] = {
+                       ): CrunchSystem[NotUsed, Cancellable] = {
 
     val crunchInputs = CrunchSystem(CrunchProps(
       system = system,
@@ -313,7 +313,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   }
 
   def forecastArrivalsSource(portCode: String): Source[FeedResponse, Cancellable] = {
-    val forecastNoOp = Source.tick[FeedResponse](0 seconds, 30 minutes, ArrivalsFeedSuccess(Flights(Seq()), SDate.now()))
+    val forecastNoOp = Source.tick[FeedResponse](100 days, 100 days, ArrivalsFeedSuccess(Flights(Seq()), SDate.now()))
     val feed = portCode match {
       case "STN" => createForecastChromaFlightFeed(ChromaForecast).chromaVanillaFlights(30 minutes)
       case "LHR" => config.getString("lhr.forecast_path")
@@ -328,9 +328,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     feed
   }
 
-  def baseArrivalsSource(): Source[Option[Flights], Cancellable] = Source.tick(1 second, 60 minutes, NotUsed).map(_ => {
+  def baseArrivalsSource(): Source[FeedResponse, Cancellable] = Source.tick(1 second, 60 minutes, NotUsed).map(_ => {
     system.log.info(s"Requesting ACL feed")
-    aclFeed.arrivals
+    aclFeed.requestArrivals
   })
 
   def walkTimeProvider(flight: Arrival): MillisSinceEpoch =
