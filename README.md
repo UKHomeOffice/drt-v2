@@ -35,7 +35,8 @@ We take feeds from the Airports about flight statuses. Most ports use a Json bas
 This provides us data about the nationality breakdown on incoming flights. 
 
 ### Technical Stack
-Scala server. Scalajs reactjs client. Communication between client server is primarily via lihaoyi's autowire. Server is hosted in play, uses Akka streams to read the feeds, state is store in Akka actors. Some of the actors use akka persistence. 
+Scala server. Scalajs reactjs client. Communication between client server is primarily via lihaoyi's autowire. 
+Server is hosted in play, uses Akka streams to read the feeds, state is store in Akka actors. Some of the actors use akka persistence. 
 The simulation/optimization algorithm is R, taken directly from Home Office Science. 
 
 ### Physical Deployment
