@@ -1,7 +1,7 @@
 pipeline:
   
   build:
-    image: massimodanieli/docker-scala-sbtjs:dev
+    image: massimodanieli/docker-scala-sbtjs:latest
     #image: quay.io/ukhomeofficedigital/scala-sbt:latest
     commands:
       - /root/entrypoint.sh
