@@ -200,13 +200,13 @@ class CrunchTestLike
 
     if (initialShifts.nonEmpty) offerAndWait(crunchInputs.shifts, initialShifts)
     if (initialFixedPoints.nonEmpty) offerAndWait(crunchInputs.fixedPoints, initialFixedPoints)
-    if (initialManifests.manifests.nonEmpty) offerAndWait(crunchInputs.manifests, initialManifests)
+    if (initialManifests.manifests.nonEmpty) offerAndWait(crunchInputs.manifestsResponse, initialManifests)
 
     CrunchGraphInputsAndProbes(
-      crunchInputs.baseArrivals,
+      crunchInputs.baseArrivalsResponse,
       crunchInputs.forecastArrivalsResponse,
       crunchInputs.liveArrivalsResponse,
-      crunchInputs.manifests,
+      crunchInputs.manifestsResponse,
       crunchInputs.shifts,
       crunchInputs.fixedPoints,
       crunchInputs.staffMovements,

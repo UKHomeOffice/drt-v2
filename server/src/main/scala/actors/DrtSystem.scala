@@ -180,7 +180,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
                         initialForecastArrivals: Option[Set[Arrival]],
                         initialLiveArrivals: Option[Set[Arrival]],
                         recrunchOnStart: Boolean
-                       ): CrunchSystem[NotUsed, Cancellable] = {
+                       ): CrunchSystem[Cancellable] = {
 
     val crunchInputs = CrunchSystem(CrunchProps(
       system = system,

@@ -19,41 +19,41 @@ object RunnableCrunch {
 
   def groupByCodeShares(flights: Seq[ApiFlightWithSplits]): Seq[(ApiFlightWithSplits, Set[Arrival])] = flights.map(f => (f, Set(f.apiFlight)))
 
-  def apply[FR, SVM, SS, SFP, SMM, SAD](baseArrivalsSource: Source[FeedResponse, FR],
-                                             fcstArrivalsSource: Source[FeedResponse, FR],
-                                             liveArrivalsSource: Source[FeedResponse, FR],
-                                             manifestsSource: Source[DqManifests, SVM],
-                                             shiftsSource: Source[String, SS],
-                                             fixedPointsSource: Source[String, SFP],
-                                             staffMovementsSource: Source[Seq[StaffMovement], SMM],
-                                             actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
+  def apply[FR, SS, SFP, SMM, SAD](baseArrivalsSource: Source[FeedResponse, FR],
+                                   fcstArrivalsSource: Source[FeedResponse, FR],
+                                   liveArrivalsSource: Source[FeedResponse, FR],
+                                   manifestsSource: Source[FeedResponse, FR],
+                                   shiftsSource: Source[String, SS],
+                                   fixedPointsSource: Source[String, SFP],
+                                   staffMovementsSource: Source[Seq[StaffMovement], SMM],
+                                   actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
 
-                                             arrivalsGraphStage: ArrivalsGraphStage,
-                                             arrivalSplitsStage: ArrivalSplitsGraphStage,
-                                             splitsPredictorStage: SplitsPredictorBase,
-                                             workloadGraphStage: WorkloadGraphStage,
-                                             loadBatchUpdateGraphStage: BatchLoadsByCrunchPeriodGraphStage,
-                                             crunchLoadGraphStage: CrunchLoadGraphStage,
-                                             staffGraphStage: StaffGraphStage,
-                                             staffBatchUpdateGraphStage: StaffBatchUpdateGraphStage,
-                                             simulationGraphStage: SimulationGraphStage,
-                                             portStateGraphStage: PortStateGraphStage,
+                                   arrivalsGraphStage: ArrivalsGraphStage,
+                                   arrivalSplitsStage: ArrivalSplitsGraphStage,
+                                   splitsPredictorStage: SplitsPredictorBase,
+                                   workloadGraphStage: WorkloadGraphStage,
+                                   loadBatchUpdateGraphStage: BatchLoadsByCrunchPeriodGraphStage,
+                                   crunchLoadGraphStage: CrunchLoadGraphStage,
+                                   staffGraphStage: StaffGraphStage,
+                                   staffBatchUpdateGraphStage: StaffBatchUpdateGraphStage,
+                                   simulationGraphStage: SimulationGraphStage,
+                                   portStateGraphStage: PortStateGraphStage,
 
-                                             baseArrivalsActor: ActorRef,
-                                             fcstArrivalsActor: ActorRef,
-                                             liveArrivalsActor: ActorRef,
+                                   baseArrivalsActor: ActorRef,
+                                   fcstArrivalsActor: ActorRef,
+                                   liveArrivalsActor: ActorRef,
 
-                                             manifestsActor: ActorRef,
+                                   manifestsActor: ActorRef,
 
-                                             liveCrunchStateActor: ActorRef,
-                                             fcstCrunchStateActor: ActorRef,
-                                             crunchPeriodStartMillis: SDateLike => SDateLike,
-                                             now: () => SDateLike
-                                            ): RunnableGraph[(FR, FR, FR, SVM, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch)] = {
+                                   liveCrunchStateActor: ActorRef,
+                                   fcstCrunchStateActor: ActorRef,
+                                   crunchPeriodStartMillis: SDateLike => SDateLike,
+                                   now: () => SDateLike
+                                  ): RunnableGraph[(FR, FR, FR, FR, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch)] = {
 
     val arrivalsKillSwitch = KillSwitches.single[ArrivalsDiff]
 
-    val manifestsKillSwitch = KillSwitches.single[DqManifests]
+    val manifestsKillSwitch = KillSwitches.single[FeedResponse]
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
@@ -100,7 +100,7 @@ object RunnableCrunch {
           val fcstArrivalsFanOut = builder.add(Broadcast[FeedResponse](2))
           val liveArrivalsFanOut = builder.add(Broadcast[FeedResponse](2))
           val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](3))
-          val manifestsFanOut = builder.add(Broadcast[DqManifests](2))
+          val manifestsFanOut = builder.add(Broadcast[FeedResponse](2))
           val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](2))
           val workloadFanOut = builder.add(Broadcast[Loads](2))
           val staffFanOut = builder.add(Broadcast[StaffMinutes](2))
@@ -124,7 +124,7 @@ object RunnableCrunch {
           liveArrivalsFanOut ~> liveArrivalsSink
 
           manifests ~> manifestGraphKillSwitch ~> manifestsFanOut
-          manifestsFanOut.map(dqm => VoyageManifests(dqm.manifests)) ~> arrivalSplits.in1
+          manifestsFanOut ~> arrivalSplits.in1
           manifestsFanOut ~> manifestsSink
           shifts ~> staff.in0
           fixedPoints ~> staff.in1
