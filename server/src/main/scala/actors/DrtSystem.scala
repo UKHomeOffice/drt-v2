@@ -106,7 +106,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val dqZipBucketName: String = config.getString("dq.s3.bucket").getOrElse(throw new Exception("You must set DQ_S3_BUCKET for us to poll for AdvPaxInfo"))
   val apiS3PollFrequencyMillis: MillisSinceEpoch = config.getInt("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
 
-  lazy val voyageManifestsStage: Source[DqManifests, NotUsed] = Source.fromGraph(
+  lazy val voyageManifestsStage: Source[FeedResponse, NotUsed] = Source.fromGraph(
     new VoyageManifestsGraphStage(
       dqZipBucketName,
       airportConfig.portCode,
@@ -131,7 +131,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         (maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals) match {
           case (initialLiveState: Option[PortState], initialForecastState: Option[PortState], initialBaseArrivals: Option[Set[Arrival]], initialForecastArrivals: Option[Set[Arrival]], initialLiveArrivals: Option[Set[Arrival]]) =>
             val initialPortState: Option[PortState] = mergePortStates(initialLiveState, initialForecastState)
-            val crunchInputs: CrunchSystem[NotUsed, Cancellable] = startCrunchSystem(initialPortState, initialBaseArrivals, initialForecastArrivals, initialLiveArrivals, recrunchOnStart)
+            val crunchInputs: CrunchSystem[Cancellable] = startCrunchSystem(initialPortState, initialBaseArrivals, initialForecastArrivals, initialLiveArrivals, recrunchOnStart)
             subscribeStaffingActors(crunchInputs)
             startScheduledFeedImports(crunchInputs)
         }
@@ -162,14 +162,14 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     case _ => (tIn: TerminalName) => s"T${tIn.take(1)}"
   }
 
-  def startScheduledFeedImports(crunchInputs: CrunchSystem[NotUsed, Cancellable]): Unit = {
+  def startScheduledFeedImports(crunchInputs: CrunchSystem[Cancellable]): Unit = {
     if (airportConfig.portCode == "LHR") config.getString("lhr.blackjack_url").map(csvUrl => {
       val requestIntervalMillis = 5 * oneMinuteMillis
       Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, requestIntervalMillis milliseconds, SDate.now().addDays(-1))
     })
   }
 
-  def subscribeStaffingActors(crunchInputs: CrunchSystem[NotUsed, Cancellable]): Unit = {
+  def subscribeStaffingActors(crunchInputs: CrunchSystem[Cancellable]): Unit = {
     shiftsActor ! AddShiftLikeSubscribers(List(crunchInputs.shifts))
     fixedPointsActor ! AddShiftLikeSubscribers(List(crunchInputs.fixedPoints))
     staffMovementsActor ! AddStaffMovementsSubscribers(List(crunchInputs.staffMovements))
