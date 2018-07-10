@@ -8,6 +8,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.{MilliDate, Queues, StaffMovement}
+import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.graphstages.Crunch
 
@@ -171,7 +172,7 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     offerAndWait(crunch.liveShiftsInput, initialShifts)
     offerAndWait(crunch.liveFixedPointsInput, initialFixedPoints)
-    offerAndWait(crunch.liveArrivalsInput, Flights(Seq(flight)))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
 
     val expectedCrunchDeployments = Set(
       (Queues.EeaDesk, shiftStart.addMinutes(0), 2),
@@ -276,7 +277,7 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     offerAndWait(crunch.liveShiftsInput, initialShifts)
     offerAndWait(crunch.liveFixedPointsInput, initialFixedPoints)
-    offerAndWait(crunch.liveArrivalsInput, Flights(Seq(flight)))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
 
     val expectedCrunchDeployments = Set(
       (Queues.EeaDesk, shiftStart.addMinutes(0), 2),
@@ -343,7 +344,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     offerAndWait(crunch.liveShiftsInput, initialShifts)
 
     val flight = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = scheduled, actPax = Option(100))
-    offerAndWait(crunch.liveArrivalsInput, Flights(Seq(flight)))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
 
     val expectedCrunchDeployments = Set(
       (Queues.EeaDesk, shiftStart.addMinutes(0), 20),

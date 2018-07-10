@@ -10,6 +10,7 @@ import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.SplitSources._
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
+import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 
 import scala.collection.immutable.Seq
@@ -42,8 +43,8 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
         queues = Map("T1" -> Seq(EeaDesk, EGate))
       ))
 
-    offerAndWait(crunch.liveArrivalsInput, inputFlightsBefore)
-    offerAndWait(crunch.liveArrivalsInput, inputFlightsAfter)
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsAfter))
 
     val expectedFlights = Set(ApiFlightWithSplits(
       updatedArrival,
@@ -79,9 +80,9 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
         queues = Map("T1" -> Seq(EeaDesk, EGate))
       ))
 
-    offerAndWait(crunch.liveArrivalsInput, inputFlightsBefore)
-    offerAndWait(crunch.liveArrivalsInput, inputFlightsBefore)
-    offerAndWait(crunch.liveArrivalsInput, inputFlightsAfter)
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsAfter))
 
     val expectedFlights = Set(ApiFlightWithSplits(
       updatedArrival,

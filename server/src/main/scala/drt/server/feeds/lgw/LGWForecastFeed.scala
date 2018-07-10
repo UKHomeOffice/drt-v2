@@ -2,6 +2,7 @@ package drt.server.feeds.lgw
 
 import java.io.{ByteArrayOutputStream, File, FileReader}
 import java.nio.file.FileSystems
+
 import akka.NotUsed
 import akka.actor.{ActorSystem, Cancellable}
 import akka.stream.scaladsl.Source
@@ -9,10 +10,13 @@ import akka.stream.{ActorAttributes, Supervision}
 import com.box.sdk.{BoxFile, BoxFolder, _}
 import drt.server.feeds.lgw.LGWFeed.log
 import drt.shared.Arrival
+import drt.shared.FlightsApi.Flights
 import org.apache.commons.lang3.StringUtils
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter, ISODateTimeFormat}
 import org.slf4j.{Logger, LoggerFactory}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedResponse}
 import services.SDate
+
 import scala.collection.JavaConversions._
 import scala.collection.immutable.Seq
 import scala.collection.mutable.ListBuffer
@@ -44,23 +48,25 @@ class LGWForecastFeed(boxConfigFilePath: String, userId: String, ukBfGalForecast
     BoxConfig.readFrom(new FileReader(boxFile))
   }
 
-  def getArrivals: Try[List[Arrival]] =
+  def getArrivals: Try[List[Arrival]] = {
+    log.info(s"About to get Arrivals from box.com")
     for {
       client <- getApiConnection
       galFileToDownload <- getTheLatestFileInfo(client)
       theData <- downloadTheData(client, galFileToDownload)
     } yield getArrivalsFromData(galFileToDownload.getName, theData)
+  }
 
   def getArrivalsFromData(fileName: String, theData: String): List[Arrival] = {
     val rows = theData.split("\n")
     if (rows.length <= 1) throw new Exception(s"The latest forecast file '$fileName' has no data.")
     val header = rows.head
-    log.debug(s"The header of the CSV file $fileName is: '$header'.")
+    log.info(s"The header of the CSV file $fileName is: '$header'.")
     if (header.split(",").size != TOTAL_COLUMNS) {
       log.warn(s"The CSV file header has does not have $TOTAL_COLUMNS, This is the header [$header].")
     }
     val body = rows.tail.filterNot(row => StringUtils.isBlank(row.replaceAll(",", "")))
-    log.debug(s"The latest forecast file has ${body.length} rows.")
+    log.info(s"The latest forecast file has ${body.length} rows.")
     body.flatMap(toArrival).toList
   }
 
@@ -161,28 +167,31 @@ trait BoxFileConstants {
 
 object LGWForecastFeed {
 
-  def apply()(implicit actorSystem: ActorSystem): Source[Seq[Arrival], Cancellable] = {
+  def apply()(implicit actorSystem: ActorSystem): Source[FeedResponse, Cancellable] = {
     val config = actorSystem.settings.config
     val boxConfigFilePath = config.getString("feeds.gatwick.forecast.boxConfigFile")
     val userId = config.getString("feeds.gatwick.forecast.userId")
     val folderId = config.getString("feeds.gatwick.forecast.folderId")
     val initialDelayImmediately = 100 milliseconds
-    val pollInterval = 1 hours
+    val pollInterval = 1.hours
+    log.info(s"About to connect to box.com for LGW forecast feed")
     val feed = new LGWForecastFeed(boxConfigFilePath, userId = userId, ukBfGalForecastFolderId = folderId)
-    val tickingSource: Source[List[Arrival], Cancellable] = Source.tick(initialDelayImmediately, pollInterval, NotUsed)
+    log.info(s"We created a feed: $feed")
+    val tickingSource: Source[FeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollInterval, NotUsed)
       .withAttributes(ActorAttributes.supervisionStrategy(Supervision.restartingDecider))
       .map(_ => {
+         log.info(s"LGW forecast feed tick.")
          feed.getArrivals match {
           case Success(arrivals) =>
             log.info(s"Got forecast Arrivals ${arrivals.size}.")
-            arrivals
+            ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
           case Failure(e: BoxAPIResponseException) =>
-            log.error(e.getResponse, e)
-            List.empty[Arrival]
+            log.error(s"BOX API Exception: ${e.getResponse}", e)
+            ArrivalsFeedFailure(e.toString, SDate.now())
           case Failure(t) =>
             log.info(s"Failed to fetch LGW forecast arrivals. $t")
-            List.empty[Arrival]
-        }
+            ArrivalsFeedFailure(t.toString, SDate.now())
+         }
       })
 
     tickingSource

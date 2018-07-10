@@ -2,7 +2,9 @@ package drt.server.feeds.lhr
 
 import drt.server.feeds.lhr.forecast.{LHRForecastEmail, LHRForecastFlightRow, LHRForecastXLSExtractor}
 import drt.shared.Arrival
+import drt.shared.FlightsApi.Flights
 import org.slf4j.LoggerFactory
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedResponse}
 import services.SDate
 
 import scala.util.{Success, Try}
@@ -15,15 +17,17 @@ case class LHRForecastFeed(
                             mailPort: Int = 993
                           ) {
 
-  def arrivals: List[Arrival] = {
-    val xlsForecastDoc = LHRForecastEmail(mailHost, userName, userPassword, from, mailPort).maybeLatestForecastFile
-    xlsForecastDoc.map(xl =>
-      {
-
-        LHRForecastXLSExtractor(xl.getPath).map(LHRForecastFeed.lhrFieldsToArrival).collect {
-          case Success(arrival) => arrival
-        }
-      }).getOrElse(List())
+  def requestFeed: FeedResponse = {
+    LHRForecastEmail(mailHost, userName, userPassword, from, mailPort).maybeLatestForecastFile match {
+      case Some(xlsForecastDoc) =>
+        val arrivals = LHRForecastXLSExtractor(xlsForecastDoc.getPath)
+          .map(LHRForecastFeed.lhrFieldsToArrival)
+          .collect {
+            case Success(arrival) => arrival
+          }
+        if (arrivals.nonEmpty) ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
+        else ArrivalsFeedFailure("No forecast arrivals found", SDate.now())
+    }
   }
 
 }

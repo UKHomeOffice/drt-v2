@@ -22,6 +22,7 @@ GET         /assets/*file                                 controllers.Assets.ver
 # Autowire calls
 POST        /api/*path                                    controllers.Application.autowireApi(path: String)
 
+
 # Logging
 POST        /logging                                      controllers.Application.logging
 
@@ -29,4 +30,8 @@ POST        /logging                                      controllers.Applicatio
 POST        /data/staff                                   controllers.Application.saveStaff
 
 POST        /test/arrival                                 controllers.Test.addArrival
+
+POST        /test/manifest                                controllers.Test.addManifest
+
+DELETE      /test/data                                    controllers.Test.deleteAllData()
 

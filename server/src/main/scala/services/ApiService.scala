@@ -3,7 +3,7 @@ package services
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
-import controllers.{FixedPointPersistence, ShiftPersistence, StaffMovementsPersistence}
+import controllers.{AvailableUserRoles, FixedPointPersistence, ShiftPersistence, StaffMovementsPersistence}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.TerminalName
 import drt.shared._
@@ -67,20 +67,19 @@ abstract class ApiService(val airportConfig: AirportConfig,
     with AirportToCountryLike
     with ShiftPersistence
     with FixedPointPersistence
-    with StaffMovementsPersistence {
+    with StaffMovementsPersistence
+    with AvailableUserRoles{
 
   override implicit val timeout: akka.util.Timeout = Timeout(5 seconds)
 
   override val log: Logger = LoggerFactory.getLogger(this.getClass)
 
-  def roles: List[String] = headers.get("X-Auth-Roles").map(_.split(",").toList).getOrElse(List())
+  def roles: List[String] = userRolesFromHeader(headers)
 
   def liveCrunchStateActor: AskableActorRef
   def forecastCrunchStateActor: AskableActorRef
 
   def actorSystem: ActorSystem
-
-  def askableCacheActorRef: AskableActorRef
 
   def getApplicationVersion(): String
 

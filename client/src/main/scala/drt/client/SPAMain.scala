@@ -2,7 +2,7 @@ package drt.client
 
 import diode.Action
 import drt.client.actions.Actions._
-import drt.client.components.{GlobalStyles, Layout, TerminalComponent, TerminalPlanningComponent, TerminalStaffingV2, TerminalsDashboardPage}
+import drt.client.components.{GlobalStyles, Layout, TerminalComponent, TerminalPlanningComponent, TerminalsDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -10,11 +10,10 @@ import drt.shared.SDateLike
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
+import scalacss.ProdDefaults._
 
 import scala.collection.immutable.Seq
-import scala.scalajs.js
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
-import scalacss.ProdDefaults._
 
 object SPAMain  {
 

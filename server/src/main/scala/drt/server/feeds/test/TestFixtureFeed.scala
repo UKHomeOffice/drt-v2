@@ -7,7 +7,11 @@ import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import drt.chroma.DiffingStage
 import drt.shared.Arrival
+import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
+import server.feeds.{ArrivalsFeedSuccess, FeedResponse}
+import services.SDate
+import test.TestActors.ResetActor
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -18,15 +22,16 @@ object TestFixtureFeed {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply(actorSystem: ActorSystem): Source[Seq[Arrival], Cancellable] = {
+  def apply(actorSystem: ActorSystem): Source[FeedResponse, Cancellable] = {
 
+    log.info(s"About to create test Arrival")
     val askableTestArrivalActor: AskableActorRef = actorSystem.actorOf(Props(classOf[TestArrivalsActor]), s"TestActor-LiveArrivals")
 
     implicit val timeout: Timeout = Timeout(300 milliseconds)
 
     val pollFrequency = 30 seconds
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
-    val tickingSource: Source[List[Arrival], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed).map(x => {
+    val tickingSource: Source[FeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed).map(_ => {
       val testArrivals = Await.result(askableTestArrivalActor.ask(GetArrivals).map {
         case TestArrivals(arrivals) =>
           log.info(s"Got these arrivals from the actor: $arrivals")
@@ -39,10 +44,10 @@ object TestFixtureFeed {
 
       log.info(s"TEST: Sending arrivals from test feed: $testArrivals")
 
-      testArrivals
+      ArrivalsFeedSuccess(Flights(testArrivals), SDate.now())
     })
 
-    tickingSource.via(DiffingStage.DiffLists[Arrival]())
+    tickingSource
   }
 }
 
@@ -64,5 +69,7 @@ class TestArrivalsActor extends Actor with ActorLogging{
     case GetArrivals =>
 
       sender ! TestArrivals(testArrivals)
+    case ResetActor =>
+      testArrivals = List()
   }
 }

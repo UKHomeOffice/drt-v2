@@ -2,6 +2,7 @@ package drt.server.feeds.lgw
 
 import java.io.FileInputStream
 import java.nio.file.{FileSystems, Path}
+
 import akka.NotUsed
 import akka.actor.{ActorSystem, Cancellable}
 import akka.stream.scaladsl.Source
@@ -9,13 +10,16 @@ import akka.stream.{ActorAttributes, ActorMaterializer, Supervision}
 import drt.http.ProdSendAndReceive
 import drt.server.feeds.lgw.LGWParserProtocol._
 import drt.shared.Arrival
+import drt.shared.FlightsApi.Flights
 import org.apache.commons.io.IOUtils
 import org.slf4j.{Logger, LoggerFactory}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedResponse}
+import services.SDate
 import spray.client.pipelining
 import spray.client.pipelining.{Delete, Post, addHeader, _}
 import spray.http.HttpHeaders.Accept
 import spray.http._
-import scala.collection.immutable.Seq
+
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
@@ -126,7 +130,7 @@ object LGWFeed {
   val log: Logger = LoggerFactory.getLogger(getClass)
   var tokenFuture: Future[GatwickAzureToken] = _
 
-  def apply()(implicit actorSystem: ActorSystem): Source[Seq[Arrival], Cancellable] = {
+  def apply()(implicit actorSystem: ActorSystem): Source[FeedResponse, Cancellable] = {
     val config = actorSystem.settings.config
 
     implicit val dispatcher: ExecutionContextExecutor = actorSystem.dispatcher
@@ -144,7 +148,7 @@ object LGWFeed {
 
     tokenFuture = feed.requestToken()
 
-    val tickingSource: Source[List[Arrival], Cancellable] = Source.tick(initialDelayImmediately, pollInterval, NotUsed)
+    val tickingSource: Source[FeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollInterval, NotUsed)
       .withAttributes(ActorAttributes.supervisionStrategy(Supervision.restartingDecider))
       .map(_ => {
         Try {
@@ -160,11 +164,11 @@ object LGWFeed {
               log.info(s"Empty LGW arrivals. Re-requesting token.")
               tokenFuture = feed.requestToken()
             }
-            arrivals
+            ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
           case Failure(t) =>
             log.info(s"Failed to fetch LGW arrivals. Re-requesting token. $t")
             tokenFuture = feed.requestToken()
-            List.empty[Arrival]
+            ArrivalsFeedFailure(t.toString, SDate.now())
         }
       })
 

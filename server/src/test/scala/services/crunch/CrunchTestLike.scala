@@ -15,12 +15,14 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
+import server.feeds.{ArrivalsFeedSuccess, FeedResponse}
 import services._
 import services.graphstages.Crunch._
 import services.graphstages.{ActualDeskStats, DqManifests, DummySplitsPredictor}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import scala.language.implicitConversions
 
 
 class LiveCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
@@ -44,8 +46,8 @@ class ForecastCrunchStateTestActor(name: String = "", queues: Map[TerminalName, 
 }
 
 case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete[Option[Flights]],
-                                      forecastArrivalsInput: SourceQueueWithComplete[Flights],
-                                      liveArrivalsInput: SourceQueueWithComplete[Flights],
+                                      forecastArrivalsInput: SourceQueueWithComplete[FeedResponse],
+                                      liveArrivalsInput: SourceQueueWithComplete[FeedResponse],
                                       manifestsInput: SourceQueueWithComplete[DqManifests],
                                       liveShiftsInput: SourceQueueWithComplete[String],
                                       liveFixedPointsInput: SourceQueueWithComplete[String],
@@ -157,8 +159,8 @@ class CrunchTestLike
     val forecastCrunchActor = forecastCrunchStateActor(logLabel, forecastProbe, now)
 
     val manifestsSource: Source[DqManifests, SourceQueueWithComplete[DqManifests]] = Source.queue[DqManifests](0, OverflowStrategy.backpressure)
-    val liveArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
-    val fcstArrivals: Source[Flights, SourceQueueWithComplete[Flights]] = Source.queue[Flights](0, OverflowStrategy.backpressure)
+    val liveArrivals: Source[FeedResponse, SourceQueueWithComplete[FeedResponse]] = Source.queue[FeedResponse](0, OverflowStrategy.backpressure)
+    val fcstArrivals: Source[FeedResponse, SourceQueueWithComplete[FeedResponse]] = Source.queue[FeedResponse](0, OverflowStrategy.backpressure)
     val baseArrivals: Source[Option[Flights], SourceQueueWithComplete[Option[Flights]]] = Source.queue[Option[Flights]](0, OverflowStrategy.backpressure)
 
     val crunchInputs = CrunchSystem(CrunchProps(
@@ -202,8 +204,8 @@ class CrunchTestLike
 
     CrunchGraphInputsAndProbes(
       crunchInputs.baseArrivals,
-      crunchInputs.forecastArrivals,
-      crunchInputs.liveArrivals,
+      crunchInputs.forecastArrivalsResponse,
+      crunchInputs.liveArrivalsResponse,
       crunchInputs.manifests,
       crunchInputs.shifts,
       crunchInputs.fixedPoints,

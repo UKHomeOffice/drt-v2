@@ -68,7 +68,7 @@ object Settings {
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
     val jsdom = "11.11.0"
-    val sourcemapsupport ="2.0.1"
+    val sourcemapsupport ="0.5.6"
   }
 
   import versions._
