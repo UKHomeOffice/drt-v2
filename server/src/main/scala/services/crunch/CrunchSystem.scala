@@ -7,7 +7,7 @@ import akka.stream.scaladsl.{RunnableGraph, Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, KillSwitch, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import drt.shared.CrunchApi.{CrunchMinutes, PortState, StaffMinutes}
-import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
+import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.{SDateLike, _}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.SplitsCalculator
@@ -22,10 +22,10 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 
-case class CrunchSystem[MS, OAL, FR](shifts: SourceQueueWithComplete[String],
+case class CrunchSystem[MS, FR](shifts: SourceQueueWithComplete[String],
                                      fixedPoints: SourceQueueWithComplete[String],
                                      staffMovements: SourceQueueWithComplete[Seq[StaffMovement]],
-                                     baseArrivals: OAL,
+                                     baseArrivals: FR,
                                      forecastArrivalsResponse: FR,
                                      liveArrivalsResponse: FR,
                                      manifests: MS,
@@ -33,7 +33,7 @@ case class CrunchSystem[MS, OAL, FR](shifts: SourceQueueWithComplete[String],
                                      killSwitches: List[KillSwitch]
                                     )
 
-case class CrunchProps[MS, OAL, FR](logLabel: String = "",
+case class CrunchProps[MS, FR](logLabel: String = "",
                                     system: ActorSystem,
                                     airportConfig: AirportConfig,
                                     pcpArrival: Arrival => MilliDate,
@@ -57,7 +57,7 @@ case class CrunchProps[MS, OAL, FR](logLabel: String = "",
                                     initialBaseArrivals: Set[Arrival] = Set(),
                                     initialFcstArrivals: Set[Arrival] = Set(),
                                     initialLiveArrivals: Set[Arrival] = Set(),
-                                    arrivalsBaseSource: Source[Option[Flights], OAL],
+                                    arrivalsBaseSource: Source[FeedResponse, FR],
                                     arrivalsFcstSource: Source[FeedResponse, FR],
                                     arrivalsLiveSource: Source[FeedResponse, FR],
                                     recrunchOnStart: Boolean = false)
@@ -71,7 +71,7 @@ object CrunchSystem {
     Crunch.getLocalLastMidnight(adjustedMinute).addMinutes(offsetMinutes)
   }
 
-  def apply[MS, OAL, FR](props: CrunchProps[MS, OAL, FR]): CrunchSystem[MS, OAL, FR] = {
+  def apply[MS, FR](props: CrunchProps[MS, FR]): CrunchSystem[MS, FR] = {
 
     val initialShifts = initialShiftsLikeState(props.actors("shifts"))
     val initialFixedPoints = initialShiftsLikeState(props.actors("fixed-points"))
@@ -85,7 +85,7 @@ object CrunchSystem {
 
     val splitsCalculator = SplitsCalculator(props.airportConfig.portCode, props.historicalSplitsProvider, props.airportConfig.defaultPaxSplits.splits.toSet)
     val groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight) _
-    val crunchStartDateProvider: (SDateLike) => SDateLike = crunchStartWithOffset(props.airportConfig.crunchOffsetMinutes)
+    val crunchStartDateProvider: SDateLike => SDateLike = crunchStartWithOffset(props.airportConfig.crunchOffsetMinutes)
 
     val maybeStaffMinutes = initialStaffMinutesFromPortState(props.initialPortState)
     val maybeCrunchMinutes = initialCrunchMinutesFromPortState(props.initialPortState)
@@ -162,7 +162,7 @@ object CrunchSystem {
       expireAfterMillis = props.expireAfterMillis,
       now = props.now)
 
-    val crunchSystem: RunnableGraph[(OAL, FR, FR, MS, SourceQueueWithComplete[String], SourceQueueWithComplete[String], SourceQueueWithComplete[Seq[StaffMovement]], SourceQueueWithComplete[ActualDeskStats], UniqueKillSwitch, UniqueKillSwitch)] = RunnableCrunch(
+    val crunchSystem: RunnableGraph[(FR, FR, FR, MS, SourceQueueWithComplete[String], SourceQueueWithComplete[String], SourceQueueWithComplete[Seq[StaffMovement]], SourceQueueWithComplete[ActualDeskStats], UniqueKillSwitch, UniqueKillSwitch)] = RunnableCrunch(
       props.arrivalsBaseSource, props.arrivalsFcstSource, props.arrivalsLiveSource, manifests, shiftsSource, fixedPointsSource, staffMovementsSource, actualDesksAndQueuesSource,
       arrivalsStage, arrivalSplitsGraphStage, splitsPredictorStage, workloadGraphStage, loadBatcher, crunchLoadGraphStage, staffGraphStage, staffBatcher, simulationGraphStage, portStateGraphStage,
       props.actors("base-arrivals").actorRef, props.actors("forecast-arrivals").actorRef, props.actors("live-arrivals").actorRef,

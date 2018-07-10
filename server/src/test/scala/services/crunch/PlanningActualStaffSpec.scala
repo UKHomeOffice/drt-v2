@@ -3,6 +3,7 @@ package services.crunch
 import controllers.{ArrivalGenerator, Forecast}
 import drt.shared.FlightsApi.Flights
 import drt.shared.{CrunchApi, Queues, SDateLike}
+import server.feeds.ArrivalsFeedSuccess
 import services.{SDate, TryRenjin}
 import services.graphstages.Crunch._
 
@@ -43,7 +44,7 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
       cruncher = TryRenjin.crunch
     )
 
-    Await.ready(crunch.baseArrivalsInput.offer(Option(Flights(forecastFlights.toSeq))), 1 second)
+    Await.ready(crunch.baseArrivalsInput.offer(ArrivalsFeedSuccess(Flights(forecastFlights.toSeq))), 1 second)
     Await.ready(crunch.forecastShiftsInput.offer(shifts), 1 second)
 
     val expected = List(

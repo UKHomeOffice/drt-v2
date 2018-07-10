@@ -27,9 +27,9 @@ class ArrivalsGraphStage(name: String = "",
                          validPortTerminals: Set[String],
                          expireAfterMillis: Long,
                          now: () => SDateLike)
-  extends GraphStage[FanInShape3[Option[Flights], FeedResponse, FeedResponse, ArrivalsDiff]] {
+  extends GraphStage[FanInShape3[FeedResponse, FeedResponse, FeedResponse, ArrivalsDiff]] {
 
-  val inBaseArrivals: Inlet[Option[Flights]] = Inlet[Option[Flights]]("inFlightsBase.in")
+  val inBaseArrivals: Inlet[FeedResponse] = Inlet[FeedResponse]("inFlightsBase.in")
   val inForecastArrivals: Inlet[FeedResponse] = Inlet[FeedResponse]("inFlightsForecast.in")
   val inLiveArrivals: Inlet[FeedResponse] = Inlet[FeedResponse]("inFlightsLive.in")
   val outArrivalsDiff: Outlet[ArrivalsDiff] = Outlet[ArrivalsDiff]("outArrivalsDiff.in")
@@ -61,23 +61,7 @@ class ArrivalsGraphStage(name: String = "",
     }
 
     setHandler(inBaseArrivals, new InHandler {
-      override def onPush(): Unit = {
-        val start = SDate.now()
-        log.info(s"inBaseArrivals onPush() grabbing base flights")
-
-        grab(inBaseArrivals) match {
-          case None =>
-            log.info(s"No arrivals from ACL. Nothing to do")
-
-          case Some(grabbedArrivals) =>
-            log.info(s"Grabbed ${grabbedArrivals.flights.length} base arrivals")
-            baseArrivals = filterAndSetPcp(grabbedArrivals.flights)
-            mergeAllSourcesAndPush(baseArrivals, forecastArrivals, liveArrivals)
-
-            if (!hasBeenPulled(inBaseArrivals)) pull(inBaseArrivals)
-            log.info(s"inBaseArrivals Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
-        }
-      }
+      override def onPush(): Unit = onPushArrivals(inBaseArrivals, BaseArrivals)
     })
 
     setHandler(inForecastArrivals, new InHandler {

@@ -9,7 +9,6 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import server.feeds.FeedResponse
-import services.ArrivalsState
 import services.graphstages.Crunch.Loads
 import services.graphstages._
 
@@ -20,7 +19,7 @@ object RunnableCrunch {
 
   def groupByCodeShares(flights: Seq[ApiFlightWithSplits]): Seq[(ApiFlightWithSplits, Set[Arrival])] = flights.map(f => (f, Set(f.apiFlight)))
 
-  def apply[OAL, FR, SVM, SS, SFP, SMM, SAD](baseArrivalsSource: Source[Option[Flights], OAL],
+  def apply[FR, SVM, SS, SFP, SMM, SAD](baseArrivalsSource: Source[FeedResponse, FR],
                                              fcstArrivalsSource: Source[FeedResponse, FR],
                                              liveArrivalsSource: Source[FeedResponse, FR],
                                              manifestsSource: Source[DqManifests, SVM],
@@ -50,7 +49,7 @@ object RunnableCrunch {
                                              fcstCrunchStateActor: ActorRef,
                                              crunchPeriodStartMillis: SDateLike => SDateLike,
                                              now: () => SDateLike
-                                            ): RunnableGraph[(OAL, FR, FR, SVM, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch)] = {
+                                            ): RunnableGraph[(FR, FR, FR, SVM, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch)] = {
 
     val arrivalsKillSwitch = KillSwitches.single[ArrivalsDiff]
 
@@ -75,7 +74,7 @@ object RunnableCrunch {
 
       implicit builder =>
         (
-          baseMaybeArrivals,
+          baseArrivals,
           fcstArrivals,
           liveArrivals,
           manifests,
@@ -97,7 +96,7 @@ object RunnableCrunch {
           val simulation = builder.add(simulationGraphStage.async)
           val portState = builder.add(portStateGraphStage.async)
 
-          val baseMaybeArrivalsFanOut = builder.add(Broadcast[Option[Flights]](2))
+          val baseArrivalsFanOut = builder.add(Broadcast[FeedResponse](2))
           val fcstArrivalsFanOut = builder.add(Broadcast[FeedResponse](2))
           val liveArrivalsFanOut = builder.add(Broadcast[FeedResponse](2))
           val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](3))
@@ -117,8 +116,8 @@ object RunnableCrunch {
           val fcstSink = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
 
 
-          baseMaybeArrivals ~> baseMaybeArrivalsFanOut ~> arrivals.in0
-          baseMaybeArrivalsFanOut.map(fs => fs.map(f => ArrivalsState(f.flights.map(x => (x.uniqueId, x)).toMap))) ~> baseArrivalsSink
+          baseArrivals ~> baseArrivalsFanOut ~> arrivals.in0
+          baseArrivalsFanOut ~> baseArrivalsSink
           fcstArrivals ~> fcstArrivalsFanOut ~> arrivals.in1
           fcstArrivalsFanOut ~> fcstArrivalsSink
           liveArrivals ~> liveArrivalsFanOut ~> arrivals.in2

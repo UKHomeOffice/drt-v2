@@ -2,10 +2,11 @@ package drt.client
 
 import diode.Action
 import drt.client.actions.Actions._
-import drt.client.components.{GlobalStyles, Layout, TerminalComponent, TerminalPlanningComponent, TerminalsDashboardPage}
+import drt.client.components.{GlobalStyles, Layout, StatusPage, TerminalComponent, TerminalPlanningComponent, TerminalsDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
+import drt.client.services.handlers.GetFeedStatuses
 import drt.shared.SDateLike
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
@@ -36,11 +37,11 @@ object SPAMain  {
       }
     }
 
-    def parseDateString(s: String) = SDate.parseAsLocalDateTime(s.replace("%20", " ").split(" ").mkString("T"))
+    def parseDateString(s: String): SDateLike = SDate.parseAsLocalDateTime(s.replace("%20", " ").split(" ").mkString("T"))
 
-    def timeRangeStart = timeRangeStartString.map(_.toInt)
+    def timeRangeStart: Option[Int] = timeRangeStartString.map(_.toInt)
 
-    def timeRangeEnd = timeRangeEndString.map(_.toInt)
+    def timeRangeEnd: Option[Int] = timeRangeEndString.map(_.toInt)
 
     def dateFromUrlOrNow: SDateLike = {
       date.map(parseDateString).getOrElse(SDate.now())
@@ -59,6 +60,7 @@ object SPAMain  {
   }
 
   case class TerminalsDashboardLoc(period: Option[Int]) extends Loc
+  case object StatusLoc extends Loc
 
   def requestInitialActions(): Unit = {
     val initActions = Seq(
@@ -67,7 +69,8 @@ object SPAMain  {
       GetLoggedInStatus,
       GetAirportConfig(),
       GetFixedPoints(),
-      UpdateMinuteTicker
+      UpdateMinuteTicker,
+      GetFeedStatuses()
     )
 
     initActions.foreach(SPACircuit.dispatch(_))
@@ -77,26 +80,8 @@ object SPAMain  {
     .buildConfig { dsl =>
       import dsl._
 
-      val home: dsl.Rule = staticRoute(root, TerminalsDashboardLoc(None)) ~> renderR((router: RouterCtl[Loc]) => TerminalsDashboardPage(None, router))
-      val terminalsDashboard: dsl.Rule = dynamicRouteCT(("#terminalsDashboard" / int.option).caseClass[TerminalsDashboardLoc]) ~>
-        dynRenderR((page: TerminalsDashboardLoc, router) => {
-          TerminalsDashboardPage(None, router, page)
-        })
-      val requiredTerminalName = string("[a-zA-Z0-9]+")
-      val requiredTopLevelTab = string("[a-zA-Z0-9]+")
-      val requiredSecondLevelTab = string("[a-zA-Z0-9]+")
-      val optionalDate = string(".+").option
-      val optionalTimeRangeStartHour = string("[0-9]+").option
-      val optionalTimeRangeEndHour = string("[0-9]+").option
-      val terminal: dsl.Rule = dynamicRouteCT(
-        ("#terminal" / requiredTerminalName / requiredTopLevelTab / requiredSecondLevelTab / optionalDate
-          / optionalTimeRangeStartHour / optionalTimeRangeEndHour).caseClass[TerminalPageTabLoc]) ~>
-        dynRenderR((page: TerminalPageTabLoc, router) => {
-          val props = TerminalComponent.Props(terminalPageTab = page, router)
-          TerminalComponent(props)
-        })
+      val rule = homeRoute(dsl) | dashboardRoute(dsl) | terminalRoute(dsl) | statusRoute(dsl)
 
-      val rule = home | terminal | terminalsDashboard
       rule.notFound(redirectToPage(TerminalsDashboardLoc(None))(Redirect.Replace))
     }
     .renderWith(layout)
@@ -114,6 +99,46 @@ object SPAMain  {
         }
       )
     })
+
+  def homeRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+    import dsl._
+
+    staticRoute(root, TerminalsDashboardLoc(None)) ~> renderR((router: RouterCtl[Loc]) => TerminalsDashboardPage(None, router))
+  }
+
+  def statusRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+    import dsl._
+
+    staticRoute("#status", StatusLoc) ~> renderR((router: RouterCtl[Loc]) => StatusPage())
+  }
+
+  def dashboardRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+    import dsl._
+
+    dynamicRouteCT(("#terminalsDashboard" / int.option).caseClass[TerminalsDashboardLoc]) ~>
+      dynRenderR((page: TerminalsDashboardLoc, router) => {
+        TerminalsDashboardPage(None, router, page)
+      })
+  }
+
+  def terminalRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+    import dsl._
+
+    val requiredTerminalName = string("[a-zA-Z0-9]+")
+    val requiredTopLevelTab = string("[a-zA-Z0-9]+")
+    val requiredSecondLevelTab = string("[a-zA-Z0-9]+")
+    val optionalDate = string(".+").option
+    val optionalTimeRangeStartHour = string("[0-9]+").option
+    val optionalTimeRangeEndHour = string("[0-9]+").option
+
+    dynamicRouteCT(
+      ("#terminal" / requiredTerminalName / requiredTopLevelTab / requiredSecondLevelTab / optionalDate
+        / optionalTimeRangeStartHour / optionalTimeRangeEndHour).caseClass[TerminalPageTabLoc]) ~>
+      dynRenderR((page: TerminalPageTabLoc, router) => {
+        val props = TerminalComponent.Props(terminalPageTab = page, router)
+        TerminalComponent(props)
+      })
+  }
 
   def layout(c: RouterCtl[Loc], r: Resolution[Loc]) = Layout(c, r)
 

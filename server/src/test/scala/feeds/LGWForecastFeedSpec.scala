@@ -6,6 +6,8 @@ import drt.shared.Arrival
 import org.specs2.mock.Mockito
 import org.specs2.mutable.Specification
 import org.specs2.specification.Scope
+import services.SDate
+
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
@@ -57,7 +59,7 @@ class LGWForecastFeedSpec extends Specification with Mockito {
         rawICAO = "3O0101",
         rawIATA = "3O0101",
         Origin = "TNG",
-        Scheduled = 1526727900000L,
+        Scheduled = SDate("2018-05-19T10:05:00Z").millisSinceEpoch,
         PcpTime = None,
         LastKnownPax = None)
     }

@@ -9,6 +9,7 @@ import akka.event.LoggingAdapter
 import akka.pattern.{AskableActorRef, _}
 import akka.stream._
 import akka.util.{ByteString, Timeout}
+import boopickle.CompositePickler
 import boopickle.Default._
 import buildinfo.BuildInfo
 import com.google.inject.{Inject, Singleton}
@@ -27,6 +28,7 @@ import server.feeds.acl.AclFeed
 import services.PcpArrival._
 import services.SDate.implicits._
 import services.SplitsProvider.SplitProvider
+import services.graphstages.Crunch
 import services.graphstages.Crunch._
 import services.shifts.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
@@ -175,7 +177,7 @@ class Application @Inject()(implicit val config: Configuration,
 
   log.info(s"Application using airportConfig $airportConfig")
 
-  def cacheActorRef: AskableActorRef = system.actorOf(Props(classOf[CachingCrunchReadActor]), name = "cache-actor")
+  val cacheActorRef: AskableActorRef = system.actorOf(Props(classOf[CachingCrunchReadActor]), name = "cache-actor")
 
   def previousDay(date: MilliDate): SDateLike = {
     val oneDayInMillis = 60 * 60 * 24 * 1000L
@@ -220,6 +222,10 @@ class Application @Inject()(implicit val config: Configuration,
 
       def isLoggedIn(): Boolean = {
         true
+      }
+
+      def getFeedStatuses(): Future[Seq[FeedStatuses]] = {
+        ctrl.getFeedStatus()
       }
 
       def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]] = {
@@ -283,8 +289,8 @@ class Application @Inject()(implicit val config: Configuration,
 
         shiftsFuture.collect {
           case shifts: String =>
-            log.info(s"Shifts: Retrieved shifts from actor")
-            StaffTimeSlots.getShiftsForMonth(shifts, SDate(month), terminalName)
+            log.info(s"Shifts: Retrieved shifts from actor for month starting: ${SDate(month).toISOString()}")
+            StaffTimeSlots.getShiftsForMonth(shifts, SDate(month, Crunch.europeLondonTimeZone), terminalName)
         }
       }
 
@@ -648,7 +654,11 @@ class Application @Inject()(implicit val config: Configuration,
 
       // call Autowire route
 
-      implicit val pickler = generatePickler[ApiPaxTypeAndQueueCount]
+      implicit val apiPaxTypeAndQueueCountPickler = generatePickler[ApiPaxTypeAndQueueCount]
+      implicit val feedStatusPickler: CompositePickler[FeedStatus] = compositePickler[FeedStatus].
+        addConcreteType[FeedStatusSuccess].
+        addConcreteType[FeedStatusFailure]
+
       val router = Router.route[Api](ApiService(airportConfig, ctrl.shiftsActor, ctrl.fixedPointsActor, ctrl.staffMovementsActor, request.headers))
 
       router(

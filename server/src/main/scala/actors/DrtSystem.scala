@@ -16,10 +16,12 @@ import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.lgw.{LGWFeed, LGWForecastFeed}
 import drt.server.feeds.lhr.live.LHRLiveFeed
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
+import drt.server.feeds.ltn.LtnLiveFeed
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{Flights, TerminalName}
-import drt.shared.{AirportConfig, Arrival, MilliDate, SDateLike}
+import drt.shared._
 import org.apache.spark.sql.SparkSession
+import org.joda.time.DateTimeZone
 import play.api.Configuration
 import server.feeds.acl.AclFeed
 import server.feeds.{ArrivalsFeedSuccess, FeedResponse}
@@ -49,6 +51,8 @@ trait DrtSystemInterface {
   val aclFeed: AclFeed
 
   def run(): Unit
+
+  def getFeedStatus(): Future[Seq[FeedStatuses]]
 }
 
 case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig) extends DrtSystemInterface {
@@ -127,7 +131,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         (maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals) match {
           case (initialLiveState: Option[PortState], initialForecastState: Option[PortState], initialBaseArrivals: Option[Set[Arrival]], initialForecastArrivals: Option[Set[Arrival]], initialLiveArrivals: Option[Set[Arrival]]) =>
             val initialPortState: Option[PortState] = mergePortStates(initialLiveState, initialForecastState)
-            val crunchInputs: CrunchSystem[NotUsed, Cancellable, Cancellable] = startCrunchSystem(initialPortState, initialBaseArrivals, initialForecastArrivals, initialLiveArrivals, recrunchOnStart)
+            val crunchInputs: CrunchSystem[NotUsed, Cancellable] = startCrunchSystem(initialPortState, initialBaseArrivals, initialForecastArrivals, initialLiveArrivals, recrunchOnStart)
             subscribeStaffingActors(crunchInputs)
             startScheduledFeedImports(crunchInputs)
         }
@@ -137,6 +141,20 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     }
   }
 
+  override def getFeedStatus(): Future[Seq[FeedStatuses]] = {
+    val actors: Seq[AskableActorRef] = Seq(liveArrivalsActor, forecastArrivalsActor, baseArrivalsActor)
+
+    val statuses = actors
+      .map(askable => askable.ask(GetFeedStatuses)(new Timeout(5 seconds)).map {
+        case Some(fs: FeedStatuses) => Option(fs)
+        case _ => None
+      })
+
+    Future
+      .sequence(statuses)
+      .map(maybeStatuses => maybeStatuses.collect { case Some(fs) => fs })
+  }
+
   def aclTerminalMapping(portCode: String): TerminalName => TerminalName = portCode match {
     case "LGW" => (tIn: TerminalName) => Map("1I" -> "S", "2I" -> "N").getOrElse(tIn, "")
     case "MAN" => (tIn: TerminalName) => Map("T1" -> "T1", "T2" -> "T2", "T3" -> "T3").getOrElse(tIn, "")
@@ -144,14 +162,14 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     case _ => (tIn: TerminalName) => s"T${tIn.take(1)}"
   }
 
-  def startScheduledFeedImports(crunchInputs: CrunchSystem[NotUsed, Cancellable, Cancellable]): Unit = {
+  def startScheduledFeedImports(crunchInputs: CrunchSystem[NotUsed, Cancellable]): Unit = {
     if (airportConfig.portCode == "LHR") config.getString("lhr.blackjack_url").map(csvUrl => {
       val requestIntervalMillis = 5 * oneMinuteMillis
       Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, requestIntervalMillis milliseconds, SDate.now().addDays(-1))
     })
   }
 
-  def subscribeStaffingActors(crunchInputs: CrunchSystem[NotUsed, Cancellable, Cancellable]): Unit = {
+  def subscribeStaffingActors(crunchInputs: CrunchSystem[NotUsed, Cancellable]): Unit = {
     shiftsActor ! AddShiftLikeSubscribers(List(crunchInputs.shifts))
     fixedPointsActor ! AddShiftLikeSubscribers(List(crunchInputs.fixedPoints))
     staffMovementsActor ! AddStaffMovementsSubscribers(List(crunchInputs.staffMovements))
@@ -162,7 +180,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
                         initialForecastArrivals: Option[Set[Arrival]],
                         initialLiveArrivals: Option[Set[Arrival]],
                         recrunchOnStart: Boolean
-                       ): CrunchSystem[NotUsed, Cancellable, Cancellable] = {
+                       ): CrunchSystem[NotUsed, Cancellable] = {
 
     val crunchInputs = CrunchSystem(CrunchProps(
       system = system,
@@ -211,9 +229,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   }
 
   def initialArrivals(arrivalsActor: AskableActorRef): Future[Option[Set[Arrival]]] = {
-    val canWaitMinutes = 5
+    val canWaitMinutes = 60
     val arrivalsFuture: Future[Option[Set[Arrival]]] = arrivalsActor.ask(GetState)(new Timeout(canWaitMinutes minutes)).map {
-      case ArrivalsState(arrivals) => Option(arrivals.values.toSet)
+      case ArrivalsState(arrivals, _) => Option(arrivals.values.toSet)
       case _ => None
     }
 
@@ -279,13 +297,23 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
       case "LGW" => LGWFeed()
       case "BHX" => BHXLiveFeed(config.getString("feeds.bhx.soap.endPointUrl").getOrElse(throw new Exception("Missing BHX live feed URL")))
+      case "LTN" =>
+        val url = config.getString("feeds.ltn.live.url").getOrElse(throw new Exception("Missing live feed url"))
+        val username = config.getString("feeds.ltn.live.username").getOrElse(throw new Exception("Missing live feed username"))
+        val password = config.getString("feeds.ltn.live.password").getOrElse(throw new Exception("Missing live feed password"))
+        val token = config.getString("feeds.ltn.live.token").getOrElse(throw new Exception("Missing live feed token"))
+        val timeZone = config.getString("feeds.ltn.live.timezone") match {
+          case Some(tz) => DateTimeZone.forID(tz)
+          case None => DateTimeZone.UTC
+        }
+        LtnLiveFeed(url, token, username, password, timeZone).tickingSource
       case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
     }
     feed
   }
 
   def forecastArrivalsSource(portCode: String): Source[FeedResponse, Cancellable] = {
-    val forecastNoOp = Source.tick[FeedResponse](0 seconds, 30 minutes, ArrivalsFeedSuccess(Flights(Seq()), SDate.now()))
+    val forecastNoOp = Source.tick[FeedResponse](100 days, 100 days, ArrivalsFeedSuccess(Flights(Seq()), SDate.now()))
     val feed = portCode match {
       case "STN" => createForecastChromaFlightFeed(ChromaForecast).chromaVanillaFlights(30 minutes)
       case "LHR" => config.getString("lhr.forecast_path")
@@ -300,9 +328,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     feed
   }
 
-  def baseArrivalsSource(): Source[Option[Flights], Cancellable] = Source.tick(1 second, 60 minutes, NotUsed).map(_ => {
+  def baseArrivalsSource(): Source[FeedResponse, Cancellable] = Source.tick(1 second, 60 minutes, NotUsed).map(_ => {
     system.log.info(s"Requesting ACL feed")
-    aclFeed.arrivals
+    aclFeed.requestArrivals
   })
 
   def walkTimeProvider(flight: Arrival): MillisSinceEpoch =
