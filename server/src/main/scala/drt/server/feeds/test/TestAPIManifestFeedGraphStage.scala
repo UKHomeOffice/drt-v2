@@ -8,6 +8,7 @@ import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
+import server.feeds.{FeedResponse, ManifestsFeedSuccess}
 import services.SDate
 import services.graphstages.DqManifests
 import test.TestActors.ResetActor
@@ -18,14 +19,14 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 
-class TestAPIManifestFeedGraphStage(actorSystem: ActorSystem) extends GraphStage[SourceShape[DqManifests]] {
-  implicit val system = actorSystem
+class TestAPIManifestFeedGraphStage(actorSystem: ActorSystem) extends GraphStage[SourceShape[FeedResponse]] {
+  implicit val system: ActorSystem = actorSystem
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   val log: Logger = LoggerFactory.getLogger(getClass)
   val minCheckIntervalMillis = 3000
 
-  val out: Outlet[DqManifests] = Outlet("manifestsOut")
-  override val shape: SourceShape[DqManifests] = SourceShape(out)
+  val out: Outlet[FeedResponse] = Outlet("manifestsOut")
+  override val shape: SourceShape[FeedResponse] = SourceShape(out)
 
   var dqManifestsState: DqManifests = DqManifests("today", Set())
   var lastFetchedMillis: MillisSinceEpoch = 0
@@ -44,7 +45,7 @@ class TestAPIManifestFeedGraphStage(actorSystem: ActorSystem) extends GraphStage
       def pushManifests(): Unit = {
         if (isAvailable(out)) {
 
-          push(out, dqManifestsState)
+          push(out, ManifestsFeedSuccess(dqManifestsState))
 
           dqManifestsState = dqManifestsState.copy(manifests = Set())
         }
@@ -52,7 +53,7 @@ class TestAPIManifestFeedGraphStage(actorSystem: ActorSystem) extends GraphStage
     }
   }
 
-  def fetchAndUpdateState() = {
+  def fetchAndUpdateState(): Unit = {
     val nowMillis = SDate.now().millisSinceEpoch
     val millisElapsed = nowMillis - lastFetchedMillis
     if (millisElapsed < minCheckIntervalMillis) {
@@ -77,7 +78,7 @@ class TestManifestsActor extends Actor with ActorLogging {
 
   var testManifests: VoyageManifests = VoyageManifests(Set())
 
-  override def receive = {
+  override def receive: PartialFunction[Any, Unit] = {
     case vms: VoyageManifests =>
       log.info(s"Got these VMS: $vms")
       testManifests = testManifests.copy(manifests = testManifests.manifests ++ vms.manifests)

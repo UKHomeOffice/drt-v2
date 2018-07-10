@@ -131,7 +131,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         (maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals) match {
           case (initialLiveState: Option[PortState], initialForecastState: Option[PortState], initialBaseArrivals: Option[Set[Arrival]], initialForecastArrivals: Option[Set[Arrival]], initialLiveArrivals: Option[Set[Arrival]]) =>
             val initialPortState: Option[PortState] = mergePortStates(initialLiveState, initialForecastState)
-            val crunchInputs: CrunchSystem[Cancellable] = startCrunchSystem(initialPortState, initialBaseArrivals, initialForecastArrivals, initialLiveArrivals, recrunchOnStart)
+            val crunchInputs: CrunchSystem[Cancellable, NotUsed] = startCrunchSystem(initialPortState, initialBaseArrivals, initialForecastArrivals, initialLiveArrivals, recrunchOnStart)
             subscribeStaffingActors(crunchInputs)
             startScheduledFeedImports(crunchInputs)
         }
@@ -142,7 +142,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   }
 
   override def getFeedStatus(): Future[Seq[FeedStatuses]] = {
-    val actors: Seq[AskableActorRef] = Seq(liveArrivalsActor, forecastArrivalsActor, baseArrivalsActor)
+    val actors: Seq[AskableActorRef] = Seq(liveArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
 
     val statuses = actors
       .map(askable => askable.ask(GetFeedStatuses)(new Timeout(5 seconds)).map {
@@ -162,14 +162,14 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     case _ => (tIn: TerminalName) => s"T${tIn.take(1)}"
   }
 
-  def startScheduledFeedImports(crunchInputs: CrunchSystem[Cancellable]): Unit = {
+  def startScheduledFeedImports(crunchInputs: CrunchSystem[Cancellable, NotUsed]): Unit = {
     if (airportConfig.portCode == "LHR") config.getString("lhr.blackjack_url").map(csvUrl => {
       val requestIntervalMillis = 5 * oneMinuteMillis
       Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, requestIntervalMillis milliseconds, SDate.now().addDays(-1))
     })
   }
 
-  def subscribeStaffingActors(crunchInputs: CrunchSystem[Cancellable]): Unit = {
+  def subscribeStaffingActors(crunchInputs: CrunchSystem[Cancellable, NotUsed]): Unit = {
     shiftsActor ! AddShiftLikeSubscribers(List(crunchInputs.shifts))
     fixedPointsActor ! AddShiftLikeSubscribers(List(crunchInputs.fixedPoints))
     staffMovementsActor ! AddStaffMovementsSubscribers(List(crunchInputs.staffMovements))
@@ -180,7 +180,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
                         initialForecastArrivals: Option[Set[Arrival]],
                         initialLiveArrivals: Option[Set[Arrival]],
                         recrunchOnStart: Boolean
-                       ): CrunchSystem[Cancellable] = {
+                       ): CrunchSystem[Cancellable, NotUsed] = {
 
     val crunchInputs = CrunchSystem(CrunchProps(
       system = system,
@@ -231,7 +231,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   def initialArrivals(arrivalsActor: AskableActorRef): Future[Option[Set[Arrival]]] = {
     val canWaitMinutes = 60
     val arrivalsFuture: Future[Option[Set[Arrival]]] = arrivalsActor.ask(GetState)(new Timeout(canWaitMinutes minutes)).map {
-      case ArrivalsState(arrivals, _) => Option(arrivals.values.toSet)
+      case ArrivalsState(arrivals, _, _) => Option(arrivals.values.toSet)
       case _ => None
     }
 
@@ -258,7 +258,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   def getLastSeenManifestsFileName: GateOrStand = {
     val futureLastSeenManifestFileName = askableVoyageManifestsActor.ask(GetState)(new Timeout(1 minute)).map {
-      case VoyageManifestState(_, lastSeenFileName) => lastSeenFileName
+      case VoyageManifestState(_, lastSeenFileName, _, _) => lastSeenFileName
     }
     Try {
       Await.result(futureLastSeenManifestFileName, 1 minute)

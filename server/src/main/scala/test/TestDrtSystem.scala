@@ -33,10 +33,10 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
   override lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[TestStaffMovementsActor]))
 
   system.log.warning(s"Using test System")
-  val voyageManifestTestSourceGraph: Source[DqManifests, NotUsed] = Source.fromGraph(new TestAPIManifestFeedGraphStage(system))
+  val voyageManifestTestSourceGraph: Source[FeedResponse, NotUsed] = Source.fromGraph(new TestAPIManifestFeedGraphStage(system))
 
   system.log.info(s"Here's the Graph $voyageManifestTestSourceGraph")
-  override lazy val voyageManifestsStage: Source[DqManifests, NotUsed] = voyageManifestTestSourceGraph
+  override lazy val voyageManifestsStage: Source[FeedResponse, NotUsed] = voyageManifestTestSourceGraph
   val testFeed = TestFixtureFeed(system)
 
   override def liveArrivalsSource(portCode: String): Source[FeedResponse, Cancellable] = testFeed

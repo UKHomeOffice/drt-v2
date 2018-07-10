@@ -22,18 +22,18 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 
-case class CrunchSystem[FR](shifts: SourceQueueWithComplete[String],
+case class CrunchSystem[FR, MS](shifts: SourceQueueWithComplete[String],
                             fixedPoints: SourceQueueWithComplete[String],
                             staffMovements: SourceQueueWithComplete[Seq[StaffMovement]],
                             baseArrivalsResponse: FR,
                             forecastArrivalsResponse: FR,
                             liveArrivalsResponse: FR,
-                            manifestsResponse: FR,
+                            manifestsResponse: MS,
                             actualDeskStats: SourceQueueWithComplete[ActualDeskStats],
                             killSwitches: List[KillSwitch]
                            )
 
-case class CrunchProps[FR](logLabel: String = "",
+case class CrunchProps[FR, MS](logLabel: String = "",
                            system: ActorSystem,
                            airportConfig: AirportConfig,
                            pcpArrival: Arrival => MilliDate,
@@ -49,7 +49,7 @@ case class CrunchProps[FR](logLabel: String = "",
                            now: () => SDateLike = () => SDate.now(),
                            initialFlightsWithSplits: Option[FlightsWithSplits] = None,
                            splitsPredictorStage: SplitsPredictorBase,
-                           manifestsSource: Source[FeedResponse, FR],
+                           manifestsSource: Source[FeedResponse, MS],
                            voyageManifestsActor: ActorRef,
                            cruncher: TryCrunch,
                            simulator: Simulator,
@@ -71,7 +71,7 @@ object CrunchSystem {
     Crunch.getLocalLastMidnight(adjustedMinute).addMinutes(offsetMinutes)
   }
 
-  def apply[FR](props: CrunchProps[FR]): CrunchSystem[FR] = {
+  def apply[FR, MS](props: CrunchProps[FR, MS]): CrunchSystem[FR, MS] = {
 
     val initialShifts = initialShiftsLikeState(props.actors("shifts"))
     val initialFixedPoints = initialShiftsLikeState(props.actors("fixed-points"))
@@ -162,7 +162,7 @@ object CrunchSystem {
       expireAfterMillis = props.expireAfterMillis,
       now = props.now)
 
-    val crunchSystem: RunnableGraph[(FR, FR, FR, FR, SourceQueueWithComplete[String], SourceQueueWithComplete[String], SourceQueueWithComplete[Seq[StaffMovement]], SourceQueueWithComplete[ActualDeskStats], UniqueKillSwitch, UniqueKillSwitch)] = RunnableCrunch(
+    val crunchSystem: RunnableGraph[(FR, FR, FR, MS, SourceQueueWithComplete[String], SourceQueueWithComplete[String], SourceQueueWithComplete[Seq[StaffMovement]], SourceQueueWithComplete[ActualDeskStats], UniqueKillSwitch, UniqueKillSwitch)] = RunnableCrunch(
       props.arrivalsBaseSource, props.arrivalsFcstSource, props.arrivalsLiveSource, manifests, shiftsSource, fixedPointsSource, staffMovementsSource, actualDesksAndQueuesSource,
       arrivalsStage, arrivalSplitsGraphStage, splitsPredictorStage, workloadGraphStage, loadBatcher, crunchLoadGraphStage, staffGraphStage, staffBatcher, simulationGraphStage, portStateGraphStage,
       props.actors("base-arrivals").actorRef, props.actors("forecast-arrivals").actorRef, props.actors("live-arrivals").actorRef,

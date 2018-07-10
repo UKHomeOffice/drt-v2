@@ -1,5 +1,6 @@
 package services.crunch
 
+import akka.NotUsed
 import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
@@ -19,10 +20,10 @@ object RunnableCrunch {
 
   def groupByCodeShares(flights: Seq[ApiFlightWithSplits]): Seq[(ApiFlightWithSplits, Set[Arrival])] = flights.map(f => (f, Set(f.apiFlight)))
 
-  def apply[FR, SS, SFP, SMM, SAD](baseArrivalsSource: Source[FeedResponse, FR],
+  def apply[FR, MS, SS, SFP, SMM, SAD](baseArrivalsSource: Source[FeedResponse, FR],
                                    fcstArrivalsSource: Source[FeedResponse, FR],
                                    liveArrivalsSource: Source[FeedResponse, FR],
-                                   manifestsSource: Source[FeedResponse, FR],
+                                   manifestsSource: Source[FeedResponse, MS],
                                    shiftsSource: Source[String, SS],
                                    fixedPointsSource: Source[String, SFP],
                                    staffMovementsSource: Source[Seq[StaffMovement], SMM],
@@ -49,7 +50,7 @@ object RunnableCrunch {
                                    fcstCrunchStateActor: ActorRef,
                                    crunchPeriodStartMillis: SDateLike => SDateLike,
                                    now: () => SDateLike
-                                  ): RunnableGraph[(FR, FR, FR, FR, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch)] = {
+                                  ): RunnableGraph[(FR, FR, FR, MS, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch)] = {
 
     val arrivalsKillSwitch = KillSwitches.single[ArrivalsDiff]
 
