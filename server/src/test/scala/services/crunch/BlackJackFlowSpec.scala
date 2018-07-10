@@ -6,6 +6,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues._
 import passengersplits.parsing.VoyageManifestParser.PassengerInfoJson
+import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.graphstages.{ActualDeskStats, DeskStat}
 
@@ -41,7 +42,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
         queues = Map("T1" -> Seq(EeaDesk, EGate)))
     )
 
-    offerAndWait(crunch.baseArrivalsInput, Option(Flights(initialBaseArrivals.toSeq)))
+    offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(initialBaseArrivals.toSeq)))
     Thread.sleep(1500)
     offerAndWait(crunch.actualDesksAndQueuesInput, deskStats)
 
@@ -87,7 +88,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
         queues = Map("T1" -> Seq(EeaDesk, EGate)))
     )
 
-    offerAndWait(crunch.baseArrivalsInput, Option(Flights(initialBaseArrivals.toSeq)))
+    offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(initialBaseArrivals.toSeq)))
     Thread.sleep(1500)
     offerAndWait(crunch.actualDesksAndQueuesInput, deskStats)
 

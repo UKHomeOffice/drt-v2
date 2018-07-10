@@ -8,14 +8,14 @@ import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, OverflowStrategy, QueueOfferResult}
 import akka.testkit.{TestKit, TestProbe}
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
+import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
-import server.feeds.{ArrivalsFeedSuccess, FeedResponse}
+import server.feeds.FeedResponse
 import services._
 import services.graphstages.Crunch._
 import services.graphstages.{ActualDeskStats, DqManifests, DummySplitsPredictor}
@@ -45,7 +45,7 @@ class ForecastCrunchStateTestActor(name: String = "", queues: Map[TerminalName, 
   }
 }
 
-case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete[Option[Flights]],
+case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete[FeedResponse],
                                       forecastArrivalsInput: SourceQueueWithComplete[FeedResponse],
                                       liveArrivalsInput: SourceQueueWithComplete[FeedResponse],
                                       manifestsInput: SourceQueueWithComplete[DqManifests],
@@ -161,7 +161,7 @@ class CrunchTestLike
     val manifestsSource: Source[DqManifests, SourceQueueWithComplete[DqManifests]] = Source.queue[DqManifests](0, OverflowStrategy.backpressure)
     val liveArrivals: Source[FeedResponse, SourceQueueWithComplete[FeedResponse]] = Source.queue[FeedResponse](0, OverflowStrategy.backpressure)
     val fcstArrivals: Source[FeedResponse, SourceQueueWithComplete[FeedResponse]] = Source.queue[FeedResponse](0, OverflowStrategy.backpressure)
-    val baseArrivals: Source[Option[Flights], SourceQueueWithComplete[Option[Flights]]] = Source.queue[Option[Flights]](0, OverflowStrategy.backpressure)
+    val baseArrivals: Source[FeedResponse, SourceQueueWithComplete[FeedResponse]] = Source.queue[FeedResponse](0, OverflowStrategy.backpressure)
 
     val crunchInputs = CrunchSystem(CrunchProps(
       logLabel = logLabel,

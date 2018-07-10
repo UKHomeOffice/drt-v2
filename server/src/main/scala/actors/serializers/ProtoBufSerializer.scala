@@ -1,10 +1,11 @@
 package actors.serializers
 
 import akka.serialization.SerializerWithStringManifest
+import drt.shared.FeedStatus
 import org.slf4j.LoggerFactory
 import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchStateSnapshotMessage}
 import server.protobuf.messages.FixedPointMessage.FixedPointsStateSnapshotMessage
-import server.protobuf.messages.FlightsMessage.{FlightStateSnapshotMessage, FlightsDiffMessage}
+import server.protobuf.messages.FlightsMessage.{FeedStatusMessage, FeedStatusesMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
 import server.protobuf.messages.ShiftMessage.ShiftStateSnapshotMessage
 import server.protobuf.messages.StaffMovementMessages.StaffMovementsStateSnapshotMessage
 import server.protobuf.messages.VoyageManifest.{VoyageManifestLatestFileNameMessage, VoyageManifestMessage, VoyageManifestStateSnapshotMessage, VoyageManifestsMessage}
@@ -22,6 +23,8 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
   final val FixedPointsStateSnapshot: String = classOf[FixedPointsStateSnapshotMessage].getName
   final val StaffMovementsStateSnapshot: String = classOf[StaffMovementsStateSnapshotMessage].getName
   final val FlightStateSnapshot: String = classOf[FlightStateSnapshotMessage].getName
+  final val FeedStatus: String = classOf[FeedStatusMessage].getName
+  final val FeedStatuses: String = classOf[FeedStatusesMessage].getName
   final val VoyageManifestStateSnapshot: String = classOf[VoyageManifestStateSnapshotMessage].getName
   final val VoyageManifestLatestFileName: String = classOf[VoyageManifestLatestFileNameMessage].getName
   final val VoyageManifests: String = classOf[VoyageManifestsMessage].getName
@@ -36,6 +39,8 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case m: FixedPointsStateSnapshotMessage => m.toByteArray
       case m: StaffMovementsStateSnapshotMessage => m.toByteArray
       case m: FlightStateSnapshotMessage => m.toByteArray
+      case m: FeedStatusMessage => m.toByteArray
+      case m: FeedStatusesMessage => m.toByteArray
       case m: VoyageManifestStateSnapshotMessage => m.toByteArray
       case m: VoyageManifestLatestFileNameMessage => m.toByteArray
       case m: VoyageManifestsMessage => m.toByteArray
@@ -54,6 +59,8 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case FixedPointsStateSnapshot => FixedPointsStateSnapshotMessage.parseFrom(bytes)
       case StaffMovementsStateSnapshot => StaffMovementsStateSnapshotMessage.parseFrom(bytes)
       case FlightStateSnapshot => FlightStateSnapshotMessage.parseFrom(bytes)
+      case FeedStatus => FeedStatusMessage.parseFrom(bytes)
+      case FeedStatuses => FeedStatusesMessage.parseFrom(bytes)
       case VoyageManifestStateSnapshot => VoyageManifestStateSnapshotMessage.parseFrom(bytes)
       case VoyageManifestLatestFileName => VoyageManifestLatestFileNameMessage.parseFrom(bytes)
       case VoyageManifests => VoyageManifestsMessage.parseFrom(bytes)

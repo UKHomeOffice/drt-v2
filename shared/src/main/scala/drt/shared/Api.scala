@@ -234,6 +234,8 @@ trait SDateLike {
 
   def getMinutes(): Int
 
+  def getSeconds(): Int
+
   def getUtcMillis(): MillisSinceEpoch
 
   def millisSinceEpoch: MillisSinceEpoch
@@ -259,6 +261,8 @@ trait SDateLike {
   def prettyDateTime(): String = f"${getDate()}%02d-${getMonth()}%02d-${getFullYear()} ${getHours()}%02d:${getMinutes()}%02d"
 
   def prettyTime(): String = f"${getHours()}%02d:${getMinutes()}%02d"
+
+  def hms(): String = f"${getHours()}%02d:${getMinutes()}%02d:${getSeconds()}%02d"
 
   def getZone(): String
 
@@ -619,6 +623,8 @@ trait Api {
   def getUserRoles(): List[String]
 
   def isLoggedIn(): Boolean
+
+  def getFeedStatuses(): Future[Seq[FeedStatuses]]
 }
 
 object ApiSplitsToSplitRatio {

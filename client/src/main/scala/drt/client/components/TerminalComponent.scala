@@ -12,7 +12,6 @@ import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
 
-import scala.collection.immutable
 
 object TerminalComponent {
 
@@ -26,7 +25,7 @@ object TerminalComponent {
                             potShifts: Pot[String],
                             potMonthOfShifts: Pot[MonthOfRawShifts],
                             potFixedPoints: Pot[String],
-                            potStaffMovements: Pot[immutable.Seq[StaffMovement]],
+                            potStaffMovements: Pot[Seq[StaffMovement]],
                             airportConfig: Pot[AirportConfig],
                             airportInfos: Pot[AirportInfo],
                             loadingState: LoadingState,
