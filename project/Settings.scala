@@ -67,6 +67,8 @@ object Settings {
     val drtBirminghamSchema = "1.0.1"
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
+    val jdom = "11.11.0"
+    val sourcemapsupport ="2.0.1"
   }
 
   import versions._
@@ -86,7 +88,9 @@ object Settings {
     "react-addons-test-utils" -> reactTestUtils,
     "log4javascript" -> log4Javascript,
     "bootstrap" -> bootstrap,
-    "react-handsontable" -> reactHandsontable
+    "react-handsontable" -> reactHandsontable,
+    "source-map-support" -> sourcemapsupport,
+    "jdom" -> "jdom"
   )
 
   val clientNpmDevDependencies = "expose-loader" -> exposeLoader
