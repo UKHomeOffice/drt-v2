@@ -88,7 +88,7 @@ lazy val server = (project in file("server"))
   dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-core" % "2.8.7",
   dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-databind" % "2.8.7",
   dependencyOverrides += "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.8.7",
-  dependencyOverrides += "com.github.dwhjames" %% "aws-wrap" % "0.9.0"
+  dependencyOverrides += "com.github.dwhjames" %% "aws-wrap" % "0.9.0",
   commands += ReleaseCmd,
   // connect to the client project
   scalaJSProjects := clients,
