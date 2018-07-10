@@ -178,7 +178,7 @@ object TerminalStaffing {
             defaultExamples
 
           <.div(
-            <.h2("Miscelaneous Staff"),
+            <.h2("Miscellaneous Staff"),
             props.roles.render(r => {
               if (r.contains("staff:edit")) {
                 <.div(
