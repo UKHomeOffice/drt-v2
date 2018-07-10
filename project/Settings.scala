@@ -90,7 +90,7 @@ object Settings {
     "bootstrap" -> bootstrap,
     "react-handsontable" -> reactHandsontable,
     "source-map-support" -> sourcemapsupport,
-    "jdom" -> "jdom"
+    "jdom" -> jdom
   )
 
   val clientNpmDevDependencies = "expose-loader" -> exposeLoader
