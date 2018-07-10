@@ -8,7 +8,7 @@ pipeline:
       - env
       - /usr/bin/yarn
       - yarn
-      - sbt clean test docker:stage
+      - sbt clean docker:stage
     environment:
       - ARTIFACTORY_USERNAME=drt_ci
     secrets:
