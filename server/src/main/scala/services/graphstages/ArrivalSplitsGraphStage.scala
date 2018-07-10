@@ -114,7 +114,7 @@ class ArrivalSplitsGraphStage(name: String = "",
             pushStateIfReady()
 
           case ManifestsFeedFailure(message, failedAt) =>
-            log.info(s"$inManifests failed at ${failedAt.toISOString()}: $message")
+            log.warn(s"$inManifests failed at ${failedAt.toISOString()}: $message")
         }
         pullAll()
         log.info(s"inManifests Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")

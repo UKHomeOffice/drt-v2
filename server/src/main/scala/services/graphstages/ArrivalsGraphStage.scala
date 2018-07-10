@@ -82,7 +82,7 @@ class ArrivalsGraphStage(name: String = "",
           handleIncomingArrivals(sourceType, flights)
           mergeAllSourcesAndPush(baseArrivals, forecastArrivals, liveArrivals)
         case ArrivalsFeedFailure(message, failedAt) =>
-          log.info(s"$arrivalsInlet failed at ${failedAt.toISOString()}: $message")
+          log.warn(s"$arrivalsInlet failed at ${failedAt.toISOString()}: $message")
       }
 
       if (!hasBeenPulled(arrivalsInlet)) pull(arrivalsInlet)

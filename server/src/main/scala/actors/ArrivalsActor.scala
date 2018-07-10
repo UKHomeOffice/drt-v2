@@ -17,9 +17,7 @@ trait FeedStateLike {
   def addStatus(newStatus: FeedStatus): FeedStatuses = {
     maybeFeedStatuses match {
       case Some(feedStatuses) => feedStatuses.add(newStatus)
-      case None =>
-        println(s"feedName: $feedName")
-        FeedStatuses(feedName, List(), None, None, None).add(newStatus)
+      case None => FeedStatuses(feedName, List(), None, None, None).add(newStatus)
     }
   }
 }
@@ -156,7 +154,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
   }
 
   def handleFeedFailure(message: String, createdAt: SDateLike): Unit = {
-    log.info("Received feed failure")
+    log.warn("Received feed failure")
     val newStatus = FeedStatusFailure(createdAt.millisSinceEpoch, message)
     state = state.copy(maybeFeedStatuses = Option(state.addStatus(newStatus)))
     persistFeedStatus(FeedStatusFailure(createdAt.millisSinceEpoch, message))
