@@ -30,6 +30,7 @@ object Settings {
     val scalajsReactComponents = "0.8.0"
     val scalaJsScripts = "1.0.0"
     val scalaCSS = "0.5.5"
+    val scalaJsMomentJs = "0.9.2"
     val autowire = "0.2.6"
     val booPickle = "1.2.6"
     val diode = "1.1.3"
@@ -162,7 +163,8 @@ object Settings {
     "io.suzaku" %%% "diode-react" % diode,
     "org.scala-js" %%% "scalajs-dom" % scalaDom,
     "com.lihaoyi" %%% "pprint" % pprint,
-    "com.lihaoyi" %%% "utest" % uTest % Test
+    "com.lihaoyi" %%% "utest" % uTest % Test,
+    "ru.pavkin" %%% "scala-js-momentjs" % scalaJsMomentJs
   ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order

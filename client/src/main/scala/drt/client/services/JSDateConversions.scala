@@ -6,8 +6,13 @@ import drt.shared.{MilliDate, SDateLike}
 
 import scala.language.implicitConversions
 import scala.scalajs.js.Date
+import moment._
+import scala.util.Try
 
 object JSDateConversions {
+
+  Moment.locale("en_GB")
+
   implicit def jsDateToMillis(jsDate: Date): MillisSinceEpoch = jsDate.getTime().toLong
 
   implicit def jsDateToMilliDate(jsDate: Date): MilliDate = MilliDate(jsDateToMillis(jsDate))
@@ -38,31 +43,31 @@ object JSDateConversions {
       def getSeconds(): Int = date.getSeconds()
 
       def addDays(daysToAdd: Int): SDateLike = {
-        val newDate = new Date(millisSinceEpoch)
+        val newDate = Moment(millisSinceEpoch).toDate()
         newDate.setDate(newDate.getDate() + daysToAdd)
         newDate
       }
 
       def addMonths(monthsToAdd: Int): SDateLike = {
-        val newDate = new Date(millisSinceEpoch)
+        val newDate = Moment(millisSinceEpoch).toDate()
         newDate.setMonth(newDate.getMonth() + monthsToAdd)
         newDate
       }
 
       def addHours(hoursToAdd: Int): SDateLike = {
-        val newDate = new Date(millisSinceEpoch)
+        val newDate = Moment(millisSinceEpoch).toDate()
         newDate.setHours(newDate.getHours() + hoursToAdd)
         newDate
       }
 
       def addMinutes(minutesToAdd: Int): SDateLike = {
-        val newDate = new Date(millisSinceEpoch)
+        val newDate = Moment(millisSinceEpoch).toDate()
         newDate.setMinutes(newDate.getMinutes() + minutesToAdd)
         newDate
       }
 
       def addMillis(millisToAdd: Int): SDateLike = {
-        new Date(millisSinceEpoch + millisToAdd)
+        Moment(millisSinceEpoch + millisToAdd).toDate()
       }
 
       def millisSinceEpoch: MillisSinceEpoch = date.getTime().toLong
@@ -78,14 +83,16 @@ object JSDateConversions {
       override def getTimeZoneOffsetMillis() = date.getTimezoneOffset() * 60000L
     }
 
-    def apply(milliDate: MilliDate): SDateLike = new Date(milliDate.millisSinceEpoch)
+    def apply(milliDate: MilliDate): SDateLike = Moment(milliDate.millisSinceEpoch).toDate()
 
-    def apply(millis: MillisSinceEpoch): SDateLike = new Date(millis)
+    def apply(millis: MillisSinceEpoch): SDateLike = Moment(millis).toDate()
 
     /** **
       * Beware - in JS land, this is interpreted as Local time, but the parse will interpret the timezone component
       */
-    def apply(y: Int, m: Int, d: Int, h: Int = 0, mm: Int = 0, s:Int =0, ms: Int = 0): SDateLike = new Date(y, m - 1, d, h, mm, s, ms)
+    def apply(y: Int, m: Int, d: Int, h: Int = 0, mm: Int = 0, s:Int =0, ms: Int = 0): SDateLike = {
+      Moment(s"$y-$m-$d`T`$h:$mm:$s.$ms", "YYYY-MM-DDTHH:mm:ss.SSS").toDate()
+    }
 
     /** *
       * dateString is an ISO parseable datetime representation, with optional timezone
@@ -93,23 +100,20 @@ object JSDateConversions {
       * @param dateString
       * @return
       */
-    def apply(dateString: String): SDateLike = new Date(dateString)
+    def apply(dateString: String): SDateLike = Moment(dateString).toDate()
 
-    def parse(dateString: String): SDateLike = new Date(dateString)
+    def parse(dateString: String): SDateLike = Moment(dateString).toDate()
 
     def parseAsLocalDateTime(localDateString: String): SDateLike = {
-      val d = new Date(localDateString)
-      new Date(d.getTime() + d.getTimezoneOffset() * 60000)
+      Moment(localDateString).toDate()
     }
 
     def stringToSDateLikeOption(dateString: String): Option[SDateLike] = {
-      val jsDate = Date.parse(dateString)
-      if (!jsDate.isNaN) Option(SDate(MilliDate(jsDate.toLong))) else
-        None
+      Try(JSSDate(Moment(dateString).toDate())).toOption
     }
 
     def midnightThisMorning(): SDateLike = {
-      val d = new Date()
+      val d = Moment().toDate()
       d.setHours(0)
       d.setMinutes(0)
       d.setSeconds(0)
@@ -118,7 +122,7 @@ object JSDateConversions {
     }
 
     def dayStart(pointInTime: SDateLike): SDateLike = {
-      val d = new Date(pointInTime.millisSinceEpoch)
+      val d = Moment(pointInTime.millisSinceEpoch).toDate()
       d.setHours(0)
       d.setMinutes(0)
       d.setSeconds(0)
@@ -127,7 +131,7 @@ object JSDateConversions {
     }
 
     def now(): SDateLike = {
-      JSSDate(new Date())
+      JSSDate(Moment().toDate())
     }
   }
 
