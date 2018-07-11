@@ -6,9 +6,5 @@ RUN mkdir /var/lib/drt-v2
 RUN mkdir -p /var/run/drt && chown 1000 /var/run/drt
 RUN mkdir -p /var/log/drt && chown 1000 /var/log/drt
 USER 1000
-<<<<<<< HEAD
-=======
-COPY id_rsa /opt/ida_rsa
->>>>>>> Changed from user to userID
 
 CMD bin/drt $JAVA_OPTS
