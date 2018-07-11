@@ -12,7 +12,7 @@ import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.InMemoryDestFile
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedResponse}
-import server.feeds.acl.AclFeed.{arrivalsFromCsvContent, contentFromFileName, latestFileForPort, sftpClient}
+import server.feeds.acl.AclFeed.{arrivalsFromCsvContent, contentFromFileName, latestFileForPort, sftpClientAndSshClient}
 import services.SDate
 
 import scala.collection.JavaConverters._
@@ -22,12 +22,21 @@ import scala.util.{Failure, Success, Try}
 case class AclFeed(ftpServer: String, username: String, path: String, portCode: String, terminalMapping: TerminalName => TerminalName) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def sftp: SFTPClient = sftpClient(ftpServer, username, path)
+  def sftpAndSsh: (SFTPClient, SSHClient) = sftpClientAndSshClient(ftpServer, username, path)
 
   def requestArrivals: FeedResponse = {
-    Try {
-      Flights(arrivalsFromCsvContent(contentFromFileName(sftp, latestFileForPort(sftp, portCode)), terminalMapping))
-    } match {
+    val feedResponseTry = for {
+      (sftpClient, sshClient) <- Try(sftpAndSsh)
+      feedResponse <- Try{
+        Flights(arrivalsFromCsvContent(contentFromFileName(sftpClient, latestFileForPort(sftpClient, portCode)), terminalMapping))
+      }
+    } yield {
+      sshClient.disconnect()
+      sftpClient.close()
+      feedResponse
+    }
+
+    feedResponseTry match {
       case Success(a) =>
         ArrivalsFeedSuccess(a)
       case Failure(f) =>
@@ -40,7 +49,7 @@ case class AclFeed(ftpServer: String, username: String, path: String, portCode: 
 object AclFeed {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def sftpClient(ftpServer: String, username: String, path: String): SFTPClient = {
+  def sftpClientAndSshClient(ftpServer: String, username: String, path: String): (SFTPClient, SSHClient) = {
     val ssh = new SSHClient()
     ssh.loadKnownHosts()
     ssh.addHostKeyVerifier(new PromiscuousVerifier())
@@ -48,7 +57,7 @@ object AclFeed {
     ssh.authPublickey(username, path)
     ssh.setTimeout(0)
 
-    ssh.newSFTPClient
+    (ssh.newSFTPClient, ssh)
   }
 
   def latestFileForPort(sftp: SFTPClient, portCode: String): String = {

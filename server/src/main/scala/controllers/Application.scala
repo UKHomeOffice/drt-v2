@@ -584,12 +584,16 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   def fetchAclFeed(portCode: String): Action[AnyContent] = Action.async {
-    val fileName = AclFeed.latestFileForPort(ctrl.aclFeed.sftp, portCode.toUpperCase)
+    val (sftpClient, sshClient) = ctrl.aclFeed.sftpAndSsh
+    val fileName = AclFeed.latestFileForPort(sftpClient, portCode.toUpperCase)
 
     log.info(s"Latest ACL file for $portCode: $fileName. Fetching..")
 
-    val zipContent = AclFeed.contentFromFileName(ctrl.aclFeed.sftp, fileName)
+    val zipContent = AclFeed.contentFromFileName(sftpClient, fileName)
     val csvFileName = fileName.replace(".zip", ".csv")
+
+    sshClient.disconnect()
+    sftpClient.close()
 
     val result = Result(
       ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$csvFileName'")),
