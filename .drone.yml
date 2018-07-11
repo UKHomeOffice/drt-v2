@@ -13,7 +13,13 @@ pipeline:
     when:
       event:
         - push
-  
+  sonar-scanner:
+    image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
+    when:
+      event:
+        - push
+        - pull_request
+
   build_docker:
     environment:
       - DOCKER_USERNAME=drt_ci
