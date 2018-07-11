@@ -12,7 +12,7 @@ import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedResponse}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, ArrivalsFeedResponse}
 import services.SDate
 
 import scala.collection.JavaConverters._
@@ -49,7 +49,7 @@ case class LHRCsvException(originalLine: String, idx: Int, innerException: Throw
   override def toString = s"$originalLine : $idx $innerException"
 }
 
-case class LHRFlightFeed(csvRecords: Iterator[(Int) => String]) {
+case class LHRFlightFeed(csvRecords: Iterator[Int => String]) {
 
   def opt(s: String): Option[String] = emptyStringToOption(s, x => x)
 
@@ -90,7 +90,7 @@ case class LHRFlightFeed(csvRecords: Iterator[(Int) => String]) {
     case Success(s) => s
   }
 
-  def dateOptToStringOrEmptyString: (Option[DateTime]) => String = (dto: Option[DateTime]) => dto.map(_.toDateTimeISO.toString()).getOrElse("")
+  def dateOptToStringOrEmptyString: Option[DateTime] => String = (dto: Option[DateTime]) => dto.map(_.toDateTimeISO.toString()).getOrElse("")
 
   lazy val copiedToApiFlights: List[Arrival] =
     successfulFlights.map(flight => {
@@ -124,13 +124,13 @@ case class LHRFlightFeed(csvRecords: Iterator[(Int) => String]) {
 
 object LHRFlightFeed {
 
-  def csvParserAsIteratorOfColumnGetter(csvString: String): Iterator[(Int) => String] = {
+  def csvParserAsIteratorOfColumnGetter(csvString: String): Iterator[Int => String] = {
     val csv: CSVParser = CSVParser.parse(csvString, CSVFormat.DEFAULT)
-    val csvGetters: Iterator[(Int) => String] = csv.iterator().asScala.map((l: CSVRecord) => (i: Int) => l.get(i))
+    val csvGetters: Iterator[Int => String] = csv.iterator().asScala.map((l: CSVRecord) => (i: Int) => l.get(i))
     csvGetters
   }
 
-  def emptyStringToOption[T](s: String, t: (String) => T): Option[T] = {
+  def emptyStringToOption[T](s: String, t: String => T): Option[T] = {
     if (s.isEmpty) None else Option(t(s))
   }
 
@@ -146,11 +146,11 @@ object LHRFlightFeed {
 
   def parseDateTime(dateString: String): DateTime = pattern.parseDateTime(dateString)
 
-  def apply(csvContentsProvider: () => Try[String] = csvContentsProviderProd): Source[FeedResponse, Cancellable] = {
+  def apply(csvContentsProvider: () => Try[String] = csvContentsProviderProd): Source[ArrivalsFeedResponse, Cancellable] = {
     val pollFrequency = 1 minute
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
-    val tickingSource: Source[FeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
-      .map((_) => {
+    val tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
+      .map(_ => {
         log.info(s"Requesting CSV")
         csvContentsProvider() match {
           case Success(csvContents) =>

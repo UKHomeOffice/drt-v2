@@ -9,7 +9,7 @@ import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
-import server.feeds.FeedResponse
+import server.feeds.{ArrivalsFeedResponse, FeedResponse, ManifestsFeedResponse}
 import services.graphstages.Crunch.Loads
 import services.graphstages._
 
@@ -20,10 +20,10 @@ object RunnableCrunch {
 
   def groupByCodeShares(flights: Seq[ApiFlightWithSplits]): Seq[(ApiFlightWithSplits, Set[Arrival])] = flights.map(f => (f, Set(f.apiFlight)))
 
-  def apply[FR, MS, SS, SFP, SMM, SAD](baseArrivalsSource: Source[FeedResponse, FR],
-                                   fcstArrivalsSource: Source[FeedResponse, FR],
-                                   liveArrivalsSource: Source[FeedResponse, FR],
-                                   manifestsSource: Source[FeedResponse, MS],
+  def apply[FR, MS, SS, SFP, SMM, SAD](baseArrivalsSource: Source[ArrivalsFeedResponse, FR],
+                                   fcstArrivalsSource: Source[ArrivalsFeedResponse, FR],
+                                   liveArrivalsSource: Source[ArrivalsFeedResponse, FR],
+                                   manifestsSource: Source[ManifestsFeedResponse, MS],
                                    shiftsSource: Source[String, SS],
                                    fixedPointsSource: Source[String, SFP],
                                    staffMovementsSource: Source[Seq[StaffMovement], SMM],
@@ -54,7 +54,7 @@ object RunnableCrunch {
 
     val arrivalsKillSwitch = KillSwitches.single[ArrivalsDiff]
 
-    val manifestsKillSwitch = KillSwitches.single[FeedResponse]
+    val manifestsKillSwitch = KillSwitches.single[ManifestsFeedResponse]
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
@@ -97,11 +97,11 @@ object RunnableCrunch {
           val simulation = builder.add(simulationGraphStage.async)
           val portState = builder.add(portStateGraphStage.async)
 
-          val baseArrivalsFanOut = builder.add(Broadcast[FeedResponse](2))
-          val fcstArrivalsFanOut = builder.add(Broadcast[FeedResponse](2))
-          val liveArrivalsFanOut = builder.add(Broadcast[FeedResponse](2))
+          val baseArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
+          val fcstArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
+          val liveArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
           val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](3))
-          val manifestsFanOut = builder.add(Broadcast[FeedResponse](2))
+          val manifestsFanOut = builder.add(Broadcast[ManifestsFeedResponse](2))
           val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](2))
           val workloadFanOut = builder.add(Broadcast[Loads](2))
           val staffFanOut = builder.add(Broadcast[StaffMinutes](2))

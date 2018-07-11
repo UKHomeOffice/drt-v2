@@ -8,8 +8,8 @@ import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.SplitsCalculator
-import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
-import server.feeds.{FeedResponse, ManifestsFeedFailure, ManifestsFeedSuccess}
+import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import server.feeds.{ManifestsFeedFailure, ManifestsFeedResponse, ManifestsFeedSuccess}
 import services._
 import services.graphstages.Crunch.{log, _}
 
@@ -22,14 +22,14 @@ case class UpdatedFlights(flights: Map[Int, ApiFlightWithSplits], updatesCount: 
 class ArrivalSplitsGraphStage(name: String = "",
                               optionalInitialFlights: Option[FlightsWithSplits],
                               splitsCalculator: SplitsCalculator,
-                              groupFlightsByCodeShares: (Seq[ApiFlightWithSplits]) => Seq[(ApiFlightWithSplits, Set[Arrival])],
+                              groupFlightsByCodeShares: Seq[ApiFlightWithSplits] => Seq[(ApiFlightWithSplits, Set[Arrival])],
                               expireAfterMillis: Long,
                               now: () => SDateLike,
                               maxDaysToCrunch: Int)
-  extends GraphStage[FanInShape3[ArrivalsDiff, FeedResponse, Seq[(Arrival, Option[ApiSplits])], FlightsWithSplits]] {
+  extends GraphStage[FanInShape3[ArrivalsDiff, ManifestsFeedResponse, Seq[(Arrival, Option[ApiSplits])], FlightsWithSplits]] {
 
   val inArrivalsDiff: Inlet[ArrivalsDiff] = Inlet[ArrivalsDiff]("ArrivalsDiffIn.in")
-  val inManifests: Inlet[FeedResponse] = Inlet[FeedResponse]("SplitsIn.in")
+  val inManifests: Inlet[ManifestsFeedResponse] = Inlet[ManifestsFeedResponse]("SplitsIn.in")
   val inSplitsPredictions: Inlet[Seq[(Arrival, Option[ApiSplits])]] = Inlet[Seq[(Arrival, Option[ApiSplits])]]("SplitsPredictionsIn.in")
   val outArrivalsWithSplits: Outlet[FlightsWithSplits] = Outlet[FlightsWithSplits]("ArrivalsWithSplitsOut.out")
 
@@ -114,7 +114,7 @@ class ArrivalSplitsGraphStage(name: String = "",
             pushStateIfReady()
 
           case ManifestsFeedFailure(message, failedAt) =>
-            log.warn(s"$inManifests failed at ${failedAt.toISOString()}: $message")
+            log.info(s"$inManifests failed at ${failedAt.toISOString()}: $message")
         }
         pullAll()
         log.info(s"inManifests Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")

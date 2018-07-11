@@ -9,7 +9,7 @@ import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveF
 import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
 import org.springframework.util.StringUtils
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedResponse}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, ArrivalsFeedResponse}
 import services.SDate
 
 import scala.collection.immutable.Seq
@@ -19,13 +19,13 @@ import scala.language.postfixOps
 
 object StreamingChromaFlow {
 
-  def chromaPollingSourceLive(log: LoggingAdapter, chromaFetcher: ChromaFetcher, pollFrequency: FiniteDuration): Source[FeedResponse, Cancellable] = {
-    implicit val l = log
+  def chromaPollingSourceLive(log: LoggingAdapter, chromaFetcher: ChromaFetcher, pollFrequency: FiniteDuration): Source[ArrivalsFeedResponse, Cancellable] = {
+    implicit val l: LoggingAdapter = log
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
     val tickingSource: Source[Try[Seq[ChromaLiveFlight]], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
-      .map((_) => Try(chromaFetcher.currentFlightsBlocking))
+      .map(_ => Try(chromaFetcher.currentFlightsBlocking))
 
-    val recoverableTicking: Source[FeedResponse, Cancellable] = tickingSource
+    val recoverableTicking: Source[ArrivalsFeedResponse, Cancellable] = tickingSource
       .map {
         case Failure(f) => ArrivalsFeedFailure(f.toString, SDate.now())
         case Success(chromaFlights) => ArrivalsFeedSuccess(Flights(liveChromaToArrival(chromaFlights)), SDate.now())
@@ -33,13 +33,13 @@ object StreamingChromaFlow {
     recoverableTicking
   }
 
-  def chromaPollingSourceForecast(log: LoggingAdapter, chromaFetcher: ChromaFetcherForecast, pollFrequency: FiniteDuration): Source[FeedResponse, Cancellable] = {
-    implicit val l = log
+  def chromaPollingSourceForecast(log: LoggingAdapter, chromaFetcher: ChromaFetcherForecast, pollFrequency: FiniteDuration): Source[ArrivalsFeedResponse, Cancellable] = {
+    implicit val l: LoggingAdapter = log
     val initialDelayImmediately: FiniteDuration = 15 seconds
     val tickingSource: Source[Try[Seq[ChromaForecastFlight]], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
-      .map((_) => Try(chromaFetcher.currentFlightsBlocking))
+      .map(_ => Try(chromaFetcher.currentFlightsBlocking))
 
-    val recoverableTicking: Source[FeedResponse, Cancellable] = tickingSource
+    val recoverableTicking: Source[ArrivalsFeedResponse, Cancellable] = tickingSource
       .map {
         case Failure(f) => ArrivalsFeedFailure(f.toString, SDate.now())
         case Success(chromaFlights) => ArrivalsFeedSuccess(Flights(forecastChromaToArrival(chromaFlights)), SDate.now())
