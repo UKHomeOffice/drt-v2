@@ -129,7 +129,7 @@ object Settings {
     "io.spray" %% "spray-json" % sprayVersion,
 
     "joda-time" % "joda-time" % jodaTime,
-    "joda-convert" % "joda-convert" % jodaConvert,
+    "org.joda" % "joda-convert" % jodaConvert,
     "org.opensaml" % "opensaml" % openSaml excludeAll (ExclusionRule("org.bouncycastle"), ExclusionRule("xerces")),
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
