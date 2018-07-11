@@ -11,7 +11,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.util.StringUtils
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedResponse}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, ArrivalsFeedResponse}
 import services.SDate
 import services.graphstages.Crunch
 import spray.client.pipelining.{Get, addHeader, unmarshal, _}
@@ -227,14 +227,14 @@ object LHRLiveFeed {
     }
   }
 
-  def apply(apiEndpoint: String, apiSecurityToken: String, actorSystem: ActorSystem): Source[FeedResponse, Cancellable] = {
+  def apply(apiEndpoint: String, apiSecurityToken: String, actorSystem: ActorSystem): Source[ArrivalsFeedResponse, Cancellable] = {
     log.info(s"Preparing to stream LHR Live feed")
 
     val LHRFetcher = new LHRLiveFeedConsumer(apiEndpoint, apiSecurityToken, actorSystem) with ProdSendAndReceive
 
     val pollFrequency = 6 minutes
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
-    val tickingSource: Source[FeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
+    val tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
       .map((_) => {
         log.info(s"About to poll for LHR live flights")
         Try(Await.result(LHRFetcher.arrivals, 3 minutes)) match {

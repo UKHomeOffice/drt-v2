@@ -9,30 +9,29 @@ sealed trait FeedResponse {
   val createdAt: SDateLike
 }
 
-case class ArrivalsFeedSuccess(arrivals: Flights, createdAt: SDateLike) extends FeedResponse
+sealed trait ArrivalsFeedResponse extends FeedResponse
+sealed trait ManifestsFeedResponse extends FeedResponse
+
+case class ArrivalsFeedSuccess(arrivals: Flights, createdAt: SDateLike) extends ArrivalsFeedResponse
 
 object ArrivalsFeedSuccess {
-  def apply(arrivals: Flights): FeedResponse = ArrivalsFeedSuccess(arrivals, SDate.now())
+  def apply(arrivals: Flights): ArrivalsFeedResponse = ArrivalsFeedSuccess(arrivals, SDate.now())
 }
 
-case class ArrivalsFeedFailure(responseMessage: String, createdAt: SDateLike) extends FeedResponse
+case class ArrivalsFeedFailure(responseMessage: String, createdAt: SDateLike) extends ArrivalsFeedResponse
 
 object ArrivalsFeedFailure {
-  def apply(responseMessage: String): FeedResponse = ArrivalsFeedFailure(responseMessage, SDate.now())
+  def apply(responseMessage: String): ArrivalsFeedResponse = ArrivalsFeedFailure(responseMessage, SDate.now())
 }
 
-case class ManifestsFeedSuccess(manifests: DqManifests, createdAt: SDateLike) extends FeedResponse
+case class ManifestsFeedSuccess(manifests: DqManifests, createdAt: SDateLike) extends ManifestsFeedResponse
 
 object ManifestsFeedSuccess {
-  def apply(manifests: DqManifests): FeedResponse = ManifestsFeedSuccess(manifests, SDate.now())
+  def apply(manifests: DqManifests): ManifestsFeedResponse = ManifestsFeedSuccess(manifests, SDate.now())
 }
 
-case class ManifestsFeedFailure(responseMessage: String, createdAt: SDateLike) extends FeedResponse
+case class ManifestsFeedFailure(responseMessage: String, createdAt: SDateLike) extends ManifestsFeedResponse
 
 object ManifestsFeedFailure {
-  def apply(responseMessage: String): FeedResponse = ManifestsFeedFailure(responseMessage, SDate.now())
+  def apply(responseMessage: String): ManifestsFeedResponse = ManifestsFeedFailure(responseMessage, SDate.now())
 }
-
-case class DeskStatsFeedSuccess(deskStats: ActualDeskStats, createdAt: SDateLike) extends FeedResponse
-
-case class DeskStatsFeedFailure(responseMessage: String, createdAt: SDateLike) extends FeedResponse

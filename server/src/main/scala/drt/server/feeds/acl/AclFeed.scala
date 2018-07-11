@@ -11,7 +11,7 @@ import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.InMemoryDestFile
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedResponse}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, FeedResponse}
 import server.feeds.acl.AclFeed.{arrivalsFromCsvContent, contentFromFileName, latestFileForPort, sftpClient}
 import services.SDate
 
@@ -24,7 +24,7 @@ case class AclFeed(ftpServer: String, username: String, path: String, portCode: 
 
   def sftp: SFTPClient = sftpClient(ftpServer, username, path)
 
-  def requestArrivals: FeedResponse = {
+  def requestArrivals: ArrivalsFeedResponse = {
     Try {
       Flights(arrivalsFromCsvContent(contentFromFileName(sftp, latestFileForPort(sftp, portCode)), terminalMapping))
     } match {

@@ -11,7 +11,7 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.{SDateLike, _}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.SplitsCalculator
-import server.feeds.FeedResponse
+import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services._
 import services.graphstages.Crunch._
 import services.graphstages._
@@ -49,7 +49,7 @@ case class CrunchProps[FR, MS](logLabel: String = "",
                            now: () => SDateLike = () => SDate.now(),
                            initialFlightsWithSplits: Option[FlightsWithSplits] = None,
                            splitsPredictorStage: SplitsPredictorBase,
-                           manifestsSource: Source[FeedResponse, MS],
+                           manifestsSource: Source[ManifestsFeedResponse, MS],
                            voyageManifestsActor: ActorRef,
                            cruncher: TryCrunch,
                            simulator: Simulator,
@@ -57,9 +57,9 @@ case class CrunchProps[FR, MS](logLabel: String = "",
                            initialBaseArrivals: Set[Arrival] = Set(),
                            initialFcstArrivals: Set[Arrival] = Set(),
                            initialLiveArrivals: Set[Arrival] = Set(),
-                           arrivalsBaseSource: Source[FeedResponse, FR],
-                           arrivalsFcstSource: Source[FeedResponse, FR],
-                           arrivalsLiveSource: Source[FeedResponse, FR],
+                           arrivalsBaseSource: Source[ArrivalsFeedResponse, FR],
+                           arrivalsFcstSource: Source[ArrivalsFeedResponse, FR],
+                           arrivalsLiveSource: Source[ArrivalsFeedResponse, FR],
                            recrunchOnStart: Boolean = false)
 
 object CrunchSystem {

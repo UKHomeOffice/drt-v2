@@ -13,7 +13,7 @@ import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
 import org.apache.commons.io.IOUtils
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedResponse}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, FeedResponse}
 import services.SDate
 import spray.client.pipelining
 import spray.client.pipelining.{Delete, Post, addHeader, _}
@@ -130,7 +130,7 @@ object LGWFeed {
   val log: Logger = LoggerFactory.getLogger(getClass)
   var tokenFuture: Future[GatwickAzureToken] = _
 
-  def apply()(implicit actorSystem: ActorSystem): Source[FeedResponse, Cancellable] = {
+  def apply()(implicit actorSystem: ActorSystem): Source[ArrivalsFeedResponse, Cancellable] = {
     val config = actorSystem.settings.config
 
     implicit val dispatcher: ExecutionContextExecutor = actorSystem.dispatcher
@@ -148,7 +148,7 @@ object LGWFeed {
 
     tokenFuture = feed.requestToken()
 
-    val tickingSource: Source[FeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollInterval, NotUsed)
+    val tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollInterval, NotUsed)
       .withAttributes(ActorAttributes.supervisionStrategy(Supervision.restartingDecider))
       .map(_ => {
         Try {

@@ -6,7 +6,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedResponse}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import services.graphstages.Crunch.midnightThisMorning
 
@@ -23,15 +23,15 @@ class ArrivalsGraphStage(name: String = "",
                          initialBaseArrivals: Set[Arrival],
                          initialForecastArrivals: Set[Arrival],
                          initialLiveArrivals: Set[Arrival],
-                         pcpArrivalTime: (Arrival) => MilliDate, crunchStartDateProvider: () => MillisSinceEpoch = midnightThisMorning _,
+                         pcpArrivalTime: Arrival => MilliDate, crunchStartDateProvider: () => MillisSinceEpoch = midnightThisMorning _,
                          validPortTerminals: Set[String],
                          expireAfterMillis: Long,
                          now: () => SDateLike)
-  extends GraphStage[FanInShape3[FeedResponse, FeedResponse, FeedResponse, ArrivalsDiff]] {
+  extends GraphStage[FanInShape3[ArrivalsFeedResponse, ArrivalsFeedResponse, ArrivalsFeedResponse, ArrivalsDiff]] {
 
-  val inBaseArrivals: Inlet[FeedResponse] = Inlet[FeedResponse]("inFlightsBase.in")
-  val inForecastArrivals: Inlet[FeedResponse] = Inlet[FeedResponse]("inFlightsForecast.in")
-  val inLiveArrivals: Inlet[FeedResponse] = Inlet[FeedResponse]("inFlightsLive.in")
+  val inBaseArrivals: Inlet[ArrivalsFeedResponse] = Inlet[ArrivalsFeedResponse]("inFlightsBase.in")
+  val inForecastArrivals: Inlet[ArrivalsFeedResponse] = Inlet[ArrivalsFeedResponse]("inFlightsForecast.in")
+  val inLiveArrivals: Inlet[ArrivalsFeedResponse] = Inlet[ArrivalsFeedResponse]("inFlightsLive.in")
   val outArrivalsDiff: Outlet[ArrivalsDiff] = Outlet[ArrivalsDiff]("outArrivalsDiff.in")
   override val shape = new FanInShape3(inBaseArrivals, inForecastArrivals, inLiveArrivals, outArrivalsDiff)
 
@@ -72,7 +72,7 @@ class ArrivalsGraphStage(name: String = "",
       override def onPush(): Unit = onPushArrivals(inLiveArrivals, LiveArrivals)
     })
 
-    def onPushArrivals(arrivalsInlet: Inlet[FeedResponse], sourceType: ArrivalsSourceType): Unit = {
+    def onPushArrivals(arrivalsInlet: Inlet[ArrivalsFeedResponse], sourceType: ArrivalsSourceType): Unit = {
       val start = SDate.now()
       log.info(s"$arrivalsInlet onPush() grabbing flights")
 
