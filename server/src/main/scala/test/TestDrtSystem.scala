@@ -9,7 +9,7 @@ import drt.server.feeds.test.{TestAPIManifestFeedGraphStage, TestFixtureFeed}
 import drt.shared.AirportConfig
 import drt.shared.FlightsApi.Flights
 import play.api.Configuration
-import server.feeds.FeedResponse
+import server.feeds.{ArrivalsFeedResponse, FeedResponse, ManifestsFeedResponse}
 import services.graphstages.DqManifests
 import test.TestActors.{TestStaffMovementsActor, _}
 
@@ -33,13 +33,13 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
   override lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[TestStaffMovementsActor]))
 
   system.log.warning(s"Using test System")
-  val voyageManifestTestSourceGraph: Source[FeedResponse, NotUsed] = Source.fromGraph(new TestAPIManifestFeedGraphStage(system))
+  val voyageManifestTestSourceGraph: Source[ManifestsFeedResponse, NotUsed] = Source.fromGraph(new TestAPIManifestFeedGraphStage(system))
 
   system.log.info(s"Here's the Graph $voyageManifestTestSourceGraph")
-  override lazy val voyageManifestsStage: Source[FeedResponse, NotUsed] = voyageManifestTestSourceGraph
+  override lazy val voyageManifestsStage: Source[ManifestsFeedResponse, NotUsed] = voyageManifestTestSourceGraph
   val testFeed = TestFixtureFeed(system)
 
-  override def liveArrivalsSource(portCode: String): Source[FeedResponse, Cancellable] = testFeed
+  override def liveArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = testFeed
 
   override def run(): Unit = {
 

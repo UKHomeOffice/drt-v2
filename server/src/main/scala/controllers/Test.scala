@@ -10,7 +10,7 @@ import passengersplits.parsing.VoyageManifestParser.FlightPassengerInfoProtocol.
 import drt.shared.{Arrival, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
-import play.api.mvc.{Action, Controller}
+import play.api.mvc.{Action, Controller, InjectedController}
 import play.api.{Configuration, Environment}
 import services.SDate
 import spray.json._
@@ -25,7 +25,7 @@ class Test @Inject()(implicit val config: Configuration,
                      implicit val mat: Materializer,
                      env: Environment,
                      val system: ActorSystem,
-                     ec: ExecutionContext) extends Controller {
+                     ec: ExecutionContext) extends InjectedController {
   implicit val timeout: Timeout = Timeout(250 milliseconds)
 
   val log: Logger = LoggerFactory.getLogger(getClass)

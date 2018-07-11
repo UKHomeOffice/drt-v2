@@ -6,10 +6,8 @@ import drt.shared.SDateLike
 import info.folone.scala.poi._
 import info.folone.scala.poi.impure._
 import org.apache.poi.ss.usermodel.DateUtil
-import org.joda.time.{DateTime, DateTimeZone}
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.graphstages.Crunch
 import services.graphstages.Crunch.europeLondonId
 
 
@@ -18,16 +16,16 @@ case class LHRForecastFlightRow(
                                  flightCode: String = "",
                                  origin: String = "",
                                  internationalDomestic: String = "",
-                                 totalPax: Integer = 0,
-                                 transferPax: Integer = 0,
+                                 totalPax: Int = 0,
+                                 transferPax: Int = 0,
                                  terminal: String
                                )
 
 object LHRForecastXLSExtractor {
 
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply(xlsFilePath: String) = {
+  def apply(xlsFilePath: String): List[LHRForecastFlightRow] = {
     val lhrWorkbook: Workbook = load(xlsFilePath)
 
     log.info(s"Extracting forecast flights from XLS Workbook located at $xlsFilePath")

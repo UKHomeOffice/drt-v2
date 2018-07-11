@@ -12,7 +12,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedResponse}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, ArrivalsFeedResponse}
 import services.SDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
@@ -24,14 +24,14 @@ import scala.util.{Failure, Success, Try}
 case class LtnLiveFeed(endPoint: String, token: String, username: String, password: String, timeZone: DateTimeZone) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def tickingSource: Source[FeedResponse, Cancellable] = Source
+  def tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source
     .tick(0 millis, 30 seconds, NotUsed)
     .map(_ => {
       log.info(s"Requesting feed")
       requestFeed()
     })
 
-  def requestFeed(): FeedResponse = {
+  def requestFeed(): ArrivalsFeedResponse = {
     val request = HttpRequest(
       method = HttpMethods.GET,
       uri = Uri(endPoint),

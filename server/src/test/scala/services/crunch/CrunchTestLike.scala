@@ -15,7 +15,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
-import server.feeds.{FeedResponse, ManifestsFeedSuccess}
+import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse, ManifestsFeedSuccess}
 import services._
 import services.graphstages.Crunch._
 import services.graphstages.{ActualDeskStats, DqManifests, DummySplitsPredictor}
@@ -45,10 +45,10 @@ class ForecastCrunchStateTestActor(name: String = "", queues: Map[TerminalName, 
   }
 }
 
-case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete[FeedResponse],
-                                      forecastArrivalsInput: SourceQueueWithComplete[FeedResponse],
-                                      liveArrivalsInput: SourceQueueWithComplete[FeedResponse],
-                                      manifestsInput: SourceQueueWithComplete[FeedResponse],
+case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
+                                      forecastArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
+                                      liveArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
+                                      manifestsInput: SourceQueueWithComplete[ManifestsFeedResponse],
                                       liveShiftsInput: SourceQueueWithComplete[String],
                                       liveFixedPointsInput: SourceQueueWithComplete[String],
                                       liveStaffMovementsInput: SourceQueueWithComplete[Seq[StaffMovement]],
@@ -115,7 +115,7 @@ class CrunchTestLike
 
   val splitsPredictorStage = new DummySplitsPredictor()
 
-  val pcpForFlight: (Arrival) => MilliDate = (a: Arrival) => MilliDate(SDate(a.Scheduled).millisSinceEpoch)
+  val pcpForFlight: Arrival => MilliDate = (a: Arrival) => MilliDate(SDate(a.Scheduled).millisSinceEpoch)
 
   def liveCrunchStateActor(name: String = "", testProbe: TestProbe, now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[LiveCrunchStateTestActor], name, airportConfig.queues, testProbe.ref, now, 2 * oneDayMillis), name = "crunch-live-state-actor")
 
@@ -130,7 +130,7 @@ class CrunchTestLike
                      initialPortState: Option[PortState] = None,
                      airportConfig: AirportConfig = airportConfig,
                      csvSplitsProvider: SplitsProvider.SplitProvider = (_, _) => None,
-                     pcpArrivalTime: (Arrival) => MilliDate = pcpForFlight,
+                     pcpArrivalTime: Arrival => MilliDate = pcpForFlight,
                      minutesToCrunch: Int = 60,
                      calcPcpWindow: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)] = (_, _) => Some((SDate.now(), SDate.now())),
                      now: () => SDateLike,
@@ -158,10 +158,10 @@ class CrunchTestLike
     val liveCrunchActor = liveCrunchStateActor(logLabel, liveProbe, now)
     val forecastCrunchActor = forecastCrunchStateActor(logLabel, forecastProbe, now)
 
-    val manifestsSource: Source[FeedResponse, SourceQueueWithComplete[FeedResponse]] = Source.queue[FeedResponse](0, OverflowStrategy.backpressure)
-    val liveArrivals: Source[FeedResponse, SourceQueueWithComplete[FeedResponse]] = Source.queue[FeedResponse](0, OverflowStrategy.backpressure)
-    val fcstArrivals: Source[FeedResponse, SourceQueueWithComplete[FeedResponse]] = Source.queue[FeedResponse](0, OverflowStrategy.backpressure)
-    val baseArrivals: Source[FeedResponse, SourceQueueWithComplete[FeedResponse]] = Source.queue[FeedResponse](0, OverflowStrategy.backpressure)
+    val manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
+    val liveArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
+    val fcstArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
+    val baseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
 
     val crunchInputs = CrunchSystem(CrunchProps(
       logLabel = logLabel,

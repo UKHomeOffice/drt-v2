@@ -17,7 +17,7 @@ import drt.shared.DqEventCodes
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
-import server.feeds.{FeedResponse, ManifestsFeedFailure, ManifestsFeedSuccess}
+import server.feeds.{ManifestsFeedResponse, ManifestsFeedFailure, ManifestsFeedSuccess}
 import services.SDate
 
 import scala.collection.immutable.Seq
@@ -42,18 +42,18 @@ case class DqManifests(lastSeenFileName: String, manifests: Set[VoyageManifest])
   }
 }
 
-class VoyageManifestsGraphStage(bucketName: String, portCode: String, initialLastSeenFileName: String, minCheckIntervalMillis: MillisSinceEpoch = 30000) extends GraphStage[SourceShape[FeedResponse]] {
+class VoyageManifestsGraphStage(bucketName: String, portCode: String, initialLastSeenFileName: String, minCheckIntervalMillis: MillisSinceEpoch = 30000) extends GraphStage[SourceShape[ManifestsFeedResponse]] {
   implicit val actorSystem: ActorSystem = ActorSystem("VoyageManifestActorSystem")
   implicit val materializer: ActorMaterializer = ActorMaterializer()
 
-  val out: Outlet[FeedResponse] = Outlet("manifestsOut")
-  override val shape: SourceShape[FeedResponse] = SourceShape(out)
+  val out: Outlet[ManifestsFeedResponse] = Outlet("manifestsOut")
+  override val shape: SourceShape[ManifestsFeedResponse] = SourceShape(out)
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   val dqRegex: Regex = "(drt_dq_[0-9]{6}_[0-9]{6})(_[0-9]{4}\\.zip)".r
 
-  var maybeResponseToPush: Option[FeedResponse] = None
+  var maybeResponseToPush: Option[ManifestsFeedResponse] = None
   var lastSeenFileName: String = initialLastSeenFileName
   var lastFetchedMillis: MillisSinceEpoch = 0
 
@@ -94,7 +94,7 @@ class VoyageManifestsGraphStage(bucketName: String, portCode: String, initialLas
     }
   }
 
-  def fetchNewManifests(startingFileName: String): FeedResponse = {
+  def fetchNewManifests(startingFileName: String): ManifestsFeedResponse = {
     log.info(s"Fetching manifests from files newer than $startingFileName")
     val eventualFileNameAndManifests = manifestsFuture(startingFileName)
       .map(fetchedFilesAndManifests => {

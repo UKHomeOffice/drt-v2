@@ -89,9 +89,9 @@ trait AirportConfProvider extends AirportConfiguration {
 
   def mockProd: String = sys.env.getOrElse("MOCK_PROD", "PROD").toUpperCase
 
-  def useStaffingInput: Boolean = config.getString("feature-flags.use-v2-staff-input").isDefined
+  def useStaffingInput: Boolean = config.getOptional[String]("feature-flags.use-v2-staff-input").isDefined
 
-  def contactEmail: Option[String] = config.getString("contact-email")
+  def contactEmail: Option[String] = config.getOptional[String]("contact-email")
 
   def getPortConfFromEnvVar: AirportConfig = AirportConfigs.confByPort(portCode)
 
@@ -150,13 +150,13 @@ class Application @Inject()(implicit val config: Configuration,
                             env: Environment,
                             val system: ActorSystem,
                             ec: ExecutionContext)
-  extends Controller
+  extends InjectedController
     with AirportConfProvider
     with ProdPassengerSplitProviders
     with ImplicitTimeoutProvider
     with AvailableUserRoles {
 
-  val ctrl: DrtSystemInterface = config.getString("env") match {
+  val ctrl: DrtSystemInterface = config.getOptional[String]("env") match {
     case Some("test") =>
       new TestDrtSystem(system, config, getPortConfFromEnvVar)
     case _ =>
@@ -294,7 +294,7 @@ class Application @Inject()(implicit val config: Configuration,
         }
       }
 
-      def getUserRoles(): List[String] = if (config.getString("feature-flags.super-user-mode").isDefined)
+      def getUserRoles(): List[String] = if (config.getOptional[String]("feature-flags.super-user-mode").isDefined)
         availableRoles
       else
         roles
@@ -584,7 +584,8 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   def fetchAclFeed(portCode: String): Action[AnyContent] = Action.async {
-    val (sftpClient, sshClient) = ctrl.aclFeed.sftpAndSsh
+    val sshClient = ctrl.aclFeed.ssh
+    val sftpClient = ctrl.aclFeed.sftp(sshClient)
     val fileName = AclFeed.latestFileForPort(sftpClient, portCode.toUpperCase)
 
     log.info(s"Latest ACL file for $portCode: $fileName. Fetching..")

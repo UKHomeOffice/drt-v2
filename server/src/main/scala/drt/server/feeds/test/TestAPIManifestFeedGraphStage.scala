@@ -8,7 +8,7 @@ import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
-import server.feeds.{FeedResponse, ManifestsFeedSuccess}
+import server.feeds.{ManifestsFeedResponse, ManifestsFeedSuccess}
 import services.SDate
 import services.graphstages.DqManifests
 import test.TestActors.ResetActor
@@ -19,14 +19,14 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 
-class TestAPIManifestFeedGraphStage(actorSystem: ActorSystem) extends GraphStage[SourceShape[FeedResponse]] {
+class TestAPIManifestFeedGraphStage(actorSystem: ActorSystem) extends GraphStage[SourceShape[ManifestsFeedResponse]] {
   implicit val system: ActorSystem = actorSystem
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   val log: Logger = LoggerFactory.getLogger(getClass)
   val minCheckIntervalMillis = 3000
 
-  val out: Outlet[FeedResponse] = Outlet("manifestsOut")
-  override val shape: SourceShape[FeedResponse] = SourceShape(out)
+  val out: Outlet[ManifestsFeedResponse] = Outlet("manifestsOut")
+  override val shape: SourceShape[ManifestsFeedResponse] = SourceShape(out)
 
   var dqManifestsState: DqManifests = DqManifests("today", Set())
   var lastFetchedMillis: MillisSinceEpoch = 0

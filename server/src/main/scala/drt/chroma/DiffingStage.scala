@@ -5,7 +5,7 @@ import akka.stream.stage._
 import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedResponse}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, ArrivalsFeedResponse}
 
 object DiffingStage {
   def DiffLists = new ArrivalsDiffingStage(diffLists)
@@ -18,22 +18,22 @@ object DiffingStage {
   }
 }
 
-final class ArrivalsDiffingStage(diff: (Seq[Arrival], Seq[Arrival]) => Seq[Arrival]) extends GraphStage[FlowShape[FeedResponse, FeedResponse]] {
-  val in: Inlet[FeedResponse] = Inlet[FeedResponse]("DiffingStage.in")
-  val out: Outlet[FeedResponse] = Outlet[FeedResponse]("DiffingStage.out")
+final class ArrivalsDiffingStage(diff: (Seq[Arrival], Seq[Arrival]) => Seq[Arrival]) extends GraphStage[FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse]] {
+  val in: Inlet[ArrivalsFeedResponse] = Inlet[ArrivalsFeedResponse]("DiffingStage.in")
+  val out: Outlet[ArrivalsFeedResponse] = Outlet[ArrivalsFeedResponse]("DiffingStage.out")
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  override val shape: FlowShape[FeedResponse, FeedResponse] = FlowShape.of(in, out)
+  override val shape: FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse] = FlowShape.of(in, out)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     private var knownArrivals: Seq[Arrival] = Seq()
-    private var maybeResponseToPush: Option[FeedResponse] = None
+    private var maybeResponseToPush: Option[ArrivalsFeedResponse] = None
 
     setHandlers(in, out, new InHandler with OutHandler {
       override def onPush(): Unit = {
         if (maybeResponseToPush.isEmpty) {
-          log.info(s"Incoming FeedResponse")
+          log.info(s"Incoming ArrivalsFeedResponse")
           maybeResponseToPush = processFeedResponse(grab(in))
         } else log.info(s"Not ready to grab until we've pushed")
 
@@ -53,8 +53,8 @@ final class ArrivalsDiffingStage(diff: (Seq[Arrival], Seq[Arrival]) => Seq[Arriv
       maybeResponseToPush = None
     }
 
-    def processFeedResponse(feedResponse: FeedResponse): Option[FeedResponse] = {
-      feedResponse match {
+    def processFeedResponse(ArrivalsFeedResponse: ArrivalsFeedResponse): Option[ArrivalsFeedResponse] = {
+      ArrivalsFeedResponse match {
         case afs@ArrivalsFeedSuccess(latestArrivals, _) =>
           val newUpdates = diff(knownArrivals, latestArrivals.flights)
           log.info(s"Got ${newUpdates.length} new arrival updates")
@@ -64,8 +64,8 @@ final class ArrivalsDiffingStage(diff: (Seq[Arrival], Seq[Arrival]) => Seq[Arriv
           log.info("Passing ArrivalsFeedFailure through. Nothing to diff. No updates to knownArrivals")
           Option(aff)
         case unexpected =>
-          log.warn(s"Unexpected FeedResponse: ${unexpected.getClass}")
-          Option.empty[FeedResponse]
+          log.warn(s"Unexpected ArrivalsFeedResponse: ${unexpected.getClass}")
+          Option.empty[ArrivalsFeedResponse]
       }
     }
   }

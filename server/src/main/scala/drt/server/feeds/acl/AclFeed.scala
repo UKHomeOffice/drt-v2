@@ -11,8 +11,9 @@ import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.InMemoryDestFile
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedResponse}
-import server.feeds.acl.AclFeed.{arrivalsFromCsvContent, contentFromFileName, latestFileForPort, sftpClientAndSshClient}
+
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, FeedResponse}
+import server.feeds.acl.AclFeed.{arrivalsFromCsvContent, contentFromFileName, latestFileForPort, sshClient, sftpClient}
 import services.SDate
 
 import scala.collection.JavaConverters._
@@ -22,11 +23,13 @@ import scala.util.{Failure, Success, Try}
 case class AclFeed(ftpServer: String, username: String, path: String, portCode: String, terminalMapping: TerminalName => TerminalName) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def sftpAndSsh: (SFTPClient, SSHClient) = sftpClientAndSshClient(ftpServer, username, path)
+  def ssh: SSHClient = sshClient(ftpServer, username, path)
+  def sftp(sshClient: SSHClient): SFTPClient = sftpClient(sshClient)
 
-  def requestArrivals: FeedResponse = {
+  def requestArrivals: ArrivalsFeedResponse = {
     val feedResponseTry = for {
-      (sftpClient, sshClient) <- Try(sftpAndSsh)
+      sshClient <- Try(ssh)
+      sftpClient <- Try(sftp(sshClient))
       feedResponse <- Try{
         Flights(arrivalsFromCsvContent(contentFromFileName(sftpClient, latestFileForPort(sftpClient, portCode)), terminalMapping))
       }
@@ -49,15 +52,18 @@ case class AclFeed(ftpServer: String, username: String, path: String, portCode: 
 object AclFeed {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def sftpClientAndSshClient(ftpServer: String, username: String, path: String): (SFTPClient, SSHClient) = {
+  def sshClient(ftpServer: String, username: String, path: String): SSHClient = {
     val ssh = new SSHClient()
     ssh.loadKnownHosts()
     ssh.addHostKeyVerifier(new PromiscuousVerifier())
     ssh.connect(ftpServer)
     ssh.authPublickey(username, path)
     ssh.setTimeout(0)
+    ssh
+  }
 
-    (ssh.newSFTPClient, ssh)
+  def sftpClient(sshClient: SSHClient): SFTPClient = {
+    sshClient.newSFTPClient
   }
 
   def latestFileForPort(sftp: SFTPClient, portCode: String): String = {

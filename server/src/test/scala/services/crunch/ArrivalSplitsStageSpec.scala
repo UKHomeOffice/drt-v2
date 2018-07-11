@@ -10,7 +10,7 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
 import passengersplits.core.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
-import server.feeds.{FeedResponse, ManifestsFeedSuccess}
+import server.feeds.{ManifestsFeedResponse, ManifestsFeedSuccess}
 import services.SDate
 import services.graphstages.{ArrivalSplitsGraphStage, DqManifests}
 
@@ -21,7 +21,7 @@ object TestableArrivalSplits {
   val oneDayMillis: Int = 60 * 60 * 24 * 1000
   def groupByCodeShares(flights: Seq[ApiFlightWithSplits]): Seq[(ApiFlightWithSplits, Set[Arrival])] = flights.map(f => (f, Set(f.apiFlight)))
 
-  def apply(splitsCalculator: SplitsCalculator, testProbe: TestProbe, now: () => SDateLike): RunnableGraph[(SourceQueueWithComplete[ArrivalsDiff], SourceQueueWithComplete[FeedResponse], SourceQueueWithComplete[Seq[(Arrival, Option[ApiSplits])]])] = {
+  def apply(splitsCalculator: SplitsCalculator, testProbe: TestProbe, now: () => SDateLike): RunnableGraph[(SourceQueueWithComplete[ArrivalsDiff], SourceQueueWithComplete[ManifestsFeedResponse], SourceQueueWithComplete[Seq[(Arrival, Option[ApiSplits])]])] = {
     val arrivalSplitsStage = new ArrivalSplitsGraphStage(
       name = "",
       optionalInitialFlights = None,
@@ -32,7 +32,7 @@ object TestableArrivalSplits {
       maxDaysToCrunch = 1)
 
     val arrivalsDiffSource = Source.queue[ArrivalsDiff](1, OverflowStrategy.backpressure)
-    val manifestsSource = Source.queue[FeedResponse](1, OverflowStrategy.backpressure)
+    val manifestsSource = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
     val predictionsSource = Source.queue[Seq[(Arrival, Option[ApiSplits])]](1, OverflowStrategy.backpressure)
 
     import akka.stream.scaladsl.GraphDSL.Implicits._

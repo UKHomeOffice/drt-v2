@@ -10,7 +10,7 @@ import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.SFTPClient
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import server.feeds.acl.AclFeed
-import server.feeds.acl.AclFeed.{arrivalsFromCsvContent, contentFromFileName, latestFileForPort, sftpClientAndSshClient}
+import server.feeds.acl.AclFeed._
 import services.SDate
 import services.crunch.CrunchTestLike
 
@@ -264,7 +264,7 @@ class AclFeedSpec extends CrunchTestLike {
     val username = ConfigFactory.load.getString("acl.username")
     val path = ConfigFactory.load.getString("acl.keypath")
 
-    val (sftp: SFTPClient, sshClient: SSHClient) = sftpClientAndSshClient(ftpServer, username, path)
+    val sftp = sftpClient(sshClient(ftpServer, username, path))
     val latestFile = latestFileForPort(sftp, "MAN")
     println(s"latestFile: $latestFile")
     val aclArrivals: List[Arrival] = arrivalsFromCsvContent(contentFromFileName(sftp, latestFile), regularTerminalMapping)
