@@ -17,6 +17,7 @@ import drt.shared.DqEventCodes
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import server.feeds.{FeedResponse, ManifestsFeedFailure, ManifestsFeedSuccess}
 import services.SDate
 
 import scala.collection.immutable.Seq
@@ -41,18 +42,19 @@ case class DqManifests(lastSeenFileName: String, manifests: Set[VoyageManifest])
   }
 }
 
-class VoyageManifestsGraphStage(bucketName: String, portCode: String, initialLastSeenFileName: String, minCheckIntervalMillis: MillisSinceEpoch = 30000) extends GraphStage[SourceShape[DqManifests]] {
+class VoyageManifestsGraphStage(bucketName: String, portCode: String, initialLastSeenFileName: String, minCheckIntervalMillis: MillisSinceEpoch = 30000) extends GraphStage[SourceShape[FeedResponse]] {
   implicit val actorSystem: ActorSystem = ActorSystem("VoyageManifestActorSystem")
   implicit val materializer: ActorMaterializer = ActorMaterializer()
 
-  val out: Outlet[DqManifests] = Outlet("manifestsOut")
-  override val shape: SourceShape[DqManifests] = SourceShape(out)
+  val out: Outlet[FeedResponse] = Outlet("manifestsOut")
+  override val shape: SourceShape[FeedResponse] = SourceShape(out)
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   val dqRegex: Regex = "(drt_dq_[0-9]{6}_[0-9]{6})(_[0-9]{4}\\.zip)".r
 
-  var dqManifestsState: DqManifests = DqManifests(initialLastSeenFileName, Set())
+  var maybeResponseToPush: Option[FeedResponse] = None
+  var lastSeenFileName: String = initialLastSeenFileName
   var lastFetchedMillis: MillisSinceEpoch = 0
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = {
@@ -73,46 +75,49 @@ class VoyageManifestsGraphStage(bucketName: String, portCode: String, initialLas
           Thread.sleep(millisToSleep)
         }
 
-        val (newLastSeenFileName, newManifests) = fetchNewManifests(dqManifestsState.lastSeenFileName)
-        dqManifestsState = dqManifestsState.update(newLastSeenFileName, newManifests)
+        maybeResponseToPush = Option(fetchNewManifests(lastSeenFileName))
         lastFetchedMillis = nowMillis
       }
 
       def pushManifests(): Unit = {
         if (isAvailable(out)) {
-          log.info(s"Pushing ${dqManifestsState.length} new manifests")
-          push(out, dqManifestsState)
+          if (maybeResponseToPush.isEmpty) log.info(s"Nothing to push right now")
 
-          dqManifestsState = dqManifestsState.copy(manifests = Set())
+          maybeResponseToPush.foreach(responseToPush => {
+            log.info(s"Pushing ${responseToPush.getClass}")
+            push(out, responseToPush)
+          })
+
+          maybeResponseToPush = None
         }
       }
     }
   }
 
-  def fetchNewManifests(startingFilename: String): (String, Set[VoyageManifest]) = {
-    log.info(s"Fetching manifests from files newer than $startingFilename")
-    val eventualFileNameAndManifests = manifestsFuture(startingFilename)
+  def fetchNewManifests(startingFileName: String): FeedResponse = {
+    log.info(s"Fetching manifests from files newer than $startingFileName")
+    val eventualFileNameAndManifests = manifestsFuture(startingFileName)
       .map(fetchedFilesAndManifests => {
-        val fileNames: String = fetchedFilesAndManifests.map { case (fileName, _) => fileName }.mkString(", ")
-        val (lastSeenFileName, fetchedManifests) = if (fetchedFilesAndManifests.isEmpty) {
-          (startingFilename, Set[VoyageManifest]())
+        val (latestFileName, fetchedManifests) = if (fetchedFilesAndManifests.isEmpty) {
+          (startingFileName, Set[VoyageManifest]())
         } else {
           val lastSeen = fetchedFilesAndManifests.map { case (fileName, _) => fileName }.max
           val manifests = fetchedFilesAndManifests.map { case (_, manifest) => manifest }.toSet
           (lastSeen, manifests)
         }
-        (lastSeenFileName, fetchedManifests)
+        (latestFileName, fetchedManifests)
       })
 
     Try {
       Await.result(eventualFileNameAndManifests, 30 minute)
     } match {
-      case Success((lastSeenFileName, manifests)) =>
-        log.info(s"Fetched ${manifests.size} manifests up to file $lastSeenFileName")
-        (lastSeenFileName, manifests)
+      case Success((latestFileName, manifests)) =>
+        log.info(s"Fetched ${manifests.size} manifests up to file $latestFileName")
+        lastSeenFileName = latestFileName
+        ManifestsFeedSuccess(DqManifests(latestFileName, manifests), SDate.now())
       case Failure(t) =>
         log.warn(s"Failed to fetch new manifests: $t")
-        (initialLastSeenFileName, Set[VoyageManifest]())
+        ManifestsFeedFailure(t.toString, SDate.now())
     }
   }
 

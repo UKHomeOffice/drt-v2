@@ -15,7 +15,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import passengersplits.AkkaPersistTestConfig
-import server.feeds.FeedResponse
+import server.feeds.{FeedResponse, ManifestsFeedSuccess}
 import services._
 import services.graphstages.Crunch._
 import services.graphstages.{ActualDeskStats, DqManifests, DummySplitsPredictor}
@@ -48,7 +48,7 @@ class ForecastCrunchStateTestActor(name: String = "", queues: Map[TerminalName, 
 case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete[FeedResponse],
                                       forecastArrivalsInput: SourceQueueWithComplete[FeedResponse],
                                       liveArrivalsInput: SourceQueueWithComplete[FeedResponse],
-                                      manifestsInput: SourceQueueWithComplete[DqManifests],
+                                      manifestsInput: SourceQueueWithComplete[FeedResponse],
                                       liveShiftsInput: SourceQueueWithComplete[String],
                                       liveFixedPointsInput: SourceQueueWithComplete[String],
                                       liveStaffMovementsInput: SourceQueueWithComplete[Seq[StaffMovement]],
@@ -77,7 +77,7 @@ class CrunchTestLike
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   val oneMinuteMillis = 60000
-  val uniquifyArrivals: (Seq[ApiFlightWithSplits]) => List[(ApiFlightWithSplits, Set[Arrival])] =
+  val uniquifyArrivals: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] =
     CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight)
 
   val airportConfig = AirportConfig(
@@ -158,7 +158,7 @@ class CrunchTestLike
     val liveCrunchActor = liveCrunchStateActor(logLabel, liveProbe, now)
     val forecastCrunchActor = forecastCrunchStateActor(logLabel, forecastProbe, now)
 
-    val manifestsSource: Source[DqManifests, SourceQueueWithComplete[DqManifests]] = Source.queue[DqManifests](0, OverflowStrategy.backpressure)
+    val manifestsSource: Source[FeedResponse, SourceQueueWithComplete[FeedResponse]] = Source.queue[FeedResponse](0, OverflowStrategy.backpressure)
     val liveArrivals: Source[FeedResponse, SourceQueueWithComplete[FeedResponse]] = Source.queue[FeedResponse](0, OverflowStrategy.backpressure)
     val fcstArrivals: Source[FeedResponse, SourceQueueWithComplete[FeedResponse]] = Source.queue[FeedResponse](0, OverflowStrategy.backpressure)
     val baseArrivals: Source[FeedResponse, SourceQueueWithComplete[FeedResponse]] = Source.queue[FeedResponse](0, OverflowStrategy.backpressure)
@@ -200,13 +200,13 @@ class CrunchTestLike
 
     if (initialShifts.nonEmpty) offerAndWait(crunchInputs.shifts, initialShifts)
     if (initialFixedPoints.nonEmpty) offerAndWait(crunchInputs.fixedPoints, initialFixedPoints)
-    if (initialManifests.manifests.nonEmpty) offerAndWait(crunchInputs.manifests, initialManifests)
+    if (initialManifests.manifests.nonEmpty) offerAndWait(crunchInputs.manifestsResponse, ManifestsFeedSuccess(initialManifests))
 
     CrunchGraphInputsAndProbes(
-      crunchInputs.baseArrivals,
+      crunchInputs.baseArrivalsResponse,
       crunchInputs.forecastArrivalsResponse,
       crunchInputs.liveArrivalsResponse,
-      crunchInputs.manifests,
+      crunchInputs.manifestsResponse,
       crunchInputs.shifts,
       crunchInputs.fixedPoints,
       crunchInputs.staffMovements,

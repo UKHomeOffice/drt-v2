@@ -7,7 +7,7 @@ import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
-import server.feeds.ArrivalsFeedSuccess
+import server.feeds.{ArrivalsFeedSuccess, ManifestsFeedSuccess}
 import services.SDate
 import services.graphstages.Crunch.getLocalLastMidnight
 import services.graphstages.DqManifests
@@ -272,11 +272,11 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           ))
         )
 
-        val voyageManifests = DqManifests("", Set(
+        val voyageManifests = ManifestsFeedSuccess(DqManifests("", Set(
           VoyageManifest(DqEventCodes.CheckIn, "STN", "JFK", "0001", "BA", "2017-01-01", "00:00", List(
             PassengerInfoJson(Some("P"), "GBR", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("GBR"), None)
           ))
-        ))
+        )))
 
         offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(flights))
         offerAndWait(crunch.manifestsInput, voyageManifests)

@@ -32,7 +32,7 @@ object FlightMessageConversion {
     case s: FeedStatusFailure => FeedStatusMessage(Option(s.date), None, Option(s.message))
   }
 
-  def arrivalsStateFromSnapshotMessage(snMessage: FlightStateSnapshotMessage): ArrivalsState = {
+  def arrivalsStateFromSnapshotMessage(snMessage: FlightStateSnapshotMessage, feedName: String): ArrivalsState = {
     val arrivalsMap = snMessage.flightMessages.map(fm => {
       val arrival = FlightMessageConversion.flightMessageToApiFlight(fm)
       (arrival.uniqueId, arrival)
@@ -40,7 +40,7 @@ object FlightMessageConversion {
 
     val maybeStatuses = snMessage.statuses.map(feedStatusesFromFeedStatusesMessage)
 
-    ArrivalsState(arrivalsMap, maybeStatuses)
+    ArrivalsState(arrivalsMap, feedName, maybeStatuses)
   }
 
   def feedStatusesFromFeedStatusesMessage(message: FeedStatusesMessage): FeedStatuses = {

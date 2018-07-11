@@ -12,7 +12,7 @@ import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.SplitSources._
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
-import server.feeds.ArrivalsFeedSuccess
+import server.feeds.{ArrivalsFeedSuccess, ManifestsFeedSuccess}
 import services.SDate
 import services.crunch.VoyageManifestGenerator._
 import services.graphstages.DqManifests
@@ -32,9 +32,9 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val flight = ArrivalGenerator.apiFlight(flightId = Option(1), schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(21))
     val inputFlights = Flights(List(flight))
-    val inputManifests = DqManifests("", Set(
+    val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
       VoyageManifest(DqEventCodes.CheckIn, "STN", "JFK", "0001", "BA", "2017-01-01", "00:00", List(euPassport))
-    ))
+    )))
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
@@ -77,16 +77,16 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val flight = ArrivalGenerator.apiFlight(flightId = Option(1), schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(21))
     val inputFlights = Flights(List(flight))
-    val inputManifestsCi = DqManifests("", Set(
+    val inputManifestsCi = ManifestsFeedSuccess(DqManifests("", Set(
       VoyageManifest(DqEventCodes.CheckIn, "STN", "JFK", "0001", "BA", "2017-01-01", "00:00", List(
         PassengerInfoGenerator.passengerInfoJson("GBR", "P", "GBR")
       ))
-    ))
-    val inputManifestsDc = DqManifests("", Set(
+    )))
+    val inputManifestsDc = ManifestsFeedSuccess(DqManifests("", Set(
       VoyageManifest(DqEventCodes.DepartureConfirmed, "STN", "JFK", "0001", "BA", "2017-01-01", "00:00", List(
         PassengerInfoGenerator.passengerInfoJson("USA", "P", "USA")
       ))
-    ))
+    )))
     val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
@@ -137,9 +137,9 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val flight = ArrivalGenerator.apiFlight(flightId = Option(1), schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(10))
     val inputFlights = Flights(List(flight))
-    val inputManifests = DqManifests("", Set(
+    val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
       VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", List(euPassport))
-    ))
+    )))
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
@@ -180,13 +180,13 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val flight = ArrivalGenerator.apiFlight(flightId = Option(1), schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(10), tranPax = Option(5))
     val inputFlights = Flights(List(flight))
-    val inputManifests = DqManifests("", Set(
+    val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
       VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", List(
         euPassport,
         inTransitFlag,
         inTransitCountry
       ))
-    ))
+    )))
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
@@ -227,7 +227,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val flight = ArrivalGenerator.apiFlight(flightId = Option(1), schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(10), tranPax = Option(6))
     val inputFlights = Flights(List(flight))
-    val inputManifests = DqManifests("", Set(
+    val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
       VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", List(
         inTransitFlag,
         inTransitCountry,
@@ -236,7 +236,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         visa,
         visa
       ))
-    ))
+    )))
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
