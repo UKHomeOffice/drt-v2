@@ -70,7 +70,14 @@ case class LtnLiveFeed(endPoint: String, token: String, username: String, passwo
           Future(ArrivalsFeedFailure(throwable.toString))
       }
 
-    Await.result(responseFuture, 30 seconds)
+    Try {
+      Await.result(responseFuture, 30 seconds)
+    } match {
+      case Success(response) => response
+      case Failure(t) =>
+        log.error(s"Failed to retrieve the LTN port feed", t)
+        ArrivalsFeedFailure(t.toString)
+    }
   }
 
   def toArrival(ltnFeedFlight: LtnLiveFlight): Arrival = Arrival(
