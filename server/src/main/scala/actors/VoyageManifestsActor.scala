@@ -102,7 +102,7 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapsh
       state = VoyageManifestState(manifests = updatedManifests,latestZipFilename = updatedLZF,feedName = name,maybeFeedStatuses = Option(state.addStatus(newStatus)))
 
     case ManifestsFeedFailure(message, failedAt) =>
-      log.warn(s"Failed to connect to AWS S3 for API data at ${failedAt.toISOString()}. $message")
+      log.error(s"Failed to connect to AWS S3 for API data at ${failedAt.toISOString()}. $message")
       val newStatus = FeedStatusFailure(failedAt.millisSinceEpoch, message)
       persistFeedStatus(newStatus)
 

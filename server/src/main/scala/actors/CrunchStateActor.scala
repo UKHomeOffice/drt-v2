@@ -114,7 +114,7 @@ class CrunchStateActor(val snapshotInterval: Int,
       logInfo(s"Purged snapshots")
 
     case u =>
-      log.warn(s"Received unexpected message $u")
+      log.error(s"Received unexpected message $u")
   }
 
   def persistSnapshot(portState: PortState): Unit = {

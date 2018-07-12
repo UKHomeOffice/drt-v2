@@ -64,7 +64,7 @@ final class ArrivalsDiffingStage(diff: (Seq[Arrival], Seq[Arrival]) => Seq[Arriv
           log.info("Passing ArrivalsFeedFailure through. Nothing to diff. No updates to knownArrivals")
           Option(aff)
         case unexpected =>
-          log.warn(s"Unexpected ArrivalsFeedResponse: ${unexpected.getClass}")
+          log.error(s"Unexpected ArrivalsFeedResponse: ${unexpected.getClass}")
           Option.empty[ArrivalsFeedResponse]
       }
     }
