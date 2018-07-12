@@ -60,16 +60,17 @@ case class LtnLiveFeed(endPoint: String, token: String, username: String, passwo
               log.info(s"parsed ${arrivals.length} arrivals from ${flights.length} flights")
               ArrivalsFeedSuccess(Flights(arrivals.map(toArrival)))
             case Failure(t) =>
-              log.info(s"Failed to parse: $t")
+              log.error(s"Failed to parse: $t")
               ArrivalsFeedFailure(t.toString)
           }
         case HttpResponse(status, _, _, _) => ArrivalsFeedFailure(status.defaultMessage())
       }
       .recoverWith {
-        case throwable => Future(ArrivalsFeedFailure(throwable.toString))
+        case throwable => log.error("Caught error while retrieving the LTN port feed.", throwable)
+          Future(ArrivalsFeedFailure(throwable.toString))
       }
 
-    Await.result(responseFuture, 5 seconds)
+    Await.result(responseFuture, 30 seconds)
   }
 
   def toArrival(ltnFeedFlight: LtnLiveFlight): Arrival = Arrival(
