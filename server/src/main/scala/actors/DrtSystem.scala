@@ -7,7 +7,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import controllers.{Deskstats, PaxFlow}
+import controllers.{Deskstats, PaxFlow, UserRoleProviderLike}
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
 import drt.chroma._
 import drt.http.ProdSendAndReceive
@@ -23,6 +23,7 @@ import drt.shared._
 import org.apache.spark.sql.SparkSession
 import org.joda.time.DateTimeZone
 import play.api.Configuration
+import play.api.mvc.{Headers, Session}
 import server.feeds.acl.AclFeed
 import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse}
 import services.PcpArrival.{GateOrStand, GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
@@ -39,7 +40,7 @@ import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
-trait DrtSystemInterface {
+trait DrtSystemInterface extends UserRoleProviderLike {
   val now: () => SDateLike = () => SDate.now()
 
   val liveCrunchStateActor: ActorRef
@@ -47,6 +48,7 @@ trait DrtSystemInterface {
   val shiftsActor: ActorRef
   val fixedPointsActor: ActorRef
   val staffMovementsActor: ActorRef
+
 
   val aclFeed: AclFeed
 
@@ -118,6 +120,11 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   system.log.info(s"useNationalityBasedProcessingTimes: $useNationalityBasedProcessingTimes")
   system.log.info(s"useSplitsPrediction: $useSplitsPrediction")
 
+  def getRoles(config: Configuration, headers: Headers, session: Session): List[String] =
+    if (config.getString("feature-flags.super-user-mode").isDefined) {
+      system.log.info(s"Using Super User Roles")
+      availableRoles
+    } else userRolesFromHeader(headers)
 
   def run(): Unit = {
     val futurePortStates: Future[(Option[PortState], Option[PortState], Option[Set[Arrival]], Option[Set[Arrival]], Option[Set[Arrival]])] = {

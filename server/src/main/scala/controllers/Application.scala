@@ -34,9 +34,8 @@ import services.shifts.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import services.{SDate, _}
-import test.TestDrtSystem
+import test.{MockRoles, TestDrtSystem}
 
-import scala.collection.immutable.{IndexedSeq, Map}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -139,11 +138,17 @@ class NoCacheFilter @Inject()(
   }
 }
 
-trait AvailableUserRoles {
+
+trait UserRoleProviderLike {
+  val log = LoggerFactory.getLogger(getClass)
+
   val availableRoles = List("staff:edit", "drt:team")
 
   def userRolesFromHeader(headers: Headers): List[String] = headers.get("X-Auth-Roles").map(_.split(",").toList).getOrElse(List())
+
+  def getRoles(config: Configuration, headers: Headers, session: Session): List[String]
 }
+
 
 class Application @Inject()(implicit val config: Configuration,
                             implicit val mat: Materializer,
@@ -153,8 +158,7 @@ class Application @Inject()(implicit val config: Configuration,
   extends InjectedController
     with AirportConfProvider
     with ProdPassengerSplitProviders
-    with ImplicitTimeoutProvider
-    with AvailableUserRoles {
+    with ImplicitTimeoutProvider {
 
   val ctrl: DrtSystemInterface = config.getOptional[String]("env") match {
     case Some("test") =>
@@ -190,8 +194,11 @@ class Application @Inject()(implicit val config: Configuration,
                shiftsActor: ActorRef,
                fixedPointsActor: ActorRef,
                staffMovementsActor: ActorRef,
-               headers: Headers
-             ): ApiService = new ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor, headers) {
+               headers: Headers,
+               session: Session
+             ): ApiService = new ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor, headers, session) {
+
+      log.info(s"Session inside service: $session")
 
       override implicit val timeout: Timeout = Timeout(5 seconds)
 
@@ -223,6 +230,8 @@ class Application @Inject()(implicit val config: Configuration,
       def isLoggedIn(): Boolean = {
         true
       }
+
+      def getUserRoles = ctrl.getRoles(config, headers, session)
 
       def getFeedStatuses(): Future[Seq[FeedStatuses]] = ctrl.getFeedStatus()
 
@@ -291,11 +300,6 @@ class Application @Inject()(implicit val config: Configuration,
             StaffTimeSlots.getShiftsForMonth(shifts, SDate(month, Crunch.europeLondonTimeZone), terminalName)
         }
       }
-
-      def getUserRoles(): List[String] = if (config.getOptional[String]("feature-flags.super-user-mode").isDefined)
-        availableRoles
-      else
-        roles
 
       override def liveCrunchStateActor: AskableActorRef = ctrl.liveCrunchStateActor
 
@@ -498,7 +502,7 @@ class Application @Inject()(implicit val config: Configuration,
       val crunchStateForPointInTime = loadBestCrunchStateForPointInTime(pit.millisSinceEpoch)
       flightsForCSVExportWithinRange(terminalName, pit, startHour, endHour, crunchStateForPointInTime).map {
         case Some(csvFlights) =>
-          val csvData = if (userRolesFromHeader(request.headers).contains("drt:team")) {
+          val csvData = if (ctrl.getRoles(config, request.headers, request.session).contains("drt:team")) {
             log.info(s"Sending Flights CSV with ACL data to DRT Team member")
             CSVData.flightsWithSplitsWithAPIActualsToCSVWithHeadings(csvFlights)
           }
@@ -662,7 +666,8 @@ class Application @Inject()(implicit val config: Configuration,
         addConcreteType[FeedStatusSuccess].
         addConcreteType[FeedStatusFailure]
 
-      val router = Router.route[Api](ApiService(airportConfig, ctrl.shiftsActor, ctrl.fixedPointsActor, ctrl.staffMovementsActor, request.headers))
+
+      val router = Router.route[Api](ApiService(airportConfig, ctrl.shiftsActor, ctrl.fixedPointsActor, ctrl.staffMovementsActor, request.headers, request.session))
 
       router(
         autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))

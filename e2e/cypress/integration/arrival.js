@@ -37,6 +37,10 @@ describe('Arrivals page', () => {
     cy.get('.pax-api');
   }
 
+  function setRoles(roles) {
+    cy.request("POST", 'v2/test/live/test/mock-roles', { "roles": roles})
+  }
+
   before(() => {
     cy.request('DELETE', '/v2/test/live/test/data');
   });
@@ -131,12 +135,10 @@ describe('Arrivals page', () => {
 
   it('Allows you to view API splits in the flights export for super users', () => {
     loadManifestFixture();
+    setRoles(["drt:team"]);
     cy.request({
       method: 'GET',
       url: '/v2/test/live/export/arrivals/' + currentMillis + '/T1?startHour=0&endHour=24',
-      headers: {
-        "X-Auth-Roles": "drt:team"
-      }
     }).then((resp) => {
       expect(resp.body).to.equal(csvWithhAPISplits)
     })
