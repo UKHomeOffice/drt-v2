@@ -9,6 +9,6 @@
   "author": "UK Home Office",
   "license": "UNLICENSED",
   "devDependencies": {
-    "cypress": "^3.0.1"
+    "cypress": "^3.0.2"
   }
 }
