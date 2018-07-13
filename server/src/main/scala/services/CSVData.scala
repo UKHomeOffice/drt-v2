@@ -96,11 +96,11 @@ object CSVData {
     val queueHeadings = relevantQueues.map(queue => Queues.queueDisplayNames.getOrElse(queue, queue))
       .flatMap(qn => List.fill(colHeadings.length)(Queues.exportQueueDisplayNames.getOrElse(qn, qn))).mkString(",")
     val headingsLine1 = "Date,," + queueHeadings +
-      ",Misc,PCP Staff,PCP Staff"
+      ",Misc,Moves,PCP Staff,PCP Staff"
     val headingsLine2 = ",Start," + relevantQueues.flatMap(q => {
       if (q == Queues.EGate) eGatesHeadings else colHeadings
     }).mkString(",") +
-      ",Staff req,Avail,Req"
+      ",Staff req,Staff movements,Avail,Req"
 
     headingsLine1 + lineEnding + headingsLine2
   }
@@ -157,7 +157,7 @@ object CSVData {
 
           val staffMinute = staffMinutesByMinute.getOrElse(minute, StaffMinute.empty)
 
-          val staffData: Seq[String] = List(staffMinute.fixedPoints.toString, staffMinute.available.toString)
+          val staffData: Seq[String] = List(staffMinute.fixedPoints.toString, staffMinute.movements.toString, staffMinute.available.toString)
           val reqForMinute = crunchMilliMinutes
             .toList
             .find { case (minuteMilli, _) => minuteMilli == minute }
