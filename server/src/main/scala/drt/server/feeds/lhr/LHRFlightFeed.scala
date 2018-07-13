@@ -4,7 +4,6 @@ import akka.NotUsed
 import akka.actor.Cancellable
 import akka.stream.scaladsl.Source
 import com.typesafe.config.ConfigFactory
-import drt.chroma.DiffingStage
 import drt.server.feeds.lhr.LHRFlightFeed.{emptyStringToOption, parseDateTime}
 import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
@@ -12,7 +11,7 @@ import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, ArrivalsFeedResponse}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 
 import scala.collection.JavaConverters._
@@ -163,6 +162,6 @@ object LHRFlightFeed {
         }
       })
 
-    tickingSource.via(DiffingStage.DiffLists)
+    tickingSource
   }
 }

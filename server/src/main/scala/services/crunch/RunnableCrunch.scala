@@ -1,15 +1,14 @@
 package services.crunch
 
-import akka.NotUsed
 import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
+import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.parsing.VoyageManifestParser.VoyageManifests
-import server.feeds.{ArrivalsFeedResponse, FeedResponse, ManifestsFeedResponse}
+import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services.graphstages.Crunch.Loads
 import services.graphstages._
 
@@ -21,36 +20,40 @@ object RunnableCrunch {
   def groupByCodeShares(flights: Seq[ApiFlightWithSplits]): Seq[(ApiFlightWithSplits, Set[Arrival])] = flights.map(f => (f, Set(f.apiFlight)))
 
   def apply[FR, MS, SS, SFP, SMM, SAD](baseArrivalsSource: Source[ArrivalsFeedResponse, FR],
-                                   fcstArrivalsSource: Source[ArrivalsFeedResponse, FR],
-                                   liveArrivalsSource: Source[ArrivalsFeedResponse, FR],
-                                   manifestsSource: Source[ManifestsFeedResponse, MS],
-                                   shiftsSource: Source[String, SS],
-                                   fixedPointsSource: Source[String, SFP],
-                                   staffMovementsSource: Source[Seq[StaffMovement], SMM],
-                                   actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
+                                       fcstArrivalsSource: Source[ArrivalsFeedResponse, FR],
+                                       liveArrivalsSource: Source[ArrivalsFeedResponse, FR],
+                                       manifestsSource: Source[ManifestsFeedResponse, MS],
+                                       shiftsSource: Source[String, SS],
+                                       fixedPointsSource: Source[String, SFP],
+                                       staffMovementsSource: Source[Seq[StaffMovement], SMM],
+                                       actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
 
-                                   arrivalsGraphStage: ArrivalsGraphStage,
-                                   arrivalSplitsStage: ArrivalSplitsGraphStage,
-                                   splitsPredictorStage: SplitsPredictorBase,
-                                   workloadGraphStage: WorkloadGraphStage,
-                                   loadBatchUpdateGraphStage: BatchLoadsByCrunchPeriodGraphStage,
-                                   crunchLoadGraphStage: CrunchLoadGraphStage,
-                                   staffGraphStage: StaffGraphStage,
-                                   staffBatchUpdateGraphStage: StaffBatchUpdateGraphStage,
-                                   simulationGraphStage: SimulationGraphStage,
-                                   portStateGraphStage: PortStateGraphStage,
+                                       arrivalsGraphStage: ArrivalsGraphStage,
+                                       arrivalSplitsStage: ArrivalSplitsGraphStage,
+                                       splitsPredictorStage: SplitsPredictorBase,
+                                       workloadGraphStage: WorkloadGraphStage,
+                                       loadBatchUpdateGraphStage: BatchLoadsByCrunchPeriodGraphStage,
+                                       crunchLoadGraphStage: CrunchLoadGraphStage,
+                                       staffGraphStage: StaffGraphStage,
+                                       staffBatchUpdateGraphStage: StaffBatchUpdateGraphStage,
+                                       simulationGraphStage: SimulationGraphStage,
+                                       portStateGraphStage: PortStateGraphStage,
 
-                                   baseArrivalsActor: ActorRef,
-                                   fcstArrivalsActor: ActorRef,
-                                   liveArrivalsActor: ActorRef,
+                                       baseArrivalsDiffStage: ArrivalsDiffingStage,
+                                       fcstArrivalsDiffStage: ArrivalsDiffingStage,
+                                       liveArrivalsDiffStage: ArrivalsDiffingStage,
 
-                                   manifestsActor: ActorRef,
+                                       baseArrivalsActor: ActorRef,
+                                       fcstArrivalsActor: ActorRef,
+                                       liveArrivalsActor: ActorRef,
 
-                                   liveCrunchStateActor: ActorRef,
-                                   fcstCrunchStateActor: ActorRef,
-                                   crunchPeriodStartMillis: SDateLike => SDateLike,
-                                   now: () => SDateLike
-                                  ): RunnableGraph[(FR, FR, FR, MS, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch)] = {
+                                       manifestsActor: ActorRef,
+
+                                       liveCrunchStateActor: ActorRef,
+                                       fcstCrunchStateActor: ActorRef,
+                                       crunchPeriodStartMillis: SDateLike => SDateLike,
+                                       now: () => SDateLike
+                                      ): RunnableGraph[(FR, FR, FR, MS, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch)] = {
 
     val arrivalsKillSwitch = KillSwitches.single[ArrivalsDiff]
 
@@ -96,6 +99,9 @@ object RunnableCrunch {
           val batchStaff = builder.add(staffBatchUpdateGraphStage.async)
           val simulation = builder.add(simulationGraphStage.async)
           val portState = builder.add(portStateGraphStage.async)
+          val baseArrivalsDiffing = builder.add(baseArrivalsDiffStage.async)
+          val fcstArrivalsDiffing = builder.add(fcstArrivalsDiffStage.async)
+          val liveArrivalsDiffing = builder.add(liveArrivalsDiffStage.async)
 
           val baseArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
           val fcstArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
@@ -117,11 +123,11 @@ object RunnableCrunch {
           val fcstSink = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
 
 
-          baseArrivals ~> baseArrivalsFanOut ~> arrivals.in0
+          baseArrivals ~> baseArrivalsFanOut~> baseArrivalsDiffing  ~> arrivals.in0
           baseArrivalsFanOut ~> baseArrivalsSink
-          fcstArrivals ~> fcstArrivalsFanOut ~> arrivals.in1
+          fcstArrivals ~> fcstArrivalsDiffing ~> fcstArrivalsFanOut ~> arrivals.in1
           fcstArrivalsFanOut ~> fcstArrivalsSink
-          liveArrivals ~> liveArrivalsFanOut ~> arrivals.in2
+          liveArrivals ~> liveArrivalsDiffing ~> liveArrivalsFanOut ~> arrivals.in2
           liveArrivalsFanOut ~> liveArrivalsSink
 
           manifests ~> manifestGraphKillSwitch ~> manifestsFanOut
@@ -184,15 +190,19 @@ object RunnableCrunch {
     Flights(merged.toSeq)
   }
 
-  def liveDeskRecs(now: () => SDateLike): DeskRecMinutes => DeskRecMinutes = (drms: DeskRecMinutes) => DeskRecMinutes(drms.minutes.filter(drm => drm.minute < tomorrowStartMillis(now)))
+  def liveDeskRecs(now: () => SDateLike): DeskRecMinutes => DeskRecMinutes = (drms: DeskRecMinutes) => DeskRecMinutes(drms.minutes.filter(
+    drm => drm.minute < tomorrowStartMillis(now)))
 
-  def liveSimulations(now: () => SDateLike): SimulationMinutes => SimulationMinutes = (sims: SimulationMinutes) => SimulationMinutes(sims.minutes.filter(drm => drm.minute < tomorrowStartMillis(now)))
+  def liveSimulations(now: () => SDateLike): SimulationMinutes => SimulationMinutes = (sims: SimulationMinutes) => SimulationMinutes(sims.minutes.filter(
+    drm => drm.minute < tomorrowStartMillis(now)))
 
   def liveFlights(now: () => SDateLike): FlightsWithSplits => FlightsWithSplits = (fs: FlightsWithSplits) => FlightsWithSplits(fs.flights.filter(_.apiFlight.PcpTime.getOrElse(0L) < tomorrowStartMillis(now)))
 
-  def forecastDeskRecs(now: () => SDateLike): DeskRecMinutes => DeskRecMinutes = (drms: DeskRecMinutes) => DeskRecMinutes(drms.minutes.filter(drm => drm.minute >= tomorrowStartMillis(now)))
+  def forecastDeskRecs(now: () => SDateLike): DeskRecMinutes => DeskRecMinutes = (drms: DeskRecMinutes) => DeskRecMinutes(drms.minutes.filter(
+    drm => drm.minute >= tomorrowStartMillis(now)))
 
-  def forecastSimulations(now: () => SDateLike): SimulationMinutes => SimulationMinutes = (sims: SimulationMinutes) => SimulationMinutes(sims.minutes.filter(drm => drm.minute >= tomorrowStartMillis(now)))
+  def forecastSimulations(now: () => SDateLike): SimulationMinutes => SimulationMinutes = (sims: SimulationMinutes) => SimulationMinutes(sims.minutes.filter(
+    drm => drm.minute >= tomorrowStartMillis(now)))
 
   def forecastFlights(now: () => SDateLike): FlightsWithSplits => FlightsWithSplits = (fs: FlightsWithSplits) => FlightsWithSplits(fs.flights.filter(_.apiFlight.PcpTime.getOrElse(0L) >= tomorrowStartMillis(now)))
 

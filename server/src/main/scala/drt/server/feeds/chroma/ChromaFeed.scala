@@ -3,8 +3,8 @@ package drt.server.feeds.chroma
 import akka.actor.Cancellable
 import akka.event.LoggingAdapter
 import akka.stream.scaladsl.Source
+import drt.chroma.StreamingChromaFlow
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
-import drt.chroma.{DiffingStage, StreamingChromaFlow}
 import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
@@ -31,7 +31,7 @@ case class ChromaLiveFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcher) {
   def chromaEdiFlights(): Source[ArrivalsFeedResponse, Cancellable] = {
     val chromaFlow = StreamingChromaFlow.chromaPollingSourceLive(log, chromaFetcher, 30 seconds)
 
-    chromaFlow.via(DiffingStage.DiffLists).map {
+    chromaFlow.map {
       case aff: ArrivalsFeedFailure => aff
       case afs: ArrivalsFeedSuccess => afs.copy(arrivals = Flights(correctEdiTerminals(afs)))
     }
@@ -45,8 +45,7 @@ case class ChromaLiveFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcher) {
     })
 
   def chromaVanillaFlights(frequency: FiniteDuration): Source[ArrivalsFeedResponse, Cancellable] = {
-    val chromaFlow = StreamingChromaFlow.chromaPollingSourceLive(log, chromaFetcher, frequency)
-    chromaFlow.via(DiffingStage.DiffLists)
+    StreamingChromaFlow.chromaPollingSourceLive(log, chromaFetcher, frequency)
   }
 }
 
@@ -54,7 +53,6 @@ case class ChromaForecastFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcherF
   flightFeed =>
 
   def chromaVanillaFlights(frequency: FiniteDuration): Source[ArrivalsFeedResponse, Cancellable] = {
-    val chromaFlow = StreamingChromaFlow.chromaPollingSourceForecast(log, chromaFetcher, frequency)
-    chromaFlow.via(DiffingStage.DiffLists)
+    StreamingChromaFlow.chromaPollingSourceForecast(log, chromaFetcher, frequency)
   }
 }

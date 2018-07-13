@@ -6,6 +6,7 @@ import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.{RunnableGraph, Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, KillSwitch, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
+import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi.{CrunchMinutes, PortState, StaffMinutes}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.{SDateLike, _}
@@ -100,6 +101,10 @@ object CrunchSystem {
       expireAfterMillis = props.expireAfterMillis,
       now = props.now)
 
+    val baseArrivalsDiffingStage = new ArrivalsDiffingStage(props.initialBaseArrivals.toSeq)
+    val fcstArrivalsDiffingStage = new ArrivalsDiffingStage(props.initialFcstArrivals.toSeq)
+    val liveArrivalsDiffingStage = new ArrivalsDiffingStage(props.initialLiveArrivals.toSeq)
+
     val arrivalSplitsGraphStage = new ArrivalSplitsGraphStage(
       name = props.logLabel,
       optionalInitialFlights = initialFlightsFromPortState(props.initialPortState),
@@ -164,7 +169,7 @@ object CrunchSystem {
 
     val crunchSystem: RunnableGraph[(FR, FR, FR, MS, SourceQueueWithComplete[String], SourceQueueWithComplete[String], SourceQueueWithComplete[Seq[StaffMovement]], SourceQueueWithComplete[ActualDeskStats], UniqueKillSwitch, UniqueKillSwitch)] = RunnableCrunch(
       props.arrivalsBaseSource, props.arrivalsFcstSource, props.arrivalsLiveSource, manifests, shiftsSource, fixedPointsSource, staffMovementsSource, actualDesksAndQueuesSource,
-      arrivalsStage, arrivalSplitsGraphStage, splitsPredictorStage, workloadGraphStage, loadBatcher, crunchLoadGraphStage, staffGraphStage, staffBatcher, simulationGraphStage, portStateGraphStage,
+      arrivalsStage, arrivalSplitsGraphStage, splitsPredictorStage, workloadGraphStage, loadBatcher, crunchLoadGraphStage, staffGraphStage, staffBatcher, simulationGraphStage, portStateGraphStage, baseArrivalsDiffingStage, fcstArrivalsDiffingStage, liveArrivalsDiffingStage,
       props.actors("base-arrivals").actorRef, props.actors("forecast-arrivals").actorRef, props.actors("live-arrivals").actorRef,
       props.voyageManifestsActor,
       props.liveCrunchStateActor, props.forecastCrunchStateActor,
@@ -187,6 +192,8 @@ object CrunchSystem {
       List(arrivalsKillSwitch, manifestsKillSwitch)
     )
   }
+
+  def arrivalsDiffingStage(initialArrivals: Seq[Arrival]) = new ArrivalsDiffingStage(initialArrivals)
 
   def initialStaffMinutesFromPortState(initialPortState: Option[PortState]): Option[StaffMinutes] = initialPortState.map(ps => StaffMinutes(ps.staffMinutes))
 
