@@ -91,7 +91,7 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     arrivals.size mustEqual 1
     arrivals.head mustEqual new Arrival(
       Operator = None,
-      Status = "LAN",
+      Status = "Landed",
       Estimated = Some(SDate("2018-06-03T19:28:00Z").millisSinceEpoch),
       Actual =  Some(SDate("2018-06-03T19:30:00Z").millisSinceEpoch),
       EstimatedChox =  Some(SDate("2018-06-03T19:37:00Z").millisSinceEpoch),
