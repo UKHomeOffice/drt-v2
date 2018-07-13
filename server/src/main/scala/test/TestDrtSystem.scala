@@ -9,9 +9,11 @@ import drt.server.feeds.test.{TestAPIManifestFeedGraphStage, TestFixtureFeed}
 import drt.shared.AirportConfig
 import drt.shared.FlightsApi.Flights
 import play.api.Configuration
+import play.api.mvc.{Headers, Session}
 import server.feeds.{ArrivalsFeedResponse, FeedResponse, ManifestsFeedResponse}
 import services.graphstages.DqManifests
 import test.TestActors.{TestStaffMovementsActor, _}
+import test.TestUserRoleProvider.log
 
 class TestDrtSystem(override val actorSystem: ActorSystem, override val config: Configuration, override val airportConfig: AirportConfig)
   extends DrtSystem(actorSystem, config, airportConfig) {
@@ -40,6 +42,11 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
   val testFeed = TestFixtureFeed(system)
 
   override def liveArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = testFeed
+
+  override def getRoles(config: Configuration, headers: Headers, session: Session): List[String] = {
+    log.info(s"Using MockRoles with $session")
+    MockRoles(session)
+  }
 
   override def run(): Unit = {
 

@@ -3,7 +3,7 @@ package services
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
-import controllers.{UserRoleProvider, FixedPointPersistence, ShiftPersistence, StaffMovementsPersistence}
+import controllers.{FixedPointPersistence, ShiftPersistence, StaffMovementsPersistence}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.TerminalName
 import drt.shared._

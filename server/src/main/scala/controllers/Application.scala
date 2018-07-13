@@ -138,24 +138,17 @@ class NoCacheFilter @Inject()(
   }
 }
 
-object UserRoleProvider {
+
+trait UserRoleProviderLike {
   val log = LoggerFactory.getLogger(getClass)
 
   val availableRoles = List("staff:edit", "drt:team")
 
   def userRolesFromHeader(headers: Headers): List[String] = headers.get("X-Auth-Roles").map(_.split(",").toList).getOrElse(List())
 
-  def apply(config: Configuration, headers: Headers, session: Session): List[String] = (config.getString("env"), config.getString("feature-flags.super-user-mode").isDefined) match {
-    case (Some(env), false) if env == "test" =>
-
-      log.info(s"Using MockRoles with $session")
-      MockRoles(session)
-    case (_, true) =>
-      log.info(s"Using Super User Roles")
-      availableRoles
-    case _ => userRolesFromHeader(headers)
-  }
+  def getRoles(config: Configuration, headers: Headers, session: Session): List[String]
 }
+
 
 class Application @Inject()(implicit val config: Configuration,
                             implicit val mat: Materializer,
@@ -238,11 +231,9 @@ class Application @Inject()(implicit val config: Configuration,
         true
       }
 
+      def getUserRoles = ctrl.getRoles(config, headers, session)
+
       def getFeedStatuses(): Future[Seq[FeedStatuses]] = ctrl.getFeedStatus()
-
-      def getUserRoles = UserRoleProvider(config, headers, session)
-
-
 
       def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]] = {
         val startOfWeekMidnight = getLocalLastMidnight(SDate(startDay))
@@ -511,7 +502,7 @@ class Application @Inject()(implicit val config: Configuration,
       val crunchStateForPointInTime = loadBestCrunchStateForPointInTime(pit.millisSinceEpoch)
       flightsForCSVExportWithinRange(terminalName, pit, startHour, endHour, crunchStateForPointInTime).map {
         case Some(csvFlights) =>
-          val csvData = if (UserRoleProvider(config, request.headers, request.session).contains("drt:team")) {
+          val csvData = if (ctrl.getRoles(config, request.headers, request.session).contains("drt:team")) {
             log.info(s"Sending Flights CSV with ACL data to DRT Team member")
             CSVData.flightsWithSplitsWithAPIActualsToCSVWithHeadings(csvFlights)
           }
@@ -674,7 +665,6 @@ class Application @Inject()(implicit val config: Configuration,
       implicit val feedStatusPickler: CompositePickler[FeedStatus] = compositePickler[FeedStatus].
         addConcreteType[FeedStatusSuccess].
         addConcreteType[FeedStatusFailure]
-
 
 
       val router = Router.route[Api](ApiService(airportConfig, ctrl.shiftsActor, ctrl.fixedPointsActor, ctrl.staffMovementsActor, request.headers, request.session))

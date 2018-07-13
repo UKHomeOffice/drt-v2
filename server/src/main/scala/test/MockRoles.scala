@@ -1,7 +1,9 @@
 package test
 
+import controllers.UserRoleProviderLike
 import org.slf4j.{Logger, LoggerFactory}
-import play.api.mvc.Session
+import play.api.Configuration
+import play.api.mvc.{Headers, Session}
 import spray.json.{DefaultJsonProtocol, JsValue, RootJsonFormat}
 
 import scala.language.postfixOps
@@ -30,3 +32,12 @@ object MockRoles {
 }
 
 case class MockRoles(roles: List[String])
+
+object TestUserRoleProvider  {
+  val log: Logger = LoggerFactory.getLogger(getClass)
+
+  def getRoles(config: Configuration, headers: Headers, session: Session): List[String] = {
+    log.info(s"Using MockRoles with $session")
+    MockRoles(session)
+  }
+}
