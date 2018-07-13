@@ -224,9 +224,7 @@ class Application @Inject()(implicit val config: Configuration,
         true
       }
 
-      def getFeedStatuses(): Future[Seq[FeedStatuses]] = {
-        ctrl.getFeedStatus()
-      }
+      def getFeedStatuses(): Future[Seq[FeedStatuses]] = ctrl.getFeedStatus()
 
       def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]] = {
         val startOfWeekMidnight = getLocalLastMidnight(SDate(startDay))

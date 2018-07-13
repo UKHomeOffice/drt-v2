@@ -16,11 +16,33 @@ object FeedStatus {
   def apply(date: MillisSinceEpoch, message: String): FeedStatusFailure = FeedStatusFailure(date, message)
 }
 
+sealed trait RagStatus
+case object Red extends RagStatus {
+  override def toString = "red"
+}
+case object Amber extends RagStatus {
+  override def toString = "amber"
+}
+case object Green extends RagStatus {
+  override def toString = "green"
+}
+
 case class FeedStatuses(name: String,
                         statuses: List[FeedStatus],
                         lastSuccessAt: Option[MillisSinceEpoch],
                         lastFailureAt: Option[MillisSinceEpoch],
                         lastUpdatesAt: Option[MillisSinceEpoch]) {
+  val oneMinuteMillis: Int = 60 * 1000
+
+  def ragStatus(now: MillisSinceEpoch): RagStatus = (lastSuccessAt, lastFailureAt) match {
+    case (Some(s), Some(f)) if f > s => Red
+    case (Some(_), Some(f)) if f > now - (5 * oneMinuteMillis) => Amber
+    case (None, Some(_)) => Red
+    case _ => Green
+  }
+
+  def hasConnectedAtLeastOnce: Boolean = lastSuccessAt.isDefined
+
   def addStatus(createdAt: SDateLike, updateCount: Int): FeedStatuses = {
     add(FeedStatusSuccess(createdAt.millisSinceEpoch, updateCount))
   }

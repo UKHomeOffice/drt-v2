@@ -47,6 +47,7 @@ class ForecastBaseArrivalsActor(now: () => SDateLike,
     state = state.copy(arrivals = incomingArrivalsWithKeys, maybeFeedStatuses = Option(state.addStatus(newStatus)))
 
     if (removals.nonEmpty || updates.nonEmpty) persistArrivalUpdates(removals, updates)
+    persistFeedStatus(FeedStatusSuccess(createdAt.millisSinceEpoch, updates.size))
 
     snapshotIfNeeded(state)
   }
@@ -107,6 +108,14 @@ abstract class ArrivalsActor(now: () => SDateLike,
       state = state.copy(maybeFeedStatuses = Option(state.addStatus(status)))
   }
 
+  override def postRecoveryComplete(): Unit = {
+    val withoutExpired = Crunch.purgeExpired(state.arrivals, (a: Arrival) => a.Scheduled, now, expireAfterMillis)
+    state = state.copy(arrivals = withoutExpired)
+
+    log.info(s"Recovered ${state.arrivals.size} arrivals for ${state.feedName}")
+    super.postRecoveryComplete()
+  }
+
   def consumeDiffsMessage(message: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState
 
   def consumeRemovals(diffsMessage: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState = {
@@ -118,10 +127,9 @@ abstract class ArrivalsActor(now: () => SDateLike,
   }
 
   def consumeUpdates(diffsMessage: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState = {
-    val withoutExpired = Crunch.purgeExpired(existingState.arrivals, (a: Arrival) => a.PcpTime.getOrElse(0L), now, expireAfterMillis)
     logRecoveryMessage(s"Consuming ${diffsMessage.updates.length} updates")
     val updatedArrivals = diffsMessage.updates
-      .foldLeft(withoutExpired) {
+      .foldLeft(existingState.arrivals) {
         case (soFar, fm) =>
           val arrival = flightMessageToApiFlight(fm)
           soFar.updated(arrival.uniqueId, arrival)

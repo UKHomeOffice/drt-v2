@@ -7,18 +7,7 @@ import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, ArrivalsFeedResponse}
 
-object DiffingStage {
-  def DiffLists = new ArrivalsDiffingStage(diffLists)
-
-  def diffLists[T](a: Seq[T], b: Seq[T]): Seq[T] = {
-    val aSet = a.toSet
-    val bSet = b.toSet
-
-    (bSet -- aSet).toList
-  }
-}
-
-final class ArrivalsDiffingStage(diff: (Seq[Arrival], Seq[Arrival]) => Seq[Arrival]) extends GraphStage[FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse]] {
+final class ArrivalsDiffingStage(initialKnownArrivals: Seq[Arrival]) extends GraphStage[FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse]] {
   val in: Inlet[ArrivalsFeedResponse] = Inlet[ArrivalsFeedResponse]("DiffingStage.in")
   val out: Outlet[ArrivalsFeedResponse] = Outlet[ArrivalsFeedResponse]("DiffingStage.out")
 
@@ -27,8 +16,13 @@ final class ArrivalsDiffingStage(diff: (Seq[Arrival], Seq[Arrival]) => Seq[Arriv
   override val shape: FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse] = FlowShape.of(in, out)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    private var knownArrivals: Seq[Arrival] = Seq()
+    private var knownArrivals: Seq[Arrival] = initialKnownArrivals
     private var maybeResponseToPush: Option[ArrivalsFeedResponse] = None
+
+    override def preStart(): Unit = {
+      log.info(s"Started with ${knownArrivals.length} known arrivals:\n${knownArrivals.take(2).mkString("\n")}")
+      super.preStart()
+    }
 
     setHandlers(in, out, new InHandler with OutHandler {
       override def onPush(): Unit = {
@@ -67,6 +61,13 @@ final class ArrivalsDiffingStage(diff: (Seq[Arrival], Seq[Arrival]) => Seq[Arriv
           log.warn(s"Unexpected ArrivalsFeedResponse: ${unexpected.getClass}")
           Option.empty[ArrivalsFeedResponse]
       }
+    }
+
+    def diff(a: Seq[Arrival], b: Seq[Arrival]): Seq[Arrival] = {
+      val aSet = a.toSet
+      val bSet = b.toSet
+
+      (bSet -- aSet).toList
     }
   }
 }

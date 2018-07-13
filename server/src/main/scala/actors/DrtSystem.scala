@@ -9,7 +9,7 @@ import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import controllers.{Deskstats, PaxFlow}
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
-import drt.chroma.{ChromaFeedType, ChromaForecast, ChromaLive, DiffingStage}
+import drt.chroma._
 import drt.http.ProdSendAndReceive
 import drt.server.feeds.bhx.{BHXForecastFeed, BHXLiveFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
@@ -151,7 +151,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
     val statuses = actors
       .map(askable => askable.ask(GetFeedStatuses)(new Timeout(5 seconds)).map {
-        case Some(fs: FeedStatuses) => Option(fs)
+        case Some(fs: FeedStatuses) if fs.hasConnectedAtLeastOnce => Option(fs)
         case _ => None
       })
 
@@ -363,6 +363,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     Source.tick(10 seconds, 1 hour, {
       system.log.info(s"LHR Forecast: ticking")
       lhrForecastFeed.requestFeed
-    }).via(DiffingStage.DiffLists)
+    })
   }
 }
