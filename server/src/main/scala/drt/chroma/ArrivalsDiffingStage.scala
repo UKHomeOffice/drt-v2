@@ -52,7 +52,6 @@ final class ArrivalsDiffingStage(initialKnownArrivals: Seq[Arrival]) extends Gra
         case afs@ArrivalsFeedSuccess(latestArrivals, _) =>
           val newUpdates = diff(knownArrivals, latestArrivals.flights)
           log.info(s"Got ${newUpdates.length} new arrival updates")
-          newUpdates.foreach(newA => knownArrivals.find(ka => ka.uniqueId == newA.uniqueId).foreach(found => log.info(s"new vs existing:\n$newA\n$found")))
           knownArrivals = latestArrivals.flights
           Option(afs.copy(arrivals = latestArrivals.copy(flights = newUpdates)))
         case aff@ArrivalsFeedFailure(_, _) =>
