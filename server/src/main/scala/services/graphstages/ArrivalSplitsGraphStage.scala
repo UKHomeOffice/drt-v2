@@ -39,12 +39,13 @@ class ArrivalSplitsGraphStage(name: String = "",
     var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
     var manifestsBuffer: Map[Int, Set[VoyageManifest]] = Map()
     var arrivalsWithSplitsDiff: Set[ApiFlightWithSplits] = Set()
+    var arrivalsToRemove: Set[Int] = Set()
 
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
     override def preStart(): Unit = {
       optionalInitialFlights match {
-        case Some(FlightsWithSplits(flights)) =>
+        case Some(FlightsWithSplits(flights, _)) =>
           log.info(s"Received initial flights. Setting ${flights.size}")
           flightsByFlightId = purgeExpiredArrivals(
             flights
@@ -86,6 +87,7 @@ class ArrivalSplitsGraphStage(name: String = "",
         val updatedFlights = purgeExpiredArrivals(updateFlightsFromIncoming(arrivalsDiff, flightsByFlightId))
         val latestDiff = updatedFlights.values.toSet -- flightsByFlightId.values.toSet
         arrivalsWithSplitsDiff = mergeDiffSets(latestDiff, arrivalsWithSplitsDiff)
+        arrivalsToRemove = arrivalsToRemove ++ arrivalsDiff.toRemove
         log.info(s"${arrivalsWithSplitsDiff.size} updated arrivals waiting to push")
         flightsByFlightId = updatedFlights
 
@@ -295,10 +297,11 @@ class ArrivalSplitsGraphStage(name: String = "",
 
     def pushStateIfReady(): Unit = {
       if (isAvailable(outArrivalsWithSplits)) {
-        if (arrivalsWithSplitsDiff.nonEmpty) {
-          log.info(s"Pushing ${arrivalsWithSplitsDiff.size} updated arrivals with splits")
-          push(outArrivalsWithSplits, FlightsWithSplits(arrivalsWithSplitsDiff.toSeq))
+        if (arrivalsWithSplitsDiff.nonEmpty || arrivalsToRemove.nonEmpty) {
+          log.info(s"Pushing ${arrivalsWithSplitsDiff.size} updated arrivals with splits and ${arrivalsToRemove.size} removals")
+          push(outArrivalsWithSplits, FlightsWithSplits(arrivalsWithSplitsDiff.toSeq, arrivalsToRemove))
           arrivalsWithSplitsDiff = Set()
+          arrivalsToRemove = Set()
         } else log.info(s"No updated arrivals with splits to push")
       } else log.info(s"outArrivalsWithSplits not available to push")
     }

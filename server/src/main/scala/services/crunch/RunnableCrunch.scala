@@ -106,7 +106,7 @@ object RunnableCrunch {
           val baseArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
           val fcstArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
           val liveArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
-          val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](3))
+          val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](2))
           val manifestsFanOut = builder.add(Broadcast[ManifestsFeedResponse](2))
           val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](2))
           val workloadFanOut = builder.add(Broadcast[Loads](2))
@@ -142,7 +142,6 @@ object RunnableCrunch {
           arrivals.out ~> arrivalsGraphKillSwitch ~> arrivalsFanOut
 
           arrivalsFanOut.map(_.toUpdate.toSeq) ~> splitsPredictor
-          arrivalsFanOut.map(diff => FlightRemovals(diff.toRemove)) ~> portState.in0
           arrivalsFanOut ~> arrivalSplits.in0
           splitsPredictor.out ~> arrivalSplits.in2
 
@@ -153,15 +152,15 @@ object RunnableCrunch {
           workloadFanOut ~> crunch
           workloadFanOut ~> simulation.in0
 
-          arrivalSplitsFanOut ~> portState.in1
-          crunch ~> portState.in2
-          actualDesksAndWaitTimes ~> portState.in3
+          arrivalSplitsFanOut ~> portState.in0
+          crunch ~> portState.in1
+          actualDesksAndWaitTimes ~> portState.in2
 
           staff.out ~> batchStaff ~> staffFanOut
           staffFanOut ~> simulation.in1
-          staffFanOut ~> portState.in4
+          staffFanOut ~> portState.in3
 
-          simulation.out ~> portState.in5
+          simulation.out ~> portState.in4
 
           portState.out ~> portStateFanOut
           portStateFanOut.map(_.window(liveStart(now), liveEnd(now))) ~> liveSink
@@ -181,41 +180,4 @@ object RunnableCrunch {
   def forecastEnd(now: () => SDateLike): SDateLike = Crunch.getLocalNextMidnight(now()).addDays(360)
 
   def forecastStart(now: () => SDateLike): SDateLike = Crunch.getLocalNextMidnight(now())
-
-  def mergeFlightSets(flightsSoFar: Seq[Arrival], nextFlights: Seq[Arrival]): Flights = {
-    val soFarById = flightsSoFar.map(f => (f.uniqueId, f)).toMap
-    val merged = nextFlights
-      .foldLeft(soFarById) {
-        case (soFar, newFlight) => soFar.updated(newFlight.uniqueId, newFlight)
-      }
-      .values
-    Flights(merged.toSeq)
-  }
-
-  def liveDeskRecs(now: () => SDateLike): DeskRecMinutes => DeskRecMinutes = (drms: DeskRecMinutes) => DeskRecMinutes(drms.minutes.filter(
-    drm => drm.minute < tomorrowStartMillis(now)))
-
-  def liveSimulations(now: () => SDateLike): SimulationMinutes => SimulationMinutes = (sims: SimulationMinutes) => SimulationMinutes(sims.minutes.filter(
-    drm => drm.minute < tomorrowStartMillis(now)))
-
-  def liveFlights(now: () => SDateLike): FlightsWithSplits => FlightsWithSplits = (fs: FlightsWithSplits) => FlightsWithSplits(fs.flights.filter(_.apiFlight.PcpTime.getOrElse(0L) < tomorrowStartMillis(now)))
-
-  def forecastDeskRecs(now: () => SDateLike): DeskRecMinutes => DeskRecMinutes = (drms: DeskRecMinutes) => DeskRecMinutes(drms.minutes.filter(
-    drm => drm.minute >= tomorrowStartMillis(now)))
-
-  def forecastSimulations(now: () => SDateLike): SimulationMinutes => SimulationMinutes = (sims: SimulationMinutes) => SimulationMinutes(sims.minutes.filter(
-    drm => drm.minute >= tomorrowStartMillis(now)))
-
-  def forecastFlights(now: () => SDateLike): FlightsWithSplits => FlightsWithSplits = (fs: FlightsWithSplits) => FlightsWithSplits(fs.flights.filter(_.apiFlight.PcpTime.getOrElse(0L) >= tomorrowStartMillis(now)))
-
-  def tomorrowStartMillis(now: () => SDateLike): MillisSinceEpoch = Crunch.getLocalNextMidnight(now()).millisSinceEpoch
-}
-
-case class FlightRemovals(idsToRemove: Set[Int]) extends PortStateMinutes {
-  def applyTo(mayBePortState: Option[PortState], now: SDateLike): Option[PortState] = {
-    mayBePortState.map(portState => {
-      val updatedFlights = portState.flights.filterKeys(id => !idsToRemove.contains(id))
-      portState.copy(flights = updatedFlights)
-    })
-  }
 }
