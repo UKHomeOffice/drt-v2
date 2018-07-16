@@ -1,0 +1,23 @@
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: {{ .NAME }}
+  labels:
+    stable.k8s.psg.io/kcm.class: default
+  annotations:
+    ingress.kubernetes.io/force-ssl-redirect: "true"
+    kubernetes.io/ingress.class: "nginx-internal"
+spec:
+  tls:
+    - hosts:
+        - {{ .NAME }}.drt-dev.notprod.acp.homeoffice.gov.uk
+      secretName: {{ .NAME }}
+  rules:
+    - host: {{ .NAME }}.drt-dev.notprod.acp.homeoffice.gov.uk
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: {{ .NAME }}
+              servicePort: 443
