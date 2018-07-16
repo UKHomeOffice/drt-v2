@@ -123,12 +123,14 @@ object RunnableCrunch {
           val fcstSink = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
 
 
-          baseArrivals ~> baseArrivalsFanOut~> baseArrivalsDiffing  ~> arrivals.in0
-          baseArrivalsFanOut ~> baseArrivalsSink
+          baseArrivals ~> baseArrivalsFanOut ~> arrivals.in0
+                          baseArrivalsFanOut ~> baseArrivalsDiffing ~> baseArrivalsSink
+
           fcstArrivals ~> fcstArrivalsDiffing ~> fcstArrivalsFanOut ~> arrivals.in1
-          fcstArrivalsFanOut ~> fcstArrivalsSink
+                          fcstArrivalsFanOut ~> fcstArrivalsSink
+
           liveArrivals ~> liveArrivalsDiffing ~> liveArrivalsFanOut ~> arrivals.in2
-          liveArrivalsFanOut ~> liveArrivalsSink
+                          liveArrivalsFanOut ~> liveArrivalsSink
 
           manifests ~> manifestGraphKillSwitch ~> manifestsFanOut
           manifestsFanOut ~> arrivalSplits.in1
