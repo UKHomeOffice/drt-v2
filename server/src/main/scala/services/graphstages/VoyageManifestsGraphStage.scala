@@ -42,8 +42,7 @@ case class DqManifests(lastSeenFileName: String, manifests: Set[VoyageManifest])
   }
 }
 
-class VoyageManifestsGraphStage(bucketName: String, portCode: String, initialLastSeenFileName: String, minCheckIntervalMillis: MillisSinceEpoch = 30000) extends GraphStage[SourceShape[ManifestsFeedResponse]] {
-  implicit val actorSystem: ActorSystem = ActorSystem("VoyageManifestActorSystem")
+class VoyageManifestsGraphStage(bucketName: String, portCode: String, initialLastSeenFileName: String, minCheckIntervalMillis: MillisSinceEpoch = 30000)(implicit actorSystem: ActorSystem) extends GraphStage[SourceShape[ManifestsFeedResponse]] {
   implicit val materializer: ActorMaterializer = ActorMaterializer()
 
   val out: Outlet[ManifestsFeedResponse] = Outlet("manifestsOut")
