@@ -165,7 +165,6 @@ class CrunchTestLike
 
     val crunchInputs = CrunchSystem(CrunchProps(
       logLabel = logLabel,
-      system = actorSystem,
       airportConfig = airportConfig,
       pcpArrival = pcpArrivalTime,
       historicalSplitsProvider = csvSplitsProvider,

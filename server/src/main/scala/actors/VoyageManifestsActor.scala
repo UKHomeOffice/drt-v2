@@ -88,23 +88,25 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapsh
       log.info(s"Received ${newManifests.size} manifests, up to file $updatedLZF from connection at ${createdAt.toISOString()}")
 
       val updates = newManifests -- state.manifests
+      val updatedManifests = newStateManifests(state.manifests, newManifests)
+      val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, updates.size)
 
       if (updates.nonEmpty) {
         persistManifests(updates)
-        persistLastSeenFileName(updatedLZF)
-        snapshotIfRequired(state)
       } else log.info(s"No new manifests to persist")
 
-      val updatedManifests = newStateManifests(state.manifests, newManifests)
-      val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, updates.size)
-      persistFeedStatus(newStatus)
       state = VoyageManifestState(manifests = updatedManifests,latestZipFilename = updatedLZF,feedName = name,maybeFeedStatuses = Option(state.addStatus(newStatus)))
+
+      persistLastSeenFileName(updatedLZF)
+      snapshotIfRequired(state)
+      persistFeedStatus(newStatus)
 
     case ManifestsFeedFailure(message, failedAt) =>
       log.warn(s"Failed to connect to AWS S3 for API data at ${failedAt.toISOString()}. $message")
       val newStatus = FeedStatusFailure(failedAt.millisSinceEpoch, message)
-      persistFeedStatus(newStatus)
       state = state.copy(maybeFeedStatuses = Option(state.addStatus(newStatus)))
+
+      persistFeedStatus(newStatus)
 
     case GetFeedStatuses =>
       log.info(s"Received GetFeedStatuses request")
