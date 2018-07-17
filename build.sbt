@@ -6,7 +6,8 @@ scalaVersion := Settings.versions.scala
 
 // uncomment the following to get a breakdown  of where build time is spent
 //enablePlugins(net.virtualvoid.optimizer.SbtOptimizerPlugin)
-
+// enabled for Apline JVM docker image compatibility 
+enablePlugins(AshScriptPlugin)
 // a special crossProject for configuring a JS/JVM/shared structure
 lazy val shared = (crossProject.crossType(CrossType.Pure) in file("shared"))
   .settings(
