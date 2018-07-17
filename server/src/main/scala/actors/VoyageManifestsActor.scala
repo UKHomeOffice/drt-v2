@@ -97,16 +97,14 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapsh
 
       val updatedManifests = newStateManifests(state.manifests, newManifests)
       val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, updates.size)
-      state = state.copy(maybeFeedStatuses = Option(state.addStatus(newStatus)))
       persistFeedStatus(newStatus)
-
       state = VoyageManifestState(manifests = updatedManifests,latestZipFilename = updatedLZF,feedName = name,maybeFeedStatuses = Option(state.addStatus(newStatus)))
 
     case ManifestsFeedFailure(message, failedAt) =>
       log.warn(s"Failed to connect to AWS S3 for API data at ${failedAt.toISOString()}. $message")
       val newStatus = FeedStatusFailure(failedAt.millisSinceEpoch, message)
-      state = state.copy(maybeFeedStatuses = Option(state.addStatus(newStatus)))
       persistFeedStatus(newStatus)
+      state = state.copy(maybeFeedStatuses = Option(state.addStatus(newStatus)))
 
     case GetFeedStatuses =>
       log.info(s"Received GetFeedStatuses request")
