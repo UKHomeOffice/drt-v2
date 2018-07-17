@@ -39,11 +39,10 @@ describe('Staff movements', function () {
       var staffDeployedSelector = '#sticky-body > :nth-child(1) > :nth-child(14)';
       cy.get(staffDeployedSelector).contains("1");
       cy.contains("Staff Movements").click();
-      cy.get('tbody > :nth-child(2) > td').eq(0).contains("1");
-      cy.get('tbody > :nth-child(2) > td').eq(1).contains("1");
-      cy.get('tbody > :nth-child(2) > td').eq(2).contains("1");
-      cy.get('tbody > :nth-child(2) > td').eq(3).contains("1");
+
+      [0, 1, 2, 3].map((rowNumber) => {cy.get('tbody > :nth-child(2) > td').eq(rowNumber).contains("1")});
       cy.get('tbody > :nth-child(2) > td').eq(4).contains("0");
+
       cy.get('.fa-remove').click()
     });
     it("Should update the available staff when 1 staff member is added for 1 hour twice", function () {
@@ -51,13 +50,18 @@ describe('Staff movements', function () {
       addMovementFor1Hour();
       addMovementFor1Hour();
       var staffDeployedSelector = '#sticky-body > :nth-child(1) > :nth-child(14)';
-      cy.get(staffDeployedSelector).contains("1");
+      cy.get(staffDeployedSelector).contains("2");
+      const movesSelector = 'td.non-pcp:nth($index)';
+      const availableSelector = ':nth-child($index) > .staff-adjustments > :nth-child(1) > .deployed';
+
+      [1, 3, 5, 7].map((tdIdx) => {cy.get(movesSelector.replace('$index', tdIdx)).contains("2")});
+      [1, 2, 3, 4].map((rowNumber) => {cy.get(availableSelector.replace('$index', rowNumber)).contains("2")});
+
       cy.contains("Staff Movements").click();
-      cy.get('tbody > :nth-child(2) > td').eq(0).contains("2");
-      cy.get('tbody > :nth-child(2) > td').eq(1).contains("2");
-      cy.get('tbody > :nth-child(2) > td').eq(2).contains("2");
-      cy.get('tbody > :nth-child(2) > td').eq(3).contains("2");
+
+      [0, 1, 2, 3].map((rowNumber) => {cy.get('tbody > :nth-child(2) > td').eq(rowNumber).contains("2")});
       cy.get('tbody > :nth-child(2) > td').eq(4).contains("0");
+      
       cy.get('.fa-remove').each(function (el) {
         el.click()
       })

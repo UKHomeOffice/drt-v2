@@ -21,7 +21,7 @@ import scala.language.postfixOps
 
 class TestAPIManifestFeedGraphStage(implicit actorSystem: ActorSystem, materializer: Materializer) extends GraphStage[SourceShape[ManifestsFeedResponse]] {
   val log: Logger = LoggerFactory.getLogger(getClass)
-  val minCheckIntervalMillis = 3000
+  val minCheckIntervalMillis = 2000
 
   val out: Outlet[ManifestsFeedResponse] = Outlet("manifestsOut")
   override val shape: SourceShape[ManifestsFeedResponse] = SourceShape(out)

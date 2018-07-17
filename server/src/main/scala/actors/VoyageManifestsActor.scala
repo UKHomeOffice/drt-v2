@@ -91,13 +91,12 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapsh
       val updatedManifests = newStateManifests(state.manifests, newManifests)
       val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, updates.size)
 
-      if (updates.nonEmpty) {
-        persistManifests(updates)
-      } else log.info(s"No new manifests to persist")
+      if (updates.nonEmpty) persistManifests(updates) else log.info(s"No new manifests to persist")
 
       state = VoyageManifestState(manifests = updatedManifests,latestZipFilename = updatedLZF,feedName = name,maybeFeedStatuses = Option(state.addStatus(newStatus)))
 
-      persistLastSeenFileName(updatedLZF)
+      if (updatedLZF != state.latestZipFilename) persistLastSeenFileName(updatedLZF)
+
       snapshotIfRequired(state)
       persistFeedStatus(newStatus)
 
