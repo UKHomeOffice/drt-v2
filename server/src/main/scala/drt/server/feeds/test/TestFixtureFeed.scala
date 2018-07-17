@@ -28,7 +28,7 @@ object TestFixtureFeed {
 
     implicit val timeout: Timeout = Timeout(300 milliseconds)
 
-    val pollFrequency = 30 seconds
+    val pollFrequency = 2 seconds
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
     val tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed).map(_ => {
       val testArrivals = Await.result(askableTestArrivalActor.ask(GetArrivals).map {
