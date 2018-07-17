@@ -39,7 +39,6 @@ object RunnableCrunch {
                                        simulationGraphStage: SimulationGraphStage,
                                        portStateGraphStage: PortStateGraphStage,
 
-                                       baseArrivalsDiffStage: ArrivalsDiffingStage,
                                        fcstArrivalsDiffStage: ArrivalsDiffingStage,
                                        liveArrivalsDiffStage: ArrivalsDiffingStage,
 
@@ -99,7 +98,6 @@ object RunnableCrunch {
           val batchStaff = builder.add(staffBatchUpdateGraphStage.async)
           val simulation = builder.add(simulationGraphStage.async)
           val portState = builder.add(portStateGraphStage.async)
-          val baseArrivalsDiffing = builder.add(baseArrivalsDiffStage.async)
           val fcstArrivalsDiffing = builder.add(fcstArrivalsDiffStage.async)
           val liveArrivalsDiffing = builder.add(liveArrivalsDiffStage.async)
 
@@ -124,48 +122,43 @@ object RunnableCrunch {
 
 
           baseArrivals ~> baseArrivalsFanOut ~> arrivals.in0
-                          baseArrivalsFanOut ~> baseArrivalsDiffing ~> baseArrivalsSink
+                          baseArrivalsFanOut ~> baseArrivalsSink
 
           fcstArrivals ~> fcstArrivalsDiffing ~> fcstArrivalsFanOut ~> arrivals.in1
-                          fcstArrivalsFanOut ~> fcstArrivalsSink
+                                                 fcstArrivalsFanOut ~> fcstArrivalsSink
 
           liveArrivals ~> liveArrivalsDiffing ~> liveArrivalsFanOut ~> arrivals.in2
-                          liveArrivalsFanOut ~> liveArrivalsSink
+                                                 liveArrivalsFanOut ~> liveArrivalsSink
 
-          manifests ~> manifestGraphKillSwitch ~> manifestsFanOut
-          manifestsFanOut ~> arrivalSplits.in1
-          manifestsFanOut ~> manifestsSink
+          manifests ~> manifestGraphKillSwitch ~> manifestsFanOut ~> arrivalSplits.in1
+                                                  manifestsFanOut ~> manifestsSink
+
           shifts ~> staff.in0
           fixedPoints ~> staff.in1
           staffMovements ~> staff.in2
 
-          arrivals.out ~> arrivalsGraphKillSwitch ~> arrivalsFanOut
+          arrivals.out ~> arrivalsGraphKillSwitch ~> arrivalsFanOut ~> arrivalSplits.in0
+                                                     arrivalsFanOut.map(_.toUpdate.toSeq) ~> splitsPredictor
 
-          arrivalsFanOut.map(_.toUpdate.toSeq) ~> splitsPredictor
-          arrivalsFanOut ~> arrivalSplits.in0
           splitsPredictor.out ~> arrivalSplits.in2
 
-          arrivalSplits.out ~> arrivalSplitsFanOut
-          arrivalSplitsFanOut ~> workload
+          arrivalSplits.out ~> arrivalSplitsFanOut ~> workload
+                               arrivalSplitsFanOut ~> portState.in0
 
-          workload.out ~> batchLoad ~> workloadFanOut
-          workloadFanOut ~> crunch
-          workloadFanOut ~> simulation.in0
+          workload.out ~> batchLoad ~> workloadFanOut ~> crunch
+                                       workloadFanOut ~> simulation.in0
 
-          arrivalSplitsFanOut ~> portState.in0
           crunch ~> portState.in1
           actualDesksAndWaitTimes ~> portState.in2
 
-          staff.out ~> batchStaff ~> staffFanOut
-          staffFanOut ~> simulation.in1
-          staffFanOut ~> portState.in3
+          staff.out ~> batchStaff ~> staffFanOut ~> simulation.in1
+                                     staffFanOut ~> portState.in3
 
           simulation.out ~> portState.in4
 
           portState.out ~> portStateFanOut
           portStateFanOut.map(_.window(liveStart(now), liveEnd(now))) ~> liveSink
           portStateFanOut.map(_.window(forecastStart(now), forecastEnd(now))) ~> fcstSink
-
 
           ClosedShape
     }
