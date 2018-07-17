@@ -8,7 +8,7 @@ import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{Sink, Source, StreamConverters}
 import akka.stream.stage.{GraphStage, GraphStageLogic, OutHandler}
-import akka.stream.{ActorMaterializer, Attributes, Outlet, SourceShape}
+import akka.stream._
 import akka.util.ByteString
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.mfglabs.commons.aws.s3.{AmazonS3AsyncClient, S3StreamBuilder}
@@ -17,7 +17,7 @@ import drt.shared.DqEventCodes
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
-import server.feeds.{ManifestsFeedResponse, ManifestsFeedFailure, ManifestsFeedSuccess}
+import server.feeds.{ManifestsFeedFailure, ManifestsFeedResponse, ManifestsFeedSuccess}
 import services.SDate
 
 import scala.collection.immutable.Seq
@@ -42,9 +42,7 @@ case class DqManifests(lastSeenFileName: String, manifests: Set[VoyageManifest])
   }
 }
 
-class VoyageManifestsGraphStage(bucketName: String, portCode: String, initialLastSeenFileName: String, minCheckIntervalMillis: MillisSinceEpoch = 30000)(implicit actorSystem: ActorSystem) extends GraphStage[SourceShape[ManifestsFeedResponse]] {
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
-
+class VoyageManifestsGraphStage(bucketName: String, portCode: String, initialLastSeenFileName: String, minCheckIntervalMillis: MillisSinceEpoch = 30000)(implicit actorSystem: ActorSystem, materializer: Materializer) extends GraphStage[SourceShape[ManifestsFeedResponse]] {
   val out: Outlet[ManifestsFeedResponse] = Outlet("manifestsOut")
   override val shape: SourceShape[ManifestsFeedResponse] = SourceShape(out)
 

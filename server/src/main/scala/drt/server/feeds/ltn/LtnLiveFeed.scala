@@ -5,7 +5,7 @@ import akka.actor.{ActorSystem, Cancellable}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
-import akka.stream.ActorMaterializer
+import akka.stream.{ActorMaterializer, Materializer}
 import akka.stream.scaladsl.Source
 import drt.shared.Arrival
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -22,7 +22,7 @@ import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
-case class LtnLiveFeed(endPoint: String, token: String, username: String, password: String, timeZone: DateTimeZone)(implicit actorSystem: ActorSystem) {
+case class LtnLiveFeed(endPoint: String, token: String, username: String, password: String, timeZone: DateTimeZone)(implicit actorSystem: ActorSystem, materializer: Materializer) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source
@@ -43,8 +43,6 @@ case class LtnLiveFeed(endPoint: String, token: String, username: String, passwo
       ),
       entity = HttpEntity.Empty
     )
-
-    implicit val materializer: ActorMaterializer = ActorMaterializer()
 
     val responseFuture = Http()
       .singleRequest(request)

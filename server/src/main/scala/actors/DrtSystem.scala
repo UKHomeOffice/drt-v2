@@ -3,7 +3,7 @@ package actors
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
 import akka.pattern.AskableActorRef
-import akka.stream.ActorMaterializer
+import akka.stream.{ActorMaterializer, Materializer}
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
@@ -57,7 +57,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   def getFeedStatus(): Future[Seq[FeedStatuses]]
 }
 
-case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig) extends DrtSystemInterface {
+case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig)(implicit actorMaterializer: Materializer) extends DrtSystemInterface {
 
   implicit val system: ActorSystem = actorSystem
 
@@ -80,7 +80,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
   val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
-  val actorMaterializer = ActorMaterializer()
 
   val purgeOldLiveSnapshots = false
   val purgeOldForecastSnapshots = true
@@ -195,7 +194,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
                        ): CrunchSystem[Cancellable, NotUsed] = {
 
     val crunchInputs = CrunchSystem(CrunchProps(
-      system = system,
       airportConfig = airportConfig,
       pcpArrival = pcpArrivalTimeCalculator,
       historicalSplitsProvider = historicalSplitsProvider,

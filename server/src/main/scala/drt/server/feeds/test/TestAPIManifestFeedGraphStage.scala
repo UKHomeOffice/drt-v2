@@ -3,7 +3,7 @@ package drt.server.feeds.test
 import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
 import akka.pattern.AskableActorRef
 import akka.stream.stage.{GraphStage, GraphStageLogic, OutHandler}
-import akka.stream.{ActorMaterializer, Attributes, Outlet, SourceShape}
+import akka.stream._
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
@@ -19,9 +19,7 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 
-class TestAPIManifestFeedGraphStage(actorSystem: ActorSystem) extends GraphStage[SourceShape[ManifestsFeedResponse]] {
-  implicit val system: ActorSystem = actorSystem
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
+class TestAPIManifestFeedGraphStage(implicit actorSystem: ActorSystem, materializer: Materializer) extends GraphStage[SourceShape[ManifestsFeedResponse]] {
   val log: Logger = LoggerFactory.getLogger(getClass)
   val minCheckIntervalMillis = 3000
 
