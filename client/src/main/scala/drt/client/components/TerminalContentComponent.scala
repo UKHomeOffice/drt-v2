@@ -40,25 +40,10 @@ object TerminalContentComponent {
                   ) {
     lazy val hash = {
       val depsHash = crunchStatePot.map(
-        cs => cs.crunchMinutes.toSeq.map(_.hashCode())
-      ).toList.mkString("|")
+        cs => (cs.crunchMinutes, cs.staffMinutes, cs.flights).hashCode()
+      ).getOrElse(0)
 
-      val flightsHash: Option[List[(Int, String, Option[String], Option[String], MillisSinceEpoch, Option[MillisSinceEpoch], Option[MillisSinceEpoch], Option[MillisSinceEpoch], Option[MillisSinceEpoch], Option[MillisSinceEpoch], Option[Int])]] = crunchStatePot.toOption.map(_.flights.toList.map(f => {
-        (f.splits.hashCode,
-          f.apiFlight.Status,
-          f.apiFlight.Gate,
-          f.apiFlight.Stand,
-          f.apiFlight.Scheduled,
-          f.apiFlight.Estimated,
-          f.apiFlight.Actual,
-          f.apiFlight.EstimatedChox,
-          f.apiFlight.ActualChox,
-          f.apiFlight.PcpTime,
-          f.apiFlight.ActPax
-        )
-      }))
-
-      (depsHash, flightsHash, minuteTicker)
+      (depsHash, minuteTicker)
     }
   }
 
