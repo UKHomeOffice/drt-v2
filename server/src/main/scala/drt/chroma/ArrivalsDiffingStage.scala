@@ -20,7 +20,7 @@ final class ArrivalsDiffingStage(initialKnownArrivals: Seq[Arrival]) extends Gra
     private var maybeResponseToPush: Option[ArrivalsFeedResponse] = None
 
     override def preStart(): Unit = {
-      log.info(s"Started with ${knownArrivals.length} known arrivals:\n${knownArrivals.take(2).mkString("\n")}")
+      log.info(s"Started with ${knownArrivals.length} known arrivals")
       super.preStart()
     }
 

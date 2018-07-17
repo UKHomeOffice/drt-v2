@@ -4,7 +4,7 @@ import actors.{GetState, StaffMovements}
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.{RunnableGraph, Source, SourceQueueWithComplete}
-import akka.stream.{ActorMaterializer, KillSwitch, OverflowStrategy, UniqueKillSwitch}
+import akka.stream._
 import akka.util.Timeout
 import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi.{CrunchMinutes, PortState, StaffMinutes}
@@ -35,7 +35,6 @@ case class CrunchSystem[FR, MS](shifts: SourceQueueWithComplete[String],
                            )
 
 case class CrunchProps[FR, MS](logLabel: String = "",
-                           system: ActorSystem,
                            airportConfig: AirportConfig,
                            pcpArrival: Arrival => MilliDate,
                            historicalSplitsProvider: SplitsProvider.SplitProvider,
@@ -72,7 +71,7 @@ object CrunchSystem {
     Crunch.getLocalLastMidnight(adjustedMinute).addMinutes(offsetMinutes)
   }
 
-  def apply[FR, MS](props: CrunchProps[FR, MS]): CrunchSystem[FR, MS] = {
+  def apply[FR, MS](props: CrunchProps[FR, MS])(implicit system: ActorSystem, materializer: Materializer): CrunchSystem[FR, MS] = {
 
     val initialShifts = initialShiftsLikeState(props.actors("shifts"))
     val initialFixedPoints = initialShiftsLikeState(props.actors("fixed-points"))
@@ -176,8 +175,6 @@ object CrunchSystem {
       crunchStartDateProvider, props.now
     )
 
-    implicit val actorSystem: ActorSystem = props.system
-    implicit val materializer: ActorMaterializer = ActorMaterializer()
     val (baseIn, fcstIn, liveIn, manifestsIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch) = crunchSystem.run
 
     CrunchSystem(
