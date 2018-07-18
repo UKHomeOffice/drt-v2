@@ -35,9 +35,9 @@ class Test @Inject()(implicit val config: Configuration,
 
   val baseTime: SDateLike = SDate.now()
 
-  val liveArrivalsTestActor: Future[ActorRef] = system.actorSelection("akka://application/user/TestActor-LiveArrivals").resolveOne()
-  val apiManifestsTestActor: Future[ActorRef] = system.actorSelection("akka://application/user/TestActor-APIManifests").resolveOne()
-  val mockRolesTestActor: Future[ActorRef] = system.actorSelection("akka://application/user/TestActor-MockRoles").resolveOne()
+  val liveArrivalsTestActor: Future[ActorRef] = system.actorSelection("akka://test-drt-actor-system/user/TestActor-LiveArrivals").resolveOne()
+  val apiManifestsTestActor: Future[ActorRef] = system.actorSelection("akka://test-drt-actor-system/user/TestActor-APIManifests").resolveOne()
+  val mockRolesTestActor: Future[ActorRef] = system.actorSelection("akka://test-drt-actor-system/user/TestActor-MockRoles").resolveOne()
 
   def saveArrival(arrival: Arrival) = {
     liveArrivalsTestActor.map(actor => {
@@ -56,7 +56,7 @@ class Test @Inject()(implicit val config: Configuration,
   }
 
   def resetData() = {
-    system.actorSelection("akka://application/user/TestActor-ResetData").resolveOne().map(actor => {
+    system.actorSelection("akka://test-drt-actor-system/user/TestActor-ResetData").resolveOne().map(actor => {
 
       log.info(s"Sending reset message")
 
