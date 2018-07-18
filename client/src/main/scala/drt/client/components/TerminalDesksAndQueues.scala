@@ -101,7 +101,7 @@ object TerminalDesksAndQueuesRow {
       <.tr((<.td(SDate(MilliDate(props.minuteMillis)).toHoursAndMinutes()) :: queueTds.toList ++ pcpTds).toTagMod)
     })
     .componentDidMount((p) => Callback.log("TerminalDesksAndQueuesRow did mount"))
-    .configure(Reusability.shouldComponentUpdate)
+//    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def apply(props: Props): VdomElement = component(props)
@@ -132,9 +132,9 @@ object TerminalDesksAndQueues {
 
   case class State(showActuals: Boolean, viewType: ViewType)
 
-  implicit val propsReuse: Reusability[Props] = Reusability.by(_.hashCode())
+//  implicit val propsReuse: Reusability[Props] = Reusability.by(_.hashCode())
 
-  implicit val stateReuse: Reusability[State] = Reusability.by(_.viewType == ViewDeps)
+//  implicit val stateReuse: Reusability[State] = Reusability.by(_.viewType == ViewDeps)
 
   val component = ScalaComponent.builder[Props]("Loader")
     .initialStateFromProps(p => {
