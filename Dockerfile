@@ -7,4 +7,4 @@ RUN mkdir -p /var/run/drt && chown 1000 /var/run/drt
 RUN mkdir -p /var/log/drt && chown 1000 /var/log/drt
 USER 1000
 
-CMD bin/drt $JAVA_OPTS
+CMD bin/drt
