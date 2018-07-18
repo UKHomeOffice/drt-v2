@@ -27,45 +27,81 @@ describe('Staff movements', function () {
         "SchDT": schDT + "T00:15:00Z"
       });
   });
-  function addMovementFor1Hour() {
-    cy.get('#sticky-body > :nth-child(1)').contains("+").click();
-    cy.contains("Save").click();
+
+  function addMovementFor1HourAt(numStaff, hour) {
+    cy.contains("Desks & Queues").click();
+
+    for (let i = 0; i < numStaff; i++) {
+      cy.get('#sticky-body > :nth-child(' + (hour + 1) + ')').contains("+").click();
+      cy.contains("Save").click();
+    }
+  }
+
+  function staffDeployedAtRow(row) {
+    var selector = '#sticky-body > :nth-child(' + (row + 1) + ') > :nth-child(14)';
+    return cy.get(selector);
+  }
+
+  function staffMovementsAtRow(row) {
+    const selector = 'td.non-pcp:nth($index)';
+    return cy.get(selector.replace('$index', row * 2 + 1));
+  }
+
+  function staffAvailableAtRow(row) {
+    const selector = ':nth-child($index) > .staff-adjustments > :nth-child(1) > .deployed';
+    return cy.get(selector.replace('$index', row + 1));
+  }
+
+  function staffOverTheDayAtSlot(slot) {
+    const selector = 'tbody > :nth-child(2) > td';
+    return cy.get(selector).eq(slot);
+  }
+
+  function checkStaffNumbersAre(numStaff) {
+    cy.contains("Desks & Queues").click();
+
+    [0, 1, 2, 3].map((row) => { staffMovementsAtRow(row).contains(numStaff) });
+    staffMovementsAtRow(4).contains("0");
+
+    [0, 1, 2, 3].map((row) => { staffDeployedAtRow(row).contains(numStaff) });
+    staffDeployedAtRow(4).contains("0");
+
+    [0, 1, 2, 3].map((row) => { staffAvailableAtRow(row).contains(numStaff) });
+    staffAvailableAtRow(4).contains("0");
+
+    cy.contains("Staff Movements").click();
+
+    [0, 1, 2, 3].map((slot) => { staffOverTheDayAtSlot(slot).contains(numStaff)});
+    staffOverTheDayAtSlot(4).contains("0");
+  }
+
+  function removeAllMovements() {
+    cy.contains("Staff Movements").click();
+
+    cy.get('.fa-remove').each(function (el) {
+      el.click();
+    });
   }
 
   describe('When adding staff movements on the desks and queues page', function () {
     it("Should update the available staff when 1 staff member is added for 1 hour", function () {
       cy.visit('/v2/test/live#terminal/T1/current/desksAndQueues//0/24');
-      addMovementFor1Hour();
-      var staffDeployedSelector = '#sticky-body > :nth-child(1) > :nth-child(14)';
-      cy.get(staffDeployedSelector).contains("1");
-      cy.contains("Staff Movements").click();
 
-      [0, 1, 2, 3].map((rowNumber) => {cy.get('tbody > :nth-child(2) > td').eq(rowNumber).contains("1")});
-      cy.get('tbody > :nth-child(2) > td').eq(4).contains("0");
+      addMovementFor1HourAt(1, 0);
+      checkStaffNumbersAre(1);
 
-      cy.get('.fa-remove').click()
+      removeAllMovements();
     });
+
     it("Should update the available staff when 1 staff member is added for 1 hour twice", function () {
       cy.visit('/v2/test/live#terminal/T1/current/desksAndQueues//0/24');
-      addMovementFor1Hour();
-      addMovementFor1Hour();
-      var staffDeployedSelector = '#sticky-body > :nth-child(1) > :nth-child(14)';
-      cy.get(staffDeployedSelector).contains("2");
-      const movesSelector = 'td.non-pcp:nth($index)';
-      const availableSelector = ':nth-child($index) > .staff-adjustments > :nth-child(1) > .deployed';
+      addMovementFor1HourAt(1, 0);
+      checkStaffNumbersAre(1);
 
-      [1, 3, 5, 7].map((tdIdx) => {cy.get(movesSelector.replace('$index', tdIdx)).contains("2")});
-      [1, 2, 3, 4].map((rowNumber) => {cy.get(availableSelector.replace('$index', rowNumber)).contains("2")});
+      addMovementFor1HourAt(2, 0);
+      checkStaffNumbersAre(3);
 
-      cy.contains("Staff Movements").click();
-
-      [0, 1, 2, 3].map((rowNumber) => {cy.get('tbody > :nth-child(2) > td').eq(rowNumber).contains("2")});
-      cy.get('tbody > :nth-child(2) > td').eq(4).contains("0");
-      
-      cy.get('.fa-remove').each(function (el) {
-        el.click()
-      })
-
+      removeAllMovements();
     });
   });
 
