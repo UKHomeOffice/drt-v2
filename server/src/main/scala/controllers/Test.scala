@@ -3,7 +3,7 @@ package controllers
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.Materializer
 import akka.util.Timeout
-import com.google.inject.Inject
+import javax.inject.{Singleton, Inject}
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
 import passengersplits.parsing.VoyageManifestParser.FlightPassengerInfoProtocol._
@@ -23,6 +23,7 @@ import test.TestActors.ResetActor
 import test.MockRoles._
 import test.MockRoles.MockRolesProtocol._
 
+@Singleton
 class Test @Inject()(implicit val config: Configuration,
                      implicit val mat: Materializer,
                      env: Environment,
