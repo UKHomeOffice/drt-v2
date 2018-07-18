@@ -128,27 +128,44 @@ object TerminalContentComponent {
         ),
         <.div(^.className := "tab-content",
           <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
-              props.crunchStatePot.render(crunchState => {
-                log.info(s"rendering ready d and q")
-                val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState, props.terminalPageTab.terminal)
-                TerminalDesksAndQueues(
-                  TerminalDesksAndQueues.Props(
-                    filteredPortState,
-                    props.airportConfig,
-                    props.terminalPageTab.terminal,
-                    props.showActuals,
-                    props.viewMode
+            {
+              log.info(s"${props.crunchStatePot.state}")
+              if (state.activeTab == "desksAndQueues") {
+                log.info(s"Rendering desks and queue $state")
+                <.div(
+                props.crunchStatePot.renderEmpty("empty"),
+                props.crunchStatePot.renderFailed(f => s"failed: ${f.toString}"),
+                props.crunchStatePot.renderPending(x => s"pending: $x"),
+                props.crunchStatePot.render(crunchState => {
+                  log.info(s"rendering ready d and q")
+                  val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState, props.terminalPageTab.terminal)
+                  TerminalDesksAndQueues(
+                    TerminalDesksAndQueues.Props(
+                      filteredPortState,
+                      props.airportConfig,
+                      props.terminalPageTab.terminal,
+                      props.showActuals,
+                      props.viewMode
+                    )
                   )
+                })
                 )
-              })
+              } else ""
+            }
           ),
           <.div(^.id := "arrivals", ^.className := s"tab-pane in $arrivalsPanelActive", {
+            if (state.activeTab == "arrivals") {
+              log.info(s"Rendering arrivals $state")
+
               <.div(props.crunchStatePot.render((crunchState: CrunchState) => {
                 val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState, props.terminalPageTab.terminal)
                 arrivalsTableComponent(FlightsWithSplitsTable.Props(filteredPortState.flights.toList, queueOrder, props.airportConfig.hasEstChox))
               }))
+            } else ""
           }),
           <.div(^.id := "available-staff", ^.className := s"tab-pane terminal-staffing-container $staffingPanelActive",
+            if (state.activeTab == "staffing") {
+              log.info(s"Rendering staffing $state")
               TerminalStaffing(TerminalStaffing.Props(
                 props.terminalPageTab.terminal,
                 props.potShifts,
@@ -158,6 +175,7 @@ object TerminalContentComponent {
                 props.roles,
                 props.viewMode
               ))
+            } else ""
           ))
       )
     }

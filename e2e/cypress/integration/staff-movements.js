@@ -1,5 +1,5 @@
 describe('Staff movements', function () {
-  before(function () {
+  beforeEach(function () {
     cy.request('DELETE', '/v2/test/live/test/data');
     var schDT = new Date().toISOString().split("T")[0];
     cy.request('POST',
@@ -32,7 +32,8 @@ describe('Staff movements', function () {
     cy.contains("Desks & Queues").click();
 
     for (let i = 0; i < numStaff; i++) {
-      cy.get('#sticky-body > :nth-child(' + (hour + 1) + ')').contains("+").click();
+      cy.get('.staff-adjustments > :nth-child(' + (hour + 1) + ') > :nth-child(3)').contains("+").click();
+//      cy.get('#sticky-body > :nth-child(' + (hour + 1) + ')').contains("+").click();
       cy.contains("Save").click();
     }
   }
