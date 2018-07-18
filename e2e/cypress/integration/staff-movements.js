@@ -98,8 +98,8 @@ describe('Staff movements', function () {
       addMovementFor1HourAt(1, 0);
       checkStaffNumbersAre(1);
 
-      addMovementFor1HourAt(2, 0);
-      checkStaffNumbersAre(3);
+      addMovementFor1HourAt(1, 0);
+      checkStaffNumbersAre(2);
 
       removeAllMovements();
     });
