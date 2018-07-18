@@ -1,4 +1,4 @@
-FROM openjdk:jre-alpine
+FROM openjdk:slim
 WORKDIR /opt/docker
 ADD server/target/docker/stage/opt /opt
 RUN ["chown", "-R", "1000:1000", "."]
