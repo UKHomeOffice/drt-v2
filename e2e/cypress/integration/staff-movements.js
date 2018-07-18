@@ -53,8 +53,8 @@ describe('Staff movements', function () {
   }
 
   function staffOverTheDayAtSlot(slot) {
-    const selector = 'tbody > :nth-child(2) > td';
-    return cy.get(selector).eq(slot);
+    const selector = '#available-staff tbody > :nth-child(2) > :nth-child(' + (slot + 1) + ')';
+    return cy.get(selector);
   }
 
   function checkStaffNumbersAre(numStaff) {
