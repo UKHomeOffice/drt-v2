@@ -29,16 +29,12 @@ describe('Staff movements', function () {
   });
 
   function addMovementFor1HourAt(numStaff, hour) {
-    cy.contains("Desks & Queues").click().then(() => {
-      cy.contains("24 hours").click().then(() => {
-        for (let i = 0; i < numStaff; i++) {
-          cy.get('.staff-adjustments > :nth-child(' + (hour + 1) + ') > :nth-child(3)').contains("+").then((el) => {
-            el.click();
-            cy.contains("Save").click();
-          });
-        }
+    for (let i = 0; i < numStaff; i++) {
+      cy.get('.staff-adjustments > :nth-child(' + (hour + 1) + ') > :nth-child(3)').contains("+").then((el) => {
+        el.click();
+        cy.contains("Save").click();
       });
-    });
+    }
   }
 
   function staffDeployedAtRow(row) {
@@ -62,25 +58,21 @@ describe('Staff movements', function () {
   }
 
   function checkStaffNumbersOnDesksAndQueuesTabAre(numStaff) {
-    cy.contains("Desks & Queues").click().then(() => {
-      cy.contains("24 hours").click().then(() => {
-        [0, 1, 2, 3].map((row) => { staffMovementsAtRow(row).contains(numStaff) });
-        staffMovementsAtRow(4).contains("0");
+    [0, 1, 2, 3].map((row) => { staffMovementsAtRow(row).contains(numStaff).end() });
+    staffMovementsAtRow(4).contains("0").end();
 
-        [0, 1, 2, 3].map((row) => { staffDeployedAtRow(row).contains(numStaff) });
-        staffDeployedAtRow(4).contains("0");
+    [0, 1, 2, 3].map((row) => { staffDeployedAtRow(row).contains(numStaff).end() });
+    staffDeployedAtRow(4).contains("0").end();
 
-        [0, 1, 2, 3].map((row) => { staffAvailableAtRow(row).contains(numStaff) });
-        staffAvailableAtRow(4).contains("0");
-      });
-    });
+    [0, 1, 2, 3].map((row) => { staffAvailableAtRow(row).contains(numStaff).end() });
+    staffAvailableAtRow(4).contains("0").end();
   }
 
   function checkStaffNumbersOnMovementsTabAre(numStaff) {
     cy.contains("Staff Movements").click().then(() => {
       [0, 1, 2, 3].map((slot) => { staffOverTheDayAtSlot(slot).contains(numStaff)});
       staffOverTheDayAtSlot(4).contains("0").end();
-    });
+    }).end();
   }
 
   function removeXMovements(numToRemove) {
@@ -92,37 +84,49 @@ describe('Staff movements', function () {
     }).end();
   }
 
-  function clickNavMenuItem(itemName) {
-    return cy.get('.collapse > div > .nav ').contains(itemName).click().end();
+  function navigateToMenuItem(itemName) {
+    return cy.get('.navbar-drt li').contains(itemName).click().end();
   }
 
   function startAtHome() {
     return cy.visit('/v2/test/live').end();
   }
 
+  function findAndClick(toFind) {
+    cy.contains(toFind).click().end();
+  }
+
   describe('When adding staff movements on the desks and queues page', function () {
     it("Should update the available staff when 1 staff member is added for 1 hour", function () {
       startAtHome()
-      clickNavMenuItem('T1');
+      navigateToMenuItem('T1');
+      findAndClick('24 hours');
+
       addMovementFor1HourAt(1, 0);
       checkStaffNumbersOnDesksAndQueuesTabAre(1);
-      checkStaffNumbersOnMovementsTabAre(1);
 
+      findAndClick('Staff Movements');
+      checkStaffNumbersOnMovementsTabAre(1);
       removeXMovements(1);
     });
 
     it("Should update the available staff when 1 staff member is added for 1 hour twice", function () {
       startAtHome();
-      clickNavMenuItem('T1');
+      navigateToMenuItem('T1');
+      findAndClick('24 hours');
 
       addMovementFor1HourAt(1, 0);
       checkStaffNumbersOnDesksAndQueuesTabAre(1);
+
+      findAndClick('Staff Movements');
       checkStaffNumbersOnMovementsTabAre(1);
 
+      findAndClick('Desks & Queues');
       addMovementFor1HourAt(1, 0);
       checkStaffNumbersOnDesksAndQueuesTabAre(2);
-      checkStaffNumbersOnMovementsTabAre(2);
 
+      findAndClick('Staff Movements');
+      checkStaffNumbersOnMovementsTabAre(2);
       removeXMovements(2);
     });
   });
