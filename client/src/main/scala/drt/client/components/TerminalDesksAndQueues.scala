@@ -84,7 +84,7 @@ object TerminalDesksAndQueuesRow {
       val downMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "-", "Staff decrease...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "-")()
       val upMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "+", "Staff increase...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "+")()
 
-      def allowAdjustments = props.viewMode.time.millisSinceEpoch > SDate.midnightThisMorning().millisSinceEpoch
+      def allowAdjustments: Boolean = props.viewMode.time.millisSinceEpoch > SDate.midnightThisMorning().millisSinceEpoch
 
 
       val pcpTds = List(
@@ -100,8 +100,8 @@ object TerminalDesksAndQueuesRow {
 
       <.tr((<.td(SDate(MilliDate(props.minuteMillis)).toHoursAndMinutes()) :: queueTds.toList ++ pcpTds).toTagMod)
     })
-    .componentDidMount((p) => Callback.log("TerminalDesksAndQueuesRow did mount"))
-//    .configure(Reusability.shouldComponentUpdate)
+    .componentDidMount(_ => Callback.log("TerminalDesksAndQueuesRow did mount"))
+    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def apply(props: Props): VdomElement = component(props)
@@ -297,7 +297,7 @@ object TerminalDesksAndQueues {
             }.toTagMod))
       )
     })
-    .componentDidMount((_) => StickyTableHeader("[data-sticky]"))
+    .componentDidMount(_ => StickyTableHeader("[data-sticky]"))
     .build
 
   def documentScrollTop: Double = Math.max(dom.document.documentElement.scrollTop, dom.document.body.scrollTop)

@@ -38,7 +38,7 @@ object TerminalContentComponent {
                     roles: Pot[List[String]],
                     minuteTicker: Int
                   ) {
-    lazy val hash = {
+    lazy val hash: (Int, Int) = {
       val depsHash = crunchStatePot.map(
         cs => (cs.crunchMinutes, cs.staffMinutes, cs.flights).hashCode()
       ).getOrElse(0)
@@ -59,13 +59,13 @@ object TerminalContentComponent {
     state.window(startOfView, endOfView, terminalName)
   }
 
-  val timelineComp: Option[(Arrival) => html_<^.VdomElement] = Some(FlightTableComponents.timelineCompFunc _)
+  val timelineComp: Option[Arrival => html_<^.VdomElement] = Some(FlightTableComponents.timelineCompFunc _)
 
   def airportWrapper(portCode: String): ReactConnectProxy[Pot[AirportInfo]] = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
 
   def originMapper(portCode: String): VdomElement = {
     Try {
-      vdomElementFromComponent(airportWrapper(portCode) { (proxy: ModelProxy[Pot[AirportInfo]]) =>
+      vdomElementFromComponent(airportWrapper(portCode) { proxy: ModelProxy[Pot[AirportInfo]] =>
         <.span(
           proxy().render(ai => <.span(^.title := s"${ai.airportName}, ${ai.city}, ${ai.country}", portCode)),
           proxy().renderEmpty(<.span(portCode))
@@ -131,8 +131,11 @@ object TerminalContentComponent {
             {
               log.info(s"${props.crunchStatePot.state}")
               if (state.activeTab == "desksAndQueues") {
-                log.info(s"Rendering desks and queue $state")
+                log.info(s"Rendering desks and queue ${props.crunchStatePot.state}")
                 <.div(
+                  props.crunchStatePot.renderEmpty("empty"),
+                  props.crunchStatePot.renderFailed(_ => "failed"),
+                  props.crunchStatePot.renderPending(_ => "pending"),
                   props.crunchStatePot.render(crunchState => {
                     log.info(s"rendering ready d and q")
                     val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState, props.terminalPageTab.terminal)
@@ -188,9 +191,7 @@ object TerminalContentComponent {
   val component = ScalaComponent.builder[Props]("TerminalContentComponent")
     .initialStateFromProps(p => State(p.terminalPageTab.subMode))
     .renderBackend[TerminalContentComponent.Backend]
-    .componentDidMount((p) => {
-      Callback.log(s"terminal component didMount")
-    })
+    .componentDidMount(_ => Callback.log(s"terminal component didMount"))
     .configure(Reusability.shouldComponentUpdate)
     .build
 

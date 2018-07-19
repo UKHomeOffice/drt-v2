@@ -29,13 +29,16 @@ describe('Staff movements', function () {
   });
 
   function addMovementFor1HourAt(numStaff, hour) {
-    cy.contains("Desks & Queues").click();
-
-    for (let i = 0; i < numStaff; i++) {
-      cy.get('.staff-adjustments > :nth-child(' + (hour + 1) + ') > :nth-child(3)').contains("+").click();
-//      cy.get('#sticky-body > :nth-child(' + (hour + 1) + ')').contains("+").click();
-      cy.contains("Save").click();
-    }
+    cy.contains("Desks & Queues").click().then(() => {
+      cy.contains("24 hours").click().then(() => {
+        for (let i = 0; i < numStaff; i++) {
+          cy.get('.staff-adjustments > :nth-child(' + (hour + 1) + ') > :nth-child(3)').contains("+").then((el) => {
+            el.click();
+            cy.contains("Save").click();
+          });
+        }
+      });
+    });
   }
 
   function staffDeployedAtRow(row) {
@@ -58,55 +61,69 @@ describe('Staff movements', function () {
     return cy.get(selector);
   }
 
-  function checkStaffNumbersAre(numStaff) {
-    cy.contains("Desks & Queues").click();
+  function checkStaffNumbersOnDesksAndQueuesTabAre(numStaff) {
+    cy.contains("Desks & Queues").click().then(() => {
+      cy.contains("24 hours").click().then(() => {
+        [0, 1, 2, 3].map((row) => { staffMovementsAtRow(row).contains(numStaff) });
+        staffMovementsAtRow(4).contains("0");
 
-    [0, 1, 2, 3].map((row) => { staffMovementsAtRow(row).contains(numStaff) });
-    staffMovementsAtRow(4).contains("0");
+        [0, 1, 2, 3].map((row) => { staffDeployedAtRow(row).contains(numStaff) });
+        staffDeployedAtRow(4).contains("0");
 
-    [0, 1, 2, 3].map((row) => { staffDeployedAtRow(row).contains(numStaff) });
-    staffDeployedAtRow(4).contains("0");
-
-    [0, 1, 2, 3].map((row) => { staffAvailableAtRow(row).contains(numStaff) });
-    staffAvailableAtRow(4).contains("0");
-
-    cy.contains("Staff Movements").click();
-
-    [0, 1, 2, 3].map((slot) => { staffOverTheDayAtSlot(slot).contains(numStaff)});
-    staffOverTheDayAtSlot(4).contains("0");
+        [0, 1, 2, 3].map((row) => { staffAvailableAtRow(row).contains(numStaff) });
+        staffAvailableAtRow(4).contains("0");
+      });
+    });
   }
 
-  function removeAllMovements() {
-    cy.contains("Staff Movements").click();
-
-    cy.get('.fa-remove').each(function (el) {
-      el.click();
+  function checkStaffNumbersOnMovementsTabAre(numStaff) {
+    cy.contains("Staff Movements").click().then(() => {
+      [0, 1, 2, 3].map((slot) => { staffOverTheDayAtSlot(slot).contains(numStaff)});
+      staffOverTheDayAtSlot(4).contains("0").end();
     });
+  }
+
+  function removeXMovements(numToRemove) {
+    cy.contains("Staff Movements").click().then(() => {
+      for (let i = 1; i <= numToRemove; i++) {
+        cy.get('.fa-remove').first().click().end();
+        cy.get('.fa-remove').should('have.length', numToRemove - i).end();
+      }
+    }).end();
+  }
+
+  function clickNavMenuItem(itemName) {
+    return cy.get('.collapse > div > .nav ').contains(itemName).click().end();
+  }
+
+  function startAtHome() {
+    return cy.visit('/v2/test/live').end();
   }
 
   describe('When adding staff movements on the desks and queues page', function () {
     it("Should update the available staff when 1 staff member is added for 1 hour", function () {
-      cy.visit('/v2/test/live');
-      cy.get('.collapse > div > .nav > :nth-child(2) > a').click();
-
+      startAtHome()
+      clickNavMenuItem('T1');
       addMovementFor1HourAt(1, 0);
-      checkStaffNumbersAre(1);
+      checkStaffNumbersOnDesksAndQueuesTabAre(1);
+      checkStaffNumbersOnMovementsTabAre(1);
 
-      removeAllMovements();
+      removeXMovements(1);
     });
 
     it("Should update the available staff when 1 staff member is added for 1 hour twice", function () {
-      cy.visit('/v2/test/live');
-      cy.get('.collapse > div > .nav > :nth-child(2) > a').click();
+      startAtHome();
+      clickNavMenuItem('T1');
 
       addMovementFor1HourAt(1, 0);
-      checkStaffNumbersAre(1);
+      checkStaffNumbersOnDesksAndQueuesTabAre(1);
+      checkStaffNumbersOnMovementsTabAre(1);
 
       addMovementFor1HourAt(1, 0);
-      checkStaffNumbersAre(2);
+      checkStaffNumbersOnDesksAndQueuesTabAre(2);
+      checkStaffNumbersOnMovementsTabAre(2);
 
-      removeAllMovements();
+      removeXMovements(2);
     });
   });
-
 });
