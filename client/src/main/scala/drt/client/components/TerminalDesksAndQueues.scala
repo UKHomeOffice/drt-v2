@@ -132,10 +132,6 @@ object TerminalDesksAndQueues {
 
   case class State(showActuals: Boolean, viewType: ViewType)
 
-//  implicit val propsReuse: Reusability[Props] = Reusability.by(_.hashCode())
-
-//  implicit val stateReuse: Reusability[State] = Reusability.by(_.viewType == ViewDeps)
-
   val component = ScalaComponent.builder[Props]("Loader")
     .initialStateFromProps(p => {
       State(showActuals = p.airportConfig.hasActualDeskStats && p.showActuals, ViewDeps)

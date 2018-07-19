@@ -52,7 +52,10 @@ object TerminalContentComponent {
   implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).hash)
   implicit val stateReuse: Reusability[State] = Reusability.derive[State]
 
-  def filterCrunchStateByRange(day: SDateLike, range: TimeRangeHours, state: CrunchState, terminalName: TerminalName): CrunchState = {
+  def filterCrunchStateByRange(day: SDateLike,
+                               range: TimeRangeHours,
+                               state: CrunchState,
+                               terminalName: TerminalName): CrunchState = {
     val startOfDay = SDate(day.getFullYear(), day.getMonth(), day.getDate())
     val startOfView = startOfDay.addHours(range.start)
     val endOfView = startOfDay.addHours(range.end)
@@ -132,24 +135,19 @@ object TerminalContentComponent {
               log.info(s"${props.crunchStatePot.state}")
               if (state.activeTab == "desksAndQueues") {
                 log.info(s"Rendering desks and queue ${props.crunchStatePot.state}")
-                <.div(
-                  props.crunchStatePot.renderEmpty("empty"),
-                  props.crunchStatePot.renderFailed(_ => "failed"),
-                  props.crunchStatePot.renderPending(_ => "pending"),
-                  props.crunchStatePot.render(crunchState => {
-                    log.info(s"rendering ready d and q")
-                    val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState, props.terminalPageTab.terminal)
-                    TerminalDesksAndQueues(
-                      TerminalDesksAndQueues.Props(
-                        filteredPortState,
-                        props.airportConfig,
-                        props.terminalPageTab.terminal,
-                        props.showActuals,
-                        props.viewMode
-                      )
+                props.crunchStatePot.render(crunchState => {
+                  log.info(s"rendering ready d and q")
+                  val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState, props.terminalPageTab.terminal)
+                  TerminalDesksAndQueues(
+                    TerminalDesksAndQueues.Props(
+                      filteredPortState,
+                      props.airportConfig,
+                      props.terminalPageTab.terminal,
+                      props.showActuals,
+                      props.viewMode
                     )
-                  })
-                )
+                  )
+                })
               } else ""
             }
           ),

@@ -58,14 +58,15 @@ describe('Staff movements', function () {
   }
 
   function checkStaffNumbersOnDesksAndQueuesTabAre(numStaff) {
-    [0, 1, 2, 3].map((row) => { staffMovementsAtRow(row).contains(numStaff).end() });
-    staffMovementsAtRow(4).contains("0").end();
+    [0, 1, 2, 3].map((row) => {
+      staffMovementsAtRow(row).contains(numStaff);
+      staffDeployedAtRow(row).contains(numStaff);
+      staffAvailableAtRow(row).contains(numStaff);
+    });
 
-    [0, 1, 2, 3].map((row) => { staffDeployedAtRow(row).contains(numStaff).end() });
-    staffDeployedAtRow(4).contains("0").end();
-
-    [0, 1, 2, 3].map((row) => { staffAvailableAtRow(row).contains(numStaff).end() });
-    staffAvailableAtRow(4).contains("0").end();
+    staffMovementsAtRow(4).contains("0");
+    staffDeployedAtRow(4).contains("0");
+    staffAvailableAtRow(4).contains("0");
   }
 
   function checkStaffNumbersOnMovementsTabAre(numStaff) {
@@ -85,22 +86,29 @@ describe('Staff movements', function () {
   }
 
   function navigateToMenuItem(itemName) {
-    cy.get('.navbar-drt li').contains(itemName).click({ force: true }).end();
+    cy.get('.navbar-drt li').contains(itemName).click(5, 5, { force: true }).end();
   }
 
-  function startAtHome() {
-    return cy.visit('/v2/test/live').end();
+  function navigateToHome() {
+    cy.visit('/v2/test/live').then(() => {
+      cy.wait(500);
+      cy.get('.navbar .container .navbar-drt').contains('DRT TEST').end();
+    }).end();
   }
 
   function findAndClick(toFind) {
     cy.contains(toFind).click({ force: true }).end();
   }
 
+  function choose24Hours() {
+    cy.get('#current .date-selector .date-view-picker-container').contains('24 hours').click().end();
+  }
+
   describe('When adding staff movements on the desks and queues page', function () {
     it("Should update the available staff when 1 staff member is added for 1 hour", function () {
-      startAtHome()
+      navigateToHome();
       navigateToMenuItem('T1');
-      findAndClick('24 hours');
+      choose24Hours();
 
       addMovementFor1HourAt(1, 0);
       checkStaffNumbersOnDesksAndQueuesTabAre(1);
@@ -111,9 +119,9 @@ describe('Staff movements', function () {
     });
 
     it("Should update the available staff when 1 staff member is added for 1 hour twice", function () {
-      startAtHome();
+      navigateToHome();
       navigateToMenuItem('T1');
-      findAndClick('24 hours');
+      choose24Hours();
 
       addMovementFor1HourAt(1, 0);
       checkStaffNumbersOnDesksAndQueuesTabAre(1);
