@@ -75,6 +75,7 @@ object TestActors {
     def reset: Receive = {
       case ResetActor =>
         state = initialState
+        subscribers = List()
     }
 
     override def receiveRecover: Receive = {
@@ -89,6 +90,7 @@ object TestActors {
     def reset: Receive = {
       case ResetActor =>
         state = initialState
+        subscribers = List()
     }
 
     override def receiveRecover: Receive = {
@@ -103,6 +105,7 @@ object TestActors {
     def reset: Receive = {
       case ResetActor =>
         state = initialState
+        subscribers = List()
     }
 
     override def receiveRecover: Receive = {

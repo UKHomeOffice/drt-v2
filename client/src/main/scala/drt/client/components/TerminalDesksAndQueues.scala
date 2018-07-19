@@ -84,7 +84,7 @@ object TerminalDesksAndQueuesRow {
       val downMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "-", "Staff decrease...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "-")()
       val upMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "+", "Staff increase...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "+")()
 
-      def allowAdjustments = props.viewMode.time.millisSinceEpoch > SDate.midnightThisMorning().millisSinceEpoch
+      def allowAdjustments: Boolean = props.viewMode.time.millisSinceEpoch > SDate.midnightThisMorning().millisSinceEpoch
 
 
       val pcpTds = List(
@@ -100,7 +100,7 @@ object TerminalDesksAndQueuesRow {
 
       <.tr((<.td(SDate(MilliDate(props.minuteMillis)).toHoursAndMinutes()) :: queueTds.toList ++ pcpTds).toTagMod)
     })
-    .componentDidMount((p) => Callback.log("TerminalDesksAndQueuesRow did mount"))
+    .componentDidMount(_ => Callback.log("TerminalDesksAndQueuesRow did mount"))
     .configure(Reusability.shouldComponentUpdate)
     .build
 
@@ -131,10 +131,6 @@ object TerminalDesksAndQueues {
   case object ViewDeps extends ViewType
 
   case class State(showActuals: Boolean, viewType: ViewType)
-
-  implicit val propsReuse: Reusability[Props] = Reusability.by(_.hashCode())
-
-  implicit val stateReuse: Reusability[State] = Reusability.by(_.viewType == ViewDeps)
 
   val component = ScalaComponent.builder[Props]("Loader")
     .initialStateFromProps(p => {
@@ -297,7 +293,7 @@ object TerminalDesksAndQueues {
             }.toTagMod))
       )
     })
-    .componentDidMount((_) => StickyTableHeader("[data-sticky]"))
+    .componentDidMount(_ => StickyTableHeader("[data-sticky]"))
     .build
 
   def documentScrollTop: Double = Math.max(dom.document.documentElement.scrollTop, dom.document.body.scrollTop)

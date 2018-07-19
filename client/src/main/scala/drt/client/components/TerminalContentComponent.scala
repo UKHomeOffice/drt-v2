@@ -38,7 +38,7 @@ object TerminalContentComponent {
                     roles: Pot[List[String]],
                     minuteTicker: Int
                   ) {
-    lazy val hash = {
+    lazy val hash: (Int, Int) = {
       val depsHash = crunchStatePot.map(
         cs => (cs.crunchMinutes, cs.staffMinutes, cs.flights).hashCode()
       ).getOrElse(0)
@@ -52,20 +52,23 @@ object TerminalContentComponent {
   implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).hash)
   implicit val stateReuse: Reusability[State] = Reusability.derive[State]
 
-  def filterCrunchStateByRange(day: SDateLike, range: TimeRangeHours, state: CrunchState, terminalName: TerminalName): CrunchState = {
+  def filterCrunchStateByRange(day: SDateLike,
+                               range: TimeRangeHours,
+                               state: CrunchState,
+                               terminalName: TerminalName): CrunchState = {
     val startOfDay = SDate(day.getFullYear(), day.getMonth(), day.getDate())
     val startOfView = startOfDay.addHours(range.start)
     val endOfView = startOfDay.addHours(range.end)
     state.window(startOfView, endOfView, terminalName)
   }
 
-  val timelineComp: Option[(Arrival) => html_<^.VdomElement] = Some(FlightTableComponents.timelineCompFunc _)
+  val timelineComp: Option[Arrival => html_<^.VdomElement] = Some(FlightTableComponents.timelineCompFunc _)
 
   def airportWrapper(portCode: String): ReactConnectProxy[Pot[AirportInfo]] = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
 
   def originMapper(portCode: String): VdomElement = {
     Try {
-      vdomElementFromComponent(airportWrapper(portCode) { (proxy: ModelProxy[Pot[AirportInfo]]) =>
+      vdomElementFromComponent(airportWrapper(portCode) { proxy: ModelProxy[Pot[AirportInfo]] =>
         <.span(
           proxy().render(ai => <.span(^.title := s"${ai.airportName}, ${ai.city}, ${ai.country}", portCode)),
           proxy().renderEmpty(<.span(portCode))
@@ -129,9 +132,8 @@ object TerminalContentComponent {
         <.div(^.className := "tab-content",
           <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
             if (state.activeTab == "desksAndQueues") {
-              log.info(s"Rendering desks and queue $state")
+              log.info(s"Rendering desks and queue")
               props.crunchStatePot.render(crunchState => {
-                log.info(s"rendering ready d and q")
                 val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState, props.terminalPageTab.terminal)
                 TerminalDesksAndQueues(
                   TerminalDesksAndQueues.Props(
@@ -147,8 +149,6 @@ object TerminalContentComponent {
           ),
           <.div(^.id := "arrivals", ^.className := s"tab-pane in $arrivalsPanelActive", {
             if (state.activeTab == "arrivals") {
-              log.info(s"Rendering arrivals $state")
-
               <.div(props.crunchStatePot.render((crunchState: CrunchState) => {
                 val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState, props.terminalPageTab.terminal)
                 arrivalsTableComponent(FlightsWithSplitsTable.Props(filteredPortState.flights.toList, queueOrder, props.airportConfig.hasEstChox))
@@ -157,7 +157,6 @@ object TerminalContentComponent {
           }),
           <.div(^.id := "available-staff", ^.className := s"tab-pane terminal-staffing-container $staffingPanelActive",
             if (state.activeTab == "staffing") {
-              log.info(s"Rendering staffing $state")
               TerminalStaffing(TerminalStaffing.Props(
                 props.terminalPageTab.terminal,
                 props.potShifts,
@@ -183,9 +182,7 @@ object TerminalContentComponent {
   val component = ScalaComponent.builder[Props]("TerminalContentComponent")
     .initialStateFromProps(p => State(p.terminalPageTab.subMode))
     .renderBackend[TerminalContentComponent.Backend]
-    .componentDidMount((p) => {
-      Callback.log(s"terminal component didMount")
-    })
+    .componentDidMount(_ => Callback.log(s"terminal component didMount"))
     .configure(Reusability.shouldComponentUpdate)
     .build
 
