@@ -1,8 +1,13 @@
+syntax = "proto2";
+
 package server.protobuf.messages;
+
+import "FlightsMessage.proto";
 
 message VoyageManifestStateSnapshotMessage {
     optional string latestFilename = 1;
     repeated VoyageManifestMessage manifestMessages = 2;
+    optional FeedStatusesMessage statuses = 3;
 }
 
 message VoyageManifestLatestFileNameMessage {

@@ -43,5 +43,10 @@ e2e/cypress/screenshots/*
 .ensime_cache/
 runsbt.sh
 
+<<<<<<< HEAD
 # SonarQube
 .scannerwork/*
+=======
+# Cypress
+e2e/cypress/fixtures/example.json
+>>>>>>> master

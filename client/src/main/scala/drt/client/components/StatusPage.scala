@@ -3,6 +3,7 @@ package drt.client.components
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{FeedStatusFailure, FeedStatusSuccess, FeedStatuses}
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.vdom.html_<^._
@@ -16,26 +17,37 @@ object StatusPage {
   val component = ScalaComponent.builder[Props]("StatusPage")
     .render_P(_ => {
 
-      val feedsRCP = SPACircuit.connect(_.feedStatuses)
+      val modelRCP = SPACircuit.connect(m => (m.feedStatuses, m.crunchStatePot))
 
-      feedsRCP { feedsMP =>
+      modelRCP { modelMP =>
+        val (feedsMP, crunchStateMP) = modelMP()
+
         <.div(
-          <.h2("Feed statuses"),
-          feedsMP().render((allFeedStatuses: Seq[FeedStatuses]) => {
+          <.h2("Feeds status"),
+          feedsMP.render((allFeedStatuses: Seq[FeedStatuses]) => {
             allFeedStatuses.map(feed => {
-              val rag = if (feed.lastSuccessAt.getOrElse(0L) > feed.lastFailureAt.getOrElse(0L)) "green" else "red"
-              <.div(^.className := s"feed-status $rag",
+              <.div(^.className := s"feed-status ${feed.ragStatus(SDate.now().millisSinceEpoch)}",
                 <.h3(feed.name),
-                <.ul(
-                  <.li(s"Last successful connection: ${feed.lastSuccessAt.map(lu => SDate(lu).prettyDateTime()).getOrElse("n/a")}"),
-                  <.li(s"Last updates: ${feed.lastUpdatesAt.map(lu => SDate(lu).prettyDateTime()).getOrElse("n/a")}"),
-                  <.li(s"Last failed connection: ${feed.lastFailureAt.map(lu => SDate(lu).prettyDateTime()).getOrElse("n/a")}")
-                ),
+                {
+                  val times = Seq(
+                    (("Updated", "When we last received new data"), feed.lastUpdatesAt),
+                    (("Checked", "When we last checked for new data"), feed.lastSuccessAt),
+                    (("Failed", "When we last experienced a failure with the feed"), feed.lastFailureAt)
+                  )
+                  <.ul(^.className := "times-summary", times.zipWithIndex.map {
+                    case (((label, description), maybeSDate), idx) =>
+                      val className = if (idx == times.length - 1) "last" else ""
+                      <.li(^.className := className, <.div(^.className := "vert-align", <.div(<.div(<.h4(label, ^.title := description)), <.div(s"${
+                        maybeSDate.map(lu => s"${timeAgo(lu)}").getOrElse("n/a")
+                      }"))))
+                  }.toVdomArray)
+                },
+                <.div(^.className := "clear"),
                 <.h4("Recent connections"),
                 <.ul(
                   feed.statuses.sortBy(_.date).reverse.map {
-                    case FeedStatusSuccess(date, updates) => <.li(s"${SDate(date).hms()}: $updates updates")
-                    case FeedStatusFailure(date, msg) => <.li(s"${SDate(date).hms()}: Connection failed")
+                    case FeedStatusSuccess(date, updates) => <.li(s"${displayTime(date)}: $updates updates")
+                    case FeedStatusFailure(date, msg) => <.li(s"${displayTime(date)}: Connection failed")
                   }.toVdomArray
                 )
               )
@@ -45,6 +57,23 @@ object StatusPage {
       }
     })
     .build
+
+  private def displayTime(date: MillisSinceEpoch): String = {
+    val dateToDisplay = SDate(date)
+    if (dateToDisplay.toISODateOnly == SDate.now().toISODateOnly) dateToDisplay.hms()
+    else dateToDisplay.prettyDateTime()
+  }
+
+  def timeAgo(millisToCheck: MillisSinceEpoch) = {
+    val minutes = (SDate.now().millisSinceEpoch - millisToCheck) / 60000
+    val hours = minutes / 60
+    val days = hours / 24
+
+    if (minutes < 1) s"< 1 min"
+    else if (minutes <= 60) s"$minutes mins"
+    else if (hours <= 24) s"$hours hrs"
+    else s"$days days"
+  }
 
   def apply(): VdomElement = component(Props())
 }

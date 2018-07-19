@@ -9,7 +9,6 @@ import drt.shared.{AirportConfig, MinuteHelper, PortStateMinutes, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchMinuteMessage, StaffMinuteMessage}
 import services.SDate
-import services.crunch.FlightRemovals
 import services.graphstages.Crunch._
 
 import scala.collection.immutable
@@ -20,7 +19,7 @@ case class PortStateWithDiff(portState: PortState, diff: CrunchDiffMessage) {
   }
 
   def crunchDiffWindow(start: SDateLike, end: SDateLike): CrunchDiffMessage = {
-    val flightsToRemove = diff.flightIdsToRemove.filter(id => portState.flights.get(id).exists(_.hasPcpPaxIn(start, end)))
+    val flightsToRemove = diff.flightIdsToRemove
     val flightsToUpdate = diff.flightsToUpdate.filter(smm => smm.flight.exists(f => start.millisSinceEpoch <= f.scheduled.getOrElse(0L) && f.scheduled.getOrElse(0L) <= end.millisSinceEpoch))
     val staffToUpdate = diff.staffMinutesToUpdate.filter(smm => start.millisSinceEpoch <= smm.minute.getOrElse(0L) && smm.minute.getOrElse(0L) <= end.millisSinceEpoch)
     val crunchToUpdate = diff.crunchMinutesToUpdate.filter(cmm => start.millisSinceEpoch <= cmm.minute.getOrElse(0L) && cmm.minute.getOrElse(0L) <= end.millisSinceEpoch)
@@ -34,9 +33,8 @@ class PortStateGraphStage(name: String = "",
                           airportConfig: AirportConfig,
                           expireAfterMillis: MillisSinceEpoch,
                           now: () => SDateLike)
-  extends GraphStage[FanInShape6[FlightRemovals, FlightsWithSplits, DeskRecMinutes, ActualDeskStats, StaffMinutes, SimulationMinutes, PortStateWithDiff]] {
+  extends GraphStage[FanInShape5[FlightsWithSplits, DeskRecMinutes, ActualDeskStats, StaffMinutes, SimulationMinutes, PortStateWithDiff]] {
 
-  val inFlightRemovals: Inlet[FlightRemovals] = Inlet[FlightRemovals]("FlightRemovals.in")
   val inFlightsWithSplits: Inlet[FlightsWithSplits] = Inlet[FlightsWithSplits]("FlightWithSplits.in")
   val inDeskRecMinutes: Inlet[DeskRecMinutes] = Inlet[DeskRecMinutes]("DeskRecMinutes.in")
   val inActualDeskStats: Inlet[ActualDeskStats] = Inlet[ActualDeskStats]("ActualDeskStats.in")
@@ -44,8 +42,7 @@ class PortStateGraphStage(name: String = "",
   val inSimulationMinutes: Inlet[SimulationMinutes] = Inlet[SimulationMinutes]("SimulationMinutes.in")
   val outPortState: Outlet[PortStateWithDiff] = Outlet[PortStateWithDiff]("PortStateWithDiff.out")
 
-  override val shape = new FanInShape6(
-    inFlightRemovals,
+  override val shape = new FanInShape5(
     inFlightsWithSplits,
     inDeskRecMinutes,
     inActualDeskStats,

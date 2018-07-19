@@ -14,7 +14,7 @@ import drt.shared.FlightsApi.Flights
 import org.apache.commons.lang3.StringUtils
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter, ISODateTimeFormat}
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedResponse}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, ArrivalsFeedResponse}
 import services.SDate
 import services.graphstages.Crunch
 
@@ -166,7 +166,7 @@ trait BoxFileConstants {
 
 object LGWForecastFeed {
 
-  def apply()(implicit actorSystem: ActorSystem): Source[FeedResponse, Cancellable] = {
+  def apply()(implicit actorSystem: ActorSystem): Source[ArrivalsFeedResponse, Cancellable] = {
     val config = actorSystem.settings.config
     val boxConfigFilePath = config.getString("feeds.gatwick.forecast.boxConfigFile")
     val userId = config.getString("feeds.gatwick.forecast.userId")
@@ -176,7 +176,7 @@ object LGWForecastFeed {
     log.info(s"About to connect to box.com for LGW forecast feed")
     val feed = new LGWForecastFeed(boxConfigFilePath, userId = userId, ukBfGalForecastFolderId = folderId)
     log.info(s"We created a feed: $feed")
-    val tickingSource: Source[FeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollInterval, NotUsed)
+    val tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollInterval, NotUsed)
       .withAttributes(ActorAttributes.supervisionStrategy(Supervision.restartingDecider))
       .map(_ => {
         log.info(s"LGW forecast feed tick.")

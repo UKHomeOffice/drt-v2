@@ -44,6 +44,7 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
 
       crunchState match {
         case Ready(thing) =>
+          log.info(s"set crunchstate pendingstale")
           updated((PendingStale(thing), latestUpdateMillis), effects)
         case _ =>
           effectOnly(effects)
@@ -59,6 +60,7 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
       } else {
         Effect(Future(HideLoader()))
       }
+      log.info(s"set crunchstate ready")
       updated((Ready(crunchState), 0L), allEffects)
 
     case UpdateCrunchStateFromUpdatesAndContinuePolling(crunchUpdates: CrunchUpdates) =>
@@ -78,6 +80,7 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
 
     case SetCrunchPending() =>
       log.info(s"Clearing out the crunch stuff")
+      log.info(s"set crunchstate pending")
       updated((Pending(), 0L))
 
     case UpdateCrunchStateFromUpdates(crunchUpdates) =>
@@ -90,6 +93,7 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
         updateStateFromUpdates(crunchUpdates, existingState)
       } else newStateFromUpdates(crunchUpdates)
 
+      log.info(s"set crunchstate pendingstale")
       updated((PendingStale(newState), crunchUpdates.latest), Effect(Future(HideLoader())))
   }
 
@@ -120,6 +124,7 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
         log.info(s"Got CrunchUpdates with ${cu.flights.size} flights, ${cu.minutes.size} minutes")
         UpdateCrunchStateFromUpdatesAndContinuePolling(cu)
       case _ =>
+        log.error(s"Failed to GetCrunchState. Re-requesting after $crunchUpdatesRequestFrequency")
         RetryActionAfter(GetCrunchState(), crunchUpdatesRequestFrequency)
     }.recoverWith {
       case _ =>

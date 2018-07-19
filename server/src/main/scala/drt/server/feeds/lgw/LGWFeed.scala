@@ -13,7 +13,7 @@ import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
 import org.apache.commons.io.IOUtils
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedResponse}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, FeedResponse}
 import services.SDate
 import spray.client.pipelining
 import spray.client.pipelining.{Delete, Post, addHeader, _}
@@ -25,7 +25,7 @@ import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
-case class LGWFeed(certPath: String, privateCertPath: String, namespace: String, issuer: String, nameId: String, implicit val system: ActorSystem) extends ProdSendAndReceive {
+case class LGWFeed(certPath: String, privateCertPath: String, namespace: String, issuer: String, nameId: String)(implicit val system: ActorSystem) extends ProdSendAndReceive {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   val privateCert: Path = FileSystems.getDefault.getPath(privateCertPath)
@@ -60,8 +60,6 @@ case class LGWFeed(certPath: String, privateCertPath: String, namespace: String,
       "grant_type" -> GRANT,
       "assertion" -> assertion
     ))
-
-    implicit val materializer: ActorMaterializer = ActorMaterializer()
 
     val tokenPostPipeline = (
       addHeader(Accept(MediaTypes.`application/json`))
@@ -130,7 +128,7 @@ object LGWFeed {
   val log: Logger = LoggerFactory.getLogger(getClass)
   var tokenFuture: Future[GatwickAzureToken] = _
 
-  def apply()(implicit actorSystem: ActorSystem): Source[FeedResponse, Cancellable] = {
+  def apply()(implicit actorSystem: ActorSystem): Source[ArrivalsFeedResponse, Cancellable] = {
     val config = actorSystem.settings.config
 
     implicit val dispatcher: ExecutionContextExecutor = actorSystem.dispatcher
@@ -141,14 +139,14 @@ object LGWFeed {
     val issuer = config.getString("feeds.gatwick.live.azure.issuer")
     val nameId = config.getString("feeds.gatwick.live.azure.name.id")
 
-    val feed = LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId, actorSystem)
+    val feed = LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId)
 
     val pollInterval = 100 milliseconds
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
 
     tokenFuture = feed.requestToken()
 
-    val tickingSource: Source[FeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollInterval, NotUsed)
+    val tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollInterval, NotUsed)
       .withAttributes(ActorAttributes.supervisionStrategy(Supervision.restartingDecider))
       .map(_ => {
         Try {

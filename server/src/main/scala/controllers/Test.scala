@@ -10,7 +10,7 @@ import passengersplits.parsing.VoyageManifestParser.FlightPassengerInfoProtocol.
 import drt.shared.{Arrival, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
-import play.api.mvc.{Action, Controller}
+import play.api.mvc.{Action, Controller, InjectedController, Session}
 import play.api.{Configuration, Environment}
 import services.SDate
 import spray.json._
@@ -18,14 +18,16 @@ import spray.json._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import test.ResetData
+import test.{MockRoles, ResetData}
 import test.TestActors.ResetActor
+import test.MockRoles._
+import test.MockRoles.MockRolesProtocol._
 
 class Test @Inject()(implicit val config: Configuration,
                      implicit val mat: Materializer,
                      env: Environment,
                      val system: ActorSystem,
-                     ec: ExecutionContext) extends Controller {
+                     ec: ExecutionContext) extends InjectedController {
   implicit val timeout: Timeout = Timeout(250 milliseconds)
 
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -34,6 +36,7 @@ class Test @Inject()(implicit val config: Configuration,
 
   val liveArrivalsTestActor: Future[ActorRef] = system.actorSelection("akka://application/user/TestActor-LiveArrivals").resolveOne()
   val apiManifestsTestActor: Future[ActorRef] = system.actorSelection("akka://application/user/TestActor-APIManifests").resolveOne()
+  val mockRolesTestActor: Future[ActorRef] = system.actorSelection("akka://application/user/TestActor-MockRoles").resolveOne()
 
   def saveArrival(arrival: Arrival) = {
     liveArrivalsTestActor.map(actor => {
@@ -109,6 +112,25 @@ class Test @Inject()(implicit val config: Configuration,
           log.info(s"Got a manifest to save $vm")
           saveVoyageManifest(vm)
           Created
+        case None =>
+          BadRequest(s"Unable to parse JSON: ${request.body.asText}")
+      }
+  }
+
+  def saveMockRoles(roles: MockRoles) = {
+    mockRolesTestActor.map(a => a ! roles)
+  }
+
+  def setMockRoles() = Action {
+    implicit request =>
+      request.body.asJson.map(s => s.toString.parseJson.convertTo[MockRoles]) match {
+        case Some(roles) =>
+          log.info(s"Got mock roles to set: $roles")
+
+          log.info(s"Replacing these mock roles: ${request.session.data}")
+          log.info(s"mock headers: ${request.headers}")
+
+          Created.withSession(Session(Map("mock-roles" -> roles.roles.mkString(","))))
         case None =>
           BadRequest(s"Unable to parse JSON: ${request.body.asText}")
       }

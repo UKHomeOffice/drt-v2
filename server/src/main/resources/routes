@@ -33,5 +33,7 @@ POST        /test/arrival                                 controllers.Test.addAr
 
 POST        /test/manifest                                controllers.Test.addManifest
 
+POST        /test/mock-roles                              controllers.Test.setMockRoles()
+
 DELETE      /test/data                                    controllers.Test.deleteAllData()
 

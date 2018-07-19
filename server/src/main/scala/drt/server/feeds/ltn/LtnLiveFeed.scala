@@ -5,33 +5,34 @@ import akka.actor.{ActorSystem, Cancellable}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
-import akka.stream.ActorMaterializer
+import akka.stream.{ActorMaterializer, Materializer}
 import akka.stream.scaladsl.Source
 import drt.shared.Arrival
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedResponse}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
-case class LtnLiveFeed(endPoint: String, token: String, username: String, password: String, timeZone: DateTimeZone) {
+case class LtnLiveFeed(endPoint: String, token: String, username: String, password: String, timeZone: DateTimeZone)(implicit actorSystem: ActorSystem, materializer: Materializer) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def tickingSource: Source[FeedResponse, Cancellable] = Source
+  def tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source
     .tick(0 millis, 30 seconds, NotUsed)
     .map(_ => {
       log.info(s"Requesting feed")
       requestFeed()
     })
 
-  def requestFeed(): FeedResponse = {
+  def requestFeed(): ArrivalsFeedResponse = {
     val request = HttpRequest(
       method = HttpMethods.GET,
       uri = Uri(endPoint),
@@ -42,10 +43,6 @@ case class LtnLiveFeed(endPoint: String, token: String, username: String, passwo
       ),
       entity = HttpEntity.Empty
     )
-
-    implicit val system: ActorSystem = ActorSystem()
-    implicit val materializer: ActorMaterializer = ActorMaterializer()
-    import scala.concurrent.ExecutionContext.Implicits.global
 
     val responseFuture = Http()
       .singleRequest(request)
@@ -60,16 +57,24 @@ case class LtnLiveFeed(endPoint: String, token: String, username: String, passwo
               log.info(s"parsed ${arrivals.length} arrivals from ${flights.length} flights")
               ArrivalsFeedSuccess(Flights(arrivals.map(toArrival)))
             case Failure(t) =>
-              log.info(s"Failed to parse: $t")
+              log.error(s"Failed to parse: $t")
               ArrivalsFeedFailure(t.toString)
           }
         case HttpResponse(status, _, _, _) => ArrivalsFeedFailure(status.defaultMessage())
       }
       .recoverWith {
-        case throwable => Future(ArrivalsFeedFailure(throwable.toString))
+        case throwable => log.error("Caught error while retrieving the LTN port feed.", throwable)
+          Future(ArrivalsFeedFailure(throwable.toString))
       }
 
-    Await.result(responseFuture, 5 seconds)
+    Try {
+      Await.result(responseFuture, 30 seconds)
+    } match {
+      case Success(response) => response
+      case Failure(t) =>
+        log.error(s"Failed to retrieve the LTN port feed", t)
+        ArrivalsFeedFailure(t.toString)
+    }
   }
 
   def toArrival(ltnFeedFlight: LtnLiveFlight): Arrival = Arrival(

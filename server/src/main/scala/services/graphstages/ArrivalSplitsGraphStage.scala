@@ -8,7 +8,8 @@ import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.SplitsCalculator
-import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
+import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import server.feeds.{ManifestsFeedFailure, ManifestsFeedResponse, ManifestsFeedSuccess}
 import services._
 import services.graphstages.Crunch.{log, _}
 
@@ -21,14 +22,14 @@ case class UpdatedFlights(flights: Map[Int, ApiFlightWithSplits], updatesCount: 
 class ArrivalSplitsGraphStage(name: String = "",
                               optionalInitialFlights: Option[FlightsWithSplits],
                               splitsCalculator: SplitsCalculator,
-                              groupFlightsByCodeShares: (Seq[ApiFlightWithSplits]) => Seq[(ApiFlightWithSplits, Set[Arrival])],
+                              groupFlightsByCodeShares: Seq[ApiFlightWithSplits] => Seq[(ApiFlightWithSplits, Set[Arrival])],
                               expireAfterMillis: Long,
                               now: () => SDateLike,
                               maxDaysToCrunch: Int)
-  extends GraphStage[FanInShape3[ArrivalsDiff, VoyageManifests, Seq[(Arrival, Option[ApiSplits])], FlightsWithSplits]] {
+  extends GraphStage[FanInShape3[ArrivalsDiff, ManifestsFeedResponse, Seq[(Arrival, Option[ApiSplits])], FlightsWithSplits]] {
 
   val inArrivalsDiff: Inlet[ArrivalsDiff] = Inlet[ArrivalsDiff]("ArrivalsDiffIn.in")
-  val inManifests: Inlet[VoyageManifests] = Inlet[VoyageManifests]("SplitsIn.in")
+  val inManifests: Inlet[ManifestsFeedResponse] = Inlet[ManifestsFeedResponse]("SplitsIn.in")
   val inSplitsPredictions: Inlet[Seq[(Arrival, Option[ApiSplits])]] = Inlet[Seq[(Arrival, Option[ApiSplits])]]("SplitsPredictionsIn.in")
   val outArrivalsWithSplits: Outlet[FlightsWithSplits] = Outlet[FlightsWithSplits]("ArrivalsWithSplitsOut.out")
 
@@ -38,12 +39,13 @@ class ArrivalSplitsGraphStage(name: String = "",
     var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
     var manifestsBuffer: Map[Int, Set[VoyageManifest]] = Map()
     var arrivalsWithSplitsDiff: Set[ApiFlightWithSplits] = Set()
+    var arrivalsToRemove: Set[Int] = Set()
 
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
     override def preStart(): Unit = {
       optionalInitialFlights match {
-        case Some(FlightsWithSplits(flights)) =>
+        case Some(FlightsWithSplits(flights, _)) =>
           log.info(s"Received initial flights. Setting ${flights.size}")
           flightsByFlightId = purgeExpiredArrivals(
             flights
@@ -85,6 +87,7 @@ class ArrivalSplitsGraphStage(name: String = "",
         val updatedFlights = purgeExpiredArrivals(updateFlightsFromIncoming(arrivalsDiff, flightsByFlightId))
         val latestDiff = updatedFlights.values.toSet -- flightsByFlightId.values.toSet
         arrivalsWithSplitsDiff = mergeDiffSets(latestDiff, arrivalsWithSplitsDiff)
+        arrivalsToRemove = arrivalsToRemove ++ arrivalsDiff.toRemove
         log.info(s"${arrivalsWithSplitsDiff.size} updated arrivals waiting to push")
         flightsByFlightId = updatedFlights
 
@@ -98,17 +101,23 @@ class ArrivalSplitsGraphStage(name: String = "",
       override def onPush(): Unit = {
         val start = SDate.now()
         log.debug(s"inSplits onPush called")
-        val vms = grab(inManifests)
+        grab(inManifests) match {
+          case ManifestsFeedSuccess(dqManifests, connectedAt) =>
+            log.info(s"Grabbed ${dqManifests.manifests.size} arrivals from connection at ${connectedAt.toISOString()}")
 
-        log.info(s"Grabbed ${vms.manifests.size} manifests")
-        val updatedFlights = purgeExpiredArrivals(updateFlightsWithManifests(vms.manifests, flightsByFlightId))
-        log.info(s"We now have ${updatedFlights.size} arrivals")
-        val latestDiff = updatedFlights.values.toSet -- flightsByFlightId.values.toSet
-        arrivalsWithSplitsDiff = mergeDiffSets(latestDiff, arrivalsWithSplitsDiff)
-        flightsByFlightId = updatedFlights
-        manifestsBuffer = purgeExpiredManifests(manifestsBuffer)
+            val updatedFlights = purgeExpiredArrivals(updateFlightsWithManifests(dqManifests.manifests, flightsByFlightId))
+            log.info(s"We now have ${updatedFlights.size} arrivals")
 
-        pushStateIfReady()
+            val latestDiff = updatedFlights.values.toSet -- flightsByFlightId.values.toSet
+            arrivalsWithSplitsDiff = mergeDiffSets(latestDiff, arrivalsWithSplitsDiff)
+            flightsByFlightId = updatedFlights
+            manifestsBuffer = purgeExpiredManifests(manifestsBuffer)
+
+            pushStateIfReady()
+
+          case ManifestsFeedFailure(message, failedAt) =>
+            log.info(s"$inManifests failed at ${failedAt.toISOString()}: $message")
+        }
         pullAll()
         log.info(s"inManifests Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
@@ -288,10 +297,11 @@ class ArrivalSplitsGraphStage(name: String = "",
 
     def pushStateIfReady(): Unit = {
       if (isAvailable(outArrivalsWithSplits)) {
-        if (arrivalsWithSplitsDiff.nonEmpty) {
-          log.info(s"Pushing ${arrivalsWithSplitsDiff.size} updated arrivals with splits")
-          push(outArrivalsWithSplits, FlightsWithSplits(arrivalsWithSplitsDiff.toSeq))
+        if (arrivalsWithSplitsDiff.nonEmpty || arrivalsToRemove.nonEmpty) {
+          log.info(s"Pushing ${arrivalsWithSplitsDiff.size} updated arrivals with splits and ${arrivalsToRemove.size} removals")
+          push(outArrivalsWithSplits, FlightsWithSplits(arrivalsWithSplitsDiff.toSeq, arrivalsToRemove))
           arrivalsWithSplitsDiff = Set()
+          arrivalsToRemove = Set()
         } else log.info(s"No updated arrivals with splits to push")
       } else log.info(s"outArrivalsWithSplits not available to push")
     }

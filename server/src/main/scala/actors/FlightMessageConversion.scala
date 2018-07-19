@@ -32,7 +32,7 @@ object FlightMessageConversion {
     case s: FeedStatusFailure => FeedStatusMessage(Option(s.date), None, Option(s.message))
   }
 
-  def arrivalsStateFromSnapshotMessage(snMessage: FlightStateSnapshotMessage): ArrivalsState = {
+  def arrivalsStateFromSnapshotMessage(snMessage: FlightStateSnapshotMessage, feedName: String): ArrivalsState = {
     val arrivalsMap = snMessage.flightMessages.map(fm => {
       val arrival = FlightMessageConversion.flightMessageToApiFlight(fm)
       (arrival.uniqueId, arrival)
@@ -40,7 +40,7 @@ object FlightMessageConversion {
 
     val maybeStatuses = snMessage.statuses.map(feedStatusesFromFeedStatusesMessage)
 
-    ArrivalsState(arrivalsMap, maybeStatuses)
+    ArrivalsState(arrivalsMap, feedName, maybeStatuses)
   }
 
   def feedStatusesFromFeedStatusesMessage(message: FeedStatusesMessage): FeedStatuses = {
@@ -85,15 +85,15 @@ object FlightMessageConversion {
 
   def apiFlightToFlightMessage(apiFlight: Arrival): FlightMessage = {
     FlightMessage(
-      operator = apiFlight.Operator.filter(StringUtils.isNotBlank(_)),
-      gate = apiFlight.Gate.filter(StringUtils.isNotBlank(_)),
-      stand = apiFlight.Stand.filter(StringUtils.isNotBlank(_)),
+      operator = apiFlight.Operator,
+      gate = apiFlight.Gate,
+      stand = apiFlight.Stand,
       status = Option(StringUtils.trimToNull(apiFlight.Status)),
       maxPax = apiFlight.MaxPax.filter(_ != 0),
       actPax = apiFlight.ActPax.filter(_ != 0),
       tranPax = apiFlight.TranPax,
-      runwayID = apiFlight.RunwayID.filter(StringUtils.isNotBlank(_)),
-      baggageReclaimId = apiFlight.BaggageReclaimId.filter(StringUtils.isNotBlank(_)),
+      runwayID = apiFlight.RunwayID,
+      baggageReclaimId = apiFlight.BaggageReclaimId,
       flightID = apiFlight.FlightID.filter(_ != 0),
       airportID = Option(StringUtils.trimToNull(apiFlight.AirportID)),
       terminal = Option(StringUtils.trimToNull(apiFlight.Terminal)),
@@ -123,19 +123,19 @@ object FlightMessageConversion {
 
   def flightMessageToApiFlight(flightMessage: FlightMessage): Arrival = {
     Arrival(
-      Operator = flightMessage.operator.filter(StringUtils.isNotBlank(_)),
+      Operator = flightMessage.operator,
       Status = flightMessage.status.getOrElse(""),
       Estimated = flightMessage.estimated.filter(_ != 0),
       Actual = flightMessage.touchdown.filter(_ != 0),
       EstimatedChox = flightMessage.estimatedChox.filterNot(_ != 0),
       ActualChox = flightMessage.actualChox.filter(_ != 0),
-      Gate = flightMessage.gate.filter(StringUtils.isNotBlank(_)),
-      Stand = flightMessage.stand.filter(StringUtils.isNotBlank(_)),
+      Gate = flightMessage.gate,
+      Stand = flightMessage.stand,
       MaxPax = flightMessage.maxPax.filter(_ != 0),
       ActPax = flightMessage.actPax.filter(_ != 0),
       TranPax = flightMessage.tranPax,
-      RunwayID = flightMessage.runwayID.filter(StringUtils.isNotBlank(_)),
-      BaggageReclaimId = flightMessage.baggageReclaimId.filter(StringUtils.isNotBlank(_)),
+      RunwayID = flightMessage.runwayID,
+      BaggageReclaimId = flightMessage.baggageReclaimId,
       FlightID = flightMessage.flightID.filter(_ != 0),
       AirportID = flightMessage.airportID.getOrElse(""),
       Terminal = flightMessage.terminal.getOrElse(""),

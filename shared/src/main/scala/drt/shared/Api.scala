@@ -296,10 +296,9 @@ case class CrunchResult(firstTimeMillis: MillisSinceEpoch,
 case class AirportInfo(airportName: String, city: String, country: String, code: String)
 
 object FlightsApi {
-
   case class Flights(flights: Seq[Arrival])
 
-  case class FlightsWithSplits(flights: Seq[ApiFlightWithSplits]) extends PortStateMinutes {
+  case class FlightsWithSplits(flights: Seq[ApiFlightWithSplits], removals: Set[Int]) extends PortStateMinutes {
     def applyTo(maybePortState: Option[PortState], now: SDateLike): Option[PortState] = {
       maybePortState match {
         case None => Option(PortState(flights.map(f => (f.apiFlight.uniqueId, f)).toMap, Map(), Map()))
@@ -307,7 +306,10 @@ object FlightsApi {
           val updatedFlights = flights.foldLeft(portState.flights) {
             case (soFar, updatedFlight) => soFar.updated(updatedFlight.apiFlight.uniqueId, updatedFlight.copy(lastUpdated = Option(now.millisSinceEpoch)))
           }
-          Option(portState.copy(flights = updatedFlights))
+          val updatedFlightsMinusRemovals = removals.foldLeft(updatedFlights) {
+            case (minusRemovals, toRemove) => minusRemovals - toRemove
+          }
+          Option(portState.copy(flights = updatedFlightsMinusRemovals))
       }
     }
   }

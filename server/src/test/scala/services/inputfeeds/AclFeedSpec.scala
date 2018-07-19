@@ -6,10 +6,11 @@ import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared._
+import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.SFTPClient
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import server.feeds.acl.AclFeed
-import server.feeds.acl.AclFeed.{arrivalsFromCsvContent, contentFromFileName, latestFileForPort, sftpClient}
+import server.feeds.acl.AclFeed._
 import services.SDate
 import services.crunch.CrunchTestLike
 
@@ -255,6 +256,31 @@ class AclFeedSpec extends CrunchTestLike {
 
       true
     }
+
+    "Given one ACL arrival followed by the same single ACL arrival " +
+      "When I ask for a crunch " +
+      "Then I should still see the arrival, ie it should not have been removed" >> {
+      val scheduledLive = "2017-01-01T00:00Z"
+
+      val aclArrival = ArrivalGenerator.apiFlight(actPax = Option(150), schDt = "2017-01-01T00:05Z", iata = "BA0001", status = "forecast")
+
+      val aclInput1 = Flights(Seq(aclArrival))
+      val aclInput2 = Flights(Seq(aclArrival))
+
+      val crunch = runCrunchGraph(now = () => SDate(scheduledLive))
+
+      offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclInput1))
+      offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclInput2))
+
+      val portStateFlightLists = crunch.liveTestProbe.receiveWhile(3 seconds) {
+        case PortState(f, _, _) => f.values.map(_.apiFlight)
+      }
+
+      val nonEmptyFlightsList = List(aclArrival)
+      val expected = List(nonEmptyFlightsList)
+
+      portStateFlightLists.distinct === expected
+    }
   }
 
   "Looking at flights" >> {
@@ -263,7 +289,7 @@ class AclFeedSpec extends CrunchTestLike {
     val username = ConfigFactory.load.getString("acl.username")
     val path = ConfigFactory.load.getString("acl.keypath")
 
-    val sftp: SFTPClient = sftpClient(ftpServer, username, path)
+    val sftp = sftpClient(sshClient(ftpServer, username, path))
     val latestFile = latestFileForPort(sftp, "MAN")
     println(s"latestFile: $latestFile")
     val aclArrivals: List[Arrival] = arrivalsFromCsvContent(contentFromFileName(sftp, latestFile), regularTerminalMapping)

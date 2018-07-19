@@ -9,9 +9,10 @@ import drt.shared.PaxTypes.{EeaMachineReadable, EeaNonMachineReadable}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
 import passengersplits.core.SplitsCalculator
-import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
+import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import server.feeds.{ManifestsFeedResponse, ManifestsFeedSuccess}
 import services.SDate
-import services.graphstages.ArrivalSplitsGraphStage
+import services.graphstages.{ArrivalSplitsGraphStage, DqManifests}
 
 import scala.concurrent.duration._
 
@@ -20,7 +21,7 @@ object TestableArrivalSplits {
   val oneDayMillis: Int = 60 * 60 * 24 * 1000
   def groupByCodeShares(flights: Seq[ApiFlightWithSplits]): Seq[(ApiFlightWithSplits, Set[Arrival])] = flights.map(f => (f, Set(f.apiFlight)))
 
-  def apply(splitsCalculator: SplitsCalculator, testProbe: TestProbe, now: () => SDateLike): RunnableGraph[(SourceQueueWithComplete[ArrivalsDiff], SourceQueueWithComplete[VoyageManifests], SourceQueueWithComplete[Seq[(Arrival, Option[ApiSplits])]])] = {
+  def apply(splitsCalculator: SplitsCalculator, testProbe: TestProbe, now: () => SDateLike): RunnableGraph[(SourceQueueWithComplete[ArrivalsDiff], SourceQueueWithComplete[ManifestsFeedResponse], SourceQueueWithComplete[Seq[(Arrival, Option[ApiSplits])]])] = {
     val arrivalSplitsStage = new ArrivalSplitsGraphStage(
       name = "",
       optionalInitialFlights = None,
@@ -31,7 +32,7 @@ object TestableArrivalSplits {
       maxDaysToCrunch = 1)
 
     val arrivalsDiffSource = Source.queue[ArrivalsDiff](1, OverflowStrategy.backpressure)
-    val manifestsSource = Source.queue[VoyageManifests](1, OverflowStrategy.backpressure)
+    val manifestsSource = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
     val predictionsSource = Source.queue[Seq[(Arrival, Option[ApiSplits])]](1, OverflowStrategy.backpressure)
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
@@ -82,15 +83,16 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
     val scheduled = s"${arrivalDate}T$arrivalTime"
     val probe = TestProbe("arrival-splits")
 
-    val (arrivalDiffs, manifests, _) = TestableArrivalSplits(splitsCalculator, probe, () => SDate(scheduled)).run()
+    val (arrivalDiffs, manifestsInput, _) = TestableArrivalSplits(splitsCalculator, probe, () => SDate(scheduled)).run()
     val arrival = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = scheduled)
     val paxList = List(
       PassengerInfoGenerator.passengerInfoJson(nationality = "GBR", documentType = "P", issuingCountry = "GBR"),
       PassengerInfoGenerator.passengerInfoJson(nationality = "ITA", documentType = "P", issuingCountry = "ITA")
     )
+    val manifests = Set(VoyageManifest(DqEventCodes.DepartureConfirmed, portCode, "JFK", "0001", "BA", arrivalDate, arrivalTime, PassengerList = paxList))
 
     arrivalDiffs.offer(ArrivalsDiff(toUpdate = Set(arrival), toRemove = Set()))
-    manifests.offer(VoyageManifests(Set(VoyageManifest(DqEventCodes.DepartureConfirmed, portCode, "JFK", "0001", "BA", arrivalDate, arrivalTime, PassengerList = paxList))))
+    manifestsInput.offer(ManifestsFeedSuccess(DqManifests("", manifests)))
 
     val historicSplits = ApiSplits(
       Set(
@@ -107,7 +109,7 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
       ApiSplits(Set(), SplitSources.TerminalAverage, None, Percentage),
       apiSplits)
 
-    val expected = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, expectedSplits, None)))
+    val expected = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, expectedSplits, None)), Set())
 
     probe.fishForMessage(10 seconds) {
       case fs: FlightsWithSplits =>

@@ -3,12 +3,12 @@ package services
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
-import controllers.{AvailableUserRoles, FixedPointPersistence, ShiftPersistence, StaffMovementsPersistence}
+import controllers.{FixedPointPersistence, ShiftPersistence, StaffMovementsPersistence}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import play.api.mvc.Headers
+import play.api.mvc.{Headers, Session}
 
 import scala.collection.immutable.Map
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -61,20 +61,18 @@ abstract class ApiService(val airportConfig: AirportConfig,
                           val shiftsActor: ActorRef,
                           val fixedPointsActor: ActorRef,
                           val staffMovementsActor: ActorRef,
-                          val headers: Headers
+                          val headers: Headers,
+                          val session: Session
                          )
   extends Api
     with AirportToCountryLike
     with ShiftPersistence
     with FixedPointPersistence
-    with StaffMovementsPersistence
-    with AvailableUserRoles{
+    with StaffMovementsPersistence {
 
   override implicit val timeout: akka.util.Timeout = Timeout(5 seconds)
 
   override val log: Logger = LoggerFactory.getLogger(this.getClass)
-
-  def roles: List[String] = userRolesFromHeader(headers)
 
   def liveCrunchStateActor: AskableActorRef
 
