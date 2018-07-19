@@ -85,7 +85,9 @@ describe('Staff movements', function () {
   }
 
   function navigateToMenuItem(itemName) {
-    return cy.get('.navbar-drt li').contains(itemName).click().end();
+    cy.get('.navbar-drt li').contains(itemName);
+    cy.wait(500);
+    cy.get('.navbar-drt li').contains(itemName).click().end();
   }
 
   function startAtHome() {
