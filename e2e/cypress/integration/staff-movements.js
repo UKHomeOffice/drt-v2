@@ -118,7 +118,7 @@ describe('Staff movements', function () {
       removeXMovements(1);
     });
 
-    it("Should update the available staff when 1 staff member is added for 1 hour twice", function () {
+    xit("Should update the available staff when 1 staff member is added for 1 hour twice", function () {
       navigateToHome();
       navigateToMenuItem('T1');
       choose24Hours();
