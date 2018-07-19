@@ -85,9 +85,7 @@ describe('Staff movements', function () {
   }
 
   function navigateToMenuItem(itemName) {
-    cy.get('.navbar-drt li').contains(itemName);
-    cy.wait(500);
-    cy.get('.navbar-drt li').contains(itemName).click().end();
+    cy.get('.navbar-drt li').contains(itemName).click({ force: true }).end();
   }
 
   function startAtHome() {
@@ -95,7 +93,7 @@ describe('Staff movements', function () {
   }
 
   function findAndClick(toFind) {
-    cy.contains(toFind).click().end();
+    cy.contains(toFind).click({ force: true }).end();
   }
 
   describe('When adding staff movements on the desks and queues page', function () {
