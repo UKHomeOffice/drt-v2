@@ -147,7 +147,7 @@ class VoyageManifestsGraphStage(bucketName: String,
       StreamConverters.asInputStream()
     )
     val zipInputStream = new ZipInputStream(inputStream)
-    val vmStream = Stream
+    val zipFilesAndMaybeManifests = Stream
       .continually(zipInputStream.getNextEntry)
       .takeWhile(_ != null)
       .map { _ =>
@@ -170,10 +170,10 @@ class VoyageManifestsGraphStage(bucketName: String,
       }
       .toList
 
-    val relevantCount = vmStream.count { case (_, maybeVm) => maybeVm.isDefined }
-    log.info(s"$relevantCount relevant manifests out of ${vmStream.length} received in $zipFileName")
+    val relevantCount = zipFilesAndMaybeManifests.count { case (_, maybeVm) => maybeVm.isDefined }
+    log.info(s"$relevantCount relevant manifests out of ${zipFilesAndMaybeManifests.length} received in $zipFileName")
 
-    vmStream
+    zipFilesAndMaybeManifests
   }
 
   def filterToFilesNewerThan(filesSource: Source[String, NotUsed], latestFile: String): Source[String, NotUsed] = {
