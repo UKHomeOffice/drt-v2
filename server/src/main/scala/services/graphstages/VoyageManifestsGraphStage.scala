@@ -113,7 +113,7 @@ class VoyageManifestsGraphStage(bucketName: String, portCode: String, initialLas
         lastSeenFileName = latestFileName
         ManifestsFeedSuccess(DqManifests(latestFileName, maybeManifests.flatten), SDate.now())
       case Failure(t) =>
-        log.warn(s"Failed to fetch new manifests: $t")
+        log.warn(s"Failed to fetch new manifests: ${t.getStackTrace}")
         ManifestsFeedFailure(t.toString, SDate.now())
     }
   }
@@ -164,9 +164,22 @@ class VoyageManifestsGraphStage(bucketName: String, portCode: String, initialLas
             len = zipInputStream.read(buffer)
           }
           val content: String = new String(stringBuffer.toArray, UTF_8)
+          log.info(s"attempting to parse manifest: $content")
           val tryManifest = VoyageManifestParser.parseVoyagePassengerInfo(content)
 
-          (zipFileName, tryManifest.toOption)
+          val maybeManifest = tryManifest match {
+            case Success(m) if maybePort.isEmpty || m.ArrivalPortCode == maybePort.get =>
+              log.info(s"SUCCESS: ${m.ArrivalPortCode}")
+              Option(m)
+            case Success(m) if m.ArrivalPortCode == maybePort.get =>
+              log.info(s"SUCCESS: ${m.ArrivalPortCode}")
+              None
+            case Failure(f) =>
+              log.info(s"FAILURE: ${f.getMessage}")
+              None
+          }
+
+          (zipFileName, maybeManifest)
         case _ =>
           (zipFileName, None)
       }
