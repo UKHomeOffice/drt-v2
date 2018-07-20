@@ -198,8 +198,6 @@ class Application @Inject()(implicit val config: Configuration,
                session: Session
              ): ApiService = new ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor, headers, session) {
 
-      log.info(s"Session inside service: $session")
-
       override implicit val timeout: Timeout = Timeout(5 seconds)
 
       def actorSystem: ActorSystem = system
