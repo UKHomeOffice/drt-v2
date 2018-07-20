@@ -135,7 +135,7 @@ fork in run := true
 
 fork in Test := true
 
-parallelExecution in Test := false
+//parallelExecution in Test := false
 
 
 // loads the Play server project at sbt startup
