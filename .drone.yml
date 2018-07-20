@@ -5,7 +5,7 @@ pipeline:
     #image: quay.io/ukhomeofficedigital/scala-sbt:latest
     commands:
       - /root/entrypoint.sh
-      - sbt test -J-Xmx6g -J-XX:MaxpermSize=512m
+      - sbt -mem 1024 test -J-Xmx6g -J-Xms6G 
     environment:
       - ARTIFACTORY_USERNAME=drt_ci
     secrets:
