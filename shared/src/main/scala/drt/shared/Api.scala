@@ -2,6 +2,7 @@ package drt.shared
 
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, _}
+import drt.shared.KeyCloakApi.KeyCloakUser
 import drt.shared.SplitRatiosNs.SplitSources
 
 import scala.concurrent.Future
@@ -627,6 +628,10 @@ trait Api {
   def isLoggedIn(): Boolean
 
   def getFeedStatuses(): Future[Seq[FeedStatuses]]
+
+  def getKeyCloakUsers(): Future[List[KeyCloakUser]]
+
+  def addUserToGroup(userId: String, groupName: String): Unit
 }
 
 object ApiSplitsToSplitRatio {

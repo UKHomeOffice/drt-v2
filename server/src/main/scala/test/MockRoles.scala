@@ -33,11 +33,10 @@ object MockRoles {
 
 case class MockRoles(roles: List[String])
 
-object TestUserRoleProvider  {
-  val log: Logger = LoggerFactory.getLogger(getClass)
+object TestUserRoleProvider extends UserRoleProviderLike {
 
   def getRoles(config: Configuration, headers: Headers, session: Session): List[String] = {
-    log.info(s"Using MockRoles with $session")
-    MockRoles(session)
+    log.info(s"Using MockRoles with $session and $headers")
+    MockRoles(session) ::: userRolesFromHeader(headers)
   }
 }

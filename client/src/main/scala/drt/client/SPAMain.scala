@@ -2,7 +2,7 @@ package drt.client
 
 import diode.Action
 import drt.client.actions.Actions._
-import drt.client.components.{GlobalStyles, Layout, StatusPage, TerminalComponent, TerminalPlanningComponent, TerminalsDashboardPage}
+import drt.client.components.{GlobalStyles, KeyCloakUsersPage, Layout, StatusPage, TerminalComponent, TerminalPlanningComponent, TerminalsDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -11,12 +11,12 @@ import drt.shared.SDateLike
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
-import scalacss.ProdDefaults._
 
 import scala.collection.immutable.Seq
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
+import scalacss.ProdDefaults._
 
-object SPAMain  {
+object SPAMain {
 
   sealed trait Loc
 
@@ -60,7 +60,10 @@ object SPAMain  {
   }
 
   case class TerminalsDashboardLoc(period: Option[Int]) extends Loc
+
   case object StatusLoc extends Loc
+
+  case object KeyCloakUsersLoc extends Loc
 
   def requestInitialActions(): Unit = {
     val initActions = Seq(
@@ -80,7 +83,7 @@ object SPAMain  {
     .buildConfig { dsl =>
       import dsl._
 
-      val rule = homeRoute(dsl) | dashboardRoute(dsl) | terminalRoute(dsl) | statusRoute(dsl)
+      val rule = homeRoute(dsl) | dashboardRoute(dsl) | terminalRoute(dsl) | statusRoute(dsl) | keyCloakUsersRoute(dsl)
 
       rule.notFound(redirectToPage(TerminalsDashboardLoc(None))(Redirect.Replace))
     }
@@ -95,6 +98,8 @@ object SPAMain  {
             SPACircuit.dispatch(c.loadAction)
           case (_, _: TerminalsDashboardLoc) =>
             SPACircuit.dispatch(SetViewMode(ViewLive()))
+          case (_, KeyCloakUsersLoc) =>
+            SPACircuit.dispatch(GetKeyCloakUsers)
           case _ =>
         }
       )
@@ -110,6 +115,12 @@ object SPAMain  {
     import dsl._
 
     staticRoute("#status", StatusLoc) ~> renderR((router: RouterCtl[Loc]) => StatusPage())
+  }
+
+  def keyCloakUsersRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+    import dsl._
+
+    staticRoute("#users", KeyCloakUsersLoc) ~> renderR((router: RouterCtl[Loc]) => KeyCloakUsersPage())
   }
 
   def dashboardRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {

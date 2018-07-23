@@ -8,11 +8,11 @@ import org.scalajs.dom.html
 
 object Navbar {
   def apply(ctl: RouterCtl[Loc], page: Loc): VdomTagOf[html.Element] = {
-    val airportConfigRCP = SPACircuit.connect(m => (m.airportConfig, m.feedStatuses))
+    val menueModelRCP = SPACircuit.connect(m => (m.airportConfig, m.feedStatuses, m.userRoles))
 
     <.nav(^.className := "navbar navbar-default",
-      airportConfigRCP(airportConfigPotMP => {
-        val (airportConfigPot, feedStatusesPot) = airportConfigPotMP()
+      menueModelRCP(menuModelPotMP => {
+        val (airportConfigPot, feedStatusesPot, userRolesPot) = menuModelPotMP()
         <.div(^.className := "container",
           airportConfigPot.render(airportConfig => {
             val contactLink = airportConfig.contactEmail.map(contactEmail => {
@@ -21,12 +21,15 @@ object Navbar {
 
             <.div(^.className := "navbar-drt",
               <.span(^.className := "navbar-brand", s"DRT ${airportConfig.portCode}"),
-              <.div(^.className := "collapse navbar-collapse", MainMenu(ctl, page, feedStatusesPot.getOrElse(Seq())),
+              userRolesPot.renderReady(roles =>
+
+              <.div(^.className := "collapse navbar-collapse", MainMenu(ctl, page, feedStatusesPot.getOrElse(Seq()), airportConfig, roles),
                 <.ul(^.className := "nav navbar-nav navbar-right",
                   <.li(contactLink),
                   <.li(<.a(Icon.signOut, "Log Out", ^.href := "/oauth/logout?redirect=" + BaseUrl.until_#.value))
                 )
               ))
+            )
           }))
       })
     )
