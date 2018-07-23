@@ -5,8 +5,7 @@ pipeline:
     #image: quay.io/ukhomeofficedigital/scala-sbt:latest
     commands:
       - /root/entrypoint.sh
-      - sbt  test docker:stage 
-        # - sbt -mem 2480 test docker:stage -J-Xmx4G -J-Xms4G 
+      - sbt  test coverage #docker:stage 
     environment:
       - ARTIFACTORY_USERNAME=drt_ci
     secrets:
