@@ -23,8 +23,8 @@ object TestableWorkloadStage {
   def apply(testProbe: TestProbe,
             now: () => SDateLike,
             airportConfig: AirportConfig,
-            workloadStart: (SDateLike) => SDateLike,
-            workloadEnd: (SDateLike) => SDateLike,
+            workloadStart: SDateLike => SDateLike,
+            workloadEnd: SDateLike => SDateLike,
             earliestAndLatestAffectedPcpTime: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)]
            ): RunnableGraph[SourceQueueWithComplete[FlightsWithSplits]] = {
     val workloadStage = new WorkloadGraphStage(
@@ -44,7 +44,7 @@ object TestableWorkloadStage {
     val graph = GraphDSL.create(flightsWithSplitsSource.async) {
 
       implicit builder =>
-        (flights) =>
+        flights =>
           val workload = builder.add(workloadStage.async)
           val sink = builder.add(Sink.actorRef(testProbe.ref, "complete"))
 
