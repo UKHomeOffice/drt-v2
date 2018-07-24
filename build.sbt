@@ -142,3 +142,4 @@ onLoad in Global := (Command.process("project server", _: State)) compose (onLoa
 // Docker Plugin
 enablePlugins(DockerPlugin)
 updateOptions := updateOptions.value.withConsolidatedResolution(true)
+ivyLoggingLevel := UpdateLogging.Quiet
