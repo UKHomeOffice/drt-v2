@@ -10,6 +10,8 @@ logLevel := Level.Error
 // enabled for Apline JVM docker image compatibility 
 enablePlugins(AshScriptPlugin)
 // a special crossProject for configuring a JS/JVM/shared structure
+import sbtcrossproject.CrossPlugin.autoImport.{crossProject, CrossType}
+
 lazy val shared = (crossProject.crossType(CrossType.Pure) in file("shared"))
   .settings(
     scalaVersion := Settings.versions.scala,
