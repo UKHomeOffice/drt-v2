@@ -5,7 +5,7 @@ pipeline:
     #image: quay.io/ukhomeofficedigital/scala-sbt:latest
     commands:
       - /root/entrypoint.sh
-      - sbt --warn test docker:stage
+      - sbt --error test docker:stage
     environment:
       - ARTIFACTORY_USERNAME=drt_ci
     secrets:
@@ -13,10 +13,7 @@ pipeline:
     when:
       event:
         - push
-<<<<<<< HEAD
-=======
       brach: !master    
->>>>>>> master
 
   sonar-scanner:
     image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
@@ -36,11 +33,7 @@ pipeline:
       - latest
     when:
       event: push
-<<<<<<< HEAD
       branch: master
-=======
-      branch: drone
->>>>>>> master
 
   build_tag:
     environment:
