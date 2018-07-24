@@ -5,7 +5,7 @@ pipeline:
     #image: quay.io/ukhomeofficedigital/scala-sbt:latest
     commands:
       - /root/entrypoint.sh
-      - sbt  test #docker:stage
+      - sbt test docker:stage
     environment:
       - ARTIFACTORY_USERNAME=drt_ci
     secrets:
@@ -19,7 +19,6 @@ pipeline:
     when:
       event:
         - push
-        - pull_request
 
   build_docker:
     environment:
@@ -33,6 +32,7 @@ pipeline:
       - latest
     when:
       event: push
+      branch: master
 
   build_tag:
     environment:
