@@ -12,7 +12,7 @@ import akka.util.{ByteString, Timeout}
 import boopickle.CompositePickler
 import boopickle.Default._
 import buildinfo.BuildInfo
-import com.google.inject.{Inject, Singleton}
+import javax.inject.{Singleton, Inject}
 import com.typesafe.config.ConfigFactory
 import drt.http.ProdSendAndReceive
 import drt.shared.CrunchApi.{groupCrunchMinutesByX, _}
@@ -152,7 +152,7 @@ trait UserRoleProviderLike {
   def getRoles(config: Configuration, headers: Headers, session: Session): List[String]
 }
 
-
+@Singleton
 class Application @Inject()(implicit val config: Configuration,
                             implicit val mat: Materializer,
                             env: Environment,
