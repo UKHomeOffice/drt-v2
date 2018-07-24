@@ -3,7 +3,6 @@ import sbt.Keys._
 import sbt.Project.projectToRef
 
 scalaVersion := Settings.versions.scala
-logLevel := Level.Error
 
 // uncomment the following to get a breakdown  of where build time is spent
 //enablePlugins(net.virtualvoid.optimizer.SbtOptimizerPlugin)
@@ -81,7 +80,6 @@ lazy val server = (project in file("server"))
   .disablePlugins(PlayLayoutPlugin) // use the standard directory layout instead of Play's custom
   .settings(
   name := "drt",
-  ivyLoggingLevel := UpdateLogging.Quiet,
   version := Settings.version,
   scalaVersion := Settings.versions.scala,
   scalacOptions ++= Settings.scalacOptions,
