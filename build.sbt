@@ -3,6 +3,7 @@ import sbt.Keys._
 import sbt.Project.projectToRef
 
 scalaVersion := Settings.versions.scala
+logLevel := Level.Error
 
 // uncomment the following to get a breakdown  of where build time is spent
 //enablePlugins(net.virtualvoid.optimizer.SbtOptimizerPlugin)
