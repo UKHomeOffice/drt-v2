@@ -13,7 +13,7 @@ pipeline:
     when:
       event:
         - push
-      brach: !master    
+      brach: drone    
 
   sonar-scanner:
     image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
