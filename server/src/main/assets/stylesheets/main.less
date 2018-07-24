@@ -1562,6 +1562,21 @@ a i.fa.fa-remove {
   cursor: default;
 }
 
+.data-updates {
+  float: left;
+  display: block;
+  width: 371px;
+  margin: 5px;
+  padding: 0px 0px 10px 15px;
+  /*min-height: 80px;*/
+  background-color: #CCFFCC;
+}
+
+.data-updates .data-summary {
+  list-style-type: none;
+  padding: 0px 10px;
+}
+
 .feed-status {
   float: left;
   display: block;
@@ -1573,6 +1588,10 @@ a i.fa.fa-remove {
 
 .feed-status.green {
   background-color: #CCFFCC;
+}
+
+.feed-status.amber {
+  background-color: #FFEBBD;
 }
 
 .feed-status.red {
@@ -1609,4 +1628,20 @@ a i.fa.fa-remove {
 .vert-align > div {
   display: table-cell;
   vertical-align: middle;
+}
+
+.navbar-nav li.red .fa-bar-chart {
+    color: #f55;
+}
+
+.navbar-nav li.amber .fa-bar-chart  {
+    color: #F7901E;
+}
+
+.navbar-nav li.green .fa-bar-chart  {
+    color: #008000;
+}
+
+.key-cloak-users td {
+  padding: 10px;
 }

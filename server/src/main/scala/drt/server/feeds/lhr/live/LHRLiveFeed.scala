@@ -4,14 +4,13 @@ import akka.NotUsed
 import akka.actor.{ActorSystem, Cancellable}
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
-import drt.chroma.DiffingStage
 import drt.http.{ProdSendAndReceive, WithSendAndReceive}
 import drt.shared.Arrival
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.util.StringUtils
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, ArrivalsFeedResponse}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import services.graphstages.Crunch
 import spray.client.pipelining.{Get, addHeader, unmarshal, _}
@@ -19,7 +18,6 @@ import spray.http.{HttpRequest, HttpResponse}
 import spray.httpx.SprayJsonSupport
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
-import scala.collection.immutable
 import scala.concurrent.duration.{FiniteDuration, _}
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
@@ -234,8 +232,9 @@ object LHRLiveFeed {
 
     val pollFrequency = 6 minutes
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
-    val tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
-      .map((_) => {
+
+    Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
+      .map(_ => {
         log.info(s"About to poll for LHR live flights")
         Try(Await.result(LHRFetcher.arrivals, 3 minutes)) match {
           case Success(arrivals) =>
@@ -245,8 +244,6 @@ object LHRLiveFeed {
             ArrivalsFeedFailure(exception.toString, SDate.now())
         }
       })
-
-    tickingSource.via(DiffingStage.DiffLists)
   }
 
 }

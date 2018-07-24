@@ -109,7 +109,7 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
       ApiSplits(Set(), SplitSources.TerminalAverage, None, Percentage),
       apiSplits)
 
-    val expected = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, expectedSplits, None)))
+    val expected = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, expectedSplits, None)), Set())
 
     probe.fishForMessage(10 seconds) {
       case fs: FlightsWithSplits =>

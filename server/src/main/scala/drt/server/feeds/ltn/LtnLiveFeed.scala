@@ -5,23 +5,24 @@ import akka.actor.{ActorSystem, Cancellable}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
-import akka.stream.ActorMaterializer
+import akka.stream.{ActorMaterializer, Materializer}
 import akka.stream.scaladsl.Source
 import drt.shared.Arrival
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, ArrivalsFeedResponse}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
-case class LtnLiveFeed(endPoint: String, token: String, username: String, password: String, timeZone: DateTimeZone) {
+case class LtnLiveFeed(endPoint: String, token: String, username: String, password: String, timeZone: DateTimeZone)(implicit actorSystem: ActorSystem, materializer: Materializer) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source
@@ -42,10 +43,6 @@ case class LtnLiveFeed(endPoint: String, token: String, username: String, passwo
       ),
       entity = HttpEntity.Empty
     )
-
-    implicit val system: ActorSystem = ActorSystem()
-    implicit val materializer: ActorMaterializer = ActorMaterializer()
-    import scala.concurrent.ExecutionContext.Implicits.global
 
     val responseFuture = Http()
       .singleRequest(request)

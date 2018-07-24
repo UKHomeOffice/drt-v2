@@ -81,7 +81,33 @@ case class ResponseToArrivals(data: Array[Byte], locationOption: Option[String] 
   }
 
   def parseStatus(n: Node): String = {
-    ((n \ "FlightLeg").head \ "LegData").head \ "OperationalStatus" text
+    val aidxCodeOrIdahoCode = ((n \ "FlightLeg").head \ "LegData").head \ "OperationalStatus" text
+
+    aidxCodeOrIdahoCode match {
+      case "DV" => "Diverted"
+      case "DX" | "CX" => "Cancelled"
+      case "EST" | "ES" => "Estimated"
+      case "EXP" | "EX" => "Expected"
+      case "FRB" | "FB" => "First Bag Delivered"
+      case "LAN" | "LD" => "Landed"
+      case "LSB" | "LB" => "Last Bag Delivered"
+      case "NIT" | "NI" => "Next Information Time"
+      case "ONB" | "OC" => "On Chocks"
+      case "OVS" | "OV" => "Overshoot"
+      case "REM" | "**" => "Deleted / Removed Flight Record"
+      case "SCT" | "SH" => "Scheduled"
+      case "TEN" | "FS" => "Final Approach"
+      case "THM" | "ZN" => "Zoning"
+      case "UNK" | "??" => "Unknown"
+      case "FCT" | "LC" => "Last Call (Departure Only)"
+      case "BST" | "BD" => "Boarding (Departure Only)"
+      case "GCL" | "GC" => "Gate Closed (Departure Only)"
+      case "GOP" | "GO" => "Gate Opened (Departure Only)"
+      case "RST" | "RS" => "Return to Stand (Departure Only)"
+      case "OFB" | "TX" => "Taxied (Departure Only)"
+      case "TKO" | "AB" => "Airborne (Departure Only)"
+      case unknownCode => unknownCode
+     }
   }
 
   def parseOrigin(n: Node): String = {

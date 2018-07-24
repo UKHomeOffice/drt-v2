@@ -3,13 +3,13 @@ package actors
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
 import akka.pattern.AskableActorRef
-import akka.stream.ActorMaterializer
+import akka.stream.{ActorMaterializer, Materializer}
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import controllers.{Deskstats, PaxFlow}
+import controllers.{Deskstats, PaxFlow, UserRoleProviderLike}
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
-import drt.chroma.{ChromaFeedType, ChromaForecast, ChromaLive, DiffingStage}
+import drt.chroma._
 import drt.http.ProdSendAndReceive
 import drt.server.feeds.bhx.{BHXForecastFeed, BHXLiveFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
@@ -23,6 +23,7 @@ import drt.shared._
 import org.apache.spark.sql.SparkSession
 import org.joda.time.DateTimeZone
 import play.api.Configuration
+import play.api.mvc.{Headers, Session}
 import server.feeds.acl.AclFeed
 import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse}
 import services.PcpArrival.{GateOrStand, GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
@@ -39,7 +40,7 @@ import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
-trait DrtSystemInterface {
+trait DrtSystemInterface extends UserRoleProviderLike {
   val now: () => SDateLike = () => SDate.now()
 
   val liveCrunchStateActor: ActorRef
@@ -48,6 +49,7 @@ trait DrtSystemInterface {
   val fixedPointsActor: ActorRef
   val staffMovementsActor: ActorRef
 
+
   val aclFeed: AclFeed
 
   def run(): Unit
@@ -55,7 +57,7 @@ trait DrtSystemInterface {
   def getFeedStatus(): Future[Seq[FeedStatuses]]
 }
 
-case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig) extends DrtSystemInterface {
+case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig)(implicit actorMaterializer: Materializer) extends DrtSystemInterface {
 
   implicit val system: ActorSystem = actorSystem
 
@@ -78,7 +80,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
   val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
-  val actorMaterializer = ActorMaterializer()
 
   val purgeOldLiveSnapshots = false
   val purgeOldForecastSnapshots = true
@@ -118,6 +119,11 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   system.log.info(s"useNationalityBasedProcessingTimes: $useNationalityBasedProcessingTimes")
   system.log.info(s"useSplitsPrediction: $useSplitsPrediction")
 
+  def getRoles(config: Configuration, headers: Headers, session: Session): List[String] =
+    if (config.getOptional[String]("feature-flags.super-user-mode").isDefined) {
+      system.log.info(s"Using Super User Roles")
+      availableRoles
+    } else userRolesFromHeader(headers)
 
   def run(): Unit = {
     val futurePortStates: Future[(Option[PortState], Option[PortState], Option[Set[Arrival]], Option[Set[Arrival]], Option[Set[Arrival]])] = {
@@ -151,7 +157,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
     val statuses = actors
       .map(askable => askable.ask(GetFeedStatuses)(new Timeout(5 seconds)).map {
-        case Some(fs: FeedStatuses) => Option(fs)
+        case Some(fs: FeedStatuses) if fs.hasConnectedAtLeastOnce => Option(fs)
         case _ => None
       })
 
@@ -188,7 +194,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
                        ): CrunchSystem[Cancellable, NotUsed] = {
 
     val crunchInputs = CrunchSystem(CrunchProps(
-      system = system,
       airportConfig = airportConfig,
       pcpArrival = pcpArrivalTimeCalculator,
       historicalSplitsProvider = historicalSplitsProvider,
@@ -363,6 +368,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     Source.tick(10 seconds, 1 hour, {
       system.log.info(s"LHR Forecast: ticking")
       lhrForecastFeed.requestFeed
-    }).via(DiffingStage.DiffLists)
+    })
   }
 }

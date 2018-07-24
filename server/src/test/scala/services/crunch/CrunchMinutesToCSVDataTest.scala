@@ -2,12 +2,18 @@ package services.crunch
 
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
 import drt.shared.Queues
+import org.specs2.matcher.Scope
 import org.specs2.mutable.Specification
 import services.{CSVData, SDate}
 
 class CrunchMinutesToCSVDataTest extends Specification {
 
-  "Given a set of crunch minutes for a terminal, we should receive a CSV for that terminals data" >> {
+  trait Context extends Scope {
+    val header =  """|Date,,Q1,Q1,Q1,Q1,Q1,Q2,Q2,Q2,Q2,Q2,Q3,Q3,Q3,Q3,Q3,Misc,Moves,PCP Staff,PCP Staff
+         |,Start,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Desks req,Act. wait time,Act. desks,Staff req,Staff movements,Avail,Req"""
+  }
+
+  "Given a set of crunch minutes for a terminal, we should receive a CSV for that terminals data" in new Context {
     val startDateTime = SDate("2017-11-10T00:00:00Z")
     val cms = Set(
       CrunchMinute("T1", "Q1", startDateTime.millisSinceEpoch, 1.1, 1, deskRec = 1, 1),
@@ -23,14 +29,13 @@ class CrunchMinutesToCSVDataTest extends Specification {
     val result = CSVData.terminalCrunchMinutesToCsvDataWithHeadings(cms, staffMins, "T1", List("Q1", "Q2", "Q3"))
 
     val expected =
-      """|Date,,Q1,Q1,Q1,Q1,Q1,Q2,Q2,Q2,Q2,Q2,Q3,Q3,Q3,Q3,Q3,Misc,PCP Staff,PCP Staff
-         |,Start,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Desks req,Act. wait time,Act. desks,Staff req,Avail,Req
-         |2017-11-10,00:00,1,1,1,,,1,1,1,,,1,1,1,,,1,4,4""".stripMargin
+      s"""$header
+         |2017-11-10,00:00,1,1,1,,,1,1,1,,,1,1,1,,,1,-1,4,4""".stripMargin
 
     result === expected
   }
 
-  "Given a set of crunch minutes for a terminal, we should get the result back in 15 minute increments" >> {
+  "Given a set of crunch minutes for a terminal, we should get the result back in 15 minute increments" in new Context {
     val startDateTime = SDate("2017-11-10T00:00:00Z")
 
     val t15mins = startDateTime.addMinutes(15).millisSinceEpoch
@@ -52,15 +57,14 @@ class CrunchMinutesToCSVDataTest extends Specification {
     val result = CSVData.terminalCrunchMinutesToCsvDataWithHeadings(cms, staffMins, "T1", List("Q1", "Q2", "Q3"))
 
     val expected =
-      """|Date,,Q1,Q1,Q1,Q1,Q1,Q2,Q2,Q2,Q2,Q2,Q3,Q3,Q3,Q3,Q3,Misc,PCP Staff,PCP Staff
-         |,Start,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Desks req,Act. wait time,Act. desks,Staff req,Avail,Req
-         |2017-11-10,00:00,15,1,1,,,15,1,1,,,15,1,1,,,1,4,4
-         |2017-11-10,00:15,1,1,1,,,1,1,1,,,1,1,1,,,1,4,4""".stripMargin
+      s"""$header
+         |2017-11-10,00:00,15,1,1,,,15,1,1,,,15,1,1,,,1,-1,4,4
+         |2017-11-10,00:15,1,1,1,,,1,1,1,,,1,1,1,,,1,-1,4,4""".stripMargin
 
     result === expected
   }
 
-  "When exporting data, column names and order must exactly match V1" >> {
+  "When exporting data, column names and order must exactly match V1" in {
     val startDateTime = SDate("2017-11-10T00:00:00Z")
     val cms = Set(
       CrunchMinute("T1", Queues.EeaDesk, startDateTime.millisSinceEpoch, 1.0, 2.0, deskRec = 1, 100, Option(2), Option(100), Option(2), Option(100)),
@@ -72,9 +76,9 @@ class CrunchMinutesToCSVDataTest extends Specification {
       StaffMinute("T1", startDateTime.millisSinceEpoch, 5, fixedPoints = 1, movements = -1)
     )
 
-    val expected = """|Date,,EEA,EEA,EEA,EEA,EEA,Non-EEA,Non-EEA,Non-EEA,Non-EEA,Non-EEA,e-Gates,e-Gates,e-Gates,e-Gates,e-Gates,Misc,PCP Staff,PCP Staff
-                      |,Start,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Staff req,Act. wait time,Act. desks,Staff req,Avail,Req
-                      |2017-11-10,00:00,1,100,1,100,2,1,100,1,100,2,1,100,1,100,2,1,4,4""".stripMargin
+    val expected = """|Date,,EEA,EEA,EEA,EEA,EEA,Non-EEA,Non-EEA,Non-EEA,Non-EEA,Non-EEA,e-Gates,e-Gates,e-Gates,e-Gates,e-Gates,Misc,Moves,PCP Staff,PCP Staff
+                      |,Start,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Staff req,Act. wait time,Act. desks,Staff req,Staff movements,Avail,Req
+                      |2017-11-10,00:00,1,100,1,100,2,1,100,1,100,2,1,100,1,100,2,1,-1,4,4""".stripMargin
 
     val result = CSVData.terminalCrunchMinutesToCsvDataWithHeadings(cms, staffMins, "T1", Queues.exportQueueOrderSansFastTrack)
 
@@ -93,7 +97,7 @@ class CrunchMinutesToCSVDataTest extends Specification {
       StaffMinute("T1", startDateTime.millisSinceEpoch, 5, fixedPoints = 1, movements = -1)
     )
 
-    val expected = """2017-11-10,00:00,1,100,1,100,2,1,100,1,100,2,1,100,1,100,2,1,4,4""".stripMargin
+    val expected = """2017-11-10,00:00,1,100,1,100,2,1,100,1,100,2,1,100,1,100,2,1,-1,4,4""".stripMargin
 
     val result = CSVData.terminalCrunchMinutesToCsvData(cms, staffMins, "T1", Queues.exportQueueOrderSansFastTrack)
 

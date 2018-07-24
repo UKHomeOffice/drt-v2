@@ -44,9 +44,7 @@ object SnapshotSelector {
   }
 
   implicit val stateReuse: Reusability[State] = Reusability.by(_.hashCode())
-  implicit val propsReuse: Reusability[Props] = Reusability.by(p =>
-    (p.loadingState.isLoading)
-  )
+  implicit val propsReuse: Reusability[Props] = Reusability.by(p => p.loadingState.isLoading)
 
   val component = ScalaComponent.builder[Props]("SnapshotSelector")
     .initialStateFromProps(
