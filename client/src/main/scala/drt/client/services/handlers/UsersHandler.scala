@@ -18,7 +18,7 @@ class UsersHandler[M](modelRW: ModelRW[M, Pot[List[KeyCloakUser]]]) extends Logg
     case GetKeyCloakUsers =>
       effectOnly(Effect(AjaxClient[Api].getKeyCloakUsers().call().map(SetKeyCloakUsers).recoverWith {
         case _ =>
-          log.error(s"CrunchState request failed. Re-requesting after ${PollDelay.recoveryDelay}")
+          log.error(s"GetKeyCloakUsers request failed. Re-requesting after ${PollDelay.recoveryDelay}")
           Future(RetryActionAfter(GetKeyCloakUsers, PollDelay.recoveryDelay))
       }))
 
@@ -28,7 +28,7 @@ class UsersHandler[M](modelRW: ModelRW[M, Pot[List[KeyCloakUser]]]) extends Logg
     case AddUserToGroup(userId, groupName) =>
       effectOnly(Effect(AjaxClient[Api].addUserToGroup(userId, groupName).call().map(_ => GetKeyCloakUsers).recoverWith {
         case _ =>
-          log.error(s"CrunchState request failed. Re-requesting after ${PollDelay.recoveryDelay}")
+          log.error(s"AddUserToGroup request failed. Re-requesting after ${PollDelay.recoveryDelay}")
           Future(RetryActionAfter(AddUserToGroup(userId, groupName), PollDelay.recoveryDelay))
       }))
   }

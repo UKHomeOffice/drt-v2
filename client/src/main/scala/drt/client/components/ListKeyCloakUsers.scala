@@ -13,16 +13,15 @@ object ListKeyCloakUsers {
 
   val component = ScalaComponent.builder[Props]("ListKeyCloakUsers")
     .renderP((scope, p) => {
-      def approveUser(userId: String) = (_: ReactEventFromInput) => {
+      def approveUser(userId: String) = (_: ReactEventFromInput) =>
         Callback(SPACircuit.dispatch(AddUserToGroup(userId, "Approved")))
-      }
+
 
       val keyCloakUsers = SPACircuit.connect(m => m.keyCloakUsers)
       keyCloakUsers(usersMP => {
-        val usersPot: Pot[List[KeyCloakUser]]
-        = usersMP()
+        val usersPot: Pot[List[KeyCloakUser]] = usersMP()
         <.div(
-          usersPot.renderReady(users => {
+          usersPot.renderReady(users =>
            <.table(^.className := "key-cloak-users",
              users.map( user => <.tr(
                <.td(user.firstName),
@@ -31,7 +30,7 @@ object ListKeyCloakUsers {
                <.td(<.button("Approve", ^.className := "btn btn-primary", ^.onClick ==> approveUser(user.id)))
              )
            ).toTagMod)
-          })
+          )
         )
       })
     }
@@ -44,10 +43,7 @@ object KeyCloakUsersPage {
   case class Props()
 
   val component = ScalaComponent.builder[Props]("ListKeyCloakUsers")
-    .render_P(p => {
-      <.div(ListKeyCloakUsers())
-    }
-    ).build
+    .render_P(p => <.div(ListKeyCloakUsers())).build
 
   def apply(): VdomElement = component(Props())
 }

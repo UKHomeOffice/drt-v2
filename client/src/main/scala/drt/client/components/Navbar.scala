@@ -8,10 +8,10 @@ import org.scalajs.dom.html
 
 object Navbar {
   def apply(ctl: RouterCtl[Loc], page: Loc): VdomTagOf[html.Element] = {
-    val menueModelRCP = SPACircuit.connect(m => (m.airportConfig, m.feedStatuses, m.userRoles))
+    val menuModelRCP = SPACircuit.connect(m => (m.airportConfig, m.feedStatuses, m.userRoles))
 
     <.nav(^.className := "navbar navbar-default",
-      menueModelRCP(menuModelPotMP => {
+      menuModelRCP(menuModelPotMP => {
         val (airportConfigPot, feedStatusesPot, userRolesPot) = menuModelPotMP()
         <.div(^.className := "container",
           airportConfigPot.render(airportConfig => {
