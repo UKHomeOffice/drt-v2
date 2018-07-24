@@ -14,11 +14,14 @@ import boopickle.Default._
 import buildinfo.BuildInfo
 import com.google.inject.{Inject, Singleton}
 import com.typesafe.config.ConfigFactory
+import drt.http.ProdSendAndReceive
 import drt.shared.CrunchApi.{groupCrunchMinutesByX, _}
 import drt.shared.FlightsApi.TerminalName
+import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
 import drt.staff.ImportStaff
+import drt.users.KeyCloakClient
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.{HeaderNames, HttpEntity}
@@ -34,7 +37,7 @@ import services.shifts.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import services.{SDate, _}
-import test.{MockRoles, TestDrtSystem}
+import test.TestDrtSystem
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -142,7 +145,7 @@ class NoCacheFilter @Inject()(
 trait UserRoleProviderLike {
   val log = LoggerFactory.getLogger(getClass)
 
-  val availableRoles = List("staff:edit", "drt:team")
+  val availableRoles = List("staff:edit", "drt:team", "manage-users")
 
   def userRolesFromHeader(headers: Headers): List[String] = headers.get("X-Auth-Roles").map(_.split(",").toList).getOrElse(List())
 
@@ -197,8 +200,6 @@ class Application @Inject()(implicit val config: Configuration,
                headers: Headers,
                session: Session
              ): ApiService = new ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor, headers, session) {
-
-      log.info(s"Session inside service: $session")
 
       override implicit val timeout: Timeout = Timeout(5 seconds)
 
@@ -299,6 +300,29 @@ class Application @Inject()(implicit val config: Configuration,
             log.info(s"Shifts: Retrieved shifts from actor for month starting: ${SDate(month).toISOString()}")
             StaffTimeSlots.getShiftsForMonth(shifts, SDate(month, Crunch.europeLondonTimeZone), terminalName)
         }
+      }
+
+      def keyCloakClient = {
+        val token = headers.get("X-Auth-Token").getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
+        val keyCloakUrl = config.getOptional[String]("key-cloak.url").getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
+        new KeyCloakClient(token, keyCloakUrl, actorSystem) with ProdSendAndReceive
+      }
+
+      def getKeyCloakUsers(): Future[List[KeyCloakUser]] = {
+        log.info(s"Got these roles: ${getUserRoles}")
+        if (getUserRoles.contains("manage-users")) {
+          keyCloakClient.getUsersNotInGroup("Approved")
+        } else throw new Exception("You do not have permission manage users")
+      }
+
+      def addUserToGroup(userId: String, groupName: String): Unit = {
+        if (getUserRoles.contains("manage-users")) {
+          val futureGroupId: Future[Option[KeyCloakGroup]] = keyCloakClient.getGroups().map(_.find(_.name == groupName))
+          futureGroupId.map {
+            case Some(group) => keyCloakClient.addUserToGroup(userId, group.id)
+            case None => log.error(s"Unable to add $userId to $groupName")
+          }
+        } else throw new Exception("You do not have permission manage users")
       }
 
       override def liveCrunchStateActor: AskableActorRef = ctrl.liveCrunchStateActor

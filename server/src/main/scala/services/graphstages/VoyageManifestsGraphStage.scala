@@ -42,7 +42,12 @@ case class DqManifests(lastSeenFileName: String, manifests: Set[VoyageManifest])
   }
 }
 
-class VoyageManifestsGraphStage(bucketName: String, portCode: String, initialLastSeenFileName: String, minCheckIntervalMillis: MillisSinceEpoch = 30000)(implicit actorSystem: ActorSystem, materializer: Materializer) extends GraphStage[SourceShape[ManifestsFeedResponse]] {
+class VoyageManifestsGraphStage(bucketName: String,
+                                portCode: String,
+                                initialLastSeenFileName: String,
+                                minCheckIntervalMillis: MillisSinceEpoch = 30000)
+                               (implicit actorSystem: ActorSystem,
+                                materializer: Materializer) extends GraphStage[SourceShape[ManifestsFeedResponse]] {
   val out: Outlet[ManifestsFeedResponse] = Outlet("manifestsOut")
   override val shape: SourceShape[ManifestsFeedResponse] = SourceShape(out)
 
@@ -113,7 +118,7 @@ class VoyageManifestsGraphStage(bucketName: String, portCode: String, initialLas
         lastSeenFileName = latestFileName
         ManifestsFeedSuccess(DqManifests(latestFileName, maybeManifests.flatten), SDate.now())
       case Failure(t) =>
-        log.warn(s"Failed to fetch new manifests: $t")
+        log.warn(s"Failed to fetch new manifests: ${t.getStackTrace}")
         ManifestsFeedFailure(t.toString, SDate.now())
     }
   }
@@ -124,7 +129,7 @@ class VoyageManifestsGraphStage(bucketName: String, portCode: String, initialLas
       .mapAsync(64) { filename =>
         log.info(s"Fetching $filename")
         val zipByteStream = S3StreamBuilder(s3Client).getFileAsStream(bucketName, filename)
-        Future(fileNameAndContentFromZip(filename, zipByteStream, Option(portCode), None))
+        Future(fileNameAndContentFromZip(filename, zipByteStream, portCode, None))
       }
       .mapConcat(identity)
       .runWith(Sink.seq[(String, Option[VoyageManifest])])
@@ -136,42 +141,39 @@ class VoyageManifestsGraphStage(bucketName: String, portCode: String, initialLas
 
   def fileNameAndContentFromZip[X](zipFileName: String,
                                    zippedFileByteStream: Source[ByteString, X],
-                                   maybePort: Option[String],
-                                   maybeAirlines: Option[List[String]]): Seq[(String, Option[VoyageManifest])] = {
+                                   port: String,
+                                   maybeAirlines: Option[List[String]]): List[(String, Option[VoyageManifest])] = {
     val inputStream: InputStream = zippedFileByteStream.runWith(
       StreamConverters.asInputStream()
     )
     val zipInputStream = new ZipInputStream(inputStream)
-    val jsonFiles = Stream
+    val zipFilesAndMaybeManifests = Stream
       .continually(zipInputStream.getNextEntry)
       .takeWhile(_ != null)
+      .map { _ =>
+        val buffer = new Array[Byte](4096)
+        val stringBuffer = new ArrayBuffer[Byte]()
+        var len: Int = zipInputStream.read(buffer)
 
-    val dcCount = jsonFiles.count(jsonFile => jsonFile.getName.split("_")(4) == DqEventCodes.DepartureConfirmed)
-    val ciCount = jsonFiles.count(jsonFile => jsonFile.getName.split("_")(4) == DqEventCodes.CheckIn)
-
-    log.info(s"$zipFileName contains $dcCount DC and $ciCount CI messages")
-
-    val maybeManifests = jsonFiles
-      .map(jsonFile => if (jsonFile.getName.split("_")(4) == DqEventCodes.DepartureConfirmed) Some(jsonFile) else None)
-      .map {
-        case Some(_) =>
-          val buffer = new Array[Byte](4096)
-          val stringBuffer = new ArrayBuffer[Byte]()
-          var len: Int = zipInputStream.read(buffer)
-
-          while (len > 0) {
-            stringBuffer ++= buffer.take(len)
-            len = zipInputStream.read(buffer)
-          }
-          val content: String = new String(stringBuffer.toArray, UTF_8)
-          val tryManifest = VoyageManifestParser.parseVoyagePassengerInfo(content)
-
-          (zipFileName, tryManifest.toOption)
-        case _ =>
-          (zipFileName, None)
+        while (len > 0) {
+          stringBuffer ++= buffer.take(len)
+          len = zipInputStream.read(buffer)
+        }
+        val content: String = new String(stringBuffer.toArray, UTF_8)
+        VoyageManifestParser.parseVoyagePassengerInfo(content) match {
+          case Success(m) =>
+            if (m.EventCode == DqEventCodes.DepartureConfirmed && m.ArrivalPortCode == port) {
+              log.info(s"Using ${m.EventCode} manifest for ${m.ArrivalPortCode} arrival ${m.flightCode}")
+              (zipFileName, Option(m))
+            } else (zipFileName, None)
+        }
       }
+      .toList
 
-    maybeManifests
+    val relevantCount = zipFilesAndMaybeManifests.count { case (_, maybeVm) => maybeVm.isDefined }
+    log.info(s"$relevantCount relevant manifests out of ${zipFilesAndMaybeManifests.length} received in $zipFileName")
+
+    zipFilesAndMaybeManifests
   }
 
   def filterToFilesNewerThan(filesSource: Source[String, NotUsed], latestFile: String): Source[String, NotUsed] = {

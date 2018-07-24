@@ -13,6 +13,10 @@ pipeline:
     when:
       event:
         - push
+<<<<<<< HEAD
+=======
+      brach: !master    
+>>>>>>> master
 
   sonar-scanner:
     image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
@@ -32,7 +36,11 @@ pipeline:
       - latest
     when:
       event: push
+<<<<<<< HEAD
       branch: master
+=======
+      branch: drone
+>>>>>>> master
 
   build_tag:
     environment:

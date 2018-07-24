@@ -6,6 +6,7 @@ import diode.Action
 import drt.client.services.{StaffAssignment, ViewMode}
 import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, ForecastPeriodWithHeadlines}
 import drt.shared.FlightsApi._
+import drt.shared.KeyCloakApi.KeyCloakUser
 import drt.shared._
 
 import scala.concurrent.duration.FiniteDuration
@@ -97,5 +98,11 @@ object Actions {
   case class RetryActionAfter(action: Action, delay: FiniteDuration) extends Action
 
   case class DoNothing() extends Action
+
+  case object GetKeyCloakUsers extends Action
+
+  case class SetKeyCloakUsers(users: List[KeyCloakUser]) extends Action
+
+  case class AddUserToGroup(userId: String, groupName: String) extends Action
 
 }

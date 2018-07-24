@@ -3,9 +3,8 @@ package drt.client.components
 import drt.client.SPAMain._
 import drt.client.components.Icon._
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.SPACircuit
-import drt.shared._
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
@@ -17,11 +16,13 @@ import scala.collection.immutable
 object MainMenu {
   @inline private def bss: BootstrapStyles.type = GlobalStyles.bootstrapStyles
 
-  case class Props(router: RouterCtl[Loc], currentLoc: Loc, feeds: Seq[FeedStatuses])
+  case class Props(router: RouterCtl[Loc], currentLoc: Loc, feeds: Seq[FeedStatuses], airportConfig: AirportConfig, roles: Seq[String])
 
   case class MenuItem(idx: Int, label: Props => VdomNode, icon: Icon, location: Loc, classes: List[String] = List())
 
-  val dashboardMenuItem = MenuItem(0, _ => "Dashboard", Icon.dashboard, TerminalsDashboardLoc(None))
+  val dashboardMenuItem: MenuItem = MenuItem(0, _ => "Dashboard", Icon.dashboard, TerminalsDashboardLoc(None))
+
+  def usersMenuItem(position: Int): MenuItem = MenuItem(position, _ => "Users", Icon.users, KeyCloakUsersLoc)
 
   def statusMenuItem(position: Int, feeds: Seq[FeedStatuses]): MenuItem = MenuItem(position, _ => s"Feeds", Icon.barChart, StatusLoc, List(feedsRag(feeds)))
 
@@ -33,7 +34,11 @@ object MainMenu {
     rag.toString
   }
 
-  def menuItems(airportConfig: AirportConfig, currentLoc: Loc, userRoles: List[String], feeds: Seq[FeedStatuses]): List[MenuItem] = {
+  val restrictedMenuItems = List(
+    ("manage-users", usersMenuItem _)
+  )
+
+  def menuItems(airportConfig: AirportConfig, currentLoc: Loc, userRoles: Seq[String], feeds: Seq[FeedStatuses]): List[MenuItem] = {
     def terminalDepsMenuItems(idxOffset: Int): List[MenuItem] = airportConfig.terminalNames.zipWithIndex.map {
       case (tn, idx) =>
         val targetLoc = currentLoc match {
@@ -44,9 +49,22 @@ object MainMenu {
         MenuItem(idx + idxOffset, _ => tn, Icon.calculator, targetLoc)
     }.toList
 
-    val nonTerminalMenuItems = dashboardMenuItem :: Nil
+    val nonTerminalUnrestrictedMenuItems = dashboardMenuItem :: Nil
 
+    val itemsForLoggedInUser: List[MenuItem] = restrictedMenuItemsForRole(userRoles, nonTerminalUnrestrictedMenuItems.length)
+
+    val nonTerminalMenuItems = nonTerminalUnrestrictedMenuItems ::: itemsForLoggedInUser
     (nonTerminalMenuItems ::: terminalDepsMenuItems(nonTerminalMenuItems.length)) :+ statusMenuItem(nonTerminalMenuItems.length + airportConfig.terminalNames.length, feeds)
+  }
+
+  private def restrictedMenuItemsForRole(roles: Seq[String], startIndex: Int): List[MenuItem] = {
+    val itemsForLoggedInUser = restrictedMenuItems.collect {
+      case (role, menuItemCallback) if roles.contains(role) => menuItemCallback
+    }.zipWithIndex.map {
+      case (menuItemCallback, index) =>
+        menuItemCallback(startIndex + index)
+    }
+    itemsForLoggedInUser
   }
 
   def lastUpdatedDescription(maybeLastUpdated: Option[MillisSinceEpoch]): String = maybeLastUpdated.map(lastUpdated => {
@@ -57,25 +75,19 @@ object MainMenu {
 
   private class Backend($: BackendScope[Props, Unit]) {
     def render(props: Props) = {
-      val airportConfigAndRoles = SPACircuit.connect(m => (m.airportConfig, m.userRoles))
-
-      airportConfigAndRoles(airportConfigAndRolesPotMP => {
-        val (airportConfigPot, userRolesPot) = airportConfigAndRolesPotMP()
-        <.div(
-          airportConfigPot.render(airportConfig => {
-            val children: immutable.Seq[TagOf[LI]] = for (item <- menuItems(airportConfig, props.currentLoc, userRolesPot.getOrElse(List()), props.feeds)) yield {
-              val active = (props.currentLoc, item.location) match {
-                case (TerminalPageTabLoc(tn, _, _, _, _, _), TerminalPageTabLoc(tni, _, _, _, _, _)) => tn == tni
-                case (current, itemLoc) => current == itemLoc
-              }
-              val classes = List(("active", active))
-              <.li(^.key := item.idx, ^.classSet(classes: _*), ^.className := item.classes.mkString(" "),
-                props.router.link(item.location)(item.icon, " ", item.label(props))
-              )
-            }
-            <.ul(^.classSet(bss.navbarClsSet.map(cn => (cn, true)): _*), ^.className := "mr-auto")(children.toTagMod)
-          }))
-      })
+      val children: immutable.Seq[TagOf[LI]] = for (item <- menuItems(props.airportConfig, props.currentLoc, props.roles, props.feeds)) yield {
+        val active = (props.currentLoc, item.location) match {
+          case (TerminalPageTabLoc(tn, _, _, _, _, _), TerminalPageTabLoc(tni, _, _, _, _, _)) => tn == tni
+          case (current, itemLoc) => current == itemLoc
+        }
+        val classes = List(("active", active))
+        <.li(^.key := item.idx, ^.classSet(classes: _*), ^.className := item.classes.mkString(" "),
+          props.router.link(item.location)(item.icon, " ", item.label(props))
+        )
+      }
+      <.div(
+        <.ul(^.classSet(bss.navbarClsSet.map(cn => (cn, true)): _*), ^.className := "mr-auto")(children.toTagMod)
+      )
     }
   }
 
@@ -83,5 +95,6 @@ object MainMenu {
     .renderBackend[Backend]
     .build
 
-  def apply(ctl: RouterCtl[Loc], currentLoc: Loc, feeds: Seq[FeedStatuses]): VdomElement = component(Props(ctl, currentLoc, feeds))
+  def apply(ctl: RouterCtl[Loc], currentLoc: Loc, feeds: Seq[FeedStatuses], airportConfig: AirportConfig, roles: Seq[String]): VdomElement
+  = component(Props(ctl, currentLoc, feeds, airportConfig, roles))
 }
