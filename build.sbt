@@ -32,6 +32,7 @@ lazy val elideOptions = settingKey[Seq[String]]("Set limit for elidable function
 lazy val client: Project = (project in file("client"))
   .settings(
     name := "client",
+    ivyLoggingLevel := UpdateLogging.Quiet,
     version := Settings.version,
     scalaVersion := Settings.versions.scala,
     scalacOptions ++= Settings.scalacOptions,
@@ -77,6 +78,7 @@ lazy val server = (project in file("server"))
   .disablePlugins(PlayLayoutPlugin) // use the standard directory layout instead of Play's custom
   .settings(
   name := "drt",
+  ivyLoggingLevel := UpdateLogging.Quiet,
   version := Settings.version,
   scalaVersion := Settings.versions.scala,
   scalacOptions ++= Settings.scalacOptions,
@@ -142,4 +144,3 @@ onLoad in Global := (Command.process("project server", _: State)) compose (onLoa
 // Docker Plugin
 enablePlugins(DockerPlugin)
 updateOptions := updateOptions.value.withConsolidatedResolution(true)
-ivyLoggingLevel := UpdateLogging.Quiet
