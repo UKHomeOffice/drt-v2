@@ -3,7 +3,7 @@ package services.graphstages
 import akka.actor.ActorSystem
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, OutHandler}
-import drt.server.feeds.api.S3ApiProvider
+import drt.server.feeds.api.{ApiProviderLike, S3ApiProvider}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.DqEventCodes
 import org.slf4j.{Logger, LoggerFactory}
@@ -33,7 +33,7 @@ case class DqManifests(lastSeenFileName: String, manifests: Set[VoyageManifest])
 }
 
 class VoyageManifestsGraphStage(portCode: String,
-                                provider: S3ApiProvider,
+                                provider: ApiProviderLike,
                                 initialLastSeenFileName: String,
                                 minCheckIntervalMillis: MillisSinceEpoch = 30000)
                                (implicit actorSystem: ActorSystem,
@@ -94,6 +94,7 @@ class VoyageManifestsGraphStage(portCode: String,
         val (latestFileName, fetchedManifests) = if (fetchedFilesAndManifests.nonEmpty) {
           val lastSeen = fetchedFilesAndManifests.map { case (fileName, _) => fileName }.max
           val manifests = fetchedFilesAndManifests.map { case (_, manifest) => jsonStringToManifest(manifest) }.toSet
+          log.info(s"Got ${manifests.size} manifests")
           (lastSeen, manifests)
         }
         else (startingFileName, Set[Option[VoyageManifest]]())

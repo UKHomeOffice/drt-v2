@@ -13,13 +13,17 @@ import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.mfglabs.commons.aws.s3.{AmazonS3AsyncClient, S3StreamBuilder}
 import org.slf4j.{Logger, LoggerFactory}
 
-import scala.collection.immutable.Seq
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.matching.Regex
 
-case class S3ApiProvider(bucketName: String)(implicit actorSystem: ActorSystem, materializer: Materializer) {
+
+trait ApiProviderLike {
+  def manifestsFuture(latestFile: String): Future[Seq[(String, String)]]
+}
+
+case class S3ApiProvider(bucketName: String)(implicit actorSystem: ActorSystem, materializer: Materializer) extends ApiProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
   val dqRegex: Regex = "(drt_dq_[0-9]{6}_[0-9]{6})(_[0-9]{4}\\.zip)".r
 
@@ -63,8 +67,9 @@ case class S3ApiProvider(bucketName: String)(implicit actorSystem: ActorSystem, 
         }
         new String(stringBuffer.toArray, UTF_8)
       }
+      .toList
 
-    (zipFileName, jsonContents.toList)
+    (zipFileName, jsonContents)
   }
 
   def filterToFilesNewerThan(filesSource: Source[String, NotUsed], latestFile: String): Source[String, NotUsed] = {
