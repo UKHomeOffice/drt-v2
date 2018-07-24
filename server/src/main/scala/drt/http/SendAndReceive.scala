@@ -13,7 +13,7 @@ trait WithSendAndReceive {
 
 trait ProdSendAndReceive extends WithSendAndReceive {
   implicit val system: ActorSystem
-  import system.dispatcher
+
   override def sendAndReceive: SendReceive = sendReceive(system, system.dispatcher, 60.seconds)
 }
 

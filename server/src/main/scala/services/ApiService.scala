@@ -6,6 +6,7 @@ import akka.util.Timeout
 import controllers.{FixedPointPersistence, ShiftPersistence, StaffMovementsPersistence}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.TerminalName
+import drt.shared.KeyCloakApi.KeyCloakUser
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.mvc.{Headers, Session}
@@ -99,5 +100,9 @@ abstract class ApiService(val airportConfig: AirportConfig,
   def isLoggedIn(): Boolean
 
   def getFeedStatuses(): Future[Seq[FeedStatuses]]
+
+  def getKeyCloakUsers() : Future[List[KeyCloakUser]]
+
+  def addUserToGroup(userId: String, groupName: String): Unit
 }
 
