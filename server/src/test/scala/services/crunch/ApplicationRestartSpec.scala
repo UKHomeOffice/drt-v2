@@ -53,7 +53,7 @@ class ApplicationRestartSpec extends CrunchTestLike {
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrivalLive)), SDate.now()))
 
-    crunch.liveTestProbe.expectNoMsg(250 milliseconds)
+    crunch.liveTestProbe.expectNoMessage(250 milliseconds)
 
     true
   }
@@ -108,7 +108,7 @@ class ApplicationRestartSpec extends CrunchTestLike {
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrivalDay1.copy(Estimated = Some(SDate("2018-01-01T00:05").millisSinceEpoch)))), SDate.now()))
 
-    crunch.forecastTestProbe.expectNoMsg(250 milliseconds)
+    crunch.forecastTestProbe.expectNoMessage(250 milliseconds)
 
     true
   }

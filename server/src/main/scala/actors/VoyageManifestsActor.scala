@@ -93,9 +93,9 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapsh
 
       if (updates.nonEmpty) persistManifests(updates) else log.info(s"No new manifests to persist")
 
-      state = VoyageManifestState(manifests = updatedManifests,latestZipFilename = updatedLZF,feedName = name,maybeFeedStatuses = Option(state.addStatus(newStatus)))
-
       if (updatedLZF != state.latestZipFilename) persistLastSeenFileName(updatedLZF)
+
+      state = VoyageManifestState(manifests = updatedManifests,latestZipFilename = updatedLZF,feedName = name,maybeFeedStatuses = Option(state.addStatus(newStatus)))
 
       snapshotIfRequired(state)
       persistFeedStatus(newStatus)
