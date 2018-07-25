@@ -64,33 +64,59 @@ class KeyCloakApiSpec extends TestKit(ActorSystem("testActorSystem", ConfigFacto
       |        }
       |    }]""".stripMargin
 
+val usersMissingOptionalFieldsJson =
+    """[{
+      |        "id": "id_string1",
+      |        "username": "test1@digital.homeoffice.gov.uk",
+      |        "enabled": true,
+      |        "emailVerified": true,
+      |        "firstName": "Man",
+      |        "lastName": "One",
+      |        "email": "test1@digital.homeoffice.gov.uk",
+      |        "requiredActions": [],
+      |        "notBefore": 0
+      |    },
+      |    {
+      |        "id": "id_string2",
+      |        "createdTimestamp": 1516967531289,
+      |        "username": "test2@homeoffice.gsi.gov.uk",
+      |        "enabled": true,
+      |        "totp": false,
+      |        "emailVerified": true,
+      |        "firstName": "Man",
+      |        "lastName": "Two",
+      |        "email": "test2@digital.homeoffice.gov.uk",
+      |        "disableableCredentialTypes": [
+      |            "password"
+      |        ],
+      |        "requiredActions": [],
+      |        "notBefore": 0,
+      |        "access": {
+      |            "manageGroupMembership": true,
+      |            "view": true,
+      |            "mapRoles": true,
+      |            "impersonate": true,
+      |            "manage": true
+      |        }
+      |    }]""".stripMargin
+
   private val user1 = KeyCloakUser(
     "id_string1",
-    1516283371483L,
     "test1@digital.homeoffice.gov.uk",
     true,
-    false,
     true,
     "Man",
     "One",
-    "test1@digital.homeoffice.gov.uk",
-    List("password"),
-    List(),
-    0
+    "test1@digital.homeoffice.gov.uk"
   )
   private val user2 = KeyCloakUser(
     "id_string2",
-    1516967531289L,
     "test2@homeoffice.gsi.gov.uk",
     true,
-    false,
     true,
     "Man",
     "Two",
-    "test2@digital.homeoffice.gov.uk",
-    List("password"),
-    List(),
-    0
+    "test2@digital.homeoffice.gov.uk"
   )
   val expectedUsers = List(
     user1,
@@ -142,6 +168,13 @@ class KeyCloakApiSpec extends TestKit(ActorSystem("testActorSystem", ConfigFacto
   )
 
   "When parsing a JSON list of users from key cloak I should get back a list of KeyCloakUsers" >> {
+    import spray.json._
+
+    val result = usersJson.parseJson.convertTo[List[KeyCloakUser]]
+
+    result == expectedUsers
+  }
+  "When parsing a JSON list of users missing some optional fields the I should still get a list of Users" >> {
     import spray.json._
 
     val result = usersJson.parseJson.convertTo[List[KeyCloakUser]]
