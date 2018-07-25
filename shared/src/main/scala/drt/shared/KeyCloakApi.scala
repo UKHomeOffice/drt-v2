@@ -4,17 +4,12 @@ object KeyCloakApi {
 
   case class KeyCloakUser(
                            id: String,
-                           createdTimestamp: Long,
                            username: String,
                            enabled: Boolean,
-                           totp: Boolean,
                            emailVerified: Boolean,
                            firstName: String,
                            lastName: String,
-                           email: String,
-                           disableableCredentialTypes: Seq[String],
-                           requiredActions: Seq[String],
-                           notBefore: Int
+                           email: String
                          )
 
   case class KeyCloakGroup(

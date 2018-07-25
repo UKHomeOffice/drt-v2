@@ -96,7 +96,7 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String, implicit 
 
 
 trait KeyCloakUserParserProtocol extends DefaultJsonProtocol with SprayJsonSupport {
-  implicit val keyCloakUserFormat: RootJsonFormat[KeyCloakUser] = jsonFormat12(KeyCloakUser)
+  implicit val keyCloakUserFormat: RootJsonFormat[KeyCloakUser] = jsonFormat7(KeyCloakUser)
   implicit val keyCloakGroupFormat: RootJsonFormat[KeyCloakGroup] = jsonFormat4(KeyCloakGroup)
 }
 
