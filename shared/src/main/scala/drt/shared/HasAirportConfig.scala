@@ -93,7 +93,7 @@ case class AirportConfig(
                           fixedPointExamples: Seq[String] = Seq(),
                           hasActualDeskStats: Boolean = false,
                           portStateSnapshotInterval: Int = 1000,
-                          eGateBankSize: Int = 5,
+                          eGateBankSize: Int = 10,
                           crunchOffsetMinutes: Int = 0,
                           hasEstChox: Boolean = false,
                           useStaffingInput: Boolean = false,
@@ -316,8 +316,7 @@ object AirportConfigs {
       "Morning shift, N, {date}, 07:00, 13:59, 15",
       "Afternoon shift, N, {date}, 14:00, 16:59, 10",
       "Evening shift, N, {date}, 17:00, 23:59, 17"
-    ),
-    eGateBankSize = 10
+    )
   )
   val stn = AirportConfig(
     portCode = "STN",
@@ -360,8 +359,7 @@ object AirportConfigs {
     ),
     fixedPointExamples = Seq("Roving Officer, 00:00, 23:59, 1",
       "Referral Officer, 00:00, 23:59, 1",
-      "Forgery Officer, 00:00, 23:59, 1"),
-    eGateBankSize = 10
+      "Forgery Officer, 00:00, 23:59, 1")
   )
   val man = AirportConfig(
     portCode = "MAN",
@@ -612,8 +610,7 @@ object AirportConfigs {
         Queues.EeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13)),
         Queues.EGate -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8))
       )
-    ),
-    eGateBankSize = 10
+    )
   )
 
   val nationalityProcessingTimes = Map(
