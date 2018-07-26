@@ -9,7 +9,7 @@ import spray.client.pipelining.{Get, addHeaders, unmarshal, _}
 import spray.http.HttpHeaders.{Accept, Authorization}
 import spray.http.{HttpRequest, HttpResponse, MediaTypes, OAuth2BearerToken}
 import spray.httpx.SprayJsonSupport
-import spray.json.{DefaultJsonProtocol, RootJsonFormat}
+import spray.json.{DefaultJsonProtocol, JsObject, JsValue, RootJsonFormat}
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -19,39 +19,44 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String, implicit 
   extends WithSendAndReceive with KeyCloakUserParserProtocol {
 
   import system.dispatcher
+  import KeyCloakUserParserProtocol.KeyCloakUserFormatParser._
 
   def log = LoggerFactory.getLogger(getClass)
   implicit val timeout: Timeout = Timeout(1 minute)
 
-  val logResponse: HttpResponse => HttpResponse = resp => {
+  def logResponse(requestName: String): HttpResponse => HttpResponse = resp => {
 
     if (resp.status.isFailure) {
-      log.error(s"Error when reading KeyCloak API ${resp.headers}, ${resp.entity.data.asString}")
+      log.error(s"Error when calling $requestName on KeyCloak API Status code: ${resp.status} Response:<${resp.entity.asString}>")
     }
 
     resp
   }
 
-  def getUsers(): Future[List[KeyCloakUser]] = {
+  def getUsers(max: Int = 1000, offset: Int = 0): Future[List[KeyCloakUser]] = {
     val pipeline: HttpRequest => Future[List[KeyCloakUser]] = (
       addHeaders(Accept(MediaTypes.`application/json`), Authorization(OAuth2BearerToken(token)))
         ~> sendAndReceive
-        ~> logResponse
+        ~> logResponse("getUsers")
         ~> unmarshal[List[KeyCloakUser]]
       )
 
-    pipeline(Get(keyCloakUrl + "/users"))
+    val uri = keyCloakUrl + s"/users?max=$max&first=$offset"
+    log.info(s"Calling key cloak: $uri")
+    pipeline(Get(uri))
   }
 
   def getGroups(): Future[List[KeyCloakGroup]] = {
     val pipeline: HttpRequest => Future[List[KeyCloakGroup]] = (
-      addHeaders(Accept(MediaTypes.`application/json`), Authorization(OAuth2BearerToken(token)))
-        ~> sendAndReceive
-        ~> logResponse
-        ~> unmarshal[List[KeyCloakGroup]]
-      )
+        addHeaders(Accept(MediaTypes.`application/json`), Authorization(OAuth2BearerToken(token)))
+    ~> sendAndReceive
+    ~> logResponse("getGroups")
+    ~> unmarshal[List[KeyCloakGroup]]
+    )
+    val uri = keyCloakUrl + "/groups"
+    log.info(s"Calling key cloak: $uri")
 
-    pipeline(Get(keyCloakUrl + "/groups"))
+    pipeline(Get(uri))
   }
 
   def getUsersInGroup(groupName: String): Future[List[KeyCloakUser]] = {
@@ -61,7 +66,7 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String, implicit 
     val pipeline: HttpRequest => Future[List[KeyCloakUser]] = (
       addHeaders(Accept(MediaTypes.`application/json`), Authorization(OAuth2BearerToken(token)))
         ~> sendAndReceive
-        ~> logResponse
+        ~> logResponse("getUsersInGroup")
         ~> unmarshal[List[KeyCloakUser]]
       )
 
@@ -86,7 +91,7 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String, implicit 
     val pipeline: HttpRequest => Future[HttpResponse] = (
       addHeaders(Accept(MediaTypes.`application/json`), Authorization(OAuth2BearerToken(token)))
         ~> sendAndReceive
-        ~> logResponse
+        ~> logResponse("addUserToGroup")
       )
 
     log.info(s"Adding $userId to $groupId")
@@ -96,7 +101,22 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String, implicit 
 
 
 trait KeyCloakUserParserProtocol extends DefaultJsonProtocol with SprayJsonSupport {
-  implicit val keyCloakUserFormat: RootJsonFormat[KeyCloakUser] = jsonFormat7(KeyCloakUser)
+  implicit object KeyCloakUserFormatParser extends RootJsonFormat[KeyCloakUser] {
+    override def write(obj: KeyCloakUser): JsValue = ???
+
+    override def read(json: JsValue): KeyCloakUser = json match {
+      case JsObject(fields) =>
+        KeyCloakUser(
+          fields.get("id").map(_.convertTo[String]).getOrElse("missing id"),
+          fields.get("username").map(_.convertTo[String]).getOrElse("missing username"),
+          fields.get("enabled").exists(_.convertTo[Boolean]),
+          fields.get("emailVerified").exists(_.convertTo[Boolean]),
+          fields.get("firstName").map(_.convertTo[String]).getOrElse("missing first name"),
+          fields.get("lastName").map(_.convertTo[String]).getOrElse("missing last name"),
+          fields.get("email").map(_.convertTo[String]).getOrElse("missing email")
+        )
+    }
+  }
   implicit val keyCloakGroupFormat: RootJsonFormat[KeyCloakGroup] = jsonFormat4(KeyCloakGroup)
 }
 

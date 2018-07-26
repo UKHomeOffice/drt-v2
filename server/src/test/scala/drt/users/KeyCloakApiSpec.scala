@@ -141,7 +141,7 @@ val usersMissingOptionalFieldsJson =
       }
     }
 
-    val users: List[KeyCloakUser] = Await.result(kc.getUsers, 30 seconds)
+    val users: List[KeyCloakUser] = Await.result(kc.getUsers(), 30 seconds)
 
     users === expectedUsers
   }
@@ -257,7 +257,7 @@ val usersMissingOptionalFieldsJson =
           Future(HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`, lhrUsers)))
         case "/groups" =>
           Future(HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`, groupsJson)))
-        case "/users" =>
+        case "/users?max=1000&first=0" =>
           Future(HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`, usersJson)))
         case "/users/id_string1/groups/id2" =>
           assert(req.method == HttpMethods.PUT)
