@@ -124,11 +124,11 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
         log.info(s"Got CrunchUpdates with ${cu.flights.size} flights, ${cu.minutes.size} minutes")
         UpdateCrunchStateFromUpdatesAndContinuePolling(cu)
       case _ =>
-        log.error(s"Failed to GetCrunchState. Re-requesting after $crunchUpdatesRequestFrequency")
+        log.info(s"Failed to GetCrunchState. Re-requesting after $crunchUpdatesRequestFrequency")
         RetryActionAfter(GetCrunchState(), crunchUpdatesRequestFrequency)
     }.recoverWith {
       case _ =>
-        log.error(s"Failed to GetCrunchState. Re-requesting after ${PollDelay.recoveryDelay}")
+        log.info(s"Failed to GetCrunchState. Re-requesting after ${PollDelay.recoveryDelay}")
         Future(RetryActionAfter(GetCrunchState(), PollDelay.recoveryDelay))
     }
   }
