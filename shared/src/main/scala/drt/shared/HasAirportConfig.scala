@@ -490,9 +490,9 @@ object AirportConfigs {
     defaultProcessingTimes = Map("T1" -> defaultProcessingTimes),
     minMaxDesksByTerminalQueue = Map(
       "T1" -> Map(
-        Queues.EGate -> (List(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2), List(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3)),
-        Queues.EeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(6, 9, 9, 9, 9, 9, 9, 8, 6, 6, 6, 6, 6, 6, 7, 7, 7, 8, 6, 6, 7, 8, 6, 6)),
-        Queues.NonEeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(4, 1, 1, 1, 1, 1, 1, 2, 4, 4, 4, 4, 4, 4, 3, 3, 3, 2, 4, 4, 3, 2, 4, 4))
+        Queues.EGate -> (List.fill(24)(2), List.fill(24)(3)),
+        Queues.EeaDesk -> (List.fill(24)(1), List.fill(24)(10)),
+        Queues.NonEeaDesk -> (List.fill(24)(1), List(4, 1, 1, 1, 1, 1, 1, 2, 4, 4, 4, 4, 4, 4, 3, 3, 3, 2, 4, 4, 3, 2, 4, 4))
       )
     )
   )
