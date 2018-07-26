@@ -2,7 +2,7 @@ package drt.shared
 
 import org.specs2.mutable.Specification
 
-class AirportConfigsSpecs extends Specification {
+class AirportConfigsSpec extends Specification {
 
   "AirportConfigs" should {
 
