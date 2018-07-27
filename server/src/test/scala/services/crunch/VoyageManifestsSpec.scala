@@ -291,7 +291,6 @@ class VoyageManifestsSpec extends CrunchTestLike {
         queues = Map("T1" -> Seq(EeaDesk, EGate))
       ))
 
-    //    offerAndWait(crunch.manifestsInput, inputManifests)
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlights))
 
     val expectedSplits = Set(
