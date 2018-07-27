@@ -57,7 +57,8 @@ object Settings {
     val scalaCheck = "1.13.4"
     val akkaPersistenceInmemory = "2.4.18.1"
     val sshJ = "0.24.0"
-    val jodaTime = "2.9.4"
+    val jodaTime = "2.9.6"
+    val jodaConvert ="1.8.1"
     val exposeLoader = "0.7.1"
     val log4Javascript = "1.4.15"
     val typesafeConfig = "1.3.0"
@@ -65,9 +66,11 @@ object Settings {
     val sparkMlLib = "2.2.1"
     val pac4jSaml = "2.0.0-RC1"
     val openSaml = "2.6.1"
-    val drtBirminghamSchema = "1.0.0"
+    val drtBirminghamSchema = "1.0.1"
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
+    val jsdom = "11.11.0"
+    val sourcemapsupport ="0.5.6"
   }
 
   import versions._
@@ -87,7 +90,9 @@ object Settings {
     "react-addons-test-utils" -> reactTestUtils,
     "log4javascript" -> log4Javascript,
     "bootstrap" -> bootstrap,
-    "react-handsontable" -> reactHandsontable
+    "react-handsontable" -> reactHandsontable,
+    "source-map-support" -> sourcemapsupport,
+    "jsdom" -> jsdom
   )
 
   val clientNpmDevDependencies = "expose-loader" -> exposeLoader
@@ -125,12 +130,13 @@ object Settings {
     "io.spray" %% "spray-json" % sprayVersion,
 
     "joda-time" % "joda-time" % jodaTime,
+    "org.joda" % "joda-convert" % jodaConvert,
     "org.opensaml" % "opensaml" % openSaml excludeAll (ExclusionRule("org.bouncycastle"), ExclusionRule("xerces")),
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
     "org.apache.spark" % "spark-mllib_2.11" % sparkMlLib,
     "org.apache.spark" % "spark-sql_2.11" % "2.2.1",
-    "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
+    "uk.gov.homeoffice" %% "drt-birmingham-schema" % "1.0.1-SNAPSHOT",
     "org.codehaus.janino" % "janino" % "3.0.7",
     "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
     "org.iq80.leveldb" % "leveldb" % levelDb,

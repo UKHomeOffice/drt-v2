@@ -33,7 +33,7 @@ pipeline:
       - latest
     when:
       event: push
-      branch: drone
+      branch: master
 
   build_tag:
     environment:
