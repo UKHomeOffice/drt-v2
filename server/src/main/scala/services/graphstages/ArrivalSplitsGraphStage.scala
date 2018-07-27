@@ -265,8 +265,9 @@ class ArrivalSplitsGraphStage(name: String = "",
       val newFlightWithAvailableSplits = manifestsBuffer.get(arrivalManifestKey) match {
         case None => newFlightWithSplits
         case Some(vm) =>
-          manifestsBuffer = manifestsBuffer.filterNot { case (manifestKey, _) => manifestKey == arrivalManifestKey }
-          log.debug(s"Found buffered manifest to apply to new flight, and removed from buffer")
+          val scheduledStr = SDate(newFlightWithSplits.apiFlight.Scheduled).toISOString()
+          val iata = newFlightWithSplits.apiFlight.IATA
+          log.info(s"Found buffered manifest to apply to new flight $iata $scheduledStr, and removed from buffer")
           removeManifestsOlderThan(twoDaysAgo)
           updateFlightWithManifests(vm, newFlightWithSplits)
       }
@@ -343,7 +344,7 @@ class ArrivalSplitsGraphStage(name: String = "",
   }
 
   def nowMillis: Option[MillisSinceEpoch] = {
-    Option(SDate.now().millisSinceEpoch)
+    Option(now().millisSinceEpoch)
   }
 
   def mergeDiffSets(latestDiff: Set[ApiFlightWithSplits],
@@ -357,7 +358,7 @@ class ArrivalSplitsGraphStage(name: String = "",
   }
 
   def purgeExpiredManifests(manifests: Map[Int, Set[VoyageManifest]]): Map[Int, Set[VoyageManifest]] = {
-    val expired = hasExpiredForType((m: VoyageManifest) => m.scheduleArrivalDateTime.getOrElse(SDate.now()).millisSinceEpoch)
+    val expired = hasExpiredForType((m: VoyageManifest) => m.scheduleArrivalDateTime.getOrElse(now()).millisSinceEpoch)
     val updated = manifests
       .mapValues(_.filterNot(expired))
       .filterNot { case (_, ms) => ms.isEmpty }
@@ -387,6 +388,6 @@ class ArrivalSplitsGraphStage(name: String = "",
     }
   }
 
-  def twoDaysAgo: MillisSinceEpoch = SDate.now().millisSinceEpoch - (2 * oneDayMillis)
+  def twoDaysAgo: MillisSinceEpoch = now().millisSinceEpoch - (2 * oneDayMillis)
 }
 
