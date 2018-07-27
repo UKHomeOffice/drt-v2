@@ -58,7 +58,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   def getFeedStatus(): Future[Seq[FeedStatuses]]
 }
 
-case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig)(implicit actorMaterializer: Materializer) extends DrtSystemInterface {
+case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig)
+                    (implicit actorMaterializer: Materializer) extends DrtSystemInterface {
 
   implicit val system: ActorSystem = actorSystem
 
@@ -109,14 +110,10 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val apiS3PollFrequencyMillis: MillisSinceEpoch = config.getOptional[Int]("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
   val s3ApiProvider = S3ApiProvider(dqZipBucketName)
   val initialManifestsState: Option[VoyageManifestState] = manifestsState
+  val maybeLatestZipFileName: String = initialManifestsState.map(_.latestZipFilename).getOrElse("")
 
   lazy val voyageManifestsStage: Source[ManifestsFeedResponse, NotUsed] = Source.fromGraph(
-    new VoyageManifestsGraphStage(
-      airportConfig.portCode,
-      s3ApiProvider,
-      initialManifestsState.map(_.latestZipFilename).getOrElse(""),
-      apiS3PollFrequencyMillis
-    )
+    new VoyageManifestsGraphStage(airportConfig.portCode, s3ApiProvider, maybeLatestZipFileName, apiS3PollFrequencyMillis)
   )
 
   system.log.info(s"useNationalityBasedProcessingTimes: $useNationalityBasedProcessingTimes")
@@ -259,7 +256,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     arrivalsFuture
   }
 
-  def mergePortStates(maybeForecastPs: Option[PortState], maybeLivePs: Option[PortState]): Option[PortState] = (maybeForecastPs, maybeLivePs) match {
+  def mergePortStates(maybeForecastPs: Option[PortState],
+                      maybeLivePs: Option[PortState]): Option[PortState] = (maybeForecastPs, maybeLivePs) match {
     case (None, None) => None
     case (Some(fps), None) => Option(fps)
     case (None, Some(lps)) => Option(lps)
@@ -284,7 +282,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     }
   }
 
-  def createSplitsPredictionStage(predictSplits: Boolean, rawSplitsUrl: String): SplitsPredictorBase = if (predictSplits)
+  def createSplitsPredictionStage(predictSplits: Boolean,
+                                  rawSplitsUrl: String): SplitsPredictorBase = if (predictSplits)
     new SplitsPredictorStage(SparkSplitsPredictorFactory(createSparkSession(), rawSplitsUrl, airportConfig.portCode))
   else
     new DummySplitsPredictor()
