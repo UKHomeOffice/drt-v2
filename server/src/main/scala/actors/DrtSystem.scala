@@ -269,11 +269,11 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   }
 
   def manifestsState: Option[VoyageManifestState] = {
-    val futureLastSeenManifestFileName = askableVoyageManifestsActor.ask(GetState)(new Timeout(1 minute)).map {
+    val futureVoyageManifestState = askableVoyageManifestsActor.ask(GetState)(new Timeout(1 minute)).map {
       case s: VoyageManifestState => s
     }
     Try {
-      Await.result(futureLastSeenManifestFileName, 1 minute)
+      Await.result(futureVoyageManifestState, 1 minute)
     } match {
       case Success(state) => Option(state)
       case Failure(t) =>
