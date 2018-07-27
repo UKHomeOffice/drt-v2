@@ -60,7 +60,7 @@ class ArrivalsGraphStage(name: String = "",
 
     def prepInitialArrivals(arrivals: Set[Arrival]): Map[Int, Arrival] = {
       val arrivalsWithPcp = filterAndSetPcp(arrivals.toSeq)
-      purgeExpired(arrivalsWithPcp)
+      Crunch.purgeExpired(arrivalsWithPcp, (a: Arrival) => a.PcpTime.getOrElse(0L), now, expireAfterMillis)
     }
 
     setHandler(inBaseArrivals, new InHandler {
@@ -106,16 +106,9 @@ class ArrivalsGraphStage(name: String = "",
       }
     }
 
-    def purgeExpired(flightsById: Map[Int, Arrival]): Map[Int, Arrival] = {
-      val expired: Arrival => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (a: Arrival) => a.PcpTime.getOrElse(0L))
-      flightsById.filterNot {
-        case (_, arrival) => expired(arrival)
-      }
-    }
-
     def mergeAllSourcesAndPush(baseArrivals: Map[Int, Arrival], forecastArrivals: Map[Int, Arrival], liveArrivals: Map[Int, Arrival]): Unit = {
       val newMerged = mergeArrivals(baseArrivals, forecastArrivals, liveArrivals)
-      val minusExpired = purgeExpired(newMerged)
+      val minusExpired = Crunch.purgeExpired(newMerged, (a: Arrival) => a.PcpTime.getOrElse(0L), now, expireAfterMillis)
 
       val numPurged = newMerged.size - minusExpired.size
       if (numPurged > 0) log.info(s"Purged $numPurged expired arrivals during merge: ${newMerged.size} -> ${minusExpired.size}")

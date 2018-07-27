@@ -21,6 +21,7 @@ case class UpdatedFlights(flights: Map[Int, ApiFlightWithSplits], updatesCount: 
 
 class ArrivalSplitsGraphStage(name: String = "",
                               optionalInitialFlights: Option[FlightsWithSplits],
+                              optionalInitialManifests: Option[Set[VoyageManifest]],
                               splitsCalculator: SplitsCalculator,
                               groupFlightsByCodeShares: Seq[ApiFlightWithSplits] => Seq[(ApiFlightWithSplits, Set[Arrival])],
                               expireAfterMillis: Long,
@@ -44,6 +45,14 @@ class ArrivalSplitsGraphStage(name: String = "",
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
     override def preStart(): Unit = {
+      optionalInitialManifests match {
+        case Some(manifests) =>
+          log.info(s"Received ${manifests.size} initial manifests")
+          manifestsBuffer = manifests.groupBy(_.key)
+        case None =>
+          log.warn("Did not receive any manifests to initialise with")
+      }
+
       optionalInitialFlights match {
         case Some(FlightsWithSplits(flights, _)) =>
           log.info(s"Received initial flights. Setting ${flights.size}")
@@ -148,7 +157,8 @@ class ArrivalSplitsGraphStage(name: String = "",
       })
     }
 
-    def addPredictions(predictions: Seq[(Arrival, Option[ApiSplits])], flightsById: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
+    def addPredictions(predictions: Seq[(Arrival, Option[ApiSplits])],
+                       flightsById: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
       val arrivalsAndSplits = predictions
         .collect {
           case (arrival, Some(splits)) => (arrival, splits)
@@ -160,7 +170,9 @@ class ArrivalSplitsGraphStage(name: String = "",
       }
     }
 
-    def updatePredictionIfFlightExists(existingFlightsByFlightId: Map[Int, ApiFlightWithSplits], arrivalForPrediction: Arrival, predictedSplits: ApiSplits): Map[Int, ApiFlightWithSplits] = {
+    def updatePredictionIfFlightExists(existingFlightsByFlightId: Map[Int, ApiFlightWithSplits],
+                                       arrivalForPrediction: Arrival,
+                                       predictedSplits: ApiSplits): Map[Int, ApiFlightWithSplits] = {
       existingFlightsByFlightId.find {
         case (_, ApiFlightWithSplits(existingArrival, _, _)) => existingArrival.uniqueId == arrivalForPrediction.uniqueId
       } match {
@@ -172,7 +184,8 @@ class ArrivalSplitsGraphStage(name: String = "",
       }
     }
 
-    def updateFlightWithHistoricalSplits(flightWithSplits: ApiFlightWithSplits, maybeNewHistorical: Option[Set[ApiPaxTypeAndQueueCount]]): ApiFlightWithSplits = {
+    def updateFlightWithHistoricalSplits(flightWithSplits: ApiFlightWithSplits,
+                                         maybeNewHistorical: Option[Set[ApiPaxTypeAndQueueCount]]): ApiFlightWithSplits = {
       val newSplits = maybeNewHistorical.map(newHistorical =>
         ApiSplits(newHistorical, SplitSources.Historical, None, Percentage)
       ).toSet
@@ -184,7 +197,9 @@ class ArrivalSplitsGraphStage(name: String = "",
       flightWithSplits.copy(splits = updatedSplitsSet)
     }
 
-    def updateSplitsSet(arrivalForPrediction: Arrival, predictedSplits: ApiSplits, existingFlightWithSplits: ApiFlightWithSplits): Set[ApiSplits] = {
+    def updateSplitsSet(arrivalForPrediction: Arrival,
+                        predictedSplits: ApiSplits,
+                        existingFlightWithSplits: ApiFlightWithSplits): Set[ApiSplits] = {
       val predictedSplitsWithPaxNumbers = predictedSplits.copy(splits = predictedSplits.splits.map(s => s.copy(paxCount = s.paxCount * ArrivalHelper.bestPax(arrivalForPrediction))), splitStyle = PaxNumbers)
       val predictedWithEgatesAndFt = predictedSplitsWithPaxNumbers.copy(splits = splitsCalculator.addEgatesAndFastTrack(arrivalForPrediction, predictedSplitsWithPaxNumbers.splits))
       val newSplitsSet = existingFlightWithSplits.splits.filterNot {
@@ -194,7 +209,8 @@ class ArrivalSplitsGraphStage(name: String = "",
       newSplitsSet
     }
 
-    def updateFlightsFromIncoming(arrivalsDiff: ArrivalsDiff, existingFlightsById: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
+    def updateFlightsFromIncoming(arrivalsDiff: ArrivalsDiff,
+                                  existingFlightsById: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
       log.info(s"${arrivalsDiff.toUpdate.size} diff updates, ${existingFlightsById.size} existing flights")
       val afterRemovals = existingFlightsById.filterNot {
         case (id, _) => arrivalsDiff.toRemove.contains(id)
@@ -268,7 +284,8 @@ class ArrivalSplitsGraphStage(name: String = "",
       }
     }
 
-    def updateFlightsWithManifests(manifests: Set[VoyageManifest], flightsById: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
+    def updateFlightsWithManifests(manifests: Set[VoyageManifest],
+                                   flightsById: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
       manifests.foldLeft[Map[Int, ApiFlightWithSplits]](flightsByFlightId) {
         case (flightsSoFar, newManifest) =>
           val maybeFlightForManifest: Option[ApiFlightWithSplits] = flightsSoFar.values
@@ -312,7 +329,8 @@ class ArrivalSplitsGraphStage(name: String = "",
       }
     }
 
-    def updateFlightWithManifest(flightWithSplits: ApiFlightWithSplits, manifest: VoyageManifest): ApiFlightWithSplits = {
+    def updateFlightWithManifest(flightWithSplits: ApiFlightWithSplits,
+                                 manifest: VoyageManifest): ApiFlightWithSplits = {
       val splitsFromManifest = splitsCalculator.splitsForArrival(manifest, flightWithSplits.apiFlight)
 
       val updatedSplitsSet = flightWithSplits.splits.filterNot {
@@ -328,7 +346,8 @@ class ArrivalSplitsGraphStage(name: String = "",
     Option(SDate.now().millisSinceEpoch)
   }
 
-  def mergeDiffSets(latestDiff: Set[ApiFlightWithSplits], existingDiff: Set[ApiFlightWithSplits]): Set[ApiFlightWithSplits] = {
+  def mergeDiffSets(latestDiff: Set[ApiFlightWithSplits],
+                    existingDiff: Set[ApiFlightWithSplits]): Set[ApiFlightWithSplits] = {
     val existingDiffById = existingDiff.map(a => (a.apiFlight.uniqueId, a)).toMap
     latestDiff
       .foldLeft(existingDiffById) {

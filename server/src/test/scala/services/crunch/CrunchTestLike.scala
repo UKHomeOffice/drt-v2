@@ -126,7 +126,7 @@ class CrunchTestLike
   def runCrunchGraph(initialBaseArrivals: Set[Arrival] = Set(),
                      initialForecastArrivals: Set[Arrival] = Set(),
                      initialLiveArrivals: Set[Arrival] = Set(),
-                     initialManifests: DqManifests = DqManifests("", Set()),
+                     maybeInitialManifestState: Option[VoyageManifestState] = None,
                      initialPortState: Option[PortState] = None,
                      airportConfig: AirportConfig = airportConfig,
                      csvSplitsProvider: SplitsProvider.SplitProvider = (_, _) => None,
@@ -192,6 +192,7 @@ class CrunchTestLike
       initialBaseArrivals = initialBaseArrivals,
       initialFcstArrivals = initialForecastArrivals,
       initialLiveArrivals = initialLiveArrivals,
+      initialManifestsState = maybeInitialManifestState,
       arrivalsBaseSource = baseArrivals,
       arrivalsFcstSource = fcstArrivals,
       arrivalsLiveSource = liveArrivals
@@ -199,7 +200,9 @@ class CrunchTestLike
 
     if (initialShifts.nonEmpty) offerAndWait(crunchInputs.shifts, initialShifts)
     if (initialFixedPoints.nonEmpty) offerAndWait(crunchInputs.fixedPoints, initialFixedPoints)
-    if (initialManifests.manifests.nonEmpty) offerAndWait(crunchInputs.manifestsResponse, ManifestsFeedSuccess(initialManifests))
+    maybeInitialManifestState.foreach(ms => {
+      if (ms.manifests.nonEmpty) offerAndWait(crunchInputs.manifestsResponse, ManifestsFeedSuccess(DqManifests("", ms.manifests)))
+    })
 
     CrunchGraphInputsAndProbes(
       crunchInputs.baseArrivalsResponse,
