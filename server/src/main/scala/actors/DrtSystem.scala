@@ -27,7 +27,7 @@ import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import server.feeds.acl.AclFeed
 import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse}
-import services.PcpArrival.{GateOrStand, GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
+import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services.SplitsProvider.SplitProvider
 import services._
 import services.crunch.{CrunchProps, CrunchSystem}
@@ -58,7 +58,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   def getFeedStatus(): Future[Seq[FeedStatuses]]
 }
 
-case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig)(implicit actorMaterializer: Materializer) extends DrtSystemInterface {
+case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig)
+                    (implicit actorMaterializer: Materializer) extends DrtSystemInterface {
 
   implicit val system: ActorSystem = actorSystem
 
@@ -108,14 +109,11 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val dqZipBucketName: String = config.getOptional[String]("dq.s3.bucket").getOrElse(throw new Exception("You must set DQ_S3_BUCKET for us to poll for AdvPaxInfo"))
   val apiS3PollFrequencyMillis: MillisSinceEpoch = config.getOptional[Int]("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
   val s3ApiProvider = S3ApiProvider(dqZipBucketName)
+  val initialManifestsState: Option[VoyageManifestState] = manifestsState
+  val maybeLatestZipFileName: String = initialManifestsState.map(_.latestZipFilename).getOrElse("")
 
   lazy val voyageManifestsStage: Source[ManifestsFeedResponse, NotUsed] = Source.fromGraph(
-    new VoyageManifestsGraphStage(
-      airportConfig.portCode,
-      s3ApiProvider,
-      getLastSeenManifestsFileName,
-      apiS3PollFrequencyMillis
-    )
+    new VoyageManifestsGraphStage(airportConfig.portCode, s3ApiProvider, maybeLatestZipFileName, apiS3PollFrequencyMillis)
   )
 
   system.log.info(s"useNationalityBasedProcessingTimes: $useNationalityBasedProcessingTimes")
@@ -221,6 +219,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       initialBaseArrivals = initialBaseArrivals.getOrElse(Set()),
       initialFcstArrivals = initialForecastArrivals.getOrElse(Set()),
       initialLiveArrivals = initialLiveArrivals.getOrElse(Set()),
+      initialManifestsState = initialManifestsState,
       arrivalsBaseSource = baseArrivalsSource(),
       arrivalsFcstSource = forecastArrivalsSource(airportConfig.portCode),
       arrivalsLiveSource = liveArrivalsSource(airportConfig.portCode),
@@ -257,7 +256,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     arrivalsFuture
   }
 
-  def mergePortStates(maybeForecastPs: Option[PortState], maybeLivePs: Option[PortState]): Option[PortState] = (maybeForecastPs, maybeLivePs) match {
+  def mergePortStates(maybeForecastPs: Option[PortState],
+                      maybeLivePs: Option[PortState]): Option[PortState] = (maybeForecastPs, maybeLivePs) match {
     case (None, None) => None
     case (Some(fps), None) => Option(fps)
     case (None, Some(lps)) => Option(lps)
@@ -268,21 +268,22 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         fps.staffMinutes ++ lps.staffMinutes))
   }
 
-  def getLastSeenManifestsFileName: GateOrStand = {
+  def manifestsState: Option[VoyageManifestState] = {
     val futureLastSeenManifestFileName = askableVoyageManifestsActor.ask(GetState)(new Timeout(1 minute)).map {
-      case VoyageManifestState(_, lastSeenFileName, _, _) => lastSeenFileName
+      case s: VoyageManifestState => s
     }
     Try {
       Await.result(futureLastSeenManifestFileName, 1 minute)
     } match {
-      case Success(lastSeen) => lastSeen
+      case Success(state) => Option(state)
       case Failure(t) =>
         system.log.warning(s"Failed to get last seen file name for DQ manifests: $t")
-        ""
+        None
     }
   }
 
-  def createSplitsPredictionStage(predictSplits: Boolean, rawSplitsUrl: String): SplitsPredictorBase = if (predictSplits)
+  def createSplitsPredictionStage(predictSplits: Boolean,
+                                  rawSplitsUrl: String): SplitsPredictorBase = if (predictSplits)
     new SplitsPredictorStage(SparkSplitsPredictorFactory(createSparkSession(), rawSplitsUrl, airportConfig.portCode))
   else
     new DummySplitsPredictor()
