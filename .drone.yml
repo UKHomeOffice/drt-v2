@@ -1,0 +1,48 @@
+pipeline:
+
+  build:
+    image: massimodanieli/docker-scala-sbtjs:latest
+    #image: quay.io/ukhomeofficedigital/scala-sbt:latest
+    commands:
+      - /root/entrypoint.sh
+      - sbt --warn test docker:stage
+    environment:
+      - ARTIFACTORY_USERNAME=drt_ci
+    secrets:
+      - ARTIFACTORY_PASSWORD
+    when:
+      event:
+        - push
+      brach: !master    
+
+  sonar-scanner:
+    image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
+    when:
+      event:
+        - push
+
+  build_docker:
+    environment:
+      - DOCKER_USERNAME=drt_ci
+    image: quay.io/ukhomeofficedigital/drone-docker
+    registry: docker.digital.homeoffice.gov.uk
+    repo: docker.digital.homeoffice.gov.uk/drt/drt
+    secrets: [ docker_password ]
+    tags:
+      - ${DRONE_COMMIT_SHA}
+      - latest
+    when:
+      event: push
+      branch: drone
+
+  build_tag:
+    environment:
+      - DOCKER_USERNAME=drt_ci
+    image: quay.io/ukhomeofficedigital/drone-docker
+    registry: docker.digital.homeoffice.gov.uk
+    repo: docker.digital.homeoffice.gov.uk/drt/drt
+    secrets: [ docker_password ]
+    tags:
+      - ${DRONE_TAG}
+    when:
+            event: tag
