@@ -6,8 +6,11 @@ scalaVersion := Settings.versions.scala
 
 // uncomment the following to get a breakdown  of where build time is spent
 //enablePlugins(net.virtualvoid.optimizer.SbtOptimizerPlugin)
-
+// enabled for Apline JVM docker image compatibility 
+enablePlugins(AshScriptPlugin)
 // a special crossProject for configuring a JS/JVM/shared structure
+import sbtcrossproject.CrossPlugin.autoImport.{crossProject, CrossType}
+
 lazy val shared = (crossProject.crossType(CrossType.Pure) in file("shared"))
   .settings(
     scalaVersion := Settings.versions.scala,
@@ -31,6 +34,7 @@ lazy val elideOptions = settingKey[Seq[String]]("Set limit for elidable function
 lazy val client: Project = (project in file("client"))
   .settings(
     name := "client",
+    ivyLoggingLevel := UpdateLogging.Quiet,
     version := Settings.version,
     scalaVersion := Settings.versions.scala,
     scalacOptions ++= Settings.scalacOptions,
@@ -88,6 +92,7 @@ lazy val server = (project in file("server"))
   dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-core" % "2.8.7",
   dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-databind" % "2.8.7",
   dependencyOverrides += "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.8.7",
+  dependencyOverrides += "com.github.dwhjames" %% "aws-wrap" % "0.9.0",
   commands += ReleaseCmd,
   // connect to the client project
   scalaJSProjects := clients,
@@ -96,6 +101,13 @@ lazy val server = (project in file("server"))
   // triggers scalaJSPipeline when using compile or continuous compilation
   compile in Compile := ((compile in Compile) dependsOn scalaJSPipeline).value,
   testFrameworks += new TestFramework("utest.runner.Framework"),
+/*  resolvers ++= Seq(
+    "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
+    "Artifactory Release Realm" at "http://artifactory.registered-traveller.homeoffice.gov.uk/artifactory/libs-release-local/",
+    Resolver.bintrayRepo("mfglabs", "maven"),
+    Resolver.bintrayRepo("dwhjames", "maven"),
+    Resolver.defaultLocal),
+*/    
   publishArtifact in(Compile, packageBin) := false,
   // Disable scaladoc generation for this project (useless)
   publishArtifact in(Compile, packageDoc) := false,
@@ -122,13 +134,13 @@ lazy val ReleaseCmd = Command.command("release") {
 }
 
 fork in run := true
-
 fork in Test := true
+
+
 
 // loads the Play server project at sbt startup
 onLoad in Global := (Command.process("project server", _: State)) compose (onLoad in Global).value
 
-// Docker Plugin 
+// Docker Plugin
 enablePlugins(DockerPlugin)
-enablePlugins(AshScriptPlugin)
-
+updateOptions := updateOptions.value.withCachedResolution(true)
