@@ -59,7 +59,7 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String, implicit 
     pipeline(Get(uri))
   }
 
-  def getUsersInGroup(groupName: String): Future[List[KeyCloakUser]] = {
+  def getUsersInGroup(groupName: String, max: Int = 1000): Future[List[KeyCloakUser]] = {
 
     val futureMaybeId: Future[Option[String]] = getGroups().map(gs => gs.find(_.name == groupName).map(_.id))
 
@@ -71,7 +71,7 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String, implicit 
       )
 
     futureMaybeId.flatMap {
-      case Some(id) => pipeline(Get(keyCloakUrl + s"/groups/$id/members"))
+      case Some(id) => pipeline(Get(keyCloakUrl + s"/groups/$id/members?max=$max"))
       case None => Future(List())
     }
   }
