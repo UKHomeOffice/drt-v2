@@ -63,11 +63,20 @@ final class ArrivalsDiffingStage(initialKnownArrivals: Seq[Arrival]) extends Gra
       }
     }
 
-    def diff(a: Seq[Arrival], b: Seq[Arrival]): Seq[Arrival] = {
-      val aSet = a.toSet
-      val bSet = b.toSet
+    def diff(existingArrivalsSeq: Seq[Arrival], newArrivalsSeq: Seq[Arrival]): Seq[Arrival] = {
+      val existingArrival = existingArrivalsSeq.toSet
 
-      (bSet -- aSet).toList
+      def findTheExistingArrival(newArrival: Arrival): Option[Arrival] = existingArrival.find(newArrival.uniqueId == _.uniqueId)
+
+      def isChoxTimeTheSameInBothSets(inInitialSet: Arrival, inNewSet: Arrival): Boolean =
+        inInitialSet.ActualChox.exists(inNewSet.ActualChox.contains)
+
+      def removeArrivalsWithAnUnchangedChoxTime(newArrivalsSet: Set[Arrival]): Set[Arrival] =
+        newArrivalsSet.filterNot(newArrival => findTheExistingArrival(newArrival).exists(existingArrival => isChoxTimeTheSameInBothSets(existingArrival, newArrival)))
+
+      val newArrivals = removeArrivalsWithAnUnchangedChoxTime(newArrivalsSeq.toSet)
+
+      (newArrivals -- existingArrival).toList
     }
   }
 }

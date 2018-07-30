@@ -87,7 +87,7 @@ class DiffingAkkaStreamSpec extends AkkaStreamTestKitSpecificationLike with Samp
     val date = SDate.now()
     val source = Source(Seq(
       List(flight1),
-      List(flight1.copy(ActDT = "2016-08-04T09:11:00Z"))))
+      List(flight1.copy(ActDT = "2016-08-04T09:11:00Z", ActChoxDT = "2016-08-04T04:54:00Z"))))
 
     "we really can diff it and parse it" in {
       source
@@ -102,11 +102,12 @@ class DiffingAkkaStreamSpec extends AkkaStreamTestKitSpecificationLike with Samp
             "2016-08-04T04:53:00Z", "", "207", 0, 0, 0, "24", "",
             1200980, "EDI", "FRT", "TAY025N", "3V025N", "LGG", "2016-08-04T04:35:00Z"
           )))), date))
-        .requestNext(ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(List(ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
+        .requestNext(ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(List(
+          ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
           "2016-08-04T04:40:00Z",
           "2016-08-04T09:11:00Z",
           "",
-          "2016-08-04T04:53:00Z", "", "207", 0, 0, 0, "24", "",
+          "2016-08-04T04:54:00Z", "", "207", 0, 0, 0, "24", "",
           1200980, "EDI", "FRT", "TAY025N", "3V025N", "LGG", "2016-08-04T04:35:00Z"
         )))), date))
         .expectComplete()
