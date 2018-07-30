@@ -66,7 +66,7 @@ object LHRLiveFeed {
 
     tryArrival match {
       case Failure(t: Throwable) =>
-        log.warn(s"Failed to parse LHR+Pax into Arrival $lhrArrival $lhrPax: ${t.getMessage}", t)
+        log.error(s"Failed to parse LHR+Pax into Arrival $lhrArrival $lhrPax: ${t.getMessage}", t)
       case _ =>
     }
 
@@ -157,7 +157,7 @@ object LHRLiveFeed {
     val logResponse: HttpResponse => HttpResponse = resp => {
 
       if (resp.status.isFailure) {
-        log.warn(s"Error when reading LHR Live API ${resp.headers}, ${resp.entity.data.asString}")
+        log.error(s"Error when reading LHR Live API ${resp.headers}, ${resp.entity.data.asString}")
       }
 
       resp

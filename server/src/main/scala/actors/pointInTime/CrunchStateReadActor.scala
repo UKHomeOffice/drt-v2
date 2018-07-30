@@ -60,7 +60,7 @@ class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, queues
       sender() ! stateForPeriod(start, end)
 
     case u =>
-      log.warn(s"Received unexpected message $u")
+      log.error(s"Received unexpected message $u")
   }
 
   override def recovery: Recovery = {
