@@ -65,7 +65,7 @@ final class ArrivalsDiffingStage(initialKnownArrivals: Seq[Arrival]) extends Gra
 
     def diff(a: Seq[Arrival], b: Seq[Arrival]): Seq[Arrival] = {
       val aSet = a.toSet
-      val bSet = b.toSet
+      val bSet = b.toSet.filterNot(arr => aSet.find(arr.uniqueId == _.uniqueId).exists(inSetA => inSetA.ActualChox.exists(arr.ActualChox.contains)))
 
       (bSet -- aSet).toList
     }
