@@ -253,7 +253,7 @@ val usersMissingOptionalFieldsJson =
 
     def sendAndReceive: (HttpRequest) => Future[HttpResponse] = (req: HttpRequest) => {
       req.uri.toString.replace(keyCloakUrl, "") match {
-        case "/groups/id2/members" =>
+        case "/groups/id2/members?max=1000" =>
           Future(HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`, lhrUsers)))
         case "/groups" =>
           Future(HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`, groupsJson)))
