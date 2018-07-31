@@ -638,10 +638,10 @@ object AirportConfigs {
   val halvedLHRProcessingTimes: Map[TerminalName, Map[PaxTypeAndQueue, Double]] = lhr.defaultProcessingTimes.mapValues(_.mapValues(_/2))
 
   //copies of LHR for AB testing nationality based processing times and halved processing times
-  val lhr_ppt_halved: AirportConfig = lhr.copy(defaultProcessingTimes = halvedLHRProcessingTimes)
+  val lhr_ppt_halved: AirportConfig = lhr.copy(portCode="LHR_PPT_HALVED", defaultProcessingTimes = halvedLHRProcessingTimes)
   //Nationality based proc times turned on using feature flag
-  val lhr_nbp: AirportConfig = lhr
-  val lhr_nbp_halved: AirportConfig = lhr_ppt_halved.copy(nationalityBasedProcTimes = nationalityProcessingTimesHalved) //use halved default times and halved nationality based times
+  val lhr_nbp: AirportConfig = lhr.copy(portCode="LHR_NBP")
+  val lhr_nbp_halved: AirportConfig = lhr_ppt_halved.copy(portCode="LHR_NBP_HALVED", nationalityBasedProcTimes = nationalityProcessingTimesHalved) //use halved default times and halved nationality based times
 
   val allPorts: List[AirportConfig] = ema :: edi :: stn :: man :: ltn :: lhr :: lhr_nbp :: lhr_nbp_halved :: lhr_ppt_halved :: lgw :: bhx:: test :: Nil
   val confByPort: Map[String, AirportConfig] = allPorts.map(c => (c.portCode, c)).toMap
