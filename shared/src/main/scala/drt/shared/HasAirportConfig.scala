@@ -643,6 +643,6 @@ object AirportConfigs {
   val lhr_nbp: AirportConfig = lhr
   val lhr_nbp_halved: AirportConfig = lhr_ppt_halved.copy(nationalityBasedProcTimes = nationalityProcessingTimesHalved) //use halved default times and halved nationality based times
 
-  val allPorts: List[AirportConfig] = ema :: edi :: stn :: man :: ltn :: lhr :: lhr_nbp :: lgw :: bhx:: test :: Nil
+  val allPorts: List[AirportConfig] = ema :: edi :: stn :: man :: ltn :: lhr :: lhr_nbp :: lhr_nbp_halved :: lhr_ppt_halved :: lgw :: bhx:: test :: Nil
   val confByPort: Map[String, AirportConfig] = allPorts.map(c => (c.portCode, c)).toMap
 }
