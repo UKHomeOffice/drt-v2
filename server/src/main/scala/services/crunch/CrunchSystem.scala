@@ -135,7 +135,7 @@ object CrunchSystem {
       optionalInitialLoads = if (props.recrunchOnStart) None else initialLoadsFromPortState(props.initialPortState),
       optionalInitialFlightsWithSplits = initialFlightsFromPortState(props.initialPortState),
       airportConfig = props.airportConfig,
-      natProcTimes = AirportConfigs.nationalityProcessingTimes,
+      natProcTimes = props.airportConfig.nationalityBasedProcTimes,
       expireAfterMillis = props.expireAfterMillis,
       now = props.now,
       useNationalityBasedProcessingTimes = props.useNationalityBasedProcessingTimes)

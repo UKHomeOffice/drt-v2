@@ -99,7 +99,8 @@ case class AirportConfig(
                           useStaffingInput: Boolean = false,
                           exportQueueOrder: List[String] = Queues.exportQueueOrderSansFastTrack,
                           contactEmail: Option[String] = None,
-                          dayLengthHours: Int = 36
+                          dayLengthHours: Int = 36,
+                          nationalityBasedProcTimes: Map[String, Double] = AirportConfigs.nationalityProcessingTimes
                         ) extends AirportConfigLike {
 
 }
@@ -633,6 +634,15 @@ object AirportConfigs {
     "KNA" -> 83.8, "SOM" -> 90.6, "LCA" -> 89.3, "GRD" -> 105.9
   )
 
-  val allPorts: List[AirportConfig] = ema :: edi :: stn :: man :: ltn :: lhr :: lgw :: bhx:: test :: Nil
+  val nationalityProcessingTimesHalved: Map[String, Double] = nationalityProcessingTimes.mapValues(_ / 2)
+  val halvedLHRProcessingTimes: Map[TerminalName, Map[PaxTypeAndQueue, Double]] = lhr.defaultProcessingTimes.mapValues(_.mapValues(_/2))
+
+  //copies of LHR for AB testing nationality based processing times and halved processing times
+  val lhr_ppt_halved: AirportConfig = lhr.copy(defaultProcessingTimes = halvedLHRProcessingTimes)
+  //Nationality based proc times turned on using feature flag
+  val lhr_nbp: AirportConfig = lhr
+  val lhr_nbp_halved: AirportConfig = lhr_ppt_halved.copy(nationalityBasedProcTimes = nationalityProcessingTimesHalved) //use halved default times and halved nationality based times
+
+  val allPorts: List[AirportConfig] = ema :: edi :: stn :: man :: ltn :: lhr :: lhr_nbp :: lhr_nbp_halved :: lhr_ppt_halved :: lgw :: bhx:: test :: Nil
   val confByPort: Map[String, AirportConfig] = allPorts.map(c => (c.portCode, c)).toMap
 }
