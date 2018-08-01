@@ -5,7 +5,7 @@ pipeline:
     #image: quay.io/ukhomeofficedigital/scala-sbt:latest
     commands:
       - /root/entrypoint.sh
-      - sbt --warn test docker:stage
+      - sbt --error test docker:stage
     environment:
       - ARTIFACTORY_USERNAME=drt_ci
     secrets:
@@ -34,7 +34,9 @@ pipeline:
       - latest
     when:
       event: push
-      branch: drone
+      branch: 
+        - drone
+        - drt-acp-pgsql
 
   build_tag:
     environment:
