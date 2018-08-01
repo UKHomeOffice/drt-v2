@@ -47,7 +47,7 @@ describe('Monthly Staffing', function () {
   describe('When adding staff using the monthly staff view', function () {
 
     let cellToTest = ".htCore tbody :nth-child(1) :nth-child(2)";
-    xit("If I enter staff for the current month those staff should still be visible if I change months and change back", function () {
+    it("If I enter staff for the current month those staff should still be visible if I change months and change back", function () {
       saveShifts();
 
       setRoles(["staff:edit"]);
