@@ -47,7 +47,7 @@ class AirportConfigsSpec extends Specification {
         terminalNames = Seq(),
         timeToChoxMillis = 0L,
         firstPaxOffMillis = 0L,
-        defaultWalkTimeMillis = Map("A1" -> 0L, "A2" -> 0L),
+        defaultWalkTimeMillis = Map(),
         defaultPaxSplits = SplitRatios("queue", Nil),
         defaultProcessingTimes = Map(),
         minMaxDesksByTerminalQueue = Map()
