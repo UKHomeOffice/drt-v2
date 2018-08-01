@@ -100,8 +100,11 @@ case class AirportConfig(
                           exportQueueOrder: List[String] = Queues.exportQueueOrderSansFastTrack,
                           contactEmail: Option[String] = None,
                           dayLengthHours: Int = 36,
-                          nationalityBasedProcTimes: Map[String, Double] = AirportConfigs.nationalityProcessingTimes
+                          nationalityBasedProcTimes: Map[String, Double] = AirportConfigs.nationalityProcessingTimes,
+                          cloneOfPortCode: Option[String] = None
                         ) extends AirportConfigLike {
+
+  def feedPortCode: String = cloneOfPortCode.getOrElse(portCode)
 
 }
 
@@ -490,7 +493,7 @@ object AirportConfigs {
     minMaxDesksByTerminalQueue = Map(
       "T1" -> Map(
         Queues.EGate -> (List.fill(24)(1), List.fill(24)(2)),
-        Queues.EeaDesk -> (List.fill(24)(1),  List(6, 9, 9, 9, 9, 9, 9, 8, 6, 6, 6, 6, 6, 6, 7, 7, 7, 8, 6, 6, 7, 8, 6, 6)),
+        Queues.EeaDesk -> (List.fill(24)(1), List(6, 9, 9, 9, 9, 9, 9, 8, 6, 6, 6, 6, 6, 6, 7, 7, 7, 8, 6, 6, 7, 8, 6, 6)),
         Queues.NonEeaDesk -> (List.fill(24)(1), List(4, 1, 1, 1, 1, 1, 1, 2, 4, 4, 4, 4, 4, 4, 3, 3, 3, 2, 4, 4, 3, 2, 4, 4))
       )
     )
@@ -635,14 +638,14 @@ object AirportConfigs {
   )
 
   val nationalityProcessingTimesHalved: Map[String, Double] = nationalityProcessingTimes.mapValues(_ / 2)
-  val halvedLHRProcessingTimes: Map[TerminalName, Map[PaxTypeAndQueue, Double]] = lhr.defaultProcessingTimes.mapValues(_.mapValues(_/2))
+  val halvedLHRProcessingTimes: Map[TerminalName, Map[PaxTypeAndQueue, Double]] = lhr.defaultProcessingTimes.mapValues(_.mapValues(_ / 2))
 
   //copies of LHR for AB testing nationality based processing times and halved processing times
-  val lhr_ppt_halved: AirportConfig = lhr.copy(portCode="LHR_PPT_HALVED", defaultProcessingTimes = halvedLHRProcessingTimes)
+  val lhr_ppt_halved: AirportConfig = lhr.copy(portCode = "LHR_PPT_HALVED", defaultProcessingTimes = halvedLHRProcessingTimes, cloneOfPortCode = Option("LHR"))
   //Nationality based proc times turned on using feature flag
-  val lhr_nbp: AirportConfig = lhr.copy(portCode="LHR_NBP")
-  val lhr_nbp_halved: AirportConfig = lhr_ppt_halved.copy(portCode="LHR_NBP_HALVED", nationalityBasedProcTimes = nationalityProcessingTimesHalved) //use halved default times and halved nationality based times
+  val lhr_nbp: AirportConfig = lhr.copy(portCode = "LHR_NBP", cloneOfPortCode = Option("LHR"))
+  val lhr_nbp_halved: AirportConfig = lhr_ppt_halved.copy(portCode = "LHR_NBP_HALVED", nationalityBasedProcTimes = nationalityProcessingTimesHalved, cloneOfPortCode = Option("LHR")) //use halved default times and halved nationality based times
 
-  val allPorts: List[AirportConfig] = ema :: edi :: stn :: man :: ltn :: lhr :: lhr_nbp :: lhr_nbp_halved :: lhr_ppt_halved :: lgw :: bhx:: test :: Nil
+  val allPorts: List[AirportConfig] = ema :: edi :: stn :: man :: ltn :: lhr :: lhr_nbp :: lhr_nbp_halved :: lhr_ppt_halved :: lgw :: bhx :: test :: Nil
   val confByPort: Map[String, AirportConfig] = allPorts.map(c => (c.portCode, c)).toMap
 }
