@@ -79,10 +79,10 @@ object TimeRangeFilter {
         <.div(^.className := "date-view-picker-container",
           <.div(^.className := "btn-group no-gutters", VdomAttr("data-toggle") := "buttons",
             if (props.showNow)
-              <.div(^.className := s"btn btn-primary $nowActive", "Now", ^.onClick ==> ((_: ReactEventFromInput) => {
+              <.div(^.id := "now", ^.className := s"btn btn-primary $nowActive", "Now", ^.onClick ==> ((_: ReactEventFromInput) => {
                 props.router.set(props.terminalPageTab.copy(timeRangeStartString = None, timeRangeEndString = None))
               })) else "",
-            <.div(^.className := s"btn btn-primary $dayActive", "24 hours", ^.onClick ==> ((_: ReactEventFromInput) => {
+            <.div(^.id := "hours24", ^.className := s"btn btn-primary $dayActive", "24 hours", ^.onClick ==> ((_: ReactEventFromInput) => {
               props.router.set(props.terminalPageTab.copy(
                 timeRangeStartString = Option(wholeDayWindow.start.toString), timeRangeEndString = Option(wholeDayWindow.end.toString)
               ))

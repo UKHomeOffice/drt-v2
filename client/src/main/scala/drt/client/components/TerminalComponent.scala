@@ -94,7 +94,8 @@ object TerminalComponent {
 
           <.div(
             <.ul(^.className := "nav nav-tabs",
-              <.li(^.className := currentClass, <.a(VdomAttr("data-toggle") := "tab", "Current"), ^.onClick --> {
+              <.li(^.className := currentClass,
+                <.a(^.id := "currentTab", VdomAttr("data-toggle") := "tab", "Current"), ^.onClick --> {
                 props.router.set(props.terminalPageTab.copy(
                   mode = "current",
                   subMode = subMode,
@@ -102,7 +103,7 @@ object TerminalComponent {
                 ))
               }),
               <.li(^.className := snapshotDataClass,
-                <.a(VdomAttr("data-toggle") := "tab", "Snapshot"), ^.onClick --> {
+                <.a(^.id := "snapshotTab", VdomAttr("data-toggle") := "tab", "Snapshot"), ^.onClick --> {
                   props.router.set(props.terminalPageTab.copy(
                     mode = "snapshot",
                     subMode = subMode,
@@ -111,14 +112,14 @@ object TerminalComponent {
                 }
               ),
               <.li(^.className := planningClass,
-                <.a(VdomAttr("data-toggle") := "tab", "Planning"), ^.onClick --> {
+                <.a(^.id := "planningTab", VdomAttr("data-toggle") := "tab", "Planning"), ^.onClick --> {
                   props.router.set(props.terminalPageTab.copy(mode = "planning", subMode = subMode, date = None))
                 }
               ),
               model.userRoles.render(
                 r => if (r.contains("staff:edit"))
                   <.li(^.className := staffingClass,
-                    <.a(VdomAttr("data-toggle") := "tab", "Monthly Staffing"), ^.onClick --> {
+                    <.a(^.id := "monthlyStaffingTab", VdomAttr("data-toggle") := "tab", "Monthly Staffing"), ^.onClick --> {
                       props.router.set(props.terminalPageTab.copy(mode = "staffing", subMode = "15", date = None))
                     }
                   ) else ""
