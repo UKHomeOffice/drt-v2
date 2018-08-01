@@ -1,5 +1,6 @@
 package drt.shared
 
+import drt.shared.SplitRatiosNs.SplitRatios
 import org.specs2.mutable.Specification
 
 class AirportConfigsSpec extends Specification {
@@ -35,6 +36,26 @@ class AirportConfigsSpec extends Specification {
       } yield {
         Queues.queueDisplayNames.get(queueName).aka(s"$queueName not found in Queues") mustNotEqual None
       }
+    }
+
+    "A cloned Airport config should return the portcode of the port it is cloned from when calling feedPortCode" in {
+      val clonedConfig = AirportConfig(
+        portCode = "LHR_Clone",
+        cloneOfPortCode = Option("LHR"),
+        queues = Map(),
+        slaByQueue = Map(),
+        terminalNames = Seq(),
+        timeToChoxMillis = 0L,
+        firstPaxOffMillis = 0L,
+        defaultWalkTimeMillis = Map("A1" -> 0L, "A2" -> 0L),
+        defaultPaxSplits = SplitRatios("queue", Nil),
+        defaultProcessingTimes = Map(),
+        minMaxDesksByTerminalQueue = Map()
+      )
+
+      val result = clonedConfig.feedPortCode
+      val expected = "LHR"
+      result === expected
     }
 
   }

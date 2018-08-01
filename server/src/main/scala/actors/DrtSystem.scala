@@ -76,7 +76,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val recrunchOnStart: Boolean = config.getOptional[Boolean]("crunch.recrunch-on-start").getOrElse(false)
   system.log.info(s"recrunchOnStart: $recrunchOnStart")
 
-  val aclFeed = AclFeed(ftpServer, username, path, airportConfig.portCode, aclTerminalMapping(airportConfig.portCode))
+  val aclFeed = AclFeed(ftpServer, username, path, airportConfig.feedPortCode, aclTerminalMapping(airportConfig.portCode))
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
 
@@ -113,7 +113,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val maybeLatestZipFileName: String = initialManifestsState.map(_.latestZipFilename).getOrElse("")
 
   lazy val voyageManifestsStage: Source[ManifestsFeedResponse, NotUsed] = Source.fromGraph(
-    new VoyageManifestsGraphStage(airportConfig.portCode, s3ApiProvider, maybeLatestZipFileName, apiS3PollFrequencyMillis)
+    new VoyageManifestsGraphStage(airportConfig.feedPortCode, s3ApiProvider, maybeLatestZipFileName, apiS3PollFrequencyMillis)
   )
 
   system.log.info(s"useNationalityBasedProcessingTimes: $useNationalityBasedProcessingTimes")
@@ -174,7 +174,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   }
 
   def startScheduledFeedImports(crunchInputs: CrunchSystem[Cancellable, NotUsed]): Unit = {
-    if (airportConfig.portCode == "LHR") config.getOptional[String]("lhr.blackjack_url").map(csvUrl => {
+    if (airportConfig.feedPortCode == "LHR") config.getOptional[String]("lhr.blackjack_url").map(csvUrl => {
       val requestIntervalMillis = 5 * oneMinuteMillis
       Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, requestIntervalMillis milliseconds, SDate.now().addDays(-1))
     })
@@ -221,8 +221,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       initialLiveArrivals = initialLiveArrivals.getOrElse(Set()),
       initialManifestsState = initialManifestsState,
       arrivalsBaseSource = baseArrivalsSource(),
-      arrivalsFcstSource = forecastArrivalsSource(airportConfig.portCode),
-      arrivalsLiveSource = liveArrivalsSource(airportConfig.portCode),
+      arrivalsFcstSource = forecastArrivalsSource(airportConfig.feedPortCode),
+      arrivalsLiveSource = liveArrivalsSource(airportConfig.feedPortCode),
       recrunchOnStart = recrunchOnStart
     ))
     crunchInputs
@@ -284,7 +284,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   def createSplitsPredictionStage(predictSplits: Boolean,
                                   rawSplitsUrl: String): SplitsPredictorBase = if (predictSplits)
-    new SplitsPredictorStage(SparkSplitsPredictorFactory(createSparkSession(), rawSplitsUrl, airportConfig.portCode))
+    new SplitsPredictorStage(SparkSplitsPredictorFactory(createSparkSession(), rawSplitsUrl, airportConfig.feedPortCode))
   else
     new DummySplitsPredictor()
 
