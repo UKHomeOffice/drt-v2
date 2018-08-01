@@ -56,6 +56,8 @@ object Settings {
     val pprint = "0.4.3"
     val scalaCheck = "1.13.4"
     val akkaPersistenceInmemory = "2.4.18.1"
+    val akkaPersistenceJdbc = "3.4.0"
+    val postgres = "42.2.2"
     val sshJ = "0.24.0"
     val jodaTime = "2.9.6"
     val jodaConvert ="1.8.1"
@@ -155,7 +157,8 @@ object Settings {
     "com.eclipsesource.minimal-json" % "minimal-json" % "0.9.1",
     "org.bitbucket.b_c" % "jose4j" % "0.4.4",
 
-    "com.github.dnvriend" %% "akka-persistence-jdbc" % "3.4.0"
+    "com.github.dnvriend" %% "akka-persistence-jdbc" % akkaPersistenceJdbc,
+    "org.postgresql" % "postgresql" % postgres
 
   ))
 
