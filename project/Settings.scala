@@ -153,7 +153,9 @@ object Settings {
 
     "com.box" % "box-java-sdk" % "2.19.0",
     "com.eclipsesource.minimal-json" % "minimal-json" % "0.9.1",
-    "org.bitbucket.b_c" % "jose4j" % "0.4.4"
+    "org.bitbucket.b_c" % "jose4j" % "0.4.4",
+
+    "com.github.dnvriend" %% "akka-persistence-jdbc" % "3.4.0"
 
   ))
 
