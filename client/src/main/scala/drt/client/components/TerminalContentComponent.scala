@@ -104,13 +104,16 @@ object TerminalContentComponent {
       <.div(^.className := s"view-mode-content $viewModeStr",
         <.div(^.className := "tabs-with-export",
           <.ul(^.className := "nav nav-tabs",
-            <.li(^.className := desksAndQueuesActive, <.a(VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {
+            <.li(^.className := desksAndQueuesActive,
+              <.a(^.id := "desksAndQueuesTab", VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {
               props.router.set(props.terminalPageTab.copy(subMode = "desksAndQueues"))
             }),
-            <.li(^.className := arrivalsActive, <.a(VdomAttr("data-toggle") := "tab", "Arrivals"), ^.onClick --> {
+            <.li(^.className := arrivalsActive,
+              <.a(^.id := "arrivalsTab", VdomAttr("data-toggle") := "tab", "Arrivals"), ^.onClick --> {
               props.router.set(props.terminalPageTab.copy(subMode = "arrivals"))
             }),
-            <.li(^.className := staffingActive, <.a(VdomAttr("data-toggle") := "tab", "Staff Movements"), ^.onClick --> {
+            <.li(^.className := staffingActive,
+              <.a(^.id := "staffMovementsTab", VdomAttr("data-toggle") := "tab", "Staff Movements"), ^.onClick --> {
               props.router.set(props.terminalPageTab.copy(subMode = "staffing"))
             })
           ),
