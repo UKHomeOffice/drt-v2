@@ -1,6 +1,11 @@
 describe('Monthly Staffing', function () {
   const today = new Date();
 
+  function waitAndHardReload(waitTime = 500) {
+      cy.wait(waitTime, {log: true});
+      cy.reload(true, {log: true, timeout: 60000});
+  }
+
   function setRoles(roles) {
     cy.request("POST", 'v2/test/live/test/mock-roles', {"roles": roles})
   }
@@ -49,16 +54,18 @@ describe('Monthly Staffing', function () {
     let cellToTest = ".htCore tbody :nth-child(1) :nth-child(2)";
     it("If I enter staff for the current month those staff should still be visible if I change months and change back", function () {
       saveShifts();
-
       setRoles(["staff:edit"]);
 
       cy.visit('/v2/test/live#terminal/T1/staffing/15///');
+      waitAndHardReload();
       cy.get(cellToTest).contains("1");
 
 
       cy.visit('/v2/test/live#terminal/T1/staffing/15/' + nextMonthDateString() +'//');
+      waitAndHardReload();
       cy.get(cellToTest).contains("2");
       cy.visit('/v2/test/live#terminal/T1/staffing/15/' + thisMonthDateString() +'//');
+      waitAndHardReload();
       cy.get(cellToTest).contains("1");
 
       resetShifts();

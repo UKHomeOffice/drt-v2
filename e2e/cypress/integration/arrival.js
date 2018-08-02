@@ -1,8 +1,15 @@
+/// <reference types="Cypress" />
+
 describe('Arrivals page', () => {
 
   const currentDateTime = new Date();
   const schDT = currentDateTime.toISOString().split("T")[0];
   const currentMillis = currentDateTime.getTime();
+
+  function waitAndHardReload(waitTime = 500) {
+      cy.wait(waitTime, {log: true});
+      cy.reload(true, {log: true, timeout: 60000});
+  }
 
   function addFlight() {
     cy.request('POST',
@@ -33,12 +40,13 @@ describe('Arrivals page', () => {
 
   function loadManifestFixture() {
     cy.request('POST', '/v2/test/live/test/manifest', manifest);
-    cy.request('GET', '/v2/test/live/export/arrivals/' + currentMillis + '/T1?startHour=0&endHour=24')
+    cy.request('GET', '/v2/test/live/export/arrivals/' + currentMillis + '/T1?startHour=0&endHour=24');
+    waitAndHardReload();
     cy.get('.pax-api');
   }
 
   function setRoles(roles) {
-    cy.request("POST", 'v2/test/live/test/mock-roles', { "roles": roles})
+    cy.request("POST", 'v2/test/live/test/mock-roles', { "roles": roles});
   }
 
   before(() => {
@@ -122,12 +130,14 @@ describe('Arrivals page', () => {
   it('Displays a flight after it has been ingested via the live feed', () => {
     addFlight();
     cy.visit('/v2/test/live#terminal/T1/current/arrivals//0/24');
+    waitAndHardReload();
     cy.get("#arrivals").contains("TS0123")
   });
 
   it('Does not show API splits in the flights export for regular users', () => {
     loadManifestFixture();
     cy.request('POST', '/v2/test/live/test/manifest', manifest);
+    waitAndHardReload();
     cy.request('GET', '/v2/test/live/export/arrivals/' + currentMillis + '/T1?startHour=0&endHour=24').then((resp) => {
       expect(resp.body).to.equal(csvWithNoApiSplits)
     });
@@ -136,6 +146,7 @@ describe('Arrivals page', () => {
   it('Allows you to view API splits in the flights export for super users', () => {
     loadManifestFixture();
     setRoles(["drt:team"]);
+    waitAndHardReload();
     cy.request({
       method: 'GET',
       url: '/v2/test/live/export/arrivals/' + currentMillis + '/T1?startHour=0&endHour=24',

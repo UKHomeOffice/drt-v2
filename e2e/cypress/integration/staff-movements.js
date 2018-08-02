@@ -1,7 +1,9 @@
+/// <reference types="Cypress" />
+
 describe('Staff movements', function () {
   beforeEach(function () {
     cy.request('DELETE', '/v2/test/live/test/data');
-    var schDT = new Date().toISOString().split("T")[0];
+    let schDT = new Date().toISOString().split("T")[0];
     cy.request('POST',
       '/v2/test/live/test/arrival',
       {
@@ -26,10 +28,17 @@ describe('Staff movements', function () {
         "Origin": "AMS",
         "SchDT": schDT + "T00:15:00Z"
       });
+      waitAndHardReload();
   });
+
+  function waitAndHardReload(waitTime = 500) {
+      cy.wait(waitTime, {log: true});
+      cy.reload(true, {log: true, timeout: 60000});
+  }
 
   function addMovementFor1HourAt(numStaff, hour) {
     for (let i = 0; i < numStaff; i++) {
+      waitAndHardReload();
       cy.get('.staff-adjustments > :nth-child(' + (hour + 1) + ') > :nth-child(3)').contains("+").then((el) => {
         el.click();
         cy.contains("Save").click();
@@ -38,7 +47,7 @@ describe('Staff movements', function () {
   }
 
   function staffDeployedAtRow(row) {
-    var selector = '#sticky-body > :nth-child(' + (row + 1) + ') > :nth-child(14)';
+    let selector = '#sticky-body > :nth-child(' + (row + 1) + ') > :nth-child(14)';
     return cy.get(selector);
   }
 
@@ -58,6 +67,7 @@ describe('Staff movements', function () {
   }
 
   function checkStaffNumbersOnDesksAndQueuesTabAre(numStaff) {
+    waitAndHardReload(1000);
     [0, 1, 2, 3].map((row) => {
       staffMovementsAtRow(row).contains(numStaff);
       staffDeployedAtRow(row).contains(numStaff);
@@ -101,7 +111,8 @@ describe('Staff movements', function () {
   }
 
   function choose24Hours() {
-    cy.get('#current .date-selector .date-view-picker-container').contains('24 hours').click().end();
+    cy.get('#current .date-selector .date-view-picker-container').contains('24 hours').click({force: true}).end();
+    waitAndHardReload(1000);
   }
 
   describe('When adding staff movements on the desks and queues page', function () {
