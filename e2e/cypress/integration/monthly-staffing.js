@@ -1,20 +1,19 @@
+let moment = require('moment');
+
 describe('Monthly Staffing', function () {
-  const today = new Date();
+  moment.locale("en_GB");
+  const today = moment();
 
   function setRoles(roles) {
     cy.request("POST", 'v2/test/live/test/mock-roles', {"roles": roles})
   }
 
   function firstMidnightOfThisMonth() {
-    let year = today.getFullYear();
-    let month = today.getMonth();
-    return new Date(year, month, 1, 0, 0);
+    return moment(today.year().toString()+'-'+(today.month()+1).toString() + "-01");
   }
 
   function firstMidnightOfNextMonth() {
-    let year = today.getFullYear();
-    let month = (today.getMonth()+1)%12;
-    return new Date(year, month, 1, 0, 0);
+    return firstMidnightOfThisMonth().add(1, 'M');
   }
 
   function saveShifts() {
@@ -39,8 +38,8 @@ describe('Monthly Staffing', function () {
   }
 
   function nextMonthDateString() {
-    let year = today.getFullYear();
-    let month = (today.getMonth()+1)%12 + 1;
+    let year = today.year();
+    let month = (today.month()+1)%12 + 1;
     return new Date(year, month, 1, 0, 0).toISOString().split("T")[0];
   }
 
