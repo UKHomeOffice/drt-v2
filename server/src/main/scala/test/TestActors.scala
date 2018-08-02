@@ -1,9 +1,9 @@
 package test
 
 import actors._
+import com.trueaccord.scalapb.GeneratedMessage
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.SDateLike
-import services.{ForecastBaseArrivalsActor, ForecastPortArrivalsActor, LiveArrivalsActor}
 
 
 object TestActors {
@@ -120,7 +120,7 @@ object TestActors {
                                   portQueues: Map[TerminalName, Seq[QueueName]],
                                   now: () => SDateLike,
                                   expireAfterMillis: Long,
-                                  purgePreviousSnapshots: Boolean) extends CrunchStateActor(snapshotInterval, name, portQueues, now, expireAfterMillis, purgePreviousSnapshots) {
+                                  purgePreviousSnapshots: Boolean) extends CrunchStateActor(snapshotInterval, 1024 * 1024, name, portQueues, now, expireAfterMillis, purgePreviousSnapshots) {
 
     def reset: Receive = {
       case ResetActor =>

@@ -16,7 +16,7 @@ import scala.language.postfixOps
 case object GetCrunchMinutes
 
 class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, queues: Map[TerminalName, Seq[QueueName]])
-  extends CrunchStateActor(snapshotInterval, "crunch-state", queues, () => pointInTime, 2 * Crunch.oneDayMillis, false) {
+  extends CrunchStateActor(snapshotInterval, 1024 * 1024, "crunch-state", queues, () => pointInTime, 2 * Crunch.oneDayMillis, false) {
 
   val staffReconstructionRequired: Boolean = pointInTime.millisSinceEpoch <= SDate("2017-12-04").millisSinceEpoch
 

@@ -1,6 +1,7 @@
 package actors
 
 import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotMetadata, SnapshotOffer}
+import com.trueaccord.scalapb.GeneratedMessage
 import drt.shared.SDateLike
 import org.slf4j.Logger
 import services.SDate
@@ -29,14 +30,15 @@ trait RecoveryLogging {
 
   def logPersistedBytesCounter(bytes: Int): Unit = {
     val megaBytes = bytes.toDouble / (1024 * 1024)
-    log.info(f"${megaBytes}%.2fMB persisted since last snapshot")
+    log.info(f"$megaBytes%.2fMB persisted since last snapshot")
   }
 }
 
 trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   val log: Logger
 
-  val oneMegaByte = 1024 * 1024
+  val oneMegaByte: Int = 1024 * 1024
+  val snapshotBytesThreshold: Int
   var bytesSinceSnapshotCounter = 0
 
   def unknownMessage: PartialFunction[Any, Unit] = {
@@ -52,6 +54,41 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   def playSnapshotMessage: PartialFunction[Any, Unit] = processSnapshotMessage orElse unknownMessage
 
   def postRecoveryComplete(): Unit = Unit
+
+  def postSaveSnapshot(): Unit = Unit
+
+  def stateToMessage: GeneratedMessage
+
+  def persistAndMaybeSnapshot(messageToPersist: GeneratedMessage): Unit = {
+    persistMessage(messageToPersist)
+    snapshotIfNeeded(stateToMessage)
+  }
+
+  def persistMessage(messageToPersist: GeneratedMessage): Unit = {
+    persist(messageToPersist) { message =>
+      val messageBytes = message.serializedSize
+      log.info(s"Persisting $messageBytes bytes of ${message.getClass}")
+
+      message match {
+        case m: AnyRef =>
+          context.system.eventStream.publish(m)
+          bytesSinceSnapshotCounter += messageBytes
+          logPersistedBytesCounter(bytesSinceSnapshotCounter)
+        case _ =>
+          log.error("Message was not of type AnyRef and so could not be persisted")
+      }
+    }
+  }
+
+  def snapshotIfNeeded(stateToSnapshot: GeneratedMessage): Unit = {
+    if (bytesSinceSnapshotCounter > snapshotBytesThreshold) {
+      log.info(s"Snapshotting ${stateToSnapshot.serializedSize} bytes of ${stateToSnapshot.getClass}. Resetting byte counter to zero")
+      saveSnapshot(stateToSnapshot)
+
+      bytesSinceSnapshotCounter = 0
+      postSaveSnapshot()
+    }
+  }
 
   override def receiveRecover: Receive = {
     case SnapshotOffer(md, ss) =>

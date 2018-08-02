@@ -3,6 +3,7 @@ package actors
 import actors.SplitsConversion.splitMessageToApiSplits
 import akka.actor._
 import akka.persistence._
+import com.trueaccord.scalapb.GeneratedMessage
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi._
 import drt.shared.SplitRatiosNs.SplitSources
@@ -16,6 +17,7 @@ import services.graphstages.PortStateWithDiff
 import scala.language.postfixOps
 
 class CrunchStateActor(val snapshotInterval: Int,
+                       val snapshotBytesThreshold: Int,
                        name: String,
                        portQueues: Map[TerminalName, Seq[QueueName]],
                        now: () => SDateLike,
@@ -29,7 +31,7 @@ class CrunchStateActor(val snapshotInterval: Int,
 
   var state: Option[PortState] = initialState
 
-  def initialState = None
+  def initialState: Option[PortState] = None
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: CrunchStateSnapshotMessage => setStateFromSnapshot(snapshot)
@@ -58,6 +60,17 @@ class CrunchStateActor(val snapshotInterval: Int,
         s", ${s.staffMinutes.size} staff minutes ")
   }
 
+  override def postSaveSnapshot(): Unit = if (purgePreviousSnapshots) {
+    val maxSequenceNr = lastSequenceNr
+    logInfo(s"Purging snapshots with sequence number < $maxSequenceNr")
+    deleteSnapshots(SnapshotSelectionCriteria(maxSequenceNr = maxSequenceNr))
+  }
+
+  override def stateToMessage: GeneratedMessage = state match {
+    case Some(ps) => portStateToSnapshotMessage(ps)
+    case None => CrunchStateSnapshotMessage(Option(0L), Option(0), List(), List(), List())
+  }
+
   override def receiveCommand: Receive = {
     case PortStateWithDiff(_, CrunchDiffMessage(_, _, fr, fu, cu, su, _)) if fr.isEmpty && fu.isEmpty && cu.isEmpty && su.isEmpty =>
       log.info(s"Received port state with empty diff")
@@ -65,12 +78,7 @@ class CrunchStateActor(val snapshotInterval: Int,
     case PortStateWithDiff(portState, diff) =>
       logInfo(s"Received port state with diff")
       updateStateFromPortState(portState)
-
-      persistDiff(diff)
-
-      if (diff.crunchMinutesToUpdate.length > 20000 || (lastSequenceNr % snapshotInterval == 0 && lastSequenceNr != 0)) {
-        persistSnapshot(portState)
-      }
+      persistAndMaybeSnapshot(diff)
 
     case GetState =>
       logInfo(s"Received GetState request. Replying with ${state.map(s => s"PortState containing ${s.crunchMinutes.size} crunch minutes")}")
@@ -115,28 +123,6 @@ class CrunchStateActor(val snapshotInterval: Int,
 
     case u =>
       log.error(s"Received unexpected message $u")
-  }
-
-  def persistSnapshot(portState: PortState): Unit = {
-    val snapshotMessage: CrunchStateSnapshotMessage = portStateToSnapshotMessage(portState)
-    saveSnapshot(snapshotMessage)
-    logInfo(s"Saved ${snapshotMessage.serializedSize} bytes of PortState snapshot: ${snapshotMessage.crunchMinutes.length} cms, ${snapshotMessage.flightWithSplits.length} fs, ${snapshotMessage.staffMinutes.length} sms")
-    bytesSinceSnapshotCounter = 0
-    if (purgePreviousSnapshots) {
-      val maxSequenceNr = lastSequenceNr
-      logInfo(s"Purging snapshots with sequence number < $maxSequenceNr")
-      deleteSnapshots(SnapshotSelectionCriteria(maxSequenceNr = maxSequenceNr))
-    }
-  }
-
-  def persistDiff(diff: CrunchDiffMessage): Unit = {
-    persist(diff) { (diff: CrunchDiffMessage) =>
-      val messageBytes = diff.serializedSize
-      logInfo(s"Persisting $messageBytes bytes of ${diff.getClass}: ${diff.crunchMinutesToUpdate.length} cms, ${diff.flightsToUpdate.length} fs, ${diff.staffMinutesToUpdate.length} sms, ${diff.flightIdsToRemove.length} removed fms")
-      context.system.eventStream.publish(diff)
-      bytesSinceSnapshotCounter += messageBytes
-      logPersistedBytesCounter(bytesSinceSnapshotCounter)
-    }
   }
 
   def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = {
@@ -195,9 +181,7 @@ class CrunchStateActor(val snapshotInterval: Int,
     staffMinuteUpdates = diffMessage.staffMinutesToUpdate.map(staffMinuteFromMessage).toSet
   )
 
-  def updateStateFromPortState(newState: PortState): Unit = {
-    state = Option(newState)
-  }
+  def updateStateFromPortState(newState: PortState): Unit = state = Option(newState)
 
   def crunchMinuteToMessage(cm: CrunchMinute): CrunchMinuteMessage = CrunchMinuteMessage(
     terminalName = Option(cm.terminalName),

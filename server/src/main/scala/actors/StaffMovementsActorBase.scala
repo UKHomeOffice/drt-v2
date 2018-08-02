@@ -4,6 +4,7 @@ import java.util.UUID
 
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
+import com.trueaccord.scalapb.GeneratedMessage
 import drt.shared.{MilliDate, StaffMovement}
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.StaffMovementMessages.{StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
@@ -58,10 +59,11 @@ class StaffMovementsActorBase extends RecoveryActorLike with PersistentDrtActor[
   def initialState = StaffMovementsState(StaffMovements(List()))
 
   val snapshotInterval = 1
+  override val snapshotBytesThreshold: Int = oneMegaByte
 
-  def updateState(data: StaffMovements): Unit = {
-    state = state.updated(data)
-  }
+  override def stateToMessage: GeneratedMessage = StaffMovementsStateSnapshotMessage(staffMovementsToStaffMovementMessages(state.staffMovements))
+
+  def updateState(data: StaffMovements): Unit = state = state.updated(data)
 
   def staffMovementMessagesToStaffMovements(messages: List[StaffMovementMessage]): StaffMovements = StaffMovements(messages.map(staffMovementMessageToStaffMovement))
 
