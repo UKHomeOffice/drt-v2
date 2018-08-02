@@ -39,6 +39,8 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
 
   val oneMegaByte: Int = 1024 * 1024
   val snapshotBytesThreshold: Int
+  val maybeSnapshotInterval: Option[Int] = None
+  var messagesPersistedSinceSnapshotCounter = 0
   var bytesSinceSnapshotCounter = 0
 
   def unknownMessage: PartialFunction[Any, Unit] = {
@@ -73,6 +75,7 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
         case m: AnyRef =>
           context.system.eventStream.publish(m)
           bytesSinceSnapshotCounter += messageBytes
+          messagesPersistedSinceSnapshotCounter += 1
           logPersistedBytesCounter(bytesSinceSnapshotCounter)
         case _ =>
           log.error("Message was not of type AnyRef and so could not be persisted")
@@ -86,6 +89,7 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
       saveSnapshot(stateToSnapshot)
 
       bytesSinceSnapshotCounter = 0
+      messagesPersistedSinceSnapshotCounter = 0
       postSaveSnapshot()
     }
   }

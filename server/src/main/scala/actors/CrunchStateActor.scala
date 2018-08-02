@@ -16,7 +16,7 @@ import services.graphstages.PortStateWithDiff
 
 import scala.language.postfixOps
 
-class CrunchStateActor(val snapshotInterval: Int,
+class CrunchStateActor(override val maybeSnapshotInterval: Option[Int],
                        val snapshotBytesThreshold: Int,
                        name: String,
                        portQueues: Map[TerminalName, Seq[QueueName]],

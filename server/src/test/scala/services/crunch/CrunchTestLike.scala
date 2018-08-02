@@ -26,7 +26,7 @@ import scala.language.implicitConversions
 
 
 class LiveCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
-  extends CrunchStateActor(1, s"live-test-$name", queues, now, expireAfterMillis, false) {
+  extends CrunchStateActor(1, 1024 * 1024, s"live-test-$name", queues, now, expireAfterMillis, false) {
   override def updateStateFromPortState(cs: PortState): Unit = {
     log.info(s"calling parent updateState...")
     super.updateStateFromPortState(cs)
@@ -36,7 +36,7 @@ class LiveCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[
 }
 
 class ForecastCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
-  extends CrunchStateActor(1, s"forecast-test-$name", queues, now, expireAfterMillis, false) {
+  extends CrunchStateActor(1, 1024 * 1024, s"forecast-test-$name", queues, now, expireAfterMillis, false) {
   override def updateStateFromPortState(cs: PortState): Unit = {
     log.info(s"calling parent updateState...")
     super.updateStateFromPortState(cs)
