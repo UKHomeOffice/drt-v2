@@ -106,7 +106,6 @@ class VoyageManifestsActor(val snapshotBytesThreshold: Int,
 
       state = VoyageManifestState(manifests = updatedManifests, latestZipFilename = updatedLZF, feedName = name, maybeFeedStatuses = Option(state.addStatus(newStatus)))
 
-      //      snapshotIfRequired(state)
       persistFeedStatus(newStatus)
 
     case ManifestsFeedFailure(message, failedAt) =>
