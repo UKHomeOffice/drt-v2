@@ -25,11 +25,10 @@ trait FeedStateLike {
 
 case class ArrivalsState(arrivals: Map[Int, Arrival], feedName: String, maybeFeedStatuses: Option[FeedStatuses]) extends FeedStateLike
 
-class ForecastBaseArrivalsActor(now: () => SDateLike,
+class ForecastBaseArrivalsActor(val snapshotBytesThreshold: Int,
+                                now: () => SDateLike,
                                 expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, "ACL forecast") {
   override def persistenceId: String = s"${getClass.getName}-forecast-base"
-
-  override val snapshotBytesThreshold: Int = oneMegaByte
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -61,11 +60,10 @@ class ForecastBaseArrivalsActor(now: () => SDateLike,
   }
 }
 
-class ForecastPortArrivalsActor(now: () => SDateLike,
+class ForecastPortArrivalsActor(val snapshotBytesThreshold: Int,
+                                now: () => SDateLike,
                                 expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, "Port forecast") {
   override def persistenceId: String = s"${getClass.getName}-forecast-port"
-
-  override val snapshotBytesThreshold: Int = 5 * oneMegaByte
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -73,11 +71,10 @@ class ForecastPortArrivalsActor(now: () => SDateLike,
                           existingState: ArrivalsState): ArrivalsState = consumeUpdates(diffsMessage, existingState)
 }
 
-class LiveArrivalsActor(now: () => SDateLike,
+class LiveArrivalsActor(val snapshotBytesThreshold: Int,
+                        now: () => SDateLike,
                         expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, "Port live") {
   override def persistenceId: String = s"${getClass.getName}-live"
-
-  override val snapshotBytesThreshold: Int = 2 * oneMegaByte
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 

@@ -29,9 +29,10 @@ trait RecoveryLogging {
 
   def logUnknown(unknown: Any): Unit = log.warn(s"$prefix received unknown message ${unknown.getClass}")
 
-  def logPersistedBytesCounter(bytes: Int): Unit = {
+  def logCounters(bytes: Int, messages: Int, bytesThreshold: Int, maybeMessageThreshold: Option[Int]): Unit = {
     val megaBytes = bytes.toDouble / (1024 * 1024)
-    log.info(f"$megaBytes%.2fMB persisted since last snapshot")
+    val megaBytesThreshold = bytesThreshold.toDouble / (1024 * 1024)
+    log.info(f"$megaBytes%.2fMB persisted in $messages messages since last snapshot. Thresholds: $megaBytesThreshold%.2fMB, $maybeMessageThreshold messages")
   }
 }
 
@@ -77,7 +78,7 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
           context.system.eventStream.publish(m)
           bytesSinceSnapshotCounter += messageBytes
           messagesPersistedSinceSnapshotCounter += 1
-          logPersistedBytesCounter(bytesSinceSnapshotCounter)
+          logCounters(bytesSinceSnapshotCounter, messagesPersistedSinceSnapshotCounter, snapshotBytesThreshold, maybeSnapshotInterval)
         case _ =>
           log.error("Message was not of type AnyRef and so could not be persisted")
       }
@@ -85,7 +86,7 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   }
 
   def snapshotIfNeeded(stateToSnapshot: GeneratedMessage): Unit = if (shouldTakeSnapshot) {
-    log.info(s"Snapshotting ${stateToSnapshot.serializedSize} bytes of ${stateToSnapshot.getClass}. Resetting byte counter to zero")
+    log.info(s"Snapshotting ${stateToSnapshot.serializedSize} bytes of ${stateToSnapshot.getClass}. Resetting counters to zero")
     saveSnapshot(stateToSnapshot)
 
     bytesSinceSnapshotCounter = 0
@@ -96,6 +97,9 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   def shouldTakeSnapshot: Boolean = {
     val shouldSnapshotByCount = maybeSnapshotInterval.isDefined && messagesPersistedSinceSnapshotCounter >= maybeSnapshotInterval.get
     val shouldSnapshotByBytes = bytesSinceSnapshotCounter > snapshotBytesThreshold
+
+    if (shouldSnapshotByCount) log.info(s"Snapshot interval reached (${maybeSnapshotInterval.getOrElse(0)})")
+    if (shouldSnapshotByBytes) log.info(s"Snapshot bytes threshold reached (${snapshotBytesThreshold.toDouble / (1024 * 1024)}MB)")
 
     shouldSnapshotByBytes || shouldSnapshotByCount
   }
@@ -112,6 +116,6 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
     case event =>
       logEvent(event)
       playEventMessage(event)
-      logPersistedBytesCounter(bytesSinceSnapshotCounter)
+      logCounters(bytesSinceSnapshotCounter, messagesPersistedSinceSnapshotCounter, snapshotBytesThreshold, maybeSnapshotInterval)
   }
 }

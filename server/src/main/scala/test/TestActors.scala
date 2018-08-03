@@ -10,8 +10,10 @@ object TestActors {
 
   case object ResetActor
 
+  val oneMegaByte: Int = 1024 * 1024
+
   case class TestForecastBaseArrivalsActor(now: () => SDateLike, expireAfterMillis: Long)
-    extends ForecastBaseArrivalsActor(now, expireAfterMillis) {
+    extends ForecastBaseArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def reset: Receive = {
       case ResetActor =>
@@ -26,7 +28,7 @@ object TestActors {
   }
 
   case class TestForecastPortArrivalsActor(now: () => SDateLike, expireAfterMillis: Long)
-    extends ForecastPortArrivalsActor(now, expireAfterMillis) {
+    extends ForecastPortArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def reset: Receive = {
       case ResetActor =>
@@ -41,7 +43,7 @@ object TestActors {
   }
 
   case class TestLiveArrivalsActor(now: () => SDateLike, expireAfterMillis: Long)
-    extends LiveArrivalsActor(now, expireAfterMillis) {
+    extends LiveArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def reset: Receive = {
       case ResetActor =>
@@ -115,12 +117,12 @@ object TestActors {
     override def receiveCommand: Receive = reset orElse super.receiveCommand
   }
 
-  case class TestCrunchStateActor(override val snapshotInterval: Int,
+  case class TestCrunchStateActor(snapshotInterval: Int,
                                   name: String,
                                   portQueues: Map[TerminalName, Seq[QueueName]],
                                   now: () => SDateLike,
                                   expireAfterMillis: Long,
-                                  purgePreviousSnapshots: Boolean) extends CrunchStateActor(snapshotInterval, 1024 * 1024, name, portQueues, now, expireAfterMillis, purgePreviousSnapshots) {
+                                  purgePreviousSnapshots: Boolean) extends CrunchStateActor(None, 1024 * 1024, name, portQueues, now, expireAfterMillis, purgePreviousSnapshots) {
 
     def reset: Receive = {
       case ResetActor =>
