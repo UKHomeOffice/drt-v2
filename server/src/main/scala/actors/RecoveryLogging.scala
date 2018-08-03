@@ -16,7 +16,8 @@ trait RecoveryLogging {
 
   def logSnapshotOffer(md: SnapshotMetadata): Unit = log.info(snapshotOfferLogMessage(md))
 
-  def logSnapshotOffer(md: SnapshotMetadata, additionalInfo: String): Unit = log.info(s"${snapshotOfferLogMessage(md)} - $additionalInfo")
+  def logSnapshotOffer(md: SnapshotMetadata,
+                       additionalInfo: String): Unit = log.info(s"${snapshotOfferLogMessage(md)} - $additionalInfo")
 
   def logEvent(event: Any): Unit = log.info(s"$prefix received event ${event.getClass}")
 
@@ -83,15 +84,20 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
     }
   }
 
-  def snapshotIfNeeded(stateToSnapshot: GeneratedMessage): Unit = {
-    if (bytesSinceSnapshotCounter > snapshotBytesThreshold) {
-      log.info(s"Snapshotting ${stateToSnapshot.serializedSize} bytes of ${stateToSnapshot.getClass}. Resetting byte counter to zero")
-      saveSnapshot(stateToSnapshot)
+  def snapshotIfNeeded(stateToSnapshot: GeneratedMessage): Unit = if (shouldTakeSnapshot) {
+    log.info(s"Snapshotting ${stateToSnapshot.serializedSize} bytes of ${stateToSnapshot.getClass}. Resetting byte counter to zero")
+    saveSnapshot(stateToSnapshot)
 
-      bytesSinceSnapshotCounter = 0
-      messagesPersistedSinceSnapshotCounter = 0
-      postSaveSnapshot()
-    }
+    bytesSinceSnapshotCounter = 0
+    messagesPersistedSinceSnapshotCounter = 0
+    postSaveSnapshot()
+  }
+
+  def shouldTakeSnapshot: Boolean = {
+    val shouldSnapshotByCount = maybeSnapshotInterval.isDefined && messagesPersistedSinceSnapshotCounter >= maybeSnapshotInterval.get
+    val shouldSnapshotByBytes = bytesSinceSnapshotCounter > snapshotBytesThreshold
+
+    shouldSnapshotByBytes || shouldSnapshotByCount
   }
 
   override def receiveRecover: Receive = {
