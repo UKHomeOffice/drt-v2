@@ -74,6 +74,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val snapshotMegaBytesLiveArrivals: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.live-arrivals").getOrElse(2d) * oneMegaByte).toInt
   val snapshotMegaBytesFcstPortState: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.forecast-portstate").getOrElse(10d) * oneMegaByte).toInt
   val snapshotMegaBytesLivePortState: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.live-portstate").getOrElse(25d) * oneMegaByte).toInt
+  val snapshotMegaBytesVoyageManifests: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.voyage-manifests").getOrElse(100d) * oneMegaByte).toInt
   val expireAfterMillis: MillisSinceEpoch = 2 * oneDayMillis
 
   val ftpServer: String = ConfigFactory.load.getString("acl.host")
@@ -93,20 +94,23 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val purgeOldLiveSnapshots = false
   val purgeOldForecastSnapshots = true
 
+  val liveCrunchStateProps = Props(classOf[CrunchStateActor], Option(airportConfig.portStateSnapshotInterval), snapshotMegaBytesLivePortState, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots)
+  val forecastCrunchStateProps = Props(classOf[CrunchStateActor], Option(100), snapshotMegaBytesFcstPortState, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots)
+
   lazy val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastBaseArrivalsActor], snapshotMegaBytesBaseArrivals, now, expireAfterMillis), name = "base-arrivals-actor")
   lazy val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastPortArrivalsActor], snapshotMegaBytesFcstArrivals, now, expireAfterMillis), name = "forecast-arrivals-actor")
   lazy val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor], snapshotMegaBytesLiveArrivals, now, expireAfterMillis), name = "live-arrivals-actor")
 
-  val liveCrunchStateProps = Props(classOf[CrunchStateActor], Option(airportConfig.portStateSnapshotInterval), snapshotMegaBytesLivePortState, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots)
-  val forecastCrunchStateProps = Props(classOf[CrunchStateActor], Option(100), snapshotMegaBytesFcstPortState, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots)
-
   lazy val liveCrunchStateActor: ActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
-  lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], now, expireAfterMillis, snapshotIntervalVm), name = "voyage-manifests-actor")
   lazy val forecastCrunchStateActor: ActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
-  val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
+
+  lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], snapshotMegaBytesVoyageManifests, now, expireAfterMillis, snapshotIntervalVm), name = "voyage-manifests-actor")
+
   lazy val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor]))
   lazy val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor]))
   lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor]))
+
+  val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
   val useNationalityBasedProcessingTimes: Boolean = config.getOptional[String]("feature-flags.nationality-based-processing-times").isDefined
   val useSplitsPrediction: Boolean = config.getOptional[String]("feature-flags.use-splits-prediction").isDefined
   val rawSplitsUrl: String = config.getOptional[String]("crunch.splits.raw-data-path").getOrElse("/dev/null")

@@ -20,14 +20,17 @@ case class VoyageManifestState(manifests: Set[VoyageManifest],
 
 case object GetLatestZipFilename
 
-class VoyageManifestsActor(now: () => SDateLike,
+class VoyageManifestsActor(val snapshotBytesThreshold: Int,
+                           now: () => SDateLike,
                            expireAfterMillis: Long,
                            snapshotInterval: Int) extends RecoveryActorLike with PersistentDrtActor[VoyageManifestState] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   val name = "API"
 
-  var state = initialState
+  var state: VoyageManifestState = initialState
+
+  override val maybeSnapshotInterval = Option(snapshotInterval)
 
   def initialState = VoyageManifestState(
     manifests = Set(),
@@ -36,7 +39,6 @@ class VoyageManifestsActor(now: () => SDateLike,
     maybeFeedStatuses = None
   )
 
-  override val snapshotBytesThreshold: Int = 100 * oneMegaByte
   var persistCounter = 0
 
   def defaultLatestZipFilename: String = {
