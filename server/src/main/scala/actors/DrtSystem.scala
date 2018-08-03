@@ -64,8 +64,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   implicit val system: ActorSystem = actorSystem
 
   val oneMegaByte: Int = 1024 * 1024
-  val liveCrunchSnapshotThresholdBytes: Int = 25 * oneMegaByte
-  val forecastCrunchSnapshotThresholdBytes: Int = 10 * oneMegaByte
 
   val minutesToCrunch: Int = 1440
   val maxDaysToCrunch: Int = config.getOptional[Int]("crunch.forecast.max_days").getOrElse(360)
@@ -74,6 +72,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val snapshotMegaBytesBaseArrivals: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.base-arrivals").getOrElse(1d) * oneMegaByte).toInt
   val snapshotMegaBytesFcstArrivals: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.forecast-arrivals").getOrElse(5d) * oneMegaByte).toInt
   val snapshotMegaBytesLiveArrivals: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.live-arrivals").getOrElse(2d) * oneMegaByte).toInt
+  val snapshotMegaBytesFcstPortState: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.forecast-portstate").getOrElse(10d) * oneMegaByte).toInt
+  val snapshotMegaBytesLivePortState: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.live-portstate").getOrElse(25d) * oneMegaByte).toInt
   val expireAfterMillis: MillisSinceEpoch = 2 * oneDayMillis
 
   val ftpServer: String = ConfigFactory.load.getString("acl.host")
@@ -97,8 +97,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastPortArrivalsActor], snapshotMegaBytesFcstArrivals, now, expireAfterMillis), name = "forecast-arrivals-actor")
   lazy val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor], snapshotMegaBytesLiveArrivals, now, expireAfterMillis), name = "live-arrivals-actor")
 
-  val liveCrunchStateProps = Props(classOf[CrunchStateActor], Option(airportConfig.portStateSnapshotInterval), liveCrunchSnapshotThresholdBytes, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots)
-  val forecastCrunchStateProps = Props(classOf[CrunchStateActor], Option(100), forecastCrunchSnapshotThresholdBytes, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots)
+  val liveCrunchStateProps = Props(classOf[CrunchStateActor], Option(airportConfig.portStateSnapshotInterval), snapshotMegaBytesLivePortState, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots)
+  val forecastCrunchStateProps = Props(classOf[CrunchStateActor], Option(100), snapshotMegaBytesFcstPortState, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots)
 
   lazy val liveCrunchStateActor: ActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
   lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], now, expireAfterMillis, snapshotIntervalVm), name = "voyage-manifests-actor")
