@@ -1,15 +1,15 @@
-let moment = require('moment');
+let moment = require('moment-timezone');
+require('moment/locale/en-gb');
+moment.locale("en-gb");
 
 describe('Monthly Staffing', function () {
-  moment.locale("en_GB");
-  const today = moment();
 
   function setRoles(roles) {
     cy.request("POST", 'v2/test/live/test/mock-roles', {"roles": roles})
   }
 
   function firstMidnightOfThisMonth() {
-    return moment(today.year().toString()+'-'+(today.month()+1).toString() + "-01");
+    return moment().tz('Europe/London').startOf('month');
   }
 
   function firstMidnightOfNextMonth() {
@@ -34,13 +34,11 @@ describe('Monthly Staffing', function () {
   }
 
   function thisMonthDateString() {
-    return today.toISOString().split("T")[0];
+    return moment().toISOString().split("T")[0];
   }
 
   function nextMonthDateString() {
-    let year = today.year();
-    let month = (today.month()+1)%12 + 1;
-    return new Date(year, month, 1, 0, 0).toISOString().split("T")[0];
+    return moment().add(1, 'M').toISOString().split("T")[0];
   }
 
   describe('When adding staff using the monthly staff view', function () {
@@ -53,7 +51,6 @@ describe('Monthly Staffing', function () {
 
       cy.visit('/v2/test/live#terminal/T1/staffing/15///');
       cy.get(cellToTest).contains("1");
-
 
       cy.visit('/v2/test/live#terminal/T1/staffing/15/' + nextMonthDateString() +'//');
       cy.get(cellToTest).contains("2");
