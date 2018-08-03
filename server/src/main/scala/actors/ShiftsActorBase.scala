@@ -1,5 +1,6 @@
 package actors
 
+import actors.Sizes.oneMegaByte
 import akka.actor.ActorLogging
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete

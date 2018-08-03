@@ -1,5 +1,6 @@
 package actors
 
+import actors.Sizes.oneMegaByte
 import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotMetadata, SnapshotOffer}
 import com.trueaccord.scalapb.GeneratedMessage
 import drt.shared.SDateLike
@@ -36,10 +37,13 @@ trait RecoveryLogging {
   }
 }
 
+object Sizes {
+  val oneMegaByte: Int = 1024 * 1024
+}
+
 trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   val log: Logger
 
-  val oneMegaByte: Int = 1024 * 1024
   val snapshotBytesThreshold: Int
   val maybeSnapshotInterval: Option[Int] = None
   var messagesPersistedSinceSnapshotCounter = 0
@@ -98,8 +102,8 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
     val shouldSnapshotByCount = maybeSnapshotInterval.isDefined && messagesPersistedSinceSnapshotCounter >= maybeSnapshotInterval.get
     val shouldSnapshotByBytes = bytesSinceSnapshotCounter > snapshotBytesThreshold
 
-    if (shouldSnapshotByCount) log.info(s"Snapshot interval reached (${maybeSnapshotInterval.getOrElse(0)})")
-    if (shouldSnapshotByBytes) log.info(s"Snapshot bytes threshold reached (${snapshotBytesThreshold.toDouble / (1024 * 1024)}MB)")
+    if (shouldSnapshotByCount) log.info(f"Snapshot interval reached (${maybeSnapshotInterval.getOrElse(0)})")
+    if (shouldSnapshotByBytes) log.info(f"Snapshot bytes threshold reached (${snapshotBytesThreshold.toDouble / oneMegaByte}%.2fMB)")
 
     shouldSnapshotByBytes || shouldSnapshotByCount
   }

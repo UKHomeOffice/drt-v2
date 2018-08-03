@@ -2,6 +2,7 @@ package actors
 
 import java.util.UUID
 
+import actors.Sizes.oneMegaByte
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.trueaccord.scalapb.GeneratedMessage

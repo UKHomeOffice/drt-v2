@@ -1,7 +1,7 @@
 package test
 
+import actors.Sizes.oneMegaByte
 import actors._
-import com.trueaccord.scalapb.GeneratedMessage
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.SDateLike
 
@@ -9,8 +9,6 @@ import drt.shared.SDateLike
 object TestActors {
 
   case object ResetActor
-
-  val oneMegaByte: Int = 1024 * 1024
 
   case class TestForecastBaseArrivalsActor(now: () => SDateLike, expireAfterMillis: Long)
     extends ForecastBaseArrivalsActor(oneMegaByte, now, expireAfterMillis) {
@@ -58,7 +56,7 @@ object TestActors {
   }
 
   case class TestVoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapshotInterval: Int)
-    extends VoyageManifestsActor(now, expireAfterMillis, snapshotInterval) {
+    extends VoyageManifestsActor(oneMegaByte, now, expireAfterMillis, snapshotInterval) {
 
     def reset: Receive = {
       case ResetActor =>
@@ -122,7 +120,7 @@ object TestActors {
                                   portQueues: Map[TerminalName, Seq[QueueName]],
                                   now: () => SDateLike,
                                   expireAfterMillis: Long,
-                                  purgePreviousSnapshots: Boolean) extends CrunchStateActor(None, 1024 * 1024, name, portQueues, now, expireAfterMillis, purgePreviousSnapshots) {
+                                  purgePreviousSnapshots: Boolean) extends CrunchStateActor(None, oneMegaByte, name, portQueues, now, expireAfterMillis, purgePreviousSnapshots) {
 
     def reset: Receive = {
       case ResetActor =>
