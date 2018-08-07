@@ -5,7 +5,7 @@ RUN ["chown", "-R", "1000:1000", "."]
 RUN mkdir /var/lib/drt-v2
 RUN mkdir -p /var/run/drt && chown 1000 /var/run/drt
 RUN mkdir -p /var/log/drt && chown 1000 /var/log/drt
-RUN apk --update add ssh \
+RUN apk --update add openssh-client \
     bash \
     && \
     rm -rf /var/cache/apk/*
