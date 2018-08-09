@@ -5,8 +5,8 @@ import org.scalajs.dom
 import org.scalajs.dom.Event
 
 object ErrorHandler {
-  def registerGlobalErrorHandler {
-    LoggerFactory.getXHRLogger("ErrorHandler").debug("Registering global error handler for uncaught exceptions")
+  def registerGlobalErrorHandler(): Unit = {
+    LoggerFactory.getLogger("ErrorHandler").debug("Registering global error handler for uncaught exceptions")
     dom.window.onerror = (ev: Event, url: String, line: Int, col: Int, error: Any) => {
       val serverLogger = LoggerFactory.getXHRLogger("error")
 
@@ -21,6 +21,7 @@ object ErrorHandler {
       if (reload) {
         dom.window.location.reload(true)
       }
+      return false
     }
   }
 }
