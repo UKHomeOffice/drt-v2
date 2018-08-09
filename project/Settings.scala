@@ -34,7 +34,7 @@ object Settings {
     val autowire = "0.2.6"
     val booPickle = "1.2.6"
     val diode = "1.1.3"
-    val uTest = "0.4.7"
+    val uTest = "0.6.3"
 
     val akka = "2.5.13"
     val akkaStreamContrib = "0.9"

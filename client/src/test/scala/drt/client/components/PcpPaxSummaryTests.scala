@@ -9,7 +9,7 @@ import utest.{TestSuite, _}
 
 object PcpPaxSummaryTests extends TestSuite {
 
-  def tests = TestSuite {
+  def tests = Tests {
     "Given a set of crunch minutes for one terminal" +
       "When I ask for a pax summary for a period of time " +
       "Then I should see total, eea & non-eea pax counts" - {

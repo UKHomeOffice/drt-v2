@@ -10,7 +10,7 @@ import scala.collection.immutable._
 
 object TerminalStaffingTests extends TestSuite {
 
-  def tests = TestSuite {
+  def tests = Tests {
     "Staff Movements" - {
       "should only display movements for the day provided" - {
         val uid1 = UUID.randomUUID()
