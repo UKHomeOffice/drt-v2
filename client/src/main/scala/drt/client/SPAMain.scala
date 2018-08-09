@@ -11,6 +11,7 @@ import drt.shared.SDateLike
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
+import org.scalajs.dom.Event
 
 import scala.collection.immutable.Seq
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
@@ -57,6 +58,11 @@ object SPAMain {
         GetShiftsForMonth(dateFromUrlOrNow, terminal)
       case _ => SetViewMode(viewMode)
     }
+  }
+
+  def serverLogEndpoint: String = {
+    println(s"This is the base url: ${BaseUrl.until_#}")
+    BaseUrl.until_#(Path("/logging")).value
   }
 
   case class TerminalsDashboardLoc(period: Option[Int]) extends Loc
@@ -161,6 +167,8 @@ object SPAMain {
   @JSExport
   def main(): Unit = {
     log.warn("Application starting")
+
+     ErrorHandler.registerGlobalErrorHandler _
 
     import scalacss.ScalaCssReact._
 
