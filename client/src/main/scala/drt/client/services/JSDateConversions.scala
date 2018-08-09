@@ -110,10 +110,10 @@ object JSDateConversions {
     }
 
     def stringToSDateLikeOption(dateString: String): Option[SDateLike] = {
-      Try{
-        val moment = Moment(dateString)
-        if (moment.isValid()) JSSDate(moment.toDate()) else throw new Exception(s"$dateString is not a date")
-      }.toOption
+      val moment = Moment(dateString)
+      if(moment.isValid())
+        Option(JSSDate(moment.toDate()))
+      else None
     }
 
     def midnightThisMorning(): SDateLike = {
