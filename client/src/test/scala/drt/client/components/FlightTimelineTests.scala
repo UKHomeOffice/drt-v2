@@ -32,7 +32,7 @@ object ExampleReactScalaJsTest extends TestSuite {
     .componentWillReceiveProps(i => Callback(i.backend.prev = i.currentProps))
     .build
 
-  def tests = TestSuite {
+  def tests = Tests {
     'FlightTablesTests - {
       ReactTestUtils.withRenderedIntoDocument(CP("start")) { m =>
         assert(m.outerHtmlScrubbed() == "<div>none → start</div>")
@@ -50,7 +50,7 @@ object ExampleReactScalaJsTest extends TestSuite {
 
 
 object FlightTimelineTests extends TestSuite {
-  def tests = TestSuite {
+  def tests = Tests {
     'TimelineTests - {
 
       "Given a scheduled DT string and an actual datetime string" - {

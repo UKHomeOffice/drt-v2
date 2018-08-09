@@ -20,7 +20,7 @@ object FlightsTableTests extends TestSuite {
   import japgolly.scalajs.react.test._
   import japgolly.scalajs.react.vdom.html_<^._
 
-  def tests = TestSuite {
+  def tests = Tests {
 
     val realComponent = ScalaComponent.builder[String]("RealThing")
       .renderP((_, p) => <.div(p)).build
@@ -74,6 +74,7 @@ object FlightsTableTests extends TestSuite {
             if (timeline) <.th("Timeline") else TagMod(""),
             <.th("Flight"),
             <.th("Origin"),
+            <.th("Country"),
             <.th("Gate/Stand", ^.className := "gate-stand"),
             <.th("Status", ^.className := "status"),
             <.th("Sch"),
@@ -106,7 +107,7 @@ object FlightsTableTests extends TestSuite {
               thead(),
               <.tbody(
                 <.tr(^.className := " before-now",
-                  <.td(testFlight.ICAO), <.td(testFlight.Origin),
+                  <.td(testFlight.ICAO), <.td(testFlight.Origin), <.td(<.span("")),
                   <.td(s"${testFlight.Gate.getOrElse("")}/${testFlight.Stand.getOrElse("")}"),
                   <.td(testFlight.Status),
                   <.td(<.span(^.title := "2016-01-01 13:00", "13:00")), //sch
@@ -142,7 +143,7 @@ object FlightsTableTests extends TestSuite {
                 <.tbody(
                   <.tr(^.className := " before-now",
                     <.td(<.span("herebecallback")),
-                    <.td(testFlight.ICAO), <.td(testFlight.Origin),
+                    <.td(testFlight.ICAO), <.td(testFlight.Origin), <.td(<.span("")),
                     <.td(s"${testFlight.Gate.getOrElse("")}/${testFlight.Stand.getOrElse("")}"),
                     <.td(testFlight.Status),
                     date(Some(testFlight.Scheduled)),
@@ -179,7 +180,7 @@ object FlightsTableTests extends TestSuite {
                 <.tbody(
                   <.tr(^.className := " before-now",
                     <.td(testFlight.ICAO),
-                    <.td(<.span(^.title := "JFK, New York, USA", testFlight.Origin)),
+                    <.td(<.span(^.title := "JFK, New York, USA", testFlight.Origin)), <.td(<.span("")),
                     <.td(s"${testFlight.Gate.getOrElse("")}/${testFlight.Stand.getOrElse("")}"),
                     <.td(testFlight.Status),
                     date(Some(testFlight.Scheduled)),
@@ -245,7 +246,7 @@ object FlightsTableTests extends TestSuite {
               <.tbody(
                 <.tr(^.className := " before-now",
                   <.td(testFlightT.ICAO),
-                  <.td(testFlightT.Origin),
+                  <.td(testFlightT.Origin), <.td(<.span("")),
                   <.td(s"${testFlightT.Gate.getOrElse("")}/${testFlightT.Stand.getOrElse("")}"),
                   <.td(testFlightT.Status),
                   date(Some(testFlightT.Scheduled)),

@@ -7,7 +7,7 @@ object PlanningTests extends TestSuite {
 
   import TerminalPlanningComponent.getLastSunday
 
-  def tests = TestSuite {
+  def tests = Tests {
     "When getting the previous Sunday for a date" - {
       "Given a Sunday then I should get Midnight same day back" - {
         val start = SDate("2017-10-22T18:15:00")

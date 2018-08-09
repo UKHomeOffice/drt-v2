@@ -10,7 +10,7 @@ object DashboardComponentTests extends TestSuite {
   import DashboardTerminalSummary._
 
 
-  def tests = TestSuite {
+  def tests = Tests {
 
     "DashboardComponentTests" - {
 
@@ -87,30 +87,30 @@ object DashboardComponentTests extends TestSuite {
     "When choosing the timeslot to display in a dashboard widget " - {
 
       "given 13:45 I should get back 13:45" - {
-        val time = SDate("2017-11-31T13:45")
+        val time = SDate("2017-11-30T13:45")
         val result = DashboardTerminalSummary.windowStart(time)
-        val expected = SDate("2017-11-31T13:45")
+        val expected = SDate("2017-11-30T13:45")
 
         assert(result.millisSinceEpoch == expected.millisSinceEpoch)
       }
       "given 13:46 I should get back 13:45" - {
-        val time = SDate("2017-11-31T13:46")
+        val time = SDate("2017-11-30T13:46")
         val result = DashboardTerminalSummary.windowStart(time)
-        val expected = SDate("2017-11-31T13:45")
+        val expected = SDate("2017-11-30T13:45")
 
         assert(result.millisSinceEpoch == expected.millisSinceEpoch)
       }
       "given 13:52 I should get back 13:45" - {
-        val time = SDate("2017-11-31T13:52")
+        val time = SDate("2017-11-30T13:52")
         val result = DashboardTerminalSummary.windowStart(time)
-        val expected = SDate("2017-11-31T13:45")
+        val expected = SDate("2017-11-30T13:45")
 
         assert(result.millisSinceEpoch == expected.millisSinceEpoch)
       }
       "given 13:02 I should get back 13:00" - {
-        val time = SDate("2017-11-31T13:02")
+        val time = SDate("2017-11-30T13:02")
         val result = DashboardTerminalSummary.windowStart(time)
-        val expected = SDate("2017-11-31T13:00")
+        val expected = SDate("2017-11-30T13:00")
 
         assert(result.millisSinceEpoch == expected.millisSinceEpoch)
       }

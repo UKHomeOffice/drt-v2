@@ -1,5 +1,7 @@
 package drt.client.components
 
+import diode.data.Pot
+import diode.react.ModelProxy
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.logger._
@@ -85,6 +87,7 @@ object FlightsWithSplitsTable {
     val columns = List(
       ("Flight", None),
       ("Origin", None),
+      ("Country", None),
       ("Gate/Stand", Option("gate-stand")),
       ("Status", Option("status")),
       ("Sch", None),
@@ -190,6 +193,9 @@ object FlightTableRow {
         val flightFields = List[(Option[String], TagMod)](
           (None, allCodes.mkString(" - ")),
           (None, props.originMapper(flight.Origin)),
+          (None, TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
+            <.span(proxy().render(ai =>ai.country))
+          }),
           (None, s"${flight.Gate.getOrElse("")}/${flight.Stand.getOrElse("")}"),
           (None, flight.Status),
           (None, localDateTimeWithPopup(Option(flight.Scheduled))),

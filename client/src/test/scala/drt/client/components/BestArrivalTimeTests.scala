@@ -6,7 +6,7 @@ import utest._
 object BestArrivalTimeTests extends TestSuite {
   import FlightTableRow._
 
-  def tests = TestSuite {
+  def tests = Tests {
 
     "BestArrivalTimeTests" - {
       "When testing for best arrival time" -{
