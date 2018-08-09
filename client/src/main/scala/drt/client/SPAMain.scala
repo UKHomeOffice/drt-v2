@@ -59,6 +59,8 @@ object SPAMain {
     }
   }
 
+  def serverLogEndpoint: String = BaseUrl.until_#(Path("/logging")).value
+
   case class TerminalsDashboardLoc(period: Option[Int]) extends Loc
 
   case object StatusLoc extends Loc
@@ -160,7 +162,9 @@ object SPAMain {
 
   @JSExport
   def main(): Unit = {
-    log.warn("Application starting")
+    log.debug("Application starting")
+
+    ErrorHandler.registerGlobalErrorHandler()
 
     import scalacss.ScalaCssReact._
 
