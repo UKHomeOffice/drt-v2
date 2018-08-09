@@ -8,7 +8,7 @@ import drt.client.services.JSDateConversions._
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.TerminalName
-import drt.shared.{AirportConfig, MilliDate, SDateLike, StaffMovement}
+import drt.shared._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.vdom.html_<^._
@@ -30,7 +30,7 @@ object TerminalStaffing {
                     potFixedPoints: Pot[String],
                     potStaffMovements: Pot[Seq[StaffMovement]],
                     airportConfig: AirportConfig,
-                    roles: Pot[List[String]],
+                    loggedInUser: Pot[LoggedInUser],
                     viewMode: ViewMode
                   )
 
@@ -81,7 +81,7 @@ object TerminalStaffing {
               val fixedPoints: List[Try[StaffAssignment]] = StaffAssignmentParser(rawFixedPoints).parsedAssignments.toList
               <.div(
                 <.div(^.className := "container",
-                  <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(rawFixedPoints, props.airportConfig, props.terminalName, props.roles))),
+                  <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(rawFixedPoints, props.airportConfig, props.terminalName, props.loggedInUser))),
                   <.div(^.className := "col-md-3", movementsEditor(movementsForDay(movements, props.viewMode.time), props.terminalName))
                 ),
                 <.div(^.className := "container",
@@ -158,7 +158,7 @@ object TerminalStaffing {
     case class FixedPointsProps(rawFixedPoints: String,
                                 airportConfig: AirportConfig,
                                 terminalName: TerminalName,
-                                roles: Pot[List[String]])
+                                loggedInUser: Pot[LoggedInUser])
 
     case class FixedPointsState(rawFixedPoints: String)
 
@@ -179,8 +179,8 @@ object TerminalStaffing {
 
           <.div(
             <.h2("Miscellaneous Staff"),
-            props.roles.render(r => {
-              if (r.contains("staff:edit")) {
+            props.loggedInUser.render(loggedInUser => {
+              if (loggedInUser.roles.contains(StaffEdit)) {
                 <.div(
                   <.p("One entry per line with values separated by commas, e.g.:"),
                   <.pre(<.div(examples.map(line => <.div(line)).toTagMod)),

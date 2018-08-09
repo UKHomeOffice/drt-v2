@@ -30,7 +30,7 @@ object TerminalComponent {
                             airportInfos: Pot[AirportInfo],
                             loadingState: LoadingState,
                             showActuals: Boolean,
-                            userRoles: Pot[List[String]],
+                            loggedInUserPot: Pot[LoggedInUser],
                             viewMode: ViewMode,
                             minuteTicker: Int
                           )
@@ -53,7 +53,7 @@ object TerminalComponent {
         model.airportInfos.getOrElse(props.terminalPageTab.terminal, Pending()),
         model.loadingState,
         model.showActualIfAvailable,
-        model.userRoles,
+        model.loggedInUserPot,
         model.viewMode,
         model.minuteTicker
       ))
@@ -76,7 +76,7 @@ object TerminalComponent {
             props.router,
             model.showActuals,
             model.viewMode,
-            model.userRoles,
+            model.loggedInUserPot,
             model.minuteTicker
           )
 
@@ -116,8 +116,8 @@ object TerminalComponent {
                   props.router.set(props.terminalPageTab.copy(mode = "planning", subMode = subMode, date = None))
                 }
               ),
-              model.userRoles.render(
-                r => if (r.contains("staff:edit"))
+              model.loggedInUserPot.render(
+                loggedInUser => if (loggedInUser.roles.contains(StaffEdit))
                   <.li(^.className := staffingClass,
                     <.a(^.id := "monthlyStaffingTab", VdomAttr("data-toggle") := "tab", "Monthly Staffing"), ^.onClick --> {
                       props.router.set(props.terminalPageTab.copy(mode = "staffing", subMode = "15", date = None))
@@ -161,8 +161,8 @@ object TerminalComponent {
                   )
                 } else ""
               }),
-              model.userRoles.render(
-                r => if (r.contains("staff:edit"))
+              model.loggedInUserPot.render(
+                loggedInUser => if (loggedInUser.roles.contains(StaffEdit))
                   <.div(^.id := "staffing", ^.className := s"tab-pane terminal-staffing-container $staffingContentClass",
                     if (props.terminalPageTab.mode == "staffing") {
                       model.potMonthOfShifts.render(ms => {

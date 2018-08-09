@@ -145,11 +145,18 @@ class NoCacheFilter @Inject()(
 trait UserRoleProviderLike {
   val log = LoggerFactory.getLogger(getClass)
 
-  val availableRoles = List("staff:edit", "drt:team", "manage-users")
+  def userRolesFromHeader(headers: Headers): List[Role] = headers.get("X-Auth-Roles").map(_.split(",").flatMap(Roles.parse).toList).getOrElse(List.empty[Role])
 
-  def userRolesFromHeader(headers: Headers): List[String] = headers.get("X-Auth-Roles").map(_.split(",").toList).getOrElse(List())
+  def getRoles(config: Configuration, headers: Headers, session: Session): List[Role]
 
-  def getRoles(config: Configuration, headers: Headers, session: Session): List[String]
+  def getLoggedInUser(config: Configuration, headers: Headers, session: Session): LoggedInUser = {
+    LoggedInUser(
+      userName = headers.get("X-Auth-Username").getOrElse("Unknown"),
+      id = headers.get("X-Auth-Userid").getOrElse("Unknown"),
+      email = headers.get("X-Auth-Email").getOrElse("Unknown"),
+      roles = getRoles(config, headers, session)
+    )
+  }
 }
 
 @Singleton
@@ -232,7 +239,7 @@ class Application @Inject()(implicit val config: Configuration,
         true
       }
 
-      def getUserRoles = ctrl.getRoles(config, headers, session)
+      def getLoggedInUser: LoggedInUser = ctrl.getLoggedInUser(config, headers, session)
 
       def getFeedStatuses(): Future[Seq[FeedStatuses]] = ctrl.getFeedStatus()
 
@@ -280,7 +287,7 @@ class Application @Inject()(implicit val config: Configuration,
       }
 
       def saveStaffTimeSlotsForMonth(timeSlotsForTerminalMonth: StaffTimeSlotsForTerminalMonth): Future[Unit] = {
-        if (getUserRoles().contains("staff:edit")) {
+        if (getLoggedInUser().roles.contains(StaffEdit)) {
           log.info(s"Saving ${timeSlotsForTerminalMonth.timeSlots.length} timeslots for ${SDate(timeSlotsForTerminalMonth.monthMillis).ddMMyyString}")
           val futureShifts = shiftsActor.ask(GetState)(new Timeout(5 second))
           futureShifts.map {
@@ -309,14 +316,14 @@ class Application @Inject()(implicit val config: Configuration,
       }
 
       def getKeyCloakUsers(): Future[List[KeyCloakUser]] = {
-        log.info(s"Got these roles: ${getUserRoles}")
-        if (getUserRoles.contains("manage-users")) {
+        log.info(s"Got these roles: ${getLoggedInUser.roles}")
+        if (getLoggedInUser.roles.contains(ManageUsers)) {
           keyCloakClient.getUsersNotInGroup("Approved")
         } else throw new Exception("You do not have permission manage users")
       }
 
       def addUserToGroup(userId: String, groupName: String): Unit = {
-        if (getUserRoles.contains("manage-users")) {
+        if (getLoggedInUser.roles.contains(ManageUsers)) {
           val futureGroupId: Future[Option[KeyCloakGroup]] = keyCloakClient.getGroups().map(_.find(_.name == groupName))
           futureGroupId.map {
             case Some(group) => keyCloakClient.addUserToGroup(userId, group.id)
@@ -526,7 +533,7 @@ class Application @Inject()(implicit val config: Configuration,
       val crunchStateForPointInTime = loadBestCrunchStateForPointInTime(pit.millisSinceEpoch)
       flightsForCSVExportWithinRange(terminalName, pit, startHour, endHour, crunchStateForPointInTime).map {
         case Some(csvFlights) =>
-          val csvData = if (ctrl.getRoles(config, request.headers, request.session).contains("drt:team")) {
+          val csvData = if (ctrl.getRoles(config, request.headers, request.session).contains(DrtTeam)) {
             log.info(s"Sending Flights CSV with ACL data to DRT Team member")
             CSVData.flightsWithSplitsWithAPIActualsToCSVWithHeadings(csvFlights)
           }

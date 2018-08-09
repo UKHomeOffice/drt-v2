@@ -6,7 +6,7 @@ import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Prop
 import akka.stream.{KillSwitch, Materializer}
 import akka.stream.scaladsl.Source
 import drt.server.feeds.test.{TestAPIManifestFeedGraphStage, TestFixtureFeed}
-import drt.shared.AirportConfig
+import drt.shared.{AirportConfig, Role}
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
@@ -38,7 +38,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
 
   override def liveArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = testFeed
 
-  override def getRoles(config: Configuration, headers: Headers, session: Session): List[String] = TestUserRoleProvider.getRoles(config, headers, session)
+  override def getRoles(config: Configuration, headers: Headers, session: Session): List[Role] = TestUserRoleProvider.getRoles(config, headers, session)
 
   override def run(): Unit = {
 

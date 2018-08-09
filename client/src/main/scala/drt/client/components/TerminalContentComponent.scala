@@ -35,7 +35,7 @@ object TerminalContentComponent {
                     router: RouterCtl[Loc],
                     showActuals: Boolean,
                     viewMode: ViewMode,
-                    roles: Pot[List[String]],
+                    loggedInUserPot: Pot[LoggedInUser],
                     minuteTicker: Int
                   ) {
     lazy val hash: (Int, Int) = {
@@ -166,7 +166,7 @@ object TerminalContentComponent {
                 props.potFixedPoints,
                 props.potStaffMovements,
                 props.airportConfig,
-                props.roles,
+                props.loggedInUserPot,
                 props.viewMode
               ))
             } else ""

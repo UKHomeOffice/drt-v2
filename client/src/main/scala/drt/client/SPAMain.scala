@@ -68,7 +68,7 @@ object SPAMain {
   def requestInitialActions(): Unit = {
     val initActions = Seq(
       GetApplicationVersion,
-      GetUserRoles,
+      GetLoggedInUser,
       GetLoggedInStatus,
       GetAirportConfig(),
       GetFixedPoints(),
