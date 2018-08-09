@@ -137,16 +137,19 @@ object TerminalContentComponent {
             if (state.activeTab == "desksAndQueues") {
               log.info(s"Rendering desks and queue")
               props.crunchStatePot.render(crunchState => {
-                val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState, props.terminalPageTab.terminal)
-                TerminalDesksAndQueues(
-                  TerminalDesksAndQueues.Props(
-                    filteredPortState,
-                    props.airportConfig,
-                    props.terminalPageTab.terminal,
-                    props.showActuals,
-                    props.viewMode
+                props.loggedInUserPot.render( loggedInUser => {
+                  val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState, props.terminalPageTab.terminal)
+                  TerminalDesksAndQueues(
+                    TerminalDesksAndQueues.Props(
+                      filteredPortState,
+                      props.airportConfig,
+                      props.terminalPageTab.terminal,
+                      props.showActuals,
+                      props.viewMode,
+                      loggedInUser
+                    )
                   )
-                )
+                })
               })
             } else ""
           ),

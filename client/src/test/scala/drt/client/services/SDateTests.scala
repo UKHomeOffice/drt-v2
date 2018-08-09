@@ -9,7 +9,7 @@ import scala.scalajs.js.Date
 
 
 object SDateTests extends TestSuite {
-  override def tests = TestSuite {
+  override def tests = Tests {
     'SDate - {
       "You can add days to an SDate" - {
         import drt.client.services.JSDateConversions._

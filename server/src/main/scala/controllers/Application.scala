@@ -239,7 +239,7 @@ class Application @Inject()(implicit val config: Configuration,
         true
       }
 
-      def getLoggedInUser: LoggedInUser = ctrl.getLoggedInUser(config, headers, session)
+      def getLoggedInUser(): LoggedInUser = ctrl.getLoggedInUser(config, headers, session)
 
       def getFeedStatuses(): Future[Seq[FeedStatuses]] = ctrl.getFeedStatus()
 
@@ -316,14 +316,14 @@ class Application @Inject()(implicit val config: Configuration,
       }
 
       def getKeyCloakUsers(): Future[List[KeyCloakUser]] = {
-        log.info(s"Got these roles: ${getLoggedInUser.roles}")
-        if (getLoggedInUser.roles.contains(ManageUsers)) {
+        log.info(s"Got these roles: ${getLoggedInUser().roles}")
+        if (getLoggedInUser().roles.contains(ManageUsers)) {
           keyCloakClient.getUsersNotInGroup("Approved")
         } else throw new Exception("You do not have permission manage users")
       }
 
       def addUserToGroup(userId: String, groupName: String): Unit = {
-        if (getLoggedInUser.roles.contains(ManageUsers)) {
+        if (getLoggedInUser().roles.contains(ManageUsers)) {
           val futureGroupId: Future[Option[KeyCloakGroup]] = keyCloakClient.getGroups().map(_.find(_.name == groupName))
           futureGroupId.map {
             case Some(group) => keyCloakClient.addUserToGroup(userId, group.id)

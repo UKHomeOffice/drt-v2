@@ -16,7 +16,7 @@ class LoggedInUserHandler[M](modelRW: ModelRW[M, Pot[LoggedInUser]]) extends Log
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
 
     case GetLoggedInUser =>
-      effectOnly(Effect(AjaxClient[Api].getLoggedInUser().call().map(SetLoggedInUser).recoverWith {
+      effectOnly(Effect(AjaxClient[Api].getLoggedInUser.call().map(SetLoggedInUser).recoverWith {
         case _ =>
           log.info(s"GetLoggedInUser request failed. Re-requesting after ${PollDelay.recoveryDelay}")
           Future(RetryActionAfter(GetLoggedInUser, PollDelay.recoveryDelay))

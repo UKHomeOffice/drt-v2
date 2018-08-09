@@ -109,7 +109,8 @@ class StaffMovementsActorBase extends RecoveryActorLike with PersistentDrtActor[
     time = MilliDate(sm.time.getOrElse(0)),
     delta = sm.delta.getOrElse(0),
     uUID = UUID.fromString(sm.uUID.getOrElse("")),
-    queue = sm.queueName
+    queue = sm.queueName,
+    createdBy = sm.createdBy
   )
 
   def staffMovementsToStaffMovementMessages(staffMovements: StaffMovements): Seq[StaffMovementMessage] =

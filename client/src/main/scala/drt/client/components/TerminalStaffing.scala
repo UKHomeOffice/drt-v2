@@ -82,7 +82,7 @@ object TerminalStaffing {
               <.div(
                 <.div(^.className := "container",
                   <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(rawFixedPoints, props.airportConfig, props.terminalName, props.loggedInUser))),
-                  <.div(^.className := "col-md-3", movementsEditor(movementsForDay(movements, props.viewMode.time), props.terminalName))
+                  <.div(^.className := "col-md-4", movementsEditor(movementsForDay(movements, props.viewMode.time), props.terminalName))
                 ),
                 <.div(^.className := "container",
                   <.div(^.className := "col-md-10", staffOverTheDay(movementsForDay(movements, props.viewMode.time), shifts, fixedPoints, props.terminalName)))
@@ -254,7 +254,8 @@ object TerminalStaffing {
         case "" => " (no reason given) "
         case r => r
       }
-      s"${start.delta} @ $startDateForDisplay ${displayTime(start.time)} -> $endDateForDisplay ${displayTime(end.time)} $reasonForDisplay"
+      val createdBy = start.createdBy.getOrElse("unknown")
+      s"${start.delta} @ $startDateForDisplay ${displayTime(start.time)} -> $endDateForDisplay ${displayTime(end.time)} $reasonForDisplay by $createdBy"
     }
 
     def displaySingle(movement: StaffMovement): String = {
@@ -264,7 +265,8 @@ object TerminalStaffing {
         case "" => " - "
         case r => r
       }
-      s"${movement.delta} @ $startDateForDisplay ${displayTime(movement.time)} -> ongoing $reasonForDisplay"
+      val createdBy = movement.createdBy.getOrElse("unknown")
+      s"${movement.delta} @ $startDateForDisplay ${displayTime(movement.time)} -> ongoing $reasonForDisplay by $createdBy"
     }
 
     def displayTime(time: MilliDate): String = {
