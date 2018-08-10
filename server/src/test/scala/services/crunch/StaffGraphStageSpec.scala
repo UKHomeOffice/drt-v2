@@ -55,8 +55,8 @@ class StaffGraphStageSpec extends CrunchTestLike {
     val terminal = "T1"
     val uuid = UUID.randomUUID()
     val incomingMovements = Seq(
-      StaffMovement(terminal, "", movementStart, -1, uuid, None),
-      StaffMovement(terminal, "", movementEnd, 1, uuid, None)
+      StaffMovement(terminal, "", movementStart, -1, uuid, None, createdBy = None),
+      StaffMovement(terminal, "", movementEnd, 1, uuid, None, createdBy = None)
     )
 
     val result = Crunch.movementsUpdateCriteria(existingMovements, incomingMovements)
@@ -74,8 +74,8 @@ class StaffGraphStageSpec extends CrunchTestLike {
     val terminal = "T1"
     val uuid = UUID.randomUUID()
     val existingMovements = Set(
-      StaffMovement(terminal, "", movementStart, -1, uuid, None),
-      StaffMovement(terminal, "", movementEnd, 1, uuid, None)
+      StaffMovement(terminal, "", movementStart, -1, uuid, None, createdBy = None),
+      StaffMovement(terminal, "", movementEnd, 1, uuid, None, createdBy = None)
     )
     val incomingMovements = Seq[StaffMovement]()
 
@@ -122,8 +122,8 @@ class StaffGraphStageSpec extends CrunchTestLike {
     val (sh, fp, mm) = TestableStaffGraphStage(probe, staffGraphStage).run
     val movementUuid = UUID.randomUUID()
     val movements = Seq(
-      StaffMovement("T1", "lunch start", MilliDate(SDate(s"${date}T00:00").millisSinceEpoch), -1, movementUuid),
-      StaffMovement("T1", "lunch end", MilliDate(SDate(s"${date}T00:01").millisSinceEpoch), 1, movementUuid)
+      StaffMovement("T1", "lunch start", MilliDate(SDate(s"${date}T00:00").millisSinceEpoch), -1, movementUuid, createdBy = None),
+      StaffMovement("T1", "lunch end", MilliDate(SDate(s"${date}T00:01").millisSinceEpoch), 1, movementUuid, createdBy = None)
     )
 
     Await.ready(fp.offer("roving officer a,T1,01/01/17,00:00,00:00,1"), 1 second)
@@ -181,8 +181,8 @@ class StaffGraphStageSpec extends CrunchTestLike {
 
     val movementUuid = UUID.randomUUID()
     val movements = Seq(
-      StaffMovement("T1", "lunch start", MilliDate(SDate(s"${date}T00:01").millisSinceEpoch), -1, movementUuid),
-      StaffMovement("T1", "lunch end", MilliDate(SDate(s"${date}T00:03").millisSinceEpoch), 1, movementUuid)
+      StaffMovement("T1", "lunch start", MilliDate(SDate(s"${date}T00:01").millisSinceEpoch), -1, movementUuid, createdBy = None),
+      StaffMovement("T1", "lunch end", MilliDate(SDate(s"${date}T00:03").millisSinceEpoch), 1, movementUuid, createdBy = None)
     )
 
     Await.ready(mm.offer(movements), 1 second)

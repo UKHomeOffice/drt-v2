@@ -3,7 +3,7 @@ package drt.client.components
 import drt.client.actions.Actions.{AddStaffMovement, SaveStaffMovements}
 import drt.client.services._
 import drt.shared.FlightsApi.TerminalName
-import drt.shared.SDateLike
+import drt.shared.{LoggedInUser, SDateLike}
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html
@@ -22,7 +22,8 @@ object StaffDeploymentsAdjustmentPopover {
                                                     startTimeMinutes: Int = 0,
                                                     endTimeHours: Int = 0,
                                                     endTimeMinutes: Int = 0,
-                                                    numberOfStaff: String = "1"
+                                                    numberOfStaff: String = "1",
+                                                    loggedInUser: LoggedInUser
                                                   )
 
   def roundToNearest(nearest: Int)(x: Int): Int = {
@@ -36,7 +37,7 @@ object StaffDeploymentsAdjustmentPopover {
       terminalNames.map(x => <.option(^.value := x, x)).toTagMod)
   }
 
-  def apply(terminalNames: Seq[TerminalName], terminal: Option[TerminalName], trigger: String, reasonPlaceholder: String, startDate: SDateLike, endDate: SDateLike, popoverPosition: String, action: String = "-") = ScalaComponent.builder[Unit]("staffMovementPopover")
+  def apply(terminalNames: Seq[TerminalName], terminal: Option[TerminalName], trigger: String, reasonPlaceholder: String, startDate: SDateLike, endDate: SDateLike, popoverPosition: String, action: String = "-", loggedInUser: LoggedInUser) = ScalaComponent.builder[Unit]("staffMovementPopover")
     .initialState(
       StaffDeploymentAdjustmentPopoverState(
         reason = "",
@@ -45,7 +46,9 @@ object StaffDeploymentsAdjustmentPopover {
         startTimeHours = startDate.getHours(),
         startTimeMinutes = roundToNearest(5)(startDate.getMinutes()),
         endTimeHours = endDate.getHours(),
-        endTimeMinutes = roundToNearest(5)(endDate.getMinutes()))
+        endTimeMinutes = roundToNearest(5)(endDate.getMinutes()),
+        loggedInUser = loggedInUser
+      )
     ).renderS((scope, state) => {
 
 
@@ -61,7 +64,7 @@ object StaffDeploymentsAdjustmentPopover {
       val startTime: String = f"${state.startTimeHours}%02d:${state.startTimeMinutes}%02d"
       val endTime: String = f"${state.endTimeHours}%02d:${state.endTimeMinutes}%02d"
       val numberOfStaff: String = s"$action${state.numberOfStaff.toString}"
-      val shiftTry = StaffAssignment(state.reason, state.terminalName, state.date, startTime, endTime, numberOfStaff)
+      val shiftTry = StaffAssignment(state.reason, state.terminalName, state.date, startTime, endTime, numberOfStaff, createdBy = Some(loggedInUser.email))
       shiftTry match {
         case Success(shift) =>
           for (movement <- StaffMovements.assignmentsToMovements(Seq(shift))) yield {

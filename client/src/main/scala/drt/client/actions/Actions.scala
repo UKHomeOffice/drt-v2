@@ -19,9 +19,9 @@ object Actions {
 
   case object GetApplicationVersion extends Action
 
-  case object GetUserRoles extends Action
+  case object GetLoggedInUser extends Action
 
-  case class SetUserRoles(roles: List[String]) extends Action
+  case class SetLoggedInUser(loggedInUser: LoggedInUser) extends Action
 
   case class SetApplicationVersion(version: String) extends Action
 

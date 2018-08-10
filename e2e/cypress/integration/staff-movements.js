@@ -1,4 +1,6 @@
 describe('Staff movements', function () {
+  var userName = "Unknown";
+
   beforeEach(function () {
     cy.request('DELETE', '/v2/test/live/test/data');
     var schDT = new Date().toISOString().split("T")[0];
@@ -84,6 +86,14 @@ describe('Staff movements', function () {
       }
     }).end();
   }
+  function checkUserNameOnMovementsTab(numMovements) {
+    cy.get('.movement-display')
+      .should('have.length', numMovements)
+      .each(($element, index, $lis) => {
+        cy.wrap($element).contains(`by ${userName}`);
+        return cy.wrap($element);
+    }).end();
+  }
 
   function navigateToMenuItem(itemName) {
     cy.get('.navbar-drt li').contains(itemName).click(5, 5, { force: true }).end();
@@ -115,6 +125,7 @@ describe('Staff movements', function () {
 
       findAndClick('Staff Movements');
       checkStaffNumbersOnMovementsTabAre(1);
+      checkUserNameOnMovementsTab(1);
       removeXMovements(1);
     });
 
@@ -128,6 +139,7 @@ describe('Staff movements', function () {
 
       findAndClick('Staff Movements');
       checkStaffNumbersOnMovementsTabAre(1);
+      checkUserNameOnMovementsTab(1);
 
       findAndClick('Desks & Queues');
       addMovementFor1HourAt(1, 0);
@@ -135,6 +147,7 @@ describe('Staff movements', function () {
 
       findAndClick('Staff Movements');
       checkStaffNumbersOnMovementsTabAre(2);
+      checkUserNameOnMovementsTab(2);
       removeXMovements(2);
     });
   });

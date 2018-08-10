@@ -8,11 +8,11 @@ import org.scalajs.dom.html
 
 object Navbar {
   def apply(ctl: RouterCtl[Loc], page: Loc): VdomTagOf[html.Element] = {
-    val menuModelRCP = SPACircuit.connect(m => (m.airportConfig, m.feedStatuses, m.userRoles))
+    val menuModelRCP = SPACircuit.connect(m => (m.airportConfig, m.feedStatuses, m.loggedInUserPot))
 
     <.nav(^.className := "navbar navbar-default",
       menuModelRCP(menuModelPotMP => {
-        val (airportConfigPot, feedStatusesPot, userRolesPot) = menuModelPotMP()
+        val (airportConfigPot, feedStatusesPot, loggedInUserPot) = menuModelPotMP()
         <.div(^.className := "container",
           airportConfigPot.render(airportConfig => {
             val contactLink = airportConfig.contactEmail.map(contactEmail => {
@@ -21,9 +21,9 @@ object Navbar {
 
             <.div(^.className := "navbar-drt",
               <.span(^.className := "navbar-brand", s"DRT ${airportConfig.portCode}"),
-              userRolesPot.renderReady(roles =>
+              loggedInUserPot.renderReady(loggedInUser =>
 
-              <.div(^.className := "collapse navbar-collapse", MainMenu(ctl, page, feedStatusesPot.getOrElse(Seq()), airportConfig, roles),
+              <.div(^.className := "collapse navbar-collapse", MainMenu(ctl, page, feedStatusesPot.getOrElse(Seq()), airportConfig, loggedInUser.roles),
                 <.ul(^.className := "nav navbar-nav navbar-right",
                   <.li(contactLink),
                   <.li(<.a(Icon.signOut, "Log Out", ^.href := "/oauth/logout?redirect=" + BaseUrl.until_#.value))
