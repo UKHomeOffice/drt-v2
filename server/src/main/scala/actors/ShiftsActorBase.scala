@@ -1,8 +1,10 @@
 package actors
 
+import actors.Sizes.oneMegaByte
 import akka.actor.ActorLogging
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
+import com.trueaccord.scalapb.GeneratedMessage
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{MilliDate, SDateLike}
 import org.joda.time.format.DateTimeFormat
@@ -68,12 +70,13 @@ class ShiftsActorBase extends RecoveryActorLike with PersistentDrtActor[ShiftsSt
   def initialState = ShiftsState ("")
 
   val snapshotInterval = 1
+  override val snapshotBytesThreshold: Int = oneMegaByte
 
   import ShiftsMessageParser._
 
-  def updateState(shifts: String): Unit = {
-    state = state.updated(data = shifts)
-  }
+  override def stateToMessage: GeneratedMessage = ShiftStateSnapshotMessage(shiftsStringToShiftMessages(state.shifts, SDate.now()))
+
+  def updateState(shifts: String): Unit = state = state.updated(data = shifts)
 
   def onUpdateState(data: String): Unit = {}
 

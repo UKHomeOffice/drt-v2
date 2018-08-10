@@ -1,9 +1,9 @@
 package test
 
+import actors.Sizes.oneMegaByte
 import actors._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.SDateLike
-import services.{ForecastBaseArrivalsActor, ForecastPortArrivalsActor, LiveArrivalsActor}
 
 
 object TestActors {
@@ -11,7 +11,7 @@ object TestActors {
   case object ResetActor
 
   case class TestForecastBaseArrivalsActor(now: () => SDateLike, expireAfterMillis: Long)
-    extends ForecastBaseArrivalsActor(now, expireAfterMillis) {
+    extends ForecastBaseArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def reset: Receive = {
       case ResetActor =>
@@ -26,7 +26,7 @@ object TestActors {
   }
 
   case class TestForecastPortArrivalsActor(now: () => SDateLike, expireAfterMillis: Long)
-    extends ForecastPortArrivalsActor(now, expireAfterMillis) {
+    extends ForecastPortArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def reset: Receive = {
       case ResetActor =>
@@ -41,7 +41,7 @@ object TestActors {
   }
 
   case class TestLiveArrivalsActor(now: () => SDateLike, expireAfterMillis: Long)
-    extends LiveArrivalsActor(now, expireAfterMillis) {
+    extends LiveArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def reset: Receive = {
       case ResetActor =>
@@ -56,7 +56,7 @@ object TestActors {
   }
 
   case class TestVoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapshotInterval: Int)
-    extends VoyageManifestsActor(now, expireAfterMillis, snapshotInterval) {
+    extends VoyageManifestsActor(oneMegaByte, now, expireAfterMillis, snapshotInterval) {
 
     def reset: Receive = {
       case ResetActor =>
@@ -115,12 +115,12 @@ object TestActors {
     override def receiveCommand: Receive = reset orElse super.receiveCommand
   }
 
-  case class TestCrunchStateActor(override val snapshotInterval: Int,
+  case class TestCrunchStateActor(snapshotInterval: Int,
                                   name: String,
                                   portQueues: Map[TerminalName, Seq[QueueName]],
                                   now: () => SDateLike,
                                   expireAfterMillis: Long,
-                                  purgePreviousSnapshots: Boolean) extends CrunchStateActor(snapshotInterval, name, portQueues, now, expireAfterMillis, purgePreviousSnapshots) {
+                                  purgePreviousSnapshots: Boolean) extends CrunchStateActor(None, oneMegaByte, name, portQueues, now, expireAfterMillis, purgePreviousSnapshots) {
 
     def reset: Receive = {
       case ResetActor =>

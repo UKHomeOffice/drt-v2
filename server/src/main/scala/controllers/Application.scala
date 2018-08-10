@@ -22,6 +22,7 @@ import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
 import drt.staff.ImportStaff
 import drt.users.KeyCloakClient
+import javax.inject.{Inject, Singleton}
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.{HeaderNames, HttpEntity}
@@ -61,10 +62,10 @@ object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
 object PaxFlow {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def makeFlightPaxFlowCalculator(splitRatioForFlight: (Arrival) => Option[SplitRatios],
-                                  bestPax: (Arrival) => Int): (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
+  def makeFlightPaxFlowCalculator(splitRatioForFlight: Arrival => Option[SplitRatios],
+                                  bestPax: Arrival => Int): Arrival => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
     val provider = PaxLoadCalculator.flightPaxFlowProvider(splitRatioForFlight, bestPax)
-    (arrival) => {
+    arrival => {
       val pax = bestPax(arrival)
       val paxFlow = provider(arrival)
       val summedPax = paxFlow.map(_._2.paxSum).sum
@@ -129,7 +130,7 @@ class NoCacheFilter @Inject()(
   val log: Logger = LoggerFactory.getLogger(getClass)
   val rootRegex: Regex = "/v2/.{3}/live".r
 
-  override def apply(requestHeaderToFutureResult: (RequestHeader) => Future[Result])(rh: RequestHeader): Future[Result] = {
+  override def apply(requestHeaderToFutureResult: RequestHeader => Future[Result])(rh: RequestHeader): Future[Result] = {
     requestHeaderToFutureResult(rh).map { result =>
       rh.uri match {
         case rootRegex() =>
@@ -143,7 +144,7 @@ class NoCacheFilter @Inject()(
 
 
 trait UserRoleProviderLike {
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   def userRolesFromHeader(headers: Headers): List[Role] = headers.get("X-Auth-Roles").map(_.split(",").flatMap(Roles.parse).toList).getOrElse(List.empty[Role])
 
@@ -174,7 +175,7 @@ class Application @Inject()(implicit val config: Configuration,
     case Some("test") =>
       new TestDrtSystem(system, config, getPortConfFromEnvVar)
     case _ =>
-      new DrtSystem(system, config, getPortConfFromEnvVar)
+      DrtSystem(system, config, getPortConfFromEnvVar)
   }
   ctrl.run()
 
@@ -184,7 +185,7 @@ class Application @Inject()(implicit val config: Configuration,
 
   log.info(s"ISOChronology.getInstance: ${ISOChronology.getInstance}")
 
-  private def systemTimeZone = System.getProperty("user.timezone")
+  def systemTimeZone: String = System.getProperty("user.timezone")
 
   log.info(s"System.getProperty(user.timezone): $systemTimeZone")
   assert(systemTimeZone == "UTC")
@@ -309,7 +310,7 @@ class Application @Inject()(implicit val config: Configuration,
         }
       }
 
-      def keyCloakClient = {
+      def keyCloakClient: KeyCloakClient with ProdSendAndReceive = {
         val token = headers.get("X-Auth-Token").getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
         val keyCloakUrl = config.getOptional[String]("key-cloak.url").getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
         new KeyCloakClient(token, keyCloakUrl, actorSystem) with ProdSendAndReceive
