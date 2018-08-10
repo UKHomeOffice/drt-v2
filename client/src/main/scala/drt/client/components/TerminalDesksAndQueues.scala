@@ -36,7 +36,8 @@ object TerminalDesksAndQueuesRow {
                    showActuals: Boolean,
                    viewType: ViewType,
                    hasActualDeskStats: Boolean,
-                   viewMode: ViewMode
+                   viewMode: ViewMode,
+                   loggedInUser: LoggedInUser
                   )
 
   implicit val rowPropsReuse: Reusability[Props] = Reusability.by(_.hashCode())
@@ -81,8 +82,8 @@ object TerminalDesksAndQueuesRow {
       val totalRequired = DesksAndQueues.totalRequired(props.staffMinute, crunchMinutes)
       val totalDeployed = DesksAndQueues.totalDeployed(props.staffMinute, crunchMinutes)
       val ragClass = ragStatus(totalRequired, available)
-      val downMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "-", "Staff decrease...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "-")()
-      val upMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "+", "Staff increase...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "+")()
+      val downMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "-", "Staff decrease...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "-", props.loggedInUser)()
+      val upMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "+", "Staff increase...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "+", props.loggedInUser)()
 
       def allowAdjustments: Boolean = props.viewMode.time.millisSinceEpoch > SDate.midnightThisMorning().millisSinceEpoch
 
@@ -121,7 +122,8 @@ object TerminalDesksAndQueues {
                    airportConfig: AirportConfig,
                    terminalName: TerminalName,
                    showActuals: Boolean,
-                   viewMode: ViewMode
+                   viewMode: ViewMode,
+                   loggedInUser: LoggedInUser
                   )
 
   sealed trait ViewType
@@ -287,7 +289,8 @@ object TerminalDesksAndQueues {
                   state.showActuals,
                   state.viewType,
                   props.airportConfig.hasActualDeskStats,
-                  props.viewMode
+                  props.viewMode,
+                  props.loggedInUser
                 )
                 TerminalDesksAndQueuesRow(rowProps)
             }.toTagMod))

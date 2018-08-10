@@ -58,8 +58,8 @@ class StaffMinutesSpec extends CrunchTestLike {
       """.stripMargin
     val uuid = UUID.randomUUID()
     val initialMovements = Seq(
-      StaffMovement("T1", "lunch start", MilliDate(shiftStart.millisSinceEpoch), -1, uuid),
-      StaffMovement("T1", "lunch end", MilliDate(shiftStart.addMinutes(15).millisSinceEpoch), 1, uuid)
+      StaffMovement("T1", "lunch start", MilliDate(shiftStart.millisSinceEpoch), -1, uuid, createdBy = None),
+      StaffMovement("T1", "lunch end", MilliDate(shiftStart.addMinutes(15).millisSinceEpoch), 1, uuid, createdBy = None)
     )
 
     val crunch = runCrunchGraph(
@@ -102,10 +102,10 @@ class StaffMinutesSpec extends CrunchTestLike {
     val uuid1 = UUID.randomUUID()
     val uuid2 = UUID.randomUUID()
     val initialMovements = Seq(
-      StaffMovement("T1", "lunch start", MilliDate(shiftStart.millisSinceEpoch), -1, uuid1),
-      StaffMovement("T1", "lunch end", MilliDate(shiftStart.addMinutes(15).millisSinceEpoch), 1, uuid1),
-      StaffMovement("T1", "lunch start", MilliDate(shiftStart.millisSinceEpoch), -5, uuid2),
-      StaffMovement("T1", "lunch end", MilliDate(shiftStart.addMinutes(15).millisSinceEpoch), 5, uuid2)
+      StaffMovement("T1", "lunch start", MilliDate(shiftStart.millisSinceEpoch), -1, uuid1, createdBy = None),
+      StaffMovement("T1", "lunch end", MilliDate(shiftStart.addMinutes(15).millisSinceEpoch), 1, uuid1, createdBy = None),
+      StaffMovement("T1", "lunch start", MilliDate(shiftStart.millisSinceEpoch), -5, uuid2, createdBy = None),
+      StaffMovement("T1", "lunch end", MilliDate(shiftStart.addMinutes(15).millisSinceEpoch), 5, uuid2, createdBy = None)
     )
 
     val crunch = runCrunchGraph(

@@ -131,7 +131,7 @@ class Test @Inject()(implicit val config: Configuration,
           log.info(s"Replacing these mock roles: ${request.session.data}")
           log.info(s"mock headers: ${request.headers}")
 
-          Created.withSession(Session(Map("mock-roles" -> roles.roles.mkString(","))))
+          Created.withSession(Session(Map("mock-roles" -> roles.roles.map(_.name).mkString(","))))
         case None =>
           BadRequest(s"Unable to parse JSON: ${request.body.asText}")
       }

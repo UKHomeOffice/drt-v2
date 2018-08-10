@@ -623,9 +623,9 @@ trait Api {
 
   def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]]
 
-  def getUserRoles(): List[String]
-
   def isLoggedIn(): Boolean
+
+  def getLoggedInUser(): LoggedInUser
 
   def getFeedStatuses(): Future[Seq[FeedStatuses]]
 
