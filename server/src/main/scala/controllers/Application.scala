@@ -534,7 +534,7 @@ class Application @Inject()(implicit val config: Configuration,
       val crunchStateForPointInTime = loadBestCrunchStateForPointInTime(pit.millisSinceEpoch)
       flightsForCSVExportWithinRange(terminalName, pit, startHour, endHour, crunchStateForPointInTime).map {
         case Some(csvFlights) =>
-          val csvData = if (ctrl.getRoles(config, request.headers, request.session).contains(DrtTeam)) {
+          val csvData = if (ctrl.getRoles(config, request.headers, request.session).contains(ApiView)) {
             log.info(s"Sending Flights CSV with ACL data to DRT Team member")
             CSVData.flightsWithSplitsWithAPIActualsToCSVWithHeadings(csvFlights)
           }
