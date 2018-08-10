@@ -1,11 +1,12 @@
 package controllers
 
 import java.nio.ByteBuffer
+import javax.inject.{Inject, Singleton}
 
 import actors._
 import actors.pointInTime.CrunchStateReadActor
 import akka.actor._
-import akka.event.LoggingAdapter
+import akka.event.{Logging, LoggingAdapter}
 import akka.pattern.{AskableActorRef, _}
 import akka.stream._
 import akka.util.{ByteString, Timeout}
@@ -702,13 +703,34 @@ class Application @Inject()(implicit val config: Configuration,
       })
   }
 
-  def logging: Action[AnyContent] = Action(parse.anyContent) {
+  def logging = Action(parse.tolerantFormUrlEncoded) {
     implicit request =>
-      request.body.asJson.foreach {
-        msg =>
-          log.info(s"CLIENT - $msg")
+
+      def postStringValOrElse(key: String, default: String) = {
+        request.body.get(key).map(_.head).getOrElse(default)
       }
-      Ok("")
+
+      val logLevel = postStringValOrElse("level", "ERROR")
+
+      val millis = request.body.get("timestamp")
+        .map(_.head.toLong)
+        .getOrElse(SDate.now(Crunch.europeLondonTimeZone).millisSinceEpoch)
+
+      val logMessage = Map(
+        "logger" -> ("CLIENT - " + postStringValOrElse("logger", "log")),
+        "message" -> postStringValOrElse("message", "no log message"),
+        "logTime" -> SDate(millis).toISOString(),
+        "url" -> postStringValOrElse("url", request.headers.get("referrer").getOrElse("unknown url")),
+        "logLevel" -> logLevel
+      )
+
+      log.log(Logging.levelFor(logLevel).getOrElse(Logging.ErrorLevel), s"Client Error: ${
+        logMessage.map {
+          case (value, key) => s"$key: $value"
+        }.mkString(", ")
+      }")
+
+      Ok("logged successfully")
   }
 }
 

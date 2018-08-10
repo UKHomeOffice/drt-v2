@@ -7,7 +7,8 @@ import drt.shared.{MilliDate, SDateLike}
 import scala.language.implicitConversions
 import scala.scalajs.js.Date
 import moment._
-import scala.util.Try
+
+import scala.util.{Failure, Try}
 
 object JSDateConversions {
 
@@ -109,7 +110,10 @@ object JSDateConversions {
     }
 
     def stringToSDateLikeOption(dateString: String): Option[SDateLike] = {
-      Try(JSSDate(Moment(dateString).toDate())).toOption
+      val moment = Moment(dateString)
+      if(moment.isValid())
+        Option(JSSDate(moment.toDate()))
+      else None
     }
 
     def midnightThisMorning(): SDateLike = {
