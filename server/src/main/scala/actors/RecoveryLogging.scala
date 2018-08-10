@@ -68,11 +68,6 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   def stateToMessage: GeneratedMessage
 
   def persistAndMaybeSnapshot(messageToPersist: GeneratedMessage): Unit = {
-    persistMessage(messageToPersist)
-    snapshotIfNeeded(stateToMessage)
-  }
-
-  def persistMessage(messageToPersist: GeneratedMessage): Unit = {
     persist(messageToPersist) { message =>
       val messageBytes = message.serializedSize
       log.info(s"Persisting $messageBytes bytes of ${message.getClass}")
@@ -83,6 +78,8 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
           bytesSinceSnapshotCounter += messageBytes
           messagesPersistedSinceSnapshotCounter += 1
           logCounters(bytesSinceSnapshotCounter, messagesPersistedSinceSnapshotCounter, snapshotBytesThreshold, maybeSnapshotInterval)
+
+          snapshotIfNeeded(stateToMessage)
         case _ =>
           log.error("Message was not of type AnyRef and so could not be persisted")
       }
