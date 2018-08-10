@@ -139,10 +139,12 @@ object TerminalStaffing {
                 movementPair.toList.sortBy(_.time) match {
                   case first :: second :: Nil =>
                     val remove = <.a(Icon.remove, ^.key := first.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) => Callback(SPACircuit.dispatch(RemoveStaffMovement(0, first.uUID)))))
-                    <.li(remove, " ", MovementDisplay.displayPair(first, second))
+                    val span = <.span(^.`class`:="movement-display", MovementDisplay.displayPair(first, second))
+                    <.li(remove, " ", span)
                   case mm :: Nil =>
                     val remove = <.a(Icon.remove, ^.key := mm.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) => Callback(SPACircuit.dispatch(RemoveStaffMovement(0, mm.uUID)))))
-                    <.li(remove, " ", MovementDisplay.displaySingle(mm))
+                    val span = <.span(^.`class`:="movement-display", MovementDisplay.displaySingle(mm))
+                    <.li(remove, " ", span)
                   case x =>
                     log.info(s"didn't get a pair: $x")
                     TagMod()
