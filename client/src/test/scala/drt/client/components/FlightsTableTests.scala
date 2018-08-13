@@ -74,8 +74,8 @@ object FlightsTableTests extends TestSuite {
             if (timeline) <.th("Timeline") else TagMod(""),
             <.th("Flight"),
             <.th("Origin"),
-            <.th("Country"),
-            <.th("Gate/Stand", ^.className := "gate-stand"),
+            <.th("Country", ^.className := "country"),
+            <.th("Gate / Stand", ^.className := "gate-stand"),
             <.th("Status", ^.className := "status"),
             <.th("Sch"),
             <.th("Est"),
@@ -107,7 +107,7 @@ object FlightsTableTests extends TestSuite {
               thead(),
               <.tbody(
                 <.tr(^.className := " before-now",
-                  <.td(testFlight.ICAO), <.td(testFlight.Origin), <.td(<.span("")),
+                  <.td(testFlight.ICAO), <.td(testFlight.Origin), <.td(<.span(<.span())),
                   <.td(s"${testFlight.Gate.getOrElse("")}/${testFlight.Stand.getOrElse("")}"),
                   <.td(testFlight.Status),
                   <.td(<.span(^.title := "2016-01-01 13:00", "13:00")), //sch
@@ -143,7 +143,7 @@ object FlightsTableTests extends TestSuite {
                 <.tbody(
                   <.tr(^.className := " before-now",
                     <.td(<.span("herebecallback")),
-                    <.td(testFlight.ICAO), <.td(testFlight.Origin), <.td(<.span("")),
+                    <.td(testFlight.ICAO), <.td(testFlight.Origin), <.td(<.span(<.span())),
                     <.td(s"${testFlight.Gate.getOrElse("")}/${testFlight.Stand.getOrElse("")}"),
                     <.td(testFlight.Status),
                     date(Some(testFlight.Scheduled)),
@@ -157,8 +157,6 @@ object FlightsTableTests extends TestSuite {
                     <.td(0, ^.className := "right"),
                     <.td(0, ^.className := "right")))))
 
-          //          val timelineComponent = ScalaComponent.builder[Arrival]("TimeLine")
-          //            .renderStatic(<.span("herebecallback")).build
           assertRenderedComponentsAreEqual(
             ArrivalsTable(Some(timelineComponent))()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), PaxTypesAndQueues.inOrderSansFastTrack, hasEstChox = true)),
             staticComponent(expected)())
@@ -180,7 +178,7 @@ object FlightsTableTests extends TestSuite {
                 <.tbody(
                   <.tr(^.className := " before-now",
                     <.td(testFlight.ICAO),
-                    <.td(<.span(^.title := "JFK, New York, USA", testFlight.Origin)), <.td(<.span("")),
+                    <.td(<.span(^.title := "JFK, New York, USA", testFlight.Origin)), <.td(<.span(<.span())),
                     <.td(s"${testFlight.Gate.getOrElse("")}/${testFlight.Stand.getOrElse("")}"),
                     <.td(testFlight.Status),
                     date(Some(testFlight.Scheduled)),
@@ -246,7 +244,7 @@ object FlightsTableTests extends TestSuite {
               <.tbody(
                 <.tr(^.className := " before-now",
                   <.td(testFlightT.ICAO),
-                  <.td(testFlightT.Origin), <.td(<.span("")),
+                  <.td(testFlightT.Origin), <.td(<.span(<.span())),
                   <.td(s"${testFlightT.Gate.getOrElse("")}/${testFlightT.Stand.getOrElse("")}"),
                   <.td(testFlightT.Status),
                   date(Some(testFlightT.Scheduled)),
