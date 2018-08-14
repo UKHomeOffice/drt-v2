@@ -101,81 +101,87 @@ object TerminalContentComponent {
 
       val timeRangeHours: CustomWindow = timeRange(props)
 
-      <.div(^.className := s"view-mode-content $viewModeStr",
-        <.div(^.className := "tabs-with-export",
-          <.ul(^.className := "nav nav-tabs",
-            <.li(^.className := desksAndQueuesActive,
-              <.a(^.id := "desksAndQueuesTab", VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {
-              props.router.set(props.terminalPageTab.copy(subMode = "desksAndQueues"))
-            }),
-            <.li(^.className := arrivalsActive,
-              <.a(^.id := "arrivalsTab", VdomAttr("data-toggle") := "tab", "Arrivals"), ^.onClick --> {
-              props.router.set(props.terminalPageTab.copy(subMode = "arrivals"))
-            }),
-            <.li(^.className := staffingActive,
-              <.a(^.id := "staffMovementsTab", VdomAttr("data-toggle") := "tab", "Staff Movements"), ^.onClick --> {
-              props.router.set(props.terminalPageTab.copy(subMode = "staffing"))
-            })
-          ),
-          <.div(^.className := "exports",
-            <.a("Export Arrivals",
-              ^.className := "btn btn-default",
-              ^.href := s"${dom.window.location.pathname}/export/arrivals/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}",
-              ^.target := "_blank"
+      <.div(
+        props.crunchStatePot.renderPending(_ => if (props.crunchStatePot.isEmpty) <.div(^.id := "terminal-spinner", Icon.spinner) else ""),
+        props.crunchStatePot.renderEmpty( if (!props.crunchStatePot.isPending) { <.div(^.id := "terminal-data", "Nothing to show for this time period")} else ""),
+        props.crunchStatePot.render((crunchState: CrunchState) => {
+          <.div(^.className := s"view-mode-content $viewModeStr",
+            <.div(^.className := "tabs-with-export",
+              <.ul(^.className := "nav nav-tabs",
+                <.li(^.className := desksAndQueuesActive,
+                  <.a(^.id := "desksAndQueuesTab", VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {
+                    props.router.set(props.terminalPageTab.copy(subMode = "desksAndQueues"))
+                  }),
+                <.li(^.className := arrivalsActive,
+                  <.a(^.id := "arrivalsTab", VdomAttr("data-toggle") := "tab", "Arrivals"), ^.onClick --> {
+                    props.router.set(props.terminalPageTab.copy(subMode = "arrivals"))
+                  }),
+                <.li(^.className := staffingActive,
+                  <.a(^.id := "staffMovementsTab", VdomAttr("data-toggle") := "tab", "Staff Movements"), ^.onClick --> {
+                    props.router.set(props.terminalPageTab.copy(subMode = "staffing"))
+                  })
+              ),
+              <.div(^.className := "exports",
+                <.a("Export Arrivals",
+                  ^.className := "btn btn-default",
+                  ^.href := s"${dom.window.location.pathname}/export/arrivals/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}",
+                  ^.target := "_blank"
+                ),
+                <.a(
+                  "Export Desks",
+                  ^.className := "btn btn-default",
+                  ^.href := s"${dom.window.location.pathname}/export/desks/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}",
+                  ^.target := "_blank"
+                ),
+                MultiDayExportComponent(props.terminalPageTab.terminal, props.terminalPageTab.dateFromUrlOrNow)
+              )
             ),
-            <.a(
-              "Export Desks",
-              ^.className := "btn btn-default",
-              ^.href := s"${dom.window.location.pathname}/export/desks/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}",
-              ^.target := "_blank"
-            ),
-            MultiDayExportComponent(props.terminalPageTab.terminal, props.terminalPageTab.dateFromUrlOrNow)
-          )
-        ),
-        <.div(^.className := "tab-content",
-          <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
-            if (state.activeTab == "desksAndQueues") {
-              log.info(s"Rendering desks and queue")
-              props.crunchStatePot.render(crunchState => {
-                props.loggedInUserPot.render( loggedInUser => {
-                  val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState, props.terminalPageTab.terminal)
-                  TerminalDesksAndQueues(
-                    TerminalDesksAndQueues.Props(
-                      filteredPortState,
-                      props.airportConfig,
-                      props.terminalPageTab.terminal,
-                      props.showActuals,
-                      props.viewMode,
-                      loggedInUser
+            <.div(^.className := "tab-content",
+              <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
+                if (state.activeTab == "desksAndQueues") {
+                  log.info(s"Rendering desks and queue")
+                  props.loggedInUserPot.render(loggedInUser => {
+                    val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState, props.terminalPageTab.terminal)
+                    TerminalDesksAndQueues(
+                      TerminalDesksAndQueues.Props(
+                        filteredPortState,
+                        props.airportConfig,
+                        props.terminalPageTab.terminal,
+                        props.showActuals,
+                        props.viewMode,
+                        loggedInUser
+                      )
                     )
+                  })
+                } else ""
+              ),
+              <.div(^.id := "arrivals", ^.className := s"tab-pane in $arrivalsPanelActive", {
+                if (state.activeTab == "arrivals") {
+                  <.div(props.crunchStatePot.render((crunchState: CrunchState) => {
+                    val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState, props.terminalPageTab.terminal)
+                    arrivalsTableComponent(FlightsWithSplitsTable.Props(filteredPortState.flights.toList, queueOrder, props.airportConfig.hasEstChox))
+                  }),
+                    props.crunchStatePot.renderEmpty("No flights")
                   )
-                })
-              })
-            } else ""
-          ),
-          <.div(^.id := "arrivals", ^.className := s"tab-pane in $arrivalsPanelActive", {
-            if (state.activeTab == "arrivals") {
-              <.div(props.crunchStatePot.render((crunchState: CrunchState) => {
-                val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState, props.terminalPageTab.terminal)
-                arrivalsTableComponent(FlightsWithSplitsTable.Props(filteredPortState.flights.toList, queueOrder, props.airportConfig.hasEstChox))
-              }))
-            } else ""
-          }),
-          <.div(^.id := "available-staff", ^.className := s"tab-pane terminal-staffing-container $staffingPanelActive",
-            if (state.activeTab == "staffing") {
-              TerminalStaffing(TerminalStaffing.Props(
-                props.terminalPageTab.terminal,
-                props.potShifts,
-                props.potFixedPoints,
-                props.potStaffMovements,
-                props.airportConfig,
-                props.loggedInUserPot,
-                props.viewMode
+                } else ""
+              }),
+              <.div(^.id := "available-staff", ^.className := s"tab-pane terminal-staffing-container $staffingPanelActive",
+                if (state.activeTab == "staffing") {
+                  TerminalStaffing(TerminalStaffing.Props(
+                    props.terminalPageTab.terminal,
+                    props.potShifts,
+                    props.potFixedPoints,
+                    props.potStaffMovements,
+                    props.airportConfig,
+                    props.loggedInUserPot,
+                    props.viewMode
+                  ))
+                } else ""
               ))
-            } else ""
-          ))
-      )
+          )
+        }))
     }
+
   }
 
   def timeRange(props: Props): CustomWindow = {
@@ -189,7 +195,7 @@ object TerminalContentComponent {
     .initialStateFromProps(p => State(p.terminalPageTab.subMode))
     .renderBackend[TerminalContentComponent.Backend]
     .componentDidMount(_ => Callback.log(s"terminal component didMount"))
-    .configure(Reusability.shouldComponentUpdate)
+    //.configure(Reusability.shouldComponentUpdate)
     .build
 
   def apply(props: Props): VdomElement = component(props)
