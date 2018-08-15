@@ -557,6 +557,45 @@ object AirportConfigs {
       )
     )
   )
+
+  val brs = AirportConfig(
+    portCode = "BRS",
+    queues = Map(
+      "T1" -> Seq(Queues.QueueDesk, Queues.EGate)
+    ),
+    divertedQueues = Map(
+      Queues.NonEeaDesk -> Queues.QueueDesk,
+      Queues.EeaDesk -> Queues.QueueDesk
+    ),
+    slaByQueue = Map(
+      Queues.QueueDesk -> 20,
+      Queues.EGate -> 25
+    ),
+    terminalNames = Seq("T1"),
+    defaultWalkTimeMillis = Map("T1" -> 780000L),
+    defaultPaxSplits = SplitRatios(
+      SplitSources.TerminalAverage,
+      SplitRatio(eeaMachineReadableToDesk, 0.99 * 0.8),
+      SplitRatio(eeaMachineReadableToEGate, 0.99 * 0.2),
+      SplitRatio(eeaNonMachineReadableToDesk, 0),
+      SplitRatio(visaNationalToDesk, 0.0),
+      SplitRatio(nonVisaNationalToDesk, 0.01)
+    ),
+    defaultProcessingTimes = Map("T1" -> Map(
+      eeaMachineReadableToDesk -> 20d / 60,
+      eeaMachineReadableToEGate -> 30d / 60,
+      eeaNonMachineReadableToDesk -> 50d / 60,
+      visaNationalToDesk -> 100d / 60,
+      nonVisaNationalToDesk -> 80d / 60
+    )),
+    minMaxDesksByTerminalQueue = Map(
+      "T1" -> Map(
+        Queues.EGate -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)),
+        Queues.QueueDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5))
+      )
+    )
+  )
+
   val bhx = AirportConfig(
     portCode = "BHX",
     queues = Map(
@@ -649,6 +688,6 @@ object AirportConfigs {
   val lhr_nbp: AirportConfig = lhr.copy(portCode = "LHR_NBP", cloneOfPortCode = Option("LHR"))
   val lhr_nbp_halved: AirportConfig = lhr_ppt_halved.copy(portCode = "LHR_NBP_HALVED", nationalityBasedProcTimes = nationalityProcessingTimesHalved, cloneOfPortCode = Option("LHR")) //use halved default times and halved nationality based times
 
-  val allPorts: List[AirportConfig] = ema :: edi :: stn :: man :: ltn :: lhr :: lhr_nbp :: lhr_nbp_halved :: lhr_ppt_halved :: lgw :: bhx :: test :: Nil
+  val allPorts: List[AirportConfig] = ema :: edi :: stn :: man :: ltn :: lhr :: lhr_nbp :: lhr_nbp_halved :: lhr_ppt_halved :: lgw :: bhx :: brs :: test :: Nil
   val confByPort: Map[String, AirportConfig] = allPorts.map(c => (c.portCode, c)).toMap
 }
