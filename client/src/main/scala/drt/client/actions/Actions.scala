@@ -37,9 +37,7 @@ object Actions {
 
   case class UpdateCrunchStateFromCrunchState(crunchState: CrunchState) extends Action
 
-  case class NoCrunchStateUpdatesAndContinuePolling() extends Action
-
-  case class UpdateCrunchStateFromUpdates(crunchUpdates: CrunchUpdates) extends Action
+  case class NoCrunchStateUpdatesAndContinuePollingIfNecessary() extends Action
 
   case class GetForecastWeek(startDay: SDateLike, terminalName: TerminalName) extends Action
 
