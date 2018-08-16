@@ -35,11 +35,6 @@ object TerminalComponent {
                             minuteTicker: Int
                           )
 
-  implicit val pageReuse: Reusability[TerminalPageTabLoc] = Reusability.derive[TerminalPageTabLoc]
-  implicit val propsReuse: Reusability[Props] = Reusability.by(p =>
-    (p.terminalPageTab, p.router)
-  )
-
   val component = ScalaComponent.builder[Props]("Terminal")
     .render_P(props => {
       val modelRCP = SPACircuit.connect(model => TerminalModel(
@@ -176,7 +171,6 @@ object TerminalComponent {
       })
     })
     .componentDidMount((p) => Callback.log("TerminalComponent did mount"))
-    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def apply(props: Props): VdomElement = component(props)
