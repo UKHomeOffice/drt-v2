@@ -358,6 +358,8 @@ object CrunchApi {
       val windowsStaffMinutes = staffMinutes.filter(sm => start.millisSinceEpoch <= sm.minute && sm.minute <= end.millisSinceEpoch && sm.terminalName == terminalName)
       CrunchState(windowedFlights, windowedCrunchMinutes, windowsStaffMinutes)
     }
+
+    def isEmpty: Boolean = flights.isEmpty && crunchMinutes.isEmpty && staffMinutes.isEmpty
   }
 
   case class PortState(flights: Map[Int, ApiFlightWithSplits],
@@ -500,8 +502,6 @@ object CrunchApi {
 
   case class CrunchMinutes(crunchMinutes: Set[CrunchMinute])
 
-  case class CrunchUpdatesError(message: String)
-
   case class CrunchUpdates(latest: MillisSinceEpoch, flights: Set[ApiFlightWithSplits], minutes: Set[CrunchMinute], staff: Set[StaffMinute])
 
   case class ForecastTimeSlot(startMillis: MillisSinceEpoch, available: Int, required: Int)
@@ -623,7 +623,7 @@ trait Api {
 
   def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]]
 
-  def getCrunchUpdates(sinceMillis: MillisSinceEpoch, windowStartMillis: MillisSinceEpoch, windowEndMillis: MillisSinceEpoch): Future[Either[CrunchUpdatesError, Option[CrunchUpdates]]]
+  def getCrunchUpdates(sinceMillis: MillisSinceEpoch, windowStartMillis: MillisSinceEpoch, windowEndMillis: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchUpdates]]]
 
   def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]]
 

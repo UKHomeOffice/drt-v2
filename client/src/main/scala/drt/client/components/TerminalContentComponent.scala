@@ -8,7 +8,7 @@ import drt.client.components.FlightComponents.paxComp
 import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, ViewMode}
-import drt.shared.CrunchApi.{CrunchState, MillisSinceEpoch}
+import drt.shared.CrunchApi.CrunchState
 import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
@@ -195,7 +195,6 @@ object TerminalContentComponent {
     .initialStateFromProps(p => State(p.terminalPageTab.subMode))
     .renderBackend[TerminalContentComponent.Backend]
     .componentDidMount(_ => Callback.log(s"terminal component didMount"))
-    //.configure(Reusability.shouldComponentUpdate)
     .build
 
   def apply(props: Props): VdomElement = component(props)

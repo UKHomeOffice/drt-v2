@@ -48,12 +48,14 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
           effectOnly(effects)
       }
 
-    case NoCrunchStateUpdates() =>
-      val getCrunchUpdatesAfterDelay = Effect(Future(GetCrunchState())).after(crunchUpdatesRequestFrequency)
-      effectOnly(Effect(Future(HideLoader())) + getCrunchUpdatesAfterDelay)
+    case NoCrunchStateUpdatesAndContinuePolling() =>
+      val allEffects = Effect(Future(HideLoader())) + getCrunchUpdatesAfterDelay
+      val thereIsNoData = modelRW.value._1.headOption.isEmpty
+      if (thereIsNoData) updated((Empty, latestUpdateMillis), allEffects) else effectOnly(allEffects)
 
     case UpdateCrunchStateFromCrunchState(crunchState: CrunchState) =>
-      val oldCodes = value._1.map(cs => cs.flights.map(_.apiFlight.Origin)).getOrElse(Set())
+      val oldCodes =
+        value._1.map(cs => cs.flights.map(_.apiFlight.Origin)).getOrElse(Set())
       val newCodes = crunchState.flights.map(_.apiFlight.Origin)
       val unseenCodes = newCodes -- oldCodes
       val allEffects = if (unseenCodes.nonEmpty) {
@@ -66,7 +68,6 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
       updated((Ready(crunchState), 0L), allEffects)
 
     case UpdateCrunchStateFromUpdatesAndContinuePolling(crunchUpdates: CrunchUpdates) =>
-      val getCrunchUpdatesAfterDelay = Effect(Future(GetCrunchState())).after(crunchUpdatesRequestFrequency)
       val updateCrunchState = Effect(Future(UpdateCrunchStateFromUpdates(crunchUpdates)))
       val effects = getCrunchUpdatesAfterDelay + updateCrunchState
 
@@ -93,6 +94,8 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
       updated((PendingStale(newState), crunchUpdates.latest), Effect(Future(HideLoader())))
   }
 
+  def getCrunchUpdatesAfterDelay: Effect = Effect(Future(GetCrunchState())).after(crunchUpdatesRequestFrequency)
+
   def requestHistoricCrunchState(viewMode: ViewMode): Future[Action] = {
     log.info(s"Requesting CrunchState for point in time ${viewMode.time.prettyDateTime()}")
 
@@ -113,26 +116,24 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
 
   def processFutureCrunch[U, E](call: Future[Either[E, Option[U]]]): Future[Action] = {
     call.map {
-      case Right(Some(cs: CrunchState)) =>
-        log.error(s"Got CrunchState with ${cs.flights.size} flights, ${cs.crunchMinutes.size} minutes")
-        UpdateCrunchStateFromCrunchState(cs)
-      case Right(Some(cu: CrunchUpdates)) =>
-        log.error(s"Got CrunchUpdates with ${cu.flights.size} flights, ${cu.minutes.size} minutes")
-        UpdateCrunchStateFromUpdatesAndContinuePolling(cu)
-      case Left(cse: CrunchStateError) =>
-        log.error(s"Failed to GetCrunchState. Re-requesting after ${PollDelay.recoveryDelay}")
-        RetryActionAfter(GetCrunchState(), PollDelay.recoveryDelay)
-      case Left(cse: CrunchUpdatesError) =>
-        log.error(s"Failed to GetCrunchState. Re-requesting after ${PollDelay.recoveryDelay}")
-        RetryActionAfter(GetCrunchState(), PollDelay.recoveryDelay)
-      case _ =>
-        log.error(s"No updates")
-        NoCrunchStateUpdates()
-    }.recoverWith {
-      case _ =>
-        log.error(s"Failed to GetCrunchState. Re-requesting after ${PollDelay.recoveryDelay}")
-        Future(RetryActionAfter(GetCrunchState(), PollDelay.recoveryDelay))
-    }
+        case Right(Some(cs: CrunchState)) =>
+          log.info(s"Got CrunchState with ${cs.flights.size} flights, ${cs.crunchMinutes.size} minutes")
+          if (cs.isEmpty) NoCrunchStateUpdatesAndContinuePolling() else UpdateCrunchStateFromCrunchState(cs)
+        case Right(Some(cu: CrunchUpdates)) =>
+          log.info(s"Got CrunchUpdates with ${cu.flights.size} flights, ${cu.minutes.size} minutes")
+          UpdateCrunchStateFromUpdatesAndContinuePolling(cu)
+        case Left(e: CrunchStateError) =>
+          log.error(s"Failed to GetCrunchState ${e.message}. Re-requesting after ${PollDelay.recoveryDelay}")
+          RetryActionAfter(GetCrunchState(), PollDelay.recoveryDelay)
+        case _ =>
+          log.info(s"No CrunchUpdates")
+          NoCrunchStateUpdatesAndContinuePolling()
+      }
+      .recoverWith {
+        case _ =>
+          log.error(s"Failed to GetCrunchState. Re-requesting after ${PollDelay.recoveryDelay}")
+          Future(RetryActionAfter(GetCrunchState(), PollDelay.recoveryDelay))
+      }
   }
 
   def requestCrunchUpdates(pointInTime: SDateLike): Future[Action] = {
