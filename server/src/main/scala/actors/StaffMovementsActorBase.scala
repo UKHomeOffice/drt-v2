@@ -129,6 +129,7 @@ class StaffMovementsActorBase extends RecoveryActorLike with PersistentDrtActor[
     delta = Some(sm.delta),
     uUID = Some(sm.uUID.toString),
     queueName = sm.queue,
-    createdAt = Option(SDate.now().millisSinceEpoch)
+    createdAt = Option(SDate.now().millisSinceEpoch),
+    createdBy = sm.createdBy
   )
 }
