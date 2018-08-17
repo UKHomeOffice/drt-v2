@@ -7,6 +7,7 @@ import server.protobuf.messages.FixedPointMessage.FixedPointsStateSnapshotMessag
 import server.protobuf.messages.FlightsMessage.{FeedStatusMessage, FeedStatusesMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
 import server.protobuf.messages.ShiftMessage.ShiftStateSnapshotMessage
 import server.protobuf.messages.StaffMovementMessages.StaffMovementsStateSnapshotMessage
+import server.protobuf.messages.Alert.{Alert, AlertSnapshotMessage}
 import server.protobuf.messages.VoyageManifest.{VoyageManifestLatestFileNameMessage, VoyageManifestMessage, VoyageManifestStateSnapshotMessage, VoyageManifestsMessage}
 
 class ProtoBufSerializer extends SerializerWithStringManifest {
@@ -27,6 +28,8 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
   final val VoyageManifestLatestFileName: String = classOf[VoyageManifestLatestFileNameMessage].getName
   final val VoyageManifests: String = classOf[VoyageManifestsMessage].getName
   final val VoyageManifest: String = classOf[VoyageManifestMessage].getName
+  final val Alerts: String = classOf[Alert].getName
+  final val AlertSnapshot: String = classOf[AlertSnapshotMessage].getName
 
   override def toBinary(objectToSerialize: AnyRef): Array[Byte] = {
     objectToSerialize match {
@@ -43,6 +46,8 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case m: VoyageManifestLatestFileNameMessage => m.toByteArray
       case m: VoyageManifestsMessage => m.toByteArray
       case m: VoyageManifestMessage => m.toByteArray
+      case m: Alert => m.toByteArray
+      case m: AlertSnapshotMessage => m.toByteArray
     }
   }
 
@@ -63,6 +68,8 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case VoyageManifestLatestFileName => VoyageManifestLatestFileNameMessage.parseFrom(bytes)
       case VoyageManifests => VoyageManifestsMessage.parseFrom(bytes)
       case VoyageManifest => VoyageManifestMessage.parseFrom(bytes)
+      case AlertSnapshot => AlertSnapshotMessage.parseFrom(bytes)
+      case Alerts => Alert.parseFrom(bytes)
     }
   }
 }

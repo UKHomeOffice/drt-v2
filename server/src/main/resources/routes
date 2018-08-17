@@ -29,6 +29,10 @@ POST        /logging                                      controllers.Applicatio
 
 POST        /data/staff                                   controllers.Application.saveStaff
 
+POST        /data/alert                                   controllers.Application.addAlert
+
+GET         /data/alert                                    controllers.Application.getAlerts
+
 POST        /test/arrival                                 controllers.Test.addArrival
 
 POST        /test/manifest                                controllers.Test.addManifest

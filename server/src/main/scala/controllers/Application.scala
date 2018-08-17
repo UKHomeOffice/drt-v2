@@ -164,6 +164,7 @@ class Application @Inject()(implicit val config: Configuration,
                             ec: ExecutionContext)
   extends InjectedController
     with AirportConfProvider
+    with ApplicationWithAlerts
     with ProdPassengerSplitProviders
     with ImplicitTimeoutProvider {
 
