@@ -1,8 +1,6 @@
 package controllers
 
 import java.nio.ByteBuffer
-import javax.inject.{Inject, Singleton}
-
 import actors._
 import actors.pointInTime.CrunchStateReadActor
 import akka.actor._
@@ -37,15 +35,13 @@ import services.graphstages.Crunch._
 import services.shifts.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
-import services.{SDate, _}
+import services._
 import test.TestDrtSystem
-
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.matching.Regex
-//import scala.collection.immutable.Seq // do not import this here, it would break autowire.
 import services.PcpArrival.pcpFrom
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
@@ -213,13 +209,13 @@ class Application @Inject()(implicit val config: Configuration,
 
       def actorSystem: ActorSystem = system
 
-      def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]] = loadBestCrunchStateForPointInTime(day)
+      def getCrunchStateForDay(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = loadBestCrunchStateForPointInTime(day)
 
       def getApplicationVersion(): String = BuildInfo.version
 
-      override def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]] = crunchStateAtPointInTime(pointInTime)
+      override def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = crunchStateAtPointInTime(pointInTime)
 
-      def getCrunchUpdates(sinceMillis: MillisSinceEpoch, windowStartMillis: MillisSinceEpoch, windowEndMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]] = {
+      def getCrunchUpdates(sinceMillis: MillisSinceEpoch, windowStartMillis: MillisSinceEpoch, windowEndMillis: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchUpdates]]] = {
         val liveStateCutOff = getLocalNextMidnight(ctrl.now()).addDays(1).millisSinceEpoch
 
         val stateActor = if (windowStartMillis < liveStateCutOff) liveCrunchStateActor else forecastCrunchStateActor
@@ -227,12 +223,12 @@ class Application @Inject()(implicit val config: Configuration,
         val crunchStateFuture = stateActor.ask(GetUpdatesSince(sinceMillis, windowStartMillis, windowEndMillis))(new Timeout(30 seconds))
 
         crunchStateFuture.map {
-          case Some(cu: CrunchUpdates) => Option(cu)
-          case _ => None
+          case Some(cu: CrunchUpdates) => Right(Option(cu))
+          case _ => Right(None)
         } recover {
           case t =>
             log.warn(s"Didn't get a CrunchUpdates: $t")
-            None
+            Left(CrunchStateError(t.getMessage))
         }
       }
 
@@ -340,31 +336,31 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def loadBestCrunchStateForPointInTime(day: MillisSinceEpoch): Future[Option[CrunchState]] =
+  def loadBestCrunchStateForPointInTime(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] =
     if (isHistoricDate(day)) {
       crunchStateForEndOfDay(day)
     } else if (day <= getLocalNextMidnight(SDate.now()).millisSinceEpoch) {
       ctrl.liveCrunchStateActor.ask(GetState).map {
-        case Some(PortState(f, m, s)) => Option(CrunchState(f.values.toSet, m.values.toSet, s.values.toSet))
-        case _ => None
+        case Some(PortState(f, m, s)) => Right(Option(CrunchState(f.values.toSet, m.values.toSet, s.values.toSet)))
+        case _ => Right(None)
       }
     } else {
       crunchStateForDayInForecast(day)
     }
 
-  def crunchStateForDayInForecast(day: MillisSinceEpoch): Future[Option[CrunchState]] = {
+  def crunchStateForDayInForecast(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = {
     val firstMinute = getLocalLastMidnight(SDate(day)).millisSinceEpoch
     val lastMinute = SDate(firstMinute).addHours(airportConfig.dayLengthHours).millisSinceEpoch
 
     val crunchStateFuture = ctrl.forecastCrunchStateActor.ask(GetPortState(firstMinute, lastMinute))(new Timeout(30 seconds))
 
     crunchStateFuture.map {
-      case Some(PortState(f, m, s)) => Option(CrunchState(f.values.toSet, m.values.toSet, s.values.toSet))
-      case _ => None
+      case Some(PortState(f, m, s)) => Right(Option(CrunchState(f.values.toSet, m.values.toSet, s.values.toSet)))
+      case _ => Right(None)
     } recover {
       case t =>
         log.warning(s"Didn't get a CrunchState: $t")
-        None
+        Left(CrunchStateError(t.getMessage))
     }
   }
 
@@ -377,7 +373,7 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
 
-  def crunchStateAtPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]] = {
+  def crunchStateAtPointInTime(pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = {
     val relativeLastMidnight = getLocalLastMidnight(SDate(pointInTime)).millisSinceEpoch
     val startMillis = relativeLastMidnight
     val endMillis = relativeLastMidnight + oneHourMillis * airportConfig.dayLengthHours
@@ -385,7 +381,7 @@ class Application @Inject()(implicit val config: Configuration,
     portStatePeriodAtPointInTime(startMillis, endMillis, pointInTime)
   }
 
-  def crunchStateForEndOfDay(day: MillisSinceEpoch): Future[Option[CrunchState]] = {
+  def crunchStateForEndOfDay(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = {
     val relativeLastMidnight = getLocalLastMidnight(SDate(day)).millisSinceEpoch
     val startMillis = relativeLastMidnight
     val endMillis = relativeLastMidnight + oneHourMillis * airportConfig.dayLengthHours
@@ -394,16 +390,16 @@ class Application @Inject()(implicit val config: Configuration,
     portStatePeriodAtPointInTime(startMillis, endMillis, pointInTime)
   }
 
-  def portStatePeriodAtPointInTime(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, pointInTime: MillisSinceEpoch): Future[Option[CrunchState]] = {
+  def portStatePeriodAtPointInTime(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = {
     val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], airportConfig.portStateSnapshotInterval, SDate(pointInTime), airportConfig.queues), GetPortState(startMillis, endMillis))
     val portCrunchResult = cacheActorRef.ask(query)(new Timeout(30 seconds))
     portCrunchResult.map {
-      case Some(PortState(f, m, s)) => Option(CrunchState(f.values.toSet, m.values.toSet, s.values.toSet))
-      case _ => None
+      case Some(PortState(f, m, s)) => Right(Option(CrunchState(f.values.toSet, m.values.toSet, s.values.toSet)))
+      case _ => Right(None)
     }.recover {
       case t =>
         log.warning(s"Didn't get a point-in-time CrunchState: $t")
-        None
+        Left(CrunchStateError(t.getMessage))
     }
   }
 
@@ -438,7 +434,7 @@ class Application @Inject()(implicit val config: Configuration,
                         pointInTime: MilliDate,
                         startHour: Int,
                         endHour: Int,
-                        crunchStateFuture: Future[Option[CrunchState]]
+                        crunchStateFuture: Future[Either[CrunchStateError, Option[CrunchState]]]
                       ): Future[Option[String]] = {
 
     val startDateTime = getLocalLastMidnight(pointInTime).addHours(startHour)
@@ -447,7 +443,7 @@ class Application @Inject()(implicit val config: Configuration,
 
     val localTime = SDate(pointInTime, europeLondonTimeZone)
     crunchStateFuture.map {
-      case Some(CrunchState(_, cm, sm)) =>
+      case Right(Some(CrunchState(_, cm, sm))) =>
         log.debug(s"Exports: ${localTime.toISOString()} Got ${cm.size} CMs and ${sm.size} SMs ")
         val cmForDay: Set[CrunchMinute] = cm.filter(cm => isInRange(SDate(cm.minute, europeLondonTimeZone)))
         val smForDay: Set[StaffMinute] = sm.filter(sm => isInRange(SDate(sm.minute, europeLondonTimeZone)))
@@ -647,7 +643,7 @@ class Application @Inject()(implicit val config: Configuration,
                                       pit: MilliDate,
                                       startHour: Int,
                                       endHour: Int,
-                                      crunchStateFuture: Future[Option[CrunchState]]
+                                      crunchStateFuture: Future[Either[CrunchStateError, Option[CrunchState]]]
                                     ): Future[Option[List[ApiFlightWithSplits]]] = {
 
     val startDateTime = getLocalLastMidnight(pit).addHours(startHour)
@@ -655,7 +651,7 @@ class Application @Inject()(implicit val config: Configuration,
     val isInRange = isInRangeOnDay(startDateTime, endDateTime) _
 
     crunchStateFuture.map {
-      case Some(CrunchState(fs, _, _)) =>
+      case Right(Some(CrunchState(fs, _, _))) =>
 
         val flightsForTerminalInRange = fs.toList
           .filter(_.apiFlight.Terminal == terminalName)
