@@ -1,0 +1,14 @@
+{
+  "name": "drt-v2-e2e",
+  "version": "1.0.0",
+  "description": "End to end tests for DRT V2",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "UK Home Office",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "cypress": "^3.0.2"
+  }
+}

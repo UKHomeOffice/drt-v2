@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: drt-test
+  namespace: drt-dev
+data:
+  PORT_CODE: test
+  ENV: test
+  PERSISTENCE_BASE_DIR: /var/lib/drt-v2/live/test
+  KEY_CLOAK_URL: https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod
