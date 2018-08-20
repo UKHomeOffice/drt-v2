@@ -43,7 +43,6 @@ pipeline:
       - kube_token_acp_notprod
     environment:
       - IMAGE_URL=docker.digital.homeoffice.gov.uk/drt/drt:latest
-      - INIT_IMAGE_URL=quay.io/ukhomeofficedigital/docker-aws-cli:latest
     commands:
       - apk update
       - apk add curl
