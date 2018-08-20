@@ -9,6 +9,7 @@ import org.joda.time.DateTime
 import play.api.libs.json.{JodaReads, Json}
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -18,20 +19,21 @@ trait ApplicationWithAlerts {
   implicit val dateRead = JodaReads.jodaDateReads(pattern)
   implicit val alertReads = Json.reads[AlertMessage]
 
-  def addAlert = Action {
+  def addAlert = Action.async {
     implicit request =>
 
       request.body.asJson.map { json =>
         val alertMessage = json.as[AlertMessage]
-        ctrl.alertsActor ! Alert(
+        (ctrl.alertsActor ? Alert(
           alertMessage.title,
           alertMessage.message,
           alertMessage.expires.getMillis,
           createdAt = DateTime.now.getMillis
-        )
-        Ok("done!")
+        )).mapTo[Alert].map {alert =>
+          Ok(s"$alert added!")
+        }
       }.getOrElse {
-        BadRequest("{\"error\": \"Unable to parse data\"}")
+        Future(BadRequest("{\"error\": \"Unable to parse data\"}"))
       }
   }
 

@@ -50,6 +50,7 @@ case class AlertsActor() extends RecoveryActorLike with PersistentDrtActor[Seq[A
       log.info(s"Saving Alert $alert")
       updateState(Seq(alert))
       persistAndMaybeSnapshot(serialise(alert))
+      sender() ! alert
 
     case GetState =>
       log.info(s"Received GetState request. Sending Alerts with ${state.size} alerts")
