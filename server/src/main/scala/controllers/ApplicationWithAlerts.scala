@@ -1,6 +1,6 @@
 package controllers
 
-import actors.GetState
+import actors.{DeleteAlerts, GetState}
 import akka.actor._
 import akka.pattern._
 import akka.util.Timeout
@@ -23,20 +23,24 @@ trait ApplicationWithAlerts {
 
       request.body.asJson.map { json =>
         val alertMessage = json.as[AlertMessage]
-        ctrl.alertsActor ! Alert(alertMessage.message, alertMessage.expires.getMillis, createdAt = DateTime.now.getMillis)
+        ctrl.alertsActor ! Alert(
+          alertMessage.title,
+          alertMessage.message,
+          alertMessage.expires.getMillis,
+          createdAt = DateTime.now.getMillis
+        )
         Ok("done!")
       }.getOrElse {
         BadRequest("{\"error\": \"Unable to parse data\"}")
       }
   }
 
-  def getAlerts = Action.async {
-    val futureShifts = ctrl.alertsActor.ask(GetState)(new Timeout(5 second))
-    futureShifts.map(s =>
+  def deleteAlerts = Action.async {
+    val futureAlerts = ctrl.alertsActor.ask(DeleteAlerts)(new Timeout(5 second))
+    futureAlerts.map(s =>
       Ok(s.toString)
-
     )
   }
 }
 
-case class AlertMessage(message: String, expires: DateTime)
+case class AlertMessage(title: String, message: String, expires: DateTime)

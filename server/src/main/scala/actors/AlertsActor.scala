@@ -1,11 +1,14 @@
 package actors
 
 import actors.Sizes.oneMegaByte
-import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
+import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess, SnapshotSelectionCriteria}
 import com.trueaccord.scalapb.GeneratedMessage
 import drt.shared.Alert
+import org.joda.time.DateTime
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.Alert.{AlertSnapshotMessage, Alert => ProtobufAlert}
+
+case object DeleteAlerts
 
 case class AlertsActor() extends RecoveryActorLike with PersistentDrtActor[Seq[Alert]] {
   override val log: Logger = LoggerFactory.getLogger(getClass)
@@ -23,14 +26,15 @@ case class AlertsActor() extends RecoveryActorLike with PersistentDrtActor[Seq[A
       updateState(smm.alerts.flatMap(deserialise))
   }
 
+  //noinspection SpellCheckingInspection
   def deserialise(alert: ProtobufAlert): Option[Alert] = for {
+    title <- alert.title
     message <- alert.message
     expires <- alert.expires
     createdAt <- alert.createdAt
-  } yield Alert(message, expires, createdAt)
+  } yield Alert(title, message, expires, createdAt)
 
-  def serialise(alert: Alert): ProtobufAlert = ProtobufAlert(Option(alert.message), Option(alert.expires), Option(alert.createdAt))
-
+  def serialise(alert: Alert): ProtobufAlert = ProtobufAlert(Option(alert.title), Option(alert.message), Option(alert.expires), Option(alert.createdAt))
 
   def updateState(data: Seq[Alert]): Unit = state = state ++ data
 
@@ -42,13 +46,19 @@ case class AlertsActor() extends RecoveryActorLike with PersistentDrtActor[Seq[A
 
   override def receiveCommand: Receive = {
 
-    case alert@Alert(_, _, _) =>
+    case alert@Alert(_, _, _, _) =>
       log.info(s"Saving Alert $alert")
       updateState(Seq(alert))
       persistAndMaybeSnapshot(serialise(alert))
 
     case GetState =>
       log.info(s"Received GetState request. Sending Alerts with ${state.size} alerts")
+      sender() ! state.filter(a=> a.expires >= DateTime.now.getMillis)
+
+    case DeleteAlerts =>
+      deleteSnapshots(SnapshotSelectionCriteria(maxSequenceNr = lastSequenceNr))
+      deleteMessages(lastSequenceNr)
+      state = initialState
       sender() ! state
 
     case SaveSnapshotSuccess(md) =>

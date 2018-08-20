@@ -330,6 +330,12 @@ class Application @Inject()(implicit val config: Configuration,
         } else throw new Exception("You do not have permission manage users")
       }
 
+      def getAlerts(createdAfter: MillisSinceEpoch): Future[Seq[Alert]] = {
+        for {
+          alerts <- (ctrl.alertsActor ? GetState).mapTo[Seq[Alert]]
+        } yield alerts.filter(a => a.createdAt > createdAfter)
+      }
+
       override def liveCrunchStateActor: AskableActorRef = ctrl.liveCrunchStateActor
 
       override def forecastCrunchStateActor: AskableActorRef = ctrl.forecastCrunchStateActor

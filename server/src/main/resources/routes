@@ -30,8 +30,7 @@ POST        /logging                                      controllers.Applicatio
 POST        /data/staff                                   controllers.Application.saveStaff
 
 POST        /data/alert                                   controllers.Application.addAlert
-
-GET         /data/alert                                    controllers.Application.getAlerts
+DELETE      /data/alert                                   controllers.Application.deleteAlerts
 
 POST        /test/arrival                                 controllers.Test.addArrival
 
