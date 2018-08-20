@@ -35,8 +35,10 @@ spec:
               memory: "12Gi"
               cpu: "4"
 
-          command: ["bin/drt"]
-          args: ["-Duser.timezone=UTC"]
+              #command: ["bin/drt"]
+              #args: ["-Duser.timezone=UTC"]
+          command: ["sleep"]
+          args: ["10000"]
 
           env:
             - name: JAVA_OPTS
