@@ -37,7 +37,41 @@ pipeline:
       branch: 
         - drone
         - drt-acp-pgsql
+  deploy-to-kube:
+    image: quay.io/ukhomeofficedigital/kd:v0.13.0
+    secrets:
+      - kube_token_acp_notprod
+    environment:
+      - IMAGE_URL=docker.digital.homeoffice.gov.uk/drt/drt:latest
+      - INIT_IMAGE_URL=quay.io/ukhomeofficedigital/docker-aws-cli:latest
+    commands:
+      - apk update
+      - apk add curl
+      - bin/deploy.sh
+    when:
+      event: deployment
 
+  e2e:
+    image: cypress/base
+    environment:
+      - CYPRESS_baseUrl=https://ltn.drt-notprod.homeoffice.gov.uk/v2/ltn/live
+    commands:
+      - npm install --save-dev cypress
+      - $(npm bin)/cypress run
+    when:
+      event: deployment
+
+  copy-e2e-result:
+    image: quay.io/ukhomeofficedigital/docker-aws-cli:latest
+    secrets:
+      - aws_bucket_name
+      - aws_access_key_id
+      - aws_secret_access_key
+    commands:
+      - env
+      - aws s3 cp cypress/ s3://$AWS_BUCKET_NAME --recursive
+    when:
+      event: deployment      
   build_tag:
     environment:
       - DOCKER_USERNAME=drt_ci

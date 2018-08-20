@@ -1,0 +1,51 @@
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ .NAME }}
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: {{ .NAME }}
+        service: drt-test
+    spec:
+      imagePullSecrets:
+        - name: docker-registry-key
+      volumes:
+        - name: drtlib-volume
+          emptyDir: {}
+      containers:
+        - name: drt
+          image: {{ .IMAGE_URL }}
+          imagePullPolicy: Always
+          securityContext:
+            runAsNonRoot: true
+
+          volumeMounts:
+          - name: drtlib-volume
+            mountPath: "/var/lib/drt-v2"
+
+          resources:
+            requests:
+              memory: "8Gi"
+              cpu: "2"
+            limits:
+              memory: "12Gi"
+              cpu: "4"
+
+          command: ["bin/drt"]
+          args: ["-Duser.timezone=UTC"]
+
+          env:
+            - name: JAVA_OPTS
+              valueFrom:
+                secretKeyRef:
+                  name: drt-play-secret
+                  key: play-secret
+          envFrom:
+          - configMapRef:
+              name: drt-test
+          ports:
+            - containerPort: 9000
