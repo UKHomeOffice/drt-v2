@@ -33,6 +33,7 @@ if ! kd --certificate-authority=/tmp/ca.crt \
   --namespace=${KUBE_NAMESPACE} \
   --timeout=5m \
   -f kube/networkpolicy.yaml \
+  -f kube/drt-test.yaml \
   -f kube/service.yaml \
   -f kube/deployment.yaml \
   -f kube/ingress.yaml; then
