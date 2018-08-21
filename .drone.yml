@@ -38,20 +38,20 @@ pipeline:
       branch: 
         - drt-acp-pgsql
 
-#  run-for-test:
-#    image: docker.digital.homeoffice.gov.uk/drt/drt:latest
-#    commands:
-#      - export KEY_CLOAK_URL=https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod  
-#      - export PERSISTENCE_BASE_DIR=/var/lib/drt-v2/live/test
-#      - export PORT_CODE=test
-#      - export DQ_S3_BUCKET=""
-#      - export ENV=test
-#      - export POSTGRES_PASSWORD=test_password
-#      - export POSTGRES_HOST=tcp://database:5432
-#      - export POSTGRES_USER=test_user  
-#      - bin/drt -Duser.timezone=UTC 
-#    when:
-#      event: push
+  run-for-test:
+    image: docker.digital.homeoffice.gov.uk/drt/drt:latest
+    commands:
+      - export KEY_CLOAK_URL=https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod  
+      - export PERSISTENCE_BASE_DIR=/var/lib/drt-v2/live/test
+      - export PORT_CODE=test
+      - export DQ_S3_BUCKET=""
+      - export ENV=test
+      - export POSTGRES_PASSWORD=test_password
+      - export POSTGRES_HOST=tcp://database:5432
+      - export POSTGRES_USER=test_user  
+      - bin/drt -Duser.timezone=UTC 
+    when:
+      event: push
 
   e2e:
     image: cypress/base
@@ -85,10 +85,10 @@ pipeline:
     when:
       event: tag
 
-  services:
-    database:
-      image: postgres
-      environment:
-        - POSTGRES_USER=test_user
-        - POSTGRES_DB=test
-        - POSTGRES_PASSWORD=test_password  
+#  services:
+#    database:
+#      image: postgres
+#      environment:
+#        - POSTGRES_USER=test_user
+#        - POSTGRES_DB=test
+#        - POSTGRES_PASSWORD=test_password  
