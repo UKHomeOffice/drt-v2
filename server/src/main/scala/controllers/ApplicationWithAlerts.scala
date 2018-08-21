@@ -1,0 +1,48 @@
+package controllers
+
+import actors.{DeleteAlerts, GetState}
+import akka.actor._
+import akka.pattern._
+import akka.util.Timeout
+import drt.shared.Alert
+import org.joda.time.DateTime
+import play.api.libs.json.{JodaReads, Json}
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.language.postfixOps
+
+trait ApplicationWithAlerts {
+  self: Application =>
+  val pattern = "yyyy-MM-dd HH:mm:ss"
+  implicit val dateRead = JodaReads.jodaDateReads(pattern)
+  implicit val alertReads = Json.reads[AlertMessage]
+
+  def addAlert = Action.async {
+    implicit request =>
+
+      request.body.asJson.map { json =>
+        val alertMessage = json.as[AlertMessage]
+        (ctrl.alertsActor ? Alert(
+          alertMessage.title,
+          alertMessage.message,
+          alertMessage.expires.getMillis,
+          createdAt = DateTime.now.getMillis
+        )).mapTo[Alert].map {alert =>
+          Ok(s"$alert added!")
+        }
+      }.getOrElse {
+        Future(BadRequest("{\"error\": \"Unable to parse data\"}"))
+      }
+  }
+
+  def deleteAlerts = Action.async {
+    val futureAlerts = ctrl.alertsActor.ask(DeleteAlerts)(new Timeout(5 second))
+    futureAlerts.map(s =>
+      Ok(s.toString)
+    )
+  }
+}
+
+case class AlertMessage(title: String, message: String, expires: DateTime)

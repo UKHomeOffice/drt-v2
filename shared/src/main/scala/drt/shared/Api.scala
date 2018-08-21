@@ -599,6 +599,8 @@ object CrunchApi {
 trait Api {
   def getApplicationVersion(): String
 
+  def getAlerts(createdAfter: MillisSinceEpoch): Future[Seq[Alert]]
+
   def airportInfoByAirportCode(code: String): Future[Option[AirportInfo]]
 
   def airportInfosByAirportCodes(codes: Set[String]): Future[Map[String, AirportInfo]]

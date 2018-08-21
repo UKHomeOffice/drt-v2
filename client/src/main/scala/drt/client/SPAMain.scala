@@ -75,7 +75,8 @@ object SPAMain {
       GetAirportConfig(),
       GetFixedPoints(),
       UpdateMinuteTicker,
-      GetFeedStatuses()
+      GetFeedStatuses(),
+      GetAlerts(0L)
     )
 
     initActions.foreach(SPACircuit.dispatch(_))

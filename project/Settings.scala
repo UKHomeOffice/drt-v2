@@ -58,6 +58,7 @@ object Settings {
     val akkaPersistenceInmemory = "2.4.18.1"
     val sshJ = "0.24.0"
     val jodaTime = "2.9.4"
+    val playJsonJoda = "2.6.9"
     val exposeLoader = "0.7.1"
     val log4Javascript = "1.4.15"
     val typesafeConfig = "1.3.0"
@@ -125,6 +126,7 @@ object Settings {
     "io.spray" %% "spray-json" % sprayVersion,
 
     "joda-time" % "joda-time" % jodaTime,
+    "com.typesafe.play" %% "play-json-joda" % playJsonJoda,
     "org.opensaml" % "opensaml" % openSaml excludeAll (ExclusionRule("org.bouncycastle"), ExclusionRule("xerces")),
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,

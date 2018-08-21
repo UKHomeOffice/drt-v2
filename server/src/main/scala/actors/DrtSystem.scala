@@ -50,6 +50,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val shiftsActor: ActorRef
   val fixedPointsActor: ActorRef
   val staffMovementsActor: ActorRef
+  val alertsActor: ActorRef
 
 
   val aclFeed: AclFeed
@@ -109,6 +110,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor]))
   lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor]))
 
+  lazy val alertsActor: ActorRef = system.actorOf(Props(classOf[AlertsActor]))
   val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
   val useNationalityBasedProcessingTimes: Boolean = config.getOptional[String]("feature-flags.nationality-based-processing-times").isDefined
   val useSplitsPrediction: Boolean = config.getOptional[String]("feature-flags.use-splits-prediction").isDefined

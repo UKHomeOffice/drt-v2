@@ -164,6 +164,7 @@ class Application @Inject()(implicit val config: Configuration,
                             ec: ExecutionContext)
   extends InjectedController
     with AirportConfProvider
+    with ApplicationWithAlerts
     with ProdPassengerSplitProviders
     with ImplicitTimeoutProvider {
 
@@ -327,6 +328,12 @@ class Application @Inject()(implicit val config: Configuration,
             case None => log.error(s"Unable to add $userId to $groupName")
           }
         } else throw new Exception("You do not have permission manage users")
+      }
+
+      def getAlerts(createdAfter: MillisSinceEpoch): Future[Seq[Alert]] = {
+        for {
+          alerts <- (ctrl.alertsActor ? GetState).mapTo[Seq[Alert]]
+        } yield alerts.filter(a => a.createdAt > createdAfter)
       }
 
       override def liveCrunchStateActor: AskableActorRef = ctrl.liveCrunchStateActor

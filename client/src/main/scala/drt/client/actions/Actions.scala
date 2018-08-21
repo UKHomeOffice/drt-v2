@@ -4,7 +4,7 @@ import java.util.UUID
 
 import diode.Action
 import drt.client.services.{StaffAssignment, ViewMode}
-import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, ForecastPeriodWithHeadlines}
+import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, ForecastPeriodWithHeadlines, MillisSinceEpoch}
 import drt.shared.FlightsApi._
 import drt.shared.KeyCloakApi.KeyCloakUser
 import drt.shared._
@@ -100,5 +100,11 @@ object Actions {
   case class SetKeyCloakUsers(users: List[KeyCloakUser]) extends Action
 
   case class AddUserToGroup(userId: String, groupName: String) extends Action
+
+  case class GetAlerts(since: MillisSinceEpoch) extends Action
+
+  case class SetAlerts(alerts: Seq[Alert], since: MillisSinceEpoch) extends Action
+
+  case object CloseAlerts extends Action
 
 }
