@@ -42,6 +42,7 @@ pipeline:
     image: docker:18.06
     environment:
       - DOCKER_USERNAME=drt_ci
+      - DOCKER_HOST=tcp://172.17.0.1:2375
     secrets: [ docker_password ]
     commands:
       - docker login      
