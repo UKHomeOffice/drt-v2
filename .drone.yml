@@ -87,7 +87,7 @@ pipeline:
 
   services:
     database:
-      image: mysql:alpine
+      image: quay.io/ukhomeofficedigital/postgres
       environment:
         - POSTGRES_USER=test_user
         - POSTGRES_DB=test
