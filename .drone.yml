@@ -88,7 +88,7 @@ pipeline:
   services:
     database:
       image: quay.io/ukhomeofficedigital/postgres
-      environment:
-        - POSTGRES_USER=test_user
-        - POSTGRES_DB=test
-        - POSTGRES_PASSWORD=test_password  
+      #environment:
+      #  - POSTGRES_USER=test_user
+      #  - POSTGRES_DB=test
+      #  - POSTGRES_PASSWORD=test_password  
