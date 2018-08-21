@@ -87,7 +87,7 @@ pipeline:
 
   services:
     database:
-      image: postgres:alpine
+      image: mysql:alpine
       environment:
         - POSTGRES_USER=test_user
         - POSTGRES_DB=test
