@@ -58,7 +58,7 @@ pipeline:
   e2e:
     image: cypress/base
     environment:
-            - CYPRESS_baseUrl=https://localhost:9000
+            - CYPRESS_baseUrl=https://172.17.0.1:9000
     commands:
       - npm install --save-dev cypress
       - $(npm bin)/cypress run
