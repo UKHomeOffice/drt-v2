@@ -46,7 +46,7 @@ pipeline:
       - export DQ_S3_BUCKET=""
       - export ENV=test
       - export POSTGRES_PASSWORD=test_password
-      - export POSTGRES_HOST=tcp://drt_pgsql:5432
+      - export POSTGRES_HOST=tcp://database:5432
       - export POSTGRES_USER=test_user  
       - bin/drt -Duser.timezone=UTC 
     when:
@@ -55,7 +55,7 @@ pipeline:
   e2e:
     image: cypress/base
     environment:
-      - CYPRESS_baseUrl=https://test.drt-notprod.homeoffice.gov.uk
+            - CYPRESS_baseUrl=https://localhost:9000
     commands:
       - npm install --save-dev cypress
       - $(npm bin)/cypress run
@@ -85,7 +85,7 @@ pipeline:
       event: tag
 
   services:
-    drt_pgsql:
+    database:
       image: postgres
       environment:
         - POSTGRES_USER=test_user
