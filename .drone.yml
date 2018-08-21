@@ -16,6 +16,7 @@ pipeline:
       brach: 
         - drone
         - drt-acp-pgsql  
+
   sonar-scanner:
     image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
     when:
