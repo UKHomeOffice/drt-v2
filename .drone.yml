@@ -40,6 +40,7 @@ pipeline:
 
   run-for-test:
     image: docker.digital.homeoffice.gov.uk/drt/drt:latest
+    detach: true
     commands:
       - export KEY_CLOAK_URL=https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod  
       - export PERSISTENCE_BASE_DIR=/var/lib/drt-v2/live/test
