@@ -40,7 +40,10 @@ pipeline:
 
   run-for-test:
     image: docker.digital.homeoffice.gov.uk/drt/drt:latest
-    secrets: [ docker_password ]
+    environment:
+      - ARTIFACTORY_USERNAME=drt_ci
+    secrets:
+      - ARTIFACTORY_PASSWORD1
     detach: true
     commands:
       - export KEY_CLOAK_URL=https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod  
