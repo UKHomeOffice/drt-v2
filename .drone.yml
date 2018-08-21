@@ -85,10 +85,10 @@ pipeline:
     when:
       event: tag
 
-#  services:
-#    database:
-#      image: postgres
-#      environment:
-#        - POSTGRES_USER=test_user
-#        - POSTGRES_DB=test
-#        - POSTGRES_PASSWORD=test_password  
+  services:
+    database:
+      image: postgres:alpine
+      environment:
+        - POSTGRES_USER=test_user
+        - POSTGRES_DB=test
+        - POSTGRES_PASSWORD=test_password  
