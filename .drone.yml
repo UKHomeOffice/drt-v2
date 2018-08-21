@@ -35,20 +35,22 @@ pipeline:
     when:
       event: push
       branch: 
-        - drone
         - drt-acp-pgsql
-  deploy-to-test:
-    image: quay.io/ukhomeofficedigital/kd:v0.13.0
-    secrets:
-      - kube_token_acp_notprod
-    environment:
-      - IMAGE_URL=docker.digital.homeoffice.gov.uk/drt/drt:latest
+
+  run-for-test:
+    image: docker.digital.homeoffice.gov.uk/drt/drt:latest
     commands:
-      - apk update
-      - apk add curl
-      - bin/deploy.sh
+      - export KEY_CLOAK_URL=https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod  
+      - export PERSISTENCE_BASE_DIR=/var/lib/drt-v2/live/test
+      - export PORT_CODE=test
+      - export DQ_S3_BUCKET=""
+      - export ENV=test
+      - export POSTGRES_PASSWORD=test_password
+      - export POSTGRES_HOST=tcp://drt_pgsql:5432
+      - export POSTGRES_USER=test_user  
+      - bin/drt -Duser.timezone=UTC 
     when:
-      event: deployment
+      event: push
 
   e2e:
     image: cypress/base
@@ -58,7 +60,7 @@ pipeline:
       - npm install --save-dev cypress
       - $(npm bin)/cypress run
     when:
-      event: deployment
+      event: push
 
   copy-e2e-result:
     image: plugins/s3
@@ -68,7 +70,7 @@ pipeline:
     source: cypress/*
     target: /e2e/   
     when:
-      event: deployment      
+      event: push      
 
   build_tag:
     environment:
@@ -81,3 +83,11 @@ pipeline:
       - ${DRONE_TAG}
     when:
       event: tag
+
+  services:
+    drt_pgsql:
+      image: postgres
+      environment:
+        - POSTGRES_USER=test_user
+        - POSTGRES_DB=test
+        - POSTGRES_PASSWORD=test_password  
