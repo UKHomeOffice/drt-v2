@@ -46,6 +46,18 @@ spec:
                 secretKeyRef:
                   name: drt-play-secret
                   key: play-secret
+            - name: POSTGRES_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: drt-dev-rds
+                  key: endpoint
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: test-db-secret
+                  key: password
+            - name: POSTGRES_USER
+              value: test_user      
           envFrom:
           - configMapRef:
               name: drt-test

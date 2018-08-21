@@ -8,3 +8,4 @@ data:
   ENV: test
   PERSISTENCE_BASE_DIR: /var/lib/drt-v2/live/test
   KEY_CLOAK_URL: https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod
+  DQ_S3_BUCKET: ""
