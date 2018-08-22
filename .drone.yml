@@ -45,7 +45,7 @@ pipeline:
       - DOCKER_HOST=tcp://172.17.0.1:2375
     secrets: [ docker_password ]
     commands:
-      - docker login      
+      - docker login  -u $DOKER_USERNAME -p $DOCKER_PASSWORD     
       - docker run -p9000:9000 --name cytarget -i docker.digital.homeoffice.gov.uk/drt/drt:latest -e KEY_CLOAK_URL='https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod' -e PERSISTENCE_BASE_DIR='/var/lib/drt-v2/live/test' -e PORT_CODE='test' -e DQ_S3_BUCKET='' -e ENV='test' -e POSTGRES_PASSWORD='test_password' -e POSTGRES_HOST='tcp://database:5432' -e POSTGRES_USER='test_user'  bin/drt -Duser.timezone=UTC 
     when:
       event: push
