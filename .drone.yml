@@ -43,10 +43,12 @@ pipeline:
     environment:
       - DOCKER_USERNAME=drt_ci
       - DOCKER_HOST=tcp://172.17.0.1:2375
-    secrets: [ docker_password ]
+    secrets:  
+      - docker_password
+      - play  
     commands:
       - docker login -u drt_ci -p $${DOCKER_PASSWORD} docker.digital.homeoffice.gov.uk
-      - docker run  -p9000:9000  --name cytarget -e KEY_CLOAK_URL="https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod" -e PERSISTENCE_BASE_DIR="/var/lib/drt-v2/live/test" -e PORT_CODE="test" -e DQ_S3_BUCKET="" -e ENV="test" -e POSTGRES_PASSWORD="test_password" -e POSTGRES_HOST="tcp://database:5432" -e POSTGRES_USER="test_user"  docker.digital.homeoffice.gov.uk/drt/drt:latest bin/drt -Duser.timezone=UTC 
+      - docker run  -p9000:9000  --name cytarget -e KEY_CLOAK_URL="https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod" -e PERSISTENCE_BASE_DIR="/var/lib/drt-v2/live/test" -e PORT_CODE="test" -e DQ_S3_BUCKET="" -e ENV="test" -e POSTGRES_PASSWORD="test_password" -e POSTGRES_HOST="tcp://database:5432" -e POSTGRES_USER="test_user"  docker.digital.homeoffice.gov.uk/drt/drt:latest bin/drt -Duser.timezone=UTC $${PLAY}
     when:
       event: push
 
