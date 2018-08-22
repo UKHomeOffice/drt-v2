@@ -604,7 +604,7 @@ object AirportConfigs {
     ),
     slaByQueue = defaultSlas,
     terminalNames = Seq("T1", "T2"),
-    defaultWalkTimeMillis = Map("T1" -> 230000L, "T2" -> 65000L),
+    defaultWalkTimeMillis = Map("T1" -> 240000L, "T2" -> 60000L),
     defaultPaxSplits = SplitRatios(
       SplitSources.TerminalAverage,
       SplitRatio(eeaMachineReadableToDesk, 0.92 * 0.7),

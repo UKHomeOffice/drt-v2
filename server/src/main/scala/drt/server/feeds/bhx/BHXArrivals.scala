@@ -17,7 +17,7 @@ sealed trait BHXArrivals {
     date.getTime match {
       case 0L => None
       case _ =>
-        val datetime = new DateTime(date.getTime)
+        val datetime = new DateTime(date.getTime).withMillisOfSecond(0).withSecondOfMinute(0)
         Some(datetime.withZone(DateTimeZone.UTC).toString(ISODateTimeFormat.dateTime))
     }
   }
