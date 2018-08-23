@@ -8,11 +8,6 @@ describe('Alerts system', function () {
     deleteAlerts();
 
   });
-
-  afterEach(function() {
-    deleteAlerts();
-  });
-
   function deleteAlerts() {
     cy.request('DELETE', '/v2/test/live/data/alert');
 

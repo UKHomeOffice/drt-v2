@@ -45,10 +45,6 @@ describe('Arrivals page', () => {
     cy.request('DELETE', '/v2/test/live/test/data');
   });
 
-  after(() => {
-    cy.request('DELETE', '/v2/test/live/test/data');
-  });
-
   const manifest = {
     "EventCode": "DC",
     "DeparturePortCode": "AMS",

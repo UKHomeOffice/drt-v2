@@ -2,7 +2,7 @@ describe('Staff movements', function () {
   var userName = "Unknown";
 
   beforeEach(function () {
-    deleteTestData();
+    cy.request('DELETE', '/v2/test/live/test/data');
     var schDT = new Date().toISOString().split("T")[0];
     cy.request('POST',
       '/v2/test/live/test/arrival',
@@ -29,10 +29,6 @@ describe('Staff movements', function () {
         "SchDT": schDT + "T00:15:00Z"
       });
   });
-
-  function deleteTestData() {
-    cy.request('DELETE', '/v2/test/live/test/data');
-  }
 
   function addMovementFor1HourAt(numStaff, hour) {
     for (let i = 0; i < numStaff; i++) {
@@ -153,7 +149,6 @@ describe('Staff movements', function () {
       checkStaffNumbersOnMovementsTabAre(2);
       checkUserNameOnMovementsTab(2);
       removeXMovements(2);
-      deleteTestData();
     });
   });
 });
