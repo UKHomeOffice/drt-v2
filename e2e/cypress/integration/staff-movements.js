@@ -30,6 +30,10 @@ describe('Staff movements', function () {
       });
   });
 
+  afterEach(function() {
+    cy.request('DELETE', '/v2/test/live/test/data');
+  });
+
   function addMovementFor1HourAt(numStaff, hour) {
     for (let i = 0; i < numStaff; i++) {
       cy.get('.staff-adjustments > :nth-child(' + (hour + 1) + ') > :nth-child(3)').contains("+").then((el) => {
