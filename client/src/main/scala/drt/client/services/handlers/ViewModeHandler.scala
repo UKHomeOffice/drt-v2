@@ -1,7 +1,7 @@
 package drt.client.services.handlers
 
 import diode.data.{Empty, Pending, PendingStale, Pot}
-import diode._
+import diode.{data, _}
 import drt.client.actions.Actions.{GetCrunchState, GetShifts, GetStaffMovements, SetViewMode}
 import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
@@ -22,11 +22,6 @@ class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[Crunch
     case _ => false
   }
 
-  def potIsPendingStale[T](pot: Pot[T]): Boolean = pot match {
-    case PendingStale(_, _)  => true
-    case _ => false
-  }
-
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case SetViewMode(newViewMode) =>
       val (currentViewMode, _, currentLatestUpdateMillis) = value
@@ -39,11 +34,17 @@ class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[Crunch
 
       log.info(s"VM: Set client newViewMode from $currentViewMode to $newViewMode. latestUpdateMillis: $latestUpdateMillis, crunchStateMP: ${crunchStateMP.value.getClass.getSimpleName}")
       (currentViewMode, newViewMode, crunchStateMP.value) match {
-        case (cv, nv, pendingStalePot@PendingStale(_, _)) if isViewModeAbleToPoll(nv)  =>
+        case (cv, nv, pendingStale@PendingStale(_, _)) if cv == nv && isViewModeAbleToPoll(cv) =>
+          log.info("crunch: Setting to PS from PS for live or future")
+          updated((newViewMode, pendingStale, latestUpdateMillis))
+        case (_, nv, PendingStale(_, _)) if isViewModeAbleToPoll(nv)  =>
+          log.info("crunch: Setting to Pending from PS")
           updated((newViewMode, Pending(), latestUpdateMillis))
         case (cv, nv, Empty) if cv != nv && isViewModeAbleToPoll(cv) && isViewModeAbleToPoll(nv)  =>
+          log.info("crunch: Setting to Pending from Empty")
           updated((newViewMode, Pending(), latestUpdateMillis))
         case _ =>
+          log.info("crunch: will poll")
           val effects = Effect(Future(GetCrunchState())) + Effect(Future(GetStaffMovements())) + Effect(Future(GetShifts()))
           updated((newViewMode, Pending(), latestUpdateMillis), effects)
       }
