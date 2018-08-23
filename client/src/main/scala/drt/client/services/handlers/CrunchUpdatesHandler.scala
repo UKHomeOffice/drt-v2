@@ -51,7 +51,6 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
     case NoCrunchStateUpdatesAndContinuePollingIfNecessary() =>
       val pollCrunchUpdatesIfTodayOrAFutureDate = viewMode() match {
         case ViewDay(time) => time.millisSinceEpoch > midnightThisMorning.millisSinceEpoch
-        case ViewPointInTime(_) => false
         case _ => true
       }
       val thereIsNoData = modelRW.value._1.headOption.isEmpty
@@ -124,7 +123,7 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
           log.error(s"Failed to GetCrunchState ${e.message}. Re-requesting after ${PollDelay.recoveryDelay}")
           RetryActionAfter(GetCrunchState(), PollDelay.recoveryDelay)
         case _ =>
-          log.info(s"No CrunchUpdates ${SDate.now().getSeconds()}")
+          log.info(s"No CrunchUpdates")
           NoCrunchStateUpdatesAndContinuePollingIfNecessary()
       }
       .recoverWith {
