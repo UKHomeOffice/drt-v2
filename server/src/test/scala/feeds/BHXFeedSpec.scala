@@ -145,7 +145,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
         rawICAO = "AF1164",
         rawIATA = "AF1164",
         Origin = "CPH",
-        Scheduled = 1338623213123L, // BHX Forecast is incorrect. This should be 1338619613123L or 2012-06-02T06:46:53.123Z
+        Scheduled = 1338623160000L, // BHX Forecast is incorrect. This should be 1338619613123L or 2012-06-02T06:46:53.123Z
         PcpTime = None,
         LastKnownPax = None)
     }

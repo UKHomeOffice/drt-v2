@@ -23,7 +23,10 @@ sealed trait BHXArrivals {
   }
 
   def convertToUTCPlusOneHour(feedDate: XMLGregorianCalendar): String = {
-    val utcDatePlusOneHour = new DateTime(feedDate.toGregorianCalendar.getTimeInMillis, DateTimeZone.UTC).plusHours(1)
+    val utcDatePlusOneHour = new DateTime(feedDate.toGregorianCalendar.getTimeInMillis, DateTimeZone.UTC)
+      .plusHours(1)
+      .withMillisOfSecond(0)
+      .withSecondOfMinute(0)
     utcDatePlusOneHour.toString(ISODateTimeFormat.dateTime)
   }
 
