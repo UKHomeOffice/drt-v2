@@ -56,7 +56,7 @@ pipeline:
   
   e2e:
     image: cypress/base
-    network_mode: bridge
+    #    network_mode: bridge
     network: drt-net
     environment: 
       - CYPRESS_baseUrl=http://cytarget:9000    
