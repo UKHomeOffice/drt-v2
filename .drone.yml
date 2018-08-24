@@ -59,8 +59,10 @@ pipeline:
     image: cypress/base
     enviroment: CYPRESS_baseUrl=http://172.17.0.3:9000    
     commands:
-      - npm install --save-dev cypress > /dev/null 2>&1
+      - npm install --save-dev cypress 
       - ./node_modules/.bin/cypress run
+    when:
+      event: push
 
   copy-e2e-result:
     image: plugins/s3
