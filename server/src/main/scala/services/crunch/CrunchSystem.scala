@@ -94,9 +94,9 @@ object CrunchSystem {
 
     val arrivalsStage = new ArrivalsGraphStage(
       name = props.logLabel,
-      initialBaseArrivals = props.initialBaseArrivals,
-      initialForecastArrivals = props.initialFcstArrivals,
-      initialLiveArrivals = props.initialLiveArrivals,
+      initialBaseArrivals = if (props.recrunchOnStart) Set() else props.initialBaseArrivals,
+      initialForecastArrivals = if (props.recrunchOnStart) Set() else props.initialFcstArrivals,
+      initialLiveArrivals =  if (props.recrunchOnStart) Set() else props.initialLiveArrivals,
       pcpArrivalTime = props.pcpArrival,
       validPortTerminals = props.airportConfig.terminalNames.toSet,
       expireAfterMillis = props.expireAfterMillis,
