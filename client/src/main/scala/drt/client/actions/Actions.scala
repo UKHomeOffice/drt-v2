@@ -33,6 +33,8 @@ object Actions {
 
   case class UpdateCrunchStateAndContinuePolling(crunchState: CrunchState) extends Action
 
+  case class UpdateCrunchStateFromUpdates(crunchUpdates: CrunchUpdates) extends Action
+
   case class UpdateCrunchStateFromUpdatesAndContinuePolling(crunchUpdates: CrunchUpdates) extends Action
 
   case class UpdateCrunchStateFromCrunchState(crunchState: CrunchState) extends Action

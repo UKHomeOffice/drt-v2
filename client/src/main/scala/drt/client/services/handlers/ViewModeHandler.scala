@@ -1,7 +1,7 @@
 package drt.client.services.handlers
 
 import diode.data.{Empty, Pending, PendingStale, Pot}
-import diode.{data, _}
+import diode.{ActionResult, Effect, ModelR, ModelRW}
 import drt.client.actions.Actions.{GetCrunchState, GetShifts, GetStaffMovements, SetViewMode}
 import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
@@ -42,6 +42,9 @@ class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[Crunch
           updated((newViewMode, Pending(), latestUpdateMillis))
         case (cv, nv, Empty) if cv != nv && isViewModeAbleToPoll(cv) && isViewModeAbleToPoll(nv)  =>
           log.info("crunch: Setting to Pending from Empty")
+          updated((newViewMode, Pending(), latestUpdateMillis))
+        case (cv, nv, Empty) if cv == nv && isViewModeAbleToPoll(cv) && latestUpdateMillis != 0L =>
+          log.info("crunch: Setting to Pending from Empty for live or future")
           updated((newViewMode, Pending(), latestUpdateMillis))
         case _ =>
           log.info("crunch: will poll")

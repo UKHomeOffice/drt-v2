@@ -56,7 +56,7 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
       }
       val thereIsNoData = modelRW.value._1.headOption.isEmpty
       val allEffects = if (pollCrunchUpdatesIfTodayOrAFutureDate) Effect(Future(HideLoader())) + getCrunchUpdatesAfterDelay else Effect(Future(HideLoader()))
-      if (thereIsNoData) updated((Empty, latestUpdateMillis), allEffects) else effectOnly(allEffects)
+      if (thereIsNoData) updated((Empty, SDate.now().millisSinceEpoch), allEffects) else effectOnly(allEffects)
 
     case UpdateCrunchStateFromCrunchState(crunchState: CrunchState) =>
       val oldCodes =
@@ -72,15 +72,8 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
       log.info(s"set crunchstate ready")
       updated((Ready(crunchState), 0L), allEffects)
 
-    case UpdateCrunchStateFromUpdatesAndContinuePolling(crunchUpdates: CrunchUpdates) =>
+    case UpdateCrunchStateFromUpdates(crunchUpdates) =>
       log.info(s"Client got ${crunchUpdates.flights.size} flights & ${crunchUpdates.minutes.size} minutes from CrunchUpdates")
-      val oldCodes = value._1.map(cs => cs.flights.map(_.apiFlight.Origin)).getOrElse(Set())
-      val newCodes = crunchUpdates.flights.map(_.apiFlight.Origin)
-      val unseenCodes = newCodes -- oldCodes
-      val allEffects = if (unseenCodes.nonEmpty) {
-        log.info(s"Requesting airport infos. Got unseen origin ports: ${unseenCodes.mkString(",")}")
-        getCrunchUpdatesAfterDelay + Effect(Future(GetAirportInfos(newCodes)))
-      } else getCrunchUpdatesAfterDelay + Effect(Future(HideLoader()))
 
       val someStateExists = !value._1.isEmpty
 
@@ -89,7 +82,23 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
         updateStateFromUpdates(crunchUpdates, existingState)
       } else newStateFromUpdates(crunchUpdates)
 
-      updated((PendingStale(newState), crunchUpdates.latest), allEffects)
+      log.info(s"set crunchstate pendingstale")
+      updated((PendingStale(newState), crunchUpdates.latest), Effect(Future(HideLoader())))
+
+    case UpdateCrunchStateFromUpdatesAndContinuePolling(crunchUpdates: CrunchUpdates) =>
+      val getCrunchStateAfterDelay = Effect(Future(GetCrunchState())).after(crunchUpdatesRequestFrequency)
+      val updateCrunchState = Effect(Future(UpdateCrunchStateFromUpdates(crunchUpdates)))
+      val effects = getCrunchStateAfterDelay + updateCrunchState
+
+      val oldCodes = value._1.map(cs => cs.flights.map(_.apiFlight.Origin)).getOrElse(Set())
+      val newCodes = crunchUpdates.flights.map(_.apiFlight.Origin)
+      val unseenCodes = newCodes -- oldCodes
+      val allEffects = if (unseenCodes.nonEmpty) {
+        log.info(s"Requesting airport infos. Got unseen origin ports: ${unseenCodes.mkString(",")}")
+        effects + Effect(Future(GetAirportInfos(newCodes)))
+      } else effects
+
+      effectOnly(allEffects)
   }
 
   def getCrunchUpdatesAfterDelay: Effect = Effect(Future(GetCrunchState())).after(crunchUpdatesRequestFrequency)
