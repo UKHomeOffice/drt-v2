@@ -110,7 +110,7 @@ class VoyageManifestsGraphStage(portCode: String,
         lastSeenFileName = latestFileName
         ManifestsFeedSuccess(DqManifests(latestFileName, maybeManifests.flatten), SDate.now())
       case Failure(t) =>
-        log.warn(s"Failed to fetch new manifests: ${t.getStackTrace}")
+        log.warn(s"Failed to fetch new manifests", t)
         ManifestsFeedFailure(t.toString, SDate.now())
     }
   }
