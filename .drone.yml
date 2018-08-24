@@ -56,8 +56,10 @@ pipeline:
   
   e2e:
     image: cypress/base
+    network_mode: bridge
+    network: drt-net
     environment: 
-      - CYPRESS_baseUrl=http://172.17.0.3:9000    
+      - CYPRESS_baseUrl=http://cytarget:9000    
     commands:
       - npm install --save-dev cypress > /dev/null 2>&1
       - $(npm bin)/cypress run
