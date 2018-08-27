@@ -3,6 +3,7 @@ package services.graphstages
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
+import services.PcpArrival
 import services.graphstages.Crunch.{FlightSplitMinute, log}
 import services.workloadcalculator.PaxLoadCalculator.{Load, minutesForHours, paxDeparturesPerMinutes, paxOffFlowRate}
 
@@ -36,7 +37,8 @@ object WorkloadCalculator {
 
       val totalPaxWithNationality = splitsWithoutTransit.toList.flatMap(_.nationalities.map(_.values.sum)).sum
 
-      minutesForHours(flight.PcpTime.getOrElse(0), 1)
+      val startMinute: Long = PcpArrival.timeToNearestMinute(flight.PcpTime.getOrElse(0))
+      minutesForHours(startMinute, 1)
         .zip(paxDeparturesPerMinutes(totalPax.toInt, paxOffFlowRate))
         .flatMap {
           case (minuteMillis, flightPaxInMinute) =>
