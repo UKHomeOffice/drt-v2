@@ -340,6 +340,10 @@ class Application @Inject()(implicit val config: Configuration,
         } yield alerts.filter(a => a.createdAt > createdAfter)
       }
 
+      def deleteAllAlerts(): Unit = ctrl.alertsActor ? DeleteAlerts
+
+      def saveAlert(alert: Alert): Unit = ctrl.alertsActor ? alert
+
       override def liveCrunchStateActor: AskableActorRef = ctrl.liveCrunchStateActor
 
       override def forecastCrunchStateActor: AskableActorRef = ctrl.forecastCrunchStateActor

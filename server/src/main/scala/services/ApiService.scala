@@ -85,6 +85,10 @@ abstract class ApiService(val airportConfig: AirportConfig,
 
   def getAlerts(pointIntTime: MillisSinceEpoch): Future[Seq[Alert]]
 
+  def deleteAllAlerts(): Unit
+
+  def saveAlert(alert: Alert): Unit
+
   def airportConfiguration(): AirportConfig = airportConfig
 
   def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]]

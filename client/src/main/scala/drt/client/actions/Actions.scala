@@ -111,4 +111,8 @@ object Actions {
 
   case object CloseAlerts extends Action
 
+  case object DeleteAllAlerts extends Action
+
+  case class SaveAlert(alert: Alert) extends Action
+
 }
