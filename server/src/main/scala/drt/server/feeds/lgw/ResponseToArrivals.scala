@@ -9,6 +9,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import scala.util.{Failure, Success, Try}
 import scala.xml.Node
 import scala.language.postfixOps
+import scalaz.Scalaz._
 
 case class ResponseToArrivals(data: Array[Byte], locationOption: Option[String] ) {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -38,7 +39,10 @@ case class ResponseToArrivals(data: Array[Byte], locationOption: Option[String] 
 
     val operator = (n \ "AirlineIATA") text
     val actPax = parsePaxCount(n, "70A").filter(_!= 0).orElse(None)
-    val transPax = parsePaxCount(n, "TIP")
+    val transitPax = parsePaxCount(n, "TIP")
+    val transferPax = parsePaxCount(n, "TPX")
+    val transPax = transitPax |+| transferPax
+
     val arrival = new Arrival(
       Operator = if (operator.isEmpty) None else Some(operator) ,
       Status = parseStatus(n),
