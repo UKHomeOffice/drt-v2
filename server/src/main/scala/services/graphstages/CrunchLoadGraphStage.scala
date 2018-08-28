@@ -60,13 +60,9 @@ class CrunchLoadGraphStage(name: String = "",
         val affectedTerminals = incomingLoads.loadMinutes.map(_.terminalName)
 
         val updatedLoads = mergeLoads(incomingLoads.loadMinutes, loadMinutes)
-        log.info(s"UpdatedLoads: ${updatedLoads.size}")
         loadMinutes = purgeExpired(updatedLoads, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
-        log.info(s"loadMinutes after purging expired: ${loadMinutes.size}")
 
-        log.info(s"Affected Terminals: $affectedTerminals")
         val deskRecMinutes = crunchLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, affectedTerminals)
-        log.info(s"deskRecMinutes: ${deskRecMinutes.size}")
 
         val diff = deskRecMinutes.foldLeft(Map[TQM, DeskRecMinute]()) {
           case (soFar, (key, drm)) =>
@@ -75,13 +71,10 @@ class CrunchLoadGraphStage(name: String = "",
               case _ => soFar.updated(key, drm)
             }
         }
-        log.info(s"deskRecMinutes diff: ${diff.size}")
 
         existingDeskRecMinutes = purgeExpired(deskRecMinutes, (cm: DeskRecMinute) => cm.minute, now, expireAfterMillis)
-        log.info(s"existingDeskRecMinutes: ${existingDeskRecMinutes.size}")
 
         val mergedDeskRecMinutes = mergeDeskRecMinutes(diff, deskRecMinutesToPush)
-        log.info(s"mergedDeskRecMinutes: ${mergedDeskRecMinutes.size}")
         deskRecMinutesToPush = purgeExpired(mergedDeskRecMinutes, (cm: DeskRecMinute) => cm.minute, now, expireAfterMillis)
         log.info(s"Now have ${deskRecMinutesToPush.size} desk rec minutes to push")
 
@@ -93,7 +86,6 @@ class CrunchLoadGraphStage(name: String = "",
 
     def crunchLoads(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToCrunch: Set[TerminalName]): Map[TQM, DeskRecMinute] = {
       val filteredLoads = filterTerminalQueueMinutes(firstMinute, lastMinute, terminalsToCrunch, loadMinutes)
-      log.info(s"FilteredLoads: ${filteredLoads.size}")
 
       filteredLoads
         .groupBy(_.terminalName)
@@ -138,33 +130,6 @@ class CrunchLoadGraphStage(name: String = "",
         val key = MinuteHelper.key(terminalName, queueName, minute)
         thingsToFilter.get(key)
       }
-      val keys = for {
-        terminalName <- terminalsToUpdate
-        queueName <- airportConfig.queues.getOrElse(terminalName, Seq())
-        minute <- firstMinute until lastMinute by oneMinuteMillis
-      } yield {
-        val key = MinuteHelper.key(terminalName, queueName, minute)
-        //        thingsToFilter.get(key)
-        key
-      }
-
-
-      val notOnMinuteBoundary = thingsToFilter.collect {
-        case (m, a) if m.minute % 60 != 0 => SDate(m.minute)
-      }
-
-      val minutesToFilter = thingsToFilter.map(_._1.minute)
-      val keyMins = keys.map(_.minute)
-      log.info(s"Min TQM key: ${SDate(keyMins.min)}")
-      log.info(s"Min Minute to Filter: ${SDate(minutesToFilter.min)}")
-      log.info(s"Max Minute to Filter: ${SDate(minutesToFilter.max)}")
-      log.info(s"Max TQM key: ${SDate(keyMins.max)}")
-
-      log.info(s"Missed minutes minute boundary miss: ${notOnMinuteBoundary.size}")
-
-      log.info(s"Missed Keys: ${keys.size}")
-      log.info(s"Found keys: ${maybeThings.filterNot(_.isEmpty).size}")
-
 
       maybeThings.collect { case Some(thing) => thing }
     }
