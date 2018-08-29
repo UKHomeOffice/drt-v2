@@ -4,6 +4,7 @@ import controllers.ArrivalGenerator
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import org.specs2.mutable.Specification
+import services.SDate
 import services.graphstages.WorkloadCalculator
 
 class WorkloadSpec extends Specification {
@@ -26,6 +27,27 @@ class WorkloadSpec extends Specification {
       .map(_.workLoad)
 
     workloads === Set(1.5)
+  }
+
+  "Given an arrival with a PCP time that has seconds, then these seconds should be ignored for workload calcs" >> {
+    val arrival = ArrivalGenerator.apiFlight(actPax = Option(1))
+      .copy(PcpTime = Some(SDate("2018-08-28T17:07:05").millisSinceEpoch))
+
+    val splits = Set(
+      ApiSplits(
+        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None)),
+        SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
+        Option(DqEventCodes.DepartureConfirmed),
+        PaxNumbers))
+    val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
+
+    val flightSplitMinutes = WorkloadCalculator
+      .flightToFlightSplitMinutes(ApiFlightWithSplits(arrival, splits, None), procTimes, Map(), false)
+      .toList
+
+    val startTime = SDate(flightSplitMinutes.head.minute).toISOString()
+
+    startTime === "2018-08-28T17:07:00Z"
   }
 
   "Given an arrival with 1 pax and 1 split containing 1 pax with 1 nationality " +
@@ -219,10 +241,10 @@ class WorkloadSpec extends Specification {
     val eeaDeskWorkloadInSeconds = (gbrSeconds * 10 + fraSeconds * 2) / 60
     val nonEEADeskWorkloadInSeconds = (zaSeconds * 6 + zbwSeconds * 6) / 60
     workloads === Set(
-      (PaxTypes.EeaMachineReadable, Queues.EeaDesk, eeaDeskWorkloadInSeconds * 10/12),
-      (PaxTypes.VisaNational, Queues.NonEeaDesk, nonEEADeskWorkloadInSeconds * 10/12),
-      (PaxTypes.EeaMachineReadable, Queues.EeaDesk, eeaDeskWorkloadInSeconds * 2/12),
-      (PaxTypes.VisaNational, Queues.NonEeaDesk, nonEEADeskWorkloadInSeconds * 2/12)
+      (PaxTypes.EeaMachineReadable, Queues.EeaDesk, eeaDeskWorkloadInSeconds * 10 / 12),
+      (PaxTypes.VisaNational, Queues.NonEeaDesk, nonEEADeskWorkloadInSeconds * 10 / 12),
+      (PaxTypes.EeaMachineReadable, Queues.EeaDesk, eeaDeskWorkloadInSeconds * 2 / 12),
+      (PaxTypes.VisaNational, Queues.NonEeaDesk, nonEEADeskWorkloadInSeconds * 2 / 12)
     )
   }
 }
