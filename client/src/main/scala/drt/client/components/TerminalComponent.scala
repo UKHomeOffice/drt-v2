@@ -3,6 +3,7 @@ package drt.client.components
 import diode.data.{Pending, Pot}
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.logger.{Logger, LoggerFactory}
+import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.{CrunchState, ForecastPeriodWithHeadlines}
@@ -34,11 +35,6 @@ object TerminalComponent {
                             viewMode: ViewMode,
                             minuteTicker: Int
                           )
-
-  implicit val pageReuse: Reusability[TerminalPageTabLoc] = Reusability.derive[TerminalPageTabLoc]
-  implicit val propsReuse: Reusability[Props] = Reusability.by(p =>
-    (p.terminalPageTab, p.router)
-  )
 
   val component = ScalaComponent.builder[Props]("Terminal")
     .render_P(props => {
@@ -92,18 +88,22 @@ object TerminalComponent {
 
           val subMode = if (props.terminalPageTab.mode == "staffing") "desksAndQueues" else props.terminalPageTab.subMode
 
+          val gaPage = s"${airportConfig.portCode}-${props.terminalPageTab.terminal}"
+
           <.div(
             <.ul(^.className := "nav nav-tabs",
               <.li(^.className := currentClass,
                 <.a(^.id := "currentTab", VdomAttr("data-toggle") := "tab", "Current"), ^.onClick --> {
-                props.router.set(props.terminalPageTab.copy(
-                  mode = "current",
-                  subMode = subMode,
-                  date = None
-                ))
+                  GoogleEventTracker.sendPageView(s"$gaPage-current")
+                  props.router.set(props.terminalPageTab.copy(
+                    mode = "current",
+                    subMode = subMode,
+                    date = None
+                  ))
               }),
               <.li(^.className := snapshotDataClass,
                 <.a(^.id := "snapshotTab", VdomAttr("data-toggle") := "tab", "Snapshot"), ^.onClick --> {
+                  GoogleEventTracker.sendPageView(s"$gaPage-snapshot")
                   props.router.set(props.terminalPageTab.copy(
                     mode = "snapshot",
                     subMode = subMode,
@@ -113,6 +113,7 @@ object TerminalComponent {
               ),
               <.li(^.className := planningClass,
                 <.a(^.id := "planningTab", VdomAttr("data-toggle") := "tab", "Planning"), ^.onClick --> {
+                  GoogleEventTracker.sendPageView(s"$gaPage-planning")
                   props.router.set(props.terminalPageTab.copy(mode = "planning", subMode = subMode, date = None))
                 }
               ),
@@ -120,6 +121,7 @@ object TerminalComponent {
                 loggedInUser => if (loggedInUser.roles.contains(StaffEdit))
                   <.li(^.className := staffingClass,
                     <.a(^.id := "monthlyStaffingTab", VdomAttr("data-toggle") := "tab", "Monthly Staffing"), ^.onClick --> {
+                      GoogleEventTracker.sendPageView(s"$gaPage-monthly-staffing")
                       props.router.set(props.terminalPageTab.copy(mode = "staffing", subMode = "15", date = None))
                     }
                   ) else ""
@@ -176,7 +178,6 @@ object TerminalComponent {
       })
     })
     .componentDidMount((p) => Callback.log("TerminalComponent did mount"))
-    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def apply(props: Props): VdomElement = component(props)

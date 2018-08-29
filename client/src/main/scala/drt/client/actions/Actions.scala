@@ -31,17 +31,15 @@ object Actions {
 
   case class GetCrunchState() extends Action
 
-  case class GetCrunchUpdates() extends Action
-
-  case class SetCrunchPending() extends Action
-
   case class UpdateCrunchStateAndContinuePolling(crunchState: CrunchState) extends Action
+
+  case class UpdateCrunchStateFromUpdates(crunchUpdates: CrunchUpdates) extends Action
 
   case class UpdateCrunchStateFromUpdatesAndContinuePolling(crunchUpdates: CrunchUpdates) extends Action
 
   case class UpdateCrunchStateFromCrunchState(crunchState: CrunchState) extends Action
 
-  case class UpdateCrunchStateFromUpdates(crunchUpdates: CrunchUpdates) extends Action
+  case class NoCrunchStateUpdatesAndContinuePollingIfNecessary() extends Action
 
   case class GetForecastWeek(startDay: SDateLike, terminalName: TerminalName) extends Action
 
