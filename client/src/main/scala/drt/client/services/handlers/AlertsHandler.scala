@@ -42,5 +42,27 @@ class AlertsHandler[M](modelRW: ModelRW[M, Pot[Seq[Alert]]]) extends LoggingActi
       val effect = Effect(Future(GetAlerts(SDate.now().millisSinceEpoch))).after(alertsRequestFrequency)
       updated(Pending(), effect)
 
+    case DeleteAllAlerts =>
+      val responseFuture = AjaxClient[Api].deleteAllAlerts().call()
+        .map(_ => DoNothing())
+        .recoverWith {
+          case _ =>
+            log.error(s"Failed to delete all alerts. Re-requesting after ${PollDelay.recoveryDelay}")
+            Future(RetryActionAfter(DeleteAllAlerts, PollDelay.recoveryDelay))
+        }
+      effectOnly(Effect(responseFuture))
+
+
+    case SaveAlert(alert) =>
+      log.info(s"Calling save Alert $alert")
+      val responseFuture = AjaxClient[Api].saveAlert(alert).call()
+        .map(_ => DoNothing())
+        .recoverWith {
+          case _ =>
+            log.error(s"Failed to save Alert. Re-requesting after ${PollDelay.recoveryDelay}")
+            Future(RetryActionAfter(SaveAlert(alert), PollDelay.recoveryDelay))
+        }
+      effectOnly(Effect(responseFuture))
+
   }
 }

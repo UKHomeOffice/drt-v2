@@ -2,11 +2,12 @@ package drt.client
 
 import diode.Action
 import drt.client.actions.Actions._
-import drt.client.components.{GlobalStyles, KeyCloakUsersPage, Layout, StatusPage, TerminalComponent, TerminalPlanningComponent, TerminalsDashboardPage}
+import drt.client.components.{AlertsPage, GlobalStyles, KeyCloakUsersPage, Layout, StatusPage, TerminalComponent, TerminalPlanningComponent, TerminalsDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.client.services.handlers.GetFeedStatuses
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SDateLike
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
@@ -67,6 +68,8 @@ object SPAMain {
 
   case object KeyCloakUsersLoc extends Loc
 
+  case object AlertLoc extends Loc
+
   def requestInitialActions(): Unit = {
     val initActions = Seq(
       GetApplicationVersion,
@@ -86,7 +89,7 @@ object SPAMain {
     .buildConfig { dsl =>
       import dsl._
 
-      val rule = homeRoute(dsl) | dashboardRoute(dsl) | terminalRoute(dsl) | statusRoute(dsl) | keyCloakUsersRoute(dsl)
+      val rule = homeRoute(dsl) | dashboardRoute(dsl) | terminalRoute(dsl) | statusRoute(dsl) | keyCloakUsersRoute(dsl) | alertRoute(dsl)
 
       rule.notFound(redirectToPage(TerminalsDashboardLoc(None))(Redirect.Replace))
     }
@@ -124,6 +127,12 @@ object SPAMain {
     import dsl._
 
     staticRoute("#users", KeyCloakUsersLoc) ~> renderR((router: RouterCtl[Loc]) => KeyCloakUsersPage())
+  }
+
+  def alertRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+    import dsl._
+
+    staticRoute("#alerts", AlertLoc) ~> renderR((router: RouterCtl[Loc]) => AlertsPage())
   }
 
   def dashboardRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {

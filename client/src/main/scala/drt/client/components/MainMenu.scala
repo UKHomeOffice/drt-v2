@@ -24,6 +24,8 @@ object MainMenu {
 
   def usersMenuItem(position: Int): MenuItem = MenuItem(position, _ => "Users", Icon.users, KeyCloakUsersLoc)
 
+  def alertsMenuItem(position: Int): MenuItem = MenuItem(position, _ => "Alerts", Icon.briefcase, AlertLoc)
+
   def statusMenuItem(position: Int, feeds: Seq[FeedStatuses]): MenuItem = MenuItem(position, _ => s"Feeds", Icon.barChart, StatusLoc, List(feedsRag(feeds)))
 
   def feedsRag(feeds: Seq[FeedStatuses]): String = {
@@ -35,7 +37,8 @@ object MainMenu {
   }
 
   val restrictedMenuItems = List(
-    (ManageUsers, usersMenuItem _)
+    (ManageUsers, usersMenuItem _),
+    (ManageUsers, alertsMenuItem _)
   )
 
   def menuItems(airportConfig: AirportConfig, currentLoc: Loc, userRoles: Seq[Role], feeds: Seq[FeedStatuses]): List[MenuItem] = {

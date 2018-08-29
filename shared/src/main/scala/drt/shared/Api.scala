@@ -597,6 +597,10 @@ trait Api {
 
   def getAlerts(createdAfter: MillisSinceEpoch): Future[Seq[Alert]]
 
+  def deleteAllAlerts(): Unit
+
+  def saveAlert(alert: Alert): Unit
+
   def airportInfoByAirportCode(code: String): Future[Option[AirportInfo]]
 
   def airportInfosByAirportCodes(codes: Set[String]): Future[Map[String, AirportInfo]]
