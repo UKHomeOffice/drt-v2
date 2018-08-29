@@ -47,7 +47,7 @@ class WorkloadSpec extends Specification {
 
     val startTime = SDate(flightSplitMinutes.head.minute).toISOString()
 
-    "2018-08-28T17:07:00Z" === startTime
+    startTime === "2018-08-28T17:07:00Z"
   }
 
   "Given an arrival with 1 pax and 1 split containing 1 pax with 1 nationality " +
