@@ -34,18 +34,18 @@ object RestrictedAccessByPortPage {
         modelRCP(modelPotMP => {
           val loggedInUserPot = modelPotMP()
           <.span(
-            <.h2("Access Restricted"),
+            <.h2(^.id:="access-restricted", "Access Restricted"),
             loggedInUserPot.render(loggedInUser => {
               val portsAccessible: Set[String] = allPortsAccessible(loggedInUser.roles)
               <.div(
-                <.p(s"You do not have access to your desired port $portRequested. If you would like access to this port, " +
+                <.p(^.id:="email-for-access", s"You do not have access to your desired port $portRequested. If you would like access to this port, " +
                   "please ", <.a("click here to send an email", ^.href := s"mailto:drtdevteam@digital.homeoffice.gov.uk;drtenquiries@homeoffice.gov.uk?subject=request access to port $portRequested for ${loggedInUser.email}&body=I, ${loggedInUser.email}, would like to request access to $portRequested."), " to request access."),
                 if (portsAccessible.nonEmpty) {
-                  <.div(
+                  <.div(^.id:="alternate-ports",
                     <.p("Alternatively you are able to access the following ports"),
                     <.ul(
                       portsAccessible.map(port =>
-                        <.li(^.key := port, <.a(port, ^.href := url(port)))
+                        <.li(^.key := port, <.a(^.id:=s"$port-link", port, ^.href := url(port)))
                       ).toVdomArray
                     )
                   )
