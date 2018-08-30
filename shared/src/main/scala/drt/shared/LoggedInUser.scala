@@ -1,7 +1,5 @@
 package drt.shared
 
-import scala.reflect.runtime.universe._
-
 case class LoggedInUser(userName: String, id: String, email: String, roles: Set[Role])
 
 sealed trait Role{
@@ -57,6 +55,7 @@ case object LTNAccess extends Role {
 case object MANAccess extends Role {
   override val name: String = "MAN"
 }
+
 case object STNAccess extends Role {
   override val name: String = "STN"
 }
