@@ -3,12 +3,13 @@ package actors
 import java.util.UUID
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern._
+import akka.testkit.{ImplicitSender, TestKit}
 import akka.util.Timeout
-import controllers.AkkaTestkitSpecs2SupportForPersistence
 import drt.shared.Alert
 import org.joda.time.DateTime
 import org.specs2.matcher.Scope
-import org.specs2.mutable.Specification
+import org.specs2.mutable.{After, Specification}
+import passengersplits.AkkaPersistTestConfig
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.language.reflectiveCalls
@@ -25,7 +26,7 @@ class AlertsActorSpec extends Specification {
   implicit val timeout: Timeout = Timeout(5 seconds)
 
   def getTestKit = {
-    new AkkaTestkitSpecs2SupportForPersistence("target/test") {
+    new AkkaTestkitSpecs2SupportForInMemoryPersistence() {
       def getActor: ActorRef = alertsActor(system)
 
       def getState(actor: ActorRef) = {
@@ -60,4 +61,21 @@ class AlertsActorSpec extends Specification {
     }
   }
 
+}
+
+abstract class AkkaTestkitSpecs2SupportForInMemoryPersistence extends TestKit(ActorSystem("testActorSystem", AkkaPersistTestConfig.inMemoryAkkaPersistConfig))
+  with After
+  with ImplicitSender {
+
+  def after = {
+    shutDownActorSystem
+  }
+
+  def shutDownActorSystem = {
+    //TODO figure out how to wait for the actor to finish saving rather than this nasty timer.
+    Thread.sleep(200)
+    import scala.language.postfixOps
+    Await.ready(system.terminate(), 2 second)
+    Await.ready(system.whenTerminated, 2 second)
+  }
 }

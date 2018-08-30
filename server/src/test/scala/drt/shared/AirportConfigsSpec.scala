@@ -50,7 +50,8 @@ class AirportConfigsSpec extends Specification {
         defaultWalkTimeMillis = Map(),
         defaultPaxSplits = SplitRatios("queue", Nil),
         defaultProcessingTimes = Map(),
-        minMaxDesksByTerminalQueue = Map()
+        minMaxDesksByTerminalQueue = Map(),
+        role = LHRAccess
       )
 
       val result = clonedConfig.feedPortCode

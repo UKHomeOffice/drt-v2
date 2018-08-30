@@ -43,6 +43,7 @@ describe('Arrivals page', () => {
 
   before(() => {
     cy.request('DELETE', '/v2/test/live/test/data');
+    setRoles(["api:view"]);
   });
 
   after(() => {
@@ -131,6 +132,7 @@ describe('Arrivals page', () => {
 
   it('Does not show API splits in the flights export for regular users', () => {
     loadManifestFixture();
+    setRoles([""]);
     cy.request('POST', '/v2/test/live/test/manifest', manifest);
     cy.request('GET', '/v2/test/live/export/arrivals/' + currentMillis + '/T1?startHour=0&endHour=24').then((resp) => {
       expect(resp.body).to.equal(csvWithNoApiSplits)

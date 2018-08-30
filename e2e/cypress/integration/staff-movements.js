@@ -4,6 +4,7 @@ describe('Staff movements', function () {
   beforeEach(function () {
     deleteTestData();
     var schDT = new Date().toISOString().split("T")[0];
+    setRoles(["api:view"]);
     cy.request('POST',
       '/v2/test/live/test/arrival',
       {
@@ -30,6 +31,10 @@ describe('Staff movements', function () {
       });
   });
 
+  function setRoles(roles) {
+    cy.request("POST", 'v2/test/live/test/mock-roles', {"roles": roles})
+  }
+
   function deleteTestData() {
     cy.request('DELETE', '/v2/test/live/test/data');
   }
@@ -48,9 +53,9 @@ describe('Staff movements', function () {
     return cy.get(selector);
   }
 
-  function staffMovementsAtRow(row) {
+  function staffMovementsAtRow(row, numStaff) {
     const selector = 'td.non-pcp:nth($index)';
-    return cy.get(selector.replace('$index', row * 2 + 1));
+    cy.contains(selector.replace('$index', row * 2 + 1), numStaff);
   }
 
   function staffAvailableAtRow(row) {
@@ -65,14 +70,14 @@ describe('Staff movements', function () {
 
   function checkStaffNumbersOnDesksAndQueuesTabAre(numStaff) {
     [0, 1, 2, 3].map((row) => {
-      staffMovementsAtRow(row).contains(numStaff);
-      staffDeployedAtRow(row).contains(numStaff);
-      staffAvailableAtRow(row).contains(numStaff);
+      staffMovementsAtRow(row, numStaff);
+      staffDeployedAtRow(row, numStaff);
+      staffAvailableAtRow(row, numStaff);
     });
 
-    staffMovementsAtRow(4).contains("0");
+    staffMovementsAtRow(4, 0);
     staffDeployedAtRow(4).contains("0");
-    staffAvailableAtRow(4).contains("0");
+    staffAvailableAtRow(4, 0);
   }
 
   function checkStaffNumbersOnMovementsTabAre(numStaff) {
