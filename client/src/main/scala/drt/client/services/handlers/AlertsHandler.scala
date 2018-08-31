@@ -38,10 +38,6 @@ class AlertsHandler[M](modelRW: ModelRW[M, Pot[Seq[Alert]]]) extends LoggingActi
         updated(pot, effect)
       }
 
-    case CloseAlerts =>
-      val effect = Effect(Future(GetAlerts(SDate.now().millisSinceEpoch))).after(alertsRequestFrequency)
-      updated(Pending(), effect)
-
     case DeleteAllAlerts =>
       val responseFuture = AjaxClient[Api].deleteAllAlerts().call()
         .map(_ => DoNothing())

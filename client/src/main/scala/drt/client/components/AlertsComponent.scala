@@ -1,6 +1,5 @@
 package drt.client.components
 
-import drt.client.actions.Actions.CloseAlerts
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.SPACircuit
 import drt.shared.Alert
@@ -16,9 +15,6 @@ object AlertsComponent {
   val component = ScalaComponent.builder[Props]("Alerts")
     .render_P(_ => {
 
-      def closeAlerts = (_: ReactEventFromInput) =>
-        Callback(SPACircuit.dispatch(CloseAlerts))
-
       val modelRCP = SPACircuit.connect(m => m.alerts)
 
       modelRCP { modelMP =>
@@ -27,7 +23,6 @@ object AlertsComponent {
         <.div(^.id:= "alerts",
           alertsPot.render((alerts: Seq[Alert]) => {
           <.span(^.id:= "has-alerts",
-            <.span(^.id :="close-alert", ^.className := "close", ^.onClick ==> closeAlerts, ^.title :="Close", "X"),
             alerts.map(alert => {
               <.span(^.key := alert.createdAt,
               <.h3(alert.title),
@@ -35,10 +30,8 @@ object AlertsComponent {
               )
             }).toVdomArray
             )
-
           }),
           alertsPot.renderEmpty(<.div(^.id :="empty-alert"))
-
         )
       }
     })
