@@ -4,7 +4,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.SPACircuit
 import drt.shared.Alert
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.ScalaComponent
 
 object AlertsComponent {
 
@@ -24,9 +24,8 @@ object AlertsComponent {
           alertsPot.render((alerts: Seq[Alert]) => {
           <.span(^.id:= "has-alerts",
             alerts.map(alert => {
-              <.span(^.key := alert.createdAt,
-              <.h3(alert.title),
-              <.p(^.className :="text", alert.message)
+              <.span(^.key := alert.createdAt, ^.`class`:="alert alert-danger col-md-12", ^.role:="alert",
+              <.strong(alert.title),s" ${alert.message}"
               )
             }).toVdomArray
             )
