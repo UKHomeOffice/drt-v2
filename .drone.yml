@@ -56,9 +56,7 @@ pipeline:
 
     when:
       event: push
-  
-  e2e:
-    
+      
 
   copy-e2e-result:
     image: plugins/s3
