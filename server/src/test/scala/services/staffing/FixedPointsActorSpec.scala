@@ -14,14 +14,14 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class TestableFixedPointsActor(testProbe: ActorRef) extends FixedPointsActor {
-  def sendAck(thing: Any): Unit = testProbe ! MsgAck(thing)
+  def sendAck(): Unit = testProbe ! MsgAck
 
   override def onUpdateState(data: Seq[StaffAssignment]): Unit = {
     super.onUpdateState(data)
-    sendAck(data)
+    sendAck()
   }
 }
-case class MsgAck(thing: Any)
+case object MsgAck
 
 class FixedPointsActorSpec extends CrunchTestLike {
   implicit val timeout = new Timeout(1 second)
@@ -39,7 +39,7 @@ class FixedPointsActorSpec extends CrunchTestLike {
 
     fixedPointsActor ! fixedPoints
 
-    probe.expectMsgAnyClassOf(classOf[MsgAck])
+    probe.expectMsgAnyClassOf(MsgAck.getClass)
 
     val storedFixedPointsWithSpacing = Await.result(askableFixedPointsActor ? GetState, 1 second).asInstanceOf[String]
     val storedFixedPointsWithoutSpacing = storedFixedPointsWithSpacing.replace(", ", ",")
