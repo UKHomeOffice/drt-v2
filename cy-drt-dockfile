@@ -1,5 +1,5 @@
 # use Cypress provided image with all dependencies included
-FROM cypress/base:10
+FROM cypress/base:8
 RUN node --version
 RUN npm --version
 WORKDIR /home/node/app
