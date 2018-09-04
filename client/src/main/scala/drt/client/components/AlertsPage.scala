@@ -8,14 +8,16 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Alert
+import japgolly.scalajs.react
 import japgolly.scalajs.react.vdom.html_<^.{^, _}
-import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{Callback, ReactEventFromInput, ReactEventTypes, ScalaComponent}
+import org.scalajs.dom
 
 object AlertsPage {
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class State(title: Option[String] = None, message: Option[String] = None, expiryDateTime: Option[MillisSinceEpoch] = None)
+  case class State(title: Option[String] = None, message: Option[String] = None, expiryDateTime: Option[MillisSinceEpoch] = None, expiryDateTimeString: String = "")
 
   val component = ScalaComponent.builder[Unit]("Alerts")
     .initialState(State())
@@ -28,7 +30,19 @@ object AlertsPage {
         scope.setState(State())
       }
 
-      def addAlert() = (_: ReactEventFromInput) => {
+      def removeValidation(field: String): Unit = {
+        <.span().renderIntoDOM(dom.document.getElementById(s"$field-error"))
+      }
+
+      def addValidation(field: String, message: String) = {
+        val div =  <.div(message, ^.`class`:="alert alert-danger")
+        div.renderIntoDOM(dom.document.getElementById(s"$field-error"))
+      }
+
+      def doAddAlert: Callback = {
+        removeValidation("title")
+        removeValidation("message")
+        removeValidation("expiry")
         for {
           title <- state.title
           message <- state.message
@@ -39,15 +53,40 @@ object AlertsPage {
         scope.setState(State())
       }
 
-      def setTitle(title: String) = scope.modState(state => state.copy(title = Option(title)))
+      def validationMessages: Callback = {
+        if (!state.title.exists(s => s.trim != "")) {
+          addValidation("title", "Title needs a value")
+        }
+        if (!state.message.exists(s => s.trim != "")) {
+          addValidation("message", "Message needs a value")
+        }
+        if (state.expiryDateTime.isEmpty) {
+          addValidation("expiry", "Expiry date and time needs to be set")
+        } else if (!state.expiryDateTime.exists(dateTime => dateTime > SDate.now().millisSinceEpoch)) {
+          addValidation("expiry", "Expiry date and time needs to be in the future")
+        }
+        scope.forceUpdate
+      }
 
-      def setMessage(message: String) = scope.modState(state => state.copy(message = Option(message)))
+      def addAlert(): ReactEventFromInput => Callback = (_: ReactEventFromInput) => if (isValid) doAddAlert else validationMessages
 
-      def setExpiryDateTime(expiryDateTime: String) = {
-        SDate.stringToSDateLikeOption(expiryDateTime).map { date =>
-          scope.modState(state => state.copy(expiryDateTime = Option(date.millisSinceEpoch)))
-        }.getOrElse(Callback(Unit))
+      def setTitle(title: String) = scope.modState(state => {
+        removeValidation("title")
+        state.copy(title = Option(title))
+      })
 
+      def setMessage(message: String) = scope.modState(state => {
+        removeValidation("message")
+        state.copy(message = Option(message))
+      })
+
+      def  setExpiryDateTime(expiryDateTime: String) = {
+        scope.modState(state =>
+          SDate.stringToSDateLikeOption(expiryDateTime).map { date =>
+            removeValidation("expiry")
+            state.copy(expiryDateTime = Option(date.millisSinceEpoch), expiryDateTimeString = expiryDateTime)
+          }.getOrElse(state.copy(expiryDateTimeString = expiryDateTime))
+        )
       }
 
       def isValid: Boolean = state.expiryDateTime.exists(dateTime => dateTime > SDate.now().millisSinceEpoch) && state.title.exists(s => s.trim != "") && state.message.exists(s => s.trim != "")
@@ -58,24 +97,24 @@ object AlertsPage {
         <.div(^.`class` := "row",
           <.label(^.`for` := "alert-title", "Title", ^.`class` := "col-md-3"),
           <.input.text(^.id := "alert-title", ^.placeholder := "Title", ^.`class` := "col-md-3", ^.value := state.title.getOrElse(""), ^.onChange ==> ((e: ReactEventFromInput) => setTitle(e.target.value))),
-          <.div(^.`class` := "col-md-6")
+          <.div(^.id:="title-error", ^.`class` := "col-md-6")
         ),
         <.div(^.`class` := "row", ^.height := "10px"),
         <.div(^.`class` := "row",
           <.label(^.`for` := "alert-message", "Message", ^.`class` := "col-md-3"),
           <.textarea(^.id := "alert-message", ^.placeholder := "Message", ^.rows := 10, ^.`class` := "col-md-3", ^.value := state.message.getOrElse(""), ^.onChange ==> ((e: ReactEventFromInput) => setMessage(e.target.value))),
-          <.div(^.`class` := "col-md-6")
+          <.div(^.id:="message-error",^.`class` := "col-md-6")
         ),
         <.div(^.`class` := "row", ^.height := "10px"),
         <.div(^.`class` := "row",
           <.label(^.`for` := "alert-date-time", "Expiry date", ^.`class` := "col-md-3"),
-          <.input.datetimeLocal(^.id := "alert-date-time", ^.`class` := "col-md-3", ^.onChange ==> ((e: ReactEventFromInput) => setExpiryDateTime(e.target.value))),
-          <.div(^.`class` := "col-md-6")
+          <.input.datetimeLocal(^.id := "alert-date-time", ^.`class` := "col-md-3", ^.value := state.expiryDateTimeString, ^.onChange ==> ((e: ReactEventFromInput) => setExpiryDateTime(e.target.value))),
+          <.div(^.id:="expiry-error",^.`class` := "col-md-6")
         ),
         <.div(^.`class` := "row", ^.height := "10px"),
         <.div(^.`class` := "row",
           <.div(^.`class` := "col-md-3"),
-          <.button("Add alert", ^.`class` := "col-md-3 btn bg-success", ^.disabled := (!isValid), ^.onClick ==> addAlert()),
+          <.button("Add alert", ^.`class` := "col-md-3 btn btn-success", ^.onClick ==> addAlert()),
           <.div(^.`class` := "col-md-6")
         ),
         <.div(^.`class` := "row", ^.height := "10px"),
@@ -85,7 +124,7 @@ object AlertsPage {
             <.div(
               alertsPot.render((alerts: Seq[Alert]) => {
                 <.div(
-                  <.button("Delete all alerts", ^.`class` := "col-md-3 btn bg-danger", ^.onClick ==> deleteAllAlerts),
+                  <.button("Delete all alerts", ^.`class` := "col-md-3 btn btn-danger", ^.onClick ==> deleteAllAlerts),
                   <.div(^.`class` := "col-md-9")
                 )
               }),
