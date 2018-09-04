@@ -49,6 +49,7 @@ pipeline:
       - play  
     commands:
       - docker login -u $${DOCKER_USERNAME} -p $${DOCKER_PASSWORD} docker.digital.homeoffice.gov.uk
+      - docker network rm drt-net
       - docker network create drt-net
       - docker run -d --name database --network drt-net -e POSTGRES_USER="test_user" -e POSTGRES_DB="test" -e POSTGRES_PASSWORD="test_password" postgres:alpine 
       - docker run  -d -p9000:9000  --name cytarget --network drt-net -e KEY_CLOAK_URL="https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod" -e PERSISTENCE_BASE_DIR="/var/lib/drt-v2/live/test" -e PORT_CODE="test" -e DQ_S3_BUCKET="" -e ENV="test" -e POSTGRES_PASSWORD="test_password" -e POSTGRES_HOST="database" -e POSTGRES_USER="test_user"  docker.digital.homeoffice.gov.uk/drt/drt:latest bin/drt -Duser.timezone=UTC $${PLAY}
