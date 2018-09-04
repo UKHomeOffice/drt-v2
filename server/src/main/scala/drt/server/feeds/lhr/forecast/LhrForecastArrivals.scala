@@ -1,6 +1,6 @@
 package drt.server.feeds.lhr.forecast
 
-import drt.shared.{Arrival, SDateLike}
+import drt.shared.{Arrival, ForecastFeed, SDateLike}
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.util.StringUtils
@@ -87,6 +87,7 @@ object LhrForecastArrival {
         Origin = origin(fields),
         Scheduled = scheduled(fields).millisSinceEpoch,
         PcpTime = None,
+        FeedSources = Set(ForecastFeed),
         LastKnownPax = None
       )
     } match {

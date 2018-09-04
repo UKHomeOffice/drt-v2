@@ -9,12 +9,12 @@ import akka.stream.scaladsl.Source
 import akka.stream.{ActorAttributes, Supervision}
 import com.box.sdk.{BoxFile, BoxFolder, _}
 import drt.server.feeds.lgw.LGWFeed.log
-import drt.shared.Arrival
+import drt.shared.{Arrival, ForecastFeed}
 import drt.shared.FlightsApi.Flights
 import org.apache.commons.lang3.StringUtils
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter, ISODateTimeFormat}
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, ArrivalsFeedResponse}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import services.graphstages.Crunch
 
@@ -108,6 +108,7 @@ class LGWForecastFeed(boxConfigFilePath: String, userId: String, ukBfGalForecast
       Origin = fields(AIRPORT_CODE),
       Scheduled = SDate(dateAsISOStringWithoutZone(fields(DATE_TIME)), Crunch.europeLondonTimeZone).millisSinceEpoch,
       PcpTime = None,
+      FeedSources = Set(ForecastFeed),
       None
     )
   } match {

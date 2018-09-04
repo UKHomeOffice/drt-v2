@@ -373,6 +373,7 @@ object ApiFlightGenerator {
       rawICAO = rawICAO,
       rawIATA = iataFlightCode,
       Origin = Origin,
+      FeedSources = Set(ApiFeed),
       PcpTime = if (PcpTime != 0) Some(PcpTime) else Some(SDate.parse(SchDT).millisSinceEpoch),
       Scheduled = if (SchDT != "") SDate.parse(SchDT).millisSinceEpoch else 0L
     )

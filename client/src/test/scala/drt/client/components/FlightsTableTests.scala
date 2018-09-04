@@ -61,7 +61,8 @@ object FlightsTableTests extends TestSuite {
         rawIATA = "BAA0001",
         Origin = "JFK",
         PcpTime = Some(1451655000000L), // 2016-01-01 13:30:00 UTC
-        Scheduled = SDate("2016-01-01T13:00").millisSinceEpoch
+        Scheduled = SDate("2016-01-01T13:00").millisSinceEpoch,
+        FeedSources = Set(ApiFeed)
       )
 
       def withSplits(flights: Seq[Arrival]) = {

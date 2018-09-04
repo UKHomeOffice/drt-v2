@@ -2,6 +2,7 @@ package services.inputfeeds
 
 import com.typesafe.config.ConfigFactory
 import controllers.ArrivalGenerator
+import drt.shared
 import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared.PaxTypesAndQueues._
@@ -46,7 +47,7 @@ class AclFeedSpec extends CrunchTestLike {
       val expected = List(Arrival(Operator = Some("4U"), Status = "ACL Forecast", Estimated = None, Actual = None,
         EstimatedChox = None, ActualChox = None, Gate = None, Stand = None, MaxPax = Some(180), ActPax = Some(149),
         TranPax = None, RunwayID = None, BaggageReclaimId = None, FlightID = Some(-904483842), AirportID = "LHR", Terminal = "T2",
-        rawICAO = "4U0460", rawIATA = "4U0460", Origin = "CGN",
+        rawICAO = "4U0460", rawIATA = "4U0460", Origin = "CGN",FeedSources = Set(shared.AclFeed),
         Scheduled = 1507878600000L, PcpTime = None, LastKnownPax = None))
 
       arrivals === expected
@@ -93,7 +94,7 @@ class AclFeedSpec extends CrunchTestLike {
         Actual = None, EstimatedChox = None, ActualChox = None, Gate = None,
         Stand = None, MaxPax = Some(180), ActPax = Some(149), TranPax = None, RunwayID = None, BaggageReclaimId = None,
         FlightID = Some(-904483842), AirportID = "LHR", Terminal = "S", rawICAO = "4U0460", rawIATA = "4U0460",
-        Origin = "CGN", Scheduled = 1507878600000L, PcpTime = None, LastKnownPax = None))
+        Origin = "CGN", Scheduled = 1507878600000L, PcpTime = None, FeedSources = Set(shared.AclFeed), LastKnownPax = None))
 
       arrivals === expected
     }
