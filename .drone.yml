@@ -21,6 +21,8 @@ pipeline:
     when:
       event:
         - push
+      branch: 
+        - fooobardrt-acp-pgsql   
 
   build_docker:
     environment:
