@@ -32,7 +32,7 @@ import services.SDate.implicits._
 import services.SplitsProvider.SplitProvider
 import services.graphstages.Crunch
 import services.graphstages.Crunch._
-import services.shifts.StaffTimeSlots
+import services.staffing.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import services._

@@ -1,4 +1,4 @@
-package services.shifts
+package services.staffing
 
 import drt.shared.{SDateLike, StaffTimeSlot, StaffTimeSlotsForTerminalMonth}
 import org.specs2.mutable.Specification
