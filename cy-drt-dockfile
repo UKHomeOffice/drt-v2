@@ -1,10 +1,10 @@
 # use Cypress provided image with all dependencies included
-FROM cypress/base:8
+FROM cypress/base:10
 RUN node --version
 RUN npm --version
-WORKDIR /app
 # copy our test page and test files
-# COPY cypress.json package.json package-lock.json ./
+ADD e2e /app
+WORKDIR /app
 
 # avoid many lines of progress bars during install
 # https://github.com/cypress-io/cypress/issues/1243
