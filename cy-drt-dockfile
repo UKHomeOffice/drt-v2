@@ -6,7 +6,6 @@ WORKDIR /home/node/app
 # copy our test page and test files
 COPY cypress.json package.json package-lock.json ./
 
-
 # avoid many lines of progress bars during install
 # https://github.com/cypress-io/cypress/issues/1243
 ENV CI=1
