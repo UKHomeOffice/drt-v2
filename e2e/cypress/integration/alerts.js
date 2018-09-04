@@ -35,7 +35,7 @@ describe('Alerts system', function () {
 
   }
   function shouldHaveAlerts(num) {
-    cy.get('#has-alerts .text').should('have.length', num);
+    cy.get('#has-alerts .alert').should('have.length', num);
   }
 
   describe('An alert exists in the app', function () {
