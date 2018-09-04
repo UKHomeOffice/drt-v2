@@ -32,25 +32,24 @@ case class LoadingState(isLoading: Boolean = false)
 
 case class ClientServerVersions(client: String, server: String)
 
-case class RootModel(
-                      applicationVersion: Pot[ClientServerVersions] = Empty,
-                      latestUpdateMillis: MillisSinceEpoch = 0L,
-                      crunchStatePot: Pot[CrunchState] = Empty,
-                      forecastPeriodPot: Pot[ForecastPeriodWithHeadlines] = Empty,
-                      airportInfos: Map[String, Pot[AirportInfo]] = Map(),
-                      airportConfig: Pot[AirportConfig] = Empty,
-                      shiftsRaw: Pot[String] = Empty,
-                      monthOfShifts: Pot[MonthOfRawShifts] = Empty,
-                      fixedPointsRaw: Pot[String] = Empty,
-                      staffMovements: Pot[Seq[StaffMovement]] = Empty,
-                      viewMode: ViewMode = ViewLive(),
-                      loadingState: LoadingState = LoadingState(),
-                      showActualIfAvailable: Boolean = true,
-                      loggedInUserPot: Pot[LoggedInUser] = Empty,
-                      minuteTicker: Int = 0,
-                      keyCloakUsers: Pot[List[KeyCloakUser]] = Empty,
-                      feedStatuses: Pot[Seq[FeedStatuses]] = Empty,
-                      alerts: Pot[Seq[Alert]] = Empty
+case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
+                     latestUpdateMillis: MillisSinceEpoch = 0L,
+                     crunchStatePot: Pot[CrunchState] = Empty,
+                     forecastPeriodPot: Pot[ForecastPeriodWithHeadlines] = Empty,
+                     airportInfos: Map[String, Pot[AirportInfo]] = Map(),
+                     airportConfig: Pot[AirportConfig] = Empty,
+                     shiftsRaw: Pot[String] = Empty,
+                     monthOfShifts: Pot[MonthOfRawShifts] = Empty,
+                     fixedPoints: Pot[StaffAssignments] = Empty,
+                     staffMovements: Pot[Seq[StaffMovement]] = Empty,
+                     viewMode: ViewMode = ViewLive(),
+                     loadingState: LoadingState = LoadingState(),
+                     showActualIfAvailable: Boolean = true,
+                     loggedInUserPot: Pot[LoggedInUser] = Empty,
+                     minuteTicker: Int = 0,
+                     keyCloakUsers: Pot[List[KeyCloakUser]] = Empty,
+                     feedStatuses: Pot[Seq[FeedStatuses]] = Empty,
+                     alerts: Pot[Seq[Alert]] = Empty
                     )
 
 object PollDelay {
@@ -81,7 +80,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ApplicationVersionHandler(zoomRW(_.applicationVersion)((m, v) => m.copy(applicationVersion = v))),
       new ShiftsHandler(currentViewMode, zoomRW(_.shiftsRaw)((m, v) => m.copy(shiftsRaw = v))),
       new ShiftsForMonthHandler(zoomRW(_.monthOfShifts)((m, v) => m.copy(monthOfShifts = v))),
-      new FixedPointsHandler(currentViewMode, zoomRW(_.fixedPointsRaw)((m, v) => m.copy(fixedPointsRaw = v))),
+      new FixedPointsHandler(currentViewMode, zoomRW(_.fixedPoints)((m, v) => m.copy(fixedPoints = v))),
       new StaffMovementsHandler(zoomRW(m => (m.staffMovements, m.viewMode))((m, v) => m.copy(staffMovements = v._1))),
       new ViewModeHandler(zoomRW(m => (m.viewMode, m.crunchStatePot, m.latestUpdateMillis))((m, v) => m.copy(viewMode = v._1, crunchStatePot = v._2, latestUpdateMillis = v._3)), zoom(_.crunchStatePot)),
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v))),

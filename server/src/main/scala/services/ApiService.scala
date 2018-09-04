@@ -27,7 +27,7 @@ trait AirportToCountryLike {
 
       val t = Try {
         val splitRow: Array[String] = l.split(",")
-        val sq: (String) => String = stripQuotes
+        val sq: String => String = stripQuotes
         AirportInfo(sq(splitRow(1)), sq(splitRow(2)), sq(splitRow(3)), sq(splitRow(4)))
       }
       t.getOrElse({

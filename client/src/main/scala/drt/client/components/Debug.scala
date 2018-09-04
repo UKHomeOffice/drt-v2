@@ -4,7 +4,7 @@ import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.services._
 import drt.shared.CrunchApi.CrunchState
-import drt.shared.StaffMovement
+import drt.shared.{StaffAssignments, StaffMovement}
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom
@@ -20,7 +20,7 @@ object Debug {
       val staffingRCP = SPACircuit.connect(
         m => (
           m.shiftsRaw,
-          m.fixedPointsRaw,
+          m.fixedPoints,
           m.staffMovements,
           m.crunchStatePot,
           m.loadingState
@@ -28,7 +28,7 @@ object Debug {
       )
       staffingRCP((staffingMP: ModelProxy[(
         Pot[String],
-          Pot[String],
+          Pot[StaffAssignments],
           Pot[Seq[StaffMovement]],
           Pot[CrunchState],
           LoadingState
@@ -38,7 +38,7 @@ object Debug {
         if (dom.window.hasOwnProperty("debug")) {
           <.table(
             <.tr(<.th("shifts"), potShifts.render(s => <.td(<.pre(^.style := js.Dictionary("overflow" -> "auto", "height" -> "200px"), s)))),
-            <.tr(<.th("fixed points"), potFixedPoints.render(s => <.td(<.pre(^.style := js.Dictionary("overflow" -> "auto", "height" -> "200px"), s)))),
+            <.tr(<.th("fixed points"), potFixedPoints.render(s => <.td(<.pre(^.style := js.Dictionary("overflow" -> "auto", "height" -> "200px"), s.assignments.map(_.toString).mkString("\n"))))),
             <.tr(<.th("staff movements"), <.td(<.pre(^.style := js.Dictionary("overflow" -> "auto", "height" -> "200px"), staffMovements.toString()))),
             <.tr(<.th("crunch State"), crunchState.render(s => <.td(<.pre(^.style := js.Dictionary("overflow" -> "auto", "height" -> "200px"), s.toString)))),
             <.tr(<.th("loading state"), s"$loadingState")
