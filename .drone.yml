@@ -14,7 +14,7 @@ pipeline:
       event:
         - push
       branch: 
-        - foobardrt-acp-pgsql  
+        - drt-acp-pgsql  
 
   sonar-scanner:
     image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
@@ -22,7 +22,7 @@ pipeline:
       event:
         - push
       branch: 
-        - foobardrt-acp-pgsql   
+        - drt-acp-pgsql   
 
   build_docker:
     environment:
@@ -37,7 +37,7 @@ pipeline:
     when:
       event: push
       branch: 
-        - fooobar-drt-acp-pgsql
+        - drt-acp-pgsql
 
   drt-test-instance:
     image: docker:18.06
@@ -53,7 +53,6 @@ pipeline:
       - docker run  -d --net=container:$${DRONE_COMMIT_SHA} -e KEY_CLOAK_URL="https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod" -e PERSISTENCE_BASE_DIR="/var/lib/drt-v2/live/test" -e PORT_CODE="test" -e DQ_S3_BUCKET="" -e ENV="test" -e POSTGRES_PASSWORD="test_password" -e POSTGRES_HOST="localhost" -e POSTGRES_USER="test_user"  docker.digital.homeoffice.gov.uk/drt/drt:latest bin/drt -Duser.timezone=UTC $${PLAY}
       - docker build -t drt-cypress -f cy-drt-dockfile .
       - docker run  --net=container:$${DRONE_COMMIT_SHA} -e CYPRESS_baseUrl="http://localhost:9000" drt-cypress /bin/bash -c "./node_modules/.bin/cypress run"       
-      - docker cp cypress:/app/cypress/ ./cypress-result 
 
     when:
       event: push
