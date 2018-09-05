@@ -59,13 +59,8 @@ object Settings {
     val akkaPersistenceJdbc = "3.4.0"
     val postgres = "42.2.2"
     val sshJ = "0.24.0"
-<<<<<<< HEAD
     val jodaTime = "2.9.6"
     val jodaConvert ="1.8.1"
-=======
-    val jodaTime = "2.9.4"
-    val playJsonJoda = "2.6.9"
->>>>>>> master
     val exposeLoader = "0.7.1"
     val log4Javascript = "1.4.15"
     val typesafeConfig = "1.3.0"
@@ -137,11 +132,8 @@ object Settings {
     "io.spray" %% "spray-json" % sprayVersion,
 
     "joda-time" % "joda-time" % jodaTime,
-<<<<<<< HEAD
     "org.joda" % "joda-convert" % jodaConvert,
-=======
     "com.typesafe.play" %% "play-json-joda" % playJsonJoda,
->>>>>>> master
     "org.opensaml" % "opensaml" % openSaml excludeAll (ExclusionRule("org.bouncycastle"), ExclusionRule("xerces")),
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,

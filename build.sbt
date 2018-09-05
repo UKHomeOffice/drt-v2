@@ -10,11 +10,8 @@ scalaVersion := Settings.versions.scala
 // enabled for Apline JVM docker image compatibility 
 enablePlugins(AshScriptPlugin)
 // a special crossProject for configuring a JS/JVM/shared structure
-<<<<<<< HEAD
 import sbtcrossproject.CrossPlugin.autoImport.{crossProject, CrossType}
 
-=======
->>>>>>> master
 lazy val shared = (crossProject(JSPlatform, JVMPlatform).crossType(CrossType.Pure) in file("shared"))
   .settings(
     scalaVersion := Settings.versions.scala,
