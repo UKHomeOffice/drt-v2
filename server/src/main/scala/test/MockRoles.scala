@@ -1,6 +1,7 @@
 package test
 
 import controllers.UserRoleProviderLike
+import drt.shared.{Role, Roles}
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
@@ -12,12 +13,12 @@ object MockRoles {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply(session: Session): List[String] = {
+  def apply(session: Session): List[Role] = {
 
     log.info(s"Session: $session")
     val maybeRoles = session.data.get("mock-roles")
     log.info(s"Maybe roles: $maybeRoles")
-    val mockRoles = maybeRoles.map(_.split(",").toList).getOrElse(List())
+    val mockRoles = maybeRoles.map(_.split(",").toList.flatMap(Roles.parse)).getOrElse(List())
     log.info(s"Using these mock roles: $mockRoles")
     mockRoles
   }
@@ -25,19 +26,18 @@ object MockRoles {
   object MockRolesProtocol extends DefaultJsonProtocol {
     implicit val mockRoleConverters: RootJsonFormat[MockRoles] = jsonFormat1((v: JsValue) => {
       log.info(s"Got this json $v")
-      MockRoles(v.convertTo[List[String]])
+      MockRoles(v.convertTo[List[String]].flatMap(Roles.parse))
     })
   }
 
 }
 
-case class MockRoles(roles: List[String])
+case class MockRoles(roles: List[Role])
 
-object TestUserRoleProvider  {
-  val log: Logger = LoggerFactory.getLogger(getClass)
+object TestUserRoleProvider extends UserRoleProviderLike {
 
-  def getRoles(config: Configuration, headers: Headers, session: Session): List[String] = {
-    log.info(s"Using MockRoles with $session")
-    MockRoles(session)
+  def getRoles(config: Configuration, headers: Headers, session: Session): List[Role] = {
+    log.info(s"Using MockRoles with $session and $headers")
+    MockRoles(session) ::: userRolesFromHeader(headers)
   }
 }

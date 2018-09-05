@@ -7,7 +7,7 @@ import utest._
 
 
 object FlightComponentsTests extends TestSuite {
-  def tests = TestSuite {
+  def tests = Tests {
 
     "Given a flight with only act pax " +
       "When I ask for the pax to display " +

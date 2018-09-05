@@ -1,8 +1,10 @@
 package actors
 
+import actors.Sizes.oneMegaByte
 import akka.actor.ActorLogging
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
+import com.trueaccord.scalapb.GeneratedMessage
 import drt.shared.MilliDate
 import org.joda.time.format.DateTimeFormat
 import org.slf4j.{Logger, LoggerFactory}
@@ -55,8 +57,11 @@ class FixedPointsActorBase extends RecoveryActorLike with PersistentDrtActor[Fix
   def initialState = FixedPointsState("")
 
   val snapshotInterval = 1
+  override val snapshotBytesThreshold: Int = oneMegaByte
 
   import FixedPointsMessageParser._
+
+  override def stateToMessage: GeneratedMessage = FixedPointsStateSnapshotMessage(fixedPointsStringToFixedPointsMessages(state.fixedPoints))
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: FixedPointsStateSnapshotMessage => state = FixedPointsState(fixedPointMessagesToFixedPointsString(snapshot.fixedPoints.toList))

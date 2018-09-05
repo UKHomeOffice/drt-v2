@@ -1,16 +1,18 @@
 package actors
 
+import actors.Sizes.oneMegaByte
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
 import akka.pattern.AskableActorRef
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import controllers.{Deskstats, PaxFlow, UserRoleProviderLike}
-import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
 import drt.chroma._
+import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
 import drt.http.ProdSendAndReceive
+import drt.server.feeds.api.S3ApiProvider
 import drt.server.feeds.bhx.{BHXForecastFeed, BHXLiveFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.lgw.{LGWFeed, LGWForecastFeed}
@@ -26,7 +28,7 @@ import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import server.feeds.acl.AclFeed
 import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse}
-import services.PcpArrival.{GateOrStand, GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
+import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services.SplitsProvider.SplitProvider
 import services._
 import services.crunch.{CrunchProps, CrunchSystem}
@@ -48,6 +50,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val shiftsActor: ActorRef
   val fixedPointsActor: ActorRef
   val staffMovementsActor: ActorRef
+  val alertsActor: ActorRef
 
 
   val aclFeed: AclFeed
@@ -57,7 +60,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   def getFeedStatus(): Future[Seq[FeedStatuses]]
 }
 
-case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig) extends DrtSystemInterface {
+case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig)
+                    (implicit actorMaterializer: Materializer) extends DrtSystemInterface {
 
   implicit val system: ActorSystem = actorSystem
 
@@ -65,6 +69,12 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val maxDaysToCrunch: Int = config.getOptional[Int]("crunch.forecast.max_days").getOrElse(360)
   val aclPollMinutes: Int = config.getOptional[Int]("crunch.forecast.poll_minutes").getOrElse(120)
   val snapshotIntervalVm: Int = config.getOptional[Int]("persistence.snapshot-interval.voyage-manifest").getOrElse(1000)
+  val snapshotMegaBytesBaseArrivals: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.base-arrivals").getOrElse(1d) * oneMegaByte).toInt
+  val snapshotMegaBytesFcstArrivals: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.forecast-arrivals").getOrElse(5d) * oneMegaByte).toInt
+  val snapshotMegaBytesLiveArrivals: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.live-arrivals").getOrElse(2d) * oneMegaByte).toInt
+  val snapshotMegaBytesFcstPortState: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.forecast-portstate").getOrElse(10d) * oneMegaByte).toInt
+  val snapshotMegaBytesLivePortState: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.live-portstate").getOrElse(25d) * oneMegaByte).toInt
+  val snapshotMegaBytesVoyageManifests: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.voyage-manifest").getOrElse(100d) * oneMegaByte).toInt
   val expireAfterMillis: MillisSinceEpoch = 2 * oneDayMillis
 
   val ftpServer: String = ConfigFactory.load.getString("acl.host")
@@ -74,31 +84,34 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val recrunchOnStart: Boolean = config.getOptional[Boolean]("crunch.recrunch-on-start").getOrElse(false)
   system.log.info(s"recrunchOnStart: $recrunchOnStart")
 
-  val aclFeed = AclFeed(ftpServer, username, path, airportConfig.portCode, aclTerminalMapping(airportConfig.portCode))
+  val aclFeed = AclFeed(ftpServer, username, path, airportConfig.feedPortCode, aclTerminalMapping(airportConfig.portCode))
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
 
   val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
   val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
-  val actorMaterializer = ActorMaterializer()
 
   val purgeOldLiveSnapshots = false
   val purgeOldForecastSnapshots = true
 
-  lazy val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastBaseArrivalsActor], now, expireAfterMillis), name = "base-arrivals-actor")
-  lazy val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastPortArrivalsActor], now, expireAfterMillis), name = "forecast-arrivals-actor")
-  lazy val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor], now, expireAfterMillis), name = "live-arrivals-actor")
+  val liveCrunchStateProps = Props(classOf[CrunchStateActor], Option(airportConfig.portStateSnapshotInterval), snapshotMegaBytesLivePortState, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots)
+  val forecastCrunchStateProps = Props(classOf[CrunchStateActor], Option(100), snapshotMegaBytesFcstPortState, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots)
 
-  val liveCrunchStateProps = Props(classOf[CrunchStateActor], airportConfig.portStateSnapshotInterval, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots)
-  val forecastCrunchStateProps = Props(classOf[CrunchStateActor], 100, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots)
+  lazy val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastBaseArrivalsActor], snapshotMegaBytesBaseArrivals, now, expireAfterMillis), name = "base-arrivals-actor")
+  lazy val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastPortArrivalsActor], snapshotMegaBytesFcstArrivals, now, expireAfterMillis), name = "forecast-arrivals-actor")
+  lazy val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor], snapshotMegaBytesLiveArrivals, now, expireAfterMillis), name = "live-arrivals-actor")
 
   lazy val liveCrunchStateActor: ActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
-  lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], now, expireAfterMillis, snapshotIntervalVm), name = "voyage-manifests-actor")
   lazy val forecastCrunchStateActor: ActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
-  val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
+
+  lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], snapshotMegaBytesVoyageManifests, now, expireAfterMillis, snapshotIntervalVm), name = "voyage-manifests-actor")
+
   lazy val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor]))
   lazy val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor]))
   lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor]))
+
+  lazy val alertsActor: ActorRef = system.actorOf(Props(classOf[AlertsActor]))
+  val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
   val useNationalityBasedProcessingTimes: Boolean = config.getOptional[String]("feature-flags.nationality-based-processing-times").isDefined
   val useSplitsPrediction: Boolean = config.getOptional[String]("feature-flags.use-splits-prediction").isDefined
   val rawSplitsUrl: String = config.getOptional[String]("crunch.splits.raw-data-path").getOrElse("/dev/null")
@@ -107,23 +120,21 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   val dqZipBucketName: String = config.getOptional[String]("dq.s3.bucket").getOrElse(throw new Exception("You must set DQ_S3_BUCKET for us to poll for AdvPaxInfo"))
   val apiS3PollFrequencyMillis: MillisSinceEpoch = config.getOptional[Int]("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
+  val s3ApiProvider = S3ApiProvider(dqZipBucketName)
+  val initialManifestsState: Option[VoyageManifestState] = manifestsState
+  val maybeLatestZipFileName: String = initialManifestsState.map(_.latestZipFilename).getOrElse("")
 
   lazy val voyageManifestsStage: Source[ManifestsFeedResponse, NotUsed] = Source.fromGraph(
-    new VoyageManifestsGraphStage(
-      dqZipBucketName,
-      airportConfig.portCode,
-      getLastSeenManifestsFileName,
-      apiS3PollFrequencyMillis
-    )
+    new VoyageManifestsGraphStage(airportConfig.feedPortCode, s3ApiProvider, maybeLatestZipFileName, apiS3PollFrequencyMillis)
   )
 
   system.log.info(s"useNationalityBasedProcessingTimes: $useNationalityBasedProcessingTimes")
   system.log.info(s"useSplitsPrediction: $useSplitsPrediction")
 
-  def getRoles(config: Configuration, headers: Headers, session: Session): List[String] =
+  def getRoles(config: Configuration, headers: Headers, session: Session): List[Role] =
     if (config.getOptional[String]("feature-flags.super-user-mode").isDefined) {
       system.log.info(s"Using Super User Roles")
-      availableRoles
+      Roles.availableRoles
     } else userRolesFromHeader(headers)
 
   def run(): Unit = {
@@ -175,7 +186,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   }
 
   def startScheduledFeedImports(crunchInputs: CrunchSystem[Cancellable, NotUsed]): Unit = {
-    if (airportConfig.portCode == "LHR") config.getOptional[String]("lhr.blackjack_url").map(csvUrl => {
+    if (airportConfig.feedPortCode == "LHR") config.getOptional[String]("lhr.blackjack_url").map(csvUrl => {
       val requestIntervalMillis = 5 * oneMinuteMillis
       Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, requestIntervalMillis milliseconds, SDate.now().addDays(-1))
     })
@@ -195,7 +206,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
                        ): CrunchSystem[Cancellable, NotUsed] = {
 
     val crunchInputs = CrunchSystem(CrunchProps(
-      system = system,
       airportConfig = airportConfig,
       pcpArrival = pcpArrivalTimeCalculator,
       historicalSplitsProvider = historicalSplitsProvider,
@@ -221,9 +231,10 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       initialBaseArrivals = initialBaseArrivals.getOrElse(Set()),
       initialFcstArrivals = initialForecastArrivals.getOrElse(Set()),
       initialLiveArrivals = initialLiveArrivals.getOrElse(Set()),
+      initialManifestsState = initialManifestsState,
       arrivalsBaseSource = baseArrivalsSource(),
-      arrivalsFcstSource = forecastArrivalsSource(airportConfig.portCode),
-      arrivalsLiveSource = liveArrivalsSource(airportConfig.portCode),
+      arrivalsFcstSource = forecastArrivalsSource(airportConfig.feedPortCode),
+      arrivalsLiveSource = liveArrivalsSource(airportConfig.feedPortCode),
       recrunchOnStart = recrunchOnStart
     ))
     crunchInputs
@@ -257,7 +268,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     arrivalsFuture
   }
 
-  def mergePortStates(maybeForecastPs: Option[PortState], maybeLivePs: Option[PortState]): Option[PortState] = (maybeForecastPs, maybeLivePs) match {
+  def mergePortStates(maybeForecastPs: Option[PortState],
+                      maybeLivePs: Option[PortState]): Option[PortState] = (maybeForecastPs, maybeLivePs) match {
     case (None, None) => None
     case (Some(fps), None) => Option(fps)
     case (None, Some(lps)) => Option(lps)
@@ -268,22 +280,23 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         fps.staffMinutes ++ lps.staffMinutes))
   }
 
-  def getLastSeenManifestsFileName: GateOrStand = {
-    val futureLastSeenManifestFileName = askableVoyageManifestsActor.ask(GetState)(new Timeout(1 minute)).map {
-      case VoyageManifestState(_, lastSeenFileName, _, _) => lastSeenFileName
+  def manifestsState: Option[VoyageManifestState] = {
+    val futureVoyageManifestState = askableVoyageManifestsActor.ask(GetState)(new Timeout(1 minute)).map {
+      case s: VoyageManifestState => s
     }
     Try {
-      Await.result(futureLastSeenManifestFileName, 1 minute)
+      Await.result(futureVoyageManifestState, 1 minute)
     } match {
-      case Success(lastSeen) => lastSeen
+      case Success(state) => Option(state)
       case Failure(t) =>
         system.log.warning(s"Failed to get last seen file name for DQ manifests: $t")
-        ""
+        None
     }
   }
 
-  def createSplitsPredictionStage(predictSplits: Boolean, rawSplitsUrl: String): SplitsPredictorBase = if (predictSplits)
-    new SplitsPredictorStage(SparkSplitsPredictorFactory(createSparkSession(), rawSplitsUrl, airportConfig.portCode))
+  def createSplitsPredictionStage(predictSplits: Boolean,
+                                  rawSplitsUrl: String): SplitsPredictorBase = if (predictSplits)
+    new SplitsPredictorStage(SparkSplitsPredictorFactory(createSparkSession(), rawSplitsUrl, airportConfig.feedPortCode))
   else
     new DummySplitsPredictor()
 

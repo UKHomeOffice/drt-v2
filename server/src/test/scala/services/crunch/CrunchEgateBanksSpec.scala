@@ -58,8 +58,8 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
       val expected = Map("T1" -> Map(
-        Queues.EeaDesk -> Seq(7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7),
-        Queues.EGate -> Seq(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2)
+        Queues.EeaDesk -> Seq.fill(15)(7),
+        Queues.EGate -> Seq.fill(15)(1)
       ))
 
       crunch.liveTestProbe.fishForMessage(10 seconds) {

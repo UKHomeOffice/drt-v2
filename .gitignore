@@ -15,6 +15,7 @@ lib_managed/
 src_managed/
 project/boot/
 project/plugins/project/
+notebooks/*.csv
 
 # Scala-IDE specific
 .scala_dependencies
@@ -42,3 +43,6 @@ e2e/cypress/videos/*
 e2e/cypress/screenshots/*
 .ensime_cache/
 runsbt.sh
+
+# Cypress
+e2e/cypress/fixtures/example.json

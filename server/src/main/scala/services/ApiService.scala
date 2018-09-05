@@ -6,6 +6,7 @@ import akka.util.Timeout
 import controllers.{FixedPointPersistence, ShiftPersistence, StaffMovementsPersistence}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.TerminalName
+import drt.shared.KeyCloakApi.KeyCloakUser
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.mvc.{Headers, Session}
@@ -82,13 +83,19 @@ abstract class ApiService(val airportConfig: AirportConfig,
 
   def getApplicationVersion(): String
 
+  def getAlerts(pointIntTime: MillisSinceEpoch): Future[Seq[Alert]]
+
+  def deleteAllAlerts(): Unit
+
+  def saveAlert(alert: Alert): Unit
+
   def airportConfiguration(): AirportConfig = airportConfig
 
-  def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]]
+  def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]]
 
-  def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]]
+  def getCrunchStateForDay(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]]
 
-  def getCrunchUpdates(sinceMillis: MillisSinceEpoch, windowStartMillis: MillisSinceEpoch, windowEndMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]]
+  def getCrunchUpdates(sinceMillis: MillisSinceEpoch, windowStartMillis: MillisSinceEpoch, windowEndMillis: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchUpdates]]]
 
   def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]]
 
@@ -99,5 +106,9 @@ abstract class ApiService(val airportConfig: AirportConfig,
   def isLoggedIn(): Boolean
 
   def getFeedStatuses(): Future[Seq[FeedStatuses]]
+
+  def getKeyCloakUsers() : Future[List[KeyCloakUser]]
+
+  def addUserToGroup(userId: String, groupName: String): Unit
 }
 

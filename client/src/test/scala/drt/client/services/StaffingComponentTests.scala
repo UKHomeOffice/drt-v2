@@ -9,7 +9,7 @@ object StaffingComponentTests extends TestSuite {
   import drt.client.components.TerminalStaffingV2._
 
 
-  def tests = TestSuite {
+  def tests = Tests {
     'StaffingService - {
       "When asking for the end date of the month " - {
         "Given 31-12-2017 then I should get 31-12-2017" - {

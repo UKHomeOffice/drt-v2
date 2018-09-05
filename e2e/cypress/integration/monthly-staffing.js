@@ -1,20 +1,19 @@
+let moment = require('moment-timezone');
+require('moment/locale/en-gb');
+moment.locale("en-gb");
+
 describe('Monthly Staffing', function () {
-  const today = new Date();
 
   function setRoles(roles) {
     cy.request("POST", 'v2/test/live/test/mock-roles', {"roles": roles})
   }
 
   function firstMidnightOfThisMonth() {
-    let year = today.getFullYear();
-    let month = today.getMonth();
-    return new Date(year, month, 1, 0, 0);
+    return moment().tz('Europe/London').startOf('month');
   }
 
   function firstMidnightOfNextMonth() {
-    let year = today.getFullYear();
-    let month = (today.getMonth()+1)%12;
-    return new Date(year, month, 1, 0, 0);
+    return firstMidnightOfThisMonth().add(1, 'M');
   }
 
   function saveShifts() {
@@ -35,26 +34,23 @@ describe('Monthly Staffing', function () {
   }
 
   function thisMonthDateString() {
-    return today.toISOString().split("T")[0];
+    return moment().toISOString().split("T")[0];
   }
 
   function nextMonthDateString() {
-    let year = today.getFullYear();
-    let month = (today.getMonth()+1)%12 + 1;
-    return new Date(year, month, 1, 0, 0).toISOString().split("T")[0];
+    return moment().add(1, 'M').toISOString().split("T")[0];
   }
 
   describe('When adding staff using the monthly staff view', function () {
 
     let cellToTest = ".htCore tbody :nth-child(1) :nth-child(2)";
-    xit("If I enter staff for the current month those staff should still be visible if I change months and change back", function () {
+    it("If I enter staff for the current month those staff should still be visible if I change months and change back", function () {
       saveShifts();
 
       setRoles(["staff:edit"]);
 
       cy.visit('/v2/test/live#terminal/T1/staffing/15///');
       cy.get(cellToTest).contains("1");
-
 
       cy.visit('/v2/test/live#terminal/T1/staffing/15/' + nextMonthDateString() +'//');
       cy.get(cellToTest).contains("2");

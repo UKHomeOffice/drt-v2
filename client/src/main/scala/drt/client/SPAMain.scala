@@ -2,21 +2,23 @@ package drt.client
 
 import diode.Action
 import drt.client.actions.Actions._
-import drt.client.components.{GlobalStyles, Layout, StatusPage, TerminalComponent, TerminalPlanningComponent, TerminalsDashboardPage}
+import drt.client.components.{AlertsPage, GlobalStyles, KeyCloakUsersPage, Layout, StatusPage, TerminalComponent, TerminalPlanningComponent, TerminalsDashboardPage}
 import drt.client.logger._
+import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.client.services.handlers.GetFeedStatuses
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SDateLike
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
-import scalacss.ProdDefaults._
 
 import scala.collection.immutable.Seq
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
+import scalacss.ProdDefaults._
 
-object SPAMain  {
+object SPAMain {
 
   sealed trait Loc
 
@@ -59,18 +61,26 @@ object SPAMain  {
     }
   }
 
+  def serverLogEndpoint: String = BaseUrl.until_#(Path("/logging")).value
+
   case class TerminalsDashboardLoc(period: Option[Int]) extends Loc
+
   case object StatusLoc extends Loc
+
+  case object KeyCloakUsersLoc extends Loc
+
+  case object AlertLoc extends Loc
 
   def requestInitialActions(): Unit = {
     val initActions = Seq(
       GetApplicationVersion,
-      GetUserRoles,
+      GetLoggedInUser,
       GetLoggedInStatus,
       GetAirportConfig(),
       GetFixedPoints(),
       UpdateMinuteTicker,
-      GetFeedStatuses()
+      GetFeedStatuses(),
+      GetAlerts(0L)
     )
 
     initActions.foreach(SPACircuit.dispatch(_))
@@ -80,7 +90,7 @@ object SPAMain  {
     .buildConfig { dsl =>
       import dsl._
 
-      val rule = homeRoute(dsl) | dashboardRoute(dsl) | terminalRoute(dsl) | statusRoute(dsl)
+      val rule = homeRoute(dsl) | dashboardRoute(dsl) | terminalRoute(dsl) | statusRoute(dsl) | keyCloakUsersRoute(dsl) | alertRoute(dsl)
 
       rule.notFound(redirectToPage(TerminalsDashboardLoc(None))(Redirect.Replace))
     }
@@ -95,6 +105,8 @@ object SPAMain  {
             SPACircuit.dispatch(c.loadAction)
           case (_, _: TerminalsDashboardLoc) =>
             SPACircuit.dispatch(SetViewMode(ViewLive()))
+          case (_, KeyCloakUsersLoc) =>
+            SPACircuit.dispatch(GetKeyCloakUsers)
           case _ =>
         }
       )
@@ -110,6 +122,18 @@ object SPAMain  {
     import dsl._
 
     staticRoute("#status", StatusLoc) ~> renderR((router: RouterCtl[Loc]) => StatusPage())
+  }
+
+  def keyCloakUsersRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+    import dsl._
+
+    staticRoute("#users", KeyCloakUsersLoc) ~> renderR((router: RouterCtl[Loc]) => KeyCloakUsersPage())
+  }
+
+  def alertRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+    import dsl._
+
+    staticRoute("#alerts", AlertLoc) ~> renderR((router: RouterCtl[Loc]) => AlertsPage())
   }
 
   def dashboardRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
@@ -149,7 +173,9 @@ object SPAMain  {
 
   @JSExport
   def main(): Unit = {
-    log.warn("Application starting")
+    log.debug("Application starting")
+
+    ErrorHandler.registerGlobalErrorHandler()
 
     import scalacss.ScalaCssReact._
 

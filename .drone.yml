@@ -5,7 +5,11 @@ pipeline:
     #image: quay.io/ukhomeofficedigital/scala-sbt:latest
     commands:
       - /root/entrypoint.sh
+<<<<<<< HEAD
       - sbt --error test docker:stage
+=======
+      - sbt --warn test docker:stage
+>>>>>>> master
     environment:
       - ARTIFACTORY_USERNAME=drt_ci
     secrets:
@@ -13,16 +17,23 @@ pipeline:
     when:
       event:
         - push
+<<<<<<< HEAD
       branch: 
         - foobardrt-acp-pgsql  
+=======
+      brach: drone    
+>>>>>>> master
 
   sonar-scanner:
     image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
     when:
       event:
         - push
+<<<<<<< HEAD
       branch: 
         - foobardrt-acp-pgsql   
+=======
+>>>>>>> master
 
   build_docker:
     environment:
@@ -36,6 +47,7 @@ pipeline:
       - latest
     when:
       event: push
+<<<<<<< HEAD
       branch: 
         - fooobar-drt-acp-pgsql
 
@@ -68,6 +80,9 @@ pipeline:
     target: /e2e/   
     when:
       event: push      
+=======
+      branch: drone
+>>>>>>> master
 
   build_tag:
     environment:
@@ -80,4 +95,7 @@ pipeline:
       - ${DRONE_TAG}
     when:
       event: tag
+<<<<<<< HEAD
 
+=======
+>>>>>>> master

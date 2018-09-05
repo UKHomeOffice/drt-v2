@@ -17,13 +17,16 @@ sealed trait BHXArrivals {
     date.getTime match {
       case 0L => None
       case _ =>
-        val datetime = new DateTime(date.getTime)
+        val datetime = new DateTime(date.getTime).withMillisOfSecond(0).withSecondOfMinute(0)
         Some(datetime.withZone(DateTimeZone.UTC).toString(ISODateTimeFormat.dateTime))
     }
   }
 
   def convertToUTCPlusOneHour(feedDate: XMLGregorianCalendar): String = {
-    val utcDatePlusOneHour = new DateTime(feedDate.toGregorianCalendar.getTimeInMillis, DateTimeZone.UTC).plusHours(1)
+    val utcDatePlusOneHour = new DateTime(feedDate.toGregorianCalendar.getTimeInMillis, DateTimeZone.UTC)
+      .plusHours(1)
+      .withMillisOfSecond(0)
+      .withSecondOfMinute(0)
     utcDatePlusOneHour.toString(ISODateTimeFormat.dateTime)
   }
 

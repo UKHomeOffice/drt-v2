@@ -8,21 +8,29 @@ import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageMa
 import server.feeds.{ManifestsFeedFailure, ManifestsFeedSuccess}
 import server.protobuf.messages.FlightsMessage.FeedStatusMessage
 import server.protobuf.messages.VoyageManifest._
-import services.{FeedStateLike, SDate}
+import services.SDate
 import services.graphstages.{Crunch, DqManifests}
 
 import scala.collection.immutable.Seq
 
-case class VoyageManifestState(manifests: Set[VoyageManifest], latestZipFilename: String, feedName: String, maybeFeedStatuses: Option[FeedStatuses]) extends FeedStateLike
+case class VoyageManifestState(manifests: Set[VoyageManifest],
+                               latestZipFilename: String,
+                               feedName: String,
+                               maybeFeedStatuses: Option[FeedStatuses]) extends FeedStateLike
 
 case object GetLatestZipFilename
 
-class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapshotInterval: Int) extends RecoveryActorLike with PersistentDrtActor[VoyageManifestState]{
+class VoyageManifestsActor(val snapshotBytesThreshold: Int,
+                           now: () => SDateLike,
+                           expireAfterMillis: Long,
+                           snapshotInterval: Int) extends RecoveryActorLike with PersistentDrtActor[VoyageManifestState] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   val name = "API"
 
-  var state = initialState
+  var state: VoyageManifestState = initialState
+
+  override val maybeSnapshotInterval = Option(snapshotInterval)
 
   def initialState = VoyageManifestState(
     manifests = Set(),
@@ -30,6 +38,7 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapsh
     feedName = name,
     maybeFeedStatuses = None
   )
+
   var persistCounter = 0
 
   def defaultLatestZipFilename: String = {
@@ -88,24 +97,22 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapsh
       log.info(s"Received ${newManifests.size} manifests, up to file $updatedLZF from connection at ${createdAt.toISOString()}")
 
       val updates = newManifests -- state.manifests
-
-      if (updates.nonEmpty) {
-        persistManifests(updates)
-        persistLastSeenFileName(updatedLZF)
-        snapshotIfRequired(state)
-      } else log.info(s"No new manifests to persist")
-
       val updatedManifests = newStateManifests(state.manifests, newManifests)
       val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, updates.size)
-      state = state.copy(maybeFeedStatuses = Option(state.addStatus(newStatus)))
+
+      if (updates.nonEmpty) persistManifests(updates) else log.info(s"No new manifests to persist")
+
+      if (updatedLZF != state.latestZipFilename) persistLastSeenFileName(updatedLZF)
+
+      state = VoyageManifestState(manifests = updatedManifests, latestZipFilename = updatedLZF, feedName = name, maybeFeedStatuses = Option(state.addStatus(newStatus)))
+
       persistFeedStatus(newStatus)
 
-      state = VoyageManifestState(manifests = updatedManifests,latestZipFilename = updatedLZF,feedName = name,maybeFeedStatuses = Option(state.addStatus(newStatus)))
-
     case ManifestsFeedFailure(message, failedAt) =>
-      log.warn(s"Failed to connect to AWS S3 for API data at ${failedAt.toISOString()}. $message")
+      log.error(s"Failed to connect to AWS S3 for API data at ${failedAt.toISOString()}. $message")
       val newStatus = FeedStatusFailure(failedAt.millisSinceEpoch, message)
       state = state.copy(maybeFeedStatuses = Option(state.addStatus(newStatus)))
+
       persistFeedStatus(newStatus)
 
     case GetFeedStatuses =>
@@ -130,57 +137,20 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapsh
       log.info(s"Received unexpected message $other")
   }
 
-  def persistLastSeenFileName(lastSeenFileName: String): Unit = {
-    persist(latestFilenameToMessage(lastSeenFileName)) { lzf =>
-      log.info(s"Persisting VoyageManifests latestZipFilename ${lzf.latestFilename.getOrElse("")}")
-      context.system.eventStream.publish(lzf)
-    }
-  }
+  def persistLastSeenFileName(lastSeenFileName: String): Unit = persistAndMaybeSnapshot(latestFilenameToMessage(lastSeenFileName))
 
-  def snapshotIfRequired(stateToSnapshot: VoyageManifestState): Unit = {
-    if (persistCounter >= snapshotInterval) {
-      val stateMessage = stateToMessage(stateToSnapshot)
-      saveSnapshot(stateMessage)
-      log.info(s"Saved ${stateMessage.serializedSize} bytes of VoyageManifests snapshot ${stateToSnapshot.latestZipFilename}, ${stateToSnapshot.manifests.size} manifests")
-      persistCounter = 0
-      bytesSinceSnapshotCounter = 0
-    }
-  }
+  def persistManifests(updatedManifests: Set[VoyageManifest]): Unit = persistAndMaybeSnapshot(voyageManifestsToMessage(updatedManifests))
 
-  def persistManifests(updatedManifests: Set[VoyageManifest]): Unit = {
-    persist(voyageManifestsToMessage(updatedManifests)) {
-      vmm =>
-        val messageBytes = vmm.serializedSize
-        log.info(s"Persisting ${vmm.serializedSize} bytes of  ${vmm.manifestMessages.size} manifest updates")
-        context.system.eventStream.publish(vmm)
-        persistCounter += 1
-        bytesSinceSnapshotCounter += messageBytes
-        logPersistedBytesCounter(bytesSinceSnapshotCounter)
-    }
-  }
+  def persistFeedStatus(feedStatus: FeedStatus): Unit = persistAndMaybeSnapshot(feedStatusToMessage(feedStatus))
 
-  def persistFeedStatus(feedStatus: FeedStatus): Unit = {
-    val message = feedStatusToMessage(feedStatus)
-
-    persist(message) { msg =>
-      val messageBytes = msg.serializedSize
-      log.info(s"Persisting $messageBytes bytes of ${msg.getClass}")
-      context.system.eventStream.publish(msg)
-      bytesSinceSnapshotCounter += messageBytes
-      logPersistedBytesCounter(bytesSinceSnapshotCounter)
-    }
-  }
-
-  private def voyageManifestsToMessage(updatedManifests: Set[VoyageManifest]) = {
-    VoyageManifestsMessage(
-      Option(SDate.now().millisSinceEpoch),
-      updatedManifests.map(voyageManifestToMessage).toList
-    )
-  }
+  def voyageManifestsToMessage(updatedManifests: Set[VoyageManifest]): VoyageManifestsMessage = VoyageManifestsMessage(
+    Option(SDate.now().millisSinceEpoch),
+    updatedManifests.map(voyageManifestToMessage).toList
+  )
 
   def latestFilenameToMessage(filename: String): VoyageManifestLatestFileNameMessage = {
     VoyageManifestLatestFileNameMessage(
-      createdAt = Option(SDate.now.millisSinceEpoch),
+      createdAt = Option(SDate.now().millisSinceEpoch),
       latestFilename = Option(filename))
   }
 
@@ -212,8 +182,8 @@ class VoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapsh
     )
   }
 
-  def stateToMessage(s: VoyageManifestState): VoyageManifestStateSnapshotMessage = VoyageManifestStateSnapshotMessage(
-    Option(s.latestZipFilename), stateVoyageManifestsToMessages(s.manifests), s.maybeFeedStatuses.flatMap(FlightMessageConversion.feedStatusesToMessage))
+  override def stateToMessage: VoyageManifestStateSnapshotMessage = VoyageManifestStateSnapshotMessage(
+    Option(state.latestZipFilename), stateVoyageManifestsToMessages(state.manifests), state.maybeFeedStatuses.flatMap(FlightMessageConversion.feedStatusesToMessage))
 
   def stateVoyageManifestsToMessages(manifests: Set[VoyageManifest]): Seq[VoyageManifestMessage] = {
     manifests.map(voyageManifestToMessage).toList

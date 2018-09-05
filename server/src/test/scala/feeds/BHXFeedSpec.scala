@@ -98,10 +98,10 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
       arrivals.head mustEqual new Arrival(
         Operator = None,
         Status = "Arrived",
-        Estimated = Some(SDate("2012-06-02T06:46:53.123Z", DateTimeZone.UTC).millisSinceEpoch),
-        Actual = Some(SDate("2012-06-02T06:46:53.123Z", DateTimeZone.UTC).millisSinceEpoch),
-        EstimatedChox = Some(SDate("2012-06-02T06:46:53.123Z", DateTimeZone.UTC).millisSinceEpoch),
-        ActualChox = Some(SDate("2012-06-02T06:46:53.123Z", DateTimeZone.UTC).millisSinceEpoch),
+        Estimated = Some(SDate("2012-06-02T06:46:00Z", DateTimeZone.UTC).millisSinceEpoch),
+        Actual = Some(SDate("2012-06-02T06:46:00Z", DateTimeZone.UTC).millisSinceEpoch),
+        EstimatedChox = Some(SDate("2012-06-02T06:46:00Z", DateTimeZone.UTC).millisSinceEpoch),
+        ActualChox = Some(SDate("2012-06-02T06:46:00Z", DateTimeZone.UTC).millisSinceEpoch),
         Gate = Some("44"),
         Stand = Some("57R"),
         MaxPax = Some(80),
@@ -115,12 +115,12 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
         rawICAO = "AF1164",
         rawIATA = "AF1164",
         Origin = "CPH",
-        Scheduled = 1338619613123L,
+        Scheduled = 1338619560000L,
         PcpTime = None,
         LastKnownPax = None)
     }
 
-    "we can read forecast flight data" in new Context {
+    "we can read forecast flight data with seconds dropped from timestamps" in new Context {
       val feed = BHXFeed(serviceSoap)
       val arrivals: List[Arrival] = feed.getForecastArrivals
       verify(serviceSoap).bfGetScheduledFlights()
@@ -145,7 +145,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
         rawICAO = "AF1164",
         rawIATA = "AF1164",
         Origin = "CPH",
-        Scheduled = 1338623213123L, // BHX Forecast is incorrect. This should be 1338619613123L or 2012-06-02T06:46:53.123Z
+        Scheduled = 1338623160000L, // BHX Forecast is incorrect. This should be 1338619613123L or 2012-06-02T06:46:53.123Z
         PcpTime = None,
         LastKnownPax = None)
     }

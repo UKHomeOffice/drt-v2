@@ -1,24 +1,26 @@
 package controllers
 
 import java.nio.ByteBuffer
-
 import actors._
 import actors.pointInTime.CrunchStateReadActor
 import akka.actor._
-import akka.event.LoggingAdapter
+import akka.event.{Logging, LoggingAdapter}
 import akka.pattern.{AskableActorRef, _}
 import akka.stream._
 import akka.util.{ByteString, Timeout}
 import boopickle.CompositePickler
 import boopickle.Default._
 import buildinfo.BuildInfo
-import com.google.inject.{Inject, Singleton}
 import com.typesafe.config.ConfigFactory
+import drt.http.ProdSendAndReceive
 import drt.shared.CrunchApi.{groupCrunchMinutesByX, _}
 import drt.shared.FlightsApi.TerminalName
+import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
 import drt.staff.ImportStaff
+import drt.users.KeyCloakClient
+import javax.inject.{Inject, Singleton}
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.{HeaderNames, HttpEntity}
@@ -33,15 +35,13 @@ import services.graphstages.Crunch._
 import services.shifts.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
-import services.{SDate, _}
-import test.{MockRoles, TestDrtSystem}
-
+import services._
+import test.TestDrtSystem
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.matching.Regex
-//import scala.collection.immutable.Seq // do not import this here, it would break autowire.
 import services.PcpArrival.pcpFrom
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
@@ -58,10 +58,10 @@ object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
 object PaxFlow {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def makeFlightPaxFlowCalculator(splitRatioForFlight: (Arrival) => Option[SplitRatios],
-                                  bestPax: (Arrival) => Int): (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
+  def makeFlightPaxFlowCalculator(splitRatioForFlight: Arrival => Option[SplitRatios],
+                                  bestPax: Arrival => Int): Arrival => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
     val provider = PaxLoadCalculator.flightPaxFlowProvider(splitRatioForFlight, bestPax)
-    (arrival) => {
+    arrival => {
       val pax = bestPax(arrival)
       val paxFlow = provider(arrival)
       val summedPax = paxFlow.map(_._2.paxSum).sum
@@ -126,7 +126,7 @@ class NoCacheFilter @Inject()(
   val log: Logger = LoggerFactory.getLogger(getClass)
   val rootRegex: Regex = "/v2/.{3}/live".r
 
-  override def apply(requestHeaderToFutureResult: (RequestHeader) => Future[Result])(rh: RequestHeader): Future[Result] = {
+  override def apply(requestHeaderToFutureResult: RequestHeader => Future[Result])(rh: RequestHeader): Future[Result] = {
     requestHeaderToFutureResult(rh).map { result =>
       rh.uri match {
         case rootRegex() =>
@@ -140,16 +140,23 @@ class NoCacheFilter @Inject()(
 
 
 trait UserRoleProviderLike {
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
-  val availableRoles = List("staff:edit", "drt:team")
+  def userRolesFromHeader(headers: Headers): List[Role] = headers.get("X-Auth-Roles").map(_.split(",").flatMap(Roles.parse).toList).getOrElse(List.empty[Role])
 
-  def userRolesFromHeader(headers: Headers): List[String] = headers.get("X-Auth-Roles").map(_.split(",").toList).getOrElse(List())
+  def getRoles(config: Configuration, headers: Headers, session: Session): List[Role]
 
-  def getRoles(config: Configuration, headers: Headers, session: Session): List[String]
+  def getLoggedInUser(config: Configuration, headers: Headers, session: Session): LoggedInUser = {
+    LoggedInUser(
+      userName = headers.get("X-Auth-Username").getOrElse("Unknown"),
+      id = headers.get("X-Auth-Userid").getOrElse("Unknown"),
+      email = headers.get("X-Auth-Email").getOrElse("Unknown"),
+      roles = getRoles(config, headers, session)
+    )
+  }
 }
 
-
+@Singleton
 class Application @Inject()(implicit val config: Configuration,
                             implicit val mat: Materializer,
                             env: Environment,
@@ -157,6 +164,7 @@ class Application @Inject()(implicit val config: Configuration,
                             ec: ExecutionContext)
   extends InjectedController
     with AirportConfProvider
+    with ApplicationWithAlerts
     with ProdPassengerSplitProviders
     with ImplicitTimeoutProvider {
 
@@ -164,7 +172,7 @@ class Application @Inject()(implicit val config: Configuration,
     case Some("test") =>
       new TestDrtSystem(system, config, getPortConfFromEnvVar)
     case _ =>
-      new DrtSystem(system, config, getPortConfFromEnvVar)
+      DrtSystem(system, config, getPortConfFromEnvVar)
   }
   ctrl.run()
 
@@ -174,7 +182,7 @@ class Application @Inject()(implicit val config: Configuration,
 
   log.info(s"ISOChronology.getInstance: ${ISOChronology.getInstance}")
 
-  private def systemTimeZone = System.getProperty("user.timezone")
+  def systemTimeZone: String = System.getProperty("user.timezone")
 
   log.info(s"System.getProperty(user.timezone): $systemTimeZone")
   assert(systemTimeZone == "UTC")
@@ -198,19 +206,17 @@ class Application @Inject()(implicit val config: Configuration,
                session: Session
              ): ApiService = new ApiService(airportConfig, shiftsActor, fixedPointsActor, staffMovementsActor, headers, session) {
 
-      log.info(s"Session inside service: $session")
-
       override implicit val timeout: Timeout = Timeout(5 seconds)
 
       def actorSystem: ActorSystem = system
 
-      def getCrunchStateForDay(day: MillisSinceEpoch): Future[Option[CrunchState]] = loadBestCrunchStateForPointInTime(day)
+      def getCrunchStateForDay(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = loadBestCrunchStateForPointInTime(day)
 
       def getApplicationVersion(): String = BuildInfo.version
 
-      override def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]] = crunchStateAtPointInTime(pointInTime)
+      override def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = crunchStateAtPointInTime(pointInTime)
 
-      def getCrunchUpdates(sinceMillis: MillisSinceEpoch, windowStartMillis: MillisSinceEpoch, windowEndMillis: MillisSinceEpoch): Future[Option[CrunchUpdates]] = {
+      def getCrunchUpdates(sinceMillis: MillisSinceEpoch, windowStartMillis: MillisSinceEpoch, windowEndMillis: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchUpdates]]] = {
         val liveStateCutOff = getLocalNextMidnight(ctrl.now()).addDays(1).millisSinceEpoch
 
         val stateActor = if (windowStartMillis < liveStateCutOff) liveCrunchStateActor else forecastCrunchStateActor
@@ -218,12 +224,12 @@ class Application @Inject()(implicit val config: Configuration,
         val crunchStateFuture = stateActor.ask(GetUpdatesSince(sinceMillis, windowStartMillis, windowEndMillis))(new Timeout(30 seconds))
 
         crunchStateFuture.map {
-          case Some(cu: CrunchUpdates) => Option(cu)
-          case _ => None
+          case Some(cu: CrunchUpdates) => Right(Option(cu))
+          case _ => Right(None)
         } recover {
           case t =>
             log.warn(s"Didn't get a CrunchUpdates: $t")
-            None
+            Left(CrunchStateError(t.getMessage))
         }
       }
 
@@ -231,7 +237,7 @@ class Application @Inject()(implicit val config: Configuration,
         true
       }
 
-      def getUserRoles = ctrl.getRoles(config, headers, session)
+      def getLoggedInUser(): LoggedInUser = ctrl.getLoggedInUser(config, headers, session)
 
       def getFeedStatuses(): Future[Seq[FeedStatuses]] = ctrl.getFeedStatus()
 
@@ -279,7 +285,7 @@ class Application @Inject()(implicit val config: Configuration,
       }
 
       def saveStaffTimeSlotsForMonth(timeSlotsForTerminalMonth: StaffTimeSlotsForTerminalMonth): Future[Unit] = {
-        if (getUserRoles().contains("staff:edit")) {
+        if (getLoggedInUser().roles.contains(StaffEdit)) {
           log.info(s"Saving ${timeSlotsForTerminalMonth.timeSlots.length} timeslots for ${SDate(timeSlotsForTerminalMonth.monthMillis).ddMMyyString}")
           val futureShifts = shiftsActor.ask(GetState)(new Timeout(5 second))
           futureShifts.map {
@@ -301,6 +307,39 @@ class Application @Inject()(implicit val config: Configuration,
         }
       }
 
+      def keyCloakClient: KeyCloakClient with ProdSendAndReceive = {
+        val token = headers.get("X-Auth-Token").getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
+        val keyCloakUrl = config.getOptional[String]("key-cloak.url").getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
+        new KeyCloakClient(token, keyCloakUrl, actorSystem) with ProdSendAndReceive
+      }
+
+      def getKeyCloakUsers(): Future[List[KeyCloakUser]] = {
+        log.info(s"Got these roles: ${getLoggedInUser().roles}")
+        if (getLoggedInUser().roles.contains(ManageUsers)) {
+          keyCloakClient.getUsersNotInGroup("Approved")
+        } else throw new Exception("You do not have permission manage users")
+      }
+
+      def addUserToGroup(userId: String, groupName: String): Unit = {
+        if (getLoggedInUser().roles.contains(ManageUsers)) {
+          val futureGroupId: Future[Option[KeyCloakGroup]] = keyCloakClient.getGroups().map(_.find(_.name == groupName))
+          futureGroupId.map {
+            case Some(group) => keyCloakClient.addUserToGroup(userId, group.id)
+            case None => log.error(s"Unable to add $userId to $groupName")
+          }
+        } else throw new Exception("You do not have permission manage users")
+      }
+
+      def getAlerts(createdAfter: MillisSinceEpoch): Future[Seq[Alert]] = {
+        for {
+          alerts <- (ctrl.alertsActor ? GetState).mapTo[Seq[Alert]]
+        } yield alerts.filter(a => a.createdAt > createdAfter)
+      }
+
+      def deleteAllAlerts(): Unit = ctrl.alertsActor ? DeleteAlerts
+
+      def saveAlert(alert: Alert): Unit = ctrl.alertsActor ? alert
+
       override def liveCrunchStateActor: AskableActorRef = ctrl.liveCrunchStateActor
 
       override def forecastCrunchStateActor: AskableActorRef = ctrl.forecastCrunchStateActor
@@ -308,31 +347,31 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def loadBestCrunchStateForPointInTime(day: MillisSinceEpoch): Future[Option[CrunchState]] =
+  def loadBestCrunchStateForPointInTime(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] =
     if (isHistoricDate(day)) {
       crunchStateForEndOfDay(day)
     } else if (day <= getLocalNextMidnight(SDate.now()).millisSinceEpoch) {
       ctrl.liveCrunchStateActor.ask(GetState).map {
-        case Some(PortState(f, m, s)) => Option(CrunchState(f.values.toSet, m.values.toSet, s.values.toSet))
-        case _ => None
+        case Some(PortState(f, m, s)) => Right(Option(CrunchState(f.values.toSet, m.values.toSet, s.values.toSet)))
+        case _ => Right(None)
       }
     } else {
       crunchStateForDayInForecast(day)
     }
 
-  def crunchStateForDayInForecast(day: MillisSinceEpoch): Future[Option[CrunchState]] = {
+  def crunchStateForDayInForecast(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = {
     val firstMinute = getLocalLastMidnight(SDate(day)).millisSinceEpoch
     val lastMinute = SDate(firstMinute).addHours(airportConfig.dayLengthHours).millisSinceEpoch
 
     val crunchStateFuture = ctrl.forecastCrunchStateActor.ask(GetPortState(firstMinute, lastMinute))(new Timeout(30 seconds))
 
     crunchStateFuture.map {
-      case Some(PortState(f, m, s)) => Option(CrunchState(f.values.toSet, m.values.toSet, s.values.toSet))
-      case _ => None
+      case Some(PortState(f, m, s)) => Right(Option(CrunchState(f.values.toSet, m.values.toSet, s.values.toSet)))
+      case _ => Right(None)
     } recover {
       case t =>
         log.warning(s"Didn't get a CrunchState: $t")
-        None
+        Left(CrunchStateError(t.getMessage))
     }
   }
 
@@ -345,7 +384,7 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
 
-  def crunchStateAtPointInTime(pointInTime: MillisSinceEpoch): Future[Option[CrunchState]] = {
+  def crunchStateAtPointInTime(pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = {
     val relativeLastMidnight = getLocalLastMidnight(SDate(pointInTime)).millisSinceEpoch
     val startMillis = relativeLastMidnight
     val endMillis = relativeLastMidnight + oneHourMillis * airportConfig.dayLengthHours
@@ -353,7 +392,7 @@ class Application @Inject()(implicit val config: Configuration,
     portStatePeriodAtPointInTime(startMillis, endMillis, pointInTime)
   }
 
-  def crunchStateForEndOfDay(day: MillisSinceEpoch): Future[Option[CrunchState]] = {
+  def crunchStateForEndOfDay(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = {
     val relativeLastMidnight = getLocalLastMidnight(SDate(day)).millisSinceEpoch
     val startMillis = relativeLastMidnight
     val endMillis = relativeLastMidnight + oneHourMillis * airportConfig.dayLengthHours
@@ -362,16 +401,16 @@ class Application @Inject()(implicit val config: Configuration,
     portStatePeriodAtPointInTime(startMillis, endMillis, pointInTime)
   }
 
-  def portStatePeriodAtPointInTime(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, pointInTime: MillisSinceEpoch): Future[Option[CrunchState]] = {
+  def portStatePeriodAtPointInTime(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = {
     val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], airportConfig.portStateSnapshotInterval, SDate(pointInTime), airportConfig.queues), GetPortState(startMillis, endMillis))
     val portCrunchResult = cacheActorRef.ask(query)(new Timeout(30 seconds))
     portCrunchResult.map {
-      case Some(PortState(f, m, s)) => Option(CrunchState(f.values.toSet, m.values.toSet, s.values.toSet))
-      case _ => None
+      case Some(PortState(f, m, s)) => Right(Option(CrunchState(f.values.toSet, m.values.toSet, s.values.toSet)))
+      case _ => Right(None)
     }.recover {
       case t =>
         log.warning(s"Didn't get a point-in-time CrunchState: $t")
-        None
+        Left(CrunchStateError(t.getMessage))
     }
   }
 
@@ -406,7 +445,7 @@ class Application @Inject()(implicit val config: Configuration,
                         pointInTime: MilliDate,
                         startHour: Int,
                         endHour: Int,
-                        crunchStateFuture: Future[Option[CrunchState]]
+                        crunchStateFuture: Future[Either[CrunchStateError, Option[CrunchState]]]
                       ): Future[Option[String]] = {
 
     val startDateTime = getLocalLastMidnight(pointInTime).addHours(startHour)
@@ -415,7 +454,7 @@ class Application @Inject()(implicit val config: Configuration,
 
     val localTime = SDate(pointInTime, europeLondonTimeZone)
     crunchStateFuture.map {
-      case Some(CrunchState(_, cm, sm)) =>
+      case Right(Some(CrunchState(_, cm, sm))) =>
         log.debug(s"Exports: ${localTime.toISOString()} Got ${cm.size} CMs and ${sm.size} SMs ")
         val cmForDay: Set[CrunchMinute] = cm.filter(cm => isInRange(SDate(cm.minute, europeLondonTimeZone)))
         val smForDay: Set[StaffMinute] = sm.filter(sm => isInRange(SDate(sm.minute, europeLondonTimeZone)))
@@ -502,7 +541,7 @@ class Application @Inject()(implicit val config: Configuration,
       val crunchStateForPointInTime = loadBestCrunchStateForPointInTime(pit.millisSinceEpoch)
       flightsForCSVExportWithinRange(terminalName, pit, startHour, endHour, crunchStateForPointInTime).map {
         case Some(csvFlights) =>
-          val csvData = if (ctrl.getRoles(config, request.headers, request.session).contains("drt:team")) {
+          val csvData = if (ctrl.getRoles(config, request.headers, request.session).contains(ApiView)) {
             log.info(s"Sending Flights CSV with ACL data to DRT Team member")
             CSVData.flightsWithSplitsWithAPIActualsToCSVWithHeadings(csvFlights)
           }
@@ -615,7 +654,7 @@ class Application @Inject()(implicit val config: Configuration,
                                       pit: MilliDate,
                                       startHour: Int,
                                       endHour: Int,
-                                      crunchStateFuture: Future[Option[CrunchState]]
+                                      crunchStateFuture: Future[Either[CrunchStateError, Option[CrunchState]]]
                                     ): Future[Option[List[ApiFlightWithSplits]]] = {
 
     val startDateTime = getLocalLastMidnight(pit).addHours(startHour)
@@ -623,7 +662,7 @@ class Application @Inject()(implicit val config: Configuration,
     val isInRange = isInRangeOnDay(startDateTime, endDateTime) _
 
     crunchStateFuture.map {
-      case Some(CrunchState(fs, _, _)) =>
+      case Right(Some(CrunchState(fs, _, _))) =>
 
         val flightsForTerminalInRange = fs.toList
           .filter(_.apiFlight.Terminal == terminalName)
@@ -678,13 +717,34 @@ class Application @Inject()(implicit val config: Configuration,
       })
   }
 
-  def logging: Action[AnyContent] = Action(parse.anyContent) {
+  def logging = Action(parse.tolerantFormUrlEncoded) {
     implicit request =>
-      request.body.asJson.foreach {
-        msg =>
-          log.info(s"CLIENT - $msg")
+
+      def postStringValOrElse(key: String, default: String) = {
+        request.body.get(key).map(_.head).getOrElse(default)
       }
-      Ok("")
+
+      val logLevel = postStringValOrElse("level", "ERROR")
+
+      val millis = request.body.get("timestamp")
+        .map(_.head.toLong)
+        .getOrElse(SDate.now(Crunch.europeLondonTimeZone).millisSinceEpoch)
+
+      val logMessage = Map(
+        "logger" -> ("CLIENT - " + postStringValOrElse("logger", "log")),
+        "message" -> postStringValOrElse("message", "no log message"),
+        "logTime" -> SDate(millis).toISOString(),
+        "url" -> postStringValOrElse("url", request.headers.get("referrer").getOrElse("unknown url")),
+        "logLevel" -> logLevel
+      )
+
+      log.log(Logging.levelFor(logLevel).getOrElse(Logging.ErrorLevel), s"Client Error: ${
+        logMessage.map {
+          case (value, key) => s"$key: $value"
+        }.mkString(", ")
+      }")
+
+      Ok("logged successfully")
   }
 }
 

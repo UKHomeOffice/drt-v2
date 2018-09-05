@@ -15,8 +15,11 @@ import scala.language.postfixOps
 
 
 sealed trait ArrivalsSourceType
+
 case object LiveArrivals extends ArrivalsSourceType
+
 case object ForecastArrivals extends ArrivalsSourceType
+
 case object BaseArrivals extends ArrivalsSourceType
 
 class ArrivalsGraphStage(name: String = "",
@@ -57,7 +60,7 @@ class ArrivalsGraphStage(name: String = "",
 
     def prepInitialArrivals(arrivals: Set[Arrival]): Map[Int, Arrival] = {
       val arrivalsWithPcp = filterAndSetPcp(arrivals.toSeq)
-      purgeExpired(arrivalsWithPcp)
+      Crunch.purgeExpired(arrivalsWithPcp, (a: Arrival) => a.PcpTime.getOrElse(0L), now, expireAfterMillis)
     }
 
     setHandler(inBaseArrivals, new InHandler {
@@ -98,34 +101,14 @@ class ArrivalsGraphStage(name: String = "",
     }
 
     def mergeUpdatesAndPurge(updates: Map[Int, Arrival], existingArrivals: Map[Int, Arrival]): Map[Int, Arrival] = {
-      val updated = updates
-        .foldLeft(existingArrivals) {
-          case (soFar, (newArrivalId, newArrival)) => soFar.updated(newArrivalId, newArrival)
-        }
-
-      val minusExpired = purgeExpired(updated)
-
-      val numPurged = existingArrivals.size - minusExpired.size
-      if (numPurged > 0) log.info(s"Purged $numPurged expired arrivals during update")
-
-      minusExpired
-    }
-
-    def purgeExpired(flightsById: Map[Int, Arrival]): Map[Int, Arrival] = {
-      val expired: Arrival => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (a: Arrival) => a.PcpTime.getOrElse(0L))
-      flightsById.filterNot {
-        case (_, arrival) => expired(arrival)
+      updates.foldLeft(existingArrivals) {
+        case (soFar, (newArrivalId, newArrival)) => soFar.updated(newArrivalId, newArrival)
       }
-    }
-
-    def purgeExpired(flights: Set[Arrival]): Set[Arrival] = {
-      val expired: Arrival => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (a: Arrival) => a.PcpTime.getOrElse(0L))
-      flights.filterNot(expired)
     }
 
     def mergeAllSourcesAndPush(baseArrivals: Map[Int, Arrival], forecastArrivals: Map[Int, Arrival], liveArrivals: Map[Int, Arrival]): Unit = {
       val newMerged = mergeArrivals(baseArrivals, forecastArrivals, liveArrivals)
-      val minusExpired = purgeExpired(newMerged)
+      val minusExpired = Crunch.purgeExpired(newMerged, (a: Arrival) => a.PcpTime.getOrElse(0L), now, expireAfterMillis)
 
       val numPurged = newMerged.size - minusExpired.size
       if (numPurged > 0) log.info(s"Purged $numPurged expired arrivals during merge: ${newMerged.size} -> ${minusExpired.size}")
@@ -188,7 +171,7 @@ class ArrivalsGraphStage(name: String = "",
             case None =>
               (notFoundSoFar + 1, mergedSoFar)
             case Some(baseArrival) =>
-              val actPax = forecastArrival.ActPax.filter(_>0).orElse(baseArrival.ActPax)
+              val actPax = forecastArrival.ActPax.filter(_ > 0).orElse(baseArrival.ActPax)
               val mergedArrival = baseArrival.copy(ActPax = actPax, TranPax = forecastArrival.TranPax, Status = forecastArrival.Status)
               (notFoundSoFar, mergedSoFar.updated(fcstId, mergedArrival))
           }
@@ -202,8 +185,8 @@ class ArrivalsGraphStage(name: String = "",
           val mergedArrival = liveArrival.copy(
             rawIATA = baseArrival.rawIATA,
             rawICAO = baseArrival.rawICAO,
-            ActPax = liveArrival.ActPax.filter(_>0).orElse(mergedSoFarArrival.ActPax),
-            TranPax = liveArrival.ActPax.filter(_ > 0).flatMap(actPax=> liveArrival.TranPax).orElse(mergedSoFarArrival.TranPax))
+            ActPax = liveArrival.ActPax.filter(_ > 0).orElse(mergedSoFarArrival.ActPax),
+            TranPax = liveArrival.ActPax.filter(_ > 0).flatMap(_ => liveArrival.TranPax).orElse(mergedSoFarArrival.TranPax))
 
           mergedSoFar.updated(liveId, mergedArrival)
       }

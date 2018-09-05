@@ -2,7 +2,6 @@ package drt.client.services.handlers
 
 import autowire._
 import boopickle.Default._
-import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import diode.Implicits.runAfterImpl
 import diode._
 import diode.data._
@@ -49,8 +48,19 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
           effectOnly(effects)
       }
 
+    case NoCrunchStateUpdatesAndContinuePollingIfNecessary() =>
+      val pollCrunchUpdatesIfTodayOrAFutureDate = viewMode() match {
+        case ViewDay(time) => time.millisSinceEpoch > midnightThisMorning.millisSinceEpoch
+        case ViewPointInTime(_) => false
+        case _ => true
+      }
+      val thereIsNoData = modelRW.value._1.headOption.isEmpty
+      val allEffects = if (pollCrunchUpdatesIfTodayOrAFutureDate) Effect(Future(HideLoader())) + getCrunchUpdatesAfterDelay else Effect(Future(HideLoader()))
+      if (thereIsNoData) updated((Empty, SDate.now().millisSinceEpoch), allEffects) else effectOnly(allEffects)
+
     case UpdateCrunchStateFromCrunchState(crunchState: CrunchState) =>
-      val oldCodes = value._1.map(cs => cs.flights.map(_.apiFlight.Origin)).getOrElse(Set())
+      val oldCodes =
+        value._1.map(cs => cs.flights.map(_.apiFlight.Origin)).getOrElse(Set())
       val newCodes = crunchState.flights.map(_.apiFlight.Origin)
       val unseenCodes = newCodes -- oldCodes
       val allEffects = if (unseenCodes.nonEmpty) {
@@ -59,7 +69,21 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
       } else {
         Effect(Future(HideLoader()))
       }
+      log.info(s"set crunchstate ready")
       updated((Ready(crunchState), 0L), allEffects)
+
+    case UpdateCrunchStateFromUpdates(crunchUpdates) =>
+      log.info(s"Client got ${crunchUpdates.flights.size} flights & ${crunchUpdates.minutes.size} minutes from CrunchUpdates")
+
+      val someStateExists = !value._1.isEmpty
+
+      val newState = if (someStateExists) {
+        val existingState = value._1.get
+        updateStateFromUpdates(crunchUpdates, existingState)
+      } else newStateFromUpdates(crunchUpdates)
+
+      log.info(s"set crunchstate pendingstale")
+      updated((PendingStale(newState), crunchUpdates.latest), Effect(Future(HideLoader())))
 
     case UpdateCrunchStateFromUpdatesAndContinuePolling(crunchUpdates: CrunchUpdates) =>
       val getCrunchStateAfterDelay = Effect(Future(GetCrunchState())).after(crunchUpdatesRequestFrequency)
@@ -75,23 +99,9 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
       } else effects
 
       effectOnly(allEffects)
-
-    case SetCrunchPending() =>
-      log.info(s"Clearing out the crunch stuff")
-      updated((Pending(), 0L))
-
-    case UpdateCrunchStateFromUpdates(crunchUpdates) =>
-      log.info(s"Client got ${crunchUpdates.flights.size} flights & ${crunchUpdates.minutes.size} minutes from CrunchUpdates")
-
-      val someStateExists = !value._1.isEmpty
-
-      val newState = if (someStateExists) {
-        val existingState = value._1.get
-        updateStateFromUpdates(crunchUpdates, existingState)
-      } else newStateFromUpdates(crunchUpdates)
-
-      updated((PendingStale(newState), crunchUpdates.latest), Effect(Future(HideLoader())))
   }
+
+  def getCrunchUpdatesAfterDelay: Effect = Effect(Future(GetCrunchState())).after(crunchUpdatesRequestFrequency)
 
   def requestHistoricCrunchState(viewMode: ViewMode): Future[Action] = {
     log.info(s"Requesting CrunchState for point in time ${viewMode.time.prettyDateTime()}")
@@ -105,27 +115,32 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
       case ViewDay(time) =>
         log.info(s"Calling getCrunchStateForDay ${time.prettyDateTime()}")
         AjaxClient[Api].getCrunchStateForDay(time.millisSinceEpoch).call()
-      case _ => Future(None)
+      case _ => Future(Right(None))
     }
 
     processFutureCrunch(futureCrunchState)
   }
 
-  def processFutureCrunch[U](call: Future[Option[U]]): Future[Action] = {
+  def processFutureCrunch[U, E](call: Future[Either[E, Option[U]]]): Future[Action] = {
     call.map {
-      case Some(cs: CrunchState) =>
-        log.info(s"Got CrunchState with ${cs.flights.size} flights, ${cs.crunchMinutes.size} minutes")
-        UpdateCrunchStateFromCrunchState(cs)
-      case Some(cu: CrunchUpdates) =>
-        log.info(s"Got CrunchUpdates with ${cu.flights.size} flights, ${cu.minutes.size} minutes")
-        UpdateCrunchStateFromUpdatesAndContinuePolling(cu)
-      case _ =>
-        RetryActionAfter(GetCrunchState(), crunchUpdatesRequestFrequency)
-    }.recoverWith {
-      case _ =>
-        log.error(s"Failed to GetCrunchState. Re-requesting after ${PollDelay.recoveryDelay}")
-        Future(RetryActionAfter(GetCrunchState(), PollDelay.recoveryDelay))
-    }
+        case Right(Some(cs: CrunchState)) =>
+          log.info(s"Got CrunchState with ${cs.flights.size} flights, ${cs.crunchMinutes.size} minutes")
+          if (cs.isEmpty) NoCrunchStateUpdatesAndContinuePollingIfNecessary() else UpdateCrunchStateFromCrunchState(cs)
+        case Right(Some(cu: CrunchUpdates)) =>
+          log.info(s"Got CrunchUpdates with ${cu.flights.size} flights, ${cu.minutes.size} minutes")
+          UpdateCrunchStateFromUpdatesAndContinuePolling(cu)
+        case Left(e: CrunchStateError) =>
+          log.error(s"Failed to GetCrunchState ${e.message}. Re-requesting after ${PollDelay.recoveryDelay}")
+          RetryActionAfter(GetCrunchState(), PollDelay.recoveryDelay)
+        case _ =>
+          log.info(s"No CrunchUpdates ${SDate.now().getSeconds()}")
+          NoCrunchStateUpdatesAndContinuePollingIfNecessary()
+      }
+      .recoverWith {
+        case _ =>
+          log.error(s"Failed to GetCrunchState. Re-requesting after ${PollDelay.recoveryDelay}")
+          Future(RetryActionAfter(GetCrunchState(), PollDelay.recoveryDelay))
+      }
   }
 
   def requestCrunchUpdates(pointInTime: SDateLike): Future[Action] = {

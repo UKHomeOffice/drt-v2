@@ -8,7 +8,7 @@ import drt.client.services.JSDateConversions._
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.TerminalName
-import drt.shared.{AirportConfig, MilliDate, SDateLike, StaffMovement}
+import drt.shared._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.vdom.html_<^._
@@ -30,7 +30,7 @@ object TerminalStaffing {
                     potFixedPoints: Pot[String],
                     potStaffMovements: Pot[Seq[StaffMovement]],
                     airportConfig: AirportConfig,
-                    roles: Pot[List[String]],
+                    loggedInUser: Pot[LoggedInUser],
                     viewMode: ViewMode
                   )
 
@@ -81,8 +81,8 @@ object TerminalStaffing {
               val fixedPoints: List[Try[StaffAssignment]] = StaffAssignmentParser(rawFixedPoints).parsedAssignments.toList
               <.div(
                 <.div(^.className := "container",
-                  <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(rawFixedPoints, props.airportConfig, props.terminalName, props.roles))),
-                  <.div(^.className := "col-md-3", movementsEditor(movementsForDay(movements, props.viewMode.time), props.terminalName))
+                  <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(rawFixedPoints, props.airportConfig, props.terminalName, props.loggedInUser))),
+                  <.div(^.className := "col-md-4", movementsEditor(movementsForDay(movements, props.viewMode.time), props.terminalName))
                 ),
                 <.div(^.className := "container",
                   <.div(^.className := "col-md-10", staffOverTheDay(movementsForDay(movements, props.viewMode.time), shifts, fixedPoints, props.terminalName)))
@@ -139,10 +139,12 @@ object TerminalStaffing {
                 movementPair.toList.sortBy(_.time) match {
                   case first :: second :: Nil =>
                     val remove = <.a(Icon.remove, ^.key := first.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) => Callback(SPACircuit.dispatch(RemoveStaffMovement(0, first.uUID)))))
-                    <.li(remove, " ", MovementDisplay.displayPair(first, second))
+                    val span = <.span(^.`class`:="movement-display", MovementDisplay.displayPair(first, second))
+                    <.li(remove, " ", span)
                   case mm :: Nil =>
                     val remove = <.a(Icon.remove, ^.key := mm.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) => Callback(SPACircuit.dispatch(RemoveStaffMovement(0, mm.uUID)))))
-                    <.li(remove, " ", MovementDisplay.displaySingle(mm))
+                    val span = <.span(^.`class`:="movement-display", MovementDisplay.displaySingle(mm))
+                    <.li(remove, " ", span)
                   case x =>
                     log.info(s"didn't get a pair: $x")
                     TagMod()
@@ -158,7 +160,7 @@ object TerminalStaffing {
     case class FixedPointsProps(rawFixedPoints: String,
                                 airportConfig: AirportConfig,
                                 terminalName: TerminalName,
-                                roles: Pot[List[String]])
+                                loggedInUser: Pot[LoggedInUser])
 
     case class FixedPointsState(rawFixedPoints: String)
 
@@ -179,8 +181,8 @@ object TerminalStaffing {
 
           <.div(
             <.h2("Miscellaneous Staff"),
-            props.roles.render(r => {
-              if (r.contains("staff:edit")) {
+            props.loggedInUser.render(loggedInUser => {
+              if (loggedInUser.roles.contains(StaffEdit)) {
                 <.div(
                   <.p("One entry per line with values separated by commas, e.g.:"),
                   <.pre(<.div(examples.map(line => <.div(line)).toTagMod)),
@@ -254,7 +256,8 @@ object TerminalStaffing {
         case "" => " (no reason given) "
         case r => r
       }
-      s"${start.delta} @ $startDateForDisplay ${displayTime(start.time)} -> $endDateForDisplay ${displayTime(end.time)} $reasonForDisplay"
+      val createdBy = start.createdBy.getOrElse("unknown")
+      s"${start.delta} @ $startDateForDisplay ${displayTime(start.time)} -> $endDateForDisplay ${displayTime(end.time)} $reasonForDisplay by $createdBy"
     }
 
     def displaySingle(movement: StaffMovement): String = {
@@ -264,7 +267,8 @@ object TerminalStaffing {
         case "" => " - "
         case r => r
       }
-      s"${movement.delta} @ $startDateForDisplay ${displayTime(movement.time)} -> ongoing $reasonForDisplay"
+      val createdBy = movement.createdBy.getOrElse("unknown")
+      s"${movement.delta} @ $startDateForDisplay ${displayTime(movement.time)} -> ongoing $reasonForDisplay by $createdBy"
     }
 
     def displayTime(time: MilliDate): String = {

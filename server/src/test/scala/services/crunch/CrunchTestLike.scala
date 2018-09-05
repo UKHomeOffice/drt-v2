@@ -1,5 +1,6 @@
 package services.crunch
 
+import actors.Sizes.oneMegaByte
 import actors._
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.AskableActorRef
@@ -26,7 +27,7 @@ import scala.language.implicitConversions
 
 
 class LiveCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
-  extends CrunchStateActor(1, s"live-test-$name", queues, now, expireAfterMillis, false) {
+  extends CrunchStateActor(None, oneMegaByte, s"live-test-$name", queues, now, expireAfterMillis, false) {
   override def updateStateFromPortState(cs: PortState): Unit = {
     log.info(s"calling parent updateState...")
     super.updateStateFromPortState(cs)
@@ -36,7 +37,7 @@ class LiveCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[
 }
 
 class ForecastCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
-  extends CrunchStateActor(1, s"forecast-test-$name", queues, now, expireAfterMillis, false) {
+  extends CrunchStateActor(None, oneMegaByte, s"forecast-test-$name", queues, now, expireAfterMillis, false) {
   override def updateStateFromPortState(cs: PortState): Unit = {
     log.info(s"calling parent updateState...")
     super.updateStateFromPortState(cs)
@@ -126,7 +127,7 @@ class CrunchTestLike
   def runCrunchGraph(initialBaseArrivals: Set[Arrival] = Set(),
                      initialForecastArrivals: Set[Arrival] = Set(),
                      initialLiveArrivals: Set[Arrival] = Set(),
-                     initialManifests: DqManifests = DqManifests("", Set()),
+                     maybeInitialManifestState: Option[VoyageManifestState] = None,
                      initialPortState: Option[PortState] = None,
                      airportConfig: AirportConfig = airportConfig,
                      csvSplitsProvider: SplitsProvider.SplitProvider = (_, _) => None,
@@ -153,7 +154,7 @@ class CrunchTestLike
     val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor]))
     val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor]))
     val snapshotInterval = 1
-    val manifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], now, expireAfterMillis, snapshotInterval))
+    val manifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], oneMegaByte, now, expireAfterMillis, snapshotInterval))
 
     val liveCrunchActor = liveCrunchStateActor(logLabel, liveProbe, now)
     val forecastCrunchActor = forecastCrunchStateActor(logLabel, forecastProbe, now)
@@ -165,7 +166,6 @@ class CrunchTestLike
 
     val crunchInputs = CrunchSystem(CrunchProps(
       logLabel = logLabel,
-      system = actorSystem,
       airportConfig = airportConfig,
       pcpArrival = pcpArrivalTime,
       historicalSplitsProvider = csvSplitsProvider,
@@ -193,6 +193,7 @@ class CrunchTestLike
       initialBaseArrivals = initialBaseArrivals,
       initialFcstArrivals = initialForecastArrivals,
       initialLiveArrivals = initialLiveArrivals,
+      initialManifestsState = maybeInitialManifestState,
       arrivalsBaseSource = baseArrivals,
       arrivalsFcstSource = fcstArrivals,
       arrivalsLiveSource = liveArrivals
@@ -200,7 +201,9 @@ class CrunchTestLike
 
     if (initialShifts.nonEmpty) offerAndWait(crunchInputs.shifts, initialShifts)
     if (initialFixedPoints.nonEmpty) offerAndWait(crunchInputs.fixedPoints, initialFixedPoints)
-    if (initialManifests.manifests.nonEmpty) offerAndWait(crunchInputs.manifestsResponse, ManifestsFeedSuccess(initialManifests))
+    maybeInitialManifestState.foreach(ms => {
+      if (ms.manifests.nonEmpty) offerAndWait(crunchInputs.manifestsResponse, ManifestsFeedSuccess(DqManifests("", ms.manifests)))
+    })
 
     CrunchGraphInputsAndProbes(
       crunchInputs.baseArrivalsResponse,

@@ -1,5 +1,6 @@
 package actors.pointInTime
 
+import actors.Sizes.oneMegaByte
 import actors._
 import akka.persistence._
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
@@ -16,7 +17,7 @@ import scala.language.postfixOps
 case object GetCrunchMinutes
 
 class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, queues: Map[TerminalName, Seq[QueueName]])
-  extends CrunchStateActor(snapshotInterval, "crunch-state", queues, () => pointInTime, 2 * Crunch.oneDayMillis, false) {
+  extends CrunchStateActor(Option(snapshotInterval), oneMegaByte, "crunch-state", queues, () => pointInTime, 2 * Crunch.oneDayMillis, false) {
 
   val staffReconstructionRequired: Boolean = pointInTime.millisSinceEpoch <= SDate("2017-12-04").millisSinceEpoch
 
@@ -60,7 +61,7 @@ class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, queues
       sender() ! stateForPeriod(start, end)
 
     case u =>
-      log.warn(s"Received unexpected message $u")
+      log.error(s"Received unexpected message $u")
   }
 
   override def recovery: Recovery = {

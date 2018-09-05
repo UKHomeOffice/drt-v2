@@ -39,7 +39,7 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     val issuer = ""
     val nameId = ""
 
-    val lgwFeed = LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId, system = system)
+    val lgwFeed = LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId)
 
     var tokenFuture = lgwFeed.requestToken()
     val arrivalsFuture = Try {
@@ -77,7 +77,7 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     mockResponse.headers returns List(RawHeader("Location", "blah.example.com/delete/messageId"))
     var deleteCalled = false
 
-    val feed: LGWFeed = new LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId, system = system) {
+    val feed: LGWFeed = new LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId) {
       override def sendAndReceive: HttpRequest => Future[HttpResponse] = (req: HttpRequest) => {
         deleteCalled = req.method.equals(HttpMethods.DELETE)
         Promise.successful(mockResponse).future
@@ -117,7 +117,7 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     mockResponse.status returns StatusCode.int2StatusCode(204)
     var deleteCalled = false
 
-    val feed: LGWFeed = new LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId, system = system) {
+    val feed: LGWFeed = new LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId) {
       override def sendAndReceive: HttpRequest => Future[HttpResponse] = (req: HttpRequest) => {
         deleteCalled = req.method.equals(HttpMethods.DELETE)
         Promise.successful(mockResponse).future
@@ -137,7 +137,7 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     mockResponse.status returns StatusCode.int2StatusCode(200)
     mockResponse.headers returns List(RawHeader("Location", "blah.example.com/delete/messageId"))
     var deleteCalled = false
-    val feed: LGWFeed = new LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId, system = system) {
+    val feed: LGWFeed = new LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId) {
       override def sendAndReceive: HttpRequest => Future[HttpResponse] = (req: HttpRequest) => {
         deleteCalled = req.method.equals(HttpMethods.DELETE)
         Promise.successful(mockResponse).future
@@ -157,7 +157,7 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     mockResponse.status returns StatusCode.int2StatusCode(200)
     mockResponse.headers returns List(RawHeader("Location", "blah.example.com/delete/messageId"))
     var deleteCalled = false
-    val feed: LGWFeed = new LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId, system = system) {
+    val feed: LGWFeed = new LGWFeed(certPath, privateCertPath, azureServiceNamespace, issuer, nameId) {
       override def sendAndReceive: HttpRequest => Future[HttpResponse] = (req: HttpRequest) => {
         deleteCalled = req.method.equals(HttpMethods.DELETE)
         Promise.successful(mockResponse).future

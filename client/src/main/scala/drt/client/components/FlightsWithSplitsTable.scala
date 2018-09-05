@@ -1,5 +1,7 @@
 package drt.client.components
 
+import diode.data.Pot
+import diode.react.ModelProxy
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.logger._
@@ -69,7 +71,7 @@ object FlightsWithSplitsTable {
                 }.toTagMod)))
         }
         else
-          <.div("Loading flights...")
+          <.div("No flights to display")
       } match {
         case Success(s) => s
         case Failure(f) =>
@@ -85,7 +87,8 @@ object FlightsWithSplitsTable {
     val columns = List(
       ("Flight", None),
       ("Origin", None),
-      ("Gate/Stand", Option("gate-stand")),
+      ("Country", Option("country")),
+      ("Gate / Stand", Option("gate-stand")),
       ("Status", Option("status")),
       ("Sch", None),
       ("Est", None),
@@ -166,22 +169,6 @@ object FlightTableRow {
       val allCodes = flight.ICAO :: codeShares.map(_.ICAO).toList
 
       Try {
-        def sourceDisplayName(splits: ApiSplits) = splits match {
-          case ApiSplits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _) => s"Live ${splits.eventType.getOrElse("")}"
-          case ApiSplits(_, SplitSources.Historical, _, _) => "Historical"
-          case _ => "Port Average"
-        }
-
-        def GraphComponent(source: String, splitStyleUnitLabel: String, sourceDisplay: String, splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int], queueOrder: Seq[PaxTypeAndQueue]): VdomElement = {
-          val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = queueOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
-          val tt = <.table(^.className := "table table-responsive table-hover table-sm ",
-            <.thead(<.tr(<.th(splitStyleUnitLabel), <.th("PassengerType"), <.th("Queue"))),
-            <.tbody(orderedSplitCounts.map(s => <.tr(<.td(s"${s._2}"), <.td(s._1.passengerType.name), <.td(s._1.queueType))).toTagMod))
-          <.div(^.className := "splitsource-" + source,
-            props.splitsGraphComponent(SplitsGraph.Props(splitTotal, orderedSplitCounts, Option(tt))),
-            sourceDisplay)
-        }
-
         val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
         val timeIndicatorClass = if (flight.PcpTime.getOrElse(0L) < SDate.now().millisSinceEpoch) "before-now" else "from-now"
 
@@ -190,6 +177,12 @@ object FlightTableRow {
         val flightFields = List[(Option[String], TagMod)](
           (None, allCodes.mkString(" - ")),
           (None, props.originMapper(flight.Origin)),
+          (None, TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
+            <.span(
+            proxy().renderEmpty(<.span()),
+            proxy().render(ai=> <.span(ai.country) )
+            )
+          }),
           (None, s"${flight.Gate.getOrElse("")}/${flight.Stand.getOrElse("")}"),
           (None, flight.Status),
           (None, localDateTimeWithPopup(Option(flight.Scheduled))),

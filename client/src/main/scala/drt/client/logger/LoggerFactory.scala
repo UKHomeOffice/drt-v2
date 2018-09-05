@@ -1,5 +1,7 @@
 package drt.client.logger
 
+import drt.client.SPAMain
+
 import scala.annotation.elidable
 import scala.annotation.elidable._
 import scala.scalajs.js.annotation.JSImport
@@ -36,6 +38,7 @@ object LoggerFactory {
 
   lazy val consoleAppender = new BrowserConsoleAppender
   lazy val popupAppender = new PopUpAppender
+  lazy val ajaxAppender = new AjaxAppender(SPAMain.serverLogEndpoint)
 
   /**
    * Create a logger that outputs to browser console
@@ -44,6 +47,15 @@ object LoggerFactory {
     println("in getlogger")
     val nativeLogger = Log4JavaScript.getLogger(name)
     nativeLogger.addAppender(consoleAppender)
+    new L4JSLogger(nativeLogger)
+  }
+
+  /**
+   * Create a logger that sends logs to the server
+   */
+  def getXHRLogger(name: String): Logger = {
+    val nativeLogger = Log4JavaScript.getLogger(name)
+    nativeLogger.addAppender(ajaxAppender)
     new L4JSLogger(nativeLogger)
   }
 

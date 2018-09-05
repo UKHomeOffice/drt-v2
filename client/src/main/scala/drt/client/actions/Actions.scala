@@ -4,8 +4,9 @@ import java.util.UUID
 
 import diode.Action
 import drt.client.services.{StaffAssignment, ViewMode}
-import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, ForecastPeriodWithHeadlines}
+import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, ForecastPeriodWithHeadlines, MillisSinceEpoch}
 import drt.shared.FlightsApi._
+import drt.shared.KeyCloakApi.KeyCloakUser
 import drt.shared._
 
 import scala.concurrent.duration.FiniteDuration
@@ -18,9 +19,9 @@ object Actions {
 
   case object GetApplicationVersion extends Action
 
-  case object GetUserRoles extends Action
+  case object GetLoggedInUser extends Action
 
-  case class SetUserRoles(roles: List[String]) extends Action
+  case class SetLoggedInUser(loggedInUser: LoggedInUser) extends Action
 
   case class SetApplicationVersion(version: String) extends Action
 
@@ -30,17 +31,15 @@ object Actions {
 
   case class GetCrunchState() extends Action
 
-  case class GetCrunchUpdates() extends Action
-
-  case class SetCrunchPending() extends Action
-
   case class UpdateCrunchStateAndContinuePolling(crunchState: CrunchState) extends Action
+
+  case class UpdateCrunchStateFromUpdates(crunchUpdates: CrunchUpdates) extends Action
 
   case class UpdateCrunchStateFromUpdatesAndContinuePolling(crunchUpdates: CrunchUpdates) extends Action
 
   case class UpdateCrunchStateFromCrunchState(crunchState: CrunchState) extends Action
 
-  case class UpdateCrunchStateFromUpdates(crunchUpdates: CrunchUpdates) extends Action
+  case class NoCrunchStateUpdatesAndContinuePollingIfNecessary() extends Action
 
   case class GetForecastWeek(startDay: SDateLike, terminalName: TerminalName) extends Action
 
@@ -97,5 +96,19 @@ object Actions {
   case class RetryActionAfter(action: Action, delay: FiniteDuration) extends Action
 
   case class DoNothing() extends Action
+
+  case object GetKeyCloakUsers extends Action
+
+  case class SetKeyCloakUsers(users: List[KeyCloakUser]) extends Action
+
+  case class AddUserToGroup(userId: String, groupName: String) extends Action
+
+  case class GetAlerts(since: MillisSinceEpoch) extends Action
+
+  case class SetAlerts(alerts: Seq[Alert], since: MillisSinceEpoch) extends Action
+
+  case object DeleteAllAlerts extends Action
+
+  case class SaveAlert(alert: Alert) extends Action
 
 }

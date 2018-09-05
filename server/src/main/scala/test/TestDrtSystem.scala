@@ -3,22 +3,17 @@ package test
 import actors._
 import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props}
+import akka.stream.{KillSwitch, Materializer}
 import akka.stream.scaladsl.Source
-import akka.stream.{ActorMaterializer, KillSwitch}
 import drt.server.feeds.test.{TestAPIManifestFeedGraphStage, TestFixtureFeed}
-import drt.shared.AirportConfig
-import drt.shared.FlightsApi.Flights
+import drt.shared.{AirportConfig, Role}
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import server.feeds.{ArrivalsFeedResponse, FeedResponse, ManifestsFeedResponse}
-import services.graphstages.DqManifests
+import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import test.TestActors.{TestStaffMovementsActor, _}
-import test.TestUserRoleProvider.log
 
-class TestDrtSystem(override val actorSystem: ActorSystem, override val config: Configuration, override val airportConfig: AirportConfig)
+class TestDrtSystem(override val actorSystem: ActorSystem, override val config: Configuration, override val airportConfig: AirportConfig)(implicit actorMaterializer: Materializer)
   extends DrtSystem(actorSystem, config, airportConfig) {
-
-  override val actorMaterializer = ActorMaterializer()
 
   override lazy val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[TestForecastBaseArrivalsActor], now, expireAfterMillis), name = "base-arrivals-actor")
   override lazy val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[TestForecastPortArrivalsActor], now, expireAfterMillis), name = "forecast-arrivals-actor")
@@ -35,7 +30,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
   override lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[TestStaffMovementsActor]))
 
   system.log.warning(s"Using test System")
-  val voyageManifestTestSourceGraph: Source[ManifestsFeedResponse, NotUsed] = Source.fromGraph(new TestAPIManifestFeedGraphStage(system))
+  val voyageManifestTestSourceGraph: Source[ManifestsFeedResponse, NotUsed] = Source.fromGraph(new TestAPIManifestFeedGraphStage)
 
   system.log.info(s"Here's the Graph $voyageManifestTestSourceGraph")
   override lazy val voyageManifestsStage: Source[ManifestsFeedResponse, NotUsed] = voyageManifestTestSourceGraph
@@ -43,10 +38,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
 
   override def liveArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = testFeed
 
-  override def getRoles(config: Configuration, headers: Headers, session: Session): List[String] = {
-    log.info(s"Using MockRoles with $session")
-    MockRoles(session)
-  }
+  override def getRoles(config: Configuration, headers: Headers, session: Session): List[Role] = TestUserRoleProvider.getRoles(config, headers, session)
 
   override def run(): Unit = {
 
@@ -96,9 +88,7 @@ case class RestartActor(startSystem: () => List[KillSwitch], testActors: List[Ac
       startTestSystem()
   }
 
-  def startTestSystem() = {
-    currentKillSwitches = startSystem()
-  }
+  def startTestSystem(): Unit = currentKillSwitches = startSystem()
 }
 
 case object ResetData

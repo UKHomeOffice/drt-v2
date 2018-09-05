@@ -1,0 +1,15 @@
+syntax = "proto2";
+
+package server.protobuf.messages;
+
+message AlertSnapshotMessage {
+    repeated Alert alerts = 1;
+}
+
+message Alert {
+    optional string title = 1;
+    optional string message = 2;
+    optional int64 expires = 3;
+    optional int64 createdAt = 4;
+    optional string createdBy = 5;
+}

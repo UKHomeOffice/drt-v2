@@ -8,7 +8,7 @@ object PaxSplitsDisplayTests extends TestSuite {
 
   import ApiSplitsToSplitRatio._
 
-  def tests = TestSuite {
+  def tests = Tests {
     "When calculating the splits for each PaxType and Queue the the split should be applied as a ratio to flight pax" - {
       "Given 1 pax with a split of 1 EeaMachineReadable to Egate then I should get 1 Pax Split of 1 EeaMachineReadable to Egate" - {
 

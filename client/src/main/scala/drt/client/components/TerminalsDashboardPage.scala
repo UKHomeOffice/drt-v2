@@ -1,6 +1,7 @@
 package drt.client.components
 
 import drt.client.SPAMain.{Loc, TerminalsDashboardLoc}
+import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.{ApiFlightWithSplits, SDateLike}

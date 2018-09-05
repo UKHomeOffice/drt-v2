@@ -58,8 +58,8 @@ class StaffMinutesSpec extends CrunchTestLike {
       """.stripMargin
     val uuid = UUID.randomUUID()
     val initialMovements = Seq(
-      StaffMovement("T1", "lunch start", MilliDate(shiftStart.millisSinceEpoch), -1, uuid),
-      StaffMovement("T1", "lunch end", MilliDate(shiftStart.addMinutes(15).millisSinceEpoch), 1, uuid)
+      StaffMovement("T1", "lunch start", MilliDate(shiftStart.millisSinceEpoch), -1, uuid, createdBy = None),
+      StaffMovement("T1", "lunch end", MilliDate(shiftStart.addMinutes(15).millisSinceEpoch), 1, uuid, createdBy = None)
     )
 
     val crunch = runCrunchGraph(
@@ -102,10 +102,10 @@ class StaffMinutesSpec extends CrunchTestLike {
     val uuid1 = UUID.randomUUID()
     val uuid2 = UUID.randomUUID()
     val initialMovements = Seq(
-      StaffMovement("T1", "lunch start", MilliDate(shiftStart.millisSinceEpoch), -1, uuid1),
-      StaffMovement("T1", "lunch end", MilliDate(shiftStart.addMinutes(15).millisSinceEpoch), 1, uuid1),
-      StaffMovement("T1", "lunch start", MilliDate(shiftStart.millisSinceEpoch), -5, uuid2),
-      StaffMovement("T1", "lunch end", MilliDate(shiftStart.addMinutes(15).millisSinceEpoch), 5, uuid2)
+      StaffMovement("T1", "lunch start", MilliDate(shiftStart.millisSinceEpoch), -1, uuid1, createdBy = None),
+      StaffMovement("T1", "lunch end", MilliDate(shiftStart.addMinutes(15).millisSinceEpoch), 1, uuid1, createdBy = None),
+      StaffMovement("T1", "lunch start", MilliDate(shiftStart.millisSinceEpoch), -5, uuid2, createdBy = None),
+      StaffMovement("T1", "lunch end", MilliDate(shiftStart.addMinutes(15).millisSinceEpoch), 5, uuid2, createdBy = None)
     )
 
     val crunch = runCrunchGraph(
@@ -280,16 +280,16 @@ class StaffMinutesSpec extends CrunchTestLike {
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
 
     val expectedCrunchDeployments = Set(
-      (Queues.EeaDesk, shiftStart.addMinutes(0), 2),
-      (Queues.EeaDesk, shiftStart.addMinutes(1), 2),
-      (Queues.EeaDesk, shiftStart.addMinutes(2), 2),
-      (Queues.EeaDesk, shiftStart.addMinutes(3), 2),
-      (Queues.EeaDesk, shiftStart.addMinutes(4), 2),
-      (Queues.EGate, shiftStart.addMinutes(0), 6),
-      (Queues.EGate, shiftStart.addMinutes(1), 6),
-      (Queues.EGate, shiftStart.addMinutes(2), 6),
-      (Queues.EGate, shiftStart.addMinutes(3), 6),
-      (Queues.EGate, shiftStart.addMinutes(4), 6))
+      (Queues.EeaDesk, shiftStart.addMinutes(0), 4),
+      (Queues.EeaDesk, shiftStart.addMinutes(1), 4),
+      (Queues.EeaDesk, shiftStart.addMinutes(2), 4),
+      (Queues.EeaDesk, shiftStart.addMinutes(3), 4),
+      (Queues.EeaDesk, shiftStart.addMinutes(4), 4),
+      (Queues.EGate, shiftStart.addMinutes(0), 4),
+      (Queues.EGate, shiftStart.addMinutes(1), 4),
+      (Queues.EGate, shiftStart.addMinutes(2), 4),
+      (Queues.EGate, shiftStart.addMinutes(3), 4),
+      (Queues.EGate, shiftStart.addMinutes(4), 4))
 
     crunch.liveTestProbe.fishForMessage(5 seconds) {
       case ps: PortState =>

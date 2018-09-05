@@ -1,13 +1,14 @@
-package services
+package actors
 
 import actors.FlightMessageConversion._
-import actors.{GetFeedStatuses, GetState, PersistentDrtActor, RecoveryActorLike}
 import akka.persistence._
+import com.trueaccord.scalapb.GeneratedMessage
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import server.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
+import services.SDate
 import services.graphstages.Crunch
 
 trait FeedStateLike {
@@ -24,11 +25,11 @@ trait FeedStateLike {
 
 case class ArrivalsState(arrivals: Map[Int, Arrival], feedName: String, maybeFeedStatuses: Option[FeedStatuses]) extends FeedStateLike
 
-class ForecastBaseArrivalsActor(now: () => SDateLike,
+class ForecastBaseArrivalsActor(val snapshotBytesThreshold: Int,
+                                now: () => SDateLike,
                                 expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, "ACL forecast") {
   override def persistenceId: String = s"${getClass.getName}-forecast-base"
 
-  override val snapshotInterval = 100
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def consumeDiffsMessage(diffsMessage: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState = {
@@ -48,8 +49,6 @@ class ForecastBaseArrivalsActor(now: () => SDateLike,
 
     if (removals.nonEmpty || updates.nonEmpty) persistArrivalUpdates(removals, updates)
     persistFeedStatus(FeedStatusSuccess(createdAt.millisSinceEpoch, updates.size))
-
-    snapshotIfNeeded(state)
   }
 
   def removalsAndUpdates(incomingArrivalsWithKeys: Map[Int, Arrival], existingArrivalsWithKeys: Map[Int, Arrival]): (Set[Int], Set[Arrival]) = {
@@ -61,18 +60,19 @@ class ForecastBaseArrivalsActor(now: () => SDateLike,
   }
 }
 
-class ForecastPortArrivalsActor(now: () => SDateLike,
+class ForecastPortArrivalsActor(val snapshotBytesThreshold: Int,
+                                now: () => SDateLike,
                                 expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, "Port forecast") {
   override def persistenceId: String = s"${getClass.getName}-forecast-port"
 
-  override val snapshotInterval = 100
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def consumeDiffsMessage(diffsMessage: FlightsDiffMessage,
                           existingState: ArrivalsState): ArrivalsState = consumeUpdates(diffsMessage, existingState)
 }
 
-class LiveArrivalsActor(now: () => SDateLike,
+class LiveArrivalsActor(val snapshotBytesThreshold: Int,
+                        now: () => SDateLike,
                         expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, "Port live") {
   override def persistenceId: String = s"${getClass.getName}-live"
 
@@ -115,6 +115,8 @@ abstract class ArrivalsActor(now: () => SDateLike,
     log.info(s"Recovered ${state.arrivals.size} arrivals for ${state.feedName}")
     super.postRecoveryComplete()
   }
+
+  override def stateToMessage: GeneratedMessage = arrivalsStateToSnapshotMessage(state)
 
   def consumeDiffsMessage(message: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState
 
@@ -179,8 +181,6 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
     persistFeedStatus(FeedStatusSuccess(createdAt.millisSinceEpoch, updatedArrivals.size))
     if (updatedArrivals.nonEmpty) persistArrivalUpdates(Set(), updatedArrivals)
-
-    snapshotIfNeeded(state)
   }
 
   def mergeArrivals(incomingArrivals: Seq[Arrival], existingArrivals: Map[Int, Arrival]): Map[Int, Arrival] = {
@@ -193,33 +193,8 @@ abstract class ArrivalsActor(now: () => SDateLike,
     val updateMessages = updatedArrivals.map(apiFlightToFlightMessage).toSeq
     val diffMessage = FlightsDiffMessage(Option(SDate.now().millisSinceEpoch), removalKeys.toSeq, updateMessages)
 
-    persist(diffMessage) { dm =>
-      val messageBytes = diffMessage.serializedSize
-      log.info(s"Persisting $messageBytes bytes of FlightsDiff with ${diffMessage.removals.length} removals & ${diffMessage.updates.length} updates")
-      context.system.eventStream.publish(dm)
-      bytesSinceSnapshotCounter += messageBytes
-      logPersistedBytesCounter(bytesSinceSnapshotCounter)
-    }
+    persistAndMaybeSnapshot(diffMessage)
   }
 
-  def persistFeedStatus(feedStatus: FeedStatus): Unit = {
-    val message = feedStatusToMessage(feedStatus)
-
-    persist(message) { msg =>
-      val messageBytes = msg.serializedSize
-      log.info(s"Persisting $messageBytes bytes of ${msg.getClass}")
-      context.system.eventStream.publish(msg)
-      bytesSinceSnapshotCounter += messageBytes
-      logPersistedBytesCounter(bytesSinceSnapshotCounter)
-    }
-  }
-
-  def snapshotIfNeeded(stateToSnapshot: ArrivalsState): Unit = {
-    if (bytesSinceSnapshotCounter > 10 * oneMegaByte) {
-      val snapshotMessage: FlightStateSnapshotMessage = arrivalsStateToSnapshotMessage(stateToSnapshot)
-      saveSnapshot(snapshotMessage)
-      log.info(s"Saved {${snapshotMessage.serializedSize} bytes of ArrivalsState snapshot. Reset byte counter to zero")
-      bytesSinceSnapshotCounter = 0
-    }
-  }
+  def persistFeedStatus(feedStatus: FeedStatus): Unit = persistAndMaybeSnapshot(feedStatusToMessage(feedStatus))
 }

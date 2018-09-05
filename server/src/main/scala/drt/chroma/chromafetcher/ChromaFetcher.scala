@@ -63,7 +63,7 @@ abstract case class ChromaFetcher(override val feedType: ChromaFeedType, implici
     log.debug(s"Response: ${resp.entity.asString}")
     if (resp.status.isFailure) {
       log.warn(s"Failed to talk to chroma ${resp.headers}")
-      log.warn(s"Failed to talk to chroma: entity ${resp.entity.data.asString}")
+      log.error(s"Failed to talk to chroma: entity ${resp.entity.data.asString}")
     }
 
     resp
@@ -122,7 +122,7 @@ abstract case class ChromaFetcherForecast(override val feedType: ChromaFeedType,
     log.debug(s"Response: ${resp.entity.asString}")
     if (resp.status.isFailure) {
       log.warn(s"Failed to talk to chroma ${resp.headers}")
-      log.warn(s"Failed to talk to chroma: entity ${resp.entity.data.asString}")
+      log.error(s"Failed to talk to chroma: entity ${resp.entity.data.asString}")
     }
 
     resp
