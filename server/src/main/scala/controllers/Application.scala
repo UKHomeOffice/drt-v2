@@ -1,6 +1,8 @@
 package controllers
 
 import java.nio.ByteBuffer
+import java.util.UUID
+import javax.inject.{Inject, Singleton}
 
 import actors._
 import actors.pointInTime.CrunchStateReadActor
@@ -21,7 +23,6 @@ import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
 import drt.staff.ImportStaff
 import drt.users.KeyCloakClient
-import javax.inject.{Inject, Singleton}
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.{HeaderNames, HttpEntity}
@@ -325,18 +326,52 @@ class Application @Inject()(implicit val config: Configuration,
       def getKeyCloakUsers(): Future[List[KeyCloakUser]] = {
         log.info(s"Got these roles: ${getLoggedInUser().roles}")
         if (getLoggedInUser().roles.contains(ManageUsers)) {
-          keyCloakClient.getUsersNotInGroup("Approved")
+          keyCloakClient.getUsers()
         } else throw new Exception("You do not have permission manage users")
       }
 
-      def addUserToGroup(userId: String, groupName: String): Unit = {
+      def getKeyCloakGroups(): Future[List[KeyCloakGroup]] = {
         if (getLoggedInUser().roles.contains(ManageUsers)) {
-          val futureGroupId: Future[Option[KeyCloakGroup]] = keyCloakClient.getGroups().map(_.find(_.name == groupName))
-          futureGroupId.map {
-            case Some(group) => keyCloakClient.addUserToGroup(userId, group.id)
-            case None => log.error(s"Unable to add $userId to $groupName")
+          keyCloakClient.getGroups()
+        } else throw new Exception("You do not have permission manage users")
+      }
+
+      def getKeyCloakUserGroups(userId: UUID): Future[Set[KeyCloakGroup]] = {
+        if (getLoggedInUser().roles.contains(ManageUsers)) {
+          keyCloakClient.getUserGroups(userId).map(_.toSet)
+        } else throw new Exception("You do not have permission manage users")
+      }
+
+      case class KeyCloakGroups(groups: List[KeyCloakGroup])
+
+
+      def addUserToGroups(userId: UUID, groups: Set[String]): Future[Unit] = {
+        if (getLoggedInUser().roles.contains(ManageUsers)) {
+          val futureGroupIds: Future[KeyCloakGroups] = keyCloakClient
+            .getGroups()
+            .map(kcGroups => KeyCloakGroups(kcGroups.filter(g => groups.contains(g.name))))
+
+
+          futureGroupIds.map {
+            case KeyCloakGroups(groups) if groups.nonEmpty =>
+              log.info(s"Adding ${groups.map(_.name)} to $userId")
+              groups.map(group => {
+                val response = keyCloakClient.addUserToGroup(userId, group.id)
+                response.map(res => log.info(s"Added group and got: ${res.status}  $res")
+                )
+              })
+            case _ => log.error(s"Unable to add $userId to $groups")
           }
         } else throw new Exception("You do not have permission manage users")
+      }
+
+      def removeUserFromGroups(userId: UUID, groups: Set[String]): Future[Unit] = {
+
+        keyCloakClient
+          .getGroups()
+          .map(kcGroups => kcGroups.filter(g => groups.contains(g.name))
+            .map(g => keyCloakClient.removeUserFromGroup(userId, g.id)))
+
       }
 
       def getAlerts(createdAfter: MillisSinceEpoch): Future[Seq[Alert]] = {

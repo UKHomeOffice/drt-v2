@@ -1,12 +1,14 @@
 package services
 
+import java.util.UUID
+
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import controllers.{FixedPointPersistence, ShiftPersistence, StaffMovementsPersistence}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.TerminalName
-import drt.shared.KeyCloakApi.KeyCloakUser
+import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.mvc.{Headers, Session}
@@ -109,6 +111,12 @@ abstract class ApiService(val airportConfig: AirportConfig,
 
   def getKeyCloakUsers() : Future[List[KeyCloakUser]]
 
-  def addUserToGroup(userId: String, groupName: String): Unit
+  def getKeyCloakGroups(): Future[List[KeyCloakGroup]]
+
+  def getKeyCloakUserGroups(userId: UUID): Future[Set[KeyCloakGroup]]
+
+  def addUserToGroups(userId: UUID, groups: Set[String]): Future[Unit]
+
+  def removeUserFromGroups(userId: UUID, groups: Set[String]): Future[Unit]
 }
 

@@ -1,8 +1,10 @@
 package drt.client
 
+import java.util.UUID
+
 import diode.Action
 import drt.client.actions.Actions._
-import drt.client.components.{AlertsPage, GlobalStyles, KeyCloakUsersPage, Layout, StatusPage, TerminalComponent, TerminalPlanningComponent, TerminalsDashboardPage}
+import drt.client.components.{AlertsPage, EditKeyCloakUser, EditKeyCloakUserPage, GlobalStyles, KeyCloakUsersPage, Layout, StatusPage, TerminalComponent, TerminalPlanningComponent, TerminalsDashboardPage}
 import drt.client.logger._
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -69,6 +71,8 @@ object SPAMain {
 
   case object KeyCloakUsersLoc extends Loc
 
+  case class KeyCloakUserEditLoc(userId: UUID) extends Loc
+
   case object AlertLoc extends Loc
 
   def requestInitialActions(): Unit = {
@@ -90,7 +94,7 @@ object SPAMain {
     .buildConfig { dsl =>
       import dsl._
 
-      val rule = homeRoute(dsl) | dashboardRoute(dsl) | terminalRoute(dsl) | statusRoute(dsl) | keyCloakUsersRoute(dsl) | alertRoute(dsl)
+      val rule = homeRoute(dsl) | dashboardRoute(dsl) | terminalRoute(dsl) | statusRoute(dsl) | keyCloakUsersRoute(dsl) | keyCloakUserEditRoute(dsl) | alertRoute(dsl)
 
       rule.notFound(redirectToPage(TerminalsDashboardLoc(None))(Redirect.Replace))
     }
@@ -107,6 +111,8 @@ object SPAMain {
             SPACircuit.dispatch(SetViewMode(ViewLive()))
           case (_, KeyCloakUsersLoc) =>
             SPACircuit.dispatch(GetKeyCloakUsers)
+          case (_, KeyCloakUserEditLoc(userId)) =>
+            SPACircuit.dispatch(GetUserGroups(userId))
           case _ =>
         }
       )
@@ -127,7 +133,16 @@ object SPAMain {
   def keyCloakUsersRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
     import dsl._
 
-    staticRoute("#users", KeyCloakUsersLoc) ~> renderR((router: RouterCtl[Loc]) => KeyCloakUsersPage())
+    staticRoute("#users", KeyCloakUsersLoc) ~> renderR((router: RouterCtl[Loc]) => KeyCloakUsersPage(router))
+  }
+
+  def keyCloakUserEditRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+    import dsl._
+
+    dynamicRouteCT(("#editUser" / uuid ).caseClass[KeyCloakUserEditLoc]) ~>
+      dynRenderR((page: KeyCloakUserEditLoc, router) => {
+        EditKeyCloakUserPage(page.userId)
+      })
   }
 
   def alertRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {

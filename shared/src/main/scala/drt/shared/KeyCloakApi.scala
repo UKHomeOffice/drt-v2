@@ -1,9 +1,11 @@
 package drt.shared
 
+import java.util.UUID
+
 object KeyCloakApi {
 
   case class KeyCloakUser(
-                           id: String,
+                           id: UUID,
                            username: String,
                            enabled: Boolean,
                            emailVerified: Boolean,
@@ -15,7 +17,6 @@ object KeyCloakApi {
   case class KeyCloakGroup(
                             id: String,
                             name: String,
-                            path: String,
-                            subGroups: List[String]
+                            path: String
                           )
 }

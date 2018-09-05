@@ -6,7 +6,7 @@ import diode.react.ReactConnector
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.handlers._
 import drt.shared.CrunchApi._
-import drt.shared.KeyCloakApi.KeyCloakUser
+import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
 
 import scala.collection.immutable.Map
@@ -48,6 +48,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      loggedInUserPot: Pot[LoggedInUser] = Empty,
                      minuteTicker: Int = 0,
                      keyCloakUsers: Pot[List[KeyCloakUser]] = Empty,
+                     selectedUserGroups: Pot[Set[KeyCloakGroup]] = Empty,
                      feedStatuses: Pot[Seq[FeedStatuses]] = Empty,
                      alerts: Pot[Seq[Alert]] = Empty
                     )
@@ -90,6 +91,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new NoopHandler(zoomRW(identity)((m, v) => m)),
       new LoggedInUserHandler(zoomRW(_.loggedInUserPot)((m, v) => m.copy(loggedInUserPot = v))),
       new UsersHandler(zoomRW(_.keyCloakUsers)((m, v) => m.copy(keyCloakUsers = v))),
+      new EditUserHandler(zoomRW(_.selectedUserGroups)((m, v) => m.copy(selectedUserGroups = v))),
       new MinuteTickerHandler(zoomRW(_.minuteTicker)((m, v) => m.copy(minuteTicker = v))),
       new FeedsStatusHandler(zoomRW(_.feedStatuses)((m, v) => m.copy(feedStatuses = v))),
       new AlertsHandler(zoomRW(_.alerts)((m, v) => m.copy(alerts = v)))

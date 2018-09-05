@@ -701,5 +701,6 @@ object AirportConfigs {
 
   val allPorts: List[AirportConfig] = ema :: edi :: stn :: man :: ltn :: lhr :: lhr_nbp :: lhr_nbp_halved :: lhr_ppt_halved :: lgw :: bhx :: brs :: test :: Nil
   val testPorts: List[AirportConfig] = test :: lhr_nbp :: lhr_nbp_halved :: lhr_ppt_halved :: Nil
+  def portGroups: List[String] = allPorts.filterNot(testPorts.contains).map(_.portCode.toUpperCase).sorted
   val confByPort: Map[String, AirportConfig] = allPorts.map(c => (c.portCode, c)).toMap
 }
