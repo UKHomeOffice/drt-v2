@@ -41,7 +41,6 @@ pipeline:
 
   drt-test-instance:
     image: docker:18.06
-    detach: true
     environment:
       - DOCKER_USERNAME=drt_ci
       - DOCKER_HOST=tcp://172.17.0.1:2375
