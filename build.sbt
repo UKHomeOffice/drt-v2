@@ -86,8 +86,6 @@ lazy val server = (project in file("server"))
   javaOptions in Runtime += "-Duser.timezone=UTC",
   libraryDependencies ++= Settings.jvmDependencies.value,
   libraryDependencies += guice,
-  libraryDependencies += "com.mfglabs" %% "commons-aws-s3" % "0.12.2",
-  libraryDependencies += "com.mfglabs" %% "commons-aws" % "0.12.2",
   dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-core" % "2.8.7",
   dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-databind" % "2.8.7",
   dependencyOverrides += "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.8.7",
