@@ -17,9 +17,6 @@ import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class FixedPointsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[StaffAssignments]]) extends LoggingActionHandler(modelRW) {
-//  implicit val picklerSA = generatePickler[StaffAssignment]
-//  implicit val picklerSAs = generatePickler[StaffAssignments]
-
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case SetFixedPoints(fixedPoints: StaffAssignments, terminalName: Option[String]) =>
       if (terminalName.isDefined)

@@ -8,7 +8,6 @@ import akka.util.Timeout
 import drt.shared.{MilliDate, StaffAssignment, StaffAssignments}
 import services.SDate
 import services.crunch.CrunchTestLike
-import services.graphstages.StaffAssignmentHelper
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -16,8 +15,8 @@ import scala.concurrent.duration._
 class TestableFixedPointsActor(testProbe: ActorRef) extends FixedPointsActor {
   def sendAck(): Unit = testProbe ! MsgAck
 
-  override def onUpdateState(data: StaffAssignments): Unit = {
-    super.onUpdateState(data)
+  override def onUpdateState(fixedPointStaffAssignments: StaffAssignments): Unit = {
+    super.onUpdateState(fixedPointStaffAssignments)
     sendAck()
   }
 }
@@ -29,7 +28,7 @@ class FixedPointsActorSpec extends CrunchTestLike {
   "Given some fixed points and a fixed points actor " +
     "When I send the fixed points as a string to the actor and then query the actor's state " +
     "Then I should get back the same fixed points I previously sent it" >> {
-    val staffAssignments = StaffAssignments(
+    val fixedPointStaffAssignments = StaffAssignments(
       Seq(StaffAssignment("Roving officer", "T1", MilliDate(SDate("2018-01-01T00:00").millisSinceEpoch), MilliDate(SDate("2018-01-01T00:14").millisSinceEpoch), 1, None))
     )
 
@@ -38,12 +37,12 @@ class FixedPointsActorSpec extends CrunchTestLike {
     val fixedPointsActor = system.actorOf(Props(classOf[TestableFixedPointsActor], probe.ref))
     val askableFixedPointsActor: AskableActorRef = fixedPointsActor
 
-    fixedPointsActor ! staffAssignments
+    fixedPointsActor ! fixedPointStaffAssignments
 
     probe.expectMsgAnyClassOf(MsgAck.getClass)
 
     val storedFixedPoints = Await.result(askableFixedPointsActor ? GetState, 1 second).asInstanceOf[StaffAssignments]
-    val expected = staffAssignments
+    val expected = fixedPointStaffAssignments
 
     storedFixedPoints === expected
   }

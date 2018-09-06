@@ -79,18 +79,18 @@ class FixedPointsActorBase extends RecoveryActorLike with PersistentDrtActor[Fix
       log.info(s"GetState received")
       sender() ! state.staffAssignments
 
-    case staffAssignments: StaffAssignments if staffAssignments != state.staffAssignments =>
-      updateState(staffAssignments)
-      onUpdateState(staffAssignments)
+    case fixedPointStaffAssignments: StaffAssignments if fixedPointStaffAssignments != state.staffAssignments =>
+      updateState(fixedPointStaffAssignments)
+      onUpdateState(fixedPointStaffAssignments)
 
       log.info(s"Fixed points updated. Saving snapshot")
       val snapshotMessage = FixedPointsStateSnapshotMessage(staffAssignmentsToFixedPointsMessages(state.staffAssignments))
       saveSnapshot(snapshotMessage)
 
-    case staffAssignments: StaffAssignments if staffAssignments == state.staffAssignments =>
+    case fixedPointStaffAssignments: StaffAssignments if fixedPointStaffAssignments == state.staffAssignments =>
       log.info(s"No changes to fixed points. Not persisting")
       log.info(s"old: ${state.staffAssignments}")
-      log.info(s"new: $staffAssignments")
+      log.info(s"new: $fixedPointStaffAssignments")
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")
@@ -102,10 +102,10 @@ class FixedPointsActorBase extends RecoveryActorLike with PersistentDrtActor[Fix
       log.info(s"unhandled message: $u")
   }
 
-  def onUpdateState(fp: StaffAssignments): Unit = {}
+  def onUpdateState(fixedPointStaffAssignments: StaffAssignments): Unit = {}
 
-  def updateState(data: StaffAssignments): Unit = {
-    state = state.updated(data)
+  def updateState(fixedPointStaffAssignments: StaffAssignments): Unit = {
+    state = state.updated(fixedPointStaffAssignments)
   }
 }
 
@@ -194,7 +194,7 @@ object FixedPointsMessageParser {
     createdBy = None
   )
 
-  def staffAssignmentsToFixedPointsMessages(staffAssignments: StaffAssignments): Seq[FixedPointMessage] = staffAssignments.assignments.map(staffAssignmentToMessage)
+  def staffAssignmentsToFixedPointsMessages(fixedPointStaffAssignments: StaffAssignments): Seq[FixedPointMessage] = fixedPointStaffAssignments.assignments.map(staffAssignmentToMessage)
 
   def staffAssignmentsToString(assignments: Seq[StaffAssignment]): String = assignments.map {
     case StaffAssignment(name, terminalName, MilliDate(startMillis), MilliDate(endMillis), numberOfStaff, _) =>

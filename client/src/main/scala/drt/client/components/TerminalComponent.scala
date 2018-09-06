@@ -176,7 +176,6 @@ object TerminalComponent {
         }))
       })
     })
-    .componentDidMount(_ => Callback.log("TerminalComponent did mount"))
     .build
 
   def apply(props: Props): VdomElement = component(props)

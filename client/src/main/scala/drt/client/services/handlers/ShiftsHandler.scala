@@ -17,8 +17,6 @@ import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class ShiftsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
-//  implicit val picklerSAs = generatePickler[MillisSinceEpoch]
-
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case SetShifts(shifts: String) =>
       val scheduledRequest = Effect(Future(GetShifts())).after(15 seconds)
