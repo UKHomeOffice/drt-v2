@@ -51,7 +51,7 @@ object Settings {
     val levelDbJni = "1.8"
     val renjin = "0.9.2646"
     val awsSdk = "1.11.89"
-    val awsCommons = "0.10.0"
+    val awsCommons = "0.12.0"
     val csvCommons = "1.4"
     val pprint = "0.4.3"
     val scalaCheck = "1.13.4"
