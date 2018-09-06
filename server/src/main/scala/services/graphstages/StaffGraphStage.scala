@@ -4,10 +4,11 @@ import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute, StaffMinutes}
 import drt.shared.FlightsApi.TerminalName
-import drt.shared.{AirportConfig, SDateLike, StaffMovement, TM}
+import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch.{getLocalLastMidnight, movementsUpdateCriteria, purgeExpired}
+
 import scala.util.Success
 
 class StaffGraphStage(name: String = "",
@@ -36,7 +37,7 @@ class StaffGraphStage(name: String = "",
 
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
-    val expireBefore = now().millisSinceEpoch - expireAfterMillis
+    val expireBefore: MillisSinceEpoch = now().millisSinceEpoch - expireAfterMillis
 
     def maybeStaffSources: Option[StaffSources] = Staffing.staffAvailableByTerminalAndQueue(expireBefore, shiftsOption, fixedPointsOption, movementsOption)
 

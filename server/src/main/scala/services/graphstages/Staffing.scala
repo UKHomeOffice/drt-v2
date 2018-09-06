@@ -14,7 +14,6 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch.{desksForHourOfDayInUKLocalTime, europeLondonTimeZone}
 
-import scala.collection.immutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
@@ -185,20 +184,10 @@ object StaffDeploymentCalculator {
 
 }
 
-case class StaffAssignment(name: String, terminalName: TerminalName, startDt: MilliDate, endDt: MilliDate, numberOfStaff: Int) {
-  def toCsv: String = {
-    val startDate: SDateLike = SDate(startDt)
-    val endDate: SDateLike = SDate(endDt)
-    val startDateString = f"${startDate.getDate()}%02d/${startDate.getMonth()}%02d/${startDate.getFullYear - 2000}%02d"
-    val startTimeString = f"${startDate.getHours()}%02d:${startDate.getMinutes()}%02d"
-    val endTimeString = f"${endDate.getHours()}%02d:${endDate.getMinutes()}%02d"
+object StaffAssignmentHelper {
+  val empty: StaffAssignments = StaffAssignments(Seq())
 
-    s"$name,$terminalName,$startDateString,$startTimeString,$endTimeString,$numberOfStaff"
-  }
-}
-
-object StaffAssignment {
-  def apply(name: String, terminalName: TerminalName, startDate: String, startTime: String, endTime: String, numberOfStaff: String = "1"): Try[StaffAssignment] = {
+  def tryStaffAssignment(name: String, terminalName: TerminalName, startDate: String, startTime: String, endTime: String, numberOfStaff: String = "1"): Try[StaffAssignment] = {
     val staffDeltaTry = Try(numberOfStaff.toInt)
     val ymd = startDate.split("/").toVector
 
@@ -216,8 +205,18 @@ object StaffAssignment {
     } yield {
       val start = MilliDate(startDt.millisSinceEpoch)
       val end = MilliDate(adjustEndDateIfEndTimeIsBeforeStartTime(d, m, y, startDt, endDt).millisSinceEpoch)
-      StaffAssignment(name, terminalName, start, end, staffDelta)
+      StaffAssignment(name, terminalName, start, end, staffDelta, None)
     }
+  }
+
+  def toCsv(assignment: StaffAssignment): String = {
+    val startDate: SDateLike = SDate(assignment.startDt)
+    val endDate: SDateLike = SDate(assignment.endDt)
+    val startDateString = f"${startDate.getDate()}%02d/${startDate.getMonth()}%02d/${startDate.getFullYear - 2000}%02d"
+    val startTimeString = f"${startDate.getHours()}%02d:${startDate.getMinutes()}%02d"
+    val endTimeString = f"${endDate.getHours()}%02d:${endDate.getMinutes()}%02d"
+
+    s"${assignment.name},${assignment.terminalName},$startDateString,$startTimeString,$endTimeString,${assignment.numberOfStaff}"
   }
 
   private def adjustEndDateIfEndTimeIsBeforeStartTime(d: Int, m: Int, y: Int, startDt: SDateLike, endDt: SDateLike): SDateLike = {
@@ -247,9 +246,9 @@ case class StaffAssignmentParser(rawStaffAssignments: String) {
     .filter(parts => parts.length == 5 || parts.length == 6)
     .map {
       case List(description, terminalName, startDay, startTime, endTime) =>
-        StaffAssignment(description, terminalName, startDay, startTime, endTime)
+        StaffAssignmentHelper.tryStaffAssignment(description, terminalName, startDay, startTime, endTime)
       case List(description, terminalName, startDay, startTime, endTime, staffNumberDelta) =>
-        StaffAssignment(description, terminalName, startDay, startTime, endTime, staffNumberDelta)
+        StaffAssignmentHelper.tryStaffAssignment(description, terminalName, startDay, startTime, endTime, staffNumberDelta)
     }
 }
 

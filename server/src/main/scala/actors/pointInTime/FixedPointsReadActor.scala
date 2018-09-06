@@ -1,6 +1,6 @@
 package actors.pointInTime
 
-import actors.FixedPointsMessageParser.fixedPointMessagesToFixedPointsString
+import actors.FixedPointsMessageParser.fixedPointMessagesToStaffAssignments
 import actors.{FixedPointsActorBase, FixedPointsState}
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.SDateLike
@@ -8,7 +8,7 @@ import server.protobuf.messages.FixedPointMessage.FixedPointsStateSnapshotMessag
 
 class FixedPointsReadActor(pointInTime: SDateLike) extends FixedPointsActorBase {
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case snapshot: FixedPointsStateSnapshotMessage => state = FixedPointsState(fixedPointMessagesToFixedPointsString(snapshot.fixedPoints.toList))
+    case snapshot: FixedPointsStateSnapshotMessage => state = FixedPointsState(fixedPointMessagesToStaffAssignments(snapshot.fixedPoints.toList))
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {

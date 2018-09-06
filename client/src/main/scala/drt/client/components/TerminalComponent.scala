@@ -8,7 +8,6 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.{CrunchState, ForecastPeriodWithHeadlines}
 import drt.shared._
-import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
@@ -25,7 +24,7 @@ object TerminalComponent {
                             forecastPeriodPot: Pot[ForecastPeriodWithHeadlines],
                             potShifts: Pot[String],
                             potMonthOfShifts: Pot[MonthOfRawShifts],
-                            potFixedPoints: Pot[String],
+                            potFixedPoints: Pot[StaffAssignments],
                             potStaffMovements: Pot[Seq[StaffMovement]],
                             airportConfig: Pot[AirportConfig],
                             airportInfos: Pot[AirportInfo],
@@ -43,7 +42,7 @@ object TerminalComponent {
         model.forecastPeriodPot,
         model.shiftsRaw,
         model.monthOfShifts,
-        model.fixedPointsRaw,
+        model.fixedPoints,
         model.staffMovements,
         model.airportConfig,
         model.airportInfos.getOrElse(props.terminalPageTab.terminal, Pending()),
@@ -177,7 +176,6 @@ object TerminalComponent {
         }))
       })
     })
-    .componentDidMount((p) => Callback.log("TerminalComponent did mount"))
     .build
 
   def apply(props: Props): VdomElement = component(props)

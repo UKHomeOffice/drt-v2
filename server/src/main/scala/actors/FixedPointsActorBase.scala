@@ -1,32 +1,33 @@
 package actors
 
 import actors.Sizes.oneMegaByte
-import akka.actor.ActorLogging
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.trueaccord.scalapb.GeneratedMessage
-import drt.shared.MilliDate
+import drt.shared.{MilliDate, StaffAssignment, StaffAssignments}
 import org.joda.time.format.DateTimeFormat
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
 import services.SDate
+import services.graphstages.StaffAssignmentHelper
 
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success, Try}
 
-case class FixedPointsState(fixedPoints: String) {
-  def updated(data: String): FixedPointsState = copy(fixedPoints = data)
+
+case class FixedPointsState(staffAssignments: StaffAssignments) {
+  def updated(newAssignments: StaffAssignments): FixedPointsState = copy(staffAssignments = newAssignments)
 }
 
 class FixedPointsActor extends FixedPointsActorBase {
   var subscribers: List[SourceQueueWithComplete[String]] = List()
 
-  override def onUpdateState(data: String): Unit = {
+  override def onUpdateState(data: StaffAssignments): Unit = {
     log.info(s"Telling subscribers ($subscribers) about updated fixed points: $data")
 
     subscribers.foreach(s => {
-      s.offer(data).onComplete {
+      s.offer(FixedPointsMessageParser.staffAssignmentsToString(data.assignments)).onComplete {
         case Success(qor) => log.info(s"update queued successfully with subscriber: $qor")
         case Failure(t) => log.info(s"update failed to queue with subscriber: $t")
       }
@@ -52,42 +53,44 @@ class FixedPointsActorBase extends RecoveryActorLike with PersistentDrtActor[Fix
 
   override def persistenceId = "fixedPoints-store"
 
-  var state = initialState
+  var state: FixedPointsState = initialState
 
-  def initialState = FixedPointsState("")
+  def initialState = FixedPointsState(StaffAssignmentHelper.empty)
 
   val snapshotInterval = 1
   override val snapshotBytesThreshold: Int = oneMegaByte
 
   import FixedPointsMessageParser._
 
-  override def stateToMessage: GeneratedMessage = FixedPointsStateSnapshotMessage(fixedPointsStringToFixedPointsMessages(state.fixedPoints))
+  override def stateToMessage: GeneratedMessage = FixedPointsStateSnapshotMessage(staffAssignmentsToFixedPointsMessages(state.staffAssignments))
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case snapshot: FixedPointsStateSnapshotMessage => state = FixedPointsState(fixedPointMessagesToFixedPointsString(snapshot.fixedPoints.toList))
+    case snapshot: FixedPointsStateSnapshotMessage => state = FixedPointsState(fixedPointMessagesToStaffAssignments(snapshot.fixedPoints))
   }
 
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case fixedPointsMessage: FixedPointsMessage =>
-      val fp = fixedPointMessagesToFixedPointsString(fixedPointsMessage.fixedPoints.toList)
+      val fp = fixedPointMessagesToStaffAssignments(fixedPointsMessage.fixedPoints)
       updateState(fp)
   }
 
   def receiveCommand: Receive = {
     case GetState =>
       log.info(s"GetState received")
-      sender() ! state.fixedPoints
+      sender() ! state.staffAssignments
 
-    case fp: String if fp != state.fixedPoints =>
-      updateState(fp)
-      onUpdateState(fp)
+    case fixedPointStaffAssignments: StaffAssignments if fixedPointStaffAssignments != state.staffAssignments =>
+      updateState(fixedPointStaffAssignments)
+      onUpdateState(fixedPointStaffAssignments)
 
       log.info(s"Fixed points updated. Saving snapshot")
-      val snapshotMessage = FixedPointsStateSnapshotMessage(fixedPointsStringToFixedPointsMessages(state.fixedPoints))
+      val snapshotMessage = FixedPointsStateSnapshotMessage(staffAssignmentsToFixedPointsMessages(state.staffAssignments))
       saveSnapshot(snapshotMessage)
 
-    case _: String =>
+    case fixedPointStaffAssignments: StaffAssignments if fixedPointStaffAssignments == state.staffAssignments =>
       log.info(s"No changes to fixed points. Not persisting")
+      log.info(s"old: ${state.staffAssignments}")
+      log.info(s"new: $fixedPointStaffAssignments")
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")
@@ -99,10 +102,10 @@ class FixedPointsActorBase extends RecoveryActorLike with PersistentDrtActor[Fix
       log.info(s"unhandled message: $u")
   }
 
-  def onUpdateState(fp: String): Unit = {}
+  def onUpdateState(fixedPointStaffAssignments: StaffAssignments): Unit = {}
 
-  def updateState(data: String): Unit = {
-    state = state.updated(data)
+  def updateState(fixedPointStaffAssignments: StaffAssignments): Unit = {
+    state = state.updated(fixedPointStaffAssignments)
   }
 }
 
@@ -148,18 +151,18 @@ object FixedPointsMessageParser {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def fixedPointStringToFixedPointMessage(fixedPoint: String): Option[FixedPointMessage] = {
+  def fixedPointStringToStaffAssignment(fixedPoint: String): Option[StaffAssignment] = {
     val strings: immutable.Seq[String] = fixedPoint.replaceAll("([^\\\\]),", "$1\",\"").split("\",\"").toList.map(_.trim)
     strings match {
       case List(description, terminalName, startDay, startTime, endTime, staffNumberDelta) =>
         val (startTimestamp, endTimestamp) = startAndEndTimestamps(startDay, startTime, endTime)
-        Some(FixedPointMessage(
-          name = Some(description),
-          terminalName = Some(terminalName),
-          startTimestamp = startTimestamp,
-          endTimestamp = endTimestamp,
-          numberOfStaff = Some(staffNumberDelta),
-          createdAt = Option(SDate.now().millisSinceEpoch)
+        Some(StaffAssignment(
+          name = description,
+          terminalName = terminalName,
+          startDt = MilliDate(startTimestamp.getOrElse(0L)),
+          endDt = MilliDate(endTimestamp.getOrElse(0L)),
+          numberOfStaff = staffNumberDelta.toInt,
+          createdBy = None
         ))
       case _ =>
         log.warn(s"Couldn't parse fixedPoints line: '$fixedPoint'")
@@ -167,21 +170,37 @@ object FixedPointsMessageParser {
     }
   }
 
-  def fixedPointsStringToFixedPointsMessages(fixedPoints: String): Seq[FixedPointMessage] = {
-    log.info(s"fixedPointsStringToFixedPointsMessages($fixedPoints)")
-    fixedPoints.split("\n").map(fixedPointStringToFixedPointMessage).collect { case Some(x) => x }.toList
-  }
+  def fixedPointsStringToStaffAssignments(fixedPoints: String): Seq[StaffAssignment] = fixedPoints
+    .split("\n")
+    .map(fixedPointStringToStaffAssignment)
+    .collect { case Some(x) => x }
+    .toList
 
-  def fixedPointsMessageToFixedPointsString(fixedPointsMessage: FixedPointsMessage): String = fixedPointsMessage.fixedPoints.collect {
-    case FixedPointMessage(Some(name), Some(terminalName), Some(numberOfStaff), Some(startTimestamp), Some(endTimestamp), _) =>
-      s"$name, $terminalName, ${FixedPointsMessageParser.dateString(startTimestamp)}, ${FixedPointsMessageParser.timeString(startTimestamp)}, ${FixedPointsMessageParser.timeString(endTimestamp)}, $numberOfStaff"
+  def staffAssignmentToMessage(assignment: StaffAssignment): FixedPointMessage = FixedPointMessage(
+    name = Option(assignment.name),
+    terminalName = Option(assignment.terminalName),
+    numberOfStaff = Option(assignment.numberOfStaff.toString),
+    startTimestamp = Option(assignment.startDt.millisSinceEpoch),
+    endTimestamp = Option(assignment.endDt.millisSinceEpoch),
+    createdAt = Option(SDate.now().millisSinceEpoch)
+  )
+
+  def fixedPointMessageToStaffAssignment(fixedPointMessage: FixedPointMessage) = StaffAssignment(
+    name = fixedPointMessage.name.getOrElse(""),
+    terminalName = fixedPointMessage.terminalName.getOrElse(""),
+    startDt = MilliDate(fixedPointMessage.startTimestamp.getOrElse(0L)),
+    endDt = MilliDate(fixedPointMessage.endTimestamp.getOrElse(0L)),
+    numberOfStaff = fixedPointMessage.numberOfStaff.getOrElse("0").toInt,
+    createdBy = None
+  )
+
+  def staffAssignmentsToFixedPointsMessages(fixedPointStaffAssignments: StaffAssignments): Seq[FixedPointMessage] = fixedPointStaffAssignments.assignments.map(staffAssignmentToMessage)
+
+  def staffAssignmentsToString(assignments: Seq[StaffAssignment]): String = assignments.map {
+    case StaffAssignment(name, terminalName, MilliDate(startMillis), MilliDate(endMillis), numberOfStaff, _) =>
+      s"$name, $terminalName, ${FixedPointsMessageParser.dateString(startMillis)}, ${FixedPointsMessageParser.timeString(startMillis)}, ${FixedPointsMessageParser.timeString(endMillis)}, $numberOfStaff"
   }.mkString("\n")
 
-  def fixedPointMessagesToFixedPointsString(fixedPointMessages: List[FixedPointMessage]): String = fixedPointMessages.map {
-    case FixedPointMessage(Some(name), Some(terminalName), Some(numberOfStaff), Some(startTimestamp), Some(endTimestamp), _) =>
-      s"$name, $terminalName, ${FixedPointsMessageParser.dateString(startTimestamp)}, ${FixedPointsMessageParser.timeString(startTimestamp)}, ${FixedPointsMessageParser.timeString(endTimestamp)}, $numberOfStaff"
-    case _ =>
-      s""
-  }.mkString("\n")
+  def fixedPointMessagesToStaffAssignments(fixedPointMessages: Seq[FixedPointMessage]): StaffAssignments = StaffAssignments(fixedPointMessages.map(fixedPointMessageToStaffAssignment))
 
 }

@@ -2,7 +2,7 @@ package drt.client.services
 
 import java.util.UUID
 
-import drt.shared.StaffMovement
+import drt.shared.{StaffAssignment, StaffMovement}
 import utest._
 
 import scala.scalajs.js.Date
@@ -141,7 +141,7 @@ object ShiftsServiceTests extends TestSuite {
             shifts match {
               case Failure(t) :: Nil => assert(true)
               case other =>
-                println(s"Should have failed that bad line ${other}")
+                println(s"Should have failed that bad line $other")
                 assert(false)
             }
           }
@@ -149,10 +149,10 @@ object ShiftsServiceTests extends TestSuite {
 
         "StaffAssignment to csv string representation" - {
           "Given a shift when I ask for a csv string then I should get a string with the fields separated by commas" - {
-            val shiftTry: Try[StaffAssignment] = StaffAssignment("My shift", "T1", "01/01/17", "08:00", "11:59", "2")
+            val shiftTry: Try[StaffAssignment] = StaffAssignmentHelper.tryStaffAssignment("My shift", "T1", "01/01/17", "08:00", "11:59", "2")
             val shift = shiftTry.get
 
-            val csvString = shift.toCsv
+            val csvString = StaffAssignmentHelper.toCsv(shift)
 
             val expected = "My shift,T1,01/01/17,08:00,11:59,2"
 
@@ -346,22 +346,22 @@ object ShiftsServiceTests extends TestSuite {
     val lines = shiftsRawTsv.split("\n")
     val parsedShifts = lines.map(l => l.split("\t"))
       .filter(_.length == 5)
-      .map(pl => StaffAssignment(pl(0), pl(1), pl(2), pl(3), pl(4)))
+      .map(pl => StaffAssignmentHelper.tryStaffAssignment(pl(0), pl(1), pl(2), pl(3), pl(4)))
     parsedShifts
   }
 }
 
 object TestTimer {
-  def timeIt(name: String)(times: Int)(f: => Unit) = {
+  def timeIt(name: String)(times: Int)(f: => Unit): Unit = {
     val start = new Date()
-    println(s"${name}: Starting timer at ${start}")
+    println(s"$name: Starting timer at $start")
     (1 to times).foreach(n => {
       println(n)
       f
     })
     val end = new Date()
-    println(s"${name} Trial done at ${end}")
-    val timeTaken = (end.getTime() - start.getTime())
-    println(s"${name} Time taken in ${times} runs ${timeTaken}ms, ${timeTaken.toDouble / times} per run")
+    println(s"$name Trial done at $end")
+    val timeTaken = end.getTime() - start.getTime()
+    println(s"$name Time taken in $times runs ${timeTaken}ms, ${timeTaken.toDouble / times} per run")
   }
 }

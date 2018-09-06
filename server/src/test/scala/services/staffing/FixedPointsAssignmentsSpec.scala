@@ -1,4 +1,4 @@
-package services.shifts
+package services.staffing
 
 import org.specs2.mutable.Specification
 import services.SDate
@@ -16,7 +16,7 @@ class FixedPointsAssignmentsSpec extends Specification {
       val result = fixedPointsAssignmentService.terminalStaffAt("T1", SDate("2018-05-22T03:00:00Z").millisSinceEpoch)
       val expected = 2
 
-      result === 2
+      result === expected
     }
 
   "Given 2 fixed points starting at 00:00 and ending at 02:00 then I should expect 2018-01-22T01:00:00Z to return 2 during UTC" >> {
@@ -27,7 +27,7 @@ class FixedPointsAssignmentsSpec extends Specification {
       val result = fixedPointsAssignmentService.terminalStaffAt("T1", SDate("2018-01-22T01:00:00Z").millisSinceEpoch)
       val expected = 2
 
-      result === 2
+      result === expected
     }
 
   "Given 2 fixed points starting at 00:00 and ending at 02:00 then I should expect 2018-05-22T01:00:00Z to return 2" >> {
@@ -38,7 +38,7 @@ class FixedPointsAssignmentsSpec extends Specification {
       val result = fixedPointsAssignmentService.terminalStaffAt("T1", SDate("2018-05-22T01:00:00", Crunch.europeLondonTimeZone).millisSinceEpoch)
       val expected = 2
 
-      result === 2
+      result === expected
     }
   }
 }

@@ -4,7 +4,7 @@ import java.nio.ByteBuffer
 
 import boopickle.Default._
 import drt.client.SPAMain
-import drt.shared.{FeedStatus, FeedStatusFailure, FeedStatusSuccess}
+import drt.shared.{FeedStatus, FeedStatusFailure, FeedStatusSuccess, StaffAssignments}
 import org.scalajs.dom
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -15,6 +15,9 @@ object AjaxClient extends autowire.Client[ByteBuffer, Pickler, Pickler] {
   implicit val feedStatusPickler = compositePickler[FeedStatus].
     addConcreteType[FeedStatusSuccess].
     addConcreteType[FeedStatusFailure]
+
+  implicit val staffAssignmentsPickler = generatePickler[StaffAssignments]
+
 
   override def doCall(req: Request): Future[ByteBuffer] = {
     dom.ext.Ajax.post(

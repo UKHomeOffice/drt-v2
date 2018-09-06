@@ -2,8 +2,8 @@ package drt.client.components
 
 import diode.data.Pot
 import drt.client.actions.Actions._
+import drt.client.components.FixedPoints._
 import drt.client.logger.{Logger, LoggerFactory}
-import FixedPoints._
 import drt.client.services.JSDateConversions._
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -27,7 +27,7 @@ object TerminalStaffing {
   case class Props(
                     terminalName: TerminalName,
                     potShifts: Pot[String],
-                    potFixedPoints: Pot[String],
+                    potFixedPoints: Pot[StaffAssignments],
                     potStaffMovements: Pot[Seq[StaffMovement]],
                     airportConfig: AirportConfig,
                     loggedInUser: Pot[LoggedInUser],
@@ -75,17 +75,16 @@ object TerminalStaffing {
 
       <.div(
         props.potShifts.render((rawShifts: String) => {
-          props.potFixedPoints.render((rawFixedPoints: String) => {
+          props.potFixedPoints.render(fixedPoints => {
             props.potStaffMovements.render((movements: Seq[StaffMovement]) => {
               val shifts: List[Try[StaffAssignment]] = StaffAssignmentParser(rawShifts).parsedAssignments.toList
-              val fixedPoints: List[Try[StaffAssignment]] = StaffAssignmentParser(rawFixedPoints).parsedAssignments.toList
               <.div(
                 <.div(^.className := "container",
-                  <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(rawFixedPoints, props.airportConfig, props.terminalName, props.loggedInUser))),
+                  <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(fixedPoints.forTerminal(props.terminalName), props.airportConfig, props.terminalName, props.loggedInUser))),
                   <.div(^.className := "col-md-4", movementsEditor(movementsForDay(movements, props.viewMode.time), props.terminalName))
                 ),
                 <.div(^.className := "container",
-                  <.div(^.className := "col-md-10", staffOverTheDay(movementsForDay(movements, props.viewMode.time), shifts, fixedPoints, props.terminalName)))
+                  <.div(^.className := "col-md-10", staffOverTheDay(movementsForDay(movements, props.viewMode.time), shifts, props.terminalName)))
               )
             })
           })
@@ -100,25 +99,14 @@ object TerminalStaffing {
       }).mkString("\n")
     }
 
-    def staffOverTheDay(movements: Seq[StaffMovement], shifts: List[Try[StaffAssignment]], fixedPoints: List[Try[StaffAssignment]], terminalName: TerminalName): VdomTagOf[Div] = {
-      val didParseFixedPointsFail = fixedPoints exists (s => s.isFailure)
-      val didParseShiftsFail = shifts exists (s => s.isFailure)
+    def staffOverTheDay(movements: Seq[StaffMovement], shifts: List[Try[StaffAssignment]], terminalName: TerminalName): VdomTagOf[Div] = {
+      val successfulShifts: List[StaffAssignment] = shifts.collect { case Success(s) => s }
+      val successfulTerminalShifts = successfulShifts.filter(_.terminalName == terminalName)
+      val ss = StaffAssignmentServiceWithDates(successfulTerminalShifts)
+      val staffWithShiftsAndMovementsAt = StaffMovements.terminalStaffAt(ss)(movements) _
       <.div(
-        <.h2("Staff over the day"), if (didParseShiftsFail || didParseFixedPointsFail) {
-          if (didParseShiftsFail)
-            <.div(^.className := "error", "Error in Shifts")
-          else ""
-          if (fixedPoints exists (s => s.isFailure))
-            <.div(^.className := "error", "Error in Fixed Points")
-          else ""
-        }
-        else {
-          val successfulShifts: List[StaffAssignment] = shifts.collect { case Success(s) => s }
-          val successfulTerminalShifts = successfulShifts.filter(_.terminalName == terminalName)
-          val ss = StaffAssignmentServiceWithDates(successfulTerminalShifts)
-          val staffWithShiftsAndMovementsAt = StaffMovements.terminalStaffAt(ss)(movements) _
-          staffingTableHourPerColumn(terminalName, daysWorthOf15Minutes(SDate.midnightThisMorning()), staffWithShiftsAndMovementsAt)
-        }
+        <.h2("Staff over the day"),
+        staffingTableHourPerColumn(terminalName, daysWorthOf15Minutes(SDate.midnightThisMorning()), staffWithShiftsAndMovementsAt)
       )
     }
 
@@ -139,11 +127,11 @@ object TerminalStaffing {
                 movementPair.toList.sortBy(_.time) match {
                   case first :: second :: Nil =>
                     val remove = <.a(Icon.remove, ^.key := first.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) => Callback(SPACircuit.dispatch(RemoveStaffMovement(0, first.uUID)))))
-                    val span = <.span(^.`class`:="movement-display", MovementDisplay.displayPair(first, second))
+                    val span = <.span(^.`class` := "movement-display", MovementDisplay.displayPair(first, second))
                     <.li(remove, " ", span)
                   case mm :: Nil =>
                     val remove = <.a(Icon.remove, ^.key := mm.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) => Callback(SPACircuit.dispatch(RemoveStaffMovement(0, mm.uUID)))))
-                    val span = <.span(^.`class`:="movement-display", MovementDisplay.displaySingle(mm))
+                    val span = <.span(^.`class` := "movement-display", MovementDisplay.displaySingle(mm))
                     <.li(remove, " ", span)
                   case x =>
                     log.info(s"didn't get a pair: $x")
@@ -157,7 +145,7 @@ object TerminalStaffing {
       )
     }
 
-    case class FixedPointsProps(rawFixedPoints: String,
+    case class FixedPointsProps(fixedPoints: StaffAssignments,
                                 airportConfig: AirportConfig,
                                 terminalName: TerminalName,
                                 loggedInUser: Pot[LoggedInUser])
@@ -166,11 +154,7 @@ object TerminalStaffing {
 
     object FixedPointsEditor {
       val component = ScalaComponent.builder[FixedPointsProps]("FixedPointsEditor")
-        .initialStateFromProps(props => {
-          val onlyOurTerminal = filterTerminal(props.terminalName, props.rawFixedPoints)
-          val withoutTerminalName = removeTerminalNameAndDate(onlyOurTerminal)
-          FixedPointsState(withoutTerminalName)
-        })
+        .initialStateFromProps(props => FixedPointsState(StaffAssignmentHelper.fixedPointsFormat(props.fixedPoints)))
         .renderPS((scope, props, state) => {
 
           val defaultExamples = Seq("Roving Officer, 00:00, 23:59, 1")
@@ -188,16 +172,17 @@ object TerminalStaffing {
                   <.pre(<.div(examples.map(line => <.div(line)).toTagMod)),
                   <.textarea(^.value := state.rawFixedPoints, ^.className := "staffing-editor"),
                   ^.onChange ==> ((e: ReactEventFromInput) => {
+                    log.info(s"fixed points changed")
                     val newRawFixedPoints = e.target.value
                     scope.modState(_.copy(rawFixedPoints = newRawFixedPoints))
                   }),
                   <.button("Save", ^.onClick ==> ((e: ReactEventFromInput) => {
                     val withTerminalName = addTerminalNameAndDate(state.rawFixedPoints, props.terminalName)
-                    Callback(SPACircuit.dispatch(SaveFixedPoints(withTerminalName, props.terminalName)))
+                    val newAssignments = StaffAssignments(StaffAssignmentParser(withTerminalName).parsedAssignments.toList.collect { case Success(sa) => sa })
+                    Callback(SPACircuit.dispatch(SaveFixedPoints(newAssignments, props.terminalName)))
                   }))
                 )
-              } else
-                <.pre(state.rawFixedPoints, ^.className := "staffing-editor")
+              } else <.pre(state.rawFixedPoints, ^.className := "staffing-editor")
             }
             ))
         }).build
@@ -285,25 +270,9 @@ object TerminalStaffing {
 }
 
 object FixedPoints {
-  def filterTerminal(terminalName: TerminalName, rawFixedPoints: String): String = {
-    rawFixedPoints.split("\n").toList.filter(line => {
-      val terminal = line.split(",").toList.map(_.trim) match {
-        case _ :: t :: _ => t
-        case _ => Nil
-      }
-      terminal == terminalName
-    }).mkString("\n")
-  }
+  def filterOtherTerminals(terminalName: TerminalName, fixedPoints: StaffAssignments): StaffAssignments =
+    StaffAssignments(fixedPoints.assignments.filterNot(_.terminalName == terminalName))
 
-  def filterOtherTerminals(terminalName: TerminalName, rawFixedPoints: String): String = {
-    rawFixedPoints.split("\n").toList.filter(line => {
-      val terminal = line.split(",").toList.map(_.trim) match {
-        case _ :: t :: _ => t
-        case _ => Nil
-      }
-      terminal != terminalName
-    }).mkString("\n")
-  }
 
   def removeTerminalNameAndDate(rawFixedPoints: String): String = {
     val lines = rawFixedPoints.split("\n").toList.map(line => {

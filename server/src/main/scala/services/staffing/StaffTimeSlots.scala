@@ -1,4 +1,4 @@
-package services.shifts
+package services.staffing
 
 import drt.shared.FlightsApi.TerminalName
 import drt.shared.{SDateLike, StaffTimeSlotsForTerminalMonth}
