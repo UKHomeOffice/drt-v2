@@ -35,12 +35,7 @@ describe('Alerts system', function () {
 
   }
   function shouldHaveAlerts(num) {
-    cy.get('#has-alerts .text').should('have.length', num);
-
-  }
-  function closeAlerts() {
-    cy.get("#close-alert").click();
-
+    cy.get('#has-alerts .alert').should('have.length', num);
   }
 
   describe('An alert exists in the app', function () {
@@ -55,14 +50,6 @@ describe('Alerts system', function () {
       addAlert(timeAtStartOfDay);
       navigateToHome();
       shouldHaveAlerts(0)
-    });
-
-    it("When the user closes the alerts no alerts are displayed", function () {
-      addAlert(timeAtEndOfDay);
-      navigateToHome();
-      shouldHaveAlerts(1);
-      closeAlerts();
-      shouldHaveAlerts(0);
     });
 
   });
