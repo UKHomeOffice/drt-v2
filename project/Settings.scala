@@ -56,12 +56,9 @@ object Settings {
     val pprint = "0.4.3"
     val scalaCheck = "1.13.4"
     val akkaPersistenceInmemory = "2.4.18.1"
-    val akkaPersistenceJdbc = "3.4.0"
-    val postgres = "42.2.2"
     val sshJ = "0.24.0"
-    val jodaTime = "2.9.6"
+    val jodaTime = "2.9.4"
     val playJsonJoda = "2.6.9"
-    val jodaConvert = "1.8.1"
     val exposeLoader = "0.7.1"
     val log4Javascript = "1.4.15"
     val typesafeConfig = "1.3.0"
@@ -72,8 +69,6 @@ object Settings {
     val drtBirminghamSchema = "1.0.0"
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
-    val jsdom = "11.11.0"
-    val sourcemapsupport ="0.5.6"
   }
 
   import versions._
@@ -93,9 +88,7 @@ object Settings {
     "react-addons-test-utils" -> reactTestUtils,
     "log4javascript" -> log4Javascript,
     "bootstrap" -> bootstrap,
-    "react-handsontable" -> reactHandsontable,
-    "source-map-support" -> sourcemapsupport,
-    "jsdom" -> jsdom
+    "react-handsontable" -> reactHandsontable
   )
 
   val clientNpmDevDependencies = "expose-loader" -> exposeLoader
@@ -133,7 +126,6 @@ object Settings {
     "io.spray" %% "spray-json" % sprayVersion,
 
     "joda-time" % "joda-time" % jodaTime,
-    "org.joda" % "joda-convert" % jodaConvert,
     "com.typesafe.play" %% "play-json-joda" % playJsonJoda,
     "org.opensaml" % "opensaml" % openSaml excludeAll (ExclusionRule("org.bouncycastle"), ExclusionRule("xerces")),
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
@@ -157,10 +149,7 @@ object Settings {
 
     "com.box" % "box-java-sdk" % "2.19.0",
     "com.eclipsesource.minimal-json" % "minimal-json" % "0.9.1",
-    "org.bitbucket.b_c" % "jose4j" % "0.4.4",
-
-    "com.github.dnvriend" %% "akka-persistence-jdbc" % akkaPersistenceJdbc,
-    "org.postgresql" % "postgresql" % postgres
+    "org.bitbucket.b_c" % "jose4j" % "0.4.4"
 
   ))
 
