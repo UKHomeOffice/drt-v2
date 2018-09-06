@@ -97,6 +97,8 @@ lazy val server = (project in file("server"))
   // triggers scalaJSPipeline when using compile or continuous compilation
   compile in Compile := ((compile in Compile) dependsOn scalaJSPipeline).value,
   testFrameworks += new TestFramework("utest.runner.Framework"),
+  resolvers += Resolver.bintrayRepo("dwhjames", "maven"),
+
   publishArtifact in(Compile, packageBin) := false,
   // Disable scaladoc generation for this project (useless)
   publishArtifact in(Compile, packageDoc) := false,
