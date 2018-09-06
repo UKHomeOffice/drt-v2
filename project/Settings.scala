@@ -100,7 +100,7 @@ object Settings {
     "com.hierynomus" % "sshj" % sshJ,
     "com.lihaoyi" %% "pprint" % pprint,
     "com.lihaoyi" %%% "utest" % uTest % Test,
-    "com.mfglabs" %% "commons-aws-s3" % awsCommons,
+    "com.mfglabs" %% "commons-aws" % awsCommons,
 
     "javax.mail" % "mail" % "1.4.7",
     "info.folone" %% "poi-scala" % "0.18",
