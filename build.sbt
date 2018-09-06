@@ -49,13 +49,15 @@ lazy val client: Project = (project in file("client"))
     scalacOptions ++= elideOptions.value,
     jsDependencies ++= Settings.jsDependencies.value,
     // reactjs testing
-    jsEnv := new org.scalajs.jsenv.jsdomnodejs.JSDOMNodeJSEnv(),
+    //jsEnv := new org.scalajs.jsenv.jsdomnodejs.JSDOMNodeJSEnv(),
+    requiresDOM := true,
     scalaJSStage in Test := FastOptStage,
     // 'new style js dependencies with scalaBundler'
     npmDependencies in Compile ++= Settings.clientNpmDependences,
     npmDevDependencies in Compile += Settings.clientNpmDevDependencies,
     // RuntimeDOM is needed for tests
-    jsEnv in Test := new org.scalajs.jsenv.jsdomnodejs.JSDOMNodeJSEnv(),
+    //jsEnv in Test := new org.scalajs.jsenv.jsdomnodejs.JSDOMNodeJSEnv(),
+    jsDependencies += RuntimeDOM % "test",
     useYarn := true,
     // yes, we want to package JS dependencies
     skip in packageJSDependencies := false,
