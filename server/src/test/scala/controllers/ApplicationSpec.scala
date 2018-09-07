@@ -16,7 +16,7 @@ class ApplicationSpec extends TestKit(ActorSystem("testActorSystem", ConfigFacto
 
   trait Context extends Scope {
     implicit val mat: Materializer = ActorMaterializer()
-    implicit val config = play.api.Configuration.from(Map("portCode" -> "test", "dq.s3.bucket" -> "bucket"))
+    implicit val config = play.api.Configuration.from(Map("portCode" -> "test", "dq.s3.bucket" -> "bucket", "googleTrackingCode"-> ""))
 
     val application = new Application()(config = config, mat = mat, env = Environment.simple(), system = system, ec = global)
   }
