@@ -126,7 +126,7 @@ lazy val ReleaseCmd = Command.command("release") {
 
 fork in run := true
 
-//fork in Test := true
+fork in Test := true
 parallelExecution in Test := false
 // loads the Play server project at sbt startup
 onLoad in Global := (Command.process("project server", _: State)) compose (onLoad in Global).value
