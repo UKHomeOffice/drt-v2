@@ -10,5 +10,8 @@
   "license": "UNLICENSED",
   "devDependencies": {
     "cypress": "^3.0.2"
+  },
+  "dependencies": {
+    "jsdom": "9.9.0"
   }
 }
