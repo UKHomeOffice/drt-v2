@@ -5,15 +5,15 @@ import scala.scalajs.js
 import scala.scalajs.js.annotation.JSGlobalScope
 
 object GoogleEventTracker {
-  val trackingCode: GoogleTrackingCode = GoogleTrackingCode.getTrackingCode(dom.document.location.href)
+  def trackingCode: String = dom.document.getElementById("ga-code").getAttribute("value")
   def port: String = dom.document.getElementById("port-code").getAttribute("value")
   def userId: String = dom.document.getElementById("user-id").getAttribute("value")
   def isScriptLoaded: Boolean = js.Dynamic.global.analytics.isInstanceOf[js.Function]
   private var hasCreateTrackerRun = false
 
   private def runCreateTracker(): Unit = {
-    if (!hasCreateTrackerRun && !userId.isEmpty && !port.isEmpty) {
-      GoogleAnalytics.analytics("create", trackingCode.code, "auto", js.Dictionary("userId"->userId))
+    if (!hasCreateTrackerRun && !userId.isEmpty && !port.isEmpty && !trackingCode.isEmpty) {
+      GoogleAnalytics.analytics("create", trackingCode, "auto", js.Dictionary("userId"->userId))
       hasCreateTrackerRun = true
     }
   }
@@ -38,28 +38,6 @@ object GoogleEventTracker {
 
   def sendError(description: String, fatal: Boolean): Unit = {
     if (isScriptLoaded && hasCreateTrackerRun) GoogleAnalytics.analytics("send", "exception", js.Dictionary("exDescription" -> description, "exFatal" -> fatal))
-  }
-}
-
-trait GoogleTrackingCode {
-  val code: String
-}
-
-case object ProductionTrackingCode extends GoogleTrackingCode {
-  val code = "UA-125317287-1"
-}
-case object TestTrackingCode extends GoogleTrackingCode {
-  val code = "UA-125317287-2"
-}
-
-object GoogleTrackingCode {
-  def getTrackingCode(location: String): GoogleTrackingCode = {
-    if (location.contains("demand.bf.drt") || location.contains("prod") && !location.contains("notprod")) {
-      ProductionTrackingCode
-    }
-    else {
-      TestTrackingCode
-    }
   }
 }
 

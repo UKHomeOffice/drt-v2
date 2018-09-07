@@ -22,7 +22,6 @@ object Navbar {
             }).getOrElse(TagMod(""))
 
             <.div(^.className := "navbar-drt",
-              <.input.hidden(^.id:="port-code", ^.value:=airportConfig.portCode),
               <.span(^.className := "navbar-brand", s"DRT ${airportConfig.portCode}"),
               loggedInUserPot.renderReady(loggedInUser =>
 
@@ -36,8 +35,7 @@ object Navbar {
             )
           }),
           loggedInUserPot.render(loggedInUser => <.input.hidden(^.id:="user-id", ^.value:=loggedInUser.id)),
-          loggedInUserPot.renderEmpty(<.input.hidden(^.id:="user-id")),
-          airportConfigPot.renderEmpty(<.input.hidden(^.id:="port-code"))
+          loggedInUserPot.renderEmpty(<.input.hidden(^.id:="user-id"))
           )
       })
     )
