@@ -1,6 +1,6 @@
 package services
 
-import drt.shared.Arrival
+import drt.shared.{ApiFeedSource, Arrival, LiveFeedSource}
 import org.specs2.mutable.Specification
 import controllers.ArrivalGenerator.apiFlight
 
@@ -114,5 +114,58 @@ class CodeSharesSpec extends Specification {
     )
 
     result === expected
+  }
+
+  "Codeshares with API data" should {
+
+    "Given three similar flights all with API data "+
+      "When we ask for unique flights "+
+      "Then we should see three tuple of only of flights with no codeshares" in {
+      val flight1: Arrival = apiFlight(flightId = Option(1), iata = "BA0001", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = Option(100), feedSources = Set(ApiFeedSource, LiveFeedSource))
+      val flight2: Arrival = apiFlight(flightId = Option(2), iata = "AA8778", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = Option(150), feedSources = Set(ApiFeedSource, LiveFeedSource))
+      val flight3: Arrival = apiFlight(flightId = Option(3), iata = "ZZ5566", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = Option(175), feedSources = Set(ApiFeedSource, LiveFeedSource))
+
+      val result = uniqueArrivalsWithCodeShares(identity[Arrival])(Seq(flight1, flight2, flight3))
+
+      val expected = List(
+        (flight1, Set()),
+        (flight2, Set()),
+        (flight3, Set())
+      )
+
+      result mustEqual expected
+    }
+
+    "Given three similar flights one with API data " +
+      "When we ask for unique flights " +
+      "Then we should see a tuple of only one flight with two code shares" in {
+      val flight1: Arrival = apiFlight(flightId = Option(1), iata = "BA0001", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = Option(100), feedSources = Set(ApiFeedSource, LiveFeedSource))
+      val flight2: Arrival = apiFlight(flightId = Option(2), iata = "AA8778", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = Option(150), feedSources = Set(LiveFeedSource))
+      val flight3: Arrival = apiFlight(flightId = Option(3), iata = "ZZ5566", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = Option(175), feedSources = Set(LiveFeedSource))
+
+      val result = uniqueArrivalsWithCodeShares(identity[Arrival])(Seq(flight1, flight2, flight3))
+
+      val expected = List(
+        (flight1, Set(flight2, flight3))
+      )
+      result mustEqual expected
+    }
+
+    "Given three similar flights two with API data " +
+      "When we ask for unique flights " +
+      "Then we should see a tuple of only one flight with one code shares and another with no code share" in {
+      val flight1: Arrival = apiFlight(flightId = Option(1), iata = "BA0001", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = Option(100), feedSources = Set(ApiFeedSource, LiveFeedSource))
+      val flight2: Arrival = apiFlight(flightId = Option(2), iata = "AA8778", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = Option(150), feedSources = Set(LiveFeedSource))
+      val flight3: Arrival = apiFlight(flightId = Option(3), iata = "ZZ5566", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = Option(175), feedSources = Set(ApiFeedSource, LiveFeedSource))
+
+      val result = uniqueArrivalsWithCodeShares(identity[Arrival])(Seq(flight1, flight2, flight3))
+
+      val expected = List(
+        (flight1, Set(flight2)),
+        (flight3, Set())
+      )
+      result mustEqual expected
+    }
+
   }
 }

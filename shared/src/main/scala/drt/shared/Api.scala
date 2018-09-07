@@ -146,6 +146,7 @@ case class Arrival(
                     Origin: String,
                     Scheduled: MillisSinceEpoch,
                     PcpTime: Option[MillisSinceEpoch],
+                    FeedSources: Set[FeedSource],
                     LastKnownPax: Option[Int] = None) {
   lazy val ICAO: String = Arrival.standardiseFlightCode(rawICAO)
   lazy val IATA: String = Arrival.standardiseFlightCode(rawIATA)
@@ -203,6 +204,21 @@ object Arrival {
       case _ => flightCode
     }
   }
+}
+
+sealed trait FeedSource
+
+case object ApiFeedSource extends FeedSource
+
+case object AclFeedSource extends FeedSource
+
+case object ForecastFeedSource extends FeedSource
+
+case object LiveFeedSource extends FeedSource
+
+object FeedSource {
+  def feedSources: Set[FeedSource] = Set(ApiFeedSource, AclFeedSource, ForecastFeedSource, LiveFeedSource)
+  def apply(name: String): Option[FeedSource] = feedSources.find(fs=> fs.toString == name)
 }
 
 case class ArrivalsDiff(toUpdate: Set[Arrival], toRemove: Set[Int])

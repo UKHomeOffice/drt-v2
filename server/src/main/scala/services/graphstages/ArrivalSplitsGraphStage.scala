@@ -339,7 +339,11 @@ class ArrivalSplitsGraphStage(name: String = "",
         case _ => false
       } + splitsFromManifest
 
-      flightWithSplits.copy(splits = updatedSplitsSet)
+      val apiFlight = flightWithSplits.apiFlight
+      flightWithSplits.copy(
+        apiFlight = apiFlight.copy(FeedSources = apiFlight.FeedSources + ApiFeedSource),
+        splits = updatedSplitsSet
+      )
     }
   }
 
