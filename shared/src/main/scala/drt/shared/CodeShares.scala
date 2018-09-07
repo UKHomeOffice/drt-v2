@@ -9,7 +9,7 @@ object CodeShares {
     })
     grouped.values.flatMap(flights => {
       def mainFlightWithNoApiData: GenFlight = flights.sortBy(f => apiFlightFromGenFlight(f).ActPax).reverse.head
-      val mainFlightsWithApiData = flights.filter(apiFlightFromGenFlight(_).FeedSources.contains(ApiFeed))
+      val mainFlightsWithApiData = flights.filter(apiFlightFromGenFlight(_).FeedSources.contains(ApiFeedSource))
       val mainFlights: Seq[GenFlight] = if (mainFlightsWithApiData.isEmpty) Seq(mainFlightWithNoApiData) else mainFlightsWithApiData
       val shares: Set[Arrival] = flights
         .filterNot(mainFlights.contains)

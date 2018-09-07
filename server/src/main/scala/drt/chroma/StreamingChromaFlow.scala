@@ -6,7 +6,7 @@ import akka.event.LoggingAdapter
 import akka.stream.scaladsl.Source
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveFlight}
-import drt.shared.{Arrival, ForecastFeed, LiveFeed}
+import drt.shared.{Arrival, ForecastFeedSource, LiveFeedSource}
 import drt.shared.FlightsApi.Flights
 import org.springframework.util.StringUtils
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
@@ -77,7 +77,7 @@ object StreamingChromaFlow {
           Origin = flight.Origin,
           PcpTime = Some(pcpTime),
           Scheduled = SDate(flight.SchDT).millisSinceEpoch,
-          FeedSources = Set(LiveFeed)
+          FeedSources = Set(LiveFeedSource)
         )
       }).toList
   }
@@ -107,7 +107,7 @@ object StreamingChromaFlow {
           rawIATA = flight.IATA,
           Origin = flight.Origin,
           PcpTime = Option(pcpTime),
-          FeedSources = Set(ForecastFeed),
+          FeedSources = Set(ForecastFeedSource),
           Scheduled = SDate(flight.SchDT).millisSinceEpoch
         )
       }).toList

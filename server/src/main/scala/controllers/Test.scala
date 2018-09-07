@@ -7,7 +7,7 @@ import javax.inject.{Inject, Singleton}
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
 import passengersplits.parsing.VoyageManifestParser.FlightPassengerInfoProtocol._
-import drt.shared.{Arrival, LiveFeed, SDateLike}
+import drt.shared.{Arrival, LiveFeedSource, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import play.api.mvc.{Action, Controller, InjectedController, Session}
@@ -96,7 +96,7 @@ class Test @Inject()(implicit val config: Configuration,
             rawIATA = flight.IATA,
             Origin = flight.Origin,
             PcpTime = Some(pcpTime),
-            FeedSources = Set(LiveFeed),
+            FeedSources = Set(LiveFeedSource),
             Scheduled = SDate(flight.SchDT).millisSinceEpoch
           )
           saveArrival(arrival)

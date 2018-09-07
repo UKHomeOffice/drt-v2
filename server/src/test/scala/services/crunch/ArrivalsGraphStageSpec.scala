@@ -21,7 +21,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
   trait Context extends Scope {
     val arrival_v1_with_no_chox_time: Arrival = apiFlight(flightId = Option(1), iata = "BA0001",
       schDt = "2017-01-01T10:25Z", origin = "JFK",
-      actPax = Option(100), feedSources = Set(LiveFeed))
+      actPax = Option(100), feedSources = Set(LiveFeedSource))
 
     val arrival_v2_with_chox_time: Arrival = arrival_v1_with_no_chox_time.copy(Stand = Some("Stand1"), ActualChox = Some(SDate("2017-01-01T10:25Z").millisSinceEpoch))
 
@@ -83,19 +83,19 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
           if (portStateSources.size > feedSources.size)
           feedSources =portStateSources
       }
-      feedSources === Set(LiveFeed, ApiFeed)
+      feedSources === Set(LiveFeedSource, ApiFeedSource)
     }
 
     "once a acl and a forecast input arrives for the flight, it will update the arrivals FeedSource so that it has a ACLFeed, LiveFeed and a ForecastFeed" in new Context {
       val forecastScheduled = "2017-01-01T10:25Z"
 
       val aclFlight = Flights(List(
-        ArrivalGenerator.apiFlight(flightId = Option(1), actPax = Option(10), schDt = forecastScheduled, iata = "BA0001", feedSources = Set(AclFeed))
+        ArrivalGenerator.apiFlight(flightId = Option(1), actPax = Option(10), schDt = forecastScheduled, iata = "BA0001", feedSources = Set(AclFeedSource))
       ))
 
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlight))
 
-      val forecastArrival = apiFlight(schDt = forecastScheduled, iata = "BA0001", terminal = "T1", actPax = Option(21), feedSources = Set(ForecastFeed))
+      val forecastArrival = apiFlight(schDt = forecastScheduled, iata = "BA0001", terminal = "T1", actPax = Option(21), feedSources = Set(ForecastFeedSource))
       val forecastArrivals = ArrivalsFeedSuccess(Flights(List(forecastArrival)))
 
 
@@ -109,7 +109,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
           if (portStateSources.size > feedSources.size)
           feedSources =portStateSources
       }
-      feedSources === Set(LiveFeed, ForecastFeed, AclFeed)
+      feedSources === Set(LiveFeedSource, ForecastFeedSource, AclFeedSource)
     }
 
   }

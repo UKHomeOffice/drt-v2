@@ -5,7 +5,7 @@ import akka.testkit.TestKit
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import drt.server.feeds.lhr.live.LHRLiveFeed
-import drt.shared.{Arrival, LiveFeed}
+import drt.shared.{Arrival, LiveFeedSource}
 import org.specs2.mutable.SpecificationLike
 import services.SDate
 import spray.http.{HttpEntity, _}
@@ -107,7 +107,7 @@ class LHRLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFacto
         ActualChox = Some(SDate("2018-02-12T10:02:00Z").millisSinceEpoch), Gate = None,
         Stand = Some("1"), MaxPax = Some(469), ActPax = Some(414), TranPax = Some(218), RunwayID = None, BaggageReclaimId = None, FlightID = None,
         AirportID = "LHR", Terminal = "T2", rawICAO = "FL002", rawIATA = "FL002", Origin = "JNB",
-        Scheduled = SDate("2018-02-12T10:20:00").millisSinceEpoch, FeedSources = Set(LiveFeed),
+        Scheduled = SDate("2018-02-12T10:20:00").millisSinceEpoch, FeedSources = Set(LiveFeedSource),
         PcpTime = None, LastKnownPax = None
       )
 
@@ -129,7 +129,7 @@ class LHRLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFacto
         ActualChox = Some(SDate("2018-04-12T09:02:00Z").millisSinceEpoch),
         Gate = None, Stand = Some("1"), MaxPax = None, ActPax = None, TranPax = None, RunwayID = None, BaggageReclaimId = None,
         FlightID = None, AirportID = "LHR", Terminal = "T2", rawICAO = "FL002", rawIATA = "FL002", Origin = "JNB",
-        Scheduled = SDate("2018-04-12T09:20:00Z").millisSinceEpoch, PcpTime = None, FeedSources = Set(LiveFeed),
+        Scheduled = SDate("2018-04-12T09:20:00Z").millisSinceEpoch, PcpTime = None, FeedSources = Set(LiveFeedSource),
         LastKnownPax = None
       )
 
@@ -152,7 +152,7 @@ class LHRLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFacto
         ActualChox = Some(SDate("2018-02-12T10:02:00Z").millisSinceEpoch),
         Gate = None, Stand = Some("1"), MaxPax = None, ActPax = None, TranPax = None, RunwayID = None, BaggageReclaimId = None,
         FlightID = None, AirportID = "LHR", Terminal = "T2", rawICAO = "FL002", rawIATA = "FL002", Origin = "JNB",
-        Scheduled = SDate("2018-02-12T10:20:00").millisSinceEpoch, FeedSources = Set(LiveFeed),
+        Scheduled = SDate("2018-02-12T10:20:00").millisSinceEpoch, FeedSources = Set(LiveFeedSource),
         PcpTime = None, LastKnownPax = None
       )
 
@@ -177,7 +177,7 @@ class LHRLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFacto
           ActualChox = Some(SDate("2018-02-12T10:02:00").millisSinceEpoch),
           Gate = None, Stand = Some("1"), MaxPax = Some(469), ActPax = Some(414), TranPax = Some(218), RunwayID = None, BaggageReclaimId = None,
           FlightID = None, AirportID = "LHR", Terminal = "T2", rawICAO = "FL002", rawIATA = "FL002",
-          Origin = "JNB", FeedSources = Set(LiveFeed),
+          Origin = "JNB", FeedSources = Set(LiveFeedSource),
           Scheduled = SDate("2018-02-12T10:20:00").millisSinceEpoch, PcpTime = None, LastKnownPax = None
         ),
         Arrival(
@@ -185,7 +185,7 @@ class LHRLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFacto
           EstimatedChox = None, ActualChox = None, Gate = None, Stand = Some("2"),
           MaxPax = Some(214), ActPax = Some(163), TranPax = Some(104), RunwayID = None, BaggageReclaimId = None, FlightID = None,
           AirportID = "LHR", Terminal = "T2", rawICAO = "FL001", rawIATA = "FL001", Origin = "JNB",
-          Scheduled = SDate("2018-02-12T18:20:00").millisSinceEpoch, FeedSources = Set(LiveFeed),
+          Scheduled = SDate("2018-02-12T18:20:00").millisSinceEpoch, FeedSources = Set(LiveFeedSource),
           PcpTime = None, LastKnownPax = None
         )
       )
@@ -208,14 +208,14 @@ class LHRLiveFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFacto
           Estimated = Some(SDate("2018-02-12T09:53:43").millisSinceEpoch),
           Actual = None,
           EstimatedChox = Some(SDate("2018-02-12T10:03:00").millisSinceEpoch),
-          ActualChox = Some(SDate("2018-02-12T10:02:00").millisSinceEpoch), FeedSources = Set(LiveFeed),
+          ActualChox = Some(SDate("2018-02-12T10:02:00").millisSinceEpoch), FeedSources = Set(LiveFeedSource),
           Gate = None, Stand = Some("1"), MaxPax = None, ActPax = None, TranPax = None, RunwayID = None, BaggageReclaimId = None,
           FlightID = None, AirportID = "LHR", Terminal = "T2", rawICAO = "FL002", rawIATA = "FL002", Origin = "JNB",
           Scheduled = SDate("2018-02-12T10:20:00").millisSinceEpoch, PcpTime = None, LastKnownPax = None
         ),
         Arrival(
           Operator = Some("FL"), Status = "Scheduled", Estimated = None, Actual = None, EstimatedChox = None, ActualChox = None, Gate = None, Stand = Some("2"), MaxPax = None, ActPax = None, TranPax = None, RunwayID = None, BaggageReclaimId = None, FlightID = None, AirportID = "LHR", Terminal = "T2", rawICAO = "FL001", rawIATA = "FL001", Origin = "JNB",
-          Scheduled = SDate("2018-02-12T18:20:00").millisSinceEpoch, PcpTime = None, LastKnownPax = None, FeedSources = Set(LiveFeed)
+          Scheduled = SDate("2018-02-12T18:20:00").millisSinceEpoch, PcpTime = None, LastKnownPax = None, FeedSources = Set(LiveFeedSource)
         )
       )
 

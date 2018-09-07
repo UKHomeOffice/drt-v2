@@ -208,16 +208,16 @@ object Arrival {
 
 sealed trait FeedSource
 
-case object ApiFeed extends FeedSource
+case object ApiFeedSource extends FeedSource
 
-case object AclFeed extends FeedSource
+case object AclFeedSource extends FeedSource
 
-case object ForecastFeed extends FeedSource
+case object ForecastFeedSource extends FeedSource
 
-case object LiveFeed extends FeedSource
+case object LiveFeedSource extends FeedSource
 
 object FeedSource {
-  def feedSources: Set[FeedSource] = Set(ApiFeed, AclFeed, ForecastFeed, LiveFeed)
+  def feedSources: Set[FeedSource] = Set(ApiFeedSource, AclFeedSource, ForecastFeedSource, LiveFeedSource)
   def apply(name: String): Option[FeedSource] = feedSources.find(fs=> fs.toString == name)
 }
 

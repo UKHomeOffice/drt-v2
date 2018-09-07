@@ -6,7 +6,7 @@ import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import com.typesafe.config.ConfigFactory
 import drt.server.feeds.bhx.BHXFeed
-import drt.shared.{Arrival, ForecastFeed, LiveFeed}
+import drt.shared.{Arrival, ForecastFeedSource, LiveFeedSource}
 import javax.xml.datatype.DatatypeFactory
 import javax.xml.ws.BindingProvider
 import org.joda.time.DateTimeZone
@@ -117,7 +117,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
         Origin = "CPH",
         Scheduled = 1338619560000L,
         PcpTime = None,
-        FeedSources = Set(LiveFeed),
+        FeedSources = Set(LiveFeedSource),
         LastKnownPax = None)
     }
 
@@ -148,7 +148,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.p
         Origin = "CPH",
         Scheduled = 1338623160000L, // BHX Forecast is incorrect. This should be 1338619613123L or 2012-06-02T06:46:53.123Z
         PcpTime = None,
-        FeedSources = Set(ForecastFeed),
+        FeedSources = Set(ForecastFeedSource),
         LastKnownPax = None)
     }
 
