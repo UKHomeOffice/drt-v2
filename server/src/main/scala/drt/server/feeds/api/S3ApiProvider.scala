@@ -10,7 +10,8 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source, StreamConverters}
 import akka.util.ByteString
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
-import com.mfglabs.commons.aws.s3.{AmazonS3AsyncClient, S3StreamBuilder}
+import com.amazonaws.regions.Regions
+import com.mfglabs.commons.aws.s3._
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.mutable.ArrayBuffer
@@ -32,7 +33,7 @@ case class S3ApiProvider(bucketName: String)(implicit actorSystem: ActorSystem, 
     zipFiles(latestFile)
       .mapAsync(64) { filename =>
         log.info(s"Fetching $filename")
-        val zipByteStream = S3StreamBuilder(s3Client).getFileAsStream(bucketName, filename)
+        val zipByteStream = s3Client.getFileAsStream(bucketName, filename)
         Future(fileNameAndContentFromZip(filename, zipByteStream))
       }
       .map {
@@ -84,13 +85,9 @@ case class S3ApiProvider(bucketName: String)(implicit actorSystem: ActorSystem, 
     }
   }
 
-  def filesAsSource: Source[String, NotUsed] = {
-    S3StreamBuilder(s3Client)
-      .listFilesAsStream(bucketName)
-      .map {
-        case (filename, _) => filename
-      }
-  }
+  def filesAsSource: Source[String, NotUsed] = s3Client.
+    listFilesAsStream(bucketName)
+    .map(_.getKey)
 
-  def s3Client: AmazonS3AsyncClient = new AmazonS3AsyncClient(new ProfileCredentialsProvider("drt-prod-s3"))
+  def s3Client: AmazonS3Client = AmazonS3Client(Regions.EU_WEST_2, new ProfileCredentialsProvider("drt-prod-s3").getCredentials)()
 }
