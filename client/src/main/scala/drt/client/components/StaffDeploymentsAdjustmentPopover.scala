@@ -1,6 +1,7 @@
 package drt.client.components
 
 import drt.client.actions.Actions.{AddStaffMovement, SaveStaffMovements}
+import drt.client.modules.GoogleEventTracker
 import drt.client.services._
 import drt.shared.FlightsApi.TerminalName
 import drt.shared.{LoggedInUser, SDateLike, StaffAssignment}
@@ -70,6 +71,7 @@ object StaffDeploymentsAdjustmentPopover {
           for (movement <- StaffMovements.assignmentsToMovements(Seq(shift))) yield {
             SPACircuit.dispatch(AddStaffMovement(movement))
           }
+          GoogleEventTracker.sendEvent(state.terminalName, "Save Staff Assignment", shift.toString)
           SPACircuit.dispatch(SaveStaffMovements(shift.terminalName))
           scope.modState(_.copy(active = false))
         case Failure(_) =>

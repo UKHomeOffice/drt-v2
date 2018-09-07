@@ -1,9 +1,10 @@
 package drt.client.components
 
 import drt.client.logger.{Logger, LoggerFactory}
+import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.SDateLike
-import japgolly.scalajs.react.ScalaComponent
+import japgolly.scalajs.react.{Callback, ScalaComponent}
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom
@@ -77,11 +78,15 @@ object MultiDayExportComponent {
                     <.a("Export Arrivals",
                       ^.className := "btn btn-default",
                       ^.href := s"${dom.window.location.pathname}/export/arrivals/${state.startMillis}/${state.endMillis}/${props.terminal}",
-                      ^.target := "_blank"),
+                      ^.target := "_blank",
+                      ^.onClick -->{Callback(GoogleEventTracker.sendEvent(props.terminal, "click", "Export Arrivals", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))}
+                    ),
                     <.a("Export Desks",
                       ^.className := "btn btn-default",
                       ^.href := s"${dom.window.location.pathname}/export/desks/${state.startMillis}/${state.endMillis}/${props.terminal}",
-                      ^.target := "_blank")
+                      ^.target := "_blank",
+                      ^.onClick -->{Callback(GoogleEventTracker.sendEvent(props.terminal, "click", "Export Desks", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))}
+                    )
                   )
                 )
               ),

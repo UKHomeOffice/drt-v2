@@ -2,7 +2,9 @@ package drt.client.components
 
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.actions.Actions.SaveMonthTimeSlotsToShifts
+import drt.client.components.TerminalPlanningComponent.defaultStartDate
 import drt.client.logger.{Logger, LoggerFactory}
+import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, StaffAssignmentParser, StaffAssignmentServiceWithDates}
 import drt.shared.{SDateLike, StaffTimeSlot, StaffTimeSlotsForTerminalMonth}
@@ -212,7 +214,8 @@ object TerminalStaffingV2 {
           val changedDays = whatDayChanged(initialTimeSlots, updatedTimeSlots)
             .map(d => state.colHeadings(d)).toList
 
-          if (confirm(s"You have updated staff for ${dateListToString(changedDays)} $updatedMonth - do you want to save these changes?"))
+          if (confirm(s"You have updated staff for ${dateListToString(changedDays)} $updatedMonth - do you want to save these changes?")) {
+            GoogleEventTracker.sendEvent(s"${props.terminalPageTab.terminal}", "Save Monthly Staffing", s"updated staff for ${dateListToString(changedDays)} $updatedMonth")
             SPACircuit.dispatch(
               SaveMonthTimeSlotsToShifts(
                 staffToStaffTimeSlotsForMonth(
@@ -221,6 +224,7 @@ object TerminalStaffingV2 {
                   props.terminalPageTab.terminal,
                   props.timeSlotMinutes
                 )))
+          }
         }
 
       val viewingDate = firstDayOfMonth(props.terminalPageTab.dateFromUrlOrNow)
@@ -271,7 +275,10 @@ object TerminalStaffingV2 {
     })
     .configure(Reusability.shouldComponentUpdate)
     .componentDidUpdate(_ => Callback.log("Staff updated"))
-    .componentDidMount(_ => Callback.log(s"Staff Mounted"))
+    .componentDidMount(p => Callback{
+      GoogleEventTracker.sendPageView(s"${p.props.terminalPageTab.terminal}/planning/${defaultStartDate(p.props.terminalPageTab.dateFromUrlOrNow).toISODateOnly}/${p.props.terminalPageTab.subMode}")
+      log.info("Staff Mounted")
+    })
     .build
 
   def stateFromProps(props: Props): State = {

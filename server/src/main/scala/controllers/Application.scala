@@ -168,6 +168,8 @@ class Application @Inject()(implicit val config: Configuration,
     with ProdPassengerSplitProviders
     with ImplicitTimeoutProvider {
 
+  val googleTrackingCode: String = config.get[String]("googleTrackingCode")
+
   val ctrl: DrtSystemInterface = config.getOptional[String]("env") match {
     case Some("test") =>
       new TestDrtSystem(system, config, getPortConfFromEnvVar)
@@ -380,7 +382,7 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   def index = Action {
-    Ok(views.html.index("DRT - BorderForce"))
+    Ok(views.html.index("DRT - BorderForce", portCode, googleTrackingCode))
   }
 
 
