@@ -98,7 +98,7 @@ lazy val server = (project in file("server"))
   compile in Compile := ((compile in Compile) dependsOn scalaJSPipeline).value,
   testFrameworks += new TestFramework("utest.runner.Framework"),
   resolvers += Resolver.bintrayRepo("dwhjames", "maven"),
-
+  dependencyOverrides += "com.github.dwhjames" %% "aws-wrap" % "0.9.0",
   publishArtifact in(Compile, packageBin) := false,
   // Disable scaladoc generation for this project (useless)
   publishArtifact in(Compile, packageDoc) := false,
