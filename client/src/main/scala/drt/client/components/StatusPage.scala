@@ -1,11 +1,12 @@
 package drt.client.components
 
 import drt.client.logger.{Logger, LoggerFactory}
+import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{FeedStatusFailure, FeedStatusSuccess, FeedStatuses}
-import japgolly.scalajs.react.ScalaComponent
+import japgolly.scalajs.react.{Callback, ScalaComponent}
 import japgolly.scalajs.react.vdom.html_<^._
 
 object StatusPage {
@@ -56,6 +57,7 @@ object StatusPage {
         )
       }
     })
+    .componentDidMount(p => Callback(GoogleEventTracker.sendPageView("feed-status")))
     .build
 
   private def displayTime(date: MillisSinceEpoch): String = {

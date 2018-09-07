@@ -2,6 +2,7 @@ package drt.client.components
 
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.logger.{Logger, LoggerFactory}
+import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.LoadingState
 import drt.shared.SDateLike
@@ -77,20 +78,26 @@ object DatePickerComponent {
       }
 
       def selectPointInTime = (_: ReactEventFromInput) => {
+        GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Point In time", state.selectedDateTime.toISODateOnly)
         updateUrlWithDateCallback(Option(state.selectedDateTime))
       }
 
       def selectYesterday = (_: ReactEventFromInput) => {
         val yesterday = SDate.midnightThisMorning().addMinutes(-1)
+        GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Yesterday", yesterday.toISODateOnly)
         updateUrlWithDateCallback(Option(yesterday))
       }
 
       def selectTomorrow = (_: ReactEventFromInput) => {
         val tomorrow = SDate.midnightThisMorning().addDays(2).addMinutes(-1)
+        GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Tomorrow", tomorrow.toISODateOnly)
         updateUrlWithDateCallback(Option(tomorrow))
       }
 
-      def selectToday = (_: ReactEventFromInput) => updateUrlWithDateCallback(None)
+      def selectToday = (_: ReactEventFromInput) => {
+        GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Today", "Today")
+        updateUrlWithDateCallback(None)
+      }
 
       def isDataAvailableForDate = SnapshotSelector.isLaterThanEarliest(state.selectedDateTime)
 

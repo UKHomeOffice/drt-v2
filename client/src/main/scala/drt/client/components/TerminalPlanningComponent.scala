@@ -1,13 +1,14 @@
 package drt.client.components
 
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
+import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, ForecastTimeSlot}
 import drt.shared.{MilliDate, Queues, SDateLike}
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
-import japgolly.scalajs.react.{ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom
 
 import scala.collection.immutable.Seq
@@ -121,6 +122,9 @@ object TerminalPlanningComponent {
       )
     })
     .configure(Reusability.shouldComponentUpdate)
+    .componentDidMount(p => Callback{
+      GoogleEventTracker.sendPageView(s"${p.props.page.terminal}/planning/${defaultStartDate(p.props.page.dateFromUrlOrNow).toISODateOnly}")
+    })
     .build
 
   def defaultStartDate(date: SDateLike) = getLastSunday(date)

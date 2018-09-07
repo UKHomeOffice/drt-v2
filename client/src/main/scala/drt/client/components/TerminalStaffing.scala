@@ -4,6 +4,7 @@ import diode.data.Pot
 import drt.client.actions.Actions._
 import drt.client.components.FixedPoints._
 import drt.client.logger.{Logger, LoggerFactory}
+import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions._
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -13,7 +14,6 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html.{Div, Table}
-
 import scala.collection.immutable.NumericRange
 import scala.scalajs.js.Date
 import scala.util.{Success, Try}
@@ -126,11 +126,19 @@ object TerminalStaffing {
               case (_, movementPair) =>
                 movementPair.toList.sortBy(_.time) match {
                   case first :: second :: Nil =>
-                    val remove = <.a(Icon.remove, ^.key := first.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) => Callback(SPACircuit.dispatch(RemoveStaffMovement(0, first.uUID)))))
+                    val remove = <.a(Icon.remove, ^.key := first.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) =>
+                      Callback{
+                        GoogleEventTracker.sendEvent(terminalName, "Remove Staff Movement", first.toString)
+                        SPACircuit.dispatch(RemoveStaffMovement(0, first.uUID))
+                      }))
                     val span = <.span(^.`class` := "movement-display", MovementDisplay.displayPair(first, second))
                     <.li(remove, " ", span)
                   case mm :: Nil =>
-                    val remove = <.a(Icon.remove, ^.key := mm.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) => Callback(SPACircuit.dispatch(RemoveStaffMovement(0, mm.uUID)))))
+                    val remove = <.a(Icon.remove, ^.key := mm.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) =>
+                      Callback{
+                        GoogleEventTracker.sendEvent(terminalName, "Remove Staff Movement", mm.toString)
+                        SPACircuit.dispatch(RemoveStaffMovement(0, mm.uUID))
+                      }))
                     val span = <.span(^.`class` := "movement-display", MovementDisplay.displaySingle(mm))
                     <.li(remove, " ", span)
                   case x =>
@@ -179,6 +187,7 @@ object TerminalStaffing {
                   <.button("Save", ^.onClick ==> ((e: ReactEventFromInput) => {
                     val withTerminalName = addTerminalNameAndDate(state.rawFixedPoints, props.terminalName)
                     val newAssignments = StaffAssignments(StaffAssignmentParser(withTerminalName).parsedAssignments.toList.collect { case Success(sa) => sa })
+                    GoogleEventTracker.sendEvent(withTerminalName, "Save Fixed Points", newAssignments.toString)
                     Callback(SPACircuit.dispatch(SaveFixedPoints(newAssignments, props.terminalName)))
                   }))
                 )
