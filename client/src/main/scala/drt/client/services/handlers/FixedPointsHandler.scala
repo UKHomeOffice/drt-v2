@@ -8,7 +8,7 @@ import drt.client.actions.Actions._
 import drt.client.components.FixedPoints
 import drt.client.logger.log
 import drt.client.services._
-import drt.shared.{Api, StaffAssignment, StaffAssignments}
+import drt.shared.{Api, StaffAssignments}
 import boopickle.Default._
 
 import scala.concurrent.Future
@@ -18,11 +18,7 @@ import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class FixedPointsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[StaffAssignments]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case SetFixedPoints(fixedPoints: StaffAssignments, terminalName: Option[String]) =>
-      if (terminalName.isDefined)
-        updated(Ready(fixedPoints))
-      else
-        updated(Ready(fixedPoints))
+    case SetFixedPoints(fixedPoints, _) => updated(Ready(fixedPoints))
 
     case SaveFixedPoints(assignments, terminalName) =>
       log.info(s"Calling saveFixedPoints")

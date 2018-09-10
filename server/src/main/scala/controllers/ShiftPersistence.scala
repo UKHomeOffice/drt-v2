@@ -5,44 +5,31 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern._
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
-import org.slf4j.LoggerFactory
-import services.SDate
-import services.graphstages.Crunch
+import drt.shared.StaffAssignments
+import org.slf4j.{Logger, LoggerFactory}
 
-import scala.language.implicitConversions
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.language.postfixOps
+import scala.language.{implicitConversions, postfixOps}
 
 trait ShiftPersistence {
   implicit val timeout: Timeout = Timeout(250 milliseconds)
 
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   def actorSystem: ActorSystem
 
   def shiftsActor: ActorRef
 
-  def getShifts(pointInTime: MillisSinceEpoch): Future[String] = {
+  def getShifts(pointInTime: MillisSinceEpoch): Future[StaffAssignments] = {
     log.info(s"getShifts($pointInTime)")
 
-    val shiftsFuture = shiftsActor ? GetState
-
-    val shiftsCollected = shiftsFuture.collect {
-      case shifts: String =>
-        log.info(s"Shifts: Retrieved shifts from actor")
-        val shiftLines = shifts.split("\n")
-        val forDay = Crunch.getLocalLastMidnight(SDate(pointInTime))
-        val twoDigitYear = forDay.getFullYear().toString.substring(2, 4)
-        val filterDate2DigitYear = f"${forDay.getDate()}%02d/${forDay.getMonth()}%02d/$twoDigitYear"
-        val filterDate4DigitYear = f"${forDay.getDate()}%02d/${forDay.getMonth()}%02d/${forDay.getFullYear()}"
-        val todaysShifts = shiftLines.filter(l => {
-          l.contains(filterDate2DigitYear) || l.contains(filterDate4DigitYear)
-        })
-        log.info(s"Shifts: Sending ${todaysShifts.length} shifts to frontend")
-        todaysShifts.mkString("\n")
+    val shiftsFuture: Future[StaffAssignments] = shiftsActor ? GetState map {
+      case sa: StaffAssignments => sa
+      case _ => StaffAssignments(Seq())
     }
-    shiftsCollected
+
+    shiftsFuture
   }
 }

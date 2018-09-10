@@ -55,7 +55,7 @@ object Actions {
 
   case class GetFixedPoints() extends Action
 
-  case class SetShifts(shifts: String) extends Action
+  case class SetShifts(shifts: String, terminalName: Option[String]) extends Action
 
   case class GetShifts() extends Action
 

@@ -10,6 +10,7 @@ import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
+import org.joda.time.format.DateTimeFormat
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch.{desksForHourOfDayInUKLocalTime, europeLondonTimeZone}
@@ -181,7 +182,6 @@ object StaffDeploymentCalculator {
     if (best > staffAvailable) staffAvailable
     else best
   }
-
 }
 
 object StaffAssignmentHelper {
@@ -236,6 +236,49 @@ object StaffAssignmentHelper {
       startDt
     }
   }
+
+  def dateAndTimeToMillis(date: String, time: String): Option[Long] = {
+
+    val formatter = DateTimeFormat.forPattern("dd/MM/yy HH:mm")
+    Try {
+      formatter.parseMillis(date + " " + time)
+    }.toOption
+  }
+
+  def dateString(timestamp: Long): String = {
+    import services.SDate.implicits._
+
+    MilliDate(timestamp).ddMMyyString
+  }
+
+  def timeString(timestamp: Long): String = {
+    import services.SDate.implicits._
+
+    val date = MilliDate(timestamp)
+
+    f"${date.getHours()}%02d:${date.getMinutes()}%02d"
+  }
+
+  def startAndEndTimestamps(startDate: String, startTime: String, endTime: String): (Option[Long], Option[Long]) = {
+    val startMillis = dateAndTimeToMillis(startDate, startTime)
+    val endMillis = dateAndTimeToMillis(startDate, endTime)
+
+    val oneDay = 60 * 60 * 24 * 1000L
+
+    (startMillis, endMillis) match {
+      case (Some(start), Some(end)) =>
+        if (start <= end)
+          (Some(start), Some(end))
+        else
+          (Some(start), Some(end + oneDay))
+      case _ => (None, None)
+    }
+  }
+
+  def staffAssignmentsToString(assignments: Seq[StaffAssignment]): String = assignments.map {
+    case StaffAssignment(name, terminalName, MilliDate(startMillis), MilliDate(endMillis), numberOfStaff, _) =>
+      s"$name, $terminalName, ${dateString(startMillis)}, ${timeString(startMillis)}, ${timeString(endMillis)}, $numberOfStaff"
+  }.mkString("\n")
 }
 
 case class StaffAssignmentParser(rawStaffAssignments: String) {
