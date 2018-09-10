@@ -2,7 +2,7 @@ package feeds
 
 import com.box.sdk.{BoxAPIResponse, BoxAPIResponseException, BoxConfig, BoxDeveloperEditionAPIConnection}
 import drt.server.feeds.lgw.LGWForecastFeed
-import drt.shared.{Arrival, ForecastFeedSource}
+import drt.shared.Arrival
 import org.specs2.mock.Mockito
 import org.specs2.mutable.Specification
 import org.specs2.specification.Scope
@@ -61,7 +61,6 @@ class LGWForecastFeedSpec extends Specification with Mockito {
         Origin = "TNG",
         Scheduled = SDate("2018-05-19T10:05:00Z").millisSinceEpoch,
         PcpTime = None,
-        FeedSources = Set(ForecastFeedSource),
         LastKnownPax = None)
     }
 

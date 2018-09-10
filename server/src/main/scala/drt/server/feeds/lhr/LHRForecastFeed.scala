@@ -1,7 +1,7 @@
 package drt.server.feeds.lhr
 
 import drt.server.feeds.lhr.forecast.{LHRForecastEmail, LHRForecastFlightRow, LHRForecastXLSExtractor}
-import drt.shared.{Arrival, ForecastFeedSource}
+import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
@@ -60,7 +60,6 @@ object LHRForecastFeed {
         Origin = flightRow.origin,
         Scheduled = flightRow.scheduledDate.millisSinceEpoch,
         PcpTime = None,
-        FeedSources = Set(ForecastFeedSource),
         None
       )
     }

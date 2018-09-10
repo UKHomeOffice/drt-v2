@@ -7,7 +7,7 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
 import akka.stream.{ActorMaterializer, Materializer}
 import akka.stream.scaladsl.Source
-import drt.shared.{Arrival, LiveFeedSource}
+import drt.shared.Arrival
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import org.joda.time.DateTimeZone
@@ -99,7 +99,6 @@ case class LtnLiveFeed(endPoint: String, token: String, username: String, passwo
     Origin = ltnFeedFlight.OriginDestAirportIATA.getOrElse(throw new Exception("Missing origin IATA port code")),
     Scheduled = sdateWithTimeZoneApplied(ltnFeedFlight.ScheduledDateTime.getOrElse(throw new Exception("Missing scheduled date time"))),
     PcpTime = None,
-    FeedSources = Set(LiveFeedSource),
     LastKnownPax = None
   )
 
