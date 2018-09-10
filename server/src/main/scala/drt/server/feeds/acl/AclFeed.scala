@@ -4,7 +4,6 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.zip.{ZipEntry, ZipInputStream}
 
-import drt.shared
 import drt.shared.Arrival
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import net.schmizz.sshj.SSHClient
@@ -12,8 +11,9 @@ import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.InMemoryDestFile
 import org.slf4j.{Logger, LoggerFactory}
+
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, FeedResponse}
-import server.feeds.acl.AclFeed.{arrivalsFromCsvContent, contentFromFileName, latestFileForPort, sftpClient, sshClient}
+import server.feeds.acl.AclFeed.{arrivalsFromCsvContent, contentFromFileName, latestFileForPort, sshClient, sftpClient}
 import services.SDate
 
 import scala.collection.JavaConverters._
@@ -200,7 +200,6 @@ object AclFeed {
         Origin = fields(AclColIndex.Origin),
         Scheduled = SDate(dateAndTimeToDateTimeIso(fields(AclColIndex.Date), fields(AclColIndex.Time))).millisSinceEpoch,
         PcpTime = None,
-        FeedSources = Set(shared.AclFeedSource),
         None
       )
     }

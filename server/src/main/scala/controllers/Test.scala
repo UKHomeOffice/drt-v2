@@ -3,11 +3,11 @@ package controllers
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.Materializer
 import akka.util.Timeout
-import javax.inject.{Inject, Singleton}
+import javax.inject.{Singleton, Inject}
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
 import passengersplits.parsing.VoyageManifestParser.FlightPassengerInfoProtocol._
-import drt.shared.{Arrival, LiveFeedSource, SDateLike}
+import drt.shared.{Arrival, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import play.api.mvc.{Action, Controller, InjectedController, Session}
@@ -96,7 +96,6 @@ class Test @Inject()(implicit val config: Configuration,
             rawIATA = flight.IATA,
             Origin = flight.Origin,
             PcpTime = Some(pcpTime),
-            FeedSources = Set(LiveFeedSource),
             Scheduled = SDate(flight.SchDT).millisSinceEpoch
           )
           saveArrival(arrival)

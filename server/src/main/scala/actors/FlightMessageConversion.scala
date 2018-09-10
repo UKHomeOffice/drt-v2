@@ -101,7 +101,7 @@ object FlightMessageConversion {
       iATA = Option(StringUtils.trimToNull(apiFlight.rawIATA)),
       origin = Option(StringUtils.trimToNull(apiFlight.Origin)),
       pcpTime = apiFlight.PcpTime.filter(_ != 0),
-      feedSources = apiFlight.FeedSources.map(_.toString).toSeq,
+
       scheduled = Option(apiFlight.Scheduled).filter(_ != 0),
       estimated = apiFlight.Estimated.filter(_ != 0),
       touchdown = apiFlight.Actual.filter(_ != 0),
@@ -144,8 +144,7 @@ object FlightMessageConversion {
       Origin = flightMessage.origin.getOrElse(""),
       PcpTime = flightMessage.pcpTime.filter(_ != 0),
       LastKnownPax = flightMessage.lastKnownPax,
-      Scheduled = flightMessage.scheduled.getOrElse(0L),
-      FeedSources = flightMessage.feedSources.flatMap(FeedSource(_)).toSet
+      Scheduled = flightMessage.scheduled.getOrElse(0L)
     )
   }
 

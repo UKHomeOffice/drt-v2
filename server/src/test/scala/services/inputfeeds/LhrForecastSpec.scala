@@ -1,7 +1,7 @@
 package services.inputfeeds
 
 import drt.server.feeds.lhr.forecast.{LhrForecastArrival, LhrForecastArrivals}
-import drt.shared.{Arrival, ForecastFeedSource}
+import drt.shared.Arrival
 import org.specs2.mutable.Specification
 import services.SDate
 
@@ -25,7 +25,7 @@ class LhrForecastSpec extends Specification {
     val expected = Arrival(Operator = Some("BA"), Status = "Forecast", Estimated = None, Actual = None,
       EstimatedChox = None, ActualChox = None, Gate = None, Stand = None, MaxPax = Some(337),
       ActPax = Some(333), TranPax = Some(142), RunwayID = None, BaggageReclaimId = None, FlightID = None, AirportID = "LHR", Terminal = "T3",
-      rawICAO = "BA0058", rawIATA = "BA0058", Origin = "CPT", FeedSources = Set(ForecastFeedSource),
+      rawICAO = "BA0058", rawIATA = "BA0058", Origin = "CPT",
       Scheduled = SDate("2018-02-22T04:45:00").millisSinceEpoch, PcpTime = None, LastKnownPax = None)
 
     arrival === expected

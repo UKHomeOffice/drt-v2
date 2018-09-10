@@ -1,6 +1,6 @@
 package controllers
 
-import drt.shared.{Arrival, FeedSource, LiveFeedSource}
+import drt.shared.Arrival
 import org.joda.time.DateTimeZone
 import org.springframework.util.StringUtils
 import services.SDate
@@ -28,8 +28,7 @@ object ArrivalGenerator {
                  tranPax: Option[Int] = None,
                  runwayId: Option[String] = None,
                  baggageReclaimId: Option[String] = None,
-                 airportId: String = "",
-                 feedSources: Set[FeedSource] = Set(LiveFeedSource)
+                 airportId: String = ""
                ): Arrival =
     Arrival(
       FlightID = flightId,
@@ -53,7 +52,6 @@ object ArrivalGenerator {
       AirportID = airportId,
       PcpTime = if (!StringUtils.isEmpty(schDt)) Some(SDate(schDt, DateTimeZone.UTC).millisSinceEpoch) else None,
       LastKnownPax = lastKnownPax,
-      Scheduled = if (!StringUtils.isEmpty(schDt)) SDate(schDt, DateTimeZone.UTC).millisSinceEpoch else 0,
-      FeedSources = feedSources
+      Scheduled = if (!StringUtils.isEmpty(schDt)) SDate(schDt, DateTimeZone.UTC).millisSinceEpoch else 0
     )
 }

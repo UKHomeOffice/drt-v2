@@ -5,7 +5,7 @@ import akka.actor.Cancellable
 import akka.stream.scaladsl.Source
 import com.typesafe.config.ConfigFactory
 import drt.server.feeds.lhr.LHRFlightFeed.{emptyStringToOption, parseDateTime}
-import drt.shared.{Arrival, LiveFeedSource}
+import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import org.joda.time.DateTime
@@ -117,7 +117,6 @@ case class LHRFlightFeed(csvRecords: Iterator[Int => String]) {
         rawIATA = flight.flightCode,
         Origin = flight.from,
         PcpTime = if (pcpTime == 0) None else Some(pcpTime),
-        FeedSources = Set(LiveFeedSource),
         Scheduled = SDate(schDtIso).millisSinceEpoch)
     }).toList
 }

@@ -1,6 +1,6 @@
 package services
 
-import drt.shared.{ApiFeedSource, Arrival, MilliDate, SDateLike}
+import drt.shared.{Arrival, MilliDate, SDateLike}
 import org.specs2.mutable.Specification
 import server.protobuf.messages.FlightsMessage.FlightMessage
 import actors.FlightMessageConversion._
@@ -30,8 +30,7 @@ class ApiFlightsToProtoBufSpec extends Specification {
         rawIATA = "BAA0001",
         Origin = "JFK",
         PcpTime = Some(1451655000000L), // 2016-01-01 13:30:00 UTC
-        Scheduled = SDate("2016-01-01T13:00:00Z").millisSinceEpoch,
-        FeedSources = Set(ApiFeedSource)
+        Scheduled = SDate("2016-01-01T13:00:00Z").millisSinceEpoch
       )
       val flightMessage = apiFlightToFlightMessage(apiFlight)
 
@@ -51,7 +50,6 @@ class ApiFlightsToProtoBufSpec extends Specification {
         iCAO = Some("BA0001"),
         iATA = Some("BAA0001"),
         origin = Some("JFK"),
-        feedSources = Seq("ApiFeedSource"),
         pcpTime = Some(1451655000000L), // 2016-01-01 13:30:00 UTC
         scheduled = Some(1451653200000L), // 2016-01-01 13:00:00 UTC
         estimated = Some(1451653500000L), // 2016-01-01 13:05:00 UTC
