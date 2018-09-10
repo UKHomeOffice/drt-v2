@@ -1,7 +1,7 @@
 package services.staffing
 
 import drt.shared.FlightsApi.TerminalName
-import drt.shared.{SDateLike, StaffTimeSlotsForTerminalMonth}
+import drt.shared._
 import services.SDate
 import services.graphstages.Crunch
 
@@ -18,6 +18,18 @@ object StaffTimeSlots {
     }.mkString("\n")
   }
 
+  def slotsToShiftsAssignments(slots: StaffTimeSlotsForTerminalMonth): Seq[StaffAssignment] = {
+    val monthSDate = SDate(slots.monthMillis)
+    slots.timeSlots.filter(_.staff != 0).zipWithIndex.map {
+      case (slot, index) =>
+        val dateTime = SDate(slot.start)
+        val name = s"shift${monthSDate.getMonth()}%02d${monthSDate.getFullYear()}$index"
+        val startMilli = SDate(dateTime.millisSinceEpoch)
+        val endMilli = startMilli.addMillis(slot.durationMillis - 1)
+        StaffAssignment(name, slot.terminal, MilliDate(startMilli.millisSinceEpoch), MilliDate(endMilli.millisSinceEpoch), slot.staff, None)
+    }
+  }
+
   def isDateInMonth(dateString: String, month: SDateLike): Boolean = {
     val ymd = dateString.split("/").toList
 
@@ -31,16 +43,17 @@ object StaffTimeSlots {
     }
   }
 
-  def replaceShiftMonthWithTimeSlotsForMonth(existingShifts: String, slots: StaffTimeSlotsForTerminalMonth): TerminalName = {
-    val shiftsExcludingNewMonth = shiftsToLines(existingShifts)
-      .filter(line => {
-        shiftLineToFieldList(line) match {
-          case List(_, t, d, _, _, _) if !isDateInMonth(d, SDate(slots.monthMillis, Crunch.europeLondonTimeZone)) || t != slots.terminal => true
-          case _ => false
-        }
+  def replaceShiftMonthWithTimeSlotsForMonth(existingShifts: StaffAssignments, slots: StaffTimeSlotsForTerminalMonth): StaffAssignments = {
+    val shiftsExcludingNewMonth = existingShifts
+      .assignments
+      .filterNot(assignment => {
+        val assignmentSdate = SDate(assignment.startDt.millisSinceEpoch, Crunch.europeLondonTimeZone)
+        val slotSdate = SDate(slots.monthMillis, Crunch.europeLondonTimeZone)
+
+        assignmentSdate.getMonth() == slotSdate.getMonth() && assignmentSdate.getFullYear() == slotSdate.getFullYear()
       })
 
-    (shiftsExcludingNewMonth.mkString("\n") + "\n" + StaffTimeSlots.slotsToShifts(slots)).trim
+    StaffAssignments(StaffTimeSlots.slotsToShiftsAssignments(slots) ++ shiftsExcludingNewMonth)
   }
 
   private def shiftLineToFieldList(line: String) = {

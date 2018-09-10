@@ -1,15 +1,15 @@
 package drt.client.services.handlers
 
 import autowire._
+import boopickle.Default._
 import diode.Implicits.runAfterImpl
 import diode.data.{Pot, Ready}
-import diode.{ActionResult, Effect, ModelRW}
+import diode.{ActionResult, Effect, ModelRW, NoAction}
 import drt.client.actions.Actions._
 import drt.client.components.FixedPoints
 import drt.client.logger.log
 import drt.client.services._
 import drt.shared.{Api, StaffAssignments}
-import boopickle.Default._
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -38,7 +38,15 @@ class FixedPointsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[St
       val fixedPointsEffect = Effect(Future(GetFixedPoints())).after(60 minutes)
       log.info(s"Calling getFixedPoints")
 
-      val apiCallEffect = Effect(AjaxClient[Api].getFixedPoints(viewMode().millis).call().map(res => SetFixedPoints(res, None)))
+      val apiCallEffect = Effect(
+        AjaxClient[Api].getFixedPoints(viewMode().millis).call()
+          .map(res => SetFixedPoints(res, None))
+          .recoverWith {
+            case _ =>
+              log.error(s"Failed to get fixed points. Polling will continue")
+              Future(NoAction)
+          }
+      )
       effectOnly(apiCallEffect + fixedPointsEffect)
   }
 }

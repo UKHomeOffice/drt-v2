@@ -5,9 +5,9 @@ import boopickle.Default._
 import diode.data.{Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW, NoAction}
 import diode.Implicits.runAfterImpl
-import drt.client.actions.Actions.{GetShifts, RetryActionAfter, SetShifts}
+import drt.client.actions.Actions.{GetShifts, SetShifts}
 import drt.client.logger.log
-import drt.client.services.{AjaxClient, PollDelay, ViewMode}
+import drt.client.services.{AjaxClient, ViewMode}
 import drt.shared.{Api, StaffAssignments}
 
 import scala.concurrent.Future
@@ -15,7 +15,7 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class ShiftsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
+class ShiftsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[StaffAssignments]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case SetShifts(shifts, _) => updated(Ready(shifts))
 
@@ -33,15 +33,5 @@ class ShiftsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[String]
           }
       )
       effectOnly(apiCallEffect + fixedPointsEffect)
-    //      log.info(s"Calling getShifts")
-    //
-    //      val apiCallEffect = Effect(AjaxClient[Api].getShifts(viewMode().millis).call()
-    //        .map(SetShifts)
-    //        .recoverWith {
-    //          case _ =>
-    //            log.error(s"Failed to get shifts. Re-requesting after ${PollDelay.recoveryDelay}")
-    //            Future(RetryActionAfter(GetShifts(), PollDelay.recoveryDelay))
-    //        })
-    //      effectOnly(apiCallEffect)
   }
 }

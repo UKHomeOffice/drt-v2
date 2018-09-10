@@ -26,7 +26,7 @@ object TerminalStaffing {
 
   case class Props(
                     terminalName: TerminalName,
-                    potShifts: Pot[String],
+                    potShifts: Pot[StaffAssignments],
                     potFixedPoints: Pot[StaffAssignments],
                     potStaffMovements: Pot[Seq[StaffMovement]],
                     airportConfig: AirportConfig,
@@ -74,10 +74,9 @@ object TerminalStaffing {
     def render(props: Props): VdomTagOf[Div] = {
 
       <.div(
-        props.potShifts.render((rawShifts: String) => {
+        props.potShifts.render(shifts => {
           props.potFixedPoints.render(fixedPoints => {
             props.potStaffMovements.render((movements: Seq[StaffMovement]) => {
-              val shifts: List[Try[StaffAssignment]] = StaffAssignmentParser(rawShifts).parsedAssignments.toList
               <.div(
                 <.div(^.className := "container",
                   <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(fixedPoints.forTerminal(props.terminalName), props.airportConfig, props.terminalName, props.loggedInUser))),
@@ -99,10 +98,9 @@ object TerminalStaffing {
       }).mkString("\n")
     }
 
-    def staffOverTheDay(movements: Seq[StaffMovement], shifts: List[Try[StaffAssignment]], terminalName: TerminalName): VdomTagOf[Div] = {
-      val successfulShifts: List[StaffAssignment] = shifts.collect { case Success(s) => s }
-      val successfulTerminalShifts = successfulShifts.filter(_.terminalName == terminalName)
-      val ss = StaffAssignmentServiceWithDates(successfulTerminalShifts)
+    def staffOverTheDay(movements: Seq[StaffMovement], shifts: StaffAssignments, terminalName: TerminalName): VdomTagOf[Div] = {
+      val successfulTerminalShifts = shifts.forTerminal(terminalName)
+      val ss = StaffAssignmentServiceWithDates(successfulTerminalShifts.assignments)
       val staffWithShiftsAndMovementsAt = StaffMovements.terminalStaffAt(ss)(movements) _
       <.div(
         <.h2("Staff over the day"),

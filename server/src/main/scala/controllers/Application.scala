@@ -1,6 +1,7 @@
 package controllers
 
 import java.nio.ByteBuffer
+
 import actors._
 import actors.pointInTime.CrunchStateReadActor
 import akka.actor._
@@ -30,13 +31,14 @@ import server.feeds.acl.AclFeed
 import services.PcpArrival._
 import services.SDate.implicits._
 import services.SplitsProvider.SplitProvider
-import services.graphstages.Crunch
+import services.graphstages.{Crunch, StaffAssignmentHelper}
 import services.graphstages.Crunch._
 import services.staffing.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import services._
 import test.TestDrtSystem
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -291,7 +293,7 @@ class Application @Inject()(implicit val config: Configuration,
           log.info(s"Saving ${timeSlotsForTerminalMonth.timeSlots.length} timeslots for ${SDate(timeSlotsForTerminalMonth.monthMillis).ddMMyyString}")
           val futureShifts = shiftsActor.ask(GetState)(new Timeout(5 second))
           futureShifts.map {
-            case shifts: String =>
+            case shifts: StaffAssignments =>
               val updatedShifts = StaffTimeSlots.replaceShiftMonthWithTimeSlotsForMonth(shifts, timeSlotsForTerminalMonth)
 
               shiftsActor ! updatedShifts
@@ -303,9 +305,9 @@ class Application @Inject()(implicit val config: Configuration,
         val shiftsFuture = shiftsActor ? GetState
 
         shiftsFuture.collect {
-          case shifts: String =>
+          case shifts: StaffAssignments =>
             log.info(s"Shifts: Retrieved shifts from actor for month starting: ${SDate(month).toISOString()}")
-            StaffTimeSlots.getShiftsForMonth(shifts, SDate(month, Crunch.europeLondonTimeZone), terminalName)
+            StaffTimeSlots.getShiftsForMonth(StaffAssignmentHelper.staffAssignmentsToString(shifts.assignments), SDate(month, Crunch.europeLondonTimeZone), terminalName)
         }
       }
 

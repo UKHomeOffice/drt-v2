@@ -22,7 +22,7 @@ object TerminalComponent {
   case class TerminalModel(
                             crunchStatePot: Pot[CrunchState],
                             forecastPeriodPot: Pot[ForecastPeriodWithHeadlines],
-                            potShifts: Pot[String],
+                            potShifts: Pot[StaffAssignments],
                             potMonthOfShifts: Pot[MonthOfRawShifts],
                             potFixedPoints: Pot[StaffAssignments],
                             potStaffMovements: Pot[Seq[StaffMovement]],

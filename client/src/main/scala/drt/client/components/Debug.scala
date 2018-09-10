@@ -27,7 +27,7 @@ object Debug {
         )
       )
       staffingRCP((staffingMP: ModelProxy[(
-        Pot[String],
+        Pot[StaffAssignments],
           Pot[StaffAssignments],
           Pot[Seq[StaffMovement]],
           Pot[CrunchState],
@@ -37,7 +37,7 @@ object Debug {
 
         if (dom.window.hasOwnProperty("debug")) {
           <.table(
-            <.tr(<.th("shifts"), potShifts.render(s => <.td(<.pre(^.style := js.Dictionary("overflow" -> "auto", "height" -> "200px"), s)))),
+            <.tr(<.th("shifts"), potShifts.render(s => <.td(<.pre(^.style := js.Dictionary("overflow" -> "auto", "height" -> "200px"), s.assignments.map(_.toString).mkString("\n"))))),
             <.tr(<.th("fixed points"), potFixedPoints.render(s => <.td(<.pre(^.style := js.Dictionary("overflow" -> "auto", "height" -> "200px"), s.assignments.map(_.toString).mkString("\n"))))),
             <.tr(<.th("staff movements"), <.td(<.pre(^.style := js.Dictionary("overflow" -> "auto", "height" -> "200px"), staffMovements.toString()))),
             <.tr(<.th("crunch State"), crunchState.render(s => <.td(<.pre(^.style := js.Dictionary("overflow" -> "auto", "height" -> "200px"), s.toString)))),
