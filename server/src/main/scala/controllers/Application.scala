@@ -307,7 +307,9 @@ class Application @Inject()(implicit val config: Configuration,
         shiftsFuture.collect {
           case shifts: StaffAssignments =>
             log.info(s"Shifts: Retrieved shifts from actor for month starting: ${SDate(month).toISOString()}")
-            StaffTimeSlots.getShiftsForMonth(StaffAssignmentHelper.staffAssignmentsToString(shifts.assignments), SDate(month, Crunch.europeLondonTimeZone), terminalName)
+            val monthInLocalTime = SDate(month, Crunch.europeLondonTimeZone)
+            val shiftsString = StaffAssignmentHelper.staffAssignmentsToString(shifts.assignments)
+            StaffTimeSlots.getShiftsForMonth(shiftsString, monthInLocalTime, terminalName)
         }
       }
 
