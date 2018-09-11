@@ -6,8 +6,8 @@ import drt.client.components.TerminalPlanningComponent.defaultStartDate
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{SPACircuit, StaffAssignmentParser, StaffAssignmentServiceWithDates}
-import drt.shared.{SDateLike, StaffTimeSlot, StaffTimeSlotsForTerminalMonth}
+import drt.client.services.SPACircuit
+import drt.shared._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.extra.Reusability
@@ -97,11 +97,9 @@ object TerminalStaffingV2 {
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(
-                    rawShiftString: String,
-                    terminalPageTab: TerminalPageTabLoc,
-                    router: RouterCtl[Loc]
-                  ) {
+  case class Props(shifts: ShiftAssignments,
+                   terminalPageTab: TerminalPageTabLoc,
+                   router: RouterCtl[Loc]) {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(15)
   }
 
@@ -134,7 +132,7 @@ object TerminalStaffingV2 {
     List.tabulate(slots)(i => startOfDay.addMinutes(i * slotDuration))
   }
 
-  def drawSelect(values: Seq[String], names: Seq[String], defaultValue: String, callback: ((ReactEventFromInput) => Callback)): TagOf[Select] = {
+  def drawSelect(values: Seq[String], names: Seq[String], defaultValue: String, callback: ReactEventFromInput => Callback): TagOf[Select] = {
     val valueNames = values.zip(names)
     <.select(^.className := "form-control", ^.defaultValue := defaultValue.toString,
       ^.onChange ==> callback,
@@ -196,7 +194,7 @@ object TerminalStaffingV2 {
 
   val monthOptions: Seq[SDateLike] = sixMonthsFromFirstOfMonth(SDate.now())
 
-  implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).rawShiftString.hashCode)
+  implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).shifts.hashCode)
   implicit val stateReuse: Reusability[State] = Reusability.always[State]
 
   val component = ScalaComponent.builder[Props]("StaffingV2")
@@ -275,7 +273,7 @@ object TerminalStaffingV2 {
     })
     .configure(Reusability.shouldComponentUpdate)
     .componentDidUpdate(_ => Callback.log("Staff updated"))
-    .componentDidMount(p => Callback{
+    .componentDidMount(p => Callback {
       GoogleEventTracker.sendPageView(s"${p.props.terminalPageTab.terminal}/planning/${defaultStartDate(p.props.terminalPageTab.dateFromUrlOrNow).toISODateOnly}/${p.props.terminalPageTab.subMode}")
       log.info("Staff Mounted")
     })
@@ -286,11 +284,9 @@ object TerminalStaffingV2 {
     val viewingDate = props.terminalPageTab.dateFromUrlOrNow
 
     val terminalName = props.terminalPageTab.terminal
-    val terminalShifts = StaffAssignmentParser(props.rawShiftString).parsedAssignments.toList.collect {
-      case Success(s) if s.terminalName == terminalName => s
-    }
+    val terminalShifts = props.shifts.forTerminal(terminalName)
 
-    val ss: StaffAssignmentServiceWithDates = StaffAssignmentServiceWithDates(terminalShifts)
+    val shiftAssignments = ShiftAssignments(terminalShifts)
 
     def firstDay = firstDayOfMonth(viewingDate)
 
@@ -300,13 +296,13 @@ object TerminalStaffingV2 {
       .map(slot => {
         daysInMonth.map(day => {
           val slotDateTime = SDate(day.getFullYear(), day.getMonth(), day.getDate(), slot.getHours(), slot.getMinutes())
-          ss.terminalStaffAt(terminalName, slotDateTime)
+          shiftAssignments.terminalStaffAt(terminalName, slotDateTime)
         })
       })
 
     State(timeSlots, daysInMonth.map(_.getDate().toString), slotsInDay(SDate.now(), props.timeSlotMinutes).map(_.prettyTime()), Map())
   }
 
-  def apply(rawShiftString: String, terminalPageTab: TerminalPageTabLoc, router: RouterCtl[Loc]): Unmounted[Props, State, Unit]
-  = component(Props(rawShiftString, terminalPageTab, router))
+  def apply(shifts: ShiftAssignments, terminalPageTab: TerminalPageTabLoc, router: RouterCtl[Loc]): Unmounted[Props, State, Unit]
+  = component(Props(shifts, terminalPageTab, router))
 }

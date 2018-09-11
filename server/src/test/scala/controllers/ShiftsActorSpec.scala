@@ -2,16 +2,18 @@ package controllers
 
 import java.io.File
 
-import actors.{GetState, ShiftsActorBase, ShiftsMessageParser}
-import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
+import actors.{GetState, ShiftsActorBase}
+import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props, Terminated}
 import akka.pattern._
-import akka.testkit.{ImplicitSender, TestKit, TestProbe}
+import akka.testkit.{ImplicitSender, TestKit}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.{After, Specification}
+import services.SDate
+import services.graphstages.StaffAssignmentHelper
 
 import scala.collection.JavaConversions._
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.language.reflectiveCalls
 
@@ -19,8 +21,8 @@ object PersistenceCleanup {
   def deleteJournal(dbLocation: String): Unit = {
     val directory = new File(dbLocation)
     Option(directory.listFiles())
-      .map(files => files.map((file: File) => {
-        val result = if (file.isDirectory) deleteJournal(file.getPath) else file.delete()
+      .foreach(files => files.foreach((file: File) => {
+        if (file.isDirectory) deleteJournal(file.getPath) else file.delete()
       }))
   }
 }
@@ -36,13 +38,13 @@ abstract class AkkaTestkitSpecs2SupportForPersistence(val dbLocation: String) ex
   with After
   with ImplicitSender {
 
-  def after = {
+  def after: Unit = {
     shutDownActorSystem
     PersistenceCleanup.deleteJournal(s"$dbLocation/snapshot")
     PersistenceCleanup.deleteJournal(dbLocation)
   }
 
-  def shutDownActorSystem = {
+  def shutDownActorSystem: Future[Terminated] = {
     //TODO figure out how to wait for the actor to finish saving rather than this nasty timer.
     Thread.sleep(200)
     import scala.language.postfixOps
@@ -56,7 +58,7 @@ class ShiftsActorSpec extends Specification {
   isolated
 
   private def shiftsActor(system: ActorSystem) = {
-    val actor = system.actorOf(Props(classOf[ShiftsActorBase]), "shiftsactor")
+    val actor = system.actorOf(Props(classOf[ShiftsActorBase], () => SDate.now()), "shiftsactor")
     actor
   }
 
@@ -131,32 +133,32 @@ class ShiftsActorSpec extends Specification {
 
 
     "convert date and time into a timestamp" in {
-      Some(1484906400000L) === ShiftsMessageParser.dateAndTimeToMillis("20/01/17", "10:00")
+      Some(1484906400000L) === StaffAssignmentHelper.dateAndTimeToMillis("20/01/17", "10:00")
     }
     "return None if the date is incorrectly formatted" in {
-      None === ShiftsMessageParser.dateAndTimeToMillis("adfgdfgdfg7", "10:00")
+      None === StaffAssignmentHelper.dateAndTimeToMillis("adfgdfgdfg7", "10:00")
     }
     "get start and end date millis from the startDate, endTime and startTime when endTime is later than startTime" in {
-      val result = ShiftsMessageParser.startAndEndTimestamps("20/01/17", "10:00", "11:00")
+      val result = StaffAssignmentHelper.startAndEndTimestamps("20/01/17", "10:00", "11:00")
       result === Tuple2(Some(1484906400000L), Some(1484910000000L))
     }
     "get start and end date millis from the startDate, endTime and startTime when endTime is earlier than startTime" in {
-      val result = ShiftsMessageParser.startAndEndTimestamps("20/01/17", "10:00", "09:00")
+      val result = StaffAssignmentHelper.startAndEndTimestamps("20/01/17", "10:00", "09:00")
       result === Tuple2(Some(1484906400000L), Some(1484989200000L))
     }
     "get start and end date millis from the startDate, endTime and startTime given invalid data" in {
-      val result = ShiftsMessageParser.startAndEndTimestamps("jkhsdfjhdsf", "10:00", "09:00")
+      val result = StaffAssignmentHelper.startAndEndTimestamps("jkhsdfjhdsf", "10:00", "09:00")
       result === Tuple2(None, None)
     }
     "convert timestamp to dateString" in {
       val timestamp = 1484906400000L
 
-      ShiftsMessageParser.dateString(timestamp) === "20/01/17"
+      StaffAssignmentHelper.dateString(timestamp) === "20/01/17"
     }
     "convert timestamp to timeString" in {
       val timestamp = 1484906400000L
 
-      ShiftsMessageParser.timeString(timestamp) === "10:00"
+      StaffAssignmentHelper.timeString(timestamp) === "10:00"
     }
   }
 }

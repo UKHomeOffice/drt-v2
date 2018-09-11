@@ -5,11 +5,37 @@ import drt.shared.FlightsApi.TerminalName
 
 case class StaffAssignment(name: String, terminalName: TerminalName, startDt: MilliDate, endDt: MilliDate, numberOfStaff: Int, createdBy: Option[String])
 
-case class StaffAssignments(assignments: Seq[StaffAssignment]) {
-  def forTerminal(terminalName: String): StaffAssignments = StaffAssignments(assignments.filter(_.terminalName == terminalName))
-  def +(staffAssignments: StaffAssignments) = StaffAssignments(assignments ++ staffAssignments.assignments)
+sealed trait StaffAssignments {
+  val assignments: Seq[StaffAssignment]
+
+  def forTerminal(terminalName: String): Seq[StaffAssignment] = assignments.filter(_.terminalName == terminalName)
+
+  def notForTerminal(terminalName: TerminalName): Seq[StaffAssignment] =
+    assignments.filterNot(_.terminalName == terminalName)
 }
 
-object StaffAssignments {
-  val empty: StaffAssignments = StaffAssignments(Seq())
+case class FixedPointAssignments(assignments: Seq[StaffAssignment]) extends StaffAssignments {
+  def +(staffAssignments: Seq[StaffAssignment]): FixedPointAssignments = copy(assignments ++ staffAssignments)
+
+  def terminalStaffAt(terminalName: TerminalName, date: SDateLike)(implicit mdToSd: MilliDate => SDateLike): Int = assignments.filter(assignment => {
+    assignment.terminalName == terminalName &&
+      date.toHoursAndMinutes() >= mdToSd(assignment.startDt).toHoursAndMinutes() &&
+      date.toHoursAndMinutes() <= mdToSd(assignment.endDt).toHoursAndMinutes()
+  }).map(_.numberOfStaff).sum
+}
+
+case class ShiftAssignments(assignments: Seq[StaffAssignment]) extends StaffAssignments {
+  def +(staffAssignments: Seq[StaffAssignment]): ShiftAssignments = copy(assignments ++ staffAssignments)
+
+  def terminalStaffAt(terminalName: TerminalName, date: SDateLike): Int = assignments.filter(assignment => {
+    assignment.startDt.millisSinceEpoch <= date.millisSinceEpoch && date.millisSinceEpoch <= assignment.endDt.millisSinceEpoch && assignment.terminalName == terminalName
+  }).map(_.numberOfStaff).sum
+}
+
+object FixedPointAssignments {
+  val empty: FixedPointAssignments = FixedPointAssignments(Seq())
+}
+
+object ShiftAssignments {
+  val empty: ShiftAssignments = ShiftAssignments(Seq())
 }

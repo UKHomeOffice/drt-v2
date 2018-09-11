@@ -4,7 +4,7 @@ import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.services._
 import drt.shared.CrunchApi.CrunchState
-import drt.shared.{StaffAssignments, StaffMovement}
+import drt.shared.{FixedPointAssignments, ShiftAssignments, StaffMovement}
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom
@@ -19,7 +19,7 @@ object Debug {
     .render_P(p => {
       val staffingRCP = SPACircuit.connect(
         m => (
-          m.shiftsRaw,
+          m.shifts,
           m.fixedPoints,
           m.staffMovements,
           m.crunchStatePot,
@@ -27,8 +27,8 @@ object Debug {
         )
       )
       staffingRCP((staffingMP: ModelProxy[(
-        Pot[StaffAssignments],
-          Pot[StaffAssignments],
+        Pot[ShiftAssignments],
+          Pot[FixedPointAssignments],
           Pot[Seq[StaffMovement]],
           Pot[CrunchState],
           LoadingState

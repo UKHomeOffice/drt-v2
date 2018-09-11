@@ -5,7 +5,7 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern._
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.StaffAssignments
+import drt.shared.ShiftAssignments
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -22,12 +22,12 @@ trait ShiftPersistence {
 
   def shiftsActor: ActorRef
 
-  def getShifts(pointInTime: MillisSinceEpoch): Future[StaffAssignments] = {
+  def getShifts(pointInTime: MillisSinceEpoch): Future[ShiftAssignments] = {
     log.info(s"getShifts($pointInTime)")
 
-    val shiftsFuture: Future[StaffAssignments] = shiftsActor ? GetState map {
-      case sa: StaffAssignments => sa
-      case _ => StaffAssignments(Seq())
+    val shiftsFuture: Future[ShiftAssignments] = shiftsActor ? GetState map {
+      case sa: ShiftAssignments => sa
+      case _ => ShiftAssignments(Seq())
     }
 
     shiftsFuture

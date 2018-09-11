@@ -31,7 +31,7 @@ import server.feeds.acl.AclFeed
 import services.PcpArrival._
 import services.SDate.implicits._
 import services.SplitsProvider.SplitProvider
-import services.graphstages.{Crunch, StaffAssignmentHelper}
+import services.graphstages.Crunch
 import services.graphstages.Crunch._
 import services.staffing.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
@@ -293,7 +293,7 @@ class Application @Inject()(implicit val config: Configuration,
           log.info(s"Saving ${timeSlotsForTerminalMonth.timeSlots.length} timeslots for ${SDate(timeSlotsForTerminalMonth.monthMillis).ddMMyyString}")
           val futureShifts = shiftsActor.ask(GetState)(new Timeout(5 second))
           futureShifts.map {
-            case shifts: StaffAssignments =>
+            case shifts: ShiftAssignments =>
               val updatedShifts = StaffTimeSlots.replaceShiftMonthWithTimeSlotsForMonth(shifts, timeSlotsForTerminalMonth)
 
               shiftsActor ! updatedShifts
@@ -301,15 +301,14 @@ class Application @Inject()(implicit val config: Configuration,
         } else throw new Exception("You do not have permission to edit staffing.")
       }
 
-      def getShiftsForMonth(month: MillisSinceEpoch, terminalName: TerminalName): Future[String] = {
+      def getShiftsForMonth(month: MillisSinceEpoch, terminalName: TerminalName): Future[ShiftAssignments] = {
         val shiftsFuture = shiftsActor ? GetState
 
         shiftsFuture.collect {
-          case shifts: StaffAssignments =>
+          case shifts: ShiftAssignments =>
             log.info(s"Shifts: Retrieved shifts from actor for month starting: ${SDate(month).toISOString()}")
             val monthInLocalTime = SDate(month, Crunch.europeLondonTimeZone)
-            val shiftsString = StaffAssignmentHelper.staffAssignmentsToString(shifts.assignments)
-            StaffTimeSlots.getShiftsForMonth(shiftsString, monthInLocalTime, terminalName)
+            StaffTimeSlots.getShiftsForMonth(shifts, monthInLocalTime, terminalName)
         }
       }
 
@@ -706,11 +705,12 @@ class Application @Inject()(implicit val config: Configuration,
 
       // call Autowire route
 
+      implicit val staffAssignmentsPickler = compositePickler[StaffAssignments].addConcreteType[ShiftAssignments].addConcreteType[FixedPointAssignments]
+      implicit val staffMovementPickler = compositePickler[StaffMovement]
       implicit val apiPaxTypeAndQueueCountPickler = generatePickler[ApiPaxTypeAndQueueCount]
       implicit val feedStatusPickler: CompositePickler[FeedStatus] = compositePickler[FeedStatus].
         addConcreteType[FeedStatusSuccess].
         addConcreteType[FeedStatusFailure]
-
 
       val router = Router.route[Api](ApiService(airportConfig, ctrl.shiftsActor, ctrl.fixedPointsActor, ctrl.staffMovementsActor, request.headers, request.session))
 

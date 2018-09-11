@@ -49,17 +49,17 @@ object Actions {
 
   case class UpdateAirportConfig(airportConfig: AirportConfig) extends Action
 
-  case class SetFixedPoints(fixedPoints: StaffAssignments, terminalName: Option[String]) extends Action
+  case class SetFixedPoints(fixedPoints: FixedPointAssignments, terminalName: Option[String]) extends Action
 
-  case class SaveFixedPoints(fixedPoints: StaffAssignments, terminalName: TerminalName) extends Action
+  case class SaveFixedPoints(fixedPoints: FixedPointAssignments, terminalName: TerminalName) extends Action
 
   case class GetFixedPoints() extends Action
 
-  case class SetShifts(shifts: StaffAssignments, terminalName: Option[String]) extends Action
+  case class SetShifts(shifts: ShiftAssignments, terminalName: Option[String]) extends Action
 
   case class GetShifts() extends Action
 
-  case class SetShiftsForMonth(shiftsForMonth: MonthOfRawShifts) extends Action
+  case class SetShiftsForMonth(shiftsForMonth: MonthOfShifts) extends Action
 
   case class GetShiftsForMonth(month: SDateLike, terminalName: TerminalName) extends Action
 

@@ -8,16 +8,6 @@ import services.graphstages.Crunch
 import scala.util.{Success, Try}
 
 object StaffTimeSlots {
-
-  def slotsToShifts(slots: StaffTimeSlotsForTerminalMonth): String = {
-    val monthSDate = SDate(slots.monthMillis)
-    slots.timeSlots.filter(_.staff != 0).zipWithIndex.map {
-      case (slot, index) =>
-        val dateTime = SDate(slot.start)
-        f"shift${monthSDate.getMonth()}%02d${monthSDate.getFullYear()}$index, ${slot.terminal}, ${dateTime.ddMMyyString}, ${dateTime.prettyTime()}, ${dateTime.addMillis(slot.durationMillis - 1).prettyTime}, ${slot.staff}"
-    }.mkString("\n")
-  }
-
   def slotsToShiftsAssignments(slots: StaffTimeSlotsForTerminalMonth): Seq[StaffAssignment] = {
     val monthSDate = SDate(slots.monthMillis)
     slots.timeSlots.filter(_.staff != 0).zipWithIndex.map {
@@ -43,17 +33,17 @@ object StaffTimeSlots {
     }
   }
 
-  def replaceShiftMonthWithTimeSlotsForMonth(existingShifts: StaffAssignments, slots: StaffTimeSlotsForTerminalMonth): StaffAssignments = {
+  def replaceShiftMonthWithTimeSlotsForMonth(existingShifts: ShiftAssignments, slots: StaffTimeSlotsForTerminalMonth): ShiftAssignments = {
+    val slotSdate = SDate(slots.monthMillis, Crunch.europeLondonTimeZone)
+
     val shiftsExcludingNewMonth = existingShifts
       .assignments
       .filterNot(assignment => {
         val assignmentSdate = SDate(assignment.startDt.millisSinceEpoch, Crunch.europeLondonTimeZone)
-        val slotSdate = SDate(slots.monthMillis, Crunch.europeLondonTimeZone)
-
         assignmentSdate.getMonth() == slotSdate.getMonth() && assignmentSdate.getFullYear() == slotSdate.getFullYear()
       })
 
-    StaffAssignments(StaffTimeSlots.slotsToShiftsAssignments(slots) ++ shiftsExcludingNewMonth)
+    ShiftAssignments(StaffTimeSlots.slotsToShiftsAssignments(slots) ++ shiftsExcludingNewMonth)
   }
 
   private def shiftLineToFieldList(line: String) = {
@@ -65,22 +55,32 @@ object StaffTimeSlots {
     existingShifts.split("\n")
   }
 
-  def getShiftsForMonth(shifts: String, month: SDateLike, terminalName: TerminalName): String = {
-    shiftsToLines(shifts)
-      .filter(line => {
-        shiftLineToFieldList(line) match {
-          case List(_, tn, d, _, _, _) =>
-            tn == terminalName && isDateInMonth(d, month)
-          case _ => false
-        }
+//  def getShiftsForMonth(shifts: String, month: SDateLike, terminalName: TerminalName): String = {
+//    shiftsToLines(shifts)
+//      .filter(line => {
+//        shiftLineToFieldList(line) match {
+//          case List(_, tn, d, _, _, _) =>
+//            tn == terminalName && isDateInMonth(d, month)
+//          case _ => false
+//        }
+//      })
+//      .zipWithIndex
+//      .map {
+//        case (line, idx) => {
+//          val fields = shiftLineToFieldList(line).drop(1)
+//          (idx.toString :: fields).mkString(",")
+//        }
+//      }
+//      .mkString("\n")
+//  }
+
+  def getShiftsForMonth(shifts: ShiftAssignments, month: SDateLike, terminalName: TerminalName): ShiftAssignments = {
+    val assignmentsForMonth = shifts.assignments
+      .filter(assignment => {
+        val assignmentSdate = SDate(assignment.startDt.millisSinceEpoch, Crunch.europeLondonTimeZone)
+        assignmentSdate.getMonth() == month.getMonth() && assignmentSdate.getFullYear() == month.getFullYear()
       })
-      .zipWithIndex
-      .map {
-        case (line, idx) => {
-          val fields = shiftLineToFieldList(line).drop(1)
-          (idx.toString :: fields).mkString(",")
-        }
-      }
-      .mkString("\n")
+
+    ShiftAssignments(assignmentsForMonth)
   }
 }

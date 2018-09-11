@@ -4,24 +4,23 @@ import actors.Sizes.oneMegaByte
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.trueaccord.scalapb.GeneratedMessage
-import drt.shared.{MilliDate, StaffAssignment, StaffAssignments}
+import drt.shared.{FixedPointAssignments, MilliDate, SDateLike, StaffAssignment}
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
-import services.SDate
 import services.graphstages.StaffAssignmentHelper
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
 
 
-case class FixedPointsState(fixedPoints: StaffAssignments) {
-  def updated(newAssignments: StaffAssignments): FixedPointsState = copy(fixedPoints = newAssignments)
+case class FixedPointsState(fixedPoints: FixedPointAssignments) {
+  def updated(newAssignments: FixedPointAssignments): FixedPointsState = copy(fixedPoints = newAssignments)
 }
 
-class FixedPointsActor extends FixedPointsActorBase {
+class FixedPointsActor(now: () => SDateLike) extends FixedPointsActorBase(now) {
   var subscribers: List[SourceQueueWithComplete[String]] = List()
 
-  override def onUpdateState(data: StaffAssignments): Unit = {
+  override def onUpdateState(data: FixedPointAssignments): Unit = {
     log.info(s"Telling subscribers ($subscribers) about updated fixed points: $data")
 
     subscribers.foreach(s => {
@@ -46,29 +45,29 @@ class FixedPointsActor extends FixedPointsActorBase {
   }
 }
 
-class FixedPointsActorBase extends RecoveryActorLike with PersistentDrtActor[FixedPointsState] {
+class FixedPointsActorBase(now: () => SDateLike) extends RecoveryActorLike with PersistentDrtActor[FixedPointsState] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def persistenceId = "fixedPoints-store"
 
   var state: FixedPointsState = initialState
 
-  def initialState = FixedPointsState(StaffAssignmentHelper.empty)
+  def initialState = FixedPointsState(FixedPointAssignments.empty)
 
   val snapshotInterval = 1
   override val snapshotBytesThreshold: Int = oneMegaByte
 
   import FixedPointsMessageParser._
 
-  override def stateToMessage: GeneratedMessage = FixedPointsStateSnapshotMessage(staffAssignmentsToFixedPointsMessages(state.fixedPoints))
+  override def stateToMessage: GeneratedMessage = FixedPointsStateSnapshotMessage(fixedPointsToFixedPointsMessages(state.fixedPoints, now()))
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case snapshot: FixedPointsStateSnapshotMessage => state = FixedPointsState(fixedPointMessagesToStaffAssignments(snapshot.fixedPoints))
+    case snapshot: FixedPointsStateSnapshotMessage => state = FixedPointsState(fixedPointMessagesToFixedPoints(snapshot.fixedPoints))
   }
 
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case fixedPointsMessage: FixedPointsMessage =>
-      val fp = fixedPointMessagesToStaffAssignments(fixedPointsMessage.fixedPoints)
+      val fp = fixedPointMessagesToFixedPoints(fixedPointsMessage.fixedPoints)
       updateState(fp)
   }
 
@@ -77,15 +76,15 @@ class FixedPointsActorBase extends RecoveryActorLike with PersistentDrtActor[Fix
       log.info(s"GetState received")
       sender() ! state.fixedPoints
 
-    case fixedPointStaffAssignments: StaffAssignments if fixedPointStaffAssignments != state.fixedPoints =>
+    case fixedPointStaffAssignments: FixedPointAssignments if fixedPointStaffAssignments != state.fixedPoints =>
       updateState(fixedPointStaffAssignments)
       onUpdateState(fixedPointStaffAssignments)
 
       log.info(s"Fixed points updated. Saving snapshot")
-      val snapshotMessage = FixedPointsStateSnapshotMessage(staffAssignmentsToFixedPointsMessages(state.fixedPoints))
+      val snapshotMessage = FixedPointsStateSnapshotMessage(fixedPointsToFixedPointsMessages(state.fixedPoints, now()))
       saveSnapshot(snapshotMessage)
 
-    case fixedPointStaffAssignments: StaffAssignments if fixedPointStaffAssignments == state.fixedPoints =>
+    case fixedPointStaffAssignments: FixedPointAssignments if fixedPointStaffAssignments == state.fixedPoints =>
       log.info(s"No changes to fixed points. Not persisting")
 
     case SaveSnapshotSuccess(md) =>
@@ -98,9 +97,9 @@ class FixedPointsActorBase extends RecoveryActorLike with PersistentDrtActor[Fix
       log.info(s"unhandled message: $u")
   }
 
-  def onUpdateState(fixedPointStaffAssignments: StaffAssignments): Unit = {}
+  def onUpdateState(fixedPointStaffAssignments: FixedPointAssignments): Unit = {}
 
-  def updateState(fixedPointStaffAssignments: StaffAssignments): Unit = {
+  def updateState(fixedPointStaffAssignments: FixedPointAssignments): Unit = {
     state = state.updated(fixedPointStaffAssignments)
   }
 }
@@ -108,13 +107,13 @@ class FixedPointsActorBase extends RecoveryActorLike with PersistentDrtActor[Fix
 object FixedPointsMessageParser {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def staffAssignmentToMessage(assignment: StaffAssignment): FixedPointMessage = FixedPointMessage(
+  def staffAssignmentToMessage(assignment: StaffAssignment, createdAt: SDateLike): FixedPointMessage = FixedPointMessage(
     name = Option(assignment.name),
     terminalName = Option(assignment.terminalName),
     numberOfStaff = Option(assignment.numberOfStaff.toString),
     startTimestamp = Option(assignment.startDt.millisSinceEpoch),
     endTimestamp = Option(assignment.endDt.millisSinceEpoch),
-    createdAt = Option(SDate.now().millisSinceEpoch)
+    createdAt = Option(createdAt.millisSinceEpoch)
   )
 
   def fixedPointMessageToStaffAssignment(fixedPointMessage: FixedPointMessage) = StaffAssignment(
@@ -126,9 +125,9 @@ object FixedPointsMessageParser {
     createdBy = None
   )
 
-  def staffAssignmentsToFixedPointsMessages(fixedPointStaffAssignments: StaffAssignments): Seq[FixedPointMessage] =
-    fixedPointStaffAssignments.assignments.map(staffAssignmentToMessage)
+  def fixedPointsToFixedPointsMessages(fixedPointStaffAssignments: FixedPointAssignments, createdAt: SDateLike): Seq[FixedPointMessage] =
+    fixedPointStaffAssignments.assignments.map(a => staffAssignmentToMessage(a, createdAt))
 
-  def fixedPointMessagesToStaffAssignments(fixedPointMessages: Seq[FixedPointMessage]): StaffAssignments =
-    StaffAssignments(fixedPointMessages.map(fixedPointMessageToStaffAssignment))
+  def fixedPointMessagesToFixedPoints(fixedPointMessages: Seq[FixedPointMessage]): FixedPointAssignments =
+    FixedPointAssignments(fixedPointMessages.map(fixedPointMessageToStaffAssignment))
 }

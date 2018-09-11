@@ -6,7 +6,7 @@ import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.SDateLike
 import server.protobuf.messages.ShiftMessage.ShiftStateSnapshotMessage
 
-class ShiftsReadActor(pointInTime: SDateLike) extends ShiftsActorBase {
+class ShiftsReadActor(now: () => SDateLike, pointInTime: SDateLike) extends ShiftsActorBase(now) {
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: ShiftStateSnapshotMessage => state = ShiftsState(shiftMessagesToStaffAssignments(snapshot.shifts))
   }

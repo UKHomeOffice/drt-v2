@@ -60,7 +60,7 @@ object Staffing {
     .filter(_.exists(_.time.millisSinceEpoch > dropBeforeMillis))
     .flatten
     .toSeq
-    .sortBy(_.time)
+    .sortBy(_.time.millisSinceEpoch)
 
   def staffMinutesForCrunchMinutes(crunchMinutes: Map[TQM, CrunchMinute], maybeSources: Option[StaffSources]): Map[TM, StaffMinute] = {
     val staff = maybeSources
@@ -185,8 +185,6 @@ object StaffDeploymentCalculator {
 }
 
 object StaffAssignmentHelper {
-  val empty: StaffAssignments = StaffAssignments(Seq())
-
   def tryStaffAssignment(name: String, terminalName: TerminalName, startDate: String, startTime: String, endTime: String, numberOfStaff: String = "1"): Try[StaffAssignment] = {
     val staffDeltaTry = Try(numberOfStaff.toInt)
     val ymd = startDate.split("/").toVector
@@ -203,15 +201,15 @@ object StaffAssignmentHelper {
       endDt <- endDtTry
       staffDelta: Int <- staffDeltaTry
     } yield {
-      val start = MilliDate(startDt.millisSinceEpoch)
-      val end = MilliDate(adjustEndDateIfEndTimeIsBeforeStartTime(d, m, y, startDt, endDt).millisSinceEpoch)
-      StaffAssignment(name, terminalName, start, end, staffDelta, None)
+      val start = startDt
+      val end = adjustEndDateIfEndTimeIsBeforeStartTime(d, m, y, startDt, endDt)
+      StaffAssignment(name, terminalName, MilliDate(start.millisSinceEpoch), MilliDate(end.millisSinceEpoch), staffDelta, None)
     }
   }
 
   def toCsv(assignment: StaffAssignment): String = {
-    val startDate: SDateLike = SDate(assignment.startDt)
-    val endDate: SDateLike = SDate(assignment.endDt)
+    val startDate: SDateLike = SDate(assignment.startDt.millisSinceEpoch)
+    val endDate: SDateLike = SDate(assignment.endDt.millisSinceEpoch)
     val startDateString = f"${startDate.getDate()}%02d/${startDate.getMonth()}%02d/${startDate.getFullYear - 2000}%02d"
     val startTimeString = f"${startDate.getHours()}%02d:${startDate.getMinutes()}%02d"
     val endTimeString = f"${endDate.getHours()}%02d:${endDate.getMinutes()}%02d"
@@ -276,8 +274,8 @@ object StaffAssignmentHelper {
   }
 
   def staffAssignmentsToString(assignments: Seq[StaffAssignment]): String = assignments.map {
-    case StaffAssignment(name, terminalName, MilliDate(startMillis), MilliDate(endMillis), numberOfStaff, _) =>
-      s"$name, $terminalName, ${dateString(startMillis)}, ${timeString(startMillis)}, ${timeString(endMillis)}, $numberOfStaff"
+    case StaffAssignment(name, terminalName, start, end, numberOfStaff, _) =>
+      s"$name, $terminalName, ${dateString(start.millisSinceEpoch)}, ${timeString(start.millisSinceEpoch)}, ${timeString(end.millisSinceEpoch)}, $numberOfStaff"
   }.mkString("\n")
 }
 
@@ -358,7 +356,7 @@ object StaffMovementsHelper {
       val uuid: UUID = UUID.randomUUID()
       StaffMovement(assignment.terminalName, assignment.name + " start", time = assignment.startDt, assignment.numberOfStaff, uuid, createdBy = None) ::
         StaffMovement(assignment.terminalName, assignment.name + " end", time = assignment.endDt, -assignment.numberOfStaff, uuid, createdBy = None) :: Nil
-    }).sortBy(_.time)
+    }).sortBy(_.time.millisSinceEpoch)
   }
 
   def adjustmentsAt(movements: Seq[StaffMovement])(dateTimeMillis: MillisSinceEpoch): Int = movements.takeWhile(_.time.millisSinceEpoch <= dateTimeMillis).map(_.delta).sum

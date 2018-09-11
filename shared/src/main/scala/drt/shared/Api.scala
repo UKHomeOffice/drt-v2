@@ -74,7 +74,7 @@ case class StaffTimeSlotsForTerminalMonth(
                                            timeSlots: Seq[StaffTimeSlot]
                                          )
 
-case class MonthOfRawShifts(month: MillisSinceEpoch, shifts: String)
+case class MonthOfShifts(month: MillisSinceEpoch, shifts: ShiftAssignments)
 
 object ApiSplits {
   def totalExcludingTransferPax(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.filter(s => s.queueType != Queues.Transfer).toList.map(_.paxCount).sum
@@ -294,6 +294,10 @@ trait SDateLike {
       case _ => false
     }
   }
+
+  def compare(that: SDateLike): Int = millisSinceEpoch.compare(that.millisSinceEpoch)
+
+  def <=(compareTo: SDateLike): Boolean = millisSinceEpoch <= compareTo.millisSinceEpoch
 }
 
 trait PortStateMinutes {
@@ -627,11 +631,11 @@ trait Api {
 
   def airportConfiguration(): AirportConfig
 
-  def getShifts(pointIntTime: MillisSinceEpoch): Future[StaffAssignments]
+  def getShifts(pointIntTime: MillisSinceEpoch): Future[ShiftAssignments]
 
-  def saveFixedPoints(rawFixedPoints: StaffAssignments): Unit
+  def saveFixedPoints(fixedPoints: FixedPointAssignments): Unit
 
-  def getFixedPoints(pointIntTime: MillisSinceEpoch): Future[StaffAssignments]
+  def getFixedPoints(pointIntTime: MillisSinceEpoch): Future[FixedPointAssignments]
 
   def saveStaffMovements(staffMovements: Seq[StaffMovement]): Unit
 
@@ -639,7 +643,7 @@ trait Api {
 
   def saveStaffTimeSlotsForMonth(timeSlotsForMonth: StaffTimeSlotsForTerminalMonth): Future[Unit]
 
-  def getShiftsForMonth(month: MillisSinceEpoch, terminalName: TerminalName): Future[String]
+  def getShiftsForMonth(month: MillisSinceEpoch, terminalName: TerminalName): Future[ShiftAssignments]
 
   def getCrunchStateForDay(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]]
 

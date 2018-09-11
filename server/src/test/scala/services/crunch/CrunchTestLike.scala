@@ -150,8 +150,8 @@ class CrunchTestLike
     val baseArrivalsProbe = testProbe("base-arrivals")
     val forecastArrivalsProbe = testProbe("forecast-arrivals")
     val liveArrivalsProbe = testProbe("live-arrivals")
-    val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor]))
-    val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor]))
+    val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], now))
+    val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], now))
     val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor]))
     val snapshotInterval = 1
     val manifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], oneMegaByte, now, expireAfterMillis, snapshotInterval))
