@@ -36,8 +36,10 @@ class ShiftsActor(now: () => SDateLike) extends ShiftsActorBase(now) {
   override def onUpdateState(data: ShiftAssignments): Unit = {
     log.info(s"Telling subscribers ($subscribers) about updated shifts")
 
+    val assignmentsString = StaffAssignmentHelper.staffAssignmentsToString(data.assignments)
+
     subscribers.foreach(s => {
-      s.offer(StaffAssignmentHelper.staffAssignmentsToString(data.assignments)).onComplete {
+      s.offer(assignmentsString).onComplete {
         case Success(qor) => log.info(s"update queued successfully with subscriber: $qor")
         case Failure(t) => log.info(s"update failed to queue with subscriber: $t")
       }

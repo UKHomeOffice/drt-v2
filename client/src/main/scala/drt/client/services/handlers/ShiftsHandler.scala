@@ -8,7 +8,7 @@ import diode.Implicits.runAfterImpl
 import drt.client.actions.Actions.{GetShifts, SetShifts}
 import drt.client.logger.log
 import drt.client.services.{AjaxClient, ViewMode}
-import drt.shared.{Api, SDateLike, ShiftAssignments, StaffAssignment}
+import drt.shared.{Api, ShiftAssignments}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -16,9 +16,6 @@ import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class ShiftsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[ShiftAssignments]]) extends LoggingActionHandler(modelRW) {
-//  implicit val sDatePickler = compositePickler[SDateLike]
-//  implicit val staffAssignmentPickler = compositePickler[StaffAssignment]
-
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case SetShifts(shifts, _) => updated(Ready(shifts))
 

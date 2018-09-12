@@ -23,8 +23,11 @@ class FixedPointsActor(now: () => SDateLike) extends FixedPointsActorBase(now) {
   override def onUpdateState(data: FixedPointAssignments): Unit = {
     log.info(s"Telling subscribers ($subscribers) about updated fixed points: $data")
 
+    val assignmentsString = StaffAssignmentHelper.staffAssignmentsToString(data.assignments)
+    log.info(s"fixed points: $assignmentsString")
+
     subscribers.foreach(s => {
-      s.offer(StaffAssignmentHelper.staffAssignmentsToString(data.assignments)).onComplete {
+      s.offer(assignmentsString).onComplete {
         case Success(qor) => log.info(s"update queued successfully with subscriber: $qor")
         case Failure(t) => log.info(s"update failed to queue with subscriber: $t")
       }

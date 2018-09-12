@@ -75,8 +75,8 @@ object CrunchSystem {
   def apply[FR, MS](props: CrunchProps[FR, MS])
                    (implicit system: ActorSystem, materializer: Materializer): CrunchSystem[FR, MS] = {
 
-    val initialShifts = initialShiftsLikeState(props.actors("shifts"))
-    val initialFixedPoints = initialShiftsLikeState(props.actors("fixed-points"))
+    val initialShifts = initialShiftsState(props.actors("shifts"))
+    val initialFixedPoints = initialFixedPointsState(props.actors("fixed-points"))
     val initialStaffMovements = initialStaffMovementsState(props.actors("staff-movements"))
 
     val manifests = props.manifestsSource
@@ -119,8 +119,8 @@ object CrunchSystem {
 
     val staffGraphStage = new StaffGraphStage(
       name = props.logLabel,
-      optionalInitialShifts = Option(initialShifts),
-      optionalInitialFixedPoints = Option(initialFixedPoints),
+      initialShifts = initialShifts,
+      initialFixedPoints = initialFixedPoints,
       optionalInitialMovements = Option(initialStaffMovements),
       now = props.now,
       expireAfterMillis = props.expireAfterMillis,
@@ -205,14 +205,25 @@ object CrunchSystem {
   def initialFlightsFromPortState(initialPortState: Option[PortState]): Option[FlightsWithSplits] = initialPortState.map(
     ps => FlightsWithSplits(ps.flights.values.toSeq, Set()))
 
-  def initialShiftsLikeState(askableShiftsLikeActor: AskableActorRef): String = {
-    Await.result(askableShiftsLikeActor.ask(GetState)(new Timeout(5 minutes)).map {
-      case shifts: String if shifts.nonEmpty =>
-        log.info(s"Got initial state from ${askableShiftsLikeActor.toString}")
+  def initialFixedPointsState(askableFixedPointsActor: AskableActorRef): FixedPointAssignments = {
+    Await.result(askableFixedPointsActor.ask(GetState)(new Timeout(5 minutes)).map {
+      case fixedPoints: FixedPointAssignments =>
+        log.info(s"Got initial state from ${askableFixedPointsActor.toString}")
+        fixedPoints
+      case _ =>
+        log.info(s"Got unexpected GetState response from ${askableFixedPointsActor.toString}")
+        FixedPointAssignments.empty
+    }, 5 minutes)
+  }
+
+  def initialShiftsState(askableShiftsActor: AskableActorRef): ShiftAssignments = {
+    Await.result(askableShiftsActor.ask(GetState)(new Timeout(5 minutes)).map {
+      case shifts: ShiftAssignments =>
+        log.info(s"Got initial state from ${askableShiftsActor.toString}")
         shifts
       case _ =>
-        log.info(s"Got no initial state from ${askableShiftsLikeActor.toString}")
-        ""
+        log.info(s"Got unexpected GetState response from ${askableShiftsActor.toString}")
+        ShiftAssignments.empty
     }, 5 minutes)
   }
 
