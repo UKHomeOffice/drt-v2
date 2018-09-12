@@ -19,7 +19,6 @@ object StaffTimeSlots {
         val name = f"shift${monthSDate.getMonth()}%02d${monthSDate.getFullYear()}$index"
         val startMilli = SDate(dateTime.millisSinceEpoch)
         val endMilli = startMilli.addMillis(slot.durationMillis - 60000)
-        log.info(s"slot change: ${startMilli.millisSinceEpoch} ${slot.staff} staff")
         StaffAssignment(name, slot.terminal, MilliDate(startMilli.millisSinceEpoch), MilliDate(endMilli.millisSinceEpoch), slot.staff, None)
     }
   }

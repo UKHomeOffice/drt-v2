@@ -198,10 +198,8 @@ object TerminalStaffing {
     }
 
     def daysWorthOf15Minutes(startOfDay: SDateLike): NumericRange[Long] = {
-      log.info(s"startOfDay: ${startOfDay.millisSinceEpoch}")
       val timeMinPlusOneDay = startOfDay.addDays(1)
-      val daysWorthOf15Minutes = startOfDay.millisSinceEpoch until timeMinPlusOneDay.millisSinceEpoch by (oneMinute * 15)
-      daysWorthOf15Minutes
+      startOfDay.millisSinceEpoch until timeMinPlusOneDay.millisSinceEpoch by (oneMinute * 15)
     }
 
     def staffingTableHourPerColumn(terminalName: TerminalName, daysWorthOf15Minutes: NumericRange[Long], staffWithShiftsAndMovements: (TerminalName, SDateLike) => Int): VdomTagOf[Table] = {

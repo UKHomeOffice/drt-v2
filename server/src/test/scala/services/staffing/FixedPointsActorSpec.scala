@@ -59,9 +59,10 @@ class FixedPointsActorSpec extends CrunchTestLike {
     val fixedPointsActor = system.actorOf(Props(classOf[TestableFixedPointsActor], probe.ref))
 
     fixedPointsActor ! fixedPointStaffAssignments
-
     probe.expectMsgAnyClassOf(MsgAck.getClass)
+
     fixedPointsActor ! PoisonPill
+    Thread.sleep(250)
 
     val fixedPointsActor2: AskableActorRef = system.actorOf(Props(classOf[TestableFixedPointsActor], probe.ref))
 

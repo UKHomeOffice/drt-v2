@@ -55,7 +55,7 @@ class AlertsActorSpec extends Specification {
 
       actor ! DeleteAlerts
       Thread.sleep(250)
-      
+
       actor ! alert
 
       val result = testKit2.getStateAndShutdown(actor)

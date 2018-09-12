@@ -193,13 +193,6 @@ object MonthlyStaffing {
     val viewingDate = props.terminalPageTab.dateFromUrlOrNow
     val terminalName = props.terminalPageTab.terminal
     val terminalShifts = props.shifts.forTerminal(terminalName)
-
-    terminalShifts
-      .filter(_.numberOfStaff > 0)
-      .foreach(sa => {
-        log.info(s"sa: ${sa.startDt} ${sa.numberOfStaff}")
-      })
-
     val shiftAssignments = ShiftAssignments(terminalShifts)
 
     def firstDay = firstDayOfMonth(viewingDate)
