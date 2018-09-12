@@ -146,11 +146,11 @@ object BigSummaryBoxTests extends TestSuite {
               val apiFlight1 = apiFlight("2017-05-01T12:05Z", Terminal = "T1", FlightID = Option(2), ActPax = Option(200), PcpTime = mkMillis("2017-05-01T12:05Z"))
               val apiFlight2 = apiFlight("2017-05-01T13:05Z", Terminal = "T1", FlightID = Option(3), ActPax = Option(300), PcpTime = mkMillis("2017-05-01T13:15Z"))
 
-              val splits1 = ApiSplits(Set(ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 41, None),
+              val splits1 = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 41, None),
                 ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 23, None)),
                 SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.DepartureConfirmed), PaxNumbers)
 
-              val splits2 = ApiSplits(Set(
+              val splits2 = Splits(Set(
                 ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 11, None),
                 ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 17, None))
                 , SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.DepartureConfirmed), PaxNumbers)
@@ -179,12 +179,12 @@ object BigSummaryBoxTests extends TestSuite {
 
               val flights = List(
                 ApiFlightWithSplits(apiFlight("2017-05-01T12:05Z", Terminal = "T1", FlightID = Option(2), ActPax = Option(100), PcpTime = mkMillis("2017-05-01T12:05Z")),
-                  Set(ApiSplits(Set(
+                  Set(Splits(Set(
                     ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 30, None),
                     ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 70, None)),
                     SplitSources.Historical, None, Percentage))),
                 ApiFlightWithSplits(apiFlight("2017-05-01T13:05Z", Terminal = "T1", FlightID = Option(3), ActPax = Option(100), PcpTime = mkMillis("2017-05-01T13:15Z")),
-                  Set(ApiSplits(Set(
+                  Set(Splits(Set(
                     ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 40, None),
                     ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 60, None)),
                     SplitSources.Historical, None, Percentage))))
@@ -211,7 +211,7 @@ object BigSummaryBoxTests extends TestSuite {
 
                   val flights = List(
                     ApiFlightWithSplits(apiFlight("2017-05-01T12:05Z", Terminal = "T1", FlightID = Option(2), ActPax = Option(300), TranPax = Option(100), PcpTime = mkMillis("2017-05-01T12:05Z")),
-                      Set(ApiSplits(Set(
+                      Set(Splits(Set(
                         ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 60, None),
                         ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 120, None),
                         ApiPaxTypeAndQueueCount(PaxTypes.Transit, Queues.Transfer, 20, None)),
@@ -236,7 +236,7 @@ object BigSummaryBoxTests extends TestSuite {
               "Then we use the sum of it's splits" - {
                 val apiFlight1 = apiFlight("2017-05-01T12:05Z", Terminal = "T1", FlightID = Option(2), ActPax = Option(100), PcpTime = mkMillis("2017-05-01T12:05Z"))
 
-                val splits1 = ApiSplits(Set(ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 41, None),
+                val splits1 = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 41, None),
                   ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 23, None)),
                   SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.DepartureConfirmed), PaxNumbers)
 
@@ -255,7 +255,7 @@ object BigSummaryBoxTests extends TestSuite {
               "AND it has act pax " - {
                 "Then we use act pax from the flight" - {
                   val apiFlight1 = apiFlight("2017-05-01T12:05Z", Terminal = "T1", FlightID = Option(2), ActPax = Option(100), PcpTime = mkMillis("2017-05-01T12:05Z"))
-                  val splits1 = ApiSplits(Set(ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 0.2, None),
+                  val splits1 = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 0.2, None),
                     ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 0.7, None)),
                     SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.DepartureConfirmed), Percentage)
 

@@ -3,7 +3,8 @@ package services
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
-import org.slf4j.LoggerFactory
+import drt.shared.splits.ApiSplitsToSplitRatio
+import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch.europeLondonTimeZone
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -12,10 +13,8 @@ import scala.util.Try
 
 
 object CSVData {
-
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
   val lineEnding = "\n"
-
 
   def forecastHeadlineToCSV(headlines: ForecastHeadlineFigures, queueOrder: List[String]): String = {
     val headings = "," + headlines.queueDayHeadlines.map(_.day).toList.sorted.map(
@@ -150,7 +149,7 @@ object CSVData {
                        terminalCrunchMinuteRowsByMinute: Seq[(MillisSinceEpoch, Seq[String])],
                        staffMinutesByMinute: Map[MillisSinceEpoch, StaffMinute],
                        crunchMilliMinutes: Seq[(MillisSinceEpoch, Set[CrunchMinute])]
-                     ) = {
+                     ): Seq[QueueName] = {
     terminalCrunchMinuteRowsByMinute
       .map {
         case (minute, queueData) =>
@@ -182,7 +181,7 @@ object CSVData {
   def actualAPISplitsAndHeadingsFromFlight(flightWithSplits: ApiFlightWithSplits): Set[(String, Double)] = flightWithSplits
     .splits
     .collect {
-      case s: ApiSplits if s.source == SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages =>
+      case s: Splits if s.source == SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages =>
         s.splits.map(s => {
           val ptaq = PaxTypeAndQueue(s.passengerType, s.queueType)
           (s"API Actual - ${PaxTypesAndQueues.displayName(ptaq)}", s.paxCount)
@@ -190,14 +189,14 @@ object CSVData {
     }
     .flatten
 
-  def actualAPISplitsForFlightInHeadingOrder(flight: ApiFlightWithSplits, headings: Seq[String]) =
+  def actualAPISplitsForFlightInHeadingOrder(flight: ApiFlightWithSplits, headings: Seq[String]): Seq[Double] =
     headings.map(h => actualAPISplitsAndHeadingsFromFlight(flight).toMap.getOrElse(h, 0.0))
 
-  def actualAPIDataForFlights(flights: List[ApiFlightWithSplits], headings: Seq[String]) = flights
+  def actualAPIDataForFlights(flights: List[ApiFlightWithSplits], headings: Seq[String]): List[Seq[Double]] = flights
     .map(f => actualAPISplitsForFlightInHeadingOrder(f, headings))
 
 
-  val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrderWithFastTrack)
+  val queueNames: Seq[String] = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrderWithFastTrack)
 
 
   def flightsWithSplitsToCSVIncludingAPIDataWithHeadings(flightsWithSplits: List[ApiFlightWithSplits]): String =
@@ -221,9 +220,9 @@ object CSVData {
     asCSV(csvData)
   }
 
-  def asCSV(csvData: List[List[Any]]) = csvData.map(_.mkString(",")).mkString(lineEnding)
+  def asCSV(csvData: List[List[Any]]): String = csvData.map(_.mkString(",")).mkString(lineEnding)
 
-  def flightsWithSplitsWithAPIActualsToCSVWithHeadings(flights: List[ApiFlightWithSplits]) = {
+  def flightsWithSplitsWithAPIActualsToCSVWithHeadings(flights: List[ApiFlightWithSplits]): String = {
     val apiHeadings = actualAPIHeadings(flights)
     val headings = flightsWithSplitsToCSVHeadings + "," + apiHeadings.mkString(",")
     val csvData = flights.map(f => {
@@ -235,7 +234,7 @@ object CSVData {
   }
 
 
-  def flightToCsvRow(queueNames: Seq[String], fws: ApiFlightWithSplits) = {
+  def flightToCsvRow(queueNames: Seq[String], fws: ApiFlightWithSplits): List[Any] = {
     List(
       fws.apiFlight.IATA,
       fws.apiFlight.ICAO,

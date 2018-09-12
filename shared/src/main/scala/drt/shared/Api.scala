@@ -56,38 +56,30 @@ case object UndefinedSplitStyle extends SplitStyle
 
 case class ApiPaxTypeAndQueueCount(passengerType: PaxType, queueType: String, paxCount: Double, nationalities: Option[Map[String, Double]])
 
-case class ApiSplits(splits: Set[ApiPaxTypeAndQueueCount], source: String, eventType: Option[String], splitStyle: SplitStyle = PaxNumbers) {
-  lazy val totalExcludingTransferPax: Double = ApiSplits.totalExcludingTransferPax(splits)
-  lazy val totalPax: Double = ApiSplits.totalPax(splits)
+case class Splits(splits: Set[ApiPaxTypeAndQueueCount], source: String, eventType: Option[String], splitStyle: SplitStyle = PaxNumbers) {
+  lazy val totalExcludingTransferPax: Double = Splits.totalExcludingTransferPax(splits)
+  lazy val totalPax: Double = Splits.totalPax(splits)
 }
 
-case class StaffTimeSlot(
-                          terminal: String,
-                          start: MillisSinceEpoch,
-                          staff: Int,
-                          durationMillis: Int
-                        )
-
-case class StaffTimeSlotsForTerminalMonth(
-                                           monthMillis: MillisSinceEpoch,
-                                           terminal: TerminalName,
-                                           timeSlots: Seq[StaffTimeSlot]
-                                         )
+case class StaffTimeSlot(terminal: String,
+                         start: MillisSinceEpoch,
+                         staff: Int,
+                         durationMillis: Int)
 
 case class MonthOfShifts(month: MillisSinceEpoch, shifts: ShiftAssignments)
 
-object ApiSplits {
+object Splits {
   def totalExcludingTransferPax(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.filter(s => s.queueType != Queues.Transfer).toList.map(_.paxCount).sum
 
   def totalPax(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.toList.map(_.paxCount).sum
 }
 
-case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[ApiSplits], lastUpdated: Option[MillisSinceEpoch] = None) {
+case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpdated: Option[MillisSinceEpoch] = None) {
   def equals(candidate: ApiFlightWithSplits): Boolean = {
     this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
   }
 
-  def bestSplits: Option[ApiSplits] = {
+  def bestSplits: Option[Splits] = {
     val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.eventType.contains(DqEventCodes.DepartureConfirmed))
     val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.eventType.contains(DqEventCodes.CheckIn))
     val predictedSplits = splits.find(s => s.source == SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages)
@@ -100,7 +92,7 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[ApiSplits], lastU
     }.flatten
   }
 
-  def apiSplits: Option[ApiSplits] = {
+  def apiSplits: Option[Splits] = {
     val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.eventType.contains(DqEventCodes.DepartureConfirmed))
     val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.eventType.contains(DqEventCodes.CheckIn))
 
@@ -114,6 +106,7 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[ApiSplits], lastU
 }
 
 case class TQM(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch)
+
 case class TM(terminalName: TerminalName, minute: MillisSinceEpoch)
 
 object MinuteHelper {
@@ -218,7 +211,8 @@ case object LiveFeedSource extends FeedSource
 
 object FeedSource {
   def feedSources: Set[FeedSource] = Set(ApiFeedSource, AclFeedSource, ForecastFeedSource, LiveFeedSource)
-  def apply(name: String): Option[FeedSource] = feedSources.find(fs=> fs.toString == name)
+
+  def apply(name: String): Option[FeedSource] = feedSources.find(fs => fs.toString == name)
 }
 
 case class ArrivalsDiff(toUpdate: Set[Arrival], toRemove: Set[Int])
@@ -252,8 +246,6 @@ trait SDateLike {
   def getMinutes(): Int
 
   def getSeconds(): Int
-
-  def getUtcMillis(): MillisSinceEpoch
 
   def millisSinceEpoch: MillisSinceEpoch
 
@@ -317,6 +309,7 @@ case class CrunchResult(firstTimeMillis: MillisSinceEpoch,
 case class AirportInfo(airportName: String, city: String, country: String, code: String)
 
 object FlightsApi {
+
   case class Flights(flights: Seq[Arrival])
 
   case class FlightsWithSplits(flights: Seq[ApiFlightWithSplits], removals: Set[Int]) extends PortStateMinutes {
@@ -457,9 +450,7 @@ object CrunchApi {
   }
 
   object StaffMinutes {
-    def apply(minutesByKey: Map[TM, StaffMinute]): StaffMinutes = {
-      StaffMinutes(minutesByKey.values.toSeq)
-    }
+    def apply(minutesByKey: Map[TM, StaffMinute]): StaffMinutes = StaffMinutes(minutesByKey.values.toSeq)
   }
 
   case class CrunchMinute(terminalName: TerminalName,
@@ -662,59 +653,4 @@ trait Api {
   def getKeyCloakUsers(): Future[List[KeyCloakUser]]
 
   def addUserToGroup(userId: String, groupName: String): Unit
-}
-
-object ApiSplitsToSplitRatio {
-
-  def queuesFromPaxTypeAndQueue(ptq: List[PaxTypeAndQueue]): Seq[String] = ptq.map {
-    case PaxTypeAndQueue(_, q) => q
-  }.distinct
-
-  def queueTotals(splits: Map[PaxTypeAndQueue, Int]): Map[QueueName, Int] = splits
-    .foldLeft(Map[QueueName, Int]())((map, ptqc) => {
-      ptqc match {
-        case (PaxTypeAndQueue(_, q), pax) =>
-          map + (q -> (map.getOrElse(q, 0) + pax))
-      }
-    })
-
-  def paxPerQueueUsingBestSplitsAsRatio(flightWithSplits: ApiFlightWithSplits): Option[Map[QueueName, Int]] = {
-    flightWithSplits.bestSplits.map(s => flightPaxPerQueueUsingSplitsAsRatio(s, flightWithSplits.apiFlight))
-  }
-
-  def flightPaxPerQueueUsingSplitsAsRatio(splits: ApiSplits, flight: Arrival): Map[QueueName, Int] = queueTotals(
-    ApiSplitsToSplitRatio.applyPaxSplitsToFlightPax(splits, ArrivalHelper.bestPax(flight))
-      .splits
-      .map(ptqc => PaxTypeAndQueue(ptqc.passengerType, ptqc.queueType) -> ptqc.paxCount.toInt)
-      .toMap
-  )
-
-  def applyPaxSplitsToFlightPax(apiSplits: ApiSplits, totalPax: Int): ApiSplits = {
-    val splitsSansTransfer = apiSplits.splits.filter(_.queueType != Queues.Transfer)
-    val splitsAppliedAsRatio = splitsSansTransfer.map(s => {
-      val total = splitsPaxTotal(splitsSansTransfer)
-      val paxCountRatio = applyRatio(s, totalPax, total)
-      s.copy(paxCount = paxCountRatio)
-    })
-    apiSplits.copy(
-      splitStyle = SplitStyle("Ratio"),
-      splits = fudgeRoundingError(splitsAppliedAsRatio, totalPax - splitsPaxTotal(splitsAppliedAsRatio))
-    )
-  }
-
-  def applyRatio(split: ApiPaxTypeAndQueueCount, totalPax: Int, splitsTotal: Double): Long =
-    Math.round(totalPax * (split.paxCount / splitsTotal))
-
-  def fudgeRoundingError(splits: Set[ApiPaxTypeAndQueueCount], diff: Double): Set[ApiPaxTypeAndQueueCount] =
-    splits
-      .toList
-      .sortBy(_.paxCount)
-      .reverse match {
-      case head :: tail =>
-        (head.copy(paxCount = head.paxCount + diff) :: tail).toSet
-      case _ =>
-        splits
-    }
-
-  def splitsPaxTotal(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.toSeq.map(_.paxCount).sum
 }

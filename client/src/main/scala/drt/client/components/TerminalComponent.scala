@@ -165,7 +165,7 @@ object TerminalComponent {
                   <.div(^.id := "staffing", ^.className := s"tab-pane terminal-staffing-container $staffingContentClass",
                     if (props.terminalPageTab.mode == "staffing") {
                       model.potMonthOfShifts.render(ms => {
-                        TerminalStaffingV2(ms.shifts, props.terminalPageTab, props.router)
+                        MonthlyStaffing(ms.shifts, props.terminalPageTab, props.router)
                       })
                     } else ""
                   ) else "")

@@ -48,7 +48,7 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
 
     val expectedFlights = Set(ApiFlightWithSplits(
       updatedArrival,
-      Set(ApiSplits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0, None)), TerminalAverage, None, Percentage))))
+      Set(Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0, None)), TerminalAverage, None, Percentage))))
 
     crunch.liveTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
@@ -86,7 +86,7 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
 
     val expectedFlights = Set(ApiFlightWithSplits(
       updatedArrival,
-      Set(ApiSplits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0, None)), TerminalAverage, None, Percentage))))
+      Set(Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0, None)), TerminalAverage, None, Percentage))))
 
     crunch.liveTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>

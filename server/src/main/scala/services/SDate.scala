@@ -42,8 +42,6 @@ object SDate {
 
     def millisSinceEpoch: MillisSinceEpoch = dateTime.getMillis
 
-    def getUtcMillis(): MillisSinceEpoch = dateTime.getMillis
-
     override def toISOString(): String = jodaSDateToIsoString(dateTime)
 
     def getZone(): String = dateTime.getZone.getID

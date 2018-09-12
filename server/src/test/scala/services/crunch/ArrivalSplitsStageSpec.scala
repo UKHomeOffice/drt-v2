@@ -21,7 +21,7 @@ object TestableArrivalSplits {
   val oneDayMillis: Int = 60 * 60 * 24 * 1000
   def groupByCodeShares(flights: Seq[ApiFlightWithSplits]): Seq[(ApiFlightWithSplits, Set[Arrival])] = flights.map(f => (f, Set(f.apiFlight)))
 
-  def apply(splitsCalculator: SplitsCalculator, testProbe: TestProbe, now: () => SDateLike): RunnableGraph[(SourceQueueWithComplete[ArrivalsDiff], SourceQueueWithComplete[ManifestsFeedResponse], SourceQueueWithComplete[Seq[(Arrival, Option[ApiSplits])]])] = {
+  def apply(splitsCalculator: SplitsCalculator, testProbe: TestProbe, now: () => SDateLike): RunnableGraph[(SourceQueueWithComplete[ArrivalsDiff], SourceQueueWithComplete[ManifestsFeedResponse], SourceQueueWithComplete[Seq[(Arrival, Option[Splits])]])] = {
     val arrivalSplitsStage = new ArrivalSplitsGraphStage(
       name = "",
       optionalInitialFlights = None,
@@ -34,7 +34,7 @@ object TestableArrivalSplits {
 
     val arrivalsDiffSource = Source.queue[ArrivalsDiff](1, OverflowStrategy.backpressure)
     val manifestsSource = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
-    val predictionsSource = Source.queue[Seq[(Arrival, Option[ApiSplits])]](1, OverflowStrategy.backpressure)
+    val predictionsSource = Source.queue[Seq[(Arrival, Option[Splits])]](1, OverflowStrategy.backpressure)
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
@@ -95,19 +95,19 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
     arrivalDiffs.offer(ArrivalsDiff(toUpdate = Set(arrival), toRemove = Set()))
     manifestsInput.offer(ManifestsFeedSuccess(DqManifests("", manifests)))
 
-    val historicSplits = ApiSplits(
+    val historicSplits = Splits(
       Set(
         ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50.0, None),
         ApiPaxTypeAndQueueCount(EeaNonMachineReadable, Queues.EeaDesk, 50.0, None)),
       SplitSources.Historical, None, Percentage)
-    val apiSplits = ApiSplits(
+    val apiSplits = Splits(
       Set(
         ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EGate, 1.0, Some(Map("GBR" -> 0.5, "ITA" -> 0.5))),
         ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 1.0, Some(Map("GBR" -> 0.5, "ITA" -> 0.5)))),
       SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Some(DqEventCodes.DepartureConfirmed), PaxNumbers)
     val expectedSplits = Set(
       historicSplits,
-      ApiSplits(Set(), SplitSources.TerminalAverage, None, Percentage),
+      Splits(Set(), SplitSources.TerminalAverage, None, Percentage),
       apiSplits)
 
     val expected = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival.copy(FeedSources = Set(LiveFeedSource, ApiFeedSource)), expectedSplits, None)), Set())

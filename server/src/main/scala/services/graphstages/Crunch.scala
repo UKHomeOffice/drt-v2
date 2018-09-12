@@ -284,7 +284,7 @@ object Crunch {
     PortState(mergedFlights, mergedCrunchMinutes, mergedStaffMinutes)
   }
 
-  def combineArrivalsWithMaybeSplits(as1: Seq[(Arrival, Option[ApiSplits])], as2: Seq[(Arrival, Option[ApiSplits])]): Seq[(Arrival, Option[ApiSplits])] = {
+  def combineArrivalsWithMaybeSplits(as1: Seq[(Arrival, Option[Splits])], as2: Seq[(Arrival, Option[Splits])]): Seq[(Arrival, Option[Splits])] = {
     val arrivalsWithMaybeSplitsById = as1
       .map {
         case (arrival, maybeSplits) => (arrival.uniqueId, (arrival, maybeSplits))
