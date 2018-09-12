@@ -625,7 +625,7 @@ trait Api {
 
   def airportInfosByAirportCodes(codes: Set[String]): Future[Map[String, AirportInfo]]
 
-  def airportConfiguration(): AirportConfig
+  def airportConfiguration(): Option[AirportConfig]
 
   def getShifts(pointIntTime: MillisSinceEpoch): Future[String]
 

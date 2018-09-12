@@ -142,9 +142,9 @@ class NoCacheFilter @Inject()(
 trait UserRoleProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def userRolesFromHeader(headers: Headers): List[Role] = headers.get("X-Auth-Roles").map(_.split(",").flatMap(Roles.parse).toList).getOrElse(List.empty[Role])
+  def userRolesFromHeader(headers: Headers): Set[Role] = headers.get("X-Auth-Roles").map(_.split(",").flatMap(Roles.parse).toSet).getOrElse(Set.empty[Role])
 
-  def getRoles(config: Configuration, headers: Headers, session: Session): List[Role]
+  def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role]
 
   def getLoggedInUser(config: Configuration, headers: Headers, session: Session): LoggedInUser = {
     LoggedInUser(

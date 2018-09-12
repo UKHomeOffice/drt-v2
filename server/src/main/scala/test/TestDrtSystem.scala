@@ -38,7 +38,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
 
   override def liveArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = testFeed
 
-  override def getRoles(config: Configuration, headers: Headers, session: Session): List[Role] = TestUserRoleProvider.getRoles(config, headers, session)
+  override def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] = TestUserRoleProvider.getRoles(config, headers, session)
 
   override def run(): Unit = {
 

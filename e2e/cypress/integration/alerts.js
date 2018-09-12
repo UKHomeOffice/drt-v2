@@ -4,14 +4,19 @@ describe('Alerts system', function () {
   let timeAtEndOfDay = "23:59:59";
   let timeAtStartOfDay = "00:00:00";
 
+
   beforeEach(function () {
     deleteAlerts();
-
+    setRoles(["api:view"]);
   });
 
   afterEach(function() {
     deleteAlerts();
   });
+
+  function setRoles(roles) {
+    cy.request("POST", 'v2/test/live/test/mock-roles', {"roles": roles})
+  }
 
   function deleteAlerts() {
     cy.request('DELETE', '/v2/test/live/data/alert');

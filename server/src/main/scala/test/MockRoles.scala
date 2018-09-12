@@ -13,12 +13,12 @@ object MockRoles {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply(session: Session): List[Role] = {
+  def apply(session: Session): Set[Role] = {
 
     log.info(s"Session: $session")
     val maybeRoles = session.data.get("mock-roles")
     log.info(s"Maybe roles: $maybeRoles")
-    val mockRoles = maybeRoles.map(_.split(",").toList.flatMap(Roles.parse)).getOrElse(List())
+    val mockRoles = maybeRoles.map(_.split(",").toSet.flatMap(Roles.parse)).getOrElse(Set.empty)
     log.info(s"Using these mock roles: $mockRoles")
     mockRoles
   }
@@ -26,18 +26,18 @@ object MockRoles {
   object MockRolesProtocol extends DefaultJsonProtocol {
     implicit val mockRoleConverters: RootJsonFormat[MockRoles] = jsonFormat1((v: JsValue) => {
       log.info(s"Got this json $v")
-      MockRoles(v.convertTo[List[String]].flatMap(Roles.parse))
+      MockRoles(v.convertTo[Set[String]].flatMap(Roles.parse))
     })
   }
 
 }
 
-case class MockRoles(roles: List[Role])
+case class MockRoles(roles: Set[Role])
 
 object TestUserRoleProvider extends UserRoleProviderLike {
 
-  def getRoles(config: Configuration, headers: Headers, session: Session): List[Role] = {
+  def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] = {
     log.info(s"Using MockRoles with $session and $headers")
-    MockRoles(session) ::: userRolesFromHeader(headers)
+    MockRoles(session) ++ userRolesFromHeader(headers)
   }
 }

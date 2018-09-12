@@ -131,7 +131,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   system.log.info(s"useNationalityBasedProcessingTimes: $useNationalityBasedProcessingTimes")
   system.log.info(s"useSplitsPrediction: $useSplitsPrediction")
 
-  def getRoles(config: Configuration, headers: Headers, session: Session): List[Role] =
+  def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] =
     if (config.getOptional[String]("feature-flags.super-user-mode").isDefined) {
       system.log.info(s"Using Super User Roles")
       Roles.availableRoles
