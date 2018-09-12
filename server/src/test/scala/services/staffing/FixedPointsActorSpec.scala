@@ -1,7 +1,7 @@
 package services.staffing
 
 import actors.{FixedPointsActor, GetState}
-import akka.actor.{ActorRef, Props}
+import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.pattern.AskableActorRef
 import akka.testkit.TestProbe
 import akka.util.Timeout
@@ -42,6 +42,30 @@ class FixedPointsActorSpec extends CrunchTestLike {
     probe.expectMsgAnyClassOf(MsgAck.getClass)
 
     val storedFixedPoints = Await.result(askableFixedPointsActor ? GetState, 1 second).asInstanceOf[FixedPointAssignments]
+    val expected = fixedPointStaffAssignments
+
+    storedFixedPoints === expected
+  }
+
+  "Given some fixed points and a fixed points actor " +
+    "When I send the fixed points as a string to the actor, then query after a restart " +
+    "Then I should get back the same fixed points I previously sent it" >> {
+    val fixedPointStaffAssignments = FixedPointAssignments(
+      Seq(StaffAssignment("Roving officer", "T1", MilliDate(SDate("2018-01-01T00:00").millisSinceEpoch), MilliDate(SDate("2018-01-01T00:14").millisSinceEpoch), 1, None))
+    )
+
+    val probe = TestProbe()
+
+    val fixedPointsActor = system.actorOf(Props(classOf[TestableFixedPointsActor], probe.ref))
+
+    fixedPointsActor ! fixedPointStaffAssignments
+
+    probe.expectMsgAnyClassOf(MsgAck.getClass)
+    fixedPointsActor ! PoisonPill
+
+    val fixedPointsActor2: AskableActorRef = system.actorOf(Props(classOf[TestableFixedPointsActor], probe.ref))
+
+    val storedFixedPoints = Await.result(fixedPointsActor2 ? GetState, 1 second).asInstanceOf[FixedPointAssignments]
     val expected = fixedPointStaffAssignments
 
     storedFixedPoints === expected

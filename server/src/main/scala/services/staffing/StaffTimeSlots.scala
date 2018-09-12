@@ -18,7 +18,7 @@ object StaffTimeSlots {
         val dateTime = SDate(slot.start)
         val name = f"shift${monthSDate.getMonth()}%02d${monthSDate.getFullYear()}$index"
         val startMilli = SDate(dateTime.millisSinceEpoch)
-        val endMilli = startMilli.addMillis(slot.durationMillis - 1)
+        val endMilli = startMilli.addMillis(slot.durationMillis - 60000)
         log.info(s"slot change: ${startMilli.millisSinceEpoch} ${slot.staff} staff")
         StaffAssignment(name, slot.terminal, MilliDate(startMilli.millisSinceEpoch), MilliDate(endMilli.millisSinceEpoch), slot.staff, None)
     }
@@ -44,7 +44,10 @@ object StaffTimeSlots {
       .assignments
       .filterNot(assignment => {
         val assignmentSdate = SDate(assignment.startDt.millisSinceEpoch, Crunch.europeLondonTimeZone)
-        assignmentSdate.getMonth() == slotSdate.getMonth() && assignmentSdate.getFullYear() == slotSdate.getFullYear()
+        val sameMonth = assignmentSdate.getMonth() == slotSdate.getMonth()
+        val sameYear = assignmentSdate.getFullYear() == slotSdate.getFullYear()
+        val sameTerminal = assignment.terminalName == slots.terminalName
+        sameMonth && sameYear && sameTerminal
       })
 
     ShiftAssignments(StaffTimeSlots.slotsToShiftsAssignments(slots) ++ shiftsExcludingNewMonth)

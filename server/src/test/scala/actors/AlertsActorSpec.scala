@@ -1,14 +1,15 @@
 package actors
 
 import java.util.UUID
+
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern._
 import akka.util.Timeout
-import controllers.AkkaTestkitSpecs2SupportForPersistence
 import drt.shared.Alert
 import org.joda.time.DateTime
 import org.specs2.matcher.Scope
 import org.specs2.mutable.Specification
+
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.language.reflectiveCalls
@@ -52,6 +53,9 @@ class AlertsActorSpec extends Specification {
 
       val alert = Alert("alert title", "this is the alert message", DateTime.now.plusDays(1).getMillis, DateTime.now.getMillis)
 
+      actor ! DeleteAlerts
+      Thread.sleep(250)
+      
       actor ! alert
 
       val result = testKit2.getStateAndShutdown(actor)
