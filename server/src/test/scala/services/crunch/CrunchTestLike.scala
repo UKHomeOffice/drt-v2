@@ -334,7 +334,7 @@ class CrunchTestLike
   }
 
   def offerAndWait[T](sourceQueue: SourceQueueWithComplete[T], offering: T): QueueOfferResult = {
-    Await.result(sourceQueue.offer(offering), 5 seconds) match {
+    Await.result(sourceQueue.offer(offering), 3 seconds) match {
       case offerResult if offerResult != Enqueued =>
         throw new Exception(s"Queue offering (${offering.getClass}) was not enqueued: ${offerResult.getClass}")
       case offerResult =>

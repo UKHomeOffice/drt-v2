@@ -112,9 +112,10 @@
 
 .main-logo {
   height: 70px;
-  width: 96%;
+  width: 210px;
   padding: 15px;
   margin: auto;
+  float:left;
   background-image: url(/v2/stn/live/assets/images/logo_colour.png);
   background-repeat: no-repeat;
   background-position: 16px 15px;
@@ -1648,10 +1649,19 @@ a i.fa.fa-remove {
   padding: 10px;
 }
 
+.topbar {
+  width: 100%;
+  overflow: hidden;
+}
+
+.alerts {
+  float: left;
+  width: calc(~"100% - 210px");
+}
+
 #has-alerts {
     font-size: 12px;
     font-family: tahoma;
-    border: 3px double #ccc;
     color: #555;
     display: block;
     padding: 10px 5px 0 5px;
@@ -1660,6 +1670,7 @@ a i.fa.fa-remove {
     overflow: auto;
 }
 
-#has-alerts:hover {
-  box-shadow: 2px -5px 5px 0px rgba(0,0,0,.2);
+.the-alert {
+  display: block;
+  margin-bottom: 1px;
 }
