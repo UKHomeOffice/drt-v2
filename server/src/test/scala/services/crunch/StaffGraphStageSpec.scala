@@ -6,7 +6,7 @@ import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueW
 import akka.stream.{ClosedShape, OverflowStrategy}
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{StaffMinute, StaffMinutes}
-import drt.shared.{MilliDate, StaffMovement}
+import drt.shared._
 import services.SDate
 import services.graphstages.{Crunch, StaffGraphStage, UpdateCriteria}
 
@@ -16,10 +16,10 @@ import scala.concurrent.duration._
 object TestableStaffGraphStage {
   def apply(testProbe: TestProbe,
             staffGraphStage: StaffGraphStage
-           ): RunnableGraph[(SourceQueueWithComplete[String], SourceQueueWithComplete[String], SourceQueueWithComplete[Seq[StaffMovement]])] = {
+           ): RunnableGraph[(SourceQueueWithComplete[ShiftAssignments], SourceQueueWithComplete[FixedPointAssignments], SourceQueueWithComplete[Seq[StaffMovement]])] = {
 
-    val shiftsSource = Source.queue[String](1, OverflowStrategy.backpressure)
-    val fixedPointsSource = Source.queue[String](1, OverflowStrategy.backpressure)
+    val shiftsSource = Source.queue[ShiftAssignments](1, OverflowStrategy.backpressure)
+    val fixedPointsSource = Source.queue[FixedPointAssignments](1, OverflowStrategy.backpressure)
     val movementsSource = Source.queue[Seq[StaffMovement]](1, OverflowStrategy.backpressure)
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
@@ -87,15 +87,18 @@ class StaffGraphStageSpec extends CrunchTestLike {
   }
 
   "Given a staff stage for 1 days " +
-    "When I send a shift of 3 minutes with 2 staff" +
+    "When I send a shift of 3 minutes with 2 staff " +
     "Then I should see all the 3 staff minutes with 2 staff from shifts" >> {
     val numDays = 1
     val date = "2017-01-01"
-    val staffGraphStage = new StaffGraphStage("", None, None, None, () => SDate(date), oneDayMillis, airportConfig.copy(terminalNames = Seq("T1")), numDays)
+    val staffGraphStage = new StaffGraphStage("", ShiftAssignments.empty, FixedPointAssignments.empty, None, () => SDate(date), oneDayMillis, airportConfig.copy(terminalNames = Seq("T1")), numDays)
     val probe = TestProbe("staff")
     val (sh, _, _) = TestableStaffGraphStage(probe, staffGraphStage).run
 
-    Await.ready(sh.offer("shift a,T1,01/01/17,00:00,00:02,2"), 1 second)
+    val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+    val endDate1 = MilliDate(SDate("2017-01-01T00:02").millisSinceEpoch)
+    val assignment1 = StaffAssignment("shift a", "T1", startDate1, endDate1, 2, None)
+    Await.ready(sh.offer(ShiftAssignments(Seq(assignment1))), 1 second)
 
     val expected = Set(
       StaffMinute("T1", SDate("2017-01-01T00:00").millisSinceEpoch, 2, 0, 0, None),
@@ -105,7 +108,6 @@ class StaffGraphStageSpec extends CrunchTestLike {
     probe.fishForMessage(10 seconds) {
       case StaffMinutes(minutes) =>
         val interestingMinutes = minutes.map(_.copy(lastUpdated = None)).toSet
-        println(s"interestingMinute: $interestingMinutes")
         interestingMinutes == expected
     }
 
@@ -113,11 +115,11 @@ class StaffGraphStageSpec extends CrunchTestLike {
   }
 
   "Given a staff stage for 1 days " +
-    "When I send shifts with 2 staff, movements of -1 for lunch and a fixed point of 1 staff" +
+    "When I send shifts with 2 staff, movements of -1 for lunch and a fixed point of 1 staff " +
     "Then I should see all the minutes affected by the shifts" >> {
     val numDays = 1
     val date = "2017-01-01"
-    val staffGraphStage = new StaffGraphStage("", None, None, None, () => SDate(date), oneDayMillis, airportConfig.copy(terminalNames = Seq("T1")), numDays)
+    val staffGraphStage = new StaffGraphStage("", ShiftAssignments.empty, FixedPointAssignments.empty, None, () => SDate(date), oneDayMillis, airportConfig.copy(terminalNames = Seq("T1")), numDays)
     val probe = TestProbe("staff")
     val (sh, fp, mm) = TestableStaffGraphStage(probe, staffGraphStage).run
     val movementUuid = UUID.randomUUID()
@@ -126,10 +128,16 @@ class StaffGraphStageSpec extends CrunchTestLike {
       StaffMovement("T1", "lunch end", MilliDate(SDate(s"${date}T00:01").millisSinceEpoch), 1, movementUuid, createdBy = None)
     )
 
-    Await.ready(fp.offer("roving officer a,T1,01/01/17,00:00,00:00,1"), 1 second)
+    val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+    val endDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+    val assignment1 = StaffAssignment("shift a", "T1", startDate1, endDate1, 1, None)
+    Await.ready(fp.offer(FixedPointAssignments(Seq(assignment1))), 1 second)
     Await.ready(mm.offer(movements), 1 second)
     Thread.sleep(250L)
-    Await.ready(sh.offer("shift a,T1,01/01/17,00:00,00:02,2"), 1 second)
+    val startDate2 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+    val endDate2 = MilliDate(SDate("2017-01-01T00:02").millisSinceEpoch)
+    val assignment2 = StaffAssignment("shift a", "T1", startDate2, endDate2, 2, None)
+    Await.ready(sh.offer(ShiftAssignments(Seq(assignment2))), 1 second)
 
     val expected = Set(
       StaffMinute("T1", SDate("2017-01-01T00:00").millisSinceEpoch, 2, 1, -1, None),
@@ -139,7 +147,6 @@ class StaffGraphStageSpec extends CrunchTestLike {
     probe.fishForMessage(10 seconds) {
       case StaffMinutes(minutes) =>
         val interestingMinutes = minutes.map(_.copy(lastUpdated = None)).toSet
-        println(s"interestingMinute: $interestingMinutes")
         interestingMinutes == expected
     }
 
@@ -151,11 +158,14 @@ class StaffGraphStageSpec extends CrunchTestLike {
     "Then I should see all the minutes affected by the fixed points for 2 days" >> {
     val numDays = 2
     val date = "2017-01-01"
-    val staffGraphStage = new StaffGraphStage("", None, None, None, () => SDate(date), oneDayMillis, airportConfig.copy(terminalNames = Seq("T1")), numDays)
+    val staffGraphStage = new StaffGraphStage("", ShiftAssignments.empty, FixedPointAssignments.empty, None, () => SDate(date), oneDayMillis, airportConfig.copy(terminalNames = Seq("T1")), numDays)
     val probe = TestProbe("staff")
     val (_, fp, _) = TestableStaffGraphStage(probe, staffGraphStage).run
 
-    Await.ready(fp.offer("roving officer a,T1,01/01/17,00:00,00:00,1"), 1 second)
+    val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+    val endDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+    val assignment1 = StaffAssignment("shift a", "T1", startDate1, endDate1, 1, None)
+    Await.ready(fp.offer(FixedPointAssignments(Seq(assignment1))), 1 second)
 
     val expected = Set(
       StaffMinute("T1", SDate("2017-01-01T00:00").millisSinceEpoch, 0, 1, 0, None),
@@ -173,9 +183,15 @@ class StaffGraphStageSpec extends CrunchTestLike {
     "Then I should see all the minutes affected by the movements, and containing the initial data " >> {
     val numDays = 2
     val date = "2017-01-01"
-    val initialShifts = "shift a,T1,01/01/17,00:00,00:05,2"
-    val initialFixedPoints = "roving officer a,T1,01/01/17,00:00,00:05,1"
-    val staffGraphStage = new StaffGraphStage("", Option(initialShifts), Option(initialFixedPoints), None, () => SDate(date), oneDayMillis, airportConfig.copy(terminalNames = Seq("T1")), numDays)
+    val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+    val endDate1 = MilliDate(SDate("2017-01-01T00:05").millisSinceEpoch)
+    val assignment1 = StaffAssignment("shift a", "T1", startDate1, endDate1, 2, None)
+    val initialShifts = ShiftAssignments(Seq(assignment1))
+    val startDate2 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+    val endDate2 = MilliDate(SDate("2017-01-01T00:05").millisSinceEpoch)
+    val assignment2 = StaffAssignment("shift a", "T1", startDate2, endDate2, 1, None)
+    val initialFixedPoints = FixedPointAssignments(Seq(assignment2))
+    val staffGraphStage = new StaffGraphStage("", initialShifts, initialFixedPoints, None, () => SDate(date), oneDayMillis, airportConfig.copy(terminalNames = Seq("T1")), numDays)
     val probe = TestProbe("staff")
     val (_, _, mm) = TestableStaffGraphStage(probe, staffGraphStage).run
 

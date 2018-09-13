@@ -5,11 +5,11 @@ import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.trueaccord.scalapb.GeneratedMessage
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{MilliDate, SDateLike, ShiftAssignments, StaffAssignment}
+import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
 import services.SDate
-import services.graphstages.{Crunch, StaffAssignmentHelper}
+import services.graphstages.Crunch
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success, Try}
@@ -28,18 +28,17 @@ case class GetUpdatesSince(millis: MillisSinceEpoch, from: MillisSinceEpoch, to:
 
 case object GetShifts
 
-case class AddShiftLikeSubscribers(subscribers: List[SourceQueueWithComplete[String]])
+case class AddShiftSubscribers(subscribers: List[SourceQueueWithComplete[ShiftAssignments]])
+case class AddFixedPointSubscribers(subscribers: List[SourceQueueWithComplete[FixedPointAssignments]])
 
 class ShiftsActor(now: () => SDateLike) extends ShiftsActorBase(now) {
-  var subscribers: List[SourceQueueWithComplete[String]] = List()
+  var subscribers: List[SourceQueueWithComplete[ShiftAssignments]] = List()
 
-  override def onUpdateState(data: ShiftAssignments): Unit = {
+  override def onUpdateState(shifts: ShiftAssignments): Unit = {
     log.info(s"Telling subscribers ($subscribers) about updated shifts")
 
-    val assignmentsString = StaffAssignmentHelper.staffAssignmentsToString(data.assignments)
-
     subscribers.foreach(s => {
-      s.offer(assignmentsString).onComplete {
+      s.offer(shifts).onComplete {
         case Success(qor) => log.info(s"update queued successfully with subscriber: $qor")
         case Failure(t) => log.info(s"update failed to queue with subscriber: $t")
       }
@@ -47,9 +46,9 @@ class ShiftsActor(now: () => SDateLike) extends ShiftsActorBase(now) {
   }
 
   val subsReceive: Receive = {
-    case AddShiftLikeSubscribers(newSubscribers) =>
+    case AddShiftSubscribers(newSubscribers) =>
       subscribers = newSubscribers.foldLeft(subscribers) {
-        case (soFar, newSub: SourceQueueWithComplete[String]) =>
+        case (soFar, newSub) =>
           log.info(s"Adding shifts subscriber $newSub")
           newSub :: soFar
       }
@@ -65,7 +64,7 @@ class ShiftsActorBase(now: () => SDateLike) extends RecoveryActorLike with Persi
 
   override def persistenceId = "shifts-store"
 
-  var state = initialState
+  var state: ShiftsState = initialState
 
   def initialState = ShiftsState(ShiftAssignments.empty)
 

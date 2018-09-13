@@ -2,13 +2,11 @@ package services.graphstages
 
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
-import services.graphstages.Crunch.midnightThisMorning
 
 import scala.collection.immutable.Map
 import scala.language.postfixOps
@@ -26,7 +24,7 @@ class ArrivalsGraphStage(name: String = "",
                          initialBaseArrivals: Set[Arrival],
                          initialForecastArrivals: Set[Arrival],
                          initialLiveArrivals: Set[Arrival],
-                         pcpArrivalTime: Arrival => MilliDate, crunchStartDateProvider: () => MillisSinceEpoch = midnightThisMorning _,
+                         pcpArrivalTime: Arrival => MilliDate,
                          validPortTerminals: Set[String],
                          expireAfterMillis: Long,
                          now: () => SDateLike)

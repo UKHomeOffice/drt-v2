@@ -7,7 +7,6 @@ import com.trueaccord.scalapb.GeneratedMessage
 import drt.shared.{FixedPointAssignments, MilliDate, SDateLike, StaffAssignment}
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
-import services.graphstages.StaffAssignmentHelper
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
@@ -18,16 +17,13 @@ case class FixedPointsState(fixedPoints: FixedPointAssignments) {
 }
 
 class FixedPointsActor(now: () => SDateLike) extends FixedPointsActorBase(now) {
-  var subscribers: List[SourceQueueWithComplete[String]] = List()
+  var subscribers: List[SourceQueueWithComplete[FixedPointAssignments]] = List()
 
-  override def onUpdateState(data: FixedPointAssignments): Unit = {
-    log.info(s"Telling subscribers ($subscribers) about updated fixed points: $data")
-
-    val assignmentsString = StaffAssignmentHelper.staffAssignmentsToString(data.assignments)
-    log.info(s"fixed points: $assignmentsString")
+  override def onUpdateState(fixedPoints: FixedPointAssignments): Unit = {
+    log.info(s"Telling subscribers ($subscribers) about updated fixed points: $fixedPoints")
 
     subscribers.foreach(s => {
-      s.offer(assignmentsString).onComplete {
+      s.offer(fixedPoints).onComplete {
         case Success(qor) => log.info(s"update queued successfully with subscriber: $qor")
         case Failure(t) => log.info(s"update failed to queue with subscriber: $t")
       }
@@ -35,9 +31,9 @@ class FixedPointsActor(now: () => SDateLike) extends FixedPointsActorBase(now) {
   }
 
   val subsReceive: Receive = {
-    case AddShiftLikeSubscribers(newSubscribers) =>
+    case AddFixedPointSubscribers(newSubscribers) =>
       subscribers = newSubscribers.foldLeft(subscribers) {
-        case (soFar, newSub: SourceQueueWithComplete[String]) =>
+        case (soFar, newSub) =>
           log.info(s"Adding fixed points subscriber $newSub")
           newSub :: soFar
       }

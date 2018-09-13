@@ -28,15 +28,14 @@ import play.api.http.{HeaderNames, HttpEntity}
 import play.api.mvc._
 import play.api.{Configuration, Environment}
 import server.feeds.acl.AclFeed
-import services.PcpArrival._
-import services.SDate.implicits._
+import services.PcpArrival.{pcpFrom, _}
 import services.SplitsProvider.SplitProvider
+import services._
 import services.graphstages.Crunch
 import services.graphstages.Crunch._
 import services.staffing.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
-import services._
 import test.TestDrtSystem
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -44,7 +43,6 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.matching.Regex
-import services.PcpArrival.pcpFrom
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
 
@@ -73,7 +71,8 @@ object PaxFlow {
     }
   }
 
-  def splitRatioForFlight(splitsProviders: List[SplitProvider])(flight: Arrival): Option[SplitRatios] = SplitsProvider.splitsForFlight(splitsProviders)(flight)
+  def splitRatioForFlight(splitsProviders: List[SplitProvider])
+                         (flight: Arrival): Option[SplitRatios] = SplitsProvider.splitsForFlight(splitsProviders)(flight)
 
   def pcpArrivalTimeForFlight(timeToChoxMillis: MillisSinceEpoch, firstPaxOffMillis: MillisSinceEpoch)
                              (walkTimeProvider: FlightWalkTime)
@@ -128,7 +127,8 @@ class NoCacheFilter @Inject()(
   val log: Logger = LoggerFactory.getLogger(getClass)
   val rootRegex: Regex = "/v2/.{3}/live".r
 
-  override def apply(requestHeaderToFutureResult: RequestHeader => Future[Result])(rh: RequestHeader): Future[Result] = {
+  override def apply(requestHeaderToFutureResult: RequestHeader => Future[Result])
+                    (rh: RequestHeader): Future[Result] = {
     requestHeaderToFutureResult(rh).map { result =>
       rh.uri match {
         case rootRegex() =>
@@ -220,7 +220,9 @@ class Application @Inject()(implicit val config: Configuration,
 
       override def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = crunchStateAtPointInTime(pointInTime)
 
-      def getCrunchUpdates(sinceMillis: MillisSinceEpoch, windowStartMillis: MillisSinceEpoch, windowEndMillis: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchUpdates]]] = {
+      def getCrunchUpdates(sinceMillis: MillisSinceEpoch,
+                           windowStartMillis: MillisSinceEpoch,
+                           windowEndMillis: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchUpdates]]] = {
         val liveStateCutOff = getLocalNextMidnight(ctrl.now()).addDays(1).millisSinceEpoch
 
         val stateActor = if (windowStartMillis < liveStateCutOff) liveCrunchStateActor else forecastCrunchStateActor
@@ -243,9 +245,10 @@ class Application @Inject()(implicit val config: Configuration,
 
       def getLoggedInUser(): LoggedInUser = ctrl.getLoggedInUser(config, headers, session)
 
-      def getFeedStatuses(): Future[Seq[FeedStatuses]] = ctrl.getFeedStatus()
+      def getFeedStatuses(): Future[Seq[FeedStatuses]] = ctrl.getFeedStatus
 
-      def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]] = {
+      def forecastWeekSummary(startDay: MillisSinceEpoch,
+                              terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]] = {
         val startOfWeekMidnight = getLocalLastMidnight(SDate(startDay))
         val endOfForecast = startOfWeekMidnight.addDays(7).millisSinceEpoch
         val now = SDate.now()
@@ -272,7 +275,8 @@ class Application @Inject()(implicit val config: Configuration,
         }
       }
 
-      def forecastWeekHeadlineFigures(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastHeadlineFigures]] = {
+      def forecastWeekHeadlineFigures(startDay: MillisSinceEpoch,
+                                      terminal: TerminalName): Future[Option[ForecastHeadlineFigures]] = {
         val midnight = getLocalLastMidnight(SDate(startDay))
         val crunchStateFuture = forecastCrunchStateActor.ask(
           GetPortState(midnight.millisSinceEpoch, midnight.addDays(7).millisSinceEpoch)
@@ -406,7 +410,9 @@ class Application @Inject()(implicit val config: Configuration,
     portStatePeriodAtPointInTime(startMillis, endMillis, pointInTime)
   }
 
-  def portStatePeriodAtPointInTime(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = {
+  def portStatePeriodAtPointInTime(startMillis: MillisSinceEpoch,
+                                   endMillis: MillisSinceEpoch,
+                                   pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = {
     val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], airportConfig.portStateSnapshotInterval, SDate(pointInTime), airportConfig.queues), GetPortState(startMillis, endMillis))
     val portCrunchResult = cacheActorRef.ask(query)(new Timeout(30 seconds))
     portCrunchResult.map {
@@ -428,7 +434,7 @@ class Application @Inject()(implicit val config: Configuration,
 
     log.info(s"Exports: For point in time ${SDate(pointInTime.toLong).toISOString()}")
     val portCode = airportConfig.portCode
-    val pit = MilliDate(pointInTime.toLong)
+    val pit = SDate(pointInTime.toLong)
 
     val fileName = f"$portCode-$terminalName-desks-and-queues-${pit.getFullYear()}-${pit.getMonth()}%02d-${pit.getDate()}%02dT" +
       f"${pit.getHours()}%02d-${pit.getMinutes()}%02d-hours-$startHour%02d-to-$endHour%02d"
@@ -445,19 +451,18 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def exportDesksToCSV(
-                        terminalName: TerminalName,
-                        pointInTime: MilliDate,
-                        startHour: Int,
-                        endHour: Int,
-                        crunchStateFuture: Future[Either[CrunchStateError, Option[CrunchState]]]
+  def exportDesksToCSV(terminalName: TerminalName,
+                       pointInTime: SDateLike,
+                       startHour: Int,
+                       endHour: Int,
+                       crunchStateFuture: Future[Either[CrunchStateError, Option[CrunchState]]]
                       ): Future[Option[String]] = {
 
     val startDateTime = getLocalLastMidnight(pointInTime).addHours(startHour)
     val endDateTime = getLocalLastMidnight(pointInTime).addHours(endHour)
     val isInRange = isInRangeOnDay(startDateTime, endDateTime) _
-
     val localTime = SDate(pointInTime, europeLondonTimeZone)
+
     crunchStateFuture.map {
       case Right(Some(CrunchState(_, cm, sm))) =>
         log.debug(s"Exports: ${localTime.toISOString()} Got ${cm.size} CMs and ${sm.size} SMs ")
@@ -535,9 +540,12 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def exportFlightsWithSplitsAtPointInTimeCSV(pointInTime: String, terminalName: TerminalName, startHour: Int, endHour: Int): Action[AnyContent] = Action.async {
+  def exportFlightsWithSplitsAtPointInTimeCSV(pointInTime: String,
+                                              terminalName: TerminalName,
+                                              startHour: Int,
+                                              endHour: Int): Action[AnyContent] = Action.async {
     implicit request =>
-      val pit = MilliDate(pointInTime.toLong)
+      val pit = SDate(pointInTime.toLong)
 
       val portCode = airportConfig.portCode
       val fileName = f"$portCode-$terminalName-arrivals-${pit.getFullYear()}-${pit.getMonth()}%02d-${pit.getDate()}%02dT" +
@@ -565,7 +573,9 @@ class Application @Inject()(implicit val config: Configuration,
       }
   }
 
-  def exportFlightsWithSplitsBetweenTimeStampsCSV(start: String, end: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
+  def exportFlightsWithSplitsBetweenTimeStampsCSV(start: String,
+                                                  end: String,
+                                                  terminalName: TerminalName): Action[AnyContent] = Action.async {
     val startPit = getLocalLastMidnight(SDate(start.toLong, europeLondonTimeZone))
     val endPit = SDate(end.toLong, europeLondonTimeZone)
 
@@ -579,7 +589,7 @@ class Application @Inject()(implicit val config: Configuration,
         val csvFunc = if (index == 0) CSVData.flightsWithSplitsToCSVWithHeadings _ else CSVData.flightsWithSplitsToCSV _
         flightsForCSVExportWithinRange(
           terminalName = terminalName,
-          pit = MilliDate(dayMillis),
+          pit = SDate(dayMillis),
           startHour = 0,
           endHour = 24,
           crunchStateFuture = loadBestCrunchStateForPointInTime(dayMillis)
@@ -597,7 +607,9 @@ class Application @Inject()(implicit val config: Configuration,
     })
   }
 
-  def exportDesksAndQueuesBetweenTimeStampsCSV(start: String, end: String, terminalName: TerminalName): Action[AnyContent] = Action.async {
+  def exportDesksAndQueuesBetweenTimeStampsCSV(start: String,
+                                               end: String,
+                                               terminalName: TerminalName): Action[AnyContent] = Action.async {
     val startPit = getLocalLastMidnight(SDate(start.toLong, europeLondonTimeZone))
     val endPit = SDate(end.toLong, europeLondonTimeZone)
 
@@ -608,7 +620,7 @@ class Application @Inject()(implicit val config: Configuration,
     val days: Seq[Future[Option[String]]] = dayRangeMillis.map(
       millis => exportDesksToCSV(
         terminalName = terminalName,
-        pointInTime = MilliDate(millis),
+        pointInTime = SDate(millis),
         startHour = 0,
         endHour = 24,
         crunchStateFuture = loadBestCrunchStateForPointInTime(millis)
@@ -623,7 +635,11 @@ class Application @Inject()(implicit val config: Configuration,
     })
   }
 
-  def makeFileName(subject: String, terminalName: TerminalName, startPit: SDateLike, endPit: SDateLike, portCode: String): String = {
+  def makeFileName(subject: String,
+                   terminalName: TerminalName,
+                   startPit: SDateLike,
+                   endPit: SDateLike,
+                   portCode: String): String = {
     f"$portCode-$terminalName-$subject-" +
       f"${startPit.getFullYear()}-${startPit.getMonth()}%02d-${startPit.getDate()}-to-" +
       f"${endPit.getFullYear()}-${endPit.getMonth()}%02d-${endPit.getDate()}"
@@ -656,7 +672,7 @@ class Application @Inject()(implicit val config: Configuration,
 
   def flightsForCSVExportWithinRange(
                                       terminalName: TerminalName,
-                                      pit: MilliDate,
+                                      pit: SDateLike,
                                       startHour: Int,
                                       endHour: Int,
                                       crunchStateFuture: Future[Either[CrunchStateError, Option[CrunchState]]]
@@ -700,14 +716,13 @@ class Application @Inject()(implicit val config: Configuration,
     implicit request =>
       log.info(s"Request path: $path")
 
-      // get the request body as ByteString
       val b = request.body.asBytes(parse.UNLIMITED).get
 
       // call Autowire route
 
-      implicit val staffAssignmentsPickler = compositePickler[StaffAssignments].addConcreteType[ShiftAssignments].addConcreteType[FixedPointAssignments]
-      implicit val staffMovementPickler = compositePickler[StaffMovement]
-      implicit val apiPaxTypeAndQueueCountPickler = generatePickler[ApiPaxTypeAndQueueCount]
+      implicit val staffAssignmentsPickler: CompositePickler[StaffAssignments] = compositePickler[StaffAssignments].addConcreteType[ShiftAssignments].addConcreteType[FixedPointAssignments]
+      implicit val staffMovementPickler: CompositePickler[StaffMovement] = compositePickler[StaffMovement]
+      implicit val apiPaxTypeAndQueueCountPickler: Pickler[ApiPaxTypeAndQueueCount] = generatePickler[ApiPaxTypeAndQueueCount]
       implicit val feedStatusPickler: CompositePickler[FeedStatus] = compositePickler[FeedStatus].
         addConcreteType[FeedStatusSuccess].
         addConcreteType[FeedStatusFailure]
@@ -723,7 +738,7 @@ class Application @Inject()(implicit val config: Configuration,
       })
   }
 
-  def logging = Action(parse.tolerantFormUrlEncoded) {
+  def logging: Action[Map[String, Seq[String]]] = Action(parse.tolerantFormUrlEncoded) {
     implicit request =>
 
       def postStringValOrElse(key: String, default: String) = {
@@ -778,7 +793,9 @@ object Forecast {
     ForecastHeadlineFigures(headlines)
   }
 
-  def rollUpForWeek(forecastMinutes: Set[CrunchMinute], staffMinutes: Set[StaffMinute], terminalName: TerminalName): Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = {
+  def rollUpForWeek(forecastMinutes: Set[CrunchMinute],
+                    staffMinutes: Set[StaffMinute],
+                    terminalName: TerminalName): Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = {
     val actualStaffByMinute = staffByTimeSlot(15)(staffMinutes, terminalName)
     val fixedPointsByMinute = fixedPointsByTimeSlot(15)(staffMinutes, terminalName)
     val terminalMinutes = CrunchApi.terminalMinutesByMinute(forecastMinutes, terminalName)

@@ -4,7 +4,7 @@ import actors.{GetState, StaffMovements, VoyageManifestState}
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.AskableActorRef
 import akka.stream._
-import akka.stream.scaladsl.{RunnableGraph, Source, SourceQueueWithComplete}
+import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.util.Timeout
 import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi.{CrunchMinutes, PortState, StaffMinutes}
@@ -23,8 +23,8 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 
-case class CrunchSystem[FR, MS](shifts: SourceQueueWithComplete[String],
-                                fixedPoints: SourceQueueWithComplete[String],
+case class CrunchSystem[FR, MS](shifts: SourceQueueWithComplete[ShiftAssignments],
+                                fixedPoints: SourceQueueWithComplete[FixedPointAssignments],
                                 staffMovements: SourceQueueWithComplete[Seq[StaffMovement]],
                                 baseArrivalsResponse: FR,
                                 forecastArrivalsResponse: FR,
@@ -69,7 +69,7 @@ object CrunchSystem {
 
   def crunchStartWithOffset(offsetMinutes: Int)(minuteInQuestion: SDateLike): SDateLike = {
     val adjustedMinute = minuteInQuestion.addMinutes(-offsetMinutes)
-    Crunch.getLocalLastMidnight(adjustedMinute).addMinutes(offsetMinutes)
+    Crunch.getLocalLastMidnight(MilliDate(adjustedMinute.millisSinceEpoch)).addMinutes(offsetMinutes)
   }
 
   def apply[FR, MS](props: CrunchProps[FR, MS])
@@ -80,8 +80,8 @@ object CrunchSystem {
     val initialStaffMovements = initialStaffMovementsState(props.actors("staff-movements"))
 
     val manifests = props.manifestsSource
-    val shiftsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](1, OverflowStrategy.backpressure)
-    val fixedPointsSource: Source[String, SourceQueueWithComplete[String]] = Source.queue[String](1, OverflowStrategy.backpressure)
+    val shiftsSource: Source[ShiftAssignments, SourceQueueWithComplete[ShiftAssignments]] = Source.queue[ShiftAssignments](1, OverflowStrategy.backpressure)
+    val fixedPointsSource: Source[FixedPointAssignments, SourceQueueWithComplete[FixedPointAssignments]] = Source.queue[FixedPointAssignments](1, OverflowStrategy.backpressure)
     val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](1, OverflowStrategy.backpressure)
     val actualDesksAndQueuesSource: Source[ActualDeskStats, SourceQueueWithComplete[ActualDeskStats]] = Source.queue[ActualDeskStats](1, OverflowStrategy.backpressure)
 
@@ -168,7 +168,7 @@ object CrunchSystem {
       expireAfterMillis = props.expireAfterMillis,
       now = props.now)
 
-    val crunchSystem: RunnableGraph[(FR, FR, FR, MS, SourceQueueWithComplete[String], SourceQueueWithComplete[String], SourceQueueWithComplete[Seq[StaffMovement]], SourceQueueWithComplete[ActualDeskStats], UniqueKillSwitch, UniqueKillSwitch)] = RunnableCrunch(
+    val crunchSystem = RunnableCrunch(
       props.arrivalsBaseSource, props.arrivalsFcstSource, props.arrivalsLiveSource, manifests, shiftsSource, fixedPointsSource, staffMovementsSource, actualDesksAndQueuesSource,
       arrivalsStage, arrivalSplitsGraphStage, splitsPredictorStage, workloadGraphStage, loadBatcher, crunchLoadGraphStage, staffGraphStage, staffBatcher, simulationGraphStage, portStateGraphStage, fcstArrivalsDiffingStage, liveArrivalsDiffingStage,
       props.actors("base-arrivals").actorRef, props.actors("forecast-arrivals").actorRef, props.actors("live-arrivals").actorRef,

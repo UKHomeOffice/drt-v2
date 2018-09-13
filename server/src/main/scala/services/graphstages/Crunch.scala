@@ -53,23 +53,31 @@ object Crunch {
 
   def midnightThisMorning: MillisSinceEpoch = {
     val localNow = SDate(new DateTime(europeLondonTimeZone).getMillis)
-    val crunchStartDate = Crunch.getLocalLastMidnight(localNow).millisSinceEpoch
+    val crunchStartDate = Crunch.getLocalLastMidnight(localNow.millisSinceEpoch).millisSinceEpoch
     crunchStartDate
   }
 
   def changedDays(offsetMinutes: Int, staffMinutes: StaffMinutes): Map[MillisSinceEpoch, Seq[StaffMinute]] =
     staffMinutes.minutes.groupBy(minutes => {
-    getLocalLastMidnight(SDate(minutes.minute - offsetMinutes * 60000, europeLondonTimeZone)).millisSinceEpoch
+    getLocalLastMidnight(minutes.minute - offsetMinutes * 60000).millisSinceEpoch
   })
 
-  def getLocalLastMidnight(now: SDateLike): SDateLike = {
+  def getLocalLastMidnight(now: MilliDate): SDateLike = getLocalLastMidnight(now.millisSinceEpoch)
+
+  def getLocalLastMidnight(now: SDateLike): SDateLike = getLocalLastMidnight(now.millisSinceEpoch)
+
+  def getLocalLastMidnight(now: MillisSinceEpoch): SDateLike = {
     val localNow = SDate(now, europeLondonTimeZone)
     val localMidnight = s"${localNow.getFullYear()}-${localNow.getMonth()}-${localNow.getDate()}T00:00"
     SDate(localMidnight, europeLondonTimeZone)
   }
 
-  def getLocalNextMidnight(now: SDateLike): SDateLike = {
-    val nextDay = now.addDays(1)
+  def getLocalNextMidnight(now: MilliDate): SDateLike = getLocalNextMidnight(now.millisSinceEpoch)
+
+  def getLocalNextMidnight(now: SDateLike): SDateLike = getLocalNextMidnight(now.millisSinceEpoch)
+
+  def getLocalNextMidnight(now: MillisSinceEpoch): SDateLike = {
+    val nextDay = getLocalLastMidnight(now).addDays(1)
     val localMidnight = s"${nextDay.getFullYear()}-${nextDay.getMonth()}-${nextDay.getDate()}T00:00"
     SDate(localMidnight, europeLondonTimeZone)
   }
@@ -231,7 +239,7 @@ object Crunch {
     Crunch.hasExpired[A](now(), expireAfter, toMillis)
   }
 
-  def hasExpired[A](now: SDateLike, expireAfterMillis: Long, toMillis: (A) => MillisSinceEpoch)(toCompare: A): Boolean = {
+  def hasExpired[A](now: SDateLike, expireAfterMillis: Long, toMillis: A => MillisSinceEpoch)(toCompare: A): Boolean = {
     val ageInMillis = now.millisSinceEpoch - toMillis(toCompare)
     ageInMillis > expireAfterMillis
   }

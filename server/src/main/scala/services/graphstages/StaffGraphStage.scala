@@ -65,6 +65,7 @@ class StaffGraphStage(name: String = "",
         val start = SDate.now()
         val incomingFixedPoints = grab(inFixedPoints)
         log.info(s"Grabbed available inFixedPoints")
+
         val updateCriteria = fixedPointsUpdateCriteria(fixedPoints, incomingFixedPoints)
         fixedPoints = incomingFixedPoints
         staffMinuteUpdates = updatesFromSources(maybeStaffSources, updateCriteria)
@@ -109,7 +110,7 @@ class StaffGraphStage(name: String = "",
     def fixedPointsUpdateCriteria(oldFixedPoints: FixedPointAssignments, newFixedPoints: FixedPointAssignments): UpdateCriteria = {
       val fpMinutesToUpdate = allMinuteMillis(newFixedPoints) union allMinuteMillis(oldFixedPoints)
       val fpMinutesOfDayToUpdate = fpMinutesToUpdate.map(m => {
-        val date = SDate(m)
+        val date = SDate(m, Crunch.europeLondonTimeZone)
         val hours = date.getHours()
         val minutes = date.getMinutes()
         hours * 60 + minutes
@@ -131,7 +132,6 @@ class StaffGraphStage(name: String = "",
 
       val oldAssignments = oldFixedPoints.assignments.toSet
       val newAssignments = newFixedPoints.assignments.toSet
-
       val terminalNames = ((newAssignments -- oldAssignments) union (oldAssignments -- newAssignments )).map(_.terminalName)
 
       UpdateCriteria(minuteMillis, terminalNames)
@@ -159,7 +159,7 @@ class StaffGraphStage(name: String = "",
 
       log.info(s"about to update ${updateCriteria.minuteMillis.size} staff minutes for ${updateCriteria.terminalNames}")
 
-      implicit def mdToSd: MilliDate => SDateLike = (md: MilliDate) => SDate(md.millisSinceEpoch)
+      import SDate.implicits.sdateFromMilliDateLocal
 
       val updatedMinutes = updateCriteria.minuteMillis
         .flatMap(m => {
@@ -168,7 +168,7 @@ class StaffGraphStage(name: String = "",
               case None => StaffMinute(tn, m, 0, 0, 0)
               case Some(staffSources) =>
                 val shifts = staffSources.shifts.terminalStaffAt(tn, SDate(m))
-                val fixedPoints = staffSources.fixedPoints.terminalStaffAt(tn, SDate(m))
+                val fixedPoints = staffSources.fixedPoints.terminalStaffAt(tn, SDate(m, Crunch.europeLondonTimeZone))
                 val movements = staffSources.movements.terminalStaffAt(tn, m)
                 StaffMinute(tn, m, shifts, fixedPoints, movements, lastUpdated = Option(SDate.now().millisSinceEpoch))
             }
