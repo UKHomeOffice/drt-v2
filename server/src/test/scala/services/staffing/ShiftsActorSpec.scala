@@ -62,6 +62,8 @@ class ShiftsActorSpec extends CrunchTestLike {
     probe.expectMsgAnyClassOf(MsgAck.getClass)
     shiftsActor ! PoisonPill
 
+    Thread.sleep(250)
+
     val shiftsActor2: AskableActorRef = system.actorOf(Props(classOf[TestableShiftsActor], probe.ref))
 
     val storedShifts = Await.result(shiftsActor2 ? GetState, 1 second).asInstanceOf[ShiftAssignments]
