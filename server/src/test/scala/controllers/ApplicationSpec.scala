@@ -1,22 +1,19 @@
 package controllers
 
-import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, Materializer}
-import akka.testkit.TestKit
-import com.typesafe.config.ConfigFactory
 import org.joda.time.DateTime
 import org.specs2.matcher.Scope
-import org.specs2.mutable.SpecificationLike
 import play.api.Environment
 import services.SDate
+import services.crunch.CrunchTestLike
 
 import scala.concurrent.ExecutionContext.global
 
-class ApplicationSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike {
+class ApplicationSpec extends CrunchTestLike {
 
   trait Context extends Scope {
     implicit val mat: Materializer = ActorMaterializer()
-    implicit val config = play.api.Configuration.from(Map("portCode" -> "test", "dq.s3.bucket" -> "bucket"))
+    implicit val config = play.api.Configuration.from(Map("portCode" -> "test", "dq.s3.bucket" -> "bucket", "googleTrackingCode"-> ""))
 
     val application = new Application()(config = config, mat = mat, env = Environment.simple(), system = system, ec = global)
   }

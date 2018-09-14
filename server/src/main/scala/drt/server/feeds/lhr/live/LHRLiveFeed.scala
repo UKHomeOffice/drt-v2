@@ -5,7 +5,7 @@ import akka.actor.{ActorSystem, Cancellable}
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import drt.http.{ProdSendAndReceive, WithSendAndReceive}
-import drt.shared.Arrival
+import drt.shared.{Arrival, LiveFeedSource}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
@@ -60,6 +60,7 @@ object LHRLiveFeed {
         Origin = lhrArrival.AIRPORTCODE,
         Scheduled = localTimeDateStringToMaybeMillis(lhrArrival.SCHEDULEDFLIGHTOPERATIONTIME).getOrElse(0L),
         PcpTime = None,
+        FeedSources = Set(LiveFeedSource),
         LastKnownPax = None
       )
     }

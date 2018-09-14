@@ -2,6 +2,7 @@ package drt.client.components
 
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.logger.{Logger, LoggerFactory}
+import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -80,9 +81,11 @@ object TimeRangeFilter {
           <.div(^.className := "btn-group no-gutters", VdomAttr("data-toggle") := "buttons",
             if (props.showNow)
               <.div(^.id := "now", ^.className := s"btn btn-primary $nowActive", "Now", ^.onClick ==> ((_: ReactEventFromInput) => {
+                GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Time Range", "now")
                 props.router.set(props.terminalPageTab.copy(timeRangeStartString = None, timeRangeEndString = None))
               })) else "",
             <.div(^.id := "hours24", ^.className := s"btn btn-primary $dayActive", "24 hours", ^.onClick ==> ((_: ReactEventFromInput) => {
+              GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Time Range", "24 hours")
               props.router.set(props.terminalPageTab.copy(
                 timeRangeStartString = Option(wholeDayWindow.start.toString), timeRangeEndString = Option(wholeDayWindow.end.toString)
               ))

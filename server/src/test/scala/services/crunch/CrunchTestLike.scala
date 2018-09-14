@@ -50,11 +50,9 @@ case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete
                                       forecastArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
                                       liveArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
                                       manifestsInput: SourceQueueWithComplete[ManifestsFeedResponse],
-                                      liveShiftsInput: SourceQueueWithComplete[String],
-                                      liveFixedPointsInput: SourceQueueWithComplete[String],
+                                      shiftsInput: SourceQueueWithComplete[ShiftAssignments],
+                                      fixedPointsInput: SourceQueueWithComplete[FixedPointAssignments],
                                       liveStaffMovementsInput: SourceQueueWithComplete[Seq[StaffMovement]],
-                                      forecastShiftsInput: SourceQueueWithComplete[String],
-                                      forecastFixedPointsInput: SourceQueueWithComplete[String],
                                       forecastStaffMovementsInput: SourceQueueWithComplete[Seq[StaffMovement]],
                                       actualDesksAndQueuesInput: SourceQueueWithComplete[ActualDeskStats],
                                       liveCrunchActor: ActorRef,
@@ -135,8 +133,8 @@ class CrunchTestLike
                      minutesToCrunch: Int = 60,
                      calcPcpWindow: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)] = (_, _) => Some((SDate.now(), SDate.now())),
                      now: () => SDateLike,
-                     initialShifts: String = "",
-                     initialFixedPoints: String = "",
+                     initialShifts: ShiftAssignments = ShiftAssignments.empty,
+                     initialFixedPoints: FixedPointAssignments = FixedPointAssignments.empty,
                      logLabel: String = "",
                      cruncher: TryCrunch = TestableCrunchLoadStage.mockCrunch,
                      simulator: Simulator = TestableCrunchLoadStage.mockSimulator
@@ -150,8 +148,8 @@ class CrunchTestLike
     val baseArrivalsProbe = testProbe("base-arrivals")
     val forecastArrivalsProbe = testProbe("forecast-arrivals")
     val liveArrivalsProbe = testProbe("live-arrivals")
-    val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor]))
-    val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor]))
+    val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], now))
+    val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], now))
     val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor]))
     val snapshotInterval = 1
     val manifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], oneMegaByte, now, expireAfterMillis, snapshotInterval))
@@ -199,8 +197,8 @@ class CrunchTestLike
       arrivalsLiveSource = liveArrivals
     ))
 
-    if (initialShifts.nonEmpty) offerAndWait(crunchInputs.shifts, initialShifts)
-    if (initialFixedPoints.nonEmpty) offerAndWait(crunchInputs.fixedPoints, initialFixedPoints)
+    if (initialShifts.assignments.nonEmpty) offerAndWait(crunchInputs.shifts, initialShifts)
+    if (initialFixedPoints.assignments.nonEmpty) offerAndWait(crunchInputs.fixedPoints, initialFixedPoints)
     maybeInitialManifestState.foreach(ms => {
       if (ms.manifests.nonEmpty) offerAndWait(crunchInputs.manifestsResponse, ManifestsFeedSuccess(DqManifests("", ms.manifests)))
     })
@@ -213,8 +211,6 @@ class CrunchTestLike
       crunchInputs.shifts,
       crunchInputs.fixedPoints,
       crunchInputs.staffMovements,
-      crunchInputs.shifts,
-      crunchInputs.fixedPoints,
       crunchInputs.staffMovements,
       crunchInputs.actualDeskStats,
       liveCrunchActor,

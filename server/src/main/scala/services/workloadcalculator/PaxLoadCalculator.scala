@@ -14,12 +14,12 @@ object PaxLoadCalculator {
 
   case class PaxTypeAndQueueCount(paxAndQueueType: PaxTypeAndQueue, paxSum: Load)
 
-  def flightPaxFlowProvider(splitRatioProvider: (Arrival) => Option[SplitRatios],
-                            bestPax: (Arrival) => Int): (Arrival) => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
+  def flightPaxFlowProvider(splitRatioProvider: Arrival => Option[SplitRatios],
+                            bestPax: Arrival => Int): Arrival => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
     voyagePaxSplitsFlowOverTime(splitRatioProvider, bestPax)
   }
 
-  def voyagePaxSplitsFlowOverTime(splitsRatioProvider: (Arrival) => Option[SplitRatios], bestPax: (Arrival) => Int)
+  def voyagePaxSplitsFlowOverTime(splitsRatioProvider: Arrival => Option[SplitRatios], bestPax: Arrival => Int)
                                  (flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
     val pcpStartTimeMillis = MilliDate(flight.PcpTime.getOrElse(0L)).millisSinceEpoch
     //TODO fix this get
@@ -34,7 +34,7 @@ object PaxLoadCalculator {
     splitsOverTime
   }
 
-  def minutesForHours(timesMin: MillisSinceEpoch, hours: Int) = timesMin until (timesMin + oneMinute * 60 * hours) by oneMinute
+  def minutesForHours(timesMin: MillisSinceEpoch, hours: Int): NumericRange[MillisSinceEpoch] = timesMin until (timesMin + oneMinute * 60 * hours) by oneMinute
 
   def paxDeparturesPerMinutes(remainingPax: Int, departRate: Int): List[Int] = {
     if (remainingPax % departRate != 0)

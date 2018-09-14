@@ -3,6 +3,7 @@ package drt.client.components
 import drt.client.actions.Actions.UpdateShowActualDesksAndQueues
 import drt.client.components.TerminalDesksAndQueues.{NodeListSeq, ViewDeps, ViewRecs, ViewType, documentScrollHeight, documentScrollTop, queueActualsColour, queueColour}
 import drt.client.logger.{Logger, LoggerFactory}
+import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions._
 import drt.client.services.{SPACircuit, ViewMode}
 import drt.shared.CrunchApi.{CrunchMinute, CrunchState, MillisSinceEpoch, StaffMinute}
@@ -223,6 +224,7 @@ object TerminalDesksAndQueues {
       }
 
       def toggleViewType(newViewType: ViewType) = (e: ReactEventFromInput) => {
+        GoogleEventTracker.sendEvent(s"${props.terminalName}", "Desks & Queues", newViewType.toString)
         scope.modState(_.copy(viewType = newViewType))
       }
 

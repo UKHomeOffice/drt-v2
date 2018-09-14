@@ -6,7 +6,7 @@ import utest._
 
 object StaffingComponentTests extends TestSuite {
 
-  import drt.client.components.TerminalStaffingV2._
+  import drt.client.components.MonthlyStaffing._
 
 
   def tests = Tests {
@@ -168,7 +168,7 @@ object StaffingComponentTests extends TestSuite {
 
         val terminal = "T1"
 
-        val result = staffToStaffTimeSlotsForMonth(start, staff, terminal, 15)
+        val result = StaffTimeSlotsForTerminalMonth(start, staff, terminal, 15)
 
         val expected = StaffTimeSlotsForTerminalMonth(
           start.millisSinceEpoch, terminal, List(
@@ -192,7 +192,7 @@ object StaffingComponentTests extends TestSuite {
 
         val terminal = "T1"
 
-        val result = staffToStaffTimeSlotsForMonth(start, staff, terminal, 15)
+        val result = StaffTimeSlotsForTerminalMonth(start, staff, terminal, 15)
 
         val expected = StaffTimeSlotsForTerminalMonth(
           start.millisSinceEpoch, terminal, List(
@@ -220,7 +220,7 @@ object StaffingComponentTests extends TestSuite {
 
         val terminal = "T1"
 
-        val result = staffToStaffTimeSlotsForMonth(start, staff, terminal, 60)
+        val result = StaffTimeSlotsForTerminalMonth(start, staff, terminal, 60)
 
         val expected = StaffTimeSlotsForTerminalMonth(
           start.millisSinceEpoch, terminal, List(
@@ -243,7 +243,7 @@ object StaffingComponentTests extends TestSuite {
       import scala.collection.immutable.Seq
       "Given 1 day with 1 time slot with 1 staff member and no changes then the time slot should be unchanged" - {
         val staffTimeSlotDays = Seq(Seq(1))
-        val changes = Map[String, Int]()
+        val changes = Map[(Int, Int), Int]()
 
         val result = applyRecordedChangesToShiftState(staffTimeSlotDays, changes)
         val expected = Seq(Seq(1))

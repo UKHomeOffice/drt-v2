@@ -2,7 +2,7 @@ package services.crunch
 
 import controllers.{ArrivalGenerator, Forecast}
 import drt.shared.FlightsApi.Flights
-import drt.shared.{CrunchApi, Queues, SDateLike}
+import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.{SDate, TryRenjin}
 import services.graphstages.Crunch._
@@ -30,9 +30,9 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
 
     val forecastArrivalDay1 = ArrivalGenerator.apiFlight(flightId = Option(1), schDt = day1, iata = "BA0001", terminal = "T1", actPax = Option(5))
     val forecastFlights = Set(forecastArrivalDay1)
-    val shifts =
-      """shift a,T1,02/01/17,00:00,23:59,20
-      """.stripMargin
+    val startDate1 = MilliDate(SDate("2017-01-02T00:00").millisSinceEpoch)
+    val endDate1 = MilliDate(SDate("2017-01-02T23:59").millisSinceEpoch)
+    val assignment1 = StaffAssignment("shift a", "T1", startDate1, endDate1, 20, None)
 
     val crunch = runCrunchGraph(
       now = () => SDate(weekBeginning).addDays(-1),
@@ -40,12 +40,11 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
         terminalNames = Seq("T1"),
         minMaxDesksByTerminalQueue = Map("T1" -> Map(Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1)))))
       ),
-      minutesToCrunch = 60,
       cruncher = TryRenjin.crunch
     )
 
     Await.ready(crunch.baseArrivalsInput.offer(ArrivalsFeedSuccess(Flights(forecastFlights.toSeq))), 1 second)
-    Await.ready(crunch.forecastShiftsInput.offer(shifts), 1 second)
+    Await.ready(crunch.shiftsInput.offer(ShiftAssignments(Seq(assignment1))), 1 second)
 
     val expected = List(
       ForecastTimeSlot(SDate("2017-01-02T00:00Z").millisSinceEpoch, 20, 1),

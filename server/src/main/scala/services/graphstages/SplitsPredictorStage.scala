@@ -8,13 +8,13 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.prediction.{SparkSplitsPredictor, SplitsPredictorFactoryLike}
 
 
-abstract class SplitsPredictorBase extends GraphStage[FlowShape[Seq[Arrival], Seq[(Arrival, Option[ApiSplits])]]]
+abstract class SplitsPredictorBase extends GraphStage[FlowShape[Seq[Arrival], Seq[(Arrival, Option[Splits])]]]
 
 class DummySplitsPredictor() extends SplitsPredictorBase {
   val in: Inlet[Seq[Arrival]] = Inlet[Seq[Arrival]]("SplitsPredictor.in")
-  val out: Outlet[Seq[(Arrival, Option[ApiSplits])]] = Outlet[Seq[(Arrival, Option[ApiSplits])]]("SplitsPredictor.out")
+  val out: Outlet[Seq[(Arrival, Option[Splits])]] = Outlet[Seq[(Arrival, Option[Splits])]]("SplitsPredictor.out")
 
-  val shape: FlowShape[Seq[Arrival], Seq[(Arrival, Option[ApiSplits])]] = FlowShape.of(in, out)
+  val shape: FlowShape[Seq[Arrival], Seq[(Arrival, Option[Splits])]] = FlowShape.of(in, out)
 
   val log = LoggerFactory.getLogger(getClass)
 
@@ -39,7 +39,7 @@ class DummySplitsPredictor() extends SplitsPredictorBase {
           log.info(s"Dummy predictor onPull()")
           if (haveGrabbed && isAvailable(out)) {
             log.info(s"Dummy predictor pushing empty results")
-            push(out, Seq[(Arrival, Option[ApiSplits])]())
+            push(out, Seq[(Arrival, Option[Splits])]())
             haveGrabbed = false
           }
           if (!hasBeenPulled(in)) {
@@ -55,16 +55,16 @@ class SplitsPredictorStage(splitsPredictorFactory: SplitsPredictorFactoryLike) e
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   val in: Inlet[Seq[Arrival]] = Inlet[Seq[Arrival]]("SplitsPredictor.in")
-  val out: Outlet[Seq[(Arrival, Option[ApiSplits])]] = Outlet[Seq[(Arrival, Option[ApiSplits])]]("SplitsPredictor.out")
+  val out: Outlet[Seq[(Arrival, Option[Splits])]] = Outlet[Seq[(Arrival, Option[Splits])]]("SplitsPredictor.out")
 
-  val shape: FlowShape[Seq[Arrival], Seq[(Arrival, Option[ApiSplits])]] = FlowShape.of(in, out)
+  val shape: FlowShape[Seq[Arrival], Seq[(Arrival, Option[Splits])]] = FlowShape.of(in, out)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
     new GraphStageLogic(shape) {
 
       var modelledFlightCodes: Map[TerminalName, Set[String]] = Map()
       var terminalMaybePredictors: Map[TerminalName, Option[SparkSplitsPredictor]] = Map()
-      var predictionsToPush: Option[Seq[(Arrival, Option[ApiSplits])]] = None
+      var predictionsToPush: Option[Seq[(Arrival, Option[Splits])]] = None
 
       setHandler(in, new InHandler {
         override def onPush(): Unit = {
@@ -104,8 +104,8 @@ class SplitsPredictorStage(splitsPredictorFactory: SplitsPredictorFactoryLike) e
         }
       }
 
-      def arrivalPredictions(arrivalsByTerminal: Map[String, Seq[Arrival]]): Seq[(Arrival, Option[ApiSplits])] = {
-        val predictions: Seq[(Arrival, Option[ApiSplits])] = arrivalsByTerminal
+      def arrivalPredictions(arrivalsByTerminal: Map[String, Seq[Arrival]]): Seq[(Arrival, Option[Splits])] = {
+        val predictions: Seq[(Arrival, Option[Splits])] = arrivalsByTerminal
           .toSeq
           .flatMap {
             case (terminalName, terminalArrivals) =>

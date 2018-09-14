@@ -19,7 +19,7 @@ object BigSummaryBoxes {
 
   def bestFlightSplitPax(bestFlightPax: (Arrival) => Int): PartialFunction[ApiFlightWithSplits, Double] = {
     case ApiFlightWithSplits(flight, splits, _) =>
-      splits.find { case api@ApiSplits(_, _, _, t) => t == PaxNumbers } match {
+      splits.find { case api@Splits(_, _, _, t) => t == PaxNumbers } match {
         case None => bestFlightPax(flight)
         case Some(apiSplits) => apiSplits.totalExcludingTransferPax
       }
@@ -50,15 +50,15 @@ object BigSummaryBoxes {
   def bestFlightSplits(bestFlightPax: (Arrival) => Int): (ApiFlightWithSplits) => Set[(PaxTypeAndQueue, Double)] = {
     case ApiFlightWithSplits(_, s, _) if s.isEmpty => Set()
     case ApiFlightWithSplits(flight, splits, _) =>
-      if (splits.exists { case ApiSplits(_, _, _, t) => t == PaxNumbers }) {
-        splits.find { case ApiSplits(_, _, _, t) => t == PaxNumbers } match {
+      if (splits.exists { case Splits(_, _, _, t) => t == PaxNumbers }) {
+        splits.find { case Splits(_, _, _, t) => t == PaxNumbers } match {
           case None => Set()
           case Some(apiSplits) => apiSplits.splits.map {
             s => (PaxTypeAndQueue(s.passengerType, s.queueType), s.paxCount)
           }
         }
       } else {
-        splits.find { case ApiSplits(_, _, _, t) => t == Percentage } match {
+        splits.find { case Splits(_, _, _, t) => t == Percentage } match {
           case None => Set()
           case Some(apiSplits) => apiSplits.splits.map {
             s => (PaxTypeAndQueue(s.passengerType, s.queueType), s.paxCount / 100 * bestFlightPax(flight))
@@ -116,7 +116,7 @@ object BigSummaryBoxes {
     aggSplitsInts
   }
 
-  def convertMapToAggSplits(aggSplits: Map[PaxTypeAndQueue, Double]) = ApiSplits(
+  def convertMapToAggSplits(aggSplits: Map[PaxTypeAndQueue, Double]) = Splits(
     aggSplits.map {
       case (k, v) => {
         ApiPaxTypeAndQueueCount(k.passengerType, k.queueType, v, None)

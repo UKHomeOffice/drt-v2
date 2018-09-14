@@ -59,7 +59,8 @@ lazy val client: Project = (project in file("client"))
     resolvers += Resolver.defaultLocal,
     // use uTest framework for tests
     testFrameworks += new TestFramework("utest.runner.Framework"),
-    scalaJSUseMainModuleInitializer := true
+    scalaJSUseMainModuleInitializer := true,
+    parallelExecution in Test := false
   )
   .enablePlugins(ScalaJSPlugin)
   .enablePlugins(ScalaJSBundlerPlugin)
@@ -115,7 +116,8 @@ lazy val server = (project in file("server"))
   PB.targets in Compile := Seq(
     scalapb.gen() -> (sourceManaged in Compile).value / "protobuf"
   ),
-  TwirlKeys.templateImports += "buildinfo._"
+  TwirlKeys.templateImports += "buildinfo._",
+  parallelExecution in Test := false
 )
   .aggregate(clients.map(projectToRef): _*)
   .dependsOn(sharedJVM)

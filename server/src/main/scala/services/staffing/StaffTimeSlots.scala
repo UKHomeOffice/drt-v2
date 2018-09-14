@@ -1,21 +1,26 @@
 package services.staffing
 
 import drt.shared.FlightsApi.TerminalName
-import drt.shared.{SDateLike, StaffTimeSlotsForTerminalMonth}
+import drt.shared._
+import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch
 
 import scala.util.{Success, Try}
 
 object StaffTimeSlots {
+  val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  def slotsToShifts(slots: StaffTimeSlotsForTerminalMonth): String = {
+  def slotsToShiftsAssignments(slots: StaffTimeSlotsForTerminalMonth): Seq[StaffAssignment] = {
     val monthSDate = SDate(slots.monthMillis)
     slots.timeSlots.filter(_.staff != 0).zipWithIndex.map {
       case (slot, index) =>
         val dateTime = SDate(slot.start)
-        f"shift${monthSDate.getMonth()}%02d${monthSDate.getFullYear()}$index, ${slot.terminal}, ${dateTime.ddMMyyString}, ${dateTime.prettyTime()}, ${dateTime.addMillis(slot.durationMillis - 1).prettyTime}, ${slot.staff}"
-    }.mkString("\n")
+        val name = f"shift${monthSDate.getMonth()}%02d${monthSDate.getFullYear()}$index"
+        val startMilli = SDate(dateTime.millisSinceEpoch)
+        val endMilli = startMilli.addMillis(slot.durationMillis - 60000)
+        StaffAssignment(name, slot.terminal, MilliDate(startMilli.millisSinceEpoch), MilliDate(endMilli.millisSinceEpoch), slot.staff, None)
+    }
   }
 
   def isDateInMonth(dateString: String, month: SDateLike): Boolean = {
@@ -31,43 +36,29 @@ object StaffTimeSlots {
     }
   }
 
-  def replaceShiftMonthWithTimeSlotsForMonth(existingShifts: String, slots: StaffTimeSlotsForTerminalMonth): TerminalName = {
-    val shiftsExcludingNewMonth = shiftsToLines(existingShifts)
-      .filter(line => {
-        shiftLineToFieldList(line) match {
-          case List(_, t, d, _, _, _) if !isDateInMonth(d, SDate(slots.monthMillis, Crunch.europeLondonTimeZone)) || t != slots.terminal => true
-          case _ => false
-        }
+  def replaceShiftMonthWithTimeSlotsForMonth(existingShifts: ShiftAssignments, slots: StaffTimeSlotsForTerminalMonth): ShiftAssignments = {
+    val slotSdate = SDate(slots.monthMillis, Crunch.europeLondonTimeZone)
+
+    val shiftsExcludingNewMonth = existingShifts
+      .assignments
+      .filterNot(assignment => {
+        val assignmentSdate = SDate(assignment.startDt.millisSinceEpoch, Crunch.europeLondonTimeZone)
+        val sameMonth = assignmentSdate.getMonth() == slotSdate.getMonth()
+        val sameYear = assignmentSdate.getFullYear() == slotSdate.getFullYear()
+        val sameTerminal = assignment.terminalName == slots.terminalName
+        sameMonth && sameYear && sameTerminal
       })
 
-    (shiftsExcludingNewMonth.mkString("\n") + "\n" + StaffTimeSlots.slotsToShifts(slots)).trim
+    ShiftAssignments(StaffTimeSlots.slotsToShiftsAssignments(slots) ++ shiftsExcludingNewMonth)
   }
 
-  private def shiftLineToFieldList(line: String) = {
-    line.replaceAll("([^\\\\]),", "$1\",\"")
-      .split("\",\"").toList.map(_.trim)
-  }
-
-  private def shiftsToLines(existingShifts: String) = {
-    existingShifts.split("\n")
-  }
-
-  def getShiftsForMonth(shifts: String, month: SDateLike, terminalName: TerminalName): String = {
-    shiftsToLines(shifts)
-      .filter(line => {
-        shiftLineToFieldList(line) match {
-          case List(_, tn, d, _, _, _) =>
-            tn == terminalName && isDateInMonth(d, month)
-          case _ => false
-        }
+  def getShiftsForMonth(shifts: ShiftAssignments, month: SDateLike, terminalName: TerminalName): ShiftAssignments = {
+    val assignmentsForMonth = shifts.assignments
+      .filter(assignment => {
+        val assignmentSdate = SDate(assignment.startDt.millisSinceEpoch, Crunch.europeLondonTimeZone)
+        assignmentSdate.getMonth() == month.getMonth() && assignmentSdate.getFullYear() == month.getFullYear()
       })
-      .zipWithIndex
-      .map {
-        case (line, idx) => {
-          val fields = shiftLineToFieldList(line).drop(1)
-          (idx.toString :: fields).mkString(",")
-        }
-      }
-      .mkString("\n")
+
+    ShiftAssignments(assignmentsForMonth)
   }
 }

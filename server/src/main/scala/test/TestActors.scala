@@ -70,7 +70,7 @@ object TestActors {
     override def receiveCommand: Receive = reset orElse super.receiveCommand
   }
 
-  case class TestShiftsActor() extends ShiftsActor {
+  case class TestShiftsActor(now: () => SDateLike) extends ShiftsActor(now) {
 
     def reset: Receive = {
       case ResetActor =>
@@ -85,7 +85,7 @@ object TestActors {
     override def receiveCommand: Receive = reset orElse super.receiveCommand
   }
 
-  case class TestFixedPointsActor() extends FixedPointsActor {
+  case class TestFixedPointsActor(now: () => SDateLike) extends FixedPointsActor(now) {
 
     def reset: Receive = {
       case ResetActor =>

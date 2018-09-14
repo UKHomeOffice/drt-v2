@@ -6,8 +6,9 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.{ApiFlightWithSplits, SDateLike}
 import japgolly.scalajs.react.extra.router.RouterCtl
+import drt.client.logger.log
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
 
 object TerminalsDashboardPage {
 
@@ -46,7 +47,10 @@ object TerminalsDashboardPage {
               def flightWithinPeriod(flight: ApiFlightWithSplits) = DashboardTerminalSummary.flightPcpInPeriod(flight, displayPeriod.start, displayPeriod.end)
 
 
-              def switchDashboardPeriod(period: Int) = (_: ReactEventFromInput) => p.router.set(p.dashboardPage.copy(period = Option(period)))
+              def switchDashboardPeriod(period: Int) = (_: ReactEventFromInput) => {
+                GoogleEventTracker.sendEvent("dashboard", "Switch Period", period.toString)
+                p.router.set(p.dashboardPage.copy(period = Option(period)))
+              }
 
               <.div(
                 <.div(^.className := "form-group row",
@@ -91,6 +95,14 @@ object TerminalsDashboardPage {
           }
           ))
       }
+    })
+    .componentWillReceiveProps(p=> Callback{
+      GoogleEventTracker.sendPageView(s"dashboard${p.nextProps.dashboardPage.period.map(period=>s"/$period").getOrElse("")}")
+      log.info("Terminal dashboard got new props")
+    })
+    .componentDidMount(p=> Callback {
+      GoogleEventTracker.sendPageView(s"dashboard${p.props.dashboardPage.period.map(period=>s"/$period").getOrElse("")}")
+      log.info("Terminal dashboard page did mount")
     })
     .build
 

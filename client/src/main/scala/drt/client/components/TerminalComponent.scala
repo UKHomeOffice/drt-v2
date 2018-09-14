@@ -22,9 +22,9 @@ object TerminalComponent {
   case class TerminalModel(
                             crunchStatePot: Pot[CrunchState],
                             forecastPeriodPot: Pot[ForecastPeriodWithHeadlines],
-                            potShifts: Pot[String],
-                            potMonthOfShifts: Pot[MonthOfRawShifts],
-                            potFixedPoints: Pot[StaffAssignments],
+                            potShifts: Pot[ShiftAssignments],
+                            potMonthOfShifts: Pot[MonthOfShifts],
+                            potFixedPoints: Pot[FixedPointAssignments],
                             potStaffMovements: Pot[Seq[StaffMovement]],
                             airportConfig: Pot[AirportConfig],
                             airportInfos: Pot[AirportInfo],
@@ -40,7 +40,7 @@ object TerminalComponent {
       val modelRCP = SPACircuit.connect(model => TerminalModel(
         model.crunchStatePot,
         model.forecastPeriodPot,
-        model.shiftsRaw,
+        model.shifts,
         model.monthOfShifts,
         model.fixedPoints,
         model.staffMovements,
@@ -87,13 +87,11 @@ object TerminalComponent {
 
           val subMode = if (props.terminalPageTab.mode == "staffing") "desksAndQueues" else props.terminalPageTab.subMode
 
-          val gaPage = s"${airportConfig.portCode}-${props.terminalPageTab.terminal}"
-
           <.div(
             <.ul(^.className := "nav nav-tabs",
               <.li(^.className := currentClass,
                 <.a(^.id := "currentTab", VdomAttr("data-toggle") := "tab", "Current"), ^.onClick --> {
-                  GoogleEventTracker.sendPageView(s"$gaPage-current")
+                  GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Current")
                   props.router.set(props.terminalPageTab.copy(
                     mode = "current",
                     subMode = subMode,
@@ -102,7 +100,7 @@ object TerminalComponent {
               }),
               <.li(^.className := snapshotDataClass,
                 <.a(^.id := "snapshotTab", VdomAttr("data-toggle") := "tab", "Snapshot"), ^.onClick --> {
-                  GoogleEventTracker.sendPageView(s"$gaPage-snapshot")
+                  GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Snapshot")
                   props.router.set(props.terminalPageTab.copy(
                     mode = "snapshot",
                     subMode = subMode,
@@ -112,7 +110,7 @@ object TerminalComponent {
               ),
               <.li(^.className := planningClass,
                 <.a(^.id := "planningTab", VdomAttr("data-toggle") := "tab", "Planning"), ^.onClick --> {
-                  GoogleEventTracker.sendPageView(s"$gaPage-planning")
+                  GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Planning")
                   props.router.set(props.terminalPageTab.copy(mode = "planning", subMode = subMode, date = None))
                 }
               ),
@@ -120,7 +118,7 @@ object TerminalComponent {
                 loggedInUser => if (loggedInUser.roles.contains(StaffEdit))
                   <.li(^.className := staffingClass,
                     <.a(^.id := "monthlyStaffingTab", VdomAttr("data-toggle") := "tab", "Monthly Staffing"), ^.onClick --> {
-                      GoogleEventTracker.sendPageView(s"$gaPage-monthly-staffing")
+                      GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Monthly Staffing")
                       props.router.set(props.terminalPageTab.copy(mode = "staffing", subMode = "15", date = None))
                     }
                   ) else ""
@@ -167,7 +165,7 @@ object TerminalComponent {
                   <.div(^.id := "staffing", ^.className := s"tab-pane terminal-staffing-container $staffingContentClass",
                     if (props.terminalPageTab.mode == "staffing") {
                       model.potMonthOfShifts.render(ms => {
-                        TerminalStaffingV2(ms.shifts, props.terminalPageTab, props.router)
+                        MonthlyStaffing(ms.shifts, props.terminalPageTab, props.router)
                       })
                     } else ""
                   ) else "")
