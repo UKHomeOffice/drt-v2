@@ -700,12 +700,12 @@ class Application @Inject()(implicit val config: Configuration,
 
   def saveStaff() = Action {
     implicit request =>
-      val maybeShifts: Option[String] = request.body.asJson.flatMap(ImportStaff.staffJsonToShifts)
+      val maybeShifts: Option[ShiftAssignments] = request.body.asJson.flatMap(ImportStaff.staffJsonToShifts)
 
       maybeShifts match {
-        case Some(shiftsString) =>
-          log.info(s"Received ${shiftsString.split("\n").length} shifts. Sending to actor")
-          ctrl.shiftsActor ! shiftsString
+        case Some(shifts) =>
+          log.info(s"Received ${shifts.assignments.length} shifts. Sending to actor")
+          ctrl.shiftsActor ! shifts
           Created
         case _ =>
           BadRequest("{\"error\": \"Unable to parse data\"}")
