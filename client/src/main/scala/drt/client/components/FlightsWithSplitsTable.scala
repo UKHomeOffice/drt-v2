@@ -8,8 +8,8 @@ import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.QueueName
-import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
+import drt.shared.splits.ApiSplitsToSplitRatio
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
@@ -20,7 +20,7 @@ import scala.util.{Failure, Success, Try}
 
 object FlightsWithSplitsTable {
 
-  type BestPaxForArrivalF = (Arrival) => Int
+  type BestPaxForArrivalF = Arrival => Int
 
   case class Props(flightsWithSplits: List[ApiFlightWithSplits], queueOrder: List[PaxTypeAndQueue], hasEstChox: Boolean)
 
@@ -28,11 +28,11 @@ object FlightsWithSplitsTable {
     props.flightsWithSplits.hashCode()
   })
 
-  def ArrivalsTable(timelineComponent: Option[(Arrival) => VdomNode] = None,
-                    originMapper: (String) => VdomNode = (portCode) => portCode,
+  def ArrivalsTable(timelineComponent: Option[Arrival => VdomNode] = None,
+                    originMapper: String => VdomNode = portCode => portCode,
                     splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
-                   )(paxComponent: (ApiFlightWithSplits) => TagMod = (f) => f.apiFlight.ActPax.getOrElse(0).toInt) = ScalaComponent.builder[Props]("ArrivalsTable")
-    .render_P((props) => {
+                   )(paxComponent: ApiFlightWithSplits => TagMod = _.apiFlight.ActPax.getOrElse(0).toInt) = ScalaComponent.builder[Props]("ArrivalsTable")
+    .render_P(props => {
 
       val flightsWithSplits = props.flightsWithSplits
       val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[Arrival])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsWithSplits)
@@ -124,17 +124,17 @@ object FlightTableRow {
 
   import FlightTableComponents._
 
-  type OriginMapperF = (String) => VdomNode
-  type BestPaxForArrivalF = (Arrival) => Int
+  type OriginMapperF = String => VdomNode
+  type BestPaxForArrivalF = Arrival => Int
 
-  type SplitsGraphComponentFn = (SplitsGraph.Props) => TagOf[Div]
+  type SplitsGraphComponentFn = SplitsGraph.Props => TagOf[Div]
 
   case class Props(flightWithSplits: ApiFlightWithSplits,
                    codeShares: Set[Arrival],
                    idx: Int,
-                   timelineComponent: Option[(Arrival) => VdomNode],
-                   originMapper: OriginMapperF = (portCode) => portCode,
-                   paxComponent: (ApiFlightWithSplits) => TagMod = (f) => f.apiFlight.ActPax.getOrElse(0).toInt,
+                   timelineComponent: Option[Arrival => VdomNode],
+                   originMapper: OriginMapperF = portCode => portCode,
+                   paxComponent: ApiFlightWithSplits => TagMod = _.apiFlight.ActPax.getOrElse(0).toInt,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                    splitsQueueOrder: List[PaxTypeAndQueue],
                    hasEstChox: Boolean
@@ -217,7 +217,6 @@ object FlightTableRow {
     }
 
     )
-    .componentDidMount((p) => Callback.log(s"arrival row component didMount"))
     .configure(Reusability.shouldComponentUpdate)
     .build
 

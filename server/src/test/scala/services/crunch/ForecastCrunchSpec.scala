@@ -57,16 +57,21 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val baseFlights = Flights(List(baseArrival))
 
     val firstMinute = SDate(base)
+
+    val startDate1 = MilliDate(SDate("2017-01-04T00:00").millisSinceEpoch)
+    val endDate1 = MilliDate(SDate("2017-01-04T00:14").millisSinceEpoch)
+    val assignment1 = StaffAssignment("shift s", "T1", startDate1, endDate1, 1, None)
+    val startDate2 = MilliDate(SDate("2017-01-04T00:15").millisSinceEpoch)
+    val endDate2 = MilliDate(SDate("2017-01-04T00:29").millisSinceEpoch)
+    val assignment2 = StaffAssignment("shift s", "T1", startDate2, endDate2, 2, None)
+
     val crunch = runCrunchGraph(
       airportConfig = airportConfig.copy(
         terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(Queues.EeaDesk))
       ),
       now = () => SDate(scheduled),
-      initialShifts =
-        """shift easy,T1,04/01/17,00:00,00:14,1
-          |shift difficult,T1,04/01/17,00:15,00:29,2
-        """.stripMargin
+      initialShifts = ShiftAssignments(Seq(assignment1, assignment2))
     )
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
@@ -100,14 +105,18 @@ class ForecastCrunchSpec extends CrunchTestLike {
     )
     val baseFlights = Flights(baseArrivals)
 
+    val startDate1 = MilliDate(SDate("2017-01-04T00:00").millisSinceEpoch)
+    val endDate1 = MilliDate(SDate("2017-01-04T00:14").millisSinceEpoch)
+    val assignment1 = StaffAssignment("shift s", "T1", startDate1, endDate1, 1, None)
+    val startDate2 = MilliDate(SDate("2017-01-04T00:15").millisSinceEpoch)
+    val endDate2 = MilliDate(SDate("2017-01-04T00:29").millisSinceEpoch)
+    val assignment2 = StaffAssignment("shift s", "T1", startDate2, endDate2, 2, None)
+
     val crunch = runCrunchGraph(
       airportConfig = airportConfig.copy(crunchOffsetMinutes = 240),
       now = () => SDate(scheduled),
       minutesToCrunch = 1440,
-      initialShifts =
-        """shift a,T1,04/01/17,00:00,00:14,1
-          |shift b,T1,04/01/17,00:15,00:29,2
-        """.stripMargin,
+      initialShifts = ShiftAssignments(Seq(assignment1, assignment2)),
       cruncher = TryRenjin.crunch
     )
 
@@ -154,7 +163,11 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val forecastStaffNumber = 5
 
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseFlights))
-    offerAndWait(crunch.forecastShiftsInput, s"shift a,T1,03/01/17,00:00,00:29,$forecastStaffNumber")
+    /*s"shift a,T1,03/01/17,00:00,00:29,$forecastStaffNumber"*/
+    val startDate = MilliDate(SDate("2017-01-03T00:00").millisSinceEpoch)
+    val endDate = MilliDate(SDate("2017-01-03T00:29").millisSinceEpoch)
+    val assignment = StaffAssignment("shift s", "T1", startDate, endDate, forecastStaffNumber, None)
+    offerAndWait(crunch.shiftsInput, ShiftAssignments(Seq(assignment)))
 
     val shiftMinuteMillis = (SDate(base).millisSinceEpoch until SDate(base).addMinutes(30).millisSinceEpoch by 60000).toList
     val expected = List.fill(30)(Some(forecastStaffNumber))

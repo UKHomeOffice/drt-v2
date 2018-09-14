@@ -17,7 +17,7 @@ class ArrivalsToCSVDataTest extends Specification {
     apiFlight(flightId = Option(1), iata = "SA324", icao = "SA0324", schDt = "2017-01-01T20:00:00Z",
       actPax = Option(100), maxPax = Option(100), lastKnownPax = None, terminal = "T1",
       origin = "JHB", operator = Option("SA"), status = "UNK", estDt = "2017-01-01T20:00:00Z"),
-    Set(ApiSplits(
+    Set(Splits(
       Set(
         ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 2, None),
         ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None),
@@ -27,7 +27,7 @@ class ArrivalsToCSVDataTest extends Specification {
         ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 7, None),
         ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.FastTrack, 6, None)
       ), SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.DepartureConfirmed)),
-      ApiSplits(
+      Splits(
         Set(
           ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 8, None),
           ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 9, None),
@@ -42,7 +42,7 @@ class ArrivalsToCSVDataTest extends Specification {
     apiFlight(flightId = Option(2), iata = "SA325", icao = "SA0325", schDt = "2017-01-01T20:00:00Z",
       actPax = Option(100), maxPax = Option(100), lastKnownPax = None, terminal = "T1", origin = "JHB",
       operator = Option("SA"), status = "UNK", estDt = "2017-01-01T20:00:00Z"),
-    Set(ApiSplits(
+    Set(Splits(
       Set(
         ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 3, None),
         ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 3, None),
@@ -57,7 +57,7 @@ class ArrivalsToCSVDataTest extends Specification {
       apiFlight(flightId = Option(3), iata = "SA326", icao = "SA0326", schDt = "2017-01-01T20:00:00Z",
         actPax = Option(100), maxPax = Option(100), lastKnownPax = None, terminal = "T1", origin = "JHB",
         operator = Option("SA"), status = "UNK", estDt = "2017-01-01T20:00:00Z"),
-      Set(ApiSplits(
+      Set(Splits(
         Set(
           ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 30, None),
           ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 30, None),

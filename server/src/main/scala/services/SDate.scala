@@ -5,6 +5,7 @@ import drt.shared.{MilliDate, SDateLike}
 import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
+import services.graphstages.Crunch
 
 import scala.language.implicitConversions
 import scala.util.Try
@@ -42,8 +43,6 @@ object SDate {
 
     def millisSinceEpoch: MillisSinceEpoch = dateTime.getMillis
 
-    def getUtcMillis(): MillisSinceEpoch = dateTime.getMillis
-
     override def toISOString(): String = jodaSDateToIsoString(dateTime)
 
     def getZone(): String = dateTime.getZone.getID
@@ -55,11 +54,11 @@ object SDate {
 
     implicit def jodaToSDate(dateTime: DateTime): SDateLike = JodaSDate(dateTime)
 
-    //    implicit def sprayToSDate(dateTime: spray.http.DateTime): SDate = JodaSDate(dateTime.year, dateTime.
-
     implicit def sdateToMilliDate(sdate: SDateLike): MilliDate = MilliDate(sdate.millisSinceEpoch)
 
     implicit def sdateFromMilliDate(milliDate: MilliDate): SDateLike = new DateTime(milliDate.millisSinceEpoch)
+
+    implicit def sdateFromMilliDateLocal(milliDate: MilliDate): SDateLike = new DateTime(milliDate.millisSinceEpoch, Crunch.europeLondonTimeZone)
   }
 
   def jodaSDateToIsoString(dateTime: SDateLike): String = {

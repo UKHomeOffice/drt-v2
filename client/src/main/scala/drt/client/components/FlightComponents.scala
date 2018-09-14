@@ -13,9 +13,9 @@ object FlightComponents {
   def paxComp(maxFlightPax: Int = 100)(flightWithSplits: ApiFlightWithSplits): TagMod = {
 
     val flight = flightWithSplits.apiFlight
-    val apiSplits = flightWithSplits.apiSplits.getOrElse(ApiSplits(Set(), "no splits - client", None))
-    val apiPax: Int = ApiSplits.totalPax(apiSplits.splits).toInt
-    val apiExTransPax: Int = ApiSplits.totalExcludingTransferPax(apiSplits.splits).toInt
+    val apiSplits = flightWithSplits.apiSplits.getOrElse(Splits(Set(), "no splits - client", None))
+    val apiPax: Int = Splits.totalPax(apiSplits.splits).toInt
+    val apiExTransPax: Int = Splits.totalExcludingTransferPax(apiSplits.splits).toInt
 
     val airportConfigRCP = SPACircuit.connect(_.airportConfig)
     airportConfigRCP(acPot => {
@@ -35,9 +35,9 @@ object FlightComponents {
 
   def paxClassFromSplits(flightWithSplits: ApiFlightWithSplits): String = {
     flightWithSplits.bestSplits match {
-      case Some(ApiSplits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) => "pax-api"
-      case Some(ApiSplits(_, SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages, _, _)) => "pax-predicted"
-      case Some(ApiSplits(_, SplitSources.Historical, _, _)) => "pax-portfeed"
+      case Some(Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) => "pax-api"
+      case Some(Splits(_, SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages, _, _)) => "pax-predicted"
+      case Some(Splits(_, SplitSources.Historical, _, _)) => "pax-portfeed"
       case _ => "pax-unknown"
     }
   }

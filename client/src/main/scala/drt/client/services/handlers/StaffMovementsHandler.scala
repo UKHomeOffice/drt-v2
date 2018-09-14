@@ -2,6 +2,7 @@ package drt.client.services.handlers
 
 import autowire._
 import boopickle.Default._
+
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import diode.data.{Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW}
@@ -10,19 +11,22 @@ import drt.client.actions.Actions._
 import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{AjaxClient, PollDelay, ViewMode}
-import drt.shared.{Api, StaffMovement}
+import drt.shared.{Api, SDateLike, StaffAssignment, StaffMovement}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
 class StaffMovementsHandler[M](modelRW: ModelRW[M, (Pot[Seq[StaffMovement]], ViewMode)]) extends LoggingActionHandler(modelRW) {
+  implicit val sDatePickler = compositePickler[SDateLike]
+  implicit val staffAssignmentPickler = compositePickler[StaffAssignment]
+
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case (AddStaffMovement(staffMovement)) =>
       value match {
         case (Ready(sms), vm) =>
 
-          val updatedValue: Seq[StaffMovement] = (sms :+ staffMovement).sortBy(_.time)
+          val updatedValue: Seq[StaffMovement] = (sms :+ staffMovement).sortBy(_.time.millisSinceEpoch)
           updated((Ready(updatedValue), vm))
         case _ => noChange
       }
