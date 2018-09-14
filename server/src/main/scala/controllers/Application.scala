@@ -721,7 +721,6 @@ class Application @Inject()(implicit val config: Configuration,
       // call Autowire route
 
       implicit val staffAssignmentsPickler: CompositePickler[StaffAssignments] = compositePickler[StaffAssignments].addConcreteType[ShiftAssignments].addConcreteType[FixedPointAssignments]
-      implicit val staffMovementPickler: CompositePickler[StaffMovement] = compositePickler[StaffMovement]
       implicit val apiPaxTypeAndQueueCountPickler: Pickler[ApiPaxTypeAndQueueCount] = generatePickler[ApiPaxTypeAndQueueCount]
       implicit val feedStatusPickler: CompositePickler[FeedStatus] = compositePickler[FeedStatus].
         addConcreteType[FeedStatusSuccess].

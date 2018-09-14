@@ -18,11 +18,8 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 class StaffMovementsHandler[M](modelRW: ModelRW[M, (Pot[Seq[StaffMovement]], ViewMode)]) extends LoggingActionHandler(modelRW) {
-  implicit val sDatePickler = compositePickler[SDateLike]
-  implicit val staffAssignmentPickler = compositePickler[StaffAssignment]
-
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case (AddStaffMovement(staffMovement)) =>
+    case AddStaffMovement(staffMovement) =>
       value match {
         case (Ready(sms), vm) =>
 
