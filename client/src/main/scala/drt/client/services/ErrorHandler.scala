@@ -24,7 +24,6 @@ object ErrorHandler {
       if (reload) {
         dom.window.location.reload(true)
       }
-      return false
     }
   }
 }

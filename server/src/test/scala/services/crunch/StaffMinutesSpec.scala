@@ -7,7 +7,7 @@ import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.{MilliDate, Queues, StaffMovement}
+import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.graphstages.Crunch
@@ -24,13 +24,17 @@ class StaffMinutesSpec extends CrunchTestLike {
     "Then I should see the staff available for the duration of the shifts" >> {
     val shiftStart = SDate("2017-01-01T00:00Z")
 
+    val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+    val endDate1 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
+    val assignment1 = StaffAssignment("shift a", "T1", startDate1, endDate1, 1, None)
+    val startDate2 = MilliDate(SDate("2017-01-01T00:15").millisSinceEpoch)
+    val endDate2 = MilliDate(SDate("2017-01-01T00:29").millisSinceEpoch)
+    val assignment2 = StaffAssignment("shift b", "T1", startDate2, endDate2, 2, None)
+    val initialShifts = ShiftAssignments(Seq(assignment1, assignment2))
     val crunch = runCrunchGraph(
       airportConfig = airportConfig.copy(terminalNames = Seq("T1")),
       now = () => shiftStart,
-      initialShifts =
-        """shift a,T1,01/01/17,00:00,00:14,1
-          |shift b,T1,01/01/17,00:15,00:29,2
-        """.stripMargin
+      initialShifts = initialShifts
     )
 
     val expectedStaff = List.fill(15)(1) ::: List.fill(15)(2)
@@ -52,10 +56,13 @@ class StaffMinutesSpec extends CrunchTestLike {
     "When I ask for the PortState " +
     "Then I should see zero staff available rather than a negative number" >> {
     val shiftStart = SDate("2017-01-01T00:00Z")
-    val initialShifts =
-      """shift a,T1,01/01/17,00:00,00:04,0
-        |shift b,T1,01/01/17,00:05,00:09,2
-      """.stripMargin
+    val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+    val endDate1 = MilliDate(SDate("2017-01-01T00:04").millisSinceEpoch)
+    val assignment1 = StaffAssignment("shift a", "T1", startDate1, endDate1, 0, None)
+    val startDate2 = MilliDate(SDate("2017-01-01T00:05").millisSinceEpoch)
+    val endDate2 = MilliDate(SDate("2017-01-01T00:09").millisSinceEpoch)
+    val assignment2 = StaffAssignment("shift b", "T1", startDate2, endDate2, 2, None)
+    val initialShifts = ShiftAssignments(Seq(assignment1, assignment2))
     val uuid = UUID.randomUUID()
     val initialMovements = Seq(
       StaffMovement("T1", "lunch start", MilliDate(shiftStart.millisSinceEpoch), -1, uuid, createdBy = None),
@@ -67,7 +74,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       now = () => shiftStart
     )
 
-    offerAndWait(crunch.liveShiftsInput, initialShifts)
+    offerAndWait(crunch.shiftsInput, initialShifts)
     offerAndWait(crunch.liveStaffMovementsInput, initialMovements)
 
     val expectedStaffAvailable = Seq(
@@ -144,12 +151,15 @@ class StaffMinutesSpec extends CrunchTestLike {
     "Then I should see deployed staff totalling the number on shift" >> {
     val scheduled = "2017-01-01T00:00Z"
     val shiftStart = SDate(scheduled)
-    val initialShifts =
-      """shift a,T1,01/01/17,00:00,00:14,10
-      """.stripMargin
-    val initialFixedPoints =
-      """egate monitor,T1,01/01/17,00:00,00:14,2
-      """.stripMargin
+
+    val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+    val endDate1 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
+    val assignment1 = StaffAssignment("shift a", "T1", startDate1, endDate1, 10, None)
+    val initialShifts = ShiftAssignments(Seq(assignment1))
+    val startDate2 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+    val endDate2 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
+    val assignment2 = StaffAssignment("egate monitor", "T1", startDate2, endDate2, 2, None)
+    val initialFixedPoints = FixedPointAssignments(Seq(assignment2))
     val flight = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = scheduled, actPax = Option(100))
 
     val crunch = runCrunchGraph(
@@ -170,8 +180,8 @@ class StaffMinutesSpec extends CrunchTestLike {
       now = () => shiftStart
     )
 
-    offerAndWait(crunch.liveShiftsInput, initialShifts)
-    offerAndWait(crunch.liveFixedPointsInput, initialFixedPoints)
+    offerAndWait(crunch.shiftsInput, initialShifts)
+    offerAndWait(crunch.fixedPointsInput, initialFixedPoints)
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
 
     val expectedCrunchDeployments = Set(
@@ -203,9 +213,10 @@ class StaffMinutesSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
     val shiftStart = SDate(scheduled)
 
-    val initialFixedPoints =
-      """egate monitor,T1,01/01/17,00:00,00:14,2
-      """.stripMargin
+    val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+    val endDate1 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
+    val assignment1 = StaffAssignment("egate monitor", "T1", startDate1, endDate1, 2, None)
+    val initialFixedPoints = FixedPointAssignments(Seq(assignment1))
 
     val crunch = runCrunchGraph(
       airportConfig = airportConfig.copy(
@@ -214,9 +225,9 @@ class StaffMinutesSpec extends CrunchTestLike {
       now = () => shiftStart
     )
 
-    offerAndWait(crunch.liveFixedPointsInput, initialFixedPoints)
+    offerAndWait(crunch.fixedPointsInput, initialFixedPoints)
 
-    offerAndWait(crunch.liveFixedPointsInput, "")
+    offerAndWait(crunch.fixedPointsInput, FixedPointAssignments.empty)
 
     val expectedFixedPoints = Seq(
       shiftStart.addMinutes(0).millisSinceEpoch -> 0,
@@ -248,12 +259,14 @@ class StaffMinutesSpec extends CrunchTestLike {
     "Then I should see deployed staff totalling the number on shift" >> {
     val scheduled = "2017-01-01T00:00Z"
     val shiftStart = SDate(scheduled)
-    val initialShifts =
-      """shift a,T1,01/01/17,00:00,00:14,10
-      """.stripMargin
-    val initialFixedPoints =
-      """egate monitor,T1,01/01/17,00:00,00:14,2
-      """.stripMargin
+    val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+    val endDate1 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
+    val assignment1 = StaffAssignment("shift a", "T1", startDate1, endDate1, 10, None)
+    val initialShifts = ShiftAssignments(Seq(assignment1))
+    val startDate2 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+    val endDate2 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
+    val assignment2 = StaffAssignment("egate monitor", "T1", startDate2, endDate2, 2, None)
+    val initialFixedPoints = FixedPointAssignments(Seq(assignment2))
     val flight = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = scheduled, actPax = Option(100))
 
     val crunch = runCrunchGraph(
@@ -275,8 +288,8 @@ class StaffMinutesSpec extends CrunchTestLike {
       now = () => shiftStart
     )
 
-    offerAndWait(crunch.liveShiftsInput, initialShifts)
-    offerAndWait(crunch.liveFixedPointsInput, initialFixedPoints)
+    offerAndWait(crunch.shiftsInput, initialShifts)
+    offerAndWait(crunch.fixedPointsInput, initialFixedPoints)
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
 
     val expectedCrunchDeployments = Set(
@@ -308,9 +321,10 @@ class StaffMinutesSpec extends CrunchTestLike {
     "Then I should see deployed staff maxed out on each desk" >> {
     val scheduled = "2017-01-01T00:00Z"
     val shiftStart = SDate(scheduled)
-    val initialShifts =
-      """shift a,T1,01/01/17,00:00,00:14,50
-      """.stripMargin
+    val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+    val endDate1 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
+    val assignment1 = StaffAssignment("shift a", "T1", startDate1, endDate1, 50, None)
+    val initialShifts = ShiftAssignments(Seq(assignment1))
 
     val crunch = runCrunchGraph(
       airportConfig = airportConfig.copy(
@@ -341,7 +355,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     )
 
 
-    offerAndWait(crunch.liveShiftsInput, initialShifts)
+    offerAndWait(crunch.shiftsInput, initialShifts)
 
     val flight = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = scheduled, actPax = Option(100))
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))

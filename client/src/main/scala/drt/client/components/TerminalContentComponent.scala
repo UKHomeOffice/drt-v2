@@ -26,8 +26,8 @@ object TerminalContentComponent {
 
   case class Props(
                     crunchStatePot: Pot[CrunchState],
-                    potShifts: Pot[String],
-                    potFixedPoints: Pot[StaffAssignments],
+                    potShifts: Pot[ShiftAssignments],
+                    potFixedPoints: Pot[FixedPointAssignments],
                     potStaffMovements: Pot[Seq[StaffMovement]],
                     airportConfig: AirportConfig,
                     terminalPageTab: TerminalPageTabLoc,

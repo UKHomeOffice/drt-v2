@@ -173,7 +173,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         val scheduled = "2017-01-01T00:00Z"
 
         val flight = ArrivalGenerator.apiFlight(flightId = Option(1), schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(20))
-        val oldSplits = ApiSplits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 100, None)), SplitSources.Historical, None, Percentage)
+        val oldSplits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 100, None)), SplitSources.Historical, None, Percentage)
         val initialFlightsWithSplits = Seq(ApiFlightWithSplits(flight, Set(oldSplits), None))
         val initialPortState = PortState(initialFlightsWithSplits.map(f => (f.apiFlight.uniqueId, f)).toMap, Map(), Map())
 
@@ -211,8 +211,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         val scheduled = "2017-01-01T00:00Z"
 
         val flight = ArrivalGenerator.apiFlight(flightId = Option(1), schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(20))
-        val terminalSplits = ApiSplits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 50, None)), SplitSources.TerminalAverage, None, Percentage)
-        val oldHistoricalSplits = ApiSplits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 100, None)), SplitSources.Historical, None, Percentage)
+        val terminalSplits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 50, None)), SplitSources.TerminalAverage, None, Percentage)
+        val oldHistoricalSplits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 100, None)), SplitSources.Historical, None, Percentage)
         val initialFlightsWithSplits = Seq(ApiFlightWithSplits(flight, Set(terminalSplits, oldHistoricalSplits), None))
         val initialPortState = PortState(initialFlightsWithSplits.map(f => (f.apiFlight.uniqueId, f)).toMap, Map(), Map())
 

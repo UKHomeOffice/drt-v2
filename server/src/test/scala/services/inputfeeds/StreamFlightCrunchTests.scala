@@ -2,11 +2,11 @@ package services.inputfeeds
 
 import java.io.File
 
+import actors.PersistenceCleanup
 import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestKit}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import controllers._
 import drt.services.AirportConfigHelpers
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.TerminalName
@@ -14,7 +14,6 @@ import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared.{Arrival, _}
 import org.joda.time.DateTime
-import services.SDate
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 

@@ -44,7 +44,7 @@ object StaffAssignmentHelper {
     s"${assignment.name},${assignment.terminalName},$startDateString,$startTimeString,$endTimeString,${assignment.numberOfStaff}"
   }
 
-  def fixedPointsFormat(staffAssignments: StaffAssignments): String = staffAssignments.assignments.map(fixedPointFormat).mkString("\n")
+  def fixedPointsFormat(fixedPoints: FixedPointAssignments): String = fixedPoints.assignments.map(fixedPointFormat).mkString("\n")
 
   def fixedPointFormat(assignment: StaffAssignment): String = {
     val startDate: SDateLike = SDate(assignment.startDt)
@@ -88,60 +88,19 @@ case class StaffAssignmentParser(rawStaffAssignments: String) {
     }
 }
 
-trait StaffAssignmentService {
-
-  def terminalStaffAt(terminalName: TerminalName, date: MilliDate): Int
-}
-
-case class StaffAssignmentServiceWithoutDates(assignments: Seq[StaffAssignment]) extends StaffAssignmentService {
-
-  def terminalStaffAt(terminalName: TerminalName, date: MilliDate): Int = assignments.filter(assignment => {
-    assignment.terminalName == terminalName &&
-      SDate(date).toHoursAndMinutes() >= SDate(assignment.startDt).toHoursAndMinutes() &&
-      SDate(date).toHoursAndMinutes() <= SDate(assignment.endDt).toHoursAndMinutes()
-  }).map(_.numberOfStaff).sum
-}
-
-case class StaffAssignmentServiceWithDates(assignments: Seq[StaffAssignment]) extends StaffAssignmentService {
-
-  def terminalStaffAt(terminalName: TerminalName, date: MilliDate): Int = assignments.filter(assignment => {
-    assignment.startDt <= date && date <= assignment.endDt && assignment.terminalName == terminalName
-  }).map(_.numberOfStaff).sum
-}
-
-object StaffAssignmentServiceWithoutDates {
-  def apply(assignments: Seq[Try[StaffAssignment]]): Try[StaffAssignmentServiceWithoutDates] = {
-    if (assignments.exists(_.isFailure))
-      Failure(new Exception("Couldn't parse assignments"))
-    else {
-      Success(StaffAssignmentServiceWithoutDates(assignments.collect { case Success(s) => s }))
-    }
-  }
-}
-
-object StaffAssignmentServiceWithDates {
-  def apply(assignments: Seq[Try[StaffAssignment]]): Try[StaffAssignmentServiceWithDates] = {
-    if (assignments.exists(_.isFailure))
-      Failure(new Exception("Couldn't parse assignments"))
-    else {
-      Success(StaffAssignmentServiceWithDates(assignments.collect { case Success(s) => s }))
-    }
-  }
-}
-
 object StaffMovements {
   def assignmentsToMovements(staffAssignments: Seq[StaffAssignment]): Seq[StaffMovement] = {
     staffAssignments.flatMap(assignment => {
       val uuid: UUID = UUID.randomUUID()
       StaffMovement(assignment.terminalName, assignment.name + " start", time = assignment.startDt, assignment.numberOfStaff, uuid, createdBy = assignment.createdBy) ::
         StaffMovement(assignment.terminalName, assignment.name + " end", time = assignment.endDt, -assignment.numberOfStaff, uuid, createdBy = assignment.createdBy) :: Nil
-    }).sortBy(_.time)
+    }).sortBy(_.time.millisSinceEpoch)
   }
 
-  def adjustmentsAt(movements: Seq[StaffMovement])(dateTime: MilliDate): Int = movements.sortBy(_.time).takeWhile(_.time <= dateTime).map(_.delta).sum
+  def adjustmentsAt(movements: Seq[StaffMovement])(dateTime: SDateLike): Int = movements.sortBy(_.time.millisSinceEpoch).takeWhile(_.time.millisSinceEpoch <= dateTime.millisSinceEpoch).map(_.delta).sum
 
-  def terminalStaffAt(assignmentService: StaffAssignmentService)(movements: Seq[StaffMovement])(terminalName: TerminalName, dateTime: MilliDate): Int = {
-    val baseStaff = assignmentService.terminalStaffAt(terminalName, dateTime)
+  def terminalStaffAt(shiftAssignments: ShiftAssignments)(movements: Seq[StaffMovement])(terminalName: TerminalName, dateTime: SDateLike): Int = {
+    val baseStaff = shiftAssignments.terminalStaffAt(terminalName, dateTime)
 
     val movementAdjustments = adjustmentsAt(movements.filter(_.terminalName == terminalName))(dateTime)
     baseStaff + movementAdjustments

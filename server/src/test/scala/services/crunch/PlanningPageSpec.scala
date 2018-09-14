@@ -2,10 +2,9 @@ package services.crunch
 
 import controllers.{ArrivalGenerator, Forecast}
 import drt.shared.FlightsApi.Flights
-import drt.shared.{CrunchApi, Queues}
+import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.{SDate, TryRenjin}
-import services.graphstages.Crunch._
 
 import scala.concurrent.duration._
 
@@ -25,15 +24,15 @@ class PlanningPageSpec() extends CrunchTestLike {
     val forecastArrivalDay1 = ArrivalGenerator.apiFlight(flightId = Option(1), schDt = day1, iata = "BA0001", terminal = "T1", actPax = Option(5))
     val baseFlights = Flights(List(forecastArrivalDay1))
 
+    val startDate1 = MilliDate(SDate("2017-01-02T00:00").millisSinceEpoch)
+    val endDate1 = MilliDate(SDate("2017-01-02T23:59").millisSinceEpoch)
+    val assignment1 = StaffAssignment("shift a", "T1", startDate1, endDate1, 20, None)
     val crunch = runCrunchGraph(
       now = () => SDate(weekBeginning).addDays(-1),
       airportConfig = airportConfig.copy(
         minMaxDesksByTerminalQueue = Map("T1" -> Map(Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1)))))
       ),
-      minutesToCrunch = 60,
-      initialShifts =
-        """shift a,T1,02/01/17,00:00,23:59,20
-        """.stripMargin,
+      initialShifts = ShiftAssignments(Seq(assignment1)),
       cruncher = TryRenjin.crunch
     )
 

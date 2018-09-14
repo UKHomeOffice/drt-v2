@@ -25,7 +25,7 @@ class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: Millis
         val incomingStaffMinutes = grab(inStaffMinutes)
 
         val daysToUpdate = changedDays(offsetMinutes, incomingStaffMinutes)
-        log.info("daysToUpdate: " + daysToUpdate.keys.map(k => SDate(k).prettyDateTime()).mkString(", "))
+        log.info("daysToUpdate: " + daysToUpdate.keys.toSeq.sorted.map(k => SDate(k).prettyDateTime()).mkString(", "))
 
         val updatedMinutes = daysToUpdate.foldLeft(staffMinutesQueue.toMap) {
           case (soFar, (dayMillis, staffMinutes)) => soFar.updated(dayMillis, StaffMinutes(staffMinutes))

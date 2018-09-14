@@ -66,7 +66,7 @@ object FlightMessageConversion {
       f.splits.map(apiSplitsToMessage).toList)
   }
 
-  def apiSplitsToMessage(s: ApiSplits): SplitMessage = {
+  def apiSplitsToMessage(s: Splits): SplitMessage = {
     SplitMessage(
       paxTypeAndQueueCount = s.splits.map(paxTypeAndQueueCountToMessage).toList,
       source = Option(s.source),

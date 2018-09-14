@@ -55,7 +55,7 @@ class StaffMovementsActorBase extends RecoveryActorLike with PersistentDrtActor[
 
   override def persistenceId = "staff-movements-store"
 
-  var state = initialState
+  var state: StaffMovementsState = initialState
 
   def initialState = StaffMovementsState(StaffMovements(List()))
 
@@ -104,12 +104,12 @@ class StaffMovementsActorBase extends RecoveryActorLike with PersistentDrtActor[
       log.info(s"unhandled message: $u")
   }
 
-  def onUpdateState(sm: StaffMovements) = {}
+  def onUpdateState(sm: StaffMovements): Unit = {}
 
   def staffMovementMessageToStaffMovement(sm: StaffMovementMessage) = StaffMovement(
     terminalName = sm.terminalName.getOrElse(""),
     reason = sm.reason.getOrElse(""),
-    time = MilliDate(sm.time.getOrElse(0)),
+    time = MilliDate(sm.time.getOrElse(0L)),
     delta = sm.delta.getOrElse(0),
     uUID = UUID.fromString(sm.uUID.getOrElse("")),
     queue = sm.queueName,

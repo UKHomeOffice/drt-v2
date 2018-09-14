@@ -17,24 +17,24 @@ case class SplitsCalculator(portCode: String, csvSplitsProvider: SplitsProvider.
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def splitsForArrival(manifest: VoyageManifestParser.VoyageManifest, arrival: Arrival): ApiSplits = {
+  def splitsForArrival(manifest: VoyageManifestParser.VoyageManifest, arrival: Arrival): Splits = {
     val paxTypeAndQueueCounts = SplitsCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(portCode, manifest).toSet
     val withEgateAndFastTrack = addEgatesAndFastTrack(arrival, paxTypeAndQueueCounts)
 
-    ApiSplits(withEgateAndFastTrack, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Some(manifest.EventCode), PaxNumbers)
+    Splits(withEgateAndFastTrack, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Some(manifest.EventCode), PaxNumbers)
   }
 
-  def terminalAndHistoricSplits(fs: Arrival): Set[ApiSplits] = {
+  def terminalAndHistoricSplits(fs: Arrival): Set[Splits] = {
     val historical: Option[Set[ApiPaxTypeAndQueueCount]] = historicalSplits(fs)
     val portDefault: Set[ApiPaxTypeAndQueueCount] = portDefaultSplits.map {
       case SplitRatio(ptqc, ratio) => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ratio, None)
     }
 
-    val defaultSplits = Set(ApiSplits(portDefault.map(aptqc => aptqc.copy(paxCount = aptqc.paxCount * 100)), SplitSources.TerminalAverage, None, Percentage))
+    val defaultSplits = Set(Splits(portDefault.map(aptqc => aptqc.copy(paxCount = aptqc.paxCount * 100)), SplitSources.TerminalAverage, None, Percentage))
 
     historical match {
       case None => defaultSplits
-      case Some(h) => Set(ApiSplits(h, SplitSources.Historical, None, Percentage)) ++ defaultSplits
+      case Some(h) => Set(Splits(h, SplitSources.Historical, None, Percentage)) ++ defaultSplits
     }
   }
 

@@ -22,9 +22,9 @@ object TerminalComponent {
   case class TerminalModel(
                             crunchStatePot: Pot[CrunchState],
                             forecastPeriodPot: Pot[ForecastPeriodWithHeadlines],
-                            potShifts: Pot[String],
-                            potMonthOfShifts: Pot[MonthOfRawShifts],
-                            potFixedPoints: Pot[StaffAssignments],
+                            potShifts: Pot[ShiftAssignments],
+                            potMonthOfShifts: Pot[MonthOfShifts],
+                            potFixedPoints: Pot[FixedPointAssignments],
                             potStaffMovements: Pot[Seq[StaffMovement]],
                             airportConfig: Pot[AirportConfig],
                             airportInfos: Pot[AirportInfo],
@@ -40,7 +40,7 @@ object TerminalComponent {
       val modelRCP = SPACircuit.connect(model => TerminalModel(
         model.crunchStatePot,
         model.forecastPeriodPot,
-        model.shiftsRaw,
+        model.shifts,
         model.monthOfShifts,
         model.fixedPoints,
         model.staffMovements,
@@ -165,7 +165,7 @@ object TerminalComponent {
                   <.div(^.id := "staffing", ^.className := s"tab-pane terminal-staffing-container $staffingContentClass",
                     if (props.terminalPageTab.mode == "staffing") {
                       model.potMonthOfShifts.render(ms => {
-                        TerminalStaffingV2(ms.shifts, props.terminalPageTab, props.router)
+                        MonthlyStaffing(ms.shifts, props.terminalPageTab, props.router)
                       })
                     } else ""
                   ) else "")

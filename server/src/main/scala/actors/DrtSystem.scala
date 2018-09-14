@@ -57,7 +57,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   def run(): Unit
 
-  def getFeedStatus(): Future[Seq[FeedStatuses]]
+  def getFeedStatus: Future[Seq[FeedStatuses]]
 }
 
 case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig)
@@ -106,8 +106,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], snapshotMegaBytesVoyageManifests, now, expireAfterMillis, snapshotIntervalVm), name = "voyage-manifests-actor")
 
-  lazy val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor]))
-  lazy val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor]))
+  lazy val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], now))
+  lazy val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], now))
   lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor]))
 
   lazy val alertsActor: ActorRef = system.actorOf(Props(classOf[AlertsActor]))
@@ -164,7 +164,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     }
   }
 
-  override def getFeedStatus(): Future[Seq[FeedStatuses]] = {
+  override def getFeedStatus: Future[Seq[FeedStatuses]] = {
     val actors: Seq[AskableActorRef] = Seq(liveArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
 
     val statuses = actors
@@ -193,8 +193,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   }
 
   def subscribeStaffingActors(crunchInputs: CrunchSystem[Cancellable, NotUsed]): Unit = {
-    shiftsActor ! AddShiftLikeSubscribers(List(crunchInputs.shifts))
-    fixedPointsActor ! AddShiftLikeSubscribers(List(crunchInputs.fixedPoints))
+    shiftsActor ! AddShiftSubscribers(List(crunchInputs.shifts))
+    fixedPointsActor ! AddFixedPointSubscribers(List(crunchInputs.fixedPoints))
     staffMovementsActor ! AddStaffMovementsSubscribers(List(crunchInputs.staffMovements))
   }
 

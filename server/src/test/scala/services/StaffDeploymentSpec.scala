@@ -2,7 +2,7 @@ package services
 
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
-import drt.shared.Queues
+import drt.shared._
 import org.specs2.mutable.Specification
 import services.graphstages.{StaffAssignmentService, StaffSources}
 import services.graphstages.StaffDeploymentCalculator._
@@ -13,8 +13,20 @@ case class TestStaffAssignmentService(staff: Int) extends StaffAssignmentService
   override def terminalStaffAt(terminalName: TerminalName, dateMillis: MillisSinceEpoch): Int = staff
 }
 
+case class TestShiftsAssignmentService(staff: Int) extends ShiftAssignmentsLike {
+  override val assignments: Seq[StaffAssignment] = Seq()
+  override def terminalStaffAt(terminalName: TerminalName, dateMillis: SDateLike): Int = staff
+}
+
+case class TestFixedPointsAssignmentService(staff: Int) extends FixedPointAssignmentsLike {
+  override val assignments: Seq[StaffAssignment] = Seq()
+  override def terminalStaffAt(terminalName: TerminalName, dateMillis: SDateLike)(implicit mdToSd: MilliDate => SDateLike): Int = staff
+}
+
 class StaffDeploymentSpec extends Specification {
   val testStaffService = TestStaffAssignmentService(0)
+  val testShiftsService = TestShiftsAssignmentService(0)
+  val testFixedPointsService = TestFixedPointsAssignmentService(0)
   val minMaxDesks = Map(
     "T1" -> Map(
       Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(10))),
@@ -35,7 +47,7 @@ class StaffDeploymentSpec extends Specification {
       crunchMinute("T1", Queues.EGate, 0, 12)
     ).map(cm => (cm.key, cm)).toMap
     val deployer: Deployer = queueRecsToDeployments(_.toInt)
-    val staffSources = StaffSources(testStaffService, testStaffService, testStaffService, (_, _) => staffAvailable)
+    val staffSources = StaffSources(testShiftsService, testFixedPointsService, testStaffService, (_, _) => staffAvailable)
     val result = addDeployments(crunchMinutes, deployer, Option(staffSources), minMaxDesks).values.toSet
 
     val expected = Set(
@@ -56,7 +68,7 @@ class StaffDeploymentSpec extends Specification {
       crunchMinute("T1", Queues.EGate, 0, 0)
     ).map(cm => (cm.key, cm)).toMap
     val deployer: Deployer = queueRecsToDeployments(_.toInt)
-    val staffSources = StaffSources(testStaffService, testStaffService, testStaffService, (_, _) => staffAvailable)
+    val staffSources = StaffSources(testShiftsService, testFixedPointsService, testStaffService, (_, _) => staffAvailable)
     val result = addDeployments(crunchMinutes, deployer, Option(staffSources), minMaxDesks).values.toSet
 
     val expected = Set(
@@ -78,7 +90,7 @@ class StaffDeploymentSpec extends Specification {
       crunchMinute("T1", Queues.NonEeaDesk, 60000, 15)
     ).map(cm => (cm.key, cm)).toMap
     val deployer: Deployer = queueRecsToDeployments(_.toInt)
-    val staffSources = StaffSources(testStaffService, testStaffService, testStaffService, (_, _) => staffAvailable)
+    val staffSources = StaffSources(testShiftsService, testFixedPointsService, testStaffService, (_, _) => staffAvailable)
 
     val result = addDeployments(crunchMinutes, deployer, Option(staffSources), minMaxDesks).values.toSet
 
@@ -107,7 +119,7 @@ class StaffDeploymentSpec extends Specification {
     ).map(cm => (cm.key, cm)).toMap
     val deployer: Deployer = queueRecsToDeployments(_.toInt)
 
-    val staffSources = StaffSources(testStaffService, testStaffService, testStaffService, (_, _) => staffAvailable)
+    val staffSources = StaffSources(testShiftsService, testFixedPointsService, testStaffService, (_, _) => staffAvailable)
     val result = addDeployments(crunchMinutes, deployer, Option(staffSources), minMaxDesks).values.toSet
 
     val expected = Set(

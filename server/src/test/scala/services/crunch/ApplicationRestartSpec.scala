@@ -24,7 +24,7 @@ class ApplicationRestartSpec extends CrunchTestLike {
     val arrivalBase = ArrivalGenerator.apiFlight(actPax = Option(1), iata = "BA2010", schDt = scheduledBase)
     val arrivalFcst = ArrivalGenerator.apiFlight(actPax = Option(1), iata = "BA3010", schDt = scheduledFcst)
     val splits = Set(
-      ApiSplits(
+      Splits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None)),
         SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
         Option(DqEventCodes.DepartureConfirmed),
@@ -66,7 +66,7 @@ class ApplicationRestartSpec extends CrunchTestLike {
     val arrivalDay1 = ArrivalGenerator.apiFlight(actPax = Option(1), iata = "BA1010", schDt = scheduledDay1)
     val arrivalDay2 = ArrivalGenerator.apiFlight(actPax = Option(1), iata = "BA1010", schDt = scheduledDay2)
     val splits = Set(
-      ApiSplits(
+      Splits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None)),
         SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
         Option(DqEventCodes.DepartureConfirmed),
