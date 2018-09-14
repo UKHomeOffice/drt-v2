@@ -14,7 +14,6 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html.{Div, Table}
-
 import scala.collection.immutable.NumericRange
 import scala.scalajs.js.Date
 import scala.util.Success
@@ -126,7 +125,7 @@ object TerminalStaffing {
                   case first :: second :: Nil =>
                     val remove = <.a(Icon.remove, ^.key := first.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) =>
                       Callback{
-                        GoogleEventTracker.sendEvent(terminalName, "Remove Staff Movement", first.toString)
+                        GoogleEventTracker.sendEvent(terminalName, "Remove Staff Movement", first.copy(createdBy = None).toString)
                         SPACircuit.dispatch(RemoveStaffMovement(0, first.uUID))
                       }))
                     val span = <.span(^.`class` := "movement-display", MovementDisplay.displayPair(first, second))
@@ -134,7 +133,7 @@ object TerminalStaffing {
                   case mm :: Nil =>
                     val remove = <.a(Icon.remove, ^.key := mm.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) =>
                       Callback{
-                        GoogleEventTracker.sendEvent(terminalName, "Remove Staff Movement", mm.toString)
+                        GoogleEventTracker.sendEvent(terminalName, "Remove Staff Movement", mm.copy(createdBy = None).toString)
                         SPACircuit.dispatch(RemoveStaffMovement(0, mm.uUID))
                       }))
                     val span = <.span(^.`class` := "movement-display", MovementDisplay.displaySingle(mm))
@@ -185,7 +184,7 @@ object TerminalStaffing {
                   <.button("Save", ^.onClick ==> ((e: ReactEventFromInput) => {
                     val withTerminalName = addTerminalNameAndDate(state.rawFixedPoints, props.terminalName)
                     val newAssignments = FixedPointAssignments(StaffAssignmentParser(withTerminalName).parsedAssignments.toList.collect { case Success(sa) => sa })
-                    GoogleEventTracker.sendEvent(withTerminalName, "Save Fixed Points", newAssignments.toString)
+                    GoogleEventTracker.sendEvent(withTerminalName, "Save Fixed Points", FixedPointAssignments(newAssignments.assignments.map(_.copy(createdBy = None))).toString)
                     Callback(SPACircuit.dispatch(SaveFixedPoints(newAssignments, props.terminalName)))
                   }))
                 )

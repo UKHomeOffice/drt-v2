@@ -71,7 +71,7 @@ object StaffDeploymentsAdjustmentPopover {
           for (movement <- StaffMovements.assignmentsToMovements(Seq(shift))) yield {
             SPACircuit.dispatch(AddStaffMovement(movement))
           }
-          GoogleEventTracker.sendEvent(state.terminalName, "Save Staff Assignment", shift.toString)
+          GoogleEventTracker.sendEvent(state.terminalName, "Save Staff Assignment", shift.copy(createdBy = None).toString)
           SPACircuit.dispatch(SaveStaffMovements(shift.terminalName))
           scope.modState(_.copy(active = false))
         case Failure(_) =>

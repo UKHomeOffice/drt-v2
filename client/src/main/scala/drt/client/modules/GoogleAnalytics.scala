@@ -1,6 +1,9 @@
 package drt.client.modules
 
+import java.util.UUID
+
 import org.scalajs.dom
+
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSGlobalScope
 
@@ -13,7 +16,8 @@ object GoogleEventTracker {
 
   private def runCreateTracker(): Unit = {
     if (!hasCreateTrackerRun && !userId.isEmpty && !port.isEmpty && !trackingCode.isEmpty) {
-      GoogleAnalytics.analytics("create", trackingCode, "auto", js.Dictionary("userId"->userId))
+      val userUUID = if (userId.contains("@")) UUID.randomUUID else userId
+      GoogleAnalytics.analytics("create", trackingCode, "auto", js.Dictionary("userId"->userUUID))
       hasCreateTrackerRun = true
     }
   }
