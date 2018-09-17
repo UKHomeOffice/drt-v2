@@ -27,7 +27,7 @@ object AlertsComponent {
           <.span(^.id:= "has-alerts",
             alerts.map(alert => {
               <.span(^.key := alert.createdAt, ^.`class`:="alert alert-danger the-alert", ^.role:="alert",
-              <.strong(alert.title),s" ${alert.message}"
+              <.strong(alert.title),s" - ${alert.message}"
               )
             }).toVdomArray
             )

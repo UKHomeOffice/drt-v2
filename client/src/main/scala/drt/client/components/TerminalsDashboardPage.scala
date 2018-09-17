@@ -53,7 +53,7 @@ object TerminalsDashboardPage {
               }
 
               <.div(
-                <.div(^.className := "form-group row",
+                <.div(
                   <.div(^.className := "btn-group no-gutters", VdomAttr("data-toggle") := "buttons",
                     periods.zipWithIndex.map {
                       case (p, index) => <.div(
