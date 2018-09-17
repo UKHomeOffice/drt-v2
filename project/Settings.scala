@@ -51,7 +51,7 @@ object Settings {
     val levelDbJni = "1.8"
     val renjin = "0.9.2646"
     val awsSdk = "1.11.89"
-    val awsCommons = "0.10.0"
+    val awsCommons = "0.12.2"
 
     val csvCommons = "1.4"
     val pprint = "0.4.3"
@@ -101,7 +101,7 @@ object Settings {
     "com.hierynomus" % "sshj" % sshJ,
     "com.lihaoyi" %% "pprint" % pprint,
     "com.lihaoyi" %%% "utest" % uTest % Test,
-    "com.mfglabs" %% "commons-aws" % awsCommons,
+    "com.mfglabs" %% "commons-aws-s3" % awsCommons,
 
     "javax.mail" % "mail" % "1.4.7",
     "info.folone" %% "poi-scala" % "0.18",
