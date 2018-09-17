@@ -33,7 +33,7 @@ class SplitsSpec extends Specification {
 
     val splits = splitsCalc.splitsForArrival(manifest, arrival)
 
-    val expectedSplits = ApiSplits(
+    val expectedSplits = Splits(
       Set(
         ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 1, Some(Map("GBR" -> 1.0))),
         ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1, Some(Map("GBR" -> 1.0))),

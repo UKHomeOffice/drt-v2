@@ -12,7 +12,7 @@ import services.SDate
 case class FeatureSpec(columns: List[String], featurePrefix: String)
 
 sealed trait SplitsPredictorLike {
-  def predictForArrivals(arrivals: Seq[Arrival]): Seq[(Arrival, Option[ApiSplits])]
+  def predictForArrivals(arrivals: Seq[Arrival]): Seq[(Arrival, Option[Splits])]
 }
 
 case class SparkSplitsPredictor(sparkSession: SparkSession, portCode: String, flightCodes: Set[String], splitsView: DataFrame)
@@ -42,7 +42,7 @@ case class SparkSplitsPredictor(sparkSession: SparkSession, portCode: String, fl
 
   lazy val paxTypeModels: Map[String, LinearRegressionModel] = paxTypes.map(paxType => (paxType, trainModel(paxType, features))).toMap
 
-  def predictForArrivals(arrivals: Seq[Arrival]): Seq[(Arrival, Option[ApiSplits])] = {
+  def predictForArrivals(arrivals: Seq[Arrival]): Seq[(Arrival, Option[Splits])] = {
     val arrivalsToPredict = arrivals.filter(a => flightCodesToTrain.contains(a.IATA))
 
     val flightSplitsPredictions: List[((String, Long), String, Double)] = paxTypes.flatMap(paxType => {
@@ -71,7 +71,7 @@ case class SparkSplitsPredictor(sparkSession: SparkSession, portCode: String, fl
     arrivalsWithPredictions(arrivals, flightSplitsPredictions)
   }
 
-  def arrivalsWithPredictions(arrivals: Seq[Arrival], flightSplitsPredictions: Seq[((String, Long), String, Double)]): Seq[(Arrival, Option[ApiSplits])] = arrivals
+  def arrivalsWithPredictions(arrivals: Seq[Arrival], flightSplitsPredictions: Seq[((String, Long), String, Double)]): Seq[(Arrival, Option[Splits])] = arrivals
     .map(a => {
       val arrivalSplits: Seq[(String, Double)] = flightSplitsPredictions
         .collect {
@@ -86,7 +86,7 @@ case class SparkSplitsPredictor(sparkSession: SparkSession, portCode: String, fl
                 ApiPaxTypeAndQueueCount(PaxType(s"""$splitType$$"""), splitTypeToQueue(splitType), prediction, None)
             }
             .toSet
-          Option(ApiSplits(paxTypeAndQueueCounts, SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages, None, Percentage))
+          Option(Splits(paxTypeAndQueueCounts, SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages, None, Percentage))
       }
       (a, predictedSplits)
     })

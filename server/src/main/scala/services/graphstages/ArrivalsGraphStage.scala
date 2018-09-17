@@ -2,13 +2,11 @@ package services.graphstages
 
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
-import services.graphstages.Crunch.midnightThisMorning
 
 import scala.collection.immutable.Map
 import scala.language.postfixOps
@@ -26,7 +24,7 @@ class ArrivalsGraphStage(name: String = "",
                          initialBaseArrivals: Set[Arrival],
                          initialForecastArrivals: Set[Arrival],
                          initialLiveArrivals: Set[Arrival],
-                         pcpArrivalTime: Arrival => MilliDate, crunchStartDateProvider: () => MillisSinceEpoch = midnightThisMorning _,
+                         pcpArrivalTime: Arrival => MilliDate,
                          validPortTerminals: Set[String],
                          expireAfterMillis: Long,
                          now: () => SDateLike)
@@ -172,7 +170,7 @@ class ArrivalsGraphStage(name: String = "",
               (notFoundSoFar + 1, mergedSoFar)
             case Some(baseArrival) =>
               val actPax = forecastArrival.ActPax.filter(_ > 0).orElse(baseArrival.ActPax)
-              val mergedArrival = baseArrival.copy(ActPax = actPax, TranPax = forecastArrival.TranPax, Status = forecastArrival.Status)
+              val mergedArrival = baseArrival.copy(ActPax = actPax, TranPax = forecastArrival.TranPax, Status = forecastArrival.Status, FeedSources = baseArrival.FeedSources ++ forecastArrival.FeedSources)
               (notFoundSoFar, mergedSoFar.updated(fcstId, mergedArrival))
           }
       }
@@ -186,8 +184,9 @@ class ArrivalsGraphStage(name: String = "",
             rawIATA = baseArrival.rawIATA,
             rawICAO = baseArrival.rawICAO,
             ActPax = liveArrival.ActPax.filter(_ > 0).orElse(mergedSoFarArrival.ActPax),
-            TranPax = liveArrival.ActPax.filter(_ > 0).flatMap(_ => liveArrival.TranPax).orElse(mergedSoFarArrival.TranPax))
-
+            TranPax = liveArrival.ActPax.filter(_ > 0).flatMap(_ => liveArrival.TranPax).orElse(mergedSoFarArrival.TranPax),
+            FeedSources = liveArrival.FeedSources ++ mergedSoFarArrival.FeedSources
+          )
           mergedSoFar.updated(liveId, mergedArrival)
       }
 

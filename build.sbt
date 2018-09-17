@@ -59,7 +59,8 @@ lazy val client: Project = (project in file("client"))
     resolvers += Resolver.defaultLocal,
     // use uTest framework for tests
     testFrameworks += new TestFramework("utest.runner.Framework"),
-    scalaJSUseMainModuleInitializer := true
+    scalaJSUseMainModuleInitializer := true,
+    parallelExecution in Test := false
   )
   .enablePlugins(ScalaJSPlugin)
   .enablePlugins(ScalaJSBundlerPlugin)
@@ -112,7 +113,8 @@ lazy val server = (project in file("server"))
   PB.targets in Compile := Seq(
     scalapb.gen() -> (sourceManaged in Compile).value / "protobuf"
   ),
-  TwirlKeys.templateImports += "buildinfo._"
+  TwirlKeys.templateImports += "buildinfo._",
+  parallelExecution in Test := false
 )
   .aggregate(clients.map(projectToRef): _*)
   .dependsOn(sharedJVM)
@@ -133,7 +135,7 @@ parallelExecution in Test := false
 // loads the Play server project at sbt startup
 onLoad in Global := (Command.process("project server", _: State)) compose (onLoad in Global).value
 
-// Docker Plugin 
+// Docker Plugin§
 enablePlugins(DockerPlugin)
 // enabled for Alpine JVM docker image compatibility
 enablePlugins(AshScriptPlugin)

@@ -1,6 +1,9 @@
 package data
 
+import drt.shared.{MilliDate, ShiftAssignments, StaffAssignment}
 import org.specs2.mutable.SpecificationLike
+import services.SDate
+import services.graphstages.Crunch
 
 class StaffApiSpec extends SpecificationLike {
 
@@ -25,13 +28,17 @@ class StaffApiSpec extends SpecificationLike {
 
         val shifts = staffJsonToShifts(Json.parse(staffJson))
 
-        val expected =
-          """ |shift0, T1, 28/06/17, 01:00, 01:14, 5
-            |shift1, T1, 28/06/17, 01:15, 01:29, 5
-            |shift2, T1, 28/06/17, 01:30, 01:44, 5
-            |shift3, T1, 28/06/17, 01:45, 01:59, 5""".stripMargin
+        val baseDateTime = SDate("2017-06-28T01:00", Crunch.europeLondonTimeZone)
+        val assignments = 0 to 3 map(i => {
+          val offset = i * 15
+          val startDate = MilliDate(baseDateTime.addMinutes(offset).millisSinceEpoch)
+          val endDate = MilliDate(baseDateTime.addMinutes(offset + 14).millisSinceEpoch)
+          StaffAssignment(i.toString, "T1", startDate, endDate, 5, Option("API"))
+        })
 
-        shifts === Some(expected)
+        val expected = Some(ShiftAssignments(assignments))
+
+        shifts === expected
       }
     }
   }
@@ -54,13 +61,17 @@ class StaffApiSpec extends SpecificationLike {
 
         val shifts = staffJsonToShifts(Json.parse(staffJson))
 
-        val expected =
-          """ |shift0, T1, 28/06/17, 01:00, 01:14, 0
-            |shift1, T1, 28/06/17, 01:15, 01:29, 0
-            |shift2, T1, 28/06/17, 01:30, 01:44, 0
-            |shift3, T1, 28/06/17, 01:45, 01:59, 0""".stripMargin
+        val baseDateTime = SDate("2017-06-28T01:00", Crunch.europeLondonTimeZone)
+        val assignments = 0 to 3 map(i => {
+          val offset = i * 15
+          val startDate = MilliDate(baseDateTime.addMinutes(offset).millisSinceEpoch)
+          val endDate = MilliDate(baseDateTime.addMinutes(offset + 14).millisSinceEpoch)
+          StaffAssignment(i.toString, "T1", startDate, endDate, 0, Option("API"))
+        })
 
-        shifts === Some(expected)
+        val expected = Some(ShiftAssignments(assignments))
+
+        shifts === expected
       }
     }
     "Given invalid JSON"   >> {

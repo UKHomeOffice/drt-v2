@@ -2,6 +2,7 @@ package drt.client.components
 
 import diode.data.Pot
 import drt.client.actions.Actions.AddUserToGroup
+import drt.client.modules.GoogleEventTracker
 import drt.client.services._
 import drt.shared.KeyCloakApi.KeyCloakUser
 import japgolly.scalajs.react.vdom.html_<^._
@@ -34,7 +35,9 @@ object ListKeyCloakUsers {
         )
       })
     }
-    ).build
+    )
+    .componentDidMount(p => Callback(GoogleEventTracker.sendPageView("users")))
+    .build
 
   def apply(): VdomElement = component(Props())
 }

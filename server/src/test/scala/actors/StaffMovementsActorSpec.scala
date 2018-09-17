@@ -6,11 +6,11 @@ import java.util.UUID
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern._
 import akka.util.Timeout
-import controllers.AkkaTestkitSpecs2SupportForPersistence
 import drt.shared.{MilliDate, StaffMovement}
 import org.specs2.matcher.Scope
 import org.specs2.mutable.Specification
 import services.SDate
+
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.language.reflectiveCalls

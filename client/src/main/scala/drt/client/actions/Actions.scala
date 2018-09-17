@@ -3,7 +3,7 @@ package drt.client.actions
 import java.util.UUID
 
 import diode.Action
-import drt.client.services.{StaffAssignment, ViewMode}
+import drt.client.services.ViewMode
 import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, ForecastPeriodWithHeadlines, MillisSinceEpoch}
 import drt.shared.FlightsApi._
 import drt.shared.KeyCloakApi.KeyCloakUser
@@ -49,21 +49,19 @@ object Actions {
 
   case class UpdateAirportConfig(airportConfig: AirportConfig) extends Action
 
-  case class SetFixedPoints(fixedPoints: String, terminalName: Option[String]) extends Action
+  case class SetFixedPoints(fixedPoints: FixedPointAssignments, terminalName: Option[String]) extends Action
 
-  case class SaveFixedPoints(fixedPoints: String, terminalName: TerminalName) extends Action
+  case class SaveFixedPoints(fixedPoints: FixedPointAssignments, terminalName: TerminalName) extends Action
 
   case class GetFixedPoints() extends Action
 
-  case class SetShifts(shifts: String) extends Action
+  case class SetShifts(shifts: ShiftAssignments, terminalName: Option[String]) extends Action
 
   case class GetShifts() extends Action
 
-  case class SetShiftsForMonth(shiftsForMonth: MonthOfRawShifts) extends Action
+  case class SetShiftsForMonth(shiftsForMonth: MonthOfShifts) extends Action
 
   case class GetShiftsForMonth(month: SDateLike, terminalName: TerminalName) extends Action
-
-  case class AddShift(shift: StaffAssignment) extends Action
 
   case class SaveMonthTimeSlotsToShifts(staffTimeSlots: StaffTimeSlotsForTerminalMonth) extends Action
 

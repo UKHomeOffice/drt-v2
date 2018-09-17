@@ -5,7 +5,7 @@ import akka.stream._
 import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
 import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
+import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
@@ -23,8 +23,8 @@ object RunnableCrunch {
                                        fcstArrivalsSource: Source[ArrivalsFeedResponse, FR],
                                        liveArrivalsSource: Source[ArrivalsFeedResponse, FR],
                                        manifestsSource: Source[ManifestsFeedResponse, MS],
-                                       shiftsSource: Source[String, SS],
-                                       fixedPointsSource: Source[String, SFP],
+                                       shiftsSource: Source[ShiftAssignments, SS],
+                                       fixedPointsSource: Source[FixedPointAssignments, SFP],
                                        staffMovementsSource: Source[Seq[StaffMovement], SMM],
                                        actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
 

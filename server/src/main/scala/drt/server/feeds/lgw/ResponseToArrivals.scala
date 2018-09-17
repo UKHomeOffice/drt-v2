@@ -1,11 +1,13 @@
 package drt.server.feeds.lgw
 
 import java.io.ByteArrayInputStream
-import drt.shared.Arrival
+
+import drt.shared.{Arrival, FeedSource, LiveFeedSource}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.apache.commons.io.IOUtils
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.{Logger, LoggerFactory}
+
 import scala.util.{Failure, Success, Try}
 import scala.xml.Node
 import scala.language.postfixOps
@@ -61,6 +63,7 @@ case class ResponseToArrivals(data: Array[Byte], locationOption: Option[String] 
       Origin = parseOrigin(n),
       Scheduled = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("SCT")).map(n => services.SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
       PcpTime = None,
+      FeedSources = Set(LiveFeedSource),
       LastKnownPax = None)
     log.info(s"parsed arrival: $arrival")
     (arrival, locationOption)

@@ -1,7 +1,8 @@
 package drt.staff
 
+import drt.shared.{MilliDate, ShiftAssignments, StaffAssignment}
 import org.joda.time.DateTime
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{JsValue, Json, OFormat}
 import services.SDate.implicits._
 import services.graphstages.Crunch.europeLondonTimeZone
 
@@ -10,21 +11,23 @@ case class StaffShift(port_code: String, terminal: String, staff: String, shift_
 case class StaffShifts(shifts: List[StaffShift])
 
 object ImportStaff {
-  def staffJsonToShifts(staffJson: JsValue): Option[String] = {
-    implicit val shiftFormat = Json.format[StaffShift]
-    implicit val shiftsFormat = Json.format[StaffShifts]
-    staffJson.validate[StaffShifts].asOpt map {
+  def staffJsonToShifts(staffJson: JsValue): Option[ShiftAssignments] = {
+    implicit val shiftFormat: OFormat[StaffShift] = Json.format[StaffShift]
+    implicit val shiftsFormat: OFormat[StaffShifts] = Json.format[StaffShifts]
+
+    val maybeAssignments = staffJson.validate[StaffShifts].asOpt map {
       case StaffShifts(shifts) =>
-        shifts.zipWithIndex.map{
+        shifts.zipWithIndex.map {
           case (shift, index) =>
             //The client deals in local time, and these shifts are sent to the client as strings with no timezone for now.
             //TODO: store shifts not as strings.
             val shiftStartDate = new DateTime(shift.shift_start).withZone(europeLondonTimeZone)
             val shiftsEndDate = shiftStartDate.addMinutes(14)
 
-            f"shift$index, ${shift.terminal}, ${shiftStartDate.ddMMyyString}, ${shiftStartDate.getHours()}%02d:${shiftStartDate.getMinutes()}%02d, ${shiftsEndDate.getHours()}%02d:${shiftsEndDate.getMinutes()}%02d, ${shift.staff}"
-        }.mkString("\n")
+            StaffAssignment(index.toString, shift.terminal, MilliDate(shiftStartDate.millisSinceEpoch), MilliDate(shiftsEndDate.millisSinceEpoch), shift.staff.toInt, Option("API"))
+        }
     }
+    maybeAssignments.map(ShiftAssignments(_))
   }
 
 }

@@ -6,7 +6,7 @@ import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import com.typesafe.config.{Config, ConfigFactory}
 import drt.server.feeds.lgw.{GatwickAzureToken, LGWFeed}
-import drt.shared.Arrival
+import drt.shared.{Arrival, LiveFeedSource}
 import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.Scope
@@ -105,7 +105,7 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       BaggageReclaimId = None,
       FlightID = None,
       AirportID = "LGW",
-      Terminal = "N", rawICAO = "VIR808", rawIATA = "VS808", Origin = "LHR",
+      Terminal = "N", rawICAO = "VIR808", rawIATA = "VS808", Origin = "LHR", FeedSources = Set(LiveFeedSource),
       Scheduled = SDate("2018-06-03T19:50:00Z").millisSinceEpoch, PcpTime = None, LastKnownPax = None)
 
     deleteCalled must beTrue

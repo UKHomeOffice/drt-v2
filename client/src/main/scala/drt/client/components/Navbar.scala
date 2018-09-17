@@ -1,7 +1,9 @@
 package drt.client.components
 
 import drt.client.SPAMain.Loc
+import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
+import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router.{BaseUrl, RouterCtl}
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html
@@ -26,11 +28,15 @@ object Navbar {
               <.div(^.className := "collapse navbar-collapse", MainMenu(ctl, page, feedStatusesPot.getOrElse(Seq()), airportConfig, loggedInUser.roles),
                 <.ul(^.className := "nav navbar-nav navbar-right",
                   <.li(contactLink),
-                  <.li(<.a(Icon.signOut, "Log Out", ^.href := "/oauth/logout?redirect=" + BaseUrl.until_#.value))
+                  <.li(<.a(Icon.signOut, "Log Out", ^.href := "/oauth/logout?redirect=" + BaseUrl.until_#.value,
+                    ^.onClick --> Callback(GoogleEventTracker.sendEvent(airportConfig.portCode, "Log Out", loggedInUser.id))))
                 )
               ))
             )
-          }))
+          }),
+          loggedInUserPot.render(loggedInUser => <.input.hidden(^.id:="user-id", ^.value:=loggedInUser.id)),
+          loggedInUserPot.renderEmpty(<.input.hidden(^.id:="user-id"))
+          )
       })
     )
   }

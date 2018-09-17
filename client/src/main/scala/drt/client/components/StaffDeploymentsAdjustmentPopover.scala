@@ -1,9 +1,10 @@
 package drt.client.components
 
 import drt.client.actions.Actions.{AddStaffMovement, SaveStaffMovements}
+import drt.client.modules.GoogleEventTracker
 import drt.client.services._
 import drt.shared.FlightsApi.TerminalName
-import drt.shared.{LoggedInUser, SDateLike}
+import drt.shared.{LoggedInUser, SDateLike, StaffAssignment}
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html
@@ -64,12 +65,13 @@ object StaffDeploymentsAdjustmentPopover {
       val startTime: String = f"${state.startTimeHours}%02d:${state.startTimeMinutes}%02d"
       val endTime: String = f"${state.endTimeHours}%02d:${state.endTimeMinutes}%02d"
       val numberOfStaff: String = s"$action${state.numberOfStaff.toString}"
-      val shiftTry = StaffAssignment(state.reason, state.terminalName, state.date, startTime, endTime, numberOfStaff, createdBy = Some(loggedInUser.email))
+      val shiftTry = StaffAssignmentHelper.tryStaffAssignment(state.reason, state.terminalName, state.date, startTime, endTime, numberOfStaff, createdBy = Some(loggedInUser.email))
       shiftTry match {
         case Success(shift) =>
           for (movement <- StaffMovements.assignmentsToMovements(Seq(shift))) yield {
             SPACircuit.dispatch(AddStaffMovement(movement))
           }
+          GoogleEventTracker.sendEvent(state.terminalName, "Save Staff Assignment", shift.copy(createdBy = None).toString)
           SPACircuit.dispatch(SaveStaffMovements(shift.terminalName))
           scope.modState(_.copy(active = false))
         case Failure(_) =>

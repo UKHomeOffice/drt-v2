@@ -2,7 +2,7 @@ package drt.client.components
 
 import drt.client.components.FlightComponents.bestPaxToDisplay
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.Arrival
+import drt.shared.{Arrival, ApiFeedSource}
 import utest._
 
 
@@ -96,6 +96,7 @@ object ArrivalGenerator {
       Origin = origin,
       PcpTime = if (schDt != "") Some(SDate.parse(schDt).millisSinceEpoch) else None,
       Scheduled = if (schDt != "") SDate.parse(schDt).millisSinceEpoch else 0L,
-      LastKnownPax = lastKnownPax
+      LastKnownPax = lastKnownPax,
+      FeedSources = Set(ApiFeedSource)
     )
 }

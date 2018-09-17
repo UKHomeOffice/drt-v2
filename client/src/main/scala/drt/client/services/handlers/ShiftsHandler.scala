@@ -2,39 +2,36 @@ package drt.client.services.handlers
 
 import autowire._
 import boopickle.Default._
-import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import diode.data.{Pot, Ready}
-import diode.{ActionResult, Effect, ModelRW}
+import diode.{ActionResult, Effect, ModelRW, NoAction}
 import diode.Implicits.runAfterImpl
-import drt.client.actions.Actions.{AddShift, GetShifts, RetryActionAfter, SetShifts}
+import drt.client.actions.Actions.{GetShifts, SetShifts}
 import drt.client.logger.log
-import drt.client.services.{AjaxClient, PollDelay, ViewMode}
-import drt.shared.Api
+import drt.client.services.{AjaxClient, ViewMode}
+import drt.shared.{Api, ShiftAssignments}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
+import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class ShiftsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[String]]) extends LoggingActionHandler(modelRW) {
+class ShiftsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[ShiftAssignments]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case SetShifts(shifts: String) =>
-      val scheduledRequest = Effect(Future(GetShifts())).after(15 seconds)
-
-      updated(Ready(shifts), scheduledRequest)
-
-    case AddShift(shift) =>
-      updated(Ready(s"${value.getOrElse("")}\n${shift.toCsv}"))
+    case SetShifts(shifts, _) => updated(Ready(shifts))
 
     case GetShifts() =>
+      val fixedPointsEffect = Effect(Future(GetShifts())).after(1 minute)
       log.info(s"Calling getShifts")
 
-      val apiCallEffect = Effect(AjaxClient[Api].getShifts(viewMode().millis).call()
-        .map(SetShifts)
-        .recoverWith {
-          case _ =>
-            log.error(s"Failed to get shifts. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(RetryActionAfter(GetShifts(), PollDelay.recoveryDelay))
-        })
-      effectOnly(apiCallEffect)
+      val apiCallEffect = Effect(
+        AjaxClient[Api].getShifts(viewMode().millis).call()
+          .map(res => SetShifts(res, None))
+          .recoverWith {
+            case _ =>
+              log.error(s"Failed to get shifts. Polling will continue")
+              Future(NoAction)
+          }
+      )
+      effectOnly(apiCallEffect + fixedPointsEffect)
   }
 }

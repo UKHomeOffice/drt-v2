@@ -3,6 +3,7 @@ package drt.client.components
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.CrunchMinute
 import drt.shared._
+import drt.shared.splits.ApiSplitsToSplitRatio
 import utest._
 
 object DashboardComponentTests extends TestSuite {

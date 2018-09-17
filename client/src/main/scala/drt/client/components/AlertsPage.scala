@@ -4,6 +4,7 @@ import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.actions.Actions.{DeleteAllAlerts, SaveAlert}
 import drt.client.logger.{Logger, LoggerFactory}
+import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -26,6 +27,7 @@ object AlertsPage {
       val modelRCP = SPACircuit.connect(m => m.alerts)
 
       def deleteAllAlerts = (_: ReactEventFromInput) => {
+        GoogleEventTracker.sendEvent("alerts", "Delete All Alerts", "")
         SPACircuit.dispatch(DeleteAllAlerts)
         scope.setState(State())
       }
@@ -48,7 +50,9 @@ object AlertsPage {
           message <- state.message
           expiryDateTime <- state.expiryDateTime
         } yield {
-          SPACircuit.dispatch(SaveAlert(Alert(title, message, expiryDateTime, SDate.now().millisSinceEpoch)))
+          val alert = Alert(title, message, expiryDateTime, SDate.now().millisSinceEpoch)
+          GoogleEventTracker.sendEvent("alerts", "Add Alert", alert.toString)
+          SPACircuit.dispatch(SaveAlert(alert))
         }
         scope.setState(State())
       }
@@ -134,6 +138,7 @@ object AlertsPage {
         )
       )
     })
+    .componentDidMount(p => Callback(GoogleEventTracker.sendPageView("alerts")))
     .build
 
   def apply(): VdomElement = component()
