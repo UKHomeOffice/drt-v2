@@ -81,7 +81,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
     override def getAWSSecretKey: TerminalName = config.getOptional[String]("aws.credentials.secret_key").getOrElse("")
   }
-  log.info(s"awsCreds: ${awSCredentials.getAWSAccessKeyId}, ${awSCredentials.getAWSSecretKey}")
   val expireAfterMillis: MillisSinceEpoch = 2 * oneDayMillis
 
   val ftpServer: String = ConfigFactory.load.getString("acl.host")
