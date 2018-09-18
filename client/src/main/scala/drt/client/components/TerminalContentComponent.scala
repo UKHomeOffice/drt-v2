@@ -150,9 +150,10 @@ object TerminalContentComponent {
                     val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState, props.terminalPageTab.terminal)
                     TerminalDesksAndQueues(
                       TerminalDesksAndQueues.Props(
+                        props.router,
                         filteredPortState,
                         props.airportConfig,
-                        props.terminalPageTab.terminal,
+                        props.terminalPageTab,
                         props.showActuals,
                         props.viewMode,
                         loggedInUser

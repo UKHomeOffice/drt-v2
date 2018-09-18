@@ -42,7 +42,7 @@ object TerminalPlanningComponent {
       def drawSelect(names: Seq[String], values: List[String], value: String) = {
         <.select(^.className := "form-control", ^.value := value.toString,
           ^.onChange ==> ((e: ReactEventFromInput) => {
-            props.router.set(props.page.copy(date = Option(SDate(e.target.value).toLocalDateTimeString())))
+            props.router.set(props.page.withDate(SDate(e.target.value).toLocalDateTimeString()))
           }),
           values.zip(names).map {
             case (value, name) => <.option(^.value := value.toString, name)

@@ -1,5 +1,6 @@
 package drt.client.components
 
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.actions.Actions.UpdateShowActualDesksAndQueues
 import drt.client.components.TerminalDesksAndQueues.{NodeListSeq, ViewDeps, ViewRecs, ViewType, documentScrollHeight, documentScrollTop, queueActualsColour, queueColour}
 import drt.client.logger.{Logger, LoggerFactory}
@@ -10,6 +11,7 @@ import drt.shared.CrunchApi.{CrunchMinute, CrunchState, MillisSinceEpoch, StaffM
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
+import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom
@@ -119,9 +121,10 @@ object TerminalDesksAndQueues {
 
   def queueActualsColour(queueName: String): String = s"${queueColour(queueName)} actuals"
 
-  case class Props(crunchState: CrunchState,
+  case class Props(router: RouterCtl[Loc],
+                   crunchState: CrunchState,
                    airportConfig: AirportConfig,
-                   terminalName: TerminalName,
+                   terminalPageTab: TerminalPageTabLoc,
                    showActuals: Boolean,
                    viewMode: ViewMode,
                    loggedInUser: LoggedInUser
@@ -137,14 +140,14 @@ object TerminalDesksAndQueues {
 
   val component = ScalaComponent.builder[Props]("Loader")
     .initialStateFromProps(p => {
-      State(showActuals = p.airportConfig.hasActualDeskStats && p.showActuals, ViewDeps)
+      State(showActuals = p.airportConfig.hasActualDeskStats && p.showActuals, p.terminalPageTab.viewType)
     })
     .renderPS((scope, props, state) => {
       def groupCrunchMinutesBy15 = CrunchApi.groupCrunchMinutesByX(15) _
 
       def groupStaffMinutesBy15 = CrunchApi.groupStaffMinutesByX(15) _
 
-      val queueNames = props.airportConfig.queues(props.terminalName).collect {
+      val queueNames = props.airportConfig.queues(props.terminalPageTab.terminal).collect {
         case queueName: String if queueName != Queues.Transfer => queueName
       }
 
@@ -192,7 +195,7 @@ object TerminalDesksAndQueues {
 
       def qth(queueName: String, xs: TagMod*) = <.th((^.className := queueName + "-user-desk-rec") :: xs.toList: _*)
 
-      val queueHeadings: List[TagMod] = props.airportConfig.queues(props.terminalName).collect {
+      val queueHeadings: List[TagMod] = props.airportConfig.queues(props.terminalPageTab.terminal).collect {
         case queueName if queueName != Queues.Transfer =>
           val colsToSpan = if (state.showActuals) 5 else 3
           qth(queueName, queueDisplayName(queueName), ^.colSpan := colsToSpan, ^.className := "top-heading")
@@ -204,16 +207,16 @@ object TerminalDesksAndQueues {
       )
 
       val terminalCrunchMinutes = groupCrunchMinutesBy15(
-        CrunchApi.terminalMinutesByMinute(props.crunchState.crunchMinutes, props.terminalName),
-        props.terminalName,
+        CrunchApi.terminalMinutesByMinute(props.crunchState.crunchMinutes, props.terminalPageTab.terminal),
+        props.terminalPageTab.terminal,
         Queues.queueOrder
       )
       val staffMinutesByMillis = CrunchApi
-        .terminalMinutesByMinute(props.crunchState.staffMinutes, props.terminalName)
+        .terminalMinutesByMinute(props.crunchState.staffMinutes, props.terminalPageTab.terminal)
         .map {
           case (millis, minutes) => (millis, minutes.head)
         }
-      val terminalStaffMinutes = groupStaffMinutesBy15(staffMinutesByMillis, props.terminalName).toMap
+      val terminalStaffMinutes = groupStaffMinutesBy15(staffMinutesByMillis, props.terminalPageTab.terminal).toMap
 
       val toggleShowActuals = (e: ReactEventFromInput) => {
         val newValue: Boolean = e.target.checked
@@ -224,8 +227,10 @@ object TerminalDesksAndQueues {
       }
 
       def toggleViewType(newViewType: ViewType) = (e: ReactEventFromInput) => {
-        GoogleEventTracker.sendEvent(s"${props.terminalName}", "Desks & Queues", newViewType.toString)
-        scope.modState(_.copy(viewType = newViewType))
+        GoogleEventTracker.sendEvent(s"${props.terminalPageTab.terminal}", "Desks & Queues", newViewType.toString)
+        props.router.set(
+          props.terminalPageTab.withViewType(newViewType)
+        )
       }
 
       def viewTypeControls(viewDepsClass: String, viewRecsClass: String): TagMod = {
@@ -287,7 +292,7 @@ object TerminalDesksAndQueues {
                   minutes,
                   terminalStaffMinutes.getOrElse(millis, StaffMinute.empty),
                   props.airportConfig,
-                  props.terminalName,
+                  props.terminalPageTab.terminal,
                   state.showActuals,
                   state.viewType,
                   props.airportConfig.hasActualDeskStats,

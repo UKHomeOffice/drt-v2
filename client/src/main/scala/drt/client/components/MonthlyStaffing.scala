@@ -143,9 +143,9 @@ object MonthlyStaffing {
                 values = monthOptions.map(_.toISOString()),
                 names = monthOptions.map(d => s"${d.getMonthString()} ${d.getFullYear()}"),
                 defaultValue = viewingDate.toISOString(),
-                callback = (e: ReactEventFromInput) =>
-                  props.router.set(props.terminalPageTab.copy(date = Option(SDate(e.target.value).toISODateOnly)))
-              )),
+                callback = (e: ReactEventFromInput) => {
+                  props.router.set(props.terminalPageTab.withDate(SDate(e.target.value).toISODateOnly))
+                })),
               <.div(<.label("Time Resolution", ^.className := "text center")),
               <.div(drawSelect(
                 values = Seq("15", "60"),

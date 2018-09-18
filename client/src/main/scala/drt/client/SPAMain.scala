@@ -1,8 +1,10 @@
 package drt.client
 
 import diode.Action
+import drt.client.SPAMain.TerminalPageTabLoc
 import drt.client.actions.Actions._
-import drt.client.components.{AlertsPage, GlobalStyles, KeyCloakUsersPage, Layout, StatusPage, TerminalComponent, TerminalPlanningComponent, TerminalsDashboardPage}
+import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType}
+import drt.client.components.{AlertsPage, GlobalStyles, KeyCloakUsersPage, Layout, StatusPage, TerminalComponent, TerminalDesksAndQueues, TerminalPlanningComponent, TerminalsDashboardPage}
 import drt.client.logger._
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -23,13 +25,16 @@ object SPAMain {
   sealed trait Loc
 
   case class TerminalPageTabLoc(
-                                 terminal: String,
-                                 mode: String = "current",
-                                 subMode: String = "desksAndQueues",
-                                 date: Option[String] = None,
-                                 timeRangeStartString: Option[String] = None,
-                                 timeRangeEndString: Option[String] = None
-                               ) extends Loc {
+                                  terminal: String,
+                                  mode: String = "current",
+                                  subMode: String = "desksAndQueues",
+                                  queryParams: Map[String, String] = Map.empty[String, String]
+                                ) extends Loc {
+    val date: Option[String] = queryParams.get("date").filter(_.matches(".+"))
+    val timeRangeStartString: Option[String] = queryParams.get("timeRangeStart").filter(_.matches("[0-9]+"))
+    val timeRangeEndString: Option[String] = queryParams.get("timeRangeEnd").filter(_.matches("[0-9]+"))
+    val viewType: ViewType = queryParams.get("viewType").map(vt => if (ViewRecs.toString.contains(vt)) ViewRecs else ViewDeps).getOrElse(ViewDeps)
+
     def viewMode: ViewMode = {
       (mode, date) match {
         case ("current", Some(dateString)) => ViewDay(parseDateString(dateString))
@@ -37,6 +42,32 @@ object SPAMain {
           .getOrElse(SDate.midnightThisMorning()))
         case _ => ViewLive()
       }
+    }
+
+    def withDateAndTime(date: Option[String], timeStart: Option[String], timeEnd: Option[String]): TerminalPageTabLoc = {
+      val params = Seq("date", "timeRangeStart", "timeRangeEnd")
+      def optMap(value : Option[String], key: String)  = value.map(key -> _).toMap
+      val newQueryParams = queryParams.filterNot(kv=> params.contains(kv._1)) ++ optMap(date, "date") ++ optMap(timeStart, "timeRangeStart") ++ optMap(timeEnd, "timeRangeEnd")
+      copy(queryParams = newQueryParams)
+    }
+
+    def withNoDate: TerminalPageTabLoc = {
+      copy(queryParams = queryParams.filterNot(kv=> kv._1 == "date"))
+    }
+    def withDate(date: String): TerminalPageTabLoc = {
+      copy(queryParams = (queryParams + ("date" -> date)).filterNot(kv => kv._2 != "") )
+    }
+
+    def withViewType(viewType: ViewType): TerminalPageTabLoc = {
+      copy(queryParams = queryParams + ("viewType" -> viewType.toString) )
+    }
+
+    def withTimeStart(timeStart: String): TerminalPageTabLoc = {
+      copy(queryParams = queryParams + ("timeRangeStart" -> timeStart))
+    }
+
+    def withTimeEnd(timeEnd: String): TerminalPageTabLoc = {
+      copy(queryParams = queryParams + ("timeRangeEnd" -> timeEnd))
     }
 
     def parseDateString(s: String): SDateLike = SDate.parseAsLocalDateTime(s.replace("%20", " ").split(" ").mkString("T"))
@@ -147,17 +178,14 @@ object SPAMain {
 
   def terminalRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
     import dsl._
+    import modules.AdditionalDsl._
 
     val requiredTerminalName = string("[a-zA-Z0-9]+")
     val requiredTopLevelTab = string("[a-zA-Z0-9]+")
     val requiredSecondLevelTab = string("[a-zA-Z0-9]+")
-    val optionalDate = string(".+").option
-    val optionalTimeRangeStartHour = string("[0-9]+").option
-    val optionalTimeRangeEndHour = string("[0-9]+").option
 
     dynamicRouteCT(
-      ("#terminal" / requiredTerminalName / requiredTopLevelTab / requiredSecondLevelTab / optionalDate
-        / optionalTimeRangeStartHour / optionalTimeRangeEndHour).caseClass[TerminalPageTabLoc]) ~>
+      ("#terminal" / requiredTerminalName / requiredTopLevelTab / requiredSecondLevelTab / "" ~ queryToMap).caseClass[TerminalPageTabLoc]) ~>
       dynRenderR((page: TerminalPageTabLoc, router) => {
         val props = TerminalComponent.Props(terminalPageTab = page, router)
         TerminalComponent(props)
