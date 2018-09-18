@@ -9,9 +9,11 @@ import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source, StreamConverters}
 import akka.util.ByteString
+import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.amazonaws.regions.Regions
 import com.mfglabs.commons.aws.s3._
+import com.typesafe.config.Config
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.mutable.ArrayBuffer
@@ -24,9 +26,10 @@ trait ApiProviderLike {
   def manifestsFuture(latestFile: String): Future[Seq[(String, String)]]
 }
 
-case class S3ApiProvider(bucketName: String)(implicit actorSystem: ActorSystem, materializer: Materializer) extends ApiProviderLike {
+case class S3ApiProvider(awsCredentials: AWSCredentials, bucketName: String)(implicit actorSystem: ActorSystem, materializer: Materializer) extends ApiProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
   val dqRegex: Regex = "(drt_dq_[0-9]{6}_[0-9]{6})(_[0-9]{4}\\.zip)".r
+  val config: Config = actorSystem.settings.config
 
   def manifestsFuture(latestFile: String): Future[Seq[(String, String)]] = {
     log.info(s"Requesting DQ zip files > ${latestFile.take(20)}")
@@ -89,5 +92,5 @@ case class S3ApiProvider(bucketName: String)(implicit actorSystem: ActorSystem, 
     listFilesAsStream(bucketName)
     .map(_.getKey)
 
-  def s3Client: AmazonS3Client = AmazonS3Client(Regions.EU_WEST_2, new ProfileCredentialsProvider("drt-prod-s3").getCredentials)()
+  def s3Client: AmazonS3Client = AmazonS3Client(Regions.EU_WEST_2, awsCredentials)()
 }
