@@ -7,6 +7,7 @@ import akka.pattern.AskableActorRef
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
+import com.amazonaws.auth.AWSCredentials
 import com.typesafe.config.ConfigFactory
 import controllers.{Deskstats, PaxFlow, UserRoleProviderLike}
 import drt.chroma._
@@ -75,6 +76,11 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val snapshotMegaBytesFcstPortState: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.forecast-portstate").getOrElse(10d) * oneMegaByte).toInt
   val snapshotMegaBytesLivePortState: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.live-portstate").getOrElse(25d) * oneMegaByte).toInt
   val snapshotMegaBytesVoyageManifests: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.voyage-manifest").getOrElse(100d) * oneMegaByte).toInt
+  val awSCredentials: AWSCredentials = new AWSCredentials {
+    override def getAWSAccessKeyId: TerminalName = config.getOptional[String]("aws.credentials.access_key_id").getOrElse("")
+
+    override def getAWSSecretKey: TerminalName = config.getOptional[String]("aws.credentials.secret_key").getOrElse("")
+  }
   val expireAfterMillis: MillisSinceEpoch = 2 * oneDayMillis
 
   val ftpServer: String = ConfigFactory.load.getString("acl.host")
@@ -120,7 +126,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   val dqZipBucketName: String = config.getOptional[String]("dq.s3.bucket").getOrElse(throw new Exception("You must set DQ_S3_BUCKET for us to poll for AdvPaxInfo"))
   val apiS3PollFrequencyMillis: MillisSinceEpoch = config.getOptional[Int]("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
-  val s3ApiProvider = S3ApiProvider(dqZipBucketName)
+  val s3ApiProvider = S3ApiProvider(awSCredentials, dqZipBucketName)
   val initialManifestsState: Option[VoyageManifestState] = manifestsState
   val maybeLatestZipFileName: String = initialManifestsState.map(_.latestZipFilename).getOrElse("")
 
