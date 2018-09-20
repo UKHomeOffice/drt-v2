@@ -130,7 +130,7 @@ object SDateTests extends TestSuite {
           assert(actual == "2016-12-10T1000")
         }
         "should take dates as UTC but return as local time when parsing a string" - {
-          val actual = SDate.parse("2017-03-01T13:40").toString
+          val actual = SDate("2017-03-01T13:40").toString
           assert(actual == "2017-03-01T1340")
         }
       }

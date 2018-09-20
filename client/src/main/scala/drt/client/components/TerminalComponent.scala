@@ -115,7 +115,7 @@ object TerminalComponent {
                 }
               ),
               model.loggedInUserPot.render(
-                loggedInUser => if (loggedInUser.roles.contains(StaffEdit))
+                loggedInUser => if (true || loggedInUser.roles.contains(StaffEdit))
                   <.li(^.className := staffingClass,
                     <.a(^.id := "monthlyStaffingTab", VdomAttr("data-toggle") := "tab", "Monthly Staffing"), ^.onClick --> {
                       GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Monthly Staffing")
@@ -161,7 +161,7 @@ object TerminalComponent {
                 } else ""
               }),
               model.loggedInUserPot.render(
-                loggedInUser => if (loggedInUser.roles.contains(StaffEdit))
+                loggedInUser => if (true || loggedInUser.roles.contains(StaffEdit))
                   <.div(^.id := "staffing", ^.className := s"tab-pane terminal-staffing-container $staffingContentClass",
                     if (props.terminalPageTab.mode == "staffing") {
                       model.potMonthOfShifts.render(ms => {

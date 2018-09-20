@@ -43,12 +43,13 @@ object MonthlyStaffing {
 
   def slotsInDay(date: SDateLike, slotDuration: Int): Seq[SDateLike] = {
     val minutesInDay = 24 * 60
-    val startOfDay = firstSecondOfTheDay(date)
+    val startOfDay = midnightForDate(date)
+    println(s"startOfDay: ${startOfDay.millisSinceEpoch}")
     val slots = minutesInDay / slotDuration
     List.tabulate(slots)(i => startOfDay.addMinutes(i * slotDuration))
   }
 
-  def firstSecondOfTheDay(date: SDateLike): SDateLike = SDate(y = date.getFullYear(), m = date.getMonth(), d = date.getDate())
+  def midnightForDate(date: SDateLike): SDateLike = SDate(y = date.getFullYear(), m = date.getMonth(), d = date.getDate())
 
   def drawSelect(values: Seq[String], names: Seq[String], defaultValue: String, callback: ReactEventFromInput => Callback): TagOf[Select] = {
     val valueNames = values.zip(names)
