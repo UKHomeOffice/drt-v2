@@ -60,7 +60,10 @@ object JSDateConversions {
 
       override def toISOString(): String = date.toISOString()
 
-      def getDayOfWeek(): Int = date.format("d").toInt
+      def getDayOfWeek(): Int = {
+        val dow = date.format("d").toInt
+        if (dow == 0) 7 else dow
+      }
 
       def getZone(): String = date.tz()
 
@@ -89,8 +92,7 @@ object JSDateConversions {
 
     def stringToSDateLikeOption(dateString: String): Option[SDateLike] = {
       val moment = Moment.tz(dateString, europeLondon)
-      if (moment.isValid())
-        Option(moment)
+      if (moment.isValid()) Option(JSSDate(moment))
       else None
     }
 

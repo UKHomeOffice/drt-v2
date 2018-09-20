@@ -2,6 +2,7 @@ package drt.client.services
 
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.{MilliDate, SDateLike}
+import moment.Moment
 import utest.TestSuite
 import utest._
 
@@ -33,12 +34,12 @@ object SDateTests extends TestSuite {
       }
 
       "round trip the above magic numbers 1481364000000d is 2016/12/10 10:00" - {
-        val sdate: SDateLike = SDate.JSSDate(new Date(1481364000000d))
+        val sdate: SDateLike = SDate.JSSDate(Moment(1481364000000d))
         assert((2016, 12, 10, 10, 0) == Tuple5(sdate.getFullYear(), sdate.getMonth(), sdate.getDate(), sdate.getHours(), sdate.getMinutes()))
       }
 
       "round trip the above magic numbers 1482148800000L is 2016/12/19 12:00" - {
-        val sdate: SDateLike = SDate.JSSDate(new Date(1482148800000d))
+        val sdate: SDateLike = SDate.JSSDate(Moment(1482148800000d))
         assert((2016, 12, 19, 12, 0) == Tuple5(sdate.getFullYear(), sdate.getMonth(), sdate.getDate(), sdate.getHours(), sdate.getMinutes()))
       }
 
