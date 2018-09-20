@@ -14,7 +14,7 @@ import scala.concurrent.Future
 
 class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[CrunchState], MillisSinceEpoch)], crunchStateMP: ModelR[M, Pot[CrunchState]]) extends LoggingActionHandler(viewModeCrunchStateMP) {
 
-  def midnightThisMorning: SDateLike = SDate.dayStart(SDate.now())
+  def midnightThisMorning: SDateLike = SDate.midnightOf(SDate.now())
 
   def isViewModeAbleToPoll(viewMode: ViewMode): Boolean =   viewMode match {
     case ViewLive() => true

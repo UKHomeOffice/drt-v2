@@ -96,16 +96,20 @@ object JSDateConversions {
       else None
     }
 
-    def midnightThisMorning(): SDateLike = dayStart(Moment())
+    def midnightThisMorning(): SDateLike = midnightOf(Moment())
 
-    def dayStart(pointInTime: SDateLike): SDateLike = dayStart(Moment(pointInTime.millisSinceEpoch))
+    def midnightOf(pointInTime: SDateLike): SDateLike = midnightOf(Moment(pointInTime.millisSinceEpoch))
 
-    def dayStart(mDate: moment.Date): SDateLike = mDate
+    def midnightOf(mDate: moment.Date): SDateLike = mDate
       .tz(europeLondon)
       .hour(0)
       .minute(0)
       .second(0)
       .millisecond(0)
+
+    def firstDayOfMonth(today: SDateLike) = SDate(y = today.getFullYear(), m = today.getMonth(), d = 1)
+
+    def lastDayOfMonth(today: SDateLike): SDateLike = firstDayOfMonth(today).addMonths(1).addDays(-1)
 
     def now(): SDateLike = Moment().tz(europeLondon)
   }

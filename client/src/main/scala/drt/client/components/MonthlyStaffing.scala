@@ -43,15 +43,13 @@ object MonthlyStaffing {
 
   def slotsInDay(date: SDateLike, slotDuration: Int): Seq[SDateLike] = {
     val minutesInDay = 24 * 60
-    val startOfDay = midnightForDate(date)
+    val startOfDay = SDate.midnightOf(date)
     val slots = minutesInDay / slotDuration
     List.tabulate(slots)(i => {
       val minsToAdd = i * slotDuration
       startOfDay.addMinutes(minsToAdd)
     })
   }
-
-  def midnightForDate(date: SDateLike): SDateLike = SDate(y = date.getFullYear(), m = date.getMonth(), d = date.getDate())
 
   def drawSelect(values: Seq[String], names: Seq[String], defaultValue: String, callback: ReactEventFromInput => Callback): TagOf[Select] = {
     val valueNames = values.zip(names)
@@ -60,15 +58,6 @@ object MonthlyStaffing {
       valueNames.map {
         case (value, name) => <.option(^.value := value, s"$name")
       }.toTagMod)
-  }
-
-  def firstDayOfMonth(today: SDateLike) = SDate(y = today.getFullYear(), m = today.getMonth(), d = 1)
-
-  def lastDayOfMonth(today: SDateLike): SDateLike = {
-    val firstOfMonth: SDateLike = firstDayOfMonth(today)
-
-    val lastDayOfMonth = firstOfMonth.addMonths(1).addDays(-1)
-    lastDayOfMonth
   }
 
   def toTimeSlots(startTime: SDateLike, endTime: SDateLike): Seq[SDateLike] = {
@@ -81,7 +70,7 @@ object MonthlyStaffing {
     List.tabulate(days)(i => startDay.addDays(i))
   }
 
-  def sixMonthsFromFirstOfMonth(date: SDateLike): Seq[SDateLike] = (0 to 5).map(i => firstDayOfMonth(date).addMonths(i))
+  def sixMonthsFromFirstOfMonth(date: SDateLike): Seq[SDateLike] = (0 to 5).map(i => SDate.firstDayOfMonth(date).addMonths(i))
 
   def applyRecordedChangesToShiftState(staffTimeSlotDays: Seq[Seq[Int]], changes: Map[(Int, Int), Int]): Seq[Seq[Int]] = changes
     .foldLeft(staffTimeSlotDays) {
@@ -138,7 +127,7 @@ object MonthlyStaffing {
           }
         }
 
-      val viewingDate = firstDayOfMonth(props.terminalPageTab.dateFromUrlOrNow)
+      val viewingDate = SDate.firstDayOfMonth(props.terminalPageTab.dateFromUrlOrNow)
       <.div(
         <.div(^.className := "date-picker",
           <.div(^.className := "row",
@@ -200,9 +189,7 @@ object MonthlyStaffing {
     val terminalShifts = props.shifts.forTerminal(terminalName)
     val shiftAssignments = ShiftAssignments(terminalShifts)
 
-    def firstDay = firstDayOfMonth(viewingDate)
-
-    def daysInMonth = consecutiveDaysInMonth(firstDay, lastDayOfMonth(firstDay))
+    val daysInMonth = consecutiveDaysInMonth(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
 
     val timeSlots = slotsInDay(viewingDate, props.timeSlotMinutes)
       .map(slot => {
