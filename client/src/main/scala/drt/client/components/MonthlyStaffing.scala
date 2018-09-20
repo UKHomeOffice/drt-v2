@@ -44,7 +44,6 @@ object MonthlyStaffing {
   def slotsInDay(date: SDateLike, slotDuration: Int): Seq[SDateLike] = {
     val minutesInDay = 24 * 60
     val startOfDay = midnightForDate(date)
-    println(s"startOfDay: ${startOfDay.millisSinceEpoch}")
     val slots = minutesInDay / slotDuration
     List.tabulate(slots)(i => startOfDay.addMinutes(i * slotDuration))
   }
