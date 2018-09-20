@@ -45,7 +45,11 @@ trait StaffMovementsPersistence {
         .map { case StaffMovements(sm) =>
           staffMovementsReadActor ! PoisonPill
           sm
-        }.recoverWith { case _ => Future(Seq()) }
+        }.recoverWith {
+        case _ =>
+          staffMovementsReadActor ! PoisonPill
+          Future(Seq())
+      }
     } else {
       staffMovementsActor.ask(GetState)
         .map { case StaffMovements(sm) => sm }.recoverWith { case _ => Future(Seq()) }
