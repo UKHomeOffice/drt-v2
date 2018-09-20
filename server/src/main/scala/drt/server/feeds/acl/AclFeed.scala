@@ -30,12 +30,13 @@ case class AclFeed(ftpServer: String, username: String, path: String, portCode: 
     val feedResponseTry = (for {
       sshClient <- Try(ssh)
       sftpClient <- Try(sftp(sshClient))
+      responseTry = Try{
+        Flights(arrivalsFromCsvContent(contentFromFileName(sftpClient, latestFileForPort(sftpClient, portCode)), terminalMapping))
+      }
     } yield {
       sshClient.disconnect()
       sftpClient.close()
-      Try{
-        Flights(arrivalsFromCsvContent(contentFromFileName(sftpClient, latestFileForPort(sftpClient, portCode)), terminalMapping))
-      }
+      responseTry
     }).flatten
 
     feedResponseTry match {
