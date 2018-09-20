@@ -44,31 +44,31 @@ object JSDateConversions {
       def getSeconds(): Int = date.getSeconds()
 
       def addDays(daysToAdd: Int): SDateLike = {
-        val newDate = Moment(millisSinceEpoch).toDate()
+        val newDate = Moment(millisSinceEpoch).tz("Europe/London").toDate()
         newDate.setDate(newDate.getDate() + daysToAdd)
         newDate
       }
 
       def addMonths(monthsToAdd: Int): SDateLike = {
-        val newDate = Moment(millisSinceEpoch).toDate()
+        val newDate = Moment(millisSinceEpoch).tz("Europe/London").toDate()
         newDate.setMonth(newDate.getMonth() + monthsToAdd)
         newDate
       }
 
       def addHours(hoursToAdd: Int): SDateLike = {
-        val newDate = Moment(millisSinceEpoch).toDate()
+        val newDate = Moment(millisSinceEpoch).tz("Europe/London").toDate()
         newDate.setHours(newDate.getHours() + hoursToAdd)
         newDate
       }
 
       def addMinutes(minutesToAdd: Int): SDateLike = {
-        val newDate = Moment(millisSinceEpoch).toDate()
+        val newDate = Moment(millisSinceEpoch).tz("Europe/London").toDate()
         newDate.setMinutes(newDate.getMinutes() + minutesToAdd)
         newDate
       }
 
       def addMillis(millisToAdd: Int): SDateLike = {
-        Moment(millisSinceEpoch + millisToAdd).toDate()
+        Moment(millisSinceEpoch + millisToAdd).tz("Europe/London").toDate()
       }
 
       def millisSinceEpoch: MillisSinceEpoch = date.getTime().toLong
@@ -82,15 +82,15 @@ object JSDateConversions {
       override def getTimeZoneOffsetMillis(): MillisSinceEpoch = date.getTimezoneOffset() * 60000L
     }
 
-    def apply(milliDate: MilliDate): SDateLike = Moment(milliDate.millisSinceEpoch).toDate()
+    def apply(milliDate: MilliDate): SDateLike = Moment(milliDate.millisSinceEpoch).tz("Europe/London").toDate()
 
-    def apply(millis: MillisSinceEpoch): SDateLike = Moment(millis).toDate()
+    def apply(millis: MillisSinceEpoch): SDateLike = Moment(millis).tz("Europe/London").toDate()
 
     /** **
       * Beware - in JS land, this is interpreted as Local time, but the parse will interpret the timezone component
       */
     def apply(y: Int, m: Int, d: Int, h: Int = 0, mm: Int = 0, s:Int =0, ms: Int = 0): SDateLike = {
-      Moment(s"$y-$m-$d`T`$h:$mm:$s.$ms", "YYYY-MM-DDTHH:mm:ss.SSS").toDate()
+      Moment(s"$y-$m-$d`T`$h:$mm:$s.$ms", "YYYY-MM-DDTHH:mm:ss.SSS").tz("Europe/London").toDate()
     }
 
     /** *
@@ -99,23 +99,23 @@ object JSDateConversions {
       * @param dateString
       * @return
       */
-    def apply(dateString: String): SDateLike = Moment(dateString).toDate()
+    def apply(dateString: String): SDateLike = Moment(dateString).tz("Europe/London").toDate()
 
-    def parse(dateString: String): SDateLike = Moment(dateString).toDate()
+    def parse(dateString: String): SDateLike = Moment(dateString).tz("Europe/London").toDate()
 
     def parseAsLocalDateTime(localDateString: String): SDateLike = {
-      Moment(localDateString).toDate()
+      Moment(localDateString).tz("Europe/London").toDate()
     }
 
     def stringToSDateLikeOption(dateString: String): Option[SDateLike] = {
-      val moment = Moment(dateString)
+      val moment = Moment(dateString).tz("Europe/London")
       if(moment.isValid())
         Option(JSSDate(moment.toDate()))
       else None
     }
 
     def midnightThisMorning(): SDateLike = {
-      val d = Moment().toDate()
+      val d = Moment().tz("Europe/London").toDate()
       d.setHours(0)
       d.setMinutes(0)
       d.setSeconds(0)
@@ -124,7 +124,7 @@ object JSDateConversions {
     }
 
     def dayStart(pointInTime: SDateLike): SDateLike = {
-      val d = Moment(pointInTime.millisSinceEpoch).toDate()
+      val d = Moment(pointInTime.millisSinceEpoch).tz("Europe/London").toDate()
       d.setHours(0)
       d.setMinutes(0)
       d.setSeconds(0)
@@ -133,7 +133,7 @@ object JSDateConversions {
     }
 
     def now(): SDateLike = {
-      JSSDate(Moment().toDate())
+      JSSDate(Moment().tz("Europe/London").toDate())
     }
   }
 

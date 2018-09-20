@@ -43,10 +43,12 @@ object MonthlyStaffing {
 
   def slotsInDay(date: SDateLike, slotDuration: Int): Seq[SDateLike] = {
     val minutesInDay = 24 * 60
-    val startOfDay = SDate(y = date.getFullYear(), m = date.getMonth(), d = date.getDate())
+    val startOfDay = firstSecondOfTheDay(date)
     val slots = minutesInDay / slotDuration
     List.tabulate(slots)(i => startOfDay.addMinutes(i * slotDuration))
   }
+
+  def firstSecondOfTheDay(date: SDateLike): SDateLike = SDate(y = date.getFullYear(), m = date.getMonth(), d = date.getDate())
 
   def drawSelect(values: Seq[String], names: Seq[String], defaultValue: String, callback: ReactEventFromInput => Callback): TagOf[Select] = {
     val valueNames = values.zip(names)
@@ -166,7 +168,7 @@ object MonthlyStaffing {
           state.timeSlots,
           colHeadings = state.colHeadings,
           rowHeadings = state.rowHeadings,
-          (row, col, value) => {
+          changeCallback = (row, col, value) => {
             scope.modState(state => state.copy(changes = state.changes.updated(TimeSlotDay(row, col).key, value))).runNow()
           }
         )),
@@ -207,7 +209,9 @@ object MonthlyStaffing {
         })
       })
 
-    State(timeSlots, daysInMonth.map(_.getDate().toString), slotsInDay(SDate.now(), props.timeSlotMinutes).map(_.prettyTime()), Map())
+    val rowHeadings = slotsInDay(SDate.now(), props.timeSlotMinutes).map(_.prettyTime())
+
+    State(timeSlots, daysInMonth.map(_.getDate().toString), rowHeadings, Map())
   }
 
   def apply(shifts: ShiftAssignments,
