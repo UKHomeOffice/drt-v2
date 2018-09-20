@@ -45,7 +45,10 @@ object MonthlyStaffing {
     val minutesInDay = 24 * 60
     val startOfDay = midnightForDate(date)
     val slots = minutesInDay / slotDuration
-    List.tabulate(slots)(i => startOfDay.addMinutes(i * slotDuration))
+    List.tabulate(slots)(i => {
+      val minsToAdd = i * slotDuration
+      startOfDay.addMinutes(minsToAdd)
+    })
   }
 
   def midnightForDate(date: SDateLike): SDateLike = SDate(y = date.getFullYear(), m = date.getMonth(), d = date.getDate())
