@@ -4,7 +4,7 @@ import java.util.UUID
 
 import actors.pointInTime.StaffMovementsReadActor
 import actors.{GetState, StaffMovements}
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.pattern._
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -39,10 +39,13 @@ trait StaffMovementsPersistence {
 
     val staffMovementsFuture: Future[Seq[StaffMovement]] = if (forDate.millisSinceEpoch < Crunch.getLocalLastMidnight(SDate.now).millisSinceEpoch) {
       val actorName = "staff-movements-read-actor-" + UUID.randomUUID().toString
-      val staffMovementsReadActor: AskableActorRef = actorSystem.actorOf(Props(classOf[StaffMovementsReadActor], forDate), actorName)
+      val staffMovementsReadActor: ActorRef = actorSystem.actorOf(Props(classOf[StaffMovementsReadActor], forDate), actorName)
 
       staffMovementsReadActor.ask(GetState)
-        .map { case StaffMovements(sm) => sm }.recoverWith { case _ => Future(Seq()) }
+        .map { case StaffMovements(sm) =>
+          staffMovementsReadActor ! PoisonPill
+          sm
+        }.recoverWith { case _ => Future(Seq()) }
     } else {
       staffMovementsActor.ask(GetState)
         .map { case StaffMovements(sm) => sm }.recoverWith { case _ => Future(Seq()) }
