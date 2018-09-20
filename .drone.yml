@@ -1,7 +1,7 @@
 pipeline:
 
   build:
-    image: quay.io/ukhomeofficedigital/scala-sbt:latest
+    image: quay.io/ukhomeofficedigital/docker-scala-sbtjs:latest
     commands:
       - /root/entrypoint.sh
       - sbt --error docker:stage
