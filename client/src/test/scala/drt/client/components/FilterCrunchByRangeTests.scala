@@ -13,8 +13,8 @@ object FilterCrunchByRangeTests extends TestSuite {
   def tests = Tests {
     "Given an hour range of 10 to 14" - {
       val range = CustomWindow(10, 14)
-      val dateWithinRange = SDate.parse("2017-01-01T11:00:00Z")
-      val dateOutsideRange = SDate.parse("2017-01-01T09:00:00Z")
+      val dateWithinRange = SDate("2017-01-01T11:00:00Z")
+      val dateOutsideRange = SDate("2017-01-01T09:00:00Z")
 
       "When a CrunchState contains minutes within the range, then they should remain after the filter" - {
         val crunchMinuteWithinRange = CrunchMinute("T1", Queues.EeaDesk, dateWithinRange.millisSinceEpoch, 0, 0, 0, 0)
@@ -60,5 +60,5 @@ object FilterCrunchByRangeTests extends TestSuite {
     }
   }
 
-  def mkMillis(t: String): Long = SDate.parse(t).millisSinceEpoch
+  def mkMillis(t: String): Long = SDate(t).millisSinceEpoch
 }
