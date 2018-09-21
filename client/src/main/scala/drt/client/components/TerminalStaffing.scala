@@ -12,8 +12,10 @@ import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.component.Scala.Unmounted
+import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html.{Div, Table}
+
 import scala.collection.immutable.NumericRange
 import scala.scalajs.js.Date
 import scala.util.Success
@@ -33,6 +35,10 @@ object TerminalStaffing {
                     loggedInUser: Pot[LoggedInUser],
                     viewMode: ViewMode
                   )
+
+  implicit val propsReuse: Reusability[Props] = Reusability.by(p => {
+    (p.potShifts.getOrElse(ShiftAssignments.empty), p.potFixedPoints.getOrElse(FixedPointAssignments.empty), p.potStaffMovements.getOrElse(Seq[StaffMovement]())).hashCode()
+  })
 
   def movementsForDay(movements: Seq[StaffMovement], day: SDateLike): Seq[StaffMovement] = {
     val startOfDayMillis = startOfDay(day).millisSinceEpoch
@@ -65,7 +71,7 @@ object TerminalStaffing {
     }
   }
 
-  private def isInWindow(startOfDayMillis: MillisSinceEpoch, endOfDayMillis: MillisSinceEpoch, movementMillis: MillisSinceEpoch) = {
+  def isInWindow(startOfDayMillis: MillisSinceEpoch, endOfDayMillis: MillisSinceEpoch, movementMillis: MillisSinceEpoch): Boolean = {
     startOfDayMillis <= movementMillis && movementMillis <= endOfDayMillis
   }
 
@@ -230,6 +236,7 @@ object TerminalStaffing {
 
   private val component = ScalaComponent.builder[Props]("TerminalStaffing")
     .renderBackend[Backend]
+    .configure(Reusability.shouldComponentUpdate)
     .build
 
   object MovementDisplay {
