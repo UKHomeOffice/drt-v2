@@ -21,6 +21,10 @@ object Actions {
 
   case object GetLoggedInUser extends Action
 
+  case object GetUserHasPortAccess extends Action
+
+  case class SetUserHasPortAccess(hasAccess: Boolean) extends Action
+
   case class SetLoggedInUser(loggedInUser: LoggedInUser) extends Action
 
   case class SetApplicationVersion(version: String) extends Action
@@ -47,7 +51,7 @@ object Actions {
 
   case class GetAirportConfig() extends Action
 
-  case class UpdateAirportConfig(airportConfigOption: Option[AirportConfig]) extends Action
+  case class UpdateAirportConfig(airportConfig: AirportConfig) extends Action
 
   case class SetFixedPoints(fixedPoints: FixedPointAssignments, terminalName: Option[String]) extends Action
 

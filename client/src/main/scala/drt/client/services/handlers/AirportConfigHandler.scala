@@ -20,8 +20,8 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
           log.error(s"CrunchState request failed. Re-requesting after ${PollDelay.recoveryDelay}")
           Future(RetryActionAfter(GetAirportConfig(), PollDelay.recoveryDelay))
       }))
-    case UpdateAirportConfig(airportConfigOption) =>
-      val pot = airportConfigOption.map(Ready(_)).getOrElse(Empty)
-      updated(pot)
+    case UpdateAirportConfig(airportConfig) =>
+
+      updated(Ready(airportConfig))
   }
 }

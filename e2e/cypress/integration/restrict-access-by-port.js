@@ -21,7 +21,7 @@ describe('Restrict access by port', function () {
   describe('Restrict access by port', function () {
 
     it("When I have the correct permission to view the port I see the app", function () {
-      setRoles(["api:view"]);
+      setRoles(["test"]);
       navigateToHome();
     });
 

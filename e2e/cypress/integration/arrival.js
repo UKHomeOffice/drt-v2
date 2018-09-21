@@ -43,7 +43,7 @@ describe('Arrivals page', () => {
 
   before(() => {
     cy.request('DELETE', '/v2/test/live/test/data');
-    setRoles(["api:view"]);
+    setRoles(["test"]);
   });
 
   after(() => {
@@ -141,7 +141,7 @@ describe('Arrivals page', () => {
 
   it('Allows you to view API splits in the flights export for users with api:view permission', () => {
     loadManifestFixture();
-    setRoles(["api:view"]);
+    setRoles(["test"]);
     cy.request({
       method: 'GET',
       url: '/v2/test/live/export/arrivals/' + currentMillis + '/T1?startHour=0&endHour=24',

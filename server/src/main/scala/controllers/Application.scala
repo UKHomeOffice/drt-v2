@@ -26,6 +26,7 @@ import drt.users.KeyCloakClient
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.{HeaderNames, HttpEntity}
+import play.api.libs.json._
 import play.api.mvc._
 import play.api.{Configuration, Environment}
 import server.feeds.acl.AclFeed
@@ -419,14 +420,32 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def isHistoricDate(day: MillisSinceEpoch): Boolean = {
-    day < getLocalLastMidnight(SDate.now()).millisSinceEpoch
-  }
+  def isHistoricDate(day: MillisSinceEpoch): Boolean = day < getLocalLastMidnight(SDate.now()).millisSinceEpoch
 
   def index = Action {
     Ok(views.html.index("DRT - BorderForce", portCode, googleTrackingCode))
   }
 
+  def getLoggedInUser(): Action[AnyContent] = Action { request =>
+    val user = ctrl.getLoggedInUser(config, request.headers, request.session)
+
+    implicit val userWrites = new Writes[LoggedInUser] {
+      def writes(user: LoggedInUser) = Json.obj(
+        "userName" -> user.userName,
+        "id" -> user.id,
+        "email" -> user.email,
+        "roles" -> user.roles.map(_.name)
+      )
+    }
+
+    Ok(Json.toJson(user))
+  }
+
+  def getUserHasPortAccess(): Action[AnyContent] = auth {
+    Action {
+      Ok("{userHasAccess: true}")
+    }
+  }
 
   def crunchStateAtPointInTime(pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = {
     val relativeLastMidnight = getLocalLastMidnight(SDate(pointInTime)).millisSinceEpoch
@@ -747,9 +766,36 @@ class Application @Inject()(implicit val config: Configuration,
       }
   }
 
-  def autowireApi(path: String): Action[RawBuffer] = Action.async(parse.raw) {
-    implicit request =>
-      log.info(s"Request path: $path")
+  def auth[A](action: Action[A]) = Action.async(action.parser) { request =>
+
+    val loggedInUser: LoggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
+    val allowedRole = airportConfig.role
+
+    log.info(s"This port requires: $allowedRole")
+    log.info(s"This user has: ${loggedInUser.roles}")
+
+
+    val enablePortAccessRestrictions =
+      config.getOptional[Boolean]("feature-flags.port-access-restrictions").getOrElse(false)
+
+    log.info(s"Enable restrictions: $enablePortAccessRestrictions")
+
+    val preventAccess = !loggedInUser.hasRole(allowedRole) && enablePortAccessRestrictions
+    log.info(s"Prevent access: $preventAccess")
+    if (preventAccess) {
+      Future(Unauthorized(s"{" +
+        s"Permission denied, you need $allowedRole to access this port" +
+        s"}"))
+    } else {
+      log.info(s"You have $allowedRole and so you can access this port.")
+      action(request)
+    }
+  }
+
+  def autowireApi(path: String): Action[RawBuffer] = auth {
+    Action.async(parse.raw) {
+      implicit request =>
+        log.info(s"Request path: $path")
 
       val b = request.body.asBytes(parse.UNLIMITED).get
 
@@ -763,43 +809,47 @@ class Application @Inject()(implicit val config: Configuration,
 
       val router = Router.route[Api](ApiService(airportConfig, ctrl.shiftsActor, ctrl.fixedPointsActor, ctrl.staffMovementsActor, request.headers, request.session))
 
-      router(
-        autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))
-      ).map(buffer => {
-        val data = Array.ofDim[Byte](buffer.remaining())
-        buffer.get(data)
-        Ok(data)
-      })
+        router(
+          autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))
+        ).map(buffer => {
+          val data = Array.ofDim[Byte](buffer.remaining())
+          buffer.get(data)
+          Ok(data)
+        })
+    }
   }
 
-  def logging: Action[Map[String, Seq[String]]] = Action(parse.tolerantFormUrlEncoded) {
-    implicit request =>
+  def logging: Action[Map[String, Seq[String]]]
+  = auth {
+    Action(parse.tolerantFormUrlEncoded) {
+      implicit request =>
 
-      def postStringValOrElse(key: String, default: String) = {
-        request.body.get(key).map(_.head).getOrElse(default)
-      }
+        def postStringValOrElse(key: String, default: String) = {
+          request.body.get(key).map(_.head).getOrElse(default)
+        }
 
-      val logLevel = postStringValOrElse("level", "ERROR")
+        val logLevel = postStringValOrElse("level", "ERROR")
 
-      val millis = request.body.get("timestamp")
-        .map(_.head.toLong)
-        .getOrElse(SDate.now(Crunch.europeLondonTimeZone).millisSinceEpoch)
+        val millis = request.body.get("timestamp")
+          .map(_.head.toLong)
+          .getOrElse(SDate.now(Crunch.europeLondonTimeZone).millisSinceEpoch)
 
-      val logMessage = Map(
-        "logger" -> ("CLIENT - " + postStringValOrElse("logger", "log")),
-        "message" -> postStringValOrElse("message", "no log message"),
-        "logTime" -> SDate(millis).toISOString(),
-        "url" -> postStringValOrElse("url", request.headers.get("referrer").getOrElse("unknown url")),
-        "logLevel" -> logLevel
-      )
+        val logMessage = Map(
+          "logger" -> ("CLIENT - " + postStringValOrElse("logger", "log")),
+          "message" -> postStringValOrElse("message", "no log message"),
+          "logTime" -> SDate(millis).toISOString(),
+          "url" -> postStringValOrElse("url", request.headers.get("referrer").getOrElse("unknown url")),
+          "logLevel" -> logLevel
+        )
 
-      log.log(Logging.levelFor(logLevel).getOrElse(Logging.ErrorLevel), s"Client Error: ${
-        logMessage.map {
-          case (value, key) => s"$key: $value"
-        }.mkString(", ")
-      }")
+        log.log(Logging.levelFor(logLevel).getOrElse(Logging.ErrorLevel), s"Client Error: ${
+          logMessage.map {
+            case (value, key) => s"$key: $value"
+          }.mkString(", ")
+        }")
 
-      Ok("logged successfully")
+        Ok("logged successfully")
+    }
   }
 }
 

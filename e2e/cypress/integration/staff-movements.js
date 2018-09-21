@@ -4,7 +4,7 @@ describe('Staff movements', function () {
   beforeEach(function () {
     deleteTestData();
     var schDT = new Date().toISOString().split("T")[0];
-    setRoles(["api:view"]);
+    setRoles(["test"]);
     cy.request('POST',
       '/v2/test/live/test/arrival',
       {

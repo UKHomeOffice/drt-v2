@@ -79,6 +79,7 @@ object SPAMain {
     val initActions = Seq(
       GetApplicationVersion,
       GetLoggedInUser,
+      GetUserHasPortAccess,
       GetLoggedInStatus,
       GetAirportConfig(),
       GetFixedPoints(),

@@ -7,7 +7,7 @@ describe('Alerts system', function () {
 
   beforeEach(function () {
     deleteAlerts();
-    setRoles(["api:view"]);
+    setRoles(["test"]);
   });
 
   afterEach(function() {
