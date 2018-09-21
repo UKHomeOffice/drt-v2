@@ -39,7 +39,7 @@ object SPAMain {
       }
     }
 
-    def parseDateString(s: String): SDateLike = SDate.parseAsLocalDateTime(s.replace("%20", " ").split(" ").mkString("T"))
+    def parseDateString(s: String): SDateLike = SDate(s.replace("%20", " ").split(" ").mkString("T"))
 
     def timeRangeStart: Option[Int] = timeRangeStartString.map(_.toInt)
 

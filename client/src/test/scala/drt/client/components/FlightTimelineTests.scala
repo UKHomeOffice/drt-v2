@@ -57,8 +57,8 @@ object FlightTimelineTests extends TestSuite {
         "we can calculate the delta where act > sch" - {
           val schS = "2017-04-21T06:40:00Z"
           val actS = "2017-04-21T06:45:00Z"
-          val sch = SDate.parse(schS)
-          val act = SDate.parse(actS)
+          val sch = SDate(schS)
+          val act = SDate(actS)
 
           val delta = sch.millisSinceEpoch - act.millisSinceEpoch
           val expected = -1 * 5 * 60 * 1000
@@ -68,8 +68,8 @@ object FlightTimelineTests extends TestSuite {
         "we can calculate the delta where sch < act" - {
           val actS = "2017-04-21T06:40:00Z"
           val schS = "2017-04-21T06:45:00Z"
-          val sch = SDate.parse(schS)
-          val act = SDate.parse(actS)
+          val sch = SDate(schS)
+          val act = SDate(actS)
 
           val delta = sch.millisSinceEpoch - act.millisSinceEpoch
           val expected = 1 * 5 * 60 * 1000

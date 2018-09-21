@@ -50,7 +50,7 @@ object BigSummaryBoxTests extends TestSuite {
             staffMinutes = Set())))
 
           "AND a current time of 2017-05-01T12:00" - {
-            val now = SDate.parse("2017-05-01T12:00Z")
+            val now = SDate("2017-05-01T12:00Z")
             val nowPlus3Hours = now.addHours(3)
 
             "Then we can get a number of flights arriving in that period" - {
@@ -67,7 +67,7 @@ object BigSummaryBoxTests extends TestSuite {
         "Given 3 flights with a nonZero PcpTime we use the pcpTime " - {
           import ApiFlightGenerator._
 
-          def mkMillis(t: String) = SDate.parse(t).millisSinceEpoch
+          def mkMillis(t: String) = SDate(t).millisSinceEpoch
 
           val apiFlightPcpBeforeNow = apiFlight("2017-05-01T11:40Z", FlightID = None, ActPax = Option(7), PcpTime = mkMillis("2017-05-01T11:40Z"))
           val apiFlight0aPcpAfterNow = apiFlight("2017-05-01T11:40Z", FlightID = Option(1), ActPax = Option(11), PcpTime = mkMillis("2017-05-01T12:05Z"))
@@ -87,7 +87,7 @@ object BigSummaryBoxTests extends TestSuite {
             staffMinutes = Set())))
 
           "AND a current time of 2017-05-01T12:00" - {
-            val now = SDate.parse("2017-05-01T12:00Z")
+            val now = SDate("2017-05-01T12:00Z")
             val nowPlus3Hours = now.addHours(3)
 
             "Then we can get a number of flights arriving in that period" - {
@@ -107,7 +107,7 @@ object BigSummaryBoxTests extends TestSuite {
 
             import ApiFlightGenerator._
 
-            def mkMillis(t: String) = SDate.parse(t).millisSinceEpoch
+            def mkMillis(t: String) = SDate(t).millisSinceEpoch
 
             val apiFlight1 = apiFlight("2017-05-01T12:05Z", Terminal = "T1", FlightID = Option(2), ActPax = Option(200), PcpTime = mkMillis("2017-05-01T12:05Z"))
             val apiFlight2 = apiFlight("2017-05-01T13:05Z", Terminal = "T1", FlightID = Option(3), ActPax = Option(300), PcpTime = mkMillis("2017-05-01T13:15Z"))
@@ -121,7 +121,7 @@ object BigSummaryBoxTests extends TestSuite {
 
 
             "AND a current time of 2017-05-01T12:00" - {
-              val now = SDate.parse("2017-05-01T12:00Z")
+              val now = SDate("2017-05-01T12:00Z")
               val nowPlus3Hours = now.addHours(3)
 
               "Then we can get a number of flights arriving in that period" - {
@@ -141,7 +141,7 @@ object BigSummaryBoxTests extends TestSuite {
 
               import ApiFlightGenerator._
 
-              def mkMillis(t: String) = SDate.parse(t).millisSinceEpoch
+              def mkMillis(t: String) = SDate(t).millisSinceEpoch
 
               val apiFlight1 = apiFlight("2017-05-01T12:05Z", Terminal = "T1", FlightID = Option(2), ActPax = Option(200), PcpTime = mkMillis("2017-05-01T12:05Z"))
               val apiFlight2 = apiFlight("2017-05-01T13:05Z", Terminal = "T1", FlightID = Option(3), ActPax = Option(300), PcpTime = mkMillis("2017-05-01T13:15Z"))
@@ -175,7 +175,7 @@ object BigSummaryBoxTests extends TestSuite {
 
               import ApiFlightGenerator._
 
-              def mkMillis(t: String) = SDate.parse(t).millisSinceEpoch
+              def mkMillis(t: String) = SDate(t).millisSinceEpoch
 
               val flights = List(
                 ApiFlightWithSplits(apiFlight("2017-05-01T12:05Z", Terminal = "T1", FlightID = Option(2), ActPax = Option(100), PcpTime = mkMillis("2017-05-01T12:05Z")),
@@ -207,7 +207,7 @@ object BigSummaryBoxTests extends TestSuite {
 
                   import ApiFlightGenerator._
 
-                  def mkMillis(t: String) = SDate.parse(t).millisSinceEpoch
+                  def mkMillis(t: String) = SDate(t).millisSinceEpoch
 
                   val flights = List(
                     ApiFlightWithSplits(apiFlight("2017-05-01T12:05Z", Terminal = "T1", FlightID = Option(2), ActPax = Option(300), TranPax = Option(100), PcpTime = mkMillis("2017-05-01T12:05Z")),
@@ -326,7 +326,7 @@ object BigSummaryBoxTests extends TestSuite {
     }
   }
 
-  def mkMillis(t: String) = SDate.parse(t).millisSinceEpoch
+  def mkMillis(t: String) = SDate(t).millisSinceEpoch
 }
 
 object ApiFlightGenerator {
@@ -374,8 +374,8 @@ object ApiFlightGenerator {
       rawIATA = iataFlightCode,
       Origin = Origin,
       FeedSources = Set(ApiFeedSource),
-      PcpTime = if (PcpTime != 0) Some(PcpTime) else Some(SDate.parse(SchDT).millisSinceEpoch),
-      Scheduled = if (SchDT != "") SDate.parse(SchDT).millisSinceEpoch else 0L
+      PcpTime = if (PcpTime != 0) Some(PcpTime) else Some(SDate(SchDT).millisSinceEpoch),
+      Scheduled = if (SchDT != "") SDate(SchDT).millisSinceEpoch else 0L
     )
 
 }
