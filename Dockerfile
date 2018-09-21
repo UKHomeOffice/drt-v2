@@ -1,7 +1,11 @@
 FROM openjdk:alpine
+ENV AWS_CLI_VERSION 1.15.60
 WORKDIR /opt/docker
 ADD server/target/docker/stage/opt /opt
 RUN apk add --update bash && rm -rf /var/cache/apk/*
+RUN apk --no-cache update && \
+    apk --no-cache add python py-pip py-setuptools ca-certificates groff less && \
+    pip --no-cache-dir install awscli==${AWS_CLI_VERSION} && \
 RUN adduser -D -u 1000 drt-admin
 RUN mkdir /home/drt-admin/.ssh
 ADD know_hosts /home/drt-admin/.ssh/
