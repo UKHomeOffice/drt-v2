@@ -44,15 +44,9 @@ object TerminalStaffing {
     val startOfDayMillis = startOfDay(day).millisSinceEpoch
     val endOfDayMillis = endOfDay(day).millisSinceEpoch
 
-    log.warn(s"DEBUG Looking over ${movements.length} movements")
-
-    val grouped = movements.groupBy(_.uUID)
-    log.warn(s"DEBUG finished grouping")
-    val filtered = grouped.filter {
-      case (_, movementsPair) => areInWindow(startOfDayMillis, endOfDayMillis, movementsPair)
-    }
-    log.warn(s"DEBUG finished filtering")
-    filtered
+    movements
+      .groupBy(_.uUID)
+      .filter { case (_, movementsPair) => areInWindow(startOfDayMillis, endOfDayMillis, movementsPair) }
       .values
       .flatten
       .toSeq
