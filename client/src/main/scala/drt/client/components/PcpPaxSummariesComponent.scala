@@ -77,7 +77,7 @@ object PcpPaxSummariesComponent {
 
   val component = ScalaComponent.builder[Props]("PcpPaxSummariesComponent")
     .renderBackend[PcpPaxSummariesComponent.Backend]
-    .componentDidMount((p) => {
+    .componentDidMount(p => {
       Callback.log(s"PcpPaxSummaries component didMount")
     })
     .build

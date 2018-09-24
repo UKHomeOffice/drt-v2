@@ -44,14 +44,14 @@ object TerminalStaffing {
     val startOfDayMillis = startOfDay(day).millisSinceEpoch
     val endOfDayMillis = endOfDay(day).millisSinceEpoch
 
-    log.debug(s"DEBUG Looking over ${movements.length} movements")
+    log.warn(s"DEBUG Looking over ${movements.length} movements")
 
     val grouped = movements.groupBy(_.uUID)
-    log.debug(s"DEBUG finished grouping")
+    log.warn(s"DEBUG finished grouping")
     val filtered = grouped.filter {
       case (_, movementsPair) => areInWindow(startOfDayMillis, endOfDayMillis, movementsPair)
     }
-    log.debug(s"DEBUG finished filtering")
+    log.warn(s"DEBUG finished filtering")
     filtered
       .values
       .flatten
@@ -220,7 +220,7 @@ object TerminalStaffing {
     def staffingTableHourPerColumn(terminalName: TerminalName,
                                    daysWorthOf15Minutes: NumericRange[Long],
                                    staffWithShiftsAndMovements: (TerminalName, SDateLike) => Int): VdomTagOf[Table] = {
-      log.debug(s"DEBUG redrawing staffing per hour table")
+      log.warn(s"DEBUG redrawing staffing per hour table")
       val t = <.table(
         ^.className := "table table-striped table-xcondensed table-sm",
         <.tbody(
@@ -242,7 +242,7 @@ object TerminalStaffing {
           }.toTagMod
         )
       )
-      log.debug(s"DEBUG finished redrawing staffing per hour table")
+      log.warn(s"DEBUG finished redrawing staffing per hour table")
       t
     }
   }
