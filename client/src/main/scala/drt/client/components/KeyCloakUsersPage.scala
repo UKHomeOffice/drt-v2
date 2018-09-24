@@ -3,9 +3,8 @@ package drt.client.components
 import java.util.UUID
 
 import diode.data.Pot
-import drt.client.actions.Actions.AddUserToGroup
-import drt.client.modules.GoogleEventTracker
 import drt.client.SPAMain.{KeyCloakUserEditLoc, Loc}
+import drt.client.modules.GoogleEventTracker
 import drt.client.services._
 import drt.shared.KeyCloakApi.KeyCloakUser
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -28,16 +27,16 @@ object KeyCloakUsersPage {
           <.h2("DRT V2 Keycloak User List"),
           usersPot.renderReady(users =>
             <.div(
-           <.table(^.className := "key-cloak-users",
-             <.tbody(
-             users.map( user => <.tr(
-               <.td(user.firstName),
-               <.td(user.lastName),
-               <.td(user.email),
-               <.td(<.button("Edit", ^.className := "btn btn-primary", ^.onClick ==> editUser(user.id)))
-             )
-           ).toTagMod))
-          ))
+              <.table(^.className := "key-cloak-users",
+                <.tbody(
+                  users.map(user => <.tr(
+                    <.td(user.firstName),
+                    <.td(user.lastName),
+                    <.td(user.email),
+                    <.td(<.button("Edit", ^.className := "btn btn-primary", ^.onClick ==> editUser(user.id)))
+                  )
+                  ).toTagMod))
+            ))
         )
       })
     }
