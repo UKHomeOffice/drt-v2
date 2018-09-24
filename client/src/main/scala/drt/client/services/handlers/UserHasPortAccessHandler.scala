@@ -13,7 +13,6 @@ import org.scalajs.dom.ext.AjaxException
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-
 class UserHasPortAccessHandler[M](modelRW: ModelRW[M, Pot[Boolean]]) extends LoggingActionHandler(modelRW) {
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {

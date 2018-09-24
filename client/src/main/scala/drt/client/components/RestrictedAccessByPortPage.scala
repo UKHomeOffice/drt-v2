@@ -40,11 +40,10 @@ object RestrictedAccessByPortPage {
         <.span(
           <.h2(^.id := "access-restricted", "Access Restricted"),
           <.div(
-            <.p(^.id := "email-for-access", s"You do not have access to your desired port $portRequested. If you would like access to this port, " +
-              "please ", <.a("click here to send an email", ^.href :=
+            <.p(^.id := "email-for-access", s"You do not currently have permission to access $portRequested. If you would like access to this port, " +
+              "please ", <.a("click here request access by email", ^.href :=
               s"mailto:drtdevteam@digital.homeoffice.gov.uk;drtenquiries@homeoffice.gov.uk?subject=request" +
-                s" access to port $portRequested&body=Please give me access to DRT $portRequested."), " to " +
-              s"request access for $portRequested."),
+                s" access to port $portRequested&body=Please give me access to DRT $portRequested."), "."),
             if (portsAccessible.nonEmpty) {
               <.div(^.id := "alternate-ports",
                 <.p("Alternatively you are able to access the following ports"),
@@ -54,7 +53,7 @@ object RestrictedAccessByPortPage {
                   ).toVdomArray
                 )
               )
-            } else ""
+            } else TagMod()
           )
         )
 

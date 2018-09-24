@@ -16,10 +16,9 @@ import upickle.default._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-
 class LoggedInUserHandler[M](modelRW: ModelRW[M, Pot[LoggedInUser]]) extends LoggingActionHandler(modelRW) {
 
-  implicit val fooReadWrite: ReadWriter[LoggedInUser] =
+  implicit val loggedInUserReadWriter: ReadWriter[LoggedInUser] =
     readwriter[Js.Value].bimap[LoggedInUser](user => {
       s"""| {
           |  userName: ${user.userName},
@@ -48,9 +47,7 @@ class LoggedInUserHandler[M](modelRW: ModelRW[M, Pot[LoggedInUser]]) extends Log
         SetLoggedInUser(loggedInUser)
       }
       )))
-
     case SetLoggedInUser(loggedInUser) =>
       updated(Ready(loggedInUser))
-
   }
 }
