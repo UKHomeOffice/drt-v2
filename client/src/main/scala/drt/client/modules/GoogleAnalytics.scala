@@ -2,12 +2,14 @@ package drt.client.modules
 
 import java.util.UUID
 
+import drt.client.logger.{Logger, LoggerFactory}
 import org.scalajs.dom
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSGlobalScope
 
 object GoogleEventTracker {
+  val log: Logger = LoggerFactory.getLogger(getClass.getName)
   def trackingCode: String = dom.document.getElementById("ga-code").getAttribute("value")
   def port: String = dom.document.getElementById("port-code").getAttribute("value")
   def userId: String = dom.document.getElementById("user-id").getAttribute("value")
@@ -33,11 +35,17 @@ object GoogleEventTracker {
   }
 
   def sendEvent(category: String, action: String, label: String): Unit = {
-    if (isScriptLoaded && hasCreateTrackerRun) GoogleAnalytics.analytics("send", "event", s"$port-$category", action, label)
+    if (isScriptLoaded && hasCreateTrackerRun) {
+      log.debug(s"Doing GA")
+      GoogleAnalytics.analytics("send", "event", s"$port-$category", action, label)
+    }
   }
 
   def sendEvent(category: String, action: String, label: String, value: String): Unit = {
-    if (isScriptLoaded && hasCreateTrackerRun) GoogleAnalytics.analytics("send", "event", s"$port-$category", action, label, value)
+    if (isScriptLoaded && hasCreateTrackerRun) {
+      log.debug(s"Doing GA")
+      GoogleAnalytics.analytics("send", "event", s"$port-$category", action, label, value)
+    }
   }
 
   def sendError(description: String, fatal: Boolean): Unit = {

@@ -121,7 +121,7 @@ object TerminalContentComponent {
                   }),
                 <.li(^.className := staffingActive,
                   <.a(^.id := "staffMovementsTab", VdomAttr("data-toggle") := "tab", "Staff Movements"), ^.onClick --> {
-                    GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Staff Movements", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
+                    //GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Staff Movements", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
                     props.router.set(props.terminalPageTab.copy(subMode = "staffing"))
                   })
               ),
