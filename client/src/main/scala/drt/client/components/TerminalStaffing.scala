@@ -219,9 +219,8 @@ object TerminalStaffing {
 
     def staffingTableHourPerColumn(terminalName: TerminalName,
                                    daysWorthOf15Minutes: NumericRange[Long],
-                                   staffWithShiftsAndMovements: (TerminalName, SDateLike) => Int): VdomTagOf[Table] = {
-      log.warn(s"DEBUG redrawing staffing per hour table")
-      val t = <.table(
+                                   staffWithShiftsAndMovements: (TerminalName, SDateLike) => Int): VdomTagOf[Table] =
+      <.table(
         ^.className := "table table-striped table-xcondensed table-sm",
         <.tbody(
           daysWorthOf15Minutes.grouped(16).flatMap {
@@ -242,9 +241,6 @@ object TerminalStaffing {
           }.toTagMod
         )
       )
-      log.warn(s"DEBUG finished redrawing staffing per hour table")
-      t
-    }
   }
 
   def apply(props: Props): VdomElement = component(props)
