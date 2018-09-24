@@ -7,7 +7,7 @@ sealed trait Role{
 }
 
 object Roles {
-  val availableRoles = List(StaffEdit, ApiView, ManageUsers)
+  val availableRoles = List(StaffEdit, ApiView, ManageUsers, CreateAlerts)
   def parse(roleName: String): Option[Role] = availableRoles.find(role=> role.name == roleName)
 }
 
@@ -21,4 +21,8 @@ case object ApiView extends Role {
 
 case object ManageUsers extends Role {
   override val name: String = "manage-users"
+}
+
+case object CreateAlerts extends Role {
+  override val name: String = "create-alerts"
 }

@@ -34,6 +34,9 @@
 .navbar-default {
   background-color: @bgDefault;
   border-color: @bgHighlight;
+  border-radius: 0px;
+  border-left: 0px;
+  border-right: 0px;
   .navbar-brand {
     color: @colDefault;
     &:hover, &:focus {
@@ -91,6 +94,18 @@
   }
 }
 
+.navbar-nav li.red .fa-bar-chart {
+    color: #f55;
+}
+
+.navbar-nav li.amber .fa-bar-chart  {
+    color: #F7901E;
+}
+
+.navbar-nav li.green .fa-bar-chart  {
+    color: #008000;
+}
+
 @media (max-width: 767px) {
   .navbar-default .navbar-nav .open .dropdown-menu {
     > li > a {
@@ -112,12 +127,11 @@
 
 .main-logo {
   height: 70px;
-  width: 96%;
-  padding: 15px;
-  margin: auto;
+  width: 220px;
+  float:left;
   background-image: url(/v2/stn/live/assets/images/logo_colour.png);
   background-repeat: no-repeat;
-  background-position: 16px 15px;
+  background-position: 0px 15px;
 }
 
 .popover.flights-popover .popover__content > tr td {
@@ -1632,26 +1646,28 @@ a i.fa.fa-remove {
   vertical-align: middle;
 }
 
-.navbar-nav li.red .fa-bar-chart {
-    color: #f55;
-}
-
-.navbar-nav li.amber .fa-bar-chart  {
-    color: #F7901E;
-}
-
-.navbar-nav li.green .fa-bar-chart  {
-    color: #008000;
-}
-
 .key-cloak-users td {
   padding: 10px;
+}
+
+.topbar {
+  height: 70px;
+  width: 96%;
+  overflow: hidden;
+  margin: auto;
+  padding-left: 15px;
+  box-sizing: border-box;
+  display: block;
+}
+
+.alerts {
+  float: left;
+  width: calc(~"100% - 220px");
 }
 
 #has-alerts {
     font-size: 12px;
     font-family: tahoma;
-    border: 3px double #ccc;
     color: #555;
     display: block;
     padding: 10px 5px 0 5px;
@@ -1660,6 +1676,7 @@ a i.fa.fa-remove {
     overflow: auto;
 }
 
-#has-alerts:hover {
-  box-shadow: 2px -5px 5px 0px rgba(0,0,0,.2);
+.the-alert {
+  display: block;
+  margin-bottom: 1px;
 }

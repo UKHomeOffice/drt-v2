@@ -38,7 +38,7 @@ object MainMenu {
 
   val restrictedMenuItems = List(
     (ManageUsers, usersMenuItem _),
-    (ManageUsers, alertsMenuItem _)
+    (CreateAlerts, alertsMenuItem _)
   )
 
   def menuItems(airportConfig: AirportConfig, currentLoc: Loc, userRoles: Seq[Role], feeds: Seq[FeedStatuses]): List[MenuItem] = {
