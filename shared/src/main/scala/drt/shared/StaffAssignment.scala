@@ -41,9 +41,12 @@ case class FixedPointAssignments(assignments: Seq[StaffAssignment]) extends Fixe
 case class ShiftAssignments(assignments: Seq[StaffAssignment]) extends ShiftAssignmentsLike {
   def +(staffAssignments: Seq[StaffAssignment]): ShiftAssignments = copy(assignments ++ staffAssignments)
 
-  def terminalStaffAt(terminalName: TerminalName, date: SDateLike): Int = assignments.filter(assignment => {
-    assignment.startDt.millisSinceEpoch <= date.millisSinceEpoch && date.millisSinceEpoch <= assignment.endDt.millisSinceEpoch && assignment.terminalName == terminalName
-  }).map(_.numberOfStaff).sum
+  def terminalStaffAt(terminalName: TerminalName, date: SDateLike): Int = {
+    val dateInQuestion = date.millisSinceEpoch
+    assignments.filter(assignment => {
+      assignment.startDt.millisSinceEpoch <= dateInQuestion && dateInQuestion <= assignment.endDt.millisSinceEpoch && assignment.terminalName == terminalName
+    }).map(_.numberOfStaff).sum
+  }
 }
 
 object FixedPointAssignments {
