@@ -31,11 +31,15 @@ case class FixedPointAssignments(assignments: Seq[StaffAssignment]) extends Fixe
   def +(staffAssignments: Seq[StaffAssignment]): FixedPointAssignments = copy(assignments ++ staffAssignments)
 
   def terminalStaffAt(terminalName: TerminalName, date: SDateLike)
-                     (implicit mdToSd: MilliDate => SDateLike): Int = assignments.filter(assignment => {
-    assignment.terminalName == terminalName &&
-      date.toHoursAndMinutes() >= mdToSd(assignment.startDt).toHoursAndMinutes() &&
-      date.toHoursAndMinutes() <= mdToSd(assignment.endDt).toHoursAndMinutes()
-  }).map(_.numberOfStaff).sum
+                     (implicit mdToSd: MilliDate => SDateLike): Int = {
+    val hoursAndMinutesInQuestion = date.toHoursAndMinutes()
+
+    assignments.filter(assignment => {
+      assignment.terminalName == terminalName &&
+        hoursAndMinutesInQuestion >= mdToSd(assignment.startDt).toHoursAndMinutes() &&
+        hoursAndMinutesInQuestion <= mdToSd(assignment.endDt).toHoursAndMinutes()
+    }).map(_.numberOfStaff).sum
+  }
 }
 
 case class ShiftAssignments(assignments: Seq[StaffAssignment]) extends ShiftAssignmentsLike {
@@ -43,6 +47,7 @@ case class ShiftAssignments(assignments: Seq[StaffAssignment]) extends ShiftAssi
 
   def terminalStaffAt(terminalName: TerminalName, date: SDateLike): Int = {
     val dateInQuestion = date.millisSinceEpoch
+
     assignments.filter(assignment => {
       assignment.startDt.millisSinceEpoch <= dateInQuestion && dateInQuestion <= assignment.endDt.millisSinceEpoch && assignment.terminalName == terminalName
     }).map(_.numberOfStaff).sum
