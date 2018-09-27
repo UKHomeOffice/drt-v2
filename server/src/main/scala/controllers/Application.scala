@@ -367,14 +367,11 @@ class Application @Inject()(implicit val config: Configuration,
           }
         } else throw new Exception(permissionDeniedMessage)
 
-      def removeUserFromGroups(userId: UUID, groups: Set[String]): Future[Unit] = {
-
+      def removeUserFromGroups(userId: UUID, groups: Set[String]): Future[Unit] =
         keyCloakClient
-          .getGroups()
-          .map(kcGroups => kcGroups.filter(g => groups.contains(g.name))
-            .map(g => keyCloakClient.removeUserFromGroup(userId, g.id)))
-
-      }
+        .getGroups()
+        .map(kcGroups => kcGroups.filter(g => groups.contains(g.name))
+          .map(g => keyCloakClient.removeUserFromGroup(userId, g.id)))
 
       def getAlerts(createdAfter: MillisSinceEpoch): Future[Seq[Alert]] = {
         for {
@@ -819,7 +816,7 @@ class Application @Inject()(implicit val config: Configuration,
         })
     }
   }
-  
+
   def logging: Action[Map[String, Seq[String]]] = auth {
     Action(parse.tolerantFormUrlEncoded) {
       implicit request =>

@@ -25,7 +25,7 @@ describe('Restrict access by port', function () {
       navigateToHome();
     });
 
-    it("When I do not have any permission to view the port I see access restricted page", function () {
+    it("When I do not have any permission to view any ports I see access restricted page", function () {
       setRoles(["bogus"]);
       navigateToHomeAccessRestricted();
       cy.get('#alternate-ports').should('not.exist');
