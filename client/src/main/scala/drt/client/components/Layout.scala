@@ -18,8 +18,10 @@ object Layout {
       loggedInUserPotRCP(loggedInUserMP => {
         val (loggedInUser, userHasPortAccess) = loggedInUserMP()
         <.div(
-          <.div(^.className := "main-logo"),
-          <.div(^.className := "alerts", AlertsComponent())
+          <.div(^.className := "topbar",
+            <.div(^.className := "main-logo"),
+            <.div(^.className := "alerts", AlertsComponent())
+          ),
           <.div(
             loggedInUser.renderReady(loggedInUser => {
               userHasPortAccess.renderReady(userHasPortAccess => {
@@ -29,7 +31,6 @@ object Layout {
                   airportConfigRCP(airportConfigMP => {
                     val airportConfig = airportConfigMP()
                     <.div(
-                      AlertsComponent(),
                       airportConfig.renderReady(airportConfig => {
                         <.div(
                           Navbar(props.ctl, props.currentLoc.page, loggedInUser, airportConfig),
@@ -40,7 +41,8 @@ object Layout {
                   })
                 } else <.div(RestrictedAccessByPortPage(loggedInUser))
               })
-            })))
+            }))
+        )
       })
     })
     .build

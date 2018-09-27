@@ -7,7 +7,7 @@ describe('Restrict access by port', function () {
 
   function navigateToHome() {
     cy.visit('/v2/test/live').then(() => {
-      cy.contains('.navbar .container .navbar-drt', 'DRT TEST').end();
+      cy.contains('.navbar-drt', 'DRT TEST').end();
     }).end();
   }
 

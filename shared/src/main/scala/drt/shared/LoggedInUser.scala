@@ -18,6 +18,7 @@ object Roles {
     LHRAccess,
     LTNAccess,
     MANAccess,
+    TestAccess,
     STNAccess
   )
   val availableRoles : Set[Role] = Set(
@@ -79,6 +80,8 @@ case object MANAccess extends Role {
 
 case object STNAccess extends Role {
   override val name: String = "STN"
-}case object CreateAlerts extends Role {
+}
+
+case object CreateAlerts extends Role {
   override val name: String = "create-alerts"
 }

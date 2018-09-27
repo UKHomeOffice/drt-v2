@@ -5,6 +5,7 @@ describe('Arrivals page', () => {
   const currentMillis = currentDateTime.getTime();
 
   function addFlight() {
+    setRoles(["test"]);
     cy.request('POST',
       '/v2/test/live/test/arrival',
       {
@@ -32,21 +33,23 @@ describe('Arrivals page', () => {
   }
 
   function loadManifestFixture() {
+    setRoles(["test"]);
     cy.request('POST', '/v2/test/live/test/manifest', manifest);
-    cy.request('GET', '/v2/test/live/export/arrivals/' + currentMillis + '/T1?startHour=0&endHour=24')
+    cy.request('GET', '/v2/test/live/export/arrivals/' + currentMillis + '/T1?startHour=0&endHour=24');
     cy.get('.pax-api');
   }
 
   function setRoles(roles) {
-    cy.request("POST", 'v2/test/live/test/mock-roles', { "roles": roles})
+    cy.request("POST", 'v2/test/live/test/mock-roles', { "roles": roles});
   }
 
   before(() => {
-    cy.request('DELETE', '/v2/test/live/test/data');
     setRoles(["test"]);
+    cy.request('DELETE', '/v2/test/live/test/data');
   });
 
   after(() => {
+    setRoles(["test"]);
     cy.request('DELETE', '/v2/test/live/test/data');
   });
 
@@ -132,16 +135,16 @@ describe('Arrivals page', () => {
 
   it('Does not show API splits in the flights export for regular users', () => {
     loadManifestFixture();
-    setRoles([""]);
+    setRoles(["test"]);
     cy.request('POST', '/v2/test/live/test/manifest', manifest);
     cy.request('GET', '/v2/test/live/export/arrivals/' + currentMillis + '/T1?startHour=0&endHour=24').then((resp) => {
-      expect(resp.body).to.equal(csvWithNoApiSplits)
+      expect(resp.body).to.equal(csvWithNoApiSplits);
     });
   });
 
   it('Allows you to view API splits in the flights export for users with api:view permission', () => {
     loadManifestFixture();
-    setRoles(["test"]);
+    setRoles(["test", "api:view"]);
     cy.request({
       method: 'GET',
       url: '/v2/test/live/export/arrivals/' + currentMillis + '/T1?startHour=0&endHour=24',

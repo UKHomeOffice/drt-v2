@@ -99,7 +99,7 @@ describe('Staff movements', function () {
     cy.get('.movement-display')
       .should('have.length', numMovements)
       .each(($element, index, $lis) => {
-        cy.wrap($element).contains(`by ${userName}`);
+        cy.wrap($element).contains(userName);
         return cy.wrap($element);
     }).end();
   }
@@ -111,7 +111,7 @@ describe('Staff movements', function () {
   function navigateToHome() {
     cy.visit('/v2/test/live').then(() => {
       cy.wait(500);
-      cy.get('.navbar .container .navbar-drt').contains('DRT TEST').end();
+      cy.get('.navbar-drt').contains('DRT TEST').end();
     }).end();
   }
 
