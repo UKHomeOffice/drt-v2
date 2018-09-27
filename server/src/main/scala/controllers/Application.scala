@@ -318,6 +318,8 @@ class Application @Inject()(implicit val config: Configuration,
         }
       }
 
+      val permissionDeniedMessage = "You do not have permission manage users"
+
       def keyCloakClient: KeyCloakClient with ProdSendAndReceive = {
         val token = headers.get("X-Auth-Token").getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
         val keyCloakUrl = config.getOptional[String]("key-cloak.url").getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
@@ -328,25 +330,25 @@ class Application @Inject()(implicit val config: Configuration,
         log.info(s"Got these roles: ${getLoggedInUser().roles}")
         if (getLoggedInUser().roles.contains(ManageUsers)) {
           keyCloakClient.getUsers()
-        } else throw new Exception("You do not have permission manage users")
+        } else throw new Exception(permissionDeniedMessage)
       }
 
       def getKeyCloakGroups(): Future[List[KeyCloakGroup]] = {
         if (getLoggedInUser().roles.contains(ManageUsers)) {
           keyCloakClient.getGroups()
-        } else throw new Exception("You do not have permission manage users")
+        } else throw new Exception(permissionDeniedMessage)
       }
 
       def getKeyCloakUserGroups(userId: UUID): Future[Set[KeyCloakGroup]] = {
         if (getLoggedInUser().roles.contains(ManageUsers)) {
           keyCloakClient.getUserGroups(userId).map(_.toSet)
-        } else throw new Exception("You do not have permission manage users")
+        } else throw new Exception(permissionDeniedMessage)
       }
 
       case class KeyCloakGroups(groups: List[KeyCloakGroup])
 
 
-      def addUserToGroups(userId: UUID, groups: Set[String]): Future[Unit] = {
+      def addUserToGroups(userId: UUID, groups: Set[String]): Future[Unit] =
         if (getLoggedInUser().roles.contains(ManageUsers)) {
           val futureGroupIds: Future[KeyCloakGroups] = keyCloakClient
             .getGroups()
@@ -363,8 +365,7 @@ class Application @Inject()(implicit val config: Configuration,
               })
             case _ => log.error(s"Unable to add $userId to $groups")
           }
-        } else throw new Exception("You do not have permission manage users")
-      }
+        } else throw new Exception(permissionDeniedMessage)
 
       def removeUserFromGroups(userId: UUID, groups: Set[String]): Future[Unit] = {
 
@@ -797,17 +798,17 @@ class Application @Inject()(implicit val config: Configuration,
       implicit request =>
         log.info(s"Request path: $path")
 
-      val b = request.body.asBytes(parse.UNLIMITED).get
+        val b = request.body.asBytes(parse.UNLIMITED).get
 
-      // call Autowire route
+        // call Autowire route
 
-      implicit val staffAssignmentsPickler: CompositePickler[StaffAssignments] = compositePickler[StaffAssignments].addConcreteType[ShiftAssignments].addConcreteType[FixedPointAssignments]
-      implicit val apiPaxTypeAndQueueCountPickler: Pickler[ApiPaxTypeAndQueueCount] = generatePickler[ApiPaxTypeAndQueueCount]
-      implicit val feedStatusPickler: CompositePickler[FeedStatus] = compositePickler[FeedStatus].
-        addConcreteType[FeedStatusSuccess].
-        addConcreteType[FeedStatusFailure]
+        implicit val staffAssignmentsPickler: CompositePickler[StaffAssignments] = compositePickler[StaffAssignments].addConcreteType[ShiftAssignments].addConcreteType[FixedPointAssignments]
+        implicit val apiPaxTypeAndQueueCountPickler: Pickler[ApiPaxTypeAndQueueCount] = generatePickler[ApiPaxTypeAndQueueCount]
+        implicit val feedStatusPickler: CompositePickler[FeedStatus] = compositePickler[FeedStatus].
+          addConcreteType[FeedStatusSuccess].
+          addConcreteType[FeedStatusFailure]
 
-      val router = Router.route[Api](ApiService(airportConfig, ctrl.shiftsActor, ctrl.fixedPointsActor, ctrl.staffMovementsActor, request.headers, request.session))
+        val router = Router.route[Api](ApiService(airportConfig, ctrl.shiftsActor, ctrl.fixedPointsActor, ctrl.staffMovementsActor, request.headers, request.session))
 
         router(
           autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))
@@ -818,9 +819,8 @@ class Application @Inject()(implicit val config: Configuration,
         })
     }
   }
-
-  def logging: Action[Map[String, Seq[String]]]
-  = auth {
+  
+  def logging: Action[Map[String, Seq[String]]] = auth {
     Action(parse.tolerantFormUrlEncoded) {
       implicit request =>
 

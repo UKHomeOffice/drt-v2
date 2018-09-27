@@ -40,7 +40,7 @@ object EditKeyCloakUser {
               if (target.checked)
                 s.copy(groups = s.groups + g)
               else
-                s.copy(groups = s.groups.filter(_ != g))
+                s.copy(groups = s.groups.filterNot(_ == g))
             })
           })), s" $g"))
       ).toTagMod

@@ -11,14 +11,14 @@ import org.scalajs.dom.html
 
 object Navbar {
   def apply(ctl: RouterCtl[Loc], page: Loc, loggedInUser: LoggedInUser, airportConfig: AirportConfig): VdomTagOf[html.Element] = {
-    val menuModelRCP = SPACircuit.connect(m => (m.feedStatuses))
+    val feedStatusesRCP = SPACircuit.connect(m => (m.feedStatuses))
 
     val contactLink = airportConfig.contactEmail.map(contactEmail => {
       <.a(Icon.envelope, "Email Us", ^.href := "mailto:" + contactEmail + "?subject=Email from DRT v2 Page&body=Please give as much detail as possible about your enquiry here")
     }).getOrElse(TagMod(""))
     <.nav(^.className := "navbar navbar-default",
-      menuModelRCP(menuModelPotMP => {
-        val feedStatusesPot = menuModelPotMP()
+      feedStatusesRCP(feedStatusesPotMP => {
+        val feedStatusesPot = feedStatusesPotMP()
         <.div(^.className := "navbar-drt",
           <.span(^.className := "navbar-brand", s"DRT ${airportConfig.portCode}"),
 

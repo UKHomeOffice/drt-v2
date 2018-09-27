@@ -18,7 +18,7 @@ object RestrictedAccessByPortPage {
   def allPortsAccessible(roles: Set[Role]): Set[String] = AirportConfigs.allPorts
     .filter(airportConfig => roles.contains(airportConfig.role)).map(_.portCode).toSet
 
-  def userCanAccessPort(loggedInUser: LoggedInUser, portCode: String) = AirportConfigs.
+  def userCanAccessPort(loggedInUser: LoggedInUser, portCode: String): Boolean = AirportConfigs.
     allPorts.find(_.portCode == portCode).exists(c => loggedInUser.hasRole(c.role)
   )
 
@@ -41,7 +41,7 @@ object RestrictedAccessByPortPage {
           <.h2(^.id := "access-restricted", "Access Restricted"),
           <.div(
             <.p(^.id := "email-for-access", s"You do not currently have permission to access $portRequested. If you would like access to this port, " +
-              "please ", <.a("click here request access by email", ^.href :=
+              "please ", <.a("click here to request access by email", ^.href :=
               s"mailto:drtdevteam@digital.homeoffice.gov.uk;drtenquiries@homeoffice.gov.uk?subject=request" +
                 s" access to port $portRequested&body=Please give me access to DRT $portRequested."), "."),
             if (portsAccessible.nonEmpty) {
@@ -56,7 +56,6 @@ object RestrictedAccessByPortPage {
             } else TagMod()
           )
         )
-
       )
     })
     .build

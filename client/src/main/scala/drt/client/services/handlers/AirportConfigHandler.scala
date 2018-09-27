@@ -21,7 +21,6 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
           Future(RetryActionAfter(GetAirportConfig(), PollDelay.recoveryDelay))
       }))
     case UpdateAirportConfig(airportConfig) =>
-
       updated(Ready(airportConfig))
   }
 }
