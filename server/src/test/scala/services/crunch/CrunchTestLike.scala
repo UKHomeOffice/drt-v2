@@ -109,7 +109,8 @@ class CrunchTestLike
         Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
         Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))))),
     timeToChoxMillis = 120000L,
-    firstPaxOffMillis = 180000L
+    firstPaxOffMillis = 180000L,
+    role = STNAccess
   )
 
   val splitsPredictorStage = new DummySplitsPredictor()
@@ -330,7 +331,7 @@ class CrunchTestLike
   }
 
   def offerAndWait[T](sourceQueue: SourceQueueWithComplete[T], offering: T): QueueOfferResult = {
-    Await.result(sourceQueue.offer(offering), 5 seconds) match {
+    Await.result(sourceQueue.offer(offering), 3 seconds) match {
       case offerResult if offerResult != Enqueued =>
         throw new Exception(s"Queue offering (${offering.getClass}) was not enqueued: ${offerResult.getClass}")
       case offerResult =>

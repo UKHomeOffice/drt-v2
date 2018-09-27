@@ -24,12 +24,5 @@ class UsersHandler[M](modelRW: ModelRW[M, Pot[List[KeyCloakUser]]]) extends Logg
 
     case SetKeyCloakUsers(users) =>
       updated(Ready(users))
-
-    case AddUserToGroup(userId, groupName) =>
-      effectOnly(Effect(AjaxClient[Api].addUserToGroup(userId, groupName).call().map(_ => GetKeyCloakUsers).recoverWith {
-        case _ =>
-          log.error(s"AddUserToGroup request failed. Re-requesting after ${PollDelay.recoveryDelay}")
-          Future(RetryActionAfter(AddUserToGroup(userId, groupName), PollDelay.recoveryDelay))
-      }))
   }
 }

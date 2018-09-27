@@ -47,7 +47,7 @@ describe('Monthly Staffing', function () {
     it("If I enter staff for the current month those staff should still be visible if I change months and change back", function () {
       saveShifts();
 
-      setRoles(["staff:edit"]);
+      setRoles(["staff:edit", "test"]);
 
       cy.visit('/v2/test/live#terminal/T1/staffing/15///');
       cy.get(cellToTest).contains("1");

@@ -1,6 +1,8 @@
 package controllers
 
 import java.nio.ByteBuffer
+import java.util.UUID
+import javax.inject.{Inject, Singleton}
 
 import actors._
 import actors.pointInTime.CrunchStateReadActor
@@ -21,10 +23,10 @@ import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
 import drt.staff.ImportStaff
 import drt.users.KeyCloakClient
-import javax.inject.{Inject, Singleton}
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.{HeaderNames, HttpEntity}
+import play.api.libs.json._
 import play.api.mvc._
 import play.api.{Configuration, Environment}
 import server.feeds.acl.AclFeed
@@ -144,9 +146,9 @@ class NoCacheFilter @Inject()(
 trait UserRoleProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def userRolesFromHeader(headers: Headers): List[Role] = headers.get("X-Auth-Roles").map(_.split(",").flatMap(Roles.parse).toList).getOrElse(List.empty[Role])
+  def userRolesFromHeader(headers: Headers): Set[Role] = headers.get("X-Auth-Roles").map(_.split(",").flatMap(Roles.parse).toSet).getOrElse(Set.empty[Role])
 
-  def getRoles(config: Configuration, headers: Headers, session: Session): List[Role]
+  def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role]
 
   def getLoggedInUser(config: Configuration, headers: Headers, session: Session): LoggedInUser = {
     LoggedInUser(
@@ -316,6 +318,8 @@ class Application @Inject()(implicit val config: Configuration,
         }
       }
 
+      val permissionDeniedMessage = "You do not have permission manage users"
+
       def keyCloakClient: KeyCloakClient with ProdSendAndReceive = {
         val token = headers.get("X-Auth-Token").getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
         val keyCloakUrl = config.getOptional[String]("key-cloak.url").getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
@@ -325,19 +329,49 @@ class Application @Inject()(implicit val config: Configuration,
       def getKeyCloakUsers(): Future[List[KeyCloakUser]] = {
         log.info(s"Got these roles: ${getLoggedInUser().roles}")
         if (getLoggedInUser().roles.contains(ManageUsers)) {
-          keyCloakClient.getUsersNotInGroup("Approved")
-        } else throw new Exception("You do not have permission manage users")
+          keyCloakClient.getUsers()
+        } else throw new Exception(permissionDeniedMessage)
       }
 
-      def addUserToGroup(userId: String, groupName: String): Unit = {
+      def getKeyCloakGroups(): Future[List[KeyCloakGroup]] = {
         if (getLoggedInUser().roles.contains(ManageUsers)) {
-          val futureGroupId: Future[Option[KeyCloakGroup]] = keyCloakClient.getGroups().map(_.find(_.name == groupName))
-          futureGroupId.map {
-            case Some(group) => keyCloakClient.addUserToGroup(userId, group.id)
-            case None => log.error(s"Unable to add $userId to $groupName")
-          }
-        } else throw new Exception("You do not have permission manage users")
+          keyCloakClient.getGroups()
+        } else throw new Exception(permissionDeniedMessage)
       }
+
+      def getKeyCloakUserGroups(userId: UUID): Future[Set[KeyCloakGroup]] = {
+        if (getLoggedInUser().roles.contains(ManageUsers)) {
+          keyCloakClient.getUserGroups(userId).map(_.toSet)
+        } else throw new Exception(permissionDeniedMessage)
+      }
+
+      case class KeyCloakGroups(groups: List[KeyCloakGroup])
+
+
+      def addUserToGroups(userId: UUID, groups: Set[String]): Future[Unit] =
+        if (getLoggedInUser().roles.contains(ManageUsers)) {
+          val futureGroupIds: Future[KeyCloakGroups] = keyCloakClient
+            .getGroups()
+            .map(kcGroups => KeyCloakGroups(kcGroups.filter(g => groups.contains(g.name))))
+
+
+          futureGroupIds.map {
+            case KeyCloakGroups(groups) if groups.nonEmpty =>
+              log.info(s"Adding ${groups.map(_.name)} to $userId")
+              groups.map(group => {
+                val response = keyCloakClient.addUserToGroup(userId, group.id)
+                response.map(res => log.info(s"Added group and got: ${res.status}  $res")
+                )
+              })
+            case _ => log.error(s"Unable to add $userId to $groups")
+          }
+        } else throw new Exception(permissionDeniedMessage)
+
+      def removeUserFromGroups(userId: UUID, groups: Set[String]): Future[Unit] =
+        keyCloakClient
+        .getGroups()
+        .map(kcGroups => kcGroups.filter(g => groups.contains(g.name))
+          .map(g => keyCloakClient.removeUserFromGroup(userId, g.id)))
 
       def getAlerts(createdAfter: MillisSinceEpoch): Future[Seq[Alert]] = {
         for {
@@ -384,14 +418,32 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def isHistoricDate(day: MillisSinceEpoch): Boolean = {
-    day < getLocalLastMidnight(SDate.now()).millisSinceEpoch
-  }
+  def isHistoricDate(day: MillisSinceEpoch): Boolean = day < getLocalLastMidnight(SDate.now()).millisSinceEpoch
 
   def index = Action {
     Ok(views.html.index("DRT - BorderForce", portCode, googleTrackingCode))
   }
 
+  def getLoggedInUser(): Action[AnyContent] = Action { request =>
+    val user = ctrl.getLoggedInUser(config, request.headers, request.session)
+
+    implicit val userWrites = new Writes[LoggedInUser] {
+      def writes(user: LoggedInUser) = Json.obj(
+        "userName" -> user.userName,
+        "id" -> user.id,
+        "email" -> user.email,
+        "roles" -> user.roles.map(_.name)
+      )
+    }
+
+    Ok(Json.toJson(user))
+  }
+
+  def getUserHasPortAccess(): Action[AnyContent] = auth {
+    Action {
+      Ok("{userHasAccess: true}")
+    }
+  }
 
   def crunchStateAtPointInTime(pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = {
     val relativeLastMidnight = getLocalLastMidnight(SDate(pointInTime)).millisSinceEpoch
@@ -712,59 +764,89 @@ class Application @Inject()(implicit val config: Configuration,
       }
   }
 
-  def autowireApi(path: String): Action[RawBuffer] = Action.async(parse.raw) {
-    implicit request =>
-      log.info(s"Request path: $path")
+  def auth[A](action: Action[A]) = Action.async(action.parser) { request =>
 
-      val b = request.body.asBytes(parse.UNLIMITED).get
+    val loggedInUser: LoggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
+    val allowedRole = airportConfig.role
 
-      // call Autowire route
+    log.info(s"This port requires: $allowedRole")
+    log.info(s"This user has: ${loggedInUser.roles}")
 
-      implicit val staffAssignmentsPickler: CompositePickler[StaffAssignments] = compositePickler[StaffAssignments].addConcreteType[ShiftAssignments].addConcreteType[FixedPointAssignments]
-      implicit val apiPaxTypeAndQueueCountPickler: Pickler[ApiPaxTypeAndQueueCount] = generatePickler[ApiPaxTypeAndQueueCount]
-      implicit val feedStatusPickler: CompositePickler[FeedStatus] = compositePickler[FeedStatus].
-        addConcreteType[FeedStatusSuccess].
-        addConcreteType[FeedStatusFailure]
 
-      val router = Router.route[Api](ApiService(airportConfig, ctrl.shiftsActor, ctrl.fixedPointsActor, ctrl.staffMovementsActor, request.headers, request.session))
+    val enablePortAccessRestrictions =
+      config.getOptional[Boolean]("feature-flags.port-access-restrictions").getOrElse(false)
 
-      router(
-        autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))
-      ).map(buffer => {
-        val data = Array.ofDim[Byte](buffer.remaining())
-        buffer.get(data)
-        Ok(data)
-      })
+    log.info(s"Enable restrictions: $enablePortAccessRestrictions")
+
+    val preventAccess = !loggedInUser.hasRole(allowedRole) && enablePortAccessRestrictions
+    log.info(s"Prevent access: $preventAccess")
+    if (preventAccess) {
+      Future(Unauthorized(s"{" +
+        s"Permission denied, you need $allowedRole to access this port" +
+        s"}"))
+    } else {
+      log.info(s"You have $allowedRole and so you can access this port.")
+      action(request)
+    }
   }
 
-  def logging: Action[Map[String, Seq[String]]] = Action(parse.tolerantFormUrlEncoded) {
-    implicit request =>
+  def autowireApi(path: String): Action[RawBuffer] = auth {
+    Action.async(parse.raw) {
+      implicit request =>
+        log.info(s"Request path: $path")
 
-      def postStringValOrElse(key: String, default: String) = {
-        request.body.get(key).map(_.head).getOrElse(default)
-      }
+        val b = request.body.asBytes(parse.UNLIMITED).get
 
-      val logLevel = postStringValOrElse("level", "ERROR")
+        // call Autowire route
 
-      val millis = request.body.get("timestamp")
-        .map(_.head.toLong)
-        .getOrElse(SDate.now(Crunch.europeLondonTimeZone).millisSinceEpoch)
+        implicit val staffAssignmentsPickler: CompositePickler[StaffAssignments] = compositePickler[StaffAssignments].addConcreteType[ShiftAssignments].addConcreteType[FixedPointAssignments]
+        implicit val apiPaxTypeAndQueueCountPickler: Pickler[ApiPaxTypeAndQueueCount] = generatePickler[ApiPaxTypeAndQueueCount]
+        implicit val feedStatusPickler: CompositePickler[FeedStatus] = compositePickler[FeedStatus].
+          addConcreteType[FeedStatusSuccess].
+          addConcreteType[FeedStatusFailure]
 
-      val logMessage = Map(
-        "logger" -> ("CLIENT - " + postStringValOrElse("logger", "log")),
-        "message" -> postStringValOrElse("message", "no log message"),
-        "logTime" -> SDate(millis).toISOString(),
-        "url" -> postStringValOrElse("url", request.headers.get("referrer").getOrElse("unknown url")),
-        "logLevel" -> logLevel
-      )
+        val router = Router.route[Api](ApiService(airportConfig, ctrl.shiftsActor, ctrl.fixedPointsActor, ctrl.staffMovementsActor, request.headers, request.session))
 
-      log.log(Logging.levelFor(logLevel).getOrElse(Logging.ErrorLevel), s"Client Error: ${
-        logMessage.map {
-          case (value, key) => s"$key: $value"
-        }.mkString(", ")
-      }")
+        router(
+          autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))
+        ).map(buffer => {
+          val data = Array.ofDim[Byte](buffer.remaining())
+          buffer.get(data)
+          Ok(data)
+        })
+    }
+  }
 
-      Ok("logged successfully")
+  def logging: Action[Map[String, Seq[String]]] = auth {
+    Action(parse.tolerantFormUrlEncoded) {
+      implicit request =>
+
+        def postStringValOrElse(key: String, default: String) = {
+          request.body.get(key).map(_.head).getOrElse(default)
+        }
+
+        val logLevel = postStringValOrElse("level", "ERROR")
+
+        val millis = request.body.get("timestamp")
+          .map(_.head.toLong)
+          .getOrElse(SDate.now(Crunch.europeLondonTimeZone).millisSinceEpoch)
+
+        val logMessage = Map(
+          "logger" -> ("CLIENT - " + postStringValOrElse("logger", "log")),
+          "message" -> postStringValOrElse("message", "no log message"),
+          "logTime" -> SDate(millis).toISOString(),
+          "url" -> postStringValOrElse("url", request.headers.get("referrer").getOrElse("unknown url")),
+          "logLevel" -> logLevel
+        )
+
+        log.log(Logging.levelFor(logLevel).getOrElse(Logging.ErrorLevel), s"Client Error: ${
+          logMessage.map {
+            case (value, key) => s"$key: $value"
+          }.mkString(", ")
+        }")
+
+        Ok("logged successfully")
+    }
   }
 }
 

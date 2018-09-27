@@ -1,24 +1,21 @@
 package drt.client
 
+import java.util.UUID
 import diode.Action
-import drt.client.SPAMain.TerminalPageTabLoc
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType}
-import drt.client.components.{AlertsPage, GlobalStyles, KeyCloakUsersPage, Layout, StatusPage, TerminalComponent, TerminalDesksAndQueues, TerminalPlanningComponent, TerminalsDashboardPage}
+import drt.client.components.{AlertsPage, EditKeyCloakUserPage, GlobalStyles, KeyCloakUsersPage, Layout, StatusPage, TerminalComponent, TerminalPlanningComponent, TerminalsDashboardPage}
 import drt.client.logger._
-import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.client.services.handlers.GetFeedStatuses
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SDateLike
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
-
+import scalacss.ProdDefaults._
 import scala.collection.immutable.Seq
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
-import scalacss.ProdDefaults._
 
 object SPAMain {
 
@@ -70,7 +67,7 @@ object SPAMain {
       copy(queryParams = queryParams + ("timeRangeEnd" -> timeEnd))
     }
 
-    def parseDateString(s: String): SDateLike = SDate.parseAsLocalDateTime(s.replace("%20", " ").split(" ").mkString("T"))
+    def parseDateString(s: String): SDateLike = SDate(s.replace("%20", " ").split(" ").mkString("T"))
 
     def timeRangeStart: Option[Int] = timeRangeStartString.map(_.toInt)
 
@@ -100,12 +97,15 @@ object SPAMain {
 
   case object KeyCloakUsersLoc extends Loc
 
+  case class KeyCloakUserEditLoc(userId: UUID) extends Loc
+
   case object AlertLoc extends Loc
 
   def requestInitialActions(): Unit = {
     val initActions = Seq(
       GetApplicationVersion,
       GetLoggedInUser,
+      GetUserHasPortAccess,
       GetLoggedInStatus,
       GetAirportConfig(),
       GetFixedPoints(),
@@ -121,7 +121,7 @@ object SPAMain {
     .buildConfig { dsl =>
       import dsl._
 
-      val rule = homeRoute(dsl) | dashboardRoute(dsl) | terminalRoute(dsl) | statusRoute(dsl) | keyCloakUsersRoute(dsl) | alertRoute(dsl)
+      val rule = homeRoute(dsl) | dashboardRoute(dsl) | terminalRoute(dsl) | statusRoute(dsl) | keyCloakUsersRoute(dsl) | keyCloakUserEditRoute(dsl) | alertRoute(dsl)
 
       rule.notFound(redirectToPage(TerminalsDashboardLoc(None))(Redirect.Replace))
     }
@@ -138,6 +138,8 @@ object SPAMain {
             SPACircuit.dispatch(SetViewMode(ViewLive()))
           case (_, KeyCloakUsersLoc) =>
             SPACircuit.dispatch(GetKeyCloakUsers)
+          case (_, KeyCloakUserEditLoc(userId)) =>
+            SPACircuit.dispatch(GetUserGroups(userId))
           case _ =>
         }
       )
@@ -158,7 +160,16 @@ object SPAMain {
   def keyCloakUsersRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
     import dsl._
 
-    staticRoute("#users", KeyCloakUsersLoc) ~> renderR((router: RouterCtl[Loc]) => KeyCloakUsersPage())
+    staticRoute("#users", KeyCloakUsersLoc) ~> renderR((router: RouterCtl[Loc]) => KeyCloakUsersPage(router))
+  }
+
+  def keyCloakUserEditRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+    import dsl._
+
+    dynamicRouteCT(("#editUser" / uuid ).caseClass[KeyCloakUserEditLoc]) ~>
+      dynRenderR((page: KeyCloakUserEditLoc, router) => {
+        EditKeyCloakUserPage(page.userId)
+      })
   }
 
   def alertRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {

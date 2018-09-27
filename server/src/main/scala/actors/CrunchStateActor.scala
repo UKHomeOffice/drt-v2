@@ -100,7 +100,7 @@ class CrunchStateActor(override val maybeSnapshotInterval: Option[Int],
           val updatedStaff = cs.staffMinutes.filter {
             case (_, sm) => sm.lastUpdated.getOrElse(1L) > millis && start <= sm.minute && sm.minute < end
           }.values.toSet
-          if (updatedFlights.nonEmpty || updatedCrunch.nonEmpty) {
+          if (updatedFlights.nonEmpty || updatedCrunch.nonEmpty || updatedStaff.nonEmpty) {
             val flightsLatest = if (updatedFlights.nonEmpty) updatedFlights.map(_.lastUpdated.getOrElse(1L)).max else 0L
             val crunchLatest = if (updatedCrunch.nonEmpty) updatedCrunch.map(_.lastUpdated.getOrElse(1L)).max else 0L
             val staffLatest = if (updatedStaff.nonEmpty) updatedStaff.map(_.lastUpdated.getOrElse(1L)).max else 0L

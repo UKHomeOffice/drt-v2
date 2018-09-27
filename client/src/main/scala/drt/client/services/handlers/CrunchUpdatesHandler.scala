@@ -182,7 +182,7 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
 
   def midnightThisMorning: SDateLike = dayStart(SDate.now())
 
-  def dayStart(pointInTime: SDateLike): SDateLike = SDate.dayStart(pointInTime)
+  def dayStart(pointInTime: SDateLike): SDateLike = SDate.midnightOf(pointInTime)
 
   def dayEnd(pointInTime: SDateLike): SDateLike = dayStart(pointInTime)
     .addHours(airportConfigPot().map(_.dayLengthHours).getOrElse(24))
