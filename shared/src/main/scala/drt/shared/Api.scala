@@ -1,8 +1,10 @@
 package drt.shared
 
+import java.util.UUID
+
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, _}
-import drt.shared.KeyCloakApi.KeyCloakUser
+import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.SplitRatiosNs.SplitSources
 
 import scala.concurrent.Future
@@ -652,5 +654,11 @@ trait Api {
 
   def getKeyCloakUsers(): Future[List[KeyCloakUser]]
 
-  def addUserToGroup(userId: String, groupName: String): Unit
+  def getKeyCloakGroups(): Future[List[KeyCloakGroup]]
+
+  def getKeyCloakUserGroups(userId: UUID): Future[Set[KeyCloakGroup]]
+
+  def addUserToGroups(userId: UUID, groups: Set[String]): Future[Unit]
+
+  def removeUserFromGroups(userId: UUID, groups: Set[String]): Future[Unit]
 }

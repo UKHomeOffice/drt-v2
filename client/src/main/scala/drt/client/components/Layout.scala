@@ -1,6 +1,7 @@
 package drt.client.components
 
 import drt.client.SPAMain._
+import drt.client.services.SPACircuit
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router.{Resolution, RouterCtl}
 import japgolly.scalajs.react.vdom.html_<^._
@@ -13,18 +14,36 @@ object Layout {
 
   val component = ScalaComponent.builder[Props]("Layout")
     .renderP((_, props: Props) => {
-      <.div(
-        <.div( ^.className:= "topbar",
-          <.div(^.className := "main-logo"),
-          <.div(^.className := "alerts", AlertsComponent())
-        ),
+      val loggedInUserPotRCP = SPACircuit.connect(m => (m.loggedInUserPot, m.userHasPortAccess))
+      loggedInUserPotRCP(loggedInUserMP => {
+        val (loggedInUser, userHasPortAccess) = loggedInUserMP()
         <.div(
-          // here we use plain Bootstrap class names as these are specific to the top level layout defined here
-          Navbar(props.ctl, props.currentLoc.page),
-          <.div(^.className := "container", props.currentLoc.render()),
-          VersionUpdateNotice()
+          <.div(^.className := "topbar",
+            <.div(^.className := "main-logo"),
+            <.div(^.className := "alerts", AlertsComponent())
+          ),
+          <.div(
+            loggedInUser.renderReady(loggedInUser => {
+              userHasPortAccess.renderReady(userHasPortAccess => {
+                if (userHasPortAccess) {
+                  val airportConfigRCP = SPACircuit.connect(m => m.airportConfig)
+
+                  airportConfigRCP(airportConfigMP => {
+                    val airportConfig = airportConfigMP()
+                    <.div(
+                      airportConfig.renderReady(airportConfig => {
+                        <.div(
+                          Navbar(props.ctl, props.currentLoc.page, loggedInUser, airportConfig),
+                          <.div(^.className := "container",
+                            <.div(<.div(props.currentLoc.render()))
+                          ), VersionUpdateNotice())
+                      }))
+                  })
+                } else <.div(RestrictedAccessByPortPage(loggedInUser))
+              })
+            }))
         )
-      )
+      })
     })
     .build
 

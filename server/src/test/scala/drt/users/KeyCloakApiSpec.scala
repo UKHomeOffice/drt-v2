@@ -1,5 +1,7 @@
 package drt.users
 
+import java.util.UUID
+
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import com.typesafe.config.ConfigFactory
@@ -16,9 +18,12 @@ class KeyCloakApiSpec extends TestKit(ActorSystem("testActorSystem", ConfigFacto
 
   val keyCloakUrl = "https://keycloak"
 
+  val userId1 = UUID.fromString("e25f2a14-bdaa-11e8-a355-529269fb1459")
+  val userId2 = UUID.fromString("e25f2dfc-bdaa-11e8-a355-529269fb1459")
+
   val usersJson =
-    """[{
-      |        "id": "id_string1",
+    s"""[{
+      |        "id": "$userId1",
       |        "createdTimestamp": 1516283371483,
       |        "username": "test1@digital.homeoffice.gov.uk",
       |        "enabled": true,
@@ -41,7 +46,7 @@ class KeyCloakApiSpec extends TestKit(ActorSystem("testActorSystem", ConfigFacto
       |        }
       |    },
       |    {
-      |        "id": "id_string2",
+      |        "id": "${userId2}",
       |        "createdTimestamp": 1516967531289,
       |        "username": "test2@homeoffice.gsi.gov.uk",
       |        "enabled": true,
@@ -65,8 +70,8 @@ class KeyCloakApiSpec extends TestKit(ActorSystem("testActorSystem", ConfigFacto
       |    }]""".stripMargin
 
 val usersMissingOptionalFieldsJson =
-    """[{
-      |        "id": "id_string1",
+    s"""[{
+      |        "id": "$userId1",
       |        "username": "test1@digital.homeoffice.gov.uk",
       |        "enabled": true,
       |        "emailVerified": true,
@@ -77,7 +82,7 @@ val usersMissingOptionalFieldsJson =
       |        "notBefore": 0
       |    },
       |    {
-      |        "id": "id_string2",
+      |        "id": "$userId2",
       |        "createdTimestamp": 1516967531289,
       |        "username": "test2@homeoffice.gsi.gov.uk",
       |        "enabled": true,
@@ -101,7 +106,7 @@ val usersMissingOptionalFieldsJson =
       |    }]""".stripMargin
 
   private val user1 = KeyCloakUser(
-    "id_string1",
+    userId1,
     "test1@digital.homeoffice.gov.uk",
     true,
     true,
@@ -110,7 +115,7 @@ val usersMissingOptionalFieldsJson =
     "test1@digital.homeoffice.gov.uk"
   )
   private val user2 = KeyCloakUser(
-    "id_string2",
+    userId2,
     "test2@homeoffice.gsi.gov.uk",
     true,
     true,
@@ -161,9 +166,9 @@ val usersMissingOptionalFieldsJson =
       |        "subGroups": []
       |    }]""".stripMargin
 
-  private val lhrGroup = KeyCloakGroup("id2", "LHR", "/LHR", List())
+  private val lhrGroup = KeyCloakGroup("id2", "LHR", "/LHR")
   val expectedGroups = List(
-    KeyCloakGroup("id1", "DRT Admin User", "/DRT Admin User", List()),
+    KeyCloakGroup("id1", "DRT Admin User", "/DRT Admin User"),
     lhrGroup
   )
 
@@ -223,9 +228,9 @@ val usersMissingOptionalFieldsJson =
     res.status === StatusCodes.NoContent
   }
 
-  val lhrUsers = """
+  val lhrUsers = s"""
     | [{
-    |        "id": "id_string2",
+    |        "id": "$userId2",
     |        "createdTimestamp": 1516967531289,
     |        "username": "test2@homeoffice.gsi.gov.uk",
     |        "enabled": true,
@@ -259,7 +264,7 @@ val usersMissingOptionalFieldsJson =
           Future(HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`, groupsJson)))
         case "/users?max=1000&first=0" =>
           Future(HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`, usersJson)))
-        case "/users/id_string1/groups/id2" =>
+        case "/users/e25f2a14-bdaa-11e8-a355-529269fb1459/groups/id2" =>
           assert(req.method == HttpMethods.PUT)
           Future(HttpResponse(StatusCodes.NoContent))
       }
