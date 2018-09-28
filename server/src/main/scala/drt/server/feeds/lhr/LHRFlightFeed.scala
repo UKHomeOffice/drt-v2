@@ -136,7 +136,7 @@ object LHRFlightFeed {
 
   def csvContentsProviderProd(): Try[String] = {
     Try(Seq(
-      "/usr/local/bin/lhr-live-fetch-latest-feed.sh",
+      "/opt/docker/bin/lhr-live-fetch-latest-feed.sh",
       "-u", ConfigFactory.load.getString("lhr.live.username"),
       "-p", ConfigFactory.load.getString("lhr.live.password")).!!)
   }
