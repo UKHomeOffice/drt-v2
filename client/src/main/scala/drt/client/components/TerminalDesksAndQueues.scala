@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlViewType}
 import drt.client.actions.Actions.UpdateShowActualDesksAndQueues
 import drt.client.components.TerminalDesksAndQueues.{NodeListSeq, ViewDeps, ViewRecs, ViewType, documentScrollHeight, documentScrollTop, queueActualsColour, queueColour}
 import drt.client.logger.{Logger, LoggerFactory}
@@ -229,7 +229,7 @@ object TerminalDesksAndQueues {
       def toggleViewType(newViewType: ViewType) = (e: ReactEventFromInput) => {
         GoogleEventTracker.sendEvent(s"${props.terminalPageTab.terminal}", "Desks & Queues", newViewType.toString)
         props.router.set(
-          props.terminalPageTab.withViewType(newViewType)
+          props.terminalPageTab.withUrlParameters(Array(UrlViewType(Option(newViewType))))
         )
       }
 

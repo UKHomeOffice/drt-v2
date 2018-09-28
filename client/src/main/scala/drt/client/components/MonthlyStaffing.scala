@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
 import drt.client.actions.Actions.SaveMonthTimeSlotsToShifts
 import drt.client.components.TerminalPlanningComponent.defaultStartDate
 import drt.client.logger.{Logger, LoggerFactory}
@@ -138,7 +138,7 @@ object MonthlyStaffing {
                 names = monthOptions.map(d => s"${d.getMonthString()} ${d.getFullYear()}"),
                 defaultValue = viewingDate.toISOString(),
                 callback = (e: ReactEventFromInput) => {
-                  props.router.set(props.terminalPageTab.withDate(SDate(e.target.value).toISODateOnly))
+                  props.router.set(props.terminalPageTab.withUrlParameters(Array(UrlDateParameter(Option(SDate(e.target.value).toISODateOnly)))))
                 })),
               <.div(<.label("Time Resolution", ^.className := "text center")),
               <.div(drawSelect(

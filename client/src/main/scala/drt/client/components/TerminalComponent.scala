@@ -1,7 +1,7 @@
 package drt.client.components
 
 import diode.data.{Pending, Pot}
-import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -95,7 +95,7 @@ object TerminalComponent {
                   props.router.set(props.terminalPageTab.copy(
                     mode = "current",
                     subMode = subMode,
-                    queryParams = props.terminalPageTab.withNoDate.queryParams
+                    queryParams = props.terminalPageTab.withUrlParameters(Array(UrlDateParameter(None))).queryParams
                   ))
               }),
               <.li(^.className := snapshotDataClass,
@@ -104,14 +104,14 @@ object TerminalComponent {
                   props.router.set(props.terminalPageTab.copy(
                     mode = "snapshot",
                     subMode = subMode,
-                    queryParams = props.terminalPageTab.withNoDate.queryParams
+                    queryParams = props.terminalPageTab.withUrlParameters(Array(UrlDateParameter(None))).queryParams
                   ))
                 }
               ),
               <.li(^.className := planningClass,
                 <.a(^.id := "planningTab", VdomAttr("data-toggle") := "tab", "Planning"), ^.onClick --> {
                   GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Planning")
-                  props.router.set(props.terminalPageTab.copy(mode = "planning", subMode = subMode, queryParams = props.terminalPageTab.withNoDate.queryParams))
+                  props.router.set(props.terminalPageTab.copy(mode = "planning", subMode = subMode, queryParams = props.terminalPageTab.withUrlParameters(Array(UrlDateParameter(None))).queryParams))
                 }
               ),
               model.loggedInUserPot.render(
@@ -119,7 +119,7 @@ object TerminalComponent {
                   <.li(^.className := staffingClass,
                     <.a(^.id := "monthlyStaffingTab", VdomAttr("data-toggle") := "tab", "Monthly Staffing"), ^.onClick --> {
                       GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Monthly Staffing")
-                      props.router.set(props.terminalPageTab.copy(mode = "staffing", subMode = "15", queryParams = props.terminalPageTab.withNoDate.queryParams))
+                      props.router.set(props.terminalPageTab.copy(mode = "staffing", subMode = "15", queryParams = props.terminalPageTab.withUrlParameters(Array(UrlDateParameter(None))).queryParams))
                     }
                   ) else ""
               )

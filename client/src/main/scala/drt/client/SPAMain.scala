@@ -21,16 +21,38 @@ object SPAMain {
 
   sealed trait Loc
 
+  sealed trait UrlParameter {
+    val name: String
+    val value: Option[String]
+  }
+
+  case class UrlDateParameter(value: Option[String]) extends UrlParameter {
+    val name = "date"
+  }
+
+  case class UrlTimeRangeStart(value: Option[String]) extends UrlParameter {
+    val name = "timeRangeStart"
+  }
+
+  case class UrlTimeRangeEnd(value: Option[String]) extends UrlParameter {
+    val name = "timeRangeEnd"
+  }
+
+  case class UrlViewType(viewType: Option[ViewType]) extends UrlParameter {
+    val name = "viewType"
+    override val value: Option[String] = viewType.map(_.toString)
+  }
+
   case class TerminalPageTabLoc(
                                   terminal: String,
                                   mode: String = "current",
                                   subMode: String = "desksAndQueues",
                                   queryParams: Map[String, String] = Map.empty[String, String]
                                 ) extends Loc {
-    val date: Option[String] = queryParams.get("date").filter(_.matches(".+"))
-    val timeRangeStartString: Option[String] = queryParams.get("timeRangeStart").filter(_.matches("[0-9]+"))
-    val timeRangeEndString: Option[String] = queryParams.get("timeRangeEnd").filter(_.matches("[0-9]+"))
-    val viewType: ViewType = queryParams.get("viewType").map(vt => if (ViewRecs.toString.contains(vt)) ViewRecs else ViewDeps).getOrElse(ViewDeps)
+    val date: Option[String] = queryParams.get(UrlDateParameter(None).name).filter(_.matches(".+"))
+    val timeRangeStartString: Option[String] = queryParams.get(UrlTimeRangeStart(None).name).filter(_.matches("[0-9]+"))
+    val timeRangeEndString: Option[String] = queryParams.get(UrlTimeRangeEnd(None).name).filter(_.matches("[0-9]+"))
+    val viewType: ViewType = queryParams.get(UrlViewType(None).name).map(vt => if (ViewRecs.toString.contains(vt)) ViewRecs else ViewDeps).getOrElse(ViewDeps)
 
     def viewMode: ViewMode = {
       (mode, date) match {
@@ -41,30 +63,11 @@ object SPAMain {
       }
     }
 
-    def withDateAndTime(date: Option[String], timeStart: Option[String], timeEnd: Option[String]): TerminalPageTabLoc = {
-      val params = Seq("date", "timeRangeStart", "timeRangeEnd")
-      def optMap(value : Option[String], key: String)  = value.map(key -> _).toMap
-      val newQueryParams = queryParams.filterNot(kv=> params.contains(kv._1)) ++ optMap(date, "date") ++ optMap(timeStart, "timeRangeStart") ++ optMap(timeEnd, "timeRangeEnd")
-      copy(queryParams = newQueryParams)
-    }
-
-    def withNoDate: TerminalPageTabLoc = {
-      copy(queryParams = queryParams.filterNot(kv=> kv._1 == "date"))
-    }
-    def withDate(date: String): TerminalPageTabLoc = {
-      copy(queryParams = (queryParams + ("date" -> date)).filterNot(kv => kv._2 != "") )
-    }
-
-    def withViewType(viewType: ViewType): TerminalPageTabLoc = {
-      copy(queryParams = queryParams + ("viewType" -> viewType.toString) )
-    }
-
-    def withTimeStart(timeStart: String): TerminalPageTabLoc = {
-      copy(queryParams = queryParams + ("timeRangeStart" -> timeStart))
-    }
-
-    def withTimeEnd(timeEnd: String): TerminalPageTabLoc = {
-      copy(queryParams = queryParams + ("timeRangeEnd" -> timeEnd))
+    def withUrlParameters(urlParameters: Array[UrlParameter]) : TerminalPageTabLoc = {
+      def unset(allParams: Map[String, String], key:  String) = allParams.filterNot(kv=> kv._1.contains(key))
+      def set(allParams: Map[String, String], key: String, value: String) = allParams + (key -> value)
+      val newQueryParams = urlParameters.foldLeft(queryParams)((allParams, current) => current.value.map(value => set(allParams, current.name, value)).getOrElse(unset(allParams, current.name)))
+      copy(queryParams= newQueryParams)
     }
 
     def parseDateString(s: String): SDateLike = SDate(s.replace("%20", " ").split(" ").mkString("T"))

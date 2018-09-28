@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
+import drt.client.SPAMain._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -69,7 +69,7 @@ object DatePickerComponent {
 
       def updateUrlWithDateCallback(date: Option[SDateLike]): Callback = {
         props.router.set(
-          props.terminalPageTab.withDateAndTime(date.map(_.toLocalDateTimeString()), None, None)
+          props.terminalPageTab.withUrlParameters(Array(UrlDateParameter(date.map(_.toLocalDateTimeString())), UrlTimeRangeStart(None), UrlTimeRangeEnd(None)))
         )
       }
 

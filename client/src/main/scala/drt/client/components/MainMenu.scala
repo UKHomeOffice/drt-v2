@@ -46,7 +46,12 @@ object MainMenu {
       case (tn, idx) =>
         val targetLoc = currentLoc match {
           case tptl: TerminalPageTabLoc =>
-            TerminalPageTabLoc(tn, tptl.mode, tptl.subMode, tptl.withDateAndTime(tptl.date, tptl.timeRangeStartString, tptl.timeRangeEndString).queryParams)
+            tptl.withUrlParameters(Array(UrlDateParameter(tptl.date), UrlTimeRangeStart(tptl.timeRangeStartString), UrlTimeRangeEnd(tptl.timeRangeEndString)))
+
+            TerminalPageTabLoc(tn, tptl.mode, tptl.subMode,
+              tptl.withUrlParameters(Array(UrlDateParameter(tptl.date),
+                UrlTimeRangeStart(tptl.timeRangeStartString),
+                UrlTimeRangeEnd(tptl.timeRangeEndString))).queryParams)
           case _ => TerminalPageTabLoc(tn)
         }
         MenuItem(idx + idxOffset, _ => tn, Icon.calculator, targetLoc)
