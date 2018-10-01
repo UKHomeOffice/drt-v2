@@ -95,7 +95,7 @@ object TerminalComponent {
                   props.router.set(props.terminalPageTab.copy(
                     mode = "current",
                     subMode = subMode,
-                    queryParams = props.terminalPageTab.withUrlParameters(Array(UrlDateParameter(None))).queryParams
+                    queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams
                   ))
               }),
               <.li(^.className := snapshotDataClass,
@@ -104,14 +104,14 @@ object TerminalComponent {
                   props.router.set(props.terminalPageTab.copy(
                     mode = "snapshot",
                     subMode = subMode,
-                    queryParams = props.terminalPageTab.withUrlParameters(Array(UrlDateParameter(None))).queryParams
+                    queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams
                   ))
                 }
               ),
               <.li(^.className := planningClass,
                 <.a(^.id := "planningTab", VdomAttr("data-toggle") := "tab", "Planning"), ^.onClick --> {
                   GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Planning")
-                  props.router.set(props.terminalPageTab.copy(mode = "planning", subMode = subMode, queryParams = props.terminalPageTab.withUrlParameters(Array(UrlDateParameter(None))).queryParams))
+                  props.router.set(props.terminalPageTab.copy(mode = "planning", subMode = subMode, queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams))
                 }
               ),
               model.loggedInUserPot.render(
@@ -119,7 +119,7 @@ object TerminalComponent {
                   <.li(^.className := staffingClass,
                     <.a(^.id := "monthlyStaffingTab", VdomAttr("data-toggle") := "tab", "Monthly Staffing"), ^.onClick --> {
                       GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Monthly Staffing")
-                      props.router.set(props.terminalPageTab.copy(mode = "staffing", subMode = "15", queryParams = props.terminalPageTab.withUrlParameters(Array(UrlDateParameter(None))).queryParams))
+                      props.router.set(props.terminalPageTab.copy(mode = "staffing", subMode = "15", queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams))
                     }
                   ) else ""
               )

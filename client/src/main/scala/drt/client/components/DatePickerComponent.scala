@@ -69,7 +69,7 @@ object DatePickerComponent {
 
       def updateUrlWithDateCallback(date: Option[SDateLike]): Callback = {
         props.router.set(
-          props.terminalPageTab.withUrlParameters(Array(UrlDateParameter(date.map(_.toLocalDateTimeString())), UrlTimeRangeStart(None), UrlTimeRangeEnd(None)))
+          props.terminalPageTab.withUrlParameters(UrlDateParameter(date.map(_.toLocalDateTimeString())), UrlTimeRangeStart(None), UrlTimeRangeEnd(None))
         )
       }
 

@@ -46,12 +46,10 @@ object MainMenu {
       case (tn, idx) =>
         val targetLoc = currentLoc match {
           case tptl: TerminalPageTabLoc =>
-            tptl.withUrlParameters(Array(UrlDateParameter(tptl.date), UrlTimeRangeStart(tptl.timeRangeStartString), UrlTimeRangeEnd(tptl.timeRangeEndString)))
-
             TerminalPageTabLoc(tn, tptl.mode, tptl.subMode,
-              tptl.withUrlParameters(Array(UrlDateParameter(tptl.date),
+              tptl.withUrlParameters(UrlDateParameter(tptl.date),
                 UrlTimeRangeStart(tptl.timeRangeStartString),
-                UrlTimeRangeEnd(tptl.timeRangeEndString))).queryParams)
+                UrlTimeRangeEnd(tptl.timeRangeEndString)).queryParams)
           case _ => TerminalPageTabLoc(tn)
         }
         MenuItem(idx + idxOffset, _ => tn, Icon.calculator, targetLoc)
@@ -101,6 +99,7 @@ object MainMenu {
 
   private val component = ScalaComponent.builder[Props]("MainMenu")
     .renderBackend[Backend]
+    .componentDidMount(p => Callback.log("mainmenu did mount"))
     .build
 
   def apply(ctl: RouterCtl[Loc], currentLoc: Loc, feeds: Seq[FeedStatuses], airportConfig: AirportConfig, roles: Set[Role]): VdomElement

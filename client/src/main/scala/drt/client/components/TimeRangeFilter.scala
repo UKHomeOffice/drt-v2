@@ -61,11 +61,11 @@ object TimeRangeFilter {
 
       def setStart(v: String) = props
         .router
-        .set(props.terminalPageTab.withUrlParameters(Array(UrlTimeRangeStart(Option(v)))))
+        .set(props.terminalPageTab.withUrlParameters(UrlTimeRangeStart(Option(v))))
 
       def setEnd(v: String) = props
         .router
-        .set(props.terminalPageTab.withUrlParameters(Array(UrlTimeRangeEnd(Option(v)))))
+        .set(props.terminalPageTab.withUrlParameters(UrlTimeRangeEnd(Option(v))))
 
       def nowActive =
         if (selectedWindow.start == currentWindow.start && selectedWindow.end == currentWindow.end)
@@ -82,12 +82,12 @@ object TimeRangeFilter {
             if (props.showNow)
               <.div(^.id := "now", ^.className := s"btn btn-primary $nowActive", "Now", ^.onClick ==> ((_: ReactEventFromInput) => {
                 GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Time Range", "now")
-                props.router.set(props.terminalPageTab.withUrlParameters(Array(UrlDateParameter(props.terminalPageTab.date), UrlTimeRangeStart(None), UrlTimeRangeEnd(None))))
+                props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(props.terminalPageTab.date), UrlTimeRangeStart(None), UrlTimeRangeEnd(None)))
               })) else "",
             <.div(^.id := "hours24", ^.className := s"btn btn-primary $dayActive", "24 hours", ^.onClick ==> ((_: ReactEventFromInput) => {
               GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Time Range", "24 hours")
-              props.router.set(props.terminalPageTab.withUrlParameters(Array(
-                UrlDateParameter(props.terminalPageTab.date), UrlTimeRangeStart(Option(wholeDayWindow.start.toString)), UrlTimeRangeEnd(Option(wholeDayWindow.end.toString))))
+              props.router.set(props.terminalPageTab.withUrlParameters(
+                UrlDateParameter(props.terminalPageTab.date), UrlTimeRangeStart(Option(wholeDayWindow.start.toString)), UrlTimeRangeEnd(Option(wholeDayWindow.end.toString)))
               )
             }))
           ),

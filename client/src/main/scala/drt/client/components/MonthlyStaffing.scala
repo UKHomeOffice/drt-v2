@@ -138,7 +138,7 @@ object MonthlyStaffing {
                 names = monthOptions.map(d => s"${d.getMonthString()} ${d.getFullYear()}"),
                 defaultValue = viewingDate.toISOString(),
                 callback = (e: ReactEventFromInput) => {
-                  props.router.set(props.terminalPageTab.withUrlParameters(Array(UrlDateParameter(Option(SDate(e.target.value).toISODateOnly)))))
+                  props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toISODateOnly))))
                 })),
               <.div(<.label("Time Resolution", ^.className := "text center")),
               <.div(drawSelect(

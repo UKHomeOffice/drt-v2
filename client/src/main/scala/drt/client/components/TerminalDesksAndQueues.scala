@@ -235,7 +235,7 @@ object TerminalDesksAndQueues {
       def toggleViewType(newViewType: ViewType) = (e: ReactEventFromInput) => {
         GoogleEventTracker.sendEvent(s"${props.terminalPageTab.terminal}", "Desks & Queues", newViewType.toString)
         props.router.set(
-          props.terminalPageTab.withUrlParameters(Array(UrlViewType(Option(newViewType))))
+          props.terminalPageTab.withUrlParameters(UrlViewType(Option(newViewType)))
         )
       }
 

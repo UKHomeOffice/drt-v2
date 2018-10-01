@@ -100,7 +100,7 @@ object SnapshotSelector {
         if (isValidSnapshotDate) {
           GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Snapshot", state.snapshotDateTime.toLocalDateTimeString())
           log.info(s"state.snapshotDateTime: ${state.snapshotDateTime.toLocalDateTimeString()}")
-          props.router.set(props.terminalPageTab.withUrlParameters(Array(UrlDateParameter(Option(state.snapshotDateTime.toLocalDateTimeString())))))
+          props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Option(state.snapshotDateTime.toLocalDateTimeString()))))
         } else {
           GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Snapshot", "Invalid Date")
           scope.modState(_.copy(showDatePicker = true))
