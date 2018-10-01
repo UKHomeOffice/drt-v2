@@ -129,7 +129,7 @@ describe('Arrivals page', () => {
 
   it('Displays a flight after it has been ingested via the live feed', () => {
     addFlight();
-    cy.visit('/v2/test/live#terminal/T1/current/arrivals//0/24');
+    cy.visit('/v2/test/live#terminal/T1/current/arrivals/?timeRangeStart=0&timeRangeEnd=24');
     cy.get("#arrivals").contains("TS0123")
   });
 

@@ -40,7 +40,7 @@ object SPAMain {
 
   case class UrlViewType(viewType: Option[ViewType]) extends UrlParameter {
     val name = "viewType"
-    override val value: Option[String] = viewType.map(_.toString)
+    override val value: Option[String] = viewType.map(_.queryParamsValue)
   }
 
   case class TerminalPageTabLoc(
@@ -52,7 +52,7 @@ object SPAMain {
     val date: Option[String] = queryParams.get(UrlDateParameter(None).name).filter(_.matches(".+"))
     val timeRangeStartString: Option[String] = queryParams.get(UrlTimeRangeStart(None).name).filter(_.matches("[0-9]+"))
     val timeRangeEndString: Option[String] = queryParams.get(UrlTimeRangeEnd(None).name).filter(_.matches("[0-9]+"))
-    val viewType: ViewType = queryParams.get(UrlViewType(None).name).map(vt => if (ViewRecs.toString.contains(vt)) ViewRecs else ViewDeps).getOrElse(ViewDeps)
+    val viewType: ViewType = queryParams.get(UrlViewType(None).name).map(vt => if (ViewRecs.queryParamsValue == vt) ViewRecs else ViewDeps).getOrElse(ViewDeps)
 
     def viewMode: ViewMode = {
       (mode, date) match {

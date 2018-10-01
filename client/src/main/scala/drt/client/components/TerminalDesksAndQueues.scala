@@ -130,11 +130,17 @@ object TerminalDesksAndQueues {
                    loggedInUser: LoggedInUser
                   )
 
-  sealed trait ViewType
+  sealed trait ViewType{
+    val queryParamsValue: String
+  }
 
-  case object ViewRecs extends ViewType
+  case object ViewRecs extends ViewType {
+    override val queryParamsValue: String = "recs"
+  }
 
-  case object ViewDeps extends ViewType
+  case object ViewDeps extends ViewType {
+    override val queryParamsValue: String = "deps"
+  }
 
   case class State(showActuals: Boolean, viewType: ViewType)
 
