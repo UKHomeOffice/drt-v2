@@ -6,26 +6,26 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{FeedStatusFailure, FeedStatusSuccess, FeedStatuses}
-import japgolly.scalajs.react.{Callback, ScalaComponent}
 import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.{Callback, ScalaComponent}
 
 object StatusPage {
 
-  val log: Logger = LoggerFactory.getLogger(getClass().getName)
+  val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
   case class Props()
 
   val component = ScalaComponent.builder[Props]("StatusPage")
     .render_P(_ => {
 
-      val modelRCP = SPACircuit.connect(m => (m.feedStatuses, m.crunchStatePot))
+      val modelRCP = SPACircuit.connect(_.feedStatuses)
 
       modelRCP { modelMP =>
-        val (feedsMP, crunchStateMP) = modelMP()
+        val feedStatusesAndCrunchState = modelMP()
 
         <.div(
           <.h2("Feeds status"),
-          feedsMP.render((allFeedStatuses: Seq[FeedStatuses]) => {
+          feedStatusesAndCrunchState.render((allFeedStatuses: Seq[FeedStatuses]) => {
             allFeedStatuses.map(feed => {
               <.div(^.className := s"feed-status ${feed.ragStatus(SDate.now().millisSinceEpoch)}",
                 <.h3(feed.name),
@@ -66,7 +66,7 @@ object StatusPage {
     else dateToDisplay.prettyDateTime()
   }
 
-  def timeAgo(millisToCheck: MillisSinceEpoch) = {
+  def timeAgo(millisToCheck: MillisSinceEpoch): String = {
     val minutes = (SDate.now().millisSinceEpoch - millisToCheck) / 60000
     val hours = minutes / 60
     val days = hours / 24

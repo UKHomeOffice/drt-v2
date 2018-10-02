@@ -48,6 +48,7 @@ class LoggedInUserHandler[M](modelRW: ModelRW[M, Pot[LoggedInUser]]) extends Log
       }
       )))
     case SetLoggedInUser(loggedInUser) =>
+      log.info(s"Updated logged in user")
       updated(Ready(loggedInUser))
   }
 }
