@@ -4,8 +4,9 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{AirportConfig, AirportConfigs, LoggedInUser, Role}
-import japgolly.scalajs.react.ScalaComponent
+import japgolly.scalajs.react.extra.router.BaseUrl
 import japgolly.scalajs.react.vdom.html_<^.{^, _}
+import japgolly.scalajs.react.{Callback, ScalaComponent}
 import org.scalajs.dom
 
 object RestrictedAccessByPortPage {
@@ -44,6 +45,10 @@ object RestrictedAccessByPortPage {
               "please ", <.a("click here to request access by email", ^.href :=
               s"mailto:drtdevteam@digital.homeoffice.gov.uk;drtenquiries@homeoffice.gov.uk?subject=request" +
                 s" access to port $portRequested&body=Please give me access to DRT $portRequested."), "."),
+            <.p(
+              "Once your request has been processed, please ", <.a(Icon.signOut, "Log Out", ^.href := "/oauth/logout?redirect=" + BaseUrl.until_#.value,
+                ^.onClick --> Callback(GoogleEventTracker.sendEvent(portRequested, "Log Out from Access Restricted Page", props.loggedInUser.id))), " and try again."
+            ),
             if (portsAccessible.nonEmpty) {
               <.div(^.id := "alternate-ports",
                 <.p("Alternatively you are able to access the following ports"),
