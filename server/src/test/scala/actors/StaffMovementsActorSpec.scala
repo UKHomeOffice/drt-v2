@@ -26,8 +26,10 @@ class StaffMovementsActorSpec extends Specification {
 
   implicit val timeout: Timeout = Timeout(5 seconds)
 
+  val dbLocation = "target/test"
+
   def getTestKit = {
-    new AkkaTestkitSpecs2SupportForPersistence("target/test") {
+    new AkkaTestkitSpecs2SupportForPersistence(dbLocation) {
       def getActor: ActorRef = staffMovementsActor(system)
 
       def getState(actor: ActorRef) = {
@@ -50,15 +52,34 @@ class StaffMovementsActorSpec extends Specification {
   }
 
   "StaffMovementsActor" should {
-    "return the message it that was set if only one message is sent" in new Context {
+    "return the movements that were added after a shutdown" in new Context {
+
+      PersistenceCleanup.deleteJournal(dbLocation)
 
       val staffMovements = StaffMovements(Seq(StaffMovement("T1", "lunch start", MilliDate(SDate(s"${date}T00:00").millisSinceEpoch), -1, movementUuid, createdBy = Some("batman"))))
 
-      actor ! staffMovements
+      actor ! AddStaffMovements(staffMovements.movements)
 
       val result = testKit2.getStateAndShutdown(actor)
 
       result mustEqual staffMovements
+    }
+
+    "return no movements if the movements were removed after a restart" in new Context {
+
+      PersistenceCleanup.deleteJournal(dbLocation)
+
+      val staffMovements = StaffMovements(Seq(StaffMovement("T1", "lunch start", MilliDate(SDate(s"${date}T00:00").millisSinceEpoch), -1, movementUuid, createdBy = Some("batman"))))
+
+      actor ! AddStaffMovements(staffMovements.movements)
+
+      Thread.sleep(250)
+
+      actor ! RemoveStaffMovements(movementUuid)
+
+      val result = testKit2.getStateAndShutdown(actor)
+
+      result mustEqual StaffMovements(Seq())
     }
   }
 

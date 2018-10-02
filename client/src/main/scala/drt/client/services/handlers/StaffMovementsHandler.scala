@@ -3,7 +3,6 @@ package drt.client.services.handlers
 import autowire._
 import boopickle.Default._
 
-import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import diode.data.{Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW}
 import diode.Implicits.runAfterImpl
@@ -11,37 +10,32 @@ import drt.client.actions.Actions._
 import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{AjaxClient, PollDelay, ViewMode}
-import drt.shared.{Api, SDateLike, StaffAssignment, StaffMovement}
+import drt.shared.{Api, StaffMovement}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
+import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class StaffMovementsHandler[M](modelRW: ModelRW[M, (Pot[Seq[StaffMovement]], ViewMode)]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case AddStaffMovement(staffMovement) =>
+    case AddStaffMovements(staffMovements) =>
       value match {
         case (Ready(sms), vm) =>
-
-          val updatedValue: Seq[StaffMovement] = (sms :+ staffMovement).sortBy(_.time.millisSinceEpoch)
-          updated((Ready(updatedValue), vm))
+          AjaxClient[Api].addStaffMovements(staffMovements).call()
+          val newStaffMovements = (sms ++ staffMovements).sortBy(_.time.millisSinceEpoch)
+          updated((Ready(newStaffMovements), vm))
         case _ => noChange
       }
 
-
-    case RemoveStaffMovement(_, uUID) =>
+    case RemoveStaffMovements(movementsPairUuid) =>
       value match {
-        case (Ready(sms), vm) if sms.exists(_.uUID == uUID) =>
-
-          sms.find(_.uUID == uUID).map(_.terminalName).map(terminal => {
-            val updatedValue = sms.filter(_.uUID != uUID)
-            updated((Ready(updatedValue), vm), Effect(Future(SaveStaffMovements(terminal))))
-          })
-            .getOrElse(noChange)
-
+        case (Ready(sms), vm) =>
+          AjaxClient[Api].removeStaffMovements(movementsPairUuid).call()
+          val newStaffMovements = sms.filterNot(_.uUID == movementsPairUuid).sortBy(_.time.millisSinceEpoch)
+          updated((Ready(newStaffMovements), vm))
         case _ => noChange
       }
-
 
     case SetStaffMovements(staffMovements: Seq[StaffMovement]) =>
       val scheduledRequest = Effect(Future(GetStaffMovements())).after(60 seconds)
@@ -64,21 +58,5 @@ class StaffMovementsHandler[M](modelRW: ModelRW[M, (Pot[Seq[StaffMovement]], Vie
         }
       )
       effectOnly(apiCallEffect)
-
-    case SaveStaffMovements(t) =>
-      value match {
-        case (Ready(sms), vm) =>
-          log.info(s"Calling saveStaffMovements")
-          val responseFuture = AjaxClient[Api].saveStaffMovements(sms).call()
-            .map(_ => DoNothing())
-            .recoverWith {
-              case _ =>
-                log.error(s"Failed to save Staff Movements. Re-requesting after ${PollDelay.recoveryDelay}")
-                Future(RetryActionAfter(SaveStaffMovements(t), PollDelay.recoveryDelay))
-            }
-          effectOnly(Effect(responseFuture))
-        case _ =>
-          noChange
-      }
   }
 }

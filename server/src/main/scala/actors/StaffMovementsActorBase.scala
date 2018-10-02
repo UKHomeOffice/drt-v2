@@ -14,11 +14,25 @@ import services.SDate
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
 
-case class StaffMovements(staffMovements: Seq[StaffMovement])
+case class StaffMovements(movements: Seq[StaffMovement]) {
+  def +(movementsToAdd: Seq[StaffMovement]): StaffMovements =
+    copy(movements = movements ++ movementsToAdd)
+
+  def -(movementsToRemove: Seq[UUID]): StaffMovements =
+    copy(movements = movements.filterNot(sm => movementsToRemove.contains(sm.uUID)))
+}
 
 case class StaffMovementsState(staffMovements: StaffMovements) {
   def updated(data: StaffMovements): StaffMovementsState = copy(staffMovements = data)
+
+  def +(movementsToAdd: Seq[StaffMovement]): StaffMovementsState = copy(staffMovements = staffMovements + movementsToAdd)
+
+  def -(movementsToRemove: Seq[UUID]): StaffMovementsState = copy(staffMovements = staffMovements - movementsToRemove)
 }
+
+case class AddStaffMovements(movementsToAdd: Seq[StaffMovement])
+
+case class RemoveStaffMovements(movementUuidsToRemove: UUID)
 
 case class AddStaffMovementsSubscribers(subscribers: List[SourceQueueWithComplete[Seq[StaffMovement]]])
 
@@ -29,7 +43,7 @@ class StaffMovementsActor extends StaffMovementsActorBase {
     log.info(s"Telling subscribers ($subscribers) about updated staff movements")
 
     subscribers.foreach(s => {
-      s.offer(data.staffMovements).onComplete {
+      s.offer(data.movements).onComplete {
         case Success(qor) => log.info(s"update queued successfully with subscriber: $qor")
         case Failure(t) => log.info(s"update failed to queue with subscriber: $t")
       }
@@ -83,16 +97,21 @@ class StaffMovementsActorBase extends RecoveryActorLike with PersistentDrtActor[
       log.info(s"GetState received")
       sender() ! state.staffMovements
 
-    case sm@StaffMovements(_) =>
-      if (sm != state.staffMovements) {
-        updateState(sm)
-        onUpdateState(sm)
+    case AddStaffMovements(movementsToAdd) =>
+      val updatedStaffMovements = state.staffMovements + movementsToAdd
+      updateState(updatedStaffMovements)
+      onUpdateState(updatedStaffMovements)
 
-        log.info(s"Staff movements updated. Saving snapshot")
-        saveSnapshot(StaffMovementsStateSnapshotMessage(staffMovementsToStaffMovementMessages(state.staffMovements)))
-      } else {
-        log.info(s"No changes to staff movements. Not persisting")
-      }
+      log.info(s"Staff movements added ($movementsToAdd). Saving snapshot")
+      saveSnapshot(StaffMovementsStateSnapshotMessage(staffMovementsToStaffMovementMessages(state.staffMovements)))
+
+    case RemoveStaffMovements(movementsToRemove) =>
+      val updatedStaffMovements = state.staffMovements - Seq(movementsToRemove)
+      updateState(updatedStaffMovements)
+      onUpdateState(updatedStaffMovements)
+
+      log.info(s"Staff movements removed ($movementsToRemove). Saving snapshot")
+      saveSnapshot(StaffMovementsStateSnapshotMessage(staffMovementsToStaffMovementMessages(state.staffMovements)))
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")
@@ -117,10 +136,10 @@ class StaffMovementsActorBase extends RecoveryActorLike with PersistentDrtActor[
   )
 
   def staffMovementsToStaffMovementMessages(staffMovements: StaffMovements): Seq[StaffMovementMessage] =
-    staffMovements.staffMovements.map(staffMovementToStaffMovementMessage)
+    staffMovements.movements.map(staffMovementToStaffMovementMessage)
 
   def staffMovementsToStaffMovementsMessage(staffMovements: StaffMovements) =
-    StaffMovementsMessage(staffMovements.staffMovements.map(staffMovementToStaffMovementMessage))
+    StaffMovementsMessage(staffMovements.movements.map(staffMovementToStaffMovementMessage))
 
   def staffMovementToStaffMovementMessage(sm: StaffMovement) = StaffMovementMessage(
     terminalName = Some(sm.terminalName),

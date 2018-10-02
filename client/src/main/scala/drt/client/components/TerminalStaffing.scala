@@ -1,5 +1,7 @@
 package drt.client.components
 
+import java.util.UUID
+
 import diode.data.Pot
 import drt.client.actions.Actions._
 import drt.client.components.FixedPoints._
@@ -13,8 +15,10 @@ import drt.shared._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.extra.Reusability
+import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import japgolly.scalajs.react.vdom.html_<^._
-import org.scalajs.dom.html.{Div, Table}
+import org.scalajs.dom.html.{Anchor, Div, Table}
+import org.scalajs.dom.raw.HTMLElement
 
 import scala.collection.immutable.NumericRange
 import scala.scalajs.js.Date
@@ -119,45 +123,7 @@ object TerminalStaffing {
 
     def movementsEditor(movements: Seq[StaffMovement], terminalName: TerminalName): VdomTagOf[Div] = {
       val terminalMovements = movements.filter(_.terminalName == terminalName)
-      <.div(
-        <.h2("Movements"),
-
-        if (terminalMovements.nonEmpty) {
-          val iterable: Iterable[TagMod] = terminalMovements
-            .groupBy(_.uUID)
-            .toSeq
-            .sortBy {
-              case (_, head :: _) => head.time.millisSinceEpoch
-            }
-            .map {
-              case (_, movementPair) =>
-                movementPair.toList.sortBy(_.time.millisSinceEpoch) match {
-                  case first :: second :: Nil =>
-                    val remove = <.a(Icon.remove, ^.key := first.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) =>
-                      Callback {
-                        GoogleEventTracker.sendEvent(terminalName, "Remove Staff Movement", first.copy(createdBy = None).toString)
-                        SPACircuit.dispatch(RemoveStaffMovement(0, first.uUID))
-                      }))
-                    val span = <.span(^.`class` := "movement-display", MovementDisplay.displayPair(first, second))
-                    <.li(remove, " ", span)
-                  case mm :: Nil =>
-                    val remove = <.a(Icon.remove, ^.key := mm.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) =>
-                      Callback {
-                        GoogleEventTracker.sendEvent(terminalName, "Remove Staff Movement", mm.copy(createdBy = None).toString)
-                        SPACircuit.dispatch(RemoveStaffMovement(0, mm.uUID))
-                      }))
-                    val span = <.span(^.`class` := "movement-display", MovementDisplay.displaySingle(mm))
-                    <.li(remove, " ", span)
-                  case x =>
-                    log.info(s"didn't get a pair: $x")
-                    TagMod()
-                }
-            }
-          <.ul(^.className := "list-unstyled", iterable.toTagMod)
-        } else {
-          <.p("No movements recorded")
-        }
-      )
+      <.div(<.h2("Movements"), movementsListTagMod(terminalMovements, terminalName))
     }
 
     case class FixedPointsProps(fixedPoints: FixedPointAssignments,
@@ -236,6 +202,47 @@ object TerminalStaffing {
         )
       )
   }
+
+  def movementsListTagMod(terminalMovements: Seq[StaffMovement], terminalName: TerminalName): TagOf[HTMLElement] = {
+    if (terminalMovements.nonEmpty)
+      <.ul(^.className := "list-unstyled", movementsLiElements(terminalMovements, terminalName).toTagMod)
+    else
+      <.p("No movements recorded")
+  }
+
+  def movementsLiElements(terminalMovements: Seq[StaffMovement], terminalName: TerminalName): Seq[TagMod] = sortedMovements(terminalMovements).map {
+    case (_, movementPair) =>
+      labelAndLink(terminalName, movementPair) match {
+        case Some((label, link)) => <.li(link, " ", <.span(^.`class` := "movement-display", label))
+        case None => TagMod()
+      }
+  }
+
+  def sortedMovements(terminalMovements: Seq[StaffMovement]): Seq[(UUID, Seq[StaffMovement])] = terminalMovements
+    .groupBy(_.uUID)
+    .toSeq
+    .sortBy {
+      case (_, head :: _) => head.time.millisSinceEpoch
+    }
+
+  def labelAndLink(terminalName: TerminalName,
+                   movementPair: Seq[StaffMovement]): Option[(String, html_<^.VdomTagOf[Anchor])] =
+    movementPair
+      .toList
+      .sortBy(_.time.millisSinceEpoch) match {
+      case first :: second :: Nil => Option(Tuple2(MovementDisplay.displayPair(first, second), removeLink(terminalName, first)))
+      case mm :: Nil => Option(Tuple2(MovementDisplay.displaySingle(mm), removeLink(terminalName, mm)))
+      case x =>
+        log.info(s"didn't get a pair: $x")
+        None
+    }
+
+  def removeLink(terminalName: TerminalName, movement: StaffMovement): VdomTagOf[Anchor] =
+    <.a(Icon.remove, ^.key := movement.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) =>
+      Callback {
+        GoogleEventTracker.sendEvent(terminalName, "Remove Staff Movement", movement.copy(createdBy = None).toString)
+        SPACircuit.dispatch(RemoveStaffMovements(movement.uUID))
+      }))
 
   def apply(props: Props): VdomElement = component(props)
 

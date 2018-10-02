@@ -630,7 +630,9 @@ trait Api {
 
   def getFixedPoints(pointIntTime: MillisSinceEpoch): Future[FixedPointAssignments]
 
-  def saveStaffMovements(staffMovements: Seq[StaffMovement]): Unit
+  def addStaffMovements(movementsToAdd: Seq[StaffMovement]): Unit
+
+  def removeStaffMovements(movementsToRemove: UUID): Unit
 
   def getStaffMovements(pointIntTime: MillisSinceEpoch): Future[Seq[StaffMovement]]
 

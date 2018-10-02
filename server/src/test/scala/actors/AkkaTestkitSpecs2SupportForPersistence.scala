@@ -6,6 +6,7 @@ import akka.actor.{ActorSystem, Terminated}
 import akka.testkit.{ImplicitSender, TestKit}
 import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.After
+import org.specs2.specification.{AfterAll, BeforeEach}
 
 import scala.collection.JavaConversions._
 import scala.concurrent.duration._
