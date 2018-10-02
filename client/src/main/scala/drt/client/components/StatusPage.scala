@@ -18,14 +18,14 @@ object StatusPage {
   val component = ScalaComponent.builder[Props]("StatusPage")
     .render_P(_ => {
 
-      val modelRCP = SPACircuit.connect(_.feedStatuses)
+      val feedStatusesRCP = SPACircuit.connect(_.feedStatuses)
 
-      modelRCP { modelMP =>
-        val feedStatusesAndCrunchState = modelMP()
+      feedStatusesRCP { feedStatusesMP =>
+        val feedStatusesPot = feedStatusesMP()
 
         <.div(
           <.h2("Feeds status"),
-          feedStatusesAndCrunchState.render((allFeedStatuses: Seq[FeedStatuses]) => {
+          feedStatusesPot.render((allFeedStatuses: Seq[FeedStatuses]) => {
             allFeedStatuses.map(feed => {
               <.div(^.className := s"feed-status ${feed.ragStatus(SDate.now().millisSinceEpoch)}",
                 <.h3(feed.name),
