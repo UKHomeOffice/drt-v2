@@ -11,7 +11,7 @@ import org.scalajs.dom.html
 
 object Navbar {
   def apply(ctl: RouterCtl[Loc], page: Loc, loggedInUser: LoggedInUser, airportConfig: AirportConfig): VdomTagOf[html.Element] = {
-    val feedStatusesRCP = SPACircuit.connect(m => (m.feedStatuses))
+    val feedStatusesRCP = SPACircuit.connect(_.feedStatuses)
 
     val contactLink = airportConfig.contactEmail.map(contactEmail => {
       <.a(Icon.envelope, "Email Us", ^.href := "mailto:" + contactEmail + "?subject=Email from DRT v2 Page&body=Please give as much detail as possible about your enquiry here")

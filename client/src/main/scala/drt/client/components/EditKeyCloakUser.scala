@@ -2,10 +2,12 @@ package drt.client.components
 
 import java.util.UUID
 
+import diode.UseValueEq
+import diode.data.Pot
 import drt.client.actions.Actions.SaveUserGroups
 import drt.client.services._
 import drt.shared.AirportConfigs
-import drt.shared.KeyCloakApi.KeyCloakUser
+import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
@@ -84,26 +86,28 @@ object EditKeyCloakUserPage {
 
   case class Props(userId: UUID)
 
+  case class UsersAndGroups(usersPot: Pot[List[KeyCloakUser]], groupsPot: Pot[Set[KeyCloakGroup]]) extends UseValueEq
+
   implicit val propsReuse: Reusability[Props] = Reusability.derive[Props]
 
   val component = ScalaComponent.builder[Props]("EditKeyCloakUserPage")
-    .render_P((props) => {
+    .render_P(props => {
 
-      val modelRCP = SPACircuit.connect(m => (m.keyCloakUsers, m.selectedUserGroups))
+      val modelRCP = SPACircuit.connect(m => UsersAndGroups(m.keyCloakUsers, m.selectedUserGroups))
       modelRCP(modelMP => {
-        val (usersPot, groupPot) = modelMP()
+        val usersAndGroups = modelMP()
 
         <.div(
           <.h2(s"Edit Groups"),
-          usersPot.renderReady(users =>
-            groupPot.renderReady(groups =>
+          usersAndGroups.usersPot.renderReady(users =>
+            usersAndGroups.groupsPot.renderReady(groups =>
               users.find(_.id == props.userId) match {
                 case Some(user) =>
                   <.div(EditKeyCloakUser(user, groups.map(_.name)))
                 case None => <.tbody(<.tr(<.td(s"Unable to find user with this id, please go back to the list users page.")))
               }
             )),
-          groupPot.renderPending(_ => <.tbody(<.tr(<.td(s"Updating groups..."))))
+          usersAndGroups.groupsPot.renderPending(_ => <.tbody(<.tr(<.td(s"Updating groups..."))))
         )
       })
     }

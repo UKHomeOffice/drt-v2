@@ -24,7 +24,7 @@ object AlertsPage {
     .initialState(State())
     .renderS((scope, state) => {
 
-      val modelRCP = SPACircuit.connect(m => m.alerts)
+      val modelRCP = SPACircuit.connect(_.alerts)
 
       def deleteAllAlerts = (_: ReactEventFromInput) => {
         GoogleEventTracker.sendEvent("alerts", "Delete All Alerts", "")

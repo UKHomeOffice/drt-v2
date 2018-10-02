@@ -20,7 +20,7 @@ object KeyCloakUsersPage {
 
       def editUser(userId: UUID) = (_: ReactEventFromInput) => p.router.set(KeyCloakUserEditLoc(userId))
 
-      val keyCloakUsers = SPACircuit.connect(m => m.keyCloakUsers)
+      val keyCloakUsers = SPACircuit.connect(_.keyCloakUsers)
       keyCloakUsers(usersMP => {
         val usersPot: Pot[List[KeyCloakUser]] = usersMP()
         <.div(
