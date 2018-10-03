@@ -32,7 +32,11 @@ case class StaffMovementsState(staffMovements: StaffMovements) {
 
 case class AddStaffMovements(movementsToAdd: Seq[StaffMovement])
 
+case class AddStaffMovementsAck(movementsToAdd: Seq[StaffMovement])
+
 case class RemoveStaffMovements(movementUuidsToRemove: UUID)
+
+case class RemoveStaffMovementsAck(movementUuidsToRemove: UUID)
 
 case class AddStaffMovementsSubscribers(subscribers: List[SourceQueueWithComplete[Seq[StaffMovement]]])
 
@@ -111,6 +115,8 @@ class StaffMovementsActorBase extends RecoveryActorLike with PersistentDrtActor[
       val messagesToPersist = StaffMovementsMessage(staffMovementsToStaffMovementMessages(movements))
       persistAndMaybeSnapshot(messagesToPersist)
 
+      sender() ! AddStaffMovementsAck(movementsToAdd)
+
     case RemoveStaffMovements(uuidToRemove) =>
       val updatedStaffMovements = state.staffMovements - Seq(uuidToRemove)
       updateState(updatedStaffMovements)
@@ -119,6 +125,8 @@ class StaffMovementsActorBase extends RecoveryActorLike with PersistentDrtActor[
       log.info(s"Staff movements removed ($uuidToRemove)")
       val messagesToPersist: RemoveStaffMovementMessage = RemoveStaffMovementMessage(Option(uuidToRemove.toString))
       persistAndMaybeSnapshot(messagesToPersist)
+
+      sender() ! RemoveStaffMovementsAck(uuidToRemove)
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")
