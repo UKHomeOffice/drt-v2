@@ -80,19 +80,20 @@ class StaffMovementsActorBase extends RecoveryActorLike with PersistentDrtActor[
 
   def updateState(data: StaffMovements): Unit = state = state.updated(data)
 
-  def staffMovementMessagesToStaffMovements(messages: List[StaffMovementMessage]): StaffMovements = StaffMovements(messages.map(staffMovementMessageToStaffMovement))
+  def staffMovementMessagesToStaffMovements(messages: Seq[StaffMovementMessage]): StaffMovements = StaffMovements(messages.map(staffMovementMessageToStaffMovement))
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: StaffMovementsStateSnapshotMessage => state = StaffMovementsState(staffMovementMessagesToStaffMovements(snapshot.staffMovements.toList))
   }
 
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case smm: StaffMovementsMessage =>
-      val sm = staffMovementMessagesToStaffMovements(smm.staffMovements.toList)
-      updateState(sm)
+    case StaffMovementsMessage(movements, _) =>
+      val updatedStaffMovements = staffMovementMessagesToStaffMovements(movements.toList)
+      updateState(updatedStaffMovements)
 
-    case RemoveStaffMovementMessage(Some(uuidToRemove)) =>
+    case RemoveStaffMovementMessage(Some(uuidToRemove), _) =>
       val updatedStaffMovements = state.staffMovements - Seq(UUID.fromString(uuidToRemove))
+      updateState(updatedStaffMovements)
   }
 
   def receiveCommand: Receive = {

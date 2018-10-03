@@ -24,4 +24,5 @@ message StaffMovementMessage {
 
 message RemoveStaffMovementMessage {
     optional string uUID = 1;
+    optional int64 createdAt = 2;
 }
