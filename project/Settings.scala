@@ -1,7 +1,5 @@
-import sbt._
-import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport._
 import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport._
-import sbt.Keys.libraryDependencies
+import sbt._
 
 /**
   * Application settings. Configure the build for your application here.
@@ -129,7 +127,7 @@ object Settings {
 
     "joda-time" % "joda-time" % jodaTime,
     "com.typesafe.play" %% "play-json-joda" % playJsonJoda,
-    "org.opensaml" % "opensaml" % openSaml excludeAll (ExclusionRule("org.bouncycastle"), ExclusionRule("xerces")),
+    "org.opensaml" % "opensaml" % openSaml excludeAll(ExclusionRule("org.bouncycastle"), ExclusionRule("xerces")),
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
     "org.apache.spark" % "spark-mllib_2.11" % sparkMlLib,
@@ -171,6 +169,7 @@ object Settings {
     "org.scala-js" %%% "scalajs-dom" % scalaDom,
     "com.lihaoyi" %%% "pprint" % pprint,
     "com.lihaoyi" %%% "utest" % uTest % Test,
+    "com.lihaoyi" %%% "upickle" % "0.6.6",
     "ru.pavkin" %%% "scala-js-momentjs" % scalaJsMomentJs
   ))
 

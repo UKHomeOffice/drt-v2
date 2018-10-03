@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.UseValueEq
 import diode.data.{Pending, Pot}
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.logger.{Logger, LoggerFactory}
@@ -33,7 +34,7 @@ object TerminalComponent {
                             loggedInUserPot: Pot[LoggedInUser],
                             viewMode: ViewMode,
                             minuteTicker: Int
-                          )
+                          ) extends UseValueEq
 
   val component = ScalaComponent.builder[Props]("Terminal")
     .render_P(props => {

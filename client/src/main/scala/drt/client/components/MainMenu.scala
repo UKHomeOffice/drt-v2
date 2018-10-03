@@ -16,7 +16,7 @@ import scala.collection.immutable
 object MainMenu {
   @inline private def bss: BootstrapStyles.type = GlobalStyles.bootstrapStyles
 
-  case class Props(router: RouterCtl[Loc], currentLoc: Loc, feeds: Seq[FeedStatuses], airportConfig: AirportConfig, roles: Seq[Role])
+  case class Props(router: RouterCtl[Loc], currentLoc: Loc, feeds: Seq[FeedStatuses], airportConfig: AirportConfig, roles: Set[Role])
 
   case class MenuItem(idx: Int, label: Props => VdomNode, icon: Icon, location: Loc, classes: List[String] = List())
 
@@ -41,7 +41,7 @@ object MainMenu {
     (CreateAlerts, alertsMenuItem _)
   )
 
-  def menuItems(airportConfig: AirportConfig, currentLoc: Loc, userRoles: Seq[Role], feeds: Seq[FeedStatuses]): List[MenuItem] = {
+  def menuItems(airportConfig: AirportConfig, currentLoc: Loc, userRoles: Set[Role], feeds: Seq[FeedStatuses]): List[MenuItem] = {
     def terminalDepsMenuItems(idxOffset: Int): List[MenuItem] = airportConfig.terminalNames.zipWithIndex.map {
       case (tn, idx) =>
         val targetLoc = currentLoc match {
@@ -60,7 +60,7 @@ object MainMenu {
     (nonTerminalMenuItems ::: terminalDepsMenuItems(nonTerminalMenuItems.length)) :+ statusMenuItem(nonTerminalMenuItems.length + airportConfig.terminalNames.length, feeds)
   }
 
-  private def restrictedMenuItemsForRole(roles: Seq[Role], startIndex: Int): List[MenuItem] = {
+  private def restrictedMenuItemsForRole(roles: Set[Role], startIndex: Int): List[MenuItem] = {
     val itemsForLoggedInUser = restrictedMenuItems.collect {
       case (role, menuItemCallback) if roles.contains(role) => menuItemCallback
     }.zipWithIndex.map {
@@ -98,6 +98,6 @@ object MainMenu {
     .renderBackend[Backend]
     .build
 
-  def apply(ctl: RouterCtl[Loc], currentLoc: Loc, feeds: Seq[FeedStatuses], airportConfig: AirportConfig, roles: Seq[Role]): VdomElement
+  def apply(ctl: RouterCtl[Loc], currentLoc: Loc, feeds: Seq[FeedStatuses], airportConfig: AirportConfig, roles: Set[Role]): VdomElement
   = component(Props(ctl, currentLoc, feeds, airportConfig, roles))
 }

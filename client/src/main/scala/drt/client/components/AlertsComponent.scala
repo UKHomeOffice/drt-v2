@@ -17,7 +17,7 @@ object AlertsComponent {
   val component = ScalaComponent.builder[Props]("Alerts")
     .render_P(_ => {
 
-      val modelRCP = SPACircuit.connect(m => m.alerts)
+      val modelRCP = SPACircuit.connect(_.alerts)
 
       modelRCP { modelMP =>
         val alertsPot = modelMP()

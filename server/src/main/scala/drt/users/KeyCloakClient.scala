@@ -1,5 +1,7 @@
 package drt.users
 
+import java.util.UUID
+
 import akka.actor.ActorSystem
 import akka.util.Timeout
 import drt.http.WithSendAndReceive
@@ -46,6 +48,19 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String, implicit 
     pipeline(Get(uri))
   }
 
+  def getUserGroups(userId: UUID): Future[List[KeyCloakGroup]] = {
+    val pipeline: HttpRequest => Future[List[KeyCloakGroup]] = (
+      addHeaders(Accept(MediaTypes.`application/json`), Authorization(OAuth2BearerToken(token)))
+        ~> sendAndReceive
+        ~> logResponse("getUserGroups")
+        ~> unmarshal[List[KeyCloakGroup]]
+      )
+    val uri = keyCloakUrl + s"/users/$userId/groups"
+    log.info(s"Calling key cloak: $uri")
+
+    pipeline(Get(uri))
+  }
+
   def getGroups(): Future[List[KeyCloakGroup]] = {
     val pipeline: HttpRequest => Future[List[KeyCloakGroup]] = (
         addHeaders(Accept(MediaTypes.`application/json`), Authorization(OAuth2BearerToken(token)))
@@ -87,7 +102,7 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String, implicit 
     } yield allUsers.filterNot(usersInGroup.toSet)
   }
 
-  def addUserToGroup(userId: String, groupId: String): Future[HttpResponse] = {
+  def addUserToGroup(userId: UUID, groupId: String): Future[HttpResponse] = {
     val pipeline: HttpRequest => Future[HttpResponse] = (
       addHeaders(Accept(MediaTypes.`application/json`), Authorization(OAuth2BearerToken(token)))
         ~> sendAndReceive
@@ -96,6 +111,17 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String, implicit 
 
     log.info(s"Adding $userId to $groupId")
     pipeline(Put(s"$keyCloakUrl/users/$userId/groups/$groupId"))
+  }
+
+  def removeUserFromGroup(userId: UUID, groupId: String): Future[HttpResponse] = {
+    val pipeline: HttpRequest => Future[HttpResponse] = (
+      addHeaders(Accept(MediaTypes.`application/json`), Authorization(OAuth2BearerToken(token)))
+        ~> sendAndReceive
+        ~> logResponse("removeUserFromGroup")
+      )
+
+    log.info(s"Adding $userId to $groupId")
+    pipeline(Delete(s"$keyCloakUrl/users/$userId/groups/$groupId"))
   }
 }
 
@@ -107,17 +133,17 @@ trait KeyCloakUserParserProtocol extends DefaultJsonProtocol with SprayJsonSuppo
     override def read(json: JsValue): KeyCloakUser = json match {
       case JsObject(fields) =>
         KeyCloakUser(
-          fields.get("id").map(_.convertTo[String]).getOrElse("missing id"),
-          fields.get("username").map(_.convertTo[String]).getOrElse("missing username"),
+          UUID.fromString(fields.get("id").map(_.convertTo[String]).getOrElse("")),
+          fields.get("username").map(_.convertTo[String]).getOrElse(""),
           fields.get("enabled").exists(_.convertTo[Boolean]),
           fields.get("emailVerified").exists(_.convertTo[Boolean]),
-          fields.get("firstName").map(_.convertTo[String]).getOrElse("missing first name"),
-          fields.get("lastName").map(_.convertTo[String]).getOrElse("missing last name"),
-          fields.get("email").map(_.convertTo[String]).getOrElse("missing email")
+          fields.get("firstName").map(_.convertTo[String]).getOrElse(""),
+          fields.get("lastName").map(_.convertTo[String]).getOrElse(""),
+          fields.get("email").map(_.convertTo[String]).getOrElse("")
         )
     }
   }
-  implicit val keyCloakGroupFormat: RootJsonFormat[KeyCloakGroup] = jsonFormat4(KeyCloakGroup)
+  implicit val keyCloakGroupFormat: RootJsonFormat[KeyCloakGroup] = jsonFormat3(KeyCloakGroup)
 }
 
 

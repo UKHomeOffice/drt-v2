@@ -109,7 +109,8 @@ class CrunchTestLike
         Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
         Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))))),
     timeToChoxMillis = 120000L,
-    firstPaxOffMillis = 180000L
+    firstPaxOffMillis = 180000L,
+    role = STNAccess
   )
 
   val splitsPredictorStage = new DummySplitsPredictor()

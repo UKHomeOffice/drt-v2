@@ -123,6 +123,7 @@ case class AirportConfig(
                           contactEmail: Option[String] = None,
                           dayLengthHours: Int = 36,
                           nationalityBasedProcTimes: Map[String, Double] = ProcessingTimes.nationalityProcessingTimes,
+                          role: Role,
                           cloneOfPortCode: Option[String] = None
                         ) extends AirportConfigLike {
 
@@ -285,7 +286,8 @@ object AirportConfigs {
       "Morning shift, A1, {date}, 07:00, 13:59, 15",
       "Afternoon shift, A1, {date}, 14:00, 16:59, 10",
       "Evening shift, A1, {date}, 17:00, 23:59, 17"
-    )
+    ),
+    role = EDIAccess
   )
   val lgw = AirportConfig(
     portCode = "LGW",
@@ -342,7 +344,8 @@ object AirportConfigs {
       "Morning shift, N, {date}, 07:00, 13:59, 15",
       "Afternoon shift, N, {date}, 14:00, 16:59, 10",
       "Evening shift, N, {date}, 17:00, 23:59, 17"
-    )
+    ),
+    role = LGWAccess
   )
   val stn = AirportConfig(
     portCode = "STN",
@@ -385,7 +388,8 @@ object AirportConfigs {
     ),
     fixedPointExamples = Seq("Roving Officer, 00:00, 23:59, 1",
       "Referral Officer, 00:00, 23:59, 1",
-      "Forgery Officer, 00:00, 23:59, 1")
+      "Forgery Officer, 00:00, 23:59, 1"),
+    role = STNAccess
   )
   val man = AirportConfig(
     portCode = "MAN",
@@ -422,7 +426,8 @@ object AirportConfigs {
       "Morning shift, T1, {date}, 07:00, 13:59, 30",
       "Afternoon shift, T1, {date}, 14:00, 16:59, 18",
       "Evening shift, T1, {date}, 17:00, 23:59, 22"
-    )
+    ),
+    role = MANAccess
   )
   private val lhrDefaultTerminalProcessingTimes = Map(
     eeaMachineReadableToDesk -> 25d / 60,
@@ -500,7 +505,8 @@ object AirportConfigs {
     hasActualDeskStats = true,
     portStateSnapshotInterval = 250,
     hasEstChox = true,
-    exportQueueOrder = Queues.exportQueueOrderWithFastTrack
+    exportQueueOrder = Queues.exportQueueOrderWithFastTrack,
+    role = LHRAccess
   )
   val ltn = AirportConfig(
     portCode = "LTN",
@@ -518,7 +524,8 @@ object AirportConfigs {
         Queues.EeaDesk -> (List.fill(24)(1), List(6, 9, 9, 9, 9, 9, 9, 8, 6, 6, 6, 6, 6, 6, 7, 7, 7, 8, 6, 6, 7, 8, 6, 6)),
         Queues.NonEeaDesk -> (List.fill(24)(1), List(4, 1, 1, 1, 1, 1, 1, 2, 4, 4, 4, 4, 4, 4, 3, 3, 3, 2, 4, 4, 3, 2, 4, 4))
       )
-    )
+    ),
+    role = LTNAccess
   )
   val ema = AirportConfig(
     portCode = "EMA",
@@ -555,7 +562,8 @@ object AirportConfigs {
         Queues.EGate -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)),
         Queues.QueueDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5))
       )
-    )
+    ),
+    role = EMAAccess
   )
 
   val brs = AirportConfig(
@@ -593,7 +601,8 @@ object AirportConfigs {
         Queues.EGate -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)),
         Queues.QueueDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5))
       )
-    )
+    ),
+    role = BRSAccess
   )
 
   val bhx = AirportConfig(
@@ -641,7 +650,8 @@ object AirportConfigs {
         Queues.NonEeaDesk -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
           List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1))
       )
-    )
+    ),
+    role = BHXAccess
   )
 
   val test = AirportConfig(
@@ -675,7 +685,8 @@ object AirportConfigs {
         Queues.EeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13)),
         Queues.EGate -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8))
       )
-    )
+    ),
+    role = TestAccess
   )
 
 
@@ -683,11 +694,13 @@ object AirportConfigs {
   val halvedLHRProcessingTimes: Map[TerminalName, Map[PaxTypeAndQueue, Double]] = lhr.defaultProcessingTimes.mapValues(_.mapValues(_ / 2))
 
   //copies of LHR for AB testing nationality based processing times and halved processing times
-  val lhr_ppt_halved: AirportConfig = lhr.copy(portCode = "LHR_PPT_HALVED", defaultProcessingTimes = halvedLHRProcessingTimes, cloneOfPortCode = Option("LHR"))
+  val lhr_ppt_halved: AirportConfig = lhr.copy(portCode = "LHR_PPT_HALVED", defaultProcessingTimes = halvedLHRProcessingTimes, cloneOfPortCode = Option("LHR"), role = TestAccess)
   //Nationality based proc times turned on using feature flag
-  val lhr_nbp: AirportConfig = lhr.copy(portCode = "LHR_NBP", cloneOfPortCode = Option("LHR"))
-  val lhr_nbp_halved: AirportConfig = lhr_ppt_halved.copy(portCode = "LHR_NBP_HALVED", nationalityBasedProcTimes = nationalityProcessingTimesHalved, cloneOfPortCode = Option("LHR")) //use halved default times and halved nationality based times
+  val lhr_nbp: AirportConfig = lhr.copy(portCode = "LHR_NBP", cloneOfPortCode = Option("LHR"), role = TestAccess)
+  val lhr_nbp_halved: AirportConfig = lhr_ppt_halved.copy(portCode = "LHR_NBP_HALVED", nationalityBasedProcTimes = nationalityProcessingTimesHalved, cloneOfPortCode = Option("LHR"), role = TestAccess) //use halved default times and halved nationality based times
 
   val allPorts: List[AirportConfig] = ema :: edi :: stn :: man :: ltn :: lhr :: lhr_nbp :: lhr_nbp_halved :: lhr_ppt_halved :: lgw :: bhx :: brs :: test :: Nil
+  val testPorts: List[AirportConfig] = test :: lhr_nbp :: lhr_nbp_halved :: lhr_ppt_halved :: Nil
+  def portGroups: List[String] = allPorts.filterNot(testPorts.contains).map(_.portCode.toUpperCase).sorted
   val confByPort: Map[String, AirportConfig] = allPorts.map(c => (c.portCode, c)).toMap
 }

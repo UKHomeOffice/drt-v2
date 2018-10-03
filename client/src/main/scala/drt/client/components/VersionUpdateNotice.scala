@@ -13,7 +13,7 @@ object VersionUpdateNotice {
 
   val component = ScalaComponent.builder[Props]("VersionUpdateNotice")
     .render(p => {
-      val appVersionRCP = SPACircuit.connect(m => m.applicationVersion)
+      val appVersionRCP = SPACircuit.connect(_.applicationVersion)
       appVersionRCP(appVersionMP => {
         appVersionMP.value match {
           case Ready(ClientServerVersions(client, server)) if client != server =>
