@@ -8,7 +8,7 @@ import akka.stream.scaladsl.SourceQueueWithComplete
 import com.trueaccord.scalapb.GeneratedMessage
 import drt.shared.{MilliDate, StaffMovement}
 import org.slf4j.{Logger, LoggerFactory}
-import server.protobuf.messages.StaffMovementMessages.{StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
+import server.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
 import services.SDate
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -73,7 +73,7 @@ class StaffMovementsActorBase extends RecoveryActorLike with PersistentDrtActor[
 
   def initialState = StaffMovementsState(StaffMovements(List()))
 
-  val snapshotInterval = 1
+  val snapshotInterval = 250
   override val snapshotBytesThreshold: Int = oneMegaByte
 
   override def stateToMessage: GeneratedMessage = StaffMovementsStateSnapshotMessage(staffMovementsToStaffMovementMessages(state.staffMovements))
@@ -90,6 +90,9 @@ class StaffMovementsActorBase extends RecoveryActorLike with PersistentDrtActor[
     case smm: StaffMovementsMessage =>
       val sm = staffMovementMessagesToStaffMovements(smm.staffMovements.toList)
       updateState(sm)
+
+    case RemoveStaffMovementMessage(Some(uuidToRemove)) =>
+      val updatedStaffMovements = state.staffMovements - Seq(UUID.fromString(uuidToRemove))
   }
 
   def receiveCommand: Receive = {
@@ -102,16 +105,19 @@ class StaffMovementsActorBase extends RecoveryActorLike with PersistentDrtActor[
       updateState(updatedStaffMovements)
       onUpdateState(updatedStaffMovements)
 
-      log.info(s"Staff movements added ($movementsToAdd). Saving snapshot")
-      saveSnapshot(StaffMovementsStateSnapshotMessage(staffMovementsToStaffMovementMessages(state.staffMovements)))
+      log.info(s"Staff movements added ($movementsToAdd)")
+      val movements: StaffMovements = StaffMovements(movementsToAdd)
+      val messagesToPersist = StaffMovementsMessage(staffMovementsToStaffMovementMessages(movements))
+      persistAndMaybeSnapshot(messagesToPersist)
 
-    case RemoveStaffMovements(movementsToRemove) =>
-      val updatedStaffMovements = state.staffMovements - Seq(movementsToRemove)
+    case RemoveStaffMovements(uuidToRemove) =>
+      val updatedStaffMovements = state.staffMovements - Seq(uuidToRemove)
       updateState(updatedStaffMovements)
       onUpdateState(updatedStaffMovements)
 
-      log.info(s"Staff movements removed ($movementsToRemove). Saving snapshot")
-      saveSnapshot(StaffMovementsStateSnapshotMessage(staffMovementsToStaffMovementMessages(state.staffMovements)))
+      log.info(s"Staff movements removed ($uuidToRemove)")
+      val messagesToPersist: RemoveStaffMovementMessage = RemoveStaffMovementMessage(Option(uuidToRemove.toString))
+      persistAndMaybeSnapshot(messagesToPersist)
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")
