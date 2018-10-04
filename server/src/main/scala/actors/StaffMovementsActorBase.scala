@@ -8,17 +8,35 @@ import akka.stream.scaladsl.SourceQueueWithComplete
 import com.trueaccord.scalapb.GeneratedMessage
 import drt.shared.{MilliDate, StaffMovement}
 import org.slf4j.{Logger, LoggerFactory}
-import server.protobuf.messages.StaffMovementMessages.{StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
+import server.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
 import services.SDate
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
 
-case class StaffMovements(staffMovements: Seq[StaffMovement])
+case class StaffMovements(movements: Seq[StaffMovement]) {
+  def +(movementsToAdd: Seq[StaffMovement]): StaffMovements =
+    copy(movements = movements ++ movementsToAdd)
+
+  def -(movementsToRemove: Seq[UUID]): StaffMovements =
+    copy(movements = movements.filterNot(sm => movementsToRemove.contains(sm.uUID)))
+}
 
 case class StaffMovementsState(staffMovements: StaffMovements) {
   def updated(data: StaffMovements): StaffMovementsState = copy(staffMovements = data)
+
+  def +(movementsToAdd: Seq[StaffMovement]): StaffMovementsState = copy(staffMovements = staffMovements + movementsToAdd)
+
+  def -(movementsToRemove: Seq[UUID]): StaffMovementsState = copy(staffMovements = staffMovements - movementsToRemove)
 }
+
+case class AddStaffMovements(movementsToAdd: Seq[StaffMovement])
+
+case class AddStaffMovementsAck(movementsToAdd: Seq[StaffMovement])
+
+case class RemoveStaffMovements(movementUuidsToRemove: UUID)
+
+case class RemoveStaffMovementsAck(movementUuidsToRemove: UUID)
 
 case class AddStaffMovementsSubscribers(subscribers: List[SourceQueueWithComplete[Seq[StaffMovement]]])
 
@@ -29,7 +47,7 @@ class StaffMovementsActor extends StaffMovementsActorBase {
     log.info(s"Telling subscribers ($subscribers) about updated staff movements")
 
     subscribers.foreach(s => {
-      s.offer(data.staffMovements).onComplete {
+      s.offer(data.movements).onComplete {
         case Success(qor) => log.info(s"update queued successfully with subscriber: $qor")
         case Failure(t) => log.info(s"update failed to queue with subscriber: $t")
       }
@@ -59,23 +77,27 @@ class StaffMovementsActorBase extends RecoveryActorLike with PersistentDrtActor[
 
   def initialState = StaffMovementsState(StaffMovements(List()))
 
-  val snapshotInterval = 1
+  val snapshotInterval = 250
   override val snapshotBytesThreshold: Int = oneMegaByte
 
   override def stateToMessage: GeneratedMessage = StaffMovementsStateSnapshotMessage(staffMovementsToStaffMovementMessages(state.staffMovements))
 
   def updateState(data: StaffMovements): Unit = state = state.updated(data)
 
-  def staffMovementMessagesToStaffMovements(messages: List[StaffMovementMessage]): StaffMovements = StaffMovements(messages.map(staffMovementMessageToStaffMovement))
+  def staffMovementMessagesToStaffMovements(messages: Seq[StaffMovementMessage]): StaffMovements = StaffMovements(messages.map(staffMovementMessageToStaffMovement))
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: StaffMovementsStateSnapshotMessage => state = StaffMovementsState(staffMovementMessagesToStaffMovements(snapshot.staffMovements.toList))
   }
 
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case smm: StaffMovementsMessage =>
-      val sm = staffMovementMessagesToStaffMovements(smm.staffMovements.toList)
-      updateState(sm)
+    case StaffMovementsMessage(movements, _) =>
+      val updatedStaffMovements = staffMovementMessagesToStaffMovements(movements.toList)
+      updateState(updatedStaffMovements)
+
+    case RemoveStaffMovementMessage(Some(uuidToRemove), _) =>
+      val updatedStaffMovements = state.staffMovements - Seq(UUID.fromString(uuidToRemove))
+      updateState(updatedStaffMovements)
   }
 
   def receiveCommand: Receive = {
@@ -83,16 +105,28 @@ class StaffMovementsActorBase extends RecoveryActorLike with PersistentDrtActor[
       log.info(s"GetState received")
       sender() ! state.staffMovements
 
-    case sm@StaffMovements(_) =>
-      if (sm != state.staffMovements) {
-        updateState(sm)
-        onUpdateState(sm)
+    case AddStaffMovements(movementsToAdd) =>
+      val updatedStaffMovements = state.staffMovements + movementsToAdd
+      updateState(updatedStaffMovements)
+      onUpdateState(updatedStaffMovements)
 
-        log.info(s"Staff movements updated. Saving snapshot")
-        saveSnapshot(StaffMovementsStateSnapshotMessage(staffMovementsToStaffMovementMessages(state.staffMovements)))
-      } else {
-        log.info(s"No changes to staff movements. Not persisting")
-      }
+      log.info(s"Staff movements added ($movementsToAdd)")
+      val movements: StaffMovements = StaffMovements(movementsToAdd)
+      val messagesToPersist = StaffMovementsMessage(staffMovementsToStaffMovementMessages(movements))
+      persistAndMaybeSnapshot(messagesToPersist)
+
+      sender() ! AddStaffMovementsAck(movementsToAdd)
+
+    case RemoveStaffMovements(uuidToRemove) =>
+      val updatedStaffMovements = state.staffMovements - Seq(uuidToRemove)
+      updateState(updatedStaffMovements)
+      onUpdateState(updatedStaffMovements)
+
+      log.info(s"Staff movements removed ($uuidToRemove)")
+      val messagesToPersist: RemoveStaffMovementMessage = RemoveStaffMovementMessage(Option(uuidToRemove.toString))
+      persistAndMaybeSnapshot(messagesToPersist)
+
+      sender() ! RemoveStaffMovementsAck(uuidToRemove)
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")
@@ -117,10 +151,10 @@ class StaffMovementsActorBase extends RecoveryActorLike with PersistentDrtActor[
   )
 
   def staffMovementsToStaffMovementMessages(staffMovements: StaffMovements): Seq[StaffMovementMessage] =
-    staffMovements.staffMovements.map(staffMovementToStaffMovementMessage)
+    staffMovements.movements.map(staffMovementToStaffMovementMessage)
 
   def staffMovementsToStaffMovementsMessage(staffMovements: StaffMovements) =
-    StaffMovementsMessage(staffMovements.staffMovements.map(staffMovementToStaffMovementMessage))
+    StaffMovementsMessage(staffMovements.movements.map(staffMovementToStaffMovementMessage))
 
   def staffMovementToStaffMovementMessage(sm: StaffMovement) = StaffMovementMessage(
     terminalName = Some(sm.terminalName),

@@ -3,7 +3,7 @@ package controllers
 import java.util.UUID
 
 import actors.pointInTime.StaffMovementsReadActor
-import actors.{GetState, StaffMovements}
+import actors.{AddStaffMovements, GetState, RemoveStaffMovements, StaffMovements}
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.pattern._
 import akka.util.Timeout
@@ -27,9 +27,14 @@ trait StaffMovementsPersistence {
 
   def staffMovementsActor: ActorRef
 
-  def saveStaffMovements(staffMovements: Seq[StaffMovement]) = {
+  def addStaffMovements(movementsToAdd: Seq[StaffMovement]): Unit = {
     actorSystem.log.info(s"Sending StaffMovements to staffMovementsActor")
-    staffMovementsActor ! StaffMovements(staffMovements)
+    staffMovementsActor ! AddStaffMovements(movementsToAdd)
+  }
+
+  def removeStaffMovements(movementsToRemove: UUID): Unit = {
+    actorSystem.log.info(s"Sending StaffMovements to staffMovementsActor")
+    staffMovementsActor ! RemoveStaffMovements(movementsToRemove)
   }
 
   def getStaffMovements(pointInTime: MillisSinceEpoch): Future[Seq[StaffMovement]] = {

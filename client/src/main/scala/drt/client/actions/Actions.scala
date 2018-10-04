@@ -69,11 +69,9 @@ object Actions {
 
   case class SaveMonthTimeSlotsToShifts(staffTimeSlots: StaffTimeSlotsForTerminalMonth) extends Action
 
-  case class AddStaffMovement(staffMovement: StaffMovement) extends Action
+  case class AddStaffMovements(staffMovements: Seq[StaffMovement]) extends Action
 
-  case class RemoveStaffMovement(idx: Int, uUID: UUID) extends Action
-
-  case class SaveStaffMovements(terminalName: TerminalName) extends Action
+  case class RemoveStaffMovements(uUID: UUID) extends Action
 
   case class SetStaffMovements(staffMovements: Seq[StaffMovement]) extends Action
 
