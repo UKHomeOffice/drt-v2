@@ -37,7 +37,7 @@ class StaffMovementsActorSpec extends TestKit(ActorSystem("StaffMovementsActorSp
   }
 
   "StaffMovementsActor" should {
-    "return the movements that were added after a shutdown" in {
+    "remember a movement added before a shutdown" in {
 
       val movementUuid1: UUID = UUID.randomUUID()
       val staffMovements = StaffMovements(Seq(StaffMovement("T1", "lunch start", MilliDate(SDate(s"2017-01-01T00:00").millisSinceEpoch), -1, movementUuid1, createdBy = Some("batman"))))
@@ -59,8 +59,7 @@ class StaffMovementsActorSpec extends TestKit(ActorSystem("StaffMovementsActorSp
       true
     }
 
-    "return no movements if the movements were removed after a restart" in {
-
+    "correctly remove a movement after a restart" in {
       val movementUuid1: UUID = UUID.randomUUID()
       val movementUuid2: UUID = UUID.randomUUID()
 
@@ -81,6 +80,44 @@ class StaffMovementsActorSpec extends TestKit(ActorSystem("StaffMovementsActorSp
 
       newActor ! GetState
       val expected = StaffMovements(Seq(movement2))
+
+      expectMsg(expected)
+
+      true
+    }
+
+    "remember multiple added movements and correctly forget removed movements after a restart" in {
+      val movementUuid1: UUID = UUID.randomUUID()
+      val movementUuid2: UUID = UUID.randomUUID()
+      val movementUuid3: UUID = UUID.randomUUID()
+      val movementUuid4: UUID = UUID.randomUUID()
+
+      val movement1 = StaffMovement("T1", "lunch start", MilliDate(SDate(s"2017-01-01T00:00").millisSinceEpoch), -1, movementUuid1, createdBy = Some("batman"))
+      val movement2 = StaffMovement("T1", "coffee start", MilliDate(SDate(s"2017-01-01T01:15").millisSinceEpoch), -1, movementUuid2, createdBy = Some("robin"))
+      val movement3 = StaffMovement("T1", "supper start", MilliDate(SDate(s"2017-01-01T21:30").millisSinceEpoch), -1, movementUuid3, createdBy = Some("bruce"))
+      val movement4 = StaffMovement("T1", "supper start", MilliDate(SDate(s"2017-01-01T21:40").millisSinceEpoch), -1, movementUuid4, createdBy = Some("bruce"))
+      val staffMovements = StaffMovements(Seq(movement1, movement2, movement3, movement4))
+
+      val actor = system.actorOf(Props(classOf[StaffMovementsActorBase]), "movementsActor1")
+
+      actor ! AddStaffMovements(Seq(movement1, movement2))
+      expectMsg(AddStaffMovementsAck(Seq(movement1, movement2)))
+
+      actor ! RemoveStaffMovements(movementUuid1)
+      expectMsg(RemoveStaffMovementsAck(movementUuid1))
+
+      actor ! AddStaffMovements(Seq(movement3, movement4))
+      expectMsg(AddStaffMovementsAck(Seq(movement3, movement4)))
+
+      actor ! RemoveStaffMovements(movementUuid4)
+      expectMsg(RemoveStaffMovementsAck(movementUuid4))
+
+      actor ! PoisonPill
+
+      val newActor = system.actorOf(Props(classOf[StaffMovementsActorBase]), "movementsActor2")
+
+      newActor ! GetState
+      val expected = StaffMovements(Seq(movement2, movement3))
 
       expectMsg(expected)
 
