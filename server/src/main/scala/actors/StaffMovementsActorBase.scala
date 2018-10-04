@@ -92,7 +92,7 @@ class StaffMovementsActorBase extends RecoveryActorLike with PersistentDrtActor[
 
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case StaffMovementsMessage(movements, _) =>
-      val updatedStaffMovements = staffMovementMessagesToStaffMovements(movements.toList)
+      val updatedStaffMovements = state.staffMovements + staffMovementMessagesToStaffMovements(movements.toList).movements
       updateState(updatedStaffMovements)
 
     case RemoveStaffMovementMessage(Some(uuidToRemove), _) =>
