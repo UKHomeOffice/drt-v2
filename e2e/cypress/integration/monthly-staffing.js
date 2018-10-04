@@ -49,12 +49,12 @@ describe('Monthly Staffing', function () {
 
       setRoles(["staff:edit", "test"]);
 
-      cy.visit('/v2/test/live#terminal/T1/staffing/15///');
+      cy.visit('/v2/test/live#terminal/T1/staffing/15/');
       cy.get(cellToTest).contains("1");
 
-      cy.visit('/v2/test/live#terminal/T1/staffing/15/' + nextMonthDateString() +'//');
+      cy.visit('/v2/test/live#terminal/T1/staffing/15/?date=' + nextMonthDateString());
       cy.get(cellToTest).contains("2");
-      cy.visit('/v2/test/live#terminal/T1/staffing/15/' + thisMonthDateString() +'//');
+      cy.visit('/v2/test/live#terminal/T1/staffing/15/?date=' + thisMonthDateString());
       cy.get(cellToTest).contains("1");
 
       resetShifts();

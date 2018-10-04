@@ -46,7 +46,10 @@ object MainMenu {
       case (tn, idx) =>
         val targetLoc = currentLoc match {
           case tptl: TerminalPageTabLoc =>
-            TerminalPageTabLoc(tn, tptl.mode, tptl.subMode, tptl.date, tptl.timeRangeStartString, tptl.timeRangeEndString)
+            TerminalPageTabLoc(tn, tptl.mode, tptl.subMode,
+              tptl.withUrlParameters(UrlDateParameter(tptl.date),
+                UrlTimeRangeStart(tptl.timeRangeStartString),
+                UrlTimeRangeEnd(tptl.timeRangeEndString)).queryParams)
           case _ => TerminalPageTabLoc(tn)
         }
         MenuItem(idx + idxOffset, _ => tn, Icon.calculator, targetLoc)
@@ -80,7 +83,7 @@ object MainMenu {
     def render(props: Props) = {
       val children: immutable.Seq[TagOf[LI]] = for (item <- menuItems(props.airportConfig, props.currentLoc, props.roles, props.feeds)) yield {
         val active = (props.currentLoc, item.location) match {
-          case (TerminalPageTabLoc(tn, _, _, _, _, _), TerminalPageTabLoc(tni, _, _, _, _, _)) => tn == tni
+          case (TerminalPageTabLoc(tn, _, _, _), TerminalPageTabLoc(tni, _, _, _)) => tn == tni
           case (current, itemLoc) => current == itemLoc
         }
         val classes = List(("active", active))
@@ -96,6 +99,7 @@ object MainMenu {
 
   private val component = ScalaComponent.builder[Props]("MainMenu")
     .renderBackend[Backend]
+    .componentDidMount(p => Callback.log("mainmenu did mount"))
     .build
 
   def apply(ctl: RouterCtl[Loc], currentLoc: Loc, feeds: Seq[FeedStatuses], airportConfig: AirportConfig, roles: Set[Role]): VdomElement

@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
+import drt.client.SPAMain._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -61,11 +61,11 @@ object TimeRangeFilter {
 
       def setStart(v: String) = props
         .router
-        .set(props.terminalPageTab.copy(timeRangeStartString = Option(v)))
+        .set(props.terminalPageTab.withUrlParameters(UrlTimeRangeStart(Option(v))))
 
       def setEnd(v: String) = props
         .router
-        .set(props.terminalPageTab.copy(timeRangeEndString = Option(v)))
+        .set(props.terminalPageTab.withUrlParameters(UrlTimeRangeEnd(Option(v))))
 
       def nowActive =
         if (selectedWindow.start == currentWindow.start && selectedWindow.end == currentWindow.end)
@@ -82,13 +82,13 @@ object TimeRangeFilter {
             if (props.showNow)
               <.div(^.id := "now", ^.className := s"btn btn-primary $nowActive", "Now", ^.onClick ==> ((_: ReactEventFromInput) => {
                 GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Time Range", "now")
-                props.router.set(props.terminalPageTab.copy(timeRangeStartString = None, timeRangeEndString = None))
+                props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(props.terminalPageTab.date), UrlTimeRangeStart(None), UrlTimeRangeEnd(None)))
               })) else "",
             <.div(^.id := "hours24", ^.className := s"btn btn-primary $dayActive", "24 hours", ^.onClick ==> ((_: ReactEventFromInput) => {
               GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Time Range", "24 hours")
-              props.router.set(props.terminalPageTab.copy(
-                timeRangeStartString = Option(wholeDayWindow.start.toString), timeRangeEndString = Option(wholeDayWindow.end.toString)
-              ))
+              props.router.set(props.terminalPageTab.withUrlParameters(
+                UrlDateParameter(props.terminalPageTab.date), UrlTimeRangeStart(Option(wholeDayWindow.start.toString)), UrlTimeRangeEnd(Option(wholeDayWindow.end.toString)))
+              )
             }))
           ),
           <.div(^.className := "time-range",
