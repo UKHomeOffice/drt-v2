@@ -773,7 +773,7 @@ class Application @Inject()(implicit val config: Configuration,
       config.getOptional[Boolean]("feature-flags.port-access-restrictions").getOrElse(false)
 
     val preventAccess = !loggedInUser.hasRole(allowedRole) && enablePortAccessRestrictions
-    log.info(s"Prevent access: $preventAccess")
+    
     if (preventAccess) {
       Future(Unauthorized(s"{" +
         s"Permission denied, you need $allowedRole to access this port" +
