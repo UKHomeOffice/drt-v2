@@ -151,7 +151,7 @@ class CrunchTestLike
     val liveArrivalsProbe = testProbe("live-arrivals")
     val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], now))
     val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], now))
-    val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor]))
+    val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], now, expireAfterMillis))
     val snapshotInterval = 1
     val manifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], oneMegaByte, now, expireAfterMillis, snapshotInterval))
 
