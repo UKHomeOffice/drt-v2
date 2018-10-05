@@ -3,7 +3,7 @@ package controllers
 import java.util.UUID
 
 import actors.pointInTime.StaffMovementsReadActor
-import actors.{AddStaffMovements, GetState, RemoveStaffMovements, StaffMovements}
+import actors._
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.pattern._
 import akka.util.Timeout
@@ -38,24 +38,27 @@ trait StaffMovementsPersistence {
   }
 
   def getStaffMovements(pointInTime: MillisSinceEpoch): Future[Seq[StaffMovement]] = {
+    log.info(s"pointInTime: $pointInTime")
     val forDate = SDate(pointInTime)
 
     log.info(s"getStaffMovements(${forDate.toISOString()})")
 
-    val staffMovementsFuture: Future[Seq[StaffMovement]] = if (forDate.millisSinceEpoch < Crunch.getLocalLastMidnight(SDate.now).millisSinceEpoch) {
+    val nowMillis = SDate.now().millisSinceEpoch
+    val staffMovementsFuture = if (forDate.millisSinceEpoch < nowMillis) {
+      log.info(s"requesting for historic point in time ${forDate.prettyDateTime()}")
       val actorName = "staff-movements-read-actor-" + UUID.randomUUID().toString
-      val staffMovementsReadActor: ActorRef = actorSystem.actorOf(Props(classOf[StaffMovementsReadActor], forDate), actorName)
+      val staffMovementsReadActor: ActorRef = actorSystem.actorOf(Props(classOf[StaffMovementsReadActor], forDate, DrtStaticParameters.expireAfterMillis), actorName)
 
-      staffMovementsReadActor.ask(GetState)
-        .map { case StaffMovements(sm) =>
-          staffMovementsReadActor ! PoisonPill
-          sm
-        }.recoverWith {
+      staffMovementsReadActor.ask(GetState).map { case StaffMovements(sm) =>
+        staffMovementsReadActor ! PoisonPill
+        sm
+      }.recoverWith {
         case _ =>
           staffMovementsReadActor ! PoisonPill
           Future(Seq())
       }
     } else {
+      log.info(s"requesting for now")
       staffMovementsActor.ask(GetState)
         .map { case StaffMovements(sm) => sm }.recoverWith { case _ => Future(Seq()) }
     }

@@ -61,12 +61,11 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   def getFeedStatus: Future[Seq[FeedStatuses]]
 }
 
-case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig)
-                    (implicit actorMaterializer: Materializer) extends DrtSystemInterface {
+object DrtStaticParameters {
+  val expireAfterMillis: MillisSinceEpoch = 2 * oneDayMillis
+}
 
-  implicit val system: ActorSystem = actorSystem
-
-  val minutesToCrunch: Int = 1440
+case class DrtConfigParameters(config: Configuration) {
   val maxDaysToCrunch: Int = config.getOptional[Int]("crunch.forecast.max_days").getOrElse(360)
   val aclPollMinutes: Int = config.getOptional[Int]("crunch.forecast.poll_minutes").getOrElse(120)
   val snapshotIntervalVm: Int = config.getOptional[Int]("persistence.snapshot-interval.voyage-manifest").getOrElse(1000)
@@ -81,16 +80,44 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
     override def getAWSSecretKey: TerminalName = config.getOptional[String]("aws.credentials.secret_key").getOrElse("")
   }
-  val expireAfterMillis: MillisSinceEpoch = 2 * oneDayMillis
-
   val ftpServer: String = ConfigFactory.load.getString("acl.host")
   val username: String = ConfigFactory.load.getString("acl.username")
   val path: String = ConfigFactory.load.getString("acl.keypath")
-
   val recrunchOnStart: Boolean = config.getOptional[Boolean]("crunch.recrunch-on-start").getOrElse(false)
-  system.log.info(s"recrunchOnStart: $recrunchOnStart")
+  val useNationalityBasedProcessingTimes: Boolean = config.getOptional[String]("feature-flags.nationality-based-processing-times").isDefined
+  val useSplitsPrediction: Boolean = config.getOptional[String]("feature-flags.use-splits-prediction").isDefined
+  val rawSplitsUrl: String = config.getOptional[String]("crunch.splits.raw-data-path").getOrElse("/dev/null")
+  val dqZipBucketName: String = config.getOptional[String]("dq.s3.bucket").getOrElse(throw new Exception("You must set DQ_S3_BUCKET for us to poll for AdvPaxInfo"))
+  val apiS3PollFrequencyMillis: MillisSinceEpoch = config.getOptional[Int]("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
+  val isSuperUserMode: Boolean = config.getOptional[String]("feature-flags.super-user-mode").isDefined
+  val maybeBlackJackUrl: Option[String] = config.getOptional[String]("lhr.blackjack_url")
 
-  val aclFeed = AclFeed(ftpServer, username, path, airportConfig.feedPortCode, aclTerminalMapping(airportConfig.portCode))
+  val useNewLhrFeed: Boolean = config.getOptional[String]("feature-flags.lhr.use-new-lhr-feed").isDefined
+  val newLhrFeedApiUrl: String = config.getOptional[String]("lhr.live.api_url").getOrElse("")
+  val newLhrFeedApiToken: String = config.getOptional[String]("lhr.live.token").getOrElse("")
+
+  val maybeBhxSoapEndPointUrl: Option[String] = config.getOptional[String]("feeds.bhx.soap.endPointUrl")
+
+  val maybeLtnLiveFeedUrl: Option[String] = config.getOptional[String]("feeds.ltn.live.url")
+  val maybeLtnLiveFeedUsername: Option[String] = config.getOptional[String]("feeds.ltn.live.username")
+  val maybeLtnLiveFeedPassword: Option[String] = config.getOptional[String]("feeds.ltn.live.password")
+  val maybeLtnLiveFeedToken: Option[String] = config.getOptional[String]("feeds.ltn.live.token")
+  val maybeLtnLiveFeedTimeZone: Option[String] = config.getOptional[String]("feeds.ltn.live.timezone")
+
+  val maybeLhrForecastFeedPath: Option[String] = config.getOptional[String]("lhr.forecast_path")
+}
+
+case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig)
+                    (implicit actorMaterializer: Materializer) extends DrtSystemInterface {
+
+  implicit val system: ActorSystem = actorSystem
+
+  val params = DrtConfigParameters(config)
+  import DrtStaticParameters.expireAfterMillis
+
+  system.log.info(s"recrunchOnStart: ${params.recrunchOnStart}")
+
+  val aclFeed = AclFeed(params.ftpServer, params.username, params.path, airportConfig.feedPortCode, aclTerminalMapping(airportConfig.portCode))
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
 
@@ -100,45 +127,40 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val purgeOldLiveSnapshots = false
   val purgeOldForecastSnapshots = true
 
-  val liveCrunchStateProps = Props(classOf[CrunchStateActor], Option(airportConfig.portStateSnapshotInterval), snapshotMegaBytesLivePortState, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots)
-  val forecastCrunchStateProps = Props(classOf[CrunchStateActor], Option(100), snapshotMegaBytesFcstPortState, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots)
+  val liveCrunchStateProps = Props(classOf[CrunchStateActor], Option(airportConfig.portStateSnapshotInterval), params.snapshotMegaBytesLivePortState, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots)
+  val forecastCrunchStateProps = Props(classOf[CrunchStateActor], Option(100), params.snapshotMegaBytesFcstPortState, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots)
 
-  lazy val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastBaseArrivalsActor], snapshotMegaBytesBaseArrivals, now, expireAfterMillis), name = "base-arrivals-actor")
-  lazy val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastPortArrivalsActor], snapshotMegaBytesFcstArrivals, now, expireAfterMillis), name = "forecast-arrivals-actor")
-  lazy val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor], snapshotMegaBytesLiveArrivals, now, expireAfterMillis), name = "live-arrivals-actor")
+  lazy val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastBaseArrivalsActor], params.snapshotMegaBytesBaseArrivals, now, expireAfterMillis), name = "base-arrivals-actor")
+  lazy val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastPortArrivalsActor], params.snapshotMegaBytesFcstArrivals, now, expireAfterMillis), name = "forecast-arrivals-actor")
+  lazy val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor], params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis), name = "live-arrivals-actor")
 
   lazy val liveCrunchStateActor: ActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
   lazy val forecastCrunchStateActor: ActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
 
-  lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], snapshotMegaBytesVoyageManifests, now, expireAfterMillis, snapshotIntervalVm), name = "voyage-manifests-actor")
+  lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, params.snapshotIntervalVm), name = "voyage-manifests-actor")
 
   lazy val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], now))
   lazy val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], now))
-  lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor]))
+  lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], now, expireAfterMillis))
 
   lazy val alertsActor: ActorRef = system.actorOf(Props(classOf[AlertsActor]))
   val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
-  val useNationalityBasedProcessingTimes: Boolean = config.getOptional[String]("feature-flags.nationality-based-processing-times").isDefined
-  val useSplitsPrediction: Boolean = config.getOptional[String]("feature-flags.use-splits-prediction").isDefined
-  val rawSplitsUrl: String = config.getOptional[String]("crunch.splits.raw-data-path").getOrElse("/dev/null")
   lazy val askableVoyageManifestsActor: AskableActorRef = voyageManifestsActor
-  val splitsPredictorStage: SplitsPredictorBase = createSplitsPredictionStage(useSplitsPrediction, rawSplitsUrl)
+  val splitsPredictorStage: SplitsPredictorBase = createSplitsPredictionStage(params.useSplitsPrediction, params.rawSplitsUrl)
 
-  val dqZipBucketName: String = config.getOptional[String]("dq.s3.bucket").getOrElse(throw new Exception("You must set DQ_S3_BUCKET for us to poll for AdvPaxInfo"))
-  val apiS3PollFrequencyMillis: MillisSinceEpoch = config.getOptional[Int]("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
-  val s3ApiProvider = S3ApiProvider(awSCredentials, dqZipBucketName)
+  val s3ApiProvider = S3ApiProvider(params.awSCredentials, params.dqZipBucketName)
   val initialManifestsState: Option[VoyageManifestState] = manifestsState
   val maybeLatestZipFileName: String = initialManifestsState.map(_.latestZipFilename).getOrElse("")
 
   lazy val voyageManifestsStage: Source[ManifestsFeedResponse, NotUsed] = Source.fromGraph(
-    new VoyageManifestsGraphStage(airportConfig.feedPortCode, s3ApiProvider, maybeLatestZipFileName, apiS3PollFrequencyMillis)
+    new VoyageManifestsGraphStage(airportConfig.feedPortCode, s3ApiProvider, maybeLatestZipFileName, params.apiS3PollFrequencyMillis)
   )
 
-  system.log.info(s"useNationalityBasedProcessingTimes: $useNationalityBasedProcessingTimes")
-  system.log.info(s"useSplitsPrediction: $useSplitsPrediction")
+  system.log.info(s"useNationalityBasedProcessingTimes: ${params.useNationalityBasedProcessingTimes}")
+  system.log.info(s"useSplitsPrediction: ${params.useSplitsPrediction}")
 
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] =
-    if (config.getOptional[String]("feature-flags.super-user-mode").isDefined) {
+    if (params.isSuperUserMode) {
       system.log.info(s"Using Super User Roles")
       Roles.availableRoles
     } else userRolesFromHeader(headers)
@@ -161,7 +183,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     futurePortStates.onComplete {
       case Success((maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals)) =>
         val initialPortState: Option[PortState] = mergePortStates(maybeLiveState, maybeForecastState)
-        val crunchInputs: CrunchSystem[Cancellable, NotUsed] = startCrunchSystem(initialPortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, recrunchOnStart)
+        val crunchInputs: CrunchSystem[Cancellable, NotUsed] = startCrunchSystem(initialPortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, params.recrunchOnStart)
         subscribeStaffingActors(crunchInputs)
         startScheduledFeedImports(crunchInputs)
       case Failure(error) =>
@@ -192,7 +214,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   }
 
   def startScheduledFeedImports(crunchInputs: CrunchSystem[Cancellable, NotUsed]): Unit = {
-    if (airportConfig.feedPortCode == "LHR") config.getOptional[String]("lhr.blackjack_url").map(csvUrl => {
+    if (airportConfig.feedPortCode == "LHR") params.maybeBlackJackUrl.map(csvUrl => {
       val requestIntervalMillis = 5 * oneMinuteMillis
       Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, requestIntervalMillis milliseconds, SDate.now().addDays(-1))
     })
@@ -217,7 +239,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       historicalSplitsProvider = historicalSplitsProvider,
       liveCrunchStateActor = liveCrunchStateActor,
       forecastCrunchStateActor = forecastCrunchStateActor,
-      maxDaysToCrunch = maxDaysToCrunch,
+      maxDaysToCrunch = params.maxDaysToCrunch,
       expireAfterMillis = expireAfterMillis,
       actors = Map(
         "shifts" -> shiftsActor,
@@ -227,7 +249,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         "forecast-arrivals" -> forecastArrivalsActor,
         "live-arrivals" -> liveArrivalsActor
       ),
-      useNationalityBasedProcessingTimes = useNationalityBasedProcessingTimes,
+      useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
       splitsPredictorStage = splitsPredictorStage,
       manifestsSource = voyageManifestsStage,
       voyageManifestsActor = voyageManifestsActor,
@@ -317,9 +339,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   def liveArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = {
     val feed = portCode match {
       case "LHR" =>
-        if (config.getOptional[String]("feature-flags.lhr.use-new-lhr-feed").isDefined) {
-          val apiUri = config.getOptional[String]("lhr.live.api_url").get
-          val token = config.getOptional[String]("lhr.live.token").get
+        if (params.useNewLhrFeed) {
+          val apiUri = params.newLhrFeedApiUrl
+          val token = params.newLhrFeedApiToken
           system.log.info(s"Connecting to $apiUri using $token")
 
           LHRLiveFeed(apiUri, token, system)
@@ -327,13 +349,13 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         else LHRFlightFeed()
       case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
       case "LGW" => LGWFeed()
-      case "BHX" => BHXLiveFeed(config.getOptional[String]("feeds.bhx.soap.endPointUrl").getOrElse(throw new Exception("Missing BHX live feed URL")))
+      case "BHX" => BHXLiveFeed(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX live feed URL")))
       case "LTN" =>
-        val url = config.getOptional[String]("feeds.ltn.live.url").getOrElse(throw new Exception("Missing live feed url"))
-        val username = config.getOptional[String]("feeds.ltn.live.username").getOrElse(throw new Exception("Missing live feed username"))
-        val password = config.getOptional[String]("feeds.ltn.live.password").getOrElse(throw new Exception("Missing live feed password"))
-        val token = config.getOptional[String]("feeds.ltn.live.token").getOrElse(throw new Exception("Missing live feed token"))
-        val timeZone = config.getOptional[String]("feeds.ltn.live.timezone") match {
+        val url = params.maybeLtnLiveFeedUrl.getOrElse(throw new Exception("Missing live feed url"))
+        val username = params.maybeLtnLiveFeedUsername.getOrElse(throw new Exception("Missing live feed username"))
+        val password = params.maybeLtnLiveFeedPassword.getOrElse(throw new Exception("Missing live feed password"))
+        val token = params.maybeLtnLiveFeedToken.getOrElse(throw new Exception("Missing live feed token"))
+        val timeZone = params.maybeLtnLiveFeedTimeZone match {
           case Some(tz) => DateTimeZone.forID(tz)
           case None => DateTimeZone.UTC
         }
@@ -347,10 +369,10 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     val forecastNoOp = Source.tick[ArrivalsFeedResponse](100 days, 100 days, ArrivalsFeedSuccess(Flights(Seq()), SDate.now()))
     val feed = portCode match {
       case "STN" => createForecastChromaFlightFeed(ChromaForecast).chromaVanillaFlights(30 minutes)
-      case "LHR" => config.getOptional[String]("lhr.forecast_path")
+      case "LHR" => params.maybeLhrForecastFeedPath
         .map(path => createForecastLHRFeed(path))
         .getOrElse(forecastNoOp)
-      case "BHX" => BHXForecastFeed(config.getOptional[String]("feeds.bhx.soap.endPointUrl").getOrElse(throw new Exception("Missing BHX forecast feed URL")))
+      case "BHX" => BHXForecastFeed(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")))
       case "LGW" => LGWForecastFeed()
       case _ =>
         system.log.info(s"No Forecast Feed defined.")

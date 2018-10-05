@@ -100,7 +100,7 @@ object TestActors {
     override def receiveCommand: Receive = reset orElse super.receiveCommand
   }
 
-  case class TestStaffMovementsActor() extends StaffMovementsActor {
+  case class TestStaffMovementsActor(now: () => SDateLike, expireAfterMillis: Long) extends StaffMovementsActor(now, expireAfterMillis) {
 
     def reset: Receive = {
       case ResetActor =>

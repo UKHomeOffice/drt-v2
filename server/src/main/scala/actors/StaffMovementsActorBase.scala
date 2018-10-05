@@ -6,10 +6,10 @@ import actors.Sizes.oneMegaByte
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.trueaccord.scalapb.GeneratedMessage
-import drt.shared.{MilliDate, StaffMovement}
+import drt.shared.{MilliDate, SDateLike, StaffMovement}
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
-import services.SDate
+import services.graphstages.Crunch
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
@@ -40,7 +40,7 @@ case class RemoveStaffMovementsAck(movementUuidsToRemove: UUID)
 
 case class AddStaffMovementsSubscribers(subscribers: List[SourceQueueWithComplete[Seq[StaffMovement]]])
 
-class StaffMovementsActor extends StaffMovementsActorBase {
+class StaffMovementsActor(now: () => SDateLike, expireAfterMillis: Long) extends StaffMovementsActorBase(now, expireAfterMillis) {
   var subscribers: List[SourceQueueWithComplete[Seq[StaffMovement]]] = List()
 
   override def onUpdateState(data: StaffMovements): Unit = {
@@ -68,7 +68,7 @@ class StaffMovementsActor extends StaffMovementsActorBase {
   }
 }
 
-class StaffMovementsActorBase extends RecoveryActorLike with PersistentDrtActor[StaffMovementsState] {
+class StaffMovementsActorBase(now: () => SDateLike, expireAfterMillis: Long) extends RecoveryActorLike with PersistentDrtActor[StaffMovementsState] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def persistenceId = "staff-movements-store"
@@ -91,39 +91,39 @@ class StaffMovementsActorBase extends RecoveryActorLike with PersistentDrtActor[
   }
 
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case StaffMovementsMessage(movements, _) =>
-      val updatedStaffMovements = state.staffMovements + staffMovementMessagesToStaffMovements(movements.toList).movements
-      updateState(updatedStaffMovements)
+    case StaffMovementsMessage(movements, _) => updateState(addToState(movements))
 
-    case RemoveStaffMovementMessage(Some(uuidToRemove), _) =>
-      val updatedStaffMovements = state.staffMovements - Seq(UUID.fromString(uuidToRemove))
-      updateState(updatedStaffMovements)
+    case RemoveStaffMovementMessage(Some(uuidToRemove), _) => updateState(removeFromState(uuidToRemove))
   }
+
+  def removeFromState(uuidToRemove: String): StaffMovements =
+    state.staffMovements - Seq(UUID.fromString(uuidToRemove))
+
+  def addToState(movements: Seq[StaffMovementMessage]): StaffMovements =
+    state.staffMovements + staffMovementMessagesToStaffMovements(movements.toList).movements
 
   def receiveCommand: Receive = {
     case GetState =>
       log.info(s"GetState received")
-      sender() ! state.staffMovements
+      sender() ! purgeExpired(state.staffMovements)
 
     case AddStaffMovements(movementsToAdd) =>
       val updatedStaffMovements = state.staffMovements + movementsToAdd
-      updateState(updatedStaffMovements)
-      onUpdateState(updatedStaffMovements)
+      purgeExpiredAndUpdateState(updatedStaffMovements)
 
-      log.info(s"Staff movements added ($movementsToAdd)")
+      log.info(s"Added $movementsToAdd. We have ${state.staffMovements.movements.length} movements after purging")
       val movements: StaffMovements = StaffMovements(movementsToAdd)
-      val messagesToPersist = StaffMovementsMessage(staffMovementsToStaffMovementMessages(movements))
+      val messagesToPersist = StaffMovementsMessage(staffMovementsToStaffMovementMessages(movements), Option(now().millisSinceEpoch))
       persistAndMaybeSnapshot(messagesToPersist)
 
       sender() ! AddStaffMovementsAck(movementsToAdd)
 
     case RemoveStaffMovements(uuidToRemove) =>
       val updatedStaffMovements = state.staffMovements - Seq(uuidToRemove)
-      updateState(updatedStaffMovements)
-      onUpdateState(updatedStaffMovements)
+      purgeExpiredAndUpdateState(updatedStaffMovements)
 
-      log.info(s"Staff movements removed ($uuidToRemove)")
-      val messagesToPersist: RemoveStaffMovementMessage = RemoveStaffMovementMessage(Option(uuidToRemove.toString))
+      log.info(s"Removed $uuidToRemove. We have ${state.staffMovements.movements.length} movements after purging")
+      val messagesToPersist: RemoveStaffMovementMessage = RemoveStaffMovementMessage(Option(uuidToRemove.toString), Option(now().millisSinceEpoch))
       persistAndMaybeSnapshot(messagesToPersist)
 
       sender() ! RemoveStaffMovementsAck(uuidToRemove)
@@ -137,6 +137,16 @@ class StaffMovementsActorBase extends RecoveryActorLike with PersistentDrtActor[
     case u =>
       log.info(s"unhandled message: $u")
   }
+
+  def purgeExpiredAndUpdateState(staffMovements: StaffMovements): Unit = {
+    val withoutExpired = purgeExpired(staffMovements)
+    updateState(withoutExpired)
+    onUpdateState(withoutExpired)
+  }
+
+  def purgeExpired(staffMovements: StaffMovements): StaffMovements =
+    staffMovements.copy(movements = Crunch.purgeExpired(staffMovements.movements, (m: StaffMovement) => m.time.millisSinceEpoch, now, expireAfterMillis))
+
 
   def onUpdateState(sm: StaffMovements): Unit = {}
 
@@ -153,9 +163,6 @@ class StaffMovementsActorBase extends RecoveryActorLike with PersistentDrtActor[
   def staffMovementsToStaffMovementMessages(staffMovements: StaffMovements): Seq[StaffMovementMessage] =
     staffMovements.movements.map(staffMovementToStaffMovementMessage)
 
-  def staffMovementsToStaffMovementsMessage(staffMovements: StaffMovements) =
-    StaffMovementsMessage(staffMovements.movements.map(staffMovementToStaffMovementMessage))
-
   def staffMovementToStaffMovementMessage(sm: StaffMovement) = StaffMovementMessage(
     terminalName = Some(sm.terminalName),
     reason = Some(sm.reason),
@@ -163,7 +170,7 @@ class StaffMovementsActorBase extends RecoveryActorLike with PersistentDrtActor[
     delta = Some(sm.delta),
     uUID = Some(sm.uUID.toString),
     queueName = sm.queue,
-    createdAt = Option(SDate.now().millisSinceEpoch),
+    createdAt = Option(now().millisSinceEpoch),
     createdBy = sm.createdBy
   )
 }
