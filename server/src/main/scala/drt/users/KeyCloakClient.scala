@@ -120,7 +120,7 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String, implicit 
         ~> logResponse("removeUserFromGroup")
       )
 
-    log.info(s"Adding $userId to $groupId")
+    log.info(s"Removing $userId from $groupId")
     pipeline(Delete(s"$keyCloakUrl/users/$userId/groups/$groupId"))
   }
 }

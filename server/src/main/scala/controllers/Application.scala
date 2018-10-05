@@ -769,14 +769,8 @@ class Application @Inject()(implicit val config: Configuration,
     val loggedInUser: LoggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
     val allowedRole = airportConfig.role
 
-    log.info(s"This port requires: $allowedRole")
-    log.info(s"This user has: ${loggedInUser.roles}")
-
-
     val enablePortAccessRestrictions =
       config.getOptional[Boolean]("feature-flags.port-access-restrictions").getOrElse(false)
-
-    log.info(s"Enable restrictions: $enablePortAccessRestrictions")
 
     val preventAccess = !loggedInUser.hasRole(allowedRole) && enablePortAccessRestrictions
     log.info(s"Prevent access: $preventAccess")
