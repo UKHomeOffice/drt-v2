@@ -31,7 +31,7 @@ case object GetShifts
 case class AddShiftSubscribers(subscribers: List[SourceQueueWithComplete[ShiftAssignments]])
 case class AddFixedPointSubscribers(subscribers: List[SourceQueueWithComplete[FixedPointAssignments]])
 
-class ShiftsActor(now: () => SDateLike) extends ShiftsActorBase(now) {
+class ShiftsActor(now: () => SDateLike, expireAfterMillis: Long) extends ShiftsActorBase(now, expireAfterMillis) {
   var subscribers: List[SourceQueueWithComplete[ShiftAssignments]] = List()
 
   override def onUpdateState(shifts: ShiftAssignments): Unit = {
@@ -59,7 +59,7 @@ class ShiftsActor(now: () => SDateLike) extends ShiftsActorBase(now) {
   }
 }
 
-class ShiftsActorBase(now: () => SDateLike) extends RecoveryActorLike with PersistentDrtActor[ShiftsState] {
+class ShiftsActorBase(now: () => SDateLike, expireAfterMillis: Long) extends RecoveryActorLike with PersistentDrtActor[ShiftsState] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def persistenceId = "shifts-store"
