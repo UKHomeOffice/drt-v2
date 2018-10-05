@@ -38,14 +38,12 @@ trait StaffMovementsPersistence {
   }
 
   def getStaffMovements(pointInTime: MillisSinceEpoch): Future[Seq[StaffMovement]] = {
-    log.info(s"pointInTime: $pointInTime")
     val forDate = SDate(pointInTime)
 
     log.info(s"getStaffMovements(${forDate.toISOString()})")
 
     val nowMillis = SDate.now().millisSinceEpoch
     val staffMovementsFuture = if (forDate.millisSinceEpoch < nowMillis) {
-      log.info(s"requesting for historic point in time ${forDate.prettyDateTime()}")
       val actorName = "staff-movements-read-actor-" + UUID.randomUUID().toString
       val staffMovementsReadActor: ActorRef = actorSystem.actorOf(Props(classOf[StaffMovementsReadActor], forDate, DrtStaticParameters.expireAfterMillis), actorName)
 
@@ -58,9 +56,9 @@ trait StaffMovementsPersistence {
           Future(Seq())
       }
     } else {
-      log.info(s"requesting for now")
       staffMovementsActor.ask(GetState)
-        .map { case StaffMovements(sm) => sm }.recoverWith { case _ => Future(Seq()) }
+        .map { case StaffMovements(sm) => sm }
+        .recoverWith { case _ => Future(Seq()) }
     }
 
     val eventualStaffMovements = staffMovementsFuture.collect {
