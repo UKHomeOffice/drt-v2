@@ -779,7 +779,6 @@ class Application @Inject()(implicit val config: Configuration,
         s"Permission denied, you need $allowedRole to access this port" +
         s"}"))
     } else {
-      log.info(s"You have $allowedRole and so you can access this port.")
       action(request)
     }
   }
