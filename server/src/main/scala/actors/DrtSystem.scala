@@ -139,7 +139,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, params.snapshotIntervalVm), name = "voyage-manifests-actor")
 
-  lazy val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], now))
+  lazy val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], now, expireAfterMillis))
   lazy val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], now))
   lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], now, expireAfterMillis))
 

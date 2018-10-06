@@ -1,13 +1,14 @@
 package drt.client.components
 
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
-import drt.client.actions.Actions.SaveMonthTimeSlotsToShifts
+import drt.client.actions.Actions.{SaveMonthTimeSlotsToShifts, UpdateShifts}
 import drt.client.components.TerminalPlanningComponent.defaultStartDate
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.component.Scala.Unmounted
@@ -18,7 +19,6 @@ import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html.Select
 import org.scalajs.dom.window.confirm
 
-import scala.collection.immutable.Seq
 import scala.util.Try
 
 
@@ -104,11 +104,14 @@ object MonthlyStaffing {
       stateFromProps(props)
     })
     .renderPS((scope, props, state) => {
-      def confirmAndSave(viewingDate: SDateLike) = (_: ReactEventFromInput) =>
+      def confirmAndSave(startOfMonthMidnight: SDateLike) = (_: ReactEventFromInput) =>
         Callback {
 
           val initialTimeSlots = stateFromProps(props).timeSlots
-          val updatedTimeSlots: Seq[Seq[Int]] = applyRecordedChangesToShiftState(state.timeSlots, scope.state.changes)
+          val changes = scope.state.changes
+          val updatedTimeSlots: Seq[Seq[Int]] = applyRecordedChangesToShiftState(state.timeSlots, changes)
+
+          val changedShiftSlots = updatedShiftAssignments(changes, startOfMonthMidnight, props.terminalPageTab.terminal)
 
           val updatedMonth = props.terminalPageTab.dateFromUrlOrNow.getMonthString()
           val changedDays = whatDayChanged(initialTimeSlots, updatedTimeSlots)
@@ -116,14 +119,7 @@ object MonthlyStaffing {
 
           if (confirm(s"You have updated staff for ${dateListToString(changedDays)} $updatedMonth - do you want to save these changes?")) {
             GoogleEventTracker.sendEvent(s"${props.terminalPageTab.terminal}", "Save Monthly Staffing", s"updated staff for ${dateListToString(changedDays)} $updatedMonth")
-            SPACircuit.dispatch(
-              SaveMonthTimeSlotsToShifts(
-                StaffTimeSlotsForTerminalMonth(
-                  viewingDate,
-                  updatedTimeSlots,
-                  props.terminalPageTab.terminal,
-                  props.timeSlotMinutes
-                )))
+            SPACircuit.dispatch(UpdateShifts(changedShiftSlots))
           }
         }
 
@@ -180,6 +176,14 @@ object MonthlyStaffing {
       log.info("Staff Mounted")
     })
     .build
+
+  def updatedShiftAssignments(changes: Map[(Int, Int), Int], startOfMonthMidnight: SDateLike, terminalName: TerminalName): Seq[StaffAssignment] = changes.toSeq.map {
+    case ((slotIdx, dayIdx), staff) =>
+      val slotStart = startOfMonthMidnight.addDays(dayIdx).addMinutes(15 * slotIdx)
+      val startMd = MilliDate(slotStart.millisSinceEpoch)
+      val endMd = MilliDate(slotStart.addMinutes(14).millisSinceEpoch)
+      StaffAssignment(slotStart.toISOString(), terminalName, startMd, endMd, staff, None)
+  }
 
   def stateFromProps(props: Props): State = {
     import drt.client.services.JSDateConversions._

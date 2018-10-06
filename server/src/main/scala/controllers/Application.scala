@@ -2,7 +2,6 @@ package controllers
 
 import java.nio.ByteBuffer
 import java.util.UUID
-import javax.inject.{Inject, Singleton}
 
 import actors._
 import actors.pointInTime.CrunchStateReadActor
@@ -23,6 +22,7 @@ import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
 import drt.staff.ImportStaff
 import drt.users.KeyCloakClient
+import javax.inject.{Inject, Singleton}
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.{HeaderNames, HttpEntity}
@@ -294,16 +294,10 @@ class Application @Inject()(implicit val config: Configuration,
         }
       }
 
-      def saveStaffTimeSlotsForMonth(timeSlotsForTerminalMonth: StaffTimeSlotsForTerminalMonth): Future[Unit] = {
+      def updateShifts(shiftsToUpdate: Seq[StaffAssignment]): Unit = {
         if (getLoggedInUser().roles.contains(StaffEdit)) {
-          log.info(s"Saving ${timeSlotsForTerminalMonth.timeSlots.length} timeslots for ${SDate(timeSlotsForTerminalMonth.monthMillis).ddMMyyString}")
-          val futureShifts = shiftsActor.ask(GetState)(new Timeout(5 second))
-          futureShifts.map {
-            case shifts: ShiftAssignments =>
-              val updatedShifts = StaffTimeSlots.replaceShiftMonthWithTimeSlotsForMonth(shifts, timeSlotsForTerminalMonth)
-
-              shiftsActor ! updatedShifts
-          }
+          log.info(s"Saving ${shiftsToUpdate.length} shift staff assignments")
+          shiftsActor ! UpdateShifts(shiftsToUpdate)
         } else throw new Exception("You do not have permission to edit staffing.")
       }
 
@@ -369,9 +363,9 @@ class Application @Inject()(implicit val config: Configuration,
 
       def removeUserFromGroups(userId: UUID, groups: Set[String]): Future[Unit] =
         keyCloakClient
-        .getGroups()
-        .map(kcGroups => kcGroups.filter(g => groups.contains(g.name))
-          .map(g => keyCloakClient.removeUserFromGroup(userId, g.id)))
+          .getGroups()
+          .map(kcGroups => kcGroups.filter(g => groups.contains(g.name))
+            .map(g => keyCloakClient.removeUserFromGroup(userId, g.id)))
 
       def getAlerts(createdAfter: MillisSinceEpoch): Future[Seq[Alert]] = {
         for {
@@ -773,7 +767,7 @@ class Application @Inject()(implicit val config: Configuration,
       config.getOptional[Boolean]("feature-flags.port-access-restrictions").getOrElse(false)
 
     val preventAccess = !loggedInUser.hasRole(allowedRole) && enablePortAccessRestrictions
-    
+
     if (preventAccess) {
       Future(Unauthorized(s"{" +
         s"Permission denied, you need $allowedRole to access this port" +

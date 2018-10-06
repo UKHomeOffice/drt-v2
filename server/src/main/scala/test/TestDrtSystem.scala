@@ -27,7 +27,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
   override lazy val liveCrunchStateActor: ActorRef = system.actorOf(testLiveCrunchStateProps, name = "crunch-live-state-actor")
   override lazy val forecastCrunchStateActor: ActorRef = system.actorOf(testForecastCrunchStateProps, name = "crunch-forecast-state-actor")
   override lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[TestVoyageManifestsActor], now, expireAfterMillis, params.snapshotIntervalVm), name = "voyage-manifests-actor")
-  override lazy val shiftsActor: ActorRef = system.actorOf(Props(classOf[TestShiftsActor], now))
+  override lazy val shiftsActor: ActorRef = system.actorOf(Props(classOf[TestShiftsActor], now, expireAfterMillis))
   override lazy val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[TestFixedPointsActor], now))
   override lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[TestStaffMovementsActor], now, expireAfterMillis))
 

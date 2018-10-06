@@ -105,6 +105,8 @@ abstract class ApiService(val airportConfig: AirportConfig,
 
   def getShiftsForMonth(month: MillisSinceEpoch, terminalName: TerminalName): Future[ShiftAssignments]
 
+  def updateShifts(shiftsToUpdate: Seq[StaffAssignment]): Unit
+
   def isLoggedIn(): Boolean
 
   def getFeedStatuses(): Future[Seq[FeedStatuses]]

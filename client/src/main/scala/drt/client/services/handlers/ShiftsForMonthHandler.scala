@@ -37,6 +37,7 @@ class ShiftsForMonthHandler[M](modelRW: ModelRW[M, Pot[MonthOfShifts]]) extends 
             Future(RetryActionAfter(GetShiftsForMonth(month, terminalName), PollDelay.recoveryDelay))
         })
       updated(Pending(), apiCallEffect)
+
     case SetShiftsForMonth(monthOfRawShifts) =>
       updated(Ready(monthOfRawShifts))
   }

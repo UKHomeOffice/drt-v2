@@ -28,7 +28,10 @@ case class GetUpdatesSince(millis: MillisSinceEpoch, from: MillisSinceEpoch, to:
 
 case object GetShifts
 
+case class UpdateShifts(shiftsToUpdate: Seq[StaffAssignment])
+
 case class AddShiftSubscribers(subscribers: List[SourceQueueWithComplete[ShiftAssignments]])
+
 case class AddFixedPointSubscribers(subscribers: List[SourceQueueWithComplete[FixedPointAssignments]])
 
 class ShiftsActor(now: () => SDateLike, expireAfterMillis: Long) extends ShiftsActorBase(now, expireAfterMillis) {
@@ -59,7 +62,8 @@ class ShiftsActor(now: () => SDateLike, expireAfterMillis: Long) extends ShiftsA
   }
 }
 
-class ShiftsActorBase(now: () => SDateLike, expireAfterMillis: Long) extends RecoveryActorLike with PersistentDrtActor[ShiftsState] {
+class ShiftsActorBase(now: () => SDateLike,
+                      expireAfterMillis: Long) extends RecoveryActorLike with PersistentDrtActor[ShiftsState] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def persistenceId = "shifts-store"
@@ -95,16 +99,13 @@ class ShiftsActorBase(now: () => SDateLike, expireAfterMillis: Long) extends Rec
       log.info(s"GetState received")
       sender() ! state.shifts
 
-    case shiftStaffAssignments: ShiftAssignments if shiftStaffAssignments != state.shifts =>
-      updateState(shiftStaffAssignments)
-      onUpdateState(shiftStaffAssignments)
+    case UpdateShifts(shiftsToUpdate) =>
+      val updatedShifts = applyUpdatedShifts(shiftsToUpdate)
+      updateState(ShiftAssignments(updatedShifts))
+      onUpdateState(ShiftAssignments(updatedShifts))
 
-      log.info(s"Fixed points updated. Saving snapshot")
-      val snapshotMessage = ShiftStateSnapshotMessage(staffAssignmentsToShiftsMessages(state.shifts, now()))
-      saveSnapshot(snapshotMessage)
-
-    case shiftStaffAssignments: ShiftAssignments if shiftStaffAssignments == state.shifts =>
-      log.info(s"No changes to fixed points. Not persisting")
+      val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(ShiftAssignments(shiftsToUpdate), now()))
+      persistAndMaybeSnapshot(shiftsMessage)
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")
@@ -115,6 +116,13 @@ class ShiftsActorBase(now: () => SDateLike, expireAfterMillis: Long) extends Rec
     case u =>
       log.info(s"unhandled message: $u")
   }
+
+  def applyUpdatedShifts(shiftsToUpdate: Seq[StaffAssignment]): Seq[StaffAssignment] = shiftsToUpdate
+    .foldLeft(state.shifts.assignments) {
+      case (assignmentsSoFar, updatedAssignment) =>
+        assignmentsSoFar.filterNot(existing =>
+          existing.startDt == updatedAssignment.startDt && existing.terminalName == updatedAssignment.terminalName)
+    } ++ shiftsToUpdate
 }
 
 object ShiftsMessageParser {
@@ -170,7 +178,8 @@ object ShiftsMessageParser {
     createdBy = None
   ))
 
-  def staffAssignmentsToShiftsMessages(shiftStaffAssignments: ShiftAssignments, createdAt: SDateLike): Seq[ShiftMessage] =
+  def staffAssignmentsToShiftsMessages(shiftStaffAssignments: ShiftAssignments,
+                                       createdAt: SDateLike): Seq[ShiftMessage] =
     shiftStaffAssignments.assignments.map(a => staffAssignmentToMessage(a, createdAt))
 
   def shiftMessagesToStaffAssignments(shiftMessages: Seq[ShiftMessage]): ShiftAssignments =

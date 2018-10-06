@@ -3,7 +3,6 @@ package drt.client.components
 import drt.client.logger.{Logger, LoggerFactory}
 import japgolly.scalajs.react.{Children, JsComponent}
 
-import scala.collection.immutable.Seq
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
 import scala.util.{Failure, Success, Try}
