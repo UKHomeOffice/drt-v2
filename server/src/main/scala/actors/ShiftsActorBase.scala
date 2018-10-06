@@ -88,10 +88,11 @@ class ShiftsActorBase(now: () => SDateLike,
   }
 
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case shiftsMessage: ShiftsMessage =>
-      log.info(s"Recovery: ShiftsMessage received with ${shiftsMessage.shifts.length} shifts")
-      val shifts = shiftMessagesToStaffAssignments(shiftsMessage.shifts)
-      updateState(shifts)
+    case ShiftsMessage(shiftMessages, _) =>
+      log.info(s"Recovery: ShiftsMessage received with ${shiftMessages.length} shifts")
+      val shifts = shiftMessagesToStaffAssignments(shiftMessages)
+      val updatedShifts = applyUpdatedShifts(shifts.assignments)
+      updateState(ShiftAssignments(updatedShifts))
   }
 
   def receiveCommand: Receive = {

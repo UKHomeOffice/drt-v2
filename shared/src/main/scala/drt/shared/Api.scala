@@ -636,8 +636,6 @@ trait Api {
 
   def getStaffMovements(pointIntTime: MillisSinceEpoch): Future[Seq[StaffMovement]]
 
-  def saveStaffTimeSlotsForMonth(timeSlotsForMonth: StaffTimeSlotsForTerminalMonth): Future[Unit]
-
   def getShiftsForMonth(month: MillisSinceEpoch, terminalName: TerminalName): Future[ShiftAssignments]
 
   def updateShifts(shiftsToUpdate: Seq[StaffAssignment]): Unit
