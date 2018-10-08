@@ -62,7 +62,11 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 }
 
 object DrtStaticParameters {
-  val expireAfterMillis: MillisSinceEpoch = 2 * oneDayMillis
+  val fortyEightHoursMillis: MillisSinceEpoch = 2 * oneDayMillis
+
+  def expire48HoursAgo(now: () => SDateLike): () => SDateLike = () => now().addDays(-2)
+
+  def expireBeforeThisMonth(now: () => SDateLike): () => SDateLike = () => now().startOfTheMonth()
 }
 
 case class DrtConfigParameters(config: Configuration) {
@@ -113,7 +117,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   implicit val system: ActorSystem = actorSystem
 
   val params = DrtConfigParameters(config)
-  import DrtStaticParameters.expireAfterMillis
+  import DrtStaticParameters._
 
   system.log.info(s"recrunchOnStart: ${params.recrunchOnStart}")
 
@@ -127,21 +131,21 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val purgeOldLiveSnapshots = false
   val purgeOldForecastSnapshots = true
 
-  val liveCrunchStateProps = Props(classOf[CrunchStateActor], Option(airportConfig.portStateSnapshotInterval), params.snapshotMegaBytesLivePortState, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots)
-  val forecastCrunchStateProps = Props(classOf[CrunchStateActor], Option(100), params.snapshotMegaBytesFcstPortState, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots)
+  val liveCrunchStateProps = Props(classOf[CrunchStateActor], Option(airportConfig.portStateSnapshotInterval), params.snapshotMegaBytesLivePortState, "crunch-state", airportConfig.queues, now, fortyEightHoursMillis, purgeOldLiveSnapshots)
+  val forecastCrunchStateProps = Props(classOf[CrunchStateActor], Option(100), params.snapshotMegaBytesFcstPortState, "forecast-crunch-state", airportConfig.queues, now, fortyEightHoursMillis, purgeOldForecastSnapshots)
 
-  lazy val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastBaseArrivalsActor], params.snapshotMegaBytesBaseArrivals, now, expireAfterMillis), name = "base-arrivals-actor")
-  lazy val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastPortArrivalsActor], params.snapshotMegaBytesFcstArrivals, now, expireAfterMillis), name = "forecast-arrivals-actor")
-  lazy val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor], params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis), name = "live-arrivals-actor")
+  lazy val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastBaseArrivalsActor], params.snapshotMegaBytesBaseArrivals, now, fortyEightHoursMillis), name = "base-arrivals-actor")
+  lazy val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastPortArrivalsActor], params.snapshotMegaBytesFcstArrivals, now, fortyEightHoursMillis), name = "forecast-arrivals-actor")
+  lazy val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor], params.snapshotMegaBytesLiveArrivals, now, fortyEightHoursMillis), name = "live-arrivals-actor")
 
   lazy val liveCrunchStateActor: ActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
   lazy val forecastCrunchStateActor: ActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
 
-  lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, params.snapshotIntervalVm), name = "voyage-manifests-actor")
+  lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], params.snapshotMegaBytesVoyageManifests, now, fortyEightHoursMillis, params.snapshotIntervalVm), name = "voyage-manifests-actor")
 
-  lazy val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], now, expireAfterMillis))
+  lazy val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], now, expireBeforeThisMonth(now)))
   lazy val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], now))
-  lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], now, expireAfterMillis))
+  lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], now, expire48HoursAgo(now)))
 
   lazy val alertsActor: ActorRef = system.actorOf(Props(classOf[AlertsActor]))
   val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
@@ -240,7 +244,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       liveCrunchStateActor = liveCrunchStateActor,
       forecastCrunchStateActor = forecastCrunchStateActor,
       maxDaysToCrunch = params.maxDaysToCrunch,
-      expireAfterMillis = expireAfterMillis,
+      expireAfterMillis = fortyEightHoursMillis,
       actors = Map(
         "shifts" -> shiftsActor,
         "fixed-points" -> fixedPointsActor,

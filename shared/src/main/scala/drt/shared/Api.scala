@@ -279,6 +279,8 @@ trait SDateLike {
 
   def getTimeZoneOffsetMillis(): MillisSinceEpoch
 
+  def startOfTheMonth(): SDateLike
+
   override def toString: String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02dT${getHours()}%02d${getMinutes()}%02d"
 
   override def equals(obj: scala.Any): Boolean = {
@@ -634,7 +636,7 @@ trait Api {
 
   def removeStaffMovements(movementsToRemove: UUID): Unit
 
-  def getStaffMovements(pointIntTime: MillisSinceEpoch): Future[Seq[StaffMovement]]
+  def getStaffMovements(maybePointInTime: Option[MillisSinceEpoch]): Future[Seq[StaffMovement]]
 
   def getShiftsForMonth(month: MillisSinceEpoch, terminalName: TerminalName): Future[ShiftAssignments]
 

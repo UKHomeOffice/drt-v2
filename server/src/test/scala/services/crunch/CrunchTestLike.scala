@@ -142,18 +142,17 @@ class CrunchTestLike
                     ): CrunchGraphInputsAndProbes = {
 
     val maxDaysToCrunch = 5
-    val expireAfterMillis = 2 * oneDayMillis
 
     val liveProbe = testProbe("live")
     val forecastProbe = testProbe("forecast")
     val baseArrivalsProbe = testProbe("base-arrivals")
     val forecastArrivalsProbe = testProbe("forecast-arrivals")
     val liveArrivalsProbe = testProbe("live-arrivals")
-    val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], now))
+    val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], now, DrtStaticParameters.expireBeforeThisMonth(now)))
     val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], now))
-    val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], now, expireAfterMillis))
+    val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], now, DrtStaticParameters.expire48HoursAgo(now)))
     val snapshotInterval = 1
-    val manifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], oneMegaByte, now, expireAfterMillis, snapshotInterval))
+    val manifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], oneMegaByte, now, DrtStaticParameters.fortyEightHoursMillis, snapshotInterval))
 
     val liveCrunchActor = liveCrunchStateActor(logLabel, liveProbe, now)
     val forecastCrunchActor = forecastCrunchStateActor(logLabel, forecastProbe, now)
@@ -171,7 +170,7 @@ class CrunchTestLike
       liveCrunchStateActor = liveCrunchActor,
       forecastCrunchStateActor = forecastCrunchActor,
       maxDaysToCrunch = maxDaysToCrunch,
-      expireAfterMillis = expireAfterMillis,
+      expireAfterMillis = DrtStaticParameters.fortyEightHoursMillis,
       minutesToCrunch = minutesToCrunch,
       actors = Map[String, AskableActorRef](
         "shifts" -> shiftsActor,

@@ -44,7 +44,7 @@ class StaffMovementsActorSpec extends TestKit(ActorSystem("StaffMovementsActorSp
       val staffMovements = StaffMovements(Seq(StaffMovement("T1", "lunch start", MilliDate(SDate(s"2017-01-01T00:00").millisSinceEpoch), -1, movementUuid1, createdBy = Some("batman"))))
 
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
-      val expireAfterOneDay = Crunch.oneDayMillis
+      val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
 
       val actor = system.actorOf(Props(classOf[StaffMovementsActorBase], now, expireAfterOneDay), "movementsActor")
 
@@ -72,7 +72,7 @@ class StaffMovementsActorSpec extends TestKit(ActorSystem("StaffMovementsActorSp
       val staffMovements = StaffMovements(Seq(movement1, movement2))
 
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
-      val expireAfterOneDay = Crunch.oneDayMillis
+      val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
 
       val actor = system.actorOf(Props(classOf[StaffMovementsActorBase], now, expireAfterOneDay), "movementsActor1")
 
@@ -105,7 +105,7 @@ class StaffMovementsActorSpec extends TestKit(ActorSystem("StaffMovementsActorSp
       val movement4 = StaffMovement("T1", "supper start", MilliDate(SDate("2017-01-01T21:40").millisSinceEpoch), -1, movementUuid4, createdBy = Some("bruce"))
 
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
-      val expireAfterOneDay = Crunch.oneDayMillis
+      val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
 
       val actor = system.actorOf(Props(classOf[StaffMovementsActorBase], now, expireAfterOneDay), "movementsActor1")
 
@@ -145,7 +145,8 @@ class StaffMovementsActorSpec extends TestKit(ActorSystem("StaffMovementsActorSp
       val unexpiredMovement2 = StaffMovement("T1", "supper start", MilliDate(SDate(s"2017-01-01T21:40").millisSinceEpoch), -1, movementUuid4, createdBy = Some("bruce"))
 
       val now_is_20170102_0200: () => SDateLike = () => SDate("2017-01-02T02:00")
-      val expireAfterOneDay = Crunch.oneDayMillis
+      val expireAfterOneDay: () => SDateLike = () => now_is_20170102_0200().addDays(-1)
+
       val actor = system.actorOf(Props(classOf[StaffMovementsActorBase], now_is_20170102_0200, expireAfterOneDay), "movementsActor1")
 
       actor ! AddStaffMovements(Seq(expiredMovement1, expiredMovement2))
@@ -169,7 +170,8 @@ class StaffMovementsActorSpec extends TestKit(ActorSystem("StaffMovementsActorSp
       val unexpiredMovement2 = StaffMovement("T1", "supper start", MilliDate(SDate(s"2017-01-01T21:40").millisSinceEpoch), -1, UUID.randomUUID(), createdBy = Some("bruce"))
 
       val now_is_20170102_0200: () => SDateLike = () => SDate("2017-01-02T02:00")
-      val expireAfterOneDay = Crunch.oneDayMillis
+      val expireAfterOneDay: () => SDateLike = () => now_is_20170102_0200().addDays(-1)
+
       val actor = system.actorOf(Props(classOf[StaffMovementsActorBase], now_is_20170102_0200, expireAfterOneDay), "movementsActor1")
 
       actor ! AddStaffMovements(Seq(expiredMovement1, expiredMovement2))

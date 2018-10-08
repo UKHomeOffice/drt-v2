@@ -1,5 +1,6 @@
 package drt.shared
 
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.TerminalName
 
 
@@ -8,7 +9,9 @@ case class StaffAssignment(name: String,
                            startDt: MilliDate,
                            endDt: MilliDate,
                            numberOfStaff: Int,
-                           createdBy: Option[String])
+                           createdBy: Option[String]) extends Expireable {
+  def isExpired(expireAfterMillis: MillisSinceEpoch): Boolean = endDt.millisSinceEpoch < expireAfterMillis
+}
 
 sealed trait StaffAssignments {
   val assignments: Seq[StaffAssignment]
@@ -42,7 +45,7 @@ case class FixedPointAssignments(assignments: Seq[StaffAssignment]) extends Fixe
   }
 }
 
-case class ShiftAssignments(assignments: Seq[StaffAssignment]) extends ShiftAssignmentsLike {
+case class ShiftAssignments(assignments: Seq[StaffAssignment]) extends ShiftAssignmentsLike with HasExpireables[ShiftAssignments] {
   def +(staffAssignments: Seq[StaffAssignment]): ShiftAssignments = copy(assignments ++ staffAssignments)
 
   def terminalStaffAt(terminalName: TerminalName, date: SDateLike): Int = {
@@ -51,6 +54,11 @@ case class ShiftAssignments(assignments: Seq[StaffAssignment]) extends ShiftAssi
     assignments.filter(assignment => {
       assignment.startDt.millisSinceEpoch <= dateInQuestion && dateInQuestion <= assignment.endDt.millisSinceEpoch && assignment.terminalName == terminalName
     }).map(_.numberOfStaff).sum
+  }
+
+  def purgeExpired(expireBefore: () => SDateLike): ShiftAssignments = {
+    val expireBeforeMillis = expireBefore().millisSinceEpoch
+    copy(assignments = assignments.filterNot(_.isExpired(expireBeforeMillis)))
   }
 }
 

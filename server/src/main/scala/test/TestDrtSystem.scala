@@ -15,21 +15,21 @@ import test.TestActors.{TestStaffMovementsActor, _}
 class TestDrtSystem(override val actorSystem: ActorSystem, override val config: Configuration, override val airportConfig: AirportConfig)(implicit actorMaterializer: Materializer)
   extends DrtSystem(actorSystem, config, airportConfig) {
 
-  import DrtStaticParameters.expireAfterMillis
+  import DrtStaticParameters._
 
-  override lazy val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[TestForecastBaseArrivalsActor], now, expireAfterMillis), name = "base-arrivals-actor")
-  override lazy val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[TestForecastPortArrivalsActor], now, expireAfterMillis), name = "forecast-arrivals-actor")
-  override lazy val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[TestLiveArrivalsActor], now, expireAfterMillis), name = "live-arrivals-actor")
+  override lazy val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[TestForecastBaseArrivalsActor], now, fortyEightHoursMillis), name = "base-arrivals-actor")
+  override lazy val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[TestForecastPortArrivalsActor], now, fortyEightHoursMillis), name = "forecast-arrivals-actor")
+  override lazy val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[TestLiveArrivalsActor], now, fortyEightHoursMillis), name = "live-arrivals-actor")
 
-  val testLiveCrunchStateProps = Props(classOf[TestCrunchStateActor], airportConfig.portStateSnapshotInterval, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots)
-  val testForecastCrunchStateProps = Props(classOf[TestCrunchStateActor], 100, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots)
+  val testLiveCrunchStateProps = Props(classOf[TestCrunchStateActor], airportConfig.portStateSnapshotInterval, "crunch-state", airportConfig.queues, now, fortyEightHoursMillis, purgeOldLiveSnapshots)
+  val testForecastCrunchStateProps = Props(classOf[TestCrunchStateActor], 100, "forecast-crunch-state", airportConfig.queues, now, fortyEightHoursMillis, purgeOldForecastSnapshots)
 
   override lazy val liveCrunchStateActor: ActorRef = system.actorOf(testLiveCrunchStateProps, name = "crunch-live-state-actor")
   override lazy val forecastCrunchStateActor: ActorRef = system.actorOf(testForecastCrunchStateProps, name = "crunch-forecast-state-actor")
-  override lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[TestVoyageManifestsActor], now, expireAfterMillis, params.snapshotIntervalVm), name = "voyage-manifests-actor")
-  override lazy val shiftsActor: ActorRef = system.actorOf(Props(classOf[TestShiftsActor], now, expireAfterMillis))
+  override lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[TestVoyageManifestsActor], now, fortyEightHoursMillis, params.snapshotIntervalVm), name = "voyage-manifests-actor")
+  override lazy val shiftsActor: ActorRef = system.actorOf(Props(classOf[TestShiftsActor], now, expireBeforeThisMonth(now)))
   override lazy val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[TestFixedPointsActor], now))
-  override lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[TestStaffMovementsActor], now, expireAfterMillis))
+  override lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[TestStaffMovementsActor], now, expire48HoursAgo(now)), "TestActor-StaffMovements")
 
   system.log.warning(s"Using test System")
   val voyageManifestTestSourceGraph: Source[ManifestsFeedResponse, NotUsed] = Source.fromGraph(new TestAPIManifestFeedGraphStage)

@@ -28,13 +28,15 @@ case class GetUpdatesSince(millis: MillisSinceEpoch, from: MillisSinceEpoch, to:
 
 case object GetShifts
 
+case class SetShifts(newShifts: Seq[StaffAssignment])
+
 case class UpdateShifts(shiftsToUpdate: Seq[StaffAssignment])
 
 case class AddShiftSubscribers(subscribers: List[SourceQueueWithComplete[ShiftAssignments]])
 
 case class AddFixedPointSubscribers(subscribers: List[SourceQueueWithComplete[FixedPointAssignments]])
 
-class ShiftsActor(now: () => SDateLike, expireAfterMillis: Long) extends ShiftsActorBase(now, expireAfterMillis) {
+class ShiftsActor(now: () => SDateLike, expireBefore: () => SDateLike) extends ShiftsActorBase(now, expireBefore) {
   var subscribers: List[SourceQueueWithComplete[ShiftAssignments]] = List()
 
   override def onUpdateState(shifts: ShiftAssignments): Unit = {
@@ -62,51 +64,60 @@ class ShiftsActor(now: () => SDateLike, expireAfterMillis: Long) extends ShiftsA
   }
 }
 
-class ShiftsActorBase(now: () => SDateLike,
-                      expireAfterMillis: Long) extends RecoveryActorLike with PersistentDrtActor[ShiftsState] {
+class ShiftsActorBase(val now: () => SDateLike,
+                      val expireBefore: () => SDateLike) extends ExpiryActorLike[ShiftAssignments] with RecoveryActorLike with PersistentDrtActor[ShiftAssignments] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def persistenceId = "shifts-store"
 
-  var state: ShiftsState = initialState
+  var state: ShiftAssignments = initialState
 
-  def initialState = ShiftsState(ShiftAssignments.empty)
+  def initialState: ShiftAssignments = ShiftAssignments.empty
 
   val snapshotInterval = 1
   override val snapshotBytesThreshold: Int = oneMegaByte
 
   import ShiftsMessageParser._
 
-  override def stateToMessage: GeneratedMessage = ShiftStateSnapshotMessage(staffAssignmentsToShiftsMessages(state.shifts, now()))
+  override def stateToMessage: GeneratedMessage = ShiftStateSnapshotMessage(staffAssignmentsToShiftsMessages(state, now()))
 
-  def updateState(shifts: ShiftAssignments): Unit = state = state.updated(data = shifts)
+  def updateState(shifts: ShiftAssignments): Unit = state = shifts
 
   def onUpdateState(data: ShiftAssignments): Unit = {}
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case snapshot: ShiftStateSnapshotMessage => state = ShiftsState(shiftMessagesToStaffAssignments(snapshot.shifts))
+    case snapshot: ShiftStateSnapshotMessage => state = shiftMessagesToStaffAssignments(snapshot.shifts)
   }
 
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case ShiftsMessage(shiftMessages, _) =>
       log.info(s"Recovery: ShiftsMessage received with ${shiftMessages.length} shifts")
-      val shifts = shiftMessagesToStaffAssignments(shiftMessages)
-      val updatedShifts = applyUpdatedShifts(shifts.assignments)
-      updateState(ShiftAssignments(updatedShifts))
+      val shiftsToRecover = shiftMessagesToStaffAssignments(shiftMessages)
+      val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToRecover.assignments)
+      purgeExpiredAndUpdateState(ShiftAssignments(updatedShifts))
   }
 
   def receiveCommand: Receive = {
     case GetState =>
       log.info(s"GetState received")
-      sender() ! state.shifts
+      sender() ! state
 
     case UpdateShifts(shiftsToUpdate) =>
-      val updatedShifts = applyUpdatedShifts(shiftsToUpdate)
-      updateState(ShiftAssignments(updatedShifts))
-      onUpdateState(ShiftAssignments(updatedShifts))
+      val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToUpdate)
+      purgeExpiredAndUpdateState(ShiftAssignments(updatedShifts))
 
       val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(ShiftAssignments(shiftsToUpdate), now()))
       persistAndMaybeSnapshot(shiftsMessage)
+
+    case SetShifts(newShiftAssignments) =>
+      if (newShiftAssignments != state) {
+        log.info(s"Replacing shifts state with $newShiftAssignments. expire before: ${expireBefore().prettyDateTime()} (${expireBefore().millisSinceEpoch}")
+        updateState(ShiftAssignments(newShiftAssignments))
+        purgeExpiredAndUpdateState(ShiftAssignments(newShiftAssignments))
+
+        val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(ShiftAssignments(newShiftAssignments), now()))
+        persistAndMaybeSnapshot(shiftsMessage)
+      } else log.info(s"No change. Nothing to persist")
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")
@@ -118,8 +129,8 @@ class ShiftsActorBase(now: () => SDateLike,
       log.info(s"unhandled message: $u")
   }
 
-  def applyUpdatedShifts(shiftsToUpdate: Seq[StaffAssignment]): Seq[StaffAssignment] = shiftsToUpdate
-    .foldLeft(state.shifts.assignments) {
+  def applyUpdatedShifts(existingAssignments: Seq[StaffAssignment], shiftsToUpdate: Seq[StaffAssignment]): Seq[StaffAssignment] = shiftsToUpdate
+    .foldLeft(existingAssignments) {
       case (assignmentsSoFar, updatedAssignment) =>
         assignmentsSoFar.filterNot(existing =>
           existing.startDt == updatedAssignment.startDt && existing.terminalName == updatedAssignment.terminalName)

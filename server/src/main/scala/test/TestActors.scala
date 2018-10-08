@@ -70,7 +70,7 @@ object TestActors {
     override def receiveCommand: Receive = reset orElse super.receiveCommand
   }
 
-  case class TestShiftsActor(now: () => SDateLike, expireAfterMillis: Long) extends ShiftsActor(now, expireAfterMillis) {
+  case class TestShiftsActor(override val now: () => SDateLike, override val expireBefore: () => SDateLike) extends ShiftsActor(now, expireBefore) {
 
     def reset: Receive = {
       case ResetActor =>
@@ -100,12 +100,13 @@ object TestActors {
     override def receiveCommand: Receive = reset orElse super.receiveCommand
   }
 
-  case class TestStaffMovementsActor(now: () => SDateLike, expireAfterMillis: Long) extends StaffMovementsActor(now, expireAfterMillis) {
+  case class TestStaffMovementsActor(override val now: () => SDateLike, override val expireBefore: () => SDateLike) extends StaffMovementsActor(now, expireBefore) {
 
     def reset: Receive = {
       case ResetActor =>
         state = initialState
         subscribers = List()
+        log.info(s"Reset staff movements to ${state.staffMovements.movements}")
     }
 
     override def receiveRecover: Receive = {

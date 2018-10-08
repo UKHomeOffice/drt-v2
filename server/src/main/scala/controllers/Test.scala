@@ -37,6 +37,7 @@ class Test @Inject()(implicit val config: Configuration,
 
   val liveArrivalsTestActor: Future[ActorRef] = system.actorSelection("akka://test-drt-actor-system/user/TestActor-LiveArrivals").resolveOne()
   val apiManifestsTestActor: Future[ActorRef] = system.actorSelection("akka://test-drt-actor-system/user/TestActor-APIManifests").resolveOne()
+  val staffMovementsTestActor: Future[ActorRef] = system.actorSelection("akka://test-drt-actor-system/user/TestActor-StaffMovements").resolveOne()
   val mockRolesTestActor: Future[ActorRef] = system.actorSelection("akka://test-drt-actor-system/user/TestActor-MockRoles").resolveOne()
 
   def saveArrival(arrival: Arrival) = {
@@ -63,8 +64,12 @@ class Test @Inject()(implicit val config: Configuration,
       actor ! ResetData
     })
 
-    liveArrivalsTestActor.map(a => a ! ResetActor)
-    apiManifestsTestActor.map(a => a ! ResetActor)
+    liveArrivalsTestActor.map(_ ! ResetActor)
+    apiManifestsTestActor.map(_ ! ResetActor)
+    staffMovementsTestActor.map(a => {
+      log.info(s"Sending ResetActor to movements actor")
+      a ! ResetActor
+    })
   }
 
   def addArrival() = Action {
