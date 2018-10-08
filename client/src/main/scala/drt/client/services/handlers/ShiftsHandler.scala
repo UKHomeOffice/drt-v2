@@ -7,7 +7,7 @@ import diode._
 import diode.Implicits.runAfterImpl
 import drt.client.actions.Actions.{GetShifts, RetryActionAfter, SetShifts, UpdateShifts}
 import drt.client.logger.log
-import drt.client.services.{AjaxClient, PollDelay, ViewMode}
+import drt.client.services.{AjaxClient, PollDelay, ViewLive, ViewMode}
 import drt.shared.{Api, ShiftAssignments}
 
 import scala.concurrent.Future
@@ -23,8 +23,12 @@ class ShiftsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[ShiftAs
       val fixedPointsEffect = Effect(Future(GetShifts())).after(1 minute)
       log.info(s"Calling getShifts")
 
+      val maybeMillis = viewMode() match {
+        case ViewLive() => None
+        case vm: ViewMode => Option(vm.millis)
+      }
       val apiCallEffect = Effect(
-        AjaxClient[Api].getShifts(viewMode().millis).call()
+        AjaxClient[Api].getShifts(maybeMillis).call()
           .map(res => SetShifts(res, None))
           .recoverWith {
             case _ =>

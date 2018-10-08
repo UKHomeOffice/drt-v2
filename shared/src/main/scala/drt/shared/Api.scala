@@ -626,7 +626,7 @@ trait Api {
 
   def airportConfiguration(): AirportConfig
 
-  def getShifts(pointIntTime: MillisSinceEpoch): Future[ShiftAssignments]
+  def getShifts(maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments]
 
   def saveFixedPoints(fixedPoints: FixedPointAssignments): Unit
 
