@@ -1,7 +1,5 @@
-import sbt._
-import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport._
 import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport._
-import sbt.Keys.libraryDependencies
+import sbt._
 
 /**
   * Application settings. Configure the build for your application here.
@@ -55,8 +53,9 @@ object Settings {
     val csvCommons = "1.4"
     val pprint = "0.4.3"
     val scalaCheck = "1.13.4"
-    val akkaPersistenceJdbc = "3.4.0"
     val akkaPersistenceInmemory = "2.4.18.1"
+    val akkaPersistenceJdbc = "3.4.0"
+    val postgres = "42.2.2"
     val sshJ = "0.24.0"
     val jodaTime = "2.9.4"
     val playJsonJoda = "2.6.9"
@@ -128,7 +127,7 @@ object Settings {
 
     "joda-time" % "joda-time" % jodaTime,
     "com.typesafe.play" %% "play-json-joda" % playJsonJoda,
-    "org.opensaml" % "opensaml" % openSaml excludeAll (ExclusionRule("org.bouncycastle"), ExclusionRule("xerces")),
+    "org.opensaml" % "opensaml" % openSaml excludeAll(ExclusionRule("org.bouncycastle"), ExclusionRule("xerces")),
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
     "org.apache.spark" % "spark-mllib_2.11" % sparkMlLib,
@@ -137,8 +136,10 @@ object Settings {
     "org.codehaus.janino" % "janino" % "3.0.7",
     "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
     "org.iq80.leveldb" % "leveldb" % levelDb,
-    "org.renjin" % "renjin-script-engine" % renjin,
     "com.github.dnvriend" %% "akka-persistence-jdbc" % akkaPersistenceJdbc,
+    "org.postgresql" % "postgresql" % postgres,
+
+    "org.renjin" % "renjin-script-engine" % renjin,
     "org.scalacheck" %% "scalacheck" % scalaCheck % "test",
 
     "org.specs2" %% "specs2-core" % specs2 % Test,
@@ -168,6 +169,7 @@ object Settings {
     "org.scala-js" %%% "scalajs-dom" % scalaDom,
     "com.lihaoyi" %%% "pprint" % pprint,
     "com.lihaoyi" %%% "utest" % uTest % Test,
+    "com.lihaoyi" %%% "upickle" % "0.6.6",
     "ru.pavkin" %%% "scala-js-momentjs" % scalaJsMomentJs
   ))
 
