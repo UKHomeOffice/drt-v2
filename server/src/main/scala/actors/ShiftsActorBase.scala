@@ -14,9 +14,6 @@ import services.graphstages.Crunch
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success, Try}
 
-case class ShiftsState(shifts: ShiftAssignments) {
-  def updated(data: ShiftAssignments): ShiftsState = copy(shifts = data)
-}
 
 case object GetState
 
@@ -100,7 +97,7 @@ class ShiftsActorBase(val now: () => SDateLike,
   def receiveCommand: Receive = {
     case GetState =>
       log.info(s"GetState received")
-      sender() ! state
+      sender() ! state.purgeExpired(expireBefore)
 
     case UpdateShifts(shiftsToUpdate) =>
       val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToUpdate)
@@ -111,7 +108,7 @@ class ShiftsActorBase(val now: () => SDateLike,
 
     case SetShifts(newShiftAssignments) =>
       if (newShiftAssignments != state) {
-        log.info(s"Replacing shifts state with $newShiftAssignments. expire before: ${expireBefore().prettyDateTime()} (${expireBefore().millisSinceEpoch}")
+        log.info(s"Replacing shifts state with $newShiftAssignments")
         updateState(ShiftAssignments(newShiftAssignments))
         purgeExpiredAndUpdateState(ShiftAssignments(newShiftAssignments))
 

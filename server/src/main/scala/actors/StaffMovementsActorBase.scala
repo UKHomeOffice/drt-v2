@@ -24,7 +24,6 @@ case class StaffMovements(movements: Seq[StaffMovement]) extends HasExpireables[
 
   def purgeExpired(expireBefore: () => SDateLike): StaffMovements = {
     val expireBeforeMillis = expireBefore().millisSinceEpoch
-    log.info(s"expireBefore: ${expireBefore().prettyDateTime()}")
     copy(movements = movements.filterNot(_.isExpired(expireBeforeMillis)))
   }
 }

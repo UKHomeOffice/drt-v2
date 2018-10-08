@@ -1,7 +1,7 @@
 package actors.pointInTime
 
+import actors.ShiftsActorBase
 import actors.ShiftsMessageParser.shiftMessagesToStaffAssignments
-import actors.{ShiftsActorBase, ShiftsState}
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.SDateLike
 import server.protobuf.messages.ShiftMessage.ShiftStateSnapshotMessage

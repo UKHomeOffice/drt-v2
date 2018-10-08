@@ -66,10 +66,7 @@ class Test @Inject()(implicit val config: Configuration,
 
     liveArrivalsTestActor.map(_ ! ResetActor)
     apiManifestsTestActor.map(_ ! ResetActor)
-    staffMovementsTestActor.map(a => {
-      log.info(s"Sending ResetActor to movements actor")
-      a ! ResetActor
-    })
+    staffMovementsTestActor.map(_ ! ResetActor)
   }
 
   def addArrival() = Action {
