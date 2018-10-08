@@ -55,6 +55,7 @@ object Settings {
     val csvCommons = "1.4"
     val pprint = "0.4.3"
     val scalaCheck = "1.13.4"
+    val akkaPersistenceJdbc = "3.4.0"
     val akkaPersistenceInmemory = "2.4.18.1"
     val sshJ = "0.24.0"
     val jodaTime = "2.9.4"
@@ -137,6 +138,7 @@ object Settings {
     "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
     "org.iq80.leveldb" % "leveldb" % levelDb,
     "org.renjin" % "renjin-script-engine" % renjin,
+    "com.github.dnvriend" %% "akka-persistence-jdbc" % akkaPersistenceJdbc,
     "org.scalacheck" %% "scalacheck" % scalaCheck % "test",
 
     "org.specs2" %% "specs2-core" % specs2 % Test,
