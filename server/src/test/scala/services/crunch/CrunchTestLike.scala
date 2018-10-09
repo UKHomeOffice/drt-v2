@@ -152,7 +152,7 @@ class CrunchTestLike
     val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], now))
     val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], now, DrtStaticParameters.time48HoursAgo(now)))
     val snapshotInterval = 1
-    val manifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], oneMegaByte, now, DrtStaticParameters.fortyEightHoursMillis, snapshotInterval))
+    val manifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], oneMegaByte, now, DrtStaticParameters.expireAfterMillis, snapshotInterval))
 
     val liveCrunchActor = liveCrunchStateActor(logLabel, liveProbe, now)
     val forecastCrunchActor = forecastCrunchStateActor(logLabel, forecastProbe, now)
@@ -170,7 +170,7 @@ class CrunchTestLike
       liveCrunchStateActor = liveCrunchActor,
       forecastCrunchStateActor = forecastCrunchActor,
       maxDaysToCrunch = maxDaysToCrunch,
-      expireAfterMillis = DrtStaticParameters.fortyEightHoursMillis,
+      expireAfterMillis = DrtStaticParameters.expireAfterMillis,
       minutesToCrunch = minutesToCrunch,
       actors = Map[String, AskableActorRef](
         "shifts" -> shiftsActor,

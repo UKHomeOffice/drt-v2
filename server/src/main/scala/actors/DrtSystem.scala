@@ -62,6 +62,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 }
 
 object DrtStaticParameters {
+  val expireAfterMillis: MillisSinceEpoch = 2 * oneDayMillis
+
   def time48HoursAgo(now: () => SDateLike): () => SDateLike = () => now().addDays(-2)
 
   def timeBeforeThisMonth(now: () => SDateLike): () => SDateLike = () => now().startOfTheMonth()
@@ -128,8 +130,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   val purgeOldLiveSnapshots = false
   val purgeOldForecastSnapshots = true
-
-  val expireAfterMillis: MillisSinceEpoch = 2 * oneDayMillis
 
   val liveCrunchStateProps = Props(classOf[CrunchStateActor], Option(airportConfig.portStateSnapshotInterval), params.snapshotMegaBytesLivePortState, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots)
   val forecastCrunchStateProps = Props(classOf[CrunchStateActor], Option(100), params.snapshotMegaBytesFcstPortState, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots)
