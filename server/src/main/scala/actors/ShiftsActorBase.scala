@@ -116,7 +116,6 @@ class ShiftsActorBase(val now: () => SDateLike,
     case SetShifts(newShiftAssignments) =>
       if (newShiftAssignments != state) {
         log.info(s"Replacing shifts state with $newShiftAssignments")
-        updateState(ShiftAssignments(newShiftAssignments))
         purgeExpiredAndUpdateState(ShiftAssignments(newShiftAssignments))
 
         val createdAt = now()
