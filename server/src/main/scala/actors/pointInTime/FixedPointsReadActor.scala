@@ -1,25 +1,30 @@
 package actors.pointInTime
 
+import actors.FixedPointsActorBase
 import actors.FixedPointsMessageParser.fixedPointMessagesToFixedPoints
-import actors.{FixedPointsActorBase, FixedPointsState}
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.SDateLike
-import server.protobuf.messages.FixedPointMessage.FixedPointsStateSnapshotMessage
+import server.protobuf.messages.FixedPointMessage.{FixedPointsMessage, FixedPointsStateSnapshotMessage}
 
-class FixedPointsReadActor(now: () => SDateLike, pointInTime: SDateLike) extends FixedPointsActorBase(now) {
+class FixedPointsReadActor(pointInTime: SDateLike) extends FixedPointsActorBase(() => pointInTime) {
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case snapshot: FixedPointsStateSnapshotMessage => state = FixedPointsState(fixedPointMessagesToFixedPoints(snapshot.fixedPoints.toList))
+    case snapshot: FixedPointsStateSnapshotMessage => state = fixedPointMessagesToFixedPoints(snapshot.fixedPoints.toList)
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case m => logRecoveryMessage(s"Didn't expect a recovery message but got a ${m.getClass}")
+    case FixedPointsMessage(fixedPointMessages, Some(createdAtMillis)) =>
+      if (createdAtMillis <= pointInTime.millisSinceEpoch) {
+        logRecoveryMessage(s"FixedPointsMessage received with ${fixedPointMessages.length} fixed points")
+        val fixedPointsToRecover = fixedPointMessagesToFixedPoints(fixedPointMessages)
+        updateState(fixedPointsToRecover)
+      }
   }
 
   override def postRecoveryComplete(): Unit = logPointInTimeCompleted(pointInTime)
 
   override def recovery: Recovery = {
     val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime.millisSinceEpoch)
-    val recovery = Recovery(fromSnapshot = criteria, replayMax = 0)
+    val recovery = Recovery(fromSnapshot = criteria, replayMax = 250)
     log.info(s"Recovery: $recovery")
     recovery
   }
