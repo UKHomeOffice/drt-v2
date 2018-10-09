@@ -2,7 +2,7 @@ package drt.client.services.handlers
 
 import diode.data.{Empty, Pending, PendingStale, Pot}
 import diode.{ActionResult, Effect, ModelR, ModelRW}
-import drt.client.actions.Actions.{GetCrunchState, GetShifts, GetStaffMovements, SetViewMode}
+import drt.client.actions.Actions._
 import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{ViewDay, ViewLive, ViewMode}
@@ -48,7 +48,7 @@ class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[Crunch
           updated((newViewMode, Pending(), latestUpdateMillis))
         case _ =>
           log.info("crunch: will poll")
-          val effects = Effect(Future(GetCrunchState())) + Effect(Future(GetStaffMovements())) + Effect(Future(GetShifts()))
+          val effects = Effect(Future(GetCrunchState())) + Effect(Future(GetStaffMovements())) + Effect(Future(GetShifts())) + Effect(Future(GetFixedPoints()))
           updated((newViewMode, Pending(), latestUpdateMillis), effects)
       }
   }

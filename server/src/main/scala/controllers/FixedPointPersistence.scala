@@ -2,7 +2,7 @@ package controllers
 
 import java.util.UUID
 
-import actors.{DrtStaticParameters, GetState}
+import actors.{DrtStaticParameters, GetState, SetFixedPoints}
 import actors.pointInTime.FixedPointsReadActor
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.pattern._
@@ -28,7 +28,7 @@ trait FixedPointPersistence {
 
   def saveFixedPoints(fixedPoints: FixedPointAssignments): Unit = {
     log.info(s"Sending fixed points to actor: $fixedPoints")
-    fixedPointsActor ! fixedPoints
+    fixedPointsActor ! SetFixedPoints(fixedPoints.assignments)
   }
 
   def getFixedPoints(maybePointInTime: Option[MillisSinceEpoch]): Future[FixedPointAssignments] = maybePointInTime match {
