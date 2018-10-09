@@ -15,17 +15,6 @@ import scala.concurrent.Future
 
 class ShiftsForMonthHandler[M](modelRW: ModelRW[M, Pot[MonthOfShifts]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case SaveMonthTimeSlotsToShifts(staffTimeSlots) =>
-
-      log.info(s"Saving staff time slots as Shifts")
-      val action: Future[Action] = AjaxClient[Api].saveStaffTimeSlotsForMonth(staffTimeSlots).call().map(_ => NoAction)
-        .recoverWith {
-          case error =>
-            log.error(s"Failed to save staff month timeslots: $error, retrying after ${PollDelay.recoveryDelay}")
-            Future(RetryActionAfter(SaveMonthTimeSlotsToShifts(staffTimeSlots), PollDelay.recoveryDelay))
-        }
-      effectOnly(Effect(action))
-
     case GetShiftsForMonth(month, terminalName) =>
       log.info(s"Calling getShifts for Month")
 
@@ -37,6 +26,7 @@ class ShiftsForMonthHandler[M](modelRW: ModelRW[M, Pot[MonthOfShifts]]) extends 
             Future(RetryActionAfter(GetShiftsForMonth(month, terminalName), PollDelay.recoveryDelay))
         })
       updated(Pending(), apiCallEffect)
+
     case SetShiftsForMonth(monthOfRawShifts) =>
       updated(Ready(monthOfRawShifts))
   }

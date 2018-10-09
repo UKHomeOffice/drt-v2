@@ -93,15 +93,16 @@ object Staffing {
   }
 
   def reconstructStaffMinutes(pointInTime: SDateLike,
+                              expireAfterMillis: Long,
                               context: ActorContext,
                               fl: Map[Int, ApiFlightWithSplits],
                               cm: Map[TQM, CrunchApi.CrunchMinute]): PortState = {
     val uniqueSuffix = pointInTime.toISOString + UUID.randomUUID.toString
-    val shiftsActor: ActorRef = context.actorOf(Props(classOf[ShiftsReadActor], pointInTime), name = s"ShiftsReadActor-$uniqueSuffix")
+    val shiftsActor: ActorRef = context.actorOf(Props(classOf[ShiftsReadActor], pointInTime, expireAfterMillis), name = s"ShiftsReadActor-$uniqueSuffix")
     val askableShiftsActor: AskableActorRef = shiftsActor
     val fixedPointsActor: ActorRef = context.actorOf(Props(classOf[FixedPointsReadActor], pointInTime), name = s"FixedPointsReadActor-$uniqueSuffix")
     val askableFixedPointsActor: AskableActorRef = fixedPointsActor
-    val staffMovementsActor: ActorRef = context.actorOf(Props(classOf[StaffMovementsReadActor], pointInTime), name = s"StaffMovementsReadActor-$uniqueSuffix")
+    val staffMovementsActor: ActorRef = context.actorOf(Props(classOf[StaffMovementsReadActor], pointInTime, expireAfterMillis), name = s"StaffMovementsReadActor-$uniqueSuffix")
     val askableStaffMovementsActor: AskableActorRef = staffMovementsActor
 
     import scala.concurrent.ExecutionContext.Implicits.global

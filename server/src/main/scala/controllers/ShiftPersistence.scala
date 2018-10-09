@@ -1,12 +1,16 @@
 package controllers
 
-import actors.GetState
-import akka.actor.{ActorRef, ActorSystem}
+import java.util.UUID
+
+import actors.{DrtStaticParameters, GetState}
+import actors.pointInTime.ShiftsReadActor
+import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.pattern._
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.ShiftAssignments
 import org.slf4j.{Logger, LoggerFactory}
+import services.SDate
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -22,14 +26,29 @@ trait ShiftPersistence {
 
   def shiftsActor: ActorRef
 
-  def getShifts(pointInTime: MillisSinceEpoch): Future[ShiftAssignments] = {
-    log.info(s"getShifts($pointInTime)")
+  def getShifts(maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments] = maybePointInTime match {
+    case None =>
+      log.info(s"getShifts(None)")
+      shiftsActor.ask(GetState)
+        .map { case sa: ShiftAssignments => sa }
+        .recoverWith { case _ => Future(ShiftAssignments.empty) }
 
-    val shiftsFuture: Future[ShiftAssignments] = shiftsActor ? GetState map {
-      case sa: ShiftAssignments => sa
-      case _ => ShiftAssignments(Seq())
-    }
+    case Some(millis) =>
+      val date = SDate(millis)
+      log.info(s"getShifts(${date.toISOString()})")
 
-    shiftsFuture
+      val actorName = "shifts-read-actor-" + UUID.randomUUID().toString
+      val shiftsReadActor: ActorRef = actorSystem.actorOf(Props(classOf[ShiftsReadActor], date, DrtStaticParameters.time48HoursAgo(() => date)), actorName)
+
+      shiftsReadActor.ask(GetState)
+        .map { case sa: ShiftAssignments =>
+          shiftsReadActor ! PoisonPill
+          sa
+        }
+        .recoverWith {
+          case _ =>
+            shiftsReadActor ! PoisonPill
+            Future(ShiftAssignments.empty)
+        }
   }
 }

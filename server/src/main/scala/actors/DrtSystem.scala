@@ -62,7 +62,9 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 }
 
 object DrtStaticParameters {
-  val expireAfterMillis: MillisSinceEpoch = 2 * oneDayMillis
+  def time48HoursAgo(now: () => SDateLike): () => SDateLike = () => now().addDays(-2)
+
+  def timeBeforeThisMonth(now: () => SDateLike): () => SDateLike = () => now().startOfTheMonth()
 }
 
 case class DrtConfigParameters(config: Configuration) {
@@ -113,7 +115,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   implicit val system: ActorSystem = actorSystem
 
   val params = DrtConfigParameters(config)
-  import DrtStaticParameters.expireAfterMillis
+  import DrtStaticParameters._
 
   system.log.info(s"recrunchOnStart: ${params.recrunchOnStart}")
 
@@ -127,6 +129,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val purgeOldLiveSnapshots = false
   val purgeOldForecastSnapshots = true
 
+  val expireAfterMillis: MillisSinceEpoch = 2 * oneDayMillis
+
   val liveCrunchStateProps = Props(classOf[CrunchStateActor], Option(airportConfig.portStateSnapshotInterval), params.snapshotMegaBytesLivePortState, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots)
   val forecastCrunchStateProps = Props(classOf[CrunchStateActor], Option(100), params.snapshotMegaBytesFcstPortState, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots)
 
@@ -139,9 +143,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, params.snapshotIntervalVm), name = "voyage-manifests-actor")
 
-  lazy val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], now))
+  lazy val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], now, timeBeforeThisMonth(now)))
   lazy val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], now))
-  lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], now, expireAfterMillis))
+  lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], now, time48HoursAgo(now)))
 
   lazy val alertsActor: ActorRef = system.actorOf(Props(classOf[AlertsActor]))
   val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider

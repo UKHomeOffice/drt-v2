@@ -1,18 +1,20 @@
 package services.staffing
 
-import actors.{GetState, ShiftsActor}
+import actors.DrtStaticParameters.time48HoursAgo
+import actors.{DrtStaticParameters, GetState, SetShifts, ShiftsActor}
 import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.pattern.AskableActorRef
 import akka.testkit.TestProbe
 import akka.util.Timeout
-import drt.shared.{MilliDate, ShiftAssignments, StaffAssignment}
+import drt.shared.{MilliDate, SDateLike, ShiftAssignments, StaffAssignment}
 import services.SDate
 import services.crunch.CrunchTestLike
+import services.graphstages.Crunch
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class TestableShiftsActor(testProbe: ActorRef) extends ShiftsActor(() => SDate.now()) {
+class TestableShiftsActor(testProbe: ActorRef, now: () => SDateLike, expireBefore: () => SDateLike) extends ShiftsActor(now, expireBefore) {
   def sendAck(): Unit = testProbe ! MsgAck
 
   override def onUpdateState(shiftStaffAssignments: ShiftAssignments): Unit = {
@@ -24,6 +26,8 @@ class TestableShiftsActor(testProbe: ActorRef) extends ShiftsActor(() => SDate.n
 class ShiftsActorSpec extends CrunchTestLike {
   implicit val timeout: Timeout = new Timeout(1 second)
 
+  val nowProvider: () => SDateLike = () => SDate("2018-01-01T00:00")
+
   "Given some shifts and a shifts actor " +
     "When I send the shifts as a string to the actor and then query the actor's state " +
     "Then I should get back the same shifts I previously sent it" >> {
@@ -33,10 +37,10 @@ class ShiftsActorSpec extends CrunchTestLike {
 
     val probe = TestProbe()
 
-    val shiftsActor = system.actorOf(Props(classOf[TestableShiftsActor], probe.ref))
+    val shiftsActor = system.actorOf(Props(classOf[TestableShiftsActor], probe.ref, nowProvider, time48HoursAgo(nowProvider)))
     val askableShiftsActor: AskableActorRef = shiftsActor
 
-    shiftsActor ! shiftStaffAssignments
+    shiftsActor ! SetShifts(shiftStaffAssignments.assignments)
 
     probe.expectMsgAnyClassOf(MsgAck.getClass)
 
@@ -55,16 +59,16 @@ class ShiftsActorSpec extends CrunchTestLike {
 
     val probe = TestProbe()
 
-    val shiftsActor = system.actorOf(Props(classOf[TestableShiftsActor], probe.ref))
+    val shiftsActor = system.actorOf(Props(classOf[TestableShiftsActor], probe.ref, nowProvider, time48HoursAgo(nowProvider)))
 
-    shiftsActor ! shiftStaffAssignments
+    shiftsActor ! SetShifts(shiftStaffAssignments.assignments)
 
     probe.expectMsgAnyClassOf(MsgAck.getClass)
     shiftsActor ! PoisonPill
 
     Thread.sleep(250)
 
-    val shiftsActor2: AskableActorRef = system.actorOf(Props(classOf[TestableShiftsActor], probe.ref))
+    val shiftsActor2: AskableActorRef = system.actorOf(Props(classOf[TestableShiftsActor], probe.ref, nowProvider, time48HoursAgo(nowProvider)))
 
     val storedShifts = Await.result(shiftsActor2 ? GetState, 1 second).asInstanceOf[ShiftAssignments]
     val expected = shiftStaffAssignments

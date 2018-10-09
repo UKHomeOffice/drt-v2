@@ -2,8 +2,8 @@ package controllers
 
 import java.util.UUID
 
-import actors.pointInTime.StaffMovementsReadActor
 import actors._
+import actors.pointInTime.StaffMovementsReadActor
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.pattern._
 import akka.util.Timeout
@@ -11,7 +11,6 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.StaffMovement
 import org.slf4j.LoggerFactory
 import services.SDate
-import services.graphstages.Crunch
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -37,38 +36,40 @@ trait StaffMovementsPersistence {
     staffMovementsActor ! RemoveStaffMovements(movementsToRemove)
   }
 
-  def getStaffMovements(pointInTime: MillisSinceEpoch): Future[Seq[StaffMovement]] = {
-    val forDate = SDate(pointInTime)
+  def getStaffMovements(maybePointInTime: Option[MillisSinceEpoch]): Future[Seq[StaffMovement]] = {
+    val staffMovementsFuture = maybePointInTime match {
+      case None =>
+        log.info(s"getStaffMovements(None)")
+        staffMovementsActor.ask(GetState)
+          .map { case StaffMovements(movements) => movements }
+          .recoverWith { case _ => Future(Seq()) }
 
-    log.info(s"getStaffMovements(${forDate.toISOString()})")
+      case Some(millis) =>
+        val date = SDate(millis)
+        log.info(s"getStaffMovements(${date.toISOString()})")
 
-    val nowMillis = SDate.now().millisSinceEpoch
-    val staffMovementsFuture = if (forDate.millisSinceEpoch < nowMillis) {
-      val actorName = "staff-movements-read-actor-" + UUID.randomUUID().toString
-      val staffMovementsReadActor: ActorRef = actorSystem.actorOf(Props(classOf[StaffMovementsReadActor], forDate, DrtStaticParameters.expireAfterMillis), actorName)
+        val actorName = "staff-movements-read-actor-" + UUID.randomUUID().toString
+        val staffMovementsReadActor: ActorRef = actorSystem.actorOf(Props(classOf[StaffMovementsReadActor], date, DrtStaticParameters.time48HoursAgo(() => date)), actorName)
 
-      staffMovementsReadActor.ask(GetState).map { case StaffMovements(sm) =>
-        staffMovementsReadActor ! PoisonPill
-        sm
-      }.recoverWith {
-        case _ =>
-          staffMovementsReadActor ! PoisonPill
-          Future(Seq())
-      }
-    } else {
-      staffMovementsActor.ask(GetState)
-        .map { case StaffMovements(sm) => sm }
-        .recoverWith { case _ => Future(Seq()) }
+        staffMovementsReadActor.ask(GetState)
+          .map { case StaffMovements(movements) =>
+            staffMovementsReadActor ! PoisonPill
+            movements
+          }
+          .recoverWith {
+            case _ =>
+              staffMovementsReadActor ! PoisonPill
+              Future(Seq())
+          }
     }
 
     val eventualStaffMovements = staffMovementsFuture.collect {
       case Nil =>
         log.info(s"Got no movements")
         List()
-      case sm: Seq[StaffMovement] =>
-        actorSystem.log.info(s"Retrieved staff movements from actor for ${forDate.toISOString()}")
-        sm
+      case sm: Seq[StaffMovement] => sm
     }
+
     eventualStaffMovements
   }
 }

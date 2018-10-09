@@ -6,20 +6,26 @@ import actors.Sizes.oneMegaByte
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.trueaccord.scalapb.GeneratedMessage
-import drt.shared.{MilliDate, SDateLike, StaffMovement}
+import drt.shared.{HasExpireables, MilliDate, SDateLike, StaffMovement}
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
-import services.graphstages.Crunch
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
 
-case class StaffMovements(movements: Seq[StaffMovement]) {
+case class StaffMovements(movements: Seq[StaffMovement]) extends HasExpireables[StaffMovements] {
+  val log: Logger = LoggerFactory.getLogger(getClass)
+
   def +(movementsToAdd: Seq[StaffMovement]): StaffMovements =
     copy(movements = movements ++ movementsToAdd)
 
   def -(movementsToRemove: Seq[UUID]): StaffMovements =
     copy(movements = movements.filterNot(sm => movementsToRemove.contains(sm.uUID)))
+
+  def purgeExpired(expireBefore: () => SDateLike): StaffMovements = {
+    val expireBeforeMillis = expireBefore().millisSinceEpoch
+    copy(movements = movements.filterNot(_.isExpired(expireBeforeMillis)))
+  }
 }
 
 case class StaffMovementsState(staffMovements: StaffMovements) {
@@ -40,7 +46,7 @@ case class RemoveStaffMovementsAck(movementUuidsToRemove: UUID)
 
 case class AddStaffMovementsSubscribers(subscribers: List[SourceQueueWithComplete[Seq[StaffMovement]]])
 
-class StaffMovementsActor(now: () => SDateLike, expireAfterMillis: Long) extends StaffMovementsActorBase(now, expireAfterMillis) {
+class StaffMovementsActor(now: () => SDateLike, expireBeforeMillis: () => SDateLike) extends StaffMovementsActorBase(now, expireBeforeMillis) {
   var subscribers: List[SourceQueueWithComplete[Seq[StaffMovement]]] = List()
 
   override def onUpdateState(data: StaffMovements): Unit = {
@@ -68,7 +74,7 @@ class StaffMovementsActor(now: () => SDateLike, expireAfterMillis: Long) extends
   }
 }
 
-class StaffMovementsActorBase(now: () => SDateLike, expireAfterMillis: Long) extends RecoveryActorLike with PersistentDrtActor[StaffMovementsState] {
+class StaffMovementsActorBase(val now: () => SDateLike, val expireBefore: () => SDateLike) extends ExpiryActorLike[StaffMovements] with RecoveryActorLike with PersistentDrtActor[StaffMovementsState] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def persistenceId = "staff-movements-store"
@@ -83,6 +89,8 @@ class StaffMovementsActorBase(now: () => SDateLike, expireAfterMillis: Long) ext
   override def stateToMessage: GeneratedMessage = StaffMovementsStateSnapshotMessage(staffMovementsToStaffMovementMessages(state.staffMovements))
 
   def updateState(data: StaffMovements): Unit = state = state.updated(data)
+
+  def onUpdateState(newState: StaffMovements): Unit = Unit
 
   def staffMovementMessagesToStaffMovements(messages: Seq[StaffMovementMessage]): StaffMovements = StaffMovements(messages.map(staffMovementMessageToStaffMovement))
 
@@ -105,7 +113,7 @@ class StaffMovementsActorBase(now: () => SDateLike, expireAfterMillis: Long) ext
   def receiveCommand: Receive = {
     case GetState =>
       log.info(s"GetState received")
-      sender() ! purgeExpired(state.staffMovements)
+      sender() ! state.staffMovements.purgeExpired(expireBefore)
 
     case AddStaffMovements(movementsToAdd) =>
       val updatedStaffMovements = state.staffMovements + movementsToAdd
@@ -137,18 +145,6 @@ class StaffMovementsActorBase(now: () => SDateLike, expireAfterMillis: Long) ext
     case u =>
       log.info(s"unhandled message: $u")
   }
-
-  def purgeExpiredAndUpdateState(staffMovements: StaffMovements): Unit = {
-    val withoutExpired = purgeExpired(staffMovements)
-    updateState(withoutExpired)
-    onUpdateState(withoutExpired)
-  }
-
-  def purgeExpired(staffMovements: StaffMovements): StaffMovements =
-    staffMovements.copy(movements = Crunch.purgeExpired(staffMovements.movements, (m: StaffMovement) => m.time.millisSinceEpoch, now, expireAfterMillis))
-
-
-  def onUpdateState(sm: StaffMovements): Unit = {}
 
   def staffMovementMessageToStaffMovement(sm: StaffMovementMessage) = StaffMovement(
     terminalName = sm.terminalName.getOrElse(""),

@@ -101,9 +101,9 @@ abstract class ApiService(val airportConfig: AirportConfig,
 
   def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]]
 
-  def saveStaffTimeSlotsForMonth(timeSlotsForMonth: StaffTimeSlotsForTerminalMonth): Future[Unit]
-
   def getShiftsForMonth(month: MillisSinceEpoch, terminalName: TerminalName): Future[ShiftAssignments]
+
+  def updateShifts(shiftsToUpdate: Seq[StaffAssignment]): Unit
 
   def isLoggedIn(): Boolean
 

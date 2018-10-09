@@ -13,10 +13,10 @@ object StaffTimeSlotsForTerminalMonth {
     StaffTimeSlotsForTerminalMonth(month.millisSinceEpoch, terminal, timeSlotsSorted)
   }
 
-  def staffTimeSlotSeqToStaffTimeSlots(monthStartMillis: SDateLike, staffDays: Seq[Seq[Int]], terminal: String, slotMinutes: Int): Seq[StaffTimeSlot] = for {
+  def staffTimeSlotSeqToStaffTimeSlots(monthStart: SDateLike, staffDays: Seq[Seq[Int]], terminal: String, slotMinutes: Int): Seq[StaffTimeSlot] = for {
     (days, timeSlotIndex) <- staffDays.zipWithIndex
     (staffInSlotForDay, dayIndex) <- days.zipWithIndex.filter(_._1 > 0)
-  } yield staffTimeSlot(monthStartMillis, terminal, slotMinutes, timeSlotIndex, staffInSlotForDay, dayIndex)
+  } yield staffTimeSlot(monthStart, terminal, slotMinutes, timeSlotIndex, staffInSlotForDay, dayIndex)
 
   def staffTimeSlot(month: SDateLike, terminal: String, slotMinutes: Int, timeSlotIndex: Int, staffInSlotForDay: Int, dayIndex: Int): StaffTimeSlot = {
     val slotStartMillis: MillisSinceEpoch = slotStart(month, slotMinutes, timeSlotIndex, dayIndex).millisSinceEpoch

@@ -2,14 +2,13 @@ package drt.client.services.handlers
 
 import autowire._
 import boopickle.Default._
-
 import diode.data.{Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW}
 import diode.Implicits.runAfterImpl
 import drt.client.actions.Actions._
 import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{AjaxClient, PollDelay, ViewMode}
+import drt.client.services.{AjaxClient, PollDelay, ViewLive, ViewMode}
 import drt.shared.{Api, StaffMovement}
 
 import scala.concurrent.Future
@@ -43,10 +42,15 @@ class StaffMovementsHandler[M](modelRW: ModelRW[M, (Pot[Seq[StaffMovement]], Vie
 
     case GetStaffMovements() =>
       val (_, viewMode) = value
-      log.info(s"Calling getStaffMovements with ${SDate(viewMode.millis).toISOString()}")
 
+      val maybePointTinTimeMillis = viewMode match {
+        case ViewLive() => None
+        case vm: ViewMode => Option(vm.millis)
+      }
 
-      val apiCallEffect = Effect(AjaxClient[Api].getStaffMovements(viewMode.millis).call()
+      log.info(s"Calling getStaffMovements with ${maybePointTinTimeMillis.map(SDate(_).toISOString())}")
+
+      val apiCallEffect = Effect(AjaxClient[Api].getStaffMovements(maybePointTinTimeMillis).call()
         .map(res => {
           log.info(s"Got StaffMovements from the server")
           SetStaffMovements(res)

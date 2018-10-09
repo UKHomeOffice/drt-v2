@@ -16,8 +16,8 @@ import scala.language.postfixOps
 
 case object GetCrunchMinutes
 
-class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, queues: Map[TerminalName, Seq[QueueName]])
-  extends CrunchStateActor(Option(snapshotInterval), oneMegaByte, "crunch-state", queues, () => pointInTime, 2 * Crunch.oneDayMillis, false) {
+class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, expireAfterMillis: Long, queues: Map[TerminalName, Seq[QueueName]])
+  extends CrunchStateActor(Option(snapshotInterval), oneMegaByte, "crunch-state", queues, () => pointInTime, expireAfterMillis, false) {
 
   val staffReconstructionRequired: Boolean = pointInTime.millisSinceEpoch <= SDate("2017-12-04").millisSinceEpoch
 
@@ -43,7 +43,7 @@ class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, queues
     state = state.map {
       case PortState(fl, cm, sm) if staffReconstructionRequired =>
         log.info(s"Staff minutes require reconstructing for PortState before 2017-12-04. Attempting to reconstruct")
-        val updatedPortState = reconstructStaffMinutes(pointInTime, context, fl, cm)
+        val updatedPortState = reconstructStaffMinutes(pointInTime, expireAfterMillis, context, fl, cm)
         log.info(s"Updating port state with ${updatedPortState.staffMinutes.size} staff minutes")
         updatedPortState
       case ps => ps

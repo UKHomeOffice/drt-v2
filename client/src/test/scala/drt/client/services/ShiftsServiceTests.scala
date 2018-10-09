@@ -3,6 +3,7 @@ package drt.client.services
 import drt.shared._
 import utest._
 
+import scala.language.implicitConversions
 import scala.scalajs.js.Date
 import scala.util.{Failure, Success, Try}
 

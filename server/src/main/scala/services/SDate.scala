@@ -43,11 +43,13 @@ object SDate {
 
     def millisSinceEpoch: MillisSinceEpoch = dateTime.getMillis
 
-    override def toISOString(): String = jodaSDateToIsoString(dateTime)
+    def toISOString(): String = jodaSDateToIsoString(dateTime)
 
     def getZone(): String = dateTime.getZone.getID
 
-    override def getTimeZoneOffsetMillis() = dateTime.getZone.getOffset(millisSinceEpoch)
+    def getTimeZoneOffsetMillis(): Long = dateTime.getZone.getOffset(millisSinceEpoch)
+
+    def startOfTheMonth(): SDateLike = SDate(dateTime.getFullYear(), dateTime.getMonth(), 1, 0, 0, Crunch.europeLondonTimeZone)
   }
 
   object implicits {
