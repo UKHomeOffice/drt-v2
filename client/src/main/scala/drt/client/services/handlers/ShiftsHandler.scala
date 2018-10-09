@@ -21,7 +21,7 @@ class ShiftsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[ShiftAs
     case SetShifts(shifts, _) => updated(Ready(shifts))
 
     case GetShifts() =>
-      val fixedPointsEffect = Effect(Future(GetShifts())).after(1 minute)
+      val shiftsEffect = Effect(Future(GetShifts())).after(1 minute)
       log.info(s"Calling getShifts")
 
       val maybePointInTimeMillis: Option[MillisSinceEpoch] = viewMode() match {
@@ -37,7 +37,7 @@ class ShiftsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[ShiftAs
               Future(NoAction)
           }
       )
-      effectOnly(apiCallEffect + fixedPointsEffect)
+      effectOnly(apiCallEffect + shiftsEffect)
 
     case UpdateShifts(shiftsToUpdate) =>
       log.info(s"Saving staff time slots as Shifts")
