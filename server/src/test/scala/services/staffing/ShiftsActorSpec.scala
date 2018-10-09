@@ -1,6 +1,6 @@
 package services.staffing
 
-import actors.DrtStaticParameters.expire48HoursAgo
+import actors.DrtStaticParameters.time48HoursAgo
 import actors.{DrtStaticParameters, GetState, SetShifts, ShiftsActor}
 import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.pattern.AskableActorRef
@@ -37,7 +37,7 @@ class ShiftsActorSpec extends CrunchTestLike {
 
     val probe = TestProbe()
 
-    val shiftsActor = system.actorOf(Props(classOf[TestableShiftsActor], probe.ref, nowProvider, expire48HoursAgo(nowProvider)))
+    val shiftsActor = system.actorOf(Props(classOf[TestableShiftsActor], probe.ref, nowProvider, time48HoursAgo(nowProvider)))
     val askableShiftsActor: AskableActorRef = shiftsActor
 
     shiftsActor ! SetShifts(shiftStaffAssignments.assignments)
@@ -59,7 +59,7 @@ class ShiftsActorSpec extends CrunchTestLike {
 
     val probe = TestProbe()
 
-    val shiftsActor = system.actorOf(Props(classOf[TestableShiftsActor], probe.ref, nowProvider, expire48HoursAgo(nowProvider)))
+    val shiftsActor = system.actorOf(Props(classOf[TestableShiftsActor], probe.ref, nowProvider, time48HoursAgo(nowProvider)))
 
     shiftsActor ! SetShifts(shiftStaffAssignments.assignments)
 
@@ -68,7 +68,7 @@ class ShiftsActorSpec extends CrunchTestLike {
 
     Thread.sleep(250)
 
-    val shiftsActor2: AskableActorRef = system.actorOf(Props(classOf[TestableShiftsActor], probe.ref, nowProvider, expire48HoursAgo(nowProvider)))
+    val shiftsActor2: AskableActorRef = system.actorOf(Props(classOf[TestableShiftsActor], probe.ref, nowProvider, time48HoursAgo(nowProvider)))
 
     val storedShifts = Await.result(shiftsActor2 ? GetState, 1 second).asInstanceOf[ShiftAssignments]
     val expected = shiftStaffAssignments

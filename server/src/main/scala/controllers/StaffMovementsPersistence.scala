@@ -49,7 +49,7 @@ trait StaffMovementsPersistence {
         log.info(s"getStaffMovements(${date.toISOString()})")
 
         val actorName = "staff-movements-read-actor-" + UUID.randomUUID().toString
-        val staffMovementsReadActor: ActorRef = actorSystem.actorOf(Props(classOf[StaffMovementsReadActor], date, DrtStaticParameters.expire48HoursAgo(() => date)), actorName)
+        val staffMovementsReadActor: ActorRef = actorSystem.actorOf(Props(classOf[StaffMovementsReadActor], date, DrtStaticParameters.time48HoursAgo(() => date)), actorName)
 
         staffMovementsReadActor.ask(GetState)
           .map { case StaffMovements(movements) =>

@@ -27,9 +27,9 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
   override lazy val liveCrunchStateActor: ActorRef = system.actorOf(testLiveCrunchStateProps, name = "crunch-live-state-actor")
   override lazy val forecastCrunchStateActor: ActorRef = system.actorOf(testForecastCrunchStateProps, name = "crunch-forecast-state-actor")
   override lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[TestVoyageManifestsActor], now, fortyEightHoursMillis, params.snapshotIntervalVm), name = "voyage-manifests-actor")
-  override lazy val shiftsActor: ActorRef = system.actorOf(Props(classOf[TestShiftsActor], now, expireBeforeThisMonth(now)))
+  override lazy val shiftsActor: ActorRef = system.actorOf(Props(classOf[TestShiftsActor], now, timeBeforeThisMonth(now)))
   override lazy val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[TestFixedPointsActor], now))
-  override lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[TestStaffMovementsActor], now, expire48HoursAgo(now)), "TestActor-StaffMovements")
+  override lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[TestStaffMovementsActor], now, time48HoursAgo(now)), "TestActor-StaffMovements")
 
   system.log.warning(s"Using test System")
   val voyageManifestTestSourceGraph: Source[ManifestsFeedResponse, NotUsed] = Source.fromGraph(new TestAPIManifestFeedGraphStage)
