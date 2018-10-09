@@ -1,7 +1,7 @@
 pipeline:
 
   build:
-    image: quay.io/ukhomeofficedigital/docker-scala-sbt-nodejs
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
           # quay.io/ukhomeofficedigital/docker-scala-sbtjs:latest
           #image: massimodanieli/docker-scala-sbtjs:latest
     commands:
