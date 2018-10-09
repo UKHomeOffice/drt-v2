@@ -1,8 +1,9 @@
 pipeline:
 
   build:
-          #image: quay.io/ukhomeofficedigital/docker-scala-sbtjs:latest
-    image: massimodanieli/docker-scala-sbtjs:latest
+    image: quay.io/ukhomeofficedigital/docker-scala-sbt-nodejs
+          # quay.io/ukhomeofficedigital/docker-scala-sbtjs:latest
+          #image: massimodanieli/docker-scala-sbtjs:latest
     commands:
       - /root/entrypoint.sh
       - sbt --error docker:stage
@@ -20,7 +21,7 @@ pipeline:
     image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
     when:
       event:
-        - push
+        - push, tag
       branch: 
         - drt-acp-pgsql   
 
@@ -35,7 +36,7 @@ pipeline:
       - ${DRONE_COMMIT_SHA}
       - latest
     when:
-      event: push
+      event: push, tag
       branch: 
         - drt-acp-pgsql
 
