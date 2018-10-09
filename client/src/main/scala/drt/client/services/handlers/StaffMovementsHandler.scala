@@ -42,14 +42,15 @@ class StaffMovementsHandler[M](modelRW: ModelRW[M, (Pot[Seq[StaffMovement]], Vie
 
     case GetStaffMovements() =>
       val (_, viewMode) = value
-      val maybeMillis = viewMode match {
+
+      val maybePointTinTimeMillis = viewMode match {
         case ViewLive() => None
         case vm: ViewMode => Option(vm.millis)
       }
-      log.info(s"Calling getStaffMovements with ${maybeMillis.map(SDate(_).toISOString())}")
 
+      log.info(s"Calling getStaffMovements with ${maybePointTinTimeMillis.map(SDate(_).toISOString())}")
 
-      val apiCallEffect = Effect(AjaxClient[Api].getStaffMovements(maybeMillis).call()
+      val apiCallEffect = Effect(AjaxClient[Api].getStaffMovements(maybePointTinTimeMillis).call()
         .map(res => {
           log.info(s"Got StaffMovements from the server")
           SetStaffMovements(res)

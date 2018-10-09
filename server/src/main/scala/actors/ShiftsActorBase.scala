@@ -27,7 +27,11 @@ case object GetShifts
 
 case class SetShifts(newShifts: Seq[StaffAssignment])
 
+case class SetShiftsAck(newShifts: Seq[StaffAssignment])
+
 case class UpdateShifts(shiftsToUpdate: Seq[StaffAssignment])
+
+case class UpdateShiftsAck(shiftsToUpdate: Seq[StaffAssignment])
 
 case class AddShiftSubscribers(subscribers: List[SourceQueueWithComplete[ShiftAssignments]])
 
@@ -103,8 +107,11 @@ class ShiftsActorBase(val now: () => SDateLike,
       val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToUpdate)
       purgeExpiredAndUpdateState(ShiftAssignments(updatedShifts))
 
-      val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(ShiftAssignments(shiftsToUpdate), now()))
+      val createdAt = now()
+      val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(ShiftAssignments(shiftsToUpdate), createdAt), Option(createdAt.millisSinceEpoch))
       persistAndMaybeSnapshot(shiftsMessage)
+
+      sender() ! UpdateShiftsAck(shiftsToUpdate)
 
     case SetShifts(newShiftAssignments) =>
       if (newShiftAssignments != state) {
@@ -112,9 +119,12 @@ class ShiftsActorBase(val now: () => SDateLike,
         updateState(ShiftAssignments(newShiftAssignments))
         purgeExpiredAndUpdateState(ShiftAssignments(newShiftAssignments))
 
-        val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(ShiftAssignments(newShiftAssignments), now()))
+        val createdAt = now()
+        val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(ShiftAssignments(newShiftAssignments), createdAt), Option(createdAt.millisSinceEpoch))
         persistAndMaybeSnapshot(shiftsMessage)
       } else log.info(s"No change. Nothing to persist")
+
+      sender() ! SetShiftsAck(newShiftAssignments)
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")

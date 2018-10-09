@@ -28,14 +28,14 @@ trait ShiftPersistence {
 
   def getShifts(maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments] = maybePointInTime match {
     case None =>
-      log.info(s"getStaffMovements(None)")
+      log.info(s"getShifts(None)")
       shiftsActor.ask(GetState)
         .map { case sa: ShiftAssignments => sa }
         .recoverWith { case _ => Future(ShiftAssignments.empty) }
 
     case Some(millis) =>
       val date = SDate(millis)
-      log.info(s"getStaffMovements(${date.toISOString()})")
+      log.info(s"getShifts(${date.toISOString()})")
 
       val actorName = "shifts-read-actor-" + UUID.randomUUID().toString
       val shiftsReadActor: ActorRef = actorSystem.actorOf(Props(classOf[ShiftsReadActor], date, DrtStaticParameters.expire48HoursAgo(() => date)), actorName)

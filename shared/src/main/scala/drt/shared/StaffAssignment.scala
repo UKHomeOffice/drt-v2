@@ -68,4 +68,5 @@ object FixedPointAssignments {
 
 object ShiftAssignments {
   val empty: ShiftAssignments = ShiftAssignments(Seq())
+  def apply(assignments: Set[StaffAssignment]): ShiftAssignments = ShiftAssignments(assignments.toSeq)
 }

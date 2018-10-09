@@ -22,9 +22,7 @@ class StaffMovementsReadActor(pointInTime: SDateLike, expireBefore: () => SDateL
 
   override def recovery: Recovery = {
     val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime.millisSinceEpoch)
-    val recovery = Recovery(
-      fromSnapshot = criteria,
-      replayMax = snapshotInterval)
+    val recovery = Recovery(fromSnapshot = criteria, replayMax = snapshotInterval)
     log.info(s"recovery: $recovery")
     recovery
   }
