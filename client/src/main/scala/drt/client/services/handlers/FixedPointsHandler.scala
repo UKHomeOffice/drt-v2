@@ -8,6 +8,7 @@ import diode.{ActionResult, Effect, ModelRW, NoAction}
 import drt.client.actions.Actions._
 import drt.client.logger.log
 import drt.client.services._
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 
 import scala.concurrent.Future
@@ -37,8 +38,12 @@ class FixedPointsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[Fi
       val fixedPointsEffect = Effect(Future(GetFixedPoints())).after(60 minutes)
       log.info(s"Calling getFixedPoints")
 
+      val maybePointInTimeMillis: Option[MillisSinceEpoch] = viewMode() match {
+        case ViewLive() => None
+        case vm: ViewMode => Option(vm.millis)
+      }
       val apiCallEffect = Effect(
-        AjaxClient[Api].getFixedPoints(viewMode().millis).call()
+        AjaxClient[Api].getFixedPoints(maybePointInTimeMillis).call()
           .map(res => SetFixedPoints(res, None))
           .recoverWith {
             case _ =>

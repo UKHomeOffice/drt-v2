@@ -1,8 +1,5 @@
 package actors
 
-
-import java.util.UUID
-
 import actors.pointInTime.ShiftsReadActor
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.testkit.{ImplicitSender, TestKit}
@@ -17,6 +14,14 @@ import scala.collection.JavaConversions._
 import scala.concurrent.duration._
 import scala.language.reflectiveCalls
 
+
+object StaffAssignmentGenerator {
+  def generateStaffAssignment(name: String, terminalName: TerminalName, startTime: String, endTime: String, staff: Int): StaffAssignment = {
+    val start = MilliDate(SDate(startTime).millisSinceEpoch)
+    val end = MilliDate(SDate(endTime).millisSinceEpoch)
+    StaffAssignment(name, terminalName, start, end, staff, None)
+  }
+}
 
 class ShiftsActorSpec extends TestKit(ActorSystem("ShiftsActorSpec", ConfigFactory.parseMap(Map(
   "akka.persistence.journal.plugin" -> "akka.persistence.journal.leveldb",
@@ -34,9 +39,11 @@ class ShiftsActorSpec extends TestKit(ActorSystem("ShiftsActorSpec", ConfigFacto
     TestKit.shutdownActorSystem(system)
     PersistenceCleanup.deleteJournal(PersistenceHelper.dbLocation)
   }
+
+  import StaffAssignmentGenerator._
   
   "Shifts actor" should {
-    "remember a shift staff assignmesnt added before a shutdown" in {
+    "remember a shift staff assignment added before a shutdown" in {
       val startTime = MilliDate(SDate(s"2017-01-01T07:00").millisSinceEpoch)
       val endTime = MilliDate(SDate(s"2017-01-01T15:00").millisSinceEpoch)
       val shifts = ShiftAssignments(Seq(StaffAssignment("Morning", "T1", startTime, endTime, 10, None)))
@@ -50,9 +57,7 @@ class ShiftsActorSpec extends TestKit(ActorSystem("ShiftsActorSpec", ConfigFacto
       expectMsg(UpdateShiftsAck(shifts.assignments))
       actor ! PoisonPill
 
-      Thread.sleep(100)
-
-      val newActor = system.actorOf(Props(classOf[ShiftsActor], now, expireAfterOneDay), "shiftsActor")
+      val newActor = system.actorOf(Props(classOf[ShiftsActor], now, expireAfterOneDay), "shiftsActor2")
 
       newActor ! GetState
 
@@ -164,10 +169,4 @@ class ShiftsActorSpec extends TestKit(ActorSystem("ShiftsActorSpec", ConfigFacto
   def nowAs(date: String): () => SDateLike = () => SDate(date)
 
   def expiryDateXDaysFrom(now: () => SDateLike, days: Int): () => SDateLike = () => now().addDays(-1 * days)
-
-  def generateStaffAssignment(name: String, terminalName: TerminalName, startTime: String, endTime: String, staff: Int): StaffAssignment = {
-    val start = MilliDate(SDate(startTime).millisSinceEpoch)
-    val end = MilliDate(SDate(endTime).millisSinceEpoch)
-    StaffAssignment(name, terminalName, start, end, staff, None)
-  }
 }
