@@ -6,7 +6,7 @@ import diode.Action
 import drt.client.services.ViewMode
 import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, ForecastPeriodWithHeadlines, MillisSinceEpoch}
 import drt.shared.FlightsApi._
-import drt.shared.KeyCloakApi.KeyCloakUser
+import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
 
 import scala.concurrent.duration.FiniteDuration
@@ -20,6 +20,10 @@ object Actions {
   case object GetApplicationVersion extends Action
 
   case object GetLoggedInUser extends Action
+
+  case object GetUserHasPortAccess extends Action
+
+  case class SetUserHasPortAccess(hasAccess: Boolean) extends Action
 
   case class SetLoggedInUser(loggedInUser: LoggedInUser) extends Action
 
@@ -97,9 +101,15 @@ object Actions {
 
   case object GetKeyCloakUsers extends Action
 
+  case class GetKeyCloakUser(userId: String) extends Action
+
   case class SetKeyCloakUsers(users: List[KeyCloakUser]) extends Action
 
-  case class AddUserToGroup(userId: String, groupName: String) extends Action
+  case class SaveUserGroups(userId: UUID, groupsToAdd: Set[String], groupsToRemove: Set[String]) extends Action
+
+  case class GetUserGroups(userId: UUID) extends Action
+
+  case class SetSelectedUserGroups(groups: Set[KeyCloakGroup]) extends Action
 
   case class GetAlerts(since: MillisSinceEpoch) extends Action
 

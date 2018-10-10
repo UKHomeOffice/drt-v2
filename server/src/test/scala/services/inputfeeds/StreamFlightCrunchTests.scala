@@ -84,7 +84,8 @@ object TestCrunchConfig {
         "Morning shift, A1, {date}, 07:00, 13:59, 15",
         "Afternoon shift, A1, {date}, 14:00, 16:59, 10",
         "Evening shift, A1, {date}, 17:00, 23:59,17"
-      )
+      ),
+      role = STNAccess
     )
   }
 

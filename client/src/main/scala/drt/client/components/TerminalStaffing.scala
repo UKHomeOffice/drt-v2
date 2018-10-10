@@ -12,8 +12,10 @@ import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.component.Scala.Unmounted
+import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html.{Div, Table}
+
 import scala.collection.immutable.NumericRange
 import scala.scalajs.js.Date
 import scala.util.Success
@@ -34,21 +36,25 @@ object TerminalStaffing {
                     viewMode: ViewMode
                   )
 
+  implicit val propsReuse: Reusability[Props] = Reusability.by(p => {
+    (p.potShifts.getOrElse(ShiftAssignments.empty), p.potFixedPoints.getOrElse(FixedPointAssignments.empty), p.potStaffMovements.getOrElse(Seq[StaffMovement]())).hashCode()
+  })
+
   def movementsForDay(movements: Seq[StaffMovement], day: SDateLike): Seq[StaffMovement] = {
     val startOfDayMillis = startOfDay(day).millisSinceEpoch
     val endOfDayMillis = endOfDay(day).millisSinceEpoch
 
     movements
       .groupBy(_.uUID)
-      .filter {
-        case (_, movementsPair) => areInWindow(startOfDayMillis, endOfDayMillis, movementsPair)
-      }
+      .filter { case (_, movementsPair) => areInWindow(startOfDayMillis, endOfDayMillis, movementsPair) }
       .values
       .flatten
       .toSeq
   }
 
-  def areInWindow(startOfDayMillis: MillisSinceEpoch, endOfDayMillis: MillisSinceEpoch, movementsPair: Seq[StaffMovement]): Boolean = {
+  def areInWindow(startOfDayMillis: MillisSinceEpoch,
+                  endOfDayMillis: MillisSinceEpoch,
+                  movementsPair: Seq[StaffMovement]): Boolean = {
     val chronologicalMovementsPair = movementsPair.sortBy(_.time.millisSinceEpoch).toList
 
     chronologicalMovementsPair match {
@@ -65,7 +71,9 @@ object TerminalStaffing {
     }
   }
 
-  private def isInWindow(startOfDayMillis: MillisSinceEpoch, endOfDayMillis: MillisSinceEpoch, movementMillis: MillisSinceEpoch) = {
+  def isInWindow(startOfDayMillis: MillisSinceEpoch,
+                 endOfDayMillis: MillisSinceEpoch,
+                 movementMillis: MillisSinceEpoch): Boolean = {
     startOfDayMillis <= movementMillis && movementMillis <= endOfDayMillis
   }
 
@@ -98,7 +106,9 @@ object TerminalStaffing {
       }).mkString("\n")
     }
 
-    def staffOverTheDay(movements: Seq[StaffMovement], shifts: ShiftAssignments, terminalName: TerminalName): VdomTagOf[Div] = {
+    def staffOverTheDay(movements: Seq[StaffMovement],
+                        shifts: ShiftAssignments,
+                        terminalName: TerminalName): VdomTagOf[Div] = {
       val terminalShifts = ShiftAssignments(shifts.forTerminal(terminalName))
       val staffWithShiftsAndMovementsAt = StaffMovements.terminalStaffAt(terminalShifts)(movements) _
       <.div(
@@ -124,7 +134,7 @@ object TerminalStaffing {
                 movementPair.toList.sortBy(_.time.millisSinceEpoch) match {
                   case first :: second :: Nil =>
                     val remove = <.a(Icon.remove, ^.key := first.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) =>
-                      Callback{
+                      Callback {
                         GoogleEventTracker.sendEvent(terminalName, "Remove Staff Movement", first.copy(createdBy = None).toString)
                         SPACircuit.dispatch(RemoveStaffMovement(0, first.uUID))
                       }))
@@ -132,7 +142,7 @@ object TerminalStaffing {
                     <.li(remove, " ", span)
                   case mm :: Nil =>
                     val remove = <.a(Icon.remove, ^.key := mm.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) =>
-                      Callback{
+                      Callback {
                         GoogleEventTracker.sendEvent(terminalName, "Remove Staff Movement", mm.copy(createdBy = None).toString)
                         SPACircuit.dispatch(RemoveStaffMovement(0, mm.uUID))
                       }))
@@ -201,7 +211,9 @@ object TerminalStaffing {
       startOfDay.millisSinceEpoch until timeMinPlusOneDay.millisSinceEpoch by (oneMinute * 15)
     }
 
-    def staffingTableHourPerColumn(terminalName: TerminalName, daysWorthOf15Minutes: NumericRange[Long], staffWithShiftsAndMovements: (TerminalName, SDateLike) => Int): VdomTagOf[Table] = {
+    def staffingTableHourPerColumn(terminalName: TerminalName,
+                                   daysWorthOf15Minutes: NumericRange[Long],
+                                   staffWithShiftsAndMovements: (TerminalName, SDateLike) => Int): VdomTagOf[Table] =
       <.table(
         ^.className := "table table-striped table-xcondensed table-sm",
         <.tbody(
@@ -223,13 +235,13 @@ object TerminalStaffing {
           }.toTagMod
         )
       )
-    }
   }
 
   def apply(props: Props): VdomElement = component(props)
 
   private val component = ScalaComponent.builder[Props]("TerminalStaffing")
     .renderBackend[Backend]
+    .configure(Reusability.shouldComponentUpdate)
     .build
 
   object MovementDisplay {

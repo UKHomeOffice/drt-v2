@@ -22,6 +22,10 @@ GET         /assets/*file                                 controllers.Assets.ver
 # Autowire calls
 POST        /api/*path                                    controllers.Application.autowireApi(path: String)
 
+GET         /data/user                                    controllers.Application.getLoggedInUser()
+
+GET         /data/user/has-port-access                    controllers.Application.getUserHasPortAccess()
+
 
 # Logging
 POST        /logging                                      controllers.Application.logging
