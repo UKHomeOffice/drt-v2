@@ -2,11 +2,9 @@ pipeline:
 
   build:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
-          # quay.io/ukhomeofficedigital/docker-scala-sbtjs:latest
-          #image: massimodanieli/docker-scala-sbtjs:latest
     commands:
       - /root/entrypoint.sh
-      - sbt --error docker:stage
+      - sbt --error test docker:stage
     environment:
       - ARTIFACTORY_USERNAME=drt_ci
     secrets:
