@@ -11,9 +11,9 @@ import drt.shared.{MilliDate, SDateLike, StaffMovement}
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterEach
 import services.SDate
-import services.graphstages.Crunch
 
 import scala.collection.JavaConversions._
+import scala.concurrent.duration._
 import scala.language.reflectiveCalls
 
 
@@ -46,7 +46,7 @@ class StaffMovementsActorSpec extends TestKit(ActorSystem("StaffMovementsActorSp
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
       val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
 
-      val actor = system.actorOf(Props(classOf[StaffMovementsActorBase], now, expireAfterOneDay), "movementsActor")
+      val actor = system.actorOf(Props(classOf[StaffMovementsActorBase], now, expireAfterOneDay), "movementsActor1")
 
       actor ! AddStaffMovements(staffMovements.movements)
       expectMsg(AddStaffMovementsAck(staffMovements.movements))
@@ -54,7 +54,7 @@ class StaffMovementsActorSpec extends TestKit(ActorSystem("StaffMovementsActorSp
 
       Thread.sleep(100)
 
-      val newActor = system.actorOf(Props(classOf[StaffMovementsActorBase], now, expireAfterOneDay), "movementsActor")
+      val newActor = system.actorOf(Props(classOf[StaffMovementsActorBase], now, expireAfterOneDay), "movementsActor2")
 
       newActor ! GetState
 
@@ -86,11 +86,13 @@ class StaffMovementsActorSpec extends TestKit(ActorSystem("StaffMovementsActorSp
       val newActor = system.actorOf(Props(classOf[StaffMovementsActorBase], now, expireAfterOneDay), "movementsActor2")
 
       newActor ! GetState
-      val expected = StaffMovements(Seq(movement2))
+      val expected = Set(movement2)
 
-      expectMsg(expected)
+      val result = expectMsgPF(1 second) {
+        case StaffMovements(movements) => movements.toSet
+      }
 
-      true
+      result === expected
     }
 
     "remember multiple added movements and correctly forget removed movements after a restart" in {
@@ -126,11 +128,13 @@ class StaffMovementsActorSpec extends TestKit(ActorSystem("StaffMovementsActorSp
       val newActor = system.actorOf(Props(classOf[StaffMovementsActorBase], now, expireAfterOneDay), "movementsActor2")
 
       newActor ! GetState
-      val expected = StaffMovements(Seq(movement2, movement3))
+      val expected = Set(movement2, movement3)
 
-      expectMsg(expected)
+      val result = expectMsgPF(1 second) {
+        case StaffMovements(movements) => movements.toSet
+      }
 
-      true
+      result === expected
     }
 
     "purge movements created more than the specified expiry period ago" in {
@@ -156,11 +160,13 @@ class StaffMovementsActorSpec extends TestKit(ActorSystem("StaffMovementsActorSp
       expectMsg(AddStaffMovementsAck(Seq(unexpiredMovement1, unexpiredMovement2)))
 
       actor ! GetState
-      val expected = StaffMovements(Seq(unexpiredMovement1, unexpiredMovement2))
+      val expected = Set(unexpiredMovement1, unexpiredMovement2)
 
-      expectMsg(expected)
+      val result = expectMsgPF(1 second) {
+        case StaffMovements(movements) => movements.toSet
+      }
 
-      true
+      result === expected
     }
 
     "purge movements created more than the specified expiry period ago when requested via a point in time actor" in {
@@ -182,14 +188,82 @@ class StaffMovementsActorSpec extends TestKit(ActorSystem("StaffMovementsActorSp
 
       actor ! PoisonPill
 
-      val newActor = system.actorOf(Props(classOf[StaffMovementsReadActor], now_is_20170102_0200(), expireAfterOneDay), "movementsActor1")
+      val newActor = system.actorOf(Props(classOf[StaffMovementsReadActor], now_is_20170102_0200(), expireAfterOneDay), "movementsActor2")
 
       newActor ! GetState
-      val expected = StaffMovements(Seq(unexpiredMovement1, unexpiredMovement2))
+      val expected = Set(unexpiredMovement1, unexpiredMovement2)
 
-      expectMsg(expected)
+      val result = expectMsgPF(1 second) {
+        case StaffMovements(movements) => movements.toSet
+      }
 
-      true
+      result === expected
+    }
+
+    "keep pairs of movements when only one was created more than the specified expiry period ago when requested via a point in time actor" in {
+      val pair1 = UUID.randomUUID()
+      val expiredMovement1 = StaffMovement("T1", "lunch start", MilliDate(SDate(s"2017-01-01T00:00").millisSinceEpoch), -1, pair1, createdBy = Some("batman"))
+      val expiredMovement2 = StaffMovement("T1", "lunch end", MilliDate(SDate(s"2017-01-01T01:15").millisSinceEpoch), 1, pair1, createdBy = Some("robin"))
+      val pair2 = UUID.randomUUID()
+      val unexpiredMovement1 = StaffMovement("T1", "supper start", MilliDate(SDate(s"2017-01-01T21:30").millisSinceEpoch), -1, pair2, createdBy = Some("bruce"))
+      val unexpiredMovement2 = StaffMovement("T1", "supper enmd", MilliDate(SDate(s"2017-01-01T21:40").millisSinceEpoch), 1, pair2, createdBy = Some("ed"))
+
+      val now_is_20170102_0200: () => SDateLike = () => SDate("2017-01-02T01:00")
+      val expireAfterOneDay: () => SDateLike = () => now_is_20170102_0200().addDays(-1)
+
+      val actor = system.actorOf(Props(classOf[StaffMovementsActorBase], now_is_20170102_0200, expireAfterOneDay), "movementsActor1")
+
+      actor ! AddStaffMovements(Seq(expiredMovement1, expiredMovement2))
+      expectMsg(AddStaffMovementsAck(Seq(expiredMovement1, expiredMovement2)))
+
+      actor ! AddStaffMovements(Seq(unexpiredMovement1, unexpiredMovement2))
+      expectMsg(AddStaffMovementsAck(Seq(unexpiredMovement1, unexpiredMovement2)))
+
+      actor ! PoisonPill
+
+      val newActor = system.actorOf(Props(classOf[StaffMovementsReadActor], now_is_20170102_0200(), expireAfterOneDay), "movementsActor2")
+
+      newActor ! GetState
+      val expected = Set(expiredMovement1, expiredMovement2, unexpiredMovement1, unexpiredMovement2)
+
+      val result = expectMsgPF(1 second) {
+        case StaffMovements(movements) => movements.toSet
+      }
+
+      result === expected
+    }
+
+    "purge pairs of movements where both were created more than the specified expiry period ago when requested via a point in time actor" in {
+      val pair1 = UUID.randomUUID()
+      val expiredMovement1 = StaffMovement("T1", "lunch start", MilliDate(SDate(s"2017-01-01T00:00").millisSinceEpoch), -1, pair1, createdBy = Some("batman"))
+      val expiredMovement2 = StaffMovement("T1", "lunch end", MilliDate(SDate(s"2017-01-01T01:15").millisSinceEpoch), 1, pair1, createdBy = Some("robin"))
+      val pair2 = UUID.randomUUID()
+      val unexpiredMovement1 = StaffMovement("T1", "supper start", MilliDate(SDate(s"2017-01-01T21:30").millisSinceEpoch), -1, pair2, createdBy = Some("bruce"))
+      val unexpiredMovement2 = StaffMovement("T1", "supper end", MilliDate(SDate(s"2017-01-01T21:40").millisSinceEpoch), 1, pair2, createdBy = Some("ed"))
+
+      val now_is_20170102_0200: () => SDateLike = () => SDate("2017-01-02T21:35")
+      val expireAfterOneDay: () => SDateLike = () => now_is_20170102_0200().addDays(-1)
+
+      val actor = system.actorOf(Props(classOf[StaffMovementsActorBase], now_is_20170102_0200, expireAfterOneDay), "movementsActor1")
+
+      actor ! AddStaffMovements(Seq(expiredMovement1, expiredMovement2))
+      expectMsg(AddStaffMovementsAck(Seq(expiredMovement1, expiredMovement2)))
+
+      actor ! AddStaffMovements(Seq(unexpiredMovement1, unexpiredMovement2))
+      expectMsg(AddStaffMovementsAck(Seq(unexpiredMovement1, unexpiredMovement2)))
+
+      actor ! PoisonPill
+
+      val newActor = system.actorOf(Props(classOf[StaffMovementsReadActor], now_is_20170102_0200(), expireAfterOneDay), "movementsActor2")
+
+      newActor ! GetState
+      val expected = Set(unexpiredMovement1, unexpiredMovement2)
+
+      val result = expectMsgPF(1 second) {
+        case StaffMovements(movements) => movements.toSet
+      }
+
+      result === expected
     }
   }
 
