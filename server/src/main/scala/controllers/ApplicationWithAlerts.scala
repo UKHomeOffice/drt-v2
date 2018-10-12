@@ -22,6 +22,7 @@ trait ApplicationWithAlerts {
   def addAlert = Action.async {
     implicit request =>
 
+      log.info(s"Adding an Alert!")
       request.body.asJson.map { json =>
         val alertMessage = json.as[AlertMessage]
         (ctrl.alertsActor ? Alert(
@@ -39,8 +40,10 @@ trait ApplicationWithAlerts {
 
   def deleteAlerts = Action.async {
     val futureAlerts = ctrl.alertsActor.ask(DeleteAlerts)(new Timeout(5 second))
-    futureAlerts.map(s =>
+    futureAlerts.map(s => {
+      log.info(s"Removing all the alerts: $s")
       Ok(s.toString)
+    }
     )
   }
 }

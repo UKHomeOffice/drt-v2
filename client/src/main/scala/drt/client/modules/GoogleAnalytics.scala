@@ -18,6 +18,7 @@ object GoogleEventTracker {
     if (!hasCreateTrackerRun && !userId.isEmpty && !port.isEmpty && !trackingCode.isEmpty) {
       val userUUID = if (userId.contains("@")) UUID.randomUUID else userId
       GoogleAnalytics.analytics("create", trackingCode, "auto", js.Dictionary("userId"->userUUID))
+      GoogleAnalytics.analytics("set", "anonymizeIp", true)
       hasCreateTrackerRun = true
     }
   }

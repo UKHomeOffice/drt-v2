@@ -59,6 +59,7 @@ case class AlertsActor() extends RecoveryActorLike with PersistentDrtActor[Seq[A
     case DeleteAlerts =>
       deleteSnapshots(SnapshotSelectionCriteria(maxSequenceNr = lastSequenceNr))
       deleteMessages(lastSequenceNr)
+
       state = initialState
       sender() ! state
 

@@ -6,6 +6,8 @@ import drt.shared.Alert
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.ScalaComponent
 
+import scala.scalajs.js
+
 object AlertsComponent {
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
@@ -24,8 +26,8 @@ object AlertsComponent {
           alertsPot.render((alerts: Seq[Alert]) => {
           <.span(^.id:= "has-alerts",
             alerts.map(alert => {
-              <.span(^.key := alert.createdAt, ^.`class`:="alert alert-danger col-md-12", ^.role:="alert",
-              <.strong(alert.title),s" ${alert.message}"
+              <.span(^.key := alert.createdAt, ^.`class`:="alert alert-danger the-alert", ^.role:="alert",
+              <.strong(alert.title),s" - ${alert.message}"
               )
             }).toVdomArray
             )
