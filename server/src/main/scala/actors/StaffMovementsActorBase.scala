@@ -24,7 +24,12 @@ case class StaffMovements(movements: Seq[StaffMovement]) extends HasExpireables[
 
   def purgeExpired(expireBefore: () => SDateLike): StaffMovements = {
     val expireBeforeMillis = expireBefore().millisSinceEpoch
-    copy(movements = movements.filterNot(_.isExpired(expireBeforeMillis)))
+    val unexpiredPairsOfMovements = movements
+      .groupBy(_.uUID)
+      .values
+      .filterNot(_.exists(_.isExpired(expireBeforeMillis)))
+      .flatten.toSeq
+    copy(movements = unexpiredPairsOfMovements)
   }
 }
 
@@ -46,7 +51,8 @@ case class RemoveStaffMovementsAck(movementUuidsToRemove: UUID)
 
 case class AddStaffMovementsSubscribers(subscribers: List[SourceQueueWithComplete[Seq[StaffMovement]]])
 
-class StaffMovementsActor(now: () => SDateLike, expireBeforeMillis: () => SDateLike) extends StaffMovementsActorBase(now, expireBeforeMillis) {
+class StaffMovementsActor(now: () => SDateLike,
+                          expireBeforeMillis: () => SDateLike) extends StaffMovementsActorBase(now, expireBeforeMillis) {
   var subscribers: List[SourceQueueWithComplete[Seq[StaffMovement]]] = List()
 
   override def onUpdateState(data: StaffMovements): Unit = {
@@ -74,7 +80,8 @@ class StaffMovementsActor(now: () => SDateLike, expireBeforeMillis: () => SDateL
   }
 }
 
-class StaffMovementsActorBase(val now: () => SDateLike, val expireBefore: () => SDateLike) extends ExpiryActorLike[StaffMovements] with RecoveryActorLike with PersistentDrtActor[StaffMovementsState] {
+class StaffMovementsActorBase(val now: () => SDateLike,
+                              val expireBefore: () => SDateLike) extends ExpiryActorLike[StaffMovements] with RecoveryActorLike with PersistentDrtActor[StaffMovementsState] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def persistenceId = "staff-movements-store"
