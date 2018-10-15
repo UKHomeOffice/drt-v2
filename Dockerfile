@@ -16,6 +16,7 @@ RUN mkdir -p /var/log/drt && chown 1000 /var/log/drt
 RUN apk --update add openssh-client \
     bash \
     curl \
+    tcpdump \
     && \
     rm -rf /var/cache/apk/*
 USER 1000
