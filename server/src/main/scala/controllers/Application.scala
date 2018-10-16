@@ -835,6 +835,20 @@ class Application @Inject()(implicit val config: Configuration,
         Ok("logged successfully")
     }
   }
+
+  def db: Action[AnyContent] = {
+    import slick.jdbc.PostgresProfile.api._
+
+    val db = Database.forConfig("queryable-db")
+
+    try {
+
+    } finally db.close
+
+    Action {
+      Ok("hello")
+    }
+  }
 }
 
 object Forecast {

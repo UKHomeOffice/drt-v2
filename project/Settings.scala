@@ -117,6 +117,10 @@ object Settings {
     "com.typesafe.play" %% "play-iteratees" % playIteratees,
     "com.typesafe.play" %% "play-iteratees-reactive-streams" % playIteratees,
 
+    "com.typesafe.slick" %% "slick" % "3.2.3",
+    "com.typesafe.slick" %% "slick-hikaricp" % "3.2.3",
+    "com.typesafe.slick" %% "slick-codegen" % "3.2.3",
+
     "com.vmunier" %% "play-scalajs-scripts" % playScripts,
     "com.vmunier" %% "scalajs-scripts" % scalaJsScripts,
 

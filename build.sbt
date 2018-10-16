@@ -1,7 +1,7 @@
-import org.scalajs.core.tools.linker.ModuleInitializer
 import sbt.Keys._
 import sbt.Project.projectToRef
-import sbtcrossproject.CrossPlugin.autoImport.{crossProject, CrossType}
+import sbtcrossproject.CrossPlugin.autoImport.{CrossType, crossProject}
+import com.typesafe.config._
 
 scalaVersion := Settings.versions.scala
 
@@ -117,7 +117,9 @@ lazy val server = (project in file("server"))
     scalapb.gen() -> (sourceManaged in Compile).value / "protobuf"
   ),
   TwirlKeys.templateImports += "buildinfo._",
-  parallelExecution in Test := false
+  parallelExecution in Test := false,
+  slick <<= slickCodeGenTask, // register manual sbt command
+  sourceGenerators in Compile <+= slickCodeGenTask // register automatic code generation on every compile, remove for only manual use
 )
   .aggregate(clients.map(projectToRef): _*)
   .dependsOn(sharedJVM)
@@ -129,6 +131,22 @@ lazy val ReleaseCmd = Command.command("release") {
       "server/dist" ::
       "set elideOptions in client := Seq()" ::
       state
+}
+
+// code generation task
+val conf = ConfigFactory.parseFile(new File("server/src/main/resources/application.conf")).resolve()
+
+lazy val slick = TaskKey[Seq[File]]("gen-tables")
+val tuple = (sourceManaged, dependencyClasspath in Compile, runner in Compile, streams)
+lazy val slickCodeGenTask = tuple map { (dir, cp, r, s) =>
+  val outputDir = (dir / "slick").getPath // place generated files in sbt's managed sources folder
+  val url = conf.getString("queryable-db.url")
+  val jdbcDriver = "org.postgresql.Driver"
+  val slickDriver = "slick.jdbc.PostgresProfile"
+  val pkg = "drt"
+  toError(r.run("slick.codegen.SourceCodeGenerator", cp.files, Array(slickDriver, jdbcDriver, url, outputDir, pkg), s.log))
+  val fname = outputDir + "/" + pkg + "/Tables.scala"
+  Seq(file(fname))
 }
 
 fork in run := true

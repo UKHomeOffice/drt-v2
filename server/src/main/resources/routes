@@ -44,3 +44,4 @@ POST        /test/mock-roles                              controllers.Test.setMo
 
 DELETE      /test/data                                    controllers.Test.deleteAllData()
 
+GET         /db                                           controllers.Application.db
