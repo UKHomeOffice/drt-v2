@@ -137,6 +137,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastBaseArrivalsActor], params.snapshotMegaBytesBaseArrivals, now, expireAfterMillis), name = "base-arrivals-actor")
   lazy val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastPortArrivalsActor], params.snapshotMegaBytesFcstArrivals, now, expireAfterMillis), name = "forecast-arrivals-actor")
   lazy val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor], params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis), name = "live-arrivals-actor")
+  lazy val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(classOf[AggregatedArrivalsActor], airportConfig.portCode), name = "aggregated-arrivals-actor")
 
   lazy val liveCrunchStateActor: ActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
   lazy val forecastCrunchStateActor: ActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
@@ -251,7 +252,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         "staff-movements" -> staffMovementsActor,
         "base-arrivals" -> baseArrivalsActor,
         "forecast-arrivals" -> forecastArrivalsActor,
-        "live-arrivals" -> liveArrivalsActor
+        "live-arrivals" -> liveArrivalsActor,
+        "aggregated-arrivals" -> aggregatedArrivalsActor
       ),
       useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
       splitsPredictorStage = splitsPredictorStage,

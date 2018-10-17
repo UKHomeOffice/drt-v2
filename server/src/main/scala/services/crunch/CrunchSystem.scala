@@ -174,6 +174,7 @@ object CrunchSystem {
       props.actors("base-arrivals").actorRef, props.actors("forecast-arrivals").actorRef, props.actors("live-arrivals").actorRef,
       props.voyageManifestsActor,
       props.liveCrunchStateActor, props.forecastCrunchStateActor,
+      props.actors("aggregated-arrivals").actorRef,
       crunchStartDateProvider, props.now
     )
 

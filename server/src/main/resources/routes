@@ -43,5 +43,3 @@ POST        /test/manifest                                controllers.Test.addMa
 POST        /test/mock-roles                              controllers.Test.setMockRoles()
 
 DELETE      /test/data                                    controllers.Test.deleteAllData()
-
-GET         /db                                           controllers.Application.db

@@ -13,16 +13,16 @@ import services.graphstages.Crunch._
 
 import scala.collection.immutable
 
-case class PortStateWithDiff(portState: PortState, diff: CrunchDiffMessage) {
+case class PortStateWithDiff(portState: PortState, diff: CrunchDiff, diffMessage: CrunchDiffMessage) {
   def window(start: SDateLike, end: SDateLike): PortStateWithDiff = {
-    PortStateWithDiff(portState.window(start, end), crunchDiffWindow(start, end))
+    PortStateWithDiff(portState.window(start, end), diff, crunchDiffWindow(start, end))
   }
 
   def crunchDiffWindow(start: SDateLike, end: SDateLike): CrunchDiffMessage = {
-    val flightsToRemove = diff.flightIdsToRemove
-    val flightsToUpdate = diff.flightsToUpdate.filter(smm => smm.flight.exists(f => start.millisSinceEpoch <= f.scheduled.getOrElse(0L) && f.scheduled.getOrElse(0L) <= end.millisSinceEpoch))
-    val staffToUpdate = diff.staffMinutesToUpdate.filter(smm => start.millisSinceEpoch <= smm.minute.getOrElse(0L) && smm.minute.getOrElse(0L) <= end.millisSinceEpoch)
-    val crunchToUpdate = diff.crunchMinutesToUpdate.filter(cmm => start.millisSinceEpoch <= cmm.minute.getOrElse(0L) && cmm.minute.getOrElse(0L) <= end.millisSinceEpoch)
+    val flightsToRemove = diffMessage.flightIdsToRemove
+    val flightsToUpdate = diffMessage.flightsToUpdate.filter(smm => smm.flight.exists(f => start.millisSinceEpoch <= f.scheduled.getOrElse(0L) && f.scheduled.getOrElse(0L) <= end.millisSinceEpoch))
+    val staffToUpdate = diffMessage.staffMinutesToUpdate.filter(smm => start.millisSinceEpoch <= smm.minute.getOrElse(0L) && smm.minute.getOrElse(0L) <= end.millisSinceEpoch)
+    val crunchToUpdate = diffMessage.crunchMinutesToUpdate.filter(cmm => start.millisSinceEpoch <= cmm.minute.getOrElse(0L) && cmm.minute.getOrElse(0L) <= end.millisSinceEpoch)
 
     CrunchDiffMessage(Option(SDate.now().millisSinceEpoch), None, flightsToRemove, flightsToUpdate, crunchToUpdate, staffToUpdate)
   }
@@ -108,7 +108,8 @@ class PortStateGraphStage(name: String = "",
           log.info(s"outPortState not available for pushing")
         case Some(portState) =>
           log.info(s"Pushing port state with diff")
-          val portStateWithDiff = PortStateWithDiff(portState, diffMessage(lastMaybePortState, portState))
+          val diff: CrunchDiff = stateDiff(lastMaybePortState, portState)
+          val portStateWithDiff = PortStateWithDiff(portState, diff, diffMessage(diff))
           lastMaybePortState = Option(portState)
 
           push(outPortState, portStateWithDiff)
@@ -116,7 +117,16 @@ class PortStateGraphStage(name: String = "",
     }
   }
 
-  def diffMessage(maybeExistingState: Option[PortState], newState: PortState): CrunchDiffMessage = {
+  def diffMessage(diff: CrunchDiff): CrunchDiffMessage = CrunchDiffMessage(
+    createdAt = Option(SDate.now().millisSinceEpoch),
+    crunchStart = Option(0),
+    flightIdsToRemove = diff.flightRemovals.map(rf => rf.flightId).toList,
+    flightsToUpdate = diff.flightUpdates.map(FlightMessageConversion.flightWithSplitsToMessage).toList,
+    crunchMinutesToUpdate = diff.crunchMinuteUpdates.map(crunchMinuteToMessage).toList,
+    staffMinutesToUpdate = diff.staffMinuteUpdates.map(staffMinuteToMessage).toList
+  )
+
+  def stateDiff(maybeExistingState: Option[PortState], newState: PortState): CrunchDiff = {
     val existingState = maybeExistingState match {
       case None => PortState(Map(), Map(), Map())
       case Some(s) => s
@@ -125,16 +135,8 @@ class PortStateGraphStage(name: String = "",
     val crunchesToUpdate = crunchMinutesDiff(existingState.crunchMinutes, newState.crunchMinutes)
     val staffToUpdate = staffMinutesDiff(existingState.staffMinutes, newState.staffMinutes)
     val (flightsToRemove, flightsToUpdate) = flightsDiff(existingState.flights, newState.flights)
-    val diff = CrunchDiff(flightsToRemove, flightsToUpdate, crunchesToUpdate, staffToUpdate)
 
-    CrunchDiffMessage(
-      createdAt = Option(SDate.now().millisSinceEpoch),
-      crunchStart = Option(0),
-      flightIdsToRemove = diff.flightRemovals.map(rf => rf.flightId).toList,
-      flightsToUpdate = diff.flightUpdates.map(FlightMessageConversion.flightWithSplitsToMessage).toList,
-      crunchMinutesToUpdate = diff.crunchMinuteUpdates.map(crunchMinuteToMessage).toList,
-      staffMinutesToUpdate = diff.staffMinuteUpdates.map(staffMinuteToMessage).toList
-    )
+    CrunchDiff(flightsToRemove, flightsToUpdate, crunchesToUpdate, staffToUpdate)
   }
 
   def crunchMinuteToMessage(cm: CrunchMinute): CrunchMinuteMessage = CrunchMinuteMessage(

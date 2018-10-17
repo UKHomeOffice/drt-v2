@@ -148,6 +148,7 @@ class CrunchTestLike
     val baseArrivalsProbe = testProbe("base-arrivals")
     val forecastArrivalsProbe = testProbe("forecast-arrivals")
     val liveArrivalsProbe = testProbe("live-arrivals")
+    val aggregatedArrivalsProbe = testProbe("aggregated-arrivals")
     val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], now, DrtStaticParameters.timeBeforeThisMonth(now)))
     val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], now))
     val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], now, DrtStaticParameters.time48HoursAgo(now)))
@@ -178,7 +179,8 @@ class CrunchTestLike
         "staff-movements" -> staffMovementsActor,
         "base-arrivals" -> baseArrivalsProbe.ref,
         "forecast-arrivals" -> forecastArrivalsProbe.ref,
-        "live-arrivals" -> liveArrivalsProbe.ref
+        "live-arrivals" -> liveArrivalsProbe.ref,
+        "aggregated-arrivals" -> aggregatedArrivalsProbe.ref
       ),
       useNationalityBasedProcessingTimes = false,
       now = now,
