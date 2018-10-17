@@ -98,13 +98,10 @@ lazy val server = (project in file("server"))
   // triggers scalaJSPipeline when using compile or continuous compilation
   compile in Compile := ((compile in Compile) dependsOn scalaJSPipeline).value,
   testFrameworks += new TestFramework("utest.runner.Framework"),
-  resolvers ++= Seq(
-    "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
-    "Artifactory Release Realm" at "http://artifactory.registered-traveller.homeoffice.gov.uk/artifactory/libs-release-local/",
-
-    Resolver.bintrayRepo("mfglabs", "maven"),
-    Resolver.bintrayRepo("dwhjames", "maven"),
-    Resolver.defaultLocal),
+  resolvers += Resolver.bintrayRepo("dwhjames", "maven"),
+  resolvers += Resolver.bintrayRepo("mfglabs", "maven"),
+  //resolvers += "Artifactory Release Realm" at "http://artifactory.registered-traveller.homeoffice.gov.uk/artifactory/libs-release-local/",
+  //dependencyOverrides += "com.github.dwhjames" %% "aws-wrap" % "0.9.0",
   publishArtifact in(Compile, packageBin) := false,
   // Disable scaladoc generation for this project (useless)
   publishArtifact in(Compile, packageDoc) := false,
@@ -134,7 +131,7 @@ lazy val ReleaseCmd = Command.command("release") {
 fork in run := true
 
 fork in Test := true
-
+parallelExecution in Test := false
 // loads the Play server project at sbt startup
 onLoad in Global := (Command.process("project server", _: State)) compose (onLoad in Global).value
 
