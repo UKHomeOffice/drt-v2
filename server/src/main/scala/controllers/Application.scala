@@ -2,6 +2,7 @@ package controllers
 
 import java.nio.ByteBuffer
 import java.util.UUID
+import javax.inject.{Inject, Singleton}
 
 import actors._
 import actors.pointInTime.CrunchStateReadActor
@@ -22,7 +23,6 @@ import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
 import drt.staff.ImportStaff
 import drt.users.KeyCloakClient
-import javax.inject.{Inject, Singleton}
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.{HeaderNames, HttpEntity}
@@ -140,6 +140,16 @@ class NoCacheFilter @Inject()(
       }
     }
   }
+}
+
+@Singleton
+class SecurityHeadersFilter @Inject()(
+                                       implicit override val mat: Materializer,
+                                       exec: ExecutionContext) extends Filter {
+
+  override def apply(requestHeaderToFutureResult: RequestHeader => Future[Result])
+                    (rh: RequestHeader): Future[Result] = requestHeaderToFutureResult(rh)
+    .map(_.withHeaders("X-Frame-Options" -> "deny"))
 }
 
 
