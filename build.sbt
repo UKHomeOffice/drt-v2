@@ -134,13 +134,14 @@ lazy val ReleaseCmd = Command.command("release") {
 }
 
 // code generation task
+//val conf = ConfigFactory.load.resolve()
 val conf = ConfigFactory.parseFile(new File("server/src/main/resources/application.conf")).resolve()
 
 lazy val slick = TaskKey[Seq[File]]("gen-tables")
 val tuple = (sourceManaged, dependencyClasspath in Compile, runner in Compile, streams)
 lazy val slickCodeGenTask = tuple map { (dir, cp, r, s) =>
   val outputDir = (dir / "main/slick").getPath // place generated files in sbt's managed sources folder
-  val url = conf.getString("queryable-db.url")
+  val url = conf.getString("aggregated-db.url")
   val jdbcDriver = "org.postgresql.Driver"
   val slickDriver = "slick.jdbc.PostgresProfile"
   val pkg = "drtdb"

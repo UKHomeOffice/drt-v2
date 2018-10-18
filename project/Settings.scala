@@ -33,6 +33,7 @@ object Settings {
     val booPickle = "1.2.6"
     val diode = "1.1.3"
     val uTest = "0.6.3"
+    val h2 = "1.4.197"
 
     val akka = "2.5.13"
     val akkaStreamContrib = "0.9"
@@ -105,6 +106,8 @@ object Settings {
     "javax.mail" % "mail" % "1.4.7",
     "info.folone" %% "poi-scala" % "0.18",
     "net.liftweb" %% "lift-json" % "3.1.0",
+
+    "com.h2database" % "h2" % h2 % Test,
 
     "com.typesafe" % "config" % typesafeConfig,
     "com.typesafe.akka" %% "akka-testkit" % akka % "test",

@@ -3,33 +3,61 @@ package actors
 import java.sql.Timestamp
 
 import akka.actor.Actor
-import drt.shared.ApiFlightWithSplits
-import drtdb.Tables.{Arrival, ArrivalRow}
+import drt.shared
+import drt.shared.{ApiFlightWithSplits, UniqueArrival}
 import org.slf4j.{Logger, LoggerFactory}
-import services.graphstages.Crunch.CrunchDiff
-import slick.jdbc.PostgresProfile.api._
+import services.SDate
+import services.graphstages.Crunch.{PortStateDiff, RemoveFlight}
+import slick.basic.DatabaseConfig
 
-class AggregatedArrivalsActor(portCode: String) extends Actor {
+import scala.concurrent.ExecutionContext.Implicits.global
+
+class AggregatedArrivalsActor[P <: slick.basic.BasicProfile](portCode: String, tables: drtdb.Tables) extends Actor {
+
+//  import tables
+  import tables.{Arrival, ArrivalRow}
+  import tables.profile.api._
   val log: Logger = LoggerFactory.getLogger(getClass)
-  val db = Database.forConfig("queryable-db")
-  val arrivalsTableQuery: TableQuery[Arrival] = TableQuery[Arrival]
+//  log.info(s"aggregated config key: $databaseConfigKey")
+  private val db = Database.forConfig("aggregated-db")
+  private val arrivalsTableQuery = TableQuery[Arrival]
 
   override def receive: Receive = {
-    case CrunchDiff(_, flightUpdates, _, _) =>
+    case PortStateDiff(flightRemovals, flightUpdates, _, _) =>
       flightUpdates.map {
         case ApiFlightWithSplits(f, _, _) =>
-          val sch = new Timestamp(f.Scheduled)
-          val est = f.Estimated.map(new Timestamp(_))
-          val act = f.Actual.map(new Timestamp(_))
-          val estChox = f.EstimatedChox.map(new Timestamp(_))
-          val actChox = f.ActualChox.map(new Timestamp(_))
-          val pcp = new Timestamp(f.PcpTime.getOrElse(f.Scheduled))
-          val pcpPax = f.ActPax.map(ap => ap - f.TranPax.getOrElse(0))
-          val row = ArrivalRow(f.IATA, f.voyageNumberPadded, portCode, f.Origin, f.Terminal, f.Gate, f.Stand, f.Status, sch, est, act, estChox, actChox, pcp, f.ActPax, pcpPax)
-
           log.info(s"Upserting ${f.IATA}")
-
-          db.run(arrivalsTableQuery.insertOrUpdate(row))
+          db.run(arrivalsTableQuery.insertOrUpdate(arrivalRow(f))).recover {
+            case throwable => log.error(s"insertOrUpdate failed", throwable)
+          }
       }
+
+      flightRemovals.map {
+        case RemoveFlight(UniqueArrival(number, terminalName, scheduled)) =>
+          val scheduledIso = SDate(scheduled).toISOString()
+          val scheduledTs = new Timestamp(scheduled)
+          log.info(s"Removing $portCode / $terminalName / $number / $scheduledIso")
+          db.run(arrivalsTableQuery.filter(matchIndex(number, terminalName, scheduledTs)).delete).recover {
+            case throwable => log.error(s"delete failed", throwable)
+          }
+      }
+  }
+
+  private def matchIndex(number: Int, terminalName: String, scheduledTs: Timestamp) = (arrival: Arrival) =>
+    arrival.number === number &&
+      arrival.terminal === terminalName &&
+      arrival.scheduled === scheduledTs &&
+      arrival.destination === portCode
+
+  private def arrivalRow(f: shared.Arrival) = {
+    val sch = new Timestamp(f.Scheduled)
+    val est = f.Estimated.map(new Timestamp(_))
+    val act = f.Actual.map(new Timestamp(_))
+    val estChox = f.EstimatedChox.map(new Timestamp(_))
+    val actChox = f.ActualChox.map(new Timestamp(_))
+    val pcp = new Timestamp(f.PcpTime.getOrElse(f.Scheduled))
+    val pcpPax = f.ActPax.map(ap => ap - f.TranPax.getOrElse(0))
+    val row = ArrivalRow(f.IATA, f.flightNumber, portCode, f.Origin, f.Terminal, f.Gate, f.Stand, f.Status, sch, est, act, estChox, actChox, pcp, f.ActPax, pcpPax)
+    row
   }
 }

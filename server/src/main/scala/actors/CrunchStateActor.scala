@@ -148,37 +148,37 @@ class CrunchStateActor(override val maybeSnapshotInterval: Option[Int],
 
   def stateFromDiff(cdm: CrunchDiffMessage, existingState: Option[PortState]): Option[PortState] = {
     logInfo(s"Unpacking CrunchDiffMessage")
-    val diff = crunchDiffFromMessage(cdm)
+    val (flightRemovals, flightUpdates, crunchMinuteUpdates, staffMinuteUpdates): (Set[Int], Set[ApiFlightWithSplits], Set[CrunchMinute], Set[StaffMinute]) = crunchDiffFromMessage(cdm)
     logInfo(s"Unpacked CrunchDiffMessage - " +
-      s"${diff.crunchMinuteUpdates.size} crunch minute updates, " +
-      s"${diff.staffMinuteUpdates.size} staff minute updates, " +
-      s"${diff.flightRemovals.size} flight removals, " +
-      s"${diff.flightUpdates.size} flight updates")
+      s"${crunchMinuteUpdates.size} crunch minute updates, " +
+      s"${staffMinuteUpdates.size} staff minute updates, " +
+      s"${flightRemovals.size} flight removals, " +
+      s"${flightUpdates.size} flight updates")
     val newState = existingState match {
       case None =>
         logInfo(s"Creating an empty PortState to apply CrunchDiff")
         Option(PortState(
-          flights = applyFlightsWithSplitsDiff(diff, Map()),
-          crunchMinutes = applyCrunchDiff(diff, Map()),
-          staffMinutes = applyStaffDiff(diff, Map())
+          flights = applyFlightsWithSplitsDiff(flightRemovals, flightUpdates, Map()),
+          crunchMinutes = applyCrunchDiff(crunchMinuteUpdates, Map()),
+          staffMinutes = applyStaffDiff(staffMinuteUpdates, Map())
         ))
       case Some(ps) =>
         logInfo(s"Applying CrunchDiff to PortState")
         val newPortState = PortState(
-          flights = applyFlightsWithSplitsDiff(diff, ps.flights),
-          crunchMinutes = applyCrunchDiff(diff, ps.crunchMinutes),
-          staffMinutes = applyStaffDiff(diff, ps.staffMinutes))
+          flights = applyFlightsWithSplitsDiff(flightRemovals, flightUpdates, ps.flights),
+          crunchMinutes = applyCrunchDiff(crunchMinuteUpdates, ps.crunchMinutes),
+          staffMinutes = applyStaffDiff(staffMinuteUpdates, ps.staffMinutes))
         logInfo(s"Finished applying CrunchDiff to PortState: ${newPortState.flights.size} flights, ${newPortState.staffMinutes.size} staff minutes, ${newPortState.crunchMinutes.size} crunch minutes")
         Option(newPortState)
     }
     newState
   }
 
-  def crunchDiffFromMessage(diffMessage: CrunchDiffMessage): CrunchDiff = CrunchDiff(
-    flightRemovals = diffMessage.flightIdsToRemove.map(RemoveFlight).toSet,
-    flightUpdates = diffMessage.flightsToUpdate.map(flightWithSplitsFromMessage).toSet,
-    crunchMinuteUpdates = diffMessage.crunchMinutesToUpdate.map(crunchMinuteFromMessage).toSet,
-    staffMinuteUpdates = diffMessage.staffMinutesToUpdate.map(staffMinuteFromMessage).toSet
+  def crunchDiffFromMessage(diffMessage: CrunchDiffMessage): (Set[Int], Set[ApiFlightWithSplits], Set[CrunchMinute], Set[StaffMinute]) = (
+    diffMessage.flightIdsToRemove.toSet,
+    diffMessage.flightsToUpdate.map(flightWithSplitsFromMessage).toSet,
+    diffMessage.crunchMinutesToUpdate.map(crunchMinuteFromMessage).toSet,
+    diffMessage.staffMinutesToUpdate.map(staffMinuteFromMessage).toSet
   )
 
   def updateStateFromPortState(newState: PortState): Unit = state = Option(newState)

@@ -36,6 +36,9 @@ import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.Crunch.{oneDayMillis, oneMinuteMillis}
 import services.graphstages._
 import services.prediction.SparkSplitsPredictorFactory
+import slick.basic.DatabaseConfig
+import slick.jdbc.PostgresProfile
+import slick.jdbc.PostgresProfile.api.Database
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -128,6 +131,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
   val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
 
+  val aggregateArrivalsDbConfigKey = "aggregated-db"
+
   val purgeOldLiveSnapshots = false
   val purgeOldForecastSnapshots = true
 
@@ -137,7 +142,12 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastBaseArrivalsActor], params.snapshotMegaBytesBaseArrivals, now, expireAfterMillis), name = "base-arrivals-actor")
   lazy val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastPortArrivalsActor], params.snapshotMegaBytesFcstArrivals, now, expireAfterMillis), name = "forecast-arrivals-actor")
   lazy val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor], params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis), name = "live-arrivals-actor")
-  lazy val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(classOf[AggregatedArrivalsActor], airportConfig.portCode), name = "aggregated-arrivals-actor")
+
+  val databaseConfig = DatabaseConfig.forConfig(aggregateArrivalsDbConfigKey)
+
+  import drtdb.Tables
+
+  lazy val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(classOf[AggregatedArrivalsActor[slick.jdbc.PostgresProfile]], airportConfig.portCode, Tables), name = "aggregated-arrivals-actor")
 
   lazy val liveCrunchStateActor: ActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
   lazy val forecastCrunchStateActor: ActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")

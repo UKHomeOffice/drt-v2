@@ -13,7 +13,7 @@ import services.graphstages.Crunch._
 
 import scala.collection.immutable
 
-case class PortStateWithDiff(portState: PortState, diff: CrunchDiff, diffMessage: CrunchDiffMessage) {
+case class PortStateWithDiff(portState: PortState, diff: PortStateDiff, diffMessage: CrunchDiffMessage) {
   def window(start: SDateLike, end: SDateLike): PortStateWithDiff = {
     PortStateWithDiff(portState.window(start, end), diff, crunchDiffWindow(start, end))
   }
@@ -108,7 +108,7 @@ class PortStateGraphStage(name: String = "",
           log.info(s"outPortState not available for pushing")
         case Some(portState) =>
           log.info(s"Pushing port state with diff")
-          val diff: CrunchDiff = stateDiff(lastMaybePortState, portState)
+          val diff: PortStateDiff = stateDiff(lastMaybePortState, portState)
           val portStateWithDiff = PortStateWithDiff(portState, diff, diffMessage(diff))
           lastMaybePortState = Option(portState)
 
@@ -117,16 +117,16 @@ class PortStateGraphStage(name: String = "",
     }
   }
 
-  def diffMessage(diff: CrunchDiff): CrunchDiffMessage = CrunchDiffMessage(
+  def diffMessage(diff: PortStateDiff): CrunchDiffMessage = CrunchDiffMessage(
     createdAt = Option(SDate.now().millisSinceEpoch),
     crunchStart = Option(0),
-    flightIdsToRemove = diff.flightRemovals.map(rf => rf.flightId).toList,
+    flightIdsToRemove = diff.flightRemovals.map(_.flightKey.uniqueId).toList,
     flightsToUpdate = diff.flightUpdates.map(FlightMessageConversion.flightWithSplitsToMessage).toList,
     crunchMinutesToUpdate = diff.crunchMinuteUpdates.map(crunchMinuteToMessage).toList,
     staffMinutesToUpdate = diff.staffMinuteUpdates.map(staffMinuteToMessage).toList
   )
 
-  def stateDiff(maybeExistingState: Option[PortState], newState: PortState): CrunchDiff = {
+  def stateDiff(maybeExistingState: Option[PortState], newState: PortState): PortStateDiff = {
     val existingState = maybeExistingState match {
       case None => PortState(Map(), Map(), Map())
       case Some(s) => s
@@ -136,7 +136,7 @@ class PortStateGraphStage(name: String = "",
     val staffToUpdate = staffMinutesDiff(existingState.staffMinutes, newState.staffMinutes)
     val (flightsToRemove, flightsToUpdate) = flightsDiff(existingState.flights, newState.flights)
 
-    CrunchDiff(flightsToRemove, flightsToUpdate, crunchesToUpdate, staffToUpdate)
+    PortStateDiff(flightsToRemove, flightsToUpdate, crunchesToUpdate, staffToUpdate)
   }
 
   def crunchMinuteToMessage(cm: CrunchMinute): CrunchMinuteMessage = CrunchMinuteMessage(

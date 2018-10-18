@@ -51,6 +51,7 @@ object RunnableCrunch {
                                        liveCrunchStateActor: ActorRef,
                                        fcstCrunchStateActor: ActorRef,
                                        aggregatedArrivalsStateActor: ActorRef,
+
                                        crunchPeriodStartMillis: SDateLike => SDateLike,
                                        now: () => SDateLike
                                       ): RunnableGraph[(FR, FR, FR, MS, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch)] = {
