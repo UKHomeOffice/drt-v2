@@ -15,4 +15,4 @@ RUN apk --update add openssh-client \
     rm -rf /var/cache/apk/*
 USER 1000
 
-CMD bin/drt
+CMD ["bin/drt", "-Duser.timezone=UTC"]
