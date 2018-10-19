@@ -10,9 +10,9 @@ RUN mkdir /var/lib/drt-v2
 RUN mkdir -p /var/run/drt && chown 1000 /var/run/drt
 RUN mkdir -p /var/log/drt && chown 1000 /var/log/drt
 RUN apk --update add openssh-client \
-    bash \
-    && \
+    bash && \
     rm -rf /var/cache/apk/*
+# can't run as root
 USER 1000
 
 ENTRYPOINT ["bin/drt", "-Duser.timezone=UTC"]
