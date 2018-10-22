@@ -9,7 +9,7 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
-import services.graphstages.Crunch.Loads
+import services.graphstages.Crunch.{Loads, PortStateDiff}
 import services.graphstages._
 
 object RunnableCrunch {
@@ -162,12 +162,17 @@ object RunnableCrunch {
           portState.out ~> portStateFanOut
           portStateFanOut.map(_.window(liveStart(now), liveEnd(now))) ~> liveSink
           portStateFanOut.map(_.window(forecastStart(now), forecastEnd(now))) ~> fcstSink
-          portStateFanOut.map(_.diff) ~> aggregatedArrivalsSink
+          portStateFanOut.map(pswd => withOnlyDescheduledRemovals(pswd.diff, now())) ~> aggregatedArrivalsSink
 
           ClosedShape
     }
 
     RunnableGraph.fromGraph(graph)
+  }
+
+  def withOnlyDescheduledRemovals: (PortStateDiff, SDateLike) => PortStateDiff = (diff: PortStateDiff, now: SDateLike) => {
+    val nowMillis = now.millisSinceEpoch
+    diff.copy(flightRemovals = diff.flightRemovals.filterNot(_.flightKey.scheduled <= nowMillis))
   }
 
   def liveStart(now: () => SDateLike): SDateLike = Crunch.getLocalLastMidnight(now()).addDays(-1)

@@ -8,18 +8,17 @@ import drt.shared.{ApiFlightWithSplits, UniqueArrival}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch.{PortStateDiff, RemoveFlight}
-import slick.basic.DatabaseConfig
+import slickdb.Tables
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class AggregatedArrivalsActor[P <: slick.basic.BasicProfile](portCode: String, tables: drtdb.Tables) extends Actor {
+class AggregatedArrivalsActor(portCode: String, tables: Tables) extends Actor {
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
-//  import tables
   import tables.{Arrival, ArrivalRow}
   import tables.profile.api._
-  val log: Logger = LoggerFactory.getLogger(getClass)
-//  log.info(s"aggregated config key: $databaseConfigKey")
-  private val db = Database.forConfig("aggregated-db")
+
+  private val db: tables.profile.backend.DatabaseDef = Database.forConfig("aggregated-db")
   private val arrivalsTableQuery = TableQuery[Arrival]
 
   override def receive: Receive = {
@@ -57,7 +56,7 @@ class AggregatedArrivalsActor[P <: slick.basic.BasicProfile](portCode: String, t
     val actChox = f.ActualChox.map(new Timestamp(_))
     val pcp = new Timestamp(f.PcpTime.getOrElse(f.Scheduled))
     val pcpPax = f.ActPax.map(ap => ap - f.TranPax.getOrElse(0))
-    val row = ArrivalRow(f.IATA, f.flightNumber, portCode, f.Origin, f.Terminal, f.Gate, f.Stand, f.Status, sch, est, act, estChox, actChox, pcp, f.ActPax, pcpPax)
-    row
+
+    ArrivalRow(f.IATA, f.flightNumber, portCode, f.Origin, f.Terminal, f.Gate, f.Stand, f.Status, sch, est, act, estChox, actChox, pcp, f.ActPax, pcpPax)
   }
 }

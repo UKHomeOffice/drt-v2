@@ -140,7 +140,7 @@ val conf = ConfigFactory.parseFile(new File("server/src/main/resources/applicati
 lazy val slick = TaskKey[Seq[File]]("gen-tables")
 val tuple = (sourceManaged, dependencyClasspath in Compile, runner in Compile, streams)
 lazy val slickCodeGenTask = tuple map { (dir, cp, r, s) =>
-  val outputDir = (dir / "main/slick").getPath // place generated files in sbt's managed sources folder
+  val outputDir = (dir / "slick").getPath // place generated files in sbt's managed sources folder
   val url = conf.getString("aggregated-db.url")
   val jdbcDriver = "org.postgresql.Driver"
   val slickDriver = "slick.jdbc.PostgresProfile"

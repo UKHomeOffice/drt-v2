@@ -106,7 +106,7 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
 
   def hasPcpPaxIn(start: SDateLike, end: SDateLike): Boolean = apiFlight.hasPcpDuring(start, end)
 
-  lazy val uniqueArrival: UniqueArrival = UniqueArrival(apiFlight.flightNumber, apiFlight.Terminal, apiFlight.Scheduled)
+  lazy val uniqueArrival: UniqueArrival = apiFlight.uniqueArrival
 }
 
 case class TQM(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch)
@@ -189,6 +189,8 @@ case class Arrival(
     val oneMinuteInMillis = 60 * 1000
     (minutesToDisembark * oneMinuteInMillis).toLong
   }
+
+  lazy val uniqueArrival: UniqueArrival = UniqueArrival(flightNumber, Terminal, Scheduled)
 }
 
 object Arrival {

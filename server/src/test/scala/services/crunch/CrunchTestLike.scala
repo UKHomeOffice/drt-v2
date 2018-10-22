@@ -13,24 +13,17 @@ import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
-import drtdb.Tables
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
-import org.specs2.specification.BeforeEach
 import passengersplits.AkkaPersistTestConfig
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse, ManifestsFeedSuccess}
 import services._
 import services.graphstages.Crunch._
 import services.graphstages.{ActualDeskStats, DqManifests, DummySplitsPredictor}
-import slick.basic.DatabaseConfig
-import slick.jdbc.H2Profile.api._
-import slick.jdbc.{H2Profile, SQLActionBuilder}
-import slick.jdbc.SetParameter.SetUnit
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.language.implicitConversions
-import scala.util.Try
 
 
 class LiveCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
@@ -68,41 +61,15 @@ case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete
                                       forecastTestProbe: TestProbe,
                                       baseArrivalsTestProbe: TestProbe,
                                       forecastArrivalsTestProbe: TestProbe,
-                                      liveArrivalsTestProbe: TestProbe
+                                      liveArrivalsTestProbe: TestProbe,
+                                      aggregatedArrivalsTestProbe: TestProbe
                                      )
 
 class CrunchTestLike
   extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPersistTestConfig.inMemoryAkkaPersistConfig))
-    with SpecificationLike with BeforeEach {
+    with SpecificationLike {
   isolated
   sequential
-
-  override def before: Any = {
-    clearDatabase()
-  }
-
-  val db = Database.forConfig("aggregated-db")
-
-  def clearDatabase(): Unit = {
-    Try(dropTables())
-    createTables()
-  }
-
-  object H2Tables extends {
-    val profile = slick.jdbc.H2Profile
-  } with Tables
-
-  def createTables(): Unit = {
-    H2Tables.schema.createStatements.toList.foreach { query =>
-      Await.ready(db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10 seconds)
-    }
-  }
-
-  def dropTables(): Unit = {
-    H2Tables.schema.dropStatements.toList.reverse.foreach { query =>
-      Await.ready(db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10 seconds)
-    }
-  }
 
   implicit val actorSystem: ActorSystem = system
   implicit val materializer: ActorMaterializer = ActorMaterializer()
@@ -166,6 +133,7 @@ class CrunchTestLike
                      csvSplitsProvider: SplitsProvider.SplitProvider = (_, _) => None,
                      pcpArrivalTime: Arrival => MilliDate = pcpForFlight,
                      minutesToCrunch: Int = 60,
+                     expireAfterMillis: Long = DrtStaticParameters.expireAfterMillis,
                      calcPcpWindow: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)] = (_, _) => Some((SDate.now(), SDate.now())),
                      now: () => SDateLike,
                      initialShifts: ShiftAssignments = ShiftAssignments.empty,
@@ -182,11 +150,7 @@ class CrunchTestLike
     val baseArrivalsProbe = testProbe("base-arrivals")
     val forecastArrivalsProbe = testProbe("forecast-arrivals")
     val liveArrivalsProbe = testProbe("live-arrivals")
-    val aggregateArrivalsDbConfigKey = "aggregated-db"
-
-//    val databaseConfig: H2Profile.backend.Database = slick.jdbc.H2Profile.api.Database.forConfig(aggregateArrivalsDbConfigKey)
-
-    val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(classOf[AggregatedArrivalsActor[slick.jdbc.H2Profile]], airportConfig.portCode, H2Tables), name = "aggregated-arrivals-actor")
+    val aggregatedArrivalsProbe = testProbe("aggregated-arrivals")
 
     val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], now, DrtStaticParameters.timeBeforeThisMonth(now)))
     val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], now))
@@ -210,7 +174,7 @@ class CrunchTestLike
       liveCrunchStateActor = liveCrunchActor,
       forecastCrunchStateActor = forecastCrunchActor,
       maxDaysToCrunch = maxDaysToCrunch,
-      expireAfterMillis = DrtStaticParameters.expireAfterMillis,
+      expireAfterMillis = expireAfterMillis,
       minutesToCrunch = minutesToCrunch,
       actors = Map[String, AskableActorRef](
         "shifts" -> shiftsActor,
@@ -219,7 +183,7 @@ class CrunchTestLike
         "base-arrivals" -> baseArrivalsProbe.ref,
         "forecast-arrivals" -> forecastArrivalsProbe.ref,
         "live-arrivals" -> liveArrivalsProbe.ref,
-        "aggregated-arrivals" -> aggregatedArrivalsActor
+        "aggregated-arrivals" -> aggregatedArrivalsProbe.ref
       ),
       useNationalityBasedProcessingTimes = false,
       now = now,
@@ -260,7 +224,8 @@ class CrunchTestLike
       forecastProbe,
       baseArrivalsProbe,
       forecastArrivalsProbe,
-      liveArrivalsProbe
+      liveArrivalsProbe,
+      aggregatedArrivalsProbe
     )
   }
 

@@ -11,7 +11,6 @@ import passengersplits.core.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import server.feeds.{ManifestsFeedFailure, ManifestsFeedResponse, ManifestsFeedSuccess}
 import services._
-import services.graphstages.Crunch.{log, _}
 
 import scala.collection.immutable.Map
 import scala.language.postfixOps
@@ -29,6 +28,8 @@ class ArrivalSplitsGraphStage(name: String = "",
                               maxDaysToCrunch: Int)
   extends GraphStage[FanInShape3[ArrivalsDiff, ManifestsFeedResponse, Seq[(Arrival, Option[Splits])], FlightsWithSplits]] {
 
+  val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
+
   val inArrivalsDiff: Inlet[ArrivalsDiff] = Inlet[ArrivalsDiff]("ArrivalsDiffIn.in")
   val inManifests: Inlet[ManifestsFeedResponse] = Inlet[ManifestsFeedResponse]("SplitsIn.in")
   val inSplitsPredictions: Inlet[Seq[(Arrival, Option[Splits])]] = Inlet[Seq[(Arrival, Option[Splits])]]("SplitsPredictionsIn.in")
@@ -42,7 +43,6 @@ class ArrivalSplitsGraphStage(name: String = "",
     var arrivalsWithSplitsDiff: Set[ApiFlightWithSplits] = Set()
     var arrivalsToRemove: Set[Int] = Set()
 
-    val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
     override def preStart(): Unit = {
       optionalInitialManifests match {
@@ -216,7 +216,7 @@ class ArrivalSplitsGraphStage(name: String = "",
         case (id, _) => arrivalsDiff.toRemove.contains(id)
       }
 
-      val lastMilliToCrunch = getLocalLastMidnight(now().addDays(maxDaysToCrunch)).millisSinceEpoch
+      val lastMilliToCrunch = Crunch.getLocalLastMidnight(now().addDays(maxDaysToCrunch)).millisSinceEpoch
 
       val updatedFlights = arrivalsDiff.toUpdate.foldLeft(UpdatedFlights(afterRemovals, 0, 0)) {
         case (updatesSoFar, updatedFlight) =>
@@ -375,7 +375,9 @@ class ArrivalSplitsGraphStage(name: String = "",
 
   def purgeExpiredArrivals(arrivals: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
     val expired = hasExpiredForType((a: ApiFlightWithSplits) => a.apiFlight.PcpTime.getOrElse(0L))
-    val updated = arrivals.filterNot { case (_, a) => expired(a) }
+    val updated = arrivals.filterNot { case (_, a) =>
+      log.info(s"Checking ${SDate(a.apiFlight.PcpTime.getOrElse(0L)).toISOString()} for expiry (now: ${now().toISOString()})")
+      expired(a) }
 
     val numPurged = arrivals.size - updated.size
     if (numPurged > 0) log.info(s"Purged $numPurged expired arrivals")
@@ -392,6 +394,6 @@ class ArrivalSplitsGraphStage(name: String = "",
     }
   }
 
-  def twoDaysAgo: MillisSinceEpoch = now().millisSinceEpoch - (2 * oneDayMillis)
+  def twoDaysAgo: MillisSinceEpoch = now().millisSinceEpoch - (2 * Crunch.oneDayMillis)
 }
 
