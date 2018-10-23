@@ -49,7 +49,7 @@ pipeline:
     commands:
       - docker login -u $${DOCKER_USERNAME} -p $${DOCKER_PASSWORD} docker.digital.homeoffice.gov.uk
       - docker run -d --name $${DRONE_COMMIT_SHA} -e POSTGRES_USER="test_user" -e POSTGRES_DB="test" -e POSTGRES_PASSWORD="test_password" postgres:alpine
-      - docker run  -d --net=container:$${DRONE_COMMIT_SHA} -e KEY_CLOAK_URL="https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod" -e PERSISTENCE_BASE_DIR="/var/lib/drt-v2/live/test" -e PORT_CODE="test" -e DQ_S3_BUCKET="" -e ENV="test" -e POSTGRES_PASSWORD="test_password" -e POSTGRES_HOST="localhost" -e POSTGRES_USER="test_user"  docker.digital.homeoffice.gov.uk/drt/drt:latest bin/drt -Duser.timezone=UTC $${PLAY}
+      - docker run  -d --net=container:$${DRONE_COMMIT_SHA} -e KEY_CLOAK_URL="https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod" -e PERSISTENCE_BASE_DIR="/var/lib/drt-v2/live/test" -e -e PORT_CODE="test" -e PORT_ACCESS_RESTRICTIONS=true -e DQ_S3_BUCKET="" -e ENV="test" -e POSTGRES_PASSWORD="test_password" -e POSTGRES_HOST="localhost" -e POSTGRES_USER="test_user"  docker.digital.homeoffice.gov.uk/drt/drt:latest bin/drt -Duser.timezone=UTC $${PLAY}
       - docker build -t drt-cypress -f cy-drt-dockfile .
       - docker run  --net=container:$${DRONE_COMMIT_SHA} -e CYPRESS_baseUrl="http://localhost:9000" drt-cypress /bin/bash -c "./node_modules/.bin/cypress run"
 
