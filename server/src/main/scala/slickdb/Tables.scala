@@ -41,12 +41,8 @@ trait Tables {
   /** Table description of table arrival. Objects of this class serve as prototypes for rows in queries. */
   class Arrival(_tableTag: Tag) extends {
     private val maybeSchema = profile match {
-      case _: PostgresProfile =>
-        println(s"Got a postgres")
-        Some("general")
-      case _ =>
-        println(s"Got a not postgres")
-        None
+      case _: PostgresProfile => Some("general")
+      case _ => None
     }
   } with profile.api.Table[ArrivalRow](_tableTag, maybeSchema, "arrival") {
     def * = (code, number, destination, origin, terminal, gate, stand, status, scheduled, estimated, actual, estimatedchox, actualchox, pcp, totalpassengers, pcppassengers) <> (ArrivalRow.tupled, ArrivalRow.unapply)
