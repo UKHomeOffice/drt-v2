@@ -1,6 +1,7 @@
 package drt.client.components
 
 import drt.client.actions.Actions.AddStaffMovements
+import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -14,6 +15,8 @@ import org.scalajs.dom.html.{Div, Select}
 import scala.util.{Failure, Success}
 
 object StaffDeploymentsAdjustmentPopover {
+
+  val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
   case class StaffDeploymentAdjustmentPopoverState(active: Boolean,
                                                    action: String,
@@ -30,9 +33,16 @@ object StaffDeploymentsAdjustmentPopover {
                                                    loggedInUser: LoggedInUser
                                                   ) {
     def isApplicableToSlot(slotStart: SDateLike, slotEnd: SDateLike): Boolean = {
-      val startDate = SDate(s"${date}T$startTimeHours:$startTimeMinutes")
+      date.split("/").toList match {
+        case d :: m :: y :: Nil =>
+          val yyyy = f"${y.toInt + 2000}%02d"
+          val mm = f"${m.toInt}%02d"
+          val dd = f"${d.toInt}%02d"
+          val startDate = SDate(f"$yyyy-$mm-${dd}T$startTimeHours%02d:$startTimeMinutes%02d")
 
-      slotStart <= startDate && startDate <= slotEnd
+          slotStart <= startDate && startDate <= slotEnd
+        case _ => false
+      }
     }
   }
 

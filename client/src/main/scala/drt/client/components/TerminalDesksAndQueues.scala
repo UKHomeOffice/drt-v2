@@ -2,6 +2,7 @@ package drt.client.components
 
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlViewType}
 import drt.client.actions.Actions.UpdateShowActualDesksAndQueues
+import drt.client.components.StaffDeploymentsAdjustmentPopover.StaffDeploymentAdjustmentPopoverState
 import drt.client.components.TerminalDesksAndQueues.{NodeListSeq, documentScrollHeight, documentScrollTop}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
@@ -52,7 +53,7 @@ object TerminalDesksAndQueues {
 
   case class State(showActuals: Boolean,
                    viewType: ViewType,
-                   maybeStaffAdjustmentsPopoverState: Option[StaffDeploymentsAdjustmentPopover.StaffDeploymentAdjustmentPopoverState])
+                   maybeStaffAdjustmentsPopoverState: Option[StaffDeploymentAdjustmentPopoverState])
 
   val component = ScalaComponent.builder[Props]("Loader")
     .initialStateFromProps(p => {
@@ -205,7 +206,7 @@ object TerminalDesksAndQueues {
             ^.id := "sticky-body",
             terminalCrunchMinutes.map {
               case (millis, minutes) =>
-                val updateDate: Option[StaffDeploymentsAdjustmentPopover.StaffDeploymentAdjustmentPopoverState] => Callback = (maybeNewState: Option[StaffDeploymentsAdjustmentPopover.StaffDeploymentAdjustmentPopoverState]) => {
+                val updateDate: Option[StaffDeploymentAdjustmentPopoverState] => Callback = (maybeNewState: Option[StaffDeploymentAdjustmentPopoverState]) => {
                   log.info(s"attempting to update state")
                   scope.modState(_.copy(maybeStaffAdjustmentsPopoverState = maybeNewState))
                 }
