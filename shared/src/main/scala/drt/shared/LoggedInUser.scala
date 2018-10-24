@@ -19,6 +19,7 @@ object Roles {
     LTNAccess,
     MANAccess,
     TestAccess,
+    Test2Access,
     STNAccess
   )
   val availableRoles : Set[Role] = Set(
@@ -40,6 +41,10 @@ case object ApiView extends Role {
 
 case object TestAccess extends Role {
   override val name: String = "test"
+}
+
+case object Test2Access extends Role {
+  override val name: String = "test2"
 }
 
 case object ManageUsers extends Role {
