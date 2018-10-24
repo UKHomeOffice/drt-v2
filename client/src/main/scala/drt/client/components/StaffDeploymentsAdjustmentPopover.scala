@@ -2,6 +2,7 @@ package drt.client.components
 
 import drt.client.actions.Actions.AddStaffMovements
 import drt.client.modules.GoogleEventTracker
+import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.FlightsApi.TerminalName
 import drt.shared.{LoggedInUser, SDateLike}
@@ -14,18 +15,55 @@ import scala.util.{Failure, Success}
 
 object StaffDeploymentsAdjustmentPopover {
 
-  case class StaffDeploymentAdjustmentPopoverState(
-                                                    active: Boolean = false,
-                                                    reason: String = "",
-                                                    terminalName: TerminalName,
-                                                    date: String = "",
-                                                    startTimeHours: Int = 0,
-                                                    startTimeMinutes: Int = 0,
-                                                    endTimeHours: Int = 0,
-                                                    endTimeMinutes: Int = 0,
-                                                    numberOfStaff: String = "1",
-                                                    loggedInUser: LoggedInUser
-                                                  )
+  case class StaffDeploymentAdjustmentPopoverState(active: Boolean,
+                                                   action: String,
+                                                   reasonPlaceholder: String,
+                                                   reason: String,
+                                                   terminalNames: Seq[TerminalName],
+                                                   terminalName: TerminalName,
+                                                   date: String,
+                                                   startTimeHours: Int,
+                                                   startTimeMinutes: Int,
+                                                   endTimeHours: Int,
+                                                   endTimeMinutes: Int,
+                                                   numberOfStaff: String,
+                                                   loggedInUser: LoggedInUser
+                                                  ) {
+    def isApplicableToSlot(slotStart: SDateLike, slotEnd: SDateLike): Boolean = {
+      val startDate = SDate(s"${date}T$startTimeHours:$startTimeMinutes")
+
+      slotStart <= startDate && startDate <= slotEnd
+    }
+  }
+
+  object StaffDeploymentAdjustmentPopoverState {
+    def apply(terminalNames: Seq[TerminalName],
+              terminal: Option[TerminalName],
+              trigger: String,
+              reasonPlaceholder: String,
+              startDate: SDateLike,
+              endDate: SDateLike,
+              popoverPosition: String,
+              action: String = "-",
+              loggedInUser: LoggedInUser): StaffDeploymentAdjustmentPopoverState =
+      StaffDeploymentAdjustmentPopoverState(
+        active = true,
+        action = action,
+        reasonPlaceholder = reasonPlaceholder,
+        reason = "",
+        terminalNames = terminalNames,
+        terminalName = terminal.getOrElse(terminalNames.head),
+        date = f"${startDate.getDate()}%02d/${startDate.getMonth()}%02d/${startDate.getFullYear - 2000}%02d",
+        startTimeHours = startDate.getHours(),
+        startTimeMinutes = roundToNearest(5)(startDate.getMinutes()),
+        endTimeHours = endDate.getHours(),
+        endTimeMinutes = roundToNearest(5)(endDate.getMinutes()),
+        numberOfStaff = "1",
+        loggedInUser = loggedInUser
+      )
+  }
+
+  case class StaffDeploymentAdjustmentPopoverProps(updateState: Option[StaffDeploymentsAdjustmentPopover.StaffDeploymentAdjustmentPopoverState] => Unit)
 
   def roundToNearest(nearest: Int)(x: Int): Int = {
     (x.toDouble / nearest).round.toInt * nearest
@@ -40,28 +78,9 @@ object StaffDeploymentsAdjustmentPopover {
       terminalNames.map(x => <.option(^.value := x, x)).toTagMod)
   }
 
-  def apply(terminalNames: Seq[TerminalName],
-            terminal: Option[TerminalName],
-            trigger: String,
-            reasonPlaceholder: String,
-            startDate: SDateLike,
-            endDate: SDateLike,
-            popoverPosition: String,
-            action: String = "-",
-            loggedInUser: LoggedInUser) = ScalaComponent.builder[Unit]("staffMovementPopover")
-    .initialState(
-      StaffDeploymentAdjustmentPopoverState(
-        reason = "",
-        terminalName = terminal.getOrElse(terminalNames.head),
-        date = f"${startDate.getDate()}%02d/${startDate.getMonth()}%02d/${startDate.getFullYear - 2000}%02d",
-        startTimeHours = startDate.getHours(),
-        startTimeMinutes = roundToNearest(5)(startDate.getMinutes()),
-        endTimeHours = endDate.getHours(),
-        endTimeMinutes = roundToNearest(5)(endDate.getMinutes()),
-        loggedInUser = loggedInUser
-      )
-    )
-    .renderS(r = (scope, state) => {
+  def apply(state: StaffDeploymentAdjustmentPopoverState) = ScalaComponent.builder[StaffDeploymentAdjustmentPopoverProps]("staffMovementPopover")
+    .initialState(state)
+    .renderPS((scope, props, state) => {
       def selectFromRange(range: Range,
                           defaultValue: Int,
                           callback: String => StaffDeploymentAdjustmentPopoverState => StaffDeploymentAdjustmentPopoverState,
@@ -76,10 +95,10 @@ object StaffDeploymentsAdjustmentPopover {
       def trySaveMovement = (e: ReactEventFromInput) => {
         val startTime: String = f"${state.startTimeHours}%02d:${state.startTimeMinutes}%02d"
         val endTime: String = f"${state.endTimeHours}%02d:${state.endTimeMinutes}%02d"
-        val numberOfStaff: String = s"$action${state.numberOfStaff.toString}"
+        val numberOfStaff: String = s"${state.action}${state.numberOfStaff.toString}"
 
         StaffAssignmentHelper
-          .tryStaffAssignment(state.reason, state.terminalName, state.date, startTime, endTime, numberOfStaff, createdBy = Some(loggedInUser.email)) match {
+          .tryStaffAssignment(state.reason, state.terminalName, state.date, startTime, endTime, numberOfStaff, createdBy = Some(state.loggedInUser.email)) match {
           case Success(movement) =>
             val movementsToAdd = for (movement <- StaffMovements.assignmentsToMovements(Seq(movement))) yield movement
             SPACircuit.dispatch(AddStaffMovements(movementsToAdd))
@@ -94,7 +113,7 @@ object StaffDeploymentsAdjustmentPopover {
                         value: String,
                         callback: String => StaffDeploymentAdjustmentPopoverState => StaffDeploymentAdjustmentPopoverState,
                         placeHolder: String = ""): VdomTagOf[html.Div] = {
-        popoverFormRow(labelText, <.input.text(^.value := value, ^.placeholder := reasonPlaceholder, ^.onChange ==> ((e: ReactEventFromInput) => {
+        popoverFormRow(labelText, <.input.text(^.value := value, ^.placeholder := state.reasonPlaceholder, ^.onChange ==> ((e: ReactEventFromInput) => {
           val newValue: String = e.target.value
           scope.modState(callback(newValue))
         })))
@@ -123,14 +142,9 @@ object StaffDeploymentsAdjustmentPopover {
       }
 
       def hoveredComponent: TagMod = if (state.active) {
-        val popoverChildren = <.div(<.div(^.className := "popover-overlay", ^.onClick ==> showPopover(false)),
+        <.div(<.div(^.className := "popover-overlay", ^.onClick ==> showPopover(false)),
           <.div(^.className := "container", ^.onClick ==> ((e: ReactEvent) => Callback(e.stopPropagation())), ^.key := "StaffAdjustments",
             labelledInput("Reason", state.reason, (v: String) => (s: StaffDeploymentAdjustmentPopoverState) => s.copy(reason = v)),
-            terminal match {
-              case None => popoverFormRow("Terminal", selectTerminal(state.terminalName, (e: ReactEventFromInput) =>
-                scope.modState(_.copy(terminalName = e.target.value)), terminalNames))
-              case _ => ""
-            },
             timeSelector("Start time", state.startTimeHours, state.startTimeMinutes,
               (v: String) => (s: StaffDeploymentAdjustmentPopoverState) => s.copy(startTimeHours = v.toInt),
               (v: String) => (s: StaffDeploymentAdjustmentPopoverState) => s.copy(startTimeMinutes = v.toInt)),
@@ -146,16 +160,19 @@ object StaffDeploymentsAdjustmentPopover {
               <.div(^.className := "col-sm-6 btn-toolbar",
                 <.button("Save", ^.className := "btn btn-primary", ^.onClick ==> trySaveMovement),
                 <.button("Cancel", ^.className := "btn btn-default", ^.onClick ==> showPopover(false))))))
-
-        popoverChildren
       } else {
         ""
       }
 
-      def showPopover(show: Boolean) = (e: ReactEventFromInput) => scope.modState(_.copy(active = show))
+      def showPopover(show: Boolean) = (_: ReactEventFromInput) => {
+        scope.modState(existingState => {
+          val updatedState = existingState.copy(active = show)
+          props.updateState(Option(updatedState))
+          updatedState
+        })
+      }
 
-      val popover = <.div(hoveredComponent, ^.className := "staff-deployment-adjustment-container",
-        <.div(^.className := "popover-trigger", ^.onClick ==> showPopover(true), trigger))
-      popover
+      <.div(hoveredComponent, ^.className := "staff-deployment-adjustment-container",
+        <.div(^.className := "popover-trigger", ^.onClick ==> showPopover(true), state.action))
     }).build
 }
