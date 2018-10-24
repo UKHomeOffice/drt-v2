@@ -8,9 +8,9 @@ import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
+import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
-import org.scalajs.dom.html.Div
 
 object TerminalDesksAndQueuesRow {
 
@@ -46,7 +46,8 @@ object TerminalDesksAndQueuesRow {
 
   val component = ScalaComponent.builder[Props]("TerminalDesksAndQueuesRow")
     .render_P((props) => {
-      val crunchMinutesByQueue = props.queueMinutes.filter(qm=> props.airportConfig.queues(props.terminalName).contains(qm.queueName)).map(qm => Tuple2(qm.queueName, qm)).toMap
+      val crunchMinutesByQueue = props.queueMinutes.filter(qm => props.airportConfig.queues(props.terminalName).contains(qm.queueName)).map(
+        qm => Tuple2(qm.queueName, qm)).toMap
       val queueTds = crunchMinutesByQueue.flatMap {
         case (qn, cm) =>
           val paxLoadTd = <.td(^.className := queueColour(qn), s"${Math.round(cm.paxLoad)}")
@@ -86,30 +87,18 @@ object TerminalDesksAndQueuesRow {
       val ragClass = ragStatus(totalRequired, available)
       val slotStart = SDate(props.minuteMillis)
       val slotEnd = slotStart.addMinutes(props.slotMinutes - 1)
-//      def downMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "-", "Staff decrease...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "-", props.loggedInUser)()
-//      def upMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "+", "Staff increase...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "+", props.loggedInUser)()
 
       def allowAdjustments: Boolean = props.viewMode.time.millisSinceEpoch > SDate.midnightThisMorning().millisSinceEpoch
 
-//      val adjustmentsDialogueOpen = props.maybeStaffAdjustmentState.isDefined && props.maybeStaffAdjustmentState.get.isApplicableToSlot(slotStart, slotEnd)
-      val minus: TagMod = props.maybeStaffAdjustmentState match {
-        case Some(state) if state.active && state.isApplicableToSlot(slotStart, slotEnd) =>
-          log.info("should be showing popover")
-          val popupState = state//StaffDeploymentsAdjustmentPopover.StaffDeploymentAdjustmentPopoverState(props.airportConfig.terminalNames, Option(props.terminalName), "-", "Staff decrease...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "-", props.loggedInUser)
-          StaffDeploymentsAdjustmentPopover(state)(StaffDeploymentsAdjustmentPopover.StaffDeploymentAdjustmentPopoverProps(_ => Option(popupState)))
-        case _ =>
-          log.info("should not be showing popover")
-          val popupState = StaffDeploymentsAdjustmentPopover.StaffDeploymentAdjustmentPopoverState(props.airportConfig.terminalNames, Option(props.terminalName), "-", "Staff decrease...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "-", props.loggedInUser)
-          <.div(^.className := "staff-deployment-adjustment-container", <.div(^.className := "popover-trigger", "-", ^.onClick --> props.updateStaffAdjustmentState(Option(popupState))))
-      }
-      val plus = <.div(^.className := "staff-deployment-adjustment-container", <.div(^.className := "popover-trigger", "+"))
+      val minus: TagMod = adjustmentLink(props, slotStart, slotEnd, "-", "decrease")
+      val plus: TagMod = adjustmentLink(props, slotStart, slotEnd, "+", "increase")
 
       val pcpTds = List(
         <.td(^.className := s"non-pcp", fixedPoints),
         <.td(^.className := s"non-pcp", movements),
         <.td(^.className := s"total-deployed $ragClass", totalRequired),
         <.td(^.className := s"total-deployed", totalDeployed),
-        if(allowAdjustments)
+        if (allowAdjustments)
           <.td(^.className := s"total-deployed staff-adjustments", ^.colSpan := 2, <.span(minus, <.span(^.className := "deployed", available), plus))
         else
           <.td(^.className := s"total-deployed staff-adjustments", ^.colSpan := 2, <.span(^.className := "deployed", available)))
@@ -120,6 +109,19 @@ object TerminalDesksAndQueuesRow {
     .componentDidMount(_ => Callback.log("TerminalDesksAndQueuesRow did mount"))
     .configure(Reusability.shouldComponentUpdate)
     .build
+
+  def adjustmentLink(props: Props, slotStart: SDateLike, slotEnd: SDateLike, action: String, label: String): TagMod = props.maybeStaffAdjustmentState match {
+    case Some(state) if state.active && state.isApplicableToSlot(slotStart, slotEnd) =>
+      StaffDeploymentsAdjustmentPopover(state)(StaffDeploymentsAdjustmentPopover.StaffDeploymentAdjustmentPopoverProps(
+        _ => Option(state)))
+    case _ =>
+      val popupState = adjustmentState(props, action, label)
+      <.div(^.className := "staff-deployment-adjustment-container", <.div(^.className := "popover-trigger", action, ^.onClick --> props.updateStaffAdjustmentState(Option(popupState))))
+  }
+
+  def adjustmentState(props: Props, action: String, label: String) = {
+    StaffDeploymentsAdjustmentPopover.StaffDeploymentAdjustmentPopoverState(props.airportConfig.terminalNames, Option(props.terminalName), action, "Staff " + label + "...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", action, props.loggedInUser)
+  }
 
   def apply(props: Props): VdomElement = component(props)
 }
