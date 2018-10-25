@@ -1,5 +1,6 @@
 package drt.client.components
 
+import drt.client.components.StaffDeploymentsAdjustmentPopover.{StaffDeploymentAdjustmentPopoverProps, StaffDeploymentAdjustmentPopoverState}
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType, queueActualsColour, queueColour}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions._
@@ -8,9 +9,10 @@ import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
-import japgolly.scalajs.react.vdom.html_<^
+import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
+import org.scalajs.dom.html
 
 object TerminalDesksAndQueuesRow {
 
@@ -35,8 +37,8 @@ object TerminalDesksAndQueuesRow {
                    viewMode: ViewMode,
                    loggedInUser: LoggedInUser,
                    slotMinutes: Int,
-                   maybeStaffAdjustmentState: Option[StaffDeploymentsAdjustmentPopover.StaffDeploymentAdjustmentPopoverState],
-                   updateStaffAdjustmentState: Option[StaffDeploymentsAdjustmentPopover.StaffDeploymentAdjustmentPopoverState] => Callback
+                   maybeStaffAdjustmentState: Option[StaffDeploymentAdjustmentPopoverState],
+                   updateStaffAdjustmentState: Option[StaffDeploymentAdjustmentPopoverState] => Callback
                   )
 
   implicit val propsReuse: Reusability[Props] = Reusability.by(p => {
@@ -90,8 +92,8 @@ object TerminalDesksAndQueuesRow {
 
       def allowAdjustments: Boolean = props.viewMode.time.millisSinceEpoch > SDate.midnightThisMorning().millisSinceEpoch
 
-      val minus: TagMod = adjustmentLink(props, slotStart, slotEnd, "-", "decrease")
-      val plus: TagMod = adjustmentLink(props, slotStart, slotEnd, "+", "increase")
+      val minus: TagMod = adjustmentLinkWithPopup(props, slotStart, slotEnd, "-", "decrease")
+      val plus: TagMod = adjustmentLink(props, "+", "increase", None)
 
       val pcpTds = List(
         <.td(^.className := s"non-pcp", fixedPoints),
@@ -110,17 +112,29 @@ object TerminalDesksAndQueuesRow {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def adjustmentLink(props: Props, slotStart: SDateLike, slotEnd: SDateLike, action: String, label: String): TagMod = props.maybeStaffAdjustmentState match {
+  def adjustmentLinkWithPopup(props: Props, slotStart: SDateLike, slotEnd: SDateLike, action: String, label: String): TagMod = props.maybeStaffAdjustmentState match {
     case Some(state) if state.active && state.isApplicableToSlot(slotStart, slotEnd) =>
-      StaffDeploymentsAdjustmentPopover(state)(StaffDeploymentsAdjustmentPopover.StaffDeploymentAdjustmentPopoverProps(
-        _ => Option(state)))
+      val popup: TagMod = StaffDeploymentsAdjustmentPopover(state)(StaffDeploymentAdjustmentPopoverProps(_ => Option(state)))
+      adjustmentLink(props, action, label, Option(popup))
+    case _ =>
+      adjustmentLink(props, action, label, None)
+  }
+
+  def adjustmentLink(props: Props, action: String, label: String, maybePopup: Option[TagMod]): TagOf[html.Div] = maybePopup match {
+    case Some(popup) =>
+      <.div(popup, ^.className := "staff-deployment-adjustment-container", <.div(^.className := "popover-trigger", action))
     case _ =>
       val popupState = adjustmentState(props, action, label)
       <.div(^.className := "staff-deployment-adjustment-container", <.div(^.className := "popover-trigger", action, ^.onClick --> props.updateStaffAdjustmentState(Option(popupState))))
   }
 
-  def adjustmentState(props: Props, action: String, label: String) = {
-    StaffDeploymentsAdjustmentPopover.StaffDeploymentAdjustmentPopoverState(props.airportConfig.terminalNames, Option(props.terminalName), action, "Staff " + label + "...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", action, props.loggedInUser)
+  def adjustmentState(props: Props, action: String, label: String): StaffDeploymentAdjustmentPopoverState = {
+    val numStaff = action match {
+      case "-" => -1
+      case "+" => 1
+      case _ => 0
+    }
+    StaffDeploymentsAdjustmentPopover.StaffDeploymentAdjustmentPopoverState(props.airportConfig.terminalNames, Option(props.terminalName), action, "Staff " + label + "...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", action, numStaff, props.loggedInUser)
   }
 
   def apply(props: Props): VdomElement = component(props)

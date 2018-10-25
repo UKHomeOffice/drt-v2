@@ -54,7 +54,8 @@ object StaffDeploymentsAdjustmentPopover {
               startDate: SDateLike,
               endDate: SDateLike,
               popoverPosition: String,
-              action: String = "-",
+              action: String,
+              numberOfStaff: Int,
               loggedInUser: LoggedInUser): StaffDeploymentAdjustmentPopoverState =
       StaffDeploymentAdjustmentPopoverState(
         active = true,
@@ -68,7 +69,7 @@ object StaffDeploymentsAdjustmentPopover {
         startTimeMinutes = roundToNearest(5)(startDate.getMinutes()),
         endTimeHours = endDate.getHours(),
         endTimeMinutes = roundToNearest(5)(endDate.getMinutes()),
-        numberOfStaff = "1",
+        numberOfStaff = numberOfStaff.toString,
         loggedInUser = loggedInUser
       )
   }
@@ -97,12 +98,16 @@ object StaffDeploymentsAdjustmentPopover {
                           applyRounding: Int => Int) = {
         <.select(
           ^.defaultValue := applyRounding(defaultValue),
-          ^.onChange ==> ((e: ReactEventFromInput) => scope.modState(callback(e.target.value))
+          ^.onChange ==> ((e: ReactEventFromInput) => scope.modState(s => {
+            val updatedState = callback(e.target.value)(s)
+            props.updateState(Option(updatedState))
+            updatedState
+          })
             ),
           range.map(x => <.option(^.value := x, f"$x%02d")).toTagMod)
       }
 
-      def trySaveMovement = (e: ReactEventFromInput) => {
+      def trySaveMovement(): Unit = {
         val startTime: String = f"${state.startTimeHours}%02d:${state.startTimeMinutes}%02d"
         val endTime: String = f"${state.endTimeHours}%02d:${state.endTimeMinutes}%02d"
         val numberOfStaff: String = s"${state.action}${state.numberOfStaff.toString}"
@@ -113,9 +118,8 @@ object StaffDeploymentsAdjustmentPopover {
             val movementsToAdd = for (movement <- StaffMovements.assignmentsToMovements(Seq(movement))) yield movement
             SPACircuit.dispatch(AddStaffMovements(movementsToAdd))
             GoogleEventTracker.sendEvent(state.terminalName, "Add StaffMovement", movement.copy(createdBy = None).toString)
-            scope.modState(_.copy(active = false))
-          case Failure(_) =>
-            scope.modState(_.copy(active = true))
+            killPopover
+          case _ =>
         }
       }
 
@@ -125,7 +129,11 @@ object StaffDeploymentsAdjustmentPopover {
                         placeHolder: String = ""): VdomTagOf[html.Div] = {
         popoverFormRow(labelText, <.input.text(^.value := value, ^.placeholder := state.reasonPlaceholder, ^.onChange ==> ((e: ReactEventFromInput) => {
           val newValue: String = e.target.value
-          scope.modState(callback(newValue))
+          scope.modState(s => {
+            val updatedState = callback(newValue)(s)
+            props.updateState(Option(updatedState))
+            updatedState
+          })
         })))
       }
 
@@ -151,38 +159,38 @@ object StaffDeploymentsAdjustmentPopover {
         )
       }
 
-      def hoveredComponent: TagMod = if (state.active) {
-        <.div(<.div(^.className := "popover-overlay", ^.onClick ==> showPopover(false)),
-          <.div(^.className := "container", ^.onClick ==> ((e: ReactEvent) => Callback(e.stopPropagation())), ^.key := "StaffAdjustments",
-            labelledInput("Reason", state.reason, (v: String) => (s: StaffDeploymentAdjustmentPopoverState) => s.copy(reason = v)),
-            timeSelector("Start time", state.startTimeHours, state.startTimeMinutes,
-              (v: String) => (s: StaffDeploymentAdjustmentPopoverState) => s.copy(startTimeHours = v.toInt),
-              (v: String) => (s: StaffDeploymentAdjustmentPopoverState) => s.copy(startTimeMinutes = v.toInt)),
-            timeSelector("End time", state.endTimeHours, state.endTimeMinutes,
-              (v: String) => (s: StaffDeploymentAdjustmentPopoverState) => s.copy(endTimeHours = v.toInt),
-              (v: String) => (s: StaffDeploymentAdjustmentPopoverState) => s.copy(endTimeMinutes = v.toInt)),
-            popoverFormRow("Number of staff", <.input.text(^.value := state.numberOfStaff.toString, ^.onChange ==> ((e: ReactEventFromInput) => {
-              val newValue = e.target.value
-              scope.modState((s: StaffDeploymentAdjustmentPopoverState) => s.copy(numberOfStaff = newValue))
-            }))),
-            <.div(^.className := "form-group-row",
-              <.div(^.className := "col-sm-4"),
-              <.div(^.className := "col-sm-6 btn-toolbar",
-                <.button("Save", ^.className := "btn btn-primary", ^.onClick ==> trySaveMovement),
-                <.button("Cancel", ^.className := "btn btn-default", ^.onClick ==> showPopover(false))))))
-      } else {
-        ""
-      }
+      def hoveredComponent: TagMod = <.div(<.div(^.className := "popover-overlay", ^.onClick --> Callback(killPopover())),
+        <.div(^.className := "container", ^.onClick ==> ((e: ReactEvent) => Callback(e.stopPropagation())), ^.key := "StaffAdjustments",
+          labelledInput("Reason", state.reason, (v: String) => (s: StaffDeploymentAdjustmentPopoverState) => s.copy(reason = v)),
+          timeSelector("Start time", state.startTimeHours, state.startTimeMinutes,
+            (v: String) => (s: StaffDeploymentAdjustmentPopoverState) => s.copy(startTimeHours = v.toInt),
+            (v: String) => (s: StaffDeploymentAdjustmentPopoverState) => s.copy(startTimeMinutes = v.toInt)),
+          timeSelector("End time", state.endTimeHours, state.endTimeMinutes,
+            (v: String) => (s: StaffDeploymentAdjustmentPopoverState) => s.copy(endTimeHours = v.toInt),
+            (v: String) => (s: StaffDeploymentAdjustmentPopoverState) => s.copy(endTimeMinutes = v.toInt)),
+          popoverFormRow("Number of staff", <.input.text(^.value := state.numberOfStaff.toString, ^.onChange ==> ((e: ReactEventFromInput) => {
+            val newValue = e.target.value
+            scope.modState(s => {
+              val updatedState = s.copy(numberOfStaff = newValue)
+              props.updateState(Option(updatedState))
+              updatedState
+            })
+          }))),
+          <.div(^.className := "form-group-row",
+            <.div(^.className := "col-sm-4"),
+            <.div(^.className := "col-sm-6 btn-toolbar",
+              <.button("Save", ^.className := "btn btn-primary", ^.onClick --> Callback(trySaveMovement())),
+              <.button("Cancel", ^.className := "btn btn-default", ^.onClick --> Callback(killPopover()))))))
 
-      def showPopover(show: Boolean) = (_: ReactEventFromInput) => {
-        scope.modState(existingState => {
-          val updatedState = existingState.copy(active = show)
+      def killPopover(): Unit = {
+        scope.modState(s => {
+          val updatedState = s.copy(active = false)
           props.updateState(Option(updatedState))
           updatedState
         })
       }
 
-      <.div(hoveredComponent, ^.className := "staff-deployment-adjustment-container",
-        <.div(^.className := "popover-trigger", ^.onClick ==> showPopover(true), state.action))
+//      <.div(hoveredComponent, ^.className := "staff-deployment-adjustment-container", <.div(^.className := "popover-trigger", ^.onClick --> Callback(killPopover()), "-"))
+      <.div(hoveredComponent)
     }).build
 }
