@@ -122,37 +122,6 @@ trait ImplicitTimeoutProvider {
   implicit val timeout: Timeout = Timeout(1 second)
 }
 
-@Singleton
-class NoCacheFilter @Inject()(
-                               implicit override val mat: Materializer,
-                               exec: ExecutionContext) extends Filter {
-  val log: Logger = LoggerFactory.getLogger(getClass)
-  val rootRegex: Regex = "/v2/.{3}/live".r
-
-  override def apply(requestHeaderToFutureResult: RequestHeader => Future[Result])
-                    (rh: RequestHeader): Future[Result] = {
-    requestHeaderToFutureResult(rh).map { result =>
-      rh.uri match {
-        case rootRegex() =>
-          result.withHeaders(HeaderNames.CACHE_CONTROL -> "no-cache")
-        case _ =>
-          result
-      }
-    }
-  }
-}
-
-@Singleton
-class SecurityHeadersFilter @Inject()(
-                                       implicit override val mat: Materializer,
-                                       exec: ExecutionContext) extends Filter {
-
-  override def apply(requestHeaderToFutureResult: RequestHeader => Future[Result])
-                    (rh: RequestHeader): Future[Result] = requestHeaderToFutureResult(rh)
-    .map(_.withHeaders("X-Frame-Options" -> "deny"))
-}
-
-
 trait UserRoleProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
