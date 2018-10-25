@@ -23,7 +23,6 @@ class NoCacheFilter @Inject()(
     requestHeaderToFutureResult(rh).map { result =>
       rh.uri match {
         case rootRegex() =>
-          log.info(s"NoCacheFilter: no-cache")
           result.withHeaders(HeaderNames.CACHE_CONTROL -> "no-cache")
         case _ =>
           result
