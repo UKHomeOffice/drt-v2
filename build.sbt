@@ -86,6 +86,7 @@ lazy val server = (project in file("server"))
   javaOptions in Test += "-Duser.timezone=UTC",
   javaOptions in Runtime += "-Duser.timezone=UTC",
   libraryDependencies ++= Settings.jvmDependencies.value,
+  libraryDependencies += specs2 % Test,
   libraryDependencies += guice,
   dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-core" % "2.8.7",
   dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-databind" % "2.8.7",
