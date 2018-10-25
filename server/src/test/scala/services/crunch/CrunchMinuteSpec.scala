@@ -103,7 +103,7 @@ class CrunchMinuteSpec extends CrunchTestLike {
 
       val expected = oldCm.values.toSet ++ newCm.values.toSet
 
-      updatedCm === expected
+      updatedCm.toList === expected.toList
     }
   }
 }
