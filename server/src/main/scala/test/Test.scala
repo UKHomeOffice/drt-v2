@@ -1,27 +1,27 @@
-package controllers
+package test.controllers
+
+import javax.inject.{Inject, Singleton}
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.Materializer
 import akka.util.Timeout
-import javax.inject.{Inject, Singleton}
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
-import passengersplits.parsing.VoyageManifestParser.FlightPassengerInfoProtocol._
 import drt.shared.{Arrival, LiveFeedSource, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
+import passengersplits.parsing.VoyageManifestParser.FlightPassengerInfoProtocol._
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
-import play.api.mvc.{Action, Controller, InjectedController, Session}
+import play.api.mvc.{InjectedController, Session}
 import play.api.{Configuration, Environment}
 import services.SDate
 import spray.json._
-
-import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration._
-import scala.language.postfixOps
+import test.MockRoles.MockRolesProtocol._
 import test.{MockRoles, ResetData}
 import test.TestActors.ResetActor
-import test.MockRoles._
-import test.MockRoles.MockRolesProtocol._
+
+import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
+import scala.language.postfixOps
 
 @Singleton
 class Test @Inject()(implicit val config: Configuration,
@@ -121,9 +121,7 @@ class Test @Inject()(implicit val config: Configuration,
       }
   }
 
-  def saveMockRoles(roles: MockRoles) = {
-    mockRolesTestActor.map(a => a ! roles)
-  }
+  def saveMockRoles(roles: MockRoles) = mockRolesTestActor.map(a => a ! roles)
 
   def setMockRoles() = Action {
     implicit request =>
