@@ -53,19 +53,39 @@ object CSVData {
     List(headings, totalPax, queues, totalWL).mkString(lineEnding)
   }
 
+  val timeslotsOnBSTToUTCChangeDay = 100
+  val timeslotsOnRegualarDay = 96
+
+  def rangeContainsBSTToUTCChange[A](daysOfForecastTimesSlots: Seq[(MillisSinceEpoch, Seq[A])]) =
+    daysOfForecastTimesSlots.exists(_._2.size == timeslotsOnBSTToUTCChangeDay)
+
+  def transposeIrregular[A](xs: List[List[A]]): List[List[A]] = xs.filter(_.nonEmpty) match {
+    case Nil => Nil
+    case ys: List[List[A]] => ys.map(_.head) :: transposeIrregular(ys.map(_.tail))
+  }
+
+  def handleBSTToUTC(forecastPeriodDays: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]]) = {
+    val epochToMaybeSlots: Map[MillisSinceEpoch, Seq[Option[ForecastTimeSlot]]] = forecastPeriodDays.mapValues(_.map(Option(_)))
+    if (rangeContainsBSTToUTCChange(epochToMaybeSlots.toList)) {
+      epochToMaybeSlots.mapValues{
+        case maybeTimeSlots if maybeTimeSlots.length == 96 =>
+          maybeTimeSlots.take(8).toList ::: List(None, None, None, None) ::: maybeTimeSlots.drop(8).toList
+        case m => m
+      }
+    } else epochToMaybeSlots
+  }
+
+  def rowHeadingsForPeriod(forecastPeriod: ForecastPeriod): Seq[String] =
+    forecastPeriod.days.toList.find(_._2.length == timeslotsOnBSTToUTCChangeDay) match {
+    case Some((day, slots)) => slots.map(s => SDate(s.startMillis, europeLondonTimeZone).toHoursAndMinutes())
+    case None => forecastPeriod.days.head._2.toList.map(s => SDate(s.startMillis, europeLondonTimeZone).toHoursAndMinutes())
+  }
+
   def forecastPeriodToCsv(forecastPeriod: ForecastPeriod): String = {
     val sortedDays: Seq[(MillisSinceEpoch, Seq[ForecastTimeSlot])] = forecastPeriod.days.toList.sortBy(_._1)
     log.info(s"Forecast CSV Export: Days in period: ${sortedDays.length}")
-    val byTimeSlot: Iterable[Iterable[ForecastTimeSlot]] = sortedDays.filter {
-      case (millis, forecastTimeSlots) if forecastTimeSlots.length == 96 =>
-        log.info(s"Forecast CSV Export: day ${SDate(millis, europeLondonTimeZone).toLocalDateTimeString()}" +
-          s" first:${SDate(forecastTimeSlots.head.startMillis, europeLondonTimeZone).toLocalDateTimeString()}" +
-          s" last:${SDate(forecastTimeSlots.last.startMillis, europeLondonTimeZone).toLocalDateTimeString()}")
-        true
-      case (millis, forecastTimeSlots) =>
-        log.error(s"Forecast CSV Export: error for ${SDate(millis, europeLondonTimeZone).toLocalDateTimeString()} got ${forecastTimeSlots.length} days")
-        false
-    }.transpose(_._2.take(96))
+
+    val byTimeSlot = transposeIrregular(handleBSTToUTC(forecastPeriod.days).toList.sortBy(_._1).map(_._2.toList))
 
     val headings = "," + sortedDays.map {
       case (day, _) =>
@@ -76,13 +96,17 @@ object CSVData {
         columnPrefix + "available," + columnPrefix + "required," + columnPrefix + "difference"
     }.mkString(",")
 
-    val data = byTimeSlot.map(row => {
-      val localHoursMinutes = SDate(row.head.startMillis, europeLondonTimeZone).toHoursAndMinutes()
-      s"$localHoursMinutes" + "," +
-        row.map(col => {
+    val data = byTimeSlot.zip(rowHeadingsForPeriod(forecastPeriod)).map{
+
+      case (row, heading) =>
+      s"$heading" + "," +
+        row.map{
+          case Some(col) =>
           s"${col.available},${col.required},${col.available - col.required}"
-        }).mkString(",")
-    }).mkString(lineEnding)
+          case None =>
+            s",,"
+        }.mkString(",")
+    }.mkString(lineEnding)
 
     List(headings, data).mkString(lineEnding)
   }
@@ -201,6 +225,7 @@ object CSVData {
 
   def flightsWithSplitsToCSVIncludingAPIDataWithHeadings(flightsWithSplits: List[ApiFlightWithSplits]): String =
     flightsWithSplitsToCSVHeadings + "," + actualAPIHeadings(flightsWithSplits) + lineEnding + flightsWithSplitsToCSV(flightsWithSplits)
+
   def flightsWithSplitsToCSVHeadings: String = {
     val headings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax," +
       headingsForSplitSource(queueNames, "API") + "," +
