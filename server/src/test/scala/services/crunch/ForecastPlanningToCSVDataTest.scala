@@ -120,7 +120,7 @@ class ForecastPlanningToCSVDataTest extends Specification {
   }
 
   "Given a ForecastPeriod which includes a period that spans a timezone change from BST to UTC " +
-    "Then regular days should have None for the second 1am time period on the timezone change date" >> {
+    "Then row headings should include 2 entries for 1am" >> {
 
     val forecastPeriod = forecastPeriodStartingOnBSTToUTCChange(2)
 
@@ -132,20 +132,7 @@ class ForecastPlanningToCSVDataTest extends Specification {
       "01:00", "01:15", "01:30", "01:45"
     )
     result === expected
-  }
-
-
-  "Given a ForecastPeriod which includes a period that spans a timezone change from BST to UTC " +
-    "Then then row headings should include 1am twice" >> {
-
-    val forecastPeriodDays: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = forecastPeriodStartingOnBSTToUTCChange(2).days
-
-    val result: Seq[Int] = CSVData.handleBSTToUTC(forecastPeriodDays).toList.map(_._2.length)
-
-    val expected = 100 :: 100 :: Nil
-
-    result === expected
-  }
+  } 
 
   "Given a ForecastPeriod which includes a period that spans a timezone change from BST to UTC " +
     "Then I should get a CSV with two rows for 1am with empty values for all days other than the timezone change day" >> {
