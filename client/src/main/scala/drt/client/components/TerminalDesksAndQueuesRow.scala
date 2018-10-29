@@ -1,10 +1,11 @@
 package drt.client.components
 
+import drt.client.actions.Actions.UpdateStaffAdjustmentPopOver
 import drt.client.components.StaffDeploymentsAdjustmentPopover.{StaffDeploymentAdjustmentPopoverProps, StaffDeploymentAdjustmentPopoverState}
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType, queueActualsColour, queueColour}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions._
-import drt.client.services.ViewMode
+import drt.client.services.{SPACircuit, ViewMode}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared.FlightsApi.TerminalName
 import drt.shared._
@@ -13,6 +14,8 @@ import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
 import org.scalajs.dom.html
+
+import scala.scalajs.js
 
 object TerminalDesksAndQueuesRow {
 
@@ -37,14 +40,12 @@ object TerminalDesksAndQueuesRow {
                    viewMode: ViewMode,
                    loggedInUser: LoggedInUser,
                    slotMinutes: Int,
-                   maybeStaffAdjustmentState: Option[StaffDeploymentAdjustmentPopoverState],
-                   updateStaffAdjustmentState: Option[StaffDeploymentAdjustmentPopoverState] => Callback
+                   maybeStaffAdjustmentState: Option[StaffDeploymentAdjustmentPopoverState]
                   )
 
-  implicit val propsReuse: Reusability[Props] = Reusability.by(p => {
-    log.info(s"calcing propsReuse (${p.maybeStaffAdjustmentState.isDefined})")
+  implicit val propsReuse: Reusability[Props] = Reusability.by(p =>
     (p.queueMinutes.hashCode(), p.staffMinute.hashCode(), p.showActuals, p.viewType.hashCode(), p.viewMode.hashCode(), p.maybeStaffAdjustmentState.hashCode())
-  })
+  )
 
   val component = ScalaComponent.builder[Props]("TerminalDesksAndQueuesRow")
     .render_P((props) => {
@@ -125,7 +126,7 @@ object TerminalDesksAndQueuesRow {
       <.div(popup, ^.className := "staff-deployment-adjustment-container", <.div(^.className := "popover-trigger", action))
     case _ =>
       val popupState = adjustmentState(props, action, label)
-      <.div(^.className := "staff-deployment-adjustment-container", <.div(^.className := "popover-trigger", action, ^.onClick --> props.updateStaffAdjustmentState(Option(popupState))))
+      <.div(^.className := "staff-deployment-adjustment-container", <.div(^.className := "popover-trigger", action, ^.onClick --> Callback(SPACircuit.dispatch(UpdateStaffAdjustmentPopOver(Option(popupState))))))
   }
 
   def adjustmentState(props: Props, action: String, label: String): StaffDeploymentAdjustmentPopoverState = {

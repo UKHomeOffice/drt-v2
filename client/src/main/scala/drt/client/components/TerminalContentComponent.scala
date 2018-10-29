@@ -5,6 +5,7 @@ import diode.react.{ModelProxy, ReactConnectProxy}
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
 import drt.client.components.FlightComponents.paxComp
+import drt.client.components.StaffDeploymentsAdjustmentPopover.StaffDeploymentAdjustmentPopoverState
 import drt.client.logger.log
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -37,7 +38,8 @@ object TerminalContentComponent {
                     showActuals: Boolean,
                     viewMode: ViewMode,
                     loggedInUserPot: Pot[LoggedInUser],
-                    minuteTicker: Int
+                    minuteTicker: Int,
+                    maybeStaffAdjustmentsPopoverState: Option[StaffDeploymentAdjustmentPopoverState]
                   ) {
     lazy val hash: (Int, Int) = {
       val depsHash = crunchStatePot.map(
@@ -156,7 +158,8 @@ object TerminalContentComponent {
                         props.terminalPageTab,
                         props.showActuals,
                         props.viewMode,
-                        loggedInUser
+                        loggedInUser,
+                        props.maybeStaffAdjustmentsPopoverState
                       )
                     )
                   })

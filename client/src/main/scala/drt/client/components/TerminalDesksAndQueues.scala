@@ -12,8 +12,9 @@ import drt.shared.FlightsApi.QueueName
 import drt.shared._
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{BackendScope, Callback, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom
+import org.scalajs.dom.html.Div
 import org.scalajs.dom.raw.Node
 import org.scalajs.dom.{DOMList, Element, Event, NodeListOf}
 
@@ -36,10 +37,11 @@ object TerminalDesksAndQueues {
                    terminalPageTab: TerminalPageTabLoc,
                    showActuals: Boolean,
                    viewMode: ViewMode,
-                   loggedInUser: LoggedInUser
+                   loggedInUser: LoggedInUser,
+                   maybeStaffAdjustmentsPopoverState: Option[StaffDeploymentAdjustmentPopoverState]
                   )
 
-  sealed trait ViewType{
+  sealed trait ViewType {
     val queryParamsValue: String
   }
 
@@ -51,15 +53,10 @@ object TerminalDesksAndQueues {
     override val queryParamsValue: String = "deps"
   }
 
-  case class State(showActuals: Boolean,
-                   viewType: ViewType,
-                   maybeStaffAdjustmentsPopoverState: Option[StaffDeploymentAdjustmentPopoverState])
+  case class State(showActuals: Boolean, viewType: ViewType)
 
-  val component = ScalaComponent.builder[Props]("Loader")
-    .initialStateFromProps(p => {
-      State(showActuals = p.airportConfig.hasActualDeskStats && p.showActuals, p.terminalPageTab.viewType, None)
-    })
-    .renderPS((scope, props, state) => {
+  class Backend(bs: BackendScope[Props, State]) {
+    def render(props: Props, state: State): VdomTagOf[Div] = {
       val slotMinutes = 15
 
       def groupCrunchMinutesBySlotSize = CrunchApi.groupCrunchMinutesByX(slotMinutes) _
@@ -142,7 +139,7 @@ object TerminalDesksAndQueues {
 
         SPACircuit.dispatch(UpdateShowActualDesksAndQueues(newValue))
 
-        scope.modState(_.copy(showActuals = newValue))
+        bs.modState(_.copy(showActuals = newValue))
       }
 
       def toggleViewType(newViewType: ViewType) = (e: ReactEventFromInput) => {
@@ -206,10 +203,6 @@ object TerminalDesksAndQueues {
             ^.id := "sticky-body",
             terminalCrunchMinutes.map {
               case (millis, minutes) =>
-                val updateDate: Option[StaffDeploymentAdjustmentPopoverState] => Callback = (maybeNewState: Option[StaffDeploymentAdjustmentPopoverState]) => {
-                  log.info(s"attempting to update state")
-                  scope.modState(_.copy(maybeStaffAdjustmentsPopoverState = maybeNewState))
-                }
                 val rowProps = TerminalDesksAndQueuesRow.Props(
                   millis,
                   minutes,
@@ -222,13 +215,22 @@ object TerminalDesksAndQueues {
                   props.viewMode,
                   props.loggedInUser,
                   slotMinutes,
-                  state.maybeStaffAdjustmentsPopoverState,
-                  updateDate
+                  props.maybeStaffAdjustmentsPopoverState
                 )
                 TerminalDesksAndQueuesRow(rowProps)
             }.toTagMod))
       )
+    }
+
+
+  }
+
+  val component = ScalaComponent.builder[Props]("Loader")
+    .initialStateFromProps(p => {
+      log.info(s"creating new state")
+      State(showActuals = p.airportConfig.hasActualDeskStats && p.showActuals, p.terminalPageTab.viewType)
     })
+    .renderBackend[Backend]
     .componentDidMount(_ => StickyTableHeader("[data-sticky]"))
     .build
 
@@ -249,6 +251,7 @@ object TerminalDesksAndQueues {
 
     override def apply(idx: Int): T = nodes(idx)
   }
+
 }
 
 object StickyTableHeader {
@@ -261,7 +264,11 @@ object StickyTableHeader {
     }
   }
 
-  def handleStickyClass(top: Double, bottom: Double, mainWidth: Double, elements: NodeListSeq[Element], toStick: Element): Unit = {
+  def handleStickyClass(top: Double,
+                        bottom: Double,
+                        mainWidth: Double,
+                        elements: NodeListSeq[Element],
+                        toStick: Element): Unit = {
     elements.foreach(sticky => {
       val stickyEnter = toIntOrElse(sticky.getAttribute("data-sticky-initial"), 0)
       val stickyExit = bottom.round.toInt

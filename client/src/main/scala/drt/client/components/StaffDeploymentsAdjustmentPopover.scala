@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.client.actions.Actions.AddStaffMovements
+import drt.client.actions.Actions.{AddStaffMovements, UpdateStaffAdjustmentPopOver}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -12,7 +12,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html
 import org.scalajs.dom.html.{Div, Select}
 
-import scala.util.{Failure, Success}
+import scala.util.Success
 
 object StaffDeploymentsAdjustmentPopover {
 
@@ -118,7 +118,7 @@ object StaffDeploymentsAdjustmentPopover {
             val movementsToAdd = for (movement <- StaffMovements.assignmentsToMovements(Seq(movement))) yield movement
             SPACircuit.dispatch(AddStaffMovements(movementsToAdd))
             GoogleEventTracker.sendEvent(state.terminalName, "Add StaffMovement", movement.copy(createdBy = None).toString)
-            killPopover
+            killPopover()
           case _ =>
         }
       }
@@ -159,7 +159,12 @@ object StaffDeploymentsAdjustmentPopover {
         )
       }
 
-      def hoveredComponent: TagMod = <.div(<.div(^.className := "popover-overlay", ^.onClick --> Callback(killPopover())),
+      def killPopover(): Unit = {
+        val updatedState = state.copy(active = false)
+        SPACircuit.dispatch(UpdateStaffAdjustmentPopOver(Option(updatedState)))
+      }
+
+      <.div(<.div(^.className := "popover-overlay", ^.onClick --> Callback(killPopover())),
         <.div(^.className := "container", ^.onClick ==> ((e: ReactEvent) => Callback(e.stopPropagation())), ^.key := "StaffAdjustments",
           labelledInput("Reason", state.reason, (v: String) => (s: StaffDeploymentAdjustmentPopoverState) => s.copy(reason = v)),
           timeSelector("Start time", state.startTimeHours, state.startTimeMinutes,
@@ -181,16 +186,5 @@ object StaffDeploymentsAdjustmentPopover {
             <.div(^.className := "col-sm-6 btn-toolbar",
               <.button("Save", ^.className := "btn btn-primary", ^.onClick --> Callback(trySaveMovement())),
               <.button("Cancel", ^.className := "btn btn-default", ^.onClick --> Callback(killPopover()))))))
-
-      def killPopover(): Unit = {
-        scope.modState(s => {
-          val updatedState = s.copy(active = false)
-          props.updateState(Option(updatedState))
-          updatedState
-        })
-      }
-
-//      <.div(hoveredComponent, ^.className := "staff-deployment-adjustment-container", <.div(^.className := "popover-trigger", ^.onClick --> Callback(killPopover()), "-"))
-      <.div(hoveredComponent)
     }).build
 }

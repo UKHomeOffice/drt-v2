@@ -3,6 +3,7 @@ package drt.client.components
 import diode.UseValueEq
 import diode.data.{Pending, Pot}
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
+import drt.client.components.StaffDeploymentsAdjustmentPopover.StaffDeploymentAdjustmentPopoverState
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -33,7 +34,8 @@ object TerminalComponent {
                             showActuals: Boolean,
                             loggedInUserPot: Pot[LoggedInUser],
                             viewMode: ViewMode,
-                            minuteTicker: Int
+                            minuteTicker: Int,
+                            maybeStaffAdjustmentsPopoverState: Option[StaffDeploymentAdjustmentPopoverState]
                           ) extends UseValueEq
 
   val component = ScalaComponent.builder[Props]("Terminal")
@@ -51,7 +53,8 @@ object TerminalComponent {
         model.showActualIfAvailable,
         model.loggedInUserPot,
         model.viewMode,
-        model.minuteTicker
+        model.minuteTicker,
+        model.staffDeploymentAdjustmentPopoverState
       ))
       modelRCP(modelMP => {
         val model = modelMP()
@@ -73,7 +76,8 @@ object TerminalComponent {
             model.showActuals,
             model.viewMode,
             model.loggedInUserPot,
-            model.minuteTicker
+            model.minuteTicker,
+            model.maybeStaffAdjustmentsPopoverState
           )
 
           val currentClass = if (props.terminalPageTab.mode == "current") "active" else ""
