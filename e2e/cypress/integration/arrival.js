@@ -1,41 +1,56 @@
-describe('Arrivals page', () => {
+let moment = require('moment-timezone');
+require('moment/locale/en-gb');
+moment.locale("en-gb");
 
-  const currentDateTime = new Date();
-  const schDT = currentDateTime.toISOString().split("T")[0];
-  const currentMillis = currentDateTime.getTime();
+describe('Arrivals page', () => {
+  const schDateString = moment().format("YYYY-MM-DD");
+
+  const schTimeString = "00:55:00"
+  const estTimeString = "01:05:00"
+  const actTimeString = "01:07:00"
+  const estChoxTimeString = "01:11:00"
+  const actChoxTimeString = "01:12:00"
+
+  const schString = schDateString + "T" + schTimeString + "Z";
+  const estString = schDateString + "T" + estTimeString + "Z";
+  const actString = schDateString + "T" + actTimeString + "Z";
+  const estChoxString = schDateString + "T" + estChoxTimeString + "Z";
+  const actChoxString = schDateString + "T" + actChoxTimeString + "Z";
+
+  const millis = moment(schString).unix() * 1000;
+
+  const flightPayload = {
+    "Operator": "TestAir",
+    "Status": "On Chocks",
+    "EstDT": estString,
+    "ActDT": actString,
+    "EstChoxDT": estChoxString,
+    "ActChoxDT": actChoxString,
+    "Gate": "46",
+    "Stand": "44R",
+    "MaxPax": 78,
+    "ActPax": 51,
+    "TranPax": 0,
+    "RunwayID": "05L",
+    "BaggageReclaimId": "05",
+    "FlightID": 14710007,
+    "AirportID": "MAN",
+    "Terminal": "T1",
+    "ICAO": "TS123",
+    "IATA": "TS123",
+    "Origin": "AMS",
+    "SchDT": schString
+  }
 
   function addFlight() {
     setRoles(["test"]);
-    cy.request('POST',
-      '/v2/test/live/test/arrival',
-      {
-        "Operator": "TestAir",
-        "Status": "On Chocks",
-        "EstDT": schDT + "T00:55:00Z",
-        "ActDT": schDT + "T00:55:00Z",
-        "EstChoxDT": schDT + "T01:01:00Z",
-        "ActChoxDT": schDT + "T01:05:00Z",
-        "Gate": "46",
-        "Stand": "44R",
-        "MaxPax": 78,
-        "ActPax": 51,
-        "TranPax": 0,
-        "RunwayID": "05L",
-        "BaggageReclaimId": "05",
-        "FlightID": 14710007,
-        "AirportID": "MAN",
-        "Terminal": "T1",
-        "ICAO": "TS123",
-        "IATA": "TS123",
-        "Origin": "AMS",
-        "SchDT": schDT + "T00:15:00Z"
-      });
+    cy.request('POST', '/v2/test/live/test/arrival', flightPayload);
   }
 
   function loadManifestFixture() {
     setRoles(["test"]);
     cy.request('POST', '/v2/test/live/test/manifest', manifest);
-    cy.request('GET', '/v2/test/live/export/arrivals/' + currentMillis + '/T1?startHour=0&endHour=24');
+    cy.request('GET', '/v2/test/live/export/arrivals/' + millis + '/T1?startHour=0&endHour=24');
     cy.get('.pax-api');
   }
 
@@ -61,11 +76,13 @@ describe('Arrivals page', () => {
     "DeparturePortCountryCode": "MAR",
     "VoyageNumber": "0123",
     "VoyageKey": "key",
-    "ScheduledDateOfDeparture": schDT,
-    "ScheduledDateOfArrival": schDT,
+    "ScheduledDateOfDeparture": schDateString,
+    "ScheduledDateOfArrival": schDateString,
     "CarrierType": "AIR",
     "CarrierCode": "TS",
     "ScheduledTimeOfDeparture": "06:30:00",
+    "ScheduledTimeOfArrival": schTimeString,
+    "FileId": "fileID",
     "PassengerList": [
       {
         "DocumentIssuingCountryCode": "GBR",
@@ -109,23 +126,28 @@ describe('Arrivals page', () => {
         "PoavKey": "3",
         "NationalityCountryCode": "AUS"
       }
-    ],
-    "ScheduledTimeOfArrival": "00:15:00",
-    "FileId": "fileID"
+    ]
   };
+
+  const schTimeLocal = moment(schString).tz("Europe/London").format("HH:mm")
+  const estTimeLocal = moment(estString).tz("Europe/London").format("HH:mm")
+  const actTimeLocal = moment(actString).tz("Europe/London").format("HH:mm")
+  const estChoxTimeLocal = moment(estChoxString).tz("Europe/London").format("HH:mm")
+  const actChoxTimeLocal = moment(actChoxString).tz("Europe/London").format("HH:mm")
+  const pcpTimeLocal = moment(actChoxString).add(13, "minutes").tz("Europe/London").format("HH:mm")
 
   const csvWithNoApiSplits = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est " +
     "Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical " +
     "EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal " +
     "Average Non-EEA,Terminal Average Fast Track" + "\n" +
-    "TS0123,TS0123,AMS,46/44R,On Chocks," + schDT + ",01:15,01:55,01:55,02:01,02:05,02:18,51,51,17,0,34,,,,,,13,37,1,";
+    "TS0123,TS0123,AMS,46/44R,On Chocks," + schDateString + "," + schTimeLocal + "," + estTimeLocal + "," + actTimeLocal + "," + estChoxTimeLocal + "," + actChoxTimeLocal + "," + pcpTimeLocal + ",51,51,17,0,34,,,,,,13,37,1,";
 
-  const csvWithhAPISplits = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival," +
+  const csvWithAPISplits = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival," +
     "Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates," +
     "Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal " +
     "Average Non-EEA,Terminal Average Fast Track,API Actual - EEA (Machine Readable),API Actual - Non EEA (Non Visa)," +
     "API Actual - Non EEA (Visa),API Actual - eGates" + "\n" +
-    "TS0123,TS0123,AMS,46/44R,On Chocks," + schDT + ",01:15,01:55,01:55,02:01,02:05,02:18,51,51,17,0,34,,,,,,13,37,1,,0.0,1.0,1.0,1.0";
+    "TS0123,TS0123,AMS,46/44R,On Chocks," + schDateString + "," + schTimeLocal + "," + estTimeLocal + "," + actTimeLocal + "," + estChoxTimeLocal + "," + actChoxTimeLocal + "," + pcpTimeLocal + ",51,51,17,0,34,,,,,,13,37,1,,0.0,1.0,1.0,1.0";
 
   it('Displays a flight after it has been ingested via the live feed', () => {
     addFlight();
@@ -137,7 +159,7 @@ describe('Arrivals page', () => {
     loadManifestFixture();
     setRoles(["test"]);
     cy.request('POST', '/v2/test/live/test/manifest', manifest);
-    cy.request('GET', '/v2/test/live/export/arrivals/' + currentMillis + '/T1?startHour=0&endHour=24').then((resp) => {
+    cy.request('GET', '/v2/test/live/export/arrivals/' + millis + '/T1?startHour=0&endHour=24').then((resp) => {
       expect(resp.body).to.equal(csvWithNoApiSplits);
     });
   });
@@ -147,9 +169,9 @@ describe('Arrivals page', () => {
     setRoles(["test", "api:view"]);
     cy.request({
       method: 'GET',
-      url: '/v2/test/live/export/arrivals/' + currentMillis + '/T1?startHour=0&endHour=24',
+      url: '/v2/test/live/export/arrivals/' + millis + '/T1?startHour=0&endHour=24',
     }).then((resp) => {
-      expect(resp.body).to.equal(csvWithhAPISplits)
+      expect(resp.body).to.equal(csvWithAPISplits)
     })
   });
 });
