@@ -1,7 +1,7 @@
 package drt.client.components
 
 import drt.client.actions.Actions.UpdateStaffAdjustmentPopOver
-import drt.client.components.StaffAdjustmentDialogue.{StaffDeploymentAdjustmentPopoverProps, StaffDeploymentAdjustmentPopoverState}
+import drt.client.components.StaffAdjustmentDialogue.StaffDeploymentAdjustmentPopoverProps
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType, queueActualsColour, queueColour}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions._
@@ -10,12 +10,10 @@ import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
-import japgolly.scalajs.react.vdom.{TagOf, html_<^}
+import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
 import org.scalajs.dom.html
-
-import scala.scalajs.js
 
 object TerminalDesksAndQueuesRow {
 
@@ -114,7 +112,7 @@ object TerminalDesksAndQueuesRow {
     .build
 
   def adjustmentLinkWithPopup(props: Props, slotStart: SDateLike, slotEnd: SDateLike, action: String, label: String): TagMod = props.maybeStaffAdjustmentState match {
-    case Some(state) if state.active && state.isApplicableToSlot(slotStart, slotEnd) =>
+    case Some(state) if state.isApplicableToSlot(slotStart, slotEnd) =>
       val popup: TagMod = StaffAdjustmentDialogue(state)(StaffDeploymentAdjustmentPopoverProps(_ => Option(state)))
       adjustmentLink(props, action, label, Option(popup))
     case _ =>
@@ -135,7 +133,7 @@ object TerminalDesksAndQueuesRow {
       case "+" => 1
       case _ => 0
     }
-    StaffAdjustmentDialogue.StaffDeploymentAdjustmentPopoverState(props.airportConfig.terminalNames, Option(props.terminalName), action, "Staff " + label + "...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", action, numStaff, props.loggedInUser)
+    StaffAdjustmentDialogueState(props.airportConfig.terminalNames, Option(props.terminalName), action, "Staff " + label + "...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", action, numStaff, props.loggedInUser)
   }
 
   def apply(props: Props): VdomElement = component(props)

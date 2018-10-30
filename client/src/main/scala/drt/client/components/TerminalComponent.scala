@@ -53,7 +53,7 @@ object TerminalComponent {
         model.loggedInUserPot,
         model.viewMode,
         model.minuteTicker,
-        model.staffDeploymentAdjustmentPopoverState
+        model.maybeStaffDeploymentAdjustmentPopoverState
       ))
       modelRCP(modelMP => {
         val model = modelMP()

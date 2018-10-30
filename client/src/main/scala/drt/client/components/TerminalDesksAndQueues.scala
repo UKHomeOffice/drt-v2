@@ -2,7 +2,6 @@ package drt.client.components
 
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlViewType}
 import drt.client.actions.Actions.UpdateShowActualDesksAndQueues
-import drt.client.components.StaffAdjustmentDialogue.StaffDeploymentAdjustmentPopoverState
 import drt.client.components.TerminalDesksAndQueues.{NodeListSeq, documentScrollHeight, documentScrollTop}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
@@ -55,7 +54,7 @@ object TerminalDesksAndQueues {
 
   case class State(showActuals: Boolean, viewType: ViewType)
 
-  class Backend(bs: BackendScope[Props, State]) {
+  class Backend(backendScope: BackendScope[Props, State]) {
     def render(props: Props, state: State): VdomTagOf[Div] = {
       val slotMinutes = 15
 
@@ -107,7 +106,6 @@ object TerminalDesksAndQueues {
       }
 
       val showActsClassSuffix = if (state.showActuals) "-with-actuals" else ""
-      val colsClass = s"cols-${queueNames.length}$showActsClassSuffix"
 
       def qth(queueName: String, xs: TagMod*) = <.th((^.className := queueName + "-user-desk-rec") :: xs.toList: _*)
 
@@ -139,7 +137,7 @@ object TerminalDesksAndQueues {
 
         SPACircuit.dispatch(UpdateShowActualDesksAndQueues(newValue))
 
-        bs.modState(_.copy(showActuals = newValue))
+        backendScope.modState(_.copy(showActuals = newValue))
       }
 
       def toggleViewType(newViewType: ViewType) = (e: ReactEventFromInput) => {
@@ -226,10 +224,7 @@ object TerminalDesksAndQueues {
   }
 
   val component = ScalaComponent.builder[Props]("Loader")
-    .initialStateFromProps(p => {
-      log.info(s"creating new state")
-      State(showActuals = p.airportConfig.hasActualDeskStats && p.showActuals, p.terminalPageTab.viewType)
-    })
+    .initialStateFromProps(p => State(showActuals = p.airportConfig.hasActualDeskStats && p.showActuals, p.terminalPageTab.viewType))
     .renderBackend[Backend]
     .componentDidMount(_ => StickyTableHeader("[data-sticky]"))
     .build

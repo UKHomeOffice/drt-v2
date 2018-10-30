@@ -17,8 +17,7 @@ import scala.util.Success
 
 
 
-case class StaffAdjustmentDialogueState(active: Boolean,
-                                        action: String,
+case class StaffAdjustmentDialogueState(action: String,
                                         reasonPlaceholder: String,
                                         reason: String,
                                         terminalNames: Seq[TerminalName],
@@ -29,8 +28,7 @@ case class StaffAdjustmentDialogueState(active: Boolean,
                                         endTimeHours: Int,
                                         endTimeMinutes: Int,
                                         numberOfStaff: String,
-                                        loggedInUser: LoggedInUser
-                                                ) {
+                                        loggedInUser: LoggedInUser) {
   def isApplicableToSlot(slotStart: SDateLike, slotEnd: SDateLike): Boolean = {
     date.split("/").toList match {
       case d :: m :: y :: Nil =>
@@ -57,7 +55,6 @@ object StaffAdjustmentDialogueState {
             numberOfStaff: Int,
             loggedInUser: LoggedInUser): StaffAdjustmentDialogueState =
     StaffAdjustmentDialogueState(
-      active = true,
       action = action,
       reasonPlaceholder = reasonPlaceholder,
       reason = "",
@@ -162,10 +159,7 @@ object StaffAdjustmentDialogue {
         )
       }
 
-      def killPopover(): Unit = {
-        val updatedState = state.copy(active = false)
-        SPACircuit.dispatch(UpdateStaffAdjustmentPopOver(Option(updatedState)))
-      }
+      def killPopover(): Unit = SPACircuit.dispatch(UpdateStaffAdjustmentPopOver(None))
 
       <.div(<.div(^.className := "popover-overlay", ^.onClick --> Callback(killPopover())),
         <.div(^.className := "container", ^.onClick ==> ((e: ReactEvent) => Callback(e.stopPropagation())), ^.key := "StaffAdjustments",
