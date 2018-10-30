@@ -3,7 +3,7 @@ package drt.client.actions
 import java.util.UUID
 
 import diode.Action
-import drt.client.components.StaffDeploymentsAdjustmentPopover.StaffDeploymentAdjustmentPopoverState
+import drt.client.components.StaffAdjustmentDialogueState
 import drt.client.services.ViewMode
 import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, ForecastPeriodWithHeadlines, MillisSinceEpoch}
 import drt.shared.FlightsApi._
@@ -120,6 +120,6 @@ object Actions {
 
   case class SaveAlert(alert: Alert) extends Action
 
-  case class UpdateStaffAdjustmentPopOver(maybeNewState: Option[StaffDeploymentAdjustmentPopoverState]) extends Action
+  case class UpdateStaffAdjustmentPopOver(maybeNewState: Option[StaffAdjustmentDialogueState]) extends Action
 
 }

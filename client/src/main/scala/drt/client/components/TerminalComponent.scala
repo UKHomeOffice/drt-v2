@@ -3,16 +3,15 @@ package drt.client.components
 import diode.UseValueEq
 import diode.data.{Pending, Pot}
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
-import drt.client.components.StaffDeploymentsAdjustmentPopover.StaffDeploymentAdjustmentPopoverState
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.{CrunchState, ForecastPeriodWithHeadlines}
 import drt.shared._
+import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, ScalaComponent}
 
 
 object TerminalComponent {
@@ -35,7 +34,7 @@ object TerminalComponent {
                             loggedInUserPot: Pot[LoggedInUser],
                             viewMode: ViewMode,
                             minuteTicker: Int,
-                            maybeStaffAdjustmentsPopoverState: Option[StaffDeploymentAdjustmentPopoverState]
+                            maybeStaffAdjustmentsPopoverState: Option[StaffAdjustmentDialogueState]
                           ) extends UseValueEq
 
   val component = ScalaComponent.builder[Props]("Terminal")

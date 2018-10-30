@@ -2,7 +2,7 @@ package drt.client.components
 
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlViewType}
 import drt.client.actions.Actions.UpdateShowActualDesksAndQueues
-import drt.client.components.StaffDeploymentsAdjustmentPopover.StaffDeploymentAdjustmentPopoverState
+import drt.client.components.StaffAdjustmentDialogue.StaffDeploymentAdjustmentPopoverState
 import drt.client.components.TerminalDesksAndQueues.{NodeListSeq, documentScrollHeight, documentScrollTop}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
@@ -38,7 +38,7 @@ object TerminalDesksAndQueues {
                    showActuals: Boolean,
                    viewMode: ViewMode,
                    loggedInUser: LoggedInUser,
-                   maybeStaffAdjustmentsPopoverState: Option[StaffDeploymentAdjustmentPopoverState]
+                   maybeStaffAdjustmentsPopoverState: Option[StaffAdjustmentDialogueState]
                   )
 
   sealed trait ViewType {

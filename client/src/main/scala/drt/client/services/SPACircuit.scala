@@ -3,7 +3,7 @@ package drt.client.services
 import diode._
 import diode.data._
 import diode.react.ReactConnector
-import drt.client.components.StaffDeploymentsAdjustmentPopover.StaffDeploymentAdjustmentPopoverState
+import drt.client.components.StaffAdjustmentDialogueState
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.handlers._
 import drt.shared.CrunchApi._
@@ -13,7 +13,6 @@ import drt.shared._
 import scala.collection.immutable.Map
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import scala.scalajs.js.Date
 
 sealed trait ViewMode {
   def millis: MillisSinceEpoch = time.millisSinceEpoch
@@ -53,7 +52,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      selectedUserGroups: Pot[Set[KeyCloakGroup]] = Empty,
                      feedStatuses: Pot[Seq[FeedStatuses]] = Empty,
                      alerts: Pot[Seq[Alert]] = Empty,
-                     staffDeploymentAdjustmentPopoverState: Option[StaffDeploymentAdjustmentPopoverState] = None
+                     staffDeploymentAdjustmentPopoverState: Option[StaffAdjustmentDialogueState] = None
                     )
 
 object PollDelay {
