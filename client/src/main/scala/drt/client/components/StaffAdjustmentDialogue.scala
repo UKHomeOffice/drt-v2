@@ -74,8 +74,6 @@ object StaffAdjustmentDialogue {
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class StaffDeploymentAdjustmentPopoverProps(updateState: Option[StaffAdjustmentDialogueState] => Unit)
-
   def roundToNearest(nearest: Int)(x: Int): Int = {
     (x.toDouble / nearest).round.toInt * nearest
   }
@@ -89,21 +87,19 @@ object StaffAdjustmentDialogue {
       terminalNames.map(x => <.option(^.value := x, x)).toTagMod)
   }
 
-  def apply(state: StaffAdjustmentDialogueState) = ScalaComponent.builder[StaffDeploymentAdjustmentPopoverProps]("staffMovementPopover")
+  def apply(state: StaffAdjustmentDialogueState) = ScalaComponent.builder[Unit]("staffMovementPopover")
     .initialState(state)
-    .renderPS((scope, props, state) => {
+    .renderS((scope, state) => {
       def selectFromRange(range: Range,
                           defaultValue: Int,
                           callback: String => StaffAdjustmentDialogueState => StaffAdjustmentDialogueState,
                           applyRounding: Int => Int) = {
         <.select(
           ^.defaultValue := applyRounding(defaultValue),
-          ^.onChange ==> ((e: ReactEventFromInput) => scope.modState(s => {
-            val updatedState = callback(e.target.value)(s)
-            props.updateState(Option(updatedState))
-            updatedState
-          })
-            ),
+          ^.onChange ==> ((e: ReactEventFromInput) => {
+            val newFromValue = e.target.value
+            scope.modState(callback(newFromValue))
+          }),
           range.map(x => <.option(^.value := x, f"$x%02d")).toTagMod)
       }
 
@@ -127,14 +123,11 @@ object StaffAdjustmentDialogue {
                         value: String,
                         callback: String => StaffAdjustmentDialogueState => StaffAdjustmentDialogueState,
                         placeHolder: String = ""): VdomTagOf[html.Div] = {
-        popoverFormRow(labelText, <.input.text(^.value := value, ^.placeholder := state.reasonPlaceholder, ^.onChange ==> ((e: ReactEventFromInput) => {
-          val newValue: String = e.target.value
-          scope.modState(s => {
-            val updatedState = callback(newValue)(s)
-            props.updateState(Option(updatedState))
-            updatedState
-          })
-        })))
+        val textInput = <.input.text(^.value := value, ^.placeholder := state.reasonPlaceholder, ^.onChange ==> ((e: ReactEventFromInput) => {
+          val newText = e.target.value
+          scope.modState(callback(newText))
+        }))
+        popoverFormRow(labelText, textInput)
       }
 
       def popoverFormRow(label: String, xs: TagMod*) = {
@@ -171,12 +164,8 @@ object StaffAdjustmentDialogue {
             (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(endTimeHours = v.toInt),
             (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(endTimeMinutes = v.toInt)),
           popoverFormRow("Number of staff", <.input.text(^.value := state.numberOfStaff.toString, ^.onChange ==> ((e: ReactEventFromInput) => {
-            val newValue = e.target.value
-            scope.modState(s => {
-              val updatedState = s.copy(numberOfStaff = newValue)
-              props.updateState(Option(updatedState))
-              updatedState
-            })
+            val newStaff = e.target.value
+            scope.modState(_.copy(numberOfStaff = newStaff))
           }))),
           <.div(^.className := "form-group-row",
             <.div(^.className := "col-sm-4"),

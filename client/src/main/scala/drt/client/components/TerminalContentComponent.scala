@@ -38,7 +38,7 @@ object TerminalContentComponent {
                     viewMode: ViewMode,
                     loggedInUserPot: Pot[LoggedInUser],
                     minuteTicker: Int,
-                    maybeStaffAdjustmentsPopoverState: Option[StaffAdjustmentDialogueState]
+                    maybeStaffAdjustmentDialogueState: Option[StaffAdjustmentDialogueState]
                   ) {
     lazy val hash: (Int, Int) = {
       val depsHash = crunchStatePot.map(
@@ -158,7 +158,7 @@ object TerminalContentComponent {
                         props.showActuals,
                         props.viewMode,
                         loggedInUser,
-                        props.maybeStaffAdjustmentsPopoverState
+                        props.maybeStaffAdjustmentDialogueState
                       )
                     )
                   })
