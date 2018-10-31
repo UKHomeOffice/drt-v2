@@ -5,7 +5,7 @@ import drt.client.actions.Actions._
 import drt.client.components.StaffAdjustmentDialogueState
 import drt.client.logger.log
 
-class StaffDeploymentAdjustmentPopoverHandler[M](popoverState: ModelRW[M, Option[StaffAdjustmentDialogueState]]) extends LoggingActionHandler(popoverState) {
+class StaffAdjustmentHandler[M](popoverState: ModelRW[M, Option[StaffAdjustmentDialogueState]]) extends LoggingActionHandler(popoverState) {
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case UpdateStaffAdjustmentPopOver(newState) =>
