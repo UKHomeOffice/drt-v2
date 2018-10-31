@@ -164,7 +164,7 @@ object StaffAdjustmentDialogue {
             (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(endTimeHours = v.toInt),
             (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(endTimeMinutes = v.toInt)),
           popoverFormRow("Number of staff", <.input.text(^.value := state.numberOfStaff.toString, ^.onChange ==> ((e: ReactEventFromInput) => {
-            val newStaff = e.target.valuepop
+            val newStaff = e.target.value
             scope.modState(_.copy(numberOfStaff = newStaff))
           }))),
           <.div(^.className := "form-group-row",
