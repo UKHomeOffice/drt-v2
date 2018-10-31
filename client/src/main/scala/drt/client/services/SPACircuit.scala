@@ -98,7 +98,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new MinuteTickerHandler(zoomRW(_.minuteTicker)((m, v) => m.copy(minuteTicker = v))),
       new FeedsStatusHandler(zoomRW(_.feedStatuses)((m, v) => m.copy(feedStatuses = v))),
       new AlertsHandler(zoomRW(_.alerts)((m, v) => m.copy(alerts = v))),
-      new StaffDeploymentAdjustmentPopoverHandler(zoomRW(_.maybeStaffDeploymentAdjustmentPopoverState)((m, v) => m.copy(maybeStaffDeploymentAdjustmentPopoverState = v)))
+      new StaffAdjustmentDialogueStateHandler(zoomRW(_.maybeStaffDeploymentAdjustmentPopoverState)((m, v) => m.copy(maybeStaffDeploymentAdjustmentPopoverState = v)))
     )
 
     composedhandlers

@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.client.actions.Actions.{AddStaffMovements, UpdateStaffAdjustmentPopOver}
+import drt.client.actions.Actions.{AddStaffMovements, UpdateStaffAdjustmentDialogueState}
 import drt.client.components.StaffAdjustmentDialogue.roundToNearest
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
@@ -152,7 +152,7 @@ object StaffAdjustmentDialogue {
         )
       }
 
-      def killPopover(): Unit = SPACircuit.dispatch(UpdateStaffAdjustmentPopOver(None))
+      def killPopover(): Unit = SPACircuit.dispatch(UpdateStaffAdjustmentDialogueState(None))
 
       <.div(<.div(^.className := "popover-overlay", ^.onClick --> Callback(killPopover())),
         <.div(^.className := "container", ^.onClick ==> ((e: ReactEvent) => Callback(e.stopPropagation())), ^.key := "StaffAdjustments",
@@ -164,7 +164,7 @@ object StaffAdjustmentDialogue {
             (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(endTimeHours = v.toInt),
             (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(endTimeMinutes = v.toInt)),
           popoverFormRow("Number of staff", <.input.text(^.value := state.numberOfStaff.toString, ^.onChange ==> ((e: ReactEventFromInput) => {
-            val newStaff = e.target.value
+            val newStaff = e.target.valuepop
             scope.modState(_.copy(numberOfStaff = newStaff))
           }))),
           <.div(^.className := "form-group-row",

@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.client.actions.Actions.UpdateStaffAdjustmentPopOver
+import drt.client.actions.Actions.UpdateStaffAdjustmentDialogueState
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType, queueActualsColour, queueColour}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions._
@@ -123,7 +123,7 @@ object TerminalDesksAndQueuesRow {
       <.div(popup, ^.className := "staff-deployment-adjustment-container", <.div(^.className := "popover-trigger", action))
     case _ =>
       val popupState = adjustmentState(props, action, label)
-      <.div(^.className := "staff-deployment-adjustment-container", <.div(^.className := "popover-trigger", action, ^.onClick --> Callback(SPACircuit.dispatch(UpdateStaffAdjustmentPopOver(Option(popupState))))))
+      <.div(^.className := "staff-deployment-adjustment-container", <.div(^.className := "popover-trigger", action, ^.onClick --> Callback(SPACircuit.dispatch(UpdateStaffAdjustmentDialogueState(Option(popupState))))))
   }
 
   def adjustmentState(props: Props, action: String, label: String): StaffAdjustmentDialogueState =

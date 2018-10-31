@@ -120,6 +120,6 @@ object Actions {
 
   case class SaveAlert(alert: Alert) extends Action
 
-  case class UpdateStaffAdjustmentPopOver(maybeNewState: Option[StaffAdjustmentDialogueState]) extends Action
+  case class UpdateStaffAdjustmentDialogueState(maybeNewState: Option[StaffAdjustmentDialogueState]) extends Action
 
 }
