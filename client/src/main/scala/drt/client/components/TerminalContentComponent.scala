@@ -37,7 +37,8 @@ object TerminalContentComponent {
                     showActuals: Boolean,
                     viewMode: ViewMode,
                     loggedInUserPot: Pot[LoggedInUser],
-                    minuteTicker: Int
+                    minuteTicker: Int,
+                    maybeStaffAdjustmentDialogueState: Option[StaffAdjustmentDialogueState]
                   ) {
     lazy val hash: (Int, Int) = {
       val depsHash = crunchStatePot.map(
@@ -156,7 +157,8 @@ object TerminalContentComponent {
                         props.terminalPageTab,
                         props.showActuals,
                         props.viewMode,
-                        loggedInUser
+                        loggedInUser,
+                        props.maybeStaffAdjustmentDialogueState
                       )
                     )
                   })

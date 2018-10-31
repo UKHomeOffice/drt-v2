@@ -9,9 +9,9 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.{CrunchState, ForecastPeriodWithHeadlines}
 import drt.shared._
+import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, ScalaComponent}
 
 
 object TerminalComponent {
@@ -33,7 +33,8 @@ object TerminalComponent {
                             showActuals: Boolean,
                             loggedInUserPot: Pot[LoggedInUser],
                             viewMode: ViewMode,
-                            minuteTicker: Int
+                            minuteTicker: Int,
+                            maybeStaffAdjustmentsPopoverState: Option[StaffAdjustmentDialogueState]
                           ) extends UseValueEq
 
   val component = ScalaComponent.builder[Props]("Terminal")
@@ -51,7 +52,8 @@ object TerminalComponent {
         model.showActualIfAvailable,
         model.loggedInUserPot,
         model.viewMode,
-        model.minuteTicker
+        model.minuteTicker,
+        model.maybeStaffDeploymentAdjustmentPopoverState
       ))
       modelRCP(modelMP => {
         val model = modelMP()
@@ -73,7 +75,8 @@ object TerminalComponent {
             model.showActuals,
             model.viewMode,
             model.loggedInUserPot,
-            model.minuteTicker
+            model.minuteTicker,
+            model.maybeStaffAdjustmentsPopoverState
           )
 
           val currentClass = if (props.terminalPageTab.mode == "current") "active" else ""

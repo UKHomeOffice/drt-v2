@@ -3,6 +3,7 @@ package drt.client.services
 import diode._
 import diode.data._
 import diode.react.ReactConnector
+import drt.client.components.StaffAdjustmentDialogueState
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.handlers._
 import drt.shared.CrunchApi._
@@ -12,7 +13,6 @@ import drt.shared._
 import scala.collection.immutable.Map
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import scala.scalajs.js.Date
 
 sealed trait ViewMode {
   def millis: MillisSinceEpoch = time.millisSinceEpoch
@@ -51,7 +51,8 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      keyCloakUsers: Pot[List[KeyCloakUser]] = Empty,
                      selectedUserGroups: Pot[Set[KeyCloakGroup]] = Empty,
                      feedStatuses: Pot[Seq[FeedStatuses]] = Empty,
-                     alerts: Pot[Seq[Alert]] = Empty
+                     alerts: Pot[Seq[Alert]] = Empty,
+                     maybeStaffDeploymentAdjustmentPopoverState: Option[StaffAdjustmentDialogueState] = None
                     )
 
 object PollDelay {
@@ -96,7 +97,8 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new EditUserHandler(zoomRW(_.selectedUserGroups)((m, v) => m.copy(selectedUserGroups = v))),
       new MinuteTickerHandler(zoomRW(_.minuteTicker)((m, v) => m.copy(minuteTicker = v))),
       new FeedsStatusHandler(zoomRW(_.feedStatuses)((m, v) => m.copy(feedStatuses = v))),
-      new AlertsHandler(zoomRW(_.alerts)((m, v) => m.copy(alerts = v)))
+      new AlertsHandler(zoomRW(_.alerts)((m, v) => m.copy(alerts = v))),
+      new StaffAdjustmentDialogueStateHandler(zoomRW(_.maybeStaffDeploymentAdjustmentPopoverState)((m, v) => m.copy(maybeStaffDeploymentAdjustmentPopoverState = v)))
     )
 
     composedhandlers
