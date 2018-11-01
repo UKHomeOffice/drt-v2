@@ -3,8 +3,8 @@ package drt.client.components
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, ForecastTimeSlot}
-import drt.shared.{MilliDate, Queues, SDateLike}
+import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, ForecastTimeSlot, MillisSinceEpoch}
+import drt.shared.{Forecast, MilliDate, Queues, SDateLike}
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
@@ -37,7 +37,7 @@ object TerminalPlanningComponent {
   val component = ScalaComponent.builder[Props]("TerminalForecast")
     .renderP((scope, props) => {
       val sortedDays = props.forecastPeriod.forecast.days.toList.sortBy(_._1)
-      val byTimeSlot: Iterable[Iterable[ForecastTimeSlot]] = sortedDays.transpose(_._2.take(96))
+      val byTimeSlot: Seq[List[Option[ForecastTimeSlot]]] = Forecast.periodByTimeSlotAcrossDays(props.forecastPeriod.forecast)
 
       def drawSelect(names: Seq[String], values: List[String], value: String) = {
         <.select(^.className := "form-control", ^.value := value.toString,
@@ -49,6 +49,10 @@ object TerminalPlanningComponent {
           }.toTagMod)
       }
 
+      val slotStartTimes = Forecast.timeSlotStartTimes(
+        props.forecastPeriod.forecast,
+        (millis: MillisSinceEpoch) => SDate(millis).toHoursAndMinutes()
+      )
       <.div(
         <.div(^.className := "form-group row planning-week",
           <.div(^.className := "col-sm-3 no-gutters", <.label(^.className := "col-form-label", "Select week start day")),
@@ -108,21 +112,25 @@ object TerminalPlanningComponent {
               <.th(^.colSpan := 2, ^.className := "heading", "Time"), sortedDays.flatMap(_ => List(<.th(^.className := "sub-heading", "Avail"), <.th(^.className := "sub-heading", "Rec"))).toTagMod
             )),
           <.tbody(
-            byTimeSlot.map(row => {
-              <.tr(
-                <.td(^.colSpan := 2, SDate(MilliDate(row.head.startMillis)).toHoursAndMinutes()),
-                row.flatMap(col => {
-                  val ragClass = TerminalDesksAndQueuesRow.ragStatus(col.required, col.available)
-                  List(<.td(^.className := ragClass, col.available), <.td(col.required))
-                }).toTagMod
-              )
-            }).toTagMod
+            byTimeSlot.zip(slotStartTimes).map {
+              case (row, startTime) =>
+                <.tr(
+                  <.td(s"$startTime"),
+                  row.flatMap {
+                    case Some(col) =>
+                      val ragClass = TerminalDesksAndQueuesRow.ragStatus(col.required, col.available)
+                      List(<.td(^.className := ragClass, col.available), <.td(col.required))
+                    case None =>
+                      List(<.td(), <.td())
+                  }.toTagMod
+                )
+            }.toTagMod
           )
         )
       )
     })
     .configure(Reusability.shouldComponentUpdate)
-    .componentDidMount(p => Callback{
+    .componentDidMount(p => Callback {
       GoogleEventTracker.sendPageView(s"${p.props.page.terminal}/planning/${defaultStartDate(p.props.page.dateFromUrlOrNow).toISODateOnly}")
     })
     .build

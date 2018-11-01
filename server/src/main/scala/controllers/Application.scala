@@ -845,7 +845,7 @@ object Forecast {
                     terminalName: TerminalName): Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = {
     val actualStaffByMinute = staffByTimeSlot(15)(staffMinutes, terminalName)
     val fixedPointsByMinute = fixedPointsByTimeSlot(15)(staffMinutes, terminalName)
-    val terminalMinutes = CrunchApi.terminalMinutesByMinute(forecastMinutes, terminalName)
+    val terminalMinutes: Seq[(MillisSinceEpoch, Set[CrunchMinute])] = CrunchApi.terminalMinutesByMinute(forecastMinutes, terminalName)
     groupCrunchMinutesByX(15)(terminalMinutes, terminalName, Queues.queueOrder)
       .map {
         case (startMillis, cms) =>
