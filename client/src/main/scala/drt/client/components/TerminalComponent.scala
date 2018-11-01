@@ -58,7 +58,6 @@ object TerminalComponent {
 
       val staffAdjustmentRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
 
-
       <.div(
         staffAdjustmentRCP(staffAdjustmentMP => {
           staffAdjustmentMP() match {
