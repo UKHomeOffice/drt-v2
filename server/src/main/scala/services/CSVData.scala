@@ -53,63 +53,43 @@ object CSVData {
     List(headings, totalPax, queues, totalWL).mkString(lineEnding)
   }
 
-  val timeslotsOnBSTToUTCChangeDay = 100
-  val timeslotsOnRegualarDay = 96
+  def forecastPeriodToCsv(forecastPeriod: ForecastPeriod): String =
+    makeDayHeadingsForPlanningExport(forecastDaysInPeriod(forecastPeriod)) +
+    lineEnding +
+    periodTimeslotsToCSVString(
+      Forecast.timeSlotStartTimes(forecastPeriod, millisToHoursAndMinutesString),
+      Forecast.periodByTimeSlotAcrossDays(forecastPeriod)
+    )
 
-  def rangeContainsBSTToUTCChange[A](daysOfForecastTimesSlots: Seq[(MillisSinceEpoch, Seq[A])]) =
-    daysOfForecastTimesSlots.exists(_._2.size == timeslotsOnBSTToUTCChangeDay)
+  def millisToHoursAndMinutesString =
+    (millis: MillisSinceEpoch) => SDate(millis, europeLondonTimeZone).toHoursAndMinutes()
 
-  def transposeIrregular[A](xs: List[List[A]]): List[List[A]] = xs.filter(_.nonEmpty) match {
-    case Nil => Nil
-    case ys: List[List[A]] => ys.map(_.head) :: transposeIrregular(ys.map(_.tail))
-  }
-
-  def handleBSTToUTC(forecastPeriodDays: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]]) = {
-    val epochToMaybeSlots: Map[MillisSinceEpoch, Seq[Option[ForecastTimeSlot]]] = forecastPeriodDays.mapValues(_.map(Option(_)))
-    if (rangeContainsBSTToUTCChange(epochToMaybeSlots.toList)) {
-      epochToMaybeSlots.mapValues{
-        case maybeTimeSlots if maybeTimeSlots.length == 96 =>
-          maybeTimeSlots.take(8).toList ::: List(None, None, None, None) ::: maybeTimeSlots.drop(8).toList
-        case m => m
-      }
-    } else epochToMaybeSlots
-  }
-
-  def rowHeadingsForPeriod(forecastPeriod: ForecastPeriod): Seq[String] =
-    forecastPeriod.days.toList.find(_._2.length == timeslotsOnBSTToUTCChangeDay) match {
-    case Some((day, slots)) => slots.map(s => SDate(s.startMillis, europeLondonTimeZone).toHoursAndMinutes())
-    case None => forecastPeriod.days.head._2.toList.map(s => SDate(s.startMillis, europeLondonTimeZone).toHoursAndMinutes())
-  }
-
-  def forecastPeriodToCsv(forecastPeriod: ForecastPeriod): String = {
-    val sortedDays: Seq[(MillisSinceEpoch, Seq[ForecastTimeSlot])] = forecastPeriod.days.toList.sortBy(_._1)
-    log.info(s"Forecast CSV Export: Days in period: ${sortedDays.length}")
-
-    val byTimeSlot = transposeIrregular(handleBSTToUTC(forecastPeriod.days).toList.sortBy(_._1).map(_._2.toList))
-
-    val headings = "," + sortedDays.map {
-      case (day, _) =>
-        val localDate = SDate(day, europeLondonTimeZone)
-        val date = localDate.getDate()
-        val month = localDate.getMonth()
-        val columnPrefix = f"$date%02d/$month%02d - "
-        columnPrefix + "available," + columnPrefix + "required," + columnPrefix + "difference"
-    }.mkString(",")
-
-    val data = byTimeSlot.zip(rowHeadingsForPeriod(forecastPeriod)).map{
-
-      case (row, heading) =>
-      s"$heading" + "," +
-        row.map{
-          case Some(col) =>
-          s"${col.available},${col.required},${col.available - col.required}"
-          case None =>
-            s",,"
-        }.mkString(",")
+  def periodTimeslotsToCSVString(timeSlotStarts: Seq[String], byTimeSlot: List[List[Option[ForecastTimeSlot]]]) = {
+    byTimeSlot.zip(timeSlotStarts).map {
+      case (row, startTime) =>
+        s"$startTime" + "," +
+          row.map(forecastTimeSlotOptionToCSV).mkString(",")
     }.mkString(lineEnding)
-
-    List(headings, data).mkString(lineEnding)
   }
+
+  def forecastTimeSlotOptionToCSV(rowOption: Option[ForecastTimeSlot]) = rowOption match {
+    case Some(col) =>
+      s"${col.available},${col.required},${col.available - col.required}"
+    case None =>
+      s",,"
+  }
+
+  def makeDayHeadingsForPlanningExport(daysInPeriod: Seq[MillisSinceEpoch]) = {
+    "," + daysInPeriod.map(day => {
+      val localDate = SDate(day, europeLondonTimeZone)
+      val date = localDate.getDate()
+      val month = localDate.getMonth()
+      val columnPrefix = f"$date%02d/$month%02d - "
+      columnPrefix + "available," + columnPrefix + "required," + columnPrefix + "difference"
+    }).mkString(",")
+  }
+
+  def forecastDaysInPeriod(forecastPeriod: ForecastPeriod): Seq[MillisSinceEpoch] = forecastPeriod.days.toList.map(_._1).sorted
 
   def terminalCrunchMinutesToCsvDataHeadings(queues: Seq[QueueName]): String = {
     val colHeadings = List("Pax", "Wait", "Desks req", "Act. wait time", "Act. desks")
