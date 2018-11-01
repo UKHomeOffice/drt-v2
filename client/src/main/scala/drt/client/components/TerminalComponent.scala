@@ -56,15 +56,10 @@ object TerminalComponent {
         model.maybeStaffDeploymentAdjustmentPopoverState
       ))
 
-      val staffAdjustmentRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
+      val dialogueStateRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
 
       <.div(
-        staffAdjustmentRCP(staffAdjustmentMP => {
-          staffAdjustmentMP() match {
-            case Some(dialogueState) => StaffAdjustmentDialogue(dialogueState)()
-            case _ => <.div()
-          }
-        }),
+        dialogueStateRCP(dialogueStateMP => <.div(dialogueStateMP().map(dialogueState => StaffAdjustmentDialogue(dialogueState)()).whenDefined)),
         modelRCP(modelMP => {
           val model = modelMP()
           <.div(model.airportConfig.render(airportConfig => {
