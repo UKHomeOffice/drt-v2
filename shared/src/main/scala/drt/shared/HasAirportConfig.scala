@@ -129,6 +129,9 @@ case class AirportConfig(
 
   def feedPortCode: String = cloneOfPortCode.getOrElse(portCode)
 
+  def nonTransferQueues(terminalName: TerminalName): Seq[QueueName] = queues(terminalName).collect {
+    case queueName: String if queueName != Queues.Transfer => queueName
+  }
 }
 
 object ArrivalHelper {

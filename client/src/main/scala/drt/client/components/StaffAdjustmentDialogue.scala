@@ -9,6 +9,7 @@ import drt.client.services._
 import drt.shared.FlightsApi.TerminalName
 import drt.shared.{LoggedInUser, SDateLike}
 import japgolly.scalajs.react._
+import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html
 import org.scalajs.dom.html.{Div, Select}
@@ -78,14 +79,7 @@ object StaffAdjustmentDialogue {
     (x.toDouble / nearest).round.toInt * nearest
   }
 
-  def selectTerminal(defaultValue: String,
-                     callback: ReactEventFromInput => Callback,
-                     terminalNames: Seq[String]): VdomTagOf[Select] = {
-    <.select(
-      ^.defaultValue := defaultValue,
-      ^.onChange ==> callback,
-      terminalNames.map(x => <.option(^.value := x, x)).toTagMod)
-  }
+  implicit val stateReuse: Reusability[StaffAdjustmentDialogueState] = Reusability.by(_.hashCode())
 
   def apply(state: StaffAdjustmentDialogueState) = ScalaComponent.builder[Unit]("staffMovementPopover")
     .initialState(state)
@@ -98,7 +92,8 @@ object StaffAdjustmentDialogue {
           ^.defaultValue := applyRounding(defaultValue),
           ^.onChange ==> ((e: ReactEventFromInput) => {
             val newFromValue = e.target.value
-            scope.modState(callback(newFromValue))
+            val updatedState = callback(newFromValue)(state)
+            scope.modState(_ => updatedState)
           }),
           range.map(x => <.option(^.value := x, f"$x%02d")).toTagMod)
       }
@@ -125,7 +120,8 @@ object StaffAdjustmentDialogue {
                         placeHolder: String = ""): VdomTagOf[html.Div] = {
         val textInput = <.input.text(^.value := value, ^.placeholder := state.reasonPlaceholder, ^.onChange ==> ((e: ReactEventFromInput) => {
           val newText = e.target.value
-          scope.modState(callback(newText))
+          val updatedState = callback(newText)(state)
+          scope.modState(_ => updatedState)
         }))
         popoverFormRow(labelText, textInput)
       }
@@ -155,7 +151,7 @@ object StaffAdjustmentDialogue {
       def killPopover(): Unit = SPACircuit.dispatch(UpdateStaffAdjustmentDialogueState(None))
 
       <.div(<.div(^.className := "popover-overlay", ^.onClick --> Callback(killPopover())),
-        <.div(^.className := "container", ^.onClick ==> ((e: ReactEvent) => Callback(e.stopPropagation())), ^.key := "StaffAdjustments",
+        <.div(^.className := "container", ^.id := "staff-adjustment-dialogue", ^.onClick ==> ((e: ReactEvent) => Callback(e.stopPropagation())), ^.key := "StaffAdjustments",
           labelledInput("Reason", state.reason, (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(reason = v)),
           timeSelector("Start time", state.startTimeHours, state.startTimeMinutes,
             (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(startTimeHours = v.toInt),
@@ -165,12 +161,15 @@ object StaffAdjustmentDialogue {
             (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(endTimeMinutes = v.toInt)),
           popoverFormRow("Number of staff", <.input.text(^.value := state.numberOfStaff.toString, ^.onChange ==> ((e: ReactEventFromInput) => {
             val newStaff = e.target.value
-            scope.modState(_.copy(numberOfStaff = newStaff))
+            val updatedState = state.copy(numberOfStaff = newStaff)
+            scope.modState(_ => updatedState)
           }))),
           <.div(^.className := "form-group-row",
             <.div(^.className := "col-sm-4"),
             <.div(^.className := "col-sm-6 btn-toolbar",
               <.button("Save", ^.className := "btn btn-primary", ^.onClick --> Callback(trySaveMovement())),
               <.button("Cancel", ^.className := "btn btn-default", ^.onClick --> Callback(killPopover()))))))
-    }).build
+    })
+    .configure(Reusability.shouldComponentUpdate)
+    .build
 }

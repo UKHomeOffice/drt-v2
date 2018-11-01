@@ -43,7 +43,9 @@ describe('Staff movements', function () {
     for (let i = 0; i < numStaff; i++) {
       cy.get('.staff-adjustments > :nth-child(' + (hour + 1) + ') > :nth-child(3)').contains("+").then((el) => {
         el.click();
-        cy.contains("Save").click();
+        cy.get('#staff-adjustment-dialogue').contains("Save").then((saveButton) => {
+          saveButton.click();
+        })
       });
     }
   }
