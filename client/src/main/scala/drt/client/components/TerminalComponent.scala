@@ -55,128 +55,140 @@ object TerminalComponent {
         model.minuteTicker,
         model.maybeStaffDeploymentAdjustmentPopoverState
       ))
-      modelRCP(modelMP => {
-        val model = modelMP()
-        <.div(model.airportConfig.render(airportConfig => {
 
-          val terminalContentProps = TerminalContentComponent.Props(
-            model.crunchStatePot,
-            model.potShifts,
-            model.potFixedPoints,
-            model.potStaffMovements,
-            airportConfig,
-            props.terminalPageTab,
-            model.airportInfos,
-            if (model.viewMode == ViewLive())
-              CurrentWindow()
-            else
-              WholeDayWindow(),
-            props.router,
-            model.showActuals,
-            model.viewMode,
-            model.loggedInUserPot,
-            model.minuteTicker,
-            model.maybeStaffAdjustmentsPopoverState
-          )
+      val staffAdjustmentRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
 
-          val currentClass = if (props.terminalPageTab.mode == "current") "active" else ""
-          val snapshotDataClass = if (props.terminalPageTab.mode == "snapshot") "active" else ""
-          val planningClass = if (props.terminalPageTab.mode == "planning") "active" else ""
-          val staffingClass = if (props.terminalPageTab.mode == "staffing") "active" else ""
 
-          val currentContentClass = if (props.terminalPageTab.mode == "current") "fade in active" else "fade out"
-          val snapshotContentClass = if (props.terminalPageTab.mode == "snapshot") "fade in active" else "fade out"
-          val planningContentClass = if (props.terminalPageTab.mode == "planning") "fade in active" else "fade out"
-          val staffingContentClass = if (props.terminalPageTab.mode == "staffing") "fade in active" else "fade out"
+      <.div(
+        staffAdjustmentRCP(staffAdjustmentMP => {
+          staffAdjustmentMP() match {
+            case Some(dialogueState) => StaffAdjustmentDialogue(dialogueState)()
+            case _ => <.div()
+          }
+        }),
+        modelRCP(modelMP => {
+          val model = modelMP()
+          <.div(model.airportConfig.render(airportConfig => {
 
-          val subMode = if (props.terminalPageTab.mode == "staffing") "desksAndQueues" else props.terminalPageTab.subMode
-
-          <.div(
-            <.ul(^.className := "nav nav-tabs",
-              <.li(^.className := currentClass,
-                <.a(^.id := "currentTab", VdomAttr("data-toggle") := "tab", "Current"), ^.onClick --> {
-                  GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Current")
-                  props.router.set(props.terminalPageTab.copy(
-                    mode = "current",
-                    subMode = subMode,
-                    queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams
-                  ))
-              }),
-              <.li(^.className := snapshotDataClass,
-                <.a(^.id := "snapshotTab", VdomAttr("data-toggle") := "tab", "Snapshot"), ^.onClick --> {
-                  GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Snapshot")
-                  props.router.set(props.terminalPageTab.copy(
-                    mode = "snapshot",
-                    subMode = subMode,
-                    queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams
-                  ))
-                }
-              ),
-              <.li(^.className := planningClass,
-                <.a(^.id := "planningTab", VdomAttr("data-toggle") := "tab", "Planning"), ^.onClick --> {
-                  GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Planning")
-                  props.router.set(props.terminalPageTab.copy(mode = "planning", subMode = subMode, queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams))
-                }
-              ),
-              model.loggedInUserPot.render(
-                loggedInUser => if (loggedInUser.roles.contains(StaffEdit))
-                  <.li(^.className := staffingClass,
-                    <.a(^.id := "monthlyStaffingTab", VdomAttr("data-toggle") := "tab", "Monthly Staffing"), ^.onClick --> {
-                      GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Monthly Staffing")
-                      props.router.set(props.terminalPageTab.copy(mode = "staffing", subMode = "15", queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams))
-                    }
-                  ) else ""
-              )
-            ),
-            <.div(^.className := "tab-content",
-              <.div(^.id := "current", ^.className := s"tab-pane $currentContentClass", {
-                if (props.terminalPageTab.mode == "current") <.div(
-                  <.h2(props.terminalPageTab.dateFromUrlOrNow match {
-                    case date: SDateLike if date.ddMMyyString == SDate.now().ddMMyyString => "Live View"
-                    case date: SDateLike if date.millisSinceEpoch < SDate.now().millisSinceEpoch => "Historic View"
-                    case date: SDateLike if date.millisSinceEpoch > SDate.now().millisSinceEpoch => "Forecast View"
-                    case _ => "Live View"
-                  }),
-                  <.div(^.className := "content-head",
-                    PcpPaxSummariesComponent(terminalContentProps.crunchStatePot, terminalContentProps.viewMode, props.terminalPageTab.terminal, model.minuteTicker),
-                    DatePickerComponent(DatePickerComponent.Props(props.router,
-                      props.terminalPageTab,
-                      model.loadingState,
-                      model.minuteTicker
-                    ))
-                  ),
-                  TerminalContentComponent(terminalContentProps)
-                ) else ""
-              }),
-              <.div(^.id := "snapshot", ^.className := s"tab-pane $snapshotContentClass", {
-                if (props.terminalPageTab.mode == "snapshot") <.div(
-                  <.h2("Snapshot View"),
-                  SnapshotSelector(props.router, props.terminalPageTab, model.loadingState),
-                  TerminalContentComponent(terminalContentProps)
-                ) else ""
-              }),
-              <.div(^.id := "planning", ^.className := s"tab-pane $planningContentClass", {
-                if (props.terminalPageTab.mode == "planning") {
-                  <.div(
-                    <.div(model.forecastPeriodPot.render(fp => {
-                      TerminalPlanningComponent(TerminalPlanningComponent.Props(fp, props.terminalPageTab, props.router))
-                    }))
-                  )
-                } else ""
-              }),
-              model.loggedInUserPot.render(
-                loggedInUser => if (loggedInUser.roles.contains(StaffEdit))
-                  <.div(^.id := "staffing", ^.className := s"tab-pane terminal-staffing-container $staffingContentClass",
-                    if (props.terminalPageTab.mode == "staffing") {
-                      model.potMonthOfShifts.render(ms => {
-                        MonthlyStaffing(ms.shifts, props.terminalPageTab, props.router)
-                      })
-                    } else ""
-                  ) else "")
+            val terminalContentProps = TerminalContentComponent.Props(
+              model.crunchStatePot,
+              model.potShifts,
+              model.potFixedPoints,
+              model.potStaffMovements,
+              airportConfig,
+              props.terminalPageTab,
+              model.airportInfos,
+              if (model.viewMode == ViewLive())
+                CurrentWindow()
+              else
+                WholeDayWindow(),
+              props.router,
+              model.showActuals,
+              model.viewMode,
+              model.loggedInUserPot,
+              model.minuteTicker,
+              model.maybeStaffAdjustmentsPopoverState
             )
-          )
-        }))
-      })
+
+            val currentClass = if (props.terminalPageTab.mode == "current") "active" else ""
+            val snapshotDataClass = if (props.terminalPageTab.mode == "snapshot") "active" else ""
+            val planningClass = if (props.terminalPageTab.mode == "planning") "active" else ""
+            val staffingClass = if (props.terminalPageTab.mode == "staffing") "active" else ""
+
+            val currentContentClass = if (props.terminalPageTab.mode == "current") "fade in active" else "fade out"
+            val snapshotContentClass = if (props.terminalPageTab.mode == "snapshot") "fade in active" else "fade out"
+            val planningContentClass = if (props.terminalPageTab.mode == "planning") "fade in active" else "fade out"
+            val staffingContentClass = if (props.terminalPageTab.mode == "staffing") "fade in active" else "fade out"
+
+            val subMode = if (props.terminalPageTab.mode == "staffing") "desksAndQueues" else props.terminalPageTab.subMode
+
+            <.div(
+              <.ul(^.className := "nav nav-tabs",
+                <.li(^.className := currentClass,
+                  <.a(^.id := "currentTab", VdomAttr("data-toggle") := "tab", "Current"), ^.onClick --> {
+                    GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Current")
+                    props.router.set(props.terminalPageTab.copy(
+                      mode = "current",
+                      subMode = subMode,
+                      queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams
+                    ))
+                  }),
+                <.li(^.className := snapshotDataClass,
+                  <.a(^.id := "snapshotTab", VdomAttr("data-toggle") := "tab", "Snapshot"), ^.onClick --> {
+                    GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Snapshot")
+                    props.router.set(props.terminalPageTab.copy(
+                      mode = "snapshot",
+                      subMode = subMode,
+                      queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams
+                    ))
+                  }
+                ),
+                <.li(^.className := planningClass,
+                  <.a(^.id := "planningTab", VdomAttr("data-toggle") := "tab", "Planning"), ^.onClick --> {
+                    GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Planning")
+                    props.router.set(props.terminalPageTab.copy(mode = "planning", subMode = subMode, queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams))
+                  }
+                ),
+                model.loggedInUserPot.render(
+                  loggedInUser => if (loggedInUser.roles.contains(StaffEdit))
+                    <.li(^.className := staffingClass,
+                      <.a(^.id := "monthlyStaffingTab", VdomAttr("data-toggle") := "tab", "Monthly Staffing"), ^.onClick --> {
+                        GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Monthly Staffing")
+                        props.router.set(props.terminalPageTab.copy(mode = "staffing", subMode = "15", queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams))
+                      }
+                    ) else ""
+                )
+              ),
+              <.div(^.className := "tab-content",
+                <.div(^.id := "current", ^.className := s"tab-pane $currentContentClass", {
+                  if (props.terminalPageTab.mode == "current") <.div(
+                    <.h2(props.terminalPageTab.dateFromUrlOrNow match {
+                      case date: SDateLike if date.ddMMyyString == SDate.now().ddMMyyString => "Live View"
+                      case date: SDateLike if date.millisSinceEpoch < SDate.now().millisSinceEpoch => "Historic View"
+                      case date: SDateLike if date.millisSinceEpoch > SDate.now().millisSinceEpoch => "Forecast View"
+                      case _ => "Live View"
+                    }),
+                    <.div(^.className := "content-head",
+                      PcpPaxSummariesComponent(terminalContentProps.crunchStatePot, terminalContentProps.viewMode, props.terminalPageTab.terminal, model.minuteTicker),
+                      DatePickerComponent(DatePickerComponent.Props(props.router,
+                        props.terminalPageTab,
+                        model.loadingState,
+                        model.minuteTicker
+                      ))
+                    ),
+                    TerminalContentComponent(terminalContentProps)
+                  ) else ""
+                }),
+                <.div(^.id := "snapshot", ^.className := s"tab-pane $snapshotContentClass", {
+                  if (props.terminalPageTab.mode == "snapshot") <.div(
+                    <.h2("Snapshot View"),
+                    SnapshotSelector(props.router, props.terminalPageTab, model.loadingState),
+                    TerminalContentComponent(terminalContentProps)
+                  ) else ""
+                }),
+                <.div(^.id := "planning", ^.className := s"tab-pane $planningContentClass", {
+                  if (props.terminalPageTab.mode == "planning") {
+                    <.div(
+                      <.div(model.forecastPeriodPot.render(fp => {
+                        TerminalPlanningComponent(TerminalPlanningComponent.Props(fp, props.terminalPageTab, props.router))
+                      }))
+                    )
+                  } else ""
+                }),
+                model.loggedInUserPot.render(
+                  loggedInUser => if (loggedInUser.roles.contains(StaffEdit))
+                    <.div(^.id := "staffing", ^.className := s"tab-pane terminal-staffing-container $staffingContentClass",
+                      if (props.terminalPageTab.mode == "staffing") {
+                        model.potMonthOfShifts.render(ms => {
+                          MonthlyStaffing(ms.shifts, props.terminalPageTab, props.router)
+                        })
+                      } else ""
+                    ) else "")
+              )
+            )
+          }))
+        })
+      )
     })
     .build
 

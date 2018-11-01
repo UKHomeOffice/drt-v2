@@ -112,8 +112,7 @@ object TerminalDesksAndQueuesRow {
 
   def adjustmentLinkWithPopup(props: Props, slotStart: SDateLike, slotEnd: SDateLike, action: String, label: String): TagMod = props.maybeStaffAdjustmentState match {
     case Some(state) if state.isApplicableToSlot(slotStart, slotEnd) =>
-      val popup: TagMod = StaffAdjustmentDialogue(state)()
-      adjustmentLink(props, action, label, Option(popup))
+      adjustmentLink(props, action, label, None)
     case _ =>
       adjustmentLink(props, action, label, None)
   }
