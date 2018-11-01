@@ -38,8 +38,7 @@ object TerminalDesksAndQueues {
                    terminalPageTab: TerminalPageTabLoc,
                    showActuals: Boolean,
                    viewMode: ViewMode,
-                   loggedInUser: LoggedInUser,
-                   maybeStaffAdjustmentsPopoverState: Option[StaffAdjustmentDialogueState]
+                   loggedInUser: LoggedInUser
                   )
 
   sealed trait ViewType {
@@ -214,8 +213,7 @@ object TerminalDesksAndQueues {
                   props.airportConfig.hasActualDeskStats,
                   props.viewMode,
                   props.loggedInUser,
-                  slotMinutes,
-                  props.maybeStaffAdjustmentsPopoverState
+                  slotMinutes
                 )
                 TerminalDesksAndQueuesRow(rowProps)
             }.toTagMod))

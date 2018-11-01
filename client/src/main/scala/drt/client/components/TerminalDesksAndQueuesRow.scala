@@ -36,12 +36,11 @@ object TerminalDesksAndQueuesRow {
                    hasActualDeskStats: Boolean,
                    viewMode: ViewMode,
                    loggedInUser: LoggedInUser,
-                   slotMinutes: Int,
-                   maybeStaffAdjustmentState: Option[StaffAdjustmentDialogueState]
+                   slotMinutes: Int
                   )
 
   implicit val propsReuse: Reusability[Props] = Reusability.by(p =>
-    (p.queueMinutes.hashCode(), p.staffMinute.hashCode(), p.showActuals, p.viewType.hashCode(), p.viewMode.hashCode(), p.maybeStaffAdjustmentState.hashCode())
+    (p.queueMinutes.hashCode(), p.staffMinute.hashCode(), p.showActuals, p.viewType.hashCode(), p.viewMode.hashCode())
   )
 
   val component = ScalaComponent.builder[Props]("TerminalDesksAndQueuesRow")
@@ -90,8 +89,8 @@ object TerminalDesksAndQueuesRow {
 
       def allowAdjustments: Boolean = props.viewMode.time.millisSinceEpoch > SDate.midnightThisMorning().millisSinceEpoch
 
-      val minus: TagMod = adjustmentLinkWithPopup(props, slotStart, slotEnd, "-", "decrease")
-      val plus: TagMod = adjustmentLink(props, "+", "increase", None)
+      val minus: TagMod = adjustmentLink(props, "-", "decrease")
+      val plus: TagMod = adjustmentLink(props, "+", "increase")
 
       val pcpTds = List(
         <.td(^.className := s"non-pcp", fixedPoints),
@@ -110,19 +109,10 @@ object TerminalDesksAndQueuesRow {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def adjustmentLinkWithPopup(props: Props, slotStart: SDateLike, slotEnd: SDateLike, action: String, label: String): TagMod = props.maybeStaffAdjustmentState match {
-    case Some(state) if state.isApplicableToSlot(slotStart, slotEnd) =>
-      adjustmentLink(props, action, label, None)
-    case _ =>
-      adjustmentLink(props, action, label, None)
-  }
-
-  def adjustmentLink(props: Props, action: String, label: String, maybePopup: Option[TagMod]): TagOf[html.Div] = maybePopup match {
-    case Some(popup) =>
-      <.div(popup, ^.className := "staff-deployment-adjustment-container", <.div(^.className := "popover-trigger", action))
-    case _ =>
-      val popupState = adjustmentState(props, action, label)
-      <.div(^.className := "staff-deployment-adjustment-container", <.div(^.className := "popover-trigger", action, ^.onClick --> Callback(SPACircuit.dispatch(UpdateStaffAdjustmentDialogueState(Option(popupState))))))
+  def adjustmentLink(props: Props, action: String, label: String): TagOf[html.Div] = {
+    val popupState = adjustmentState(props, action, label)
+    val initialiseDialogue = Callback(SPACircuit.dispatch(UpdateStaffAdjustmentDialogueState(Option(popupState))))
+    <.div(^.className := "staff-deployment-adjustment-container", <.div(^.className := "popover-trigger", action, ^.onClick --> initialiseDialogue))
   }
 
   def adjustmentState(props: Props, action: String, label: String): StaffAdjustmentDialogueState =

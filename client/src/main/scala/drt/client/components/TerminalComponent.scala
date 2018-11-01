@@ -70,6 +70,8 @@ object TerminalComponent {
           val model = modelMP()
           <.div(model.airportConfig.render(airportConfig => {
 
+            val viewMode = if (model.viewMode == ViewLive()) CurrentWindow() else WholeDayWindow()
+
             val terminalContentProps = TerminalContentComponent.Props(
               model.crunchStatePot,
               model.potShifts,
@@ -78,16 +80,12 @@ object TerminalComponent {
               airportConfig,
               props.terminalPageTab,
               model.airportInfos,
-              if (model.viewMode == ViewLive())
-                CurrentWindow()
-              else
-                WholeDayWindow(),
+              viewMode,
               props.router,
               model.showActuals,
               model.viewMode,
               model.loggedInUserPot,
-              model.minuteTicker,
-              model.maybeStaffAdjustmentsPopoverState
+              model.minuteTicker
             )
 
             val currentClass = if (props.terminalPageTab.mode == "current") "active" else ""
