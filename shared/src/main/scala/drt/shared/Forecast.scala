@@ -28,8 +28,11 @@ object Forecast {
       case None => forecastPeriod
         .days
         .headOption
-        .map(_._2.toList.map(s => millisToRowLabel(s.startMillis)))
+        .map {
+          case (_, slots) => slots.toList.map(s => millisToRowLabel(s.startMillis))
+        }
         .getOrElse(List())
+
     }
 
   def rangeContainsBSTToUTCChange[A](daysOfForecastTimesSlots: Seq[(MillisSinceEpoch, Seq[A])]) =
