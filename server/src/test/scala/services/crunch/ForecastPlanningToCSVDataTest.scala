@@ -41,6 +41,17 @@ class ForecastPlanningToCSVDataTest extends Specification {
       result === expected
     }
 
+    "Given ForecastPeriod with no data, we should get an empty list of timeslots" >> {
+
+      val forecast = ForecastPeriod(Map())
+
+      val result = Forecast.timeSlotStartTimes(forecast, CSVData.millisToHoursAndMinutesString)
+
+      val expected = List()
+
+      result === expected
+    }
+
     "Given a ForecastPeriod with 3 days when we export to CSV, we should see the same data as a CSV" >> {
       val day1Midnight = SDate("2017-10-25T00:00:00Z")
       val d1t0000Millis = day1Midnight.millisSinceEpoch
