@@ -24,8 +24,15 @@ object Forecast {
 
   def timeSlotStartTimes(forecastPeriod: ForecastPeriod, millisToRowLabel: (MillisSinceEpoch) => String): Seq[String] =
     forecastPeriod.days.toList.find(_._2.length == Forecast.timeslotsOnBSTToUTCChangeDay) match {
-      case Some((day, slots)) => slots.map(s => millisToRowLabel(s.startMillis))
-      case None => forecastPeriod.days.head._2.toList.map(s => millisToRowLabel(s.startMillis))
+      case Some((_, slots)) => slots.map(s => millisToRowLabel(s.startMillis))
+      case None => forecastPeriod
+        .days
+        .headOption
+        .map {
+          case (_, slots) => slots.toList.map(s => millisToRowLabel(s.startMillis))
+        }
+        .getOrElse(List())
+
     }
 
   def rangeContainsBSTToUTCChange[A](daysOfForecastTimesSlots: Seq[(MillisSinceEpoch, Seq[A])]) =
