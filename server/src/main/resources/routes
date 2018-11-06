@@ -3,44 +3,46 @@
 # ~~~~
 
 # Home page
-GET         /                                             controllers.Application.index
+GET           /                                                    controllers.Application.index
 
-GET         /export/desks/:pointInTime/:terminalName      controllers.Application.exportDesksAndQueuesAtPointInTimeCSV(pointInTime, terminalName, startHour: Int ?= 0, endHour: Int ?= 24)
-GET         /export/arrivals/:pointInTime/:terminalName   controllers.Application.exportFlightsWithSplitsAtPointInTimeCSV(pointInTime, terminalName, startHour: Int ?= 0, endHour: Int ?= 24)
-GET         /export/desks/:start/:end/:terminalName       controllers.Application.exportDesksAndQueuesBetweenTimeStampsCSV(start, end, terminalName)
-GET         /export/arrivals/:start/:end/:terminalName    controllers.Application.exportFlightsWithSplitsBetweenTimeStampsCSV(start, end, terminalName)
-GET         /export/planning/:weekStarting/:terminalName  controllers.Application.exportForecastWeekToCSV(weekStarting, terminalName)
-GET         /export/headlines/:weekStarting/:terminalName controllers.Application.exportForecastWeekHeadlinesToCSV(weekStarting, terminalName)
+GET           /export/desks/:pointInTime/:terminalName             controllers.Application.exportDesksAndQueuesAtPointInTimeCSV(pointInTime, terminalName, startHour: Int ?= 0, endHour: Int ?= 24)
+GET           /export/arrivals/:pointInTime/:terminalName          controllers.Application.exportFlightsWithSplitsAtPointInTimeCSV(pointInTime, terminalName, startHour: Int ?= 0, endHour: Int ?= 24)
+GET           /export/desks/:start/:end/:terminalName              controllers.Application.exportDesksAndQueuesBetweenTimeStampsCSV(start, end, terminalName)
+GET           /export/arrivals/:start/:end/:terminalName           controllers.Application.exportFlightsWithSplitsBetweenTimeStampsCSV(start, end, terminalName)
+GET           /export/planning/:weekStarting/:terminalName         controllers.Application.exportForecastWeekToCSV(weekStarting, terminalName)
+GET           /export/headlines/:weekStarting/:terminalName        controllers.Application.exportForecastWeekHeadlinesToCSV(weekStarting, terminalName)
 
-GET         /export/acl-feed/latest/:portCode             controllers.Application.fetchAclFeed(portCode)
+GET           /export/acl-feed/latest/:portCode                    controllers.Application.fetchAclFeed(portCode)
 
 # Map static resources from the /public folder to the /assets URL path
-GET         /assets/fonts/*file                           controllers.Assets.at(path="/public/lib/font-awesome/fonts", file)
-GET         /assets/images/*file                          controllers.Assets.at(path="/public/images", file)
-GET         /assets/*file                                 controllers.Assets.versioned(path="/public", file: Asset)
+GET           /assets/fonts/*file                                  controllers.Assets.at(path="/public/lib/font-awesome/fonts", file)
+GET           /assets/images/*file                                 controllers.Assets.at(path="/public/images", file)
+GET           /assets/*file                                        controllers.Assets.versioned(path="/public", file: Asset)
 
 # Autowire calls
-POST        /api/*path                                    controllers.Application.autowireApi(path: String)
+POST          /api/*path                                           controllers.Application.autowireApi(path: String)
 
-GET         /data/user                                    controllers.Application.getLoggedInUser()
+GET           /data/user                                           controllers.Application.getLoggedInUser()
 
-GET         /data/user/has-port-access                    controllers.Application.getUserHasPortAccess()
+GET           /data/user/has-port-access                           controllers.Application.getUserHasPortAccess()
 
 
 # Logging
-POST        /logging                                      controllers.Application.logging
+POST          /logging                                             controllers.Application.logging
 
 
-POST        /data/staff                                   controllers.Application.saveStaff
+POST          /data/staff                                          controllers.Application.saveStaff
 
-POST        /data/alert                                   controllers.Application.addAlert
-DELETE      /data/alert                                   controllers.Application.deleteAlerts
+POST          /data/alert                                          controllers.Application.addAlert
+DELETE        /data/alert                                          controllers.Application.deleteAlerts
 
-POST        /test/arrival                                 test.controllers.Test.addArrival
+POST          /test/arrival                                        test.controllers.Test.addArrival
 
-POST        /test/manifest                                test.controllers.Test.addManifest
+POST          /test/arrivals/:forDate                              test.controllers.Test.addArrivals(forDate)
 
-POST        /test/mock-roles                              test.controllers.Test.setMockRoles()
+POST          /test/manifest                                       test.controllers.Test.addManifest
 
-DELETE      /test/data                                    test.controllers.Test.deleteAllData()
+POST          /test/mock-roles                                     test.controllers.Test.setMockRoles()
+
+DELETE        /test/data                                           test.controllers.Test.deleteAllData()
 

@@ -1,4 +1,4 @@
-package drt.server.feeds.test
+package test.feeds.test
 
 import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorSystem, Cancellable, Props}
