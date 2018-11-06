@@ -5,12 +5,13 @@ import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props}
 import akka.stream.{KillSwitch, Materializer}
 import akka.stream.scaladsl.Source
-import drt.server.feeds.test.{TestAPIManifestFeedGraphStage, TestFixtureFeed}
+import test.feeds.test.{TestAPIManifestFeedGraphStage, TestFixtureFeed}
 import drt.shared.{AirportConfig, Role}
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import test.TestActors.{TestStaffMovementsActor, _}
+import test.roles.TestUserRoleProvider
 
 class TestDrtSystem(override val actorSystem: ActorSystem, override val config: Configuration, override val airportConfig: AirportConfig)(implicit actorMaterializer: Materializer)
   extends DrtSystem(actorSystem, config, airportConfig) {
@@ -34,7 +35,6 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
   system.log.warning(s"Using test System")
   val voyageManifestTestSourceGraph: Source[ManifestsFeedResponse, NotUsed] = Source.fromGraph(new TestAPIManifestFeedGraphStage)
 
-  system.log.info(s"Here's the Graph $voyageManifestTestSourceGraph")
   override lazy val voyageManifestsStage: Source[ManifestsFeedResponse, NotUsed] = voyageManifestTestSourceGraph
   val testFeed = TestFixtureFeed(system)
 
