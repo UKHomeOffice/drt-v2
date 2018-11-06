@@ -5,6 +5,7 @@ import javax.inject.{Inject, Singleton}
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.Materializer
 import akka.util.Timeout
+import controllers.AirportConfProvider
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
 import drt.shared.{Arrival, LiveFeedSource, SDateLike}
@@ -31,17 +32,17 @@ class Test @Inject()(implicit val config: Configuration,
                      implicit val mat: Materializer,
                      env: Environment,
                      val system: ActorSystem,
-                     ec: ExecutionContext) extends InjectedController {
+                     ec: ExecutionContext) extends InjectedController with AirportConfProvider {
   implicit val timeout: Timeout = Timeout(250 milliseconds)
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   val baseTime: SDateLike = SDate.now()
 
-  val liveArrivalsTestActor: Future[ActorRef] = system.actorSelection("akka://test-drt-actor-system/user/TestActor-LiveArrivals").resolveOne()
-  val apiManifestsTestActor: Future[ActorRef] = system.actorSelection("akka://test-drt-actor-system/user/TestActor-APIManifests").resolveOne()
-  val staffMovementsTestActor: Future[ActorRef] = system.actorSelection("akka://test-drt-actor-system/user/TestActor-StaffMovements").resolveOne()
-  val mockRolesTestActor: Future[ActorRef] = system.actorSelection("akka://test-drt-actor-system/user/TestActor-MockRoles").resolveOne()
+  val liveArrivalsTestActor: Future[ActorRef] = system.actorSelection(s"akka://${portCode.toLowerCase}-drt-actor-system/user/TestActor-LiveArrivals").resolveOne()
+  val apiManifestsTestActor: Future[ActorRef] = system.actorSelection(s"akka://${portCode.toLowerCase}-drt-actor-system/user/TestActor-APIManifests").resolveOne()
+  val staffMovementsTestActor: Future[ActorRef] = system.actorSelection(s"akka://${portCode.toLowerCase}-drt-actor-system/user/TestActor-StaffMovements").resolveOne()
+  val mockRolesTestActor: Future[ActorRef] = system.actorSelection(s"akka://${portCode.toLowerCase}-drt-actor-system/user/TestActor-MockRoles").resolveOne()
 
   def saveArrival(arrival: Arrival) = {
     liveArrivalsTestActor.map(actor => {
@@ -60,7 +61,7 @@ class Test @Inject()(implicit val config: Configuration,
   }
 
   def resetData() = {
-    system.actorSelection("akka://test-drt-actor-system/user/TestActor-ResetData").resolveOne().map(actor => {
+    system.actorSelection(s"akka://${portCode.toLowerCase}-drt-actor-system/user/TestActor-ResetData").resolveOne().map(actor => {
 
       log.info(s"Sending reset message")
 
