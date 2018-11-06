@@ -21,7 +21,7 @@ import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
 import drt.staff.ImportStaff
-import drt.users.KeyCloakClient
+import drt.users.{KeyCloakClient, KeyCloakGroups}
 import javax.inject.{Inject, Singleton}
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
@@ -40,6 +40,7 @@ import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import test.TestDrtSystem
 
+import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -423,31 +424,18 @@ class Application @Inject()(implicit val config: Configuration,
     new KeyCloakClient(token, keyCloakUrl, system) with ProdSendAndReceive
   }
 
-  def exportUsers(): Action[AnyContent] = Action { request =>
+  def exportUsers(): Action[AnyContent] = Action.async { request =>
     val loggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
-    log.info(s"Got these roles: ${loggedInUser.roles}")
+
     if (loggedInUser.roles.contains(ManageUsers)) {
-      val usersWithGroups: Future[List[String]] = keyCloakClient(request.headers).getGroups().map(groups => {
-        groups
-          .flatMap(group => {
-            val usersInGroupFuture = keyCloakClient(request.headers).getUsersInGroup(group.id)
-            val users = Await.result(usersInGroupFuture, 100 seconds)
-            users.map(u => (u, group.name))
-          })
-          .groupBy {
-            case (user, _) => user
-          }
-          .map {
-            case (user, usersGroups) =>
-              val groupList = usersGroups.map(_._2).mkString(", ")
-              val line = s"""${user.email},"$groupList""""
-              log.info(s"line: $line")
-              line
-          }
-          .toList
-      })
-      val lines = Await.result(usersWithGroups, 300 seconds).mkString("\n")
-      Ok(lines)
+      val client = keyCloakClient(request.headers)
+      client
+        .getGroups()
+        .map(KeyCloakGroups)
+        .flatMap(_.eventualUsersWithGroupsCsvContent(client))
+        .map(csvContent => Result(
+          ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='users-with-groups.csv'")),
+          HttpEntity.Strict(ByteString(csvContent), Option("application/csv"))))
     } else throw new Exception(permissionDeniedMessage)
   }
 
