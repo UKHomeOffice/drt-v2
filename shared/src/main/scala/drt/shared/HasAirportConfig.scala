@@ -566,7 +566,12 @@ object AirportConfigs {
         Queues.QueueDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5))
       )
     ),
-    role = EMAAccess
+    role = EMAAccess,
+    // This is deliberately high (10000) to cope with restoring previous snapshot bug where the time between snapshots
+    // was going beyond the message threshold.
+    // A neater fix would be to produce the missing snapshots retrospectively, but that would be quite a big job for a
+    // minor gain
+    portStateSnapshotInterval = 10000
   )
 
   val brs = AirportConfig(
