@@ -431,8 +431,7 @@ class Application @Inject()(implicit val config: Configuration,
       val client = keyCloakClient(request.headers)
       client
         .getGroups()
-        .map(KeyCloakGroups)
-        .flatMap(_.eventualUsersWithGroupsCsvContent(client))
+        .flatMap(groupList => KeyCloakGroups(groupList).usersWithGroupsCsvContent(client))
         .map(csvContent => Result(
           ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='users-with-groups.csv'")),
           HttpEntity.Strict(ByteString(csvContent), Option("application/csv"))))

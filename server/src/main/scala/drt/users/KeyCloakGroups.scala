@@ -7,12 +7,12 @@ import scala.concurrent.Future
 
 
 case class KeyCloakGroups(groups: List[KeyCloakGroup]) {
-  def eventualUsersWithGroupsCsvContent(client: KeyCloakClient): Future[String] = {
-    val usersWithGroupsFuture = eventualUsersWithGroups(groups, client)
-    futureUsersWithGroupsToCsv(usersWithGroupsFuture)
+  def usersWithGroupsCsvContent(client: KeyCloakClient): Future[String] = {
+    val usersWithGroupsFuture = usersWithGroups(groups, client)
+    usersWithGroupsToCsv(usersWithGroupsFuture)
   }
 
-  def futureUsersWithGroupsToCsv(usersWithGroupsFuture: Future[List[(KeyCloakUser, String)]]): Future[String] = usersWithGroupsFuture
+  def usersWithGroupsToCsv(usersWithGroupsFuture: Future[List[(KeyCloakUser, String)]]): Future[String] = usersWithGroupsFuture
     .map(_.groupBy { case (user, _) => user })
     .map(usersToUsersWithGroups => {
       val csvLines = usersToUsersWithGroups
@@ -25,7 +25,7 @@ case class KeyCloakGroups(groups: List[KeyCloakGroup]) {
       csvLines.mkString("\n")
     })
 
-  def eventualUsersWithGroups(groups: List[KeyCloakGroup], client: KeyCloakClient): Future[List[(KeyCloakUser, String)]] = {
+  def usersWithGroups(groups: List[KeyCloakGroup], client: KeyCloakClient): Future[List[(KeyCloakUser, String)]] = {
     val eventualUsersWithGroupsByGroup: List[Future[List[(KeyCloakUser, String)]]] = groups.map(group => {
       val eventualUsersWithGroups = client
         .getUsersInGroup(group.name)
