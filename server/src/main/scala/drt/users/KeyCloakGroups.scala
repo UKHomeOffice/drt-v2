@@ -19,8 +19,8 @@ case class KeyCloakGroups(groups: List[KeyCloakGroup]) {
         .toSeq
         .map {
           case (user, usersWithGroups) =>
-            val groupsCsvValue = usersWithGroups.map(_._2).sorted.mkString(", ")
-            s"""${user.email},${user.firstName},${user.lastName},${user.enabled},"$groupsCsvValue""""
+            val userGroupsCsvValue = usersWithGroups.map { case (_, userGroups) => userGroups.sorted.mkString(", ") }
+            s"""${user.email},${user.firstName},${user.lastName},${user.enabled},"$userGroupsCsvValue""""
         }
       csvLines.mkString("\n")
     })
