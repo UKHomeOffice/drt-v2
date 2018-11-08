@@ -57,6 +57,7 @@ case class CrunchProps[FR, MS](logLabel: String = "",
                                initialBaseArrivals: Set[Arrival] = Set(),
                                initialFcstArrivals: Set[Arrival] = Set(),
                                initialLiveArrivals: Set[Arrival] = Set(),
+                               initialMergeArrivals: Map[Int, Arrival] = Map(),
                                initialManifestsState: Option[VoyageManifestState],
                                arrivalsBaseSource: Source[ArrivalsFeedResponse, FR],
                                arrivalsFcstSource: Source[ArrivalsFeedResponse, FR],
@@ -92,11 +93,16 @@ object CrunchSystem {
     val maybeStaffMinutes = initialStaffMinutesFromPortState(props.initialPortState)
     val maybeCrunchMinutes = initialCrunchMinutesFromPortState(props.initialPortState)
 
+    val initialFlightsWithSplits = initialFlightsFromPortState(props.initialPortState)
+
     val arrivalsStage = new ArrivalsGraphStage(
       name = props.logLabel,
       initialBaseArrivals = if (props.recrunchOnStart) Set() else props.initialBaseArrivals,
       initialForecastArrivals = if (props.recrunchOnStart) Set() else props.initialFcstArrivals,
       initialLiveArrivals =  if (props.recrunchOnStart) Set() else props.initialLiveArrivals,
+      initialMergedArrivals =  if (props.recrunchOnStart) Map() else {
+        initialFlightsWithSplits.map(_.flights.map(fws => (fws.apiFlight.uniqueId, fws.apiFlight)).toMap).getOrElse(Map())
+      },
       pcpArrivalTime = props.pcpArrival,
       validPortTerminals = props.airportConfig.terminalNames.toSet,
       expireAfterMillis = props.expireAfterMillis,
@@ -107,7 +113,7 @@ object CrunchSystem {
 
     val arrivalSplitsGraphStage = new ArrivalSplitsGraphStage(
       name = props.logLabel,
-      optionalInitialFlights = initialFlightsFromPortState(props.initialPortState),
+      optionalInitialFlights = initialFlightsWithSplits,
       optionalInitialManifests = props.initialManifestsState.map(_.manifests),
       splitsCalculator = splitsCalculator,
       groupFlightsByCodeShares = groupFlightsByCodeShares,
@@ -133,7 +139,7 @@ object CrunchSystem {
     val workloadGraphStage = new WorkloadGraphStage(
       name = props.logLabel,
       optionalInitialLoads = if (props.recrunchOnStart) None else initialLoadsFromPortState(props.initialPortState),
-      optionalInitialFlightsWithSplits = initialFlightsFromPortState(props.initialPortState),
+      optionalInitialFlightsWithSplits = initialFlightsWithSplits,
       airportConfig = props.airportConfig,
       natProcTimes = props.airportConfig.nationalityBasedProcTimes,
       expireAfterMillis = props.expireAfterMillis,
