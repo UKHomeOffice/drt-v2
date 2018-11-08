@@ -75,7 +75,7 @@ class ShiftsActorBase(val now: () => SDateLike,
 
   def initialState: ShiftAssignments = ShiftAssignments.empty
 
-  val snapshotInterval = 250
+  val snapshotInterval = 5000
   override val snapshotBytesThreshold: Int = oneMegaByte
 
   import ShiftsMessageParser._
