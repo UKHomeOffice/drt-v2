@@ -10,6 +10,7 @@ import drt.shared.KeyCloakApi.KeyCloakUser
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
+import org.scalajs.dom
 
 object KeyCloakUsersPage {
 
@@ -27,6 +28,7 @@ object KeyCloakUsersPage {
           <.h2("DRT V2 Keycloak User List"),
           usersPot.renderReady(users =>
             <.div(
+              <.div(^.className := "button-group", <.a("Export Users", ^.href := s"${dom.window.location.pathname}/export/users", ^.target := "_blank", ^.className := "btn btn-default")),
               <.table(^.className := "key-cloak-users",
                 <.tbody(
                   users.map(user => <.tr(

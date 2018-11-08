@@ -2,7 +2,6 @@ package controllers
 
 import java.nio.ByteBuffer
 import java.util.UUID
-import javax.inject.{Inject, Singleton}
 
 import actors._
 import actors.pointInTime.CrunchStateReadActor
@@ -22,7 +21,8 @@ import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
 import drt.staff.ImportStaff
-import drt.users.KeyCloakClient
+import drt.users.{KeyCloakClient, KeyCloakGroups}
+import javax.inject.{Inject, Singleton}
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.{HeaderNames, HttpEntity}
@@ -44,7 +44,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
-import scala.util.matching.Regex
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
 
@@ -181,6 +180,8 @@ class Application @Inject()(implicit val config: Configuration,
     SDate(date.millisSinceEpoch - oneDayInMillis)
   }
 
+  val permissionDeniedMessage = "You do not have permission manage users"
+
   object ApiService {
     def apply(
                airportConfig: AirportConfig,
@@ -290,8 +291,6 @@ class Application @Inject()(implicit val config: Configuration,
             StaffTimeSlots.getShiftsForMonth(shifts, monthInLocalTime, terminalName)
         }
       }
-
-      val permissionDeniedMessage = "You do not have permission manage users"
 
       def keyCloakClient: KeyCloakClient with ProdSendAndReceive = {
         val token = headers.get("X-Auth-Token").getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
@@ -416,6 +415,26 @@ class Application @Inject()(implicit val config: Configuration,
     Action {
       Ok("{userHasAccess: true}")
     }
+  }
+
+  def keyCloakClient(headers: Headers): KeyCloakClient with ProdSendAndReceive = {
+    val token = headers.get("X-Auth-Token").getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
+    val keyCloakUrl = config.getOptional[String]("key-cloak.url").getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
+    new KeyCloakClient(token, keyCloakUrl, system) with ProdSendAndReceive
+  }
+
+  def exportUsers(): Action[AnyContent] = Action.async { request =>
+    val loggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
+
+    if (loggedInUser.roles.contains(ManageUsers)) {
+      val client = keyCloakClient(request.headers)
+      client
+        .getGroups()
+        .flatMap(groupList => KeyCloakGroups(groupList).usersWithGroupsCsvContent(client))
+        .map(csvContent => Result(
+          ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='users-with-groups.csv'")),
+          HttpEntity.Strict(ByteString(csvContent), Option("application/csv"))))
+    } else throw new Exception(permissionDeniedMessage)
   }
 
   def crunchStateAtPointInTime(pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = {
