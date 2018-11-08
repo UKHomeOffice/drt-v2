@@ -2,7 +2,6 @@ package controllers
 
 import java.nio.ByteBuffer
 import java.util.UUID
-
 import actors._
 import actors.pointInTime.CrunchStateReadActor
 import akka.actor._
@@ -39,11 +38,11 @@ import services.staffing.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import test.TestDrtSystem
-
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
+import scala.util.Try
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
 
@@ -581,6 +580,39 @@ class Application @Inject()(implicit val config: Configuration,
       case None =>
         log.error(s"Missing headline data for ${startOfWeekMidnight.ddMMyyString} for Terminal $terminal")
         NotFound(s"Sorry, no headlines available for week starting ${startOfWeekMidnight.ddMMyyString}")
+    }
+  }
+
+  def exportApi(day: Int, month: Int, year: Int, terminalName: TerminalName) = auth {
+    Action.async { request =>
+      val dateOption = Try(SDate(year, month, day, 0, 0)).toOption
+      val terminalNameOption = airportConfig.terminalNames.find(name => name == terminalName)
+      val hasRole = ctrl.getRoles(config, request.headers, request.session).contains(ApiViewPortCsv)
+      val resultOption = for {
+        date <- dateOption if hasRole
+        terminalName <- terminalNameOption
+      } yield {
+        val pit = date.millisSinceEpoch
+        val crunchStateForPointInTime = loadBestCrunchStateForPointInTime(pit)
+        val fileName = f"export-splits-$portCode-$terminalName-${date.getFullYear()}-${date.getMonth()}-${date.getDate()}"
+        flightsForCSVExportWithinRange(terminalName, date, startHour = 0, endHour = 24, crunchStateForPointInTime).map {
+          case Some(csvFlights) =>
+            val csvData = CSVData.flightsWithSplitsWithAPIActualsToCSVWithHeadings(csvFlights)
+            Result(
+              ResponseHeader(OK, Map(
+                CONTENT_LENGTH -> csvData.length.toString,
+                CONTENT_TYPE -> "text/csv",
+                CONTENT_DISPOSITION -> s"attachment; filename='$fileName.csv'",
+                CACHE_CONTROL -> "no-cache")
+              ),
+              HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
+            )
+          case None => NotFound("No data for this date")
+        }
+      }
+      resultOption.getOrElse(
+        Future(if (!hasRole) Unauthorized else BadRequest("Invalid terminal name or date"))
+      )
     }
   }
 

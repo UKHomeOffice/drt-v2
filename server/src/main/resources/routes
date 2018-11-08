@@ -5,6 +5,7 @@
 # Home page
 GET           /                                                    controllers.Application.index
 
+GET           /export/api/:day/:month/:year/:terminalName          controllers.Application.exportApi(day: Int, month: Int, year: Int, terminalName: String)
 GET           /export/desks/:pointInTime/:terminalName             controllers.Application.exportDesksAndQueuesAtPointInTimeCSV(pointInTime, terminalName, startHour: Int ?= 0, endHour: Int ?= 24)
 GET           /export/arrivals/:pointInTime/:terminalName          controllers.Application.exportFlightsWithSplitsAtPointInTimeCSV(pointInTime, terminalName, startHour: Int ?= 0, endHour: Int ?= 24)
 GET           /export/desks/:start/:end/:terminalName              controllers.Application.exportDesksAndQueuesBetweenTimeStampsCSV(start, end, terminalName)

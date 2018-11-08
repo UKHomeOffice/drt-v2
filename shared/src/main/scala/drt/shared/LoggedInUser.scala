@@ -26,7 +26,8 @@ object Roles {
     StaffEdit,
     ApiView,
     ManageUsers,
-    CreateAlerts
+    CreateAlerts,
+    ApiViewPortCsv
   ) ++ portRoles
   def parse(roleName: String): Option[Role] = availableRoles.find(role=> role.name == roleName)
 }
@@ -37,6 +38,10 @@ case object StaffEdit extends Role {
 
 case object ApiView extends Role {
   override val name: String = "api:view"
+}
+
+case object ApiViewPortCsv extends Role {
+  override val name: String = "api:view-port-csv"
 }
 
 case object TestAccess extends Role {

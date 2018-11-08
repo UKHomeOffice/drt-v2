@@ -23,3 +23,37 @@
 //
 // -- This is will overwrite an existing command --
 // Cypress.Commands.overwrite("visit", (originalFn, url, options) => { ... })
+Cypress.Commands.add('setRoles', (roles = []) => {
+  cy.request("POST", 'v2/test/live/test/mock-roles', { "roles": roles});
+});
+
+Cypress.Commands.add('addFlight', (estString, actString, estChoxString, actChoxString, schString) => {
+  const flightPayload = {
+    "Operator": "TestAir",
+    "Status": "On Chocks",
+    "EstDT": estString,
+    "ActDT": actString,
+    "EstChoxDT": estChoxString,
+    "ActChoxDT": actChoxString,
+    "Gate": "46",
+    "Stand": "44R",
+    "MaxPax": 78,
+    "ActPax": 51,
+    "TranPax": 0,
+    "RunwayID": "05L",
+    "BaggageReclaimId": "05",
+    "FlightID": 14710007,
+    "AirportID": "MAN",
+    "Terminal": "T1",
+    "ICAO": "TS123",
+    "IATA": "TS123",
+    "Origin": "AMS",
+    "SchDT": schString
+  };
+
+  cy.request('POST', '/v2/test/live/test/arrival', flightPayload);
+});
+
+Cypress.Commands.add('deleteData', () => {
+  cy.request("DELETE", '/v2/test/live/test/data');
+});
