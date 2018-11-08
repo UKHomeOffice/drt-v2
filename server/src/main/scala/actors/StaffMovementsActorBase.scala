@@ -93,7 +93,7 @@ class StaffMovementsActorBase(val now: () => SDateLike,
 
   def initialState = StaffMovementsState(StaffMovements(List()))
 
-  val snapshotInterval = 250
+  val snapshotInterval = 5000
   override val snapshotBytesThreshold: Int = oneMegaByte
 
   override def stateToMessage: GeneratedMessage = StaffMovementsStateSnapshotMessage(staffMovementsToStaffMovementMessages(state.staffMovements))
