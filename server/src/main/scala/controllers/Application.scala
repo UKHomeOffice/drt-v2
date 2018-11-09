@@ -583,13 +583,12 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def exportApi(day: Int, month: Int, year: Int, terminalName: TerminalName) = auth {
+  def exportApi(day: Int, month: Int, year: Int, terminalName: TerminalName) = authByRole(ApiViewPortCsv) {
     Action.async { request =>
       val dateOption = Try(SDate(year, month, day, 0, 0)).toOption
       val terminalNameOption = airportConfig.terminalNames.find(name => name == terminalName)
-      val hasRole = ctrl.getRoles(config, request.headers, request.session).contains(ApiViewPortCsv)
       val resultOption = for {
-        date <- dateOption if hasRole
+        date <- dateOption
         terminalName <- terminalNameOption
       } yield {
         val pit = date.millisSinceEpoch
@@ -611,7 +610,7 @@ class Application @Inject()(implicit val config: Configuration,
         }
       }
       resultOption.getOrElse(
-        Future(if (!hasRole) Unauthorized else BadRequest("Invalid terminal name or date"))
+        Future(BadRequest("Invalid terminal name or date"))
       )
     }
   }
@@ -786,6 +785,19 @@ class Application @Inject()(implicit val config: Configuration,
         case _ =>
           BadRequest("{\"error\": \"Unable to parse data\"}")
       }
+  }
+
+  def authByRole[A](allowedRole: Role)(action: Action[A]) = Action.async(action.parser) { request =>
+    val loggedInUser: LoggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
+    log.error(s"${loggedInUser.roles}, allowed role $allowedRole")
+    if (loggedInUser.hasRole(allowedRole)) {
+      auth(action)(request)
+    } else {
+      log.error("Unauthorized")
+      Future(Unauthorized(s"{" +
+        s"Permission denied, you need $allowedRole to access this page" +
+        s"}"))
+    }
   }
 
   def auth[A](action: Action[A]) = Action.async(action.parser) { request =>

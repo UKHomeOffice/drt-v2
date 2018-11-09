@@ -15,8 +15,8 @@ describe('Advanced Passenger Information Splits exposed to Port Operators', func
     cy.setRoles(["test"]);
   });
 
-  function downloadCsv(day, month, year, terminalName) {
-    return cy.request({url: '/v2/test/live/export/api/'+day+'/'+month+'/'+year+'/'+terminalName, failOnStatusCode: false})
+  function downloadCsv(terminalName, year, month, day) {
+    return cy.request({url: '/v2/test/live/export/api/'+terminalName+'/'+year+'/'+month+'/'+day, failOnStatusCode: false})
   }
 
   function waitForArrivalToAppearInTheSystem() {
@@ -25,37 +25,44 @@ describe('Advanced Passenger Information Splits exposed to Port Operators', func
   }
 
   it("Forbidden when user does not have the role `ApiViewPortCsv`", function () {
-    downloadCsv(day, month, year, "T1").then((response) => {
+    downloadCsv("T1", year, month, day).then((response) => {
       expect(response.status).to.eq(401)
     });
   });
 
+  it("Forbidden when user does not have the role to access the port", function () {
+    cy.setRoles(["api:view-port-arrivals"]);
+    downloadCsv("T1", year, month, day).then((response) => {
+      expect(response.status).to.eq(401)
+  });
+  });
+
   it("Bad Request when the date is invalid", function () {
-    cy.setRoles(["test", "api:view-port-csv"]);
-    downloadCsv(40, month, year, "T1").then((response) => {
+    cy.setRoles(["test", "api:view-port-arrivals"]);
+    downloadCsv("T1", year, month, 40).then((response) => {
       expect(response.status).to.eq(400)
     });
   });
 
   it("Bad Request when the terminal is invalid", function () {
-    cy.setRoles(["test", "api:view-port-csv"]);
-    downloadCsv(40, month, year, "InvalidTerminalName").then((response) => {
+    cy.setRoles(["test", "api:view-port-arrivals"]);
+    downloadCsv("InvalidTerminalName", year, month, day).then((response) => {
       expect(response.status).to.eq(400)
     });
   });
 
   it("Not Found when there is no arrivals on the date", function () {
-    cy.setRoles(["test", "api:view-port-csv"]);
-    downloadCsv(day, month, year, "T1").then((response) => {
+    cy.setRoles(["test", "api:view-port-arrivals"]);
+    downloadCsv("T1", year, month, day).then((response) => {
       expect(response.status).to.eq(404)
     });
   });
 
   it("Ok when there are arrivals on the date and user has the correct role", function () {
     cy.addFlight(schDateString + "T00:55:00Z", schDateString + "T00:55:00Z", schDateString + "T01:01:00Z", schDateString + "T01:05:00Z", schDateString + "T00:15:00Z");
-    cy.setRoles(["test", "api:view-port-csv"]);
+    cy.setRoles(["test", "api:view-port-arrivals"]);
     waitForArrivalToAppearInTheSystem();
-    downloadCsv(day, month, year, "T1").then((response) => {
+    downloadCsv("T1", year, month, day).then((response) => {
       expect(response.status).to.eq(200);
       expect(response.body).to.contain(header);
       expect(response.body).to.contain(schDateString + ',' + '00:15');

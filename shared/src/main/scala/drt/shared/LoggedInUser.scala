@@ -41,7 +41,7 @@ case object ApiView extends Role {
 }
 
 case object ApiViewPortCsv extends Role {
-  override val name: String = "api:view-port-csv"
+  override val name: String = "api:view-port-arrivals"
 }
 
 case object TestAccess extends Role {
