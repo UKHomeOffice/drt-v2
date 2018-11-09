@@ -38,13 +38,13 @@ POST          /data/staff                                          controllers.A
 POST          /data/alert                                          controllers.Application.addAlert
 DELETE        /data/alert                                          controllers.Application.deleteAlerts
 
-POST          /test/arrival                                        test.controllers.Test.addArrival
+POST          /test/arrival                                        test.controllers.TestController.addArrival
 
-POST          /test/arrivals/:forDate                              test.controllers.Test.addArrivals(forDate)
+POST          /test/arrivals/:forDate                              test.controllers.TestController.addArrivals(forDate)
 
-POST          /test/manifest                                       test.controllers.Test.addManifest
+POST          /test/manifest                                       test.controllers.TestController.addManifest
 
-POST          /test/mock-roles                                     test.controllers.Test.setMockRoles()
+POST          /test/mock-roles                                     test.controllers.TestController.setMockRoles()
 
-DELETE        /test/data                                           test.controllers.Test.deleteAllData()
+DELETE        /test/data                                           test.controllers.TestController.deleteAllData()
 
