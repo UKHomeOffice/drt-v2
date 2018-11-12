@@ -19,6 +19,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.util.{Failure, Success, Try}
 import scala.util.matching.Regex
 
 
@@ -57,21 +58,29 @@ case class S3ApiProvider(awsCredentials: AWSCredentials, bucketName: String)(imp
     )
     val zipInputStream = new ZipInputStream(inputStream)
 
-    val jsonContents = Stream
-      .continually(zipInputStream.getNextEntry)
-      .takeWhile(_ != null)
-      .map { _ =>
-        val buffer = new Array[Byte](4096)
-        val stringBuffer = new ArrayBuffer[Byte]()
-        var len: Int = zipInputStream.read(buffer)
+    val jsonContents = Try {
+      Stream
+        .continually(zipInputStream.getNextEntry)
+        .takeWhile(_ != null)
+        .map { _ =>
+          val buffer = new Array[Byte](4096)
+          val stringBuffer = new ArrayBuffer[Byte]()
+          var len: Int = zipInputStream.read(buffer)
 
-        while (len > 0) {
-          stringBuffer ++= buffer.take(len)
-          len = zipInputStream.read(buffer)
+          while (len > 0) {
+            stringBuffer ++= buffer.take(len)
+            len = zipInputStream.read(buffer)
+          }
+          new String(stringBuffer.toArray, UTF_8)
         }
-        new String(stringBuffer.toArray, UTF_8)
-      }
-      .toList
+        .toList
+    } match {
+      case Success(contents) => contents
+      case Failure(e) => log.error(e.getMessage)
+                         List.empty[String]
+    }
+
+    Try(zipInputStream.close())
 
     (zipFileName, jsonContents)
   }
