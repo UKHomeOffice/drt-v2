@@ -1,4 +1,4 @@
-Term,Flight No,From,Scheduled,Estimated,Touchdown,Est Chocks,Act Chocks,Stand,Max pax,Act Pax,Trans pax
+Terminal,Flight Number,Origin,Scheduled,Estimated,Touchdown,Est Chocks,Act Chocks,Stand,Max Pax,Act Pax,Trans Pax
 T1,TST001,HAM,00:00,00:00,00:00,00:00,00:00,1,200,100,0
 T1,TST002,CPH,01:00,01:00,01:00,01:00,01:00,2,200,100,0
 T1,TST003,ABV,02:00,02:00,02:00,02:00,02:00,3,200,100,0
