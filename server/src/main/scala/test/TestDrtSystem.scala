@@ -47,7 +47,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
   val testFeed = TestFixtureFeed(system)
 
 
-  sys.env.get("LIVE_FIXTURE_CSV").foreach { file =>
+  config.getOptional[String]("test.live_fixture_csv").foreach { file =>
     implicit val timeout: Timeout = Timeout(250 milliseconds)
     val testActor = system.actorSelection(s"akka://${airportConfig.portCode.toLowerCase}-drt-actor-system/user/TestActor-LiveArrivals").resolveOne()
     actorSystem.scheduler.schedule(1 second, 1 day)({
