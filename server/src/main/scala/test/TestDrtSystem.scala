@@ -5,13 +5,21 @@ import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props}
 import akka.stream.{KillSwitch, Materializer}
 import akka.stream.scaladsl.Source
-import test.feeds.test.{TestAPIManifestFeedGraphStage, TestFixtureFeed}
+import akka.util.Timeout
+import test.feeds.test.{CSVFixtures, TestAPIManifestFeedGraphStage, TestFixtureFeed}
 import drt.shared.{AirportConfig, Role}
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
+import services.SDate
 import test.TestActors.{TestStaffMovementsActor, _}
 import test.roles.TestUserRoleProvider
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.language.postfixOps
+import scala.concurrent.duration._
+import scala.util.Success
 
 class TestDrtSystem(override val actorSystem: ActorSystem, override val config: Configuration, override val airportConfig: AirportConfig)(implicit actorMaterializer: Materializer)
   extends DrtSystem(actorSystem, config, airportConfig) {
@@ -37,6 +45,21 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
 
   override lazy val voyageManifestsStage: Source[ManifestsFeedResponse, NotUsed] = voyageManifestTestSourceGraph
   val testFeed = TestFixtureFeed(system)
+
+
+  config.getOptional[String]("test.live_fixture_csv").foreach { file =>
+    implicit val timeout: Timeout = Timeout(250 milliseconds)
+    val testActor = system.actorSelection(s"akka://${airportConfig.portCode.toLowerCase}-drt-actor-system/user/TestActor-LiveArrivals").resolveOne()
+    actorSystem.scheduler.schedule(1 second, 1 day)({
+      val day = SDate.now().toISODateOnly
+      CSVFixtures.csvPathToArrivalsOnDate(day, file).collect {
+        case Success(arrival) =>
+          testActor.map( _ ! arrival)
+      }
+    })
+
+  }
+
 
   override def liveArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = testFeed
 

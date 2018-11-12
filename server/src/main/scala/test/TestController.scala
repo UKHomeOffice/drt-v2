@@ -19,20 +19,21 @@ import services.SDate
 import spray.json._
 import test.ResetData
 import test.TestActors.ResetActor
+import test.feeds.test.CSVFixtures
 import test.roles.MockRoles
 import test.roles.MockRoles.MockRolesProtocol._
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 @Singleton
-class Test @Inject()(implicit val config: Configuration,
-                     implicit val mat: Materializer,
-                     env: Environment,
-                     val system: ActorSystem,
-                     ec: ExecutionContext) extends InjectedController with AirportConfProvider {
+class TestController @Inject()(implicit val config: Configuration,
+                               implicit val mat: Materializer,
+                               env: Environment,
+                               val system: ActorSystem,
+                               ec: ExecutionContext) extends InjectedController with AirportConfProvider {
   implicit val timeout: Timeout = Timeout(250 milliseconds)
 
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -46,7 +47,6 @@ class Test @Inject()(implicit val config: Configuration,
 
   def saveArrival(arrival: Arrival) = {
     liveArrivalsTestActor.map(actor => {
-
       actor ! arrival
     })
   }
@@ -112,79 +112,26 @@ class Test @Inject()(implicit val config: Configuration,
       }
   }
 
-  object ArrivalsCSVFixture {
-
-    object fieldMap {
-      val Estimated = 4
-      val Actual = 5
-      val EstimatedChox = 6
-      val ActualChox = 7
-      val Stand = 8
-      val MaxPax = 9
-      val ActPax = 10
-      val TranPax = 11
-      val Terminal = 0
-      val rawICAO = 1
-      val rawIATA = 1
-      val Origin = 2
-      val Scheduled = 3
-    }
-
-  }
-
   def addArrivals(forDate: String) = Action {
     implicit request =>
 
-      def timeToSDateOnDate(time: String) = SDate.tryParseString(forDate + "T" + time + "Z")
-        .toOption
-        .map(_.millisSinceEpoch)
-
       request.body.asMultipartFormData.flatMap(_.files.find(_.key == "data")) match {
         case Some(f) =>
-          log.info(s"Got this file: ${f.ref.toString}")
-          csvPathToRows(f.ref.path.toString).drop(1).foreach(csvRow => {
-            val fields = csvRow.split(",")
-            import ArrivalsCSVFixture.fieldMap._
-            val arrivalTry = Try(Arrival(
-              None,
-              "Unk",
-              timeToSDateOnDate(fields(Estimated)),
-              timeToSDateOnDate(fields(Actual)),
-              timeToSDateOnDate(fields(EstimatedChox)),
-              timeToSDateOnDate(fields(ActualChox)),
-              None,
-              Option(fields(Stand)),
-              Option(fields(MaxPax).toInt),
-              Option(fields(ActPax).toInt),
-              Option(fields(TranPax).toInt),
-              None,
-              None,
-              None,
-              "TEST",
-              fields(Terminal),
-              fields(rawICAO),
-              fields(rawIATA),
-              fields(Origin),
-              timeToSDateOnDate(fields(Scheduled)).getOrElse(SDate.now().millisSinceEpoch),
-              None,
-              Set(LiveFeedSource),
-              None
-            )) match {
-              case Success(a) => saveArrival(a)
-              case Failure(f) => log.error("Failed to parse Arrival $f")
+
+          val path = f.ref.path.toString
+          CSVFixtures.csvPathToArrivalsOnDate(forDate, path)
+            .map {
+              case Failure(error) =>
+                Failure(error)
+              case Success(a) => a
+                saveArrival(a)
             }
-          })
+
           Created.withHeaders(HeaderNames.ACCEPT -> "application/csv")
 
         case None =>
           BadRequest("You must post a CSV file with name \"data\"")
       }
-
-  }
-
-  def csvPathToRows(fileName: String): Iterator[String] = {
-    val bufferedSource = scala.io.Source.fromFile(fileName)
-    bufferedSource.getLines()
   }
 
   def addManifest() = Action {
