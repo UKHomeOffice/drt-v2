@@ -67,6 +67,14 @@ pipeline:
       event: push
       status: failure
 
+  slack:
+    image: plugins/slack
+    webhook: https://hooks.slack.com/services/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
+    channel: devs
+    username: drone
+    when:
+      status: [ success, failure ]
+  
   build_tag:
     environment:
       - DOCKER_USERNAME=drt_ci
