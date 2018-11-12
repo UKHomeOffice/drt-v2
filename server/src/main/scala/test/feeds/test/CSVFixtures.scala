@@ -1,12 +1,15 @@
 package test.feeds.test
 
 import drt.shared.{Arrival, LiveFeedSource}
+import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 
 import scala.collection.immutable.Seq
 import scala.util.Try
 
 object CSVFixtures {
+
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   object ArrivalsCSVFixture {
 
@@ -61,6 +64,8 @@ object CSVFixtures {
         None
       ))
     })
+
+    log.info(s"Found ${maybeArrivals.length} arrival fixtures in $path")
 
     maybeArrivals
   }
