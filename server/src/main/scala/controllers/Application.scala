@@ -2,7 +2,6 @@ package controllers
 
 import java.nio.ByteBuffer
 import java.util.UUID
-
 import actors._
 import actors.pointInTime.CrunchStateReadActor
 import akka.actor._
@@ -39,11 +38,11 @@ import services.staffing.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import test.TestDrtSystem
-
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
+import scala.util.Try
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
 
@@ -584,6 +583,38 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
+  def exportApi(day: Int, month: Int, year: Int, terminalName: TerminalName) = authByRole(ApiViewPortCsv) {
+    Action.async { request =>
+      val dateOption = Try(SDate(year, month, day, 0, 0)).toOption
+      val terminalNameOption = airportConfig.terminalNames.find(name => name == terminalName)
+      val resultOption = for {
+        date <- dateOption
+        terminalName <- terminalNameOption
+      } yield {
+        val pit = date.millisSinceEpoch
+        val crunchStateForPointInTime = loadBestCrunchStateForPointInTime(pit)
+        val fileName = f"export-splits-$portCode-$terminalName-${date.getFullYear()}-${date.getMonth()}-${date.getDate()}"
+        flightsForCSVExportWithinRange(terminalName, date, startHour = 0, endHour = 24, crunchStateForPointInTime).map {
+          case Some(csvFlights) =>
+            val csvData = CSVData.flightsWithSplitsWithAPIActualsToCSVWithHeadings(csvFlights)
+            Result(
+              ResponseHeader(OK, Map(
+                CONTENT_LENGTH -> csvData.length.toString,
+                CONTENT_TYPE -> "text/csv",
+                CONTENT_DISPOSITION -> s"attachment; filename='$fileName.csv'",
+                CACHE_CONTROL -> "no-cache")
+              ),
+              HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
+            )
+          case None => NotFound("No data for this date")
+        }
+      }
+      resultOption.getOrElse(
+        Future(BadRequest("Invalid terminal name or date"))
+      )
+    }
+  }
+
   def exportFlightsWithSplitsAtPointInTimeCSV(pointInTime: String,
                                               terminalName: TerminalName,
                                               startHour: Int,
@@ -754,6 +785,19 @@ class Application @Inject()(implicit val config: Configuration,
         case _ =>
           BadRequest("{\"error\": \"Unable to parse data\"}")
       }
+  }
+
+  def authByRole[A](allowedRole: Role)(action: Action[A]) = Action.async(action.parser) { request =>
+    val loggedInUser: LoggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
+    log.error(s"${loggedInUser.roles}, allowed role $allowedRole")
+    if (loggedInUser.hasRole(allowedRole)) {
+      auth(action)(request)
+    } else {
+      log.error("Unauthorized")
+      Future(Unauthorized(s"{" +
+        s"Permission denied, you need $allowedRole to access this page" +
+        s"}"))
+    }
   }
 
   def auth[A](action: Action[A]) = Action.async(action.parser) { request =>

@@ -1,10 +1,5 @@
 describe('Restrict access by port', function () {
 
-
-  function setRoles(roles) {
-    cy.request("POST", 'v2/test/live/test/mock-roles', {"roles": roles})
-  }
-
   function navigateToHome() {
     cy.visit('/v2/test/live').then(() => {
       cy.contains('.navbar-drt', 'DRT TEST').end();
@@ -21,18 +16,18 @@ describe('Restrict access by port', function () {
   describe('Restrict access by port', function () {
 
     it("When I have the correct permission to view the port I see the app", function () {
-      setRoles(["test"]);
+      cy.setRoles(["test"]);
       navigateToHome();
     });
 
     it("When I do not have any permission to view any ports I see access restricted page", function () {
-      setRoles(["bogus"]);
+      cy.setRoles(["bogus"]);
       navigateToHomeAccessRestricted();
       cy.get('#alternate-ports').should('not.exist');
     });
 
     it("When I only have permission to view LHR I see access restricted page with a link to LHR only", function () {
-      setRoles(["LHR"]);
+      cy.setRoles(["LHR"]);
       navigateToHomeAccessRestricted();
       cy.get('#alternate-ports').should('exist');
       cy.contains('#LHR-link', 'LHR');
@@ -40,7 +35,7 @@ describe('Restrict access by port', function () {
     });
 
     it("When I have permission to view LHR and LGW I see access restricted page with a link to both ports", function () {
-      setRoles(["LHR", "LGW"]);
+      cy.setRoles(["LHR", "LGW"]);
       navigateToHomeAccessRestricted();
       cy.get('#alternate-ports').should('exist');
       cy.contains('#LHR-link', 'LHR');

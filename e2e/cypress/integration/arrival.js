@@ -5,11 +5,11 @@ moment.locale("en-gb");
 describe('Arrivals page', () => {
   const schDateString = moment().format("YYYY-MM-DD");
 
-  const schTimeString = "00:55:00"
-  const estTimeString = "01:05:00"
-  const actTimeString = "01:07:00"
-  const estChoxTimeString = "01:11:00"
-  const actChoxTimeString = "01:12:00"
+  const schTimeString = "00:55:00";
+  const estTimeString = "01:05:00";
+  const actTimeString = "01:07:00";
+  const estChoxTimeString = "01:11:00";
+  const actChoxTimeString = "01:12:00";
 
   const schString = schDateString + "T" + schTimeString + "Z";
   const estString = schDateString + "T" + estTimeString + "Z";
@@ -19,53 +19,27 @@ describe('Arrivals page', () => {
 
   const millis = moment(schString).unix() * 1000;
 
-  const flightPayload = {
-    "Operator": "TestAir",
-    "Status": "On Chocks",
-    "EstDT": estString,
-    "ActDT": actString,
-    "EstChoxDT": estChoxString,
-    "ActChoxDT": actChoxString,
-    "Gate": "46",
-    "Stand": "44R",
-    "MaxPax": 78,
-    "ActPax": 51,
-    "TranPax": 0,
-    "RunwayID": "05L",
-    "BaggageReclaimId": "05",
-    "FlightID": 14710007,
-    "AirportID": "MAN",
-    "Terminal": "T1",
-    "ICAO": "TS123",
-    "IATA": "TS123",
-    "Origin": "AMS",
-    "SchDT": schString
-  }
-
   function addFlight() {
-    setRoles(["test"]);
-    cy.request('POST', '/v2/test/live/test/arrival', flightPayload);
+    cy.setRoles(["test"]);
+    cy.addFlight(estString, actString, estChoxString, actChoxString, schString);
   }
 
   function loadManifestFixture() {
-    setRoles(["test"]);
+    cy.setRoles(["test"]);
     cy.request('POST', '/v2/test/live/test/manifest', manifest);
     cy.request('GET', '/v2/test/live/export/arrivals/' + millis + '/T1?startHour=0&endHour=24');
     cy.get('.pax-api');
   }
 
-  function setRoles(roles) {
-    cy.request("POST", 'v2/test/live/test/mock-roles', { "roles": roles});
-  }
 
   before(() => {
-    setRoles(["test"]);
-    cy.request('DELETE', '/v2/test/live/test/data');
+    cy.setRoles(["test"]);
+    cy.deleteData();
   });
 
   after(() => {
-    setRoles(["test"]);
-    cy.request('DELETE', '/v2/test/live/test/data');
+    cy.setRoles(["test"]);
+    cy.deleteData();
   });
 
   const manifest = {
@@ -157,7 +131,7 @@ describe('Arrivals page', () => {
 
   it('Does not show API splits in the flights export for regular users', () => {
     loadManifestFixture();
-    setRoles(["test"]);
+    cy.setRoles(["test"]);
     cy.request('POST', '/v2/test/live/test/manifest', manifest);
     cy.request('GET', '/v2/test/live/export/arrivals/' + millis + '/T1?startHour=0&endHour=24').then((resp) => {
       expect(resp.body).to.equal(csvWithNoApiSplits);
@@ -166,7 +140,7 @@ describe('Arrivals page', () => {
 
   it('Allows you to view API splits in the flights export for users with api:view permission', () => {
     loadManifestFixture();
-    setRoles(["test", "api:view"]);
+    cy.setRoles(["test", "api:view"]);
     cy.request({
       method: 'GET',
       url: '/v2/test/live/export/arrivals/' + millis + '/T1?startHour=0&endHour=24',

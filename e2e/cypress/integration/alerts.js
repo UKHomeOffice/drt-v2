@@ -6,7 +6,7 @@ describe('Alerts system', function () {
 
 
   beforeEach(function () {
-    setRoles(["test"]);
+    cy.setRoles(["test"]);
     deleteAlerts();
   });
 
@@ -14,12 +14,9 @@ describe('Alerts system', function () {
     deleteAlerts();
   });
 
-  function setRoles(roles) {
-    cy.request("POST", 'v2/test/live/test/mock-roles', {"roles": roles})
-  }
 
   function deleteAlerts() {
-    setRoles(["test"]);
+    cy.setRoles(["test"]);
     cy.request('DELETE', '/v2/test/live/data/alert');
 
   }
@@ -34,7 +31,7 @@ describe('Alerts system', function () {
   }
 
   function navigateToHome() {
-    setRoles(["test"]);
+    cy.setRoles(["test"]);
     cy.visit('/v2/test/live').then(() => {
       cy.wait(1000);
       cy.get('.navbar-drt').contains('DRT TEST').end();
@@ -42,7 +39,7 @@ describe('Alerts system', function () {
 
   }
   function shouldHaveAlerts(num) {
-    setRoles(["test"]);
+    cy.setRoles(["test"]);
     cy.get('#has-alerts .alert').should('have.length', num);
   }
 
