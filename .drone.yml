@@ -71,8 +71,8 @@ pipeline:
   git_tag:
      image: docker.io/massimodanieli/drt-git-ssh:latest
      commands: 
-       - git tag v${DRONE_BUILD_NUMBER}
-       - git push origin v${DRONE_BUILD_NUMBER}
+       - tag ${DRONE_BUILD_NUMBER}
+       - push origin ${DRONE_BUILD_NUMBER}
 
 
 
