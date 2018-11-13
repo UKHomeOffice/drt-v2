@@ -78,10 +78,11 @@ pipeline:
   trigger_deploy:
     image: quay.io/ukhomeofficedigital/drone-trigger:latest
     drone_server: https://drone.acp.homeoffice.gov.uk
-    drone_token: ${DRONE_TOKEN}
     repo: UKHomeOffice/kube-drt
     deploy_to: drt-dev
     params: "IMAGE_NAME=docker.digital.homeoffice.gov.uk/drt/drt:latest"
+    secrets:
+      - $DRONE_TOKEN      
 
   slack:
     image: plugins/slack
