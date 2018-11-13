@@ -71,7 +71,6 @@
   git_tag:
      image: docker.io/massimodanieli/drt-git-ssh:latest
      commands: 
-       - ssh -T git@github.com && exit 0
        - git tag ${DRONE_BUILD_NUMBER}
        - git push origin ${DRONE_BUILD_NUMBER}
 
