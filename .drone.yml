@@ -68,7 +68,7 @@ pipeline:
       status: failure
 
   git_tag:
-     image: alpine/git
+     image: docker.io/massimodanieli/drt-git-ssh
      commands: 
        - git tag v${DRONE_BUILD_NUMBER}
        - git push origin v${DRONE_BUILD_NUMBER}
