@@ -1,5 +1,12 @@
 pipeline:
-  
+
+  sonar-scanner:
+    image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
+    when:
+      event:
+        - push
+      branch:
+        - master  
   build:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
     commands:
@@ -15,13 +22,6 @@ pipeline:
       branch:
         - master
 
-  sonar-scanner:
-    image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
-    when:
-      event:
-        - push
-      branch:
-        - master
 
   build_docker:
     environment:
