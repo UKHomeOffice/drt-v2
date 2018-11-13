@@ -76,7 +76,8 @@
 
   trigger_deploy:
     image: quay.io/ukhomeofficedigital/drone-trigger:latest
-    drone_server: https://drone.acp.homeoffice.gov.uk/
+    drone_server: https://drone.acp.homeoffice.gov.uk
+    drone_token: ${DRONE_TOKEN}
     repo: UKHomeOffice/kube-drt
     branch: DRT-5351-port-migration
     deploy_to: drt-dev
