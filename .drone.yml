@@ -68,7 +68,7 @@ pipeline:
       status: failure
 
   git_tag:
-     image: docker/git
+     image: alpine/git
      commands: 
        - git tag v${DRONE_BUILD_NUMBER}
        - git push origin v${DRONE_BUILD_NUMBER}
