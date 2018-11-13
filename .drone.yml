@@ -80,9 +80,8 @@ pipeline:
     drone_server: https://drone.acp.homeoffice.gov.uk
     repo: UKHomeOffice/kube-drt
     deploy_to: drt-dev
-    params: "IMAGE_NAME=docker.digital.homeoffice.gov.uk/drt/drt:latest"
-    secrets:
-      - $DRONE_TOKEN      
+    drone_token: [ drone_token ]
+    params: "IMAGE_NAME=docker.digital.homeoffice.gov.uk/drt/drt:latest"      
 
   slack:
     image: plugins/slack
