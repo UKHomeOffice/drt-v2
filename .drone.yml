@@ -1,5 +1,5 @@
 pipeline:
-
+  
   build:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
     commands:
@@ -13,7 +13,7 @@ pipeline:
       event:
         - [push, tag]
       branch:
-        - DRT-5351-port-migration
+        - master
 
   sonar-scanner:
     image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
@@ -21,7 +21,7 @@ pipeline:
       event:
         - push
       branch:
-        - DRT-5351-port-migration
+        - master
 
   build_docker:
     environment:
@@ -36,7 +36,7 @@ pipeline:
     when:
       event: [push, tag]
       branch:
-        - DRT-5351-port-migration
+        - master
 
   drt-test-instance:
     image: docker:18.06
@@ -54,6 +54,7 @@ pipeline:
 
     when:
       event: push
+      branch: master
 
 
   copy-e2e-result:
