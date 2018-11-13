@@ -71,8 +71,8 @@ pipeline:
   git_tag:
      image: docker.io/massimodanieli/drt-git-ssh:latest
      commands: 
-       - tag ${DRONE_BUILD_NUMBER}
-       - push origin ${DRONE_BUILD_NUMBER}
+       - git tag ${DRONE_BUILD_NUMBER}
+       - git push origin ${DRONE_BUILD_NUMBER}
 
 
 
@@ -83,7 +83,8 @@ pipeline:
     username: drone
     when:
       status: [ success, failure ]
-  
+      branch: master 
+
   build_tag:
     environment:
       - DOCKER_USERNAME=drt_ci
