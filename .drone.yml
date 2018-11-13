@@ -79,7 +79,6 @@
     drone_server: https://drone.acp.homeoffice.gov.uk
     drone_token: ${DRONE_TOKEN}
     repo: UKHomeOffice/kube-drt
-    branch: DRT-5351-port-migration
     deploy_to: drt-dev
     params: "IMAGE_NAME=docker.digital.homeoffice.gov.uk/drt/drt:latest"
 
