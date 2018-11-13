@@ -1,4 +1,4 @@
-pipeline:
+
 
   sonar-scanner:
     image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
@@ -71,11 +71,17 @@ pipeline:
   git_tag:
      image: docker.io/massimodanieli/drt-git-ssh:latest
      commands: 
-       - ssh -T git@github.com
+       - ssh -T git@github.com && exit 0
        - git tag ${DRONE_BUILD_NUMBER}
        - git push origin ${DRONE_BUILD_NUMBER}
 
-
+  trigger_deploy:
+    image: quay.io/ukhomeofficedigital/drone-trigger:latest
+    drone_server: https://drone.acp.homeoffice.gov.uk/
+    repo: UKHomeOffice/kube-drt
+    branch: DRT-5351-port-migration
+    deploy_to: drt-dev
+    params: "IMAGE_NAME=docker.digital.homeoffice.gov.uk/drt/drt:latest"
 
   slack:
     image: plugins/slack
