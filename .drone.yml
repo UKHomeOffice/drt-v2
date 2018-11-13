@@ -13,7 +13,7 @@ pipeline:
       event:
         - [push, tag]
       branch:
-        - master
+        - DRT-5351-port-migration
 
   sonar-scanner:
     image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
@@ -21,7 +21,7 @@ pipeline:
       event:
         - push
       branch:
-        - master
+        - DRT-5351-port-migration
 
   build_docker:
     environment:
@@ -31,12 +31,12 @@ pipeline:
     repo: docker.digital.homeoffice.gov.uk/drt/drt
     secrets: [ docker_password ]
     tags:
-      - ${DRONE_COMMIT_SHA}
+      - ${DRONE_BUILD_NUMBER}
       - latest
     when:
       event: [push, tag]
       branch:
-        - master
+        - DRT-5351-port-migration
 
   drt-test-instance:
     image: docker:18.06
@@ -66,6 +66,14 @@ pipeline:
     when:
       event: push
       status: failure
+
+  git_tag:
+     image: docker/git
+     commands: 
+       - git tag v${DRONE_BUILD_NUMBER}
+       - git push origin v${DRONE_BUILD_NUMBER}
+
+
 
   slack:
     image: plugins/slack
