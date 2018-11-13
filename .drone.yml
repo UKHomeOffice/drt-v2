@@ -1,4 +1,4 @@
-
+pipeline:
 
   sonar-scanner:
     image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
