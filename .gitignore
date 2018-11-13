@@ -46,6 +46,7 @@ project/
 .ensime_cache/
 runsbt.sh
 
+foobar 
 # Cypress
 e2e/cypress/fixtures/example.json
 e2e/cypress/videos/*
