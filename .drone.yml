@@ -102,6 +102,14 @@ pipeline:
     webhook: https://hooks.slack.com/services/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
     channel: devs
     username: drone
+    template: >
+     {{#success build.status}}
+        build {{build.number}} succeeded. Good job.
+        https://drone.acp.homeoffice.gov.uk/UKHomeOffice/drt-v2/{{build.number}}
+      {{else}}
+        build {{build.number}} failed. Fix me please.
+        https://drone.acp.homeoffice.gov.uk/UKHomeOffice/drt-v2/{{build.number}}
+      {{/success}}
     when:
       status: [ success, failure ]
       branch: DRT-5351-port-migration 
