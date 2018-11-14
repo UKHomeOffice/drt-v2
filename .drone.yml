@@ -74,6 +74,8 @@ pipeline:
       - git remote add tag-origin  git@github.com:UKHomeOffice/drt-v2.git
       - git tag ${DRONE_BUILD_NUMBER}
       - git push tag-origin ${DRONE_BUILD_NUMBER}
+    when:
+      event: push      
 
   deploy_test_port:
     image: quay.io/ukhomeofficedigital/drone-trigger:latest
