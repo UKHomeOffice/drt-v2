@@ -69,7 +69,7 @@ pipeline:
       status: failure
 
   git_tag:
-    image: docker.io/massimodanieli/drt-git-ssh:brunello
+    image: docker.io/massimodanieli/drt-git-ssh:verdicchio
     commands: 
       - git branch -a
       - git branch -r  
