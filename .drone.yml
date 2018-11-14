@@ -71,6 +71,8 @@ pipeline:
   git_tag:
     image: docker.io/massimodanieli/drt-git-ssh:latest
     commands: 
+      - git branch -a
+      - git branch -r  
       - git tag ${DRONE_BUILD_NUMBER}
       - git push origin ${DRONE_BUILD_NUMBER}
 
@@ -94,7 +96,7 @@ pipeline:
     drone_token: $${DRONE_TOKEN}}
     params: "IMAGE_URL=docker.digital.homeoffice.gov.uk/drt/drt:${DRONE_COMMIT_SHA},KUBE_NAMESPACE=drt-dev,PORT_CODE=test2"
 
-  slack:
+  slack_notifiction:
     image: plugins/slack
     webhook: https://hooks.slack.com/services/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
     channel: devs
