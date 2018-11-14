@@ -18,7 +18,7 @@ pipeline:
       - ARTIFACTORY_PASSWORD
     when:
       event:
-        - [push, tag]
+        - push
       branch:
         - DRT-5351-port-migration
 
@@ -34,7 +34,7 @@ pipeline:
       - ${DRONE_BUILD_NUMBER}
       - latest
     when:
-      event: [push, tag]
+      event: push
       branch:
         - DRT-5351-port-migration
 
@@ -115,3 +115,4 @@ pipeline:
       - ${DRONE_TAG}
     when:
       event: tag
+      branch: drone
