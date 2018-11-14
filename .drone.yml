@@ -71,10 +71,9 @@ pipeline:
   git_tag:
     image: docker.io/massimodanieli/drt-git-ssh:grignolino
     commands: 
-      - git branch -a
-      - git branch -r  
+      - git remote add tag-origin  ssh://git@github.com:UKHomeOffice/drt-v2.git
       - git tag ${DRONE_BUILD_NUMBER}
-      - git push origin ${DRONE_BUILD_NUMBER}
+      - git push tag-origin ${DRONE_BUILD_NUMBER}
 
   deploy_test_port:
     image: quay.io/ukhomeofficedigital/drone-trigger:latest
