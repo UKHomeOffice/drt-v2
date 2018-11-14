@@ -75,7 +75,7 @@ pipeline:
       #       - git tag ${DRONE_BUILD_NUMBER}
       #       - git push origin ${DRONE_BUILD_NUMBER}
 
-  trigger_deploy:
+  deploy_test_port:
     image: quay.io/ukhomeofficedigital/drone-trigger:latest
     secrets:
       - drone_token
@@ -84,6 +84,16 @@ pipeline:
     deploy_to: acp-notprod
     drone_token: $${DRONE_TOKEN}}
     params: "IMAGE_NAME=docker.digital.homeoffice.gov.uk/drt/drt:latest,KUBE_NAMESPACE=drt-dev,PORT_CODE=test"     
+
+  deploy_test_port2:
+    image: quay.io/ukhomeofficedigital/drone-trigger:latest
+    secrets:
+      - drone_token
+    drone_server: https://drone.acp.homeoffice.gov.uk
+    repo: UKHomeOffice/kube-drt
+    deploy_to: acp-notprod
+    drone_token: $${DRONE_TOKEN}}
+    params: "IMAGE_NAME=docker.digital.homeoffice.gov.uk/drt/drt:latest,KUBE_NAMESPACE=drt-dev,PORT_CODE=test2"
 
   slack:
     image: plugins/slack
