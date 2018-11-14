@@ -85,7 +85,7 @@ pipeline:
     repo: UKHomeOffice/kube-drt
     deploy_to: acp-notprod
     drone_token: $${DRONE_TOKEN}}
-    params: "IMAGE_URL=docker.digital.homeoffice.gov.uk/drt/drt:${DRONE_COMMIT_SHA},KUBE_NAMESPACE=drt-dev,PORT_CODE=test"     
+    params: "IMAGE_URL=docker.digital.homeoffice.gov.uk/drt/drt:${DRONE_BUILD_NUMBER},KUBE_NAMESPACE=drt-dev,PORT_CODE=test"     
 
   deploy_test_port2:
     image: quay.io/ukhomeofficedigital/drone-trigger:latest
@@ -95,7 +95,7 @@ pipeline:
     repo: UKHomeOffice/kube-drt
     deploy_to: acp-notprod
     drone_token: $${DRONE_TOKEN}}
-    params: "IMAGE_URL=docker.digital.homeoffice.gov.uk/drt/drt:${DRONE_COMMIT_SHA},KUBE_NAMESPACE=drt-dev,PORT_CODE=test2"
+    params: "IMAGE_URL=docker.digital.homeoffice.gov.uk/drt/drt:${DRONE_BUILD_NUMBER},KUBE_NAMESPACE=drt-dev,PORT_CODE=test2"
 
   slack_notifiction:
     image: plugins/slack
