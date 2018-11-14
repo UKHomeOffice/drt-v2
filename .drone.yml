@@ -6,7 +6,7 @@ pipeline:
       event:
         - push
       branch:
-        - DRT-5351-port-migration  
+        - master  
   build:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
     commands:
@@ -20,7 +20,7 @@ pipeline:
       event:
         - [push, tag]
       branch:
-        - DRT-5351-port-migration
+        - master
 
 
   build_docker:
@@ -36,7 +36,7 @@ pipeline:
     when:
       event: [push, tag]
       branch:
-        - DRT-5351-port-migration
+        - master
 
   drt-test-instance:
     image: docker:18.06
@@ -54,7 +54,7 @@ pipeline:
 
     when:
       event: push
-      branch: DRT-5351-port-migration
+      branch: master
 
 
   copy-e2e-result:
@@ -68,12 +68,12 @@ pipeline:
       event: push
       status: failure
 
-      #  git_tag:
-      #     image: docker.io/massimodanieli/drt-git-ssh:latest
-      #     commands: 
-      #       - ssh -T git@github.com && exit 0
-      #       - git tag ${DRONE_BUILD_NUMBER}
-      #       - git push origin ${DRONE_BUILD_NUMBER}
+  git_tag:
+    image: docker.io/massimodanieli/drt-git-ssh:latest
+    commands: 
+      - git remote add origin ssh://git@github.com:UKHomeOffice/drt-v2.git
+      - git tag ${DRONE_BUILD_NUMBER}
+      - git push origin ${DRONE_BUILD_NUMBER}
 
   deploy_test_port:
     image: quay.io/ukhomeofficedigital/drone-trigger:latest
@@ -102,7 +102,7 @@ pipeline:
     username: drone
     when:
       status: [ success, failure ]
-      branch: DRT-5351-port-migration 
+      branch: master 
 
   build_tag:
     environment:
