@@ -31,7 +31,7 @@ pipeline:
     repo: docker.digital.homeoffice.gov.uk/drt/drt
     secrets: [ docker_password ]
     tags:
-      - ${DRONE_COMMIT_SHA}
+      - ${DRONE_BUILD_NUMBER}
       - latest
     when:
       event: [push, tag]
