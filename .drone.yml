@@ -6,7 +6,7 @@ pipeline:
       event:
         - push
       branch:
-        - master  
+        - DRT-5351-port-migration  
   build:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
     commands:
@@ -20,7 +20,7 @@ pipeline:
       event:
         - [push, tag]
       branch:
-        - master
+        - DRT-5351-port-migration
 
 
   build_docker:
@@ -36,7 +36,7 @@ pipeline:
     when:
       event: [push, tag]
       branch:
-        - master
+        - DRT-5351-port-migration
 
   cypress-E2E-test:
     image: docker:18.06
@@ -54,7 +54,7 @@ pipeline:
 
     when:
       event: push
-      branch: master
+      branch: DRT-5351-port-migration
 
 
   copy-e2e-result:
@@ -102,7 +102,7 @@ pipeline:
     username: drone
     when:
       status: [ success, failure ]
-      branch: master 
+      branch: DRT-5351-port-migration 
 
   build_tag:
     environment:
