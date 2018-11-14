@@ -38,7 +38,7 @@ pipeline:
       branch:
         - master
 
-  drt-test-instance:
+  cypress-E2E-test:
     image: docker:18.06
     environment:
       - DOCKER_USERNAME=drt_ci
@@ -71,7 +71,7 @@ pipeline:
   git_tag:
     image: docker.io/massimodanieli/drt-git-ssh:latest
     commands: 
-      - git remote add origin ssh://git@github.com:UKHomeOffice/drt-v2.git
+    #- git remote add origin ssh://git@github.com:UKHomeOffice/drt-v2.git
       - git tag ${DRONE_BUILD_NUMBER}
       - git push origin ${DRONE_BUILD_NUMBER}
 
