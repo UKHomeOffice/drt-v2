@@ -6,7 +6,7 @@ pipeline:
       event:
         - push
       branch:
-        - DRT-5351-port-migration  
+        - master  
   build:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
     commands:
@@ -20,7 +20,7 @@ pipeline:
       event:
         - push
       branch:
-        - DRT-5351-port-migration
+        - master
 
 
   build_docker:
@@ -36,7 +36,7 @@ pipeline:
     when:
       event: push
       branch:
-        - DRT-5351-port-migration
+        - master
 
   cypress-E2E-test:
     image: docker:18.06
@@ -54,7 +54,7 @@ pipeline:
 
     when:
       event: push
-      branch: DRT-5351-port-migration
+      branch: master
 
 
   copy-e2e-result:
@@ -86,6 +86,9 @@ pipeline:
     deploy_to: acp-notprod
     drone_token: $${DRONE_TOKEN}}
     params: "IMAGE_URL=docker.digital.homeoffice.gov.uk/drt/drt:${DRONE_BUILD_NUMBER},KUBE_NAMESPACE=drt-dev,PORT_CODE=test"     
+    when:
+      branch: master
+
 
   deploy_test_port2:
     image: quay.io/ukhomeofficedigital/drone-trigger:latest
@@ -96,6 +99,9 @@ pipeline:
     deploy_to: acp-notprod
     drone_token: $${DRONE_TOKEN}}
     params: "IMAGE_URL=docker.digital.homeoffice.gov.uk/drt/drt:${DRONE_BUILD_NUMBER},KUBE_NAMESPACE=drt-dev,PORT_CODE=test2"
+    when:
+      branch: master
+
 
   slack_notifiction:
     image: plugins/slack
@@ -112,5 +118,5 @@ pipeline:
       {{/success}}
     when:
       status: [ success, failure ]
-      branch: DRT-5351-port-migration 
+      branch: master 
 
