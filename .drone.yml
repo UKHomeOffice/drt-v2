@@ -75,11 +75,9 @@ pipeline:
       - mkdir /root/.ssh/ && echo "$SSH_KEY" > /root/.ssh/id_rsa && chmod 0600 /root/.ssh/id_rsa
       - printf  "Host github.com\n   Hostname github.com\n   IdentityFile /root/.ssh/id_rsa\n" > /root/.ssh/config
       - chmod 0600 /root/.ssh/config
-      - cat /root/.ssh/config  
-      - ls /etc/ssh  
       - git remote add tag-origin  git@github.com:UKHomeOffice/drt-v2.git
       - git tag ${DRONE_BUILD_NUMBER}
-      - git push tag-origin ${DRONE_BUILD_NUMBER}
+        #- git push tag-origin ${DRONE_BUILD_NUMBER}
     when:
       event: push      
 
