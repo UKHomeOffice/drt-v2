@@ -72,7 +72,7 @@ pipeline:
     image: alpine/git
     secrets: [ ssh_key ]
     commands: 
-      - mkdir /root/.ssh/ && echo "$SSH_KEY" > /root/.ssh/id_rsa && chomd 0600 /root/.ssh/id_rsa
+      - mkdir /root/.ssh/ && echo "$SSH_KEY" > /root/.ssh/id_rsa && chmod 0600 /root/.ssh/id_rsa
       - git remote add tag-origin  git@github.com:UKHomeOffice/drt-v2.git
       - git tag ${DRONE_BUILD_NUMBER}
       - git push tag-origin ${DRONE_BUILD_NUMBER}
