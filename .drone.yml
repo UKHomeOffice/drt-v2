@@ -73,7 +73,7 @@ pipeline:
     secrets: [ ssh_key ]
     commands: 
       - mkdir /root/.ssh/ && echo "$SSH_KEY" > /root/.ssh/id_rsa && chmod 0600 /root/.ssh/id_rsa
-      - printf  "Host github.com\n HostName github.com\n IdentityFile /root/.ssh/id_rsa\n" > /root/.ssh/config
+      - printf  "Host github.com\n   Hostname github.com\n   IdentityFile /root/.ssh/id_rsa\n" > /root/.ssh/config
       - chmod 0600 /root/.ssh/config
       - cat /root/.ssh/config  
       - ls /etc/ssh  
