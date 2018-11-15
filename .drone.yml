@@ -73,11 +73,7 @@ pipeline:
     secrets: [ ssh_key ]
     commands: 
       - mkdir /root/.ssh/ && echo "$SSH_KEY" > /root/.ssh/id_rsa && chmod 0600 /root/.ssh/id_rsa
-      - echo > /root/ssh/config << EOM 
-      host github.com
-      HostName github.com
-      IdentityFile /root/.ssh/id_rsa
-      EOM 
+      - echo > "host github.com\nHostName github.com\nIdentityFile /root/.ssh/id_rsa\n" > /root/.ssh/config
       - chmod 0600 /root/.ssh/config
       - git remote add tag-origin  git@github.com:UKHomeOffice/drt-v2.git
       - git tag ${DRONE_BUILD_NUMBER}
