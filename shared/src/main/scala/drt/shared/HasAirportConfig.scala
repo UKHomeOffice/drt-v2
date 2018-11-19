@@ -129,6 +129,9 @@ case class AirportConfig(
 
   def feedPortCode: String = cloneOfPortCode.getOrElse(portCode)
 
+  def nonTransferQueues(terminalName: TerminalName): Seq[QueueName] = queues(terminalName).collect {
+    case queueName: String if queueName != Queues.Transfer => queueName
+  }
 }
 
 object ArrivalHelper {
@@ -563,7 +566,12 @@ object AirportConfigs {
         Queues.QueueDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5))
       )
     ),
-    role = EMAAccess
+    role = EMAAccess,
+    // This is deliberately high (10000) to cope with restoring previous snapshot bug where the time between snapshots
+    // was going beyond the message threshold.
+    // A neater fix would be to produce the missing snapshots retrospectively, but that would be quite a big job for a
+    // minor gain
+    portStateSnapshotInterval = 10000
   )
 
   val brs = AirportConfig(
@@ -683,12 +691,55 @@ object AirportConfigs {
       "T1" -> Map(
         Queues.EGate -> (List(1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(3, 3, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3)),
         Queues.EeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13)),
-        Queues.EGate -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8))
+        Queues.NonEeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8))
       )
     ),
     role = TestAccess
   )
 
+  val test2 = AirportConfig(
+    portCode = "TEST2",
+    queues = Map(
+      "T1" -> Seq(EeaDesk, EGate, NonEeaDesk),
+      "T2" -> Seq(EeaDesk, EGate, NonEeaDesk, FastTrack)
+    ),
+    slaByQueue = Map(EeaDesk -> 25, EGate -> 5, NonEeaDesk -> 45),
+    terminalNames = Seq("T1", "T2"),
+    crunchOffsetMinutes = 240,
+    dayLengthHours = 36,
+    defaultWalkTimeMillis = Map(
+      "T1" -> 600000L,
+      "T2" -> 600000L
+    ),
+    defaultPaxSplits = SplitRatios(
+      SplitSources.TerminalAverage,
+      SplitRatio(eeaMachineReadableToDesk, 0.7425),
+      SplitRatio(eeaMachineReadableToEGate, 0.2475),
+      SplitRatio(eeaNonMachineReadableToDesk, 0.0),
+      SplitRatio(visaNationalToDesk, 0.0),
+      SplitRatio(nonVisaNationalToDesk, 0.01)
+    ),
+    defaultProcessingTimes = Map("T1" -> Map(
+      eeaMachineReadableToDesk -> 20d / 60,
+      eeaMachineReadableToEGate -> 35d / 60,
+      eeaNonMachineReadableToDesk -> 50d / 60,
+      visaNationalToDesk -> 90d / 60,
+      nonVisaNationalToDesk -> 78d / 60
+    )),
+    minMaxDesksByTerminalQueue = Map(
+      "T1" -> Map(
+        Queues.EGate -> (List(1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(3, 3, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3)),
+        Queues.EeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13)),
+        Queues.NonEeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8))
+      ),
+      "T2" -> Map(
+        Queues.EGate -> (List(1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(3, 3, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3)),
+        Queues.EeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13)),
+        Queues.NonEeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8))
+      )
+    ),
+    role = Test2Access
+  )
 
   val nationalityProcessingTimesHalved: Map[String, Double] = ProcessingTimes.nationalityProcessingTimes.mapValues(_ / 2)
   val halvedLHRProcessingTimes: Map[TerminalName, Map[PaxTypeAndQueue, Double]] = lhr.defaultProcessingTimes.mapValues(_.mapValues(_ / 2))
@@ -699,8 +750,10 @@ object AirportConfigs {
   val lhr_nbp: AirportConfig = lhr.copy(portCode = "LHR_NBP", cloneOfPortCode = Option("LHR"), role = TestAccess)
   val lhr_nbp_halved: AirportConfig = lhr_ppt_halved.copy(portCode = "LHR_NBP_HALVED", nationalityBasedProcTimes = nationalityProcessingTimesHalved, cloneOfPortCode = Option("LHR"), role = TestAccess) //use halved default times and halved nationality based times
 
-  val allPorts: List[AirportConfig] = ema :: edi :: stn :: man :: ltn :: lhr :: lhr_nbp :: lhr_nbp_halved :: lhr_ppt_halved :: lgw :: bhx :: brs :: test :: Nil
-  val testPorts: List[AirportConfig] = test :: lhr_nbp :: lhr_nbp_halved :: lhr_ppt_halved :: Nil
+  val allPorts: List[AirportConfig] = ema :: edi :: stn :: man :: ltn :: lhr :: lhr_nbp :: lhr_nbp_halved :: lhr_ppt_halved :: lgw :: bhx :: brs :: test :: test2 :: Nil
+  val testPorts: List[AirportConfig] = test :: test2 :: lhr_nbp :: lhr_nbp_halved :: lhr_ppt_halved :: Nil
+
   def portGroups: List[String] = allPorts.filterNot(testPorts.contains).map(_.portCode.toUpperCase).sorted
+
   val confByPort: Map[String, AirportConfig] = allPorts.map(c => (c.portCode, c)).toMap
 }

@@ -19,13 +19,15 @@ object Roles {
     LTNAccess,
     MANAccess,
     TestAccess,
+    Test2Access,
     STNAccess
   )
   val availableRoles : Set[Role] = Set(
     StaffEdit,
     ApiView,
     ManageUsers,
-    CreateAlerts
+    CreateAlerts,
+    ApiViewPortCsv
   ) ++ portRoles
   def parse(roleName: String): Option[Role] = availableRoles.find(role=> role.name == roleName)
 }
@@ -38,8 +40,16 @@ case object ApiView extends Role {
   override val name: String = "api:view"
 }
 
+case object ApiViewPortCsv extends Role {
+  override val name: String = "api:view-port-arrivals"
+}
+
 case object TestAccess extends Role {
   override val name: String = "test"
+}
+
+case object Test2Access extends Role {
+  override val name: String = "test2"
 }
 
 case object ManageUsers extends Role {

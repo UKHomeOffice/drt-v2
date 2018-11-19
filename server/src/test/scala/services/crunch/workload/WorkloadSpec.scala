@@ -26,7 +26,7 @@ class WorkloadSpec extends Specification {
       .toList
       .map(_.workLoad)
 
-    workloads === Set(1.5)
+    workloads === List(1.5)
   }
 
   "Given an arrival with a PCP time that has seconds, then these seconds should be ignored for workload calcs" >> {
@@ -69,7 +69,7 @@ class WorkloadSpec extends Specification {
       .toList
       .map(_.workLoad)
 
-    workloads === Set(gbrSeconds / 60)
+    workloads === List(gbrSeconds / 60)
   }
 
   "Given an arrival with 10 pax and 1 split containing 1 pax with 1 nationality " +
@@ -91,7 +91,7 @@ class WorkloadSpec extends Specification {
       .toList
       .map(_.workLoad)
 
-    workloads === Set(gbrSeconds / 60 * 10)
+    workloads === List(gbrSeconds / 60 * 10)
   }
 
   "Given an arrival with 100 pax and 1 split containing 1 pax with 1 nationality " +
@@ -138,7 +138,7 @@ class WorkloadSpec extends Specification {
 
     val expectedFraWorkload = 2d / 3 * (fraSeconds / 60) * 10
     val expectedGbrWorkload = 1d / 3 * (gbrSeconds / 60) * 10
-    workloads === Set(expectedFraWorkload + expectedGbrWorkload)
+    workloads === List(expectedFraWorkload + expectedGbrWorkload)
   }
 
   "Given an arrival with 2 pax and 2 splits each containing 1 pax with 1 nationality " +
@@ -167,7 +167,7 @@ class WorkloadSpec extends Specification {
       .toList
       .map(_.workLoad)
 
-    workloads === Set(gbrSeconds / 60, zaSeconds / 60)
+    workloads === List(gbrSeconds / 60, zaSeconds / 60)
   }
 
   "Given an arrival with 4 pax and 2 splits each containing 2 pax with 2 nationalities " +
@@ -203,7 +203,7 @@ class WorkloadSpec extends Specification {
       .toList
       .map(_.workLoad)
 
-    workloads === Set((gbrSeconds + fraSeconds) / 60, (zaSeconds + zbwSeconds) / 60)
+    workloads === List((gbrSeconds + fraSeconds) / 60, (zaSeconds + zbwSeconds) / 60)
   }
 
   "Given an arrival with 30 pax and 2 splits each containing 15 pax with 2 nationalities " +

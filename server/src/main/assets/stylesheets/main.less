@@ -129,7 +129,7 @@
   height: 70px;
   width: 220px;
   float:left;
-  background-image: url(/v2/stn/live/assets/images/logo_colour.png);
+  background-image: url(../images/logo_colour.png);
   background-repeat: no-repeat;
   background-position: 0px 15px;
 }
@@ -221,11 +221,6 @@
   display: inline-block;
   padding: 4px;
   font-size: 12px;
-}
-
-.nav .staff-deployment-adjustment-container .container {
-  left: -19em;
-  top: 2.2em;
 }
 
 .nav .popover-trigger {
@@ -351,14 +346,14 @@ table.headlines tr:nth-child(odd) {
   right: 0;
   bottom: 0;
   left: 0;
-  background: rgba(0, 0, 0, 0.0);
-  z-index: 1;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
 }
 
-.staff-deployment-adjustment-container .container {
+#staff-adjustment-dialogue {
   display: block;
   font-size: medium;
-  position: absolute;
+  position: fixed;
 
   /* prettify */
   padding: 0.5em;
@@ -366,20 +361,18 @@ table.headlines tr:nth-child(odd) {
   opacity: 0.9;
   background: #ebf4fb;
   border: 0.1em solid #b7ddf2;
+
   /* round the corners */
   border-radius: 0.5em;
+
   width: 23em;
   z-index: 1000;
-  .below {
-    top: 1em;
-  }
-
-  .left {
-    top: 1em;
-    right: 1em;
-  }
-  left: -24em;
-  top: 58%;
+  left: 0;
+  right: 0;
+  top: 50%;
+  margin-top: -150px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .date-selector {
@@ -1644,6 +1637,11 @@ a i.fa.fa-remove {
 .vert-align > div {
   display: table-cell;
   vertical-align: middle;
+}
+
+.button-group {
+  margin-top: 15px;
+  margin-bottom: 15px;
 }
 
 .key-cloak-users td {

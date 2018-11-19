@@ -102,6 +102,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
     case diff: FlightsDiffMessage =>
       state = consumeDiffsMessage(diff, state)
       bytesSinceSnapshotCounter += diff.serializedSize
+      messagesPersistedSinceSnapshotCounter += 1
 
     case feedStatusMessage: FeedStatusMessage =>
       val status = feedStatusFromFeedStatusMessage(feedStatusMessage)

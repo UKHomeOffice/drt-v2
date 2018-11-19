@@ -1,4 +1,4 @@
-package test
+package test.roles
 
 import controllers.UserRoleProviderLike
 import drt.shared.{Role, Roles}

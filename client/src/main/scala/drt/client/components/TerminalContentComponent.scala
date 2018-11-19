@@ -151,7 +151,8 @@ object TerminalContentComponent {
                     TerminalDesksAndQueues(
                       TerminalDesksAndQueues.Props(
                         props.router,
-                        filteredPortState,
+                        filteredPortState.crunchMinutes,
+                        filteredPortState.staffMinutes,
                         props.airportConfig,
                         props.terminalPageTab,
                         props.showActuals,

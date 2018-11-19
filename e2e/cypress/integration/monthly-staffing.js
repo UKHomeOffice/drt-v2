@@ -4,10 +4,6 @@ moment.locale("en-gb");
 
 describe('Monthly Staffing', function () {
 
-  function setRoles(roles) {
-    cy.request("POST", 'v2/test/live/test/mock-roles', {"roles": roles})
-  }
-
   function firstMidnightOfThisMonth() {
     return moment().tz('Europe/London').startOf('month');
   }
@@ -47,7 +43,7 @@ describe('Monthly Staffing', function () {
     it("If I enter staff for the current month those staff should still be visible if I change months and change back", function () {
       saveShifts();
 
-      setRoles(["staff:edit", "test"]);
+      cy.setRoles(["staff:edit", "test"]);
 
       cy.visit('/v2/test/live#terminal/T1/staffing/15/');
       cy.get(cellToTest).contains("1");

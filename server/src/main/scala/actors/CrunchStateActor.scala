@@ -43,6 +43,7 @@ class CrunchStateActor(override val maybeSnapshotInterval: Option[Int],
       logRecoveryState(newState)
       state = newState
       bytesSinceSnapshotCounter += diff.serializedSize
+      messagesPersistedSinceSnapshotCounter += 1
   }
 
   def logRecoveryState(optionalState: Option[PortState]): Unit = optionalState match {

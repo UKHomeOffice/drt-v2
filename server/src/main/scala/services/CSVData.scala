@@ -53,39 +53,43 @@ object CSVData {
     List(headings, totalPax, queues, totalWL).mkString(lineEnding)
   }
 
-  def forecastPeriodToCsv(forecastPeriod: ForecastPeriod): String = {
-    val sortedDays: Seq[(MillisSinceEpoch, Seq[ForecastTimeSlot])] = forecastPeriod.days.toList.sortBy(_._1)
-    log.info(s"Forecast CSV Export: Days in period: ${sortedDays.length}")
-    val byTimeSlot: Iterable[Iterable[ForecastTimeSlot]] = sortedDays.filter {
-      case (millis, forecastTimeSlots) if forecastTimeSlots.length == 96 =>
-        log.info(s"Forecast CSV Export: day ${SDate(millis, europeLondonTimeZone).toLocalDateTimeString()}" +
-          s" first:${SDate(forecastTimeSlots.head.startMillis, europeLondonTimeZone).toLocalDateTimeString()}" +
-          s" last:${SDate(forecastTimeSlots.last.startMillis, europeLondonTimeZone).toLocalDateTimeString()}")
-        true
-      case (millis, forecastTimeSlots) =>
-        log.error(s"Forecast CSV Export: error for ${SDate(millis, europeLondonTimeZone).toLocalDateTimeString()} got ${forecastTimeSlots.length} days")
-        false
-    }.transpose(_._2.take(96))
+  def forecastPeriodToCsv(forecastPeriod: ForecastPeriod): String =
+    makeDayHeadingsForPlanningExport(forecastDaysInPeriod(forecastPeriod)) +
+    lineEnding +
+    periodTimeslotsToCSVString(
+      Forecast.timeSlotStartTimes(forecastPeriod, millisToHoursAndMinutesString),
+      Forecast.periodByTimeSlotAcrossDays(forecastPeriod)
+    )
 
-    val headings = "," + sortedDays.map {
-      case (day, _) =>
-        val localDate = SDate(day, europeLondonTimeZone)
-        val date = localDate.getDate()
-        val month = localDate.getMonth()
-        val columnPrefix = f"$date%02d/$month%02d - "
-        columnPrefix + "available," + columnPrefix + "required," + columnPrefix + "difference"
-    }.mkString(",")
+  def millisToHoursAndMinutesString =
+    (millis: MillisSinceEpoch) => SDate(millis, europeLondonTimeZone).toHoursAndMinutes()
 
-    val data = byTimeSlot.map(row => {
-      val localHoursMinutes = SDate(row.head.startMillis, europeLondonTimeZone).toHoursAndMinutes()
-      s"$localHoursMinutes" + "," +
-        row.map(col => {
-          s"${col.available},${col.required},${col.available - col.required}"
-        }).mkString(",")
-    }).mkString(lineEnding)
-
-    List(headings, data).mkString(lineEnding)
+  def periodTimeslotsToCSVString(timeSlotStarts: Seq[String], byTimeSlot: List[List[Option[ForecastTimeSlot]]]) = {
+    byTimeSlot.zip(timeSlotStarts).map {
+      case (row, startTime) =>
+        s"$startTime" + "," +
+          row.map(forecastTimeSlotOptionToCSV).mkString(",")
+    }.mkString(lineEnding)
   }
+
+  def forecastTimeSlotOptionToCSV(rowOption: Option[ForecastTimeSlot]) = rowOption match {
+    case Some(col) =>
+      s"${col.available},${col.required},${col.available - col.required}"
+    case None =>
+      s",,"
+  }
+
+  def makeDayHeadingsForPlanningExport(daysInPeriod: Seq[MillisSinceEpoch]) = {
+    "," + daysInPeriod.map(day => {
+      val localDate = SDate(day, europeLondonTimeZone)
+      val date = localDate.getDate()
+      val month = localDate.getMonth()
+      val columnPrefix = f"$date%02d/$month%02d - "
+      columnPrefix + "available," + columnPrefix + "required," + columnPrefix + "difference"
+    }).mkString(",")
+  }
+
+  def forecastDaysInPeriod(forecastPeriod: ForecastPeriod): Seq[MillisSinceEpoch] = forecastPeriod.days.toList.map(_._1).sorted
 
   def terminalCrunchMinutesToCsvDataHeadings(queues: Seq[QueueName]): String = {
     val colHeadings = List("Pax", "Wait", "Desks req", "Act. wait time", "Act. desks")
@@ -201,6 +205,7 @@ object CSVData {
 
   def flightsWithSplitsToCSVIncludingAPIDataWithHeadings(flightsWithSplits: List[ApiFlightWithSplits]): String =
     flightsWithSplitsToCSVHeadings + "," + actualAPIHeadings(flightsWithSplits) + lineEnding + flightsWithSplitsToCSV(flightsWithSplits)
+
   def flightsWithSplitsToCSVHeadings: String = {
     val headings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax," +
       headingsForSplitSource(queueNames, "API") + "," +

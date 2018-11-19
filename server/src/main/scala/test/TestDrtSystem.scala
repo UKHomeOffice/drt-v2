@@ -3,14 +3,22 @@ package test
 import actors._
 import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props}
-import akka.stream.{KillSwitch, Materializer}
 import akka.stream.scaladsl.Source
-import drt.server.feeds.test.{TestAPIManifestFeedGraphStage, TestFixtureFeed}
+import akka.stream.{KillSwitch, Materializer}
+import akka.util.Timeout
 import drt.shared.{AirportConfig, Role}
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
+import services.SDate
 import test.TestActors.{TestStaffMovementsActor, _}
+import test.feeds.test.{CSVFixtures, TestAPIManifestFeedGraphStage, TestFixtureFeed}
+import test.roles.TestUserRoleProvider
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
+import scala.language.postfixOps
+import scala.util.Success
 
 class TestDrtSystem(override val actorSystem: ActorSystem, override val config: Configuration, override val airportConfig: AirportConfig)(implicit actorMaterializer: Materializer)
   extends DrtSystem(actorSystem, config, airportConfig) {
@@ -34,9 +42,24 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
   system.log.warning(s"Using test System")
   val voyageManifestTestSourceGraph: Source[ManifestsFeedResponse, NotUsed] = Source.fromGraph(new TestAPIManifestFeedGraphStage)
 
-  system.log.info(s"Here's the Graph $voyageManifestTestSourceGraph")
   override lazy val voyageManifestsStage: Source[ManifestsFeedResponse, NotUsed] = voyageManifestTestSourceGraph
   val testFeed = TestFixtureFeed(system)
+
+
+  config.getOptional[String]("test.live_fixture_csv").foreach { file =>
+    implicit val timeout: Timeout = Timeout(250 milliseconds)
+    log.info(s"Loading fixtures from $file")
+    val testActor = system.actorSelection(s"akka://${airportConfig.portCode.toLowerCase}-drt-actor-system/user/TestActor-LiveArrivals").resolveOne()
+    actorSystem.scheduler.schedule(1 second, 1 day)({
+      val day = SDate.now().toISODateOnly
+      CSVFixtures.csvPathToArrivalsOnDate(day, file).collect {
+        case Success(arrival) =>
+          testActor.map( _ ! arrival)
+      }
+    })
+
+  }
+
 
   override def liveArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = testFeed
 

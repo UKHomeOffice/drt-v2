@@ -2,114 +2,24 @@ package drt.client.components
 
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlViewType}
 import drt.client.actions.Actions.UpdateShowActualDesksAndQueues
-import drt.client.components.TerminalDesksAndQueues.{NodeListSeq, ViewDeps, ViewRecs, ViewType, documentScrollHeight, documentScrollTop, queueActualsColour, queueColour}
+import drt.client.components.TerminalDesksAndQueues.{NodeListSeq, documentScrollHeight, documentScrollTop}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
-import drt.client.services.JSDateConversions._
 import drt.client.services.{SPACircuit, ViewMode}
-import drt.shared.CrunchApi.{CrunchMinute, CrunchState, MillisSinceEpoch, StaffMinute}
-import drt.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
+import drt.shared.FlightsApi.QueueName
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{BackendScope, Callback, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom
+import org.scalajs.dom.html.Div
 import org.scalajs.dom.raw.Node
 import org.scalajs.dom.{DOMList, Element, Event, NodeListOf}
 
 import scala.util.{Success, Try}
 
-
-object TerminalDesksAndQueuesRow {
-
-  def ragStatus(totalRequired: Int, totalDeployed: Int): String = {
-    totalRequired.toDouble / totalDeployed match {
-      case diff if diff >= 1 => "red"
-      case diff if diff >= 0.75 => "amber"
-      case _ => ""
-    }
-  }
-
-  case class Props(minuteMillis: MillisSinceEpoch,
-                   queueMinutes: Seq[CrunchMinute],
-                   staffMinute: StaffMinute,
-                   airportConfig: AirportConfig,
-                   terminalName: TerminalName,
-                   showActuals: Boolean,
-                   viewType: ViewType,
-                   hasActualDeskStats: Boolean,
-                   viewMode: ViewMode,
-                   loggedInUser: LoggedInUser
-                  )
-
-  implicit val rowPropsReuse: Reusability[Props] = Reusability.by(_.hashCode())
-
-  val component = ScalaComponent.builder[Props]("TerminalDesksAndQueuesRow")
-    .render_P((props) => {
-      val crunchMinutesByQueue = props.queueMinutes.filter(qm=> props.airportConfig.queues(props.terminalName).contains(qm.queueName)).map(qm => Tuple2(qm.queueName, qm)).toMap
-      val queueTds = crunchMinutesByQueue.flatMap {
-        case (qn, cm) =>
-          val paxLoadTd = <.td(^.className := queueColour(qn), s"${Math.round(cm.paxLoad)}")
-          val queueCells = props.viewType match {
-            case ViewDeps =>
-              val ragClass = cm.deployedWait.getOrElse(0).toDouble / props.airportConfig.slaByQueue(qn) match {
-                case pc if pc >= 1 => "red"
-                case pc if pc >= 0.7 => "amber"
-                case _ => ""
-              }
-              List(paxLoadTd,
-                <.td(^.className := queueColour(qn), ^.title := s"Rec: ${cm.deskRec}", s"${cm.deployedDesks.getOrElse("-")}"),
-                <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"With rec: ${cm.waitTime}", s"${cm.deployedWait.map(Math.round(_)).getOrElse("-")}"))
-            case ViewRecs =>
-              val ragClass = cm.waitTime.toDouble / props.airportConfig.slaByQueue(qn) match {
-                case pc if pc >= 1 => "red"
-                case pc if pc >= 0.7 => "amber"
-                case _ => ""
-              }
-              List(paxLoadTd,
-                <.td(^.className := queueColour(qn), ^.title := s"Dep: ${cm.deployedDesks.getOrElse("-")}", s"${cm.deskRec}"),
-                <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"With Dep: ${cm.waitTime}", s"${Math.round(cm.waitTime)}"))
-          }
-
-          if (props.showActuals) {
-            val actDesks: String = cm.actDesks.map(act => s"$act").getOrElse("-")
-            val actWaits: String = cm.actWait.map(act => s"$act").getOrElse("-")
-            queueCells ++ Seq(<.td(^.className := queueActualsColour(qn), actDesks), <.td(^.className := queueActualsColour(qn), actWaits))
-          } else queueCells
-      }
-      val fixedPoints = props.staffMinute.fixedPoints
-      val movements = props.staffMinute.movements
-      val available = props.staffMinute.available
-      val crunchMinutes = crunchMinutesByQueue.values.toSet
-      val totalRequired = DesksAndQueues.totalRequired(props.staffMinute, crunchMinutes)
-      val totalDeployed = DesksAndQueues.totalDeployed(props.staffMinute, crunchMinutes)
-      val ragClass = ragStatus(totalRequired, available)
-      val downMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "-", "Staff decrease...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "-", props.loggedInUser)()
-      val upMovementPopup = StaffDeploymentsAdjustmentPopover(props.airportConfig.terminalNames, Option(props.terminalName), "+", "Staff increase...", SDate(props.minuteMillis), SDate(props.minuteMillis).addHours(1), "left", "+", props.loggedInUser)()
-
-      def allowAdjustments: Boolean = props.viewMode.time.millisSinceEpoch > SDate.midnightThisMorning().millisSinceEpoch
-
-
-      val pcpTds = List(
-        <.td(^.className := s"non-pcp", fixedPoints),
-        <.td(^.className := s"non-pcp", movements),
-        <.td(^.className := s"total-deployed $ragClass", totalRequired),
-        <.td(^.className := s"total-deployed", totalDeployed),
-        if(allowAdjustments)
-          <.td(^.className := s"total-deployed staff-adjustments", ^.colSpan := 2, <.span(downMovementPopup, <.span(^.className := "deployed", available), upMovementPopup))
-        else
-          <.td(^.className := s"total-deployed staff-adjustments", ^.colSpan := 2, <.span(^.className := "deployed", available)))
-
-
-      <.tr((<.td(SDate(MilliDate(props.minuteMillis)).toHoursAndMinutes()) :: queueTds.toList ++ pcpTds).toTagMod)
-    })
-    .componentDidMount(_ => Callback.log("TerminalDesksAndQueuesRow did mount"))
-    .configure(Reusability.shouldComponentUpdate)
-    .build
-
-  def apply(props: Props): VdomElement = component(props)
-}
 
 object TerminalDesksAndQueues {
 
@@ -122,7 +32,8 @@ object TerminalDesksAndQueues {
   def queueActualsColour(queueName: String): String = s"${queueColour(queueName)} actuals"
 
   case class Props(router: RouterCtl[Loc],
-                   crunchState: CrunchState,
+                   crunchMinutes: Set[CrunchMinute],
+                   staffMinutes: Set[StaffMinute],
                    airportConfig: AirportConfig,
                    terminalPageTab: TerminalPageTabLoc,
                    showActuals: Boolean,
@@ -130,7 +41,7 @@ object TerminalDesksAndQueues {
                    loggedInUser: LoggedInUser
                   )
 
-  sealed trait ViewType{
+  sealed trait ViewType {
     val queryParamsValue: String
   }
 
@@ -144,24 +55,26 @@ object TerminalDesksAndQueues {
 
   case class State(showActuals: Boolean, viewType: ViewType)
 
-  val component = ScalaComponent.builder[Props]("Loader")
-    .initialStateFromProps(p => {
-      State(showActuals = p.airportConfig.hasActualDeskStats && p.showActuals, p.terminalPageTab.viewType)
-    })
-    .renderPS((scope, props, state) => {
-      def groupCrunchMinutesBy15 = CrunchApi.groupCrunchMinutesByX(15) _
+  implicit val stateReuse: Reusability[State] = Reusability.by_==[State]
+  implicit val propsReuse: Reusability[Props] = Reusability.by_==[Props]
 
-      def groupStaffMinutesBy15 = CrunchApi.groupStaffMinutesByX(15) _
+  class Backend(backendScope: BackendScope[Props, State]) {
+    def render(props: Props, state: State): VdomTagOf[Div] = {
+      val slotMinutes = 15
 
-      val queueNames = props.airportConfig.queues(props.terminalPageTab.terminal).collect {
-        case queueName: String if queueName != Queues.Transfer => queueName
-      }
+      def groupCrunchMinutesBySlotSize = CrunchApi.groupCrunchMinutesByX(slotMinutes) _
+
+      def groupStaffMinutesBySlotSize = CrunchApi.groupStaffMinutesByX(slotMinutes) _
 
       def deskUnitLabel(queueName: QueueName): String = {
         queueName match {
           case "eGate" => "Banks"
           case _ => "Desks"
         }
+      }
+
+      def queueNames: Seq[QueueName] = {
+        props.airportConfig.nonTransferQueues(props.terminalPageTab.terminal)
       }
 
       def staffDeploymentSubheadings(queueName: QueueName) = {
@@ -196,40 +109,36 @@ object TerminalDesksAndQueues {
           <.th(^.className := "total-deployed", "Avail", ^.colSpan := 2, ^.title := "Total staff available based on staff entered"))
       }
 
-      val showActsClassSuffix = if (state.showActuals) "-with-actuals" else ""
-      val colsClass = s"cols-${queueNames.length}$showActsClassSuffix"
-
       def qth(queueName: String, xs: TagMod*) = <.th((^.className := queueName + "-user-desk-rec") :: xs.toList: _*)
 
-      val queueHeadings: List[TagMod] = props.airportConfig.queues(props.terminalPageTab.terminal).collect {
-        case queueName if queueName != Queues.Transfer =>
+      val queueHeadings: List[TagMod] = queueNames.map(queueName => {
           val colsToSpan = if (state.showActuals) 5 else 3
           qth(queueName, queueDisplayName(queueName), ^.colSpan := colsToSpan, ^.className := "top-heading")
-      }.toList
+      }).toList
 
       val headings: List[TagMod] = queueHeadings ++ List(
         <.th(^.className := "non-pcp", ^.colSpan := 2, ""),
         <.th(^.className := "total-deployed", ^.colSpan := 4, "PCP")
       )
 
-      val terminalCrunchMinutes = groupCrunchMinutesBy15(
-        CrunchApi.terminalMinutesByMinute(props.crunchState.crunchMinutes, props.terminalPageTab.terminal),
+      val terminalCrunchMinutes = groupCrunchMinutesBySlotSize(
+        CrunchApi.terminalMinutesByMinute(props.crunchMinutes, props.terminalPageTab.terminal),
         props.terminalPageTab.terminal,
         Queues.queueOrder
       )
       val staffMinutesByMillis = CrunchApi
-        .terminalMinutesByMinute(props.crunchState.staffMinutes, props.terminalPageTab.terminal)
+        .terminalMinutesByMinute(props.staffMinutes, props.terminalPageTab.terminal)
         .map {
           case (millis, minutes) => (millis, minutes.head)
         }
-      val terminalStaffMinutes = groupStaffMinutesBy15(staffMinutesByMillis, props.terminalPageTab.terminal).toMap
+      val terminalStaffMinutes = groupStaffMinutesBySlotSize(staffMinutesByMillis, props.terminalPageTab.terminal).toMap
 
       val toggleShowActuals = (e: ReactEventFromInput) => {
         val newValue: Boolean = e.target.checked
 
         SPACircuit.dispatch(UpdateShowActualDesksAndQueues(newValue))
 
-        scope.modState(_.copy(showActuals = newValue))
+        backendScope.modState(_.copy(showActuals = newValue))
       }
 
       def toggleViewType(newViewType: ViewType) = (e: ReactEventFromInput) => {
@@ -303,12 +212,21 @@ object TerminalDesksAndQueues {
                   state.viewType,
                   props.airportConfig.hasActualDeskStats,
                   props.viewMode,
-                  props.loggedInUser
+                  props.loggedInUser,
+                  slotMinutes
                 )
                 TerminalDesksAndQueuesRow(rowProps)
             }.toTagMod))
       )
-    })
+    }
+
+
+  }
+
+  val component = ScalaComponent.builder[Props]("Loader")
+    .initialStateFromProps(p => State(showActuals = p.airportConfig.hasActualDeskStats && p.showActuals, p.terminalPageTab.viewType))
+    .renderBackend[Backend]
+    .configure(Reusability.shouldComponentUpdate)
     .componentDidMount(_ => StickyTableHeader("[data-sticky]"))
     .build
 
@@ -329,6 +247,7 @@ object TerminalDesksAndQueues {
 
     override def apply(idx: Int): T = nodes(idx)
   }
+
 }
 
 object StickyTableHeader {
@@ -341,7 +260,11 @@ object StickyTableHeader {
     }
   }
 
-  def handleStickyClass(top: Double, bottom: Double, mainWidth: Double, elements: NodeListSeq[Element], toStick: Element): Unit = {
+  def handleStickyClass(top: Double,
+                        bottom: Double,
+                        mainWidth: Double,
+                        elements: NodeListSeq[Element],
+                        toStick: Element): Unit = {
     elements.foreach(sticky => {
       val stickyEnter = toIntOrElse(sticky.getAttribute("data-sticky-initial"), 0)
       val stickyExit = bottom.round.toInt

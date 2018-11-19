@@ -93,7 +93,7 @@ class StaffMovementsActorBase(val now: () => SDateLike,
 
   def initialState = StaffMovementsState(StaffMovements(List()))
 
-  val snapshotInterval = 250
+  val snapshotInterval = 5000
   override val snapshotBytesThreshold: Int = oneMegaByte
 
   override def stateToMessage: GeneratedMessage = StaffMovementsStateSnapshotMessage(staffMovementsToStaffMovementMessages(state.staffMovements))
@@ -109,9 +109,17 @@ class StaffMovementsActorBase(val now: () => SDateLike,
   }
 
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case StaffMovementsMessage(movements, _) => updateState(addToState(movements))
+    case smm: StaffMovementsMessage =>
+      updateState(addToState(smm.staffMovements))
 
-    case RemoveStaffMovementMessage(Some(uuidToRemove), _) => updateState(removeFromState(uuidToRemove))
+      bytesSinceSnapshotCounter += smm.serializedSize
+      messagesPersistedSinceSnapshotCounter += 1
+
+    case rsmm: RemoveStaffMovementMessage =>
+      rsmm.uUID.map(uuidToRemove => updateState(removeFromState(uuidToRemove)))
+
+      bytesSinceSnapshotCounter += rsmm.serializedSize
+      messagesPersistedSinceSnapshotCounter += 1
   }
 
   def removeFromState(uuidToRemove: String): StaffMovements =

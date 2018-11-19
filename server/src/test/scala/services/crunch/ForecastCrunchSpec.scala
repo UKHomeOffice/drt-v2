@@ -2,7 +2,7 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
-import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.{SDate, TryRenjin}
@@ -345,6 +345,40 @@ class ForecastCrunchSpec extends CrunchTestLike {
           baseArrival2.copy(ActPax = Some(52), Status = "Port Forecast"))
 
         crunchForecastArrivals == expectedForecastArrivals
+    }
+
+    true
+  }
+
+  "Given an initial base arrivals of 1 flight, and and initial merged arrivals of 2 flights (from a port state that hadn't been updated) " +
+    "When I send an updated base arrivals " +
+    "Then I should only see arrivals that exist in the latest base arrivals" >> {
+
+    val scheduled = "2017-01-01T00:00Z"
+    val base = "2017-01-04T00:00Z"
+
+    val initialBaseArrivals = Set(ArrivalGenerator.apiFlight(schDt = base, iata = "BA0001", terminal = "T1", actPax = Option(21)))
+    val initialPortStateArrivals = Seq(
+      ArrivalGenerator.apiFlight(schDt = base, iata = "FR0001", terminal = "T1", actPax = Option(101)),
+      ArrivalGenerator.apiFlight(schDt = base, iata = "EZ1100", terminal = "T1", actPax = Option(250))
+    ).map(a => (a.uniqueId, ApiFlightWithSplits(a, Set()))).toMap
+
+    val updatedBaseArrivals = List(ArrivalGenerator.apiFlight(schDt = base, iata = "AA0099", terminal = "T1", actPax = Option(55)))
+
+    val crunch = runCrunchGraph(
+      now = () => SDate(scheduled),
+      initialBaseArrivals = initialBaseArrivals,
+      initialPortState = Option(PortState(initialPortStateArrivals, Map(), Map()))
+    )
+
+    offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(updatedBaseArrivals)))
+
+    val expectedFlightCodes = updatedBaseArrivals.map(_.IATA)
+
+    crunch.forecastTestProbe.fishForMessage(2 seconds) {
+      case PortState(flightsWithSplits, _, _) =>
+        val flightCodes = flightsWithSplits.values.map(_.apiFlight.IATA)
+        flightCodes == expectedFlightCodes
     }
 
     true

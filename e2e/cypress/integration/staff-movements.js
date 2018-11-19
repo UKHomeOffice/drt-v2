@@ -4,46 +4,21 @@ describe('Staff movements', function () {
   beforeEach(function () {
     deleteTestData();
     var schDT = new Date().toISOString().split("T")[0];
-    setRoles(["test"]);
-    cy.request('POST',
-      '/v2/test/live/test/arrival',
-      {
-        "Operator": "Flybe",
-        "Status": "On Chocks",
-        "EstDT": schDT + "T00:55:00Z",
-        "ActDT": schDT + "T00:55:00Z",
-        "EstChoxDT": schDT + "T01:01:00Z",
-        "ActChoxDT": schDT + "T01:05:00Z",
-        "Gate": "46",
-        "Stand": "44R",
-        "MaxPax": 78,
-        "ActPax": 51,
-        "TranPax": 0,
-        "RunwayID": "05L",
-        "BaggageReclaimId": "05",
-        "FlightID": 14710007,
-        "AirportID": "MAN",
-        "Terminal": "T1",
-        "ICAO": "SA123",
-        "IATA": "SA123",
-        "Origin": "AMS",
-        "SchDT": schDT + "T00:15:00Z"
-      });
+    cy.setRoles(["test"]);
+    cy.addFlight(schDT + "T00:55:00Z", schDT + "T00:55:00Z", schDT + "T01:01:00Z", schDT + "T01:05:00Z", schDT + "T00:15:00Z");
   });
 
-  function setRoles(roles) {
-    cy.request("POST", 'v2/test/live/test/mock-roles', {"roles": roles})
-  }
-
   function deleteTestData() {
-    cy.request('DELETE', '/v2/test/live/test/data');
+    cy.deleteData();
   }
 
   function addMovementFor1HourAt(numStaff, hour) {
     for (let i = 0; i < numStaff; i++) {
       cy.get('.staff-adjustments > :nth-child(' + (hour + 1) + ') > :nth-child(3)').contains("+").then((el) => {
         el.click();
-        cy.contains("Save").click();
+        cy.get('#staff-adjustment-dialogue').contains("Save").then((saveButton) => {
+          saveButton.click();
+        })
       });
     }
   }

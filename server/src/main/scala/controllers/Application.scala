@@ -21,7 +21,7 @@ import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
 import drt.staff.ImportStaff
-import drt.users.KeyCloakClient
+import drt.users.{KeyCloakClient, KeyCloakGroups}
 import javax.inject.{Inject, Singleton}
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
@@ -40,12 +40,11 @@ import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import slick.lifted.QueryBase
 import test.TestDrtSystem
-
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
-import scala.util.matching.Regex
+import scala.util.Try
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
 
@@ -123,27 +122,6 @@ trait ImplicitTimeoutProvider {
   implicit val timeout: Timeout = Timeout(1 second)
 }
 
-@Singleton
-class NoCacheFilter @Inject()(
-                               implicit override val mat: Materializer,
-                               exec: ExecutionContext) extends Filter {
-  val log: Logger = LoggerFactory.getLogger(getClass)
-  val rootRegex: Regex = "/v2/.{3}/live".r
-
-  override def apply(requestHeaderToFutureResult: RequestHeader => Future[Result])
-                    (rh: RequestHeader): Future[Result] = {
-    requestHeaderToFutureResult(rh).map { result =>
-      rh.uri match {
-        case rootRegex() =>
-          result.withHeaders(HeaderNames.CACHE_CONTROL -> "no-cache")
-        case _ =>
-          result
-      }
-    }
-  }
-}
-
-
 trait UserRoleProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -208,6 +186,8 @@ class Application @Inject()(implicit val config: Configuration,
     val oneDayInMillis = 60 * 60 * 24 * 1000L
     SDate(date.millisSinceEpoch - oneDayInMillis)
   }
+
+  val permissionDeniedMessage = "You do not have permission manage users"
 
   object ApiService {
     def apply(
@@ -318,8 +298,6 @@ class Application @Inject()(implicit val config: Configuration,
             StaffTimeSlots.getShiftsForMonth(shifts, monthInLocalTime, terminalName)
         }
       }
-
-      val permissionDeniedMessage = "You do not have permission manage users"
 
       def keyCloakClient: KeyCloakClient with ProdSendAndReceive = {
         val token = headers.get("X-Auth-Token").getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
@@ -444,6 +422,26 @@ class Application @Inject()(implicit val config: Configuration,
     Action {
       Ok("{userHasAccess: true}")
     }
+  }
+
+  def keyCloakClient(headers: Headers): KeyCloakClient with ProdSendAndReceive = {
+    val token = headers.get("X-Auth-Token").getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
+    val keyCloakUrl = config.getOptional[String]("key-cloak.url").getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
+    new KeyCloakClient(token, keyCloakUrl, system) with ProdSendAndReceive
+  }
+
+  def exportUsers(): Action[AnyContent] = Action.async { request =>
+    val loggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
+
+    if (loggedInUser.roles.contains(ManageUsers)) {
+      val client = keyCloakClient(request.headers)
+      client
+        .getGroups()
+        .flatMap(groupList => KeyCloakGroups(groupList).usersWithGroupsCsvContent(client))
+        .map(csvContent => Result(
+          ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='users-with-groups.csv'")),
+          HttpEntity.Strict(ByteString(csvContent), Option("application/csv"))))
+    } else throw new Exception(permissionDeniedMessage)
   }
 
   def crunchStateAtPointInTime(pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = {
@@ -590,6 +588,38 @@ class Application @Inject()(implicit val config: Configuration,
       case None =>
         log.error(s"Missing headline data for ${startOfWeekMidnight.ddMMyyString} for Terminal $terminal")
         NotFound(s"Sorry, no headlines available for week starting ${startOfWeekMidnight.ddMMyyString}")
+    }
+  }
+
+  def exportApi(day: Int, month: Int, year: Int, terminalName: TerminalName) = authByRole(ApiViewPortCsv) {
+    Action.async { request =>
+      val dateOption = Try(SDate(year, month, day, 0, 0)).toOption
+      val terminalNameOption = airportConfig.terminalNames.find(name => name == terminalName)
+      val resultOption = for {
+        date <- dateOption
+        terminalName <- terminalNameOption
+      } yield {
+        val pit = date.millisSinceEpoch
+        val crunchStateForPointInTime = loadBestCrunchStateForPointInTime(pit)
+        val fileName = f"export-splits-$portCode-$terminalName-${date.getFullYear()}-${date.getMonth()}-${date.getDate()}"
+        flightsForCSVExportWithinRange(terminalName, date, startHour = 0, endHour = 24, crunchStateForPointInTime).map {
+          case Some(csvFlights) =>
+            val csvData = CSVData.flightsWithSplitsWithAPIActualsToCSVWithHeadings(csvFlights)
+            Result(
+              ResponseHeader(OK, Map(
+                CONTENT_LENGTH -> csvData.length.toString,
+                CONTENT_TYPE -> "text/csv",
+                CONTENT_DISPOSITION -> s"attachment; filename='$fileName.csv'",
+                CACHE_CONTROL -> "no-cache")
+              ),
+              HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
+            )
+          case None => NotFound("No data for this date")
+        }
+      }
+      resultOption.getOrElse(
+        Future(BadRequest("Invalid terminal name or date"))
+      )
     }
   }
 
@@ -765,6 +795,19 @@ class Application @Inject()(implicit val config: Configuration,
       }
   }
 
+  def authByRole[A](allowedRole: Role)(action: Action[A]) = Action.async(action.parser) { request =>
+    val loggedInUser: LoggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
+    log.error(s"${loggedInUser.roles}, allowed role $allowedRole")
+    if (loggedInUser.hasRole(allowedRole)) {
+      auth(action)(request)
+    } else {
+      log.error("Unauthorized")
+      Future(Unauthorized(s"{" +
+        s"Permission denied, you need $allowedRole to access this page" +
+        s"}"))
+    }
+  }
+
   def auth[A](action: Action[A]) = Action.async(action.parser) { request =>
 
     val loggedInUser: LoggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
@@ -873,7 +916,7 @@ object Forecast {
                     terminalName: TerminalName): Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = {
     val actualStaffByMinute = staffByTimeSlot(15)(staffMinutes, terminalName)
     val fixedPointsByMinute = fixedPointsByTimeSlot(15)(staffMinutes, terminalName)
-    val terminalMinutes = CrunchApi.terminalMinutesByMinute(forecastMinutes, terminalName)
+    val terminalMinutes: Seq[(MillisSinceEpoch, Set[CrunchMinute])] = CrunchApi.terminalMinutesByMinute(forecastMinutes, terminalName)
     groupCrunchMinutesByX(15)(terminalMinutes, terminalName, Queues.queueOrder)
       .map {
         case (startMillis, cms) =>

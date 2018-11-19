@@ -1,4 +1,4 @@
-package drt.server.feeds.test
+package test.feeds.test
 
 import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
 import akka.pattern.AskableActorRef

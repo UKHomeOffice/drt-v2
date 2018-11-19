@@ -1,48 +1,52 @@
-package controllers
+package test.controllers
+
+import javax.inject.{Inject, Singleton}
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.Materializer
 import akka.util.Timeout
-import javax.inject.{Inject, Singleton}
+import controllers.AirportConfProvider
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
-import passengersplits.parsing.VoyageManifestParser.FlightPassengerInfoProtocol._
 import drt.shared.{Arrival, LiveFeedSource, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
+import passengersplits.parsing.VoyageManifestParser.FlightPassengerInfoProtocol._
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
-import play.api.mvc.{Action, Controller, InjectedController, Session}
+import play.api.http.HeaderNames
+import play.api.mvc.{InjectedController, Session}
 import play.api.{Configuration, Environment}
 import services.SDate
 import spray.json._
-
-import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration._
-import scala.language.postfixOps
-import test.{MockRoles, ResetData}
+import test.ResetData
 import test.TestActors.ResetActor
-import test.MockRoles._
-import test.MockRoles.MockRolesProtocol._
+import test.feeds.test.CSVFixtures
+import test.roles.MockRoles
+import test.roles.MockRoles.MockRolesProtocol._
+
+import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
+import scala.language.postfixOps
+import scala.util.{Failure, Success}
 
 @Singleton
-class Test @Inject()(implicit val config: Configuration,
-                     implicit val mat: Materializer,
-                     env: Environment,
-                     val system: ActorSystem,
-                     ec: ExecutionContext) extends InjectedController {
+class TestController @Inject()(implicit val config: Configuration,
+                               implicit val mat: Materializer,
+                               env: Environment,
+                               val system: ActorSystem,
+                               ec: ExecutionContext) extends InjectedController with AirportConfProvider {
   implicit val timeout: Timeout = Timeout(250 milliseconds)
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   val baseTime: SDateLike = SDate.now()
 
-  val liveArrivalsTestActor: Future[ActorRef] = system.actorSelection("akka://test-drt-actor-system/user/TestActor-LiveArrivals").resolveOne()
-  val apiManifestsTestActor: Future[ActorRef] = system.actorSelection("akka://test-drt-actor-system/user/TestActor-APIManifests").resolveOne()
-  val staffMovementsTestActor: Future[ActorRef] = system.actorSelection("akka://test-drt-actor-system/user/TestActor-StaffMovements").resolveOne()
-  val mockRolesTestActor: Future[ActorRef] = system.actorSelection("akka://test-drt-actor-system/user/TestActor-MockRoles").resolveOne()
+  val liveArrivalsTestActor: Future[ActorRef] = system.actorSelection(s"akka://${portCode.toLowerCase}-drt-actor-system/user/TestActor-LiveArrivals").resolveOne()
+  val apiManifestsTestActor: Future[ActorRef] = system.actorSelection(s"akka://${portCode.toLowerCase}-drt-actor-system/user/TestActor-APIManifests").resolveOne()
+  val staffMovementsTestActor: Future[ActorRef] = system.actorSelection(s"akka://${portCode.toLowerCase}-drt-actor-system/user/TestActor-StaffMovements").resolveOne()
+  val mockRolesTestActor: Future[ActorRef] = system.actorSelection(s"akka://${portCode.toLowerCase}-drt-actor-system/user/TestActor-MockRoles").resolveOne()
 
   def saveArrival(arrival: Arrival) = {
     liveArrivalsTestActor.map(actor => {
-
       actor ! arrival
     })
   }
@@ -57,7 +61,7 @@ class Test @Inject()(implicit val config: Configuration,
   }
 
   def resetData() = {
-    system.actorSelection("akka://test-drt-actor-system/user/TestActor-ResetData").resolveOne().map(actor => {
+    system.actorSelection(s"akka://${portCode.toLowerCase}-drt-actor-system/user/TestActor-ResetData").resolveOne().map(actor => {
 
       log.info(s"Sending reset message")
 
@@ -108,6 +112,28 @@ class Test @Inject()(implicit val config: Configuration,
       }
   }
 
+  def addArrivals(forDate: String) = Action {
+    implicit request =>
+
+      request.body.asMultipartFormData.flatMap(_.files.find(_.key == "data")) match {
+        case Some(f) =>
+
+          val path = f.ref.path.toString
+          CSVFixtures.csvPathToArrivalsOnDate(forDate, path)
+            .map {
+              case Failure(error) =>
+                Failure(error)
+              case Success(a) => a
+                saveArrival(a)
+            }
+
+          Created.withHeaders(HeaderNames.ACCEPT -> "application/csv")
+
+        case None =>
+          BadRequest("You must post a CSV file with name \"data\"")
+      }
+  }
+
   def addManifest() = Action {
     implicit request =>
 
@@ -121,9 +147,7 @@ class Test @Inject()(implicit val config: Configuration,
       }
   }
 
-  def saveMockRoles(roles: MockRoles) = {
-    mockRolesTestActor.map(a => a ! roles)
-  }
+  def saveMockRoles(roles: MockRoles) = mockRolesTestActor.map(a => a ! roles)
 
   def setMockRoles() = Action {
     implicit request =>

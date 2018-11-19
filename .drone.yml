@@ -1,25 +1,27 @@
 pipeline:
 
   build:
-    image: massimodanieli/docker-scala-sbtjs:latest
-    #image: quay.io/ukhomeofficedigital/scala-sbt:latest
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
     commands:
       - /root/entrypoint.sh
-      - sbt --warn test docker:stage
+      - sbt --error test docker:stage
     environment:
       - ARTIFACTORY_USERNAME=drt_ci
     secrets:
       - ARTIFACTORY_PASSWORD
     when:
       event:
-        - push
-      branch: drone    
+        - [push, tag]
+      branch:
+        - master
 
   sonar-scanner:
     image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
     when:
       event:
         - push
+      branch:
+        - master
 
   build_docker:
     environment:
@@ -32,9 +34,47 @@ pipeline:
       - ${DRONE_COMMIT_SHA}
       - latest
     when:
-      event: push
-      branch: drone
+      event: [push, tag]
+      branch:
+        - master
 
+  drt-test-instance:
+    image: docker:18.06
+    environment:
+      - DOCKER_USERNAME=drt_ci
+      - DOCKER_HOST=tcp://172.17.0.1:2375
+    secrets:
+      - docker_password
+      - play
+    commands:
+      - docker login -u $${DOCKER_USERNAME} -p $${DOCKER_PASSWORD} docker.digital.homeoffice.gov.uk
+      - docker run  -d --name $${DRONE_COMMIT_SHA} -e KEY_CLOAK_URL="https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod" -e PERSISTENCE_BASE_DIR="/tmp/test" -e PORT_ACCESS_RESTRICTIONS=true -e PORT_CODE="test" -e DQ_S3_BUCKET="" -e ENV="test" docker.digital.homeoffice.gov.uk/drt/drt:latest $${PLAY}
+      - docker build -t drt-cypress -f cy-drt-dockfile .
+      - docker run  --net=container:$${DRONE_COMMIT_SHA} -e CYPRESS_baseUrl="http://localhost:9000" drt-cypress /bin/bash -c "./node_modules/.bin/cypress run"
+
+    when:
+      event: push
+
+
+  copy-e2e-result:
+    image: plugins/s3
+    bucket: ${AWS_BUCKET_NAME}
+    access_key: ${AWS_ACCESS_KEY_ID}
+    secret_key: ${AWS_SECRET_ACCESS_KEY}
+    source: cypress-result/*
+    target: /e2e/
+    when:
+      event: push
+      status: failure
+
+  slack:
+    image: plugins/slack
+    webhook: https://hooks.slack.com/services/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
+    channel: devs
+    username: drone
+    when:
+      status: [ success, failure ]
+  
   build_tag:
     environment:
       - DOCKER_USERNAME=drt_ci

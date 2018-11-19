@@ -67,6 +67,7 @@ class VoyageManifestsActor(val snapshotBytesThreshold: Int,
     case m@VoyageManifestLatestFileNameMessage(_, Some(latestFilename)) =>
       state = state.copy(latestZipFilename = latestFilename)
       bytesSinceSnapshotCounter += m.serializedSize
+      messagesPersistedSinceSnapshotCounter += 1
 
     case m@VoyageManifestsMessage(_, manifestMessages) =>
       val updatedManifests = manifestMessages
@@ -74,12 +75,14 @@ class VoyageManifestsActor(val snapshotBytesThreshold: Int,
         .toSet -- state.manifests
 
       state = state.copy(manifests = newStateManifests(state.manifests, updatedManifests))
-      persistCounter += 1
       bytesSinceSnapshotCounter += m.serializedSize
+      messagesPersistedSinceSnapshotCounter += 1
 
     case feedStatusMessage: FeedStatusMessage =>
       val status = feedStatusFromFeedStatusMessage(feedStatusMessage)
       state = state.copy(maybeFeedStatuses = Option(state.addStatus(status)))
+      bytesSinceSnapshotCounter += feedStatusMessage.serializedSize
+      messagesPersistedSinceSnapshotCounter += 1
   }
 
   def newStateManifests(existing: Set[VoyageManifest], updates: Set[VoyageManifest]): Set[VoyageManifest] = {

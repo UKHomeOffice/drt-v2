@@ -24,6 +24,7 @@ class ArrivalsGraphStage(name: String = "",
                          initialBaseArrivals: Set[Arrival],
                          initialForecastArrivals: Set[Arrival],
                          initialLiveArrivals: Set[Arrival],
+                         initialMergedArrivals: Map[Int, Arrival],
                          pcpArrivalTime: Arrival => MilliDate,
                          validPortTerminals: Set[String],
                          expireAfterMillis: Long,
@@ -52,7 +53,7 @@ class ArrivalsGraphStage(name: String = "",
       forecastArrivals = prepInitialArrivals(initialForecastArrivals)
       log.info(s"Received ${initialLiveArrivals.size} initial live arrivals")
       liveArrivals = prepInitialArrivals(initialLiveArrivals)
-      merged = mergeArrivals(baseArrivals, forecastArrivals, liveArrivals)
+      merged = initialMergedArrivals
       super.preStart()
     }
 

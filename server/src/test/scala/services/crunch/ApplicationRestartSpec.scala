@@ -19,10 +19,8 @@ class ApplicationRestartSpec extends CrunchTestLike {
     "Then I should not see any new crunch data" >> {
     val scheduledLive = "2018-01-01T00:00"
     val scheduledBase = "2018-01-01T00:05"
-    val scheduledFcst = "2018-01-01T00:10"
     val arrivalLive = ArrivalGenerator.apiFlight(actPax = Option(1), iata = "BA1010", schDt = scheduledLive)
     val arrivalBase = ArrivalGenerator.apiFlight(actPax = Option(1), iata = "BA2010", schDt = scheduledBase)
-    val arrivalFcst = ArrivalGenerator.apiFlight(actPax = Option(1), iata = "BA3010", schDt = scheduledFcst)
     val splits = Set(
       Splits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None)),
@@ -32,7 +30,6 @@ class ApplicationRestartSpec extends CrunchTestLike {
     val portState = PortState(
       flights = Seq(
         ApiFlightWithSplits(arrivalLive, splits),
-        ApiFlightWithSplits(arrivalFcst, splits),
         ApiFlightWithSplits(arrivalBase, splits)
       ).map(f => (f.apiFlight.uniqueId, f)).toMap,
       Map(),
@@ -40,20 +37,18 @@ class ApplicationRestartSpec extends CrunchTestLike {
     )
 
     val initialLiveArrivals = Set(arrivalLive)
-    val initialFcstArrivals = Set(arrivalFcst)
     val initialBaseArrivals = Set(arrivalBase)
 
     val crunch = runCrunchGraph(
       now = () => SDate(scheduledLive),
       initialPortState = Option(portState),
       initialLiveArrivals = initialLiveArrivals,
-      initialForecastArrivals = initialFcstArrivals,
       initialBaseArrivals = initialBaseArrivals
     )
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrivalLive)), SDate.now()))
 
-    crunch.liveTestProbe.expectNoMessage(250 milliseconds)
+    crunch.liveTestProbe.expectNoMessage(1 second)
 
     true
   }

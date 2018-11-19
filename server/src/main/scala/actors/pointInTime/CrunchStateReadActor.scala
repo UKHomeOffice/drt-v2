@@ -29,11 +29,11 @@ class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, expire
     case cdm@CrunchDiffMessage(createdAtOption, _, _, _, _, _, _) =>
       createdAtOption match {
         case Some(createdAt) if createdAt <= pointInTime.millisSinceEpoch =>
-          log.info(s"Applying crunch diff with createdAt ($createdAt) <= point in time requested: ${pointInTime.millisSinceEpoch}")
+          log.info(s"Applying crunch diff with createdAt (${SDate(createdAt).toISOString()}) <= point in time requested: ${pointInTime.toISOString()}")
           val newState = stateFromDiff(cdm, state)
           state = newState
         case Some(createdAt) =>
-          log.info(s"Ignoring crunch diff with createdAt ($createdAt) > point in time requested: ${pointInTime.millisSinceEpoch}")
+          log.info(s"Ignoring crunch diff with createdAt (${SDate(createdAt).toISOString()}) > point in time requested: ${pointInTime.toISOString()}")
       }
   }
 

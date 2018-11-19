@@ -1,0 +1,17 @@
+# use Cypress provided image with all dependencies included
+FROM cypress/base:10
+RUN node --version
+RUN npm --version
+# copy our test page and test files
+ADD e2e /app
+WORKDIR /app
+
+# avoid many lines of progress bars during install
+# https://github.com/cypress-io/cypress/issues/1243
+ENV CI=1
+
+# install NPM dependencies and Cypress binary
+RUN npm install --save-dev cypress
+# check if the binary was installed successfully
+RUN $(npm bin)/cypress verify
+
