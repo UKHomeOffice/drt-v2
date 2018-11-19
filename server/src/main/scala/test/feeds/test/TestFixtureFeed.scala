@@ -32,7 +32,7 @@ object TestFixtureFeed {
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
     val tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed).map(_ => {
       val testArrivals = Await.result(askableTestArrivalActor.ask(GetArrivals).map {
-        case TestArrivals(arrivals) =>
+        case Arrivals(arrivals) =>
           log.info(s"Got these arrivals from the actor: $arrivals")
           arrivals
         case x =>
@@ -52,7 +52,7 @@ object TestFixtureFeed {
 
 case object GetArrivals
 
-case class TestArrivals(arrivals: List[Arrival])
+case class Arrivals(arrivals: List[Arrival])
 
 class TestArrivalsActor extends Actor with ActorLogging{
 
@@ -66,8 +66,8 @@ class TestArrivalsActor extends Actor with ActorLogging{
       log.info(s"TEST: Arrivals now equal $testArrivals")
 
     case GetArrivals =>
+      sender ! Arrivals(testArrivals)
 
-      sender ! TestArrivals(testArrivals)
     case ResetActor =>
       testArrivals = List()
   }

@@ -6,7 +6,7 @@ import com.trueaccord.scalapb.GeneratedMessage
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, ArrivalsFeedSuccessAck}
 import server.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
 import services.SDate
 import services.graphstages.Crunch
@@ -142,7 +142,10 @@ abstract class ArrivalsActor(now: () => SDateLike,
   }
 
   override def receiveCommand: Receive = {
-    case ArrivalsFeedSuccess(Flights(incomingArrivals), createdAt) => handleFeedSuccess(incomingArrivals, createdAt)
+    case ArrivalsFeedSuccess(Flights(incomingArrivals), createdAt) =>
+      handleFeedSuccess(incomingArrivals, createdAt)
+      log.info(s"Sending ack")
+      sender() ! ArrivalsFeedSuccessAck
 
     case ArrivalsFeedFailure(message, createdAt) => handleFeedFailure(message, createdAt)
 

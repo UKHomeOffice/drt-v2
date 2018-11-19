@@ -20,6 +20,7 @@ import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse, ManifestsFeedS
 import services._
 import services.graphstages.Crunch._
 import services.graphstages.{ActualDeskStats, DqManifests, DummySplitsPredictor}
+import slickdb.Tables
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -62,8 +63,13 @@ case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete
                                       baseArrivalsTestProbe: TestProbe,
                                       forecastArrivalsTestProbe: TestProbe,
                                       liveArrivalsTestProbe: TestProbe,
-                                      aggregatedArrivalsTestProbe: TestProbe
-                                     )
+                                      aggregatedArrivalsActor: ActorRef)
+
+
+
+object H2Tables extends {
+  val profile = slick.jdbc.H2Profile
+} with Tables
 
 class CrunchTestLike
   extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPersistTestConfig.inMemoryAkkaPersistConfig))
@@ -140,7 +146,8 @@ class CrunchTestLike
                      initialFixedPoints: FixedPointAssignments = FixedPointAssignments.empty,
                      logLabel: String = "",
                      cruncher: TryCrunch = TestableCrunchLoadStage.mockCrunch,
-                     simulator: Simulator = TestableCrunchLoadStage.mockSimulator
+                     simulator: Simulator = TestableCrunchLoadStage.mockSimulator,
+                     aggregatedArrivalsActor: ActorRef = testProbe("aggregated-arrivals").ref
                     ): CrunchGraphInputsAndProbes = {
 
     val maxDaysToCrunch = 5
@@ -150,7 +157,6 @@ class CrunchTestLike
     val baseArrivalsProbe = testProbe("base-arrivals")
     val forecastArrivalsProbe = testProbe("forecast-arrivals")
     val liveArrivalsProbe = testProbe("live-arrivals")
-    val aggregatedArrivalsProbe = testProbe("aggregated-arrivals")
 
     val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], now, DrtStaticParameters.timeBeforeThisMonth(now)))
     val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], now))
@@ -183,7 +189,7 @@ class CrunchTestLike
         "base-arrivals" -> baseArrivalsProbe.ref,
         "forecast-arrivals" -> forecastArrivalsProbe.ref,
         "live-arrivals" -> liveArrivalsProbe.ref,
-        "aggregated-arrivals" -> aggregatedArrivalsProbe.ref
+        "aggregated-arrivals" -> aggregatedArrivalsActor
       ),
       useNationalityBasedProcessingTimes = false,
       now = now,
@@ -225,7 +231,7 @@ class CrunchTestLike
       baseArrivalsProbe,
       forecastArrivalsProbe,
       liveArrivalsProbe,
-      aggregatedArrivalsProbe
+      aggregatedArrivalsActor
     )
   }
 
