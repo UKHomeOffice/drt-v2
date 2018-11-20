@@ -82,6 +82,7 @@ pipeline:
       - git push tag-origin ${DRONE_BUILD_NUMBER}
     when:
       event: push      
+      branch: master
 
   deploy_test_port:
     image: quay.io/ukhomeofficedigital/drone-trigger:latest
