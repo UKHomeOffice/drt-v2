@@ -6,7 +6,7 @@ pipeline:
       event:
         - push
       branch:
-        - master  
+        - DRT-5351-port-migration  
   build:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
     commands:
@@ -20,7 +20,7 @@ pipeline:
       event:
         - push
       branch:
-        - master
+        - DRT-5351-port-migration
 
 
   build_docker:
@@ -36,7 +36,7 @@ pipeline:
     when:
       event: push
       branch:
-        - master
+        - DRT-5351-port-migration
 
   cypress-E2E-test:
     image: docker:18.06
@@ -54,7 +54,7 @@ pipeline:
 
     when:
       event: push
-      branch: master
+      branch: DRT-5351-port-migration
 
 
   copy-e2e-result:
@@ -82,7 +82,7 @@ pipeline:
       - git push tag-origin ${DRONE_BUILD_NUMBER}
     when:
       event: push      
-      branch: master
+      branch: DRT-5351-port-migration
 
   deploy_test_port:
     image: quay.io/ukhomeofficedigital/drone-trigger:latest
@@ -94,7 +94,7 @@ pipeline:
     drone_token: $${DRONE_TOKEN}
     params: "DRT_TAG=${DRONE_BUILD_NUMBER},ENV=test,PORT_CODE=test"     
     when:
-      branch: master
+      branch: DRT-5351-port-migration
 
 
   deploy_test_port2:
@@ -107,7 +107,7 @@ pipeline:
     drone_token: $${DRONE_TOKEN}
     params: "DRT_TAG=${DRONE_BUILD_NUMBER},ENV=test,PORT_CODE=test2"
     when:
-      branch: master
+      branch: DRT-5351-port-migration
 
 
   slack_notification:
@@ -125,5 +125,5 @@ pipeline:
       {{/success}}
     when:
       status: [ success, failure ]
-      branch: master 
+      branch: DRT-5351-port-migration 
 
