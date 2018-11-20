@@ -67,13 +67,13 @@ object TerminalPlanningComponent {
           <.a(
             "Export Headlines",
             ^.className := "btn btn-link",
-            ^.href := s"${dom.window.location.pathname}/export/headlines/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}",
+            ^.href := s"${dom.window.location.pathname}export/headlines/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}",
             ^.target := "_blank"
           ),
           <.a(
             "Export Week",
             ^.className := "btn btn-link",
-            ^.href := s"${dom.window.location.pathname}/export/planning/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}",
+            ^.href := s"${dom.window.location.pathname}export/planning/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}",
             ^.target := "_blank"
           )
         ),

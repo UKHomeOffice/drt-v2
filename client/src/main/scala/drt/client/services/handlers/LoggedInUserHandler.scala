@@ -37,7 +37,7 @@ class LoggedInUserHandler[M](modelRW: ModelRW[M, Pot[LoggedInUser]]) extends Log
 
     case GetLoggedInUser =>
       log.info(s"Getting logged in user")
-      val url = SPAMain.pathToThisApp + "/data/user"
+      val url = SPAMain.pathToThisApp + "data/user"
 
       val eventualRequest: Future[XMLHttpRequest] = dom.ext.Ajax.get(url = url)
       effectOnly(Effect(eventualRequest.map(r => {

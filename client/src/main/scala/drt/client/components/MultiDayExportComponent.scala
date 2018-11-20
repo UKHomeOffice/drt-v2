@@ -77,13 +77,13 @@ object MultiDayExportComponent {
                   <.div(^.className := "multi-day-export-links",
                     <.a("Export Arrivals",
                       ^.className := "btn btn-default",
-                      ^.href := s"${dom.window.location.pathname}/export/arrivals/${state.startMillis}/${state.endMillis}/${props.terminal}",
+                      ^.href := s"${dom.window.location.pathname}export/arrivals/${state.startMillis}/${state.endMillis}/${props.terminal}",
                       ^.target := "_blank",
                       ^.onClick -->{Callback(GoogleEventTracker.sendEvent(props.terminal, "click", "Export Arrivals", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))}
                     ),
                     <.a("Export Desks",
                       ^.className := "btn btn-default",
-                      ^.href := s"${dom.window.location.pathname}/export/desks/${state.startMillis}/${state.endMillis}/${props.terminal}",
+                      ^.href := s"${dom.window.location.pathname}export/desks/${state.startMillis}/${state.endMillis}/${props.terminal}",
                       ^.target := "_blank",
                       ^.onClick -->{Callback(GoogleEventTracker.sendEvent(props.terminal, "click", "Export Desks", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))}
                     )
