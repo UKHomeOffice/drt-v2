@@ -116,8 +116,7 @@ lazy val server = (project in file("server"))
   ),
   TwirlKeys.templateImports += "buildinfo._",
   parallelExecution in Test := false,
-  slick <<= slickCodeGenTask, // register manual sbt command
-  sourceGenerators in Compile <+= slickCodeGenTask // register automatic code generation on every compile, remove for only manual use
+  slick <<= slickCodeGenTask // register manual sbt command
 )
   .aggregate(clients.map(projectToRef): _*)
   .dependsOn(sharedJVM)
@@ -132,7 +131,6 @@ lazy val ReleaseCmd = Command.command("release") {
 }
 
 // code generation task
-//val conf = ConfigFactory.load.resolve()
 val conf = ConfigFactory.parseFile(new File("server/src/main/resources/application.conf")).resolve()
 
 lazy val slick = TaskKey[Seq[File]]("gen-tables")

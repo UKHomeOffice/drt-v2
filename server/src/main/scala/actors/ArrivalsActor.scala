@@ -144,7 +144,6 @@ abstract class ArrivalsActor(now: () => SDateLike,
   override def receiveCommand: Receive = {
     case ArrivalsFeedSuccess(Flights(incomingArrivals), createdAt) =>
       handleFeedSuccess(incomingArrivals, createdAt)
-      log.info(s"Sending ack")
       sender() ! ArrivalsFeedSuccessAck
 
     case ArrivalsFeedFailure(message, createdAt) => handleFeedFailure(message, createdAt)

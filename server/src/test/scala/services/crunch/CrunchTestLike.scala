@@ -15,7 +15,7 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
-import passengersplits.AkkaPersistTestConfig
+import passengersplits.InMemoryPersistence
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse, ManifestsFeedSuccess}
 import services._
 import services.graphstages.Crunch._
@@ -72,7 +72,7 @@ object H2Tables extends {
 } with Tables
 
 class CrunchTestLike
-  extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPersistTestConfig.inMemoryAkkaPersistConfig))
+  extends TestKit(ActorSystem("StreamingCrunchTests", InMemoryPersistence.akkaAndAggregateDbConfig))
     with SpecificationLike {
   isolated
   sequential
