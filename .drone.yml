@@ -38,7 +38,7 @@ pipeline:
       branch:
         - master
 
-  cypress-E2E-test:
+  cypress-e2e-test:
     image: docker:18.06
     environment:
       - DOCKER_USERNAME=drt_ci
