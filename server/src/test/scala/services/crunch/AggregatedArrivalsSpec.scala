@@ -6,7 +6,6 @@ import akka.pattern.AskableActorRef
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator
-import drt.server.feeds.test.GetArrivals
 import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.SplitRatiosNs.SplitSources
@@ -18,6 +17,7 @@ import services.graphstages.Crunch
 import slick.jdbc.SQLActionBuilder
 import slick.jdbc.SetParameter.SetUnit
 import slickdb.{AggregatedArrival, AggregatedArrivals, ArrivalTable, ArrivalTableLike}
+import test.feeds.test.GetArrivals
 
 import scala.collection.immutable.{List, Seq}
 import scala.concurrent.Await
