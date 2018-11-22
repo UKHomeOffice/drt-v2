@@ -192,12 +192,6 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
     val expected = Set()
 
     arrivalsResult === expected
-
-//    val psDiff = crunch.aggregatedArrivalsTestProbe.receiveOne(1 seconds) match {
-//      case psd: PortStateDiff => psd
-//    }
-//
-//    psDiff.flightRemovals === Set(RemoveFlight(descheduledArrival.uniqueArrival)) && psDiff.flightUpdates === Set()
   }
 
 }
