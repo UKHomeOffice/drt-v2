@@ -2,6 +2,7 @@ package drt.client.services.handlers
 
 import autowire._
 import boopickle.Default._
+import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import diode.{ActionResult, Effect, ModelRW}
 import drt.client.actions.Actions.{GetLoggedInStatus, RetryActionAfter, TriggerReload}
 import drt.client.logger.log
@@ -11,7 +12,6 @@ import org.scalajs.dom
 import org.scalajs.dom.ext.AjaxException
 
 import scala.concurrent.Future
-import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class LoggedInStatusHandler[M](modelRW: ModelRW[M, RootModel]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
@@ -25,10 +25,6 @@ class LoggedInStatusHandler[M](modelRW: ModelRW[M, RootModel]) extends LoggingAc
             .recoverWith {
               case f: AjaxException if f.xhr.status == 405 =>
                 log.error(s"User is logged out, triggering page reload.")
-                Future(TriggerReload)
-              case f: AjaxException if f.xhr.status == 0 =>
-
-                log.error(s"Unexpected error detected, probably a redirect - reloading page.")
                 Future(TriggerReload)
               case f =>
                 log.error(s"Error when checking for user login status, retrying after ${PollDelay.loginCheckDelay}")
