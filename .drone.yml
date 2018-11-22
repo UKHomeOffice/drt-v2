@@ -125,5 +125,5 @@ pipeline:
       {{/success}}
     when:
       status: [ success, failure ]
-      branch: master 
+      branch: [ master, speedup-build ] 
 
