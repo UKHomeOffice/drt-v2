@@ -37,9 +37,9 @@ case class ArrivalTable(portCode: String, tables: Tables) extends ArrivalTableLi
   val arrivalsTableQuery = TableQuery[Arrival]
 
   def selectAll: AggregatedArrivals = {
-    val eventualArrivals = db.run(arrivalsTableQuery.result).map(x => {
-      x.map(ar => AggregatedArrival(ar.code, ar.scheduled.getTime, ar.origin, ar.destination, ar.terminal))
-    })
+    val eventualArrivals = db.run(arrivalsTableQuery.result).map(arrivalRows =>
+      arrivalRows.map(ar =>
+        AggregatedArrival(ar.code, ar.scheduled.getTime, ar.origin, ar.destination, ar.terminal)))
     val arrivals = Await.result(eventualArrivals, 5 seconds)
     AggregatedArrivals(arrivals)
   }
