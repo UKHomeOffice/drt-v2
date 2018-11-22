@@ -8,7 +8,7 @@ pipeline:
       branch:
         - master  
   build:
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
+    image: massimodanieli/scala-sbt-nodejs:fatty
     commands:
       - /root/entrypoint.sh
       - sbt --error test docker:stage
@@ -20,7 +20,7 @@ pipeline:
       event:
         - push
       branch:
-        - master
+        - speedup-build
 
 
   build_docker:
