@@ -10,7 +10,7 @@ import akka.testkit.{TestKit, TestProbe}
 import drt.server.feeds.api.ApiProviderLike
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
-import passengersplits.AkkaPersistTestConfig
+import passengersplits.InMemoryPersistence
 import server.feeds.ManifestsFeedSuccess
 import services.graphstages.VoyageManifestsGraphStage
 
@@ -57,7 +57,7 @@ class TestApiProvider() extends ApiProviderLike {
   }
 }
 
-class VoyageManifestsGraphStageSpec extends TestKit(ActorSystem("VoyageManifestsGraphStageSpec", AkkaPersistTestConfig.inMemoryAkkaPersistConfig))
+class VoyageManifestsGraphStageSpec extends TestKit(ActorSystem("VoyageManifestsGraphStageSpec", InMemoryPersistence.akkaAndAggregateDbConfig))
   with SpecificationLike {
 
   implicit val actorSystem: ActorSystem = system

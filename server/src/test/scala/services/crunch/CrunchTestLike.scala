@@ -15,11 +15,12 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
-import passengersplits.AkkaPersistTestConfig
+import passengersplits.InMemoryPersistence
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse, ManifestsFeedSuccess}
 import services._
 import services.graphstages.Crunch._
 import services.graphstages.{ActualDeskStats, DqManifests, DummySplitsPredictor}
+import slickdb.Tables
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -61,11 +62,17 @@ case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete
                                       forecastTestProbe: TestProbe,
                                       baseArrivalsTestProbe: TestProbe,
                                       forecastArrivalsTestProbe: TestProbe,
-                                      liveArrivalsTestProbe: TestProbe
-                      )
+                                      liveArrivalsTestProbe: TestProbe,
+                                      aggregatedArrivalsActor: ActorRef)
+
+
+
+object H2Tables extends {
+  val profile = slick.jdbc.H2Profile
+} with Tables
 
 class CrunchTestLike
-  extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPersistTestConfig.inMemoryAkkaPersistConfig))
+  extends TestKit(ActorSystem("StreamingCrunchTests", InMemoryPersistence.akkaAndAggregateDbConfig))
     with SpecificationLike {
   isolated
   sequential
@@ -132,13 +139,15 @@ class CrunchTestLike
                      csvSplitsProvider: SplitsProvider.SplitProvider = (_, _) => None,
                      pcpArrivalTime: Arrival => MilliDate = pcpForFlight,
                      minutesToCrunch: Int = 60,
+                     expireAfterMillis: Long = DrtStaticParameters.expireAfterMillis,
                      calcPcpWindow: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)] = (_, _) => Some((SDate.now(), SDate.now())),
                      now: () => SDateLike,
                      initialShifts: ShiftAssignments = ShiftAssignments.empty,
                      initialFixedPoints: FixedPointAssignments = FixedPointAssignments.empty,
                      logLabel: String = "",
                      cruncher: TryCrunch = TestableCrunchLoadStage.mockCrunch,
-                     simulator: Simulator = TestableCrunchLoadStage.mockSimulator
+                     simulator: Simulator = TestableCrunchLoadStage.mockSimulator,
+                     aggregatedArrivalsActor: ActorRef = testProbe("aggregated-arrivals").ref
                     ): CrunchGraphInputsAndProbes = {
 
     val maxDaysToCrunch = 5
@@ -148,6 +157,7 @@ class CrunchTestLike
     val baseArrivalsProbe = testProbe("base-arrivals")
     val forecastArrivalsProbe = testProbe("forecast-arrivals")
     val liveArrivalsProbe = testProbe("live-arrivals")
+
     val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], now, DrtStaticParameters.timeBeforeThisMonth(now)))
     val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], now))
     val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], now, DrtStaticParameters.time48HoursAgo(now)))
@@ -170,7 +180,7 @@ class CrunchTestLike
       liveCrunchStateActor = liveCrunchActor,
       forecastCrunchStateActor = forecastCrunchActor,
       maxDaysToCrunch = maxDaysToCrunch,
-      expireAfterMillis = DrtStaticParameters.expireAfterMillis,
+      expireAfterMillis = expireAfterMillis,
       minutesToCrunch = minutesToCrunch,
       actors = Map[String, AskableActorRef](
         "shifts" -> shiftsActor,
@@ -178,7 +188,8 @@ class CrunchTestLike
         "staff-movements" -> staffMovementsActor,
         "base-arrivals" -> baseArrivalsProbe.ref,
         "forecast-arrivals" -> forecastArrivalsProbe.ref,
-        "live-arrivals" -> liveArrivalsProbe.ref
+        "live-arrivals" -> liveArrivalsProbe.ref,
+        "aggregated-arrivals" -> aggregatedArrivalsActor
       ),
       useNationalityBasedProcessingTimes = false,
       now = now,
@@ -219,7 +230,8 @@ class CrunchTestLike
       forecastProbe,
       baseArrivalsProbe,
       forecastArrivalsProbe,
-      liveArrivalsProbe
+      liveArrivalsProbe,
+      aggregatedArrivalsActor
     )
   }
 

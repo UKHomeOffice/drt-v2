@@ -33,6 +33,7 @@ object Settings {
     val booPickle = "1.2.6"
     val diode = "1.1.3"
     val uTest = "0.6.3"
+    val h2 = "1.4.197"
 
     val akka = "2.5.13"
     val akkaStreamContrib = "0.9"
@@ -106,6 +107,8 @@ object Settings {
     "info.folone" %% "poi-scala" % "0.18",
     "net.liftweb" %% "lift-json" % "3.1.0",
 
+    "com.h2database" % "h2" % h2 % Test,
+
     "com.typesafe" % "config" % typesafeConfig,
     "com.typesafe.akka" %% "akka-testkit" % akka % "test",
     "com.typesafe.akka" %% "akka-stream-testkit" % akka % "test",
@@ -116,6 +119,10 @@ object Settings {
     "com.typesafe.play" %% "play-json" % playJson,
     "com.typesafe.play" %% "play-iteratees" % playIteratees,
     "com.typesafe.play" %% "play-iteratees-reactive-streams" % playIteratees,
+
+    "com.typesafe.slick" %% "slick" % "3.2.3",
+    "com.typesafe.slick" %% "slick-hikaricp" % "3.2.3",
+    "com.typesafe.slick" %% "slick-codegen" % "3.2.3",
 
     "com.vmunier" %% "play-scalajs-scripts" % playScripts,
     "com.vmunier" %% "scalajs-scripts" % scalaJsScripts,

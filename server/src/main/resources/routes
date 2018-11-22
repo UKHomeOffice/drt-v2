@@ -48,4 +48,3 @@ POST          /test/manifest                                       test.controll
 POST          /test/mock-roles                                     test.controllers.TestController.setMockRoles()
 
 DELETE        /test/data                                           test.controllers.TestController.deleteAllData()
-

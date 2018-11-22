@@ -9,7 +9,7 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
-import services.graphstages.Crunch.Loads
+import services.graphstages.Crunch.{Loads, PortStateDiff}
 import services.graphstages._
 
 object RunnableCrunch {
@@ -50,6 +50,8 @@ object RunnableCrunch {
 
                                        liveCrunchStateActor: ActorRef,
                                        fcstCrunchStateActor: ActorRef,
+                                       aggregatedArrivalsStateActor: ActorRef,
+
                                        crunchPeriodStartMillis: SDateLike => SDateLike,
                                        now: () => SDateLike
                                       ): RunnableGraph[(FR, FR, FR, MS, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch)] = {
@@ -109,7 +111,7 @@ object RunnableCrunch {
           val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](2))
           val workloadFanOut = builder.add(Broadcast[Loads](2))
           val staffFanOut = builder.add(Broadcast[StaffMinutes](2))
-          val portStateFanOut = builder.add(Broadcast[PortStateWithDiff](2))
+          val portStateFanOut = builder.add(Broadcast[PortStateWithDiff](3))
 
           val baseArrivalsSink = builder.add(Sink.actorRef(baseArrivalsActor, "complete"))
           val fcstArrivalsSink = builder.add(Sink.actorRef(fcstArrivalsActor, "complete"))
@@ -119,6 +121,7 @@ object RunnableCrunch {
 
           val liveSink = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
           val fcstSink = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
+          val aggregatedArrivalsSink = builder.add(Sink.actorRef(aggregatedArrivalsStateActor, "complete"))
 
 
           baseArrivals ~> baseArrivalsFanOut ~> arrivals.in0
@@ -159,11 +162,17 @@ object RunnableCrunch {
           portState.out ~> portStateFanOut
           portStateFanOut.map(_.window(liveStart(now), liveEnd(now))) ~> liveSink
           portStateFanOut.map(_.window(forecastStart(now), forecastEnd(now))) ~> fcstSink
+          portStateFanOut.map(pswd => withOnlyDescheduledRemovals(pswd.diff, now())) ~> aggregatedArrivalsSink
 
           ClosedShape
     }
 
     RunnableGraph.fromGraph(graph)
+  }
+
+  def withOnlyDescheduledRemovals: (PortStateDiff, SDateLike) => PortStateDiff = (diff: PortStateDiff, now: SDateLike) => {
+    val nowMillis = now.millisSinceEpoch
+    diff.copy(flightRemovals = diff.flightRemovals.filterNot(_.flightKey.scheduled <= nowMillis))
   }
 
   def liveStart(now: () => SDateLike): SDateLike = Crunch.getLocalLastMidnight(now()).addDays(-1)
