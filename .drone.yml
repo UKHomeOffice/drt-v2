@@ -8,7 +8,7 @@ pipeline:
       branch:
         - master  
   build:
-    image: massimodanieli/scala-sbt-nodejs:fatty
+    image: massimodanieli/scala-sbt-nodejs:fatter
     commands:
       - /root/entrypoint.sh
       - sbt --error test docker:stage
