@@ -375,9 +375,7 @@ class ArrivalSplitsGraphStage(name: String = "",
 
   def purgeExpiredArrivals(arrivals: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
     val expired = hasExpiredForType((a: ApiFlightWithSplits) => a.apiFlight.PcpTime.getOrElse(0L))
-    val updated = arrivals.filterNot { case (_, a) =>
-      log.info(s"Checking ${SDate(a.apiFlight.PcpTime.getOrElse(0L)).toISOString()} for expiry (now: ${now().toISOString()})")
-      expired(a) }
+    val updated = arrivals.filterNot { case (_, a) => expired(a) }
 
     val numPurged = arrivals.size - updated.size
     if (numPurged > 0) log.info(s"Purged $numPurged expired arrivals")
