@@ -13,6 +13,7 @@ pipeline:
     secrets:
       - DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
       - DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
+      - DRONE_S3_CACHE_BUCKET_NAME
 
   build:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
@@ -38,7 +39,8 @@ pipeline:
     drone_s3_cache_mode: "push"
     secrets:
       - DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
-      - DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY        
+      - DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
+      - DRONE_S3_CACHE_BUCKET_NAME        
 
   build_docker:
     environment:
@@ -143,6 +145,3 @@ pipeline:
     when:
       status: [ success, failure ]
       branch: [ master, speedup-build ] 
-matrix:
-  DRONE_S3_CACHE_BUCKET_NAME:
-    - drt-prod-backup-s3
