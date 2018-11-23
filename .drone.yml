@@ -15,7 +15,7 @@ pipeline:
       - DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
 
   build:
-    image: massimodanieli/scala-sbt-nodejs:fatter
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
     commands:
       - /root/entrypoint.sh
       - sbt --error test docker:stage
