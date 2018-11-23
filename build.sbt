@@ -101,7 +101,9 @@ lazy val server = (project in file("server"))
   testFrameworks += new TestFramework("utest.runner.Framework"),
   resolvers += Resolver.bintrayRepo("dwhjames", "maven"),
   resolvers += Resolver.bintrayRepo("mfglabs", "maven"),
-  //resolvers += "Artifactory Release Realm" at "http://artifactory.registered-traveller.homeoffice.gov.uk/artifactory/libs-release-local/",
+  resolvers += "Artifactory Release Realm" at "http://artifactory.registered-traveller.homeoffice.gov.uk/artifactory/libs-release-local/",
+  resolvers += "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
+
   //dependencyOverrides += "com.github.dwhjames" %% "aws-wrap" % "0.9.0",
   publishArtifact in(Compile, packageBin) := false,
   // Disable scaladoc generation for this project (useless)
