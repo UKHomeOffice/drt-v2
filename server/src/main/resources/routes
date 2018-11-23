@@ -27,6 +27,8 @@ POST          /api/*path                                           controllers.A
 
 GET           /data/user                                           controllers.Application.getLoggedInUser()
 
+GET           /data/should-reload                                  controllers.Application.getShouldReload()
+
 GET           /data/user/has-port-access                           controllers.Application.getUserHasPortAccess()
 
 
