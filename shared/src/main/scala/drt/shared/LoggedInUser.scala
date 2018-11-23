@@ -4,6 +4,8 @@ case class LoggedInUser(userName: String, id: String, email: String, roles: Set[
   def hasRole(role: Role) = roles.exists(_.name == role.name)
 }
 
+case class ShouldReload(shouldReload: Boolean)
+
 sealed trait Role {
   val name: String
 }

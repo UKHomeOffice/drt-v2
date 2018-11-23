@@ -173,8 +173,8 @@ class Application @Inject()(implicit val config: Configuration,
 
   log.info(s"System.getProperty(user.timezone): $systemTimeZone")
   log.info(s"TimeZone.getDefault: $defaultTimeZone")
-  assert(systemTimeZone == "UTC")
-  assert(defaultTimeZone == "UTC")
+  assert(systemTimeZone == "UTC", "System Timezone is not set to UTC")
+  assert(defaultTimeZone == "UTC", "Default Timezone is not set to UTC")
 
   log.info(s"timezone: ${Calendar.getInstance().getTimeZone()}")
 
@@ -416,6 +416,12 @@ class Application @Inject()(implicit val config: Configuration,
     }
 
     Ok(Json.toJson(user))
+  }
+
+  def getShouldReload(): Action[AnyContent] = Action { request =>
+
+    val shouldRedirect: Boolean = config.getOptional[Boolean]("feature-flags.acp-redirect").getOrElse(false)
+    Ok(Json.obj("reload" -> shouldRedirect))
   }
 
   def getUserHasPortAccess(): Action[AnyContent] = auth {
