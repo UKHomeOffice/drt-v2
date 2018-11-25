@@ -1,7 +1,7 @@
 package feeds.lhr.sftp
 
 import com.typesafe.config.ConfigFactory
-import drt.server.feeds.lhr.sftp.LhrSftpLive
+import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
 import org.specs2.mutable.Specification
 
 class LhrLiveSpec extends Specification {
@@ -10,7 +10,7 @@ class LhrLiveSpec extends Specification {
     val host = config.getString("feeds.lhr.sftp.live.host")
     val username = config.getString("feeds.lhr.sftp.live.username")
     val password = config.getString("feeds.lhr.sftp.live.password")
-    val content: String = LhrSftpLive(host, username, password).latestContent
+    val content: String = LhrSftpLiveContentProvider(host, username, password).latestContent
 
     println(s"content:\n$content")
 

@@ -4,7 +4,7 @@ import drt.server.feeds.SftpClientPasswordAuth
 
 import scala.util.Try
 
-case class LhrSftpLive(host: String, username: String, password: String) {
+case class LhrSftpLiveContentProvider(host: String, username: String, password: String) {
   def sftpClient: SftpClientPasswordAuth = SftpClientPasswordAuth(host, username, password)
 
   def latestFile(): String = {

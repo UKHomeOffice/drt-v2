@@ -122,15 +122,6 @@ case class LHRFlightFeed(csvRecords: Iterator[Int => String]) {
     }).toList
 }
 
-case class LegacyLhrLiveContentProvider() {
-  def csvContentsProviderProd(): Try[String] = {
-    Try(Seq(
-      "/usr/local/bin/lhr-live-fetch-latest-feed.sh",
-      "-u", ConfigFactory.load.getString("feeds.lhr.live.username"),
-      "-p", ConfigFactory.load.getString("feeds.lhr.live.password")).!!)
-  }
-}
-
 object LHRFlightFeed {
 
   def csvParserAsIteratorOfColumnGetter(csvString: String): Iterator[Int => String] = {
