@@ -1,6 +1,7 @@
 package drt.server.feeds.lhr.live
 
 import com.typesafe.config.ConfigFactory
+import scala.sys.process._
 
 import scala.util.Try
 

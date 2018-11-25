@@ -17,7 +17,6 @@ import services.SDate
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import scala.sys.process._
 import scala.util.{Failure, Success, Try}
 
 case class LHRLiveFlight(
