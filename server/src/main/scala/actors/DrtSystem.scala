@@ -18,7 +18,8 @@ import drt.server.feeds.bhx.{BHXForecastFeed, BHXLiveFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.lgw.{LGWFeed, LGWForecastFeed}
 import drt.server.feeds.lhr.live.LHRLiveFeed
-import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
+import drt.server.feeds.lhr.sftp.LhrSftpLive
+import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed, LegacyLhrLiveContentProvider}
 import drt.server.feeds.ltn.LtnLiveFeed
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{Flights, TerminalName}
@@ -101,11 +102,11 @@ case class DrtConfigParameters(config: Configuration) {
   val dqZipBucketName: String = config.getOptional[String]("dq.s3.bucket").getOrElse(throw new Exception("You must set DQ_S3_BUCKET for us to poll for AdvPaxInfo"))
   val apiS3PollFrequencyMillis: MillisSinceEpoch = config.getOptional[Int]("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
   val isSuperUserMode: Boolean = config.getOptional[String]("feature-flags.super-user-mode").isDefined
-  val maybeBlackJackUrl: Option[String] = config.getOptional[String]("lhr.blackjack_url")
+  val maybeBlackJackUrl: Option[String] = config.getOptional[String]("feeds.lhr.blackjack_url")
 
   val useNewLhrFeed: Boolean = config.getOptional[String]("feature-flags.lhr.use-new-lhr-feed").isDefined
-  val newLhrFeedApiUrl: String = config.getOptional[String]("lhr.live.api_url").getOrElse("")
-  val newLhrFeedApiToken: String = config.getOptional[String]("lhr.live.token").getOrElse("")
+  val newLhrFeedApiUrl: String = config.getOptional[String]("feeds.lhr.live.api_url").getOrElse("")
+  val newLhrFeedApiToken: String = config.getOptional[String]("feeds.lhr.live.token").getOrElse("")
 
   val maybeBhxSoapEndPointUrl: Option[String] = config.getOptional[String]("feeds.bhx.soap.endPointUrl")
 
@@ -115,7 +116,7 @@ case class DrtConfigParameters(config: Configuration) {
   val maybeLtnLiveFeedToken: Option[String] = config.getOptional[String]("feeds.ltn.live.token")
   val maybeLtnLiveFeedTimeZone: Option[String] = config.getOptional[String]("feeds.ltn.live.timezone")
 
-  val maybeLhrForecastFeedPath: Option[String] = config.getOptional[String]("lhr.forecast_path")
+  val maybeLhrForecastFeedPath: Option[String] = config.getOptional[String]("feeds.lhr.forecast_path")
 }
 
 case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig)
@@ -124,6 +125,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   implicit val system: ActorSystem = actorSystem
 
   val params = DrtConfigParameters(config)
+
   import DrtStaticParameters._
 
   system.log.info(s"recrunchOnStart: ${params.recrunchOnStart}")
@@ -355,14 +357,17 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   def liveArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = {
     val feed = portCode match {
       case "LHR" =>
-        if (params.useNewLhrFeed) {
-          val apiUri = params.newLhrFeedApiUrl
-          val token = params.newLhrFeedApiToken
-          system.log.info(s"Connecting to $apiUri using $token")
-
-          LHRLiveFeed(apiUri, token, system)
+        val contentProvider = if (config.get[Boolean]("feeds.lhr.use-legacy-live")) {
+          log.info(s"Using legacy LHR live feed")
+          () => LegacyLhrLiveContentProvider().csvContentsProviderProd()
+        } else {
+          log.info(s"Using new LHR live feed")
+          val host = config.get[String]("feeds.lhr.sftp.live.host")
+          val username = config.get[String]("feeds.lhr.sftp.live.username")
+          val password = config.get[String]("feeds.lhr.sftp.live.password")
+          () => LhrSftpLive(host, username, password).latestContent
         }
-        else LHRFlightFeed()
+        LHRFlightFeed(contentProvider)
       case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
       case "LGW" => LGWFeed()
       case "BHX" => BHXLiveFeed(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX live feed URL")))
@@ -417,11 +422,11 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   }
 
   def createForecastLHRFeed(lhrForecastPath: String): Source[ArrivalsFeedResponse, Cancellable] = {
-    val imapServer = ConfigFactory.load().getString("lhr.forecast.imap_server")
-    val imapPort = ConfigFactory.load().getInt("lhr.forecast.imap_port")
-    val imapUsername = ConfigFactory.load().getString("lhr.forecast.imap_username")
-    val imapPassword = ConfigFactory.load().getString("lhr.forecast.imap_password")
-    val imapFromAddress = ConfigFactory.load().getString("lhr.forecast.from_address")
+    val imapServer = ConfigFactory.load().getString("feeds.lhr.forecast.imap_server")
+    val imapPort = ConfigFactory.load().getInt("feeds.lhr.forecast.imap_port")
+    val imapUsername = ConfigFactory.load().getString("feeds.lhr.forecast.imap_username")
+    val imapPassword = ConfigFactory.load().getString("feeds.lhr.forecast.imap_password")
+    val imapFromAddress = ConfigFactory.load().getString("feeds.lhr.forecast.from_address")
     val lhrForecastFeed = LHRForecastFeed(imapServer, imapUsername, imapPassword, imapFromAddress, imapPort)
     system.log.info(s"LHR Forecast: about to start ticking")
     Source.tick(10 seconds, 1 hour, {
