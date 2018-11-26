@@ -7,6 +7,14 @@ pipeline:
         - push
       branch:
         - master  
+  drone_s3_cache_pull:
+    image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
+    drone_s3_cache_mode: "pull"
+    secrets:
+      - DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
+      - DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
+      - DRONE_S3_CACHE_BUCKET_NAME
+
   build:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
     commands:
@@ -22,6 +30,17 @@ pipeline:
       branch:
         - master
 
+  drone_s3_cache_push:
+    image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
+    drone_s3_cache_folders:
+      - ./.ivy2
+      - ./.sbt/boot
+
+    drone_s3_cache_mode: "push"
+    secrets:
+      - DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
+      - DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
+      - DRONE_S3_CACHE_BUCKET_NAME        
 
   build_docker:
     environment:
@@ -56,17 +75,6 @@ pipeline:
       event: push
       branch: master
 
-
-  copy-e2e-result:
-    image: plugins/s3
-    bucket: ${AWS_BUCKET_NAME}
-    access_key: ${AWS_ACCESS_KEY_ID}
-    secret_key: ${AWS_SECRET_ACCESS_KEY}
-    source: cypress-result/*
-    target: /e2e/
-    when:
-      event: push
-      status: failure
 
   git_tag:
     image: alpine/git
@@ -126,4 +134,3 @@ pipeline:
     when:
       status: [ success, failure ]
       branch: master 
-
