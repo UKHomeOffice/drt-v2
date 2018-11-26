@@ -17,9 +17,9 @@ import drt.server.feeds.api.S3ApiProvider
 import drt.server.feeds.bhx.{BHXForecastFeed, BHXLiveFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.lgw.{LGWFeed, LGWForecastFeed}
-import drt.server.feeds.lhr.live.LHRLiveFeed
+import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
+import drt.server.feeds.lhr.live.LegacyLhrLiveContentProvider
 import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
-import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed, LegacyLhrLiveContentProvider}
 import drt.server.feeds.ltn.LtnLiveFeed
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{Flights, TerminalName}
@@ -37,8 +37,6 @@ import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.Crunch.{oneDayMillis, oneMinuteMillis}
 import services.graphstages._
 import services.prediction.SparkSplitsPredictorFactory
-import slick.jdbc
-import slick.jdbc.PostgresProfile.api.Database
 import slickdb.{ArrivalTable, Tables}
 
 import scala.concurrent.ExecutionContext.Implicits.global
