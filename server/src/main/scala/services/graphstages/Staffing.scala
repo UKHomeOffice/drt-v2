@@ -98,7 +98,7 @@ object Staffing {
                               fl: Map[Int, ApiFlightWithSplits],
                               cm: Map[TQM, CrunchApi.CrunchMinute]): PortState = {
     val uniqueSuffix = pointInTime.toISOString + UUID.randomUUID.toString
-    val shiftsActor: ActorRef = context.actorOf(Props(classOf[ShiftsReadActor], pointInTime, expireAfterMillis), name = s"ShiftsReadActor-$uniqueSuffix")
+    val shiftsActor: ActorRef = context.actorOf(Props(classOf[ShiftsReadActor], pointInTime, () => SDate(expireAfterMillis)), name = s"ShiftsReadActor-$uniqueSuffix")
     val askableShiftsActor: AskableActorRef = shiftsActor
     val fixedPointsActor: ActorRef = context.actorOf(Props(classOf[FixedPointsReadActor], pointInTime), name = s"FixedPointsReadActor-$uniqueSuffix")
     val askableFixedPointsActor: AskableActorRef = fixedPointsActor

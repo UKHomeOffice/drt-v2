@@ -2,9 +2,14 @@ package actors.pointInTime
 
 import actors.ShiftsActorBase
 import actors.ShiftsMessageParser.shiftMessagesToStaffAssignments
+import akka.actor.Props
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.{SDateLike, ShiftAssignments}
 import server.protobuf.messages.ShiftMessage.{ShiftStateSnapshotMessage, ShiftsMessage}
+
+object ShiftsReadActor {
+  def props(pointInTime: SDateLike, expireBefore: () => SDateLike): Props = Props(new ShiftsReadActor(pointInTime, expireBefore))
+}
 
 class ShiftsReadActor(pointInTime: SDateLike, expireBefore: () => SDateLike) extends ShiftsActorBase(() => pointInTime, expireBefore) {
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
