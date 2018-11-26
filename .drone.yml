@@ -76,17 +76,6 @@ pipeline:
       branch: master
 
 
-  copy-e2e-result:
-    image: plugins/s3
-    bucket: ${AWS_BUCKET_NAME}
-    access_key: ${AWS_ACCESS_KEY_ID}
-    secret_key: ${AWS_SECRET_ACCESS_KEY}
-    source: cypress-result/*
-    target: /e2e/
-    when:
-      event: push
-      status: failure
-
   git_tag:
     image: alpine/git
     secrets: [ ssh_key ]
