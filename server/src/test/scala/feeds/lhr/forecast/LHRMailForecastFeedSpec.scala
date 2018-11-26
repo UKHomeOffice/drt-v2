@@ -12,11 +12,11 @@ class LHRMailForecastFeedSpec extends Specification {
     "Given connection details, I should be able to connect to the server" >> {
       skipped("Integration test for connecting to mailserver (requires ssh tunnel to run locally)")
 
-      val imapServer = ConfigFactory.load().getString("lhr.forecast.imap_server")
-      val imapPort = ConfigFactory.load().getInt("lhr.forecast.imap_port")
-      val imapUsername = ConfigFactory.load().getString("lhr.forecast.imap_username")
-      val imapPassword = ConfigFactory.load().getString("lhr.forecast.imap_password")
-      val imapFromAddress = ConfigFactory.load().getString("lhr.forecast.from_address")
+      val imapServer = ConfigFactory.load().getString("feeds.lhr.forecast.imap_server")
+      val imapPort = ConfigFactory.load().getInt("feeds.lhr.forecast.imap_port")
+      val imapUsername = ConfigFactory.load().getString("feeds.lhr.forecast.imap_username")
+      val imapPassword = ConfigFactory.load().getString("feeds.lhr.forecast.imap_password")
+      val imapFromAddress = ConfigFactory.load().getString("feeds.lhr.forecast.from_address")
       val latest = LHRForecastEmail(imapServer, imapUsername, imapPassword, imapFromAddress, imapPort).maybeLatestForecastFile
 
       latest.isDefined === true
