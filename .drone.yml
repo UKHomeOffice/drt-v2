@@ -28,7 +28,7 @@ pipeline:
       event:
         - push
       branch:
-        - speedup-build
+        - master
 
   drone_s3_cache_push:
     image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
@@ -133,4 +133,4 @@ pipeline:
       {{/success}}
     when:
       status: [ success, failure ]
-      branch: [ master, speedup-build ] 
+      branch: master 
