@@ -2,6 +2,7 @@ package drt.client.components
 
 import diode.data.{Pending, Pot}
 import diode.react.{ModelProxy, ReactConnectProxy}
+import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
 import drt.client.components.FlightComponents.paxComp
@@ -128,14 +129,14 @@ object TerminalContentComponent {
               <.div(^.className := "exports",
                 <.a("Export Arrivals",
                   ^.className := "btn btn-default",
-                  ^.href := s"${dom.window.location.pathname}/export/arrivals/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}",
+                  ^.href := SPAMain.absoluteUrl(s"export/arrivals/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}"),
                   ^.target := "_blank",
                   ^.onClick -->{Callback(GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Export Arrivals", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly))}
                 ),
                 <.a(
                   "Export Desks",
                   ^.className := "btn btn-default",
-                  ^.href := s"${dom.window.location.pathname}/export/desks/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}",
+                  ^.href := SPAMain.absoluteUrl(s"export/desks/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}"),
                   ^.target := "_blank",
                   ^.onClick -->{Callback(GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Export Desks", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly))}
                 ),

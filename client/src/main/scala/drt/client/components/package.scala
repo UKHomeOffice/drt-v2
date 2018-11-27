@@ -1,7 +1,6 @@
 package drt.client
 
 import diode.data.Pot
-import drt.client.services.JSDateConversions.SDate
 
 package object components {
   import diode.react.ReactPot

@@ -234,6 +234,13 @@ object SPAMain {
 
   def pathToThisApp: String = dom.document.location.pathname
 
+  def absoluteUrl(relativeUrl: String): String = {
+    if (pathToThisApp == "/") s"/$relativeUrl"
+    else s"$pathToThisApp/$relativeUrl"
+  }
+
+  def assetsPrefix: String = if (pathToThisApp == "/") s"/assets" else s"live/assets"
+
   @JSExportTopLevel("SPAMain")
   protected def getInstance(): this.type = this
 

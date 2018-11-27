@@ -1,5 +1,6 @@
 package drt.client.components
 
+import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -67,13 +68,13 @@ object TerminalPlanningComponent {
           <.a(
             "Export Headlines",
             ^.className := "btn btn-link",
-            ^.href := s"${dom.window.location.pathname}/export/headlines/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}",
+            ^.href := SPAMain.absoluteUrl(s"export/headlines/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"),
             ^.target := "_blank"
           ),
           <.a(
             "Export Week",
             ^.className := "btn btn-link",
-            ^.href := s"${dom.window.location.pathname}/export/planning/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}",
+            ^.href := SPAMain.absoluteUrl(s"export/planning/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"),
             ^.target := "_blank"
           )
         ),

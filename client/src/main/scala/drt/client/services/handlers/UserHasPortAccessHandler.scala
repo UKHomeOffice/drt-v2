@@ -19,7 +19,7 @@ class UserHasPortAccessHandler[M](modelRW: ModelRW[M, Pot[Boolean]]) extends Log
 
     case GetUserHasPortAccess =>
 
-      val url = SPAMain.pathToThisApp + "/data/user/has-port-access"
+      val url = SPAMain.absoluteUrl("data/user/has-port-access")
 
       val eventualRequest: Future[XMLHttpRequest] = dom.ext.Ajax.get(url = url)
       effectOnly(Effect(eventualRequest.map(r => {
