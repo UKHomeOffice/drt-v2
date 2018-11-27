@@ -32,7 +32,9 @@
 
     @Seq("fastopt", "opt").find(optType => env.resource(s"public/client-$optType.js").isDefined).map { appName =>
         @Seq("-library.js", "-loader.js", ".js").map { filePostFix =>
-            <script src="/assets/client-@appName@filePostFix?@BuildInfo.version"></script>
+            @defining(if (config.get[Boolean]("feature-flags.legacy-urls")) "live/assets" else "/assets") { prefix =>
+                <script src="@prefix/client-@appName@filePostFix?@BuildInfo.version"></script>
+            }
         }
     }
 </html>
