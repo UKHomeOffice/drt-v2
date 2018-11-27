@@ -6,7 +6,7 @@ pipeline:
       event:
         - push
       branch:
-        - master  
+        - master
   drone_s3_cache_pull:
     image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
     drone_s3_cache_mode: "pull"
@@ -24,11 +24,12 @@ pipeline:
       - ARTIFACTORY_USERNAME=drt_ci
     secrets:
       - ARTIFACTORY_PASSWORD
+      - KEYTOOL_PASSWORD
     when:
       event:
         - push
       branch:
-        - master
+        - ${DRONE_BRANCH}
 
   drone_s3_cache_push:
     image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
@@ -40,7 +41,7 @@ pipeline:
     secrets:
       - DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
       - DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
-      - DRONE_S3_CACHE_BUCKET_NAME        
+      - DRONE_S3_CACHE_BUCKET_NAME
 
   build_docker:
     environment:
@@ -55,7 +56,7 @@ pipeline:
     when:
       event: push
       branch:
-        - master
+        - ${DRONE_BRANCH}
 
   cypress-e2e-test:
     image: docker:18.06
@@ -79,17 +80,17 @@ pipeline:
   git_tag:
     image: alpine/git
     secrets: [ ssh_key ]
-    commands: 
+    commands:
       - mkdir /root/.ssh/ && echo "$SSH_KEY" > /root/.ssh/id_rsa && chmod 0600 /root/.ssh/id_rsa
       - ssh-keyscan github.com >> /root/.ssh/known_hosts && chmod 600 /root/.ssh/known_hosts
       - printf  "Host github.com\n   Hostname github.com\n   IdentityFile /root/.ssh/id_rsa\n" > /root/.ssh/config
       - chmod 0600 /root/.ssh/config
-      - printf "[github]\n[user]\n user = git" > /root/.gitconfig   
+      - printf "[github]\n[user]\n user = git" > /root/.gitconfig
       - git remote add tag-origin  git@github.com:UKHomeOffice/drt-v2.git
       - git tag ${DRONE_BUILD_NUMBER}
       - git push tag-origin ${DRONE_BUILD_NUMBER}
     when:
-      event: push      
+      event: push
       branch: master
 
   deploy_test_port:
@@ -100,9 +101,9 @@ pipeline:
     repo: UKHomeOffice/kube-drt
     deploy_to: acp-notprod
     drone_token: $${DRONE_TOKEN}
-    params: "DRT_TAG=${DRONE_BUILD_NUMBER},ENV=test,PORT_CODE=test"     
+    params: "DRT_TAG=${DRONE_BUILD_NUMBER},ENV=test,PORT_CODE=test"
     when:
-      branch: master
+      branch: ${DRONE_BRANCH}
 
 
   deploy_test_port2:
@@ -133,4 +134,4 @@ pipeline:
       {{/success}}
     when:
       status: [ success, failure ]
-      branch: master 
+      branch: master
