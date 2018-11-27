@@ -17,7 +17,6 @@ import services.SDate
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import scala.sys.process._
 import scala.util.{Failure, Success, Try}
 
 case class LHRLiveFlight(
@@ -134,19 +133,12 @@ object LHRFlightFeed {
     if (s.isEmpty) None else Option(t(s))
   }
 
-  def csvContentsProviderProd(): Try[String] = {
-    Try(Seq(
-      "/usr/local/bin/lhr-live-fetch-latest-feed.sh",
-      "-u", ConfigFactory.load.getString("lhr.live.username"),
-      "-p", ConfigFactory.load.getString("lhr.live.password")).!!)
-  }
-
   val pattern: DateTimeFormatter = DateTimeFormat.forPattern("HH:mm dd/MM/YYYY")
   val log: Logger = LoggerFactory.getLogger(classOf[LHRFlightFeed])
 
   def parseDateTime(dateString: String): DateTime = pattern.parseDateTime(dateString)
 
-  def apply(csvContentsProvider: () => Try[String] = csvContentsProviderProd): Source[ArrivalsFeedResponse, Cancellable] = {
+  def apply(csvContentsProvider: () => Try[String]): Source[ArrivalsFeedResponse, Cancellable] = {
     val pollFrequency = 1 minute
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
     val tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)

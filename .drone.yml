@@ -1,5 +1,20 @@
 pipeline:
 
+  sonar-scanner:
+    image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
+    when:
+      event:
+        - push
+      branch:
+        - master  
+  drone_s3_cache_pull:
+    image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
+    drone_s3_cache_mode: "pull"
+    secrets:
+      - DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
+      - DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
+      - DRONE_S3_CACHE_BUCKET_NAME
+
   build:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
     commands:
@@ -11,17 +26,21 @@ pipeline:
       - ARTIFACTORY_PASSWORD
     when:
       event:
-        - [push, tag]
-      branch:
-        - master
-
-  sonar-scanner:
-    image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
-    when:
-      event:
         - push
       branch:
         - master
+
+  drone_s3_cache_push:
+    image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
+    drone_s3_cache_folders:
+      - ./.ivy2
+      - ./.sbt/boot
+
+    drone_s3_cache_mode: "push"
+    secrets:
+      - DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
+      - DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
+      - DRONE_S3_CACHE_BUCKET_NAME        
 
   build_docker:
     environment:
@@ -31,14 +50,14 @@ pipeline:
     repo: docker.digital.homeoffice.gov.uk/drt/drt
     secrets: [ docker_password ]
     tags:
-      - ${DRONE_COMMIT_SHA}
+      - ${DRONE_BUILD_NUMBER}
       - latest
     when:
-      event: [push, tag]
+      event: push
       branch:
         - master
 
-  drt-test-instance:
+  cypress-e2e-test:
     image: docker:18.06
     environment:
       - DOCKER_USERNAME=drt_ci
@@ -54,35 +73,64 @@ pipeline:
 
     when:
       event: push
+      branch: master
 
 
-  copy-e2e-result:
-    image: plugins/s3
-    bucket: ${AWS_BUCKET_NAME}
-    access_key: ${AWS_ACCESS_KEY_ID}
-    secret_key: ${AWS_SECRET_ACCESS_KEY}
-    source: cypress-result/*
-    target: /e2e/
+  git_tag:
+    image: alpine/git
+    secrets: [ ssh_key ]
+    commands: 
+      - mkdir /root/.ssh/ && echo "$SSH_KEY" > /root/.ssh/id_rsa && chmod 0600 /root/.ssh/id_rsa
+      - ssh-keyscan github.com >> /root/.ssh/known_hosts && chmod 600 /root/.ssh/known_hosts
+      - printf  "Host github.com\n   Hostname github.com\n   IdentityFile /root/.ssh/id_rsa\n" > /root/.ssh/config
+      - chmod 0600 /root/.ssh/config
+      - printf "[github]\n[user]\n user = git" > /root/.gitconfig   
+      - git remote add tag-origin  git@github.com:UKHomeOffice/drt-v2.git
+      - git tag ${DRONE_BUILD_NUMBER}
+      - git push tag-origin ${DRONE_BUILD_NUMBER}
     when:
-      event: push
-      status: failure
+      event: push      
+      branch: master
 
-  slack:
+  deploy_test_port:
+    image: quay.io/ukhomeofficedigital/drone-trigger:latest
+    secrets:
+      - drone_token
+    drone_server: https://drone.acp.homeoffice.gov.uk
+    repo: UKHomeOffice/kube-drt
+    deploy_to: acp-notprod
+    drone_token: $${DRONE_TOKEN}
+    params: "DRT_TAG=${DRONE_BUILD_NUMBER},ENV=test,PORT_CODE=test"     
+    when:
+      branch: master
+
+
+  deploy_test_port2:
+    image: quay.io/ukhomeofficedigital/drone-trigger:latest
+    secrets:
+      - drone_token
+    drone_server: https://drone.acp.homeoffice.gov.uk
+    repo: UKHomeOffice/kube-drt
+    deploy_to: acp-notprod
+    drone_token: $${DRONE_TOKEN}
+    params: "DRT_TAG=${DRONE_BUILD_NUMBER},ENV=test,PORT_CODE=test2"
+    when:
+      branch: master
+
+
+  slack_notification:
     image: plugins/slack
     webhook: https://hooks.slack.com/services/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
     channel: devs
     username: drone
+    template: >
+     {{#success build.status}}
+        build {{build.number}} succeeded. Good job.
+        https://drone.acp.homeoffice.gov.uk/UKHomeOffice/drt-v2/{{build.number}}
+      {{else}}
+        build {{build.number}} failed. Fix me please.
+        https://drone.acp.homeoffice.gov.uk/UKHomeOffice/drt-v2/{{build.number}}
+      {{/success}}
     when:
       status: [ success, failure ]
-  
-  build_tag:
-    environment:
-      - DOCKER_USERNAME=drt_ci
-    image: quay.io/ukhomeofficedigital/drone-docker
-    registry: docker.digital.homeoffice.gov.uk
-    repo: docker.digital.homeoffice.gov.uk/drt/drt
-    secrets: [ docker_password ]
-    tags:
-      - ${DRONE_TAG}
-    when:
-      event: tag
+      branch: master 

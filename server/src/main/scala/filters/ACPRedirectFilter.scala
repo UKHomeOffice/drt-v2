@@ -17,13 +17,19 @@ class ACPRedirectFilter @Inject()(
   val portCode: String = config.get[String]("portcode")
   val redirectUrl = s"https://$portCode.drt.homeoffice.gov.uk/v2/$portCode/live"
 
+  val redirectCheckUriRegEx = ".+/data/should-reload".r
   override def apply(next: RequestHeader => Future[Result])
                     (requestHeader: RequestHeader): Future[Result] = {
-    if (acpRedirectFlagIsSet) {
-      log.info(s"ACPRedirectFilter: Redirecting to $redirectUrl")
-      Future(Results.Redirect(redirectUrl))
-    } else {
-      next(requestHeader)
+
+    requestHeader.uri match {
+      case redirectCheckUriRegEx() =>
+        next(requestHeader)
+      case _ =>
+        if (acpRedirectFlagIsSet) {
+          Future(Results.Redirect(redirectUrl))
+        } else {
+          next(requestHeader)
+        }
     }
   }
 }

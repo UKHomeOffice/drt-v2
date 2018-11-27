@@ -38,7 +38,7 @@ trait ShiftPersistence {
       log.info(s"getShifts(${date.toISOString()})")
 
       val actorName = "shifts-read-actor-" + UUID.randomUUID().toString
-      val shiftsReadActor: ActorRef = actorSystem.actorOf(Props(classOf[ShiftsReadActor], date, DrtStaticParameters.time48HoursAgo(() => date)), actorName)
+      val shiftsReadActor: ActorRef = actorSystem.actorOf(ShiftsReadActor.props(date, DrtStaticParameters.time48HoursAgo(() => date)), actorName)
 
       shiftsReadActor.ask(GetState)
         .map { case sa: ShiftAssignments =>

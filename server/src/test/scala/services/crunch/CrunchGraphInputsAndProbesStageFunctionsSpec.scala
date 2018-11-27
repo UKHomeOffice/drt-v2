@@ -8,13 +8,13 @@ import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
 import drt.shared._
 import org.specs2.mutable.SpecificationLike
-import passengersplits.AkkaPersistTestConfig
+import passengersplits.InMemoryPersistence
 import services.graphstages.Crunch._
 
 import scala.collection.immutable.{List, Seq}
 
 
-class CrunchGraphInputsAndProbesStageFunctionsSpec extends TestKit(ActorSystem("StreamingCrunchTests", AkkaPersistTestConfig.inMemoryAkkaPersistConfig)) with SpecificationLike {
+class CrunchGraphInputsAndProbesStageFunctionsSpec extends TestKit(ActorSystem("StreamingCrunchTests", InMemoryPersistence.akkaAndAggregateDbConfig)) with SpecificationLike {
   isolated
   sequential
 

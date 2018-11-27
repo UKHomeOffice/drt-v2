@@ -1,7 +1,8 @@
 package controllers
 
 import java.nio.ByteBuffer
-import java.util.UUID
+import java.util.{Calendar, Date, TimeZone, UUID}
+
 import actors._
 import actors.pointInTime.CrunchStateReadActor
 import akka.actor._
@@ -37,10 +38,11 @@ import services.graphstages.Crunch._
 import services.staffing.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
+import slick.lifted.QueryBase
 import test.TestDrtSystem
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.Try
 
@@ -165,10 +167,16 @@ class Application @Inject()(implicit val config: Configuration,
 
   log.info(s"ISOChronology.getInstance: ${ISOChronology.getInstance}")
 
+  def defaultTimeZone: String = TimeZone.getDefault.getID
+
   def systemTimeZone: String = System.getProperty("user.timezone")
 
   log.info(s"System.getProperty(user.timezone): $systemTimeZone")
-  assert(systemTimeZone == "UTC")
+  log.info(s"TimeZone.getDefault: $defaultTimeZone")
+  assert(systemTimeZone == "UTC", "System Timezone is not set to UTC")
+  assert(defaultTimeZone == "UTC", "Default Timezone is not set to UTC")
+
+  log.info(s"timezone: ${Calendar.getInstance().getTimeZone()}")
 
   log.info(s"Application using airportConfig $airportConfig")
 
@@ -408,6 +416,12 @@ class Application @Inject()(implicit val config: Configuration,
     }
 
     Ok(Json.toJson(user))
+  }
+
+  def getShouldReload(): Action[AnyContent] = Action { request =>
+
+    val shouldRedirect: Boolean = config.getOptional[Boolean]("feature-flags.acp-redirect").getOrElse(false)
+    Ok(Json.obj("reload" -> shouldRedirect))
   }
 
   def getUserHasPortAccess(): Action[AnyContent] = auth {
