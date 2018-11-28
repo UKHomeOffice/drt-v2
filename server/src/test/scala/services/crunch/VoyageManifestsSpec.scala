@@ -97,7 +97,9 @@ class VoyageManifestsSpec extends CrunchTestLike {
       ))
 
     offerAndWait(crunch.manifestsInput, inputManifestsCi)
+    Thread.sleep(250)
     offerAndWait(crunch.manifestsInput, inputManifestsDc)
+    Thread.sleep(250)
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlights))
 
     val expectedSplits = Set(
