@@ -29,6 +29,8 @@ GET           /data/user                                           controllers.A
 
 GET           /data/should-reload                                  controllers.Application.getShouldReload()
 
+POST           /data/login                                          controllers.Application.apiLogin()
+
 GET           /data/user/has-port-access                           controllers.Application.getUserHasPortAccess()
 
 

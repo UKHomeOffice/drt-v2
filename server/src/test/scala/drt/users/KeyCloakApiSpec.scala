@@ -21,7 +21,7 @@ class KeyCloakApiSpec extends TestKit(ActorSystem("testActorSystem", ConfigFacto
   val userId1 = UUID.fromString("e25f2a14-bdaa-11e8-a355-529269fb1459")
   val userId2 = UUID.fromString("e25f2dfc-bdaa-11e8-a355-529269fb1459")
 
-  val usersJson =
+  val usersJson: String =
     s"""[{
       |        "id": "$userId1",
       |        "createdTimestamp": 1516283371483,

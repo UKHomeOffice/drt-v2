@@ -23,6 +23,8 @@ import drt.shared.{AirportConfig, Api, Arrival, _}
 import drt.staff.ImportStaff
 import drt.users.{KeyCloakClient, KeyCloakGroups}
 import javax.inject.{Inject, Singleton}
+
+import api.{KeyCloakAuth, KeyCloakAuthError, KeyCloakAuthToken}
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.{HeaderNames, HttpEntity}
@@ -39,7 +41,9 @@ import services.staffing.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import slick.lifted.QueryBase
+import spray.json.JsValue
 import test.TestDrtSystem
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -423,6 +427,63 @@ class Application @Inject()(implicit val config: Configuration,
     val shouldRedirect: Boolean = config.getOptional[Boolean]("feature-flags.acp-redirect").getOrElse(false)
     Ok(Json.obj("reload" -> shouldRedirect))
   }
+
+  def apiLogin(): Action[Map[String, Seq[String]]] = Action.async(parse.tolerantFormUrlEncoded) { request =>
+
+    def postStringValOrElse(key: String): Option[String] = {
+      request.body.get(key).map(_.head)
+    }
+
+    val tokenUrlOption = config.getOptional[String]("key-cloak.token_url")
+    val clientIdOption = config.getOptional[String]("key-cloak.client_id")
+    val clientSecretOption = config.getOptional[String]("key-cloak.client_secret")
+    val usernameOption = postStringValOrElse("username")
+    val passwordOption = postStringValOrElse("password")
+
+    val result: Option[Future[Result]] = for {
+      tokenUrl <- tokenUrlOption
+      clientId <- clientIdOption
+      clientSecret <- clientSecretOption
+    } yield {
+
+      (usernameOption, passwordOption) match {
+        case (Some(username), Some(password)) =>
+          val authClient =  new KeyCloakAuth(tokenUrl, clientId, clientSecret, system) with ProdSendAndReceive
+          authClient.getToken(username, password).map(token => {
+            import spray.json._
+            import api.KeyCloakAuthTokenParserProtocol._
+            val response: JsValue = token match {
+              case t: KeyCloakAuthToken =>
+                log.info(s"Successful login to API via keycloak for $username")
+                t.toJson
+              case e: KeyCloakAuthError =>
+                log.info(s"Failed login to API via keycloak for $username")
+                e.toJson
+            }
+            Ok(response.toString)
+          })
+        case _ =>
+          log.info(s"Login attempt without API enabled.")
+          Future(BadRequest(
+          """
+            |{
+            |  "error": "You must provide a valid username and password as post fields"
+            |}
+          """.stripMargin))
+      }
+    }
+    result match {
+      case Some(f) => f.map(t => t)
+      case None => Future(NotImplemented(
+        """|
+           |{
+           |  "error": "Api login not implemented for this DRT port."
+           |}
+        """.stripMargin))
+    }
+  }
+
+
 
   def getUserHasPortAccess(): Action[AnyContent] = auth {
     Action {
