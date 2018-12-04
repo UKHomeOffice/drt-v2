@@ -28,7 +28,7 @@ class KeyCloakAuthSpec extends TestKit(ActorSystem("testActorSystem", ConfigFact
     |}""".stripMargin
 
 
-  "When parsing a JSON token key cloak I should get back a case class representation of the token" >> {
+  "When parsing keycloak JSON token I should get back a case class representation of the token" >> {
 
     import KeyCloakAuthTokenParserProtocol._
     import spray.json._
