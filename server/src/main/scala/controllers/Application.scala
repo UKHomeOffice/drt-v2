@@ -1,7 +1,8 @@
 package controllers
 
 import java.nio.ByteBuffer
-import java.util.{Calendar, Date, TimeZone, UUID}
+import java.util.{Calendar, TimeZone, UUID}
+import javax.inject.{Inject, Singleton}
 
 import actors._
 import actors.pointInTime.CrunchStateReadActor
@@ -10,6 +11,7 @@ import akka.event.{Logging, LoggingAdapter}
 import akka.pattern.{AskableActorRef, _}
 import akka.stream._
 import akka.util.{ByteString, Timeout}
+import api.{KeyCloakAuth, KeyCloakAuthError, KeyCloakAuthResponse, KeyCloakAuthToken}
 import boopickle.CompositePickler
 import boopickle.Default._
 import buildinfo.BuildInfo
@@ -22,7 +24,6 @@ import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
 import drt.staff.ImportStaff
 import drt.users.{KeyCloakClient, KeyCloakGroups}
-import javax.inject.{Inject, Singleton}
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.{HeaderNames, HttpEntity}
@@ -38,11 +39,11 @@ import services.graphstages.Crunch._
 import services.staffing.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
-import slick.lifted.QueryBase
 import test.TestDrtSystem
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.Try
 
@@ -422,6 +423,63 @@ class Application @Inject()(implicit val config: Configuration,
 
     val shouldRedirect: Boolean = config.getOptional[Boolean]("feature-flags.acp-redirect").getOrElse(false)
     Ok(Json.obj("reload" -> shouldRedirect))
+  }
+
+  def apiLogin(): Action[Map[String, Seq[String]]] = Action.async(parse.tolerantFormUrlEncoded) { request =>
+
+    def postStringValOrElse(key: String): Option[String] = {
+      request.body.get(key).map(_.head)
+    }
+
+    val tokenUrlOption = config.getOptional[String]("key-cloak.token_url")
+    val clientIdOption = config.getOptional[String]("key-cloak.client_id")
+    val clientSecretOption = config.getOptional[String]("key-cloak.client_secret")
+    val usernameOption = postStringValOrElse("username")
+    val passwordOption = postStringValOrElse("password")
+    import api.KeyCloakAuthTokenParserProtocol._
+    import spray.json._
+
+    def tokenToHttpResponse(username: String)(token: KeyCloakAuthResponse) = {
+
+      token match {
+        case t: KeyCloakAuthToken =>
+          log.info(s"Successful login to API via keycloak for $username")
+          Ok(t.toJson.toString)
+        case e: KeyCloakAuthError =>
+          log.info(s"Failed login to API via keycloak for $username")
+          BadRequest(e.toJson.toString)
+      }
+    }
+
+    def missingPostFieldsResponse = Future(
+      BadRequest(KeyCloakAuthError("invalid_form_data", "You must provide a username and password").toJson.toString)
+    )
+
+    val result: Option[Future[Result]] = for {
+      tokenUrl <- tokenUrlOption
+      clientId <- clientIdOption
+      clientSecret <- clientSecretOption
+    } yield (usernameOption, passwordOption) match {
+      case (Some(username), Some(password)) =>
+        val authClient = new KeyCloakAuth(tokenUrl, clientId, clientSecret, system) with ProdSendAndReceive
+        authClient.getToken(username, password).map(tokenToHttpResponse(username))
+      case _ =>
+        log.info(s"Invalid post fields for api login.")
+        missingPostFieldsResponse
+    }
+
+    def disabledFeatureResponse = Future(NotImplemented(
+      KeyCloakAuthError(
+        "feature_not_implemented",
+        "This feature is not currently available for this port on DRT"
+      ).toJson.toString
+    ))
+
+    result match {
+      case Some(f) => f.map(t => t)
+      case None =>
+        disabledFeatureResponse
+    }
   }
 
   def getUserHasPortAccess(): Action[AnyContent] = auth {
