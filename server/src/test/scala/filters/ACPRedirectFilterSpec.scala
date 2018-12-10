@@ -31,7 +31,7 @@ class ACPRedirectFilterSpec (implicit ec :ExecutionContext) extends PlaySpecific
     val result = call(filter, request)
 
     status(result) mustEqual SEE_OTHER
-    redirectLocation(result) mustEqual Option("https://test.drt.homeoffice.gov.uk/v2/test/live")
+    redirectLocation(result) mustEqual Option("https://test.drt.homeoffice.gov.uk")
   }
 
 }
