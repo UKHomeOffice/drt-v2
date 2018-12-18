@@ -6,7 +6,7 @@ pipeline:
       event:
         - push
       branch:
-        - master
+        - ${DRONE_BRANCH}
   drone_s3_cache_pull:
     image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
     drone_s3_cache_mode: "pull"
@@ -74,7 +74,7 @@ pipeline:
 
     when:
       event: push
-      branch: master
+      branch: ${DRONE_BRANCH}
 
 
   git_tag:
@@ -91,7 +91,7 @@ pipeline:
       - git push tag-origin ${DRONE_BUILD_NUMBER}
     when:
       event: push
-      branch: master
+      branch: ${DRONE_BRANCH}
 
   deploy_test_port:
     image: quay.io/ukhomeofficedigital/drone-trigger:latest
@@ -116,7 +116,7 @@ pipeline:
     drone_token: $${DRONE_TOKEN}
     params: "DRT_TAG=${DRONE_BUILD_NUMBER},ENV=test,PORT_CODE=test2"
     when:
-      branch: master
+      branch: ${DRONE_BRANCH}
 
 
   slack_notification:
