@@ -127,7 +127,9 @@ pipeline:
       *{{repo.name}}: _{{build.status}}_*
 
       Completed build *{{build.number}}* after *{{since build.started}}* on *{{build.branch}}*
+
       *Triggered by*: _${DRONE_COMMIT_AUTHOR}_
+
       *Message*: ${DRONE_COMMIT_MESSAGE}
 
       {{build.link}}
