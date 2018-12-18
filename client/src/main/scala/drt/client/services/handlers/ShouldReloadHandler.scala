@@ -31,7 +31,7 @@ class ShouldReloadHandler[M](modelRW: ModelRW[M, RootModel]) extends LoggingActi
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
 
     case GetShouldReload =>
-      val url = SPAMain.pathToThisApp + "/data/should-reload"
+      val url = SPAMain.absoluteUrl("data/should-reload")
 
       effectOnly(Effect(dom.ext.Ajax.get(url = url).map(r => {
         val reload = read[ShouldReload](r.responseText)
