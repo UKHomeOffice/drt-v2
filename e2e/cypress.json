@@ -3,5 +3,6 @@
   "defaultCommandTimeout": 15000,
   "pageLoadTimeout": 100000,
   "viewportWidth": 1440,
-  "viewportHeight": 900
+  "viewportHeight": 900,
+  "video": false
 }
