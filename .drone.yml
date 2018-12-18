@@ -1,5 +1,4 @@
 pipeline:
-
   sonar-scanner:
     image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
     when:
@@ -91,7 +90,7 @@ pipeline:
       - git push tag-origin ${DRONE_BUILD_NUMBER}
     when:
       event: push
-      branch: ${DRONE_BRANCH}
+      branch: master
 
   deploy_test_port:
     image: quay.io/ukhomeofficedigital/drone-trigger:latest
@@ -103,7 +102,7 @@ pipeline:
     drone_token: $${DRONE_TOKEN}
     params: "DRT_TAG=${DRONE_BUILD_NUMBER},ENV=test,PORT_CODE=test"
     when:
-      branch: ${DRONE_BRANCH}
+      branch: master
 
 
   deploy_test_port2:
@@ -116,7 +115,7 @@ pipeline:
     drone_token: $${DRONE_TOKEN}
     params: "DRT_TAG=${DRONE_BUILD_NUMBER},ENV=test,PORT_CODE=test2"
     when:
-      branch: ${DRONE_BRANCH}
+      branch: master
 
 
   slack_notification:
