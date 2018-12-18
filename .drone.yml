@@ -1,12 +1,11 @@
 pipeline:
-
   sonar-scanner:
     image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
     when:
       event:
         - push
       branch:
-        - master
+        - ${DRONE_BRANCH}
   drone_s3_cache_pull:
     image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
     drone_s3_cache_mode: "pull"
@@ -74,7 +73,7 @@ pipeline:
 
     when:
       event: push
-      branch: master
+      branch: ${DRONE_BRANCH}
 
 
   git_tag:
@@ -103,7 +102,7 @@ pipeline:
     drone_token: $${DRONE_TOKEN}
     params: "DRT_TAG=${DRONE_BUILD_NUMBER},ENV=test,PORT_CODE=test"
     when:
-      branch: ${DRONE_BRANCH}
+      branch: master
 
 
   deploy_test_port2:
