@@ -125,11 +125,19 @@ pipeline:
     username: drone
     template: >
      {{#success build.status}}
-        build {{build.number}} succeeded. Good job.
-        https://drone.acp.homeoffice.gov.uk/UKHomeOffice/drt-v2/{{build.number}}
+        {{repo.name}}: {{repo.status}}
+        Success for build started at {{datetime build.started}} after {{since build.started}} on {{build.branch}}
+        Build number: {{build.number}}
+        Triggered by: ${DRONE_COMMIT_AUTHOR}
+        Message: ${DRONE_COMMIT_MESSAGE}
+        {{build.link}}
       {{else}}
-        build {{build.number}} failed. Fix me please.
-        https://drone.acp.homeoffice.gov.uk/UKHomeOffice/drt-v2/{{build.number}}
+        {{repo.name}}: {{repo.status}}
+        Failure for build started at {{datetime build.started}} after {{since build.started}} on {{build.branch}}
+        Build number: {{build.number}}
+        Triggered by: ${DRONE_COMMIT_AUTHOR}
+        Message: ${DRONE_COMMIT_MESSAGE}
+        {{build.link}}
       {{/success}}
     when:
       status: [ success, failure ]
