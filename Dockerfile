@@ -12,6 +12,9 @@ RUN mkdir -p /var/log/drt && chown 1000 /var/log/drt
 RUN apk --update add openssh-client \
     bash && \
     rm -rf /var/cache/apk/*
+RUN mkdir -p /var/data/snapshots
+RUN chown 1000:1000 -R /var/data/snapshots
+
 
 COPY certs/rds-combined-ca-bundle.pem /etc/drt/rds-combined-ca-bundle.pem
 
