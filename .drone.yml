@@ -6,6 +6,7 @@ pipeline:
         - push
       branch:
         - ${DRONE_BRANCH}
+
   drone_s3_cache_pull:
     image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
     drone_s3_cache_mode: "pull"
@@ -75,7 +76,6 @@ pipeline:
       event: push
       branch: ${DRONE_BRANCH}
 
-
   git_tag:
     image: alpine/git
     secrets: [ ssh_key ]
@@ -104,7 +104,6 @@ pipeline:
     when:
       branch: master
 
-
   deploy_test_port2:
     image: quay.io/ukhomeofficedigital/drone-trigger:latest
     secrets:
@@ -116,7 +115,6 @@ pipeline:
     params: "DRT_TAG=${DRONE_BUILD_NUMBER},ENV=test,PORT_CODE=test2"
     when:
       branch: master
-
 
   slack_notification:
     image: plugins/slack
