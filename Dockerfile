@@ -11,6 +11,8 @@ RUN mkdir -p /var/run/drt && chown 1000 /var/run/drt
 RUN mkdir -p /var/log/drt && chown 1000 /var/log/drt
 RUN apk --update add openssh-client \
     bash && \
+    apk --no-cache add python py-pip py-setuptools ca-certificates groff less && \
+    pip --no-cache-dir install awscli && \
     rm -rf /var/cache/apk/*
 RUN mkdir -p /var/data
 RUN chown 1000:1000 -R /var/data
