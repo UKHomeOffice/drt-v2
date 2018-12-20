@@ -26,7 +26,7 @@ COPY certs/rds-combined-ca-bundle.pem /etc/drt/rds-combined-ca-bundle.pem
 
 RUN echo keytool $KEYTOOL_PASSWORD
 RUN keytool -noprompt -storepass changeit -import -alias rds -keystore $JAVA_HOME/jre/lib/security/cacerts -file /etc/drt/rds-combined-ca-bundle.pem
-# can't run as root
+
 USER 1000
 
 ENTRYPOINT ["bin/drt", "-Duser.timezone=UTC"]
