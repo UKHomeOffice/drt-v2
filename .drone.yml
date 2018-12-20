@@ -58,23 +58,23 @@ pipeline:
       branch:
         - ${DRONE_BRANCH}
 
-  cypress-e2e-test:
-    image: docker:18.06
-    environment:
-      - DOCKER_USERNAME=drt_ci
-      - DOCKER_HOST=tcp://172.17.0.1:2375
-    secrets:
-      - docker_password
-      - play
-    commands:
-      - docker login -u $${DOCKER_USERNAME} -p $${DOCKER_PASSWORD} docker.digital.homeoffice.gov.uk
-      - docker run  -d --name $${DRONE_COMMIT_SHA} -e KEY_CLOAK_URL="https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod" -e PERSISTENCE_BASE_DIR="/tmp/test" -e PORT_ACCESS_RESTRICTIONS=true -e PORT_CODE="test" -e DQ_S3_BUCKET="" -e ENV="test" docker.digital.homeoffice.gov.uk/drt/drt:latest $${PLAY}
-      - docker build -t drt-cypress -f cy-drt-dockfile .
-      - docker run  --net=container:$${DRONE_COMMIT_SHA} -e CYPRESS_baseUrl="http://localhost:9000" drt-cypress /bin/bash -c "./node_modules/.bin/cypress run"
-
-    when:
-      event: push
-      branch: ${DRONE_BRANCH}
+#  cypress-e2e-test:
+#    image: docker:18.06
+#    environment:
+#      - DOCKER_USERNAME=drt_ci
+#      - DOCKER_HOST=tcp://172.17.0.1:2375
+#    secrets:
+#      - docker_password
+#      - play
+#    commands:
+#      - docker login -u $${DOCKER_USERNAME} -p $${DOCKER_PASSWORD} docker.digital.homeoffice.gov.uk
+#      - docker run -d --name $${DRONE_COMMIT_SHA} -e KEY_CLOAK_URL="https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod" -e PERSISTENCE_BASE_DIR="/tmp/test" -e PORT_ACCESS_RESTRICTIONS=true -e PORT_CODE="test" -e DQ_S3_BUCKET="" -e ENV="test" docker.digital.homeoffice.gov.uk/drt/drt:latest $${PLAY}
+#      - docker build -t drt-cypress -f cy-drt-dockfile .
+#      - docker run --net=container:$${DRONE_COMMIT_SHA} -e CYPRESS_baseUrl="http://localhost:9000" drt-cypress /bin/bash -c "./node_modules/.bin/cypress run"
+#
+#    when:
+#      event: push
+#      branch: ${DRONE_BRANCH}
 
   git_tag:
     image: alpine/git
