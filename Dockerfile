@@ -26,3 +26,4 @@ RUN keytool -noprompt -storepass changeit -import -alias rds -keystore $JAVA_HOM
 USER 1000
 
 ENTRYPOINT ["bin/drt", "-Duser.timezone=UTC"]
+
