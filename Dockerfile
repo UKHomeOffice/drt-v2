@@ -15,6 +15,9 @@ RUN ssh-keyscan gateway.heathrow.com >> /home/drt-admin/.ssh/known_hosts
 RUN chown -R 1000:1000 /home/drt-admin/.ssh
 
 RUN mkdir /var/lib/drt-v2
+RUN mkdir -p /var/run/drt && chown 1000 /var/run/drt
+RUN mkdir -p /var/log/drt && chown 1000 /var/log/drt
+
 RUN mkdir -p /var/data
 RUN chown 1000:1000 -R /var/data
 
