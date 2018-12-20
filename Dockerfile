@@ -1,10 +1,11 @@
 FROM openjdk:alpine
 
 WORKDIR /opt/docker
+
+RUN adduser -D -u 1000 drt-admin
 RUN chown -R 1000:1000 /opt/docker
 
 ADD server/target/docker/stage/opt /opt
-RUN adduser -D -u 1000 drt-admin
 
 RUN apk --update add openssh-client \
     bash && \
@@ -18,7 +19,7 @@ RUN ssh-keyscan gateway.heathrow.com >> /home/drt-admin/.ssh/known_hosts
 RUN chown -R 1000:1000 /home/drt-admin/.ssh
 
 RUN mkdir /var/lib/drt-v2
-RUN mkdir -p /var/data
+RUN mkdir /var/data
 RUN chown 1000:1000 -R /var/data
 
 COPY certs/rds-combined-ca-bundle.pem /etc/drt/rds-combined-ca-bundle.pem
