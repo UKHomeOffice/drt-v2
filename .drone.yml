@@ -100,7 +100,7 @@ pipeline:
     repo: UKHomeOffice/kube-drt
     deploy_to: acp-notprod
     drone_token: $${DRONE_TOKEN}
-    params: "DRT_TAG=${DRONE_BUILD_NUMBER},ENV=test,PORT_CODE=test"
+    params: "DRT_TAG=${DRONE_BUILD_NUMBER},ENV=test,PORT_CODE=test,TYPE=app"
     when:
       branch: master
 
@@ -112,7 +112,7 @@ pipeline:
     repo: UKHomeOffice/kube-drt
     deploy_to: acp-notprod
     drone_token: $${DRONE_TOKEN}
-    params: "DRT_TAG=${DRONE_BUILD_NUMBER},ENV=test,PORT_CODE=test2"
+    params: "DRT_TAG=${DRONE_BUILD_NUMBER},ENV=test,PORT_CODE=test2,TYPE=app"
     when:
       branch: master
 
