@@ -524,8 +524,8 @@ object AirportConfigs {
     minMaxDesksByTerminalQueue = Map(
       "T1" -> Map(
         Queues.EGate -> (List.fill(24)(1), List.fill(24)(2)),
-        Queues.EeaDesk -> (List.fill(24)(1), List(6, 9, 9, 9, 9, 9, 9, 8, 6, 6, 6, 6, 6, 6, 7, 7, 7, 8, 6, 6, 7, 8, 6, 6)),
-        Queues.NonEeaDesk -> (List.fill(24)(1), List(4, 1, 1, 1, 1, 1, 1, 2, 4, 4, 4, 4, 4, 4, 3, 3, 3, 2, 4, 4, 3, 2, 4, 4))
+        Queues.EeaDesk -> (List.fill(24)(1), List(9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9)),
+        Queues.NonEeaDesk -> (List.fill(24)(1), List(5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5))
       )
     ),
     role = LTNAccess
