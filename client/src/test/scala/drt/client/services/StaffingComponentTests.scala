@@ -10,6 +10,7 @@ object StaffingComponentTests extends TestSuite {
 
 
   def tests = Tests {
+
     'StaffingService - {
       "When asking for the end date of the month " - {
         "Given 31-12-2017 then I should get 31-12-2017" - {
@@ -117,6 +118,29 @@ object StaffingComponentTests extends TestSuite {
 
           assert(result == expected)
         }
+      }
+    }
+    "When asking for quarter hourly slot changes " - {
+      "Given slot changes by hour " +
+      "Then I should get back those changes in quarter hourly slots" - {
+        val hourlyChanges: Map[(Int, Int), Int] = Map(
+          (0, 0) -> 0,
+          (1, 0) -> 1
+        )
+
+        val quarterHourlyChanges = getQuarterHourlySlotChanges(60, hourlyChanges)
+        val expected = Map((5, 0) -> 1, (0, 0) -> 0, (4, 0) -> 1, (2, 0) -> 0, (3, 0) -> 0, (6, 0) -> 1, (1, 0) -> 0, (7, 0) -> 1)
+
+        assert(quarterHourlyChanges == expected)
+      }
+
+      "Given slot changes by quarter hour " +
+      "Then I should get back unchanged" - {
+        val quarterHourly: Map[(Int, Int), Int] = Map((5, 0) -> 1, (0, 0) -> 0, (4, 0) -> 1, (2, 0) -> 0, (3, 0) -> 0, (6, 0) -> 1, (1, 0) -> 0, (7, 0) -> 1)
+        val quarterHourlyChanges = getQuarterHourlySlotChanges(15, quarterHourly)
+        val expected = Map((5, 0) -> 1, (0, 0) -> 0, (4, 0) -> 1, (2, 0) -> 0, (3, 0) -> 0, (6, 0) -> 1, (1, 0) -> 0, (7, 0) -> 1)
+
+        assert(quarterHourlyChanges == expected)
       }
     }
     "When asking for 6 months from first day of month provided" - {

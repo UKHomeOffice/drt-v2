@@ -99,6 +99,8 @@ object MonthlyStaffing {
   implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).shifts.hashCode)
   implicit val stateReuse: Reusability[State] = Reusability.always[State]
 
+  def getQuarterHourlySlotChanges(timeSlotMinutes: Int, changes: Map[(Int, Int), Int]): Map[(Int, Int), Int] = if (timeSlotMinutes == 60) hourlyToQuarterHourlySlots(changes) else changes
+
   val component = ScalaComponent.builder[Props]("StaffingV2")
     .initialStateFromProps(props => {
       stateFromProps(props)
@@ -108,7 +110,7 @@ object MonthlyStaffing {
         Callback {
 
           val initialTimeSlots = stateFromProps(props).timeSlots
-          val changes = scope.state.changes
+          val changes = getQuarterHourlySlotChanges(props.timeSlotMinutes, scope.state.changes)
           val updatedTimeSlots: Seq[Seq[Int]] = applyRecordedChangesToShiftState(state.timeSlots, changes)
 
           val changedShiftSlots = updatedShiftAssignments(changes, startOfMonthMidnight, props.terminalPageTab.terminal)
@@ -179,10 +181,18 @@ object MonthlyStaffing {
 
   def updatedShiftAssignments(changes: Map[(Int, Int), Int], startOfMonthMidnight: SDateLike, terminalName: TerminalName): Seq[StaffAssignment] = changes.toSeq.map {
     case ((slotIdx, dayIdx), staff) =>
+
       val slotStart = startOfMonthMidnight.addDays(dayIdx).addMinutes(15 * slotIdx)
       val startMd = MilliDate(slotStart.millisSinceEpoch)
       val endMd = MilliDate(slotStart.addMinutes(14).millisSinceEpoch)
       StaffAssignment(slotStart.toISOString(), terminalName, startMd, endMd, staff, None)
+  }
+
+  def hourlyToQuarterHourlySlots(hourlySlots: Map[(Int, Int), Int]): Map[(Int, Int), Int] = hourlySlots.flatMap {
+    case ((slotIdx, dayIdx), staff) =>
+      (0 to 3).map(offset =>
+        (((slotIdx * 4) + offset, dayIdx), staff)
+      )
   }
 
   def stateFromProps(props: Props): State = {
