@@ -20,7 +20,8 @@ pipeline:
     mem_limit: 8589934592
     commands:
       - /root/entrypoint.sh
-      - sbt --error test docker:stage
+      - export SBT_OPTS='-Xmx6G'
+      - sbt $SBT_OPTS --error test docker:stage
     environment:
       - ARTIFACTORY_USERNAME=drt_ci
     secrets:
