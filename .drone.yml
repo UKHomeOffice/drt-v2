@@ -17,6 +17,7 @@ pipeline:
 
   build:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
+    mem_limit: 6442450944
     commands:
       - /root/entrypoint.sh
       - sbt --error test docker:stage
