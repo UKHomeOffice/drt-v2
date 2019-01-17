@@ -1,13 +1,12 @@
 package drt.client.components
 
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
-import drt.client.actions.Actions.{SaveMonthTimeSlotsToShifts, UpdateShifts}
+import drt.client.actions.Actions.UpdateShifts
 import drt.client.components.TerminalPlanningComponent.defaultStartDate
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 import japgolly.scalajs.react._
@@ -74,7 +73,8 @@ object MonthlyStaffing {
 
   def applyRecordedChangesToShiftState(staffTimeSlotDays: Seq[Seq[Int]], changes: Map[(Int, Int), Int]): Seq[Seq[Int]] = changes
     .foldLeft(staffTimeSlotDays) {
-      case (staffSoFar, ((slotIdx, dayIdx), newStaff)) => staffSoFar.updated(slotIdx, staffSoFar(slotIdx).updated(dayIdx, newStaff))
+      case (staffSoFar, ((slotIdx, dayIdx), newStaff)) =>
+        staffSoFar.updated(slotIdx, staffSoFar(slotIdx).updated(dayIdx, newStaff))
     }
 
   def whatDayChanged(startingSlots: Seq[Seq[Int]], updatedSlots: Seq[Seq[Int]]): Set[Int] =
@@ -110,10 +110,11 @@ object MonthlyStaffing {
         Callback {
 
           val initialTimeSlots = stateFromProps(props).timeSlots
-          val changes = getQuarterHourlySlotChanges(props.timeSlotMinutes, scope.state.changes)
+          val changes = scope.state.changes
+          val quarterHourlyChanges = getQuarterHourlySlotChanges(props.timeSlotMinutes, changes)
           val updatedTimeSlots: Seq[Seq[Int]] = applyRecordedChangesToShiftState(state.timeSlots, changes)
 
-          val changedShiftSlots = updatedShiftAssignments(changes, startOfMonthMidnight, props.terminalPageTab.terminal)
+          val changedShiftSlots = updatedShiftAssignments(quarterHourlyChanges, startOfMonthMidnight, props.terminalPageTab.terminal)
 
           val updatedMonth = props.terminalPageTab.dateFromUrlOrNow.getMonthString()
           val changedDays = whatDayChanged(initialTimeSlots, updatedTimeSlots)
@@ -190,9 +191,7 @@ object MonthlyStaffing {
 
   def hourlyToQuarterHourlySlots(hourlySlots: Map[(Int, Int), Int]): Map[(Int, Int), Int] = hourlySlots.flatMap {
     case ((slotIdx, dayIdx), staff) =>
-      (0 to 3).map(offset =>
-        (((slotIdx * 4) + offset, dayIdx), staff)
-      )
+      (0 to 3).map(offset => (((slotIdx * 4) + offset, dayIdx), staff))
   }
 
   def stateFromProps(props: Props): State = {
