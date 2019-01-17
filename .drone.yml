@@ -23,7 +23,7 @@ pipeline:
       - sbt --error test docker:stage
     environment:
       - ARTIFACTORY_USERNAME=drt_ci
-      - SBT_OPTS="-Xmx6G"
+      - SBT_OPTS="-J-Xmx6G"
     secrets:
       - ARTIFACTORY_PASSWORD
       - KEYTOOL_PASSWORD
