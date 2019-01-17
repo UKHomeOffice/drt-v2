@@ -1,4 +1,4 @@
-CREATE TABLE general.arrival(
+CREATE TABLE public.arrival(
   code text NOT NULL,
   number integer NOT NULL,
   destination text NOT NULL,
@@ -18,9 +18,9 @@ CREATE TABLE general.arrival(
   PRIMARY KEY (number, destination, terminal, scheduled)
 );
 
-CREATE INDEX code ON general.arrival (code);
-CREATE INDEX number ON general.arrival (number);
-CREATE INDEX origin ON general.arrival (origin);
-CREATE INDEX terminal ON general.arrival (terminal);
-CREATE INDEX scheduled ON general.arrival (scheduled ASC);
-CREATE INDEX pcp ON general.arrival (pcp ASC);
+CREATE INDEX code ON public.arrival (code);
+CREATE INDEX number ON public.arrival (number);
+CREATE INDEX origin ON public.arrival (origin);
+CREATE INDEX terminal ON public.arrival (terminal);
+CREATE INDEX scheduled ON public.arrival (scheduled ASC);
+CREATE INDEX pcp ON public.arrival (pcp ASC);
