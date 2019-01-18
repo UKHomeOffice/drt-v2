@@ -20,7 +20,6 @@ pipeline:
     mem_limit: 17179869184
     commands:
       - /root/entrypoint.sh
-      - printenv
       - sbt --error test docker:stage
     environment:
       - JAVA_OPTS=-Xmx6g
