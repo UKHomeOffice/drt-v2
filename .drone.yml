@@ -17,7 +17,7 @@ pipeline:
 
   build:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
-    mem_limit: 10000000000
+    mem_limit: 15000000000
     commands:
       - /root/entrypoint.sh
       - sbt --error test docker:stage
@@ -62,7 +62,7 @@ pipeline:
 
   cypress-e2e-test:
     image: docker:18.06
-    mem_limit: 10000000000
+    mem_limit: 15000000000
     environment:
       - DOCKER_USERNAME=drt_ci
       - DOCKER_HOST=tcp://172.17.0.1:2375
