@@ -17,7 +17,7 @@ pipeline:
 
   build:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
-    mem_limit: 8589934592
+    mem_limit: 17179869184
     commands:
       - /root/entrypoint.sh
       - free
