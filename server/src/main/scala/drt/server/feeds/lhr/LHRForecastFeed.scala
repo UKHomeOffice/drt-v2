@@ -1,36 +1,36 @@
 package drt.server.feeds.lhr
 
-import drt.server.feeds.lhr.forecast.{LHRForecastEmail, LHRForecastFlightRow, LHRForecastXLSExtractor}
-import drt.shared.{Arrival, ForecastFeedSource}
+import akka.pattern.AskableActorRef
+import akka.util.Timeout
+import drt.server.feeds.lhr.forecast.LHRForecastFlightRow
 import drt.shared.FlightsApi.Flights
+import drt.shared.{Arrival, ForecastFeedSource}
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, GetFeedImportArrivals}
 import services.SDate
 
-import scala.util.{Success, Try}
+import scala.concurrent.Await
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.language.postfixOps
+import scala.util.Try
 
-case class LHRForecastFeed(
-                            mailHost: String,
-                            userName: String,
-                            userPassword: String,
-                            from: String,
-                            mailPort: Int = 993
-                          ) {
+case class LHRForecastFeed(arrivalsActor: AskableActorRef) {
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   def requestFeed: ArrivalsFeedResponse = {
-    LHRForecastEmail(mailHost, userName, userPassword, from, mailPort).maybeLatestForecastFile match {
-      case Some(xlsForecastDoc) =>
-        val arrivals = LHRForecastXLSExtractor(xlsForecastDoc.getPath)
-          .map(LHRForecastFeed.lhrFieldsToArrival)
-          .collect {
-            case Success(arrival) => arrival
-          }
-        if (arrivals.nonEmpty) ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
-        else ArrivalsFeedFailure("No forecast arrivals found", SDate.now())
-      case None => ArrivalsFeedFailure("No forecast mail attachment found", SDate.now())
+    val futureArrivals = arrivalsActor.ask(GetFeedImportArrivals)(new Timeout(10 seconds))
+    val futureResponse = futureArrivals.map {
+      case Some(Flights(arrivals)) =>
+        log.info(s"Got ${arrivals.length} LHR port forecast arrivals")
+        ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
+      case x =>
+        log.info(s"Got no LHR port forecast arrivals: $x")
+        ArrivalsFeedSuccess(Flights(Seq()), SDate.now())
     }
-  }
 
+    Await.result(futureResponse, 10 seconds)
+  }
 }
 
 object LHRForecastFeed {

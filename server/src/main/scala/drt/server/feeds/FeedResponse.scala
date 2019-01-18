@@ -12,6 +12,9 @@ sealed trait FeedResponse {
 sealed trait ArrivalsFeedResponse extends FeedResponse
 sealed trait ManifestsFeedResponse extends FeedResponse
 
+case class StoreFeedImportArrivals(arrivals: Flights)
+case object GetFeedImportArrivals
+
 case class ArrivalsFeedSuccess(arrivals: Flights, createdAt: SDateLike) extends ArrivalsFeedResponse
 case object ArrivalsFeedSuccessAck
 

@@ -2,11 +2,12 @@ package actors
 
 import actors.FlightMessageConversion._
 import akka.persistence._
+import akka.stream.scaladsl.SourceQueueWithComplete
 import com.trueaccord.scalapb.GeneratedMessage
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, ArrivalsFeedSuccessAck}
+import server.feeds._
 import server.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
 import services.SDate
 import services.graphstages.Crunch
@@ -87,6 +88,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
                              name: String) extends RecoveryActorLike with PersistentDrtActor[ArrivalsState] {
 
   var state: ArrivalsState = initialState
+  var maybeArrivalsFromImport: Option[Flights] = None
 
   override def initialState = ArrivalsState(Map(), name, None)
 
@@ -142,6 +144,15 @@ abstract class ArrivalsActor(now: () => SDateLike,
   }
 
   override def receiveCommand: Receive = {
+    case StoreFeedImportArrivals(incomingArrivals) =>
+      log.info(s"Storing arrivals from import")
+      maybeArrivalsFromImport = Option(incomingArrivals)
+
+    case GetFeedImportArrivals =>
+      log.info(s"Sending arrivals from import")
+      sender() ! maybeArrivalsFromImport
+      if (maybeArrivalsFromImport.nonEmpty) maybeArrivalsFromImport = None
+
     case ArrivalsFeedSuccess(Flights(incomingArrivals), createdAt) =>
       handleFeedSuccess(incomingArrivals, createdAt)
       sender() ! ArrivalsFeedSuccessAck

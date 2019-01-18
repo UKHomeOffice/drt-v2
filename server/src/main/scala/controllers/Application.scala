@@ -2,8 +2,8 @@ package controllers
 
 import java.nio.ByteBuffer
 import java.util.{Calendar, TimeZone, UUID}
-import javax.inject.{Inject, Singleton}
 
+import javax.inject.{Inject, Singleton}
 import actors._
 import actors.pointInTime.CrunchStateReadActor
 import akka.actor._
@@ -27,6 +27,7 @@ import drt.users.{KeyCloakClient, KeyCloakGroups}
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.{HeaderNames, HttpEntity}
+import play.api.libs.Files
 import play.api.libs.json._
 import play.api.mvc._
 import play.api.{Configuration, Environment}
@@ -149,6 +150,7 @@ class Application @Inject()(implicit val config: Configuration,
   extends InjectedController
     with AirportConfProvider
     with ApplicationWithAlerts
+    with ApplicationWithImports
     with ProdPassengerSplitProviders
     with ImplicitTimeoutProvider {
 
