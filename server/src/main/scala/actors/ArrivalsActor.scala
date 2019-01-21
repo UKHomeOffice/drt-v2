@@ -88,7 +88,6 @@ abstract class ArrivalsActor(now: () => SDateLike,
                              name: String) extends RecoveryActorLike with PersistentDrtActor[ArrivalsState] {
 
   var state: ArrivalsState = initialState
-  var maybeArrivalsFromImport: Option[Flights] = None
 
   override def initialState = ArrivalsState(Map(), name, None)
 
@@ -144,15 +143,6 @@ abstract class ArrivalsActor(now: () => SDateLike,
   }
 
   override def receiveCommand: Receive = {
-    case StoreFeedImportArrivals(incomingArrivals) =>
-      log.info(s"Storing arrivals from import")
-      maybeArrivalsFromImport = Option(incomingArrivals)
-
-    case GetFeedImportArrivals =>
-      log.info(s"Sending arrivals from import")
-      sender() ! maybeArrivalsFromImport
-      if (maybeArrivalsFromImport.nonEmpty) maybeArrivalsFromImport = None
-
     case ArrivalsFeedSuccess(Flights(incomingArrivals), createdAt) =>
       handleFeedSuccess(incomingArrivals, createdAt)
       sender() ! ArrivalsFeedSuccessAck
