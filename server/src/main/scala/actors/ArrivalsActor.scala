@@ -2,7 +2,6 @@ package actors
 
 import actors.FlightMessageConversion._
 import akka.persistence._
-import akka.stream.scaladsl.SourceQueueWithComplete
 import com.trueaccord.scalapb.GeneratedMessage
 import drt.shared.FlightsApi.Flights
 import drt.shared._
