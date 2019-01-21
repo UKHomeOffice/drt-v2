@@ -145,6 +145,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastPortArrivalsActor], params.snapshotMegaBytesFcstArrivals, now, expireAfterMillis), name = "forecast-arrivals-actor")
   lazy val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor], params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis), name = "live-arrivals-actor")
 
+  lazy val arrivalsImportActor: ActorRef = system.actorOf(Props(classOf[ArrivalsImportActor]), name = "arrivals-import-actor")
+
   lazy val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(classOf[AggregatedArrivalsActor], airportConfig.portCode, ArrivalTable(airportConfig.portCode, PostgresTables)), name = "aggregated-arrivals-actor")
 
   lazy val liveCrunchStateActor: ActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
@@ -417,7 +419,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   }
 
   def createForecastLHRFeed(): Source[ArrivalsFeedResponse, Cancellable] = {
-    val lhrForecastFeed = LHRForecastFeed(forecastArrivalsActor)
+    val lhrForecastFeed = LHRForecastFeed(arrivalsImportActor)
     system.log.info(s"LHR Forecast: about to start ticking")
     Source.tick(10 seconds, 10 seconds, NotUsed).map(tick => {
       system.log.info(s"LHR Forecast: ticking")
