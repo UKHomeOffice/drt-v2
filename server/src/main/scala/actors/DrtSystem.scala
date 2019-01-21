@@ -54,7 +54,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val fixedPointsActor: ActorRef
   val staffMovementsActor: ActorRef
   val alertsActor: ActorRef
-  val forecastArrivalsActor: ActorRef
+  val arrivalsImportActor: ActorRef
 
   val aclFeed: AclFeed
 
@@ -420,10 +420,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   def createForecastLHRFeed(): Source[ArrivalsFeedResponse, Cancellable] = {
     val lhrForecastFeed = LHRForecastFeed(arrivalsImportActor)
-    system.log.info(s"LHR Forecast: about to start ticking")
-    Source.tick(10 seconds, 10 seconds, NotUsed).map(tick => {
-      system.log.info(s"LHR Forecast: ticking")
-      lhrForecastFeed.requestFeed
-    })
+    Source
+      .tick(10 seconds, 60 seconds, NotUsed)
+      .map(_ => lhrForecastFeed.requestFeed)
   }
 }

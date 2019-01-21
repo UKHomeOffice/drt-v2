@@ -29,7 +29,7 @@ trait ApplicationWithImports {
 
     if (arrivals.nonEmpty) {
       log.info(s"Import found ${arrivals.length} arrivals")
-      ctrl.forecastArrivalsActor ! StoreFeedImportArrivals(Flights(arrivals))
+      ctrl.arrivalsImportActor ! StoreFeedImportArrivals(Flights(arrivals))
       Ok(s"Arrivals have been queued for processing")
     } else Ok("No arrivals found")
   }

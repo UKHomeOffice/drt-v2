@@ -6,10 +6,10 @@ import drt.server.feeds.lhr.forecast.LHRForecastFlightRow
 import drt.shared.FlightsApi.Flights
 import drt.shared.{Arrival, ForecastFeedSource}
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, GetFeedImportArrivals}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, GetFeedImportArrivals}
 import services.SDate
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.postfixOps
@@ -20,14 +20,18 @@ case class LHRForecastFeed(arrivalsActor: AskableActorRef) {
 
   def requestFeed: ArrivalsFeedResponse = {
     val futureArrivals = arrivalsActor.ask(GetFeedImportArrivals)(new Timeout(10 seconds))
-    val futureResponse = futureArrivals.map {
-      case Some(Flights(arrivals)) =>
-        log.info(s"Got ${arrivals.length} LHR port forecast arrivals")
-        ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
-      case x =>
-        log.info(s"Got no LHR port forecast arrivals: $x")
-        ArrivalsFeedSuccess(Flights(Seq()), SDate.now())
-    }
+    val futureResponse = futureArrivals
+      .map {
+        case Some(Flights(arrivals)) =>
+          log.info(s"Got ${arrivals.length} LHR port forecast arrivals")
+          ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
+        case x =>
+          log.info(s"Got no LHR port forecast arrivals: $x")
+          ArrivalsFeedSuccess(Flights(Seq()), SDate.now())
+      }
+      .recoverWith {
+        case e => Future(ArrivalsFeedFailure(e.getMessage, SDate.now()))
+      }
 
     Await.result(futureResponse, 10 seconds)
   }

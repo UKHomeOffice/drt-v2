@@ -27,7 +27,6 @@ import drt.users.{KeyCloakClient, KeyCloakGroups}
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.{HeaderNames, HttpEntity}
-import play.api.libs.Files
 import play.api.libs.json._
 import play.api.mvc._
 import play.api.{Configuration, Environment}
