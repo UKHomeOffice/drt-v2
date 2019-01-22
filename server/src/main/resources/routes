@@ -15,7 +15,7 @@ GET           /export/headlines/:weekStarting/:terminalName        controllers.A
 
 GET           /export/acl-feed/latest/:portCode                    controllers.Application.fetchAclFeed(portCode)
 
-GET         /export/users                                 controllers.Application.exportUsers
+GET           /export/users                                        controllers.Application.exportUsers
 
 # Map static resources from the /public folder to the /assets URL path
 GET           /assets/fonts/*file                                  controllers.Assets.at(path="/public/lib/font-awesome/fonts", file)
@@ -29,7 +29,7 @@ GET           /data/user                                           controllers.A
 
 GET           /data/should-reload                                  controllers.Application.getShouldReload()
 
-POST           /data/login                                          controllers.Application.apiLogin()
+POST          /data/login                                          controllers.Application.apiLogin()
 
 GET           /data/user/has-port-access                           controllers.Application.getUserHasPortAccess()
 
@@ -43,6 +43,11 @@ POST          /data/staff                                          controllers.A
 POST          /data/alert                                          controllers.Application.addAlert
 DELETE        /data/alert                                          controllers.Application.deleteAlerts
 
+# Feed import
+POST          /data/feed/:feedType/:portCode                       controllers.Application.feedImport(feedType: String, portCode: String)
+POST          /data/scanner                                        controllers.Application.scanner
+
+# Test related
 POST          /test/arrival                                        test.controllers.TestController.addArrival
 
 POST          /test/arrivals/:forDate                              test.controllers.TestController.addArrivals(forDate)

@@ -54,7 +54,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val fixedPointsActor: ActorRef
   val staffMovementsActor: ActorRef
   val alertsActor: ActorRef
-
+  val arrivalsImportActor: ActorRef
 
   val aclFeed: AclFeed
 
@@ -113,8 +113,6 @@ case class DrtConfigParameters(config: Configuration) {
   val maybeLtnLiveFeedPassword: Option[String] = config.getOptional[String]("feeds.ltn.live.password")
   val maybeLtnLiveFeedToken: Option[String] = config.getOptional[String]("feeds.ltn.live.token")
   val maybeLtnLiveFeedTimeZone: Option[String] = config.getOptional[String]("feeds.ltn.live.timezone")
-
-  val maybeLhrForecastFeedPath: Option[String] = config.getOptional[String]("feeds.lhr.forecast_path")
 }
 
 case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig)
@@ -146,6 +144,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastBaseArrivalsActor], params.snapshotMegaBytesBaseArrivals, now, expireAfterMillis), name = "base-arrivals-actor")
   lazy val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastPortArrivalsActor], params.snapshotMegaBytesFcstArrivals, now, expireAfterMillis), name = "forecast-arrivals-actor")
   lazy val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor], params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis), name = "live-arrivals-actor")
+
+  lazy val arrivalsImportActor: ActorRef = system.actorOf(Props(classOf[ArrivalsImportActor]), name = "arrivals-import-actor")
 
   lazy val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(classOf[AggregatedArrivalsActor], airportConfig.portCode, ArrivalTable(airportConfig.portCode, PostgresTables)), name = "aggregated-arrivals-actor")
 
@@ -389,9 +389,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     val forecastNoOp = Source.tick[ArrivalsFeedResponse](100 days, 100 days, ArrivalsFeedSuccess(Flights(Seq()), SDate.now()))
     val feed = portCode match {
       case "STN" => createForecastChromaFlightFeed(ChromaForecast).chromaVanillaFlights(30 minutes)
-      case "LHR" => params.maybeLhrForecastFeedPath
-        .map(path => createForecastLHRFeed(path))
-        .getOrElse(forecastNoOp)
+      case "LHR" => createForecastLHRFeed()
       case "BHX" => BHXForecastFeed(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")))
       case "LGW" => LGWForecastFeed()
       case _ =>
@@ -420,17 +418,10 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     ChromaForecastFeed(system.log, new ChromaFetcherForecast(feedType, system) with ProdSendAndReceive)
   }
 
-  def createForecastLHRFeed(lhrForecastPath: String): Source[ArrivalsFeedResponse, Cancellable] = {
-    val imapServer = ConfigFactory.load().getString("feeds.lhr.forecast.imap_server")
-    val imapPort = ConfigFactory.load().getInt("feeds.lhr.forecast.imap_port")
-    val imapUsername = ConfigFactory.load().getString("feeds.lhr.forecast.imap_username")
-    val imapPassword = ConfigFactory.load().getString("feeds.lhr.forecast.imap_password")
-    val imapFromAddress = ConfigFactory.load().getString("feeds.lhr.forecast.from_address")
-    val lhrForecastFeed = LHRForecastFeed(imapServer, imapUsername, imapPassword, imapFromAddress, imapPort)
-    system.log.info(s"LHR Forecast: about to start ticking")
-    Source.tick(10 seconds, 1 hour, {
-      system.log.info(s"LHR Forecast: ticking")
-      lhrForecastFeed.requestFeed
-    })
+  def createForecastLHRFeed(): Source[ArrivalsFeedResponse, Cancellable] = {
+    val lhrForecastFeed = LHRForecastFeed(arrivalsImportActor)
+    Source
+      .tick(10 seconds, 60 seconds, NotUsed)
+      .map(_ => lhrForecastFeed.requestFeed)
   }
 }
