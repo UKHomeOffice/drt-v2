@@ -56,6 +56,7 @@ object Settings {
     val scalaCheck = "1.13.4"
     val akkaPersistenceInmemory = "2.4.18.1"
     val akkaPersistenceJdbc = "3.5.0-DRT-SNAPSHOT"
+    val bluebus = "0.2-DRT-SNAPSHOT"
     val postgres = "42.2.2"
     val sshJ = "0.24.0"
     val jodaTime = "2.9.4"
@@ -109,6 +110,7 @@ object Settings {
     "net.liftweb" %% "lift-json" % "3.1.0",
 
     "com.h2database" % "h2" % h2 % Test,
+    "net.databinder.dispatch" %% "dispatch-core" % "0.13.4",
 
     "com.typesafe" % "config" % typesafeConfig,
     "com.typesafe.akka" %% "akka-testkit" % akka % "test",
@@ -146,6 +148,7 @@ object Settings {
     "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
     "org.iq80.leveldb" % "leveldb" % levelDb,
     "com.github.dnvriend" %% "akka-persistence-jdbc" % akkaPersistenceJdbc,
+    "uk.gov.homeoffice" %% "bluebus" % bluebus,
     "org.postgresql" % "postgresql" % postgres,
 
     "org.renjin" % "renjin-script-engine" % renjin,
@@ -162,7 +165,6 @@ object Settings {
     "com.box" % "box-java-sdk" % "2.19.0",
     "com.eclipsesource.minimal-json" % "minimal-json" % "0.9.1",
     "org.bitbucket.b_c" % "jose4j" % "0.4.4"
-
   ))
 
 

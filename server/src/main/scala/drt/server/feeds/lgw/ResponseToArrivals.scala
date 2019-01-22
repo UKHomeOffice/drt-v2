@@ -1,42 +1,31 @@
 package drt.server.feeds.lgw
 
-import java.io.ByteArrayInputStream
-
-import drt.shared.{Arrival, FeedSource, LiveFeedSource}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import org.apache.commons.io.IOUtils
+import drt.shared.{Arrival, LiveFeedSource}
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.{Logger, LoggerFactory}
 
+import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 import scala.xml.Node
-import scala.language.postfixOps
 
-case class ResponseToArrivals(data: Array[Byte], locationOption: Option[String] ) {
+case class ResponseToArrivals(data: String) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def getArrivals: List[(Arrival, Option[String])] = {
-    val is = new ByteArrayInputStream(data)
-    val xmlTry = Try(scala.xml.XML.load(is)).recoverWith {
-      case e: Throwable =>
-        log.error(s"Cannot load Gatwick XML from the response: ${new String(data)}.", e)
-        throw e
-    }
-    IOUtils.closeQuietly(is)
-    Try {
-      for {
-        xml <- xmlTry.toOption.toSeq
-        node <- scala.xml.Utility.trimProper(xml)
-      } yield nodeToArrival(node)
-    } match {
-      case Success(arrivalsAndLocation) => arrivalsAndLocation.toList
-      case Failure(t) =>
-        log.error(s"Failed to get an Arrival from the Gatwick XML. ${t.getMessage}. ${xmlTry.getOrElse("")}.", t)
-        List.empty[(Arrival, Option[String])]
-    }
+  def getArrivals: List[Arrival] = Try {
+    scala.xml.Utility.trimProper(
+      scala.xml.XML.loadString(data)
+    )
+      .map(nodeToArrival)
+
+  } match {
+    case Success(arrivalsAndLocation) => arrivalsAndLocation.toList
+    case Failure(t) =>
+      log.error(s"Failed to get an Arrival from the Gatwick XML.", t)
+      List.empty[Arrival]
   }
 
-  def nodeToArrival: Node => (Arrival, Option[String]) = (n: Node) => {
+  def nodeToArrival: Node => Arrival = (n: Node) => {
 
     val operator = (n \ "AirlineIATA") text
     val actPax = parsePaxCount(n, "70A").filter(_!= 0).orElse(None)
@@ -65,8 +54,8 @@ case class ResponseToArrivals(data: Array[Byte], locationOption: Option[String] 
       PcpTime = None,
       FeedSources = Set(LiveFeedSource),
       LastKnownPax = None)
-    log.info(s"parsed arrival: $arrival")
-    (arrival, locationOption)
+    log.debug(s"parsed arrival: $arrival")
+    arrival
   }
 
   private def parseTerminal(n: Node): String = {

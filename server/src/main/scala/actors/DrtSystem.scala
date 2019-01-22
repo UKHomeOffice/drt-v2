@@ -113,6 +113,11 @@ case class DrtConfigParameters(config: Configuration) {
   val maybeLtnLiveFeedPassword: Option[String] = config.getOptional[String]("feeds.ltn.live.password")
   val maybeLtnLiveFeedToken: Option[String] = config.getOptional[String]("feeds.ltn.live.token")
   val maybeLtnLiveFeedTimeZone: Option[String] = config.getOptional[String]("feeds.ltn.live.timezone")
+  val maybeLhrForecastFeedPath: Option[String] = config.getOptional[String]("feeds.lhr.forecast_path")
+
+  val maybeLGWNamespace: Option[String] = config.getOptional[String]("feeds.lgw.live.azure.namespace")
+  val maybeLGWSASToKey: Option[String] = config.getOptional[String]("feeds.lgw.live.azure.sas_to_Key")
+  val maybeLGWServiceBusUri: Option[String] = config.getOptional[String]("feeds.lgw.live.azure.service_bus_uri")
 }
 
 case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig)
@@ -368,7 +373,11 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         }
         LHRFlightFeed(contentProvider)
       case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
-      case "LGW" => LGWFeed()
+      case "LGW" =>
+        val lgwNamespace = params.maybeLGWNamespace.getOrElse(throw new Exception("Missing LGW Azure Namespace parameter"))
+        val lgwSasToKey = params.maybeLGWNamespace.getOrElse(throw new Exception("Missing LGW SAS Key for To Queue"))
+        val lgwServiceBusUri = params.maybeLGWServiceBusUri.getOrElse(throw new Exception("Missing LGW Service Bus Uri"))
+        LGWFeed(lgwNamespace, lgwSasToKey, lgwServiceBusUri)(system).source()
       case "BHX" => BHXLiveFeed(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX live feed URL")))
       case "LTN" =>
         val url = params.maybeLtnLiveFeedUrl.getOrElse(throw new Exception("Missing live feed url"))
