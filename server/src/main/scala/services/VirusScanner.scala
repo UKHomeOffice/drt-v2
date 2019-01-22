@@ -1,7 +1,7 @@
 package services
 
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.language.postfixOps
 
 
@@ -10,11 +10,9 @@ trait VirusScanServiceLike {
 }
 
 case class VirusScanner(service: VirusScanServiceLike) {
-  def fileIsOk(fileName: String, filePath: String): Boolean = {
+  def fileIsOk(fileName: String, filePath: String): Future[Boolean] = {
     val futureResponse = service.scan(fileName, filePath)
 
-    Await
-      .result(futureResponse, 30 seconds)
-      .contains("Everything ok : true")
+    futureResponse.map(_.contains("Everything ok : true"))
   }
 }

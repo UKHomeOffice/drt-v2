@@ -3,7 +3,8 @@ package services
 import org.specs2.mutable.Specification
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
 case class VirusScanServiceMock(response: String) extends VirusScanServiceLike {
   override def scan(fileName: String, filePath: String): Future[String] = Future(response)
@@ -16,7 +17,7 @@ class VirusScanServiceSpec extends Specification {
       val mockService = VirusScanServiceMock("bad response")
       val scanner = VirusScanner(mockService)
 
-      val result = scanner.fileIsOk("filename", "filepath")
+      val result = Await.result(scanner.fileIsOk("filename", "filepath"), 1 second)
 
       val expected = false
 
@@ -28,7 +29,7 @@ class VirusScanServiceSpec extends Specification {
       val mockService = VirusScanServiceMock("Everything ok : true")
       val scanner = VirusScanner(mockService)
 
-      val result = scanner.fileIsOk("filename", "filepath")
+      val result = Await.result(scanner.fileIsOk("filename", "filepath"), 1 second)
 
       val expected = true
 
