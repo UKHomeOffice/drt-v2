@@ -25,7 +25,8 @@ class LHRMailForecastFeedSpec extends Specification {
     "Given an excel file with the LHR forecast format for GMT flights then I should get forecast flights for each terminal" >> {
       val path = getClass.getClassLoader.getResource("LHR_Forecast_Fixture.xlsx").getPath
 
-      val result = LHRForecastXLSExtractor(path)
+      val result = LHRForecastXLSExtractor
+        .rows(path)
         .map(r =>
           (r.scheduledDate.millisSinceEpoch, r.flightCode, r.origin, r.internationalDomestic, r.totalPax, r.transferPax, r.terminal)
         )
@@ -45,7 +46,8 @@ class LHRMailForecastFeedSpec extends Specification {
     "Given an excel file with the LHR forecast format for BST flights then I should get forecast flights for each terminal" >> {
       val path = getClass.getClassLoader.getResource("LHR_Forecast_Fixture_BST.xlsx").getPath
 
-      val result = LHRForecastXLSExtractor(path)
+      val result = LHRForecastXLSExtractor
+        .rows(path)
         .map(r =>
           (r.scheduledDate.millisSinceEpoch, r.flightCode, r.origin, r.internationalDomestic, r.totalPax, r.transferPax, r.terminal)
         )

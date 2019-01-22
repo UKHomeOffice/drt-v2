@@ -2,13 +2,16 @@ package drt.server.feeds.lhr.forecast
 
 import java.util.TimeZone
 
-import drt.shared.SDateLike
+import drt.server.feeds.lhr.LHRForecastFeed
+import drt.shared.{Arrival, SDateLike}
 import info.folone.scala.poi._
 import info.folone.scala.poi.impure._
 import org.apache.poi.ss.usermodel.DateUtil
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch.europeLondonId
+
+import scala.util.Success
 
 
 case class LHRForecastFlightRow(
@@ -25,12 +28,18 @@ object LHRForecastXLSExtractor {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply(xlsFilePath: String): List[LHRForecastFlightRow] = {
+  def apply(xlsFilePath: String): List[Arrival] = rows(xlsFilePath)
+    .map(LHRForecastFeed.lhrFieldsToArrival)
+    .collect {
+      case Success(arrival) => arrival
+    }
+
+  def rows(xlsFilePath: String): List[LHRForecastFlightRow] = {
     val lhrWorkbook: Workbook = load(xlsFilePath)
 
     log.info(s"Extracting forecast flights from XLS Workbook located at $xlsFilePath")
 
-    val arrivals = for {
+    val arrivalRows = for {
       terminal <- List("T2", "T3", "T4", "T5")
       row <- lhrWorkbook.sheetMap(terminal + " Arr").rows
       flightDate <- row.cells.find(cell => cell.index == 1 && cell.isInstanceOf[NumericCell]).map(c => c.asInstanceOf[NumericCell].data)
@@ -44,7 +53,8 @@ object LHRForecastXLSExtractor {
       LHRForecastFlightRow(scheduledDate = scheduled, flightCode = number, origin = airport, internationalDomestic = internationalDomestic, totalPax = total.toInt, transferPax = transfer.toInt, terminal)
     }
 
-    log.info(s"Extracted ${arrivals.length} from XLS Workbook")
-    arrivals
+    log.info(s"Extracted ${arrivalRows.length} arrival rows from XLS Workbook")
+
+    arrivalRows
   }
 }

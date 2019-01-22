@@ -7,8 +7,8 @@ import scala.concurrent.ExecutionContext
 
 class ACPRedirectFilterSpec (implicit ec :ExecutionContext) extends PlaySpecification with Results {
 
-  val configWithAcpRedirectNotSet = play.api.Configuration.from(Map("portcode" -> "test", "dq.s3.bucket" -> "bucket", "googleTrackingCode"-> "", "feature-flags.acp-redirect" -> false))
-  val configWithAcpRedirectSet = configWithAcpRedirectNotSet ++ play.api.Configuration.from(Map("feature-flags.acp-redirect" -> true))
+  val configWithAcpRedirectNotSet = play.api.Configuration.from(Map("portcode" -> "test", "dq.s3.bucket" -> "bucket", "googleTrackingCode"-> "", "feature-flags.acp-redirect" -> false, "virus-scanner-url" -> ""))
+  val configWithAcpRedirectSet = configWithAcpRedirectNotSet ++ play.api.Configuration.from(Map("feature-flags.acp-redirect" -> true, "virus-scanner-url" -> ""))
 
   "Passes through the app when the ACP redirect flag is not set" in new WithApplication(GuiceApplicationBuilder(configuration = configWithAcpRedirectNotSet).build()) {
     val dummyEndpoint: EssentialAction = Action (Ok("hello world"))

@@ -7,7 +7,7 @@ import sbt._
   */
 object Settings {
   /** The name of your application */
-  val name = "scalajs-spa"
+  val name = "DRTv2"
 
   /** The version of your application */
   val version = sys.env.getOrElse("DRONE_BUILD_NUMBER", sys.env.getOrElse("BUILD_ID", "dev"))
@@ -69,6 +69,7 @@ object Settings {
     val openSaml = "2.6.1"
     val drtBirminghamSchema = "1.0.0"
     val playJson = "2.6.0"
+    val playAhcWs = "2.6.0"
     val playIteratees = "2.6.1"
   }
 
@@ -119,6 +120,7 @@ object Settings {
     "com.typesafe.play" %% "play-json" % playJson,
     "com.typesafe.play" %% "play-iteratees" % playIteratees,
     "com.typesafe.play" %% "play-iteratees-reactive-streams" % playIteratees,
+    "com.typesafe.play" %% "play-ahc-ws" % playAhcWs,
 
     "com.typesafe.slick" %% "slick" % "3.2.3",
     "com.typesafe.slick" %% "slick-hikaricp" % "3.2.3",

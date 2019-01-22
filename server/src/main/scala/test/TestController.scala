@@ -117,14 +117,13 @@ class TestController @Inject()(implicit val config: Configuration,
 
       request.body.asMultipartFormData.flatMap(_.files.find(_.key == "data")) match {
         case Some(f) =>
-
           val path = f.ref.path.toString
-          CSVFixtures.csvPathToArrivalsOnDate(forDate, path)
+
+          CSVFixtures
+            .csvPathToArrivalsOnDate(forDate, path)
             .map {
-              case Failure(error) =>
-                Failure(error)
-              case Success(a) => a
-                saveArrival(a)
+              case Failure(error) => Failure(error)
+              case Success(a) => saveArrival(a)
             }
 
           Created.withHeaders(HeaderNames.ACCEPT -> "application/csv")

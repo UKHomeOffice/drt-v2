@@ -45,6 +45,7 @@ DELETE        /data/alert                                          controllers.A
 
 # Feed import
 POST          /data/feed/:feedType/:portCode                       controllers.Application.feedImport(feedType: String, portCode: String)
+POST          /data/scanner                                        controllers.Application.scanner
 
 # Test related
 POST          /test/arrival                                        test.controllers.TestController.addArrival
