@@ -8,7 +8,6 @@ import akka.actor.{ActorSystem, Cancellable}
 import akka.stream.scaladsl.Source
 import akka.stream.{ActorAttributes, Supervision}
 import com.box.sdk.{BoxFile, BoxFolder, _}
-import drt.server.feeds.lgw.LGWFeed.log
 import drt.shared.{Arrival, ForecastFeedSource}
 import drt.shared.FlightsApi.Flights
 import org.apache.commons.lang3.StringUtils
@@ -167,11 +166,13 @@ trait BoxFileConstants {
 
 object LGWForecastFeed {
 
+  val log: Logger = LoggerFactory.getLogger(getClass)
+
   def apply()(implicit actorSystem: ActorSystem): Source[ArrivalsFeedResponse, Cancellable] = {
     val config = actorSystem.settings.config
-    val boxConfigFilePath = config.getString("feeds.gatwick.forecast.boxConfigFile")
-    val userId = config.getString("feeds.gatwick.forecast.userId")
-    val folderId = config.getString("feeds.gatwick.forecast.folderId")
+    val boxConfigFilePath = config.getString("feeds.lgw.forecast.boxConfigFile")
+    val userId = config.getString("feeds.lgw.forecast.userId")
+    val folderId = config.getString("feeds.lgw.forecast.folderId")
     val initialDelayImmediately = 100 milliseconds
     val pollInterval = 1.hours
     log.info(s"About to connect to box.com for LGW forecast feed")
