@@ -4,7 +4,6 @@ import akka.stream.{ActorMaterializer, Materializer}
 import org.joda.time.DateTime
 import org.specs2.matcher.Scope
 import play.api.Environment
-import play.api.test.WsTestClient
 import services.SDate
 import services.crunch.CrunchTestLike
 
@@ -15,9 +14,8 @@ class ApplicationSpec extends CrunchTestLike {
   trait Context extends Scope {
     implicit val mat: Materializer = ActorMaterializer()
     implicit val config = play.api.Configuration.from(Map("portCode" -> "test", "dq.s3.bucket" -> "bucket", "googleTrackingCode"-> "", "virus-scanner-url" -> ""))
-    implicit val wsClient = new WsTestClient.InternalWSClient("someScheme", 80)
 
-    val application = new Application()(config = config, mat = mat, wsClient = wsClient, env = Environment.simple(), system = system, ec = global)
+    val application = new Application()(config = config, mat = mat, env = Environment.simple(), system = system, ec = global)
   }
 
   "Application" should {

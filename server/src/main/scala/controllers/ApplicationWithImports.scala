@@ -8,7 +8,7 @@ import drt.server.feeds.lhr.forecast.LHRForecastXLSExtractor
 import drt.shared.FlightsApi.Flights
 import play.api.libs.Files
 import play.api.libs.json.Json._
-import play.api.mvc.{Action, AnyContent, Request}
+import play.api.mvc.{Action, Request}
 import server.feeds.StoreFeedImportArrivals
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -18,10 +18,6 @@ import scala.language.postfixOps
 
 trait ApplicationWithImports {
   self: Application =>
-
-  def scanner(): Action[AnyContent] = Action { _ =>
-    Ok("Everything ok : true")
-  }
 
   def feedImport(feedType: String, portCode: String): Action[Files.TemporaryFile] = Action.async(parse.temporaryFile) { request: Request[Files.TemporaryFile] =>
     val filePath = s"/tmp/${UUID.randomUUID().toString}"

@@ -1,21 +1,21 @@
 package services
 
-import java.nio.file.Paths
+import java.io.File
 
-import akka.stream.scaladsl.{FileIO, Source}
-import play.api.libs.ws.WSClient
-import play.api.mvc.MultipartFormData.{DataPart, FilePart}
+import dispatch.{Http, Req, url}
+import org.asynchttpclient.request.body.multipart.FilePart
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-case class VirusScanService(serviceUrl: String, wsClient: WSClient) extends VirusScanServiceLike {
+case class VirusScanService(serviceUrl: String) extends VirusScanServiceLike {
   def scan(fileName: String, filePath: String): Future[String] = {
-    val filePart = FilePart("file", fileName, Option("application/octet-stream"), FileIO.fromPath(Paths.get(filePath)))
+    val file = new File(filePath)
 
-    wsClient
-      .url(serviceUrl)
-      .post(Source(filePart :: DataPart("key", "value") :: List()))
-      .map(_.body)
+    val filePart = new FilePart(fileName, file, "application/octet-stream")
+
+    val urlToCall: Req = Req(_ => url(serviceUrl).toRequestBuilder.addBodyPart(filePart).setMethod("POST"))
+    Http.default(urlToCall)
+      .map(res => res.getResponseBody)
   }
 }

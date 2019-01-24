@@ -28,7 +28,6 @@ import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.{HeaderNames, HttpEntity}
 import play.api.libs.json._
-import play.api.libs.ws._
 import play.api.mvc._
 import play.api.{Configuration, Environment}
 import server.feeds.acl.AclFeed
@@ -144,7 +143,6 @@ trait UserRoleProviderLike {
 @Singleton
 class Application @Inject()(implicit val config: Configuration,
                             implicit val mat: Materializer,
-                            implicit val wsClient: WSClient,
                             env: Environment,
                             val system: ActorSystem,
                             ec: ExecutionContext)
@@ -167,7 +165,7 @@ class Application @Inject()(implicit val config: Configuration,
 
   val virusScannerUrl: String = config.get[String]("virus-scanner-url")
 
-  val virusScanner: VirusScanner = VirusScanner(VirusScanService(virusScannerUrl, wsClient))
+  val virusScanner: VirusScanner = VirusScanner(VirusScanService(virusScannerUrl))
 
   def log: LoggingAdapter = system.log
 
