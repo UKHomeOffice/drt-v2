@@ -374,7 +374,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
       case "LGW" =>
         val lgwNamespace = params.maybeLGWNamespace.getOrElse(throw new Exception("Missing LGW Azure Namespace parameter"))
-        val lgwSasToKey = params.maybeLGWNamespace.getOrElse(throw new Exception("Missing LGW SAS Key for To Queue"))
+        val lgwSasToKey = params.maybeLGWSASToKey.getOrElse(throw new Exception("Missing LGW SAS Key for To Queue"))
         val lgwServiceBusUri = params.maybeLGWServiceBusUri.getOrElse(throw new Exception("Missing LGW Service Bus Uri"))
         LGWFeed(lgwNamespace, lgwSasToKey, lgwServiceBusUri)(system).source()
       case "BHX" => BHXLiveFeed(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX live feed URL")))

@@ -51,7 +51,7 @@ case class LGWFeed(namespace: String, sasToKey: String, serviceBusUrl: String)(v
           }
           ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
         case Failure(error) =>
-          log.info(s"Failed to fetch LGW arrivals. Re-requesting token.", error)
+          log.info(s"Failed to fetch LGW arrivals.", error)
 
           ArrivalsFeedFailure(error.toString, SDate.now())
       }
