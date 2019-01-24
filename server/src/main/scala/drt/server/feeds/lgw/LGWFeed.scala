@@ -46,7 +46,6 @@ case class LGWFeed(namespace: String, sasToKey: String, serviceBusUrl: String)(v
         Await.result(arrivalsFuture, 30 seconds)
       } match {
         case Success(arrivals) =>
-          log.info(s"Got Some Arrivals $arrivals")
           if (arrivals.isEmpty) {
             log.info(s"Empty LGW arrivals.")
           }
