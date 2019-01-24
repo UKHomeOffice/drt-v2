@@ -56,7 +56,7 @@ object Settings {
     val scalaCheck = "1.13.4"
     val akkaPersistenceInmemory = "2.4.18.1"
     val akkaPersistenceJdbc = "3.5.0-DRT-SNAPSHOT"
-    val bluebus = "0.2-DRT-SNAPSHOT"
+    val bluebus = "0.2.1-DRT-SNAPSHOT"
     val postgres = "42.2.2"
     val sshJ = "0.24.0"
     val jodaTime = "2.9.4"
