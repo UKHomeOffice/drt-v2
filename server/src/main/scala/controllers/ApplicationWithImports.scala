@@ -24,25 +24,27 @@ trait ApplicationWithImports {
 
     request.body.moveTo(Paths.get(filePath), replace = true)
 
-    virusScanner
-      .fileIsOk(request.path, filePath)
-      .map {
-        case true =>
+//    virusScanner
+//      .fileIsOk(request.path, filePath)
+//      .map {
+//        case true =>
           val extractedArrivals = LHRForecastXLSExtractor(filePath)
 
-          if (extractedArrivals.nonEmpty) {
+          val response = if (extractedArrivals.nonEmpty) {
             log.info(s"Import found ${extractedArrivals.length} arrivals")
             ctrl.arrivalsImportActor ! StoreFeedImportArrivals(Flights(extractedArrivals))
             Accepted(toJson(ApiResponseBody("Arrivals have been queued for processing")))
           } else BadRequest(toJson(ApiResponseBody("No arrivals found")))
 
-        case false =>
-          BadRequest(toJson(ApiResponseBody("Bad file")))
-      }
-      .recoverWith {
-        case t =>
-          log.info(s"feed import failed: ${t.getMessage}")
-          Future(BadRequest(toJson(ApiResponseBody("Something went wrong. Try again"))))
-      }
+          Future(response)
+
+//        case false =>
+//          BadRequest(toJson(ApiResponseBody("Bad file")))
+//      }
+//      .recoverWith {
+//        case t =>
+//          log.info(s"feed import failed: ${t.getMessage}")
+//          Future(BadRequest(toJson(ApiResponseBody("Something went wrong. Try again"))))
+//      }
   }
 }
