@@ -40,7 +40,9 @@ trait ApplicationWithImports {
           BadRequest(toJson(ApiResponseBody("Bad file")))
       }
       .recoverWith {
-        case _ => Future(BadRequest(toJson(ApiResponseBody("Something went wrong. Try again"))))
+        case t =>
+          log.info(s"feed import failed: ${t.getMessage}")
+          Future(BadRequest(toJson(ApiResponseBody("Something went wrong. Try again"))))
       }
   }
 }
