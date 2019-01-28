@@ -314,7 +314,7 @@ class Application @Inject()(implicit val config: Configuration,
       def getKeyCloakUsers(): Future[List[KeyCloakUser]] = {
         log.info(s"Got these roles: ${getLoggedInUser().roles}")
         if (getLoggedInUser().roles.contains(ManageUsers)) {
-          keyCloakClient.getUsers()
+          Future(keyCloakClient.getAllUsers().toList)
         } else throw new Exception(permissionDeniedMessage)
       }
 
@@ -506,10 +506,11 @@ class Application @Inject()(implicit val config: Configuration,
       val client = keyCloakClient(request.headers)
       client
         .getGroups()
-        .flatMap(groupList => KeyCloakGroups(groupList).usersWithGroupsCsvContent(client))
+        .flatMap(groupList => KeyCloakGroups(groupList, client).usersWithGroupsCsvContent)
         .map(csvContent => Result(
           ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='users-with-groups.csv'")),
-          HttpEntity.Strict(ByteString(csvContent), Option("application/csv"))))
+          HttpEntity.Strict(ByteString(csvContent), Option("application/csv"))
+        ))
     } else throw new Exception(permissionDeniedMessage)
   }
 

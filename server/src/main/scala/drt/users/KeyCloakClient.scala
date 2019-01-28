@@ -15,7 +15,7 @@ import spray.json.{DefaultJsonProtocol, JsObject, JsValue, RootJsonFormat}
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 
 abstract case class KeyCloakClient(token: String, keyCloakUrl: String, implicit val system: ActorSystem)
   extends WithSendAndReceive with KeyCloakUserParserProtocol {
@@ -35,7 +35,7 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String, implicit 
     resp
   }
 
-  def getUsers(max: Int = 1000, offset: Int = 0): Future[List[KeyCloakUser]] = {
+  def getUsers(max: Int = 100, offset: Int = 0): Future[List[KeyCloakUser]] = {
     val pipeline: HttpRequest => Future[List[KeyCloakUser]] = (
       addHeaders(Accept(MediaTypes.`application/json`), Authorization(OAuth2BearerToken(token)))
         ~> sendAndReceive
@@ -46,6 +46,13 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String, implicit 
     val uri = keyCloakUrl + s"/users?max=$max&first=$offset"
     log.info(s"Calling key cloak: $uri")
     pipeline(Get(uri))
+  }
+
+  def getAllUsers(offset: Int = 0): Seq[KeyCloakUser] = {
+
+    val users = Await.result(getUsers(50, offset), 2 seconds)
+
+    if (users.isEmpty) Nil else users ++ getAllUsers(offset + 50)
   }
 
   def getUserGroups(userId: UUID): Future[List[KeyCloakGroup]] = {
