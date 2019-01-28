@@ -21,7 +21,7 @@ pipeline:
       - /root/entrypoint.sh
       - sbt --error test docker:stage
     environment:
-      - JAVA_OPTS=-Xmx4g
+      - JAVA_OPTS=-Xmx3g
       - ARTIFACTORY_USERNAME=drt_ci
     secrets:
       - ARTIFACTORY_PASSWORD
@@ -69,7 +69,7 @@ pipeline:
       - play
     commands:
       - docker login -u $${DOCKER_USERNAME} -p $${DOCKER_PASSWORD} docker.digital.homeoffice.gov.uk
-      - docker run -m 4g -d --name $${DRONE_COMMIT_SHA} -e KEY_CLOAK_URL="https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod" -e JAVA_OPTS="-Xmx6g" -e PERSISTENCE_BASE_DIR="/tmp/test" -e PORT_ACCESS_RESTRICTIONS=true -e PORT_CODE="test" -e DQ_S3_BUCKET="" -e ENV="test" docker.digital.homeoffice.gov.uk/drt/drt:latest $${PLAY}
+      - docker run -m 3g -d --name $${DRONE_COMMIT_SHA} -e KEY_CLOAK_URL="https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod" -e JAVA_OPTS="-Xmx6g" -e PERSISTENCE_BASE_DIR="/tmp/test" -e PORT_ACCESS_RESTRICTIONS=true -e PORT_CODE="test" -e DQ_S3_BUCKET="" -e ENV="test" docker.digital.homeoffice.gov.uk/drt/drt:latest $${PLAY}
       - docker build -t drt-cypress -f cy-drt-dockfile .
       - docker run --net=container:$${DRONE_COMMIT_SHA} -e CYPRESS_baseUrl="http://localhost:9000" drt-cypress /bin/bash -c "./node_modules/.bin/cypress run"
 
