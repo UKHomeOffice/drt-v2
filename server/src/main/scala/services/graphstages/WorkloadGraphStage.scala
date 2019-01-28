@@ -81,13 +81,20 @@ class WorkloadGraphStage(name: String = "",
         val incomingFlights = grab(inFlightsWithSplits)
         log.info(s"Received ${incomingFlights.flights.size} arrivals")
 
+        val used = Memory.used
         val updatedWorkloads: Map[Int, Set[FlightSplitMinute]] = mergeWorkloadByFlightId(incomingFlights, workloadByFlightId)
+        Memory.printMemUsedSince(used, "WL After merge")
         workloadByFlightId = purgeExpired(updatedWorkloads, (fsms: Set[FlightSplitMinute]) => if (fsms.nonEmpty) fsms.map(_.minute).min else 0, now, expireAfterMillis)
+        Memory.printMemUsedSince(used, "WL After purging expired wl by flight id")
         val updatedLoads = flightSplitMinutesToQueueLoadMinutes(updatedWorkloads)
+        Memory.printMemUsedSince(used, "WL After updatedLoads")
         val latestDiff = loadDiff(updatedLoads, loadMinutes)
+        Memory.printMemUsedSince(used, "WL After diff")
         loadMinutes = purgeExpired(updatedLoads, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
+        Memory.printMemUsedSince(used, "WL After purging loads")
 
         updatedLoadsToPush = purgeExpired(mergeLoadMinutes(latestDiff, updatedLoadsToPush), (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
+        Memory.printMemUsedSince(used, "WL After merging & purging loads to push")
         log.info(s"${updatedLoadsToPush.size} load minutes to push (${updatedLoadsToPush.values.count(_.paxLoad == 0d)} zero pax minutes)")
 
         pushStateIfReady()
