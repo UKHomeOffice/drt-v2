@@ -37,7 +37,7 @@ case class KeyCloakGroups(groups: List[KeyCloakGroup], client: KeyCloakClient) {
     Future.sequence(eventualUsersWithGroupsByGroup).map(_.flatten)
   }
 
-  def usersWithGroupsByUser(groups: List[KeyCloakGroup]) =
+  def usersWithGroupsByUser(groups: List[KeyCloakGroup]): Future[Map[KeyCloakUser, List[String]]] =
     usersWithGroups(groups).map(usersAndGroups => {
       usersAndGroups.groupBy {
         case (user, group) => user
