@@ -21,6 +21,7 @@ pipeline:
       - /root/entrypoint.sh
       - sbt --error test docker:stage
     environment:
+      - JAVA_OPTS=-Xmx4g
       - ARTIFACTORY_USERNAME=drt_ci
     secrets:
       - ARTIFACTORY_PASSWORD
