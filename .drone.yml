@@ -17,12 +17,10 @@ pipeline:
 
   build:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
-    mem_limit: 15000000000
     commands:
       - /root/entrypoint.sh
       - sbt --error test docker:stage
     environment:
-      - JAVA_OPTS=-Xmx4g
       - ARTIFACTORY_USERNAME=drt_ci
     secrets:
       - ARTIFACTORY_PASSWORD
