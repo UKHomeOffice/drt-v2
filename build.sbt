@@ -84,6 +84,7 @@ lazy val server = (project in file("server"))
   buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
   buildInfoPackage := "buildinfo",
   javaOptions in Test += "-Duser.timezone=UTC",
+  javaOptions in Test += "-Xmx1750m",
   javaOptions in Runtime += "-Duser.timezone=UTC",
   libraryDependencies ++= Settings.jvmDependencies.value,
   libraryDependencies += specs2 % Test,
