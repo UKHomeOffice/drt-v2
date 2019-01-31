@@ -1,12 +1,9 @@
 package drt.users
 
-import java.io
-
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
+import scala.concurrent.Future
 import scala.language.postfixOps
 
 
@@ -16,16 +13,19 @@ case class KeyCloakGroups(groups: List[KeyCloakGroup], client: KeyCloakClient) {
     usersWithGroupsToCsv(usersWithGroupsFuture)
   }
 
-  def usersWithGroupsToCsv(usersWithGroupsFuture: Future[Map[KeyCloakUser, List[String]]]): Future[String] = usersWithGroupsFuture
-    .map(usersToUsersWithGroups => {
-      val csvLines = usersToUsersWithGroups
-        .map {
-          case (user, userGroups) =>
-            val userGroupsCsvValue = userGroups.sorted.mkString(", ")
-            s"""${user.email},${user.firstName},${user.lastName},${user.enabled},"$userGroupsCsvValue""""
-        }
-      csvLines.mkString("\n")
-    })
+  def usersWithGroupsToCsv(usersWithGroupsFuture: Future[Map[KeyCloakUser, List[String]]]): Future[String] = {
+    val headerLine = "Email,First Name,Last Name,Enabled,Groups"
+    usersWithGroupsFuture
+      .map(usersToUsersWithGroups => {
+        val csvLines = usersToUsersWithGroups
+          .map {
+            case (user, userGroups) =>
+              val userGroupsCsvValue = userGroups.sorted.mkString(", ")
+              s"""${user.email},${user.firstName},${user.lastName},${user.enabled},"$userGroupsCsvValue""""
+          }
+        headerLine + "\n" + csvLines.mkString("\n")
+      })
+  }
 
   def usersWithGroups(groups: List[KeyCloakGroup]): Future[List[(KeyCloakUser, String)]] = {
     val eventualUsersWithGroupsByGroup: List[Future[List[(KeyCloakUser, String)]]] = groups.map(group => {
