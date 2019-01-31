@@ -46,6 +46,7 @@ pipeline:
   build_docker:
     environment:
       - DOCKER_USERNAME=drt_ci
+      - DOCKER_HOST=tcp://172.17.0.1:2375
     image: quay.io/ukhomeofficedigital/drone-docker
     registry: docker.digital.homeoffice.gov.uk
     repo: docker.digital.homeoffice.gov.uk/drt/drt
