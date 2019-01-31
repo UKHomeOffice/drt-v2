@@ -29,7 +29,7 @@ object KeyCloakUsersPage {
           <.h2("DRT V2 Keycloak User List"),
           usersPot.renderReady(users =>
             <.div(
-              <.div(^.className := "button-group", <.a("Export Users", ^.href := SPAMain.absoluteUrl("/export/users"), ^.target := "_blank", ^.className := "btn btn-default")),
+              <.div(^.className := "button-group", <.a("Export Users", ^.href := SPAMain.absoluteUrl("export/users"), ^.target := "_blank", ^.className := "btn btn-default")),
               <.table(^.className := "key-cloak-users",
                 <.tbody(
                   users.map(user => <.tr(
