@@ -36,6 +36,7 @@ pipeline:
     drone_s3_cache_folders:
       - ./.ivy2
       - ./.sbt/boot
+      - ./drone/src/github.com/UKHomeOffice/drt-v2/node_modules
 
     drone_s3_cache_mode: "push"
     secrets:
