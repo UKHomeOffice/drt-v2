@@ -81,8 +81,10 @@ class ArrivalsGraphStage(name: String = "",
       grab(arrivalsInlet) match {
         case ArrivalsFeedSuccess(Flights(flights), connectedAt) =>
           log.info(s"Grabbed ${flights.length} arrivals from connection at ${connectedAt.toISOString()}")
-          handleIncomingArrivals(sourceType, flights)
-          mergeAllSourcesAndPush(baseArrivals, forecastArrivals, liveArrivals)
+          if (flights.nonEmpty || sourceType == BaseArrivals) {
+            handleIncomingArrivals(sourceType, flights)
+            mergeAllSourcesAndPush(baseArrivals, forecastArrivals, liveArrivals)
+          }
         case ArrivalsFeedFailure(message, failedAt) =>
           log.warn(s"$arrivalsInlet failed at ${failedAt.toISOString()}: $message")
       }

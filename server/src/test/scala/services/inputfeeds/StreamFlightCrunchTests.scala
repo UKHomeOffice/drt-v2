@@ -92,6 +92,7 @@ object TestCrunchConfig {
   def levelDbJournalDir(tn: String) = s"target/test/journal/$tn"
 
   def levelDbTestActorSystem(tn: String) = ActorSystem("testActorSystem", ConfigFactory.parseMap(Map(
+    "akka.actor.warn-about-java-serializer-usage" -> false,
     "akka.persistence.journal.plugin" -> "akka.persistence.journal.leveldb",
     "akka.persistence.no-snapshot-store.class" -> "akka.persistence.snapshot.NoSnapshotStore",
     "akka.persistence.journal.leveldb.dir" -> levelDbJournalDir(tn),

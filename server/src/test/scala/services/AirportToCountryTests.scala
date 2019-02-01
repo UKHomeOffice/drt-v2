@@ -16,10 +16,8 @@ object AirportToCountryTests extends TestSuite {
       val airportInfo = AirportToCountry.airportInfoByAirportCode("LGW")
       airportInfo.onSuccess {
         case Some(ai) =>
-          println(s"i'm asserting ${ai}")
           assert(ai == AirportInfo("Gatwick", "London",  "United Kingdom", "LGW"))
         case f =>
-          println(f)
           assert(false)
       }
     }

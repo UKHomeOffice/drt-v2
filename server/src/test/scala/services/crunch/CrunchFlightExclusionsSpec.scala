@@ -82,7 +82,6 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
     crunch.liveTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val resultSummary = paxLoadsFromPortState(ps, 30)
-        println(s"results: $resultSummary")
         resultSummary == expected
     }
 

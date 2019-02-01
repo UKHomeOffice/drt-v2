@@ -136,11 +136,7 @@ class SplitsExportSpec extends Specification {
           .map(p => p.copy(nationalities = None))
 
         val scheduledDateString = s"${vm.ScheduledDateOfArrival}T${vm.ScheduledTimeOfArrival}"
-        Try {
-          MilliDate(SDate(scheduledDateString).millisSinceEpoch)
-        }
-        match {
-          case Failure(_) => println(s"Couldn't parse scheduled date string: $scheduledDateString")
+        Try(MilliDate(SDate(scheduledDateString).millisSinceEpoch)) match {
           case Success(scheduled) =>
             val year = SDate(scheduled).getFullYear()
             val month = SDate(scheduled).getMonth()
@@ -157,6 +153,7 @@ class SplitsExportSpec extends Specification {
 
             val row = s"${vm.flightCode},${SDate(scheduled).toISOString()},${vm.DeparturePortCode},${vm.ArrivalPortCode},$year,$month,$dayOfWeek,${percentages.mkString(",")}\n"
             outputFile.write(row)
+          case Failure(_) =>
         }
 
       case _ =>

@@ -16,13 +16,6 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 
-object Memory {
-  val mb: Int = 1024 * 1024
-  val runtime: Runtime = Runtime.getRuntime
-  def used: Long = runtime.totalMemory - runtime.freeMemory
-  def printMemUsedSince(lastUsed: Long, msg: String = ""): Unit = println(s"${(used - lastUsed) / mb} used: $msg")
-}
-
 class SimulationGraphStage(name: String = "",
                            optionalInitialCrunchMinutes: Option[CrunchMinutes],
                            optionalInitialStaffMinutes: Option[StaffMinutes],
@@ -106,13 +99,20 @@ class SimulationGraphStage(name: String = "",
         val firstMinute = crunchPeriodStartMillis(SDate(allMinuteMillis.min))
         val lastMinute = firstMinute.addMinutes(minutesToCrunch)
 
-        val accessor = (x: (TerminalName, QueueName, MillisSinceEpoch)) => x._3
-        val updatedDeployments: Map[(TerminalName, QueueName, MillisSinceEpoch), Int] = updateDeployments(affectedTerminals, firstMinute, lastMinute, deployments)
-        deployments = Crunch.purgeExpiredTuple(updatedDeployments, accessor, now, expireAfterMillis)
+        val affectedTerminalsWithDeployments = availableStaffForPeriod(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, affectedTerminals)
+          .foldLeft(List[TerminalName]()) {
+            case (tns, (tn, staffByMillis)) => if (staffByMillis.count(_._2 > 0) > 0) tn :: tns else tns
+          }
+          .toSet
 
-        updateSimulationsForPeriod(firstMinute, lastMinute, affectedTerminals)
+        if (affectedTerminalsWithDeployments.nonEmpty) {
+          val accessor = (x: (TerminalName, QueueName, MillisSinceEpoch)) => x._3
+          val updatedDeployments: Map[(TerminalName, QueueName, MillisSinceEpoch), Int] = updateDeployments(affectedTerminalsWithDeployments, firstMinute, lastMinute, deployments)
+          deployments = Crunch.purgeExpiredTuple(updatedDeployments, accessor, now, expireAfterMillis)
+          updateSimulationsForPeriod(firstMinute, lastMinute, affectedTerminals)
 
-        pushStateIfReady()
+          pushStateIfReady()
+        } else log.info(s"Skipping simulations for all affected terminals")
 
         pullAll()
         log.info(s"inLoads Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
@@ -184,10 +184,8 @@ class SimulationGraphStage(name: String = "",
                                   ): Unit = {
       log.info(s"Simulation for ${firstMinute.toLocalDateTimeString()} - ${lastMinute.toLocalDateTimeString()} ${terminalsToUpdate.mkString(", ")}")
 
-      val used = Memory.used
       val newSimulationsForPeriod: Set[SimulationMinute] = simulateLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, terminalsToUpdate)
 
-      Memory.printMemUsedSince(used, "After simulateLoads")
       val diff = newSimulationsForPeriod -- existingSimulationsForPeriod(firstMinute, lastMinute, terminalsToUpdate).values.toSet
 
       val updatedSims = diff.foldLeft(allSimulationMinutes) {
@@ -216,9 +214,7 @@ class SimulationGraphStage(name: String = "",
 
     def simulateLoads(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Set[TerminalName]): Set[SimulationMinute] = {
       log.info(s"calling workloadForPeriod")
-      val used = Memory.used
       val workload: PortLoad = workloadForPeriod(firstMinute, lastMinute, terminalsToUpdate)
-      Memory.printMemUsedSince(used, "After workloadForPeriod")
       val minuteMillis = firstMinute until lastMinute by 60000
       log.info(s"millis range: ${minuteMillis.min} - ${minuteMillis.max}")
 
@@ -236,23 +232,27 @@ class SimulationGraphStage(name: String = "",
       val sla = airportConfig.slaByQueue.getOrElse(qn, 15)
       val adjustedWorkloadMinutes = if (qn == Queues.EGate) adjustEgatesWorkload(queueWorkload) else queueWorkload
       val fullWorkMinutes = minuteMillis.map(m => adjustedWorkloadMinutes.getOrElse(m, 0d))
-      val deployedDesks = minuteMillis.map(m => deployments.getOrElse((tn, qn, m), 0))
 
-      log.info(s"Running $tn, $qn simulation with ${fullWorkMinutes.length} workloads & ${deployedDesks.length} desks")
-      val used = Memory.used
-      Try(simulate(fullWorkMinutes, deployedDesks, OptimizerConfig(sla))) match {
-        case Success(waits) =>
-          Memory.printMemUsedSince(used, s"During simulation of $tn/$qn")
-          minuteMillis.zipWithIndex.map {
-            case (minute, idx) => SimulationMinute(tn, qn, minute, deployedDesks(idx), waits(idx))
-          }.toSet
-        case Failure(t) =>
-          val start = SDate(minuteMillis.min).toLocalDateTimeString()
-          val end = SDate(minuteMillis.max).toLocalDateTimeString()
-          log.error(s"Failed to run simulations for $tn / $qn - $start -> $end: $t")
-          log.error(s"${deployedDesks.length} desks: $deployedDesks")
-          log.error(s"${fullWorkMinutes.length} works minutes: $fullWorkMinutes")
+
+      minuteMillis.map(m => deployments.getOrElse((tn, qn, m), 0)) match {
+        case noStaff if noStaff.count(_ > 0) == 0 =>
+          log.info(s"No deployed staff. Skipping simulations")
           Set()
+        case deployedDesks if deployedDesks.count(_ > 0) > 0 =>
+          log.info(s"Running $tn, $qn simulation with ${fullWorkMinutes.length} workloads & ${deployedDesks.length} desks")
+          Try(simulate(fullWorkMinutes, deployedDesks, OptimizerConfig(sla))) match {
+            case Success(waits) =>
+              minuteMillis.zipWithIndex.map {
+                case (minute, idx) => SimulationMinute(tn, qn, minute, deployedDesks(idx), waits(idx))
+              }.toSet
+            case Failure(t) =>
+              val start = SDate(minuteMillis.min).toLocalDateTimeString()
+              val end = SDate(minuteMillis.max).toLocalDateTimeString()
+              log.error(s"Failed to run simulations for $tn / $qn - $start -> $end: $t")
+              log.error(s"${deployedDesks.length} desks: $deployedDesks")
+              log.error(s"${fullWorkMinutes.length} works minutes: $fullWorkMinutes")
+              Set()
+          }
       }
     }
 
@@ -269,22 +269,26 @@ class SimulationGraphStage(name: String = "",
       terminalsToUpdate
         .flatMap(tn => {
           val terminalWorkloads: Map[QueueName, Map[MillisSinceEpoch, Double]] = workload.getOrElse(tn, Map())
+          val queues = airportConfig.nonTransferQueues(tn)
 
           minuteMillis
             .sliding(15, 15)
-            .flatMap(slotMillis =>
-              queueDeployments(availableStaff, minMaxDesks, tn, terminalWorkloads, slotMillis)
-                .flatMap {
-                  case (qn, staff) => slotMillis.map(millis => ((tn, qn, millis), staff))
-                }
+            .flatMap(slotMillis => {
+              val queueDeps = availableStaff.getOrElse(tn, Map()).getOrElse(slotMillis.min, 0) match {
+                case 0 => zeroQueueDeployments(tn)
+                case availableForSlot => queueDeployments(availableForSlot, minMaxDesks, tn, queues, terminalWorkloads, slotMillis)
+              }
+              queueDeps.flatMap { case (qn, staff) => slotMillis.map(millis => ((tn, qn, millis), staff)) }
+            }
             )
         })
         .toMap
     }
 
-    def queueDeployments(availableStaff: Map[TerminalName, Map[MillisSinceEpoch, Int]],
+    def queueDeployments(available: Int,
                          minMaxDesks: Map[TerminalName, Map[QueueName, Map[MillisSinceEpoch, (Int, Int)]]],
                          terminalName: TerminalName,
+                         queues: Seq[String],
                          terminalWorkloads: Map[QueueName, Map[MillisSinceEpoch, Double]],
                          slotMillis: immutable.IndexedSeq[MillisSinceEpoch]
                         ): Seq[(String, Int)] = {
@@ -292,7 +296,6 @@ class SimulationGraphStage(name: String = "",
       val queueWl = slaWeightedLoadByQueue(queuesWithoutTransfer, terminalWorkloads, slotMillis)
       val slotStartMilli = slotMillis.min
       val queueMm = minMaxDesks.getOrElse(terminalName, Map()).mapValues(_.getOrElse(slotStartMilli, (0, 0)))
-      val available = availableStaff.getOrElse(terminalName, Map()).getOrElse(slotStartMilli, 0)
 
       deployer(queueWl, available, queueMm)
     }
@@ -460,6 +463,11 @@ class SimulationGraphStage(name: String = "",
           sms.map(sm => (sm.minute, sm.availableAtPcp)).toMap
         }
   }
+
+  val zeroQueueDeployments: Map[TerminalName, Seq[(QueueName, Int)]] = airportConfig
+    .terminalNames
+    .map(tn => (tn, airportConfig.nonTransferQueues(tn).map(qn => (qn, 0))))
+    .toMap
 }
 
 case class SimulationMinute(terminalName: TerminalName,
