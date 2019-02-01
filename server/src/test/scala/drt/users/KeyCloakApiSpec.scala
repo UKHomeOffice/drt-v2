@@ -262,7 +262,7 @@ val usersMissingOptionalFieldsJson =
           Future(HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`, lhrUsers)))
         case "/groups" =>
           Future(HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`, groupsJson)))
-        case "/users?max=1000&first=0" =>
+        case "/users?max=100&first=0" =>
           Future(HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`, usersJson)))
         case "/users/e25f2a14-bdaa-11e8-a355-529269fb1459/groups/id2" =>
           assert(req.method == HttpMethods.PUT)

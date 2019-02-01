@@ -3,6 +3,7 @@ package drt.client.components
 import java.util.UUID
 
 import diode.data.Pot
+import drt.client.SPAMain
 import drt.client.SPAMain.{KeyCloakUserEditLoc, Loc}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services._
@@ -28,7 +29,7 @@ object KeyCloakUsersPage {
           <.h2("DRT V2 Keycloak User List"),
           usersPot.renderReady(users =>
             <.div(
-              <.div(^.className := "button-group", <.a("Export Users", ^.href := s"${dom.window.location.pathname}/export/users", ^.target := "_blank", ^.className := "btn btn-default")),
+              <.div(^.className := "button-group", <.a("Export Users", ^.href := SPAMain.absoluteUrl("/export/users"), ^.target := "_blank", ^.className := "btn btn-default")),
               <.table(^.className := "key-cloak-users",
                 <.tbody(
                   users.map(user => <.tr(

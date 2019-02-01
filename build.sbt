@@ -84,6 +84,7 @@ lazy val server = (project in file("server"))
   buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
   buildInfoPackage := "buildinfo",
   javaOptions in Test += "-Duser.timezone=UTC",
+  javaOptions in Test += "-Xmx1750m",
   javaOptions in Runtime += "-Duser.timezone=UTC",
   libraryDependencies ++= Settings.jvmDependencies.value,
   libraryDependencies += specs2 % Test,
@@ -148,9 +149,6 @@ lazy val slickCodeGenTask = tuple map { (dir, cp, r, s) =>
   Seq(file(fname))
 }
 
-fork in run := true
-
-fork in Test := true
 parallelExecution in Test := false
 // loads the Play server project at sbt startup
 onLoad in Global := (Command.process("project server", _: State)) compose (onLoad in Global).value
