@@ -99,7 +99,7 @@ class SimulationGraphStage(name: String = "",
         val firstMinute = crunchPeriodStartMillis(SDate(allMinuteMillis.min))
         val lastMinute = firstMinute.addMinutes(minutesToCrunch)
 
-        val staffAvailable = availableStaffForPeriodWithNonZeroDeployments(affectedTerminals, firstMinute, lastMinute)
+        val staffAvailable = terminalsWithNonZeroStaff(affectedTerminals, firstMinute, lastMinute)
         if (staffAvailable.nonEmpty) {
           val deploymentsTimeAccessor = (x: (TerminalName, QueueName, MillisSinceEpoch)) => x._3
           val updatedDeployments = updateDeployments(staffAvailable, firstMinute, lastMinute, deployments)
@@ -448,10 +448,12 @@ class SimulationGraphStage(name: String = "",
           sms.map(sm => (sm.minute, sm.availableAtPcp)).toMap
         }
 
-    def availableStaffForPeriodWithNonZeroDeployments(affectedTerminals: Set[TerminalName], firstMinute: SDateLike, lastMinute: SDateLike): Set[TerminalName] = {
-      availableStaffForPeriod(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, affectedTerminals)
+    def terminalsWithNonZeroStaff(allTerminals: Set[TerminalName], firstMinute: SDateLike, lastMinute: SDateLike): Set[TerminalName] = {
+      availableStaffForPeriod(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, allTerminals)
         .foldLeft(List[TerminalName]()) {
-          case (tns, (tn, staffByMillis)) => if (staffByMillis.count(_._2 > 0) > 0) tn :: tns else tns
+          case (nonZeroTerminals, (terminal, staffByMillis)) =>
+            if (staffByMillis.count(_._2 > 0) > 0) terminal :: nonZeroTerminals
+            else nonZeroTerminals
         }
         .toSet
     }
