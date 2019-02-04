@@ -20,7 +20,9 @@ class SimulationSpec extends Specification {
   def randomDesks: Seq[Int] = 1 to 1440 map (_ => (Math.random() * 30).toInt)
   def zeroDesks: Seq[Int] = 1 to 1440 map (_ => 0)
 
-  "Something here" >> {
+  "Given some a simulation of random loads and desks, and one of random load and zero desks " +
+    "I want to see what the memory usage difference is" >> {
+    skipped("exploratory")
 
     println(s"$randomWorkload")
     println(s"$randomDesks")
