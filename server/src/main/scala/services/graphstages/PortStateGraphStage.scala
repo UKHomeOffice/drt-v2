@@ -85,10 +85,12 @@ class PortStateGraphStage(name: String = "",
 
     setHandler(outPortState, new OutHandler {
       override def onPull(): Unit = {
+        val start = SDate.now()
         log.info(s"onPull() called")
         pushIfAppropriate(mayBePortState)
 
         pullAllInlets()
+        log.info(s"outPortState Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
 
