@@ -116,6 +116,7 @@ class KeyCloakGroupsSpec extends Specification {
         .map(_.split("\n").toSet), 1 second)
 
     val expected = Set(
+      """Email,First Name,Last Name,Enabled,Groups""",
       """user1,,,true,"BHX, EMA, LGW, LHR"""",
       """user2,,,true,"BHX, EDI"""",
       """user3,,,true,"LHR"""",
@@ -153,6 +154,7 @@ class KeyCloakGroupsSpec extends Specification {
         .map(_.split("\n").toSet), 1 second)
 
     val expected = Set(
+      """Email,First Name,Last Name,Enabled,Groups""",
       """user1,,,true,"BHX, EMA, LGW, LHR"""",
       """user2,,,true,"BHX, EDI"""",
       """user3,,,true,"LHR"""",
