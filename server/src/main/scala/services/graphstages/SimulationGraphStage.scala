@@ -99,20 +99,14 @@ class SimulationGraphStage(name: String = "",
         val firstMinute = crunchPeriodStartMillis(SDate(allMinuteMillis.min))
         val lastMinute = firstMinute.addMinutes(minutesToCrunch)
 
-        val affectedTerminalsWithDeployments = availableStaffForPeriod(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, affectedTerminals)
-          .foldLeft(List[TerminalName]()) {
-            case (tns, (tn, staffByMillis)) => if (staffByMillis.count(_._2 > 0) > 0) tn :: tns else tns
-          }
-          .toSet
-
-        if (affectedTerminalsWithDeployments.nonEmpty) {
+        if (availableStaffForPeriodWithNonZeroDeployments(affectedTerminals, firstMinute, lastMinute).nonEmpty) {
           val accessor = (x: (TerminalName, QueueName, MillisSinceEpoch)) => x._3
-          val updatedDeployments: Map[(TerminalName, QueueName, MillisSinceEpoch), Int] = updateDeployments(affectedTerminalsWithDeployments, firstMinute, lastMinute, deployments)
+          val updatedDeployments: Map[(TerminalName, QueueName, MillisSinceEpoch), Int] = updateDeployments(availableStaffForPeriodWithNonZeroDeployments(affectedTerminals, firstMinute, lastMinute), firstMinute, lastMinute, deployments)
           deployments = Crunch.purgeExpiredTuple(updatedDeployments, accessor, now, expireAfterMillis)
           updateSimulationsForPeriod(firstMinute, lastMinute, affectedTerminals)
 
           pushStateIfReady()
-        } else log.info(s"Skipping simulations for all affected terminals")
+        } else log.info(s"Zero deployments. Skipping simulations")
 
         pullAll()
         log.info(s"inLoads Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
@@ -462,6 +456,14 @@ class SimulationGraphStage(name: String = "",
         .mapValues { sms =>
           sms.map(sm => (sm.minute, sm.availableAtPcp)).toMap
         }
+
+    def availableStaffForPeriodWithNonZeroDeployments(affectedTerminals: Set[TerminalName], firstMinute: SDateLike, lastMinute: SDateLike): Set[TerminalName] = {
+      availableStaffForPeriod(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, affectedTerminals)
+        .foldLeft(List[TerminalName]()) {
+          case (tns, (tn, staffByMillis)) => if (staffByMillis.count(_._2 > 0) > 0) tn :: tns else tns
+        }
+        .toSet
+    }
   }
 
   val zeroQueueDeployments: Map[TerminalName, Seq[(QueueName, Int)]] = airportConfig

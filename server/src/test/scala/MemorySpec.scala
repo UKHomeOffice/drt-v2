@@ -15,6 +15,8 @@ class MemorySpec extends Specification {
   "Given a Map of stuff " +
     "When I transform it to a Set " +
     "How much memory allocation is triggered" >> {
+    skipped("exploratory")
+    
     val terminals = Seq("T2", "T3", "T4", "T5")
     val queues = Seq("EEA", "NonEEA", "EGates", "FastTrack")
     val sixMonthsInMinutes = 180 * 24 * 60 * 60
