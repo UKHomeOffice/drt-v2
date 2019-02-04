@@ -166,6 +166,10 @@ case class Arrival(
     }
   }
 
+  def basicForComparison = copy(FeedSources = Set(), LastKnownPax = None, PcpTime = None)
+
+  def equals(arrival: Arrival) = arrival.basicForComparison == basicForComparison
+
   def voyageNumberPadded: String = {
     val number = FlightParsing.parseIataToCarrierCodeVoyageNumber(IATA)
     ArrivalHelper.padTo4Digits(number.map(_._2).getOrElse("-"))

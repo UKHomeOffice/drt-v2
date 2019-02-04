@@ -263,7 +263,7 @@ class AclFeedSpec extends CrunchTestLike {
       "Then I should still see the arrival, ie it should not have been removed" >> {
       val scheduledLive = "2017-01-01T00:00Z"
 
-      val aclArrival = ArrivalGenerator.apiFlight(actPax = Option(150), schDt = "2017-01-01T00:05Z", iata = "BA0001", status = "forecast")
+      val aclArrival = ArrivalGenerator.apiFlight(actPax = Option(150), schDt = "2017-01-01T00:05Z", iata = "BA0001", status = "forecast", feedSources = Set(AclFeedSource))
 
       val aclInput1 = Flights(Seq(aclArrival))
       val aclInput2 = Flights(Seq(aclArrival))

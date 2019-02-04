@@ -82,6 +82,7 @@ class ArrivalsGraphStage(name: String = "",
         case ArrivalsFeedSuccess(Flights(flights), connectedAt) =>
           log.info(s"Grabbed ${flights.length} arrivals from connection at ${connectedAt.toISOString()}")
           if (flights.nonEmpty || sourceType == BaseArrivals) handleIncomingArrivals(sourceType, flights)
+          else log.info(s"No arrivals to handle")
 
         case ArrivalsFeedFailure(message, failedAt) =>
           log.warn(s"$arrivalsInlet failed at ${failedAt.toISOString()}: $message")
@@ -93,6 +94,7 @@ class ArrivalsGraphStage(name: String = "",
 
     def handleIncomingArrivals(sourceType: ArrivalsSourceType, incomingArrivals: Seq[Arrival]): Unit = {
       val filteredArrivals = filterAndSetPcp(incomingArrivals)
+      log.info(s"${filteredArrivals.size} arrivals after filtering: $filteredArrivals")
       sourceType match {
         case LiveArrivals =>
           val updatedLiveArrivals = updatesFromIncoming(filteredArrivals.values.toSeq, LiveFeedSource)
@@ -125,13 +127,14 @@ class ArrivalsGraphStage(name: String = "",
               merged = diff.toUpdate.foldLeft(merged -- diff.toRemove) {
                 case (mergedSoFar, updatedArrival) => mergedSoFar.updated(updatedArrival.uniqueId, updatedArrival)
               }
+              toPush = Option(diff)
           }
 
           pushIfAvailable(toPush, outArrivalsDiff)
       }
     }
 
-    private def updateToPush(updatedLiveArrivals: Seq[Arrival]) = {
+    def updateToPush(updatedLiveArrivals: Seq[Arrival]): Option[ArrivalsDiff] = {
       toPush match {
         case None => Option(ArrivalsDiff(updatedLiveArrivals.toSet, Set()))
         case Some(diff) =>
@@ -260,7 +263,7 @@ class ArrivalsGraphStage(name: String = "",
                 FeedSources = liveArrival.FeedSources ++ withForecast.FeedSources
               )
           }
-          if (!merged.contains(key) || merged(key) != withLive) {
+          if (!merged.contains(key) || !merged(key).equals(withLive)) {
             merged = merged.updated(key, withLive)
             updatedArrivalsSoFar.updated(key, withLive)
           }
@@ -283,7 +286,7 @@ class ArrivalsGraphStage(name: String = "",
         FeedSources = liveArrival.FeedSources ++ baseArrival.FeedSources
       )
 
-      if (merged.contains(updated.uniqueId) && merged(updated.uniqueId) == updated) None
+      if (merged.contains(updated.uniqueId) && merged(updated.uniqueId).equals(updated)) None
       else Option(updated)
     }
 
@@ -296,7 +299,7 @@ class ArrivalsGraphStage(name: String = "",
             TranPax = bestTransPax(mergedArrival, forecastArrival),
             FeedSources = forecastArrival.FeedSources ++ mergedArrival.FeedSources
           )
-          if (merged.contains(updated.uniqueId) && merged(updated.uniqueId) == updated) None
+          if (merged.contains(updated.uniqueId) && merged(updated.uniqueId).equals(updated)) None
           else Option(updated)
       }
     }
