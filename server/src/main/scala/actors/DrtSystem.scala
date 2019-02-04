@@ -230,6 +230,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     case "LGW" => (tIn: TerminalName) => Map("1I" -> "S", "2I" -> "N").getOrElse(tIn, "")
     case "MAN" => (tIn: TerminalName) => Map("T1" -> "T1", "T2" -> "T2", "T3" -> "T3").getOrElse(tIn, "")
     case "EMA" => (tIn: TerminalName) => Map("1I" -> "T1", "1D" -> "T1").getOrElse(tIn, "")
+    case "EDI" => (tIn: TerminalName) => Map("1I" -> "A1").getOrElse(tIn, "")
     case _ => (tIn: TerminalName) => s"T${tIn.take(1)}"
   }
 
