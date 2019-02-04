@@ -99,15 +99,16 @@ class SimulationGraphStage(name: String = "",
         val firstMinute = crunchPeriodStartMillis(SDate(allMinuteMillis.min))
         val lastMinute = firstMinute.addMinutes(minutesToCrunch)
 
-        val staffAvailable = terminalsWithNonZeroStaff(affectedTerminals, firstMinute, lastMinute)
-        if (staffAvailable.nonEmpty) {
-          val deploymentsTimeAccessor = (x: (TerminalName, QueueName, MillisSinceEpoch)) => x._3
-          val updatedDeployments = updateDeployments(staffAvailable, firstMinute, lastMinute, deployments)
-          deployments = Crunch.purgeExpiredTuple(updatedDeployments, deploymentsTimeAccessor, now, expireAfterMillis)
-          updateSimulationsForPeriod(firstMinute, lastMinute, affectedTerminals)
-
-          pushStateIfReady()
-        } else log.info(s"Zero deployments. Skipping simulations")
+        terminalsWithNonZeroStaff(affectedTerminals, firstMinute, lastMinute) match {
+          case noTerminals if noTerminals.isEmpty =>
+            log.info(s"No affected terminals with deployments. Skipping simulations")
+          case affectedTerminals =>
+            val deploymentsTimeAccessor = (x: (TerminalName, QueueName, MillisSinceEpoch)) => x._3
+            val updatedDeployments = updateDeployments(affectedTerminals, firstMinute, lastMinute, deployments)
+            deployments = Crunch.purgeExpiredTuple(updatedDeployments, deploymentsTimeAccessor, now, expireAfterMillis)
+            updateSimulationsForPeriod(firstMinute, lastMinute, affectedTerminals)
+            pushStateIfReady()
+        }
 
         pullAll()
         log.info(s"inLoads Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
