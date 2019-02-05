@@ -156,10 +156,12 @@ class StaffMinutesSpec extends CrunchTestLike {
     val endDate1 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
     val assignment1 = StaffAssignment("shift a", "T1", startDate1, endDate1, 10, None)
     val initialShifts = ShiftAssignments(Seq(assignment1))
+
     val startDate2 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
     val endDate2 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
     val assignment2 = StaffAssignment("egate monitor", "T1", startDate2, endDate2, 2, None)
     val initialFixedPoints = FixedPointAssignments(Seq(assignment2))
+
     val flight = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = scheduled, actPax = Option(100))
 
     val crunch = runCrunchGraph(
@@ -309,7 +311,6 @@ class StaffMinutesSpec extends CrunchTestLike {
         val minutesInOrder = ps.crunchMinutes.values.toList.sortBy(cm => (cm.minute, cm.queueName)).take(10)
         val deployments = minutesInOrder.map(cm => (cm.queueName, SDate(cm.minute), cm.deployedDesks.getOrElse(0))).toSet
 
-        println(s"deployments: $deployments")
         deployments == expectedCrunchDeployments
     }
 

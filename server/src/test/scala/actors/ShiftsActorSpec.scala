@@ -24,6 +24,8 @@ object StaffAssignmentGenerator {
 }
 
 class ShiftsActorSpec extends TestKit(ActorSystem("ShiftsActorSpec", ConfigFactory.parseMap(Map(
+  "akka.log-dead-letters" -> 0,
+  "akka.actor.warn-about-java-serializer-usage" -> false,
   "akka.persistence.journal.plugin" -> "akka.persistence.journal.leveldb",
   "akka.persistence.journal.leveldb.dir" -> PersistenceHelper.dbLocation,
   "akka.persistence.snapshot-store.plugin" -> "akka.persistence.snapshot-store.local",
@@ -41,7 +43,7 @@ class ShiftsActorSpec extends TestKit(ActorSystem("ShiftsActorSpec", ConfigFacto
   }
 
   import StaffAssignmentGenerator._
-  
+
   "Shifts actor" should {
     "remember a shift staff assignment added before a shutdown" in {
       val startTime = MilliDate(SDate(s"2017-01-01T07:00").millisSinceEpoch)

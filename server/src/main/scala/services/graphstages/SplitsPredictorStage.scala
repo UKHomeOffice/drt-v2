@@ -5,6 +5,7 @@ import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
+import services.SDate
 import services.prediction.{SparkSplitsPredictor, SplitsPredictorFactoryLike}
 
 
@@ -24,6 +25,7 @@ class DummySplitsPredictor() extends SplitsPredictorBase {
 
       setHandler(in, new InHandler {
         override def onPush(): Unit = {
+          val start = SDate.now()
           log.info(s"Dummy predictor onPush() - grabbing arrivals")
           grab(in)
           haveGrabbed = true
@@ -31,11 +33,13 @@ class DummySplitsPredictor() extends SplitsPredictorBase {
             log.info(s"Dummy predictor pull(in)")
             pull(in)
           }
+          log.info(s"in Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
         }
       })
 
       setHandler(out, new OutHandler {
         override def onPull(): Unit = {
+          val start = SDate.now()
           log.info(s"Dummy predictor onPull()")
           if (haveGrabbed && isAvailable(out)) {
             log.info(s"Dummy predictor pushing empty results")
@@ -46,6 +50,7 @@ class DummySplitsPredictor() extends SplitsPredictorBase {
             log.info(s"Dummy predictor pull(in)")
             pull(in)
           }
+          log.info(s"out Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
         }
       })
     }
