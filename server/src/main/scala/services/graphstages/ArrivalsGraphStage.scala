@@ -96,9 +96,9 @@ class ArrivalsGraphStage(name: String = "",
       log.info(s"${filteredArrivals.size} arrivals after filtering: $filteredArrivals")
       sourceType match {
         case LiveArrivals =>
+          liveArrivals = incomingArrivals.map(arrival => (arrival.uniqueId, arrival)).toMap
           val updatedLiveArrivals = updatesFromIncoming(filteredArrivals.values.toSeq, LiveFeedSource)
 
-          liveArrivals = incomingArrivals.map(arrival => (arrival.uniqueId, arrival)).toMap
           merged = updatedLiveArrivals.foldLeft(merged) {
             case (mergedSoFar, updatedArrival) => mergedSoFar.updated(updatedArrival.uniqueId, updatedArrival)
           }
@@ -107,9 +107,9 @@ class ArrivalsGraphStage(name: String = "",
           pushIfAvailable(toPush, outArrivalsDiff)
 
         case ForecastArrivals =>
+          forecastArrivals = incomingArrivals.map(arrival => (arrival.uniqueId, arrival)).toMap
           val updatedForecastArrivals = updatesFromIncoming(filteredArrivals.values.toSeq, ForecastFeedSource)
 
-          forecastArrivals = incomingArrivals.map(arrival => (arrival.uniqueId, arrival)).toMap
           merged = updatedForecastArrivals.foldLeft(merged) {
             case (mergedSoFar, updatedArrival) => mergedSoFar.updated(updatedArrival.uniqueId, updatedArrival)
           }
@@ -206,67 +206,38 @@ class ArrivalsGraphStage(name: String = "",
       } else log.info(s"outMerged not available to push")
     }
 
-    def maybeUpdatedForecastArrival(forecastArrival: Arrival): Option[Arrival] = {
-      liveArrivals.get(forecastArrival.uniqueId) match {
-        case Some(_) =>
-          log.info(s"Ignoring forecast arrival. Live arrival supersedes it")
-          None
-        case None =>
-          baseArrivals.get(forecastArrival.uniqueId) match {
-            case None =>
-              log.info(s"Ignoring forecast arrival. No base arrival found")
-              None
-            case Some(baseArrival) =>
-              val actPax = bestPax(baseArrival, forecastArrival)
-              val mergedArrival = baseArrival.copy(ActPax = actPax, TranPax = forecastArrival.TranPax, Status = forecastArrival.Status, FeedSources = baseArrival.FeedSources ++ forecastArrival.FeedSources)
-              Some(mergedArrival)
-          }
-      }
-    }
-
-    def standariseLiveArrival(liveArrival: Arrival): Arrival = {
-      val baseArrival = baseArrivals.getOrElse(liveArrival.uniqueId, liveArrival)
-      val mergedSoFarArrival = merged.getOrElse(liveArrival.uniqueId, liveArrival)
-      liveArrival.copy(
-        rawIATA = baseArrival.rawIATA,
-        rawICAO = baseArrival.rawICAO,
-        ActPax = bestPax(mergedSoFarArrival, liveArrival),
-        TranPax = bestTransPax(mergedSoFarArrival, liveArrival),
-        FeedSources = liveArrival.FeedSources ++ mergedSoFarArrival.FeedSources
-      )
-    }
-
     def mergeArrivalSourcesAndGetUpdates(base: Map[Int, Arrival], forecast: Map[Int, Arrival], live: Map[Int, Arrival]): Set[Arrival] = baseArrivals
       .foldLeft(Map[Int, Arrival]()) {
         case (updatedArrivalsSoFar, (key, baseArrival)) =>
           val withForecast = merged.get(key) match {
             case Some(mergedArrival) => mergedArrival.copy(FeedSources = mergedArrival.FeedSources + AclFeedSource)
             case None => forecast.get(key) match {
-              case None => baseArrival
-              case Some(forecastArrival) =>
+              case None =>
+                baseArrival.copy(FeedSources = Set(AclFeedSource))
+              case Some(_) =>
                 baseArrival.copy(
-                  ActPax = bestPax(baseArrival, forecastArrival),
-                  TranPax = bestTransPax(forecastArrival, baseArrival),
-                  FeedSources = forecastArrival.FeedSources ++ baseArrival.FeedSources
+                  ActPax = bestPax(key),
+                  TranPax = bestTransPax(key),
+                  FeedSources = Set(AclFeedSource, ForecastFeedSource)
                 )
             }
           }
           val withLive = liveArrivals.get(key) match {
             case None => withForecast
             case Some(liveArrival) =>
-              withForecast.copy(
+              liveArrival.copy(
                 rawIATA = withForecast.rawIATA,
                 rawICAO = withForecast.rawICAO,
-                ActPax = bestPax(withForecast, liveArrival),
-                TranPax = bestTransPax(liveArrival, withForecast),
-                FeedSources = liveArrival.FeedSources ++ withForecast.FeedSources
+                ActPax = bestPax(key),
+                TranPax = bestTransPax(key),
+                Status = bestStatus(key),
+                FeedSources = withForecast.FeedSources + LiveFeedSource
               )
           }
           if (!merged.contains(key) || !merged(key).equals(withLive)) {
             merged = merged.updated(key, withLive)
             updatedArrivalsSoFar.updated(key, withLive)
-          }
-          else updatedArrivalsSoFar
+          } else updatedArrivalsSoFar
       }.values.toSet
 
     def maybeUpdateFromArrival(arrival: Arrival, feedSource: FeedSource): Option[Arrival] = feedSource match {
@@ -280,26 +251,58 @@ class ArrivalsGraphStage(name: String = "",
       val updated = liveArrival.copy(
         rawIATA = baseArrival.rawIATA,
         rawICAO = baseArrival.rawICAO,
-        ActPax = bestPax(baseArrival, liveArrival),
-        TranPax = bestTransPax(baseArrival, liveArrival),
-        FeedSources = liveArrival.FeedSources ++ baseArrival.FeedSources
+        ActPax = bestPax(liveArrival.uniqueId),
+        TranPax = bestTransPax(liveArrival.uniqueId),
+        FeedSources = baseArrival.FeedSources + LiveFeedSource
       )
 
       if (merged.contains(updated.uniqueId) && merged(updated.uniqueId).equals(updated)) None
       else Option(updated)
     }
 
-    def maybeUpdateFromForecastArrival(forecastArrival: Arrival): Option[Arrival] = {
-      merged.get(forecastArrival.uniqueId) match {
-        case None => None
-        case Some(mergedArrival) =>
-          val updated = mergedArrival.copy(
-            ActPax = bestPax(mergedArrival, forecastArrival),
-            TranPax = bestTransPax(mergedArrival, forecastArrival),
-            FeedSources = forecastArrival.FeedSources ++ mergedArrival.FeedSources
-          )
-          if (merged.contains(updated.uniqueId) && merged(updated.uniqueId).equals(updated)) None
-          else Option(updated)
+    def maybeUpdateFromForecastArrival(forecastArrival: Arrival): Option[Arrival] = merged.get(forecastArrival.uniqueId) match {
+      case None => None
+      case Some(mergedArrival) =>
+        val updated = mergedArrival.copy(
+          ActPax = bestPax(forecastArrival.uniqueId),
+          TranPax = bestTransPax(forecastArrival.uniqueId),
+          Status = bestStatus(forecastArrival.uniqueId),
+          FeedSources = mergedArrival.FeedSources + ForecastFeedSource
+        )
+        if (merged.contains(updated.uniqueId) && merged(updated.uniqueId).equals(updated)) None
+        else Option(updated)
+    }
+
+    def bestPax(uniqueId: Int): Option[Int] = liveArrivals.get(uniqueId) match {
+      case Some(liveArrival) if liveArrival.ActPax.exists(_ > 0) => liveArrival.ActPax
+      case _ => forecastArrivals.get(uniqueId) match {
+        case Some(forecastArrival) if forecastArrival.ActPax.exists(_ > 0) => forecastArrival.ActPax
+        case _ => baseArrivals.get(uniqueId) match {
+          case Some(baseArrival) if baseArrival.ActPax.exists(_ > 0) => baseArrival.ActPax
+          case _ => None
+        }
+      }
+    }
+
+    def bestTransPax(uniqueId: Int): Option[Int] = liveArrivals.get(uniqueId) match {
+      case Some(liveArrival) if liveArrival.ActPax.exists(_ > 0) => liveArrival.TranPax
+      case _ => forecastArrivals.get(uniqueId) match {
+        case Some(forecastArrival) if forecastArrival.ActPax.exists(_ > 0) => forecastArrival.TranPax
+        case _ => baseArrivals.get(uniqueId) match {
+          case Some(baseArrival) if baseArrival.ActPax.exists(_ > 0) => baseArrival.TranPax
+          case _ => None
+        }
+      }
+    }
+
+    def bestStatus(uniqueId: Int): String = liveArrivals.get(uniqueId) match {
+      case Some(liveArrival) => liveArrival.Status
+      case _ => forecastArrivals.get(uniqueId) match {
+        case Some(forecastArrival) => forecastArrival.Status
+        case _ => baseArrivals.get(uniqueId) match {
+          case Some(baseArrival) => baseArrival.Status
+          case _ => "Unknown"
+        }
       }
     }
 
@@ -329,17 +332,6 @@ class ArrivalsGraphStage(name: String = "",
       .map(arrival => maybeUpdateFromArrival(arrival, source))
       .collect { case Some(updatedArrival) => updatedArrival }
   }
-
-  def bestTransPax(existingArrival: Arrival, newArrival: Arrival): Option[Int] = newArrival
-    .ActPax
-    .filter(_ > 0)
-    .flatMap(_ => newArrival.TranPax)
-    .orElse(existingArrival.TranPax)
-
-  def bestPax(existingArrival: Arrival, newArrival: Arrival): Option[Int] = newArrival
-    .ActPax
-    .filter(_ > 0)
-    .orElse(existingArrival.ActPax)
 
   val domesticPorts = Seq(
     "ABB", "ABZ", "ACI", "ADV", "ADX", "AYH",

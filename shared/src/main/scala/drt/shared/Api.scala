@@ -166,9 +166,9 @@ case class Arrival(
     }
   }
 
-  def basicForComparison = copy(FeedSources = Set(), LastKnownPax = None, PcpTime = None)
+  def basicForComparison: Arrival = copy(LastKnownPax = None, PcpTime = None)
 
-  def equals(arrival: Arrival) = arrival.basicForComparison == basicForComparison
+  def equals(arrival: Arrival): Boolean = arrival.basicForComparison == basicForComparison
 
   def voyageNumberPadded: String = {
     val number = FlightParsing.parseIataToCarrierCodeVoyageNumber(IATA)
