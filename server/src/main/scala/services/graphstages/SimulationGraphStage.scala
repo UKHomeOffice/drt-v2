@@ -100,13 +100,13 @@ class SimulationGraphStage(name: String = "",
         val lastMinute = firstMinute.addMinutes(minutesToCrunch)
 
         terminalsWithNonZeroStaff(affectedTerminals, firstMinute, lastMinute) match {
-          case noTerminals if noTerminals.isEmpty =>
+          case affectedTerminalsWithStaff if affectedTerminalsWithStaff.isEmpty =>
             log.info(s"No affected terminals with deployments. Skipping simulations")
-          case affectedTerminals =>
-            val deploymentsTimeAccessor = (x: (TerminalName, QueueName, MillisSinceEpoch)) => x._3
-            val updatedDeployments = updateDeployments(affectedTerminals, firstMinute, lastMinute, deployments)
+          case affectedTerminalsWithStaff =>
+            val deploymentsTimeAccessor = { case (_, _, millis) => millis }
+            val updatedDeployments = updateDeployments(affectedTerminalsWithStaff, firstMinute, lastMinute, deployments)
             deployments = Crunch.purgeExpiredTuple(updatedDeployments, deploymentsTimeAccessor, now, expireAfterMillis)
-            updateSimulationsForPeriod(firstMinute, lastMinute, affectedTerminals)
+            updateSimulationsForPeriod(firstMinute, lastMinute, affectedTerminalsWithStaff)
             pushStateIfReady()
         }
 
@@ -230,7 +230,7 @@ class SimulationGraphStage(name: String = "",
       val fullWorkMinutes = minuteMillis.map(m => adjustedWorkloadMinutes.getOrElse(m, 0d))
 
       minuteMillis.map(m => deployments.getOrElse((tn, qn, m), 0)) match {
-        case noDeployedStaff if noDeployedStaff.count(_ > 0) == 0 =>
+        case deployedStaff if deployedStaff.sum == 0 =>
           log.info(s"No deployed staff. Skipping simulations")
           Set()
         case deployedStaff =>
