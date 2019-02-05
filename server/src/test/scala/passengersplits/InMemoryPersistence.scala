@@ -8,6 +8,8 @@ import scala.collection.JavaConversions._
 object InMemoryPersistence {
 
   val akkaAndAggregateDbConfig = ConfigFactory.parseMap(Map(
+    "akka.actor.warn-about-java-serializer-usage" -> false,
+
     "akka.persistence.journal.plugin" -> "inmemory-journal",
     "akka.persistence.no-snapshot-store.class" -> "akka.persistence.snapshot.NoSnapshotStore",
     "akka.persistence.snapshot-store.plugin" -> "inmemory-snapshot-store",
@@ -18,8 +20,3 @@ object InMemoryPersistence {
     "aggregated-db.keepAliveConnection" -> "true"
   ))
 }
-
-
-
-
-

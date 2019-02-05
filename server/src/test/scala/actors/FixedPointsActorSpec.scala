@@ -16,6 +16,8 @@ import scala.language.reflectiveCalls
 
 
 class FixedPointsActorSpec extends TestKit(ActorSystem("FixedPointsActorSpec", ConfigFactory.parseMap(Map(
+  "akka.log-dead-letters" -> 0,
+  "akka.actor.warn-about-java-serializer-usage" -> false,
   "akka.persistence.journal.plugin" -> "akka.persistence.journal.leveldb",
   "akka.persistence.journal.leveldb.dir" -> PersistenceHelper.dbLocation,
   "akka.persistence.snapshot-store.plugin" -> "akka.persistence.snapshot-store.local",
@@ -31,7 +33,7 @@ class FixedPointsActorSpec extends TestKit(ActorSystem("FixedPointsActorSpec", C
     TestKit.shutdownActorSystem(system)
     PersistenceCleanup.deleteJournal(PersistenceHelper.dbLocation)
   }
-  
+
   import StaffAssignmentGenerator._
 
   "FixedPoints actor" should {

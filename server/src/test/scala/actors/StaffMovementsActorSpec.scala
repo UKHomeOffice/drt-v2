@@ -22,6 +22,8 @@ object PersistenceHelper {
 }
 
 class StaffMovementsActorSpec extends TestKit(ActorSystem("StaffMovementsActorSpec", ConfigFactory.parseMap(Map(
+  "akka.log-dead-letters" -> 0,
+  "akka.actor.warn-about-java-serializer-usage" -> false,
   "akka.persistence.journal.plugin" -> "akka.persistence.journal.leveldb",
   "akka.persistence.journal.leveldb.dir" -> PersistenceHelper.dbLocation,
   "akka.persistence.snapshot-store.plugin" -> "akka.persistence.snapshot-store.local",

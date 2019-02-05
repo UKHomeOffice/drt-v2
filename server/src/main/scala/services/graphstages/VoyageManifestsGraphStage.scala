@@ -53,8 +53,10 @@ class VoyageManifestsGraphStage(portCode: String,
     new GraphStageLogic(shape) {
       setHandler(out, new OutHandler {
         override def onPull(): Unit = {
+          val start = SDate.now()
           fetchAndUpdateState()
           pushManifests()
+          log.info(s"out Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
         }
       })
 

@@ -105,7 +105,6 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       crunch.liveTestProbe.receiveWhile(5 seconds) {
         case ps: PortState =>
           val portStateSources = ps.flights.values.flatMap(_.apiFlight.FeedSources).toSet
-          println("HERE: "+ portStateSources)
           if (portStateSources.size > feedSources.size)
           feedSources =portStateSources
       }

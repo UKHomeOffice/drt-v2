@@ -83,7 +83,6 @@ class ArrivalsGraphStage(name: String = "",
           log.info(s"Grabbed ${flights.length} arrivals from connection at ${connectedAt.toISOString()}")
           if (flights.nonEmpty || sourceType == BaseArrivals) handleIncomingArrivals(sourceType, flights)
           else log.info(s"No arrivals to handle")
-
         case ArrivalsFeedFailure(message, failedAt) =>
           log.warn(s"$arrivalsInlet failed at ${failedAt.toISOString()}: $message")
       }

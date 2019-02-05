@@ -5,7 +5,8 @@ import akka.stream.stage._
 import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, ArrivalsFeedResponse}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import services.SDate
 
 final class ArrivalsDiffingStage(initialKnownArrivals: Seq[Arrival]) extends GraphStage[FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse]] {
   val in: Inlet[ArrivalsFeedResponse] = Inlet[ArrivalsFeedResponse]("DiffingStage.in")
@@ -26,6 +27,7 @@ final class ArrivalsDiffingStage(initialKnownArrivals: Seq[Arrival]) extends Gra
 
     setHandlers(in, out, new InHandler with OutHandler {
       override def onPush(): Unit = {
+        val start = SDate.now()
         if (maybeResponseToPush.isEmpty) {
           log.info(s"Incoming ArrivalsFeedResponse")
           maybeResponseToPush = processFeedResponse(grab(in))
@@ -33,12 +35,16 @@ final class ArrivalsDiffingStage(initialKnownArrivals: Seq[Arrival]) extends Gra
 
         if (isAvailable(out))
           pushAndClear()
+
+        log.info(s"onPush Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
 
       override def onPull(): Unit = {
+        val start = SDate.now()
         pushAndClear()
 
         if (!hasBeenPulled(in)) pull(in)
+        log.info(s"onPull Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
 

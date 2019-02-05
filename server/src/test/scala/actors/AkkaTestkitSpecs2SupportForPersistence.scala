@@ -24,6 +24,7 @@ object PersistenceCleanup {
 }
 
 abstract class AkkaTestkitSpecs2SupportForPersistence(val dbLocation: String) extends TestKit(ActorSystem("testActorSystem", ConfigFactory.parseMap(Map(
+  "akka.actor.warn-about-java-serializer-usage" -> false,
   "akka.persistence.journal.plugin" -> "akka.persistence.journal.leveldb",
   "akka.persistence.no-snapshot-store.class" -> "akka.persistence.snapshot.NoSnapshotStore",
   "akka.persistence.journal.leveldb.dir" -> dbLocation,

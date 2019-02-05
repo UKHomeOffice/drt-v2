@@ -13,6 +13,7 @@ import services.SDate
 import services.graphstages.Crunch.{LoadMinute, Loads}
 import services.graphstages.{Crunch, WorkloadGraphStage}
 
+import scala.collection.immutable.Seq
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
@@ -107,6 +108,7 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
     val workloadWindow = (_: Set[ApiFlightWithSplits], _: Set[ApiFlightWithSplits]) => Option((workloadStart(SDate(scheduled)), workloadEnd(SDate(scheduled))))
     val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
     val testAirportConfig = airportConfig.copy(
+      terminalNames = Seq("T1"),
       queues = Map("T1" -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.Transfer)),
       defaultProcessingTimes = procTimes
     )

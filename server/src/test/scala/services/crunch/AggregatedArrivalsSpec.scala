@@ -49,29 +49,24 @@ class TestAggregatedArrivalsActor(portCode: String, arrivalTable: ArrivalTableLi
 
 class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
   override def before: Any = {
-    println(s"before()")
     clearDatabase()
   }
 
   val table = ArrivalTable(airportConfig.portCode, H2Tables)
 
   def clearDatabase(): Unit = {
-    println(s"clearDatabase")
     Try(dropTables())
     createTables()
   }
 
   def createTables(): Unit = {
-    println(s"attempting to create db")
     H2Tables.schema.createStatements.toList.foreach { query =>
-      println(s"query: $query")
       Await.ready(table.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10 seconds)
     }
   }
 
   def dropTables(): Unit = {
     H2Tables.schema.dropStatements.toList.reverse.foreach { query =>
-      println(s"query: $query")
       Await.ready(table.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10 seconds)
     }
   }

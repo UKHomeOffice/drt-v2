@@ -50,6 +50,7 @@ class CrunchLoadGraphStage(name: String = "",
 
     setHandler(inLoads, new InHandler {
       override def onPush(): Unit = {
+        val start = SDate.now()
         val incomingLoads = grab(inLoads)
         log.info(s"Received ${incomingLoads.loadMinutes.size} loads")
 
@@ -81,6 +82,7 @@ class CrunchLoadGraphStage(name: String = "",
         pushStateIfReady()
 
         pullLoads()
+        log.info(s"inLoads Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
 
@@ -103,9 +105,11 @@ class CrunchLoadGraphStage(name: String = "",
                 val adjustedWorkMinutes = if (qn == Queues.EGate) fullWorkMinutes.map(_ / airportConfig.eGateBankSize) else fullWorkMinutes
                 val fullPaxMinutes = minuteMillis.map(m => paxMinutes.getOrElse(m, 0d))
                 val (minDesks, maxDesks) = minMaxDesksForQueue(minuteMillis, tn, qn)
+                val start = SDate.now()
                 val triedResult: Try[OptimizerCrunchResult] = crunch(adjustedWorkMinutes, minDesks, maxDesks, OptimizerConfig(sla))
                 triedResult match {
                   case Success(OptimizerCrunchResult(desks, waits)) =>
+                    log.info(s"Optimizer for $qn Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
                     minuteMillis.zipWithIndex.map {
                       case (minute, idx) =>
                         val wl = fullWorkMinutes(idx)
@@ -162,9 +166,10 @@ class CrunchLoadGraphStage(name: String = "",
 
     setHandler(outDeskRecMinutes, new OutHandler {
       override def onPull(): Unit = {
-        log.debug(s"outLoads onPull called")
+        val start = SDate.now()
         pushStateIfReady()
         pullLoads()
+        log.info(s"outDeskRecMinutes Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
 
