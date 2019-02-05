@@ -2,7 +2,7 @@ package services.graphstages
 
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import drt.shared.CrunchApi._
+import drt.shared.CrunchApi.{MillisSinceEpoch, _}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
@@ -103,7 +103,9 @@ class SimulationGraphStage(name: String = "",
           case affectedTerminalsWithStaff if affectedTerminalsWithStaff.isEmpty =>
             log.info(s"No affected terminals with deployments. Skipping simulations")
           case affectedTerminalsWithStaff =>
-            val deploymentsTimeAccessor = { case (_, _, millis) => millis }
+            val deploymentsTimeAccessor = (tqm: (TerminalName, QueueName, MillisSinceEpoch)) => tqm match {
+              case (_, _, millis) => millis
+            }
             val updatedDeployments = updateDeployments(affectedTerminalsWithStaff, firstMinute, lastMinute, deployments)
             deployments = Crunch.purgeExpiredTuple(updatedDeployments, deploymentsTimeAccessor, now, expireAfterMillis)
             updateSimulationsForPeriod(firstMinute, lastMinute, affectedTerminalsWithStaff)

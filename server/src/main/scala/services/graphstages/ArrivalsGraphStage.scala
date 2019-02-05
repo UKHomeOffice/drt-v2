@@ -81,7 +81,7 @@ class ArrivalsGraphStage(name: String = "",
       grab(arrivalsInlet) match {
         case ArrivalsFeedSuccess(Flights(flights), connectedAt) =>
           log.info(s"Grabbed ${flights.length} arrivals from connection at ${connectedAt.toISOString()}")
-          if (flights.nonEmpty) {
+          if (flights.nonEmpty || sourceType == BaseArrivals) {
             handleIncomingArrivals(sourceType, flights)
             mergeAllSourcesAndPush(baseArrivals, forecastArrivals, liveArrivals)
           }
