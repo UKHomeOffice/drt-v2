@@ -103,7 +103,7 @@ class ArrivalsGraphStage(name: String = "",
 
     def handleIncomingArrivals(sourceType: ArrivalsSourceType, incomingArrivals: Seq[Arrival]): Unit = {
       val filteredArrivals = filterAndSetPcp(incomingArrivals)
-      log.info(s"${filteredArrivals.size} arrivals after filtering: $filteredArrivals")
+      log.info(s"${filteredArrivals.size} arrivals after filtering")
       sourceType match {
         case LiveArrivals =>
           liveArrivals = filteredArrivals
