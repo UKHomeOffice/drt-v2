@@ -111,12 +111,10 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
       apiSplits)
 
     val expected = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival.copy(FeedSources = Set(LiveFeedSource, ApiFeedSource)), expectedSplits, None)), Set())
-    println(s"**expected:\n${expected.flights.mkString("\n")}")
 
     probe.fishForMessage(3 seconds) {
       case fs: FlightsWithSplits =>
         val fws = fs.copy(flights = fs.flights.map(f => f.copy(lastUpdated = None)))
-        println(s"*** actual:\n${fws.flights.mkString("\n")}")
         fws == expected
     }
 
