@@ -106,16 +106,22 @@ class ArrivalsGraphStage(name: String = "",
       log.info(s"${filteredArrivals.size} arrivals after filtering")
       sourceType match {
         case LiveArrivals =>
-          liveArrivals = filteredArrivals
+          liveArrivals = updateArrivalsSource(liveArrivals, filteredArrivals)
           toPush = mergeUpdatesFromKeys(liveArrivals.keys)
         case ForecastArrivals =>
-          forecastArrivals = filteredArrivals
+          forecastArrivals = updateArrivalsSource(forecastArrivals, filteredArrivals)
           toPush = mergeUpdatesFromKeys(forecastArrivals.keys)
         case BaseArrivals =>
           baseArrivals = filteredArrivals
           toPush = mergeUpdatesFromAllSources()
       }
       pushIfAvailable(toPush, outArrivalsDiff)
+    }
+
+    def updateArrivalsSource(existingArrivals: Map[Int, Arrival], newArrivals: Map[Int, Arrival]): Map[Int, Arrival] = newArrivals.foldLeft(existingArrivals) {
+      case (arrivalsSoFar, (key, newArrival)) =>
+        if (!arrivalsSoFar.contains(key) || !arrivalsSoFar(key).equals(newArrival)) arrivalsSoFar.updated(key, newArrival)
+        else arrivalsSoFar
     }
 
     def mergeUpdatesFromAllSources(): Option[ArrivalsDiff] = maybeDiffFromAllSources().map(diff => {

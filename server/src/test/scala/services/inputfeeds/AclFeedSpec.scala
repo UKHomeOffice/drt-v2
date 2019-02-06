@@ -247,7 +247,7 @@ class AclFeedSpec extends CrunchTestLike {
 
       val expected = newAcl.flights.map(_.copy(FeedSources = Set(AclFeedSource))).toSet ++
         newLive.flights.map(_.copy(FeedSources = Set(LiveFeedSource))).toSet ++
-        initialLive.flights.map(_.copy(FeedSources = Set(LiveFeedSource, AclFeedSource))).toSet
+        initialLive.flights.map(_.copy(FeedSources = Set(LiveFeedSource))).toSet
 
       crunch.liveTestProbe.fishForMessage(3 seconds) {
         case ps: PortState =>
