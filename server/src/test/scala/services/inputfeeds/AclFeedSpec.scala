@@ -105,9 +105,8 @@ class AclFeedSpec extends CrunchTestLike {
       "When I ask for a crunch " +
       "Then I should see that flight in the CrunchState" >> {
       val scheduled = "2017-01-01T00:00Z"
-      val aclFlight = Flights(List(
-        ArrivalGenerator.apiFlight(flightId = Option(1), actPax = Option(10), schDt = scheduled, iata = "BA0001")
-      ))
+      val arrival = ArrivalGenerator.apiFlight(flightId = Option(1), actPax = Option(10), schDt = scheduled, iata = "BA0001")
+      val aclFlight = Flights(List(arrival))
 
       val fiveMinutes = 600d / 60
 
@@ -117,9 +116,9 @@ class AclFeedSpec extends CrunchTestLike {
 
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlight))
 
-      val expected = Set(ArrivalGenerator.apiFlight(flightId = Option(1), actPax = Option(10), schDt = scheduled, iata = "BA0001"))
+      val expected = Set(arrival.copy(FeedSources = Set(AclFeedSource)))
 
-      crunch.liveTestProbe.fishForMessage(5 seconds) {
+      crunch.liveTestProbe.fishForMessage(3 seconds) {
         case ps: PortState =>
           val flightsResult = ps.flights.values.map(_.apiFlight).toSet
           flightsResult == expected
@@ -146,9 +145,9 @@ class AclFeedSpec extends CrunchTestLike {
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlights))
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
 
-      val expected = Set(liveFlight.copy(rawIATA = aclFlight.rawIATA, rawICAO = aclFlight.rawICAO))
+      val expected = Set(liveFlight.copy(rawIATA = aclFlight.rawIATA, rawICAO = aclFlight.rawICAO, FeedSources = Set(AclFeedSource, LiveFeedSource)))
 
-      crunch.liveTestProbe.fishForMessage(5 seconds) {
+      crunch.liveTestProbe.fishForMessage(3 seconds) {
         case ps: PortState =>
           val flightsResult = ps.flights.values.map(_.apiFlight).toSet
           flightsResult == expected
@@ -176,12 +175,12 @@ class AclFeedSpec extends CrunchTestLike {
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(initialACL))
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(initialLive))
 
-      Thread.sleep(1000) // Let the initial arrivals work their way through the system
+      Thread.sleep(500) // Let the initial arrivals work their way through the system
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(newAcl.toList)))
 
-      val expected = initialLive.flights.toSet ++ newAcl
+      val expected = initialLive.flights.map(_.copy(FeedSources = Set(LiveFeedSource))).toSet ++ newAcl.map(_.copy(FeedSources = Set(AclFeedSource)))
 
-      crunch.liveTestProbe.fishForMessage(5 seconds) {
+      crunch.liveTestProbe.fishForMessage(3 seconds) {
         case ps: PortState =>
           val flightsResult = ps.flights.values.map(_.apiFlight).toSet
           flightsResult == expected
@@ -208,13 +207,13 @@ class AclFeedSpec extends CrunchTestLike {
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(initialAcl))
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(initialLive))
 
-      Thread.sleep(1000) // Let the initial arrivals work their way through the system
+      Thread.sleep(500) // Let the initial arrivals work their way through the system
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(newLive.toList)))
 
-      val expected = newLive.map(_.copy(rawIATA = "BA0001")) + initialAcl2
+      val expected = newLive.map(_.copy(rawIATA = "BA0001", FeedSources = Set(LiveFeedSource, AclFeedSource))) + initialAcl2.copy(FeedSources = Set(AclFeedSource))
 
-      crunch.liveTestProbe.fishForMessage(5 seconds) {
+      crunch.liveTestProbe.fishForMessage(3 seconds) {
         case ps: PortState =>
           val flightsResult = ps.flights.values.map(_.apiFlight).toSet
           flightsResult == expected
@@ -241,14 +240,16 @@ class AclFeedSpec extends CrunchTestLike {
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(initialAcl))
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(initialLive))
 
-      Thread.sleep(1000) // Let the initial arrivals work their way through the system
+      Thread.sleep(500) // Let the initial arrivals work their way through the system
 
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(newAcl))
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(newLive))
 
-      val expected = newAcl.flights.toSet ++ newLive.flights.toSet ++ initialLive.flights.toSet
+      val expected = newAcl.flights.map(_.copy(FeedSources = Set(AclFeedSource))).toSet ++
+        newLive.flights.map(_.copy(FeedSources = Set(LiveFeedSource))).toSet ++
+        initialLive.flights.map(_.copy(FeedSources = Set(LiveFeedSource))).toSet
 
-      crunch.liveTestProbe.fishForMessage(5 seconds) {
+      crunch.liveTestProbe.fishForMessage(3 seconds) {
         case ps: PortState =>
           val flightsResult = ps.flights.values.map(_.apiFlight).toSet
           flightsResult == expected
@@ -262,7 +263,7 @@ class AclFeedSpec extends CrunchTestLike {
       "Then I should still see the arrival, ie it should not have been removed" >> {
       val scheduledLive = "2017-01-01T00:00Z"
 
-      val aclArrival = ArrivalGenerator.apiFlight(actPax = Option(150), schDt = "2017-01-01T00:05Z", iata = "BA0001", status = "forecast")
+      val aclArrival = ArrivalGenerator.apiFlight(actPax = Option(150), schDt = "2017-01-01T00:05Z", iata = "BA0001", status = "forecast", feedSources = Set(AclFeedSource))
 
       val aclInput1 = Flights(Seq(aclArrival))
       val aclInput2 = Flights(Seq(aclArrival))
@@ -276,7 +277,7 @@ class AclFeedSpec extends CrunchTestLike {
         case PortState(f, _, _) => f.values.map(_.apiFlight)
       }
 
-      val nonEmptyFlightsList = List(aclArrival)
+      val nonEmptyFlightsList = List(aclArrival.copy(FeedSources = Set(AclFeedSource)))
       val expected = List(nonEmptyFlightsList)
 
       portStateFlightLists.distinct === expected

@@ -98,20 +98,19 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       val forecastArrival = apiFlight(schDt = forecastScheduled, iata = "BA0001", terminal = "T1", actPax = Option(21), feedSources = Set(ForecastFeedSource))
       val forecastArrivals = ArrivalsFeedSuccess(Flights(List(forecastArrival)))
 
-
       offerAndWait(crunch.forecastArrivalsInput, forecastArrivals)
 
-      var feedSources: Set[FeedSource] = Set[FeedSource]()
-      crunch.liveTestProbe.receiveWhile(5 seconds) {
+      val expected = Set(LiveFeedSource, ForecastFeedSource, AclFeedSource)
+
+      crunch.liveTestProbe.fishForMessage(5 seconds) {
         case ps: PortState =>
           val portStateSources = ps.flights.values.flatMap(_.apiFlight.FeedSources).toSet
-          if (portStateSources.size > feedSources.size)
-          feedSources =portStateSources
+          portStateSources == expected
       }
-      feedSources === Set(LiveFeedSource, ForecastFeedSource, AclFeedSource)
+
+      true
     }
 
   }
-
 
 }

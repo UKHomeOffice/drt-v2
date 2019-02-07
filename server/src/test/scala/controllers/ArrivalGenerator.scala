@@ -29,7 +29,7 @@ object ArrivalGenerator {
                  runwayId: Option[String] = None,
                  baggageReclaimId: Option[String] = None,
                  airportId: String = "",
-                 feedSources: Set[FeedSource] = Set(LiveFeedSource)
+                 feedSources: Set[FeedSource] = Set()
                ): Arrival =
     Arrival(
       FlightID = flightId,
