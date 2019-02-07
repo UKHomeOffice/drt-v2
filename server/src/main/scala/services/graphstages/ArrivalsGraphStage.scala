@@ -2,6 +2,7 @@ package services.graphstages
 
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
@@ -154,12 +155,12 @@ class ArrivalsGraphStage(name: String = "",
     }
 
     def maybeDiffFromAllSources(): Option[ArrivalsDiff] = {
+      purgeExpired()
+
       val existingArrivalsKeys = merged.keys.toSet
       val newArrivalsKeys = baseArrivals.keys.toSet ++ liveArrivals.keys.toSet
       val arrivalsWithUpdates = getUpdatesFromBaseArrivals(baseArrivals)
       arrivalsWithUpdates.foreach(mergedArrival => merged = merged.updated(mergedArrival.uniqueId, mergedArrival))
-
-      purgeExpiredFromMerged()
 
       val removedArrivalsKeys = existingArrivalsKeys -- newArrivalsKeys
 
@@ -168,13 +169,13 @@ class ArrivalsGraphStage(name: String = "",
       else None
     }
 
-    def purgeExpiredFromMerged(): Unit = {
-      val countBeforePurge = merged.size
-      merged = Crunch.purgeExpired(merged, (a: Arrival) => a.PcpTime.getOrElse(0L), now, expireAfterMillis)
-      val countAfterPurge = merged.size
+    def purgeExpired(): Unit = {
+      val scheduledFromArrival: Arrival => MillisSinceEpoch = (a: Arrival) => a.PcpTime.getOrElse(0L)
 
-      val numPurged = countBeforePurge - countAfterPurge
-      if (numPurged > 0) log.info(s"Purged $numPurged expired arrivals during merge. $countAfterPurge arrivals remaining")
+      liveArrivals = Crunch.purgeExpired(liveArrivals, scheduledFromArrival, now, expireAfterMillis)
+      forecastArrivals = Crunch.purgeExpired(forecastArrivals, scheduledFromArrival, now, expireAfterMillis)
+      baseArrivals = Crunch.purgeExpired(baseArrivals, scheduledFromArrival, now, expireAfterMillis)
+      merged = Crunch.purgeExpired(merged, scheduledFromArrival, now, expireAfterMillis)
     }
 
     def filterAndSetPcp(arrivals: Seq[Arrival]): Map[Int, Arrival] = {
