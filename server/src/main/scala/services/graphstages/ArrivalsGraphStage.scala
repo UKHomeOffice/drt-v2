@@ -250,36 +250,22 @@ class ArrivalsGraphStage(name: String = "",
 
     def updateArrival(baseArrival: Arrival, bestArrival: Arrival): Arrival = {
       val key = baseArrival.uniqueId
+      val (pax, transPax) = bestPaxNos(key)
       bestArrival.copy(
         rawIATA = baseArrival.rawIATA,
         rawICAO = baseArrival.rawICAO,
-        ActPax = bestPax(key),
-        TranPax = bestTransPax(key),
+        ActPax = pax,
+        TranPax = transPax,
         Status = bestStatus(key),
         FeedSources = feedSources(key)
       )
     }
 
-    def bestPax(uniqueId: Int): Option[Int] = liveArrivals.get(uniqueId) match {
-      case Some(liveArrival) if liveArrival.ActPax.exists(_ > 0) => liveArrival.ActPax
-      case _ => forecastArrivals.get(uniqueId) match {
-        case Some(forecastArrival) if forecastArrival.ActPax.exists(_ > 0) => forecastArrival.ActPax
-        case _ => baseArrivals.get(uniqueId) match {
-          case Some(baseArrival) if baseArrival.ActPax.exists(_ > 0) => baseArrival.ActPax
-          case _ => None
-        }
-      }
-    }
-
-    def bestTransPax(uniqueId: Int): Option[Int] = liveArrivals.get(uniqueId) match {
-      case Some(liveArrival) if liveArrival.ActPax.exists(_ > 0) => liveArrival.TranPax
-      case _ => forecastArrivals.get(uniqueId) match {
-        case Some(forecastArrival) if forecastArrival.ActPax.exists(_ > 0) => forecastArrival.TranPax
-        case _ => baseArrivals.get(uniqueId) match {
-          case Some(baseArrival) if baseArrival.ActPax.exists(_ > 0) => baseArrival.TranPax
-          case _ => None
-        }
-      }
+    def bestPaxNos(uniqueId: Int): (Option[Int], Option[Int]) = (liveArrivals.get(uniqueId),forecastArrivals.get(uniqueId),baseArrivals.get(uniqueId)) match {
+      case (Some(liveArrival), _, _) if liveArrival.ActPax.exists(_ > 0) => (liveArrival.ActPax, liveArrival.TranPax)
+      case (_, Some(fcstArrival), _) if fcstArrival.ActPax.exists(_ > 0) => (fcstArrival.ActPax, fcstArrival.TranPax)
+      case (_, _, Some(baseArrival)) if baseArrival.ActPax.exists(_ > 0) => (baseArrival.ActPax, baseArrival.TranPax)
+      case _ => (None, None)
     }
 
     def bestStatus(uniqueId: Int): String = liveArrivals.get(uniqueId) match {
