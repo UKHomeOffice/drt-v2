@@ -170,10 +170,10 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
       "Given an initial flight with 20 pax and an old CSV split " +
         "When I request a crunch with new CSV splits of 25% to eea desk " +
-        "Then I should see a pax load of 5 (20 * 0.25)" >> {
+        "Then I should see an EEA pax load of 5 (20 * 0.25), and a Non-EEA pax load of 15 (20 * 0.75)" >> {
         val scheduled = "2017-01-01T00:00Z"
 
-        val flight = ArrivalGenerator.apiFlight(flightId = Option(1), schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(20))
+        val flight = ArrivalGenerator.apiFlight(flightId = Option(1), schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(15))
         val oldSplits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 100, None)), SplitSources.Historical, None, Percentage)
         val initialFlightsWithSplits = Seq(ApiFlightWithSplits(flight, Set(oldSplits), None))
         val initialPortState = PortState(initialFlightsWithSplits.map(f => (f.apiFlight.uniqueId, f)).toMap, Map(), Map())
@@ -187,15 +187,19 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           ),
           csvSplitsProvider = (_, _) => Option(SplitRatios(
             SplitSources.Historical,
-            SplitRatio(eeaMachineReadableToDesk, 0.25)
+            SplitRatio(eeaMachineReadableToDesk, 0.25),
+            SplitRatio(nonVisaNationalToDesk, 0.75)
           )),
           initialPortState = Option(initialPortState)
         )
 
         // Make a change to the arrival to force a crunch
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(flight.copy(Status = "In the air")))))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(flight.copy(Status = "In the air", ActPax = Option(20))))))
 
-        val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(5.0, 0.0, 0.0, 0.0, 0.0)))
+        val expected = Map("T1" -> Map(
+          Queues.EeaDesk -> Seq(5.0, 0.0, 0.0, 0.0, 0.0),
+          Queues.NonEeaDesk -> Seq(15.0, 0.0, 0.0, 0.0, 0.0)
+        ))
 
         crunch.liveTestProbe.fishForMessage(5 seconds) {
           case ps: PortState =>
@@ -236,7 +240,9 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         // Make a change to the arrival to force a crunch
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(flight.copy(Status = "In the air")))))
 
-        val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(10.0, 0.0, 0.0, 0.0, 0.0)))
+        val expected = Map("T1" -> Map(
+          Queues.EeaDesk -> Seq(10.0, 0.0, 0.0, 0.0, 0.0),
+          Queues.NonEeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0)))
 
         crunch.liveTestProbe.fishForMessage(5 seconds) {
           case ps: PortState =>
