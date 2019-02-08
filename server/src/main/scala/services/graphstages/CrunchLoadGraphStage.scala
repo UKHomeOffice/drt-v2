@@ -152,13 +152,6 @@ class CrunchLoadGraphStage(name: String = "",
       }
     }
 
-    def loadDiff(updatedLoads: Set[LoadMinute], existingLoads: Set[LoadMinute]): Set[LoadMinute] = {
-      val loadDiff = updatedLoads -- existingLoads
-      log.info(s"${loadDiff.size} updated load minutes")
-
-      loadDiff
-    }
-
     def mergeLoads(incomingLoads: Set[LoadMinute], existingLoads: Map[TQM, LoadMinute]): Map[TQM, LoadMinute] = incomingLoads
       .foldLeft(existingLoads) {
         case (soFar, load) => soFar.updated(load.uniqueId, load)
