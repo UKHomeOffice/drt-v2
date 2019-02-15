@@ -110,7 +110,7 @@ object CrunchSystem {
     val fcstArrivalsDiffingStage = new ArrivalsDiffingStage(props.initialFcstArrivals.toSeq)
     val liveArrivalsDiffingStage = new ArrivalsDiffingStage(props.initialLiveArrivals.toSeq)
 
-    val arrivalSplitsGraphStage = new ArrivalSplitsGraphStage(
+    val arrivalSplitsGraphStage = new ArrivalSplitsFromAllSourcesGraphStage(
       name = props.logLabel,
       optionalInitialFlights = initialFlightsWithSplits,
       optionalInitialManifests = props.initialManifestsState.map(_.manifests),

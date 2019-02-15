@@ -29,7 +29,7 @@ object RunnableCrunch {
                                        actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
 
                                        arrivalsGraphStage: ArrivalsGraphStage,
-                                       arrivalSplitsStage: ArrivalSplitsGraphStage,
+                                       arrivalSplitsStage: ArrivalSplitsFromAllSourcesGraphStage,
                                        splitsPredictorStage: SplitsPredictorBase,
                                        workloadGraphStage: WorkloadGraphStage,
                                        loadBatchUpdateGraphStage: BatchLoadsByCrunchPeriodGraphStage,

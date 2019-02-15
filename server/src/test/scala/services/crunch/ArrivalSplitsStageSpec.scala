@@ -12,7 +12,7 @@ import passengersplits.core.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import server.feeds.{ManifestsFeedResponse, ManifestsFeedSuccess}
 import services.SDate
-import services.graphstages.{ArrivalSplitsGraphStage, DqManifests}
+import services.graphstages.{ArrivalSplitsFromAllSourcesGraphStage, DqManifests}
 
 import scala.concurrent.duration._
 
@@ -22,7 +22,7 @@ object TestableArrivalSplits {
   def groupByCodeShares(flights: Seq[ApiFlightWithSplits]): Seq[(ApiFlightWithSplits, Set[Arrival])] = flights.map(f => (f, Set(f.apiFlight)))
 
   def apply(splitsCalculator: SplitsCalculator, testProbe: TestProbe, now: () => SDateLike): RunnableGraph[(SourceQueueWithComplete[ArrivalsDiff], SourceQueueWithComplete[ManifestsFeedResponse], SourceQueueWithComplete[Seq[(Arrival, Option[Splits])]])] = {
-    val arrivalSplitsStage = new ArrivalSplitsGraphStage(
+    val arrivalSplitsStage = new ArrivalSplitsFromAllSourcesGraphStage(
       name = "",
       optionalInitialFlights = None,
       optionalInitialManifests = None,

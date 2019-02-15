@@ -18,14 +18,14 @@ import scala.language.postfixOps
 
 case class UpdatedFlights(flights: Map[Int, ApiFlightWithSplits], updatesCount: Int, additionsCount: Int)
 
-class ArrivalSplitsGraphStage(name: String = "",
-                              optionalInitialFlights: Option[FlightsWithSplits],
-                              optionalInitialManifests: Option[Set[VoyageManifest]],
-                              splitsCalculator: SplitsCalculator,
-                              groupFlightsByCodeShares: Seq[ApiFlightWithSplits] => Seq[(ApiFlightWithSplits, Set[Arrival])],
-                              expireAfterMillis: Long,
-                              now: () => SDateLike,
-                              maxDaysToCrunch: Int)
+class ArrivalSplitsFromAllSourcesGraphStage(name: String = "",
+                                            optionalInitialFlights: Option[FlightsWithSplits],
+                                            optionalInitialManifests: Option[Set[VoyageManifest]],
+                                            splitsCalculator: SplitsCalculator,
+                                            groupFlightsByCodeShares: Seq[ApiFlightWithSplits] => Seq[(ApiFlightWithSplits, Set[Arrival])],
+                                            expireAfterMillis: Long,
+                                            now: () => SDateLike,
+                                            maxDaysToCrunch: Int)
   extends GraphStage[FanInShape3[ArrivalsDiff, ManifestsFeedResponse, Seq[(Arrival, Option[Splits])], FlightsWithSplits]] {
 
   val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
