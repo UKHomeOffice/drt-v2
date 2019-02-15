@@ -2,6 +2,7 @@ package server.feeds
 
 import drt.shared.FlightsApi.Flights
 import drt.shared.SDateLike
+import passengersplits.parsing.VoyageManifestParser.BestAvailableManifest
 import services.SDate
 import services.graphstages.{ActualDeskStats, DqManifests}
 
@@ -38,4 +39,16 @@ case class ManifestsFeedFailure(responseMessage: String, createdAt: SDateLike) e
 
 object ManifestsFeedFailure {
   def apply(responseMessage: String): ManifestsFeedResponse = ManifestsFeedFailure(responseMessage, SDate.now())
+}
+
+case class BestManifestsFeedSuccess(manifests: Seq[BestAvailableManifest], createdAt: SDateLike) extends ManifestsFeedResponse
+
+object BestManifestsFeedSuccess {
+  def apply(manifests: Seq[BestAvailableManifest]): ManifestsFeedResponse = BestManifestsFeedSuccess(manifests, SDate.now())
+}
+
+case class BestManifestsFeedFailure(responseMessage: String, createdAt: SDateLike) extends ManifestsFeedResponse
+
+object BestManifestsFeedFailure {
+  def apply(responseMessage: String): ManifestsFeedResponse = BestManifestsFeedFailure(responseMessage, SDate.now())
 }

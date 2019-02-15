@@ -24,6 +24,13 @@ case class SplitsCalculator(portCode: String, csvSplitsProvider: SplitsProvider.
     Splits(withEgateAndFastTrack, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Some(manifest.EventCode), PaxNumbers)
   }
 
+  def bestSplitsForArrival(manifest: VoyageManifestParser.BestAvailableManifest, arrival: Arrival): Splits = {
+    val paxTypeAndQueueCounts = SplitsCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(portCode, manifest).toSet
+    val withEgateAndFastTrack = addEgatesAndFastTrack(arrival, paxTypeAndQueueCounts)
+
+    Splits(withEgateAndFastTrack, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Some(manifest.EventCode), PaxNumbers)
+  }
+
   def terminalAndHistoricSplits(fs: Arrival): Set[Splits] = {
     val historical: Option[Set[ApiPaxTypeAndQueueCount]] = historicalSplits(fs)
     val portDefault: Set[ApiPaxTypeAndQueueCount] = portDefaultSplits.map {
@@ -187,6 +194,21 @@ object SplitsCalculator {
     } else paxInManifest
     val paxTypeInfos: Seq[PassengerTypeCalculator.PaxTypeInfo] = uniquePax.map(passengerInfoFields)
     val paxTypes: Seq[(PaxType, Option[String])] = paxTypeInfos.map(pti => Tuple2(paxTypeFn(pti), pti.nationalityCode))
+    distributeToQueues(paxTypes)
+  }
+
+  def convertBestVoyageManifestIntoPaxTypeAndQueueCounts(portCode: String, manifest: VoyageManifestParser.BestAvailableManifest): Seq[ApiPaxTypeAndQueueCount] = {
+    val paxTypeFn: PartialFunction[PassengerTypeCalculator.PaxTypeInfo, PaxType] = manifest.arrivalPortCode match {
+      case "LHR" => whenTransitMatters(portCode)
+      case _ => mostAirports
+    }
+    val uniquePax = manifest.passengerList
+//    val byIdGrouped: Map[Option[String], List[PassengerInfoJson]] = paxInManifest.groupBy(_.passengerIdentifier)
+//    val uniquePax: Seq[PassengerInfoJson] = if (byIdGrouped.size > 1) byIdGrouped.values.toList.collect {
+//      case head :: _ => head
+//    } else paxInManifest
+//    val paxTypeInfos: Seq[PassengerTypeCalculator.PaxTypeInfo] = uniquePax.map(passengerInfoFields)
+    val paxTypes: Seq[(PaxType, Option[String])] = uniquePax.map(pti => Tuple2(paxTypeFn(pti), pti.nationality))
     distributeToQueues(paxTypes)
   }
 
