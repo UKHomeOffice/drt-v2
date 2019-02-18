@@ -95,7 +95,6 @@ object RunnableCrunch {
         ) =>
           val arrivals = builder.add(arrivalsGraphStage.async)
           val arrivalSplits = if(true) builder.add(arrivalSplitsFromAllSourcesStage.async) else builder.add(arrivalSplitsStage)
-          val splitsPredictor = builder.add(splitsPredictorStage.async)
           val workload = builder.add(workloadGraphStage.async)
           val batchLoad = builder.add(loadBatchUpdateGraphStage.async)
           val crunch = builder.add(crunchLoadGraphStage.async)
@@ -109,7 +108,7 @@ object RunnableCrunch {
           val baseArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
           val fcstArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
           val liveArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
-          val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](2))
+
           val manifestsFanOut = builder.add(Broadcast[ManifestsFeedResponse](2))
           val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](2))
           val workloadFanOut = builder.add(Broadcast[Loads](2))
@@ -143,9 +142,7 @@ object RunnableCrunch {
           fixedPoints ~> staff.in1
           staffMovements ~> staff.in2
 
-          arrivals.out ~> arrivalsGraphKillSwitch ~> arrivalsFanOut ~> arrivalSplits.in0
-                                                     arrivalsFanOut.map(_.toUpdate.toSeq) ~> splitsPredictor
-          
+          arrivals.out ~> arrivalsGraphKillSwitch ~> arrivalSplits.in0
 
           arrivalSplits.out ~> arrivalSplitsFanOut ~> workload
                                arrivalSplitsFanOut ~> portState.in0
