@@ -26,16 +26,15 @@ class ArrivalSplitsFromAllSourcesGraphStage(name: String = "",
                                             expireAfterMillis: Long,
                                             now: () => SDateLike,
                                             maxDaysToCrunch: Int)
-  extends GraphStage[FanInShape3[ArrivalsDiff, ManifestsFeedResponse, Seq[(Arrival, Option[Splits])], FlightsWithSplits]] {
+  extends GraphStage[FanInShape2[ArrivalsDiff, ManifestsFeedResponse,  FlightsWithSplits]] {
 
   val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
   val inArrivalsDiff: Inlet[ArrivalsDiff] = Inlet[ArrivalsDiff]("ArrivalsDiffIn.in")
   val inManifests: Inlet[ManifestsFeedResponse] = Inlet[ManifestsFeedResponse]("SplitsIn.in")
-  val inSplitsPredictions: Inlet[Seq[(Arrival, Option[Splits])]] = Inlet[Seq[(Arrival, Option[Splits])]]("SplitsPredictionsIn.in")
   val outArrivalsWithSplits: Outlet[FlightsWithSplits] = Outlet[FlightsWithSplits]("ArrivalsWithSplitsOut.out")
 
-  override val shape = new FanInShape3(inArrivalsDiff, inManifests, inSplitsPredictions, outArrivalsWithSplits)
+  override val shape = new FanInShape2(inArrivalsDiff, inManifests, outArrivalsWithSplits)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
@@ -132,26 +131,10 @@ class ArrivalSplitsFromAllSourcesGraphStage(name: String = "",
       }
     })
 
-    setHandler(inSplitsPredictions, new InHandler {
-      override def onPush(): Unit = {
-        val start = SDate.now()
-        log.debug(s"inSplitsPredictions onPush called")
-        val predictions = grab(inSplitsPredictions)
 
-        log.info(s"Grabbed ${predictions.length} predictions")
-        val updatedFlights = purgeExpiredArrivals(addPredictions(predictions, flightsByFlightId))
-        val latestDiff = updatedFlights.values.toSet -- flightsByFlightId.values.toSet
-        arrivalsWithSplitsDiff = mergeDiffSets(latestDiff, arrivalsWithSplitsDiff)
-        flightsByFlightId = updatedFlights
-
-        pushStateIfReady()
-        pullAll()
-        log.info(s"inSplitsPredictions Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
-      }
-    })
 
     def pullAll(): Unit = {
-      List(inManifests, inArrivalsDiff, inSplitsPredictions).foreach(in => if (!hasBeenPulled(in)) {
+      List(inManifests, inArrivalsDiff).foreach(in => if (!hasBeenPulled(in)) {
         log.info(s"Pulling ${in.toString}")
         pull(in)
       })

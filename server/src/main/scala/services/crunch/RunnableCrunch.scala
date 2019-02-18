@@ -29,7 +29,8 @@ object RunnableCrunch {
                                        actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
 
                                        arrivalsGraphStage: ArrivalsGraphStage,
-                                       arrivalSplitsStage: ArrivalSplitsFromAllSourcesGraphStage,
+                                       arrivalSplitsFromAllSourcesStage: ArrivalSplitsFromAllSourcesGraphStage,
+                                       arrivalSplitsStage: ArrivalSplitsGraphStage,
                                        splitsPredictorStage: SplitsPredictorBase,
                                        workloadGraphStage: WorkloadGraphStage,
                                        loadBatchUpdateGraphStage: BatchLoadsByCrunchPeriodGraphStage,
@@ -59,6 +60,8 @@ object RunnableCrunch {
     val arrivalsKillSwitch = KillSwitches.single[ArrivalsDiff]
 
     val manifestsKillSwitch = KillSwitches.single[ManifestsFeedResponse]
+
+
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
@@ -91,7 +94,7 @@ object RunnableCrunch {
           manifestGraphKillSwitch
         ) =>
           val arrivals = builder.add(arrivalsGraphStage.async)
-          val arrivalSplits = builder.add(arrivalSplitsStage.async)
+          val arrivalSplits = if(true) builder.add(arrivalSplitsFromAllSourcesStage.async) else builder.add(arrivalSplitsStage)
           val splitsPredictor = builder.add(splitsPredictorStage.async)
           val workload = builder.add(workloadGraphStage.async)
           val batchLoad = builder.add(loadBatchUpdateGraphStage.async)
@@ -142,8 +145,7 @@ object RunnableCrunch {
 
           arrivals.out ~> arrivalsGraphKillSwitch ~> arrivalsFanOut ~> arrivalSplits.in0
                                                      arrivalsFanOut.map(_.toUpdate.toSeq) ~> splitsPredictor
-
-          splitsPredictor.out ~> arrivalSplits.in2
+          
 
           arrivalSplits.out ~> arrivalSplitsFanOut ~> workload
                                arrivalSplitsFanOut ~> portState.in0

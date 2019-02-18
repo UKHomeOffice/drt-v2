@@ -79,7 +79,7 @@ object CrunchSystem {
     val initialFixedPoints = initialFixedPointsState(props.actors("fixed-points"))
     val initialStaffMovements = initialStaffMovementsState(props.actors("staff-movements"))
 
-    val manifests = props.manifestsSource
+    val manifestsSource = props.manifestsSource
     val shiftsSource: Source[ShiftAssignments, SourceQueueWithComplete[ShiftAssignments]] = Source.queue[ShiftAssignments](1, OverflowStrategy.backpressure)
     val fixedPointsSource: Source[FixedPointAssignments, SourceQueueWithComplete[FixedPointAssignments]] = Source.queue[FixedPointAssignments](1, OverflowStrategy.backpressure)
     val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](1, OverflowStrategy.backpressure)
@@ -110,11 +110,21 @@ object CrunchSystem {
     val fcstArrivalsDiffingStage = new ArrivalsDiffingStage(props.initialFcstArrivals.toSeq)
     val liveArrivalsDiffingStage = new ArrivalsDiffingStage(props.initialLiveArrivals.toSeq)
 
-    val arrivalSplitsGraphStage = new ArrivalSplitsFromAllSourcesGraphStage(
+    val arrivalSplitsFromAllSourcesGraphStage = new ArrivalSplitsFromAllSourcesGraphStage(
       name = props.logLabel,
       optionalInitialFlights = initialFlightsWithSplits,
       optionalInitialManifests = props.initialManifestsState.map(_.manifests),
       splitsCalculator = splitsCalculator,
+      groupFlightsByCodeShares = groupFlightsByCodeShares,
+      expireAfterMillis = props.expireAfterMillis,
+      now = props.now,
+      maxDaysToCrunch = props.maxDaysToCrunch)
+
+
+    val arrivalSplitsSourcesGraphStage = new ArrivalSplitsGraphStage(
+      name = props.logLabel,
+      optionalInitialFlights = initialFlightsWithSplits,
+      splitsCalculator = manifests.queues.SplitsCalculator(props.airportConfig.feedPortCode, props.historicalSplitsProvider, props.airportConfig.defaultPaxSplits.splits.toSet),
       groupFlightsByCodeShares = groupFlightsByCodeShares,
       expireAfterMillis = props.expireAfterMillis,
       now = props.now,
@@ -174,8 +184,8 @@ object CrunchSystem {
       now = props.now)
 
     val crunchSystem = RunnableCrunch(
-      props.arrivalsBaseSource, props.arrivalsFcstSource, props.arrivalsLiveSource, manifests, shiftsSource, fixedPointsSource, staffMovementsSource, actualDesksAndQueuesSource,
-      arrivalsStage, arrivalSplitsGraphStage, splitsPredictorStage, workloadGraphStage, loadBatcher, crunchLoadGraphStage, staffGraphStage, staffBatcher, simulationGraphStage, portStateGraphStage, fcstArrivalsDiffingStage, liveArrivalsDiffingStage,
+      props.arrivalsBaseSource, props.arrivalsFcstSource, props.arrivalsLiveSource, manifestsSource, shiftsSource, fixedPointsSource, staffMovementsSource, actualDesksAndQueuesSource,
+      arrivalsStage, arrivalSplitsFromAllSourcesGraphStage, arrivalSplitsSourcesGraphStage, splitsPredictorStage, workloadGraphStage, loadBatcher, crunchLoadGraphStage, staffGraphStage, staffBatcher, simulationGraphStage, portStateGraphStage, fcstArrivalsDiffingStage, liveArrivalsDiffingStage,
       props.actors("base-arrivals").actorRef, props.actors("forecast-arrivals").actorRef, props.actors("live-arrivals").actorRef,
       props.voyageManifestsActor,
       props.liveCrunchStateActor, props.forecastCrunchStateActor,
