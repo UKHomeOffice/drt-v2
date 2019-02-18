@@ -3,7 +3,9 @@ package manifests.passengers
 import drt.shared.PaxType
 import drt.shared.PaxTypes._
 import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.parsing.VoyageManifestParser.{ManifestPassengerProfile, PassengerInfoJson}
+import passengersplits.core.PassengerTypeCalculatorValues._
+import passengersplits.core.PassengerTypeCalculatorValues.DocType
+import passengersplits.parsing.VoyageManifestParser.PassengerInfoJson
 
 object PassengerTypeCalculator {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -16,24 +18,11 @@ object PassengerTypeCalculator {
 
   def passengerInfoFields(pi: PassengerInfoJson) = PaxTypeInfo(pi.DisembarkationPortCode, pi.InTransitFlag, pi.DocumentIssuingCountryCode, pi.DocumentType, pi.NationalityCountryCode)
 
-  def transitMatters(portCode: String): PartialFunction[PaxTypeInfo, PaxType] = {
-    case PaxTypeInfo(_, "Y", _, _, _) => Transit
-    case PaxTypeInfo(Some(disembarkPortCode), _, _, _, _) if disembarkPortCode.nonEmpty && disembarkPortCode != portCode => Transit
-  }
-
   def transitMatters(portCode: String): PartialFunction[ManifestPassengerProfile, PaxType] = {
     case ManifestPassengerProfile(_, _, _, Some(true)) => Transit
-    case ManifestPassengerProfile(_, _, _, _) if disembarkPortCode.nonEmpty && disembarkPortCode != portCode => Transit
   }
 
-  val countryAndDocumentTypes: PartialFunction[PaxTypeInfo, PaxType] = {
-    case PaxTypeInfo(_, _, country, Some(docType), _) if isEea(country) && docType == DocType.Passport => EeaMachineReadable
-    case PaxTypeInfo(_, _, country, _, _) if isEea(country) => EeaNonMachineReadable
-    case PaxTypeInfo(_, _, country, _, _) if !isEea(country) && isVisaNational(country) => VisaNational
-    case PaxTypeInfo(_, _, country, _, _) if !isEea(country) => NonVisaNational
-  }
-
-  val countryAndDocumentTypes2: PartialFunction[ManifestPassengerProfile, PaxType] = {
+  val countryAndDocumentTypes: PartialFunction[ManifestPassengerProfile, PaxType] = {
     case ManifestPassengerProfile(country, Some(docType), _, _) if isEea(country) && docType == DocType.Passport => EeaMachineReadable
     case ManifestPassengerProfile(country, _, _, _) if isEea(country) => EeaNonMachineReadable
     case ManifestPassengerProfile(country, _, _, _) if !isEea(country) && isVisaNational(country) => VisaNational
@@ -46,11 +35,9 @@ object PassengerTypeCalculator {
     case _ => VisaNational
   }
 
-  val mostAirports: PartialFunction[PaxTypeInfo, PaxType] = countryAndDocumentTypes orElse defaultToVisaNational
+  val mostAirports: PartialFunction[ManifestPassengerProfile, PaxType] = countryAndDocumentTypes orElse defaultToVisaNational
 
-  val mostAirports2: PartialFunction[ManifestPassengerProfile, PaxType] = countryAndDocumentTypes2 orElse defaultToVisaNational
-
-  def whenTransitMatters(portCode: String): PartialFunction[PaxTypeInfo, PaxType] = transitMatters(portCode) orElse mostAirports
+  def whenTransitMatters(portCode: String): PartialFunction[ManifestPassengerProfile, PaxType] = transitMatters(portCode) orElse mostAirports
 
   case class Country(name: String, code3Letter: String, isVisaRequired: Boolean)
 

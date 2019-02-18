@@ -6,10 +6,10 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
-import org.slf4j.{Logger, LoggerFactory}
+import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
-import passengersplits.parsing.VoyageManifestParser.{BestAvailableManifest, VoyageManifest}
-import server.feeds.{BestManifestsFeedFailure, ManifestsFeedResponse, BestManifestsFeedSuccess}
+import org.slf4j.{Logger, LoggerFactory}
+import server.feeds.{BestManifestsFeedFailure, BestManifestsFeedSuccess, ManifestsFeedResponse}
 import services._
 
 import scala.collection.immutable.Map
@@ -249,10 +249,10 @@ class ArrivalSplitsGraphStage(name: String = "",
 
     def updateFlightWithManifest(flightWithSplits: ApiFlightWithSplits,
                                  manifest: BestAvailableManifest): ApiFlightWithSplits = {
-      val splitsFromManifest = splitsCalculator.bestSplitsForArrival(manifest, flightWithSplits.apiFlight)
+      val splitsFromManifest: Splits = splitsCalculator.bestSplitsForArrival(manifest, flightWithSplits.apiFlight)
 
       val updatedSplitsSet = flightWithSplits.splits.filterNot {
-        case Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Some(manifest.EventCode), _) => true
+        case Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Some(manifest.source), _) => true
         case _ => false
       } + splitsFromManifest
 
@@ -278,18 +278,6 @@ class ArrivalSplitsGraphStage(name: String = "",
       .values.toSet
   }
 
-  def purgeExpiredManifests(manifests: Map[Int, Set[VoyageManifest]]): Map[Int, Set[VoyageManifest]] = {
-    val expired = hasExpiredForType((m: VoyageManifest) => m.scheduleArrivalDateTime.getOrElse(now()).millisSinceEpoch)
-    val updated = manifests
-      .mapValues(_.filterNot(expired))
-      .filterNot { case (_, ms) => ms.isEmpty }
-
-    val numPurged = manifests.size - updated.size
-    if (numPurged > 0) log.info(s"Purged $numPurged expired manifests")
-
-    updated
-  }
-
   def purgeExpiredArrivals(arrivals: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
     val expired = hasExpiredForType((a: ApiFlightWithSplits) => a.apiFlight.PcpTime.getOrElse(0L))
     val updated = arrivals.filterNot { case (_, a) => expired(a) }
@@ -301,13 +289,6 @@ class ArrivalSplitsGraphStage(name: String = "",
   }
 
   def hasExpiredForType[A](toMillis: A => MillisSinceEpoch): A => Boolean = Crunch.hasExpired[A](now(), expireAfterMillis, toMillis)
-
-  def isNewerThan(thresholdMillis: MillisSinceEpoch, vm: VoyageManifest): Boolean = {
-    vm.scheduleArrivalDateTime match {
-      case None => false
-      case Some(sch) => sch.millisSinceEpoch > thresholdMillis
-    }
-  }
 
   def twoDaysAgo: MillisSinceEpoch = now().millisSinceEpoch - (2 * Crunch.oneDayMillis)
 }

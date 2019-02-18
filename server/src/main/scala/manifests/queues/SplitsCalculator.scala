@@ -5,8 +5,9 @@ import drt.shared.PaxTypes._
 import drt.shared.Queues.EeaDesk
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
+import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile, PassengerTypeCalculator}
+import manifests.passengers.PassengerTypeCalculator._
 import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.core.PassengerTypeCalculator.{mostAirports, passengerInfoFields, whenTransitMatters}
 import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser.PassengerInfoJson
 import services.{FastTrackPercentages, SplitsProvider}
@@ -17,18 +18,12 @@ case class SplitsCalculator(portCode: String, csvSplitsProvider: SplitsProvider.
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def splitsForArrival(manifest: VoyageManifestParser.VoyageManifest, arrival: Arrival): Splits = {
-    val paxTypeAndQueueCounts = SplitsCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(portCode, manifest).toSet
+
+  def bestSplitsForArrival(manifest: BestAvailableManifest, arrival: Arrival): Splits = {
+    val paxTypeAndQueueCounts = SplitsCalculator.convertBestVoyageManifestIntoPaxTypeAndQueueCounts(portCode, manifest).toSet
     val withEgateAndFastTrack = addEgatesAndFastTrack(arrival, paxTypeAndQueueCounts)
 
-    Splits(withEgateAndFastTrack, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Some(manifest.EventCode), PaxNumbers)
-  }
-
-  def bestSplitsForArrival(manifest: VoyageManifestParser.BestAvailableManifest, arrival: Arrival): Splits = {
-    val paxTypeAndQueueCounts = SplitsCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(portCode, manifest).toSet
-    val withEgateAndFastTrack = addEgatesAndFastTrack(arrival, paxTypeAndQueueCounts)
-
-    Splits(withEgateAndFastTrack, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Some(manifest.EventCode), PaxNumbers)
+    Splits(withEgateAndFastTrack, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Some(manifest.source), PaxNumbers)
   }
 
   def terminalAndHistoricSplits(fs: Arrival): Set[Splits] = {
@@ -129,7 +124,7 @@ case class SplitsCalculator(portCode: String, csvSplitsProvider: SplitsProvider.
 
 object SplitsCalculator {
 
-  def countPassengerTypes(paxTypeAndNationalities: Seq[(PaxType, Option[String])]): Map[PaxType, (Int, Option[Map[String, Double]])] = paxTypeAndNationalities
+  def countPassengerTypes(paxTypeAndNationalities: Seq[(PaxType, String)]): Map[PaxType, (Int, Option[Map[String, Double]])] = paxTypeAndNationalities
     .groupBy {
       case (pt, _) => pt
     }
@@ -138,8 +133,8 @@ object SplitsCalculator {
         .groupBy {
           case (_, maybeNat) => maybeNat
         }
-        .collect {
-          case (Some(nat), pax) => (nat, pax.length.toDouble)
+        .map {
+          case (nat, pax) => (nat, pax.length.toDouble)
         }
       if (natCounts.values.sum == ptNats.length)
         Tuple2(ptNats.length, Some(natCounts))
@@ -182,37 +177,18 @@ object SplitsCalculator {
     case otherPaxType => Seq(ApiPaxTypeAndQueueCount(otherPaxType, NonEeaDesk, paxCount, paxNats))
   }
 
-  def convertVoyageManifestIntoPaxTypeAndQueueCounts(portCode: String, manifest: VoyageManifestParser.VoyageManifest): Seq[ApiPaxTypeAndQueueCount] = {
-    val paxTypeFn = manifest.ArrivalPortCode match {
-      case "LHR" => whenTransitMatters(portCode)
-      case _ => mostAirports
-    }
-    val paxInManifest = manifest.PassengerList
-    val byIdGrouped: Map[Option[String], List[PassengerInfoJson]] = paxInManifest.groupBy(_.PassengerIdentifier)
-    val uniquePax: Seq[PassengerInfoJson] = if (byIdGrouped.size > 1) byIdGrouped.values.toList.collect {
-      case head :: _ => head
-    } else paxInManifest
-    val paxTypeInfos: Seq[PassengerTypeCalculator.PaxTypeInfo] = uniquePax.map(passengerInfoFields)
-    val paxTypes: Seq[(PaxType, Option[String])] = paxTypeInfos.map(pti => Tuple2(paxTypeFn(pti), pti.nationalityCode))
-    distributeToQueues(paxTypes)
-  }
-
-  def convertBestVoyageManifestIntoPaxTypeAndQueueCounts(portCode: String, manifest: VoyageManifestParser.BestAvailableManifest): Seq[ApiPaxTypeAndQueueCount] = {
-    val paxTypeFn: PartialFunction[PassengerTypeCalculator.PaxTypeInfo, PaxType] = manifest.arrivalPortCode match {
+  def convertBestVoyageManifestIntoPaxTypeAndQueueCounts(portCode: String, manifest: BestAvailableManifest): Seq[ApiPaxTypeAndQueueCount] = {
+    val paxTypeFn: PartialFunction[ManifestPassengerProfile, PaxType] = manifest.arrivalPortCode match {
       case "LHR" => whenTransitMatters(portCode)
       case _ => mostAirports
     }
     val uniquePax = manifest.passengerList
-//    val byIdGrouped: Map[Option[String], List[PassengerInfoJson]] = paxInManifest.groupBy(_.passengerIdentifier)
-//    val uniquePax: Seq[PassengerInfoJson] = if (byIdGrouped.size > 1) byIdGrouped.values.toList.collect {
-//      case head :: _ => head
-//    } else paxInManifest
-//    val paxTypeInfos: Seq[PassengerTypeCalculator.PaxTypeInfo] = uniquePax.map(passengerInfoFields)
-    val paxTypes: Seq[(PaxType, Option[String])] = uniquePax.map(pti => Tuple2(paxTypeFn(pti), pti.nationality))
+
+    val paxTypes: Seq[(PaxType, String)] = uniquePax.map(passengerProfile => Tuple2(paxTypeFn(passengerProfile), passengerProfile.nationality))
     distributeToQueues(paxTypes)
   }
 
-  def distributeToQueues(paxTypeAndNationalities: Seq[(PaxType, Option[String])]): Seq[ApiPaxTypeAndQueueCount] = {
+  def distributeToQueues(paxTypeAndNationalities: Seq[(PaxType, String)]): Seq[ApiPaxTypeAndQueueCount] = {
     val paxTypeCountAndNats: Map[PaxType, (Int, Option[Map[String, Double]])] = SplitsCalculator.countPassengerTypes(paxTypeAndNationalities)
     val disabledEgatePercentage = 0d
 
