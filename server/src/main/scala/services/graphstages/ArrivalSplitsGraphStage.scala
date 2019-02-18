@@ -7,7 +7,7 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.core.SplitsCalculator
+import manifests.queues.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser.{BestAvailableManifest, VoyageManifest}
 import server.feeds.{BestManifestsFeedFailure, ManifestsFeedResponse, BestManifestsFeedSuccess}
 import services._
@@ -16,7 +16,7 @@ import scala.collection.immutable.Map
 import scala.language.postfixOps
 
 
-case class UpdatedFlights(flights: Map[Int, ApiFlightWithSplits], updatesCount: Int, additionsCount: Int)
+//case class UpdatedFlights(flights: Map[Int, ApiFlightWithSplits], updatesCount: Int, additionsCount: Int)
 
 class ArrivalSplitsGraphStage(name: String = "",
                               optionalInitialFlights: Option[FlightsWithSplits],

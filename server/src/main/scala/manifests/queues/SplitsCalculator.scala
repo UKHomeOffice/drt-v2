@@ -1,4 +1,4 @@
-package passengersplits.core
+package manifests.queues
 
 import drt.shared.PassengerSplits.PaxTypeAndQueueCounts
 import drt.shared.PaxTypes._
@@ -18,6 +18,13 @@ case class SplitsCalculator(portCode: String, csvSplitsProvider: SplitsProvider.
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def splitsForArrival(manifest: VoyageManifestParser.VoyageManifest, arrival: Arrival): Splits = {
+    val paxTypeAndQueueCounts = SplitsCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(portCode, manifest).toSet
+    val withEgateAndFastTrack = addEgatesAndFastTrack(arrival, paxTypeAndQueueCounts)
+
+    Splits(withEgateAndFastTrack, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Some(manifest.EventCode), PaxNumbers)
+  }
+
+  def bestSplitsForArrival(manifest: VoyageManifestParser.BestAvailableManifest, arrival: Arrival): Splits = {
     val paxTypeAndQueueCounts = SplitsCalculator.convertVoyageManifestIntoPaxTypeAndQueueCounts(portCode, manifest).toSet
     val withEgateAndFastTrack = addEgatesAndFastTrack(arrival, paxTypeAndQueueCounts)
 
@@ -187,6 +194,21 @@ object SplitsCalculator {
     } else paxInManifest
     val paxTypeInfos: Seq[PassengerTypeCalculator.PaxTypeInfo] = uniquePax.map(passengerInfoFields)
     val paxTypes: Seq[(PaxType, Option[String])] = paxTypeInfos.map(pti => Tuple2(paxTypeFn(pti), pti.nationalityCode))
+    distributeToQueues(paxTypes)
+  }
+
+  def convertBestVoyageManifestIntoPaxTypeAndQueueCounts(portCode: String, manifest: VoyageManifestParser.BestAvailableManifest): Seq[ApiPaxTypeAndQueueCount] = {
+    val paxTypeFn: PartialFunction[PassengerTypeCalculator.PaxTypeInfo, PaxType] = manifest.arrivalPortCode match {
+      case "LHR" => whenTransitMatters(portCode)
+      case _ => mostAirports
+    }
+    val uniquePax = manifest.passengerList
+//    val byIdGrouped: Map[Option[String], List[PassengerInfoJson]] = paxInManifest.groupBy(_.passengerIdentifier)
+//    val uniquePax: Seq[PassengerInfoJson] = if (byIdGrouped.size > 1) byIdGrouped.values.toList.collect {
+//      case head :: _ => head
+//    } else paxInManifest
+//    val paxTypeInfos: Seq[PassengerTypeCalculator.PaxTypeInfo] = uniquePax.map(passengerInfoFields)
+    val paxTypes: Seq[(PaxType, Option[String])] = uniquePax.map(pti => Tuple2(paxTypeFn(pti), pti.nationality))
     distributeToQueues(paxTypes)
   }
 
