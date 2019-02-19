@@ -9,14 +9,12 @@ import drt.shared._
 import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{BestManifestsFeedFailure, BestManifestsFeedSuccess, ManifestsFeedResponse}
+import server.feeds._
 import services._
 
 import scala.collection.immutable.Map
 import scala.language.postfixOps
 
-
-//case class UpdatedFlights(flights: Map[Int, ApiFlightWithSplits], updatesCount: Int, additionsCount: Int)
 
 class ArrivalSplitsGraphStage(name: String = "",
                               optionalInitialFlights: Option[FlightsWithSplits],
@@ -91,7 +89,15 @@ class ArrivalSplitsGraphStage(name: String = "",
       override def onPush(): Unit = {
         val start = SDate.now()
         log.debug(s"inSplits onPush called")
-        grab(inManifests) match {
+
+        val incoming: ManifestsFeedResponse = grab(inManifests) match {
+          case ManifestsFeedSuccess(DqManifests(_, manifests), createdAt) =>
+            BestManifestsFeedSuccess(manifests.toSeq.map(BestAvailableManifest(_)), createdAt)
+          case ManifestsFeedFailure(msg, createdAt) => BestManifestsFeedFailure(msg, createdAt)
+          case other => other
+        }
+
+        incoming match {
           case BestManifestsFeedSuccess(bestAvailableManifests, connectedAt) =>
             log.info(s"Grabbed ${bestAvailableManifests.size} BestAvailableManifests from connection at ${connectedAt.toISOString()}")
 
@@ -106,6 +112,8 @@ class ArrivalSplitsGraphStage(name: String = "",
 
           case BestManifestsFeedFailure(message, failedAt) =>
             log.info(s"$inManifests failed at ${failedAt.toISOString()}: $message")
+
+          case unexpected => log.error(s"Unexpected feed response: ${unexpected.getClass}")
         }
         pullAll()
         log.info(s"inManifests Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")

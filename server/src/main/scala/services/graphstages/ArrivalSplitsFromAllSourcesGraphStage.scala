@@ -89,7 +89,7 @@ class ArrivalSplitsFromAllSourcesGraphStage(name: String = "",
         log.debug(s"inFlights onPush called")
         val arrivalsDiff = grab(inArrivalsDiff)
 
-        log.info(s"Grabbed ${arrivalsDiff.toUpdate.size} updates, ${arrivalsDiff.toRemove.size} removals")
+        log.info(s"Grabbed ${arrivalsDiff.toUpdate.size} arrival updates, ${arrivalsDiff.toRemove.size} removals")
 
         val updatedFlights = purgeExpiredArrivals(updateFlightsFromIncoming(arrivalsDiff, flightsByFlightId))
         val latestDiff = updatedFlights.values.toSet -- flightsByFlightId.values.toSet
@@ -107,10 +107,10 @@ class ArrivalSplitsFromAllSourcesGraphStage(name: String = "",
     setHandler(inManifests, new InHandler {
       override def onPush(): Unit = {
         val start = SDate.now()
-        log.debug(s"inSplits onPush called")
+        log.debug(s"inManifests onPush called")
         grab(inManifests) match {
           case ManifestsFeedSuccess(dqManifests, connectedAt) =>
-            log.info(s"Grabbed ${dqManifests.manifests.size} arrivals from connection at ${connectedAt.toISOString()}")
+            log.info(s"Grabbed ${dqManifests.manifests.size} manifests from connection at ${connectedAt.toISOString()}")
 
             val updatedFlights = purgeExpiredArrivals(updateFlightsWithManifests(dqManifests.manifests, flightsByFlightId))
             log.info(s"We now have ${updatedFlights.size} arrivals")
@@ -299,6 +299,7 @@ class ArrivalSplitsFromAllSourcesGraphStage(name: String = "",
       if (isAvailable(outArrivalsWithSplits)) {
         if (arrivalsWithSplitsDiff.nonEmpty || arrivalsToRemove.nonEmpty) {
           log.info(s"Pushing ${arrivalsWithSplitsDiff.size} updated arrivals with splits and ${arrivalsToRemove.size} removals")
+          log.info(s"Splits: ${arrivalsWithSplitsDiff.take(1).map(_.splits)}")
           push(outArrivalsWithSplits, FlightsWithSplits(arrivalsWithSplitsDiff.toSeq, arrivalsToRemove))
           arrivalsWithSplitsDiff = Set()
           arrivalsToRemove = Set()

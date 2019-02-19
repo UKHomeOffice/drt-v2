@@ -4,7 +4,7 @@ import akka.NotUsed
 import akka.actor.{ActorSystem, Cancellable}
 import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.{Materializer, QueueOfferResult}
-import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
+import akka.stream.scaladsl.{Sink, SinkQueueWithCancel, Source, SourceQueueWithComplete}
 import drt.server.feeds.api.ApiProviderLike
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.DqEventCodes
@@ -18,11 +18,13 @@ import services.graphstages.DqManifests
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
+import scala.language.postfixOps
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
-case class ManifestQueueManager(sourceQueue: SourceQueueWithComplete[ManifestsFeedResponse], portCode: String, initialLastSeenFileName: String, provider: ApiProviderLike)
-                               (implicit actorSystem: ActorSystem, materializer: Materializer) {
+
+class ManifestQueueManager(sourceQueue: SourceQueueWithComplete[ManifestsFeedResponse], portCode: String, initialLastSeenFileName: String, provider: ApiProviderLike)
+                          (implicit actorSystem: ActorSystem, materializer: Materializer) {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -76,12 +78,12 @@ case class ManifestQueueManager(sourceQueue: SourceQueueWithComplete[ManifestsFe
   }
 
   val tickingSource: Source[Unit, Cancellable] = Source.tick(0 seconds, 1 minute, NotUsed).map(_ => {
+    log.info(s"Ticking API stuff")
     sourceQueue.offer(fetchNewManifests(lastSeenFileName)).map {
-      case Enqueued =>
+      case Enqueued => log.info("Manifests enqueued successfully")
       case error => log.error(s"Failed to add manifest response to queue: $error")
     }
   })
 
-  def startPollingForManifests() = tickingSource.runWith(Sink.queue())
-
+  def startPollingForManifests(): SinkQueueWithCancel[Unit] = tickingSource.runWith(Sink.queue())
 }

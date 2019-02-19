@@ -30,7 +30,7 @@ import org.joda.time.DateTimeZone
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import server.feeds.acl.AclFeed
-import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse}
+import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse, ManifestsFeedSuccess}
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services.SplitsProvider.SplitProvider
 import services._
@@ -207,7 +207,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         val initialPortState: Option[PortState] = mergePortStates(maybeLiveState, maybeForecastState)
         val crunchInputs: CrunchSystem[Cancellable] = startCrunchSystem(initialPortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, params.recrunchOnStart)
 
-        ManifestQueueManager(crunchInputs.manifestsResponse, airportConfig.portCode, latestZipFileName, s3ApiProvider).startPollingForManifests()
+        new ManifestQueueManager(crunchInputs.manifestsResponse, airportConfig.portCode, latestZipFileName, s3ApiProvider).startPollingForManifests()
 
         subscribeStaffingActors(crunchInputs)
         startScheduledFeedImports(crunchInputs)
