@@ -4,8 +4,8 @@ import actors.Sizes.oneMegaByte
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
 import akka.pattern.AskableActorRef
-import akka.stream.Materializer
-import akka.stream.scaladsl.Source
+import akka.stream.{Materializer, OverflowStrategy}
+import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.util.Timeout
 import com.amazonaws.auth.AWSCredentials
 import com.typesafe.config.ConfigFactory
@@ -24,6 +24,7 @@ import drt.server.feeds.ltn.LtnLiveFeed
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared._
+import manifests.passengers.ManifestQueueManager
 import org.apache.spark.sql.SparkSession
 import org.joda.time.DateTimeZone
 import play.api.Configuration
@@ -169,11 +170,12 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   val s3ApiProvider = S3ApiProvider(params.awSCredentials, params.dqZipBucketName)
   val initialManifestsState: Option[VoyageManifestState] = manifestsState
-  val maybeLatestZipFileName: String = initialManifestsState.map(_.latestZipFilename).getOrElse("")
+  val latestZipFileName: String = initialManifestsState.map(_.latestZipFilename).getOrElse("")
 
-  lazy val voyageManifestsStage: Source[ManifestsFeedResponse, NotUsed] = Source.fromGraph(
-    new VoyageManifestsGraphStage(airportConfig.feedPortCode, s3ApiProvider, maybeLatestZipFileName, params.apiS3PollFrequencyMillis)
-  )
+  //  lazy val voyageManifestsStage: Source[ManifestsFeedResponse, _] = if (true) Source.fromGraph(
+  //    new VoyageManifestsGraphStage(airportConfig.feedPortCode, s3ApiProvider, maybeLatestZipFileName, params.apiS3PollFrequencyMillis)
+  //  ) else Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
+  lazy val voyageManifestsStage: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
 
   system.log.info(s"useNationalityBasedProcessingTimes: ${params.useNationalityBasedProcessingTimes}")
   system.log.info(s"useSplitsPrediction: ${params.useSplitsPrediction}")
@@ -203,7 +205,10 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       case Success((maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals)) =>
         system.log.info(s"Successfully restored initial state for App")
         val initialPortState: Option[PortState] = mergePortStates(maybeLiveState, maybeForecastState)
-        val crunchInputs: CrunchSystem[Cancellable, NotUsed] = startCrunchSystem(initialPortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, params.recrunchOnStart)
+        val crunchInputs: CrunchSystem[Cancellable] = startCrunchSystem(initialPortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, params.recrunchOnStart)
+
+        ManifestQueueManager(crunchInputs.manifestsResponse, airportConfig.portCode, latestZipFileName, s3ApiProvider).startPollingForManifests()
+
         subscribeStaffingActors(crunchInputs)
         startScheduledFeedImports(crunchInputs)
       case Failure(error) =>
@@ -234,14 +239,14 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     case _ => (tIn: TerminalName) => s"T${tIn.take(1)}"
   }
 
-  def startScheduledFeedImports(crunchInputs: CrunchSystem[Cancellable, NotUsed]): Unit = {
+  def startScheduledFeedImports(crunchInputs: CrunchSystem[Cancellable]): Unit = {
     if (airportConfig.feedPortCode == "LHR") params.maybeBlackJackUrl.map(csvUrl => {
       val requestIntervalMillis = 5 * oneMinuteMillis
       Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, requestIntervalMillis milliseconds, SDate.now().addDays(-1))
     })
   }
 
-  def subscribeStaffingActors(crunchInputs: CrunchSystem[Cancellable, NotUsed]): Unit = {
+  def subscribeStaffingActors(crunchInputs: CrunchSystem[Cancellable]): Unit = {
     shiftsActor ! AddShiftSubscribers(List(crunchInputs.shifts))
     fixedPointsActor ! AddFixedPointSubscribers(List(crunchInputs.fixedPoints))
     staffMovementsActor ! AddStaffMovementsSubscribers(List(crunchInputs.staffMovements))
@@ -252,7 +257,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
                         initialForecastArrivals: Option[Set[Arrival]],
                         initialLiveArrivals: Option[Set[Arrival]],
                         recrunchOnStart: Boolean
-                       ): CrunchSystem[Cancellable, NotUsed] = {
+                       ): CrunchSystem[Cancellable] = {
 
     val crunchInputs = CrunchSystem(CrunchProps(
       airportConfig = airportConfig,

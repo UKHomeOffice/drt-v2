@@ -94,7 +94,7 @@ object RunnableCrunch {
           manifestGraphKillSwitch
         ) =>
           val arrivals = builder.add(arrivalsGraphStage.async)
-          val arrivalSplits = if(true) builder.add(arrivalSplitsFromAllSourcesStage.async) else builder.add(arrivalSplitsStage)
+          val arrivalSplits = if(false) builder.add(arrivalSplitsFromAllSourcesStage.async) else builder.add(arrivalSplitsStage)
           val workload = builder.add(workloadGraphStage.async)
           val batchLoad = builder.add(loadBatchUpdateGraphStage.async)
           val crunch = builder.add(crunchLoadGraphStage.async)

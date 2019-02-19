@@ -42,7 +42,6 @@ class ArrivalSplitsFromAllSourcesGraphStage(name: String = "",
     var arrivalsWithSplitsDiff: Set[ApiFlightWithSplits] = Set()
     var arrivalsToRemove: Set[Int] = Set()
 
-
     override def preStart(): Unit = {
       optionalInitialManifests match {
         case Some(manifests) =>

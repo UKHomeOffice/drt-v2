@@ -3,8 +3,8 @@ package test
 import actors._
 import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props}
-import akka.stream.scaladsl.Source
-import akka.stream.{KillSwitch, Materializer}
+import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
+import akka.stream.{KillSwitch, Materializer, OverflowStrategy}
 import akka.util.Timeout
 import drt.shared.{AirportConfig, Role}
 import play.api.Configuration
@@ -40,9 +40,9 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
   override lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[TestStaffMovementsActor], now, time48HoursAgo(now)), "TestActor-StaffMovements")
 
   system.log.warning(s"Using test System")
-  val voyageManifestTestSourceGraph: Source[ManifestsFeedResponse, NotUsed] = Source.fromGraph(new TestAPIManifestFeedGraphStage)
-
-  override lazy val voyageManifestsStage: Source[ManifestsFeedResponse, NotUsed] = voyageManifestTestSourceGraph
+//  val voyageManifestTestSourceGraph: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
+//
+//  override lazy val voyageManifestsStage: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = voyageManifestTestSourceGraph
   val testFeed = TestFixtureFeed(system)
 
 

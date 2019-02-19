@@ -23,18 +23,18 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 
-case class CrunchSystem[FR, MS](shifts: SourceQueueWithComplete[ShiftAssignments],
+case class CrunchSystem[FR](shifts: SourceQueueWithComplete[ShiftAssignments],
                                 fixedPoints: SourceQueueWithComplete[FixedPointAssignments],
                                 staffMovements: SourceQueueWithComplete[Seq[StaffMovement]],
                                 baseArrivalsResponse: FR,
                                 forecastArrivalsResponse: FR,
                                 liveArrivalsResponse: FR,
-                                manifestsResponse: MS,
+                                manifestsResponse: SourceQueueWithComplete[ManifestsFeedResponse],
                                 actualDeskStats: SourceQueueWithComplete[ActualDeskStats],
                                 killSwitches: List[KillSwitch]
                                )
 
-case class CrunchProps[FR, MS](logLabel: String = "",
+case class CrunchProps[FR](logLabel: String = "",
                                airportConfig: AirportConfig,
                                pcpArrival: Arrival => MilliDate,
                                historicalSplitsProvider: SplitsProvider.SplitProvider,
@@ -49,7 +49,7 @@ case class CrunchProps[FR, MS](logLabel: String = "",
                                now: () => SDateLike = () => SDate.now(),
                                initialFlightsWithSplits: Option[FlightsWithSplits] = None,
                                splitsPredictorStage: SplitsPredictorBase,
-                               manifestsSource: Source[ManifestsFeedResponse, MS],
+                               manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]],
                                voyageManifestsActor: ActorRef,
                                cruncher: TryCrunch,
                                simulator: Simulator,
@@ -72,8 +72,8 @@ object CrunchSystem {
     Crunch.getLocalLastMidnight(MilliDate(adjustedMinute.millisSinceEpoch)).addMinutes(offsetMinutes)
   }
 
-  def apply[FR, MS](props: CrunchProps[FR, MS])
-                   (implicit system: ActorSystem, materializer: Materializer): CrunchSystem[FR, MS] = {
+  def apply[FR](props: CrunchProps[FR])
+                   (implicit system: ActorSystem, materializer: Materializer): CrunchSystem[FR] = {
 
     val initialShifts = initialShiftsState(props.actors("shifts"))
     val initialFixedPoints = initialFixedPointsState(props.actors("fixed-points"))

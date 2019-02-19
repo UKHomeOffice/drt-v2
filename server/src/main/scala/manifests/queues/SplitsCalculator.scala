@@ -5,13 +5,11 @@ import drt.shared.PaxTypes._
 import drt.shared.Queues.EeaDesk
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
-import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile, PassengerTypeCalculator}
 import manifests.passengers.PassengerTypeCalculator._
+import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.parsing.VoyageManifestParser
-import passengersplits.parsing.VoyageManifestParser.PassengerInfoJson
-import services.{FastTrackPercentages, SplitsProvider}
 import services.workloadcalculator.PaxLoadCalculator.Load
+import services.{FastTrackPercentages, SplitsProvider}
 
 
 case class SplitsCalculator(portCode: String, csvSplitsProvider: SplitsProvider.SplitProvider, portDefaultSplits: Set[SplitRatio]) {
