@@ -13,7 +13,7 @@ case class BestAvailableManifest(source: String,
                                  passengerList: List[ManifestPassengerProfile])
 
 object BestAvailableManifest {
-  def apply(manifest: VoyageManifest) = BestAvailableManifest(manifest.EventCode,
+  def apply(manifest: VoyageManifest): BestAvailableManifest = BestAvailableManifest(manifest.EventCode,
     manifest.ArrivalPortCode,
     manifest.DeparturePortCode,
     manifest.VoyageNumber,

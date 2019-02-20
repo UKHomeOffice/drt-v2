@@ -90,8 +90,6 @@ trait AirportConfProvider extends AirportConfiguration {
   val portCode: String = ConfigFactory.load().getString("portcode").toUpperCase
   val config: Configuration
 
-  def mockProd: String = sys.env.getOrElse("MOCK_PROD", "PROD").toUpperCase
-
   def useStaffingInput: Boolean = config.getOptional[String]("feature-flags.use-v2-staff-input").isDefined
 
   def contactEmail: Option[String] = config.getOptional[String]("contact-email")

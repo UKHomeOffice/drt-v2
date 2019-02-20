@@ -31,6 +31,7 @@ object RunnableCrunch {
                                        arrivalsGraphStage: ArrivalsGraphStage,
                                        arrivalSplitsFromAllSourcesStage: ArrivalSplitsFromAllSourcesGraphStage,
                                        arrivalSplitsStage: ArrivalSplitsGraphStage,
+                                       useHistoricManifests: Boolean,
                                        splitsPredictorStage: SplitsPredictorBase,
                                        workloadGraphStage: WorkloadGraphStage,
                                        loadBatchUpdateGraphStage: BatchLoadsByCrunchPeriodGraphStage,
@@ -60,7 +61,6 @@ object RunnableCrunch {
     val arrivalsKillSwitch = KillSwitches.single[ArrivalsDiff]
 
     val manifestsKillSwitch = KillSwitches.single[ManifestsFeedResponse]
-
 
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
@@ -94,7 +94,11 @@ object RunnableCrunch {
           manifestGraphKillSwitch
         ) =>
           val arrivals = builder.add(arrivalsGraphStage.async)
-          val arrivalSplits = if (false) builder.add(arrivalSplitsFromAllSourcesStage.async) else builder.add(arrivalSplitsStage)
+          val arrivalSplits = if (useHistoricManifests)
+            builder.add(arrivalSplitsStage)
+          else
+            builder.add(arrivalSplitsFromAllSourcesStage.async)
+
           val workload = builder.add(workloadGraphStage.async)
           val batchLoad = builder.add(loadBatchUpdateGraphStage.async)
           val crunch = builder.add(crunchLoadGraphStage.async)
@@ -127,16 +131,16 @@ object RunnableCrunch {
 
 
           baseArrivals ~> baseArrivalsFanOut ~> arrivals.in0
-                          baseArrivalsFanOut ~> baseArrivalsSink
+          baseArrivalsFanOut ~> baseArrivalsSink
 
           fcstArrivals ~> fcstArrivalsDiffing ~> fcstArrivalsFanOut ~> arrivals.in1
-                                                 fcstArrivalsFanOut ~> fcstArrivalsSink
+          fcstArrivalsFanOut ~> fcstArrivalsSink
 
           liveArrivals ~> liveArrivalsDiffing ~> liveArrivalsFanOut ~> arrivals.in2
-                                                 liveArrivalsFanOut ~> liveArrivalsSink
+          liveArrivalsFanOut ~> liveArrivalsSink
 
           manifests ~> manifestGraphKillSwitch ~> manifestsFanOut ~> arrivalSplits.in1
-                                                  manifestsFanOut ~> manifestsSink
+          manifestsFanOut ~> manifestsSink
 
           shifts ~> staff.in0
           fixedPoints ~> staff.in1
@@ -145,16 +149,16 @@ object RunnableCrunch {
           arrivals.out ~> arrivalsGraphKillSwitch ~> arrivalSplits.in0
 
           arrivalSplits.out ~> arrivalSplitsFanOut ~> workload
-                               arrivalSplitsFanOut ~> portState.in0
+          arrivalSplitsFanOut ~> portState.in0
 
           workload.out ~> batchLoad ~> workloadFanOut ~> crunch
-                                       workloadFanOut ~> simulation.in0
+          workloadFanOut ~> simulation.in0
 
           crunch ~> portState.in1
           actualDesksAndWaitTimes ~> portState.in2
 
           staff.out ~> batchStaff ~> staffFanOut ~> simulation.in1
-                                     staffFanOut ~> portState.in3
+          staffFanOut ~> portState.in3
 
           simulation.out ~> portState.in4
 

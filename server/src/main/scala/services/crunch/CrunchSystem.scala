@@ -46,6 +46,7 @@ case class CrunchProps[FR](logLabel: String = "",
                                crunchOffsetMillis: Long = 0,
                                actors: Map[String, AskableActorRef],
                                useNationalityBasedProcessingTimes: Boolean,
+                               useHistoricManifests: Boolean = false,
                                now: () => SDateLike = () => SDate.now(),
                                initialFlightsWithSplits: Option[FlightsWithSplits] = None,
                                splitsPredictorStage: SplitsPredictorBase,
@@ -185,7 +186,7 @@ object CrunchSystem {
 
     val crunchSystem = RunnableCrunch(
       props.arrivalsBaseSource, props.arrivalsFcstSource, props.arrivalsLiveSource, manifestsSource, shiftsSource, fixedPointsSource, staffMovementsSource, actualDesksAndQueuesSource,
-      arrivalsStage, arrivalSplitsFromAllSourcesGraphStage, arrivalSplitsSourcesGraphStage, splitsPredictorStage, workloadGraphStage, loadBatcher, crunchLoadGraphStage, staffGraphStage, staffBatcher, simulationGraphStage, portStateGraphStage, fcstArrivalsDiffingStage, liveArrivalsDiffingStage,
+      arrivalsStage, arrivalSplitsFromAllSourcesGraphStage, arrivalSplitsSourcesGraphStage, props.useHistoricManifests, splitsPredictorStage, workloadGraphStage, loadBatcher, crunchLoadGraphStage, staffGraphStage, staffBatcher, simulationGraphStage, portStateGraphStage, fcstArrivalsDiffingStage, liveArrivalsDiffingStage,
       props.actors("base-arrivals").actorRef, props.actors("forecast-arrivals").actorRef, props.actors("live-arrivals").actorRef,
       props.voyageManifestsActor,
       props.liveCrunchStateActor, props.forecastCrunchStateActor,

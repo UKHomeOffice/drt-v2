@@ -96,6 +96,8 @@ case class DrtConfigParameters(config: Configuration) {
   val path: String = ConfigFactory.load.getString("acl.keypath")
   val recrunchOnStart: Boolean = config.getOptional[Boolean]("crunch.recrunch-on-start").getOrElse(false)
   val useNationalityBasedProcessingTimes: Boolean = config.getOptional[String]("feature-flags.nationality-based-processing-times").isDefined
+
+  val useHistoricManifests: Boolean = config.getOptional[Boolean]("feature-flags.use-historic-manifests").getOrElse(false)
   val useSplitsPrediction: Boolean = config.getOptional[String]("feature-flags.use-splits-prediction").isDefined
   val rawSplitsUrl: String = config.getOptional[String]("crunch.splits.raw-data-path").getOrElse("/dev/null")
   val dqZipBucketName: String = config.getOptional[String]("dq.s3.bucket").getOrElse(throw new Exception("You must set DQ_S3_BUCKET for us to poll for AdvPaxInfo"))
@@ -172,9 +174,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val initialManifestsState: Option[VoyageManifestState] = manifestsState
   val latestZipFileName: String = initialManifestsState.map(_.latestZipFilename).getOrElse("")
 
-  //  lazy val voyageManifestsStage: Source[ManifestsFeedResponse, _] = if (true) Source.fromGraph(
-  //    new VoyageManifestsGraphStage(airportConfig.feedPortCode, s3ApiProvider, maybeLatestZipFileName, params.apiS3PollFrequencyMillis)
-  //  ) else Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
   lazy val voyageManifestsStage: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
 
   system.log.info(s"useNationalityBasedProcessingTimes: ${params.useNationalityBasedProcessingTimes}")
@@ -277,6 +276,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         "aggregated-arrivals" -> aggregatedArrivalsActor
       ),
       useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
+      useHistoricManifests = params.useHistoricManifests,
       splitsPredictorStage = splitsPredictorStage,
       manifestsSource = voyageManifestsStage,
       voyageManifestsActor = voyageManifestsActor,
