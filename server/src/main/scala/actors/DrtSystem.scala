@@ -172,9 +172,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val initialManifestsState: Option[VoyageManifestState] = manifestsState
   val latestZipFileName: String = initialManifestsState.map(_.latestZipFilename).getOrElse("")
 
-  //  lazy val voyageManifestsStage: Source[ManifestsFeedResponse, _] = if (true) Source.fromGraph(
-  //    new VoyageManifestsGraphStage(airportConfig.feedPortCode, s3ApiProvider, maybeLatestZipFileName, params.apiS3PollFrequencyMillis)
-  //  ) else Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
   lazy val voyageManifestsStage: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
 
   system.log.info(s"useNationalityBasedProcessingTimes: ${params.useNationalityBasedProcessingTimes}")
