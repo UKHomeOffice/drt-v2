@@ -17,6 +17,7 @@ import scala.language.postfixOps
 
 
 class ArrivalSplitsGraphStage(name: String = "",
+                              portCode: String,
                               optionalInitialFlights: Option[FlightsWithSplits],
                               splitsCalculator: SplitsCalculator, //keep this for now, we'll need to move this into it's own graph stage later..
                               groupFlightsByCodeShares: Seq[ApiFlightWithSplits] => Seq[(ApiFlightWithSplits, Set[Arrival])],
@@ -92,7 +93,7 @@ class ArrivalSplitsGraphStage(name: String = "",
 
         val incoming: ManifestsFeedResponse = grab(inManifests) match {
           case ManifestsFeedSuccess(DqManifests(_, manifests), createdAt) =>
-            BestManifestsFeedSuccess(manifests.toSeq.map(BestAvailableManifest(_)), createdAt)
+            BestManifestsFeedSuccess(manifests.toSeq.map(vm => BestAvailableManifest(vm, portCode)), createdAt)
           case ManifestsFeedFailure(msg, createdAt) => BestManifestsFeedFailure(msg, createdAt)
           case other => other
         }

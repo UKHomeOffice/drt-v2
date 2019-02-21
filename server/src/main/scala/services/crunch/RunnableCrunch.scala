@@ -3,6 +3,7 @@ package services.crunch
 import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
+import akka.stream.stage.GraphStage
 import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplits
@@ -29,9 +30,7 @@ object RunnableCrunch {
                                        actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
 
                                        arrivalsGraphStage: ArrivalsGraphStage,
-                                       arrivalSplitsFromAllSourcesStage: ArrivalSplitsFromAllSourcesGraphStage,
-                                       arrivalSplitsStage: ArrivalSplitsGraphStage,
-                                       useHistoricManifests: Boolean,
+                                       arrivalSplitsStage: GraphStage[FanInShape2[ArrivalsDiff, ManifestsFeedResponse, FlightsWithSplits]],
                                        splitsPredictorStage: SplitsPredictorBase,
                                        workloadGraphStage: WorkloadGraphStage,
                                        loadBatchUpdateGraphStage: BatchLoadsByCrunchPeriodGraphStage,
@@ -94,11 +93,7 @@ object RunnableCrunch {
           manifestGraphKillSwitch
         ) =>
           val arrivals = builder.add(arrivalsGraphStage.async)
-          val arrivalSplits = if (useHistoricManifests)
-            builder.add(arrivalSplitsStage)
-          else
-            builder.add(arrivalSplitsFromAllSourcesStage.async)
-
+          val arrivalSplits = builder.add(arrivalSplitsStage.async)
           val workload = builder.add(workloadGraphStage.async)
           val batchLoad = builder.add(loadBatchUpdateGraphStage.async)
           val crunch = builder.add(crunchLoadGraphStage.async)
