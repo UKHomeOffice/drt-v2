@@ -100,4 +100,72 @@ trait Tables {
   }
   /** Collection-like TableQuery object for table Arrival */
   lazy val Arrival = new TableQuery(tag => new Arrival(tag))
+
+  case class VoyageManifestPassengerInfoRow(event_code: String,
+                                            arrival_port_code: String,
+                                            departure_port_code: String,
+                                            voyager_number: String,
+                                            carrier_code: String,
+                                            scheduled_date: java.sql.Timestamp,
+                                            document_type: String,
+                                            document_issuing_country_code: String,
+                                            eea_flag: String,
+                                            age: String,
+                                            disembarkation_port_code: String,
+                                            in_transit_flag: String,
+                                            disembarkation_port_country_code: String,
+                                            nationality_country_code: String,
+                                            passenger_identifier: String,
+                                            in_transit: Boolean)
+  /** GetResult implicit for fetching ArrivalRow objects using plain SQL queries */
+  implicit def GetResultVoyageManifestPassengerInfoRow(implicit e0: GR[String], e1: GR[java.sql.Timestamp]): GR[VoyageManifestPassengerInfoRow] = GR{
+    prs => import prs._
+      VoyageManifestPassengerInfoRow.tupled((<<[String], <<[String], <<[String], <<[String], <<[String], <<[java.sql.Timestamp], <<[String], <<[String], <<[String], <<[String], <<[String], <<[String], <<[String], <<[String], <<[String], <<[Boolean]))
+  }
+  /** Table description of table arrival. Objects of this class serve as prototypes for rows in queries. */
+  class VoyageManifestPassengerInfo(_tableTag: Tag) extends {
+    private val maybeSchema = profile match {
+      case _: PostgresProfile => Some("public")
+      case _ => None
+    }
+  } with profile.api.Table[VoyageManifestPassengerInfoRow](_tableTag, maybeSchema, "voyage_manifest_passenger_info") {
+    def * = (event_code, arrival_port_code, departure_port_code, voyager_number, carrier_code, scheduled_date, document_type, document_issuing_country_code, eea_flag, age, disembarkation_port_code, in_transit_flag, disembarkation_port_country_code, nationality_country_code, passenger_identifier, in_transit) <> (VoyageManifestPassengerInfoRow.tupled, VoyageManifestPassengerInfoRow.unapply)
+    /** Maps whole row to an option. Useful for outer joins. */
+    def ? = (event_code, arrival_port_code, departure_port_code, voyager_number, carrier_code, scheduled_date, document_type, document_issuing_country_code, eea_flag, age, disembarkation_port_code, in_transit_flag, disembarkation_port_country_code, nationality_country_code, passenger_identifier, in_transit).shaped.<>({r=>import r._; _1.map(_=> VoyageManifestPassengerInfoRow.tupled((_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+
+    /** Database column code SqlType(text) */
+    val event_code: Rep[String] = column[String]("event_code")
+    /** Database column number SqlType(int4) */
+    val arrival_port_code: Rep[String] = column[String]("arrival_port_code")
+    /** Database column destination SqlType(text) */
+    val departure_port_code: Rep[String] = column[String]("departure_port_code")
+    /** Database column origin SqlType(text) */
+    val voyager_number: Rep[String] = column[String]("voyager_number")
+    /** Database column terminal SqlType(text) */
+    val carrier_code: Rep[String] = column[String]("carrier_code")
+    /** Database column gate SqlType(text), Default(None) */
+    val scheduled_date: Rep[java.sql.Timestamp] = column[java.sql.Timestamp]("scheduled_date")
+    /** Database column stand SqlType(text), Default(None) */
+    val document_type: Rep[String] = column[String]("document_type")
+    /** Database column status SqlType(text) */
+    val document_issuing_country_code: Rep[String] = column[String]("document_issuing_country_code")
+    /** Database column scheduled SqlType(timestamp) */
+    val eea_flag: Rep[String] = column[String]("eea_flag")
+    /** Database column estimated SqlType(timestamp), Default(None) */
+    val age: Rep[String] = column[String]("age")
+    /** Database column actual SqlType(timestamp), Default(None) */
+    val disembarkation_port_code: Rep[String] = column[String]("disembarkation_port_code")
+    /** Database column estimatedchox SqlType(timestamp), Default(None) */
+    val in_transit_flag: Rep[String] = column[String]("in_transit_flag")
+    /** Database column actualchox SqlType(timestamp), Default(None) */
+    val disembarkation_port_country_code: Rep[String] = column[String]("disembarkation_port_country_code")
+    /** Database column pcp SqlType(timestamp) */
+    val nationality_country_code: Rep[String] = column[String]("nationality_country_code")
+    /** Database column totalpassengers SqlType(int4), Default(None) */
+    val passenger_identifier: Rep[String] = column[String]("passenger_identifier")
+    /** Database column pcppassengers SqlType(int4), Default(None) */
+    val in_transit: Rep[Boolean] = column[Boolean]("in_transit")
+  }
+  /** Collection-like TableQuery object for table VoyageManifestPassengerInfo */
+  lazy val VoyageManifestPassengerInfo = new TableQuery(tag => new VoyageManifestPassengerInfo(tag))
 }
