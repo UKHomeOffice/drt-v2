@@ -13,13 +13,13 @@ case class BestAvailableManifest(source: String,
                                  passengerList: List[ManifestPassengerProfile])
 
 object BestAvailableManifest {
-  def apply(manifest: VoyageManifest): BestAvailableManifest = BestAvailableManifest(manifest.EventCode,
+  def apply(manifest: VoyageManifest, portCode: String): BestAvailableManifest = BestAvailableManifest(manifest.EventCode,
     manifest.ArrivalPortCode,
     manifest.DeparturePortCode,
     manifest.VoyageNumber,
     manifest.CarrierCode,
     manifest.scheduleArrivalDateTime.getOrElse(SDate.now()),
-    manifest.PassengerList.map(ManifestPassengerProfile(_)))
+    manifest.PassengerList.map(p => ManifestPassengerProfile(p, portCode)))
 }
 
 case class ManifestPassengerProfile(nationality: String,
@@ -28,11 +28,11 @@ case class ManifestPassengerProfile(nationality: String,
                                     inTransit: Option[Boolean])
 
 object ManifestPassengerProfile {
-  def apply(pij: PassengerInfoJson): ManifestPassengerProfile = {
+  def apply(pij: PassengerInfoJson, portCode: String): ManifestPassengerProfile = {
     val nationality = pij.NationalityCountryCode.getOrElse("")
     val documentType: Option[String] = pij.DocumentType
     val maybeAge = pij.Age.map(_.toInt)
-    val maybeInTransit = Option(pij.InTransitFlag == "Y")
+    val maybeInTransit = Option(pij.InTransitFlag == "Y" || pij.DisembarkationPortCode.exists(_ != portCode))
     ManifestPassengerProfile(nationality, documentType, maybeAge, maybeInTransit)
   }
 }
