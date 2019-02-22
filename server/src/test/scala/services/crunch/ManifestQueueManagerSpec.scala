@@ -25,7 +25,7 @@ class ManifestQueueManagerSpec extends CrunchTestLike {
 
     def getNext: ManifestsFeedResponse = Await.result(sinkQueue.pull(), 1 second).get
 
-    val queueManager: ManifestQueueManager = ManifestQueueManager(sourceQueue, "LHR", "", provider)
+    val queueManager: ManifestQueueManager = new ManifestQueueManager(sourceQueue, "LHR", "", provider)
     queueManager.startPollingForManifests()
 
     val result = getNext match {
