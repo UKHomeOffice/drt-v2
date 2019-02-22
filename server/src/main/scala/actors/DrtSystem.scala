@@ -38,7 +38,7 @@ import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.Crunch.{oneDayMillis, oneMinuteMillis}
 import services.graphstages._
 import services.prediction.SparkSplitsPredictorFactory
-import slickdb.{ArrivalTable, Tables}
+import slickdb.{ArrivalTable, Tables, VoyageManifestPassengerInfoTable}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -122,6 +122,8 @@ case class DrtConfigParameters(config: Configuration) {
   val maybeLGWServiceBusUri: Option[String] = config.getOptional[String]("feeds.lgw.live.azure.service_bus_uri")
 }
 
+case class Subscribe[A](subscriber: SourceQueueWithComplete[A])
+
 case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig)
                     (implicit actorMaterializer: Materializer) extends DrtSystemInterface {
 
@@ -160,6 +162,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val forecastCrunchStateActor: ActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
 
   lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, params.snapshotIntervalVm), name = "voyage-manifests-actor")
+  lazy val voyageManifestsRequestActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsRequestActor], airportConfig.portCode, VoyageManifestPassengerInfoTable(PostgresTables)), name = "voyage-manifests-request-actor")
 
   lazy val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], now, timeBeforeThisMonth(now)))
   lazy val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], now))
@@ -207,6 +210,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         val crunchInputs: CrunchSystem[Cancellable] = startCrunchSystem(initialPortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, params.recrunchOnStart)
 
         new ManifestQueueManager(crunchInputs.manifestsResponse, airportConfig.portCode, latestZipFileName, s3ApiProvider).startPollingForManifests()
+
+        voyageManifestsRequestActor ! Subscribe(crunchInputs.manifestsResponse)
 
         subscribeStaffingActors(crunchInputs)
         startScheduledFeedImports(crunchInputs)
@@ -280,6 +285,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       splitsPredictorStage = splitsPredictorStage,
       manifestsSource = voyageManifestsStage,
       voyageManifestsActor = voyageManifestsActor,
+      voyageManifestsRequestActor = voyageManifestsRequestActor,
       cruncher = TryRenjin.crunch,
       simulator = TryRenjin.runSimulationOfWork,
       initialPortState = initialPortState,

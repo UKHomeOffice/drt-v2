@@ -48,6 +48,7 @@ object RunnableCrunch {
                                        liveArrivalsActor: ActorRef,
 
                                        manifestsActor: ActorRef,
+                                       manifestsRequestActor: ActorRef,
 
                                        liveCrunchStateActor: ActorRef,
                                        fcstCrunchStateActor: ActorRef,
@@ -108,6 +109,8 @@ object RunnableCrunch {
           val fcstArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
           val liveArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
 
+          val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](2))
+
           val manifestsFanOut = builder.add(Broadcast[ManifestsFeedResponse](2))
           val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](2))
           val workloadFanOut = builder.add(Broadcast[Loads](2))
@@ -123,6 +126,7 @@ object RunnableCrunch {
           val liveSink = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
           val fcstSink = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
           val aggregatedArrivalsSink = builder.add(Sink.actorRef(aggregatedArrivalsStateActor, "complete"))
+          val manifestsRequestSink = builder.add(Sink.actorRef(manifestsRequestActor, "complete"))
 
 
           baseArrivals ~> baseArrivalsFanOut ~> arrivals.in0
@@ -141,7 +145,8 @@ object RunnableCrunch {
           fixedPoints ~> staff.in1
           staffMovements ~> staff.in2
 
-          arrivals.out ~> arrivalsGraphKillSwitch ~> arrivalSplits.in0
+          arrivals.out ~> arrivalsGraphKillSwitch ~> arrivalsFanOut ~> arrivalSplits.in0
+          arrivalsFanOut ~> manifestsRequestSink
 
           arrivalSplits.out ~> arrivalSplitsFanOut ~> workload
           arrivalSplitsFanOut ~> portState.in0

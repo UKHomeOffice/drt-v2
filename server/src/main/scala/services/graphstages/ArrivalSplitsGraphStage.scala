@@ -237,6 +237,7 @@ class ArrivalSplitsGraphStage(name: String = "",
           maybeFlightForManifest match {
             case Some(flightForManifest) =>
               val flightWithManifestSplits = updateFlightWithManifest(flightForManifest, newManifest)
+              log.info(s"Updated ${flightWithManifestSplits.apiFlight.IATA}@${SDate(flightWithManifestSplits.apiFlight.Scheduled).toISOString()} with $newManifest")
               flightsSoFar.updated(flightWithManifestSplits.apiFlight.uniqueId, flightWithManifestSplits)
             case None =>
               log.debug(s"Got a manifest with no flight")

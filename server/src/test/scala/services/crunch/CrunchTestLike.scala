@@ -163,6 +163,7 @@ class CrunchTestLike
     val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], now, DrtStaticParameters.time48HoursAgo(now)))
     val snapshotInterval = 1
     val manifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], oneMegaByte, now, DrtStaticParameters.expireAfterMillis, snapshotInterval))
+    val manifestsRequestActor: ActorRef = testProbe("manifests-request").ref
 
     val liveCrunchActor = liveCrunchStateActor(logLabel, liveProbe, now)
     val forecastCrunchActor = forecastCrunchStateActor(logLabel, forecastProbe, now)
@@ -196,6 +197,7 @@ class CrunchTestLike
       splitsPredictorStage = splitsPredictorStage,
       manifestsSource = manifestsSource,
       voyageManifestsActor = manifestsActor,
+      voyageManifestsRequestActor = manifestsRequestActor,
       cruncher = cruncher,
       simulator = simulator,
       initialPortState = initialPortState,

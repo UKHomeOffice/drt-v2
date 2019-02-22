@@ -52,6 +52,7 @@ case class CrunchProps[FR](logLabel: String = "",
                            splitsPredictorStage: SplitsPredictorBase,
                            manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]],
                            voyageManifestsActor: ActorRef,
+                           voyageManifestsRequestActor: ActorRef,
                            cruncher: TryCrunch,
                            simulator: Simulator,
                            initialPortState: Option[PortState] = None,
@@ -121,7 +122,7 @@ object CrunchSystem {
         expireAfterMillis = props.expireAfterMillis,
         now = props.now,
         maxDaysToCrunch = props.maxDaysToCrunch)
-    else
+    else {
       new ArrivalSplitsGraphStage(
         name = props.logLabel,
         props.airportConfig.portCode,
@@ -131,6 +132,7 @@ object CrunchSystem {
         expireAfterMillis = props.expireAfterMillis,
         now = props.now,
         maxDaysToCrunch = props.maxDaysToCrunch)
+    }
 
     val splitsPredictorStage = props.splitsPredictorStage
 
@@ -189,7 +191,7 @@ object CrunchSystem {
       props.arrivalsBaseSource, props.arrivalsFcstSource, props.arrivalsLiveSource, manifestsSource, shiftsSource, fixedPointsSource, staffMovementsSource, actualDesksAndQueuesSource,
       arrivalsStage, arrivalSplitsGraphStage, splitsPredictorStage, workloadGraphStage, loadBatcher, crunchLoadGraphStage, staffGraphStage, staffBatcher, simulationGraphStage, portStateGraphStage, fcstArrivalsDiffingStage, liveArrivalsDiffingStage,
       props.actors("base-arrivals").actorRef, props.actors("forecast-arrivals").actorRef, props.actors("live-arrivals").actorRef,
-      props.voyageManifestsActor,
+      props.voyageManifestsActor, props.voyageManifestsRequestActor,
       props.liveCrunchStateActor, props.forecastCrunchStateActor,
       props.actors("aggregated-arrivals").actorRef,
       crunchStartDateProvider, props.now
