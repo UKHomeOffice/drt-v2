@@ -1,8 +1,11 @@
 package actors
 
+import java.sql.Timestamp
+
 import akka.actor.Actor
 import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.SourceQueueWithComplete
+import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared.{ArrivalsDiff, SDateLike}
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import org.slf4j.{Logger, LoggerFactory}
@@ -28,9 +31,10 @@ class VoyageManifestsRequestActor(portCode: String, paxInfoTable: VoyageManifest
       log.info(s"received manifest requests for ${arrivals.size} arrivals:\n${arrivals.map(a => s"${a.voyageNumberPadded}-${a.Origin}-$portCode").mkString("\n")}")
 
       manifestsResponseQueue.foreach(queue => {
+        log.info(s"We have a queue so I'll try looking some things up")
         import paxInfoTable.tables.profile.api._
 
-        def mostRecentScheduled(arrivalPort: String, departurePort: String, voyageNumber: String, scheduled: SDateLike): Future[Option[SDateLike]] =
+        def mostRecentScheduled(arrivalPort: String, departurePort: String, voyageNumber: String, scheduled: SDateLike): Future[Option[java.sql.Timestamp]] = {
           paxInfoTable.db.run(sql"""select scheduled_date
                                     from voyage_manifest_passenger_info
                                     where event_code ='DC'
@@ -39,9 +43,10 @@ class VoyageManifestsRequestActor(portCode: String, paxInfoTable: VoyageManifest
                                       and voyager_number=$voyageNumber
                                       and extract(dow from scheduled_date) = extract(dow from to_date(${scheduled.toISODateOnly}, 'YYYY-MM-DD'))
                                     order by scheduled_date DESC
-                                    LIMIT 1""".as[String]).map(rows => rows.map(row => SDate(row.replace(" ", "T"))).headOption)
+                                    LIMIT 1""".as[java.sql.Timestamp]).map(_.headOption)
+        }
 
-        def mostRecentManifest(arrivalPort: String, departurePort: String, voyageNumber: String, scheduled: SDateLike): Future[Vector[(String, String, String, String, String, Boolean)]] =
+        def mostRecentManifest(arrivalPort: String, departurePort: String, voyageNumber: String, scheduled: java.sql.Timestamp): Future[Vector[(String, String, String, String, String, Boolean)]] = {
           paxInfoTable.db.run(sql"""select
                                       nationality_country_code,
                                       document_type,
@@ -54,18 +59,20 @@ class VoyageManifestsRequestActor(portCode: String, paxInfoTable: VoyageManifest
                                       and arrival_port_code=$arrivalPort
                                       and departure_port_code=$departurePort
                                       and voyager_number=$voyageNumber
-                                      and date(scheduled_date)=${scheduled.toISODateOnly}""".as[(String, String, String, String, String, Boolean)])
+                                      and scheduled_date=$scheduled""".as[(String, String, String, String, String, Boolean)])
+        }
 
         val manifests = arrivals
           .map(a => {
-            val mostRecentFuture: Future[Option[SDateLike]] = mostRecentScheduled(portCode, a.Origin, a.voyageNumberPadded, SDate(a.Scheduled))
-            Await.result(mostRecentFuture, 1 second) match {
+            val mostRecentFuture: Future[Option[Timestamp]] = mostRecentScheduled(portCode, a.Origin, a.voyageNumberPadded, SDate(a.Scheduled))
+            Await.result(mostRecentFuture, 10 seconds) match {
               case None =>
-                log.warn(s"No recent arrival on the same day of the week for ${a.IATA} @ ${SDate(a.Scheduled).toISOString()}")
+                log.info(s"No recent arrival on the same day of the week for ${a.IATA} @ ${SDate(a.Scheduled).toISOString()}")
                 None
               case Some(mostRecent) =>
+                log.info(s"Most recent arrival on the same day of the week for ${a.IATA} @ ${SDate(a.Scheduled).toISOString()} is ${SDate(mostRecent.getTime).toISOString()}")
                 val paxProfilesFuture: Future[Vector[(String, String, String, String, String, Boolean)]] = mostRecentManifest(portCode, a.Origin, a.voyageNumberPadded, mostRecent)
-                val paxProfiles = Await.result(paxProfilesFuture, 1 second)
+                val paxProfiles = Await.result(paxProfilesFuture, 10 seconds)
                 val pax = paxProfiles.map {
                   case (nat, doc, age, transitFlag, endCountry, inTransit) =>
                     val transit = (transitFlag, endCountry, inTransit) match {
@@ -74,10 +81,9 @@ class VoyageManifestsRequestActor(portCode: String, paxInfoTable: VoyageManifest
                       case (_, _, t) if t => true
                       case _ => false
                     }
-                    ManifestPassengerProfile(nat, Option(doc), Option(age.toInt), Option(transit))
+                    ManifestPassengerProfile(nat, Option(doc), Try(age.toInt).toOption, Option(transit))
                 }
-                log.info(s"Using ${mostRecent.toISOString()} manifest for ${a.IATA} @ ${SDate(a.Scheduled).toISOString()}")
-                Option(BestAvailableManifest("ApiSplitsWithHistoricalEGateAndFTPercentages", portCode, a.Origin, a.voyageNumberPadded, "xx", SDate(a.Scheduled), pax.toList))
+                Option(BestAvailableManifest(SplitSources.Historical, portCode, a.Origin, a.voyageNumberPadded, "xx", SDate(a.Scheduled), pax.toList))
             }
           })
           .collect {

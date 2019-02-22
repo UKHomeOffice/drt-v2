@@ -21,7 +21,11 @@ case class SplitsCalculator(portCode: String, csvSplitsProvider: SplitsProvider.
     val paxTypeAndQueueCounts = SplitsCalculator.convertBestVoyageManifestIntoPaxTypeAndQueueCounts(portCode, manifest).toSet
     val withEgateAndFastTrack = addEgatesAndFastTrack(arrival, paxTypeAndQueueCounts)
 
-    Splits(withEgateAndFastTrack, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Some(manifest.source), PaxNumbers)
+    val eventType = manifest.source match {
+      case SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages => Option(DqEventCodes.DepartureConfirmed)
+      case _ => None
+    }
+    Splits(withEgateAndFastTrack, manifest.source, eventType, PaxNumbers)
   }
 
   def terminalAndHistoricSplits(fs: Arrival): Set[Splits] = {

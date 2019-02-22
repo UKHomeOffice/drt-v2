@@ -1,6 +1,7 @@
 package manifests.passengers
 
 import drt.shared.SDateLike
+import drt.shared.SplitRatiosNs.SplitSources
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import services.SDate
 
@@ -13,7 +14,8 @@ case class BestAvailableManifest(source: String,
                                  passengerList: List[ManifestPassengerProfile])
 
 object BestAvailableManifest {
-  def apply(manifest: VoyageManifest, portCode: String): BestAvailableManifest = BestAvailableManifest(manifest.EventCode,
+  def apply(manifest: VoyageManifest, portCode: String): BestAvailableManifest = BestAvailableManifest(
+    SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
     manifest.ArrivalPortCode,
     manifest.DeparturePortCode,
     manifest.VoyageNumber,

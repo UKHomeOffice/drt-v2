@@ -3,13 +3,16 @@ package services.graphstages
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
+import org.slf4j.{Logger, LoggerFactory}
 import services.PcpArrival
-import services.graphstages.Crunch.{FlightSplitMinute, log}
+import services.graphstages.Crunch.FlightSplitMinute
 import services.workloadcalculator.PaxLoadCalculator.{Load, minutesForHours, paxDeparturesPerMinutes, paxOffFlowRate}
 
 import scala.collection.immutable.Map
 
 object WorkloadCalculator {
+  val log: Logger = LoggerFactory.getLogger(getClass)
+  
   def flightToFlightSplitMinutes(flightWithSplits: ApiFlightWithSplits,
                                  procTimes: Map[PaxTypeAndQueue, Double],
                                  nationalityProcessingTimes: Map[String, Double],
