@@ -108,7 +108,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
           portStateSources == expected
       }
 
-      true
+      true === true
     }
 
   }

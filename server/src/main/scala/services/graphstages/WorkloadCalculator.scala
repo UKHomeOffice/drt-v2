@@ -12,7 +12,7 @@ import scala.collection.immutable.Map
 
 object WorkloadCalculator {
   val log: Logger = LoggerFactory.getLogger(getClass)
-  
+
   def flightToFlightSplitMinutes(flightWithSplits: ApiFlightWithSplits,
                                  procTimes: Map[PaxTypeAndQueue, Double],
                                  nationalityProcessingTimes: Map[String, Double],

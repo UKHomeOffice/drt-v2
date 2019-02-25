@@ -147,7 +147,8 @@ class CrunchTestLike
                      logLabel: String = "",
                      cruncher: TryCrunch = TestableCrunchLoadStage.mockCrunch,
                      simulator: Simulator = TestableCrunchLoadStage.mockSimulator,
-                     aggregatedArrivalsActor: ActorRef = testProbe("aggregated-arrivals").ref
+                     aggregatedArrivalsActor: ActorRef = testProbe("aggregated-arrivals").ref,
+                     useHistoricManifests: Boolean = true
                     ): CrunchGraphInputsAndProbes = {
 
     val maxDaysToCrunch = 5
@@ -193,6 +194,7 @@ class CrunchTestLike
         "aggregated-arrivals" -> aggregatedArrivalsActor
       ),
       useNationalityBasedProcessingTimes = false,
+      useHistoricManifests = useHistoricManifests,
       now = now,
       splitsPredictorStage = splitsPredictorStage,
       manifestsSource = manifestsSource,
