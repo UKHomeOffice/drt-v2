@@ -49,6 +49,7 @@ object PaxType {
     case "VisaNational$" => VisaNational
     case "EeaMachineReadable$" => EeaMachineReadable
     case "NonVisaNational$" => NonVisaNational
+    case "B5JPlusNational$" => B5JPlusNational
     case _ => UndefinedPaxType
   }
 }
@@ -64,6 +65,8 @@ object PaxTypes {
   case object EeaMachineReadable extends PaxType
 
   case object NonVisaNational extends PaxType
+
+  case object B5JPlusNational extends PaxType
 
   case object UndefinedPaxType extends PaxType
 

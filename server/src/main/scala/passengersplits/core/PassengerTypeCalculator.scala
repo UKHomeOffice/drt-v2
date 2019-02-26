@@ -14,6 +14,8 @@ object PassengerTypeCalculator {
 
   def isEea(country: String): Boolean = EEACountries contains country
 
+  def isB5JPlus(country: String): Boolean = B5JPlusCountries contains country
+
   def isNonMachineReadable(country: String): Boolean = nonMachineReadableCountries contains country
 
   def passengerInfoFields(pi: PassengerInfoJson) = PaxTypeInfo(pi.DisembarkationPortCode, pi.InTransitFlag, pi.DocumentIssuingCountryCode, pi.DocumentType, pi.NationalityCountryCode)
