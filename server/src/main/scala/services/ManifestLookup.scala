@@ -10,6 +10,7 @@ import slick.jdbc.SQLActionBuilder
 import slick.sql.SqlStreamingAction
 import slickdb.VoyageManifestPassengerInfoTable
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 

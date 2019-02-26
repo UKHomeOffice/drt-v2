@@ -24,7 +24,8 @@ import drt.server.feeds.ltn.LtnLiveFeed
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared._
-import manifests.passengers.ManifestQueueManager
+import manifests.graph.{BatchRequestsStage, ManifestsGraph, RequestsExecutorStage}
+import manifests.passengers.{BestAvailableManifest, ManifestQueueManager}
 import org.apache.spark.sql.SparkSession
 import org.joda.time.DateTimeZone
 import play.api.Configuration
@@ -122,7 +123,8 @@ case class DrtConfigParameters(config: Configuration) {
   val maybeLGWServiceBusUri: Option[String] = config.getOptional[String]("feeds.lgw.live.azure.service_bus_uri")
 }
 
-case class Subscribe[A](subscriber: SourceQueueWithComplete[A])
+case class SubscribeRequestQueue(subscriber: SourceQueueWithComplete[List[Arrival]])
+case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsFeedResponse])
 
 case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig)
                     (implicit actorMaterializer: Materializer) extends DrtSystemInterface {
@@ -164,6 +166,13 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, params.snapshotIntervalVm), name = "voyage-manifests-actor")
   lazy val lookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
   lazy val voyageManifestsRequestActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsRequestActor], airportConfig.portCode, lookup), name = "voyage-manifests-request-actor")
+
+  lazy val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](0, OverflowStrategy.backpressure)
+  lazy val requestPrioritisationStage: BatchRequestsStage = new BatchRequestsStage(now)
+  lazy val requestsExecutorStage: RequestsExecutorStage = new RequestsExecutorStage(airportConfig.portCode, lookup)
+
+  val manifestsSourceQueue: SourceQueueWithComplete[List[Arrival]] = ManifestsGraph(manifestsArrivalRequestSource, requestPrioritisationStage, requestsExecutorStage, voyageManifestsRequestActor).run
+  voyageManifestsRequestActor ! SubscribeRequestQueue(manifestsSourceQueue)
 
   lazy val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], now, timeBeforeThisMonth(now)))
   lazy val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], now))
@@ -212,7 +221,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
         new ManifestQueueManager(crunchInputs.manifestsResponse, airportConfig.portCode, latestZipFileName, s3ApiProvider).startPollingForManifests()
 
-        voyageManifestsRequestActor ! Subscribe(crunchInputs.manifestsResponse)
+        voyageManifestsRequestActor ! SubscribeResponseQueue(crunchInputs.manifestsResponse)
 
         subscribeStaffingActors(crunchInputs)
         startScheduledFeedImports(crunchInputs)
