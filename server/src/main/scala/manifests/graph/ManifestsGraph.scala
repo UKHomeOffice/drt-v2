@@ -8,8 +8,8 @@ import drt.shared.Arrival
 
 object ManifestsGraph {
   def apply(arrivalsSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]],
-            requestPrioritisationStage: GraphStage[FlowShape[List[Arrival], List[Arrival]]],
-            requestsExecutorStage: GraphStage[FlowShape[List[Arrival], List[FutureManifests]]],
+            requestPrioritisationStage: GraphStage[FlowShape[List[Arrival], List[SimpleArrival]]],
+            requestsExecutorStage: GraphStage[FlowShape[List[SimpleArrival], FutureManifests]],
             manifestsSinkActor: ActorRef): RunnableGraph[SourceQueueWithComplete[List[Arrival]]] = {
     import akka.stream.scaladsl.GraphDSL.Implicits._
 

@@ -9,13 +9,13 @@ import services.{ManifestLookupLike, SDate}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.util.Success
+import scala.util.Try
 
-case class FutureManifests(eventualManifests: Future[List[BestAvailableManifest]])
+case class FutureManifests(eventualManifests: Future[List[Try[BestAvailableManifest]]])
 
-class RequestsExecutorStage(portCode: String, manifestLookup: ManifestLookupLike) extends GraphStage[FlowShape[List[Arrival], List[FutureManifests]]] {
-  val inArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("inArrivals.in")
-  val outManifests: Outlet[List[FutureManifests]] = Outlet[List[FutureManifests]]("outManifests.out")
+class RequestsExecutorStage(portCode: String, manifestLookup: ManifestLookupLike) extends GraphStage[FlowShape[List[SimpleArrival], FutureManifests]] {
+  val inArrivals: Inlet[List[SimpleArrival]] = Inlet[List[SimpleArrival]]("inArrivals.in")
+  val outManifests: Outlet[FutureManifests] = Outlet[FutureManifests]("outManifests.out")
 
   override def shape = new FlowShape(inArrivals, outManifests)
 
@@ -43,7 +43,8 @@ class RequestsExecutorStage(portCode: String, manifestLookup: ManifestLookupLike
     private def pushAndPullIfAvailable(): Unit = {
       if (toPush.nonEmpty && isAvailable(outManifests)) {
         log.info(s"Pushing ${toPush.length} future manifests")
-        push(outManifests, toPush)
+        val combinedFutures = Future.sequence(toPush.map(fm => fm.eventualManifests)).map(_.flatten)
+        push(outManifests, FutureManifests(combinedFutures))
         toPush = List()
       }
 
@@ -54,14 +55,17 @@ class RequestsExecutorStage(portCode: String, manifestLookup: ManifestLookupLike
     }
   }
 
-  private def futureManifests(incomingArrivals: List[Arrival]): FutureManifests = FutureManifests(
+  private def futureManifests(incomingArrivals: List[SimpleArrival]): FutureManifests = FutureManifests(
     Future.sequence(
       incomingArrivals
         .map { arrival =>
           manifestLookup
-            .tryBestAvailableManifest(portCode, arrival.Origin, arrival.voyageNumberPadded, SDate(arrival.Scheduled))
-            .collect {
-              case Success(bestManifest) => bestManifest
-            }
+            .tryBestAvailableManifest(portCode, arrival.origin, arrival.voyageNumber, SDate(arrival.scheduled))
         }))
+}
+
+case class SimpleArrival(origin: String, voyageNumber: String, scheduled: Long)
+
+object SimpleArrival {
+  def apply(arrival: Arrival): SimpleArrival = SimpleArrival(arrival.Origin, arrival.voyageNumberPadded, arrival.Scheduled)
 }

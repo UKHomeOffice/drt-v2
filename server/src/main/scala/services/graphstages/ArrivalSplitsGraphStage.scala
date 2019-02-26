@@ -95,6 +95,8 @@ class ArrivalSplitsGraphStage(name: String = "",
           case ManifestsFeedSuccess(DqManifests(_, manifests), createdAt) =>
             BestManifestsFeedSuccess(manifests.toSeq.map(vm => BestAvailableManifest(vm, portCode)), createdAt)
           case ManifestsFeedFailure(msg, createdAt) => BestManifestsFeedFailure(msg, createdAt)
+          case bms: BestManifestsFeedSuccess => bms
+          case bmf: BestManifestsFeedFailure => bmf
         }
 
         incoming match {

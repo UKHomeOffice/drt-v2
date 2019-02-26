@@ -11,6 +11,7 @@ import services.{ManifestLookupLike, SDate}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.postfixOps
+import scala.util.{Failure, Success}
 
 
 class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLookupLike) extends Actor {
@@ -29,14 +30,19 @@ class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLook
       manifestsResponseQueue = Option(subscriber)
 
     case FutureManifests(eventualManifests) =>
-      eventualManifests.map { bestManifests =>
-        manifestsResponseQueue.foreach(queue => {
-          queue.offer(BestManifestsFeedSuccess(bestManifests, SDate.now())) map {
-            case Enqueued => log.info(s"Enqueued ${bestManifests.size} estimated manifests")
-            case failure => log.info(s"Failed to enqueue ${bestManifests.size} estimated manifests: $failure")
-          }
-        })
-      }
+      eventualManifests
+        .map { bestManifests =>
+          manifestsResponseQueue.foreach(queue => {
+            queue.offer(BestManifestsFeedSuccess(bestManifests.collect { case Success(bm) => bm}, SDate.now())) map {
+              case Enqueued => log.info(s"Enqueued ${bestManifests.size} estimated manifests")
+              case failure => log.info(s"Failed to enqueue ${bestManifests.size} estimated manifests: $failure")
+            }
+          })
+        }
+        .recover { case t =>
+          log.info(s"Error getting manifests: ${t.getMessage.take(500)}")
+          Failure(t)
+        }
 
     case ArrivalsDiff(arrivals, _) =>
       manifestsRequestQueue.foreach(queue => {
