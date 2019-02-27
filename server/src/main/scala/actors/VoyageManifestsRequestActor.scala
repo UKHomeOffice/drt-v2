@@ -4,7 +4,7 @@ import akka.actor.Actor
 import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.{Arrival, ArrivalsDiff}
-import manifests.graph.FutureManifests
+import manifests.graph.ManifestTries
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{BestManifestsFeedSuccess, ManifestsFeedResponse}
 import services.{ManifestLookupLike, SDate}
@@ -29,20 +29,16 @@ class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLook
       log.info(s"received manifest response subscriber")
       manifestsResponseQueue = Option(subscriber)
 
-    case FutureManifests(eventualManifests) =>
-      eventualManifests
-        .map { bestManifests =>
-          manifestsResponseQueue.foreach(queue => {
-            queue.offer(BestManifestsFeedSuccess(bestManifests.collect { case Success(bm) => bm}, SDate.now())) map {
-              case Enqueued => log.info(s"Enqueued ${bestManifests.size} estimated manifests")
-              case failure => log.info(s"Failed to enqueue ${bestManifests.size} estimated manifests: $failure")
-            }
-          })
+    case ManifestTries(bestManifests) =>
+      manifestsResponseQueue.foreach(queue => {
+        bestManifests.collect { case Failure(t) => log.info(s"Failed manifest request: $t") }
+        val successfulManifests = bestManifests.collect { case Success(bm) => bm }
+
+        queue.offer(BestManifestsFeedSuccess(successfulManifests, SDate.now())) map {
+          case Enqueued => log.info(s"Enqueued ${bestManifests.size} estimated manifests")
+          case failure => log.info(s"Failed to enqueue ${bestManifests.size} estimated manifests: $failure")
         }
-        .recover { case t =>
-          log.info(s"Error getting manifests: ${t.getMessage.take(500)}")
-          Failure(t)
-        }
+      })
 
     case ArrivalsDiff(arrivals, _) =>
       manifestsRequestQueue.foreach(queue => {

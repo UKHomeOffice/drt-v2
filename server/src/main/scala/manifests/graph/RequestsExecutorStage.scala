@@ -8,27 +8,39 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.{ManifestLookupLike, SDate}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
+import scala.language.postfixOps
 import scala.util.Try
 
-case class FutureManifests(eventualManifests: Future[List[Try[BestAvailableManifest]]])
 
-class RequestsExecutorStage(portCode: String, manifestLookup: ManifestLookupLike) extends GraphStage[FlowShape[List[SimpleArrival], FutureManifests]] {
+case class ManifestTries(tries: List[Try[BestAvailableManifest]]) {
+  def +(triesToAdd: List[Try[BestAvailableManifest]]) = ManifestTries(tries ++ triesToAdd)
+  def nonEmpty: Boolean = tries.nonEmpty
+  def length: Int = tries.length
+}
+
+object ManifestTries {
+  def empty: ManifestTries = ManifestTries(List())
+}
+
+class RequestsExecutorStage(portCode: String, manifestLookup: ManifestLookupLike) extends GraphStage[FlowShape[List[SimpleArrival], ManifestTries]] {
   val inArrivals: Inlet[List[SimpleArrival]] = Inlet[List[SimpleArrival]]("inArrivals.in")
-  val outManifests: Outlet[FutureManifests] = Outlet[FutureManifests]("outManifests.out")
+  val outManifests: Outlet[ManifestTries] = Outlet[ManifestTries]("outManifests.out")
 
   override def shape = new FlowShape(inArrivals, outManifests)
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var toPush: List[FutureManifests] = List()
+    var toPush: ManifestTries = ManifestTries(List())
 
     setHandler(inArrivals, new InHandler {
       override def onPush(): Unit = {
         val incomingArrivals = grab(inArrivals)
 
-        toPush = futureManifests(incomingArrivals) :: toPush
+        val manifestTries: List[Try[BestAvailableManifest]] = Await.result(futureManifests(incomingArrivals), 30 seconds)
+        toPush = toPush + manifestTries
 
         pushAndPullIfAvailable()
       }
@@ -42,10 +54,9 @@ class RequestsExecutorStage(portCode: String, manifestLookup: ManifestLookupLike
 
     private def pushAndPullIfAvailable(): Unit = {
       if (toPush.nonEmpty && isAvailable(outManifests)) {
-        log.info(s"Pushing ${toPush.length} future manifests")
-        val combinedFutures = Future.sequence(toPush.map(fm => fm.eventualManifests)).map(_.flatten)
-        push(outManifests, FutureManifests(combinedFutures))
-        toPush = List()
+        log.info(s"Pushing ${toPush.length} manifest tries")
+        push(outManifests, toPush)
+        toPush = ManifestTries.empty
       }
 
       if (!hasBeenPulled(inArrivals)) {
@@ -55,13 +66,13 @@ class RequestsExecutorStage(portCode: String, manifestLookup: ManifestLookupLike
     }
   }
 
-  private def futureManifests(incomingArrivals: List[SimpleArrival]): FutureManifests = FutureManifests(
+  private def futureManifests(incomingArrivals: List[SimpleArrival]): Future[List[Try[BestAvailableManifest]]] =
     Future.sequence(
       incomingArrivals
         .map { arrival =>
           manifestLookup
             .tryBestAvailableManifest(portCode, arrival.origin, arrival.voyageNumber, SDate(arrival.scheduled))
-        }))
+        })
 }
 
 case class SimpleArrival(origin: String, voyageNumber: String, scheduled: Long)

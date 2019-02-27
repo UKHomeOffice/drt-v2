@@ -32,9 +32,7 @@ class AggregatedArrivalsActor(portCode: String, arrivalTable: ArrivalTableLike) 
 
   def handleUpdates(flightUpdates: Set[ApiFlightWithSplits]): Unit = {
     flightUpdates.foreach {
-      case ApiFlightWithSplits(f, _, _) =>
-        log.info(s"Upserting ${f.IATA}")
-        arrivalTable.insertOrUpdateArrival(f)
+      case ApiFlightWithSplits(f, _, _) => arrivalTable.insertOrUpdateArrival(f)
     }
   }
 }

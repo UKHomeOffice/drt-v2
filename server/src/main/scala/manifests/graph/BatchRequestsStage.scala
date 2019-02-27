@@ -93,7 +93,7 @@ class BatchRequestsStage(now: () => SDateLike) extends GraphStage[FlowShape[List
         case (prioritisedSoFar, (subscriber, Some(lastLookup))) =>
           if (!prioritisedSoFar.contains(subscriber) && isDueLookup(subscriber, lastLookup)) subscriber :: prioritisedSoFar
           else prioritisedSoFar
-      }
+      }.sortBy(_.scheduled)
     }
 
     private def addToSubscribers(arrival: SimpleArrival): Unit = {

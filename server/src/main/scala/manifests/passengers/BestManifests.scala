@@ -5,6 +5,8 @@ import drt.shared.SplitRatiosNs.SplitSources
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import services.SDate
 
+import scala.util.Try
+
 case class BestAvailableManifest(source: String,
                                  arrivalPortCode: String,
                                  departurePortCode: String,
@@ -33,7 +35,7 @@ object ManifestPassengerProfile {
   def apply(pij: PassengerInfoJson, portCode: String): ManifestPassengerProfile = {
     val nationality = pij.NationalityCountryCode.getOrElse("")
     val documentType: Option[String] = pij.DocumentType
-    val maybeAge = pij.Age.map(_.toInt)
+    val maybeAge = pij.Age.flatMap(a => Try(a.toInt).toOption)
     val maybeInTransit = Option(pij.InTransitFlag == "Y" || pij.DisembarkationPortCode.exists(_ != portCode))
     ManifestPassengerProfile(nationality, documentType, maybeAge, maybeInTransit)
   }

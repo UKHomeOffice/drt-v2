@@ -238,7 +238,6 @@ class ArrivalSplitsGraphStage(name: String = "",
           maybeFlightForManifest match {
             case Some(flightForManifest) =>
               val flightWithManifestSplits = updateFlightWithManifest(flightForManifest, newManifest)
-              log.info(s"Updated ${flightWithManifestSplits.apiFlight.IATA}@${SDate(flightWithManifestSplits.apiFlight.Scheduled).toISOString()}: ${flightWithManifestSplits.splits}")
               flightsSoFar.updated(flightWithManifestSplits.apiFlight.uniqueId, flightWithManifestSplits)
             case None =>
               log.debug(s"Got a manifest with no flight")
@@ -262,12 +261,10 @@ class ArrivalSplitsGraphStage(name: String = "",
                                  manifest: BestAvailableManifest): ApiFlightWithSplits = {
       val splitsFromManifest: Splits = splitsCalculator.bestSplitsForArrival(manifest, flightWithSplits.apiFlight)
 
-      log.info(s"splitsFromManifest: $splitsFromManifest")
-
       val apiFlight = flightWithSplits.apiFlight
       flightWithSplits.copy(
         apiFlight = apiFlight.copy(FeedSources = apiFlight.FeedSources + ApiFeedSource),
-        splits = Set(splitsFromManifest)
+        splits = flightWithSplits.splits.filterNot(_.source == splitsFromManifest.source) ++ Set(splitsFromManifest)
       )
     }
   }
