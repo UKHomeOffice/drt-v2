@@ -35,11 +35,7 @@ case class PaxTypeQueueAllocation(paxTypeAllocator: PaxTypeAllocator, queueAlloc
             val ptqc: ApiPaxTypeAndQueueCount = soFar.get(paxTypeAndQueue) match {
               case Some(apiPaxTypeAndQueueCount) => apiPaxTypeAndQueueCount.copy(
                 paxCount = apiPaxTypeAndQueueCount.paxCount + paxCount,
-                nationalities = apiPaxTypeAndQueueCount.nationalities.map(nats => {
-                  val existingOfNationality: Double = nats.getOrElse(mpp.nationality, 0)
-                  val newNats: Map[String, Double] = nats + (mpp.nationality -> (existingOfNationality + paxCount))
-                  Some(newNats)
-                }).getOrElse(Some(Map(mpp.nationality -> paxCount)))
+                nationalities = incrementNationalityCount(mpp, paxCount, apiPaxTypeAndQueueCount)
               )
 
               case None => ApiPaxTypeAndQueueCount(paxType, queue, paxCount, Some(Map(mpp.nationality -> paxCount)))
@@ -50,5 +46,13 @@ case class PaxTypeQueueAllocation(paxTypeAllocator: PaxTypeAllocator, queueAlloc
     }.values.toSet
 
     Splits(splits, bestManifest.source, None, Ratio)
+  }
+
+  private def incrementNationalityCount(mpp: ManifestPassengerProfile, paxCount: Double, apiPaxTypeAndQueueCount: ApiPaxTypeAndQueueCount) = {
+    apiPaxTypeAndQueueCount.nationalities.map(nats => {
+      val existingOfNationality: Double = nats.getOrElse(mpp.nationality, 0)
+      val newNats: Map[String, Double] = nats + (mpp.nationality -> (existingOfNationality + paxCount))
+      Some(newNats)
+    }).getOrElse(Some(Map(mpp.nationality -> paxCount)))
   }
 }
