@@ -47,7 +47,7 @@ case class CrunchProps[FR](logLabel: String = "",
                            crunchOffsetMillis: Long = 0,
                            actors: Map[String, AskableActorRef],
                            useNationalityBasedProcessingTimes: Boolean,
-                           useHistoricManifests: Boolean = false,
+                           useLegacyManifests: Boolean = false,
                            now: () => SDateLike = () => SDate.now(),
                            initialFlightsWithSplits: Option[FlightsWithSplits] = None,
                            splitsPredictorStage: SplitsPredictorBase,
@@ -113,7 +113,7 @@ object CrunchSystem {
     val fcstArrivalsDiffingStage = new ArrivalsDiffingStage(props.initialFcstArrivals.toSeq)
     val liveArrivalsDiffingStage = new ArrivalsDiffingStage(props.initialLiveArrivals.toSeq)
 
-    val arrivalSplitsGraphStage = if (props.useHistoricManifests)
+    val arrivalSplitsGraphStage = if (props.useLegacyManifests)
       new ArrivalSplitsFromAllSourcesGraphStage(
         name = props.logLabel,
         optionalInitialFlights = initialFlightsWithSplits,

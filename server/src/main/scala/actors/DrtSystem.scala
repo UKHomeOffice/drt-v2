@@ -98,7 +98,7 @@ case class DrtConfigParameters(config: Configuration) {
   val recrunchOnStart: Boolean = config.getOptional[Boolean]("crunch.recrunch-on-start").getOrElse(false)
   val useNationalityBasedProcessingTimes: Boolean = config.getOptional[String]("feature-flags.nationality-based-processing-times").isDefined
 
-  val useHistoricManifests: Boolean = config.getOptional[Boolean]("feature-flags.use-historic-manifests").getOrElse(false)
+  val useLegacyManifests: Boolean = config.getOptional[Boolean]("feature-flags.use-legacy-manifests").getOrElse(false)
   val useSplitsPrediction: Boolean = config.getOptional[String]("feature-flags.use-splits-prediction").isDefined
   val rawSplitsUrl: String = config.getOptional[String]("crunch.splits.raw-data-path").getOrElse("/dev/null")
   val dqZipBucketName: String = config.getOptional[String]("dq.s3.bucket").getOrElse(throw new Exception("You must set DQ_S3_BUCKET for us to poll for AdvPaxInfo"))
@@ -291,7 +291,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         "aggregated-arrivals" -> aggregatedArrivalsActor
       ),
       useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
-      useHistoricManifests = params.useHistoricManifests,
+      useLegacyManifests = params.useLegacyManifests,
       splitsPredictorStage = splitsPredictorStage,
       manifestsSource = voyageManifestsStage,
       voyageManifestsActor = voyageManifestsActor,
