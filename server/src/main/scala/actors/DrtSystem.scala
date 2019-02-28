@@ -24,8 +24,8 @@ import drt.server.feeds.ltn.LtnLiveFeed
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared._
-import manifests.graph.{BatchRequestsStage, ManifestsGraph, RequestsExecutorStage}
-import manifests.passengers.{BestAvailableManifest, ManifestQueueManager}
+import manifests.graph.{BatchStage, ManifestsGraph, ExecutorStage}
+import manifests.passengers.{BestAvailableManifest, S3ManifestPoller}
 import org.apache.spark.sql.SparkSession
 import org.joda.time.DateTimeZone
 import play.api.Configuration
@@ -168,8 +168,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val voyageManifestsRequestActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsRequestActor], airportConfig.portCode, lookup), name = "voyage-manifests-request-actor")
 
   lazy val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](0, OverflowStrategy.backpressure)
-  lazy val requestPrioritisationStage: BatchRequestsStage = new BatchRequestsStage(now)
-  lazy val requestsExecutorStage: RequestsExecutorStage = new RequestsExecutorStage(airportConfig.portCode, lookup)
+  lazy val requestPrioritisationStage: BatchStage = new BatchStage(now)
+  lazy val requestsExecutorStage: ExecutorStage = new ExecutorStage(airportConfig.portCode, lookup)
 
   val manifestsSourceQueue: SourceQueueWithComplete[List[Arrival]] = ManifestsGraph(manifestsArrivalRequestSource, requestPrioritisationStage, requestsExecutorStage, voyageManifestsRequestActor).run
   voyageManifestsRequestActor ! SubscribeRequestQueue(manifestsSourceQueue)
@@ -219,7 +219,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         val initialPortState: Option[PortState] = mergePortStates(maybeLiveState, maybeForecastState)
         val crunchInputs: CrunchSystem[Cancellable] = startCrunchSystem(initialPortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, params.recrunchOnStart)
 
-        new ManifestQueueManager(crunchInputs.manifestsResponse, airportConfig.portCode, latestZipFileName, s3ApiProvider).startPollingForManifests()
+        new S3ManifestPoller(crunchInputs.manifestsResponse, airportConfig.portCode, latestZipFileName, s3ApiProvider).startPollingForManifests()
 
         voyageManifestsRequestActor ! SubscribeResponseQueue(crunchInputs.manifestsResponse)
 

@@ -40,11 +40,8 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
   override lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[TestStaffMovementsActor], now, time48HoursAgo(now)), "TestActor-StaffMovements")
 
   system.log.warning(s"Using test System")
-//  val voyageManifestTestSourceGraph: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
-//
-//  override lazy val voyageManifestsStage: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = voyageManifestTestSourceGraph
-  val testFeed = TestFixtureFeed(system)
 
+  val testFeed = TestFixtureFeed(system)
 
   config.getOptional[String]("test.live_fixture_csv").foreach { file =>
     implicit val timeout: Timeout = Timeout(250 milliseconds)
@@ -54,12 +51,11 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
       val day = SDate.now().toISODateOnly
       CSVFixtures.csvPathToArrivalsOnDate(day, file).collect {
         case Success(arrival) =>
-          testActor.map( _ ! arrival)
+          testActor.map(_ ! arrival)
       }
     })
 
   }
-
 
   override def liveArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = testFeed
 

@@ -23,8 +23,8 @@ import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
 
-class ManifestQueueManager(sourceQueue: SourceQueueWithComplete[ManifestsFeedResponse], portCode: String, initialLastSeenFileName: String, provider: ApiProviderLike)
-                          (implicit actorSystem: ActorSystem, materializer: Materializer) {
+class S3ManifestPoller(sourceQueue: SourceQueueWithComplete[ManifestsFeedResponse], portCode: String, initialLastSeenFileName: String, provider: ApiProviderLike)
+                      (implicit actorSystem: ActorSystem, materializer: Materializer) {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 

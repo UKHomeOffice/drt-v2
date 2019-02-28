@@ -27,8 +27,10 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
     .run(paxForArrivalQuery(arrivalPort, departurePort, voyageNumber, manifestScheduled).as[(String, String, String, String, String, Boolean)])
     .map { rows =>
       Success(BestAvailableManifest(SplitSources.Historical, arrivalPort, departurePort, voyageNumber, "xx", scheduled, passengerProfiles(rows).toList))
+    }.recover { case t =>
+      log.error(s"Didn't get pax for $arrivalPort -> $departurePort: $voyageNumber @ ${scheduled.toISOString()}", t)
+      Failure(t)
     }
-    .recover { case t => Failure(new Exception(s"Didn't get pax for $arrivalPort -> $departurePort: $voyageNumber @ ${scheduled.toISOString()}: $t")) }
 
   def manifestSearch(arrivalPort: String, departurePort: String, voyageNumber: String, scheduled: SDateLike, queries: List[(String, QueryFunction)]): Future[Try[BestAvailableManifest]] = queries match {
     case Nil => Future(Failure(new Exception(s"No manifests found for $arrivalPort -> $departurePort: $voyageNumber @ ${scheduled.toISOString()}")))

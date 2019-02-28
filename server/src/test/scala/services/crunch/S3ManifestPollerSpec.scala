@@ -2,7 +2,7 @@ package services.crunch
 
 import akka.stream.scaladsl.{Keep, Sink, Source}
 import akka.stream.{Attributes, OverflowStrategy}
-import manifests.passengers.ManifestQueueManager
+import manifests.passengers.S3ManifestPoller
 import server.feeds.{ManifestsFeedResponse, ManifestsFeedSuccess}
 import services.graphstages.DqManifests
 
@@ -10,7 +10,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 
-class ManifestQueueManagerSpec extends CrunchTestLike {
+class S3ManifestPollerSpec extends CrunchTestLike {
   "Given a manifest queue manager with a mock API provider " +
     "When I enqueue a manifest in the mock provider " +
     "Then I should see the manifest come out of the sinkz`" >> {
@@ -25,7 +25,7 @@ class ManifestQueueManagerSpec extends CrunchTestLike {
 
     def getNext: ManifestsFeedResponse = Await.result(sinkQueue.pull(), 1 second).get
 
-    val queueManager: ManifestQueueManager = new ManifestQueueManager(sourceQueue, "LHR", "", provider)
+    val queueManager: S3ManifestPoller = new S3ManifestPoller(sourceQueue, "LHR", "", provider)
     queueManager.startPollingForManifests()
 
     val result = getNext match {

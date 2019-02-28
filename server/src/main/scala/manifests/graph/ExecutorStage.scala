@@ -24,8 +24,8 @@ object ManifestTries {
   def empty: ManifestTries = ManifestTries(List())
 }
 
-class RequestsExecutorStage(portCode: String, manifestLookup: ManifestLookupLike) extends GraphStage[FlowShape[List[SimpleArrival], ManifestTries]] {
-  val inArrivals: Inlet[List[SimpleArrival]] = Inlet[List[SimpleArrival]]("inArrivals.in")
+class ExecutorStage(portCode: String, manifestLookup: ManifestLookupLike) extends GraphStage[FlowShape[List[ArrivalKey], ManifestTries]] {
+  val inArrivals: Inlet[List[ArrivalKey]] = Inlet[List[ArrivalKey]]("inArrivals.in")
   val outManifests: Outlet[ManifestTries] = Outlet[ManifestTries]("outManifests.out")
 
   override def shape = new FlowShape(inArrivals, outManifests)
@@ -66,7 +66,7 @@ class RequestsExecutorStage(portCode: String, manifestLookup: ManifestLookupLike
     }
   }
 
-  private def futureManifests(incomingArrivals: List[SimpleArrival]): Future[List[Try[BestAvailableManifest]]] =
+  private def futureManifests(incomingArrivals: List[ArrivalKey]): Future[List[Try[BestAvailableManifest]]] =
     Future.sequence(
       incomingArrivals
         .map { arrival =>
@@ -75,8 +75,8 @@ class RequestsExecutorStage(portCode: String, manifestLookup: ManifestLookupLike
         })
 }
 
-case class SimpleArrival(origin: String, voyageNumber: String, scheduled: Long)
+case class ArrivalKey(origin: String, voyageNumber: String, scheduled: Long)
 
-object SimpleArrival {
-  def apply(arrival: Arrival): SimpleArrival = SimpleArrival(arrival.Origin, arrival.voyageNumberPadded, arrival.Scheduled)
+object ArrivalKey {
+  def apply(arrival: Arrival): ArrivalKey = ArrivalKey(arrival.Origin, arrival.voyageNumberPadded, arrival.Scheduled)
 }

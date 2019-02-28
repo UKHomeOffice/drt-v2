@@ -128,44 +128,45 @@ object RunnableCrunch {
           val aggregatedArrivalsSink = builder.add(Sink.actorRef(aggregatedArrivalsStateActor, "complete"))
           val manifestsRequestSink = builder.add(Sink.actorRef(manifestsRequestActor, "complete"))
 
-
+          // @formatter:off
           baseArrivals ~> baseArrivalsFanOut ~> arrivals.in0
-          baseArrivalsFanOut ~> baseArrivalsSink
+                          baseArrivalsFanOut ~> baseArrivalsSink
 
           fcstArrivals ~> fcstArrivalsDiffing ~> fcstArrivalsFanOut ~> arrivals.in1
-          fcstArrivalsFanOut ~> fcstArrivalsSink
+                                                 fcstArrivalsFanOut ~> fcstArrivalsSink
 
           liveArrivals ~> liveArrivalsDiffing ~> liveArrivalsFanOut ~> arrivals.in2
-          liveArrivalsFanOut ~> liveArrivalsSink
+                                                 liveArrivalsFanOut ~> liveArrivalsSink
 
           manifests ~> manifestGraphKillSwitch ~> manifestsFanOut ~> arrivalSplits.in1
-          manifestsFanOut ~> manifestsSink
+                                                  manifestsFanOut ~> manifestsSink
 
-          shifts ~> staff.in0
-          fixedPoints ~> staff.in1
-          staffMovements ~> staff.in2
+          shifts          ~> staff.in0
+          fixedPoints     ~> staff.in1
+          staffMovements  ~> staff.in2
 
           arrivals.out ~> arrivalsGraphKillSwitch ~> arrivalsFanOut ~> arrivalSplits.in0
-          arrivalsFanOut ~> manifestsRequestSink
+                                                     arrivalsFanOut ~> manifestsRequestSink
 
           arrivalSplits.out ~> arrivalSplitsFanOut ~> workload
-          arrivalSplitsFanOut ~> portState.in0
+                               arrivalSplitsFanOut ~> portState.in0
 
           workload.out ~> batchLoad ~> workloadFanOut ~> crunch
-          workloadFanOut ~> simulation.in0
+                                       workloadFanOut ~> simulation.in0
 
-          crunch ~> portState.in1
+          crunch                  ~> portState.in1
           actualDesksAndWaitTimes ~> portState.in2
 
           staff.out ~> batchStaff ~> staffFanOut ~> simulation.in1
-          staffFanOut ~> portState.in3
+                                     staffFanOut ~> portState.in3
 
           simulation.out ~> portState.in4
 
           portState.out ~> portStateFanOut
-          portStateFanOut.map(_.window(liveStart(now), liveEnd(now))) ~> liveSink
-          portStateFanOut.map(_.window(forecastStart(now), forecastEnd(now))) ~> fcstSink
-          portStateFanOut.map(pswd => withOnlyDescheduledRemovals(pswd.diff, now())) ~> aggregatedArrivalsSink
+                           portStateFanOut.map(_.window(liveStart(now), liveEnd(now)))                ~> liveSink
+                           portStateFanOut.map(_.window(forecastStart(now), forecastEnd(now)))        ~> fcstSink
+                           portStateFanOut.map(pswd => withOnlyDescheduledRemovals(pswd.diff, now())) ~> aggregatedArrivalsSink
+          // @formatter:on
 
           ClosedShape
     }

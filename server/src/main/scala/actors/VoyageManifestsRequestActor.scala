@@ -31,20 +31,24 @@ class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLook
 
     case ManifestTries(bestManifests) =>
       manifestsResponseQueue.foreach(queue => {
-        bestManifests.collect { case Failure(t) => log.info(s"Failed manifest request: $t") }
+        bestManifests.collect { case Failure(t) => log.error(s"Manifest request failed: $t") }
         val successfulManifests = bestManifests.collect { case Success(bm) => bm }
 
-        queue.offer(BestManifestsFeedSuccess(successfulManifests, SDate.now())) map {
-          case Enqueued => log.info(s"Enqueued ${bestManifests.size} estimated manifests")
-          case failure => log.info(s"Failed to enqueue ${bestManifests.size} estimated manifests: $failure")
+        queue.offer(BestManifestsFeedSuccess(successfulManifests, SDate.now())).map {
+          case Enqueued => Unit
+          case failure => log.error(s"Failed to enqueue ${bestManifests.size} estimated manifests: $failure")
+        }.recover {
+          case t => log.error(s"Enqueuing manifests failure: $t")
         }
       })
 
     case ArrivalsDiff(arrivals, _) =>
       manifestsRequestQueue.foreach(queue => {
-        queue.offer(arrivals.toList) map {
+        queue.offer(arrivals.toList).map {
           case Enqueued => log.info(s"Enqueued ${arrivals.size} manifest request arrivals")
-          case failure => log.info(s"Failed to enqueue ${arrivals.size} manifest request arrivals: $failure")
+          case failure => log.error(s"Failed to enqueue ${arrivals.size} manifest request arrivals: $failure")
+        }.recover {
+          case t => log.error(s"Enqueuing manifest requests failure: $t")
         }
       })
 

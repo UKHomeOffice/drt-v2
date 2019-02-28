@@ -21,6 +21,7 @@ pipeline:
       - /root/entrypoint.sh
       - sbt --error test docker:stage
     environment:
+      - ENV_LOG_LEVEL=ERROR
       - ARTIFACTORY_USERNAME=drt_ci
     secrets:
       - ARTIFACTORY_PASSWORD
