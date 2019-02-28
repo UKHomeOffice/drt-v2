@@ -1,13 +1,13 @@
 describe('Restrict access by port', function () {
 
   function navigateToHome() {
-    cy.visit('/v2/test/live').then(() => {
+    cy.visit('').then(() => {
       cy.contains('.navbar-drt', 'DRT TEST').end();
     }).end();
   }
 
   function navigateToHomeAccessRestricted() {
-    cy.visit('/v2/test/live').then(() => {
+    cy.visit('/').then(() => {
       cy.get('#access-restricted').should('exist').end();
       cy.get('#email-for-access').should('exist').end();
     }).end();

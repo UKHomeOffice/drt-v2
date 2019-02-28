@@ -16,11 +16,11 @@ describe('Advanced Passenger Information Splits exposed to Port Operators', func
   });
 
   function downloadCsv(terminalName, year, month, day) {
-    return cy.request({url: '/v2/test/live/export/api/'+terminalName+'/'+year+'/'+month+'/'+day, failOnStatusCode: false})
+    return cy.request({url: '/export/api/'+terminalName+'/'+year+'/'+month+'/'+day, failOnStatusCode: false})
   }
 
   function waitForArrivalToAppearInTheSystem() {
-    cy.visit('/v2/test/live#terminal/T1/current/arrivals/?timeRangeStart=0&timeRangeEnd=24');
+    cy.visit('#terminal/T1/current/arrivals/?timeRangeStart=0&timeRangeEnd=24');
     cy.get("#arrivals").contains("TS0123");
   }
 

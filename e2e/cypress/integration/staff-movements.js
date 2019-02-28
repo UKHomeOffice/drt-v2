@@ -84,7 +84,7 @@ describe('Staff movements', function () {
   }
 
   function navigateToHome() {
-    cy.visit('/v2/test/live').then(() => {
+    cy.visit('/').then(() => {
       cy.wait(500);
       cy.get('.navbar-drt').contains('DRT TEST').end();
     }).end();

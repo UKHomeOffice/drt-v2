@@ -26,8 +26,8 @@ describe('Arrivals page', () => {
 
   function loadManifestFixture() {
     cy.setRoles(["test"]);
-    cy.request('POST', '/v2/test/live/test/manifest', manifest);
-    cy.request('GET', '/v2/test/live/export/arrivals/' + millis + '/T1?startHour=0&endHour=24');
+    cy.request('POST', '/test/manifest', manifest);
+    cy.request('GET', '/export/arrivals/' + millis + '/T1?startHour=0&endHour=24');
     cy.get('.pax-api');
   }
 
@@ -125,15 +125,15 @@ describe('Arrivals page', () => {
 
   it('Displays a flight after it has been ingested via the live feed', () => {
     addFlight();
-    cy.visit('/v2/test/live#terminal/T1/current/arrivals/?timeRangeStart=0&timeRangeEnd=24');
+    cy.visit('#terminal/T1/current/arrivals/?timeRangeStart=0&timeRangeEnd=24');
     cy.get("#arrivals").contains("TS0123")
   });
 
   it('Does not show API splits in the flights export for regular users', () => {
     loadManifestFixture();
     cy.setRoles(["test"]);
-    cy.request('POST', '/v2/test/live/test/manifest', manifest);
-    cy.request('GET', '/v2/test/live/export/arrivals/' + millis + '/T1?startHour=0&endHour=24').then((resp) => {
+    cy.request('POST', '/test/manifest', manifest);
+    cy.request('GET', '/export/arrivals/' + millis + '/T1?startHour=0&endHour=24').then((resp) => {
       expect(resp.body).to.equal(csvWithNoApiSplits);
     });
   });
@@ -143,7 +143,7 @@ describe('Arrivals page', () => {
     cy.setRoles(["test", "api:view"]);
     cy.request({
       method: 'GET',
-      url: '/v2/test/live/export/arrivals/' + millis + '/T1?startHour=0&endHour=24',
+      url: '/export/arrivals/' + millis + '/T1?startHour=0&endHour=24',
     }).then((resp) => {
       expect(resp.body).to.equal(csvWithAPISplits)
     })

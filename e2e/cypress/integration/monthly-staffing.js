@@ -13,7 +13,7 @@ describe('Monthly Staffing', function () {
   }
 
   function saveShifts() {
-    cy.request("POST", "/v2/test/live/data/staff", {
+    cy.request("POST", "/data/staff", {
       "shifts": [
         {"port_code": "test", "terminal": "T1", "staff": "1", "shift_start": firstMidnightOfThisMonth().toISOString()},
         {"port_code": "test", "terminal": "T1", "staff": "2", "shift_start": firstMidnightOfNextMonth().toISOString()}
@@ -21,7 +21,7 @@ describe('Monthly Staffing', function () {
     });
   }
   function resetShifts() {
-    cy.request("POST", "/v2/test/live/data/staff", {
+    cy.request("POST", "/data/staff", {
       "shifts": [
         {"port_code": "test", "terminal": "T1", "staff": "0", "shift_start": firstMidnightOfThisMonth().toISOString()},
         {"port_code": "test", "terminal": "T1", "staff": "0", "shift_start": firstMidnightOfNextMonth().toISOString()}
@@ -45,12 +45,12 @@ describe('Monthly Staffing', function () {
 
       cy.setRoles(["staff:edit", "test"]);
 
-      cy.visit('/v2/test/live#terminal/T1/staffing/15/');
+      cy.visit('#terminal/T1/staffing/15/');
       cy.get(cellToTest).contains("1");
 
-      cy.visit('/v2/test/live#terminal/T1/staffing/15/?date=' + nextMonthDateString());
+      cy.visit('#terminal/T1/staffing/15/?date=' + nextMonthDateString());
       cy.get(cellToTest).contains("2");
-      cy.visit('/v2/test/live#terminal/T1/staffing/15/?date=' + thisMonthDateString());
+      cy.visit('#terminal/T1/staffing/15/?date=' + thisMonthDateString());
       cy.get(cellToTest).contains("1");
 
       resetShifts();
