@@ -206,7 +206,6 @@ class ArrivalSplitsGraphStage(name: String = "",
 
     def updateFlightWithManifest(flightWithSplits: ApiFlightWithSplits,
                                  manifest: BestAvailableManifest): ApiFlightWithSplits = {
-      println(s"manifest: $manifest")
       val splitsFromManifest: Splits = splitsCalculator.bestSplitsForArrival(manifest, flightWithSplits.apiFlight)
 
       val apiFlight = flightWithSplits.apiFlight

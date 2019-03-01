@@ -11,7 +11,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 
 case class ManifestTries(tries: List[Try[BestAvailableManifest]]) {
@@ -39,7 +39,15 @@ class ExecutorStage(portCode: String, manifestLookup: ManifestLookupLike) extend
       override def onPush(): Unit = {
         val incomingArrivals = grab(inArrivals)
 
-        val manifestTries: List[Try[BestAvailableManifest]] = Await.result(futureManifests(incomingArrivals), 30 seconds)
+        val start = SDate.now().millisSinceEpoch
+        val manifestTries: List[Try[BestAvailableManifest]] = Try(Await.result(futureManifests(incomingArrivals), 30 seconds)) match {
+          case Success(tries) =>
+            log.info(s"lookups took ${SDate.now().millisSinceEpoch - start}ms")
+            tries
+          case Failure(t) =>
+            log.error(s"Manifests lookup failed", t)
+            List()
+        }
         toPush = toPush + manifestTries
 
         pushAndPullIfAvailable()

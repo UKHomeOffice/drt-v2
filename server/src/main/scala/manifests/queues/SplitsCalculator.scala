@@ -25,7 +25,6 @@ case class SplitsCalculator(portCode: String, csvSplitsProvider: SplitsProvider.
 
   def bestSplitsForArrival(manifest: BestAvailableManifest, arrival: Arrival): Splits = {
     val paxTypeAndQueueCounts = SplitsCalculator.convertBestVoyageManifestIntoPaxTypeAndQueueCounts(portCode, manifest).toSet
-    println(s"paxTypeAndQueueCounts: $paxTypeAndQueueCounts")
     val withEgateAndFastTrack = addEgatesAndFastTrack(arrival, paxTypeAndQueueCounts)
 
     val eventType = manifest.source match {

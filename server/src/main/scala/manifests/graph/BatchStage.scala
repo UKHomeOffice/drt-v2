@@ -16,7 +16,7 @@ class BatchStage(now: () => SDateLike) extends GraphStage[FlowShape[List[Arrival
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var registeredArrivals: Map[ArrivalKey, Option[Long]] = Map()
-    var lookupQueue: List[ArrivalKey] = List()
+    var lookupQueue: Set[ArrivalKey] = Set()
 
     setHandler(inArrivals, new InHandler {
       override def onPush(): Unit = {
@@ -29,8 +29,8 @@ class BatchStage(now: () => SDateLike) extends GraphStage[FlowShape[List[Arrival
           registeredArrivals.get(arrivalKey) match {
             case None =>
               registerArrival(arrivalKey)
-              addToLookupQueue(arrivalKey)
-            case Some(Some(lastLookupMillis)) if isDueLookup(arrivalKey, lastLookupMillis) => addToLookupQueue(arrivalKey)
+              addToLookupQueueNoCheck(arrivalKey)
+            case Some(Some(lastLookupMillis)) if isDueLookup(arrivalKey, lastLookupMillis) => addToLookupQueueWithCheck(arrivalKey)
             case _ => log.info(s"Existing subscriber with a sufficiently recent lookup. Ignoring")
           }
         }
@@ -58,21 +58,22 @@ class BatchStage(now: () => SDateLike) extends GraphStage[FlowShape[List[Arrival
       }
     }
 
-    private def prioritiseAndPush(existingSubscribers: Map[ArrivalKey, Option[MillisSinceEpoch]], existingPrioritised: List[ArrivalKey]): Unit = {
+    private def prioritiseAndPush(existingSubscribers: Map[ArrivalKey, Option[MillisSinceEpoch]], existingPrioritised: Set[ArrivalKey]): Unit = {
       val prioritisedBatch = updatePrioritisedAndSubscribers(existingSubscribers, existingPrioritised)
 
       if (prioritisedBatch.nonEmpty) {
-        log.info(s"Pushing ${prioritisedBatch.length} prioritised arrivals. ${lookupQueue.length} prioritised remaining.")
-        push(outArrivals, prioritisedBatch)
+        log.info(s"Pushing ${prioritisedBatch.size} prioritised arrivals. ${lookupQueue.size} prioritised remaining.")
+        push(outArrivals, prioritisedBatch.toList)
       } else log.info(s"Nothing to push right now")
     }
 
-    private def updatePrioritisedAndSubscribers(existingSubscribers: Map[ArrivalKey, Option[MillisSinceEpoch]], existingPrioritised: List[ArrivalKey]): List[ArrivalKey] = {
-      val updatedPrioritised: List[ArrivalKey] = addToPrioritised(existingSubscribers, existingPrioritised)
+    private def updatePrioritisedAndSubscribers(existingSubscribers: Map[ArrivalKey, Option[MillisSinceEpoch]], existingPrioritised: Set[ArrivalKey]): Set[ArrivalKey] = {
+      log.info(s"about to check all arrivals for those due a lookup")
+      val updatedPrioritised: Set[ArrivalKey] = addToPrioritised(existingSubscribers, existingPrioritised)
 
       val (prioritisedBatch, remainingPrioritised) = updatedPrioritised.splitAt(500)
 
-      log.info(s"prioritisedBatch: ${prioritisedBatch.length}. remainingPrioritised: ${remainingPrioritised.length}")
+      log.info(s"prioritisedBatch: ${prioritisedBatch.size}. remainingPrioritised: ${remainingPrioritised.size}")
       lookupQueue = remainingPrioritised
 
       val lookupTime: MillisSinceEpoch = now().millisSinceEpoch
@@ -84,24 +85,26 @@ class BatchStage(now: () => SDateLike) extends GraphStage[FlowShape[List[Arrival
       prioritisedBatch
     }
 
-    private def addToPrioritised(subscribersToCheck: Map[ArrivalKey, Option[MillisSinceEpoch]], existingPrioritised: List[ArrivalKey]): List[ArrivalKey] = {
+    private def addToPrioritised(subscribersToCheck: Map[ArrivalKey, Option[MillisSinceEpoch]], existingPrioritised: Set[ArrivalKey]): Set[ArrivalKey] = {
       subscribersToCheck.foldLeft(existingPrioritised) {
         case (prioritisedSoFar, (subscriber, None)) =>
-          if (!prioritisedSoFar.contains(subscriber)) subscriber :: prioritisedSoFar
+          if (!prioritisedSoFar.contains(subscriber)) prioritisedSoFar + subscriber
           else prioritisedSoFar
         case (prioritisedSoFar, (subscriber, Some(lastLookup))) =>
-          if (!prioritisedSoFar.contains(subscriber) && isDueLookup(subscriber, lastLookup)) subscriber :: prioritisedSoFar
+          if (!prioritisedSoFar.contains(subscriber) && isDueLookup(subscriber, lastLookup)) prioritisedSoFar + subscriber
           else prioritisedSoFar
-      }.sortBy(_.scheduled)
+      }//.sortBy(_.scheduled)
     }
 
     private def registerArrival(arrival: ArrivalKey): Unit = {
       registeredArrivals = registeredArrivals.updated(arrival, None)
     }
 
-    private def addToLookupQueue(arrivalKey: ArrivalKey): Unit =
+    private def addToLookupQueueWithCheck(arrivalKey: ArrivalKey): Unit =
       if (!lookupQueue.contains(arrivalKey))
-        lookupQueue = arrivalKey :: lookupQueue
+        lookupQueue = lookupQueue + arrivalKey
+
+    private def addToLookupQueueNoCheck(arrivalKey: ArrivalKey): Unit = lookupQueue = lookupQueue + arrivalKey
 
   }
 

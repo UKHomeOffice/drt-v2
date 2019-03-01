@@ -57,6 +57,16 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
     ("Most recent same route", mostRecentRouteQuery)
   )
 
+  def dowToPostgres = Map(
+    1 -> 1,
+    2 -> 2,
+    3 -> 3,
+    4 -> 4,
+    5 -> 5,
+    6 -> 6,
+    7 -> 0
+  )
+
   def mostRecentFlightSameDayOfWeekQuery(arrivalPort: String, departurePort: String, voyageNumber: String, scheduled: SDateLike): SqlStreamingAction[Vector[Timestamp], Timestamp, Effect] =
     sql"""select scheduled_date
           from voyage_manifest_passenger_info
@@ -64,7 +74,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
             and arrival_port_code=$arrivalPort
             and departure_port_code=$departurePort
             and voyager_number=$voyageNumber
-            and extract(dow from scheduled_date) = extract(dow from to_date(${scheduled.toISODateOnly}, 'YYYY-MM-DD'))
+            and day_of_week = ${dowToPostgres(scheduled.getDayOfWeek())}
           order by scheduled_date DESC
           LIMIT 1""".as[java.sql.Timestamp]
 
@@ -84,7 +94,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
           where event_code ='DC'
             and arrival_port_code=$arrivalPort
             and departure_port_code=$departurePort
-            and extract(dow from scheduled_date) = extract(dow from to_date(${scheduled.toISODateOnly}, 'YYYY-MM-DD'))
+            and day_of_week = ${dowToPostgres(scheduled.getDayOfWeek())}
           order by scheduled_date DESC
           LIMIT 1""".as[java.sql.Timestamp]
 

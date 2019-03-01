@@ -107,6 +107,8 @@ trait Tables {
                                             voyager_number: String,
                                             carrier_code: String,
                                             scheduled_date: java.sql.Timestamp,
+                                            day_of_week: Int,
+                                            week_of_year: Int,
                                             document_type: String,
                                             document_issuing_country_code: String,
                                             eea_flag: String,
@@ -118,9 +120,9 @@ trait Tables {
                                             passenger_identifier: String,
                                             in_transit: Boolean)
   /** GetResult implicit for fetching ArrivalRow objects using plain SQL queries */
-  implicit def GetResultVoyageManifestPassengerInfoRow(implicit e0: GR[String], e1: GR[java.sql.Timestamp]): GR[VoyageManifestPassengerInfoRow] = GR{
+  implicit def GetResultVoyageManifestPassengerInfoRow(implicit e0: GR[String], e1: GR[java.sql.Timestamp], e2: GR[Int]): GR[VoyageManifestPassengerInfoRow] = GR{
     prs => import prs._
-      VoyageManifestPassengerInfoRow.tupled((<<[String], <<[String], <<[String], <<[String], <<[String], <<[java.sql.Timestamp], <<[String], <<[String], <<[String], <<[String], <<[String], <<[String], <<[String], <<[String], <<[String], <<[Boolean]))
+      VoyageManifestPassengerInfoRow.tupled((<<[String], <<[String], <<[String], <<[String], <<[String], <<[java.sql.Timestamp], <<[Int], <<[Int], <<[String], <<[String], <<[String], <<[String], <<[String], <<[String], <<[String], <<[String], <<[String], <<[Boolean]))
   }
   /** Table description of table arrival. Objects of this class serve as prototypes for rows in queries. */
   class VoyageManifestPassengerInfo(_tableTag: Tag) extends {
@@ -129,9 +131,9 @@ trait Tables {
       case _ => None
     }
   } with profile.api.Table[VoyageManifestPassengerInfoRow](_tableTag, maybeSchema, "voyage_manifest_passenger_info") {
-    def * = (event_code, arrival_port_code, departure_port_code, voyager_number, carrier_code, scheduled_date, document_type, document_issuing_country_code, eea_flag, age, disembarkation_port_code, in_transit_flag, disembarkation_port_country_code, nationality_country_code, passenger_identifier, in_transit) <> (VoyageManifestPassengerInfoRow.tupled, VoyageManifestPassengerInfoRow.unapply)
+    def * = (event_code, arrival_port_code, departure_port_code, voyager_number, carrier_code, scheduled_date, day_of_week, week_of_year, document_type, document_issuing_country_code, eea_flag, age, disembarkation_port_code, in_transit_flag, disembarkation_port_country_code, nationality_country_code, passenger_identifier, in_transit) <> (VoyageManifestPassengerInfoRow.tupled, VoyageManifestPassengerInfoRow.unapply)
     /** Maps whole row to an option. Useful for outer joins. */
-    def ? = (event_code, arrival_port_code, departure_port_code, voyager_number, carrier_code, scheduled_date, document_type, document_issuing_country_code, eea_flag, age, disembarkation_port_code, in_transit_flag, disembarkation_port_country_code, nationality_country_code, passenger_identifier, in_transit).shaped.<>({r=>import r._; _1.map(_=> VoyageManifestPassengerInfoRow.tupled((_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+    def ? = (event_code, arrival_port_code, departure_port_code, voyager_number, carrier_code, scheduled_date, day_of_week, week_of_year, document_type, document_issuing_country_code, eea_flag, age, disembarkation_port_code, in_transit_flag, disembarkation_port_country_code, nationality_country_code, passenger_identifier, in_transit).shaped.<>({r=>import r._; _1.map(_=> VoyageManifestPassengerInfoRow.tupled((_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
 
     /** Database column code SqlType(text) */
     val event_code: Rep[String] = column[String]("event_code")
@@ -145,6 +147,10 @@ trait Tables {
     val carrier_code: Rep[String] = column[String]("carrier_code")
     /** Database column gate SqlType(text), Default(None) */
     val scheduled_date: Rep[java.sql.Timestamp] = column[java.sql.Timestamp]("scheduled_date")
+    /** Database column gate SqlType(text), Default(None) */
+    val day_of_week: Rep[Int] = column[Int]("day_of_week")
+    /** Database column gate SqlType(text), Default(None) */
+    val week_of_year: Rep[Int] = column[Int]("week_of_year")
     /** Database column stand SqlType(text), Default(None) */
     val document_type: Rep[String] = column[String]("document_type")
     /** Database column status SqlType(text) */
