@@ -4,6 +4,9 @@ import controllers.ArrivalGenerator
 import controllers.ArrivalGenerator.apiFlight
 import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
+import drt.shared.PaxTypes.EeaMachineReadable
+import drt.shared.Queues.EeaDesk
+import drt.shared.SplitRatiosNs.SplitSources.TerminalAverage
 import drt.shared._
 import org.specs2.matcher.Scope
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
@@ -27,15 +30,17 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
     val dateNow: SDateLike = SDate("2017-01-01T00:00Z")
 
+    val terminalSplits = Splits(Set(
+      ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 100.0, None)), TerminalAverage, None, Percentage)
+
     val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(
       airportConfig = airportConfig.copy(terminalNames = Seq("T1")),
-      now = () => dateNow
+      now = () => dateNow,
+      initialPortState = Option(PortState(Map(arrival_v2_with_chox_time.uniqueId -> ApiFlightWithSplits(arrival_v2_with_chox_time, Set(terminalSplits))), Map(), Map())),
+      initialLiveArrivals = Set(arrival_v2_with_chox_time)
     )
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival_v1_with_no_chox_time))))
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival_v2_with_chox_time))))
-
-    var messages: Seq[Arrival] = Seq[Arrival]()
+    var messages: Set[Arrival] = Set()
   }
 
   "Arrivals Graph Stage" should {
@@ -44,26 +49,15 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       val arrival_v3_with_an_update_to_chox_time: Arrival = arrival_v2_with_chox_time.copy(ActualChox = Some(SDate("2017-01-01T10:30Z").millisSinceEpoch), Stand = Some("I will update"))
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival_v3_with_an_update_to_chox_time))))
 
-      crunch.liveTestProbe.receiveWhile(5 seconds) {
-        case ps: PortState => messages = ps.flights.values.map(_.apiFlight).toSeq ++ messages
+      val expectedArrivals = List(arrival_v3_with_an_update_to_chox_time)
+
+      crunch.liveTestProbe.fishForMessage(5 seconds) {
+        case ps: PortState =>
+          val arrivals = ps.flights.values.map(_.apiFlight)
+          arrivals == expectedArrivals
       }
 
-      messages must be_===(Seq(arrival_v3_with_an_update_to_chox_time, arrival_v2_with_chox_time, arrival_v1_with_no_chox_time))
-
-    }
-
-    "a third arrival update with the same chox time will not update the arrival" in new Context {
-
-      val arrival_v3_with_an_update_and_same_chox_time: Arrival = arrival_v2_with_chox_time.copy(Stand = Some("Should not update"))
-
-
-      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival_v3_with_an_update_and_same_chox_time))))
-
-      crunch.liveTestProbe.receiveWhile(5 seconds) {
-        case ps: PortState => messages = ps.flights.values.map(_.apiFlight).toSeq ++ messages
-      }
-
-      messages must be_===(Seq(arrival_v2_with_chox_time, arrival_v1_with_no_chox_time))
+      true === true
     }
 
     "once an API (advanced passenger information) input arrives for the flight, it will update the arrivals FeedSource so that it has a LiveFeed and a ApiFeed" in new Context {
@@ -76,17 +70,18 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
       offerAndWait(crunch.manifestsInput, voyageManifests)
 
-      var feedSources: Set[FeedSource] = Set[FeedSource]()
-      crunch.liveTestProbe.receiveWhile(5 seconds) {
+      val expected = Set(LiveFeedSource, ApiFeedSource)
+
+      crunch.liveTestProbe.fishForMessage(5 seconds) {
         case ps: PortState =>
           val portStateSources = ps.flights.values.flatMap(_.apiFlight.FeedSources).toSet
-          if (portStateSources.size > feedSources.size)
-          feedSources =portStateSources
+          portStateSources == expected
       }
-      feedSources === Set(LiveFeedSource, ApiFeedSource)
+
+      true === true
     }
 
-    "once a acl and a forecast input arrives for the flight, it will update the arrivals FeedSource so that it has a ACLFeed, LiveFeed and a ForecastFeed" in new Context {
+    "once an acl and a forecast input arrives for the flight, it will update the arrivals FeedSource so that it has a ACLFeed, LiveFeed and a ForecastFeed" in new Context {
       val forecastScheduled = "2017-01-01T10:25Z"
 
       val aclFlight = Flights(List(

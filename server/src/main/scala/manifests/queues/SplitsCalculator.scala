@@ -12,13 +12,20 @@ import services.workloadcalculator.PaxLoadCalculator.Load
 import services.{FastTrackPercentages, SplitsProvider}
 
 
-case class SplitsCalculator(portCode: String, csvSplitsProvider: SplitsProvider.SplitProvider, portDefaultSplits: Set[SplitRatio]) {
+case class SplitsCalculator(portCode: String, csvSplitsProvider: SplitsProvider.SplitProvider, portDefaultSplitRatios: Set[SplitRatio]) {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
+  val portDefaultSplits: Set[Splits] = {
+    val portDefault = portDefaultSplitRatios.map {
+      case SplitRatio(ptqc, ratio) => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ratio, None)
+    }
+    Set(Splits(portDefault.map(aptqc => aptqc.copy(paxCount = aptqc.paxCount * 100)), SplitSources.TerminalAverage, None, Percentage))
+  }
 
   def bestSplitsForArrival(manifest: BestAvailableManifest, arrival: Arrival): Splits = {
     val paxTypeAndQueueCounts = SplitsCalculator.convertBestVoyageManifestIntoPaxTypeAndQueueCounts(portCode, manifest).toSet
+    println(s"paxTypeAndQueueCounts: $paxTypeAndQueueCounts")
     val withEgateAndFastTrack = addEgatesAndFastTrack(arrival, paxTypeAndQueueCounts)
 
     val eventType = manifest.source match {
@@ -26,20 +33,6 @@ case class SplitsCalculator(portCode: String, csvSplitsProvider: SplitsProvider.
       case _ => None
     }
     Splits(withEgateAndFastTrack, manifest.source, eventType, PaxNumbers)
-  }
-
-  def terminalAndHistoricSplits(fs: Arrival): Set[Splits] = {
-    val historical: Option[Set[ApiPaxTypeAndQueueCount]] = historicalSplits(fs)
-    val portDefault: Set[ApiPaxTypeAndQueueCount] = portDefaultSplits.map {
-      case SplitRatio(ptqc, ratio) => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ratio, None)
-    }
-
-    val defaultSplits = Set(Splits(portDefault.map(aptqc => aptqc.copy(paxCount = aptqc.paxCount * 100)), SplitSources.TerminalAverage, None, Percentage))
-
-    historical match {
-      case None => defaultSplits
-      case Some(h) => Set(Splits(h, SplitSources.Historical, None, Percentage)) ++ defaultSplits
-    }
   }
 
   def historicalSplits(fs: Arrival): Option[Set[ApiPaxTypeAndQueueCount]] = {

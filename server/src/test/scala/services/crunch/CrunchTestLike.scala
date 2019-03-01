@@ -148,7 +148,7 @@ class CrunchTestLike
                      cruncher: TryCrunch = TestableCrunchLoadStage.mockCrunch,
                      simulator: Simulator = TestableCrunchLoadStage.mockSimulator,
                      aggregatedArrivalsActor: ActorRef = testProbe("aggregated-arrivals").ref,
-                     useLegacyManifests: Boolean = true
+                     useLegacyManifests: Boolean = false
                     ): CrunchGraphInputsAndProbes = {
 
     val maxDaysToCrunch = 5
@@ -337,13 +337,6 @@ class CrunchTestLike
           }
         (tn, terminalLoads)
     }
-
-  def getLastMessageReceivedBy(testProbe: TestProbe, timeDurationToWait: Duration): PortState = {
-    testProbe
-      .receiveWhile(timeDurationToWait) { case ps@PortState(_, _, _) => ps }
-      .reverse
-      .head
-  }
 
   def offerAndWait[T](sourceQueue: SourceQueueWithComplete[T], offering: T): QueueOfferResult = {
     Await.result(sourceQueue.offer(offering), 3 seconds) match {
