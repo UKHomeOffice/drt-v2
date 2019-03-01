@@ -128,10 +128,11 @@ describe('Arrivals page', () => {
   });
 
   it('Does not show API splits in the flights export for regular users', () => {
-    loadManifestFixture();
     cy.setRoles(["test"]);
     cy.request('POST', '/test/manifest', manifest);
     cy.visit('#terminal/T1/current/arrivals/?timeRangeStart=0&timeRangeEnd=24');
+    cy.wait(2000);
+    cy.reload();
     cy.get('.pax-api');
     cy.request('GET', '/export/arrivals/' + millis + '/T1?startHour=0&endHour=24').then((resp) => {
       expect(resp.body).to.equal(csvWithNoApiSplits);
