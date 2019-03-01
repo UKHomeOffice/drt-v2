@@ -27,8 +27,6 @@ describe('Arrivals page', () => {
   function loadManifestFixture() {
     cy.setRoles(["test"]);
     cy.request('POST', '/test/manifest', manifest);
-    cy.request('GET', '/export/arrivals/' + millis + '/T1?startHour=0&endHour=24');
-    cy.get('.pax-api');
   }
 
 
@@ -133,6 +131,8 @@ describe('Arrivals page', () => {
     loadManifestFixture();
     cy.setRoles(["test"]);
     cy.request('POST', '/test/manifest', manifest);
+    cy.visit('#terminal/T1/current/arrivals/?timeRangeStart=0&timeRangeEnd=24');
+    cy.get('.pax-api');
     cy.request('GET', '/export/arrivals/' + millis + '/T1?startHour=0&endHour=24').then((resp) => {
       expect(resp.body).to.equal(csvWithNoApiSplits);
     });
