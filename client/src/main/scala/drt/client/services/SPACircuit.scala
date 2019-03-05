@@ -52,7 +52,8 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      selectedUserGroups: Pot[Set[KeyCloakGroup]] = Empty,
                      feedStatuses: Pot[Seq[FeedStatuses]] = Empty,
                      alerts: Pot[Seq[Alert]] = Empty,
-                     maybeStaffDeploymentAdjustmentPopoverState: Option[StaffAdjustmentDialogueState] = None
+                     maybeStaffDeploymentAdjustmentPopoverState: Option[StaffAdjustmentDialogueState] = None,
+                     displayAlertDialog: Pot[Boolean] = Empty
                     )
 
 object PollDelay {
@@ -88,6 +89,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ViewModeHandler(zoomRW(m => (m.viewMode, m.crunchStatePot, m.latestUpdateMillis))((m, v) => m.copy(viewMode = v._1, crunchStatePot = v._2, latestUpdateMillis = v._3)), zoom(_.crunchStatePot)),
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v))),
       new ShowActualDesksAndQueuesHandler(zoomRW(_.showActualIfAvailable)((m, v) => m.copy(showActualIfAvailable = v))),
+      new ShowAlertModalDialogHandler(zoomRW(_.displayAlertDialog)((m, v) => m.copy(displayAlertDialog = v))),
       new RetryHandler(zoomRW(identity)((m, v) => m)),
       new ShouldReloadHandler(zoomRW(identity)((m, v) => m)),
       new LoggedInStatusHandler(zoomRW(identity)((m, v) => m)),

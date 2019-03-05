@@ -118,5 +118,7 @@ abstract class ApiService(val airportConfig: AirportConfig,
   def addUserToGroups(userId: UUID, groups: Set[String]): Future[Unit]
 
   def removeUserFromGroups(userId: UUID, groups: Set[String]): Future[Unit]
+
+  def getShowAlertModalDialog(): Boolean
 }
 

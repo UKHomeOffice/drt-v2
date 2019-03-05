@@ -96,6 +96,10 @@ object Actions {
 
   case class UpdateShowActualDesksAndQueues(state: Boolean) extends Action
 
+  case class UpdateShowAlertModalDialog(state: Boolean) extends Action
+
+  case object GetShowAlertModalDialog extends Action
+
   case object UpdateMinuteTicker extends Action
 
   case class RetryActionAfter(action: Action, delay: FiniteDuration) extends Action

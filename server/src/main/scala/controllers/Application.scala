@@ -370,6 +370,10 @@ class Application @Inject()(implicit val config: Configuration,
 
       override def forecastCrunchStateActor: AskableActorRef = ctrl.forecastCrunchStateActor
 
+      def getShowAlertModalDialog(): Boolean = config
+        .getOptional[Boolean]("feature-flags.display-modal-alert")
+        .getOrElse(false)
+
     }
   }
 
