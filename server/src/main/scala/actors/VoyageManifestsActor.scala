@@ -95,23 +95,6 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
   }
 
   override def receiveCommand: Receive = {
-//    case BestManifestsFeedSuccess(manifests, createdAt) =>
-//      log.info(s"Received ${newManifests.size} manifests, up to file $updatedLZF from connection at ${createdAt.toISOString()}")
-//
-//      val updates = newManifests -- state.manifests
-//      val updatedManifests = newStateManifests(state.manifests, newManifests)
-//      val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, updates.size)
-//
-//      if (updates.nonEmpty) persistManifests(updates) else log.info(s"No new manifests to persist")
-//
-//      if (updatedLZF != state.latestZipFilename) persistLastSeenFileName(updatedLZF)
-//
-//      state = VoyageManifestState(manifests = updatedManifests, latestZipFilename = updatedLZF, feedName = name, maybeFeedStatuses = Option(state.addStatus(newStatus)))
-//
-//      persistFeedStatus(newStatus)
-
-    case BestManifestsFeedFailure(message, failedAt) =>
-
     case ManifestsFeedSuccess(DqManifests(updatedLZF, newManifests), createdAt) =>
       log.info(s"Received ${newManifests.size} manifests, up to file $updatedLZF from connection at ${createdAt.toISOString()}")
 
@@ -133,6 +116,10 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
       state = state.copy(maybeFeedStatuses = Option(state.addStatus(newStatus)))
 
       persistFeedStatus(newStatus)
+      
+    case _: BestManifestsFeedSuccess =>
+
+    case _: BestManifestsFeedFailure =>
 
     case GetFeedStatuses =>
       log.info(s"Received GetFeedStatuses request")
