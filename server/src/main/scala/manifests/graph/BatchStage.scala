@@ -5,9 +5,8 @@ import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{Arrival, ArrivalKey, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
-import services.SDate
 
-class BatchStage(now: () => SDateLike, isDueLookup: (ArrivalKey, MillisSinceEpoch, SDateLike) => Boolean) extends GraphStage[FlowShape[List[Arrival], List[ArrivalKey]]] {
+class BatchStage(now: () => SDateLike, isDueLookup: (ArrivalKey, MillisSinceEpoch, SDateLike) => Boolean, batchSize: Int) extends GraphStage[FlowShape[List[Arrival], List[ArrivalKey]]] {
   val inArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("inArrivals.in")
   val outArrivals: Outlet[List[ArrivalKey]] = Outlet[List[ArrivalKey]]("outArrivals.out")
 
@@ -71,11 +70,10 @@ class BatchStage(now: () => SDateLike, isDueLookup: (ArrivalKey, MillisSinceEpoc
     }
 
     private def updatePrioritisedAndSubscribers(existingSubscribers: Map[ArrivalKey, Option[MillisSinceEpoch]], existingPrioritised: Set[ArrivalKey]): Set[ArrivalKey] = {
-      log.info(s"about to check all arrivals for those due a lookup")
       val currentNow = now()
       val updatedPrioritised: Set[ArrivalKey] = addToPrioritised(existingSubscribers, existingPrioritised, currentNow)
 
-      val (prioritisedBatch, remainingPrioritised) = updatedPrioritised.toSeq.sortBy(_.scheduled).splitAt(500)
+      val (prioritisedBatch, remainingPrioritised) = updatedPrioritised.toSeq.sortBy(_.scheduled).splitAt(batchSize)
 
       lookupQueue = Set[ArrivalKey](remainingPrioritised :_*)
 
