@@ -83,14 +83,20 @@ class WorkloadGraphStage(name: String = "",
         log.info(s"Received ${incomingFlights.flights.size} arrivals")
 
         val existingFlightTQMs: Set[TQM] = incomingFlights.flights.flatMap(fws => flightTQMs.getOrElse(fws.apiFlight.uniqueId, List())).toSet
+        log.info(s"Got existing flight TQMs")
         val updatedWorkloads: Map[TQM, Set[FlightSplitMinute]] = flightLoadMinutes(incomingFlights)
+        log.info(s"Got updated workloads")
 
         flightLoadMinutes = mergeFlightLoadMinutes(existingFlightTQMs, updatedWorkloads, incomingFlights)
+        log.info(s"Merged updated workloads into existing")
 
         val affectedTQMs = updatedWorkloads.keys.toSet ++ existingFlightTQMs
+        log.info(s"Got affected TQMs")
         val latestDiff = diffFromTQMs(affectedTQMs)
+        log.info(s"Got latestDiff")
 
         loadMinutes = mergeLoadMinutes(latestDiff)
+        log.info(s"Merged load minutes")
         updatedLoadsToPush = purgeExpired(mergeLoadMinutes(latestDiff, updatedLoadsToPush), (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
         log.info(s"${updatedLoadsToPush.size} load minutes to push (${updatedLoadsToPush.values.count(_.paxLoad == 0d)} zero pax minutes)")
 
@@ -120,10 +126,11 @@ class WorkloadGraphStage(name: String = "",
     }
 
     def mergeFlightLoadMinutes(existingFlightTQMs: Set[TQM], updatedWorkloads: Map[TQM, Set[FlightSplitMinute]], incomingFlights: FlightsWithSplits): Map[TQM, Set[FlightSplitMinute]] = {
+      val arrivalIds: Set[Int] = incomingFlights.flights.map(_.apiFlight.uniqueId).toSet
       val minusOldSplitMinutes = existingFlightTQMs.foldLeft(flightLoadMinutes) {
         case (flightSplitMinutesSoFar, tqm) =>
           val existingFlightSplitsMinutes: Set[FlightSplitMinute] = flightSplitMinutesSoFar.getOrElse(tqm, Set[FlightSplitMinute]())
-          val minusIncomingSplitMinutes = existingFlightSplitsMinutes.filterNot(fsm => incomingFlights.flights.map(_.apiFlight.uniqueId).contains(fsm.flightId))
+          val minusIncomingSplitMinutes = existingFlightSplitsMinutes.filterNot(fsm => arrivalIds.contains(fsm.flightId))
           flightSplitMinutesSoFar.updated(tqm, minusIncomingSplitMinutes)
       }
       val withNewSplitMinutes = updatedWorkloads.foldLeft(minusOldSplitMinutes) {

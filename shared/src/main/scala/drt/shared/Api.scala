@@ -229,10 +229,12 @@ object FeedSource {
 }
 
 case class ArrivalKey(origin: String, voyageNumber: String, scheduled: Long) extends Ordered[ArrivalKey] {
-  override def compare(that: ArrivalKey): Int =
-    if (this.scheduled == that.scheduled) 0
-    else if (this.scheduled > that.scheduled) 1
-    else -1
+  override def compare(that: ArrivalKey): Int = {
+    val schComp = (this.scheduled - that.scheduled).toInt
+    val originComp = origin.compare(that.origin)
+    val vnComp = voyageNumber.compare(that.voyageNumber)
+    schComp + originComp + vnComp
+  }
 }
 
 object ArrivalKey {

@@ -4,8 +4,8 @@ import actors.Sizes.oneMegaByte
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
 import akka.pattern.AskableActorRef
-import akka.stream.{Materializer, OverflowStrategy}
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
+import akka.stream.{Materializer, OverflowStrategy}
 import akka.util.Timeout
 import com.amazonaws.auth.AWSCredentials
 import com.typesafe.config.ConfigFactory
@@ -17,15 +17,15 @@ import drt.server.feeds.api.S3ApiProvider
 import drt.server.feeds.bhx.{BHXForecastFeed, BHXLiveFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.lgw.{LGWFeed, LGWForecastFeed}
-import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.server.feeds.lhr.live.LegacyLhrLiveContentProvider
 import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
+import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.server.feeds.ltn.LtnLiveFeed
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared._
-import manifests.graph.{BatchStage, ManifestsGraph, ExecutorStage}
-import manifests.passengers.{BestAvailableManifest, S3ManifestPoller}
+import manifests.graph.{BatchStage, ExecutorStage, ManifestsGraph}
+import manifests.passengers.S3ManifestPoller
 import org.apache.spark.sql.SparkSession
 import org.joda.time.DateTimeZone
 import play.api.Configuration
@@ -168,7 +168,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val voyageManifestsRequestActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsRequestActor], airportConfig.portCode, lookup), name = "voyage-manifests-request-actor")
 
   lazy val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](100, OverflowStrategy.backpressure)
-  lazy val requestPrioritisationStage: BatchStage = new BatchStage(now)
+  lazy val requestPrioritisationStage: BatchStage = new BatchStage(now, Crunch.isDueLookup)
   lazy val requestsExecutorStage: ExecutorStage = new ExecutorStage(airportConfig.portCode, lookup)
 
   val manifestsSourceQueue: SourceQueueWithComplete[List[Arrival]] = ManifestsGraph(manifestsArrivalRequestSource, requestPrioritisationStage, requestsExecutorStage, voyageManifestsRequestActor).run

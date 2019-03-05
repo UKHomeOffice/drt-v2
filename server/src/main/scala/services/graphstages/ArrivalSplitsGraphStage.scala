@@ -192,13 +192,6 @@ class ArrivalSplitsGraphStage(name: String = "",
       manifests.foldLeft[Map[ArrivalKey, ApiFlightWithSplits]](flightsByFlightId) {
         case (flightsSoFar, newManifest) =>
           val key = ArrivalKey(newManifest.departurePortCode, newManifest.voyageNumber, newManifest.scheduled.millisSinceEpoch)
-          //          val maybeFlightForManifest_: Option[ApiFlightWithSplits] = flightsSoFar.values
-//            .find { flightToCheck =>
-//              val vnMatches = flightToCheck.apiFlight.voyageNumberPadded == newManifest.voyageNumber
-//              val schMatches = newManifest.scheduled.millisSinceEpoch == flightToCheck.apiFlight.Scheduled
-//              vnMatches && schMatches
-//            }
-
           flightsSoFar.get(key) match {
             case Some(flightForManifest) =>
               val flightWithManifestSplits = updateFlightWithManifest(flightForManifest, newManifest)

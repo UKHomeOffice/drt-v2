@@ -116,7 +116,7 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
       state = state.copy(maybeFeedStatuses = Option(state.addStatus(newStatus)))
 
       persistFeedStatus(newStatus)
-      
+
     case _: BestManifestsFeedSuccess =>
 
     case _: BestManifestsFeedFailure =>
