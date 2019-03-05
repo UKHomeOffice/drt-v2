@@ -4,7 +4,7 @@ import java.nio.file.Paths
 import java.util.UUID
 
 import api.ApiResponseBody
-import drt.server.feeds.lhr.forecast.LHRForecastXLSExtractor
+import drt.server.feeds.lhr.forecast.{LHRForecastCSVExtractor, LHRForecastXLSExtractor}
 import drt.shared.FlightsApi.Flights
 import play.api.libs.Files
 import play.api.libs.json.Json._
@@ -28,7 +28,7 @@ trait ApplicationWithImports {
 //      .fileIsOk(request.path, filePath)
 //      .map {
 //        case true =>
-          val extractedArrivals = LHRForecastXLSExtractor(filePath)
+          val extractedArrivals = LHRForecastCSVExtractor(filePath)
 
           val response = if (extractedArrivals.nonEmpty) {
             log.info(s"Import found ${extractedArrivals.length} arrivals")

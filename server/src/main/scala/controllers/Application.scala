@@ -370,6 +370,10 @@ class Application @Inject()(implicit val config: Configuration,
 
       override def forecastCrunchStateActor: AskableActorRef = ctrl.forecastCrunchStateActor
 
+      def getShowAlertModalDialog(): Boolean = config
+        .getOptional[Boolean]("feature-flags.display-modal-alert")
+        .getOrElse(false)
+
     }
   }
 
@@ -885,6 +889,12 @@ class Application @Inject()(implicit val config: Configuration,
 
     val enablePortAccessRestrictions =
       config.getOptional[Boolean]("feature-flags.port-access-restrictions").getOrElse(false)
+
+    if(!loggedInUser.hasRole(allowedRole))
+      log.warning(
+        s"User missing port role: ${loggedInUser.email} is accessing ${airportConfig.portCode} " +
+        s"and has ${loggedInUser.roles.mkString(", ")} (needs $allowedRole)"
+      )
 
     val preventAccess = !loggedInUser.hasRole(allowedRole) && enablePortAccessRestrictions
 

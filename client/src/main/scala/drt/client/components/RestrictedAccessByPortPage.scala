@@ -14,14 +14,16 @@ object RestrictedAccessByPortPage {
   val allAirportConfigsToDisplay: List[AirportConfig] = AirportConfigs.allPorts diff AirportConfigs.testPorts
   val allPorts: List[String] = AirportConfigs.allPorts.map(config => config.portCode.toLowerCase)
   val urlLowerCase: String = dom.document.URL.toLowerCase
-  val portRequested: String = allPorts.find(port => urlLowerCase.contains(s"/$port/")).map(_.toUpperCase).getOrElse("[please specify port code]")
+  val portRequested: String = allPorts.find(port => urlLowerCase.contains(s"$port"))
+    .map(_.toUpperCase).getOrElse("[please specify port code]")
 
   def allPortsAccessible(roles: Set[Role]): Set[String] = AirportConfigs.allPorts
     .filter(airportConfig => roles.contains(airportConfig.role)).map(_.portCode).toSet
 
   def userCanAccessPort(loggedInUser: LoggedInUser, portCode: String): Boolean = AirportConfigs.
-    allPorts.find(_.portCode == portCode).exists(c => loggedInUser.hasRole(c.role)
-  )
+    allPorts
+    .find(_.portCode == portCode)
+    .exists(c => loggedInUser.hasRole(c.role))
 
   case class Props(loggedInUser: LoggedInUser)
 

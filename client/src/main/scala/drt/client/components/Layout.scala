@@ -19,16 +19,17 @@ object Layout {
 
   val component = ScalaComponent.builder[Props]("Layout")
     .renderP((_, props: Props) => {
-      val loggedInUserPotRCP = SPACircuit.connect(m => LoggedInUserAndHasPortAccess(m.loggedInUserPot, m.userHasPortAccess))
-      loggedInUserPotRCP(loggedInUserMP => {
+      val loggedInUserAndDisplayDialogPotRCP = SPACircuit.connect(m => (LoggedInUserAndHasPortAccess(m.loggedInUserPot, m.userHasPortAccess), m.displayAlertDialog))
+      loggedInUserAndDisplayDialogPotRCP(loggedInUserMPAndDialog => {
+        val (userAndHasPortAccess: LoggedInUserAndHasPortAccess, displayDialogPot: Pot[Boolean]) = loggedInUserMPAndDialog()
         <.div(
           <.div(^.className := "topbar",
             <.div(^.className := "main-logo"),
             <.div(^.className := "alerts", AlertsComponent())
           ),
           <.div(
-            loggedInUserMP().userPot.renderReady(loggedInUser => {
-              loggedInUserMP().hasPortAccessPot.renderReady(userHasPortAccess => {
+            userAndHasPortAccess.userPot.renderReady(loggedInUser => {
+              userAndHasPortAccess.hasPortAccessPot.renderReady(userHasPortAccess => {
                 if (userHasPortAccess) {
                   val airportConfigRCP = SPACircuit.connect(_.airportConfig)
 
@@ -41,8 +42,9 @@ object Layout {
                           <.div(^.className := "container",
                             <.div(<.div(props.currentLoc.render()))
                           ), VersionUpdateNotice())
-                      }))
+                      }), displayDialogPot.renderReady(displayDialog => PortRestrictionsModalAlert(displayDialog, loggedInUser)))
                   })
+
                 } else <.div(RestrictedAccessByPortPage(loggedInUser))
               })
             }))
