@@ -99,9 +99,7 @@ object SPAMain {
 
     def timeRangeEnd: Option[Int] = timeRangeEndString.map(_.toInt)
 
-    def dateFromUrlOrNow: SDateLike = {
-      date.map(parseDateString).getOrElse(SDate.now())
-    }
+    def dateFromUrlOrNow: SDateLike = date.map(parseDateString).getOrElse(SDate.now())
 
     def updateRequired(p: TerminalPageTabLoc): Boolean = (terminal != p.terminal) || (date != p.date) || (mode != p.mode)
 
@@ -138,7 +136,8 @@ object SPAMain {
       GetFixedPoints(),
       UpdateMinuteTicker,
       GetFeedStatuses(),
-      GetAlerts(0L)
+      GetAlerts(0L),
+      GetShowAlertModalDialog
     )
 
     initActions.foreach(SPACircuit.dispatch(_))
