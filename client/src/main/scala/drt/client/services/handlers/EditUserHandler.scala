@@ -13,6 +13,7 @@ import drt.shared.KeyCloakApi.KeyCloakGroup
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class EditUserHandler[M](modelRW: ModelRW[M, Pot[Set[KeyCloakGroup]]]) extends LoggingActionHandler(modelRW) {

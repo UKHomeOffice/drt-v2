@@ -178,7 +178,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
         val scheduled = "2017-01-01T00:00Z"
 
-        val arrival = ArrivalGenerator.apiFlight(flightId = Option(1), schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(10), airportId = "LHR")
+        val arrival = ArrivalGenerator.apiFlight(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(10), airportId = "LHR")
 
         val crunch = runCrunchGraph(
           now = () => SDate(scheduled),

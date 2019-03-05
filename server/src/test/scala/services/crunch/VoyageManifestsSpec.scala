@@ -27,7 +27,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val scheduled = "2017-01-01T00:00Z"
 
-    val flight = ArrivalGenerator.apiFlight(flightId = Option(1), schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(21))
+    val flight = ArrivalGenerator.apiFlight(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(21))
     val inputManifestsCi = ManifestsFeedSuccess(DqManifests("", Set(
       VoyageManifest(DqEventCodes.CheckIn, "STN", "JFK", "0001", "BA", "2017-01-01", "00:00", List(
         PassengerInfoGenerator.passengerInfoJson("GBR", "P", "GBR")
@@ -60,12 +60,8 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     crunch.liveTestProbe.fishForMessage(3 seconds) {
       case ps: PortState =>
-        val splitsSet = ps.flights.values.headOption match {
-          case Some(ApiFlightWithSplits(_, s, _)) => s
-          case None => Set()
-        }
         val nonZeroQueues = ps.crunchMinutes.values.filter(_.paxLoad > 0).groupBy(_.queueName).keys.toSet
-
+        println(s"nonZeroQueues: $nonZeroQueues")
         nonZeroQueues == expectedNonZeroQueues
     }
 
@@ -79,7 +75,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
     val portCode = "LHR"
 
-    val flight = ArrivalGenerator.apiFlight(flightId = Option(1), schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(10))
+    val flight = ArrivalGenerator.apiFlight(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(10))
     val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
       VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", List(euPassport))
     )))
@@ -115,154 +111,154 @@ class VoyageManifestsSpec extends CrunchTestLike {
     true
   }
 
-    "Given a VoyageManifest with 2 transfers and one Eea Passport " +
-      "When I crunch the flight with 10 pax minus 5 transit " +
-      "Then I should see the 5 non-transit pax go to the egates" >> {
+  "Given a VoyageManifest with 2 transfers and one Eea Passport " +
+    "When I crunch the flight with 10 pax minus 5 transit " +
+    "Then I should see the 5 non-transit pax go to the egates" >> {
 
-      val scheduled = "2017-01-01T00:00Z"
-      val portCode = "LHR"
+    val scheduled = "2017-01-01T00:00Z"
+    val portCode = "LHR"
 
-      val flight = ArrivalGenerator.apiFlight(flightId = Option(1), schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(10), tranPax = Option(5))
-      val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
-        VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", List(
-          euPassport,
-          inTransitFlag,
-          inTransitCountry
-        ))
-      )))
-      val crunch = runCrunchGraph(
-        now = () => SDate(scheduled),
-        airportConfig = airportConfig.copy(
-          portCode = portCode,
-          defaultProcessingTimes = Map("T1" -> Map(
-            eeaMachineReadableToDesk -> 25d / 60,
-            eeaMachineReadableToEGate -> 25d / 60
-          )),
-          terminalNames = Seq("T1"),
-          queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
-        ),
-        initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set())), Map(), Map()))
-      )
+    val flight = ArrivalGenerator.apiFlight(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(10), tranPax = Option(5))
+    val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
+      VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", List(
+        euPassport,
+        inTransitFlag,
+        inTransitCountry
+      ))
+    )))
+    val crunch = runCrunchGraph(
+      now = () => SDate(scheduled),
+      airportConfig = airportConfig.copy(
+        portCode = portCode,
+        defaultProcessingTimes = Map("T1" -> Map(
+          eeaMachineReadableToDesk -> 25d / 60,
+          eeaMachineReadableToEGate -> 25d / 60
+        )),
+        terminalNames = Seq("T1"),
+        queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
+      ),
+      initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set())), Map(), Map()))
+    )
 
-      offerAndWait(crunch.manifestsInput, inputManifests)
+    offerAndWait(crunch.manifestsInput, inputManifests)
 
-      val expected = Map(Queues.EeaDesk -> 0.0, Queues.EGate -> 5.0)
+    val expected = Map(Queues.EeaDesk -> 0.0, Queues.EGate -> 5.0)
 
-      crunch.liveTestProbe.fishForMessage(3 seconds) {
-        case ps: PortState =>
-          val queuePax = ps.crunchMinutes
-            .values
-            .filter(cm => cm.minute == SDate(scheduled).millisSinceEpoch)
-            .map(cm => (cm.queueName, cm.paxLoad))
-            .toMap
+    crunch.liveTestProbe.fishForMessage(3 seconds) {
+      case ps: PortState =>
+        val queuePax = ps.crunchMinutes
+          .values
+          .filter(cm => cm.minute == SDate(scheduled).millisSinceEpoch)
+          .map(cm => (cm.queueName, cm.paxLoad))
+          .toMap
 
-          queuePax == expected
-      }
-
-      true
+        queuePax == expected
     }
 
-    "Given a VoyageManifest with 2 transfers, 1 Eea Passport, 1 Eea Id card, and 2 visa nationals " +
-      "When I crunch the flight with 4 non-transit pax (10 pax minus 6 transit) " +
-      "Then I should see the 4 non-transit pax go to egates (1), eea desk (1), and non-eea (2)" >> {
+    true
+  }
 
-      val scheduled = "2017-01-01T00:00Z"
-      val portCode = "LHR"
+  "Given a VoyageManifest with 2 transfers, 1 Eea Passport, 1 Eea Id card, and 2 visa nationals " +
+    "When I crunch the flight with 4 non-transit pax (10 pax minus 6 transit) " +
+    "Then I should see the 4 non-transit pax go to egates (1), eea desk (1), and non-eea (2)" >> {
 
-      val flight = ArrivalGenerator.apiFlight(flightId = Option(1), schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(10), tranPax = Option(6))
-      val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
-        VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", List(
-          inTransitFlag,
-          inTransitCountry,
-          euPassport,
-          euIdCard,
-          visa,
-          visa
-        ))
-      )))
-      val crunch = runCrunchGraph(
-        now = () => SDate(scheduled),
-        airportConfig = airportConfig.copy(
-          portCode = portCode,
-          defaultProcessingTimes = Map("T1" -> Map(
-            eeaMachineReadableToDesk -> 25d / 60,
-            eeaNonMachineReadableToDesk -> 25d / 60,
-            eeaMachineReadableToEGate -> 25d / 60,
-            visaNationalToDesk -> 25d / 60
-          )),
-          terminalNames = Seq("T1"),
-          queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
-        ),
-        initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set())), Map(), Map()))
-      )
+    val scheduled = "2017-01-01T00:00Z"
+    val portCode = "LHR"
 
-      offerAndWait(crunch.manifestsInput, inputManifests)
+    val flight = ArrivalGenerator.apiFlight(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(10), tranPax = Option(6))
+    val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
+      VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", List(
+        inTransitFlag,
+        inTransitCountry,
+        euPassport,
+        euIdCard,
+        visa,
+        visa
+      ))
+    )))
+    val crunch = runCrunchGraph(
+      now = () => SDate(scheduled),
+      airportConfig = airportConfig.copy(
+        portCode = portCode,
+        defaultProcessingTimes = Map("T1" -> Map(
+          eeaMachineReadableToDesk -> 25d / 60,
+          eeaNonMachineReadableToDesk -> 25d / 60,
+          eeaMachineReadableToEGate -> 25d / 60,
+          visaNationalToDesk -> 25d / 60
+        )),
+        terminalNames = Seq("T1"),
+        queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
+      ),
+      initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set())), Map(), Map()))
+    )
 
-      val expected = Map(Queues.EeaDesk -> 1.0, Queues.EGate -> 1.0, Queues.NonEeaDesk -> 2.0)
+    offerAndWait(crunch.manifestsInput, inputManifests)
 
-      crunch.liveTestProbe.fishForMessage(10 seconds) {
-        case ps: PortState =>
-          val queuePax = ps.crunchMinutes
-            .values
-            .filter(cm => cm.minute == SDate(scheduled).millisSinceEpoch)
-            .map(cm => (cm.queueName, cm.paxLoad))
-            .toMap
+    val expected = Map(Queues.EeaDesk -> 1.0, Queues.EGate -> 1.0, Queues.NonEeaDesk -> 2.0)
 
-          println(s"queuePax: $queuePax")
+    crunch.liveTestProbe.fishForMessage(10 seconds) {
+      case ps: PortState =>
+        val queuePax = ps.crunchMinutes
+          .values
+          .filter(cm => cm.minute == SDate(scheduled).millisSinceEpoch)
+          .map(cm => (cm.queueName, cm.paxLoad))
+          .toMap
 
-          queuePax == expected
-      }
+        println(s"queuePax: $queuePax")
 
-      true
+        queuePax == expected
     }
 
-    "Given initial VoyageManifests and no updates from the feed " +
-      "When I send in a live arrival " +
-      "Then I should see the flight with its API split in the port state" >> {
+    true
+  }
 
-      val scheduled = "2017-01-01T00:00Z"
+  "Given initial VoyageManifests and no updates from the feed " +
+    "When I send in a live arrival " +
+    "Then I should see the flight with its API split in the port state" >> {
 
-      val flight = ArrivalGenerator.apiFlight(flightId = Option(1), schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(21))
-      val initialManifestState = VoyageManifestState(
-        Set(VoyageManifest(DqEventCodes.DepartureConfirmed, "STN", "JFK", "0001", "BA", "2017-01-01", "00:00", List(euPassport))),
-        "", "API", None
-      )
-      val terminalSplits = Splits(Set(
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 100.0, None)), TerminalAverage, None, Percentage)
+    val scheduled = "2017-01-01T00:00Z"
 
-      val crunch = runCrunchGraph(
+    val flight = ArrivalGenerator.apiFlight(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(21))
+    val initialManifestState = VoyageManifestState(
+      Set(VoyageManifest(DqEventCodes.DepartureConfirmed, "STN", "JFK", "0001", "BA", "2017-01-01", "00:00", List(euPassport))),
+      "", "API", None
+    )
+    val terminalSplits = Splits(Set(
+      ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 100.0, None)), TerminalAverage, None, Percentage)
+
+    val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
       maybeInitialManifestState = Option(initialManifestState),
       airportConfig = airportConfig.copy(
-      defaultProcessingTimes = Map("T1" -> Map(
-      eeaMachineReadableToDesk -> 25d / 60,
-      eeaMachineReadableToEGate -> 25d / 60
-      )),
-      terminalNames = Seq("T1"),
-      queues = Map("T1" -> Seq(EeaDesk, EGate))
+        defaultProcessingTimes = Map("T1" -> Map(
+          eeaMachineReadableToDesk -> 25d / 60,
+          eeaMachineReadableToEGate -> 25d / 60
+        )),
+        terminalNames = Seq("T1"),
+        queues = Map("T1" -> Seq(EeaDesk, EGate))
       ),
       initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set(terminalSplits))), Map(), Map()))
-      )
+    )
 
 
-      val expectedSplits = Set(
-        terminalSplits,
-        Splits(Set(
-          ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 1.0, Option(Map("GBR" -> 1.0))),
-          ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 0.0, Option(Map("GBR" -> 0.0)))), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.DepartureConfirmed), PaxNumbers)
-      )
+    val expectedSplits = Set(
+      terminalSplits,
+      Splits(Set(
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 1.0, Option(Map("GBR" -> 1.0))),
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 0.0, Option(Map("GBR" -> 0.0)))), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.DepartureConfirmed), PaxNumbers)
+    )
 
-      crunch.liveTestProbe.fishForMessage(10 seconds) {
-        case ps: PortState =>
-          val splitsSet = ps.flights.values.headOption match {
-            case Some(ApiFlightWithSplits(_, s, _)) => s
-            case None => Set()
-          }
-          splitsSet == expectedSplits
-      }
-
-      true
+    crunch.liveTestProbe.fishForMessage(10 seconds) {
+      case ps: PortState =>
+        val splitsSet = ps.flights.values.headOption match {
+          case Some(ApiFlightWithSplits(_, s, _)) => s
+          case None => Set()
+        }
+        splitsSet == expectedSplits
     }
+
+    true
+  }
 
 }
 
