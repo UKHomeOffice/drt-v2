@@ -25,10 +25,13 @@ trait FeedStateLike {
 
 case class ArrivalsState(arrivals: Map[Int, Arrival], feedName: String, maybeFeedStatuses: Option[FeedStatuses]) extends FeedStateLike
 
-class ForecastBaseArrivalsActor(val snapshotBytesThreshold: Int,
+class ForecastBaseArrivalsActor(initialSnapshotBytesThreshold: Int,
                                 now: () => SDateLike,
                                 expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, "ACL forecast") {
   override def persistenceId: String = s"${getClass.getName}-forecast-base"
+
+  override val snapshotBytesThreshold: Int = initialSnapshotBytesThreshold
+  override val maybeSnapshotInterval: Option[Int] = Option(100)
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -60,10 +63,13 @@ class ForecastBaseArrivalsActor(val snapshotBytesThreshold: Int,
   }
 }
 
-class ForecastPortArrivalsActor(val snapshotBytesThreshold: Int,
+class ForecastPortArrivalsActor(initialSnapshotBytesThreshold: Int,
                                 now: () => SDateLike,
                                 expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, "Port forecast") {
   override def persistenceId: String = s"${getClass.getName}-forecast-port"
+
+  override val snapshotBytesThreshold: Int = initialSnapshotBytesThreshold
+  override val maybeSnapshotInterval: Option[Int] = Option(100)
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -71,10 +77,13 @@ class ForecastPortArrivalsActor(val snapshotBytesThreshold: Int,
                           existingState: ArrivalsState): ArrivalsState = consumeUpdates(diffsMessage, existingState)
 }
 
-class LiveArrivalsActor(val snapshotBytesThreshold: Int,
+class LiveArrivalsActor(initialSnapshotBytesThreshold: Int,
                         now: () => SDateLike,
                         expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, "Port live") {
   override def persistenceId: String = s"${getClass.getName}-live"
+
+  override val snapshotBytesThreshold: Int = initialSnapshotBytesThreshold
+  override val maybeSnapshotInterval: Option[Int] = Option(500)
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -89,8 +98,6 @@ abstract class ArrivalsActor(now: () => SDateLike,
   var state: ArrivalsState = initialState
 
   override def initialState = ArrivalsState(Map(), name, None)
-
-  val snapshotInterval = 500
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case stateMessage: FlightStateSnapshotMessage =>

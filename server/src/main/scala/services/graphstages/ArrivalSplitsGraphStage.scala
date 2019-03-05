@@ -14,6 +14,8 @@ import services._
 import scala.collection.immutable.Map
 import scala.language.postfixOps
 
+case class UpdatedFlights(flights: Map[ArrivalKey, ApiFlightWithSplits], updatesCount: Int, additionsCount: Int)
+
 
 class ArrivalSplitsGraphStage(name: String = "",
                               portCode: String,
@@ -34,7 +36,7 @@ class ArrivalSplitsGraphStage(name: String = "",
   override val shape = new FanInShape2(inArrivalsDiff, inManifests, outArrivalsWithSplits)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
+    var flightsByFlightId: Map[ArrivalKey, ApiFlightWithSplits] = Map()
     var arrivalsWithSplitsDiff: Set[ApiFlightWithSplits] = Set()
     var arrivalsToRemove: Set[Int] = Set()
 
@@ -45,8 +47,20 @@ class ArrivalSplitsGraphStage(name: String = "",
         case Some(FlightsWithSplits(flights, _)) =>
           log.info(s"Received initial flights. Setting ${flights.size}")
           flightsByFlightId = purgeExpiredArrivals(
-            flights.map(fws => (fws.apiFlight.uniqueId, fws)).toMap
+            flights.map(fws => (ArrivalKey(fws.apiFlight), fws)).toMap
           )
+          flights
+            .foldLeft(Map[(String, String, Long), Int]()) {
+              case (soFar, fws) =>
+                val id = (fws.apiFlight.Origin, fws.apiFlight.voyageNumberPadded, fws.apiFlight.Scheduled)
+                soFar.get(id) match {
+                  case Some(count) => soFar.updated(id, count + 1)
+                  case None => soFar.updated(id, 1)
+                }
+            }
+            .foreach {
+              case (id, count) => if (count > 1) log.info(s"***** id $id has $count matches")
+            }
         case _ =>
           log.warn(s"Did not receive any flights to initialise with")
       }
@@ -88,7 +102,7 @@ class ArrivalSplitsGraphStage(name: String = "",
     setHandler(inManifests, new InHandler {
       override def onPush(): Unit = {
         val start = SDate.now()
-        log.debug(s"inSplits onPush called")
+        log.info(s"inSplits onPush called")
 
         val incoming: ManifestsFeedResponse = grab(inManifests) match {
           case ManifestsFeedSuccess(DqManifests(_, manifests), createdAt) =>
@@ -103,11 +117,12 @@ class ArrivalSplitsGraphStage(name: String = "",
             log.info(s"Grabbed ${bestAvailableManifests.size} BestAvailableManifests from connection at ${connectedAt.toISOString()}")
 
             val updatedFlights = purgeExpiredArrivals(updateFlightsWithManifests(bestAvailableManifests, flightsByFlightId))
-            log.info(s"We now have ${updatedFlights.size} arrivals: ${updatedFlights.head._2.splits}")
+            log.info(s"We now have ${updatedFlights.size}")
 
             val latestDiff = updatedFlights.values.toSet -- flightsByFlightId.values.toSet
             arrivalsWithSplitsDiff = mergeDiffSets(latestDiff, arrivalsWithSplitsDiff)
             flightsByFlightId = updatedFlights
+            log.info(s"Done diff")
 
             pushStateIfReady()
 
@@ -129,10 +144,10 @@ class ArrivalSplitsGraphStage(name: String = "",
     }
 
     def updateFlightsFromIncoming(arrivalsDiff: ArrivalsDiff,
-                                  existingFlightsById: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
+                                  existingFlightsById: Map[ArrivalKey, ApiFlightWithSplits]): Map[ArrivalKey, ApiFlightWithSplits] = {
       log.info(s"${arrivalsDiff.toUpdate.size} diff updates, ${existingFlightsById.size} existing flights")
       val afterRemovals = existingFlightsById.filterNot {
-        case (id, _) => arrivalsDiff.toRemove.contains(id)
+        case (_, ApiFlightWithSplits(arrival, _, _)) => arrivalsDiff.toRemove.contains(arrival.uniqueId)
       }
 
       val lastMilliToCrunch = Crunch.getLocalLastMidnight(now().addDays(maxDaysToCrunch)).millisSinceEpoch
@@ -148,7 +163,7 @@ class ArrivalSplitsGraphStage(name: String = "",
       val minusExpired = purgeExpiredArrivals(updatedFlights.flights)
 
       val uniqueFlights = groupFlightsByCodeShares(minusExpired.values.toSeq)
-        .map { case (fws, _) => (fws.apiFlight.uniqueId, fws) }
+        .map { case (fws, _) => (ArrivalKey(fws.apiFlight), fws) }
         .toMap
 
       log.info(s"${uniqueFlights.size} flights after removing expired and accounting for codeshares")
@@ -157,14 +172,15 @@ class ArrivalSplitsGraphStage(name: String = "",
     }
 
     def updateWithFlight(updatedFlights: UpdatedFlights, updatedFlight: Arrival): UpdatedFlights = {
-      updatedFlights.flights.get(updatedFlight.uniqueId) match {
+      val key = ArrivalKey(updatedFlight)
+      updatedFlights.flights.get(key) match {
         case None =>
           val newFlightSplits: ApiFlightWithSplits = ApiFlightWithSplits(updatedFlight, splitsCalculator.portDefaultSplits, nowMillis)
-          val withNewFlight = updatedFlights.flights.updated(updatedFlight.uniqueId, newFlightSplits.copy(lastUpdated = nowMillis))
+          val withNewFlight = updatedFlights.flights.updated(key, newFlightSplits.copy(lastUpdated = nowMillis))
           updatedFlights.copy(flights = withNewFlight, additionsCount = updatedFlights.additionsCount + 1)
 
         case Some(existingFlight) if existingFlight.apiFlight != updatedFlight =>
-          val withUpdatedFlight = updatedFlights.flights.updated(updatedFlight.uniqueId, existingFlight.copy(apiFlight = updatedFlight, lastUpdated = nowMillis))
+          val withUpdatedFlight = updatedFlights.flights.updated(key, existingFlight.copy(apiFlight = updatedFlight, lastUpdated = nowMillis))
           updatedFlights.copy(flights = withUpdatedFlight, updatesCount = updatedFlights.updatesCount + 1)
 
         case _ => updatedFlights
@@ -172,20 +188,21 @@ class ArrivalSplitsGraphStage(name: String = "",
     }
 
     def updateFlightsWithManifests(manifests: Seq[BestAvailableManifest],
-                                   flightsById: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
-      manifests.foldLeft[Map[Int, ApiFlightWithSplits]](flightsByFlightId) {
+                                   flightsById: Map[ArrivalKey, ApiFlightWithSplits]): Map[ArrivalKey, ApiFlightWithSplits] = {
+      manifests.foldLeft[Map[ArrivalKey, ApiFlightWithSplits]](flightsByFlightId) {
         case (flightsSoFar, newManifest) =>
-          val maybeFlightForManifest: Option[ApiFlightWithSplits] = flightsSoFar.values
-            .find { flightToCheck =>
-              val vnMatches = flightToCheck.apiFlight.voyageNumberPadded == newManifest.voyageNumber
-              val schMatches = newManifest.scheduled.millisSinceEpoch == flightToCheck.apiFlight.Scheduled
-              vnMatches && schMatches
-            }
+          val key = ArrivalKey(newManifest.departurePortCode, newManifest.voyageNumber, newManifest.scheduled.millisSinceEpoch)
+          //          val maybeFlightForManifest_: Option[ApiFlightWithSplits] = flightsSoFar.values
+//            .find { flightToCheck =>
+//              val vnMatches = flightToCheck.apiFlight.voyageNumberPadded == newManifest.voyageNumber
+//              val schMatches = newManifest.scheduled.millisSinceEpoch == flightToCheck.apiFlight.Scheduled
+//              vnMatches && schMatches
+//            }
 
-          maybeFlightForManifest match {
+          flightsSoFar.get(key) match {
             case Some(flightForManifest) =>
               val flightWithManifestSplits = updateFlightWithManifest(flightForManifest, newManifest)
-              flightsSoFar.updated(flightWithManifestSplits.apiFlight.uniqueId, flightWithManifestSplits)
+              flightsSoFar.updated(ArrivalKey(flightWithManifestSplits.apiFlight), flightWithManifestSplits)
             case None =>
               log.debug(s"Got a manifest with no flight")
               flightsSoFar
@@ -230,7 +247,7 @@ class ArrivalSplitsGraphStage(name: String = "",
       .values.toSet
   }
 
-  def purgeExpiredArrivals(arrivals: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
+  def purgeExpiredArrivals(arrivals: Map[ArrivalKey, ApiFlightWithSplits]): Map[ArrivalKey, ApiFlightWithSplits] = {
     val expired = hasExpiredForType((a: ApiFlightWithSplits) => a.apiFlight.PcpTime.getOrElse(0L))
     val updated = arrivals.filterNot { case (_, a) => expired(a) }
 

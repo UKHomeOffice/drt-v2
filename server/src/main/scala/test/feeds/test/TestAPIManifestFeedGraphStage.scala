@@ -5,6 +5,7 @@ import akka.actor.{Actor, ActorLogging}
 import akka.stream.scaladsl.SourceQueueWithComplete
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import server.feeds.{ManifestsFeedResponse, ManifestsFeedSuccess}
+import services.OfferHandler
 import services.graphstages.DqManifests
 import test.TestActors.ResetActor
 
@@ -24,7 +25,7 @@ class TestManifestsActor extends Actor with ActorLogging {
 
       maybeSubscriber match {
         case Some(subscriber) =>
-          subscriber.offer(ManifestsFeedSuccess(DqManifests("", manifests)))
+          OfferHandler.offerWithRetries(subscriber, ManifestsFeedSuccess(DqManifests("", manifests)), 5)
           maybeManifests = None
         case None =>
           maybeManifests = Some(manifests)

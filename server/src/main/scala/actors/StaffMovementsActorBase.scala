@@ -9,6 +9,7 @@ import com.trueaccord.scalapb.GeneratedMessage
 import drt.shared.{HasExpireables, MilliDate, SDateLike, StaffMovement}
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
+import services.OfferHandler
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
@@ -61,12 +62,7 @@ class StaffMovementsActor(now: () => SDateLike,
   override def onUpdateState(data: StaffMovements): Unit = {
     log.info(s"Telling subscribers ($subscribers) about updated staff movements")
 
-    subscribers.foreach(s => {
-      s.offer(data.movements).onComplete {
-        case Success(qor) => log.info(s"update queued successfully with subscriber: $qor")
-        case Failure(t) => log.info(s"update failed to queue with subscriber: $t")
-      }
-    })
+    subscribers.foreach(s => OfferHandler.offerWithRetries(s, data.movements, 5))
   }
 
   val subsReceive: Receive = {
@@ -89,12 +85,13 @@ class StaffMovementsActorBase(val now: () => SDateLike,
 
   override def persistenceId = "staff-movements-store"
 
+  val snapshotInterval = 5000
+  override val snapshotBytesThreshold: Int = oneMegaByte
+  override val maybeSnapshotInterval: Option[Int] = Option(snapshotInterval)
+
   var state: StaffMovementsState = initialState
 
   def initialState = StaffMovementsState(StaffMovements(List()))
-
-  val snapshotInterval = 5000
-  override val snapshotBytesThreshold: Int = oneMegaByte
 
   override def stateToMessage: GeneratedMessage = StaffMovementsStateSnapshotMessage(staffMovementsToStaffMovementMessages(state.staffMovements))
 

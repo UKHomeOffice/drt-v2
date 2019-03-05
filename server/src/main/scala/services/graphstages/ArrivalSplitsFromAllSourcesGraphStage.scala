@@ -15,8 +15,7 @@ import services._
 import scala.collection.immutable.Map
 import scala.language.postfixOps
 
-
-case class UpdatedFlights(flights: Map[Int, ApiFlightWithSplits], updatesCount: Int, additionsCount: Int)
+case class UpdatedFlights_(flights: Map[Int, ApiFlightWithSplits], updatesCount: Int, additionsCount: Int)
 
 class ArrivalSplitsFromAllSourcesGraphStage(name: String = "",
                                             optionalInitialFlights: Option[FlightsWithSplits],
@@ -200,7 +199,7 @@ class ArrivalSplitsFromAllSourcesGraphStage(name: String = "",
 
       val lastMilliToCrunch = Crunch.getLocalLastMidnight(now().addDays(maxDaysToCrunch)).millisSinceEpoch
 
-      val updatedFlights = arrivalsDiff.toUpdate.foldLeft(UpdatedFlights(afterRemovals, 0, 0)) {
+      val updatedFlights = arrivalsDiff.toUpdate.foldLeft(UpdatedFlights_(afterRemovals, 0, 0)) {
         case (updatesSoFar, updatedFlight) =>
           if (updatedFlight.PcpTime.getOrElse(0L) <= lastMilliToCrunch) updateWithFlight(updatesSoFar, updatedFlight)
           else updatesSoFar
@@ -219,7 +218,7 @@ class ArrivalSplitsFromAllSourcesGraphStage(name: String = "",
       uniqueFlights
     }
 
-    def updateWithFlight(updatedFlights: UpdatedFlights, updatedFlight: Arrival): UpdatedFlights = {
+    def updateWithFlight(updatedFlights: UpdatedFlights_, updatedFlight: Arrival): UpdatedFlights_ = {
       updatedFlights.flights.get(updatedFlight.uniqueId) match {
         case None =>
           val newFlightWithAvailableSplits: ApiFlightWithSplits = addSplitsToFlight(updatedFlight)

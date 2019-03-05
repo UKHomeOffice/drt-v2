@@ -1,8 +1,6 @@
 package actors
 
-import actors.Sizes.oneMegaByte
-import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotMetadata, SnapshotOffer}
-import com.trueaccord.scalapb.GeneratedMessage
+import akka.persistence.SnapshotMetadata
 import drt.shared.SDateLike
 import org.slf4j.Logger
 import services.SDate
@@ -19,8 +17,6 @@ trait RecoveryLogging {
 
   def logSnapshotOffer(md: SnapshotMetadata,
                        additionalInfo: String): Unit = log.info(s"${snapshotOfferLogMessage(md)} - $additionalInfo")
-
-  def logEvent(event: Any): Unit = log.info(s"$prefix received event ${event.getClass}")
 
   def logRecoveryMessage(message: String): Unit = log.info(s"$prefix - $message")
 

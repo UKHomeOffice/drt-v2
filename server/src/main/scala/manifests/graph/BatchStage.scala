@@ -1,10 +1,12 @@
 package manifests.graph
 
-import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
+import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{Arrival, SDateLike}
+import drt.shared.{Arrival, ArrivalKey, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
+
+import scala.collection.SortedSet
 
 class BatchStage(now: () => SDateLike) extends GraphStage[FlowShape[List[Arrival], List[ArrivalKey]]] {
   val inArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("inArrivals.in")
@@ -16,7 +18,7 @@ class BatchStage(now: () => SDateLike) extends GraphStage[FlowShape[List[Arrival
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var registeredArrivals: Map[ArrivalKey, Option[Long]] = Map()
-    var lookupQueue: Set[ArrivalKey] = Set()
+    var lookupQueue: SortedSet[ArrivalKey] = SortedSet[ArrivalKey]()
 
     setHandler(inArrivals, new InHandler {
       override def onPush(): Unit = {
@@ -31,7 +33,7 @@ class BatchStage(now: () => SDateLike) extends GraphStage[FlowShape[List[Arrival
               registerArrival(arrivalKey)
               addToLookupQueueNoCheck(arrivalKey)
             case Some(Some(lastLookupMillis)) if isDueLookup(arrivalKey, lastLookupMillis) => addToLookupQueueWithCheck(arrivalKey)
-            case _ => log.info(s"Existing subscriber with a sufficiently recent lookup. Ignoring")
+            case _ => log.debug(s"Existing subscriber with a sufficiently recent lookup. Ignoring: $arrivalKey")
           }
         }
 
@@ -58,7 +60,7 @@ class BatchStage(now: () => SDateLike) extends GraphStage[FlowShape[List[Arrival
       }
     }
 
-    private def prioritiseAndPush(existingSubscribers: Map[ArrivalKey, Option[MillisSinceEpoch]], existingPrioritised: Set[ArrivalKey]): Unit = {
+    private def prioritiseAndPush(existingSubscribers: Map[ArrivalKey, Option[MillisSinceEpoch]], existingPrioritised: SortedSet[ArrivalKey]): Unit = {
       val prioritisedBatch = updatePrioritisedAndSubscribers(existingSubscribers, existingPrioritised)
 
       if (prioritisedBatch.nonEmpty) {
@@ -67,9 +69,9 @@ class BatchStage(now: () => SDateLike) extends GraphStage[FlowShape[List[Arrival
       } else log.info(s"Nothing to push right now")
     }
 
-    private def updatePrioritisedAndSubscribers(existingSubscribers: Map[ArrivalKey, Option[MillisSinceEpoch]], existingPrioritised: Set[ArrivalKey]): Set[ArrivalKey] = {
+    private def updatePrioritisedAndSubscribers(existingSubscribers: Map[ArrivalKey, Option[MillisSinceEpoch]], existingPrioritised: SortedSet[ArrivalKey]): SortedSet[ArrivalKey] = {
       log.info(s"about to check all arrivals for those due a lookup")
-      val updatedPrioritised: Set[ArrivalKey] = addToPrioritised(existingSubscribers, existingPrioritised)
+      val updatedPrioritised: SortedSet[ArrivalKey] = addToPrioritised(existingSubscribers, existingPrioritised)
 
       val (prioritisedBatch, remainingPrioritised) = updatedPrioritised.splitAt(500)
 
@@ -85,7 +87,7 @@ class BatchStage(now: () => SDateLike) extends GraphStage[FlowShape[List[Arrival
       prioritisedBatch
     }
 
-    private def addToPrioritised(subscribersToCheck: Map[ArrivalKey, Option[MillisSinceEpoch]], existingPrioritised: Set[ArrivalKey]): Set[ArrivalKey] = {
+    private def addToPrioritised(subscribersToCheck: Map[ArrivalKey, Option[MillisSinceEpoch]], existingPrioritised: SortedSet[ArrivalKey]): SortedSet[ArrivalKey] = {
       subscribersToCheck.foldLeft(existingPrioritised) {
         case (prioritisedSoFar, (subscriber, None)) =>
           if (!prioritisedSoFar.contains(subscriber)) prioritisedSoFar + subscriber

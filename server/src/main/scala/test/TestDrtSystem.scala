@@ -41,7 +41,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
 
   system.log.warning(s"Using test System")
 
-  val voyageManifestTestSourceGraph: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
+  val voyageManifestTestSourceGraph: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](100, OverflowStrategy.backpressure)
 
   override lazy val voyageManifestsStage: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = voyageManifestTestSourceGraph
 
@@ -72,7 +72,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
       val cs = startCrunchSystem(None, None, None, None, true)
       subscribeStaffingActors(cs)
       startScheduledFeedImports(cs)
-      cs.killSwitches
+//      cs.killSwitches
       testManifestsActor ! SubscribeResponseQueue(cs.manifestsResponse)
     }
     val testActors = List(

@@ -5,7 +5,7 @@ import akka.persistence._
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
-import server.feeds.{ManifestsFeedFailure, ManifestsFeedSuccess}
+import server.feeds.{BestManifestsFeedFailure, BestManifestsFeedSuccess, ManifestsFeedFailure, ManifestsFeedSuccess}
 import server.protobuf.messages.FlightsMessage.FeedStatusMessage
 import server.protobuf.messages.VoyageManifest._
 import services.SDate
@@ -20,17 +20,18 @@ case class VoyageManifestState(manifests: Set[VoyageManifest],
 
 case object GetLatestZipFilename
 
-class VoyageManifestsActor(val snapshotBytesThreshold: Int,
+class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
                            now: () => SDateLike,
                            expireAfterMillis: Long,
-                           snapshotInterval: Int) extends RecoveryActorLike with PersistentDrtActor[VoyageManifestState] {
+                           val initialMaybeSnapshotInterval: Option[Int]) extends RecoveryActorLike with PersistentDrtActor[VoyageManifestState] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   val name = "API"
 
   var state: VoyageManifestState = initialState
 
-  override val maybeSnapshotInterval = Option(snapshotInterval)
+  override val maybeSnapshotInterval: Option[Int] = initialMaybeSnapshotInterval
+  override val snapshotBytesThreshold: Int = initialSnapshotBytesThreshold
 
   def initialState = VoyageManifestState(
     manifests = Set(),
@@ -38,8 +39,6 @@ class VoyageManifestsActor(val snapshotBytesThreshold: Int,
     feedName = name,
     maybeFeedStatuses = None
   )
-
-  var persistCounter = 0
 
   def defaultLatestZipFilename: String = {
     val yesterday = SDate.now().addDays(-1)
@@ -96,6 +95,23 @@ class VoyageManifestsActor(val snapshotBytesThreshold: Int,
   }
 
   override def receiveCommand: Receive = {
+//    case BestManifestsFeedSuccess(manifests, createdAt) =>
+//      log.info(s"Received ${newManifests.size} manifests, up to file $updatedLZF from connection at ${createdAt.toISOString()}")
+//
+//      val updates = newManifests -- state.manifests
+//      val updatedManifests = newStateManifests(state.manifests, newManifests)
+//      val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, updates.size)
+//
+//      if (updates.nonEmpty) persistManifests(updates) else log.info(s"No new manifests to persist")
+//
+//      if (updatedLZF != state.latestZipFilename) persistLastSeenFileName(updatedLZF)
+//
+//      state = VoyageManifestState(manifests = updatedManifests, latestZipFilename = updatedLZF, feedName = name, maybeFeedStatuses = Option(state.addStatus(newStatus)))
+//
+//      persistFeedStatus(newStatus)
+
+    case BestManifestsFeedFailure(message, failedAt) =>
+
     case ManifestsFeedSuccess(DqManifests(updatedLZF, newManifests), createdAt) =>
       log.info(s"Received ${newManifests.size} manifests, up to file $updatedLZF from connection at ${createdAt.toISOString()}")
 

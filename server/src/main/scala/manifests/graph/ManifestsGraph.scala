@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
 import akka.stream.stage.GraphStage
-import drt.shared.Arrival
+import drt.shared.{Arrival, ArrivalKey}
 
 object ManifestsGraph {
   def apply(arrivalsSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]],

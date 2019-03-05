@@ -900,7 +900,7 @@ class Application @Inject()(implicit val config: Configuration,
   def autowireApi(path: String): Action[RawBuffer] = auth {
     Action.async(parse.raw) {
       implicit request =>
-        log.info(s"Request path: $path")
+        log.debug(s"Request path: $path")
 
         val b = request.body.asBytes(parse.UNLIMITED).get
 

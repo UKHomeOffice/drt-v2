@@ -12,7 +12,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import server.feeds.{ManifestsFeedFailure, ManifestsFeedResponse, ManifestsFeedSuccess}
-import services.SDate
+import services.{OfferHandler, SDate}
 import services.graphstages.DqManifests
 
 import scala.concurrent.Await
@@ -79,10 +79,7 @@ class S3ManifestPoller(sourceQueue: SourceQueueWithComplete[ManifestsFeedRespons
 
   val tickingSource: Source[Unit, Cancellable] = Source.tick(0 seconds, 1 minute, NotUsed).map(_ => {
     log.info(s"Ticking API stuff")
-    sourceQueue.offer(fetchNewManifests(lastSeenFileName)).map {
-      case Enqueued => log.info("Manifests enqueued successfully")
-      case error => log.error(s"Failed to add manifest response to queue: $error")
-    }
+    OfferHandler.offerWithRetries(sourceQueue, fetchNewManifests(lastSeenFileName), 5)
   })
 
   def startPollingForManifests(): SinkQueueWithCancel[Unit] = tickingSource.runWith(Sink.queue())

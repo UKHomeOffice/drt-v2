@@ -7,6 +7,7 @@ import com.trueaccord.scalapb.GeneratedMessage
 import drt.shared.{FixedPointAssignments, MilliDate, SDateLike, StaffAssignment}
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
+import services.OfferHandler
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
@@ -22,12 +23,7 @@ class FixedPointsActor(now: () => SDateLike) extends FixedPointsActorBase(now) {
   override def onUpdateState(fixedPoints: FixedPointAssignments): Unit = {
     log.info(s"Telling subscribers ($subscribers) about updated fixed points: $fixedPoints")
 
-    subscribers.foreach(s => {
-      s.offer(fixedPoints).onComplete {
-        case Success(qor) => log.info(s"update queued successfully with subscriber: $qor")
-        case Failure(t) => log.info(s"update failed to queue with subscriber: $t")
-      }
-    })
+    subscribers.foreach(s => OfferHandler.offerWithRetries(s, fixedPoints, 5))
   }
 
   val subsReceive: Receive = {
@@ -49,12 +45,12 @@ class FixedPointsActorBase(now: () => SDateLike) extends RecoveryActorLike with 
 
   override def persistenceId = "fixedPoints-store"
 
+  override val snapshotBytesThreshold: Int = oneMegaByte
+  override val maybeSnapshotInterval: Option[Int] = Option(250)
+
   var state: FixedPointAssignments = initialState
 
   def initialState: FixedPointAssignments = FixedPointAssignments.empty
-
-  val snapshotInterval = 250
-  override val snapshotBytesThreshold: Int = oneMegaByte
 
   import FixedPointsMessageParser._
 

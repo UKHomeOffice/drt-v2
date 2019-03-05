@@ -28,7 +28,9 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
 
   def playSnapshotMessage: PartialFunction[Any, Unit] = processSnapshotMessage orElse unknownMessage
 
-  def postRecoveryComplete(): Unit = Unit
+  def postRecoveryComplete(): Unit =
+    log.info("Recovery complete")
+//    logCounters(bytesSinceSnapshotCounter, messagesPersistedSinceSnapshotCounter, snapshotBytesThreshold, maybeSnapshotInterval)
 
   def postSaveSnapshot(): Unit = Unit
 
@@ -82,8 +84,6 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
       postRecoveryComplete()
 
     case event =>
-      logEvent(event)
       playEventMessage(event)
-      logCounters(bytesSinceSnapshotCounter, messagesPersistedSinceSnapshotCounter, snapshotBytesThreshold, maybeSnapshotInterval)
   }
 }

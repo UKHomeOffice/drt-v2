@@ -9,6 +9,10 @@ import services.SDate
 import services.graphstages.Crunch.{PortStateDiff, RemoveFlight}
 import slickdb.ArrivalTableLike
 
+import scala.concurrent.Await
+import scala.concurrent.duration._
+import scala.language.postfixOps
+
 
 class AggregatedArrivalsActor(portCode: String, arrivalTable: ArrivalTableLike) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -26,13 +30,13 @@ class AggregatedArrivalsActor(portCode: String, arrivalTable: ArrivalTableLike) 
         val scheduledIso = SDate(scheduled).toISOString()
         val scheduledTs = new Timestamp(scheduled)
         log.info(s"Removing $portCode / $terminalName / $number / $scheduledIso")
-        arrivalTable.removeArrival(number, terminalName, scheduledTs)
+        Await.result(arrivalTable.removeArrival(number, terminalName, scheduledTs), 10 seconds)
     }
   }
 
   def handleUpdates(flightUpdates: Set[ApiFlightWithSplits]): Unit = {
     flightUpdates.foreach {
-      case ApiFlightWithSplits(f, _, _) => arrivalTable.insertOrUpdateArrival(f)
+      case ApiFlightWithSplits(f, _, _) => Await.result(arrivalTable.insertOrUpdateArrival(f), 10 seconds)
     }
   }
 }

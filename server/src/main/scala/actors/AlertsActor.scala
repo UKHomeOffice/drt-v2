@@ -12,7 +12,11 @@ case object DeleteAlerts
 
 case class AlertsActor() extends RecoveryActorLike with PersistentDrtActor[Seq[Alert]] {
   override val log: Logger = LoggerFactory.getLogger(getClass)
+
+  override def persistenceId: String = "alerts-store"
+
   override val snapshotBytesThreshold: Int = oneMegaByte
+  override val maybeSnapshotInterval: Option[Int] = None
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case alert: ProtobufAlert =>
@@ -73,6 +77,4 @@ case class AlertsActor() extends RecoveryActorLike with PersistentDrtActor[Seq[A
       log.error(s"Received unexpected message ${other.getClass}")
 
   }
-
-  override def persistenceId: String = "alerts-store"
 }

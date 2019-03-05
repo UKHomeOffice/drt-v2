@@ -163,11 +163,11 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val liveCrunchStateActor: ActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
   lazy val forecastCrunchStateActor: ActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
 
-  lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, params.snapshotIntervalVm), name = "voyage-manifests-actor")
+  lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, Option(params.snapshotIntervalVm)), name = "voyage-manifests-actor")
   lazy val lookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
   lazy val voyageManifestsRequestActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsRequestActor], airportConfig.portCode, lookup), name = "voyage-manifests-request-actor")
 
-  lazy val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](0, OverflowStrategy.backpressure)
+  lazy val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](100, OverflowStrategy.backpressure)
   lazy val requestPrioritisationStage: BatchStage = new BatchStage(now)
   lazy val requestsExecutorStage: ExecutorStage = new ExecutorStage(airportConfig.portCode, lookup)
 
@@ -187,7 +187,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val initialManifestsState: Option[VoyageManifestState] = manifestsState
   val latestZipFileName: String = initialManifestsState.map(_.latestZipFilename).getOrElse("")
 
-  lazy val voyageManifestsStage: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
+  lazy val voyageManifestsStage: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](100, OverflowStrategy.backpressure)
 
   system.log.info(s"useNationalityBasedProcessingTimes: ${params.useNationalityBasedProcessingTimes}")
   system.log.info(s"useSplitsPrediction: ${params.useSplitsPrediction}")
