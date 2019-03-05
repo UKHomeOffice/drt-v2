@@ -37,9 +37,7 @@ class BatchStage(now: () => SDateLike, isDueLookup: (ArrivalKey, MillisSinceEpoc
           }
         }
 
-        if (isAvailable(outArrivals)) {
-          prioritiseAndPush(registeredArrivals, lookupQueue)
-        }
+        if (isAvailable(outArrivals)) prioritiseAndPush()
 
         pullIfAvailable()
       }
@@ -47,7 +45,7 @@ class BatchStage(now: () => SDateLike, isDueLookup: (ArrivalKey, MillisSinceEpoc
 
     setHandler(outArrivals, new OutHandler {
       override def onPull(): Unit = {
-        prioritiseAndPush(registeredArrivals, lookupQueue)
+        prioritiseAndPush()
 
         pullIfAvailable()
       }
@@ -60,8 +58,8 @@ class BatchStage(now: () => SDateLike, isDueLookup: (ArrivalKey, MillisSinceEpoc
       }
     }
 
-    private def prioritiseAndPush(existingSubscribers: Map[ArrivalKey, Option[MillisSinceEpoch]], existingPrioritised: Set[ArrivalKey]): Unit = {
-      val prioritisedBatch = updatePrioritisedAndSubscribers(existingSubscribers, existingPrioritised)
+    private def prioritiseAndPush(): Unit = {
+      val prioritisedBatch = updatePrioritisedAndSubscribers()
 
       if (prioritisedBatch.nonEmpty) {
         log.info(s"Pushing ${prioritisedBatch.size} prioritised arrivals. ${lookupQueue.size} prioritised remaining.")
@@ -69,9 +67,9 @@ class BatchStage(now: () => SDateLike, isDueLookup: (ArrivalKey, MillisSinceEpoc
       } else log.info(s"Nothing to push right now")
     }
 
-    private def updatePrioritisedAndSubscribers(existingSubscribers: Map[ArrivalKey, Option[MillisSinceEpoch]], existingPrioritised: Set[ArrivalKey]): Set[ArrivalKey] = {
+    private def updatePrioritisedAndSubscribers(): Set[ArrivalKey] = {
       val currentNow = now()
-      val updatedPrioritised: Set[ArrivalKey] = addToPrioritised(existingSubscribers, existingPrioritised, currentNow)
+      val updatedPrioritised: Set[ArrivalKey] = addToPrioritised(currentNow)
 
       val (prioritisedBatch, remainingPrioritised) = updatedPrioritised.toSeq.sortBy(_.scheduled).splitAt(batchSize)
 
@@ -86,8 +84,8 @@ class BatchStage(now: () => SDateLike, isDueLookup: (ArrivalKey, MillisSinceEpoc
       Set[ArrivalKey](prioritisedBatch :_*)
     }
 
-    private def addToPrioritised(subscribersToCheck: Map[ArrivalKey, Option[MillisSinceEpoch]], prioritised: Set[ArrivalKey], currentNow: SDateLike): Set[ArrivalKey] = subscribersToCheck
-      .foldLeft(prioritised) {
+    private def addToPrioritised(currentNow: SDateLike): Set[ArrivalKey] = registeredArrivals
+      .foldLeft(lookupQueue) {
         case (prioritisedSoFar, (subscriber, None)) =>
           if (!prioritisedSoFar.contains(subscriber)) prioritisedSoFar + subscriber
           else prioritisedSoFar
