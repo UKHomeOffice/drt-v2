@@ -1,10 +1,9 @@
 package test
 
 import actors._
-import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props}
-import akka.stream.scaladsl.Source
-import akka.stream.{KillSwitch, Materializer}
+import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
+import akka.stream.{KillSwitch, Materializer, OverflowStrategy}
 import akka.util.Timeout
 import drt.shared.{AirportConfig, Role}
 import play.api.Configuration
@@ -12,7 +11,7 @@ import play.api.mvc.{Headers, Session}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services.SDate
 import test.TestActors.{TestStaffMovementsActor, _}
-import test.feeds.test.{CSVFixtures, TestAPIManifestFeedGraphStage, TestFixtureFeed}
+import test.feeds.test.{CSVFixtures, TestFixtureFeed, TestManifestsActor}
 import test.roles.TestUserRoleProvider
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -31,6 +30,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
 
   val testLiveCrunchStateProps = Props(classOf[TestCrunchStateActor], airportConfig.portStateSnapshotInterval, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots)
   val testForecastCrunchStateProps = Props(classOf[TestCrunchStateActor], 100, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots)
+  val testManifestsActor: ActorRef = actorSystem.actorOf(Props(classOf[TestManifestsActor]), s"TestActor-APIManifests")
 
   override lazy val liveCrunchStateActor: ActorRef = system.actorOf(testLiveCrunchStateProps, name = "crunch-live-state-actor")
   override lazy val forecastCrunchStateActor: ActorRef = system.actorOf(testForecastCrunchStateProps, name = "crunch-forecast-state-actor")
@@ -40,11 +40,13 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
   override lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[TestStaffMovementsActor], now, time48HoursAgo(now)), "TestActor-StaffMovements")
 
   system.log.warning(s"Using test System")
-  val voyageManifestTestSourceGraph: Source[ManifestsFeedResponse, NotUsed] = Source.fromGraph(new TestAPIManifestFeedGraphStage)
 
-  override lazy val voyageManifestsStage: Source[ManifestsFeedResponse, NotUsed] = voyageManifestTestSourceGraph
+  val voyageManifestTestSourceGraph: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
+
+  override lazy val voyageManifestsStage: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = voyageManifestTestSourceGraph
+
+
   val testFeed = TestFixtureFeed(system)
-
 
   config.getOptional[String]("test.live_fixture_csv").foreach { file =>
     implicit val timeout: Timeout = Timeout(250 milliseconds)
@@ -54,12 +56,11 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
       val day = SDate.now().toISODateOnly
       CSVFixtures.csvPathToArrivalsOnDate(day, file).collect {
         case Success(arrival) =>
-          testActor.map( _ ! arrival)
+          testActor.map(_ ! arrival)
       }
     })
 
   }
-
 
   override def liveArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = testFeed
 
@@ -72,24 +73,24 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
       subscribeStaffingActors(cs)
       startScheduledFeedImports(cs)
       cs.killSwitches
+      testManifestsActor ! SubscribeResponseQueue(cs.manifestsResponse)
     }
     val testActors = List(
-      baseArrivalsActor,
-      forecastArrivalsActor,
-      liveArrivalsActor,
-      voyageManifestsActor,
-      shiftsActor,
-      fixedPointsActor,
-      staffMovementsActor,
-      liveCrunchStateActor,
-      forecastCrunchStateActor
+        baseArrivalsActor,
+        forecastArrivalsActor,
+        liveArrivalsActor,
+        voyageManifestsActor,
+        shiftsActor,
+        fixedPointsActor,
+        staffMovementsActor,
+        liveCrunchStateActor,
+        forecastCrunchStateActor
     )
 
     val restartActor: ActorRef = system.actorOf(
-      Props(classOf[RestartActor], startSystem, testActors),
-      name = "TestActor-ResetData"
+        Props(classOf[RestartActor], startSystem, testActors),
+        name = "TestActor-ResetData"
     )
-
     restartActor ! StartTestSystem
   }
 }

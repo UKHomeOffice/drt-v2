@@ -3,6 +3,7 @@ package services.crunch
 import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
+import akka.stream.stage.GraphStage
 import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplits
@@ -29,7 +30,7 @@ object RunnableCrunch {
                                        actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
 
                                        arrivalsGraphStage: ArrivalsGraphStage,
-                                       arrivalSplitsStage: ArrivalSplitsGraphStage,
+                                       arrivalSplitsStage: GraphStage[FanInShape2[ArrivalsDiff, ManifestsFeedResponse, FlightsWithSplits]],
                                        splitsPredictorStage: SplitsPredictorBase,
                                        workloadGraphStage: WorkloadGraphStage,
                                        loadBatchUpdateGraphStage: BatchLoadsByCrunchPeriodGraphStage,
@@ -47,6 +48,7 @@ object RunnableCrunch {
                                        liveArrivalsActor: ActorRef,
 
                                        manifestsActor: ActorRef,
+                                       manifestsRequestActor: ActorRef,
 
                                        liveCrunchStateActor: ActorRef,
                                        fcstCrunchStateActor: ActorRef,
@@ -59,6 +61,7 @@ object RunnableCrunch {
     val arrivalsKillSwitch = KillSwitches.single[ArrivalsDiff]
 
     val manifestsKillSwitch = KillSwitches.single[ManifestsFeedResponse]
+
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
@@ -92,7 +95,6 @@ object RunnableCrunch {
         ) =>
           val arrivals = builder.add(arrivalsGraphStage.async)
           val arrivalSplits = builder.add(arrivalSplitsStage.async)
-          val splitsPredictor = builder.add(splitsPredictorStage.async)
           val workload = builder.add(workloadGraphStage.async)
           val batchLoad = builder.add(loadBatchUpdateGraphStage.async)
           val crunch = builder.add(crunchLoadGraphStage.async)
@@ -106,7 +108,9 @@ object RunnableCrunch {
           val baseArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
           val fcstArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
           val liveArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
+
           val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](2))
+
           val manifestsFanOut = builder.add(Broadcast[ManifestsFeedResponse](2))
           val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](2))
           val workloadFanOut = builder.add(Broadcast[Loads](2))
@@ -122,8 +126,9 @@ object RunnableCrunch {
           val liveSink = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
           val fcstSink = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
           val aggregatedArrivalsSink = builder.add(Sink.actorRef(aggregatedArrivalsStateActor, "complete"))
+          val manifestsRequestSink = builder.add(Sink.actorRef(manifestsRequestActor, "complete"))
 
-
+          // @formatter:off
           baseArrivals ~> baseArrivalsFanOut ~> arrivals.in0
                           baseArrivalsFanOut ~> baseArrivalsSink
 
@@ -136,14 +141,12 @@ object RunnableCrunch {
           manifests ~> manifestGraphKillSwitch ~> manifestsFanOut ~> arrivalSplits.in1
                                                   manifestsFanOut ~> manifestsSink
 
-          shifts ~> staff.in0
-          fixedPoints ~> staff.in1
-          staffMovements ~> staff.in2
+          shifts          ~> staff.in0
+          fixedPoints     ~> staff.in1
+          staffMovements  ~> staff.in2
 
           arrivals.out ~> arrivalsGraphKillSwitch ~> arrivalsFanOut ~> arrivalSplits.in0
-                                                     arrivalsFanOut.map(_.toUpdate.toSeq) ~> splitsPredictor
-
-          splitsPredictor.out ~> arrivalSplits.in2
+                                                     arrivalsFanOut ~> manifestsRequestSink
 
           arrivalSplits.out ~> arrivalSplitsFanOut ~> workload
                                arrivalSplitsFanOut ~> portState.in0
@@ -151,7 +154,7 @@ object RunnableCrunch {
           workload.out ~> batchLoad ~> workloadFanOut ~> crunch
                                        workloadFanOut ~> simulation.in0
 
-          crunch ~> portState.in1
+          crunch                  ~> portState.in1
           actualDesksAndWaitTimes ~> portState.in2
 
           staff.out ~> batchStaff ~> staffFanOut ~> simulation.in1
@@ -160,9 +163,10 @@ object RunnableCrunch {
           simulation.out ~> portState.in4
 
           portState.out ~> portStateFanOut
-          portStateFanOut.map(_.window(liveStart(now), liveEnd(now))) ~> liveSink
-          portStateFanOut.map(_.window(forecastStart(now), forecastEnd(now))) ~> fcstSink
-          portStateFanOut.map(pswd => withOnlyDescheduledRemovals(pswd.diff, now())) ~> aggregatedArrivalsSink
+                           portStateFanOut.map(_.window(liveStart(now), liveEnd(now)))                ~> liveSink
+                           portStateFanOut.map(_.window(forecastStart(now), forecastEnd(now)))        ~> fcstSink
+                           portStateFanOut.map(pswd => withOnlyDescheduledRemovals(pswd.diff, now())) ~> aggregatedArrivalsSink
+          // @formatter:on
 
           ClosedShape
     }

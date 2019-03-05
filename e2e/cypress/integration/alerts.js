@@ -17,12 +17,12 @@ describe('Alerts system', function () {
 
   function deleteAlerts() {
     cy.setRoles(["test"]);
-    cy.request('DELETE', '/v2/test/live/data/alert');
+    cy.request('DELETE', '/data/alert');
 
   }
   function addAlert(time, number="") {
     cy.request('POST',
-      '/v2/test/live/data/alert',
+      '/data/alert',
       {
         "title": "This is an alert"+number,
         "message": "This is the message of the alert",
@@ -32,7 +32,7 @@ describe('Alerts system', function () {
 
   function navigateToHome() {
     cy.setRoles(["test"]);
-    cy.visit('/v2/test/live').then(() => {
+    cy.visit('/').then(() => {
       cy.wait(1000);
       cy.get('.navbar-drt').contains('DRT TEST').end();
     }).end();

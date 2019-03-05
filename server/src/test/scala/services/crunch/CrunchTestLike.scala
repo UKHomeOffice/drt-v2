@@ -147,7 +147,8 @@ class CrunchTestLike
                      logLabel: String = "",
                      cruncher: TryCrunch = TestableCrunchLoadStage.mockCrunch,
                      simulator: Simulator = TestableCrunchLoadStage.mockSimulator,
-                     aggregatedArrivalsActor: ActorRef = testProbe("aggregated-arrivals").ref
+                     aggregatedArrivalsActor: ActorRef = testProbe("aggregated-arrivals").ref,
+                     useLegacyManifests: Boolean = false
                     ): CrunchGraphInputsAndProbes = {
 
     val maxDaysToCrunch = 5
@@ -163,6 +164,7 @@ class CrunchTestLike
     val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], now, DrtStaticParameters.time48HoursAgo(now)))
     val snapshotInterval = 1
     val manifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], oneMegaByte, now, DrtStaticParameters.expireAfterMillis, snapshotInterval))
+    val manifestsRequestActor: ActorRef = testProbe("manifests-request").ref
 
     val liveCrunchActor = liveCrunchStateActor(logLabel, liveProbe, now)
     val forecastCrunchActor = forecastCrunchStateActor(logLabel, forecastProbe, now)
@@ -192,10 +194,12 @@ class CrunchTestLike
         "aggregated-arrivals" -> aggregatedArrivalsActor
       ),
       useNationalityBasedProcessingTimes = false,
+      useLegacyManifests = useLegacyManifests,
       now = now,
       splitsPredictorStage = splitsPredictorStage,
       manifestsSource = manifestsSource,
       voyageManifestsActor = manifestsActor,
+      voyageManifestsRequestActor = manifestsRequestActor,
       cruncher = cruncher,
       simulator = simulator,
       initialPortState = initialPortState,
@@ -333,13 +337,6 @@ class CrunchTestLike
           }
         (tn, terminalLoads)
     }
-
-  def getLastMessageReceivedBy(testProbe: TestProbe, timeDurationToWait: Duration): PortState = {
-    testProbe
-      .receiveWhile(timeDurationToWait) { case ps@PortState(_, _, _) => ps }
-      .reverse
-      .head
-  }
 
   def offerAndWait[T](sourceQueue: SourceQueueWithComplete[T], offering: T): QueueOfferResult = {
     Await.result(sourceQueue.offer(offering), 3 seconds) match {

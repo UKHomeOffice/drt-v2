@@ -53,7 +53,6 @@ case class ArrivalTable(portCode: String, tables: Tables) extends ArrivalTableLi
   }
 
   def insertOrUpdateArrival(f: shared.Arrival): Unit = {
-    log.info(s"insertOrUpdate: $f")
     db.run(arrivalsTableQuery.insertOrUpdate(arrivalRow(f))).recover {
       case throwable => log.error(s"insertOrUpdate failed", throwable)
     }

@@ -4,7 +4,6 @@ object PassengerTypeCalculatorValues {
 
   object CountryCodes {
     val Austria = "AUT"
-    val Australia = "AUS"
     val Belgium = "BEL"
     val Bulgaria = "BGR"
     val Croatia = "HRV"
@@ -36,6 +35,14 @@ object PassengerTypeCalculatorValues {
     val Sweden = "SWE"
     val Switzerland = "CHE"
     val UK = "GBR"
+
+    val Australia = "AUS"
+    val Canada = "CAN"
+    val Japan = "JPN"
+    val NewZealand = "NZL"
+    val Singapore = "SGP"
+    val SouthKorea = "KOR"
+    val USA = "USA"
   }
 
   import CountryCodes._
@@ -77,6 +84,17 @@ object PassengerTypeCalculatorValues {
     val extras = Set(Iceland, Norway, Liechtenstein, Switzerland)
     EUCountries ++ extras
   }
+
+  lazy val B5JPlusCountries: Set[String] = Set(
+    USA,
+    Australia,
+    Canada,
+    NewZealand,
+    Japan,
+    SouthKorea,
+    Singapore
+  )
+
 
   object DocType {
     val Visa = "V"

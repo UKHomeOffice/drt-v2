@@ -137,7 +137,7 @@ class VoyageManifestsActor(val snapshotBytesThreshold: Int,
       log.info(s"Save snapshot failure: $md, $cause")
 
     case other =>
-      log.info(s"Received unexpected message $other")
+      log.info(s"Received unexpected message ${other.getClass}")
   }
 
   def persistLastSeenFileName(lastSeenFileName: String): Unit = persistAndMaybeSnapshot(latestFilenameToMessage(lastSeenFileName))

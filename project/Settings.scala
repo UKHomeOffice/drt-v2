@@ -35,7 +35,7 @@ object Settings {
     val uTest = "0.6.3"
     val h2 = "1.4.197"
 
-    val akka = "2.5.17"
+    val akka = "2.5.20"
     val akkaStreamContrib = "0.9"
 
     val specs2 = "3.7"
@@ -55,7 +55,7 @@ object Settings {
     val pprint = "0.4.3"
     val scalaCheck = "1.13.4"
     val akkaPersistenceInmemory = "2.4.18.1"
-    val akkaPersistenceJdbc = "3.5.0-DRT-SNAPSHOT"
+    val akkaPersistenceJdbc = "3.5.0"
     val bluebus = "0.2.1-DRT-SNAPSHOT"
     val postgres = "42.2.2"
     val sshJ = "0.24.0"

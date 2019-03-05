@@ -22,10 +22,10 @@ describe('Global error handler', function () {
 
   it("should log an error event to the server and popup a confirmation dialog to reload the page", function () {
     preventExceptionFromFailingTest();
-    cy.visit('/v2/test/live');
+    cy.visit('/');
     cy.server();
     let pageLoadCount = 1;
-    cy.route("POST", "/v2/test/live/logging", {}).as('postLog');
+    cy.route("POST", "/logging", {}).as('postLog');
     cy.on('window:confirm', (str) => true);
     cy.on("window:before:load", () => {
       pageLoadCount++;
@@ -41,7 +41,7 @@ describe('Global error handler', function () {
 
   it("should not reload the page if the user selects not to", function () {
     preventExceptionFromFailingTest();
-    cy.visit('/v2/test/live');
+    cy.visit('/');
     let pageLoadCount = 1;
     cy.on('window:confirm', (str) => false);
 

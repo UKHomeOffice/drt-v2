@@ -24,7 +24,7 @@
 // -- This is will overwrite an existing command --
 // Cypress.Commands.overwrite("visit", (originalFn, url, options) => { ... })
 Cypress.Commands.add('setRoles', (roles = []) => {
-  cy.request("POST", 'v2/test/live/test/mock-roles', { "roles": roles});
+  cy.request("POST", '/test/mock-roles', { "roles": roles});
 });
 
 Cypress.Commands.add('addFlight', (estString, actString, estChoxString, actChoxString, schString) => {
@@ -51,9 +51,9 @@ Cypress.Commands.add('addFlight', (estString, actString, estChoxString, actChoxS
     "SchDT": schString
   };
 
-  cy.request('POST', '/v2/test/live/test/arrival', flightPayload);
+  cy.request('POST', '/test/arrival', flightPayload);
 });
 
 Cypress.Commands.add('deleteData', () => {
-  cy.request("DELETE", '/v2/test/live/test/data');
+  cy.request("DELETE", '/test/data');
 });
