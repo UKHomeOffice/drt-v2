@@ -26,7 +26,7 @@ object ManifestTries {
   def empty: ManifestTries = ManifestTries(List())
 }
 
-class ExecutorStage(portCode: String, manifestLookup: ManifestLookupLike) extends GraphStage[FlowShape[List[ArrivalKey], ManifestTries]] {
+class LookupStage(portCode: String, manifestLookup: ManifestLookupLike) extends GraphStage[FlowShape[List[ArrivalKey], ManifestTries]] {
   val inArrivals: Inlet[List[ArrivalKey]] = Inlet[List[ArrivalKey]]("inArrivals.in")
   val outManifests: Outlet[ManifestTries] = Outlet[ManifestTries]("outManifests.out")
 

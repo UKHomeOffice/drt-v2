@@ -10,7 +10,7 @@ import manifests.actors.RegisteredArrivals
 object ManifestsGraph {
   def apply(arrivalsSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]],
             batchStage: GraphStage[FanOutShape2[List[Arrival], List[ArrivalKey],RegisteredArrivals]],
-            executorStage: GraphStage[FlowShape[List[ArrivalKey], ManifestTries]],
+            lookupStage: GraphStage[FlowShape[List[ArrivalKey], ManifestTries]],
             manifestsSinkActor: ActorRef,
             registeredArrivalsActor: ActorRef
            ): RunnableGraph[SourceQueueWithComplete[List[Arrival]]] = {
@@ -20,13 +20,13 @@ object ManifestsGraph {
       implicit builder =>
         arrivals =>
           val batchRequests = builder.add(batchStage.async)
-          val requestsExecutor = builder.add(executorStage.async)
+          val manifestLookup = builder.add(lookupStage.async)
           val manifestsSink = builder.add(Sink.actorRef(manifestsSinkActor, "completed"))
           val registeredArrivalsSink = builder.add(Sink.actorRef(registeredArrivalsActor, "completed"))
 
           arrivals ~> batchRequests.in
 
-          batchRequests.out0 ~> requestsExecutor ~> manifestsSink
+          batchRequests.out0 ~> manifestLookup ~> manifestsSink
           batchRequests.out1 ~> registeredArrivalsSink
 
           ClosedShape

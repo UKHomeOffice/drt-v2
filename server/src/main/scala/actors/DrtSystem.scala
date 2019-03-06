@@ -25,7 +25,7 @@ import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared._
 import manifests.actors.{RegisteredArrivals, RegisteredArrivalsActor}
-import manifests.graph.{BatchStage, ExecutorStage, ManifestsGraph}
+import manifests.graph.{BatchStage, LookupStage, ManifestsGraph}
 import manifests.passengers.S3ManifestPoller
 import org.apache.spark.sql.SparkSession
 import org.joda.time.DateTimeZone
@@ -281,7 +281,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   def startManifestsGraph(maybeRegisteredArrivals: Option[RegisteredArrivals]): SourceQueueWithComplete[List[Arrival]] = {
     lazy val requestPrioritisationStage: BatchStage = new BatchStage(now, Crunch.isDueLookup, 250, expireAfterMillis, maybeRegisteredArrivals)
-    lazy val requestsExecutorStage: ExecutorStage = new ExecutorStage(airportConfig.portCode, lookup)
+    lazy val requestsExecutorStage: LookupStage = new LookupStage(airportConfig.portCode, lookup)
 
     ManifestsGraph(manifestsArrivalRequestSource, requestPrioritisationStage, requestsExecutorStage, voyageManifestsRequestActor, registeredArrivalsActor).run
   }
