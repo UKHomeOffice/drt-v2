@@ -1,0 +1,14 @@
+syntax = "proto2";
+
+package server.protobuf.messages;
+
+message RegisteredArrivalsMessage {
+    repeated RegisteredArrivalMessage arrivals = 1;
+}
+
+message RegisteredArrivalMessage {
+    optional string origin = 1;
+    optional string voyageNumber = 2;
+    optional int64 scheduled = 3;
+    optional int64 lookedUp = 4;
+}

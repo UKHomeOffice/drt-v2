@@ -20,8 +20,6 @@ trait RecoveryLogging {
 
   def logRecoveryMessage(message: String): Unit = log.info(s"$prefix - $message")
 
-  def logCompleted(): Unit = log.info(s"$prefix completed")
-
   def logPointInTimeCompleted(pit: SDateLike): Unit = log.info(s"$prefix completed to point-in-time ${pit.toISOString()}")
 
   def logUnknown(unknown: Any): Unit = log.warn(s"$prefix received unknown message ${unknown.getClass}")

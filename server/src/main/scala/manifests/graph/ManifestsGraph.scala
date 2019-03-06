@@ -5,12 +5,15 @@ import akka.stream._
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
 import akka.stream.stage.GraphStage
 import drt.shared.{Arrival, ArrivalKey}
+import manifests.actors.RegisteredArrivals
 
 object ManifestsGraph {
   def apply(arrivalsSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]],
-            batchStage: GraphStage[FlowShape[List[Arrival], List[ArrivalKey]]],
+            batchStage: GraphStage[FanOutShape2[List[Arrival], List[ArrivalKey],RegisteredArrivals]],
             executorStage: GraphStage[FlowShape[List[ArrivalKey], ManifestTries]],
-            manifestsSinkActor: ActorRef): RunnableGraph[SourceQueueWithComplete[List[Arrival]]] = {
+            manifestsSinkActor: ActorRef,
+            registeredArrivalsActor: ActorRef
+           ): RunnableGraph[SourceQueueWithComplete[List[Arrival]]] = {
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
     val graph = GraphDSL.create(arrivalsSource.async) {
@@ -19,8 +22,12 @@ object ManifestsGraph {
           val batchRequests = builder.add(batchStage.async)
           val requestsExecutor = builder.add(executorStage.async)
           val manifestsSink = builder.add(Sink.actorRef(manifestsSinkActor, "completed"))
+          val registeredArrivalsSink = builder.add(Sink.actorRef(registeredArrivalsActor, "completed"))
 
-          arrivals ~> batchRequests ~> requestsExecutor ~> manifestsSink
+          arrivals ~> batchRequests.in
+
+          batchRequests.out0 ~> requestsExecutor ~> manifestsSink
+          batchRequests.out1 ~> registeredArrivalsSink
 
           ClosedShape
     }

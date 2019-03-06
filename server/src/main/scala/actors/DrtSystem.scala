@@ -24,6 +24,7 @@ import drt.server.feeds.ltn.LtnLiveFeed
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared._
+import manifests.actors.{RegisteredArrivals, RegisteredArrivalsActor}
 import manifests.graph.{BatchStage, ExecutorStage, ManifestsGraph}
 import manifests.passengers.S3ManifestPoller
 import org.apache.spark.sql.SparkSession
@@ -124,6 +125,7 @@ case class DrtConfigParameters(config: Configuration) {
 }
 
 case class SubscribeRequestQueue(subscriber: SourceQueueWithComplete[List[Arrival]])
+
 case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsFeedResponse])
 
 case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig)
@@ -159,6 +161,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val arrivalsImportActor: ActorRef = system.actorOf(Props(classOf[ArrivalsImportActor]), name = "arrivals-import-actor")
 
   lazy val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(classOf[AggregatedArrivalsActor], airportConfig.portCode, ArrivalTable(airportConfig.portCode, PostgresTables)), name = "aggregated-arrivals-actor")
+  lazy val registeredArrivalsActor: ActorRef = system.actorOf(Props(classOf[RegisteredArrivalsActor], oneMegaByte, now, expireAfterMillis, None), name = "registered-arrivals-actor")
 
   lazy val liveCrunchStateActor: ActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
   lazy val forecastCrunchStateActor: ActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
@@ -168,11 +171,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val voyageManifestsRequestActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsRequestActor], airportConfig.portCode, lookup), name = "voyage-manifests-request-actor")
 
   lazy val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](100, OverflowStrategy.backpressure)
-  lazy val requestPrioritisationStage: BatchStage = new BatchStage(now, Crunch.isDueLookup, 250)
-  lazy val requestsExecutorStage: ExecutorStage = new ExecutorStage(airportConfig.portCode, lookup)
-
-  val manifestsSourceQueue: SourceQueueWithComplete[List[Arrival]] = ManifestsGraph(manifestsArrivalRequestSource, requestPrioritisationStage, requestsExecutorStage, voyageManifestsRequestActor).run
-  voyageManifestsRequestActor ! SubscribeRequestQueue(manifestsSourceQueue)
 
   lazy val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], now, timeBeforeThisMonth(now)))
   lazy val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], now))
@@ -199,29 +197,37 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     } else userRolesFromHeader(headers)
 
   def run(): Unit = {
-    val futurePortStates: Future[(Option[PortState], Option[PortState], Option[Set[Arrival]], Option[Set[Arrival]], Option[Set[Arrival]])] = {
+    val futurePortStates: Future[(Option[PortState], Option[PortState], Option[Set[Arrival]], Option[Set[Arrival]], Option[Set[Arrival]], Option[RegisteredArrivals])] = {
       val maybeLivePortState = initialPortState(liveCrunchStateActor)
       val maybeForecastPortState = initialPortState(forecastCrunchStateActor)
       val maybeInitialBaseArrivals = initialArrivals(baseArrivalsActor)
       val maybeInitialFcstArrivals = initialArrivals(forecastArrivalsActor)
       val maybeInitialLiveArrivals = initialArrivals(liveArrivalsActor)
+      val maybeInitialRegisteredArrivals = initialRegisteredArrivals(registeredArrivalsActor)
       for {
         lps <- maybeLivePortState
         fps <- maybeForecastPortState
         ba <- maybeInitialBaseArrivals
         fa <- maybeInitialFcstArrivals
         la <- maybeInitialLiveArrivals
-      } yield (lps, fps, ba, fa, la)
+        ra <- maybeInitialRegisteredArrivals
+      } yield (lps, fps, ba, fa, la, ra)
     }
     futurePortStates.onComplete {
-      case Success((maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals)) =>
+      case Success((maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeRegisteredArrivals)) =>
         system.log.info(s"Successfully restored initial state for App")
         val initialPortState: Option[PortState] = mergePortStates(maybeLiveState, maybeForecastState)
+
         val crunchInputs: CrunchSystem[Cancellable] = startCrunchSystem(initialPortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, params.recrunchOnStart)
+        voyageManifestsRequestActor ! SubscribeResponseQueue(crunchInputs.manifestsResponse)
+
+        if (maybeRegisteredArrivals.isDefined) log.info(s"sending ${maybeRegisteredArrivals.get.arrivals.size} initial registered arrivals to batch stage")
+        else log.info(s"sending no registered arrivals to batch stage")
+
+        val manifestsSourceQueue = startManifestsGraph(maybeRegisteredArrivals)
+        voyageManifestsRequestActor ! SubscribeRequestQueue(manifestsSourceQueue)
 
         new S3ManifestPoller(crunchInputs.manifestsResponse, airportConfig.portCode, latestZipFileName, s3ApiProvider).startPollingForManifests()
-
-        voyageManifestsRequestActor ! SubscribeResponseQueue(crunchInputs.manifestsResponse)
 
         subscribeStaffingActors(crunchInputs)
         startScheduledFeedImports(crunchInputs)
@@ -235,10 +241,17 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     val actors: Seq[AskableActorRef] = Seq(liveArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
 
     val statuses = actors
-      .map(askable => askable.ask(GetFeedStatuses)(new Timeout(5 seconds)).map {
-        case Some(fs: FeedStatuses) if fs.hasConnectedAtLeastOnce => Option(fs)
-        case _ => None
-      })
+      .map(askable => askable.ask(GetFeedStatuses)(new Timeout(30 seconds))
+        .map {
+          case Some(fs: FeedStatuses) if fs.hasConnectedAtLeastOnce => Option(fs)
+          case _ => None
+        }
+        .recover {
+          case t =>
+            log.error(s"Failed to receive feed status from $askable", t)
+            None
+        }
+      )
 
     Future
       .sequence(statuses)
@@ -264,6 +277,13 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     shiftsActor ! AddShiftSubscribers(List(crunchInputs.shifts))
     fixedPointsActor ! AddFixedPointSubscribers(List(crunchInputs.fixedPoints))
     staffMovementsActor ! AddStaffMovementsSubscribers(List(crunchInputs.staffMovements))
+  }
+
+  def startManifestsGraph(maybeRegisteredArrivals: Option[RegisteredArrivals]): SourceQueueWithComplete[List[Arrival]] = {
+    lazy val requestPrioritisationStage: BatchStage = new BatchStage(now, Crunch.isDueLookup, 250, expireAfterMillis, maybeRegisteredArrivals)
+    lazy val requestsExecutorStage: ExecutorStage = new ExecutorStage(airportConfig.portCode, lookup)
+
+    ManifestsGraph(manifestsArrivalRequestSource, requestPrioritisationStage, requestsExecutorStage, voyageManifestsRequestActor, registeredArrivalsActor).run
   }
 
   def startCrunchSystem(initialPortState: Option[PortState],
@@ -309,6 +329,17 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       recrunchOnStart = recrunchOnStart
     ))
     crunchInputs
+  }
+
+  def initialRegisteredArrivals(askableRegisteredArrivalsActor: AskableActorRef): Future[Option[RegisteredArrivals]] = {
+    askableRegisteredArrivalsActor.ask(GetState)(new Timeout(5 minutes)).map {
+      case ra: RegisteredArrivals =>
+        system.log.info(s"Got initial registered arrival state from ${askableRegisteredArrivalsActor.toString}")
+        Option(ra)
+      case _ =>
+        system.log.info(s"Got no initial registered arrival state from ${askableRegisteredArrivalsActor.toString}")
+        None
+    }
   }
 
   def initialPortState(askableCrunchStateActor: AskableActorRef): Future[Option[PortState]] = {

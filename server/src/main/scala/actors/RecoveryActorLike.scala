@@ -39,7 +39,7 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   def persistAndMaybeSnapshot(messageToPersist: GeneratedMessage): Unit = {
     persist(messageToPersist) { message =>
       val messageBytes = message.serializedSize
-      log.info(s"Persisting $messageBytes bytes of ${message.getClass}")
+      log.debug(s"Persisting $messageBytes bytes of ${message.getClass}")
 
       message match {
         case m: AnyRef =>
@@ -80,7 +80,6 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
       playSnapshotMessage(ss)
 
     case RecoveryCompleted =>
-      logCompleted()
       postRecoveryComplete()
 
     case event =>
