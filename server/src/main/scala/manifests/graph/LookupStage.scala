@@ -14,8 +14,8 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 
-case class ManifestTries(tries: List[Try[BestAvailableManifest]]) {
-  def +(triesToAdd: List[Try[BestAvailableManifest]]) = ManifestTries(tries ++ triesToAdd)
+case class ManifestTries(tries: List[Option[BestAvailableManifest]]) {
+  def +(triesToAdd: List[Option[BestAvailableManifest]]) = ManifestTries(tries ++ triesToAdd)
 
   def nonEmpty: Boolean = tries.nonEmpty
 
@@ -42,7 +42,7 @@ class LookupStage(portCode: String, manifestLookup: ManifestLookupLike) extends 
         val incomingArrivals = grab(inArrivals)
 
         val start = SDate.now().millisSinceEpoch
-        val manifestTries: List[Try[BestAvailableManifest]] = Try(Await.result(futureManifests(incomingArrivals), 30 seconds)) match {
+        val manifestTries: List[Option[BestAvailableManifest]] = Try(Await.result(futureManifests(incomingArrivals), 30 seconds)) match {
           case Success(tries) =>
             log.info(s"lookups took ${SDate.now().millisSinceEpoch - start}ms")
             tries
@@ -76,11 +76,11 @@ class LookupStage(portCode: String, manifestLookup: ManifestLookupLike) extends 
     }
   }
 
-  private def futureManifests(incomingArrivals: List[ArrivalKey]): Future[List[Try[BestAvailableManifest]]] =
+  private def futureManifests(incomingArrivals: List[ArrivalKey]): Future[List[Option[BestAvailableManifest]]] =
     Future.sequence(
       incomingArrivals
         .map { arrival =>
           manifestLookup
-            .tryBestAvailableManifest(portCode, arrival.origin, arrival.voyageNumber, SDate(arrival.scheduled))
+            .maybeBestAvailableManifest(portCode, arrival.origin, arrival.voyageNumber, SDate(arrival.scheduled))
         })
 }

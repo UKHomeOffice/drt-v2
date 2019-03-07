@@ -14,7 +14,7 @@ import scala.concurrent.Future
 import scala.util.{Success, Try}
 
 case class MockManifestLookupService(bestAvailableManifest: BestAvailableManifest) extends ManifestLookupLike {
-  override def tryBestAvailableManifest(
+  override def maybeBestAvailableManifest(
                                          arrivalPort: String, departurePort: String,
                                          voyageNumber: String, scheduled: SDateLike):
   Future[Try[BestAvailableManifest]] = Future(Success(bestAvailableManifest))
