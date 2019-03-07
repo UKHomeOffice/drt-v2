@@ -167,12 +167,14 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val lookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
   lazy val voyageManifestsRequestActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsRequestActor], airportConfig.portCode, lookup), name = "voyage-manifests-request-actor")
 
-  lazy val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](0, OverflowStrategy.backpressure)
-  lazy val requestPrioritisationStage: BatchStage = new BatchStage(now)
-  lazy val requestsExecutorStage: ExecutorStage = new ExecutorStage(airportConfig.portCode, lookup)
+  if (!params.useLegacyManifests) {
+    lazy val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](0, OverflowStrategy.backpressure)
+    lazy val requestPrioritisationStage: BatchStage = new BatchStage(now)
+    lazy val requestsExecutorStage: ExecutorStage = new ExecutorStage(airportConfig.portCode, lookup)
 
-  val manifestsSourceQueue: SourceQueueWithComplete[List[Arrival]] = ManifestsGraph(manifestsArrivalRequestSource, requestPrioritisationStage, requestsExecutorStage, voyageManifestsRequestActor).run
-  voyageManifestsRequestActor ! SubscribeRequestQueue(manifestsSourceQueue)
+    val manifestsSourceQueue: SourceQueueWithComplete[List[Arrival]] = ManifestsGraph(manifestsArrivalRequestSource, requestPrioritisationStage, requestsExecutorStage, voyageManifestsRequestActor).run
+    voyageManifestsRequestActor ! SubscribeRequestQueue(manifestsSourceQueue)
+  }
 
   lazy val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], now, timeBeforeThisMonth(now)))
   lazy val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], now))
@@ -221,7 +223,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
         new S3ManifestPoller(crunchInputs.manifestsResponse, airportConfig.portCode, latestZipFileName, s3ApiProvider).startPollingForManifests()
 
-        voyageManifestsRequestActor ! SubscribeResponseQueue(crunchInputs.manifestsResponse)
+        if (!params.useLegacyManifests) {
+          voyageManifestsRequestActor ! SubscribeResponseQueue(crunchInputs.manifestsResponse)
+        }
 
         subscribeStaffingActors(crunchInputs)
         startScheduledFeedImports(crunchInputs)

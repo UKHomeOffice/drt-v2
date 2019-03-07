@@ -8,7 +8,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.TerminalName
 import org.slf4j.{Logger, LoggerFactory}
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
@@ -44,17 +44,21 @@ case class ArrivalTable(portCode: String, tables: Tables) extends ArrivalTableLi
     AggregatedArrivals(arrivals)
   }
 
-  def removeArrival(number: Int, terminalName: TerminalName, scheduledTs: Timestamp): Unit = {
+  def removeArrival(number: Int, terminalName: TerminalName, scheduledTs: Timestamp): Future[Int] = {
     val idx = matchIndex(number, terminalName, scheduledTs)
     log.info(s"removing: $number / $terminalName / $scheduledTs")
-    db.run(arrivalsTableQuery.filter(idx).delete).recover {
-      case throwable => log.error(s"delete failed", throwable)
+    db.run(arrivalsTableQuery.filter(idx).delete) recover {
+      case throwable =>
+        log.error(s"delete failed", throwable)
+        0
     }
   }
 
-  def insertOrUpdateArrival(f: shared.Arrival): Unit = {
-    db.run(arrivalsTableQuery.insertOrUpdate(arrivalRow(f))).recover {
-      case throwable => log.error(s"insertOrUpdate failed", throwable)
+  def insertOrUpdateArrival(f: shared.Arrival): Future[Int] = {
+    db.run(arrivalsTableQuery.insertOrUpdate(arrivalRow(f))) recover {
+      case throwable =>
+        log.error(s"insertOrUpdate failed", throwable)
+        0
     }
   }
 
