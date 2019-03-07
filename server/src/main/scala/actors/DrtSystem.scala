@@ -224,10 +224,14 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         if (maybeRegisteredArrivals.isDefined) log.info(s"sending ${maybeRegisteredArrivals.get.arrivals.size} initial registered arrivals to batch stage")
         else log.info(s"sending no registered arrivals to batch stage")
 
-        val manifestsSourceQueue = startManifestsGraph(maybeRegisteredArrivals)
-        voyageManifestsRequestActor ! SubscribeRequestQueue(manifestsSourceQueue)
 
         new S3ManifestPoller(crunchInputs.manifestsResponse, airportConfig.portCode, latestZipFileName, s3ApiProvider).startPollingForManifests()
+
+        if (!params.useLegacyManifests) {
+          val manifestsSourceQueue = startManifestsGraph(maybeRegisteredArrivals)
+          voyageManifestsRequestActor ! SubscribeRequestQueue(manifestsSourceQueue)
+          voyageManifestsRequestActor ! SubscribeResponseQueue(crunchInputs.manifestsResponse)
+        }
 
         subscribeStaffingActors(crunchInputs)
         startScheduledFeedImports(crunchInputs)

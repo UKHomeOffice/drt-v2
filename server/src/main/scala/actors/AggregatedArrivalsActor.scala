@@ -30,14 +30,13 @@ class AggregatedArrivalsActor(portCode: String, arrivalTable: ArrivalTableLike) 
         val scheduledIso = SDate(scheduled).toISOString()
         val scheduledTs = new Timestamp(scheduled)
         log.info(s"Removing $portCode / $terminalName / $number / $scheduledIso")
-        Await.result(arrivalTable.removeArrival(number, terminalName, scheduledTs), 10 seconds)
+        Await.result(arrivalTable.removeArrival(number, terminalName, scheduledTs), 1 seconds)
     }
   }
 
   def handleUpdates(flightUpdates: Set[ApiFlightWithSplits]): Unit = {
     flightUpdates.foreach {
-      case ApiFlightWithSplits(f, _, _) => Await.result(arrivalTable.insertOrUpdateArrival(f), 10 seconds)
+      case ApiFlightWithSplits(f, _, _) => Await.result(arrivalTable.insertOrUpdateArrival(f), 1 seconds)
     }
   }
 }
-
