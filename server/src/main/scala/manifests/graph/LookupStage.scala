@@ -5,7 +5,7 @@ import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
 import drt.shared.{Arrival, ArrivalKey}
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
-import services.{ManifestLookupLike, SDate}
+import services.{ManifestLookupLike, SDate, UniqueArrivalKey}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
@@ -43,9 +43,11 @@ class LookupStage(portCode: String, manifestLookup: ManifestLookupLike) extends 
 
         val start = SDate.now().millisSinceEpoch
         val manifestTries: List[Option[BestAvailableManifest]] = Try(Await.result(futureManifests(incomingArrivals), 30 seconds)) match {
-          case Success(tries) =>
+          case Success(arrivalsWithMaybeManifests) =>
             log.info(s"lookups took ${SDate.now().millisSinceEpoch - start}ms")
-            tries
+            arrivalsWithMaybeManifests.map {
+              case (_, maybeManifests) => maybeManifests
+            }
           case Failure(t) =>
             log.error(s"Manifests lookup failed", t)
             List()
@@ -76,7 +78,7 @@ class LookupStage(portCode: String, manifestLookup: ManifestLookupLike) extends 
     }
   }
 
-  private def futureManifests(incomingArrivals: List[ArrivalKey]): Future[List[Option[BestAvailableManifest]]] =
+  private def futureManifests(incomingArrivals: List[ArrivalKey]): Future[List[(UniqueArrivalKey, Option[BestAvailableManifest])]] =
     Future.sequence(
       incomingArrivals
         .map { arrival =>

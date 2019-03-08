@@ -3,7 +3,7 @@ package manifests.passengers
 import drt.shared.SDateLike
 import drt.shared.SplitRatiosNs.SplitSources
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
-import services.SDate
+import services.{SDate, UniqueArrivalKey}
 
 import scala.util.Try
 
@@ -24,6 +24,17 @@ object BestAvailableManifest {
     manifest.CarrierCode,
     manifest.scheduleArrivalDateTime.getOrElse(SDate.now()),
     manifest.PassengerList.map(p => ManifestPassengerProfile(p, portCode)))
+
+  def apply(source: String,
+            uniqueArrivalKey: UniqueArrivalKey,
+            passengerList: List[ManifestPassengerProfile]): BestAvailableManifest = BestAvailableManifest(
+    SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
+    uniqueArrivalKey.arrivalPort,
+    uniqueArrivalKey.departurePort,
+    uniqueArrivalKey.voyageNumber,
+    "",
+    uniqueArrivalKey.scheduled,
+    passengerList)
 }
 
 case class ManifestPassengerProfile(nationality: String,
