@@ -14,7 +14,13 @@ import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class ShowAlertModalDialogHandler[M](modelRW: ModelRW[M, Pot[Boolean]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case UpdateShowAlertModalDialog(show) => updated(Ready(show))
+    case UpdateShowAlertModalDialog(show) =>
+      value match {
+        case Ready(current) if current == show =>
+          noChange
+        case _ =>
+          updated(Ready(show))
+      }
 
     case GetShowAlertModalDialog =>
       effectOnly(
