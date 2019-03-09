@@ -1,4 +1,4 @@
-package services
+package manifests
 
 import java.sql.Timestamp
 

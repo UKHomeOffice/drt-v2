@@ -3,10 +3,11 @@ package actors
 import akka.actor.Actor
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.{Arrival, ArrivalsDiff}
+import manifests.ManifestLookupLike
 import manifests.graph.ManifestTries
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{BestManifestsFeedSuccess, ManifestsFeedResponse}
-import services.{ManifestLookupLike, OfferHandler, SDate}
+import services.{OfferHandler, SDate}
 
 import scala.Option
 import scala.language.postfixOps

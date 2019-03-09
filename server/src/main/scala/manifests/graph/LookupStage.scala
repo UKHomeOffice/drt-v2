@@ -3,9 +3,10 @@ package manifests.graph
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
 import drt.shared.{Arrival, ArrivalKey}
+import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
-import services.{ManifestLookupLike, SDate, UniqueArrivalKey}
+import services.{SDate, UniqueArrivalKey}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}

@@ -4,12 +4,12 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.testkit.TestKit
 import drt.shared.SDateLike
+import manifests.ManifestLookupLike
 import manifests.passengers.BestAvailableManifest
 import org.specs2.mutable.SpecificationLike
 import passengersplits.InMemoryPersistence
-import services.ManifestLookupLike
-import scala.concurrent.ExecutionContext.Implicits.global
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Success, Try}
 

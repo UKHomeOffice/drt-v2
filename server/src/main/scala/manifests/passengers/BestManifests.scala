@@ -2,8 +2,9 @@ package manifests.passengers
 
 import drt.shared.SDateLike
 import drt.shared.SplitRatiosNs.SplitSources
+import manifests.UniqueArrivalKey
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
-import services.{SDate, UniqueArrivalKey}
+import services.SDate
 
 import scala.util.Try
 
