@@ -28,7 +28,8 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
 
   def playSnapshotMessage: PartialFunction[Any, Unit] = processSnapshotMessage orElse unknownMessage
 
-  def postRecoveryComplete(): Unit = Unit
+  def postRecoveryComplete(): Unit =
+    log.info("Recovery complete")
 
   def postSaveSnapshot(): Unit = Unit
 
@@ -37,7 +38,7 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   def persistAndMaybeSnapshot(messageToPersist: GeneratedMessage): Unit = {
     persist(messageToPersist) { message =>
       val messageBytes = message.serializedSize
-      log.info(s"Persisting $messageBytes bytes of ${message.getClass}")
+      log.debug(s"Persisting $messageBytes bytes of ${message.getClass}")
 
       message match {
         case m: AnyRef =>
@@ -78,12 +79,9 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
       playSnapshotMessage(ss)
 
     case RecoveryCompleted =>
-      logCompleted()
       postRecoveryComplete()
 
     case event =>
-      logEvent(event)
       playEventMessage(event)
-      logCounters(bytesSinceSnapshotCounter, messagesPersistedSinceSnapshotCounter, snapshotBytesThreshold, maybeSnapshotInterval)
   }
 }

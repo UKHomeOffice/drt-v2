@@ -56,7 +56,9 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
         flightsAfterUpdate == expectedFlights
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   "Given a noop update to an existing flight followed by a real update " +
@@ -94,6 +96,8 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
         flightsAfterUpdate == expectedFlights
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 }

@@ -1,6 +1,7 @@
 package actors
 
 import actors.Sizes.oneMegaByte
+import akka.actor.Scheduler
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.trueaccord.scalapb.GeneratedMessage
@@ -8,7 +9,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
-import services.SDate
+import services.{OfferHandler, SDate}
 import services.graphstages.Crunch
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -39,16 +40,12 @@ case class AddFixedPointSubscribers(subscribers: List[SourceQueueWithComplete[Fi
 
 class ShiftsActor(now: () => SDateLike, expireBefore: () => SDateLike) extends ShiftsActorBase(now, expireBefore) {
   var subscribers: List[SourceQueueWithComplete[ShiftAssignments]] = List()
+  implicit val scheduler: Scheduler = this.context.system.scheduler
 
   override def onUpdateState(shifts: ShiftAssignments): Unit = {
     log.info(s"Telling subscribers ($subscribers) about updated shifts")
 
-    subscribers.foreach(s => {
-      s.offer(shifts).onComplete {
-        case Success(qor) => log.info(s"update queued successfully with subscriber: $qor")
-        case Failure(t) => log.info(s"update failed to queue with subscriber: $t")
-      }
-    })
+    subscribers.foreach(s => OfferHandler.offerWithRetries(s, shifts, 5))
   }
 
   val subsReceive: Receive = {
@@ -69,14 +66,15 @@ class ShiftsActorBase(val now: () => SDateLike,
                       val expireBefore: () => SDateLike) extends ExpiryActorLike[ShiftAssignments] with RecoveryActorLike with PersistentDrtActor[ShiftAssignments] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
+  val snapshotInterval = 5000
+  override val snapshotBytesThreshold: Int = oneMegaByte
+  override val maybeSnapshotInterval: Option[Int] = Option(snapshotInterval)
+
   override def persistenceId = "shifts-store"
 
   var state: ShiftAssignments = initialState
 
   def initialState: ShiftAssignments = ShiftAssignments.empty
-
-  val snapshotInterval = 5000
-  override val snapshotBytesThreshold: Int = oneMegaByte
 
   import ShiftsMessageParser._
 

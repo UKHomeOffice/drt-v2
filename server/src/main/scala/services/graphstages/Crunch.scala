@@ -57,6 +57,23 @@ object Crunch {
     crunchStartDate
   }
 
+  def isDueLookup(arrival: ArrivalKey, lastLookupMillis: MillisSinceEpoch, now: SDateLike): Boolean = {
+    val soonWithExpiredLookup = isWithinHours(arrival.scheduled, 48, now) && !wasWithinHours(lastLookupMillis, 24, now)
+    val notSoonWithExpiredLookup = !isWithinHours(arrival.scheduled, 48, now) && !wasWithinHours(lastLookupMillis, 24 * 7, now)
+
+    soonWithExpiredLookup || notSoonWithExpiredLookup
+  }
+
+  def isWithinHours(millis: MillisSinceEpoch, hours: Int, now: SDateLike): Boolean = {
+    val target = now.addHours(hours)
+    millis <= target.millisSinceEpoch
+  }
+
+  def wasWithinHours(millis: MillisSinceEpoch, hours: Int, now: SDateLike): Boolean = {
+    val target = now.addHours(-hours)
+    target.millisSinceEpoch <= millis
+  }
+
   def changedDays(offsetMinutes: Int, staffMinutes: StaffMinutes): Map[MillisSinceEpoch, Seq[StaffMinute]] =
     staffMinutes.minutes.groupBy(minutes => {
     getLocalLastMidnight(minutes.minute - offsetMinutes * 60000).millisSinceEpoch
@@ -105,16 +122,6 @@ object Crunch {
       case (id, f) if oldFlightsById.get(id).isEmpty || !f.equals(oldFlightsById(id)) => f
     }.toSet
 
-    toUpdate.map(_.apiFlight).foreach(ua => {
-      oldFlightsById.get(ua.uniqueId).map(_.apiFlight).foreach(oa => {
-        if (ua.Estimated != oa.Estimated) log.info(s"${ua.IATA} changed estimated ${oa.Estimated} -> ${ua.Estimated}")
-        if (ua.Actual != oa.Actual) log.info(s"${ua.IATA} changed touchdown ${oa.Actual} -> ${ua.Actual}")
-        if (ua.EstimatedChox != oa.EstimatedChox) log.info(s"${ua.IATA} changed estchox   ${oa.EstimatedChox} -> ${ua.EstimatedChox}")
-        if (ua.ActualChox != oa.ActualChox) log.info(s"${ua.IATA} changed actchox   ${oa.ActualChox} -> ${ua.ActualChox}")
-        if (ua.ActPax != oa.ActPax) log.info(s"${ua.IATA} changed actpax   ${oa.ActPax} -> ${ua.ActPax}")
-      })
-    })
-
     (toRemove, toUpdate)
   }
 
@@ -138,24 +145,21 @@ object Crunch {
     Tuple2(Tuple3(cm.terminalName, cm.queueName, cm.minute), cm)
   }
 
-  def applyCrunchDiff(crunchMinuteUpdates: Set[CrunchMinute], crunchMinutes: Map[TQM, CrunchMinute]): Map[TQM, CrunchMinute] = {
-    val nowMillis = SDate.now().millisSinceEpoch
+  def applyCrunchDiff(crunchMinuteUpdates: Set[CrunchMinute], crunchMinutes: Map[TQM, CrunchMinute], nowMillis: MillisSinceEpoch): Map[TQM, CrunchMinute] = {
     val withUpdates = crunchMinuteUpdates.foldLeft(crunchMinutes) {
       case (soFar, ncm) => soFar.updated(ncm.key, ncm.copy(lastUpdated = Option(nowMillis)))
     }
     withUpdates
   }
 
-  def applyStaffDiff(staffMinuteUpdates: Set[StaffMinute], staffMinutes: Map[TM, StaffMinute]): Map[TM, StaffMinute] = {
-    val nowMillis = SDate.now().millisSinceEpoch
+  def applyStaffDiff(staffMinuteUpdates: Set[StaffMinute], staffMinutes: Map[TM, StaffMinute], nowMillis: MillisSinceEpoch): Map[TM, StaffMinute] = {
     val withUpdates = staffMinuteUpdates.foldLeft(staffMinutes) {
       case (soFar, newStaffMinute) => soFar.updated(newStaffMinute.key, newStaffMinute.copy(lastUpdated = Option(nowMillis)))
     }
     withUpdates
   }
 
-  def applyFlightsWithSplitsDiff(flightRemovals: Set[Int], flightUpdates: Set[ApiFlightWithSplits], flights: Map[Int, ApiFlightWithSplits]): Map[Int, ApiFlightWithSplits] = {
-    val nowMillis = SDate.now().millisSinceEpoch
+  def applyFlightsWithSplitsDiff(flightRemovals: Set[Int], flightUpdates: Set[ApiFlightWithSplits], flights: Map[Int, ApiFlightWithSplits], nowMillis: MillisSinceEpoch): Map[Int, ApiFlightWithSplits] = {
     val withoutRemovals = flightRemovals.foldLeft(flights) {
       case (soFar, flightIdToRemove) => soFar - flightIdToRemove
     }
@@ -254,34 +258,6 @@ object Crunch {
     ageInMillis > expireAfterMillis
   }
 
-  def purgeExpiredMinutes[M <: Minute](minutes: Map[Int, M], now: () => SDateLike, expireAfterMillis: MillisSinceEpoch): Map[Int, M] = {
-    val expired: M => Boolean = Crunch.hasExpired(now(), expireAfterMillis, (cm: M) => cm.minute)
-    val updated = minutes.filterNot { case (_, cm) => expired(cm) }
-    val numPurged = minutes.size - updated.size
-    if (numPurged > 0) log.info(s"Purged $numPurged expired CrunchMinutes")
-    updated
-  }
-
-  def mergeArrivalsDiffs(diff1: ArrivalsDiff, diff2: ArrivalsDiff): ArrivalsDiff = {
-    val mergedUpdates = diff2.toUpdate
-      .foldLeft(diff1.toUpdate) {
-        case (soFar, newArrival) => soFar.filterNot(_.uniqueId == newArrival.uniqueId) + newArrival
-      }
-    val mergedRemovals = diff2.toRemove ++ diff1.toRemove
-    ArrivalsDiff(mergedUpdates, mergedRemovals)
-  }
-
-  def mergeMaybeArrivalsDiffs(maybeDiff1: Option[ArrivalsDiff], maybeDiff2: Option[ArrivalsDiff]): Option[ArrivalsDiff] = {
-    (maybeDiff1, maybeDiff2) match {
-      case (None, None) => None
-      case (Some(diff1), None) => Option(diff1)
-      case (None, Some(diff2)) => Option(diff2)
-      case (Some(diff1), Some(diff2)) =>
-        log.info(s"Merging ArrivalsDiffs")
-        Option(mergeArrivalsDiffs(diff1, diff2))
-    }
-  }
-
   def mergeMapOfIndexedThings[I, X](things1: Map[I, X], things2: Map[I, X]): Map[I, X] = things2.foldLeft(things1) {
     case (soFar, (id, newThing)) => soFar.updated(id, newThing)
   }
@@ -327,7 +303,7 @@ object Crunch {
       .foldLeft(loadMinutesQueue.toMap) {
         case (existingQueue, (dayStartMillis, newLoadsForDay)) =>
           val existingLoadsForDay = existingQueue.get(dayStartMillis)
-          log.info(s"Adding ${newLoadsForDay.size} new loads to ${existingLoadsForDay.map(_.loadMinutes.size).getOrElse(0)} existing loads for ${SDate(dayStartMillis, europeLondonTimeZone).toISOString()}")
+          log.debug(s"Adding ${newLoadsForDay.size} new loads to ${existingLoadsForDay.map(_.loadMinutes.size).getOrElse(0)} existing loads for ${SDate(dayStartMillis, europeLondonTimeZone).toISOString()}")
           val mergedDayMinutes = mergeUpdatedLoads(existingLoadsForDay, dayStartMillis, newLoadsForDay)
           existingQueue.updated(dayStartMillis, Loads(mergedDayMinutes))
       }
@@ -338,7 +314,7 @@ object Crunch {
   def mergeUpdatedLoads(maybeExistingDayLoads: Option[Loads], dayMillis: MillisSinceEpoch, dayLoadMinutes: Set[LoadMinute]): Set[LoadMinute] = {
     maybeExistingDayLoads match {
       case None =>
-        log.info(s"Adding ${SDate(dayMillis).toISOString()} to queue with ${dayLoadMinutes.size} loads (${dayLoadMinutes.toSeq.count(_.paxLoad != 0)} non-zero pax minutes)")
+        log.debug(s"Adding ${SDate(dayMillis).toISOString()} to queue with ${dayLoadMinutes.size} loads (${dayLoadMinutes.toSeq.count(_.paxLoad != 0)} non-zero pax minutes)")
         dayLoadMinutes
       case Some(existingDayLoads) =>
         val existingDayLoadsByKey = existingDayLoads

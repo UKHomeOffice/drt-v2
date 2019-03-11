@@ -47,7 +47,9 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
           resultSummary == expected
       }
 
-      true
+      crunch.liveArrivalsInput.complete()
+
+      success
     }
 
     "Given flights some of which are code shares with each other " +
@@ -83,7 +85,9 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
           resultSummary == expected
       }
 
-      true
+      crunch.liveArrivalsInput.complete()
+
+      success
     }
   }
 

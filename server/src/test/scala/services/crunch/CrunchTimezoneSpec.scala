@@ -76,7 +76,9 @@ class CrunchTimezoneSpec extends CrunchTestLike {
             resultSummary == expected
         }
 
-        true
+        crunch.liveArrivalsInput.complete()
+
+        success
       }
 
       "Given a list of Min or Max desks" >> {

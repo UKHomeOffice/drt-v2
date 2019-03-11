@@ -3,15 +3,15 @@ package controllers
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.TimeZone
-import javax.net.ssl._
 
+import javax.net.ssl._
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
-import services.SDate
+import services.{OfferHandler, SDate}
 import services.graphstages.{ActualDeskStats, Crunch, DeskStat}
 import services.graphstages.Crunch.europeLondonId
 
@@ -48,11 +48,13 @@ object Deskstats {
   def startBlackjack(csvUrl: String, actualDesksSource: SourceQueueWithComplete[ActualDeskStats], interval: FiniteDuration, startFrom: SDateLike)(implicit actorSystem: ActorSystem): Any = {
     val initialDelay1Second = 1 * 1000
 
-    actorSystem.scheduler.schedule(
+    implicit val  scheduler = actorSystem.scheduler
+
+    scheduler.schedule(
       initialDelay1Second milliseconds,
       interval) {
       val actDesks = Deskstats.blackjackDeskstats(csvUrl, startFrom)
-      actualDesksSource.offer(ActualDeskStats(actDesks))
+      OfferHandler.offerWithRetries(actualDesksSource, ActualDeskStats(actDesks), 5)
     }
   }
 

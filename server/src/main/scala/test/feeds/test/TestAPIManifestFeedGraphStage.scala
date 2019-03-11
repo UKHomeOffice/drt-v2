@@ -1,19 +1,23 @@
 package test.feeds.test
 
 import actors.SubscribeResponseQueue
-import akka.actor.{Actor, ActorLogging}
+import akka.actor.{Actor, ActorLogging, Scheduler}
 import akka.stream.scaladsl.SourceQueueWithComplete
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import server.feeds.{ManifestsFeedResponse, ManifestsFeedSuccess}
+import services.OfferHandler
 import services.graphstages.DqManifests
 import test.TestActors.ResetActor
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.postfixOps
 
 
 case object GetManifests
 
 class TestManifestsActor extends Actor with ActorLogging {
+
+  implicit val scheduler: Scheduler = this.context.system.scheduler
 
   var maybeManifests: Option[Set[VoyageManifest]] = None
   var maybeSubscriber: Option[SourceQueueWithComplete[ManifestsFeedResponse]] = None
@@ -24,7 +28,7 @@ class TestManifestsActor extends Actor with ActorLogging {
 
       maybeSubscriber match {
         case Some(subscriber) =>
-          subscriber.offer(ManifestsFeedSuccess(DqManifests("", manifests)))
+          OfferHandler.offerWithRetries(subscriber, ManifestsFeedSuccess(DqManifests("", manifests)), 5)
           maybeManifests = None
         case None =>
           maybeManifests = Some(manifests)

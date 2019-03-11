@@ -56,7 +56,7 @@ object TestActors {
   }
 
   case class TestVoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapshotInterval: Int)
-    extends VoyageManifestsActor(oneMegaByte, now, expireAfterMillis, snapshotInterval) {
+    extends VoyageManifestsActor(oneMegaByte, now, expireAfterMillis, Option(snapshotInterval)) {
 
     def reset: Receive = {
       case ResetActor =>

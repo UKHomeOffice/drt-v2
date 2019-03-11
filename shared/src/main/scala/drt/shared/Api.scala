@@ -228,6 +228,19 @@ object FeedSource {
   def apply(name: String): Option[FeedSource] = feedSources.find(fs => fs.toString == name)
 }
 
+case class ArrivalKey(origin: String, voyageNumber: String, scheduled: Long) extends Ordered[ArrivalKey] {
+  override def compare(that: ArrivalKey): Int = {
+    val schComp = (this.scheduled - that.scheduled).toInt
+    val originComp = origin.compare(that.origin)
+    val vnComp = voyageNumber.compare(that.voyageNumber)
+    schComp + originComp + vnComp
+  }
+}
+
+object ArrivalKey {
+  def apply(arrival: Arrival): ArrivalKey = ArrivalKey(arrival.Origin, arrival.voyageNumberPadded, arrival.Scheduled)
+}
+
 case class ArrivalsDiff(toUpdate: Set[Arrival], toRemove: Set[Int])
 
 trait SDateLike {

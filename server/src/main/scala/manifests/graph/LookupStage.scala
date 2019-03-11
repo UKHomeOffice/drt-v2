@@ -2,7 +2,7 @@ package manifests.graph
 
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
-import drt.shared.Arrival
+import drt.shared.{Arrival, ArrivalKey}
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import services.{ManifestLookupLike, SDate}
@@ -16,7 +16,9 @@ import scala.util.{Failure, Success, Try}
 
 case class ManifestTries(tries: List[Try[BestAvailableManifest]]) {
   def +(triesToAdd: List[Try[BestAvailableManifest]]) = ManifestTries(tries ++ triesToAdd)
+
   def nonEmpty: Boolean = tries.nonEmpty
+
   def length: Int = tries.length
 }
 
@@ -24,7 +26,7 @@ object ManifestTries {
   def empty: ManifestTries = ManifestTries(List())
 }
 
-class ExecutorStage(portCode: String, manifestLookup: ManifestLookupLike) extends GraphStage[FlowShape[List[ArrivalKey], ManifestTries]] {
+class LookupStage(portCode: String, manifestLookup: ManifestLookupLike) extends GraphStage[FlowShape[List[ArrivalKey], ManifestTries]] {
   val inArrivals: Inlet[List[ArrivalKey]] = Inlet[List[ArrivalKey]]("inArrivals.in")
   val outManifests: Outlet[ManifestTries] = Outlet[ManifestTries]("outManifests.out")
 
@@ -81,10 +83,4 @@ class ExecutorStage(portCode: String, manifestLookup: ManifestLookupLike) extend
           manifestLookup
             .tryBestAvailableManifest(portCode, arrival.origin, arrival.voyageNumber, SDate(arrival.scheduled))
         })
-}
-
-case class ArrivalKey(origin: String, voyageNumber: String, scheduled: Long)
-
-object ArrivalKey {
-  def apply(arrival: Arrival): ArrivalKey = ArrivalKey(arrival.Origin, arrival.voyageNumberPadded, arrival.Scheduled)
 }
