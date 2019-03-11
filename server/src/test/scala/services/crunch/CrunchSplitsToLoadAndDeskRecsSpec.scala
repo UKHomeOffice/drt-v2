@@ -61,7 +61,9 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           resultSummary == expected
       }
 
-      true
+      crunch.liveArrivalsInput.complete()
+
+      success
     }
 
     "Given 2 flights with one passenger each and one split to eea desk arriving at pcp 1 minute apart" +
@@ -87,7 +89,9 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           resultSummary == expected
       }
 
-      true
+      crunch.liveArrivalsInput.complete()
+
+      success
     }
 
     "Given 1 flight with 100 passengers eaa splits to desk and eGates" +
@@ -130,7 +134,9 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           resultSummary == expected
       }
 
-      true
+      crunch.liveArrivalsInput.complete()
+
+      success
     }
 
     "CSV split ratios " >> {
@@ -167,7 +173,9 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             resultSummary == expected
         }
 
-        true
+        crunch.liveArrivalsInput.complete()
+
+        success
       }
     }
 
@@ -212,7 +220,9 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             resultSummary == expected
         }
 
-        true
+        crunch.liveArrivalsInput.complete()
+
+        success
       }
     }
   }

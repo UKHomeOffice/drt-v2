@@ -49,7 +49,9 @@ class StaffMinutesSpec extends CrunchTestLike {
         (staffMillis, staff) == Tuple2(expectedMillis, expectedStaff)
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   "Given shifts of 0 and 1 staff and a -1 staff movement at the start of the shift" +
@@ -98,7 +100,9 @@ class StaffMinutesSpec extends CrunchTestLike {
         staffAvailable == expectedStaffAvailable
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   "Given two staff movement covering the same time period" +
@@ -143,7 +147,9 @@ class StaffMinutesSpec extends CrunchTestLike {
         staffMovements === expectedStaffMovements
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   "Given a shift with 10 staff and passengers split to 2 queues " +
@@ -206,7 +212,9 @@ class StaffMinutesSpec extends CrunchTestLike {
         deployments == expectedCrunchDeployments
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   "Given one initial fixed point " +
@@ -252,7 +260,9 @@ class StaffMinutesSpec extends CrunchTestLike {
         fixedPoints == expectedFixedPoints
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
 
@@ -314,7 +324,9 @@ class StaffMinutesSpec extends CrunchTestLike {
         deployments == expectedCrunchDeployments
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   "Given a shift with 50 staff and a max of 45 split to Eea desk, egates and fastrack " +
@@ -381,7 +393,9 @@ class StaffMinutesSpec extends CrunchTestLike {
         deployments == expectedCrunchDeployments
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
 }

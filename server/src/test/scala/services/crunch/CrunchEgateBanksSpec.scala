@@ -68,7 +68,9 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
           resultSummary == expected
       }
 
-      true
+      crunch.liveArrivalsInput.complete()
+
+      success
     }
   }
 

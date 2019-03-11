@@ -59,7 +59,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
       crunch.liveArrivalsInput.complete()
 
-      true === true
+      success
     }
 
     "once an API (advanced passenger information) input arrives for the flight, it will update the arrivals FeedSource so that it has a LiveFeed and a ApiFeed" in new Context {
@@ -82,7 +82,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
       crunch.liveArrivalsInput.complete()
 
-      true === true
+      success
     }
 
     "once an acl and a forecast input arrives for the flight, it will update the arrivals FeedSource so that it has a ACLFeed, LiveFeed and a ForecastFeed" in new Context {
@@ -109,7 +109,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
       crunch.liveArrivalsInput.complete()
 
-      true === true
+      success
     }
 
   }

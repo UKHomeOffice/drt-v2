@@ -124,7 +124,9 @@ class AclFeedSpec extends CrunchTestLike {
           flightsResult == expected
       }
 
-      true
+      crunch.liveArrivalsInput.complete()
+
+      success
     }
 
     "Given an ACL feed with one flight and the same flight in the live feed" +
@@ -153,7 +155,9 @@ class AclFeedSpec extends CrunchTestLike {
           flightsResult == expected
       }
 
-      true
+      crunch.liveArrivalsInput.complete()
+
+      success
     }
 
     "Given some initial ACL & live arrivals, one ACL arrival and no live arrivals " +
@@ -186,7 +190,9 @@ class AclFeedSpec extends CrunchTestLike {
           flightsResult == expected
       }
 
-      true
+      crunch.liveArrivalsInput.complete()
+
+      success
     }
 
     "Given some initial arrivals, no ACL arrivals and one live arrival " +
@@ -219,7 +225,9 @@ class AclFeedSpec extends CrunchTestLike {
           flightsResult == expected
       }
 
-      true
+      crunch.liveArrivalsInput.complete()
+
+      success
     }
 
     "Given one ACL arrival followed by one live arrival and initial arrivals which don't match them " +
@@ -255,7 +263,9 @@ class AclFeedSpec extends CrunchTestLike {
           flightsResult == expected
       }
 
-      true
+      crunch.liveArrivalsInput.complete()
+
+      success
     }
 
     "Given one ACL arrival followed by the same single ACL arrival " +
@@ -279,6 +289,8 @@ class AclFeedSpec extends CrunchTestLike {
 
       val nonEmptyFlightsList = List(aclArrival.copy(FeedSources = Set(AclFeedSource)))
       val expected = List(nonEmptyFlightsList)
+
+      crunch.liveArrivalsInput.complete()
 
       portStateFlightLists.distinct === expected
     }
@@ -312,6 +324,6 @@ class AclFeedSpec extends CrunchTestLike {
 
     todayArrivals.keys.foreach(t => println(s"terminal $t has ${todayArrivals(t).size} flights"))
 
-    true
+    success
   }
 }

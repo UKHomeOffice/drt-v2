@@ -49,7 +49,9 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
         resultSummary == expected
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   "Given two flights, one with a cancelled " +
@@ -85,6 +87,8 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
         resultSummary == expected
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 }

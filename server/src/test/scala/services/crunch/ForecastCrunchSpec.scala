@@ -41,7 +41,9 @@ class ForecastCrunchSpec extends CrunchTestLike {
         forecastSummary == expectedForecast
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   "Given a live flight and a base flight arriving 3 days later, and shifts spanning the pcp time  " +
@@ -89,7 +91,9 @@ class ForecastCrunchSpec extends CrunchTestLike {
         deployedStaff == expected
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   "Given a flight with pcp times just before midnight " +
@@ -139,7 +143,9 @@ class ForecastCrunchSpec extends CrunchTestLike {
         waitTimeOneMinuteBeforeMidnight < waitTimeAtMidnight
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   "Given a flight a live flight update after a base crunch & simulation, followed by a staffing change " +
@@ -180,7 +186,9 @@ class ForecastCrunchSpec extends CrunchTestLike {
         deployedStaff == expected
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
 
@@ -206,7 +214,9 @@ class ForecastCrunchSpec extends CrunchTestLike {
         forecastSummary == expectedForecast
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   "Given a forecast arrival with no matching base arrival " +
@@ -223,7 +233,9 @@ class ForecastCrunchSpec extends CrunchTestLike {
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals))
     crunch.forecastTestProbe.expectNoMessage(1 seconds)
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   "Given a base arrival with 21 pax, and a forecast arrival scheduled 1 minute later " +
@@ -252,7 +264,9 @@ class ForecastCrunchSpec extends CrunchTestLike {
         crunchForecastArrivals == expectedForecastArrivals
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   "Given a base arrival with 21 pax, and a matching forecast arrival with 50 pax, 25 trans pax and a different format flight code " +
@@ -280,7 +294,9 @@ class ForecastCrunchSpec extends CrunchTestLike {
         crunchForecastArrivals == expectedForecastArrivals
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   "Given a base arrival with 21 pax, followed by a matching forecast arrival with 50 pax, and finally a live flight with zero pax " +
@@ -313,7 +329,9 @@ class ForecastCrunchSpec extends CrunchTestLike {
         crunchForecastArrivals == expectedForecastArrivals
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   "Given 2 base arrivals followed by 1 matching forecast arrival, and then the other matching forecast arrival " +
@@ -349,7 +367,9 @@ class ForecastCrunchSpec extends CrunchTestLike {
         crunchForecastArrivals == expectedForecastArrivals
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   "Given an initial base arrivals of 1 flight, and and initial merged arrivals of 2 flights (from a port state that hadn't been updated) " +
@@ -383,7 +403,9 @@ class ForecastCrunchSpec extends CrunchTestLike {
         flightCodes == expectedFlightCodes
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   def interestingPaxLoads(cms: Map[TQM, CrunchApi.CrunchMinute]): Map[MillisSinceEpoch, Double] = {

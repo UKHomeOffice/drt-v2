@@ -64,7 +64,9 @@ class VoyageManifestsSpec extends CrunchTestLike {
         nonZeroQueues == expectedNonZeroQueues
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   "Given a VoyageManifest and its arrival where the arrival has a different number of passengers to the manifest " +
@@ -107,7 +109,9 @@ class VoyageManifestsSpec extends CrunchTestLike {
         queuePax == expected
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   "Given a VoyageManifest with 2 transfers and one Eea Passport " +
@@ -154,7 +158,9 @@ class VoyageManifestsSpec extends CrunchTestLike {
         queuePax == expected
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   "Given a VoyageManifest with 2 transfers, 1 Eea Passport, 1 Eea Id card, and 2 visa nationals " +
