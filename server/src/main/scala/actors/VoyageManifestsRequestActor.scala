@@ -1,6 +1,6 @@
 package actors
 
-import akka.actor.Actor
+import akka.actor.{Actor, Scheduler}
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.{Arrival, ArrivalsDiff}
 import manifests.graph.ManifestTries
@@ -8,6 +8,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{BestManifestsFeedSuccess, ManifestsFeedResponse}
 import services.{ManifestLookupLike, OfferHandler, SDate}
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
@@ -17,6 +18,8 @@ class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLook
 
   var manifestsRequestQueue: Option[SourceQueueWithComplete[List[Arrival]]] = None
   var manifestsResponseQueue: Option[SourceQueueWithComplete[ManifestsFeedResponse]] = None
+
+  implicit val scheduler: Scheduler = this.context.system.scheduler
 
   override def receive: Receive = {
     case SubscribeRequestQueue(subscriber) =>

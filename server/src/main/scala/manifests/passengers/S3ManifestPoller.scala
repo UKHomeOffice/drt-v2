@@ -1,7 +1,7 @@
 package manifests.passengers
 
 import akka.NotUsed
-import akka.actor.{ActorSystem, Cancellable}
+import akka.actor.{ActorSystem, Cancellable, Scheduler}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, SinkQueueWithCancel, Source, SourceQueueWithComplete}
 import drt.server.feeds.api.ApiProviderLike
@@ -77,6 +77,8 @@ class S3ManifestPoller(sourceQueue: SourceQueueWithComplete[ManifestsFeedRespons
   }
 
   val tickingSource: Source[Unit, Cancellable] = Source.tick(0 seconds, 1 minute, NotUsed).map(_ => {
+    implicit val scheduler: Scheduler = actorSystem.scheduler
+
     log.info(s"Ticking API stuff")
     OfferHandler.offerWithRetries(sourceQueue, fetchNewManifests(lastSeenFileName), 5)
   })

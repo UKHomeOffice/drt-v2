@@ -3,6 +3,7 @@ package actors
 import java.util.UUID
 
 import actors.Sizes.oneMegaByte
+import akka.actor.Scheduler
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.trueaccord.scalapb.GeneratedMessage
@@ -58,6 +59,7 @@ case class AddStaffMovementsSubscribers(subscribers: List[SourceQueueWithComplet
 class StaffMovementsActor(now: () => SDateLike,
                           expireBeforeMillis: () => SDateLike) extends StaffMovementsActorBase(now, expireBeforeMillis) {
   var subscribers: List[SourceQueueWithComplete[Seq[StaffMovement]]] = List()
+  implicit val scheduler: Scheduler = this.context.system.scheduler
 
   override def onUpdateState(data: StaffMovements): Unit = {
     log.info(s"Telling subscribers ($subscribers) about updated staff movements")

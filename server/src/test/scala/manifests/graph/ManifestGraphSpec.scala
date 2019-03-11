@@ -75,13 +75,9 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
 
   def createAndRunGraph(manifestProbe: TestProbe, registeredArrivalSinkProbe: TestProbe, testManifest: BestAvailableManifest, initialRegisteredArrivals: Option[RegisteredArrivals], isDueLookup: (ArrivalKey, MillisSinceEpoch, SDateLike) => Boolean = (_, _, _) => true): SourceQueueWithComplete[List[Arrival]] = {
     val arrivalsSource = Source.queue[List[Arrival]](0, OverflowStrategy.backpressure)
-    val batchStage = new BatchStage(
-    () => SDate("2019-03-06T11:00:00Z"),
-    isDueLookup,
-    1,
-    1000 * 60 * 60 * 3,
-    initialRegisteredArrivals
-    )
+    val minLookupQueueRefreshIntervalMillis = 0L
+    val expireAfterMillis = (3 hours).length
+    val batchStage = new BatchStage(() => SDate("2019-03-06T11:00:00Z"), isDueLookup, 1, expireAfterMillis, initialRegisteredArrivals, minLookupQueueRefreshIntervalMillis)
 
     val lookupStage = new LookupStage("STN", MockManifestLookupService(testManifest))
 
