@@ -47,5 +47,17 @@ describe('Multi day export', () => {
     cy.get('.modal-body').should('not.be.visible');
   });
 
+  it('The multi day export dialog is still visible after 5 seconds', () => {
+    addFlight()
+    cy.visit('#terminal/T1/current/arrivals/?timeRangeStart=0&timeRangeEnd=24');
+
+    cy.contains('Multi Day Export').click().end();
+
+    cy.wait(5000);
+
+    cy.get('.modal-footer').contains("Close").click();
+    cy.get('.modal-body').should('not.be.visible');
+  });
+
 
 });

@@ -13,22 +13,27 @@ object Layout {
 
   case class Props(ctl: RouterCtl[Loc], currentLoc: Resolution[Loc])
 
-  case class LoggedInUserAndHasPortAccess(userPot: Pot[LoggedInUser], hasPortAccessPot: Pot[Boolean]) extends UseValueEq
+  case class LayoutModelItems(
+                               userPot: Pot[LoggedInUser],
+                               hasPortAccessPot: Pot[Boolean],
+                               displayAlertDialog: Pot[Boolean]
+                             ) extends UseValueEq
 
   @inline private def bss = GlobalStyles.bootstrapStyles
 
   val component = ScalaComponent.builder[Props]("Layout")
     .renderP((_, props: Props) => {
-      val loggedInUserPotRCP = SPACircuit.connect(m => LoggedInUserAndHasPortAccess(m.loggedInUserPot, m.userHasPortAccess))
-      loggedInUserPotRCP(loggedInUserMP => {
+      val layoutModelItemsRCP = SPACircuit.connect(m => LayoutModelItems(m.loggedInUserPot, m.userHasPortAccess, m.displayAlertDialog))
+      layoutModelItemsRCP(layoutModelItemsMP => {
+        val layoutModelItems: LayoutModelItems = layoutModelItemsMP()
         <.div(
           <.div(^.className := "topbar",
             <.div(^.className := "main-logo"),
             <.div(^.className := "alerts", AlertsComponent())
           ),
           <.div(
-            loggedInUserMP().userPot.renderReady(loggedInUser => {
-              loggedInUserMP().hasPortAccessPot.renderReady(userHasPortAccess => {
+            layoutModelItems.userPot.renderReady(loggedInUser => {
+              layoutModelItems.hasPortAccessPot.renderReady(userHasPortAccess => {
                 if (userHasPortAccess) {
                   val airportConfigRCP = SPACircuit.connect(_.airportConfig)
 
@@ -41,8 +46,11 @@ object Layout {
                           <.div(^.className := "container",
                             <.div(<.div(props.currentLoc.render()))
                           ), VersionUpdateNotice())
-                      }))
+                      }), layoutModelItems
+                        .displayAlertDialog
+                        .renderReady(displayDialog => PortRestrictionsModalAlert(displayDialog, loggedInUser)))
                   })
+
                 } else <.div(RestrictedAccessByPortPage(loggedInUser))
               })
             }))
