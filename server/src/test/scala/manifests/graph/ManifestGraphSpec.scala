@@ -38,10 +38,13 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
     graphInput.offer(List(testArrival))
 
     manifestSinkProbe.expectMsg(ManifestTries(List(Success(testManifest))))
+
+    graphInput.complete()
+
     success
   }
 
-  "Given an inital registered arrival with a recent lookup time " +
+  "Given an initial registered arrival with a recent lookup time " +
     "When the same arrival is sent into the ManifestGraph " +
     "Then no manifests should appear in the sink" >> {
 
@@ -70,6 +73,9 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
     graphInput.offer(List(testArrival))
 
     manifestSinkProbe.expectNoMessage(1 second)
+
+    graphInput.complete()
+
     success
   }
 
@@ -81,13 +87,16 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
 
     val lookupStage = new LookupStage("STN", MockManifestLookupService(testManifest))
 
-    val graphInput: SourceQueueWithComplete[List[Arrival]] = ManifestsGraph(
+    val graph = ManifestsGraph(
       arrivalsSource,
       batchStage,
       lookupStage,
       manifestProbe.ref,
       registeredArrivalSinkProbe.ref
-    ).run()
+    )
+
+    val graphInput: SourceQueueWithComplete[List[Arrival]] = graph.run()
+
     graphInput
   }
 }

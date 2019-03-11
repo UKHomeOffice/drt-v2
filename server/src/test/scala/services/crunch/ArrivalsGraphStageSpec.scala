@@ -57,6 +57,8 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
           arrivals == expectedArrivals
       }
 
+      crunch.liveArrivalsInput.complete()
+
       true === true
     }
 
@@ -77,6 +79,8 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
           val portStateSources = ps.flights.values.flatMap(_.apiFlight.FeedSources).toSet
           portStateSources == expected
       }
+
+      crunch.liveArrivalsInput.complete()
 
       true === true
     }
@@ -102,6 +106,8 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
           val portStateSources = ps.flights.values.flatMap(_.apiFlight.FeedSources).toSet
           portStateSources == expected
       }
+
+      crunch.liveArrivalsInput.complete()
 
       true === true
     }
