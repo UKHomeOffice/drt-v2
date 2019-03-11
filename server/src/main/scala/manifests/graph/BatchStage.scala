@@ -107,7 +107,7 @@ class BatchStage(now: () => SDateLike,
     }
 
     private def updatePrioritisedAndSubscribers(): Set[ArrivalKey] = {
-      val currentNow = now()
+      val currentNow: SDateLike = now()
       val updatedLookupQueue: Set[ArrivalKey] = refreshLookupQueue(currentNow)
 
       val (nextLookupBatch, remainingLookups) = updatedLookupQueue.toSeq.sortBy(_.scheduled).splitAt(batchSize)
@@ -127,11 +127,15 @@ class BatchStage(now: () => SDateLike,
     private def refreshLookupQueue(currentNow: SDateLike): Set[ArrivalKey] = registeredArrivals
       .foldLeft(lookupQueue) {
         case (prioritisedSoFar, (arrival, None)) =>
-          if (!prioritisedSoFar.contains(arrival)) prioritisedSoFar + arrival
-          else prioritisedSoFar
+          if (!prioritisedSoFar.contains(arrival))
+            prioritisedSoFar + arrival
+          else
+            prioritisedSoFar
         case (prioritisedSoFar, (arrival, Some(lastLookup))) =>
-          if (!prioritisedSoFar.contains(arrival) && isDueLookup(arrival, lastLookup, currentNow)) prioritisedSoFar + arrival
-          else prioritisedSoFar
+          if (!prioritisedSoFar.contains(arrival) && isDueLookup(arrival, lastLookup, currentNow))
+            prioritisedSoFar + arrival
+          else
+            prioritisedSoFar
       }
 
     private def registerArrival(arrival: ArrivalKey): Unit = {

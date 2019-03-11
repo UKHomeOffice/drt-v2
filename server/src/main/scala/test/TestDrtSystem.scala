@@ -72,7 +72,6 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
       val cs = startCrunchSystem(None, None, None, None, true)
       subscribeStaffingActors(cs)
       startScheduledFeedImports(cs)
-//      cs.killSwitches
       testManifestsActor ! SubscribeResponseQueue(cs.manifestsResponse)
     }
     val testActors = List(

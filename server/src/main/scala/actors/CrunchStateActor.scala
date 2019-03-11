@@ -158,15 +158,15 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
       case None =>
         logDebug(s"Creating an empty PortState to apply CrunchDiff")
         Option(PortState(
-          flights = applyFlightsWithSplitsDiff_(flightRemovals, flightUpdates, Map()),
-          crunchMinutes = applyCrunchDiff(crunchMinuteUpdates, Map()),
-          staffMinutes = applyStaffDiff(staffMinuteUpdates, Map())
+          flights = applyFlightsWithSplitsDiff(flightRemovals, flightUpdates, Map(), SDate.now().millisSinceEpoch),
+          crunchMinutes = applyCrunchDiff(crunchMinuteUpdates, Map(), SDate.now().millisSinceEpoch),
+          staffMinutes = applyStaffDiff(staffMinuteUpdates, Map(), SDate.now().millisSinceEpoch)
         ))
       case Some(ps) =>
         val newPortState = PortState(
-          flights = applyFlightsWithSplitsDiff_(flightRemovals, flightUpdates, ps.flights),
-          crunchMinutes = applyCrunchDiff(crunchMinuteUpdates, ps.crunchMinutes),
-          staffMinutes = applyStaffDiff(staffMinuteUpdates, ps.staffMinutes))
+          flights = applyFlightsWithSplitsDiff(flightRemovals, flightUpdates, ps.flights, SDate.now().millisSinceEpoch),
+          crunchMinutes = applyCrunchDiff(crunchMinuteUpdates, ps.crunchMinutes, SDate.now().millisSinceEpoch),
+          staffMinutes = applyStaffDiff(staffMinuteUpdates, ps.staffMinutes, SDate.now().millisSinceEpoch))
         Option(newPortState)
     }
     newState

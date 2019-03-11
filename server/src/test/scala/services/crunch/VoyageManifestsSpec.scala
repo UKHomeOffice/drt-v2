@@ -61,7 +61,6 @@ class VoyageManifestsSpec extends CrunchTestLike {
     crunch.liveTestProbe.fishForMessage(3 seconds) {
       case ps: PortState =>
         val nonZeroQueues = ps.crunchMinutes.values.filter(_.paxLoad > 0).groupBy(_.queueName).keys.toSet
-        println(s"nonZeroQueues: $nonZeroQueues")
         nonZeroQueues == expectedNonZeroQueues
     }
 
@@ -204,12 +203,10 @@ class VoyageManifestsSpec extends CrunchTestLike {
           .map(cm => (cm.queueName, cm.paxLoad))
           .toMap
 
-        println(s"queuePax: $queuePax")
-
         queuePax == expected
     }
 
-    true
+    success
   }
 
   "Given initial VoyageManifests and no updates from the feed " +
@@ -257,7 +254,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         splitsSet == expectedSplits
     }
 
-    true
+    success
   }
 
 }

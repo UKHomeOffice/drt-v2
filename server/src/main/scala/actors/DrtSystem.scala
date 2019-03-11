@@ -341,7 +341,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         system.log.info(s"Got initial registered arrival state from ${askableRegisteredArrivalsActor.toString}")
         Option(ra)
       case _ =>
-        system.log.info(s"Got no initial registered arrival state from ${askableRegisteredArrivalsActor.toString}")
+        system.log.warning(s"Got no initial registered arrival state from ${askableRegisteredArrivalsActor.toString}")
         None
     }
   }
