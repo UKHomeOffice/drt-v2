@@ -31,7 +31,7 @@ object TerminalPlanningComponent {
     }.hashCode
   }
 
-  val forecastWeeks: Seq[SDateLike] = (0 to 18).map(w => getLastSunday(SDate.now()).addDays(w * 7))
+  val forecastWeeks: Seq[SDateLike] = (0 to 30).map(w => getLastSunday(SDate.now()).addDays(w * 7))
 
   implicit val propsReuse = Reusability.by((_: Props).hash)
 
