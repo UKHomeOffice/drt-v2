@@ -24,6 +24,7 @@ import drt.server.feeds.ltn.LtnLiveFeed
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared._
+import manifests.ManifestLookup
 import manifests.actors.{RegisteredArrivals, RegisteredArrivalsActor}
 import manifests.graph.{BatchStage, LookupStage, ManifestsGraph}
 import manifests.passengers.S3ManifestPoller

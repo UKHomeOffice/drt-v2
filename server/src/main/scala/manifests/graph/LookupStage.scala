@@ -2,20 +2,21 @@ package manifests.graph
 
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
-import drt.shared.{Arrival, ArrivalKey}
+import drt.shared.ArrivalKey
 import manifests.passengers.BestAvailableManifest
+import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import org.slf4j.{Logger, LoggerFactory}
-import services.{ManifestLookupLike, SDate}
+import services.SDate
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 
-case class ManifestTries(tries: List[Try[BestAvailableManifest]]) {
-  def +(triesToAdd: List[Try[BestAvailableManifest]]) = ManifestTries(tries ++ triesToAdd)
+case class ManifestTries(tries: List[Option[BestAvailableManifest]]) {
+  def +(triesToAdd: List[Option[BestAvailableManifest]]) = ManifestTries(tries ++ triesToAdd)
 
   def nonEmpty: Boolean = tries.nonEmpty
 
@@ -42,10 +43,12 @@ class LookupStage(portCode: String, manifestLookup: ManifestLookupLike) extends 
         val incomingArrivals = grab(inArrivals)
 
         val start = SDate.now().millisSinceEpoch
-        val manifestTries: List[Try[BestAvailableManifest]] = Try(Await.result(futureManifests(incomingArrivals), 30 seconds)) match {
-          case Success(tries) =>
+        val manifestTries: List[Option[BestAvailableManifest]] = Try(Await.result(futureManifests(incomingArrivals), 30 seconds)) match {
+          case Success(arrivalsWithMaybeManifests) =>
             log.info(s"lookups took ${SDate.now().millisSinceEpoch - start}ms")
-            tries
+            arrivalsWithMaybeManifests.map {
+              case (_, maybeManifests) => maybeManifests
+            }
           case Failure(t) =>
             log.error(s"Manifests lookup failed", t)
             List()
@@ -76,11 +79,11 @@ class LookupStage(portCode: String, manifestLookup: ManifestLookupLike) extends 
     }
   }
 
-  private def futureManifests(incomingArrivals: List[ArrivalKey]): Future[List[Try[BestAvailableManifest]]] =
+  private def futureManifests(incomingArrivals: List[ArrivalKey]): Future[List[(UniqueArrivalKey, Option[BestAvailableManifest])]] =
     Future.sequence(
       incomingArrivals
         .map { arrival =>
           manifestLookup
-            .tryBestAvailableManifest(portCode, arrival.origin, arrival.voyageNumber, SDate(arrival.scheduled))
+            .maybeBestAvailableManifest(portCode, arrival.origin, arrival.voyageNumber, SDate(arrival.scheduled))
         })
 }
