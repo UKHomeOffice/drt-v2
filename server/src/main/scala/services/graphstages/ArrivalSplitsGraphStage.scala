@@ -49,18 +49,6 @@ class ArrivalSplitsGraphStage(name: String = "",
           flightsByFlightId = purgeExpiredArrivals(
             flights.map(fws => (ArrivalKey(fws.apiFlight), fws)).toMap
           )
-          flights
-            .foldLeft(Map[(String, String, Long), Int]()) {
-              case (soFar, fws) =>
-                val id = (fws.apiFlight.Origin, fws.apiFlight.voyageNumberPadded, fws.apiFlight.Scheduled)
-                soFar.get(id) match {
-                  case Some(count) => soFar.updated(id, count + 1)
-                  case None => soFar.updated(id, 1)
-                }
-            }
-            .foreach {
-              case (id, count) => if (count > 1) log.info(s"***** id $id has $count matches")
-            }
         case _ =>
           log.warn(s"Did not receive any flights to initialise with")
       }

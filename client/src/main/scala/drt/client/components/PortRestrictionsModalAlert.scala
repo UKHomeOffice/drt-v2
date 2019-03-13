@@ -30,8 +30,8 @@ object PortRestrictionsModalAlert {
             ),
             <.div(^.className := "modal-body",
               <.p("We are adding new restrictions to DRT that will prevent users from viewing ports they are not assigned to."),
-              <.p("Currently you have not been assigned access to this port. Please request access by ",
-                <.a(^.href := s"mailto:drtpoiseteam@homeoffice.gov.uk?subject=DRT Port Access Request&body=Please give me access to $currentPort", "emailing the DRT Team ASAP"), " to avoid any disruption.")
+              <.p(s"Currently you have not been assigned access to this port. Please request access by emailing" +
+                s" drtpoiseteam@homeoffice.gov.uk and requesting access to $currentPort to avoid any disruption.")
             ),
             <.div(^.className := "modal-footer",
               <.button(^.className := "btn btn-primary", "Close", ^.onClick --> {

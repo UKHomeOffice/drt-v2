@@ -1,43 +1,35 @@
 package services
 
-import akka.stream.QueueOfferResult.Enqueued
+import akka.actor.Scheduler
+import akka.pattern.after
 import akka.stream.scaladsl.SourceQueueWithComplete
 import org.slf4j.{Logger, LoggerFactory}
+import services.OfferHandler.log
 
-import scala.concurrent.Await
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
-import scala.util.{Failure, Success, Try}
 
 object OfferHandler {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def offerWithRetries[A](queue: SourceQueueWithComplete[A], thingToOffer: A, retries: Int): Unit = {
-    val resultFuture = queue.offer(thingToOffer).map {
-      case Enqueued => true
-      case failure =>
-        log.warn(s"Failed to enqueue ${thingToOffer.getClass}. $retries retries left. Result was: $failure")
-        false
-    }.recover {
-      case t =>
-        log.warn(s"Failed to enqueue ${thingToOffer.getClass}. $retries retries left", t)
-        false
-    }
-
-    val offerSuccess = Try(Await.result(resultFuture, 5 seconds)) match {
-      case Success(result) => result
-      case Failure(t) => false
-    }
-
-    if (!offerSuccess) {
-      if (retries > 0) {
-        log.info(s"Waiting before retrying")
-        Thread.sleep(5000)
-        offerWithRetries(queue, thingToOffer, retries - 1)
-      }
-      else log.error(s"Failed to enqueue ${thingToOffer.getClass}. No retries left")
+  def offerWithRetries[A](queue: SourceQueueWithComplete[A], thingToOffer: A, retries: Int)(implicit ec: ExecutionContext, s: Scheduler): Unit = {
+    Retry.retry(queue.offer(thingToOffer), RetryDelays.fibonacci, retries, 5 seconds).onFailure {
+      case throwable =>
+        log.error(s"Failed to enqueue ${thingToOffer.getClass} after . $retries", throwable)
     }
   }
+}
 
+object Retry {
+  def retry[T](futureToRetry: => Future[T], delay: Seq[FiniteDuration], retries: Int, defaultDelay: FiniteDuration )(implicit ec: ExecutionContext, s: Scheduler): Future[T] = futureToRetry
+    .recoverWith {
+      case _ if retries > 0 =>
+        log.warn(s"Future failed. $retries retries remaining")
+        after(delay.headOption.getOrElse(defaultDelay), s)(retry(futureToRetry, delay.tail, retries - 1 , defaultDelay))
+    }
+}
+
+object RetryDelays {
+  val fibonacci: Stream[FiniteDuration] = 0.seconds #:: 1.seconds #:: (fibonacci zip fibonacci.tail).map{ t => t._1 + t._2 }
 }

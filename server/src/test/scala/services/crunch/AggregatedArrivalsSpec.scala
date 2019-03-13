@@ -10,7 +10,7 @@ import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
-import org.specs2.specification.BeforeEach
+import org.specs2.specification.{AfterEach, BeforeEach}
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.graphstages.Crunch
@@ -102,6 +102,8 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     val expected = AggregatedArrival(liveArrival, airportConfig.portCode)
 
+    crunch.liveArrivalsInput.complete()
+
     arrivalsResult === AggregatedArrivals(Seq(expected))
   }
 
@@ -147,6 +149,8 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
       AggregatedArrival(expiredArrival, airportConfig.portCode)
     )
 
+    crunch.liveArrivalsInput.complete()
+
     arrivalsResult === expected
   }
 
@@ -185,6 +189,8 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
     }
 
     val expected = Set()
+
+    crunch.liveArrivalsInput.complete()
 
     arrivalsResult === expected
   }

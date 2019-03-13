@@ -61,11 +61,12 @@ class VoyageManifestsSpec extends CrunchTestLike {
     crunch.liveTestProbe.fishForMessage(3 seconds) {
       case ps: PortState =>
         val nonZeroQueues = ps.crunchMinutes.values.filter(_.paxLoad > 0).groupBy(_.queueName).keys.toSet
-        println(s"nonZeroQueues: $nonZeroQueues")
         nonZeroQueues == expectedNonZeroQueues
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   "Given a VoyageManifest and its arrival where the arrival has a different number of passengers to the manifest " +
@@ -108,7 +109,9 @@ class VoyageManifestsSpec extends CrunchTestLike {
         queuePax == expected
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   "Given a VoyageManifest with 2 transfers and one Eea Passport " +
@@ -155,7 +158,9 @@ class VoyageManifestsSpec extends CrunchTestLike {
         queuePax == expected
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   "Given a VoyageManifest with 2 transfers, 1 Eea Passport, 1 Eea Id card, and 2 visa nationals " +
@@ -204,12 +209,10 @@ class VoyageManifestsSpec extends CrunchTestLike {
           .map(cm => (cm.queueName, cm.paxLoad))
           .toMap
 
-        println(s"queuePax: $queuePax")
-
         queuePax == expected
     }
 
-    true
+    success
   }
 
   "Given initial VoyageManifests and no updates from the feed " +
@@ -257,7 +260,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         splitsSet == expectedSplits
     }
 
-    true
+    success
   }
 
 }

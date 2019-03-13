@@ -1,6 +1,7 @@
 package actors
 
 import actors.Sizes.oneMegaByte
+import akka.actor.Scheduler
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.trueaccord.scalapb.GeneratedMessage
@@ -39,6 +40,7 @@ case class AddFixedPointSubscribers(subscribers: List[SourceQueueWithComplete[Fi
 
 class ShiftsActor(now: () => SDateLike, expireBefore: () => SDateLike) extends ShiftsActorBase(now, expireBefore) {
   var subscribers: List[SourceQueueWithComplete[ShiftAssignments]] = List()
+  implicit val scheduler: Scheduler = this.context.system.scheduler
 
   override def onUpdateState(shifts: ShiftAssignments): Unit = {
     log.info(s"Telling subscribers ($subscribers) about updated shifts")

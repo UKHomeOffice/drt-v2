@@ -60,7 +60,9 @@ class BlackJackFlowSpec extends CrunchTestLike {
         actDesks == expected
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   "Given a CrunchGraph when the blackjack CSV is updated with some unavailable data " +
@@ -106,7 +108,9 @@ class BlackJackFlowSpec extends CrunchTestLike {
         actDesks == expected
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   def passengerInfoJson(nationality: String, documentType: String, issuingCountry: String): PassengerInfoJson = {

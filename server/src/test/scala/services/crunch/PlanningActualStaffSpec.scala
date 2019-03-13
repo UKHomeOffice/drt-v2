@@ -65,7 +65,9 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
         firstDayFirstHour == expected
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   "Given a list of staff numbers for every minute, when I group by 15 minutes, " +

@@ -50,7 +50,9 @@ class ApplicationRestartSpec extends CrunchTestLike {
 
     crunch.liveTestProbe.expectNoMessage(1 second)
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 
   "Given an initial PortState to restore from with a flight in day 1 and day 2 " +
@@ -105,6 +107,8 @@ class ApplicationRestartSpec extends CrunchTestLike {
 
     crunch.forecastTestProbe.expectNoMessage(250 milliseconds)
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 }

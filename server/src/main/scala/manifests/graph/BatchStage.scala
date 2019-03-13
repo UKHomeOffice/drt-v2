@@ -1,7 +1,7 @@
 package manifests.graph
 
-import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.stream._
+import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{Arrival, ArrivalKey, SDateLike}
 import manifests.actors.RegisteredArrivals
@@ -11,9 +11,9 @@ import services.graphstages.Crunch
 class BatchStage(now: () => SDateLike,
                  isDueLookup: (ArrivalKey, MillisSinceEpoch, SDateLike) => Boolean,
                  batchSize: Int,
-                 expireAfterMillis: Long,
-                 maybeInitialState: Option[RegisteredArrivals]
-                ) extends GraphStage[FanOutShape2[List[Arrival], List[ArrivalKey], RegisteredArrivals]] {
+                 expireAfterMillis: MillisSinceEpoch,
+                 maybeInitialState: Option[RegisteredArrivals],
+                 minimumRefreshIntervalMillis: Long) extends GraphStage[FanOutShape2[List[Arrival], List[ArrivalKey], RegisteredArrivals]] {
   val inArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("inArrivals.in")
   val outArrivals: Outlet[List[ArrivalKey]] = Outlet[List[ArrivalKey]]("outArrivals.out")
   val outRegisteredArrivals: Outlet[RegisteredArrivals] = Outlet[RegisteredArrivals]("outRegisteredArrivals.out")
@@ -26,6 +26,7 @@ class BatchStage(now: () => SDateLike,
     var registeredArrivals: Map[ArrivalKey, Option[Long]] = Map()
     var registeredArrivalsUpdates: Map[ArrivalKey, Option[Long]] = Map()
     var lookupQueue: Set[ArrivalKey] = Set()
+    var lastRefresh: Long = 0L
 
     override def preStart(): Unit = {
       if (maybeInitialState.isEmpty) log.warn(s"Did not receive any initial registered arrivals")
@@ -107,10 +108,12 @@ class BatchStage(now: () => SDateLike,
     }
 
     private def updatePrioritisedAndSubscribers(): Set[ArrivalKey] = {
-      val currentNow = now()
-      val updatedLookupQueue: Set[ArrivalKey] = refreshLookupQueue(currentNow)
-
-      val (nextLookupBatch, remainingLookups) = updatedLookupQueue.toSeq.sortBy(_.scheduled).splitAt(batchSize)
+      val (nextLookupBatch, remainingLookups) = if (shouldRefreshLookupQueue) {
+        lastRefresh = now().millisSinceEpoch
+        refreshLookupQueue(now()).toSeq.sortBy(_.scheduled).splitAt(batchSize)
+      } else {
+        lookupQueue.toSeq.sortBy(_.scheduled).splitAt(batchSize)
+      }
 
       lookupQueue = Set[ArrivalKey](remainingLookups: _*)
 
@@ -124,14 +127,23 @@ class BatchStage(now: () => SDateLike,
       Set[ArrivalKey](nextLookupBatch: _*)
     }
 
+    private def shouldRefreshLookupQueue: Boolean = {
+      val elapsedMillis = now().millisSinceEpoch - lastRefresh
+      elapsedMillis >= minimumRefreshIntervalMillis
+    }
+
     private def refreshLookupQueue(currentNow: SDateLike): Set[ArrivalKey] = registeredArrivals
       .foldLeft(lookupQueue) {
         case (prioritisedSoFar, (arrival, None)) =>
-          if (!prioritisedSoFar.contains(arrival)) prioritisedSoFar + arrival
-          else prioritisedSoFar
+          if (!prioritisedSoFar.contains(arrival))
+            prioritisedSoFar + arrival
+          else
+            prioritisedSoFar
         case (prioritisedSoFar, (arrival, Some(lastLookup))) =>
-          if (!prioritisedSoFar.contains(arrival) && isDueLookup(arrival, lastLookup, currentNow)) prioritisedSoFar + arrival
-          else prioritisedSoFar
+          if (!prioritisedSoFar.contains(arrival) && isDueLookup(arrival, lastLookup, currentNow))
+            prioritisedSoFar + arrival
+          else
+            prioritisedSoFar
       }
 
     private def registerArrival(arrival: ArrivalKey): Unit = {

@@ -285,10 +285,12 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   }
 
   def startManifestsGraph(maybeRegisteredArrivals: Option[RegisteredArrivals]): SourceQueueWithComplete[List[Arrival]] = {
-    lazy val requestPrioritisationStage: BatchStage = new BatchStage(now, Crunch.isDueLookup, 250, expireAfterMillis, maybeRegisteredArrivals)
-    lazy val requestsExecutorStage: LookupStage = new LookupStage(airportConfig.portCode, lookup)
+    val minimumRefreshIntervalMillis = 30 * 60 * 60 * 10000
 
-    ManifestsGraph(manifestsArrivalRequestSource, requestPrioritisationStage, requestsExecutorStage, voyageManifestsRequestActor, registeredArrivalsActor).run
+    lazy val batchStage: BatchStage = new BatchStage(now, Crunch.isDueLookup, 250, expireAfterMillis, maybeRegisteredArrivals, minimumRefreshIntervalMillis)
+    lazy val lookupStage: LookupStage = new LookupStage(airportConfig.portCode, lookup)
+
+    ManifestsGraph(manifestsArrivalRequestSource, batchStage, lookupStage, voyageManifestsRequestActor, registeredArrivalsActor).run
   }
 
   def startCrunchSystem(initialPortState: Option[PortState],
@@ -342,7 +344,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         system.log.info(s"Got initial registered arrival state from ${askableRegisteredArrivalsActor.toString}")
         Option(ra)
       case _ =>
-        system.log.info(s"Got no initial registered arrival state from ${askableRegisteredArrivalsActor.toString}")
+        system.log.warning(s"Got no initial registered arrival state from ${askableRegisteredArrivalsActor.toString}")
         None
     }
   }

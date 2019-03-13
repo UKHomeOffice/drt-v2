@@ -51,7 +51,9 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
           resultSummary == expected
       }
 
-      true
+      crunch.liveArrivalsInput.complete()
+
+      success
     }
   }
 
@@ -84,6 +86,8 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
         resultSummary == expected
     }
 
-    true
+    crunch.liveArrivalsInput.complete()
+
+    success
   }
 }
