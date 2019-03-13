@@ -11,7 +11,7 @@ trait Tables {
   import slick.jdbc.{GetResult => GR}
 
   /** DDL for all tables. Call .create to execute. */
-  lazy val schema: profile.SchemaDescription = Arrival.schema
+  lazy val schema: profile.SchemaDescription = Arrival.schema ++ VoyageManifestPassengerInfo.schema
   @deprecated("Use .schema instead of .ddl", "3.0")
   def ddl = schema
 

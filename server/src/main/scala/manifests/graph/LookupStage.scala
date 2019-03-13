@@ -2,15 +2,15 @@ package manifests.graph
 
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
-import drt.shared.{Arrival, ArrivalKey}
-import manifests.{ManifestLookupLike, UniqueArrivalKey}
+import drt.shared.ArrivalKey
 import manifests.passengers.BestAvailableManifest
+import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import org.slf4j.{Logger, LoggerFactory}
-import services.{SDate, UniqueArrivalKey}
+import services.SDate
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 

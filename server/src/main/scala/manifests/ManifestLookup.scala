@@ -63,7 +63,6 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
       log.warn(s"No manifests found for $uniqueArrivalKey")
       Future((uniqueArrivalKey, None))
     case (label, nextQuery) :: tail =>
-      log.info(s"running query $label on $uniqueArrivalKey")
       paxInfoTable.db
         .run(nextQuery(uniqueArrivalKey))
         .map {
@@ -89,6 +88,9 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
   def sameFlightAndDay3WeekWindowPreviousYearQuery(uniqueArrivalKey: UniqueArrivalKey): SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), Effect] = {
     val earliestWeek = uniqueArrivalKey.scheduled.addMonths(-12).addDays(-7)
     val latestWeek = uniqueArrivalKey.scheduled.addMonths(-12).addDays(7)
+    val scheduledTs = uniqueArrivalKey.scheduled.toISODateOnly
+    val earliestTs = earliestWeek.toISODateOnly
+    val latestTs = latestWeek.toISODateOnly
 
     sql"""SELECT
             arrival_port_code,
@@ -102,9 +104,9 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
             and arrival_port_code=${uniqueArrivalKey.arrivalPort}
             and departure_port_code=${uniqueArrivalKey.departurePort}
             and voyager_number=${uniqueArrivalKey.voyageNumber}
-            and day_of_week = EXTRACT(DOW FROM TIMESTAMP ${new Timestamp(uniqueArrivalKey.scheduled.millisSinceEpoch)})
-            and week_of_year >= EXTRACT(WEEK FROM TIMESTAMP ${new Timestamp(earliestWeek.millisSinceEpoch)})
-            and week_of_year <= EXTRACT(WEEK FROM TIMESTAMP ${new Timestamp(latestWeek.millisSinceEpoch)})
+            and day_of_week = EXTRACT(DOW FROM TIMESTAMP '#$scheduledTs')
+            and week_of_year >= EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs')
+            and week_of_year <= EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')
           GROUP BY
             arrival_port_code,
             departure_port_code,
@@ -117,6 +119,8 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
   def sameFlight3WeekWindowPreviousYearQuery(uniqueArrivalKey: UniqueArrivalKey): SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), Effect] = {
     val earliestWeek = uniqueArrivalKey.scheduled.addMonths(-12).addDays(-7)
     val latestWeek = uniqueArrivalKey.scheduled.addMonths(-12).addDays(7)
+    val earliestTs = earliestWeek.toISODateOnly
+    val latestTs = latestWeek.toISODateOnly
     sql"""SELECT
             arrival_port_code,
             departure_port_code,
@@ -129,8 +133,8 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
             and arrival_port_code=${uniqueArrivalKey.arrivalPort}
             and departure_port_code=${uniqueArrivalKey.departurePort}
             and voyager_number=${uniqueArrivalKey.voyageNumber}
-            and week_of_year >= EXTRACT(WEEK FROM TIMESTAMP ${new Timestamp(earliestWeek.millisSinceEpoch)})
-            and week_of_year <= EXTRACT(WEEK FROM TIMESTAMP ${new Timestamp(latestWeek.millisSinceEpoch)})
+            and week_of_year >= EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs')
+            and week_of_year <= EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')
           GROUP BY
             arrival_port_code,
             departure_port_code,
@@ -142,6 +146,9 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
   def sameRouteAndDay3WeekWindowPreviousYearQuery(uniqueArrivalKey: UniqueArrivalKey): SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), Effect] = {
     val earliestWeek = uniqueArrivalKey.scheduled.addMonths(-12).addDays(-7)
     val latestWeek = uniqueArrivalKey.scheduled.addMonths(-12).addDays(7)
+    val scheduledTs = uniqueArrivalKey.scheduled.toISODateOnly
+    val earliestTs = earliestWeek.toISODateOnly
+    val latestTs = latestWeek.toISODateOnly
     sql"""SELECT
             arrival_port_code,
             departure_port_code,
@@ -153,9 +160,9 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
             event_code ='DC'
             and arrival_port_code=${uniqueArrivalKey.arrivalPort}
             and departure_port_code=${uniqueArrivalKey.departurePort}
-            and day_of_week = EXTRACT(DOW FROM TIMESTAMP ${new Timestamp(uniqueArrivalKey.scheduled.millisSinceEpoch)})
-            and week_of_year >= EXTRACT(WEEK FROM TIMESTAMP ${new Timestamp(earliestWeek.millisSinceEpoch)})
-            and week_of_year <= EXTRACT(WEEK FROM TIMESTAMP ${new Timestamp(latestWeek.millisSinceEpoch)})
+            and day_of_week = EXTRACT(DOW FROM TIMESTAMP '#$scheduledTs')
+            and week_of_year >= EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs')
+            and week_of_year <= EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')
           GROUP BY
             arrival_port_code,
             departure_port_code,
@@ -164,46 +171,6 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
           LIMIT 3
           """.as[(String, String, String, Timestamp)]
   }
-
-//  def mostRecentFlightSameDayOfWeekQuery(arrivalPort: String, departurePort: String, voyageNumber: String, scheduled: SDateLike): SqlStreamingAction[Vector[Timestamp], Timestamp, Effect] =
-//    sql"""select scheduled_date
-//          from voyage_manifest_passenger_info
-//          where event_code ='DC'
-//            and arrival_port_code=$arrivalPort
-//            and departure_port_code=$departurePort
-//            and voyager_number=$voyageNumber
-//            and day_of_week = EXTRACT(DOW FROM TIMESTAMP ${new Timestamp(scheduled.millisSinceEpoch)})
-//          order by scheduled_date DESC
-//          LIMIT 1""".as[Timestamp]
-//
-//  def mostRecentFlightQuery(arrivalPort: String, departurePort: String, voyageNumber: String, scheduled: SDateLike): SqlStreamingAction[Vector[Timestamp], Timestamp, Effect] =
-//    sql"""select scheduled_date
-//          from voyage_manifest_passenger_info
-//          where event_code ='DC'
-//            and arrival_port_code=$arrivalPort
-//            and departure_port_code=$departurePort
-//            and voyager_number=$voyageNumber
-//          order by scheduled_date DESC
-//          LIMIT 1""".as[Timestamp]
-//
-//  def mostRecentRouteSameDayOfWeekQuery(arrivalPort: String, departurePort: String, voyageNumber: String, scheduled: SDateLike): SqlStreamingAction[Vector[Timestamp], Timestamp, Effect] =
-//    sql"""select scheduled_date
-//          from voyage_manifest_passenger_info
-//          where event_code ='DC'
-//            and arrival_port_code=$arrivalPort
-//            and departure_port_code=$departurePort
-//            and day_of_week = EXTRACT(DOW FROM TIMESTAMP ${new Timestamp(scheduled.millisSinceEpoch)})
-//          order by scheduled_date DESC
-//          LIMIT 1""".as[Timestamp]
-//
-//  def mostRecentRouteQuery(arrivalPort: String, departurePort: String, voyageNumber: String, scheduled: SDateLike): SqlStreamingAction[Vector[Timestamp], Timestamp, Effect] =
-//    sql"""select scheduled_date
-//          from voyage_manifest_passenger_info
-//          where event_code ='DC'
-//            and arrival_port_code=$arrivalPort
-//            and departure_port_code=$departurePort
-//          order by scheduled_date DESC
-//          LIMIT 1""".as[Timestamp]
 
   def paxForArrivalQuery(flightKeys: Vector[(String, String, String, Timestamp)]): Vector[SQLActionBuilder] =
     flightKeys.map {
