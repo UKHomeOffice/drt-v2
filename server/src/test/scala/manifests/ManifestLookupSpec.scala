@@ -35,7 +35,6 @@ object PostgresTables extends {
 
 class ManifestLookupSpec extends TestKit(ActorSystem("ManifestLookup", PostgresPersistence.akkaAndAggregateDbConfig))
   with SpecificationLike {
-  skipped("Exploratory")
   val table = VoyageManifestPassengerInfoTable(PostgresTables)
 
 //  override def before: Any = {
@@ -62,6 +61,7 @@ class ManifestLookupSpec extends TestKit(ActorSystem("ManifestLookup", PostgresP
 //  }
 
   "something" >> {
+    skipped("Exploratory")
     val lookupService = ManifestLookup(table)
 
     Await.result(lookupService.maybeBestAvailableManifest("LHR", "ORD", "0938", SDate("2019-04-01T00:00:00Z")), 5 seconds)
