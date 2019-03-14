@@ -120,10 +120,10 @@ pipeline:
       branch: master
 
   slack_notification:
-    secrets:
-      - slack_web_hook
     image: plugins/slack
-    webhook: $SLACK_WEB_HOOK
+    settings:
+      webhook:
+        from_secret: slack_web_hook
     channel: devs
     username: drone
     template: >
