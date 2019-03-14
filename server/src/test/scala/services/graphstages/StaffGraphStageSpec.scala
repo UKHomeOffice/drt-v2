@@ -1,4 +1,4 @@
-package services.crunch
+package services.graphstages
 
 import java.util.UUID
 
@@ -8,7 +8,7 @@ import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{StaffMinute, StaffMinutes}
 import drt.shared._
 import services.SDate
-import services.graphstages.{Crunch, StaffGraphStage, UpdateCriteria}
+import services.crunch.CrunchTestLike
 
 import scala.concurrent.Await
 import scala.concurrent.duration._

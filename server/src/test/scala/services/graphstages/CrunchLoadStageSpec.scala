@@ -1,11 +1,11 @@
-package services.crunch
+package services.graphstages
 
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{ClosedShape, OverflowStrategy}
 import akka.testkit.TestProbe
 import drt.shared._
+import services.crunch.CrunchTestLike
 import services.graphstages.Crunch.{LoadMinute, Loads}
-import services.graphstages.{Crunch, CrunchLoadGraphStage, DeskRecMinute, DeskRecMinutes}
 import services.{OptimizerConfig, OptimizerCrunchResult, SDate}
 
 import scala.concurrent.duration._

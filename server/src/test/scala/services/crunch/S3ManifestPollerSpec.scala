@@ -4,7 +4,7 @@ import akka.stream.scaladsl.{Keep, Sink, Source}
 import akka.stream.{Attributes, OverflowStrategy}
 import manifests.passengers.S3ManifestPoller
 import server.feeds.{ManifestsFeedResponse, ManifestsFeedSuccess}
-import services.graphstages.DqManifests
+import services.graphstages.{DqManifests, TestApiProvider}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._

@@ -19,7 +19,7 @@ import passengersplits.InMemoryPersistence
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse, ManifestsFeedSuccess}
 import services._
 import services.graphstages.Crunch._
-import services.graphstages.{ActualDeskStats, DqManifests, DummySplitsPredictor}
+import services.graphstages.{ActualDeskStats, DqManifests, DummySplitsPredictor, TestableCrunchLoadStage}
 import slickdb.Tables
 
 import scala.concurrent.Await

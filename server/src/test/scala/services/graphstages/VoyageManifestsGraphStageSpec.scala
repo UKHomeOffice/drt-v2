@@ -1,4 +1,4 @@
-package services.crunch
+package services.graphstages
 
 import java.io.InputStream
 
@@ -12,7 +12,6 @@ import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import passengersplits.InMemoryPersistence
 import server.feeds.ManifestsFeedSuccess
-import services.graphstages.VoyageManifestsGraphStage
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
