@@ -1,4 +1,5 @@
 pipeline:
+
   sonar-scanner:
     image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
     when:
@@ -121,9 +122,8 @@ pipeline:
 
   slack_notification:
     image: plugins/slack
-    settings:
-      webhook:
-        from_secret: slack_web_hook
+    secrets:
+      - slack_webhook
     channel: devs
     username: drone
     template: >
