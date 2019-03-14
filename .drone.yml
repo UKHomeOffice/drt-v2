@@ -1,23 +1,5 @@
 pipeline:
 
-  slack_notification_test:
-    image: plugins/slack
-    secrets:
-      - slack_webhook
-    channel: devs
-    username: drone
-    template: >
-      *{{repo.name}}: _{{build.status}}_*
-
-      Completed build *{{build.number}}* after *{{since build.started}}* on *{{build.branch}}*
-
-      *Triggered by*: _${DRONE_COMMIT_AUTHOR}_
-
-      *Message*: ${DRONE_COMMIT_MESSAGE}
-
-      {{build.link}}
-
-
   sonar-scanner:
     image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
     when:
@@ -141,21 +123,19 @@ pipeline:
   slack_notification:
     image: plugins/slack
     secrets:
-      - slack_token
-    settings:
-      webhook: https://hooks.slack.com/services/$SLACK_TOKEN
-      channel: devs
-      username: drone
-      template: >
-        *{{repo.name}}: _{{build.status}}_*
+      - slack_webhook
+    channel: devs
+    username: drone
+    template: >
+      *{{repo.name}}: _{{build.status}}_*
 
-        Completed build *{{build.number}}* after *{{since build.started}}* on *{{build.branch}}*
+      Completed build *{{build.number}}* after *{{since build.started}}* on *{{build.branch}}*
 
-        *Triggered by*: _${DRONE_COMMIT_AUTHOR}_
+      *Triggered by*: _${DRONE_COMMIT_AUTHOR}_
 
-        *Message*: ${DRONE_COMMIT_MESSAGE}
+      *Message*: ${DRONE_COMMIT_MESSAGE}
 
-        {{build.link}}
-      when:
-        status: [ success, failure ]
-        branch: master
+      {{build.link}}
+    when:
+      status: [ success, failure ]
+      branch: master
