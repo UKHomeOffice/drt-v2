@@ -124,18 +124,18 @@ pipeline:
     settings:
       webhook:
         from_secret: slack_web_hook
-    channel: devs
-    username: drone
-    template: >
-      *{{repo.name}}: _{{build.status}}_*
+      channel: devs
+      username: drone
+      template: >
+        *{{repo.name}}: _{{build.status}}_*
 
-      Completed build *{{build.number}}* after *{{since build.started}}* on *{{build.branch}}*
+        Completed build *{{build.number}}* after *{{since build.started}}* on *{{build.branch}}*
 
-      *Triggered by*: _${DRONE_COMMIT_AUTHOR}_
+        *Triggered by*: _${DRONE_COMMIT_AUTHOR}_
 
-      *Message*: ${DRONE_COMMIT_MESSAGE}
+        *Message*: ${DRONE_COMMIT_MESSAGE}
 
-      {{build.link}}
-    when:
-      status: [ success, failure ]
-      branch: master
+        {{build.link}}
+      when:
+        status: [ success, failure ]
+        branch: master
