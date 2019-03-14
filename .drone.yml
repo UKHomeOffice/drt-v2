@@ -123,7 +123,7 @@ pipeline:
     secrets:
       - slack_web_hook
     image: plugins/slack
-    webhook: $${SLACK_WEB_HOOK}
+    webhook: $SLACK_WEB_HOOK
     channel: devs
     username: drone
     template: >
