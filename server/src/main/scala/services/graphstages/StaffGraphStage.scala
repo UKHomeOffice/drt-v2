@@ -13,6 +13,7 @@ class StaffGraphStage(name: String = "",
                       initialShifts: ShiftAssignments,
                       initialFixedPoints: FixedPointAssignments,
                       optionalInitialMovements: Option[Seq[StaffMovement]],
+                      initialStaffMinutes: StaffMinutes,
                       now: () => SDateLike,
                       expireAfterMillis: MillisSinceEpoch,
                       airportConfig: AirportConfig,
@@ -42,8 +43,46 @@ class StaffGraphStage(name: String = "",
       shifts = initialShifts
       fixedPoints = initialFixedPoints
       movementsOption = optionalInitialMovements
+      staffMinutes = initialStaffMinutes.minutes.map(sm => (TM(sm.terminalName, sm.minute), sm)).toMap
+
+      missingMinutes match {
+        case Nil => log.info(s"No missing minutes to add")
+        case minutes =>
+          val updateCriteria = UpdateCriteria(minutes, airportConfig.terminalNames.toSet)
+          staffMinuteUpdates = updatesFromSources(maybeStaffSources, updateCriteria)
+          log.info(s"${staffMinuteUpdates.size} missing minutes generated across terminals")
+      }
 
       super.preStart()
+    }
+
+    def missingMinutes: List[MillisSinceEpoch] = {
+      val midnight = getLocalLastMidnight(now()).millisSinceEpoch
+
+      val startMillis = SDate.now().millisSinceEpoch
+      log.info(s"Checking for missing minutes")
+      val minutesInADay = 1440
+      val oneDayMillis = 60 * 60 * 24 * 1000
+      val oneMinuteMillis = 60 * 1000
+
+      val missing = (0 to numberOfDays).foldLeft(List[MillisSinceEpoch]()) {
+        case (missingSoFar, day) =>
+          val dayMillis = midnight + (day * oneDayMillis)
+          if (!minuteExists(dayMillis, airportConfig.terminalNames.toList)) {
+            (0 until minutesInADay).map(m => {
+              dayMillis + (m * oneMinuteMillis)
+            }) ++: missingSoFar
+          }
+          else missingSoFar
+      }
+      log.info(s"${missing.length} missing minutes took ${SDate.now().millisSinceEpoch - startMillis} milliseconds")
+      missing
+    }
+
+    def minuteExists(millis: MillisSinceEpoch, terminals: List[TerminalName]): Boolean = terminals match {
+      case Nil => false
+      case t :: tail if staffMinutes.contains(TM(t, millis)) => true
+      case _ :: tail => minuteExists(millis, tail)
     }
 
     setHandler(inShifts, new InHandler {
@@ -132,7 +171,7 @@ class StaffGraphStage(name: String = "",
 
       val oldAssignments = oldFixedPoints.assignments.toSet
       val newAssignments = newFixedPoints.assignments.toSet
-      val terminalNames = ((newAssignments -- oldAssignments) union (oldAssignments -- newAssignments )).map(_.terminalName)
+      val terminalNames = ((newAssignments -- oldAssignments) union (oldAssignments -- newAssignments)).map(_.terminalName)
 
       UpdateCriteria(minuteMillis, terminalNames)
     }

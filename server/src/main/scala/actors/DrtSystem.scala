@@ -332,9 +332,45 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       arrivalsBaseSource = baseArrivalsSource(),
       arrivalsFcstSource = forecastArrivalsSource(airportConfig.feedPortCode),
       arrivalsLiveSource = liveArrivalsSource(airportConfig.feedPortCode),
+      initialShifts = initialShiftsState(shiftsActor),
+      initialFixedPoints = initialFixedPointsState(fixedPointsActor),
+      initialStaffMovements = initialStaffMovementsState(staffMovementsActor),
       recrunchOnStart = recrunchOnStart
     ))
     crunchInputs
+  }
+
+  def initialFixedPointsState(askableFixedPointsActor: AskableActorRef): FixedPointAssignments = {
+    Await.result(askableFixedPointsActor.ask(GetState)(new Timeout(5 minutes)).map {
+      case fixedPoints: FixedPointAssignments =>
+        log.info(s"Got initial state from ${askableFixedPointsActor.toString}")
+        fixedPoints
+      case _ =>
+        log.info(s"Got unexpected GetState response from ${askableFixedPointsActor.toString}")
+        FixedPointAssignments.empty
+    }, 5 minutes)
+  }
+
+  def initialShiftsState(askableShiftsActor: AskableActorRef): ShiftAssignments = {
+    Await.result(askableShiftsActor.ask(GetState)(new Timeout(5 minutes)).map {
+      case shifts: ShiftAssignments =>
+        log.info(s"Got initial state from ${askableShiftsActor.toString}")
+        shifts
+      case _ =>
+        log.info(s"Got unexpected GetState response from ${askableShiftsActor.toString}")
+        ShiftAssignments.empty
+    }, 5 minutes)
+  }
+
+  def initialStaffMovementsState(askableStaffMovementsActor: AskableActorRef): Seq[StaffMovement] = {
+    Await.result(askableStaffMovementsActor.ask(GetState)(new Timeout(5 minutes)).map {
+      case StaffMovements(mms) if mms.nonEmpty =>
+        log.info(s"Got initial state from ${askableStaffMovementsActor.toString}")
+        mms
+      case _ =>
+        log.info(s"Got no initial state from ${askableStaffMovementsActor.toString}")
+        Seq()
+    }, 5 minutes)
   }
 
   def initialRegisteredArrivals(askableRegisteredArrivalsActor: AskableActorRef): Future[Option[RegisteredArrivals]] = {

@@ -64,6 +64,9 @@ case class CrunchProps[FR](logLabel: String = "",
                            arrivalsBaseSource: Source[ArrivalsFeedResponse, FR],
                            arrivalsFcstSource: Source[ArrivalsFeedResponse, FR],
                            arrivalsLiveSource: Source[ArrivalsFeedResponse, FR],
+                           initialShifts: ShiftAssignments = ShiftAssignments(Seq()),
+                           initialFixedPoints: FixedPointAssignments = FixedPointAssignments(Seq()),
+                           initialStaffMovements: Seq[StaffMovement] = Seq(),
                            recrunchOnStart: Boolean = false)
 
 object CrunchSystem {
@@ -77,10 +80,6 @@ object CrunchSystem {
 
   def apply[FR](props: CrunchProps[FR])
                (implicit system: ActorSystem, materializer: Materializer): CrunchSystem[FR] = {
-
-    val initialShifts = initialShiftsState(props.actors("shifts"))
-    val initialFixedPoints = initialFixedPointsState(props.actors("fixed-points"))
-    val initialStaffMovements = initialStaffMovementsState(props.actors("staff-movements"))
 
     val manifestsSource = props.manifestsSource
     val shiftsSource: Source[ShiftAssignments, SourceQueueWithComplete[ShiftAssignments]] = Source.queue[ShiftAssignments](10, OverflowStrategy.backpressure)
@@ -139,9 +138,10 @@ object CrunchSystem {
 
     val staffGraphStage = new StaffGraphStage(
       name = props.logLabel,
-      initialShifts = initialShifts,
-      initialFixedPoints = initialFixedPoints,
-      optionalInitialMovements = Option(initialStaffMovements),
+      initialShifts = props.initialShifts,
+      initialFixedPoints = props.initialFixedPoints,
+      optionalInitialMovements = Option(props.initialStaffMovements),
+      initialStaffMinutes = maybeStaffMinutes.getOrElse(StaffMinutes(Seq())),
       now = props.now,
       expireAfterMillis = props.expireAfterMillis,
       airportConfig = props.airportConfig,
@@ -225,37 +225,4 @@ object CrunchSystem {
 
   def initialFlightsFromPortState(initialPortState: Option[PortState]): Option[FlightsWithSplits] = initialPortState.map(
     ps => FlightsWithSplits(ps.flights.values.toSeq, Set()))
-
-  def initialFixedPointsState(askableFixedPointsActor: AskableActorRef): FixedPointAssignments = {
-    Await.result(askableFixedPointsActor.ask(GetState)(new Timeout(5 minutes)).map {
-      case fixedPoints: FixedPointAssignments =>
-        log.info(s"Got initial state from ${askableFixedPointsActor.toString}")
-        fixedPoints
-      case _ =>
-        log.info(s"Got unexpected GetState response from ${askableFixedPointsActor.toString}")
-        FixedPointAssignments.empty
-    }, 5 minutes)
-  }
-
-  def initialShiftsState(askableShiftsActor: AskableActorRef): ShiftAssignments = {
-    Await.result(askableShiftsActor.ask(GetState)(new Timeout(5 minutes)).map {
-      case shifts: ShiftAssignments =>
-        log.info(s"Got initial state from ${askableShiftsActor.toString}")
-        shifts
-      case _ =>
-        log.info(s"Got unexpected GetState response from ${askableShiftsActor.toString}")
-        ShiftAssignments.empty
-    }, 5 minutes)
-  }
-
-  def initialStaffMovementsState(askableStaffMovementsActor: AskableActorRef): Seq[StaffMovement] = {
-    Await.result(askableStaffMovementsActor.ask(GetState)(new Timeout(5 minutes)).map {
-      case StaffMovements(mms) if mms.nonEmpty =>
-        log.info(s"Got initial state from ${askableStaffMovementsActor.toString}")
-        mms
-      case _ =>
-        log.info(s"Got no initial state from ${askableStaffMovementsActor.toString}")
-        Seq()
-    }, 5 minutes)
-  }
 }

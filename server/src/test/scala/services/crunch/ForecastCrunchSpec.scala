@@ -46,7 +46,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     success
   }
 
-  "Given a live flight and a base flight arriving 3 days later, and shifts spanning the pcp time  " +
+  "Given a live flight and a base flight arriving 3 days later, and shifts spanning the pcp time " +
     "When I ask for pax loads " +
     "Then I should see deployed staff matching the staff available for the crunch period" >> {
 
@@ -231,11 +231,13 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(now = () => SDate(forecastScheduled).addDays(-1))
 
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals))
-    crunch.forecastTestProbe.expectNoMessage(1 seconds)
-
     crunch.liveArrivalsInput.complete()
 
-    success
+    val gotAnyFlights = crunch.forecastTestProbe.receiveWhile(2 seconds) {
+      case PortState(flights, _, _) => flights.size
+    }.exists(_ > 0)
+
+    gotAnyFlights === false
   }
 
   "Given a base arrival with 21 pax, and a forecast arrival scheduled 1 minute later " +
