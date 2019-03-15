@@ -76,12 +76,12 @@ class S3ManifestPoller(sourceQueue: SourceQueueWithComplete[ManifestsFeedRespons
     }
   }
 
-  val tickingSource: Source[Unit, Cancellable] = Source.tick(0 seconds, 1 minute, NotUsed).map(_ => {
-    implicit val scheduler: Scheduler = actorSystem.scheduler
-
-    log.info(s"Ticking API stuff")
-    OfferHandler.offerWithRetries(sourceQueue, fetchNewManifests(lastSeenFileName), 5)
-  })
-
-  def startPollingForManifests(): SinkQueueWithCancel[Unit] = tickingSource.runWith(Sink.queue())
+  def startPollingForManifests(): Cancellable = {
+    actorSystem.scheduler.schedule(0 seconds, 1 minute, new Runnable {
+      def run(): Unit = {
+        implicit val scheduler: Scheduler = actorSystem.scheduler
+        OfferHandler.offerWithRetries(sourceQueue, fetchNewManifests(lastSeenFileName), 5)
+      }
+    })
+  }
 }
