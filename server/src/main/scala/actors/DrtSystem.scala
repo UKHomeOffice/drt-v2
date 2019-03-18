@@ -2,7 +2,7 @@ package actors
 
 import actors.Sizes.oneMegaByte
 import akka.NotUsed
-import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
+import akka.actor.{ActorRef, ActorSystem, Cancellable, Props, Scheduler}
 import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy}
@@ -343,6 +343,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         log.info(s"Got unexpected GetState response from ${askableActor.toString}")
         None
     }
+
+    implicit val scheduler: Scheduler = actorSystem.scheduler
     Retry.retry(future, RetryDelays.fibonacci, 3, 5 seconds)
   }
 
