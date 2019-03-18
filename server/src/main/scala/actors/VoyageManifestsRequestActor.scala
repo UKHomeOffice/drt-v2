@@ -3,14 +3,14 @@ package actors
 import akka.actor.{Actor, Scheduler}
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.{Arrival, ArrivalsDiff}
+import manifests.ManifestLookupLike
 import manifests.graph.ManifestTries
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{BestManifestsFeedSuccess, ManifestsFeedResponse}
-import services.{ManifestLookupLike, OfferHandler, SDate}
+import services.{OfferHandler, SDate}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.postfixOps
-import scala.util.{Failure, Success}
 
 
 class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLookupLike) extends Actor {
@@ -32,9 +32,7 @@ class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLook
 
     case ManifestTries(bestManifests) =>
       manifestsResponseQueue.foreach(queue => {
-        bestManifests.collect { case Failure(t) => log.error(s"Manifest request failed: $t") }
-        val successfulManifests = bestManifests.collect { case Success(bm) => bm }
-
+        val successfulManifests = bestManifests.collect { case Some(bm) => bm }
         val bestManifestsResult = BestManifestsFeedSuccess(successfulManifests, SDate.now())
 
         OfferHandler.offerWithRetries(queue, bestManifestsResult, 10)

@@ -37,7 +37,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
     val testArrival = ArrivalGenerator.apiFlight(schDt = "2019-03-06T12:00:00Z")
     graphInput.offer(List(testArrival))
 
-    manifestSinkProbe.expectMsg(ManifestTries(List(Success(testManifest))))
+    manifestSinkProbe.expectMsg(ManifestTries(List(Option(testManifest))))
 
     graphInput.complete()
 
