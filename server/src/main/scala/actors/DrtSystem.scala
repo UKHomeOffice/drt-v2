@@ -179,11 +179,10 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   lazy val alertsActor: ActorRef = system.actorOf(Props(classOf[AlertsActor]))
   val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
-  lazy val askableVoyageManifestsActor: AskableActorRef = voyageManifestsActor
   val splitsPredictorStage: SplitsPredictorBase = createSplitsPredictionStage(params.useSplitsPrediction, params.rawSplitsUrl)
 
   val s3ApiProvider = S3ApiProvider(params.awSCredentials, params.dqZipBucketName)
-  val initialManifestsState: Option[VoyageManifestState] = manifestsState
+  val initialManifestsState: Option[VoyageManifestState] = initialState(voyageManifestsActor, GetState)
   val latestZipFileName: String = initialManifestsState.map(_.latestZipFilename).getOrElse("")
 
   lazy val voyageManifestsStage: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](100, OverflowStrategy.backpressure)
@@ -199,12 +198,12 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   def run(): Unit = {
     val futurePortStates: Future[(Option[PortState], Option[PortState], Option[Set[Arrival]], Option[Set[Arrival]], Option[Set[Arrival]], Option[RegisteredArrivals])] = {
-      val maybeLivePortState = initialPortState(liveCrunchStateActor)
-      val maybeForecastPortState = initialPortState(forecastCrunchStateActor)
-      val maybeInitialBaseArrivals = initialArrivals(baseArrivalsActor)
-      val maybeInitialFcstArrivals = initialArrivals(forecastArrivalsActor)
-      val maybeInitialLiveArrivals = initialArrivals(liveArrivalsActor)
-      val maybeInitialRegisteredArrivals = initialRegisteredArrivals(registeredArrivalsActor)
+      val maybeLivePortState = initialStateFuture(liveCrunchStateActor, GetState)
+      val maybeForecastPortState = initialStateFuture(forecastCrunchStateActor, GetState)
+      val maybeInitialBaseArrivals = initialStateFuture[ArrivalsState](baseArrivalsActor, GetState).map(_.map(_.arrivals.values.toSet))
+      val maybeInitialFcstArrivals = initialStateFuture[ArrivalsState](forecastArrivalsActor, GetState).map(_.map(_.arrivals.values.toSet))
+      val maybeInitialLiveArrivals = initialStateFuture[ArrivalsState](liveArrivalsActor, GetState).map(_.map(_.arrivals.values.toSet))
+      val maybeInitialRegisteredArrivals = initialStateFuture(registeredArrivalsActor, GetState)
       for {
         lps <- maybeLivePortState
         fps <- maybeForecastPortState
@@ -245,18 +244,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   override def getFeedStatus: Future[Seq[FeedStatuses]] = {
     val actors: Seq[AskableActorRef] = Seq(liveArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
 
-    val statuses = actors
-      .map(askable => askable.ask(GetFeedStatuses)(new Timeout(30 seconds))
-        .map {
-          case Some(fs: FeedStatuses) if fs.hasConnectedAtLeastOnce => Option(fs)
-          case _ => None
-        }
-        .recover {
-          case t =>
-            log.error(s"Failed to receive feed status from $askable", t)
-            None
-        }
-      )
+    val statuses = actors.map(a => initialStateFuture[FeedStatuses](a, GetFeedStatuses))
 
     Future
       .sequence(statuses)
@@ -333,84 +321,29 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       arrivalsBaseSource = baseArrivalsSource(),
       arrivalsFcstSource = forecastArrivalsSource(airportConfig.feedPortCode),
       arrivalsLiveSource = liveArrivalsSource(airportConfig.feedPortCode),
-      initialShifts = initialShiftsState(shiftsActor),
-      initialFixedPoints = initialFixedPointsState(fixedPointsActor),
-      initialStaffMovements = initialStaffMovementsState(staffMovementsActor),
+      initialShifts = initialState(shiftsActor, GetState).getOrElse(ShiftAssignments(Seq())),
+      initialFixedPoints = initialState(fixedPointsActor, GetState).getOrElse(FixedPointAssignments(Seq())),
+      initialStaffMovements = initialState[StaffMovements](staffMovementsActor, GetState).map(_.movements).getOrElse(Seq[StaffMovement]()),
       recrunchOnStart = recrunchOnStart
     ))
     crunchInputs
   }
 
-  def initialFixedPointsState(askableFixedPointsActor: AskableActorRef): FixedPointAssignments = {
-    Await.result(askableFixedPointsActor.ask(GetState)(new Timeout(5 minutes)).map {
-      case fixedPoints: FixedPointAssignments =>
-        log.info(s"Got initial state from ${askableFixedPointsActor.toString}")
-        fixedPoints
-      case _ =>
-        log.info(s"Got unexpected GetState response from ${askableFixedPointsActor.toString}")
-        FixedPointAssignments.empty
-    }, 5 minutes)
-  }
+  def initialState[A](askableActor: AskableActorRef, toAsk: Any): Option[A] = Await.result(initialStateFuture(askableActor, toAsk), 5 minutes)
 
-  def initialShiftsState(askableShiftsActor: AskableActorRef): ShiftAssignments = {
-    Await.result(askableShiftsActor.ask(GetState)(new Timeout(5 minutes)).map {
-      case shifts: ShiftAssignments =>
-        log.info(s"Got initial state from ${askableShiftsActor.toString}")
-        shifts
+  def initialStateFuture[A](askableActor: AskableActorRef, toAsk: Any): Future[Option[A]] = {
+    val future = askableActor.ask(toAsk)(new Timeout(5 minutes)).map {
+      case Some(state: A) =>
+        log.info(s"Got initial state from ${askableActor.toString}")
+        Option(state)
+      case state: A =>
+        log.info(s"Got initial state from ${askableActor.toString}")
+        Option(state)
       case _ =>
-        log.info(s"Got unexpected GetState response from ${askableShiftsActor.toString}")
-        ShiftAssignments.empty
-    }, 5 minutes)
-  }
-
-  def initialStaffMovementsState(askableStaffMovementsActor: AskableActorRef): Seq[StaffMovement] = {
-    Await.result(askableStaffMovementsActor.ask(GetState)(new Timeout(5 minutes)).map {
-      case StaffMovements(mms) if mms.nonEmpty =>
-        log.info(s"Got initial state from ${askableStaffMovementsActor.toString}")
-        mms
-      case _ =>
-        log.info(s"Got no initial state from ${askableStaffMovementsActor.toString}")
-        Seq()
-    }, 5 minutes)
-  }
-
-  def initialRegisteredArrivals(askableRegisteredArrivalsActor: AskableActorRef): Future[Option[RegisteredArrivals]] = {
-    askableRegisteredArrivalsActor.ask(GetState)(new Timeout(5 minutes)).map {
-      case ra: RegisteredArrivals =>
-        system.log.info(s"Got initial registered arrival state from ${askableRegisteredArrivalsActor.toString}")
-        Option(ra)
-      case _ =>
-        system.log.warning(s"Got no initial registered arrival state from ${askableRegisteredArrivalsActor.toString}")
+        log.info(s"Got unexpected GetState response from ${askableActor.toString}")
         None
     }
-  }
-
-  def initialPortState(askableCrunchStateActor: AskableActorRef): Future[Option[PortState]] = {
-    askableCrunchStateActor.ask(GetState)(new Timeout(5 minutes)).map {
-      case Some(ps: PortState) =>
-        system.log.info(s"Got an initial port state from ${askableCrunchStateActor.toString} with ${ps.staffMinutes.size} staff minutes, ${ps.crunchMinutes.size} crunch minutes, and ${ps.flights.size} flights")
-        Option(ps)
-      case _ =>
-        system.log.info(s"Got no initial port state from ${askableCrunchStateActor.toString}")
-        None
-    }
-  }
-
-  def initialArrivals(arrivalsActor: AskableActorRef): Future[Option[Set[Arrival]]] = {
-    val canWaitMinutes = 60
-    val arrivalsFuture: Future[Option[Set[Arrival]]] = arrivalsActor.ask(GetState)(new Timeout(canWaitMinutes minutes)).map {
-      case ArrivalsState(arrivals, _, _) => Option(arrivals.values.toSet)
-      case _ => None
-    }
-
-    arrivalsFuture.onComplete {
-      case Success(arrivals) => arrivals
-      case Failure(t) =>
-        system.log.warning(s"Failed to get an initial ArrivalsState: $t")
-        None
-    }
-
-    arrivalsFuture
+    Retry.retry(future, RetryDelays.fibonacci, 3, 5 seconds)
   }
 
   def mergePortStates(maybeForecastPs: Option[PortState],
@@ -423,20 +356,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         fps.flights ++ lps.flights,
         fps.crunchMinutes ++ lps.crunchMinutes,
         fps.staffMinutes ++ lps.staffMinutes))
-  }
-
-  def manifestsState: Option[VoyageManifestState] = {
-    val futureVoyageManifestState = askableVoyageManifestsActor.ask(GetState)(new Timeout(1 minute)).map {
-      case s: VoyageManifestState => s
-    }
-    Try {
-      Await.result(futureVoyageManifestState, 1 minute)
-    } match {
-      case Success(state) => Option(state)
-      case Failure(t) =>
-        system.log.warning(s"Failed to get last seen file name for DQ manifests: $t")
-        None
-    }
   }
 
   def createSplitsPredictionStage(predictSplits: Boolean,

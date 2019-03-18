@@ -12,7 +12,6 @@ import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.graphstages.Crunch
 
-import scala.collection.immutable
 import scala.collection.immutable.List
 import scala.concurrent.duration._
 
