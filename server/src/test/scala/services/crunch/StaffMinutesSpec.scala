@@ -421,7 +421,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       (date, minutes)
     }.toMap
 
-    crunch.forecastTestProbe.fishForMessage(2 seconds) {
+    crunch.forecastTestProbe.fishForMessage(5 seconds) {
       case PortState(_, _, staffMinutes) =>
         val actualMinutes = staffMinutes.values.toSeq.filter(_.fixedPoints == 50).groupBy(m => SDate(m.minute).toISODateOnly).mapValues { minutes =>
           minutes.map(m => SDate(m.minute).millisSinceEpoch).sorted
@@ -467,7 +467,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       (date, minutes)
     }.toMap
 
-    crunch.forecastTestProbe.fishForMessage(2 seconds) {
+    crunch.forecastTestProbe.fishForMessage(5 seconds) {
       case PortState(_, _, staffMinutes) =>
         val actualMinutes = staffMinutes.values.toSeq.filter(_.fixedPoints == 50).groupBy(m => SDate(m.minute).toISODateOnly).mapValues { minutes =>
           minutes.map(m => SDate(m.minute).millisSinceEpoch).sorted
