@@ -11,9 +11,10 @@ import services.graphstages.Crunch
 case class RegisteredArrivals(arrivals: Map[ArrivalKey, Option[Long]])
 
 class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
+                              val initialMaybeSnapshotInterval: Option[Int],
                               now: () => SDateLike,
-                              expireAfterMillis: Long,
-                              val initialMaybeSnapshotInterval: Option[Int]) extends RecoveryActorLike with PersistentDrtActor[RegisteredArrivals] {
+                              portCode: String,
+                              expireAfterMillis: Long) extends RecoveryActorLike with PersistentDrtActor[RegisteredArrivals] {
   override def persistenceId: String = "registered-arrivals"
 
   override def initialState: RegisteredArrivals = RegisteredArrivals(Map())
@@ -29,7 +30,7 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
   private def arrivalsToMessage(arrivalWithLastLookup: Map[ArrivalKey, Option[Long]]): RegisteredArrivalsMessage = {
     RegisteredArrivalsMessage(
       arrivalWithLastLookup
-        .map { case (ArrivalKey(o, v, s), l) => RegisteredArrivalMessage(Option(o), Option(v), Option(s), l) }
+        .map { case (ArrivalKey(o, v, s), l) => RegisteredArrivalMessage(Option(o), Option(portCode), Option(v), Option(s), l) }
         .toSeq
     )
   }
