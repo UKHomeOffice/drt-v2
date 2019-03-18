@@ -3,7 +3,7 @@ package services.crunch
 import java.util.UUID
 
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.PortState
+import drt.shared.CrunchApi.{PortState, StaffMinute}
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
@@ -12,6 +12,7 @@ import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.graphstages.Crunch
 
+import scala.collection.immutable
 import scala.collection.immutable.List
 import scala.concurrent.duration._
 
@@ -411,13 +412,68 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(
       now = () => now,
-      initialFixedPoints = fixedPoints
+      initialFixedPoints = fixedPoints,
+      maxDaysToCrunch = 5
     )
 
-    crunch.forecastTestProbe.receiveWhile(10 seconds) {
+    val expectedStaffMinutes = (1 to 5).map { day =>
+      val date = SDate(scheduled).addDays(day).toISODateOnly
+      val minutes = (0 until 15).map { minute => SDate(scheduled).addDays(day).addMinutes(minute).millisSinceEpoch }.sorted
+      (date, minutes)
+    }.toMap
+
+    crunch.forecastTestProbe.fishForMessage(2 seconds) {
       case PortState(_, _, staffMinutes) =>
-        val fixedPoints = staffMinutes.values.toSeq.sortBy(_.minute).map(sm => s"${SDate(sm.minute).toISOString()}: ${sm.fixedPoints}").mkString("\n")
-        println(s"Got a forecast port state: $fixedPoints")
+        val actualMinutes = staffMinutes.values.toSeq.filter(_.fixedPoints == 50).groupBy(m => SDate(m.minute).toISODateOnly).mapValues { minutes =>
+          minutes.map(m => SDate(m.minute).millisSinceEpoch).sorted
+        }
+        actualMinutes == expectedStaffMinutes
+    }
+
+    crunch.liveArrivalsInput.complete()
+
+    success
+  }
+
+  "Given some fixed points and existing port state with out of date fixed points " +
+    "When starting the crunch graph " +
+    "Then the forecast crunch probe should receive staff minutes for the max crunch days reflecting the actual fixed points" >> {
+
+    val scheduled = "2017-01-01T00:00Z"
+    val now = SDate(scheduled)
+    val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+    val endDate1 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
+    val assignment1 = StaffAssignment("shift a", "T1", startDate1, endDate1, 50, None)
+    val fixedPoints = FixedPointAssignments(Seq(assignment1))
+
+    val daysToCrunch = 5
+
+    def staffMinutes(days: Int, minutes: Int, startDate: String): Map[TM, StaffMinute] = (0 until days).flatMap { day =>
+      (0 until minutes).map { minute =>
+        val currentMinute = SDate(startDate).addDays(day).addMinutes(minute).millisSinceEpoch
+        (TM("T1", currentMinute), StaffMinute("T1", currentMinute, 0, 1, 0))
+      }
+    }.toMap
+
+    val crunch = runCrunchGraph(
+      now = () => now,
+      initialFixedPoints = fixedPoints,
+      maxDaysToCrunch = daysToCrunch,
+      initialPortState = Option(PortState(Map(), Map(), staffMinutes(daysToCrunch, 15, scheduled)))
+    )
+
+    val expectedStaffMinutes = (1 to 5).map { day =>
+      val date = SDate(scheduled).addDays(day).toISODateOnly
+      val minutes = (0 until 15).map { minute => SDate(scheduled).addDays(day).addMinutes(minute).millisSinceEpoch }.sorted
+      (date, minutes)
+    }.toMap
+
+    crunch.forecastTestProbe.fishForMessage(2 seconds) {
+      case PortState(_, _, staffMinutes) =>
+        val actualMinutes = staffMinutes.values.toSeq.filter(_.fixedPoints == 50).groupBy(m => SDate(m.minute).toISODateOnly).mapValues { minutes =>
+          minutes.map(m => SDate(m.minute).millisSinceEpoch).sorted
+        }
+        actualMinutes == expectedStaffMinutes
     }
 
     crunch.liveArrivalsInput.complete()
