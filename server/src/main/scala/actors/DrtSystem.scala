@@ -245,11 +245,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
     val statuses: Seq[Future[Option[FeedStatuses]]] = actors.map(a => initialStateFuture[FeedStatuses](a, GetFeedStatuses))
 
-    val eventualStatuseses: Future[Seq[FeedStatuses]] = Future
+    Future
       .sequence(statuses)
       .map(maybeStatuses => maybeStatuses.collect { case Some(fs) => fs })
-
-    eventualStatuseses
   }
 
   def aclTerminalMapping(portCode: String): TerminalName => TerminalName = portCode match {
