@@ -198,12 +198,12 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   def run(): Unit = {
     val futurePortStates: Future[(Option[PortState], Option[PortState], Option[Set[Arrival]], Option[Set[Arrival]], Option[Set[Arrival]], Option[RegisteredArrivals])] = {
-      val maybeLivePortState = initialStateFuture(liveCrunchStateActor, GetState)
-      val maybeForecastPortState = initialStateFuture(forecastCrunchStateActor, GetState)
+      val maybeLivePortState = initialStateFuture[PortState](liveCrunchStateActor, GetState)
+      val maybeForecastPortState = initialStateFuture[PortState](forecastCrunchStateActor, GetState)
       val maybeInitialBaseArrivals = initialStateFuture[ArrivalsState](baseArrivalsActor, GetState).map(_.map(_.arrivals.values.toSet))
       val maybeInitialFcstArrivals = initialStateFuture[ArrivalsState](forecastArrivalsActor, GetState).map(_.map(_.arrivals.values.toSet))
       val maybeInitialLiveArrivals = initialStateFuture[ArrivalsState](liveArrivalsActor, GetState).map(_.map(_.arrivals.values.toSet))
-      val maybeInitialRegisteredArrivals = initialStateFuture(registeredArrivalsActor, GetState)
+      val maybeInitialRegisteredArrivals = initialStateFuture[RegisteredArrivals](registeredArrivalsActor, GetState)
       for {
         lps <- maybeLivePortState
         fps <- maybeForecastPortState
@@ -224,7 +224,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         if (maybeRegisteredArrivals.isDefined) log.info(s"sending ${maybeRegisteredArrivals.get.arrivals.size} initial registered arrivals to batch stage")
         else log.info(s"sending no registered arrivals to batch stage")
 
-
         new S3ManifestPoller(crunchInputs.manifestsResponse, airportConfig.portCode, latestZipFileName, s3ApiProvider).startPollingForManifests()
 
         if (!params.useLegacyManifests) {
@@ -244,11 +243,13 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   override def getFeedStatus: Future[Seq[FeedStatuses]] = {
     val actors: Seq[AskableActorRef] = Seq(liveArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
 
-    val statuses = actors.map(a => initialStateFuture[FeedStatuses](a, GetFeedStatuses))
+    val statuses: Seq[Future[Option[FeedStatuses]]] = actors.map(a => initialStateFuture[FeedStatuses](a, GetFeedStatuses))
 
-    Future
+    val eventualStatuseses: Future[Seq[FeedStatuses]] = Future
       .sequence(statuses)
       .map(maybeStatuses => maybeStatuses.collect { case Some(fs) => fs })
+
+    eventualStatuseses
   }
 
   def aclTerminalMapping(portCode: String): TerminalName => TerminalName = portCode match {
@@ -329,16 +330,19 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     crunchInputs
   }
 
-  def initialState[A](askableActor: AskableActorRef, toAsk: Any): Option[A] = Await.result(initialStateFuture(askableActor, toAsk), 5 minutes)
+  def initialState[A](askableActor: AskableActorRef, toAsk: Any): Option[A] = Await.result(initialStateFuture[A](askableActor, toAsk), 5 minutes)
 
   def initialStateFuture[A](askableActor: AskableActorRef, toAsk: Any): Future[Option[A]] = {
     val future = askableActor.ask(toAsk)(new Timeout(5 minutes)).map {
-      case Some(state: A) =>
-        log.info(s"Got initial state from ${askableActor.toString}")
+      case Some(state: A) if state.isInstanceOf[A] =>
+        log.info(s"Got initial state (Some(${state.getClass})) from ${askableActor.toString}")
         Option(state)
-      case state: A =>
-        log.info(s"Got initial state from ${askableActor.toString}")
+      case state: A if !state.isInstanceOf[Option[A]] =>
+        log.info(s"Got initial state (${state.getClass}) from ${askableActor.toString}")
         Option(state)
+      case None =>
+        log.info(s"Got no state (None) from ${askableActor.toString}")
+        None
       case _ =>
         log.info(s"Got unexpected GetState response from ${askableActor.toString}")
         None
