@@ -86,8 +86,6 @@ class WorkloadGraphStage(name: String = "",
         log.info(s"Got existing flight TQMs")
         val updatedWorkloads: Map[TQM, Set[FlightSplitMinute]] = flightLoadMinutes(incomingFlights)
         log.info(s"Got updated workloads")
-        log.info(s"incomingFlights: $incomingFlights")
-        log.info(s"updatedWorkloads: $updatedWorkloads")
 
         flightLoadMinutes = mergeFlightLoadMinutes(existingFlightTQMs, updatedWorkloads, incomingFlights)
         log.info(s"Merged updated workloads into existing")

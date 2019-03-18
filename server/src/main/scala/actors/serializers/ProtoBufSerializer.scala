@@ -8,6 +8,7 @@ import server.protobuf.messages.FlightsMessage.{FeedStatusMessage, FeedStatusesM
 import server.protobuf.messages.ShiftMessage.ShiftStateSnapshotMessage
 import server.protobuf.messages.StaffMovementMessages.StaffMovementsStateSnapshotMessage
 import server.protobuf.messages.Alert.{Alert, AlertSnapshotMessage}
+import server.protobuf.messages.RegisteredArrivalMessage.{RegisteredArrivalMessage, RegisteredArrivalsMessage}
 import server.protobuf.messages.VoyageManifest.{VoyageManifestLatestFileNameMessage, VoyageManifestMessage, VoyageManifestStateSnapshotMessage, VoyageManifestsMessage}
 
 class ProtoBufSerializer extends SerializerWithStringManifest {
@@ -30,6 +31,8 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
   final val VoyageManifest: String = classOf[VoyageManifestMessage].getName
   final val Alerts: String = classOf[Alert].getName
   final val AlertSnapshot: String = classOf[AlertSnapshotMessage].getName
+  final val RegisteredArrivals: String = classOf[RegisteredArrivalsMessage].getName
+  final val RegisteredArrival: String = classOf[RegisteredArrivalMessage].getName
 
   override def toBinary(objectToSerialize: AnyRef): Array[Byte] = {
     objectToSerialize match {
@@ -48,6 +51,8 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case m: VoyageManifestMessage => m.toByteArray
       case m: Alert => m.toByteArray
       case m: AlertSnapshotMessage => m.toByteArray
+      case m: RegisteredArrivalMessage => m.toByteArray
+      case m: RegisteredArrivalsMessage => m.toByteArray
     }
   }
 
@@ -70,6 +75,8 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case VoyageManifest => VoyageManifestMessage.parseFrom(bytes)
       case AlertSnapshot => AlertSnapshotMessage.parseFrom(bytes)
       case Alerts => Alert.parseFrom(bytes)
+      case RegisteredArrival => RegisteredArrivalMessage.parseFrom(bytes)
+      case RegisteredArrivals => RegisteredArrivalsMessage.parseFrom(bytes)
     }
   }
 }

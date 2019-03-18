@@ -154,11 +154,10 @@ object RunnableCrunch {
           workload.out ~> batchLoad ~> workloadFanOut ~> crunch
                                        workloadFanOut ~> simulation.in0
 
-          crunch                  ~> portState.in1
-          actualDesksAndWaitTimes ~> portState.in2
-
-          staff.out ~> batchStaff ~> staffFanOut ~> simulation.in1
-                                     staffFanOut ~> portState.in3
+          crunch                   ~> portState.in1
+          actualDesksAndWaitTimes  ~> portState.in2
+          staff.out ~> staffFanOut ~> portState.in3
+                       staffFanOut ~> batchStaff ~> simulation.in1
 
           simulation.out ~> portState.in4
 

@@ -27,7 +27,7 @@ object Staffing {
   def staffAvailableByTerminalAndQueue(dropBeforeMillis: MillisSinceEpoch,
                                        shifts: ShiftAssignments,
                                        fixedPoints: FixedPointAssignments,
-                                       optionalMovements: Option[Seq[StaffMovement]]): Option[StaffSources] = {
+                                       optionalMovements: Option[Seq[StaffMovement]]): StaffSources = {
     val movements = optionalMovements.getOrElse(Seq())
 
     val relevantShifts = removeOldShifts(dropBeforeMillis, shifts)
@@ -38,7 +38,7 @@ object Staffing {
 
     val available = StaffMovementsHelper.terminalStaffAt(relevantShifts, fixedPoints)(movements) _
 
-    Option(StaffSources(relevantShifts, fixedPoints, movementsService, available))
+    StaffSources(relevantShifts, fixedPoints, movementsService, available)
   }
 
   def removeOldShifts(dropBeforeMillis: MillisSinceEpoch, shifts: ShiftAssignments): ShiftAssignments = shifts.copy(
@@ -55,7 +55,7 @@ object Staffing {
     .sortBy(_.time.millisSinceEpoch)
 
   def staffMinutesForCrunchMinutes(crunchMinutes: Map[TQM, CrunchMinute],
-                                   maybeSources: Option[StaffSources]): Map[TM, StaffMinute] = {
+                                   maybeSources: StaffSources): Map[TM, StaffMinute] = {
 
     val staff = maybeSources
     crunchMinutes
@@ -72,23 +72,19 @@ object Staffing {
       }
   }
 
-  def staffMinutesForPeriod(staff: Option[StaffSources],
+  def staffMinutesForPeriod(staff: StaffSources,
                             tn: TerminalName,
                             minuteMillis: NumericRange[MillisSinceEpoch]): Map[TM, StaffMinute] = {
     import SDate.implicits.sdateFromMilliDateLocal
 
     minuteMillis
-      .map(m => {
-        val staffMinute = staff match {
-          case None => StaffMinute(tn, m, 0, 0, 0)
-          case Some(staffSources) =>
-            val shifts = staffSources.shifts.terminalStaffAt(tn, SDate(m))
-            val fixedPoints = staffSources.fixedPoints.terminalStaffAt(tn, SDate(m, Crunch.europeLondonTimeZone))
-            val movements = staffSources.movements.terminalStaffAt(tn, m)
-            StaffMinute(tn, m, shifts, fixedPoints, movements)
-        }
+      .map { minute =>
+        val shifts = staff.shifts.terminalStaffAt(tn, SDate(minute))
+        val fixedPoints = staff.fixedPoints.terminalStaffAt(tn, SDate(minute, Crunch.europeLondonTimeZone))
+        val movements = staff.movements.terminalStaffAt(tn, minute)
+        val staffMinute = StaffMinute(tn, minute, shifts, fixedPoints, movements)
         (staffMinute.key, staffMinute)
-      })
+      }
       .toMap
   }
 
