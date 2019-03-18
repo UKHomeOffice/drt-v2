@@ -1,4 +1,4 @@
-package services.crunch
+package services.graphstages
 
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{ClosedShape, OverflowStrategy}
@@ -10,8 +10,8 @@ import drt.shared.PaxTypesAndQueues.{eeaMachineReadableToDesk, visaNationalToDes
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import services.SDate
+import services.crunch.CrunchTestLike
 import services.graphstages.Crunch.{LoadMinute, Loads}
-import services.graphstages.{Crunch, WorkloadGraphStage}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Await

@@ -27,7 +27,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val scheduled = "2017-01-01T00:00Z"
 
-    val flight = ArrivalGenerator.apiFlight(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(21))
+    val flight = ArrivalGenerator.apiFlight(origin = "JFK", schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(21))
     val inputManifestsCi = ManifestsFeedSuccess(DqManifests("", Set(
       VoyageManifest(DqEventCodes.CheckIn, "STN", "JFK", "0001", "BA", "2017-01-01", "00:00", List(
         PassengerInfoGenerator.passengerInfoJson("GBR", "P", "GBR")
@@ -53,7 +53,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     )
 
     offerAndWait(crunch.manifestsInput, inputManifestsCi)
-    Thread.sleep(250)
+    Thread.sleep(1500)
     offerAndWait(crunch.manifestsInput, inputManifestsDc)
 
     val expectedNonZeroQueues = Set(NonEeaDesk)
@@ -239,10 +239,10 @@ class VoyageManifestsSpec extends CrunchTestLike {
         )),
         terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(EeaDesk, EGate))
-      ),
-      initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set(terminalSplits))), Map(), Map()))
+      )
     )
 
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
 
     val expectedSplits = Set(
       terminalSplits,

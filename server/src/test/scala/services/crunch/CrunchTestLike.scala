@@ -19,7 +19,7 @@ import passengersplits.InMemoryPersistence
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse, ManifestsFeedSuccess}
 import services._
 import services.graphstages.Crunch._
-import services.graphstages.{ActualDeskStats, DqManifests, DummySplitsPredictor}
+import services.graphstages.{ActualDeskStats, DqManifests, DummySplitsPredictor, TestableCrunchLoadStage}
 import slickdb.Tables
 
 import scala.concurrent.Await
@@ -144,14 +144,14 @@ class CrunchTestLike
                      now: () => SDateLike,
                      initialShifts: ShiftAssignments = ShiftAssignments.empty,
                      initialFixedPoints: FixedPointAssignments = FixedPointAssignments.empty,
+                     initialStaffMovements: Seq[StaffMovement] = Seq(),
                      logLabel: String = "",
                      cruncher: TryCrunch = TestableCrunchLoadStage.mockCrunch,
                      simulator: Simulator = TestableCrunchLoadStage.mockSimulator,
                      aggregatedArrivalsActor: ActorRef = testProbe("aggregated-arrivals").ref,
-                     useLegacyManifests: Boolean = false
+                     useLegacyManifests: Boolean = true,
+                     maxDaysToCrunch: Int = 4
                     ): CrunchGraphInputsAndProbes = {
-
-    val maxDaysToCrunch = 5
 
     val liveProbe = testProbe("live")
     val forecastProbe = testProbe("forecast")
@@ -209,14 +209,11 @@ class CrunchTestLike
       initialManifestsState = maybeInitialManifestState,
       arrivalsBaseSource = baseArrivals,
       arrivalsFcstSource = fcstArrivals,
-      arrivalsLiveSource = liveArrivals
+      arrivalsLiveSource = liveArrivals,
+      initialShifts = initialShifts,
+      initialFixedPoints = initialFixedPoints,
+      initialStaffMovements = initialStaffMovements
     ))
-
-    if (initialShifts.assignments.nonEmpty) offerAndWait(crunchInputs.shifts, initialShifts)
-    if (initialFixedPoints.assignments.nonEmpty) offerAndWait(crunchInputs.fixedPoints, initialFixedPoints)
-    maybeInitialManifestState.foreach(ms => {
-      if (ms.manifests.nonEmpty) offerAndWait(crunchInputs.manifestsResponse, ManifestsFeedSuccess(DqManifests("", ms.manifests)))
-    })
 
     CrunchGraphInputsAndProbes(
       crunchInputs.baseArrivalsResponse,

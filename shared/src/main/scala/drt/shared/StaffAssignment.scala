@@ -35,13 +35,16 @@ case class FixedPointAssignments(assignments: Seq[StaffAssignment]) extends Fixe
 
   def terminalStaffAt(terminalName: TerminalName, date: SDateLike)
                      (implicit mdToSd: MilliDate => SDateLike): Int = {
-    val hoursAndMinutesInQuestion = date.toHoursAndMinutes()
+    val hoursAndMinutes = date.toHoursAndMinutes()
 
-    assignments.filter(assignment => {
-      assignment.terminalName == terminalName &&
-        hoursAndMinutesInQuestion >= mdToSd(assignment.startDt).toHoursAndMinutes() &&
-        hoursAndMinutesInQuestion <= mdToSd(assignment.endDt).toHoursAndMinutes()
-    }).map(_.numberOfStaff).sum
+    assignments
+      .filter { assignment =>
+        assignment.terminalName == terminalName &&
+          hoursAndMinutes >= mdToSd(assignment.startDt).toHoursAndMinutes() &&
+          hoursAndMinutes <= mdToSd(assignment.endDt).toHoursAndMinutes()
+      }
+      .map(_.numberOfStaff)
+      .sum
   }
 }
 
@@ -49,11 +52,14 @@ case class ShiftAssignments(assignments: Seq[StaffAssignment]) extends ShiftAssi
   def +(staffAssignments: Seq[StaffAssignment]): ShiftAssignments = copy(assignments ++ staffAssignments)
 
   def terminalStaffAt(terminalName: TerminalName, date: SDateLike): Int = {
-    val dateInQuestion = date.millisSinceEpoch
+    val dateMillis = date.millisSinceEpoch
 
-    assignments.filter(assignment => {
-      assignment.startDt.millisSinceEpoch <= dateInQuestion && dateInQuestion <= assignment.endDt.millisSinceEpoch && assignment.terminalName == terminalName
-    }).map(_.numberOfStaff).sum
+    assignments
+      .filter { assignment =>
+        assignment.startDt.millisSinceEpoch <= dateMillis && dateMillis <= assignment.endDt.millisSinceEpoch && assignment.terminalName == terminalName
+      }
+      .map(_.numberOfStaff)
+      .sum
   }
 
   def purgeExpired(expireBefore: () => SDateLike): ShiftAssignments = {
@@ -68,5 +74,6 @@ object FixedPointAssignments {
 
 object ShiftAssignments {
   val empty: ShiftAssignments = ShiftAssignments(Seq())
+
   def apply(assignments: Set[StaffAssignment]): ShiftAssignments = ShiftAssignments(assignments.toSeq)
 }

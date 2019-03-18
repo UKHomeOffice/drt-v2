@@ -3,7 +3,7 @@ package services.crunch
 import java.util.UUID
 
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.PortState
+import drt.shared.CrunchApi.{PortState, StaffMinute}
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
@@ -43,8 +43,8 @@ class StaffMinutesSpec extends CrunchTestLike {
     crunch.liveTestProbe.fishForMessage(5 seconds) {
       case ps: PortState =>
         val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute)
-        val staff = minutesInOrder.map(_.shifts)
-        val staffMillis = minutesInOrder.map(_.minute)
+        val staff = minutesInOrder.map(_.shifts).take(expectedStaff.length)
+        val staffMillis = minutesInOrder.map(_.minute).take(expectedMillis.length)
 
         (staffMillis, staff) == Tuple2(expectedMillis, expectedStaff)
     }
@@ -105,7 +105,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     success
   }
 
-  "Given two staff movement covering the same time period" +
+  "Given two staff movement covering the same time period " +
     "When I ask for the PortState " +
     "Then I should see the sum of the movements for the minute they cover" >> {
     val shiftStart = SDate("2017-01-01T00:00Z")
@@ -141,10 +141,10 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     crunch.liveTestProbe.fishForMessage(2 seconds) {
       case ps: PortState  =>
-        val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute).take(10)
-        val staffMovements = minutesInOrder.map(sm => (sm.minute, sm.movements))
+        val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute)
+        val staffMovements = minutesInOrder.filter(_.minute >= shiftStart.millisSinceEpoch).map(sm => (sm.minute, sm.movements)).take(10)
 
-        staffMovements === expectedStaffMovements
+        staffMovements == expectedStaffMovements
     }
 
     crunch.liveArrivalsInput.complete()
@@ -391,6 +391,88 @@ class StaffMinutesSpec extends CrunchTestLike {
         val deployments = minutesInOrder.map(cm => (cm.queueName, SDate(cm.minute), cm.deployedDesks.getOrElse(0))).toSet
 
         deployments == expectedCrunchDeployments
+    }
+
+    crunch.liveArrivalsInput.complete()
+
+    success
+  }
+
+  "Given some fixed points and no existing port state " +
+    "When starting the crunch graph " +
+    "Then the forecast crunch probe should receive staff minutes for the max crunch days " >> {
+
+    val scheduled = "2017-01-01T00:00Z"
+    val now = SDate(scheduled)
+    val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+    val endDate1 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
+    val assignment1 = StaffAssignment("shift a", "T1", startDate1, endDate1, 50, None)
+    val fixedPoints = FixedPointAssignments(Seq(assignment1))
+
+    val crunch = runCrunchGraph(
+      now = () => now,
+      initialFixedPoints = fixedPoints,
+      maxDaysToCrunch = 5
+    )
+
+    val expectedStaffMinutes = (1 to 5).map { day =>
+      val date = SDate(scheduled).addDays(day).toISODateOnly
+      val minutes = (0 until 15).map { minute => SDate(scheduled).addDays(day).addMinutes(minute).millisSinceEpoch }.sorted
+      (date, minutes)
+    }.toMap
+
+    crunch.forecastTestProbe.fishForMessage(5 seconds) {
+      case PortState(_, _, staffMinutes) =>
+        val actualMinutes = staffMinutes.values.toSeq.filter(_.fixedPoints == 50).groupBy(m => SDate(m.minute).toISODateOnly).mapValues { minutes =>
+          minutes.map(m => SDate(m.minute).millisSinceEpoch).sorted
+        }
+        actualMinutes == expectedStaffMinutes
+    }
+
+    crunch.liveArrivalsInput.complete()
+
+    success
+  }
+
+  "Given some fixed points and existing port state with out of date fixed points " +
+    "When starting the crunch graph " +
+    "Then the forecast crunch probe should receive staff minutes for the max crunch days reflecting the actual fixed points" >> {
+
+    val scheduled = "2017-01-01T00:00Z"
+    val now = SDate(scheduled)
+    val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+    val endDate1 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
+    val assignment1 = StaffAssignment("shift a", "T1", startDate1, endDate1, 50, None)
+    val fixedPoints = FixedPointAssignments(Seq(assignment1))
+
+    val daysToCrunch = 5
+
+    def staffMinutes(days: Int, minutes: Int, startDate: String): Map[TM, StaffMinute] = (0 until days).flatMap { day =>
+      (0 until minutes).map { minute =>
+        val currentMinute = SDate(startDate).addDays(day).addMinutes(minute).millisSinceEpoch
+        (TM("T1", currentMinute), StaffMinute("T1", currentMinute, 0, 1, 0))
+      }
+    }.toMap
+
+    val crunch = runCrunchGraph(
+      now = () => now,
+      initialFixedPoints = fixedPoints,
+      maxDaysToCrunch = daysToCrunch,
+      initialPortState = Option(PortState(Map(), Map(), staffMinutes(daysToCrunch, 15, scheduled)))
+    )
+
+    val expectedStaffMinutes = (1 to 5).map { day =>
+      val date = SDate(scheduled).addDays(day).toISODateOnly
+      val minutes = (0 until 15).map { minute => SDate(scheduled).addDays(day).addMinutes(minute).millisSinceEpoch }.sorted
+      (date, minutes)
+    }.toMap
+
+    crunch.forecastTestProbe.fishForMessage(5 seconds) {
+      case PortState(_, _, staffMinutes) =>
+        val actualMinutes = staffMinutes.values.toSeq.filter(_.fixedPoints == 50).groupBy(m => SDate(m.minute).toISODateOnly).mapValues { minutes =>
+          minutes.map(m => SDate(m.minute).millisSinceEpoch).sorted
+        }
+        actualMinutes == expectedStaffMinutes
     }
 
     crunch.liveArrivalsInput.complete()
