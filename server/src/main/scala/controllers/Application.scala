@@ -569,7 +569,7 @@ class Application @Inject()(implicit val config: Configuration,
       case Some(csvData) =>
         val columnHeadings = CSVData.terminalCrunchMinutesToCsvDataHeadings(airportConfig.queues(terminalName))
         Result(
-          ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
+          ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
           HttpEntity.Strict(ByteString(columnHeadings + CSVData.lineEnding + csvData), Option("application/csv")))
       case None =>
         NotFound("Could not find desks and queues for this date.")
@@ -624,7 +624,7 @@ class Application @Inject()(implicit val config: Configuration,
         log.info(s"Forecast CSV export for $terminal on $startDay with: crunch minutes: ${m.size} staff minutes: ${s.size}")
         val csvData = CSVData.forecastPeriodToCsv(ForecastPeriod(Forecast.rollUpForWeek(m.values.toSet, s.values.toSet, terminal)))
         Result(
-          ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
+          ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
           HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
         )
 
@@ -654,7 +654,7 @@ class Application @Inject()(implicit val config: Configuration,
       case Some(PortState(_, m, _)) =>
         val csvData = CSVData.forecastHeadlineToCSV(Forecast.headLineFigures(m.values.toSet, terminal), airportConfig.exportQueueOrder)
         Result(
-          ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
+          ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
           HttpEntity.Strict(ByteString(csvData), Option("application/csv")
           )
         )
@@ -683,7 +683,7 @@ class Application @Inject()(implicit val config: Configuration,
               ResponseHeader(OK, Map(
                 CONTENT_LENGTH -> csvData.length.toString,
                 CONTENT_TYPE -> "text/csv",
-                CONTENT_DISPOSITION -> s"attachment; filename='$fileName.csv'",
+                CONTENT_DISPOSITION -> s"attachment; filename=$fileName.csv",
                 CACHE_CONTROL -> "no-cache")
               ),
               HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
@@ -721,7 +721,7 @@ class Application @Inject()(implicit val config: Configuration,
           }
           Result(
             ResponseHeader(200, Map(
-              "Content-Disposition" -> s"attachment; filename='$fileName.csv'",
+              "Content-Disposition" -> s"attachment; filename=$fileName.csv",
               HeaderNames.CACHE_CONTROL -> "no-cache")
             ),
             HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
@@ -759,7 +759,7 @@ class Application @Inject()(implicit val config: Configuration,
     }
 
     CSVData.multiDayToSingleExport(days).map(csvData => {
-      Result(ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
+      Result(ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
         HttpEntity.Strict(ByteString(csvData), Option("application/csv")))
     })
   }
@@ -785,7 +785,7 @@ class Application @Inject()(implicit val config: Configuration,
     )
 
     CSVData.multiDayToSingleExport(days).map(csvData => {
-      Result(ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$fileName.csv'")),
+      Result(ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
         HttpEntity.Strict(ByteString(
           CSVData.terminalCrunchMinutesToCsvDataHeadings(airportConfig.queues(terminalName)) + CSVData.lineEnding + csvData
         ), Option("application/csv")))
