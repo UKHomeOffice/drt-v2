@@ -27,18 +27,18 @@ class LivePollingHandler[M](viewModeMP: ModelRW[M, ViewMode]) extends LoggingAct
       effectOnly(pollingEffects)
 
     case PollForCrunchUpdates =>
-      val effects = Effect(Future(PollForCrunchUpdates)).after(PollDelay.crunchUpdateDelay) + Effect(Future(GetCrunchState()))
+      val pollingEffect = Effect(Future(PollForCrunchUpdates)).after(PollDelay.crunchUpdateDelay)
       if (isViewModeAbleToPoll(value))
-        effectOnly(effects)
+        effectOnly(pollingEffect + Effect(Future(GetCrunchState())))
       else
-        noChange
+        effectOnly(pollingEffect)
 
     case PollForStaffUpdates =>
-      val effects = Effect(Future(PollForStaffUpdates)).after(PollDelay.staffUpdateDelay) +
-        Effect(Future(GetShifts())) + Effect(Future(GetStaffMovements())) + Effect(Future(GetFixedPoints()))
+      val pollingEffect = Effect(Future(PollForStaffUpdates)).after(PollDelay.staffUpdateDelay)
       if (isViewModeAbleToPoll(value))
-        effectOnly(effects)
+        effectOnly(pollingEffect +
+          Effect(Future(GetShifts())) + Effect(Future(GetStaffMovements())) + Effect(Future(GetFixedPoints())))
       else
-        noChange
+        effectOnly(pollingEffect)
   }
 }
