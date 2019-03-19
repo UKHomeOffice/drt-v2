@@ -51,13 +51,6 @@ describe('Advanced Passenger Information Splits exposed to Port Operators', func
     });
   });
 
-  it("Not Found when there is no arrivals on the date", function () {
-    cy.setRoles(["test", "api:view-port-arrivals"]);
-    downloadCsv("T1", year, month, day).then((response) => {
-      expect(response.status).to.eq(404)
-    });
-  });
-
   it("Ok when there are arrivals on the date and user has the correct role", function () {
     cy.addFlight(schDateString + "T00:55:00Z", schDateString + "T00:55:00Z", schDateString + "T01:01:00Z", schDateString + "T01:05:00Z", schDateString + "T00:15:00Z");
     cy.setRoles(["test", "api:view-port-arrivals"]);
