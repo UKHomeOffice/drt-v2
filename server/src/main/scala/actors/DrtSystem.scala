@@ -218,7 +218,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         system.log.info(s"Successfully restored initial state for App")
         val initialPortState: Option[PortState] = mergePortStates(maybeLiveState, maybeForecastState)
 
-        val crunchInputs: CrunchSystem[Cancellable] = startCrunchSystem(initialPortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, params.recrunchOnStart)
+        val crunchInputs: CrunchSystem[Cancellable] = startCrunchSystem(initialPortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, params.recrunchOnStart, true)
         voyageManifestsRequestActor ! SubscribeResponseQueue(crunchInputs.manifestsResponse)
 
         if (maybeRegisteredArrivals.isDefined) log.info(s"sending ${maybeRegisteredArrivals.get.arrivals.size} initial registered arrivals to batch stage")
@@ -284,8 +284,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
                         initialBaseArrivals: Option[Set[Arrival]],
                         initialForecastArrivals: Option[Set[Arrival]],
                         initialLiveArrivals: Option[Set[Arrival]],
-                        recrunchOnStart: Boolean
-                       ): CrunchSystem[Cancellable] = {
+                        recrunchOnStart: Boolean,
+                        checkRequiredStaffUpdatesOnStartup: Boolean): CrunchSystem[Cancellable] = {
 
     val crunchInputs = CrunchSystem(CrunchProps(
       airportConfig = airportConfig,
@@ -323,7 +323,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       initialShifts = initialState(shiftsActor, GetState).getOrElse(ShiftAssignments(Seq())),
       initialFixedPoints = initialState(fixedPointsActor, GetState).getOrElse(FixedPointAssignments(Seq())),
       initialStaffMovements = initialState[StaffMovements](staffMovementsActor, GetState).map(_.movements).getOrElse(Seq[StaffMovement]()),
-      recrunchOnStart = recrunchOnStart
+      recrunchOnStart = recrunchOnStart,
+      checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup
     ))
     crunchInputs
   }

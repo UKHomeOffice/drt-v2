@@ -150,7 +150,8 @@ class CrunchTestLike
                      simulator: Simulator = TestableCrunchLoadStage.mockSimulator,
                      aggregatedArrivalsActor: ActorRef = testProbe("aggregated-arrivals").ref,
                      useLegacyManifests: Boolean = true,
-                     maxDaysToCrunch: Int = 4
+                     maxDaysToCrunch: Int = 4,
+                     checkRequiredStaffUpdatesOnStartup: Boolean = false
                     ): CrunchGraphInputsAndProbes = {
 
     val liveProbe = testProbe("live")
@@ -212,7 +213,8 @@ class CrunchTestLike
       arrivalsLiveSource = liveArrivals,
       initialShifts = initialShifts,
       initialFixedPoints = initialFixedPoints,
-      initialStaffMovements = initialStaffMovements
+      initialStaffMovements = initialStaffMovements,
+      checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup
     ))
 
     CrunchGraphInputsAndProbes(

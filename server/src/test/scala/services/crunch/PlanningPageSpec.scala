@@ -33,7 +33,8 @@ class PlanningPageSpec() extends CrunchTestLike {
         minMaxDesksByTerminalQueue = Map("T1" -> Map(Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1)))))
       ),
       initialShifts = ShiftAssignments(Seq(assignment1)),
-      cruncher = TryRenjin.crunch
+      cruncher = TryRenjin.crunch,
+      checkRequiredStaffUpdatesOnStartup = true
     )
 
     crunch.forecastTestProbe.receiveOne(5 seconds)

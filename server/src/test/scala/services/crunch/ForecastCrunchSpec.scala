@@ -73,7 +73,8 @@ class ForecastCrunchSpec extends CrunchTestLike {
         queues = Map("T1" -> Seq(Queues.EeaDesk))
       ),
       now = () => SDate(scheduled),
-      initialShifts = ShiftAssignments(Seq(assignment1, assignment2))
+      initialShifts = ShiftAssignments(Seq(assignment1, assignment2)),
+      checkRequiredStaffUpdatesOnStartup = true
     )
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
@@ -83,6 +84,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
       .map(m => (m, "T1", Queues.EeaDesk, Some(1)))
     val shift2Millis = (firstMinute.addMinutes(15).millisSinceEpoch to firstMinute.addMinutes(29).millisSinceEpoch by 60000)
       .map(m => (m, "T1", Queues.EeaDesk, Some(2)))
+
     val expected = shift1Millis ++ shift2Millis
 
     crunch.forecastTestProbe.fishForMessage(10 seconds) {
