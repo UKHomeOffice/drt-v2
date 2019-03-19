@@ -66,7 +66,7 @@ describe('Advanced Passenger Information Splits exposed to Port Operators', func
       expect(response.status).to.eq(200);
       expect(response.body).to.contain(header);
       expect(response.body).to.contain(schDateString + ',' + '00:15');
-      expect(response.headers['content-disposition']).to.eq("attachment; filename='export-splits-TEST-T1-" + year + "-" + month + "-" + day + ".csv'")
+      expect(response.headers['content-disposition']).to.eq("attachment; filename=export-splits-TEST-T1-" + year + "-" + month + "-" + day + ".csv")
     });
   })
 
