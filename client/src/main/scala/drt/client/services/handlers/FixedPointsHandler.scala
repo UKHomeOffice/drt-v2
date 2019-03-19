@@ -21,22 +21,19 @@ class FixedPointsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[Fi
     case SetFixedPoints(fixedPoints, _) => updated(Ready(fixedPoints))
 
     case SaveFixedPoints(assignments, terminalName) =>
-      log.info(s"Calling saveFixedPoints")
 
       val otherTerminalFixedPoints = value.getOrElse(FixedPointAssignments.empty).notForTerminal(terminalName)
       val newFixedPoints: FixedPointAssignments = assignments + otherTerminalFixedPoints
-      val futureResponse = AjaxClient[Api].saveFixedPoints(newFixedPoints).call()
+      val saveFixedPointsResponse = AjaxClient[Api].saveFixedPoints(newFixedPoints).call()
         .map(_ => SetFixedPoints(newFixedPoints, Option(terminalName)))
         .recoverWith {
           case _ =>
             log.error(s"Failed to save FixedPoints. Re-requesting after ${PollDelay.recoveryDelay}")
             Future(RetryActionAfter(SaveFixedPoints(assignments, terminalName), PollDelay.recoveryDelay))
         }
-      effectOnly(Effect(futureResponse))
+      effectOnly(Effect(saveFixedPointsResponse))
 
     case GetFixedPoints() =>
-      val fixedPointsEffect = Effect(Future(GetFixedPoints())).after(60 minutes)
-      log.info(s"Calling getFixedPoints")
 
       val maybePointInTimeMillis: Option[MillisSinceEpoch] = viewMode() match {
         case ViewLive() => None
@@ -51,6 +48,6 @@ class FixedPointsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[Fi
               Future(NoAction)
           }
       )
-      effectOnly(apiCallEffect + fixedPointsEffect)
+      effectOnly(apiCallEffect)
   }
 }

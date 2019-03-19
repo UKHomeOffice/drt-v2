@@ -37,8 +37,7 @@ class StaffMovementsHandler[M](modelRW: ModelRW[M, (Pot[Seq[StaffMovement]], Vie
       }
 
     case SetStaffMovements(staffMovements: Seq[StaffMovement]) =>
-      val scheduledRequest = Effect(Future(GetStaffMovements())).after(60 seconds)
-      updated((Ready(staffMovements), value._2), scheduledRequest)
+      updated((Ready(staffMovements), value._2))
 
     case GetStaffMovements() =>
       val (_, viewMode) = value

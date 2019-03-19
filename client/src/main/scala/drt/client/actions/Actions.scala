@@ -46,7 +46,7 @@ object Actions {
 
   case class UpdateCrunchStateFromCrunchState(crunchState: CrunchState) extends Action
 
-  case class NoCrunchStateUpdatesAndContinuePollingIfNecessary() extends Action
+  case object NoCrunchUpdates extends Action
 
   case class GetForecastWeek(startDay: SDateLike, terminalName: TerminalName) extends Action
 
@@ -127,5 +127,12 @@ object Actions {
   case class SaveAlert(alert: Alert) extends Action
 
   case class UpdateStaffAdjustmentDialogueState(maybeNewState: Option[StaffAdjustmentDialogueState]) extends Action
+
+  case object PollForUpdates extends Action
+
+  case object PollForCrunchUpdates extends Action
+
+  case object PollForStaffUpdates extends Action
+
 
 }
