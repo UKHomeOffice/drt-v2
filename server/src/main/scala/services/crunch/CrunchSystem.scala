@@ -67,7 +67,8 @@ case class CrunchProps[FR](logLabel: String = "",
                            initialShifts: ShiftAssignments = ShiftAssignments(Seq()),
                            initialFixedPoints: FixedPointAssignments = FixedPointAssignments(Seq()),
                            initialStaffMovements: Seq[StaffMovement] = Seq(),
-                           recrunchOnStart: Boolean = false)
+                           recrunchOnStart: Boolean = false,
+                           checkRequiredStaffUpdatesOnStartup: Boolean)
 
 object CrunchSystem {
 
@@ -145,7 +146,8 @@ object CrunchSystem {
       now = props.now,
       expireAfterMillis = props.expireAfterMillis,
       airportConfig = props.airportConfig,
-      numberOfDays = props.maxDaysToCrunch)
+      numberOfDays = props.maxDaysToCrunch,
+      checkRequiredUpdatesOnStartup = props.checkRequiredStaffUpdatesOnStartup)
 
     val staffBatcher = new StaffBatchUpdateGraphStage(props.now, props.expireAfterMillis, props.airportConfig.crunchOffsetMinutes)
     val loadBatcher = new BatchLoadsByCrunchPeriodGraphStage(props.now, props.expireAfterMillis, crunchStartDateProvider)

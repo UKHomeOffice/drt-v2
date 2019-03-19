@@ -17,7 +17,8 @@ class StaffGraphStage(name: String = "",
                       now: () => SDateLike,
                       expireAfterMillis: MillisSinceEpoch,
                       airportConfig: AirportConfig,
-                      numberOfDays: Int) extends GraphStage[FanInShape3[ShiftAssignments, FixedPointAssignments, Seq[StaffMovement], StaffMinutes]] {
+                      numberOfDays: Int,
+                      checkRequiredUpdatesOnStartup: Boolean) extends GraphStage[FanInShape3[ShiftAssignments, FixedPointAssignments, Seq[StaffMovement], StaffMinutes]] {
   val inShifts: Inlet[ShiftAssignments] = Inlet[ShiftAssignments]("Shifts.in")
   val inFixedPoints: Inlet[FixedPointAssignments] = Inlet[FixedPointAssignments]("FixedPoints.in")
   val inMovements: Inlet[Seq[StaffMovement]] = Inlet[Seq[StaffMovement]]("Movements.in")
@@ -45,13 +46,17 @@ class StaffGraphStage(name: String = "",
       movementsOption = optionalInitialMovements
       staffMinutes = initialStaffMinutes.minutes.map(sm => (TM(sm.terminalName, sm.minute), sm)).toMap
 
-      missingMinutes ++ minutesRequiringUpdate match {
-        case m if m.isEmpty => log.info(s"No minutes to add or update")
-        case minutes =>
-          val updateCriteria = UpdateCriteria(minutes.toList.sorted, airportConfig.terminalNames.toSet)
-          log.info(s"${updateCriteria.minuteMillis.length} minutes to add or update")
-          staffMinuteUpdates = updatesFromSources(staffSources, updateCriteria)
-          log.info(s"${staffMinuteUpdates.size} minutes generated across terminals")
+      if (checkRequiredUpdatesOnStartup) {
+        missingMinutes ++ minutesRequiringUpdate match {
+          case m if m.isEmpty => log.info(s"No minutes to add or update")
+          case minutes =>
+            val updateCriteria = UpdateCriteria(minutes.toList.sorted, airportConfig.terminalNames.toSet)
+            log.info(s"${updateCriteria.minuteMillis.length} minutes to add or update")
+            staffMinuteUpdates = updatesFromSources(staffSources, updateCriteria)
+            log.info(s"${staffMinuteUpdates.size} minutes generated across terminals")
+        }
+      } else {
+        log.warn(s"Prestart update checks are disabled")
       }
 
       super.preStart()

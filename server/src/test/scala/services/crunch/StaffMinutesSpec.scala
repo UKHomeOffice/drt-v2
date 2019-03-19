@@ -34,7 +34,8 @@ class StaffMinutesSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       airportConfig = airportConfig.copy(terminalNames = Seq("T1")),
       now = () => shiftStart,
-      initialShifts = initialShifts
+      initialShifts = initialShifts,
+      checkRequiredStaffUpdatesOnStartup = true
     )
 
     val expectedStaff = List.fill(15)(1) ::: List.fill(15)(2)
@@ -412,7 +413,8 @@ class StaffMinutesSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       now = () => now,
       initialFixedPoints = fixedPoints,
-      maxDaysToCrunch = 5
+      maxDaysToCrunch = 5,
+      checkRequiredStaffUpdatesOnStartup = true
     )
 
     val expectedStaffMinutes = (1 to 5).map { day =>
@@ -458,7 +460,8 @@ class StaffMinutesSpec extends CrunchTestLike {
       now = () => now,
       initialFixedPoints = fixedPoints,
       maxDaysToCrunch = daysToCrunch,
-      initialPortState = Option(PortState(Map(), Map(), staffMinutes(daysToCrunch, 15, scheduled)))
+      initialPortState = Option(PortState(Map(), Map(), staffMinutes(daysToCrunch, 15, scheduled))),
+      checkRequiredStaffUpdatesOnStartup = true
     )
 
     val expectedStaffMinutes = (1 to 5).map { day =>
