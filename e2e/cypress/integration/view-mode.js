@@ -40,6 +40,7 @@ describe('View Modes', function () {
 
     it("should poll for updates when switching from historic to live view", function () {
       cy.visit('#terminal/T1/current/arrivals/?timeRangeStart=0&timeRangeEnd=24');
+      cy.get('#yesterday').should('be.visible');
       cy.get('#yesterday').click();
       cy.get('#terminal-data').contains("Nothing to show for this time period");
       cy.wait(2000);
