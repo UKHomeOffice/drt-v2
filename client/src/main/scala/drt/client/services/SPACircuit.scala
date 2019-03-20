@@ -60,8 +60,6 @@ object PollDelay {
   val recoveryDelay: FiniteDuration = 10 seconds
   val loginCheckDelay: FiniteDuration = 30 seconds
   val minuteUpdateDelay: FiniteDuration = 10 seconds
-  val crunchUpdateDelay: FiniteDuration = 2 seconds
-  val staffUpdateDelay: FiniteDuration = 30 seconds
 }
 
 trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
@@ -89,7 +87,6 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new FixedPointsHandler(currentViewMode, zoomRW(_.fixedPoints)((m, v) => m.copy(fixedPoints = v))),
       new StaffMovementsHandler(zoomRW(m => (m.staffMovements, m.viewMode))((m, v) => m.copy(staffMovements = v._1))),
       new ViewModeHandler(zoomRW(m => (m.viewMode, m.crunchStatePot, m.latestUpdateMillis))((m, v) => m.copy(viewMode = v._1, crunchStatePot = v._2, latestUpdateMillis = v._3)), zoom(_.crunchStatePot)),
-      new LivePollingHandler(zoomRW(m => m.viewMode)((m, v) => m.copy(viewMode = v))),
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v))),
       new ShowActualDesksAndQueuesHandler(zoomRW(_.showActualIfAvailable)((m, v) => m.copy(showActualIfAvailable = v))),
       new ShowAlertModalDialogHandler(zoomRW(_.displayAlertDialog)((m, v) => m.copy(displayAlertDialog = v))),
