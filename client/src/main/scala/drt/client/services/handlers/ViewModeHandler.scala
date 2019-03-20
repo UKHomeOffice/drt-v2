@@ -42,8 +42,7 @@ class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[Crunch
           updated((newViewMode, Pending(), latestUpdateMillis))
         case (cv, nv, Empty) if cv != nv && isViewModeAbleToPoll(cv) && isViewModeAbleToPoll(nv)  =>
           log.info("crunch: Setting to Pending from Empty")
-          val effects = Effect(Future(GetCrunchState())) + Effect(Future(GetShifts())) + Effect(Future(GetFixedPoints()))
-          updated((newViewMode, Pending(), latestUpdateMillis), effects)
+          updated((newViewMode, Pending(), latestUpdateMillis))
         case (cv, nv, Empty) if cv == nv && isViewModeAbleToPoll(cv) && latestUpdateMillis != 0L =>
           log.info("crunch: Setting to Pending from Empty for live or future")
           updated((newViewMode, Pending(), latestUpdateMillis))
