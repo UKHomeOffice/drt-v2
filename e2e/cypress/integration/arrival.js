@@ -130,9 +130,10 @@ describe('Arrivals page', () => {
     cy.setRoles(["test"]);
     cy.request('POST', '/test/manifest', manifest);
     cy.visit('#terminal/T1/current/arrivals/?timeRangeStart=0&timeRangeEnd=24');
-    cy.get('.pax-api');
-    cy.request('GET', '/export/arrivals/' + millis + '/T1?startHour=0&endHour=24').then((resp) => {
-      expect(resp.body).to.equal(csvWithNoApiSplits);
+    cy.get('.pax-api').then(() => {
+      cy.request('GET', '/export/arrivals/' + millis + '/T1?startHour=0&endHour=24').then((resp) => {
+        expect(resp.body).to.equal(csvWithNoApiSplits);
+      });
     });
   });
 
