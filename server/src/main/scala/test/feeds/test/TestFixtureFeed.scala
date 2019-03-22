@@ -12,10 +12,11 @@ import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import test.TestActors.ResetActor
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.{FiniteDuration, _}
 import scala.language.postfixOps
+import scala.util.Try
 
 object TestFixtureFeed {
 
@@ -26,20 +27,27 @@ object TestFixtureFeed {
     log.info(s"About to create test Arrival")
     val askableTestArrivalActor: AskableActorRef = actorSystem.actorOf(Props(classOf[TestArrivalsActor]), s"TestActor-LiveArrivals")
 
-    implicit val timeout: Timeout = Timeout(4 seconds)
+    implicit val timeout: Timeout = Timeout(1 seconds)
 
     val pollFrequency = 2 seconds
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
     val tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed).map(_ => {
-      val testArrivals = Await.result(askableTestArrivalActor.ask(GetArrivals).map {
+      val eventualArrivals = askableTestArrivalActor.ask(GetArrivals).map {
         case Arrivals(arrivals) =>
           log.info(s"Got these arrivals from the actor: $arrivals")
           arrivals
         case x =>
-          log.info(s"TEST: found this instead $x")
+          log.info(s"TEST arrivals feed: found this instead $x")
 
           List()
-      }, 10 seconds)
+      }.recoverWith {
+        case t =>
+          log.error(s"TEST arrivals feed: threw", t)
+
+          Future(List())
+      }
+
+      val testArrivals = Try(Await.result(eventualArrivals, 1 seconds)).getOrElse(List())
 
       log.info(s"TEST: Sending arrivals from test feed: $testArrivals")
 
@@ -67,7 +75,6 @@ class TestArrivalsActor extends Actor with ActorLogging{
 
     case GetArrivals =>
       sender ! Arrivals(testArrivals)
-      Thread.sleep(1000)
 
     case ResetActor =>
       testArrivals = List()

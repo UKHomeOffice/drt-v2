@@ -10,7 +10,7 @@ Cypress.Commands.add('waitForArrivalToAppearInTheSystem', () => {
   cy
     .visit('#terminal/T1/current/arrivals/?timeRangeStart=0&timeRangeEnd=24')
     .get("#arrivals")
-    .contains("TS0123");
+    .contains("TS0123", { timeout: 10000 });
 });
 
 describe('Advanced Passenger Information Splits exposed to Port Operators', function () {

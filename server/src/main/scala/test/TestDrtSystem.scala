@@ -10,7 +10,6 @@ import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services.SDate
-import services.crunch.CrunchSystem
 import test.TestActors.{TestStaffMovementsActor, _}
 import test.feeds.test.{CSVFixtures, TestFixtureFeed, TestManifestsActor}
 import test.roles.TestUserRoleProvider
@@ -69,12 +68,12 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
 
   override def run(): Unit = {
 
-    val startSystem: () => CrunchSystem[Cancellable] = () => {
+    val startSystem: () => List[KillSwitch] = () => {
       val cs = startCrunchSystem(None, None, None, None, true, true)
       subscribeStaffingActors(cs)
       startScheduledFeedImports(cs)
       testManifestsActor ! SubscribeResponseQueue(cs.manifestsResponse)
-      cs
+      cs.killSwitches
     }
 
     val testActors = List(
@@ -98,18 +97,19 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
   }
 }
 
-case class RestartActor(startSystem: () => CrunchSystem[Cancellable], testActors: List[ActorRef]) extends Actor with ActorLogging {
+case class RestartActor(startSystem: () => List[KillSwitch], testActors: List[ActorRef]) extends Actor with ActorLogging {
 
-  var crunchSystem: Option[CrunchSystem[Cancellable]] = None
+  var killSwitches: List[KillSwitch] = List()
 
   override def receive: Receive = {
     case ResetData =>
       log.info(s"About to shut down everything")
 
-      crunchSystem.map(cs => {
-        log.info(s"Cancelling live arrivals")
-        cs.liveArrivalsResponse.cancel()
-      })
+        log.info(s"Pressing killswitches")
+        killSwitches.zipWithIndex.foreach { case (ks, idx) =>
+          log.info(s"Killswitch ${idx + 1}")
+          ks.shutdown()
+        }
 
       testActors.foreach(a => {
         a ! ResetActor
@@ -122,7 +122,7 @@ case class RestartActor(startSystem: () => CrunchSystem[Cancellable], testActors
       startTestSystem()
   }
 
-  def startTestSystem(): Unit = crunchSystem = Option(startSystem())
+  def startTestSystem(): Unit = killSwitches = startSystem()
 }
 
 case object ResetData
