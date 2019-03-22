@@ -26,7 +26,7 @@ object TestFixtureFeed {
     log.info(s"About to create test Arrival")
     val askableTestArrivalActor: AskableActorRef = actorSystem.actorOf(Props(classOf[TestArrivalsActor]), s"TestActor-LiveArrivals")
 
-    implicit val timeout: Timeout = Timeout(300 milliseconds)
+    implicit val timeout: Timeout = Timeout(4 seconds)
 
     val pollFrequency = 2 seconds
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
@@ -67,6 +67,7 @@ class TestArrivalsActor extends Actor with ActorLogging{
 
     case GetArrivals =>
       sender ! Arrivals(testArrivals)
+      Thread.sleep(1000)
 
     case ResetActor =>
       testArrivals = List()

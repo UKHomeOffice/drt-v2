@@ -10,6 +10,7 @@ import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services.SDate
+import services.crunch.CrunchSystem
 import test.TestActors.{TestStaffMovementsActor, _}
 import test.feeds.test.{CSVFixtures, TestFixtureFeed, TestManifestsActor}
 import test.roles.TestUserRoleProvider
@@ -68,12 +69,14 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
 
   override def run(): Unit = {
 
-    val startSystem = () => {
+    val startSystem: () => CrunchSystem[Cancellable] = () => {
       val cs = startCrunchSystem(None, None, None, None, true, true)
       subscribeStaffingActors(cs)
       startScheduledFeedImports(cs)
       testManifestsActor ! SubscribeResponseQueue(cs.manifestsResponse)
+      cs
     }
+
     val testActors = List(
         baseArrivalsActor,
         forecastArrivalsActor,
@@ -90,22 +93,28 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
         Props(classOf[RestartActor], startSystem, testActors),
         name = "TestActor-ResetData"
     )
+
     restartActor ! StartTestSystem
   }
 }
 
-case class RestartActor(startSystem: () => List[KillSwitch], testActors: List[ActorRef]) extends Actor with ActorLogging {
+case class RestartActor(startSystem: () => CrunchSystem[Cancellable], testActors: List[ActorRef]) extends Actor with ActorLogging {
 
-  var currentKillSwitches: List[KillSwitch] = List()
+  var crunchSystem: Option[CrunchSystem[Cancellable]] = None
 
   override def receive: Receive = {
     case ResetData =>
       log.info(s"About to shut down everything")
 
-      currentKillSwitches.foreach(_.shutdown())
+      crunchSystem.map(cs => {
+        log.info(s"Cancelling live arrivals")
+        cs.liveArrivalsResponse.cancel()
+      })
+
       testActors.foreach(a => {
         a ! ResetActor
       })
+
       log.info(s"Shutdown triggered")
       startTestSystem()
 
@@ -113,7 +122,7 @@ case class RestartActor(startSystem: () => List[KillSwitch], testActors: List[Ac
       startTestSystem()
   }
 
-  def startTestSystem(): Unit = currentKillSwitches = startSystem()
+  def startTestSystem(): Unit = crunchSystem = Option(startSystem())
 }
 
 case object ResetData
