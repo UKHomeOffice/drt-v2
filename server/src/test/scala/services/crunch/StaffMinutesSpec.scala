@@ -175,7 +175,6 @@ class StaffMinutesSpec extends CrunchTestLike {
         val minutesInOrder = ps.staffMinutes.values.toList.filter(m => startDate.millisSinceEpoch <= m.minute).sortBy(_.minute).take(minutesToCheck)
         val actualAvailableAndMovements = minutesInOrder.map(m => (m.available, m.movements))
 
-        println(s"actualAvailableAndMovements: $actualAvailableAndMovements")
         actualAvailableAndMovements == expectedStaffAvailableAndMovements
     }
 
