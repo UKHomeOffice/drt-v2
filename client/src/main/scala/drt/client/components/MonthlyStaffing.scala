@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.UseValueEq
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
 import drt.client.actions.Actions.UpdateShifts
 import drt.client.components.TerminalPlanningComponent.defaultStartDate
@@ -30,7 +31,7 @@ object MonthlyStaffing {
   case class State(timeSlots: Seq[Seq[Any]],
                    colHeadings: Seq[String],
                    rowHeadings: Seq[String],
-                   changes: Map[(Int, Int), Int])
+                   changes: Map[(Int, Int), Int]) extends UseValueEq
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
