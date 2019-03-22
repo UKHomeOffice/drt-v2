@@ -27,7 +27,7 @@ object MonthlyStaffing {
     def key: (Int, Int) = (timeSlot, day)
   }
 
-  case class State(timeSlots: Seq[Seq[Int]],
+  case class State(timeSlots: Seq[Seq[Any]],
                    colHeadings: Seq[String],
                    rowHeadings: Seq[String],
                    changes: Map[(Int, Int), Int])
@@ -41,13 +41,37 @@ object MonthlyStaffing {
   }
 
   def slotsInDay(date: SDateLike, slotDuration: Int): Seq[SDateLike] = {
-    val minutesInDay = 24 * 60
+
     val startOfDay = SDate.midnightOf(date)
-    val slots = minutesInDay / slotDuration
+    val slots = minutesInDay(date) / slotDuration
     List.tabulate(slots)(i => {
       val minsToAdd = i * slotDuration
       startOfDay.addMinutes(minsToAdd)
     })
+  }
+
+  def timeZoneSafeTimeSlots(slots: Seq[SDateLike], slotMinutes: Int): Seq[Option[SDateLike]] = {
+    val slotsInRegularDay = (24 * 60 * 60) / slotMinutes
+    val slotsPerHour = 60 / slotMinutes
+    if (slots.size < slotsInRegularDay) {
+
+      val timeslotsWithNones: Seq[Option[SDateLike]] = slots.sliding(2).flatMap(dates =>
+        if (dates(0).getTimeZoneOffsetMillis < dates(1).getTimeZoneOffsetMillis)
+          Option(dates(0)) :: List.fill(slotsPerHour)(None)
+        else
+          Option(dates(0)) :: Nil
+      ).toSeq
+      timeslotsWithNones ++ Seq(Option(slots.last))
+    }
+
+    else
+      slots.map(Option(_))
+  }
+
+  def minutesInDay(date: SDateLike): Int = {
+    val startOfDay = SDate.midnightOf(date)
+    val endOfDay = SDate.midnightOf(date.addDays(1))
+    (endOfDay.millisSinceEpoch - startOfDay.millisSinceEpoch).toInt / 1000 / 60
   }
 
   def drawSelect(values: Seq[String], names: Seq[String], defaultValue: String, callback: ReactEventFromInput => Callback): TagOf[Select] = {
@@ -59,11 +83,6 @@ object MonthlyStaffing {
       }.toTagMod)
   }
 
-  def toTimeSlots(startTime: SDateLike, endTime: SDateLike): Seq[SDateLike] = {
-    val numberOfSlots = (endTime.getHours() - startTime.getHours()) * 4
-    List.tabulate(numberOfSlots)(i => startTime.addMinutes(i * 15))
-  }
-
   def consecutiveDaysInMonth(startDay: SDateLike, endDay: SDateLike): Seq[SDateLike] = {
     val days = (endDay.getDate() - startDay.getDate()) + 1
     List.tabulate(days)(i => startDay.addDays(i))
@@ -71,17 +90,17 @@ object MonthlyStaffing {
 
   def sixMonthsFromFirstOfMonth(date: SDateLike): Seq[SDateLike] = (0 to 5).map(i => SDate.firstDayOfMonth(date).addMonths(i))
 
-  def applyRecordedChangesToShiftState(staffTimeSlotDays: Seq[Seq[Int]], changes: Map[(Int, Int), Int]): Seq[Seq[Int]] = changes
+  def applyRecordedChangesToShiftState(staffTimeSlotDays: Seq[Seq[Any]], changes: Map[(Int, Int), Int]): Seq[Seq[Any]] = changes
     .foldLeft(staffTimeSlotDays) {
       case (staffSoFar, ((slotIdx, dayIdx), newStaff)) =>
         staffSoFar.updated(slotIdx, staffSoFar(slotIdx).updated(dayIdx, newStaff))
     }
 
-  def whatDayChanged(startingSlots: Seq[Seq[Int]], updatedSlots: Seq[Seq[Int]]): Set[Int] =
+  def whatDayChanged(startingSlots: Seq[Seq[Any]], updatedSlots: Seq[Seq[Any]]): Set[Int] =
     toDaysWithIndexSet(updatedSlots)
       .diff(toDaysWithIndexSet(startingSlots)).map { case (_, dayIndex) => dayIndex }
 
-  def toDaysWithIndexSet(updatedSlots: Seq[Seq[Int]]): Set[(Seq[Int], Int)] = {
+  def toDaysWithIndexSet(updatedSlots: Seq[Seq[Any]]): Set[(Seq[Any], Int)] = {
     updatedSlots
       .transpose
       .zipWithIndex
@@ -109,12 +128,17 @@ object MonthlyStaffing {
       def confirmAndSave(startOfMonthMidnight: SDateLike) = (_: ReactEventFromInput) =>
         Callback {
 
-          val initialTimeSlots = stateFromProps(props).timeSlots
+          val initialTimeSlots: Seq[Seq[Any]] = stateFromProps(props).timeSlots
           val changes = scope.state.changes
           val quarterHourlyChanges = getQuarterHourlySlotChanges(props.timeSlotMinutes, changes)
-          val updatedTimeSlots: Seq[Seq[Int]] = applyRecordedChangesToShiftState(state.timeSlots, changes)
+          val updatedTimeSlots: Seq[Seq[Any]] = applyRecordedChangesToShiftState(state.timeSlots, changes)
 
-          val changedShiftSlots = updatedShiftAssignments(quarterHourlyChanges, startOfMonthMidnight, props.terminalPageTab.terminal)
+          val changedShiftSlots: Seq[StaffAssignment] = updatedShiftAssignments(
+            quarterHourlyChanges,
+            startOfMonthMidnight,
+            props.terminalPageTab.terminal,
+            props.timeSlotMinutes
+          )
 
           val updatedMonth = props.terminalPageTab.dateFromUrlOrNow.getMonthString()
           val changedDays = whatDayChanged(initialTimeSlots, updatedTimeSlots)
@@ -173,26 +197,36 @@ object MonthlyStaffing {
         ))
     })
     .configure(Reusability.shouldComponentUpdate)
-    .componentDidUpdate(_ => Callback.log("Staff updated"))
     .componentDidMount(p => Callback {
       GoogleEventTracker.sendPageView(s"${p.props.terminalPageTab.terminal}/planning/${defaultStartDate(p.props.terminalPageTab.dateFromUrlOrNow).toISODateOnly}/${p.props.terminalPageTab.subMode}")
-      log.info("Staff Mounted")
     })
     .build
 
-  def updatedShiftAssignments(changes: Map[(Int, Int), Int], startOfMonthMidnight: SDateLike, terminalName: TerminalName): Seq[StaffAssignment] = changes.toSeq.map {
+  def updatedShiftAssignments(changes: Map[(Int, Int), Int], startOfMonthMidnight: SDateLike, terminalName: TerminalName, timeSlotMinutes: Int): Seq[StaffAssignment] = changes.toSeq.map {
     case ((slotIdx, dayIdx), staff) =>
 
-      val slotStart = startOfMonthMidnight.addDays(dayIdx).addMinutes(15 * slotIdx)
-      val startMd = MilliDate(slotStart.millisSinceEpoch)
-      val endMd = MilliDate(slotStart.addMinutes(14).millisSinceEpoch)
-      StaffAssignment(slotStart.toISOString(), terminalName, startMd, endMd, staff, None)
+      daysInMonthByTimeSlot(startOfMonthMidnight, timeSlotMinutes)(slotIdx)(dayIdx).map((slotStart: SDateLike) => {
+        val startMd = MilliDate(slotStart.millisSinceEpoch)
+        val endMd = MilliDate(slotStart.addMinutes(timeSlotMinutes - 1).millisSinceEpoch)
+        StaffAssignment(slotStart.toISOString(), terminalName, startMd, endMd, staff, None)
+      })
+  }.collect {
+    case Some(a) => a
   }
 
   def hourlyToQuarterHourlySlots(hourlySlots: Map[(Int, Int), Int]): Map[(Int, Int), Int] = hourlySlots.flatMap {
     case ((slotIdx, dayIdx), staff) =>
       (0 to 3).map(offset => (((slotIdx * 4) + offset, dayIdx), staff))
   }
+
+
+  def daysInMonthByTimeSlot(viewingDate: SDateLike, timeSlotMinutes: Int): Seq[Seq[Option[SDateLike]]] =
+    consecutiveDaysInMonth(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
+      .map(day => timeZoneSafeTimeSlots(
+        slotsInDay(day, timeSlotMinutes),
+        timeSlotMinutes
+      ))
+      .transpose
 
   def stateFromProps(props: Props): State = {
     import drt.client.services.JSDateConversions._
@@ -202,19 +236,16 @@ object MonthlyStaffing {
     val terminalShifts = props.shifts.forTerminal(terminalName)
     val shiftAssignments = ShiftAssignments(terminalShifts)
 
-    val daysInMonth = consecutiveDaysInMonth(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
+    val daysInMonth: Seq[SDateLike] = consecutiveDaysInMonth(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
 
-    val timeSlots = slotsInDay(viewingDate, props.timeSlotMinutes)
-      .map(slot => {
-        daysInMonth.map(day => {
-          val slotDateTime = SDate(day.getFullYear(), day.getMonth(), day.getDate(), slot.getHours(), slot.getMinutes())
-          shiftAssignments.terminalStaffAt(terminalName, slotDateTime)
-        })
-      })
+    val staffTimeSlots: Seq[Seq[Any]] = daysInMonthByTimeSlot(viewingDate, props.timeSlotMinutes).map(_.map {
+      case Some(slotDateTime) => shiftAssignments.terminalStaffAt(terminalName, slotDateTime)
+      case None => "-"
+    })
 
     val rowHeadings = slotsInDay(SDate.now(), props.timeSlotMinutes).map(_.prettyTime())
 
-    State(timeSlots, daysInMonth.map(_.getDate().toString), rowHeadings, Map())
+    State(staffTimeSlots, daysInMonth.map(_.getDate().toString), rowHeadings, Map())
   }
 
   def apply(shifts: ShiftAssignments,

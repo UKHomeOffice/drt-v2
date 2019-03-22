@@ -20,7 +20,7 @@ object HotTable {
     var settings: js.Dictionary[js.Any] = js.native
   }
 
-  def props(data: Seq[Seq[AnyVal]],
+  def props(data: Seq[Seq[Any]],
             colHeadings: Seq[String],
             rowHeadings: Seq[String],
             changeCallback: (Int, Int, Int) => Unit,
