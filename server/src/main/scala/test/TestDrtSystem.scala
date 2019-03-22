@@ -99,14 +99,14 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
 
 case class RestartActor(startSystem: () => List[KillSwitch], testActors: List[ActorRef]) extends Actor with ActorLogging {
 
-  var killSwitches: List[KillSwitch] = List()
+  var currentKillSwitches: List[KillSwitch] = List()
 
   override def receive: Receive = {
     case ResetData =>
       log.info(s"About to shut down everything")
 
         log.info(s"Pressing killswitches")
-        killSwitches.zipWithIndex.foreach { case (ks, idx) =>
+        currentKillSwitches.zipWithIndex.foreach { case (ks, idx) =>
           log.info(s"Killswitch ${idx + 1}")
           ks.shutdown()
         }
@@ -122,7 +122,7 @@ case class RestartActor(startSystem: () => List[KillSwitch], testActors: List[Ac
       startTestSystem()
   }
 
-  def startTestSystem(): Unit = killSwitches = startSystem()
+  def startTestSystem(): Unit = currentKillSwitches = startSystem()
 }
 
 case object ResetData
