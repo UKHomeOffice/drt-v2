@@ -80,25 +80,7 @@ object StaffingComponentTests extends TestSuite {
           assert(result.toISOString() == expected.toISOString())
         }
       }
-      "When asking for a list of time slots" - {
-        "Given a start time of 2017-12-21T00:00 and an end time of 2017-12-21T01:00 " +
-          "Then I should get back 15 minute slots" - {
 
-          val startTime = SDate("2017-12-21T00:00")
-          val endTime = SDate("2017-12-21T01:00")
-
-          val result = toTimeSlots(startTime, endTime).map(_.millisSinceEpoch)
-
-          val expected = List(
-            SDate("2017-12-21T00:00"),
-            SDate("2017-12-21T00:15"),
-            SDate("2017-12-21T00:30"),
-            SDate("2017-12-21T00:45")
-          ).map(_.millisSinceEpoch)
-
-          assert(result == expected)
-        }
-      }
       "When asking for a list of days" - {
         "Given a start day of 2017-12-21 and an end day of 2017-12-25 " +
           "Then I should get back a list of days in between" - {
