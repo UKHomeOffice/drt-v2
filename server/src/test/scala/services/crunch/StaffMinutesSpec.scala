@@ -106,6 +106,83 @@ class StaffMinutesSpec extends CrunchTestLike {
     success
   }
 
+  "Given a shift of 0 staff and a -1 staff movement at the start of the shift " +
+    "When I monitor the PortState " +
+    "Then I should see 0 staff available, and a movement value of -1" >> {
+    val startDate = SDate("2017-01-01T00:00")
+    val endDate = SDate("2017-01-01T00:05")
+
+    val uuid = UUID.randomUUID()
+    val initialMovements = Seq(
+      StaffMovement("T1", "lunch start", MilliDate(startDate.millisSinceEpoch), -1, uuid, createdBy = None),
+      StaffMovement("T1", "lunch end", MilliDate(endDate.millisSinceEpoch), 1, uuid, createdBy = None)
+    )
+
+    val crunch = runCrunchGraph(
+      airportConfig = airportConfig.copy(terminalNames = Seq("T1")),
+      now = () => startDate,
+      checkRequiredStaffUpdatesOnStartup = true
+    )
+
+    offerAndWait(crunch.liveStaffMovementsInput, initialMovements)
+
+    val minutesToCheck = 5
+    val expectedStaffAvailableAndMovements = List.fill(minutesToCheck)((0, -1))
+
+    crunch.liveTestProbe.fishForMessage(2 seconds) {
+      case ps: PortState =>
+        val minutesInOrder = ps.staffMinutes.values.toList.filter(m => startDate.millisSinceEpoch <= m.minute).sortBy(_.minute).take(minutesToCheck)
+        val actualAvailableAndMovements = minutesInOrder.map(m => (m.available, m.movements))
+
+        println(s"actualAvailableAndMovements: $actualAvailableAndMovements")
+        actualAvailableAndMovements == expectedStaffAvailableAndMovements
+    }
+
+    crunch.liveArrivalsInput.complete()
+
+    success
+  }
+
+  "Given a shift of 10 staff and a -1 staff movement at the start of the shift " +
+    "When I monitor the PortState " +
+    "Then I should see 9 staff available, and a movement value of -1" >> {
+    val startDate = SDate("2017-01-01T00:00")
+    val endDate = SDate("2017-01-01T00:04")
+
+    val shift = StaffAssignment("shift a", "T1", MilliDate(startDate.millisSinceEpoch), MilliDate(endDate.millisSinceEpoch), 10, None)
+
+    val initialShifts = ShiftAssignments(Seq(shift))
+
+    val uuid = UUID.randomUUID()
+    val initialMovements = Seq(
+      StaffMovement("T1", "lunch start", MilliDate(startDate.millisSinceEpoch), -1, uuid, createdBy = None),
+      StaffMovement("T1", "lunch end", MilliDate(endDate.addMinutes(1).millisSinceEpoch), 1, uuid, createdBy = None)
+    )
+
+    val crunch = runCrunchGraph(
+      airportConfig = airportConfig.copy(terminalNames = Seq("T1")),
+      now = () => startDate
+    )
+
+    offerAndWait(crunch.shiftsInput, initialShifts)
+    offerAndWait(crunch.liveStaffMovementsInput, initialMovements)
+
+    val minutesToCheck = 5
+    val expectedStaffAvailableAndMovements = List.fill(minutesToCheck)((9, -1))
+
+    crunch.liveTestProbe.fishForMessage(2 seconds) {
+      case ps: PortState =>
+        val minutesInOrder = ps.staffMinutes.values.toList.filter(m => startDate.millisSinceEpoch <= m.minute).sortBy(_.minute).take(minutesToCheck)
+        val actualAvailableAndMovements = minutesInOrder.map(m => (m.available, m.movements))
+
+        actualAvailableAndMovements == expectedStaffAvailableAndMovements
+    }
+
+    crunch.liveArrivalsInput.complete()
+
+    success
+  }
+
   "Given two staff movement covering the same time period " +
     "When I ask for the PortState " +
     "Then I should see the sum of the movements for the minute they cover" >> {

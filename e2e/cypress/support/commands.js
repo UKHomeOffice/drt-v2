@@ -87,6 +87,21 @@ Cypress.Commands.add('addFlightWithFlightCode', (flightCode, estString, actStrin
   cy.request('POST', '/test/arrival', flightPayload);
 });
 
-Cypress.Commands.add('deleteData', () => {
-  cy.request("DELETE", '/test/data');
-});
+Cypress.Commands.add('deleteData', () => cy.request("DELETE", '/test/data'));
+
+Cypress.Commands.add('saveShifts', (shiftsJson) => cy.request("POST", "/data/staff", shiftsJson));
+
+Cypress.Commands.add('navigateHome', () => cy
+  .visit('/')
+  .get('.navbar-drt').contains('DRT TEST')
+);
+
+Cypress.Commands.add('navigateToMenuItem', (itemName) => cy
+  .get('.navbar-drt li')
+  .contains(itemName)
+  .click(5, 5, { force: true })
+);
+
+Cypress.Commands.add('findAndClick', (toFind) => cy.contains(toFind).click({ force: true }));
+
+Cypress.Commands.add('choose24Hours', () => cy.get('#current .date-selector .date-view-picker-container').contains('24 hours').click());
