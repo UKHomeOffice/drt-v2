@@ -53,21 +53,27 @@ object MonthlyStaffing {
   }
 
   def timeZoneSafeTimeSlots(slots: Seq[SDateLike], slotMinutes: Int): Seq[Option[SDateLike]] = {
-    val slotsInRegularDay = (24 * 60 * 60) / slotMinutes
     val slotsPerHour = 60 / slotMinutes
-    if (slots.size < slotsInRegularDay) {
+    val slotsInRegularDay = slotsPerHour * 24
 
-      val timeslotsWithNones: Seq[Option[SDateLike]] = slots.sliding(2).flatMap(dates =>
-        if (dates(0).getTimeZoneOffsetMillis < dates(1).getTimeZoneOffsetMillis)
-          Option(dates(0)) :: List.fill(slotsPerHour)(None)
-        else
-          Option(dates(0)) :: Nil
-      ).toSeq
-      timeslotsWithNones ++ Seq(Option(slots.last))
+
+    if(slots.head.getMonth() == 10 && slots.size == slotsInRegularDay) {
+      slots.map(Option(_)).patch(2 * slotsPerHour , List.fill(slotsPerHour)(None), 0)
     }
-
+    else if (slots.size < slotsInRegularDay)
+      handleUtcToBstDay(slots, slotsPerHour)
     else
       slots.map(Option(_))
+  }
+
+  private def handleUtcToBstDay(slots: Seq[SDateLike], slotsPerHour: Int) = {
+    val timeslotsWithNones: Seq[Option[SDateLike]] = slots.sliding(2).flatMap(dates =>
+      if (dates(0).getTimeZoneOffsetMillis < dates(1).getTimeZoneOffsetMillis)
+        Option(dates(0)) :: List.fill(slotsPerHour)(None)
+      else
+        Option(dates(0)) :: Nil
+    ).toSeq
+    timeslotsWithNones ++ Seq(Option(slots.last))
   }
 
   def minutesInDay(date: SDateLike): Int = {
@@ -253,7 +259,12 @@ object MonthlyStaffing {
       case None => "-"
     })
 
-    val rowHeadings = slotsInDay(SDate.now(), props.timeSlotMinutes).map(_.prettyTime())
+    val dayForRowLabels = if (viewingDate.getMonth() != 10)
+      viewingDate
+    else
+      SDate.lastDayOfMonth(viewingDate).getLastSunday
+
+    val rowHeadings = slotsInDay(dayForRowLabels, props.timeSlotMinutes).map(_.prettyTime())
 
     State(staffTimeSlots, daysInMonth.map(_.getDate().toString), rowHeadings, Map())
   }

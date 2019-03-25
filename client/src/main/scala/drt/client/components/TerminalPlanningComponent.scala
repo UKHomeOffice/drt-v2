@@ -17,7 +17,7 @@ import scala.collection.immutable.Seq
 object TerminalPlanningComponent {
 
   def getLastSunday(start: SDateLike) = {
-    val sunday = if (start.getDayOfWeek() == 7) start else start.addDays(-1 * start.getDayOfWeek())
+    val sunday = start.getLastSunday
 
     SDate(f"${sunday.getFullYear()}-${sunday.getMonth()}%02d-${sunday.getDate()}%02dT00:00:00")
   }
