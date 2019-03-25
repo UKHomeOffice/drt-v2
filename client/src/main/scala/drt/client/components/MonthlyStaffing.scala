@@ -19,6 +19,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html.Select
 import org.scalajs.dom.window.confirm
 
+import scala.collection.mutable
 import scala.util.Try
 
 
@@ -205,7 +206,6 @@ object MonthlyStaffing {
 
   def updatedShiftAssignments(changes: Map[(Int, Int), Int], startOfMonthMidnight: SDateLike, terminalName: TerminalName, timeSlotMinutes: Int): Seq[StaffAssignment] = changes.toSeq.map {
     case ((slotIdx, dayIdx), staff) =>
-
       daysInMonthByTimeSlot(startOfMonthMidnight, timeSlotMinutes)(slotIdx)(dayIdx).map((slotStart: SDateLike) => {
         val startMd = MilliDate(slotStart.millisSinceEpoch)
         val endMd = MilliDate(slotStart.addMinutes(timeSlotMinutes - 1).millisSinceEpoch)
@@ -220,14 +220,23 @@ object MonthlyStaffing {
       (0 to 3).map(offset => (((slotIdx * 4) + offset, dayIdx), staff))
   }
 
+  def memoize[I, O](f: I => O): I => O = new mutable.HashMap[I, O]() {
+    override def apply(key: I) = getOrElseUpdate(key, f(key))
+  }
 
-  def daysInMonthByTimeSlot(viewingDate: SDateLike, timeSlotMinutes: Int): Seq[Seq[Option[SDateLike]]] =
+  lazy val daysInMonthByTimeSlot: ((SDateLike, Int)) => Seq[Seq[Option[SDateLike]]] = memoize {
+    case (viewingDate, timeSlotMinutes) => daysInMonthByTimeSlotCalc(viewingDate, timeSlotMinutes)
+  }
+
+  def daysInMonthByTimeSlotCalc(viewingDate: SDateLike, timeSlotMinutes: Int): Seq[Seq[Option[SDateLike]]] = {
+
     consecutiveDaysInMonth(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
       .map(day => timeZoneSafeTimeSlots(
         slotsInDay(day, timeSlotMinutes),
         timeSlotMinutes
       ))
       .transpose
+  }
 
   def stateFromProps(props: Props): State = {
     import drt.client.services.JSDateConversions._
