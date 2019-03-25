@@ -5,7 +5,7 @@ import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
-import drt.shared.{AirportConfig, MinuteHelper, PortStateMinutes, SDateLike}
+import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchMinuteMessage, StaffMinuteMessage}
 import services.SDate
@@ -111,6 +111,7 @@ class PortStateGraphStage(name: String = "",
         case Some(portState) =>
           log.info(s"Pushing port state with diff")
           val diff: PortStateDiff = stateDiff(lastMaybePortState, portState)
+//          log.info(s"diff: ${diff.staffMinuteUpdates.find(_.minute == SDate("2019-03-25T00:00").millisSinceEpoch).map(_.movements).getOrElse("--")}")
           val portStateWithDiff = PortStateWithDiff(portState, diff, diffMessage(diff))
           lastMaybePortState = Option(portState)
 

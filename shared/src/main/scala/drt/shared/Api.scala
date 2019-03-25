@@ -459,6 +459,7 @@ object CrunchApi {
         case _ => 0
       }
     }
+    override def toString() = s"StaffMinute($terminalName, $minute, $shifts, $fixedPoints, $movements, $lastUpdated)"
   }
 
   object StaffMinute {

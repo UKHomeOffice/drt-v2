@@ -177,6 +177,8 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
     val flights = updateAndTrimFlights(crunchUpdates, existingState, lastMidnightMillis)
     val minutes = updateAndTrimCrunch(crunchUpdates, existingState, lastMidnightMillis)
     val staff = updateAndTrimStaff(crunchUpdates, existingState, lastMidnightMillis)
+    println(s"movements incoming: ${crunchUpdates.staff.find(_.minute == SDate("2019-03-25T00:00").millisSinceEpoch).map(_.movements).getOrElse("--")}")
+    println(s"movements incoming filtered: ${staff.find(_.minute == SDate("2019-03-25T00:00").millisSinceEpoch).map(_.movements).getOrElse("--")}")
     CrunchState(flights = flights, crunchMinutes = minutes, staffMinutes = staff)
   }
 

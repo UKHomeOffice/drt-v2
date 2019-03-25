@@ -5,8 +5,9 @@ import drt.client.actions.Actions.UpdateShowActualDesksAndQueues
 import drt.client.components.TerminalDesksAndQueues.{NodeListSeq, documentScrollHeight, documentScrollTop}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
+import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, ViewMode}
-import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared.FlightsApi.QueueName
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
@@ -60,6 +61,7 @@ object TerminalDesksAndQueues {
 
   class Backend(backendScope: BackendScope[Props, State]) {
     def render(props: Props, state: State): VdomTagOf[Div] = {
+      println(s"movement @ 00:00: ${props.staffMinutes.find(_.minute == SDate("2019-03-25T00:00")).map(_.movements).getOrElse("--")}")
       val slotMinutes = 15
 
       def groupCrunchMinutesBySlotSize = CrunchApi.groupCrunchMinutesByX(slotMinutes) _
@@ -131,7 +133,7 @@ object TerminalDesksAndQueues {
         .map {
           case (millis, minutes) => (millis, minutes.head)
         }
-      val terminalStaffMinutes = groupStaffMinutesBySlotSize(staffMinutesByMillis, props.terminalPageTab.terminal).toMap
+      val terminalStaffMinutes: Map[MillisSinceEpoch, StaffMinute] = groupStaffMinutesBySlotSize(staffMinutesByMillis, props.terminalPageTab.terminal).toMap
 
       val toggleShowActuals = (e: ReactEventFromInput) => {
         val newValue: Boolean = e.target.checked
