@@ -206,7 +206,7 @@ object StaffingComponentTimezoneTests extends TestSuite {
 
     "When inputing data to the monthly staffing table and the timezone changes from BST to UTC" - {
       val bstToUtcChangeDate = SDate("2019-10-27")
-      "Given 2019-03-31 (timezone change day) I should get back a list of 23 hours of time slots not the usual 24" - {
+      "Given 2019-10-27 (timezone change day) I should get back a list of 25 hours of time slots not the usual 24" - {
         val result = slotsInDay(bstToUtcChangeDate, 60).size
 
         val expected = 25

@@ -56,8 +56,8 @@ object MonthlyStaffing {
     val slotsPerHour = 60 / slotMinutes
     val slotsInRegularDay = slotsPerHour * 24
 
-    if(itsARegularDayInOctober(slots, slotsInRegularDay)) {
-      handleBstToUtcChangeDay(slots, slotsPerHour)
+    if (itsARegularDayInOctober(slots, slotsInRegularDay)) {
+      handleBstToUtcChange(slots, slotsPerHour)
     }
     else if (itsTheDayWeSwitchToBst(slots, slotsInRegularDay))
       handleUtcToBstDay(slots, slotsPerHour)
@@ -65,27 +65,21 @@ object MonthlyStaffing {
       slots.map(Option(_))
   }
 
-  def itsTheDayWeSwitchToBst(slots: Seq[SDateLike], slotsInRegularDay: Int): Boolean = {
-    slots.size < slotsInRegularDay
-  }
+  def itsTheDayWeSwitchToBst(slots: Seq[SDateLike], slotsInRegularDay: Int): Boolean = slots.size < slotsInRegularDay
 
-  def itsARegularDayInOctober(slots: Seq[SDateLike], slotsInRegularDay: Int): Boolean = {
+  def itsARegularDayInOctober(slots: Seq[SDateLike], slotsInRegularDay: Int): Boolean =
     slots.head.getMonth() == 10 && slots.size == slotsInRegularDay
-  }
 
-  def handleBstToUtcChangeDay(slots: Seq[SDateLike], slotsPerHour: Int): Seq[Option[SDateLike]] = {
+  def handleBstToUtcChange(slots: Seq[SDateLike], slotsPerHour: Int): Seq[Option[SDateLike]] =
     slots.map(Option(_)).patch(2 * slotsPerHour, List.fill(slotsPerHour)(None), 0)
-  }
 
-  def handleUtcToBstDay(slots: Seq[SDateLike], slotsPerHour: Int): Seq[Option[SDateLike]] = {
-    val timeslotsWithNones: Seq[Option[SDateLike]] = slots.sliding(2).flatMap(dates =>
+  def handleUtcToBstDay(slots: Seq[SDateLike], slotsPerHour: Int): Seq[Option[SDateLike]] =
+    slots.sliding(2).flatMap(dates =>
       if (dates(0).getTimeZoneOffsetMillis < dates(1).getTimeZoneOffsetMillis)
         Option(dates(0)) :: List.fill(slotsPerHour)(None)
       else
         Option(dates(0)) :: Nil
-    ).toSeq
-    timeslotsWithNones ++ Seq(Option(slots.last))
-  }
+    ).toSeq ++ Seq(Option(slots.last))
 
   def minutesInDay(date: SDateLike): Int = {
     val startOfDay = SDate.midnightOf(date)
@@ -93,7 +87,12 @@ object MonthlyStaffing {
     (endOfDay.millisSinceEpoch - startOfDay.millisSinceEpoch).toInt / 1000 / 60
   }
 
-  def drawSelect(values: Seq[String], names: Seq[String], defaultValue: String, callback: ReactEventFromInput => Callback): TagOf[Select] = {
+  def drawSelect(
+                  values: Seq[String],
+                  names: Seq[String],
+                  defaultValue: String,
+                  callback: ReactEventFromInput => Callback
+                ): TagOf[Select] = {
     val valueNames = values.zip(names)
     <.select(^.className := "form-control", ^.defaultValue := defaultValue.toString,
       ^.onChange ==> callback,
@@ -107,10 +106,11 @@ object MonthlyStaffing {
     List.tabulate(days)(i => startDay.addDays(i))
   }
 
-  def sixMonthsFromFirstOfMonth(date: SDateLike): Seq[SDateLike] = (0 to 5).map(i => SDate.firstDayOfMonth(date).addMonths(i))
+  def sixMonthsFromFirstOfMonth(date: SDateLike): Seq[SDateLike] = (0 to 5)
+    .map(i => SDate.firstDayOfMonth(date).addMonths(i))
 
-  def applyRecordedChangesToShiftState(staffTimeSlotDays: Seq[Seq[Any]], changes: Map[(Int, Int), Int]): Seq[Seq[Any]] = changes
-    .foldLeft(staffTimeSlotDays) {
+  def applyRecordedChangesToShiftState(staffTimeSlotDays: Seq[Seq[Any]], changes: Map[(Int, Int), Int]): Seq[Seq[Any]] =
+    changes.foldLeft(staffTimeSlotDays) {
       case (staffSoFar, ((slotIdx, dayIdx), newStaff)) =>
         staffSoFar.updated(slotIdx, staffSoFar(slotIdx).updated(dayIdx, newStaff))
     }
@@ -119,12 +119,10 @@ object MonthlyStaffing {
     toDaysWithIndexSet(updatedSlots)
       .diff(toDaysWithIndexSet(startingSlots)).map { case (_, dayIndex) => dayIndex }
 
-  def toDaysWithIndexSet(updatedSlots: Seq[Seq[Any]]): Set[(Seq[Any], Int)] = {
-    updatedSlots
-      .transpose
-      .zipWithIndex
-      .toSet
-  }
+  def toDaysWithIndexSet(updatedSlots: Seq[Seq[Any]]): Set[(Seq[Any], Int)] = updatedSlots
+    .transpose
+    .zipWithIndex
+    .toSet
 
   def dateListToString(dates: List[String]): String = dates.map(_.toInt).sorted match {
     case Nil => ""
@@ -137,7 +135,8 @@ object MonthlyStaffing {
   implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).shifts.hashCode)
   implicit val stateReuse: Reusability[State] = Reusability.always[State]
 
-  def getQuarterHourlySlotChanges(timeSlotMinutes: Int, changes: Map[(Int, Int), Int]): Map[(Int, Int), Int] = if (timeSlotMinutes == 60) hourlyToQuarterHourlySlots(changes) else changes
+  def getQuarterHourlySlotChanges(timeSlotMinutes: Int, changes: Map[(Int, Int), Int]): Map[(Int, Int), Int] =
+    if (timeSlotMinutes == 60) hourlyToQuarterHourlySlots(changes) else changes
 
   val component = ScalaComponent.builder[Props]("StaffingV2")
     .initialStateFromProps(props => {
@@ -222,11 +221,15 @@ object MonthlyStaffing {
     })
     .build
 
-  def updatedShiftAssignments(changes: Map[(Int, Int), Int], startOfMonthMidnight: SDateLike, terminalName: TerminalName, timeSlotMinutes: Int): Seq[StaffAssignment] = changes.toSeq.map {
+  def updatedShiftAssignments(
+                               changes: Map[(Int, Int), Int],
+                               startOfMonthMidnight: SDateLike,
+                               terminalName: TerminalName,
+                               timeSlotMinutes: Int
+                             ): Seq[StaffAssignment] = changes.toSeq.map {
     case ((slotIdx, dayIdx), staff) =>
       val timeslots = daysInMonthByTimeSlot(startOfMonthMidnight, timeSlotMinutes)
 
-      log.info(s"Slot: slotIdx, $dayIdx, slots: ${timeslots.length}")
       timeslots(slotIdx)(dayIdx).map((slotStart: SDateLike) => {
         val startMd = MilliDate(slotStart.millisSinceEpoch)
         val endMd = MilliDate(slotStart.addMinutes(timeSlotMinutes - 1).millisSinceEpoch)
@@ -249,15 +252,13 @@ object MonthlyStaffing {
     case (viewingDate, timeSlotMinutes) => daysInMonthByTimeSlotCalc(viewingDate, timeSlotMinutes)
   }
 
-  def daysInMonthByTimeSlotCalc(viewingDate: SDateLike, timeSlotMinutes: Int): Seq[Seq[Option[SDateLike]]] = {
-
+  def daysInMonthByTimeSlotCalc(viewingDate: SDateLike, timeSlotMinutes: Int): Seq[Seq[Option[SDateLike]]] =
     consecutiveDaysInMonth(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
       .map(day => timeZoneSafeTimeSlots(
         slotsInDay(day, timeSlotMinutes),
         timeSlotMinutes
       ))
       .transpose
-  }
 
   def stateFromProps(props: Props): State = {
     import drt.client.services.JSDateConversions._
