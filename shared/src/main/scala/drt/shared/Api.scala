@@ -307,6 +307,12 @@ trait SDateLike {
 
   def startOfTheMonth(): SDateLike
 
+  def getLastSunday: SDateLike =
+    if (getDayOfWeek() == 7)
+      this
+    else
+      addDays(-1 * getDayOfWeek())
+
   override def toString: String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02dT${getHours()}%02d${getMinutes()}%02d"
 
   override def equals(obj: scala.Any): Boolean = {

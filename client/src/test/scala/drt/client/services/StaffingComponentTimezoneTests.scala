@@ -203,6 +203,94 @@ object StaffingComponentTimezoneTests extends TestSuite {
         }
       }
     }
+
+    "When inputing data to the monthly staffing table and the timezone changes from BST to UTC" - {
+      val bstToUtcChangeDate = SDate("2019-10-27")
+      "Given 2019-10-27 (timezone change day) I should get back a list of 25 hours of time slots not the usual 24" - {
+        val result = slotsInDay(bstToUtcChangeDate, 60).size
+
+        val expected = 25
+
+        assert(result == expected)
+      }
+
+      "Given I pass timezone change day time slots into the time zone day slots method then I should get back no empty slots" - {
+
+        val changeDayTimeslots: Seq[SDateLike] = slotsInDay(bstToUtcChangeDate, 15)
+
+        val result: List[Option[SDateLike]] = timeZoneSafeTimeSlots(changeDayTimeslots, 15).take(16).toList
+
+        val expected = Seq(
+          Some(SDate("2019-10-26T23:00:00Z")),
+          Some(SDate("2019-10-26T23:15:00Z")),
+          Some(SDate("2019-10-26T23:30:00Z")),
+          Some(SDate("2019-10-26T23:45:00Z")),
+          Some(SDate("2019-10-27T00:00:00Z")),
+          Some(SDate("2019-10-27T00:15:00Z")),
+          Some(SDate("2019-10-27T00:30:00Z")),
+          Some(SDate("2019-10-27T00:45:00Z")),
+          Some(SDate("2019-10-27T01:00:00Z")),
+          Some(SDate("2019-10-27T01:15:00Z")),
+          Some(SDate("2019-10-27T01:30:00Z")),
+          Some(SDate("2019-10-27T01:45:00Z")),
+          Some(SDate("2019-10-27T02:00:00Z")),
+          Some(SDate("2019-10-27T02:15:00Z")),
+          Some(SDate("2019-10-27T02:30:00Z")),
+          Some(SDate("2019-10-27T02:45:00Z"))
+        )
+
+        assert(result == expected)
+      }
+      "Given I pass timezone another October day time slots into the time zone day slots method then I should " +
+        "get back empty slots for the row where the timezone change day has an extra 2am with 60 minute slots" - {
+
+        val changeDayTimeslots: Seq[SDateLike] = slotsInDay(SDate("2019-10-26"), 60)
+
+        val result: List[Option[SDateLike]] = timeZoneSafeTimeSlots(changeDayTimeslots, 60).take(5).toList
+
+        val expected = Seq(
+          Some(SDate("2019-10-25T23:00:00Z")),
+          Some(SDate("2019-10-26T00:00:00Z")),
+          None,
+          Some(SDate("2019-10-26T01:00:00Z")),
+          Some(SDate("2019-10-26T02:00:00Z"))
+        )
+
+        assert(result == expected)
+      }
+      "Given I pass timezone another October day time slots into the time zone day slots method then I should " +
+        "get back empty slots for the row where the timezone change day has an extra 2am with 15 minute slots" - {
+
+        val changeDayTimeslots: Seq[SDateLike] = slotsInDay(SDate("2019-10-26"), 15)
+
+        val result: List[Option[SDateLike]] = timeZoneSafeTimeSlots(changeDayTimeslots, 15).take(20).toList
+
+        val expected = Seq(
+          Some(SDate("2019-10-25T23:00:00Z")),
+          Some(SDate("2019-10-25T23:15:00Z")),
+          Some(SDate("2019-10-25T23:30:00Z")),
+          Some(SDate("2019-10-25T23:45:00Z")),
+          Some(SDate("2019-10-26T00:00:00Z")),
+          Some(SDate("2019-10-26T00:15:00Z")),
+          Some(SDate("2019-10-26T00:30:00Z")),
+          Some(SDate("2019-10-26T00:45:00Z")),
+          None,
+          None,
+          None,
+          None,
+          Some(SDate("2019-10-26T01:00:00Z")),
+          Some(SDate("2019-10-26T01:15:00Z")),
+          Some(SDate("2019-10-26T01:30:00Z")),
+          Some(SDate("2019-10-26T01:45:00Z")),
+          Some(SDate("2019-10-26T02:00:00Z")),
+          Some(SDate("2019-10-26T02:15:00Z")),
+          Some(SDate("2019-10-26T02:30:00Z")),
+          Some(SDate("2019-10-26T02:45:00Z"))
+        )
+
+        assert(result == expected)
+      }
+    }
   }
 
 }
