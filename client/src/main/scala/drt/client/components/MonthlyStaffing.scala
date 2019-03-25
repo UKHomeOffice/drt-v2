@@ -56,17 +56,28 @@ object MonthlyStaffing {
     val slotsPerHour = 60 / slotMinutes
     val slotsInRegularDay = slotsPerHour * 24
 
-
-    if(slots.head.getMonth() == 10 && slots.size == slotsInRegularDay) {
-      slots.map(Option(_)).patch(2 * slotsPerHour , List.fill(slotsPerHour)(None), 0)
+    if(itsARegularDayInOctober(slots, slotsInRegularDay)) {
+      handleBstToUtcChangeDay(slots, slotsPerHour)
     }
-    else if (slots.size < slotsInRegularDay)
+    else if (itsTheDayWeSwitchToBst(slots, slotsInRegularDay))
       handleUtcToBstDay(slots, slotsPerHour)
     else
       slots.map(Option(_))
   }
 
-  private def handleUtcToBstDay(slots: Seq[SDateLike], slotsPerHour: Int) = {
+  def itsTheDayWeSwitchToBst(slots: Seq[SDateLike], slotsInRegularDay: Int): Boolean = {
+    slots.size < slotsInRegularDay
+  }
+
+  def itsARegularDayInOctober(slots: Seq[SDateLike], slotsInRegularDay: Int): Boolean = {
+    slots.head.getMonth() == 10 && slots.size == slotsInRegularDay
+  }
+
+  def handleBstToUtcChangeDay(slots: Seq[SDateLike], slotsPerHour: Int): Seq[Option[SDateLike]] = {
+    slots.map(Option(_)).patch(2 * slotsPerHour, List.fill(slotsPerHour)(None), 0)
+  }
+
+  def handleUtcToBstDay(slots: Seq[SDateLike], slotsPerHour: Int): Seq[Option[SDateLike]] = {
     val timeslotsWithNones: Seq[Option[SDateLike]] = slots.sliding(2).flatMap(dates =>
       if (dates(0).getTimeZoneOffsetMillis < dates(1).getTimeZoneOffsetMillis)
         Option(dates(0)) :: List.fill(slotsPerHour)(None)
@@ -140,12 +151,13 @@ object MonthlyStaffing {
           val changes = scope.state.changes
           val quarterHourlyChanges = getQuarterHourlySlotChanges(props.timeSlotMinutes, changes)
           val updatedTimeSlots: Seq[Seq[Any]] = applyRecordedChangesToShiftState(state.timeSlots, changes)
+          val saveAsTimeSlotMinutes = 15
 
           val changedShiftSlots: Seq[StaffAssignment] = updatedShiftAssignments(
             quarterHourlyChanges,
             startOfMonthMidnight,
             props.terminalPageTab.terminal,
-            props.timeSlotMinutes
+            saveAsTimeSlotMinutes
           )
 
           val updatedMonth = props.terminalPageTab.dateFromUrlOrNow.getMonthString()
@@ -212,7 +224,10 @@ object MonthlyStaffing {
 
   def updatedShiftAssignments(changes: Map[(Int, Int), Int], startOfMonthMidnight: SDateLike, terminalName: TerminalName, timeSlotMinutes: Int): Seq[StaffAssignment] = changes.toSeq.map {
     case ((slotIdx, dayIdx), staff) =>
-      daysInMonthByTimeSlot(startOfMonthMidnight, timeSlotMinutes)(slotIdx)(dayIdx).map((slotStart: SDateLike) => {
+      val timeslots = daysInMonthByTimeSlot(startOfMonthMidnight, timeSlotMinutes)
+
+      log.info(s"Slot: slotIdx, $dayIdx, slots: ${timeslots.length}")
+      timeslots(slotIdx)(dayIdx).map((slotStart: SDateLike) => {
         val startMd = MilliDate(slotStart.millisSinceEpoch)
         val endMd = MilliDate(slotStart.addMinutes(timeSlotMinutes - 1).millisSinceEpoch)
         StaffAssignment(slotStart.toISOString(), terminalName, startMd, endMd, staff, None)
