@@ -116,11 +116,6 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
           } else None
         case None => None
       }
-      if (updates.isDefined && updates.get.staff.exists(sm => sm.minute == SDate("2019-03-25T00:00").millisSinceEpoch)) {
-        println(s"sending update for 2019-03-25T00:00: ${updates.get.staff.filter(sm => SDate("2019-03-25T00:00").millisSinceEpoch <= sm.minute && SDate("2019-03-25T00:15").millisSinceEpoch < sm.minute).map(_.movements).mkString(", ")}")
-      } else {
-        println(s"Not sending update for 2019-03-25T00:00")
-      }
       sender() ! updates
 
     case SaveSnapshotSuccess(md) =>

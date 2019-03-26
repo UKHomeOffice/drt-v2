@@ -111,7 +111,6 @@ class PortStateGraphStage(name: String = "",
         case Some(portState) =>
           log.info(s"Pushing port state with diff")
           val diff: PortStateDiff = stateDiff(lastMaybePortState, portState)
-//          log.info(s"diff: ${diff.staffMinuteUpdates.find(_.minute == SDate("2019-03-25T00:00").millisSinceEpoch).map(_.movements).getOrElse("--")}")
           val portStateWithDiff = PortStateWithDiff(portState, diff, diffMessage(diff))
           lastMaybePortState = Option(portState)
 

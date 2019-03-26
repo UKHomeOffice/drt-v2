@@ -61,7 +61,6 @@ object TerminalDesksAndQueues {
 
   class Backend(backendScope: BackendScope[Props, State]) {
     def render(props: Props, state: State): VdomTagOf[Div] = {
-      println(s"movement @ 00:00: ${props.staffMinutes.find(_.minute == SDate("2019-03-25T00:00")).map(_.movements).getOrElse("--")}")
       val slotMinutes = 15
 
       def groupCrunchMinutesBySlotSize = CrunchApi.groupCrunchMinutesByX(slotMinutes) _

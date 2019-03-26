@@ -459,7 +459,6 @@ object CrunchApi {
         case _ => 0
       }
     }
-    override def toString() = s"StaffMinute($terminalName, $minute, $shifts, $fixedPoints, $movements, $lastUpdated)"
   }
 
   object StaffMinute {
@@ -587,9 +586,9 @@ object CrunchApi {
       val queueCrunchMinutes = queueOrder.collect {
         case qn if byQueueName.contains(qn) =>
           val queueMinutes: Seq[CrunchMinute] = byQueueName(qn)
-          val allActDesks = queueMinutes.collect { case (CrunchMinute(_, _, _, _, _, _, _, _, _, Some(ad), _, _)) => ad }
+          val allActDesks = queueMinutes.collect { case CrunchMinute(_, _, _, _, _, _, _, _, _, Some(ad), _, _) => ad }
           val actDesks = if (allActDesks.isEmpty) None else Option(allActDesks.max)
-          val allActWaits = queueMinutes.collect { case (CrunchMinute(_, _, _, _, _, _, _, _, _, _, Some(aw), _)) => aw }
+          val allActWaits = queueMinutes.collect { case CrunchMinute(_, _, _, _, _, _, _, _, _, _, Some(aw), _) => aw }
           val actWaits = if (allActWaits.isEmpty) None else Option(allActWaits.max)
           CrunchMinute(
             terminalName = terminalName,
