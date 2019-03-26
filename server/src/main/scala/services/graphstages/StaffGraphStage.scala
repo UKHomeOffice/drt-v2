@@ -218,7 +218,6 @@ class StaffGraphStage(name: String = "",
             val shifts = staff.shifts.terminalStaffAt(tn, SDate(m))
             val fixedPoints = staff.fixedPoints.terminalStaffAt(tn, SDate(m, Crunch.europeLondonTimeZone))
             val movements = staff.movements.terminalStaffAt(tn, m)
-            println(s"movements @ $tn @ ${SDate(m).toISOString()}: $movements")
             StaffMinute(tn, m, shifts, fixedPoints, movements, lastUpdated = Option(SDate.now().millisSinceEpoch))
           }
         })
@@ -244,9 +243,6 @@ class StaffGraphStage(name: String = "",
       if (isAvailable(outStaffMinutes)) {
         if (staffMinuteUpdates.nonEmpty) {
           log.info(s"Pushing ${staffMinuteUpdates.size} staff minute updates")
-          staffMinuteUpdates.values.foreach(sm => {
-            println(s"updates: ${SDate(sm.minute).toISOString()}: ${sm.movements} - last updated ${SDate(sm.lastUpdated.getOrElse(0L)).toISOString()}")
-          })
           push(outStaffMinutes, StaffMinutes(staffMinuteUpdates))
           staffMinuteUpdates = Map()
         }
