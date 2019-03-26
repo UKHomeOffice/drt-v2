@@ -47,6 +47,7 @@ object Crunch {
   val oneMinuteMillis: MillisSinceEpoch = 60000L
   val oneHourMillis: MillisSinceEpoch = oneMinuteMillis * 60
   val oneDayMillis: MillisSinceEpoch = oneHourMillis * 24
+  val minutesInADay: Int = 60 * 24
 
   val europeLondonId = "Europe/London"
   val europeLondonTimeZone: DateTimeZone = DateTimeZone.forID(europeLondonId)
@@ -99,6 +100,23 @@ object Crunch {
     SDate(localMidnight, europeLondonTimeZone)
   }
 
+  def minuteMillisFor24hours(dayMillis: MillisSinceEpoch): Seq[MillisSinceEpoch] =
+    (0 until minutesInADay).map(m => dayMillis + (m * oneMinuteMillis))
+
+  def missingMinutesForDay(fromMillis: MillisSinceEpoch, minuteExistsTerminals: (MillisSinceEpoch, List[TerminalName]) => Boolean, terminals: List[TerminalName], days: Int): Set[MillisSinceEpoch] = {
+    val fromMillisMidnight = getLocalLastMidnight(fromMillis).millisSinceEpoch
+
+    (0 until days).foldLeft(List[MillisSinceEpoch]()) {
+      case (missingSoFar, day) =>
+        val dayMillis = fromMillisMidnight + (day * Crunch.oneDayMillis)
+        val isMissing = !minuteExistsTerminals(dayMillis, terminals)
+        if (isMissing) Crunch.minuteMillisFor24hours(dayMillis) ++: missingSoFar
+        else missingSoFar
+    }.toSet
+  }
+
+  def filterNonMinuteBoundaryMillis(millis: List[MillisSinceEpoch]): List[MillisSinceEpoch] = millis.filter(_ % oneMinuteMillis == 0)
+
   def earliestAndLatestAffectedPcpTimeFromFlights(maxDays: Int)(existingFlights: Set[ApiFlightWithSplits], updatedFlights: Set[ApiFlightWithSplits]): Option[(SDateLike, SDateLike)] = {
     val differences: Set[ApiFlightWithSplits] = updatedFlights -- existingFlights
     val latestPcpTimes = differences
@@ -147,14 +165,16 @@ object Crunch {
 
   def applyCrunchDiff(crunchMinuteUpdates: Set[CrunchMinute], crunchMinutes: Map[TQM, CrunchMinute], nowMillis: MillisSinceEpoch): Map[TQM, CrunchMinute] = {
     val withUpdates = crunchMinuteUpdates.foldLeft(crunchMinutes) {
-      case (soFar, ncm) => soFar.updated(ncm.key, ncm.copy(lastUpdated = Option(nowMillis)))
+      case (soFar, cm) if cm.minute % oneMinuteMillis == 0 => soFar.updated(cm.key, cm.copy(lastUpdated = Option(nowMillis)))
+      case (soFar, _) => soFar
     }
     withUpdates
   }
 
   def applyStaffDiff(staffMinuteUpdates: Set[StaffMinute], staffMinutes: Map[TM, StaffMinute], nowMillis: MillisSinceEpoch): Map[TM, StaffMinute] = {
     val withUpdates = staffMinuteUpdates.foldLeft(staffMinutes) {
-      case (soFar, newStaffMinute) => soFar.updated(newStaffMinute.key, newStaffMinute.copy(lastUpdated = Option(nowMillis)))
+      case (soFar, sm) if sm.minute % oneMinuteMillis == 0 => soFar.updated(sm.key, sm.copy(lastUpdated = Option(nowMillis)))
+      case (soFar, _) => soFar
     }
     withUpdates
   }

@@ -5,8 +5,9 @@ import drt.client.actions.Actions.UpdateShowActualDesksAndQueues
 import drt.client.components.TerminalDesksAndQueues.{NodeListSeq, documentScrollHeight, documentScrollTop}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
+import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, ViewMode}
-import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared.FlightsApi.QueueName
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
@@ -131,7 +132,7 @@ object TerminalDesksAndQueues {
         .map {
           case (millis, minutes) => (millis, minutes.head)
         }
-      val terminalStaffMinutes = groupStaffMinutesBySlotSize(staffMinutesByMillis, props.terminalPageTab.terminal).toMap
+      val terminalStaffMinutes: Map[MillisSinceEpoch, StaffMinute] = groupStaffMinutesBySlotSize(staffMinutesByMillis, props.terminalPageTab.terminal).toMap
 
       val toggleShowActuals = (e: ReactEventFromInput) => {
         val newValue: Boolean = e.target.checked

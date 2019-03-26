@@ -47,7 +47,12 @@ class StaffGraphStage(name: String = "",
       staffMinutes = initialStaffMinutes.minutes.map(sm => (TM(sm.terminalName, sm.minute), sm)).toMap
 
       if (checkRequiredUpdatesOnStartup) {
-        missingMinutes ++ minutesRequiringUpdate match {
+        val lastMidnightMillis = getLocalLastMidnight(now()).millisSinceEpoch
+
+        val missing = Crunch.missingMinutesForDay(lastMidnightMillis, minuteExists, airportConfig.terminalNames.toList, numberOfDays)
+        val requiringUpdate = minutesRequiringUpdate(lastMidnightMillis)
+
+        missing ++ requiringUpdate match {
           case m if m.isEmpty => log.info(s"No minutes to add or update")
           case minutes =>
             val updateCriteria = UpdateCriteria(minutes.toList.sorted, airportConfig.terminalNames.toSet)
@@ -62,12 +67,10 @@ class StaffGraphStage(name: String = "",
       super.preStart()
     }
 
-    def minutesRequiringUpdate: Set[MillisSinceEpoch] = {
-      val midnight = getLocalLastMidnight(now()).millisSinceEpoch
+    def minutesRequiringUpdate(fromMillis: MillisSinceEpoch): Set[MillisSinceEpoch] = {
+      val minutesMillis = (fromMillis until (fromMillis + (numberOfDays.toLong * Crunch.oneDayMillis)) by 60000).toArray
 
-      val minutesMillis = (midnight until (midnight + (numberOfDays.toLong * 60 * 60 * 24 * 1000)) by 60000).toArray
-
-      log.info(s"Checking $numberOfDays days worth of minutes (${minutesMillis.length} minutes)")
+      log.info(s"Checking $numberOfDays days worth of minutes (${minutesMillis.length} minutes starting at ${SDate(minutesMillis.head).toISOString()}")
       val maybeUpdates = for {
         terminal <- airportConfig.terminalNames
         minuteMillis <- minutesMillis
@@ -90,32 +93,9 @@ class StaffGraphStage(name: String = "",
       requiringUpdate.toSet
     }
 
-    def missingMinutes: Set[MillisSinceEpoch] = {
-      val midnight = getLocalLastMidnight(now()).millisSinceEpoch
-
-      val startMillis = SDate.now().millisSinceEpoch
-      log.info(s"Checking for missing minutes")
-      val minutesInADay = 1440
-      val oneDayMillis = 60 * 60 * 24 * 1000
-      val oneMinuteMillis = 60 * 1000
-
-      val missing = (0 to numberOfDays).foldLeft(List[MillisSinceEpoch]()) {
-        case (missingSoFar, day) =>
-          val dayMillis = midnight + (day * oneDayMillis)
-          if (!minuteExists(dayMillis, airportConfig.terminalNames.toList)) {
-            (0 until minutesInADay).map(m => {
-              dayMillis + (m * oneMinuteMillis)
-            }) ++: missingSoFar
-          }
-          else missingSoFar
-      }
-      log.info(s"${missing.length} missing minutes took ${SDate.now().millisSinceEpoch - startMillis} milliseconds")
-      missing.toSet
-    }
-
     def minuteExists(millis: MillisSinceEpoch, terminals: List[TerminalName]): Boolean = terminals match {
       case Nil => false
-      case t :: tail if staffMinutes.contains(TM(t, millis)) => true
+      case t :: _ if staffMinutes.contains(TM(t, millis)) => true
       case _ :: tail => minuteExists(millis, tail)
     }
 

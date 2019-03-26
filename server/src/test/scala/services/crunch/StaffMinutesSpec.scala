@@ -494,7 +494,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       checkRequiredStaffUpdatesOnStartup = true
     )
 
-    val expectedStaffMinutes = (1 to 5).map { day =>
+    val expectedStaffMinutes = (1 until 5).map { day =>
       val date = SDate(scheduled).addDays(day).toISODateOnly
       val minutes = (0 until 15).map { minute => SDate(scheduled).addDays(day).addMinutes(minute).millisSinceEpoch }.sorted
       (date, minutes)
@@ -541,7 +541,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       checkRequiredStaffUpdatesOnStartup = true
     )
 
-    val expectedStaffMinutes = (1 to 5).map { day =>
+    val expectedStaffMinutes = (1 until 5).map { day =>
       val date = SDate(scheduled).addDays(day).toISODateOnly
       val minutes = (0 until 15).map { minute => SDate(scheduled).addDays(day).addMinutes(minute).millisSinceEpoch }.sorted
       (date, minutes)
