@@ -58,7 +58,7 @@ class CrunchSpec extends Specification {
 
   "Given a start time of zero milliseconds " +
     "When I ask for 24 hours worth of minute milliseconds " +
-    "Then the last millisecond should be 1339 minutes after the first, ie 1339 * oneMinuteMillis" >> {
+    "Then the last millisecond should be 1439 minutes after the first, ie 1439 * oneMinuteMillis" >> {
     val millisFor24Hours: Seq[MillisSinceEpoch] = Crunch.minuteMillisFor24hours(0L)
 
     val lastMillis: MillisSinceEpoch = 1439 * Crunch.oneMinuteMillis
