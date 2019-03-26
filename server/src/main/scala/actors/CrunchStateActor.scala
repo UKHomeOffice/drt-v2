@@ -181,8 +181,3 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
 
   def updateStateFromPortState(newState: PortState): Unit = state = Option(newState)
 }
-
-object SplitsConversion {
-}
-
-case object GetPortWorkload

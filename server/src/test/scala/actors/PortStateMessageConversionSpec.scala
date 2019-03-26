@@ -8,7 +8,7 @@ import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchStateSna
 
 class PortStateMessageConversionSpec extends Specification {
   "Given a persisted port state message containing some valid & invalid crunch and staff minutes " +
-    "When I ask for the coresponding PortState " +
+    "When I ask for the corresponding PortState " +
     "Then I should only see the valid crunch & staff minutes" >> {
     val validMinuteMilli = 0L
     val invalidMinuteMilli = 60001L
