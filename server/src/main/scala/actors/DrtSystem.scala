@@ -216,7 +216,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     futurePortStates.onComplete {
       case Success((maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeRegisteredArrivals)) =>
         system.log.info(s"Successfully restored initial state for App")
-        val initialPortState: Option[PortState] = mergePortStates(maybeLiveState, maybeForecastState)
+        val initialPortState: Option[PortState] = mergePortStates(maybeForecastState, maybeLiveState)
 
         val crunchInputs: CrunchSystem[Cancellable] = startCrunchSystem(initialPortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, params.recrunchOnStart, true)
         voyageManifestsRequestActor ! SubscribeResponseQueue(crunchInputs.manifestsResponse)
