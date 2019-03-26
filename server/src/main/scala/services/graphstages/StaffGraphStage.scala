@@ -49,7 +49,7 @@ class StaffGraphStage(name: String = "",
       if (checkRequiredUpdatesOnStartup) {
         val lastMidnightMillis = getLocalLastMidnight(now()).millisSinceEpoch
 
-        val missing = Crunch.missingMinutes(lastMidnightMillis, minuteExists, airportConfig.terminalNames.toList, numberOfDays)
+        val missing = Crunch.missingMinutesForDay(lastMidnightMillis, minuteExists, airportConfig.terminalNames.toList, numberOfDays)
         val requiringUpdate = minutesRequiringUpdate(lastMidnightMillis)
 
         missing ++ requiringUpdate match {

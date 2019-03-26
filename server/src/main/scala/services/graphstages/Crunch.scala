@@ -103,10 +103,12 @@ object Crunch {
   def minuteMillisFor24hours(dayMillis: MillisSinceEpoch): Seq[MillisSinceEpoch] =
     (0 until minutesInADay).map(m => dayMillis + (m * oneMinuteMillis))
 
-  def missingMinutes(fromMillis: MillisSinceEpoch, minuteExistsTerminals: (MillisSinceEpoch, List[TerminalName]) => Boolean, terminals: List[TerminalName], days: Int): Set[MillisSinceEpoch] = {
-    (0 to days).foldLeft(List[MillisSinceEpoch]()) {
+  def missingMinutesForDay(fromMillis: MillisSinceEpoch, minuteExistsTerminals: (MillisSinceEpoch, List[TerminalName]) => Boolean, terminals: List[TerminalName], days: Int): Set[MillisSinceEpoch] = {
+    val fromMillisMidnight = getLocalLastMidnight(fromMillis).millisSinceEpoch
+
+    (0 until days).foldLeft(List[MillisSinceEpoch]()) {
       case (missingSoFar, day) =>
-        val dayMillis = fromMillis + (day * Crunch.oneDayMillis)
+        val dayMillis = fromMillisMidnight + (day * Crunch.oneDayMillis)
         val isMissing = !minuteExistsTerminals(dayMillis, terminals)
         if (isMissing) Crunch.minuteMillisFor24hours(dayMillis) ++: missingSoFar
         else missingSoFar

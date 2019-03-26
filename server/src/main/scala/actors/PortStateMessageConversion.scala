@@ -69,13 +69,11 @@ object PortStateMessageConversion {
     movements = smm.movements.getOrElse(0)
   )
 
-  def flightWithSplitsFromMessage(fm: FlightWithSplitsMessage): ApiFlightWithSplits = {
-    ApiFlightWithSplits(
-      FlightMessageConversion.flightMessageToApiFlight(fm.flight.get),
-      fm.splits.map(sm => splitMessageToApiSplits(sm)).toSet,
-      None
-    )
-  }
+  def flightWithSplitsFromMessage(fm: FlightWithSplitsMessage): ApiFlightWithSplits = ApiFlightWithSplits(
+    FlightMessageConversion.flightMessageToApiFlight(fm.flight.get),
+    fm.splits.map(sm => splitMessageToApiSplits(sm)).toSet,
+    None
+  )
 
   def staffMinuteToMessage(sm: StaffMinute): StaffMinuteMessage = StaffMinuteMessage(
     terminalName = Option(sm.terminalName),
