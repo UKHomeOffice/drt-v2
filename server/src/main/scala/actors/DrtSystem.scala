@@ -47,7 +47,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 trait DrtSystemInterface extends UserRoleProviderLike {
   val now: () => SDateLike = () => SDate.now()
@@ -213,6 +213,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         ra <- maybeInitialRegisteredArrivals
       } yield (lps, fps, ba, fa, la, ra)
     }
+
     futurePortStates.onComplete {
       case Success((maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeRegisteredArrivals)) =>
         system.log.info(s"Successfully restored initial state for App")
@@ -234,9 +235,10 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
         subscribeStaffingActors(crunchInputs)
         startScheduledFeedImports(crunchInputs)
+
       case Failure(error) =>
         system.log.error(s"Failed to restore initial state for App", error)
-        None
+        System.exit(1)
     }
   }
 
