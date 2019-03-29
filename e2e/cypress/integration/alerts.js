@@ -6,68 +6,33 @@ describe('Alerts system', function () {
 
 
   beforeEach(function () {
-    cy.setRoles(["test"]);
-    deleteAlerts();
+    cy.deleteData()
+      .deleteAlerts()
+      .setRoles(["test"])
   });
 
-  afterEach(function() {
-    deleteAlerts();
-  });
-
-
-  function deleteAlerts() {
-    cy.setRoles(["test"]);
-    cy.request('DELETE', '/data/alert');
-
-  }
-  function addAlert(time, number="") {
-    cy.request('POST',
-      '/data/alert',
-      {
+  Cypress.Commands.add('addAlert', (time, number="") => {
+    cy
+      .request('POST', '/data/alert', {
         "title": "This is an alert"+number,
         "message": "This is the message of the alert",
         "expires": today + " " + time
-      }).its("body").should('include', "This is an alert");
-  }
+      })
+      .its("body").should('include', "This is an alert");
+  });
 
-  function navigateToHome() {
-    cy.setRoles(["test"]);
-    cy.visit('/').then(() => {
-      cy.wait(1000);
-      cy.get('.navbar-drt').contains('DRT TEST').end();
-    }).end();
+  Cypress.Commands.add('deleteAlerts', () => cy.request('DELETE', '/data/alert'))
 
-  }
-  function shouldHaveAlerts(num) {
-    cy.setRoles(["test"]);
-    cy.get('#has-alerts .alert').should('have.length', num);
-  }
+  Cypress.Commands.add('shouldHaveAlerts', (num) => cy.get('#has-alerts .alert').should('have.length', num))
 
   describe('An alert exists in the app', function () {
 
     it("When an alert is not expired it should be displayed", function () {
-      addAlert(timeAtEndOfDay);
-      navigateToHome();
-      shouldHaveAlerts(1)
+      cy
+        .addAlert(timeAtEndOfDay)
+        .navigateHome()
+        .shouldHaveAlerts(1);
     });
 
-    // it("When there is an expired alert it should not be displayed", function () {
-    //   deleteAlerts();
-    //   addAlert(timeAtStartOfDay);
-    //   navigateToHome();
-    //   shouldHaveAlerts(0)
-    // });
-
   });
-
-  // describe('Two alerts exist in the app', function() {
-  //   it("When there are two alerts that are not expired they should be displayed", function () {
-  //     deleteAlerts();
-  //     addAlert(timeAtEndOfDay, "1");
-  //     addAlert(timeAtEndOfDay, "2");
-  //
-  //     navigateToHome();
-  //     shouldHaveAlerts(2)
-  //   });
-  // })
 });
