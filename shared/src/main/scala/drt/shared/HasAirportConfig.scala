@@ -127,7 +127,8 @@ case class AirportConfig(
                           dayLengthHours: Int = 36,
                           nationalityBasedProcTimes: Map[String, Double] = ProcessingTimes.nationalityProcessingTimes,
                           role: Role,
-                          cloneOfPortCode: Option[String] = None
+                          cloneOfPortCode: Option[String] = None,
+                          egateSplitPercentages: Map[TerminalName, Double]
                         ) extends AirportConfigLike {
 
   def feedPortCode: String = cloneOfPortCode.getOrElse(portCode)
@@ -293,7 +294,8 @@ object AirportConfigs {
       "Afternoon shift, A1, {date}, 14:00, 16:59, 10",
       "Evening shift, A1, {date}, 17:00, 23:59, 17"
     ),
-    role = EDIAccess
+    role = EDIAccess,
+    egateSplitPercentages = Map("A1" -> 0.8140, "A2" -> 0.7894)
   )
   val lgw = AirportConfig(
     portCode = "LGW",
@@ -351,7 +353,8 @@ object AirportConfigs {
       "Afternoon shift, N, {date}, 14:00, 16:59, 10",
       "Evening shift, N, {date}, 17:00, 23:59, 17"
     ),
-    role = LGWAccess
+    role = LGWAccess,
+    egateSplitPercentages = Map("N" -> 0.8244, "S" -> 0.8375)
   )
   val stn = AirportConfig(
     portCode = "STN",
@@ -395,7 +398,8 @@ object AirportConfigs {
     fixedPointExamples = Seq("Roving Officer, 00:00, 23:59, 1",
       "Referral Officer, 00:00, 23:59, 1",
       "Forgery Officer, 00:00, 23:59, 1"),
-    role = STNAccess
+    role = STNAccess,
+    egateSplitPercentages = Map("T1" -> 0.8084)
   )
   val man = AirportConfig(
     portCode = "MAN",
@@ -433,7 +437,8 @@ object AirportConfigs {
       "Afternoon shift, T1, {date}, 14:00, 16:59, 18",
       "Evening shift, T1, {date}, 17:00, 23:59, 22"
     ),
-    role = MANAccess
+    role = MANAccess,
+    egateSplitPercentages = Map("T1" -> 0.7968, "T2" -> 0.7140, "T3" -> 0.7038)
   )
   private val lhrDefaultTerminalProcessingTimes = Map(
     eeaMachineReadableToDesk -> 25d / 60,
@@ -512,7 +517,8 @@ object AirportConfigs {
     portStateSnapshotInterval = 250,
     hasEstChox = true,
     exportQueueOrder = Queues.exportQueueOrderWithFastTrack,
-    role = LHRAccess
+    role = LHRAccess,
+    egateSplitPercentages = Map("T2" -> 0.8102, "T3" -> 0.8075, "T4" -> 0.7687, "T5" -> 0.8466)
   )
   val ltn = AirportConfig(
     portCode = "LTN",
@@ -531,7 +537,8 @@ object AirportConfigs {
         Queues.NonEeaDesk -> (List.fill(24)(1), List(5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5))
       )
     ),
-    role = LTNAccess
+    role = LTNAccess,
+    egateSplitPercentages = Map("T1" -> 0.7922)
   )
   val ema = AirportConfig(
     portCode = "EMA",
@@ -574,7 +581,8 @@ object AirportConfigs {
     // was going beyond the message threshold.
     // A neater fix would be to produce the missing snapshots retrospectively, but that would be quite a big job for a
     // minor gain
-    portStateSnapshotInterval = 10000
+    portStateSnapshotInterval = 10000,
+    egateSplitPercentages = Map("T1" -> 0.6993)
   )
 
   val brs = AirportConfig(
@@ -613,7 +621,8 @@ object AirportConfigs {
         Queues.QueueDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5))
       )
     ),
-    role = BRSAccess
+    role = BRSAccess,
+    egateSplitPercentages = Map("T1" -> 0.7742)
   )
 
   val bhx = AirportConfig(
@@ -662,7 +671,8 @@ object AirportConfigs {
           List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1))
       )
     ),
-    role = BHXAccess
+    role = BHXAccess,
+    egateSplitPercentages = Map("T1" -> 0.7968, "T2" -> 0.7140, "T3" -> 0.7038)
   )
 
   val test = AirportConfig(
@@ -697,7 +707,8 @@ object AirportConfigs {
         Queues.NonEeaDesk -> (List(0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8))
       )
     ),
-    role = TestAccess
+    role = TestAccess,
+    egateSplitPercentages = Map("T1" -> 0.6)
   )
 
   val test2 = AirportConfig(
@@ -741,7 +752,8 @@ object AirportConfigs {
         Queues.NonEeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8))
       )
     ),
-    role = Test2Access
+    role = Test2Access,
+    egateSplitPercentages = Map("T1" -> 0.6)
   )
 
   val nationalityProcessingTimesHalved: Map[String, Double] = ProcessingTimes.nationalityProcessingTimes.mapValues(_ / 2)
