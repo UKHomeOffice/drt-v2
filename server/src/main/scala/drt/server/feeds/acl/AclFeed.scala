@@ -81,13 +81,12 @@ object AclFeed {
       })
       .reverse
     val oneHundredKbInBytes = 100000L
-    val latestFileOver100KB: RemoteResourceInfo = filesByDate.find(f => {
-      if(f.getAttributes.getSize > oneHundredKbInBytes)
-        true
-      else
-        false
-    }).getOrElse(filesByDate.head)
+    val latestFileOver100KB: RemoteResourceInfo = filesByDate
+      .find(_.getAttributes.getSize > oneHundredKbInBytes)
+      .getOrElse(filesByDate.head)
+
     log.info(s"Latest File Size: ${latestFileOver100KB.getAttributes.getSize}")
+
     latestFileOver100KB.getPath
   }
 
