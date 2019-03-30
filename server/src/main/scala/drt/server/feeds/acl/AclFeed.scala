@@ -8,7 +8,7 @@ import drt.shared
 import drt.shared.Arrival
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import net.schmizz.sshj.SSHClient
-import net.schmizz.sshj.sftp.SFTPClient
+import net.schmizz.sshj.sftp.{RemoteResourceInfo, SFTPClient}
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.InMemoryDestFile
 import org.slf4j.{Logger, LoggerFactory}
@@ -70,7 +70,7 @@ object AclFeed {
     val portRegex = "([A-Z]{3})[SW][0-9]{2}_HOMEOFFICEROLL180_[0-9]{8}.zip".r
     val dateRegex = "[A-Z]{3}[SW][0-9]{2}_HOMEOFFICEROLL180_([0-9]{8}).zip".r
 
-    val latestFile = sftp
+    val filesByDate = sftp
       .ls("/180_Days/").asScala
       .filter(_.getName match {
         case portRegex(pc) if pc == portCode => true
@@ -79,8 +79,16 @@ object AclFeed {
       .sortBy(_.getName match {
         case dateRegex(date) => date
       })
-      .reverse.head
-    latestFile.getPath
+      .reverse
+    val oneHundredKbInBytes = 100000L
+    val latestFileOver100KB: RemoteResourceInfo = filesByDate.find(f => {
+      if(f.getAttributes.getSize > oneHundredKbInBytes)
+        true
+      else
+        false
+    }).getOrElse(filesByDate.head)
+    log.info(s"Latest File Size: ${latestFileOver100KB.getAttributes.getSize}")
+    latestFileOver100KB.getPath
   }
 
   def arrivalsFromCsvContent(csvContent: String, terminalMapping: TerminalName => TerminalName): List[Arrival] = {
