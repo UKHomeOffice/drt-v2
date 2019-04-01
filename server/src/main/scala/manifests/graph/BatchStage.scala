@@ -108,11 +108,17 @@ class BatchStage(now: () => SDateLike,
     }
 
     private def updatePrioritisedAndSubscribers(): Set[ArrivalKey] = {
-      val (nextLookupBatch, remainingLookups) = if (shouldRefreshLookupQueue) {
-        lastRefresh = now().millisSinceEpoch
-        refreshLookupQueue(now()).toSeq.sortBy(_.scheduled).splitAt(batchSize)
-      } else {
-        lookupQueue.toSeq.sortBy(_.scheduled).splitAt(batchSize)
+      val (nextLookupBatch, remainingLookups) = (shouldRefreshLookupQueue, registeredArrivals.nonEmpty) match {
+        case (true, true) =>
+          log.info(s"Refreshing lookup queue")
+          lastRefresh = now().millisSinceEpoch
+          refreshLookupQueue(now()).toSeq.sortBy(_.scheduled).splitAt(batchSize)
+        case (true, false) =>
+          log.info(s"No registered arrivals")
+          lookupQueue.toSeq.sortBy(_.scheduled).splitAt(batchSize)
+        case (false, _) =>
+          log.info(f"Minimum refresh interval: ${minimumRefreshIntervalMillis / 1000}s. ${(now().millisSinceEpoch - lastRefresh) / 1000}%ds since last refresh. Not refreshing")
+          lookupQueue.toSeq.sortBy(_.scheduled).splitAt(batchSize)
       }
 
       lookupQueue = Set[ArrivalKey](remainingLookups: _*)
