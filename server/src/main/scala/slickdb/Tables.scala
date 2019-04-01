@@ -112,7 +112,7 @@ trait Tables {
                                             document_type: String,
                                             document_issuing_country_code: String,
                                             eea_flag: String,
-                                            age: String,
+                                            age: Int,
                                             disembarkation_port_code: String,
                                             in_transit_flag: String,
                                             disembarkation_port_country_code: String,
@@ -122,7 +122,7 @@ trait Tables {
   /** GetResult implicit for fetching ArrivalRow objects using plain SQL queries */
   implicit def GetResultVoyageManifestPassengerInfoRow(implicit e0: GR[String], e1: GR[java.sql.Timestamp], e2: GR[Int]): GR[VoyageManifestPassengerInfoRow] = GR{
     prs => import prs._
-      VoyageManifestPassengerInfoRow.tupled((<<[String], <<[String], <<[String], <<[Int], <<[String], <<[java.sql.Timestamp], <<[Int], <<[Int], <<[String], <<[String], <<[String], <<[String], <<[String], <<[String], <<[String], <<[String], <<[String], <<[Boolean]))
+      VoyageManifestPassengerInfoRow.tupled((<<[String], <<[String], <<[String], <<[Int], <<[String], <<[java.sql.Timestamp], <<[Int], <<[Int], <<[String], <<[String], <<[String], <<[Int], <<[String], <<[String], <<[String], <<[String], <<[String], <<[Boolean]))
   }
   /** Table description of table arrival. Objects of this class serve as prototypes for rows in queries. */
   class VoyageManifestPassengerInfo(_tableTag: Tag) extends {
@@ -158,7 +158,7 @@ trait Tables {
     /** Database column scheduled SqlType(timestamp) */
     val eea_flag: Rep[String] = column[String]("eea_flag")
     /** Database column estimated SqlType(timestamp), Default(None) */
-    val age: Rep[String] = column[String]("age")
+    val age: Rep[Int] = column[Int]("age")
     /** Database column actual SqlType(timestamp), Default(None) */
     val disembarkation_port_code: Rep[String] = column[String]("disembarkation_port_code")
     /** Database column estimatedchox SqlType(timestamp), Default(None) */

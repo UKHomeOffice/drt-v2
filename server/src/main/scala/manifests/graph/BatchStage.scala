@@ -117,7 +117,9 @@ class BatchStage(now: () => SDateLike,
           log.info(s"No registered arrivals")
           lookupQueue.toSeq.sortBy(_.scheduled).splitAt(batchSize)
         case (false, _) =>
-          log.info(f"Minimum refresh interval: ${minimumRefreshIntervalMillis / 1000}s. ${(now().millisSinceEpoch - lastRefresh) / 1000}%ds since last refresh. Not refreshing")
+          val minRefreshSeconds = minimumRefreshIntervalMillis / 1000
+          val secondsSinceLastRefresh = (now().millisSinceEpoch - lastRefresh) / 1000
+          log.info(f"Minimum refresh interval: ${minRefreshSeconds}s. $secondsSinceLastRefresh%ds since last refresh. Not refreshing")
           lookupQueue.toSeq.sortBy(_.scheduled).splitAt(batchSize)
       }
 
