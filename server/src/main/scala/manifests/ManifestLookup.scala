@@ -95,7 +95,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
     sql"""SELECT
             arrival_port_code,
             departure_port_code,
-            voyager_number,
+            voyage_number,
             scheduled_date
           FROM
             voyage_manifest_passenger_info
@@ -103,14 +103,14 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
             event_code ='DC'
             and arrival_port_code=${uniqueArrivalKey.arrivalPort}
             and departure_port_code=${uniqueArrivalKey.departurePort}
-            and voyager_number=${uniqueArrivalKey.voyageNumber}
+            and voyage_number=${uniqueArrivalKey.voyageNumber.toInt}
             and day_of_week = EXTRACT(DOW FROM TIMESTAMP '#$scheduledTs')
             and week_of_year >= EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs')
             and week_of_year <= EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')
           GROUP BY
             arrival_port_code,
             departure_port_code,
-            voyager_number,
+            voyage_number,
             scheduled_date
           """.as[(String, String, String, Timestamp)]
   }
@@ -124,7 +124,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
     sql"""SELECT
             arrival_port_code,
             departure_port_code,
-            voyager_number,
+            voyage_number,
             scheduled_date
           FROM
             voyage_manifest_passenger_info
@@ -132,13 +132,13 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
             event_code ='DC'
             and arrival_port_code=${uniqueArrivalKey.arrivalPort}
             and departure_port_code=${uniqueArrivalKey.departurePort}
-            and voyager_number=${uniqueArrivalKey.voyageNumber}
+            and voyage_number=${uniqueArrivalKey.voyageNumber.toInt}
             and week_of_year >= EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs')
             and week_of_year <= EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')
           GROUP BY
             arrival_port_code,
             departure_port_code,
-            voyager_number,
+            voyage_number,
             scheduled_date
           """.as[(String, String, String, Timestamp)]
   }
@@ -152,7 +152,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
     sql"""SELECT
             arrival_port_code,
             departure_port_code,
-            voyager_number,
+            voyage_number,
             scheduled_date
           FROM
             voyage_manifest_passenger_info
@@ -166,7 +166,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
           GROUP BY
             arrival_port_code,
             departure_port_code,
-            voyager_number,
+            voyage_number,
             scheduled_date
           LIMIT 3
           """.as[(String, String, String, Timestamp)]
@@ -187,7 +187,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
             event_code ='DC'
             and arrival_port_code=$destination
             and departure_port_code=$origin
-            and voyager_number=$voyageNumber
+            and voyage_number=${voyageNumber.toInt}
             and scheduled_date=$scheduled"""
     }
 

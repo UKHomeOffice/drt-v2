@@ -149,7 +149,7 @@ class CrunchTestLike
                      cruncher: TryCrunch = TestableCrunchLoadStage.mockCrunch,
                      simulator: Simulator = TestableCrunchLoadStage.mockSimulator,
                      aggregatedArrivalsActor: ActorRef = testProbe("aggregated-arrivals").ref,
-                     useLegacyManifests: Boolean = true,
+                     useLegacyManifests: Boolean = false,
                      maxDaysToCrunch: Int = 4,
                      checkRequiredStaffUpdatesOnStartup: Boolean = false
                     ): CrunchGraphInputsAndProbes = {

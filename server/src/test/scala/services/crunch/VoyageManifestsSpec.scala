@@ -232,6 +232,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
       maybeInitialManifestState = Option(initialManifestState),
+      useLegacyManifests = true,
       airportConfig = airportConfig.copy(
         defaultProcessingTimes = Map("T1" -> Map(
           eeaMachineReadableToDesk -> 25d / 60,
