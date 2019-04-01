@@ -42,8 +42,6 @@ class LookupStage(portCode: String, manifestLookup: ManifestLookupLike) extends 
       override def onPush(): Unit = {
         val incomingArrivals = grab(inArrivals)
 
-        log.info(s"${incomingArrivals.length} arrivals to look up")
-
         val start = SDate.now().millisSinceEpoch
         val manifestTries: List[Option[BestAvailableManifest]] = Try(Await.result(futureManifests(incomingArrivals), 30 seconds)) match {
           case Success(arrivalsWithMaybeManifests) =>
