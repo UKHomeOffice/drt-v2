@@ -52,7 +52,6 @@ class AirportConfigsSpec extends Specification {
         defaultProcessingTimes = Map(),
         minMaxDesksByTerminalQueue = Map(),
         role = LHRAccess,
-        egateSplitPercentages = Map(),
         terminalPaxTypeQueueAllocation = Map("T1" -> AirportConfigs.defaultQueueRatios)
       )
 

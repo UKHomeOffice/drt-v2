@@ -86,7 +86,6 @@ object TestCrunchConfig {
         "Evening shift, A1, {date}, 17:00, 23:59,17"
       ),
       role = STNAccess,
-      egateSplitPercentages = Map(),
       terminalPaxTypeQueueAllocation = Map("T1" -> AirportConfigs.defaultQueueRatios)
     )
   }

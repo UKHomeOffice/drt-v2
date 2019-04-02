@@ -118,7 +118,6 @@ class CrunchTestLike
     timeToChoxMillis = 120000L,
     firstPaxOffMillis = 180000L,
     role = STNAccess,
-    egateSplitPercentages = Map(),
     terminalPaxTypeQueueAllocation = Map("T1" -> AirportConfigs.defaultQueueRatios)
   )
 
