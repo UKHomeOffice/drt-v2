@@ -85,7 +85,8 @@ object TestCrunchConfig {
         "Afternoon shift, A1, {date}, 14:00, 16:59, 10",
         "Evening shift, A1, {date}, 17:00, 23:59,17"
       ),
-      role = STNAccess
+      role = STNAccess,
+      terminalPaxTypeQueueAllocation = Map("T1" -> AirportConfigs.defaultQueueRatios)
     )
   }
 

@@ -6,8 +6,8 @@ import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 
 case class PaxTypeQueueAllocation(paxTypeAllocator: PaxTypeAllocator, queueAllocator: QueueAllocator) {
 
-  def toQueues(bestManifest: BestAvailableManifest): Map[QueueType, List[(QueueType, PaxType, ManifestPassengerProfile, Double)]] = {
-    val queueAllocatorForFlight = queueAllocator(bestManifest) _
+  def toQueues(terminal: String, bestManifest: BestAvailableManifest): Map[QueueType, List[(QueueType, PaxType, ManifestPassengerProfile, Double)]] = {
+    val queueAllocatorForFlight = queueAllocator(terminal, bestManifest) _
     val paxTypeAllocatorForFlight = paxTypeAllocator(bestManifest) _
     bestManifest.passengerList.flatMap(mpp => {
       val paxType = paxTypeAllocatorForFlight(mpp)
@@ -20,8 +20,8 @@ case class PaxTypeQueueAllocation(paxTypeAllocator: PaxTypeAllocator, queueAlloc
     case (queueType, _, _, _) => queueType
   }
 
-  def toSplits(bestManifest: BestAvailableManifest): Splits = {
-    val splits = toQueues(bestManifest).flatMap {
+  def toSplits(terminal: String, bestManifest: BestAvailableManifest): Splits = {
+    val splits = toQueues(terminal, bestManifest).flatMap {
       case (_, passengerProfileTypeByQueueCount) =>
         passengerProfileTypeByQueueCount.foldLeft(Map[PaxTypeAndQueue, ApiPaxTypeAndQueueCount]())(
           (
