@@ -114,6 +114,8 @@ case class DrtConfigParameters(config: Configuration) {
 
   val maybeBhxSoapEndPointUrl: Option[String] = config.getOptional[String]("feeds.bhx.soap.endPointUrl")
 
+  val maybeB5JStartDate: Option[String] = config.getOptional[String]("feature-flags.b5jplus-start-date")
+
   val maybeLtnLiveFeedUrl: Option[String] = config.getOptional[String]("feeds.ltn.live.url")
   val maybeLtnLiveFeedUsername: Option[String] = config.getOptional[String]("feeds.ltn.live.username")
   val maybeLtnLiveFeedPassword: Option[String] = config.getOptional[String]("feeds.ltn.live.password")
@@ -309,6 +311,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
       useLegacyManifests = params.useLegacyManifests,
       splitsPredictorStage = splitsPredictorStage,
+      b5JStartDate = params.maybeB5JStartDate.map(SDate(_)).getOrElse(SDate("2019-06-01")),
       manifestsSource = voyageManifestsStage,
       voyageManifestsActor = voyageManifestsActor,
       voyageManifestsRequestActor = voyageManifestsRequestActor,

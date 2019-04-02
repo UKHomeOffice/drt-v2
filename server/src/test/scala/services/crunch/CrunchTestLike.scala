@@ -117,7 +117,9 @@ class CrunchTestLike
         Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))))),
     timeToChoxMillis = 120000L,
     firstPaxOffMillis = 180000L,
-    role = STNAccess
+    role = STNAccess,
+    egateSplitPercentages = Map(),
+    terminalPaxTypeQueueAllocation = Map("T1" -> AirportConfigs.defaultQueueRatios)
   )
 
   val splitsPredictorStage = new DummySplitsPredictor()
@@ -198,6 +200,7 @@ class CrunchTestLike
       useLegacyManifests = useLegacyManifests,
       now = now,
       splitsPredictorStage = splitsPredictorStage,
+      b5JStartDate = SDate("2019-06-01"),
       manifestsSource = manifestsSource,
       voyageManifestsActor = manifestsActor,
       voyageManifestsRequestActor = manifestsRequestActor,

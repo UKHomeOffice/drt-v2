@@ -1,6 +1,7 @@
 package drt.shared
 
 import drt.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared.PassengerSplits.QueueType
 import drt.shared.PaxTypes._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 
@@ -64,9 +65,13 @@ object PaxTypes {
 
   case object EeaMachineReadable extends PaxType
 
+  case object EeaBelowEGateAge extends PaxType
+
   case object NonVisaNational extends PaxType
 
   case object B5JPlusNational extends PaxType
+
+  case object B5JPlusNationalBelowEGateAge extends PaxType
 
   case object UndefinedPaxType extends PaxType
 
@@ -128,7 +133,8 @@ case class AirportConfig(
                           nationalityBasedProcTimes: Map[String, Double] = ProcessingTimes.nationalityProcessingTimes,
                           role: Role,
                           cloneOfPortCode: Option[String] = None,
-                          egateSplitPercentages: Map[TerminalName, Double]
+                          egateSplitPercentages: Map[TerminalName, Double],
+                          terminalPaxTypeQueueAllocation: Map[String, Map[PaxType, Seq[(QueueType, Double)]]]
                         ) extends AirportConfigLike {
 
   def feedPortCode: String = cloneOfPortCode.getOrElse(portCode)
@@ -242,6 +248,17 @@ object AirportConfigs {
     SplitRatio(nonVisaNationalToDesk, 0.05)
   )
 
+  val defaultQueueRatios: Map[PaxType, Seq[(QueueType, Double)]] = Map(
+    EeaMachineReadable -> List(Queues.EGate -> 0.8, Queues.EeaDesk -> 0.2),
+    EeaBelowEGateAge -> List(Queues.EeaDesk -> 1.0),
+    EeaNonMachineReadable -> List(Queues.EeaDesk -> 1.0),
+    Transit -> List(Queues.Transfer -> 1.0),
+    NonVisaNational -> List(Queues.NonEeaDesk -> 1.0),
+    VisaNational -> List(Queues.NonEeaDesk -> 1.0),
+    B5JPlusNational -> List(Queues.EGate -> 0.4, Queues.EeaDesk -> 0.6),
+    B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
+  )
+
   val defaultProcessingTimes = Map(
     eeaMachineReadableToDesk -> 20d / 60,
     eeaMachineReadableToEGate -> 35d / 60,
@@ -295,7 +312,17 @@ object AirportConfigs {
       "Evening shift, A1, {date}, 17:00, 23:59, 17"
     ),
     role = EDIAccess,
-    egateSplitPercentages = Map("A1" -> 0.8140, "A2" -> 0.7894)
+    egateSplitPercentages = Map("A1" -> 0.8140, "A2" -> 0.7894),
+    terminalPaxTypeQueueAllocation = Map(
+      "A1" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+        EGate -> 0.8140,
+        EeaDesk -> (1.0 - 0.8140)
+      ))),
+      "A1" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+        EGate -> 0.7894,
+        EeaDesk -> (1.0 - 0.7894)
+      )))
+    )
   )
   val lgw = AirportConfig(
     portCode = "LGW",
@@ -354,7 +381,16 @@ object AirportConfigs {
       "Evening shift, N, {date}, 17:00, 23:59, 17"
     ),
     role = LGWAccess,
-    egateSplitPercentages = Map("N" -> 0.8244, "S" -> 0.8375)
+    egateSplitPercentages = Map("N" -> 0.8244, "S" -> 0.8375),
+    terminalPaxTypeQueueAllocation = Map(
+      "N" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+        EGate -> 0.8244,
+        EeaDesk -> (1.0 - 0.8244)
+      ))),
+      "S" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+        EGate -> 0.8375,
+        EeaDesk -> (1.0 - 0.8375)
+      ))))
   )
   val stn = AirportConfig(
     portCode = "STN",
@@ -399,7 +435,13 @@ object AirportConfigs {
       "Referral Officer, 00:00, 23:59, 1",
       "Forgery Officer, 00:00, 23:59, 1"),
     role = STNAccess,
-    egateSplitPercentages = Map("T1" -> 0.8084)
+    egateSplitPercentages = Map("T1" -> 0.8084),
+    terminalPaxTypeQueueAllocation = Map(
+      "T1" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+        EGate -> 0.8084,
+        EeaDesk -> (1.0 - 0.8084)
+      )))
+    )
   )
   val man = AirportConfig(
     portCode = "MAN",
@@ -438,7 +480,20 @@ object AirportConfigs {
       "Evening shift, T1, {date}, 17:00, 23:59, 22"
     ),
     role = MANAccess,
-    egateSplitPercentages = Map("T1" -> 0.7968, "T2" -> 0.7140, "T3" -> 0.7038)
+    egateSplitPercentages = Map("T1" -> 0.7968, "T2" -> 0.7140, "T3" -> 0.7038),
+    terminalPaxTypeQueueAllocation = Map(
+      "T1" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+        EGate -> 0.7968,
+        EeaDesk -> (1.0 - 0.7968)
+      ))),
+      "T2" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+        EGate -> 0.7140,
+        EeaDesk -> (1.0 - 0.7140)
+      ))),
+      "T3" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+        EGate -> 0.7038,
+        EeaDesk -> (1.0 - 0.7038)
+      ))))
   )
   private val lhrDefaultTerminalProcessingTimes = Map(
     eeaMachineReadableToDesk -> 25d / 60,
@@ -518,7 +573,25 @@ object AirportConfigs {
     hasEstChox = true,
     exportQueueOrder = Queues.exportQueueOrderWithFastTrack,
     role = LHRAccess,
-    egateSplitPercentages = Map("T2" -> 0.8102, "T3" -> 0.8075, "T4" -> 0.7687, "T5" -> 0.8466)
+    egateSplitPercentages = Map("T2" -> 0.8102, "T3" -> 0.8075, "T4" -> 0.8075, "T5" -> 0.8075),
+    terminalPaxTypeQueueAllocation = Map(
+      "T2" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+        EGate -> 0.8102,
+        EeaDesk -> (1.0 - 0.8102)
+      ))),
+      "T3" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+        EGate -> 0.8075,
+        EeaDesk -> (1.0 - 0.8075)
+      ))),
+      "T4" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+        EGate -> 0.8075,
+        EeaDesk -> (1.0 - 0.8075)
+      ))),
+      "T5" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+        EGate -> 0.8075,
+        EeaDesk -> (1.0 - 0.8075)
+      )))
+    )
   )
   val ltn = AirportConfig(
     portCode = "LTN",
@@ -538,7 +611,13 @@ object AirportConfigs {
       )
     ),
     role = LTNAccess,
-    egateSplitPercentages = Map("T1" -> 0.7922)
+    egateSplitPercentages = Map("T1" -> 0.7922),
+    terminalPaxTypeQueueAllocation = Map(
+      "T1" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+        EGate -> 0.7922,
+        EeaDesk -> (1.0 - 0.7922)
+      )))
+    )
   )
   val ema = AirportConfig(
     portCode = "EMA",
@@ -582,7 +661,13 @@ object AirportConfigs {
     // A neater fix would be to produce the missing snapshots retrospectively, but that would be quite a big job for a
     // minor gain
     portStateSnapshotInterval = 10000,
-    egateSplitPercentages = Map("T1" -> 0.6993)
+    egateSplitPercentages = Map("T1" -> 0.6993),
+    terminalPaxTypeQueueAllocation = Map(
+      "T1" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+        EGate -> 0.6993,
+        EeaDesk -> (1.0 - 0.6993)
+      )))
+    )
   )
 
   val brs = AirportConfig(
@@ -622,7 +707,13 @@ object AirportConfigs {
       )
     ),
     role = BRSAccess,
-    egateSplitPercentages = Map("T1" -> 0.7742)
+    egateSplitPercentages = Map("T1" -> 0.7742),
+    terminalPaxTypeQueueAllocation = Map(
+      "T1" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+        EGate -> 0.7742,
+        EeaDesk -> (1.0 - 0.7742)
+      )))
+    )
   )
 
   val bhx = AirportConfig(
@@ -672,7 +763,21 @@ object AirportConfigs {
       )
     ),
     role = BHXAccess,
-    egateSplitPercentages = Map("T1" -> 0.7968, "T2" -> 0.7140, "T3" -> 0.7038)
+    egateSplitPercentages = Map("T1" -> 0.7968, "T2" -> 0.7140, "T3" -> 0.7038),
+    terminalPaxTypeQueueAllocation = Map(
+      "T1" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+        EGate -> 0.7968,
+        EeaDesk -> (1.0 - 0.7968)
+      ))),
+      "T2" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+        EGate -> 0.7140,
+        EeaDesk -> (1.0 - 0.7140)
+      ))),
+      "T3" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+        EGate -> 0.7038,
+        EeaDesk -> (1.0 - 0.7038)
+      )))
+    )
   )
 
   val test = AirportConfig(
@@ -708,7 +813,13 @@ object AirportConfigs {
       )
     ),
     role = TestAccess,
-    egateSplitPercentages = Map("T1" -> 0.6)
+    egateSplitPercentages = Map("T1" -> 0.6),
+    terminalPaxTypeQueueAllocation = Map(
+      "T1" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+        EGate -> 0.7968,
+        EeaDesk -> (1.0 - 0.7968)
+      )))
+    )
   )
 
   val test2 = AirportConfig(
@@ -753,7 +864,12 @@ object AirportConfigs {
       )
     ),
     role = Test2Access,
-    egateSplitPercentages = Map("T1" -> 0.6)
+    egateSplitPercentages = Map("T1" -> 0.6),
+    terminalPaxTypeQueueAllocation = Map(
+      "T1" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+        EGate -> 0.7968,
+        EeaDesk -> (1.0 - 0.7968)
+      ))))
   )
 
   val nationalityProcessingTimesHalved: Map[String, Double] = ProcessingTimes.nationalityProcessingTimes.mapValues(_ / 2)
