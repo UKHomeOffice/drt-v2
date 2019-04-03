@@ -99,14 +99,14 @@ describe('Arrivals page', () => {
     "Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical " +
     "EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal " +
     "Average Non-EEA,Terminal Average Fast Track" + "\n" +
-    "TS0123,TS0123,AMS,46/44R,On Chocks," + schDateString + "," + schTimeLocal + "," + estTimeLocal + "," + actTimeLocal + "," + estChoxTimeLocal + "," + actChoxTimeLocal + "," + pcpTimeLocal + ",51,51,17,0,34,,,,,,13,37,1,";
+    "TS0123,TS0123,AMS,46/44R,On Chocks," + schDateString + "," + schTimeLocal + "," + estTimeLocal + "," + actTimeLocal + "," + estChoxTimeLocal + "," + actChoxTimeLocal + "," + pcpTimeLocal + ",51,51,14,3,34,,,,,,13,37,1,";
 
   const csvWithAPISplits = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival," +
     "Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates," +
     "Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal " +
     "Average Non-EEA,Terminal Average Fast Track,API Actual - EEA (Machine Readable),API Actual - Non EEA (Non Visa)," +
     "API Actual - Non EEA (Visa),API Actual - eGates" + "\n" +
-    "TS0123,TS0123,AMS,46/44R,On Chocks," + schDateString + "," + schTimeLocal + "," + estTimeLocal + "," + actTimeLocal + "," + estChoxTimeLocal + "," + actChoxTimeLocal + "," + pcpTimeLocal + ",51,51,17,0,34,,,,,,13,37,1,,0.0,1.0,1.0,1.0";
+    "TS0123,TS0123,AMS,46/44R,On Chocks," + schDateString + "," + schTimeLocal + "," + estTimeLocal + "," + actTimeLocal + "," + estChoxTimeLocal + "," + actChoxTimeLocal + "," + pcpTimeLocal + ",51,51,14,3,34,,,,,,13,37,1,,0.0,1.0,1.0,1.0";
 
   it('Displays a flight after it has been ingested via the live feed', () => {
     cy
@@ -119,7 +119,7 @@ describe('Arrivals page', () => {
       .addManifest(manifest)
       .get('.pax-api')
       .request('GET', '/export/arrivals/' + millis + '/T1?startHour=0&endHour=24').then((resp) => {
-        expect(resp.body).to.equal(csvWithNoApiSplits);
+        expect(resp.body).to.equal(csvWithNoApiSplits, "Api splits incorrect for regular users");
       });
   });
 
@@ -134,7 +134,7 @@ describe('Arrivals page', () => {
         url: '/export/arrivals/' + millis + '/T1?startHour=0&endHour=24',
       })
       .then((resp) => {
-        expect(resp.body).to.equal(csvWithAPISplits)
+        expect(resp.body).to.equal(csvWithAPISplits, "Api splits incorrect for users with API reporting role")
       })
   });
 });

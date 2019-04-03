@@ -195,6 +195,7 @@ object CSVData {
 
   def actualAPISplitsForFlightInHeadingOrder(flight: ApiFlightWithSplits, headings: Seq[String]): Seq[Double] =
     headings.map(h => actualAPISplitsAndHeadingsFromFlight(flight).toMap.getOrElse(h, 0.0))
+      .map(n => Math.round(n).toDouble)
 
   def actualAPIDataForFlights(flights: List[ApiFlightWithSplits], headings: Seq[String]): List[Seq[Double]] = flights
     .map(f => actualAPISplitsForFlightInHeadingOrder(f, headings))

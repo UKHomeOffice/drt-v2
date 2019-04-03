@@ -9,6 +9,7 @@ describe('Global error handler', function () {
     });
     return postData
   }
+  
 
   function preventExceptionFromFailingTest() {
     cy.on('uncaught:exception', (str) => false);
