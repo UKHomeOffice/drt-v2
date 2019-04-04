@@ -276,7 +276,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   }
 
   def startManifestsGraph(maybeRegisteredArrivals: Option[RegisteredArrivals]): SourceQueueWithComplete[List[Arrival]] = {
-    val minimumRefreshIntervalMillis = 30 * 60 * 60 * 10000
+    val minimumRefreshIntervalMillis = 15 * 60 * 1000
 
     lazy val batchStage: BatchStage = new BatchStage(now, Crunch.isDueLookup, 25, expireAfterMillis, maybeRegisteredArrivals, minimumRefreshIntervalMillis)
     lazy val lookupStage: LookupStage = new LookupStage(airportConfig.portCode, lookup)
