@@ -32,8 +32,7 @@ object WorkloadCalculator {
           val splitsWithoutTransit = splitsToUse.splits.filter(_.queueType != Queues.Transfer)
           val totalSplitsPax = splitsWithoutTransit.toList.map(_.paxCount).sum
           splitsWithoutTransit.map(qc => qc.copy(paxCount = qc.paxCount / totalSplitsPax))
-        case x =>
-          splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / 100))
+        case _ => splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / 100))
       }
 
       val splitsWithoutTransit = splitRatios.filterNot(_.queueType == Queues.Transfer)
