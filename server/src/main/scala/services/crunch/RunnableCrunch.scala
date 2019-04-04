@@ -8,8 +8,10 @@ import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
+import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
+import server.feeds._
+import services.SDate
 import services.graphstages.Crunch.{Loads, PortStateDiff}
 import services.graphstages._
 
@@ -138,8 +140,17 @@ object RunnableCrunch {
           liveArrivals ~> liveArrivalsDiffing ~> liveArrivalsFanOut ~> arrivals.in2
                                                  liveArrivalsFanOut ~> liveArrivalsSink
 
-          manifests ~> manifestGraphKillSwitch ~> manifestsFanOut ~> arrivalSplits.in1
-                                                  manifestsFanOut ~> manifestsSink
+          manifests ~> manifestGraphKillSwitch ~> manifestsFanOut
+              manifestsFanOut.out(0)
+                .collect {
+                  case ManifestsFeedSuccess(DqManifests(_, ms), createdAt) => BestManifestsFeedSuccess(ms.toSeq.map(vm => BestAvailableManifest(vm)), createdAt)
+                  case bmfs: BestManifestsFeedSuccess => bmfs
+                }
+                .conflate[ManifestsFeedResponse] {
+                  case (BestManifestsFeedSuccess(acc, _), BestManifestsFeedSuccess(newManifests, createdAt)) =>
+                    BestManifestsFeedSuccess(acc ++ newManifests, createdAt)
+                } ~> arrivalSplits.in1
+              manifestsFanOut.out(1) ~> manifestsSink
 
           shifts          ~> staff.in0
           fixedPoints     ~> staff.in1

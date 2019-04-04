@@ -92,13 +92,7 @@ class ArrivalSplitsGraphStage(name: String = "",
         val start = SDate.now()
         log.info(s"inSplits onPush called")
 
-        val incoming: ManifestsFeedResponse = grab(inManifests) match {
-          case ManifestsFeedSuccess(DqManifests(_, manifests), createdAt) =>
-            BestManifestsFeedSuccess(manifests.toSeq.map(vm => BestAvailableManifest(vm, portCode)), createdAt)
-          case ManifestsFeedFailure(msg, createdAt) => BestManifestsFeedFailure(msg, createdAt)
-          case bms: BestManifestsFeedSuccess => bms
-          case bmf: BestManifestsFeedFailure => bmf
-        }
+        val incoming: ManifestsFeedResponse = grab(inManifests)
 
         incoming match {
           case BestManifestsFeedSuccess(bestAvailableManifests, connectedAt) =>

@@ -174,7 +174,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
       visa
     ))
 
-    val result = BestAvailableManifest(vm, "LHR")
+    val result = BestAvailableManifest(vm)
 
     val expected = BestAvailableManifest(
       ApiSplitsWithHistoricalEGateAndFTPercentages,"LHR","JFK","0001","BA",SDate("2017-01-01"),
