@@ -17,19 +17,19 @@ case class BestAvailableManifest(source: String,
                                  passengerList: List[ManifestPassengerProfile])
 
 object BestAvailableManifest {
-  def apply(manifest: VoyageManifest, portCode: String): BestAvailableManifest = BestAvailableManifest(
+  def apply(manifest: VoyageManifest): BestAvailableManifest = BestAvailableManifest(
     SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
     manifest.ArrivalPortCode,
     manifest.DeparturePortCode,
     manifest.VoyageNumber,
     manifest.CarrierCode,
     manifest.scheduleArrivalDateTime.getOrElse(SDate.now()),
-    manifest.PassengerList.map(p => ManifestPassengerProfile(p, portCode)))
+    manifest.PassengerList.map(p => ManifestPassengerProfile(p, manifest.ArrivalPortCode)))
 
   def apply(source: String,
             uniqueArrivalKey: UniqueArrivalKey,
             passengerList: List[ManifestPassengerProfile]): BestAvailableManifest = BestAvailableManifest(
-    SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
+    source,
     uniqueArrivalKey.arrivalPort,
     uniqueArrivalKey.departurePort,
     uniqueArrivalKey.voyageNumber,

@@ -127,8 +127,8 @@ class KeyCloakGroupsSpec extends Specification {
   }
 
   "Given a list of groups and a corresponding list of users in each of those groups " +
-    "And a number of users who are not in any group"
-  "When I ask for a csv export of users with their groups " +
+    "And a number of users who are not in any group" +
+    "When I ask for a csv export of users with their groups " +
     "Then I should see a list of users with all the groups each is in and all the users with no  groups" >> {
 
     val usersPage1 = List(
