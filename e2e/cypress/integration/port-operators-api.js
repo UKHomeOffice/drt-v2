@@ -14,8 +14,10 @@ Cypress.Commands.add('waitForArrivalToAppearInTheSystem', () => {
 });
 
 describe('Advanced Passenger Information Splits exposed to Port Operators', function () {
-  const now = moment();
-  const schDateString = now.format("YYYY-MM-DD");
+  const now = moment.utc();
+  const scheduledDate = now.hour(0).minute(55)
+  const localTimeScheduledDate = scheduledDate.tz("Europe/London")
+
   const day = now.date();
   const month = now.month() + 1;
   const year = now.year();
@@ -60,14 +62,15 @@ describe('Advanced Passenger Information Splits exposed to Port Operators', func
   });
 
   it("Ok when there are arrivals on the date and user has the correct role", function () {
+   cy.log(scheduledDate.format("YYYY-MM-DDTHH:mmZ"));
     cy
-      .addFlight(schDateString + "T00:55:00Z", schDateString + "T00:55:00Z", schDateString + "T01:01:00Z", schDateString + "T01:05:00Z", schDateString + "T00:15:00Z")
+      .addFlightWithFlightCode("TS0123", scheduledDate.format("YYYY-MM-DDTHH:mmZ"))
       .setRoles(["test", "api:view-port-arrivals"])
       .waitForArrivalToAppearInTheSystem()
       .downloadCsv("T1", year, month, day).then((response) => {
         expect(response.status).to.eq(200);
         expect(response.body).to.contain(header);
-        expect(response.body).to.contain(schDateString + ',' + '00:15');
+        expect(response.body).to.contain(localTimeScheduledDate.format("YYYY-MM-DD") + ',' + localTimeScheduledDate.format("HH:mm"));
         expect(response.headers['content-disposition']).to.eq("attachment; filename=export-splits-TEST-T1-" + year + "-" + month + "-" + day + ".csv")
       });
   })

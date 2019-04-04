@@ -9,6 +9,7 @@ import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.SplitSources._
 import drt.shared._
+import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import server.feeds.{ArrivalsFeedSuccess, ManifestsFeedSuccess}
 import services.SDate
@@ -96,7 +97,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     offerAndWait(crunch.manifestsInput, inputManifests)
 
-    val expected = Map(Queues.EeaDesk -> 0.0, Queues.EGate -> 10.0)
+    val expected = Map(Queues.EeaDesk -> 2.0, Queues.EGate -> 8.0)
 
     crunch.liveTestProbe.fishForMessage(3 seconds) {
       case ps: PortState =>
@@ -145,7 +146,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     offerAndWait(crunch.manifestsInput, inputManifests)
 
-    val expected = Map(Queues.EeaDesk -> 0.0, Queues.EGate -> 5.0)
+    val expected = Map(Queues.EeaDesk -> 1.0, Queues.EGate -> 4.0)
 
     crunch.liveTestProbe.fishForMessage(3 seconds) {
       case ps: PortState =>
@@ -161,6 +162,33 @@ class VoyageManifestsSpec extends CrunchTestLike {
     crunch.liveArrivalsInput.complete()
 
     success
+  }
+
+  "Given a voyage manifest then I should get a BestAvailableManifest that matches it" >> {
+    val vm = VoyageManifest(DqEventCodes.CheckIn, "LHR", "JFK", "0001", "BA", "2017-01-01", "00:00", List(
+      inTransitFlag,
+      inTransitCountry,
+      euPassport,
+      euIdCard,
+      visa,
+      visa
+    ))
+
+    val result = BestAvailableManifest(vm, "LHR")
+
+    val expected = BestAvailableManifest(
+      ApiSplitsWithHistoricalEGateAndFTPercentages,"LHR","JFK","0001","BA",SDate("2017-01-01"),
+      List(
+        ManifestPassengerProfile("GBR",Some("P"),Some(22),Some(true)),
+        ManifestPassengerProfile("GBR",Some("P"),Some(22),Some(true)),
+        ManifestPassengerProfile("GBR",Some("P"),Some(22),Some(false)),
+        ManifestPassengerProfile("GBR",Some("I"),Some(22),Some(false)),
+        ManifestPassengerProfile("AFG",Some("P"),Some(22),Some(false)),
+        ManifestPassengerProfile("AFG",Some("P"),Some(22),Some(false))
+      )
+    )
+
+    result === expected
   }
 
   "Given a VoyageManifest with 2 transfers, 1 Eea Passport, 1 Eea Id card, and 2 visa nationals " +
@@ -199,7 +227,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     offerAndWait(crunch.manifestsInput, inputManifests)
 
-    val expected = Map(Queues.EeaDesk -> 1.0, Queues.EGate -> 1.0, Queues.NonEeaDesk -> 2.0)
+    val expected = Map(Queues.EeaDesk -> 1.2, Queues.EGate -> 0.8, Queues.NonEeaDesk -> 2.0)
 
     crunch.liveTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>

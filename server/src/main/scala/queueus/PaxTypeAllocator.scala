@@ -64,5 +64,5 @@ case class B5JPlusWithTransitTypeAllocator(b5JStartDate: SDateLike) extends PaxT
     if (bestAvailableManifest.scheduled.millisSinceEpoch > b5JStartDate.millisSinceEpoch)
       withTransitAndB5JPlus(manifestPassengerProfile)
     else
-      noTransit(manifestPassengerProfile)
+      withTransit(manifestPassengerProfile)
 }

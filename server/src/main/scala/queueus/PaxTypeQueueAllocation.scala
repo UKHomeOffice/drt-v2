@@ -45,10 +45,10 @@ case class PaxTypeQueueAllocation(paxTypeAllocator: PaxTypeAllocator, queueAlloc
         )
     }.values.toSet
 
-    Splits(splits, bestManifest.source, None, Ratio)
+    Splits(splits, bestManifest.source, None, PaxNumbers)
   }
 
-  private def incrementNationalityCount(mpp: ManifestPassengerProfile, paxCount: Double, apiPaxTypeAndQueueCount: ApiPaxTypeAndQueueCount) = {
+  def incrementNationalityCount(mpp: ManifestPassengerProfile, paxCount: Double, apiPaxTypeAndQueueCount: ApiPaxTypeAndQueueCount) = {
     apiPaxTypeAndQueueCount.nationalities.map(nats => {
       val existingOfNationality: Double = nats.getOrElse(mpp.nationality, 0)
       val newNats: Map[String, Double] = nats + (mpp.nationality -> (existingOfNationality + paxCount))
