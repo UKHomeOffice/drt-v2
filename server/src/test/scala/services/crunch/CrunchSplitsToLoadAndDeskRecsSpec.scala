@@ -141,8 +141,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
     "CSV split ratios " >> {
       "Given a flight with 20 passengers and one CSV split of 25% to eea desk " +
-        "When request a crunch " +
-        "Then I should see a pax load of 5 (20 * 0.25)" >> {
+      "When request a crunch " +
+      "Then I should see a pax load of 5 (20 * 0.25)" >> {
         val scheduled = "2017-01-01T00:00Z"
 
         val flight = ArrivalGenerator.apiFlight(flightId = Option(1), schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(20))
@@ -209,8 +209,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         offerAndWait(crunch.manifestsInput, voyageManifests)
 
         val expected = Map("T1" -> Map(
-          Queues.EeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0),
-          Queues.EGate -> Seq(10.0, 0.0, 0.0, 0.0, 0.0)
+          Queues.EeaDesk -> Seq(2.0, 0.0, 0.0, 0.0, 0.0),
+          Queues.EGate -> Seq(8.0, 0.0, 0.0, 0.0, 0.0)
         ))
 
         crunch.liveTestProbe.fishForMessage(5 seconds) {
