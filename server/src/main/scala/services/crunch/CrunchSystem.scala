@@ -121,12 +121,18 @@ object CrunchSystem {
         now = props.now,
         maxDaysToCrunch = props.maxDaysToCrunch)
     else {
-      val queueAllocator = TerminalQueueAllocator(props.airportConfig.terminalPaxTypeQueueAllocation)
-      val paxTypeAllocator = if (props.airportConfig.portCode == "LHR")
-        B5JPlusWithTransitTypeAllocator(props.b5JStartDate)
+
+      val ptqa = if (props.airportConfig.portCode == "LHR")
+        PaxTypeQueueAllocation(
+          B5JPlusWithTransitTypeAllocator(props.b5JStartDate),
+          TerminalQueueAllocatorWithFastTrack(props.airportConfig.terminalPaxTypeQueueAllocation)
+        )
       else
-        B5JPlusTypeAllocator(props.b5JStartDate)
-      val ptqa = PaxTypeQueueAllocation(paxTypeAllocator, queueAllocator)
+        PaxTypeQueueAllocation(
+          B5JPlusTypeAllocator(props.b5JStartDate),
+          TerminalQueueAllocator(props.airportConfig.terminalPaxTypeQueueAllocation)
+        )
+
       new ArrivalSplitsGraphStage(
         name = props.logLabel,
         props.airportConfig.portCode,
