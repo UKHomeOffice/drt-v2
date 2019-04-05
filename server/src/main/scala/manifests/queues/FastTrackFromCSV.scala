@@ -9,9 +9,7 @@ case class CarrierFastTrackSplit(iataCode: String, carrier: String, fastTrackSpl
 
 object FastTrackFromCSV {
 
-  lazy val fastTrackCarriers: Seq[CarrierFastTrackSplit] = loadFastTrack()
-
-  def loadFastTrack(): Seq[CarrierFastTrackSplit] = {
+  lazy val fastTrackCarriers: Seq[CarrierFastTrackSplit] = {
     log.info(s"Loading fast track splits from CSV")
     val csvLines = Source
       .fromInputStream(getClass.getClassLoader.getResourceAsStream("lhr-fast-track.csv"))
