@@ -6,7 +6,7 @@ import drt.shared.ArrivalKey
 import manifests.passengers.BestAvailableManifest
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import org.slf4j.{Logger, LoggerFactory}
-import services.SDate
+import services.{OfferHandler, RetryDelays, SDate}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -43,7 +43,7 @@ class LookupStage(portCode: String, manifestLookup: ManifestLookupLike) extends 
         val incomingArrivals = grab(inArrivals)
 
         val start = SDate.now().millisSinceEpoch
-        val manifestTries: List[Option[BestAvailableManifest]] = Try(Await.result(futureManifests(incomingArrivals), 30 seconds)) match {
+        val manifestTries: List[Option[BestAvailableManifest]] = Try(Await.result(futureManifests(incomingArrivals), 60 seconds)) match {
           case Success(arrivalsWithMaybeManifests) =>
             log.info(s"lookups took ${SDate.now().millisSinceEpoch - start}ms")
             arrivalsWithMaybeManifests.map {
