@@ -5,7 +5,7 @@ import manifests.passengers.PassengerTypeCalculator.log
 import scala.io.Source
 import scala.util.{Success, Try}
 
-case class CarrierFastTrackSplit(iataCode: String, carrier: String, fastTrackSplit: Double)
+case class CarrierFastTrackSplit(iataCode: String, icaoCode: String, carrier: String, fastTrackSplit: Double)
 
 object FastTrackFromCSV {
 
@@ -18,7 +18,7 @@ object FastTrackFromCSV {
 
     csvLines.map(l => Try {
       val row = l.split(",")
-      CarrierFastTrackSplit(row(0), row(1), row(2).toDouble)
+      CarrierFastTrackSplit(row(0), row(1), row(2), row(3).toDouble)
     }).collect {
       case Success(s) => s
     }.toSeq

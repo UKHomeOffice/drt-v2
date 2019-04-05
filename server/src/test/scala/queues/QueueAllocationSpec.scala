@@ -279,7 +279,7 @@ class QueueAllocationSpec extends Specification {
     result === expected
   }
 
-  "Given a BestAvailableManifest with 10 NonEEA Passengers on a Flight with no FastTrack at LHR " +
+  "Given a BestAvailableManifest with 1 NonEEA Passenger on a Flight with no FastTrack at LHR " +
     "Then I should get 1 Pax to NonEEA Queue and 0 to FastTrack" >> {
 
     val bestManifest = BestAvailableManifest(
@@ -299,6 +299,41 @@ class QueueAllocationSpec extends Specification {
     val expected = Splits(
       Set(
         ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Some(Map("ZWE" -> 1)))
+      ),
+      "DC",
+      None,
+      PaxNumbers
+    )
+
+    val result = PaxTypeQueueAllocation(
+      B5JPlusWithTransitTypeAllocator(b5JStartDate),
+      fastTrackQueueAllocator
+    ).toSplits("T1", bestManifest)
+
+    result === expected
+  }
+
+  "Given a BestAvailableManifest with 1 NonEEA Passengers on a Flight with FastTrack and an ICAO code at LHR " +
+    "Then I should get 0.8 Pax to NonEEA Queue and 0.2 to FastTrack" >> {
+
+    val bestManifest = BestAvailableManifest(
+      "DC",
+      "LHR",
+      "USA",
+      "234",
+      "SAA",
+      SDate("2019-01-22T06:24:00Z"),
+      List(
+        ManifestPassengerProfile("ZWE", Some(DocType.Passport), Some(22), Some(false))
+      )
+    )
+
+    val b5JStartDate = SDate("2019-06-01T00:00:00Z")
+
+    val expected = Splits(
+      Set(
+        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 0.2, Some(Map("ZWE" -> 0.2))),
+        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 0.8, Some(Map("ZWE" -> 0.8)))
       ),
       "DC",
       None,

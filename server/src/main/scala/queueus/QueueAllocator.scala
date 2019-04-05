@@ -43,7 +43,7 @@ case class TerminalQueueAllocatorWithFastTrack(queueRatios: Map[String, Map[PaxT
   def apply(terminal: String, bestAvailableManifest: BestAvailableManifest)(paxType: PaxType): Seq[(QueueType, Double)] =
     if (paxType == NonVisaNational || paxType == VisaNational)
       FastTrackFromCSV.fastTrackCarriers
-        .find(_.iataCode == bestAvailableManifest.carrierCode)
+        .find(ftc => ftc.iataCode == bestAvailableManifest.carrierCode || ftc.icaoCode == bestAvailableManifest.carrierCode)
         .map(fts => {
           Seq((Queues.FastTrack, fts.fastTrackSplit), (Queues.NonEeaDesk, 1.0 - fts.fastTrackSplit))
         })
