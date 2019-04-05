@@ -105,8 +105,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
             and departure_port_code=${uniqueArrivalKey.departurePort}
             and voyage_number=${uniqueArrivalKey.voyageNumber.toInt}
             and day_of_week = EXTRACT(DOW FROM TIMESTAMP '#$scheduledTs')
-            and week_of_year >= EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs')
-            and week_of_year <= EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')
+            and week_of_year BETWEEN EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs') and EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')
           GROUP BY
             arrival_port_code,
             departure_port_code,
@@ -133,8 +132,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
             and arrival_port_code=${uniqueArrivalKey.arrivalPort}
             and departure_port_code=${uniqueArrivalKey.departurePort}
             and voyage_number=${uniqueArrivalKey.voyageNumber.toInt}
-            and week_of_year >= EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs')
-            and week_of_year <= EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')
+            and week_of_year BETWEEN EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs') and EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')
           GROUP BY
             arrival_port_code,
             departure_port_code,
@@ -161,8 +159,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
             and arrival_port_code=${uniqueArrivalKey.arrivalPort}
             and departure_port_code=${uniqueArrivalKey.departurePort}
             and day_of_week = EXTRACT(DOW FROM TIMESTAMP '#$scheduledTs')
-            and week_of_year >= EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs')
-            and week_of_year <= EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')
+            and week_of_year BETWEEN EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs') and EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')
           GROUP BY
             arrival_port_code,
             departure_port_code,
