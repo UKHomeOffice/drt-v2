@@ -98,6 +98,7 @@ case class DrtConfigParameters(config: Configuration) {
   val username: String = ConfigFactory.load.getString("acl.username")
   val path: String = ConfigFactory.load.getString("acl.keypath")
   val recrunchOnStart: Boolean = config.getOptional[Boolean]("crunch.recrunch-on-start").getOrElse(false)
+  val resetRegisteredArrivalOnStart: Boolean = config.getOptional[Boolean]("crunch.manifests.reset-registered-arrivals-on-start").getOrElse(false)
   val useNationalityBasedProcessingTimes: Boolean = config.getOptional[String]("feature-flags.nationality-based-processing-times").isDefined
 
   val useLegacyManifests: Boolean = config.getOptional[Boolean]("feature-flags.use-legacy-manifests").getOrElse(false)
@@ -230,7 +231,11 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         new S3ManifestPoller(crunchInputs.manifestsResponse, airportConfig.portCode, latestZipFileName, s3ApiProvider).startPollingForManifests()
 
         if (!params.useLegacyManifests) {
-          val manifestsSourceQueue = startManifestsGraph(maybeRegisteredArrivals)
+          val initialRegisteredArrivals = if (params.resetRegisteredArrivalOnStart) {
+            val maybeAllArrivals = initialPortState.map(_.flights.values.map(fws => (ArrivalKey(fws.apiFlight), None)).toMap)
+            Option(RegisteredArrivals(maybeAllArrivals.getOrElse(Map())))
+          } else maybeRegisteredArrivals
+          val manifestsSourceQueue = startManifestsGraph(initialRegisteredArrivals)
           voyageManifestsRequestActor ! SubscribeRequestQueue(manifestsSourceQueue)
           voyageManifestsRequestActor ! SubscribeResponseQueue(crunchInputs.manifestsResponse)
         }

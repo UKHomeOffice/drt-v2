@@ -157,10 +157,5 @@ class BatchStage(now: () => SDateLike,
     private def registerArrival(arrival: ArrivalKey): Unit = {
       registeredArrivals = registeredArrivals.updated(arrival, None)
     }
-
-    private def addToLookupQueueWithCheck(arrivalKey: ArrivalKey): Unit =
-      if (!lookupQueue.contains(arrivalKey))
-        lookupQueue = lookupQueue + arrivalKey
-
   }
 }
