@@ -101,6 +101,8 @@ case class DrtConfigParameters(config: Configuration) {
   val resetRegisteredArrivalOnStart: Boolean = config.getOptional[Boolean]("crunch.manifests.reset-registered-arrivals-on-start").getOrElse(false)
   val useNationalityBasedProcessingTimes: Boolean = config.getOptional[String]("feature-flags.nationality-based-processing-times").isDefined
 
+  val manifestLookupBatchSize: Int = config.getOptional[Int]("crunch.manifests.lookup-batch-size").getOrElse(5)
+
   val useLegacyManifests: Boolean = config.getOptional[Boolean]("feature-flags.use-legacy-manifests").getOrElse(false)
   val useSplitsPrediction: Boolean = config.getOptional[String]("feature-flags.use-splits-prediction").isDefined
   val rawSplitsUrl: String = config.getOptional[String]("crunch.splits.raw-data-path").getOrElse("/dev/null")
@@ -283,7 +285,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   def startManifestsGraph(maybeRegisteredArrivals: Option[RegisteredArrivals]): SourceQueueWithComplete[List[Arrival]] = {
     val minimumRefreshIntervalMillis = 15 * 60 * 1000
 
-    lazy val batchStage: BatchStage = new BatchStage(now, Crunch.isDueLookup, 25, expireAfterMillis, maybeRegisteredArrivals, minimumRefreshIntervalMillis)
+    lazy val batchStage: BatchStage = new BatchStage(now, Crunch.isDueLookup, params.manifestLookupBatchSize, expireAfterMillis, maybeRegisteredArrivals, minimumRefreshIntervalMillis)
     lazy val lookupStage: LookupStage = new LookupStage(airportConfig.portCode, lookup)
 
     ManifestsGraph(manifestsArrivalRequestSource, batchStage, lookupStage, voyageManifestsRequestActor, registeredArrivalsActor).run
