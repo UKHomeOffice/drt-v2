@@ -232,7 +232,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
         if (!params.useLegacyManifests) {
           val initialRegisteredArrivals = if (params.resetRegisteredArrivalOnStart) {
-            val maybeAllArrivals = initialPortState.map(_.flights.values.map(k => (ArrivalKey(k.apiFlight), None)).toMap)
+            val maybeAllArrivals = initialPortState.map(_.flights.values.map(fws => (ArrivalKey(fws.apiFlight), None)).toMap)
             Option(RegisteredArrivals(maybeAllArrivals.getOrElse(Map())))
           } else maybeRegisteredArrivals
           val manifestsSourceQueue = startManifestsGraph(initialRegisteredArrivals)
