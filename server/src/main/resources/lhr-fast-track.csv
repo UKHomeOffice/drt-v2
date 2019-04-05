@@ -1,58 +1,58 @@
-Airline Code,Airline,Fast Track Ratio
-SU,Aeroflot,0.2
-AM,Aeromexico,0.2
-KC,Air Astana,0.2
-AC,Air Canada,0.2
-CA,Air China,0.2
-AI,Air India,0.2
-MK,Air Mauritius,0.2
-NZ,Air New Zealand,0.2
-JU,Air Serbia,0.2
-AA,American Airlines,0.2
-NH,ANA,0.2
-W3,Arik Air,0.2
-OZ,Asiana Airlines,0.2
-J2,Azerbaijan Airlines,0.2
-AV,Avianca,0.2
-BG,Biman Bangladesh Airlines,0.2
-BA,British Airways International,0.2
-CX,Cathay Pacific Airways,0.2
-MU,China Eastern,0.2
-CZ,China Southern,0.2
-DL,Delta,0.2
-MS,Egyptair,0.2
-EK,Emirates,0.2
-ET,Ethopian,0.2
-EY,Eithad Airlines,0.2
-LY,El Al,0.2
-BR,EVA Air,0.2
-GA,Garuda Indonesia,0.2
-GF,Gulf Air,0.2
-JL,Japan Airlines,0.2
-9W,Jet Airways,0.2
-KQ,Kenya Airways,0.2
-KE,Korean Air,0.2
-KU,Kuwait Airways,0.2
-MH,Malaysia Airlines,0.2
-ME,MEA,0.2
-WY,Oman Air,0.2
-PK,Pakistan International Airlines,0.2
-QF,Qantas,0.2
-QR,Qatar Airways,0.2
-AT,Royal Air Maroc,0.2
-BI,Royal Brunei Airlines,0.2
-RJ,Royal Jordian,0.2
-SV,Saudia Airlines,0.2
-SQ,Singapore Airlines,0.2
-SA,South African Airways,0.2
-UL,Sri Lankan Airlines,0.2
-JJ,TAM,0.2
-RO,Tarom,0.2
-TG,Thai Airways,0.2
-S5,Transaero,0.2
-TU,Tunisair,0.2
-TK,Turkish Airlines,0.2
-UA,United Airlines,0.2
-HY,Uzbekistan Airways,0.2
-VN,Vietnam Airlines,0.2
-VS,Virgin Atlantic,0.2
+IATA Code,ICAO Code,Airline,Arrivals,Fast Track Split
+SU,AFL,Aeroflot,0.2
+AM,AMX ,Aeromexico,0.2
+KC,KZR ,Air Astana,0.2
+AC,ACA,Air Canada,0.2
+CA,CCA,Air China,0.2
+AI,AIC,Air India,0.2
+MK,MAU,Air Mauritius,0.2
+NZ,ANZ,Air New Zealand,0.2
+JU,ASL,Air Serbia,0.2
+AA,AAL,American Airlines,0.2
+NH,ANA,ANA,0.2
+W3,ARA,Arik Air,0.2
+OZ,AAR,Asiana Airlines,0.2
+J2,AHY,Azerbaijan Airlines,0.2
+AV,AVA,Avianca,0.2
+BG,BBC,Biman Bangladesh Airlines,0.2
+BA,BAW,British Airways International,0.2
+CX,CPA,Cathay Pacific Airways,0.2
+MU,CES,China Eastern,0.2
+CZ,CSN,China Southern,0.2
+DL,DAL,Delta,0.2
+MS,MSR,Egyptair,0.2
+EK,UAE,Emirates,0.2
+ET,ETH,Ethiopian,0.2
+EY,ETD,EtIhad Airlines,0.2
+LY,ELY,El Al,0.2
+BR,EVA,EVA Air,0.2
+GA,GIA,Garuda Indonesia,0.2
+GF,GFA,Gulf Air,0.2
+JL,JAL,Japan Airlines,0.2
+9W,JAI,Jet Airways,0.2
+KQ,KQA,Kenya Airways,0.2
+KE,KAL,Korean Air,0.2
+KU,KAC,Kuwait Airways,0.2
+MH,MAS,Malaysia Airlines,0.2
+ME,MEA,Middle East Airlines,0.2
+WY,OMA,Oman Air,0.2
+PK,PKA,Pakistan International Airlines,0.2
+QF,QFA,Qantas,0.2
+QR,QTR,Qatar Airways,0.2
+AT,RAM,Royal Air Maroc,0.2
+BI,RBA,Royal Brunei Airlines,0.2
+RJ,RJA,Royal Jordian,0.2
+SV,SVA,Saudia Airlines,0.2
+SQ,SIA,Singapore Airlines,0.2
+SA,SAA,South African Airways,0.2
+UL,ALK,Sri Lankan Airlines,0.2
+JJ,TAM,TAM,0.2
+RO,ROT,Tarom,0.2
+TG,THA,Thai Airways,0.2
+UN,TSO,Transaero,0.2
+TU,TAR,Tunisair,0.2
+TK,THY,Turkish Airlines,0.2
+UA,UAL,United Airlines,0.2
+HY,UZB,Uzbekistan Airways,0.2
+VN,HVN,Vietnam Airlines,0.2
+VS,VIR,Virgin Atlantic,0.2
