@@ -2,8 +2,9 @@ package queueus
 
 import drt.shared.PassengerSplits.QueueType
 import drt.shared.PaxTypes._
-import drt.shared.{PaxType, Queues, SDateLike}
+import drt.shared.{PaxType, Queues}
 import manifests.passengers.BestAvailableManifest
+import manifests.queues.FastTrackFromCSV
 
 
 trait QueueAllocator {
@@ -33,6 +34,21 @@ trait QueueAllocator {
 
 case class TerminalQueueAllocator(queueRatios: Map[String, Map[PaxType, Seq[(QueueType, Double)]]]) extends QueueAllocator {
 
-  def apply(terminal: String, bestAvailableManifest: BestAvailableManifest)(paxType: PaxType): Seq[(QueueType, Double)]
-  = queueRatios(terminal)(paxType)
+  def apply(terminal: String, bestAvailableManifest: BestAvailableManifest)(paxType: PaxType): Seq[(QueueType, Double)] =
+    queueRatios(terminal)(paxType)
+}
+
+case class TerminalQueueAllocatorWithFastTrack(queueRatios: Map[String, Map[PaxType, Seq[(QueueType, Double)]]]) extends QueueAllocator {
+
+  def apply(terminal: String, bestAvailableManifest: BestAvailableManifest)(paxType: PaxType): Seq[(QueueType, Double)] =
+    if (paxType == NonVisaNational || paxType == VisaNational)
+      FastTrackFromCSV.fastTrackCarriers
+        .find(_.iataCode == bestAvailableManifest.carrierCode)
+        .map(fts => {
+          Seq((Queues.FastTrack, fts.fastTrackSplit), (Queues.NonEeaDesk, 1.0 - fts.fastTrackSplit))
+        })
+        .getOrElse(queueRatios(terminal)(paxType))
+    else
+      queueRatios(terminal)(paxType)
+
 }
