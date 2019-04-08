@@ -166,6 +166,19 @@ case class Arrival(
     }
   }
 
+  lazy val carrierCode: String = {
+    val bestCode = (IATA, ICAO) match {
+      case (iata, _) if iata != "" => iata
+      case (_, icao) if icao != "" => icao
+      case _ => ""
+    }
+
+    bestCode match {
+      case Arrival.flightCodeRegex(cc, _, _) => cc
+      case _ => ""
+    }
+  }
+
   def basicForComparison: Arrival = copy(LastKnownPax = None, PcpTime = None)
 
   def equals(arrival: Arrival): Boolean = arrival.basicForComparison == basicForComparison
