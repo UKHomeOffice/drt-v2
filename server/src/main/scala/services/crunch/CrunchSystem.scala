@@ -210,7 +210,7 @@ object CrunchSystem {
       props.voyageManifestsActor, props.voyageManifestsRequestActor,
       props.liveCrunchStateActor, props.forecastCrunchStateActor,
       props.actors("aggregated-arrivals").actorRef,
-      crunchStartDateProvider, props.now
+      crunchStartDateProvider, props.now, props.airportConfig.queues
     )
 
     val (baseIn, fcstIn, liveIn, manifestsIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch) = crunchSystem.run

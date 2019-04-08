@@ -407,12 +407,6 @@ object CrunchApi {
   case class CrunchState(flights: Set[ApiFlightWithSplits],
                          crunchMinutes: Set[CrunchMinute],
                          staffMinutes: Set[StaffMinute]) {
-    def window(start: SDateLike, end: SDateLike): CrunchState = {
-      val windowedFlights = flights.filter(f => f.apiFlight.hasPcpDuring(start, end))
-      val windowedCrunchMinutes = crunchMinutes.filter(cm => start.millisSinceEpoch <= cm.minute && cm.minute <= end.millisSinceEpoch)
-      val windowsStaffMinutes = staffMinutes.filter(sm => start.millisSinceEpoch <= sm.minute && sm.minute <= end.millisSinceEpoch)
-      CrunchState(windowedFlights, windowedCrunchMinutes, windowsStaffMinutes)
-    }
 
     def window(start: SDateLike, end: SDateLike, terminalName: TerminalName): CrunchState = {
       val windowedFlights = flights.filter(f => f.apiFlight.hasPcpDuring(start, end) && f.apiFlight.Terminal == terminalName)
@@ -427,17 +421,46 @@ object CrunchApi {
   case class PortState(flights: Map[Int, ApiFlightWithSplits],
                        crunchMinutes: Map[TQM, CrunchMinute],
                        staffMinutes: Map[TM, StaffMinute]) {
-    def window(start: SDateLike, end: SDateLike): PortState = {
-      val windowedFlights = flights.filter {
-        case (_, f) => f.apiFlight.hasPcpDuring(start, end)
+    def window(start: SDateLike, end: SDateLike, portQueues: Map[TerminalName, Seq[QueueName]]): PortState = {
+      val windowRange = (start.millisSinceEpoch until end.millisSinceEpoch by 60000L).toArray
+
+      val cms = extractCrunchMinutes(windowRange, portQueues)
+      val sms = extractStaffMinutes(windowRange, portQueues.keys.toSeq)
+
+      PortState(
+        flights = flights.filter {
+          case (_, f) => f.apiFlight.hasPcpDuring(start, end)
+        },
+        crunchMinutes = cms,
+        staffMinutes = sms
+      )
+    }
+
+    def extractCrunchMinutes(windowRange: Array[MillisSinceEpoch], portQueues: Map[TerminalName, Seq[QueueName]]): Map[TQM, CrunchMinute] = {
+      val maybeCms = for {
+        terminal <- portQueues.keys
+        queue <- portQueues(terminal)
+        minute <- windowRange
+      } yield {
+        val tqm = TQM(terminal, queue, minute)
+        crunchMinutes.get(tqm).map(cm => (tqm, cm))
       }
-      val windowedCrunchMinutes = crunchMinutes.filter {
-        case (_, cm) => start.millisSinceEpoch <= cm.minute && cm.minute <= end.millisSinceEpoch
+      maybeCms.collect {
+        case Some(tup) => tup
+      }.toMap
+    }
+
+    def extractStaffMinutes(windowRange: Array[MillisSinceEpoch], terminals: Seq[TerminalName]): Map[TM, StaffMinute] = {
+      val maybeSms = for {
+        terminal <- terminals
+        minute <- windowRange
+      } yield {
+        val tm = TM(terminal, minute)
+        staffMinutes.get(tm).map(cm => (tm, cm))
       }
-      val windowsStaffMinutes = staffMinutes.filter {
-        case (_, sm) => start.millisSinceEpoch <= sm.minute && sm.minute <= end.millisSinceEpoch
-      }
-      PortState(windowedFlights, windowedCrunchMinutes, windowsStaffMinutes)
+      maybeSms.collect {
+        case Some(tup) => tup
+      }.toMap
     }
   }
 
