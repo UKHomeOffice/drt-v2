@@ -427,7 +427,20 @@ object CrunchApi {
   case class PortState(flights: Map[Int, ApiFlightWithSplits],
                        crunchMinutes: Map[TQM, CrunchMinute],
                        staffMinutes: Map[TM, StaffMinute]) {
-    def window(start: SDateLike, end: SDateLike): PortState = {
+    def window(start: SDateLike, end: SDateLike, portQueues: Map[TerminalName, Seq[QueueName]]): PortState = {
+      val windowRange = (start.millisSinceEpoch to end.millisSinceEpoch by 60000L).toArray
+
+      val cms = extractCrunchMinutes(windowRange, portQueues)
+      val sms = extractStaffMinutes(windowRange, portQueues.keys.toSeq)
+
+      PortState(
+        flights = flights.filter {
+          case (_, f) => f.apiFlight.hasPcpDuring(start, end)
+        },
+        crunchMinutes = cms,
+        staffMinutes = sms
+      )
+
       val windowedFlights = flights.filter {
         case (_, f) => f.apiFlight.hasPcpDuring(start, end)
       }
@@ -438,6 +451,33 @@ object CrunchApi {
         case (_, sm) => start.millisSinceEpoch <= sm.minute && sm.minute <= end.millisSinceEpoch
       }
       PortState(windowedFlights, windowedCrunchMinutes, windowsStaffMinutes)
+    }
+
+    def extractCrunchMinutes(windowRange: Array[MillisSinceEpoch], portQueues: Map[TerminalName, Seq[QueueName]]): Map[TQM, CrunchMinute] = {
+      val maybeCms = for {
+        terminal <- portQueues.keys
+        queue <- portQueues(terminal)
+        minute <- windowRange
+      } yield {
+        val tqm = TQM(terminal, queue, minute)
+        crunchMinutes.get(tqm).map(cm => (tqm, cm))
+      }
+      maybeCms.collect {
+        case Some(tup) => tup
+      }.toMap
+    }
+
+    def extractStaffMinutes(windowRange: Array[MillisSinceEpoch], terminals: Seq[TerminalName]): Map[TM, StaffMinute] = {
+      val maybeSms = for {
+        terminal <- terminals
+        minute <- windowRange
+      } yield {
+        val tm = TM(terminal, minute)
+        staffMinutes.get(tm).map(cm => (tm, cm))
+      }
+      maybeSms.collect {
+        case Some(tup) => tup
+      }.toMap
     }
   }
 

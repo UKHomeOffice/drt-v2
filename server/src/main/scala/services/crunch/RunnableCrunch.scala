@@ -6,12 +6,11 @@ import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
 import akka.stream.stage.GraphStage
 import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared._
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds._
-import services.SDate
 import services.graphstages.Crunch.{Loads, PortStateDiff}
 import services.graphstages._
 
@@ -57,7 +56,8 @@ object RunnableCrunch {
                                        aggregatedArrivalsStateActor: ActorRef,
 
                                        crunchPeriodStartMillis: SDateLike => SDateLike,
-                                       now: () => SDateLike
+                                       now: () => SDateLike,
+                                       portQueues: Map[TerminalName, Seq[QueueName]]
                                       ): RunnableGraph[(FR, FR, FR, MS, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch)] = {
 
     val arrivalsKillSwitch = KillSwitches.single[ArrivalsDiff]
@@ -173,8 +173,8 @@ object RunnableCrunch {
           simulation.out ~> portState.in4
 
           portState.out ~> portStateFanOut
-                           portStateFanOut.map(_.window(liveStart(now), liveEnd(now)))                ~> liveSink
-                           portStateFanOut.map(_.window(forecastStart(now), forecastEnd(now)))        ~> fcstSink
+                           portStateFanOut.map(_.window(liveStart(now), liveEnd(now), portQueues))                ~> liveSink
+                           portStateFanOut.map(_.window(forecastStart(now), forecastEnd(now), portQueues))        ~> fcstSink
                            portStateFanOut.map(pswd => withOnlyDescheduledRemovals(pswd.diff, now())) ~> aggregatedArrivalsSink
           // @formatter:on
 

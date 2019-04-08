@@ -14,8 +14,8 @@ import services.graphstages.Crunch._
 import scala.collection.immutable
 
 case class PortStateWithDiff(portState: PortState, diff: PortStateDiff, diffMessage: CrunchDiffMessage) {
-  def window(start: SDateLike, end: SDateLike): PortStateWithDiff = {
-    PortStateWithDiff(portState.window(start, end), diff, crunchDiffWindow(start, end))
+  def window(start: SDateLike, end: SDateLike, portQueues: Map[TerminalName, Seq[QueueName]]): PortStateWithDiff = {
+    PortStateWithDiff(portState.window(start, end, portQueues), diff, crunchDiffWindow(start, end))
   }
 
   def crunchDiffWindow(start: SDateLike, end: SDateLike): CrunchDiffMessage = {

@@ -91,7 +91,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
       sender() ! state
 
     case GetPortState(start: MillisSinceEpoch, end: MillisSinceEpoch) =>
-      logDebug(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
+      logInfo(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       sender() ! stateForPeriod(start, end)
 
     case GetUpdatesSince(millis, start, end) =>
@@ -133,19 +133,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
 
   def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = {
     logDebug(s"PortState contains: (cms, fs, sms) ${state.map(s => (s.crunchMinutes.size, s.flights.size, s.staffMinutes.size).toString()).getOrElse("Nothing")}")
-    state.map {
-      case PortState(fs, ms, ss) => PortState(
-        flights = fs.filter(_._2.apiFlight.PcpTime.isDefined).filter {
-          case (_, f) => start <= f.apiFlight.PcpTime.getOrElse(0L) && f.apiFlight.PcpTime.getOrElse(0L) < end
-        },
-        crunchMinutes = ms.filter {
-          case (_, m) => start <= m.minute && m.minute < end
-        },
-        staffMinutes = ss.filter {
-          case (_, m) => start <= m.minute && m.minute < end
-        }
-      )
-    }
+    state.map(_.window(SDate(start), SDate(end), portQueues))
   }
 
   def setStateFromSnapshot(snapshot: CrunchStateSnapshotMessage, timeWindowEnd: Option[SDateLike] = None): Unit = {
