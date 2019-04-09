@@ -245,7 +245,7 @@ class QueueAllocationSpec extends Specification {
   val fastTrackQueueAllocator = TerminalQueueAllocatorWithFastTrack(terminalQueueAllocationMap)
 
   "Given a BestAvailableManifest with 10 NonEEA Passengers on a Flight with FastTrack at LHR " +
-    "Then I should get 0.8 Pax to NonEEA Queue and 0.2 to FastTrack" >> {
+    "Then I should get 0.8 Pax to NonEEA Queue and 0.1 to FastTrack" >> {
 
     val bestManifest = BestAvailableManifest(
       "DC",
@@ -263,8 +263,8 @@ class QueueAllocationSpec extends Specification {
 
     val expected = Splits(
       Set(
-        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 0.2, Some(Map("ZWE" -> 0.2))),
-        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 0.8, Some(Map("ZWE" -> 0.8)))
+        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 0.1, Some(Map("ZWE" -> 0.1))),
+        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 0.9, Some(Map("ZWE" -> 0.9)))
       ),
       "DC",
       None,
@@ -314,7 +314,7 @@ class QueueAllocationSpec extends Specification {
   }
 
   "Given a BestAvailableManifest with 1 NonEEA Passengers on a Flight with FastTrack and an ICAO code at LHR " +
-    "Then I should get 0.8 Pax to NonEEA Queue and 0.2 to FastTrack" >> {
+    "Then I should get 0.8 Pax to NonEEA Queue and 0.1 to FastTrack" >> {
 
     val bestManifest = BestAvailableManifest(
       "DC",
@@ -332,8 +332,8 @@ class QueueAllocationSpec extends Specification {
 
     val expected = Splits(
       Set(
-        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 0.2, Some(Map("ZWE" -> 0.2))),
-        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 0.8, Some(Map("ZWE" -> 0.8)))
+        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 0.1, Some(Map("ZWE" -> 0.1))),
+        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 0.9, Some(Map("ZWE" -> 0.9)))
       ),
       "DC",
       None,
