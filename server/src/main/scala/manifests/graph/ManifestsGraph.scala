@@ -1,5 +1,7 @@
 package manifests.graph
 
+import actors.AckingReceiver
+import actors.AckingReceiver._
 import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
@@ -22,7 +24,7 @@ object ManifestsGraph {
           val batchRequests = builder.add(batchStage.async)
           val manifestLookup = builder.add(lookupStage.async)
           val manifestsSink = builder.add(Sink.actorRef(manifestsSinkActor, "completed"))
-          val registeredArrivalsSink = builder.add(Sink.actorRef(registeredArrivalsActor, "completed"))
+          val registeredArrivalsSink = builder.add(Sink.actorRefWithAck(registeredArrivalsActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
 
           arrivals ~> batchRequests.in
 
