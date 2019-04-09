@@ -1,5 +1,6 @@
 package actors
 
+import actors.AckingReceiver.{Ack, StreamInitialized}
 import akka.actor.{Actor, Scheduler}
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.{Arrival, ArrivalsDiff}
@@ -13,6 +14,18 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.postfixOps
 
 
+object AckingReceiver {
+
+  case object Ack
+
+  case object StreamInitialized
+
+  case object StreamCompleted
+
+  final case class StreamFailure(ex: Throwable)
+
+}
+
 class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLookupLike) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -22,6 +35,10 @@ class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLook
   implicit val scheduler: Scheduler = this.context.system.scheduler
 
   override def receive: Receive = {
+    case StreamInitialized =>
+      log.info("Stream initialized!")
+      sender() ! Ack
+
     case SubscribeRequestQueue(subscriber) =>
       log.info(s"received manifest request subscriber")
       manifestsRequestQueue = Option(subscriber)
@@ -34,8 +51,11 @@ class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLook
       manifestsResponseQueue.foreach(queue => {
         val successfulManifests = bestManifests.collect { case Some(bm) => bm }
         val bestManifestsResult = BestManifestsFeedSuccess(successfulManifests, SDate.now())
+        val replyTo = sender()
 
-        OfferHandler.offerWithRetries(queue, bestManifestsResult, 10)
+        OfferHandler.offerWithRetries(queue, bestManifestsResult, 10, Option(() => {
+          log.info(s"Acking back to lookup stage")
+          replyTo ! Ack }))
       })
 
     case ArrivalsDiff(arrivals, _) => manifestsRequestQueue.foreach(queue => OfferHandler.offerWithRetries(queue, arrivals.toList, 10))

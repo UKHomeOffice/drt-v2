@@ -13,8 +13,12 @@ import scala.language.postfixOps
 object OfferHandler {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def offerWithRetries[A](queue: SourceQueueWithComplete[A], thingToOffer: A, retries: Int)(implicit ec: ExecutionContext, s: Scheduler): Unit = {
-    Retry.retry(queue.offer(thingToOffer), RetryDelays.fibonacci.drop(1), retries, 5 seconds).onFailure {
+  def offerWithRetries[A](queue: SourceQueueWithComplete[A], thingToOffer: A, retries: Int, maybeOnSuccess: Option[() => Unit] = None)(implicit ec: ExecutionContext, s: Scheduler): Unit = {
+    val eventualResult = queue.offer(thingToOffer)
+
+    maybeOnSuccess.foreach(onSuccess => eventualResult.onSuccess { case _ => onSuccess() })
+
+    Retry.retry(eventualResult, RetryDelays.fibonacci.drop(1), retries, 5 seconds).onFailure {
       case throwable =>
         log.error(s"Failed to enqueue ${thingToOffer.getClass} after . $retries", throwable)
     }
@@ -22,15 +26,15 @@ object OfferHandler {
 }
 
 object Retry {
-  def retry[T](futureToRetry: => Future[T], delay: Seq[FiniteDuration], retries: Int, defaultDelay: FiniteDuration )(implicit ec: ExecutionContext, s: Scheduler): Future[T] = futureToRetry
+  def retry[T](futureToRetry: => Future[T], delay: Seq[FiniteDuration], retries: Int, defaultDelay: FiniteDuration)(implicit ec: ExecutionContext, s: Scheduler): Future[T] = futureToRetry
     .recoverWith {
       case _ if retries > 0 =>
         val nextDelayDuration = delay.headOption.getOrElse(defaultDelay)
         log.warn(s"Future failed. Trying again after $nextDelayDuration. $retries retries remaining")
-        after(nextDelayDuration, s)(retry(futureToRetry, delay.tail, retries - 1 , defaultDelay))
+        after(nextDelayDuration, s)(retry(futureToRetry, delay.tail, retries - 1, defaultDelay))
     }
 }
 
 object RetryDelays {
-  val fibonacci: Stream[FiniteDuration] = 0.seconds #:: 1.seconds #:: (fibonacci zip fibonacci.tail).map{ t => t._1 + t._2 }
+  val fibonacci: Stream[FiniteDuration] = 0.seconds #:: 1.seconds #:: (fibonacci zip fibonacci.tail).map { t => t._1 + t._2 }
 }
