@@ -1,58 +1,58 @@
 IATA Code,ICAO Code,Airline,Arrivals,Fast Track Split
-SU,AFL,Aeroflot,0.2
-AM,AMX ,Aeromexico,0.2
-KC,KZR ,Air Astana,0.2
-AC,ACA,Air Canada,0.2
-CA,CCA,Air China,0.2
-AI,AIC,Air India,0.2
-MK,MAU,Air Mauritius,0.2
-NZ,ANZ,Air New Zealand,0.2
-JU,ASL,Air Serbia,0.2
-AA,AAL,American Airlines,0.2
-NH,ANA,ANA,0.2
-W3,ARA,Arik Air,0.2
-OZ,AAR,Asiana Airlines,0.2
-J2,AHY,Azerbaijan Airlines,0.2
-AV,AVA,Avianca,0.2
-BG,BBC,Biman Bangladesh Airlines,0.2
-BA,BAW,British Airways International,0.2
-CX,CPA,Cathay Pacific Airways,0.2
-MU,CES,China Eastern,0.2
-CZ,CSN,China Southern,0.2
-DL,DAL,Delta,0.2
-MS,MSR,Egyptair,0.2
-EK,UAE,Emirates,0.2
-ET,ETH,Ethiopian,0.2
-EY,ETD,EtIhad Airlines,0.2
-LY,ELY,El Al,0.2
-BR,EVA,EVA Air,0.2
-GA,GIA,Garuda Indonesia,0.2
-GF,GFA,Gulf Air,0.2
-JL,JAL,Japan Airlines,0.2
-9W,JAI,Jet Airways,0.2
-KQ,KQA,Kenya Airways,0.2
-KE,KAL,Korean Air,0.2
-KU,KAC,Kuwait Airways,0.2
-MH,MAS,Malaysia Airlines,0.2
-ME,MEA,Middle East Airlines,0.2
-WY,OMA,Oman Air,0.2
-PK,PKA,Pakistan International Airlines,0.2
-QF,QFA,Qantas,0.2
-QR,QTR,Qatar Airways,0.2
-AT,RAM,Royal Air Maroc,0.2
-BI,RBA,Royal Brunei Airlines,0.2
-RJ,RJA,Royal Jordian,0.2
-SV,SVA,Saudia Airlines,0.2
-SQ,SIA,Singapore Airlines,0.2
-SA,SAA,South African Airways,0.2
-UL,ALK,Sri Lankan Airlines,0.2
-JJ,TAM,TAM,0.2
-RO,ROT,Tarom,0.2
-TG,THA,Thai Airways,0.2
-UN,TSO,Transaero,0.2
-TU,TAR,Tunisair,0.2
-TK,THY,Turkish Airlines,0.2
-UA,UAL,United Airlines,0.2
-HY,UZB,Uzbekistan Airways,0.2
-VN,HVN,Vietnam Airlines,0.2
-VS,VIR,Virgin Atlantic,0.2
+SU,AFL,Aeroflot,0.1
+AM,AMX ,Aeromexico,0.1
+KC,KZR ,Air Astana,0.1
+AC,ACA,Air Canada,0.1
+CA,CCA,Air China,0.1
+AI,AIC,Air India,0.1
+MK,MAU,Air Mauritius,0.1
+NZ,ANZ,Air New Zealand,0.1
+JU,ASL,Air Serbia,0.1
+AA,AAL,American Airlines,0.1
+NH,ANA,ANA,0.1
+W3,ARA,Arik Air,0.1
+OZ,AAR,Asiana Airlines,0.1
+J2,AHY,Azerbaijan Airlines,0.1
+AV,AVA,Avianca,0.1
+BG,BBC,Biman Bangladesh Airlines,0.1
+BA,BAW,British Airways International,0.1
+CX,CPA,Cathay Pacific Airways,0.1
+MU,CES,China Eastern,0.1
+CZ,CSN,China Southern,0.1
+DL,DAL,Delta,0.1
+MS,MSR,Egyptair,0.1
+EK,UAE,Emirates,0.1
+ET,ETH,Ethiopian,0.1
+EY,ETD,EtIhad Airlines,0.1
+LY,ELY,El Al,0.1
+BR,EVA,EVA Air,0.1
+GA,GIA,Garuda Indonesia,0.1
+GF,GFA,Gulf Air,0.1
+JL,JAL,Japan Airlines,0.1
+9W,JAI,Jet Airways,0.1
+KQ,KQA,Kenya Airways,0.1
+KE,KAL,Korean Air,0.1
+KU,KAC,Kuwait Airways,0.1
+MH,MAS,Malaysia Airlines,0.1
+ME,MEA,Middle East Airlines,0.1
+WY,OMA,Oman Air,0.1
+PK,PKA,Pakistan International Airlines,0.1
+QF,QFA,Qantas,0.1
+QR,QTR,Qatar Airways,0.1
+AT,RAM,Royal Air Maroc,0.1
+BI,RBA,Royal Brunei Airlines,0.1
+RJ,RJA,Royal Jordian,0.1
+SV,SVA,Saudia Airlines,0.1
+SQ,SIA,Singapore Airlines,0.1
+SA,SAA,South African Airways,0.1
+UL,ALK,Sri Lankan Airlines,0.1
+JJ,TAM,TAM,0.1
+RO,ROT,Tarom,0.1
+TG,THA,Thai Airways,0.1
+UN,TSO,Transaero,0.1
+TU,TAR,Tunisair,0.1
+TK,THY,Turkish Airlines,0.1
+UA,UAL,United Airlines,0.1
+HY,UZB,Uzbekistan Airways,0.1
+VN,HVN,Vietnam Airlines,0.1
+VS,VIR,Virgin Atlantic,0.1
