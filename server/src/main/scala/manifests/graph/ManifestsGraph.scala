@@ -23,8 +23,8 @@ object ManifestsGraph {
         arrivals =>
           val batchRequests = builder.add(batchStage.async)
           val manifestLookup = builder.add(lookupStage.async)
-          val manifestsSink = builder.add(Sink.actorRef(manifestsSinkActor, "completed"))
-          val registeredArrivalsSink = builder.add(Sink.actorRefWithAck(registeredArrivalsActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
+          val manifestsSink = builder.add(Sink.actorRefWithAck(manifestsSinkActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
+          val registeredArrivalsSink = builder.add(Sink.actorRef(registeredArrivalsActor, "completed"))
 
           arrivals ~> batchRequests.in
 

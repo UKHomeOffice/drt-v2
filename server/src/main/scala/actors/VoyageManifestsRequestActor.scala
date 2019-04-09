@@ -1,11 +1,12 @@
 package actors
 
 import actors.AckingReceiver.{Ack, StreamInitialized}
-import akka.actor.{Actor, Scheduler}
+import akka.actor.{Actor, ActorRef, Scheduler}
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.{Arrival, ArrivalsDiff}
 import manifests.ManifestLookupLike
 import manifests.graph.ManifestTries
+import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{BestManifestsFeedSuccess, ManifestsFeedResponse}
 import services.{OfferHandler, SDate}
@@ -32,6 +33,8 @@ class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLook
   var manifestsRequestQueue: Option[SourceQueueWithComplete[List[Arrival]]] = None
   var manifestsResponseQueue: Option[SourceQueueWithComplete[ManifestsFeedResponse]] = None
 
+  def senderRef(): ActorRef = sender()
+
   implicit val scheduler: Scheduler = this.context.system.scheduler
 
   override def receive: Receive = {
@@ -48,20 +51,24 @@ class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLook
       manifestsResponseQueue = Option(subscriber)
 
     case ManifestTries(bestManifests) =>
-      manifestsResponseQueue.foreach(queue => {
-        val successfulManifests = bestManifests.collect { case Some(bm) => bm }
-        val bestManifestsResult = BestManifestsFeedSuccess(successfulManifests, SDate.now())
-        val replyTo = sender()
-
-        OfferHandler.offerWithRetries(queue, bestManifestsResult, 10, Option(() => {
-          log.info(s"Acking back to lookup stage")
-          replyTo ! Ack }))
-      })
+      log.info(s"Received BestAvailableManifest tries")
+      handleManifestTries(bestManifests)
 
     case ArrivalsDiff(arrivals, _) => manifestsRequestQueue.foreach(queue => OfferHandler.offerWithRetries(queue, arrivals.toList, 10))
 
     case unexpected => log.warn(s"received unexpected ${unexpected.getClass}")
   }
 
-}
+  def handleManifestTries(bestManifests: List[Option[BestAvailableManifest]]): Unit = {
+    manifestsResponseQueue.foreach(queue => {
+      val successfulManifests = bestManifests.collect { case Some(bm) => bm }
+      val bestManifestsResult = BestManifestsFeedSuccess(successfulManifests, SDate.now())
+      val replyTo = senderRef()
 
+      OfferHandler.offerWithRetries(queue, bestManifestsResult, 10, Option(() => {
+        log.info(s"Acking back to lookup stage")
+        replyTo ! Ack
+      }))
+    })
+  }
+}

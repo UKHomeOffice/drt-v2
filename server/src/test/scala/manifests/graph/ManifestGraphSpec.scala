@@ -1,26 +1,34 @@
 package manifests.graph
 
+import actors.AckingReceiver.Ack
+import actors.VoyageManifestsRequestActor
+import akka.actor.{ActorRef, Props}
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{Arrival, ArrivalKey, SDateLike}
+import manifests.ManifestLookupLike
 import manifests.actors.RegisteredArrivals
 import manifests.passengers.BestAvailableManifest
 import services.SDate
 import services.graphstages.Crunch
 
-import scala.util.Success
 import scala.concurrent.duration._
+
+
+class TestableVoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLookupLike, probe: TestProbe) extends VoyageManifestsRequestActor(portCode, manifestLookup) {
+  override def senderRef(): ActorRef = probe.ref
+
+  override def handleManifestTries(bestManifests: List[Option[BestAvailableManifest]]): Unit = senderRef() ! ManifestTries(bestManifests)
+}
+
 
 class ManifestGraphSpec extends ManifestGraphTestLike {
 
   val scheduled = SDate("2019-03-06T12:00:00Z")
   "Given an arrival is sent into the ManifestGraph then we should find the manifest for that flight in the sink" >> {
-
-    val manifestSinkProbe = TestProbe(name = "manifest-test-probe")
-    val registeredArrivalSinkProbe = TestProbe(name = "registered-arrival-test-probe")
 
     val testManifest = BestAvailableManifest(
       "test",
@@ -31,8 +39,11 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
       scheduled,
       List()
     )
+    val manifestSinkProbe = TestProbe("manifest-test-probe")
+    val manifestSink = system.actorOf(Props(classOf[TestableVoyageManifestsRequestActor], "LHR", MockManifestLookupService(testManifest), manifestSinkProbe))
+    val registeredArrivalSinkProbe = TestProbe(name = "registered-arrival-test-probe")
 
-    val graphInput = createAndRunGraph(manifestSinkProbe, registeredArrivalSinkProbe, testManifest, None)
+    val graphInput = createAndRunGraph(manifestSink, registeredArrivalSinkProbe, testManifest, None)
 
     val testArrival = ArrivalGenerator.apiFlight(schDt = "2019-03-06T12:00:00Z")
     graphInput.offer(List(testArrival))
@@ -63,8 +74,10 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
 
     val testArrival = ArrivalGenerator.apiFlight(schDt = "2019-03-06T12:00:00Z")
 
+    val manifestSink = system.actorOf(Props(classOf[TestableVoyageManifestsRequestActor], "LHR", MockManifestLookupService(testManifest), manifestSinkProbe))
+
     val graphInput = createAndRunGraph(
-      manifestSinkProbe,
+      manifestSink,
       registeredArrivalSinkProbe,
       testManifest,
       Some(RegisteredArrivals(Map(ArrivalKey(testArrival) -> Option(scheduled.millisSinceEpoch)))),
@@ -79,9 +92,9 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
     success
   }
 
-  def createAndRunGraph(manifestProbe: TestProbe, registeredArrivalSinkProbe: TestProbe, testManifest: BestAvailableManifest, initialRegisteredArrivals: Option[RegisteredArrivals], isDueLookup: (ArrivalKey, MillisSinceEpoch, SDateLike) => Boolean = (_, _, _) => true): SourceQueueWithComplete[List[Arrival]] = {
+  def createAndRunGraph(manifestProbeActor: ActorRef, registeredArrivalSinkProbe: TestProbe, testManifest: BestAvailableManifest, initialRegisteredArrivals: Option[RegisteredArrivals], isDueLookup: (ArrivalKey, MillisSinceEpoch, SDateLike) => Boolean = (_, _, _) => true): SourceQueueWithComplete[List[Arrival]] = {
     val arrivalsSource = Source.queue[List[Arrival]](0, OverflowStrategy.backpressure)
-    val minLookupQueueRefreshIntervalMillis = 0L
+    val minLookupQueueRefreshIntervalMillis = 50L
     val expireAfterMillis = (3 hours).length
     val batchStage = new BatchStage(() => SDate("2019-03-06T11:00:00Z"), isDueLookup, 1, expireAfterMillis, initialRegisteredArrivals, minLookupQueueRefreshIntervalMillis)
 
@@ -91,7 +104,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
       arrivalsSource,
       batchStage,
       lookupStage,
-      manifestProbe.ref,
+      manifestProbeActor,
       registeredArrivalSinkProbe.ref
     )
 
