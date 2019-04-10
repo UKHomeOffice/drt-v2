@@ -3,10 +3,11 @@ package manifests.passengers
 import akka.NotUsed
 import akka.actor.{ActorSystem, Cancellable, Scheduler}
 import akka.stream.Materializer
+import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.{Sink, SinkQueueWithCancel, Source, SourceQueueWithComplete}
 import drt.server.feeds.api.ApiProviderLike
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.DqEventCodes
+import drt.shared.{DqEventCodes, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
@@ -29,7 +30,7 @@ class S3ManifestPoller(sourceQueue: SourceQueueWithComplete[ManifestsFeedRespons
 
   val dqRegex: Regex = "(drt_dq_[0-9]{6}_[0-9]{6})(_[0-9]{4}\\.zip)".r
 
-  var maybeResponseToPush: Option[ManifestsFeedResponse] = None
+  var liveManifestsBuffer: Option[ManifestsFeedSuccess] = None
   var lastSeenFileName: String = initialLastSeenFileName
   var lastFetchedMillis: MillisSinceEpoch = 0
 
@@ -54,7 +55,6 @@ class S3ManifestPoller(sourceQueue: SourceQueueWithComplete[ManifestsFeedRespons
     } match {
       case Success((latestFileName, maybeManifests)) =>
         log.info(s"Fetched ${maybeManifests.count(_.isDefined)} manifests up to file $latestFileName")
-        lastSeenFileName = latestFileName
         ManifestsFeedSuccess(DqManifests(latestFileName, maybeManifests.flatten), SDate.now())
       case Failure(t) =>
         log.warn(s"Failed to fetch new manifests", t)
@@ -80,8 +80,42 @@ class S3ManifestPoller(sourceQueue: SourceQueueWithComplete[ManifestsFeedRespons
     actorSystem.scheduler.schedule(0 seconds, 1 minute, new Runnable {
       def run(): Unit = {
         implicit val scheduler: Scheduler = actorSystem.scheduler
-        OfferHandler.offerWithRetries(sourceQueue, fetchNewManifests(lastSeenFileName), 5)
+        fetchNewManifests(lastSeenFileName) match {
+          case ManifestsFeedSuccess(DqManifests(latestFileName, manifests), createdAt) =>
+            log.info(s"Received live manifests")
+            liveManifestsBuffer = updateManifestsBuffer(latestFileName, manifests, createdAt)
+            lastSeenFileName = latestFileName
+            tryOfferManifests()
+          case ManifestsFeedSuccess(DqManifests(_, manifests), _) if manifests.isEmpty =>
+            log.info(s"No new live manifests")
+          case ManifestsFeedFailure(msg, _) =>
+            log.warn(s"Failed to fetch new live manifests: $msg")
+        }
       }
     })
+  }
+
+  def tryOfferManifests(): Unit = {
+    liveManifestsBuffer.foreach { manifestsToSend =>
+      sourceQueue.offer(manifestsToSend).map {
+        case Enqueued =>
+          liveManifestsBuffer = None
+          log.info(s"Enqueued live manifests")
+        case _ => log.info(s"Couldn't enqueue live manifests. Leaving them in the buffer")
+      }.recover {
+        case t => log.error(s"Couldn't enqueue live manifests. Leaving them in the buffer", t)
+      }
+    }
+  }
+
+  def updateManifestsBuffer(lastFilename: String, manifests: Set[VoyageManifest], createdAt: SDateLike): Option[ManifestsFeedSuccess] = {
+    liveManifestsBuffer match {
+      case None =>
+        log.info(s"live manifest buffer was empty")
+        Option(ManifestsFeedSuccess(DqManifests(lastFilename, manifests), createdAt))
+      case Some(ManifestsFeedSuccess(DqManifests(_, existingManifests), _)) =>
+        log.info(s"live manifest buffer was not empty. Adding new manifests to it")
+        Option(ManifestsFeedSuccess(DqManifests(lastFilename, existingManifests ++ manifests), createdAt))
+    }
   }
 }
