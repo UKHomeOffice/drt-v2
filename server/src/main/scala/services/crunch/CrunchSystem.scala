@@ -26,7 +26,8 @@ case class CrunchSystem[FR](shifts: SourceQueueWithComplete[ShiftAssignments],
                             baseArrivalsResponse: FR,
                             forecastArrivalsResponse: FR,
                             liveArrivalsResponse: FR,
-                            manifestsResponse: SourceQueueWithComplete[ManifestsFeedResponse],
+                            manifestsLiveResponse: SourceQueueWithComplete[ManifestsFeedResponse],
+                            manifestsHistoricResponse: SourceQueueWithComplete[ManifestsFeedResponse],
                             actualDeskStats: SourceQueueWithComplete[ActualDeskStats],
                             killSwitches: List[KillSwitch]
                            )
@@ -48,7 +49,8 @@ case class CrunchProps[FR](logLabel: String = "",
                            initialFlightsWithSplits: Option[FlightsWithSplits] = None,
                            splitsPredictorStage: SplitsPredictorBase,
                            b5JStartDate: SDateLike,
-                           manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]],
+                           manifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]],
+                           manifestsHistoricSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]],
                            voyageManifestsActor: ActorRef,
                            voyageManifestsRequestActor: ActorRef,
                            cruncher: TryCrunch,
@@ -79,7 +81,6 @@ object CrunchSystem {
   def apply[FR](props: CrunchProps[FR])
                (implicit system: ActorSystem, materializer: Materializer): CrunchSystem[FR] = {
 
-    val manifestsSource = props.manifestsSource
     val shiftsSource: Source[ShiftAssignments, SourceQueueWithComplete[ShiftAssignments]] = Source.queue[ShiftAssignments](10, OverflowStrategy.backpressure)
     val fixedPointsSource: Source[FixedPointAssignments, SourceQueueWithComplete[FixedPointAssignments]] = Source.queue[FixedPointAssignments](10, OverflowStrategy.backpressure)
     val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](10, OverflowStrategy.backpressure)
@@ -204,7 +205,7 @@ object CrunchSystem {
       now = props.now)
 
     val crunchSystem = RunnableCrunch(
-      props.arrivalsBaseSource, props.arrivalsFcstSource, props.arrivalsLiveSource, manifestsSource, shiftsSource, fixedPointsSource, staffMovementsSource, actualDesksAndQueuesSource,
+      props.arrivalsBaseSource, props.arrivalsFcstSource, props.arrivalsLiveSource, props.manifestsLiveSource, props.manifestsHistoricSource, shiftsSource, fixedPointsSource, staffMovementsSource, actualDesksAndQueuesSource,
       arrivalsStage, arrivalSplitsGraphStage, splitsPredictorStage, workloadGraphStage, loadBatcher, crunchLoadGraphStage, staffGraphStage, staffBatcher, simulationGraphStage, portStateGraphStage, fcstArrivalsDiffingStage, liveArrivalsDiffingStage,
       props.actors("base-arrivals").actorRef, props.actors("forecast-arrivals").actorRef, props.actors("live-arrivals").actorRef,
       props.voyageManifestsActor, props.voyageManifestsRequestActor,
@@ -213,7 +214,7 @@ object CrunchSystem {
       crunchStartDateProvider, props.now, props.airportConfig.queues
     )
 
-    val (baseIn, fcstIn, liveIn, manifestsIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch) = crunchSystem.run
+    val (baseIn, fcstIn, liveIn, manifestsLiveIn, manifestsHistoricIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch) = crunchSystem.run
 
     CrunchSystem(
       shifts = shiftsIn,
@@ -222,7 +223,8 @@ object CrunchSystem {
       baseArrivalsResponse = baseIn,
       forecastArrivalsResponse = fcstIn,
       liveArrivalsResponse = liveIn,
-      manifestsResponse = manifestsIn,
+      manifestsLiveResponse = manifestsLiveIn,
+      manifestsHistoricResponse = manifestsHistoricIn,
       actualDeskStats = actDesksIn,
       List(arrivalsKillSwitch, manifestsKillSwitch)
     )

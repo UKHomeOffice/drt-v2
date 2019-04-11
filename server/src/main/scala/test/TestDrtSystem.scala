@@ -43,7 +43,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
 
   val voyageManifestTestSourceGraph: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](100, OverflowStrategy.backpressure)
 
-  override lazy val voyageManifestsStage: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = voyageManifestTestSourceGraph
+  override lazy val voyageManifestsHistoricSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = voyageManifestTestSourceGraph
 
 
   val testFeed = TestFixtureFeed(system)
@@ -72,7 +72,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
       val cs = startCrunchSystem(None, None, None, None, true, true)
       subscribeStaffingActors(cs)
       startScheduledFeedImports(cs)
-      testManifestsActor ! SubscribeResponseQueue(cs.manifestsResponse)
+      testManifestsActor ! SubscribeResponseQueue(cs.manifestsLiveResponse)
       cs.killSwitches
     }
 

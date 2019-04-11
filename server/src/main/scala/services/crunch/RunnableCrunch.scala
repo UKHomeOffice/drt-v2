@@ -24,14 +24,15 @@ object RunnableCrunch {
   def apply[FR, MS, SS, SFP, SMM, SAD](baseArrivalsSource: Source[ArrivalsFeedResponse, FR],
                                        fcstArrivalsSource: Source[ArrivalsFeedResponse, FR],
                                        liveArrivalsSource: Source[ArrivalsFeedResponse, FR],
-                                       manifestsSource: Source[ManifestsFeedResponse, MS],
+                                       manifestsLiveSource: Source[ManifestsFeedResponse, MS],
+                                       manifestsHistoricSource: Source[ManifestsFeedResponse, MS],
                                        shiftsSource: Source[ShiftAssignments, SS],
                                        fixedPointsSource: Source[FixedPointAssignments, SFP],
                                        staffMovementsSource: Source[Seq[StaffMovement], SMM],
                                        actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
 
                                        arrivalsGraphStage: ArrivalsGraphStage,
-                                       arrivalSplitsStage: GraphStage[FanInShape2[ArrivalsDiff, ManifestsFeedResponse, FlightsWithSplits]],
+                                       arrivalSplitsStage: GraphStage[FanInShape3[ArrivalsDiff, ManifestsFeedResponse, ManifestsFeedResponse, FlightsWithSplits]],
                                        splitsPredictorStage: SplitsPredictorBase,
                                        workloadGraphStage: WorkloadGraphStage,
                                        loadBatchUpdateGraphStage: BatchLoadsByCrunchPeriodGraphStage,
@@ -58,7 +59,7 @@ object RunnableCrunch {
                                        crunchPeriodStartMillis: SDateLike => SDateLike,
                                        now: () => SDateLike,
                                        portQueues: Map[TerminalName, Seq[QueueName]]
-                                      ): RunnableGraph[(FR, FR, FR, MS, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch)] = {
+                                      ): RunnableGraph[(FR, FR, FR, MS, MS, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch)] = {
 
     val arrivalsKillSwitch = KillSwitches.single[ArrivalsDiff]
 
@@ -67,27 +68,27 @@ object RunnableCrunch {
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
-    log.info(s"Manifests Source: $manifestsSource")
-
     val graph = GraphDSL.create(
       baseArrivalsSource.async,
       fcstArrivalsSource.async,
       liveArrivalsSource.async,
-      manifestsSource.async,
+      manifestsLiveSource.async,
+      manifestsHistoricSource.async,
       shiftsSource.async,
       fixedPointsSource.async,
       staffMovementsSource.async,
       actualDesksAndWaitTimesSource.async,
       arrivalsKillSwitch,
       manifestsKillSwitch
-    )((_, _, _, _, _, _, _, _, _, _)) {
+    )((_, _, _, _, _, _, _, _, _, _, _)) {
 
       implicit builder =>
         (
           baseArrivals,
           fcstArrivals,
           liveArrivals,
-          manifests,
+          manifestsLive,
+          manifestsHistoric,
           shifts,
           fixedPoints,
           staffMovements,
@@ -140,17 +141,29 @@ object RunnableCrunch {
           liveArrivals ~> liveArrivalsDiffing ~> liveArrivalsFanOut ~> arrivals.in2
                                                  liveArrivalsFanOut ~> liveArrivalsSink
 
-          manifests ~> manifestGraphKillSwitch ~> manifestsFanOut
-              manifestsFanOut.out(0)
-                .collect {
-                  case ManifestsFeedSuccess(DqManifests(_, ms), createdAt) => BestManifestsFeedSuccess(ms.toSeq.map(vm => BestAvailableManifest(vm)), createdAt)
-                  case bmfs: BestManifestsFeedSuccess => bmfs
-                }
-                .conflate[ManifestsFeedResponse] {
-                  case (BestManifestsFeedSuccess(acc, _), BestManifestsFeedSuccess(newManifests, createdAt)) =>
-                    BestManifestsFeedSuccess(acc ++ newManifests, createdAt)
-                } ~> arrivalSplits.in1
-              manifestsFanOut.out(1) ~> manifestsSink
+          manifestsLive ~> manifestsFanOut
+
+          manifestsFanOut.out(0).conflate[ManifestsFeedResponse] {
+              case (bm, ManifestsFeedFailure(_, _)) => bm
+              case (ManifestsFeedSuccess(DqManifests(_, acc), _), ManifestsFeedSuccess(DqManifests(_, ms), createdAt)) =>
+                val existingManifests = acc.toSeq.map(vm => BestAvailableManifest(vm))
+                val newManifests = ms.toSeq.map(vm => BestAvailableManifest(vm))
+                log.info(s"xxxx Conflating live (1) ${existingManifests.length} + ${newManifests.length}")
+                BestManifestsFeedSuccess(existingManifests ++ newManifests, createdAt)
+              case (BestManifestsFeedSuccess(acc, _), ManifestsFeedSuccess(DqManifests(_, ms), createdAt)) =>
+                val newManifests = ms.toSeq.map(vm => BestAvailableManifest(vm))
+                log.info(s"xxxx Conflating live (2) ${acc.length} + ${newManifests.length}")
+                BestManifestsFeedSuccess(acc ++ newManifests, createdAt)
+            } ~> manifestGraphKillSwitch ~> arrivalSplits.in1
+
+          manifestsFanOut.out(1) ~> manifestsSink
+
+          manifestsHistoric.out.conflate[ManifestsFeedResponse] {
+            case (BestManifestsFeedSuccess(acc, _), BestManifestsFeedSuccess(newManifests, createdAt)) =>
+              log.info(s"xxxx Conflating historic ${acc.length} + ${newManifests.length}")
+              BestManifestsFeedSuccess(acc ++ newManifests, createdAt)
+          } ~> arrivalSplits.in2
+
 
           shifts          ~> staff.in0
           fixedPoints     ~> staff.in1

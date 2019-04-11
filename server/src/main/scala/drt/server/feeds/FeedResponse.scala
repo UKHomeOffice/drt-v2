@@ -42,13 +42,3 @@ object ManifestsFeedFailure {
 }
 
 case class BestManifestsFeedSuccess(manifests: Seq[BestAvailableManifest], createdAt: SDateLike) extends ManifestsFeedResponse
-
-object BestManifestsFeedSuccess {
-  def apply(manifests: Seq[BestAvailableManifest]): ManifestsFeedResponse = BestManifestsFeedSuccess(manifests, SDate.now())
-}
-
-case class BestManifestsFeedFailure(responseMessage: String, createdAt: SDateLike) extends ManifestsFeedResponse
-
-object BestManifestsFeedFailure {
-  def apply(responseMessage: String): ManifestsFeedResponse = BestManifestsFeedFailure(responseMessage, SDate.now())
-}

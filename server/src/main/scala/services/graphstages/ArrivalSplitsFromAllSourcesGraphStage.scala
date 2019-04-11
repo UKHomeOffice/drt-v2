@@ -25,15 +25,16 @@ class ArrivalSplitsFromAllSourcesGraphStage(name: String = "",
                                             expireAfterMillis: Long,
                                             now: () => SDateLike,
                                             maxDaysToCrunch: Int)
-  extends GraphStage[FanInShape2[ArrivalsDiff, ManifestsFeedResponse,  FlightsWithSplits]] {
+  extends GraphStage[FanInShape3[ArrivalsDiff, ManifestsFeedResponse, ManifestsFeedResponse, FlightsWithSplits]] {
 
   val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
   val inArrivalsDiff: Inlet[ArrivalsDiff] = Inlet[ArrivalsDiff]("ArrivalsDiffIn.in")
-  val inManifests: Inlet[ManifestsFeedResponse] = Inlet[ManifestsFeedResponse]("SplitsIn.in")
+  val inManifestsLive: Inlet[ManifestsFeedResponse] = Inlet[ManifestsFeedResponse]("SplitsIn.in")
+  val inManifestsHistoric: Inlet[ManifestsFeedResponse] = Inlet[ManifestsFeedResponse]("SplitsIn.in")
   val outArrivalsWithSplits: Outlet[FlightsWithSplits] = Outlet[FlightsWithSplits]("ArrivalsWithSplitsOut.out")
 
-  override val shape = new FanInShape2(inArrivalsDiff, inManifests, outArrivalsWithSplits)
+  override val shape = new FanInShape3(inArrivalsDiff, inManifestsLive, inManifestsHistoric, outArrivalsWithSplits)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var flightsByFlightId: Map[Int, ApiFlightWithSplits] = Map()
@@ -103,36 +104,40 @@ class ArrivalSplitsFromAllSourcesGraphStage(name: String = "",
       }
     })
 
-    setHandler(inManifests, new InHandler {
-      override def onPush(): Unit = {
-        val start = SDate.now()
-        log.debug(s"inManifests onPush called")
-        grab(inManifests) match {
-          case ManifestsFeedSuccess(dqManifests, connectedAt) =>
-            log.info(s"Grabbed ${dqManifests.manifests.size} manifests from connection at ${connectedAt.toISOString()}")
+    setHandler(inManifestsLive, inManifestsHandler(inManifestsLive))
 
-            val updatedFlights = purgeExpiredArrivals(updateFlightsWithManifests(dqManifests.manifests, flightsByFlightId))
-            log.info(s"We now have ${updatedFlights.size} arrivals")
-
-            val latestDiff = updatedFlights.values.toSet -- flightsByFlightId.values.toSet
-            arrivalsWithSplitsDiff = mergeDiffSets(latestDiff, arrivalsWithSplitsDiff)
-            flightsByFlightId = updatedFlights
-            manifestsBuffer = purgeExpiredManifests(manifestsBuffer)
-
-            pushStateIfReady()
-
-          case ManifestsFeedFailure(message, failedAt) =>
-            log.info(s"$inManifests failed at ${failedAt.toISOString()}: $message")
-        }
-        pullAll()
-        log.info(s"inManifests Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
-      }
+    setHandler(inManifestsHistoric, new InHandler {
+      override def onPush(): Unit = grab(inManifestsHistoric)
     })
 
+    private def inManifestsHandler(inlet: Inlet[ManifestsFeedResponse]): InHandler =
+      new InHandler() {
+        override def onPush(): Unit = {
+          val start = SDate.now()
+          grab(inlet) match {
+            case ManifestsFeedSuccess(dqManifests, connectedAt) =>
+              log.info(s"Grabbed ${dqManifests.manifests.size} manifests from connection at ${connectedAt.toISOString()}")
 
+              val updatedFlights = purgeExpiredArrivals(updateFlightsWithManifests(dqManifests.manifests, flightsByFlightId))
+              log.info(s"We now have ${updatedFlights.size} arrivals")
+
+              val latestDiff = updatedFlights.values.toSet -- flightsByFlightId.values.toSet
+              arrivalsWithSplitsDiff = mergeDiffSets(latestDiff, arrivalsWithSplitsDiff)
+              flightsByFlightId = updatedFlights
+              manifestsBuffer = purgeExpiredManifests(manifestsBuffer)
+
+              pushStateIfReady()
+
+            case ManifestsFeedFailure(message, failedAt) =>
+              log.info(s"$inlet failed at ${failedAt.toISOString()}: $message")
+          }
+          pullAll()
+          log.info(s"inManifests Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        }
+      }
 
     def pullAll(): Unit = {
-      List(inManifests, inArrivalsDiff).foreach(in => if (!hasBeenPulled(in)) {
+      List(inManifestsLive, inArrivalsDiff).foreach(in => if (!hasBeenPulled(in)) {
         log.info(s"Pulling ${in.toString}")
         pull(in)
       })

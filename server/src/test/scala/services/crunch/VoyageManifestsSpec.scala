@@ -53,9 +53,9 @@ class VoyageManifestsSpec extends CrunchTestLike {
       initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set())), Map(), Map()))
     )
 
-    offerAndWait(crunch.manifestsInput, inputManifestsCi)
+    offerAndWait(crunch.manifestsLiveInput, inputManifestsCi)
     Thread.sleep(1500)
-    offerAndWait(crunch.manifestsInput, inputManifestsDc)
+    offerAndWait(crunch.manifestsLiveInput, inputManifestsDc)
 
     val expectedNonZeroQueues = Set(NonEeaDesk)
 
@@ -95,7 +95,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
       initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set())), Map(), Map()))
     )
 
-    offerAndWait(crunch.manifestsInput, inputManifests)
+    offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
     val expected = Map(Queues.EeaDesk -> 2.0, Queues.EGate -> 8.0)
 
@@ -144,7 +144,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
       initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set())), Map(), Map()))
     )
 
-    offerAndWait(crunch.manifestsInput, inputManifests)
+    offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
     val expected = Map(Queues.EeaDesk -> 1.0, Queues.EGate -> 4.0)
 
@@ -225,7 +225,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
       initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set())), Map(), Map()))
     )
 
-    offerAndWait(crunch.manifestsInput, inputManifests)
+    offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
     val expected = Map(Queues.EeaDesk -> 1.2, Queues.EGate -> 0.8, Queues.NonEeaDesk -> 2.0)
 
