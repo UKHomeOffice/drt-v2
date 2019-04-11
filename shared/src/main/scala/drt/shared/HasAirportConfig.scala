@@ -316,7 +316,7 @@ object AirportConfigs {
         EGate -> 0.8140,
         EeaDesk -> (1.0 - 0.8140)
       ))),
-      "A1" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+      "A2" -> (defaultQueueRatios + (EeaMachineReadable -> List(
         EGate -> 0.7894,
         EeaDesk -> (1.0 - 0.7894)
       )))
