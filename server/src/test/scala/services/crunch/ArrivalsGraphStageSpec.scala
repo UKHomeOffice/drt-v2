@@ -70,7 +70,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
         ))
       )))
 
-      offerAndWait(crunch.manifestsInput, voyageManifests)
+      offerAndWait(crunch.manifestsLiveInput, voyageManifests)
 
       val expected = Set(LiveFeedSource, ApiFeedSource)
 

@@ -5,7 +5,7 @@ import akka.persistence._
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
-import server.feeds.{BestManifestsFeedFailure, BestManifestsFeedSuccess, ManifestsFeedFailure, ManifestsFeedSuccess}
+import server.feeds.{BestManifestsFeedSuccess, ManifestsFeedFailure, ManifestsFeedSuccess}
 import server.protobuf.messages.FlightsMessage.FeedStatusMessage
 import server.protobuf.messages.VoyageManifest._
 import services.SDate
@@ -118,8 +118,6 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
       persistFeedStatus(newStatus)
 
     case _: BestManifestsFeedSuccess =>
-
-    case _: BestManifestsFeedFailure =>
 
     case GetFeedStatuses =>
       log.info(s"Received GetFeedStatuses request")

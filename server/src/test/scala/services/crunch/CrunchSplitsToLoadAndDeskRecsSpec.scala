@@ -206,7 +206,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           ))
         )))
 
-        offerAndWait(crunch.manifestsInput, voyageManifests)
+        offerAndWait(crunch.manifestsLiveInput, voyageManifests)
 
         val expected = Map("T1" -> Map(
           Queues.EeaDesk -> Seq(2.0, 0.0, 0.0, 0.0, 0.0),

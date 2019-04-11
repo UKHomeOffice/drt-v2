@@ -25,15 +25,16 @@ class ArrivalSplitsGraphStage(name: String = "",
                               expireAfterMillis: Long,
                               now: () => SDateLike,
                               maxDaysToCrunch: Int)
-  extends GraphStage[FanInShape2[ArrivalsDiff, ManifestsFeedResponse, FlightsWithSplits]] {
+  extends GraphStage[FanInShape3[ArrivalsDiff, ManifestsFeedResponse, ManifestsFeedResponse, FlightsWithSplits]] {
 
   val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
   val inArrivalsDiff: Inlet[ArrivalsDiff] = Inlet[ArrivalsDiff]("ArrivalsDiffIn.in")
-  val inManifests: Inlet[ManifestsFeedResponse] = Inlet[ManifestsFeedResponse]("SplitsIn.in")
+  val inManifestsLive: Inlet[ManifestsFeedResponse] = Inlet[ManifestsFeedResponse]("ManifestsLiveIn.in")
+  val inManifestsHistoric: Inlet[ManifestsFeedResponse] = Inlet[ManifestsFeedResponse]("ManifestsHistoricIn.in")
   val outArrivalsWithSplits: Outlet[FlightsWithSplits] = Outlet[FlightsWithSplits]("ArrivalsWithSplitsOut.out")
 
-  override val shape = new FanInShape2(inArrivalsDiff, inManifests, outArrivalsWithSplits)
+  override val shape = new FanInShape3(inArrivalsDiff, inManifestsLive, inManifestsHistoric, outArrivalsWithSplits)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var flightsByFlightId: Map[ArrivalKey, ApiFlightWithSplits] = Map()
@@ -87,39 +88,44 @@ class ArrivalSplitsGraphStage(name: String = "",
       }
     })
 
-    setHandler(inManifests, new InHandler {
-      override def onPush(): Unit = {
-        val start = SDate.now()
-        log.info(s"inSplits onPush called")
+    setHandler(inManifestsLive, InManifestsHandler(inManifestsLive))
 
-        val incoming: ManifestsFeedResponse = grab(inManifests)
+    setHandler(inManifestsHistoric, InManifestsHandler(inManifestsHistoric))
 
-        incoming match {
-          case BestManifestsFeedSuccess(bestAvailableManifests, connectedAt) =>
-            log.info(s"Grabbed ${bestAvailableManifests.size} BestAvailableManifests from connection at ${connectedAt.toISOString()}")
+    def InManifestsHandler(inlet: Inlet[ManifestsFeedResponse]): InHandler =
+      new InHandler() {
+        override def onPush(): Unit = {
+          val start = SDate.now()
+          log.info(s"inSplits onPush called")
 
-            val updatedFlights = purgeExpiredArrivals(updateFlightsWithManifests(bestAvailableManifests, flightsByFlightId))
-            log.info(s"We now have ${updatedFlights.size}")
+          val incoming: ManifestsFeedResponse = grab(inlet) match {
+            case ManifestsFeedSuccess(DqManifests(_, manifests), createdAt) => BestManifestsFeedSuccess(manifests.toSeq.map(vm => BestAvailableManifest(vm)), createdAt)
+            case other => other
+          }
 
-            val latestDiff = updatedFlights.values.toSet -- flightsByFlightId.values.toSet
-            arrivalsWithSplitsDiff = mergeDiffSets(latestDiff, arrivalsWithSplitsDiff)
-            flightsByFlightId = updatedFlights
-            log.info(s"Done diff")
+          incoming match {
+            case BestManifestsFeedSuccess(bestAvailableManifests, connectedAt) =>
+              log.info(s"Grabbed ${bestAvailableManifests.size} BestAvailableManifests from connection at ${connectedAt.toISOString()}")
 
-            pushStateIfReady()
+              val updatedFlights = purgeExpiredArrivals(updateFlightsWithManifests(bestAvailableManifests, flightsByFlightId))
+              log.info(s"We now have ${updatedFlights.size}")
 
-          case BestManifestsFeedFailure(message, failedAt) =>
-            log.info(s"$inManifests failed at ${failedAt.toISOString()}: $message")
+              val latestDiff = updatedFlights.values.toSet -- flightsByFlightId.values.toSet
+              arrivalsWithSplitsDiff = mergeDiffSets(latestDiff, arrivalsWithSplitsDiff)
+              flightsByFlightId = updatedFlights
+              log.info(s"Done diff")
 
-          case unexpected => log.error(s"Unexpected feed response: ${unexpected.getClass}")
+              pushStateIfReady()
+
+            case unexpected => log.error(s"Unexpected feed response: ${unexpected.getClass}")
+          }
+          pullAll()
+          log.info(s"inManifests Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
         }
-        pullAll()
-        log.info(s"inManifests Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
-    })
 
     def pullAll(): Unit = {
-      List(inManifests, inArrivalsDiff).foreach(in => if (!hasBeenPulled(in)) {
+      List(inManifestsLive, inManifestsHistoric, inArrivalsDiff).foreach(in => if (!hasBeenPulled(in)) {
         log.info(s"Pulling ${in.toString}")
         pull(in)
       })

@@ -190,7 +190,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val initialManifestsState: Option[VoyageManifestState] = initialState(voyageManifestsActor, GetState)
   val latestZipFileName: String = initialManifestsState.map(_.latestZipFilename).getOrElse("")
 
-  lazy val voyageManifestsStage: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](100, OverflowStrategy.backpressure)
+  lazy val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
+  lazy val voyageManifestsHistoricSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
 
   system.log.info(s"useNationalityBasedProcessingTimes: ${params.useNationalityBasedProcessingTimes}")
   system.log.info(s"useSplitsPrediction: ${params.useSplitsPrediction}")
@@ -225,12 +226,11 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         val initialPortState: Option[PortState] = mergePortStates(maybeForecastState, maybeLiveState)
 
         val crunchInputs: CrunchSystem[Cancellable] = startCrunchSystem(initialPortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, params.recrunchOnStart, true)
-        voyageManifestsRequestActor ! SubscribeResponseQueue(crunchInputs.manifestsResponse)
 
         if (maybeRegisteredArrivals.isDefined) log.info(s"sending ${maybeRegisteredArrivals.get.arrivals.size} initial registered arrivals to batch stage")
         else log.info(s"sending no registered arrivals to batch stage")
 
-        new S3ManifestPoller(crunchInputs.manifestsResponse, airportConfig.portCode, latestZipFileName, s3ApiProvider).startPollingForManifests()
+        new S3ManifestPoller(crunchInputs.manifestsLiveResponse, airportConfig.portCode, latestZipFileName, s3ApiProvider).startPollingForManifests()
 
         if (!params.useLegacyManifests) {
           val initialRegisteredArrivals = if (params.resetRegisteredArrivalOnStart) {
@@ -239,7 +239,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
           } else maybeRegisteredArrivals
           val manifestsSourceQueue = startManifestsGraph(initialRegisteredArrivals)
           voyageManifestsRequestActor ! SubscribeRequestQueue(manifestsSourceQueue)
-          voyageManifestsRequestActor ! SubscribeResponseQueue(crunchInputs.manifestsResponse)
+          voyageManifestsRequestActor ! SubscribeResponseQueue(crunchInputs.manifestsHistoricResponse)
         }
 
         subscribeStaffingActors(crunchInputs)
@@ -319,7 +319,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       useLegacyManifests = params.useLegacyManifests,
       splitsPredictorStage = splitsPredictorStage,
       b5JStartDate = params.maybeB5JStartDate.map(SDate(_)).getOrElse(SDate("2019-06-01")),
-      manifestsSource = voyageManifestsStage,
+      manifestsLiveSource = voyageManifestsLiveSource,
+      manifestsHistoricSource = voyageManifestsHistoricSource,
       voyageManifestsActor = voyageManifestsActor,
       voyageManifestsRequestActor = voyageManifestsRequestActor,
       cruncher = TryRenjin.crunch,
