@@ -3,7 +3,6 @@ package drt.client.components
 import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.actions.Actions.{DeleteAllAlerts, SaveAlert}
-import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
@@ -21,9 +20,7 @@ object AlertsPage {
   val defaultExpiryHours = 24
   def defaultExpiryMillis(): MillisSinceEpoch = SDate.now().addHours(defaultExpiryHours).millisSinceEpoch
 
-  def defaultState(): State = {
-    State(alertClass = Option(defaultAlertClass), expiryDateTime = Option(defaultExpiryMillis()))
-  }
+  def defaultState(): State = State(alertClass = Option(defaultAlertClass), expiryDateTime = Option(defaultExpiryMillis()))
 
   val component = ScalaComponent.builder[Unit]("Alerts")
     .initialState(defaultState())
@@ -94,9 +91,8 @@ object AlertsPage {
         state.copy(message = Option(message))
       })
 
-      def setExpiryDateTimeFromHours(hours: String) = {
+      def setExpiryDateTimeFromHours(hours: String) =
         scope.modState(state => state.copy(expiryDateTime = Option(SDate.now().addHours(hours.toInt).millisSinceEpoch)))
-      }
 
       def isValid: Boolean = state.message.exists(s => s.trim != "")
 
