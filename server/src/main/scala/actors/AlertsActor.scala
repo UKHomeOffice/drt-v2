@@ -34,9 +34,10 @@ case class AlertsActor() extends RecoveryActorLike with PersistentDrtActor[Seq[A
   def deserialise(alert: ProtobufAlert): Option[Alert] = for {
     title <- alert.title
     message <- alert.message
+    alertClass <- alert.alertClass
     expires <- alert.expires
     createdAt <- alert.createdAt
-  } yield Alert(title, message, expires, createdAt)
+  } yield Alert(title, message, alertClass, expires, createdAt)
 
   def serialise(alert: Alert): ProtobufAlert = ProtobufAlert(Option(alert.title), Option(alert.message), Option(alert.expires), Option(alert.createdAt))
 
@@ -50,7 +51,7 @@ case class AlertsActor() extends RecoveryActorLike with PersistentDrtActor[Seq[A
 
   override def receiveCommand: Receive = {
 
-    case alert@Alert(_, _, _, _) =>
+    case alert: Alert =>
       log.info(s"Saving Alert $alert")
       updateState(Seq(alert))
       persistAndMaybeSnapshot(serialise(alert))

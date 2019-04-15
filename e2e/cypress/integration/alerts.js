@@ -15,6 +15,7 @@ describe('Alerts system', function () {
     cy
       .request('POST', '/data/alert', {
         "title": "This is an alert"+number,
+        "alertClass": "notice",
         "message": "This is the message of the alert",
         "expires": today + " " + time
       })

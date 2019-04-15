@@ -6,8 +6,6 @@ import drt.shared.Alert
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.ScalaComponent
 
-import scala.scalajs.js
-
 object AlertsComponent {
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
@@ -22,17 +20,17 @@ object AlertsComponent {
       modelRCP { modelMP =>
         val alertsPot = modelMP()
 
-        <.div(^.id:= "alerts",
+        <.div(^.id := "alerts",
           alertsPot.render((alerts: Seq[Alert]) => {
-          <.span(^.id:= "has-alerts",
-            alerts.map(alert => {
-              <.span(^.key := alert.createdAt, ^.`class`:="alert alert-danger the-alert", ^.role:="alert",
-              <.strong(alert.title),s" - ${alert.message}"
-              )
-            }).toVdomArray
+            <.span(^.id := "has-alerts",
+              alerts.map(alert => {
+                <.span(^.key := alert.createdAt, ^.`class` := "alert alert-danger the-alert", ^.role := "alert",
+                  <.div(^.dangerouslySetInnerHtml := s"<strong>${alert.title}</strong> - ${alert.message}")
+                )
+              }).toVdomArray
             )
           }),
-          alertsPot.renderEmpty(<.div(^.id :="empty-alert"))
+          alertsPot.renderEmpty(<.div(^.id := "empty-alert"))
         )
       }
     })

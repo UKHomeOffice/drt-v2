@@ -12,4 +12,5 @@ message Alert {
     optional int64 expires = 3;
     optional int64 createdAt = 4;
     optional string createdBy = 5;
+    optional string alertClass = 6;
 }
