@@ -51,7 +51,7 @@ class AlertsActorSpec extends Specification {
   "AlertsActor" should {
     "return the message it that was set if only one message is sent" in new Context {
 
-      val alert = Alert("alert title", "this is the alert message", DateTime.now.plusDays(1).getMillis, DateTime.now.getMillis)
+      val alert = Alert("alert title", "this is the alert message", "notice", DateTime.now.plusDays(1).getMillis, DateTime.now.getMillis)
 
       actor ! DeleteAlerts
       Thread.sleep(250)
