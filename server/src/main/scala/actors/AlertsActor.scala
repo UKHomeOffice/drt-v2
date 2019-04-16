@@ -74,6 +74,10 @@ case class AlertsActor() extends RecoveryActorLike with PersistentDrtActor[Seq[A
     case SaveSnapshotFailure(md, cause) =>
       log.info(s"Save snapshot failure: $md, $cause")
 
+    case "complete" =>
+      log.info(s"Received 'complete'. Stopping")
+      context.stop(self)
+
     case other =>
       log.error(s"Received unexpected message ${other.getClass}")
 

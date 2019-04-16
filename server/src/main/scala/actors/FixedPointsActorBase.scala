@@ -96,6 +96,10 @@ class FixedPointsActorBase(now: () => SDateLike) extends RecoveryActorLike with 
     case SaveSnapshotFailure(md, cause) =>
       log.info(s"Save snapshot failure: $md, $cause")
 
+    case "complete" =>
+      log.info(s"Received 'complete'. Stopping")
+      context.stop(self)
+
     case u =>
       log.info(s"unhandled message: $u")
   }

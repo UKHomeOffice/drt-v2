@@ -127,6 +127,10 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
     case DeleteSnapshotsSuccess(_) =>
       logInfo(s"Purged snapshots")
 
+    case "complete" =>
+      log.info(s"Received 'complete'. Stopping")
+      context.stop(self)
+
     case u =>
       log.error(s"Received unexpected message $u")
   }

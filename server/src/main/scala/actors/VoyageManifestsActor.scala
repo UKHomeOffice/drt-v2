@@ -137,6 +137,10 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
     case SaveSnapshotFailure(md, cause) =>
       log.info(s"Save snapshot failure: $md, $cause")
 
+    case "complete" =>
+      log.info(s"Received 'complete'. Stopping")
+      context.stop(self)
+
     case other =>
       log.info(s"Received unexpected message ${other.getClass}")
   }
