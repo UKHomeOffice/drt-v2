@@ -13,7 +13,10 @@ class ApplicationSpec extends CrunchTestLike {
 
   trait Context extends Scope {
     implicit val mat: Materializer = ActorMaterializer()
-    implicit val config = play.api.Configuration.from(Map("portCode" -> "test", "dq.s3.bucket" -> "bucket", "googleTrackingCode"-> "", "virus-scanner-url" -> ""))
+    implicit val config = play.api.Configuration.from(Map("portCode" -> "test",
+      "dq.s3.bucket" -> "bucket",
+      "googleTrackingCode"-> "",
+      "virus-scanner-url" -> ""))
 
     val application = new Application()(config = config, mat = mat, env = Environment.simple(), system = system, ec = global)
   }
