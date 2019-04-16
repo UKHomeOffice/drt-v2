@@ -28,7 +28,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val baseArrival = ArrivalGenerator.apiFlight(schDt = base, iata = "BA0001", terminal = "T1", actPax = Option(21))
     val baseFlights = Flights(List(baseArrival))
 
-    val crunch = runCrunchGraph(now = () => SDate(scheduled))
+    val crunch = runCrunchGraph(now = () => SDate(scheduled), maxDaysToCrunch = 4)
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseFlights))
@@ -74,6 +74,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
       ),
       now = () => SDate(scheduled),
       initialShifts = ShiftAssignments(Seq(assignment1, assignment2)),
+      maxDaysToCrunch = 4,
       checkRequiredStaffUpdatesOnStartup = true
     )
 
@@ -123,7 +124,8 @@ class ForecastCrunchSpec extends CrunchTestLike {
       now = () => SDate(scheduled),
       minutesToCrunch = 1440,
       initialShifts = ShiftAssignments(Seq(assignment1, assignment2)),
-      cruncher = TryRenjin.crunch
+      cruncher = TryRenjin.crunch,
+      maxDaysToCrunch = 4
     )
 
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseFlights))
@@ -394,7 +396,8 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
       initialBaseArrivals = initialBaseArrivals,
-      initialPortState = Option(PortState(initialPortStateArrivals, Map(), Map()))
+      initialPortState = Option(PortState(initialPortStateArrivals, Map(), Map())),
+      maxDaysToCrunch = 4
     )
 
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(updatedBaseArrivals)))
