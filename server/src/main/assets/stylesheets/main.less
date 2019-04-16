@@ -1188,26 +1188,6 @@ th h2 {
   height: @pax-bar-height;
 }
 
-.pax-unknown {
-  background-color: @reliability-low;
-  .pax-bar
-}
-
-.pax-portfeed {
-  background-color: @reliability-medium;
-  .pax-bar
-}
-
-.pax-predicted {
-  background-color: @reliability-quite-high;
-  .pax-bar
-}
-
-.pax-api {
-  background-color: @reliability-high;
-  .pax-bar
-}
-
 .pax-capacity {
   height: 0px;
   border-bottom: solid 1px #9c9c9c;
@@ -1485,6 +1465,27 @@ div.summary-box-container.rag-summary table.rag-desks td, div.summary-box-contai
 
 .splits .graph .bar.fastTrack {
   background-color: purple;
+}
+
+#arrivals td.queue-split {
+  padding: 0px;
+}
+
+.queue-split span {
+  padding: 8px 20px 5px 10px;
+  display: block;
+}
+
+.pax-api span {
+  border-bottom: 3px solid @reliability-high;
+}
+
+.pax-portfeed span {
+  border-bottom: 3px solid @reliability-medium;
+}
+
+.pax-unknown span {
+  border-bottom: 3px solid @reliability-low;
 }
 
 #arrivals td, #arrivals th {

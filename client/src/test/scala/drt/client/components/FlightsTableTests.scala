@@ -1,7 +1,6 @@
 package drt.client.components
 
 import diode.data.{Pot, Ready}
-import drt.client.components.FlightsWithSplitsTable.tableHead
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
@@ -116,11 +115,11 @@ object FlightsTableTests extends TestSuite {
                   <.td(<.span(^.title := "2016-01-01 13:10", "13:10")),
                   <.td(<.span(^.title := "2016-01-01 13:15", "13:15"), ^.className := "est-chox"),
                   <.td(<.span(^.title := "2016-01-01 13:20", "13:20")),
-                  <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:37", "13:37"))), //pcp
+                  <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:37", "13:37"))),
                   <.td(testFlight.ActPax.getOrElse(0).toInt, ^.className := "right"),
-                  <.td(0, ^.className := "right"),
-                  <.td(0, ^.className := "right"),
-                  <.td(0, ^.className := "right")))))
+                  <.td(<.span(0), ^.className := "queue-split pax-unknown right"),
+                  <.td(<.span(0), ^.className := "queue-split pax-unknown right"),
+                  <.td(<.span(0), ^.className := "queue-split pax-unknown right")))))
 
           assertRenderedComponentsAreEqual(
             ArrivalsTable(timelineComponent = None)()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), PaxTypesAndQueues.inOrderSansFastTrack, hasEstChox = true)),
@@ -128,7 +127,7 @@ object FlightsTableTests extends TestSuite {
         }
 
         "ArrivalsTableComponent has a hook for a timeline column" - {
-          val timelineComponent: (Arrival) => VdomNode = (f: Arrival) => <.span("herebecallback")
+          val timelineComponent: Arrival => VdomNode = (f: Arrival) => <.span("herebecallback")
           val expected =
             <.div(
               <.div(^.id := "toStick", ^.className := "container sticky",
@@ -152,11 +151,11 @@ object FlightsTableTests extends TestSuite {
                     date(testFlight.Actual),
                     date(testFlight.EstimatedChox, Option("est-chox")),
                     date(testFlight.ActualChox),
-                    <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:37", "13:37"))), //pcp
+                    <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:37", "13:37"))),
                     <.td(testFlight.ActPax.getOrElse(0).toInt, ^.className := "right"),
-                    <.td(0, ^.className := "right"),
-                    <.td(0, ^.className := "right"),
-                    <.td(0, ^.className := "right")))))
+                    <.td(<.span(0), ^.className := "queue-split pax-unknown right"),
+                    <.td(<.span(0), ^.className := "queue-split pax-unknown right"),
+                    <.td(<.span(0), ^.className := "queue-split pax-unknown right")))))
 
           assertRenderedComponentsAreEqual(
             ArrivalsTable(Some(timelineComponent))()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), PaxTypesAndQueues.inOrderSansFastTrack, hasEstChox = true)),
@@ -187,17 +186,17 @@ object FlightsTableTests extends TestSuite {
                     date(testFlight.Actual),
                     date(testFlight.EstimatedChox, Option("est-chox")),
                     date(testFlight.ActualChox),
-                    <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:37", "13:37"))), //pcp
+                    <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:37", "13:37"))),
                     <.td(testFlight.ActPax.getOrElse(0).toInt, ^.className := "right"),
-                    <.td(0, ^.className := "right"),
-                    <.td(0, ^.className := "right"),
-                    <.td(0, ^.className := "right")))))
+                    <.td(<.span(0), ^.className := "queue-split pax-unknown right"),
+                    <.td(<.span(0), ^.className := "queue-split pax-unknown right"),
+                    <.td(<.span(0), ^.className := "queue-split pax-unknown right")))))
 
 
             def originMapperComponent(portCode: String): VdomNode = <.span(^.title := "JFK, New York, USA", portCode)
 
             val table = ArrivalsTable(timelineComponent = None,
-              originMapper = (port) => originMapperComponent(port)
+              originMapper = port => originMapperComponent(port)
             )()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), PaxTypesAndQueues.inOrderSansFastTrack, hasEstChox = true))
 
             assertRenderedComponentsAreEqual(table, staticComponent(expected)())
@@ -253,17 +252,17 @@ object FlightsTableTests extends TestSuite {
                   date(testFlightT.Actual),
                   date(testFlightT.EstimatedChox, Option("est-chox")),
                   date(testFlightT.ActualChox),
-                  <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:36", "13:36"))), //pcp
+                  <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:36", "13:36"))),
                   <.td(<.div(paxToDisplay, ^.className := "pax-portfeed", ^.width := s"$width%"), ^.className := "right"),
-                  <.td(0, ^.className := "right"),
-                  <.td(0, ^.className := "right"),
-                  <.td(0, ^.className := "right")
+                  <.td(<.span(0), ^.className := "queue-split pax-unknown right"),
+                  <.td(<.span(0), ^.className := "queue-split pax-unknown right"),
+                  <.td(<.span(0), ^.className := "queue-split pax-unknown right")
                 ))))
 
           def paxComponent(f: ApiFlightWithSplits): VdomNode = <.div(f.apiFlight.ActPax.getOrElse(0).toInt, ^.className := "pax-portfeed", ^.width := s"$width%")
 
           assertRenderedComponentsAreEqual(
-            FlightsWithSplitsTable.ArrivalsTable(timelineComponent = None, originMapper = (s) => s)(paxComponent)(
+            FlightsWithSplitsTable.ArrivalsTable(timelineComponent = None, originMapper = s => s)(paxComponent)(
               FlightsWithSplitsTable.Props(withSplits(testFlightT :: Nil), PaxTypesAndQueues.inOrderSansFastTrack, hasEstChox = true)),
             staticComponent(expected)())
 

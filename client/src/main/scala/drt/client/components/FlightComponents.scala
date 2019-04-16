@@ -22,12 +22,11 @@ object FlightComponents {
       <.div(
         acPot().render(_ => {
           val paxToDisplay: Int = ArrivalHelper.bestPax(flight)
-          val paxClass = paxClassFromSplits(flightWithSplits)
 
           <.div(
             ^.title := paxComponentTitle(flight, apiExTransPax, apiPax),
             ^.className := "pax-cell",
-            <.div(^.className := paxClass + " right", paxToDisplay)
+            <.div(^.className := "right", paxToDisplay)
           )
         }))
     })

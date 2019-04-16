@@ -179,8 +179,8 @@ object FlightTableRow {
           (None, props.originMapper(flight.Origin)),
           (None, TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
             <.span(
-            proxy().renderEmpty(<.span()),
-            proxy().render(ai=> <.span(ai.country) )
+              proxy().renderEmpty(<.span()),
+              proxy().render(ai => <.span(ai.country))
             )
           }),
           (None, s"${flight.Gate.getOrElse("")}/${flight.Stand.getOrElse("")}"),
@@ -202,13 +202,16 @@ object FlightTableRow {
           }
           .toTagMod
 
+
+        val paxClass = FlightComponents.paxClassFromSplits(flightWithSplits)
+
         <.tr(
           ^.key := flight.uniqueId.toString,
           ^.className := s"${offScheduleClass(flight)} $timeIndicatorClass",
           hasChangedStyle,
           props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
           flightFields,
-          queueNames.map(q => <.td(s"${queuePax.getOrElse(q, 0)}", ^.className := "right")).toTagMod
+          queueNames.map(q => <.td(<.span(s"${queuePax.getOrElse(q, 0)}"), ^.className := s"queue-split $paxClass right")).toTagMod
         )
       }.recover {
         case e => log.error(s"couldn't make flight row $e")
