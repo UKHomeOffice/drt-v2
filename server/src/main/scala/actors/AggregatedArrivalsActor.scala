@@ -22,10 +22,6 @@ class AggregatedArrivalsActor(portCode: String, arrivalTable: ArrivalTableLike) 
       handleUpdates(flightUpdates)
 
       handleRemovals(flightRemovals)
-
-    case "complete" =>
-      log.info(s"Received 'complete'. Stopping")
-      context.stop(self)
   }
 
   def handleRemovals(flightRemovals: Set[RemoveFlight]): Unit = {

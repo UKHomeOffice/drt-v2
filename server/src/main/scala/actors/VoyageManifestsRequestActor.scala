@@ -56,10 +56,6 @@ class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLook
 
     case ArrivalsDiff(arrivals, _) => manifestsRequestQueue.foreach(queue => OfferHandler.offerWithRetries(queue, arrivals.toList, 10))
 
-    case "complete" =>
-      log.info(s"Received 'complete'. Stopping")
-      context.stop(self)
-
     case unexpected => log.warn(s"received unexpected ${unexpected.getClass}")
   }
 
