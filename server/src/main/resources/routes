@@ -5,6 +5,8 @@
 # Home page
 GET           /                                                    controllers.Application.index
 
+GET           /airport-config                                      controllers.Application.getAirportConfig
+
 GET           /export/api/:terminalName/:year/:month/:day          controllers.Application.exportApi(day: Int, month: Int, year: Int, terminalName: String)
 GET           /export/desks/:pointInTime/:terminalName             controllers.Application.exportDesksAndQueuesAtPointInTimeCSV(pointInTime, terminalName, startHour: Int ?= 0, endHour: Int ?= 24)
 GET           /export/arrivals/:pointInTime/:terminalName          controllers.Application.exportFlightsWithSplitsAtPointInTimeCSV(pointInTime, terminalName, startHour: Int ?= 0, endHour: Int ?= 24)

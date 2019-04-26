@@ -1,13 +1,31 @@
 package drt.shared
 
+import ujson.Js.Value
+import upickle.Js
+import upickle.default._
+import upickle.default.{macroRW, ReadWriter => RW}
+
 case class LoggedInUser(userName: String, id: String, email: String, roles: Set[Role]) {
   def hasRole(role: Role) = roles.exists(_.name == role.name)
+}
+
+object LoggedInUser {
+  implicit val rw: RW[AirportConfig] = macroRW
 }
 
 case class ShouldReload(shouldReload: Boolean)
 
 sealed trait Role {
   val name: String
+}
+
+object Role {
+  implicit val paxTypeReaderWriter: ReadWriter[Role] =
+    readwriter[Js.Value].bimap[Role](
+      r => r.name,
+      (s: Value) => Roles.parse(s.toString())
+        .getOrElse(NoOpRole)
+    )
 }
 
 object Roles {
@@ -24,14 +42,19 @@ object Roles {
     Test2Access,
     STNAccess
   )
-  val availableRoles : Set[Role] = Set(
+  val availableRoles: Set[Role] = Set(
     StaffEdit,
     ApiView,
     ManageUsers,
     CreateAlerts,
     ApiViewPortCsv
   ) ++ portRoles
-  def parse(roleName: String): Option[Role] = availableRoles.find(role=> role.name == roleName)
+
+  def parse(roleName: String): Option[Role] = availableRoles.find(role => role.name == roleName)
+}
+
+case object NoOpRole extends Role {
+  override val name: String = "noop"
 }
 
 case object StaffEdit extends Role {

@@ -1,6 +1,5 @@
 package drt.client.services.handlers
 
-import boopickle.Default._
 import diode.data.{Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW}
 import drt.client.SPAMain

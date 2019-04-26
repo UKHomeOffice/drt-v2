@@ -1,4 +1,5 @@
 package drt.shared
+import upickle.default.{ReadWriter => RW, macroRW}
 
 object SplitRatiosNs {
   case class SplitRatios(splits: List[SplitRatio]=Nil, origin: String)
@@ -15,6 +16,10 @@ object SplitRatiosNs {
   object SplitRatios {
     def apply(origin: String, ratios: SplitRatio*): SplitRatios = SplitRatios(ratios.toList, origin)
     def apply(origin: String, ratios: List[SplitRatio]): SplitRatios = SplitRatios(ratios, origin)
+    implicit val rw: RW[SplitRatios] = macroRW
   }
   case class SplitRatio(paxType: PaxTypeAndQueue, ratio: Double)
+  object SplitRatio {
+    implicit val rw: RW[SplitRatio] = macroRW
+  }
 }

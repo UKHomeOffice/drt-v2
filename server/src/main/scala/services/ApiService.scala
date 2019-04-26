@@ -91,8 +91,6 @@ abstract class ApiService(val airportConfig: AirportConfig,
 
   def saveAlert(alert: Alert): Unit
 
-  def airportConfiguration(): AirportConfig = airportConfig
-
   def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]]
 
   def getCrunchStateForDay(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]]

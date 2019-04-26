@@ -692,8 +692,6 @@ trait Api {
 
   def airportInfosByAirportCodes(codes: Set[String]): Future[Map[String, AirportInfo]]
 
-  def airportConfiguration(): AirportConfig
-
   def getShifts(maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments]
 
   def saveFixedPoints(fixedPoints: FixedPointAssignments): Unit

@@ -426,6 +426,12 @@ class Application @Inject()(implicit val config: Configuration,
     Ok(Json.toJson(user))
   }
 
+  def getAirportConfig(): Action[AnyContent] = Action { _ =>
+    import upickle.default._
+
+    Ok(write(airportConfig))
+  }
+
   def getShouldReload(): Action[AnyContent] = Action { request =>
 
     val shouldRedirect: Boolean = config.getOptional[Boolean]("feature-flags.acp-redirect").getOrElse(false)
