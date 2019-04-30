@@ -114,7 +114,7 @@ object CrunchSystem {
     val arrivalSplitsGraphStage = if (props.useLegacyManifests)
       new ArrivalSplitsFromAllSourcesGraphStage(
         name = props.logLabel,
-        optionalInitialFlights = initialFlightsWithSplits,
+        optionalInitialFlights = if (props.recrunchOnStart) None else initialFlightsWithSplits,
         optionalInitialManifests = props.initialManifestsState.map(_.manifests),
         splitsCalculator = splitsCalculator,
         groupFlightsByCodeShares = groupFlightsByCodeShares,
@@ -122,7 +122,6 @@ object CrunchSystem {
         now = props.now,
         maxDaysToCrunch = props.maxDaysToCrunch)
     else {
-
       val ptqa = if (props.airportConfig.portCode == "LHR")
         PaxTypeQueueAllocation(
           B5JPlusWithTransitTypeAllocator(props.b5JStartDate),
