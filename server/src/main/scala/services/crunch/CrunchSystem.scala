@@ -136,7 +136,7 @@ object CrunchSystem {
       new ArrivalSplitsGraphStage(
         name = props.logLabel,
         props.airportConfig.portCode,
-        optionalInitialFlights = initialFlightsWithSplits,
+        optionalInitialFlights = if (props.recrunchOnStart) None else initialFlightsWithSplits,
         splitsCalculator = manifests.queues.SplitsCalculator(
           props.airportConfig.feedPortCode,
           ptqa,
