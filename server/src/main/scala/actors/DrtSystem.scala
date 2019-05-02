@@ -234,6 +234,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
         if (!params.useLegacyManifests) {
           val initialRegisteredArrivals = if (params.resetRegisteredArrivalOnStart) {
+            log.info(s"Resetting registered arrivals for manifest lookups")
             val maybeAllArrivals = initialPortState.map(_.flights.values.map(fws => (ArrivalKey(fws.apiFlight), None)).toMap)
             Option(RegisteredArrivals(maybeAllArrivals.getOrElse(Map())))
           } else maybeRegisteredArrivals
