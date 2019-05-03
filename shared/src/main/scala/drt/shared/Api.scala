@@ -6,6 +6,9 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, _}
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.SplitRatiosNs.SplitSources
+import upickle.Js
+import upickle.default._
+import upickle.default.{macroRW, ReadWriter => RW}
 
 import scala.concurrent.Future
 import scala.util.matching.Regex
@@ -357,6 +360,10 @@ case class CrunchResult(firstTimeMillis: MillisSinceEpoch,
 
 case class AirportInfo(airportName: String, city: String, country: String, code: String)
 
+object AirportInfo {
+  implicit val rw: RW[AirportInfo] = macroRW
+}
+
 object FlightsApi {
 
   case class Flights(flights: Seq[Arrival])
@@ -687,10 +694,6 @@ trait Api {
   def deleteAllAlerts(): Unit
 
   def saveAlert(alert: Alert): Unit
-
-  def airportInfoByAirportCode(code: String): Future[Option[AirportInfo]]
-
-  def airportInfosByAirportCodes(codes: Set[String]): Future[Map[String, AirportInfo]]
 
   def getShifts(maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments]
 

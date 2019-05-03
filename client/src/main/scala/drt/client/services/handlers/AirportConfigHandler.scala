@@ -21,12 +21,11 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
 
       val eventualAction: Future[UpdateAirportConfig] = dom.ext.Ajax.get(url = url).map(r => {
 
-
         val airportConfig = read[AirportConfig]({
           log.info(s"respone: ${r.responseText}")
           r.responseText
         })
-        log.info(s"Airport Config is: $airportConfig")
+
         UpdateAirportConfig(airportConfig)
       })
       updated(Pending(), Effect(eventualAction.recoverWith {

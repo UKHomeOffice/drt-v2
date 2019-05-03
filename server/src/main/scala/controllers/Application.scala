@@ -426,10 +426,29 @@ class Application @Inject()(implicit val config: Configuration,
     Ok(Json.toJson(user))
   }
 
-  def getAirportConfig(): Action[AnyContent] = Action { _ =>
+  def getAirportConfig: Action[AnyContent] = Action { _ =>
     import upickle.default._
 
     Ok(write(airportConfig))
+  }
+
+  def getAirportInfo: Action[AnyContent] = Action { request =>
+    import upickle.default._
+
+    val res: Map[String, AirportInfo] = request.queryString.get("portCode")
+      .flatMap(_.headOption)
+      .map(codes => codes
+        .split(",")
+        .map(code => (code, AirportToCountry.airportInfo.get(code)))
+        .collect{
+          case (code , Some(info)) => (code, info)
+        }
+      ) match {
+      case Some(airportInfoTuples) => airportInfoTuples.toMap
+      case None => Map()
+    }
+
+    Ok(write(res))
   }
 
   def getShouldReload(): Action[AnyContent] = Action { request =>

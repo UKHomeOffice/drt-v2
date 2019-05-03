@@ -52,11 +52,13 @@ object PaxType {
     case "EeaMachineReadable$" => EeaMachineReadable
     case "NonVisaNational$" => NonVisaNational
     case "B5JPlusNational$" => B5JPlusNational
+    case "EeaBelowEGateAge$" => EeaBelowEGateAge
+    case "B5JPlusNationalBelowEGateAge$" => B5JPlusNationalBelowEGateAge
     case _ => UndefinedPaxType
   }
 
   implicit val paxTypeReaderWriter: ReadWriter[PaxType] =
-    readwriter[Js.Value].bimap[PaxType](paxType => paxType.cleanName, (s: Value) => PaxType(s.toString()))
+    readwriter[Js.Value].bimap[PaxType](paxType => paxType.cleanName, (s: Value) => PaxType(s"${s.str}$$"))
 }
 
 object PaxTypes {

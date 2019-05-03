@@ -42,8 +42,6 @@ trait AirportToCountryLike {
     row1.substring(1, row1.length - 1)
   }
 
-  def airportInfoByAirportCode(code: String) = Future(airportInfo.get(code))
-
   def airportInfosByAirportCodes(codes: Set[String]): Future[Map[String, AirportInfo]] = Future {
     val res = codes.map(code => (code, airportInfo.get(code)))
 
@@ -56,9 +54,7 @@ trait AirportToCountryLike {
   }
 }
 
-object AirportToCountry extends AirportToCountryLike {
-
-}
+object AirportToCountry extends AirportToCountryLike
 
 abstract class ApiService(val airportConfig: AirportConfig,
                           val shiftsActor: ActorRef,

@@ -122,6 +122,9 @@ object CrunchSystem {
         now = props.now,
         maxDaysToCrunch = props.maxDaysToCrunch)
     else {
+
+      log.info(s"Using B5JPlus Start Date of ${props.b5JStartDate.toISOString()}")
+
       val ptqa = if (props.airportConfig.portCode == "LHR")
         PaxTypeQueueAllocation(
           B5JPlusWithTransitTypeAllocator(props.b5JStartDate),

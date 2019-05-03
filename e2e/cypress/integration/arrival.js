@@ -111,6 +111,8 @@ describe('Arrivals page', () => {
   it('Displays a flight after it has been ingested via the live feed', () => {
     cy
       .waitForFlightToAppear("TS0123")
+      .get('.before-now > :nth-child(2) > span > span')
+      .should('have.attr', 'title', 'Schiphol, Amsterdam, Netherlands')
   });
 
   it('Does not show API splits in the flights export for regular users', () => {

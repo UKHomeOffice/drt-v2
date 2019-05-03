@@ -23,8 +23,7 @@ object Role {
   implicit val paxTypeReaderWriter: ReadWriter[Role] =
     readwriter[Js.Value].bimap[Role](
       r => r.name,
-      (s: Value) => Roles.parse(s.toString())
-        .getOrElse(NoOpRole)
+      (s: Value) => Roles.parse(s.str).getOrElse(NoOpRole)
     )
 }
 
