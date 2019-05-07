@@ -254,7 +254,7 @@ object AirportConfigs {
     Transit -> List(Queues.Transfer -> 1.0),
     NonVisaNational -> List(Queues.NonEeaDesk -> 1.0),
     VisaNational -> List(Queues.NonEeaDesk -> 1.0),
-    B5JPlusNational -> List(Queues.EGate -> 0.4, Queues.EeaDesk -> 0.6),
+    B5JPlusNational -> List(Queues.EGate -> 0.6, Queues.EeaDesk -> 0.4),
     B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
   )
 
