@@ -210,8 +210,6 @@ class Application @Inject()(implicit val config: Configuration,
 
       def getCrunchStateForDay(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = loadBestCrunchStateForPointInTime(day)
 
-      def getApplicationVersion(): String = BuildInfo.version
-
       override def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = crunchStateAtPointInTime(pointInTime)
 
       def getCrunchUpdates(sinceMillis: MillisSinceEpoch,
@@ -441,6 +439,11 @@ class Application @Inject()(implicit val config: Configuration,
     }
 
     Ok(write(res))
+  }
+
+  def getApplicationVersion:Action[AnyContent] = Action { _ =>
+
+    Ok(write(BuildVersion(BuildInfo.version.toString)))
   }
 
   def getShouldReload(): Action[AnyContent] = Action { request =>

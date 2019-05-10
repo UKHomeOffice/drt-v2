@@ -1,17 +1,15 @@
 package drt.client.services.handlers
 
-import autowire._
-import boopickle.Default._
-import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
+import diode.Implicits.runAfterImpl
 import diode.data.{Empty, Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW, NoAction}
-import diode.Implicits.runAfterImpl
 import drt.client.actions.Actions.{GetApplicationVersion, SetApplicationVersion, UpdateServerApplicationVersion}
 import drt.client.logger.log
-import drt.client.services.{AjaxClient, ClientServerVersions, PollDelay}
-import drt.shared.Api
-
+import drt.client.services.{ClientServerVersions, DrtApi, PollDelay}
+import drt.shared.BuildVersion
+import upickle.default.read
 import scala.concurrent.Future
+import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.util.{Failure, Success, Try}
 
 class ApplicationVersionHandler[M](modelRW: ModelRW[M, Pot[ClientServerVersions]]) extends LoggingActionHandler(modelRW) {
@@ -21,18 +19,17 @@ class ApplicationVersionHandler[M](modelRW: ModelRW[M, Pot[ClientServerVersions]
 
       val nextCallEffect = Effect(Future(GetApplicationVersion)).after(PollDelay.recoveryDelay)
 
-      val effect = Effect(AjaxClient[Api].getApplicationVersion().call().map(serverVersionContent => {
-        Try(Integer.parseInt(serverVersionContent)) match {
-          case Success(serverVersionInt) =>
-            val serverVersion = serverVersionInt.toString
+      val effect = Effect(DrtApi.get("version").map(response => {
+        Try(read[BuildVersion](response.responseText)) match {
+          case Success(buildInfo) =>
             value match {
-              case Ready(ClientServerVersions(clientVersion, _)) if serverVersion != clientVersion =>
-                UpdateServerApplicationVersion(serverVersion)
+              case Ready(ClientServerVersions(clientVersion, _)) if buildInfo.version != clientVersion =>
+                UpdateServerApplicationVersion(buildInfo.version)
               case Ready(_) =>
-                log.info(s"server application version unchanged ($serverVersionInt)")
+                log.info(s"server application version unchanged (${buildInfo.version})")
                 NoAction
               case Empty =>
-                SetApplicationVersion(serverVersion)
+                SetApplicationVersion(buildInfo.version)
               case u =>
                 log.info(s"Got a $u")
                 NoAction

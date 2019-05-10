@@ -364,6 +364,12 @@ object AirportInfo {
   implicit val rw: RW[AirportInfo] = macroRW
 }
 
+case class BuildVersion(version: String)
+
+object BuildVersion {
+  implicit val rw: RW[BuildVersion] = macroRW
+}
+
 object FlightsApi {
 
   case class Flights(flights: Seq[Arrival])
@@ -687,7 +693,6 @@ object CrunchApi {
 }
 
 trait Api {
-  def getApplicationVersion(): String
 
   def getShifts(maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments]
 

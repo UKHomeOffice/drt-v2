@@ -4,7 +4,6 @@ import diode.data.{Pending, Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW}
 import drt.client.SPAMain
 import drt.client.actions.Actions._
-import drt.client.logger.log
 import drt.client.services.PollDelay
 import drt.shared.AirportInfo
 import org.scalajs.dom
@@ -22,15 +21,9 @@ class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map
 
       val url = SPAMain.absoluteUrl(s"airport-info?portCode=${codes.mkString(",")}")
 
-      val eventualAction: Future[UpdateAirportInfos] = dom.ext.Ajax.get(url = url).map(r => {
-
-        val aiportInfos = read[Map[String,AirportInfo]]({
-          log.info(s"respone: ${r.responseText}")
-          r.responseText
-        })
-        log.info(s"Airport infos is: $aiportInfos")
-        UpdateAirportInfos(aiportInfos)
-      })
+      val eventualAction: Future[UpdateAirportInfos] = dom.ext.Ajax.get(url = url)
+        .map(r => UpdateAirportInfos(read[Map[String, AirportInfo]](r.responseText))
+      )
       effectOnly(Effect(eventualAction.recoverWith {
         case _ =>
           Future(RetryActionAfter(GetAirportConfig, PollDelay.recoveryDelay))

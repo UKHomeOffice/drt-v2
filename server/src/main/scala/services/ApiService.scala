@@ -79,8 +79,6 @@ abstract class ApiService(val airportConfig: AirportConfig,
 
   def actorSystem: ActorSystem
 
-  def getApplicationVersion(): String
-
   def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]]
 
   def getCrunchStateForDay(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]]
