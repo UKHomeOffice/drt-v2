@@ -40,6 +40,7 @@ import services.staffing.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import test.TestDrtSystem
+import upickle.default.write
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -356,16 +357,6 @@ class Application @Inject()(implicit val config: Configuration,
           .map(kcGroups => kcGroups.filter(g => groups.contains(g.name))
             .map(g => keyCloakClient.removeUserFromGroup(userId, g.id)))
 
-      def getAlerts(createdAfter: MillisSinceEpoch): Future[Seq[Alert]] = {
-        for {
-          alerts <- (ctrl.alertsActor ? GetState).mapTo[Seq[Alert]]
-        } yield alerts.filter(a => a.createdAt > createdAfter)
-      }
-
-      def deleteAllAlerts(): Unit = ctrl.alertsActor ? DeleteAlerts
-
-      def saveAlert(alert: Alert): Unit = ctrl.alertsActor ? alert
-
       override def liveCrunchStateActor: AskableActorRef = ctrl.liveCrunchStateActor
 
       override def forecastCrunchStateActor: AskableActorRef = ctrl.forecastCrunchStateActor
@@ -432,6 +423,7 @@ class Application @Inject()(implicit val config: Configuration,
     Ok(write(airportConfig))
   }
 
+
   def getAirportInfo: Action[AnyContent] = Action { request =>
     import upickle.default._
 
@@ -440,8 +432,8 @@ class Application @Inject()(implicit val config: Configuration,
       .map(codes => codes
         .split(",")
         .map(code => (code, AirportToCountry.airportInfo.get(code)))
-        .collect{
-          case (code , Some(info)) => (code, info)
+        .collect {
+          case (code, Some(info)) => (code, info)
         }
       ) match {
       case Some(airportInfoTuples) => airportInfoTuples.toMap
@@ -915,10 +907,10 @@ class Application @Inject()(implicit val config: Configuration,
     val enablePortAccessRestrictions =
       config.getOptional[Boolean]("feature-flags.port-access-restrictions").getOrElse(false)
 
-    if(!loggedInUser.hasRole(allowedRole))
+    if (!loggedInUser.hasRole(allowedRole))
       log.warning(
         s"User missing port role: ${loggedInUser.email} is accessing ${airportConfig.portCode} " +
-        s"and has ${loggedInUser.roles.mkString(", ")} (needs $allowedRole)"
+          s"and has ${loggedInUser.roles.mkString(", ")} (needs $allowedRole)"
       )
 
     val preventAccess = !loggedInUser.hasRole(allowedRole) && enablePortAccessRestrictions

@@ -9,6 +9,10 @@ GET           /airport-config                                      controllers.A
 
 GET           /airport-info                                        controllers.Application.getAirportInfo
 
+GET           /alerts/:createdAfter                                controllers.Application.getAlerts(createdAfter: Long)
+POST          /alerts                                              controllers.Application.addAlert
+DELETE        /alerts                                              controllers.Application.deleteAlerts
+
 GET           /export/api/:terminalName/:year/:month/:day          controllers.Application.exportApi(day: Int, month: Int, year: Int, terminalName: String)
 GET           /export/desks/:pointInTime/:terminalName             controllers.Application.exportDesksAndQueuesAtPointInTimeCSV(pointInTime, terminalName, startHour: Int ?= 0, endHour: Int ?= 24)
 GET           /export/arrivals/:pointInTime/:terminalName          controllers.Application.exportFlightsWithSplitsAtPointInTimeCSV(pointInTime, terminalName, startHour: Int ?= 0, endHour: Int ?= 24)
@@ -44,8 +48,6 @@ POST          /logging                                             controllers.A
 
 POST          /data/staff                                          controllers.Application.saveStaff
 
-POST          /data/alert                                          controllers.Application.addAlert
-DELETE        /data/alert                                          controllers.Application.deleteAlerts
 
 # Feed import
 POST          /data/feed/:feedType/:portCode                       controllers.Application.feedImport(feedType: String, portCode: String)

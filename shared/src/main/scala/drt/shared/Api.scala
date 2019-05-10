@@ -689,12 +689,6 @@ object CrunchApi {
 trait Api {
   def getApplicationVersion(): String
 
-  def getAlerts(createdAfter: MillisSinceEpoch): Future[Seq[Alert]]
-
-  def deleteAllAlerts(): Unit
-
-  def saveAlert(alert: Alert): Unit
-
   def getShifts(maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments]
 
   def saveFixedPoints(fixedPoints: FixedPointAssignments): Unit
