@@ -11,7 +11,7 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi._
 import drt.shared._
-
+import upickle.default.read
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -110,11 +110,9 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
 
     val futureCrunchState = viewMode match {
       case ViewPointInTime(time) =>
-        log.info(s"Calling getCrunchStateForPointInTime ${time.prettyDateTime()}")
         AjaxClient[Api].getCrunchStateForPointInTime(time.millisSinceEpoch).call()
       case ViewDay(time) =>
-        log.info(s"Calling getCrunchStateForDay ${time.prettyDateTime()}")
-        AjaxClient[Api].getCrunchStateForDay(time.millisSinceEpoch).call()
+        DrtApi.get(s"crunch-state/$time").map(r => read[Either[CrunchStateError, Option[CrunchState]]](r.responseText))
       case _ => Future(Right(None))
     }
 

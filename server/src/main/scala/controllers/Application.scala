@@ -28,7 +28,7 @@ import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.{HeaderNames, HttpEntity}
 import play.api.libs.json._
-import play.api.mvc._
+import play.api.mvc.{Action, _}
 import play.api.{Configuration, Environment}
 import server.feeds.acl.AclFeed
 import services.PcpArrival.{pcpFrom, _}
@@ -207,8 +207,6 @@ class Application @Inject()(implicit val config: Configuration,
       override implicit val timeout: Timeout = Timeout(5 seconds)
 
       def actorSystem: ActorSystem = system
-
-      def getCrunchStateForDay(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = loadBestCrunchStateForPointInTime(day)
 
       override def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = crunchStateAtPointInTime(pointInTime)
 
@@ -421,7 +419,6 @@ class Application @Inject()(implicit val config: Configuration,
     Ok(write(airportConfig))
   }
 
-
   def getAirportInfo: Action[AnyContent] = Action { request =>
     import upickle.default._
 
@@ -444,6 +441,10 @@ class Application @Inject()(implicit val config: Configuration,
   def getApplicationVersion:Action[AnyContent] = Action { _ =>
 
     Ok(write(BuildVersion(BuildInfo.version.toString)))
+  }
+
+  def getCrunchStateForDay(day: MillisSinceEpoch):Action[AnyContent] = Action.async { _ =>
+    loadBestCrunchStateForPointInTime(day).map((s: Either[CrunchStateError, Option[CrunchState]]) => Ok(write(s)))
   }
 
   def getShouldReload(): Action[AnyContent] = Action { request =>

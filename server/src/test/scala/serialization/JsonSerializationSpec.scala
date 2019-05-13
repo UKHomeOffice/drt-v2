@@ -1,5 +1,6 @@
 package serialization
 
+import drt.shared.CrunchApi.{CrunchMinute, CrunchState, CrunchStateError, StaffMinute}
 import drt.shared.PaxTypes._
 import drt.shared._
 import org.specs2.mutable.Specification
@@ -61,6 +62,35 @@ class JsonSerializationSpec extends Specification {
       val deserialized = read[Map[String, AirportInfo]](asJson)
 
       deserialized === info
+    }
+
+    "CrunchState" >> {
+      val cs = CrunchState(
+        Set(
+          ApiFlightWithSplits(
+            Arrival(None, "scheduled", None, None, None, None, None, None, None, None, None, None, None, None, "test", "test", "test", "test", "test", 0L, None, Set(AclFeedSource, LiveFeedSource), None),
+            Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, None)), "source", None, Percentage))
+          )
+        ),
+        Set(CrunchMinute("T1", Queues.NonEeaDesk, 0L, 2.0, 2.0, 1, 1, None, None, None, None, Some(0))),
+        Set(StaffMinute("T1", 0L, 1, 1,1,None))
+      )
+
+      val asJson: String = write(cs)
+
+      val deserialized = read[CrunchState](asJson)
+
+      deserialized === cs
+    }
+
+    "CrunchStateError" >> {
+      val ce = CrunchStateError("Error Message")
+
+      val json = write(ce)
+
+      val deserialized = read[CrunchStateError](json)
+
+      deserialized === ce
     }
   }
 }
