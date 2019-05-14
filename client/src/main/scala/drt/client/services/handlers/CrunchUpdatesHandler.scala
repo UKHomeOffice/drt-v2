@@ -110,9 +110,11 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
 
     val futureCrunchState = viewMode match {
       case ViewPointInTime(time) =>
-        AjaxClient[Api].getCrunchStateForPointInTime(time.millisSinceEpoch).call()
+        DrtApi.get(s"crunch-snapshot/$time")
+          .map(r => read[Either[CrunchStateError, Option[CrunchState]]](r.responseText))
       case ViewDay(time) =>
-        DrtApi.get(s"crunch-state/$time").map(r => read[Either[CrunchStateError, Option[CrunchState]]](r.responseText))
+        DrtApi.get(s"crunch-state/$time")
+          .map(r => read[Either[CrunchStateError, Option[CrunchState]]](r.responseText))
       case _ => Future(Right(None))
     }
 
@@ -135,8 +137,8 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
           NoCrunchStateUpdatesAndContinuePollingIfNecessary()
       }
       .recoverWith {
-        case _ =>
-          log.error(s"Failed to GetCrunchState. Re-requesting after ${PollDelay.recoveryDelay}")
+        case e: Throwable =>
+          log.error(s"Failed to GetCrunchState (${e.getMessage}. Re-requesting after ${PollDelay.recoveryDelay}")
           Future(RetryActionAfter(GetCrunchState(), PollDelay.recoveryDelay))
       }
   }
@@ -144,12 +146,12 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
   def requestCrunchUpdates(pointInTime: SDateLike): Future[Action] = {
     implicit val pickler = generatePickler[ApiPaxTypeAndQueueCount]
 
-    val startOfDay = dayStart(pointInTime)
-    val endOfDay = dayEnd(pointInTime)
+    val startOfDay = dayStart(pointInTime).millisSinceEpoch
+    val endOfDay = dayEnd(pointInTime).millisSinceEpoch
 
-    log.info(s"Calling getCrunchUpdates for ${startOfDay.toISOString()} to ${endOfDay.toISOString()}")
-
-    val futureCrunchUpdates = AjaxClient[Api].getCrunchUpdates(latestUpdateMillis, startOfDay.millisSinceEpoch, endOfDay.millisSinceEpoch).call()
+    val futureCrunchUpdates = DrtApi
+      .get(s"crunch-state?sinceMillis=$latestUpdateMillis&windowStartMillis=$startOfDay&windowEndMillis=$endOfDay")
+      .map(r => read[Either[CrunchStateError, Option[CrunchUpdates]]](r.responseText))
 
     processFutureCrunch(futureCrunchUpdates)
   }

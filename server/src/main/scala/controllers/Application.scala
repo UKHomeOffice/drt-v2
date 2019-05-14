@@ -208,27 +208,6 @@ class Application @Inject()(implicit val config: Configuration,
 
       def actorSystem: ActorSystem = system
 
-      override def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = crunchStateAtPointInTime(pointInTime)
-
-      def getCrunchUpdates(sinceMillis: MillisSinceEpoch,
-                           windowStartMillis: MillisSinceEpoch,
-                           windowEndMillis: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchUpdates]]] = {
-        val liveStateCutOff = getLocalNextMidnight(ctrl.now()).addDays(1).millisSinceEpoch
-
-        val stateActor = if (windowStartMillis < liveStateCutOff) liveCrunchStateActor else forecastCrunchStateActor
-
-        val crunchStateFuture = stateActor.ask(GetUpdatesSince(sinceMillis, windowStartMillis, windowEndMillis))(new Timeout(30 seconds))
-
-        crunchStateFuture.map {
-          case Some(cu: CrunchUpdates) => Right(Option(cu))
-          case _ => Right(None)
-        } recover {
-          case t =>
-            log.warn(s"Didn't get a CrunchUpdates: $t")
-            Left(CrunchStateError(t.getMessage))
-        }
-      }
-
       def isLoggedIn(): Boolean = {
         true
       }
@@ -316,12 +295,6 @@ class Application @Inject()(implicit val config: Configuration,
       def getKeyCloakGroups(): Future[List[KeyCloakGroup]] = {
         if (getLoggedInUser().roles.contains(ManageUsers)) {
           keyCloakClient.getGroups()
-        } else throw new Exception(permissionDeniedMessage)
-      }
-
-      def getKeyCloakUserGroups(userId: UUID): Future[Set[KeyCloakGroup]] = {
-        if (getLoggedInUser().roles.contains(ManageUsers)) {
-          keyCloakClient.getUserGroups(userId).map(_.toSet)
         } else throw new Exception(permissionDeniedMessage)
       }
 
@@ -438,13 +411,43 @@ class Application @Inject()(implicit val config: Configuration,
     Ok(write(res))
   }
 
-  def getApplicationVersion:Action[AnyContent] = Action { _ =>
+  def getApplicationVersion: Action[AnyContent] = Action { _ => Ok(write(BuildVersion(BuildInfo.version.toString))) }
 
-    Ok(write(BuildVersion(BuildInfo.version.toString)))
+  def getCrunchStateForDay(day: MillisSinceEpoch): Action[AnyContent] = Action.async { _ =>
+    loadBestCrunchStateForPointInTime(day).map((s: Either[CrunchStateError, Option[CrunchState]]) => Ok(write(s)))
   }
 
-  def getCrunchStateForDay(day: MillisSinceEpoch):Action[AnyContent] = Action.async { _ =>
-    loadBestCrunchStateForPointInTime(day).map((s: Either[CrunchStateError, Option[CrunchState]]) => Ok(write(s)))
+  def getCrunchUpdates(): Action[AnyContent] = Action.async { request: Request[AnyContent] =>
+
+    val sinceMillis: MillisSinceEpoch = request.queryString.get("sinceMillis").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
+    val windowStartMillis: MillisSinceEpoch = request.queryString.get("windowStartMillis").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
+    val windowEndMillis: MillisSinceEpoch = request.queryString.get("windowEndMillis").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
+    val liveStateCutOff = getLocalNextMidnight(ctrl.now()).addDays(1).millisSinceEpoch
+
+    def liveCrunchStateActor: AskableActorRef = ctrl.liveCrunchStateActor
+
+    def forecastCrunchStateActor: AskableActorRef = ctrl.forecastCrunchStateActor
+
+    val stateActor = if (windowStartMillis < liveStateCutOff) liveCrunchStateActor else forecastCrunchStateActor
+
+    val crunchStateFuture = stateActor.ask(GetUpdatesSince(sinceMillis, windowStartMillis, windowEndMillis))(new Timeout(30 seconds))
+
+    val futureCS: Future[Either[CrunchStateError, Option[CrunchUpdates]]] = crunchStateFuture.map {
+      case Some(cu: CrunchUpdates) => Right(Option(cu))
+      case _ => Right(None)
+    } recover {
+      case t: Throwable =>
+        system.log.warning(s"Didn't get a CrunchUpdates: $t")
+        Left(CrunchStateError(t.getMessage))
+    }
+
+    futureCS.map(cs => Ok(write(cs)))
+  }
+
+  def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Action[AnyContent] = Action.async { request: Request[AnyContent] =>
+    crunchStateAtPointInTime(pointInTime).map(cs => Ok(write(cs)))
+  }
+
   }
 
   def getShouldReload(): Action[AnyContent] = Action { request =>
