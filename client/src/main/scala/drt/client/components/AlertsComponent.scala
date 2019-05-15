@@ -24,7 +24,7 @@ object AlertsComponent {
           alertsPot.render((alerts: Seq[Alert]) => {
             <.span(^.id := "has-alerts",
               alerts.map(alert => {
-                <.span(^.key := alert.createdAt, ^.`class` := "alert alert-danger the-alert", ^.role := "alert",
+                <.span(^.key := alert.createdAt, ^.`class` := s"alert alert-class-${alert.alertClass} the-alert", ^.role := "alert",
                   <.div(^.dangerouslySetInnerHtml := s"<strong>${alert.title}</strong> - ${alert.message}")
                 )
               }).toVdomArray
