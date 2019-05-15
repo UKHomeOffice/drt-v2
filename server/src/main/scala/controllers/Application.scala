@@ -1,6 +1,7 @@
 package controllers
 
 import java.nio.ByteBuffer
+import java.nio.file.AccessDeniedException
 import java.util.{Calendar, TimeZone, UUID}
 
 import javax.inject.{Inject, Singleton}
@@ -208,10 +209,6 @@ class Application @Inject()(implicit val config: Configuration,
       override implicit val timeout: Timeout = Timeout(5 seconds)
 
       def actorSystem: ActorSystem = system
-
-      def isLoggedIn(): Boolean = {
-        true
-      }
 
       def getLoggedInUser(): LoggedInUser = ctrl.getLoggedInUser(config, headers, session)
 
@@ -562,6 +559,12 @@ class Application @Inject()(implicit val config: Configuration,
   def getUserHasPortAccess(): Action[AnyContent] = auth {
     Action {
       Ok("{userHasAccess: true}")
+    }
+  }
+
+  def isLoggedIn: Action[AnyContent] = auth {
+    Action {
+      Ok("{loggedIn: true}")
     }
   }
 

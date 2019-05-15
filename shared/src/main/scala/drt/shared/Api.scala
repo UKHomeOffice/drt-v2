@@ -754,8 +754,6 @@ trait Api {
 
   def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]]
 
-  def isLoggedIn(): Boolean
-
   def getLoggedInUser(): LoggedInUser
 
   def getKeyCloakUsers(): Future[List[KeyCloakUser]]

@@ -84,8 +84,6 @@ abstract class ApiService(val airportConfig: AirportConfig,
 
   def updateShifts(shiftsToUpdate: Seq[StaffAssignment]): Unit
 
-  def isLoggedIn(): Boolean
-
   def getKeyCloakUsers() : Future[List[KeyCloakUser]]
 
   def getKeyCloakGroups(): Future[List[KeyCloakGroup]]

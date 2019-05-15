@@ -1,33 +1,36 @@
 package drt.client.services.handlers
 
-import autowire._
-import boopickle.Default._
-import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import diode.{ActionResult, Effect, ModelRW}
 import drt.client.actions.Actions.{GetLoggedInStatus, RetryActionAfter, TriggerReload}
 import drt.client.logger.log
-import drt.client.services.{AjaxClient, PollDelay, RootModel}
-import drt.shared.Api
+import drt.client.services.{DrtApi, PollDelay, RootModel}
 import org.scalajs.dom
 import org.scalajs.dom.ext.AjaxException
 
 import scala.concurrent.Future
+import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class LoggedInStatusHandler[M](modelRW: ModelRW[M, RootModel]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetLoggedInStatus =>
       effectOnly(
         Effect(
-          AjaxClient[Api]
-            .isLoggedIn()
-            .call()
-            .map(_ => RetryActionAfter(GetLoggedInStatus, PollDelay.loginCheckDelay))
+          DrtApi.get("logged-in")
+            .map(r => {
+              if(r.status == 200)
+                RetryActionAfter(GetLoggedInStatus, PollDelay.loginCheckDelay)
+              else
+                TriggerReload
+            })
             .recoverWith {
-              case f: AjaxException if f.xhr.status == 405 =>
+              case f: AjaxException if f.xhr.status == 405 || f.xhr.status == 401 =>
                 log.error(s"User is logged out, triggering page reload.")
                 Future(TriggerReload)
+              case f: AjaxException =>
+                log.error(s"Http error when checking for user login status - got (${f.xhr.status}), retrying after ${PollDelay.loginCheckDelay}")
+                Future(RetryActionAfter(GetLoggedInStatus, PollDelay.loginCheckDelay))
               case f =>
-                log.error(s"Error when checking for user login status, retrying after ${PollDelay.loginCheckDelay}")
+                log.error(s"Unexpected error when checking for user login status (${f}), retrying after ${PollDelay.loginCheckDelay}")
                 Future(RetryActionAfter(GetLoggedInStatus, PollDelay.loginCheckDelay))
             }
         ))

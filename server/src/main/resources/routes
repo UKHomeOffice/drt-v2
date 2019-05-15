@@ -21,6 +21,8 @@ GET           /crunch-snapshot/:pointInTimeMillis                  controllers.A
 
 GET           /feed-statuses                                       controllers.Application.getFeedStatuses
 
+GET           /logged-in                                           controllers.Application.isLoggedIn
+
 GET           /fixed-points                                        controllers.Application.getFixedPoints
 POST          /fixed-points                                        controllers.Application.saveFixedPoints
 
