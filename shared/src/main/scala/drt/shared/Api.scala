@@ -25,6 +25,10 @@ case class MilliDate(millisSinceEpoch: MillisSinceEpoch) extends Ordered[MilliDa
   def compare(that: MilliDate): Int = millisSinceEpoch.compare(that.millisSinceEpoch)
 }
 
+object MilliDate {
+  implicit val rw: RW[MilliDate] = macroRW
+}
+
 object FlightParsing {
   val iataRe: Regex = """([A-Z0-9]{2})(\d{1,4})(\w)?""".r
   val icaoRe: Regex = """([A-Z]{2,3})(\d{1,4})(\w)?""".r
@@ -738,10 +742,6 @@ trait Api {
 
   def getShifts(maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments]
 
-  def saveFixedPoints(fixedPoints: FixedPointAssignments): Unit
-
-  def getFixedPoints(maybePointIntTime: Option[MillisSinceEpoch]): Future[FixedPointAssignments]
-
   def addStaffMovements(movementsToAdd: Seq[StaffMovement]): Unit
 
   def removeStaffMovements(movementsToRemove: UUID): Unit
@@ -757,8 +757,6 @@ trait Api {
   def isLoggedIn(): Boolean
 
   def getLoggedInUser(): LoggedInUser
-
-  def getFeedStatuses(): Future[Seq[FeedStatuses]]
 
   def getKeyCloakUsers(): Future[List[KeyCloakUser]]
 

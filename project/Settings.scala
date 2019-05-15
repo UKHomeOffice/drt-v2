@@ -72,9 +72,11 @@ object Settings {
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
     val uPickle = "0.6.7"
+    val uJson = "0.7.1"
   }
 
   import versions._
+
 
   /**
     * These dependencies are shared between JS and JVM projects

@@ -1,16 +1,11 @@
 package serialization
 
-import java.io.InputStream
-
 import drt.shared.CrunchApi._
 import drt.shared.PaxTypes._
 import drt.shared._
-import manifests.queues.FastTrackFromCSV.getClass
 import org.specs2.mutable.Specification
 import services.AirportToCountry
 import upickle.default._
-
-import scala.io.Source
 
 class JsonSerializationSpec extends Specification {
 
@@ -92,9 +87,7 @@ class JsonSerializationSpec extends Specification {
         )
       )
 
-
       val asJson: String = write(cs)
-
 
       val deserialized = read[CrunchState](asJson)
 
@@ -110,7 +103,6 @@ class JsonSerializationSpec extends Specification {
 
       deserialized === ce
     }
-
 
     "CrunchUpdates" >> {
       val cu = CrunchUpdates(
@@ -132,36 +124,35 @@ class JsonSerializationSpec extends Specification {
       deserialized === cu
     }
 
-    "CrunchStateEither" >> {
-      val cs = CrunchState(
-        Set(
-          ApiFlightWithSplits(
-            Arrival(None, "scheduled", None, None, None, None, None, None, None, None, None, None, None, None, "test", "test", "test", "test", "test", 0L, None, Set(AclFeedSource, LiveFeedSource), None),
-            Set(
-              Splits(
-                Set(
-                  ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, None),
-                  ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, None)
-                ), "source", None, Percentage))
-          )
+    "FeedStatuses" >> {
+      val fss = FeedStatuses(
+        "test",
+        List(
+          FeedStatusFailure(0L, "failure"),
+          FeedStatusSuccess(0L, 3)
         ),
-        Set(
-          CrunchMinute("T1", Queues.NonEeaDesk, 0L, 2.0, 2.0, 1, 1, None, None, None, None, Some(0)),
-          CrunchMinute("T1", Queues.NonEeaDesk, 0L, 2.0, 2.0, 1, 1, None, None, None, None, Some(0))
-        ),
-        Set(
-          StaffMinute("T1", 0L, 1, 1,1,None),
-          StaffMinute("T1", 0L, 1, 1,1,None)
-        )
+        None,
+        None,
+        None
       )
 
-      val ce: Either[CrunchStateError, Option[CrunchState]] = Right(Option(cs))
+      val json = write(fss)
 
-      val json = write(ce)
+      val deserialized = read[FeedStatuses](json)
 
-      val deserialized = read[CrunchStateError](json)
+      deserialized === fss
+    }
 
-      deserialized === ce
+    "FixedPointAssignments" >> {
+      val fpa = FixedPointAssignments(
+        Seq(StaffAssignment("test", "test", MilliDate(0L), MilliDate(0L), 0, None))
+      )
+
+      val json = write(fpa)
+
+      val deserialized = read[FixedPointAssignments](json)
+
+      deserialized === fpa
     }
   }
 }

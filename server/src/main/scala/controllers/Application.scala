@@ -5,7 +5,7 @@ import java.util.{Calendar, TimeZone, UUID}
 
 import javax.inject.{Inject, Singleton}
 import actors._
-import actors.pointInTime.CrunchStateReadActor
+import actors.pointInTime.{CrunchStateReadActor, FixedPointsReadActor}
 import akka.actor._
 import akka.event.{Logging, LoggingAdapter}
 import akka.pattern.{AskableActorRef, _}
@@ -41,6 +41,7 @@ import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import test.TestDrtSystem
 import upickle.default.write
+import upickle.default.read
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -214,8 +215,6 @@ class Application @Inject()(implicit val config: Configuration,
 
       def getLoggedInUser(): LoggedInUser = ctrl.getLoggedInUser(config, headers, session)
 
-      def getFeedStatuses(): Future[Seq[FeedStatuses]] = ctrl.getFeedStatus
-
       def forecastWeekSummary(startDay: MillisSinceEpoch,
                               terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]] = {
         val startOfWeekMidnight = getLocalLastMidnight(SDate(startDay))
@@ -295,6 +294,12 @@ class Application @Inject()(implicit val config: Configuration,
       def getKeyCloakGroups(): Future[List[KeyCloakGroup]] = {
         if (getLoggedInUser().roles.contains(ManageUsers)) {
           keyCloakClient.getGroups()
+        } else throw new Exception(permissionDeniedMessage)
+      }
+
+      def getKeyCloakUserGroups(userId: UUID): Future[Set[KeyCloakGroup]] = {
+        if (getLoggedInUser().roles.contains(ManageUsers)) {
+          keyCloakClient.getUserGroups(userId).map(_.toSet)
         } else throw new Exception(permissionDeniedMessage)
       }
 
@@ -417,7 +422,7 @@ class Application @Inject()(implicit val config: Configuration,
     loadBestCrunchStateForPointInTime(day).map((s: Either[CrunchStateError, Option[CrunchState]]) => Ok(write(s)))
   }
 
-  def getCrunchUpdates(): Action[AnyContent] = Action.async { request: Request[AnyContent] =>
+  def getCrunchUpdates: Action[AnyContent] = Action.async { request: Request[AnyContent] =>
 
     val sinceMillis: MillisSinceEpoch = request.queryString.get("sinceMillis").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
     val windowStartMillis: MillisSinceEpoch = request.queryString.get("windowStartMillis").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
@@ -444,16 +449,57 @@ class Application @Inject()(implicit val config: Configuration,
     futureCS.map(cs => Ok(write(cs)))
   }
 
+  def getFeedStatuses: Action[AnyContent] = Action.async { _ => ctrl.getFeedStatus.map(s => Ok(write(s))) }
+
   def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Action[AnyContent] = Action.async { request: Request[AnyContent] =>
     crunchStateAtPointInTime(pointInTime).map(cs => Ok(write(cs)))
   }
 
-  }
-
-  def getShouldReload(): Action[AnyContent] = Action { request =>
+  def getShouldReload: Action[AnyContent] = Action { request =>
 
     val shouldRedirect: Boolean = config.getOptional[Boolean]("feature-flags.acp-redirect").getOrElse(false)
     Ok(Json.obj("reload" -> shouldRedirect))
+  }
+
+  def saveFixedPoints(): Action[AnyContent] = Action { request =>
+    log.info(s"Got this body: ${request.body.asText}")
+    request.body.asText match {
+      case Some(text) =>
+        val fixedPoints: FixedPointAssignments = read[FixedPointAssignments](text)
+        ctrl.fixedPointsActor ! SetFixedPoints(fixedPoints.assignments)
+        Accepted
+      case None =>
+        BadRequest
+    }
+  }
+
+  def getFixedPoints: Action[AnyContent] = Action.async { request: Request[AnyContent] =>
+
+    val fps: Future[FixedPointAssignments] = request.queryString.get("sinceMillis").flatMap(_.headOption.map(_.toLong)) match {
+
+      case None =>
+        ctrl.fixedPointsActor.ask(GetState)
+          .map { case sa: FixedPointAssignments => sa }
+          .recoverWith { case _ => Future(FixedPointAssignments.empty) }
+
+      case Some(millis) =>
+        val date = SDate(millis)
+
+        val actorName = "fixed-points-read-actor-" + UUID.randomUUID().toString
+        val fixedPointsReadActor: ActorRef = system.actorOf(Props(classOf[FixedPointsReadActor], date), actorName)
+
+        fixedPointsReadActor.ask(GetState)
+          .map { case sa: FixedPointAssignments =>
+            fixedPointsReadActor ! PoisonPill
+            sa
+          }
+          .recoverWith {
+            case _ =>
+              fixedPointsReadActor ! PoisonPill
+              Future(FixedPointAssignments.empty)
+          }
+    }
+    fps.map(fp => Ok(write(fp)))
   }
 
   def apiLogin(): Action[Map[String, Seq[String]]] = Action.async(parse.tolerantFormUrlEncoded) { request =>
