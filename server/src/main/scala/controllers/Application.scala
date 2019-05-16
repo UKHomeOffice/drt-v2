@@ -459,7 +459,7 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   def saveFixedPoints(): Action[AnyContent] = Action { request =>
-    log.info(s"Got this body: ${request.body.asText}")
+
     request.body.asText match {
       case Some(text) =>
         val fixedPoints: FixedPointAssignments = read[FixedPointAssignments](text)

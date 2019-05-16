@@ -55,6 +55,7 @@ object SplitStyle {
     case "Ratio" => Ratio
     case _ => UndefinedSplitStyle
   }
+
   implicit val splitStyleReadWriter: RW[SplitStyle] =
     readwriter[Js.Value].bimap[SplitStyle](
       feedSource => feedSource.toString,
@@ -90,9 +91,10 @@ object Splits {
 }
 
 case class StaffTimeSlot(terminal: String,
-start: MillisSinceEpoch,
-staff: Int,
-durationMillis: Int)
+                         start: MillisSinceEpoch,
+                         staff: Int,
+                         durationMillis: Int
+                        )
 
 case class MonthOfShifts(month: MillisSinceEpoch, shifts: ShiftAssignments)
 
@@ -446,7 +448,7 @@ object CrunchApi {
 
   case class CrunchStateError(message: String)
 
-  object CrunchStateError{
+  object CrunchStateError {
     implicit val rw: RW[CrunchStateError] = macroRW
   }
 
@@ -555,6 +557,7 @@ object CrunchApi {
 
   object StaffMinute {
     def empty = StaffMinute("", 0L, 0, 0, 0, None)
+
     implicit val rw: RW[StaffMinute] = macroRW
   }
 
@@ -642,6 +645,7 @@ object CrunchApi {
   case class CrunchMinutes(crunchMinutes: Set[CrunchMinute])
 
   case class CrunchUpdates(latest: MillisSinceEpoch, flights: Set[ApiFlightWithSplits], minutes: Set[CrunchMinute], staff: Set[StaffMinute])
+
   object CrunchUpdates {
     implicit val rw: RW[CrunchUpdates] = macroRW
   }
