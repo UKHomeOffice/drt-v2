@@ -1,20 +1,20 @@
 package drt.client.services.handlers
 
-import autowire._
+import diode.Implicits.runAfterImpl
 import diode.data._
 import diode.{ActionResult, Effect, ModelRW}
 import drt.client.actions.Actions._
 import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{AjaxClient, PollDelay}
+import drt.client.services.{DrtApi, PollDelay}
+import drt.shared.Alert
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{Alert, Api}
-import diode.Implicits.runAfterImpl
+import upickle.default.{read, write}
+
 import scala.concurrent.Future
 import scala.concurrent.duration.{FiniteDuration, _}
 import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
-import boopickle.Default._
 
 class AlertsHandler[M](modelRW: ModelRW[M, Pot[Seq[Alert]]]) extends LoggingActionHandler(modelRW) {
 
@@ -22,14 +22,16 @@ class AlertsHandler[M](modelRW: ModelRW[M, Pot[Seq[Alert]]]) extends LoggingActi
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
 
     case GetAlerts(since: MillisSinceEpoch) =>
-      effectOnly(Effect(AjaxClient[Api].getAlerts(since).call().map(alerts => SetAlerts(alerts, since)).recoverWith {
+      effectOnly(Effect(DrtApi.get(s"alerts/$since").map(r => {
+        val alerts = read[Seq[Alert]](r.responseText)
+        SetAlerts(alerts, since)
+      }).recoverWith {
         case _ =>
           log.info(s"Alerts request failed. Re-requesting after ${PollDelay.recoveryDelay}")
           Future(RetryActionAfter(GetLoggedInUser, PollDelay.recoveryDelay))
       }))
 
     case SetAlerts(alerts, since) =>
-      log.info(s"Alerts are: $alerts")
       val effect = Effect(Future(GetAlerts(since))).after(alertsRequestFrequency)
       val pot = if (alerts.isEmpty) Empty else Ready(alerts)
       if (modelRW.value.isPending && since <= SDate.now().addMinutes(-1).millisSinceEpoch) {
@@ -39,7 +41,7 @@ class AlertsHandler[M](modelRW: ModelRW[M, Pot[Seq[Alert]]]) extends LoggingActi
       }
 
     case DeleteAllAlerts =>
-      val responseFuture = AjaxClient[Api].deleteAllAlerts().call()
+      val responseFuture = DrtApi.delete("alerts")
         .map(_ => DoNothing())
         .recoverWith {
           case _ =>
@@ -48,10 +50,8 @@ class AlertsHandler[M](modelRW: ModelRW[M, Pot[Seq[Alert]]]) extends LoggingActi
         }
       effectOnly(Effect(responseFuture))
 
-
     case SaveAlert(alert) =>
-      log.info(s"Calling save Alert $alert")
-      val responseFuture = AjaxClient[Api].saveAlert(alert).call()
+      val responseFuture = DrtApi.post("alerts", write(alert))
         .map(_ => DoNothing())
         .recoverWith {
           case _ =>
@@ -59,6 +59,5 @@ class AlertsHandler[M](modelRW: ModelRW[M, Pot[Seq[Alert]]]) extends LoggingActi
             Future(RetryActionAfter(SaveAlert(alert), PollDelay.recoveryDelay))
         }
       effectOnly(Effect(responseFuture))
-
   }
 }

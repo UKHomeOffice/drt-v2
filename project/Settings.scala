@@ -71,9 +71,12 @@ object Settings {
     val drtBirminghamSchema = "1.0.0"
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
+    val uPickle = "0.6.7"
+    val uJson = "0.7.1"
   }
 
   import versions._
+
 
   /**
     * These dependencies are shared between JS and JVM projects
@@ -81,6 +84,7 @@ object Settings {
     */
   val sharedDependencies = Def.setting(Seq(
     "com.lihaoyi" %%% "autowire" % autowire,
+    "com.lihaoyi" %%% "upickle" % uPickle,
     "io.suzaku" %%% "boopickle" % booPickle
   ))
 
@@ -102,6 +106,7 @@ object Settings {
     "com.hierynomus" % "sshj" % sshJ,
     "com.lihaoyi" %% "pprint" % pprint,
     "com.lihaoyi" %%% "utest" % uTest % Test,
+
     "com.mfglabs" %% "commons-aws-s3" % awsCommons,
 
     "javax.mail" % "mail" % "1.4.7",
@@ -178,7 +183,7 @@ object Settings {
     "org.scala-js" %%% "scalajs-dom" % scalaDom,
     "com.lihaoyi" %%% "pprint" % pprint,
     "com.lihaoyi" %%% "utest" % uTest % Test,
-    "com.lihaoyi" %%% "upickle" % "0.6.6",
+    "com.lihaoyi" %%% "upickle" % uPickle,
     "ru.pavkin" %%% "scala-js-momentjs" % scalaJsMomentJs
   ))
 

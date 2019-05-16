@@ -1,22 +1,33 @@
 package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-
+import ujson.Js.Value
+import upickle.Js
+import upickle.default.{macroRW, readwriter, ReadWriter => RW}
 
 sealed trait FeedStatus {
   val date: MillisSinceEpoch
 }
 
 case class FeedStatusSuccess(date: MillisSinceEpoch, updateCount: Int) extends FeedStatus
+object FeedStatusSuccess {
+  implicit val rw: RW[FeedStatusSuccess] = macroRW
+}
 
 case class FeedStatusFailure(date: MillisSinceEpoch, message: String) extends FeedStatus
+object FeedStatusFailure {
+  implicit val rw: RW[FeedStatusFailure] = macroRW
+}
 
 object FeedStatus {
   def apply(date: MillisSinceEpoch, updateCount: Int): FeedStatusSuccess = FeedStatusSuccess(date, updateCount)
   def apply(date: MillisSinceEpoch, message: String): FeedStatusFailure = FeedStatusFailure(date, message)
+
+  implicit val rw: RW[FeedStatus] = RW.merge(FeedStatusSuccess.rw, FeedStatusFailure.rw)
 }
 
 sealed trait RagStatus
+
 case object Red extends RagStatus {
   override def toString = "red"
 }
@@ -65,4 +76,6 @@ case class FeedStatuses(name: String,
     }
   }
 }
-
+object FeedStatuses {
+  implicit val rw: RW[FeedStatuses] = macroRW
+}

@@ -5,7 +5,7 @@ import java.util.UUID
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
-import controllers.{FixedPointPersistence, ShiftPersistence, StaffMovementsPersistence}
+import controllers.{ShiftPersistence, StaffMovementsPersistence}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.TerminalName
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
@@ -42,8 +42,6 @@ trait AirportToCountryLike {
     row1.substring(1, row1.length - 1)
   }
 
-  def airportInfoByAirportCode(code: String) = Future(airportInfo.get(code))
-
   def airportInfosByAirportCodes(codes: Set[String]): Future[Map[String, AirportInfo]] = Future {
     val res = codes.map(code => (code, airportInfo.get(code)))
 
@@ -56,9 +54,7 @@ trait AirportToCountryLike {
   }
 }
 
-object AirportToCountry extends AirportToCountryLike {
-
-}
+object AirportToCountry extends AirportToCountryLike
 
 abstract class ApiService(val airportConfig: AirportConfig,
                           val shiftsActor: ActorRef,
@@ -70,7 +66,6 @@ abstract class ApiService(val airportConfig: AirportConfig,
   extends Api
     with AirportToCountryLike
     with ShiftPersistence
-    with FixedPointPersistence
     with StaffMovementsPersistence {
 
   override implicit val timeout: akka.util.Timeout = Timeout(5 seconds)
@@ -83,31 +78,11 @@ abstract class ApiService(val airportConfig: AirportConfig,
 
   def actorSystem: ActorSystem
 
-  def getApplicationVersion(): String
-
-  def getAlerts(pointIntTime: MillisSinceEpoch): Future[Seq[Alert]]
-
-  def deleteAllAlerts(): Unit
-
-  def saveAlert(alert: Alert): Unit
-
-  def airportConfiguration(): AirportConfig = airportConfig
-
-  def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]]
-
-  def getCrunchStateForDay(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]]
-
-  def getCrunchUpdates(sinceMillis: MillisSinceEpoch, windowStartMillis: MillisSinceEpoch, windowEndMillis: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchUpdates]]]
-
   def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]]
 
   def getShiftsForMonth(month: MillisSinceEpoch, terminalName: TerminalName): Future[ShiftAssignments]
 
   def updateShifts(shiftsToUpdate: Seq[StaffAssignment]): Unit
-
-  def isLoggedIn(): Boolean
-
-  def getFeedStatuses(): Future[Seq[FeedStatuses]]
 
   def getKeyCloakUsers() : Future[List[KeyCloakUser]]
 

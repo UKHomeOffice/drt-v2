@@ -1,7 +1,5 @@
 package drt.client.services.handlers
 
-import autowire._
-import boopickle.Default._
 import diode.Implicits.runAfterImpl
 import diode.data.{Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW, NoAction}
@@ -10,6 +8,7 @@ import drt.client.logger.log
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
+import upickle.default.{read, write}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -25,7 +24,7 @@ class FixedPointsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[Fi
 
       val otherTerminalFixedPoints = value.getOrElse(FixedPointAssignments.empty).notForTerminal(terminalName)
       val newFixedPoints: FixedPointAssignments = assignments + otherTerminalFixedPoints
-      val futureResponse = AjaxClient[Api].saveFixedPoints(newFixedPoints).call()
+      val futureResponse = DrtApi.post("fixed-points", write(newFixedPoints))
         .map(_ => SetFixedPoints(newFixedPoints, Option(terminalName)))
         .recoverWith {
           case _ =>
@@ -42,9 +41,13 @@ class FixedPointsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[Fi
         case ViewLive() => None
         case vm: ViewMode => Option(vm.millis)
       }
+      val url = maybePointInTimeMillis match {
+        case Some(millis) => s"fixed-points?pointInTime=$millis"
+        case None => "fixed-points"
+      }
       val apiCallEffect = Effect(
-        AjaxClient[Api].getFixedPoints(maybePointInTimeMillis).call()
-          .map(res => SetFixedPoints(res, None))
+        DrtApi.get(url)
+          .map(r => SetFixedPoints(read[FixedPointAssignments](r.responseText), None))
           .recoverWith {
             case _ =>
               log.error(s"Failed to get fixed points. Polling will continue")

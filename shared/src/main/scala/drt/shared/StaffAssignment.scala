@@ -2,7 +2,7 @@ package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.TerminalName
-
+import upickle.default.{macroRW, ReadWriter => RW}
 
 case class StaffAssignment(name: String,
                            terminalName: TerminalName,
@@ -11,6 +11,10 @@ case class StaffAssignment(name: String,
                            numberOfStaff: Int,
                            createdBy: Option[String]) extends Expireable {
   def isExpired(expireAfterMillis: MillisSinceEpoch): Boolean = endDt.millisSinceEpoch < expireAfterMillis
+}
+
+object StaffAssignment {
+  implicit val rw: RW[StaffAssignment] = macroRW
 }
 
 sealed trait StaffAssignments {
@@ -30,6 +34,12 @@ trait ShiftAssignmentsLike extends StaffAssignments {
   def terminalStaffAt(terminalName: TerminalName, date: SDateLike): Int
 }
 
+object ShiftAssignments {
+  val empty: ShiftAssignments = ShiftAssignments(Seq())
+
+  def apply(assignments: Set[StaffAssignment]): ShiftAssignments = ShiftAssignments(assignments.toSeq)
+}
+
 case class FixedPointAssignments(assignments: Seq[StaffAssignment]) extends FixedPointAssignmentsLike {
   def +(staffAssignments: Seq[StaffAssignment]): FixedPointAssignments = copy(assignments ++ staffAssignments)
 
@@ -46,6 +56,11 @@ case class FixedPointAssignments(assignments: Seq[StaffAssignment]) extends Fixe
       .map(_.numberOfStaff)
       .sum
   }
+}
+
+object FixedPointAssignments {
+  val empty: FixedPointAssignments = FixedPointAssignments(Seq())
+  implicit val rw: RW[FixedPointAssignments] = macroRW
 }
 
 case class ShiftAssignments(assignments: Seq[StaffAssignment]) extends ShiftAssignmentsLike with HasExpireables[ShiftAssignments] {
@@ -68,12 +83,3 @@ case class ShiftAssignments(assignments: Seq[StaffAssignment]) extends ShiftAssi
   }
 }
 
-object FixedPointAssignments {
-  val empty: FixedPointAssignments = FixedPointAssignments(Seq())
-}
-
-object ShiftAssignments {
-  val empty: ShiftAssignments = ShiftAssignments(Seq())
-
-  def apply(assignments: Set[StaffAssignment]): ShiftAssignments = ShiftAssignments(assignments.toSeq)
-}

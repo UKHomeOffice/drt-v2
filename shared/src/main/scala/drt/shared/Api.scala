@@ -6,6 +6,9 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, _}
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.SplitRatiosNs.SplitSources
+import ujson.Js.Value
+import upickle.Js
+import upickle.default.{macroRW, readwriter, ReadWriter => RW}
 
 import scala.concurrent.Future
 import scala.util.matching.Regex
@@ -20,6 +23,10 @@ object DeskAndPaxTypeCombinations {
 
 case class MilliDate(millisSinceEpoch: MillisSinceEpoch) extends Ordered[MilliDate] {
   def compare(that: MilliDate): Int = millisSinceEpoch.compare(that.millisSinceEpoch)
+}
+
+object MilliDate {
+  implicit val rw: RW[MilliDate] = macroRW
 }
 
 object FlightParsing {
@@ -42,10 +49,18 @@ sealed trait SplitStyle {
 object SplitStyle {
   def apply(splitStyle: String): SplitStyle = splitStyle match {
     case "PaxNumbers$" => PaxNumbers
+    case "PaxNumbers" => PaxNumbers
     case "Percentage$" => Percentage
+    case "Percentage" => Percentage
     case "Ratio" => Ratio
     case _ => UndefinedSplitStyle
   }
+
+  implicit val splitStyleReadWriter: RW[SplitStyle] =
+    readwriter[Js.Value].bimap[SplitStyle](
+      feedSource => feedSource.toString,
+      (s: Value) => apply(s.str)
+    )
 }
 
 case object PaxNumbers extends SplitStyle
@@ -58,23 +73,30 @@ case object UndefinedSplitStyle extends SplitStyle
 
 case class ApiPaxTypeAndQueueCount(passengerType: PaxType, queueType: String, paxCount: Double, nationalities: Option[Map[String, Double]])
 
+object ApiPaxTypeAndQueueCount {
+  implicit val rw: RW[ApiPaxTypeAndQueueCount] = macroRW
+}
+
 case class Splits(splits: Set[ApiPaxTypeAndQueueCount], source: String, eventType: Option[String], splitStyle: SplitStyle = PaxNumbers) {
   lazy val totalExcludingTransferPax: Double = Splits.totalExcludingTransferPax(splits)
   lazy val totalPax: Double = Splits.totalPax(splits)
 }
 
-case class StaffTimeSlot(terminal: String,
-                         start: MillisSinceEpoch,
-                         staff: Int,
-                         durationMillis: Int)
-
-case class MonthOfShifts(month: MillisSinceEpoch, shifts: ShiftAssignments)
-
 object Splits {
   def totalExcludingTransferPax(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.filter(s => s.queueType != Queues.Transfer).toList.map(_.paxCount).sum
 
   def totalPax(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.toList.map(_.paxCount).sum
+
+  implicit val rw: RW[Splits] = macroRW
 }
+
+case class StaffTimeSlot(terminal: String,
+                         start: MillisSinceEpoch,
+                         staff: Int,
+                         durationMillis: Int
+                        )
+
+case class MonthOfShifts(month: MillisSinceEpoch, shifts: ShiftAssignments)
 
 case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpdated: Option[MillisSinceEpoch] = None) {
   def equals(candidate: ApiFlightWithSplits): Boolean = {
@@ -107,6 +129,10 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
   def hasPcpPaxIn(start: SDateLike, end: SDateLike): Boolean = apiFlight.hasPcpDuring(start, end)
 
   lazy val uniqueArrival: UniqueArrival = apiFlight.uniqueArrival
+}
+
+object ApiFlightWithSplits {
+  implicit val rw: RW[ApiFlightWithSplits] = macroRW
 }
 
 case class TQM(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch)
@@ -225,6 +251,8 @@ object Arrival {
       case _ => flightCode
     }
   }
+
+  implicit val rw: RW[Arrival] = macroRW
 }
 
 sealed trait FeedSource
@@ -241,6 +269,12 @@ object FeedSource {
   def feedSources: Set[FeedSource] = Set(ApiFeedSource, AclFeedSource, ForecastFeedSource, LiveFeedSource)
 
   def apply(name: String): Option[FeedSource] = feedSources.find(fs => fs.toString == name)
+
+  implicit val feedSourceReadWriter: RW[FeedSource] =
+    readwriter[Js.Value].bimap[FeedSource](
+      feedSource => feedSource.toString,
+      (s: Value) => apply(s.str).get
+    )
 }
 
 case class ArrivalKey(origin: String, voyageNumber: String, scheduled: Long) extends Ordered[ArrivalKey] {
@@ -357,6 +391,16 @@ case class CrunchResult(firstTimeMillis: MillisSinceEpoch,
 
 case class AirportInfo(airportName: String, city: String, country: String, code: String)
 
+object AirportInfo {
+  implicit val rw: RW[AirportInfo] = macroRW
+}
+
+case class BuildVersion(version: String)
+
+object BuildVersion {
+  implicit val rw: RW[BuildVersion] = macroRW
+}
+
 object FlightsApi {
 
   case class Flights(flights: Seq[Arrival])
@@ -404,6 +448,10 @@ object CrunchApi {
 
   case class CrunchStateError(message: String)
 
+  object CrunchStateError {
+    implicit val rw: RW[CrunchStateError] = macroRW
+  }
+
   case class CrunchState(flights: Set[ApiFlightWithSplits],
                          crunchMinutes: Set[CrunchMinute],
                          staffMinutes: Set[StaffMinute]) {
@@ -416,6 +464,10 @@ object CrunchApi {
     }
 
     def isEmpty: Boolean = flights.isEmpty && crunchMinutes.isEmpty && staffMinutes.isEmpty
+  }
+
+  object CrunchState {
+    implicit val rw: RW[CrunchState] = macroRW
   }
 
   case class PortState(flights: Map[Int, ApiFlightWithSplits],
@@ -505,6 +557,8 @@ object CrunchApi {
 
   object StaffMinute {
     def empty = StaffMinute("", 0L, 0, 0, 0, None)
+
+    implicit val rw: RW[StaffMinute] = macroRW
   }
 
   case class StaffMinutes(minutes: Seq[StaffMinute]) extends PortStateMinutes {
@@ -523,6 +577,8 @@ object CrunchApi {
 
   object StaffMinutes {
     def apply(minutesByKey: Map[TM, StaffMinute]): StaffMinutes = StaffMinutes(minutesByKey.values.toSeq)
+
+    implicit val rw: RW[StaffMinutes] = macroRW
   }
 
   case class CrunchMinute(terminalName: TerminalName,
@@ -541,24 +597,6 @@ object CrunchApi {
       this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
 
     lazy val key: TQM = MinuteHelper.key(terminalName, queueName, minute)
-  }
-
-  trait DeskRecMinuteLike {
-    val terminalName: TerminalName
-    val queueName: QueueName
-    val minute: MillisSinceEpoch
-    val paxLoad: Double
-    val workLoad: Double
-    val deskRec: Int
-    val waitTime: Int
-  }
-
-  trait SimulationMinuteLike {
-    val terminalName: TerminalName
-    val queueName: QueueName
-    val minute: MillisSinceEpoch
-    val desks: Int
-    val waitTime: Int
   }
 
   object CrunchMinute {
@@ -581,11 +619,36 @@ object CrunchApi {
       waitTime = 0,
       deployedDesks = Option(sm.desks),
       deployedWait = Option(sm.waitTime))
+
+    implicit val rw: RW[CrunchMinute] = macroRW
   }
+
+  trait DeskRecMinuteLike {
+    val terminalName: TerminalName
+    val queueName: QueueName
+    val minute: MillisSinceEpoch
+    val paxLoad: Double
+    val workLoad: Double
+    val deskRec: Int
+    val waitTime: Int
+  }
+
+  trait SimulationMinuteLike {
+    val terminalName: TerminalName
+    val queueName: QueueName
+    val minute: MillisSinceEpoch
+    val desks: Int
+    val waitTime: Int
+  }
+
 
   case class CrunchMinutes(crunchMinutes: Set[CrunchMinute])
 
   case class CrunchUpdates(latest: MillisSinceEpoch, flights: Set[ApiFlightWithSplits], minutes: Set[CrunchMinute], staff: Set[StaffMinute])
+
+  object CrunchUpdates {
+    implicit val rw: RW[CrunchUpdates] = macroRW
+  }
 
   case class ForecastTimeSlot(startMillis: MillisSinceEpoch, available: Int, required: Int)
 
@@ -680,25 +743,8 @@ object CrunchApi {
 }
 
 trait Api {
-  def getApplicationVersion(): String
-
-  def getAlerts(createdAfter: MillisSinceEpoch): Future[Seq[Alert]]
-
-  def deleteAllAlerts(): Unit
-
-  def saveAlert(alert: Alert): Unit
-
-  def airportInfoByAirportCode(code: String): Future[Option[AirportInfo]]
-
-  def airportInfosByAirportCodes(codes: Set[String]): Future[Map[String, AirportInfo]]
-
-  def airportConfiguration(): AirportConfig
 
   def getShifts(maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments]
-
-  def saveFixedPoints(fixedPoints: FixedPointAssignments): Unit
-
-  def getFixedPoints(maybePointIntTime: Option[MillisSinceEpoch]): Future[FixedPointAssignments]
 
   def addStaffMovements(movementsToAdd: Seq[StaffMovement]): Unit
 
@@ -710,19 +756,9 @@ trait Api {
 
   def updateShifts(shiftsToUpdate: Seq[StaffAssignment]): Unit
 
-  def getCrunchStateForDay(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]]
-
-  def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]]
-
-  def getCrunchUpdates(sinceMillis: MillisSinceEpoch, windowStartMillis: MillisSinceEpoch, windowEndMillis: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchUpdates]]]
-
   def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]]
 
-  def isLoggedIn(): Boolean
-
   def getLoggedInUser(): LoggedInUser
-
-  def getFeedStatuses(): Future[Seq[FeedStatuses]]
 
   def getKeyCloakUsers(): Future[List[KeyCloakUser]]
 
@@ -736,3 +772,5 @@ trait Api {
 
   def getShowAlertModalDialog(): Boolean
 }
+
+

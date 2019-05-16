@@ -52,7 +52,7 @@ object Actions {
 
   case class SetForecastPeriod(forecastPeriodOption: Option[ForecastPeriodWithHeadlines]) extends Action
 
-  case class GetAirportConfig() extends Action
+  case object GetAirportConfig extends Action
 
   case class UpdateAirportConfig(airportConfig: AirportConfig) extends Action
 

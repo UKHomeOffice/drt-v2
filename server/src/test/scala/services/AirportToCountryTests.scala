@@ -12,15 +12,6 @@ object AirportToCountryTests extends TestSuite {
       val expected = Some(AirportInfo("Goroka", "Goroka", "Papua New Guinea", "GKA"))
       assert(result == expected)
     }
-    "can ask the apiservice for LGW" - {
-      val airportInfo = AirportToCountry.airportInfoByAirportCode("LGW")
-      airportInfo.onSuccess {
-        case Some(ai) =>
-          assert(ai == AirportInfo("Gatwick", "London",  "United Kingdom", "LGW"))
-        case f =>
-          assert(false)
-      }
-    }
   }
 }
 

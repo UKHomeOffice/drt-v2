@@ -13,7 +13,7 @@ describe('Alerts system', function () {
 
   Cypress.Commands.add('addAlert', (time, number="") => {
     cy
-      .request('POST', '/data/alert', {
+      .request('POST', '/alerts', {
         "title": "This is an alert"+number,
         "alertClass": "notice",
         "message": "This is the message of the alert",
@@ -22,17 +22,19 @@ describe('Alerts system', function () {
       .its("body").should('include', "This is an alert");
   });
 
-  Cypress.Commands.add('deleteAlerts', () => cy.request('DELETE', '/data/alert'))
+  Cypress.Commands.add('deleteAlerts', () => cy.request('DELETE', '/alerts'))
 
   Cypress.Commands.add('shouldHaveAlerts', (num) => cy.get('#has-alerts .alert').should('have.length', num))
 
   describe('An alert exists in the app', function () {
 
-    it("When an alert is not expired it should be displayed", function () {
+    it("Should be possible to add an alert, view it and the delete it.", function () {
       cy
         .addAlert(timeAtEndOfDay)
         .navigateHome()
-        .shouldHaveAlerts(1);
+        .shouldHaveAlerts(1)
+        .deleteAlerts()
+        .shouldHaveAlerts(0);
     });
 
   });

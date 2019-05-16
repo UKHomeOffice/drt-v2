@@ -4,9 +4,10 @@ import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.PassengerSplits.QueueType
 import drt.shared.PaxTypes._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-
-//import scala.collection.immutable.Seq
-
+import ujson.Js.Value
+import upickle.Js
+import upickle.default._
+import upickle.default.{macroRW, ReadWriter => RW}
 
 object Queues {
   val EeaDesk = "eeaDesk"
@@ -51,8 +52,13 @@ object PaxType {
     case "EeaMachineReadable$" => EeaMachineReadable
     case "NonVisaNational$" => NonVisaNational
     case "B5JPlusNational$" => B5JPlusNational
+    case "EeaBelowEGateAge$" => EeaBelowEGateAge
+    case "B5JPlusNationalBelowEGateAge$" => B5JPlusNationalBelowEGateAge
     case _ => UndefinedPaxType
   }
+
+  implicit val paxTypeReaderWriter: ReadWriter[PaxType] =
+    readwriter[Js.Value].bimap[PaxType](paxType => paxType.cleanName, (s: Value) => PaxType(s"${s.str}$$"))
 }
 
 object PaxTypes {
@@ -81,6 +87,7 @@ case class PaxTypeAndQueue(passengerType: PaxType, queueType: String)
 
 object PaxTypeAndQueue {
   def apply(split: ApiPaxTypeAndQueueCount): PaxTypeAndQueue = PaxTypeAndQueue(split.passengerType, split.queueType)
+  implicit val rw: RW[PaxTypeAndQueue] = macroRW
 }
 
 object ProcessingTimes {
@@ -141,6 +148,10 @@ case class AirportConfig(
   def nonTransferQueues(terminalName: TerminalName): Seq[QueueName] = queues(terminalName).collect {
     case queueName: String if queueName != Queues.Transfer => queueName
   }
+}
+
+object AirportConfig {
+  implicit val rw: RW[AirportConfig] = macroRW
 }
 
 object ArrivalHelper {

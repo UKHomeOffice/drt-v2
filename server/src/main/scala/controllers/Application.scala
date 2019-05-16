@@ -1,11 +1,12 @@
 package controllers
 
 import java.nio.ByteBuffer
+import java.nio.file.AccessDeniedException
 import java.util.{Calendar, TimeZone, UUID}
 
 import javax.inject.{Inject, Singleton}
 import actors._
-import actors.pointInTime.CrunchStateReadActor
+import actors.pointInTime.{CrunchStateReadActor, FixedPointsReadActor}
 import akka.actor._
 import akka.event.{Logging, LoggingAdapter}
 import akka.pattern.{AskableActorRef, _}
@@ -28,7 +29,7 @@ import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.{HeaderNames, HttpEntity}
 import play.api.libs.json._
-import play.api.mvc._
+import play.api.mvc.{Action, _}
 import play.api.{Configuration, Environment}
 import server.feeds.acl.AclFeed
 import services.PcpArrival.{pcpFrom, _}
@@ -40,6 +41,8 @@ import services.staffing.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import test.TestDrtSystem
+import upickle.default.write
+import upickle.default.read
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -207,38 +210,7 @@ class Application @Inject()(implicit val config: Configuration,
 
       def actorSystem: ActorSystem = system
 
-      def getCrunchStateForDay(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = loadBestCrunchStateForPointInTime(day)
-
-      def getApplicationVersion(): String = BuildInfo.version
-
-      override def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = crunchStateAtPointInTime(pointInTime)
-
-      def getCrunchUpdates(sinceMillis: MillisSinceEpoch,
-                           windowStartMillis: MillisSinceEpoch,
-                           windowEndMillis: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchUpdates]]] = {
-        val liveStateCutOff = getLocalNextMidnight(ctrl.now()).addDays(1).millisSinceEpoch
-
-        val stateActor = if (windowStartMillis < liveStateCutOff) liveCrunchStateActor else forecastCrunchStateActor
-
-        val crunchStateFuture = stateActor.ask(GetUpdatesSince(sinceMillis, windowStartMillis, windowEndMillis))(new Timeout(30 seconds))
-
-        crunchStateFuture.map {
-          case Some(cu: CrunchUpdates) => Right(Option(cu))
-          case _ => Right(None)
-        } recover {
-          case t =>
-            log.warn(s"Didn't get a CrunchUpdates: $t")
-            Left(CrunchStateError(t.getMessage))
-        }
-      }
-
-      def isLoggedIn(): Boolean = {
-        true
-      }
-
       def getLoggedInUser(): LoggedInUser = ctrl.getLoggedInUser(config, headers, session)
-
-      def getFeedStatuses(): Future[Seq[FeedStatuses]] = ctrl.getFeedStatus
 
       def forecastWeekSummary(startDay: MillisSinceEpoch,
                               terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]] = {
@@ -356,16 +328,6 @@ class Application @Inject()(implicit val config: Configuration,
           .map(kcGroups => kcGroups.filter(g => groups.contains(g.name))
             .map(g => keyCloakClient.removeUserFromGroup(userId, g.id)))
 
-      def getAlerts(createdAfter: MillisSinceEpoch): Future[Seq[Alert]] = {
-        for {
-          alerts <- (ctrl.alertsActor ? GetState).mapTo[Seq[Alert]]
-        } yield alerts.filter(a => a.createdAt > createdAfter)
-      }
-
-      def deleteAllAlerts(): Unit = ctrl.alertsActor ? DeleteAlerts
-
-      def saveAlert(alert: Alert): Unit = ctrl.alertsActor ? alert
-
       override def liveCrunchStateActor: AskableActorRef = ctrl.liveCrunchStateActor
 
       override def forecastCrunchStateActor: AskableActorRef = ctrl.forecastCrunchStateActor
@@ -426,10 +388,115 @@ class Application @Inject()(implicit val config: Configuration,
     Ok(Json.toJson(user))
   }
 
-  def getShouldReload(): Action[AnyContent] = Action { request =>
+  def getAirportConfig: Action[AnyContent] = Action { _ =>
+    import upickle.default._
+
+    Ok(write(airportConfig))
+  }
+
+  def getAirportInfo: Action[AnyContent] = Action { request =>
+    import upickle.default._
+
+    val res: Map[String, AirportInfo] = request.queryString.get("portCode")
+      .flatMap(_.headOption)
+      .map(codes => codes
+        .split(",")
+        .map(code => (code, AirportToCountry.airportInfo.get(code)))
+        .collect {
+          case (code, Some(info)) => (code, info)
+        }
+      ) match {
+      case Some(airportInfoTuples) => airportInfoTuples.toMap
+      case None => Map()
+    }
+
+    Ok(write(res))
+  }
+
+  def getApplicationVersion: Action[AnyContent] = Action { _ => Ok(write(BuildVersion(BuildInfo.version.toString))) }
+
+  def getCrunchStateForDay(day: MillisSinceEpoch): Action[AnyContent] = Action.async { _ =>
+    loadBestCrunchStateForPointInTime(day).map((s: Either[CrunchStateError, Option[CrunchState]]) => Ok(write(s)))
+  }
+
+  def getCrunchUpdates: Action[AnyContent] = Action.async { request: Request[AnyContent] =>
+
+    val sinceMillis: MillisSinceEpoch = request.queryString.get("sinceMillis").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
+    val windowStartMillis: MillisSinceEpoch = request.queryString.get("windowStartMillis").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
+    val windowEndMillis: MillisSinceEpoch = request.queryString.get("windowEndMillis").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
+    val liveStateCutOff = getLocalNextMidnight(ctrl.now()).addDays(1).millisSinceEpoch
+
+    def liveCrunchStateActor: AskableActorRef = ctrl.liveCrunchStateActor
+
+    def forecastCrunchStateActor: AskableActorRef = ctrl.forecastCrunchStateActor
+
+    val stateActor = if (windowStartMillis < liveStateCutOff) liveCrunchStateActor else forecastCrunchStateActor
+
+    val crunchStateFuture = stateActor.ask(GetUpdatesSince(sinceMillis, windowStartMillis, windowEndMillis))(new Timeout(30 seconds))
+
+    val futureCS: Future[Either[CrunchStateError, Option[CrunchUpdates]]] = crunchStateFuture.map {
+      case Some(cu: CrunchUpdates) => Right(Option(cu))
+      case _ => Right(None)
+    } recover {
+      case t: Throwable =>
+        system.log.warning(s"Didn't get a CrunchUpdates: $t")
+        Left(CrunchStateError(t.getMessage))
+    }
+
+    futureCS.map(cs => Ok(write(cs)))
+  }
+
+  def getFeedStatuses: Action[AnyContent] = Action.async { _ => ctrl.getFeedStatus.map(s => Ok(write(s))) }
+
+  def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Action[AnyContent] = Action.async { request: Request[AnyContent] =>
+    crunchStateAtPointInTime(pointInTime).map(cs => Ok(write(cs)))
+  }
+
+  def getShouldReload: Action[AnyContent] = Action { request =>
 
     val shouldRedirect: Boolean = config.getOptional[Boolean]("feature-flags.acp-redirect").getOrElse(false)
     Ok(Json.obj("reload" -> shouldRedirect))
+  }
+
+  def saveFixedPoints(): Action[AnyContent] = Action { request =>
+
+    request.body.asText match {
+      case Some(text) =>
+        val fixedPoints: FixedPointAssignments = read[FixedPointAssignments](text)
+        ctrl.fixedPointsActor ! SetFixedPoints(fixedPoints.assignments)
+        Accepted
+      case None =>
+        BadRequest
+    }
+  }
+
+  def getFixedPoints: Action[AnyContent] = Action.async { request: Request[AnyContent] =>
+
+    val fps: Future[FixedPointAssignments] = request.queryString.get("sinceMillis").flatMap(_.headOption.map(_.toLong)) match {
+
+      case None =>
+        ctrl.fixedPointsActor.ask(GetState)
+          .map { case sa: FixedPointAssignments => sa }
+          .recoverWith { case _ => Future(FixedPointAssignments.empty) }
+
+      case Some(millis) =>
+        val date = SDate(millis)
+
+        val actorName = "fixed-points-read-actor-" + UUID.randomUUID().toString
+        val fixedPointsReadActor: ActorRef = system.actorOf(Props(classOf[FixedPointsReadActor], date), actorName)
+
+        fixedPointsReadActor.ask(GetState)
+          .map { case sa: FixedPointAssignments =>
+            fixedPointsReadActor ! PoisonPill
+            sa
+          }
+          .recoverWith {
+            case _ =>
+              fixedPointsReadActor ! PoisonPill
+              Future(FixedPointAssignments.empty)
+          }
+    }
+    fps.map(fp => Ok(write(fp)))
   }
 
   def apiLogin(): Action[Map[String, Seq[String]]] = Action.async(parse.tolerantFormUrlEncoded) { request =>
@@ -494,6 +561,11 @@ class Application @Inject()(implicit val config: Configuration,
       Ok("{userHasAccess: true}")
     }
   }
+
+  def isLoggedIn: Action[AnyContent] = Action {
+    Ok("{loggedIn: true}")
+  }
+
 
   def keyCloakClient(headers: Headers): KeyCloakClient with ProdSendAndReceive = {
     val token = headers.get("X-Auth-Token").getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
@@ -890,10 +962,10 @@ class Application @Inject()(implicit val config: Configuration,
     val enablePortAccessRestrictions =
       config.getOptional[Boolean]("feature-flags.port-access-restrictions").getOrElse(false)
 
-    if(!loggedInUser.hasRole(allowedRole))
+    if (!loggedInUser.hasRole(allowedRole))
       log.warning(
         s"User missing port role: ${loggedInUser.email} is accessing ${airportConfig.portCode} " +
-        s"and has ${loggedInUser.roles.mkString(", ")} (needs $allowedRole)"
+          s"and has ${loggedInUser.roles.mkString(", ")} (needs $allowedRole)"
       )
 
     val preventAccess = !loggedInUser.hasRole(allowedRole) && enablePortAccessRestrictions
