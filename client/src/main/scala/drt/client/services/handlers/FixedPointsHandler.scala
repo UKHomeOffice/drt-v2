@@ -1,6 +1,5 @@
 package drt.client.services.handlers
 
-import autowire._
 import diode.Implicits.runAfterImpl
 import diode.data.{Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW, NoAction}

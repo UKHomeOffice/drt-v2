@@ -562,11 +562,10 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def isLoggedIn: Action[AnyContent] = auth {
-    Action {
-      Ok("{loggedIn: true}")
-    }
+  def isLoggedIn: Action[AnyContent] = Action {
+    Ok("{loggedIn: true}")
   }
+
 
   def keyCloakClient(headers: Headers): KeyCloakClient with ProdSendAndReceive = {
     val token = headers.get("X-Auth-Token").getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))

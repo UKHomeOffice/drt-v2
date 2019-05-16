@@ -1,6 +1,5 @@
 package drt.client.services.handlers
 
-import autowire._
 import boopickle.Default._
 import diode.Implicits.runAfterImpl
 import diode._
@@ -12,6 +11,7 @@ import drt.client.services._
 import drt.shared.CrunchApi._
 import drt.shared._
 import upickle.default.read
+
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
