@@ -241,12 +241,12 @@ object CrunchSystem {
 
   def initialLoadsFromPortState(initialPortState: Option[PortState]): Option[Loads] = initialPortState.map(ps => Loads(ps.crunchMinutes.values.toSeq))
 
-  def initialFlightsFromPortState(initialPortState: Option[PortState], removeSplits: Boolean): Option[FlightsWithSplits] = initialPortState.map(
-    ps => {
-      val flightsWithSplits = ps.flights.values.toSeq.map { fws =>
-        if (removeSplits) fws.copy(splits = fws.splits.filter(_.source == SplitSources.TerminalAverage))
-        else fws
-      }
-      FlightsWithSplits(flightsWithSplits, Set())
-    })
+  def initialFlightsFromPortState(initialPortState: Option[PortState], removeSplits: Boolean): Option[FlightsWithSplits] = initialPortState.map { ps =>
+    val initialFlightsWithSplits = ps.flights.values.toSeq
+    val flightsWithSplits = if (removeSplits) initialFlightsWithSplits.map { fws =>
+      fws.copy(splits = fws.splits.filter(_.source == SplitSources.TerminalAverage))
+    } else initialFlightsWithSplits
+    
+    FlightsWithSplits(flightsWithSplits, Set())
+  }
 }
