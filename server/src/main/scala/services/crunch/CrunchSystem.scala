@@ -8,6 +8,7 @@ import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi.{CrunchMinutes, PortState, StaffMinutes}
 import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared.{SDateLike, _}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.SplitsCalculator
@@ -93,16 +94,14 @@ object CrunchSystem {
     val maybeStaffMinutes = initialStaffMinutesFromPortState(props.initialPortState)
     val maybeCrunchMinutes = initialCrunchMinutesFromPortState(props.initialPortState)
 
-    val initialFlightsWithSplits = initialFlightsFromPortState(props.initialPortState)
+    val initialFlightsWithSplits = initialFlightsFromPortState(props.initialPortState, props.recrunchOnStart)
 
     val arrivalsStage = new ArrivalsGraphStage(
       name = props.logLabel,
-      initialBaseArrivals = if (props.recrunchOnStart) Set() else props.initialBaseArrivals,
-      initialForecastArrivals = if (props.recrunchOnStart) Set() else props.initialFcstArrivals,
-      initialLiveArrivals = if (props.recrunchOnStart) Set() else props.initialLiveArrivals,
-      initialMergedArrivals = if (props.recrunchOnStart) Map() else {
-        initialFlightsWithSplits.map(_.flights.map(fws => (fws.apiFlight.uniqueId, fws.apiFlight)).toMap).getOrElse(Map())
-      },
+      initialBaseArrivals = props.initialBaseArrivals,
+      initialForecastArrivals = props.initialFcstArrivals,
+      initialLiveArrivals = props.initialLiveArrivals,
+      initialMergedArrivals = initialFlightsWithSplits.map(_.flights.map(fws => (fws.apiFlight.uniqueId, fws.apiFlight)).toMap).getOrElse(Map()),
       pcpArrivalTime = props.pcpArrival,
       validPortTerminals = props.airportConfig.terminalNames.toSet,
       expireAfterMillis = props.expireAfterMillis,
@@ -139,7 +138,7 @@ object CrunchSystem {
       new ArrivalSplitsGraphStage(
         name = props.logLabel,
         props.airportConfig.portCode,
-        optionalInitialFlights = if (props.recrunchOnStart) None else initialFlightsWithSplits,
+        optionalInitialFlights = initialFlightsWithSplits,
         splitsCalculator = manifests.queues.SplitsCalculator(
           props.airportConfig.feedPortCode,
           ptqa,
@@ -242,6 +241,12 @@ object CrunchSystem {
 
   def initialLoadsFromPortState(initialPortState: Option[PortState]): Option[Loads] = initialPortState.map(ps => Loads(ps.crunchMinutes.values.toSeq))
 
-  def initialFlightsFromPortState(initialPortState: Option[PortState]): Option[FlightsWithSplits] = initialPortState.map(
-    ps => FlightsWithSplits(ps.flights.values.toSeq, Set()))
+  def initialFlightsFromPortState(initialPortState: Option[PortState], removeSplits: Boolean): Option[FlightsWithSplits] = initialPortState.map(
+    ps => {
+      val flightsWithSplits = ps.flights.values.toSeq.map { fws =>
+        if (removeSplits) fws.copy(splits = fws.splits.filter(_.source == SplitSources.TerminalAverage))
+        else fws
+      }
+      FlightsWithSplits(flightsWithSplits, Set())
+    })
 }
