@@ -280,7 +280,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 0.0, Option(Map("GBR" -> 0.0)))), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.DepartureConfirmed), PaxNumbers)
     )
 
-    crunch.liveTestProbe.fishForMessage(10 seconds) {
+    crunch.liveTestProbe.fishForMessage(4 seconds) {
       case ps: PortState =>
         val splitsSet = ps.flights.values.headOption match {
           case Some(ApiFlightWithSplits(_, s, _)) => s
