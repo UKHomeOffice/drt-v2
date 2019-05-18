@@ -58,14 +58,18 @@ object Deskstats {
     }
   }
 
-  def blackjackDeskstats(blackjackUrl: String, parseSince: SDateLike): Map[String, Map[String, Map[Long, DeskStat]]] = {
+  def blackjackDeskstats(blackjackBaseUrl: String, parseSince: SDateLike): Map[String, Map[String, Map[Long, DeskStat]]] = {
+    val startDate = parseSince.toISODateOnly
+    val endDate = parseSince.addDays(2).toISODateOnly
+    val blackjackFullUrl = s"$blackjackBaseUrl?date_limit=&start_date=$startDate&end_date=$endDate"
+
     val sc = SSLContext.getInstance("SSL")
     sc.init(null, Array(new NaiveTrustManager), new java.security.SecureRandom())
     HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory)
     val backupSslSocketFactory = HttpsURLConnection.getDefaultSSLSocketFactory
 
-    log.info(s"DeskStats: requesting blackjack CSV from $blackjackUrl")
-    val bufferedCsvContent: BufferedSource = Source.fromURL(blackjackUrl)
+    log.info(s"DeskStats: requesting blackjack CSV from $blackjackFullUrl")
+    val bufferedCsvContent: BufferedSource = Source.fromURL(blackjackFullUrl)
     log.info("DeskStats: received blackjack CSV")
 
     HttpsURLConnection.setDefaultSSLSocketFactory(backupSslSocketFactory)
