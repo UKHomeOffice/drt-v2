@@ -120,7 +120,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
 
     val requestUri = controllers.Deskstats.uriForDate(now)
 
-    requestUri === s"date_limit=&start_date=2019-01-10&end_date=2019-01-12"
+    requestUri === s"?date_limit=&start_date=2019-01-10&end_date=2019-01-12"
   }
 
   def passengerInfoJson(nationality: String, documentType: String, issuingCountry: String): PassengerInfoJson = {
