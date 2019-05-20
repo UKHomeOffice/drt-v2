@@ -113,6 +113,16 @@ class BlackJackFlowSpec extends CrunchTestLike {
     success
   }
 
+  "Given a date representing the start time for parsing data " +
+    "When I ask for a blackjack request url " +
+    "I should see the same day as the start date, and 2 days later as the end date" >> {
+    val now = SDate("2019-01-10T13:23:59")
+
+    val requestUri = controllers.Deskstats.uriForDate(now)
+
+    requestUri === s"date_limit=&start_date=2019-01-10&end_date=2019-01-12"
+  }
+
   def passengerInfoJson(nationality: String, documentType: String, issuingCountry: String): PassengerInfoJson = {
     PassengerInfoJson(Some(documentType), issuingCountry, "", Some("22"), Some("LHR"), "N", Some("GBR"), Option(nationality), None)
   }

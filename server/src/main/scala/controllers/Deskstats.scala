@@ -58,14 +58,16 @@ object Deskstats {
     }
   }
 
-  def blackjackDeskstats(blackjackUrl: String, parseSince: SDateLike): Map[String, Map[String, Map[Long, DeskStat]]] = {
+  def blackjackDeskstats(blackjackBaseUrl: String, parseSince: SDateLike): Map[String, Map[String, Map[Long, DeskStat]]] = {
+    val blackjackFullUrl = blackjackBaseUrl + uriForDate(parseSince)
+
     val sc = SSLContext.getInstance("SSL")
     sc.init(null, Array(new NaiveTrustManager), new java.security.SecureRandom())
     HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory)
     val backupSslSocketFactory = HttpsURLConnection.getDefaultSSLSocketFactory
 
-    log.info(s"DeskStats: requesting blackjack CSV from $blackjackUrl")
-    val bufferedCsvContent: BufferedSource = Source.fromURL(blackjackUrl)
+    log.info(s"DeskStats: requesting blackjack CSV from $blackjackFullUrl")
+    val bufferedCsvContent: BufferedSource = Source.fromURL(blackjackFullUrl)
     log.info("DeskStats: received blackjack CSV")
 
     HttpsURLConnection.setDefaultSSLSocketFactory(backupSslSocketFactory)
@@ -73,6 +75,12 @@ object Deskstats {
     log.info(s"Asking for blackjack entries since $parseSince")
     val relevantData = csvLinesUntil(bufferedCsvContent, parseSince.millisSinceEpoch)
     csvData(relevantData)
+  }
+
+  def uriForDate(date: SDateLike): String = {
+    val startDate = date.toISODateOnly
+    val endDate = date.addDays(2).toISODateOnly
+    s"?date_limit=&start_date=$startDate&end_date=$endDate"
   }
 
   def csvLinesUntil(csvContent: Source, until: Long): String = {
