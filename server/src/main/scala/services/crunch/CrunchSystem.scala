@@ -68,6 +68,7 @@ case class CrunchProps[FR](logLabel: String = "",
                            initialFixedPoints: FixedPointAssignments = FixedPointAssignments(Seq()),
                            initialStaffMovements: Seq[StaffMovement] = Seq(),
                            recrunchOnStart: Boolean = false,
+                           refreshArrivalsOnStart: Boolean = false,
                            checkRequiredStaffUpdatesOnStartup: Boolean)
 
 object CrunchSystem {
@@ -98,8 +99,8 @@ object CrunchSystem {
 
     val arrivalsStage = new ArrivalsGraphStage(
       name = props.logLabel,
-      initialBaseArrivals = props.initialBaseArrivals,
-      initialForecastArrivals = props.initialFcstArrivals,
+      initialBaseArrivals = if (props.refreshArrivalsOnStart) Set() else props.initialBaseArrivals,
+      initialForecastArrivals = if (props.refreshArrivalsOnStart) Set() else props.initialFcstArrivals,
       initialLiveArrivals = props.initialLiveArrivals,
       initialMergedArrivals = initialFlightsWithSplits.map(_.flights.map(fws => (fws.apiFlight.uniqueId, fws.apiFlight)).toMap).getOrElse(Map()),
       pcpArrivalTime = props.pcpArrival,
@@ -107,8 +108,8 @@ object CrunchSystem {
       expireAfterMillis = props.expireAfterMillis,
       now = props.now)
 
-    val fcstArrivalsDiffingStage = new ArrivalsDiffingStage(props.initialFcstArrivals.toSeq)
-    val liveArrivalsDiffingStage = new ArrivalsDiffingStage(props.initialLiveArrivals.toSeq)
+    val fcstArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) Seq() else props.initialFcstArrivals.toSeq)
+    val liveArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) Seq() else props.initialLiveArrivals.toSeq)
 
     val arrivalSplitsGraphStage = if (props.useLegacyManifests)
       new ArrivalSplitsFromAllSourcesGraphStage(
@@ -246,7 +247,7 @@ object CrunchSystem {
     val flightsWithSplits = if (removeSplits) initialFlightsWithSplits.map { fws =>
       fws.copy(splits = fws.splits.filter(_.source == SplitSources.TerminalAverage))
     } else initialFlightsWithSplits
-    
+
     FlightsWithSplits(flightsWithSplits, Set())
   }
 }

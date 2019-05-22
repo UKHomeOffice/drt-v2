@@ -69,7 +69,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
   override def run(): Unit = {
 
     val startSystem: () => List[KillSwitch] = () => {
-      val cs = startCrunchSystem(None, None, None, None, true, true)
+      val cs = startCrunchSystem(None, None, None, None, true, true, true)
       subscribeStaffingActors(cs)
       startScheduledFeedImports(cs)
       testManifestsActor ! SubscribeResponseQueue(cs.manifestsLiveResponse)

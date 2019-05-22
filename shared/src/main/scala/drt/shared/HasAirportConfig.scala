@@ -251,8 +251,8 @@ object AirportConfigs {
 
   val defaultPaxSplits = SplitRatios(
     SplitSources.TerminalAverage,
-    SplitRatio(eeaMachineReadableToDesk, 0.4875),
-    SplitRatio(eeaMachineReadableToEGate, 0.1625),
+    SplitRatio(eeaMachineReadableToDesk, 0.1625),
+    SplitRatio(eeaMachineReadableToEGate, 0.4875),
     SplitRatio(eeaNonMachineReadableToDesk, 0.1625),
     SplitRatio(visaNationalToDesk, 0.05),
     SplitRatio(nonVisaNationalToDesk, 0.05)
@@ -412,8 +412,8 @@ object AirportConfigs {
     defaultWalkTimeMillis = Map("T1" -> 600000L),
     defaultPaxSplits = SplitRatios(
       SplitSources.TerminalAverage,
-      SplitRatio(eeaMachineReadableToDesk, 0.7425),
-      SplitRatio(eeaMachineReadableToEGate, 0.2475),
+      SplitRatio(eeaMachineReadableToDesk, 0.2475),
+      SplitRatio(eeaMachineReadableToEGate, 0.7425),
       SplitRatio(eeaNonMachineReadableToDesk, 0.0),
       SplitRatio(visaNationalToDesk, 0.0),
       SplitRatio(nonVisaNationalToDesk, 0.01)
@@ -640,8 +640,8 @@ object AirportConfigs {
     defaultWalkTimeMillis = Map("T1" -> 780000L),
     defaultPaxSplits = SplitRatios(
       SplitSources.TerminalAverage,
-      SplitRatio(eeaMachineReadableToDesk, 0.99 * 0.8),
-      SplitRatio(eeaMachineReadableToEGate, 0.99 * 0.2),
+      SplitRatio(eeaMachineReadableToDesk, 0.99 * 0.2),
+      SplitRatio(eeaMachineReadableToEGate, 0.99 * 0.8),
       SplitRatio(eeaNonMachineReadableToDesk, 0),
       SplitRatio(visaNationalToDesk, 0.0),
       SplitRatio(nonVisaNationalToDesk, 0.01)
@@ -690,8 +690,8 @@ object AirportConfigs {
     defaultWalkTimeMillis = Map("T1" -> 780000L),
     defaultPaxSplits = SplitRatios(
       SplitSources.TerminalAverage,
-      SplitRatio(eeaMachineReadableToDesk, 0.99 * 0.8),
-      SplitRatio(eeaMachineReadableToEGate, 0.99 * 0.2),
+      SplitRatio(eeaMachineReadableToDesk, 0.99 * 0.2),
+      SplitRatio(eeaMachineReadableToEGate, 0.99 * 0.8),
       SplitRatio(eeaNonMachineReadableToDesk, 0),
       SplitRatio(visaNationalToDesk, 0.0),
       SplitRatio(nonVisaNationalToDesk, 0.01)
@@ -729,8 +729,8 @@ object AirportConfigs {
     defaultWalkTimeMillis = Map("T1" -> 240000L, "T2" -> 60000L),
     defaultPaxSplits = SplitRatios(
       SplitSources.TerminalAverage,
-      SplitRatio(eeaMachineReadableToDesk, 0.92 * 0.7),
-      SplitRatio(eeaMachineReadableToEGate, 0.92 * 0.3),
+      SplitRatio(eeaMachineReadableToDesk, 0.92 * 0.3),
+      SplitRatio(eeaMachineReadableToEGate, 0.92 * 0.7),
       SplitRatio(eeaNonMachineReadableToDesk, 0),
       SplitRatio(visaNationalToDesk, 0.04),
       SplitRatio(nonVisaNationalToDesk, 0.04)
@@ -793,8 +793,8 @@ object AirportConfigs {
     defaultWalkTimeMillis = Map("T1" -> 600000L),
     defaultPaxSplits = SplitRatios(
       SplitSources.TerminalAverage,
-      SplitRatio(eeaMachineReadableToDesk, 0.7425),
-      SplitRatio(eeaMachineReadableToEGate, 0.2475),
+      SplitRatio(eeaMachineReadableToDesk, 0.2475),
+      SplitRatio(eeaMachineReadableToEGate, 0.7425),
       SplitRatio(eeaNonMachineReadableToDesk, 0.0),
       SplitRatio(visaNationalToDesk, 0.0),
       SplitRatio(nonVisaNationalToDesk, 0.01)
@@ -838,8 +838,8 @@ object AirportConfigs {
     ),
     defaultPaxSplits = SplitRatios(
       SplitSources.TerminalAverage,
-      SplitRatio(eeaMachineReadableToDesk, 0.7425),
-      SplitRatio(eeaMachineReadableToEGate, 0.2475),
+      SplitRatio(eeaMachineReadableToDesk, 0.2475),
+      SplitRatio(eeaMachineReadableToEGate, 0.7425),
       SplitRatio(eeaNonMachineReadableToDesk, 0.0),
       SplitRatio(visaNationalToDesk, 0.0),
       SplitRatio(nonVisaNationalToDesk, 0.01)
