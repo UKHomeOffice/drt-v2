@@ -793,8 +793,8 @@ object AirportConfigs {
     defaultWalkTimeMillis = Map("T1" -> 600000L),
     defaultPaxSplits = SplitRatios(
       SplitSources.TerminalAverage,
-      SplitRatio(eeaMachineReadableToDesk, 0.2475),
-      SplitRatio(eeaMachineReadableToEGate, 0.7425),
+      SplitRatio(eeaMachineReadableToDesk, 0.7425),
+      SplitRatio(eeaMachineReadableToEGate, 0.2475),
       SplitRatio(eeaNonMachineReadableToDesk, 0.0),
       SplitRatio(visaNationalToDesk, 0.0),
       SplitRatio(nonVisaNationalToDesk, 0.01)
