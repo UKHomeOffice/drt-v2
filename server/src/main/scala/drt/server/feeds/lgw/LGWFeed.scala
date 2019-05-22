@@ -29,7 +29,6 @@ case class LGWFeed(namespace: String, sasToKey: String, serviceBusUrl: String)(v
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
   def requestArrivals(): Future[List[Arrival]] = azureSasClient.receive.map(xmlString => {
-
     if (xmlString.trim().length > 0)
       ResponseToArrivals(xmlString).getArrivals
     else
@@ -39,21 +38,14 @@ case class LGWFeed(namespace: String, sasToKey: String, serviceBusUrl: String)(v
   def source()(implicit actorSystem: ActorSystem): Source[ArrivalsFeedResponse, Cancellable] = Source
     .tick(initialDelayImmediately, pollInterval, NotUsed)
     .withAttributes(ActorAttributes.supervisionStrategy(Supervision.restartingDecider))
-    .map(_ => {
-      Try {
-        val arrivalsFuture: Future[List[Arrival]] = requestArrivals()
-        arrivalsFuture.map(a => log.info(s"Got some arrivals: ${a.size}"))
-        Await.result(arrivalsFuture, 30 seconds)
-      } match {
-        case Success(arrivals) =>
-          if (arrivals.isEmpty) {
-            log.info(s"Empty LGW arrivals.")
-          }
-          ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
-        case Failure(error) =>
-          log.info(s"Failed to fetch LGW arrivals.", error)
-
-          ArrivalsFeedFailure(error.toString, SDate.now())
-      }
+    .mapAsync(1)(_ => requestArrivals().recover { case t =>
+      log.error("Failed to fetch live arrivals", t)
+      List()
     })
+    .filter(_.nonEmpty)
+    .map( arrivals => ArrivalsFeedSuccess(Flights(arrivals)))
+    .conflate[ArrivalsFeedResponse] {
+      case (ArrivalsFeedSuccess(Flights(existingFlights), _), ArrivalsFeedSuccess(Flights(newFlights), createdAt)) =>
+        ArrivalsFeedSuccess(Flights(existingFlights ++ newFlights), createdAt)
+    }
 }
