@@ -433,7 +433,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   def forecastArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = {
     val forecastNoOp = Source.tick[ArrivalsFeedResponse](100 days, 100 days, ArrivalsFeedSuccess(Flights(Seq()), SDate.now()))
     val feed = portCode match {
-//      case "STN" => createForecastChromaFlightFeed(ChromaForecast).chromaVanillaFlights(30 minutes)
       case "LHR" => createForecastLHRFeed()
       case "BHX" => BHXForecastFeed(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")))
       case "LGW" => LGWForecastFeed()
