@@ -72,7 +72,7 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
       log.info(s"set crunchstate ready")
       updated((Ready(crunchState), 0L), allEffects)
 
-    case UpdateCrunchStateFromUpdates(crunchUpdates) =>
+    case UpdateCrunchStateFromUpdates(_, crunchUpdates) =>
       log.info(s"Client got ${crunchUpdates.flights.size} flights & ${crunchUpdates.minutes.size} minutes from CrunchUpdates")
 
       val someStateExists = !value._1.isEmpty

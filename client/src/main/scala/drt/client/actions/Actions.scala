@@ -38,9 +38,15 @@ object Actions {
 
   case class GetCrunchState() extends Action
 
+  case class GetInitialCrunchState() extends Action
+
+  case class GetCrunchStateUpdates() extends Action
+
   case class UpdateCrunchStateAndContinuePolling(crunchState: CrunchState) extends Action
 
-  case class UpdateCrunchStateFromUpdates(crunchUpdates: CrunchUpdates) extends Action
+  case class CreateCrunchStateFromUpdates(startMillis: MillisSinceEpoch, crunchUpdates: CrunchUpdates) extends Action
+
+  case class UpdateCrunchStateFromUpdates(startMillis: MillisSinceEpoch, crunchUpdates: CrunchUpdates) extends Action
 
   case class UpdateCrunchStateFromUpdatesAndContinuePolling(crunchUpdates: CrunchUpdates) extends Action
 

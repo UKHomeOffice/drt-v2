@@ -17,6 +17,8 @@ import scala.language.postfixOps
 sealed trait ViewMode {
   def millis: MillisSinceEpoch = time.millisSinceEpoch
 
+  def dayStart: SDateLike = SDate.midnightOf(time)
+
   def time: SDateLike
 }
 
@@ -69,7 +71,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
 
   override protected def initialModel = RootModel()
 
-  def currentViewMode(): ViewMode = zoom(_.viewMode).value
+  def currentViewMode: () => ViewMode = () => zoom(_.viewMode).value
 
   def airportConfigPot(): Pot[AirportConfig] = zoomTo(_.airportConfig).value
 
@@ -77,7 +79,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
 
   override val actionHandler: HandlerFunction = {
     val composedhandlers: HandlerFunction = composeHandlers(
-      new CrunchUpdatesHandler(airportConfigPot, currentViewMode, zoom(_.latestUpdateMillis), zoomRW(m => (m.crunchStatePot, m.latestUpdateMillis))((m, v) => m.copy(crunchStatePot = v._1, latestUpdateMillis = v._2))),
+      new InitialCrunchStateHandler(currentViewMode, zoomRW(m => (m.crunchStatePot, m.latestUpdateMillis))((m, v) => m.copy(crunchStatePot = v._1, latestUpdateMillis = v._2))),
       new ForecastHandler(zoomRW(_.forecastPeriodPot)((m, v) => m.copy(forecastPeriodPot = v))),
       new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
