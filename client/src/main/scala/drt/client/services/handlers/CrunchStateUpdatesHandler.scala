@@ -2,6 +2,7 @@ package drt.client.services.handlers
 
 import diode._
 import diode.data._
+import diode.Implicits.runAfterImpl
 import drt.client.actions.Actions._
 import drt.client.logger._
 import drt.client.services._
@@ -15,47 +16,53 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class CrunchStateUpdatesHandler[M](viewMode: () => ViewMode,
+class CrunchStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
                                    modelRW: ModelRW[M, (Pot[CrunchState], MillisSinceEpoch)]) extends LoggingActionHandler(modelRW) {
   val crunchUpdatesRequestFrequency: FiniteDuration = 2 seconds
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case GetCrunchStateUpdates() =>
+    case GetCrunchStateUpdates(viewMode) =>
       val (_, lastUpdateMillis) = modelRW.value
       val startMillis = startMillisFromView
       val endMillis = startMillis + (1000 * 60 * 60 * 36)
       val updateRequestFuture = DrtApi.get(s"crunch-state?sinceMillis=$lastUpdateMillis&windowStartMillis=$startMillis&windowEndMillis=$endMillis")
 
-      val eventualAction = processUpdatesRequest(startMillis, updateRequestFuture)
+      val eventualAction = processUpdatesRequest(viewMode, updateRequestFuture)
 
-      updated((Pending(), 0L), Effect(Future(ShowLoader())) + Effect(eventualAction))
+      effectOnly(Effect(eventualAction))
 
-    case UpdateCrunchStateFromUpdates(startMillis, _) if startMillis != startMillisFromView =>
-      log.warn(s"Received old crunch updates response ($startMillis != $startMillisFromView)")
+    case UpdateCrunchStateFromUpdates(viewMode, _) if viewMode.dayStart.millisSinceEpoch != startMillisFromView =>
+      log.warn(s"Received old crunch updates response (${viewMode.dayStart.millisSinceEpoch} != $startMillisFromView)")
       noChange
 
-    case UpdateCrunchStateFromUpdates(startMillis, crunchUpdates) =>
+    case UpdateCrunchStateFromUpdates(viewMode, crunchUpdates) =>
       val (Ready(existingState), _) = modelRW.value
-      val newState = updateStateFromUpdates(startMillis, crunchUpdates, existingState)
-      updated((Ready(newState), crunchUpdates.latest), Effect(Future(HideLoader())))
+      val newState = updateStateFromUpdates(viewMode.dayStart.millisSinceEpoch, crunchUpdates, existingState)
+      updated((Ready(newState), crunchUpdates.latest), Effect(Future(ScheduleCrunchUpdateRequest(viewMode))))
+
+    case ScheduleCrunchUpdateRequest(viewMode) if viewMode.dayStart.millisSinceEpoch != startMillisFromView =>
+      log.warn(s"Received old schedule crunch request (${viewMode.dayStart.millisSinceEpoch} != $startMillisFromView)")
+      noChange
+
+    case ScheduleCrunchUpdateRequest(viewMode) => effectOnly(getCrunchUpdatesAfterDelay(viewMode))
   }
 
-  def startMillisFromView: MillisSinceEpoch = viewMode().dayStart.millisSinceEpoch
+  def startMillisFromView: MillisSinceEpoch = getCurrentViewMode().dayStart.millisSinceEpoch
 
-  def processUpdatesRequest(startMillis: MillisSinceEpoch, call: Future[dom.XMLHttpRequest]): Future[Action] = {
+  def processUpdatesRequest(viewMode: ViewMode, call: Future[dom.XMLHttpRequest]): Future[Action] = {
     call
       .map(r => read[Either[CrunchStateError, Option[CrunchUpdates]]](r.responseText))
       .map {
-        case Right(Some(cu)) => UpdateCrunchStateFromUpdates(startMillis, cu)
-        case Right(None) => NoAction
+        case Right(Some(cu)) => UpdateCrunchStateFromUpdates(viewMode, cu)
+        case Right(None) => ScheduleCrunchUpdateRequest(viewMode)
         case Left(error) =>
           log.error(s"Failed to GetInitialCrunchState ${error.message}. Re-requesting after ${PollDelay.recoveryDelay}")
-          RetryActionAfter(GetInitialCrunchState(), PollDelay.recoveryDelay)
+          RetryActionAfter(GetInitialCrunchState(viewMode), PollDelay.recoveryDelay)
       }
       .recoverWith {
         case throwable =>
           log.error(s"Call to crunch-state failed (${throwable.getMessage}. Re-requesting after ${PollDelay.recoveryDelay}")
-          Future(RetryActionAfter(GetInitialCrunchState(), PollDelay.recoveryDelay))
+          Future(RetryActionAfter(GetInitialCrunchState(viewMode), PollDelay.recoveryDelay))
       }
   }
 
@@ -95,4 +102,5 @@ class CrunchStateUpdatesHandler[M](viewMode: () => ViewMode,
     flights
   }
 
+  def getCrunchUpdatesAfterDelay(viewMode: ViewMode): Effect = Effect(Future(GetCrunchStateUpdates(viewMode))).after(crunchUpdatesRequestFrequency)
 }

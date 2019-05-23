@@ -20,15 +20,29 @@ sealed trait ViewMode {
   def dayStart: SDateLike = SDate.midnightOf(time)
 
   def time: SDateLike
+
+  def isHistoric: Boolean
 }
 
 case class ViewLive() extends ViewMode {
   def time: SDateLike = SDate.now()
+
+  def isHistoric: Boolean = false
 }
 
-case class ViewPointInTime(time: SDateLike) extends ViewMode
+case class NoViewMode() extends ViewMode {
+  def time: SDateLike = SDate.now()
 
-case class ViewDay(time: SDateLike) extends ViewMode
+  def isHistoric: Boolean = false
+}
+
+case class ViewPointInTime(time: SDateLike) extends ViewMode {
+  def isHistoric: Boolean = true
+}
+
+case class ViewDay(time: SDateLike) extends ViewMode {
+  def isHistoric: Boolean = dayStart.millisSinceEpoch < SDate.midnightOf(SDate.now()).millisSinceEpoch
+}
 
 case class LoadingState(isLoading: Boolean = false)
 
@@ -44,7 +58,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      monthOfShifts: Pot[MonthOfShifts] = Empty,
                      fixedPoints: Pot[FixedPointAssignments] = Empty,
                      staffMovements: Pot[Seq[StaffMovement]] = Empty,
-                     viewMode: ViewMode = ViewLive(),
+                     viewMode: ViewMode = NoViewMode(),
                      loadingState: LoadingState = LoadingState(),
                      showActualIfAvailable: Boolean = true,
                      loggedInUserPot: Pot[LoggedInUser] = Empty,
@@ -80,6 +94,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   override val actionHandler: HandlerFunction = {
     val composedhandlers: HandlerFunction = composeHandlers(
       new InitialCrunchStateHandler(currentViewMode, zoomRW(m => (m.crunchStatePot, m.latestUpdateMillis))((m, v) => m.copy(crunchStatePot = v._1, latestUpdateMillis = v._2))),
+      new CrunchStateUpdatesHandler(currentViewMode, zoomRW(m => (m.crunchStatePot, m.latestUpdateMillis))((m, v) => m.copy(crunchStatePot = v._1, latestUpdateMillis = v._2))),
       new ForecastHandler(zoomRW(_.forecastPeriodPot)((m, v) => m.copy(forecastPeriodPot = v))),
       new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),

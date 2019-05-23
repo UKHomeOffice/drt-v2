@@ -36,23 +36,15 @@ object Actions {
 
   case class ShowVersionWarning(currentVersion: String, newVersion: String) extends Action
 
-  case class GetCrunchState() extends Action
+  case class GetInitialCrunchState(viewMode: ViewMode) extends Action
 
-  case class GetInitialCrunchState() extends Action
+  case class GetCrunchStateUpdates(viewMode: ViewMode) extends Action
 
-  case class GetCrunchStateUpdates() extends Action
+  case class ScheduleCrunchUpdateRequest(viewMode: ViewMode) extends Action
 
-  case class UpdateCrunchStateAndContinuePolling(crunchState: CrunchState) extends Action
+  case class CreateCrunchStateFromUpdates(viewMode: ViewMode, crunchUpdates: CrunchUpdates) extends Action
 
-  case class CreateCrunchStateFromUpdates(startMillis: MillisSinceEpoch, crunchUpdates: CrunchUpdates) extends Action
-
-  case class UpdateCrunchStateFromUpdates(startMillis: MillisSinceEpoch, crunchUpdates: CrunchUpdates) extends Action
-
-  case class UpdateCrunchStateFromUpdatesAndContinuePolling(crunchUpdates: CrunchUpdates) extends Action
-
-  case class UpdateCrunchStateFromCrunchState(crunchState: CrunchState) extends Action
-
-  case class NoCrunchStateUpdatesAndContinuePollingIfNecessary() extends Action
+  case class UpdateCrunchStateFromUpdates(viewMode: ViewMode, crunchUpdates: CrunchUpdates) extends Action
 
   case class GetForecastWeek(startDay: SDateLike, terminalName: TerminalName) extends Action
 

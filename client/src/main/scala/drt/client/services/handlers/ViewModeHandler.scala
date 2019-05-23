@@ -1,9 +1,8 @@
 package drt.client.services.handlers
 
-import diode.data.{Empty, Pending, PendingStale, Pot}
 import diode._
+import diode.data.Pot
 import drt.client.actions.Actions._
-import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{ViewDay, ViewLive, ViewMode}
 import drt.shared.CrunchApi.{CrunchState, MillisSinceEpoch}
@@ -24,13 +23,13 @@ class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[Crunch
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case SetViewMode(newViewMode) =>
-      val (currentViewMode, currentCrunchState, currentLatestUpdateMillis) = value
+      val (currentViewMode, _, _) = value
 
       (newViewMode, currentViewMode) match {
         case (newVm, oldVm) if newVm != oldVm =>
-          updated((newViewMode, Pot.empty[CrunchState], 0L), Effect(Future(GetInitialCrunchState())))
+          updated((newViewMode, Pot.empty[CrunchState], 0L), Effect(Future(GetInitialCrunchState(newViewMode))))
         case (ViewDay(newTime), ViewDay(oldTime)) if newTime != oldTime =>
-          updated((newViewMode, Pot.empty[CrunchState], 0L), Effect(Future(GetInitialCrunchState())))
+          updated((newViewMode, Pot.empty[CrunchState], 0L), Effect(Future(GetInitialCrunchState(newViewMode))))
         case _ =>
           noChange
       }
