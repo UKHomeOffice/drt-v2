@@ -274,7 +274,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   def startScheduledFeedImports(crunchInputs: CrunchSystem[Cancellable]): Unit = {
     if (airportConfig.feedPortCode == "LHR") params.maybeBlackJackUrl.map(csvUrl => {
       val requestIntervalMillis = 5 * oneMinuteMillis
-      Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, requestIntervalMillis milliseconds, SDate.now().addDays(-1))
+      Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, requestIntervalMillis milliseconds, () => SDate.now().addDays(-1))
     })
   }
 
