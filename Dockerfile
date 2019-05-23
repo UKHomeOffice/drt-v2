@@ -15,8 +15,8 @@ RUN apk --update add openssh-client \
     rm -rf /var/cache/apk/*
 
 RUN mkdir /home/drt-admin/.ssh
-RUN ssh-keyscan ftp.acl-uk.org >> /home/drt-admin/.ssh/known_hosts
-RUN ssh-keyscan gateway.heathrow.com >> /home/drt-admin/.ssh/known_hosts
+RUN ssh-keyscan -T 60 ftp.acl-uk.org >> /home/drt-admin/.ssh/known_hosts
+RUN ssh-keyscan -T 60 gateway.heathrow.com >> /home/drt-admin/.ssh/known_hosts
 RUN chown -R 1000:1000 /home/drt-admin/.ssh
 
 RUN mkdir -p /var/data
