@@ -5,7 +5,7 @@ import java.security.cert.X509Certificate
 import java.util.TimeZone
 
 import javax.net.ssl._
-import akka.actor.ActorSystem
+import akka.actor.{ActorSystem, Scheduler}
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
@@ -45,15 +45,15 @@ object Deskstats {
     }
   }
 
-  def startBlackjack(csvUrl: String, actualDesksSource: SourceQueueWithComplete[ActualDeskStats], interval: FiniteDuration, startFrom: SDateLike)(implicit actorSystem: ActorSystem): Any = {
+  def startBlackjack(csvUrl: String, actualDesksSource: SourceQueueWithComplete[ActualDeskStats], interval: FiniteDuration, startFrom: () => SDateLike)(implicit actorSystem: ActorSystem): Any = {
     val initialDelay1Second = 1 * 1000
 
-    implicit val  scheduler = actorSystem.scheduler
+    implicit val scheduler: Scheduler = actorSystem.scheduler
 
     scheduler.schedule(
       initialDelay1Second milliseconds,
       interval) {
-      val actDesks = Deskstats.blackjackDeskstats(csvUrl, startFrom)
+      val actDesks = Deskstats.blackjackDeskstats(csvUrl, startFrom())
       OfferHandler.offerWithRetries(actualDesksSource, ActualDeskStats(actDesks), 5)
     }
   }
