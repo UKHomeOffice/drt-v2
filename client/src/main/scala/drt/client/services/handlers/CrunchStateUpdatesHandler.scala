@@ -38,7 +38,14 @@ class CrunchStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
     case UpdateCrunchStateFromUpdates(viewMode, crunchUpdates) =>
       val (Ready(existingState), _) = modelRW.value
       val newState = updateStateFromUpdates(viewMode.dayStart.millisSinceEpoch, crunchUpdates, existingState)
-      updated((Ready(newState), crunchUpdates.latest), Effect(Future(ScheduleCrunchUpdateRequest(viewMode))))
+
+      val scheduledUpdateRequest = Effect(Future(ScheduleCrunchUpdateRequest(viewMode)))
+
+      val newOriginCodes = crunchUpdates.flights.map(_.apiFlight.Origin) -- existingState.flights.map(_.apiFlight.Origin)
+
+      val effects = if (newOriginCodes.nonEmpty) scheduledUpdateRequest + Effect(Future(GetAirportInfos(newOriginCodes))) else scheduledUpdateRequest
+
+      updated((Ready(newState), crunchUpdates.latest), effects)
 
     case ScheduleCrunchUpdateRequest(viewMode) if viewMode.dayStart.millisSinceEpoch != startMillisFromView =>
       log.warn(s"Received old schedule crunch request (${viewMode.dayStart.millisSinceEpoch} != $startMillisFromView)")
