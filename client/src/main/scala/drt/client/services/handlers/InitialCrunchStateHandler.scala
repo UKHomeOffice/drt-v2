@@ -21,6 +21,8 @@ class InitialCrunchStateHandler[M](getCurrentViewMode: () => ViewMode,
 
   def startMillisFromView: MillisSinceEpoch = getCurrentViewMode().dayStart.millisSinceEpoch
 
+  def viewHasChanged(viewMode: ViewMode): Boolean = viewMode.dayStart.millisSinceEpoch != startMillisFromView
+
   def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetInitialCrunchState(viewMode) =>
       val startMillis = startMillisFromView
@@ -31,8 +33,8 @@ class InitialCrunchStateHandler[M](getCurrentViewMode: () => ViewMode,
 
       updated((Pending(), 0L), Effect(Future(ShowLoader())) + Effect(eventualAction))
 
-    case CreateCrunchStateFromUpdates(viewMode, _) if viewMode.dayStart.millisSinceEpoch != startMillisFromView =>
-      log.warn(s"Received old crunch state response (${viewMode.dayStart.millisSinceEpoch} != $startMillisFromView)")
+    case CreateCrunchStateFromUpdates(viewMode, _) if viewHasChanged(viewMode) =>
+      log.info(s"Ignoring old view response")
       noChange
 
     case CreateCrunchStateFromUpdates(viewMode, crunchUpdates) =>

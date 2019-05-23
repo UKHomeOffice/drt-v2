@@ -27,11 +27,18 @@ class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[Crunch
 
       (newViewMode, currentViewMode) match {
         case (newVm, oldVm) if newVm != oldVm =>
-          updated((newViewMode, Pot.empty[CrunchState], 0L), Effect(Future(GetInitialCrunchState(newViewMode))))
+          updated((newViewMode, Pot.empty[CrunchState], 0L), initialRequests(newViewMode))
         case (ViewDay(newTime), ViewDay(oldTime)) if newTime != oldTime =>
-          updated((newViewMode, Pot.empty[CrunchState], 0L), Effect(Future(GetInitialCrunchState(newViewMode))))
+          updated((newViewMode, Pot.empty[CrunchState], 0L), initialRequests(newViewMode))
         case _ =>
           noChange
       }
+  }
+
+  def initialRequests(newViewMode: ViewMode): EffectSet = {
+    Effect(Future(GetInitialCrunchState(newViewMode))) +
+      Effect(Future(GetStaffMovements(newViewMode))) +
+      Effect(Future(GetShifts(newViewMode))) +
+      Effect(Future(GetFixedPoints(newViewMode)))
   }
 }

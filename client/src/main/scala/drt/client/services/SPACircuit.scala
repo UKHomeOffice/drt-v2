@@ -102,7 +102,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ShiftsHandler(currentViewMode, zoomRW(_.shifts)((m, v) => m.copy(shifts = v))),
       new ShiftsForMonthHandler(zoomRW(_.monthOfShifts)((m, v) => m.copy(monthOfShifts = v))),
       new FixedPointsHandler(currentViewMode, zoomRW(_.fixedPoints)((m, v) => m.copy(fixedPoints = v))),
-      new StaffMovementsHandler(zoomRW(m => (m.staffMovements, m.viewMode))((m, v) => m.copy(staffMovements = v._1))),
+      new StaffMovementsHandler(currentViewMode, zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
       new ViewModeHandler(zoomRW(m => (m.viewMode, m.crunchStatePot, m.latestUpdateMillis))((m, v) => m.copy(viewMode = v._1, crunchStatePot = v._2, latestUpdateMillis = v._3)), zoom(_.crunchStatePot)),
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v))),
       new ShowActualDesksAndQueuesHandler(zoomRW(_.showActualIfAvailable)((m, v) => m.copy(showActualIfAvailable = v))),

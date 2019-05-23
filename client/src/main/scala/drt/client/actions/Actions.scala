@@ -54,15 +54,15 @@ object Actions {
 
   case class UpdateAirportConfig(airportConfig: AirportConfig) extends Action
 
-  case class SetFixedPoints(fixedPoints: FixedPointAssignments, terminalName: Option[String]) extends Action
+  case class SetFixedPoints(viewMode: ViewMode, fixedPoints: FixedPointAssignments, terminalName: Option[String]) extends Action
 
   case class SaveFixedPoints(fixedPoints: FixedPointAssignments, terminalName: TerminalName) extends Action
 
-  case class GetFixedPoints() extends Action
+  case class GetFixedPoints(viewMode: ViewMode) extends Action
 
-  case class SetShifts(shifts: ShiftAssignments, terminalName: Option[String]) extends Action
+  case class SetShifts(viewMode: ViewMode, shifts: ShiftAssignments, terminalName: Option[String]) extends Action
 
-  case class GetShifts() extends Action
+  case class GetShifts(viewMode: ViewMode) extends Action
 
   case class SetShiftsForMonth(shiftsForMonth: MonthOfShifts) extends Action
 
@@ -76,9 +76,9 @@ object Actions {
 
   case class RemoveStaffMovements(uUID: UUID) extends Action
 
-  case class SetStaffMovements(staffMovements: Seq[StaffMovement]) extends Action
+  case class SetStaffMovements(viewMode: ViewMode, staffMovements: Seq[StaffMovement]) extends Action
 
-  case class GetStaffMovements() extends Action
+  case class GetStaffMovements(viewMode: ViewMode) extends Action
 
   case class SetViewMode(mode: ViewMode) extends Action
 
