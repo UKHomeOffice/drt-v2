@@ -5,7 +5,7 @@ import java.util.UUID
 import diode.Action
 import drt.client.components.StaffAdjustmentDialogueState
 import drt.client.services.ViewMode
-import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, ForecastPeriodWithHeadlines, MillisSinceEpoch}
+import drt.shared.CrunchApi._
 import drt.shared.FlightsApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
@@ -42,7 +42,7 @@ object Actions {
 
   case class ScheduleCrunchUpdateRequest(viewMode: ViewMode) extends Action
 
-  case class CreateCrunchStateFromUpdates(viewMode: ViewMode, crunchUpdates: CrunchUpdates) extends Action
+  case class CreateCrunchStateFromPortState(viewMode: ViewMode, portState: PortState) extends Action
 
   case class UpdateCrunchStateFromUpdates(viewMode: ViewMode, crunchUpdates: CrunchUpdates) extends Action
 

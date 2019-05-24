@@ -96,24 +96,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
 
     case GetUpdatesSince(millis, start, end) =>
       val updates = state match {
-        case Some(cs) =>
-          val updatedFlights = cs.flights.filter(_._2.apiFlight.PcpTime.isDefined).filter {
-            case (_, f) => f.lastUpdated.getOrElse(1L) > millis && start <= f.apiFlight.PcpTime.getOrElse(0L) && f.apiFlight.PcpTime.getOrElse(0L) < end
-          }.values.toSet
-          val updatedCrunch = cs.crunchMinutes.filter {
-            case (_, cm) => cm.lastUpdated.getOrElse(1L) > millis && start <= cm.minute && cm.minute < end
-          }.values.toSet
-          val updatedStaff = cs.staffMinutes.filter {
-            case (_, sm) => sm.lastUpdated.getOrElse(1L) > millis && start <= sm.minute && sm.minute < end
-          }.values.toSet
-          if (updatedFlights.nonEmpty || updatedCrunch.nonEmpty || updatedStaff.nonEmpty) {
-            val flightsLatest = if (updatedFlights.nonEmpty) updatedFlights.map(_.lastUpdated.getOrElse(1L)).max else 0L
-            val crunchLatest = if (updatedCrunch.nonEmpty) updatedCrunch.map(_.lastUpdated.getOrElse(1L)).max else 0L
-            val staffLatest = if (updatedStaff.nonEmpty) updatedStaff.map(_.lastUpdated.getOrElse(1L)).max else 0L
-            val latestUpdate = List(flightsLatest, crunchLatest, staffLatest).max
-            logDebug(s"latestUpdate: ${SDate(latestUpdate).toLocalDateTimeString()}")
-            Option(CrunchUpdates(latestUpdate, updatedFlights, updatedCrunch, updatedStaff))
-          } else None
+        case Some(fullPortState) => fullPortState.window(SDate(start), SDate(end), portQueues).updates(millis)
         case None => None
       }
       sender() ! updates

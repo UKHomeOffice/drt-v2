@@ -27,19 +27,23 @@ class InitialCrunchStateHandler[M](getCurrentViewMode: () => ViewMode,
     case GetInitialCrunchState(viewMode) =>
       val startMillis = startMillisFromView
       val endMillis = startMillis + (1000 * 60 * 60 * 36)
-      val updateRequestFuture = DrtApi.get(s"crunch-state?sinceMillis=0&windowStartMillis=$startMillis&windowEndMillis=$endMillis")
+      val updateRequestFuture = viewMode match {
+        case ViewPointInTime(time) => DrtApi.get(s"crunch-snapshot/${time.millisSinceEpoch}?start=$startMillis&end=$endMillis")
+        case _ => DrtApi.get(s"crunch?start=$startMillis&end=$endMillis")
+      }
 
       val eventualAction = processRequest(viewMode, updateRequestFuture)
 
       updated((Pending(), 0L), Effect(Future(ShowLoader())) + Effect(eventualAction))
 
-    case CreateCrunchStateFromUpdates(viewMode, _) if viewHasChanged(viewMode) =>
+    case CreateCrunchStateFromPortState(viewMode, _) if viewHasChanged(viewMode) =>
       log.info(s"Ignoring old view response")
       noChange
 
-    case CreateCrunchStateFromUpdates(viewMode, crunchUpdates) =>
-      val newState = CrunchState(crunchUpdates.flights, crunchUpdates.minutes, crunchUpdates.staff)
-      val originCodes = crunchUpdates.flights.map(_.apiFlight.Origin)
+    case CreateCrunchStateFromPortState(viewMode, portState) =>
+      val flights = portState.flights.values.toSet
+      val newState = CrunchState(flights, portState.crunchMinutes.values.toSet, portState.staffMinutes.values.toSet)
+      val originCodes = flights.map(_.apiFlight.Origin)
 
       val hideLoader = Effect(Future(HideLoader()))
       val fetchOrigins = Effect(Future(GetAirportInfos(originCodes)))
@@ -49,17 +53,17 @@ class InitialCrunchStateHandler[M](getCurrentViewMode: () => ViewMode,
         hideLoader + fetchOrigins + getCrunchUpdatesAfterDelay(viewMode)
       }
 
-      updated((Ready(newState), crunchUpdates.latest), effects)
+      updated((Ready(newState), portState.latestUpdate), effects)
   }
 
   def processRequest(viewMode: ViewMode, call: Future[dom.XMLHttpRequest]): Future[Action] = {
     call
-      .map(r => read[Either[CrunchStateError, Option[CrunchUpdates]]](r.responseText))
+      .map(r => read[Either[CrunchStateError, Option[PortState]]](r.responseText))
       .map {
-        case Right(Some(cu)) => CreateCrunchStateFromUpdates(viewMode, cu)
+        case Right(Some(portState)) => CreateCrunchStateFromPortState(viewMode, portState)
         case Right(None) =>
           log.info(s"Got no crunch state for date")
-          CreateCrunchStateFromUpdates(viewMode, CrunchUpdates(0L, Set(), Set(), Set()))
+          CreateCrunchStateFromPortState(viewMode, PortState(Map(), Map(), Map()))
         case Left(error) =>
           log.error(s"Failed to GetInitialCrunchState ${error.message}. Re-requesting after ${PollDelay.recoveryDelay}")
           RetryActionAfter(GetInitialCrunchState(viewMode), PollDelay.recoveryDelay)

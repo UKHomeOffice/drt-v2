@@ -415,35 +415,69 @@ class Application @Inject()(implicit val config: Configuration,
 
   def getApplicationVersion: Action[AnyContent] = Action { _ => Ok(write(BuildVersion(BuildInfo.version.toString))) }
 
-  def getCrunchStateForDay(day: MillisSinceEpoch): Action[AnyContent] = Action.async { _ =>
-    loadBestCrunchStateForPointInTime(day).map((s: Either[CrunchStateError, Option[CrunchState]]) => Ok(write(s)))
+  def requestPortState[X](actorRef: AskableActorRef, message: Any): Future[Either[CrunchStateError, Option[X]]] = {
+    actorRef
+      .ask(message)
+      .map {
+        case Some(ps: X) => Right(Option(ps))
+        case _ => Right(None)
+      }
+      .recover {
+        case t => Left(CrunchStateError(t.getMessage))
+      }
   }
 
-  def getCrunchUpdates: Action[AnyContent] = Action.async { request: Request[AnyContent] =>
+  def getCrunch: Action[AnyContent] = Action.async { request: Request[AnyContent] =>
+    val startMillis = request.queryString.get("start").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
+    val endMillis = request.queryString.get("end").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
 
-    val sinceMillis: MillisSinceEpoch = request.queryString.get("sinceMillis").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
-    val windowStartMillis: MillisSinceEpoch = request.queryString.get("windowStartMillis").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
-    val windowEndMillis: MillisSinceEpoch = request.queryString.get("windowEndMillis").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
-    val liveStateCutOff = getLocalNextMidnight(ctrl.now()).addDays(1).millisSinceEpoch
+    val maybeSinceMillis = request.queryString.get("since").flatMap(_.headOption.map(_.toLong))
 
-    def liveCrunchStateActor: AskableActorRef = ctrl.liveCrunchStateActor
+    val maybePointInTime = if (endMillis < SDate.now().millisSinceEpoch) {
+      val oneHourMillis = 1000 * 60 * 60
+      Option(endMillis + oneHourMillis * 2)
+    } else None
 
-    def forecastCrunchStateActor: AskableActorRef = ctrl.forecastCrunchStateActor
+    maybeSinceMillis match {
+      case None =>
+        val future = futureCrunchState[PortState](maybePointInTime, startMillis, endMillis, GetPortState(startMillis, endMillis))
+        future.map { updates => Ok(write(updates)) }
 
-    val stateActor = if (windowStartMillis < liveStateCutOff) liveCrunchStateActor else forecastCrunchStateActor
-
-    val crunchStateFuture = stateActor.ask(GetUpdatesSince(sinceMillis, windowStartMillis, windowEndMillis))(new Timeout(30 seconds))
-
-    val futureCS: Future[Either[CrunchStateError, Option[CrunchUpdates]]] = crunchStateFuture.map {
-      case Some(cu: CrunchUpdates) => Right(Option(cu))
-      case _ => Right(None)
-    } recover {
-      case t: Throwable =>
-        system.log.warning(s"Didn't get a CrunchUpdates: $t")
-        Left(CrunchStateError(t.getMessage))
+      case Some(sinceMillis) =>
+        val future = futureCrunchState[CrunchUpdates](maybePointInTime, startMillis, endMillis, GetUpdatesSince(sinceMillis, startMillis, endMillis))
+        future.map { updates => Ok(write(updates)) }
     }
+  }
 
-    futureCS.map(cs => Ok(write(cs)))
+  def getCrunchSnapshot(pointInTime: MillisSinceEpoch): Action[AnyContent] = Action.async { request: Request[AnyContent] =>
+    val startMillis = request.queryString.get("start").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
+    val endMillis = request.queryString.get("end").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
+
+    val message = GetPortState(startMillis, endMillis)
+    val futureState = futureCrunchState[PortState](Option(pointInTime), startMillis, endMillis, message)
+
+    futureState.map { updates => Ok(write(updates)) }
+  }
+
+  def futureCrunchState[X](maybePointInTime: Option[MillisSinceEpoch], startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, request: Any): Future[Either[CrunchStateError, Option[X]]] = {
+    maybePointInTime match {
+      case Some(pit) =>
+        log.info(s"Snapshot crunch state query ${SDate(pit).toISOString()}")
+        val tempActor = system.actorOf(Props(classOf[CrunchStateReadActor], airportConfig.portStateSnapshotInterval, SDate(pit), DrtStaticParameters.expireAfterMillis, airportConfig.queues))
+        val futureResult = requestPortState[X](tempActor, request)
+        futureResult.onSuccess {
+          case _ => tempActor ! PoisonPill
+        }
+        futureResult
+      case _ =>
+        if (endMillis > getLocalNextMidnight(SDate.now().addDays(1)).millisSinceEpoch) {
+          log.info(s"Regular forecast crunch state query")
+          requestPortState[X](ctrl.forecastCrunchStateActor, request)
+        } else {
+          log.info(s"Regular live crunch state query")
+          requestPortState[X](ctrl.liveCrunchStateActor, request)
+        }
+    }
   }
 
   def getFeedStatuses: Action[AnyContent] = Action.async { _ => ctrl.getFeedStatus.map(s => Ok(write(s))) }

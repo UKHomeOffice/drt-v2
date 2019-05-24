@@ -18,14 +18,15 @@ import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class CrunchStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
                                    modelRW: ModelRW[M, (Pot[CrunchState], MillisSinceEpoch)]) extends LoggingActionHandler(modelRW) {
-  val crunchUpdatesRequestFrequency: FiniteDuration = 2 seconds
+  val liveRequestFrequency: FiniteDuration = 2 seconds
+  val forecastRequestFrequency: FiniteDuration = 15 seconds
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetCrunchStateUpdates(viewMode) =>
       val (_, lastUpdateMillis) = modelRW.value
       val startMillis = startMillisFromView
       val endMillis = startMillis + (1000 * 60 * 60 * 36)
-      val updateRequestFuture = DrtApi.get(s"crunch-state?sinceMillis=$lastUpdateMillis&windowStartMillis=$startMillis&windowEndMillis=$endMillis")
+      val updateRequestFuture = DrtApi.get(s"crunch?start=$startMillis&end=$endMillis&since=$lastUpdateMillis")
 
       val eventualAction = processUpdatesRequest(viewMode, updateRequestFuture)
 
@@ -64,12 +65,12 @@ class CrunchStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
         case Right(None) => ScheduleCrunchUpdateRequest(viewMode)
         case Left(error) =>
           log.error(s"Failed to GetInitialCrunchState ${error.message}. Re-requesting after ${PollDelay.recoveryDelay}")
-          RetryActionAfter(GetInitialCrunchState(viewMode), PollDelay.recoveryDelay)
+          RetryActionAfter(GetCrunchStateUpdates(viewMode), PollDelay.recoveryDelay)
       }
       .recoverWith {
         case throwable =>
           log.error(s"Call to crunch-state failed (${throwable.getMessage}. Re-requesting after ${PollDelay.recoveryDelay}")
-          Future(RetryActionAfter(GetInitialCrunchState(viewMode), PollDelay.recoveryDelay))
+          Future(RetryActionAfter(GetCrunchStateUpdates(viewMode), PollDelay.recoveryDelay))
       }
   }
 
@@ -109,5 +110,10 @@ class CrunchStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
     flights
   }
 
-  def getCrunchUpdatesAfterDelay(viewMode: ViewMode): Effect = Effect(Future(GetCrunchStateUpdates(viewMode))).after(crunchUpdatesRequestFrequency)
+  def getCrunchUpdatesAfterDelay(viewMode: ViewMode): Effect = Effect(Future(GetCrunchStateUpdates(viewMode))).after(requestFrequency(viewMode))
+
+  def requestFrequency(viewMode: ViewMode): FiniteDuration = viewMode match {
+    case ViewLive() => liveRequestFrequency
+    case _ => forecastRequestFrequency
+  }
 }

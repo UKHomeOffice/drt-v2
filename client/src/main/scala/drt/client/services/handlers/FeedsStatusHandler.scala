@@ -1,5 +1,6 @@
 package drt.client.services.handlers
 
+import boopickle.CompositePickler
 import boopickle.Default._
 import diode.Implicits.runAfterImpl
 import diode.data.{Pot, Ready}
@@ -21,16 +22,13 @@ case class SetFeedStatuses(statuses: Seq[FeedStatuses]) extends Action
 
 
 class FeedsStatusHandler[M](modelRW: ModelRW[M, Pot[Seq[FeedStatuses]]]) extends LoggingActionHandler(modelRW) {
-  implicit val pickler = compositePickler[FeedStatus].
+  implicit val pickler: CompositePickler[FeedStatus] = compositePickler[FeedStatus].
     addConcreteType[FeedStatusSuccess].
     addConcreteType[FeedStatusFailure]
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case SetFeedStatuses(statuses) =>
       val scheduledRequest = Effect(Future(GetFeedStatuses())).after(15 seconds)
-
-      log.info(s"setting feed status: $statuses")
-
       updated(Ready(statuses), scheduledRequest)
 
     case GetFeedStatuses() =>

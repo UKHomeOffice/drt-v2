@@ -15,9 +15,8 @@ DELETE        /alerts                                              controllers.A
 
 GET           /version                                             controllers.Application.getApplicationVersion
 
-GET           /crunch-state/:dayMillis                             controllers.Application.getCrunchStateForDay(dayMillis: Long)
-GET           /crunch-state                                        controllers.Application.getCrunchUpdates
-GET           /crunch-snapshot/:pointInTimeMillis                  controllers.Application.getCrunchStateForPointInTime(pointInTimeMillis: Long)
+GET           /crunch                                              controllers.Application.getCrunch
+GET           /crunch-snapshot/:pit                                controllers.Application.getCrunchSnapshot(pit: Long)
 
 GET           /feed-statuses                                       controllers.Application.getFeedStatuses
 
