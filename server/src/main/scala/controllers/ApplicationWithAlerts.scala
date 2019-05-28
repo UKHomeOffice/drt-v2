@@ -3,7 +3,7 @@ package controllers
 import actors.{DeleteAlerts, GetState}
 import akka.pattern._
 import akka.util.Timeout
-import drt.shared.Alert
+import drt.shared.{Alert, CreateAlerts}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.joda.time.DateTime
 import play.api.libs.json._
@@ -29,25 +29,29 @@ trait ApplicationWithAlerts {
     eventualAlerts.map(alerts => Ok(write(alerts)))
   }
 
-  def addAlert(): Action[AnyContent] = Action.async {
-    implicit request =>
-      log.info(s"Adding an Alert!")
-      request.body.asJson.map { json =>
-        val alertMessage = json.as[AlertMessage]
-        (ctrl.alertsActor ? Alert(alertMessage.title, alertMessage.message, alertMessage.alertClass, alertMessage.expires.getMillis, createdAt = DateTime.now.getMillis)).mapTo[Alert].map { alert =>
-          Ok(s"$alert added!")
+  def addAlert(): Action[AnyContent] = authByRole(CreateAlerts) {
+    Action.async {
+      implicit request =>
+        log.info(s"Adding an Alert!")
+        request.body.asJson.map { json =>
+          val alertMessage = json.as[AlertMessage]
+          (ctrl.alertsActor ? Alert(alertMessage.title, alertMessage.message, alertMessage.alertClass, alertMessage.expires.getMillis, createdAt = DateTime.now.getMillis)).mapTo[Alert].map { alert =>
+            Ok(s"$alert added!")
+          }
+        }.getOrElse {
+          Future(BadRequest("{\"error\": \"Unable to parse data\"}"))
         }
-      }.getOrElse {
-        Future(BadRequest("{\"error\": \"Unable to parse data\"}"))
-      }
+    }
   }
 
-  def deleteAlerts(): Action[AnyContent] = Action.async {
-    val futureAlerts = ctrl.alertsActor.ask(DeleteAlerts)(new Timeout(5 second))
-    futureAlerts.map(s => {
-      log.info(s"Removing all the alerts: $s")
-      Ok(s.toString)
-    })
+  def deleteAlerts(): Action[AnyContent] = authByRole(CreateAlerts) {
+    Action.async {
+      val futureAlerts = ctrl.alertsActor.ask(DeleteAlerts)(new Timeout(5 second))
+      futureAlerts.map(s => {
+        log.info(s"Removing all the alerts: $s")
+        Ok(s.toString)
+      })
+    }
   }
 }
 

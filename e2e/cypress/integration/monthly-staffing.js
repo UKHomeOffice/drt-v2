@@ -5,8 +5,7 @@ moment.locale("en-gb");
 describe('Monthly Staffing', function () {
 
   beforeEach(function () {
-    cy.deleteData()
-      .setRoles(["test"]);
+    cy.deleteData();
   });
 
   function firstMidnightOfThisMonth() {
@@ -19,6 +18,7 @@ describe('Monthly Staffing', function () {
 
   Cypress.Commands.add('saveShifts', ()=> {
     cy
+      .asABorderForcePlanningOfficer()
       .request("POST", "/data/staff", {
         "shifts": [
           {"port_code": "test", "terminal": "T1", "staff": "1", "shift_start": firstMidnightOfThisMonth().toISOString()},
@@ -29,6 +29,7 @@ describe('Monthly Staffing', function () {
 
   Cypress.Commands.add('resetShifts', () => {
     cy
+      .asABorderForcePlanningOfficer()
       .request("POST", "/data/staff", {
         "shifts": [
           {"port_code": "test", "terminal": "T1", "staff": "0", "shift_start": firstMidnightOfThisMonth().toISOString()},
@@ -50,8 +51,8 @@ describe('Monthly Staffing', function () {
     let cellToTest = ".htCore tbody :nth-child(1) :nth-child(2)";
     it("If I enter staff for the current month those staff should still be visible if I change months and change back", function () {
       cy
+        .asABorderForcePlanningOfficer()
         .saveShifts()
-        .setRoles(["staff:edit", "test"])
         .visit('#terminal/T1/staffing/15/')
         .get(cellToTest).contains("1")
         .visit('#terminal/T1/staffing/15/?date=' + nextMonthDateString())

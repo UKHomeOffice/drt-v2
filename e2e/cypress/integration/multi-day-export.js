@@ -5,8 +5,7 @@ moment.locale("en-gb");
 describe('Multi day export', () => {
 
   beforeEach(function () {
-    cy.deleteData()
-      .setRoles(["test"]);
+    cy.deleteData();
   });
 
   const schDateString = moment().format("YYYY-MM-DD");
@@ -26,6 +25,7 @@ describe('Multi day export', () => {
   it('Allows you to download API splits using the API splits dialog', () => {
     cy
       .addFlight(estString, actString, estChoxString, actChoxString, schString)
+      .asABorderForceOfficer()
       .navigateHome()
       .navigateToMenuItem('T1')
       .choose24Hours()
@@ -42,11 +42,12 @@ describe('Multi day export', () => {
   it('The multi day export dialog is still visible after 5 seconds', () => {
     cy
       .addFlight(estString, actString, estChoxString, actChoxString, schString)
+      .asABorderForceOfficer()
       .navigateHome()
       .navigateToMenuItem('T1')
       .choose24Hours()
       .then(() => {
-        cy.contains('Multi Day Export').click().then(()=> {
+        cy.contains('Multi Day Export').click().then(() => {
           cy.wait(5000)
             .get('.modal-footer').contains("Close").click()
             .get('.modal-body').should('not.be.visible');

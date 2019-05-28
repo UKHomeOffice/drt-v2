@@ -63,7 +63,7 @@ object MainMenu {
     (nonTerminalMenuItems ::: terminalDepsMenuItems(nonTerminalMenuItems.length)) :+ statusMenuItem(nonTerminalMenuItems.length + airportConfig.terminalNames.length, feeds)
   }
 
-  private def restrictedMenuItemsForRole(roles: Set[Role], startIndex: Int): List[MenuItem] = {
+  def restrictedMenuItemsForRole(roles: Set[Role], startIndex: Int): List[MenuItem] = {
     val itemsForLoggedInUser = restrictedMenuItems.collect {
       case (role, menuItemCallback) if roles.contains(role) => menuItemCallback
     }.zipWithIndex.map {
