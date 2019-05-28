@@ -795,7 +795,7 @@ class Application @Inject()(implicit val config: Configuration,
   def exportFlightsWithSplitsAtPointInTimeCSV(pointInTime: String,
                                               terminalName: TerminalName,
                                               startHour: Int,
-                                              endHour: Int): Action[AnyContent] = authByRole(ApiViewPortCsv) {
+                                              endHour: Int): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
     Action.async {
       implicit request =>
         val pit = SDate(pointInTime.toLong)
