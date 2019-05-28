@@ -5,12 +5,6 @@ describe('Alerts system', function () {
   let timeAtStartOfDay = "00:00:00";
 
 
-  beforeEach(function () {
-    cy.deleteData()
-      .deleteAlerts()
-      .setRoles(["test"])
-  });
-
   Cypress.Commands.add('addAlert', (time, number="") => {
     cy
       .request('POST', '/alerts', {
@@ -30,6 +24,7 @@ describe('Alerts system', function () {
 
     it("Should be possible to add an alert, view it and the delete it.", function () {
       cy
+        .asADrtSuperUser()
         .addAlert(timeAtEndOfDay)
         .navigateHome()
         .shouldHaveAlerts(1)

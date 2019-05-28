@@ -808,11 +808,11 @@ class Application @Inject()(implicit val config: Configuration,
         flightsForCSVExportWithinRange(terminalName, pit, startHour, endHour, crunchStateForPointInTime).map {
           case Some(csvFlights) =>
             val csvData = if (ctrl.getRoles(config, request.headers, request.session).contains(ApiView)) {
-              log.info(s"Sending Flights CSV with ACL data to DRT Team member")
+              log.info(s"Sending Flights CSV with API data")
               CSVData.flightsWithSplitsWithAPIActualsToCSVWithHeadings(csvFlights)
             }
             else {
-              log.info(s"Sending Flights CSV with no ACL data")
+              log.info(s"Sending Flights CSV with no API data")
               CSVData.flightsWithSplitsToCSVWithHeadings(csvFlights)
             }
             Result(
@@ -901,27 +901,6 @@ class Application @Inject()(implicit val config: Configuration,
     f"$portCode-$terminalName-$subject-" +
       f"${startPit.getFullYear()}-${startPit.getMonth()}%02d-${startPit.getDate()}-to-" +
       f"${endPit.getFullYear()}-${endPit.getMonth()}%02d-${endPit.getDate()}"
-  }
-
-  def fetchAclFeed(portCode: String): Action[AnyContent] = Action.async {
-    val sshClient = ctrl.aclFeed.ssh
-    val sftpClient = ctrl.aclFeed.sftp(sshClient)
-    val fileName = AclFeed.latestFileForPort(sftpClient, portCode.toUpperCase)
-
-    log.info(s"Latest ACL file for $portCode: $fileName. Fetching..")
-
-    val zipContent = AclFeed.contentFromFileName(sftpClient, fileName)
-    val csvFileName = fileName.replace(".zip", ".csv")
-
-    sshClient.disconnect()
-    sftpClient.close()
-
-    val result = Result(
-      ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename='$csvFileName'")),
-      HttpEntity.Strict(ByteString(zipContent), Option("application/csv"))
-    )
-
-    Future(result)
   }
 
   def isInRangeOnDay(startDateTime: SDateLike, endDateTime: SDateLike)(minute: SDateLike): Boolean =

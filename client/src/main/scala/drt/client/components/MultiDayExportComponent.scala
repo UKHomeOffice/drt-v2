@@ -93,11 +93,11 @@ object MultiDayExportComponent {
                         ^.onClick --> {
                           Callback(GoogleEventTracker.sendEvent(props.terminal, "click", "Export Desks", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
                         }
-                      ) else EmptyVdom,
+                      ) else EmptyVdom
                   )
                 )
               ),
-              <.div(ok
+              <.div(
                 ^.className := "modal-footer",
                 <.button(
                   ^.className := "btn btn-link",

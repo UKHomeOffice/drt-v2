@@ -25,29 +25,13 @@ describe('Advanced Passenger Information Splits exposed to Port Operators', func
 
   beforeEach(function () {
     cy
-      .deleteData()
-      .setRoles(["test"]);
+      .deleteData();
   });
 
-  it("Forbidden when user does not have the role `ApiViewPortCsv`", function () {
-    cy
-      .downloadCsv("T1", year, month, day)
-      .then((response) => {
-        expect(response.status).to.eq(401);
-      });
-  });
-
-  it("Forbidden when user does not have the role to access the port", function () {
-    cy
-      .setRoles(["api:view-port-arrivals"])
-      .downloadCsv("T1", year, month, day).then((response) => {
-         expect(response.status).to.eq(401);
-      });
-  });
 
   it("Bad Request when the date is invalid", function () {
     cy
-      .setRoles(["test", "api:view-port-arrivals"])
+      .asAPortOperator()
       .downloadCsv("T1", year, month, 40).then((response) => {
         expect(response.status).to.eq(400);
       });
@@ -64,9 +48,10 @@ describe('Advanced Passenger Information Splits exposed to Port Operators', func
   it("Ok when there are arrivals on the date and user has the correct role", function () {
    cy.log(scheduledDate.format("YYYY-MM-DDTHH:mmZ"));
     cy
+      .asATestSetupUser()
       .addFlightWithFlightCode("TS0123", scheduledDate.format("YYYY-MM-DDTHH:mmZ"))
-      .setRoles(["test", "api:view-port-arrivals"])
       .waitForArrivalToAppearInTheSystem()
+      .asAPortOperator()
       .downloadCsv("T1", year, month, day).then((response) => {
         expect(response.status).to.eq(200);
         expect(response.body).to.contain(header);
