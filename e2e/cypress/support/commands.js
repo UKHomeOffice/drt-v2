@@ -24,7 +24,39 @@
 // -- This is will overwrite an existing command --
 // Cypress.Commands.overwrite("visit", (originalFn, url, options) => { ... })
 Cypress.Commands.add('setRoles', (roles = []) => {
-  cy.request("POST", '/test/mock-roles', { "roles": roles});
+  return cy.request("POST", '/test/mock-roles', { "roles": roles});
+});
+
+const portRole = ["test"]
+const bfRoles = ["border-force-staff", "forecast:view", "fixed-points:view", "arrivals-and-splits:view", "desks-and-queues:view"];
+const bfPlanningRoles = ["staff:edit"];
+const superUserRoles = ["create-alerts", "manage-users"];
+const portOperatorRoles = ["port-operator-staff", "arrivals-and-splits:view", "api:view-port-arrivals"]
+
+Cypress.Commands.add('asABorderForceOfficer', () => {
+  return cy.request("POST", '/test/mock-roles', { "roles": portRole.concat(bfRoles)});
+});
+
+Cypress.Commands.add('asABorderForcePlanningOfficer', () => {
+  const roles = portRole.concat(bfRoles).concat(bfPlanningRoles);
+  return cy.request("POST", '/test/mock-roles', { "roles": roles});
+});
+
+Cypress.Commands.add('asADrtSuperUser', () => {
+  return cy.request("POST", '/test/mock-roles', { "roles": superUserRoles.concat(bfRoles).concat(portRole)});
+});
+
+Cypress.Commands.add('asATestSetupUser', () => {
+  return cy.request("POST", '/test/mock-roles', { "roles": superUserRoles.concat(bfRoles).concat(portRole)});
+});
+
+Cypress.Commands.add('asAPortOperator', () => {
+  return cy.request("POST", '/test/mock-roles', { "roles": portOperatorRoles.concat(portRole)});
+});
+
+Cypress.Commands.add('asABorderForceOfficerWithRoles', (roles = []) => {
+  const withRoles = roles.concat(bfRoles).concat(portRole);
+  return cy.request("POST", '/test/mock-roles', { "roles": withRoles})
 });
 
 Cypress.Commands.add('addFlight', (estString, actString, estChoxString, actChoxString, schString) => {

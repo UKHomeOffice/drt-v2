@@ -105,7 +105,9 @@ object TerminalContentComponent {
 
       <.div(
         props.crunchStatePot.renderPending(_ => if (props.crunchStatePot.isEmpty) <.div(^.id := "terminal-spinner", Icon.spinner) else ""),
-        props.crunchStatePot.renderEmpty( if (!props.crunchStatePot.isPending) { <.div(^.id := "terminal-data", "Nothing to show for this time period")} else ""),
+        props.crunchStatePot.renderEmpty(if (!props.crunchStatePot.isPending) {
+          <.div(^.id := "terminal-data", "Nothing to show for this time period")
+        } else ""),
         props.crunchStatePot.render((crunchState: CrunchState) => {
           <.div(^.className := s"view-mode-content $viewModeStr",
             <.div(^.className := "tabs-with-export",
@@ -117,7 +119,7 @@ object TerminalContentComponent {
                   }),
                 <.li(^.className := arrivalsActive,
                   <.a(^.id := "arrivalsTab", VdomAttr("data-toggle") := "tab", "Arrivals"), ^.onClick --> {
-                    GoogleEventTracker.sendEvent(props.terminalPageTab.terminal,  "Arrivals", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
+                    GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Arrivals", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
                     props.router.set(props.terminalPageTab.copy(subMode = "arrivals"))
                   }),
                 <.li(^.className := staffingActive,
@@ -131,16 +133,22 @@ object TerminalContentComponent {
                   ^.className := "btn btn-default",
                   ^.href := SPAMain.absoluteUrl(s"export/arrivals/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}"),
                   ^.target := "_blank",
-                  ^.onClick -->{Callback(GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Export Arrivals", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly))}
+                  ^.onClick --> {
+                    Callback(GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Export Arrivals", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly))
+                  }
                 ),
                 <.a(
                   "Export Desks",
                   ^.className := "btn btn-default",
                   ^.href := SPAMain.absoluteUrl(s"export/desks/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}"),
                   ^.target := "_blank",
-                  ^.onClick -->{Callback(GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Export Desks", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly))}
+                  ^.onClick --> {
+                    Callback(GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Export Desks", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly))
+                  }
                 ),
-                MultiDayExportComponent(props.terminalPageTab.terminal, props.terminalPageTab.dateFromUrlOrNow)
+                props.loggedInUserPot.render(loggedInUser => {
+                  MultiDayExportComponent(props.terminalPageTab.terminal, props.terminalPageTab.dateFromUrlOrNow, loggedInUser)
+                })
               )
             ),
             <.div(^.className := "tab-content",
@@ -204,10 +212,10 @@ object TerminalContentComponent {
     .initialStateFromProps(p => State(p.terminalPageTab.subMode))
     .renderBackend[TerminalContentComponent.Backend]
     .componentDidMount(p =>
-      Callback{
+      Callback {
         val page = s"${p.props.terminalPageTab.terminal}/${p.props.terminalPageTab.mode}/${p.props.terminalPageTab.subMode}"
         val pageWithTime = s"$page/${timeRange(p.props).start}/${timeRange(p.props).end}"
-        val pageWithDate = p.props.terminalPageTab.date.map(s=> s"$page/${p.props.terminalPageTab.parseDateString(s)}/${timeRange(p.props).start}/${timeRange(p.props).end}").getOrElse(pageWithTime)
+        val pageWithDate = p.props.terminalPageTab.date.map(s => s"$page/${p.props.terminalPageTab.parseDateString(s)}/${timeRange(p.props).start}/${timeRange(p.props).end}").getOrElse(pageWithTime)
         GoogleEventTracker.sendPageView(pageWithDate)
         log.info("terminal component didMount")
       }

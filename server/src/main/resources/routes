@@ -33,7 +33,6 @@ GET           /export/arrivals/:start/:end/:terminalName           controllers.A
 GET           /export/planning/:weekStarting/:terminalName         controllers.Application.exportForecastWeekToCSV(weekStarting, terminalName)
 GET           /export/headlines/:weekStarting/:terminalName        controllers.Application.exportForecastWeekHeadlinesToCSV(weekStarting, terminalName)
 
-GET           /export/acl-feed/latest/:portCode                    controllers.Application.fetchAclFeed(portCode)
 
 GET           /export/users                                        controllers.Application.exportUsers
 

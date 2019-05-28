@@ -8,7 +8,6 @@ describe('Staff movements', function () {
   beforeEach(function () {
     var schDT = new Date().toISOString().split("T")[0];
     cy.deleteData()
-      .setRoles(["test"])
       .addFlight(schDT + "T00:55:00Z", schDT + "T00:55:00Z", schDT + "T01:01:00Z", schDT + "T01:05:00Z", schDT + "T00:15:00Z");
   });
 
@@ -19,10 +18,10 @@ describe('Staff movements', function () {
   function shifts(numberOfStaff) {
     return {
       "shifts": [
-        {"port_code": "test", "terminal": "T1", "staff": String(numberOfStaff), "shift_start": midnightThisMorning().toISOString()},
-        {"port_code": "test", "terminal": "T1", "staff": String(numberOfStaff), "shift_start": midnightThisMorning().add('minute', 15).toISOString()},
-        {"port_code": "test", "terminal": "T1", "staff": String(numberOfStaff), "shift_start": midnightThisMorning().add('minute', 30).toISOString()},
-        {"port_code": "test", "terminal": "T1", "staff": String(numberOfStaff), "shift_start": midnightThisMorning().add('minute', 45).toISOString()}
+        { "port_code": "test", "terminal": "T1", "staff": String(numberOfStaff), "shift_start": midnightThisMorning().toISOString() },
+        { "port_code": "test", "terminal": "T1", "staff": String(numberOfStaff), "shift_start": midnightThisMorning().add('minute', 15).toISOString() },
+        { "port_code": "test", "terminal": "T1", "staff": String(numberOfStaff), "shift_start": midnightThisMorning().add('minute', 30).toISOString() },
+        { "port_code": "test", "terminal": "T1", "staff": String(numberOfStaff), "shift_start": midnightThisMorning().add('minute', 45).toISOString() }
       ]
     };
   }
@@ -46,7 +45,7 @@ describe('Staff movements', function () {
 
     it("Should update the available staff when 1 staff member is removed for 1 hour", function () {
       cy
-        .setRoles(["test", "staff:edit"])
+        .asABorderForcePlanningOfficer()
         .saveShifts(shifts(2))
         .navigateHome()
         .navigateToMenuItem('T1')
@@ -63,7 +62,7 @@ describe('Staff movements', function () {
 
     it("Should update the available staff when 1 staff member is added for 1 hour twice", function () {
       cy
-        .setRoles(["test", "staff:edit"])
+        .asABorderForceOfficer()
         .navigateHome()
         .navigateToMenuItem('T1')
         .choose24Hours()
@@ -134,7 +133,7 @@ Cypress.Commands.add('checkStaffDeployedOnDesksAndQueuesTabAre', (numStaff) => {
 
 Cypress.Commands.add('checkStaffNumbersOnMovementsTabAre', (numStaff) => {
   cy.contains("Staff Movements").click().then(() => {
-    [0, 1, 2, 3].map((slot) => { cy.staffOverTheDayAtSlot(slot).contains(numStaff)});
+    [0, 1, 2, 3].map((slot) => { cy.staffOverTheDayAtSlot(slot).contains(numStaff) });
     cy.staffOverTheDayAtSlot(4).contains("0");
   });
 });
@@ -154,7 +153,7 @@ Cypress.Commands.add('checkUserNameOnMovementsTab', (numMovements, userName) => 
     .each(($element, index, $lis) => {
       cy.wrap($element).contains(userName);
       cy.wrap($element);
-  });
+    });
 });
 
 Cypress.Commands.add('addOrRemoveMovementFor1HourAt', (addOrRemove, numStaff, hour) => {

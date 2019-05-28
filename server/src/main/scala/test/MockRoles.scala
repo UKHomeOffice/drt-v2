@@ -25,8 +25,10 @@ object MockRoles {
 
   object MockRolesProtocol extends DefaultJsonProtocol {
     implicit val mockRoleConverters: RootJsonFormat[MockRoles] = jsonFormat1((v: JsValue) => {
-      log.info(s"Got this json $v")
-      MockRoles(v.convertTo[Set[String]].flatMap(Roles.parse))
+      log.info(s"MR: Got this json $v")
+      val roles = MockRoles(v.convertTo[Set[String]].flatMap(Roles.parse))
+      log.info(s"MR: Got these roles from it: $roles")
+      roles
     })
   }
 

@@ -42,11 +42,19 @@ object Roles {
     STNAccess
   )
   val availableRoles: Set[Role] = Set(
+    FixedPointsEdit,
     StaffEdit,
     ApiView,
     ManageUsers,
     CreateAlerts,
-    ApiViewPortCsv
+    ApiViewPortCsv,
+    FixedPointsEdit,
+    FixedPointsView,
+    DesksAndQueuesView,
+    ArrivalsAndSplitsView,
+    ForecastView,
+    BorderForceStaff,
+    PortOperatorStaff
   ) ++ portRoles
 
   def parse(roleName: String): Option[Role] = availableRoles.find(role => role.name == roleName)
@@ -118,4 +126,32 @@ case object STNAccess extends Role {
 
 case object CreateAlerts extends Role {
   override val name: String = "create-alerts"
+}
+
+case object FixedPointsEdit extends Role {
+  override val name: String = "fixed-points:edit"
+}
+
+case object FixedPointsView extends Role {
+  override val name: String = "fixed-points:view"
+}
+
+case object DesksAndQueuesView extends Role {
+  override val name: String = "desks-and-queues:view"
+}
+
+case object ArrivalsAndSplitsView extends Role {
+  override val name: String = "arrivals-and-splits:view"
+}
+
+case object ForecastView extends Role {
+  override val name: String = "forecast:view"
+}
+
+case object BorderForceStaff extends Role {
+  override val name: String = "border-force-staff"
+}
+
+case object PortOperatorStaff extends Role {
+  override val name: String = "port-operator-staff"
 }

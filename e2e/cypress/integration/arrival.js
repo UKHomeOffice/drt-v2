@@ -23,7 +23,6 @@ describe('Arrivals page', () => {
   beforeEach(function () {
     var schDT = new Date().toISOString().split("T")[0];
     cy.deleteData()
-      .setRoles(["test"])
       .addFlight(estString, actString, estChoxString, actChoxString, schString);
   });
 
@@ -110,6 +109,7 @@ describe('Arrivals page', () => {
 
   it('Displays a flight after it has been ingested via the live feed', () => {
     cy
+      .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
       .get('.before-now > :nth-child(2) > span > span')
       .should('have.attr', 'title', 'Schiphol, Amsterdam, Netherlands')
@@ -117,6 +117,7 @@ describe('Arrivals page', () => {
 
   it('Does not show API splits in the flights export for regular users', () => {
     cy
+      .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
       .addManifest(manifest)
       .get('.pax-api')
@@ -127,10 +128,10 @@ describe('Arrivals page', () => {
 
   it('Allows you to view API splits in the flights export for users with api:view permission', () => {
     cy
-      .setRoles(["test", "api:view"])
       .waitForFlightToAppear("TS0123")
       .addManifest(manifest)
       .get('.pax-api')
+      .asABorderForceOfficerWithRoles(["api:view"])
       .request({
         method: 'GET',
         url: '/export/arrivals/' + millis + '/T1?startHour=0&endHour=24',
@@ -145,6 +146,7 @@ Cypress.Commands.add('addManifest', (manifest) => cy.request('POST', '/test/mani
 
 Cypress.Commands.add('waitForFlightToAppear', (flightCode) => {
   cy
+    .asABorderForceOfficer()
     .navigateHome()
     .navigateToMenuItem('T1')
     .choose24Hours()
