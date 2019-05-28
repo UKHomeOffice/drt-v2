@@ -395,7 +395,7 @@ object AirportInfo {
   implicit val rw: RW[AirportInfo] = macroRW
 }
 
-case class BuildVersion(version: String)
+case class BuildVersion(version: String, requiresReload: Boolean = false)
 
 object BuildVersion {
   implicit val rw: RW[BuildVersion] = macroRW

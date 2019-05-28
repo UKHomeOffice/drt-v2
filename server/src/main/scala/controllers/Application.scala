@@ -417,7 +417,10 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def getApplicationVersion: Action[AnyContent] = Action { _ => Ok(write(BuildVersion(BuildInfo.version.toString))) }
+  def getApplicationVersion: Action[AnyContent] = Action { _ => {
+    val shouldReload = config.getOptional[Boolean]("feature-flags.version-requires-reload").getOrElse(false)
+    Ok(write(BuildVersion(BuildInfo.version.toString, requiresReload = shouldReload)))
+  } }
 
   def getCrunchStateForDay(day: MillisSinceEpoch): Action[AnyContent] = authByRole(DesksAndQueuesView) {
     Action.async { _ =>
