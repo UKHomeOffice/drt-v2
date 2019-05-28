@@ -28,7 +28,7 @@ Cypress.Commands.add('setRoles', (roles = []) => {
 });
 
 const portRole = ["test"]
-const bfRoles = ["border-force-staff", "forecast:view", "fixed-points:view", "arrivals-and-splits:view", "desks-and-queues:view", "forecast:view", "api:view-port-arrivals"];
+const bfRoles = ["border-force-staff", "forecast:view", "fixed-points:view", "arrivals-and-splits:view", "desks-and-queues:view"];
 const bfPlanningRoles = ["staff:edit"];
 const superUserRoles = ["create-alerts", "manage-users"];
 const portOperatorRoles = ["port-operator-staff", "arrivals-and-splits:view", "api:view-port-arrivals"]

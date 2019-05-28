@@ -4,7 +4,7 @@ import drt.client.SPAMain
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.{ArrivalsAndSplitsView, LoggedInUser, SDateLike}
+import drt.shared.{ArrivalsAndSplitsView, DesksAndQueuesView, LoggedInUser, SDateLike}
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
@@ -85,7 +85,7 @@ object MultiDayExportComponent {
                           Callback(GoogleEventTracker.sendEvent(props.terminal, "click", "Export Arrivals", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
                         }
                       ) else EmptyVdom,
-                    if (props.loggedInUser.hasRole(ArrivalsAndSplitsView))
+                    if (props.loggedInUser.hasRole(DesksAndQueuesView))
                       <.a("Export Desks",
                         ^.className := "btn btn-default",
                         ^.href := SPAMain.absoluteUrl(s"export/desks/${state.startMillis}/${state.endMillis}/${props.terminal}"),
