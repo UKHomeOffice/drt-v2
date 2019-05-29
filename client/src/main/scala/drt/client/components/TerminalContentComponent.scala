@@ -147,7 +147,7 @@ object TerminalContentComponent {
                   }
                 ),
                 props.loggedInUserPot.render(loggedInUser => {
-                  MultiDayExportComponent(props.terminalPageTab.terminal, props.terminalPageTab.dateFromUrlOrNow, loggedInUser)
+                  MultiDayExportComponent(props.terminalPageTab.terminal, props.terminalPageTab.dateFromUrlOrNow)
                 })
               )
             ),

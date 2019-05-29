@@ -938,7 +938,7 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def saveStaff() = authByRole(StaffEdit) {
+  def saveStaff(): Action[AnyContent] = authByRole(StaffEdit) {
     Action {
       implicit request =>
         val maybeShifts: Option[ShiftAssignments] = request.body.asJson.flatMap(ImportStaff.staffJsonToShifts)
@@ -957,13 +957,17 @@ class Application @Inject()(implicit val config: Configuration,
   def authByRole[A](allowedRole: Role)(action: Action[A]) = Action.async(action.parser) { request =>
     val loggedInUser: LoggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
     log.error(s"${loggedInUser.roles}, allowed role $allowedRole")
-    if (loggedInUser.hasRole(allowedRole)) {
+    val enableRoleBasedAccessRestrictions =
+      config.getOptional[Boolean]("feature-flags.role-based-access-restrictions").getOrElse(false)
+    val preventAccess = !loggedInUser.hasRole(allowedRole) && enableRoleBasedAccessRestrictions
+
+    if (!preventAccess) {
       auth(action)(request)
     } else {
       log.error("Unauthorized")
       Future(Unauthorized(s"{" +
-        s"Permission denied, you need $allowedRole to access this resource" +
-        s"}"))
+      s"Permission denied, you need $allowedRole to access this resource" +
+      s"}"))
     }
   }
 
@@ -973,7 +977,7 @@ class Application @Inject()(implicit val config: Configuration,
     val allowedRole = airportConfig.role
 
     val enablePortAccessRestrictions =
-      config.getOptional[Boolean]("feature-flags.port-access-restrictions").getOrElse(false)
+    config.getOptional[Boolean]("feature-flags.port-access-restrictions").getOrElse(false)
 
     if (!loggedInUser.hasRole(allowedRole))
       log.warning(
