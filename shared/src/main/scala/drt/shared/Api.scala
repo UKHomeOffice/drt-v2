@@ -532,18 +532,18 @@ object CrunchApi {
 
     def updates(sinceEpoch: MillisSinceEpoch): Option[CrunchUpdates] = {
       val updatedFlights = flights.filter(_._2.apiFlight.PcpTime.isDefined).filter {
-        case (_, f) => f.lastUpdated.getOrElse(1L) > sinceEpoch
+        case (_, f) => f.lastUpdated.getOrElse(0L) > sinceEpoch
       }.values.toSet
       val updatedCrunch = crunchMinutes.filter {
-        case (_, cm) => cm.lastUpdated.getOrElse(1L) > sinceEpoch
+        case (_, cm) => cm.lastUpdated.getOrElse(0L) > sinceEpoch
       }.values.toSet
       val updatedStaff = staffMinutes.filter {
-        case (_, sm) => sm.lastUpdated.getOrElse(1L) > sinceEpoch
+        case (_, sm) => sm.lastUpdated.getOrElse(0L) > sinceEpoch
       }.values.toSet
       if (updatedFlights.nonEmpty || updatedCrunch.nonEmpty || updatedStaff.nonEmpty) {
-        val flightsLatest = if (updatedFlights.nonEmpty) updatedFlights.map(_.lastUpdated.getOrElse(1L)).max else 0L
-        val crunchLatest = if (updatedCrunch.nonEmpty) updatedCrunch.map(_.lastUpdated.getOrElse(1L)).max else 0L
-        val staffLatest = if (updatedStaff.nonEmpty) updatedStaff.map(_.lastUpdated.getOrElse(1L)).max else 0L
+        val flightsLatest = if (updatedFlights.nonEmpty) updatedFlights.map(_.lastUpdated.getOrElse(0L)).max else 0L
+        val crunchLatest = if (updatedCrunch.nonEmpty) updatedCrunch.map(_.lastUpdated.getOrElse(0L)).max else 0L
+        val staffLatest = if (updatedStaff.nonEmpty) updatedStaff.map(_.lastUpdated.getOrElse(0L)).max else 0L
         val latestUpdate = List(flightsLatest, crunchLatest, staffLatest).max
         Option(CrunchUpdates(latestUpdate, updatedFlights, updatedCrunch, updatedStaff))
       } else None

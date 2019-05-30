@@ -50,12 +50,12 @@ class FixedPointsHandler[M](getCurrentViewMode: () => ViewMode, modelRW: ModelRW
       noChange
 
     case GetFixedPoints(viewMode) =>
-      val maybePointInTimeMillis = if (viewMode.isHistoric) Option(viewMode.millis) else None
-
-      val url = maybePointInTimeMillis match {
-        case Some(millis) => s"fixed-points?pointInTime=$millis"
-        case None => "fixed-points"
+      val url = if (viewMode.isHistoric) {
+        s"fixed-points?pointInTime=${viewMode.millis}"
+      } else {
+        "fixed-points"
       }
+
       val apiCallEffect = Effect(
         DrtApi.get(url)
           .map(r => SetFixedPoints(viewMode, read[FixedPointAssignments](r.responseText), None))

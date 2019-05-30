@@ -19,6 +19,8 @@ class InitialCrunchStateHandler[M](getCurrentViewMode: () => ViewMode,
                                    modelRW: ModelRW[M, (Pot[CrunchState], MillisSinceEpoch)]) extends LoggingActionHandler(modelRW) {
   val crunchUpdatesRequestFrequency: FiniteDuration = 2 seconds
 
+  val thirtySixHoursInMillis: Long = 1000L * 60 * 60 * 36
+
   def startMillisFromView: MillisSinceEpoch = getCurrentViewMode().dayStart.millisSinceEpoch
 
   def viewHasChanged(viewMode: ViewMode): Boolean = viewMode.dayStart.millisSinceEpoch != startMillisFromView
@@ -26,7 +28,7 @@ class InitialCrunchStateHandler[M](getCurrentViewMode: () => ViewMode,
   def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetInitialCrunchState(viewMode) =>
       val startMillis = startMillisFromView
-      val endMillis = startMillis + (1000 * 60 * 60 * 36)
+      val endMillis = startMillis + thirtySixHoursInMillis
       val updateRequestFuture = viewMode match {
         case ViewPointInTime(time) => DrtApi.get(s"crunch-snapshot/${time.millisSinceEpoch}?start=$startMillis&end=$endMillis")
         case _ => DrtApi.get(s"crunch?start=$startMillis&end=$endMillis")
