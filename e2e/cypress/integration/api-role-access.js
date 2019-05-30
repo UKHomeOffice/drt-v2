@@ -136,13 +136,25 @@ describe('Restrict access to endpoint by role', function () {
     },
     {
       roles: ["test", "desks-and-queues:view"],
-      endpoint: "/crunch-state",
+      endpoint: "/crunch",
       method: "GET",
       shouldBeGranted: true
     },
     {
       roles: ["test"],
-      endpoint: "/crunch-state",
+      endpoint: "/crunch",
+      method: "GET",
+      shouldBeGranted: false
+    },
+    {
+      roles: ["test", "desks-and-queues:view"],
+      endpoint: "/crunch-snapshot/1",
+      method: "GET",
+      shouldBeGranted: true
+    },
+    {
+      roles: ["test"],
+      endpoint: "/crunch-snapshot/1",
       method: "GET",
       shouldBeGranted: false
     },
