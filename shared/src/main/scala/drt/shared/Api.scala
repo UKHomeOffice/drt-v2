@@ -482,14 +482,10 @@ object CrunchApi {
                        crunchMinutes: Map[TQM, CrunchMinute],
                        staffMinutes: Map[TM, StaffMinute]) {
     lazy val latestUpdate: MillisSinceEpoch = {
-      val latestFlights = flights.map(_._2.lastUpdated.getOrElse(0L)).max
-      val latestCrunch = crunchMinutes.map(_._2.lastUpdated.getOrElse(0L)).max
-      val latestStaff = staffMinutes.map(_._2.lastUpdated.getOrElse(0L)).max
-      (latestFlights, latestCrunch, latestStaff) match {
-        case (f, c, s) if f >= c && f >= s => f
-        case (f, c, s) if c >= f && c >= s => c
-        case (f, c, s) => c
-      }
+      val latestFlights = if (flights.nonEmpty) flights.map(_._2.lastUpdated.getOrElse(0L)).max else 0L
+      val latestCrunch = if (crunchMinutes.nonEmpty) crunchMinutes.map(_._2.lastUpdated.getOrElse(0L)).max else 0L
+      val latestStaff = if (staffMinutes.nonEmpty) staffMinutes.map(_._2.lastUpdated.getOrElse(0L)).max else 0L
+      List(latestFlights, latestCrunch, latestStaff).max
     }
 
     def window(start: SDateLike, end: SDateLike, portQueues: Map[TerminalName, Seq[QueueName]]): PortState = {
