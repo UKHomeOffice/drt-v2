@@ -28,6 +28,17 @@ describe('View Modes', function () {
         .get("#arrivals").contains("TS0123")
     });
 
+    it("should successfully load data when a url for a future date is requested", function () {
+      const endOfTheDayTomorrow = timeOnDay(tomorrowAsScheduledDate, "22:59:59")
+
+      cy
+        .addFlightWithFlightCode("TS0123", timeStringTomorrow)
+        .asABorderForceOfficer()
+        .visit('#terminal/T1/current/arrivals/?date=' + endOfTheDayTomorrow)
+        .get("#arrivals").contains("TS0123")
+
+    });
+
     it("should poll for updates when looking at future days", function () {
       const endOfTheDayTomorrow = timeOnDay(tomorrowAsScheduledDate, "22:59:59")
 
