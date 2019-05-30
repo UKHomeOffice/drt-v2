@@ -41,6 +41,7 @@ class InitialCrunchStateHandler[M](getCurrentViewMode: () => ViewMode,
       noChange
 
     case CreateCrunchStateFromPortState(viewMode, portState) =>
+      log.info(s"Got a crunch state!")
       val flights = portState.flights.values.toSet
       val newState = CrunchState(flights, portState.crunchMinutes.values.toSet, portState.staffMinutes.values.toSet)
       val originCodes = flights.map(_.apiFlight.Origin)
@@ -48,7 +49,9 @@ class InitialCrunchStateHandler[M](getCurrentViewMode: () => ViewMode,
       val hideLoader = Effect(Future(HideLoader()))
       val fetchOrigins = Effect(Future(GetAirportInfos(originCodes)))
 
-      val effects = if (getCurrentViewMode().isHistoric) hideLoader + fetchOrigins else {
+      val effects = if (getCurrentViewMode().isHistoric) {
+        hideLoader + fetchOrigins
+      } else {
         log.info(s"Starting to poll for crunch updates")
         hideLoader + fetchOrigins + getCrunchUpdatesAfterDelay(viewMode)
       }
