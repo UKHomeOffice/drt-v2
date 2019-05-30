@@ -3,11 +3,12 @@ package drt.client.services.handlers
 import diode.Implicits.runAfterImpl
 import diode.data.{Empty, Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW, NoAction}
-import drt.client.actions.Actions.{GetApplicationVersion, SetApplicationVersion, UpdateServerApplicationVersion}
+import drt.client.actions.Actions.{GetApplicationVersion, SetApplicationVersion, TriggerReload, UpdateServerApplicationVersion}
 import drt.client.logger.log
 import drt.client.services.{ClientServerVersions, DrtApi, PollDelay}
 import drt.shared.BuildVersion
 import upickle.default.read
+
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.util.{Failure, Success, Try}
@@ -23,6 +24,8 @@ class ApplicationVersionHandler[M](modelRW: ModelRW[M, Pot[ClientServerVersions]
         Try(read[BuildVersion](response.responseText)) match {
           case Success(buildInfo) =>
             value match {
+              case Ready(ClientServerVersions(clientVersion, _)) if buildInfo.version != clientVersion && buildInfo.requiresReload =>
+                TriggerReload
               case Ready(ClientServerVersions(clientVersion, _)) if buildInfo.version != clientVersion =>
                 UpdateServerApplicationVersion(buildInfo.version)
               case Ready(_) =>

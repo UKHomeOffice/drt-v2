@@ -159,7 +159,7 @@ describe('Restrict access to endpoint by role', function () {
       shouldBeGranted: false
     },
     {
-      roles: ["test", "api:view-port-arrivals"],
+      roles: ["test", "arrivals-and-splits:view"],
       endpoint: "/export/arrivals/" + millis + "/T1",
       method: "GET",
       shouldBeGranted: true

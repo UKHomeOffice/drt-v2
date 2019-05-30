@@ -4,7 +4,7 @@ import drt.client.SPAMain
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.{ArrivalsAndSplitsView, DesksAndQueuesView, LoggedInUser, SDateLike}
+import drt.shared.SDateLike
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
@@ -15,8 +15,7 @@ object MultiDayExportComponent {
 
   case class Props(
                     terminal: String,
-                    selectedDate: SDateLike,
-                    loggedInUser: LoggedInUser
+                    selectedDate: SDateLike
                   )
 
   case class State(startDay: Int,
@@ -76,24 +75,18 @@ object MultiDayExportComponent {
                 }),
                 <.div(
                   <.div(^.className := "multi-day-export-links",
-                    if (props.loggedInUser.hasRole(ArrivalsAndSplitsView))
-                      <.a("Export Arrivals",
-                        ^.className := "btn btn-default",
-                        ^.href := SPAMain.absoluteUrl(s"export/arrivals/${state.startMillis}/${state.endMillis}/${props.terminal}"),
-                        ^.target := "_blank",
-                        ^.onClick --> {
-                          Callback(GoogleEventTracker.sendEvent(props.terminal, "click", "Export Arrivals", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
-                        }
-                      ) else EmptyVdom,
-                    if (props.loggedInUser.hasRole(DesksAndQueuesView))
-                      <.a("Export Desks",
-                        ^.className := "btn btn-default",
-                        ^.href := SPAMain.absoluteUrl(s"export/desks/${state.startMillis}/${state.endMillis}/${props.terminal}"),
-                        ^.target := "_blank",
-                        ^.onClick --> {
-                          Callback(GoogleEventTracker.sendEvent(props.terminal, "click", "Export Desks", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
-                        }
-                      ) else EmptyVdom
+                    <.a("Export Arrivals",
+                      ^.className := "btn btn-default",
+                      ^.href := SPAMain.absoluteUrl(s"export/arrivals/${state.startMillis}/${state.endMillis}/${props.terminal}"),
+                      ^.target := "_blank",
+                      ^.onClick -->{Callback(GoogleEventTracker.sendEvent(props.terminal, "click", "Export Arrivals", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))}
+                    ),
+                    <.a("Export Desks",
+                      ^.className := "btn btn-default",
+                      ^.href := SPAMain.absoluteUrl(s"export/desks/${state.startMillis}/${state.endMillis}/${props.terminal}"),
+                      ^.target := "_blank",
+                      ^.onClick -->{Callback(GoogleEventTracker.sendEvent(props.terminal, "click", "Export Desks", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))}
+                    )
                   )
                 )
               ),
@@ -112,5 +105,5 @@ object MultiDayExportComponent {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def apply(terminal: String, selectedDate: SDateLike, loggedInUser: LoggedInUser): VdomElement = component(Props(terminal, selectedDate, loggedInUser: LoggedInUser))
+  def apply(terminal: String, selectedDate: SDateLike): VdomElement = component(Props(terminal, selectedDate))
 }

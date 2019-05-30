@@ -29,7 +29,7 @@ describe('Staff movements', function () {
   describe('When adding staff movements on the desks and queues page', function () {
     it("Should update the available staff when 1 staff member is added for 1 hour", function () {
       cy
-        .setRoles(["test", "staff:edit"])
+        .asABorderForcePlanningOfficer()
         .navigateHome()
         .navigateToMenuItem('T1')
         .choose24Hours()

@@ -417,7 +417,10 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def getApplicationVersion: Action[AnyContent] = Action { _ => Ok(write(BuildVersion(BuildInfo.version.toString))) }
+  def getApplicationVersion: Action[AnyContent] = Action { _ => {
+    val shouldReload = config.getOptional[Boolean]("feature-flags.version-requires-reload").getOrElse(false)
+    Ok(write(BuildVersion(BuildInfo.version.toString, requiresReload = shouldReload)))
+  } }
 
   def requestPortState[X](actorRef: AskableActorRef, message: Any): Future[Either[CrunchStateError, Option[X]]] = {
     actorRef
@@ -827,7 +830,7 @@ class Application @Inject()(implicit val config: Configuration,
   def exportFlightsWithSplitsAtPointInTimeCSV(pointInTime: String,
                                               terminalName: TerminalName,
                                               startHour: Int,
-                                              endHour: Int): Action[AnyContent] = authByRole(ApiViewPortCsv) {
+                                              endHour: Int): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
     Action.async {
       implicit request =>
         val pit = SDate(pointInTime.toLong)
@@ -967,7 +970,7 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def saveStaff() = authByRole(StaffEdit) {
+  def saveStaff(): Action[AnyContent] = authByRole(StaffEdit) {
     Action {
       implicit request =>
         val maybeShifts: Option[ShiftAssignments] = request.body.asJson.flatMap(ImportStaff.staffJsonToShifts)
@@ -986,13 +989,17 @@ class Application @Inject()(implicit val config: Configuration,
   def authByRole[A](allowedRole: Role)(action: Action[A]) = Action.async(action.parser) { request =>
     val loggedInUser: LoggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
     log.error(s"${loggedInUser.roles}, allowed role $allowedRole")
-    if (loggedInUser.hasRole(allowedRole)) {
+    val enableRoleBasedAccessRestrictions =
+      config.getOptional[Boolean]("feature-flags.role-based-access-restrictions").getOrElse(false)
+    val preventAccess = !loggedInUser.hasRole(allowedRole) && enableRoleBasedAccessRestrictions
+
+    if (!preventAccess) {
       auth(action)(request)
     } else {
       log.error("Unauthorized")
       Future(Unauthorized(s"{" +
-        s"Permission denied, you need $allowedRole to access this resource" +
-        s"}"))
+      s"Permission denied, you need $allowedRole to access this resource" +
+      s"}"))
     }
   }
 
@@ -1002,7 +1009,7 @@ class Application @Inject()(implicit val config: Configuration,
     val allowedRole = airportConfig.role
 
     val enablePortAccessRestrictions =
-      config.getOptional[Boolean]("feature-flags.port-access-restrictions").getOrElse(false)
+    config.getOptional[Boolean]("feature-flags.port-access-restrictions").getOrElse(false)
 
     if (!loggedInUser.hasRole(allowedRole))
       log.warning(
