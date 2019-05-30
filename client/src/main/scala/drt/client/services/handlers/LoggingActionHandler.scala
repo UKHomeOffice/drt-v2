@@ -10,7 +10,7 @@ abstract class LoggingActionHandler[M, T](modelRW: ModelRW[M, T]) extends Action
     Try(super.handleAction(model, action)) match {
       case Failure(f) =>
         f.getCause match {
-          case null => log.error(s"no cause")
+          case null => log.error(s"no cause: $f, ${f.getStackTrace.mkString("\n")}")
           case c => log.error(s"Exception from $getClass  ${c.getMessage}")
         }
 
