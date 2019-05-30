@@ -110,10 +110,10 @@ class CrunchUpdatesHandler[M](airportConfigPot: () => Pot[AirportConfig],
 
     val futureCrunchState = viewMode match {
       case ViewPointInTime(time) =>
-        DrtApi.get(s"crunch-snapshot/$time")
+        DrtApi.get(s"crunch-snapshot/${time.millisSinceEpoch}")
           .map(r => read[Either[CrunchStateError, Option[CrunchState]]](r.responseText))
       case ViewDay(time) =>
-        DrtApi.get(s"crunch-state/$time")
+        DrtApi.get(s"crunch-state/${time.millisSinceEpoch}")
           .map(r => read[Either[CrunchStateError, Option[CrunchState]]](r.responseText))
       case _ => Future(Right(None))
     }
