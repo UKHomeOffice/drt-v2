@@ -21,11 +21,13 @@ class CrunchStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
   val liveRequestFrequency: FiniteDuration = 2 seconds
   val forecastRequestFrequency: FiniteDuration = 15 seconds
 
+  val thirtySixHoursInMillis: Long = 1000L * 60 * 60 * 36
+
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetCrunchStateUpdates(viewMode) =>
       val (_, lastUpdateMillis) = modelRW.value
       val startMillis = startMillisFromView
-      val endMillis = startMillis + (1000 * 60 * 60 * 36)
+      val endMillis = startMillis + thirtySixHoursInMillis
       val updateRequestFuture = DrtApi.get(s"crunch?start=$startMillis&end=$endMillis&since=$lastUpdateMillis")
 
       val eventualAction = processUpdatesRequest(viewMode, updateRequestFuture)
