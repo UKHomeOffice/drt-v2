@@ -458,14 +458,16 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def getCrunchSnapshot(pointInTime: MillisSinceEpoch): Action[AnyContent] = Action.async { request: Request[AnyContent] =>
-    val startMillis = request.queryString.get("start").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
-    val endMillis = request.queryString.get("end").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
+  def getCrunchSnapshot(pointInTime: MillisSinceEpoch): Action[AnyContent] = authByRole(DesksAndQueuesView) {
+    Action.async { request: Request[AnyContent] =>
+      val startMillis = request.queryString.get("start").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
+      val endMillis = request.queryString.get("end").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
 
-    val message = GetPortState(startMillis, endMillis)
-    val futureState = futureCrunchState[PortState](Option(pointInTime), startMillis, endMillis, message)
+      val message = GetPortState(startMillis, endMillis)
+      val futureState = futureCrunchState[PortState](Option(pointInTime), startMillis, endMillis, message)
 
-    futureState.map { updates => Ok(write(updates)) }
+      futureState.map { updates => Ok(write(updates)) }
+    }
   }
 
   def futureCrunchState[X](maybePointInTime: Option[MillisSinceEpoch], startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, request: Any): Future[Either[CrunchStateError, Option[X]]] = {
