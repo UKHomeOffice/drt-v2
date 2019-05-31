@@ -56,12 +56,12 @@ describe('View Modes', function () {
         .visit('#terminal/T1/current/arrivals/?timeRangeStart=0&timeRangeEnd=24')
         .get('#yesterday').click()
         .get('#arrivals').contains("No flights to display")
-        .get('#tomorrow')
-        .click()
-        .addFlightWithFlightCode("TS0123", timeOnDay(tomorrowAsScheduledDate, "01:30"))
-        .get('#arrivals').contains("TS0123", { "timeout": 30000 })
-        .addFlightWithFlightCode("TS0234", timeOnDay(tomorrowAsScheduledDate, "04:45"))
-        .get('#arrivals').contains("TS0234", { "timeout": 30000 });
+        .get('#today').click()
+        .choose24Hours()
+        .addFlightWithFlightCode("TS0123", timeOnDay(todayAsScheduledDate, "01:30"))
+        .get('#arrivals').contains("TS0123")
+        .addFlightWithFlightCode("TS0234", timeOnDay(todayAsScheduledDate, "04:45"))
+        .get('#arrivals').contains("TS0234");
     });
   });
 });
