@@ -23,7 +23,10 @@ describe('View Modes', function () {
     it("should poll for updates when looking at the live view", function () {
       cy
         .asABorderForceOfficer()
-        .visit('#terminal/T1/current/arrivals/?timeRangeStart=0&timeRangeEnd=24')
+        .navigateHome()
+        .navigateToMenuItem('T1')
+        .chooseArrivalsTab()
+        .choose24Hours()
         .addFlightWithFlightCode("TS0123", timeStringToday)
         .get("#arrivals").contains("TS0123")
     });
@@ -44,7 +47,11 @@ describe('View Modes', function () {
 
       cy
         .asABorderForceOfficer()
-        .visit('#terminal/T1/current/arrivals/?date=' + endOfTheDayTomorrow)
+        .navigateHome()
+        .navigateToMenuItem('T1')
+        .chooseArrivalsTab()
+        .choose24Hours()
+        .get('#tomorrow').click()
         .addFlightWithFlightCode("TS0123", timeStringTomorrow)
         .get("#arrivals").contains("TS0123")
 
@@ -55,9 +62,8 @@ describe('View Modes', function () {
         .asABorderForceOfficer()
         .navigateHome()
         .navigateToMenuItem('T1')
-        .choose24Hours()
-        .get("#arrivalsTab").click()
-        .get('#yesterday', { "force": true }).click()
+        .chooseArrivalsTab()
+        .get('#yesterday').click()
         .get('#arrivals').contains("No flights to display")
         .get('#today').click()
         .choose24Hours()

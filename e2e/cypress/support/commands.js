@@ -134,3 +134,5 @@ Cypress.Commands.add('navigateToMenuItem', (itemName) => cy
 Cypress.Commands.add('findAndClick', (toFind) => cy.contains(toFind).click({ force: true }));
 
 Cypress.Commands.add('choose24Hours', () => cy.get('#current .date-selector .date-view-picker-container').contains('24 hours').click());
+
+Cypress.Commands.add('chooseArrivalsTab', () => cy.get("#arrivalsTab").click());
