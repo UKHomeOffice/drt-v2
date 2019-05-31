@@ -988,9 +988,9 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def authByRole[A](allowedRole: Role)(action: Action[A]) = Action.async(action.parser) { request =>
+  def authByRole[A](allowedRole: Role)(action: Action[A]): Action[A] = Action.async(action.parser) { request =>
     val loggedInUser: LoggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
-    log.error(s"${loggedInUser.roles}, allowed role $allowedRole")
+    log.debug(s"${loggedInUser.roles}, allowed role $allowedRole")
     val enableRoleBasedAccessRestrictions =
       config.getOptional[Boolean]("feature-flags.role-based-access-restrictions").getOrElse(false)
     val preventAccess = !loggedInUser.hasRole(allowedRole) && enableRoleBasedAccessRestrictions
@@ -1005,7 +1005,7 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def auth[A](action: Action[A]) = Action.async(action.parser) { request =>
+  def auth[A](action: Action[A]): Action[A] = Action.async(action.parser) { request =>
 
     val loggedInUser: LoggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
     val allowedRole = airportConfig.role

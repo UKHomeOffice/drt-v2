@@ -53,7 +53,10 @@ describe('View Modes', function () {
     it("should poll for updates when switching from historic to live view", function () {
       cy
         .asABorderForceOfficer()
-        .visit('#terminal/T1/current/arrivals/?timeRangeStart=0&timeRangeEnd=24')
+        .navigateHome()
+        .navigateToMenuItem('T1')
+        .choose24Hours()
+        .get("#arrivalsTab").click()
         .get('#yesterday', { "force": true }).click()
         .get('#arrivals').contains("No flights to display")
         .get('#today').click()
