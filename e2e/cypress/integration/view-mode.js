@@ -54,7 +54,7 @@ describe('View Modes', function () {
       cy
         .asABorderForceOfficer()
         .visit('#terminal/T1/current/arrivals/?timeRangeStart=0&timeRangeEnd=24')
-        .get('#yesterday').click()
+        .get('#yesterday', { "force": true }).click()
         .get('#arrivals').contains("No flights to display")
         .get('#today').click()
         .choose24Hours()
