@@ -132,11 +132,16 @@ trait UserRoleProviderLike {
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role]
 
   def getLoggedInUser(config: Configuration, headers: Headers, session: Session): LoggedInUser = {
+    val enableRoleBasedAccessRestrictions =
+      config.getOptional[Boolean]("feature-flags.role-based-access-restrictions").getOrElse(false)
+    val baseRoles = if(enableRoleBasedAccessRestrictions) Set() else Set(BorderForceStaff)
+    val roles: Set[Role] =
+      getRoles(config, headers, session) ++ baseRoles
     LoggedInUser(
       userName = headers.get("X-Auth-Username").getOrElse("Unknown"),
       id = headers.get("X-Auth-Userid").getOrElse("Unknown"),
       email = headers.get("X-Auth-Email").getOrElse("Unknown"),
-      roles = getRoles(config, headers, session)
+      roles = roles
     )
   }
 }
@@ -999,9 +1004,7 @@ class Application @Inject()(implicit val config: Configuration,
       auth(action)(request)
     } else {
       log.error("Unauthorized")
-      Future(Unauthorized(s"{" +
-      s"Permission denied, you need $allowedRole to access this resource" +
-      s"}"))
+      Future(Unauthorized(s"{Permission denied, you need $allowedRole to access this resource}"))
     }
   }
 
