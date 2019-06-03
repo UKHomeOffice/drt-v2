@@ -1,10 +1,11 @@
 package drt.client
 
 import java.util.UUID
+
 import diode.Action
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType}
-import drt.client.components.{AlertsPage, EditKeyCloakUserPage, GlobalStyles, KeyCloakUsersPage, Layout, StatusPage, TerminalComponent, TerminalPlanningComponent, TerminalsDashboardPage}
+import drt.client.components.{AlertsPage, EditKeyCloakUserPage, GlobalStyles, KeyCloakUsersPage, Layout, StatusPage, TerminalComponent, TerminalPlanningComponent, TerminalsDashboardPage, TerminalsExportDashboardPage, UserDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -14,6 +15,7 @@ import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
 import scalacss.ProdDefaults._
+
 import scala.collection.immutable.Seq
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 
@@ -120,6 +122,8 @@ object SPAMain {
 
   case object StatusLoc extends Loc
 
+  case object UserDashboardLoc extends Loc
+
   case object KeyCloakUsersLoc extends Loc
 
   case class KeyCloakUserEditLoc(userId: UUID) extends Loc
@@ -174,7 +178,7 @@ object SPAMain {
   def homeRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
     import dsl._
 
-    staticRoute(root, TerminalsDashboardLoc(None)) ~> renderR((router: RouterCtl[Loc]) => TerminalsDashboardPage(None, router))
+    staticRoute(root, UserDashboardLoc) ~> renderR((router: RouterCtl[Loc]) => UserDashboardPage(router))
   }
 
   def statusRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
@@ -209,7 +213,7 @@ object SPAMain {
 
     dynamicRouteCT(("#terminalsDashboard" / int.option).caseClass[TerminalsDashboardLoc]) ~>
       dynRenderR((page: TerminalsDashboardLoc, router) => {
-        TerminalsDashboardPage(None, router, page)
+        TerminalsDashboardPage(router, page)
       })
   }
 

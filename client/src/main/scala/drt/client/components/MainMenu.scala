@@ -20,7 +20,7 @@ object MainMenu {
 
   case class MenuItem(idx: Int, label: Props => VdomNode, icon: Icon, location: Loc, classes: List[String] = List())
 
-  val dashboardMenuItem: MenuItem = MenuItem(0, _ => "Dashboard", Icon.dashboard, TerminalsDashboardLoc(None))
+  val dashboardMenuItem: MenuItem = MenuItem(0, _ => "Dashboard", Icon.dashboard, UserDashboardLoc)
 
   def usersMenuItem(position: Int): MenuItem = MenuItem(position, _ => "Users", Icon.users, KeyCloakUsersLoc)
 
@@ -36,14 +36,9 @@ object MainMenu {
     rag.toString
   }
 
-  val restrictedMenuItems = List(
-    (ManageUsers, usersMenuItem _),
-    (CreateAlerts, alertsMenuItem _)
-  )
 
   def menuItems(airportConfig: AirportConfig, currentLoc: Loc, userRoles: Set[Role], feeds: Seq[FeedStatuses]): List[MenuItem] = {
-    def terminalDepsMenuItems(idxOffset: Int): List[MenuItem] = airportConfig.terminalNames.zipWithIndex.map {
-      case (tn, idx) =>
+    def terminalDepsMenuItem: List[(Role, Int => MenuItem)] = airportConfig.terminalNames.map { tn =>
         val targetLoc = currentLoc match {
           case tptl: TerminalPageTabLoc =>
             TerminalPageTabLoc(tn, tptl.mode, tptl.subMode,
@@ -52,18 +47,23 @@ object MainMenu {
                 UrlTimeRangeEnd(tptl.timeRangeEndString)).queryParams)
           case _ => TerminalPageTabLoc(tn)
         }
-        MenuItem(idx + idxOffset, _ => tn, Icon.calculator, targetLoc)
+        (BorderForceStaff, (offset: Int) => MenuItem(offset, _ => tn, Icon.calculator, targetLoc))
     }.toList
+
+    val restrictedMenuItems: List[(Role, Int => MenuItem)] = List(
+      (ManageUsers, usersMenuItem _),
+      (CreateAlerts, alertsMenuItem _)
+    ) ++ terminalDepsMenuItem
 
     val nonTerminalUnrestrictedMenuItems = dashboardMenuItem :: Nil
 
-    val itemsForLoggedInUser: List[MenuItem] = restrictedMenuItemsForRole(userRoles, nonTerminalUnrestrictedMenuItems.length)
+    val itemsForLoggedInUser: List[MenuItem] = restrictedMenuItemsForRole(restrictedMenuItems, userRoles, nonTerminalUnrestrictedMenuItems.length)
 
     val nonTerminalMenuItems = nonTerminalUnrestrictedMenuItems ::: itemsForLoggedInUser
-    (nonTerminalMenuItems ::: terminalDepsMenuItems(nonTerminalMenuItems.length)) :+ statusMenuItem(nonTerminalMenuItems.length + airportConfig.terminalNames.length, feeds)
+    nonTerminalMenuItems  :+ statusMenuItem(nonTerminalMenuItems.length + airportConfig.terminalNames.length, feeds)
   }
 
-  def restrictedMenuItemsForRole(roles: Set[Role], startIndex: Int): List[MenuItem] = {
+  def restrictedMenuItemsForRole(restrictedMenuItems: List[(Role, Int => MenuItem)], roles: Set[Role], startIndex: Int): List[MenuItem] = {
     val itemsForLoggedInUser = restrictedMenuItems.collect {
       case (role, menuItemCallback) if roles.contains(role) => menuItemCallback
     }.zipWithIndex.map {

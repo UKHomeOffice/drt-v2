@@ -12,11 +12,7 @@ import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
 
 object TerminalsDashboardPage {
 
-  case class Props(
-                    periodStart: Option[String],
-                    router: RouterCtl[Loc],
-                    dashboardPage: TerminalsDashboardLoc
-                  )
+  case class Props(router: RouterCtl[Loc], dashboardPage: TerminalsDashboardLoc)
 
   case class DisplayPeriod(start: SDateLike, end: SDateLike)
 
@@ -31,7 +27,7 @@ object TerminalsDashboardPage {
       val crunchStateRCP = SPACircuit.connect(_.crunchStatePot)
 
       portCodeQueueOrderTerminals { portMP =>
-        <.div(
+        <.div(^.className := "terminal-summary-dashboard",
           portMP().render(portConfig => {
             val (queueOrder, terminals) = portConfig
             crunchStateRCP(crunchStateMP => {
@@ -96,19 +92,13 @@ object TerminalsDashboardPage {
           ))
       }
     })
-    .componentWillReceiveProps(p=> Callback{
-      GoogleEventTracker.sendPageView(s"dashboard${p.nextProps.dashboardPage.period.map(period=>s"/$period").getOrElse("")}")
-      log.info("Terminal dashboard got new props")
+    .componentWillReceiveProps(p => Callback {
+      GoogleEventTracker.sendPageView(s"dashboard${p.nextProps.dashboardPage.period.map(period => s"/$period").getOrElse("")}")
     })
-    .componentDidMount(p=> Callback {
-      GoogleEventTracker.sendPageView(s"dashboard${p.props.dashboardPage.period.map(period=>s"/$period").getOrElse("")}")
-      log.info("Terminal dashboard page did mount")
+    .componentDidMount(p => Callback {
+      GoogleEventTracker.sendPageView(s"dashboard${p.props.dashboardPage.period.map(period => s"/$period").getOrElse("")}")
     })
     .build
 
-  def apply(
-             periodStart: Option[String],
-             router: RouterCtl[Loc],
-             dashboardPage: TerminalsDashboardLoc = TerminalsDashboardLoc(None)
-           ): VdomElement = component(Props(periodStart, router, dashboardPage))
+  def apply(router: RouterCtl[Loc], dashboardPage: TerminalsDashboardLoc = TerminalsDashboardLoc(None)): VdomElement = component(Props(router, dashboardPage))
 }
