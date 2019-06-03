@@ -51,9 +51,6 @@ object TerminalContentComponent {
 
   case class State(activeTab: String, showExportDialogue: Boolean = false)
 
-  implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).hash)
-  implicit val stateReuse: Reusability[State] = Reusability.derive[State]
-
   def filterCrunchStateByRange(day: SDateLike,
                                range: TimeRangeHours,
                                state: CrunchState,
@@ -154,7 +151,6 @@ object TerminalContentComponent {
             <.div(^.className := "tab-content",
               <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
                 if (state.activeTab == "desksAndQueues") {
-                  log.info(s"Rendering desks and queue")
                   props.loggedInUserPot.render(loggedInUser => {
                     val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState, props.terminalPageTab.terminal)
                     TerminalDesksAndQueues(

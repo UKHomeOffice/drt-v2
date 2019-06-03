@@ -133,7 +133,6 @@ object SPAMain {
       GetLoggedInStatus,
       GetShouldReload,
       GetAirportConfig,
-      GetFixedPoints(),
       UpdateMinuteTicker,
       GetFeedStatuses(),
       GetAlerts(0L),

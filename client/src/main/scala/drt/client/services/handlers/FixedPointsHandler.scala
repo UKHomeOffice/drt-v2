@@ -1,5 +1,6 @@
 package drt.client.services.handlers
 
+import boopickle.Default._
 import diode.Implicits.runAfterImpl
 import diode.data.{Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW, NoAction}
@@ -15,9 +16,20 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class FixedPointsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[FixedPointAssignments]]) extends LoggingActionHandler(modelRW) {
+class FixedPointsHandler[M](getCurrentViewMode: () => ViewMode, modelRW: ModelRW[M, Pot[FixedPointAssignments]]) extends LoggingActionHandler(modelRW) {
+
+  def startMillisFromView: MillisSinceEpoch = getCurrentViewMode().dayStart.millisSinceEpoch
+
+  def viewHasChanged(viewMode: ViewMode): Boolean = viewMode.dayStart.millisSinceEpoch != startMillisFromView
+
+  def scheduledRequest(viewMode: ViewMode): Effect = Effect(Future(GetFixedPoints(viewMode))).after(2 seconds)
+
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case SetFixedPoints(fixedPoints, _) => updated(Ready(fixedPoints))
+    case SetFixedPoints(viewMode, fixedPoints, _) =>
+      if (viewMode.isHistoric)
+        updated(Ready(fixedPoints))
+      else
+        updated(Ready(fixedPoints), scheduledRequest(viewMode))
 
     case SaveFixedPoints(assignments, terminalName) =>
       log.info(s"Calling saveFixedPoints")
@@ -25,7 +37,7 @@ class FixedPointsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[Fi
       val otherTerminalFixedPoints = value.getOrElse(FixedPointAssignments.empty).notForTerminal(terminalName)
       val newFixedPoints: FixedPointAssignments = assignments + otherTerminalFixedPoints
       val futureResponse = DrtApi.post("fixed-points", write(newFixedPoints))
-        .map(_ => SetFixedPoints(newFixedPoints, Option(terminalName)))
+        .map(_ => NoAction)
         .recoverWith {
           case _ =>
             log.error(s"Failed to save FixedPoints. Re-requesting after ${PollDelay.recoveryDelay}")
@@ -33,27 +45,26 @@ class FixedPointsHandler[M](viewMode: () => ViewMode, modelRW: ModelRW[M, Pot[Fi
         }
       effectOnly(Effect(futureResponse))
 
-    case GetFixedPoints() =>
-      val fixedPointsEffect = Effect(Future(GetFixedPoints())).after(60 minutes)
-      log.info(s"Calling getFixedPoints")
+    case GetFixedPoints(viewMode) if viewHasChanged(viewMode) =>
+      log.info(s"Ignoring old view response")
+      noChange
 
-      val maybePointInTimeMillis: Option[MillisSinceEpoch] = viewMode() match {
-        case ViewLive() => None
-        case vm: ViewMode => Option(vm.millis)
+    case GetFixedPoints(viewMode) =>
+      val url = if (viewMode.isHistoric) {
+        s"fixed-points?pointInTime=${viewMode.millis}"
+      } else {
+        "fixed-points"
       }
-      val url = maybePointInTimeMillis match {
-        case Some(millis) => s"fixed-points?pointInTime=$millis"
-        case None => "fixed-points"
-      }
+
       val apiCallEffect = Effect(
         DrtApi.get(url)
-          .map(r => SetFixedPoints(read[FixedPointAssignments](r.responseText), None))
+          .map(r => SetFixedPoints(viewMode, read[FixedPointAssignments](r.responseText), None))
           .recoverWith {
             case _ =>
               log.error(s"Failed to get fixed points. Polling will continue")
               Future(NoAction)
           }
       )
-      effectOnly(apiCallEffect + fixedPointsEffect)
+      effectOnly(apiCallEffect)
   }
 }

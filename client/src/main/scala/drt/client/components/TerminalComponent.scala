@@ -64,7 +64,7 @@ object TerminalComponent {
           val model = modelMP()
           <.div(model.airportConfig.render(airportConfig => {
 
-            val viewMode = if (model.viewMode == ViewLive()) CurrentWindow() else WholeDayWindow()
+            val timeRangeHours = if (model.viewMode == ViewLive()) CurrentWindow() else WholeDayWindow()
 
             val terminalContentProps = TerminalContentComponent.Props(
               model.crunchStatePot,
@@ -74,7 +74,7 @@ object TerminalComponent {
               airportConfig,
               props.terminalPageTab,
               model.airportInfos,
-              viewMode,
+              timeRangeHours,
               props.router,
               model.showActuals,
               model.viewMode,

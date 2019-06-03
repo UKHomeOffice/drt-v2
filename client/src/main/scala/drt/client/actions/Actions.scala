@@ -5,7 +5,7 @@ import java.util.UUID
 import diode.Action
 import drt.client.components.StaffAdjustmentDialogueState
 import drt.client.services.ViewMode
-import drt.shared.CrunchApi.{CrunchState, CrunchUpdates, ForecastPeriodWithHeadlines, MillisSinceEpoch}
+import drt.shared.CrunchApi._
 import drt.shared.FlightsApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
@@ -36,17 +36,15 @@ object Actions {
 
   case class ShowVersionWarning(currentVersion: String, newVersion: String) extends Action
 
-  case class GetCrunchState() extends Action
+  case class GetInitialCrunchState(viewMode: ViewMode) extends Action
 
-  case class UpdateCrunchStateAndContinuePolling(crunchState: CrunchState) extends Action
+  case class GetCrunchStateUpdates(viewMode: ViewMode) extends Action
 
-  case class UpdateCrunchStateFromUpdates(crunchUpdates: CrunchUpdates) extends Action
+  case class ScheduleCrunchUpdateRequest(viewMode: ViewMode) extends Action
 
-  case class UpdateCrunchStateFromUpdatesAndContinuePolling(crunchUpdates: CrunchUpdates) extends Action
+  case class CreateCrunchStateFromPortState(viewMode: ViewMode, portState: PortState) extends Action
 
-  case class UpdateCrunchStateFromCrunchState(crunchState: CrunchState) extends Action
-
-  case class NoCrunchStateUpdatesAndContinuePollingIfNecessary() extends Action
+  case class UpdateCrunchStateFromUpdates(viewMode: ViewMode, crunchUpdates: CrunchUpdates) extends Action
 
   case class GetForecastWeek(startDay: SDateLike, terminalName: TerminalName) extends Action
 
@@ -56,15 +54,15 @@ object Actions {
 
   case class UpdateAirportConfig(airportConfig: AirportConfig) extends Action
 
-  case class SetFixedPoints(fixedPoints: FixedPointAssignments, terminalName: Option[String]) extends Action
+  case class SetFixedPoints(viewMode: ViewMode, fixedPoints: FixedPointAssignments, terminalName: Option[String]) extends Action
 
   case class SaveFixedPoints(fixedPoints: FixedPointAssignments, terminalName: TerminalName) extends Action
 
-  case class GetFixedPoints() extends Action
+  case class GetFixedPoints(viewMode: ViewMode) extends Action
 
-  case class SetShifts(shifts: ShiftAssignments, terminalName: Option[String]) extends Action
+  case class SetShifts(viewMode: ViewMode, shifts: ShiftAssignments, terminalName: Option[String]) extends Action
 
-  case class GetShifts() extends Action
+  case class GetShifts(viewMode: ViewMode) extends Action
 
   case class SetShiftsForMonth(shiftsForMonth: MonthOfShifts) extends Action
 
@@ -78,9 +76,9 @@ object Actions {
 
   case class RemoveStaffMovements(uUID: UUID) extends Action
 
-  case class SetStaffMovements(staffMovements: Seq[StaffMovement]) extends Action
+  case class SetStaffMovements(viewMode: ViewMode, staffMovements: Seq[StaffMovement]) extends Action
 
-  case class GetStaffMovements() extends Action
+  case class GetStaffMovements(viewMode: ViewMode) extends Action
 
   case class SetViewMode(mode: ViewMode) extends Action
 

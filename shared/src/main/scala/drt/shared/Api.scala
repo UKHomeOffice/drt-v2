@@ -137,7 +137,15 @@ object ApiFlightWithSplits {
 
 case class TQM(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch)
 
+object TQM {
+  implicit val rw: RW[TQM] = macroRW
+}
+
 case class TM(terminalName: TerminalName, minute: MillisSinceEpoch)
+
+object TM {
+  implicit val rw: RW[TM] = macroRW
+}
 
 case class UniqueArrival(number: Int, terminalName: TerminalName, scheduled: MillisSinceEpoch) {
   lazy val uniqueId: Int = uniqueStr.hashCode
@@ -473,6 +481,13 @@ object CrunchApi {
   case class PortState(flights: Map[Int, ApiFlightWithSplits],
                        crunchMinutes: Map[TQM, CrunchMinute],
                        staffMinutes: Map[TM, StaffMinute]) {
+    lazy val latestUpdate: MillisSinceEpoch = {
+      val latestFlights = if (flights.nonEmpty) flights.map(_._2.lastUpdated.getOrElse(0L)).max else 0L
+      val latestCrunch = if (crunchMinutes.nonEmpty) crunchMinutes.map(_._2.lastUpdated.getOrElse(0L)).max else 0L
+      val latestStaff = if (staffMinutes.nonEmpty) staffMinutes.map(_._2.lastUpdated.getOrElse(0L)).max else 0L
+      List(latestFlights, latestCrunch, latestStaff).max
+    }
+
     def window(start: SDateLike, end: SDateLike, portQueues: Map[TerminalName, Seq[QueueName]]): PortState = {
       val windowRange = (start.millisSinceEpoch until end.millisSinceEpoch by 60000L).toArray
 
@@ -514,6 +529,29 @@ object CrunchApi {
         case Some(tup) => tup
       }.toMap
     }
+
+    def updates(sinceEpoch: MillisSinceEpoch): Option[CrunchUpdates] = {
+      val updatedFlights = flights.filter(_._2.apiFlight.PcpTime.isDefined).filter {
+        case (_, f) => f.lastUpdated.getOrElse(0L) > sinceEpoch
+      }.values.toSet
+      val updatedCrunch = crunchMinutes.filter {
+        case (_, cm) => cm.lastUpdated.getOrElse(0L) > sinceEpoch
+      }.values.toSet
+      val updatedStaff = staffMinutes.filter {
+        case (_, sm) => sm.lastUpdated.getOrElse(0L) > sinceEpoch
+      }.values.toSet
+      if (updatedFlights.nonEmpty || updatedCrunch.nonEmpty || updatedStaff.nonEmpty) {
+        val flightsLatest = if (updatedFlights.nonEmpty) updatedFlights.map(_.lastUpdated.getOrElse(0L)).max else 0L
+        val crunchLatest = if (updatedCrunch.nonEmpty) updatedCrunch.map(_.lastUpdated.getOrElse(0L)).max else 0L
+        val staffLatest = if (updatedStaff.nonEmpty) updatedStaff.map(_.lastUpdated.getOrElse(0L)).max else 0L
+        val latestUpdate = List(flightsLatest, crunchLatest, staffLatest).max
+        Option(CrunchUpdates(latestUpdate, updatedFlights, updatedCrunch, updatedStaff))
+      } else None
+    }
+  }
+
+  object PortState {
+    implicit val rw: RW[PortState] = macroRW
   }
 
   trait Minute {
