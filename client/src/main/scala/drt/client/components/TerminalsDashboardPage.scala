@@ -27,7 +27,7 @@ object TerminalsDashboardPage {
       val crunchStateRCP = SPACircuit.connect(_.crunchStatePot)
 
       portCodeQueueOrderTerminals { portMP =>
-        <.div(
+        <.div(^.className := "terminal-summary-dashboard",
           portMP().render(portConfig => {
             val (queueOrder, terminals) = portConfig
             crunchStateRCP(crunchStateMP => {

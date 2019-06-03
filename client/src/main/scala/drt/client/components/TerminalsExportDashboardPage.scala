@@ -15,16 +15,16 @@ object TerminalsExportDashboardPage {
     .render_P(p => {
       val airportConfigRCP = SPACircuit.connect(_.airportConfig)
 
-        airportConfigRCP(airportConfigMP => {
-          <.div(airportConfigMP().renderReady(config => {
-            <.div(config.terminalNames.map(tn => {
-              <.div(
-                <.h3(s"Terminal $tn"),
-                MultiDayExportComponent(tn, SDate.now(), p.loggedInUser)
-              )
-            }).toTagMod)
-          }))
-        })
+      airportConfigRCP(airportConfigMP => {
+        <.div(^.className := "terminal-export-dashboard", airportConfigMP().renderReady(config => {
+          <.div(config.terminalNames.map(tn => {
+            <.div(
+              <.h3(s"Terminal $tn"),
+              MultiDayExportComponent(tn, SDate.now(), p.loggedInUser)
+            )
+          }).toTagMod)
+        }))
+      })
     })
     .componentDidMount(p => Callback {
       GoogleEventTracker.sendPageView(s"dashboard")
