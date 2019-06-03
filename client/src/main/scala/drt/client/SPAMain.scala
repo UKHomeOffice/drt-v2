@@ -48,6 +48,7 @@ object SPAMain {
 
   object UrlTimeRangeEnd {
     val paramName = "timeRangeEnd"
+
     def apply(paramValue: Option[String]): UrlParameter = new UrlParameter {
       override val name: String = paramName
       override val value: Option[String] = paramValue
@@ -63,12 +64,11 @@ object SPAMain {
     }
   }
 
-  case class TerminalPageTabLoc(
-                                  terminal: String,
-                                  mode: String = "current",
-                                  subMode: String = "desksAndQueues",
-                                  queryParams: Map[String, String] = Map.empty[String, String]
-                                ) extends Loc {
+  case class TerminalPageTabLoc(terminal: String,
+                                mode: String = "current",
+                                subMode: String = "desksAndQueues",
+                                queryParams: Map[String, String] = Map.empty[String, String]
+                               ) extends Loc {
     val date: Option[String] = queryParams.get(UrlDateParameter.paramName).filter(_.matches(".+"))
     val timeRangeStartString: Option[String] = queryParams.get(UrlTimeRangeStart.paramName).filter(_.matches("[0-9]+"))
     val timeRangeEndString: Option[String] = queryParams.get(UrlTimeRangeEnd.paramName).filter(_.matches("[0-9]+"))
@@ -77,9 +77,10 @@ object SPAMain {
     def viewMode: ViewMode = {
       (mode, date) match {
         case ("current", Some(dateString)) => ViewDay(parseDateString(dateString))
-        case ("snapshot", dateStringOption) => ViewPointInTime(dateStringOption.map(parseDateString)
-          .getOrElse(SDate.midnightThisMorning()))
-        case _ => ViewLive()
+        case ("snapshot", dateStringOption) =>
+          val pointInTimeMillis = dateStringOption.map(parseDateString).getOrElse(SDate.midnightThisMorning())
+          ViewPointInTime(pointInTimeMillis)
+        case _ => ViewLive
       }
     }
 
@@ -160,7 +161,7 @@ object SPAMain {
             log.info(s"Triggering post load action for $c")
             SPACircuit.dispatch(c.loadAction)
           case (_, _: TerminalsDashboardLoc) =>
-            SPACircuit.dispatch(SetViewMode(ViewLive()))
+            SPACircuit.dispatch(SetViewMode(ViewLive))
           case (_, KeyCloakUsersLoc) =>
             SPACircuit.dispatch(GetKeyCloakUsers)
           case (_, KeyCloakUserEditLoc(userId)) =>
@@ -191,7 +192,7 @@ object SPAMain {
   def keyCloakUserEditRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
     import dsl._
 
-    dynamicRouteCT(("#editUser" / uuid ).caseClass[KeyCloakUserEditLoc]) ~>
+    dynamicRouteCT(("#editUser" / uuid).caseClass[KeyCloakUserEditLoc]) ~>
       dynRenderR((page: KeyCloakUserEditLoc, router) => {
         EditKeyCloakUserPage(page.userId)
       })

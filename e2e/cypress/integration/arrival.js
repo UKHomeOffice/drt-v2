@@ -111,7 +111,7 @@ describe('Arrivals page', () => {
                                ",,,," +
                                "13,37,1,";
   const actApiData           = "0.0,1.0,0.0,1.0,1.0";
-  
+
   const dataWithActApi       = dataWithoutActApi + "," + actApiData;
 
   const csvWithNoApiSplits = headersWithoutActApi + "\n" + dataWithoutActApi;

@@ -1,5 +1,7 @@
 package drt.client.services
 
+import java.util.UUID
+
 import diode._
 import diode.data._
 import diode.react.ReactConnector
@@ -15,6 +17,10 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 sealed trait ViewMode {
+  val uUID: UUID = UUID.randomUUID()
+
+  def isDifferentTo(viewMode: ViewMode): Boolean = viewMode.uUID != uUID
+
   def millis: MillisSinceEpoch = time.millisSinceEpoch
 
   def dayStart: SDateLike = SDate.midnightOf(time)
@@ -24,14 +30,14 @@ sealed trait ViewMode {
   def isHistoric: Boolean
 }
 
-case class ViewLive() extends ViewMode {
+case object ViewLive extends ViewMode {
   def time: SDateLike = SDate.now()
 
   def isHistoric: Boolean = false
 }
 
 case class NoViewMode() extends ViewMode {
-  def time: SDateLike = SDate.now()
+  def time: SDateLike = SDate(0L)
 
   def isHistoric: Boolean = false
 }
