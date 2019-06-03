@@ -1,7 +1,6 @@
 package drt.client.services
 
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 import utest._
 

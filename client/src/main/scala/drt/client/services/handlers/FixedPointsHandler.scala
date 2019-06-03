@@ -7,7 +7,6 @@ import diode.{ActionResult, Effect, ModelRW, NoAction}
 import drt.client.actions.Actions._
 import drt.client.logger.log
 import drt.client.services._
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import upickle.default.{read, write}
 
@@ -17,11 +16,6 @@ import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class FixedPointsHandler[M](getCurrentViewMode: () => ViewMode, modelRW: ModelRW[M, Pot[FixedPointAssignments]]) extends LoggingActionHandler(modelRW) {
-
-  def startMillisFromView: MillisSinceEpoch = getCurrentViewMode().dayStart.millisSinceEpoch
-
-  def viewHasChanged(viewMode: ViewMode): Boolean = viewMode.dayStart.millisSinceEpoch != startMillisFromView
-
   def scheduledRequest(viewMode: ViewMode): Effect = Effect(Future(GetFixedPoints(viewMode))).after(2 seconds)
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
@@ -45,7 +39,7 @@ class FixedPointsHandler[M](getCurrentViewMode: () => ViewMode, modelRW: ModelRW
         }
       effectOnly(Effect(futureResponse))
 
-    case GetFixedPoints(viewMode) if viewHasChanged(viewMode) =>
+    case GetFixedPoints(viewMode) if viewMode.isDifferentTo(getCurrentViewMode()) =>
       log.info(s"Ignoring old view response")
       noChange
 

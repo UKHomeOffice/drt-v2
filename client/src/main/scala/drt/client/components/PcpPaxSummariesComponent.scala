@@ -41,7 +41,7 @@ object PcpPaxSummariesComponent {
       val fiveMinutes = 5
       val queues = Seq(Queues.EeaDesk, Queues.NonEeaDesk)
       <.div(^.className := "pcp-pax-summaries",
-        if (props.viewMode == ViewLive()) {
+        if (props.viewMode == ViewLive) {
           props.crunchStatePot.render(cs => {
             val boxes = Seq("next 5 mins", "5-10 mins", "10-15 mins")
             <.div(

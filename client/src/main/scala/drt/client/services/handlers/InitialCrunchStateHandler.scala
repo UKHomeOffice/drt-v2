@@ -21,13 +21,9 @@ class InitialCrunchStateHandler[M](getCurrentViewMode: () => ViewMode,
 
   val thirtySixHoursInMillis: Long = 1000L * 60 * 60 * 36
 
-  def startMillisFromView: MillisSinceEpoch = getCurrentViewMode().dayStart.millisSinceEpoch
-
-  def viewHasChanged(viewMode: ViewMode): Boolean = viewMode.dayStart.millisSinceEpoch != startMillisFromView
-
   def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetInitialCrunchState(viewMode) =>
-      val startMillis = startMillisFromView
+      val startMillis = viewMode.dayStart.millisSinceEpoch
       val endMillis = startMillis + thirtySixHoursInMillis
       val updateRequestFuture = viewMode match {
         case ViewPointInTime(time) => DrtApi.get(s"crunch-snapshot/${time.millisSinceEpoch}?start=$startMillis&end=$endMillis")
@@ -38,8 +34,8 @@ class InitialCrunchStateHandler[M](getCurrentViewMode: () => ViewMode,
 
       updated((Pending(), 0L), Effect(Future(ShowLoader())) + Effect(eventualAction))
 
-    case CreateCrunchStateFromPortState(viewMode, _) if viewHasChanged(viewMode) =>
-      log.info(s"Ignoring old view response")
+    case CreateCrunchStateFromPortState(viewMode, _) if viewMode.isDifferentTo(getCurrentViewMode()) =>
+      log.info(s"Ignoring out of date view response")
       noChange
 
     case CreateCrunchStateFromPortState(viewMode, portState) =>
@@ -70,8 +66,15 @@ class InitialCrunchStateHandler[M](getCurrentViewMode: () => ViewMode,
           log.info(s"Got no crunch state for date")
           CreateCrunchStateFromPortState(viewMode, PortState(Map(), Map(), Map()))
         case Left(error) =>
-          log.error(s"Failed to GetInitialCrunchState ${error.message}. Re-requesting after ${PollDelay.recoveryDelay}")
-          RetryActionAfter(GetInitialCrunchState(viewMode), PollDelay.recoveryDelay)
+          log.error(s"Failed to GetInitialCrunchState ${error.message}")
+
+          if (viewMode.isDifferentTo(getCurrentViewMode())) {
+            log.info(s"No need to request as view has changed")
+            NoAction
+          } else {
+            log.info(s"Re-requesting after ${PollDelay.recoveryDelay}")
+            RetryActionAfter(GetInitialCrunchState(viewMode), PollDelay.recoveryDelay)
+          }
       }
       .recoverWith {
         case throwable =>

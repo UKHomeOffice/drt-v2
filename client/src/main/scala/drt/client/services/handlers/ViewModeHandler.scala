@@ -15,20 +15,12 @@ class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[Crunch
 
   def midnightThisMorning: SDateLike = SDate.midnightOf(SDate.now())
 
-  def isViewModeAbleToPoll(viewMode: ViewMode): Boolean =   viewMode match {
-    case ViewLive() => true
-    case ViewDay(time) if time.millisSinceEpoch >= midnightThisMorning.millisSinceEpoch => true
-    case _ => false
-  }
-
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case SetViewMode(newViewMode) =>
       val (currentViewMode, _, _) = value
 
       (newViewMode, currentViewMode) match {
-        case (newVm, oldVm) if newVm != oldVm =>
-          updated((newViewMode, Pot.empty[CrunchState], 0L), initialRequests(newViewMode))
-        case (ViewDay(newTime), ViewDay(oldTime)) if newTime != oldTime =>
+        case (newVm, oldVm) if newVm.uUID != oldVm.uUID =>
           updated((newViewMode, Pot.empty[CrunchState], 0L), initialRequests(newViewMode))
         case _ =>
           noChange

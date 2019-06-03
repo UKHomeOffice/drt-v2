@@ -8,7 +8,6 @@ import diode.data.{Pot, Ready}
 import drt.client.actions.Actions._
 import drt.client.logger.log
 import drt.client.services.{AjaxClient, PollDelay, ViewMode}
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{Api, ShiftAssignments}
 
 import scala.concurrent.Future
@@ -17,11 +16,6 @@ import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class ShiftsHandler[M](getCurrentViewMode: () => ViewMode, modelRW: ModelRW[M, Pot[ShiftAssignments]]) extends LoggingActionHandler(modelRW) {
-
-  def startMillisFromView: MillisSinceEpoch = getCurrentViewMode().dayStart.millisSinceEpoch
-
-  def viewHasChanged(viewMode: ViewMode): Boolean = viewMode.dayStart.millisSinceEpoch != startMillisFromView
-
   def scheduledRequest(viewMode: ViewMode): Effect = Effect(Future(GetShifts(viewMode))).after(2 seconds)
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
@@ -31,7 +25,7 @@ class ShiftsHandler[M](getCurrentViewMode: () => ViewMode, modelRW: ModelRW[M, P
       else
         updated(Ready(shifts), scheduledRequest(viewMode))
 
-    case GetShifts(viewMode) if viewHasChanged(viewMode) =>
+    case GetShifts(viewMode) if viewMode.isDifferentTo(getCurrentViewMode()) =>
       log.info(s"Ignoring old view response")
       noChange
 
