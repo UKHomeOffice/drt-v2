@@ -3,7 +3,7 @@ package drt.client.components
 import drt.client.SPAMain.{Loc, TerminalsDashboardLoc}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
-import drt.shared.PortOperatorStaff
+import drt.shared.{BorderForceStaff, PortOperatorStaff}
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
@@ -19,8 +19,10 @@ object UserDashboardPage {
         <.div(loggedInUserMP().renderReady(user => {
           if (user.hasRole(PortOperatorStaff))
             TerminalsExportDashboardPage(user)
-          else
+          else if (user.hasRole(BorderForceStaff))
             TerminalsDashboardPage(p.router, TerminalsDashboardLoc(None))
+          else
+            <.div("You have successfully logged into DRT but your account has not been configured correctly. Please contact us for assistance.")
         }))
       })
     })
