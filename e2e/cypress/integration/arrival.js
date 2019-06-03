@@ -94,18 +94,28 @@ describe('Arrivals page', () => {
   const actChoxTimeLocal = moment(actChoxString).tz("Europe/London").format("HH:mm")
   const pcpTimeLocal = moment(actChoxString).add(13, "minutes").tz("Europe/London").format("HH:mm")
 
-  const csvWithNoApiSplits = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est " +
-    "Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical " +
-    "EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal " +
-    "Average Non-EEA,Terminal Average Fast Track" + "\n" +
-    "TS0123,TS0123,AMS,46/44R,On Chocks," + schDateString + "," + schTimeLocal + "," + estTimeLocal + "," + actTimeLocal + "," + estChoxTimeLocal + "," + actChoxTimeLocal + "," + pcpTimeLocal + ",51,51,14,3,34,,,,,,13,37,1,";
+  const headersWithoutActApi = "IATA,ICAO,Origin,Gate/Stand,Status," +
+                               "Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP," +
+                               "Total Pax,PCP Pax," +
+                               "API e-Gates,API EEA,API Non-EEA,API Fast Track," +
+                               "Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track," +
+                               "Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track";
+  const actApiHeaders        = "API Actual - B5JSSK to Desk,API Actual - B5JSSK to eGates,API Actual - EEA (Machine Readable),API Actual - Non EEA (Visa),API Actual - eGates";
 
-  const csvWithAPISplits = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival," +
-    "Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates," +
-    "Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal " +
-    "Average Non-EEA,Terminal Average Fast Track,API Actual - EEA (Machine Readable),API Actual - Non EEA (Non Visa)," +
-    "API Actual - Non EEA (Visa),API Actual - eGates" + "\n" +
-    "TS0123,TS0123,AMS,46/44R,On Chocks," + schDateString + "," + schTimeLocal + "," + estTimeLocal + "," + actTimeLocal + "," + estChoxTimeLocal + "," + actChoxTimeLocal + "," + pcpTimeLocal + ",51,51,14,3,34,,,,,,13,37,1,,0.0,1.0,1.0,1.0";
+  const headersWithActApi    = headersWithoutActApi + "," + actApiHeaders;
+
+  const dataWithoutActApi    = "TS0123,TS0123,AMS,46/44R,On Chocks," +
+                               schDateString + "," + schTimeLocal + "," + estTimeLocal + "," + actTimeLocal + "," + estChoxTimeLocal + "," + actChoxTimeLocal + "," + pcpTimeLocal + "," +
+                               "51,51," +
+                               "24,10,17,," +
+                               ",,,," +
+                               "13,37,1,";
+  const actApiData           = "0.0,1.0,0.0,1.0,1.0";
+  
+  const dataWithActApi       = dataWithoutActApi + "," + actApiData;
+
+  const csvWithNoApiSplits = headersWithoutActApi + "\n" + dataWithoutActApi;
+  const csvWithAPISplits = headersWithActApi + "\n" + dataWithActApi;
 
   it('Displays a flight after it has been ingested via the live feed', () => {
     cy
@@ -121,7 +131,11 @@ describe('Arrivals page', () => {
       .waitForFlightToAppear("TS0123")
       .addManifest(manifest)
       .get('.pax-api')
-      .request('GET', '/export/arrivals/' + millis + '/T1?startHour=0&endHour=24').then((resp) => {
+      .request({
+        method: 'GET',
+        url: '/export/arrivals/' + millis + '/T1?startHour=0&endHour=24',
+      })
+      .then((resp) => {
         expect(resp.body).to.equal(csvWithNoApiSplits, "Api splits incorrect for regular users");
       });
   });

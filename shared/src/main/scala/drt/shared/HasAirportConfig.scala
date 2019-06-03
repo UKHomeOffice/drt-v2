@@ -207,6 +207,9 @@ object PaxTypesAndQueues {
   val eeaMachineReadableToDesk = PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk)
   val eeaMachineReadableToEGate = PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EGate)
   val eeaNonMachineReadableToDesk = PaxTypeAndQueue(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk)
+  val b5jsskToDesk = PaxTypeAndQueue(PaxTypes.B5JPlusNational, Queues.EeaDesk)
+  val b5jsskChildToDesk = PaxTypeAndQueue(PaxTypes.B5JPlusNationalBelowEGateAge, Queues.EeaDesk)
+  val b5jsskToEGate = PaxTypeAndQueue(PaxTypes.B5JPlusNational, Queues.EGate)
   val visaNationalToDesk = PaxTypeAndQueue(PaxTypes.VisaNational, Queues.NonEeaDesk)
   val nonVisaNationalToDesk = PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk)
   val visaNationalToFastTrack = PaxTypeAndQueue(PaxTypes.VisaNational, Queues.FastTrack)
@@ -217,6 +220,9 @@ object PaxTypesAndQueues {
     eeaMachineReadableToEGate -> "eGates",
     eeaMachineReadableToDesk -> "EEA (Machine Readable)",
     eeaNonMachineReadableToDesk -> "EEA (Non Machine Readable)",
+    b5jsskToDesk -> "B5JSSK to Desk",
+    b5jsskChildToDesk -> "B5JSSK child to Desk",
+    b5jsskToEGate -> "B5JSSK to eGates",
     visaNationalToDesk -> "Non EEA (Visa)",
     nonVisaNationalToDesk -> "Non EEA (Non Visa)",
     visaNationalToFastTrack -> "Fast Track (Visa)",
@@ -838,8 +844,8 @@ object AirportConfigs {
     ),
     defaultPaxSplits = SplitRatios(
       SplitSources.TerminalAverage,
-      SplitRatio(eeaMachineReadableToDesk, 0.2475),
-      SplitRatio(eeaMachineReadableToEGate, 0.7425),
+      SplitRatio(eeaMachineReadableToDesk, 1.0 - 0.7968),
+      SplitRatio(eeaMachineReadableToEGate, 0.7968),
       SplitRatio(eeaNonMachineReadableToDesk, 0.0),
       SplitRatio(visaNationalToDesk, 0.0),
       SplitRatio(nonVisaNationalToDesk, 0.01)
