@@ -164,8 +164,8 @@ object SPAMain {
           case (_, c: TerminalPageTabLoc) =>
             log.info(s"Triggering post load action for $c")
             SPACircuit.dispatch(c.loadAction)
-          case (_, _: TerminalsDashboardLoc) =>
-            SPACircuit.dispatch(SetViewMode(ViewLive))
+          case (_, UserDashboardLoc) =>
+            SPACircuit.dispatch(GetUserDashboardState)
           case (_, KeyCloakUsersLoc) =>
             SPACircuit.dispatch(GetKeyCloakUsers)
           case (_, KeyCloakUserEditLoc(userId)) =>
