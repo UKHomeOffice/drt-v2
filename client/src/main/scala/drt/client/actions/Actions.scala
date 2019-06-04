@@ -22,6 +22,8 @@ object Actions {
 
   case object GetLoggedInUser extends Action
 
+  case object GetUserDashboardState extends Action
+
   case object GetShouldReload extends Action
 
   case object GetUserHasPortAccess extends Action

@@ -118,6 +118,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new LoggedInStatusHandler(zoomRW(identity)((m, v) => m)),
       new NoopHandler(zoomRW(identity)((m, v) => m)),
       new LoggedInUserHandler(zoomRW(_.loggedInUserPot)((m, v) => m.copy(loggedInUserPot = v))),
+      new UserDashboardHandler(zoomRW(_.loggedInUserPot)((m, v) => m.copy(loggedInUserPot = v))),
       new UserHasPortAccessHandler(zoomRW(_.userHasPortAccess)((m, v) => m.copy(userHasPortAccess = v))),
       new UsersHandler(zoomRW(_.keyCloakUsers)((m, v) => m.copy(keyCloakUsers = v))),
       new EditUserHandler(zoomRW(_.selectedUserGroups)((m, v) => m.copy(selectedUserGroups = v))),
