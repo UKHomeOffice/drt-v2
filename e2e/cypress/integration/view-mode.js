@@ -53,7 +53,7 @@ describe('View Modes', function () {
         .choose24Hours()
         .get('#tomorrow').click()
         .addFlightWithFlightCode("TS0123", timeStringTomorrow)
-        .get("#arrivals").contains("TS0123")
+        .get("#arrivals").contains("TS0123", { "timeout": 30000 })
 
     });
 
