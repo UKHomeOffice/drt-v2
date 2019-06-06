@@ -50,7 +50,7 @@ describe('Restrict access by Role', function () {
         cy
           .asAPortOperator()
           .navigateHome()
-          .contains("Multi Day Export")
+          .get('[data-toggle="modal"]')
           .click()
           .get(".modal-dialog")
           .should((modal) => {
