@@ -96,30 +96,6 @@ pipeline:
       event: push
       branch: master
 
-  deploy_test_port:
-    image: quay.io/ukhomeofficedigital/drone-trigger:latest
-    secrets:
-      - drone_token
-    drone_server: https://drone.acp.homeoffice.gov.uk
-    repo: UKHomeOffice/kube-drt
-    deploy_to: acp-notprod
-    drone_token: $${DRONE_TOKEN}
-    params: "DRT_TAG=${DRONE_BUILD_NUMBER},ENV=test,PORT_CODE=test,TYPE=app"
-    when:
-      branch: master
-
-  deploy_test_port2:
-    image: quay.io/ukhomeofficedigital/drone-trigger:latest
-    secrets:
-      - drone_token
-    drone_server: https://drone.acp.homeoffice.gov.uk
-    repo: UKHomeOffice/kube-drt
-    deploy_to: acp-notprod
-    drone_token: $${DRONE_TOKEN}
-    params: "DRT_TAG=${DRONE_BUILD_NUMBER},ENV=test,PORT_CODE=test2,TYPE=app"
-    when:
-      branch: master
-
   slack_notification:
     image: plugins/slack
     secrets:
