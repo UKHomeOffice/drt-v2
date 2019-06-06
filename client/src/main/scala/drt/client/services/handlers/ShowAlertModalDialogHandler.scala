@@ -32,7 +32,7 @@ class ShowAlertModalDialogHandler[M](modelRW: ModelRW[M, Pot[Boolean]]) extends 
             .map(show => UpdateShowAlertModalDialog(show))
             .recoverWith {
               case f: AjaxException if f.xhr.status == 401 =>
-                Future(NoAction)
+                Future(UpdateShowAlertModalDialog(false))
               case f =>
                 log.error(s"Error when checking for modal dialog feature switch. $f")
                 Future(RetryActionAfter(GetShowAlertModalDialog, PollDelay.recoveryDelay))

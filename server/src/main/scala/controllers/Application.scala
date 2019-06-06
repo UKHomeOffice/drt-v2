@@ -1004,7 +1004,12 @@ class Application @Inject()(implicit val config: Configuration,
       auth(action)(request)
     } else {
       log.error("Unauthorized")
-      Future(Unauthorized(s"{Permission denied, you need $allowedRole to access this resource}"))
+      Future(Unauthorized(
+        s"""
+           |{
+           |  message: "Permission denied, you need $allowedRole to access this resource"
+           |}
+         """.stripMargin))
     }
   }
 
@@ -1025,9 +1030,11 @@ class Application @Inject()(implicit val config: Configuration,
     val preventAccess = !loggedInUser.hasRole(allowedRole) && enablePortAccessRestrictions
 
     if (preventAccess) {
-      Future(Unauthorized(s"{" +
-        s"Permission denied, you need $allowedRole to access this port" +
-        s"}"))
+      Future(Unauthorized(s"""
+                             |{
+                             |  message: "Permission denied, you need $allowedRole to access this resource"
+                             |}
+         """.stripMargin))
     } else {
       action(request)
     }
