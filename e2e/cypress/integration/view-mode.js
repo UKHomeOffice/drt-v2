@@ -70,7 +70,7 @@ describe('View Modes', function () {
         .addFlightWithFlightCode("TS0123", timeOnDay(todayAsScheduledDate, "01:30"))
         .get('#arrivals').contains("TS0123")
         .addFlightWithFlightCode("TS0234", timeOnDay(todayAsScheduledDate, "04:45"))
-        .get('#arrivals').contains("TS0234");
+        .get('#arrivals').contains("td", "TS0234", { log: true, timeout: 60000});
     });
   });
 });

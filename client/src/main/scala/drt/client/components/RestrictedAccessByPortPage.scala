@@ -11,6 +11,7 @@ import org.scalajs.dom
 
 object RestrictedAccessByPortPage {
 
+
   val allAirportConfigsToDisplay: List[AirportConfig] = AirportConfigs.allPorts diff AirportConfigs.testPorts
   val allPorts: List[String] = AirportConfigs.allPorts.map(config => config.portCode.toLowerCase)
   val urlLowerCase: String = dom.document.URL.toLowerCase
@@ -31,12 +32,10 @@ object RestrictedAccessByPortPage {
 
   case class State(title: Option[String] = None, message: Option[String] = None, expiryDateTime: Option[MillisSinceEpoch] = None)
 
-  val component = ScalaComponent.builder[Props]("Restricted Access On Port")
+  val component = ScalaComponent.builder[Props]("RestrictedAccessForPort")
     .render_P(props => {
 
       def url(port: String) = urlLowerCase.replace(s"/${portRequested.toLowerCase}/", s"/${port.toLowerCase}/")
-
-      GoogleEventTracker.sendPageView(s"$portRequested-access-restricted")
 
       val portsAccessible: Set[String] = allPortsAccessible(props.loggedInUser.roles)
       <.div(^.className := "access-restricted",
