@@ -30,6 +30,7 @@ describe('View Modes', function () {
         .navigateToMenuItem('T1')
         .chooseArrivalsTab()
         .get('#tomorrow').click()
+        .reload()
         .addFlightWithFlightCode("TS0123", timeStringTomorrow)
         .addFlightWithFlightCode("TS0234", timeOnDay(todayAsScheduledDate, "04:45"))
         .addFlightWithFlightCode("TS0235", timeOnDay(todayAsScheduledDate, "05:45"))

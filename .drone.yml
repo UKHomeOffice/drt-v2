@@ -33,19 +33,6 @@ pipeline:
       branch:
         - ${DRONE_BRANCH}
 
-  drone_s3_cache_push:
-    image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
-    drone_s3_cache_folders:
-      - ./.ivy2
-      - ./.sbt/boot
-      - ./drone/src/github.com/UKHomeOffice/drt-v2/node_modules
-
-    drone_s3_cache_mode: "push"
-    secrets:
-      - DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
-      - DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
-      - DRONE_S3_CACHE_BUCKET_NAME
-
   build_docker:
     environment:
       - DOCKER_USERNAME=drt_ci
@@ -75,10 +62,21 @@ pipeline:
       - docker run -m 5g -d --name $${DRONE_COMMIT_SHA} -e KEY_CLOAK_URL="https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod" -e JAVA_OPTS="-Xmx4g" -e PERSISTENCE_BASE_DIR="/tmp/test" -e ROLE_BASED_ACCESS_RESTRICTIONS=true -e PORT_ACCESS_RESTRICTIONS=true -e PORT_CODE="test" -e DQ_S3_BUCKET="" -e ENV="test" -e FORECAST_MAX_DAYS=2 docker.digital.homeoffice.gov.uk/drt/drt:latest $${PLAY}
       - docker build -t drt-cypress -f cy-drt-dockfile .
       - docker run --net=container:$${DRONE_COMMIT_SHA} -e CYPRESS_baseUrl="http://localhost:9000" drt-cypress /bin/bash -c "./node_modules/.bin/cypress run"
-
     when:
       event: push
       branch: ${DRONE_BRANCH}
+
+  drone_s3_cache_push:
+    image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
+    drone_s3_cache_folders:
+      - ./.ivy2
+      - ./.sbt/boot
+      - ./drone/src/github.com/UKHomeOffice/drt-v2/node_modules
+    drone_s3_cache_mode: "push"
+    secrets:
+      - DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
+      - DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
+      - DRONE_S3_CACHE_BUCKET_NAME
 
   git_tag:
     image: alpine/git
