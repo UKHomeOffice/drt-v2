@@ -3,12 +3,12 @@ package controllers
 import actors.{DeleteAlerts, GetState}
 import akka.pattern._
 import akka.util.Timeout
-import drt.shared.{Alert, CreateAlerts}
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.{Alert, CreateAlerts}
 import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
-import upickle.default.write
+import upickle.default.{read, write}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -33,13 +33,15 @@ trait ApplicationWithAlerts {
     Action.async {
       implicit request =>
         log.info(s"Adding an Alert!")
-        request.body.asJson.map { json =>
-          val alertMessage = json.as[AlertMessage]
-          (ctrl.alertsActor ? Alert(alertMessage.title, alertMessage.message, alertMessage.alertClass, alertMessage.expires.getMillis, createdAt = DateTime.now.getMillis)).mapTo[Alert].map { alert =>
-            Ok(s"$alert added!")
-          }
-        }.getOrElse {
-          Future(BadRequest("{\"error\": \"Unable to parse data\"}"))
+        request.body.asText match {
+          case Some(text) =>
+            val alert: Alert = read[Alert](text)
+            (ctrl.alertsActor ? Alert(alert.title, alert.message, alert.alertClass, alert.expires, createdAt = DateTime.now.getMillis)).mapTo[Alert].map { alert =>
+              Ok(s"$alert added!")
+            }
+            Future(Accepted)
+          case None =>
+            Future(BadRequest)
         }
     }
   }
@@ -55,4 +57,4 @@ trait ApplicationWithAlerts {
   }
 }
 
-case class AlertMessage(title: String, message: String, alertClass: String, expires: DateTime)
+case class AlertMessage(title: String, message: String, alertClass: String, expires: MillisSinceEpoch)

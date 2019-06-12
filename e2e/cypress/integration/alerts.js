@@ -1,23 +1,7 @@
+
 describe('Alerts system', function () {
 
-  let today = new Date().toISOString().split("T")[0];
-  let timeAtEndOfDay = "23:59:59";
-  let timeAtStartOfDay = "00:00:00";
-
-
-  Cypress.Commands.add('addAlert', (time, number="") => {
-    cy
-      .request('POST', '/alerts', {
-        "title": "This is an alert"+number,
-        "alertClass": "notice",
-        "message": "This is the message of the alert",
-        "expires": today + " " + time
-      })
-      .its("body").should('include', "This is an alert");
-  });
-
   Cypress.Commands.add('deleteAlerts', () => cy.request('DELETE', '/alerts'))
-
   Cypress.Commands.add('shouldHaveAlerts', (num) => cy.get('#has-alerts .alert').should('have.length', num))
 
   describe('An alert exists in the app', function () {
@@ -25,8 +9,11 @@ describe('Alerts system', function () {
     it("Should be possible to add an alert, view it and the delete it.", function () {
       cy
         .asADrtSuperUser()
-        .addAlert(timeAtEndOfDay)
         .navigateHome()
+        .contains('Alerts').click()
+        .get('#alert-title').type("This is an alert")
+        .get('#alert-message').type("This is the message of the alert")
+        .get(':nth-child(11) > .btn').click()
         .shouldHaveAlerts(1)
         .deleteAlerts()
         .shouldHaveAlerts(0);
