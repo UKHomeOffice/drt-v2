@@ -28,6 +28,7 @@ Cypress.Commands.add('setRoles', (roles = []) => {
 });
 
 const portRole = ["test"]
+const lhrPortRole = ["LHR"]
 const bfRoles = ["border-force-staff", "forecast:view", "fixed-points:view", "arrivals-and-splits:view", "desks-and-queues:view"];
 const bfPlanningRoles = ["staff:edit"];
 const superUserRoles = ["create-alerts", "manage-users"];
@@ -35,6 +36,18 @@ const portOperatorRoles = ["port-operator-staff", "arrivals-and-splits:view", "a
 
 Cypress.Commands.add('asABorderForceOfficer', () => {
   return cy.request("POST", '/test/mock-roles', { "roles": portRole.concat(bfRoles)});
+});
+
+Cypress.Commands.add('asATestPortUser', () => {
+  return cy.request("POST", '/test/mock-roles', { "roles": portRole});
+});
+
+Cypress.Commands.add('asAnLHRPortUser', () => {
+  return cy.request("POST", '/test/mock-roles', { "roles": lhrPortRole});
+});
+
+Cypress.Commands.add('asANonTestPortUser', () => {
+  return cy.request("POST", '/test/mock-roles', { "roles":[]});
 });
 
 Cypress.Commands.add('asABorderForcePlanningOfficer', () => {

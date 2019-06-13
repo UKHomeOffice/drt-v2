@@ -11,7 +11,7 @@ object ContactPage {
 
   val component = ScalaComponent.builder[Props]("ContactUs")
     .render_P(_ =>
-      <.div(<.h3("Contact Us"), ContactDetails())
+      <.div(^.className := "contact-us", <.h3("Contact Us"), ContactDetails())
     )
     .componentDidMount(p => Callback {
       GoogleEventTracker.sendPageView(s"contact")

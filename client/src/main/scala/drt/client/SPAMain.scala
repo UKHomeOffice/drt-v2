@@ -165,7 +165,6 @@ object SPAMain {
           case (Some(p: TerminalPageTabLoc), c: TerminalPageTabLoc) =>
             if (c.updateRequired(p)) SPACircuit.dispatch(c.loadAction)
           case (_, c: TerminalPageTabLoc) =>
-            log.info(s"Triggering post load action for $c")
             SPACircuit.dispatch(c.loadAction)
           case (_, UserDashboardLoc) =>
             SPACircuit.dispatch(GetUserDashboardState)
