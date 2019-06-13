@@ -136,6 +136,7 @@ case class AirportConfig(
                           useStaffingInput: Boolean = false,
                           exportQueueOrder: List[String] = Queues.exportQueueOrderSansFastTrack,
                           contactEmail: Option[String] = None,
+                          outOfHoursContactPhone: Option[String] = None,
                           dayLengthHours: Int = 36,
                           nationalityBasedProcTimes: Map[String, Double] = ProcessingTimes.nationalityProcessingTimes,
                           role: Role,
@@ -152,6 +153,12 @@ case class AirportConfig(
 
 object AirportConfig {
   implicit val rw: RW[AirportConfig] = macroRW
+}
+
+case class ContactDetails(supportEmail: Option[String], oohPhone: Option[String])
+
+object ContactDetails {
+  implicit val rw: RW[ContactDetails] = macroRW
 }
 
 object ArrivalHelper {

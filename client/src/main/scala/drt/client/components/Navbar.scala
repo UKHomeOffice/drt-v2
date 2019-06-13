@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.client.SPAMain.Loc
+import drt.client.SPAMain.{ContactUsLoc, Loc}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
 import drt.shared.{AirportConfig, LoggedInUser}
@@ -13,9 +13,6 @@ object Navbar {
   def apply(ctl: RouterCtl[Loc], page: Loc, loggedInUser: LoggedInUser, airportConfig: AirportConfig): VdomTagOf[html.Element] = {
     val feedStatusesRCP = SPACircuit.connect(_.feedStatuses)
 
-    val contactLink = airportConfig.contactEmail.map(contactEmail => {
-      <.a(Icon.envelope, "Email Us", ^.href := "mailto:" + contactEmail + "?subject=Email from DRT v2 Page&body=Please give as much detail as possible about your enquiry here")
-    }).getOrElse(TagMod(""))
     <.nav(^.className := "navbar navbar-default",
       feedStatusesRCP(feedStatusesPotMP => {
         val feedStatusesPot = feedStatusesPotMP()
@@ -25,7 +22,7 @@ object Navbar {
 
           <.div(^.className := "collapse navbar-collapse", MainMenu(ctl, page, feedStatusesPot.getOrElse(Seq()), airportConfig, loggedInUser.roles),
             <.ul(^.className := "nav navbar-nav navbar-right",
-              <.li(contactLink),
+              <.li(ctl.link(ContactUsLoc)(Icon.envelope, " ", "Contact Us")),
               <.li(<.a(Icon.signOut, "Log Out", ^.href := "/oauth/logout?redirect=" + BaseUrl.until_#.value,
                 ^.onClick --> Callback(GoogleEventTracker.sendEvent(airportConfig.portCode, "Log Out", loggedInUser.id))))
             ),

@@ -1,10 +1,11 @@
 package drt.client.components
 
+import drt.client.SPAMain.{ContactUsLoc, Loc}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{AirportConfig, AirportConfigs, LoggedInUser, Role}
-import japgolly.scalajs.react.extra.router.BaseUrl
+import japgolly.scalajs.react.extra.router.{BaseUrl, RouterCtl}
 import japgolly.scalajs.react.vdom.html_<^.{^, _}
 import japgolly.scalajs.react.{Callback, ScalaComponent}
 import org.scalajs.dom
@@ -26,7 +27,7 @@ object RestrictedAccessByPortPage {
     .find(_.portCode == portCode)
     .exists(c => loggedInUser.hasRole(c.role))
 
-  case class Props(loggedInUser: LoggedInUser)
+  case class Props(loggedInUser: LoggedInUser, ctl: RouterCtl[Loc])
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
@@ -43,16 +44,15 @@ object RestrictedAccessByPortPage {
           <.h2(^.id := "access-restricted", "Access Restricted"),
           <.div(
             <.p(^.id := "email-for-access", s"You do not currently have permission to access $portRequested. If you would like access to this port, " +
-              "please ", <.a("click here to request access by email",
-              ^.onClick --> Callback(GoogleEventTracker.sendEvent(portRequested, "Request for port access", props.loggedInUser.id)),
-              ^.href :=
-              s"mailto:drtdevteam@digital.homeoffice.gov.uk;drtenquiries@homeoffice.gov.uk?subject=request" +
-                s"Please give me access to $portRequested on DRT&body=Please give me access to DRT $portRequested."), "."),
+              "please contact us to request access."),
             <.p(
               "Once your request has been processed, please ", <.a(Icon.signOut, "Log Out", ^.href := "/oauth/logout?redirect=" + BaseUrl.until_#.value,
                 ^.onClick --> Callback(GoogleEventTracker.sendEvent(portRequested, "Log Out from Access Restricted Page", props.loggedInUser.id))),
               " and login again to update your permissions."
             ),
+            <.h3("Contact Details"),
+            ContactDetails(),
+
             if (portsAccessible.nonEmpty) {
               <.div(^.id := "alternate-ports",
                 <.p("Alternatively you are able to access the following ports"),
@@ -69,5 +69,5 @@ object RestrictedAccessByPortPage {
     })
     .build
 
-  def apply(loggedInUser: LoggedInUser): VdomElement = component(Props(loggedInUser))
+  def apply(loggedInUser: LoggedInUser, ctl: RouterCtl[Loc] ): VdomElement = component(Props(loggedInUser, ctl))
 }

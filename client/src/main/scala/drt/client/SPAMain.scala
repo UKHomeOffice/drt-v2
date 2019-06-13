@@ -5,7 +5,7 @@ import java.util.UUID
 import diode.Action
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType}
-import drt.client.components.{AlertsPage, EditKeyCloakUserPage, GlobalStyles, KeyCloakUsersPage, Layout, StatusPage, TerminalComponent, TerminalPlanningComponent, TerminalsDashboardPage, TerminalsExportDashboardPage, UserDashboardPage}
+import drt.client.components.{AlertsPage, ContactPage, EditKeyCloakUserPage, GlobalStyles, KeyCloakUsersPage, Layout, StatusPage, TerminalComponent, TerminalPlanningComponent, TerminalsDashboardPage, TerminalsExportDashboardPage, UserDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -124,6 +124,8 @@ object SPAMain {
 
   case object UserDashboardLoc extends Loc
 
+  case object ContactUsLoc extends Loc
+
   case object KeyCloakUsersLoc extends Loc
 
   case class KeyCloakUserEditLoc(userId: UUID) extends Loc
@@ -133,6 +135,7 @@ object SPAMain {
   def requestInitialActions(): Unit = {
     val initActions = Seq(
       GetApplicationVersion,
+      GetContactDetails,
       GetLoggedInUser,
       GetUserHasPortAccess,
       GetLoggedInStatus,
@@ -151,7 +154,7 @@ object SPAMain {
     .buildConfig { dsl =>
       import dsl._
 
-      val rule = homeRoute(dsl) | dashboardRoute(dsl) | terminalRoute(dsl) | statusRoute(dsl) | keyCloakUsersRoute(dsl) | keyCloakUserEditRoute(dsl) | alertRoute(dsl)
+      val rule = homeRoute(dsl) | dashboardRoute(dsl) | terminalRoute(dsl) | statusRoute(dsl) | keyCloakUsersRoute(dsl) | keyCloakUserEditRoute(dsl) | alertRoute(dsl) | contactRoute(dsl)
 
       rule.notFound(redirectToPage(TerminalsDashboardLoc(None))(Redirect.Replace))
     }
@@ -162,7 +165,6 @@ object SPAMain {
           case (Some(p: TerminalPageTabLoc), c: TerminalPageTabLoc) =>
             if (c.updateRequired(p)) SPACircuit.dispatch(c.loadAction)
           case (_, c: TerminalPageTabLoc) =>
-            log.info(s"Triggering post load action for $c")
             SPACircuit.dispatch(c.loadAction)
           case (_, UserDashboardLoc) =>
             SPACircuit.dispatch(GetUserDashboardState)
@@ -179,6 +181,12 @@ object SPAMain {
     import dsl._
 
     staticRoute(root, UserDashboardLoc) ~> renderR((router: RouterCtl[Loc]) => UserDashboardPage(router))
+  }
+
+  def contactUsRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+    import dsl._
+
+    staticRoute(root, ContactUsLoc) ~> renderR(_ => ContactPage())
   }
 
   def statusRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
@@ -206,6 +214,12 @@ object SPAMain {
     import dsl._
 
     staticRoute("#alerts", AlertLoc) ~> renderR((router: RouterCtl[Loc]) => AlertsPage())
+  }
+
+  def contactRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+    import dsl._
+
+    staticRoute("#contact", ContactUsLoc) ~> renderR(_ => ContactPage())
   }
 
   def dashboardRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {

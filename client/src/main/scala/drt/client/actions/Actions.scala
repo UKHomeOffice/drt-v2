@@ -56,6 +56,10 @@ object Actions {
 
   case class UpdateAirportConfig(airportConfig: AirportConfig) extends Action
 
+  case object GetContactDetails extends Action
+
+  case class UpdateContactDetails(contactDetails: ContactDetails) extends Action
+
   case class SetFixedPoints(viewMode: ViewMode, fixedPoints: FixedPointAssignments, terminalName: Option[String]) extends Action
 
   case class SaveFixedPoints(fixedPoints: FixedPointAssignments, terminalName: TerminalName) extends Action
