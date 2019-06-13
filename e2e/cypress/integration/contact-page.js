@@ -5,7 +5,7 @@ describe('Contact page', function () {
       .asABorderForceOfficer()
       .navigateHome()
       .contains("Contact Us")
-      .click()
+      .click({ force: true })
       .get('.contact-us')
       .contains("Contact the Dynamic Response Tool service team by email at support@test.com")
       .get('.contact-us')
