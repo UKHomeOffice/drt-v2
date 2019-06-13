@@ -6,6 +6,7 @@
 GET           /                                                    controllers.Application.index
 
 GET           /airport-config                                      controllers.Application.getAirportConfig
+GET           /contact-details                                     controllers.Application.getContactDetails
 
 GET           /airport-info                                        controllers.Application.getAirportInfo
 

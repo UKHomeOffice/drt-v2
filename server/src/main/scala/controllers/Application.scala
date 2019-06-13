@@ -97,11 +97,14 @@ trait AirportConfProvider extends AirportConfiguration {
 
   def contactEmail: Option[String] = config.getOptional[String]("contact-email")
 
+  def oohPhone: Option[String] = config.getOptional[String]("ooh-phone")
+
   def getPortConfFromEnvVar: AirportConfig = AirportConfigs.confByPort(portCode)
 
   def airportConfig: AirportConfig = getPortConfFromEnvVar.copy(
     useStaffingInput = useStaffingInput,
-    contactEmail = contactEmail
+    contactEmail = contactEmail,
+    outOfHoursContactPhone = oohPhone
   )
 }
 
@@ -134,7 +137,7 @@ trait UserRoleProviderLike {
   def getLoggedInUser(config: Configuration, headers: Headers, session: Session): LoggedInUser = {
     val enableRoleBasedAccessRestrictions =
       config.getOptional[Boolean]("feature-flags.role-based-access-restrictions").getOrElse(false)
-    val baseRoles = if(enableRoleBasedAccessRestrictions) Set() else Set(BorderForceStaff)
+    val baseRoles = if (enableRoleBasedAccessRestrictions) Set() else Set(BorderForceStaff)
     val roles: Set[Role] =
       getRoles(config, headers, session) ++ baseRoles
     LoggedInUser(
@@ -401,6 +404,12 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
+  def getContactDetails: Action[AnyContent] = Action { _ =>
+    import upickle.default._
+
+    Ok(write(ContactDetails(airportConfig.contactEmail, airportConfig.outOfHoursContactPhone)))
+  }
+
   def getAirportInfo: Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
     Action { request =>
       import upickle.default._
@@ -425,7 +434,8 @@ class Application @Inject()(implicit val config: Configuration,
   def getApplicationVersion: Action[AnyContent] = Action { _ => {
     val shouldReload = config.getOptional[Boolean]("feature-flags.version-requires-reload").getOrElse(false)
     Ok(write(BuildVersion(BuildInfo.version.toString, requiresReload = shouldReload)))
-  } }
+  }
+  }
 
   def requestPortState[X](actorRef: AskableActorRef, message: Any): Future[Either[CrunchStateError, Option[X]]] = {
     actorRef
@@ -1019,7 +1029,7 @@ class Application @Inject()(implicit val config: Configuration,
     val allowedRole = airportConfig.role
 
     val enablePortAccessRestrictions =
-    config.getOptional[Boolean]("feature-flags.port-access-restrictions").getOrElse(false)
+      config.getOptional[Boolean]("feature-flags.port-access-restrictions").getOrElse(false)
 
     if (!loggedInUser.hasRole(allowedRole))
       log.warning(
@@ -1030,10 +1040,11 @@ class Application @Inject()(implicit val config: Configuration,
     val preventAccess = !loggedInUser.hasRole(allowedRole) && enablePortAccessRestrictions
 
     if (preventAccess) {
-      Future(Unauthorized(s"""
-                             |{
-                             |  message: "Permission denied, you need $allowedRole to access this resource"
-                             |}
+      Future(Unauthorized(
+        s"""
+           |{
+           |  message: "Permission denied, you need $allowedRole to access this resource"
+           |}
          """.stripMargin))
     } else {
       action(request)

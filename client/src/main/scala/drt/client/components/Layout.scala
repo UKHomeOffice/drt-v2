@@ -51,7 +51,7 @@ object Layout {
                         .renderReady(displayDialog => PortRestrictionsModalAlert(displayDialog, loggedInUser)))
                   })
 
-                } else <.div(RestrictedAccessByPortPage(loggedInUser))
+                } else <.div(RestrictedAccessByPortPage(loggedInUser, props.ctl))
               })
             }))
         )
