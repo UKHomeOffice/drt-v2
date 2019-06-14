@@ -24,7 +24,7 @@ object MainMenu {
 
   def usersMenuItem(position: Int): MenuItem = MenuItem(position, _ => "Users", Icon.users, KeyCloakUsersLoc)
 
-  def alertsMenuItem(position: Int): MenuItem = MenuItem(position, _ => "Alerts", Icon.briefcase, AlertLoc)
+  def alertsMenuItem(position: Int): MenuItem = MenuItem(position, _ => "Alerts", Icon.briefcase, AlertLoc, List("alerts-link"))
 
   def statusMenuItem(position: Int, feeds: Seq[FeedStatuses]): MenuItem = MenuItem(position, _ => s"Feeds", Icon.barChart, StatusLoc, List(feedsRag(feeds)))
 

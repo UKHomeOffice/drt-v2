@@ -10,7 +10,8 @@ describe('Alerts system', function () {
       cy
         .asADrtSuperUser()
         .navigateHome()
-        .contains('Alerts').click()
+        .get('.alerts-link > a')
+        .click()
         .get('#alert-title').type("This is an alert")
         .get('#alert-message').type("This is the message of the alert")
         .get(':nth-child(11) > .btn').click()
