@@ -1,17 +1,14 @@
 package services.crunch
 
-import actors.VoyageManifestState
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.PortState
-import drt.shared.FlightsApi.Flights
-import drt.shared.PaxTypes._
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.SplitSources._
 import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
-import server.feeds.{ArrivalsFeedSuccess, ManifestsFeedSuccess}
+import server.feeds.ManifestsFeedSuccess
 import services.SDate
 import services.crunch.VoyageManifestGenerator._
 import services.graphstages.DqManifests
@@ -238,55 +235,6 @@ class VoyageManifestsSpec extends CrunchTestLike {
           .toMap
 
         queuePax == expected
-    }
-
-    success
-  }
-
-  "Given initial VoyageManifests and no updates from the feed " +
-    "When I send in a live arrival " +
-    "Then I should see the flight with its API split in the port state" >> {
-
-    val scheduled = "2017-01-01T00:00Z"
-
-    val flight = ArrivalGenerator.apiFlight(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "TST001", terminal = "T1", actPax = Option(21))
-    val initialManifestState = VoyageManifestState(
-      Set(VoyageManifest(DqEventCodes.DepartureConfirmed, "STN", "JFK", "0001", "TS", "2017-01-01", "00:00", List(euPassport))),
-      "", "API", None
-    )
-    val terminalSplits = Splits(Set(
-      ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 100.0, None)), TerminalAverage, None, Percentage)
-
-    val crunch = runCrunchGraph(
-      now = () => SDate(scheduled),
-      maybeInitialManifestState = Option(initialManifestState),
-      useLegacyManifests = true,
-      airportConfig = airportConfig.copy(
-        defaultProcessingTimes = Map("T1" -> Map(
-          eeaMachineReadableToDesk -> 25d / 60,
-          eeaMachineReadableToEGate -> 25d / 60
-        )),
-        terminalNames = Seq("T1"),
-        queues = Map("T1" -> Seq(EeaDesk, EGate))
-      )
-    )
-
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
-
-    val expectedSplits = Set(
-      terminalSplits,
-      Splits(Set(
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 1.0, Option(Map("GBR" -> 1.0))),
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 0.0, Option(Map("GBR" -> 0.0)))), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DqEventCodes.DepartureConfirmed), PaxNumbers)
-    )
-
-    crunch.liveTestProbe.fishForMessage(4 seconds) {
-      case ps: PortState =>
-        val splitsSet = ps.flights.values.headOption match {
-          case Some(ApiFlightWithSplits(_, s, _)) => s
-          case None => Set()
-        }
-        splitsSet == expectedSplits
     }
 
     success

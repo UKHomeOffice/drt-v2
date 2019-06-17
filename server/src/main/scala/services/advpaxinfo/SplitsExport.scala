@@ -6,7 +6,7 @@ import java.util.zip.ZipInputStream
 import com.typesafe.config.ConfigFactory
 import drt.shared.{ApiPaxTypeAndQueueCount, DqEventCodes, MilliDate, PaxType}
 import passengersplits.core.ZipUtils._
-import passengersplits.core.{SplitsCalculator, ZipUtils}
+import passengersplits.core.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import services.SDate
 
