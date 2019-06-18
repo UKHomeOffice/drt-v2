@@ -1,6 +1,5 @@
 package services.crunch
 
-import actors.VoyageManifestState
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.AskableActorRef
 import akka.stream._
@@ -11,7 +10,6 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared.{SDateLike, _}
 import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.core.SplitsCalculator
 import queueus._
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services._
@@ -60,7 +58,6 @@ case class CrunchProps[FR](logLabel: String = "",
                            initialBaseArrivals: Set[Arrival] = Set(),
                            initialFcstArrivals: Set[Arrival] = Set(),
                            initialLiveArrivals: Set[Arrival] = Set(),
-                           initialManifestsState: Option[VoyageManifestState],
                            arrivalsBaseSource: Source[ArrivalsFeedResponse, FR],
                            arrivalsFcstSource: Source[ArrivalsFeedResponse, FR],
                            arrivalsLiveSource: Source[ArrivalsFeedResponse, FR],
@@ -88,7 +85,6 @@ object CrunchSystem {
     val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](10, OverflowStrategy.backpressure)
     val actualDesksAndQueuesSource: Source[ActualDeskStats, SourceQueueWithComplete[ActualDeskStats]] = Source.queue[ActualDeskStats](10, OverflowStrategy.backpressure)
 
-    val splitsCalculator = SplitsCalculator(props.airportConfig.feedPortCode, props.historicalSplitsProvider, props.airportConfig.defaultPaxSplits.splits.toSet)
     val groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight) _
     val crunchStartDateProvider: SDateLike => SDateLike = crunchStartWithOffset(props.airportConfig.crunchOffsetMinutes)
 
@@ -111,45 +107,31 @@ object CrunchSystem {
     val fcstArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) Seq() else props.initialFcstArrivals.toSeq)
     val liveArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) Seq() else props.initialLiveArrivals.toSeq)
 
-    val arrivalSplitsGraphStage = if (props.useLegacyManifests)
-      new ArrivalSplitsFromAllSourcesGraphStage(
-        name = props.logLabel,
-        optionalInitialFlights = if (props.recrunchOnStart) None else initialFlightsWithSplits,
-        optionalInitialManifests = props.initialManifestsState.map(_.manifests),
-        splitsCalculator = splitsCalculator,
-        groupFlightsByCodeShares = groupFlightsByCodeShares,
-        expireAfterMillis = props.expireAfterMillis,
-        now = props.now,
-        maxDaysToCrunch = props.maxDaysToCrunch)
-    else {
 
-      log.info(s"Using B5JPlus Start Date of ${props.b5JStartDate.toISOString()}")
+    log.info(s"Using B5JPlus Start Date of ${props.b5JStartDate.toISOString()}")
 
-      val ptqa = if (props.airportConfig.portCode == "LHR")
-        PaxTypeQueueAllocation(
-          B5JPlusWithTransitTypeAllocator(props.b5JStartDate),
-          TerminalQueueAllocatorWithFastTrack(props.airportConfig.terminalPaxTypeQueueAllocation)
-        )
-      else
-        PaxTypeQueueAllocation(
-          B5JPlusTypeAllocator(props.b5JStartDate),
-          TerminalQueueAllocator(props.airportConfig.terminalPaxTypeQueueAllocation)
-        )
+    val ptqa = if (props.airportConfig.portCode == "LHR")
+      PaxTypeQueueAllocation(
+        B5JPlusWithTransitTypeAllocator(props.b5JStartDate),
+        TerminalQueueAllocatorWithFastTrack(props.airportConfig.terminalPaxTypeQueueAllocation))
+    else
+      PaxTypeQueueAllocation(
+        B5JPlusTypeAllocator(props.b5JStartDate),
+        TerminalQueueAllocator(props.airportConfig.terminalPaxTypeQueueAllocation))
 
-      new ArrivalSplitsGraphStage(
-        name = props.logLabel,
-        props.airportConfig.portCode,
-        optionalInitialFlights = initialFlightsWithSplits,
-        splitsCalculator = manifests.queues.SplitsCalculator(
-          props.airportConfig.feedPortCode,
-          ptqa,
-          props.airportConfig.defaultPaxSplits.splits.toSet
-        ),
-        groupFlightsByCodeShares = groupFlightsByCodeShares,
-        expireAfterMillis = props.expireAfterMillis,
-        now = props.now,
-        maxDaysToCrunch = props.maxDaysToCrunch)
-    }
+    val arrivalSplitsGraphStage = new ArrivalSplitsGraphStage(
+      name = props.logLabel,
+      props.airportConfig.portCode,
+      optionalInitialFlights = initialFlightsWithSplits,
+      splitsCalculator = manifests.queues.SplitsCalculator(
+        props.airportConfig.feedPortCode,
+        ptqa,
+        props.airportConfig.defaultPaxSplits.splits.toSet
+      ),
+      groupFlightsByCodeShares = groupFlightsByCodeShares,
+      expireAfterMillis = props.expireAfterMillis,
+      now = props.now,
+      maxDaysToCrunch = props.maxDaysToCrunch)
 
     val splitsPredictorStage = props.splitsPredictorStage
 

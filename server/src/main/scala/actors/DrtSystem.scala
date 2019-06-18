@@ -332,7 +332,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       initialBaseArrivals = initialBaseArrivals.getOrElse(Set()),
       initialFcstArrivals = initialForecastArrivals.getOrElse(Set()),
       initialLiveArrivals = initialLiveArrivals.getOrElse(Set()),
-      initialManifestsState = initialManifestsState,
       arrivalsBaseSource = baseArrivalsSource(),
       arrivalsFcstSource = forecastArrivalsSource(airportConfig.feedPortCode),
       arrivalsLiveSource = liveArrivalsSource(airportConfig.feedPortCode),
