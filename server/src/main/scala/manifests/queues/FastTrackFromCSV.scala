@@ -1,6 +1,6 @@
 package manifests.queues
 
-import manifests.passengers.PassengerTypeCalculator.log
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.io.Source
 import scala.util.{Success, Try}
@@ -8,6 +8,7 @@ import scala.util.{Success, Try}
 case class CarrierFastTrackSplit(iataCode: String, icaoCode: String, carrier: String, fastTrackSplit: Double)
 
 object FastTrackFromCSV {
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   lazy val fastTrackCarriers: Seq[CarrierFastTrackSplit] = {
     log.info(s"Loading fast track splits from CSV")
