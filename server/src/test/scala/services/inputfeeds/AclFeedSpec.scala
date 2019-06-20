@@ -103,7 +103,7 @@ class AclFeedSpec extends CrunchTestLike {
   "ACL Flights " >> {
     "Given an ACL feed with one flight and no live flights" +
       "When I ask for a crunch " +
-      "Then I should see that flight in the CrunchState" >> {
+      "Then I should see that flight in the PortState" >> {
       val scheduled = "2017-01-01T00:00Z"
       val arrival = ArrivalGenerator.apiFlight(flightId = Option(1), actPax = Option(10), schDt = scheduled, iata = "BA0001")
       val aclFlight = Flights(List(arrival))
@@ -131,7 +131,7 @@ class AclFeedSpec extends CrunchTestLike {
 
     "Given an ACL feed with one flight and the same flight in the live feed" +
       "When I ask for a crunch " +
-      "Then I should see the one flight in the CrunchState with the ACL flightcode and live chox" >> {
+      "Then I should see the one flight in the PortState with the ACL flightcode and live chox" >> {
       val scheduled = "2017-01-01T00:00Z"
       val aclFlight = ArrivalGenerator.apiFlight(flightId = Option(1), actPax = Option(10), schDt = scheduled, iata = "BA0001")
       val aclFlights = Flights(List(aclFlight))

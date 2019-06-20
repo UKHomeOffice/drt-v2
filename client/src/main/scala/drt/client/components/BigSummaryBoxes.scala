@@ -1,8 +1,10 @@
 package drt.client.components
 
+import diode.data.Pot
 import drt.client.components.FlightComponents._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.vdom.TagOf
@@ -12,12 +14,12 @@ import org.scalajs.dom.raw.HTMLElement
 import scala.util.Try
 
 object BigSummaryBoxes {
-  def flightPcpInPeriod(f: ApiFlightWithSplits, start: SDateLike, end: SDateLike) = {
+  def flightPcpInPeriod(f: ApiFlightWithSplits, start: SDateLike, end: SDateLike): Boolean = {
     val bt: Long = bestTime(f)
     start.millisSinceEpoch <= bt && bt <= end.millisSinceEpoch
   }
 
-  def bestFlightSplitPax(bestFlightPax: (Arrival) => Int): PartialFunction[ApiFlightWithSplits, Double] = {
+  def bestFlightSplitPax(bestFlightPax: Arrival => Int): PartialFunction[ApiFlightWithSplits, Double] = {
     case ApiFlightWithSplits(flight, splits, _) =>
       splits.find { case api@Splits(_, _, _, t) => t == PaxNumbers } match {
         case None => bestFlightPax(flight)
@@ -25,7 +27,7 @@ object BigSummaryBoxes {
       }
   }
 
-  def bestTime(f: ApiFlightWithSplits) = {
+  def bestTime(f: ApiFlightWithSplits): MillisSinceEpoch = {
     val bestTime = {
       val flightDt = SDate(f.apiFlight.Scheduled)
 
@@ -34,20 +36,20 @@ object BigSummaryBoxes {
     bestTime
   }
 
-  def flightsInPeriod(flights: Seq[ApiFlightWithSplits], now: SDateLike, nowPlus3Hours: SDateLike) =
+  def flightsInPeriod(flights: Seq[ApiFlightWithSplits], now: SDateLike, nowPlus3Hours: SDateLike): Seq[ApiFlightWithSplits] =
     flights.filter(flightPcpInPeriod(_, now, nowPlus3Hours))
 
-  def countFlightsInPeriod(rootModel: RootModel, now: SDateLike, nowPlus3Hours: SDateLike) =
-    rootModel.crunchStatePot.map(crunchState => flightsInPeriod(crunchState.flights.toList, now, nowPlus3Hours).length)
+  def countFlightsInPeriod(rootModel: RootModel, now: SDateLike, nowPlus3Hours: SDateLike): Pot[Int] =
+    rootModel.crunchStatePot.map(crunchState => flightsInPeriod(crunchState.flights.values.toList, now, nowPlus3Hours).length)
 
-  def countPaxInPeriod(rootModel: RootModel, now: SDateLike, nowPlus3Hours: SDateLike) = {
+  def countPaxInPeriod(rootModel: RootModel, now: SDateLike, nowPlus3Hours: SDateLike): Pot[Int] = {
     rootModel.crunchStatePot.map(crunchState => {
-      val flights: Seq[ApiFlightWithSplits] = flightsInPeriod(crunchState.flights.toList, now, nowPlus3Hours)
+      val flights: Seq[ApiFlightWithSplits] = flightsInPeriod(crunchState.flights.values.toList, now, nowPlus3Hours)
       sumActPax(flights)
     })
   }
 
-  def bestFlightSplits(bestFlightPax: (Arrival) => Int): (ApiFlightWithSplits) => Set[(PaxTypeAndQueue, Double)] = {
+  def bestFlightSplits(bestFlightPax: Arrival => Int): ApiFlightWithSplits => Set[(PaxTypeAndQueue, Double)] = {
     case ApiFlightWithSplits(_, s, _) if s.isEmpty => Set()
     case ApiFlightWithSplits(flight, splits, _) =>
       if (splits.exists { case Splits(_, _, _, t) => t == PaxNumbers }) {
@@ -67,40 +69,40 @@ object BigSummaryBoxes {
       }
   }
 
-  def aggregateSplitsLogging(bestFlightPax: (Arrival) => Int)(flights: Seq[ApiFlightWithSplits]) = {
-    val flightSplits = bestFlightSplits(bestFlightPax)
+//  def aggregateSplitsLogging(bestFlightPax: Arrival => Int)(flights: Seq[ApiFlightWithSplits]): Unit = {
+//    val flightSplits: ApiFlightWithSplits => Set[(PaxTypeAndQueue, Double)] = bestFlightSplits(bestFlightPax)
+//
+//    def excludeTrans(s: (PaxTypeAndQueue, Double)): Boolean = {
+//      s._1.queueType != Queues.Transfer
+//    }
+//
+//    def identity(s: (PaxTypeAndQueue, Double)): Boolean = true
+//
+//    def inner(filter: String, sfilter: (PaxTypeAndQueue, Double) => Boolean): Unit = {
+//      val allFlightsBestPaxAndSplitsExTx = flights.map(f => {
+//        val filtered = flightSplits(f).filter(sfilter)
+//        val splitSum = filtered.map(_._2).sum
+//        (f.apiFlight, bestFlightPax(f.apiFlight), filter, splitSum)
+//      })
+//      val notAgreeing = allFlightsBestPaxAndSplitsExTx.filter(f => f._2 != f._3.map(_._2).sum.toInt)
+//      val allDiffs = notAgreeing.map(f => {
+//        val splitSum = f._3.map(_._2).sum.toInt
+//        (Arrival.summaryString(f._1), f._2 - splitSum, f._2, splitSum)
+//      })
+//      val totalDiff = allDiffs.map(f => f._2).sum
+//      println(s"$filter flightPax: arr: ${allFlightsBestPaxAndSplitsExTx.map(_._2).sum} splExTx: ${allFlightsBestPaxAndSplitsExTx.map(_._3.map(_._2).sum).sum}")
+//
+//      println(s"$filter notAgreeing totalDiff: ${totalDiff} over ${allDiffs.length} ${pprint.stringify(allDiffs)}")
+//      println(s"notAgreeing: ${pprint.stringify(notAgreeing)}")
+//
+//    }
+//
+//    inner("exTx", excludeTrans)
+//    inner("inTx", identity)
+//
+//  }
 
-    def excludeTrans(s: ((PaxTypeAndQueue), Double)): Boolean = {
-      s._1.queueType != Queues.Transfer
-    }
-
-    def identity(s: ((PaxTypeAndQueue), Double)): Boolean = true
-
-    def inner(filter: String, sfilter: ((PaxTypeAndQueue, Double)) => Boolean) = {
-      val allFlightsBestPaxAndSplitsExTx = flights.map(f => {
-        val filter = flightSplits(f).filter(sfilter)
-        val splitSum = filter.map(_._2).sum
-        (f.apiFlight, bestFlightPax(f.apiFlight), filter, splitSum)
-      })
-      val notAgreeing = allFlightsBestPaxAndSplitsExTx.filter(f => f._2 != f._3.map(_._2).sum.toInt)
-      val allDiffs = notAgreeing.map(f => {
-        val splitSum = f._3.map(_._2).sum.toInt
-        (Arrival.summaryString(f._1), f._2 - splitSum, f._2, splitSum)
-      })
-      val totalDiff = allDiffs.map(f => f._2).sum
-      println(s"$filter flightPax: arr: ${allFlightsBestPaxAndSplitsExTx.map(_._2).sum} splExTx: ${allFlightsBestPaxAndSplitsExTx.map(_._3.map(_._2).sum).sum}")
-
-      println(s"$filter notAgreeing totalDiff: ${totalDiff} over ${allDiffs.length} ${pprint.stringify(allDiffs)}")
-      println(s"notAgreeing: ${pprint.stringify(notAgreeing)}")
-
-    }
-
-    inner("exTx", excludeTrans)
-    inner("inTx", identity)
-
-  }
-
-  def aggregateSplits(bestFlightPax: (Arrival) => Int)(flights: Seq[ApiFlightWithSplits]): Map[PaxTypeAndQueue, Int] = {
+  def aggregateSplits(bestFlightPax: Arrival => Int)(flights: Seq[ApiFlightWithSplits]): Map[PaxTypeAndQueue, Int] = {
     val newSplits = Map[PaxTypeAndQueue, Double]()
     val flightSplits = bestFlightSplits(bestFlightPax)
     val allSplits: Seq[(PaxTypeAndQueue, Double)] = flights.flatMap(flightSplits)
@@ -118,20 +120,19 @@ object BigSummaryBoxes {
 
   def convertMapToAggSplits(aggSplits: Map[PaxTypeAndQueue, Double]) = Splits(
     aggSplits.map {
-      case (k, v) => {
+      case (k, v) =>
         ApiPaxTypeAndQueueCount(k.passengerType, k.queueType, v, None)
-      }
     }.toSet,
     "Aggregated", None, PaxNumbers
   )
 
-  def flightsAtTerminal(flightsPcp: Seq[ApiFlightWithSplits], ourTerminal: String) = {
+  def flightsAtTerminal(flightsPcp: Seq[ApiFlightWithSplits], ourTerminal: String): Seq[ApiFlightWithSplits] = {
     flightsPcp.filter(f => f.apiFlight.Terminal == ourTerminal)
   }
 
-  def sumActPax(flights: Seq[ApiFlightWithSplits]) = flights.flatMap(_.apiFlight.ActPax).sum
+  def sumActPax(flights: Seq[ApiFlightWithSplits]): Int = flights.flatMap(_.apiFlight.ActPax).sum
 
-  def sumBestPax(bestFlightSplitPax: (ApiFlightWithSplits) => Double)(flights: Seq[ApiFlightWithSplits]) = flights.map(bestFlightSplitPax).sum
+  def sumBestPax(bestFlightSplitPax: ApiFlightWithSplits => Double)(flights: Seq[ApiFlightWithSplits]): Double = flights.map(bestFlightSplitPax).sum
 
   case class Props(flightCount: Int, actPaxCount: Int, bestPaxCount: Int, aggSplits: Map[PaxTypeAndQueue, Int], paxQueueOrder: Seq[PaxTypeAndQueue])
 
@@ -162,7 +163,7 @@ object BigSummaryBoxes {
 
 
   val SummaryBox = ScalaComponent.builder[Props]("SummaryBox")
-    .render_P((p) => {
+    .render_P(p => {
 
       <.div(^.className := "summary-boxes ",
         <.div(^.className := "summary-box-container", <.h3(<.span(^.className := "summary-box-count flight-count", f"${p.flightCount}%,d"), <.span(^.className := "sub", " Flights"))),

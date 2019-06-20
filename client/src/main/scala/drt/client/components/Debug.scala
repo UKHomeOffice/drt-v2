@@ -3,7 +3,7 @@ package drt.client.components
 import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.services._
-import drt.shared.CrunchApi.CrunchState
+import drt.shared.CrunchApi.PortState
 import drt.shared.{FixedPointAssignments, ShiftAssignments, StaffMovement}
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.vdom.html_<^._
@@ -30,7 +30,7 @@ object Debug {
         Pot[ShiftAssignments],
           Pot[FixedPointAssignments],
           Pot[Seq[StaffMovement]],
-          Pot[CrunchState],
+          Pot[PortState],
           LoadingState
         )]) => {
         val (potShifts, potFixedPoints, staffMovements, crunchState, loadingState) = staffingMP()

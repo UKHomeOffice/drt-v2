@@ -2,9 +2,8 @@ package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
-import drt.shared.Queues
+import drt.shared.{Queues, TQM}
 import utest.{TestSuite, _}
-
 
 
 object PcpPaxSummaryTests extends TestSuite {
@@ -15,11 +14,12 @@ object PcpPaxSummaryTests extends TestSuite {
       "Then I should see total, eea & non-eea pax counts" - {
       val startMillis = SDate("2018-01-01T00:00").millisSinceEpoch
       val quantity = 10
-      val crunchMinutes: Set[CrunchMinute] =
+      val crunchMinutesSet =
         generateCrunchMinutes(startMillis, quantity, "T1", Queues.EeaDesk, 1, 2) ++
           generateCrunchMinutes(startMillis, quantity, "T1", Queues.NonEeaDesk, 0.5, 2) ++
           generateCrunchMinutes(startMillis, quantity, "T1", Queues.EGate, 0.25, 2) ++
           generateCrunchMinutes(startMillis, quantity, "T1", Queues.FastTrack, 0.1, 2)
+      val crunchMinutes = crunchMinutesSet.map(cm => (TQM(cm), cm)).toMap
 
       val summaryStartMillis = SDate("2018-01-01T00:04").millisSinceEpoch
       val summaryDurationMinutes = 3
@@ -35,7 +35,7 @@ object PcpPaxSummaryTests extends TestSuite {
       "Then I should see total, eea & non-eea pax counts for only the terminal specified" - {
       val startMillis = SDate("2018-01-01T00:00").millisSinceEpoch
       val quantity = 10
-      val crunchMinutes: Set[CrunchMinute] =
+      val crunchMinutesSet =
         generateCrunchMinutes(startMillis, quantity, "T1", Queues.EeaDesk, 1, 2) ++
           generateCrunchMinutes(startMillis, quantity, "T1", Queues.NonEeaDesk, 0.5, 2) ++
           generateCrunchMinutes(startMillis, quantity, "T1", Queues.EGate, 0.25, 2) ++
@@ -44,6 +44,7 @@ object PcpPaxSummaryTests extends TestSuite {
           generateCrunchMinutes(startMillis, quantity, "T2", Queues.NonEeaDesk, 0.75, 2) ++
           generateCrunchMinutes(startMillis, quantity, "T2", Queues.EGate, 0.2, 2) ++
           generateCrunchMinutes(startMillis, quantity, "T2", Queues.FastTrack, 0.05, 2)
+      val crunchMinutes = crunchMinutesSet.map(cm => (TQM(cm), cm)).toMap
 
       val summaryStartMillis = SDate("2018-01-01T00:04").millisSinceEpoch
       val summaryDurationMinutes = 3

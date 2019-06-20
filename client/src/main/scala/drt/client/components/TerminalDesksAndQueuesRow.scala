@@ -80,7 +80,7 @@ object TerminalDesksAndQueuesRow {
       val fixedPoints = props.staffMinute.fixedPoints
       val movements = props.staffMinute.movements
       val available = props.staffMinute.available
-      val crunchMinutes = crunchMinutesByQueue.values.toSet
+      val crunchMinutes = crunchMinutesByQueue.values.toList
       val totalRequired = DesksAndQueues.totalRequired(props.staffMinute, crunchMinutes)
       val totalDeployed = DesksAndQueues.totalDeployed(props.staffMinute, crunchMinutes)
       val ragClass = ragStatus(totalRequired, available)

@@ -130,7 +130,7 @@ class PortStateGraphStage(name: String = "",
 
   def stateDiff(maybeExistingState: Option[PortState], newState: PortState): PortStateDiff = {
     val existingState = maybeExistingState match {
-      case None => PortState(Map(), Map(), Map())
+      case None => PortState.empty
       case Some(s) => s
     }
 

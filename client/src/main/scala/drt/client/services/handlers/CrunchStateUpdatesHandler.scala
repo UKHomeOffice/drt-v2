@@ -6,7 +6,7 @@ import diode.Implicits.runAfterImpl
 import drt.client.actions.Actions._
 import drt.client.logger._
 import drt.client.services._
-import drt.shared.{ApiFlightWithSplits, CrunchApi}
+import drt.shared.{ApiFlightWithSplits, CrunchApi, TM, TQM}
 import drt.shared.CrunchApi._
 import org.scalajs.dom
 import upickle.default.read
@@ -17,7 +17,7 @@ import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class CrunchStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
-                                   modelRW: ModelRW[M, (Pot[CrunchState], MillisSinceEpoch)]) extends LoggingActionHandler(modelRW) {
+                                   modelRW: ModelRW[M, (Pot[PortState], MillisSinceEpoch)]) extends LoggingActionHandler(modelRW) {
   val liveRequestFrequency: FiniteDuration = 2 seconds
   val forecastRequestFrequency: FiniteDuration = 15 seconds
 
@@ -43,7 +43,7 @@ class CrunchStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
         case (Ready(existingState), _) =>
           val newState = updateStateFromUpdates(viewMode.dayStart.millisSinceEpoch, crunchUpdates, existingState)
           val scheduledUpdateRequest = Effect(Future(ScheduleCrunchUpdateRequest(viewMode)))
-          val newOriginCodes = crunchUpdates.flights.map(_.apiFlight.Origin) -- existingState.flights.map(_.apiFlight.Origin)
+          val newOriginCodes = crunchUpdates.flights.map(_.apiFlight.Origin) -- existingState.flights.map { case (_, fws) => fws.apiFlight.Origin }
           val effects = if (newOriginCodes.nonEmpty) scheduledUpdateRequest + Effect(Future(GetAirportInfos(newOriginCodes))) else scheduledUpdateRequest
 
           updated((Ready(newState), crunchUpdates.latest), effects)
@@ -85,40 +85,38 @@ class CrunchStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
       }
   }
 
-  def updateStateFromUpdates(startMillis: MillisSinceEpoch, crunchUpdates: CrunchUpdates, existingState: CrunchState): CrunchState = {
+  def updateStateFromUpdates(startMillis: MillisSinceEpoch, crunchUpdates: CrunchUpdates, existingState: PortState): PortState = {
     val flights = updateAndTrimFlights(crunchUpdates, existingState, startMillis)
     val minutes = updateAndTrimCrunch(crunchUpdates, existingState, startMillis)
     val staff = updateAndTrimStaff(crunchUpdates, existingState, startMillis)
-    CrunchState(flights = flights, crunchMinutes = minutes, staffMinutes = staff)
+    PortState(flights, minutes, staff)
   }
 
-  def updateAndTrimCrunch(crunchUpdates: CrunchUpdates, existingState: CrunchState, keepFromMillis: MillisSinceEpoch): Set[CrunchApi.CrunchMinute] = {
-    val relevantMinutes = existingState.crunchMinutes.filter(_.minute >= keepFromMillis)
-    val existingMinutesByTqm = relevantMinutes.map(cm => ((cm.terminalName, cm.queueName, cm.minute), cm)).toMap
-    val minutes = crunchUpdates.minutes.foldLeft(existingMinutesByTqm) {
-      case (soFar, newCm) => soFar.updated((newCm.terminalName, newCm.queueName, newCm.minute), newCm)
-    }.values.toSet
-    minutes
-  }
-
-  def updateAndTrimStaff(crunchUpdates: CrunchUpdates, existingState: CrunchState, keepFromMillis: MillisSinceEpoch): Set[CrunchApi.StaffMinute] = {
-    val relevantMinutes = existingState.staffMinutes.filter(_.minute >= keepFromMillis)
-    val existingMinutesByTqm = relevantMinutes.map(cm => ((cm.terminalName, cm.minute), cm)).toMap
-    val minutes = crunchUpdates.staff.foldLeft(existingMinutesByTqm) {
-      case (soFar, newCm) => soFar.updated((newCm.terminalName, newCm.minute), newCm)
-    }.values.toSet
-    minutes
-  }
-
-  def updateAndTrimFlights(crunchUpdates: CrunchUpdates, existingState: CrunchState, keepFromMillis: MillisSinceEpoch): Set[ApiFlightWithSplits] = {
-    val thirtyMinutesMillis = 30 * 60000
-    val relevantFlights = existingState.flights.filter(_.apiFlight.PcpTime.isDefined).filter(keepFromMillis - thirtyMinutesMillis <= _.apiFlight.PcpTime.getOrElse(0L))
-    val flights = crunchUpdates.flights.foldLeft(relevantFlights) {
-      case (soFar, newFlight) =>
-        val withoutOldFlight = soFar.filterNot(_.apiFlight.uniqueId == newFlight.apiFlight.uniqueId)
-        withoutOldFlight + newFlight
+  def updateAndTrimCrunch(crunchUpdates: CrunchUpdates, existingState: PortState, keepFromMillis: MillisSinceEpoch): Map[TQM, CrunchApi.CrunchMinute] = {
+    val relevantMinutes = existingState.crunchMinutes.filter { case (_, cm) => cm.minute >= keepFromMillis }
+    crunchUpdates.minutes.foldLeft(relevantMinutes) {
+      case (soFar, newCm) => soFar.updated(TQM(newCm), newCm)
     }
-    flights
+  }
+
+  def updateAndTrimStaff(crunchUpdates: CrunchUpdates, existingState: PortState, keepFromMillis: MillisSinceEpoch): Map[TM, CrunchApi.StaffMinute] = {
+    val relevantMinutes = existingState.staffMinutes.filter { case (_, sm) => sm.minute >= keepFromMillis }
+    crunchUpdates.staff.foldLeft(relevantMinutes) {
+      case (soFar, newSm) => soFar.updated(TM(newSm), newSm)
+    }
+  }
+
+  def updateAndTrimFlights(crunchUpdates: CrunchUpdates, existingState: PortState, keepFromMillis: MillisSinceEpoch): Map[Int, ApiFlightWithSplits] = {
+    val thirtyMinutesMillis = 30 * 60000
+    val relevantFlights = existingState.flights
+      .filter { case (_, fws) => fws.apiFlight.PcpTime.isDefined }
+      .filter { case (_, fws) => keepFromMillis - thirtyMinutesMillis <= fws.apiFlight.PcpTime.getOrElse(0L) }
+
+    crunchUpdates.flights.foldLeft(relevantFlights) {
+      case (soFar, newFlight) =>
+        val withoutOldFlight = soFar.filterNot { case (_, fws) => fws.apiFlight.uniqueId == newFlight.apiFlight.uniqueId }
+        withoutOldFlight.updated(newFlight.apiFlight.uniqueId, newFlight)
+    }
   }
 
   def getCrunchUpdatesAfterDelay(viewMode: ViewMode): Effect = Effect(Future(GetCrunchStateUpdates(viewMode))).after(requestFrequency(viewMode))

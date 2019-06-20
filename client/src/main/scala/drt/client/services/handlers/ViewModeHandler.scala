@@ -5,13 +5,13 @@ import diode.data.Pot
 import drt.client.actions.Actions._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{ViewDay, ViewLive, ViewMode}
-import drt.shared.CrunchApi.{CrunchState, MillisSinceEpoch}
+import drt.shared.CrunchApi.{PortState, MillisSinceEpoch}
 import drt.shared.SDateLike
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[CrunchState], MillisSinceEpoch)], crunchStateMP: ModelR[M, Pot[CrunchState]]) extends LoggingActionHandler(viewModeCrunchStateMP) {
+class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[PortState], MillisSinceEpoch)], crunchStateMP: ModelR[M, Pot[PortState]]) extends LoggingActionHandler(viewModeCrunchStateMP) {
 
   def midnightThisMorning: SDateLike = SDate.midnightOf(SDate.now())
 
@@ -21,7 +21,7 @@ class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[Crunch
 
       (newViewMode, currentViewMode) match {
         case (newVm, oldVm) if newVm.uUID != oldVm.uUID =>
-          updated((newViewMode, Pot.empty[CrunchState], 0L), initialRequests(newViewMode))
+          updated((newViewMode, Pot.empty[PortState], 0L), initialRequests(newViewMode))
         case _ =>
           noChange
       }

@@ -1,7 +1,7 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, PortState, StaffMinute}
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
@@ -396,7 +396,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
       initialBaseArrivals = initialBaseArrivals,
-      initialPortState = Option(PortState(initialPortStateArrivals, Map(), Map())),
+      initialPortState = Option(PortState(initialPortStateArrivals, Map[TQM, CrunchMinute](), Map[TM, StaffMinute]())),
       maxDaysToCrunch = 4
     )
 

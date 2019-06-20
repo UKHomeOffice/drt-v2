@@ -3,7 +3,7 @@ package drt.client.components
 import diode.data.Ready
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel
-import drt.shared.CrunchApi.CrunchState
+import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
@@ -19,14 +19,14 @@ object BigSummaryBoxTests extends TestSuite {
     "Summary for the next 3 hours" - {
       "Given a rootModel with flightsWithSplits with flights arriving 2017-05-01T12:01Z onwards" - {
         "Given 0 flights" - {
-          val rootModel = RootModel(crunchStatePot = Ready(CrunchState(Set(), Set(), Set())))
+          val rootModel = RootModel(crunchStatePot = Ready(PortState.empty))
 
           "AND a current time of 2017-05-01T12:00" - {
             val now = SDate(2016, 5, 1, 12)
             val nowPlus3Hours = now.addHours(3)
 
             "Then we can get a number of flights arriving in that period" - {
-              val countOfFlights = rootModel.crunchStatePot.map(_.flights.count(f => {
+              val countOfFlights = rootModel.crunchStatePot.map(_.flights.values.count(f => {
                 val flightDt = SDate(f.apiFlight.Scheduled)
                 now.millisSinceEpoch <= flightDt.millisSinceEpoch && flightDt.millisSinceEpoch <= nowPlus3Hours.millisSinceEpoch
               }))
@@ -41,13 +41,13 @@ object BigSummaryBoxTests extends TestSuite {
           val apiFlight2 = apiFlight("2017-05-01T13:05Z", FlightID = Option(2), ActPax = Option(300))
           val apiFlight3 = apiFlight("2017-05-01T13:20Z", FlightID = Option(3), ActPax = Option(40))
 
-          val rootModel = RootModel(crunchStatePot = Ready(CrunchState(
-            flights = Set(
+          val rootModel = RootModel(crunchStatePot = Ready(PortState(
+            List(
               ApiFlightWithSplits(apiFlight1, Set()),
               ApiFlightWithSplits(apiFlight2, Set()),
               ApiFlightWithSplits(apiFlight3, Set())),
-            crunchMinutes = Set(),
-            staffMinutes = Set())))
+            List(),
+            List())))
 
           "AND a current time of 2017-05-01T12:00" - {
             val now = SDate("2017-05-01T12:00Z")
@@ -76,15 +76,15 @@ object BigSummaryBoxTests extends TestSuite {
           val apiFlight3 = apiFlight("2017-05-01T13:20Z", FlightID = Option(4), ActPax = Option(40), PcpTime = mkMillis("2017-05-01T13:22Z"))
 
 
-          val rootModel = RootModel(crunchStatePot = Ready(CrunchState(
-            flights = Set(
+          val rootModel = RootModel(crunchStatePot = Ready(PortState(
+            List(
               ApiFlightWithSplits(apiFlightPcpBeforeNow, Set()),
               ApiFlightWithSplits(apiFlight0aPcpAfterNow, Set()),
               ApiFlightWithSplits(apiFlight1, Set()),
               ApiFlightWithSplits(apiFlight2, Set()),
               ApiFlightWithSplits(apiFlight3, Set())),
-            crunchMinutes = Set(),
-            staffMinutes = Set())))
+            List(),
+            List())))
 
           "AND a current time of 2017-05-01T12:00" - {
             val now = SDate("2017-05-01T12:00Z")
@@ -113,12 +113,11 @@ object BigSummaryBoxTests extends TestSuite {
             val apiFlight2 = apiFlight("2017-05-01T13:05Z", Terminal = "T1", FlightID = Option(3), ActPax = Option(300), PcpTime = mkMillis("2017-05-01T13:15Z"))
             val notOurTerminal = apiFlight("2017-05-01T13:20Z", Terminal = "T4", FlightID = Option(4), ActPax = Option(40), PcpTime = mkMillis("2017-05-01T13:22Z"))
 
-            val flights = Set(
+            val flights = List(
               ApiFlightWithSplits(apiFlight1, Set()),
               ApiFlightWithSplits(apiFlight2, Set()),
               ApiFlightWithSplits(notOurTerminal, Set()))
-            val rootModel = RootModel(crunchStatePot = Ready(CrunchState(flights = flights, crunchMinutes = Set(), staffMinutes = Set())))
-
+            val rootModel = RootModel(crunchStatePot = Ready(PortState(flights, List(), List())))
 
             "AND a current time of 2017-05-01T12:00" - {
               val now = SDate("2017-05-01T12:00Z")

@@ -1,7 +1,6 @@
 package controllers
 
 import java.nio.ByteBuffer
-import java.nio.file.AccessDeniedException
 import java.util.{Calendar, TimeZone, UUID}
 
 import javax.inject.{Inject, Singleton}
@@ -31,7 +30,6 @@ import play.api.http.{HeaderNames, HttpEntity}
 import play.api.libs.json._
 import play.api.mvc.{Action, _}
 import play.api.{Configuration, Environment}
-import server.feeds.acl.AclFeed
 import services.PcpArrival.{pcpFrom, _}
 import services.SplitsProvider.SplitProvider
 import services._
@@ -238,7 +236,7 @@ class Application @Inject()(implicit val config: Configuration,
         crunchStateFuture.map {
           case Some(PortState(_, m, s)) =>
             log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString()} on $terminal")
-            val timeSlotsByDay = Forecast.rollUpForWeek(m.values.toSet, s.values.toSet, terminal)
+            val timeSlotsByDay = Forecast.rollUpForWeek(m, s, terminal)
             val period = ForecastPeriod(timeSlotsByDay)
             val headlineFigures = Forecast.headLineFigures(m.values.toSet, terminal)
             Option(ForecastPeriodWithHeadlines(period, headlineFigures))
@@ -347,30 +345,30 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def loadBestCrunchStateForPointInTime(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] =
+  def loadBestCrunchStateForPointInTime(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[PortState]]] =
     if (isHistoricDate(day)) {
       crunchStateForEndOfDay(day)
     } else if (day <= getLocalNextMidnight(SDate.now()).millisSinceEpoch) {
       ctrl.liveCrunchStateActor.ask(GetState).map {
-        case Some(PortState(f, m, s)) => Right(Option(CrunchState(f.values.toSet, m.values.toSet, s.values.toSet)))
+        case Some(ps: PortState) => Right(Option(ps))
         case _ => Right(None)
       }
     } else {
       crunchStateForDayInForecast(day)
     }
 
-  def crunchStateForDayInForecast(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = {
+  def crunchStateForDayInForecast(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[PortState]]] = {
     val firstMinute = getLocalLastMidnight(SDate(day)).millisSinceEpoch
     val lastMinute = SDate(firstMinute).addHours(airportConfig.dayLengthHours).millisSinceEpoch
 
     val crunchStateFuture = ctrl.forecastCrunchStateActor.ask(GetPortState(firstMinute, lastMinute))(new Timeout(30 seconds))
 
     crunchStateFuture.map {
-      case Some(PortState(f, m, s)) => Right(Option(CrunchState(f.values.toSet, m.values.toSet, s.values.toSet)))
+      case Some(ps: PortState) => Right(Option(ps))
       case _ => Right(None)
     } recover {
       case t =>
-        log.warning(s"Didn't get a CrunchState: $t")
+        log.warning(s"Didn't get a PortState: $t")
         Left(CrunchStateError(t.getMessage))
     }
   }
@@ -508,12 +506,6 @@ class Application @Inject()(implicit val config: Configuration,
 
   def getFeedStatuses: Action[AnyContent] = auth {
     Action.async { _ => ctrl.getFeedStatus.map(s => Ok(write(s))) }
-  }
-
-  def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Action[AnyContent] = authByRole(DesksAndQueuesView) {
-    Action.async { request: Request[AnyContent] =>
-      crunchStateAtPointInTime(pointInTime).map(cs => Ok(write(cs)))
-    }
   }
 
   def getShouldReload: Action[AnyContent] = Action { request =>
@@ -656,15 +648,7 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def crunchStateAtPointInTime(pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = {
-    val relativeLastMidnight = getLocalLastMidnight(SDate(pointInTime)).millisSinceEpoch
-    val startMillis = relativeLastMidnight
-    val endMillis = relativeLastMidnight + oneHourMillis * airportConfig.dayLengthHours
-
-    portStatePeriodAtPointInTime(startMillis, endMillis, pointInTime)
-  }
-
-  def crunchStateForEndOfDay(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = {
+  def crunchStateForEndOfDay(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[PortState]]] = {
     val relativeLastMidnight = getLocalLastMidnight(SDate(day)).millisSinceEpoch
     val startMillis = relativeLastMidnight
     val endMillis = relativeLastMidnight + oneHourMillis * airportConfig.dayLengthHours
@@ -675,17 +659,17 @@ class Application @Inject()(implicit val config: Configuration,
 
   def portStatePeriodAtPointInTime(startMillis: MillisSinceEpoch,
                                    endMillis: MillisSinceEpoch,
-                                   pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = {
+                                   pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[PortState]]] = {
     val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], airportConfig.portStateSnapshotInterval, SDate(pointInTime), DrtStaticParameters.expireAfterMillis, airportConfig.queues), GetPortState(startMillis, endMillis))
     val portCrunchResult = cacheActorRef.ask(query)(new Timeout(30 seconds))
     portCrunchResult.map {
-      case Some(PortState(f, m, s)) =>
+      case Some(ps: PortState) =>
         log.info(s"Got point-in-time PortState for ${SDate(pointInTime).toISOString()}")
-        Right(Option(CrunchState(f.values.toSet, m.values.toSet, s.values.toSet)))
+        Right(Option(ps))
       case _ => Right(None)
     }.recover {
       case t =>
-        log.warning(s"Didn't get a point-in-time CrunchState: $t")
+        log.warning(s"Didn't get a point-in-time PortState: $t")
         Left(CrunchStateError(t.getMessage))
     }
   }
@@ -723,21 +707,26 @@ class Application @Inject()(implicit val config: Configuration,
                        pointInTime: SDateLike,
                        startHour: Int,
                        endHour: Int,
-                       crunchStateFuture: Future[Either[CrunchStateError, Option[CrunchState]]]
+                       crunchStateFuture: Future[Either[CrunchStateError, Option[PortState]]]
                       ): Future[Option[String]] = {
 
     val startDateTime = getLocalLastMidnight(pointInTime).addHours(startHour)
     val endDateTime = getLocalLastMidnight(pointInTime).addHours(endHour)
-    val isInRange = isInRangeOnDay(startDateTime, endDateTime) _
+//    val isInRange = isInRangeOnDay(startDateTime, endDateTime) _
     val localTime = SDate(pointInTime, europeLondonTimeZone)
 
     crunchStateFuture.map {
-      case Right(Some(CrunchState(_, cm, sm))) =>
-        log.debug(s"Exports: ${localTime.toISOString()} Got ${cm.size} CMs and ${sm.size} SMs ")
-        val cmForDay: Set[CrunchMinute] = cm.filter(cm => isInRange(SDate(cm.minute, europeLondonTimeZone)))
-        val smForDay: Set[StaffMinute] = sm.filter(sm => isInRange(SDate(sm.minute, europeLondonTimeZone)))
-        log.debug(s"Exports: ${localTime.toISOString()} filtered to ${cmForDay.size} CMs and ${smForDay.size} SMs ")
-        Option(CSVData.terminalCrunchMinutesToCsvData(cmForDay, smForDay, terminalName, airportConfig.queues(terminalName)))
+      case Right(Some(ps: PortState)) =>
+        val windowedPortState = ps.window(startDateTime, endDateTime, airportConfig.queues.filter(_ == terminalName))
+//        log.debug(s"Exports: ${localTime.toISOString()} Got ${cm.size} CMs and ${sm.size} SMs ")
+//        val cmForDay: Set[CrunchMinute] = cm.filter(cm => isInRange(SDate(cm.minute, europeLondonTimeZone)))
+//        val smForDay: Set[StaffMinute] = sm.filter(sm => isInRange(SDate(sm.minute, europeLondonTimeZone)))
+        log.debug(s"Exports: ${localTime.toISOString()} filtered to ${windowedPortState.crunchMinutes.size} CMs and ${windowedPortState.staffMinutes.size} SMs ")
+        Option(CSVData.terminalCrunchMinutesToCsvData(
+          windowedPortState.crunchMinutes.values.toList,
+          windowedPortState.staffMinutes.values.toList,
+          terminalName, airportConfig.queues(terminalName)))
+
       case unexpected =>
         log.error(s"Exports: Got the wrong thing $unexpected for Point In time: ${localTime.toISOString()}")
 
@@ -766,7 +755,7 @@ class Application @Inject()(implicit val config: Configuration,
       crunchStateFuture.map {
         case Some(PortState(_, m, s)) =>
           log.info(s"Forecast CSV export for $terminal on $startDay with: crunch minutes: ${m.size} staff minutes: ${s.size}")
-          val csvData = CSVData.forecastPeriodToCsv(ForecastPeriod(Forecast.rollUpForWeek(m.values.toSet, s.values.toSet, terminal)))
+          val csvData = CSVData.forecastPeriodToCsv(ForecastPeriod(Forecast.rollUpForWeek(m, s, terminal)))
           Result(
             ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
             HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
@@ -812,7 +801,7 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def exportApi(day: Int, month: Int, year: Int, terminalName: TerminalName) = authByRole(ApiViewPortCsv) {
+  def exportApi(day: Int, month: Int, year: Int, terminalName: TerminalName): Action[AnyContent] = authByRole(ApiViewPortCsv) {
     Action.async { request =>
       val dateOption = Try(SDate(year, month, day, 0, 0)).toOption
       val terminalNameOption = airportConfig.terminalNames.find(name => name == terminalName)
@@ -964,7 +953,7 @@ class Application @Inject()(implicit val config: Configuration,
                                       pit: SDateLike,
                                       startHour: Int,
                                       endHour: Int,
-                                      crunchStateFuture: Future[Either[CrunchStateError, Option[CrunchState]]]
+                                      crunchStateFuture: Future[Either[CrunchStateError, Option[PortState]]]
                                     ): Future[Option[List[ApiFlightWithSplits]]] = {
 
     val startDateTime = getLocalLastMidnight(pit).addHours(startHour)
@@ -972,16 +961,17 @@ class Application @Inject()(implicit val config: Configuration,
     val isInRange = isInRangeOnDay(startDateTime, endDateTime) _
 
     crunchStateFuture.map {
-      case Right(Some(CrunchState(fs, _, _))) =>
+      case Right(Some(PortState(fs, _, _))) =>
 
-        val flightsForTerminalInRange = fs.toList
+        val flightsForTerminalInRange = fs.values
           .filter(_.apiFlight.Terminal == terminalName)
           .filter(_.apiFlight.PcpTime.isDefined)
           .filter(f => isInRange(SDate(f.apiFlight.PcpTime.getOrElse(0L), europeLondonTimeZone)))
+          .toList
 
         Option(flightsForTerminalInRange)
       case unexpected =>
-        log.error(s"got the wrong thing extracting flights from CrunchState (terminal: $terminalName, millis: $pit," +
+        log.error(s"got the wrong thing extracting flights from PortState (terminal: $terminalName, millis: $pit," +
           s" start hour: $startHour, endHour: $endHour): Error: $unexpected")
         None
     }
@@ -1135,12 +1125,12 @@ object Forecast {
     ForecastHeadlineFigures(headlines)
   }
 
-  def rollUpForWeek(forecastMinutes: Set[CrunchMinute],
-                    staffMinutes: Set[StaffMinute],
+  def rollUpForWeek(forecastMinutes: Map[TQM, CrunchMinute],
+                    staffMinutes: Map[TM, StaffMinute],
                     terminalName: TerminalName): Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = {
-    val actualStaffByMinute = staffByTimeSlot(15)(staffMinutes, terminalName)
-    val fixedPointsByMinute = fixedPointsByTimeSlot(15)(staffMinutes, terminalName)
-    val terminalMinutes: Seq[(MillisSinceEpoch, Set[CrunchMinute])] = CrunchApi.terminalMinutesByMinute(forecastMinutes, terminalName)
+    val actualStaffByMinute = staffByTimeSlot(15)(staffMinutes.values.toSet, terminalName)
+    val fixedPointsByMinute = fixedPointsByTimeSlot(15)(staffMinutes.values.toSet, terminalName)
+    val terminalMinutes: Seq[(MillisSinceEpoch, List[CrunchMinute])] = CrunchApi.terminalMinutesByMinute(forecastMinutes.values.toList, terminalName)
     groupCrunchMinutesByX(15)(terminalMinutes, terminalName, Queues.queueOrder)
       .map {
         case (startMillis, cms) =>

@@ -56,8 +56,8 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
     crunch.forecastTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val weekOf15MinSlots: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = Forecast.rollUpForWeek(
-          ps.crunchMinutes.values.toSet,
-          ps.staffMinutes.values.toSet,
+          ps.crunchMinutes,
+          ps.staffMinutes,
           "T1")
 
         val firstDayFirstHour = weekOf15MinSlots.getOrElse(SDate("2017-01-02T00:00Z").millisSinceEpoch, Seq()).take(4)
@@ -103,8 +103,11 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
         lastUpdated = None, paxLoad = 0d, workLoad = 0d, deskRec = 1, waitTime = 0)).toSet
     val crunchMinutesT2 = crunchMinutesT1.map(_.copy(terminalName = "T2", deskRec = 2))
 
+    val crunchMinutes = (crunchMinutesT1 ++ crunchMinutesT2).map(cm => (TQM(cm), cm)).toMap
+    val staffMinutes = (staffMinutesT1 ++ staffMinutesT2).map(sm => (TM(sm), sm)).toMap
+
     val result = Forecast
-      .rollUpForWeek(crunchMinutesT1 ++ crunchMinutesT2, staffMinutesT1 ++ staffMinutesT2, "T1")
+      .rollUpForWeek(crunchMinutes, staffMinutes, "T1")
       .values.head.toSet
 
     val expected = Set(

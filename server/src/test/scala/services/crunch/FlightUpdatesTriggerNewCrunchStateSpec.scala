@@ -20,7 +20,7 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
   sequential
 
   "Given an update to an existing flight " +
-    "When I expect a CrunchState " +
+    "When I expect a PortState " +
     "Then I should see one containing the updated flight" >> {
 
     val scheduled = "2017-01-01T00:00Z"
@@ -59,7 +59,7 @@ class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
   }
 
   "Given a noop update to an existing flight followed by a real update " +
-    "When I expect a CrunchState " +
+    "When I expect a PortState " +
     "Then I should see one containing the updated flight" >> {
 
     val scheduled = "2017-01-01T00:00Z"

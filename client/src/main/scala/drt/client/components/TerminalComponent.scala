@@ -7,7 +7,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.shared.CrunchApi.{CrunchState, ForecastPeriodWithHeadlines}
+import drt.shared.CrunchApi.{PortState, ForecastPeriodWithHeadlines}
 import drt.shared._
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -21,7 +21,7 @@ object TerminalComponent {
   case class Props(terminalPageTab: TerminalPageTabLoc, router: RouterCtl[Loc])
 
   case class TerminalModel(
-                            crunchStatePot: Pot[CrunchState],
+                            crunchStatePot: Pot[PortState],
                             forecastPeriodPot: Pot[ForecastPeriodWithHeadlines],
                             potShifts: Pot[ShiftAssignments],
                             potMonthOfShifts: Pot[MonthOfShifts],

@@ -3,9 +3,9 @@ package drt.client.components
 import diode.data.Pot
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{ViewLive, ViewMode}
-import drt.shared.CrunchApi.{CrunchMinute, CrunchState, MillisSinceEpoch}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
-import drt.shared.{Queues, SDateLike}
+import drt.shared.{Queues, SDateLike, TQM}
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
@@ -17,8 +17,9 @@ case class PcpPaxSummary(startMillis: MillisSinceEpoch,
                          queuesPax: Map[QueueName, Double])
 
 object PcpPaxSummary {
-  def apply(startMillis: MillisSinceEpoch, durationMillis: Long, crunchMinutes: Set[CrunchMinute], terminalName: TerminalName, queues: Set[QueueName]): PcpPaxSummary = {
+  def apply(startMillis: MillisSinceEpoch, durationMillis: Long, crunchMinutes: Map[TQM, CrunchMinute], terminalName: TerminalName, queues: Set[QueueName]): PcpPaxSummary = {
     val queueLoads: Map[QueueName, Double] = crunchMinutes
+      .values
       .filter(cm => cm.minute >= startMillis && cm.minute < startMillis + (durationMillis * 60000) && cm.terminalName == terminalName)
       .groupBy(_.queueName)
       .map {
@@ -33,7 +34,7 @@ object PcpPaxSummary {
 
 object PcpPaxSummariesComponent {
 
-  case class Props(crunchStatePot: Pot[CrunchState], viewMode: ViewMode, terminalName: TerminalName, minuteTicker: Int)
+  case class Props(crunchStatePot: Pot[PortState], viewMode: ViewMode, terminalName: TerminalName, minuteTicker: Int)
 
   class Backend {
     def render(props: Props): TagOf[Div] = {
@@ -82,6 +83,6 @@ object PcpPaxSummariesComponent {
     })
     .build
 
-  def apply(crunchStatePot: Pot[CrunchState], viewMode: ViewMode, terminalName: TerminalName, minuteTicker: Int): VdomElement =
+  def apply(crunchStatePot: Pot[PortState], viewMode: ViewMode, terminalName: TerminalName, minuteTicker: Int): VdomElement =
     component(Props(crunchStatePot, viewMode, terminalName, minuteTicker))
 }

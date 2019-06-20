@@ -1,8 +1,8 @@
 package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.CrunchApi.{CrunchMinute, CrunchState, StaffMinute}
-import drt.shared.{ApiFlightWithSplits, Queues}
+import drt.shared.CrunchApi.{CrunchMinute, PortState, StaffMinute}
+import drt.shared.{ApiFlightWithSplits, Queues, TM, TQM}
 import utest.{TestSuite, _}
 
 object FilterCrunchByRangeTests extends TestSuite {
@@ -16,30 +16,30 @@ object FilterCrunchByRangeTests extends TestSuite {
       val dateWithinRange = SDate("2017-01-01T11:00:00Z")
       val dateOutsideRange = SDate("2017-01-01T09:00:00Z")
 
-      "When a CrunchState contains minutes within the range, then they should remain after the filter" - {
+      "When a PortState contains minutes within the range, then they should remain after the filter" - {
         val crunchMinuteWithinRange = CrunchMinute("T1", Queues.EeaDesk, dateWithinRange.millisSinceEpoch, 0, 0, 0, 0)
         val staffMinuteWithinRange = StaffMinute("T1", dateWithinRange.millisSinceEpoch, 0, 0, 0)
         val flightWithinRange = ApiFlightWithSplits(apiFlight(Terminal = "T1", SchDT = dateWithinRange.toISOString(), PcpTime = dateWithinRange.millisSinceEpoch), Set())
 
-        val result = filterCrunchStateByRange(dateWithinRange, range, CrunchState(Set(flightWithinRange), Set(crunchMinuteWithinRange), Set(staffMinuteWithinRange)), "T1")
-        val expected = CrunchState(Set(flightWithinRange), Set(crunchMinuteWithinRange), Set(staffMinuteWithinRange))
+        val result = filterCrunchStateByRange(dateWithinRange, range, PortState(List(flightWithinRange), List(crunchMinuteWithinRange), List(staffMinuteWithinRange)), Map("T1" -> Seq(Queues.EeaDesk)))
+        val expected = PortState(List(flightWithinRange), List(crunchMinuteWithinRange), List(staffMinuteWithinRange))
 
         assert(result == expected)
       }
 
-      "When a CrunchState contains nothing within the range then it should have empty sets for all values" - {
+      "When a PortState contains nothing within the range then it should have empty sets for all values" - {
         val crunchMinuteNotWithinRange = CrunchMinute("T1", Queues.EeaDesk, dateOutsideRange.millisSinceEpoch, 0, 0, 0, 0)
         val staffMinuteNotWithinRange = StaffMinute("T1", dateOutsideRange.millisSinceEpoch, 0, 0, 0)
         val flightNotWithinRange = ApiFlightWithSplits(apiFlight(Terminal = "T1", SchDT = dateOutsideRange.toISOString(), PcpTime = dateOutsideRange.millisSinceEpoch), Set())
 
-        val result = filterCrunchStateByRange(dateWithinRange, range, CrunchState(Set(flightNotWithinRange), Set(crunchMinuteNotWithinRange), Set(staffMinuteNotWithinRange)), "T1")
+        val result = filterCrunchStateByRange(dateWithinRange, range, PortState(List(flightNotWithinRange), List(crunchMinuteNotWithinRange), List(staffMinuteNotWithinRange)), Map("T1" -> Seq(Queues.EeaDesk)))
 
-        val expected = CrunchState(Set(),Set(),Set())
+        val expected = PortState.empty
 
         assert(result == expected)
       }
 
-      "When a CrunchState contains some minutes within the range and some without it should retain the ones within range" - {
+      "When a PortState contains some minutes within the range and some without it should retain the ones within range" - {
         val crunchMinuteWithinRange = CrunchMinute("T1", Queues.EeaDesk, dateWithinRange.millisSinceEpoch, 0, 0, 0, 0)
         val staffMinuteWithinRange = StaffMinute("T1", dateWithinRange.millisSinceEpoch, 0, 0, 0)
         val flightWithinRange = ApiFlightWithSplits(apiFlight(Terminal = "T1", SchDT = dateWithinRange.toISOString(), PcpTime = dateWithinRange.millisSinceEpoch), Set())
@@ -48,12 +48,14 @@ object FilterCrunchByRangeTests extends TestSuite {
         val staffMinuteNotWithinRange = StaffMinute("T1", dateOutsideRange.millisSinceEpoch, 0, 0, 0)
         val flightNotWithinRange = ApiFlightWithSplits(apiFlight(Terminal = "T1", SchDT = dateOutsideRange.toISOString(), PcpTime = dateOutsideRange.millisSinceEpoch), Set())
 
-        val result = filterCrunchStateByRange(dateWithinRange, range, CrunchState(
-                  Set(flightNotWithinRange, flightWithinRange),
-                  Set(crunchMinuteNotWithinRange, crunchMinuteWithinRange),
-                  Set(staffMinuteNotWithinRange, staffMinuteWithinRange)), "T1")
+        val portState = PortState(
+          List(flightNotWithinRange, flightWithinRange),
+          List(crunchMinuteNotWithinRange, crunchMinuteWithinRange),
+          List(staffMinuteNotWithinRange, staffMinuteWithinRange))
 
-        val expected = CrunchState(Set(flightWithinRange), Set(crunchMinuteWithinRange), Set(staffMinuteWithinRange))
+        val result = filterCrunchStateByRange(dateWithinRange, range, portState, Map("T1" -> Seq(Queues.EeaDesk)))
+
+        val expected = PortState(List(flightWithinRange), List(crunchMinuteWithinRange), List(staffMinuteWithinRange))
 
         assert(result == expected)
       }

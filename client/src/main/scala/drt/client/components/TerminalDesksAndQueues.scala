@@ -33,8 +33,8 @@ object TerminalDesksAndQueues {
   def queueActualsColour(queueName: String): String = s"${queueColour(queueName)} actuals"
 
   case class Props(router: RouterCtl[Loc],
-                   crunchMinutes: Set[CrunchMinute],
-                   staffMinutes: Set[StaffMinute],
+                   crunchMinutes: Map[TQM, CrunchMinute],
+                   staffMinutes: Map[TM, StaffMinute],
                    airportConfig: AirportConfig,
                    terminalPageTab: TerminalPageTabLoc,
                    showActuals: Boolean,
@@ -123,12 +123,12 @@ object TerminalDesksAndQueues {
       )
 
       val terminalCrunchMinutes = groupCrunchMinutesBySlotSize(
-        CrunchApi.terminalMinutesByMinute(props.crunchMinutes, props.terminalPageTab.terminal),
+        CrunchApi.terminalMinutesByMinute(props.crunchMinutes.values.toList, props.terminalPageTab.terminal),
         props.terminalPageTab.terminal,
         Queues.queueOrder
       )
       val staffMinutesByMillis = CrunchApi
-        .terminalMinutesByMinute(props.staffMinutes, props.terminalPageTab.terminal)
+        .terminalMinutesByMinute(props.staffMinutes.values.toList, props.terminalPageTab.terminal)
         .map {
           case (millis, minutes) => (millis, minutes.head)
         }

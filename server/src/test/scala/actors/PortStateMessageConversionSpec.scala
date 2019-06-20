@@ -3,7 +3,7 @@ package actors
 import org.specs2.mutable.Specification
 import PortStateMessageConversion._
 import drt.shared.CrunchApi.{CrunchMinute, PortState, StaffMinute}
-import drt.shared.Queues
+import drt.shared.{ApiFlightWithSplits, Queues}
 import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchStateSnapshotMessage, StaffMinuteMessage}
 
 class PortStateMessageConversionSpec extends Specification {
@@ -25,7 +25,7 @@ class PortStateMessageConversionSpec extends Specification {
     val expectedCrunchMinutes = Seq(CrunchMinute("T1", Queues.EeaDesk, validMinuteMilli, 0, 0, 0, 0, None, None, None, None, None)).map(m => (m.key, m)).toMap
     val expectedStaffMinutes = Seq(StaffMinute("T1", validMinuteMilli, 0, 0, 0, None)).map(m => (m.key, m)).toMap
 
-    val expected = PortState(Map(), expectedCrunchMinutes, expectedStaffMinutes)
+    val expected = PortState(Map[Int, ApiFlightWithSplits](), expectedCrunchMinutes, expectedStaffMinutes)
 
     state === expected
   }

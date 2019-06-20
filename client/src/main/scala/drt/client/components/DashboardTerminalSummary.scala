@@ -123,7 +123,7 @@ object DashboardTerminalSummary {
   val component = ScalaComponent.builder[Props]("SummaryBox")
     .render_P((p) => {
 
-      val crunchMinuteTimeSlots = groupCrunchMinutesByX(15)(CrunchApi.terminalMinutesByMinute(p.crunchMinutes.toSet, p.terminal), p.terminal, Queues.queueOrder).flatMap(_._2)
+      val crunchMinuteTimeSlots = groupCrunchMinutesByX(15)(CrunchApi.terminalMinutesByMinute(p.crunchMinutes, p.terminal), p.terminal, Queues.queueOrder).flatMap(_._2)
 
       if (crunchMinuteTimeSlots.isEmpty) {
         <.div(^.className := "dashboard-summary container-fluid", "No data available to display")

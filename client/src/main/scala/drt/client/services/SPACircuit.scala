@@ -56,7 +56,7 @@ case class ClientServerVersions(client: String, server: String)
 
 case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      latestUpdateMillis: MillisSinceEpoch = 0L,
-                     crunchStatePot: Pot[CrunchState] = Empty,
+                     crunchStatePot: Pot[PortState] = Empty,
                      forecastPeriodPot: Pot[ForecastPeriodWithHeadlines] = Empty,
                      airportInfos: Map[String, Pot[AirportInfo]] = Map(),
                      airportConfig: Pot[AirportConfig] = Empty,

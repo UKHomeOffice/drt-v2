@@ -3,7 +3,7 @@ package services.crunch
 import java.util.UUID
 
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{PortState, StaffMinute}
+import drt.shared.CrunchApi.{CrunchMinute, PortState, StaffMinute}
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
@@ -537,7 +537,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       now = () => now,
       initialFixedPoints = fixedPoints,
       maxDaysToCrunch = daysToCrunch,
-      initialPortState = Option(PortState(Map(), Map(), staffMinutes(daysToCrunch, 15, scheduled))),
+      initialPortState = Option(PortState(Map[Int, ApiFlightWithSplits](), Map[TQM, CrunchMinute](), staffMinutes(daysToCrunch, 15, scheduled))),
       checkRequiredStaffUpdatesOnStartup = true
     )
 

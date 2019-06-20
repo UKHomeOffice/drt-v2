@@ -16,7 +16,7 @@ import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class InitialCrunchStateHandler[M](getCurrentViewMode: () => ViewMode,
-                                   modelRW: ModelRW[M, (Pot[CrunchState], MillisSinceEpoch)]) extends LoggingActionHandler(modelRW) {
+                                   modelRW: ModelRW[M, (Pot[PortState], MillisSinceEpoch)]) extends LoggingActionHandler(modelRW) {
   val crunchUpdatesRequestFrequency: FiniteDuration = 2 seconds
 
   val thirtySixHoursInMillis: Long = 1000L * 60 * 60 * 36
@@ -41,7 +41,7 @@ class InitialCrunchStateHandler[M](getCurrentViewMode: () => ViewMode,
     case CreateCrunchStateFromPortState(viewMode, portState) =>
       log.info(s"Got a crunch state!")
       val flights = portState.flights.values.toSet
-      val newState = CrunchState(flights, portState.crunchMinutes.values.toSet, portState.staffMinutes.values.toSet)
+//      val newState = PortState(flights, portState.crunchMinutes.values.toSet, portState.staffMinutes.values.toSet)
       val originCodes = flights.map(_.apiFlight.Origin)
 
       val hideLoader = Effect(Future(HideLoader()))
@@ -54,7 +54,7 @@ class InitialCrunchStateHandler[M](getCurrentViewMode: () => ViewMode,
         hideLoader + fetchOrigins + getCrunchUpdatesAfterDelay(viewMode)
       }
 
-      updated((Ready(newState), portState.latestUpdate), effects)
+      updated((Ready(portState), portState.latestUpdate), effects)
   }
 
   def processRequest(viewMode: ViewMode, call: Future[dom.XMLHttpRequest]): Future[Action] = {
@@ -64,7 +64,7 @@ class InitialCrunchStateHandler[M](getCurrentViewMode: () => ViewMode,
         case Right(Some(portState)) => CreateCrunchStateFromPortState(viewMode, portState)
         case Right(None) =>
           log.info(s"Got no crunch state for date")
-          CreateCrunchStateFromPortState(viewMode, PortState(Map(), Map(), Map()))
+          CreateCrunchStateFromPortState(viewMode, PortState.empty)
         case Left(error) =>
           log.error(s"Failed to GetInitialCrunchState ${error.message}")
 
