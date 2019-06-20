@@ -46,9 +46,6 @@ object ContactDetails {
         })
       )
     })
-    .componentDidMount(p => Callback {
-      GoogleEventTracker.sendPageView(s"contact")
-    })
     .build
 
   def apply(): VdomElement = component(Props())
