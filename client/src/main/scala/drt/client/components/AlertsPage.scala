@@ -18,6 +18,7 @@ object AlertsPage {
 
   val defaultAlertClass = "notice"
   val defaultExpiryHours = 24
+
   def defaultExpiryMillis(): MillisSinceEpoch = SDate.now().addHours(defaultExpiryHours).millisSinceEpoch
 
   def defaultState(): State = State(alertClass = Option(defaultAlertClass), expiryDateTime = Option(defaultExpiryMillis()))
@@ -44,33 +45,28 @@ object AlertsPage {
       }
 
       def doAddAlert(): Callback = {
-        removeValidation("title")
         removeValidation("message")
         removeValidation("expiry")
-        for {
-          title <- state.title
-          message <- state.message
-          alertClass <- state.alertClass
-          expiryDateTime <- state.expiryDateTime
-        } yield {
-          val alert = Alert(title, message, alertClass, expiryDateTime, SDate.now().millisSinceEpoch)
-          GoogleEventTracker.sendEvent("alerts", "Add Alert", alert.toString)
-          SPACircuit.dispatch(SaveAlert(alert))
-        }
+
+        GoogleEventTracker.sendEvent("alerts", "Add Alert", alertFromState.toString)
+        SPACircuit.dispatch(SaveAlert(alertFromState))
+
         scope.setState(defaultState())
       }
 
+      def alertFromState: Alert = {
+        val maybeAlert = for {
+          message <- state.message
+          alertClass <- state.alertClass
+          expiryDateTime <- state.expiryDateTime
+        } yield Alert(state.title.getOrElse(""), message, alertClass, expiryDateTime, SDate.now().millisSinceEpoch)
+
+        maybeAlert.getOrElse(Alert.empty)
+      }
+
       def validationMessages: Callback = {
-        if (!state.title.exists(s => s.trim != "")) {
-          addValidation("title", "Title needs a value")
-        }
         if (!state.message.exists(s => s.trim != "")) {
           addValidation("message", "Message needs a value")
-        }
-        if (state.expiryDateTime.isEmpty) {
-          addValidation("expiry", "Expiry date and time needs to be set")
-        } else if (!state.expiryDateTime.exists(dateTime => dateTime > SDate.now().millisSinceEpoch)) {
-          addValidation("expiry", "Expiry date and time needs to be in the future")
         }
         scope.forceUpdate
       }
@@ -78,7 +74,6 @@ object AlertsPage {
       def addAlert(): ReactEventFromInput => Callback = (_: ReactEventFromInput) => if (isValid) doAddAlert() else validationMessages
 
       def setTitle(title: String) = scope.modState(state => {
-        removeValidation("title")
         state.copy(title = Option(title))
       })
 
@@ -130,10 +125,10 @@ object AlertsPage {
         ),
         <.div(^.`class` := "row", ^.height := "10px"),
         <.div(^.`class` := "row",
-          modelRCP { modelMP: ModelProxy[Pot[Seq[Alert]]] =>
+          modelRCP { modelMP: ModelProxy[Pot[List[Alert]]] =>
             val alertsPot = modelMP()
             <.div(
-              alertsPot.render((alerts: Seq[Alert]) => {
+              alertsPot.render((alerts: List[Alert]) => {
                 <.div(
                   <.div(^.`class` := "col-md-3"),
                   <.div(
@@ -145,6 +140,11 @@ object AlertsPage {
               alertsPot.renderEmpty(<.div(^.id := "no-alerts-to-delete"))
             )
           }
+        ),
+        <.div(
+          <.h2("Preview"),
+          <.p("The alert will display at the top of the page next to the Border Force logo"),
+          AlertsComponent.renderAlert(List(alertFromState))
         )
       )
     })

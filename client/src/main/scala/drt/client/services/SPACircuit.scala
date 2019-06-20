@@ -74,7 +74,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      keyCloakUsers: Pot[List[KeyCloakUser]] = Empty,
                      selectedUserGroups: Pot[Set[KeyCloakGroup]] = Empty,
                      feedStatuses: Pot[Seq[FeedStatuses]] = Empty,
-                     alerts: Pot[Seq[Alert]] = Empty,
+                     alerts: Pot[List[Alert]] = Empty,
                      maybeStaffDeploymentAdjustmentPopoverState: Option[StaffAdjustmentDialogueState] = None,
                      displayAlertDialog: Pot[Boolean] = Empty
                     )
