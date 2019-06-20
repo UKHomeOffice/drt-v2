@@ -2,6 +2,7 @@ package drt.client.components
 
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.PassengerSplits.QueueType
 import drt.shared._
@@ -39,7 +40,7 @@ object PortConfigDetails {
                 <.h2(tn),
                 <.div(^.className := "container config-container",
                   <.h4("Min / Max Desks by hour of day"),
-                    minMaxDesksTable(config.minMaxDesksByTerminalQueue(tn))
+                  minMaxDesksTable(config.minMaxDesksByTerminalQueue(tn))
                 ),
                 <.div(^.className := "container config-container",
                   <.h4("Default Processing Times"),
@@ -48,6 +49,10 @@ object PortConfigDetails {
                 <.div(^.className := "container config-container",
                   <.h4("Passenger Queue Allocation"),
                   defaultPaxSplits(config.terminalPaxTypeQueueAllocation(tn))
+                ),
+                <.div(^.className := "container config-container",
+                  <.h4("Walktimes"),
+                  defaultWalktime(config.defaultWalkTimeMillis(tn))
                 )
               )
             ).toTagMod
@@ -105,7 +110,25 @@ object PortConfigDetails {
     )
   }
 
-def defaultPaxSplits(defaultPaxTypeQueueAllocation: Map[PaxType, Seq[(QueueType, Double)]]) = {
+  def defaultWalktime(defaultWalkTime: MillisSinceEpoch) = {
+    <.div(^.className := "config-block float-left",
+      <.table(^.className := "table table-bordered table-hover",
+        <.tbody(
+          <.tr(
+            <.th(^.className := "col", "Gate"),
+            <.th(^.className := "col", "Walk time seconds")
+          ),
+          <.tr(
+            <.th(^.scope := "row", "Default"),
+            <.td(^.className := "text-right", (defaultWalkTime / 1000).toInt)
+          )
+
+        )
+      )
+    )
+  }
+
+  def defaultPaxSplits(defaultPaxTypeQueueAllocation: Map[PaxType, Seq[(QueueType, Double)]]) = {
     <.div(^.className := "config-block float-left",
       <.table(^.className := "table table-bordered table-hover",
         <.tbody(
