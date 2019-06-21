@@ -553,19 +553,34 @@ object CrunchApi {
       } else None
     }
 
-    def summary(startMillis: MillisSinceEpoch, periods: Int, periodSize: Int, terminal: TerminalName, queues: List[String]): Map[Long, Map[String, CrunchMinute]] = {
-      val endMillis = startMillis + (periods * periodSize)
-      val byPeriod: Map[Long, Map[String, CrunchMinute]] = (startMillis until endMillis by periodSize)
+    def crunchSummary(startMillis: MillisSinceEpoch, periods: Int, periodSize: Int, terminal: TerminalName, queues: List[String]): Map[Long, Map[String, CrunchMinute]] = {
+      val endMillis = startMillis + (periods * periodSize * 60000)
+      val byPeriod: Map[Long, Map[String, CrunchMinute]] = (startMillis until endMillis by periodSize * 60000)
         .map { periodStart =>
           val queueMinutes = queues
             .map { queue =>
-              val slotMinutes = (periodStart until (periodStart + periodSize))
+              val slotMinutes = (periodStart until (periodStart + periodSize * 60000) by 60000)
                 .map { minute => crunchMinutes.get(TQM(terminal, queue, minute)) }
                 .collect { case Some(cm) => cm }
                 .toList
               (queue, crunchPeriodSummary(terminal, periodStart, queue, slotMinutes))
             }
             .toMap
+          (periodStart, queueMinutes)
+        }
+        .toMap
+      byPeriod
+    }
+
+    def staffSummary(startMillis: MillisSinceEpoch, periods: Int, periodSize: Int, terminal: TerminalName): Map[Long, StaffMinute] = {
+      val endMillis = startMillis + (periods * periodSize * 60000)
+      val byPeriod: Map[Long, StaffMinute] = (startMillis until endMillis by periodSize * 60000)
+        .map { periodStart =>
+          val slotMinutes = (periodStart until (periodStart + periodSize * 60000) by 60000)
+            .map { minute => staffMinutes.get(TM(terminal, minute)) }
+            .collect { case Some(cm) => cm }
+            .toList
+          val queueMinutes = staffPeriodSummary(terminal, periodStart, slotMinutes)
           (periodStart, queueMinutes)
         }
         .toMap
@@ -597,6 +612,21 @@ object CrunchApi {
         deployedWait = None,
         actDesks = None,
         actWait = None)
+    }
+
+    def staffPeriodSummary(terminal: String, periodStart: MillisSinceEpoch, slotMinutes: List[StaffMinute]): StaffMinute = {
+      if (slotMinutes.nonEmpty) StaffMinute(
+        terminalName = terminal,
+        minute = periodStart,
+        shifts = slotMinutes.map(_.shifts).max,
+        fixedPoints = slotMinutes.map(_.fixedPoints).max,
+        movements = slotMinutes.map(_.movements).max)
+      else StaffMinute(
+        terminalName = terminal,
+        minute = periodStart,
+        shifts = 0,
+        fixedPoints = 0,
+        movements = 0)
     }
   }
 

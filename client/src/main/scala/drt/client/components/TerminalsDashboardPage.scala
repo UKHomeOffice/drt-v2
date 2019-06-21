@@ -62,22 +62,16 @@ object TerminalsDashboardPage {
                     <.h3(s"Terminal $terminalName"),
                     crunchStateMP().render(crunchState => {
                       val flightsInTerminal: List[ApiFlightWithSplits] = crunchState
-                        .flights.values
-                        .toList
-                        .filter(_.apiFlight.Terminal == terminalName)
-                        .filter(flightWithinPeriod)
-                      val crunchMinutesInTerminal = crunchState.crunchMinutes.values.toList
-                        .filter(cm => cm.minute >= displayPeriod.start.millisSinceEpoch && cm.minute < displayPeriod.end.millisSinceEpoch)
-                        .filter(_.terminalName == terminalName)
-
-                      val staffMinutesInTerminal = crunchState.staffMinutes.values.toList
-                        .filter(sm => sm.minute >= displayPeriod.start.millisSinceEpoch && sm.minute < displayPeriod.end.millisSinceEpoch)
-                        .filter(_.terminalName == terminalName)
+                        .flights.values.toList
+                        .filter(fws => fws.apiFlight.Terminal == terminalName && flightWithinPeriod(fws))
+                      val portStateForWindow = crunchState.window(displayPeriod.start, displayPeriod.end, portConfig.queues)
+                      val terminalCrunchMinutes = portStateForWindow.crunchMinutes.filterKeys(_.terminalName == terminalName).values.toList
+                      val terminalStaffMinutes = portStateForWindow.staffMinutes.filterKeys(_.terminalName == terminalName).values.toList
 
                       DashboardTerminalSummary(DashboardTerminalSummary.Props(
                         flightsInTerminal,
-                        crunchMinutesInTerminal,
-                        staffMinutesInTerminal,
+                        terminalCrunchMinutes,
+                        terminalStaffMinutes,
                         terminalName,
                         queueOrder,
                         displayPeriod.start,

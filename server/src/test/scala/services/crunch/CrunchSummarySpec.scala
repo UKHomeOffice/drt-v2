@@ -14,7 +14,7 @@ class CrunchSummarySpec extends Specification {
       queue <- queues
       minute <- 0 to 29
     } yield {
-      CrunchMinute(terminal, queue, minute.toLong, minute.toDouble, minute.toDouble, minute, minute, Option(minute), Option(minute), Option(minute), Option(minute))
+      CrunchMinute(terminal, queue, minute.toLong * 60000, minute.toDouble, minute.toDouble, minute, minute, Option(minute), Option(minute), Option(minute), Option(minute))
     }
 
     val cmsMap = cmsList.map(cm => (TQM(cm), cm)).toMap
@@ -22,24 +22,24 @@ class CrunchSummarySpec extends Specification {
 
     val periods = 4
     val periodSize = 15
-    val summary: Map[MillisSinceEpoch, Map[String, CrunchMinute]] = portState.summary(0L, periods, periodSize, terminal, queues)
+    val summary: Map[MillisSinceEpoch, Map[String, CrunchMinute]] = portState.crunchSummary(0L, periods, periodSize, terminal, queues)
 
     val expected = Map(
       0L -> Map(
         Queues.EeaDesk -> CrunchMinute(terminal, Queues.EeaDesk, 0, 105, 105, 14, 14, Option(14), Option(14), Option(14), Option(14)),
         Queues.EGate -> CrunchMinute(terminal, Queues.EGate, 0, 105, 105, 14, 14, Option(14), Option(14), Option(14), Option(14))
       ),
-      15L -> Map(
-        Queues.EeaDesk -> CrunchMinute(terminal, Queues.EeaDesk, 15, 330, 330, 29, 29, Option(29), Option(29), Option(29), Option(29)),
-        Queues.EGate -> CrunchMinute(terminal, Queues.EGate, 15, 330, 330, 29, 29, Option(29), Option(29), Option(29), Option(29))
+      15L * 60000 -> Map(
+        Queues.EeaDesk -> CrunchMinute(terminal, Queues.EeaDesk, 15 * 60000, 330, 330, 29, 29, Option(29), Option(29), Option(29), Option(29)),
+        Queues.EGate -> CrunchMinute(terminal, Queues.EGate, 15 * 60000, 330, 330, 29, 29, Option(29), Option(29), Option(29), Option(29))
       ),
-      30L -> Map(
-        Queues.EeaDesk -> CrunchMinute(terminal, Queues.EeaDesk, 30, 0, 0, 0, 0, None, None, None, None),
-        Queues.EGate -> CrunchMinute(terminal, Queues.EGate, 30, 0, 0, 0, 0, None, None, None, None)
+      30L * 60000 -> Map(
+        Queues.EeaDesk -> CrunchMinute(terminal, Queues.EeaDesk, 30 * 60000, 0, 0, 0, 0, None, None, None, None),
+        Queues.EGate -> CrunchMinute(terminal, Queues.EGate, 30 * 60000, 0, 0, 0, 0, None, None, None, None)
       ),
-      45L -> Map(
-        Queues.EeaDesk -> CrunchMinute(terminal, Queues.EeaDesk, 45, 0, 0, 0, 0, None, None, None, None),
-        Queues.EGate -> CrunchMinute(terminal, Queues.EGate, 45, 0, 0, 0, 0, None, None, None, None)
+      45L * 60000 -> Map(
+        Queues.EeaDesk -> CrunchMinute(terminal, Queues.EeaDesk, 45 * 60000, 0, 0, 0, 0, None, None, None, None),
+        Queues.EGate -> CrunchMinute(terminal, Queues.EGate, 45 * 60000, 0, 0, 0, 0, None, None, None, None)
       )
     )
 

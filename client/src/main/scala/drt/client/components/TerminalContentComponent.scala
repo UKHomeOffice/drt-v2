@@ -60,6 +60,13 @@ object TerminalContentComponent {
     state.window(startOfView, endOfView, queues)
   }
 
+  def viewStartAndEnd(day: SDateLike, range: TimeRangeHours): (SDateLike, SDateLike) = {
+    val startOfDay = SDate(day.getFullYear(), day.getMonth(), day.getDate())
+    val startOfView = startOfDay.addHours(range.start)
+    val endOfView = startOfDay.addHours(range.end)
+    (startOfView, endOfView)
+  }
+
   val timelineComp: Option[Arrival => html_<^.VdomElement] = Some(FlightTableComponents.timelineCompFunc _)
 
   def airportWrapper(portCode: String): ReactConnectProxy[Pot[AirportInfo]] = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
@@ -105,6 +112,9 @@ object TerminalContentComponent {
           <.div(^.id := "terminal-data", "Nothing to show for this time period")
         } else ""),
         props.crunchStatePot.render((crunchState: PortState) => {
+          val queues = props.airportConfig.queues.filter(_ == props.terminalPageTab.terminal)
+          val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.time, timeRangeHours)
+          val filteredPortState = crunchState.window(viewStart, viewEnd, queues)
           <.div(^.className := s"view-mode-content $viewModeStr",
             <.div(^.className := "tabs-with-export",
               <.ul(^.className := "nav nav-tabs",
@@ -151,13 +161,13 @@ object TerminalContentComponent {
               <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
                 if (state.activeTab == "desksAndQueues") {
                   props.loggedInUserPot.render(loggedInUser => {
-                    val queues: Map[TerminalName, Seq[QueueName]] = props.airportConfig.queues.filter(_ == props.terminalPageTab.terminal)
-                    val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState, queues)
+                    val (viewStart, _) = viewStartAndEnd(props.terminalPageTab.viewMode.time, timeRangeHours)
                     TerminalDesksAndQueues(
                       TerminalDesksAndQueues.Props(
                         props.router,
-                        filteredPortState.crunchMinutes,
-                        filteredPortState.staffMinutes,
+                        filteredPortState,
+                        viewStart,
+                        timeRangeHours.end - timeRangeHours.start,
                         props.airportConfig,
                         props.terminalPageTab,
                         props.showActuals,
@@ -171,8 +181,6 @@ object TerminalContentComponent {
               <.div(^.id := "arrivals", ^.className := s"tab-pane in $arrivalsPanelActive", {
                 if (state.activeTab == "arrivals") {
                   <.div(props.crunchStatePot.render((crunchState: PortState) => {
-                    val queues: Map[TerminalName, Seq[QueueName]] = props.airportConfig.queues.filter(_ == props.terminalPageTab.terminal)
-                    val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState, queues)
                     arrivalsTableComponent(FlightsWithSplitsTable.Props(filteredPortState.flights.values.toList, queueOrder, props.airportConfig.hasEstChox))
                   }),
                     props.crunchStatePot.renderEmpty("No flights")

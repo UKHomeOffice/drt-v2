@@ -20,7 +20,6 @@ object PcpPaxSummary {
   def apply(startMillis: MillisSinceEpoch, durationMillis: Long, crunchMinutes: Map[TQM, CrunchMinute], terminalName: TerminalName, queues: Set[QueueName]): PcpPaxSummary = {
     val queueLoads: Map[QueueName, Double] = crunchMinutes
       .values
-      .filter(cm => cm.minute >= startMillis && cm.minute < startMillis + (durationMillis * 60000) && cm.terminalName == terminalName)
       .groupBy(_.queueName)
       .map {
         case (qn, cms) =>
@@ -49,7 +48,10 @@ object PcpPaxSummariesComponent {
               boxes.zipWithIndex.map {
                 case (label, box) =>
                   val start = now.addMinutes(box * 5)
-                  val summary = PcpPaxSummary(start.millisSinceEpoch, fiveMinutes, cs.crunchMinutes, props.terminalName, queues.toSet)
+                  val millisOffset = start.millisSinceEpoch % 60000
+                  val minuteStart = start.addMillis(-1 * millisOffset.toInt)
+                  val crunchMinutes = cs.window(minuteStart, minuteStart.addMinutes(4), Map(props.terminalName -> queues)).crunchMinutes
+                  val summary = PcpPaxSummary(start.millisSinceEpoch, fiveMinutes, crunchMinutes, props.terminalName, queues.toSet)
                   summaryBox(box, label, start, queues, summary)
               }.toTagMod
             )
