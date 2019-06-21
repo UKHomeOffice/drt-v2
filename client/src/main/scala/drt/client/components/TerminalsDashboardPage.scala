@@ -23,13 +23,13 @@ object TerminalsDashboardPage {
   val component = ScalaComponent.builder[Props]("TerminalsDashboard")
     .render_P(p => {
 
-      val portCodeQueueOrderTerminals = SPACircuit.connect(_.airportConfig.map(ac => (ac.queueOrder, ac.terminalNames)))
+      val portCodeQueueOrderTerminals = SPACircuit.connect(_.airportConfig)
       val crunchStateRCP = SPACircuit.connect(_.crunchStatePot)
 
       portCodeQueueOrderTerminals { portMP =>
         <.div(^.className := "terminal-summary-dashboard",
-          portMP().render(portConfig => {
-            val (queueOrder, terminals) = portConfig
+            portMP().render(portConfig => {
+            val (queueOrder, terminals) = (portConfig.queueOrder, portConfig.terminalNames)
             crunchStateRCP(crunchStateMP => {
               val currentPeriodStart = DashboardTerminalSummary.windowStart(SDate.now())
               val periods = List(

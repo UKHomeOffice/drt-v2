@@ -40,7 +40,6 @@ object Settings {
 
     val specs2 = "3.7"
     val react = "16.0.0"
-    val reactTestUtils = "15.4.1"
 
     val bootstrap = "3.3.6"
 
@@ -72,8 +71,6 @@ object Settings {
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
     val uPickle = "0.6.7"
-    val uJson = "0.7.1"
-    val reactMarkdown = "0.3.0"
   }
 
   import versions._
@@ -92,7 +89,6 @@ object Settings {
   val clientNpmDependences = Seq(
     "react" -> react,
     "react-dom" -> react,
-    "react-addons-test-utils" -> reactTestUtils,
     "log4javascript" -> log4Javascript,
     "bootstrap" -> bootstrap,
     "react-handsontable" -> reactHandsontable,
