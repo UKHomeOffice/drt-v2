@@ -3,6 +3,7 @@ package drt.client.components
 import diode.UseValueEq
 import diode.data.{Pending, Pot}
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
+import drt.client.components.TerminalDesksAndQueues.Props
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -10,6 +11,7 @@ import drt.client.services._
 import drt.shared.CrunchApi.{PortState, ForecastPeriodWithHeadlines}
 import drt.shared._
 import japgolly.scalajs.react.ScalaComponent
+import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 
@@ -28,7 +30,6 @@ object TerminalComponent {
                             potFixedPoints: Pot[FixedPointAssignments],
                             potStaffMovements: Pot[Seq[StaffMovement]],
                             airportConfig: Pot[AirportConfig],
-                            airportInfos: Pot[AirportInfo],
                             loadingState: LoadingState,
                             showActuals: Boolean,
                             loggedInUserPot: Pot[LoggedInUser],
@@ -47,7 +48,6 @@ object TerminalComponent {
         model.fixedPoints,
         model.staffMovements,
         model.airportConfig,
-        model.airportInfos.getOrElse(props.terminalPageTab.terminal, Pending()),
         model.loadingState,
         model.showActualIfAvailable,
         model.loggedInUserPot,
@@ -73,7 +73,6 @@ object TerminalComponent {
               model.potStaffMovements,
               airportConfig,
               props.terminalPageTab,
-              model.airportInfos,
               timeRangeHours,
               props.router,
               model.showActuals,

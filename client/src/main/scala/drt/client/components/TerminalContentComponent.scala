@@ -32,7 +32,6 @@ object TerminalContentComponent {
                     potStaffMovements: Pot[Seq[StaffMovement]],
                     airportConfig: AirportConfig,
                     terminalPageTab: TerminalPageTabLoc,
-                    airportInfoPot: Pot[AirportInfo],
                     defaultTimeRangeHours: TimeRangeHours,
                     router: RouterCtl[Loc],
                     showActuals: Boolean,
