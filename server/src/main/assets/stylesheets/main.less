@@ -1664,7 +1664,7 @@ a i.fa.fa-remove {
   width: calc(~"100% - 220px");
 }
 
-#has-alerts {
+.has-alerts {
   font-size: 15px;
   display: block;
   margin-top: 2px;
@@ -1672,6 +1672,10 @@ a i.fa.fa-remove {
   box-sizing: border-box;
   text-decoration: none;
   overflow: auto;
+}
+
+.has-alerts > span > div > p {
+  margin: 0px;
 }
 
 .alert-class-notice {
@@ -1701,4 +1705,15 @@ table.key-cloak-users tr:nth-child(odd) {
 
 div.access-restricted {
   padding: 15px;
+}
+
+.config-block {
+  max-width: 350px;
+  float: left;
+  margin-right: 30px;
+}
+
+.container .config-container {
+  margin-left: 1%;
+  padding: 0
 }

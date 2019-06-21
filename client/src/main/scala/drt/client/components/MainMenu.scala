@@ -28,6 +28,8 @@ object MainMenu {
 
   def statusMenuItem(position: Int, feeds: Seq[FeedStatuses]): MenuItem = MenuItem(position, _ => s"Feeds", Icon.barChart, StatusLoc, List(feedsRag(feeds)))
 
+  def portConfigMenuItem(position: Int): MenuItem = MenuItem(position, _ => s"Port Config", Icon.cogs, PortConfigLoc)
+
   def feedsRag(feeds: Seq[FeedStatuses]): String = {
     val rag = if (feeds.map(_.ragStatus(SDate.now().millisSinceEpoch)).contains(Red)) Red
     else if (feeds.map(_.ragStatus(SDate.now().millisSinceEpoch)).contains(Amber)) Amber
@@ -53,7 +55,7 @@ object MainMenu {
     val restrictedMenuItems: List[(Role, Int => MenuItem)] = List(
       (ManageUsers, usersMenuItem _),
       (CreateAlerts, alertsMenuItem _)
-    ) ++ terminalDepsMenuItem
+    ) ++ terminalDepsMenuItem :+ (ViewConfig, portConfigMenuItem _)
 
     val nonTerminalUnrestrictedMenuItems = dashboardMenuItem :: Nil
 

@@ -5,6 +5,8 @@ import drt.client.services.SPACircuit
 import drt.shared.Alert
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.ScalaComponent
+import org.scalajs.dom.html.Span
+
 
 object AlertsComponent {
 
@@ -21,20 +23,23 @@ object AlertsComponent {
         val alertsPot = modelMP()
 
         <.div(^.id := "alerts",
-          alertsPot.render((alerts: Seq[Alert]) => {
-            <.span(^.id := "has-alerts",
-              alerts.map(alert => {
-                <.span(^.key := alert.createdAt, ^.`class` := s"alert alert-class-${alert.alertClass} the-alert", ^.role := "alert",
-                  <.div(^.dangerouslySetInnerHtml := s"<strong>${alert.title}</strong> - ${alert.message}")
-                )
-              }).toVdomArray
-            )
-          }),
+          alertsPot.render(renderAlert),
           alertsPot.renderEmpty(<.div(^.id := "empty-alert"))
         )
       }
     })
     .build
+
+  def renderAlert(alerts: List[Alert]): VdomTagOf[Span] =
+    <.span(^.className := "has-alerts",
+      alerts.map(alert => {
+        val message = if (alert.title.nonEmpty) s"${alert.title} - ${alert.message}" else alert.message
+        <.span(^.key := alert.createdAt, ^.`class` := s"alert alert-class-${alert.alertClass} the-alert", ^.role := "alert",
+          ReactMarkdown.component(ReactMarkdown.props(message))
+        )
+      }).toVdomArray
+    )
+
 
   def apply(): VdomElement = component(Props())
 }

@@ -5,7 +5,7 @@ import java.util.UUID
 import diode.Action
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType}
-import drt.client.components.{AlertsPage, ContactPage, EditKeyCloakUserPage, GlobalStyles, KeyCloakUsersPage, Layout, StatusPage, TerminalComponent, TerminalPlanningComponent, TerminalsDashboardPage, TerminalsExportDashboardPage, UserDashboardPage}
+import drt.client.components.{AlertsPage, ContactPage, EditKeyCloakUserPage, GlobalStyles, KeyCloakUsersPage, Layout, PortConfigPage, StatusPage, TerminalComponent, TerminalPlanningComponent, TerminalsDashboardPage, TerminalsExportDashboardPage, UserDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -126,6 +126,8 @@ object SPAMain {
 
   case object ContactUsLoc extends Loc
 
+  case object PortConfigLoc extends Loc
+
   case object KeyCloakUsersLoc extends Loc
 
   case class KeyCloakUserEditLoc(userId: UUID) extends Loc
@@ -154,7 +156,7 @@ object SPAMain {
     .buildConfig { dsl =>
       import dsl._
 
-      val rule = homeRoute(dsl) | dashboardRoute(dsl) | terminalRoute(dsl) | statusRoute(dsl) | keyCloakUsersRoute(dsl) | keyCloakUserEditRoute(dsl) | alertRoute(dsl) | contactRoute(dsl)
+      val rule = homeRoute(dsl) | dashboardRoute(dsl) | terminalRoute(dsl) | statusRoute(dsl) | keyCloakUsersRoute(dsl) | keyCloakUserEditRoute(dsl) | alertRoute(dsl) | contactRoute(dsl) | portConfigRoute(dsl)
 
       rule.notFound(redirectToPage(TerminalsDashboardLoc(None))(Redirect.Replace))
     }
@@ -220,6 +222,12 @@ object SPAMain {
     import dsl._
 
     staticRoute("#contact", ContactUsLoc) ~> renderR(_ => ContactPage())
+  }
+
+  def portConfigRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+    import dsl._
+
+    staticRoute("#config", PortConfigLoc) ~> renderR(_ => PortConfigPage())
   }
 
   def dashboardRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {

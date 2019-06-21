@@ -124,7 +124,7 @@ object Actions {
 
   case class GetAlerts(since: MillisSinceEpoch) extends Action
 
-  case class SetAlerts(alerts: Seq[Alert], since: MillisSinceEpoch) extends Action
+  case class SetAlerts(alerts: List[Alert], since: MillisSinceEpoch) extends Action
 
   case object DeleteAllAlerts extends Action
 

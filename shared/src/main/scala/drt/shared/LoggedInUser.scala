@@ -54,7 +54,8 @@ object Roles {
     ArrivalsAndSplitsView,
     ForecastView,
     BorderForceStaff,
-    PortOperatorStaff
+    PortOperatorStaff,
+    ViewConfig
   ) ++ portRoles
 
   def parse(roleName: String): Option[Role] = availableRoles.find(role => role.name == roleName)
@@ -126,6 +127,10 @@ case object STNAccess extends Role {
 
 case object CreateAlerts extends Role {
   override val name: String = "create-alerts"
+}
+
+case object ViewConfig extends Role {
+  override val name: String = "view-config"
 }
 
 case object FixedPointsEdit extends Role {

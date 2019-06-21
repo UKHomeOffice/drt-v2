@@ -81,12 +81,24 @@ object PaxTypes {
 
   case object UndefinedPaxType extends PaxType
 
+  def displayName(pt: PaxType) = pt match {
+    case EeaMachineReadable => "EEA Machine Readable"
+    case EeaNonMachineReadable => "EEA Non-Machine Readable"
+    case EeaBelowEGateAge => "EEA Child"
+    case VisaNational => "Visa National"
+    case NonVisaNational => "Non-Visa National"
+    case B5JPlusNational => "B5J+ National"
+    case B5JPlusNationalBelowEGateAge => "B5J+ Child"
+    case Transit => "Transit"
+    case other => other.name
+  }
 }
 
 case class PaxTypeAndQueue(passengerType: PaxType, queueType: String)
 
 object PaxTypeAndQueue {
   def apply(split: ApiPaxTypeAndQueueCount): PaxTypeAndQueue = PaxTypeAndQueue(split.passengerType, split.queueType)
+
   implicit val rw: RW[PaxTypeAndQueue] = macroRW
 }
 

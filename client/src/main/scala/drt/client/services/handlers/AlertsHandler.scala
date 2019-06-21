@@ -16,14 +16,14 @@ import scala.concurrent.duration.{FiniteDuration, _}
 import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class AlertsHandler[M](modelRW: ModelRW[M, Pot[Seq[Alert]]]) extends LoggingActionHandler(modelRW) {
+class AlertsHandler[M](modelRW: ModelRW[M, Pot[List[Alert]]]) extends LoggingActionHandler(modelRW) {
 
   val alertsRequestFrequency: FiniteDuration = 10 seconds
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
 
     case GetAlerts(since: MillisSinceEpoch) =>
       effectOnly(Effect(DrtApi.get(s"alerts/$since").map(r => {
-        val alerts = read[Seq[Alert]](r.responseText)
+        val alerts = read[List[Alert]](r.responseText)
         SetAlerts(alerts, since)
       }).recoverWith {
         case _ =>
@@ -48,7 +48,7 @@ class AlertsHandler[M](modelRW: ModelRW[M, Pot[Seq[Alert]]]) extends LoggingActi
             log.error(s"Failed to delete all alerts. Re-requesting after ${PollDelay.recoveryDelay}")
             Future(RetryActionAfter(DeleteAllAlerts, PollDelay.recoveryDelay))
         }
-      effectOnly(Effect(responseFuture))
+      updated(Empty, Effect(responseFuture))
 
     case SaveAlert(alert) =>
       val responseFuture = DrtApi.post("alerts", write(alert))
@@ -58,6 +58,12 @@ class AlertsHandler[M](modelRW: ModelRW[M, Pot[Seq[Alert]]]) extends LoggingActi
             log.error(s"Failed to save Alert. Re-requesting after ${PollDelay.recoveryDelay}")
             Future(RetryActionAfter(SaveAlert(alert), PollDelay.recoveryDelay))
         }
-      effectOnly(Effect(responseFuture))
+
+      val pot = value match {
+        case Empty => Ready(List(alert))
+        case Ready(alerts) => Ready(alert :: alerts)
+      }
+
+      updated(pot, Effect(responseFuture))
   }
 }
