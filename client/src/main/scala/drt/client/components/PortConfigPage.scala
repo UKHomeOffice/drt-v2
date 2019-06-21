@@ -39,7 +39,7 @@ object PortConfigDetails {
               <.div(
                 <.h2(tn),
                 <.div(^.className := "container config-container",
-                  <.h4("Min / Max Desks by hour of day"),
+                  <.h4("Min / Max Desks or eGate Banks by hour of day"),
                   minMaxDesksTable(config.minMaxDesksByTerminalQueue(tn))
                 ),
                 <.div(^.className := "container config-container",
