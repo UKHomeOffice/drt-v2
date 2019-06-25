@@ -69,39 +69,6 @@ object BigSummaryBoxes {
       }
   }
 
-//  def aggregateSplitsLogging(bestFlightPax: Arrival => Int)(flights: Seq[ApiFlightWithSplits]): Unit = {
-//    val flightSplits: ApiFlightWithSplits => Set[(PaxTypeAndQueue, Double)] = bestFlightSplits(bestFlightPax)
-//
-//    def excludeTrans(s: (PaxTypeAndQueue, Double)): Boolean = {
-//      s._1.queueType != Queues.Transfer
-//    }
-//
-//    def identity(s: (PaxTypeAndQueue, Double)): Boolean = true
-//
-//    def inner(filter: String, sfilter: (PaxTypeAndQueue, Double) => Boolean): Unit = {
-//      val allFlightsBestPaxAndSplitsExTx = flights.map(f => {
-//        val filtered = flightSplits(f).filter(sfilter)
-//        val splitSum = filtered.map(_._2).sum
-//        (f.apiFlight, bestFlightPax(f.apiFlight), filter, splitSum)
-//      })
-//      val notAgreeing = allFlightsBestPaxAndSplitsExTx.filter(f => f._2 != f._3.map(_._2).sum.toInt)
-//      val allDiffs = notAgreeing.map(f => {
-//        val splitSum = f._3.map(_._2).sum.toInt
-//        (Arrival.summaryString(f._1), f._2 - splitSum, f._2, splitSum)
-//      })
-//      val totalDiff = allDiffs.map(f => f._2).sum
-//      println(s"$filter flightPax: arr: ${allFlightsBestPaxAndSplitsExTx.map(_._2).sum} splExTx: ${allFlightsBestPaxAndSplitsExTx.map(_._3.map(_._2).sum).sum}")
-//
-//      println(s"$filter notAgreeing totalDiff: ${totalDiff} over ${allDiffs.length} ${pprint.stringify(allDiffs)}")
-//      println(s"notAgreeing: ${pprint.stringify(notAgreeing)}")
-//
-//    }
-//
-//    inner("exTx", excludeTrans)
-//    inner("inTx", identity)
-//
-//  }
-
   def aggregateSplits(bestFlightPax: Arrival => Int)(flights: Seq[ApiFlightWithSplits]): Map[PaxTypeAndQueue, Int] = {
     val newSplits = Map[PaxTypeAndQueue, Double]()
     val flightSplits = bestFlightSplits(bestFlightPax)

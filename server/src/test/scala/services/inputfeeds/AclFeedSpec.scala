@@ -185,7 +185,6 @@ class AclFeedSpec extends CrunchTestLike {
       crunch.liveTestProbe.fishForMessage(3 seconds) {
         case ps: PortState =>
           val flightsResult = ps.flights.values.map(_.apiFlight).toSet
-          println(s"got flights: $flightsResult")
           flightsResult == expected
       }
 
