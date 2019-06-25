@@ -197,7 +197,7 @@ case class DeskRecMinute(terminalName: TerminalName,
 case class DeskRecMinutes(minutes: Set[DeskRecMinute]) extends PortStateMinutes {
   def applyTo(maybePortState: Option[PortState], now: SDateLike): Option[PortState] = {
     maybePortState match {
-      case None => Option(PortState(Map[Int, ApiFlightWithSplits](), newCrunchMinutes, Map[TM, StaffMinute]()))
+      case None => Option(PortState(Map[Int, ApiFlightWithSplits](), newCrunchMinutes, SortedMap[TM, StaffMinute]()))
       case Some(portState) =>
         val updatedCrunchMinutes = minutes
           .foldLeft(portState.crunchMinutes) {

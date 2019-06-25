@@ -57,7 +57,7 @@ class ApplicationRestartSpec extends CrunchTestLike {
         ApiFlightWithSplits(arrivalBase, splits)
       ).map(f => (f.apiFlight.uniqueId, f)).toMap,
       crunchMinutes = SortedMap[TQM, CrunchMinute](),
-      staffMinutes = emptyStaffMinutes(now, daysToCrunch, airportConfig.terminalNames.toList)
+      staffMinutes = SortedMap[TM, StaffMinute]() ++ emptyStaffMinutes(now, daysToCrunch, airportConfig.terminalNames.toList)
     )
     val initialLiveArrivals = Set(arrivalLive)
 
@@ -119,8 +119,8 @@ class ApplicationRestartSpec extends CrunchTestLike {
         ApiFlightWithSplits(arrivalDay1, splits),
         ApiFlightWithSplits(arrivalDay2, splits)
       ).map(f => (f.apiFlight.uniqueId, f)).toMap,
-      SortedMap[TQM, CrunchMinute]() ++ existingMinutesDay1.toMap ++ existingMinutesDay2.toMap,
-      staffMinutes = emptyStaffMinutes(now, daysToCrunch, airportConfig.terminalNames.toList)
+      crunchMinutes = SortedMap[TQM, CrunchMinute]() ++ existingMinutesDay1.toMap ++ existingMinutesDay2.toMap,
+      staffMinutes = SortedMap[TM, StaffMinute]() ++ emptyStaffMinutes(now, daysToCrunch, airportConfig.terminalNames.toList)
     )
 
     val initialLiveArrivals = Set(arrivalDay1, arrivalDay2)

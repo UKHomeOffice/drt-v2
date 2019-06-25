@@ -154,7 +154,16 @@ object TQM {
   def apply(crunchMinute: CrunchMinute): TQM = TQM(crunchMinute.terminalName, crunchMinute.queueName, crunchMinute.minute)
 }
 
-case class TM(terminalName: TerminalName, minute: MillisSinceEpoch)
+case class TM(terminalName: TerminalName, minute: MillisSinceEpoch) extends Ordered[TM]  {
+  override def equals(o: scala.Any): Boolean = o match {
+    case TM(t, m) => t == terminalName && m == minute
+    case _ => false
+  }
+
+  lazy val comparisonString = s"$minute-$terminalName"
+
+  override def compare(that: TM): Int = this.comparisonString.compareTo(that.comparisonString)
+}
 
 object TM {
   implicit val rw: RW[TM] = macroRW
@@ -500,7 +509,7 @@ object CrunchApi {
 
   case class PortState(flights: Map[Int, ApiFlightWithSplits],
                        crunchMinutes: SortedMap[TQM, CrunchMinute],
-                       staffMinutes: Map[TM, StaffMinute]) {
+                       staffMinutes: SortedMap[TM, StaffMinute]) {
     lazy val latestUpdate: MillisSinceEpoch = {
       val latestFlights = if (flights.nonEmpty) flights.map(_._2.lastUpdated.getOrElse(0L)).max else 0L
       val latestCrunch = if (crunchMinutes.nonEmpty) crunchMinutes.map(_._2.lastUpdated.getOrElse(0L)).max else 0L
@@ -537,7 +546,7 @@ object CrunchApi {
       SortedMap[TQM, CrunchMinute]() ++ maybeCms.collect { case Some(tup) => tup }
     }
 
-    def extractStaffMinutes(windowRange: Array[MillisSinceEpoch], terminals: Seq[TerminalName]): Map[TM, StaffMinute] = {
+    def extractStaffMinutes(windowRange: Array[MillisSinceEpoch], terminals: Seq[TerminalName]): SortedMap[TM, StaffMinute] = {
       val maybeSms = for {
         terminal <- terminals
         minute <- windowRange
@@ -545,9 +554,7 @@ object CrunchApi {
         val tm = TM(terminal, minute)
         staffMinutes.get(tm).map(cm => (tm, cm))
       }
-      maybeSms.collect {
-        case Some(tup) => tup
-      }.toMap
+      SortedMap[TM, StaffMinute]() ++ maybeSms.collect { case Some(tup) => tup }
     }
 
     def updates(sinceEpoch: MillisSinceEpoch): Option[CrunchUpdates] = {
@@ -648,17 +655,25 @@ object CrunchApi {
 
   object PortState {
     implicit val rw: ReadWriter[PortState] =
-      readwriter[(Map[Int, ApiFlightWithSplits], Map[TQM, CrunchMinute], Map[TM, StaffMinute])].bimap[PortState](ps => (ps.flights, ps.crunchMinutes, ps.staffMinutes), t => PortState(t._1, SortedMap[TQM, CrunchMinute]() ++ t._2, t._3))
-//    implicit val rw: RW[PortState] = macroRW
+      readwriter[(Map[Int, ApiFlightWithSplits], Map[TQM, CrunchMinute], Map[TM, StaffMinute])]
+        .bimap[PortState](ps => portStateToTuple(ps), t => tupleToPortState(t))
+
+    private def tupleToPortState(t: (Map[Int, ApiFlightWithSplits], Map[TQM, CrunchMinute], Map[TM, StaffMinute])): PortState = {
+      PortState(t._1, SortedMap[TQM, CrunchMinute]() ++ t._2, SortedMap[TM, StaffMinute]() ++ t._3)
+    }
+
+    private def portStateToTuple(ps: PortState): (Map[Int, ApiFlightWithSplits], SortedMap[TQM, CrunchMinute], SortedMap[TM, StaffMinute]) = {
+      (ps.flights, ps.crunchMinutes, ps.staffMinutes)
+    }
 
     def apply(flightsWithSplits: List[ApiFlightWithSplits], crunchMinutes: List[CrunchMinute], staffMinutes: List[StaffMinute]): PortState = {
       val flights = flightsWithSplits.map(fws => (fws.apiFlight.uniqueId, fws)).toMap
-      val cms = SortedMap[TQM, CrunchMinute]() ++ crunchMinutes.map(cm => (TQM(cm), cm)).toMap
-      val sms = staffMinutes.map(sm => (TM(sm), sm)).toMap
+      val cms = SortedMap[TQM, CrunchMinute]() ++ crunchMinutes.map(cm => (TQM(cm), cm))
+      val sms = SortedMap[TM, StaffMinute]() ++ staffMinutes.map(sm => (TM(sm), sm))
       PortState(flights, cms, sms)
     }
 
-    val empty: PortState = PortState(Map[Int, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), Map[TM, StaffMinute]())
+    val empty: PortState = PortState(Map[Int, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())
   }
 
   trait Minute {

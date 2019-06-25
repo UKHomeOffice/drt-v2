@@ -40,16 +40,6 @@ object TerminalContentComponent {
 
   case class State(activeTab: String, showExportDialogue: Boolean = false)
 
-  def filterCrunchStateByRange(day: SDateLike,
-                               range: TimeRangeHours,
-                               state: PortState,
-                               queues: Map[TerminalName, Seq[QueueName]]): PortState = {
-    val startOfDay = SDate(day.getFullYear(), day.getMonth(), day.getDate())
-    val startOfView = startOfDay.addHours(range.start)
-    val endOfView = startOfDay.addHours(range.end)
-    state.window(startOfView, endOfView, queues)
-  }
-
   def viewStartAndEnd(day: SDateLike, range: TimeRangeHours): (SDateLike, SDateLike) = {
     val startOfDay = SDate(day.getFullYear(), day.getMonth(), day.getDate())
     val startOfView = startOfDay.addHours(range.start)

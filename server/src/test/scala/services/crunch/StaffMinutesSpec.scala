@@ -526,12 +526,12 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     val daysToCrunch = 5
 
-    def staffMinutes(days: Int, minutes: Int, startDate: String): Map[TM, StaffMinute] = (0 until days).flatMap { day =>
+    def staffMinutes(days: Int, minutes: Int, startDate: String): SortedMap[TM, StaffMinute] = SortedMap[TM, StaffMinute]() ++ (0 until days).flatMap { day =>
       (0 until minutes).map { minute =>
         val currentMinute = SDate(startDate).addDays(day).addMinutes(minute).millisSinceEpoch
         (TM("T1", currentMinute), StaffMinute("T1", currentMinute, 0, 1, 0))
       }
-    }.toMap
+    }
 
     val crunch = runCrunchGraph(
       now = () => now,

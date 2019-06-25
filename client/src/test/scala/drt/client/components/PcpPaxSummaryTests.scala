@@ -21,7 +21,7 @@ object PcpPaxSummaryTests extends TestSuite {
           generateCrunchMinutes(startMillis, quantity, "T1", Queues.FastTrack, 0.1, 2)
       val crunchMinutes = crunchMinutesSet.map(cm => (TQM(cm), cm)).toMap
 
-      val summaryStartMillis = SDate("2018-01-01T00:04").millisSinceEpoch
+      val summaryStartMillis = SDate("2018-01-01T00:04")
       val summaryDurationMinutes = 3
 
       val result = PcpPaxSummary(summaryStartMillis, summaryDurationMinutes, crunchMinutes, "T1", Set(Queues.EeaDesk, Queues.NonEeaDesk))
@@ -47,7 +47,7 @@ object PcpPaxSummaryTests extends TestSuite {
           generateCrunchMinutes(startMillis, quantity, "T2", Queues.FastTrack, 0.05, 2)
       val crunchMinutes = crunchMinutesSet.map(cm => (TQM(cm), cm)).toMap
 
-      val summaryStartMillis = SDate("2018-01-01T00:04").millisSinceEpoch
+      val summaryStartMillis = SDate("2018-01-01T00:04")
       val summaryDurationMinutes = 3
 
       val result = PcpPaxSummary(summaryStartMillis, summaryDurationMinutes, crunchMinutes, "T1", Set(Queues.EeaDesk, Queues.NonEeaDesk))

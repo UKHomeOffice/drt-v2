@@ -81,12 +81,12 @@ class JsonSerializationSpec extends Specification {
       val crunchMinutes = SortedMap[TQM, CrunchMinute]() ++ List(
         CrunchMinute("T1", Queues.NonEeaDesk, 0L, 2.0, 2.0, 1, 1, None, None, None, None, Some(0)),
         CrunchMinute("T1", Queues.NonEeaDesk, 0L, 2.0, 2.0, 1, 1, None, None, None, None, Some(0))
-      ).map(cm => (TQM(cm), cm)).toMap
+      ).map(cm => (TQM(cm), cm))
 
-      val staffMinutes = List(
+      val staffMinutes = SortedMap[TM, StaffMinute]() ++ List(
         StaffMinute("T1", 0L, 1, 1, 1, None),
         StaffMinute("T1", 0L, 1, 1, 1, None)
-      ).map(sm => (TM(sm), sm)).toMap
+      ).map(sm => (TM(sm), sm))
 
       val cs = PortState(flightsWithSplits, crunchMinutes, staffMinutes)
 

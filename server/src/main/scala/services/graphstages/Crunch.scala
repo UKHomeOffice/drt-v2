@@ -171,7 +171,7 @@ object Crunch {
     withUpdates
   }
 
-  def applyStaffDiff(staffMinuteUpdates: Set[StaffMinute], staffMinutes: Map[TM, StaffMinute], nowMillis: MillisSinceEpoch): Map[TM, StaffMinute] = {
+  def applyStaffDiff(staffMinuteUpdates: Set[StaffMinute], staffMinutes: SortedMap[TM, StaffMinute], nowMillis: MillisSinceEpoch): SortedMap[TM, StaffMinute] = {
     val withUpdates = staffMinuteUpdates.foldLeft(staffMinutes) {
       case (soFar, sm) if sm.minute % oneMinuteMillis == 0 => soFar.updated(sm.key, sm.copy(lastUpdated = Option(nowMillis)))
       case (soFar, _) => soFar

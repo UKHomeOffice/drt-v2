@@ -396,7 +396,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
       initialBaseArrivals = initialBaseArrivals,
-      initialPortState = Option(PortState(initialPortStateArrivals, SortedMap[TQM, CrunchMinute](), Map[TM, StaffMinute]())),
+      initialPortState = Option(PortState(initialPortStateArrivals, SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())),
       maxDaysToCrunch = 4
     )
 

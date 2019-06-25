@@ -21,7 +21,9 @@ object FilterCrunchByRangeTests extends TestSuite {
         val staffMinuteWithinRange = StaffMinute("T1", dateWithinRange.millisSinceEpoch, 0, 0, 0)
         val flightWithinRange = ApiFlightWithSplits(apiFlight(Terminal = "T1", SchDT = dateWithinRange.toISOString(), PcpTime = dateWithinRange.millisSinceEpoch), Set())
 
-        val result = filterCrunchStateByRange(dateWithinRange, range, PortState(List(flightWithinRange), List(crunchMinuteWithinRange), List(staffMinuteWithinRange)), Map("T1" -> Seq(Queues.EeaDesk)))
+        val state = PortState(List(flightWithinRange), List(crunchMinuteWithinRange), List(staffMinuteWithinRange))
+        val (start, end) = viewStartAndEnd(dateWithinRange, range)
+        val result = state.window(start, end, Map("T1" -> Seq(Queues.EeaDesk)))
         val expected = PortState(List(flightWithinRange), List(crunchMinuteWithinRange), List(staffMinuteWithinRange))
 
         assert(result == expected)
@@ -32,8 +34,9 @@ object FilterCrunchByRangeTests extends TestSuite {
         val staffMinuteNotWithinRange = StaffMinute("T1", dateOutsideRange.millisSinceEpoch, 0, 0, 0)
         val flightNotWithinRange = ApiFlightWithSplits(apiFlight(Terminal = "T1", SchDT = dateOutsideRange.toISOString(), PcpTime = dateOutsideRange.millisSinceEpoch), Set())
 
-        val result = filterCrunchStateByRange(dateWithinRange, range, PortState(List(flightNotWithinRange), List(crunchMinuteNotWithinRange), List(staffMinuteNotWithinRange)), Map("T1" -> Seq(Queues.EeaDesk)))
-
+        val state = PortState(List(flightNotWithinRange), List(crunchMinuteNotWithinRange), List(staffMinuteNotWithinRange))
+        val (start, end) = viewStartAndEnd(dateWithinRange, range)
+        val result = state.window(start, end, Map("T1" -> Seq(Queues.EeaDesk)))
         val expected = PortState.empty
 
         assert(result == expected)
@@ -53,7 +56,8 @@ object FilterCrunchByRangeTests extends TestSuite {
           List(crunchMinuteNotWithinRange, crunchMinuteWithinRange),
           List(staffMinuteNotWithinRange, staffMinuteWithinRange))
 
-        val result = filterCrunchStateByRange(dateWithinRange, range, portState, Map("T1" -> Seq(Queues.EeaDesk)))
+        val (start, end) = viewStartAndEnd(dateWithinRange, range)
+        val result = portState.window(start, end, Map("T1" -> Seq(Queues.EeaDesk)))
 
         val expected = PortState(List(flightWithinRange), List(crunchMinuteWithinRange), List(staffMinuteWithinRange))
 

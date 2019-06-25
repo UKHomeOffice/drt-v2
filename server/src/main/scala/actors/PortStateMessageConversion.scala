@@ -35,13 +35,13 @@ object PortStateMessageConversion {
       case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 =>
         val cm = crunchMinuteFromMessage(message)
         (cm.key, cm)
-    }.toMap
+    }
 
-    val staffMinutes = sm.staffMinutes.collect {
+    val staffMinutes = SortedMap[TM, StaffMinute]() ++ sm.staffMinutes.collect {
       case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 =>
         val sm = staffMinuteFromMessage(message)
         (sm.key, sm)
-    }.toMap
+    }
 
     log.debug(s"Finished unwrapping messages")
 

@@ -36,7 +36,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(
       airportConfig = airportConfig.copy(terminalNames = Seq("T1")),
       now = () => dateNow,
-      initialPortState = Option(PortState(Map(arrival_v2_with_chox_time.uniqueId -> ApiFlightWithSplits(arrival_v2_with_chox_time, Set(terminalSplits))), SortedMap[TQM, CrunchMinute](), Map[TM, StaffMinute]())),
+      initialPortState = Option(PortState(Map(arrival_v2_with_chox_time.uniqueId -> ApiFlightWithSplits(arrival_v2_with_chox_time, Set(terminalSplits))), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())),
       initialLiveArrivals = Set(arrival_v2_with_chox_time)
     )
 

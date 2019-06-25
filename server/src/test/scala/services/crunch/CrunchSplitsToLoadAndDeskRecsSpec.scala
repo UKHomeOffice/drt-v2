@@ -197,7 +197,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               eeaMachineReadableToDesk -> 20d / 60,
               eeaMachineReadableToEGate -> 35d / 60))
           ),
-          initialPortState = Option(PortState(Map(arrival.uniqueId -> ApiFlightWithSplits(arrival, Set())), SortedMap[TQM, CrunchMinute](), Map[TM, StaffMinute]()))
+          initialPortState = Option(PortState(Map(arrival.uniqueId -> ApiFlightWithSplits(arrival, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
         )
 
         val voyageManifests = ManifestsFeedSuccess(DqManifests("", Set(

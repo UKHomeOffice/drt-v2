@@ -101,8 +101,10 @@ class CrunchStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
     }
   }
 
-  def updateAndTrimStaff(crunchUpdates: CrunchUpdates, existingState: PortState, keepFromMillis: MillisSinceEpoch): Map[TM, CrunchApi.StaffMinute] = {
-    val relevantMinutes = existingState.staffMinutes.filter { case (_, sm) => sm.minute >= keepFromMillis }
+  def updateAndTrimStaff(crunchUpdates: CrunchUpdates, existingState: PortState, keepFromMillis: MillisSinceEpoch): SortedMap[TM, CrunchApi.StaffMinute] = {
+    val relevantMinutes = existingState.staffMinutes.dropWhile {
+      case (TM(_, m), _) => m < keepFromMillis
+    }
     crunchUpdates.staff.foldLeft(relevantMinutes) {
       case (soFar, newSm) => soFar.updated(TM(newSm), newSm)
     }

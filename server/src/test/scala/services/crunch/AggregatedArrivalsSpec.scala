@@ -123,7 +123,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     val oldSplits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 100, None)), SplitSources.Historical, None, Percentage)
     val initialFlightsWithSplits = Seq(ApiFlightWithSplits(expiredArrival, Set(oldSplits), None))
-    val initialPortState = PortState(initialFlightsWithSplits.map(f => (f.apiFlight.uniqueId, f)).toMap, SortedMap[TQM, CrunchMinute](), Map[TM, StaffMinute]())
+    val initialPortState = PortState(initialFlightsWithSplits.map(f => (f.apiFlight.uniqueId, f)).toMap, SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())
 
     val testProbe = TestProbe("arrivals-probe")
 
@@ -167,7 +167,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     val oldSplits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 100, None)), SplitSources.Historical, None, Percentage)
     val initialFlightsWithSplits = Seq(ApiFlightWithSplits(descheduledArrival, Set(oldSplits), None))
-    val initialPortState = PortState(initialFlightsWithSplits.map(f => (f.apiFlight.uniqueId, f)).toMap, SortedMap[TQM, CrunchMinute](), Map[TM, StaffMinute]())
+    val initialPortState = PortState(initialFlightsWithSplits.map(f => (f.apiFlight.uniqueId, f)).toMap, SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())
 
     val testProbe = TestProbe("arrivals-probe")
 

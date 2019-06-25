@@ -20,7 +20,7 @@ class CrunchSummarySpec extends Specification {
     }
 
     val cmsMap = SortedMap[TQM, CrunchMinute]() ++ cmsList.map(cm => (TQM(cm), cm)).toMap
-    val portState = CrunchApi.PortState(Map[Int, ApiFlightWithSplits](), cmsMap, Map[TM, StaffMinute]())
+    val portState = CrunchApi.PortState(Map[Int, ApiFlightWithSplits](), cmsMap, SortedMap[TM, StaffMinute]())
 
     val periods = 4
     val periodSize = 15
