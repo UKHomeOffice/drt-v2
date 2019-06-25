@@ -25,7 +25,7 @@ import scala.util.Try
 
 object TerminalContentComponent {
 
-  case class Props(crunchStatePot: Pot[PortState],
+  case class Props(portStatePot: Pot[PortState],
                    potShifts: Pot[ShiftAssignments],
                    potFixedPoints: Pot[FixedPointAssignments],
                    potStaffMovements: Pot[Seq[StaffMovement]],
@@ -87,14 +87,14 @@ object TerminalContentComponent {
       val timeRangeHours: CustomWindow = timeRange(props)
 
       <.div(
-        props.crunchStatePot.renderPending(_ => if (props.crunchStatePot.isEmpty) <.div(^.id := "terminal-spinner", Icon.spinner) else ""),
-        props.crunchStatePot.renderEmpty(if (!props.crunchStatePot.isPending) {
+        props.portStatePot.renderPending(_ => if (props.portStatePot.isEmpty) <.div(^.id := "terminal-spinner", Icon.spinner) else ""),
+        props.portStatePot.renderEmpty(if (!props.portStatePot.isPending) {
           <.div(^.id := "terminal-data", "Nothing to show for this time period")
         } else ""),
-        props.crunchStatePot.render((crunchState: PortState) => {
+        props.portStatePot.render((portState: PortState) => {
           val queues = props.airportConfig.queues.filterKeys(_ == props.terminalPageTab.terminal)
           val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.time, timeRangeHours)
-          val filteredPortState = crunchState.window(viewStart, viewEnd, queues)
+          val filteredPortState = portState.window(viewStart, viewEnd, queues)
           <.div(^.className := s"view-mode-content $viewModeStr",
             <.div(^.className := "tabs-with-export",
               <.ul(^.className := "nav nav-tabs",

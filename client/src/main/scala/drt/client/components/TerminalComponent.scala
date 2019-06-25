@@ -22,26 +22,25 @@ object TerminalComponent {
 
   case class Props(terminalPageTab: TerminalPageTabLoc, router: RouterCtl[Loc])
 
-  case class TerminalModel(
-                            crunchStatePot: Pot[PortState],
-                            forecastPeriodPot: Pot[ForecastPeriodWithHeadlines],
-                            potShifts: Pot[ShiftAssignments],
-                            potMonthOfShifts: Pot[MonthOfShifts],
-                            potFixedPoints: Pot[FixedPointAssignments],
-                            potStaffMovements: Pot[Seq[StaffMovement]],
-                            airportConfig: Pot[AirportConfig],
-                            loadingState: LoadingState,
-                            showActuals: Boolean,
-                            loggedInUserPot: Pot[LoggedInUser],
-                            viewMode: ViewMode,
-                            minuteTicker: Int,
-                            maybeStaffAdjustmentsPopoverState: Option[StaffAdjustmentDialogueState]
+  case class TerminalModel(portStatePot: Pot[PortState],
+                           forecastPeriodPot: Pot[ForecastPeriodWithHeadlines],
+                           potShifts: Pot[ShiftAssignments],
+                           potMonthOfShifts: Pot[MonthOfShifts],
+                           potFixedPoints: Pot[FixedPointAssignments],
+                           potStaffMovements: Pot[Seq[StaffMovement]],
+                           airportConfig: Pot[AirportConfig],
+                           loadingState: LoadingState,
+                           showActuals: Boolean,
+                           loggedInUserPot: Pot[LoggedInUser],
+                           viewMode: ViewMode,
+                           minuteTicker: Int,
+                           maybeStaffAdjustmentsPopoverState: Option[StaffAdjustmentDialogueState]
                           ) extends UseValueEq
 
   val component = ScalaComponent.builder[Props]("Terminal")
     .render_P(props => {
       val modelRCP = SPACircuit.connect(model => TerminalModel(
-        model.crunchStatePot,
+        model.portStatePot,
         model.forecastPeriodPot,
         model.shifts,
         model.monthOfShifts,
@@ -67,7 +66,7 @@ object TerminalComponent {
             val timeRangeHours = if (model.viewMode == ViewLive) CurrentWindow() else WholeDayWindow()
 
             val terminalContentProps = TerminalContentComponent.Props(
-              model.crunchStatePot,
+              model.portStatePot,
               model.potShifts,
               model.potFixedPoints,
               model.potStaffMovements,
@@ -140,7 +139,7 @@ object TerminalComponent {
                       case _ => "Live View"
                     }),
                     <.div(^.className := "content-head",
-                      PcpPaxSummariesComponent(terminalContentProps.crunchStatePot, terminalContentProps.viewMode, props.terminalPageTab.terminal, model.minuteTicker),
+                      PcpPaxSummariesComponent(terminalContentProps.portStatePot, terminalContentProps.viewMode, props.terminalPageTab.terminal, model.minuteTicker),
                       DatePickerComponent(DatePickerComponent.Props(props.router,
                         props.terminalPageTab,
                         model.loadingState,

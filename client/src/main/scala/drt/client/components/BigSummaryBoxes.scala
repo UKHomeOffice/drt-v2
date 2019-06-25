@@ -40,11 +40,11 @@ object BigSummaryBoxes {
     flights.filter(flightPcpInPeriod(_, now, nowPlus3Hours))
 
   def countFlightsInPeriod(rootModel: RootModel, now: SDateLike, nowPlus3Hours: SDateLike): Pot[Int] =
-    rootModel.crunchStatePot.map(crunchState => flightsInPeriod(crunchState.flights.values.toList, now, nowPlus3Hours).length)
+    rootModel.portStatePot.map(portState => flightsInPeriod(portState.flights.values.toList, now, nowPlus3Hours).length)
 
   def countPaxInPeriod(rootModel: RootModel, now: SDateLike, nowPlus3Hours: SDateLike): Pot[Int] = {
-    rootModel.crunchStatePot.map(crunchState => {
-      val flights: Seq[ApiFlightWithSplits] = flightsInPeriod(crunchState.flights.values.toList, now, nowPlus3Hours)
+    rootModel.portStatePot.map(portState => {
+      val flights: Seq[ApiFlightWithSplits] = flightsInPeriod(portState.flights.values.toList, now, nowPlus3Hours)
       sumActPax(flights)
     })
   }

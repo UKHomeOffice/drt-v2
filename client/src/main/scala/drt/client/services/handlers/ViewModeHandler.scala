@@ -11,7 +11,7 @@ import drt.shared.SDateLike
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[PortState], MillisSinceEpoch)], crunchStateMP: ModelR[M, Pot[PortState]]) extends LoggingActionHandler(viewModeCrunchStateMP) {
+class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[PortState], MillisSinceEpoch)], portStateMP: ModelR[M, Pot[PortState]]) extends LoggingActionHandler(viewModeCrunchStateMP) {
 
   def midnightThisMorning: SDateLike = SDate.midnightOf(SDate.now())
 

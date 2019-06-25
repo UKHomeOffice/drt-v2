@@ -24,13 +24,13 @@ object TerminalsDashboardPage {
     .render_P(p => {
 
       val portCodeQueueOrderTerminals = SPACircuit.connect(_.airportConfig)
-      val crunchStateRCP = SPACircuit.connect(_.crunchStatePot)
+      val portStateRCP = SPACircuit.connect(_.portStatePot)
 
       portCodeQueueOrderTerminals { portMP =>
         <.div(^.className := "terminal-summary-dashboard",
             portMP().render(portConfig => {
             val (queueOrder, terminals) = (portConfig.queueOrder, portConfig.terminalNames)
-            crunchStateRCP(crunchStateMP => {
+            portStateRCP(portStateMP => {
               val currentPeriodStart = DashboardTerminalSummary.windowStart(SDate.now())
               val periods = List(
                 DisplayPeriod(currentPeriodStart),
@@ -59,8 +59,8 @@ object TerminalsDashboardPage {
                 terminals.map { terminalName =>
                   <.div(
                     <.h3(s"Terminal $terminalName"),
-                    crunchStateMP().render(crunchState => {
-                      val portStateForDashboard = crunchState.window(displayPeriod.start, displayPeriod.end, portConfig.queues.filterKeys(_ == terminalName))
+                    portStateMP().render(portState => {
+                      val portStateForDashboard = portState.window(displayPeriod.start, displayPeriod.end, portConfig.queues.filterKeys(_ == terminalName))
                       val flightsInTerminal = portStateForDashboard.flights.values.toList
                       val terminalCrunchMinutes = portStateForDashboard.crunchMinutes.values.toList
                       val terminalStaffMinutes = portStateForDashboard.staffMinutes.values.toList

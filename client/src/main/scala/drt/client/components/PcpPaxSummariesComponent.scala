@@ -35,7 +35,7 @@ object PcpPaxSummary {
 
 object PcpPaxSummariesComponent {
 
-  case class Props(crunchStatePot: Pot[PortState], viewMode: ViewMode, terminalName: TerminalName, minuteTicker: Int)
+  case class Props(portStatePot: Pot[PortState], viewMode: ViewMode, terminalName: TerminalName, minuteTicker: Int)
 
   class Backend {
     def render(props: Props): TagOf[Div] = {
@@ -44,7 +44,7 @@ object PcpPaxSummariesComponent {
       val queues = Seq(Queues.EeaDesk, Queues.NonEeaDesk)
       <.div(^.className := "pcp-pax-summaries",
         if (props.viewMode == ViewLive) {
-          props.crunchStatePot.render { cs =>
+          props.portStatePot.render { cs =>
             val boxes = Seq("next 5 mins", "5-10 mins", "10-15 mins")
             <.div(
               boxes.zipWithIndex.map {
@@ -85,6 +85,6 @@ object PcpPaxSummariesComponent {
     })
     .build
 
-  def apply(crunchStatePot: Pot[PortState], viewMode: ViewMode, terminalName: TerminalName, minuteTicker: Int): VdomElement =
-    component(Props(crunchStatePot, viewMode, terminalName, minuteTicker))
+  def apply(portStatePot: Pot[PortState], viewMode: ViewMode, terminalName: TerminalName, minuteTicker: Int): VdomElement =
+    component(Props(portStatePot, viewMode, terminalName, minuteTicker))
 }
