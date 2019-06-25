@@ -489,24 +489,6 @@ object CrunchApi {
     implicit val rw: RW[CrunchStateError] = macroRW
   }
 
-  case class CrunchState(flights: Set[ApiFlightWithSplits],
-                         crunchMinutes: Set[CrunchMinute],
-                         staffMinutes: Set[StaffMinute]) {
-
-    def window(start: SDateLike, end: SDateLike, terminalName: TerminalName): CrunchState = {
-      val windowedFlights = flights.filter(f => f.apiFlight.hasPcpDuring(start, end) && f.apiFlight.Terminal == terminalName)
-      val windowedCrunchMinutes = crunchMinutes.filter(cm => start.millisSinceEpoch <= cm.minute && cm.minute <= end.millisSinceEpoch && cm.terminalName == terminalName)
-      val windowsStaffMinutes = staffMinutes.filter(sm => start.millisSinceEpoch <= sm.minute && sm.minute <= end.millisSinceEpoch && sm.terminalName == terminalName)
-      CrunchState(windowedFlights, windowedCrunchMinutes, windowsStaffMinutes)
-    }
-
-    def isEmpty: Boolean = flights.isEmpty && crunchMinutes.isEmpty && staffMinutes.isEmpty
-  }
-
-  object CrunchState {
-    implicit val rw: RW[CrunchState] = macroRW
-  }
-
   case class PortState(flights: Map[Int, ApiFlightWithSplits],
                        crunchMinutes: SortedMap[TQM, CrunchMinute],
                        staffMinutes: SortedMap[TM, StaffMinute]) {
@@ -532,6 +514,20 @@ object CrunchApi {
         crunchMinutes = cms,
         staffMinutes = sms
       )
+    }
+
+    def purgeOlderThanDate(thresholdDate: SDateLike): PortState = {
+      val thresholdMillis = thresholdDate.millisSinceEpoch
+      val cleansedFlights = flights.filter {
+        case (_, ApiFlightWithSplits(arrival, _, _)) => arrival.PcpTime.getOrElse(0L) >= thresholdMillis
+      }
+      val cleansedCrunchMinutes = crunchMinutes.dropWhile {
+        case (TQM(_, _, m), _) => m < thresholdMillis
+      }
+      val cleansedStaffMinutes = staffMinutes.dropWhile {
+        case (TM(_, m), _) => m < thresholdMillis
+      }
+      PortState(cleansedFlights, cleansedCrunchMinutes, cleansedStaffMinutes)
     }
 
     def extractCrunchMinutes(windowRange: Array[MillisSinceEpoch], portQueues: Map[TerminalName, Seq[QueueName]]): SortedMap[TQM, CrunchMinute] = {
