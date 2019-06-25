@@ -4,6 +4,8 @@ import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared._
 import org.specs2.mutable.Specification
 
+import scala.collection.immutable.SortedMap
+
 class CrunchSummarySpec extends Specification {
   "Given a port state with crunch minutes for 2 queues over 30 minutes " +
     "When I ask for a 4 period summary of 15 minutes each period " +
@@ -17,7 +19,7 @@ class CrunchSummarySpec extends Specification {
       CrunchMinute(terminal, queue, minute.toLong * 60000, minute.toDouble, minute.toDouble, minute, minute, Option(minute), Option(minute), Option(minute), Option(minute))
     }
 
-    val cmsMap = cmsList.map(cm => (TQM(cm), cm)).toMap
+    val cmsMap = SortedMap[TQM, CrunchMinute]() ++ cmsList.map(cm => (TQM(cm), cm)).toMap
     val portState = CrunchApi.PortState(Map[Int, ApiFlightWithSplits](), cmsMap, Map[TM, StaffMinute]())
 
     val periods = 4

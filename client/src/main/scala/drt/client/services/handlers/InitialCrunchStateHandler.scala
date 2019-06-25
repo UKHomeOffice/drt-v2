@@ -5,8 +5,10 @@ import diode.Implicits.runAfterImpl
 import diode.data._
 import drt.client.actions.Actions._
 import drt.client.logger._
+import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi._
+import drt.shared.Queues
 import org.scalajs.dom
 import upickle.default.read
 
@@ -40,9 +42,13 @@ class InitialCrunchStateHandler[M](getCurrentViewMode: () => ViewMode,
 
     case CreateCrunchStateFromPortState(viewMode, portState) =>
       log.info(s"Got a crunch state!")
-      val flights = portState.flights.values.toSet
-//      val newState = PortState(flights, portState.crunchMinutes.values.toSet, portState.staffMinutes.values.toSet)
-      val originCodes = flights.map(_.apiFlight.Origin)
+      val originCodes = portState.flights
+        .map { case (_, fws) => fws.apiFlight.Origin }
+        .toSet
+
+      portState.crunchMinutes.filter(_._1.queueName == Queues.EeaDesk).take(10).map {
+        case (tqm, cm) => log.warn(s"$tqm, ${SDate(cm.minute).toISOString()} $cm")
+      }
 
       val hideLoader = Effect(Future(HideLoader()))
       val fetchOrigins = Effect(Future(GetAirportInfos(originCodes)))

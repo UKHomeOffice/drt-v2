@@ -13,7 +13,7 @@ import services.SDate
 import services.crunch.VoyageManifestGenerator._
 import services.graphstages.DqManifests
 
-import scala.collection.immutable.Seq
+import scala.collection.immutable.{Seq, SortedMap}
 import scala.concurrent.duration._
 
 
@@ -47,7 +47,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
       ),
-      initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set())), Map[TQM, CrunchMinute](), Map[TM, StaffMinute]()))
+      initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), Map[TM, StaffMinute]()))
     )
 
     offerAndWait(crunch.manifestsLiveInput, inputManifestsCi)
@@ -89,7 +89,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(EeaDesk, EGate))
       ),
-      initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set())), Map[TQM, CrunchMinute](), Map[TM, StaffMinute]()))
+      initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), Map[TM, StaffMinute]()))
     )
 
     offerAndWait(crunch.manifestsLiveInput, inputManifests)
@@ -138,7 +138,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
       ),
-      initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set())), Map[TQM, CrunchMinute](), Map[TM, StaffMinute]()))
+      initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), Map[TM, StaffMinute]()))
     )
 
     offerAndWait(crunch.manifestsLiveInput, inputManifests)
@@ -219,7 +219,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
       ),
-      initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set())), Map[TQM, CrunchMinute](), Map[TM, StaffMinute]()))
+      initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), Map[TM, StaffMinute]()))
     )
 
     offerAndWait(crunch.manifestsLiveInput, inputManifests)

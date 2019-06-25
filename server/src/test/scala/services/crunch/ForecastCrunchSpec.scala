@@ -7,7 +7,7 @@ import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.{SDate, TryRenjin}
 
-import scala.collection.immutable.{List, Seq}
+import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._
 
 
@@ -396,7 +396,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
       initialBaseArrivals = initialBaseArrivals,
-      initialPortState = Option(PortState(initialPortStateArrivals, Map[TQM, CrunchMinute](), Map[TM, StaffMinute]())),
+      initialPortState = Option(PortState(initialPortStateArrivals, SortedMap[TQM, CrunchMinute](), Map[TM, StaffMinute]())),
       maxDaysToCrunch = 4
     )
 

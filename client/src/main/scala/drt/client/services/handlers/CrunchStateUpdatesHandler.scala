@@ -11,6 +11,7 @@ import drt.shared.CrunchApi._
 import org.scalajs.dom
 import upickle.default.read
 
+import scala.collection.immutable.SortedMap
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -53,7 +54,6 @@ class CrunchStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
           noChange
       }
 
-
     case ScheduleCrunchUpdateRequest(viewMode) if viewMode.isDifferentTo(getCurrentViewMode()) =>
       log.info(s"Ignoring out of date schedule updates request")
       noChange
@@ -92,8 +92,10 @@ class CrunchStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
     PortState(flights, minutes, staff)
   }
 
-  def updateAndTrimCrunch(crunchUpdates: CrunchUpdates, existingState: PortState, keepFromMillis: MillisSinceEpoch): Map[TQM, CrunchApi.CrunchMinute] = {
-    val relevantMinutes = existingState.crunchMinutes.filter { case (_, cm) => cm.minute >= keepFromMillis }
+  def updateAndTrimCrunch(crunchUpdates: CrunchUpdates, existingState: PortState, keepFromMillis: MillisSinceEpoch): SortedMap[TQM, CrunchApi.CrunchMinute] = {
+    val relevantMinutes = existingState.crunchMinutes.dropWhile {
+      case (TQM(_, _, m), _) => m < keepFromMillis
+    }
     crunchUpdates.minutes.foldLeft(relevantMinutes) {
       case (soFar, newCm) => soFar.updated(TQM(newCm), newCm)
     }

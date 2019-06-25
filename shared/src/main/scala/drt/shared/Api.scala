@@ -9,7 +9,9 @@ import drt.shared.SplitRatiosNs.SplitSources
 import ujson.Js.Value
 import upickle.Js
 import upickle.default.{macroRW, readwriter, ReadWriter => RW}
+import upickle.default._
 
+import scala.collection.immutable.SortedMap
 import scala.concurrent.Future
 import scala.util.matching.Regex
 
@@ -135,7 +137,16 @@ object ApiFlightWithSplits {
   implicit val rw: RW[ApiFlightWithSplits] = macroRW
 }
 
-case class TQM(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch)
+case class TQM(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch) extends Ordered[TQM] {
+  override def equals(o: scala.Any): Boolean = o match {
+    case TQM(t, q, m) => t == terminalName && q == queueName && m == minute
+    case _ => false
+  }
+
+  lazy val comparisonString = s"$minute-$queueName-$terminalName"
+
+  override def compare(that: TQM): Int = this.comparisonString.compareTo(that.comparisonString)
+}
 
 object TQM {
   implicit val rw: RW[TQM] = macroRW
@@ -348,6 +359,11 @@ trait SDateLike {
 
   def addMillis(millisToAdd: Int): SDateLike
 
+  def roundToMinute(): SDateLike = {
+    val remainder = millisSinceEpoch % 60000
+    addMillis(-1 * remainder.toInt)
+  }
+
   def toLocalDateTimeString(): String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02d ${getHours()}%02d:${getMinutes()}%02d"
 
   def toISODateOnly: String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02d"
@@ -483,7 +499,7 @@ object CrunchApi {
   }
 
   case class PortState(flights: Map[Int, ApiFlightWithSplits],
-                       crunchMinutes: Map[TQM, CrunchMinute],
+                       crunchMinutes: SortedMap[TQM, CrunchMinute],
                        staffMinutes: Map[TM, StaffMinute]) {
     lazy val latestUpdate: MillisSinceEpoch = {
       val latestFlights = if (flights.nonEmpty) flights.map(_._2.lastUpdated.getOrElse(0L)).max else 0L
@@ -493,21 +509,23 @@ object CrunchApi {
     }
 
     def window(start: SDateLike, end: SDateLike, portQueues: Map[TerminalName, Seq[QueueName]]): PortState = {
-      val windowRange = (start.millisSinceEpoch until end.millisSinceEpoch by 60000L).toArray
+      val roundedStart = start.roundToMinute()
+      val roundedEnd = end.roundToMinute()
+      val windowRange = (roundedStart.millisSinceEpoch until roundedEnd.millisSinceEpoch by 60000L).toArray
 
       val cms = extractCrunchMinutes(windowRange, portQueues)
       val sms = extractStaffMinutes(windowRange, portQueues.keys.toSeq)
 
       PortState(
         flights = flights.filter {
-          case (_, f) => f.apiFlight.hasPcpDuring(start, end)
+          case (_, f) => f.apiFlight.hasPcpDuring(roundedStart, roundedEnd) && portQueues.contains(f.apiFlight.Terminal)
         },
         crunchMinutes = cms,
         staffMinutes = sms
       )
     }
 
-    def extractCrunchMinutes(windowRange: Array[MillisSinceEpoch], portQueues: Map[TerminalName, Seq[QueueName]]): Map[TQM, CrunchMinute] = {
+    def extractCrunchMinutes(windowRange: Array[MillisSinceEpoch], portQueues: Map[TerminalName, Seq[QueueName]]): SortedMap[TQM, CrunchMinute] = {
       val maybeCms = for {
         terminal <- portQueues.keys
         queue <- portQueues(terminal)
@@ -516,9 +534,7 @@ object CrunchApi {
         val tqm = TQM(terminal, queue, minute)
         crunchMinutes.get(tqm).map(cm => (tqm, cm))
       }
-      maybeCms.collect {
-        case Some(tup) => tup
-      }.toMap
+      SortedMap[TQM, CrunchMinute]() ++ maybeCms.collect { case Some(tup) => tup }
     }
 
     def extractStaffMinutes(windowRange: Array[MillisSinceEpoch], terminals: Seq[TerminalName]): Map[TM, StaffMinute] = {
@@ -631,16 +647,18 @@ object CrunchApi {
   }
 
   object PortState {
-    implicit val rw: RW[PortState] = macroRW
+    implicit val rw: ReadWriter[PortState] =
+      readwriter[(Map[Int, ApiFlightWithSplits], Map[TQM, CrunchMinute], Map[TM, StaffMinute])].bimap[PortState](ps => (ps.flights, ps.crunchMinutes, ps.staffMinutes), t => PortState(t._1, SortedMap[TQM, CrunchMinute]() ++ t._2, t._3))
+//    implicit val rw: RW[PortState] = macroRW
 
     def apply(flightsWithSplits: List[ApiFlightWithSplits], crunchMinutes: List[CrunchMinute], staffMinutes: List[StaffMinute]): PortState = {
       val flights = flightsWithSplits.map(fws => (fws.apiFlight.uniqueId, fws)).toMap
-      val cms = crunchMinutes.map(cm => (TQM(cm), cm)).toMap
+      val cms = SortedMap[TQM, CrunchMinute]() ++ crunchMinutes.map(cm => (TQM(cm), cm)).toMap
       val sms = staffMinutes.map(sm => (TM(sm), sm)).toMap
       PortState(flights, cms, sms)
     }
 
-    val empty: PortState = PortState(Map[Int, ApiFlightWithSplits](), Map[TQM, CrunchMinute](), Map[TM, StaffMinute]())
+    val empty: PortState = PortState(Map[Int, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), Map[TM, StaffMinute]())
   }
 
   trait Minute {

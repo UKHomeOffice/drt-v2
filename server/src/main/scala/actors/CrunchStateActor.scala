@@ -14,6 +14,7 @@ import services.SDate
 import services.graphstages.Crunch._
 import services.graphstages.PortStateWithDiff
 
+import scala.collection.immutable.SortedMap
 import scala.language.postfixOps
 
 class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
@@ -130,7 +131,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
         logDebug(s"Creating an empty PortState to apply CrunchDiff")
         Option(PortState(
           flights = applyFlightsWithSplitsDiff(flightRemovals, flightUpdates, Map(), SDate.now().millisSinceEpoch),
-          crunchMinutes = applyCrunchDiff(crunchMinuteUpdates, Map(), SDate.now().millisSinceEpoch),
+          crunchMinutes = applyCrunchDiff(crunchMinuteUpdates, SortedMap[TQM, CrunchMinute](), SDate.now().millisSinceEpoch),
           staffMinutes = applyStaffDiff(staffMinuteUpdates, Map(), SDate.now().millisSinceEpoch)
         ))
       case Some(ps) =>

@@ -44,7 +44,7 @@ object TerminalDesksAndQueuesRow {
   )
 
   val component = ScalaComponent.builder[Props]("TerminalDesksAndQueuesRow")
-    .render_P((props) => {
+    .render_P(props => {
       val crunchMinutesByQueue = props.queueMinutes.filter(qm => props.airportConfig.queues(props.terminalName).contains(qm.queueName)).map(
         qm => Tuple2(qm.queueName, qm)).toMap
       val queueTds = crunchMinutesByQueue.flatMap {

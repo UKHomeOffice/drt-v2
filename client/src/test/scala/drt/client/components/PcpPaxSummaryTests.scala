@@ -10,7 +10,7 @@ object PcpPaxSummaryTests extends TestSuite {
 
   def tests = Tests {
     "Given a set of crunch minutes for one terminal" +
-      "When I ask for a pax summary for a period of time " +
+    "When I ask for a pax summary for a period of time " +
       "Then I should see total, eea & non-eea pax counts" - {
       val startMillis = SDate("2018-01-01T00:00").millisSinceEpoch
       val quantity = 10
@@ -25,7 +25,8 @@ object PcpPaxSummaryTests extends TestSuite {
       val summaryDurationMinutes = 3
 
       val result = PcpPaxSummary(summaryStartMillis, summaryDurationMinutes, crunchMinutes, "T1", Set(Queues.EeaDesk, Queues.NonEeaDesk))
-      val expected = PcpPaxSummary(summaryStartMillis, summaryDurationMinutes, 3 * 1 + 3 * 0.5 + 3 * 0.25 + 3 * 0.1, Map(Queues.EeaDesk -> 3, Queues.NonEeaDesk -> 1.5))
+      val totalPax = (3 * 1 + 3 * 0.5 + 3 * 0.25 + 3 * 0.1).toInt
+      val expected = PcpPaxSummary(totalPax, Map(Queues.EeaDesk -> 3, Queues.NonEeaDesk -> 1.5))
 
       assert(result == expected)
     }
@@ -50,7 +51,8 @@ object PcpPaxSummaryTests extends TestSuite {
       val summaryDurationMinutes = 3
 
       val result = PcpPaxSummary(summaryStartMillis, summaryDurationMinutes, crunchMinutes, "T1", Set(Queues.EeaDesk, Queues.NonEeaDesk))
-      val expected = PcpPaxSummary(summaryStartMillis, summaryDurationMinutes, 3 * 1 + 3 * 0.5 + 3 * 0.25 + 3 * 0.1, Map(Queues.EeaDesk -> 3, Queues.NonEeaDesk -> 1.5))
+      val totalPax = (3 * 1 + 3 * 0.5 + 3 * 0.25 + 3 * 0.1).toInt
+      val expected = PcpPaxSummary(totalPax, Map(Queues.EeaDesk -> 3, Queues.NonEeaDesk -> 1.5))
 
       assert(result == expected)
     }

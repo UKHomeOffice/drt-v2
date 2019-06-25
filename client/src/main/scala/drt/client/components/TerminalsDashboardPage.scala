@@ -42,7 +42,6 @@ object TerminalsDashboardPage {
 
               def flightWithinPeriod(flight: ApiFlightWithSplits) = DashboardTerminalSummary.flightPcpInPeriod(flight, displayPeriod.start, displayPeriod.end)
 
-
               def switchDashboardPeriod(period: Int) = (_: ReactEventFromInput) => {
                 GoogleEventTracker.sendEvent("dashboard", "Switch Period", period.toString)
                 p.router.set(p.dashboardPage.copy(period = Option(period)))
@@ -61,12 +60,10 @@ object TerminalsDashboardPage {
                   <.div(
                     <.h3(s"Terminal $terminalName"),
                     crunchStateMP().render(crunchState => {
-                      val flightsInTerminal: List[ApiFlightWithSplits] = crunchState
-                        .flights.values.toList
-                        .filter(fws => fws.apiFlight.Terminal == terminalName && flightWithinPeriod(fws))
-                      val portStateForWindow = crunchState.window(displayPeriod.start, displayPeriod.end, portConfig.queues)
-                      val terminalCrunchMinutes = portStateForWindow.crunchMinutes.filterKeys(_.terminalName == terminalName).values.toList
-                      val terminalStaffMinutes = portStateForWindow.staffMinutes.filterKeys(_.terminalName == terminalName).values.toList
+                      val portStateForDashboard = crunchState.window(displayPeriod.start, displayPeriod.end, portConfig.queues.filterKeys(_ == terminalName))
+                      val flightsInTerminal = portStateForDashboard.flights.values.toList
+                      val terminalCrunchMinutes = portStateForDashboard.crunchMinutes.values.toList
+                      val terminalStaffMinutes = portStateForDashboard.staffMinutes.values.toList
 
                       DashboardTerminalSummary(DashboardTerminalSummary.Props(
                         flightsInTerminal,

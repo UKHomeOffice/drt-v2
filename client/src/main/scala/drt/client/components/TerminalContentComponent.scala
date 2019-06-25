@@ -25,28 +25,18 @@ import scala.util.Try
 
 object TerminalContentComponent {
 
-  case class Props(
-                    crunchStatePot: Pot[PortState],
-                    potShifts: Pot[ShiftAssignments],
-                    potFixedPoints: Pot[FixedPointAssignments],
-                    potStaffMovements: Pot[Seq[StaffMovement]],
-                    airportConfig: AirportConfig,
-                    terminalPageTab: TerminalPageTabLoc,
-                    defaultTimeRangeHours: TimeRangeHours,
-                    router: RouterCtl[Loc],
-                    showActuals: Boolean,
-                    viewMode: ViewMode,
-                    loggedInUserPot: Pot[LoggedInUser],
-                    minuteTicker: Int
-                  ) {
-    lazy val hash: (Int, Int) = {
-      val depsHash = crunchStatePot.map(
-        cs => (cs.crunchMinutes, cs.staffMinutes, cs.flights).hashCode()
-      ).getOrElse(0)
-
-      (depsHash, minuteTicker)
-    }
-  }
+  case class Props(crunchStatePot: Pot[PortState],
+                   potShifts: Pot[ShiftAssignments],
+                   potFixedPoints: Pot[FixedPointAssignments],
+                   potStaffMovements: Pot[Seq[StaffMovement]],
+                   airportConfig: AirportConfig,
+                   terminalPageTab: TerminalPageTabLoc,
+                   defaultTimeRangeHours: TimeRangeHours,
+                   router: RouterCtl[Loc],
+                   showActuals: Boolean,
+                   viewMode: ViewMode,
+                   loggedInUserPot: Pot[LoggedInUser],
+                   minuteTicker: Int)
 
   case class State(activeTab: String, showExportDialogue: Boolean = false)
 
@@ -112,7 +102,7 @@ object TerminalContentComponent {
           <.div(^.id := "terminal-data", "Nothing to show for this time period")
         } else ""),
         props.crunchStatePot.render((crunchState: PortState) => {
-          val queues = props.airportConfig.queues.filter(_ == props.terminalPageTab.terminal)
+          val queues = props.airportConfig.queues.filterKeys(_ == props.terminalPageTab.terminal)
           val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.time, timeRangeHours)
           val filteredPortState = crunchState.window(viewStart, viewEnd, queues)
           <.div(^.className := s"view-mode-content $viewModeStr",
@@ -180,11 +170,8 @@ object TerminalContentComponent {
               ),
               <.div(^.id := "arrivals", ^.className := s"tab-pane in $arrivalsPanelActive", {
                 if (state.activeTab == "arrivals") {
-                  <.div(props.crunchStatePot.render((crunchState: PortState) => {
-                    arrivalsTableComponent(FlightsWithSplitsTable.Props(filteredPortState.flights.values.toList, queueOrder, props.airportConfig.hasEstChox))
-                  }),
-                    props.crunchStatePot.renderEmpty("No flights")
-                  )
+                  val flightsForTerminal = filteredPortState.flights.values.filter(_.apiFlight.Terminal == props.terminalPageTab.terminal).toList
+                  arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsForTerminal, queueOrder, props.airportConfig.hasEstChox))
                 } else ""
               }),
               <.div(^.id := "available-staff", ^.className := s"tab-pane terminal-staffing-container $staffingPanelActive",

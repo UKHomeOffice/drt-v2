@@ -7,6 +7,8 @@ import org.specs2.mutable.Specification
 import services.AirportToCountry
 import upickle.default._
 
+import scala.collection.immutable.SortedMap
+
 class JsonSerializationSpec extends Specification {
 
   "Scala case classes can be serialized to JSON and then deserialized back to case classes without data loss" >> {
@@ -76,7 +78,7 @@ class JsonSerializationSpec extends Specification {
       )
       val flightsWithSplits = Map(flightWithSplits.apiFlight.uniqueId -> flightWithSplits)
 
-      val crunchMinutes = List(
+      val crunchMinutes = SortedMap[TQM, CrunchMinute]() ++ List(
         CrunchMinute("T1", Queues.NonEeaDesk, 0L, 2.0, 2.0, 1, 1, None, None, None, None, Some(0)),
         CrunchMinute("T1", Queues.NonEeaDesk, 0L, 2.0, 2.0, 1, 1, None, None, None, None, Some(0))
       ).map(cm => (TQM(cm), cm)).toMap

@@ -12,7 +12,7 @@ import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.graphstages.Crunch
 
-import scala.collection.immutable.List
+import scala.collection.immutable.{List, SortedMap}
 import scala.concurrent.duration._
 
 class StaffMinutesSpec extends CrunchTestLike {
@@ -537,7 +537,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       now = () => now,
       initialFixedPoints = fixedPoints,
       maxDaysToCrunch = daysToCrunch,
-      initialPortState = Option(PortState(Map[Int, ApiFlightWithSplits](), Map[TQM, CrunchMinute](), staffMinutes(daysToCrunch, 15, scheduled))),
+      initialPortState = Option(PortState(Map[Int, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), staffMinutes(daysToCrunch, 15, scheduled))),
       checkRequiredStaffUpdatesOnStartup = true
     )
 

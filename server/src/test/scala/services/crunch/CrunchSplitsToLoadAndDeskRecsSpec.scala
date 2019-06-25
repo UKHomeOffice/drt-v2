@@ -12,7 +12,7 @@ import services.SDate
 import services.graphstages.Crunch.getLocalLastMidnight
 import services.graphstages.DqManifests
 
-import scala.collection.immutable.{List, Seq}
+import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._
 
 
@@ -197,7 +197,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               eeaMachineReadableToDesk -> 20d / 60,
               eeaMachineReadableToEGate -> 35d / 60))
           ),
-          initialPortState = Option(PortState(Map(arrival.uniqueId -> ApiFlightWithSplits(arrival, Set())), Map[TQM, CrunchMinute](), Map[TM, StaffMinute]()))
+          initialPortState = Option(PortState(Map(arrival.uniqueId -> ApiFlightWithSplits(arrival, Set())), SortedMap[TQM, CrunchMinute](), Map[TM, StaffMinute]()))
         )
 
         val voyageManifests = ManifestsFeedSuccess(DqManifests("", Set(

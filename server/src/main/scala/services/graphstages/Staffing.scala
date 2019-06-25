@@ -14,7 +14,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch.{desksForHourOfDayInUKLocalTime, europeLondonTimeZone}
 
-import scala.collection.immutable.NumericRange
+import scala.collection.immutable.{NumericRange, SortedMap}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
@@ -92,7 +92,7 @@ object Staffing {
                               expireAfterMillis: Long,
                               context: ActorContext,
                               fl: Map[Int, ApiFlightWithSplits],
-                              cm: Map[TQM, CrunchApi.CrunchMinute]): PortState = {
+                              cm: SortedMap[TQM, CrunchApi.CrunchMinute]): PortState = {
     val uniqueSuffix = pointInTime.toISOString + UUID.randomUUID.toString
     val shiftsActor: ActorRef = context.actorOf(Props(classOf[ShiftsReadActor], pointInTime, () => SDate(expireAfterMillis)), name = s"ShiftsReadActor-$uniqueSuffix")
     val askableShiftsActor: AskableActorRef = shiftsActor

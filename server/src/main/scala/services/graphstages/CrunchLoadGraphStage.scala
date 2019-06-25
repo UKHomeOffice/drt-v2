@@ -9,7 +9,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch._
 import services.{OptimizerConfig, OptimizerCrunchResult, SDate, TryCrunch}
 
-import scala.collection.immutable.Map
+import scala.collection.immutable.{Map, SortedMap}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
@@ -210,11 +210,10 @@ case class DeskRecMinutes(minutes: Set[DeskRecMinute]) extends PortStateMinutes 
     }
   }
 
-  def newCrunchMinutes: Map[TQM, CrunchMinute] = minutes
+  def newCrunchMinutes: SortedMap[TQM, CrunchMinute] = SortedMap[TQM, CrunchMinute]() ++ minutes
     .map(CrunchMinute(_))
     .map(cm => (cm.key, cm))
     .toMap
-
 
   def mergeMinute(maybeMinute: Option[CrunchMinute], updatedDrm: DeskRecMinute): CrunchMinute = maybeMinute
     .map(existingCm => existingCm.copy(

@@ -19,7 +19,7 @@ import slick.jdbc.SetParameter.SetUnit
 import slickdb.{AggregatedArrival, AggregatedArrivals, ArrivalTable, ArrivalTableLike}
 import test.feeds.test.GetArrivals
 
-import scala.collection.immutable.{List, Seq}
+import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.Try
@@ -123,7 +123,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     val oldSplits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 100, None)), SplitSources.Historical, None, Percentage)
     val initialFlightsWithSplits = Seq(ApiFlightWithSplits(expiredArrival, Set(oldSplits), None))
-    val initialPortState = PortState(initialFlightsWithSplits.map(f => (f.apiFlight.uniqueId, f)).toMap, Map[TQM, CrunchMinute](), Map[TM, StaffMinute]())
+    val initialPortState = PortState(initialFlightsWithSplits.map(f => (f.apiFlight.uniqueId, f)).toMap, SortedMap[TQM, CrunchMinute](), Map[TM, StaffMinute]())
 
     val testProbe = TestProbe("arrivals-probe")
 
@@ -167,7 +167,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     val oldSplits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 100, None)), SplitSources.Historical, None, Percentage)
     val initialFlightsWithSplits = Seq(ApiFlightWithSplits(descheduledArrival, Set(oldSplits), None))
-    val initialPortState = PortState(initialFlightsWithSplits.map(f => (f.apiFlight.uniqueId, f)).toMap, Map[TQM, CrunchMinute](), Map[TM, StaffMinute]())
+    val initialPortState = PortState(initialFlightsWithSplits.map(f => (f.apiFlight.uniqueId, f)).toMap, SortedMap[TQM, CrunchMinute](), Map[TM, StaffMinute]())
 
     val testProbe = TestProbe("arrivals-probe")
 
