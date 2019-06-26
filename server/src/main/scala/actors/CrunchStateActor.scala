@@ -90,9 +90,9 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
       logDebug(s"Received GetState request. Replying with ${state.map(s => s"PortState containing ${s.crunchMinutes.size} crunch minutes")}")
       sender() ! state
 
-    case GetPortState(start: MillisSinceEpoch, end: MillisSinceEpoch) =>
+    case GetPortState(start, end, maybeTerminalName) =>
       logInfo(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
-      sender() ! stateForPeriod(start, end)
+      sender() ! stateForPeriod(start, end, maybeTerminalName)
 
     case GetUpdatesSince(millis, start, end) =>
       val updates = state match {
@@ -114,9 +114,12 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
       log.error(s"Received unexpected message $u")
   }
 
-  def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = {
-    logDebug(s"PortState contains: (cms, fs, sms) ${state.map(s => (s.crunchMinutes.size, s.flights.size, s.staffMinutes.size).toString()).getOrElse("Nothing")}")
-    state.map(_.window(SDate(start), SDate(end), portQueues))
+  def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch, maybeTerminalName: Option[TerminalName]): Option[PortState] = {
+    val queues = maybeTerminalName match {
+      case None => portQueues
+      case Some(tn) => portQueues.filterKeys(_ == tn)
+    }
+    state.map(_.window(SDate(start), SDate(end), queues))
   }
 
   def setStateFromSnapshot(snapshot: CrunchStateSnapshotMessage, timeWindowEnd: Option[SDateLike] = None): Unit = {

@@ -191,7 +191,7 @@ class Application @Inject()(implicit val config: Configuration,
   assert(systemTimeZone == "UTC", "System Timezone is not set to UTC")
   assert(defaultTimeZone == "UTC", "Default Timezone is not set to UTC")
 
-  log.info(s"timezone: ${Calendar.getInstance().getTimeZone()}")
+  log.info(s"timezone: ${Calendar.getInstance().getTimeZone}")
 
   log.info(s"Application using airportConfig $airportConfig")
 
@@ -232,7 +232,7 @@ class Application @Inject()(implicit val config: Configuration,
         } else startOfWeekMidnight
 
         val crunchStateFuture = forecastCrunchStateActor.ask(
-          GetPortState(startOfForecast.millisSinceEpoch, endOfForecast)
+          GetPortState(startOfForecast.millisSinceEpoch, endOfForecast, Option(terminal))
         )(new Timeout(30 seconds))
 
         crunchStateFuture.map {
@@ -252,7 +252,7 @@ class Application @Inject()(implicit val config: Configuration,
                                       terminal: TerminalName): Future[Option[ForecastHeadlineFigures]] = {
         val midnight = getLocalLastMidnight(SDate(startDay))
         val crunchStateFuture = forecastCrunchStateActor.ask(
-          GetPortState(midnight.millisSinceEpoch, midnight.addDays(7).millisSinceEpoch)
+          GetPortState(midnight.millisSinceEpoch, midnight.addDays(7).millisSinceEpoch, Option(terminal))
         )(new Timeout(30 seconds))
 
         crunchStateFuture.map {
@@ -319,9 +319,9 @@ class Application @Inject()(implicit val config: Configuration,
 
 
           futureGroupIds.map {
-            case KeyCloakGroups(groups) if groups.nonEmpty =>
-              log.info(s"Adding ${groups.map(_.name)} to $userId")
-              groups.map(group => {
+            case KeyCloakGroups(gps) if gps.nonEmpty =>
+              log.info(s"Adding ${gps.map(_.name)} to $userId")
+              gps.map(group => {
                 val response = keyCloakClient.addUserToGroup(userId, group.id)
                 response.map(res => log.info(s"Added group and got: ${res.status}  $res")
                 )
@@ -363,7 +363,7 @@ class Application @Inject()(implicit val config: Configuration,
     val firstMinute = getLocalLastMidnight(SDate(day)).millisSinceEpoch
     val lastMinute = SDate(firstMinute).addHours(airportConfig.dayLengthHours).millisSinceEpoch
 
-    val crunchStateFuture = ctrl.forecastCrunchStateActor.ask(GetPortState(firstMinute, lastMinute))(new Timeout(30 seconds))
+    val crunchStateFuture = ctrl.forecastCrunchStateActor.ask(GetPortState(firstMinute, lastMinute, None))(new Timeout(30 seconds))
 
     crunchStateFuture.map {
       case Some(PortState(f, m, s)) => Right(Option(CrunchState(f.values.toSet, m.values.toSet, s.values.toSet)))
@@ -384,8 +384,8 @@ class Application @Inject()(implicit val config: Configuration,
   def getLoggedInUser(): Action[AnyContent] = Action { request =>
     val user = ctrl.getLoggedInUser(config, request.headers, request.session)
 
-    implicit val userWrites = new Writes[LoggedInUser] {
-      def writes(user: LoggedInUser) = Json.obj(
+    implicit val userWrites: Writes[LoggedInUser] = new Writes[LoggedInUser] {
+      def writes(user: LoggedInUser): JsObject = Json.obj(
         "userName" -> user.userName,
         "id" -> user.id,
         "email" -> user.email,
@@ -463,7 +463,7 @@ class Application @Inject()(implicit val config: Configuration,
 
       maybeSinceMillis match {
         case None =>
-          val future = futureCrunchState[PortState](maybePointInTime, startMillis, endMillis, GetPortState(startMillis, endMillis))
+          val future = futureCrunchState[PortState](maybePointInTime, startMillis, endMillis, GetPortState(startMillis, endMillis, None))
           future.map { updates => Ok(write(updates)) }
 
         case Some(sinceMillis) =>
@@ -478,7 +478,7 @@ class Application @Inject()(implicit val config: Configuration,
       val startMillis = request.queryString.get("start").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
       val endMillis = request.queryString.get("end").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
 
-      val message = GetPortState(startMillis, endMillis)
+      val message = GetPortState(startMillis, endMillis, None)
       val futureState = futureCrunchState[PortState](Option(pointInTime), startMillis, endMillis, message)
 
       futureState.map { updates => Ok(write(updates)) }
@@ -511,12 +511,12 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   def getCrunchStateForPointInTime(pointInTime: MillisSinceEpoch): Action[AnyContent] = authByRole(DesksAndQueuesView) {
-    Action.async { request: Request[AnyContent] =>
+    Action.async { _: Request[AnyContent] =>
       crunchStateAtPointInTime(pointInTime).map(cs => Ok(write(cs)))
     }
   }
 
-  def getShouldReload: Action[AnyContent] = Action { request =>
+  def getShouldReload: Action[AnyContent] = Action { _ =>
 
     val shouldRedirect: Boolean = config.getOptional[Boolean]("feature-flags.acp-redirect").getOrElse(false)
     Ok(Json.obj("reload" -> shouldRedirect))
@@ -643,8 +643,6 @@ class Application @Inject()(implicit val config: Configuration,
 
   def exportUsers(): Action[AnyContent] = authByRole(ManageUsers) {
     Action.async { request =>
-      val loggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
-
       val client = keyCloakClient(request.headers)
       client
         .getGroups()
@@ -676,7 +674,7 @@ class Application @Inject()(implicit val config: Configuration,
   def portStatePeriodAtPointInTime(startMillis: MillisSinceEpoch,
                                    endMillis: MillisSinceEpoch,
                                    pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[CrunchState]]] = {
-    val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], airportConfig.portStateSnapshotInterval, SDate(pointInTime), DrtStaticParameters.expireAfterMillis, airportConfig.queues), GetPortState(startMillis, endMillis))
+    val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], airportConfig.portStateSnapshotInterval, SDate(pointInTime), DrtStaticParameters.expireAfterMillis, airportConfig.queues), GetPortState(startMillis, endMillis, None))
     val portCrunchResult = cacheActorRef.ask(query)(new Timeout(30 seconds))
     portCrunchResult.map {
       case Some(PortState(f, m, s)) =>
@@ -757,7 +755,7 @@ class Application @Inject()(implicit val config: Configuration,
       } else startOfWeekMidnight
 
       val crunchStateFuture = ctrl.forecastCrunchStateActor.ask(
-        GetPortState(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch)
+        GetPortState(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, Option(terminal))
       )(new Timeout(30 seconds))
 
       val portCode = airportConfig.portCode
@@ -791,7 +789,7 @@ class Application @Inject()(implicit val config: Configuration,
       } else startOfWeekMidnight
 
       val crunchStateFuture = ctrl.forecastCrunchStateActor.ask(
-        GetPortState(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch)
+        GetPortState(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, Option(terminal))
       )(new Timeout(30 seconds))
 
 
@@ -812,8 +810,8 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def exportApi(day: Int, month: Int, year: Int, terminalName: TerminalName) = authByRole(ApiViewPortCsv) {
-    Action.async { request =>
+  def exportApi(day: Int, month: Int, year: Int, terminalName: TerminalName): Action[AnyContent] = authByRole(ApiViewPortCsv) {
+    Action.async { _ =>
       val dateOption = Try(SDate(year, month, day, 0, 0)).toOption
       val terminalNameOption = airportConfig.terminalNames.find(name => name == terminalName)
       val resultOption = for {

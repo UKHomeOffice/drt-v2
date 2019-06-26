@@ -41,7 +41,7 @@ class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, expire
     logPointInTimeCompleted(pointInTime)
 
     state = state.map {
-      case PortState(fl, cm, sm) if staffReconstructionRequired =>
+      case PortState(fl, cm, _) if staffReconstructionRequired =>
         log.info(s"Staff minutes require reconstructing for PortState before 2017-12-04. Attempting to reconstruct")
         val updatedPortState = reconstructStaffMinutes(pointInTime, expireAfterMillis, context, fl, cm)
         log.info(s"Updating port state with ${updatedPortState.staffMinutes.size} staff minutes")
@@ -57,8 +57,8 @@ class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, expire
     case GetState =>
       sender() ! state
 
-    case GetPortState(start: MillisSinceEpoch, end: MillisSinceEpoch) =>
-      sender() ! stateForPeriod(start, end)
+    case GetPortState(start: MillisSinceEpoch, end: MillisSinceEpoch, maybeTerminalName) =>
+      sender() ! stateForPeriod(start, end, maybeTerminalName)
 
     case u =>
       log.error(s"Received unexpected message $u")
