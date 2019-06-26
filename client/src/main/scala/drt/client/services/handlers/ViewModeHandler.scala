@@ -11,7 +11,7 @@ import drt.shared.SDateLike
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[PortState], MillisSinceEpoch)], portStateMP: ModelR[M, Pot[PortState]]) extends LoggingActionHandler(viewModeCrunchStateMP) {
+class ViewModeHandler[M](viewModePortStateMP: ModelRW[M, (ViewMode, Pot[PortState], MillisSinceEpoch)], portStateMP: ModelR[M, Pot[PortState]]) extends LoggingActionHandler(viewModePortStateMP) {
 
   def midnightThisMorning: SDateLike = SDate.midnightOf(SDate.now())
 
@@ -28,7 +28,7 @@ class ViewModeHandler[M](viewModeCrunchStateMP: ModelRW[M, (ViewMode, Pot[PortSt
   }
 
   def initialRequests(newViewMode: ViewMode): EffectSet = {
-    Effect(Future(GetInitialCrunchState(newViewMode))) +
+    Effect(Future(GetInitialPortState(newViewMode))) +
       Effect(Future(GetStaffMovements(newViewMode))) +
       Effect(Future(GetShifts(newViewMode))) +
       Effect(Future(GetFixedPoints(newViewMode)))

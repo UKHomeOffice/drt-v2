@@ -483,10 +483,10 @@ object PassengerSplits {
 object CrunchApi {
   type MillisSinceEpoch = Long
 
-  case class CrunchStateError(message: String)
+  case class PortStateError(message: String)
 
-  object CrunchStateError {
-    implicit val rw: RW[CrunchStateError] = macroRW
+  object PortStateError {
+    implicit val rw: RW[PortStateError] = macroRW
   }
 
   case class PortState(flights: Map[Int, ApiFlightWithSplits],
@@ -553,7 +553,7 @@ object CrunchApi {
       SortedMap[TM, StaffMinute]() ++ maybeSms.collect { case Some(tup) => tup }
     }
 
-    def updates(sinceEpoch: MillisSinceEpoch): Option[CrunchUpdates] = {
+    def updates(sinceEpoch: MillisSinceEpoch): Option[PortStateUpdates] = {
       val updatedFlights = flights.filter(_._2.apiFlight.PcpTime.isDefined).filter {
         case (_, f) => f.lastUpdated.getOrElse(0L) > sinceEpoch
       }.values.toSet
@@ -568,7 +568,7 @@ object CrunchApi {
         val crunchLatest = if (updatedCrunch.nonEmpty) updatedCrunch.map(_.lastUpdated.getOrElse(0L)).max else 0L
         val staffLatest = if (updatedStaff.nonEmpty) updatedStaff.map(_.lastUpdated.getOrElse(0L)).max else 0L
         val latestUpdate = List(flightsLatest, crunchLatest, staffLatest).max
-        Option(CrunchUpdates(latestUpdate, updatedFlights, updatedCrunch, updatedStaff))
+        Option(PortStateUpdates(latestUpdate, updatedFlights, updatedCrunch, updatedStaff))
       } else None
     }
 
@@ -800,10 +800,10 @@ object CrunchApi {
 
   case class CrunchMinutes(crunchMinutes: Set[CrunchMinute])
 
-  case class CrunchUpdates(latest: MillisSinceEpoch, flights: Set[ApiFlightWithSplits], minutes: Set[CrunchMinute], staff: Set[StaffMinute])
+  case class PortStateUpdates(latest: MillisSinceEpoch, flights: Set[ApiFlightWithSplits], minutes: Set[CrunchMinute], staff: Set[StaffMinute])
 
-  object CrunchUpdates {
-    implicit val rw: RW[CrunchUpdates] = macroRW
+  object PortStateUpdates {
+    implicit val rw: RW[PortStateUpdates] = macroRW
   }
 
   case class ForecastTimeSlot(startMillis: MillisSinceEpoch, available: Int, required: Int)

@@ -38,15 +38,15 @@ object Actions {
 
   case class ShowVersionWarning(currentVersion: String, newVersion: String) extends Action
 
-  case class GetInitialCrunchState(viewMode: ViewMode) extends Action
+  case class GetInitialPortState(viewMode: ViewMode) extends Action
 
-  case class GetCrunchStateUpdates(viewMode: ViewMode) extends Action
+  case class GetPortStateUpdates(viewMode: ViewMode) extends Action
 
-  case class ScheduleCrunchUpdateRequest(viewMode: ViewMode) extends Action
+  case class SchedulePortStateUpdateRequest(viewMode: ViewMode) extends Action
 
-  case class CreateCrunchStateFromPortState(viewMode: ViewMode, portState: PortState) extends Action
+  case class SetPortState(viewMode: ViewMode, portState: PortState) extends Action
 
-  case class UpdateCrunchStateFromUpdates(viewMode: ViewMode, crunchUpdates: CrunchUpdates) extends Action
+  case class UpdatePortStateFromUpdates(viewMode: ViewMode, portStateUpdates: PortStateUpdates) extends Action
 
   case class GetForecastWeek(startDay: SDateLike, terminalName: TerminalName) extends Action
 

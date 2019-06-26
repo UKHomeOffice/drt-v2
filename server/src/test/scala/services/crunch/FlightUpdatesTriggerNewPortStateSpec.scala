@@ -15,7 +15,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 
-class FlightUpdatesTriggerNewCrunchStateSpec extends CrunchTestLike {
+class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
   isolated
   sequential
 

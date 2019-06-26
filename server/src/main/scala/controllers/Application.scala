@@ -345,7 +345,7 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def loadBestCrunchStateForPointInTime(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[PortState]]] =
+  def loadBestPortStateForPointInTime(day: MillisSinceEpoch): Future[Either[PortStateError, Option[PortState]]] =
     if (isHistoricDate(day)) {
       portStateForEndOfDay(day)
     } else if (day <= getLocalNextMidnight(SDate.now()).millisSinceEpoch) {
@@ -357,7 +357,7 @@ class Application @Inject()(implicit val config: Configuration,
       portStateForDayInForecast(day)
     }
 
-  def portStateForDayInForecast(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[PortState]]] = {
+  def portStateForDayInForecast(day: MillisSinceEpoch): Future[Either[PortStateError, Option[PortState]]] = {
     val firstMinute = getLocalLastMidnight(SDate(day)).millisSinceEpoch
     val lastMinute = SDate(firstMinute).addHours(airportConfig.dayLengthHours).millisSinceEpoch
 
@@ -369,7 +369,7 @@ class Application @Inject()(implicit val config: Configuration,
     } recover {
       case t =>
         log.warning(s"Didn't get a PortState: $t")
-        Left(CrunchStateError(t.getMessage))
+        Left(PortStateError(t.getMessage))
     }
   }
 
@@ -435,7 +435,7 @@ class Application @Inject()(implicit val config: Configuration,
   }
   }
 
-  def requestPortState[X](actorRef: AskableActorRef, message: Any): Future[Either[CrunchStateError, Option[X]]] = {
+  def requestPortState[X](actorRef: AskableActorRef, message: Any): Future[Either[PortStateError, Option[X]]] = {
     actorRef
       .ask(message)(15 seconds)
       .map {
@@ -443,7 +443,7 @@ class Application @Inject()(implicit val config: Configuration,
         case _ => Right(None)
       }
       .recover {
-        case t => Left(CrunchStateError(t.getMessage))
+        case t => Left(PortStateError(t.getMessage))
       }
   }
 
@@ -465,7 +465,7 @@ class Application @Inject()(implicit val config: Configuration,
           future.map { updates => Ok(write(updates)) }
 
         case Some(sinceMillis) =>
-          val future = futureCrunchState[CrunchUpdates](maybePointInTime, startMillis, endMillis, GetUpdatesSince(sinceMillis, startMillis, endMillis))
+          val future = futureCrunchState[PortStateUpdates](maybePointInTime, startMillis, endMillis, GetUpdatesSince(sinceMillis, startMillis, endMillis))
           future.map { updates => Ok(write(updates)) }
       }
     }
@@ -483,7 +483,7 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def futureCrunchState[X](maybePointInTime: Option[MillisSinceEpoch], startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, request: Any): Future[Either[CrunchStateError, Option[X]]] = {
+  def futureCrunchState[X](maybePointInTime: Option[MillisSinceEpoch], startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, request: Any): Future[Either[PortStateError, Option[X]]] = {
     maybePointInTime match {
       case Some(pit) =>
         log.info(s"Snapshot crunch state query ${SDate(pit).toISOString()}")
@@ -648,7 +648,7 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def portStateForEndOfDay(day: MillisSinceEpoch): Future[Either[CrunchStateError, Option[PortState]]] = {
+  def portStateForEndOfDay(day: MillisSinceEpoch): Future[Either[PortStateError, Option[PortState]]] = {
     val relativeLastMidnight = getLocalLastMidnight(SDate(day)).millisSinceEpoch
     val startMillis = relativeLastMidnight
     val endMillis = relativeLastMidnight + oneHourMillis * airportConfig.dayLengthHours
@@ -659,7 +659,7 @@ class Application @Inject()(implicit val config: Configuration,
 
   def portStatePeriodAtPointInTime(startMillis: MillisSinceEpoch,
                                    endMillis: MillisSinceEpoch,
-                                   pointInTime: MillisSinceEpoch): Future[Either[CrunchStateError, Option[PortState]]] = {
+                                   pointInTime: MillisSinceEpoch): Future[Either[PortStateError, Option[PortState]]] = {
     val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], airportConfig.portStateSnapshotInterval, SDate(pointInTime), DrtStaticParameters.expireAfterMillis, airportConfig.queues), GetPortState(startMillis, endMillis))
     val portCrunchResult = cacheActorRef.ask(query)(new Timeout(30 seconds))
     portCrunchResult.map {
@@ -670,7 +670,7 @@ class Application @Inject()(implicit val config: Configuration,
     }.recover {
       case t =>
         log.warning(s"Didn't get a point-in-time PortState: $t")
-        Left(CrunchStateError(t.getMessage))
+        Left(PortStateError(t.getMessage))
     }
   }
 
@@ -690,7 +690,7 @@ class Application @Inject()(implicit val config: Configuration,
         val fileName = f"$portCode-$terminalName-desks-and-queues-${pit.getFullYear()}-${pit.getMonth()}%02d-${pit.getDate()}%02dT" +
           f"${pit.getHours()}%02d-${pit.getMinutes()}%02d-hours-$startHour%02d-to-$endHour%02d"
 
-        val portStateForPointInTime = loadBestCrunchStateForPointInTime(pit.millisSinceEpoch)
+        val portStateForPointInTime = loadBestPortStateForPointInTime(pit.millisSinceEpoch)
         exportDesksToCSV(terminalName, pit, startHour, endHour, portStateForPointInTime).map {
           case Some(csvData) =>
             val columnHeadings = CSVData.terminalCrunchMinutesToCsvDataHeadings(airportConfig.queues(terminalName))
@@ -707,7 +707,7 @@ class Application @Inject()(implicit val config: Configuration,
                        pointInTime: SDateLike,
                        startHour: Int,
                        endHour: Int,
-                       portStateFuture: Future[Either[CrunchStateError, Option[PortState]]]
+                       portStateFuture: Future[Either[PortStateError, Option[PortState]]]
                       ): Future[Option[String]] = {
 
     val startDateTime = getLocalLastMidnight(pointInTime).addHours(startHour)
@@ -806,7 +806,7 @@ class Application @Inject()(implicit val config: Configuration,
         terminalName <- terminalNameOption
       } yield {
         val pit = date.millisSinceEpoch
-        val portStateForPointInTime = loadBestCrunchStateForPointInTime(pit)
+        val portStateForPointInTime = loadBestPortStateForPointInTime(pit)
         val fileName = f"export-splits-$portCode-$terminalName-${date.getFullYear()}-${date.getMonth()}-${date.getDate()}"
         flightsForCSVExportWithinRange(terminalName, date, startHour = 0, endHour = 24, portStateForPointInTime).map {
           case Some(csvFlights) =>
@@ -841,7 +841,7 @@ class Application @Inject()(implicit val config: Configuration,
         val fileName = f"$portCode-$terminalName-arrivals-${pit.getFullYear()}-${pit.getMonth()}%02d-${pit.getDate()}%02dT" +
           f"${pit.getHours()}%02d-${pit.getMinutes()}%02d-hours-$startHour%02d-to-$endHour%02d"
 
-        val portStateForPointInTime = loadBestCrunchStateForPointInTime(pit.millisSinceEpoch)
+        val portStateForPointInTime = loadBestPortStateForPointInTime(pit.millisSinceEpoch)
         flightsForCSVExportWithinRange(terminalName, pit, startHour, endHour, portStateForPointInTime).map {
           case Some(csvFlights) =>
             val csvData = if (ctrl.getRoles(config, request.headers, request.session).contains(ApiView)) {
@@ -884,7 +884,7 @@ class Application @Inject()(implicit val config: Configuration,
             pit = SDate(dayMillis),
             startHour = 0,
             endHour = 24,
-            portStateFuture = loadBestCrunchStateForPointInTime(dayMillis)
+            portStateFuture = loadBestPortStateForPointInTime(dayMillis)
           ).map {
             case Some(fs) => Option(csvFunc(fs))
             case None =>
@@ -917,7 +917,7 @@ class Application @Inject()(implicit val config: Configuration,
           pointInTime = SDate(millis),
           startHour = 0,
           endHour = 24,
-          portStateFuture = loadBestCrunchStateForPointInTime(millis)
+          portStateFuture = loadBestPortStateForPointInTime(millis)
         )
       )
 
@@ -948,7 +948,7 @@ class Application @Inject()(implicit val config: Configuration,
                                      pit: SDateLike,
                                      startHour: Int,
                                      endHour: Int,
-                                     portStateFuture: Future[Either[CrunchStateError, Option[PortState]]]
+                                     portStateFuture: Future[Either[PortStateError, Option[PortState]]]
                                     ): Future[Option[List[ApiFlightWithSplits]]] = {
 
     val startDateTime = getLocalLastMidnight(pit).addHours(startHour)

@@ -97,18 +97,18 @@ class JsonSerializationSpec extends Specification {
       deserialized === cs
     }
 
-    "CrunchStateError" >> {
-      val ce = CrunchStateError("Error Message")
+    "PortStateError" >> {
+      val ce = PortStateError("Error Message")
 
       val json = write(ce)
 
-      val deserialized = read[CrunchStateError](json)
+      val deserialized = read[PortStateError](json)
 
       deserialized === ce
     }
 
-    "CrunchUpdates" >> {
-      val cu = CrunchUpdates(
+    "PortStateUpdates" >> {
+      val cu = PortStateUpdates(
         0L,
         Set(
           ApiFlightWithSplits(
@@ -122,7 +122,7 @@ class JsonSerializationSpec extends Specification {
 
       val asJson: String = write(cu)
 
-      val deserialized = read[CrunchUpdates](asJson)
+      val deserialized = read[PortStateUpdates](asJson)
 
       deserialized === cu
     }
