@@ -7,6 +7,8 @@ import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState._
 import services.graphstages.Crunch
 
+import scala.collection.immutable.SortedMap
+
 object PortStateMessageConversion {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -29,17 +31,17 @@ object PortStateMessageConversion {
 
     log.debug(s"Unwrapping minutes messages")
 
-    val crunchMinutes = sm.crunchMinutes.collect {
+    val crunchMinutes = SortedMap[TQM, CrunchMinute]() ++ sm.crunchMinutes.collect {
       case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 =>
         val cm = crunchMinuteFromMessage(message)
         (cm.key, cm)
-    }.toMap
+    }
 
-    val staffMinutes = sm.staffMinutes.collect {
+    val staffMinutes = SortedMap[TM, StaffMinute]() ++ sm.staffMinutes.collect {
       case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 =>
         val sm = staffMinuteFromMessage(message)
         (sm.key, sm)
-    }.toMap
+    }
 
     log.debug(s"Finished unwrapping messages")
 

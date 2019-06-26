@@ -7,6 +7,8 @@ import org.specs2.mutable.Specification
 import services.AirportToCountry
 import upickle.default._
 
+import scala.collection.immutable.SortedMap
+
 class JsonSerializationSpec extends Specification {
 
   "Scala case classes can be serialized to JSON and then deserialized back to case classes without data loss" >> {
@@ -64,48 +66,49 @@ class JsonSerializationSpec extends Specification {
       deserialized === info
     }
 
-    "CrunchState" >> {
-      val cs = CrunchState(
+    "PortState" >> {
+      val flightWithSplits = ApiFlightWithSplits(
+        Arrival(None, "scheduled", None, None, None, None, None, None, None, None, None, None, None, None, "test", "test", "test", "test", "test", 0L, None, Set(AclFeedSource, LiveFeedSource), None),
         Set(
-          ApiFlightWithSplits(
-            Arrival(None, "scheduled", None, None, None, None, None, None, None, None, None, None, None, None, "test", "test", "test", "test", "test", 0L, None, Set(AclFeedSource, LiveFeedSource), None),
+          Splits(
             Set(
-              Splits(
-                Set(
-                  ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, None),
-                  ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, None)
-              ), "source", None, Percentage))
-          )
-        ),
-        Set(
-          CrunchMinute("T1", Queues.NonEeaDesk, 0L, 2.0, 2.0, 1, 1, None, None, None, None, Some(0)),
-          CrunchMinute("T1", Queues.NonEeaDesk, 0L, 2.0, 2.0, 1, 1, None, None, None, None, Some(0))
-        ),
-        Set(
-          StaffMinute("T1", 0L, 1, 1,1,None),
-          StaffMinute("T1", 0L, 1, 1,1,None)
-        )
+              ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, None),
+              ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, None)
+            ), "source", None, Percentage))
       )
+      val flightsWithSplits = Map(flightWithSplits.apiFlight.uniqueId -> flightWithSplits)
+
+      val crunchMinutes = SortedMap[TQM, CrunchMinute]() ++ List(
+        CrunchMinute("T1", Queues.NonEeaDesk, 0L, 2.0, 2.0, 1, 1, None, None, None, None, Some(0)),
+        CrunchMinute("T1", Queues.NonEeaDesk, 0L, 2.0, 2.0, 1, 1, None, None, None, None, Some(0))
+      ).map(cm => (TQM(cm), cm))
+
+      val staffMinutes = SortedMap[TM, StaffMinute]() ++ List(
+        StaffMinute("T1", 0L, 1, 1, 1, None),
+        StaffMinute("T1", 0L, 1, 1, 1, None)
+      ).map(sm => (TM(sm), sm))
+
+      val cs = PortState(flightsWithSplits, crunchMinutes, staffMinutes)
 
       val asJson: String = write(cs)
 
-      val deserialized = read[CrunchState](asJson)
+      val deserialized = read[PortState](asJson)
 
       deserialized === cs
     }
 
-    "CrunchStateError" >> {
-      val ce = CrunchStateError("Error Message")
+    "PortStateError" >> {
+      val ce = PortStateError("Error Message")
 
       val json = write(ce)
 
-      val deserialized = read[CrunchStateError](json)
+      val deserialized = read[PortStateError](json)
 
       deserialized === ce
     }
 
-    "CrunchUpdates" >> {
-      val cu = CrunchUpdates(
+    "PortStateUpdates" >> {
+      val cu = PortStateUpdates(
         0L,
         Set(
           ApiFlightWithSplits(
@@ -119,7 +122,7 @@ class JsonSerializationSpec extends Specification {
 
       val asJson: String = write(cu)
 
-      val deserialized = read[CrunchUpdates](asJson)
+      val deserialized = read[PortStateUpdates](asJson)
 
       deserialized === cu
     }

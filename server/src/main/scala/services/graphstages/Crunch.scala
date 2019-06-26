@@ -7,7 +7,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 import services._
 
-import scala.collection.immutable.Map
+import scala.collection.immutable.{Map, SortedMap}
 import scala.reflect.runtime.universe.{TypeTag, typeOf}
 
 object Crunch {
@@ -163,7 +163,7 @@ object Crunch {
     Tuple2(Tuple3(cm.terminalName, cm.queueName, cm.minute), cm)
   }
 
-  def applyCrunchDiff(crunchMinuteUpdates: Set[CrunchMinute], crunchMinutes: Map[TQM, CrunchMinute], nowMillis: MillisSinceEpoch): Map[TQM, CrunchMinute] = {
+  def applyCrunchDiff(crunchMinuteUpdates: Set[CrunchMinute], crunchMinutes: SortedMap[TQM, CrunchMinute], nowMillis: MillisSinceEpoch): SortedMap[TQM, CrunchMinute] = {
     val withUpdates = crunchMinuteUpdates.foldLeft(crunchMinutes) {
       case (soFar, cm) if cm.minute % oneMinuteMillis == 0 => soFar.updated(cm.key, cm.copy(lastUpdated = Option(nowMillis)))
       case (soFar, _) => soFar
@@ -171,7 +171,7 @@ object Crunch {
     withUpdates
   }
 
-  def applyStaffDiff(staffMinuteUpdates: Set[StaffMinute], staffMinutes: Map[TM, StaffMinute], nowMillis: MillisSinceEpoch): Map[TM, StaffMinute] = {
+  def applyStaffDiff(staffMinuteUpdates: Set[StaffMinute], staffMinutes: SortedMap[TM, StaffMinute], nowMillis: MillisSinceEpoch): SortedMap[TM, StaffMinute] = {
     val withUpdates = staffMinuteUpdates.foldLeft(staffMinutes) {
       case (soFar, sm) if sm.minute % oneMinuteMillis == 0 => soFar.updated(sm.key, sm.copy(lastUpdated = Option(nowMillis)))
       case (soFar, _) => soFar
@@ -278,10 +278,6 @@ object Crunch {
     ageInMillis > expireAfterMillis
   }
 
-  def mergeMapOfIndexedThings[I, X](things1: Map[I, X], things2: Map[I, X]): Map[I, X] = things2.foldLeft(things1) {
-    case (soFar, (id, newThing)) => soFar.updated(id, newThing)
-  }
-
   def mergeMaybePortStates(maybePortState1: Option[PortState], maybePortState2: Option[PortState]): Option[PortState] = {
     (maybePortState1, maybePortState2) match {
       case (None, None) => None
@@ -292,9 +288,9 @@ object Crunch {
   }
 
   def mergePortState(ps1: PortState, ps2: PortState): PortState = {
-    val mergedFlights = mergeMapOfIndexedThings(ps1.flights, ps2.flights)
-    val mergedCrunchMinutes = mergeMapOfIndexedThings(ps1.crunchMinutes, ps2.crunchMinutes)
-    val mergedStaffMinutes = mergeMapOfIndexedThings(ps1.staffMinutes, ps2.staffMinutes)
+    val mergedFlights = ps1.flights ++ ps2.flights
+    val mergedCrunchMinutes = ps1.crunchMinutes ++ ps2.crunchMinutes
+    val mergedStaffMinutes = ps1.staffMinutes ++ ps2.staffMinutes
     PortState(mergedFlights, mergedCrunchMinutes, mergedStaffMinutes)
   }
 

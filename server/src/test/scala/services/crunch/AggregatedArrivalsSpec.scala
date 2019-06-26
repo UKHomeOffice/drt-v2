@@ -6,7 +6,7 @@ import akka.pattern.AskableActorRef
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.PortState
+import drt.shared.CrunchApi.{CrunchMinute, PortState, StaffMinute}
 import drt.shared.FlightsApi.Flights
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
@@ -19,7 +19,7 @@ import slick.jdbc.SetParameter.SetUnit
 import slickdb.{AggregatedArrival, AggregatedArrivals, ArrivalTable, ArrivalTableLike}
 import test.feeds.test.GetArrivals
 
-import scala.collection.immutable.{List, Seq}
+import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.Try
@@ -123,7 +123,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     val oldSplits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 100, None)), SplitSources.Historical, None, Percentage)
     val initialFlightsWithSplits = Seq(ApiFlightWithSplits(expiredArrival, Set(oldSplits), None))
-    val initialPortState = PortState(initialFlightsWithSplits.map(f => (f.apiFlight.uniqueId, f)).toMap, Map(), Map())
+    val initialPortState = PortState(initialFlightsWithSplits.map(f => (f.apiFlight.uniqueId, f)).toMap, SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())
 
     val testProbe = TestProbe("arrivals-probe")
 
@@ -167,7 +167,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     val oldSplits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 100, None)), SplitSources.Historical, None, Percentage)
     val initialFlightsWithSplits = Seq(ApiFlightWithSplits(descheduledArrival, Set(oldSplits), None))
-    val initialPortState = PortState(initialFlightsWithSplits.map(f => (f.apiFlight.uniqueId, f)).toMap, Map(), Map())
+    val initialPortState = PortState(initialFlightsWithSplits.map(f => (f.apiFlight.uniqueId, f)).toMap, SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())
 
     val testProbe = TestProbe("arrivals-probe")
 

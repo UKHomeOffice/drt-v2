@@ -1,13 +1,13 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, PortState, StaffMinute}
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.{SDate, TryRenjin}
 
-import scala.collection.immutable.{List, Seq}
+import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._
 
 
@@ -396,7 +396,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
       initialBaseArrivals = initialBaseArrivals,
-      initialPortState = Option(PortState(initialPortStateArrivals, Map(), Map())),
+      initialPortState = Option(PortState(initialPortStateArrivals, SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())),
       maxDaysToCrunch = 4
     )
 

@@ -5,6 +5,8 @@ import drt.shared._
 import services.SDate
 import services.graphstages.Crunch._
 
+import scala.collection.immutable.SortedMap
+
 
 class CrunchMinuteSpec extends CrunchTestLike {
   "Unique keys " >> {
@@ -95,7 +97,7 @@ class CrunchMinuteSpec extends CrunchTestLike {
     "Given two sets of CrunchMinutes " +
       "When I ask for the difference and apply it to the old set " +
       "Then I should receive a set containing both the old and new minute" >> {
-      val oldCm = Set(CrunchMinute("T1", Queues.EeaDesk, 0L, 1, 30, 1, 0)).map(cm => (cm.key, cm)).toMap
+      val oldCm = SortedMap[TQM, CrunchMinute]() ++ Set(CrunchMinute("T1", Queues.EeaDesk, 0L, 1, 30, 1, 0)).map(cm => (cm.key, cm)).toMap
       val newCm = Set(CrunchMinute("T1", Queues.EeaDesk, 60000L, 1, 30, 1, 0)).map(cm => (cm.key, cm)).toMap
 
       val toUpdate = crunchMinutesDiff(oldCm, newCm)

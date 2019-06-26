@@ -14,7 +14,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch.{desksForHourOfDayInUKLocalTime, europeLondonTimeZone}
 
-import scala.collection.immutable.NumericRange
+import scala.collection.immutable.{NumericRange, SortedMap}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
@@ -54,11 +54,11 @@ object Staffing {
     .toSeq
     .sortBy(_.time.millisSinceEpoch)
 
-  def staffMinutesForCrunchMinutes(crunchMinutes: Map[TQM, CrunchMinute],
-                                   maybeSources: StaffSources): Map[TM, StaffMinute] = {
+  def staffMinutesForCrunchMinutes(crunchMinutes: SortedMap[TQM, CrunchMinute],
+                                   maybeSources: StaffSources): SortedMap[TM, StaffMinute] = {
 
     val staff = maybeSources
-    crunchMinutes
+    SortedMap[TM, StaffMinute]() ++ crunchMinutes
       .values
       .groupBy(_.terminalName)
       .flatMap {
@@ -67,17 +67,16 @@ object Staffing {
           val startMinuteMillis = minutes.min + Crunch.oneMinuteMillis
           val endMinuteMillis = minutes.max
           val minuteMillis = startMinuteMillis to endMinuteMillis by Crunch.oneMinuteMillis
-          log.info(s"Getting ${minuteMillis.size} staff minutes")
           staffMinutesForPeriod(staff, tn, minuteMillis)
       }
   }
 
   def staffMinutesForPeriod(staff: StaffSources,
                             tn: TerminalName,
-                            minuteMillis: NumericRange[MillisSinceEpoch]): Map[TM, StaffMinute] = {
+                            minuteMillis: NumericRange[MillisSinceEpoch]): SortedMap[TM, StaffMinute] = {
     import SDate.implicits.sdateFromMilliDateLocal
 
-    minuteMillis
+    SortedMap[TM, StaffMinute]() ++ minuteMillis
       .map { minute =>
         val shifts = staff.shifts.terminalStaffAt(tn, SDate(minute))
         val fixedPoints = staff.fixedPoints.terminalStaffAt(tn, SDate(minute, Crunch.europeLondonTimeZone))
@@ -85,14 +84,13 @@ object Staffing {
         val staffMinute = StaffMinute(tn, minute, shifts, fixedPoints, movements)
         (staffMinute.key, staffMinute)
       }
-      .toMap
   }
 
   def reconstructStaffMinutes(pointInTime: SDateLike,
                               expireAfterMillis: Long,
                               context: ActorContext,
                               fl: Map[Int, ApiFlightWithSplits],
-                              cm: Map[TQM, CrunchApi.CrunchMinute]): PortState = {
+                              cm: SortedMap[TQM, CrunchApi.CrunchMinute]): PortState = {
     val uniqueSuffix = pointInTime.toISOString + UUID.randomUUID.toString
     val shiftsActor: ActorRef = context.actorOf(Props(classOf[ShiftsReadActor], pointInTime, () => SDate(expireAfterMillis)), name = s"ShiftsReadActor-$uniqueSuffix")
     val askableShiftsActor: AskableActorRef = shiftsActor

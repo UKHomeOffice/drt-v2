@@ -3,8 +3,10 @@ package actors
 import org.specs2.mutable.Specification
 import PortStateMessageConversion._
 import drt.shared.CrunchApi.{CrunchMinute, PortState, StaffMinute}
-import drt.shared.Queues
+import drt.shared.{ApiFlightWithSplits, Queues, TM, TQM}
 import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchStateSnapshotMessage, StaffMinuteMessage}
+
+import scala.collection.immutable.SortedMap
 
 class PortStateMessageConversionSpec extends Specification {
   "Given a persisted port state message containing some valid & invalid crunch and staff minutes " +
@@ -22,10 +24,10 @@ class PortStateMessageConversionSpec extends Specification {
     )
     val state = snapshotMessageToState(CrunchStateSnapshotMessage(None, None, Seq(), crunchMinutes, staffMinutes), None)
 
-    val expectedCrunchMinutes = Seq(CrunchMinute("T1", Queues.EeaDesk, validMinuteMilli, 0, 0, 0, 0, None, None, None, None, None)).map(m => (m.key, m)).toMap
-    val expectedStaffMinutes = Seq(StaffMinute("T1", validMinuteMilli, 0, 0, 0, None)).map(m => (m.key, m)).toMap
+    val expectedCrunchMinutes = SortedMap[TQM, CrunchMinute]() ++ Seq(CrunchMinute("T1", Queues.EeaDesk, validMinuteMilli, 0, 0, 0, 0, None, None, None, None, None)).map(m => (m.key, m))
+    val expectedStaffMinutes = SortedMap[TM, StaffMinute]() ++ Seq(StaffMinute("T1", validMinuteMilli, 0, 0, 0, None)).map(m => (m.key, m))
 
-    val expected = PortState(Map(), expectedCrunchMinutes, expectedStaffMinutes)
+    val expected = PortState(Map[Int, ApiFlightWithSplits](), expectedCrunchMinutes, expectedStaffMinutes)
 
     state === expected
   }

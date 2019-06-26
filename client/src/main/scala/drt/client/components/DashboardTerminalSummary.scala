@@ -1,7 +1,7 @@
 package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute, groupCrunchMinutesByX}
+import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import drt.shared.splits.ApiSplitsToSplitRatio
@@ -55,7 +55,6 @@ object DashboardTerminalSummary {
   def hourSummary(flights: List[ApiFlightWithSplits], cms: List[CrunchMinute], start: SDateLike): Seq[DashboardSummary] = {
     val groupedFlights: Map[MillisSinceEpoch, Set[ApiFlightWithSplits]] = groupFlightsByHour(flights, start).toMap
     val groupedCrunchMinutes = groupCrunchMinutesByHour(cms, start).toMap
-    val sum = groupedCrunchMinutes.mapValues(cms => cms.map(_.paxLoad).sum).values.sum
 
     hourRange(start, 3).map(h => DashboardSummary(
       h.millisSinceEpoch,
@@ -68,7 +67,7 @@ object DashboardTerminalSummary {
 
   def groupFlightsByHour(flights: List[ApiFlightWithSplits], startMin: SDateLike): Seq[(MillisSinceEpoch, Set[ApiFlightWithSplits])] = {
     val hourInMillis = 3600000
-    flights.filter{ f=> f.apiFlight.PcpTime.isDefined}.sortBy(_.apiFlight.PcpTime.getOrElse(0L)).groupBy(fws => {
+    flights.filter { f => f.apiFlight.PcpTime.isDefined }.sortBy(_.apiFlight.PcpTime.getOrElse(0L)).groupBy(fws => {
       val hoursSinceStart = ((fws.apiFlight.PcpTime.getOrElse(0L) - startMin.millisSinceEpoch) / hourInMillis).toInt
       startMin.addHours(hoursSinceStart).millisSinceEpoch
     }).mapValues(_.toSet).toList.sortBy(_._1)
@@ -83,8 +82,7 @@ object DashboardTerminalSummary {
   }
 
   def flightPcpInPeriod(f: ApiFlightWithSplits, start: SDateLike, end: SDateLike): Boolean =
-    f.apiFlight.PcpTime.exists( millis=> start.millisSinceEpoch <= millis && millis <= end.millisSinceEpoch )
-
+    f.apiFlight.PcpTime.exists(millis => start.millisSinceEpoch <= millis && millis <= end.millisSinceEpoch)
 
   def windowStart(time: SDateLike): SDateLike = {
 
@@ -110,44 +108,42 @@ object DashboardTerminalSummary {
 
   def paxInPeriod(cms: Seq[CrunchMinute]): Double = cms.map(_.paxLoad).sum
 
-  case class Props(
-                    flights: List[ApiFlightWithSplits],
-                    crunchMinutes: List[CrunchMinute],
-                    staffMinutes: List[StaffMinute],
-                    terminal: TerminalName,
-                    queues: List[PaxTypeAndQueue],
-                    timeWindowStart: SDateLike,
-                    timeWindowEnd: SDateLike
-                  )
+  case class Props(flights: List[ApiFlightWithSplits],
+                   crunchMinutes: List[CrunchMinute],
+                   staffMinutes: List[StaffMinute],
+                   terminal: TerminalName,
+                   queues: List[PaxTypeAndQueue],
+                   timeWindowStart: SDateLike,
+                   timeWindowEnd: SDateLike)
 
   val component = ScalaComponent.builder[Props]("SummaryBox")
-    .render_P((p) => {
+    .render_P { props =>
 
-      val crunchMinuteTimeSlots = groupCrunchMinutesByX(15)(CrunchApi.terminalMinutesByMinute(p.crunchMinutes.toSet, p.terminal), p.terminal, Queues.queueOrder).flatMap(_._2)
+      val crunchMinuteTimeSlots = groupCrunchMinutesByX(15)(CrunchApi.terminalMinutesByMinute(props.crunchMinutes, props.terminal), props.terminal, Queues.queueOrder).flatMap(_._2)
 
       if (crunchMinuteTimeSlots.isEmpty) {
         <.div(^.className := "dashboard-summary container-fluid", "No data available to display")
       } else {
 
-        val pressurePoint = worstTimeslot(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, p.terminal))
+        val pressurePoint = worstTimeslot(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal))
         val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePoint.deployedDesks.getOrElse(0))
 
-        val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(p.flights)
+        val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(props.flights)
 
-        val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(p.queues)
+        val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(props.queues)
 
-        val summary: Seq[DashboardSummary] = hourSummary(p.flights, p.crunchMinutes, p.timeWindowStart)
+        val summary: Seq[DashboardSummary] = hourSummary(props.flights, props.crunchMinutes, props.timeWindowStart)
         val queueTotals = totalsByQueue(summary)
         val totalPaxAcrossQueues = queueTotals.values.sum
 
-        val pcpLowestTimeSlot = pcpLowest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, p.terminal)).minute
-        val pcpHighestTimeSlot = pcpHighest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, p.terminal)).minute
+        val pcpLowestTimeSlot = pcpLowest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal)).minute
+        val pcpHighestTimeSlot = pcpHighest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal)).minute
 
-        def pressureStaffMinute = p.staffMinutes.find(_.minute == pressurePoint.minute)
+        def pressureStaffMinute = props.staffMinutes.find(_.minute == pressurePoint.minute)
 
         <.div(^.className := "dashboard-summary container-fluid",
           <.div(^.className := s"$ragClass summary-box-container rag-summary col-sm-1",
-            <.span(^.className := "flights-total", f"${p.flights.size}%,d Flights"),
+            <.span(^.className := "flights-total", f"${props.flights.size}%,d Flights"),
             <.table(^.className := s"summary-box-count rag-desks",
               <.tbody(
                 <.tr(
@@ -157,13 +153,13 @@ object DashboardTerminalSummary {
                   <.td("Staff"), <.td("Desks")
                 ),
                 <.tr(
-                  <.td(s"${pressureStaffMinute.map(sm => sm.available).getOrElse(0) }"),
+                  <.td(s"${pressureStaffMinute.map(sm => sm.available).getOrElse(0)}"),
                   <.td(s"${pressurePoint.deskRec + pressureStaffMinute.map(_.fixedPoints).getOrElse(0)}")
                 )
               )
             )),
           <.div(^.className := "summary-box-container pax-count col-sm-1", <.div(s"$totalPaxAcrossQueues Pax")),
-          <.div(^.className := "summary-box-container col-sm-1", BigSummaryBoxes.GraphComponent("aggregated", "", splitsForPeriod.values.sum, splitsForPeriod, p.queues)),
+          <.div(^.className := "summary-box-container col-sm-1", BigSummaryBoxes.GraphComponent("aggregated", "", splitsForPeriod.values.sum, splitsForPeriod, props.queues)),
           <.div(^.className := "summary-box-container col-sm-4 pax-summary",
             <.table(
               <.tbody(
@@ -182,7 +178,7 @@ object DashboardTerminalSummary {
                 }.toTagMod,
                 <.tr(
                   <.th(^.colSpan := 2, ^.className := "heading", "3 Hour Total"),
-                  <.th(p.flights.size),
+                  <.th(props.flights.size),
                   <.th(totalPaxAcrossQueues), queueNames.map(q => <.th(s"${queueTotals.getOrElse(q, 0.0)}")).toTagMod
                 )
               )
@@ -201,7 +197,7 @@ object DashboardTerminalSummary {
           )
         )
       }
-    }).build
+    }.build
 
   def totalsByQueue(summary: Seq[DashboardSummary]): Map[QueueName, MillisSinceEpoch] = {
     summary

@@ -51,8 +51,8 @@ class PlanningPageSpec() extends CrunchTestLike {
     crunch.forecastTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val weekOf15MinSlots: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = Forecast.rollUpForWeek(
-          ps.crunchMinutes.values.toSet,
-          ps.staffMinutes.values.toSet,
+          ps.crunchMinutes,
+          ps.staffMinutes,
           "T1"
         )
         val firstDayFirstHour = weekOf15MinSlots.getOrElse(SDate("2017-01-02T00:00Z").millisSinceEpoch, Seq()).take(4)

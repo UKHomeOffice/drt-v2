@@ -10,8 +10,8 @@ import drt.client.logger.log
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, ViewMode}
-import drt.shared.CrunchApi.CrunchState
-import drt.shared.FlightsApi.TerminalName
+import drt.shared.CrunchApi.PortState
+import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -25,40 +25,26 @@ import scala.util.Try
 
 object TerminalContentComponent {
 
-  case class Props(
-                    crunchStatePot: Pot[CrunchState],
-                    potShifts: Pot[ShiftAssignments],
-                    potFixedPoints: Pot[FixedPointAssignments],
-                    potStaffMovements: Pot[Seq[StaffMovement]],
-                    airportConfig: AirportConfig,
-                    terminalPageTab: TerminalPageTabLoc,
-                    airportInfoPot: Pot[AirportInfo],
-                    defaultTimeRangeHours: TimeRangeHours,
-                    router: RouterCtl[Loc],
-                    showActuals: Boolean,
-                    viewMode: ViewMode,
-                    loggedInUserPot: Pot[LoggedInUser],
-                    minuteTicker: Int
-                  ) {
-    lazy val hash: (Int, Int) = {
-      val depsHash = crunchStatePot.map(
-        cs => (cs.crunchMinutes, cs.staffMinutes, cs.flights).hashCode()
-      ).getOrElse(0)
-
-      (depsHash, minuteTicker)
-    }
-  }
+  case class Props(portStatePot: Pot[PortState],
+                   potShifts: Pot[ShiftAssignments],
+                   potFixedPoints: Pot[FixedPointAssignments],
+                   potStaffMovements: Pot[Seq[StaffMovement]],
+                   airportConfig: AirportConfig,
+                   terminalPageTab: TerminalPageTabLoc,
+                   defaultTimeRangeHours: TimeRangeHours,
+                   router: RouterCtl[Loc],
+                   showActuals: Boolean,
+                   viewMode: ViewMode,
+                   loggedInUserPot: Pot[LoggedInUser],
+                   minuteTicker: Int)
 
   case class State(activeTab: String, showExportDialogue: Boolean = false)
 
-  def filterCrunchStateByRange(day: SDateLike,
-                               range: TimeRangeHours,
-                               state: CrunchState,
-                               terminalName: TerminalName): CrunchState = {
+  def viewStartAndEnd(day: SDateLike, range: TimeRangeHours): (SDateLike, SDateLike) = {
     val startOfDay = SDate(day.getFullYear(), day.getMonth(), day.getDate())
     val startOfView = startOfDay.addHours(range.start)
     val endOfView = startOfDay.addHours(range.end)
-    state.window(startOfView, endOfView, terminalName)
+    (startOfView, endOfView)
   }
 
   val timelineComp: Option[Arrival => html_<^.VdomElement] = Some(FlightTableComponents.timelineCompFunc _)
@@ -101,11 +87,14 @@ object TerminalContentComponent {
       val timeRangeHours: CustomWindow = timeRange(props)
 
       <.div(
-        props.crunchStatePot.renderPending(_ => if (props.crunchStatePot.isEmpty) <.div(^.id := "terminal-spinner", Icon.spinner) else ""),
-        props.crunchStatePot.renderEmpty(if (!props.crunchStatePot.isPending) {
+        props.portStatePot.renderPending(_ => if (props.portStatePot.isEmpty) <.div(^.id := "terminal-spinner", Icon.spinner) else ""),
+        props.portStatePot.renderEmpty(if (!props.portStatePot.isPending) {
           <.div(^.id := "terminal-data", "Nothing to show for this time period")
         } else ""),
-        props.crunchStatePot.render((crunchState: CrunchState) => {
+        props.portStatePot.render((portState: PortState) => {
+          val queues = props.airportConfig.queues.filterKeys(_ == props.terminalPageTab.terminal)
+          val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.time, timeRangeHours)
+          val filteredPortState = portState.window(viewStart, viewEnd, queues)
           <.div(^.className := s"view-mode-content $viewModeStr",
             <.div(^.className := "tabs-with-export",
               <.ul(^.className := "nav nav-tabs",
@@ -152,12 +141,13 @@ object TerminalContentComponent {
               <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
                 if (state.activeTab == "desksAndQueues") {
                   props.loggedInUserPot.render(loggedInUser => {
-                    val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState, props.terminalPageTab.terminal)
+                    val (viewStart, _) = viewStartAndEnd(props.terminalPageTab.viewMode.time, timeRangeHours)
                     TerminalDesksAndQueues(
                       TerminalDesksAndQueues.Props(
                         props.router,
-                        filteredPortState.crunchMinutes,
-                        filteredPortState.staffMinutes,
+                        filteredPortState,
+                        viewStart,
+                        timeRangeHours.end - timeRangeHours.start,
                         props.airportConfig,
                         props.terminalPageTab,
                         props.showActuals,
@@ -170,12 +160,8 @@ object TerminalContentComponent {
               ),
               <.div(^.id := "arrivals", ^.className := s"tab-pane in $arrivalsPanelActive", {
                 if (state.activeTab == "arrivals") {
-                  <.div(props.crunchStatePot.render((crunchState: CrunchState) => {
-                    val filteredPortState = filterCrunchStateByRange(props.terminalPageTab.viewMode.time, timeRangeHours, crunchState, props.terminalPageTab.terminal)
-                    arrivalsTableComponent(FlightsWithSplitsTable.Props(filteredPortState.flights.toList, queueOrder, props.airportConfig.hasEstChox))
-                  }),
-                    props.crunchStatePot.renderEmpty("No flights")
-                  )
+                  val flightsForTerminal = filteredPortState.flights.values.filter(_.apiFlight.Terminal == props.terminalPageTab.terminal).toList
+                  arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsForTerminal, queueOrder, props.airportConfig.hasEstChox))
                 } else ""
               }),
               <.div(^.id := "available-staff", ^.className := s"tab-pane terminal-staffing-container $staffingPanelActive",

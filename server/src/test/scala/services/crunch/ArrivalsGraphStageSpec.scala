@@ -2,7 +2,7 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import controllers.ArrivalGenerator.apiFlight
-import drt.shared.CrunchApi.PortState
+import drt.shared.CrunchApi.{CrunchMinute, PortState, StaffMinute}
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.Queues.EeaDesk
@@ -14,7 +14,7 @@ import server.feeds.{ArrivalsFeedSuccess, ManifestsFeedSuccess}
 import services.SDate
 import services.graphstages.DqManifests
 
-import scala.collection.immutable.List
+import scala.collection.immutable.{List, SortedMap}
 import scala.concurrent.duration._
 
 class ArrivalsGraphStageSpec extends CrunchTestLike {
@@ -36,7 +36,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(
       airportConfig = airportConfig.copy(terminalNames = Seq("T1")),
       now = () => dateNow,
-      initialPortState = Option(PortState(Map(arrival_v2_with_chox_time.uniqueId -> ApiFlightWithSplits(arrival_v2_with_chox_time, Set(terminalSplits))), Map(), Map())),
+      initialPortState = Option(PortState(Map(arrival_v2_with_chox_time.uniqueId -> ApiFlightWithSplits(arrival_v2_with_chox_time, Set(terminalSplits))), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())),
       initialLiveArrivals = Set(arrival_v2_with_chox_time)
     )
 

@@ -3,7 +3,7 @@ package services.crunch
 import java.util.UUID
 
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{PortState, StaffMinute}
+import drt.shared.CrunchApi.{CrunchMinute, PortState, StaffMinute}
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
@@ -12,7 +12,7 @@ import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.graphstages.Crunch
 
-import scala.collection.immutable.List
+import scala.collection.immutable.{List, SortedMap}
 import scala.concurrent.duration._
 
 class StaffMinutesSpec extends CrunchTestLike {
@@ -526,18 +526,18 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     val daysToCrunch = 5
 
-    def staffMinutes(days: Int, minutes: Int, startDate: String): Map[TM, StaffMinute] = (0 until days).flatMap { day =>
+    def staffMinutes(days: Int, minutes: Int, startDate: String): SortedMap[TM, StaffMinute] = SortedMap[TM, StaffMinute]() ++ (0 until days).flatMap { day =>
       (0 until minutes).map { minute =>
         val currentMinute = SDate(startDate).addDays(day).addMinutes(minute).millisSinceEpoch
         (TM("T1", currentMinute), StaffMinute("T1", currentMinute, 0, 1, 0))
       }
-    }.toMap
+    }
 
     val crunch = runCrunchGraph(
       now = () => now,
       initialFixedPoints = fixedPoints,
       maxDaysToCrunch = daysToCrunch,
-      initialPortState = Option(PortState(Map(), Map(), staffMinutes(daysToCrunch, 15, scheduled))),
+      initialPortState = Option(PortState(Map[Int, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), staffMinutes(daysToCrunch, 15, scheduled))),
       checkRequiredStaffUpdatesOnStartup = true
     )
 
