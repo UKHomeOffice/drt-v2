@@ -11,7 +11,7 @@ import services.graphstages.StaffDeploymentCalculator.deploymentWithinBounds
 import services.{SDate, _}
 
 import scala.collection.immutable
-import scala.collection.immutable.{Map, NumericRange}
+import scala.collection.immutable.{Map, NumericRange, SortedMap}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
@@ -493,7 +493,7 @@ case class SimulationMinute(terminalName: TerminalName,
 case class SimulationMinutes(minutes: Set[SimulationMinute]) extends PortStateMinutes {
   def applyTo(maybePortState: Option[PortState], now: SDateLike): Option[PortState] = {
     maybePortState match {
-      case None => Option(PortState(Map(), newCrunchMinutes, Map()))
+      case None => Option(PortState(Map[Int, ApiFlightWithSplits](), newCrunchMinutes, SortedMap[TM, StaffMinute]()))
       case Some(portState) =>
         val updatedCrunchMinutes = minutes
           .foldLeft(portState.crunchMinutes) {
@@ -506,10 +506,9 @@ case class SimulationMinutes(minutes: Set[SimulationMinute]) extends PortStateMi
     }
   }
 
-  def newCrunchMinutes: Map[TQM, CrunchMinute] = minutes
+  def newCrunchMinutes: SortedMap[TQM, CrunchMinute] = SortedMap[TQM, CrunchMinute]() ++ minutes
     .map(CrunchMinute(_))
     .map(cm => (cm.key, cm))
-    .toMap
 
   def mergeMinute(maybeMinute: Option[CrunchMinute], updatedSm: SimulationMinute): CrunchMinute = maybeMinute
     .map(existingCm => existingCm.copy(

@@ -23,14 +23,14 @@ object TerminalsDashboardPage {
   val component = ScalaComponent.builder[Props]("TerminalsDashboard")
     .render_P(p => {
 
-      val portCodeQueueOrderTerminals = SPACircuit.connect(_.airportConfig.map(ac => (ac.queueOrder, ac.terminalNames)))
-      val crunchStateRCP = SPACircuit.connect(_.crunchStatePot)
+      val portCodeQueueOrderTerminals = SPACircuit.connect(_.airportConfig)
+      val portStateRCP = SPACircuit.connect(_.portStatePot)
 
       portCodeQueueOrderTerminals { portMP =>
         <.div(^.className := "terminal-summary-dashboard",
-          portMP().render(portConfig => {
-            val (queueOrder, terminals) = portConfig
-            crunchStateRCP(crunchStateMP => {
+            portMP().render(portConfig => {
+            val (queueOrder, terminals) = (portConfig.queueOrder, portConfig.terminalNames)
+            portStateRCP(portStateMP => {
               val currentPeriodStart = DashboardTerminalSummary.windowStart(SDate.now())
               val periods = List(
                 DisplayPeriod(currentPeriodStart),
@@ -41,7 +41,6 @@ object TerminalsDashboardPage {
               def displayPeriod = periods(p.dashboardPage.period.getOrElse(0))
 
               def flightWithinPeriod(flight: ApiFlightWithSplits) = DashboardTerminalSummary.flightPcpInPeriod(flight, displayPeriod.start, displayPeriod.end)
-
 
               def switchDashboardPeriod(period: Int) = (_: ReactEventFromInput) => {
                 GoogleEventTracker.sendEvent("dashboard", "Switch Period", period.toString)
@@ -60,24 +59,16 @@ object TerminalsDashboardPage {
                 terminals.map { terminalName =>
                   <.div(
                     <.h3(s"Terminal $terminalName"),
-                    crunchStateMP().render(crunchState => {
-                      val flightsInTerminal: List[ApiFlightWithSplits] = crunchState
-                        .flights
-                        .toList
-                        .filter(_.apiFlight.Terminal == terminalName)
-                        .filter(flightWithinPeriod)
-                      val crunchMinutesInTerminal = crunchState.crunchMinutes.toList
-                        .filter(cm => cm.minute >= displayPeriod.start.millisSinceEpoch && cm.minute < displayPeriod.end.millisSinceEpoch)
-                        .filter(_.terminalName == terminalName)
-
-                      val staffMinutesInTerminal = crunchState.staffMinutes.toList
-                        .filter(sm => sm.minute >= displayPeriod.start.millisSinceEpoch && sm.minute < displayPeriod.end.millisSinceEpoch)
-                        .filter(_.terminalName == terminalName)
+                    portStateMP().render(portState => {
+                      val portStateForDashboard = portState.window(displayPeriod.start, displayPeriod.end, portConfig.queues.filterKeys(_ == terminalName))
+                      val flightsInTerminal = portStateForDashboard.flights.values.toList
+                      val terminalCrunchMinutes = portStateForDashboard.crunchMinutes.values.toList
+                      val terminalStaffMinutes = portStateForDashboard.staffMinutes.values.toList
 
                       DashboardTerminalSummary(DashboardTerminalSummary.Props(
                         flightsInTerminal,
-                        crunchMinutesInTerminal,
-                        staffMinutesInTerminal,
+                        terminalCrunchMinutes,
+                        terminalStaffMinutes,
                         terminalName,
                         queueOrder,
                         displayPeriod.start,

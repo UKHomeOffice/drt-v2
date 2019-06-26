@@ -61,10 +61,10 @@ object CSVData {
       Forecast.periodByTimeSlotAcrossDays(forecastPeriod)
     )
 
-  def millisToHoursAndMinutesString =
+  def millisToHoursAndMinutesString: MillisSinceEpoch => String =
     (millis: MillisSinceEpoch) => SDate(millis, europeLondonTimeZone).toHoursAndMinutes()
 
-  def periodTimeslotsToCSVString(timeSlotStarts: Seq[String], byTimeSlot: List[List[Option[ForecastTimeSlot]]]) = {
+  def periodTimeslotsToCSVString(timeSlotStarts: Seq[String], byTimeSlot: List[List[Option[ForecastTimeSlot]]]): String = {
     byTimeSlot.zip(timeSlotStarts).map {
       case (row, startTime) =>
         s"$startTime" + "," +
@@ -72,14 +72,14 @@ object CSVData {
     }.mkString(lineEnding)
   }
 
-  def forecastTimeSlotOptionToCSV(rowOption: Option[ForecastTimeSlot]) = rowOption match {
+  def forecastTimeSlotOptionToCSV(rowOption: Option[ForecastTimeSlot]): String = rowOption match {
     case Some(col) =>
       s"${col.available},${col.required},${col.available - col.required}"
     case None =>
       s",,"
   }
 
-  def makeDayHeadingsForPlanningExport(daysInPeriod: Seq[MillisSinceEpoch]) = {
+  def makeDayHeadingsForPlanningExport(daysInPeriod: Seq[MillisSinceEpoch]): QueueName = {
     "," + daysInPeriod.map(day => {
       val localDate = SDate(day, europeLondonTimeZone)
       val date = localDate.getDate()
@@ -108,14 +108,13 @@ object CSVData {
     headingsLine1 + lineEnding + headingsLine2
   }
 
-  def terminalCrunchMinutesToCsvDataWithHeadings(cms: Set[CrunchMinute], staffMinutes: Set[StaffMinute], terminalName: TerminalName, queues: Seq[QueueName]): String =
-
+  def terminalCrunchMinutesToCsvDataWithHeadings(cms: List[CrunchMinute], staffMinutes: List[StaffMinute], terminalName: TerminalName, queues: Seq[QueueName]): String =
     terminalCrunchMinutesToCsvDataHeadings(queues) + lineEnding + terminalCrunchMinutesToCsvData(cms, staffMinutes, terminalName, queues)
 
 
-  def terminalCrunchMinutesToCsvData(cms: Set[CrunchMinute], staffMinutes: Set[StaffMinute], terminalName: TerminalName, queues: Seq[QueueName]): String = {
+  def terminalCrunchMinutesToCsvData(cms: List[CrunchMinute], staffMinutes: List[StaffMinute], terminalName: TerminalName, queues: Seq[QueueName]): String = {
 
-    val crunchMilliMinutes: Seq[(MillisSinceEpoch, Set[CrunchMinute])] = CrunchApi.terminalMinutesByMinute(cms, terminalName)
+    val crunchMilliMinutes: Seq[(MillisSinceEpoch, List[CrunchMinute])] = CrunchApi.terminalMinutesByMinute(cms, terminalName)
     val staffMilliMinutes = CrunchApi
       .terminalMinutesByMinute(staffMinutes, terminalName)
       .map { case (minute, sms) => (minute, sms.head) }
@@ -152,7 +151,7 @@ object CSVData {
   def addStaffMinutes(
                        terminalCrunchMinuteRowsByMinute: Seq[(MillisSinceEpoch, Seq[String])],
                        staffMinutesByMinute: Map[MillisSinceEpoch, StaffMinute],
-                       crunchMilliMinutes: Seq[(MillisSinceEpoch, Set[CrunchMinute])]
+                       crunchMilliMinutes: Seq[(MillisSinceEpoch, List[CrunchMinute])]
                      ): Seq[QueueName] = {
     terminalCrunchMinuteRowsByMinute
       .map {

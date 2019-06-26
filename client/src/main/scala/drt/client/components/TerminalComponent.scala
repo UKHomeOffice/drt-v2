@@ -3,13 +3,15 @@ package drt.client.components
 import diode.UseValueEq
 import diode.data.{Pending, Pot}
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
+import drt.client.components.TerminalDesksAndQueues.Props
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.shared.CrunchApi.{CrunchState, ForecastPeriodWithHeadlines}
+import drt.shared.CrunchApi.{PortState, ForecastPeriodWithHeadlines}
 import drt.shared._
 import japgolly.scalajs.react.ScalaComponent
+import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 
@@ -20,34 +22,31 @@ object TerminalComponent {
 
   case class Props(terminalPageTab: TerminalPageTabLoc, router: RouterCtl[Loc])
 
-  case class TerminalModel(
-                            crunchStatePot: Pot[CrunchState],
-                            forecastPeriodPot: Pot[ForecastPeriodWithHeadlines],
-                            potShifts: Pot[ShiftAssignments],
-                            potMonthOfShifts: Pot[MonthOfShifts],
-                            potFixedPoints: Pot[FixedPointAssignments],
-                            potStaffMovements: Pot[Seq[StaffMovement]],
-                            airportConfig: Pot[AirportConfig],
-                            airportInfos: Pot[AirportInfo],
-                            loadingState: LoadingState,
-                            showActuals: Boolean,
-                            loggedInUserPot: Pot[LoggedInUser],
-                            viewMode: ViewMode,
-                            minuteTicker: Int,
-                            maybeStaffAdjustmentsPopoverState: Option[StaffAdjustmentDialogueState]
+  case class TerminalModel(portStatePot: Pot[PortState],
+                           forecastPeriodPot: Pot[ForecastPeriodWithHeadlines],
+                           potShifts: Pot[ShiftAssignments],
+                           potMonthOfShifts: Pot[MonthOfShifts],
+                           potFixedPoints: Pot[FixedPointAssignments],
+                           potStaffMovements: Pot[Seq[StaffMovement]],
+                           airportConfig: Pot[AirportConfig],
+                           loadingState: LoadingState,
+                           showActuals: Boolean,
+                           loggedInUserPot: Pot[LoggedInUser],
+                           viewMode: ViewMode,
+                           minuteTicker: Int,
+                           maybeStaffAdjustmentsPopoverState: Option[StaffAdjustmentDialogueState]
                           ) extends UseValueEq
 
   val component = ScalaComponent.builder[Props]("Terminal")
     .render_P(props => {
       val modelRCP = SPACircuit.connect(model => TerminalModel(
-        model.crunchStatePot,
+        model.portStatePot,
         model.forecastPeriodPot,
         model.shifts,
         model.monthOfShifts,
         model.fixedPoints,
         model.staffMovements,
         model.airportConfig,
-        model.airportInfos.getOrElse(props.terminalPageTab.terminal, Pending()),
         model.loadingState,
         model.showActualIfAvailable,
         model.loggedInUserPot,
@@ -67,13 +66,12 @@ object TerminalComponent {
             val timeRangeHours = if (model.viewMode == ViewLive) CurrentWindow() else WholeDayWindow()
 
             val terminalContentProps = TerminalContentComponent.Props(
-              model.crunchStatePot,
+              model.portStatePot,
               model.potShifts,
               model.potFixedPoints,
               model.potStaffMovements,
               airportConfig,
               props.terminalPageTab,
-              model.airportInfos,
               timeRangeHours,
               props.router,
               model.showActuals,
@@ -141,7 +139,7 @@ object TerminalComponent {
                       case _ => "Live View"
                     }),
                     <.div(^.className := "content-head",
-                      PcpPaxSummariesComponent(terminalContentProps.crunchStatePot, terminalContentProps.viewMode, props.terminalPageTab.terminal, model.minuteTicker),
+                      PcpPaxSummariesComponent(terminalContentProps.portStatePot, terminalContentProps.viewMode, props.terminalPageTab.terminal, model.minuteTicker),
                       DatePickerComponent(DatePickerComponent.Props(props.router,
                         props.terminalPageTab,
                         model.loadingState,

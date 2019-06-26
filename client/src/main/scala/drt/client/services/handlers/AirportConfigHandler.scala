@@ -18,7 +18,7 @@ class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends L
       updated(Pending(), Effect(DrtApi.get("airport-config")
         .map(r => UpdateAirportConfig(read[AirportConfig](r.responseText))).recoverWith {
         case _ =>
-          log.error(s"CrunchState request failed. Re-requesting after ${PollDelay.recoveryDelay}")
+          log.error(s"AirportConfig request failed. Re-requesting after ${PollDelay.recoveryDelay}")
           Future(RetryActionAfter(GetAirportConfig, PollDelay.recoveryDelay))
       }))
     case UpdateAirportConfig(airportConfig) =>
