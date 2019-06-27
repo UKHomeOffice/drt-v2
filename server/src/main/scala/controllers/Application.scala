@@ -375,8 +375,9 @@ class Application @Inject()(implicit val config: Configuration,
 
   def isHistoricDate(day: MillisSinceEpoch): Boolean = day < getLocalLastMidnight(SDate.now()).millisSinceEpoch
 
-  def index = Action {
-    Ok(views.html.index("DRT - BorderForce", portCode, googleTrackingCode))
+  def index = Action { request =>
+    val user = ctrl.getLoggedInUser(config, request.headers, request.session)
+    Ok(views.html.index("DRT - BorderForce", portCode, googleTrackingCode, user.id))
   }
 
   def getLoggedInUser(): Action[AnyContent] = Action { request =>
