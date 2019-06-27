@@ -55,11 +55,9 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
 
     crunch.forecastTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
-        val weekOf15MinSlots: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = Forecast.rollUpForWeek(
-          ps.crunchMinutes,
-          ps.staffMinutes,
-          "T1")
-
+        val cs = ps.crunchSummary(SDate(startDate1), 4, 15, "T1", airportConfig.queues("T1").toList)
+        val ss = ps.staffSummary(SDate(startDate1), 4, 15, "T1")
+        val weekOf15MinSlots: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = Forecast.rollUpForWeek(cs, ss)
         val firstDayFirstHour = weekOf15MinSlots.getOrElse(SDate("2017-01-02T00:00Z").millisSinceEpoch, Seq()).take(4)
 
         firstDayFirstHour == expected
@@ -70,26 +68,6 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
     success
   }
 
-  "Given a list of staff numbers for every minute, when I group by 15 minutes, " +
-    "Then I should get the lowest number in each 15 minute block" >> {
-
-    val staffMinutes: Set[StaffMinute] = ((0 to 58)
-      .map(index => {
-        StaffMinute(terminalName = "T1", minute = index * 60000, shifts = 20, fixedPoints = 2, movements = 1, lastUpdated = None)
-      })
-      :+ StaffMinute(terminalName = "T1", minute = 59 * 60000, shifts = 10, fixedPoints = 1, movements = 0, lastUpdated = None)).toSet
-
-    val staffAvailable: Map[MillisSinceEpoch, Int] = staffByTimeSlot(15)(staffMinutes, "T1")
-
-    val expected = Map(
-      slot0To14 -> 20,
-      slot15To29 -> 20,
-      slot30To44 -> 20,
-      slot45To59 -> 10)
-
-    staffAvailable === expected
-  }
-
   "Given a set of forecast minutes and staff minutes for all terminals, " +
     "When I roll up for week per terminal " +
     "Then I should get the lowest number in each 15 minute block relevant to the particular terminal" >> {
@@ -98,17 +76,16 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
       .map(index => StaffMinute(terminalName = "T1", minute = index * 60000, shifts = 20, fixedPoints = 2, movements = 1, lastUpdated = None)).toSet
     val staffMinutesT2 = staffMinutesT1.map(_.copy(terminalName = "T2", fixedPoints = 3))
 
-    val crunchMinutesT1: Set[CrunchMinute] = (0 to 58)
+    val crunchMinutesT1: Set[CrunchMinute] = (0 to 59)
       .map(index => CrunchMinute(terminalName = "T1", queueName = Queues.EeaDesk, minute = index * 60000,
         lastUpdated = None, paxLoad = 0d, workLoad = 0d, deskRec = 1, waitTime = 0)).toSet
     val crunchMinutesT2 = crunchMinutesT1.map(_.copy(terminalName = "T2", deskRec = 2))
 
-    val crunchMinutes = (crunchMinutesT1 ++ crunchMinutesT2).map(cm => (TQM(cm), cm)).toMap
-    val staffMinutes = (staffMinutesT1 ++ staffMinutesT2).map(sm => (TM(sm), sm)).toMap
+    val ps = PortState(List(), (crunchMinutesT1 ++ crunchMinutesT2).toList, (staffMinutesT1 ++ staffMinutesT2).toList)
+    val cs = ps.crunchSummary(SDate(0L), 4, 15, "T1", airportConfig.queues("T1").toList)
+    val ss = ps.staffSummary(SDate(0L), 4, 15, "T1")
 
-    val result = Forecast
-      .rollUpForWeek(crunchMinutes, staffMinutes, "T1")
-      .values.head.toSet
+    val result = Forecast.rollUpForWeek(cs, ss).values.head.toSet
 
     val expected = Set(
       ForecastTimeSlot(0, 20, 3),

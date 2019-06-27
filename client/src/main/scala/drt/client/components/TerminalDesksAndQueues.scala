@@ -122,8 +122,8 @@ object TerminalDesksAndQueues {
       )
 
       val queues = props.airportConfig.nonTransferQueues(terminalName).toList
-      val terminalCrunchMinutes: Map[MillisSinceEpoch, Map[String, CrunchMinute]] = props.portState.crunchSummary(props.viewStart.millisSinceEpoch, props.hoursToView * 4, 15, terminalName, queues)
-      val terminalStaffMinutes: Map[MillisSinceEpoch, StaffMinute] = props.portState.staffSummary(props.viewStart.millisSinceEpoch, props.hoursToView * 4, 15, terminalName)
+      val terminalCrunchMinutes: Map[MillisSinceEpoch, Map[String, CrunchMinute]] = props.portState.crunchSummary(props.viewStart, props.hoursToView * 4, 15, terminalName, queues)
+      val terminalStaffMinutes: Map[MillisSinceEpoch, StaffMinute] = props.portState.staffSummary(props.viewStart, props.hoursToView * 4, 15, terminalName)
       val viewMinutes = props.viewStart.millisSinceEpoch until (props.viewStart.millisSinceEpoch + (props.hoursToView * 60 * 60000)) by 15 * 60000
 
       val toggleShowActuals = (e: ReactEventFromInput) => {

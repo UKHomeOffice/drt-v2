@@ -572,7 +572,8 @@ object CrunchApi {
       } else None
     }
 
-    def crunchSummary(startMillis: MillisSinceEpoch, periods: Int, periodSize: Int, terminal: TerminalName, queues: List[String]): Map[Long, Map[String, CrunchMinute]] = {
+    def crunchSummary(start: SDateLike, periods: Int, periodSize: Int, terminal: TerminalName, queues: List[String]): Map[Long, Map[String, CrunchMinute]] = {
+      val startMillis = start.roundToMinute().millisSinceEpoch
       val endMillis = startMillis + (periods * periodSize * 60000)
       val byPeriod: Map[Long, Map[String, CrunchMinute]] = (startMillis until endMillis by periodSize * 60000)
         .map { periodStart =>
@@ -591,7 +592,8 @@ object CrunchApi {
       byPeriod
     }
 
-    def staffSummary(startMillis: MillisSinceEpoch, periods: Int, periodSize: Int, terminal: TerminalName): Map[Long, StaffMinute] = {
+    def staffSummary(start: SDateLike, periods: Int, periodSize: Int, terminal: TerminalName): Map[Long, StaffMinute] = {
+      val startMillis = start.roundToMinute().millisSinceEpoch
       val endMillis = startMillis + (periods * periodSize * 60000)
       val byPeriod: Map[Long, StaffMinute] = (startMillis until endMillis by periodSize * 60000)
         .map { periodStart =>
@@ -637,7 +639,7 @@ object CrunchApi {
       if (slotMinutes.nonEmpty) StaffMinute(
         terminalName = terminal,
         minute = periodStart,
-        shifts = slotMinutes.map(_.shifts).max,
+        shifts = slotMinutes.map(_.shifts).min,
         fixedPoints = slotMinutes.map(_.fixedPoints).max,
         movements = slotMinutes.map(_.movements).max)
       else StaffMinute(
@@ -812,33 +814,9 @@ object CrunchApi {
 
   case class ForecastPeriod(days: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]])
 
-  case class ForecastHeadlineFigures(queueDayHeadlines: Set[QueueHeadline])
+  case class ForecastHeadlineFigures(queueDayHeadlines: Seq[QueueHeadline])
 
   case class QueueHeadline(day: MillisSinceEpoch, queue: QueueName, paxNos: Int, workload: Int)
-
-  def staffByTimeSlot(slotSize: Int)(staffMinutes: Set[StaffMinute], terminalName: TerminalName): Map[MillisSinceEpoch, Int] = {
-    staffMinutes
-      .filter(_.terminalName == terminalName)
-      .toList
-      .sortBy(_.minute)
-      .grouped(slotSize)
-      .toList
-      .map(slot => {
-        slot.map(_.minute).min -> slot.map(_.shifts).min
-      }).toMap
-  }
-
-  def fixedPointsByTimeSlot(slotSize: Int)(staffMinutes: Set[StaffMinute], terminalName: TerminalName): Map[MillisSinceEpoch, Int] = {
-    staffMinutes
-      .filter(_.terminalName == terminalName)
-      .toList
-      .sortBy(_.minute)
-      .grouped(slotSize)
-      .toList
-      .map(slot => {
-        slot.map(_.minute).min -> slot.map(_.fixedPoints).max
-      }).toMap
-  }
 
   def groupCrunchMinutesByX(groupSize: Int)(crunchMinutes: Seq[(MillisSinceEpoch, List[CrunchMinute])], terminalName: TerminalName, queueOrder: List[String]): Seq[(MillisSinceEpoch, Seq[CrunchMinute])] = {
     crunchMinutes.grouped(groupSize).toList.map(group => {
