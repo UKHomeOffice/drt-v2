@@ -1,4 +1,4 @@
-@(title: String, port: String, googleTrackingCode: String)(implicit config: play.api.Configuration, env: play.api.Environment)
+@(title: String, port: String, googleTrackingCode: String, userId: String)(implicit config: play.api.Configuration, env: play.api.Environment)
 @import views.html.tags._
 
 <!DOCTYPE html>
@@ -27,6 +27,8 @@
         </div>
         <input type="hidden" id="port-code" value="@{port}"/>
         <input type="hidden" id="ga-code" value="@{googleTrackingCode}"/>
+        <input type="hidden" id="user-id" value="@{userId}"/>
+
     </body>
     @*<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">*@
 
