@@ -380,8 +380,9 @@ class Application @Inject()(implicit val config: Configuration,
 
   def isHistoricDate(day: MillisSinceEpoch): Boolean = day < getLocalLastMidnight(SDate.now()).millisSinceEpoch
 
-  def index = Action {
-    Ok(views.html.index("DRT - BorderForce", portCode, googleTrackingCode))
+  def index = Action { request =>
+    val user = ctrl.getLoggedInUser(config, request.headers, request.session)
+    Ok(views.html.index("DRT - BorderForce", portCode, googleTrackingCode, user.id))
   }
 
   def getLoggedInUser(): Action[AnyContent] = Action { request =>
@@ -718,7 +719,7 @@ class Application @Inject()(implicit val config: Configuration,
 
     portStateFuture.map {
       case Right(Some(ps: PortState)) =>
-        val windowedPortState = ps.window(startDateTime, endDateTime, airportConfig.queues.filter(_ == terminalName))
+        val windowedPortState = ps.window(startDateTime, endDateTime, airportConfig.queues.filterKeys(_ == terminalName))
         log.debug(s"Exports: ${localTime.toISOString()} filtered to ${windowedPortState.crunchMinutes.size} CMs and ${windowedPortState.staffMinutes.size} SMs ")
         Option(CSVData.terminalCrunchMinutesToCsvData(
           windowedPortState.crunchMinutes.values.toList,
