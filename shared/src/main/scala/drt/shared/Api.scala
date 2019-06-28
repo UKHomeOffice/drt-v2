@@ -23,8 +23,10 @@ object DeskAndPaxTypeCombinations {
   val nationalsDeskNonVisa = "Non-VISA"
 }
 
-case class MilliDate(millisSinceEpoch: MillisSinceEpoch) extends Ordered[MilliDate] {
+case class MilliDate(millisSinceEpoch: MillisSinceEpoch) extends Ordered[MilliDate] with WithTimeAccessor {
   def compare(that: MilliDate): Int = millisSinceEpoch.compare(that.millisSinceEpoch)
+
+  override def timeValue: MillisSinceEpoch = millisSinceEpoch
 }
 
 object MilliDate {
@@ -317,13 +319,12 @@ object FeedSource {
     )
 }
 
-case class ArrivalKey(origin: String, voyageNumber: String, scheduled: Long) extends Ordered[ArrivalKey] {
-  override def compare(that: ArrivalKey): Int = {
-    val schComp = (this.scheduled - that.scheduled).toInt
-    val originComp = origin.compare(that.origin)
-    val vnComp = voyageNumber.compare(that.voyageNumber)
-    schComp + originComp + vnComp
-  }
+case class ArrivalKey(origin: String, voyageNumber: String, scheduled: Long) extends Ordered[ArrivalKey] with WithTimeAccessor {
+  lazy val comparisonString = s"$scheduled-$origin-$voyageNumber"
+
+  override def compare(that: ArrivalKey): Int = this.comparisonString.compareTo(that.comparisonString)
+
+  override def timeValue: MillisSinceEpoch = scheduled
 }
 
 object ArrivalKey {

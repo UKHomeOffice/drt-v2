@@ -4,13 +4,14 @@ import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
+import drt.shared.Queues.EeaDesk
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.graphstages.Crunch._
 
-import scala.collection.immutable.List
+import scala.collection.immutable.{List, Seq}
 import scala.concurrent.duration._
 
 class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
@@ -38,7 +39,9 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
             SplitRatio(eeaMachineReadableToDesk, 1),
             SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.Transfer), 1)
           ),
-          defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))
+          defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
+          queues = Map("T1" -> Seq(EeaDesk)),
+          terminalNames = Seq("T1")
         ))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
@@ -48,6 +51,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
       crunch.liveTestProbe.fishForMessage(10 seconds) {
         case ps: PortState =>
           val resultSummary = paxLoadsFromPortState(ps, 1).flatMap(_._2.keys).toSet
+          println(s"resultSummary: $resultSummary")
           resultSummary == expected
       }
 
@@ -73,8 +77,11 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
-        defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))
-      ))
+        defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
+        queues = Map("T1" -> Seq(EeaDesk)),
+        terminalNames = Seq("T1")
+      )
+    )
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 

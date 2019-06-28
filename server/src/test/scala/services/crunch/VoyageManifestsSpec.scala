@@ -143,7 +143,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
-    val expected = Map(Queues.EeaDesk -> 1.0, Queues.EGate -> 4.0)
+    val expected = Map(Queues.EeaDesk -> 1.0, Queues.EGate -> 4.0, Queues.NonEeaDesk -> 0.0)
 
     crunch.liveTestProbe.fishForMessage(3 seconds) {
       case ps: PortState =>

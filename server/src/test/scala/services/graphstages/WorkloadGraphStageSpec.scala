@@ -83,12 +83,12 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
 
     flightsWithSplits.offer(flight)
 
-    val expectedLoads = Set(
+    val expectedLoads = Loads(Seq(
       LoadMinute("T1", Queues.EeaDesk, 10, 5, SDate(scheduled).millisSinceEpoch),
       LoadMinute("T1", Queues.EeaDesk, 2.5, 1.25, SDate(scheduled).addMinutes(1).millisSinceEpoch),
       LoadMinute("T1", Queues.NonEeaDesk, 10, 10, SDate(scheduled).millisSinceEpoch),
       LoadMinute("T1", Queues.NonEeaDesk, 2.5, 2.5, SDate(scheduled).addMinutes(1).millisSinceEpoch)
-    )
+    )).loadMinutes
 
     val result = probe.receiveOne(2 seconds) match {
       case Loads(loadMinutes) => loadMinutes
@@ -125,12 +125,12 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
 
     flightsWithSplits.offer(flight)
 
-    val expectedLoads = Set(
+    val expectedLoads = Loads(Seq(
       LoadMinute("T1", Queues.EeaDesk, 10, 5, SDate(scheduled).millisSinceEpoch),
       LoadMinute("T1", Queues.EeaDesk, 2.5, 1.25, SDate(scheduled).addMinutes(1).millisSinceEpoch),
       LoadMinute("T1", Queues.NonEeaDesk, 10, 10, SDate(scheduled).millisSinceEpoch),
       LoadMinute("T1", Queues.NonEeaDesk, 2.5, 2.5, SDate(scheduled).addMinutes(1).millisSinceEpoch)
-    )
+    )).loadMinutes
 
     val result = probe.receiveOne(2 seconds) match {
       case Loads(loadMinutes) => loadMinutes
@@ -166,12 +166,12 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
     flightsWithSplits.offer(flight)
     flightsWithSplits.offer(flight2)
 
-    val expectedLoads = Set(
+    val expectedLoads = Loads(Seq(
       LoadMinute("T1", Queues.EeaDesk, 2.5 + 10, 1.25 + 5, SDate(scheduled).addMinutes(1).millisSinceEpoch),
       LoadMinute("T1", Queues.EeaDesk, 0 + 2.5, 0 + 1.25, SDate(scheduled).addMinutes(2).millisSinceEpoch),
       LoadMinute("T1", Queues.NonEeaDesk, 2.5 + 10, 2.5 + 10, SDate(scheduled).addMinutes(1).millisSinceEpoch),
       LoadMinute("T1", Queues.NonEeaDesk, 0 + 2.5, 0 + 2.5, SDate(scheduled).addMinutes(2).millisSinceEpoch)
-    )
+    )).loadMinutes
 
     val result = probe.receiveN(2, 2 seconds).reverse.head match {
       case Loads(loadMinutes) => loadMinutes
@@ -209,14 +209,14 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
     Await.ready(flightsWithSplits.offer(flight2), 1 second)
     Await.ready(flightsWithSplits.offer(flight1Update), 1 second)
 
-    val expectedLoads = Set(
+    val expectedLoads = Loads(Seq(
       LoadMinute("T1", Queues.EeaDesk, 0, 0, SDate(scheduled).addMinutes(0).millisSinceEpoch),
       LoadMinute("T1", Queues.EeaDesk, 10 + 10, 5 + 5, SDate(scheduled).addMinutes(1).millisSinceEpoch),
       LoadMinute("T1", Queues.EeaDesk, 2.5 + 2.5, 1.25 + 1.25, SDate(scheduled).addMinutes(2).millisSinceEpoch),
       LoadMinute("T1", Queues.NonEeaDesk, 0, 0, SDate(scheduled).addMinutes(0).millisSinceEpoch),
       LoadMinute("T1", Queues.NonEeaDesk, 10 + 10, 10 + 10, SDate(scheduled).addMinutes(1).millisSinceEpoch),
       LoadMinute("T1", Queues.NonEeaDesk, 2.5 + 2.5, 2.5 + 2.5, SDate(scheduled).addMinutes(2).millisSinceEpoch)
-    )
+    )).loadMinutes
 
     val result = probe.receiveN(3, 2 seconds).reverse.head match {
       case Loads(loadMinutes) => loadMinutes
@@ -252,10 +252,10 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
 
     flightsWithSplits.offer(flight)
 
-    val expectedLoads = Set(
+    val expectedLoads = Loads(Seq(
       LoadMinute("T1", Queues.EeaDesk, 20, 15, SDate(scheduled).millisSinceEpoch),
       LoadMinute("T1", Queues.EeaDesk, 5, 3.75, SDate(scheduled).addMinutes(1).millisSinceEpoch)
-    )
+    )).loadMinutes
 
     val result = probe.receiveOne(2 seconds) match {
       case Loads(loadMinutes) => loadMinutes

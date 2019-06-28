@@ -31,7 +31,7 @@ class CrunchLoadGraphStage(name: String = "",
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var loadMinutes: SortedMap[TQM, LoadMinute] = SortedMap()
-    var existingDeskRecMinutes: Map[TQM, DeskRecMinute] = Map()
+    var existingDeskRecMinutes: SortedMap[TQM, DeskRecMinute] = SortedMap()
     var deskRecMinutesToPush: Map[TQM, DeskRecMinute] = Map()
 
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
@@ -54,18 +54,18 @@ class CrunchLoadGraphStage(name: String = "",
         val incomingLoads = grab(inLoads)
         log.info(s"Received ${incomingLoads.loadMinutes.size} loads")
 
-        val allMinuteMillis = incomingLoads.loadMinutes.map(_.minute)
+        val allMinuteMillis = incomingLoads.loadMinutes.keys.map(_.minute)
         val firstMinute = crunchPeriodStartMillis(SDate(allMinuteMillis.min))
         val lastMinute = firstMinute.addMinutes(minutesToCrunch)
         log.info(s"Crunch ${firstMinute.toLocalDateTimeString()} - ${lastMinute.toLocalDateTimeString()}")
-        val affectedTerminals = incomingLoads.loadMinutes.map(_.terminalName)
+        val affectedTerminals = incomingLoads.loadMinutes.keys.map(_.terminalName).toSet
 
         val updatedLoads = mergeLoads(incomingLoads.loadMinutes, loadMinutes)
         loadMinutes = purgeExpired(updatedLoads, now, expireAfterMillis.toInt)
 
         val deskRecMinutes = crunchLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, affectedTerminals)
 
-        val diff = deskRecMinutes.foldLeft(Map[TQM, DeskRecMinute]()) {
+        val affectedDeskRecs = deskRecMinutes.foldLeft(Map[TQM, DeskRecMinute]()) {
           case (soFar, (key, drm)) =>
             existingDeskRecMinutes.get(key) match {
               case Some(existingDrm) if existingDrm == drm => soFar
@@ -73,10 +73,13 @@ class CrunchLoadGraphStage(name: String = "",
             }
         }
 
-        existingDeskRecMinutes = purgeExpired(deskRecMinutes, (cm: DeskRecMinute) => cm.minute, now, expireAfterMillis)
+        val updatedDeskRecs = deskRecMinutes.foldLeft(existingDeskRecMinutes) {
+          case (soFar, (tqm, drm)) => soFar.updated(tqm, drm)
+        }
 
-        val mergedDeskRecMinutes = mergeDeskRecMinutes(diff, deskRecMinutesToPush)
-        deskRecMinutesToPush = purgeExpired(mergedDeskRecMinutes, (cm: DeskRecMinute) => cm.minute, now, expireAfterMillis)
+        existingDeskRecMinutes = purgeExpired(updatedDeskRecs, now, expireAfterMillis.toInt)
+        deskRecMinutesToPush = mergeDeskRecMinutes(affectedDeskRecs, deskRecMinutesToPush)
+
         log.info(s"Now have ${deskRecMinutesToPush.size} desk rec minutes to push")
 
         pushStateIfReady()
@@ -86,46 +89,44 @@ class CrunchLoadGraphStage(name: String = "",
       }
     })
 
-    def crunchLoads(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToCrunch: Set[TerminalName]): Map[TQM, DeskRecMinute] = {
-      val filteredLoads = filterTerminalQueueMinutes(firstMinute, lastMinute, terminalsToCrunch, loadMinutes)
-
-      filteredLoads
-        .groupBy(_.terminalName)
-        .flatMap {
-          case (tn, tLms) => tLms
-            .groupBy(_.queueName)
-            .flatMap {
-              case (qn, qLms) =>
-                val sla = airportConfig.slaByQueue.getOrElse(qn, 15)
-                val sortedLms = qLms.toSeq.sortBy(_.minute)
-                val paxMinutes: Map[MillisSinceEpoch, Double] = sortedLms.map(m => (m.minute, m.paxLoad)).toMap
-                val workMinutes: Map[MillisSinceEpoch, Double] = sortedLms.map(m => (m.minute, m.workLoad)).toMap
-                val minuteMillis = firstMinute until lastMinute by 60000
-                val fullWorkMinutes = minuteMillis.map(m => workMinutes.getOrElse(m, 0d))
-                val adjustedWorkMinutes = if (qn == Queues.EGate) fullWorkMinutes.map(_ / airportConfig.eGateBankSize) else fullWorkMinutes
-                val fullPaxMinutes = minuteMillis.map(m => paxMinutes.getOrElse(m, 0d))
-                val (minDesks, maxDesks) = minMaxDesksForQueue(minuteMillis, tn, qn)
-                val start = SDate.now()
-                val triedResult: Try[OptimizerCrunchResult] = crunch(adjustedWorkMinutes, minDesks, maxDesks, OptimizerConfig(sla))
-                triedResult match {
-                  case Success(OptimizerCrunchResult(desks, waits)) =>
-                    log.info(s"Optimizer for $qn Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
-                    minuteMillis.zipWithIndex.map {
-                      case (minute, idx) =>
-                        val wl = fullWorkMinutes(idx)
-                        val pl = fullPaxMinutes(idx)
-                        val drm = DeskRecMinute(tn, qn, minute, pl, wl, desks(idx), waits(idx))
-                        (drm.key, drm)
-                    }
-                  case Failure(t) =>
-                    log.warn(s"failed to crunch: $t")
-                    Map()
-                }
-            }
-        }
+    def crunchLoads(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToCrunch: Set[TerminalName]): SortedMap[TQM, DeskRecMinute] = {
+      val terminalQueueDeskRecs = for {
+        terminal <- terminalsToCrunch
+        queue <- airportConfig.nonTransferQueues(terminal)
+      } yield {
+        val lms = (firstMinute until lastMinute by 60000).map(minute =>
+          loadMinutes.getOrElse(TQM(terminal, queue, minute), LoadMinute(terminal, queue, 0, 0, minute)))
+        crunchQueue(firstMinute, lastMinute, terminal, queue, lms)
+      }
+      SortedMap[TQM, DeskRecMinute]() ++ terminalQueueDeskRecs.toSeq.flatten
     }
 
-    def filterTerminalQueueMinutes[A <: TerminalQueueMinute](firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Set[TerminalName], thingsToFilter: Map[TQM, A]): Set[A] = {
+    def crunchQueue(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, tn: TerminalName, qn: QueueName, qLms: IndexedSeq[LoadMinute]): SortedMap[TQM, DeskRecMinute] = {
+      val sla = airportConfig.slaByQueue.getOrElse(qn, 15)
+      val paxMinutes = qLms.map(_.paxLoad)
+      val workMinutes = qLms.map(_.workLoad)
+      val adjustedWorkMinutes = if (qn == Queues.EGate) workMinutes.map(_ / airportConfig.eGateBankSize) else workMinutes
+      val minuteMillis: Seq[MillisSinceEpoch] = firstMinute until lastMinute by 60000
+      val (minDesks, maxDesks) = minMaxDesksForQueue(minuteMillis, tn, qn)
+      val start = SDate.now()
+      val triedResult: Try[OptimizerCrunchResult] = crunch(adjustedWorkMinutes, minDesks, maxDesks, OptimizerConfig(sla))
+      triedResult match {
+        case Success(OptimizerCrunchResult(desks, waits)) =>
+          log.info(s"Optimizer for $qn Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+          SortedMap[TQM, DeskRecMinute]() ++ minuteMillis.zipWithIndex.map {
+            case (minute, idx) =>
+              val wl = workMinutes(idx)
+              val pl = paxMinutes(idx)
+              val drm = DeskRecMinute(tn, qn, minute, pl, wl, desks(idx), waits(idx))
+              (drm.key, drm)
+          }
+        case Failure(t) =>
+          log.warn(s"failed to crunch: $t")
+          SortedMap[TQM, DeskRecMinute]()
+      }
+    }
+
+    def filterTerminalQueueMinutes[A <: TerminalQueueMinute](firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Set[TerminalName], thingsToFilter: SortedMap[TQM, A]): Set[A] = {
       val maybeThings = for {
         terminalName <- terminalsToUpdate
         queueName <- airportConfig.queues.getOrElse(terminalName, Seq())
@@ -152,9 +153,9 @@ class CrunchLoadGraphStage(name: String = "",
       }
     }
 
-    def mergeLoads(incomingLoads: Set[LoadMinute], existingLoads: SortedMap[TQM, LoadMinute]): SortedMap[TQM, LoadMinute] = incomingLoads
+    def mergeLoads(incomingLoads: SortedMap[TQM, LoadMinute], existingLoads: SortedMap[TQM, LoadMinute]): SortedMap[TQM, LoadMinute] = incomingLoads
       .foldLeft(existingLoads) {
-        case (soFar, load) => soFar.updated(load.uniqueId, load)
+        case (soFar, (tqm, load)) => soFar.updated(tqm, load)
       }
 
     setHandler(outDeskRecMinutes, new OutHandler {

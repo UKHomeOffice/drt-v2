@@ -6,8 +6,9 @@ import drt.shared._
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 import services._
+import services.workloadcalculator.PaxLoadCalculator.Load
 
-import scala.collection.immutable.{Map, SortedMap}
+import scala.collection.immutable.{Map, SortedMap, SortedSet}
 import scala.reflect.runtime.universe.{TypeTag, typeOf}
 
 object Crunch {
@@ -25,10 +26,13 @@ object Crunch {
     def apply(cm: CrunchMinute): LoadMinute = LoadMinute(cm.terminalName, cm.queueName, cm.paxLoad, cm.workLoad, cm.minute)
   }
 
-  case class Loads(loadMinutes: Set[LoadMinute])
+  case class Loads(loadMinutes: SortedMap[TQM, LoadMinute])
 
   object Loads {
-    def apply(cms: Seq[CrunchMinute]): Loads = Loads(cms.map(LoadMinute(_)).toSet)
+    def apply(lms: Seq[LoadMinute]): Loads = {
+      Loads(SortedMap[TQM, LoadMinute]() ++ lms.map(cm => (TQM(cm.terminalName, cm.queueName, cm.minute), cm)))
+    }
+    def fromCrunchMinutes(cms: SortedMap[TQM, CrunchMinute]): Loads = Loads(cms.mapValues(LoadMinute(_)))
   }
 
   case class RemoveCrunchMinute(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch) {
@@ -229,6 +233,14 @@ object Crunch {
     fresh
   }
 
+  def purgeExpired[A <: WithTimeAccessor](expireable: SortedSet[A], now: () => SDateLike, expireAfter: Int): SortedSet[A] = {
+    val start = SDate.now().millisSinceEpoch
+    val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
+    val fresh = expireable.dropWhile { _.timeValue < thresholdMillis }
+    println(s"Efficient purge took ${SDate.now().millisSinceEpoch - start}ms (${expireable.size} element SortedSet)")
+    fresh
+  }
+
   def purgeExpired[A: TypeTag](expireable: List[(MillisSinceEpoch, A)], now: () => SDateLike, expireAfter: MillisSinceEpoch): List[(MillisSinceEpoch, A)] = {
     val start = SDate.now().millisSinceEpoch
     val expired = hasExpiredForType(identity[MillisSinceEpoch], now, expireAfter)
@@ -340,39 +352,30 @@ object Crunch {
       .toSeq
   }
 
-  def mergeLoadsIntoQueue(incomingLoads: Loads, loadMinutesQueue: List[(MillisSinceEpoch, Loads)], crunchPeriodStartMillis: SDateLike => SDateLike): List[(MillisSinceEpoch, Loads)] = {
-    val changedDays = incomingLoads.loadMinutes
-      .groupBy(sm => crunchPeriodStartMillis(SDate(sm.minute, europeLondonTimeZone)).millisSinceEpoch)
+  def mergeLoadsIntoQueue(incomingLoads: Loads, loadMinutesQueue: SortedMap[MilliDate, Loads], crunchPeriodStartMillis: SDateLike => SDateLike): SortedMap[MilliDate, Loads] = {
+    val changedDays: Map[MillisSinceEpoch, SortedMap[TQM, LoadMinute]] = incomingLoads.loadMinutes
+      .groupBy { case (_, sm) =>
+        crunchPeriodStartMillis(SDate(sm.minute, europeLondonTimeZone)).millisSinceEpoch
+      }
 
     changedDays
-      .foldLeft(loadMinutesQueue.toMap) {
+      .foldLeft(loadMinutesQueue) {
         case (existingQueue, (dayStartMillis, newLoadsForDay)) =>
-          val existingLoadsForDay = existingQueue.get(dayStartMillis)
-          log.debug(s"Adding ${newLoadsForDay.size} new loads to ${existingLoadsForDay.map(_.loadMinutes.size).getOrElse(0)} existing loads for ${SDate(dayStartMillis, europeLondonTimeZone).toISOString()}")
+          val milliDate = MilliDate(dayStartMillis)
+          val existingLoadsForDay = existingQueue.get(milliDate)
           val mergedDayMinutes = mergeUpdatedLoads(existingLoadsForDay, dayStartMillis, newLoadsForDay)
-          existingQueue.updated(dayStartMillis, Loads(mergedDayMinutes))
+          existingQueue.updated(milliDate, Loads(mergedDayMinutes))
       }
-      .toList
-      .sortBy { case (dayStartMillis, _) => dayStartMillis }
   }
 
-  def mergeUpdatedLoads(maybeExistingDayLoads: Option[Loads], dayMillis: MillisSinceEpoch, dayLoadMinutes: Set[LoadMinute]): Set[LoadMinute] = {
+  def mergeUpdatedLoads(maybeExistingDayLoads: Option[Loads], dayMillis: MillisSinceEpoch, dayLoadMinutes: SortedMap[TQM, LoadMinute]): SortedMap[TQM, LoadMinute] = {
     maybeExistingDayLoads match {
-      case None =>
-        log.debug(s"Adding ${SDate(dayMillis).toISOString()} to queue with ${dayLoadMinutes.size} loads (${dayLoadMinutes.toSeq.count(_.paxLoad != 0)} non-zero pax minutes)")
-        dayLoadMinutes
+      case None => dayLoadMinutes
       case Some(existingDayLoads) =>
-        val existingDayLoadsByKey = existingDayLoads
-          .loadMinutes
-          .toSeq
-          .map(lm => (lm.uniqueId, lm))
-          .toMap
         dayLoadMinutes
-          .foldLeft(existingDayLoadsByKey) {
-            case (daySoFar, loadMinute) => daySoFar.updated(loadMinute.uniqueId, loadMinute)
+          .foldLeft(existingDayLoads.loadMinutes) {
+            case (daySoFar, (_, loadMinute)) => daySoFar.updated(loadMinute.uniqueId, loadMinute)
           }
-          .values
-          .toSet
     }
   }
 

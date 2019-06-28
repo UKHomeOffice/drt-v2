@@ -33,7 +33,11 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
-      airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))),
+      airportConfig = airportConfig.copy(
+        defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
+        queues = Map("T1" -> Seq(Queues.EeaDesk)),
+        terminalNames = Seq("T1")
+      ),
       minutesToCrunch = 120)
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
@@ -43,7 +47,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
         15.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
 
-    crunch.liveTestProbe.fishForMessage(10 seconds) {
+    crunch.liveTestProbe.fishForMessage(5 seconds) {
       case ps: PortState =>
         val resultSummary = paxLoadsFromPortState(ps, 30)
         resultSummary == expected
@@ -71,8 +75,12 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
-      airportConfig = airportConfig.copy(defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))),
-      minutesToCrunch = 120)
+      airportConfig = airportConfig.copy(
+        defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
+        queues = Map("T1" -> Seq(Queues.EeaDesk)),
+        terminalNames = Seq("T1")),
+      minutesToCrunch = 120
+    )
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 

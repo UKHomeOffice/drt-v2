@@ -129,12 +129,11 @@ class StaffMinutesSpec extends CrunchTestLike {
     val minutesToCheck = 5
     val expectedStaffAvailableAndMovements = List.fill(minutesToCheck)((0, -1))
 
-    crunch.liveTestProbe.fishForMessage(2 seconds) {
+    crunch.liveTestProbe.fishForMessage(5 seconds) {
       case ps: PortState =>
         val minutesInOrder = ps.staffMinutes.values.toList.filter(m => startDate.millisSinceEpoch <= m.minute).sortBy(_.minute).take(minutesToCheck)
         val actualAvailableAndMovements = minutesInOrder.map(m => (m.available, m.movements))
 
-        println(s"actualAvailableAndMovements: $actualAvailableAndMovements")
         actualAvailableAndMovements == expectedStaffAvailableAndMovements
     }
 

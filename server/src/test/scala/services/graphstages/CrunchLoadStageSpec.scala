@@ -64,7 +64,7 @@ class CrunchLoadStageSpec extends CrunchTestLike {
     val minutesToCrunch = 1440
     val loadsSource = TestableCrunchLoadStage(probe, () => SDate(scheduled), testAirportConfig, minutesToCrunch).run
 
-    val loads = Loads(Set(
+    val loads = Loads(Seq(
       LoadMinute("T1", Queues.EeaDesk, 10, 5, SDate(scheduled).millisSinceEpoch),
       LoadMinute("T1", Queues.EeaDesk, 2.5, 1.25, SDate(scheduled).addMinutes(1).millisSinceEpoch),
       LoadMinute("T1", Queues.NonEeaDesk, 10, 10, SDate(scheduled).millisSinceEpoch),
@@ -78,12 +78,12 @@ class CrunchLoadStageSpec extends CrunchTestLike {
       DeskRecMinute("T1", Queues.NonEeaDesk, 1514765100000L, 10.0, 10.0, 1, 45),
       DeskRecMinute("T1", Queues.NonEeaDesk, 1514765160000L, 2.5, 2.5, 1, 45)
     )
-    val expectedMillis = loads.loadMinutes.map(_.minute)
+    val expectedMillis = loads.loadMinutes.keys.map(_.minute).toList
     val expectedSize = 2 * minutesToCrunch
 
     val result = probe.receiveOne(5 seconds) match {
       case DeskRecMinutes(drms) => drms
-      case unexpected => Set()
+      case _ => Set[DeskRecMinute]()
     }
 
     val interestingMinutes = result.filter(cm => {
@@ -104,7 +104,7 @@ class CrunchLoadStageSpec extends CrunchTestLike {
     val minutesToCrunch = 2880
     val loadsSource = TestableCrunchLoadStage(probe, () => SDate(scheduledDay1), testAirportConfig, minutesToCrunch).run
 
-    val loads = Loads(Set(
+    val loads = Loads(Seq(
       LoadMinute("T1", Queues.EeaDesk, 10, 5, SDate(scheduledDay1).millisSinceEpoch),
       LoadMinute("T1", Queues.EeaDesk, 2.5, 1.25, SDate(scheduledDay2).millisSinceEpoch),
       LoadMinute("T1", Queues.NonEeaDesk, 10, 10, SDate(scheduledDay1).millisSinceEpoch),
@@ -112,13 +112,13 @@ class CrunchLoadStageSpec extends CrunchTestLike {
 
     loadsSource.offer(loads)
 
-    val expected = Set(
+    val expected = Seq(
       DeskRecMinute("T1", Queues.EeaDesk, SDate(scheduledDay1).millisSinceEpoch, 10.0, 5.0, 1, 25),
       DeskRecMinute("T1", Queues.EeaDesk, SDate(scheduledDay2).millisSinceEpoch, 2.5, 1.25, 1, 25),
       DeskRecMinute("T1", Queues.NonEeaDesk, SDate(scheduledDay1).millisSinceEpoch, 10.0, 10.0, 1, 45),
       DeskRecMinute("T1", Queues.NonEeaDesk, SDate(scheduledDay2).millisSinceEpoch, 2.5, 2.5, 1, 45)
     )
-    val expectedMillis = loads.loadMinutes.map(_.minute)
+    val expectedMillis = loads.loadMinutes.keys.map(_.minute).toList
     val expectedSize = 2 * 2 * 1440
 
     probe.fishForMessage(5 seconds) {

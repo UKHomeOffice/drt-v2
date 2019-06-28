@@ -8,6 +8,8 @@ import manifests.actors.RegisteredArrivals
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch
 
+import scala.collection.immutable.{SortedMap, SortedSet}
+
 class BatchStage(now: () => SDateLike,
                  isDueLookup: (ArrivalKey, MillisSinceEpoch, SDateLike) => Boolean,
                  batchSize: Int,
@@ -23,9 +25,9 @@ class BatchStage(now: () => SDateLike,
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var registeredArrivals: Map[ArrivalKey, Option[Long]] = Map()
-    var registeredArrivalsUpdates: Map[ArrivalKey, Option[Long]] = Map()
-    var lookupQueue: Set[ArrivalKey] = Set()
+    var registeredArrivals: SortedMap[ArrivalKey, Option[Long]] = SortedMap()
+    var registeredArrivalsUpdates: SortedMap[ArrivalKey, Option[Long]] = SortedMap()
+    var lookupQueue: SortedSet[ArrivalKey] = SortedSet()
     var lastRefresh: Long = 0L
 
     override def preStart(): Unit = {
@@ -87,7 +89,9 @@ class BatchStage(now: () => SDateLike,
     }
 
     private def prioritiseAndPush(): Unit = {
-      purgeExpired()
+      lookupQueue = Crunch.purgeExpired(lookupQueue, now, expireAfterMillis.toInt)
+      registeredArrivals = Crunch.purgeExpired(registeredArrivals, now, expireAfterMillis.toInt)
+
       val lookupBatch = updatePrioritisedAndSubscribers()
 
       if (lookupBatch.nonEmpty) {
@@ -99,12 +103,7 @@ class BatchStage(now: () => SDateLike,
     private def pushRegisteredArrivalsUpdates(): Unit = if (registeredArrivalsUpdates.nonEmpty) {
       log.info(s"Pushing ${registeredArrivalsUpdates.size} registered arrivals updates")
       push(outRegisteredArrivals, RegisteredArrivals(registeredArrivalsUpdates))
-      registeredArrivalsUpdates = Map()
-    }
-
-    private def purgeExpired(): Unit = {
-      lookupQueue = Crunch.purgeExpired(lookupQueue, (a: ArrivalKey) => a.scheduled, now, expireAfterMillis)
-      registeredArrivals = Crunch.purgeExpiredTuple(registeredArrivals, (a: ArrivalKey) => a.scheduled, now, expireAfterMillis)
+      registeredArrivalsUpdates = SortedMap()
     }
 
     private def updatePrioritisedAndSubscribers(): Set[ArrivalKey] = {
@@ -123,7 +122,7 @@ class BatchStage(now: () => SDateLike,
           lookupQueue.toSeq.sortBy(_.scheduled).splitAt(batchSize)
       }
 
-      lookupQueue = Set[ArrivalKey](remainingLookups: _*)
+      lookupQueue = SortedSet[ArrivalKey](remainingLookups: _*)
 
       val lookupTime: MillisSinceEpoch = now().millisSinceEpoch
 
@@ -140,7 +139,7 @@ class BatchStage(now: () => SDateLike,
       elapsedMillis >= minimumRefreshIntervalMillis
     }
 
-    private def refreshLookupQueue(currentNow: SDateLike): Set[ArrivalKey] = registeredArrivals
+    private def refreshLookupQueue(currentNow: SDateLike): SortedSet[ArrivalKey] = registeredArrivals
       .foldLeft(lookupQueue) {
         case (prioritisedSoFar, (arrival, None)) =>
           if (!prioritisedSoFar.contains(arrival))

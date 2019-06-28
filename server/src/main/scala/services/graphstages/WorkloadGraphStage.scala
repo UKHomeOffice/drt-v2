@@ -8,7 +8,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch._
 
-import scala.collection.immutable.Map
+import scala.collection.immutable.{Map, SortedMap}
 import scala.language.postfixOps
 
 
@@ -30,10 +30,10 @@ class WorkloadGraphStage(name: String = "",
   override val shape = new FlowShape(inFlightsWithSplits, outLoads)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var loadMinutes: Map[TQM, LoadMinute] = Map()
+    var loadMinutes: SortedMap[TQM, LoadMinute] = SortedMap()
     var flightTQMs: Map[Int, List[TQM]] = Map()
-    var flightLoadMinutes: Map[TQM, Set[FlightSplitMinute]] = Map()
-    var updatedLoadsToPush: Map[TQM, LoadMinute] = Map()
+    var flightLoadMinutes: SortedMap[TQM, Set[FlightSplitMinute]] = SortedMap()
+    var updatedLoadsToPush: SortedMap[TQM, LoadMinute] = SortedMap()
 
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
@@ -41,25 +41,21 @@ class WorkloadGraphStage(name: String = "",
       loadMinutes = optionalInitialLoads match {
         case Some(Loads(lms)) =>
           log.info(s"Received ${lms.size} initial loads")
-          val byId = lms
-            .map(lm => (lm.uniqueId, lm))
-            .toMap
-          val afterPurged = purgeExpired(byId, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
+          val afterPurged = purgeExpired(lms, now, expireAfterMillis.toInt)
           log.info(s"Storing ${afterPurged.size} initial loads")
           afterPurged
         case _ =>
           log.warn(s"Did not receive any loads to initialise with")
-          Map()
+          SortedMap()
       }
       flightLoadMinutes = optionalInitialFlightsWithSplits match {
         case Some(fws: FlightsWithSplits) =>
           log.info(s"Received ${fws.flights.size} initial flights. Calculating workload.")
-          val timeAccessor = (fsms: Set[FlightSplitMinute]) => if (fsms.nonEmpty) fsms.map(_.minute).min else 0L
-          val updatedWorkloads: Map[TQM, Set[FlightSplitMinute]] = flightLoadMinutes(fws)
-          purgeExpired(updatedWorkloads, timeAccessor, now, expireAfterMillis)
+          val updatedWorkloads = flightLoadMinutes(fws)
+          purgeExpired(updatedWorkloads, now, expireAfterMillis.toInt)
         case None =>
           log.warn(s"Didn't receive any initial flights to initialise with")
-          Map()
+          SortedMap()
       }
 
       super.preStart()
@@ -84,7 +80,7 @@ class WorkloadGraphStage(name: String = "",
 
         val existingFlightTQMs: Set[TQM] = incomingFlights.flights.flatMap(fws => flightTQMs.getOrElse(fws.apiFlight.uniqueId, List())).toSet
         log.info(s"Got existing flight TQMs")
-        val updatedWorkloads: Map[TQM, Set[FlightSplitMinute]] = flightLoadMinutes(incomingFlights)
+        val updatedWorkloads = flightLoadMinutes(incomingFlights)
         log.info(s"Got updated workloads")
 
         flightLoadMinutes = mergeFlightLoadMinutes(existingFlightTQMs, updatedWorkloads, incomingFlights)
@@ -95,9 +91,9 @@ class WorkloadGraphStage(name: String = "",
         val latestDiff = diffFromTQMs(affectedTQMs)
         log.info(s"Got latestDiff")
 
-        loadMinutes = mergeLoadMinutes(latestDiff)
+        loadMinutes = mergeLoadMinutes(latestDiff, loadMinutes)
         log.info(s"Merged load minutes")
-        updatedLoadsToPush = purgeExpired(mergeLoadMinutes(latestDiff, updatedLoadsToPush), (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
+        updatedLoadsToPush = purgeExpired(mergeLoadMinutes(latestDiff, updatedLoadsToPush), now, expireAfterMillis.toInt)
         log.info(s"${updatedLoadsToPush.size} load minutes to push (${updatedLoadsToPush.values.count(_.paxLoad == 0d)} zero pax minutes)")
 
         pushStateIfReady()
@@ -106,14 +102,6 @@ class WorkloadGraphStage(name: String = "",
         log.info(s"inFlightsWithSplits Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
-
-    def mergeLoadMinutes(latestDiff: Map[TQM, LoadMinute]): Map[TQM, LoadMinute] = {
-      val updatedLoads = latestDiff.foldLeft(loadMinutes) {
-        case (soFar, (tqm, newLm)) => soFar.updated(tqm, newLm)
-      }
-
-      purgeExpired(updatedLoads, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
-    }
 
     def diffFromTQMs(affectedTQMs: Set[TQM]): Map[TQM, LoadMinute] = {
       val affectedLoads = flightSplitMinutesToQueueLoadMinutes(affectedTQMs)
@@ -125,7 +113,7 @@ class WorkloadGraphStage(name: String = "",
       }
     }
 
-    def mergeFlightLoadMinutes(existingFlightTQMs: Set[TQM], updatedWorkloads: Map[TQM, Set[FlightSplitMinute]], incomingFlights: FlightsWithSplits): Map[TQM, Set[FlightSplitMinute]] = {
+    def mergeFlightLoadMinutes(existingFlightTQMs: Set[TQM], updatedWorkloads: SortedMap[TQM, Set[FlightSplitMinute]], incomingFlights: FlightsWithSplits): SortedMap[TQM, Set[FlightSplitMinute]] = {
       val arrivalIds: Set[Int] = incomingFlights.flights.map(_.apiFlight.uniqueId).toSet
       val minusOldSplitMinutes = existingFlightTQMs.foldLeft(flightLoadMinutes) {
         case (flightSplitMinutesSoFar, tqm) =>
@@ -136,10 +124,10 @@ class WorkloadGraphStage(name: String = "",
       val withNewSplitMinutes = updatedWorkloads.foldLeft(minusOldSplitMinutes) {
         case (soFar, (tqm, newLm)) => soFar.updated(tqm, soFar.getOrElse(tqm, Set()) ++ newLm)
       }
-      purgeExpiredTuple(withNewSplitMinutes, (tqm: TQM) => tqm.minute, now, expireAfterMillis)
+      purgeExpired(withNewSplitMinutes, now, expireAfterMillis.toInt)
     }
 
-    def mergeLoadMinutes(updatedLoads: Map[TQM, LoadMinute], existingLoads: Map[TQM, LoadMinute]): Map[TQM, LoadMinute] = updatedLoads.foldLeft(existingLoads) {
+    def mergeLoadMinutes(updatedLoads: Map[TQM, LoadMinute], existingLoads: SortedMap[TQM, LoadMinute]): SortedMap[TQM, LoadMinute] = updatedLoads.foldLeft(existingLoads) {
       case (soFar, (key, newLoadMinute)) => soFar.updated(key, newLoadMinute)
     }
 
@@ -162,11 +150,11 @@ class WorkloadGraphStage(name: String = "",
       diff
     }
 
-    def flightLoadMinutes(incomingFlights: FlightsWithSplits): Map[TQM, Set[FlightSplitMinute]] = incomingFlights
+    def flightLoadMinutes(incomingFlights: FlightsWithSplits): SortedMap[TQM, Set[FlightSplitMinute]] = incomingFlights
       .flights
       .filterNot(isCancelled)
       .filter(hasProcessingTime)
-      .foldLeft(Map[TQM, Set[FlightSplitMinute]]()) {
+      .foldLeft(SortedMap[TQM, Set[FlightSplitMinute]]()) {
         case (flightWorkloadsSoFar, fws) =>
           airportConfig.defaultProcessingTimes.get(fws.apiFlight.Terminal)
             .map(procTimes => {
@@ -177,11 +165,12 @@ class WorkloadGraphStage(name: String = "",
             .getOrElse(flightWorkloadsSoFar)
       }
 
-    def mergeWorkloadsFromFlight(existingFlightSplitMinutes: Map[TQM, Set[FlightSplitMinute]], flightWorkload: Set[FlightSplitMinute]): Map[TQM, Set[FlightSplitMinute]] = flightWorkload.foldLeft(existingFlightSplitMinutes) {
-      case (soFarSoFar, fsm) =>
-        val tqm = TQM(fsm.terminalName, fsm.queueName, fsm.minute)
-        soFarSoFar.updated(tqm, soFarSoFar.getOrElse(tqm, Set[FlightSplitMinute]()) + fsm)
-    }
+    def mergeWorkloadsFromFlight(existingFlightSplitMinutes: SortedMap[TQM, Set[FlightSplitMinute]], flightWorkload: Set[FlightSplitMinute]): SortedMap[TQM, Set[FlightSplitMinute]] =
+      flightWorkload.foldLeft(existingFlightSplitMinutes) {
+        case (soFarSoFar, fsm) =>
+          val tqm = TQM(fsm.terminalName, fsm.queueName, fsm.minute)
+          soFarSoFar.updated(tqm, soFarSoFar.getOrElse(tqm, Set[FlightSplitMinute]()) + fsm)
+      }
 
     def updateTQMsForFlight(fws: ApiFlightWithSplits, flightWorkload: Set[FlightSplitMinute]): Unit = {
       val tqms = flightWorkload.map(f => TQM(f.terminalName, f.queueName, f.minute)).toList
@@ -210,8 +199,8 @@ class WorkloadGraphStage(name: String = "",
         log.info(s"We have no load minutes. Nothing to push")
       else if (isAvailable(outLoads)) {
         log.info(s"Pushing ${updatedLoadsToPush.size} load minutes")
-        push(outLoads, Loads(updatedLoadsToPush.values.toSet))
-        updatedLoadsToPush = Map()
+        push(outLoads, Loads(updatedLoadsToPush))
+        updatedLoadsToPush = SortedMap()
       }
       else log.info(s"outLoads not available to push")
     }

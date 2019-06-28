@@ -7,8 +7,10 @@ import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.RegisteredArrivalMessage.{RegisteredArrivalMessage, RegisteredArrivalsMessage}
 import services.graphstages.Crunch
 
+import scala.collection.immutable.SortedMap
 
-case class RegisteredArrivals(arrivals: Map[ArrivalKey, Option[Long]])
+
+case class RegisteredArrivals(arrivals: SortedMap[ArrivalKey, Option[Long]])
 
 class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
                               val initialMaybeSnapshotInterval: Option[Int],
@@ -18,13 +20,13 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
                               ) extends RecoveryActorLike with PersistentDrtActor[RegisteredArrivals] {
   override def persistenceId: String = "registered-arrivals"
 
-  override def initialState: RegisteredArrivals = RegisteredArrivals(Map())
+  override def initialState: RegisteredArrivals = RegisteredArrivals(SortedMap())
 
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
 
-  override var state = RegisteredArrivals(Map())
+  override var state = RegisteredArrivals(SortedMap())
 
   override def stateToMessage: GeneratedMessage = arrivalsToMessage(state.arrivals)
 
@@ -67,7 +69,7 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
       }
 
       val updatedArrivals = state.arrivals ++ newArrivals
-      val minusExpired = Crunch.purgeExpiredTuple(updatedArrivals, (a: ArrivalKey) => a.scheduled, now, expireAfterMillis)
+      val minusExpired = Crunch.purgeExpired(updatedArrivals, now, expireAfterMillis.toInt)
 
       state = RegisteredArrivals(minusExpired)
   }
@@ -84,7 +86,7 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
     !state.arrivals.contains(arrivalToCheck) || state.arrivals(arrivalToCheck) != lastLookup
   }
 
-  private def arrivalMessagesToRegisteredArrivals(arrivalMessages: Seq[RegisteredArrivalMessage]): Map[ArrivalKey, Option[Long]] = {
+  private def arrivalMessagesToRegisteredArrivals(arrivalMessages: Seq[RegisteredArrivalMessage]): SortedMap[ArrivalKey, Option[Long]] = {
     val maybeArrivals = arrivalMessages.map(am => {
       for {
         origin <- am.origin
@@ -94,7 +96,6 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
       } yield (ArrivalKey(origin, voyageNumber, scheduled), Option(lookedUp))
     })
 
-    val newArrivals = maybeArrivals.collect { case Some(keyAndLookup) => keyAndLookup }.toMap
-    newArrivals
+    SortedMap[ArrivalKey, Option[Long]]() ++ maybeArrivals.collect { case Some(keyAndLookup) => keyAndLookup }
   }
 }

@@ -81,7 +81,10 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
-      val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(1.0, 1.0, 0.0, 0.0, 0.0)))
+      val expected = Map("T1" -> Map(
+        Queues.EeaDesk -> Seq(1.0, 1.0, 0.0, 0.0, 0.0),
+        Queues.NonEeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0)
+      ))
 
       crunch.liveTestProbe.fishForMessage(5 seconds) {
         case ps: PortState =>
@@ -124,9 +127,10 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
       val expected = Map("T1" -> Map(
-        "eeaDesk" -> List(5.25, 5.25, 5.25, 5.25, 5.25),
-        "eGate" -> List(1.5, 1.5, 1.5, 1.5, 1.5))
-      )
+        Queues.EeaDesk -> List(5.25, 5.25, 5.25, 5.25, 5.25),
+        Queues.EGate -> List(1.5, 1.5, 1.5, 1.5, 1.5),
+        Queues.NonEeaDesk -> List(0, 0, 0, 0, 0)
+      ))
 
       crunch.liveTestProbe.fishForMessage(5 seconds) {
         case ps: PortState =>
@@ -141,8 +145,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
     "CSV split ratios " >> {
       "Given a flight with 20 passengers and one CSV split of 25% to eea desk " +
-      "When request a crunch " +
-      "Then I should see a pax load of 5 (20 * 0.25)" >> {
+        "When request a crunch " +
+        "Then I should see a pax load of 5 (20 * 0.25)" >> {
         val scheduled = "2017-01-01T00:00Z"
 
         val flight = ArrivalGenerator.apiFlight(flightId = Option(1), schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(20))
@@ -165,7 +169,10 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
-        val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(5.0, 0.0, 0.0, 0.0, 0.0)))
+        val expected = Map("T1" -> Map(
+          Queues.EeaDesk -> Seq(5.0, 0.0, 0.0, 0.0, 0.0),
+          Queues.NonEeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0)
+        ))
 
         crunch.liveTestProbe.fishForMessage(5 seconds) {
           case ps: PortState =>
