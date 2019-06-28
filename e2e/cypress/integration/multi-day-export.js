@@ -54,4 +54,30 @@ describe('Multi day export', () => {
         });
       });
   });
+
+  it('Exporting desks & queues results in a file with desk recommendations', () => {
+    cy
+      .addFlight(estString, actString, estChoxString, actChoxString, schString)
+      .asABorderForceOfficer()
+      .navigateHome()
+      .navigateToMenuItem('T1')
+      .choose24Hours()
+      .then(() => {
+        cy
+          .get("#desksAndQueues")
+          .contains("38").then(() => {
+            cy.contains('Multi Day Export').click().then(() => {
+              cy
+                .get('.modal-body')
+                .contains("Export Desks")
+                .should('have.attr', 'href')
+                .then((href) => {
+                  cy.request(href).then((response) => {
+                    expect(response.body).to.contain(",38,4,1,,,13,5,0,,,1,0,1,,,0,0,0,2")
+                  });
+                });
+            });
+          });
+      });
+  });
 });
