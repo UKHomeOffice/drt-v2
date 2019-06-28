@@ -39,7 +39,7 @@ class ArrivalSplitsGraphStage(name: String = "",
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var flightsByFlightId: Map[ArrivalKey, ApiFlightWithSplits] = Map()
     var arrivalsWithSplitsDiff: Set[ApiFlightWithSplits] = Set()
-    var arrivalsToRemove: Set[Int] = Set()
+    var arrivalsToRemove: Set[Arrival] = Set()
     var manifestBuffer: Map[ArrivalKey, BestAvailableManifest] = Map()
 
     override def preStart(): Unit = {
@@ -134,14 +134,13 @@ class ArrivalSplitsGraphStage(name: String = "",
     def updateFlightsFromIncoming(arrivalsDiff: ArrivalsDiff,
                                   existingFlightsById: Map[ArrivalKey, ApiFlightWithSplits]): Map[ArrivalKey, ApiFlightWithSplits] = {
       log.info(s"${arrivalsDiff.toUpdate.size} diff updates, ${existingFlightsById.size} existing flights")
-      val afterRemovals = existingFlightsById.filterNot {
-        case (_, ApiFlightWithSplits(arrival, _, _)) => arrivalsDiff.toRemove.contains(arrival.uniqueId)
-      }
+
+      val afterRemovals = existingFlightsById -- arrivalsDiff.toRemove.map(ArrivalKey(_))
 
       val lastMilliToCrunch = Crunch.getLocalLastMidnight(now().addDays(maxDaysToCrunch)).millisSinceEpoch
 
       val updatedFlights = arrivalsDiff.toUpdate.foldLeft(UpdatedFlights(afterRemovals, 0, 0)) {
-        case (updatesSoFar, updatedFlight) =>
+        case (updatesSoFar, (_, updatedFlight)) =>
           if (updatedFlight.PcpTime.getOrElse(0L) <= lastMilliToCrunch) updateWithFlight(updatesSoFar, updatedFlight)
           else updatesSoFar
       }

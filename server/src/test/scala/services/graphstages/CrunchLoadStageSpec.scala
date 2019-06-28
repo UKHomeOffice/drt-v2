@@ -112,7 +112,7 @@ class CrunchLoadStageSpec extends CrunchTestLike {
 
     loadsSource.offer(loads)
 
-    val expected = Seq(
+    val expected = Set(
       DeskRecMinute("T1", Queues.EeaDesk, SDate(scheduledDay1).millisSinceEpoch, 10.0, 5.0, 1, 25),
       DeskRecMinute("T1", Queues.EeaDesk, SDate(scheduledDay2).millisSinceEpoch, 2.5, 1.25, 1, 25),
       DeskRecMinute("T1", Queues.NonEeaDesk, SDate(scheduledDay1).millisSinceEpoch, 10.0, 10.0, 1, 45),

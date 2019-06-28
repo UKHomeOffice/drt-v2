@@ -9,6 +9,8 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch.{getLocalLastMidnight, movementsUpdateCriteria, purgeExpired}
 
+import scala.collection.immutable.SortedMap
+
 class StaffGraphStage(name: String = "",
                       initialShifts: ShiftAssignments,
                       initialFixedPoints: FixedPointAssignments,
@@ -31,8 +33,8 @@ class StaffGraphStage(name: String = "",
     var shifts: ShiftAssignments = ShiftAssignments.empty
     var fixedPoints: FixedPointAssignments = FixedPointAssignments.empty
     var movementsOption: Option[Seq[StaffMovement]] = None
-    var staffMinutes: Map[TM, StaffMinute] = Map()
-    var staffMinuteUpdates: Map[TM, StaffMinute] = Map()
+    var staffMinutes: SortedMap[TM, StaffMinute] = SortedMap()
+    var staffMinuteUpdates: SortedMap[TM, StaffMinute] = SortedMap()
 
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
@@ -44,7 +46,7 @@ class StaffGraphStage(name: String = "",
       shifts = initialShifts
       fixedPoints = initialFixedPoints
       movementsOption = optionalInitialMovements
-      staffMinutes = initialStaffMinutes.minutes.map(sm => (TM(sm.terminalName, sm.minute), sm)).toMap
+      staffMinutes = SortedMap[TM, StaffMinute]() ++ initialStaffMinutes.minutes.map(sm => (TM(sm.terminalName, sm.minute), sm))
 
       if (checkRequiredUpdatesOnStartup) {
         val lastMidnightMillis = getLocalLastMidnight(now()).millisSinceEpoch
@@ -190,7 +192,7 @@ class StaffGraphStage(name: String = "",
       UpdateCriteria(minuteMillis, terminalNames)
     }
 
-    def mergeStaffMinuteUpdates(latestUpdates: Map[TM, StaffMinute], existingUpdates: Map[TM, StaffMinute]): Map[TM, StaffMinute] = latestUpdates
+    def mergeStaffMinuteUpdates(latestUpdates: SortedMap[TM, StaffMinute], existingUpdates: SortedMap[TM, StaffMinute]): SortedMap[TM, StaffMinute] = latestUpdates
       .foldLeft(existingUpdates) {
         case (soFar, (id, updatedMinute)) => soFar.updated(id, updatedMinute)
       }
@@ -207,34 +209,34 @@ class StaffGraphStage(name: String = "",
       }
     })
 
-    def updatesFromSources(staff: StaffSources, updateCriteria: UpdateCriteria): Map[TM, StaffMinute] = {
+    def updatesFromSources(staff: StaffSources, updateCriteria: UpdateCriteria): SortedMap[TM, StaffMinute] = {
       log.info(s"about to update ${updateCriteria.minuteMillis.size} staff minutes for ${updateCriteria.terminalNames}")
 
       import SDate.implicits.sdateFromMilliDateLocal
 
-      val updatedMinutes = updateCriteria.minuteMillis
+      val updatedMinutes = SortedMap[TM, StaffMinute]() ++ updateCriteria.minuteMillis
         .flatMap(m => {
           updateCriteria.terminalNames.map { tn =>
             val shifts = staff.shifts.terminalStaffAt(tn, SDate(m))
             val fixedPoints = staff.fixedPoints.terminalStaffAt(tn, SDate(m, Crunch.europeLondonTimeZone))
             val movements = staff.movements.terminalStaffAt(tn, m)
-            StaffMinute(tn, m, shifts, fixedPoints, movements, lastUpdated = Option(SDate.now().millisSinceEpoch))
+            (TM(tn, m), StaffMinute(tn, m, shifts, fixedPoints, movements, lastUpdated = Option(SDate.now().millisSinceEpoch)))
           }
         })
 
       val mergedMinutes = mergeMinutes(updatedMinutes, staffMinutes)
 
-      staffMinutes = purgeExpired(mergedMinutes, (sm: StaffMinute) => sm.minute, now, expireAfterMillis)
+      staffMinutes = purgeExpired(mergedMinutes, now, expireAfterMillis.toInt)
 
       mergeMinutes(updatedMinutes, staffMinuteUpdates)
     }
 
-    def mergeMinutes(updatedMinutes: Seq[StaffMinute], existingMinutes: Map[TM, StaffMinute]): Map[TM, StaffMinute] = {
+    def mergeMinutes(updatedMinutes: SortedMap[TM, StaffMinute], existingMinutes: SortedMap[TM, StaffMinute]): SortedMap[TM, StaffMinute] = {
       updatedMinutes.foldLeft(existingMinutes) {
-        case (soFar, updatedMinute) =>
-          soFar.get(updatedMinute.key) match {
+        case (soFar, (tm, updatedMinute)) =>
+          soFar.get(tm) match {
             case Some(existingMinute) if existingMinute.equals(updatedMinute) => soFar
-            case _ => soFar.updated(updatedMinute.key, updatedMinute)
+            case _ => soFar.updated(tm, updatedMinute)
           }
       }
     }
@@ -244,7 +246,7 @@ class StaffGraphStage(name: String = "",
         if (staffMinuteUpdates.nonEmpty) {
           log.info(s"Pushing ${staffMinuteUpdates.size} staff minute updates")
           push(outStaffMinutes, StaffMinutes(staffMinuteUpdates))
-          staffMinuteUpdates = Map()
+          staffMinuteUpdates = SortedMap()
         }
       } else log.info(s"outStaffMinutes not available to push")
     }

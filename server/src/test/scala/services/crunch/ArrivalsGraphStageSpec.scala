@@ -85,7 +85,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       success
     }
 
-    "once an acl and a forecast input arrives for the flight, it will update the arrivals FeedSource so that it has a ACLFeed, LiveFeed and a ForecastFeed" in new Context {
+    "once an acl and a forecast input arrives for the flight, it will update the arrivals FeedSource so that it has ACLFeed and ForecastFeed" in new Context {
       val forecastScheduled = "2017-01-01T10:25Z"
 
       val aclFlight = Flights(List(
@@ -99,11 +99,12 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
       offerAndWait(crunch.forecastArrivalsInput, forecastArrivals)
 
-      val expected = Set(LiveFeedSource, ForecastFeedSource, AclFeedSource)
+      val expected = Set(ForecastFeedSource, AclFeedSource)
 
       crunch.liveTestProbe.fishForMessage(5 seconds) {
         case ps: PortState =>
           val portStateSources = ps.flights.values.flatMap(_.apiFlight.FeedSources).toSet
+          println(s"sources: $portStateSources")
           portStateSources == expected
       }
 

@@ -38,10 +38,10 @@ class SimulationGraphStage(name: String = "",
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var loadMinutes: SortedMap[TQM, LoadMinute] = SortedMap()
-    var staffMinutes: Map[TM, StaffMinute] = Map()
+    var staffMinutes: SortedMap[TM, StaffMinute] = SortedMap()
     var deployments: SortedMap[TQM, Int] = SortedMap()
     var allSimulationMinutes: SortedMap[TQM, SimulationMinute] = SortedMap()
-    var simulationMinutesToPush: Map[TQM, SimulationMinute] = Map()
+    var simulationMinutesToPush: SortedMap[TQM, SimulationMinute] = SortedMap()
 
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
@@ -57,12 +57,10 @@ class SimulationGraphStage(name: String = "",
       }
 
       staffMinutes = optionalInitialStaffMinutes match {
-        case None => Map()
+        case None => SortedMap()
         case Some(StaffMinutes(sms)) =>
           log.info(s"Received ${sms.size} initial staff minutes")
-          sms.map(sm => {
-            (sm.key, sm)
-          }).toMap
+          SortedMap[TM, StaffMinute]() ++ sms.map(sm => (sm.key, sm))
       }
 
       deployments = optionalInitialCrunchMinutes match {
@@ -118,11 +116,11 @@ class SimulationGraphStage(name: String = "",
         val incomingStaffMinutes: StaffMinutes = grab(inStaffMinutes)
         log.info(s"Grabbed ${incomingStaffMinutes.minutes.length} staff minutes")
 
-        val affectedTerminals = incomingStaffMinutes.minutes.map(_.terminalName).toSet.toSeq
+        val affectedTerminals = incomingStaffMinutes.minutes.map(_.terminalName).distinct
 
         log.info(s"Staff updates affect ${affectedTerminals.mkString(", ")}")
 
-        staffMinutes = purgeExpired(updateStaffMinutes(staffMinutes, incomingStaffMinutes), (sm: StaffMinute) => sm.minute, now, expireAfterMillis)
+        staffMinutes = purgeExpired(updateStaffMinutes(staffMinutes, incomingStaffMinutes), now, expireAfterMillis.toInt)
 
         log.info(s"Purged expired staff minutes")
 
@@ -196,7 +194,7 @@ class SimulationGraphStage(name: String = "",
       allSimulationMinutes = purgeExpired(updatedSims, now, expireAfterMillis.toInt)
 
       val mergedSimulationMinutesToPush = mergeSimulationMinutes(diff, simulationMinutesToPush)
-      simulationMinutesToPush = purgeExpired(mergedSimulationMinutesToPush, (sm: SimulationMinute) => sm.minute, now, expireAfterMillis)
+      simulationMinutesToPush = purgeExpired(mergedSimulationMinutesToPush, now, expireAfterMillis.toInt)
       log.info(s"Now have ${simulationMinutesToPush.size} simulation minutes to push")
     }
 
@@ -218,7 +216,7 @@ class SimulationGraphStage(name: String = "",
       }
     }
 
-    def updateStaffMinutes(existingStaffMinutes: Map[TM, StaffMinute], incomingStaffMinutes: StaffMinutes): Map[TM, StaffMinute] = incomingStaffMinutes
+    def updateStaffMinutes(existingStaffMinutes: SortedMap[TM, StaffMinute], incomingStaffMinutes: StaffMinutes): SortedMap[TM, StaffMinute] = incomingStaffMinutes
       .minutes
       .foldLeft(existingStaffMinutes) {
         case (soFar, sm) => soFar.updated(sm.key, sm)
@@ -409,7 +407,7 @@ class SimulationGraphStage(name: String = "",
       (minDesks, maxDesks)
     }
 
-    def mergeSimulationMinutes(updatedCms: SortedMap[TQM, SimulationMinute], existingCms: Map[TQM, SimulationMinute]): Map[TQM, SimulationMinute] =
+    def mergeSimulationMinutes(updatedCms: SortedMap[TQM, SimulationMinute], existingCms: SortedMap[TQM, SimulationMinute]): SortedMap[TQM, SimulationMinute] =
       updatedCms.foldLeft(existingCms) {
         case (soFar, (tqm, newLoadMinute)) => soFar.updated(tqm, newLoadMinute)
       }
@@ -442,7 +440,7 @@ class SimulationGraphStage(name: String = "",
       else if (isAvailable(outSimulationMinutes)) {
         log.info(s"Pushing ${simulationMinutesToPush.size} simulation minutes")
         push(outSimulationMinutes, SimulationMinutes(simulationMinutesToPush.values.toSet))
-        simulationMinutesToPush = Map()
+        simulationMinutesToPush = SortedMap()
       } else log.info(s"outSimulationMinutes not available to push")
     }
 

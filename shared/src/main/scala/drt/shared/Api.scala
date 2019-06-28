@@ -331,7 +331,7 @@ object ArrivalKey {
   def apply(arrival: Arrival): ArrivalKey = ArrivalKey(arrival.Origin, arrival.voyageNumberPadded, arrival.Scheduled)
 }
 
-case class ArrivalsDiff(toUpdate: Set[Arrival], toRemove: Set[Int])
+case class ArrivalsDiff(toUpdate: SortedMap[ArrivalKey, Arrival], toRemove: Set[Arrival])
 
 trait SDateLike {
 
@@ -451,7 +451,7 @@ object FlightsApi {
 
   case class Flights(flights: Seq[Arrival])
 
-  case class FlightsWithSplits(flights: Seq[ApiFlightWithSplits], removals: Set[Int]) extends PortStateMinutes {
+  case class FlightsWithSplits(flights: Seq[ApiFlightWithSplits], removals: Set[Arrival]) extends PortStateMinutes {
     def applyTo(maybePortState: Option[PortState], now: SDateLike): Option[PortState] = {
       maybePortState match {
         case None => Option(PortState(flights.toList, List(), List()))
@@ -460,7 +460,7 @@ object FlightsApi {
             case (soFar, updatedFlight) => soFar.updated(updatedFlight.apiFlight.uniqueId, updatedFlight.copy(lastUpdated = Option(now.millisSinceEpoch)))
           }
           val updatedFlightsMinusRemovals = removals.foldLeft(updatedFlights) {
-            case (minusRemovals, toRemove) => minusRemovals - toRemove
+            case (minusRemovals, toRemove) => minusRemovals - toRemove.uniqueId
           }
           Option(portState.copy(flights = updatedFlightsMinusRemovals))
       }
