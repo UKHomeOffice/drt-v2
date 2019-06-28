@@ -30,7 +30,7 @@ class CrunchLoadGraphStage(name: String = "",
   override val shape = new FlowShape(inLoads, outDeskRecMinutes)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var loadMinutes: Map[TQM, LoadMinute] = Map()
+    var loadMinutes: SortedMap[TQM, LoadMinute] = SortedMap()
     var existingDeskRecMinutes: Map[TQM, DeskRecMinute] = Map()
     var deskRecMinutesToPush: Map[TQM, DeskRecMinute] = Map()
 
@@ -38,11 +38,11 @@ class CrunchLoadGraphStage(name: String = "",
 
     override def preStart(): Unit = {
       loadMinutes = optionalInitialCrunchMinutes match {
-        case None => Map()
-        case Some(CrunchMinutes(cms)) => cms.map(cm => {
+        case None => SortedMap[TQM, LoadMinute]()
+        case Some(CrunchMinutes(cms)) => SortedMap[TQM, LoadMinute]() ++ cms.map(cm => {
           val lm = LoadMinute(cm.terminalName, cm.queueName, cm.paxLoad, cm.workLoad, cm.minute)
           (lm.uniqueId, lm)
-        }).toMap
+        })
       }
 
       super.preStart()
@@ -61,7 +61,7 @@ class CrunchLoadGraphStage(name: String = "",
         val affectedTerminals = incomingLoads.loadMinutes.map(_.terminalName)
 
         val updatedLoads = mergeLoads(incomingLoads.loadMinutes, loadMinutes)
-        loadMinutes = purgeExpired(updatedLoads, (lm: LoadMinute) => lm.minute, now, expireAfterMillis)
+        loadMinutes = purgeExpired(updatedLoads, now, expireAfterMillis.toInt)
 
         val deskRecMinutes = crunchLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, affectedTerminals)
 
@@ -152,7 +152,7 @@ class CrunchLoadGraphStage(name: String = "",
       }
     }
 
-    def mergeLoads(incomingLoads: Set[LoadMinute], existingLoads: Map[TQM, LoadMinute]): Map[TQM, LoadMinute] = incomingLoads
+    def mergeLoads(incomingLoads: Set[LoadMinute], existingLoads: SortedMap[TQM, LoadMinute]): SortedMap[TQM, LoadMinute] = incomingLoads
       .foldLeft(existingLoads) {
         case (soFar, load) => soFar.updated(load.uniqueId, load)
       }

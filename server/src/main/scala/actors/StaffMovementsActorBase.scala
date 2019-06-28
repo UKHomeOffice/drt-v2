@@ -10,7 +10,8 @@ import com.trueaccord.scalapb.GeneratedMessage
 import drt.shared.{HasExpireables, MilliDate, SDateLike, StaffMovement}
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
-import services.OfferHandler
+import services.graphstages.Crunch
+import services.{OfferHandler, SDate}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
@@ -25,6 +26,7 @@ case class StaffMovements(movements: Seq[StaffMovement]) extends HasExpireables[
     copy(movements = movements.filterNot(sm => movementsToRemove.contains(sm.uUID)))
 
   def purgeExpired(expireBefore: () => SDateLike): StaffMovements = {
+    val start = SDate.now().millisSinceEpoch
     val expireBeforeMillis = expireBefore().millisSinceEpoch
     val unexpiredPairsOfMovements = movements
       .groupBy(_.uUID)
@@ -34,6 +36,7 @@ case class StaffMovements(movements: Seq[StaffMovement]) extends HasExpireables[
         neitherHaveExpired
       })
       .flatten.toSeq
+    Crunch.logTimeTaken(start)
     copy(movements = unexpiredPairsOfMovements)
   }
 }
@@ -130,7 +133,11 @@ class StaffMovementsActorBase(val now: () => SDateLike,
   def receiveCommand: Receive = {
     case GetState =>
       log.info(s"GetState received")
-      sender() ! state.staffMovements.purgeExpired(expireBefore)
+      val start = SDate.now().millisSinceEpoch
+
+      val movements = state.staffMovements.purgeExpired(expireBefore)
+      Crunch.logTimeTaken(start)
+      sender() ! movements
 
     case AddStaffMovements(movementsToAdd) =>
       val updatedStaffMovements = state.staffMovements + movementsToAdd

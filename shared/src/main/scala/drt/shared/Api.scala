@@ -137,7 +137,11 @@ object ApiFlightWithSplits {
   implicit val rw: RW[ApiFlightWithSplits] = macroRW
 }
 
-case class TQM(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch) extends Ordered[TQM] {
+trait WithTimeAccessor {
+  def timeValue: MillisSinceEpoch
+}
+
+case class TQM(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch) extends Ordered[TQM] with WithTimeAccessor {
   override def equals(o: scala.Any): Boolean = o match {
     case TQM(t, q, m) => t == terminalName && q == queueName && m == minute
     case _ => false
@@ -146,6 +150,8 @@ case class TQM(terminalName: TerminalName, queueName: QueueName, minute: MillisS
   lazy val comparisonString = s"$minute-$queueName-$terminalName"
 
   override def compare(that: TQM): Int = this.comparisonString.compareTo(that.comparisonString)
+
+  override def timeValue: MillisSinceEpoch = minute
 }
 
 object TQM {
@@ -154,7 +160,7 @@ object TQM {
   def apply(crunchMinute: CrunchMinute): TQM = TQM(crunchMinute.terminalName, crunchMinute.queueName, crunchMinute.minute)
 }
 
-case class TM(terminalName: TerminalName, minute: MillisSinceEpoch) extends Ordered[TM]  {
+case class TM(terminalName: TerminalName, minute: MillisSinceEpoch) extends Ordered[TM] with WithTimeAccessor {
   override def equals(o: scala.Any): Boolean = o match {
     case TM(t, m) => t == terminalName && m == minute
     case _ => false
@@ -163,6 +169,8 @@ case class TM(terminalName: TerminalName, minute: MillisSinceEpoch) extends Orde
   lazy val comparisonString = s"$minute-$terminalName"
 
   override def compare(that: TM): Int = this.comparisonString.compareTo(that.comparisonString)
+
+  override def timeValue: MillisSinceEpoch = minute
 }
 
 object TM {

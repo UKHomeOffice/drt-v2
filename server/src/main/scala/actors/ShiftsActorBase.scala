@@ -103,7 +103,11 @@ class ShiftsActorBase(val now: () => SDateLike,
   def receiveCommand: Receive = {
     case GetState =>
       log.info(s"GetState received")
-      sender() ! state.purgeExpired(expireBefore)
+      val start = SDate.now().millisSinceEpoch
+
+      val assignments = state.purgeExpired(expireBefore)
+      Crunch.logTimeTaken(start)
+      sender() ! assignments
 
     case UpdateShifts(shiftsToUpdate) =>
       val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToUpdate)
