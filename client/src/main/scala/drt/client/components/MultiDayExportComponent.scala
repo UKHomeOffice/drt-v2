@@ -65,7 +65,7 @@ object MultiDayExportComponent {
               ^.className := "modal-content",
               <.div(
                 ^.className := "modal-header",
-                <.h5(^.className := "modal-title", "Choose what to export")
+                <.h5(^.className := "modal-title", "Choose dates to export")
               ),
               <.div(
                 ^.className := "modal-body",
