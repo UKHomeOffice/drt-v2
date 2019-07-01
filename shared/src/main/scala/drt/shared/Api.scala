@@ -515,7 +515,7 @@ object CrunchApi {
 
     def window(start: SDateLike, end: SDateLike, portQueues: Map[TerminalName, Seq[QueueName]]): PortState = {
       val roundedStart = start.roundToMinute()
-      val roundedEnd = end.roundToMinute()
+      val roundedEnd = end.roundToMinute().addMinutes(-1)
 
       val cms = crunchMinuteRange(roundedStart.millisSinceEpoch, roundedEnd.millisSinceEpoch, portQueues)
       val sms = staffMinuteRange(roundedStart.millisSinceEpoch, roundedEnd.millisSinceEpoch, portQueues.keys.toSeq)
