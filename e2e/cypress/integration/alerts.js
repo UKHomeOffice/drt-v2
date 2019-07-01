@@ -11,7 +11,7 @@ describe('Alerts system', function () {
         .asADrtSuperUser()
         .navigateHome()
         .get('.alerts-link > a')
-        .click()
+        .click({force: true})
         .get('#alert-title').type("This is an alert")
         .get('#alert-message').type("This is the message of the alert")
         .get(':nth-child(11) > .btn').click()
