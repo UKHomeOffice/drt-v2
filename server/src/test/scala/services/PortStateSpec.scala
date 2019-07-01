@@ -5,6 +5,8 @@ import drt.shared.CrunchApi.{CrunchMinute, PortState, StaffMinute}
 import drt.shared._
 import org.specs2.mutable.Specification
 
+import scala.collection.immutable.SortedMap
+
 class PortStateSpec extends Specification {
   "Given a PortState with no purgable entries " +
     "When I purge " +
@@ -80,6 +82,42 @@ class PortStateSpec extends Specification {
     val result = portState.purgeOlderThanDate(newerTime)
 
     val expected = PortState(arrivalsToFlightsWithSplits(List(newerArrival)), List(newerCrunchMinute), List(newerStaffMinute))
+
+    result === expected
+  }
+
+  "Given 3 days of crunch minutes across 2 terminals and 2 queues " +
+    "When I ask for the middle day's data " +
+    "I should not see any data from the days either side" >> {
+    val terminalQueues = Map("T1" -> Seq(Queues.EeaDesk, Queues.NonEeaDesk), "T2" -> Seq(Queues.EeaDesk, Queues.NonEeaDesk))
+    val threeDayMillis = SDate("2019-01-01").millisSinceEpoch until SDate("2019-01-04").millisSinceEpoch by 60000
+    val oneDayMillis = SDate("2019-01-02").millisSinceEpoch until SDate("2019-01-03").millisSinceEpoch by 60000
+
+    val cms = for {
+      (terminal, queues) <- terminalQueues
+      queue <- queues
+      minute <- threeDayMillis
+    } yield CrunchMinute(terminal, queue, minute, 5, 10, 2, 15)
+
+    val sms = for {
+      terminal <- terminalQueues.keys
+      minute <- threeDayMillis
+    } yield StaffMinute(terminal, minute, 10, 2, -1)
+
+    val ps = PortState(List(), cms.toList, sms.toList)
+
+    val result = ps.window(SDate("2019-01-02"), SDate("2019-01-03"), terminalQueues)
+    val expectedCms = for {
+      (terminal, queues) <- terminalQueues
+      queue <- queues
+      minute <- oneDayMillis
+    } yield CrunchMinute(terminal, queue, minute, 5, 10, 2, 15)
+    val expectedSms = for {
+      terminal <- terminalQueues.keys
+      minute <- oneDayMillis
+    } yield StaffMinute(terminal, minute, 10, 2, -1)
+
+    val expected = PortState(List(), expectedCms.toList, expectedSms.toList)
 
     result === expected
   }

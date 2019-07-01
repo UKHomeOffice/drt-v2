@@ -60,7 +60,7 @@ object TerminalsDashboardPage {
                   <.div(
                     <.h3(s"Terminal $terminalName"),
                     portStateMP().render(portState => {
-                      val portStateForDashboard = portState.window(displayPeriod.start, displayPeriod.end, portConfig.queues.filterKeys(_ == terminalName))
+                      val portStateForDashboard = portState.windowWithTerminalFilter(displayPeriod.start, displayPeriod.end, portConfig.queues.filterKeys(_ == terminalName))
                       val flightsInTerminal = portStateForDashboard.flights.values.toList
                       val terminalCrunchMinutes = portStateForDashboard.crunchMinutes.values.toList
                       val terminalStaffMinutes = portStateForDashboard.staffMinutes.values.toList

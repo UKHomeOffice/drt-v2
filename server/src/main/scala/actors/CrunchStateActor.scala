@@ -116,11 +116,12 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
   }
 
   def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch, maybeTerminalName: Option[TerminalName]): Option[PortState] = {
-    val queues = maybeTerminalName match {
-      case None => portQueues
-      case Some(tn) => portQueues.filterKeys(_ == tn)
+    maybeTerminalName match {
+      case None =>
+        state.map(_.window(SDate(start), SDate(end), portQueues))
+      case Some(tn) =>
+        state.map(_.windowWithTerminalFilter(SDate(start), SDate(end), portQueues.filterKeys(_ == tn)))
     }
-    state.map(_.window(SDate(start), SDate(end), queues))
   }
 
   def setStateFromSnapshot(snapshot: CrunchStateSnapshotMessage, timeWindowEnd: Option[SDateLike] = None): Unit = {

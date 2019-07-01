@@ -67,8 +67,8 @@ object AclFeed {
   }
 
   def latestFileForPort(sftp: SFTPClient, portCode: String): String = {
-    val portRegex = "([A-Z]{3})[SW][0-9]{2}_HOMEOFFICEROLL180_[0-9]{8}.zip".r
-    val dateRegex = "[A-Z]{3}[SW][0-9]{2}_HOMEOFFICEROLL180_([0-9]{8}).zip".r
+    val portRegex = "([A-Z]{3})[S][0-9]{2}_HOMEOFFICEROLL180_[0-9]{8}.zip".r
+    val dateRegex = "[A-Z]{3}[S][0-9]{2}_HOMEOFFICEROLL180_([0-9]{8}).zip".r
 
     val filesByDate = sftp
       .ls("/180_Days/").asScala

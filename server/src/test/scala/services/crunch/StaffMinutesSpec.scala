@@ -121,10 +121,9 @@ class StaffMinutesSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       airportConfig = airportConfig.copy(terminalNames = Seq("T1")),
       now = () => startDate,
-      checkRequiredStaffUpdatesOnStartup = true
+      checkRequiredStaffUpdatesOnStartup = true,
+      initialStaffMovements = initialMovements
     )
-
-    offerAndWait(crunch.liveStaffMovementsInput, initialMovements)
 
     val minutesToCheck = 5
     val expectedStaffAvailableAndMovements = List.fill(minutesToCheck)((0, -1))
@@ -266,7 +265,15 @@ class StaffMinutesSpec extends CrunchTestLike {
     )
 
     offerAndWait(crunch.shiftsInput, initialShifts)
+
+    crunch.liveTestProbe.fishForMessage(2 seconds) {
+      case ps: PortState => ps.staffMinutes.get(TM("T1", startDate1.millisSinceEpoch)).map(_.shifts) == Option(10)
+    }
     offerAndWait(crunch.fixedPointsInput, initialFixedPoints)
+
+    crunch.liveTestProbe.fishForMessage(5 seconds) {
+      case ps: PortState => ps.staffMinutes.get(TM("T1", startDate1.millisSinceEpoch)).map(_.fixedPoints) == Option(2)
+    }
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
 
     val expectedCrunchDeployments = Set(

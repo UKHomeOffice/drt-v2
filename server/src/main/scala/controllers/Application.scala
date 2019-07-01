@@ -719,7 +719,7 @@ class Application @Inject()(implicit val config: Configuration,
 
     portStateFuture.map {
       case Right(Some(ps: PortState)) =>
-        val windowedPortState = ps.window(startDateTime, endDateTime, airportConfig.queues.filterKeys(_ == terminalName))
+        val windowedPortState = ps.windowWithTerminalFilter(startDateTime, endDateTime, airportConfig.queues.filterKeys(_ == terminalName))
         log.debug(s"Exports: ${localTime.toISOString()} filtered to ${windowedPortState.crunchMinutes.size} CMs and ${windowedPortState.staffMinutes.size} SMs ")
         Option(CSVData.terminalCrunchMinutesToCsvData(
           windowedPortState.crunchMinutes.values.toList,

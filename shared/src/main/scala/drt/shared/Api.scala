@@ -24,7 +24,12 @@ object DeskAndPaxTypeCombinations {
 }
 
 case class MilliDate(millisSinceEpoch: MillisSinceEpoch) extends Ordered[MilliDate] with WithTimeAccessor {
-  def compare(that: MilliDate): Int = millisSinceEpoch.compare(that.millisSinceEpoch)
+  override def equals(o: scala.Any): Boolean = o match {
+    case MilliDate(millis) => millis == millisSinceEpoch
+    case _ => false
+  }
+
+  override def compare(that: MilliDate): Int = millisSinceEpoch.compare(that.millisSinceEpoch)
 
   override def timeValue: MillisSinceEpoch = millisSinceEpoch
 }
@@ -513,13 +518,26 @@ object CrunchApi {
       val roundedEnd = end.roundToMinute()
       val windowRange = (roundedStart.millisSinceEpoch until roundedEnd.millisSinceEpoch by 60000L).toArray
 
-      val cms = extractCrunchMinutes(windowRange, portQueues)
-      val sms = extractStaffMinutes(windowRange, portQueues.keys.toSeq)
+      val cms = crunchMinuteRange(windowRange, portQueues)
+      val sms = staffMinuteRange(windowRange, portQueues.keys.toSeq)
 
       PortState(
-        flights = flights.filter {
-          case (_, f) => f.apiFlight.hasPcpDuring(roundedStart, roundedEnd) && portQueues.contains(f.apiFlight.Terminal)
-        },
+        flights = flights.filter { case (_, f) => f.apiFlight.hasPcpDuring(roundedStart, roundedEnd) },
+        crunchMinutes = cms,
+        staffMinutes = sms
+      )
+    }
+
+    def windowWithTerminalFilter(start: SDateLike, end: SDateLike, portQueues: Map[TerminalName, Seq[QueueName]]): PortState = {
+      val roundedStart = start.roundToMinute()
+      val roundedEnd = end.roundToMinute()
+      val windowRange = (roundedStart.millisSinceEpoch until roundedEnd.millisSinceEpoch by 60000L).toArray
+
+      val cms = crunchMinuteRangeWithTerminals(windowRange, portQueues)
+      val sms = staffMinuteRangeWithTerminals(windowRange, portQueues.keys.toSeq)
+
+      PortState(
+        flights = flights.filter { case (_, f) => f.apiFlight.hasPcpDuring(roundedStart, roundedEnd) && portQueues.contains(f.apiFlight.Terminal) },
         crunchMinutes = cms,
         staffMinutes = sms
       )
@@ -539,28 +557,31 @@ object CrunchApi {
       PortState(cleansedFlights, cleansedCrunchMinutes, cleansedStaffMinutes)
     }
 
-    def extractCrunchMinutes(windowRange: Array[MillisSinceEpoch], portQueues: Map[TerminalName, Seq[QueueName]]): SortedMap[TQM, CrunchMinute] = {
-      val maybeCms = for {
-        terminal <- portQueues.keys
-        queue <- portQueues(terminal)
-        minute <- windowRange
-      } yield {
-        val tqm = TQM(terminal, queue, minute)
-        crunchMinutes.get(tqm).map(cm => (tqm, cm))
-      }
-      SortedMap[TQM, CrunchMinute]() ++ maybeCms.collect { case Some(tup) => tup }
+    def crunchMinuteRange(windowRange: Array[MillisSinceEpoch], portQueues: Map[TerminalName, Seq[QueueName]]): SortedMap[TQM, CrunchMinute] = {
+      val minTerminal = portQueues.keys.min
+      val minQueue = portQueues(minTerminal).min
+      val maxTerminal = portQueues.keys.max
+      val maxQueue = portQueues(maxTerminal).max
+      crunchMinutes
+        .from(TQM(minTerminal, minQueue, windowRange.min))
+        .to(TQM(maxTerminal, maxQueue, windowRange.max))
     }
 
-    def extractStaffMinutes(windowRange: Array[MillisSinceEpoch], terminals: Seq[TerminalName]): SortedMap[TM, StaffMinute] = {
-      val maybeSms = for {
-        terminal <- terminals
-        minute <- windowRange
-      } yield {
-        val tm = TM(terminal, minute)
-        staffMinutes.get(tm).map(cm => (tm, cm))
-      }
-      SortedMap[TM, StaffMinute]() ++ maybeSms.collect { case Some(tup) => tup }
+    def crunchMinuteRangeWithTerminals(windowRange: Array[MillisSinceEpoch], portQueues: Map[TerminalName, Seq[QueueName]]): SortedMap[TQM, CrunchMinute] =
+      crunchMinuteRange(windowRange, portQueues)
+        .filterKeys { tqm => portQueues.contains(tqm.terminalName) && portQueues(tqm.terminalName).contains(tqm.queueName) }
+
+    def staffMinuteRange(windowRange: Array[MillisSinceEpoch], terminals: Seq[TerminalName]): SortedMap[TM, StaffMinute] = {
+      val minTerminal = terminals.min
+      val maxTerminal = terminals.max
+      staffMinutes
+        .from(TM(minTerminal, windowRange.min))
+        .to(TM(maxTerminal, windowRange.max))
     }
+
+    def staffMinuteRangeWithTerminals(windowRange: Array[MillisSinceEpoch], terminals: Seq[TerminalName]): SortedMap[TM, StaffMinute] =
+      staffMinuteRange(windowRange, terminals)
+        .filterKeys { tm => terminals.contains(tm.terminalName) }
 
     def updates(sinceEpoch: MillisSinceEpoch): Option[PortStateUpdates] = {
       val updatedFlights = flights.filter(_._2.apiFlight.PcpTime.isDefined).filter {

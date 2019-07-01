@@ -19,7 +19,7 @@ object Crunch {
   case class FlightSplitDiff(flightId: Int, paxType: PaxType, terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
 
   case class LoadMinute(terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch) extends TerminalQueueMinute {
-    lazy val uniqueId: TQM = MinuteHelper.key(terminalName, queueName, minute)
+    lazy val uniqueId: TQM = TQM(terminalName, queueName, minute)
   }
 
   object LoadMinute {
@@ -358,17 +358,19 @@ object Crunch {
         crunchPeriodStartMillis(SDate(sm.minute, europeLondonTimeZone)).millisSinceEpoch
       }
 
+    println(s"Adding dates ${changedDays.map{case (m, _) => SDate(m).toISOString()}.mkString(", ")}")
+
     changedDays
       .foldLeft(loadMinutesQueue) {
         case (existingQueue, (dayStartMillis, newLoadsForDay)) =>
           val milliDate = MilliDate(dayStartMillis)
           val existingLoadsForDay = existingQueue.get(milliDate)
-          val mergedDayMinutes = mergeUpdatedLoads(existingLoadsForDay, dayStartMillis, newLoadsForDay)
+          val mergedDayMinutes = mergeUpdatedLoads(existingLoadsForDay, newLoadsForDay)
           existingQueue.updated(milliDate, Loads(mergedDayMinutes))
       }
   }
 
-  def mergeUpdatedLoads(maybeExistingDayLoads: Option[Loads], dayMillis: MillisSinceEpoch, dayLoadMinutes: SortedMap[TQM, LoadMinute]): SortedMap[TQM, LoadMinute] = {
+  def mergeUpdatedLoads(maybeExistingDayLoads: Option[Loads], dayLoadMinutes: SortedMap[TQM, LoadMinute]): SortedMap[TQM, LoadMinute] = {
     maybeExistingDayLoads match {
       case None => dayLoadMinutes
       case Some(existingDayLoads) =>
