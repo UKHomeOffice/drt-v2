@@ -83,7 +83,7 @@ object TerminalPlanningComponent {
           <.thead(
             <.tr(
               <.th(^.className := "queue-heading"),
-              props.forecastPeriod.headlines.queueDayHeadlines.map(_.day).toList.sorted.map(
+              props.forecastPeriod.headlines.queueDayHeadlines.map(_.day).toSet.toList.sorted.map(
                 day => <.th(s"${SDate(MilliDate(day)).getDate()}/${SDate(MilliDate(day)).getMonth()}")
               ).toTagMod
             ), {
