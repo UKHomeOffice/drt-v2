@@ -36,7 +36,7 @@ object RestrictedAccessByPortPage {
   val component = ScalaComponent.builder[Props]("RestrictedAccessForPort")
     .render_P(props => {
 
-      def url(port: String) = urlLowerCase.replace(s"/${portRequested.toLowerCase}/", s"/${port.toLowerCase}/")
+      def url(port: String) = urlLowerCase.replace(portRequested.toLowerCase, port.toLowerCase)
 
       val portsAccessible: Set[String] = allPortsAccessible(props.loggedInUser.roles)
       <.div(^.className := "access-restricted",
