@@ -358,8 +358,6 @@ object Crunch {
         crunchPeriodStartMillis(SDate(sm.minute, europeLondonTimeZone)).millisSinceEpoch
       }
 
-    println(s"Adding dates ${changedDays.map{case (m, _) => SDate(m).toISOString()}.mkString(", ")}")
-
     changedDays
       .foldLeft(loadMinutesQueue) {
         case (existingQueue, (dayStartMillis, newLoadsForDay)) =>
