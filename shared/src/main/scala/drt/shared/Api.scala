@@ -516,10 +516,9 @@ object CrunchApi {
     def window(start: SDateLike, end: SDateLike, portQueues: Map[TerminalName, Seq[QueueName]]): PortState = {
       val roundedStart = start.roundToMinute()
       val roundedEnd = end.roundToMinute()
-      val windowRange = (roundedStart.millisSinceEpoch until roundedEnd.millisSinceEpoch by 60000L).toArray
 
-      val cms = crunchMinuteRange(windowRange, portQueues)
-      val sms = staffMinuteRange(windowRange, portQueues.keys.toSeq)
+      val cms = crunchMinuteRange(roundedStart.millisSinceEpoch, roundedEnd.millisSinceEpoch, portQueues)
+      val sms = staffMinuteRange(roundedStart.millisSinceEpoch, roundedEnd.millisSinceEpoch, portQueues.keys.toSeq)
 
       PortState(
         flights = flights.filter { case (_, f) => f.apiFlight.hasPcpDuring(roundedStart, roundedEnd) },
@@ -531,10 +530,9 @@ object CrunchApi {
     def windowWithTerminalFilter(start: SDateLike, end: SDateLike, portQueues: Map[TerminalName, Seq[QueueName]]): PortState = {
       val roundedStart = start.roundToMinute()
       val roundedEnd = end.roundToMinute()
-      val windowRange = (roundedStart.millisSinceEpoch until roundedEnd.millisSinceEpoch by 60000L).toArray
 
-      val cms = crunchMinuteRangeWithTerminals(windowRange, portQueues)
-      val sms = staffMinuteRangeWithTerminals(windowRange, portQueues.keys.toSeq)
+      val cms = crunchMinuteRangeWithTerminals(roundedStart.millisSinceEpoch, roundedEnd.millisSinceEpoch, portQueues)
+      val sms = staffMinuteRangeWithTerminals(roundedStart.millisSinceEpoch, roundedEnd.millisSinceEpoch, portQueues.keys.toSeq)
 
       PortState(
         flights = flights.filter { case (_, f) => f.apiFlight.hasPcpDuring(roundedStart, roundedEnd) && portQueues.contains(f.apiFlight.Terminal) },
@@ -557,30 +555,30 @@ object CrunchApi {
       PortState(cleansedFlights, cleansedCrunchMinutes, cleansedStaffMinutes)
     }
 
-    def crunchMinuteRange(windowRange: Array[MillisSinceEpoch], portQueues: Map[TerminalName, Seq[QueueName]]): SortedMap[TQM, CrunchMinute] = {
+    def crunchMinuteRange(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, portQueues: Map[TerminalName, Seq[QueueName]]): SortedMap[TQM, CrunchMinute] = {
       val minTerminal = portQueues.keys.min
       val minQueue = portQueues(minTerminal).min
       val maxTerminal = portQueues.keys.max
       val maxQueue = portQueues(maxTerminal).max
       crunchMinutes
-        .from(TQM(minTerminal, minQueue, windowRange.min))
-        .to(TQM(maxTerminal, maxQueue, windowRange.max))
+        .from(TQM(minTerminal, minQueue, startMillis))
+        .to(TQM(maxTerminal, maxQueue, endMillis))
     }
 
-    def crunchMinuteRangeWithTerminals(windowRange: Array[MillisSinceEpoch], portQueues: Map[TerminalName, Seq[QueueName]]): SortedMap[TQM, CrunchMinute] =
-      crunchMinuteRange(windowRange, portQueues)
+    def crunchMinuteRangeWithTerminals(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, portQueues: Map[TerminalName, Seq[QueueName]]): SortedMap[TQM, CrunchMinute] =
+      crunchMinuteRange(startMillis, endMillis, portQueues)
         .filterKeys { tqm => portQueues.contains(tqm.terminalName) && portQueues(tqm.terminalName).contains(tqm.queueName) }
 
-    def staffMinuteRange(windowRange: Array[MillisSinceEpoch], terminals: Seq[TerminalName]): SortedMap[TM, StaffMinute] = {
+    def staffMinuteRange(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, terminals: Seq[TerminalName]): SortedMap[TM, StaffMinute] = {
       val minTerminal = terminals.min
       val maxTerminal = terminals.max
       staffMinutes
-        .from(TM(minTerminal, windowRange.min))
-        .to(TM(maxTerminal, windowRange.max))
+        .from(TM(minTerminal, startMillis))
+        .to(TM(maxTerminal, endMillis))
     }
 
-    def staffMinuteRangeWithTerminals(windowRange: Array[MillisSinceEpoch], terminals: Seq[TerminalName]): SortedMap[TM, StaffMinute] =
-      staffMinuteRange(windowRange, terminals)
+    def staffMinuteRangeWithTerminals(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, terminals: Seq[TerminalName]): SortedMap[TM, StaffMinute] =
+      staffMinuteRange(startMillis, endMillis, terminals)
         .filterKeys { tm => terminals.contains(tm.terminalName) }
 
     def updates(sinceEpoch: MillisSinceEpoch): Option[PortStateUpdates] = {
