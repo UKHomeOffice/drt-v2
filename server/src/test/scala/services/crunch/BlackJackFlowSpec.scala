@@ -35,11 +35,10 @@ class BlackJackFlowSpec extends CrunchTestLike {
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
         defaultProcessingTimes = Map("T1" -> Map(
-          eeaMachineReadableToDesk -> 25d / 60,
-          eeaMachineReadableToEGate -> 25d / 60
+          eeaMachineReadableToDesk -> 25d / 60
         )),
         terminalNames = Seq("T1"),
-        queues = Map("T1" -> Seq(EeaDesk, EGate)))
+        queues = Map("T1" -> Seq(EeaDesk)))
     )
 
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(initialBaseArrivals.toSeq)))
@@ -87,7 +86,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
           eeaMachineReadableToEGate -> 25d / 60
         )),
         terminalNames = Seq("T1"),
-        queues = Map("T1" -> Seq(EeaDesk, EGate)))
+        queues = Map("T1" -> Seq(EeaDesk)))
     )
 
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(initialBaseArrivals.toSeq)))

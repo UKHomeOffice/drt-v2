@@ -3,10 +3,13 @@ package services.graphstages
 import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinutes}
-import drt.shared.SDateLike
+import drt.shared.{MilliDate, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.graphstages.Crunch.{europeLondonTimeZone, getLocalLastMidnight, changedDays}
+import services.graphstages.Crunch.{changedDays, europeLondonTimeZone, getLocalLastMidnight}
+
+import scala.collection.immutable
+import scala.collection.immutable.SortedMap
 
 class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: MillisSinceEpoch, offsetMinutes: Int) extends GraphStage[FlowShape[StaffMinutes, StaffMinutes]] {
   val inStaffMinutes: Inlet[StaffMinutes] = Inlet[StaffMinutes]("StaffMinutes.in")
@@ -15,7 +18,7 @@ class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: Millis
   override def shape: FlowShape[StaffMinutes, StaffMinutes] = new FlowShape(inStaffMinutes, outStaffMinutes)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var staffMinutesQueue: List[(MillisSinceEpoch, StaffMinutes)] = List[(MillisSinceEpoch, StaffMinutes)]()
+    var staffMinutesQueue: SortedMap[MilliDate, StaffMinutes] = SortedMap()
 
     val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -27,11 +30,11 @@ class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: Millis
         val daysToUpdate = changedDays(offsetMinutes, incomingStaffMinutes)
         log.info("daysToUpdate: " + daysToUpdate.keys.toSeq.sorted.map(k => SDate(k).prettyDateTime()).mkString(", "))
 
-        val updatedMinutes = daysToUpdate.foldLeft(staffMinutesQueue.toMap) {
-          case (soFar, (dayMillis, staffMinutes)) => soFar.updated(dayMillis, StaffMinutes(staffMinutes))
-        }.toList.sortBy(_._1)
+        val updatedMinutes = daysToUpdate.foldLeft(staffMinutesQueue) {
+          case (soFar, (dayMillis, staffMinutes)) => soFar.updated(MilliDate(dayMillis), StaffMinutes(staffMinutes))
+        }
 
-        staffMinutesQueue = Crunch.purgeExpired(updatedMinutes, now, expireAfterMillis)
+        staffMinutesQueue = Crunch.purgeExpired(updatedMinutes, now, expireAfterMillis.toInt)
 
         pushIfAvailable()
 
@@ -43,7 +46,7 @@ class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: Millis
     setHandler(outStaffMinutes, new OutHandler {
       override def onPull(): Unit = {
         val start = SDate.now()
-        log.info(s"onPull called. ${staffMinutesQueue.length} sets of minutes in the queue")
+        log.info(s"onPull called. ${staffMinutesQueue.size} sets of minutes in the queue")
 
         pushIfAvailable()
 
@@ -54,15 +57,16 @@ class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: Millis
 
     def pushIfAvailable(): Unit = {
       staffMinutesQueue match {
-        case Nil => log.info(s"Queue is empty. Nothing to push")
+        case empty if empty.isEmpty => log.info(s"Queue is empty. Nothing to push")
         case _ if !isAvailable(outStaffMinutes) =>
           log.info(s"outStaffMinutes not available to push")
-        case (millis, staffMinutes) :: queueTail =>
+        case minutes =>
+          val (millis, staffMinutes) = minutes.head
           log.info(s"Pushing ${SDate(millis).toLocalDateTimeString()} ${staffMinutes.minutes.length} staff minutes for ${staffMinutes.minutes.groupBy(_.terminalName).keys.mkString(", ")}")
           push(outStaffMinutes, staffMinutes)
 
-          staffMinutesQueue = queueTail
-          log.info(s"Queue length now ${staffMinutesQueue.length}")
+          staffMinutesQueue = minutes.drop(1)
+          log.info(s"Queue length now ${staffMinutesQueue.size}")
       }
     }
   }

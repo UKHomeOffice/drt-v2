@@ -488,7 +488,7 @@ class ForecastPlanningToCSVDataTest extends Specification {
       val day2StartMinute = SDate("2017-01-02T00:00Z")
       val day3StartMinute = SDate("2017-01-03T00:00Z")
 
-      val headlines = ForecastHeadlineFigures(Set(
+      val headlines = ForecastHeadlineFigures(Seq(
         QueueHeadline(day1StartMinute.millisSinceEpoch, Queues.EeaDesk, 1, 2),
         QueueHeadline(day1StartMinute.millisSinceEpoch, Queues.EGate, 1, 2),
         QueueHeadline(day2StartMinute.millisSinceEpoch, Queues.EeaDesk, 1, 2),

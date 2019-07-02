@@ -48,13 +48,11 @@ class PlanningPageSpec() extends CrunchTestLike {
       ForecastTimeSlot(SDate("2017-01-02T00:45Z").millisSinceEpoch, 20, 0)
     )
 
-    crunch.forecastTestProbe.fishForMessage(10 seconds) {
+    crunch.forecastTestProbe.fishForMessage(5 seconds) {
       case ps: PortState =>
-        val weekOf15MinSlots: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = Forecast.rollUpForWeek(
-          ps.crunchMinutes,
-          ps.staffMinutes,
-          "T1"
-        )
+        val cs = ps.crunchSummary(SDate(startDate1), 4, 15, "T1", airportConfig.queues("T1").toList)
+        val ss = ps.staffSummary(SDate(startDate1), 4, 15, "T1")
+        val weekOf15MinSlots: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = Forecast.rollUpForWeek(cs, ss)
         val firstDayFirstHour = weekOf15MinSlots.getOrElse(SDate("2017-01-02T00:00Z").millisSinceEpoch, Seq()).take(4)
 
         firstDayFirstHour == expected

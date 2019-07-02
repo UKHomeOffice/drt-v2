@@ -10,7 +10,8 @@ import com.trueaccord.scalapb.GeneratedMessage
 import drt.shared.{HasExpireables, MilliDate, SDateLike, StaffMovement}
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
-import services.OfferHandler
+import services.graphstages.Crunch
+import services.{OfferHandler, SDate}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
@@ -130,7 +131,8 @@ class StaffMovementsActorBase(val now: () => SDateLike,
   def receiveCommand: Receive = {
     case GetState =>
       log.info(s"GetState received")
-      sender() ! state.staffMovements.purgeExpired(expireBefore)
+      val movements = state.staffMovements.purgeExpired(expireBefore)
+      sender() ! movements
 
     case AddStaffMovements(movementsToAdd) =>
       val updatedStaffMovements = state.staffMovements + movementsToAdd

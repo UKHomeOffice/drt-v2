@@ -16,6 +16,7 @@ import services._
 import services.graphstages.Crunch._
 import services.graphstages._
 
+import scala.collection.immutable.SortedMap
 import scala.language.postfixOps
 
 
@@ -98,7 +99,7 @@ object CrunchSystem {
       initialBaseArrivals = if (props.refreshArrivalsOnStart) Set() else props.initialBaseArrivals,
       initialForecastArrivals = if (props.refreshArrivalsOnStart) Set() else props.initialFcstArrivals,
       initialLiveArrivals = props.initialLiveArrivals,
-      initialMergedArrivals = initialFlightsWithSplits.map(_.flights.map(fws => (fws.apiFlight.uniqueId, fws.apiFlight)).toMap).getOrElse(Map()),
+      initialMergedArrivals = SortedMap[ArrivalKey, Arrival]() ++ initialFlightsWithSplits.map(_.flights.map(fws => (ArrivalKey(fws.apiFlight), fws.apiFlight))).getOrElse(List()),
       pcpArrivalTime = props.pcpArrival,
       validPortTerminals = props.airportConfig.terminalNames.toSet,
       expireAfterMillis = props.expireAfterMillis,
@@ -222,7 +223,7 @@ object CrunchSystem {
   def initialCrunchMinutesFromPortState(initialPortState: Option[PortState]): Option[CrunchMinutes] = initialPortState.map(
     ps => CrunchMinutes(ps.crunchMinutes.values.toSet))
 
-  def initialLoadsFromPortState(initialPortState: Option[PortState]): Option[Loads] = initialPortState.map(ps => Loads(ps.crunchMinutes.values.toSeq))
+  def initialLoadsFromPortState(initialPortState: Option[PortState]): Option[Loads] = initialPortState.map(ps => Loads.fromCrunchMinutes(ps.crunchMinutes))
 
   def initialFlightsFromPortState(initialPortState: Option[PortState], removeSplits: Boolean): Option[FlightsWithSplits] = initialPortState.map { ps =>
     val initialFlightsWithSplits = ps.flights.values.toSeq

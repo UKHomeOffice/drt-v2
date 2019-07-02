@@ -6,14 +6,15 @@ import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
 import com.trueaccord.scalapb.GeneratedMessage
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
-import services.{OfferHandler, SDate}
 import services.graphstages.Crunch
+import services.{OfferHandler, SDate}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 
 case object GetState
@@ -21,6 +22,8 @@ case object GetState
 case object GetFeedStatuses
 
 case class GetPortState(from: MillisSinceEpoch, to: MillisSinceEpoch)
+
+case class GetPortStateForTerminal(from: MillisSinceEpoch, to: MillisSinceEpoch, terminalName: TerminalName)
 
 case class GetUpdatesSince(millis: MillisSinceEpoch, from: MillisSinceEpoch, to: MillisSinceEpoch)
 
@@ -102,7 +105,8 @@ class ShiftsActorBase(val now: () => SDateLike,
   def receiveCommand: Receive = {
     case GetState =>
       log.info(s"GetState received")
-      sender() ! state.purgeExpired(expireBefore)
+      val assignments = state.purgeExpired(expireBefore)
+      sender() ! assignments
 
     case UpdateShifts(shiftsToUpdate) =>
       val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToUpdate)

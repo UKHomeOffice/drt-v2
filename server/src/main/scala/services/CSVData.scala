@@ -17,7 +17,7 @@ object CSVData {
   val lineEnding = "\n"
 
   def forecastHeadlineToCSV(headlines: ForecastHeadlineFigures, queueOrder: List[String]): String = {
-    val headings = "," + headlines.queueDayHeadlines.map(_.day).toList.sorted.map(
+    val headings = "," + headlines.queueDayHeadlines.map(_.day).toSet.toList.sorted.map(
       day => {
         val localDate = SDate(day, europeLondonTimeZone)
         f"${localDate.getDate()}%02d/${localDate.getMonth()}%02d"

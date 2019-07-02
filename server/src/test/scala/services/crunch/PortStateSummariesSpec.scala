@@ -3,13 +3,14 @@ package services.crunch
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared._
 import org.specs2.mutable.Specification
+import services.SDate
 
 import scala.collection.immutable.SortedMap
 
-class CrunchSummarySpec extends Specification {
+class PortStateSummariesSpec extends Specification {
   "Given a port state with crunch minutes for 2 queues over 30 minutes " +
     "When I ask for a 4 period summary of 15 minutes each period " +
-    "Then I should see crunch minutes for all periods" >> {
+    "Then I should see crunch minutes for all periods with the sum of any loads, and the max of any desks or wait times" >> {
     val terminal = "T1"
     val queues = List(Queues.EeaDesk, Queues.EGate)
     val cmsList = for {
@@ -24,7 +25,7 @@ class CrunchSummarySpec extends Specification {
 
     val periods = 4
     val periodSize = 15
-    val summary: Map[MillisSinceEpoch, Map[String, CrunchMinute]] = portState.crunchSummary(0L, periods, periodSize, terminal, queues)
+    val summary: Map[MillisSinceEpoch, Map[String, CrunchMinute]] = portState.crunchSummary(SDate(0L), periods, periodSize, terminal, queues)
 
     val expected = Map(
       0L -> Map(
@@ -43,6 +44,29 @@ class CrunchSummarySpec extends Specification {
         Queues.EeaDesk -> CrunchMinute(terminal, Queues.EeaDesk, 45 * 60000, 0, 0, 0, 0, None, None, None, None),
         Queues.EGate -> CrunchMinute(terminal, Queues.EGate, 45 * 60000, 0, 0, 0, 0, None, None, None, None)
       )
+    )
+
+    summary === expected
+  }
+
+  "Given a port state with staff minutes for 2 queues over 30 minutes " +
+    "When I ask for a 4 period summary of 15 minutes each period " +
+    "Then I should see staff minutes for all periods, with the minimum staff number, and maximum fixed point and movements nos of the period" >> {
+    val terminal = "T1"
+    val smsList = (0 to 29).map(minute => StaffMinute(terminal, minute.toLong * 60000, minute, minute, minute))
+
+    val smsMap = SortedMap[TM, StaffMinute]() ++ smsList.map(sm => (TM(sm), sm)).toMap
+    val portState = CrunchApi.PortState(Map[Int, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), smsMap)
+
+    val periods = 4
+    val periodSize = 15
+    val summary: Map[MillisSinceEpoch, StaffMinute] = portState.staffSummary(SDate(0L), periods, periodSize, terminal)
+
+    val expected = Map(
+      0L -> StaffMinute(terminal, 0, 0, 14, 14),
+      15L * 60000 -> StaffMinute(terminal, 15 * 60000, 15, 29, 29),
+      30L * 60000 -> StaffMinute(terminal, 30 * 60000, 0, 0, 0),
+      45L * 60000 -> StaffMinute(terminal, 45 * 60000, 0, 0, 0)
     )
 
     summary === expected

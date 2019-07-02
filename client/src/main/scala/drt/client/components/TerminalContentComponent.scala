@@ -94,7 +94,7 @@ object TerminalContentComponent {
         props.portStatePot.render((portState: PortState) => {
           val queues = props.airportConfig.queues.filterKeys(_ == props.terminalPageTab.terminal)
           val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.time, timeRangeHours)
-          val filteredPortState = portState.window(viewStart, viewEnd, queues)
+          val filteredPortState = portState.windowWithTerminalFilter(viewStart, viewEnd, queues)
           <.div(^.className := s"view-mode-content $viewModeStr",
             <.div(^.className := "tabs-with-export",
               <.ul(^.className := "nav nav-tabs",
@@ -160,7 +160,7 @@ object TerminalContentComponent {
               ),
               <.div(^.id := "arrivals", ^.className := s"tab-pane in $arrivalsPanelActive", {
                 if (state.activeTab == "arrivals") {
-                  val flightsForTerminal = filteredPortState.flights.values.filter(_.apiFlight.Terminal == props.terminalPageTab.terminal).toList
+                  val flightsForTerminal = filteredPortState.flights.values.toList
                   arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsForTerminal, queueOrder, props.airportConfig.hasEstChox))
                 } else ""
               }),

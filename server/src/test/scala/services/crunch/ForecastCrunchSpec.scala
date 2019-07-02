@@ -120,7 +120,11 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val assignment2 = StaffAssignment("shift s", "T1", startDate2, endDate2, 2, None)
 
     val crunch = runCrunchGraph(
-      airportConfig = airportConfig.copy(crunchOffsetMinutes = 240),
+      airportConfig = airportConfig.copy(
+        crunchOffsetMinutes = 240,
+        queues = Map("T1" -> Seq(Queues.EeaDesk)),
+        terminalNames = Seq("T1")
+      ),
       now = () => SDate(scheduled),
       minutesToCrunch = 1440,
       initialShifts = ShiftAssignments(Seq(assignment1, assignment2)),

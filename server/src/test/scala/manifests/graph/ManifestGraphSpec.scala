@@ -15,6 +15,7 @@ import manifests.passengers.BestAvailableManifest
 import services.SDate
 import services.graphstages.Crunch
 
+import scala.collection.immutable.SortedMap
 import scala.concurrent.duration._
 
 
@@ -80,7 +81,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
       manifestSink,
       registeredArrivalSinkProbe,
       testManifest,
-      Some(RegisteredArrivals(Map(ArrivalKey(testArrival) -> Option(scheduled.millisSinceEpoch)))),
+      Some(RegisteredArrivals(SortedMap(ArrivalKey(testArrival) -> Option(scheduled.millisSinceEpoch)))),
       Crunch.isDueLookup
     )
     graphInput.offer(List(testArrival))

@@ -35,13 +35,17 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        airportConfig = airportConfig.copy(defaultProcessingTimes = procTimes))
+        airportConfig = airportConfig.copy(
+          defaultProcessingTimes = procTimes,
+          queues = Map("T1" -> Seq(Queues.EeaDesk)),
+          terminalNames = Seq("T1")
+        ))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
       val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
 
-      crunch.liveTestProbe.fishForMessage(5 seconds) {
+      crunch.liveTestProbe.fishForMessage(2 seconds) {
         case ps: PortState =>
           val resultSummary = paxLoadsFromPortState(ps, 15)
           resultSummary == expected
@@ -67,7 +71,9 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        airportConfig = airportConfig.copy(defaultProcessingTimes = procTimes))
+        airportConfig = airportConfig.copy(
+          defaultProcessingTimes = procTimes,
+          queues = Map("T1" -> Seq(Queues.EeaDesk), "T2" -> Seq(Queues.EeaDesk))))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
@@ -79,7 +85,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
           12.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
 
-      crunch.liveTestProbe.fishForMessage(10 seconds) {
+      crunch.liveTestProbe.fishForMessage(2 seconds) {
         case ps: PortState =>
           val resultSummary = paxLoadsFromPortState(ps, 30)
           resultSummary == expected

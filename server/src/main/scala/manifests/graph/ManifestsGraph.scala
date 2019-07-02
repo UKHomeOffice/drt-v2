@@ -1,6 +1,5 @@
 package manifests.graph
 
-import actors.AckingReceiver
 import actors.AckingReceiver._
 import akka.actor.ActorRef
 import akka.stream._

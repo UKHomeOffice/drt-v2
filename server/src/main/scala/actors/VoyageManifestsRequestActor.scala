@@ -54,7 +54,7 @@ class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLook
       log.info(s"Received BestAvailableManifest tries")
       handleManifestTries(bestManifests)
 
-    case ArrivalsDiff(arrivals, _) => manifestsRequestQueue.foreach(queue => OfferHandler.offerWithRetries(queue, arrivals.toList, 10))
+    case ArrivalsDiff(arrivals, _) => manifestsRequestQueue.foreach(queue => OfferHandler.offerWithRetries(queue, arrivals.values.toList, 10))
 
     case unexpected => log.warn(s"received unexpected ${unexpected.getClass}")
   }

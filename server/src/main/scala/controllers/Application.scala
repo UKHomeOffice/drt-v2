@@ -18,7 +18,7 @@ import buildinfo.BuildInfo
 import com.typesafe.config.ConfigFactory
 import drt.http.ProdSendAndReceive
 import drt.shared.CrunchApi.{groupCrunchMinutesByX, _}
-import drt.shared.FlightsApi.TerminalName
+import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
@@ -189,7 +189,7 @@ class Application @Inject()(implicit val config: Configuration,
   assert(systemTimeZone == "UTC", "System Timezone is not set to UTC")
   assert(defaultTimeZone == "UTC", "Default Timezone is not set to UTC")
 
-  log.info(s"timezone: ${Calendar.getInstance().getTimeZone()}")
+  log.info(s"timezone: ${Calendar.getInstance().getTimeZone}")
 
   log.info(s"Application using airportConfig $airportConfig")
 
@@ -220,26 +220,18 @@ class Application @Inject()(implicit val config: Configuration,
 
       def forecastWeekSummary(startDay: MillisSinceEpoch,
                               terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]] = {
-        val startOfWeekMidnight = getLocalLastMidnight(SDate(startDay))
-        val endOfForecast = startOfWeekMidnight.addDays(7).millisSinceEpoch
-        val now = SDate.now()
-
-        val startOfForecast = if (startOfWeekMidnight.millisSinceEpoch < now.millisSinceEpoch) {
-          log.info(s"${startOfWeekMidnight.toLocalDateTimeString()} < ${now.toLocalDateTimeString()}, going to use ${getLocalNextMidnight(now)} instead")
-          getLocalNextMidnight(now)
-        } else startOfWeekMidnight
+        val (startOfForecast, endOfForecast) = startAndEndForDay(startDay, 7)
 
         val portStateFuture = forecastCrunchStateActor.ask(
-          GetPortState(startOfForecast.millisSinceEpoch, endOfForecast)
+          GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
         )(new Timeout(30 seconds))
 
         portStateFuture.map {
-          case Some(PortState(_, m, s)) =>
+          case Some(portState: PortState) =>
             log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString()} on $terminal")
-            val timeSlotsByDay = Forecast.rollUpForWeek(m, s, terminal)
-            val period = ForecastPeriod(timeSlotsByDay)
-            val headlineFigures = Forecast.headLineFigures(m.values.toSet, terminal)
-            Option(ForecastPeriodWithHeadlines(period, headlineFigures))
+            val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
+            val hf = Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queues(terminal).toList)
+            Option(ForecastPeriodWithHeadlines(fp, hf))
           case None =>
             log.info(s"No forecast available for week beginning ${SDate(startDay).toISOString()} on $terminal")
             None
@@ -248,15 +240,16 @@ class Application @Inject()(implicit val config: Configuration,
 
       def forecastWeekHeadlineFigures(startDay: MillisSinceEpoch,
                                       terminal: TerminalName): Future[Option[ForecastHeadlineFigures]] = {
-        val midnight = getLocalLastMidnight(SDate(startDay))
+        val (startOfForecast, endOfForecast) = startAndEndForDay(startDay, 7)
+
         val portStateFuture = forecastCrunchStateActor.ask(
-          GetPortState(midnight.millisSinceEpoch, midnight.addDays(7).millisSinceEpoch)
+          GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
         )(new Timeout(30 seconds))
 
         portStateFuture.map {
-          case Some(PortState(_, m, _)) =>
-
-            Option(Forecast.headLineFigures(m.values.toSet, terminal))
+          case Some(portState: PortState) =>
+            val hf = Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queues(terminal).toList)
+            Option(hf)
           case None =>
             log.info(s"No forecast available for week beginning ${SDate(startDay).toISOString()} on $terminal")
             None
@@ -317,9 +310,9 @@ class Application @Inject()(implicit val config: Configuration,
 
 
           futureGroupIds.map {
-            case KeyCloakGroups(groups) if groups.nonEmpty =>
-              log.info(s"Adding ${groups.map(_.name)} to $userId")
-              groups.map(group => {
+            case KeyCloakGroups(gps) if gps.nonEmpty =>
+              log.info(s"Adding ${gps.map(_.name)} to $userId")
+              gps.map(group => {
                 val response = keyCloakClient.addUserToGroup(userId, group.id)
                 response.map(res => log.info(s"Added group and got: ${res.status}  $res")
                 )
@@ -343,6 +336,16 @@ class Application @Inject()(implicit val config: Configuration,
         .getOrElse(false)
 
     }
+  }
+
+  def startAndEndForDay(startDay: MillisSinceEpoch, numberOfDays: Int): (SDateLike, SDateLike) = {
+    val startOfWeekMidnight = getLocalLastMidnight(SDate(startDay))
+    val endOfForecast = startOfWeekMidnight.addDays(numberOfDays)
+    val now = SDate.now()
+
+    val startOfForecast = if (startOfWeekMidnight.millisSinceEpoch < now.millisSinceEpoch) getLocalNextMidnight(now) else startOfWeekMidnight
+
+    (startOfForecast, endOfForecast)
   }
 
   def loadBestPortStateForPointInTime(day: MillisSinceEpoch): Future[Either[PortStateError, Option[PortState]]] =
@@ -383,8 +386,8 @@ class Application @Inject()(implicit val config: Configuration,
   def getLoggedInUser(): Action[AnyContent] = Action { request =>
     val user = ctrl.getLoggedInUser(config, request.headers, request.session)
 
-    implicit val userWrites = new Writes[LoggedInUser] {
-      def writes(user: LoggedInUser) = Json.obj(
+    implicit val userWrites: Writes[LoggedInUser] = new Writes[LoggedInUser] {
+      def writes(user: LoggedInUser): JsObject = Json.obj(
         "userName" -> user.userName,
         "id" -> user.id,
         "email" -> user.email,
@@ -509,8 +512,7 @@ class Application @Inject()(implicit val config: Configuration,
     Action.async { _ => ctrl.getFeedStatus.map(s => Ok(write(s))) }
   }
 
-  def getShouldReload: Action[AnyContent] = Action { request =>
-
+  def getShouldReload: Action[AnyContent] = Action { _ =>
     val shouldRedirect: Boolean = config.getOptional[Boolean]("feature-flags.acp-redirect").getOrElse(false)
     Ok(Json.obj("reload" -> shouldRedirect))
   }
@@ -636,8 +638,6 @@ class Application @Inject()(implicit val config: Configuration,
 
   def exportUsers(): Action[AnyContent] = authByRole(ManageUsers) {
     Action.async { request =>
-      val loggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
-
       val client = keyCloakClient(request.headers)
       client
         .getGroups()
@@ -717,7 +717,7 @@ class Application @Inject()(implicit val config: Configuration,
 
     portStateFuture.map {
       case Right(Some(ps: PortState)) =>
-        val windowedPortState = ps.window(startDateTime, endDateTime, airportConfig.queues.filterKeys(_ == terminalName))
+        val windowedPortState = ps.windowWithTerminalFilter(startDateTime, endDateTime, airportConfig.queues.filterKeys(_ == terminalName))
         log.debug(s"Exports: ${localTime.toISOString()} filtered to ${windowedPortState.crunchMinutes.size} CMs and ${windowedPortState.staffMinutes.size} SMs ")
         Option(CSVData.terminalCrunchMinutesToCsvData(
           windowedPortState.crunchMinutes.values.toList,
@@ -733,34 +733,27 @@ class Application @Inject()(implicit val config: Configuration,
 
   def exportForecastWeekToCSV(startDay: String, terminal: TerminalName): Action[AnyContent] = authByRole(ForecastView) {
     Action.async {
-      val startOfWeekMidnight = getLocalLastMidnight(SDate(startDay.toLong))
-      val endOfForecast = startOfWeekMidnight.addDays(180)
-      val now = SDate.now()
-
-      val startOfForecast = if (startOfWeekMidnight.millisSinceEpoch < now.millisSinceEpoch) {
-        log.info(s"${startOfWeekMidnight.toLocalDateTimeString()} < ${now.toLocalDateTimeString()}, going to use ${getLocalNextMidnight(now)} instead")
-        getLocalNextMidnight(now)
-      } else startOfWeekMidnight
+      val (startOfForecast, endOfForecast) = startAndEndForDay(startDay.toLong, 180)
 
       val portStateFuture = ctrl.forecastCrunchStateActor.ask(
-        GetPortState(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch)
+        GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
       )(new Timeout(30 seconds))
 
       val portCode = airportConfig.portCode
 
       val fileName = f"$portCode-$terminal-forecast-export-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}%02d-${startOfForecast.getDate()}%02d"
       portStateFuture.map {
-        case Some(PortState(_, m, s)) =>
-          log.info(s"Forecast CSV export for $terminal on $startDay with: crunch minutes: ${m.size} staff minutes: ${s.size}")
-          val csvData = CSVData.forecastPeriodToCsv(ForecastPeriod(Forecast.rollUpForWeek(m, s, terminal)))
+        case Some(portState: PortState) =>
+          val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
+          val csvData = CSVData.forecastPeriodToCsv(fp)
           Result(
             ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
             HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
           )
 
         case None =>
-          log.error(s"Forecast CSV Export: Missing planning data for ${startOfWeekMidnight.ddMMyyString} for Terminal $terminal")
-          NotFound(s"Sorry, no planning summary available for week starting ${startOfWeekMidnight.ddMMyyString}")
+          log.error(s"Forecast CSV Export: Missing planning data for ${startOfForecast.ddMMyyString} for Terminal $terminal")
+          NotFound(s"Sorry, no planning summary available for week starting ${startOfForecast.ddMMyyString}")
       }
     }
   }
@@ -777,14 +770,14 @@ class Application @Inject()(implicit val config: Configuration,
       } else startOfWeekMidnight
 
       val portStateFuture = ctrl.forecastCrunchStateActor.ask(
-        GetPortState(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch)
+        GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
       )(new Timeout(30 seconds))
-
 
       val fileName = f"${airportConfig.portCode}-$terminal-forecast-export-headlines-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}%02d-${startOfForecast.getDate()}%02d"
       portStateFuture.map {
-        case Some(PortState(_, m, _)) =>
-          val csvData = CSVData.forecastHeadlineToCSV(Forecast.headLineFigures(m.values.toSet, terminal), airportConfig.exportQueueOrder)
+        case Some(portState: PortState) =>
+          val hf: ForecastHeadlineFigures = Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queues(terminal).toList)
+          val csvData = CSVData.forecastHeadlineToCSV(hf, airportConfig.exportQueueOrder)
           Result(
             ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
             HttpEntity.Strict(ByteString(csvData), Option("application/csv")
@@ -799,7 +792,7 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   def exportApi(day: Int, month: Int, year: Int, terminalName: TerminalName): Action[AnyContent] = authByRole(ApiViewPortCsv) {
-    Action.async { request =>
+    Action.async { _ =>
       val dateOption = Try(SDate(year, month, day, 0, 0)).toOption
       val terminalNameOption = airportConfig.terminalNames.find(name => name == terminalName)
       val resultOption = for {
@@ -1098,47 +1091,40 @@ class Application @Inject()(implicit val config: Configuration,
 }
 
 object Forecast {
-  def headLineFigures(forecastMinutes: Set[CrunchMinute], terminalName: TerminalName): ForecastHeadlineFigures = {
-    val headlines = forecastMinutes
-      .toList
-      .filter(_.terminalName == terminalName)
-      .groupBy(
-        cm => getLocalLastMidnight(SDate(cm.minute)).millisSinceEpoch
-      )
-      .flatMap {
-        case (day, cm) =>
-          cm.groupBy(_.queueName)
-            .map {
-              case (q, cms) =>
-                QueueHeadline(
-                  day,
-                  q,
-                  Math.round(cms.map(_.paxLoad).sum).toInt,
-                  Math.round(cms.map(_.workLoad).sum).toInt
-                )
-            }
-      }.toSet
-    ForecastHeadlineFigures(headlines)
+  def headlineFigures(startOfForecast: SDateLike, endOfForecast: SDateLike, terminal: TerminalName, portState: PortState, queues: List[QueueName]): ForecastHeadlineFigures = {
+    val dayMillis = 60 * 60 * 24 * 1000
+    val periods = (endOfForecast.millisSinceEpoch - startOfForecast.millisSinceEpoch) / dayMillis
+    val crunchSummaryDaily = portState.crunchSummary(startOfForecast, periods, 1440, terminal, queues)
+
+    val figures = for {
+      (dayMillis, queueMinutes) <- crunchSummaryDaily
+      (queue, queueMinute) <- queueMinutes
+    } yield {
+      QueueHeadline(dayMillis, queue, queueMinute.paxLoad.toInt, queueMinute.workLoad.toInt)
+    }
+    ForecastHeadlineFigures(figures.toSeq)
   }
 
-  def rollUpForWeek(forecastMinutes: Map[TQM, CrunchMinute],
-                    staffMinutes: Map[TM, StaffMinute],
-                    terminalName: TerminalName): Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = {
-    val actualStaffByMinute = staffByTimeSlot(15)(staffMinutes.values.toSet, terminalName)
-    val fixedPointsByMinute = fixedPointsByTimeSlot(15)(staffMinutes.values.toSet, terminalName)
-    val terminalMinutes: Seq[(MillisSinceEpoch, List[CrunchMinute])] = CrunchApi.terminalMinutesByMinute(forecastMinutes.values.toList, terminalName)
-    groupCrunchMinutesByX(15)(terminalMinutes, terminalName, Queues.queueOrder)
-      .map {
-        case (startMillis, cms) =>
-          val available = actualStaffByMinute.getOrElse(startMillis, 0)
-          val fixedPoints = fixedPointsByMinute.getOrElse(startMillis, 0)
-          val forecastTimeSlot = ForecastTimeSlot(startMillis, available, required = fixedPoints)
-          cms.foldLeft(forecastTimeSlot) {
-            case (fts, cm) => fts.copy(required = fts.required + cm.deskRec)
-          }
+  def forecastPeriod(airportConfig: AirportConfig, terminal: TerminalName, startOfForecast: SDateLike, endOfForecast: SDateLike, portState: PortState): ForecastPeriod = {
+    val fifteenMinuteMillis = 15 * 60 * 1000
+    val periods = (endOfForecast.millisSinceEpoch - startOfForecast.millisSinceEpoch) / fifteenMinuteMillis
+    val staffSummary = portState.staffSummary(startOfForecast, periods, 15, terminal)
+    val crunchSummary15Mins = portState.crunchSummary(startOfForecast, periods, 15, terminal, airportConfig.nonTransferQueues(terminal).toList)
+    val timeSlotsByDay = Forecast.rollUpForWeek(crunchSummary15Mins, staffSummary)
+    ForecastPeriod(timeSlotsByDay)
+  }
+
+  def rollUpForWeek(crunchSummary: Map[MillisSinceEpoch, Map[QueueName, CrunchMinute]],
+                    staffSummary: Map[MillisSinceEpoch, StaffMinute]
+                   ): Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] =
+    crunchSummary
+      .map { case (millis, cms) =>
+        val (available, fixedPoints) = staffSummary.get(millis).map(sm => (sm.shifts, sm.fixedPoints)).getOrElse((0, 0))
+        val deskStaff = if (cms.nonEmpty) cms.values.map(_.deskRec).sum else 0
+        ForecastTimeSlot(millis, available, fixedPoints + deskStaff)
       }
       .groupBy(forecastTimeSlot => getLocalLastMidnight(SDate(forecastTimeSlot.startMillis)).millisSinceEpoch)
-  }
+      .mapValues(_.toSeq)
 }
 
 case class GetTerminalCrunch(terminalName: TerminalName)
