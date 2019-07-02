@@ -21,7 +21,9 @@ case object GetState
 
 case object GetFeedStatuses
 
-case class GetPortState(from: MillisSinceEpoch, to: MillisSinceEpoch, maybeTerminalName: Option[TerminalName])
+case class GetPortState(from: MillisSinceEpoch, to: MillisSinceEpoch)
+
+case class GetPortStateForTerminal(from: MillisSinceEpoch, to: MillisSinceEpoch, terminalName: TerminalName)
 
 case class GetUpdatesSince(millis: MillisSinceEpoch, from: MillisSinceEpoch, to: MillisSinceEpoch)
 
@@ -103,10 +105,7 @@ class ShiftsActorBase(val now: () => SDateLike,
   def receiveCommand: Receive = {
     case GetState =>
       log.info(s"GetState received")
-      val start = SDate.now().millisSinceEpoch
-
       val assignments = state.purgeExpired(expireBefore)
-      Crunch.logTimeTaken(start)
       sender() ! assignments
 
     case UpdateShifts(shiftsToUpdate) =>

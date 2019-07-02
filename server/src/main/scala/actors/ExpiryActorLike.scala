@@ -14,9 +14,7 @@ trait ExpiryActorLike[A <: HasExpireables[A]] {
   def onUpdateState(newState: A): Unit
 
   def purgeExpiredAndUpdateState(hasExpireables: A): Unit = {
-    val start = SDate.now().millisSinceEpoch
     val withoutExpired = hasExpireables.purgeExpired(expireBefore)
-    Crunch.logTimeTaken(start)
     updateState(withoutExpired)
     onUpdateState(withoutExpired)
   }

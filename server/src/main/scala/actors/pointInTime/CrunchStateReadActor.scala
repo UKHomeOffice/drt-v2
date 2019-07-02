@@ -57,8 +57,13 @@ class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, expire
     case GetState =>
       sender() ! state
 
-    case GetPortState(start: MillisSinceEpoch, end: MillisSinceEpoch, maybeTerminalName) =>
-      sender() ! stateForPeriod(start, end, maybeTerminalName)
+    case GetPortState(start, end) =>
+      logInfo(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
+      sender() ! stateForPeriod(start, end)
+
+    case GetPortStateForTerminal(start, end, terminalName) =>
+      logInfo(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
+      sender() ! stateForPeriodForTerminal(start, end, terminalName)
 
     case u =>
       log.error(s"Received unexpected message $u")

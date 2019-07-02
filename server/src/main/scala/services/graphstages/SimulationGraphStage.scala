@@ -324,17 +324,6 @@ class SimulationGraphStage(name: String = "",
         case LoadMinute(_, _, _, workLoad, _) => workLoad
       }
 
-    //    def filterTerminalQueueMinutes[A <: TerminalQueueMinute](firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Seq[TerminalName], toFilter: Map[TQM, A]): Set[A] = {
-    //      val maybeThings = for {
-    //        terminalName <- terminalsToUpdate
-    //        queueName <- airportConfig.nonTransferQueues(terminalName)
-    //        minute <- firstMinute until lastMinute by oneMinuteMillis
-    //      } yield
-    //        toFilter.get(MinuteHelper.key(terminalName, queueName, minute))
-    //
-    //      maybeThings.collect { case Some(thing) => thing }
-    //    }
-
     def filterTerminalMinutes[A <: TerminalMinute](firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Seq[TerminalName], toFilter: Map[TM, A]): Seq[A] = {
       val maybeThings = for {
         terminalName <- terminalsToUpdate

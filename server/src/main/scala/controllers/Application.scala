@@ -223,7 +223,7 @@ class Application @Inject()(implicit val config: Configuration,
         val (startOfForecast, endOfForecast) = startAndEndForDay(startDay, 7)
 
         val portStateFuture = forecastCrunchStateActor.ask(
-          GetPortState(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, Option(terminal))
+          GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
         )(new Timeout(30 seconds))
 
         portStateFuture.map {
@@ -243,7 +243,7 @@ class Application @Inject()(implicit val config: Configuration,
         val (startOfForecast, endOfForecast) = startAndEndForDay(startDay, 7)
 
         val portStateFuture = forecastCrunchStateActor.ask(
-          GetPortState(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, Option(terminal))
+          GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
         )(new Timeout(30 seconds))
 
         portStateFuture.map {
@@ -343,10 +343,7 @@ class Application @Inject()(implicit val config: Configuration,
     val endOfForecast = startOfWeekMidnight.addDays(numberOfDays)
     val now = SDate.now()
 
-    val startOfForecast = if (startOfWeekMidnight.millisSinceEpoch < now.millisSinceEpoch) {
-      log.info(s"${startOfWeekMidnight.toLocalDateTimeString()} < ${now.toLocalDateTimeString()}, going to use ${getLocalNextMidnight(now)} instead")
-      getLocalNextMidnight(now)
-    } else startOfWeekMidnight
+    val startOfForecast = if (startOfWeekMidnight.millisSinceEpoch < now.millisSinceEpoch) getLocalNextMidnight(now) else startOfWeekMidnight
 
     (startOfForecast, endOfForecast)
   }
@@ -367,7 +364,7 @@ class Application @Inject()(implicit val config: Configuration,
     val firstMinute = getLocalLastMidnight(SDate(day)).millisSinceEpoch
     val lastMinute = SDate(firstMinute).addHours(airportConfig.dayLengthHours).millisSinceEpoch
 
-    val portStateFuture = ctrl.forecastCrunchStateActor.ask(GetPortState(firstMinute, lastMinute, None))(new Timeout(30 seconds))
+    val portStateFuture = ctrl.forecastCrunchStateActor.ask(GetPortState(firstMinute, lastMinute))(new Timeout(30 seconds))
 
     portStateFuture.map {
       case Some(ps: PortState) => Right(Option(ps))
@@ -468,7 +465,7 @@ class Application @Inject()(implicit val config: Configuration,
 
       maybeSinceMillis match {
         case None =>
-          val future = futureCrunchState[PortState](maybePointInTime, startMillis, endMillis, GetPortState(startMillis, endMillis, None))
+          val future = futureCrunchState[PortState](maybePointInTime, startMillis, endMillis, GetPortState(startMillis, endMillis))
           future.map { updates => Ok(write(updates)) }
 
         case Some(sinceMillis) =>
@@ -483,7 +480,7 @@ class Application @Inject()(implicit val config: Configuration,
       val startMillis = request.queryString.get("start").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
       val endMillis = request.queryString.get("end").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
 
-      val message = GetPortState(startMillis, endMillis, None)
+      val message = GetPortState(startMillis, endMillis)
       val futureState = futureCrunchState[PortState](Option(pointInTime), startMillis, endMillis, message)
 
       futureState.map { updates => Ok(write(updates)) }
@@ -664,7 +661,7 @@ class Application @Inject()(implicit val config: Configuration,
   def portStatePeriodAtPointInTime(startMillis: MillisSinceEpoch,
                                    endMillis: MillisSinceEpoch,
                                    pointInTime: MillisSinceEpoch): Future[Either[PortStateError, Option[PortState]]] = {
-    val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], airportConfig.portStateSnapshotInterval, SDate(pointInTime), DrtStaticParameters.expireAfterMillis, airportConfig.queues), GetPortState(startMillis, endMillis, None))
+    val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], airportConfig.portStateSnapshotInterval, SDate(pointInTime), DrtStaticParameters.expireAfterMillis, airportConfig.queues), GetPortState(startMillis, endMillis))
     val portCrunchResult = cacheActorRef.ask(query)(new Timeout(30 seconds))
     portCrunchResult.map {
       case Some(ps: PortState) =>
@@ -739,7 +736,7 @@ class Application @Inject()(implicit val config: Configuration,
       val (startOfForecast, endOfForecast) = startAndEndForDay(startDay.toLong, 180)
 
       val portStateFuture = ctrl.forecastCrunchStateActor.ask(
-        GetPortState(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, Option(terminal))
+        GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
       )(new Timeout(30 seconds))
 
       val portCode = airportConfig.portCode
@@ -773,7 +770,7 @@ class Application @Inject()(implicit val config: Configuration,
       } else startOfWeekMidnight
 
       val portStateFuture = ctrl.forecastCrunchStateActor.ask(
-        GetPortState(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, Option(terminal))
+        GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
       )(new Timeout(30 seconds))
 
       val fileName = f"${airportConfig.portCode}-$terminal-forecast-export-headlines-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}%02d-${startOfForecast.getDate()}%02d"
@@ -1119,7 +1116,7 @@ object Forecast {
 
   def rollUpForWeek(crunchSummary: Map[MillisSinceEpoch, Map[QueueName, CrunchMinute]],
                     staffSummary: Map[MillisSinceEpoch, StaffMinute]
-                   ): Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = {
+                   ): Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] =
     crunchSummary
       .map { case (millis, cms) =>
         val (available, fixedPoints) = staffSummary.get(millis).map(sm => (sm.shifts, sm.fixedPoints)).getOrElse((0, 0))
@@ -1128,7 +1125,6 @@ object Forecast {
       }
       .groupBy(forecastTimeSlot => getLocalLastMidnight(SDate(forecastTimeSlot.startMillis)).millisSinceEpoch)
       .mapValues(_.toSeq)
-  }
 }
 
 case class GetTerminalCrunch(terminalName: TerminalName)

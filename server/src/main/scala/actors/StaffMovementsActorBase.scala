@@ -26,7 +26,6 @@ case class StaffMovements(movements: Seq[StaffMovement]) extends HasExpireables[
     copy(movements = movements.filterNot(sm => movementsToRemove.contains(sm.uUID)))
 
   def purgeExpired(expireBefore: () => SDateLike): StaffMovements = {
-    val start = SDate.now().millisSinceEpoch
     val expireBeforeMillis = expireBefore().millisSinceEpoch
     val unexpiredPairsOfMovements = movements
       .groupBy(_.uUID)
@@ -36,7 +35,6 @@ case class StaffMovements(movements: Seq[StaffMovement]) extends HasExpireables[
         neitherHaveExpired
       })
       .flatten.toSeq
-    Crunch.logTimeTaken(start)
     copy(movements = unexpiredPairsOfMovements)
   }
 }
@@ -133,10 +131,7 @@ class StaffMovementsActorBase(val now: () => SDateLike,
   def receiveCommand: Receive = {
     case GetState =>
       log.info(s"GetState received")
-      val start = SDate.now().millisSinceEpoch
-
       val movements = state.staffMovements.purgeExpired(expireBefore)
-      Crunch.logTimeTaken(start)
       sender() ! movements
 
     case AddStaffMovements(movementsToAdd) =>

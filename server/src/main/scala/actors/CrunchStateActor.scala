@@ -91,9 +91,13 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
       logDebug(s"Received GetState request. Replying with ${state.map(s => s"PortState containing ${s.crunchMinutes.size} crunch minutes")}")
       sender() ! state
 
-    case GetPortState(start, end, maybeTerminalName) =>
+    case GetPortState(start, end) =>
       logInfo(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
-      sender() ! stateForPeriod(start, end, maybeTerminalName)
+      sender() ! stateForPeriod(start, end)
+
+    case GetPortStateForTerminal(start, end, terminalName) =>
+      logInfo(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
+      sender() ! stateForPeriodForTerminal(start, end, terminalName)
 
     case GetUpdatesSince(millis, start, end) =>
       val updates = state match {
@@ -115,14 +119,11 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
       log.error(s"Received unexpected message $u")
   }
 
-  def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch, maybeTerminalName: Option[TerminalName]): Option[PortState] = {
-    maybeTerminalName match {
-      case None =>
-        state.map(_.window(SDate(start), SDate(end), portQueues))
-      case Some(tn) =>
-        state.map(_.windowWithTerminalFilter(SDate(start), SDate(end), portQueues.filterKeys(_ == tn)))
-    }
-  }
+  def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = state
+    .map(_.window(SDate(start), SDate(end), portQueues))
+
+  def stateForPeriodForTerminal(start: MillisSinceEpoch, end: MillisSinceEpoch, terminalName: TerminalName): Option[PortState] = state
+    .map(_.windowWithTerminalFilter(SDate(start), SDate(end), portQueues.filterKeys(_ == terminalName)))
 
   def setStateFromSnapshot(snapshot: CrunchStateSnapshotMessage, timeWindowEnd: Option[SDateLike] = None): Unit = {
     state = Option(snapshotMessageToState(snapshot, timeWindowEnd))
