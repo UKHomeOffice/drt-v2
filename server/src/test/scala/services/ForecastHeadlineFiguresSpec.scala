@@ -45,7 +45,7 @@ class ForecastHeadlineFiguresSpec extends Specification {
         CrunchMinute("T1", Queues.EeaDesk, startMinute.millisSinceEpoch, 1, 2, 0, 0),
         CrunchMinute("T1", Queues.EGate, startMinute.millisSinceEpoch, 1, 2, 0, 0)
       ), List())
-      val result = Forecast.headlineFigures(startMinute, startMinute.addDays(1), "T1", ps, List(Queues.EeaDesk))
+      val result = Forecast.headlineFigures(startMinute, startMinute.addDays(1), "T1", ps, List(Queues.EeaDesk, Queues.EGate))
 
       val expected = ForecastHeadlineFigures(Seq(
         QueueHeadline(startMinute.millisSinceEpoch, Queues.EeaDesk, 1, 2),
@@ -68,7 +68,7 @@ class ForecastHeadlineFiguresSpec extends Specification {
         CrunchMinute("T1", Queues.EeaDesk, day2StartMinute.millisSinceEpoch, 1, 2, 0, 0),
         CrunchMinute("T1", Queues.EGate, day2StartMinute.millisSinceEpoch, 1, 2, 0, 0)
       ), List())
-      val result = Forecast.headlineFigures(day1StartMinute, day2StartMinute.addDays(1), "T1", ps, List(Queues.EeaDesk))
+      val result = Forecast.headlineFigures(day1StartMinute, day2StartMinute.addDays(1), "T1", ps, List(Queues.EeaDesk, Queues.EGate))
 
       val expected = ForecastHeadlineFigures(Seq(
         QueueHeadline(day1StartMinute.millisSinceEpoch, Queues.EeaDesk, 1, 2),
