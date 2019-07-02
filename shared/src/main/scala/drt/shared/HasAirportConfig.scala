@@ -374,8 +374,8 @@ object AirportConfigs {
     defaultWalkTimeMillis = Map("N" -> 180000L, "S" -> 180000L),
     defaultPaxSplits = SplitRatios(
       SplitSources.TerminalAverage,
-      SplitRatio(eeaMachineReadableToDesk, 0.85 * 0.55),
-      SplitRatio(eeaMachineReadableToEGate, 0.85 * 0.45),
+      SplitRatio(eeaMachineReadableToDesk, 0.85 * 0.17),
+      SplitRatio(eeaMachineReadableToEGate, 0.85 * 0.83),
       SplitRatio(eeaNonMachineReadableToDesk, 0d),
       SplitRatio(visaNationalToDesk, 0.06),
       SplitRatio(nonVisaNationalToDesk, 0.09)
@@ -437,8 +437,8 @@ object AirportConfigs {
     defaultWalkTimeMillis = Map("T1" -> 600000L),
     defaultPaxSplits = SplitRatios(
       SplitSources.TerminalAverage,
-      SplitRatio(eeaMachineReadableToDesk, 0.2475),
-      SplitRatio(eeaMachineReadableToEGate, 0.7425),
+      SplitRatio(eeaMachineReadableToDesk, 0.1916),
+      SplitRatio(eeaMachineReadableToEGate, 0.8084),
       SplitRatio(eeaNonMachineReadableToDesk, 0.0),
       SplitRatio(visaNationalToDesk, 0.0),
       SplitRatio(nonVisaNationalToDesk, 0.01)
@@ -484,8 +484,15 @@ object AirportConfigs {
     ),
     slaByQueue = Map(EeaDesk -> 25, EGate -> 10, NonEeaDesk -> 45),
     terminalNames = Seq("T1", "T2", "T3"),
-    defaultWalkTimeMillis = Map("T1" -> 180000L, "T2" -> 180000L, "T3" -> 60000L),
-    defaultPaxSplits = defaultPaxSplits,
+    defaultWalkTimeMillis = Map("T1" -> 180000L, "T2" -> 600000L, "T3" -> 180000L),
+    defaultPaxSplits = SplitRatios(
+      SplitSources.TerminalAverage,
+      SplitRatio(eeaMachineReadableToDesk, 0.2666),
+      SplitRatio(eeaMachineReadableToEGate, 0.7333),
+      SplitRatio(eeaNonMachineReadableToDesk, 0.1625),
+      SplitRatio(visaNationalToDesk, 0.05),
+      SplitRatio(nonVisaNationalToDesk, 0.05)
+    ),
     defaultProcessingTimes = Map("T1" -> defaultProcessingTimes, "T2" -> defaultProcessingTimes, "T3" -> defaultProcessingTimes),
     minMaxDesksByTerminalQueue = Map(
       "T1" -> Map(
@@ -551,8 +558,8 @@ object AirportConfigs {
     defaultWalkTimeMillis = Map("T2" -> 900000L, "T3" -> 660000L, "T4" -> 900000L, "T5" -> 660000L),
     defaultPaxSplits = SplitRatios(
       SplitSources.TerminalAverage,
-      SplitRatio(eeaMachineReadableToDesk, 0.64 * 0.57),
-      SplitRatio(eeaMachineReadableToEGate, 0.64 * 0.43),
+      SplitRatio(eeaMachineReadableToDesk, 0.64 * 0.2),
+      SplitRatio(eeaMachineReadableToEGate, 0.64 * 0.8),
       SplitRatio(eeaNonMachineReadableToDesk, 0),
       SplitRatio(visaNationalToDesk, 0.08 * 0.95),
       SplitRatio(visaNationalToFastTrack, 0.08 * 0.05),
@@ -631,7 +638,14 @@ object AirportConfigs {
     slaByQueue = defaultSlas,
     terminalNames = Seq("T1"),
     defaultWalkTimeMillis = Map("T1" -> 300000L),
-    defaultPaxSplits = defaultPaxSplits,
+    defaultPaxSplits = SplitRatios(
+      SplitSources.TerminalAverage,
+      SplitRatio(eeaMachineReadableToDesk, 0.02078),
+      SplitRatio(eeaMachineReadableToEGate, 0.07922),
+      SplitRatio(eeaNonMachineReadableToDesk, 0.1625),
+      SplitRatio(visaNationalToDesk, 0.05),
+      SplitRatio(nonVisaNationalToDesk, 0.05)
+    ),
     defaultProcessingTimes = Map("T1" -> defaultProcessingTimes),
     minMaxDesksByTerminalQueue = Map(
       "T1" -> Map(
@@ -751,11 +765,11 @@ object AirportConfigs {
     ),
     slaByQueue = defaultSlas,
     terminalNames = Seq("T1", "T2"),
-    defaultWalkTimeMillis = Map("T1" -> 240000L, "T2" -> 60000L),
+    defaultWalkTimeMillis = Map("T1" -> 240000L, "T2" -> 240000L),
     defaultPaxSplits = SplitRatios(
       SplitSources.TerminalAverage,
-      SplitRatio(eeaMachineReadableToDesk, 0.92 * 0.3),
-      SplitRatio(eeaMachineReadableToEGate, 0.92 * 0.7),
+      SplitRatio(eeaMachineReadableToDesk, 0.92 * 0.2446),
+      SplitRatio(eeaMachineReadableToEGate, 0.92 * 0.7554),
       SplitRatio(eeaNonMachineReadableToDesk, 0),
       SplitRatio(visaNationalToDesk, 0.04),
       SplitRatio(nonVisaNationalToDesk, 0.04)
