@@ -600,14 +600,15 @@ object CrunchApi {
       } else None
     }
 
-    def crunchSummary(start: SDateLike, periods: Int, periodSize: Int, terminal: TerminalName, queues: List[String]): Map[Long, Map[String, CrunchMinute]] = {
+    def crunchSummary(start: SDateLike, periods: Long, periodSize: Long, terminal: TerminalName, queues: List[String]): SortedMap[Long, Map[String, CrunchMinute]] = {
       val startMillis = start.roundToMinute().millisSinceEpoch
       val endMillis = startMillis + (periods * periodSize * 60000)
-      val byPeriod: Map[Long, Map[String, CrunchMinute]] = (startMillis until endMillis by periodSize * 60000)
+      val periodMillis = periodSize * 60000
+      SortedMap[Long, Map[String, CrunchMinute]]() ++ (startMillis until endMillis by periodMillis)
         .map { periodStart =>
           val queueMinutes = queues
             .map { queue =>
-              val slotMinutes = (periodStart until (periodStart + periodSize * 60000) by 60000)
+              val slotMinutes = (periodStart until (periodStart + periodMillis) by 60000)
                 .map { minute => crunchMinutes.get(TQM(terminal, queue, minute)) }
                 .collect { case Some(cm) => cm }
                 .toList
@@ -617,23 +618,23 @@ object CrunchApi {
           (periodStart, queueMinutes)
         }
         .toMap
-      byPeriod
     }
 
-    def staffSummary(start: SDateLike, periods: Int, periodSize: Int, terminal: TerminalName): Map[Long, StaffMinute] = {
+    def staffSummary(start: SDateLike, periods: Long, periodSize: Long, terminal: TerminalName): SortedMap[Long, StaffMinute] = {
       val startMillis = start.roundToMinute().millisSinceEpoch
       val endMillis = startMillis + (periods * periodSize * 60000)
-      val byPeriod: Map[Long, StaffMinute] = (startMillis until endMillis by periodSize * 60000)
+      val periodMillis = periodSize * 60000
+      SortedMap[Long, StaffMinute]() ++ (startMillis until endMillis by periodMillis)
         .map { periodStart =>
-          val slotMinutes = (periodStart until (periodStart + periodSize * 60000) by 60000)
+          val periodEnd = periodStart + periodMillis
+          val slotMinutes = (periodStart until periodEnd by 60000)
             .map { minute => staffMinutes.get(TM(terminal, minute)) }
             .collect { case Some(cm) => cm }
             .toList
-          val queueMinutes = staffPeriodSummary(terminal, periodStart, slotMinutes)
-          (periodStart, queueMinutes)
+          val terminalMinutes = staffPeriodSummary(terminal, periodStart, slotMinutes)
+          (periodStart, terminalMinutes)
         }
         .toMap
-      byPeriod
     }
 
     def crunchPeriodSummary(terminal: String, periodStart: MillisSinceEpoch, queue: String, slotMinutes: List[CrunchMinute]): CrunchMinute = {

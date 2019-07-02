@@ -19,6 +19,5 @@ describe('Alerts system', function () {
         .deleteAlerts()
         .shouldHaveAlerts(0);
     });
-
   });
 });
