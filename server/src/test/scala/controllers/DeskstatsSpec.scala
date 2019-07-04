@@ -2,10 +2,10 @@ package controllers
 
 import com.typesafe.config.ConfigFactory
 import controllers.Deskstats._
+import drt.shared.CrunchApi.DeskStat
 import drt.shared.Queues
 import org.specs2.mutable.Specification
 import services.SDate
-import services.graphstages.DeskStat
 
 import scala.collection.JavaConversions._
 import scala.io.Source

@@ -5,7 +5,7 @@ import akka.pattern.AskableActorRef
 import akka.stream._
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import drt.chroma.ArrivalsDiffingStage
-import drt.shared.CrunchApi.{CrunchMinutes, PortState, StaffMinutes}
+import drt.shared.CrunchApi.{ActualDeskStats, CrunchMinutes, PortState, StaffMinutes}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared.{SDateLike, _}
@@ -231,6 +231,6 @@ object CrunchSystem {
       fws.copy(splits = fws.splits.filter(_.source == SplitSources.TerminalAverage))
     } else initialFlightsWithSplits
 
-    FlightsWithSplits(flightsWithSplits, Set())
+    FlightsWithSplits(flightsWithSplits, Seq())
   }
 }

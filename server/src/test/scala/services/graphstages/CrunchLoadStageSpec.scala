@@ -82,7 +82,7 @@ class CrunchLoadStageSpec extends CrunchTestLike {
     val expectedSize = 2 * minutesToCrunch
 
     val result = probe.receiveOne(5 seconds) match {
-      case DeskRecMinutes(drms) => drms
+      case DeskRecMinutes(drms) => drms.toSet
       case _ => Set[DeskRecMinute]()
     }
 
@@ -125,7 +125,7 @@ class CrunchLoadStageSpec extends CrunchTestLike {
       case DeskRecMinutes(drms) =>
         val minutes = drms.filter(cm => {
           expectedMillis.contains(cm.minute)
-        })
+        }).toSet
         minutes == expected && drms.size == expectedSize
     }
 

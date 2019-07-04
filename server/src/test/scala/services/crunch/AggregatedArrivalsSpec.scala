@@ -36,7 +36,7 @@ class TestAggregatedArrivalsActor(portCode: String, arrivalTable: ArrivalTableLi
 
   override def receive: Receive = testReceive orElse super.receive
 
-  override def handleRemovals(flightRemovals: Set[Crunch.RemoveFlight]): Unit = {
+  override def handleRemovals(flightRemovals: Set[RemoveFlight]): Unit = {
     super.handleRemovals(flightRemovals)
     probe ! RemovalsHandled
   }

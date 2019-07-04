@@ -204,7 +204,7 @@ class ArrivalSplitsGraphStage(name: String = "",
       if (isAvailable(outArrivalsWithSplits)) {
         if (arrivalsWithSplitsDiff.nonEmpty || arrivalsToRemove.nonEmpty) {
           log.info(s"Pushing ${arrivalsWithSplitsDiff.size} updated arrivals with splits and ${arrivalsToRemove.size} removals")
-          push(outArrivalsWithSplits, FlightsWithSplits(arrivalsWithSplitsDiff.toSeq, arrivalsToRemove))
+          push(outArrivalsWithSplits, FlightsWithSplits(arrivalsWithSplitsDiff.toSeq, arrivalsToRemove.toSeq))
           arrivalsWithSplitsDiff = Set()
           arrivalsToRemove = Set()
         } else log.info(s"No updated arrivals with splits to push")

@@ -3,10 +3,9 @@ package actors
 import java.sql.Timestamp
 
 import akka.actor.Actor
-import drt.shared.{ApiFlightWithSplits, UniqueArrival}
+import drt.shared.{ApiFlightWithSplits, PortStateDiff, RemoveFlight, UniqueArrival}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.graphstages.Crunch.{PortStateDiff, RemoveFlight}
 import slickdb.ArrivalTableLike
 
 import scala.concurrent.Await
@@ -19,9 +18,9 @@ class AggregatedArrivalsActor(portCode: String, arrivalTable: ArrivalTableLike) 
 
   override def receive: Receive = {
     case PortStateDiff(flightRemovals, flightUpdates, _, _) =>
-      handleUpdates(flightUpdates)
+      handleUpdates(flightUpdates.values.toSet)
 
-      handleRemovals(flightRemovals)
+      handleRemovals(flightRemovals.toSet)
   }
 
   def handleRemovals(flightRemovals: Set[RemoveFlight]): Unit = {

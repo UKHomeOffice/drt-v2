@@ -27,7 +27,7 @@ class PortStateSpec extends Specification {
 
     val portState = PortState(flights, crunchMinutes, staffMinutes)
 
-    val result = portState.purgeOlderThanDate(newerTime1)
+    val result = portState.purgeOlderThanDate(newerTime1.millisSinceEpoch)
 
     val expected = PortState(flights, crunchMinutes, staffMinutes)
 
@@ -53,7 +53,7 @@ class PortStateSpec extends Specification {
 
     val portState = PortState(flights, crunchMinutes, staffMinutes)
 
-    val result = portState.purgeOlderThanDate(oldTime2.addMinutes(1))
+    val result = portState.purgeOlderThanDate(oldTime2.addMinutes(1).millisSinceEpoch)
 
     val expected = PortState(arrivalsToFlightsWithSplits(List()), List(), List())
 
@@ -79,7 +79,7 @@ class PortStateSpec extends Specification {
 
     val portState = PortState(flights, crunchMinutes, staffMinutes)
 
-    val result = portState.purgeOlderThanDate(newerTime)
+    val result = portState.purgeOlderThanDate(newerTime.millisSinceEpoch)
 
     val expected = PortState(arrivalsToFlightsWithSplits(List(newerArrival)), List(newerCrunchMinute), List(newerStaffMinute))
 

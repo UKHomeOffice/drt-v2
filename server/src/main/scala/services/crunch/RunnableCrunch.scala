@@ -11,7 +11,7 @@ import drt.shared._
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds._
-import services.graphstages.Crunch.{Loads, PortStateDiff}
+import services.graphstages.Crunch.Loads
 import services.graphstages._
 
 object RunnableCrunch {
