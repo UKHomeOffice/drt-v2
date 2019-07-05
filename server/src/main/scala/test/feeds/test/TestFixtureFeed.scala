@@ -34,10 +34,10 @@ object TestFixtureFeed {
     val tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed).map(_ => {
       val eventualArrivals = askableTestArrivalActor.ask(GetArrivals).map {
         case Arrivals(arrivals) =>
-          log.info(s"Got these arrivals from the actor: $arrivals")
+          log.debug(s"Got these arrivals from the actor: $arrivals")
           arrivals
         case x =>
-          log.info(s"TEST arrivals feed: found this instead $x")
+          log.warn(s"TEST arrivals feed: found this instead $x")
 
           List()
       }.recoverWith {
@@ -49,7 +49,7 @@ object TestFixtureFeed {
 
       val testArrivals = Try(Await.result(eventualArrivals, 1 seconds)).getOrElse(List())
 
-      log.info(s"TEST: Sending arrivals from test feed: $testArrivals")
+      log.debug(s"TEST: Sending arrivals from test feed: $testArrivals")
 
       ArrivalsFeedSuccess(Flights(testArrivals), SDate.now())
     })
