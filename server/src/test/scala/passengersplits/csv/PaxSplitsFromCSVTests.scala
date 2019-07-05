@@ -1,6 +1,6 @@
 package passengersplits.csv
 
-import controllers.ArrivalGenerator.apiFlight
+import controllers.ArrivalGenerator.arrival
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
 import org.specs2.mutable.SpecificationLike

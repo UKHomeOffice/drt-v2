@@ -12,7 +12,7 @@ class WorkloadSpec extends Specification {
     "When I ask for the workload for this arrival " +
     "Then I see the 1x the proc time provided" >> {
 
-    val arrival = ArrivalGenerator.apiFlight(actPax = Option(1))
+    val arrival = ArrivalGenerator.arrival(actPax = Option(1))
     val splits = Set(
       Splits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None)),
@@ -30,7 +30,7 @@ class WorkloadSpec extends Specification {
   }
 
   "Given an arrival with a PCP time that has seconds, then these seconds should be ignored for workload calcs" >> {
-    val arrival = ArrivalGenerator.apiFlight(actPax = Option(1))
+    val arrival = ArrivalGenerator.arrival(actPax = Option(1))
       .copy(PcpTime = Some(SDate("2018-08-28T17:07:05").millisSinceEpoch))
 
     val splits = Set(
@@ -54,7 +54,7 @@ class WorkloadSpec extends Specification {
     "When I ask for the workload for this arrival " +
     "Then I see the 1x the proc time for the given nationality rather than the port proc time" >> {
 
-    val arrival = ArrivalGenerator.apiFlight(actPax = Option(1))
+    val arrival = ArrivalGenerator.arrival(actPax = Option(1))
     val splits = Set(
       Splits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, Option(Map("GBR" -> 1)))),
@@ -76,7 +76,7 @@ class WorkloadSpec extends Specification {
     "When I ask for the workload for this arrival " +
     "Then I see the 10x the proc time for the given nationality" >> {
 
-    val arrival = ArrivalGenerator.apiFlight(actPax = Option(10))
+    val arrival = ArrivalGenerator.arrival(actPax = Option(10))
     val splits = Set(
       Splits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, Option(Map("GBR" -> 1)))),
@@ -98,7 +98,7 @@ class WorkloadSpec extends Specification {
     "When I ask for the workload for this arrival " +
     "Then I see the 100x the proc time for the given nationality" >> {
 
-    val arrival = ArrivalGenerator.apiFlight(actPax = Option(100))
+    val arrival = ArrivalGenerator.arrival(actPax = Option(100))
     val splits = Set(
       Splits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, Option(Map("GBR" -> 1)))),
@@ -120,7 +120,7 @@ class WorkloadSpec extends Specification {
     "When I ask for the workload for this arrival " +
     "Then I see the 10x 2/3 + 10x 1/3 the proc times for the given nationalities" >> {
 
-    val arrival = ArrivalGenerator.apiFlight(actPax = Option(10))
+    val arrival = ArrivalGenerator.arrival(actPax = Option(10))
     val splits = Set(
       Splits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 3, Option(Map("GBR" -> 1, "FRA" -> 2)))),
@@ -145,7 +145,7 @@ class WorkloadSpec extends Specification {
     "When I ask for the workload for this arrival " +
     "Then I see the 1x the proc time for the given nationality in each queue" >> {
 
-    val arrival = ArrivalGenerator.apiFlight(actPax = Option(2))
+    val arrival = ArrivalGenerator.arrival(actPax = Option(2))
     val splits = Set(
       Splits(
         Set(
@@ -174,7 +174,7 @@ class WorkloadSpec extends Specification {
     "When I ask for the workload for this arrival " +
     "Then I see the sum to each nationality for each split" >> {
 
-    val arrival = ArrivalGenerator.apiFlight(actPax = Option(4))
+    val arrival = ArrivalGenerator.arrival(actPax = Option(4))
     val splits = Set(
       Splits(
         Set(
@@ -210,7 +210,7 @@ class WorkloadSpec extends Specification {
     "When I ask for the workload for this arrival " +
     "Then I see the sum to each nationality for each split over two minutes" >> {
 
-    val arrival = ArrivalGenerator.apiFlight(actPax = Option(24))
+    val arrival = ArrivalGenerator.arrival(actPax = Option(24))
     val splits = Set(
       Splits(
         Set(

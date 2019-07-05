@@ -93,7 +93,7 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
     val probe = TestProbe("arrival-splits")
 
     val (arrivalDiffs, manifestsLiveInput, _) = TestableArrivalSplits(splitsCalculator, probe, () => SDate(scheduled)).run()
-    val arrival = ArrivalGenerator.apiFlight(iata = "BA0001", terminal = "T1", origin = "JFK", schDt = scheduled, feedSources = Set(LiveFeedSource))
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = "T1", origin = "JFK", schDt = scheduled, feedSources = Set(LiveFeedSource))
     val paxList = List(
       PassengerInfoGenerator.passengerInfoJson(nationality = "GBR", documentType = "P", issuingCountry = "GBR"),
       PassengerInfoGenerator.passengerInfoJson(nationality = "ITA", documentType = "P", issuingCountry = "ITA")
@@ -120,7 +120,7 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
 
     probe.fishForMessage(3 seconds) {
       case fs: FlightsWithSplits =>
-        val fws = fs.flights.map(f => f.copy(lastUpdated = None))
+        val fws = fs.flightsToUpdate.map(f => f.copy(lastUpdated = None))
         fws == expected
     }
 

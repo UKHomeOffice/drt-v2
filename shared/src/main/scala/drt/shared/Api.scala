@@ -476,19 +476,34 @@ object FlightsApi {
 
   case class Flights(flights: Seq[Arrival])
 
-  case class FlightsWithSplits(flights: Seq[ApiFlightWithSplits], removals: Seq[Arrival]) extends PortStateMinutes {
+  case class FlightsWithSplits(flightsToUpdate: Seq[ApiFlightWithSplits], arrivalsToRemove: Seq[Arrival]) extends PortStateMinutes {
     def applyTo(maybePortState: Option[PortState], now: MillisSinceEpoch): (PortState, PortStateDiff) = {
-      maybePortState match {
-        case None => (PortState(flights.toList, List(), List()), PortStateDiff(Seq(), flights.map(fws => fws.copy(lastUpdated = Option(now))), Seq(), Seq()))
-        case Some(portState) =>
-          val updatedFlights = flights.foldLeft(portState.flights) {
-            case (soFar, updatedFlight) => soFar.updated(updatedFlight.apiFlight.uniqueId, updatedFlight.copy(lastUpdated = Option(now)))
-          }
-          val updatedFlightsMinusRemovals = removals.foldLeft(updatedFlights) {
-            case (minusRemovals, toRemove) => minusRemovals - toRemove.uniqueId
-          }
-          (portState.copy(flights = updatedFlightsMinusRemovals), PortStateDiff(removals.map(f => RemoveFlight(UniqueArrival(f))), flights, Seq(), Seq()))
+      val updatedFlights = flightsToUpdate.map(_.copy(lastUpdated = Option(now)))
+
+      val portState = maybePortState match {
+        case None => PortState.empty
+        case Some(ps) => ps
       }
+
+      val newPortState: PortState = applyToPortState(updatedFlights, portState)
+      val newDiff: PortStateDiff = portStateDiff(updatedFlights)
+      (newPortState, newDiff)
+    }
+
+    def portStateDiff(updatedFlights: Seq[ApiFlightWithSplits]): PortStateDiff = {
+      val removals = arrivalsToRemove.map(f => RemoveFlight(UniqueArrival(f)))
+      val newDiff = PortStateDiff(removals, updatedFlights, Seq(), Seq())
+      newDiff
+    }
+
+    def applyToPortState(updatedFlights: Seq[ApiFlightWithSplits], portState: PortState): PortState = {
+      val newFlights = updatedFlights.foldLeft(portState.flights) {
+        case (soFar, fws) => soFar.updated(fws.apiFlight.uniqueId, fws)
+      }
+      val newFlightsMinusRemovals = arrivalsToRemove.foldLeft(newFlights) {
+        case (minusRemovals, toRemove) => minusRemovals - toRemove.uniqueId
+      }
+      portState.copy(flights = newFlightsMinusRemovals)
     }
   }
 
@@ -769,17 +784,20 @@ object CrunchApi {
 
   case class StaffMinutes(minutes: Seq[StaffMinute]) extends PortStateMinutes {
     def applyTo(maybePortState: Option[PortState], now: MillisSinceEpoch): (PortState, PortStateDiff) = {
-      val diff = PortStateDiff(Seq(), Seq(), Seq(), minutes.map(_.copy(lastUpdated = Option(now))))
-      maybePortState match {
-        case None =>
-          (PortState(List(), List(), minutes.toList), diff)
-        case Some(portState) =>
-          val updatedSms = minutes.foldLeft(portState.staffMinutes) {
-            case (soFar, updatedSm) => soFar.updated(updatedSm.key, updatedSm.copy(lastUpdated = Option(now)))
-          }
+      val updatedMinutes = minutes.map(_.copy(lastUpdated = Option(now)))
 
-          (portState.copy(staffMinutes = updatedSms), diff)
+      val diff = PortStateDiff(Seq(), Seq(), Seq(), updatedMinutes)
+
+      val portState = maybePortState match {
+        case None => PortState.empty
+        case Some(ps) => ps
       }
+
+      val updatedSms = updatedMinutes.foldLeft(portState.staffMinutes) {
+        case (soFar, updatedSm) => soFar.updated(updatedSm.key, updatedSm)
+      }
+
+      (portState.copy(staffMinutes = updatedSms), diff)
     }
   }
 
@@ -867,21 +885,23 @@ object CrunchApi {
     val oneMinuteMillis: Long = 60 * 1000
 
     def applyTo(maybePortState: Option[PortState], now: MillisSinceEpoch): (PortState, PortStateDiff) = {
-      maybePortState match {
-        case None =>
-          val crunchMinutes = minutes.map { case (tqm, drm) => mergeMinute(tqm, None, drm, now) }
-          (PortState(Map[Int, ApiFlightWithSplits](), newCrunchMinutes, SortedMap[TM, StaffMinute]()), PortStateDiff(Seq(), Seq(), crunchMinutes.toSeq, Seq()))
-
-        case Some(portState) =>
-          val (updatedCrunchMinutes, crunchMinutesDiff) = minutes
-            .foldLeft((portState.crunchMinutes, List[CrunchMinute]())) {
-              case ((updatesSoFar, diffSoFar), (tqm, updatedDrm)) =>
-                val maybeMinute: Option[CrunchMinute] = updatesSoFar.get(tqm)
-                val mergedCm: CrunchMinute = mergeMinute(tqm, maybeMinute, updatedDrm, now)
-                (updatesSoFar.updated(tqm, mergedCm), mergedCm :: diffSoFar)
-            }
-          (portState.copy(crunchMinutes = updatedCrunchMinutes), PortStateDiff(Seq(), Seq(), crunchMinutesDiff, Seq()))
+      val portState = maybePortState match {
+        case None => PortState.empty
+        case Some(ps) => ps
       }
+
+      val (updatedCrunchMinutes, crunchMinutesDiff) = minutes
+        .foldLeft((portState.crunchMinutes, List[CrunchMinute]())) {
+          case ((updatesSoFar, diffSoFar), (tqm, updatedDrm)) =>
+            val maybeMinute: Option[CrunchMinute] = updatesSoFar.get(tqm)
+            val mergedCm: CrunchMinute = mergeMinute(tqm, maybeMinute, updatedDrm, now)
+            (updatesSoFar.updated(tqm, mergedCm), mergedCm :: diffSoFar)
+        }
+
+      val newPortState = portState.copy(crunchMinutes = updatedCrunchMinutes)
+      val newDiff = PortStateDiff(Seq(), Seq(), crunchMinutesDiff, Seq())
+
+      (newPortState, newDiff)
     }
 
     lazy val minutes: Map[TQM, DeskStat] = for {
@@ -897,10 +917,10 @@ object CrunchApi {
     def mergeMinute(tqm: TQM, maybeMinute: Option[CrunchMinute], updatedDeskStat: DeskStat, now: MillisSinceEpoch): CrunchMinute = maybeMinute
       .map(existingCm => existingCm.copy(
         actDesks = updatedDeskStat.desks,
-        actWait = updatedDeskStat.waitTime,
-        lastUpdated = Option(now)
+        actWait = updatedDeskStat.waitTime
       ))
       .getOrElse(CrunchMinute(tqm, updatedDeskStat))
+      .copy(lastUpdated = Option(now))
   }
 
   case class CrunchMinutes(crunchMinutes: Set[CrunchMinute])

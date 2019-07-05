@@ -72,7 +72,7 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
     val testAirportConfig = airportConfig.copy(defaultProcessingTimes = procTimes)
     val flightsWithSplits = TestableWorkloadStage(probe, () => SDate(scheduled), testAirportConfig, workloadStart, workloadEnd, workloadWindow).run
 
-    val arrival = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = scheduled, actPax = Option(25))
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(25))
     val historicSplits = Splits(
       Set(
         ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50, None),
@@ -114,7 +114,7 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
     )
     val flightsWithSplits = TestableWorkloadStage(probe, () => SDate(scheduled), testAirportConfig, workloadStart, workloadEnd, workloadWindow).run
 
-    val arrival = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = scheduled, actPax = Option(75), tranPax = Option(50))
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(75), tranPax = Option(50))
     val historicSplits = Splits(
       Set(
         ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50, None),
@@ -153,8 +153,8 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
     val testAirportConfig = airportConfig.copy(defaultProcessingTimes = procTimes)
     val flightsWithSplits = TestableWorkloadStage(probe, () => SDate(scheduled), testAirportConfig, workloadStart, workloadEnd, workloadWindow).run
 
-    val arrival = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = scheduled, actPax = Option(25))
-    val arrival2 = ArrivalGenerator.apiFlight(iata = "BA0002", schDt = scheduled2, actPax = Option(25))
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(25))
+    val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = scheduled2, actPax = Option(25))
     val historicSplits = Splits(Set(
       ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50, None),
       ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 50, None)),
@@ -194,8 +194,8 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
     val testAirportConfig = airportConfig.copy(defaultProcessingTimes = procTimes)
     val flightsWithSplits = TestableWorkloadStage(probe, () => SDate(scheduled), testAirportConfig, workloadStart, workloadEnd, workloadWindow).run
 
-    val arrival = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = scheduled, actPax = Option(25))
-    val arrival2 = ArrivalGenerator.apiFlight(iata = "BA0002", schDt = scheduled2, actPax = Option(25))
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(25))
+    val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = scheduled2, actPax = Option(25))
     val historicSplits = Splits(Set(
         ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50, None),
         ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 50, None)),
@@ -241,7 +241,7 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
     )
     val flightsWithSplits = TestableWorkloadStage(probe, () => SDate(scheduled), testAirportConfig, workloadStart, workloadEnd, workloadWindow).run
 
-    val arrival = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = scheduled, actPax = Option(25))
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(25))
     val historicSplits = Splits(
       Set(
         ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50, None),

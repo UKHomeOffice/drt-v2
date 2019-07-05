@@ -197,18 +197,22 @@ case class DeskRecMinute(terminalName: TerminalName,
 
 case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateMinutes {
   def applyTo(maybePortState: Option[PortState], now: MillisSinceEpoch): (PortState, PortStateDiff) = {
-    maybePortState match {
-      case None => (PortState(Map[Int, ApiFlightWithSplits](), newCrunchMinutes, SortedMap[TM, StaffMinute]()), PortStateDiff(Seq(), Seq(), minutes.map(drm => mergeMinute(None, drm, now)), Seq()))
-      case Some(portState) =>
-        val (updatedCrunchMinutes, crunchMinutesDiff) = minutes
-          .foldLeft((portState.crunchMinutes, List[CrunchMinute]())) {
-            case ((updatesSoFar, diffSoFar), updatedDrm) =>
-              val maybeMinute: Option[CrunchMinute] = updatesSoFar.get(updatedDrm.key)
-              val mergedCm: CrunchMinute = mergeMinute(maybeMinute, updatedDrm, now)
-              (updatesSoFar.updated(updatedDrm.key, mergedCm), mergedCm :: diffSoFar)
-          }
-        (portState.copy(crunchMinutes = updatedCrunchMinutes), PortStateDiff(Seq(), Seq(), crunchMinutesDiff, Seq()))
+    val portState = maybePortState match {
+      case None => PortState.empty
+      case Some(ps) => ps
     }
+
+    val (updatedCrunchMinutes, crunchMinutesDiff) = minutes
+      .foldLeft((portState.crunchMinutes, List[CrunchMinute]())) {
+        case ((updatesSoFar, diffSoFar), updatedDrm) =>
+          val maybeMinute: Option[CrunchMinute] = updatesSoFar.get(updatedDrm.key)
+          val mergedCm: CrunchMinute = mergeMinute(maybeMinute, updatedDrm, now)
+          (updatesSoFar.updated(updatedDrm.key, mergedCm), mergedCm :: diffSoFar)
+      }
+    val newPortState = portState.copy(crunchMinutes = updatedCrunchMinutes)
+    val newDiff = PortStateDiff(Seq(), Seq(), crunchMinutesDiff, Seq())
+
+    (newPortState, newDiff)
   }
 
   def newCrunchMinutes: SortedMap[TQM, CrunchMinute] = SortedMap[TQM, CrunchMinute]() ++ minutes
@@ -217,12 +221,12 @@ case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateMinutes 
     .toMap
 
   def mergeMinute(maybeMinute: Option[CrunchMinute], updatedDrm: DeskRecMinute, now: MillisSinceEpoch): CrunchMinute = maybeMinute
-    .map(existingCm => existingCm.copy(
+    .map(_.copy(
       paxLoad = updatedDrm.paxLoad,
       workLoad = updatedDrm.workLoad,
       deskRec = updatedDrm.deskRec,
-      waitTime = updatedDrm.waitTime,
-      lastUpdated = Option(now)
+      waitTime = updatedDrm.waitTime
     ))
     .getOrElse(CrunchMinute(updatedDrm))
+    .copy(lastUpdated = Option(now))
 }

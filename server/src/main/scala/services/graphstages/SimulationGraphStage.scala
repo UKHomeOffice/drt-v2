@@ -480,18 +480,19 @@ case class SimulationMinute(terminalName: TerminalName,
 
 case class SimulationMinutes(minutes: Seq[SimulationMinute]) extends PortStateMinutes {
   def applyTo(maybePortState: Option[PortState], now: MillisSinceEpoch): (PortState, PortStateDiff) = {
-    maybePortState match {
-      case None => (PortState(Map[Int, ApiFlightWithSplits](), newCrunchMinutes, SortedMap[TM, StaffMinute]()), PortStateDiff(Seq(), Seq(), minutes.map(mergeMinute(None, _, now)), Seq()))
-      case Some(portState) =>
-        val (updatedCrunchMinutes, minutesDiff) = minutes
-          .foldLeft((portState.crunchMinutes, List[CrunchMinute]())) {
-            case ((minutesSoFar, updatesSoFar), updatedCm) =>
-              val maybeMinute: Option[CrunchMinute] = minutesSoFar.get(updatedCm.key)
-              val mergedCm: CrunchMinute = mergeMinute(maybeMinute, updatedCm, now)
-              (minutesSoFar.updated(updatedCm.key, mergedCm), mergedCm :: updatesSoFar)
-          }
-        (portState.copy(crunchMinutes = updatedCrunchMinutes), PortStateDiff(Seq(), Seq(), minutesDiff, Seq()))
+    val portState = maybePortState match {
+      case None => PortState.empty
+      case Some(ps) => ps
     }
+
+    val (updatedCrunchMinutes, minutesDiff) = minutes
+      .foldLeft((portState.crunchMinutes, List[CrunchMinute]())) {
+        case ((minutesSoFar, updatesSoFar), updatedCm) =>
+          val maybeMinute: Option[CrunchMinute] = minutesSoFar.get(updatedCm.key)
+          val mergedCm: CrunchMinute = mergeMinute(maybeMinute, updatedCm, now)
+          (minutesSoFar.updated(updatedCm.key, mergedCm), mergedCm :: updatesSoFar)
+      }
+    (portState.copy(crunchMinutes = updatedCrunchMinutes), PortStateDiff(Seq(), Seq(), minutesDiff, Seq()))
   }
 
   def newCrunchMinutes: SortedMap[TQM, CrunchMinute] = SortedMap[TQM, CrunchMinute]() ++ minutes
@@ -501,8 +502,8 @@ case class SimulationMinutes(minutes: Seq[SimulationMinute]) extends PortStateMi
   def mergeMinute(maybeMinute: Option[CrunchMinute], updatedSm: SimulationMinute, now: MillisSinceEpoch): CrunchMinute = maybeMinute
     .map(existingCm => existingCm.copy(
       deployedDesks = Option(updatedSm.desks),
-      deployedWait = Option(updatedSm.waitTime),
-      lastUpdated = Option(now)
+      deployedWait = Option(updatedSm.waitTime)
     ))
     .getOrElse(CrunchMinute(updatedSm))
+    .copy(lastUpdated = Option(now))
 }

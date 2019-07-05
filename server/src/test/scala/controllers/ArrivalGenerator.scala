@@ -7,30 +7,29 @@ import services.SDate
 
 object ArrivalGenerator {
 
-  def apiFlight(
-                 flightId: Option[Int] = None,
-                 iata: String = "",
-                 icao: String = "",
-                 schDt: String = "",
-                 actPax: Option[Int] = None,
-                 maxPax: Option[Int] = None,
-                 lastKnownPax: Option[Int] = None,
-                 terminal: String = "T1",
-                 origin: String = "",
-                 operator: Option[String] = None,
-                 status: String = "",
-                 estDt: String = "",
-                 actDt: String = "",
-                 estChoxDt: String = "",
-                 actChoxDt: String = "",
-                 gate: Option[String] = None,
-                 stand: Option[String] = None,
-                 tranPax: Option[Int] = None,
-                 runwayId: Option[String] = None,
-                 baggageReclaimId: Option[String] = None,
-                 airportId: String = "",
-                 feedSources: Set[FeedSource] = Set()
-               ): Arrival =
+  def arrival(flightId: Option[Int] = None,
+              iata: String = "",
+              icao: String = "",
+              schDt: String = "",
+              actPax: Option[Int] = None,
+              maxPax: Option[Int] = None,
+              lastKnownPax: Option[Int] = None,
+              terminal: String = "T1",
+              origin: String = "",
+              operator: Option[String] = None,
+              status: String = "",
+              estDt: String = "",
+              actDt: String = "",
+              estChoxDt: String = "",
+              actChoxDt: String = "",
+              gate: Option[String] = None,
+              stand: Option[String] = None,
+              tranPax: Option[Int] = None,
+              runwayId: Option[String] = None,
+              baggageReclaimId: Option[String] = None,
+              airportId: String = "",
+              feedSources: Set[FeedSource] = Set()
+             ): Arrival =
     Arrival(
       FlightID = flightId,
       rawICAO = icao,

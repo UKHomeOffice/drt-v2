@@ -244,7 +244,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     val assignment2 = StaffAssignment("egate monitor", "T1", startDate2, endDate2, 2, None)
     val initialFixedPoints = FixedPointAssignments(Seq(assignment2))
 
-    val flight = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = scheduled, actPax = Option(100))
+    val flight = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(100))
 
     val crunch = runCrunchGraph(
       airportConfig = airportConfig.copy(
@@ -363,7 +363,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     val endDate2 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
     val assignment2 = StaffAssignment("egate monitor", "T1", startDate2, endDate2, 2, None)
     val initialFixedPoints = FixedPointAssignments(Seq(assignment2))
-    val flight = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = scheduled, actPax = Option(100))
+    val flight = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(100))
 
     val crunch = runCrunchGraph(
       airportConfig = airportConfig.copy(
@@ -454,7 +454,7 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     offerAndWait(crunch.shiftsInput, initialShifts)
 
-    val flight = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = scheduled, actPax = Option(100))
+    val flight = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(100))
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
 
     val expectedCrunchDeployments = Set(
