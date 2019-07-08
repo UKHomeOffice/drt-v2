@@ -48,7 +48,7 @@ class PortStateSummariesSpec extends Specification {
 
     summary === expected
   }
-  
+
   "Given a port state with crunch minutes with no deployed or actual desks & wait times " +
     "When I ask for a summary  " +
     "Then I should see crunch minutes witth None for all the deployed and actual desks and wait times values" >> {
