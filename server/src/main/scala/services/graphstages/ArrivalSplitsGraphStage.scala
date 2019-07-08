@@ -80,7 +80,7 @@ class ArrivalSplitsGraphStage(name: String = "",
         val mergedMinusExpired = purgeExpired(mergedFlights, now, expireAfterMillis.toInt)
 
         val uniqueFlightsWithUpdates = flightsWithUpdates.filterKeys(mergedMinusExpired.contains)
-        
+
         arrivalsWithSplitsDiff = mergeDiffSets(uniqueFlightsWithUpdates, arrivalsWithSplitsDiff)
         arrivalsToRemove = arrivalsToRemove ++ arrivalsDiff.toRemove
         log.info(s"${arrivalsWithSplitsDiff.size} updated arrivals waiting to push")
@@ -205,15 +205,10 @@ class ArrivalSplitsGraphStage(name: String = "",
               val manifestSplits: Splits = splitsFromManifest(flightForManifest.apiFlight, newManifest)
 
               if (isNewManifestForFlight(flightForManifest, manifestSplits)) {
-                log.info(s"New splits for arrival")
                 val flightWithManifestSplits = updateFlightWithSplits(flightForManifest, manifestSplits)
                 (flightsSoFar.updated(key, flightWithManifestSplits), flightsWithNewSplits.updated(key, flightWithManifestSplits))
-              } else {
-                log.info(s"Splits were not new")
-                (flightsSoFar, flightsWithNewSplits)
-              }
+              } else (flightsSoFar, flightsWithNewSplits)
             case None =>
-              log.info(s"Got a manifest with no flight. Adding to the buffer")
               manifestBuffer = manifestBuffer.updated(key, newManifest)
               (flightsSoFar, flightsWithNewSplits)
           }
