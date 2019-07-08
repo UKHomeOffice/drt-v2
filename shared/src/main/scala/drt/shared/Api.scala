@@ -646,10 +646,10 @@ object CrunchApi {
         workLoad = slotMinutes.map(_.workLoad).sum,
         deskRec = slotMinutes.map(_.deskRec).max,
         waitTime = slotMinutes.map(_.waitTime).max,
-        deployedDesks = Option(slotMinutes.map(_.deployedDesks.getOrElse(0)).max),
-        deployedWait = Option(slotMinutes.map(_.deployedWait.getOrElse(0)).max),
-        actDesks = Option(slotMinutes.map(_.actDesks.getOrElse(0)).max),
-        actWait = Option(slotMinutes.map(_.actWait.getOrElse(0)).max))
+        deployedDesks = if (slotMinutes.exists(cm => cm.deployedDesks.isDefined)) Option(slotMinutes.map(_.deployedDesks.getOrElse(0)).max) else None,
+        deployedWait = if (slotMinutes.exists(cm => cm.deployedWait.isDefined)) Option(slotMinutes.map(_.deployedWait.getOrElse(0)).max) else None,
+        actDesks = if (slotMinutes.exists(cm => cm.actDesks.isDefined)) Option(slotMinutes.map(_.actDesks.getOrElse(0)).max) else None,
+        actWait = if (slotMinutes.exists(cm => cm.actWait.isDefined)) Option(slotMinutes.map(_.actWait.getOrElse(0)).max) else None)
       else CrunchMinute(
         terminalName = terminal,
         queueName = queue,
