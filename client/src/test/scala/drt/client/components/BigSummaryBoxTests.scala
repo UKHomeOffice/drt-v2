@@ -156,9 +156,9 @@ object BigSummaryBoxTests extends TestSuite {
 
               val flights = FlightsWithSplits(
                 List(ApiFlightWithSplits(apiFlight1, Set(splits1)),
-                  ApiFlightWithSplits(apiFlight2, Set(splits2))), Set())
+                  ApiFlightWithSplits(apiFlight2, Set(splits2))), Seq())
 
-              val aggSplits = aggregateSplits(ArrivalHelper.bestPax)(flights.flights)
+              val aggSplits = aggregateSplits(ArrivalHelper.bestPax)(flights.flightsToUpdate)
 
               val expectedAggSplits = Map(
                 PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk) -> (41 + 11),

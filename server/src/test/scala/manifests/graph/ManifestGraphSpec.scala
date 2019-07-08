@@ -46,7 +46,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
 
     val graphInput = createAndRunGraph(manifestSink, registeredArrivalSinkProbe, testManifest, None)
 
-    val testArrival = ArrivalGenerator.apiFlight(schDt = "2019-03-06T12:00:00Z")
+    val testArrival = ArrivalGenerator.arrival(schDt = "2019-03-06T12:00:00Z")
     graphInput.offer(List(testArrival))
 
     manifestSinkProbe.expectMsg(ManifestTries(List(Option(testManifest))))
@@ -73,7 +73,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
       List()
     )
 
-    val testArrival = ArrivalGenerator.apiFlight(schDt = "2019-03-06T12:00:00Z")
+    val testArrival = ArrivalGenerator.arrival(schDt = "2019-03-06T12:00:00Z")
 
     val manifestSink = system.actorOf(Props(classOf[TestableVoyageManifestsRequestActor], "LHR", MockManifestLookupService(testManifest), manifestSinkProbe))
 

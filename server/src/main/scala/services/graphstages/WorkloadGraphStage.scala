@@ -50,7 +50,7 @@ class WorkloadGraphStage(name: String = "",
       }
       flightLoadMinutes = optionalInitialFlightsWithSplits match {
         case Some(fws: FlightsWithSplits) =>
-          log.info(s"Received ${fws.flights.size} initial flights. Calculating workload.")
+          log.info(s"Received ${fws.flightsToUpdate.size} initial flights. Calculating workload.")
           val updatedWorkloads = flightLoadMinutes(fws)
           purgeExpired(updatedWorkloads, now, expireAfterMillis.toInt)
         case None =>
@@ -76,9 +76,9 @@ class WorkloadGraphStage(name: String = "",
       override def onPush(): Unit = {
         val start = SDate.now()
         val incomingFlights = grab(inFlightsWithSplits)
-        log.info(s"Received ${incomingFlights.flights.size} arrivals")
+        log.info(s"Received ${incomingFlights.flightsToUpdate.size} arrivals")
 
-        val existingFlightTQMs: Set[TQM] = incomingFlights.flights.flatMap(fws => flightTQMs.getOrElse(fws.apiFlight.uniqueId, List())).toSet
+        val existingFlightTQMs: Set[TQM] = incomingFlights.flightsToUpdate.flatMap(fws => flightTQMs.getOrElse(fws.apiFlight.uniqueId, List())).toSet
         log.info(s"Got existing flight TQMs")
         val updatedWorkloads = flightLoadMinutes(incomingFlights)
         log.info(s"Got updated workloads")
@@ -114,7 +114,7 @@ class WorkloadGraphStage(name: String = "",
     }
 
     def mergeFlightLoadMinutes(existingFlightTQMs: Set[TQM], updatedWorkloads: SortedMap[TQM, Set[FlightSplitMinute]], incomingFlights: FlightsWithSplits): SortedMap[TQM, Set[FlightSplitMinute]] = {
-      val arrivalIds: Set[Int] = incomingFlights.flights.map(_.apiFlight.uniqueId).toSet
+      val arrivalIds: Set[Int] = incomingFlights.flightsToUpdate.map(_.apiFlight.uniqueId).toSet
       val minusOldSplitMinutes = existingFlightTQMs.foldLeft(flightLoadMinutes) {
         case (flightSplitMinutesSoFar, tqm) =>
           val existingFlightSplitsMinutes: Set[FlightSplitMinute] = flightSplitMinutesSoFar.getOrElse(tqm, Set[FlightSplitMinute]())
@@ -151,7 +151,7 @@ class WorkloadGraphStage(name: String = "",
     }
 
     def flightLoadMinutes(incomingFlights: FlightsWithSplits): SortedMap[TQM, Set[FlightSplitMinute]] = incomingFlights
-      .flights
+      .flightsToUpdate
       .filterNot(isCancelled)
       .filter(hasProcessingTime)
       .foldLeft(SortedMap[TQM, Set[FlightSplitMinute]]()) {

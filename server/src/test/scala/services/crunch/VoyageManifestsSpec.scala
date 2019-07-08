@@ -25,7 +25,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val scheduled = "2017-01-01T00:00Z"
 
-    val flight = ArrivalGenerator.apiFlight(origin = "JFK", schDt = scheduled, iata = "TST001", terminal = "T1", actPax = Option(21))
+    val flight = ArrivalGenerator.arrival(origin = "JFK", schDt = scheduled, iata = "TST001", terminal = "T1", actPax = Option(21))
     val inputManifestsCi = ManifestsFeedSuccess(DqManifests("", Set(
       VoyageManifest(DqEventCodes.CheckIn, "STN", "JFK", "0001", "TS", "2017-01-01", "00:00", List(
         PassengerInfoGenerator.passengerInfoJson("GBR", "P", "GBR")
@@ -74,7 +74,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
     val portCode = "LHR"
 
-    val flight = ArrivalGenerator.apiFlight(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "TST001", terminal = "T1", actPax = Option(10))
+    val flight = ArrivalGenerator.arrival(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "TST001", terminal = "T1", actPax = Option(10))
     val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
       VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", List(euPassport))
     )))
@@ -119,7 +119,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
     val portCode = "LHR"
 
-    val flight = ArrivalGenerator.apiFlight(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "TST001", terminal = "T1", actPax = Option(10), tranPax = Option(5))
+    val flight = ArrivalGenerator.arrival(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "TST001", terminal = "T1", actPax = Option(10), tranPax = Option(5))
     val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
       VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", List(
         euPassport,
@@ -195,7 +195,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
     val portCode = "LHR"
 
-    val flight = ArrivalGenerator.apiFlight(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "TST001", terminal = "T1", actPax = Option(10), tranPax = Option(6))
+    val flight = ArrivalGenerator.arrival(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "TST001", terminal = "T1", actPax = Option(10), tranPax = Option(6))
     val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
       VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "TS", "2017-01-01", "00:00", List(
         inTransitFlag,

@@ -5,16 +5,14 @@ import drt.shared.CrunchApi.{CrunchMinute, PortState, StaffMinute}
 import drt.shared._
 import org.specs2.mutable.Specification
 
-import scala.collection.immutable.SortedMap
-
 class PortStateSpec extends Specification {
   "Given a PortState with no purgable entries " +
     "When I purge " +
     "Then I should still see all the entries" >> {
     val newerTime1 = SDate("2019-01-01T00:30Z")
     val newerTime2 = SDate("2019-01-02T00:30Z")
-    val oldArrival = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = newerTime1.toISOString())
-    val newerArrival = ArrivalGenerator.apiFlight(iata = "BA0002", schDt = newerTime2.toISOString())
+    val oldArrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = newerTime1.toISOString())
+    val newerArrival = ArrivalGenerator.arrival(iata = "BA0002", schDt = newerTime2.toISOString())
     val flights = arrivalsToFlightsWithSplits(List(oldArrival, newerArrival))
 
     val newerCrunchMinute1 = CrunchMinute("T1", Queues.EeaDesk, newerTime1.millisSinceEpoch, 0, 0, 0, 0)
@@ -27,7 +25,7 @@ class PortStateSpec extends Specification {
 
     val portState = PortState(flights, crunchMinutes, staffMinutes)
 
-    val result = portState.purgeOlderThanDate(newerTime1)
+    val result = portState.purgeOlderThanDate(newerTime1.millisSinceEpoch)
 
     val expected = PortState(flights, crunchMinutes, staffMinutes)
 
@@ -39,8 +37,8 @@ class PortStateSpec extends Specification {
     "Then I should not see any entries survive" >> {
     val oldTime1 = SDate("2019-01-01T00:30Z")
     val oldTime2 = SDate("2019-01-02T00:30Z")
-    val oldArrival1 = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = oldTime1.toISOString())
-    val oldArrival2 = ArrivalGenerator.apiFlight(iata = "BA0002", schDt = oldTime2.toISOString())
+    val oldArrival1 = ArrivalGenerator.arrival(iata = "BA0001", schDt = oldTime1.toISOString())
+    val oldArrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = oldTime2.toISOString())
     val flights = arrivalsToFlightsWithSplits(List(oldArrival1, oldArrival2))
 
     val oldCrunchMinute1 = CrunchMinute("T1", Queues.EeaDesk, oldTime1.millisSinceEpoch, 0, 0, 0, 0)
@@ -53,7 +51,7 @@ class PortStateSpec extends Specification {
 
     val portState = PortState(flights, crunchMinutes, staffMinutes)
 
-    val result = portState.purgeOlderThanDate(oldTime2.addMinutes(1))
+    val result = portState.purgeOlderThanDate(oldTime2.addMinutes(1).millisSinceEpoch)
 
     val expected = PortState(arrivalsToFlightsWithSplits(List()), List(), List())
 
@@ -65,8 +63,8 @@ class PortStateSpec extends Specification {
     "Then I should only see the newer entries survive" >> {
     val oldTime = SDate("2019-01-01T00:30Z")
     val newerTime = SDate("2019-01-02T00:30Z")
-    val oldArrival = ArrivalGenerator.apiFlight(iata = "BA0001", schDt = oldTime.toISOString())
-    val newerArrival = ArrivalGenerator.apiFlight(iata = "BA0002", schDt = newerTime.toISOString())
+    val oldArrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = oldTime.toISOString())
+    val newerArrival = ArrivalGenerator.arrival(iata = "BA0002", schDt = newerTime.toISOString())
     val flights = arrivalsToFlightsWithSplits(List(oldArrival, newerArrival))
 
     val oldCrunchMinute = CrunchMinute("T1", Queues.EeaDesk, oldTime.millisSinceEpoch, 0, 0, 0, 0)
@@ -79,7 +77,7 @@ class PortStateSpec extends Specification {
 
     val portState = PortState(flights, crunchMinutes, staffMinutes)
 
-    val result = portState.purgeOlderThanDate(newerTime)
+    val result = portState.purgeOlderThanDate(newerTime.millisSinceEpoch)
 
     val expected = PortState(arrivalsToFlightsWithSplits(List(newerArrival)), List(newerCrunchMinute), List(newerStaffMinute))
 

@@ -11,10 +11,10 @@ import scala.concurrent.{Await, Future}
 class ArrivalsToCSVDataTest extends Specification {
 
   import CSVData._
-  import controllers.ArrivalGenerator.apiFlight
+  import controllers.ArrivalGenerator.arrival
 
   private val flightWithAllTypesOfAPISplit = ApiFlightWithSplits(
-    apiFlight(flightId = Option(1), iata = "SA324", icao = "SA0324", schDt = "2017-01-01T20:00:00Z",
+    arrival(flightId = Option(1), iata = "SA324", icao = "SA0324", schDt = "2017-01-01T20:00:00Z",
       actPax = Option(100), maxPax = Option(100), lastKnownPax = None, terminal = "T1",
       origin = "JHB", operator = Option("SA"), status = "UNK", estDt = "2017-01-01T20:00:00Z"),
     Set(Splits(
@@ -39,7 +39,7 @@ class ArrivalsToCSVDataTest extends Specification {
         ), SplitRatiosNs.SplitSources.Historical, None))
   )
   val flightWithoutFastTrackApiSplits = ApiFlightWithSplits(
-    apiFlight(flightId = Option(2), iata = "SA325", icao = "SA0325", schDt = "2017-01-01T20:00:00Z",
+    arrival(flightId = Option(2), iata = "SA325", icao = "SA0325", schDt = "2017-01-01T20:00:00Z",
       actPax = Option(100), maxPax = Option(100), lastKnownPax = None, terminal = "T1", origin = "JHB",
       operator = Option("SA"), status = "UNK", estDt = "2017-01-01T20:00:00Z"),
     Set(Splits(
@@ -54,7 +54,7 @@ class ArrivalsToCSVDataTest extends Specification {
     flightWithAllTypesOfAPISplit,
     flightWithoutFastTrackApiSplits,
     ApiFlightWithSplits(
-      apiFlight(flightId = Option(3), iata = "SA326", icao = "SA0326", schDt = "2017-01-01T20:00:00Z",
+      arrival(flightId = Option(3), iata = "SA326", icao = "SA0326", schDt = "2017-01-01T20:00:00Z",
         actPax = Option(100), maxPax = Option(100), lastKnownPax = None, terminal = "T1", origin = "JHB",
         operator = Option("SA"), status = "UNK", estDt = "2017-01-01T20:00:00Z"),
       Set(Splits(

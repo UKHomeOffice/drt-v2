@@ -16,10 +16,10 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import passengersplits.InMemoryPersistence
-import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse, ManifestsFeedSuccess}
+import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services._
 import services.graphstages.Crunch._
-import services.graphstages.{ActualDeskStats, DqManifests, DummySplitsPredictor, TestableCrunchLoadStage}
+import services.graphstages.{DummySplitsPredictor, TestableCrunchLoadStage}
 import slickdb.Tables
 
 import scala.concurrent.Await

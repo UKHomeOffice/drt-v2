@@ -12,6 +12,7 @@ import services.SDate
 import services.graphstages.Crunch._
 
 import scala.collection.immutable
+import scala.collection.immutable.{Map, SortedMap}
 
 case class PortStateWithDiff(portState: PortState, diff: PortStateDiff, diffMessage: CrunchDiffMessage) {
   def window(start: SDateLike, end: SDateLike, portQueues: Map[TerminalName, Seq[QueueName]]): PortStateWithDiff = {
@@ -52,34 +53,35 @@ class PortStateGraphStage(name: String = "",
   )
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var lastMaybePortState: Option[PortState] = None
-    var mayBePortState: Option[PortState] = None
+    var maybePortState: Option[PortState] = None
+    var maybePortStateDiff: Option[PortStateDiff] = None
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
     override def preStart(): Unit = {
       log.info(s"Received initial port state")
-      lastMaybePortState = optionalInitialPortState
-      mayBePortState = lastMaybePortState
+      maybePortState = optionalInitialPortState
       super.preStart()
     }
 
     shape.inlets.foreach(inlet => {
       setHandler(inlet, new InHandler {
         override def onPush(): Unit = {
-          mayBePortState = grab(inlet) match {
+          val (updatedState, stateDiff) = grab(inlet) match {
             case incoming: PortStateMinutes =>
               log.info(s"Incoming ${inlet.toString}")
-              val startTime = SDate.now().millisSinceEpoch
-              val expireThreshold = now().addMillis(-1 * expireAfterMillis.toInt)
-              val newState = incoming
-                .applyTo(mayBePortState, now())
-                .map(_.purgeOlderThanDate(expireThreshold))
-              val elapsedSeconds = (SDate.now().millisSinceEpoch - startTime).toDouble / 1000
+              val startTime = now().millisSinceEpoch
+              val expireThreshold = now().addMillis(-1 * expireAfterMillis.toInt).millisSinceEpoch
+              val (newState, diff) = incoming
+                .applyTo(maybePortState, startTime)
+              val elapsedSeconds = (now().millisSinceEpoch - startTime).toDouble / 1000
               log.info(f"Finished processing $inlet data in $elapsedSeconds%.2f seconds")
-              newState
+              (newState.purgeOlderThanDate(expireThreshold), diff)
           }
 
-          pushIfAppropriate(mayBePortState)
+          maybePortState = Option(updatedState)
+          maybePortStateDiff = mergeDiff(maybePortStateDiff, stateDiff)
+
+          pushIfAppropriate()
 
           pullAllInlets()
         }
@@ -88,14 +90,36 @@ class PortStateGraphStage(name: String = "",
 
     setHandler(outPortState, new OutHandler {
       override def onPull(): Unit = {
-        val start = SDate.now()
+        val start = now()
         log.info(s"onPull() called")
-        pushIfAppropriate(mayBePortState)
+        pushIfAppropriate()
 
         pullAllInlets()
-        log.info(s"outPortState Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        log.info(s"outPortState Took ${now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
+
+    def mergeDiff(maybePortStateDiff: Option[PortStateDiff], newDiff: PortStateDiff): Option[PortStateDiff] = maybePortStateDiff match {
+      case None => Option(newDiff)
+      case Some(existingDiff) =>
+        val updatedFlightRemovals = newDiff.flightRemovals.foldLeft(existingDiff.flightRemovals) {
+          case (soFar, newRemoval) => if (soFar.contains(newRemoval)) soFar else soFar :+ newRemoval
+        }
+        val updatedFlights = newDiff.flightUpdates.foldLeft(existingDiff.flightUpdates) {
+          case (soFar, (id, newFlight)) => if (soFar.contains(id)) soFar else soFar.updated(id, newFlight)
+        }
+        val updatedCms = newDiff.crunchMinuteUpdates.foldLeft(existingDiff.crunchMinuteUpdates) {
+          case (soFar, (id, newCm)) => if (soFar.contains(id)) soFar else soFar.updated(id, newCm)
+        }
+        val updatedSms = newDiff.staffMinuteUpdates.foldLeft(existingDiff.staffMinuteUpdates) {
+          case (soFar, (id, newSm)) => if (soFar.contains(id)) soFar else soFar.updated(id, newSm)
+        }
+        Option(existingDiff.copy(
+          flightRemovals = updatedFlightRemovals,
+          flightUpdates = updatedFlights,
+          crunchMinuteUpdates = updatedCms,
+          staffMinuteUpdates = updatedSms))
+    }
 
     def pullAllInlets(): Unit = {
       shape.inlets.foreach(i => if (!hasBeenPulled(i)) {
@@ -104,45 +128,32 @@ class PortStateGraphStage(name: String = "",
       })
     }
 
-    def pushIfAppropriate(maybeState: Option[PortState]): Unit = {
-      maybeState match {
-        case None => log.info(s"No port state to push yet")
-        case Some(portState) if lastMaybePortState.isDefined && lastMaybePortState.get == portState =>
-          log.info(s"No updates to push")
+    def pushIfAppropriate(): Unit = {
+      maybePortStateDiff match {
+        case None => log.info(s"No port state diff to push yet")
         case Some(_) if !isAvailable(outPortState) =>
           log.info(s"outPortState not available for pushing")
-        case Some(portState) =>
+        case Some(portStateDiff) =>
           log.info(s"Pushing port state with diff")
-          val diff: PortStateDiff = stateDiff(lastMaybePortState, portState)
-          val portStateWithDiff = PortStateWithDiff(portState, diff, diffMessage(diff))
-          lastMaybePortState = Option(portState)
-
-          push(outPortState, portStateWithDiff)
+          maybePortState match {
+            case None =>
+            case Some(portState) =>
+              val portStateWithDiff = PortStateWithDiff(portState, portStateDiff, diffMessage(portStateDiff))
+              maybePortStateDiff = None
+              push(outPortState, portStateWithDiff)
+          }
       }
     }
   }
 
   def diffMessage(diff: PortStateDiff): CrunchDiffMessage = CrunchDiffMessage(
-    createdAt = Option(SDate.now().millisSinceEpoch),
+    createdAt = Option(now().millisSinceEpoch),
     crunchStart = Option(0),
-    flightIdsToRemove = diff.flightRemovals.map(_.flightKey.uniqueId).toList,
-    flightsToUpdate = diff.flightUpdates.map(FlightMessageConversion.flightWithSplitsToMessage).toList,
-    crunchMinutesToUpdate = diff.crunchMinuteUpdates.map(crunchMinuteToMessage).toList,
-    staffMinutesToUpdate = diff.staffMinuteUpdates.map(staffMinuteToMessage).toList
+    flightIdsToRemove = diff.flightRemovals.map(_.flightKey.uniqueId),
+    flightsToUpdate = diff.flightUpdates.values.map(FlightMessageConversion.flightWithSplitsToMessage).toList,
+    crunchMinutesToUpdate = diff.crunchMinuteUpdates.values.map(crunchMinuteToMessage).toList,
+    staffMinutesToUpdate = diff.staffMinuteUpdates.values.map(staffMinuteToMessage).toList
   )
-
-  def stateDiff(maybeExistingState: Option[PortState], newState: PortState): PortStateDiff = {
-    val existingState = maybeExistingState match {
-      case None => PortState.empty
-      case Some(s) => s
-    }
-
-    val crunchesToUpdate = crunchMinutesDiff(existingState.crunchMinutes, newState.crunchMinutes)
-    val staffToUpdate = staffMinutesDiff(existingState.staffMinutes, newState.staffMinutes)
-    val (flightsToRemove, flightsToUpdate) = flightsDiff(existingState.flights, newState.flights)
-
-    PortStateDiff(flightsToRemove, flightsToUpdate, crunchesToUpdate, staffToUpdate)
-  }
 
   def crunchMinuteToMessage(cm: CrunchMinute): CrunchMinuteMessage = CrunchMinuteMessage(
     terminalName = Option(cm.terminalName),
@@ -164,58 +175,4 @@ class PortStateGraphStage(name: String = "",
     shifts = Option(sm.shifts),
     fixedPoints = Option(sm.fixedPoints),
     movements = Option(sm.movements))
-}
-
-case class DeskStat(desks: Option[Int], waitTime: Option[Int])
-
-case class ActualDeskStats(portDeskSlots: Map[String, Map[String, Map[MillisSinceEpoch, DeskStat]]]) extends PortStateMinutes {
-  def applyTo(maybePortState: Option[PortState], now: SDateLike): Option[PortState] = {
-    val flattened = portDeskSlots
-      .flatMap {
-        case (tn, queueDeskSlots) =>
-          queueDeskSlots.flatMap {
-            case (qn, minuteDesks) =>
-              minuteDesks.map {
-                case (millis, deskStat) =>
-                  (tn, qn, millis, deskStat)
-              }
-          }
-      }
-      .toSeq
-
-    maybePortState.map(portState => {
-      flattened.foldLeft(portState) {
-        case (portStateSoFar, (tn, qn, millis, deskStat)) => expandSlotAndApply(tn, qn, portStateSoFar, millis, deskStat)
-      }
-    })
-  }
-
-  def expandSlotAndApply(terminalName: TerminalName, queueName: QueueName, portState: PortState, millis: MillisSinceEpoch, deskStat: DeskStat): PortState = {
-    (millis until millis + 15 * oneMinuteMillis by oneMinuteMillis).foldLeft(portState) {
-      case (portStateToUpdate, minuteMillis) =>
-        val key = MinuteHelper.key(terminalName, queueName, minuteMillis)
-        portStateToUpdate.crunchMinutes.get(key) match {
-          case None => portStateToUpdate
-          case Some(cm) if cm.actDesks == deskStat.desks && cm.actWait == deskStat.waitTime => portStateToUpdate
-          case Some(cm) =>
-            val cmWithDeskStats = cm.copy(actDesks = deskStat.desks, actWait = deskStat.waitTime, lastUpdated = Option(SDate.now().millisSinceEpoch))
-            val updatedCms = portStateToUpdate.crunchMinutes.updated(key, cmWithDeskStats)
-            portStateToUpdate.copy(crunchMinutes = updatedCms)
-        }
-    }
-  }
-
-  def crunchMinutesWithActDesks(queueActDesks: Map[MillisSinceEpoch, DeskStat], crunchMinutes: Map[Int, CrunchMinute], terminalName: TerminalName, queueName: QueueName): immutable.Iterable[CrunchMinute] = {
-    queueActDesks
-      .map {
-        case (millis, deskStat) =>
-          crunchMinutes
-            .values
-            .find(cm => cm.minute == millis && cm.queueName == queueName && cm.terminalName == terminalName)
-            .map(cm => cm.copy(actDesks = deskStat.desks, actWait = deskStat.waitTime))
-      }
-      .collect {
-        case Some(cm) => cm
-      }
-  }
 }

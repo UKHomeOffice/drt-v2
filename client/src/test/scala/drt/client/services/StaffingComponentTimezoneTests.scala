@@ -97,7 +97,7 @@ object StaffingComponentTimezoneTests extends TestSuite {
 
       "Given 2019-01-01 when retrieving days in month by time slot with 1 hour slots I should get back a 24x31 matrix" - {
         val startDate = SDate("2019-01-01")
-        val result: Seq[Seq[Option[SDateLike]]] = daysInMonthByTimeSlot(startDate, 60)
+        val result: Seq[Seq[Option[SDateLike]]] = daysInMonthByTimeSlot((startDate, 60))
         val expectedHeight = 24
         val expecrtedWidth = 31
 
@@ -108,7 +108,7 @@ object StaffingComponentTimezoneTests extends TestSuite {
       "Given 2019-01-01 when retrieving days in month by time slot with 1 hour slots row 1 should be midnight for " +
         "every day of the month" - {
         val startDate = SDate("2019-01-01T00:00:00Z")
-        val result: Seq[Option[SDateLike]] = daysInMonthByTimeSlot(startDate, 60).head
+        val result: Seq[Option[SDateLike]] = daysInMonthByTimeSlot((startDate, 60)).head
         val expected = List.tabulate(31)(d => Option(startDate.addDays(d)))
 
         assert(result == expected)
@@ -116,7 +116,7 @@ object StaffingComponentTimezoneTests extends TestSuite {
 
       "Given 2019-03-01 the final day in row 2 should be None (handling switch to BST)" - {
         val startDate = SDate("2019-03-01T00:00:00Z")
-        val oneAmTimeslot = daysInMonthByTimeSlot(startDate, 60)(1)
+        val oneAmTimeslot = daysInMonthByTimeSlot((startDate, 60))(1)
 
         val result: Option[SDateLike] = oneAmTimeslot(30)
         val expected = None

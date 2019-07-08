@@ -1,14 +1,13 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.PortState
+import drt.shared.CrunchApi.{ActualDeskStats, DeskStat, PortState}
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues._
 import passengersplits.parsing.VoyageManifestParser.PassengerInfoJson
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
-import services.graphstages.{ActualDeskStats, DeskStat}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -22,7 +21,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
     "Then the updated blackjack numbers should appear in the PortState" >> {
     val scheduled = "2017-01-01T00:00Z"
 
-    val flight = ArrivalGenerator.apiFlight(flightId = Option(1), schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(21))
+    val flight = ArrivalGenerator.arrival(flightId = Option(1), schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(21))
     val initialBaseArrivals = Set(flight)
     val deskStats = ActualDeskStats(Map(
       "T1" -> Map(
@@ -69,7 +68,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
 
     val scheduled = "2017-01-01T00:00Z"
 
-    val flight = ArrivalGenerator.apiFlight(flightId = Option(1), schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(21))
+    val flight = ArrivalGenerator.arrival(flightId = Option(1), schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(21))
     val initialBaseArrivals = Set(flight)
     val deskStats = ActualDeskStats(Map(
       "T1" -> Map(

@@ -1,7 +1,7 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import controllers.ArrivalGenerator.apiFlight
+import controllers.ArrivalGenerator.arrival
 import drt.shared.CrunchApi.{CrunchMinute, PortState, StaffMinute}
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypes.EeaMachineReadable
@@ -22,7 +22,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
   isolated
 
   trait Context extends Scope {
-    val arrival_v1_with_no_chox_time: Arrival = apiFlight(flightId = Option(1), iata = "BA0001",
+    val arrival_v1_with_no_chox_time: Arrival = arrival(flightId = Option(1), iata = "BA0001",
       schDt = "2017-01-01T10:25Z", origin = "JFK",
       actPax = Option(100), feedSources = Set(LiveFeedSource))
 
@@ -89,12 +89,12 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       val forecastScheduled = "2017-01-01T10:25Z"
 
       val aclFlight = Flights(List(
-        ArrivalGenerator.apiFlight(flightId = Option(1), actPax = Option(10), schDt = forecastScheduled, iata = "BA0001", feedSources = Set(AclFeedSource))
+        ArrivalGenerator.arrival(flightId = Option(1), actPax = Option(10), schDt = forecastScheduled, iata = "BA0001", feedSources = Set(AclFeedSource))
       ))
 
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlight))
 
-      val forecastArrival = apiFlight(schDt = forecastScheduled, iata = "BA0001", terminal = "T1", actPax = Option(21), feedSources = Set(ForecastFeedSource))
+      val forecastArrival = arrival(schDt = forecastScheduled, iata = "BA0001", terminal = "T1", actPax = Option(21), feedSources = Set(ForecastFeedSource))
       val forecastArrivals = ArrivalsFeedSuccess(Flights(List(forecastArrival)))
 
       offerAndWait(crunch.forecastArrivalsInput, forecastArrivals)
@@ -104,7 +104,6 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       crunch.liveTestProbe.fishForMessage(5 seconds) {
         case ps: PortState =>
           val portStateSources = ps.flights.values.flatMap(_.apiFlight.FeedSources).toSet
-          println(s"sources: $portStateSources")
           portStateSources == expected
       }
 

@@ -37,13 +37,6 @@ object Crunch {
     lazy val key: TQM = MinuteHelper.key(terminalName, queueName, minute)
   }
 
-  case class RemoveFlight(flightKey: UniqueArrival)
-
-  case class PortStateDiff(flightRemovals: Set[RemoveFlight],
-                           flightUpdates: Set[ApiFlightWithSplits],
-                           crunchMinuteUpdates: Set[CrunchMinute],
-                           staffMinuteUpdates: Set[StaffMinute])
-
   case class CrunchRequest(flights: List[ApiFlightWithSplits], crunchStart: MillisSinceEpoch)
 
   val oneMinuteMillis: MillisSinceEpoch = 60000L
@@ -132,37 +125,6 @@ object Crunch {
         case Some((e, _)) => Some((e, e.addDays(maxDays)))
       }
     } else None
-  }
-
-  def flightsDiff(oldFlightsById: Map[Int, ApiFlightWithSplits], newFlightsById: Map[Int, ApiFlightWithSplits]): (Set[RemoveFlight], Set[ApiFlightWithSplits]) = {
-    val oldIds = oldFlightsById.keys.toSet
-    val newIds = newFlightsById.keys.toSet
-    val toRemove = (oldIds -- newIds).map(idToRemove => RemoveFlight(oldFlightsById(idToRemove).uniqueArrival))
-    val toUpdate = newFlightsById.collect {
-      case (id, f) if oldFlightsById.get(id).isEmpty || !f.equals(oldFlightsById(id)) => f
-    }.toSet
-
-    (toRemove, toUpdate)
-  }
-
-  def crunchMinutesDiff(oldTqmToCm: Map[TQM, CrunchMinute], newTqmToCm: Map[TQM, CrunchMinute]): Set[CrunchMinute] = {
-    val toUpdate = newTqmToCm.collect {
-      case (k, cm) if oldTqmToCm.get(k).isEmpty || !cm.equals(oldTqmToCm(k)) => cm
-    }.toSet
-
-    toUpdate
-  }
-
-  def staffMinutesDiff(oldTqmToCm: Map[TM, StaffMinute], newTqmToCm: Map[TM, StaffMinute]): Set[StaffMinute] = {
-    val toUpdate = newTqmToCm.collect {
-      case (k, cm) if oldTqmToCm.get(k).isEmpty || !cm.equals(oldTqmToCm(k)) => cm
-    }.toSet
-
-    toUpdate
-  }
-
-  def crunchMinuteToTqmCm(cm: CrunchMinute): ((TerminalName, QueueName, MillisSinceEpoch), CrunchMinute) = {
-    Tuple2(Tuple3(cm.terminalName, cm.queueName, cm.minute), cm)
   }
 
   def applyCrunchDiff(crunchMinuteUpdates: Set[CrunchMinute], crunchMinutes: SortedMap[TQM, CrunchMinute], nowMillis: MillisSinceEpoch): SortedMap[TQM, CrunchMinute] = {
