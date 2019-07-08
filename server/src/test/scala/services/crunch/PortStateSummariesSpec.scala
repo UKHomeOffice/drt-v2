@@ -48,6 +48,35 @@ class PortStateSummariesSpec extends Specification {
 
     summary === expected
   }
+  
+  "Given a port state with crunch minutes with no deployed or actual desks & wait times " +
+    "When I ask for a summary  " +
+    "Then I should see crunch minutes witth None for all the deployed and actual desks and wait times values" >> {
+    val terminal = "T1"
+    val queues = List(Queues.EeaDesk, Queues.EGate)
+    val cmsList = for {
+      queue <- queues
+      minute <- 0 to 14
+    } yield {
+      CrunchMinute(terminal, queue, minute.toLong * 60000, minute.toDouble, minute.toDouble, minute, minute, None, None, None, None)
+    }
+
+    val cmsMap = SortedMap[TQM, CrunchMinute]() ++ cmsList.map(cm => (TQM(cm), cm)).toMap
+    val portState = CrunchApi.PortState(Map[Int, ApiFlightWithSplits](), cmsMap, SortedMap[TM, StaffMinute]())
+
+    val periods = 1
+    val periodSize = 15
+    val summary: Map[MillisSinceEpoch, Map[String, CrunchMinute]] = portState.crunchSummary(SDate(0L), periods, periodSize, terminal, queues)
+
+    val expected = Map(
+      0L -> Map(
+        Queues.EeaDesk -> CrunchMinute(terminal, Queues.EeaDesk, 0, 105, 105, 14, 14, None, None, None, None),
+        Queues.EGate -> CrunchMinute(terminal, Queues.EGate, 0, 105, 105, 14, 14, None, None, None, None)
+      )
+    )
+
+    summary === expected
+  }
 
   "Given a port state with staff minutes for 2 queues over 30 minutes " +
     "When I ask for a 4 period summary of 15 minutes each period " +

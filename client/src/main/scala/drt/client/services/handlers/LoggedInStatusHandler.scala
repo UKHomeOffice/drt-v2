@@ -24,13 +24,13 @@ class LoggedInStatusHandler[M](modelRW: ModelRW[M, RootModel]) extends LoggingAc
             })
             .recoverWith {
               case f: AjaxException if f.xhr.status == 405 || f.xhr.status == 401 =>
-                log.error(s"User is logged out, triggering page reload.")
+                log.error(s"User is logged out. Triggering page reload.")
                 Future(TriggerReload)
               case f: AjaxException =>
-                log.error(s"Http error when checking for user login status - got (${f.xhr.status}), retrying after ${PollDelay.loginCheckDelay}")
-                Future(RetryActionAfter(GetLoggedInStatus, PollDelay.loginCheckDelay))
+                log.error(s"Http error when checking for user login status. Got (${f.xhr.status}). Triggering reload.")
+                Future(TriggerReload)
               case f =>
-                log.error(s"Unexpected error when checking for user login status (${f}), retrying after ${PollDelay.loginCheckDelay}")
+                log.error(s"Unexpected error when checking for user login status ($f). Retrying after ${PollDelay.loginCheckDelay}")
                 Future(RetryActionAfter(GetLoggedInStatus, PollDelay.loginCheckDelay))
             }
         ))
