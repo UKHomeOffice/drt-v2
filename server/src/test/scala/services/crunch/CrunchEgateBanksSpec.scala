@@ -52,7 +52,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
             Queues.EGate -> ((List.fill[Int](24)(0), List.fill[Int](24)(20))))),
           slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 25)
         ),
-        optimiserMock = OptimiserR
+        optimiserMock = OptimiserLocal
       )
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
