@@ -40,7 +40,7 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
         terminalNames = Seq("T1"),
         minMaxDesksByTerminalQueue = Map("T1" -> Map(Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1)))))
       ),
-      cruncher = TryRenjin.crunch
+      optimiserMock = OptimiserLocal
     )
 
     Await.ready(crunch.baseArrivalsInput.offer(ArrivalsFeedSuccess(Flights(forecastFlights.toSeq))), 1 second)

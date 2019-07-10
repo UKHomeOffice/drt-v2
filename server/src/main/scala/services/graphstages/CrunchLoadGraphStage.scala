@@ -6,12 +6,14 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
+import services.SDate
+import services.crunch.{OptimiserLike, WorkloadToOptimise}
 import services.graphstages.Crunch._
-import services.{OptimizerConfig, OptimizerCrunchResult, SDate, TryCrunch}
 
 import scala.collection.immutable.{Map, SortedMap}
+import scala.concurrent.Await
+import scala.concurrent.duration._
 import scala.language.postfixOps
-import scala.util.{Failure, Success, Try}
 
 
 class CrunchLoadGraphStage(name: String = "",
@@ -19,7 +21,7 @@ class CrunchLoadGraphStage(name: String = "",
                            airportConfig: AirportConfig,
                            expireAfterMillis: MillisSinceEpoch,
                            now: () => SDateLike,
-                           crunch: TryCrunch,
+                           optimiser: OptimiserLike,
                            crunchPeriodStartMillis: SDateLike => SDateLike,
                            minutesToCrunch: Int)
   extends GraphStage[FlowShape[Loads, DeskRecMinutes]] {
@@ -108,21 +110,16 @@ class CrunchLoadGraphStage(name: String = "",
       val adjustedWorkMinutes = if (qn == Queues.EGate) workMinutes.map(_ / airportConfig.eGateBankSize) else workMinutes
       val minuteMillis: Seq[MillisSinceEpoch] = firstMinute until lastMinute by 60000
       val (minDesks, maxDesks) = minMaxDesksForQueue(minuteMillis, tn, qn)
-      val start = SDate.now()
-      val triedResult: Try[OptimizerCrunchResult] = crunch(adjustedWorkMinutes, minDesks, maxDesks, OptimizerConfig(sla))
-      triedResult match {
-        case Success(OptimizerCrunchResult(desks, waits)) =>
-          log.info(s"Optimizer for $qn Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
-          SortedMap[TQM, DeskRecMinute]() ++ minuteMillis.zipWithIndex.map {
-            case (minute, idx) =>
-              val wl = workMinutes(idx)
-              val pl = paxMinutes(idx)
-              val drm = DeskRecMinute(tn, qn, minute, pl, wl, desks(idx), waits(idx))
-              (drm.key, drm)
-          }
-        case Failure(t) =>
-          log.warn(s"failed to crunch: $t")
-          SortedMap[TQM, DeskRecMinute]()
+      val description = s"${airportConfig.portCode}/$tn/$qn/${SDate(firstMinute).toISOString()}"
+      val workloadToOptimise = WorkloadToOptimise(adjustedWorkMinutes, minDesks, maxDesks, sla, description)
+      val desksAndWaits = Await.result(optimiser.requestDesksAndWaits(workloadToOptimise), 120 seconds)
+
+      SortedMap[TQM, DeskRecMinute]() ++ minuteMillis.zipWithIndex.map {
+        case (minute, idx) =>
+          val wl = workMinutes(idx)
+          val pl = paxMinutes(idx)
+          val drm = DeskRecMinute(tn, qn, minute, pl, wl, desksAndWaits.desks(idx), desksAndWaits.waits(idx))
+          (drm.key, drm)
       }
     }
 
@@ -229,4 +226,8 @@ case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateMinutes 
     ))
     .getOrElse(CrunchMinute(updatedDrm))
     .copy(lastUpdated = Option(now))
+}
+
+case class OptimiserService(host: String, port: String) {
+  val uri: String = s"$host:$port"
 }

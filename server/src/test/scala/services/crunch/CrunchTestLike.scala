@@ -22,8 +22,9 @@ import services.graphstages.Crunch._
 import services.graphstages.{DummySplitsPredictor, TestableCrunchLoadStage}
 import slickdb.Tables
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.implicitConversions
 
 
@@ -147,7 +148,7 @@ class CrunchTestLike
                      initialFixedPoints: FixedPointAssignments = FixedPointAssignments.empty,
                      initialStaffMovements: Seq[StaffMovement] = Seq(),
                      logLabel: String = "",
-                     cruncher: TryCrunch = TestableCrunchLoadStage.mockCrunch,
+                     optimiserMock: OptimiserLike = defaultOptimiserMock,
                      simulator: Simulator = TestableCrunchLoadStage.mockSimulator,
                      aggregatedArrivalsActor: ActorRef = testProbe("aggregated-arrivals").ref,
                      useLegacyManifests: Boolean = false,
@@ -204,7 +205,7 @@ class CrunchTestLike
       manifestsHistoricSource = manifestsSource,
       voyageManifestsActor = manifestsActor,
       voyageManifestsRequestActor = manifestsRequestActor,
-      cruncher = cruncher,
+      optimiser = optimiserMock,
       simulator = simulator,
       initialPortState = initialPortState,
       initialBaseArrivals = initialBaseArrivals,
@@ -240,6 +241,8 @@ class CrunchTestLike
       aggregatedArrivalsActor
     )
   }
+
+  def defaultOptimiserMock: OptimiserMock = OptimiserMock((w2d: WorkloadToOptimise) => DesksAndWaits(w2d.minDesks, List.fill[Int](w2d.workloads.length)(w2d.sla)))
 
   def paxLoadsFromPortState(portState: PortState, minsToTake: Int, startFromMinuteIdx: Int = 0): Map[TerminalName, Map[QueueName, List[Double]]] = portState
     .crunchMinutes
@@ -348,5 +351,11 @@ class CrunchTestLike
         offerResult
     }
   }
+}
+
+case class OptimiserMock(wlToDw: WorkloadToOptimise => DesksAndWaits) extends OptimiserLike {
+  override def uri: String = ""
+
+  override def requestDesksAndWaits(workloadToOptimise: WorkloadToOptimise): Future[DesksAndWaits] = Future(wlToDw(workloadToOptimise))
 }
 

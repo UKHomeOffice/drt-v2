@@ -8,7 +8,7 @@ import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy}
 import akka.util.Timeout
 import com.amazonaws.auth.AWSCredentials
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import controllers.{Deskstats, PaxFlow, UserRoleProviderLike}
 import drt.chroma._
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
@@ -37,7 +37,7 @@ import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedRes
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services.SplitsProvider.SplitProvider
 import services._
-import services.crunch.{CrunchProps, CrunchSystem}
+import services.crunch._
 import services.graphstages.Crunch.{oneDayMillis, oneMinuteMillis}
 import services.graphstages._
 import services.prediction.SparkSplitsPredictorFactory
@@ -81,6 +81,16 @@ object PostgresTables extends {
 } with Tables
 
 case class DrtConfigParameters(config: Configuration) {
+  val cfg: Config = ConfigFactory.load
+
+  val optimiserService: OptimiserLike = if (cfg.getBoolean("crunch.optimiser-service.use-local")) {
+    OptimiserLocal
+  } else {
+    val optimiserServiceHost: String = cfg.getString("crunch.optimiser-service.host")
+    val optimiserServicePort: String = cfg.getString("crunch.optimiser-service.port")
+    Optimiser(OptimiserService(optimiserServiceHost, optimiserServicePort).uri)
+  }
+
   val maxDaysToCrunch: Int = config.getOptional[Int]("crunch.forecast.max_days").getOrElse(180)
   val aclPollMinutes: Int = config.getOptional[Int]("crunch.forecast.poll_minutes").getOrElse(120)
   val snapshotIntervalVm: Int = config.getOptional[Int]("persistence.snapshot-interval.voyage-manifest").getOrElse(1000)
@@ -95,9 +105,9 @@ case class DrtConfigParameters(config: Configuration) {
 
     override def getAWSSecretKey: TerminalName = config.getOptional[String]("aws.credentials.secret_key").getOrElse("")
   }
-  val ftpServer: String = ConfigFactory.load.getString("acl.host")
-  val username: String = ConfigFactory.load.getString("acl.username")
-  val path: String = ConfigFactory.load.getString("acl.keypath")
+  val ftpServer: String = cfg.getString("acl.host")
+  val username: String = cfg.getString("acl.username")
+  val path: String = cfg.getString("acl.keypath")
   val refreshArrivalsOnStart: Boolean = config.getOptional[Boolean]("crunch.refresh-arrivals-on-start").getOrElse(false)
   val recrunchOnStart: Boolean = config.getOptional[Boolean]("crunch.recrunch-on-start").getOrElse(false)
   val resetRegisteredArrivalOnStart: Boolean = config.getOptional[Boolean]("crunch.manifests.reset-registered-arrivals-on-start").getOrElse(false)
@@ -328,7 +338,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       manifestsHistoricSource = voyageManifestsHistoricSource,
       voyageManifestsActor = voyageManifestsActor,
       voyageManifestsRequestActor = voyageManifestsRequestActor,
-      cruncher = TryRenjin.crunch,
+      optimiser = params.optimiserService,
       simulator = TryRenjin.runSimulationOfWork,
       initialPortState = initialPortState,
       initialBaseArrivals = initialBaseArrivals.getOrElse(Set()),

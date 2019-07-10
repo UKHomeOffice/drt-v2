@@ -53,7 +53,7 @@ case class CrunchProps[FR](logLabel: String = "",
                            manifestsHistoricSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]],
                            voyageManifestsActor: ActorRef,
                            voyageManifestsRequestActor: ActorRef,
-                           cruncher: TryCrunch,
+                           optimiser: OptimiserLike,
                            simulator: Simulator,
                            initialPortState: Option[PortState] = None,
                            initialBaseArrivals: Set[Arrival] = Set(),
@@ -167,7 +167,7 @@ object CrunchSystem {
       airportConfig = props.airportConfig,
       expireAfterMillis = props.expireAfterMillis,
       now = props.now,
-      crunch = props.cruncher,
+      optimiser = props.optimiser,
       crunchPeriodStartMillis = crunchStartDateProvider,
       minutesToCrunch = props.minutesToCrunch)
 
