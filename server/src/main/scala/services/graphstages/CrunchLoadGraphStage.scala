@@ -229,5 +229,5 @@ case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateMinutes 
 }
 
 case class OptimiserService(host: String, port: String) {
-  val uri: String = s"http://$host:$port"
+  val uri: String = s"http://$host:$port/optimise"
 }
