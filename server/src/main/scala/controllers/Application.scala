@@ -89,13 +89,13 @@ trait AirportConfiguration {
 
 trait AirportConfProvider extends AirportConfiguration {
   val portCode: String = ConfigFactory.load().getString("portcode").toUpperCase
-  val config: Configuration
+  val configuration: Configuration
 
-  def useStaffingInput: Boolean = config.getOptional[String]("feature-flags.use-v2-staff-input").isDefined
+  def useStaffingInput: Boolean = configuration.getOptional[String]("feature-flags.use-v2-staff-input").isDefined
 
-  def contactEmail: Option[String] = config.getOptional[String]("contact-email")
+  def contactEmail: Option[String] = configuration.getOptional[String]("contact-email")
 
-  def oohPhone: Option[String] = config.getOptional[String]("ooh-phone")
+  def oohPhone: Option[String] = configuration.getOptional[String]("ooh-phone")
 
   def getPortConfFromEnvVar: AirportConfig = AirportConfigs.confByPort(portCode)
 
@@ -148,7 +148,7 @@ trait UserRoleProviderLike {
 }
 
 @Singleton
-class Application @Inject()(implicit val config: Configuration,
+class Application @Inject()(implicit val configuration: Configuration,
                             implicit val mat: Materializer,
                             env: Environment,
                             val system: ActorSystem,
@@ -160,17 +160,17 @@ class Application @Inject()(implicit val config: Configuration,
     with ProdPassengerSplitProviders
     with ImplicitTimeoutProvider {
 
-  val googleTrackingCode: String = config.get[String]("googleTrackingCode")
+  val googleTrackingCode: String = configuration.get[String]("googleTrackingCode")
 
-  val ctrl: DrtSystemInterface = config.getOptional[String]("env") match {
+  val ctrl: DrtSystemInterface = configuration.getOptional[String]("env") match {
     case Some("test") =>
-      new TestDrtSystem(system, config, getPortConfFromEnvVar)
+      new TestDrtSystem(system, configuration, getPortConfFromEnvVar)
     case _ =>
-      DrtSystem(system, config, getPortConfFromEnvVar)
+      DrtSystem(system, configuration, getPortConfFromEnvVar)
   }
   ctrl.run()
 
-  val virusScannerUrl: String = config.get[String]("virus-scanner-url")
+  val virusScannerUrl: String = configuration.get[String]("virus-scanner-url")
 
   val virusScanner: VirusScanner = VirusScanner(VirusScanService(virusScannerUrl))
 
@@ -216,7 +216,7 @@ class Application @Inject()(implicit val config: Configuration,
 
       def actorSystem: ActorSystem = system
 
-      def getLoggedInUser(): LoggedInUser = ctrl.getLoggedInUser(config, headers, session)
+      def getLoggedInUser(): LoggedInUser = ctrl.getLoggedInUser(configuration, headers, session)
 
       def forecastWeekSummary(startDay: MillisSinceEpoch,
                               terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]] = {
@@ -276,7 +276,7 @@ class Application @Inject()(implicit val config: Configuration,
 
       def keyCloakClient: KeyCloakClient with ProdSendAndReceive = {
         val token = headers.get("X-Auth-Token").getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
-        val keyCloakUrl = config.getOptional[String]("key-cloak.url").getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
+        val keyCloakUrl = configuration.getOptional[String]("key-cloak.url").getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
         new KeyCloakClient(token, keyCloakUrl, actorSystem) with ProdSendAndReceive
       }
 
@@ -331,7 +331,7 @@ class Application @Inject()(implicit val config: Configuration,
 
       override def forecastCrunchStateActor: AskableActorRef = ctrl.forecastCrunchStateActor
 
-      def getShowAlertModalDialog(): Boolean = config
+      def getShowAlertModalDialog(): Boolean = configuration
         .getOptional[Boolean]("feature-flags.display-modal-alert")
         .getOrElse(false)
 
@@ -379,12 +379,12 @@ class Application @Inject()(implicit val config: Configuration,
   def isHistoricDate(day: MillisSinceEpoch): Boolean = day < getLocalLastMidnight(SDate.now()).millisSinceEpoch
 
   def index = Action { request =>
-    val user = ctrl.getLoggedInUser(config, request.headers, request.session)
+    val user = ctrl.getLoggedInUser(configuration, request.headers, request.session)
     Ok(views.html.index("DRT - BorderForce", portCode, googleTrackingCode, user.id))
   }
 
   def getLoggedInUser(): Action[AnyContent] = Action { request =>
-    val user = ctrl.getLoggedInUser(config, request.headers, request.session)
+    val user = ctrl.getLoggedInUser(configuration, request.headers, request.session)
 
     implicit val userWrites: Writes[LoggedInUser] = new Writes[LoggedInUser] {
       def writes(user: LoggedInUser): JsObject = Json.obj(
@@ -434,7 +434,7 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   def getApplicationVersion: Action[AnyContent] = Action { _ => {
-    val shouldReload = config.getOptional[Boolean]("feature-flags.version-requires-reload").getOrElse(false)
+    val shouldReload = configuration.getOptional[Boolean]("feature-flags.version-requires-reload").getOrElse(false)
     Ok(write(BuildVersion(BuildInfo.version.toString, requiresReload = shouldReload)))
   }
   }
@@ -513,7 +513,7 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   def getShouldReload: Action[AnyContent] = Action { _ =>
-    val shouldRedirect: Boolean = config.getOptional[Boolean]("feature-flags.acp-redirect").getOrElse(false)
+    val shouldRedirect: Boolean = configuration.getOptional[Boolean]("feature-flags.acp-redirect").getOrElse(false)
     Ok(Json.obj("reload" -> shouldRedirect))
   }
 
@@ -568,9 +568,9 @@ class Application @Inject()(implicit val config: Configuration,
       request.body.get(key).map(_.head)
     }
 
-    val tokenUrlOption = config.getOptional[String]("key-cloak.token_url")
-    val clientIdOption = config.getOptional[String]("key-cloak.client_id")
-    val clientSecretOption = config.getOptional[String]("key-cloak.client_secret")
+    val tokenUrlOption = configuration.getOptional[String]("key-cloak.token_url")
+    val clientIdOption = configuration.getOptional[String]("key-cloak.client_id")
+    val clientSecretOption = configuration.getOptional[String]("key-cloak.client_secret")
     val usernameOption = postStringValOrElse("username")
     val passwordOption = postStringValOrElse("password")
     import api.KeyCloakAuthTokenParserProtocol._
@@ -632,7 +632,7 @@ class Application @Inject()(implicit val config: Configuration,
 
   def keyCloakClient(headers: Headers): KeyCloakClient with ProdSendAndReceive = {
     val token = headers.get("X-Auth-Token").getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
-    val keyCloakUrl = config.getOptional[String]("key-cloak.url").getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
+    val keyCloakUrl = configuration.getOptional[String]("key-cloak.url").getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
     new KeyCloakClient(token, keyCloakUrl, system) with ProdSendAndReceive
   }
 
@@ -838,7 +838,7 @@ class Application @Inject()(implicit val config: Configuration,
         val portStateForPointInTime = loadBestPortStateForPointInTime(pit.millisSinceEpoch)
         flightsForCSVExportWithinRange(terminalName, pit, startHour, endHour, portStateForPointInTime).map {
           case Some(csvFlights) =>
-            val csvData = if (ctrl.getRoles(config, request.headers, request.session).contains(ApiView)) {
+            val csvData = if (ctrl.getRoles(configuration, request.headers, request.session).contains(ApiView)) {
               log.info(s"Sending Flights CSV with API data")
               CSVData.flightsWithSplitsWithAPIActualsToCSVWithHeadings(csvFlights)
             }
@@ -934,10 +934,6 @@ class Application @Inject()(implicit val config: Configuration,
       f"${endPit.getFullYear()}-${endPit.getMonth()}%02d-${endPit.getDate()}"
   }
 
-  def isInRangeOnDay(startDateTime: SDateLike, endDateTime: SDateLike)(minute: SDateLike): Boolean =
-    startDateTime.millisSinceEpoch <= minute.millisSinceEpoch && minute.millisSinceEpoch <= endDateTime.millisSinceEpoch
-
-
   def flightsForCSVExportWithinRange(terminalName: TerminalName,
                                      pit: SDateLike,
                                      startHour: Int,
@@ -947,7 +943,7 @@ class Application @Inject()(implicit val config: Configuration,
 
     val startDateTime = getLocalLastMidnight(pit).addHours(startHour)
     val endDateTime = getLocalLastMidnight(pit).addHours(endHour)
-    val isInRange = isInRangeOnDay(startDateTime, endDateTime) _
+    val isInRange = Crunch.isInRangeOnDay(startDateTime, endDateTime) _
 
     portStateFuture.map {
       case Right(Some(PortState(fs, _, _))) =>
@@ -983,10 +979,10 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   def authByRole[A](allowedRole: Role)(action: Action[A]): Action[A] = Action.async(action.parser) { request =>
-    val loggedInUser: LoggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
+    val loggedInUser: LoggedInUser = ctrl.getLoggedInUser(configuration, request.headers, request.session)
     log.debug(s"${loggedInUser.roles}, allowed role $allowedRole")
     val enableRoleBasedAccessRestrictions =
-      config.getOptional[Boolean]("feature-flags.role-based-access-restrictions").getOrElse(false)
+      configuration.getOptional[Boolean]("feature-flags.role-based-access-restrictions").getOrElse(false)
     val preventAccess = !loggedInUser.hasRole(allowedRole) && enableRoleBasedAccessRestrictions
 
     if (!preventAccess) {
@@ -1004,11 +1000,11 @@ class Application @Inject()(implicit val config: Configuration,
 
   def auth[A](action: Action[A]): Action[A] = Action.async(action.parser) { request =>
 
-    val loggedInUser: LoggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
+    val loggedInUser: LoggedInUser = ctrl.getLoggedInUser(configuration, request.headers, request.session)
     val allowedRole = airportConfig.role
 
     val enablePortAccessRestrictions =
-      config.getOptional[Boolean]("feature-flags.port-access-restrictions").getOrElse(false)
+      configuration.getOptional[Boolean]("feature-flags.port-access-restrictions").getOrElse(false)
 
     if (!loggedInUser.hasRole(allowedRole))
       log.warning(

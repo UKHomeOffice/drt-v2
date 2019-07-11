@@ -29,7 +29,7 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 @Singleton
-class TestController @Inject()(implicit val config: Configuration,
+class TestController @Inject()(implicit val configuration: Configuration,
                                implicit val mat: Materializer,
                                env: Environment,
                                val system: ActorSystem,

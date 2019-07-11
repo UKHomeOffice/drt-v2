@@ -3,23 +3,22 @@ package services.crunch
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
-import akka.stream.{ActorMaterializer, Materializer}
+import akka.stream.Materializer
 import org.slf4j.{Logger, LoggerFactory}
 import services.{OptimizerConfig, TryRenjin}
-
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
-import scala.util.{Failure, Success, Try}
 import upickle.default.{macroRW, ReadWriter => RW}
 
+import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
+import scala.util.{Failure, Success, Try}
 
 trait OptimiserLike {
   def uri: String
   def requestDesksAndWaits(workloadToOptimise: WorkloadToOptimise): Future[DesksAndWaits]
 }
 
-case class Optimiser(uri: String) extends OptimiserLike {
+case class Optimiser(uri: String)(implicit val system: ActorSystem, val materializer: Materializer, val ec: ExecutionContext) extends OptimiserLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   import upickle.default.{write, read => rd}
@@ -30,9 +29,6 @@ case class Optimiser(uri: String) extends OptimiserLike {
       uri = Uri(uri),
       entity = HttpEntity(ContentTypes.`application/json`, write(workloadToOptimise))
     )
-    implicit val actorSystem: ActorSystem = ActorSystem("optimisation-actor-system")
-    implicit val materializer: Materializer = ActorMaterializer()
-    import scala.concurrent.ExecutionContext.Implicits.global
     val responseFuture = Http()
       .singleRequest(request)
       .map {
