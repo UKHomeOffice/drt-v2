@@ -91,9 +91,9 @@ class WorkloadGraphStage(name: String = "",
         val latestDiff = diffFromTQMs(affectedTQMs)
         log.info(s"Got latestDiff")
 
-        loadMinutes = mergeLoadMinutes(latestDiff, loadMinutes)
+        loadMinutes = loadMinutes ++ latestDiff
         log.info(s"Merged load minutes")
-        updatedLoadsToPush = purgeExpired(mergeLoadMinutes(latestDiff, updatedLoadsToPush), now, expireAfterMillis.toInt)
+        updatedLoadsToPush = purgeExpired(updatedLoadsToPush ++ latestDiff, now, expireAfterMillis.toInt)
         log.info(s"${updatedLoadsToPush.size} load minutes to push (${updatedLoadsToPush.values.count(_.paxLoad == 0d)} zero pax minutes)")
 
         pushStateIfReady()
@@ -125,10 +125,6 @@ class WorkloadGraphStage(name: String = "",
         case (soFar, (tqm, newLm)) => soFar.updated(tqm, soFar.getOrElse(tqm, Set()) ++ newLm)
       }
       purgeExpired(withNewSplitMinutes, now, expireAfterMillis.toInt)
-    }
-
-    def mergeLoadMinutes(updatedLoads: Map[TQM, LoadMinute], existingLoads: SortedMap[TQM, LoadMinute]): SortedMap[TQM, LoadMinute] = updatedLoads.foldLeft(existingLoads) {
-      case (soFar, (key, newLoadMinute)) => soFar.updated(key, newLoadMinute)
     }
 
     def loadDiff(updatedLoads: Map[TQM, LoadMinute], existingLoads: Map[TQM, LoadMinute]): Map[TQM, LoadMinute] = {

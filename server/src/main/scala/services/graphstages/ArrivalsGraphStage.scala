@@ -106,10 +106,10 @@ class ArrivalsGraphStage(name: String = "",
       log.info(s"${filteredArrivals.size} arrivals after filtering")
       sourceType match {
         case LiveArrivals =>
-          liveArrivals = updateArrivalsSource(liveArrivals, filteredArrivals)
+          liveArrivals = liveArrivals ++ filteredArrivals
           toPush = mergeUpdatesFromKeys(liveArrivals.keys)
         case ForecastArrivals =>
-          forecastArrivals = updateArrivalsSource(forecastArrivals, filteredArrivals)
+          forecastArrivals = forecastArrivals ++ filteredArrivals
           toPush = mergeUpdatesFromKeys(forecastArrivals.keys)
         case BaseArrivals =>
           baseArrivals = filteredArrivals
@@ -118,25 +118,16 @@ class ArrivalsGraphStage(name: String = "",
       pushIfAvailable(toPush, outArrivalsDiff)
     }
 
-    def updateArrivalsSource(existingArrivals: SortedMap[ArrivalKey, Arrival], newArrivals: SortedMap[ArrivalKey, Arrival]): SortedMap[ArrivalKey, Arrival] = newArrivals.foldLeft(existingArrivals) {
-      case (arrivalsSoFar, (key, newArrival)) =>
-        if (!arrivalsSoFar.contains(key) || !arrivalsSoFar(key).equals(newArrival)) arrivalsSoFar.updated(key, newArrival)
-        else arrivalsSoFar
-    }
-
-    def mergeUpdatesFromAllSources(): Option[ArrivalsDiff] = maybeDiffFromAllSources().map(diff => {
-      merged = diff.toUpdate.foldLeft(merged -- diff.toRemove.map(ArrivalKey(_))) {
-        case (mergedSoFar, (ak, updatedArrival)) => mergedSoFar.updated(ak, updatedArrival)
-      }
+    def mergeUpdatesFromAllSources(): Option[ArrivalsDiff] = maybeDiffFromAllSources().map { diff =>
+      val minusRemovals = merged -- diff.toRemove.map(ArrivalKey(_))
+      merged = minusRemovals ++ diff.toUpdate
       diff
-    })
+    }
 
     def mergeUpdatesFromKeys(arrivalKeys: Iterable[ArrivalKey]): Option[ArrivalsDiff] = {
       val updatedArrivals = getUpdatesFromNonBaseArrivals(arrivalKeys)
 
-      merged = updatedArrivals.foldLeft(merged) {
-        case (mergedSoFar, (ak, updatedArrival)) => mergedSoFar.updated(ak, updatedArrival)
-      }
+      merged = merged ++ updatedArrivals
 
       updateDiffToPush(updatedArrivals)
     }
@@ -145,9 +136,7 @@ class ArrivalsGraphStage(name: String = "",
       toPush match {
         case None => Option(ArrivalsDiff(updatedLiveArrivals, Set()))
         case Some(diff) =>
-          val newToUpdate = updatedLiveArrivals.foldLeft(diff.toUpdate) {
-            case (toUpdateSoFar, (ak, arrival)) => toUpdateSoFar.updated(ak, arrival)
-          }
+          val newToUpdate = diff.toUpdate ++ updatedLiveArrivals
           Option(diff.copy(toUpdate = newToUpdate))
       }
     }
