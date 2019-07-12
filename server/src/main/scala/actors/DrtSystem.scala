@@ -116,22 +116,19 @@ case class DrtConfigParameters(config: Configuration) {
     case _ => None
   }
 
-  val maybeBhxSoapEndPointUrl: Option[String] = config.get[String]("feeds.bhx.soap.endPointUrl") match {
-    case endPointUrl if endPointUrl.nonEmpty => Option(endPointUrl)
-    case _ => None
-  }
+  val bhxSoapEndPointUrl: String = config.get[String]("feeds.bhx.soap.endPointUrl")
 
-  val maybeB5JStartDate: Option[String] = Option("2019-06-01")
+  val b5JStartDate: Option[String] = Option("2019-06-01")
 
-  val maybeLtnLiveFeedUrl: String = config.get[String]("feeds.ltn.live.url")
-  val maybeLtnLiveFeedUsername: String = config.get[String]("feeds.ltn.live.username")
-  val maybeLtnLiveFeedPassword: String = config.get[String]("feeds.ltn.live.password")
-  val maybeLtnLiveFeedToken: String = config.get[String]("feeds.ltn.live.token")
-  val maybeLtnLiveFeedTimeZone: String = config.get[String]("feeds.ltn.live.timezone")
+  val ltnLiveFeedUrl: String = config.get[String]("feeds.ltn.live.url")
+  val ltnLiveFeedUsername: String = config.get[String]("feeds.ltn.live.username")
+  val ltnLiveFeedPassword: String = config.get[String]("feeds.ltn.live.password")
+  val ltnLiveFeedToken: String = config.get[String]("feeds.ltn.live.token")
+  val ltnLiveFeedTimeZone: String = config.get[String]("feeds.ltn.live.timezone")
 
-  val maybeLGWNamespace: String = config.get[String]("feeds.lgw.live.azure.namespace")
-  val maybeLGWSASToKey: String = config.get[String]("feeds.lgw.live.azure.sas_to_Key")
-  val maybeLGWServiceBusUri: String = config.get[String]("feeds.lgw.live.azure.service_bus_uri")
+  val lgwNamespace: String = config.get[String]("feeds.lgw.live.azure.namespace")
+  val lgwSasToKey: String = config.get[String]("feeds.lgw.live.azure.sas_to_Key")
+  val lgwServiceBusUri: String = config.get[String]("feeds.lgw.live.azure.service_bus_uri")
 }
 
 case class SubscribeRequestQueue(subscriber: SourceQueueWithComplete[List[Arrival]])
@@ -333,7 +330,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
       useLegacyManifests = params.useLegacyManifests,
       splitsPredictorStage = splitsPredictorStage,
-      b5JStartDate = params.maybeB5JStartDate.map(SDate(_)).getOrElse(SDate("2019-06-01")),
+      b5JStartDate = params.b5JStartDate.map(SDate(_)).getOrElse(SDate("2019-06-01")),
       manifestsLiveSource = voyageManifestsLiveSource,
       manifestsHistoricSource = voyageManifestsHistoricSource,
       voyageManifestsActor = voyageManifestsActor,
@@ -421,17 +418,17 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         LHRFlightFeed(contentProvider)
       case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
       case "LGW" =>
-        val lgwNamespace = params.maybeLGWNamespace
-        val lgwSasToKey = params.maybeLGWSASToKey
-        val lgwServiceBusUri = params.maybeLGWServiceBusUri
+        val lgwNamespace = params.lgwNamespace
+        val lgwSasToKey = params.lgwSasToKey
+        val lgwServiceBusUri = params.lgwServiceBusUri
         LGWFeed(lgwNamespace, lgwSasToKey, lgwServiceBusUri)(system).source()
-      case "BHX" => BHXLiveFeed(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX live feed URL")))
+      case "BHX" => BHXLiveFeed(params.bhxSoapEndPointUrl, 60 seconds)
       case "LTN" =>
-        val url = params.maybeLtnLiveFeedUrl
-        val username = params.maybeLtnLiveFeedUsername
-        val password = params.maybeLtnLiveFeedPassword
-        val token = params.maybeLtnLiveFeedToken
-        val timeZone = DateTimeZone.forID(params.maybeLtnLiveFeedTimeZone)
+        val url = params.ltnLiveFeedUrl
+        val username = params.ltnLiveFeedUsername
+        val password = params.ltnLiveFeedPassword
+        val token = params.ltnLiveFeedToken
+        val timeZone = DateTimeZone.forID(params.ltnLiveFeedTimeZone)
         LtnLiveFeed(url, token, username, password, timeZone).tickingSource
       case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
     }
@@ -442,7 +439,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     val forecastNoOp = Source.tick[ArrivalsFeedResponse](100 days, 100 days, ArrivalsFeedSuccess(Flights(Seq()), SDate.now()))
     val feed = portCode match {
       case "LHR" => createForecastLHRFeed()
-      case "BHX" => BHXForecastFeed(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")))
+      case "BHX" => BHXForecastFeed(params.bhxSoapEndPointUrl, 60 minutes)
       case "LGW" => LGWForecastFeed()
       case _ =>
         system.log.info(s"No Forecast Feed defined.")

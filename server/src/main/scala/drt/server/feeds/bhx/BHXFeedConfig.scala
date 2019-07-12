@@ -11,7 +11,6 @@ trait BHXFeedConfig {
   val log: Logger
   val connectionTimeout = 25000
   val receiveTimeout = 30000
-  val pollFrequency: FiniteDuration = 30 seconds
   val initialDelayImmediately: FiniteDuration = 1 milliseconds
 
   def serviceSoap(endPointUrl: String): FlightInformationSoap = {

@@ -2,11 +2,12 @@ package drt.chroma
 
 import akka.stream._
 import akka.stream.stage._
-import drt.shared.Arrival
-import drt.shared.FlightsApi.Flights
+import drt.shared.{Arrival, ArrivalKey}
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
+
+import scala.collection.immutable.SortedMap
 
 final class ArrivalsDiffingStage(initialKnownArrivals: Seq[Arrival]) extends GraphStage[FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse]] {
   val in: Inlet[ArrivalsFeedResponse] = Inlet[ArrivalsFeedResponse]("DiffingStage.in")
@@ -17,11 +18,11 @@ final class ArrivalsDiffingStage(initialKnownArrivals: Seq[Arrival]) extends Gra
   override val shape: FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse] = FlowShape.of(in, out)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    private var knownArrivals: Seq[Arrival] = initialKnownArrivals
+    private var knownArrivals: SortedMap[ArrivalKey, Arrival] = SortedMap[ArrivalKey, Arrival]() ++ initialKnownArrivals.map(a => (ArrivalKey(a), a))
     private var maybeResponseToPush: Option[ArrivalsFeedResponse] = None
 
     override def preStart(): Unit = {
-      log.info(s"Started with ${knownArrivals.length} known arrivals")
+      log.info(s"Started with ${knownArrivals.size} known arrivals")
       super.preStart()
     }
 
@@ -53,36 +54,29 @@ final class ArrivalsDiffingStage(initialKnownArrivals: Seq[Arrival]) extends Gra
       maybeResponseToPush = None
     }
 
-    def processFeedResponse(ArrivalsFeedResponse: ArrivalsFeedResponse): Option[ArrivalsFeedResponse] = {
-      ArrivalsFeedResponse match {
-        case afs@ArrivalsFeedSuccess(latestArrivals, _) =>
-          val newUpdates = diff(knownArrivals, latestArrivals.flights)
-          log.info(s"Got ${newUpdates.length} new arrival updates")
-          knownArrivals = latestArrivals.flights
-          Option(afs.copy(arrivals = latestArrivals.copy(flights = newUpdates)))
-        case aff@ArrivalsFeedFailure(_, _) =>
-          log.info("Passing ArrivalsFeedFailure through. Nothing to diff. No updates to knownArrivals")
-          Option(aff)
-        case unexpected =>
-          log.error(s"Unexpected ArrivalsFeedResponse: ${unexpected.getClass}")
-          Option.empty[ArrivalsFeedResponse]
+    def processFeedResponse(ArrivalsFeedResponse: ArrivalsFeedResponse): Option[ArrivalsFeedResponse] = ArrivalsFeedResponse match {
+      case afs@ArrivalsFeedSuccess(latestArrivals, _) =>
+        val incomingArrivals = SortedMap[ArrivalKey, Arrival]() ++ latestArrivals.flights.map(a => (ArrivalKey(a), a))
+        val newUpdates = diff(knownArrivals, incomingArrivals)
+        log.info(s"Got ${newUpdates.size} new arrival updates")
+        knownArrivals = incomingArrivals
+        Option(afs.copy(arrivals = latestArrivals.copy(flights = newUpdates.values.toSeq)))
+      case aff@ArrivalsFeedFailure(_, _) =>
+        log.info("Passing ArrivalsFeedFailure through. Nothing to diff. No updates to knownArrivals")
+        Option(aff)
+      case unexpected =>
+        log.error(s"Unexpected ArrivalsFeedResponse: ${unexpected.getClass}")
+        None
+    }
+
+    def diff(existingArrivals: SortedMap[ArrivalKey, Arrival], newArrivals: SortedMap[ArrivalKey, Arrival]): SortedMap[ArrivalKey, Arrival] = newArrivals
+      .foldLeft(SortedMap[ArrivalKey, Arrival]()) {
+        case (soFar, (key, arrival)) => existingArrivals.get(key) match {
+          case None => soFar.updated(key, arrival)
+          case Some(existingArrival) if existingArrival == arrival => soFar
+          case Some(existingArrival) if existingArrival.ActualChox.isDefined && arrival.ActualChox == existingArrival.ActualChox => soFar
+          case _ => soFar.updated(key, arrival)
+        }
       }
-    }
-
-    def diff(existingArrivalsSeq: Seq[Arrival], newArrivalsSeq: Seq[Arrival]): Seq[Arrival] = {
-      val existingArrival = existingArrivalsSeq.toSet
-
-      def findTheExistingArrival(newArrival: Arrival): Option[Arrival] = existingArrival.find(newArrival.uniqueId == _.uniqueId)
-
-      def isChoxTimeTheSameInBothSets(inInitialSet: Arrival, inNewSet: Arrival): Boolean =
-        inInitialSet.ActualChox.exists(inNewSet.ActualChox.contains)
-
-      def removeArrivalsWithAnUnchangedChoxTime(newArrivalsSet: Set[Arrival]): Set[Arrival] =
-        newArrivalsSet.filterNot(newArrival => findTheExistingArrival(newArrival).exists(existingArrival => isChoxTimeTheSameInBothSets(existingArrival, newArrival)))
-
-      val newArrivals = removeArrivalsWithAnUnchangedChoxTime(newArrivalsSeq.toSet)
-
-      (newArrivals -- existingArrival).toList
-    }
   }
 }

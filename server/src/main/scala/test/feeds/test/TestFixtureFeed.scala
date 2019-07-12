@@ -31,7 +31,7 @@ object TestFixtureFeed {
 
     val pollFrequency = 2 seconds
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
-    val tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed).map(_ => {
+    val tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed).throttle(1, 2 seconds).map(_ => {
       val eventualArrivals = askableTestArrivalActor.ask(GetArrivals).map {
         case Arrivals(arrivals) =>
           log.debug(s"Got these arrivals from the actor: $arrivals")
