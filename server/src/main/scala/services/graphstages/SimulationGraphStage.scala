@@ -485,14 +485,17 @@ case class SimulationMinutes(minutes: Seq[SimulationMinute]) extends PortStateMi
       case Some(ps) => ps
     }
 
-    val (updatedCrunchMinutes, minutesDiff) = minutes
-      .foldLeft((portState.crunchMinutes, List[CrunchMinute]())) {
-        case ((minutesSoFar, updatesSoFar), updatedCm) =>
-          val maybeMinute: Option[CrunchMinute] = minutesSoFar.get(updatedCm.key)
-          val mergedCm: CrunchMinute = mergeMinute(maybeMinute, updatedCm, now)
-          (minutesSoFar.updated(updatedCm.key, mergedCm), mergedCm :: updatesSoFar)
-      }
-    (portState.copy(crunchMinutes = updatedCrunchMinutes), PortStateDiff(Seq(), Seq(), minutesDiff, Seq()))
+    val minutesDiff = minutes.foldLeft(List[(TQM, CrunchMinute)]()) {
+      case (updatesSoFar, updatedCm) =>
+        val maybeMinute: Option[CrunchMinute] = portState.crunchMinutes.get(updatedCm.key)
+        val mergedCm: CrunchMinute = mergeMinute(maybeMinute, updatedCm, now)
+        (mergedCm.key, mergedCm) :: updatesSoFar
+    }
+
+    val newPortState = portState.copy(crunchMinutes = portState.crunchMinutes ++ minutesDiff.toMap)
+    val newDiff = PortStateDiff(Seq(), Map[Int, ApiFlightWithSplits](), minutesDiff.toMap, Map[TM, StaffMinute]())
+    
+    (newPortState, newDiff)
   }
 
   def newCrunchMinutes: SortedMap[TQM, CrunchMinute] = SortedMap[TQM, CrunchMinute]() ++ minutes

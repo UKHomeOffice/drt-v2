@@ -33,5 +33,4 @@ trait BHXFeedConfig {
         throw new RuntimeException("Failed to start BHX feed.", t)
     }
   }
-
 }

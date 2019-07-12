@@ -62,7 +62,7 @@ class CrunchLoadGraphStage(name: String = "",
         log.info(s"Crunch ${firstMinute.toLocalDateTimeString()} - ${lastMinute.toLocalDateTimeString()}")
         val affectedTerminals = incomingLoads.loadMinutes.keys.map(_.terminalName).toSet
 
-        val updatedLoads = mergeLoads(incomingLoads.loadMinutes, loadMinutes)
+        val updatedLoads = loadMinutes ++ incomingLoads.loadMinutes
         loadMinutes = purgeExpired(updatedLoads, now, expireAfterMillis.toInt)
 
         val deskRecMinutes = crunchLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, affectedTerminals)
@@ -75,12 +75,10 @@ class CrunchLoadGraphStage(name: String = "",
             }
         }
 
-        val updatedDeskRecs = deskRecMinutes.foldLeft(existingDeskRecMinutes) {
-          case (soFar, (tqm, drm)) => soFar.updated(tqm, drm)
-        }
+        val updatedDeskRecs = existingDeskRecMinutes ++ deskRecMinutes
 
         existingDeskRecMinutes = purgeExpired(updatedDeskRecs, now, expireAfterMillis.toInt)
-        deskRecMinutesToPush = mergeDeskRecMinutes(affectedDeskRecs, deskRecMinutesToPush)
+        deskRecMinutesToPush = deskRecMinutesToPush ++ affectedDeskRecs
 
         log.info(s"Now have ${deskRecMinutesToPush.size} desk rec minutes to push")
 
@@ -144,17 +142,6 @@ class CrunchLoadGraphStage(name: String = "",
       (minDesks, maxDesks)
     }
 
-    def mergeDeskRecMinutes(updatedCms: Map[TQM, DeskRecMinute], existingCms: Map[TQM, DeskRecMinute]): Map[TQM, DeskRecMinute] = {
-      updatedCms.foldLeft(existingCms) {
-        case (soFar, (newId, newLoadMinute)) => soFar.updated(newId, newLoadMinute)
-      }
-    }
-
-    def mergeLoads(incomingLoads: SortedMap[TQM, LoadMinute], existingLoads: SortedMap[TQM, LoadMinute]): SortedMap[TQM, LoadMinute] = incomingLoads
-      .foldLeft(existingLoads) {
-        case (soFar, (tqm, load)) => soFar.updated(tqm, load)
-      }
-
     setHandler(outDeskRecMinutes, new OutHandler {
       override def onPull(): Unit = {
         val start = SDate.now()
@@ -199,15 +186,15 @@ case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateMinutes 
       case Some(ps) => ps
     }
 
-    val (updatedCrunchMinutes, crunchMinutesDiff) = minutes
-      .foldLeft((portState.crunchMinutes, List[CrunchMinute]())) {
-        case ((updatesSoFar, diffSoFar), updatedDrm) =>
-          val maybeMinute: Option[CrunchMinute] = updatesSoFar.get(updatedDrm.key)
-          val mergedCm: CrunchMinute = mergeMinute(maybeMinute, updatedDrm, now)
-          (updatesSoFar.updated(updatedDrm.key, mergedCm), mergedCm :: diffSoFar)
-      }
-    val newPortState = portState.copy(crunchMinutes = updatedCrunchMinutes)
-    val newDiff = PortStateDiff(Seq(), Seq(), crunchMinutesDiff, Seq())
+    val crunchMinutesDiff = minutes.foldLeft(List[(TQM, CrunchMinute)]()) {
+      case (diffSoFar, updatedDrm) =>
+        val maybeMinute: Option[CrunchMinute] = portState.crunchMinutes.get(updatedDrm.key)
+        val mergedCm: CrunchMinute = mergeMinute(maybeMinute, updatedDrm, now)
+        (mergedCm.key, mergedCm) :: diffSoFar
+    }
+
+    val newPortState = portState.copy(crunchMinutes = portState.crunchMinutes ++ crunchMinutesDiff.toMap)
+    val newDiff = PortStateDiff(Seq(), Map[Int, ApiFlightWithSplits](), crunchMinutesDiff.toMap, Map[TM, StaffMinute]())
 
     (newPortState, newDiff)
   }
