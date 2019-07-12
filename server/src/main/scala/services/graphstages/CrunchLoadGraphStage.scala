@@ -10,6 +10,7 @@ import services.SDate
 import services.crunch.{OptimiserLike, WorkloadToOptimise}
 import services.graphstages.Crunch._
 
+import scala.Option
 import scala.collection.immutable.{Map, SortedMap}
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -110,14 +111,16 @@ class CrunchLoadGraphStage(name: String = "",
       val (minDesks, maxDesks) = minMaxDesksForQueue(minuteMillis, tn, qn)
       val description = s"${airportConfig.portCode}/$tn/$qn/${SDate(firstMinute).toISOString()}"
       val workloadToOptimise = WorkloadToOptimise(adjustedWorkMinutes, minDesks, maxDesks, sla, description)
-      val desksAndWaits = Await.result(optimiser.requestDesksAndWaits(workloadToOptimise), 120 seconds)
 
-      SortedMap[TQM, DeskRecMinute]() ++ minuteMillis.zipWithIndex.map {
-        case (minute, idx) =>
-          val wl = workMinutes(idx)
-          val pl = paxMinutes(idx)
-          val drm = DeskRecMinute(tn, qn, minute, pl, wl, desksAndWaits.desks(idx), desksAndWaits.waits(idx))
-          (drm.key, drm)
+      Await.result(optimiser.requestDesksAndWaits(workloadToOptimise), 120 seconds) match {
+        case Some(daw) =>
+          SortedMap[TQM, DeskRecMinute]() ++ minuteMillis.zipWithIndex.map {
+            case (minute, idx) =>
+              val wl = workMinutes(idx)
+              val pl = paxMinutes(idx)
+              val drm = DeskRecMinute(tn, qn, minute, pl, wl, daw.desks(idx), daw.waits(idx))
+              (drm.key, drm)
+          }
       }
     }
 

@@ -15,7 +15,7 @@ import scala.util.{Failure, Success, Try}
 
 trait OptimiserLike {
   def uri: String
-  def requestDesksAndWaits(workloadToOptimise: WorkloadToOptimise): Future[DesksAndWaits]
+  def requestDesksAndWaits(workloadToOptimise: WorkloadToOptimise): Future[Option[DesksAndWaits]]
 }
 
 case class Optimiser(uri: String)(implicit val system: ActorSystem, val materializer: Materializer, val ec: ExecutionContext) extends OptimiserLike {
@@ -23,7 +23,7 @@ case class Optimiser(uri: String)(implicit val system: ActorSystem, val material
 
   import upickle.default.{write, read => rd}
 
-  def requestDesksAndWaits(workloadToOptimise: WorkloadToOptimise): Future[DesksAndWaits] = {
+  def requestDesksAndWaits(workloadToOptimise: WorkloadToOptimise): Future[Option[DesksAndWaits]] = {
     val request = HttpRequest(
       method = HttpMethods.POST,
       uri = Uri(uri),
@@ -34,19 +34,15 @@ case class Optimiser(uri: String)(implicit val system: ActorSystem, val material
       .map {
         case HttpResponse(StatusCodes.Created, _, entity, _) =>
           val responseBody = Await.result(entity.toStrict(120 seconds), 120 seconds).data.utf8String
-          Try(rd[DesksAndWaits](responseBody)) match {
-            case Success(daw) => daw
-            case Failure(t) =>
-              log.error(s"Failed to parse: $t")
-              DesksAndWaits(Seq(), Seq())
-          }
+          Try(rd[DesksAndWaits](responseBody)).toOption
         case HttpResponse(status, _, _, _) =>
           log.error(s"Got status: $status")
-          DesksAndWaits(Seq(), Seq())
+          None
       }
       .recoverWith {
-        case throwable => log.error("Caught error while retrieving optimised desks.", throwable)
-          Future(DesksAndWaits(Seq(), Seq()))
+        case throwable =>
+          log.error("Caught error while retrieving optimised desks.", throwable)
+          Future(None)
       }
     responseFuture
   }
@@ -69,14 +65,14 @@ object OptimiserLocal extends OptimiserLike {
 
   override def uri: String = ""
 
-  override def requestDesksAndWaits(workloadToOptimise: WorkloadToOptimise): Future[DesksAndWaits] =
+  override def requestDesksAndWaits(workloadToOptimise: WorkloadToOptimise): Future[Option[DesksAndWaits]] =
     TryRenjin.crunch(
       workloadToOptimise.workloads,
       workloadToOptimise.minDesks,
       workloadToOptimise.maxDesks,
       OptimizerConfig(workloadToOptimise.sla)
     ) match {
-      case Success(result) => Future(DesksAndWaits(result.recommendedDesks, result.waitTimes))
-      case Failure(_) => Future(DesksAndWaits(Seq(), Seq()))
+      case Success(result) => Future(Option(DesksAndWaits(result.recommendedDesks, result.waitTimes)))
+      case Failure(_) => Future(None)
     }
 }
