@@ -113,6 +113,9 @@ class CrunchLoadGraphStage(name: String = "",
       val workloadToOptimise = WorkloadToOptimise(adjustedWorkMinutes, minDesks, maxDesks, sla, description)
 
       Await.result(optimiser.requestDesksAndWaits(workloadToOptimise), 120 seconds) match {
+        case None =>
+          log.warn(s"Did not receive a crunch result")
+          SortedMap[TQM, DeskRecMinute]()
         case Some(daw) =>
           SortedMap[TQM, DeskRecMinute]() ++ minuteMillis.zipWithIndex.map {
             case (minute, idx) =>
