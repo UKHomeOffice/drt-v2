@@ -139,19 +139,19 @@ class BatchStage(now: () => SDateLike,
       elapsedMillis >= minimumRefreshIntervalMillis
     }
 
-    private def refreshLookupQueue(currentNow: SDateLike): SortedSet[ArrivalKey] = registeredArrivals
-      .foldLeft(lookupQueue) {
-        case (prioritisedSoFar, (arrival, None)) =>
-          if (!prioritisedSoFar.contains(arrival))
-            prioritisedSoFar + arrival
-          else
-            prioritisedSoFar
-        case (prioritisedSoFar, (arrival, Some(lastLookup))) =>
-          if (!prioritisedSoFar.contains(arrival) && isDueLookup(arrival, lastLookup, currentNow))
-            prioritisedSoFar + arrival
-          else
-            prioritisedSoFar
-      }
+    private def refreshLookupQueue(currentNow: SDateLike): SortedSet[ArrivalKey] = {
+      val toAdd = registeredArrivals
+        .foldLeft(List[ArrivalKey]()) {
+          case (prioritisedSoFar, (arrival, None)) =>
+              arrival :: prioritisedSoFar
+          case (prioritisedSoFar, (arrival, Some(lastLookup))) =>
+            if (isDueLookup(arrival, lastLookup, currentNow))
+              arrival :: prioritisedSoFar
+            else
+              prioritisedSoFar
+        }
+      lookupQueue ++ toAdd
+    }
 
     private def registerArrival(arrival: ArrivalKey): Unit = {
       registeredArrivals = registeredArrivals.updated(arrival, None)

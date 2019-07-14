@@ -196,11 +196,13 @@ class ArrivalsGraphStage(name: String = "",
       } else log.info(s"outMerged not available to push")
     }
 
-    def getUpdatesFromBaseArrivals(base: SortedMap[ArrivalKey, Arrival]): SortedMap[ArrivalKey, Arrival] = base
-      .foldLeft(SortedMap[ArrivalKey, Arrival]()) {
+    def getUpdatesFromBaseArrivals(base: SortedMap[ArrivalKey, Arrival]): SortedMap[ArrivalKey, Arrival] = SortedMap[ArrivalKey, Arrival]() ++ base
+      .foldLeft(List[(ArrivalKey, Arrival)]()) {
         case (updatedArrivalsSoFar, (key, baseArrival)) =>
           val mergedArrival = mergeBaseArrival(baseArrival)
-          if (arrivalHasUpdates(merged.get(key), mergedArrival)) updatedArrivalsSoFar.updated(key, mergedArrival) else updatedArrivalsSoFar
+          if (arrivalHasUpdates(merged.get(key), mergedArrival))
+            (key, mergedArrival) :: updatedArrivalsSoFar
+          else updatedArrivalsSoFar
       }
 
     def getUpdatesFromNonBaseArrivals(keys: Iterable[ArrivalKey]): SortedMap[ArrivalKey, Arrival] = SortedMap[ArrivalKey, Arrival]() ++ keys
