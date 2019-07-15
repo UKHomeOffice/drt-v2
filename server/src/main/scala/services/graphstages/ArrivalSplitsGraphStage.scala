@@ -12,7 +12,7 @@ import server.feeds._
 import services._
 import services.graphstages.Crunch.purgeExpired
 
-import scala.collection.immutable.{Map, SortedMap}
+import scala.collection.immutable.{Map, SortedMap, SortedSet}
 import scala.language.postfixOps
 
 case class UpdatedFlights(flights: SortedMap[ArrivalKey, ApiFlightWithSplits], updatesCount: Int, additionsCount: Int)
@@ -38,7 +38,8 @@ class ArrivalSplitsGraphStage(name: String = "",
   override val shape = new FanInShape3(inArrivalsDiff, inManifestsLive, inManifestsHistoric, outArrivalsWithSplits)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var flightsByFlightId: SortedMap[ArrivalKey, ApiFlightWithSplits] = SortedMap()
+    var flightsByArrivalKey: SortedMap[ArrivalKey, ApiFlightWithSplits] = SortedMap()
+    var codeShares: SortedMap[CodeShareKey, Set[ArrivalKey]] = SortedMap()
     var arrivalsWithSplitsDiff: Map[ArrivalKey, ApiFlightWithSplits] = Map()
     var arrivalsToRemove: Set[Arrival] = Set()
     var manifestBuffer: Map[ArrivalKey, BestAvailableManifest] = Map()
@@ -49,7 +50,14 @@ class ArrivalSplitsGraphStage(name: String = "",
         case Some(FlightsWithSplits(flights, _)) =>
           log.info(s"Received initial flights. Setting ${flights.size}")
           val sortedFlightsByKey = SortedMap[ArrivalKey, ApiFlightWithSplits]() ++ flights.map(fws => (ArrivalKey(fws.apiFlight), fws))
-          flightsByFlightId = purgeExpired(sortedFlightsByKey, now, expireAfterMillis.toInt)
+          flightsByArrivalKey = purgeExpired(sortedFlightsByKey, now, expireAfterMillis.toInt)
+          codeShares = sortedFlightsByKey
+            .foldLeft(SortedMap[CodeShareKey, Set[ArrivalKey]]()) { case (codeShareUpdatesSoFar, (arrivalKey, fws)) =>
+              val csKey = CodeShareKey(fws.apiFlight.Scheduled, fws.apiFlight.Terminal, fws.apiFlight.Origin, Set())
+              val existingEntry: Set[ArrivalKey] = codeShares.getOrElse(csKey, codeShareUpdatesSoFar.getOrElse(csKey, Set()))
+              val updatedArrivalKeys = existingEntry + arrivalKey
+              codeShareUpdatesSoFar.updated(csKey.copy(arrivalKeys = updatedArrivalKeys), updatedArrivalKeys)
+            }
         case _ =>
           log.warn(s"Did not receive any flights to initialise with")
       }
@@ -76,7 +84,9 @@ class ArrivalSplitsGraphStage(name: String = "",
         log.info(s"Grabbed ${arrivalsDiff.toUpdate.size} updates, ${arrivalsDiff.toRemove.size} removals")
 
         val flightsWithUpdates = applyUpdatesToFlights(arrivalsDiff)
-        val mergedFlights = updateFlightsFromIncoming(arrivalsDiff, flightsByFlightId)
+        val codeShareUpdates: SortedMap[CodeShareKey, Set[ArrivalKey]] = codeSharesUpdatesFromDiff(arrivalsDiff)
+        codeShares = codeShares ++ codeShareUpdates
+        val mergedFlights = updateFlightsFromIncoming(arrivalsDiff, flightsByArrivalKey)
         val mergedMinusExpired = purgeExpired(mergedFlights, now, expireAfterMillis.toInt)
 
         val uniqueFlightsWithUpdates = flightsWithUpdates.filterKeys(mergedMinusExpired.contains)
@@ -84,7 +94,7 @@ class ArrivalSplitsGraphStage(name: String = "",
         arrivalsWithSplitsDiff = mergeDiffSets(uniqueFlightsWithUpdates, arrivalsWithSplitsDiff)
         arrivalsToRemove = arrivalsToRemove ++ arrivalsDiff.toRemove
         log.info(s"${arrivalsWithSplitsDiff.size} updated arrivals waiting to push")
-        flightsByFlightId = mergedMinusExpired
+        flightsByArrivalKey = mergedMinusExpired
 
         pushStateIfReady()
         pullAll()
@@ -94,7 +104,7 @@ class ArrivalSplitsGraphStage(name: String = "",
 
     def applyUpdatesToFlights(arrivalsDiff: ArrivalsDiff): Map[ArrivalKey, ApiFlightWithSplits] = {
       val flightsWithUpdates = arrivalsDiff.toUpdate.foldLeft(List[ApiFlightWithSplits]()) {
-        case (withUpdatesSoFar, (key, newArrival)) => flightsByFlightId.get(key) match {
+        case (withUpdatesSoFar, (key, newArrival)) => flightsByArrivalKey.get(key) match {
           case None =>
             val splits: Set[Splits] = initialSplits(newArrival, key)
             val newFlightWithSplits: ApiFlightWithSplits = ApiFlightWithSplits(newArrival, splits, nowMillis)
@@ -131,7 +141,7 @@ class ArrivalSplitsGraphStage(name: String = "",
               log.info(s"We now have ${mergedFlights.size} flights")
 
               arrivalsWithSplitsDiff = mergeDiffSets(flightsWithUpdates, arrivalsWithSplitsDiff)
-              flightsByFlightId = purgeExpired(mergedFlights, now, expireAfterMillis.toInt)
+              flightsByArrivalKey = purgeExpired(mergedFlights, now, expireAfterMillis.toInt)
               log.info(s"Done diff")
 
               pushStateIfReady()
@@ -162,8 +172,18 @@ class ArrivalSplitsGraphStage(name: String = "",
 
       log.info(s"${updatedFlights.flights.size} flights after updates. ${updatedFlights.updatesCount} updates & ${updatedFlights.additionsCount} additions")
 
-      val uniqueFlights = SortedMap[ArrivalKey, ApiFlightWithSplits]() ++ groupFlightsByCodeShares(updatedFlights.flights.values.toSeq)
-        .map { case (fws, _) => (ArrivalKey(fws.apiFlight), fws) }
+      val codeSharesToRemove = codeShares.foldLeft(Set[ArrivalKey]()) {
+        case (removalsSoFar, (_, codeShareArrivalKeys)) =>
+          val shares = codeShareArrivalKeys
+            .map(arrivalKey => updatedFlights.flights.get(arrivalKey))
+            .collect { case Some(fws) => fws}
+            .toSeq.sortBy(_.apiFlight.ActPax.getOrElse(0)).reverse
+          val toRemove = shares.drop(1)
+          val keysToRemove = toRemove.map(fws => ArrivalKey(fws.apiFlight))
+          removalsSoFar ++ keysToRemove
+      }
+
+      val uniqueFlights = updatedFlights.flights -- codeSharesToRemove
 
       log.info(s"${uniqueFlights.size} flights after accounting for codeshares")
 
@@ -199,7 +219,7 @@ class ArrivalSplitsGraphStage(name: String = "",
       val updatedFlights = manifests.foldLeft(Map[ArrivalKey, ApiFlightWithSplits]()) {
         case (flightsWithNewSplits, newManifest) =>
           val key = ArrivalKey(newManifest.departurePortCode, newManifest.voyageNumber, newManifest.scheduled.millisSinceEpoch)
-          flightsByFlightId.get(key) match {
+          flightsByArrivalKey.get(key) match {
             case Some(flightForManifest) =>
               val manifestSplits: Splits = splitsFromManifest(flightForManifest.apiFlight, newManifest)
 
@@ -212,7 +232,7 @@ class ArrivalSplitsGraphStage(name: String = "",
               flightsWithNewSplits
           }
       }
-      (flightsByFlightId ++ updatedFlights, updatedFlights)
+      (flightsByArrivalKey ++ updatedFlights, updatedFlights)
     }
 
     def pushStateIfReady(): Unit = {
@@ -236,6 +256,14 @@ class ArrivalSplitsGraphStage(name: String = "",
         splits = flightWithSplits.splits.filterNot(_.source == newSplits.source) ++ Set(newSplits)
       )
     }
+
+    def codeSharesUpdatesFromDiff(arrivalsDiff: ArrivalsDiff): SortedMap[CodeShareKey, Set[ArrivalKey]] = arrivalsDiff.toUpdate
+      .foldLeft(SortedMap[CodeShareKey, Set[ArrivalKey]]()) { case (codeShareUpdatesSoFar, (arrivalKey, arrival)) =>
+        val csKey = CodeShareKey(arrival.Scheduled, arrival.Terminal, arrival.Origin, Set())
+        val existingEntry: Set[ArrivalKey] = codeShares.getOrElse(csKey, codeShareUpdatesSoFar.getOrElse(csKey, Set()))
+        val updatedArrivalKeys = existingEntry + arrivalKey
+        codeShareUpdatesSoFar.updated(csKey.copy(arrivalKeys = updatedArrivalKeys), updatedArrivalKeys)
+      }
   }
 
   def splitsFromManifest(arrival: Arrival, manifest: BestAvailableManifest): Splits = {
