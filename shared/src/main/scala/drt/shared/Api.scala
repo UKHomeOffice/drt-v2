@@ -543,6 +543,25 @@ object CrunchApi {
       List(latestFlights, latestCrunch, latestStaff).max
     }
 
+    def timeWindow(start: SDateLike, end: SDateLike, portQueues: Map[TerminalName, Seq[QueueName]]): PortState = {
+      val roundedStart = start.roundToMinute()
+      val roundedEnd = end.roundToMinute().addMinutes(-1)
+      val firstTerminal = portQueues.keys.min
+      val lastTerminal = portQueues.keys.max
+      val firstQueue = portQueues(firstTerminal).min
+      val lastQueue = portQueues(lastTerminal).max
+
+      val firstTqm = TQM(firstTerminal, firstQueue, roundedStart.millisSinceEpoch)
+      val lastTqm = TQM(lastQueue, lastQueue, roundedEnd.millisSinceEpoch)
+      val firstTm = TM(firstTerminal, roundedStart.millisSinceEpoch)
+      val lastTm = TM(lastQueue, roundedEnd.millisSinceEpoch)
+
+      val fts = flights.filter { case (_, f) => f.apiFlight.hasPcpDuring(roundedStart, roundedEnd) }
+      val cms = crunchMinutes.range(firstTqm, lastTqm)
+      val sms = staffMinutes.range(firstTm, lastTm)
+      PortState(flights = fts, crunchMinutes = cms, staffMinutes = sms)
+    }
+
     def window(start: SDateLike, end: SDateLike, portQueues: Map[TerminalName, Seq[QueueName]]): PortState = {
       val roundedStart = start.roundToMinute()
       val roundedEnd = end.roundToMinute().addMinutes(-1)

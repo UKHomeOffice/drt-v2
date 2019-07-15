@@ -178,11 +178,11 @@ class SimulationGraphStage(name: String = "",
 
       val existingMinutes = forPeriod(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, terminalsToUpdate, allSimulationMinutes)
 
-      val diff = newSimulationsForPeriod.foldLeft(SortedMap[TQM, SimulationMinute]()) {
+      val diff = newSimulationsForPeriod.foldLeft(List[(TQM, SimulationMinute)]()) {
         case (soFar, (tqm, newMinute)) =>
           existingMinutes.get(tqm) match {
             case Some(existing) if existing == newMinute => soFar
-            case _ => soFar.updated(tqm, newMinute)
+            case _ => (tqm, newMinute) :: soFar
           }
       }
 

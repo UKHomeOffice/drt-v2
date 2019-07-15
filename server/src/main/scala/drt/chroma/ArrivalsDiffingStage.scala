@@ -60,7 +60,7 @@ final class ArrivalsDiffingStage(initialKnownArrivals: Seq[Arrival]) extends Gra
         val newUpdates = diff(knownArrivals, incomingArrivals)
         log.info(s"Got ${newUpdates.size} new arrival updates")
         knownArrivals = incomingArrivals
-        Option(afs.copy(arrivals = latestArrivals.copy(flights = newUpdates.values.toSeq)))
+        Option(afs.copy(arrivals = latestArrivals.copy(flights = newUpdates.map(_._2))))
       case aff@ArrivalsFeedFailure(_, _) =>
         log.info("Passing ArrivalsFeedFailure through. Nothing to diff. No updates to knownArrivals")
         Option(aff)
@@ -69,13 +69,13 @@ final class ArrivalsDiffingStage(initialKnownArrivals: Seq[Arrival]) extends Gra
         None
     }
 
-    def diff(existingArrivals: SortedMap[ArrivalKey, Arrival], newArrivals: SortedMap[ArrivalKey, Arrival]): SortedMap[ArrivalKey, Arrival] = newArrivals
-      .foldLeft(SortedMap[ArrivalKey, Arrival]()) {
+    def diff(existingArrivals: SortedMap[ArrivalKey, Arrival], newArrivals: SortedMap[ArrivalKey, Arrival]): List[(ArrivalKey, Arrival)] = newArrivals
+      .foldLeft(List[(ArrivalKey, Arrival)]()) {
         case (soFar, (key, arrival)) => existingArrivals.get(key) match {
-          case None => soFar.updated(key, arrival)
+          case None => (key, arrival) :: soFar
           case Some(existingArrival) if existingArrival == arrival => soFar
           case Some(existingArrival) if existingArrival.ActualChox.isDefined && arrival.ActualChox == existingArrival.ActualChox => soFar
-          case _ => soFar.updated(key, arrival)
+          case _ => (key, arrival) :: soFar
         }
       }
   }
