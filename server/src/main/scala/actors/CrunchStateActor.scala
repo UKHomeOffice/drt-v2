@@ -101,7 +101,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
 
     case GetUpdatesSince(millis, start, end) =>
       val updates = state match {
-        case Some(fullPortState) => fullPortState.window(SDate(start), SDate(end), portQueues).updates(millis)
+        case Some(fullPortState) => fullPortState.timeWindow(SDate(start), SDate(end), portQueues).updates(millis)
         case None => None
       }
       sender() ! updates
@@ -120,7 +120,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
   }
 
   def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = state
-    .map(_.window(SDate(start), SDate(end), portQueues))
+    .map(_.timeWindow(SDate(start), SDate(end), portQueues))
 
   def stateForPeriodForTerminal(start: MillisSinceEpoch, end: MillisSinceEpoch, terminalName: TerminalName): Option[PortState] = state
     .map(_.windowWithTerminalFilter(SDate(start), SDate(end), portQueues.filterKeys(_ == terminalName)))
