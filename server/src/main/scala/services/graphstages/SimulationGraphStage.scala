@@ -190,26 +190,18 @@ class SimulationGraphStage(name: String = "",
 
       allSimulationMinutes = purgeExpired(updatedSims, now, expireAfterMillis.toInt)
 
-      val mergedSimulationMinutesToPush = simulationMinutesToPush ++ diff
-      simulationMinutesToPush = purgeExpired(mergedSimulationMinutesToPush, now, expireAfterMillis.toInt)
+      simulationMinutesToPush = simulationMinutesToPush ++ diff
+
       log.info(s"Now have ${simulationMinutesToPush.size} simulation minutes to push")
     }
 
     def forPeriod[A](firstMinute: MillisSinceEpoch,
-                     lastMinute: MillisSinceEpoch,
-                     terminalsToUpdate: Seq[TerminalName],
-                     itemsToFilter: SortedMap[TQM, A]): SortedMap[TQM, A] = {
-      val tqmMinutes = for {
-        minute <- firstMinute until lastMinute by 60000
-        terminal <- terminalsToUpdate
-        queue <- airportConfig.nonTransferQueues(terminal)
-      } yield {
-        val tqm = TQM(terminal, queue, minute)
-        (tqm, itemsToFilter.get(tqm))
-      }
-
-      SortedMap[TQM, A]() ++ tqmMinutes.collect {
-        case (tqm, Some(thing)) => (tqm, thing)
+                  lastMinute: MillisSinceEpoch,
+                  terminalsToUpdate: Seq[TerminalName],
+                  itemsToFilter: SortedMap[TQM, A]): SortedMap[TQM, A] = {
+      tqmBoundaries(firstMinute, lastMinute, airportConfig.queues.filterKeys(_ == terminalsToUpdate)) match {
+        case None => SortedMap[TQM, A]()
+        case Some((start, end)) => itemsToFilter.range(start, end)
       }
     }
 

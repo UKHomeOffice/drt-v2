@@ -216,7 +216,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     )
 
     crunch.liveTestProbe.fishForMessage(2 seconds) {
-      case ps: PortState  =>
+      case ps: PortState =>
         val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute)
         val staffMovements = minutesInOrder.filter(_.minute >= shiftStart.millisSinceEpoch).map(sm => (sm.minute, sm.movements)).take(10)
 
@@ -277,22 +277,21 @@ class StaffMinutesSpec extends CrunchTestLike {
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
 
     val expectedCrunchDeployments = Set(
-      (Queues.EeaDesk, shiftStart.addMinutes(0), 2),
-      (Queues.EeaDesk, shiftStart.addMinutes(1), 2),
-      (Queues.EeaDesk, shiftStart.addMinutes(2), 2),
-      (Queues.EeaDesk, shiftStart.addMinutes(3), 2),
-      (Queues.EeaDesk, shiftStart.addMinutes(4), 2),
-      (Queues.NonEeaDesk, shiftStart.addMinutes(0), 6),
-      (Queues.NonEeaDesk, shiftStart.addMinutes(1), 6),
-      (Queues.NonEeaDesk, shiftStart.addMinutes(2), 6),
-      (Queues.NonEeaDesk, shiftStart.addMinutes(3), 6),
-      (Queues.NonEeaDesk, shiftStart.addMinutes(4), 6))
+      (Queues.EeaDesk, shiftStart.addMinutes(0), 4),
+      (Queues.EeaDesk, shiftStart.addMinutes(1), 4),
+      (Queues.EeaDesk, shiftStart.addMinutes(2), 4),
+      (Queues.EeaDesk, shiftStart.addMinutes(3), 4),
+      (Queues.EeaDesk, shiftStart.addMinutes(4), 4),
+      (Queues.NonEeaDesk, shiftStart.addMinutes(0), 4),
+      (Queues.NonEeaDesk, shiftStart.addMinutes(1), 4),
+      (Queues.NonEeaDesk, shiftStart.addMinutes(2), 4),
+      (Queues.NonEeaDesk, shiftStart.addMinutes(3), 4),
+      (Queues.NonEeaDesk, shiftStart.addMinutes(4), 4))
 
     crunch.liveTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val minutesInOrder = ps.crunchMinutes.values.toList.sortBy(cm => (cm.minute, cm.queueName)).take(10)
         val deployments = minutesInOrder.map(cm => (cm.queueName, SDate(cm.minute), cm.deployedDesks.getOrElse(0))).toSet
-
         deployments == expectedCrunchDeployments
     }
 
@@ -337,7 +336,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     )
 
     crunch.liveTestProbe.fishForMessage(10 seconds) {
-      case ps: PortState  =>
+      case ps: PortState =>
         val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute).take(10)
         val fixedPoints = minutesInOrder.map(sm => (sm.minute, sm.fixedPoints))
 
@@ -446,8 +445,8 @@ class StaffMinutesSpec extends CrunchTestLike {
             Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
             Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
             Queues.FastTrack -> ((List.fill[Int](24)(1), List.fill[Int](24)(5)))
-        ))
-    ),
+          ))
+      ),
       now = () => shiftStart
     )
 

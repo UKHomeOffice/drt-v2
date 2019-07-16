@@ -35,21 +35,31 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
 
   def logDebug(msg: String, level: String = "info"): Unit = if (name.isEmpty) log.debug(msg) else log.debug(s"$name $msg")
 
+  var recoveryFlights: Map[Int, ApiFlightWithSplits] = Map()
+  var recoveryCrunchMinutes: List[(TQM, CrunchMinute)] = List()
+  var recoveryStaffMinutes: List[(TM, StaffMinute)] = List()
   var state: Option[PortState] = initialState
 
   def initialState: Option[PortState] = None
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case snapshot: CrunchStateSnapshotMessage => setStateFromSnapshot(snapshot)
+    case snapshot: CrunchStateSnapshotMessage =>
+      setRecoveryStateFromSnapshot(snapshot)
   }
 
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case diff: CrunchDiffMessage =>
-      val newState = stateFromDiff(diff, state)
-      logRecoveryState(newState)
-      state = newState
+      recoveryFlights = recoveryFlights -- diff.flightIdsToRemove ++ flightsFromMessages(diff.flightsToUpdate, None)
+      recoveryCrunchMinutes = recoveryCrunchMinutes ++ crunchMinutesFromMessages(diff.crunchMinutesToUpdate)
+      recoveryStaffMinutes = recoveryStaffMinutes ++ staffMinutesFromMessages(diff.staffMinutesToUpdate)
       bytesSinceSnapshotCounter += diff.serializedSize
       messagesPersistedSinceSnapshotCounter += 1
+  }
+
+  override def postRecoveryComplete(): Unit = {
+    val newState = PortState(recoveryFlights, SortedMap[TQM, CrunchMinute]() ++ recoveryCrunchMinutes, SortedMap[TM, StaffMinute]() ++ recoveryStaffMinutes)
+    log.info(s"Recovered PortState: ${newState.flights.size} flight, ${newState.crunchMinutes} cms, ${newState.staffMinutes.size} sms")
+    state = Option(newState)
   }
 
   def logRecoveryState(optionalState: Option[PortState]): Unit = optionalState match {
@@ -125,8 +135,10 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
   def stateForPeriodForTerminal(start: MillisSinceEpoch, end: MillisSinceEpoch, terminalName: TerminalName): Option[PortState] = state
     .map(_.windowWithTerminalFilter(SDate(start), SDate(end), portQueues.filterKeys(_ == terminalName)))
 
-  def setStateFromSnapshot(snapshot: CrunchStateSnapshotMessage, timeWindowEnd: Option[SDateLike] = None): Unit = {
-    state = Option(snapshotMessageToState(snapshot, timeWindowEnd))
+  def setRecoveryStateFromSnapshot(snapshot: CrunchStateSnapshotMessage, timeWindowEnd: Option[SDateLike] = None): Unit = {
+    recoveryFlights = flightsFromMessages(snapshot.flightWithSplits, timeWindowEnd).toMap
+    recoveryCrunchMinutes = crunchMinutesFromMessages(snapshot.crunchMinutes)
+    recoveryStaffMinutes = staffMinutesFromMessages(snapshot.staffMinutes)
   }
 
   def stateFromDiff(cdm: CrunchDiffMessage, existingState: Option[PortState]): Option[PortState] = {

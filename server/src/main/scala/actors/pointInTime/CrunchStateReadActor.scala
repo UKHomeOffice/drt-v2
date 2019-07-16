@@ -22,7 +22,7 @@ class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, expire
   val staffReconstructionRequired: Boolean = pointInTime.millisSinceEpoch <= SDate("2017-12-04").millisSinceEpoch
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case snapshot: CrunchStateSnapshotMessage => setStateFromSnapshot(snapshot, Option(pointInTime.addDays(2)))
+    case snapshot: CrunchStateSnapshotMessage => setRecoveryStateFromSnapshot(snapshot, Option(pointInTime.addDays(2)))
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
