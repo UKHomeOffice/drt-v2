@@ -165,6 +165,24 @@ object TQM {
   implicit val rw: RW[TQM] = macroRW
 
   def apply(crunchMinute: CrunchMinute): TQM = TQM(crunchMinute.terminalName, crunchMinute.queueName, crunchMinute.minute)
+
+  def range(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalQueues: Map[TerminalName, Seq[QueueName]]): Option[(TQM, TQM)] = {
+    println(s"hmm")
+    if (terminalQueues.nonEmpty) {
+      val firstTerminal = terminalQueues.keys.min
+      val lastTerminal = terminalQueues.keys.max
+      println(s"first: $firstTerminal, last: $lastTerminal, out of ${terminalQueues.keys}")
+      val queuesFirst = terminalQueues(firstTerminal)
+      val queuesLast = terminalQueues(lastTerminal)
+      if (queuesFirst.nonEmpty && queuesLast.nonEmpty) {
+        val firstQueue = queuesFirst.min
+        val lastQueue = queuesLast.max
+        val firstTqm = TQM(firstTerminal, firstQueue, firstMinute)
+        val lastTqm = TQM(lastTerminal, lastQueue, lastMinute)
+        Some((firstTqm, lastTqm))
+      } else None
+    } else None
+  }
 }
 
 case class TM(terminalName: TerminalName, minute: MillisSinceEpoch) extends Ordered[TM] with WithTimeAccessor {
@@ -184,6 +202,16 @@ object TM {
   implicit val rw: RW[TM] = macroRW
 
   def apply(staffMinute: StaffMinute): TM = TM(staffMinute.terminalName, staffMinute.minute)
+
+  def range(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalQueues: Map[TerminalName, Seq[QueueName]]): Option[(TM, TM)] = {
+    if (terminalQueues.nonEmpty) {
+      val firstTerminal = terminalQueues.keys.min
+      val lastTerminal = terminalQueues.keys.max
+      val firstTm = TM(firstTerminal, firstMinute)
+      val lastTm = TM(lastTerminal, lastMinute)
+      Some((firstTm, lastTm))
+    } else None
+  }
 }
 
 case class UniqueArrival(number: Int, terminalName: TerminalName, scheduled: MillisSinceEpoch) {
@@ -448,15 +476,33 @@ case class RemoveFlight(flightKey: UniqueArrival)
 
 case class PortStateDiff(flightRemovals: Seq[RemoveFlight],
                          flightUpdates: Map[Int, ApiFlightWithSplits],
-                         crunchMinuteUpdates: Map[TQM, CrunchMinute],
-                         staffMinuteUpdates: Map[TM, StaffMinute])
+                         crunchMinuteUpdates: SortedMap[TQM, CrunchMinute],
+                         staffMinuteUpdates: SortedMap[TM, StaffMinute]) {
+
+  def window(start: SDateLike, end: SDateLike, portQueues: Map[TerminalName, Seq[QueueName]]): PortStateDiff = {
+    val roundedStart = start.roundToMinute()
+    val roundedEnd = end.roundToMinute().addMinutes(-1)
+
+    val cms = TQM.range(roundedStart.millisSinceEpoch, roundedEnd.millisSinceEpoch, portQueues) match {
+      case None => SortedMap[TQM, CrunchMinute]()
+      case Some((startTqm, endTqm)) => crunchMinuteUpdates.from(startTqm).to(endTqm)
+    }
+    val sms = TM.range(roundedStart.millisSinceEpoch, roundedEnd.millisSinceEpoch, portQueues) match {
+      case None => SortedMap[TM, StaffMinute]()
+      case Some((startTm, endTm)) => staffMinuteUpdates.from(startTm).to(endTm)
+    }
+
+    val fts = flightUpdates.filter { case (_, f) => f.apiFlight.hasPcpDuring(roundedStart, roundedEnd) }
+    PortStateDiff(flightRemovals = flightRemovals, flightUpdates = fts, crunchMinuteUpdates = cms, staffMinuteUpdates = sms)
+  }
+}
 
 object PortStateDiff {
   def apply(flightRemovals: Seq[RemoveFlight], flightUpdates: Seq[ApiFlightWithSplits], crunchUpdates: Seq[CrunchMinute], staffUpdates: Seq[StaffMinute]): PortStateDiff = PortStateDiff(
     flightRemovals = flightRemovals,
     flightUpdates = flightUpdates.map(fws => (fws.apiFlight.uniqueId, fws)).toMap,
-    crunchMinuteUpdates = crunchUpdates.map(cm => (TQM(cm), cm)).toMap,
-    staffMinuteUpdates = staffUpdates.map(sm => (TM(sm), sm)).toMap
+    crunchMinuteUpdates = SortedMap[TQM, CrunchMinute]() ++ crunchUpdates.map(cm => (TQM(cm), cm)),
+    staffMinuteUpdates = SortedMap[TM, StaffMinute]() ++ staffUpdates.map(sm => (TM(sm), sm))
   )
 }
 
@@ -557,37 +603,21 @@ object CrunchApi {
       List(latestFlights, latestCrunch, latestStaff).max
     }
 
-    def timeWindow(start: SDateLike, end: SDateLike, portQueues: Map[TerminalName, Seq[QueueName]]): PortState = {
-      val roundedStart = start.roundToMinute()
-      val roundedEnd = end.roundToMinute().addMinutes(-1)
-      val firstTerminal = portQueues.keys.min
-      val lastTerminal = portQueues.keys.max
-      val firstQueue = portQueues(firstTerminal).min
-      val lastQueue = portQueues(lastTerminal).max
-
-      val firstTqm = TQM(firstTerminal, firstQueue, roundedStart.millisSinceEpoch)
-      val lastTqm = TQM(lastQueue, lastQueue, roundedEnd.millisSinceEpoch)
-      val firstTm = TM(firstTerminal, roundedStart.millisSinceEpoch)
-      val lastTm = TM(lastQueue, roundedEnd.millisSinceEpoch)
-
-      val fts = flights.filter { case (_, f) => f.apiFlight.hasPcpDuring(roundedStart, roundedEnd) }
-      val cms = crunchMinutes.range(firstTqm, lastTqm)
-      val sms = staffMinutes.range(firstTm, lastTm)
-      PortState(flights = fts, crunchMinutes = cms, staffMinutes = sms)
-    }
-
     def window(start: SDateLike, end: SDateLike, portQueues: Map[TerminalName, Seq[QueueName]]): PortState = {
       val roundedStart = start.roundToMinute()
       val roundedEnd = end.roundToMinute().addMinutes(-1)
 
-      val cms = crunchMinuteRange(roundedStart.millisSinceEpoch, roundedEnd.millisSinceEpoch, portQueues)
-      val sms = staffMinuteRange(roundedStart.millisSinceEpoch, roundedEnd.millisSinceEpoch, portQueues.keys.toSeq)
+      val cms = TQM.range(roundedStart.millisSinceEpoch, roundedEnd.millisSinceEpoch, portQueues) match {
+        case None => SortedMap[TQM, CrunchMinute]()
+        case Some((startTqm, endTqm)) => crunchMinutes.from(startTqm).to(endTqm)
+      }
+      val sms = TM.range(roundedStart.millisSinceEpoch, roundedEnd.millisSinceEpoch, portQueues) match {
+        case None => SortedMap[TM, StaffMinute]()
+        case Some((startTm, endTm)) => staffMinutes.from(startTm).to(endTm)
+      }
 
-      PortState(
-        flights = flights.filter { case (_, f) => f.apiFlight.hasPcpDuring(roundedStart, roundedEnd) },
-        crunchMinutes = cms,
-        staffMinutes = sms
-      )
+      val fts = flights.filter { case (_, f) => f.apiFlight.hasPcpDuring(roundedStart, roundedEnd) }
+      PortState(flights = fts, crunchMinutes = cms, staffMinutes = sms)
     }
 
     def windowWithTerminalFilter(start: SDateLike, end: SDateLike, portQueues: Map[TerminalName, Seq[QueueName]]): PortState = {
@@ -820,7 +850,7 @@ object CrunchApi {
       }
 
       val newPortState = portState.copy(staffMinutes = portState.staffMinutes ++ updatedMinutes)
-      val diff = PortStateDiff(Seq(), Map[Int, ApiFlightWithSplits](), Map[TQM, CrunchMinute](), updatedMinutes.toMap)
+      val diff = PortStateDiff(Seq(), SortedMap[Int, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]() ++ updatedMinutes)
 
       (newPortState, diff)
     }
@@ -923,7 +953,7 @@ object CrunchApi {
       }
 
       val newPortState = portState.copy(crunchMinutes = portState.crunchMinutes ++ crunchMinutesDiff)
-      val newDiff = PortStateDiff(Seq(), Map[Int, ApiFlightWithSplits](), crunchMinutesDiff.toMap, Map[TM, StaffMinute]())
+      val newDiff = PortStateDiff(Seq(), SortedMap[Int, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute]() ++ crunchMinutesDiff, SortedMap[TM, StaffMinute]())
 
       (newPortState, newDiff)
     }

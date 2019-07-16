@@ -30,9 +30,9 @@ import scala.language.implicitConversions
 
 class LiveCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
   extends CrunchStateActor(None, oneMegaByte, s"live-test-$name", queues, now, expireAfterMillis, false) {
-  override def updateStateFromPortState(cs: PortState): Unit = {
+  override def updatePortStateFromDiff(diff: PortStateDiff): Unit = {
     log.info(s"calling parent updateState...")
-    super.updateStateFromPortState(cs)
+    super.updatePortStateFromDiff(diff)
 
     probe ! state.get
   }
@@ -40,9 +40,9 @@ class LiveCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[
 
 class ForecastCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
   extends CrunchStateActor(None, oneMegaByte, s"forecast-test-$name", queues, now, expireAfterMillis, false) {
-  override def updateStateFromPortState(cs: PortState): Unit = {
+  override def updatePortStateFromDiff(diff: PortStateDiff): Unit = {
     log.info(s"calling parent updateState...")
-    super.updateStateFromPortState(cs)
+    super.updatePortStateFromDiff(diff)
 
     probe ! state.get
   }
@@ -66,7 +66,6 @@ case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete
                                       forecastArrivalsTestProbe: TestProbe,
                                       liveArrivalsTestProbe: TestProbe,
                                       aggregatedArrivalsActor: ActorRef)
-
 
 
 object H2Tables extends {

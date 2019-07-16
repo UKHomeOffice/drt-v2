@@ -16,7 +16,7 @@ import scala.collection.immutable.{Map, SortedMap}
 
 case class PortStateWithDiff(portState: PortState, diff: PortStateDiff, diffMessage: CrunchDiffMessage) {
   def window(start: SDateLike, end: SDateLike, portQueues: Map[TerminalName, Seq[QueueName]]): PortStateWithDiff = {
-    PortStateWithDiff(portState.timeWindow(start, end, portQueues), diff, crunchDiffWindow(start, end))
+    PortStateWithDiff(portState.window(start, end, portQueues), diff.window(start, end, portQueues), crunchDiffWindow(start, end))
   }
 
   def crunchDiffWindow(start: SDateLike, end: SDateLike): CrunchDiffMessage = {
@@ -126,7 +126,7 @@ class PortStateGraphStage(name: String = "",
           maybePortState match {
             case None =>
             case Some(portState) =>
-              val portStateWithDiff = PortStateWithDiff(portState, portStateDiff, diffMessage(portStateDiff))
+              val portStateWithDiff = PortStateWithDiff(PortState.empty, portStateDiff, diffMessage(portStateDiff))
               maybePortStateDiff = None
               push(outPortState, portStateWithDiff)
           }

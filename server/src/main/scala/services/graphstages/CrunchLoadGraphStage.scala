@@ -200,7 +200,7 @@ case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateMinutes 
     }
 
     val newPortState = portState.copy(crunchMinutes = portState.crunchMinutes ++ crunchMinutesDiff.toMap)
-    val newDiff = PortStateDiff(Seq(), Map[Int, ApiFlightWithSplits](), crunchMinutesDiff.toMap, Map[TM, StaffMinute]())
+    val newDiff = PortStateDiff(Seq(), SortedMap[Int, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute]() ++ crunchMinutesDiff, SortedMap[TM, StaffMinute]())
 
     (newPortState, newDiff)
   }

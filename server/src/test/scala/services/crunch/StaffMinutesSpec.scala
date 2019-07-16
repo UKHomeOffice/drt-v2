@@ -3,7 +3,7 @@ package services.crunch
 import java.util.UUID
 
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{CrunchMinute, PortState, StaffMinute}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, PortState, StaffMinute}
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
@@ -12,6 +12,7 @@ import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.graphstages.Crunch
 
+import scala.collection.immutable
 import scala.collection.immutable.{List, SortedMap}
 import scala.concurrent.duration._
 
@@ -499,17 +500,16 @@ class StaffMinutesSpec extends CrunchTestLike {
       checkRequiredStaffUpdatesOnStartup = true
     )
 
-    val expectedStaffMinutes = (1 until 5).map { day =>
-      val date = SDate(scheduled).addDays(day).toISODateOnly
-      val minutes = (0 until 15).map { minute => SDate(scheduled).addDays(day).addMinutes(minute).millisSinceEpoch }.sorted
-      (date, minutes)
-    }.toMap
+    val expectedStaffMinutes = (1 until 5)
+      .flatMap { day =>
+        val date = SDate(scheduled).addDays(day).toISODateOnly
+        val minutes = (0 until 15).map { minute => SDate(scheduled).addDays(day).addMinutes(minute).millisSinceEpoch }.sorted
+        minutes
+      }.sorted
 
     crunch.forecastTestProbe.fishForMessage(5 seconds) {
       case PortState(_, _, staffMinutes) =>
-        val actualMinutes = staffMinutes.values.toSeq.filter(_.fixedPoints == 50).groupBy(m => SDate(m.minute).toISODateOnly).mapValues { minutes =>
-          minutes.map(m => SDate(m.minute).millisSinceEpoch).sorted
-        }
+        val actualMinutes = staffMinutes.values.filter(_.fixedPoints == 50).map(_.minute).toSeq.sorted
         actualMinutes == expectedStaffMinutes
     }
 

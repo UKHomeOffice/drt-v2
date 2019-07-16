@@ -196,13 +196,12 @@ class SimulationGraphStage(name: String = "",
     }
 
     def forPeriod[A](firstMinute: MillisSinceEpoch,
-                  lastMinute: MillisSinceEpoch,
-                  terminalsToUpdate: Seq[TerminalName],
-                  itemsToFilter: SortedMap[TQM, A]): SortedMap[TQM, A] = {
-      tqmBoundaries(firstMinute, lastMinute, airportConfig.queues.filterKeys(_ == terminalsToUpdate)) match {
-        case None => SortedMap[TQM, A]()
-        case Some((start, end)) => itemsToFilter.range(start, end)
-      }
+                     lastMinute: MillisSinceEpoch,
+                     terminalsToUpdate: Seq[TerminalName],
+                     itemsToFilter: SortedMap[TQM, A]): SortedMap[TQM, A] = TQM
+      .range(firstMinute, lastMinute, airportConfig.queues.filterKeys(_ == terminalsToUpdate)) match {
+      case None => SortedMap[TQM, A]()
+      case Some((start, end)) => itemsToFilter.range(start, end)
     }
 
     def updateStaffMinutes(existingStaffMinutes: SortedMap[TM, StaffMinute], incomingStaffMinutes: StaffMinutes): SortedMap[TM, StaffMinute] =
@@ -469,7 +468,7 @@ case class SimulationMinutes(minutes: Seq[SimulationMinute]) extends PortStateMi
     }
 
     val newPortState = portState.copy(crunchMinutes = portState.crunchMinutes ++ minutesDiff.toMap)
-    val newDiff = PortStateDiff(Seq(), Map[Int, ApiFlightWithSplits](), minutesDiff.toMap, Map[TM, StaffMinute]())
+    val newDiff = PortStateDiff(Seq(), SortedMap[Int, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute]() ++ minutesDiff, SortedMap[TM, StaffMinute]())
 
     (newPortState, newDiff)
   }

@@ -1,5 +1,6 @@
 package actors.pointInTime
 
+import actors.PortStateMessageConversion.{crunchMinutesFromMessages, flightsFromMessages, staffMinutesFromMessages}
 import actors.Sizes.oneMegaByte
 import actors._
 import akka.persistence._
@@ -26,18 +27,21 @@ class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, expire
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case cdm@CrunchDiffMessage(createdAtOption, _, _, _, _, _, _) =>
-      createdAtOption match {
-        case Some(createdAt) if createdAt <= pointInTime.millisSinceEpoch =>
-          log.info(s"Applying crunch diff with createdAt (${SDate(createdAt).toISOString()}) <= point in time requested: ${pointInTime.toISOString()}")
-          val newState = stateFromDiff(cdm, state)
-          state = newState
-        case Some(createdAt) =>
-          log.info(s"Ignoring crunch diff with createdAt (${SDate(createdAt).toISOString()}) > point in time requested: ${pointInTime.toISOString()}")
-      }
+    case diff: CrunchDiffMessage if diff.getCreatedAt <= pointInTime.millisSinceEpoch =>
+      recoveryFlights = recoveryFlights -- diff.flightIdsToRemove ++ flightsFromMessages(diff.flightsToUpdate, None)
+      recoveryCrunchMinutes = recoveryCrunchMinutes ++ crunchMinutesFromMessages(diff.crunchMinutesToUpdate)
+      recoveryStaffMinutes = recoveryStaffMinutes ++ staffMinutesFromMessages(diff.staffMinutesToUpdate)
+      bytesSinceSnapshotCounter += diff.serializedSize
+      messagesPersistedSinceSnapshotCounter += 1
+    case CrunchDiffMessage(Some(createdAt), _, _, _, _, _, _) =>
+      log.info(s"Ignoring crunch diff with createdAt (${SDate(createdAt).toISOString()}) > point in time requested: ${pointInTime.toISOString()}")
+    case unexpected =>
+      log.info(s"Ignoring unexpected recovery message ${unexpected.getClass}")
   }
 
   override def postRecoveryComplete(): Unit = {
+    super.postRecoveryComplete()
+
     logPointInTimeCompleted(pointInTime)
 
     state = state.map {

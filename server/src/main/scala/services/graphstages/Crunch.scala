@@ -168,22 +168,6 @@ object Crunch {
       .toSet
   }
 
-  def tqmBoundaries(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalQueues: Map[TerminalName, Seq[QueueName]]): Option[(TQM, TQM)] = {
-    if (terminalQueues.nonEmpty) {
-      val firstTerminal = terminalQueues.keys.min
-      val lastTerminal = terminalQueues.keys.max
-      val queuesFirst = terminalQueues(firstTerminal)
-      val queuesLast = terminalQueues(lastTerminal)
-      if (queuesFirst.nonEmpty && queuesLast.nonEmpty) {
-        val firstQueue = queuesFirst.min
-        val lastQueue = queuesLast.max
-        val firstTqm = TQM(firstTerminal, firstQueue, firstMinute)
-        val lastTqm = TQM(lastTerminal, lastQueue, lastMinute)
-        Some((firstTqm, lastTqm))
-      } else None
-    } else None
-  }
-
   def collapseQueueLoadMinutesToSet(queueLoadMinutes: List[LoadMinute]): Set[LoadMinute] = {
     queueLoadMinutes
       .groupBy(qlm => (qlm.terminalName, qlm.queueName, qlm.minute))
