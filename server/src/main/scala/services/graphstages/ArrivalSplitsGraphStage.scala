@@ -2,17 +2,17 @@ package services.graphstages
 
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
+import drt.server.feeds._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
-import drt.server.feeds._
 import services._
 import services.graphstages.Crunch.purgeExpired
 
-import scala.collection.immutable.{Map, SortedMap, SortedSet}
+import scala.collection.immutable.{Map, SortedMap}
 import scala.language.postfixOps
 
 case class UpdatedFlights(flights: SortedMap[ArrivalKey, ApiFlightWithSplits], updatesCount: Int, additionsCount: Int)
@@ -47,9 +47,9 @@ class ArrivalSplitsGraphStage(name: String = "",
     override def preStart(): Unit = {
 
       optionalInitialFlights match {
-        case Some(FlightsWithSplits(flights, _)) =>
-          log.info(s"Received initial flights. Setting ${flights.size}")
-          val sortedFlightsByKey = SortedMap[ArrivalKey, ApiFlightWithSplits]() ++ flights.map(fws => (ArrivalKey(fws.apiFlight), fws))
+        case Some(FlightsWithSplits(initialFlights, _)) =>
+          log.info(s"Received initial flights. Setting ${initialFlights.size}")
+          val sortedFlightsByKey = SortedMap[ArrivalKey, ApiFlightWithSplits]() ++ initialFlights.map(fws => (ArrivalKey(fws.apiFlight), fws))
           flightsByArrivalKey = purgeExpired(sortedFlightsByKey, now, expireAfterMillis.toInt)
           codeShares = sortedFlightsByKey
             .foldLeft(SortedMap[CodeShareKey, Set[ArrivalKey]]()) { case (codeShareUpdatesSoFar, (arrivalKey, fws)) =>
@@ -103,19 +103,19 @@ class ArrivalSplitsGraphStage(name: String = "",
     })
 
     def applyUpdatesToFlights(arrivalsDiff: ArrivalsDiff): Map[ArrivalKey, ApiFlightWithSplits] = {
-      val flightsWithUpdates = arrivalsDiff.toUpdate.foldLeft(List[ApiFlightWithSplits]()) {
+      val flightsWithUpdates = arrivalsDiff.toUpdate.foldLeft(List[(ArrivalKey, ApiFlightWithSplits)]()) {
         case (withUpdatesSoFar, (key, newArrival)) => flightsByArrivalKey.get(key) match {
           case None =>
             val splits: Set[Splits] = initialSplits(newArrival, key)
             val newFlightWithSplits: ApiFlightWithSplits = ApiFlightWithSplits(newArrival, splits, nowMillis)
-            newFlightWithSplits :: withUpdatesSoFar
+            (key, newFlightWithSplits) :: withUpdatesSoFar
           case Some(existingArrival) =>
             if (!existingArrival.apiFlight.equals(newArrival))
-              existingArrival.copy(apiFlight = newArrival, lastUpdated = nowMillis) :: withUpdatesSoFar
+              (key, existingArrival.copy(apiFlight = newArrival, lastUpdated = nowMillis)) :: withUpdatesSoFar
             else withUpdatesSoFar
         }
       }
-      flightsWithUpdates.map(fws => (ArrivalKey(fws.apiFlight), fws)).toMap
+      flightsWithUpdates.toMap
     }
 
     setHandler(inManifestsLive, InManifestsHandler(inManifestsLive))
@@ -216,7 +216,7 @@ class ArrivalSplitsGraphStage(name: String = "",
       else splitsCalculator.portDefaultSplits
 
     def updateFlightsWithManifests(manifests: Seq[BestAvailableManifest]): (SortedMap[ArrivalKey, ApiFlightWithSplits], Map[ArrivalKey, ApiFlightWithSplits]) = {
-      val updatedFlights = manifests.foldLeft(Map[ArrivalKey, ApiFlightWithSplits]()) {
+      val updatedFlights = manifests.foldLeft(List[(ArrivalKey, ApiFlightWithSplits)]()) {
         case (flightsWithNewSplits, newManifest) =>
           val key = ArrivalKey(newManifest.departurePortCode, newManifest.voyageNumber, newManifest.scheduled.millisSinceEpoch)
           flightsByArrivalKey.get(key) match {
@@ -225,14 +225,14 @@ class ArrivalSplitsGraphStage(name: String = "",
 
               if (isNewManifestForFlight(flightForManifest, manifestSplits)) {
                 val flightWithManifestSplits = updateFlightWithSplits(flightForManifest, manifestSplits)
-                flightsWithNewSplits.updated(key, flightWithManifestSplits)
+                (key, flightWithManifestSplits)::flightsWithNewSplits
               } else flightsWithNewSplits
             case None =>
               manifestBuffer = manifestBuffer.updated(key, newManifest)
               flightsWithNewSplits
           }
       }
-      (flightsByArrivalKey ++ updatedFlights, updatedFlights)
+      (flightsByArrivalKey ++ updatedFlights, updatedFlights.toMap)
     }
 
     def pushStateIfReady(): Unit = {
