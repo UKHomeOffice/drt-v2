@@ -105,12 +105,12 @@ class WorkloadGraphStage(name: String = "",
       }
     })
 
-    def diffFromTQMs(affectedTQMs: Iterable[TQM]): Map[TQM, LoadMinute] = {
+    def diffFromTQMs(affectedTQMs: Iterable[TQM]): List[(TQM, LoadMinute)] = {
       val affectedLoads = flightSplitMinutesToQueueLoadMinutes(affectedTQMs)
-      affectedLoads.foldLeft(Map[TQM, LoadMinute]()) {
+      affectedLoads.foldLeft(List[(TQM, LoadMinute)]()) {
         case (soFar, (tqm, lm)) => loadMinutes.get(tqm) match {
           case Some(existingLm) if existingLm == lm => soFar
-          case _ => soFar.updated(tqm, lm)
+          case _ => (tqm, lm) :: soFar
         }
       }
     }
@@ -118,11 +118,11 @@ class WorkloadGraphStage(name: String = "",
     def affectedTqmSplitsFromIncoming(incomingFlightsOldTqms: Set[TQM], incomingWorkloads: SortedMap[TQM, Set[FlightSplitMinute]], incomingFlights: FlightsWithSplits): SortedMap[TQM, Set[FlightSplitMinute]] = {
       val arrivalIds: Set[Int] = incomingFlights.flightsToUpdate.map(_.apiFlight.uniqueId).toSet
 
-      val oldSplitMinutesRemoved = incomingFlightsOldTqms.foldLeft(SortedMap[TQM, Set[FlightSplitMinute]]()) {
+      val oldSplitMinutesRemoved = SortedMap[TQM, Set[FlightSplitMinute]]() ++ incomingFlightsOldTqms.foldLeft(List[(TQM, Set[FlightSplitMinute])]()) {
         case (affectedSoFar, tqm) =>
           val existingFlightSplitsMinutes: Set[FlightSplitMinute] = flightLoadMinutes.getOrElse(tqm, Set[FlightSplitMinute]())
           val minusIncomingSplitMinutes = existingFlightSplitsMinutes.filterNot(fsm => arrivalIds.contains(fsm.flightId))
-          affectedSoFar.updated(tqm, minusIncomingSplitMinutes)
+          (tqm, minusIncomingSplitMinutes) :: affectedSoFar
       }
 
       val allAffectedSplitMinutes = incomingWorkloads.foldLeft(oldSplitMinutesRemoved) {
@@ -135,11 +135,11 @@ class WorkloadGraphStage(name: String = "",
     }
 
     def loadDiff(updatedLoads: Map[TQM, LoadMinute], existingLoads: Map[TQM, LoadMinute]): Map[TQM, LoadMinute] = {
-      val updates: Map[TQM, LoadMinute] = updatedLoads.foldLeft(Map[TQM, LoadMinute]()) {
+      val updates: List[(TQM, LoadMinute)] = updatedLoads.foldLeft(List[(TQM, LoadMinute)]()) {
         case (soFar, (key, updatedLoad)) =>
           existingLoads.get(key) match {
             case Some(existingLoadMinute) if existingLoadMinute == updatedLoad => soFar
-            case _ => soFar.updated(key, updatedLoad)
+            case _ => (key, updatedLoad) :: soFar
           }
       }
       val toRemoveIds = existingLoads.keys.toSet -- updatedLoads.keys.toSet
@@ -147,7 +147,7 @@ class WorkloadGraphStage(name: String = "",
         .map(id => existingLoads.get(id))
         .collect { case Some(lm) if lm.workLoad != 0 => (lm.uniqueId, lm.copy(paxLoad = 0, workLoad = 0)) }
 
-      val diff = updates ++ removes
+      val diff = updates.toMap ++ removes
       log.info(s"${diff.size} updated load minutes (${updates.size} updates + ${removes.size} removes)")
 
       diff
