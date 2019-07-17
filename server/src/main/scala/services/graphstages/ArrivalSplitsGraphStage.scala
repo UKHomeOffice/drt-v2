@@ -91,7 +91,7 @@ class ArrivalSplitsGraphStage(name: String = "",
 
         val uniqueFlightsWithUpdates = flightsWithUpdates.filterKeys(mergedMinusExpired.contains)
 
-        arrivalsWithSplitsDiff = mergeDiffSets(uniqueFlightsWithUpdates, arrivalsWithSplitsDiff)
+        arrivalsWithSplitsDiff = arrivalsWithSplitsDiff ++ uniqueFlightsWithUpdates
         arrivalsToRemove = arrivalsToRemove ++ arrivalsDiff.toRemove
         log.info(s"${arrivalsWithSplitsDiff.size} updated arrivals waiting to push")
         flightsByArrivalKey = mergedMinusExpired
@@ -140,7 +140,7 @@ class ArrivalSplitsGraphStage(name: String = "",
               val (mergedFlights, flightsWithUpdates) = updateFlightsWithManifests(bestAvailableManifests)
               log.info(s"We now have ${mergedFlights.size} flights")
 
-              arrivalsWithSplitsDiff = mergeDiffSets(flightsWithUpdates, arrivalsWithSplitsDiff)
+              arrivalsWithSplitsDiff = arrivalsWithSplitsDiff ++ flightsWithUpdates
               flightsByArrivalKey = purgeExpired(mergedFlights, now, expireAfterMillis.toInt)
               log.info(s"Done diff")
 
@@ -271,11 +271,5 @@ class ArrivalSplitsGraphStage(name: String = "",
   }
 
   def nowMillis: Option[MillisSinceEpoch] = Option(now().millisSinceEpoch)
-
-  def mergeDiffSets(latestDiff: Map[ArrivalKey, ApiFlightWithSplits],
-                    existingDiff: Map[ArrivalKey, ApiFlightWithSplits]
-                   ): Map[ArrivalKey, ApiFlightWithSplits] =
-    existingDiff ++ latestDiff
-
 }
 
