@@ -3,7 +3,7 @@ package services.crunch
 import controllers.{ArrivalGenerator, Forecast}
 import drt.shared.FlightsApi.Flights
 import drt.shared._
-import server.feeds.ArrivalsFeedSuccess
+import drt.server.feeds.ArrivalsFeedSuccess
 import services.{SDate, TryRenjin}
 
 import scala.concurrent.duration._

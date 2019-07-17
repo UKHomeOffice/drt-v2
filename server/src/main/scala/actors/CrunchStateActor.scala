@@ -11,7 +11,6 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState._
 import services.SDate
-import services.graphstages.Crunch._
 import services.graphstages.PortStateWithDiff
 
 import scala.collection.immutable.SortedMap
@@ -57,7 +56,9 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
   }
 
   override def postRecoveryComplete(): Unit = {
-    val newState = PortState(recoveryFlights, SortedMap[TQM, CrunchMinute]() ++ recoveryCrunchMinutes, SortedMap[TM, StaffMinute]() ++ recoveryStaffMinutes)
+    val crunchMinutes = SortedMap[TQM, CrunchMinute]() ++ recoveryCrunchMinutes
+    val staffMinutes = SortedMap[TM, StaffMinute]() ++ recoveryStaffMinutes
+    val newState = PortState(recoveryFlights, crunchMinutes, staffMinutes)
     state = Option(newState)
   }
 
@@ -93,7 +94,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
 
     case PortStateWithDiff(_, diff, diffMsg) =>
       logInfo(s"Received port state diff with diffMsg. ${diff.flightRemovals.size} flight removals, ${diff.flightUpdates.size} flight updates, ${diff.crunchMinuteUpdates.size} crunch updates, ${diff.staffMinuteUpdates.size} staff updates")
-      updatePortStateFromDiff(diff)
+      state = portStateFromDiff(diff)
       persistAndMaybeSnapshot(diffMsg)
 
     case GetState =>
@@ -128,12 +129,18 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
       log.error(s"Received unexpected message $u")
   }
 
-  def updatePortStateFromDiff(diff: PortStateDiff): Unit = {
-    state = state match {
-      case None => Option(PortState(diff.flightUpdates, SortedMap[TQM, CrunchMinute]() ++ diff.crunchMinuteUpdates, SortedMap[TM, StaffMinute]() ++ diff.staffMinuteUpdates))
-      case Some(PortState(fts, cms, sms)) =>
-        Option(PortState(fts -- diff.flightRemovals.map(_.flightKey.uniqueId) ++ diff.flightUpdates, cms ++ diff.crunchMinuteUpdates, sms ++ diff.staffMinuteUpdates))
+  def portStateFromDiff(diff: PortStateDiff): Option[PortState] = {
+    val existingPs = state match {
+      case None => PortState.empty
+      case Some(ps) => ps
     }
+
+    val newState = existingPs.copy(
+      flights = existingPs.flights -- diff.flightRemovals.map(_.flightKey.uniqueId) ++ diff.flightUpdates,
+      crunchMinutes = existingPs.crunchMinutes ++ diff.crunchMinuteUpdates,
+      staffMinutes = existingPs.staffMinutes ++ diff.staffMinuteUpdates)
+
+    Option(newState)
   }
 
   def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = state

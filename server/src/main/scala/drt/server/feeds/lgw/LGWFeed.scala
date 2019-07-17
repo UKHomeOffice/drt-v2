@@ -6,16 +6,14 @@ import akka.stream.scaladsl.Source
 import akka.stream.{ActorAttributes, Supervision}
 import bluebus.client.ServiceBusClient
 import bluebus.configuration.SBusConfig
+import drt.server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
-import services.SDate
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
-import scala.util.{Failure, Success, Try}
 
 case class LGWFeed(namespace: String, sasToKey: String, serviceBusUrl: String)(val system: ActorSystem) {
   val log: Logger = LoggerFactory.getLogger(getClass)

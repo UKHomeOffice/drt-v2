@@ -5,7 +5,7 @@ import akka.actor.{ActorSystem, Cancellable}
 import akka.stream.scaladsl.Source
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 
 import scala.concurrent.duration.FiniteDuration

@@ -4,7 +4,7 @@ import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, PortState, StaffMinute}
 import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import drt.shared._
-import server.feeds.ArrivalsFeedSuccess
+import drt.server.feeds.ArrivalsFeedSuccess
 import services.SDate
 
 import scala.collection.immutable.{List, Seq, SortedMap}

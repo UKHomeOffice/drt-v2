@@ -8,11 +8,12 @@ import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy}
 import akka.util.Timeout
 import com.amazonaws.auth.AWSCredentials
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.ConfigFactory
 import controllers.{Deskstats, PaxFlow, UserRoleProviderLike}
 import drt.chroma._
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
 import drt.http.ProdSendAndReceive
+import drt.server.feeds.acl.AclFeed
 import drt.server.feeds.api.S3ApiProvider
 import drt.server.feeds.bhx.{BHXForecastFeed, BHXLiveFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
@@ -21,6 +22,7 @@ import drt.server.feeds.lhr.live.LegacyLhrLiveContentProvider
 import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.server.feeds.ltn.LtnLiveFeed
+import drt.server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse}
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared._
@@ -32,8 +34,6 @@ import org.apache.spark.sql.SparkSession
 import org.joda.time.DateTimeZone
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import server.feeds.acl.AclFeed
-import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse}
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services.SplitsProvider.SplitProvider
 import services._
@@ -118,7 +118,7 @@ case class DrtConfigParameters(config: Configuration) {
 
   val bhxSoapEndPointUrl: String = config.get[String]("feeds.bhx.soap.endPointUrl")
 
-  val b5JStartDate: Option[String] = Option("2019-06-01")
+  val b5JStartDate: String = "2019-06-01"
 
   val ltnLiveFeedUrl: String = config.get[String]("feeds.ltn.live.url")
   val ltnLiveFeedUsername: String = config.get[String]("feeds.ltn.live.username")
@@ -330,7 +330,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
       useLegacyManifests = params.useLegacyManifests,
       splitsPredictorStage = splitsPredictorStage,
-      b5JStartDate = params.b5JStartDate.map(SDate(_)).getOrElse(SDate("2019-06-01")),
+      b5JStartDate = SDate(params.b5JStartDate),
       manifestsLiveSource = voyageManifestsLiveSource,
       manifestsHistoricSource = voyageManifestsHistoricSource,
       voyageManifestsActor = voyageManifestsActor,
@@ -417,11 +417,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         }
         LHRFlightFeed(contentProvider)
       case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
-      case "LGW" =>
-        val lgwNamespace = params.lgwNamespace
-        val lgwSasToKey = params.lgwSasToKey
-        val lgwServiceBusUri = params.lgwServiceBusUri
-        LGWFeed(lgwNamespace, lgwSasToKey, lgwServiceBusUri)(system).source()
+      case "LGW" => LGWFeed(params.lgwNamespace, params.lgwSasToKey, params.lgwServiceBusUri)(system).source()
       case "BHX" => BHXLiveFeed(params.bhxSoapEndPointUrl, 60 seconds)
       case "LTN" =>
         val url = params.ltnLiveFeedUrl

@@ -9,7 +9,7 @@ import com.typesafe.config.Config
 import drt.shared.{AirportConfig, Role}
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
+import drt.server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services.SDate
 import test.TestActors.{TestStaffMovementsActor, _}
 import test.feeds.test.{CSVFixtures, TestFixtureFeed, TestManifestsActor}

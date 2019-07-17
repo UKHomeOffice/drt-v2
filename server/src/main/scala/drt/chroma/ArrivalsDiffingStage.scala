@@ -2,12 +2,10 @@ package drt.chroma
 
 import akka.stream._
 import akka.stream.stage._
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.shared.{Arrival, ArrivalKey}
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
-
-import scala.collection.immutable.SortedMap
 
 final class ArrivalsDiffingStage(initialKnownArrivals: Seq[Arrival]) extends GraphStage[FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse]] {
   val in: Inlet[ArrivalsFeedResponse] = Inlet[ArrivalsFeedResponse]("DiffingStage.in")
@@ -18,8 +16,8 @@ final class ArrivalsDiffingStage(initialKnownArrivals: Seq[Arrival]) extends Gra
   override val shape: FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse] = FlowShape.of(in, out)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    private var knownArrivals: SortedMap[ArrivalKey, Arrival] = SortedMap[ArrivalKey, Arrival]() ++ initialKnownArrivals.map(a => (ArrivalKey(a), a))
-    private var maybeResponseToPush: Option[ArrivalsFeedResponse] = None
+    var knownArrivals: Map[ArrivalKey, Arrival] = initialKnownArrivals.map(a => (ArrivalKey(a), a)).toMap
+    var maybeResponseToPush: Option[ArrivalsFeedResponse] = None
 
     override def preStart(): Unit = {
       log.info(s"Started with ${knownArrivals.size} known arrivals")
@@ -56,10 +54,10 @@ final class ArrivalsDiffingStage(initialKnownArrivals: Seq[Arrival]) extends Gra
 
     def processFeedResponse(ArrivalsFeedResponse: ArrivalsFeedResponse): Option[ArrivalsFeedResponse] = ArrivalsFeedResponse match {
       case afs@ArrivalsFeedSuccess(latestArrivals, _) =>
-        val incomingArrivals = SortedMap[ArrivalKey, Arrival]() ++ latestArrivals.flights.map(a => (ArrivalKey(a), a))
+        val incomingArrivals = latestArrivals.flights.map(a => (ArrivalKey(a), a))
         val newUpdates = diff(knownArrivals, incomingArrivals)
         log.info(s"Got ${newUpdates.size} new arrival updates")
-        knownArrivals = incomingArrivals
+        knownArrivals = incomingArrivals.toMap
         Option(afs.copy(arrivals = latestArrivals.copy(flights = newUpdates.map(_._2))))
       case aff@ArrivalsFeedFailure(_, _) =>
         log.info("Passing ArrivalsFeedFailure through. Nothing to diff. No updates to knownArrivals")
@@ -69,14 +67,17 @@ final class ArrivalsDiffingStage(initialKnownArrivals: Seq[Arrival]) extends Gra
         None
     }
 
-    def diff(existingArrivals: SortedMap[ArrivalKey, Arrival], newArrivals: SortedMap[ArrivalKey, Arrival]): List[(ArrivalKey, Arrival)] = newArrivals
+    def diff(existingArrivals: Map[ArrivalKey, Arrival], newArrivals: Seq[(ArrivalKey, Arrival)]): Seq[(ArrivalKey, Arrival)] = newArrivals
       .foldLeft(List[(ArrivalKey, Arrival)]()) {
         case (soFar, (key, arrival)) => existingArrivals.get(key) match {
           case None => (key, arrival) :: soFar
           case Some(existingArrival) if existingArrival == arrival => soFar
-          case Some(existingArrival) if existingArrival.ActualChox.isDefined && arrival.ActualChox == existingArrival.ActualChox => soFar
+          case Some(existingArrival) if unchangedExistingActChox(arrival, existingArrival) => soFar
           case _ => (key, arrival) :: soFar
         }
       }
+
+    def unchangedExistingActChox(arrival: Arrival, existingArrival: Arrival): Boolean =
+      existingArrival.ActualChox.isDefined && arrival.ActualChox == existingArrival.ActualChox
   }
 }

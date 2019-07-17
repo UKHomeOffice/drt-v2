@@ -1,12 +1,10 @@
-package server.feeds
+package drt.server.feeds
 
 import drt.shared.FlightsApi.Flights
-import drt.shared.{Arrival, ArrivalKey, SDateLike}
+import drt.shared.SDateLike
 import manifests.passengers.BestAvailableManifest
 import services.SDate
 import services.graphstages.DqManifests
-
-import scala.collection.immutable.SortedMap
 
 sealed trait FeedResponse {
   val createdAt: SDateLike

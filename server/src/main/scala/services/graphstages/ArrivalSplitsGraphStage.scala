@@ -8,7 +8,7 @@ import drt.shared._
 import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds._
+import drt.server.feeds._
 import services._
 import services.graphstages.Crunch.purgeExpired
 

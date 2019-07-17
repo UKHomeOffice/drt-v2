@@ -3,10 +3,10 @@ package actors
 import actors.FlightMessageConversion._
 import akka.persistence._
 import com.trueaccord.scalapb.GeneratedMessage
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, ArrivalsFeedSuccessAck}
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds._
 import server.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
 import services.SDate
 import services.graphstages.Crunch

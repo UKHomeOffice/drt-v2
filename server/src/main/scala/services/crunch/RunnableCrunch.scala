@@ -10,7 +10,7 @@ import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared._
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds._
+import drt.server.feeds._
 import services.graphstages.Crunch.Loads
 import services.graphstages._
 

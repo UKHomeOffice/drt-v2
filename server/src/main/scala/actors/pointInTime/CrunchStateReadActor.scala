@@ -34,7 +34,7 @@ class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, expire
       bytesSinceSnapshotCounter += diff.serializedSize
       messagesPersistedSinceSnapshotCounter += 1
     case CrunchDiffMessage(Some(createdAt), _, _, _, _, _, _) =>
-      log.info(s"Ignoring crunch diff with createdAt (${SDate(createdAt).toISOString()}) > point in time requested: ${pointInTime.toISOString()}")
+      log.debug(s"Ignoring crunch diff with createdAt (${SDate(createdAt).toISOString()}) > point in time requested: ${pointInTime.toISOString()}")
     case unexpected =>
       log.info(s"Ignoring unexpected recovery message ${unexpected.getClass}")
   }

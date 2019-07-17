@@ -8,7 +8,7 @@ import manifests.ManifestLookupLike
 import manifests.graph.ManifestTries
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{BestManifestsFeedSuccess, ManifestsFeedResponse}
+import drt.server.feeds.{BestManifestsFeedSuccess, ManifestsFeedResponse}
 import services.{OfferHandler, SDate}
 
 import scala.concurrent.ExecutionContext.Implicits.global

@@ -167,11 +167,9 @@ object TQM {
   def apply(crunchMinute: CrunchMinute): TQM = TQM(crunchMinute.terminalName, crunchMinute.queueName, crunchMinute.minute)
 
   def range(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalQueues: Map[TerminalName, Seq[QueueName]]): Option[(TQM, TQM)] = {
-    println(s"hmm")
     if (terminalQueues.nonEmpty) {
       val firstTerminal = terminalQueues.keys.min
       val lastTerminal = terminalQueues.keys.max
-      println(s"first: $firstTerminal, last: $lastTerminal, out of ${terminalQueues.keys}")
       val queuesFirst = terminalQueues(firstTerminal)
       val queuesLast = terminalQueues(lastTerminal)
       if (queuesFirst.nonEmpty && queuesLast.nonEmpty) {

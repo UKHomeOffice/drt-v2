@@ -14,13 +14,13 @@ object PortStateMessageConversion {
 
   def snapshotMessageToState(sm: CrunchStateSnapshotMessage, optionalTimeWindowEnd: Option[SDateLike]): PortState = {
     log.debug(s"Unwrapping flights messages")
-    val flights: Map[Int, ApiFlightWithSplits] = flightsFromMessages(sm.flightWithSplits, optionalTimeWindowEnd).toMap
+    val flights = flightsFromMessages(sm.flightWithSplits, optionalTimeWindowEnd).toMap
 
     log.debug(s"Unwrapping minutes messages")
 
-    val crunchMinutes: SortedMap[TQM, CrunchMinute] = SortedMap[TQM, CrunchMinute]() ++ crunchMinutesFromMessages(sm.crunchMinutes)
+    val crunchMinutes = SortedMap[TQM, CrunchMinute]() ++ crunchMinutesFromMessages(sm.crunchMinutes)
 
-    val staffMinutes: SortedMap[TM, StaffMinute] = SortedMap[TM, StaffMinute]() ++ staffMinutesFromMessages(sm.staffMinutes)
+    val staffMinutes = SortedMap[TM, StaffMinute]() ++ staffMinutesFromMessages(sm.staffMinutes)
 
     log.debug(s"Finished unwrapping messages")
 

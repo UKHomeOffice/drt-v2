@@ -16,7 +16,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import passengersplits.InMemoryPersistence
-import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
+import drt.server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services._
 import services.graphstages.Crunch._
 import services.graphstages.{DummySplitsPredictor, TestableCrunchLoadStage}
@@ -30,21 +30,25 @@ import scala.language.implicitConversions
 
 class LiveCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
   extends CrunchStateActor(None, oneMegaByte, s"live-test-$name", queues, now, expireAfterMillis, false) {
-  override def updatePortStateFromDiff(diff: PortStateDiff): Unit = {
+  override def portStateFromDiff(diff: PortStateDiff): Option[PortState] = {
     log.info(s"calling parent updateState...")
-    super.updatePortStateFromDiff(diff)
+    val newState = super.portStateFromDiff(diff)
 
-    probe ! state.get
+    probe ! newState.get
+
+    newState
   }
 }
 
 class ForecastCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
   extends CrunchStateActor(None, oneMegaByte, s"forecast-test-$name", queues, now, expireAfterMillis, false) {
-  override def updatePortStateFromDiff(diff: PortStateDiff): Unit = {
+  override def portStateFromDiff(diff: PortStateDiff): Option[PortState] = {
     log.info(s"calling parent updateState...")
-    super.updatePortStateFromDiff(diff)
+    val newState = super.portStateFromDiff(diff)
 
-    probe ! state.get
+    probe ! newState.get
+
+    newState
   }
 }
 

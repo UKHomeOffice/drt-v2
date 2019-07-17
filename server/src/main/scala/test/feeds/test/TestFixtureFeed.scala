@@ -8,7 +8,7 @@ import akka.util.Timeout
 import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import drt.server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import test.TestActors.ResetActor
 

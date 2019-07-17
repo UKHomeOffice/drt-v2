@@ -8,7 +8,7 @@ import drt.shared.SplitRatiosNs.SplitSources._
 import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
-import server.feeds.ManifestsFeedSuccess
+import drt.server.feeds.ManifestsFeedSuccess
 import services.SDate
 import services.crunch.VoyageManifestGenerator._
 import services.graphstages.DqManifests
