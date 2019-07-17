@@ -176,9 +176,8 @@ class WorkloadGraphStage(name: String = "",
           soFarSoFar.updated(tqm, soFarSoFar.getOrElse(tqm, Set[FlightSplitMinute]()) + fsm)
       }
 
-    def updateTqmsForFlight(fws: ApiFlightWithSplits, flightWorkload: Set[FlightSplitMinute]): List[TQM] = {
+    def updateTqmsForFlight(fws: ApiFlightWithSplits, flightWorkload: Set[FlightSplitMinute]): List[TQM] =
       flightWorkload.map(f => TQM(f.terminalName, f.queueName, f.minute)).toList
-    }
 
     setHandler(outLoads, new OutHandler {
       override def onPull(): Unit = {
