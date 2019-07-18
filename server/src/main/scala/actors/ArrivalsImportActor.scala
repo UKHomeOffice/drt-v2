@@ -18,6 +18,6 @@ class ArrivalsImportActor() extends Actor {
     case GetFeedImportArrivals =>
       log.info(s"Sending arrivals from import")
       sender() ! maybeArrivalsFromImport
-      if (maybeArrivalsFromImport.nonEmpty) maybeArrivalsFromImport = None
+      maybeArrivalsFromImport = None
   }
 }

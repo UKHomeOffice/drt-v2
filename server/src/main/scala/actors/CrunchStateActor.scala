@@ -59,7 +59,12 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
     val crunchMinutes = SortedMap[TQM, CrunchMinute]() ++ recoveryCrunchMinutes
     val staffMinutes = SortedMap[TM, StaffMinute]() ++ recoveryStaffMinutes
     val newState = PortState(recoveryFlights, crunchMinutes, staffMinutes)
+
     state = Option(newState)
+
+    recoveryCrunchMinutes = List()
+    recoveryStaffMinutes = List()
+    recoveryFlights = Map()
   }
 
   def logRecoveryState(optionalState: Option[PortState]): Unit = optionalState match {
@@ -135,7 +140,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
       case Some(ps) => ps
     }
 
-    val newState = existingPs.copy(
+    val newState = PortState(
       flights = existingPs.flights -- diff.flightRemovals.map(_.flightKey.uniqueId) ++ diff.flightUpdates,
       crunchMinutes = existingPs.crunchMinutes ++ diff.crunchMinuteUpdates,
       staffMinutes = existingPs.staffMinutes ++ diff.staffMinuteUpdates)
