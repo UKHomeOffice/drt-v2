@@ -75,7 +75,7 @@ describe('Restrict access to endpoint by role', function () {
       shouldBeGranted: false
     },
     {
-      roles: ["test", "port-operator-staff"],
+      roles: ["test", "port-feed-upload"],
       endpoint: "/data/feed/live/lhr",
       method: "POST",
       shouldBeGranted: true
@@ -271,7 +271,7 @@ describe('Restrict access to endpoint by role', function () {
             const accessGranted = resp.status != 401
             expect(accessGranted)
             .to
-            .eq(testCase.shouldBeGranted, "wrong status code")
+            .eq(testCase.shouldBeGranted, "Role: " + testCase.roles.join(", ") + " has incorrect permissions to " + testCase.method + " on " + testCase.endpoint)
           });
       });
     });
