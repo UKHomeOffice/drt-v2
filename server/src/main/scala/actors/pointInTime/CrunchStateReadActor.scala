@@ -28,7 +28,7 @@ class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, expire
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case diff: CrunchDiffMessage if diff.getCreatedAt <= pointInTime.millisSinceEpoch =>
-      recoveryFlights = recoveryFlights -- diff.flightIdsToRemove ++ flightsFromMessages(diff.flightsToUpdate, None)
+      recoveryFlights = (recoveryFlights -- diff.flightIdsToRemove) ++ flightsFromMessages(diff.flightsToUpdate, None)
       recoveryCrunchMinutes = recoveryCrunchMinutes ++ crunchMinutesFromMessages(diff.crunchMinutesToUpdate)
       recoveryStaffMinutes = recoveryStaffMinutes ++ staffMinutesFromMessages(diff.staffMinutesToUpdate)
       bytesSinceSnapshotCounter += diff.serializedSize

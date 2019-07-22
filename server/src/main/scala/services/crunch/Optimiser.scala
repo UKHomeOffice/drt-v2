@@ -14,7 +14,6 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 trait OptimiserLike {
-  def uri: String
   def requestDesksAndWaits(workloadToOptimise: WorkloadToOptimise): Future[Option[DesksAndWaits]]
 }
 
@@ -62,8 +61,6 @@ object WorkloadToOptimise {
 
 object OptimiserLocal extends OptimiserLike {
   import scala.concurrent.ExecutionContext.Implicits.global
-
-  override def uri: String = ""
 
   override def requestDesksAndWaits(workloadToOptimise: WorkloadToOptimise): Future[Option[DesksAndWaits]] =
     TryRenjin.crunch(

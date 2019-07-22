@@ -54,8 +54,8 @@ final class ArrivalsDiffingStage(initialKnownArrivals: Seq[Arrival]) extends Gra
 
     def processFeedResponse(ArrivalsFeedResponse: ArrivalsFeedResponse): Option[ArrivalsFeedResponse] = ArrivalsFeedResponse match {
       case afs@ArrivalsFeedSuccess(latestArrivals, _) =>
-        val incomingArrivals = latestArrivals.flights.map(a => (ArrivalKey(a), a))
-        val newUpdates = diff(knownArrivals, incomingArrivals)
+        val incomingArrivals: Seq[(ArrivalKey, Arrival)] = latestArrivals.flights.map(a => (ArrivalKey(a), a))
+        val newUpdates: Seq[(ArrivalKey, Arrival)] = filterArrivalsWithUpdates(knownArrivals, incomingArrivals)
         log.info(s"Got ${newUpdates.size} new arrival updates")
         knownArrivals = incomingArrivals.toMap
         Option(afs.copy(arrivals = latestArrivals.copy(flights = newUpdates.map(_._2))))
@@ -67,7 +67,7 @@ final class ArrivalsDiffingStage(initialKnownArrivals: Seq[Arrival]) extends Gra
         None
     }
 
-    def diff(existingArrivals: Map[ArrivalKey, Arrival], newArrivals: Seq[(ArrivalKey, Arrival)]): Seq[(ArrivalKey, Arrival)] = newArrivals
+    def filterArrivalsWithUpdates(existingArrivals: Map[ArrivalKey, Arrival], newArrivals: Seq[(ArrivalKey, Arrival)]): Seq[(ArrivalKey, Arrival)] = newArrivals
       .foldLeft(List[(ArrivalKey, Arrival)]()) {
         case (soFar, (key, arrival)) => existingArrivals.get(key) match {
           case None => (key, arrival) :: soFar

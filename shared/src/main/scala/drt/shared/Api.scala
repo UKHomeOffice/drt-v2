@@ -555,7 +555,8 @@ object FlightsApi {
     }
 
     def applyToPortState(updatedFlights: Seq[ApiFlightWithSplits], portState: PortState): PortState = {
-      val newFlights = portState.flights -- arrivalsToRemove.map(_.uniqueId) ++ updatedFlights.map(f => (f.apiFlight.uniqueId, f))
+      val idsToRemove = arrivalsToRemove.map(_.uniqueId)
+      val newFlights = (portState.flights -- idsToRemove) ++ updatedFlights.map(f => (f.apiFlight.uniqueId, f))
       portState.copy(flights = newFlights)
     }
   }

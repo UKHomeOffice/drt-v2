@@ -357,8 +357,6 @@ class CrunchTestLike
 }
 
 case class OptimiserMock(wlToDw: WorkloadToOptimise => DesksAndWaits) extends OptimiserLike {
-  override def uri: String = ""
-
   override def requestDesksAndWaits(workloadToOptimise: WorkloadToOptimise): Future[Option[DesksAndWaits]] = Future(Option(wlToDw(workloadToOptimise)))
 }
 
