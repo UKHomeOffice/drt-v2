@@ -4,9 +4,9 @@ import java.nio.file.Paths
 import java.util.UUID
 
 import api.ApiResponseBody
-import drt.server.feeds.lhr.forecast.{LHRForecastCSVExtractor, LHRForecastXLSExtractor}
+import drt.server.feeds.lhr.forecast.LHRForecastCSVExtractor
 import drt.shared.FlightsApi.Flights
-import drt.shared.PortOperatorStaff
+import drt.shared.PortFeedUpload
 import play.api.libs.Files
 import play.api.libs.json.Json._
 import play.api.mvc.{Action, Request}
@@ -20,7 +20,7 @@ import scala.language.postfixOps
 trait ApplicationWithImports {
   self: Application =>
 
-  def feedImport(feedType: String, portCode: String): Action[Files.TemporaryFile] = authByRole(PortOperatorStaff) {
+  def feedImport(feedType: String, portCode: String): Action[Files.TemporaryFile] = authByRole(PortFeedUpload) {
     Action.async(parse.temporaryFile) { request: Request[Files.TemporaryFile] =>
       val filePath = s"/tmp/${UUID.randomUUID().toString}"
 
