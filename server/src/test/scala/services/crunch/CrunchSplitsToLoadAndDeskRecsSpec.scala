@@ -7,7 +7,7 @@ import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
-import server.feeds.{ArrivalsFeedSuccess, ManifestsFeedSuccess}
+import drt.server.feeds.{ArrivalsFeedSuccess, ManifestsFeedSuccess}
 import services.SDate
 import services.graphstages.Crunch.getLocalLastMidnight
 import services.graphstages.DqManifests

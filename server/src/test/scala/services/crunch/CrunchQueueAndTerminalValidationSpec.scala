@@ -7,7 +7,7 @@ import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.EeaDesk
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
-import server.feeds.ArrivalsFeedSuccess
+import drt.server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.graphstages.Crunch._
 

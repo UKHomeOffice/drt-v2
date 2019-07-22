@@ -10,7 +10,7 @@ import drt.shared.PortFeedUpload
 import play.api.libs.Files
 import play.api.libs.json.Json._
 import play.api.mvc.{Action, Request}
-import server.feeds.StoreFeedImportArrivals
+import drt.server.feeds.StoreFeedImportArrivals
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

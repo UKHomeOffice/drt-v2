@@ -5,7 +5,7 @@ import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared._
-import server.feeds.ArrivalsFeedSuccess
+import drt.server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.graphstages.Crunch._
 
@@ -29,8 +29,8 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val scheduled = "2017-01-01T00:00Z"
 
       val flights = Flights(List(
-        ArrivalGenerator.arrival(flightId = Option(1), actPax = Option(10), schDt = scheduled, iata = "BA0001"),
-        ArrivalGenerator.arrival(flightId = Option(2), actPax = Option(10), schDt = scheduled, iata = "FR8819")
+        ArrivalGenerator.arrival(flightId = Option(1), origin = "JFK", actPax = Option(10), schDt = scheduled, iata = "BA0001"),
+        ArrivalGenerator.arrival(flightId = Option(2), origin = "JFK", actPax = Option(10), schDt = scheduled, iata = "FR8819")
       ))
 
       val crunch = runCrunchGraph(

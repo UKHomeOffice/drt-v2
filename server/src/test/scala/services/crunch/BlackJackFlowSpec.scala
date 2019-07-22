@@ -6,7 +6,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues._
 import passengersplits.parsing.VoyageManifestParser.PassengerInfoJson
-import server.feeds.ArrivalsFeedSuccess
+import drt.server.feeds.ArrivalsFeedSuccess
 import services.SDate
 
 import scala.collection.immutable.Seq

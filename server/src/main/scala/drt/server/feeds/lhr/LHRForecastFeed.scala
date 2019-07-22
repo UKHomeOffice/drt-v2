@@ -6,7 +6,7 @@ import drt.server.feeds.lhr.forecast.LHRForecastFlightRow
 import drt.shared.FlightsApi.Flights
 import drt.shared.{Arrival, ForecastFeedSource}
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, GetFeedImportArrivals}
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, GetFeedImportArrivals}
 import services.SDate
 
 import scala.concurrent.{Await, Future}

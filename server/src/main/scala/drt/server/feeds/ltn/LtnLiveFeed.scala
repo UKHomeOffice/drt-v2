@@ -5,14 +5,14 @@ import akka.actor.{ActorSystem, Cancellable}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
-import akka.stream.{ActorMaterializer, Materializer}
+import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import drt.shared.{Arrival, LiveFeedSource}
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
+import drt.shared.{Arrival, LiveFeedSource}
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 

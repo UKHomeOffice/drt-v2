@@ -48,14 +48,14 @@ class WorkloadGraphStage(name: String = "",
           log.warn(s"Did not receive any loads to initialise with")
           SortedMap()
       }
-      flightLoadMinutes = optionalInitialFlightsWithSplits match {
+      optionalInitialFlightsWithSplits match {
         case Some(fws: FlightsWithSplits) =>
           log.info(s"Received ${fws.flightsToUpdate.size} initial flights. Calculating workload.")
-          val updatedWorkloads = flightLoadMinutes(fws)
-          purgeExpired(updatedWorkloads, now, expireAfterMillis.toInt)
+          val (updatedWorkloads, flightTqms) = affectedWorkloadsAndTqms(fws)
+          flightLoadMinutes = purgeExpired(updatedWorkloads, now, expireAfterMillis.toInt)
+          flightTQMs = flightTqms
         case None =>
           log.warn(s"Didn't receive any initial flights to initialise with")
-          SortedMap()
       }
 
       super.preStart()
@@ -78,22 +78,24 @@ class WorkloadGraphStage(name: String = "",
         val incomingFlights = grab(inFlightsWithSplits)
         log.info(s"Received ${incomingFlights.flightsToUpdate.size} arrivals")
 
-        val existingFlightTQMs: Set[TQM] = incomingFlights.flightsToUpdate.flatMap(fws => flightTQMs.getOrElse(fws.apiFlight.uniqueId, List())).toSet
+        val incomingFlightsTqms: Set[TQM] = incomingFlights.flightsToUpdate.flatMap(fws => flightTQMs.getOrElse(fws.apiFlight.uniqueId, List())).toSet
         log.info(s"Got existing flight TQMs")
-        val updatedWorkloads = flightLoadMinutes(incomingFlights)
+        val (incomingWorkloads, incomingTqmsByFlight) = affectedWorkloadsAndTqms(incomingFlights)
+        flightTQMs = flightTQMs ++ incomingTqmsByFlight
         log.info(s"Got updated workloads")
 
-        flightLoadMinutes = mergeFlightLoadMinutes(existingFlightTQMs, updatedWorkloads, incomingFlights)
+        val newAffectedTqmSplits = affectedTqmSplitsFromIncoming(incomingFlightsTqms, incomingWorkloads, incomingFlights)
+        flightLoadMinutes = flightLoadMinutes ++ newAffectedTqmSplits
         log.info(s"Merged updated workloads into existing")
 
-        val affectedTQMs = updatedWorkloads.keys.toSet ++ existingFlightTQMs
+        val affectedTqms = newAffectedTqmSplits.keys
         log.info(s"Got affected TQMs")
-        val latestDiff = diffFromTQMs(affectedTQMs)
+        val latestDiff = diffFromTQMs(affectedTqms)
         log.info(s"Got latestDiff")
 
-        loadMinutes = mergeLoadMinutes(latestDiff, loadMinutes)
+        loadMinutes = loadMinutes ++ latestDiff
         log.info(s"Merged load minutes")
-        updatedLoadsToPush = purgeExpired(mergeLoadMinutes(latestDiff, updatedLoadsToPush), now, expireAfterMillis.toInt)
+        updatedLoadsToPush = purgeExpired(updatedLoadsToPush ++ latestDiff, now, expireAfterMillis.toInt)
         log.info(s"${updatedLoadsToPush.size} load minutes to push (${updatedLoadsToPush.values.count(_.paxLoad == 0d)} zero pax minutes)")
 
         pushStateIfReady()
@@ -103,40 +105,41 @@ class WorkloadGraphStage(name: String = "",
       }
     })
 
-    def diffFromTQMs(affectedTQMs: Set[TQM]): Map[TQM, LoadMinute] = {
+    def diffFromTQMs(affectedTQMs: Iterable[TQM]): List[(TQM, LoadMinute)] = {
       val affectedLoads = flightSplitMinutesToQueueLoadMinutes(affectedTQMs)
-      affectedLoads.foldLeft(Map[TQM, LoadMinute]()) {
+      affectedLoads.foldLeft(List[(TQM, LoadMinute)]()) {
         case (soFar, (tqm, lm)) => loadMinutes.get(tqm) match {
           case Some(existingLm) if existingLm == lm => soFar
-          case _ => soFar.updated(tqm, lm)
+          case _ => (tqm, lm) :: soFar
         }
       }
     }
 
-    def mergeFlightLoadMinutes(existingFlightTQMs: Set[TQM], updatedWorkloads: SortedMap[TQM, Set[FlightSplitMinute]], incomingFlights: FlightsWithSplits): SortedMap[TQM, Set[FlightSplitMinute]] = {
+    def affectedTqmSplitsFromIncoming(incomingFlightsOldTqms: Set[TQM], incomingWorkloads: SortedMap[TQM, Set[FlightSplitMinute]], incomingFlights: FlightsWithSplits): SortedMap[TQM, Set[FlightSplitMinute]] = {
       val arrivalIds: Set[Int] = incomingFlights.flightsToUpdate.map(_.apiFlight.uniqueId).toSet
-      val minusOldSplitMinutes = existingFlightTQMs.foldLeft(flightLoadMinutes) {
-        case (flightSplitMinutesSoFar, tqm) =>
-          val existingFlightSplitsMinutes: Set[FlightSplitMinute] = flightSplitMinutesSoFar.getOrElse(tqm, Set[FlightSplitMinute]())
-          val minusIncomingSplitMinutes = existingFlightSplitsMinutes.filterNot(fsm => arrivalIds.contains(fsm.flightId))
-          flightSplitMinutesSoFar.updated(tqm, minusIncomingSplitMinutes)
-      }
-      val withNewSplitMinutes = updatedWorkloads.foldLeft(minusOldSplitMinutes) {
-        case (soFar, (tqm, newLm)) => soFar.updated(tqm, soFar.getOrElse(tqm, Set()) ++ newLm)
-      }
-      purgeExpired(withNewSplitMinutes, now, expireAfterMillis.toInt)
-    }
 
-    def mergeLoadMinutes(updatedLoads: Map[TQM, LoadMinute], existingLoads: SortedMap[TQM, LoadMinute]): SortedMap[TQM, LoadMinute] = updatedLoads.foldLeft(existingLoads) {
-      case (soFar, (key, newLoadMinute)) => soFar.updated(key, newLoadMinute)
+      val oldSplitMinutesRemoved = SortedMap[TQM, Set[FlightSplitMinute]]() ++ incomingFlightsOldTqms.foldLeft(List[(TQM, Set[FlightSplitMinute])]()) {
+        case (affectedSoFar, tqm) =>
+          val existingFlightSplitsMinutes: Set[FlightSplitMinute] = flightLoadMinutes.getOrElse(tqm, Set[FlightSplitMinute]())
+          val minusIncomingSplitMinutes = existingFlightSplitsMinutes.filterNot(fsm => arrivalIds.contains(fsm.flightId))
+          (tqm, minusIncomingSplitMinutes) :: affectedSoFar
+      }
+
+      val allAffectedSplitMinutes = incomingWorkloads.foldLeft(oldSplitMinutesRemoved) {
+        case (soFar, (tqm, newLm)) =>
+          val splitMinutes = soFar.getOrElse(tqm, flightLoadMinutes.getOrElse(tqm, Set()))
+          soFar.updated(tqm, splitMinutes ++ newLm)
+      }
+
+      allAffectedSplitMinutes
     }
 
     def loadDiff(updatedLoads: Map[TQM, LoadMinute], existingLoads: Map[TQM, LoadMinute]): Map[TQM, LoadMinute] = {
-      val updates: Map[TQM, LoadMinute] = updatedLoads.foldLeft(Map[TQM, LoadMinute]()) {
+      val updates: List[(TQM, LoadMinute)] = updatedLoads.foldLeft(List[(TQM, LoadMinute)]()) {
         case (soFar, (key, updatedLoad)) =>
           existingLoads.get(key) match {
             case Some(existingLoadMinute) if existingLoadMinute == updatedLoad => soFar
-            case _ => soFar.updated(key, updatedLoad)
+            case _ => (key, updatedLoad) :: soFar
           }
       }
       val toRemoveIds = existingLoads.keys.toSet -- updatedLoads.keys.toSet
@@ -144,25 +147,26 @@ class WorkloadGraphStage(name: String = "",
         .map(id => existingLoads.get(id))
         .collect { case Some(lm) if lm.workLoad != 0 => (lm.uniqueId, lm.copy(paxLoad = 0, workLoad = 0)) }
 
-      val diff = updates ++ removes
+      val diff = updates.toMap ++ removes
       log.info(s"${diff.size} updated load minutes (${updates.size} updates + ${removes.size} removes)")
 
       diff
     }
 
-    def flightLoadMinutes(incomingFlights: FlightsWithSplits): SortedMap[TQM, Set[FlightSplitMinute]] = incomingFlights
+    def affectedWorkloadsAndTqms(incomingFlights: FlightsWithSplits): (SortedMap[TQM, Set[FlightSplitMinute]], Map[Int, List[TQM]]) = incomingFlights
       .flightsToUpdate
       .filterNot(isCancelled)
       .filter(hasProcessingTime)
-      .foldLeft(SortedMap[TQM, Set[FlightSplitMinute]]()) {
-        case (flightWorkloadsSoFar, fws) =>
+      .foldLeft(SortedMap[TQM, Set[FlightSplitMinute]](), Map[Int, List[TQM]]()) {
+        case ((flightWorkloadsSoFar, flightTqmsSoFar), fws) =>
           airportConfig.defaultProcessingTimes.get(fws.apiFlight.Terminal)
             .map(procTimes => {
               val flightWorkload = WorkloadCalculator.flightToFlightSplitMinutes(fws, procTimes, natProcTimes, useNationalityBasedProcessingTimes)
-              updateTQMsForFlight(fws, flightWorkload)
-              mergeWorkloadsFromFlight(flightWorkloadsSoFar, flightWorkload)
+              val flightTqms = updateTqmsForFlight(fws, flightWorkload)
+              val splitMinutes = mergeWorkloadsFromFlight(flightWorkloadsSoFar, flightWorkload)
+              (splitMinutes, flightTqmsSoFar.updated(fws.apiFlight.uniqueId, flightTqms))
             })
-            .getOrElse(flightWorkloadsSoFar)
+            .getOrElse((flightWorkloadsSoFar, flightTqmsSoFar))
       }
 
     def mergeWorkloadsFromFlight(existingFlightSplitMinutes: SortedMap[TQM, Set[FlightSplitMinute]], flightWorkload: Set[FlightSplitMinute]): SortedMap[TQM, Set[FlightSplitMinute]] =
@@ -172,10 +176,8 @@ class WorkloadGraphStage(name: String = "",
           soFarSoFar.updated(tqm, soFarSoFar.getOrElse(tqm, Set[FlightSplitMinute]()) + fsm)
       }
 
-    def updateTQMsForFlight(fws: ApiFlightWithSplits, flightWorkload: Set[FlightSplitMinute]): Unit = {
-      val tqms = flightWorkload.map(f => TQM(f.terminalName, f.queueName, f.minute)).toList
-      flightTQMs = flightTQMs.updated(fws.apiFlight.uniqueId, tqms)
-    }
+    def updateTqmsForFlight(fws: ApiFlightWithSplits, flightWorkload: Set[FlightSplitMinute]): List[TQM] =
+      flightWorkload.map(f => TQM(f.terminalName, f.queueName, f.minute)).toList
 
     setHandler(outLoads, new OutHandler {
       override def onPull(): Unit = {
@@ -205,7 +207,7 @@ class WorkloadGraphStage(name: String = "",
       else log.info(s"outLoads not available to push")
     }
 
-    def flightSplitMinutesToQueueLoadMinutes(tqms: Set[TQM]): Map[TQM, LoadMinute] = tqms
+    def flightSplitMinutesToQueueLoadMinutes(tqms: Iterable[TQM]): Map[TQM, LoadMinute] = tqms
       .map(tqm => {
         val fqms = flightLoadMinutes.getOrElse(tqm, Set())
         val paxLoad = fqms.toSeq.map(_.paxLoad).sum

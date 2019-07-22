@@ -13,7 +13,7 @@ import drt.shared.FlightsApi.Flights
 import org.apache.commons.lang3.StringUtils
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter, ISODateTimeFormat}
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import services.graphstages.Crunch
 

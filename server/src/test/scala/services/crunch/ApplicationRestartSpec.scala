@@ -6,7 +6,7 @@ import drt.shared.CrunchApi.{CrunchMinute, PortState, StaffMinute}
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
-import server.feeds.ArrivalsFeedSuccess
+import drt.server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.graphstages.Crunch
 

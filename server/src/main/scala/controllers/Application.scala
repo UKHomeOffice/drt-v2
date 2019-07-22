@@ -934,10 +934,6 @@ class Application @Inject()(implicit val config: Configuration,
       f"${endPit.getFullYear()}-${endPit.getMonth()}%02d-${endPit.getDate()}"
   }
 
-  def isInRangeOnDay(startDateTime: SDateLike, endDateTime: SDateLike)(minute: SDateLike): Boolean =
-    startDateTime.millisSinceEpoch <= minute.millisSinceEpoch && minute.millisSinceEpoch <= endDateTime.millisSinceEpoch
-
-
   def flightsForCSVExportWithinRange(terminalName: TerminalName,
                                      pit: SDateLike,
                                      startHour: Int,
@@ -947,7 +943,7 @@ class Application @Inject()(implicit val config: Configuration,
 
     val startDateTime = getLocalLastMidnight(pit).addHours(startHour)
     val endDateTime = getLocalLastMidnight(pit).addHours(endHour)
-    val isInRange = isInRangeOnDay(startDateTime, endDateTime) _
+    val isInRange = Crunch.isInRangeOnDay(startDateTime, endDateTime) _
 
     portStateFuture.map {
       case Right(Some(PortState(fs, _, _))) =>

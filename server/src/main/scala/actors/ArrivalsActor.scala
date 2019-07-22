@@ -3,10 +3,10 @@ package actors
 import actors.FlightMessageConversion._
 import akka.persistence._
 import com.trueaccord.scalapb.GeneratedMessage
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, ArrivalsFeedSuccessAck}
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds._
 import server.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
 import services.SDate
 import services.graphstages.Crunch
@@ -139,13 +139,13 @@ abstract class ArrivalsActor(now: () => SDateLike,
   def consumeUpdates(diffsMessage: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState = {
     logRecoveryMessage(s"Consuming ${diffsMessage.updates.length} updates")
     val updatedArrivals = diffsMessage.updates
-      .foldLeft(existingState.arrivals) {
+      .foldLeft(List[(Int, Arrival)]()) {
         case (soFar, fm) =>
           val arrival = flightMessageToApiFlight(fm)
-          soFar.updated(arrival.uniqueId, arrival)
+          (arrival.uniqueId, arrival) :: soFar
       }
 
-    existingState.copy(arrivals = updatedArrivals)
+    existingState.copy(arrivals = existingState.arrivals ++ updatedArrivals)
   }
 
   override def receiveCommand: Receive = {
@@ -193,11 +193,8 @@ abstract class ArrivalsActor(now: () => SDateLike,
     if (updatedArrivals.nonEmpty) persistArrivalUpdates(Set(), updatedArrivals)
   }
 
-  def mergeArrivals(incomingArrivals: Seq[Arrival], existingArrivals: Map[Int, Arrival]): Map[Int, Arrival] = {
-    incomingArrivals.foldLeft(existingArrivals) {
-      case (soFar, updatedArrival) => soFar.updated(updatedArrival.uniqueId, updatedArrival)
-    }
-  }
+  def mergeArrivals(incomingArrivals: Seq[Arrival], existingArrivals: Map[Int, Arrival]): Map[Int, Arrival] =
+    existingArrivals ++ incomingArrivals.map(a => (a.uniqueId, a))
 
   def persistArrivalUpdates(removalKeys: Set[Int], updatedArrivals: Set[Arrival]): Unit = {
     val updateMessages = updatedArrivals.map(apiFlightToFlightMessage).toSeq
