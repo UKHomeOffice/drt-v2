@@ -1,4 +1,4 @@
-package drt.server.feeds.bhx
+package drt.server.feeds.legacy.bhx
 
 import drt.shared.Arrival
 import uk.co.bhx.online.flightinformation.FlightInformationSoap

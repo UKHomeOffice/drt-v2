@@ -5,7 +5,7 @@ import java.util.{Calendar, GregorianCalendar, TimeZone}
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import com.typesafe.config.ConfigFactory
-import drt.server.feeds.bhx.BHXFeed
+import drt.server.feeds.legacy.bhx.BHXFeed
 import drt.shared.{Arrival, ForecastFeedSource, LiveFeedSource}
 import javax.xml.datatype.DatatypeFactory
 import javax.xml.ws.BindingProvider

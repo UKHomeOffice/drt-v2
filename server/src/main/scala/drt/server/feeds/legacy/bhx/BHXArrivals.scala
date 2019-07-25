@@ -1,4 +1,4 @@
-package drt.server.feeds.bhx
+package drt.server.feeds.legacy.bhx
 
 import drt.shared.{Arrival, FeedSource, ForecastFeedSource, LiveFeedSource}
 import javax.xml.datatype.XMLGregorianCalendar
