@@ -71,7 +71,7 @@ object Settings {
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
     val uPickle = "0.6.7"
-    val drtLib = "0.1.0"
+    val drtLib = "0.2.0"
   }
 
   import versions._
