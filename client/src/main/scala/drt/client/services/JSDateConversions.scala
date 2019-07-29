@@ -70,6 +70,8 @@ object JSDateConversions {
       override def getTimeZoneOffsetMillis(): MillisSinceEpoch = date.utcOffset().toLong * 60000L
 
       def startOfTheMonth(): SDateLike = SDate(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0)
+
+      def getLocalPreviousMidnight: SDateLike = midnightOf(date)
     }
 
     def apply(milliDate: MilliDate): SDateLike = Moment.tz(milliDate.millisSinceEpoch, europeLondon)

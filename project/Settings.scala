@@ -82,7 +82,6 @@ object Settings {
     * the special %%% function selects the correct version for each project
     */
   val sharedDependencies = Def.setting(Seq(
-    "uk.gov.homeoffice" %%% "drt-lib" % drtLib,
     "com.lihaoyi" %%% "autowire" % autowire,
     "com.lihaoyi" %%% "upickle" % uPickle,
     "io.suzaku" %%% "boopickle" % booPickle
