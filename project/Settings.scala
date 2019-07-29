@@ -71,6 +71,7 @@ object Settings {
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
     val uPickle = "0.6.7"
+    val drtLib = "0.2.0"
   }
 
   import versions._
@@ -99,6 +100,8 @@ object Settings {
 
   /** Dependencies only used by the JVM project */
   val jvmDependencies = Def.setting(List(
+    "uk.gov.homeoffice" %% "drt-lib" % drtLib,
+
     "com.amazonaws" % "aws-java-sdk" % awsSdk,
     "com.github.dnvriend" %% "akka-persistence-inmemory" % akkaPersistenceInmemory % "test",
     "com.hierynomus" % "sshj" % sshJ,
@@ -171,6 +174,7 @@ object Settings {
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */
   val scalajsDependencies = Def.setting(Seq(
+    "uk.gov.homeoffice" %%% "drt-lib" % drtLib,
     "com.github.japgolly.scalajs-react" %%% "core" % scalajsReact,
     "com.github.japgolly.scalajs-react" %%% "extra" % scalajsReact,
     "com.github.japgolly.scalajs-react" %%% "test" % scalajsReact % Test,
