@@ -50,12 +50,6 @@ object SDate {
     def getTimeZoneOffsetMillis(): Long = dateTime.getZone.getOffset(millisSinceEpoch)
 
     def startOfTheMonth(): SDateLike = SDate(dateTime.getFullYear(), dateTime.getMonth(), 1, 0, 0, Crunch.europeLondonTimeZone)
-
-    def getLocalPreviousMidnight: SDateLike = {
-      val localNow = SDate(dateTime.getMillis, Crunch.europeLondonTimeZone)
-      val localMidnight = s"${localNow.toISODateOnly}T00:00"
-      SDate(localMidnight, Crunch.europeLondonTimeZone)
-    }
   }
 
   object implicits {
