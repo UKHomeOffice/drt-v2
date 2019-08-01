@@ -47,6 +47,9 @@ object Crunch {
   val europeLondonId = "Europe/London"
   val europeLondonTimeZone: DateTimeZone = DateTimeZone.forID(europeLondonId)
 
+  def isInRangeOnDay(startDateTime: SDateLike, endDateTime: SDateLike)(minute: SDateLike): Boolean =
+    startDateTime.millisSinceEpoch <= minute.millisSinceEpoch && minute.millisSinceEpoch <= endDateTime.millisSinceEpoch
+
   def midnightThisMorning: MillisSinceEpoch = {
     val localNow = SDate(new DateTime(europeLondonTimeZone).getMillis)
     val crunchStartDate = Crunch.getLocalLastMidnight(localNow.millisSinceEpoch).millisSinceEpoch

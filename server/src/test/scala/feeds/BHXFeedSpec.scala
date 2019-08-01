@@ -16,7 +16,6 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.xml.XML
 
-
 class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike {
   sequential
   isolated
@@ -67,8 +66,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
         Option(65)
       )
     )
-    println(result)
-    println(expected)
+
     result === expected
   }
 
@@ -170,7 +168,6 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
           |</LegData>
         """.stripMargin)
 
-
     val expected = "2018-09-01T24:00:00.000Z"
     val node = xml \ "OperationTime"
     val result = BHXFlight.estChox(node).get
@@ -187,7 +184,6 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
           |   <OperationTime OperationQualifier="TDN" CodeContext="2005" TimeType="EST">2018-09-01T24:00:00.000Z</OperationTime>
           |</LegData>
         """.stripMargin)
-
 
     val expected = "2018-09-01T24:00:00.000Z"
     val node = xml \ "OperationTime"
