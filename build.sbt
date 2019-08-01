@@ -119,8 +119,7 @@ lazy val server = (project in file("server"))
     scalapb.gen() -> (sourceManaged in Compile).value / "protobuf"
   ),
   TwirlKeys.templateImports += "buildinfo._",
-  parallelExecution in Test := false,
-  slick <<= slickCodeGenTask // register manual sbt command
+  parallelExecution in Test := false
 )
   .aggregate(clients.map(projectToRef): _*)
   .dependsOn(sharedJVM)
@@ -139,16 +138,6 @@ val conf = ConfigFactory.parseFile(new File("server/src/main/resources/applicati
 
 lazy val slick = TaskKey[Seq[File]]("gen-tables")
 val tuple = (sourceManaged, dependencyClasspath in Compile, runner in Compile, streams)
-lazy val slickCodeGenTask = tuple map { (dir, cp, r, s) =>
-  val outputDir = (dir / "slick").getPath // place generated files in sbt's managed sources folder
-  val url = conf.getString("aggregated-db.url")
-  val jdbcDriver = "org.postgresql.Driver"
-  val slickDriver = "slick.jdbc.PostgresProfile"
-  val pkg = "drtdb"
-  toError(r.run("slick.codegen.SourceCodeGenerator", cp.files, Array(slickDriver, jdbcDriver, url, outputDir, pkg), s.log))
-  val fname = outputDir + "/" + pkg + "/Tables.scala"
-  Seq(file(fname))
-}
 
 parallelExecution in Test := false
 // loads the Play server project at sbt startup
