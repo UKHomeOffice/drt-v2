@@ -38,7 +38,7 @@ object Settings {
     val akka = "2.5.23"
     val akkaStreamContrib = "0.9"
 
-    val specs2 = "3.7"
+    val specs2 = "4.6.0"
     val react = "16.0.0"
 
     val bootstrap = "3.3.6"
@@ -51,11 +51,11 @@ object Settings {
     val awsSdk = "1.11.89"
     val awsCommons = "0.12.2"
     val csvCommons = "1.4"
-    val pprint = "0.4.3"
+    val pprint = "0.5.4"
     val scalaCheck = "1.13.4"
     val akkaPersistenceInmemory = "2.4.18.1"
     val akkaPersistenceJdbc = "3.5.0"
-    val bluebus = "0.2.1-DRT-SNAPSHOT"
+    val bluebus = "0.3.1-DRT"
     val postgres = "42.2.2"
     val sshJ = "0.24.0"
     val jodaTime = "2.9.4"
@@ -64,7 +64,7 @@ object Settings {
     val log4Javascript = "1.4.15"
     val typesafeConfig = "1.3.0"
     val reactHandsontable = "0.3.1"
-    val sparkMlLib = "2.2.1"
+    val spark = "2.4.3"
     val pac4jSaml = "2.0.0-RC1"
     val openSaml = "2.6.1"
     val drtBirminghamSchema = "1.0.0"
@@ -72,6 +72,8 @@ object Settings {
     val playIteratees = "2.6.1"
     val uPickle = "0.6.7"
     val akkaXml = "10.1.9"
+    val akkaHttpCaching = "10.1.9"
+    val slick = "3.3.2"
   }
 
   import versions._
@@ -127,14 +129,12 @@ object Settings {
     "com.typesafe.play" %% "play-iteratees" % playIteratees,
     "com.typesafe.play" %% "play-iteratees-reactive-streams" % playIteratees,
 
-    "com.typesafe.slick" %% "slick" % "3.2.3",
-    "com.typesafe.slick" %% "slick-hikaricp" % "3.2.3",
-    "com.typesafe.slick" %% "slick-codegen" % "3.2.3",
+    "com.typesafe.slick" %% "slick" % slick,
+    "com.typesafe.slick" %% "slick-hikaricp" % slick,
+    "com.typesafe.slick" %% "slick-codegen" % slick,
 
-    "com.vmunier" %% "play-scalajs-scripts" % playScripts,
-    "com.vmunier" %% "scalajs-scripts" % scalaJsScripts,
+    "com.typesafe.akka" %% "akka-http-caching" % akkaHttpCaching,
 
-    "io.spray" %% "spray-caching" % sprayVersion,
     "io.spray" %% "spray-client" % sprayVersion,
     "io.spray" %% "spray-routing" % sprayVersion,
     "io.spray" %% "spray-json" % sprayVersion,
@@ -144,8 +144,8 @@ object Settings {
     "org.opensaml" % "opensaml" % openSaml excludeAll(ExclusionRule("org.bouncycastle"), ExclusionRule("xerces")),
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
-    "org.apache.spark" % "spark-mllib_2.11" % sparkMlLib,
-    "org.apache.spark" % "spark-sql_2.11" % "2.2.1",
+    "org.apache.spark" %% "spark-mllib" % spark,
+    "org.apache.spark" %% "spark-sql" % spark,
     "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
     "org.codehaus.janino" % "janino" % "3.0.7",
     "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
@@ -160,7 +160,7 @@ object Settings {
     "org.specs2" %% "specs2-core" % specs2 % Test,
     "org.specs2" %% "specs2-junit" % specs2 % Test,
     "org.specs2" %% "specs2-mock" % specs2 % Test,
-    "org.specs2" %% "specs2-scalacheck" % "3.8.4" % Test,
+    "org.specs2" %% "specs2-scalacheck" % specs2 % Test,
 
     "org.webjars" % "font-awesome" % "4.3.0-1" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,

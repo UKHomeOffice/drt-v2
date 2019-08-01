@@ -3,13 +3,14 @@ package actors
 import java.util.UUID
 
 import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
+import akka.http.caching.LfuCache
+import akka.http.caching.scaladsl.{Cache, CachingSettings, LfuCacheSettings}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import services.SDate
-import spray.caching.{Cache, LruCache}
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
@@ -19,13 +20,22 @@ class CachingCrunchReadActor extends Actor with ActorLogging {
 
   import context.dispatcher
 
-  implicit val timeout = Timeout(60 seconds)
+  implicit val timeout: Timeout = Timeout(60 seconds)
+
+  val defaultCachingSettings = CachingSettings(context.system)
+  val lfuCacheSettings: LfuCacheSettings = defaultCachingSettings.lfuCacheSettings
+    .withInitialCapacity(25)
+    .withMaxCapacity(50)
+    .withTimeToLive(20.seconds)
+    .withTimeToIdle(10.seconds)
+  val cachingSettings: CachingSettings = defaultCachingSettings.withLfuCacheSettings(lfuCacheSettings)
+  val resultCache: Cache[Int, Any] = LfuCache(cachingSettings)
 
   def receive: Receive = {
     case caq: CachableActorQuery =>
       log.info(s"Received query: $caq")
       val replyTo = sender()
-      val cacheKey = key(caq)
+      val cacheKey: Int = key(caq)
 
       val hit = resultCache.keys.contains(cacheKey)
       if (hit) {
@@ -33,8 +43,9 @@ class CachingCrunchReadActor extends Actor with ActorLogging {
       } else {
         log.info(s"Cache miss: $cacheKey - ${caq.props}")
       }
-      val cachedResult = resultCache(cacheKey) {
 
+
+      val cachedResult = resultCache.getOrLoad(cacheKey, key => {
         val start = SDate.now().millisSinceEpoch
         val actorName = "query-actor" + UUID.randomUUID().toString
 
@@ -42,21 +53,24 @@ class CachingCrunchReadActor extends Actor with ActorLogging {
         val actorRef: ActorRef = context.actorOf(caq.props, actorName)
         val askableActorRef: AskableActorRef = actorRef
         val resToCache: Future[Any] = askableActorRef.ask(caq.query)
+
         resToCache.onComplete {
           case Success(s) =>
+            actorRef ! PoisonPill
             log.info(s"Res from actor succeeded")
+            log.info(s"Cache generation took ${(SDate.now().millisSinceEpoch - start) / 1000} seconds")
+
           case Failure(f) =>
+            actorRef ! PoisonPill
             log.info(s"Res from actor failed: $f")
         }
 
         log.info(s"Sent query to actor, waiting for response")
+        log.info(s"Sending and caching: with key $key -  ${caq.props}")
 
-        log.info(s"Sending and caching: with key $cacheKey -  ${caq.props}")
-        val res = Await.result(resToCache, 60 seconds)
-        log.info(s"Cache generation took ${(SDate.now().millisSinceEpoch - start) / 1000} seconds")
-        actorRef ! PoisonPill
-        res
-      }
+        resToCache
+      })
+
       cachedResult.onComplete {
         case Success(s) =>
           log.info(s"Succeeded to get result from Cache")
@@ -67,10 +81,7 @@ class CachingCrunchReadActor extends Actor with ActorLogging {
       }
   }
 
-  val resultCache: Cache[Any] = LruCache(maxCapacity = 50)
-
   def key(query: CachableActorQuery): Int = {
     query.hashCode()
   }
 }
-
