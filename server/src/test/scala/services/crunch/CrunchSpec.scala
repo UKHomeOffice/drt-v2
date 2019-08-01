@@ -4,6 +4,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import org.specs2.mutable.Specification
 import services.SDate
 import services.graphstages.Crunch
+import org.joda.time.DateTime
 
 class CrunchSpec extends Specification {
   "When I ask for minuteInADay " +
@@ -106,5 +107,13 @@ class CrunchSpec extends Specification {
     val oneMinuteBeforeNextMidnight = SDate("2019-01-01T23:59:00Z").millisSinceEpoch
 
     minutes.toSeq.max === oneMinuteBeforeNextMidnight
+  }
+
+  "isInRangeOnDay should be True of the last date-time in a given date range" >> {
+    val anHourAgo: DateTime = DateTime.now.minusHours(1)
+    val now: DateTime = DateTime.now
+    val startDateTime = SDate(anHourAgo)
+    val endDateTime = SDate(now)
+    Crunch.isInRangeOnDay(startDateTime, endDateTime)(endDateTime) must beTrue
   }
 }
