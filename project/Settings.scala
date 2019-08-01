@@ -71,6 +71,7 @@ object Settings {
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
     val uPickle = "0.6.7"
+    val akkaXml = "10.1.9"
     val akkaHttpCaching = "10.1.9"
     val slick = "3.3.2"
   }
@@ -122,6 +123,7 @@ object Settings {
     "com.typesafe.akka" %% "akka-persistence" % akka,
     "com.typesafe.akka" %% "akka-stream-contrib" % akkaStreamContrib,
     "com.typesafe.akka" %% "akka-slf4j" % akka,
+    "com.typesafe.akka" %% "akka-http-xml" % akkaXml,
 
     "com.typesafe.play" %% "play-json" % playJson,
     "com.typesafe.play" %% "play-iteratees" % playIteratees,

@@ -1,4 +1,4 @@
-package drt.server.feeds.bhx
+package drt.server.feeds.legacy.bhx
 
 import akka.NotUsed
 import akka.actor.{ActorSystem, Cancellable}
@@ -11,22 +11,23 @@ import services.SDate
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
-object BHXLiveFeed extends BHXFeedConfig {
+object BHXForecastFeedLegacy extends BHXFeedConfig {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   def apply(endPointUrl: String)(implicit actorSystem: ActorSystem): Source[ArrivalsFeedResponse, Cancellable] = {
-    val feed = BHXFeed(serviceSoap(endPointUrl))
-    val tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
+
+      val feed = BHXFeed(serviceSoap(endPointUrl))
+      val tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
       .map(_ => {
         Try {
-          log.info(s"About to get BHX live arrivals.")
-          feed.getLiveArrivals
+          log.info(s"About to get BHX forecast arrivals.")
+          feed.getForecastArrivals
         } match {
           case Success(arrivals) =>
-            log.info(s"Got ${arrivals.size} BHX live arrivals.")
+            log.info(s"Got ${arrivals.size} BHX forecast arrivals.")
             ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
           case Failure(t) =>
-            log.info(s"Failed to fetch BHX live arrivals.", t)
+            log.info(s"Failed to fetch BHX forecast arrivals.", t)
             ArrivalsFeedFailure(t.toString, SDate.now())
         }
       })
