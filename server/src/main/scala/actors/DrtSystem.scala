@@ -14,6 +14,7 @@ import drt.chroma._
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
 import drt.http.ProdSendAndReceive
 import drt.server.feeds.api.S3ApiProvider
+import drt.server.feeds.bhx.BHXFeed
 import drt.server.feeds.legacy.bhx.{BHXForecastFeedLegacy, BHXLiveFeedLegacy}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.lgw.{LGWFeed, LGWForecastFeed}
@@ -112,6 +113,10 @@ case class DrtConfigParameters(config: Configuration) {
   val apiS3PollFrequencyMillis: MillisSinceEpoch = config.getOptional[Int]("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
   val isSuperUserMode: Boolean = config.getOptional[String]("feature-flags.super-user-mode").isDefined
   val maybeBlackJackUrl: Option[String] = config.getOptional[String]("feeds.lhr.blackjack_url")
+
+  val bhxSoapEndPointUrl: String = config.get[String]("feeds.bhx.soap.endPointUrl")
+  val bhxIataEndPointUrl: String = config.get[String]("feeds.bhx.iata.endPointUrl")
+  val bhxIataUsername: String = config.get[String]("feeds.bhx.iata.username")
 
   val useNewLhrFeed: Boolean = config.getOptional[String]("feature-flags.lhr.use-new-lhr-feed").isDefined
   val newLhrFeedApiUrl: String = config.getOptional[String]("feeds.lhr.live.api_url").getOrElse("")
@@ -396,6 +401,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   }
 
   def liveArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = {
+
     val feed = portCode match {
       case "LHR" =>
         val contentProvider = if (config.get[Boolean]("feeds.lhr.use-legacy-live")) {
@@ -415,6 +421,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         val lgwSasToKey = params.maybeLGWSASToKey.getOrElse(throw new Exception("Missing LGW SAS Key for To Queue"))
         val lgwServiceBusUri = params.maybeLGWServiceBusUri.getOrElse(throw new Exception("Missing LGW Service Bus Uri"))
         LGWFeed(lgwNamespace, lgwSasToKey, lgwServiceBusUri)(system).source()
+      case "BHX" if ! params.bhxIataEndPointUrl.isEmpty =>
+        BHXFeed(params.bhxIataUsername, params.bhxIataEndPointUrl)(system)
       case "BHX" => BHXLiveFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX live feed URL")))
       case "LTN" =>
         val url = params.maybeLtnLiveFeedUrl.getOrElse(throw new Exception("Missing live feed url"))

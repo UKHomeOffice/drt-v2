@@ -35,7 +35,7 @@ object Settings {
     val uTest = "0.6.3"
     val h2 = "1.4.197"
 
-    val akka = "2.5.20"
+    val akka = "2.5.23"
     val akkaStreamContrib = "0.9"
 
     val specs2 = "3.7"
@@ -71,6 +71,7 @@ object Settings {
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
     val uPickle = "0.6.7"
+    val akkaXml = "10.1.9"
   }
 
   import versions._
@@ -120,6 +121,7 @@ object Settings {
     "com.typesafe.akka" %% "akka-persistence" % akka,
     "com.typesafe.akka" %% "akka-stream-contrib" % akkaStreamContrib,
     "com.typesafe.akka" %% "akka-slf4j" % akka,
+    "com.typesafe.akka" %% "akka-http-xml" % akkaXml,
 
     "com.typesafe.play" %% "play-json" % playJson,
     "com.typesafe.play" %% "play-iteratees" % playIteratees,
