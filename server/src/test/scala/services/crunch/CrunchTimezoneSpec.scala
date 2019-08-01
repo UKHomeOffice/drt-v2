@@ -6,7 +6,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
 import drt.shared._
 import org.joda.time.DateTimeZone
-import drt.server.feeds.ArrivalsFeedSuccess
+import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.graphstages.Crunch
 import services.graphstages.Crunch._

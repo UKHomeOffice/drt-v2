@@ -5,11 +5,10 @@ import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Prop
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{KillSwitch, Materializer, OverflowStrategy}
 import akka.util.Timeout
-import com.typesafe.config.Config
 import drt.shared.{AirportConfig, Role}
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import drt.server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
+import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services.SDate
 import test.TestActors.{TestStaffMovementsActor, _}
 import test.feeds.test.{CSVFixtures, TestFixtureFeed, TestManifestsActor}
@@ -49,19 +48,18 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
 
   val testFeed = TestFixtureFeed(system)
 
-  val liveFixtureCsv: String = config.get[String]("test.live_fixture_csv")
-
-  if (liveFixtureCsv.nonEmpty) {
+  config.getOptional[String]("test.live_fixture_csv").foreach { file =>
     implicit val timeout: Timeout = Timeout(250 milliseconds)
-    log.info(s"Loading fixtures from $liveFixtureCsv")
+    log.info(s"Loading fixtures from $file")
     val testActor = system.actorSelection(s"akka://${airportConfig.portCode.toLowerCase}-drt-actor-system/user/TestActor-LiveArrivals").resolveOne()
     actorSystem.scheduler.schedule(1 second, 1 day)({
       val day = SDate.now().toISODateOnly
-      CSVFixtures.csvPathToArrivalsOnDate(day, liveFixtureCsv).collect {
+      CSVFixtures.csvPathToArrivalsOnDate(day, file).collect {
         case Success(arrival) =>
           testActor.map(_ ! arrival)
       }
     })
+
   }
 
   override def liveArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = testFeed
@@ -79,20 +77,20 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
     }
 
     val testActors = List(
-      baseArrivalsActor,
-      forecastArrivalsActor,
-      liveArrivalsActor,
-      voyageManifestsActor,
-      shiftsActor,
-      fixedPointsActor,
-      staffMovementsActor,
-      liveCrunchStateActor,
-      forecastCrunchStateActor
+        baseArrivalsActor,
+        forecastArrivalsActor,
+        liveArrivalsActor,
+        voyageManifestsActor,
+        shiftsActor,
+        fixedPointsActor,
+        staffMovementsActor,
+        liveCrunchStateActor,
+        forecastCrunchStateActor
     )
 
     val restartActor: ActorRef = system.actorOf(
-      Props(classOf[RestartActor], startSystem, testActors),
-      name = "TestActor-ResetData"
+        Props(classOf[RestartActor], startSystem, testActors),
+        name = "TestActor-ResetData"
     )
 
     restartActor ! StartTestSystem
@@ -107,11 +105,11 @@ case class RestartActor(startSystem: () => List[KillSwitch], testActors: List[Ac
     case ResetData =>
       log.info(s"About to shut down everything")
 
-      log.info(s"Pressing killswitches")
-      currentKillSwitches.zipWithIndex.foreach { case (ks, idx) =>
-        log.info(s"Killswitch ${idx + 1}")
-        ks.shutdown()
-      }
+        log.info(s"Pressing killswitches")
+        currentKillSwitches.zipWithIndex.foreach { case (ks, idx) =>
+          log.info(s"Killswitch ${idx + 1}")
+          ks.shutdown()
+        }
 
       testActors.foreach(a => {
         a ! ResetActor

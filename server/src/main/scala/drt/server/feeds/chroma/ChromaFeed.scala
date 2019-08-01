@@ -7,7 +7,7 @@ import drt.chroma.StreamingChromaFlow
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
 import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 
 import scala.concurrent.duration._
 import scala.language.postfixOps

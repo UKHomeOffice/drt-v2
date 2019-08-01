@@ -47,9 +47,6 @@ object Crunch {
   val europeLondonId = "Europe/London"
   val europeLondonTimeZone: DateTimeZone = DateTimeZone.forID(europeLondonId)
 
-  def isInRangeOnDay(startDateTime: SDateLike, endDateTime: SDateLike)(minute: SDateLike): Boolean =
-    startDateTime.millisSinceEpoch <= minute.millisSinceEpoch && minute.millisSinceEpoch <= endDateTime.millisSinceEpoch
-
   def midnightThisMorning: MillisSinceEpoch = {
     val localNow = SDate(new DateTime(europeLondonTimeZone).getMillis)
     val crunchStartDate = Crunch.getLocalLastMidnight(localNow.millisSinceEpoch).millisSinceEpoch
@@ -131,27 +128,29 @@ object Crunch {
   }
 
   def applyCrunchDiff(crunchMinuteUpdates: Set[CrunchMinute], crunchMinutes: SortedMap[TQM, CrunchMinute], nowMillis: MillisSinceEpoch): SortedMap[TQM, CrunchMinute] = {
-    val updates = crunchMinuteUpdates.foldLeft(List[(TQM, CrunchMinute)]()) {
-      case (soFar, cm) if cm.minute % oneMinuteMillis == 0 => (cm.key, cm.copy(lastUpdated = Option(nowMillis))) :: soFar
+    val withUpdates = crunchMinuteUpdates.foldLeft(crunchMinutes) {
+      case (soFar, cm) if cm.minute % oneMinuteMillis == 0 => soFar.updated(cm.key, cm.copy(lastUpdated = Option(nowMillis)))
       case (soFar, _) => soFar
     }
-    crunchMinutes ++ updates
+    withUpdates
   }
 
   def applyStaffDiff(staffMinuteUpdates: Set[StaffMinute], staffMinutes: SortedMap[TM, StaffMinute], nowMillis: MillisSinceEpoch): SortedMap[TM, StaffMinute] = {
-    val updates = staffMinuteUpdates.foldLeft(List[(TM, StaffMinute)]()) {
-      case (soFar, sm) if sm.minute % oneMinuteMillis == 0 => (sm.key, sm.copy(lastUpdated = Option(nowMillis))) :: soFar
+    val withUpdates = staffMinuteUpdates.foldLeft(staffMinutes) {
+      case (soFar, sm) if sm.minute % oneMinuteMillis == 0 => soFar.updated(sm.key, sm.copy(lastUpdated = Option(nowMillis)))
       case (soFar, _) => soFar
     }
-    staffMinutes ++ updates
+    withUpdates
   }
 
   def applyFlightsWithSplitsDiff(flightRemovals: Set[Int], flightUpdates: Set[ApiFlightWithSplits], flights: Map[Int, ApiFlightWithSplits], nowMillis: MillisSinceEpoch): Map[Int, ApiFlightWithSplits] = {
-    val withoutRemovals = flights -- flightRemovals
-    val updates = flightUpdates.foldLeft(List[(Int, ApiFlightWithSplits)]()) {
-      case (soFar, flight) => (flight.apiFlight.uniqueId, flight.copy(lastUpdated = Option(nowMillis))) :: soFar
+    val withoutRemovals = flightRemovals.foldLeft(flights) {
+      case (soFar, flightIdToRemove) => soFar - flightIdToRemove
     }
-    withoutRemovals ++ updates
+    val withoutRemovalsWithUpdates = flightUpdates.foldLeft(withoutRemovals) {
+      case (soFar, flight) => soFar.updated(flight.apiFlight.uniqueId, flight.copy(lastUpdated = Option(nowMillis)))
+    }
+    withoutRemovalsWithUpdates
   }
 
   def flightLoadDiff(oldSet: Set[FlightSplitMinute], newSet: Set[FlightSplitMinute]): Set[FlightSplitDiff] = {

@@ -6,7 +6,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
-import drt.server.feeds.ArrivalsFeedSuccess
+import server.feeds.ArrivalsFeedSuccess
 import services.{SDate, TryRenjin}
 import services.graphstages.Crunch._
 
@@ -52,7 +52,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
             Queues.EGate -> ((List.fill[Int](24)(0), List.fill[Int](24)(20))))),
           slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 25)
         ),
-        optimiserMock = OptimiserLocal
+        cruncher = TryRenjin.crunch
       )
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))

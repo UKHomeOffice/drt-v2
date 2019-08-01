@@ -3,7 +3,7 @@ package services.crunch
 import controllers.{ArrivalGenerator, Forecast}
 import drt.shared.FlightsApi.Flights
 import drt.shared._
-import drt.server.feeds.ArrivalsFeedSuccess
+import server.feeds.ArrivalsFeedSuccess
 import services.{SDate, TryRenjin}
 import services.graphstages.Crunch._
 
@@ -40,7 +40,7 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
         terminalNames = Seq("T1"),
         minMaxDesksByTerminalQueue = Map("T1" -> Map(Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1)))))
       ),
-      optimiserMock = OptimiserLocal
+      cruncher = TryRenjin.crunch
     )
 
     Await.ready(crunch.baseArrivalsInput.offer(ArrivalsFeedSuccess(Flights(forecastFlights.toSeq))), 1 second)

@@ -11,7 +11,7 @@ import drt.shared._
 import manifests.queues.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import queueus.{B5JPlusWithTransitTypeAllocator, PaxTypeQueueAllocation, TerminalQueueAllocatorWithFastTrack}
-import drt.server.feeds.{ManifestsFeedResponse, ManifestsFeedSuccess}
+import server.feeds.{ManifestsFeedResponse, ManifestsFeedSuccess}
 import services.SDate
 import services.crunch.{CrunchTestLike, PassengerInfoGenerator}
 

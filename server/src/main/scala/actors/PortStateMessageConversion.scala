@@ -14,48 +14,40 @@ object PortStateMessageConversion {
 
   def snapshotMessageToState(sm: CrunchStateSnapshotMessage, optionalTimeWindowEnd: Option[SDateLike]): PortState = {
     log.debug(s"Unwrapping flights messages")
-    val flights = flightsFromMessages(sm.flightWithSplits, optionalTimeWindowEnd).toMap
+    val flights = optionalTimeWindowEnd match {
+      case None =>
+        sm.flightWithSplits.map(message => {
+          val fws = flightWithSplitsFromMessage(message)
+          (fws.apiFlight.uniqueId, fws)
+        }).toMap
+      case Some(timeWindowEnd) =>
+        val windowEndMillis = timeWindowEnd.millisSinceEpoch
+        sm.flightWithSplits.collect {
+          case message if message.flight.map(fm => fm.pcpTime.getOrElse(0L)).getOrElse(0L) <= windowEndMillis =>
+            val fws = flightWithSplitsFromMessage(message)
+            (fws.apiFlight.uniqueId, fws)
+        }.toMap
+    }
 
     log.debug(s"Unwrapping minutes messages")
 
-    val crunchMinutes = SortedMap[TQM, CrunchMinute]() ++ crunchMinutesFromMessages(sm.crunchMinutes)
+    val crunchMinutes = SortedMap[TQM, CrunchMinute]() ++ sm.crunchMinutes.collect {
+      case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 =>
+        val cm = crunchMinuteFromMessage(message)
+        (cm.key, cm)
+    }
 
-    val staffMinutes = SortedMap[TM, StaffMinute]() ++ staffMinutesFromMessages(sm.staffMinutes)
+    val staffMinutes = SortedMap[TM, StaffMinute]() ++ sm.staffMinutes.collect {
+      case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 =>
+        val sm = staffMinuteFromMessage(message)
+        (sm.key, sm)
+    }
 
     log.debug(s"Finished unwrapping messages")
 
     PortState(flights, crunchMinutes, staffMinutes)
   }
 
-
-  def staffMinutesFromMessages(smms: Seq[StaffMinuteMessage]): List[(TM, StaffMinute)] = smms.collect {
-    case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 =>
-      val sm = staffMinuteFromMessage(message)
-      (sm.key, sm)
-  }.toList
-
-  def crunchMinutesFromMessages(cmms: Seq[CrunchMinuteMessage]): List[(TQM, CrunchMinute)] = cmms.collect {
-    case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 =>
-      val cm = crunchMinuteFromMessage(message)
-      (cm.key, cm)
-  }.toList
-
-  def flightsFromMessages(fwsMsgs: Seq[FlightWithSplitsMessage], optionalTimeWindowEnd: Option[SDateLike]): Seq[(Int, ApiFlightWithSplits)] = {
-    optionalTimeWindowEnd match {
-      case None =>
-        fwsMsgs.map(message => {
-          val fws = flightWithSplitsFromMessage(message)
-          (fws.apiFlight.uniqueId, fws)
-        })
-      case Some(timeWindowEnd) =>
-        val windowEndMillis = timeWindowEnd.millisSinceEpoch
-        fwsMsgs.collect {
-          case message if message.flight.map(fm => fm.pcpTime.getOrElse(0L)).getOrElse(0L) <= windowEndMillis =>
-            val fws = flightWithSplitsFromMessage(message)
-            (fws.apiFlight.uniqueId, fws)
-        }
-    }
-  }
 
   def crunchMinuteFromMessage(cmm: CrunchMinuteMessage): CrunchMinute = CrunchMinute(
     terminalName = cmm.terminalName.getOrElse(""),

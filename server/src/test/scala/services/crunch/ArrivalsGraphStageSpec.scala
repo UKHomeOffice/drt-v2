@@ -10,7 +10,7 @@ import drt.shared.SplitRatiosNs.SplitSources.TerminalAverage
 import drt.shared._
 import org.specs2.matcher.Scope
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
-import drt.server.feeds.{ArrivalsFeedSuccess, ManifestsFeedSuccess}
+import server.feeds.{ArrivalsFeedSuccess, ManifestsFeedSuccess}
 import services.SDate
 import services.graphstages.DqManifests
 

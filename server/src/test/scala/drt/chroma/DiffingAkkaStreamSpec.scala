@@ -7,7 +7,7 @@ import drt.chroma.chromafetcher.ChromaParserProtocol
 import drt.chroma.chromafetcher.ChromaParserProtocol._
 import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
-import drt.server.feeds.{ArrivalsFeedSuccess, FeedResponse}
+import server.feeds.{ArrivalsFeedSuccess, FeedResponse}
 import services.SDate
 import spray.json._
 

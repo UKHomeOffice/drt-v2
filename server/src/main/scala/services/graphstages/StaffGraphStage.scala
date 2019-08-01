@@ -139,7 +139,7 @@ class StaffGraphStage(name: String = "",
         val updateCriteria: UpdateCriteria = movementsUpdateCriteria(existingMovements, incomingMovements)
         movementsOption = Option(incomingMovements)
         val latestUpdates = updatesFromSources(staffSources, updateCriteria)
-        staffMinuteUpdates = staffMinuteUpdates ++ latestUpdates
+        staffMinuteUpdates = mergeStaffMinuteUpdates(latestUpdates, staffMinuteUpdates)
         tryPush()
         pull(inMovements)
         log.info(s"inMovements Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
@@ -192,6 +192,11 @@ class StaffGraphStage(name: String = "",
       UpdateCriteria(minuteMillis, terminalNames)
     }
 
+    def mergeStaffMinuteUpdates(latestUpdates: SortedMap[TM, StaffMinute], existingUpdates: SortedMap[TM, StaffMinute]): SortedMap[TM, StaffMinute] = latestUpdates
+      .foldLeft(existingUpdates) {
+        case (soFar, (id, updatedMinute)) => soFar.updated(id, updatedMinute)
+      }
+
     setHandler(outStaffMinutes, new OutHandler {
       override def onPull(): Unit = {
         val start = SDate.now()
@@ -219,11 +224,21 @@ class StaffGraphStage(name: String = "",
           }
         })
 
-      val mergedMinutes = staffMinutes ++ updatedMinutes
+      val mergedMinutes = mergeMinutes(updatedMinutes, staffMinutes)
 
       staffMinutes = purgeExpired(mergedMinutes, now, expireAfterMillis.toInt)
 
-      staffMinuteUpdates ++ updatedMinutes
+      mergeMinutes(updatedMinutes, staffMinuteUpdates)
+    }
+
+    def mergeMinutes(updatedMinutes: SortedMap[TM, StaffMinute], existingMinutes: SortedMap[TM, StaffMinute]): SortedMap[TM, StaffMinute] = {
+      updatedMinutes.foldLeft(existingMinutes) {
+        case (soFar, (tm, updatedMinute)) =>
+          soFar.get(tm) match {
+            case Some(existingMinute) if existingMinute.equals(updatedMinute) => soFar
+            case _ => soFar.updated(tm, updatedMinute)
+          }
+      }
     }
 
     def tryPush(): Unit = {

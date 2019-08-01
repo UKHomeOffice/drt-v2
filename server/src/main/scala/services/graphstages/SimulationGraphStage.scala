@@ -88,7 +88,7 @@ class SimulationGraphStage(name: String = "",
 
         val affectedTerminals = incomingLoads.loadMinutes.map { case (TQM(t, _, _), _) => t }.toSet.toSeq
 
-        val updatedLoads = loadMinutes ++ incomingLoads.loadMinutes
+        val updatedLoads = mergeLoads(incomingLoads.loadMinutes, loadMinutes)
         loadMinutes = purgeExpired(updatedLoads, now, expireAfterMillis.toInt)
 
         val allMinuteMillis = incomingLoads.loadMinutes.keys.map(_.minute)
@@ -152,8 +152,9 @@ class SimulationGraphStage(name: String = "",
       val deploymentUpdates = deploymentsForMillis(firstMillis, lastMillis, affectedTerminals)
 
       log.info(s"Merging updated deployments into existing")
-
-      val updatedDeployments = existingDeployments ++ deploymentUpdates
+      val updatedDeployments = deploymentUpdates.foldLeft(existingDeployments) {
+        case (soFar, (tqm, staff)) => soFar.updated(tqm, staff)
+      }
 
       updatedDeployments
     }
@@ -178,34 +179,48 @@ class SimulationGraphStage(name: String = "",
 
       val existingMinutes = forPeriod(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, terminalsToUpdate, allSimulationMinutes)
 
-      val diff = newSimulationsForPeriod.foldLeft(List[(TQM, SimulationMinute)]()) {
+      val diff = newSimulationsForPeriod.foldLeft(SortedMap[TQM, SimulationMinute]()) {
         case (soFar, (tqm, newMinute)) =>
           existingMinutes.get(tqm) match {
             case Some(existing) if existing == newMinute => soFar
-            case _ => (tqm, newMinute) :: soFar
+            case _ => soFar.updated(tqm, newMinute)
           }
       }
 
-      val updatedSims = allSimulationMinutes ++ diff
+      val updatedSims = diff.foldLeft(allSimulationMinutes) {
+        case (allSims, (tqm, sm)) => allSims.updated(tqm, sm)
+      }
 
       allSimulationMinutes = purgeExpired(updatedSims, now, expireAfterMillis.toInt)
 
-      simulationMinutesToPush = simulationMinutesToPush ++ diff
-
+      val mergedSimulationMinutesToPush = mergeSimulationMinutes(diff, simulationMinutesToPush)
+      simulationMinutesToPush = purgeExpired(mergedSimulationMinutesToPush, now, expireAfterMillis.toInt)
       log.info(s"Now have ${simulationMinutesToPush.size} simulation minutes to push")
     }
 
     def forPeriod[A](firstMinute: MillisSinceEpoch,
                      lastMinute: MillisSinceEpoch,
                      terminalsToUpdate: Seq[TerminalName],
-                     itemsToFilter: SortedMap[TQM, A]): SortedMap[TQM, A] = TQM
-      .range(firstMinute, lastMinute, airportConfig.queues.filterKeys(_ == terminalsToUpdate)) match {
-      case None => SortedMap[TQM, A]()
-      case Some((start, end)) => itemsToFilter.range(start, end)
+                     itemsToFilter: SortedMap[TQM, A]): SortedMap[TQM, A] = {
+      val tqmMinutes = for {
+        minute <- firstMinute until lastMinute by 60000
+        terminal <- terminalsToUpdate
+        queue <- airportConfig.nonTransferQueues(terminal)
+      } yield {
+        val tqm = TQM(terminal, queue, minute)
+        (tqm, itemsToFilter.get(tqm))
+      }
+
+      SortedMap[TQM, A]() ++ tqmMinutes.collect {
+        case (tqm, Some(thing)) => (tqm, thing)
+      }
     }
 
-    def updateStaffMinutes(existingStaffMinutes: SortedMap[TM, StaffMinute], incomingStaffMinutes: StaffMinutes): SortedMap[TM, StaffMinute] =
-      existingStaffMinutes ++ incomingStaffMinutes.minutes.map(m => (m.key, m))
+    def updateStaffMinutes(existingStaffMinutes: SortedMap[TM, StaffMinute], incomingStaffMinutes: StaffMinutes): SortedMap[TM, StaffMinute] = incomingStaffMinutes
+      .minutes
+      .foldLeft(existingStaffMinutes) {
+        case (soFar, sm) => soFar.updated(sm.key, sm)
+      }
 
     def simulateLoads(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Seq[TerminalName]): SortedMap[TQM, SimulationMinute] = {
       val workload = workloadForPeriod(firstMinute, lastMinute, terminalsToUpdate)
@@ -381,12 +396,22 @@ class SimulationGraphStage(name: String = "",
       (minDesks, maxDesks)
     }
 
+    def mergeSimulationMinutes(updatedCms: SortedMap[TQM, SimulationMinute], existingCms: SortedMap[TQM, SimulationMinute]): SortedMap[TQM, SimulationMinute] =
+      updatedCms.foldLeft(existingCms) {
+        case (soFar, (tqm, newLoadMinute)) => soFar.updated(tqm, newLoadMinute)
+      }
+
     def loadDiff(updatedLoads: Set[LoadMinute], existingLoads: Set[LoadMinute]): Set[LoadMinute] = {
       val loadDiff = updatedLoads -- existingLoads
       log.info(s"${loadDiff.size} updated load minutes")
 
       loadDiff
     }
+
+    def mergeLoads(incomingLoads: SortedMap[TQM, LoadMinute], existingLoads: SortedMap[TQM, LoadMinute]): SortedMap[TQM, LoadMinute] =
+      incomingLoads.foldLeft(existingLoads) {
+        case (soFar, (tqm, load)) => soFar.updated(tqm, load)
+      }
 
     def pullAll(): Unit = {
       if (!hasBeenPulled(inLoads)) {
@@ -460,17 +485,14 @@ case class SimulationMinutes(minutes: Seq[SimulationMinute]) extends PortStateMi
       case Some(ps) => ps
     }
 
-    val minutesDiff = minutes.foldLeft(List[(TQM, CrunchMinute)]()) {
-      case (updatesSoFar, updatedCm) =>
-        val maybeMinute: Option[CrunchMinute] = portState.crunchMinutes.get(updatedCm.key)
-        val mergedCm: CrunchMinute = mergeMinute(maybeMinute, updatedCm, now)
-        (mergedCm.key, mergedCm) :: updatesSoFar
-    }
-
-    val newPortState = portState.copy(crunchMinutes = portState.crunchMinutes ++ minutesDiff.toMap)
-    val newDiff = PortStateDiff(Seq(), SortedMap[Int, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute]() ++ minutesDiff, SortedMap[TM, StaffMinute]())
-
-    (newPortState, newDiff)
+    val (updatedCrunchMinutes, minutesDiff) = minutes
+      .foldLeft((portState.crunchMinutes, List[CrunchMinute]())) {
+        case ((minutesSoFar, updatesSoFar), updatedCm) =>
+          val maybeMinute: Option[CrunchMinute] = minutesSoFar.get(updatedCm.key)
+          val mergedCm: CrunchMinute = mergeMinute(maybeMinute, updatedCm, now)
+          (minutesSoFar.updated(updatedCm.key, mergedCm), mergedCm :: updatesSoFar)
+      }
+    (portState.copy(crunchMinutes = updatedCrunchMinutes), PortStateDiff(Seq(), Seq(), minutesDiff, Seq()))
   }
 
   def newCrunchMinutes: SortedMap[TQM, CrunchMinute] = SortedMap[TQM, CrunchMinute]() ++ minutes

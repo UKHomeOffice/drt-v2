@@ -8,7 +8,7 @@ import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.SplitSources._
 import drt.shared._
-import drt.server.feeds.ArrivalsFeedSuccess
+import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 
 import scala.collection.immutable.Seq

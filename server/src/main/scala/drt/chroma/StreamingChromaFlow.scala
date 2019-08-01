@@ -9,7 +9,7 @@ import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveF
 import drt.shared.{Arrival, ForecastFeedSource, LiveFeedSource}
 import drt.shared.FlightsApi.Flights
 import org.springframework.util.StringUtils
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 
 import scala.collection.immutable.Seq
