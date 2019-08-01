@@ -11,6 +11,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState._
 import services.SDate
+import services.graphstages.Crunch._
 import services.graphstages.PortStateWithDiff
 
 import scala.collection.immutable.SortedMap
@@ -34,37 +35,21 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
 
   def logDebug(msg: String, level: String = "info"): Unit = if (name.isEmpty) log.debug(msg) else log.debug(s"$name $msg")
 
-  var recoveryFlights: Map[Int, ApiFlightWithSplits] = Map()
-  var recoveryCrunchMinutes: List[(TQM, CrunchMinute)] = List()
-  var recoveryStaffMinutes: List[(TM, StaffMinute)] = List()
   var state: Option[PortState] = initialState
 
   def initialState: Option[PortState] = None
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case snapshot: CrunchStateSnapshotMessage =>
-      setRecoveryStateFromSnapshot(snapshot)
+    case snapshot: CrunchStateSnapshotMessage => setStateFromSnapshot(snapshot)
   }
 
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case diff: CrunchDiffMessage =>
-      recoveryFlights = recoveryFlights -- diff.flightIdsToRemove ++ flightsFromMessages(diff.flightsToUpdate, None)
-      recoveryCrunchMinutes = recoveryCrunchMinutes ++ crunchMinutesFromMessages(diff.crunchMinutesToUpdate)
-      recoveryStaffMinutes = recoveryStaffMinutes ++ staffMinutesFromMessages(diff.staffMinutesToUpdate)
+      val newState = stateFromDiff(diff, state)
+      logRecoveryState(newState)
+      state = newState
       bytesSinceSnapshotCounter += diff.serializedSize
       messagesPersistedSinceSnapshotCounter += 1
-  }
-
-  override def postRecoveryComplete(): Unit = {
-    val crunchMinutes = SortedMap[TQM, CrunchMinute]() ++ recoveryCrunchMinutes
-    val staffMinutes = SortedMap[TM, StaffMinute]() ++ recoveryStaffMinutes
-    val newState = PortState(recoveryFlights, crunchMinutes, staffMinutes)
-
-    state = Option(newState)
-
-    recoveryCrunchMinutes = List()
-    recoveryStaffMinutes = List()
-    recoveryFlights = Map()
   }
 
   def logRecoveryState(optionalState: Option[PortState]): Unit = optionalState match {
@@ -97,10 +82,10 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
     case PortStateWithDiff(_, _, CrunchDiffMessage(_, _, fr, fu, cu, su, _)) if fr.isEmpty && fu.isEmpty && cu.isEmpty && su.isEmpty =>
       log.info(s"Received port state with empty diff")
 
-    case PortStateWithDiff(_, diff, diffMsg) =>
-      logInfo(s"Received port state diff with diffMsg. ${diff.flightRemovals.size} flight removals, ${diff.flightUpdates.size} flight updates, ${diff.crunchMinuteUpdates.size} crunch updates, ${diff.staffMinuteUpdates.size} staff updates")
-      state = portStateFromDiff(diff)
-      persistAndMaybeSnapshot(diffMsg)
+    case PortStateWithDiff(portState, _, diff) =>
+      logInfo(s"Received port state with diff")
+      updateStateFromPortState(portState)
+      persistAndMaybeSnapshot(diff)
 
     case GetState =>
       logDebug(s"Received GetState request. Replying with ${state.map(s => s"PortState containing ${s.crunchMinutes.size} crunch minutes")}")
@@ -134,30 +119,34 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
       log.error(s"Received unexpected message $u")
   }
 
-  def portStateFromDiff(diff: PortStateDiff): Option[PortState] = {
-    val existingPs = state match {
-      case None => PortState.empty
-      case Some(ps) => ps
-    }
-
-    val newState = PortState(
-      flights = existingPs.flights -- diff.flightRemovals.map(_.flightKey.uniqueId) ++ diff.flightUpdates,
-      crunchMinutes = existingPs.crunchMinutes ++ diff.crunchMinuteUpdates,
-      staffMinutes = existingPs.staffMinutes ++ diff.staffMinuteUpdates)
-
-    Option(newState)
-  }
-
   def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = state
     .map(_.window(SDate(start), SDate(end), portQueues))
 
   def stateForPeriodForTerminal(start: MillisSinceEpoch, end: MillisSinceEpoch, terminalName: TerminalName): Option[PortState] = state
     .map(_.windowWithTerminalFilter(SDate(start), SDate(end), portQueues.filterKeys(_ == terminalName)))
 
-  def setRecoveryStateFromSnapshot(snapshot: CrunchStateSnapshotMessage, timeWindowEnd: Option[SDateLike] = None): Unit = {
-    recoveryFlights = flightsFromMessages(snapshot.flightWithSplits, timeWindowEnd).toMap
-    recoveryCrunchMinutes = crunchMinutesFromMessages(snapshot.crunchMinutes)
-    recoveryStaffMinutes = staffMinutesFromMessages(snapshot.staffMinutes)
+  def setStateFromSnapshot(snapshot: CrunchStateSnapshotMessage, timeWindowEnd: Option[SDateLike] = None): Unit = {
+    state = Option(snapshotMessageToState(snapshot, timeWindowEnd))
+  }
+
+  def stateFromDiff(cdm: CrunchDiffMessage, existingState: Option[PortState]): Option[PortState] = {
+    val (flightRemovals, flightUpdates, crunchMinuteUpdates, staffMinuteUpdates): (Set[Int], Set[ApiFlightWithSplits], Set[CrunchMinute], Set[StaffMinute]) = crunchDiffFromMessage(cdm)
+    val newState = existingState match {
+      case None =>
+        logDebug(s"Creating an empty PortState to apply CrunchDiff")
+        Option(PortState(
+          flights = applyFlightsWithSplitsDiff(flightRemovals, flightUpdates, Map(), SDate.now().millisSinceEpoch),
+          crunchMinutes = applyCrunchDiff(crunchMinuteUpdates, SortedMap[TQM, CrunchMinute](), SDate.now().millisSinceEpoch),
+          staffMinutes = applyStaffDiff(staffMinuteUpdates, SortedMap(), SDate.now().millisSinceEpoch)
+        ))
+      case Some(ps) =>
+        val newPortState = PortState(
+          flights = applyFlightsWithSplitsDiff(flightRemovals, flightUpdates, ps.flights, SDate.now().millisSinceEpoch),
+          crunchMinutes = applyCrunchDiff(crunchMinuteUpdates, ps.crunchMinutes, SDate.now().millisSinceEpoch),
+          staffMinutes = applyStaffDiff(staffMinuteUpdates, ps.staffMinutes, SDate.now().millisSinceEpoch))
+        Option(newPortState)
+    }
+    newState
   }
 
   def crunchDiffFromMessage(diffMessage: CrunchDiffMessage): (Set[Int], Set[ApiFlightWithSplits], Set[CrunchMinute], Set[StaffMinute]) = (
@@ -166,4 +155,6 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
     diffMessage.crunchMinutesToUpdate.map(crunchMinuteFromMessage).toSet,
     diffMessage.staffMinutesToUpdate.map(staffMinuteFromMessage).toSet
   )
+
+  def updateStateFromPortState(newState: PortState): Unit = state = Option(newState)
 }

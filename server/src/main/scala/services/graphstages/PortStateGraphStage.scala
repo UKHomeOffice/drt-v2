@@ -16,7 +16,7 @@ import scala.collection.immutable.{Map, SortedMap}
 
 case class PortStateWithDiff(portState: PortState, diff: PortStateDiff, diffMessage: CrunchDiffMessage) {
   def window(start: SDateLike, end: SDateLike, portQueues: Map[TerminalName, Seq[QueueName]]): PortStateWithDiff = {
-    PortStateWithDiff(portState.window(start, end, portQueues), diff.window(start, end, portQueues), crunchDiffWindow(start, end))
+    PortStateWithDiff(portState.window(start, end, portQueues), diff, crunchDiffWindow(start, end))
   }
 
   def crunchDiffWindow(start: SDateLike, end: SDateLike): CrunchDiffMessage = {
@@ -102,11 +102,23 @@ class PortStateGraphStage(name: String = "",
     def mergeDiff(maybePortStateDiff: Option[PortStateDiff], newDiff: PortStateDiff): Option[PortStateDiff] = maybePortStateDiff match {
       case None => Option(newDiff)
       case Some(existingDiff) =>
+        val updatedFlightRemovals = newDiff.flightRemovals.foldLeft(existingDiff.flightRemovals) {
+          case (soFar, newRemoval) => if (soFar.contains(newRemoval)) soFar else soFar :+ newRemoval
+        }
+        val updatedFlights = newDiff.flightUpdates.foldLeft(existingDiff.flightUpdates) {
+          case (soFar, (id, newFlight)) => if (soFar.contains(id)) soFar else soFar.updated(id, newFlight)
+        }
+        val updatedCms = newDiff.crunchMinuteUpdates.foldLeft(existingDiff.crunchMinuteUpdates) {
+          case (soFar, (id, newCm)) => if (soFar.contains(id)) soFar else soFar.updated(id, newCm)
+        }
+        val updatedSms = newDiff.staffMinuteUpdates.foldLeft(existingDiff.staffMinuteUpdates) {
+          case (soFar, (id, newSm)) => if (soFar.contains(id)) soFar else soFar.updated(id, newSm)
+        }
         Option(existingDiff.copy(
-          flightRemovals = newDiff.flightRemovals ++ existingDiff.flightRemovals,
-          flightUpdates = existingDiff.flightUpdates ++ newDiff.flightUpdates,
-          crunchMinuteUpdates = existingDiff.crunchMinuteUpdates ++ newDiff.crunchMinuteUpdates,
-          staffMinuteUpdates = existingDiff.staffMinuteUpdates ++ newDiff.staffMinuteUpdates))
+          flightRemovals = updatedFlightRemovals,
+          flightUpdates = updatedFlights,
+          crunchMinuteUpdates = updatedCms,
+          staffMinuteUpdates = updatedSms))
     }
 
     def pullAllInlets(): Unit = {
@@ -126,7 +138,7 @@ class PortStateGraphStage(name: String = "",
           maybePortState match {
             case None =>
             case Some(portState) =>
-              val portStateWithDiff = PortStateWithDiff(PortState.empty, portStateDiff, diffMessage(portStateDiff))
+              val portStateWithDiff = PortStateWithDiff(portState, portStateDiff, diffMessage(portStateDiff))
               maybePortStateDiff = None
               push(outPortState, portStateWithDiff)
           }

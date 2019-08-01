@@ -1,9 +1,9 @@
 package actors
 
 import akka.actor.Actor
-import drt.server.feeds.{GetFeedImportArrivals, StoreFeedImportArrivals}
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
+import server.feeds.{GetFeedImportArrivals, StoreFeedImportArrivals}
 
 class ArrivalsImportActor() extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -18,6 +18,6 @@ class ArrivalsImportActor() extends Actor {
     case GetFeedImportArrivals =>
       log.info(s"Sending arrivals from import")
       sender() ! maybeArrivalsFromImport
-      maybeArrivalsFromImport = None
+      if (maybeArrivalsFromImport.nonEmpty) maybeArrivalsFromImport = None
   }
 }

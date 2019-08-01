@@ -11,7 +11,7 @@ import drt.server.feeds.api.ApiProviderLike
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import passengersplits.InMemoryPersistence
-import drt.server.feeds.ManifestsFeedSuccess
+import server.feeds.ManifestsFeedSuccess
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

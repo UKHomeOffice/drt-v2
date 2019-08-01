@@ -6,15 +6,12 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.SDate
-import services.crunch.{OptimiserLike, WorkloadToOptimise}
 import services.graphstages.Crunch._
+import services.{OptimizerConfig, OptimizerCrunchResult, SDate, TryCrunch}
 
-import scala.Option
 import scala.collection.immutable.{Map, SortedMap}
-import scala.concurrent.Await
-import scala.concurrent.duration._
 import scala.language.postfixOps
+import scala.util.{Failure, Success, Try}
 
 
 class CrunchLoadGraphStage(name: String = "",
@@ -22,7 +19,7 @@ class CrunchLoadGraphStage(name: String = "",
                            airportConfig: AirportConfig,
                            expireAfterMillis: MillisSinceEpoch,
                            now: () => SDateLike,
-                           optimiser: OptimiserLike,
+                           crunch: TryCrunch,
                            crunchPeriodStartMillis: SDateLike => SDateLike,
                            minutesToCrunch: Int)
   extends GraphStage[FlowShape[Loads, DeskRecMinutes]] {
@@ -63,7 +60,7 @@ class CrunchLoadGraphStage(name: String = "",
         log.info(s"Crunch ${firstMinute.toLocalDateTimeString()} - ${lastMinute.toLocalDateTimeString()}")
         val affectedTerminals = incomingLoads.loadMinutes.keys.map(_.terminalName).toSet
 
-        val updatedLoads = loadMinutes ++ incomingLoads.loadMinutes
+        val updatedLoads = mergeLoads(incomingLoads.loadMinutes, loadMinutes)
         loadMinutes = purgeExpired(updatedLoads, now, expireAfterMillis.toInt)
 
         val deskRecMinutes = crunchLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, affectedTerminals)
@@ -76,10 +73,12 @@ class CrunchLoadGraphStage(name: String = "",
             }
         }
 
-        val updatedDeskRecs = existingDeskRecMinutes ++ deskRecMinutes
+        val updatedDeskRecs = deskRecMinutes.foldLeft(existingDeskRecMinutes) {
+          case (soFar, (tqm, drm)) => soFar.updated(tqm, drm)
+        }
 
         existingDeskRecMinutes = purgeExpired(updatedDeskRecs, now, expireAfterMillis.toInt)
-        deskRecMinutesToPush = deskRecMinutesToPush ++ affectedDeskRecs
+        deskRecMinutesToPush = mergeDeskRecMinutes(affectedDeskRecs, deskRecMinutesToPush)
 
         log.info(s"Now have ${deskRecMinutesToPush.size} desk rec minutes to push")
 
@@ -109,21 +108,21 @@ class CrunchLoadGraphStage(name: String = "",
       val adjustedWorkMinutes = if (qn == Queues.EGate) workMinutes.map(_ / airportConfig.eGateBankSize) else workMinutes
       val minuteMillis: Seq[MillisSinceEpoch] = firstMinute until lastMinute by 60000
       val (minDesks, maxDesks) = minMaxDesksForQueue(minuteMillis, tn, qn)
-      val description = s"${airportConfig.portCode}/$tn/$qn/${SDate(firstMinute).toISOString()}"
-      val workloadToOptimise = WorkloadToOptimise(adjustedWorkMinutes, minDesks, maxDesks, sla, description)
-
-      Await.result(optimiser.requestDesksAndWaits(workloadToOptimise), 120 seconds) match {
-        case None =>
-          log.warn(s"Did not receive a crunch result")
-          SortedMap[TQM, DeskRecMinute]()
-        case Some(daw) =>
+      val start = SDate.now()
+      val triedResult: Try[OptimizerCrunchResult] = crunch(adjustedWorkMinutes, minDesks, maxDesks, OptimizerConfig(sla))
+      triedResult match {
+        case Success(OptimizerCrunchResult(desks, waits)) =>
+          log.info(s"Optimizer for $qn Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
           SortedMap[TQM, DeskRecMinute]() ++ minuteMillis.zipWithIndex.map {
             case (minute, idx) =>
               val wl = workMinutes(idx)
               val pl = paxMinutes(idx)
-              val drm = DeskRecMinute(tn, qn, minute, pl, wl, daw.desks(idx), daw.waits(idx))
+              val drm = DeskRecMinute(tn, qn, minute, pl, wl, desks(idx), waits(idx))
               (drm.key, drm)
           }
+        case Failure(t) =>
+          log.warn(s"failed to crunch: $t")
+          SortedMap[TQM, DeskRecMinute]()
       }
     }
 
@@ -147,6 +146,17 @@ class CrunchLoadGraphStage(name: String = "",
       val maxDesks = deskRecMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._2))
       (minDesks, maxDesks)
     }
+
+    def mergeDeskRecMinutes(updatedCms: Map[TQM, DeskRecMinute], existingCms: Map[TQM, DeskRecMinute]): Map[TQM, DeskRecMinute] = {
+      updatedCms.foldLeft(existingCms) {
+        case (soFar, (newId, newLoadMinute)) => soFar.updated(newId, newLoadMinute)
+      }
+    }
+
+    def mergeLoads(incomingLoads: SortedMap[TQM, LoadMinute], existingLoads: SortedMap[TQM, LoadMinute]): SortedMap[TQM, LoadMinute] = incomingLoads
+      .foldLeft(existingLoads) {
+        case (soFar, (tqm, load)) => soFar.updated(tqm, load)
+      }
 
     setHandler(outDeskRecMinutes, new OutHandler {
       override def onPull(): Unit = {
@@ -192,15 +202,15 @@ case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateMinutes 
       case Some(ps) => ps
     }
 
-    val crunchMinutesDiff = minutes.foldLeft(List[(TQM, CrunchMinute)]()) {
-      case (diffSoFar, updatedDrm) =>
-        val maybeMinute: Option[CrunchMinute] = portState.crunchMinutes.get(updatedDrm.key)
-        val mergedCm: CrunchMinute = mergeMinute(maybeMinute, updatedDrm, now)
-        (mergedCm.key, mergedCm) :: diffSoFar
-    }
-
-    val newPortState = portState.copy(crunchMinutes = portState.crunchMinutes ++ crunchMinutesDiff.toMap)
-    val newDiff = PortStateDiff(Seq(), SortedMap[Int, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute]() ++ crunchMinutesDiff, SortedMap[TM, StaffMinute]())
+    val (updatedCrunchMinutes, crunchMinutesDiff) = minutes
+      .foldLeft((portState.crunchMinutes, List[CrunchMinute]())) {
+        case ((updatesSoFar, diffSoFar), updatedDrm) =>
+          val maybeMinute: Option[CrunchMinute] = updatesSoFar.get(updatedDrm.key)
+          val mergedCm: CrunchMinute = mergeMinute(maybeMinute, updatedDrm, now)
+          (updatesSoFar.updated(updatedDrm.key, mergedCm), mergedCm :: diffSoFar)
+      }
+    val newPortState = portState.copy(crunchMinutes = updatedCrunchMinutes)
+    val newDiff = PortStateDiff(Seq(), Seq(), crunchMinutesDiff, Seq())
 
     (newPortState, newDiff)
   }
@@ -219,8 +229,4 @@ case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateMinutes 
     ))
     .getOrElse(CrunchMinute(updatedDrm))
     .copy(lastUpdated = Option(now))
-}
-
-case class OptimiserService(host: String, port: String) {
-  val uri: String = s"http://$host:$port/optimise"
 }

@@ -1,11 +1,9 @@
-package drt.server.feeds.acl
+package server.feeds.acl
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.zip.{ZipEntry, ZipInputStream}
 
-import drt.server.feeds.acl.AclFeed._
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.shared
 import drt.shared.Arrival
 import drt.shared.FlightsApi.{Flights, TerminalName}
@@ -14,6 +12,8 @@ import net.schmizz.sshj.sftp.{RemoteResourceInfo, SFTPClient}
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.InMemoryDestFile
 import org.slf4j.{Logger, LoggerFactory}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, FeedResponse}
+import server.feeds.acl.AclFeed.{arrivalsFromCsvContent, contentFromFileName, latestFileForPort, sftpClient, sshClient}
 import services.SDate
 
 import scala.collection.JavaConverters._

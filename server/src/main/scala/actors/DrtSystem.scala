@@ -13,7 +13,6 @@ import controllers.{Deskstats, PaxFlow, UserRoleProviderLike}
 import drt.chroma._
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
 import drt.http.ProdSendAndReceive
-import drt.server.feeds.acl.AclFeed
 import drt.server.feeds.api.S3ApiProvider
 import drt.server.feeds.bhx.{BHXForecastFeed, BHXLiveFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
@@ -22,7 +21,6 @@ import drt.server.feeds.lhr.live.LegacyLhrLiveContentProvider
 import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.server.feeds.ltn.LtnLiveFeed
-import drt.server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse}
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared._
@@ -34,10 +32,12 @@ import org.apache.spark.sql.SparkSession
 import org.joda.time.DateTimeZone
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
+import server.feeds.acl.AclFeed
+import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse}
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services.SplitsProvider.SplitProvider
 import services._
-import services.crunch._
+import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.Crunch.{oneDayMillis, oneMinuteMillis}
 import services.graphstages._
 import services.prediction.SparkSplitsPredictorFactory
@@ -81,54 +81,55 @@ object PostgresTables extends {
 } with Tables
 
 case class DrtConfigParameters(config: Configuration) {
-  val maxDaysToCrunch: Int = config.get[Int]("crunch.forecast.max_days")
-  val aclPollMinutes: Int = config.get[Int]("crunch.forecast.poll_minutes")
-  val snapshotIntervalVm: Int = config.get[Int]("persistence.snapshot-interval.voyage-manifest")
-  val snapshotMegaBytesBaseArrivals: Int = (config.get[Double]("persistence.snapshot-megabytes.base-arrivals") * oneMegaByte).toInt
-  val snapshotMegaBytesFcstArrivals: Int = (config.get[Double]("persistence.snapshot-megabytes.forecast-arrivals") * oneMegaByte).toInt
-  val snapshotMegaBytesLiveArrivals: Int = (config.get[Double]("persistence.snapshot-megabytes.live-arrivals") * oneMegaByte).toInt
-  val snapshotMegaBytesFcstPortState: Int = (config.get[Double]("persistence.snapshot-megabytes.forecast-portstate") * oneMegaByte).toInt
-  val snapshotMegaBytesLivePortState: Int = (config.get[Double]("persistence.snapshot-megabytes.live-portstate") * oneMegaByte).toInt
-  val snapshotMegaBytesVoyageManifests: Int = (config.get[Double]("persistence.snapshot-megabytes.voyage-manifest") * oneMegaByte).toInt
+  val maxDaysToCrunch: Int = config.getOptional[Int]("crunch.forecast.max_days").getOrElse(180)
+  val aclPollMinutes: Int = config.getOptional[Int]("crunch.forecast.poll_minutes").getOrElse(120)
+  val snapshotIntervalVm: Int = config.getOptional[Int]("persistence.snapshot-interval.voyage-manifest").getOrElse(1000)
+  val snapshotMegaBytesBaseArrivals: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.base-arrivals").getOrElse(1d) * oneMegaByte).toInt
+  val snapshotMegaBytesFcstArrivals: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.forecast-arrivals").getOrElse(5d) * oneMegaByte).toInt
+  val snapshotMegaBytesLiveArrivals: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.live-arrivals").getOrElse(2d) * oneMegaByte).toInt
+  val snapshotMegaBytesFcstPortState: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.forecast-portstate").getOrElse(10d) * oneMegaByte).toInt
+  val snapshotMegaBytesLivePortState: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.live-portstate").getOrElse(25d) * oneMegaByte).toInt
+  val snapshotMegaBytesVoyageManifests: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.voyage-manifest").getOrElse(100d) * oneMegaByte).toInt
   val awSCredentials: AWSCredentials = new AWSCredentials {
-    override def getAWSAccessKeyId: TerminalName = config.get[String]("aws.credentials.access_key_id")
+    override def getAWSAccessKeyId: TerminalName = config.getOptional[String]("aws.credentials.access_key_id").getOrElse("")
 
-    override def getAWSSecretKey: TerminalName = config.get[String]("aws.credentials.secret_key")
+    override def getAWSSecretKey: TerminalName = config.getOptional[String]("aws.credentials.secret_key").getOrElse("")
   }
-  val ftpServer: String = config.get[String]("acl.host")
-  val username: String = config.get[String]("acl.username")
-  val path: String = config.get[String]("acl.keypath")
-  val refreshArrivalsOnStart: Boolean = config.get[Boolean]("crunch.refresh-arrivals-on-start")
-  val recrunchOnStart: Boolean = config.get[Boolean]("crunch.recrunch-on-start")
-  val resetRegisteredArrivalOnStart: Boolean = config.get[Boolean]("crunch.manifests.reset-registered-arrivals-on-start")
-  val useNationalityBasedProcessingTimes: Boolean = config.get[Boolean]("feature-flags.nationality-based-processing-times")
+  val ftpServer: String = ConfigFactory.load.getString("acl.host")
+  val username: String = ConfigFactory.load.getString("acl.username")
+  val path: String = ConfigFactory.load.getString("acl.keypath")
+  val refreshArrivalsOnStart: Boolean = config.getOptional[Boolean]("crunch.refresh-arrivals-on-start").getOrElse(false)
+  val recrunchOnStart: Boolean = config.getOptional[Boolean]("crunch.recrunch-on-start").getOrElse(false)
+  val resetRegisteredArrivalOnStart: Boolean = config.getOptional[Boolean]("crunch.manifests.reset-registered-arrivals-on-start").getOrElse(false)
+  val useNationalityBasedProcessingTimes: Boolean = config.getOptional[String]("feature-flags.nationality-based-processing-times").isDefined
 
-  val manifestLookupBatchSize: Int = config.get[Int]("crunch.manifests.lookup-batch-size")
+  val manifestLookupBatchSize: Int = config.getOptional[Int]("crunch.manifests.lookup-batch-size").getOrElse(10)
 
-  val useLegacyManifests: Boolean = config.get[Boolean]("feature-flags.use-legacy-manifests")
-  val useSplitsPrediction: Boolean = config.get[Boolean]("feature-flags.use-splits-prediction")
-  val rawSplitsUrl: String = config.get[String]("crunch.splits.raw-data-path")
-  val dqZipBucketName: String = config.get[String]("dq.s3.bucket")
-  val apiS3PollFrequencyMillis: MillisSinceEpoch = config.get[Int]("dq.s3.poll_frequency_seconds") * 1000L
-  val isSuperUserMode: Boolean = config.get[Boolean]("feature-flags.super-user-mode")
-  val maybeBlackJackUrl: Option[String] = config.get[String]("feeds.lhr.blackjack_url") match {
-    case url if url.nonEmpty => Option(url)
-    case _ => None
-  }
+  val useLegacyManifests: Boolean = config.getOptional[Boolean]("feature-flags.use-legacy-manifests").getOrElse(false)
+  val useSplitsPrediction: Boolean = config.getOptional[String]("feature-flags.use-splits-prediction").isDefined
+  val rawSplitsUrl: String = config.getOptional[String]("crunch.splits.raw-data-path").getOrElse("/dev/null")
+  val dqZipBucketName: String = config.getOptional[String]("dq.s3.bucket").getOrElse(throw new Exception("You must set DQ_S3_BUCKET for us to poll for AdvPaxInfo"))
+  val apiS3PollFrequencyMillis: MillisSinceEpoch = config.getOptional[Int]("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
+  val isSuperUserMode: Boolean = config.getOptional[String]("feature-flags.super-user-mode").isDefined
+  val maybeBlackJackUrl: Option[String] = config.getOptional[String]("feeds.lhr.blackjack_url")
 
-  val bhxSoapEndPointUrl: String = config.get[String]("feeds.bhx.soap.endPointUrl")
+  val useNewLhrFeed: Boolean = config.getOptional[String]("feature-flags.lhr.use-new-lhr-feed").isDefined
+  val newLhrFeedApiUrl: String = config.getOptional[String]("feeds.lhr.live.api_url").getOrElse("")
+  val newLhrFeedApiToken: String = config.getOptional[String]("feeds.lhr.live.token").getOrElse("")
 
-  val b5JStartDate: String = "2019-06-01"
+  val maybeBhxSoapEndPointUrl: Option[String] = config.getOptional[String]("feeds.bhx.soap.endPointUrl")
 
-  val ltnLiveFeedUrl: String = config.get[String]("feeds.ltn.live.url")
-  val ltnLiveFeedUsername: String = config.get[String]("feeds.ltn.live.username")
-  val ltnLiveFeedPassword: String = config.get[String]("feeds.ltn.live.password")
-  val ltnLiveFeedToken: String = config.get[String]("feeds.ltn.live.token")
-  val ltnLiveFeedTimeZone: String = config.get[String]("feeds.ltn.live.timezone")
+  val maybeB5JStartDate: Option[String] = config.getOptional[String]("feature-flags.b5jplus-start-date")
 
-  val lgwNamespace: String = config.get[String]("feeds.lgw.live.azure.namespace")
-  val lgwSasToKey: String = config.get[String]("feeds.lgw.live.azure.sas_to_Key")
-  val lgwServiceBusUri: String = config.get[String]("feeds.lgw.live.azure.service_bus_uri")
+  val maybeLtnLiveFeedUrl: Option[String] = config.getOptional[String]("feeds.ltn.live.url")
+  val maybeLtnLiveFeedUsername: Option[String] = config.getOptional[String]("feeds.ltn.live.username")
+  val maybeLtnLiveFeedPassword: Option[String] = config.getOptional[String]("feeds.ltn.live.password")
+  val maybeLtnLiveFeedToken: Option[String] = config.getOptional[String]("feeds.ltn.live.token")
+  val maybeLtnLiveFeedTimeZone: Option[String] = config.getOptional[String]("feeds.ltn.live.timezone")
+
+  val maybeLGWNamespace: Option[String] = config.getOptional[String]("feeds.lgw.live.azure.namespace")
+  val maybeLGWSASToKey: Option[String] = config.getOptional[String]("feeds.lgw.live.azure.sas_to_Key")
+  val maybeLGWServiceBusUri: Option[String] = config.getOptional[String]("feeds.lgw.live.azure.service_bus_uri")
 }
 
 case class SubscribeRequestQueue(subscriber: SourceQueueWithComplete[List[Arrival]])
@@ -157,14 +158,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   val purgeOldLiveSnapshots = false
   val purgeOldForecastSnapshots = true
-
-  val optimiserService: OptimiserLike = if (config.get[Boolean]("crunch.optimiser-service.use-local")) {
-    OptimiserLocal
-  } else {
-    val optimiserServiceHost: String = config.get[String]("crunch.optimiser-service.host")
-    val optimiserServicePort: String = config.get[String]("crunch.optimiser-service.port")
-    Optimiser(OptimiserService(optimiserServiceHost, optimiserServicePort).uri)
-  }
 
   val liveCrunchStateProps = Props(classOf[CrunchStateActor], Option(airportConfig.portStateSnapshotInterval), params.snapshotMegaBytesLivePortState, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots)
   val forecastCrunchStateProps = Props(classOf[CrunchStateActor], Option(100), params.snapshotMegaBytesFcstPortState, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots)
@@ -330,12 +323,12 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
       useLegacyManifests = params.useLegacyManifests,
       splitsPredictorStage = splitsPredictorStage,
-      b5JStartDate = SDate(params.b5JStartDate),
+      b5JStartDate = params.maybeB5JStartDate.map(SDate(_)).getOrElse(SDate("2019-06-01")),
       manifestsLiveSource = voyageManifestsLiveSource,
       manifestsHistoricSource = voyageManifestsHistoricSource,
       voyageManifestsActor = voyageManifestsActor,
       voyageManifestsRequestActor = voyageManifestsRequestActor,
-      optimiser = optimiserService,
+      cruncher = TryRenjin.crunch,
       simulator = TryRenjin.runSimulationOfWork,
       initialPortState = initialPortState,
       initialBaseArrivals = initialBaseArrivals.getOrElse(Set()),
@@ -417,14 +410,21 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         }
         LHRFlightFeed(contentProvider)
       case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
-      case "LGW" => LGWFeed(params.lgwNamespace, params.lgwSasToKey, params.lgwServiceBusUri)(system).source()
-      case "BHX" => BHXLiveFeed(params.bhxSoapEndPointUrl, 60 seconds)
+      case "LGW" =>
+        val lgwNamespace = params.maybeLGWNamespace.getOrElse(throw new Exception("Missing LGW Azure Namespace parameter"))
+        val lgwSasToKey = params.maybeLGWSASToKey.getOrElse(throw new Exception("Missing LGW SAS Key for To Queue"))
+        val lgwServiceBusUri = params.maybeLGWServiceBusUri.getOrElse(throw new Exception("Missing LGW Service Bus Uri"))
+        LGWFeed(lgwNamespace, lgwSasToKey, lgwServiceBusUri)(system).source()
+      case "BHX" => BHXLiveFeed(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX live feed URL")))
       case "LTN" =>
-        val url = params.ltnLiveFeedUrl
-        val username = params.ltnLiveFeedUsername
-        val password = params.ltnLiveFeedPassword
-        val token = params.ltnLiveFeedToken
-        val timeZone = DateTimeZone.forID(params.ltnLiveFeedTimeZone)
+        val url = params.maybeLtnLiveFeedUrl.getOrElse(throw new Exception("Missing live feed url"))
+        val username = params.maybeLtnLiveFeedUsername.getOrElse(throw new Exception("Missing live feed username"))
+        val password = params.maybeLtnLiveFeedPassword.getOrElse(throw new Exception("Missing live feed password"))
+        val token = params.maybeLtnLiveFeedToken.getOrElse(throw new Exception("Missing live feed token"))
+        val timeZone = params.maybeLtnLiveFeedTimeZone match {
+          case Some(tz) => DateTimeZone.forID(tz)
+          case None => DateTimeZone.UTC
+        }
         LtnLiveFeed(url, token, username, password, timeZone).tickingSource
       case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
     }
@@ -435,7 +435,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     val forecastNoOp = Source.tick[ArrivalsFeedResponse](100 days, 100 days, ArrivalsFeedSuccess(Flights(Seq()), SDate.now()))
     val feed = portCode match {
       case "LHR" => createForecastLHRFeed()
-      case "BHX" => BHXForecastFeed(params.bhxSoapEndPointUrl, 60 minutes)
+      case "BHX" => BHXForecastFeed(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")))
       case "LGW" => LGWForecastFeed()
       case _ =>
         system.log.info(s"No Forecast Feed defined.")

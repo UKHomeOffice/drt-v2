@@ -4,7 +4,7 @@ import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueW
 import akka.stream.{ClosedShape, OverflowStrategy}
 import akka.testkit.TestProbe
 import drt.shared._
-import services.crunch.{CrunchTestLike, OptimiserMock}
+import services.crunch.CrunchTestLike
 import services.graphstages.Crunch.{LoadMinute, Loads}
 import services.{OptimizerConfig, OptimizerCrunchResult, SDate}
 
@@ -22,14 +22,14 @@ object TestableCrunchLoadStage {
     Seq.fill(workloads.length)(config.sla)
   }
 
-  def apply(testProbe: TestProbe, now: () => SDateLike, airportConfig: AirportConfig, minutesToCrunch: Int, mockOptimiser: OptimiserMock): RunnableGraph[SourceQueueWithComplete[Loads]] = {
+  def apply(testProbe: TestProbe, now: () => SDateLike, airportConfig: AirportConfig, minutesToCrunch: Int): RunnableGraph[SourceQueueWithComplete[Loads]] = {
     val crunchLoadStage = new CrunchLoadGraphStage(
       name = "",
       optionalInitialCrunchMinutes = None,
       airportConfig = airportConfig,
       expireAfterMillis = oneDayMillis,
       now = now,
-      optimiser = mockOptimiser,
+      crunch = mockCrunch,
       crunchPeriodStartMillis = Crunch.getLocalLastMidnight,
       minutesToCrunch = minutesToCrunch)
 
@@ -40,7 +40,7 @@ object TestableCrunchLoadStage {
     val graph = GraphDSL.create(loadSource.async) {
 
       implicit builder =>
-        load =>
+        (load) =>
           val crunch = builder.add(crunchLoadStage.async)
           val sink = builder.add(Sink.actorRef(testProbe.ref, "complete"))
 
@@ -62,7 +62,7 @@ class CrunchLoadStageSpec extends CrunchTestLike {
     val scheduled = "2018-01-01T00:05"
     val testAirportConfig = airportConfig
     val minutesToCrunch = 1440
-    val loadsSource = TestableCrunchLoadStage(probe, () => SDate(scheduled), testAirportConfig, minutesToCrunch, defaultOptimiserMock).run
+    val loadsSource = TestableCrunchLoadStage(probe, () => SDate(scheduled), testAirportConfig, minutesToCrunch).run
 
     val loads = Loads(Seq(
       LoadMinute("T1", Queues.EeaDesk, 10, 5, SDate(scheduled).millisSinceEpoch),
@@ -102,7 +102,7 @@ class CrunchLoadStageSpec extends CrunchTestLike {
     val scheduledDay2 = "2018-01-02T05:30"
     val testAirportConfig = airportConfig
     val minutesToCrunch = 2880
-    val loadsSource = TestableCrunchLoadStage(probe, () => SDate(scheduledDay1), testAirportConfig, minutesToCrunch, defaultOptimiserMock).run
+    val loadsSource = TestableCrunchLoadStage(probe, () => SDate(scheduledDay1), testAirportConfig, minutesToCrunch).run
 
     val loads = Loads(Seq(
       LoadMinute("T1", Queues.EeaDesk, 10, 5, SDate(scheduledDay1).millisSinceEpoch),

@@ -1,4 +1,4 @@
-package drt.server.feeds
+package server.feeds
 
 import drt.shared.FlightsApi.Flights
 import drt.shared.SDateLike

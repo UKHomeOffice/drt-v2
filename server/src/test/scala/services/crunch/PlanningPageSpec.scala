@@ -3,7 +3,7 @@ package services.crunch
 import controllers.{ArrivalGenerator, Forecast}
 import drt.shared.FlightsApi.Flights
 import drt.shared._
-import drt.server.feeds.ArrivalsFeedSuccess
+import server.feeds.ArrivalsFeedSuccess
 import services.{SDate, TryRenjin}
 
 import scala.concurrent.duration._
@@ -33,6 +33,7 @@ class PlanningPageSpec() extends CrunchTestLike {
         minMaxDesksByTerminalQueue = Map("T1" -> Map(Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1)))))
       ),
       initialShifts = ShiftAssignments(Seq(assignment1)),
+      cruncher = TryRenjin.crunch,
       checkRequiredStaffUpdatesOnStartup = true
     )
 
@@ -41,7 +42,7 @@ class PlanningPageSpec() extends CrunchTestLike {
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseFlights))
 
     val expected = List(
-      ForecastTimeSlot(SDate("2017-01-02T00:00Z").millisSinceEpoch, 20, 0),
+      ForecastTimeSlot(SDate("2017-01-02T00:00Z").millisSinceEpoch, 20, 1),
       ForecastTimeSlot(SDate("2017-01-02T00:15Z").millisSinceEpoch, 20, 0),
       ForecastTimeSlot(SDate("2017-01-02T00:30Z").millisSinceEpoch, 20, 0),
       ForecastTimeSlot(SDate("2017-01-02T00:45Z").millisSinceEpoch, 20, 0)

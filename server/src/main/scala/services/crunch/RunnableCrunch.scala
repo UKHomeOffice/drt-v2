@@ -10,7 +10,7 @@ import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared._
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
-import drt.server.feeds._
+import server.feeds._
 import services.graphstages.Crunch.Loads
 import services.graphstages._
 
@@ -204,9 +204,9 @@ object RunnableCrunch {
 
   def liveStart(now: () => SDateLike): SDateLike = Crunch.getLocalLastMidnight(now()).addDays(-1)
 
-  def liveEnd(now: () => SDateLike): SDateLike = Crunch.getLocalNextMidnight(now()).addDays(1)
+  def liveEnd(now: () => SDateLike): SDateLike = Crunch.getLocalNextMidnight(now()).addDays(2)
+
+  def forecastEnd(now: () => SDateLike): SDateLike = Crunch.getLocalNextMidnight(now()).addDays(360)
 
   def forecastStart(now: () => SDateLike): SDateLike = Crunch.getLocalNextMidnight(now())
-
-  def forecastEnd(now: () => SDateLike): SDateLike = Crunch.getLocalNextMidnight(now()).addDays(180)
 }

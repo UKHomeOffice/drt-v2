@@ -16,39 +16,34 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import passengersplits.InMemoryPersistence
-import drt.server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
+import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services._
 import services.graphstages.Crunch._
 import services.graphstages.{DummySplitsPredictor, TestableCrunchLoadStage}
 import slickdb.Tables
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.implicitConversions
 
 
 class LiveCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
   extends CrunchStateActor(None, oneMegaByte, s"live-test-$name", queues, now, expireAfterMillis, false) {
-  override def portStateFromDiff(diff: PortStateDiff): Option[PortState] = {
+  override def updateStateFromPortState(cs: PortState): Unit = {
     log.info(s"calling parent updateState...")
-    val newState = super.portStateFromDiff(diff)
+    super.updateStateFromPortState(cs)
 
-    probe ! newState.get
-
-    newState
+    probe ! state.get
   }
 }
 
 class ForecastCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
   extends CrunchStateActor(None, oneMegaByte, s"forecast-test-$name", queues, now, expireAfterMillis, false) {
-  override def portStateFromDiff(diff: PortStateDiff): Option[PortState] = {
+  override def updateStateFromPortState(cs: PortState): Unit = {
     log.info(s"calling parent updateState...")
-    val newState = super.portStateFromDiff(diff)
+    super.updateStateFromPortState(cs)
 
-    probe ! newState.get
-
-    newState
+    probe ! state.get
   }
 }
 
@@ -70,6 +65,7 @@ case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete
                                       forecastArrivalsTestProbe: TestProbe,
                                       liveArrivalsTestProbe: TestProbe,
                                       aggregatedArrivalsActor: ActorRef)
+
 
 
 object H2Tables extends {
@@ -151,7 +147,7 @@ class CrunchTestLike
                      initialFixedPoints: FixedPointAssignments = FixedPointAssignments.empty,
                      initialStaffMovements: Seq[StaffMovement] = Seq(),
                      logLabel: String = "",
-                     optimiserMock: OptimiserLike = defaultOptimiserMock,
+                     cruncher: TryCrunch = TestableCrunchLoadStage.mockCrunch,
                      simulator: Simulator = TestableCrunchLoadStage.mockSimulator,
                      aggregatedArrivalsActor: ActorRef = testProbe("aggregated-arrivals").ref,
                      useLegacyManifests: Boolean = false,
@@ -208,7 +204,7 @@ class CrunchTestLike
       manifestsHistoricSource = manifestsSource,
       voyageManifestsActor = manifestsActor,
       voyageManifestsRequestActor = manifestsRequestActor,
-      optimiser = optimiserMock,
+      cruncher = cruncher,
       simulator = simulator,
       initialPortState = initialPortState,
       initialBaseArrivals = initialBaseArrivals,
@@ -244,8 +240,6 @@ class CrunchTestLike
       aggregatedArrivalsActor
     )
   }
-
-  def defaultOptimiserMock: OptimiserMock = OptimiserMock((w2d: WorkloadToOptimise) => DesksAndWaits(w2d.minDesks, List.fill[Int](w2d.workloads.length)(w2d.sla)))
 
   def paxLoadsFromPortState(portState: PortState, minsToTake: Int, startFromMinuteIdx: Int = 0): Map[TerminalName, Map[QueueName, List[Double]]] = portState
     .crunchMinutes
@@ -354,9 +348,5 @@ class CrunchTestLike
         offerResult
     }
   }
-}
-
-case class OptimiserMock(wlToDw: WorkloadToOptimise => DesksAndWaits) extends OptimiserLike {
-  override def requestDesksAndWaits(workloadToOptimise: WorkloadToOptimise): Future[Option[DesksAndWaits]] = Future(Option(wlToDw(workloadToOptimise)))
 }
 

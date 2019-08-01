@@ -17,7 +17,7 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
                               portCode: String,
                               now: () => SDateLike,
                               expireAfterMillis: Long
-                             ) extends RecoveryActorLike with PersistentDrtActor[RegisteredArrivals] {
+                              ) extends RecoveryActorLike with PersistentDrtActor[RegisteredArrivals] {
   override def persistenceId: String = "registered-arrivals"
 
   override def initialState: RegisteredArrivals = RegisteredArrivals(SortedMap())
@@ -74,13 +74,13 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
       state = RegisteredArrivals(minusExpired)
   }
 
-  private def findUpdatesToPersist(newArrivals: Map[ArrivalKey, Option[Long]]): Map[ArrivalKey, Option[Long]] = newArrivals
-    .foldLeft(List[(ArrivalKey, Option[Long])]()) {
+  private def findUpdatesToPersist(newArrivals: Map[ArrivalKey, Option[Long]]): Map[ArrivalKey, Option[Long]] = {
+    newArrivals.foldLeft(Map[ArrivalKey, Option[Long]]()) {
       case (toPersistSoFar, (arrivalToCheck, lastLookup)) =>
         if (!hasChanged(arrivalToCheck, lastLookup)) toPersistSoFar
-        else (arrivalToCheck, lastLookup) :: toPersistSoFar
+        else toPersistSoFar.updated(arrivalToCheck, lastLookup)
     }
-    .toMap
+  }
 
   private def hasChanged(arrivalToCheck: ArrivalKey, lastLookup: Option[Long]): Boolean = {
     !state.arrivals.contains(arrivalToCheck) || state.arrivals(arrivalToCheck) != lastLookup

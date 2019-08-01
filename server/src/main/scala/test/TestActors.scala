@@ -129,7 +129,7 @@ object TestActors {
     }
 
     override def receiveRecover: Receive = {
-      case _ =>
+      case m => log.info(logMessage(m))
     }
 
     override def receiveCommand: Receive = reset orElse super.receiveCommand
