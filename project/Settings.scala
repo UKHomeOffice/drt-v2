@@ -71,8 +71,7 @@ object Settings {
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
     val uPickle = "0.6.7"
-    val akkaXml = "10.1.9"
-    val akkaHttpCaching = "10.1.9"
+    val akkaHttp = "10.1.9"
     val slick = "3.3.2"
   }
 
@@ -121,37 +120,39 @@ object Settings {
     "com.typesafe.akka" %% "akka-testkit" % akka % "test",
     "com.typesafe.akka" %% "akka-stream-testkit" % akka % "test",
     "com.typesafe.akka" %% "akka-persistence" % akka,
+    "com.typesafe.akka" %% "akka-persistence-query" % akka,
     "com.typesafe.akka" %% "akka-stream-contrib" % akkaStreamContrib,
     "com.typesafe.akka" %% "akka-slf4j" % akka,
-    "com.typesafe.akka" %% "akka-http-xml" % akkaXml,
+    "com.typesafe.akka" %% "akka-http" % akkaHttp,
+    "com.typesafe.akka" %% "akka-http-caching" % akkaHttp,
+    "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttp,
+    "com.typesafe.akka" %% "akka-http-xml" % akkaHttp,
+    "com.typesafe.akka" %% "akka-stream" % akka,
 
     "com.typesafe.play" %% "play-json" % playJson,
     "com.typesafe.play" %% "play-iteratees" % playIteratees,
     "com.typesafe.play" %% "play-iteratees-reactive-streams" % playIteratees,
+    "com.typesafe.play" %% "play-json-joda" % playJsonJoda,
 
     "com.typesafe.slick" %% "slick" % slick,
     "com.typesafe.slick" %% "slick-hikaricp" % slick,
     "com.typesafe.slick" %% "slick-codegen" % slick,
 
-    "com.typesafe.akka" %% "akka-http-caching" % akkaHttpCaching,
 
-    "io.spray" %% "spray-client" % sprayVersion,
-    "io.spray" %% "spray-routing" % sprayVersion,
-    "io.spray" %% "spray-json" % sprayVersion,
+//    "io.spray" %% "spray-client" % sprayVersion,
+//    "io.spray" %% "spray-routing" % sprayVersion,
+//    "io.spray" %% "spray-json" % sprayVersion,
 
     "joda-time" % "joda-time" % jodaTime,
-    "com.typesafe.play" %% "play-json-joda" % playJsonJoda,
     "org.opensaml" % "opensaml" % openSaml excludeAll(ExclusionRule("org.bouncycastle"), ExclusionRule("xerces")),
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
     "org.apache.spark" %% "spark-mllib" % spark,
     "org.apache.spark" %% "spark-sql" % spark,
-    "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
     "org.codehaus.janino" % "janino" % "3.0.7",
     "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
     "org.iq80.leveldb" % "leveldb" % levelDb,
     "com.github.dnvriend" %% "akka-persistence-jdbc" % akkaPersistenceJdbc,
-    "uk.gov.homeoffice" %% "bluebus" % bluebus,
     "org.postgresql" % "postgresql" % postgres,
 
     "org.renjin" % "renjin-script-engine" % renjin,
@@ -167,7 +168,10 @@ object Settings {
 
     "com.box" % "box-java-sdk" % "2.19.0",
     "com.eclipsesource.minimal-json" % "minimal-json" % "0.9.1",
-    "org.bitbucket.b_c" % "jose4j" % "0.4.4"
+    "org.bitbucket.b_c" % "jose4j" % "0.4.4",
+
+    "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
+    "uk.gov.homeoffice" %% "bluebus" % bluebus
   ))
 
 

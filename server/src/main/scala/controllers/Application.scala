@@ -277,7 +277,7 @@ class Application @Inject()(implicit val config: Configuration,
       def keyCloakClient: KeyCloakClient with ProdSendAndReceive = {
         val token = headers.get("X-Auth-Token").getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
         val keyCloakUrl = config.getOptional[String]("key-cloak.url").getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
-        new KeyCloakClient(token, keyCloakUrl, actorSystem) with ProdSendAndReceive
+        new KeyCloakClient(token, keyCloakUrl) with ProdSendAndReceive
       }
 
       def getKeyCloakUsers(): Future[List[KeyCloakUser]] = {
@@ -289,7 +289,7 @@ class Application @Inject()(implicit val config: Configuration,
 
       def getKeyCloakGroups(): Future[List[KeyCloakGroup]] = {
         if (getLoggedInUser().roles.contains(ManageUsers)) {
-          keyCloakClient.getGroups()
+          keyCloakClient.getGroups
         } else throw new Exception(permissionDeniedMessage)
       }
 
@@ -305,7 +305,7 @@ class Application @Inject()(implicit val config: Configuration,
       def addUserToGroups(userId: UUID, groups: Set[String]): Future[Unit] =
         if (getLoggedInUser().roles.contains(ManageUsers)) {
           val futureGroupIds: Future[KeyCloakGroups] = keyCloakClient
-            .getGroups()
+            .getGroups
             .map(kcGroups => KeyCloakGroups(kcGroups.filter(g => groups.contains(g.name))))
 
 
@@ -323,7 +323,7 @@ class Application @Inject()(implicit val config: Configuration,
 
       def removeUserFromGroups(userId: UUID, groups: Set[String]): Future[Unit] =
         keyCloakClient
-          .getGroups()
+          .getGroups
           .map(kcGroups => kcGroups.filter(g => groups.contains(g.name))
             .map(g => keyCloakClient.removeUserFromGroup(userId, g.id)))
 
@@ -573,7 +573,7 @@ class Application @Inject()(implicit val config: Configuration,
     val clientSecretOption = config.getOptional[String]("key-cloak.client_secret")
     val usernameOption = postStringValOrElse("username")
     val passwordOption = postStringValOrElse("password")
-    import api.KeyCloakAuthTokenParserProtocol._
+    import api.KeyCloakAuthTokenParserProtocol_._
     import spray.json._
 
     def tokenToHttpResponse(username: String)(token: KeyCloakAuthResponse) = {
@@ -598,7 +598,7 @@ class Application @Inject()(implicit val config: Configuration,
       clientSecret <- clientSecretOption
     } yield (usernameOption, passwordOption) match {
       case (Some(username), Some(password)) =>
-        val authClient = new KeyCloakAuth(tokenUrl, clientId, clientSecret, system) with ProdSendAndReceive
+        val authClient = new KeyCloakAuth(tokenUrl, clientId, clientSecret) with ProdSendAndReceive
         authClient.getToken(username, password).map(tokenToHttpResponse(username))
       case _ =>
         log.info(s"Invalid post fields for api login.")
@@ -633,14 +633,14 @@ class Application @Inject()(implicit val config: Configuration,
   def keyCloakClient(headers: Headers): KeyCloakClient with ProdSendAndReceive = {
     val token = headers.get("X-Auth-Token").getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
     val keyCloakUrl = config.getOptional[String]("key-cloak.url").getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
-    new KeyCloakClient(token, keyCloakUrl, system) with ProdSendAndReceive
+    new KeyCloakClient(token, keyCloakUrl) with ProdSendAndReceive
   }
 
   def exportUsers(): Action[AnyContent] = authByRole(ManageUsers) {
     Action.async { request =>
       val client = keyCloakClient(request.headers)
       client
-        .getGroups()
+        .getGroups
         .flatMap(groupList => KeyCloakGroups(groupList, client).usersWithGroupsCsvContent)
         .map(csvContent => Result(
           ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=users-with-groups.csv")),

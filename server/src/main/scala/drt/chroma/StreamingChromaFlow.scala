@@ -4,22 +4,22 @@ import akka.NotUsed
 import akka.actor.Cancellable
 import akka.event.LoggingAdapter
 import akka.stream.scaladsl.Source
-import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
+import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveFlight}
-import drt.shared.{Arrival, ForecastFeedSource, LiveFeedSource}
 import drt.shared.FlightsApi.Flights
+import drt.shared.{Arrival, ForecastFeedSource, LiveFeedSource}
 import org.springframework.util.StringUtils
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
-import scala.util.{Failure, Success, Try}
 import scala.language.postfixOps
+import scala.util.{Failure, Success, Try}
 
 object StreamingChromaFlow {
 
-  def chromaPollingSourceLive(log: LoggingAdapter, chromaFetcher: ChromaFetcher, pollFrequency: FiniteDuration): Source[ArrivalsFeedResponse, Cancellable] = {
+  def chromaPollingSourceLive(log: LoggingAdapter, chromaFetcher: ChromaFetcher[ChromaLiveFlight], pollFrequency: FiniteDuration): Source[ArrivalsFeedResponse, Cancellable] = {
     implicit val l: LoggingAdapter = log
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
     val tickingSource: Source[Try[Seq[ChromaLiveFlight]], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
@@ -33,7 +33,7 @@ object StreamingChromaFlow {
     recoverableTicking
   }
 
-  def chromaPollingSourceForecast(log: LoggingAdapter, chromaFetcher: ChromaFetcherForecast, pollFrequency: FiniteDuration): Source[ArrivalsFeedResponse, Cancellable] = {
+  def chromaPollingSourceForecast(log: LoggingAdapter, chromaFetcher: ChromaFetcher[ChromaForecastFlight], pollFrequency: FiniteDuration): Source[ArrivalsFeedResponse, Cancellable] = {
     implicit val l: LoggingAdapter = log
     val initialDelayImmediately: FiniteDuration = 15 seconds
     val tickingSource: Source[Try[Seq[ChromaForecastFlight]], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)

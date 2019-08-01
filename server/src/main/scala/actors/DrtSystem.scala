@@ -11,12 +11,13 @@ import com.amazonaws.auth.AWSCredentials
 import com.typesafe.config.ConfigFactory
 import controllers.{Deskstats, PaxFlow, UserRoleProviderLike}
 import drt.chroma._
-import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFetcherForecast}
+import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
+import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveFlight}
 import drt.http.ProdSendAndReceive
 import drt.server.feeds.api.S3ApiProvider
 import drt.server.feeds.bhx.BHXFeed
-import drt.server.feeds.legacy.bhx.{BHXForecastFeedLegacy, BHXLiveFeedLegacy}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
+import drt.server.feeds.legacy.bhx.{BHXForecastFeedLegacy, BHXLiveFeedLegacy}
 import drt.server.feeds.lgw.{LGWFeed, LGWForecastFeed}
 import drt.server.feeds.lhr.live.LegacyLhrLiveContentProvider
 import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
@@ -464,11 +465,11 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     PaxFlow.pcpArrivalTimeForFlight(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis)(walkTimeProvider)
 
   def createLiveChromaFlightFeed(feedType: ChromaFeedType): ChromaLiveFeed = {
-    ChromaLiveFeed(system.log, new ChromaFetcher(feedType, system) with ProdSendAndReceive)
+    ChromaLiveFeed(system.log, new ChromaFetcher[ChromaLiveFlight](feedType, ChromaFlightMarshallers.live) with ProdSendAndReceive)
   }
 
   def createForecastChromaFlightFeed(feedType: ChromaFeedType): ChromaForecastFeed = {
-    ChromaForecastFeed(system.log, new ChromaFetcherForecast(feedType, system) with ProdSendAndReceive)
+    ChromaForecastFeed(system.log, new ChromaFetcher[ChromaForecastFlight](feedType, ChromaFlightMarshallers.forecast) with ProdSendAndReceive)
   }
 
   def createForecastLHRFeed(): Source[ArrivalsFeedResponse, Cancellable] = {

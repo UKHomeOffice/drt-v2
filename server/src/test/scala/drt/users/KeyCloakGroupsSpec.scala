@@ -3,9 +3,10 @@ package drt.users
 import java.util.UUID
 
 import akka.actor.ActorSystem
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
+import akka.stream.ActorMaterializer
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import org.specs2.mutable.Specification
-import spray.http.{HttpRequest, HttpResponse}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
@@ -46,8 +47,11 @@ class KeyCloakGroupsSpec extends Specification {
     KeyCloakGroup("", "LGW", "")
   )
 
+  implicit val system: ActorSystem = ActorSystem("keycloak-test")
+  implicit val mat: ActorMaterializer = ActorMaterializer()
+
   class TestKeyCloakClient(groupUsers: Map[String, List[KeyCloakUser]], allUsers: Map[Int, List[KeyCloakUser]])
-    extends KeyCloakClient("", "", ActorSystem("test")) {
+    extends KeyCloakClient("", "") {
 
     override def sendAndReceive: HttpRequest => Future[HttpResponse] = _ => Future(HttpResponse())
 
