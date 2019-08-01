@@ -138,11 +138,6 @@ object Settings {
     "com.typesafe.slick" %% "slick-hikaricp" % slick,
     "com.typesafe.slick" %% "slick-codegen" % slick,
 
-
-//    "io.spray" %% "spray-client" % sprayVersion,
-//    "io.spray" %% "spray-routing" % sprayVersion,
-//    "io.spray" %% "spray-json" % sprayVersion,
-
     "joda-time" % "joda-time" % jodaTime,
     "org.opensaml" % "opensaml" % openSaml excludeAll(ExclusionRule("org.bouncycastle"), ExclusionRule("xerces")),
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
