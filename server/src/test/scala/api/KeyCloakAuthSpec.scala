@@ -32,7 +32,7 @@ class KeyCloakAuthSpec extends TestKit(ActorSystem("testActorSystem", ConfigFact
 
   "When parsing keycloak JSON token I should get back a case class representation of the token" >> {
 
-    import KeyCloakAuthTokenParserProtocol_._
+    import KeyCloakAuthTokenParserProtocol._
     import spray.json._
 
     val expected = KeyCloakAuthToken(

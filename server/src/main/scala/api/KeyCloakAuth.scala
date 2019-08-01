@@ -28,17 +28,6 @@ abstract case class KeyCloakAuth(tokenUrl: String, clientId: String, clientSecre
     "grant_type" -> "password"
   ))
 
-  val logResponse: HttpResponse => HttpResponse = { resp =>
-    log.info(s"Response Object: $resp")
-    log.debug(s"Response: ${resp.entity.toString}")
-    if (resp.status.isFailure) {
-      log.warn(s"Failed to talk to chroma ${resp.headers}")
-      log.error(s"Failed to talk to chroma: entity ${resp.entity.toString}")
-    }
-
-    resp
-  }
-
   def getToken(username: String, password: String): Future[KeyCloakAuthResponse] = {
     val request = HttpRequest(
       method = HttpMethods.POST,
@@ -49,31 +38,25 @@ abstract case class KeyCloakAuth(tokenUrl: String, clientId: String, clientSecre
     val requestWithHeaders = request.addHeader(Accept(MediaTypes.`application/json`))
 
     sendAndReceive(requestWithHeaders).flatMap { r =>
-      logResponse(r)
-      //      sprayJsonSourceReader[KeyCloakAuthToken](KeyCloakAuthTokenFormatParser, new JsonEntityStreamingSupport())
-      Unmarshal(r)
-        .to[KeyCloakAuthResponse]
-      //        .recoverWith { case _ => Unmarshal(r).to[KeyCloakAuthError] }
+      Unmarshal(r).to[KeyCloakAuthResponse]
     }
   }
 }
 
 sealed trait KeyCloakAuthResponse
 
-case class KeyCloakAuthToken(
-                              accessToken: String,
-                              expiresIn: Int,
-                              refreshExpiresIn: Int,
-                              refreshToken: String,
-                              tokenType: String,
-                              notBeforePolicy: Int,
-                              sessionState: String,
-                              scope: String
-                            ) extends KeyCloakAuthResponse
+case class KeyCloakAuthToken(accessToken: String,
+                             expiresIn: Int,
+                             refreshExpiresIn: Int,
+                             refreshToken: String,
+                             tokenType: String,
+                             notBeforePolicy: Int,
+                             sessionState: String,
+                             scope: String) extends KeyCloakAuthResponse
 
 case class KeyCloakAuthError(error: String, errorDescription: String) extends KeyCloakAuthResponse
 
-object KeyCloakAuthTokenParserProtocol_ extends KeyCloakAuthTokenParserProtocol
+object KeyCloakAuthTokenParserProtocol extends KeyCloakAuthTokenParserProtocol
 
 
 trait KeyCloakAuthTokenParserProtocol extends SprayJsonSupport with DefaultJsonProtocol {

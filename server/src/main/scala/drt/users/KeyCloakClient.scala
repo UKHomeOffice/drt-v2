@@ -28,24 +28,20 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String)(implicit 
 
   implicit val timeout: Timeout = Timeout(1 minute)
 
-  val logResponse: HttpResponse => HttpResponse = { resp =>
-    log.info(s"Response Object: $resp")
-    log.debug(s"Response: ${resp.entity.toString}")
-    if (resp.status.isFailure) {
-      log.warn(s"Failed to talk to chroma ${resp.headers}")
-      log.error(s"Failed to talk to chroma: entity ${resp.entity.toString}")
-    }
+  def logResponse(requestName: String, resp: HttpResponse): HttpResponse = {
+    if (resp.status.isFailure)
+      log.error(s"Error when calling $requestName on KeyCloak API Status code: ${resp.status} Response:<${resp.entity.toString}>")
 
     resp
   }
 
-  def pipeline(method: HttpMethod, uri: String): Future[HttpResponse] = {
+  def pipeline(method: HttpMethod, uri: String, requestName: String): Future[HttpResponse] = {
     val request = HttpRequest(method, Uri(uri))
     val requestWithHeaders = request
       .addHeader(Accept(MediaTypes.`application/json`))
       .addHeader(Authorization(OAuth2BearerToken(token)))
     sendAndReceive(requestWithHeaders).map { r =>
-      logResponse(r)
+      logResponse(requestName, r)
       r
     }
   }
@@ -53,7 +49,7 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String)(implicit 
   def getUsers(max: Int = 100, offset: Int = 0): Future[List[KeyCloakUser]] = {
     val uri = keyCloakUrl + s"/users?max=$max&first=$offset"
     log.info(s"Calling key cloak: $uri")
-    pipeline(HttpMethods.GET, uri).flatMap { r => Unmarshal(r).to[List[KeyCloakUser]] }
+    pipeline(HttpMethods.GET, uri, "getUsers").flatMap { r => Unmarshal(r).to[List[KeyCloakUser]] }
   }
 
   def getAllUsers(offset: Int = 0): Seq[KeyCloakUser] = {
@@ -66,13 +62,13 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String)(implicit 
   def getUserGroups(userId: UUID): Future[List[KeyCloakGroup]] = {
     val uri = keyCloakUrl + s"/users/$userId/groups"
     log.info(s"Calling key cloak: $uri")
-    pipeline(HttpMethods.GET, uri).flatMap { r => Unmarshal(r).to[List[KeyCloakGroup]] }
+    pipeline(HttpMethods.GET, uri, "getUserGroups").flatMap { r => Unmarshal(r).to[List[KeyCloakGroup]] }
   }
 
   def getGroups: Future[List[KeyCloakGroup]] = {
     val uri = keyCloakUrl + "/groups"
     log.info(s"Calling key cloak: $uri")
-    pipeline(HttpMethods.GET, uri).flatMap { r => Unmarshal(r).to[List[KeyCloakGroup]] }
+    pipeline(HttpMethods.GET, uri, "getGroups").flatMap { r => Unmarshal(r).to[List[KeyCloakGroup]] }
   }
 
   def getUsersInGroup(groupName: String, max: Int = 1000): Future[List[KeyCloakUser]] = {
@@ -81,7 +77,7 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String)(implicit 
     futureMaybeId.flatMap {
       case Some(id) =>
         val uri = keyCloakUrl + s"/groups/$id/members?max=$max"
-        pipeline(HttpMethods.GET, uri).flatMap { r => Unmarshal(r).to[List[KeyCloakUser]] }
+        pipeline(HttpMethods.GET, uri, "getUsersInGroup").flatMap { r => Unmarshal(r).to[List[KeyCloakUser]] }
       case None => Future(List())
     }
   }
@@ -100,13 +96,13 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String)(implicit 
   def addUserToGroup(userId: UUID, groupId: String): Future[HttpResponse] = {
     log.info(s"Adding $userId to $groupId")
     val uri = s"$keyCloakUrl/users/$userId/groups/$groupId"
-    pipeline(HttpMethods.PUT, uri)
+    pipeline(HttpMethods.PUT, uri, "addUserToGroup")
   }
 
   def removeUserFromGroup(userId: UUID, groupId: String): Future[HttpResponse] = {
     log.info(s"Removing $userId from $groupId")
     val uri = s"$keyCloakUrl/users/$userId/groups/$groupId"
-    pipeline(HttpMethods.DELETE, uri)
+    pipeline(HttpMethods.DELETE, uri, "removeUserFromGroup")
   }
 }
 

@@ -11,8 +11,8 @@ import com.amazonaws.auth.AWSCredentials
 import com.typesafe.config.ConfigFactory
 import controllers.{Deskstats, PaxFlow, UserRoleProviderLike}
 import drt.chroma._
-import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveFlight}
+import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.http.ProdSendAndReceive
 import drt.server.feeds.api.S3ApiProvider
 import drt.server.feeds.bhx.BHXFeed
