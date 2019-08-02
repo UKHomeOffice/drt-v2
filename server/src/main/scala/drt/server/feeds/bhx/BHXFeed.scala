@@ -13,7 +13,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import drt.shared.{Arrival, LiveFeedSource}
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 
 import scala.collection.immutable
@@ -26,58 +26,27 @@ import scala.xml.{Node, NodeSeq}
 object BHXFeed {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply(bhxLiveFeedUser: String, bhxSoapEndpoint: String)(implicit actorSystem: ActorSystem): Source[ArrivalsFeedResponse, Cancellable] = {
+  def apply(client: BHXClientLike, pollFrequency: FiniteDuration, initialDelay: FiniteDuration)(implicit actorSystem: ActorSystem): Source[ArrivalsFeedResponse, Cancellable] = {
 
-    val client = BHXClient(bhxLiveFeedUser, bhxSoapEndpoint)
-    val pollFrequency = 5 minutes
-    val initialDelayImmediately: FiniteDuration = 1 milliseconds
-    val tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
+    var initialRequest = true
+    val tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source.tick(initialDelay, pollFrequency, NotUsed)
       .mapAsync(1)(_ => {
         log.info(s"Requesting BHX Feed")
-        client.flights
-          .map(bHXFlights => bHXFlights.map(f => {
-            bhxFlightToArrival(f)
-          })).map(a => {
-          log.info(s"Received ${a.length} flights from BHX live feed")
-          log.info(s"Sending These 10 ${a.take(10)}")
-          ArrivalsFeedSuccess(Flights(a))
-        })
+        if (initialRequest)
+
+          client.initialFlights.map {
+            case s: ArrivalsFeedSuccess =>
+              initialRequest = false
+              s
+            case f: ArrivalsFeedFailure =>
+              f
+          }
+        else
+          client.updateFlights
       })
 
     tickingSource
   }
-
-  def bhxFlightToArrival(f: BHXFlight) = {
-    Arrival(
-      Option(f.airline),
-      BHXFlightStatus(f.status),
-      maybeTimeStringToMaybeMillis(f.estimatedTouchDown),
-      maybeTimeStringToMaybeMillis(f.actualTouchDown),
-      maybeTimeStringToMaybeMillis(f.estimatedOnBlocks),
-      maybeTimeStringToMaybeMillis(f.actualOnBlocks),
-      f.passengerGate,
-      f.aircraftParkingPosition,
-      f.seatCapacity,
-      f.paxCount,
-      None,
-      None,
-      None,
-      None,
-      f.arrivalAirport,
-      s"T${f.aircraftTerminal}",
-      f.airline + f.flightNumber,
-      f.airline + f.flightNumber,
-      f.departureAirport,
-      SDate(f.scheduledOnBlocks).millisSinceEpoch,
-      None,
-      Set(LiveFeedSource),
-      None
-    )
-  }
-
-  def maybeTimeStringToMaybeMillis(t: Option[String]): Option[MillisSinceEpoch] = t.flatMap(
-    SDate.tryParseString(_).toOption.map(_.millisSinceEpoch)
-  )
 
 }
 
@@ -158,41 +127,84 @@ object SoapActionHeader extends ModeledCustomHeaderCompanion[SoapActionHeader] {
   override def parse(value: String) = Try(new SoapActionHeader(value))
 }
 
-case class BHXClient(bhxLiveFeedUser: String, soapEndPoint: String) extends ScalaXmlSupport {
+trait BHXClientLike extends ScalaXmlSupport {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def flights(implicit actorSystem: ActorSystem): Future[List[BHXFlight]] = {
+  val bhxLiveFeedUser: String
+  val soapEndPoint: String
+
+  def initialFlights(implicit actorSystem: ActorSystem): Future[ArrivalsFeedResponse] = {
+
+    log.info(s"Making initial Live Feed Request")
+    sendXMLRequest(fullRefreshXml(bhxLiveFeedUser))
+  }
+
+  def updateFlights(implicit actorSystem: ActorSystem): Future[ArrivalsFeedResponse] = {
+
+    log.info(s"Making update Feed Request")
+    sendXMLRequest(updateXml(bhxLiveFeedUser))
+  }
+
+  def sendXMLRequest(postXml: String)(implicit actorSystem: ActorSystem) = {
+
+    implicit val xmlToResUM: Unmarshaller[NodeSeq, BHXFlightsResponse] = BHXFlight.unmarshaller
+    implicit val resToBHXResUM: Unmarshaller[HttpResponse, BHXFlightsResponse] = BHXFlight.responseToAUnmarshaller
 
     implicit val materializer: ActorMaterializer = ActorMaterializer()
-
-    val endpoint = soapEndPoint
 
     val headers: List[HttpHeader] = List(
       SoapActionHeader("http://www.iata.org/IATA/2007/00/IRequestFlightService/RequestFlightData")
     )
 
-    val username = bhxLiveFeedUser
-    val postXML =
-      s"""<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://www.iata.org/IATA/2007/00">
-         |    <soapenv:Header/>
-         |    <soapenv:Body>
-         |        <ns:userID>$username</ns:userID>
-         |        <ns:fullRefresh>1</ns:fullRefresh>
-         |    </soapenv:Body>
-         |</soapenv:Envelope>""".stripMargin
-
-    Http().singleRequest(HttpRequest(HttpMethods.POST, endpoint, headers, HttpEntity(ContentTypes.`text/xml(UTF-8)`, postXML)))
+    makeRequest(soapEndPoint, headers, postXml)
       .map(res => {
         log.info(s"Got a response from BHX ${res.status}")
-        Unmarshal[HttpResponse](res).to[List[BHXFlight]]
+        val bhxResponse = Unmarshal[HttpResponse](res).to[BHXFlightsResponse]
+
+        bhxResponse.map {
+          case s: BHXFlightsResponseSuccess =>
+            ArrivalsFeedSuccess(Flights(s.flights.map(fs => BHXFlight.bhxFlightToArrival(fs))))
+
+          case f: BHXFlightsResponseFailure =>
+            ArrivalsFeedFailure(f.message)
+        }
+
       })
       .flatMap(identity)
       .recoverWith {
         case f =>
           log.error(s"Failed to get BHX Live Feed", f)
-          Future(List())
+          Future(ArrivalsFeedFailure(f.getMessage))
       }
   }
+
+  def fullRefreshXml: String => String = postXMLTemplate(fullRefresh = "1")
+
+  def updateXml: String => String = postXMLTemplate(fullRefresh = "0")
+
+  def postXMLTemplate(fullRefresh: String)(username: String): String = {
+    val postXML =
+      s"""<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://www.iata.org/IATA/2007/00">
+         |    <soapenv:Header/>
+         |    <soapenv:Body>
+         |        <ns:userID>$username</ns:userID>
+         |        <ns:fullRefresh>$fullRefresh</ns:fullRefresh>
+         |    </soapenv:Body>
+         |</soapenv:Envelope>""".stripMargin
+    postXML
+  }
+
+  def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)
+                 (implicit system: ActorSystem): Future[HttpResponse]
+
+}
+
+case class BHXClient(bhxLiveFeedUser: String, soapEndPoint: String) extends BHXClientLike {
+
+  def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)
+                 (implicit system: ActorSystem): Future[HttpResponse] =
+    Http().singleRequest(HttpRequest(HttpMethods.POST, endpoint, headers, HttpEntity(ContentTypes.`text/xml(UTF-8)`, postXML)))
+
 }
 
 trait NodeSeqUnmarshaller {
@@ -201,6 +213,12 @@ trait NodeSeqUnmarshaller {
     resp.flatMap(toA).asScala
   }
 }
+
+sealed trait BHXFlightsResponse
+
+case class BHXFlightsResponseSuccess(flights: List[BHXFlight]) extends BHXFlightsResponse
+
+case class BHXFlightsResponseFailure(message: String) extends BHXFlightsResponse
 
 object BHXFlight extends NodeSeqUnmarshaller {
   def operationTimeFromNodeSeq(timeType: String, qualifier: String)(nodeSeq: NodeSeq) = {
@@ -222,13 +240,14 @@ object BHXFlight extends NodeSeqUnmarshaller {
 
   def scheduledTime: NodeSeq => Option[String] = operationTimeFromNodeSeq("SCT", "ONB")
 
-  implicit val unmarshaller: Unmarshaller[NodeSeq, List[BHXFlight]] = Unmarshaller.strict[NodeSeq, List[BHXFlight]] { xml =>
+  implicit val unmarshaller: Unmarshaller[NodeSeq, BHXFlightsResponse] = Unmarshaller.strict[NodeSeq, BHXFlightsResponse] { xml =>
 
 
     val flightNodeSeq = xml \ "Body" \ "IATA_AIDX_FlightLegRS" \ "FlightLeg"
 
     log.info(s"Got ${flightNodeSeq.length} flights in BHX XML")
-    flightNodeSeq.map(n => {
+
+    val flights = flightNodeSeq.map(n => {
       val airline = (n \ "LegIdentifier" \ "Airline").text
       val flightNumber = (n \ "LegIdentifier" \ "FlightNumber").text
       val departureAirport = (n \ "LegIdentifier" \ "DepartureAirport").text
@@ -270,6 +289,19 @@ object BHXFlight extends NodeSeqUnmarshaller {
         totalPax
       )
     }).toList
+
+    val warningNode = xml \ "Body" \ "IATA_AIDX_FlightLegRS" \ "Warnings" \ "Warning"
+
+    val warnings = warningNode.map(w => {
+      val typeCode = attributeFromNode(w, "Type").getOrElse("No error type code")
+      s"Code: $typeCode  Message:${w.text}"
+    })
+    warnings.foreach(w => log.warn(s"BHX Live Feed warning: $w"))
+
+    if (flights.isEmpty && warnings.nonEmpty)
+      BHXFlightsResponseFailure(warnings.mkString(", "))
+    else
+      BHXFlightsResponseSuccess(flights)
   }
 
   def paxFromCabin(cabinPax: NodeSeq, seatingField: String): Option[Int] = cabinPax match {
@@ -280,8 +312,7 @@ object BHXFlight extends NodeSeqUnmarshaller {
           None
         else
           maybeNodeText(seatingNode).map(_.toInt)
-      }
-      )
+      })
       if (seats.count(_.isDefined) > 0)
         Option(seats.flatten.sum)
       else
@@ -299,4 +330,36 @@ object BHXFlight extends NodeSeqUnmarshaller {
     case Some(node) => Some(node.text)
     case _ => None
   }
+
+  def bhxFlightToArrival(f: BHXFlight) = {
+    Arrival(
+      Option(f.airline),
+      BHXFlightStatus(f.status),
+      maybeTimeStringToMaybeMillis(f.estimatedTouchDown),
+      maybeTimeStringToMaybeMillis(f.actualTouchDown),
+      maybeTimeStringToMaybeMillis(f.estimatedOnBlocks),
+      maybeTimeStringToMaybeMillis(f.actualOnBlocks),
+      f.passengerGate,
+      f.aircraftParkingPosition,
+      f.seatCapacity,
+      f.paxCount,
+      None,
+      None,
+      None,
+      None,
+      f.arrivalAirport,
+      s"T${f.aircraftTerminal}",
+      f.airline + f.flightNumber,
+      f.airline + f.flightNumber,
+      f.departureAirport,
+      SDate(f.scheduledOnBlocks).millisSinceEpoch,
+      None,
+      Set(LiveFeedSource),
+      None
+    )
+  }
+
+  def maybeTimeStringToMaybeMillis(t: Option[String]): Option[MillisSinceEpoch] = t.flatMap(
+    SDate.tryParseString(_).toOption.map(_.millisSinceEpoch)
+  )
 }
