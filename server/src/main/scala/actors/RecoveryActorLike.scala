@@ -1,7 +1,7 @@
 package actors
 
 import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotOffer}
-import com.trueaccord.scalapb.GeneratedMessage
+import scalapb.GeneratedMessage
 import org.slf4j.Logger
 
 object Sizes {

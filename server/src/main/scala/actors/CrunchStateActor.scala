@@ -3,7 +3,7 @@ package actors
 import actors.PortStateMessageConversion._
 import akka.actor._
 import akka.persistence._
-import com.trueaccord.scalapb.GeneratedMessage
+import scalapb.GeneratedMessage
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi._
 import drt.shared.SplitRatiosNs.SplitSources

@@ -3,11 +3,7 @@ resolvers += "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases/
 
 addSbtPlugin("net.virtual-void" % "sbt-optimizer" % "0.1.2")
 
-// the protobuf sbt plugin must come before the scalajs plugin, see
-// https://github.com/scalapb/ScalaPB/issues/150
-addSbtPlugin("com.thesamet" % "sbt-protoc" % "0.99.23")
 
-libraryDependencies += "com.trueaccord.scalapb" %% "compilerplugin" % "0.6.7"
 libraryDependencies += "com.typesafe" % "config" % "1.3.0"
 
 

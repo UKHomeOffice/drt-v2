@@ -118,6 +118,7 @@ lazy val server = (project in file("server"))
   PB.targets in Compile := Seq(
     scalapb.gen() -> (sourceManaged in Compile).value / "protobuf"
   ),
+  PB.deleteTargetDirectory := false,
   TwirlKeys.templateImports += "buildinfo._",
   parallelExecution in Test := false
 )

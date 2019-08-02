@@ -42,7 +42,7 @@ import test.TestDrtSystem
 import upickle.default.write
 import upickle.default.read
 
-import scala.concurrent.ExecutionContext.Implicits.global
+//import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
