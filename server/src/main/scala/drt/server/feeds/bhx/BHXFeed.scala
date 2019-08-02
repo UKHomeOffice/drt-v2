@@ -26,8 +26,6 @@ import scala.xml.{Node, NodeSeq}
 object BHXFeed {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  var initialRequest = true
-
   def apply(client: BHXClientLike, pollFrequency: FiniteDuration, initialDelay: FiniteDuration)(implicit actorSystem: ActorSystem): Source[ArrivalsFeedResponse, Cancellable] = {
 
     var initialRequest = true
