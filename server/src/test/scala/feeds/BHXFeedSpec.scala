@@ -1,26 +1,34 @@
 package feeds
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorSystem, Cancellable}
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.unmarshalling.Unmarshal
+import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
 import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestKit
 import com.typesafe.config.ConfigFactory
-import drt.server.feeds.bhx.{BHXClient, BHXFeed, BHXFlight}
+import drt.server.feeds.bhx._
+import drt.shared.FlightsApi.Flights
 import drt.shared.{Arrival, LiveFeedSource}
 import org.specs2.mutable.SpecificationLike
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, FeedResponse}
 import services.SDate
 
-import scala.concurrent.Await
+import scala.collection.immutable
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-import scala.xml.XML
+import scala.xml.{NodeSeq, XML}
 
 class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike {
   sequential
   isolated
 
   implicit val materializer = ActorMaterializer()
+
+  implicit val xmlToResUM: Unmarshaller[NodeSeq, BHXFlightsResponse] = BHXFlight.unmarshaller
+  implicit val resToBHXResUM: Unmarshaller[HttpResponse, BHXFlightsResponse] = BHXFlight.responseToAUnmarshaller
 
   "The BHX Feed client should successfully get a response from the BHX server" >> {
 
@@ -30,7 +38,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     val username = sys.env("BHX_IATA_USERNAME")
 
     val bhxClient = BHXClient(username, endpoint)
-    println(Await.result(bhxClient.flights(system), 30 seconds))
+    println(Await.result(bhxClient.initialFlights(system), 30 seconds))
 
     false
   }
@@ -44,7 +52,9 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       )
     )
 
-    val result = Await.result(Unmarshal[HttpResponse](resp).to[List[BHXFlight]], 5 seconds)
+    val result = Await.result(Unmarshal[HttpResponse](resp).to[BHXFlightsResponse], 5 seconds)
+      .asInstanceOf[BHXFlightsResponseSuccess]
+      .flights
     val expected = List(
       BHXFlight(
         "TOM",
@@ -70,6 +80,43 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     result === expected
   }
 
+  val flight1 = BHXFlight(
+    "TOM",
+    "7623",
+    "PFO",
+    "BHX",
+    "1",
+    "ARR",
+    "2018-09-01T23:00:00.000Z",
+    arrival = true,
+    international = true,
+    None,
+    Option("2018-09-01T23:05:00.000Z"),
+    None,
+    Option("2018-09-01T23:00:00.000Z"),
+    Option("54L"),
+    Option("44"),
+    Option(189)
+  )
+
+  val flight2 = BHXFlight(
+    "FR",
+    "8045",
+    "CHQ",
+    "BHX",
+    "2",
+    "ARR",
+    "2018-09-18T23:00:00.000Z",
+    arrival = true,
+    international = true,
+    None,
+    Option("2018-09-18T23:05:00.000Z"),
+    None,
+    Option("2018-09-18T23:00:00.000Z"),
+    Option("1"),
+    Option("1"),
+    Option(189)
+  )
   "Given some flight xml with 2 flights, I should get get back 2 arrival objects" >> {
 
     val resp = HttpResponse(
@@ -79,46 +126,117 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       )
     )
 
-    val result = Await.result(Unmarshal[HttpResponse](resp).to[List[BHXFlight]], 5 seconds)
+    val result = Await.result(Unmarshal[HttpResponse](resp).to[BHXFlightsResponse], 5 seconds)
+      .asInstanceOf[BHXFlightsResponseSuccess]
+      .flights
     val expected = List(
-      BHXFlight(
-        "TOM",
-        "7623",
-        "PFO",
-        "BHX",
-        "1",
-        "ARR",
-        "2018-09-01T23:00:00.000Z",
-        arrival = true,
-        international = true,
-        None,
-        Option("2018-09-01T23:05:00.000Z"),
-        None,
-        Option("2018-09-01T23:00:00.000Z"),
-        Option("54L"),
-        Option("44"),
-        Option(189)
-
-      ),
-      BHXFlight(
-        "FR",
-        "8045",
-        "CHQ",
-        "BHX",
-        "2",
-        "ARR",
-        "2018-09-18T23:00:00.000Z",
-        arrival = true,
-        international = true,
-        None,
-        Option("2018-09-18T23:05:00.000Z"),
-        None,
-        Option("2018-09-18T23:00:00.000Z"),
-        Option("1"),
-        Option("1"),
-        Option(189)
-      )
+      flight1,
+      flight2
     )
+
+    result === expected
+  }
+
+  case class BHXMockClient(xmlResponse: String, bhxLiveFeedUser: String = "", soapEndPoint: String = "") extends BHXClientLike {
+
+
+    def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)
+                   (implicit system: ActorSystem): Future[HttpResponse] = Future(HttpResponse(
+      entity = HttpEntity(
+        contentType = ContentType(MediaTypes.`application/xml`, HttpCharsets.`UTF-8`),
+        xmlResponse
+      )))
+  }
+
+
+  "Given a request for a full refresh of all flights, if it's successful the client should return all the flights" >> {
+    var client = BHXMockClient(bhxSoapResponse2FlightsXml)
+
+    val result: Flights = Await
+      .result(client.initialFlights, 1 second).asInstanceOf[ArrivalsFeedSuccess].arrivals
+    val expected = Flights(List(
+      BHXFlight.bhxFlightToArrival(flight1),
+      BHXFlight.bhxFlightToArrival(flight2)
+    ))
+
+    result === expected
+  }
+
+  "Given a request for a full refresh of all flights, if we are rate limited then we should get an ArrivalsFeedFailure" >> {
+    var client = BHXMockClient(rateLimitReachedResponse)
+
+    val result = Await.result(client.initialFlights, 1 second)
+
+    result must haveClass[ArrivalsFeedFailure]
+  }
+
+  case class BHXMockClientWithUpdates(initialResponses: List[ArrivalsFeedResponse], updateResponses: List[ArrivalsFeedResponse]) extends BHXClientLike {
+
+    var mockInitialResponse = initialResponses
+    var mockUpdateResponses = updateResponses
+
+    override def initialFlights(implicit actorSystem: ActorSystem): Future[ArrivalsFeedResponse] = mockInitialResponse match {
+      case head :: tail =>
+        mockInitialResponse = tail
+        Future(head)
+      case Nil =>
+        Future(ArrivalsFeedFailure("No more mock esponses"))
+    }
+
+    override def updateFlights(implicit actorSystem: ActorSystem): Future[ArrivalsFeedResponse] =
+      mockUpdateResponses match {
+        case head :: tail =>
+          mockUpdateResponses = tail
+          Future(head)
+
+        case Nil =>
+          Future(ArrivalsFeedFailure("No more mock esponses"))
+      }
+
+    def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)
+                   (implicit system: ActorSystem): Future[HttpResponse] = ???
+
+    override val bhxLiveFeedUser: String = ""
+    override val soapEndPoint: String = ""
+  }
+
+  "Given a request for a full refresh of all flights fails, we should poll for a full request until it succeeds" >> {
+
+    val firstFailure = ArrivalsFeedFailure("First Failure")
+    val secondFailure = ArrivalsFeedFailure("Second Failure")
+    val success = ArrivalsFeedSuccess(Flights(List()))
+
+    val initialResponses = List(firstFailure, secondFailure, success)
+    val updateResponses = List(success)
+
+    val feed: Source[ArrivalsFeedResponse, Cancellable] = BHXFeed(
+      BHXMockClientWithUpdates(initialResponses, updateResponses),
+      1 millisecond,
+      1 millisecond
+    )
+
+    val expected = Seq(firstFailure, secondFailure, success, success)
+    var result = Await.result(feed.take(4).runWith(Sink.seq), 1 second)
+
+    result === expected
+  }
+
+  "Given a successful initial request, followed by a failed update, we should continue to poll for updates" >> {
+
+    val failure = ArrivalsFeedFailure("First Failure")
+    val success = ArrivalsFeedSuccess(Flights(List()))
+
+    val initialResponses = List(success)
+    val updateResponses = List(failure, success)
+
+    val feed: Source[ArrivalsFeedResponse, Cancellable] = BHXFeed(
+      BHXMockClientWithUpdates(initialResponses, updateResponses),
+      1 millisecond,
+      1 millisecond
+    )
+
+    val expected = Seq(success, failure, success)
+    var result = Await.result(feed.take(3).runWith(Sink.seq), 1 second)
 
     result === expected
   }
@@ -225,8 +343,8 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       "1",
       "ARR",
       scheduledTimeString,
-      true,
-      true,
+      arrival = true,
+      international = true,
       Option(estimatedOnBlocksTimeString),
       Option(actualOnBlocksTimeString),
       Option(estimatedTouchDownTimeString),
@@ -238,7 +356,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       Nil
     )
 
-    val result = BHXFeed.bhxFlightToArrival(bhxFlight)
+    val result = BHXFlight.bhxFlightToArrival(bhxFlight)
 
     val expected = Arrival(
       Option("SA"),
@@ -269,7 +387,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     result === expected
   }
 
-  val bhxSoapResponse1FlightXml =
+  val bhxSoapResponse1FlightXml: String =
     """<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
       |    <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
       |        <IATA_AIDX_FlightLegRS TimeStamp="2019-07-25T09:13:19.4014748+01:00" Version="16.1" xmlns="http://www.iata.org/IATA/2007/00">
@@ -328,7 +446,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       |</s:Envelope>
     """.stripMargin
 
-  val bhxSoapResponse2FlightsXml =
+  val bhxSoapResponse2FlightsXml: String =
     """<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
       |    <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
       |        <IATA_AIDX_FlightLegRS TimeStamp="2019-07-25T09:13:19.4014748+01:00" Version="16.1" xmlns="http://www.iata.org/IATA/2007/00">
@@ -432,6 +550,21 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       |                    <TPA_KeyValue Key="ArrivalAirportName">Birmingham</TPA_KeyValue>
       |                </TPA_Extension>
       |            </FlightLeg>
+      |        </IATA_AIDX_FlightLegRS>
+      |    </s:Body>
+      |</s:Envelope>
+    """.stripMargin
+
+
+  val rateLimitReachedResponse: String =
+    """
+      |<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+      |    <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      |        <IATA_AIDX_FlightLegRS Version="16.1" xmlns="http://www.iata.org/IATA/2007/00">
+      |            <Success/>
+      |            <Warnings>
+      |                <Warning Type="911">Warning: Full Refresh not possible at this time please try in 590 seconds.</Warning>
+      |            </Warnings>
       |        </IATA_AIDX_FlightLegRS>
       |    </s:Body>
       |</s:Envelope>
