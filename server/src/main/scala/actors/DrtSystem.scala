@@ -15,7 +15,7 @@ import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveF
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.http.ProdSendAndReceive
 import drt.server.feeds.api.S3ApiProvider
-import drt.server.feeds.bhx.BHXFeed
+import drt.server.feeds.bhx.{BHXClient, BHXFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.legacy.bhx.{BHXForecastFeedLegacy, BHXLiveFeedLegacy}
 import drt.server.feeds.lgw.{LGWFeed, LGWForecastFeed}
@@ -422,8 +422,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         val lgwSasToKey = params.maybeLGWSASToKey.getOrElse(throw new Exception("Missing LGW SAS Key for To Queue"))
         val lgwServiceBusUri = params.maybeLGWServiceBusUri.getOrElse(throw new Exception("Missing LGW Service Bus Uri"))
         LGWFeed(lgwNamespace, lgwSasToKey, lgwServiceBusUri)(system).source()
-      case "BHX" if ! params.bhxIataEndPointUrl.isEmpty =>
-        BHXFeed(params.bhxIataUsername, params.bhxIataEndPointUrl)(system)
+
+      case "BHX" if !params.bhxIataEndPointUrl.isEmpty =>
+        BHXFeed(BHXClient(params.bhxIataUsername, params.bhxIataEndPointUrl), 30 seconds, 1 milliseconds)(system)
       case "BHX" => BHXLiveFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX live feed URL")))
       case "LTN" =>
         val url = params.maybeLtnLiveFeedUrl.getOrElse(throw new Exception("Missing live feed url"))
