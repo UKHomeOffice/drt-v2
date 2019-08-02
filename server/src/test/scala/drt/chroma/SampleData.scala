@@ -1,7 +1,7 @@
 package drt.chroma
 
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse, StatusCodes}
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
-import spray.http.{ContentTypes, HttpEntity, HttpResponse, StatusCodes}
 
 trait SampleData {
 
@@ -25,8 +25,9 @@ trait SampleData {
     1200980, "EDI", "T1", "TAY025N", "3V025N", "LGG", "2016-08-04T04:35:00Z"
   )
 
-  val successfulChromaResponse1 = HttpResponse(StatusCodes.OK,
-    HttpEntity(ContentTypes.`application/json`,
+  val successfulChromaResponse1 = HttpResponse(
+    status = StatusCodes.OK,
+    entity = HttpEntity(ContentTypes.`application/json`,
       """
         |[
         |  {
@@ -77,8 +78,9 @@ trait SampleData {
       """.stripMargin))
 
   val successfulChromaResponse2 =
-    HttpResponse(StatusCodes.OK,
-      HttpEntity(ContentTypes.`application/json`,
+    HttpResponse(
+      status = StatusCodes.OK,
+      entity = HttpEntity(ContentTypes.`application/json`,
         """
           |[{
           |    "Operator": "Klm",

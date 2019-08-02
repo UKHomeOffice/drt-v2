@@ -1,19 +1,20 @@
 package drt.http
 
 import akka.actor.ActorSystem
-import spray.http.{HttpResponse, HttpRequest}
-import spray.client.pipelining._
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
+
 import scala.concurrent.Future
-import scala.concurrent.duration._
 
 trait WithSendAndReceive {
+  type SendReceive = HttpRequest => Future[HttpResponse]
  // sendAndReceive gives us a position where we can mock out interaction
-  def sendAndReceive:  (HttpRequest) => Future[HttpResponse]
+  def sendAndReceive: SendReceive
 }
 
 trait ProdSendAndReceive extends WithSendAndReceive {
   implicit val system: ActorSystem
 
-  override def sendAndReceive: SendReceive = sendReceive(system, system.dispatcher, 60.seconds)
+  override def sendAndReceive: SendReceive = request => Http()(system).singleRequest(request)
 }
 

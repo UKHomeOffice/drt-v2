@@ -3,49 +3,53 @@ package drt.users
 import java.util.UUID
 
 import akka.actor.ActorSystem
+import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+import akka.http.scaladsl.model.headers.{Accept, Authorization, OAuth2BearerToken}
+import akka.http.scaladsl.model._
+import akka.http.scaladsl.unmarshalling.Unmarshal
+import akka.stream.Materializer
 import akka.util.Timeout
 import drt.http.WithSendAndReceive
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
-import org.slf4j.LoggerFactory
-import spray.client.pipelining.{Get, addHeaders, unmarshal, _}
-import spray.http.HttpHeaders.{Accept, Authorization}
-import spray.http.{HttpRequest, HttpResponse, MediaTypes, OAuth2BearerToken}
-import spray.httpx.SprayJsonSupport
+import org.slf4j.{Logger, LoggerFactory}
 import spray.json.{DefaultJsonProtocol, JsObject, JsValue, RootJsonFormat}
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.concurrent.{Await, Future}
 
-abstract case class KeyCloakClient(token: String, keyCloakUrl: String, implicit val system: ActorSystem)
+abstract case class KeyCloakClient(token: String, keyCloakUrl: String)(implicit val system: ActorSystem, mat: Materializer)
   extends WithSendAndReceive with KeyCloakUserParserProtocol {
 
   import system.dispatcher
   import KeyCloakUserParserProtocol.KeyCloakUserFormatParser._
 
-  def log = LoggerFactory.getLogger(getClass)
+  def log: Logger = LoggerFactory.getLogger(getClass)
+
   implicit val timeout: Timeout = Timeout(1 minute)
 
-  def logResponse(requestName: String): HttpResponse => HttpResponse = resp => {
-
-    if (resp.status.isFailure) {
-      log.error(s"Error when calling $requestName on KeyCloak API Status code: ${resp.status} Response:<${resp.entity.asString}>")
-    }
+  def logResponse(requestName: String, resp: HttpResponse): HttpResponse = {
+    if (resp.status.isFailure)
+      log.error(s"Error when calling $requestName on KeyCloak API Status code: ${resp.status} Response:<${resp.entity.toString}>")
 
     resp
   }
 
-  def getUsers(max: Int = 100, offset: Int = 0): Future[List[KeyCloakUser]] = {
-    val pipeline: HttpRequest => Future[List[KeyCloakUser]] = (
-      addHeaders(Accept(MediaTypes.`application/json`), Authorization(OAuth2BearerToken(token)))
-        ~> sendAndReceive
-        ~> logResponse("getUsers")
-        ~> unmarshal[List[KeyCloakUser]]
-      )
+  def pipeline(method: HttpMethod, uri: String, requestName: String): Future[HttpResponse] = {
+    val request = HttpRequest(method, Uri(uri))
+    val requestWithHeaders = request
+      .addHeader(Accept(MediaTypes.`application/json`))
+      .addHeader(Authorization(OAuth2BearerToken(token)))
+    sendAndReceive(requestWithHeaders).map { r =>
+      logResponse(requestName, r)
+      r
+    }
+  }
 
+  def getUsers(max: Int = 100, offset: Int = 0): Future[List[KeyCloakUser]] = {
     val uri = keyCloakUrl + s"/users?max=$max&first=$offset"
     log.info(s"Calling key cloak: $uri")
-    pipeline(Get(uri))
+    pipeline(HttpMethods.GET, uri, "getUsers").flatMap { r => Unmarshal(r).to[List[KeyCloakUser]] }
   }
 
   def getAllUsers(offset: Int = 0): Seq[KeyCloakUser] = {
@@ -56,44 +60,24 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String, implicit 
   }
 
   def getUserGroups(userId: UUID): Future[List[KeyCloakGroup]] = {
-    val pipeline: HttpRequest => Future[List[KeyCloakGroup]] = (
-      addHeaders(Accept(MediaTypes.`application/json`), Authorization(OAuth2BearerToken(token)))
-        ~> sendAndReceive
-        ~> logResponse("getUserGroups")
-        ~> unmarshal[List[KeyCloakGroup]]
-      )
     val uri = keyCloakUrl + s"/users/$userId/groups"
     log.info(s"Calling key cloak: $uri")
-
-    pipeline(Get(uri))
+    pipeline(HttpMethods.GET, uri, "getUserGroups").flatMap { r => Unmarshal(r).to[List[KeyCloakGroup]] }
   }
 
-  def getGroups(): Future[List[KeyCloakGroup]] = {
-    val pipeline: HttpRequest => Future[List[KeyCloakGroup]] = (
-        addHeaders(Accept(MediaTypes.`application/json`), Authorization(OAuth2BearerToken(token)))
-    ~> sendAndReceive
-    ~> logResponse("getGroups")
-    ~> unmarshal[List[KeyCloakGroup]]
-    )
+  def getGroups: Future[List[KeyCloakGroup]] = {
     val uri = keyCloakUrl + "/groups"
     log.info(s"Calling key cloak: $uri")
-
-    pipeline(Get(uri))
+    pipeline(HttpMethods.GET, uri, "getGroups").flatMap { r => Unmarshal(r).to[List[KeyCloakGroup]] }
   }
 
   def getUsersInGroup(groupName: String, max: Int = 1000): Future[List[KeyCloakUser]] = {
-
-    val futureMaybeId: Future[Option[String]] = getGroups().map(gs => gs.find(_.name == groupName).map(_.id))
-
-    val pipeline: HttpRequest => Future[List[KeyCloakUser]] = (
-      addHeaders(Accept(MediaTypes.`application/json`), Authorization(OAuth2BearerToken(token)))
-        ~> sendAndReceive
-        ~> logResponse("getUsersInGroup")
-        ~> unmarshal[List[KeyCloakUser]]
-      )
+    val futureMaybeId: Future[Option[String]] = getGroups.map(gs => gs.find(_.name == groupName).map(_.id))
 
     futureMaybeId.flatMap {
-      case Some(id) => pipeline(Get(keyCloakUrl + s"/groups/$id/members?max=$max"))
+      case Some(id) =>
+        val uri = keyCloakUrl + s"/groups/$id/members?max=$max"
+        pipeline(HttpMethods.GET, uri, "getUsersInGroup").flatMap { r => Unmarshal(r).to[List[KeyCloakUser]] }
       case None => Future(List())
     }
   }
@@ -110,30 +94,21 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String, implicit 
   }
 
   def addUserToGroup(userId: UUID, groupId: String): Future[HttpResponse] = {
-    val pipeline: HttpRequest => Future[HttpResponse] = (
-      addHeaders(Accept(MediaTypes.`application/json`), Authorization(OAuth2BearerToken(token)))
-        ~> sendAndReceive
-        ~> logResponse("addUserToGroup")
-      )
-
     log.info(s"Adding $userId to $groupId")
-    pipeline(Put(s"$keyCloakUrl/users/$userId/groups/$groupId"))
+    val uri = s"$keyCloakUrl/users/$userId/groups/$groupId"
+    pipeline(HttpMethods.PUT, uri, "addUserToGroup")
   }
 
   def removeUserFromGroup(userId: UUID, groupId: String): Future[HttpResponse] = {
-    val pipeline: HttpRequest => Future[HttpResponse] = (
-      addHeaders(Accept(MediaTypes.`application/json`), Authorization(OAuth2BearerToken(token)))
-        ~> sendAndReceive
-        ~> logResponse("removeUserFromGroup")
-      )
-
     log.info(s"Removing $userId from $groupId")
-    pipeline(Delete(s"$keyCloakUrl/users/$userId/groups/$groupId"))
+    val uri = s"$keyCloakUrl/users/$userId/groups/$groupId"
+    pipeline(HttpMethods.DELETE, uri, "removeUserFromGroup")
   }
 }
 
 
 trait KeyCloakUserParserProtocol extends DefaultJsonProtocol with SprayJsonSupport {
+
   implicit object KeyCloakUserFormatParser extends RootJsonFormat[KeyCloakUser] {
     override def write(obj: KeyCloakUser): JsValue = ???
 
@@ -150,6 +125,7 @@ trait KeyCloakUserParserProtocol extends DefaultJsonProtocol with SprayJsonSuppo
         )
     }
   }
+
   implicit val keyCloakGroupFormat: RootJsonFormat[KeyCloakGroup] = jsonFormat3(KeyCloakGroup)
 }
 

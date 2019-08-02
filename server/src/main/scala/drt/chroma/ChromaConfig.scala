@@ -1,7 +1,7 @@
 package drt.chroma
 
+import akka.http.scaladsl.model.FormData
 import com.typesafe.config.ConfigFactory
-import spray.http.FormData
 
 trait ChromaFeedType {
   def toString: String
@@ -17,7 +17,7 @@ trait ChromaConfig {
   lazy val config = ConfigFactory.load()
   def feedType: ChromaFeedType
 
-  val chromaTokenRequestCredentials = FormData(Seq(
+  val chromaTokenRequestCredentials = FormData(Map(
     "username" -> config.getString("chroma.username"),
     "password" -> config.getString("chroma.password"),
     "grant_type" -> "password"

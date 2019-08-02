@@ -3,12 +3,13 @@ package drt.users
 import java.util.UUID
 
 import akka.actor.ActorSystem
+import akka.http.scaladsl.model._
+import akka.stream.ActorMaterializer
 import akka.testkit.TestKit
 import com.typesafe.config.ConfigFactory
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.users.KeyCloakUserParserProtocol._
 import org.specs2.mutable.SpecificationLike
-import spray.http.{HttpMethods, _}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -18,8 +19,10 @@ class KeyCloakApiSpec extends TestKit(ActorSystem("testActorSystem", ConfigFacto
 
   val keyCloakUrl = "https://keycloak"
 
-  val userId1 = UUID.fromString("e25f2a14-bdaa-11e8-a355-529269fb1459")
-  val userId2 = UUID.fromString("e25f2dfc-bdaa-11e8-a355-529269fb1459")
+  val userId1: UUID = UUID.fromString("e25f2a14-bdaa-11e8-a355-529269fb1459")
+  val userId2: UUID = UUID.fromString("e25f2dfc-bdaa-11e8-a355-529269fb1459")
+
+  implicit val mat: ActorMaterializer =  ActorMaterializer()
 
   val usersJson: String =
     s"""[{
@@ -46,7 +49,7 @@ class KeyCloakApiSpec extends TestKit(ActorSystem("testActorSystem", ConfigFacto
       |        }
       |    },
       |    {
-      |        "id": "${userId2}",
+      |        "id": "$userId2",
       |        "createdTimestamp": 1516967531289,
       |        "username": "test2@homeoffice.gsi.gov.uk",
       |        "enabled": true,
@@ -69,7 +72,7 @@ class KeyCloakApiSpec extends TestKit(ActorSystem("testActorSystem", ConfigFacto
       |        }
       |    }]""".stripMargin
 
-val usersMissingOptionalFieldsJson =
+val usersMissingOptionalFieldsJson: String =
     s"""[{
       |        "id": "$userId1",
       |        "username": "test1@digital.homeoffice.gov.uk",
@@ -139,8 +142,8 @@ val usersMissingOptionalFieldsJson =
     "Given an auth token then I should get back a list of users" >> {
 
     val token = "testToken"
-    val kc = new KeyCloakClient(token, keyCloakUrl, system) {
-      def sendAndReceive: (HttpRequest) => Future[HttpResponse] = (req: HttpRequest) => {
+    val kc = new KeyCloakClient(token, keyCloakUrl) {
+      def sendAndReceive: HttpRequest => Future[HttpResponse] = (_: HttpRequest) => {
 
         Future(HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`, usersJson)))
       }
@@ -190,8 +193,8 @@ val usersMissingOptionalFieldsJson =
   "When querying the keycloak API to get a list of all groups I should get back a list of groups" >> {
 
     val token = "testToken"
-    val kc = new KeyCloakClient(token, keyCloakUrl, system) {
-      def sendAndReceive: (HttpRequest) => Future[HttpResponse] = (req: HttpRequest) => {
+    val kc = new KeyCloakClient(token, keyCloakUrl) {
+      def sendAndReceive: HttpRequest => Future[HttpResponse] = (_: HttpRequest) => {
         Future(HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`, groupsJson)))
       }
     }
@@ -203,7 +206,7 @@ val usersMissingOptionalFieldsJson =
 
   "When querying the keycloak API to get a list of users in LHR then I should get back user2" >> {
     val token = "testToken"
-    val kc = new KeyCloakClient(token, keyCloakUrl, system) with MockServerForUsersInGroup
+    val kc = new KeyCloakClient(token, keyCloakUrl) with MockServerForUsersInGroup
 
     val users: List[KeyCloakUser] = Await.result(kc.getUsersInGroup("LHR"), 30 seconds)
 
@@ -212,7 +215,7 @@ val usersMissingOptionalFieldsJson =
 
   "When asking for users not in LHR I should get back user1" >> {
     val token = "testToken"
-    val kc = new KeyCloakClient(token, keyCloakUrl, system) with MockServerForUsersInGroup
+    val kc = new KeyCloakClient(token, keyCloakUrl) with MockServerForUsersInGroup
 
     val users: List[KeyCloakUser] = Await.result(kc.getUsersNotInGroup("LHR"), 30 seconds)
 
@@ -221,14 +224,14 @@ val usersMissingOptionalFieldsJson =
 
   "When adding a user to a group the user and group should be posted to the correct keycloak endpoint" >> {
     val token = "testToken"
-    val kc = new KeyCloakClient(token, keyCloakUrl, system) with MockServerForUsersInGroup
+    val kc = new KeyCloakClient(token, keyCloakUrl) with MockServerForUsersInGroup
 
     val res: HttpResponse = Await.result(kc.addUserToGroup(user1.id, lhrGroup.id), 30 seconds)
 
     res.status === StatusCodes.NoContent
   }
 
-  val lhrUsers = s"""
+  val lhrUsers: String = s"""
     | [{
     |        "id": "$userId2",
     |        "createdTimestamp": 1516967531289,
@@ -256,7 +259,7 @@ val usersMissingOptionalFieldsJson =
 
   trait MockServerForUsersInGroup {
 
-    def sendAndReceive: (HttpRequest) => Future[HttpResponse] = (req: HttpRequest) => {
+    def sendAndReceive: HttpRequest => Future[HttpResponse] = (req: HttpRequest) => {
       req.uri.toString.replace(keyCloakUrl, "") match {
         case "/groups/id2/members?max=1000" =>
           Future(HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`, lhrUsers)))

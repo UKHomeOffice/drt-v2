@@ -1,10 +1,11 @@
 package api
 
 import akka.actor.ActorSystem
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, HttpResponse}
+import akka.stream.{ActorMaterializer, Materializer}
 import akka.testkit.TestKit
 import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.SpecificationLike
-import spray.http.{ContentTypes, HttpEntity, HttpRequest, HttpResponse}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -14,8 +15,9 @@ class KeyCloakAuthSpec extends TestKit(ActorSystem("testActorSystem", ConfigFact
 
   val keyCloakUrl = "https://keycloak"
 
+  implicit val mat: ActorMaterializer = ActorMaterializer()
 
-  val tokenResponseJson =
+  val tokenResponseJson: String =
     s"""{
     |   "access_token": "token",
     |   "expires_in": 86400,
@@ -51,8 +53,8 @@ class KeyCloakAuthSpec extends TestKit(ActorSystem("testActorSystem", ConfigFact
 
   "When logging into Keycloak with a correct username and password then I should get a token back" >> {
 
-    val auth = new KeyCloakAuth("tokenurl", "clientId", "client secret", system) {
-      def sendAndReceive: (HttpRequest) => Future[HttpResponse] = (req: HttpRequest) => {
+    val auth = new KeyCloakAuth("tokenurl", "clientId", "client secret") {
+      def sendAndReceive: HttpRequest => Future[HttpResponse] = (_: HttpRequest) => {
         Future(HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`, tokenResponseJson)))
       }
     }
@@ -75,8 +77,8 @@ class KeyCloakAuthSpec extends TestKit(ActorSystem("testActorSystem", ConfigFact
 
   "When logging into Keycloak with an invalid username and password then I should handle the response" >> {
 
-    val auth = new KeyCloakAuth("tokenurl", "clientId", "client secret", system) {
-      def sendAndReceive: (HttpRequest) => Future[HttpResponse] = (req: HttpRequest) => {
+    val auth = new KeyCloakAuth("tokenurl", "clientId", "client secret") {
+      def sendAndReceive: HttpRequest => Future[HttpResponse] = (_: HttpRequest) => {
         Future(HttpResponse(400).withEntity(HttpEntity(
           ContentTypes.`application/json`,
           """|
