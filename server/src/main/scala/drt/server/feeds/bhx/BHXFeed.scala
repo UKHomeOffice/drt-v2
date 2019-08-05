@@ -257,7 +257,6 @@ object BHXFlight extends NodeSeqUnmarshaller {
       val passengerGate = maybeNodeText(n \ "LegData" \ "AirportResources" \ "Resource" \ "PassengerGate")
 
       val cabins = n \ "LegData" \ "CabinClass"
-
       val maxPax = paxFromCabin(cabins, "SeatCapacity")
       val totalPax = paxFromCabin(cabins, "PaxCount")
 
@@ -306,13 +305,14 @@ object BHXFlight extends NodeSeqUnmarshaller {
 
   def paxFromCabin(cabinPax: NodeSeq, seatingField: String): Option[Int] = cabinPax match {
     case cpn if cpn.length > 0 =>
-      val seats: immutable.Seq[Option[Int]] = cpn.map(p => {
-        val seatingNode = p \ seatingField
+      val seats: immutable.Seq[Option[Int]] = cpn.flatMap(p => {
+        (p \ seatingField).map(seatingNode =>
+
         if (seatingNode.text.length == 0)
           None
         else
           maybeNodeText(seatingNode).map(_.toInt)
-      })
+        )})
       if (seats.count(_.isDefined) > 0)
         Option(seats.flatten.sum)
       else
