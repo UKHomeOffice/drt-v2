@@ -384,6 +384,7 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   def healthCheck: Action[AnyContent] = Action.async { _ =>
+    val requestStart = SDate.now()
     val liveStartMillis = getLocalLastMidnight(SDate.now()).millisSinceEpoch
     val liveEndMillis = getLocalNextMidnight(SDate.now()).millisSinceEpoch
     val liveState = requestPortState[PortState](ctrl.liveCrunchStateActor, GetPortState(liveStartMillis, liveEndMillis))
@@ -417,7 +418,10 @@ class Application @Inject()(implicit val config: Configuration,
               |   "error": "Unable to retrieve forecast state
               |}
             """)
-        case _ => NoContent
+        case _ =>
+          val requestEnd = SDate.now().millisSinceEpoch
+          log.info(s"Health check request started at ${requestStart.toISOString()} and lasted ${(requestStart.millisSinceEpoch - requestEnd) / 1000} seconds ")
+          NoContent
       }
     }
   }
