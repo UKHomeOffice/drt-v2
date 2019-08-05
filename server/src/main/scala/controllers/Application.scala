@@ -383,6 +383,46 @@ class Application @Inject()(implicit val config: Configuration,
     Ok(views.html.index("DRT - BorderForce", portCode, googleTrackingCode, user.id))
   }
 
+  def healthCheck: Action[AnyContent] = Action.async { _ =>
+    val liveStartMillis = getLocalLastMidnight(SDate.now()).millisSinceEpoch
+    val liveEndMillis = getLocalNextMidnight(SDate.now()).millisSinceEpoch
+    val liveState = requestPortState[PortState](ctrl.liveCrunchStateActor, GetPortState(liveStartMillis, liveEndMillis))
+
+    val forecastStartMillis = getLocalLastMidnight(SDate.now().addDays(3)).millisSinceEpoch
+    val forecastEndMillis = getLocalNextMidnight(SDate.now()).addDays(3).millisSinceEpoch
+    val forecastState = requestPortState[PortState](ctrl.forecastCrunchStateActor, GetPortState(forecastStartMillis, forecastEndMillis))
+    for {
+      fs <- forecastState
+      ls <- liveState
+    } yield {
+      (fs, ls) match {
+        case (Left(forecastError), Left(liveError)) =>
+          log.error(s"Healthcheck failed to get live or forecast response ${forecastError.message}, ${liveError.message}")
+          BadGateway(
+            """{
+              |   "error": "Unable to retrieve live or forecast state
+              |}
+            """.stripMargin)
+        case (_, Left(liveError)) =>
+          log.error(s"Healthcheck failed to get live response, ${liveError.message}")
+          BadGateway(
+            """{
+              |   "error": "Unable to retrieve live state
+              |}
+            """)
+        case (Left(forecastError), _) =>
+          log.error(s"Healthcheck failed to get forecast response ${forecastError.message}")
+          BadGateway(
+            """{
+              |   "error": "Unable to retrieve forecast state
+              |}
+            """)
+        case _ => NoContent
+      }
+    }
+  }
+
+
   def getLoggedInUser(): Action[AnyContent] = Action { request =>
     val user = ctrl.getLoggedInUser(config, request.headers, request.session)
 
@@ -933,7 +973,6 @@ class Application @Inject()(implicit val config: Configuration,
       f"${startPit.getFullYear()}-${startPit.getMonth()}%02d-${startPit.getDate()}-to-" +
       f"${endPit.getFullYear()}-${endPit.getMonth()}%02d-${endPit.getDate()}"
   }
-
 
 
   def flightsForCSVExportWithinRange(terminalName: TerminalName,
