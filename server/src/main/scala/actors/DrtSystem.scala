@@ -424,7 +424,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         LGWFeed(lgwNamespace, lgwSasToKey, lgwServiceBusUri)(system).source()
 
       case "BHX" if !params.bhxIataEndPointUrl.isEmpty =>
-        BHXFeed(BHXClient(params.bhxIataUsername, params.bhxIataEndPointUrl), 60 seconds, 1 milliseconds)(system)
+        BHXFeed(BHXClient(params.bhxIataUsername, params.bhxIataEndPointUrl), 80 seconds, 1 milliseconds)(system)
       case "BHX" => BHXLiveFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX live feed URL")))
       case "LTN" =>
         val url = params.maybeLtnLiveFeedUrl.getOrElse(throw new Exception("Missing live feed url"))
