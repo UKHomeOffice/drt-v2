@@ -12,13 +12,12 @@ import drt.server.feeds.bhx._
 import drt.shared.FlightsApi.Flights
 import drt.shared.{Arrival, LiveFeedSource}
 import org.specs2.mutable.SpecificationLike
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, FeedResponse}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 
-import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import scala.xml.{NodeSeq, XML}
 
 class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike {
@@ -117,6 +116,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     Option("1"),
     Option(189)
   )
+
   "Given some flight xml with 2 flights, I should get get back 2 arrival objects" >> {
 
     val resp = HttpResponse(
@@ -137,6 +137,26 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     result === expected
   }
 
+  "Given a flight with multiple types of passengers, those passenger numbers should be added together" >> {
+
+    val resp = HttpResponse(
+      entity = HttpEntity(
+        contentType = ContentType(MediaTypes.`application/xml`, HttpCharsets.`UTF-8`),
+        multiplePassengerTypesXML
+      )
+    )
+
+    val result = Await.result(Unmarshal[HttpResponse](resp).to[BHXFlightsResponse], 5 seconds)
+      .asInstanceOf[BHXFlightsResponseSuccess]
+      .flights
+      .head
+      .paxCount
+
+    val expected = Option(71)
+
+    result === expected
+  }
+
   case class BHXMockClient(xmlResponse: String, bhxLiveFeedUser: String = "", soapEndPoint: String = "") extends BHXClientLike {
 
 
@@ -147,7 +167,6 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
         xmlResponse
       )))
   }
-
 
   "Given a request for a full refresh of all flights, if it's successful the client should return all the flights" >> {
     var client = BHXMockClient(bhxSoapResponse2FlightsXml)
@@ -386,6 +405,53 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
 
     result === expected
   }
+
+  val multiplePassengerTypesXML =
+    """<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+      |    <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      |        <IATA_AIDX_FlightLegRS TimeStamp="2019-07-25T09:13:19.4014748+01:00" Version="16.1" xmlns="http://www.iata.org/IATA/2007/00">
+      |            <Success/>
+      |            <FlightLeg>
+      |                <LegIdentifier>
+      |                    <Airline CodeContext="3">SN</Airline>
+      |                    <FlightNumber>1234</FlightNumber>
+      |                    <DepartureAirport CodeContext="3">TST</DepartureAirport>
+      |                    <ArrivalAirport CodeContext="3">BHX</ArrivalAirport>
+      |                    <OriginDate>2019-08-05</OriginDate>
+      |                </LegIdentifier>
+      |                <LegData InternationalStatus="International">
+      |                    <PublicStatus xsi:nil="true"/>
+      |                    <OperatingAlliance xsi:nil="true"/>
+      |                    <EstFlightDuration xsi:nil="true"/>
+      |                    <OwnerAirline xsi:nil="true"/>
+      |                    <CabinClass Class="7">
+      |                        <PaxCount Qualifier="A" Usage="Planned" DestinationType="Local">68</PaxCount>
+      |                        <PaxCount Qualifier="IN" Usage="Planned" DestinationType="Local">1</PaxCount>
+      |                        <PaxCount Qualifier="A" Usage="Planned" DestinationType="Transfer">1</PaxCount>
+      |                        <PaxCount Qualifier="A" Usage="Planned" DestinationType="Transit">1</PaxCount>
+      |                        <SeatCapacity>88</SeatCapacity>
+      |                    </CabinClass>
+      |                    <RemarkFreeText>ARR</RemarkFreeText>
+      |                    <AirportResources Usage="Planned">
+      |                        <Resource DepartureOrArrival="Arrival">
+      |                            <AirportZone xsi:nil="true"/>
+      |                            <AircraftParkingPosition>5</AircraftParkingPosition>
+      |                            <PassengerGate>0</PassengerGate>
+      |                            <Runway xsi:nil="true"/>
+      |                            <AircraftTerminal>1</AircraftTerminal>
+      |                        </Resource>
+      |                    </AirportResources>
+      |                    <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="SCT">2018-09-01T23:00:00.000Z</OperationTime>
+      |                    <AircraftInfo>
+      |                        <AircraftSubType xsi:nil="true"/>
+      |                        <TailNumber xsi:nil="true"/>
+      |                    </AircraftInfo>
+      |                </LegData>
+      |            </FlightLeg>
+      |        </IATA_AIDX_FlightLegRS>
+      |    </s:Body>
+      |</s:Envelope>
+    """.stripMargin
 
   val bhxSoapResponse1FlightXml: String =
     """<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
