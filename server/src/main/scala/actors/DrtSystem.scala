@@ -256,7 +256,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         startScheduledFeedImports(crunchInputs)
 
       case Failure(error) =>
-        system.log.error(s"Failed to restore initial state for App", error)
+        system.log.error(error, s"Failed to restore initial state for App")
         System.exit(1)
     }
   }
