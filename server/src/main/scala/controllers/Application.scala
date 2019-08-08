@@ -555,11 +555,11 @@ class Application @Inject()(implicit val config: Configuration,
   def getFeedStatuses: Action[AnyContent] = auth {
     Action.async { _ =>
       ctrl.getFeedStatus.map(s => {
-        val safeStatusMessages = s.map(_.statuses.map{
+        val safeStatusMessages = s.map(statusMessage => statusMessage.copy(statuses = statusMessage.statuses.map {
           case f: FeedStatusFailure =>
             f.copy(message = "Unable to connect to feed.")
           case s => s
-        })
+        }))
         Ok(write(safeStatusMessages))
       })
     }

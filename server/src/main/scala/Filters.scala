@@ -11,7 +11,7 @@ class Filters @Inject()(
   override val filters = Seq(noCache, SecurityHeadersFilter(SecurityHeadersConfig(
     frameOptions = None,
     xssProtection = None,
-    contentSecurityPolicy = Option("default-src 'self'; script-src 'self' www.google-analytics.com ajax.googleapis.com; style-src 'self' cdnjs.cloudflare.com; font-src 'self' cdnjs.cloudflare.com"),
+    contentSecurityPolicy = Option("default-src 'self'; script-src 'self' www.google-analytics.com ajax.googleapis.com; style-src 'self' cdnjs.cloudflare.com 'unsafe-inline'; font-src 'self' cdnjs.cloudflare.com"),
     contentTypeOptions = None
   )))
 }
