@@ -553,7 +553,16 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   def getFeedStatuses: Action[AnyContent] = auth {
-    Action.async { _ => ctrl.getFeedStatus.map(s => Ok(write(s))) }
+    Action.async { _ =>
+      ctrl.getFeedStatus.map(s => {
+        val safeStatusMessages = s.map(_.statuses.map{
+          case f: FeedStatusFailure =>
+            f.copy(message = "Unable to connect to feed.")
+          case s => s
+        })
+        Ok(write(safeStatusMessages))
+      })
+    }
   }
 
   def getShouldReload: Action[AnyContent] = Action { _ =>
