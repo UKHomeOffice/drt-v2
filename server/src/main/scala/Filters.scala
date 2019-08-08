@@ -1,11 +1,12 @@
+import filters.NoCacheFilter
 import javax.inject.{Inject, Singleton}
-import filters.{NoCacheFilter, SecurityHeadersFilter}
 import play.api.Environment
 import play.api.http.HttpFilters
+import play.filters.headers.SecurityHeadersFilter
 
 @Singleton
 class Filters @Inject()(
                          env: Environment,
-                         noCache: NoCacheFilter, securityHeaders: SecurityHeadersFilter) extends HttpFilters {
-  override val filters = Seq(noCache, securityHeaders)
+                         noCache: NoCacheFilter) extends HttpFilters {
+  override val filters = Seq(noCache, SecurityHeadersFilter())
 }
