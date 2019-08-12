@@ -4,10 +4,12 @@
 
 # Home page
 GET           /                                                    controllers.Application.index
-GET           /health-check                                         controllers.Application.healthCheck
+GET           /health-check                                        controllers.Application.healthCheck
 
 GET           /airport-config                                      controllers.Application.getAirportConfig
 GET           /contact-details                                     controllers.Application.getContactDetails
+
+GET           /ooh-status                                          controllers.Application.getOOHStatus
 
 GET           /airport-info                                        controllers.Application.getAirportInfo
 

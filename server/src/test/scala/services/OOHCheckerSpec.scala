@@ -161,22 +161,24 @@ class OOHCheckerSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
   }
 
   trait GetHolidaysSuccess {
+    self: BankHolidayApiClient =>
 
-    def sendAndReceive: HttpRequest => Future[HttpResponse] = {
+    override def sendAndReceive: HttpRequest => Future[HttpResponse] = {
 
       _: HttpRequest => Future(HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`, bankHolidaySuccessJson)))
     }
   }
 
   trait Holidays2019Success {
+    self: BankHolidayApiClient =>
 
-    def sendAndReceive: HttpRequest => Future[HttpResponse] = {
+    override def sendAndReceive: HttpRequest => Future[HttpResponse] = {
 
       _: HttpRequest => Future(HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`, hols2019Success)))
     }
   }
 
-  val bankHolidaySuccessJson =
+  val bankHolidaySuccessJson: String =
     """
       |{
       |    "england-and-wales": {
@@ -199,7 +201,7 @@ class OOHCheckerSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
       |}
     """.stripMargin
 
-  val hols2019Success =
+  val hols2019Success: String =
     """
       |{
       |    "england-and-wales": {

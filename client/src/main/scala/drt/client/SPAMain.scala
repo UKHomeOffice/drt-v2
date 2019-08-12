@@ -146,7 +146,8 @@ object SPAMain {
       UpdateMinuteTicker,
       GetFeedStatuses(),
       GetAlerts(0L),
-      GetShowAlertModalDialog
+      GetShowAlertModalDialog,
+      GetOohStatus
     )
 
     initActions.foreach(SPACircuit.dispatch(_))

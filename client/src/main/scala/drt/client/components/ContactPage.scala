@@ -1,7 +1,9 @@
 package drt.client.components
 
+import diode.data.Pot
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
+import drt.shared.{ContactDetails, OutOfHoursStatus}
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
 
@@ -21,36 +23,40 @@ object ContactPage {
   def apply(): VdomElement = component(Props())
 }
 
+case class ContactModel(contactDetails: Pot[ContactDetails], oohStatus: Pot[OutOfHoursStatus])
+
 object ContactDetails {
 
   case class Props()
 
   val component = ScalaComponent.builder[Props]("ContactUs")
     .render_P(p => {
-      val contactDetailsRCP = SPACircuit.connect(_.contactDetails)
+      val contactDetailsRCP = SPACircuit.connect(m => ContactModel(m.contactDetails, m.oohStatus))
       <.div(
         contactDetailsRCP(contactDetailsMP => {
-          <.div(contactDetailsMP().renderReady(
+          <.div(contactDetailsMP().contactDetails.renderReady(
             details => {
-              val email = details.supportEmail.getOrElse("DRT Support Email Missing")
-              val oohPhone = details.oohPhone.getOrElse("OOH Contact Number Missing")
+              contactDetailsMP().oohStatus.renderReady(oohStatus => {
+                val email = details.supportEmail.getOrElse("DRT Support Email Missing")
+                val oohPhone = details.oohPhone.getOrElse("OOH Contact Number Missing")
 
-              val oohMessage = details.oohPhone.map(oohPhone =>
-                List(
+                val oohMesssage = List(
                   <.p(<.strong("After 5pm Monday to Friday, all day Saturday, Sunday and Bank Holidays")),
                   <.p(s" For urgent issues contact our out of hours support team on ", <.strong(oohPhone), ". Say that you're calling about Dynamic Response Tool."),
                   <.p("For anything else, please email us at ", <.strong(email), " and we'll respond on the next business day.")
                 ).toTagMod
-              ).getOrElse("")
 
-              val inHoursMessage = <.div(
-                <.p(<.strong("9am to 5pm Monday to Friday")),
-                <.p(s"Contact the Dynamic Response Tool service team by email at ", <.strong(email)),""
+
+                val inHoursMessage = List(
+                  <.p(<.strong("9am to 5pm Monday to Friday")),
+                  <.p(s"Contact the Dynamic Response Tool service team by email at ", <.strong(email), ".")
+                ).toTagMod
+
+                <.div(if (oohStatus.isOoh) oohMesssage else inHoursMessage)
+              }
               )
-
-              inHoursMessage
-
-            }))
+            }
+          ))
         })
       )
     })
