@@ -32,16 +32,24 @@ object ContactDetails {
         contactDetailsRCP(contactDetailsMP => {
           <.div(contactDetailsMP().renderReady(
             details => {
-              val email = details.supportEmail.getOrElse("")
-              <.div(
-                <.p(<.strong("During office Hours"), " (9am to 5pm Monday to Friday)"),
-                <.p(s"Contact the Dynamic Response Tool service team by email at ", <.strong(email)),
-                details.oohPhone.map(oohPhone =>
-                  List(
-                    <.p(<.strong("Outside office hours"), " (after 5pm Monday to Friday, all day Saturday, Sunday and Bank Holidays)"),
-                    <.p(s"Contact our out of hours support team on ", <.strong(oohPhone), ". Say that you're calling about Dynamic Response Tool.")).toTagMod
-                ).getOrElse("")
+              val email = details.supportEmail.getOrElse("DRT Support Email Missing")
+              val oohPhone = details.oohPhone.getOrElse("OOH Contact Number Missing")
+
+              val oohMessage = details.oohPhone.map(oohPhone =>
+                List(
+                  <.p(<.strong("After 5pm Monday to Friday, all day Saturday, Sunday and Bank Holidays")),
+                  <.p(s" For urgent issues contact our out of hours support team on ", <.strong(oohPhone), ". Say that you're calling about Dynamic Response Tool."),
+                  <.p("For anything else, please email us at ", <.strong(email), " and we'll respond on the next business day.")
+                ).toTagMod
+              ).getOrElse("")
+
+              val inHoursMessage = <.div(
+                <.p(<.strong("9am to 5pm Monday to Friday")),
+                <.p(s"Contact the Dynamic Response Tool service team by email at ", <.strong(email)),""
               )
+
+              inHoursMessage
+
             }))
         })
       )
