@@ -63,7 +63,9 @@ class FixedPointsActorBase(now: () => SDateLike) extends RecoveryActorLike with 
   def onUpdateState(data: FixedPointAssignments): Unit = {}
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case snapshot: FixedPointsStateSnapshotMessage => state = fixedPointMessagesToFixedPoints(snapshot.fixedPoints)
+    case snapshot: FixedPointsStateSnapshotMessage =>
+      log.info(s"Processing a snapshot message")
+      state = fixedPointMessagesToFixedPoints(snapshot.fixedPoints)
   }
 
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
@@ -95,6 +97,10 @@ class FixedPointsActorBase(now: () => SDateLike) extends RecoveryActorLike with 
 
     case SaveSnapshotFailure(md, cause) =>
       log.info(s"Save snapshot failure: $md, $cause")
+
+    case SaveSnapshot =>
+      log.info(s"Received request to snapshot")
+      takeSnapshot(stateToMessage)
 
     case u =>
       log.info(s"unhandled message: $u")
@@ -128,3 +134,4 @@ object FixedPointsMessageParser {
   def fixedPointMessagesToFixedPoints(fixedPointMessages: Seq[FixedPointMessage]): FixedPointAssignments =
     FixedPointAssignments(fixedPointMessages.map(fixedPointMessageToStaffAssignment))
 }
+
