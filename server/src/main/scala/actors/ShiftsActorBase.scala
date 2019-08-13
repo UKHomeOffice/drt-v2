@@ -41,6 +41,9 @@ case class AddShiftSubscribers(subscribers: List[SourceQueueWithComplete[ShiftAs
 
 case class AddFixedPointSubscribers(subscribers: List[SourceQueueWithComplete[FixedPointAssignments]])
 
+case object SaveSnapshot
+
+
 class ShiftsActor(now: () => SDateLike, expireBefore: () => SDateLike) extends ShiftsActorBase(now, expireBefore) {
   var subscribers: List[SourceQueueWithComplete[ShiftAssignments]] = List()
   implicit val scheduler: Scheduler = this.context.system.scheduler
@@ -88,7 +91,9 @@ class ShiftsActorBase(val now: () => SDateLike,
   def onUpdateState(data: ShiftAssignments): Unit = {}
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case snapshot: ShiftStateSnapshotMessage => state = shiftMessagesToStaffAssignments(snapshot.shifts)
+    case snapshot: ShiftStateSnapshotMessage =>
+      log.info(s"Got a snapshot message!!")
+      state = shiftMessagesToStaffAssignments(snapshot.shifts)
   }
 
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
@@ -135,6 +140,10 @@ class ShiftsActorBase(val now: () => SDateLike,
 
     case SaveSnapshotFailure(md, cause) =>
       log.info(s"Save snapshot failure: $md, $cause")
+
+    case SaveSnapshot =>
+      log.info(s"Received request to snapshot")
+      takeSnapshot(stateToMessage)
 
     case u =>
       log.info(s"unhandled message: $u")
