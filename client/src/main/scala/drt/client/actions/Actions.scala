@@ -56,6 +56,10 @@ object Actions {
 
   case class UpdateAirportConfig(airportConfig: AirportConfig) extends Action
 
+  case object GetOohStatus extends Action
+
+  case class UpdateOohStatus(oohStatus: OutOfHoursStatus) extends Action
+
   case object GetContactDetails extends Action
 
   case class UpdateContactDetails(contactDetails: ContactDetails) extends Action
