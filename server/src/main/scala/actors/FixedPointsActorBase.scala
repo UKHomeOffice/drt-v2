@@ -64,7 +64,7 @@ class FixedPointsActorBase(now: () => SDateLike) extends RecoveryActorLike with 
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: FixedPointsStateSnapshotMessage =>
-      log.info(s"Got a snapshot message!!")
+      log.info(s"Processing a snapshot message")
       state = fixedPointMessagesToFixedPoints(snapshot.fixedPoints)
   }
 

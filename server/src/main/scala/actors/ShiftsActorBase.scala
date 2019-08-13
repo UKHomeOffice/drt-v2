@@ -92,7 +92,7 @@ class ShiftsActorBase(val now: () => SDateLike,
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: ShiftStateSnapshotMessage =>
-      log.info(s"Got a snapshot message!!")
+      log.info(s"Processing a snapshot message")
       state = shiftMessagesToStaffAssignments(snapshot.shifts)
   }
 
