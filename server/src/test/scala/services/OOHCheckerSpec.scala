@@ -29,6 +29,7 @@ class OOHCheckerSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
 
       result === expected
     }
+
     "Given a time on a weekday before 9am then OOH should be true" >> {
       val time = SDate("2019-08-09T05:58:00", Crunch.europeLondonTimeZone)
       val result = Await.result(OOHChecker(mockBankHolidayClient).isOOH(time), 1 second)
@@ -71,6 +72,7 @@ class OOHCheckerSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
 
       result === expected
     }
+
     "Given a time on a weekday before 9am then OOH should be true" >> {
       val time = SDate("2019-01-09T05:58:00", Crunch.europeLondonTimeZone)
       val result = Await.result(OOHChecker(mockBankHolidayClient).isOOH(time), 1 second)
@@ -121,6 +123,7 @@ class OOHCheckerSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
 
       result === expected
     }
+
     "Given a normal day I should get false when testing if it's a bank holiday" >> {
       val client = new BankHolidayApiClient() with Holidays2019Success
 
@@ -144,20 +147,6 @@ class OOHCheckerSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
 
       result === expected
     }
-
-    //    "integration test" >> {
-    //      skipped("This is just for testing connectivity")
-    //
-    //      implicit val actorSystem = system
-    //      val client = new BankHolidayApiClient()(system) with ProdSendAndReceive {
-    //        val system = actorSystem
-    //      }
-    //
-    //      val result = Await.result(client.getHolidays, 2 seconds)
-    //      println(result)
-    //
-    //      false
-    //    }
   }
 
   trait GetHolidaysSuccess {
