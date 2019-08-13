@@ -456,6 +456,17 @@ class Application @Inject()(implicit val config: Configuration,
     Ok(write(ContactDetails(airportConfig.contactEmail, airportConfig.outOfHoursContactPhone)))
   }
 
+  def getOOHStatus: Action[AnyContent] = Action.async { _ =>
+    import upickle.default._
+
+    val localTime = SDate.now(Crunch.europeLondonTimeZone)
+
+    OOHChecker(BankHolidayApiClient()).isOOH(localTime).map { isOoh =>
+
+      Ok(write(OutOfHoursStatus(localTime.toLocalDateTimeString(), isOoh)))
+    }
+  }
+
   def getAirportInfo: Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
     Action { request =>
       import upickle.default._
