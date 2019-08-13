@@ -383,6 +383,50 @@ class Application @Inject()(implicit val config: Configuration,
     Ok(views.html.index("DRT - BorderForce", portCode, googleTrackingCode, user.id))
   }
 
+  def healthCheck: Action[AnyContent] = Action.async { _ =>
+    val requestStart = SDate.now()
+    val liveStartMillis = getLocalLastMidnight(SDate.now()).millisSinceEpoch
+    val liveEndMillis = getLocalNextMidnight(SDate.now()).millisSinceEpoch
+    val liveState = requestPortState[PortState](ctrl.liveCrunchStateActor, GetPortState(liveStartMillis, liveEndMillis))
+
+    val forecastStartMillis = getLocalLastMidnight(SDate.now().addDays(3)).millisSinceEpoch
+    val forecastEndMillis = getLocalNextMidnight(SDate.now()).addDays(3).millisSinceEpoch
+    val forecastState = requestPortState[PortState](ctrl.forecastCrunchStateActor, GetPortState(forecastStartMillis, forecastEndMillis))
+    for {
+      fs <- forecastState
+      ls <- liveState
+    } yield {
+      (fs, ls) match {
+        case (Left(forecastError), Left(liveError)) =>
+          log.error(s"Healthcheck failed to get live or forecast response ${forecastError.message}, ${liveError.message}")
+          BadGateway(
+            """{
+              |   "error": "Unable to retrieve live or forecast state
+              |}
+            """.stripMargin)
+        case (_, Left(liveError)) =>
+          log.error(s"Healthcheck failed to get live response, ${liveError.message}")
+          BadGateway(
+            """{
+              |   "error": "Unable to retrieve live state
+              |}
+            """)
+        case (Left(forecastError), _) =>
+          log.error(s"Healthcheck failed to get forecast response ${forecastError.message}")
+          BadGateway(
+            """{
+              |   "error": "Unable to retrieve forecast state
+              |}
+            """)
+        case _ =>
+          val requestEnd = SDate.now().millisSinceEpoch
+          log.info(s"Health check request started at ${requestStart.toISOString()} and lasted ${(requestStart.millisSinceEpoch - requestEnd) / 1000} seconds ")
+          NoContent
+      }
+    }
+  }
+
+
   def getLoggedInUser(): Action[AnyContent] = Action { request =>
     val user = ctrl.getLoggedInUser(config, request.headers, request.session)
 
@@ -410,6 +454,17 @@ class Application @Inject()(implicit val config: Configuration,
     import upickle.default._
 
     Ok(write(ContactDetails(airportConfig.contactEmail, airportConfig.outOfHoursContactPhone)))
+  }
+
+  def getOOHStatus: Action[AnyContent] = Action.async { _ =>
+    import upickle.default._
+
+    val localTime = SDate.now(Crunch.europeLondonTimeZone)
+
+    OOHChecker(BankHolidayApiClient()).isOOH(localTime).map { isOoh =>
+
+      Ok(write(OutOfHoursStatus(localTime.toLocalDateTimeString(), isOoh)))
+    }
   }
 
   def getAirportInfo: Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
@@ -509,7 +564,16 @@ class Application @Inject()(implicit val config: Configuration,
   }
 
   def getFeedStatuses: Action[AnyContent] = auth {
-    Action.async { _ => ctrl.getFeedStatus.map(s => Ok(write(s))) }
+    Action.async { _ =>
+      ctrl.getFeedStatus.map(s => {
+        val safeStatusMessages = s.map(statusMessage => statusMessage.copy(statuses = statusMessage.statuses.map {
+          case f: FeedStatusFailure =>
+            f.copy(message = "Unable to connect to feed.")
+          case s => s
+        }))
+        Ok(write(safeStatusMessages))
+      })
+    }
   }
 
   def getShouldReload: Action[AnyContent] = Action { _ =>
@@ -933,7 +997,6 @@ class Application @Inject()(implicit val config: Configuration,
       f"${startPit.getFullYear()}-${startPit.getMonth()}%02d-${startPit.getDate()}-to-" +
       f"${endPit.getFullYear()}-${endPit.getMonth()}%02d-${endPit.getDate()}"
   }
-
 
 
   def flightsForCSVExportWithinRange(terminalName: TerminalName,

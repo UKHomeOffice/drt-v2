@@ -136,6 +136,8 @@ case class DrtConfigParameters(config: Configuration) {
   val maybeLGWNamespace: Option[String] = config.getOptional[String]("feeds.lgw.live.azure.namespace")
   val maybeLGWSASToKey: Option[String] = config.getOptional[String]("feeds.lgw.live.azure.sas_to_Key")
   val maybeLGWServiceBusUri: Option[String] = config.getOptional[String]("feeds.lgw.live.azure.service_bus_uri")
+
+  val snapshotStaffOnStart: Boolean = config.get[Boolean]("feature-flags.snapshot-staffing-on-start")
 }
 
 case class SubscribeRequestQueue(subscriber: SourceQueueWithComplete[List[Arrival]])
@@ -256,7 +258,33 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         startScheduledFeedImports(crunchInputs)
 
       case Failure(error) =>
-        system.log.error(s"Failed to restore initial state for App", error)
+        system.log.error(error, s"Failed to restore initial state for App")
+        System.exit(1)
+    }
+
+    val staffingStates: Future[NotUsed] = {
+      val maybeShifts = initialStateFuture[ShiftAssignments](shiftsActor, GetState)
+      val maybeFixedPoints = initialStateFuture[FixedPointAssignments](fixedPointsActor, GetState)
+      val maybeMovements = initialStateFuture[StaffMovements](staffMovementsActor, GetState)
+      for {
+        _ <- maybeShifts
+        _ <- maybeFixedPoints
+        _ <- maybeMovements
+      } yield NotUsed
+    }
+
+    staffingStates.onComplete {
+      case Success(NotUsed) =>
+        system.log.info(s"Successfully restored initial staffing states for App")
+        if (params.snapshotStaffOnStart) {
+          log.info(s"Snapshotting staff as requested by feature flag")
+          shiftsActor ! SaveSnapshot
+          fixedPointsActor ! SaveSnapshot
+          staffMovementsActor ! SaveSnapshot
+        }
+
+      case Failure(error) =>
+        system.log.error(error, s"Failed to restore initial staffing state for App")
         System.exit(1)
     }
   }
@@ -424,7 +452,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         LGWFeed(lgwNamespace, lgwSasToKey, lgwServiceBusUri)(system).source()
 
       case "BHX" if !params.bhxIataEndPointUrl.isEmpty =>
-        BHXFeed(BHXClient(params.bhxIataUsername, params.bhxIataEndPointUrl), 30 seconds, 1 milliseconds)(system)
+        BHXFeed(BHXClient(params.bhxIataUsername, params.bhxIataEndPointUrl), 80 seconds, 1 milliseconds)(system)
       case "BHX" => BHXLiveFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX live feed URL")))
       case "LTN" =>
         val url = params.maybeLtnLiveFeedUrl.getOrElse(throw new Exception("Missing live feed url"))

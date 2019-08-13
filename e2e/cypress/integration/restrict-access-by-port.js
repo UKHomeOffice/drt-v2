@@ -13,23 +13,28 @@ describe('Restrict access by port', function () {
         .navigateHome().then(() => cy.contains('.navbar-drt', 'DRT TEST'));
     });
 
-    it("When I do not have any permission to view any ports I see access restricted page", function () {
+    it("During business hours I should see only the DRT Team contact address but Out of Hours I should see the Support phone number", function () {
+      cy.server()
       cy
+        .route({ method: 'GET', url: 'ooh-status', status: 200, response: { "localTime": "2019-08-12 16:58", "isOoh": true }, delay: 100, })
+        .as('getSupportOOH')
         .asANonTestPortUser()
         .navigateHome()
+        .wait('@getSupportOOH')
         .assertAccessRestricted()
+        .get(".access-restricted")
+        .contains("For urgent issues contact our out of hours support team on")
         .get('#alternate-ports')
-        .should('not.exist');
+        .should('not.exist')
+        .route({ method: 'GET', url: 'ooh-status', status: 200, response: { "localTime": "2019-08-12 16:58", "isOoh": false }, delay: 100, })
+        .as('getSupportInHours')
+        .navigateHome()
+        .wait('@getSupportInHours')
+        .get(".access-restricted")
+        .contains("Contact the Dynamic Response Tool service team by email at")
+        ;
     });
 
-    it("The access restricted page should have contact details for the team on it.", function () {
-      cy
-        .asANonTestPortUser()
-        .navigateHome()
-        .contains("Contact the Dynamic Response Tool service team by email at support@test.com")
-        .get('.access-restricted')
-        .contains("Contact our out of hours support team on 012345.");
-    });
 
     it("When I only have permission to view LHR I see access restricted page with a link to LHR only", function () {
       cy

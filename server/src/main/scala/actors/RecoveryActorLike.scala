@@ -54,7 +54,9 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
     }
   }
 
-  def snapshotIfNeeded(stateToSnapshot: GeneratedMessage): Unit = if (shouldTakeSnapshot) {
+  def snapshotIfNeeded(stateToSnapshot: GeneratedMessage): Unit = if (shouldTakeSnapshot) takeSnapshot(stateToSnapshot)
+
+  def takeSnapshot(stateToSnapshot: GeneratedMessage): Unit = {
     log.info(s"Snapshotting ${stateToSnapshot.serializedSize} bytes of ${stateToSnapshot.getClass}. Resetting counters to zero")
     saveSnapshot(stateToSnapshot)
 

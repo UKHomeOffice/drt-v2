@@ -105,7 +105,9 @@ class StaffMovementsActorBase(val now: () => SDateLike,
   def staffMovementMessagesToStaffMovements(messages: Seq[StaffMovementMessage]): StaffMovements = StaffMovements(messages.map(staffMovementMessageToStaffMovement))
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case snapshot: StaffMovementsStateSnapshotMessage => state = StaffMovementsState(staffMovementMessagesToStaffMovements(snapshot.staffMovements.toList))
+    case snapshot: StaffMovementsStateSnapshotMessage =>
+      log.info(s"Processing a snapshot message")
+      state = StaffMovementsState(staffMovementMessagesToStaffMovements(snapshot.staffMovements.toList))
   }
 
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
@@ -160,6 +162,10 @@ class StaffMovementsActorBase(val now: () => SDateLike,
 
     case SaveSnapshotFailure(md, cause) =>
       log.info(s"Save snapshot failure: $md, $cause")
+
+    case SaveSnapshot =>
+      log.info(s"Received request to snapshot")
+      takeSnapshot(stateToMessage)
 
     case u =>
       log.info(s"unhandled message: $u")

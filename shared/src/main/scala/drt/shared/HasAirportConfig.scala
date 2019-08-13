@@ -173,6 +173,12 @@ object ContactDetails {
   implicit val rw: RW[ContactDetails] = macroRW
 }
 
+case class OutOfHoursStatus(localTime: String, isOoh: Boolean)
+
+object OutOfHoursStatus {
+  implicit val rw: RW[OutOfHoursStatus] = macroRW
+}
+
 object ArrivalHelper {
   val defaultPax = 0
 

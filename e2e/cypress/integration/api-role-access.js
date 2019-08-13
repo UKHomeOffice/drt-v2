@@ -253,6 +253,18 @@ describe('Restrict access to endpoint by role', function () {
       endpoint: "/",
       method: "GET",
       shouldBeGranted: true
+    },
+    {
+      roles: [],
+      endpoint: "/contact-details",
+      method: "GET",
+      shouldBeGranted: true
+    },
+    {
+      roles: [],
+      endpoint: "/ooh-status",
+      method: "GET",
+      shouldBeGranted: true
     }
   ]
 

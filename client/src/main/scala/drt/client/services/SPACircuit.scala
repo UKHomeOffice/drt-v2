@@ -76,13 +76,15 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      feedStatuses: Pot[Seq[FeedStatuses]] = Empty,
                      alerts: Pot[List[Alert]] = Empty,
                      maybeStaffDeploymentAdjustmentPopoverState: Option[StaffAdjustmentDialogueState] = None,
-                     displayAlertDialog: Pot[Boolean] = Empty
+                     displayAlertDialog: Pot[Boolean] = Empty,
+                     oohStatus: Pot[OutOfHoursStatus] = Empty
                     )
 
 object PollDelay {
   val recoveryDelay: FiniteDuration = 10 seconds
   val loginCheckDelay: FiniteDuration = 30 seconds
   val minuteUpdateDelay: FiniteDuration = 10 seconds
+  val oohSupportUpdateDelay: FiniteDuration = 1 minute
 }
 
 trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
@@ -106,6 +108,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
       new ContactDetailsHandler(zoomRW(_.contactDetails)((m, v) => m.copy(contactDetails = v))),
+      new OohForSupportHandler(zoomRW(_.oohStatus)((m, v) => m.copy(oohStatus = v))),
       new ApplicationVersionHandler(zoomRW(_.applicationVersion)((m, v) => m.copy(applicationVersion = v))),
       new ShiftsHandler(currentViewMode, zoomRW(_.shifts)((m, v) => m.copy(shifts = v))),
       new ShiftsForMonthHandler(zoomRW(_.monthOfShifts)((m, v) => m.copy(monthOfShifts = v))),
