@@ -137,8 +137,8 @@ class PortStateGraphStage(name: String = "",
           log.info(s"Pushing port state with diff")
           maybePortState match {
             case None =>
-            case Some(portState) =>
-              val portStateWithDiff = PortStateWithDiff(portState, portStateDiff, diffMessage(portStateDiff))
+            case Some(_) =>
+              val portStateWithDiff = PortStateWithDiff(PortState.empty, portStateDiff, diffMessage(portStateDiff))
               maybePortStateDiff = None
               push(outPortState, portStateWithDiff)
           }

@@ -82,10 +82,10 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
     case PortStateWithDiff(_, _, CrunchDiffMessage(_, _, fr, fu, cu, su, _)) if fr.isEmpty && fu.isEmpty && cu.isEmpty && su.isEmpty =>
       log.info(s"Received port state with empty diff")
 
-    case PortStateWithDiff(portState, _, diff) =>
+    case PortStateWithDiff(_, _, diffMsg) =>
       logInfo(s"Received port state with diff")
-      updateStateFromPortState(portState)
-      persistAndMaybeSnapshot(diff)
+      state = stateFromDiff(diffMsg, state)
+      persistAndMaybeSnapshot(diffMsg)
 
     case GetState =>
       logDebug(s"Received GetState request. Replying with ${state.map(s => s"PortState containing ${s.crunchMinutes.size} crunch minutes")}")
@@ -140,7 +140,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
           staffMinutes = applyStaffDiff(staffMinuteUpdates, SortedMap(), SDate.now().millisSinceEpoch)
         ))
       case Some(ps) =>
-        val newPortState = PortState(
+        val newPortState = ps.copy(
           flights = applyFlightsWithSplitsDiff(flightRemovals, flightUpdates, ps.flights, SDate.now().millisSinceEpoch),
           crunchMinutes = applyCrunchDiff(crunchMinuteUpdates, ps.crunchMinutes, SDate.now().millisSinceEpoch),
           staffMinutes = applyStaffDiff(staffMinuteUpdates, ps.staffMinutes, SDate.now().millisSinceEpoch))
@@ -155,6 +155,4 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
     diffMessage.crunchMinutesToUpdate.map(crunchMinuteFromMessage).toSet,
     diffMessage.staffMinutesToUpdate.map(staffMinuteFromMessage).toSet
   )
-
-  def updateStateFromPortState(newState: PortState): Unit = state = Option(newState)
 }
