@@ -130,32 +130,6 @@ object Crunch {
     } else None
   }
 
-  def applyCrunchDiff(crunchMinuteUpdates: Set[CrunchMinute], crunchMinutes: SortedMap[TQM, CrunchMinute], nowMillis: MillisSinceEpoch): SortedMap[TQM, CrunchMinute] = {
-    val withUpdates = crunchMinuteUpdates.foldLeft(crunchMinutes) {
-      case (soFar, cm) if cm.minute % oneMinuteMillis == 0 => soFar.updated(cm.key, cm.copy(lastUpdated = Option(nowMillis)))
-      case (soFar, _) => soFar
-    }
-    withUpdates
-  }
-
-  def applyStaffDiff(staffMinuteUpdates: Set[StaffMinute], staffMinutes: SortedMap[TM, StaffMinute], nowMillis: MillisSinceEpoch): SortedMap[TM, StaffMinute] = {
-    val withUpdates = staffMinuteUpdates.foldLeft(staffMinutes) {
-      case (soFar, sm) if sm.minute % oneMinuteMillis == 0 => soFar.updated(sm.key, sm.copy(lastUpdated = Option(nowMillis)))
-      case (soFar, _) => soFar
-    }
-    withUpdates
-  }
-
-  def applyFlightsWithSplitsDiff(flightRemovals: Set[Int], flightUpdates: Set[ApiFlightWithSplits], flights: Map[Int, ApiFlightWithSplits], nowMillis: MillisSinceEpoch): Map[Int, ApiFlightWithSplits] = {
-    val withoutRemovals = flightRemovals.foldLeft(flights) {
-      case (soFar, flightIdToRemove) => soFar - flightIdToRemove
-    }
-    val withoutRemovalsWithUpdates = flightUpdates.foldLeft(withoutRemovals) {
-      case (soFar, flight) => soFar.updated(flight.apiFlight.uniqueId, flight.copy(lastUpdated = Option(nowMillis)))
-    }
-    withoutRemovalsWithUpdates
-  }
-
   def flightLoadDiff(oldSet: Set[FlightSplitMinute], newSet: Set[FlightSplitMinute]): Set[FlightSplitDiff] = {
     val toRemove = oldSet.map(fsm => FlightSplitMinute(fsm.flightId, fsm.paxType, fsm.terminalName, fsm.queueName, -fsm.paxLoad, -fsm.workLoad, fsm.minute))
     val addAndRemoveGrouped: Map[(Int, TerminalName, QueueName, MillisSinceEpoch, PaxType), Set[FlightSplitMinute]] = newSet

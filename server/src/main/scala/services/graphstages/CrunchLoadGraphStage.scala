@@ -130,7 +130,7 @@ class CrunchLoadGraphStage(name: String = "",
       val maybeThings = for {
         terminalName <- terminalsToUpdate
         queueName <- airportConfig.queues.getOrElse(terminalName, Seq())
-        minute <- firstMinute until lastMinute by oneMinuteMillis
+        minute <- firstMinute until lastMinute by Crunch.oneMinuteMillis
       } yield {
         val key = MinuteHelper.key(terminalName, queueName, minute)
         thingsToFilter.get(key)
@@ -213,6 +213,18 @@ case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateMinutes 
     val newDiff = PortStateDiff(Seq(), Seq(), crunchMinutesDiff, Seq())
 
     (newPortState, newDiff)
+  }
+
+  def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
+    val crunchMinutesDiff = minutes.foldLeft(List[CrunchMinute]()) { case (soFar, dm) =>
+      val key = dm.key
+      val merged = mergeMinute(portState.crunchMinutes.get(key), dm, now)
+      portState.crunchMinutes += (key -> merged)
+      merged :: soFar
+    }
+    val newDiff = PortStateDiff(Seq(), Seq(), crunchMinutesDiff, Seq())
+
+    newDiff
   }
 
   def newCrunchMinutes: SortedMap[TQM, CrunchMinute] = SortedMap[TQM, CrunchMinute]() ++ minutes

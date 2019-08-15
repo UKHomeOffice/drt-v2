@@ -14,6 +14,9 @@ import server.feeds._
 import services.graphstages.Crunch.Loads
 import services.graphstages._
 
+import scala.concurrent.duration._
+import scala.language.postfixOps
+
 object RunnableCrunch {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -169,8 +172,8 @@ object RunnableCrunch {
           fixedPoints     ~> staff.in1
           staffMovements  ~> staff.in2
 
-          arrivals.out ~> arrivalsGraphKillSwitch ~> arrivalsFanOut ~> arrivalSplits.in0
-                                                     arrivalsFanOut ~> manifestsRequestSink
+          arrivals.out/*.throttle(1, 2 milliseconds)*/ ~> arrivalsGraphKillSwitch ~> arrivalsFanOut ~> arrivalSplits.in0
+                                                                                             arrivalsFanOut ~> manifestsRequestSink
 
           arrivalSplits.out ~> arrivalSplitsFanOut ~> workload
                                arrivalSplitsFanOut ~> portState.in0

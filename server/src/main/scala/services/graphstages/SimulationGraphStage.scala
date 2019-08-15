@@ -327,7 +327,7 @@ class SimulationGraphStage(name: String = "",
     def filterTerminalMinutes[A <: TerminalMinute](firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Seq[TerminalName], toFilter: Map[TM, A]): Seq[A] = {
       val maybeThings = for {
         terminalName <- terminalsToUpdate
-        minute <- firstMinute until lastMinute by oneMinuteMillis
+        minute <- firstMinute until lastMinute by Crunch.oneMinuteMillis
       } yield toFilter.get(MinuteHelper.key(terminalName, minute))
 
       maybeThings.collect { case Some(thing) => thing }
@@ -493,6 +493,16 @@ case class SimulationMinutes(minutes: Seq[SimulationMinute]) extends PortStateMi
           (minutesSoFar.updated(updatedCm.key, mergedCm), mergedCm :: updatesSoFar)
       }
     (portState.copy(crunchMinutes = updatedCrunchMinutes), PortStateDiff(Seq(), Seq(), minutesDiff, Seq()))
+  }
+
+  def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
+    val minutesDiff = minutes.foldLeft(List[CrunchMinute]()) { case (soFar, dm) =>
+      val key = dm.key
+      val merged = mergeMinute(portState.crunchMinutes.get(key), dm, now)
+      portState.crunchMinutes += (key -> merged)
+      merged :: soFar
+    }
+    PortStateDiff(Seq(), Seq(), minutesDiff, Seq())
   }
 
   def newCrunchMinutes: SortedMap[TQM, CrunchMinute] = SortedMap[TQM, CrunchMinute]() ++ minutes

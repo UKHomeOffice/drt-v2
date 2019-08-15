@@ -3,7 +3,7 @@ package actors.pointInTime
 import actors.Sizes.oneMegaByte
 import actors._
 import akka.persistence._
-import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
+import drt.shared.CrunchApi.{MillisSinceEpoch, PortState, PortStateMutable}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchStateSnapshotMessage}
@@ -30,8 +30,7 @@ class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, expire
       createdAtOption match {
         case Some(createdAt) if createdAt <= pointInTime.millisSinceEpoch =>
           log.info(s"Applying crunch diff with createdAt (${SDate(createdAt).toISOString()}) <= point in time requested: ${pointInTime.toISOString()}")
-          val newState = stateFromDiff(cdm, state)
-          state = newState
+          applyDiff(cdm)
         case Some(createdAt) =>
           log.info(s"Ignoring crunch diff with createdAt (${SDate(createdAt).toISOString()}) > point in time requested: ${pointInTime.toISOString()}")
       }
@@ -40,14 +39,14 @@ class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, expire
   override def postRecoveryComplete(): Unit = {
     logPointInTimeCompleted(pointInTime)
 
-    state = state.map {
-      case PortState(fl, cm, _) if staffReconstructionRequired =>
-        log.info(s"Staff minutes require reconstructing for PortState before 2017-12-04. Attempting to reconstruct")
-        val updatedPortState = reconstructStaffMinutes(pointInTime, expireAfterMillis, context, fl, cm)
-        log.info(s"Updating port state with ${updatedPortState.staffMinutes.size} staff minutes")
-        updatedPortState
-      case ps => ps
-    }
+//    state = state.map {
+//      case PortStateMutable(fl, cm, _) if staffReconstructionRequired =>
+//        log.info(s"Staff minutes require reconstructing for PortState before 2017-12-04. Attempting to reconstruct")
+//        val updatedPortState = reconstructStaffMinutes(pointInTime, expireAfterMillis, context, fl, cm)
+//        log.info(s"Updating port state with ${updatedPortState.staffMinutes.size} staff minutes")
+//        updatedPortState
+//      case ps => ps
+//    }
   }
 
   override def receiveCommand: Receive = {
@@ -55,7 +54,7 @@ class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, expire
       log.info("Saved PortState Snapshot")
 
     case GetState =>
-      sender() ! state
+      sender() ! Option(state)
 
     case GetPortState(start, end) =>
       logInfo(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")

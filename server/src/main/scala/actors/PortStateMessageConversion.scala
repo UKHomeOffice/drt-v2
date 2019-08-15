@@ -1,6 +1,6 @@
 package actors
 
-import drt.shared.CrunchApi.{CrunchMinute, PortState, StaffMinute}
+import drt.shared.CrunchApi.{CrunchMinute, PortState, PortStateMutable, StaffMinute}
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
@@ -8,36 +8,38 @@ import server.protobuf.messages.CrunchState._
 import services.graphstages.Crunch
 
 import scala.collection.immutable.SortedMap
+import scala.collection.mutable
 
 object PortStateMessageConversion {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def snapshotMessageToState(sm: CrunchStateSnapshotMessage, optionalTimeWindowEnd: Option[SDateLike]): PortState = {
+  def snapshotMessageToState(sm: CrunchStateSnapshotMessage, optionalTimeWindowEnd: Option[SDateLike]): PortStateMutable = {
     log.debug(s"Unwrapping flights messages")
-    val flights = optionalTimeWindowEnd match {
+    val flightsTuple = optionalTimeWindowEnd match {
       case None =>
         sm.flightWithSplits.map(message => {
           val fws = flightWithSplitsFromMessage(message)
           (fws.apiFlight.uniqueId, fws)
-        }).toMap
+        })
       case Some(timeWindowEnd) =>
         val windowEndMillis = timeWindowEnd.millisSinceEpoch
         sm.flightWithSplits.collect {
           case message if message.flight.map(fm => fm.pcpTime.getOrElse(0L)).getOrElse(0L) <= windowEndMillis =>
             val fws = flightWithSplitsFromMessage(message)
             (fws.apiFlight.uniqueId, fws)
-        }.toMap
+        }
     }
+    val flights = mutable.Map[Int, ApiFlightWithSplits]() ++ flightsTuple
 
     log.debug(s"Unwrapping minutes messages")
 
-    val crunchMinutes = SortedMap[TQM, CrunchMinute]() ++ sm.crunchMinutes.collect {
+    val crunchMinutes = mutable.SortedMap[TQM, CrunchMinute]() ++ sm.crunchMinutes.collect {
       case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 =>
         val cm = crunchMinuteFromMessage(message)
         (cm.key, cm)
     }
 
-    val staffMinutes = SortedMap[TM, StaffMinute]() ++ sm.staffMinutes.collect {
+    val staffMinutes = mutable.SortedMap[TM, StaffMinute]() ++ sm.staffMinutes.collect {
       case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 =>
         val sm = staffMinuteFromMessage(message)
         (sm.key, sm)
@@ -45,9 +47,8 @@ object PortStateMessageConversion {
 
     log.debug(s"Finished unwrapping messages")
 
-    PortState(flights, crunchMinutes, staffMinutes)
+    new PortStateMutable(flights, crunchMinutes, staffMinutes)
   }
-
 
   def crunchMinuteFromMessage(cmm: CrunchMinuteMessage): CrunchMinute = CrunchMinute(
     terminalName = cmm.terminalName.getOrElse(""),
@@ -84,7 +85,7 @@ object PortStateMessageConversion {
     fixedPoints = Option(sm.fixedPoints),
     movements = Option(sm.movements))
 
-  def portStateToSnapshotMessage(portState: PortState) = CrunchStateSnapshotMessage(
+  def portStateToSnapshotMessage(portState: PortStateMutable) = CrunchStateSnapshotMessage(
     Option(0L),
     Option(0),
     portState.flights.values.toList.map(flight => FlightMessageConversion.flightWithSplitsToMessage(flight)),

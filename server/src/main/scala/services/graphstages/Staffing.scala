@@ -15,6 +15,7 @@ import services.SDate
 import services.graphstages.Crunch.{desksForHourOfDayInUKLocalTime, europeLondonTimeZone}
 
 import scala.collection.immutable.{NumericRange, SortedMap}
+import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
@@ -54,7 +55,7 @@ object Staffing {
     .toSeq
     .sortBy(_.time.millisSinceEpoch)
 
-  def staffMinutesForCrunchMinutes(crunchMinutes: SortedMap[TQM, CrunchMinute],
+  def staffMinutesForCrunchMinutes(crunchMinutes: mutable.SortedMap[TQM, CrunchMinute],
                                    maybeSources: StaffSources): SortedMap[TM, StaffMinute] = {
 
     val staff = maybeSources
@@ -89,8 +90,8 @@ object Staffing {
   def reconstructStaffMinutes(pointInTime: SDateLike,
                               expireAfterMillis: Long,
                               context: ActorContext,
-                              fl: Map[Int, ApiFlightWithSplits],
-                              cm: SortedMap[TQM, CrunchApi.CrunchMinute]): PortState = {
+                              fl: mutable.Map[Int, ApiFlightWithSplits],
+                              cm: mutable.SortedMap[TQM, CrunchApi.CrunchMinute]): PortStateMutable = {
     val uniqueSuffix = pointInTime.toISOString + UUID.randomUUID.toString
     val shiftsActor: ActorRef = context.actorOf(Props(classOf[ShiftsReadActor], pointInTime, () => SDate(expireAfterMillis)), name = s"ShiftsReadActor-$uniqueSuffix")
     val askableShiftsActor: AskableActorRef = shiftsActor
@@ -117,7 +118,7 @@ object Staffing {
     val staffSources = Staffing.staffAvailableByTerminalAndQueue(0L, shifts, fixedPoints, Option(movements))
     val staffMinutes = Staffing.staffMinutesForCrunchMinutes(cm, staffSources)
 
-    PortState(fl, cm, staffMinutes)
+    new PortStateMutable(fl, cm, mutable.SortedMap[TM, StaffMinute]() ++ staffMinutes)
   }
 
 }

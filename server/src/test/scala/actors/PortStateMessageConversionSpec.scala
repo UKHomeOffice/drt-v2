@@ -22,7 +22,7 @@ class PortStateMessageConversionSpec extends Specification {
       StaffMinuteMessage(Option("T1"), Option(validMinuteMilli), Option(0), Option(0), Option(0), None),
       StaffMinuteMessage(Option("T1"), Option(invalidMinuteMilli), Option(0), Option(0), Option(0), None)
     )
-    val state = snapshotMessageToState(CrunchStateSnapshotMessage(None, None, Seq(), crunchMinutes, staffMinutes), None)
+    val state = snapshotMessageToState(CrunchStateSnapshotMessage(None, None, Seq(), crunchMinutes, staffMinutes), None).immutable
 
     val expectedCrunchMinutes = SortedMap[TQM, CrunchMinute]() ++ Seq(CrunchMinute("T1", Queues.EeaDesk, validMinuteMilli, 0, 0, 0, 0, None, None, None, None, None)).map(m => (m.key, m))
     val expectedStaffMinutes = SortedMap[TM, StaffMinute]() ++ Seq(StaffMinute("T1", validMinuteMilli, 0, 0, 0, None)).map(m => (m.key, m))

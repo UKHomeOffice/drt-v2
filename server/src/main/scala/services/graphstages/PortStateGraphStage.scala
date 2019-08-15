@@ -53,32 +53,34 @@ class PortStateGraphStage(name: String = "",
   )
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var maybePortState: Option[PortState] = None
+    var portState: PortStateMutable = PortStateMutable.empty
     var maybePortStateDiff: Option[PortStateDiff] = None
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
     override def preStart(): Unit = {
       log.info(s"Received initial port state")
-      maybePortState = optionalInitialPortState
+      portState = optionalInitialPortState match {
+        case None => PortStateMutable.empty
+        case Some(portState) => portState.mutable
+      }
       super.preStart()
     }
 
     shape.inlets.foreach(inlet => {
       setHandler(inlet, new InHandler {
         override def onPush(): Unit = {
-          val (updatedState, stateDiff) = grab(inlet) match {
+          val stateDiff = grab(inlet) match {
             case incoming: PortStateMinutes =>
               log.info(s"Incoming ${inlet.toString}")
               val startTime = now().millisSinceEpoch
               val expireThreshold = now().addMillis(-1 * expireAfterMillis.toInt).millisSinceEpoch
-              val (newState, diff) = incoming
-                .applyTo(maybePortState, startTime)
+              val diff = incoming.applyTo(portState, startTime)
               val elapsedSeconds = (now().millisSinceEpoch - startTime).toDouble / 1000
               log.info(f"Finished processing $inlet data in $elapsedSeconds%.2f seconds")
-              (newState.purgeOlderThanDate(expireThreshold), diff)
+              diff
           }
 
-          maybePortState = Option(updatedState)
+          //          portState = Option(updatedState)
           maybePortStateDiff = mergeDiff(maybePortStateDiff, stateDiff)
 
           pushIfAppropriate()
@@ -133,15 +135,13 @@ class PortStateGraphStage(name: String = "",
         case None => log.info(s"No port state diff to push yet")
         case Some(_) if !isAvailable(outPortState) =>
           log.info(s"outPortState not available for pushing")
+        case Some(portStateDiff) if portStateDiff.isEmpty =>
+          log.info(s"Empty PortStateDiff. Nothing to push")
         case Some(portStateDiff) =>
           log.info(s"Pushing port state with diff")
-          maybePortState match {
-            case None =>
-            case Some(_) =>
-              val portStateWithDiff = PortStateWithDiff(PortState.empty, portStateDiff, diffMessage(portStateDiff))
-              maybePortStateDiff = None
-              push(outPortState, portStateWithDiff)
-          }
+          val portStateWithDiff = PortStateWithDiff(PortState.empty, portStateDiff, diffMessage(portStateDiff))
+          maybePortStateDiff = None
+          push(outPortState, portStateWithDiff)
       }
     }
   }

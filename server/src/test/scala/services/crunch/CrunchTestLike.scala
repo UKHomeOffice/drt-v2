@@ -1,5 +1,7 @@
 package services.crunch
 
+import java.util.UUID
+
 import actors.Sizes.oneMegaByte
 import actors._
 import akka.actor.{ActorRef, ActorSystem, Props}
@@ -23,32 +25,29 @@ import services.graphstages.Crunch._
 import services.graphstages.{DummySplitsPredictor, TestableCrunchLoadStage}
 import slickdb.Tables
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
 import scala.language.implicitConversions
+import scala.util.Success
 
 
 class LiveCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
   extends CrunchStateActor(None, oneMegaByte, s"live-test-$name", queues, now, expireAfterMillis, false) {
-  override def stateFromDiff(cdm: CrunchDiffMessage, existingState: Option[PortState]): Option[PortState] = {
+  override def applyDiff(cdm: CrunchDiffMessage): Unit = {
     log.info(s"calling parent updateState...")
-    val newState = super.stateFromDiff(cdm, existingState)
+    super.applyDiff(cdm)
 
-    probe ! newState.get
-
-    newState
+    probe ! state.immutable
   }
 }
 
 class ForecastCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
   extends CrunchStateActor(None, oneMegaByte, s"forecast-test-$name", queues, now, expireAfterMillis, false) {
-  override def stateFromDiff(cdm: CrunchDiffMessage, existingState: Option[PortState]): Option[PortState] = {
+  override def applyDiff(cdm: CrunchDiffMessage): Unit = {
     log.info(s"calling parent updateState...")
-    val newState = super.stateFromDiff(cdm, existingState)
+    super.applyDiff(cdm)
 
-    probe ! newState.get
-
-    newState
+    probe ! state.immutable
   }
 }
 
@@ -85,6 +84,7 @@ class CrunchTestLike
 
   implicit val actorSystem: ActorSystem = system
   implicit val materializer: ActorMaterializer = ActorMaterializer()
+  implicit val ec = ExecutionContext.global
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -131,7 +131,7 @@ class CrunchTestLike
 
   val pcpForFlight: Arrival => MilliDate = (a: Arrival) => MilliDate(SDate(a.Scheduled).millisSinceEpoch)
 
-  def liveCrunchStateActor(name: String = "", testProbe: TestProbe, now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[LiveCrunchStateTestActor], name, airportConfig.queues, testProbe.ref, now, 2 * oneDayMillis), name = "crunch-live-state-actor")
+  def liveCrunchStateActor(name: String = "", testProbe: TestProbe, now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[LiveCrunchStateTestActor], name, airportConfig.queues, testProbe.ref, now, 2 * oneDayMillis), name = "crunch-live-state-actor" + UUID.randomUUID().toString)
 
   def forecastCrunchStateActor(name: String = "", testProbe: TestProbe, now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[ForecastCrunchStateTestActor], name, airportConfig.queues, testProbe.ref, now, 2 * oneDayMillis), name = "crunch-forecast-state-actor")
 
@@ -174,6 +174,11 @@ class CrunchTestLike
     val manifestsRequestActor: ActorRef = testProbe("manifests-request").ref
 
     val liveCrunchActor = liveCrunchStateActor(logLabel, liveProbe, now)
+    val askableLive: AskableActorRef = liveCrunchActor
+    askableLive.ask(GetState)(5 seconds).onComplete {
+      case Success(Some(PortState(f, c, s))) =>
+        println(s"new live crunch actor got:\nflights: $f\ncrunch: $c\nstaff: $s")
+    }
     val forecastCrunchActor = forecastCrunchStateActor(logLabel, forecastProbe, now)
 
     val manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
