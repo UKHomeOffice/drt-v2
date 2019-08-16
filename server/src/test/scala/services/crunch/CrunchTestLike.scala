@@ -129,7 +129,14 @@ class CrunchTestLike
 
   val splitsPredictorStage = new DummySplitsPredictor()
 
-  val pcpForFlight: Arrival => MilliDate = (a: Arrival) => MilliDate(SDate(a.Scheduled).millisSinceEpoch)
+  val pcpForFlightFromSch: Arrival => MilliDate = (a: Arrival) => MilliDate(SDate(a.Scheduled).millisSinceEpoch)
+  val pcpForFlightFromBest: Arrival => MilliDate = (a: Arrival) => {
+    if (a.ActualChox.isDefined) MilliDate(SDate(a.ActualChox.get).millisSinceEpoch)
+    else if (a.EstimatedChox.isDefined) MilliDate(SDate(a.EstimatedChox.get).millisSinceEpoch)
+    else if (a.Actual.isDefined) MilliDate(SDate(a.Actual.get).millisSinceEpoch)
+    else if (a.Estimated.isDefined) MilliDate(SDate(a.Estimated.get).millisSinceEpoch)
+    else MilliDate(SDate(a.Scheduled).millisSinceEpoch)
+  }
 
   def liveCrunchStateActor(name: String = "", testProbe: TestProbe, now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[LiveCrunchStateTestActor], name, airportConfig.queues, testProbe.ref, now, 2 * oneDayMillis), name = "crunch-live-state-actor" + UUID.randomUUID().toString)
 
@@ -143,7 +150,7 @@ class CrunchTestLike
                      initialPortState: Option[PortState] = None,
                      airportConfig: AirportConfig = airportConfig,
                      csvSplitsProvider: SplitsProvider.SplitProvider = (_, _) => None,
-                     pcpArrivalTime: Arrival => MilliDate = pcpForFlight,
+                     pcpArrivalTime: Arrival => MilliDate = pcpForFlightFromSch,
                      minutesToCrunch: Int = 60,
                      expireAfterMillis: Long = DrtStaticParameters.expireAfterMillis,
                      calcPcpWindow: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)] = (_, _) => Some((SDate.now(), SDate.now())),

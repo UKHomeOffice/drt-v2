@@ -81,6 +81,7 @@ class WorkloadGraphStage(name: String = "",
         val existingFlightTQMs: Set[TQM] = incomingFlights.flightsToUpdate.flatMap(fws => flightTQMs.getOrElse(fws.apiFlight.uniqueId, List())).toSet
         log.info(s"Got existing flight TQMs")
         val updatedWorkloads = flightLoadMinutes(incomingFlights)
+
         log.info(s"Got updated workloads")
 
         flightLoadMinutes = mergeFlightLoadMinutes(existingFlightTQMs, updatedWorkloads, incomingFlights)

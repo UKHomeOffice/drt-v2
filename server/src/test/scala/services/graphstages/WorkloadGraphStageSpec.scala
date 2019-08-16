@@ -4,11 +4,13 @@ import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueW
 import akka.stream.{ClosedShape, OverflowStrategy}
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
-import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.CrunchApi.{CrunchMinute, PortState}
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared.PaxTypes.{EeaMachineReadable, VisaNational}
 import drt.shared.PaxTypesAndQueues.{eeaMachineReadableToDesk, visaNationalToDesk}
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
+import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.crunch.CrunchTestLike
 import services.graphstages.Crunch.{LoadMinute, Loads}
@@ -180,6 +182,220 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
     result === expectedLoads
   }
 
+  "Given a single flight with pax arriving at PCP at noon and going to a single queue " +
+    "When the PCP time updates to 1pm  " +
+    "Then the workload from noon should disappear and move to 1pm" >> {
+
+    val probe = TestProbe("workload")
+    val noon = "2018-01-01T12:00"
+    val onePm = "2018-01-01T00:06"
+    val workloadStart = (t: SDateLike) => Crunch.getLocalLastMidnight(t)
+    val workloadEnd = (t: SDateLike) => Crunch.getLocalNextMidnight(t)
+    val workloadWindow = (_: Set[ApiFlightWithSplits], _: Set[ApiFlightWithSplits]) => Option((workloadStart(SDate(noon)), workloadEnd(SDate(noon))))
+    val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60))
+    val testAirportConfig = airportConfig.copy(defaultProcessingTimes = procTimes)
+    val flightsWithSplits = TestableWorkloadStage(probe, () => SDate(noon), testAirportConfig, workloadStart, workloadEnd, workloadWindow).run
+
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = noon, actPax = Option(25))
+    val historicSplits = Splits(
+      Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100, None)),
+      SplitSources.Historical, None, Percentage)
+
+    val noonMillis = SDate(noon).millisSinceEpoch
+    val onePmMillis = SDate(onePm).millisSinceEpoch
+
+    val flight1 = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival.copy(PcpTime = Option(noonMillis)), Set(historicSplits), None)), Seq())
+    val flight1Update = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival.copy(PcpTime = Option(onePmMillis)), Set(historicSplits), None)), Seq())
+
+    Await.ready(flightsWithSplits.offer(flight1), 1 second)
+
+    probe.fishForMessage(2 seconds) {
+      case Loads(loadMinutes) =>
+        val nonZeroAtNoon = loadMinutes.get(TQM("T1", Queues.EeaDesk, noonMillis)) match {
+          case Some(cm) => cm.paxLoad > 0 && cm.workLoad > 0
+        }
+        nonZeroAtNoon
+    }
+
+    Await.ready(flightsWithSplits.offer(flight1Update), 1 second)
+
+    probe.fishForMessage(2 seconds) {
+      case Loads(loadMinutes) =>
+        val zeroAtNoon = loadMinutes.get(TQM("T1", Queues.EeaDesk, noonMillis)) match {
+          case Some(cm) => cm.paxLoad == 0 && cm.workLoad == 0
+        }
+        val nonZeroAtOnePm = loadMinutes.get(TQM("T1", Queues.EeaDesk, onePmMillis)) match {
+          case Some(cm) => cm.paxLoad > 0 && cm.workLoad > 0
+        }
+        zeroAtNoon && nonZeroAtOnePm
+    }
+
+    success
+  }
+
+  "Given a single flight with pax arriving at PCP at midnight " +
+    "When the PCP time updates to 00:30  " +
+    "Then the workload in the PortState from noon should disappear and move to 00:30" >> {
+
+    val noon = "2018-01-01T00:00"
+    val noon30 = "2018-01-01T00:30"
+    val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60))
+    val testAirportConfig = airportConfig.copy(
+      defaultProcessingTimes = procTimes,
+      terminalNames = Seq("T1"),
+      queues = Map("T1" -> Seq(Queues.EeaDesk))
+    )
+    val crunch = runCrunchGraph(
+      airportConfig = testAirportConfig,
+      now = () => SDate(noon),
+      pcpArrivalTime = pcpForFlightFromBest
+    )
+
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = noon, actPax = Option(25))
+
+    val noonMillis = SDate(noon).millisSinceEpoch
+    val noon30Millis = SDate(noon30).millisSinceEpoch
+
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival.copy(Estimated = Option(noonMillis))))))
+
+    crunch.liveTestProbe.fishForMessage(2 seconds) {
+      case PortState(_, cms, _) =>
+        val nonZeroAtNoon = cms.get(TQM("T1", Queues.EeaDesk, noonMillis)) match {
+          case None => false
+          case Some(cm) => cm.paxLoad == 20 && cm.workLoad == 10
+        }
+        nonZeroAtNoon
+    }
+
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival.copy(Estimated = Option(noon30Millis))))))
+
+    crunch.liveTestProbe.fishForMessage(2 seconds) {
+      case PortState(_, cms, _) =>
+        val zeroAtNoon = cms.get(TQM("T1", Queues.EeaDesk, noonMillis)) match {
+          case None => false
+          case Some(cm) => cm.paxLoad == 0 && cm.workLoad == 0
+        }
+        val nonZeroAtOnePm = cms.get(TQM("T1", Queues.EeaDesk, noon30Millis)) match {
+          case None => false
+          case Some(cm) => cm.paxLoad == 20 && cm.workLoad == 10
+        }
+        zeroAtNoon && nonZeroAtOnePm
+    }
+
+    success
+  }
+
+  "Given an existing single flight with pax arriving at PCP at midnight " +
+    "When the PCP time updates to 00:30  " +
+    "Then the workload in the PortState from noon should disappear and move to 00:30" >> {
+
+    val noon = "2018-01-01T00:00"
+    val noon30 = "2018-01-01T00:30"
+    val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60))
+    val testAirportConfig = airportConfig.copy(
+      defaultProcessingTimes = procTimes,
+      terminalNames = Seq("T1"),
+      queues = Map("T1" -> Seq(Queues.EeaDesk))
+    )
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = noon, actPax = Option(25))
+
+    val historicSplits = Splits(
+      Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100, None)),
+      SplitSources.Historical, None, Percentage)
+
+    val noonMillis = SDate(noon).millisSinceEpoch
+    val noon30Millis = SDate(noon30).millisSinceEpoch
+
+    val flight1 = ApiFlightWithSplits(arrival.copy(PcpTime = Option(noonMillis)), Set(historicSplits), None)
+
+    val initialPortState = PortState(
+      flightsWithSplits = List(flight1),
+      crunchMinutes = List(
+        CrunchMinute("T1", Queues.EeaDesk, noonMillis, 30, 10, 0, 0),
+        CrunchMinute("T1", Queues.EeaDesk, noonMillis + 60000, 5, 2.5, 0, 0),
+        CrunchMinute("T1", Queues.EeaDesk, noonMillis + 120000, 1, 1, 0, 0),
+        CrunchMinute("T1", Queues.EeaDesk, noonMillis + 180000, 1, 1, 0, 0)
+      ),
+      staffMinutes = List()
+    )
+    val crunch = runCrunchGraph(
+      airportConfig = testAirportConfig,
+      now = () => SDate(noon),
+      pcpArrivalTime = pcpForFlightFromBest,
+      initialPortState = Option(initialPortState)
+    )
+
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival.copy(Estimated = Option(noon30Millis))))))
+
+    crunch.liveTestProbe.fishForMessage(2 seconds) {
+      case PortState(_, cms, _) =>
+        val zeroAtNoon = cms.get(TQM("T1", Queues.EeaDesk, noonMillis)) match {
+          case None => false
+          case Some(cm) => cm.paxLoad == 0 && cm.workLoad == 0
+        }
+        val nonZeroAtOnePm = cms.get(TQM("T1", Queues.EeaDesk, noon30Millis)) match {
+          case None => false
+          case Some(cm) => cm.paxLoad == 20 && cm.workLoad == 10
+        }
+        zeroAtNoon && nonZeroAtOnePm
+    }
+
+    success
+  }
+
+  "Given a two flights with pax arriving at PCP at midnight " +
+    "When the PCP time updates to 00:30 for one " +
+    "Then the workload in the PortState from noon should spread between 00:00 and 00:30" >> {
+
+    val noon = "2018-01-01T00:00"
+    val noon30 = "2018-01-01T00:30"
+    val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60))
+    val testAirportConfig = airportConfig.copy(
+      defaultProcessingTimes = procTimes,
+      terminalNames = Seq("T1"),
+      queues = Map("T1" -> Seq(Queues.EeaDesk))
+    )
+    val crunch = runCrunchGraph(
+      airportConfig = testAirportConfig,
+      now = () => SDate(noon),
+      pcpArrivalTime = pcpForFlightFromBest
+    )
+
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", origin = "JFK", schDt = noon, actPax = Option(25))
+    val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", origin = "AAA", schDt = noon, actPax = Option(25))
+
+    val noonMillis = SDate(noon).millisSinceEpoch
+    val noon30Millis = SDate(noon30).millisSinceEpoch
+
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival, arrival2))))
+
+    crunch.liveTestProbe.fishForMessage(2 seconds) {
+      case PortState(_, cms, _) =>
+        val nonZeroAtNoon = cms.get(TQM("T1", Queues.EeaDesk, noonMillis)) match {
+          case None => false
+          case Some(cm) => cm.paxLoad == 40 && cm.workLoad == 20
+        }
+        nonZeroAtNoon
+    }
+
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival.copy(Estimated = Option(noon30Millis))))))
+
+    crunch.liveTestProbe.fishForMessage(2 seconds) {
+      case PortState(_, cms, _) =>
+        val zeroAtNoon = cms.get(TQM("T1", Queues.EeaDesk, noonMillis)) match {
+          case None => false
+          case Some(cm) => cm.paxLoad == 20 && cm.workLoad == 10
+        }
+        val nonZeroAtOnePm = cms.get(TQM("T1", Queues.EeaDesk, noon30Millis)) match {
+          case None => false
+          case Some(cm) => cm.paxLoad == 20 && cm.workLoad == 10
+        }
+        zeroAtNoon && nonZeroAtOnePm
+    }
+
+    success
+  }
+
   "Given two flights with splits with overlapping pax " +
     "When the first flight receives an estimated arrival time update and I ask for the workload " +
     "Then I should see the combined workload for those flights" >> {
@@ -197,13 +413,13 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(25))
     val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = scheduled2, actPax = Option(25))
     val historicSplits = Splits(Set(
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50, None),
-        ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 50, None)),
+      ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50, None),
+      ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 50, None)),
       SplitSources.Historical, None, Percentage)
 
     val flight1 = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, Set(historicSplits), None)), Seq())
     val flight2 = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival2, Set(historicSplits), None)), Seq())
-    val flight1Update = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival.copy(PcpTime = arrival.PcpTime.map(_+ 60000)), Set(historicSplits), None)), Seq())
+    val flight1Update = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival.copy(PcpTime = arrival.PcpTime.map(_ + 60000)), Set(historicSplits), None)), Seq())
 
     Await.ready(flightsWithSplits.offer(flight1), 1 second)
     Await.ready(flightsWithSplits.offer(flight2), 1 second)
