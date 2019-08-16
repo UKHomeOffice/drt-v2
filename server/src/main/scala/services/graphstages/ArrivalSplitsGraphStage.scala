@@ -13,6 +13,7 @@ import services._
 import services.graphstages.Crunch.purgeExpired
 
 import scala.collection.immutable.{Map, SortedMap}
+import scala.collection.mutable
 import scala.language.postfixOps
 
 case class UpdatedFlights(flights: SortedMap[ArrivalKey, ApiFlightWithSplits], updatesCount: Int, additionsCount: Int)
@@ -39,6 +40,7 @@ class ArrivalSplitsGraphStage(name: String = "",
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var flightsByFlightId: SortedMap[ArrivalKey, ApiFlightWithSplits] = SortedMap()
+//    val flightsByFlightId: mutable.SortedMap[ArrivalKey, ApiFlightWithSplits] = mutable.SortedMap()
     var arrivalsWithSplitsDiff: Map[ArrivalKey, ApiFlightWithSplits] = Map()
     var arrivalsToRemove: Set[Arrival] = Set()
     var manifestBuffer: Map[ArrivalKey, BestAvailableManifest] = Map()

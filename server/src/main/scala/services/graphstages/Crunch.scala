@@ -9,6 +9,7 @@ import services._
 import services.workloadcalculator.PaxLoadCalculator.Load
 
 import scala.collection.immutable.{Map, SortedMap, SortedSet}
+import scala.collection.mutable
 import scala.reflect.runtime.universe.{TypeTag, typeOf}
 
 object Crunch {
@@ -30,6 +31,7 @@ object Crunch {
 
   object Loads {
     def apply(lms: Seq[LoadMinute]): Loads = Loads(SortedMap[TQM, LoadMinute]() ++ lms.map(cm => (TQM(cm.terminalName, cm.queueName, cm.minute), cm)))
+
     def fromCrunchMinutes(cms: SortedMap[TQM, CrunchMinute]): Loads = Loads(cms.mapValues(LoadMinute(_)))
   }
 
@@ -160,6 +162,13 @@ object Crunch {
     desks(date.getHourOfDay)
   }
 
+  def purgeExpired[A <: WithTimeAccessor, B](expireable: mutable.SortedMap[A, B], now: () => SDateLike, expireAfter: Int): Unit = {
+    val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
+    expireable
+      .takeWhile { case (a: A, _) => a.timeValue < thresholdMillis }
+      .foreach { case (a, _) => expireable.remove(a) }
+  }
+
   def purgeExpired[A <: WithTimeAccessor, B](expireable: SortedMap[A, B], now: () => SDateLike, expireAfter: Int): SortedMap[A, B] = {
     val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
     expireable.dropWhile { case (a: A, _) => a.timeValue < thresholdMillis }
@@ -167,7 +176,9 @@ object Crunch {
 
   def purgeExpired[A <: WithTimeAccessor](expireable: SortedSet[A], now: () => SDateLike, expireAfter: Int): SortedSet[A] = {
     val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
-    expireable.dropWhile {_.timeValue < thresholdMillis}
+    expireable.dropWhile {
+      _.timeValue < thresholdMillis
+    }
   }
 
   def purgeExpired[A: TypeTag](expireable: List[(MillisSinceEpoch, A)], now: () => SDateLike, expireAfter: MillisSinceEpoch): List[(MillisSinceEpoch, A)] = {
