@@ -337,7 +337,7 @@ object BHXFlight extends NodeSeqUnmarshaller {
       BHXFlightStatus(f.status),
       maybeTimeStringToMaybeMillis(f.estimatedTouchDown),
       maybeTimeStringToMaybeMillis(f.actualTouchDown),
-      maybeTimeStringToMaybeMillis(f.estimatedOnBlocks),
+      None,
       maybeTimeStringToMaybeMillis(f.actualOnBlocks),
       f.passengerGate,
       f.aircraftParkingPosition,
