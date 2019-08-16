@@ -16,7 +16,7 @@ import scala.collection.immutable.{Map, SortedMap}
 import scala.collection.mutable
 import scala.language.postfixOps
 
-case class UpdatedFlights(flights: SortedMap[ArrivalKey, ApiFlightWithSplits], updatesCount: Int, additionsCount: Int)
+case class UpdateStats(updatesCount: Int, additionsCount: Int)
 
 
 class ArrivalSplitsGraphStage(name: String = "",
@@ -39,8 +39,7 @@ class ArrivalSplitsGraphStage(name: String = "",
   override val shape = new FanInShape3(inArrivalsDiff, inManifestsLive, inManifestsHistoric, outArrivalsWithSplits)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var flightsByFlightId: SortedMap[ArrivalKey, ApiFlightWithSplits] = SortedMap()
-//    val flightsByFlightId: mutable.SortedMap[ArrivalKey, ApiFlightWithSplits] = mutable.SortedMap()
+    var flightsByFlightId: mutable.SortedMap[ArrivalKey, ApiFlightWithSplits] = mutable.SortedMap()
     var arrivalsWithSplitsDiff: Map[ArrivalKey, ApiFlightWithSplits] = Map()
     var arrivalsToRemove: Set[Arrival] = Set()
     var manifestBuffer: Map[ArrivalKey, BestAvailableManifest] = Map()
@@ -50,8 +49,8 @@ class ArrivalSplitsGraphStage(name: String = "",
       optionalInitialFlights match {
         case Some(FlightsWithSplits(flights, _)) =>
           log.info(s"Received initial flights. Setting ${flights.size}")
-          val sortedFlightsByKey = SortedMap[ArrivalKey, ApiFlightWithSplits]() ++ flights.map(fws => (ArrivalKey(fws.apiFlight), fws))
-          flightsByFlightId = purgeExpired(sortedFlightsByKey, now, expireAfterMillis.toInt)
+          flights.foreach(fws => flightsByFlightId += (ArrivalKey(fws.apiFlight) -> fws))
+          purgeExpired(flightsByFlightId, now, expireAfterMillis.toInt)
         case _ =>
           log.warn(s"Did not receive any flights to initialise with")
       }
@@ -78,15 +77,14 @@ class ArrivalSplitsGraphStage(name: String = "",
         log.info(s"Grabbed ${arrivalsDiff.toUpdate.size} updates, ${arrivalsDiff.toRemove.size} removals")
 
         val flightsWithUpdates = applyUpdatesToFlights(arrivalsDiff)
-        val mergedFlights = updateFlightsFromIncoming(arrivalsDiff, flightsByFlightId)
-        val mergedMinusExpired = purgeExpired(mergedFlights, now, expireAfterMillis.toInt)
+        flightsByFlightId = updateFlightsFromIncoming(arrivalsDiff)
+        purgeExpired(flightsByFlightId, now, expireAfterMillis.toInt)
 
-        val uniqueFlightsWithUpdates = flightsWithUpdates.filterKeys(mergedMinusExpired.contains)
+        val uniqueFlightsWithUpdates = flightsWithUpdates.filterKeys(flightsByFlightId.contains)
 
         arrivalsWithSplitsDiff = mergeDiffSets(uniqueFlightsWithUpdates, arrivalsWithSplitsDiff)
         arrivalsToRemove = arrivalsToRemove ++ arrivalsDiff.toRemove
         log.info(s"${arrivalsWithSplitsDiff.size} updated arrivals waiting to push")
-        flightsByFlightId = mergedMinusExpired
 
         pushStateIfReady()
         pullAll()
@@ -129,11 +127,11 @@ class ArrivalSplitsGraphStage(name: String = "",
             case BestManifestsFeedSuccess(bestAvailableManifests, connectedAt) =>
               log.info(s"Grabbed ${bestAvailableManifests.size} BestAvailableManifests from connection at ${connectedAt.toISOString()}")
 
-              val (mergedFlights, flightsWithUpdates) = updateFlightsWithManifests(bestAvailableManifests, flightsByFlightId)
-              log.info(s"We now have ${mergedFlights.size} flights")
+              val flightsWithUpdates = updateFlightsWithManifests(bestAvailableManifests)
+              log.info(s"We now have ${flightsByFlightId.size} flights")
 
               arrivalsWithSplitsDiff = mergeDiffSets(flightsWithUpdates, arrivalsWithSplitsDiff)
-              flightsByFlightId = purgeExpired(mergedFlights, now, expireAfterMillis.toInt)
+              purgeExpired(flightsByFlightId, now, expireAfterMillis.toInt)
               log.info(s"Done diff")
 
               pushStateIfReady()
@@ -152,19 +150,18 @@ class ArrivalSplitsGraphStage(name: String = "",
       })
     }
 
-    def updateFlightsFromIncoming(arrivalsDiff: ArrivalsDiff,
-                                  existingFlightsById: SortedMap[ArrivalKey, ApiFlightWithSplits]): SortedMap[ArrivalKey, ApiFlightWithSplits] = {
-      log.info(s"${arrivalsDiff.toUpdate.size} diff updates, ${existingFlightsById.size} existing flights")
+    def updateFlightsFromIncoming(arrivalsDiff: ArrivalsDiff): mutable.SortedMap[ArrivalKey, ApiFlightWithSplits] = {
+      log.info(s"${arrivalsDiff.toUpdate.size} diff updates, ${flightsByFlightId.size} existing flights")
 
-      val afterRemovals = existingFlightsById -- arrivalsDiff.toRemove.map(ArrivalKey(_))
+      flightsByFlightId --= arrivalsDiff.toRemove.map(ArrivalKey(_))
 
-      val updatedFlights = arrivalsDiff.toUpdate.foldLeft(UpdatedFlights(afterRemovals, 0, 0)) {
-        case (updatesSoFar, (_, updatedFlight)) => updateWithFlight(updatesSoFar, updatedFlight)
+      val updateStats = arrivalsDiff.toUpdate.foldLeft(UpdateStats(0, 0)) {
+        case (statsSoFar, (_, updatedFlight)) => updateWithFlight(statsSoFar, updatedFlight)
       }
 
-      log.info(s"${updatedFlights.flights.size} flights after updates. ${updatedFlights.updatesCount} updates & ${updatedFlights.additionsCount} additions")
+      log.info(s"${flightsByFlightId.size} flights after updates. ${updateStats.updatesCount} updates & ${updateStats.additionsCount} additions")
 
-      val uniqueFlights = SortedMap[ArrivalKey, ApiFlightWithSplits]() ++ groupFlightsByCodeShares(updatedFlights.flights.values.toSeq)
+      val uniqueFlights = mutable.SortedMap[ArrivalKey, ApiFlightWithSplits]() ++ groupFlightsByCodeShares(flightsByFlightId.values.toSeq)
         .map { case (fws, _) => (ArrivalKey(fws.apiFlight), fws) }
 
       log.info(s"${uniqueFlights.size} flights after accounting for codeshares")
@@ -172,18 +169,18 @@ class ArrivalSplitsGraphStage(name: String = "",
       uniqueFlights
     }
 
-    def updateWithFlight(updatedFlights: UpdatedFlights, updatedFlight: Arrival): UpdatedFlights = {
+    def updateWithFlight(updatedFlights: UpdateStats, updatedFlight: Arrival): UpdateStats = {
       val key = ArrivalKey(updatedFlight)
-      updatedFlights.flights.get(key) match {
+      flightsByFlightId.get(key) match {
         case None =>
           val splits: Set[Splits] = initialSplits(updatedFlight, key)
           val newFlightWithSplits: ApiFlightWithSplits = ApiFlightWithSplits(updatedFlight, splits, nowMillis)
-          val withNewFlight = updatedFlights.flights.updated(key, newFlightWithSplits.copy(lastUpdated = nowMillis))
-          updatedFlights.copy(flights = withNewFlight, additionsCount = updatedFlights.additionsCount + 1)
+          flightsByFlightId += (key -> newFlightWithSplits.copy(lastUpdated = nowMillis))
+          updatedFlights.copy(additionsCount = updatedFlights.additionsCount + 1)
 
         case Some(existingFlight) if existingFlight.apiFlight != updatedFlight =>
-          val withUpdatedFlight = updatedFlights.flights.updated(key, existingFlight.copy(apiFlight = updatedFlight, lastUpdated = nowMillis))
-          updatedFlights.copy(flights = withUpdatedFlight, updatesCount = updatedFlights.updatesCount + 1)
+          flightsByFlightId += (key -> existingFlight.copy(apiFlight = updatedFlight, lastUpdated = nowMillis))
+          updatedFlights.copy(updatesCount = updatedFlights.updatesCount + 1)
 
         case _ => updatedFlights
       }
@@ -197,22 +194,22 @@ class ArrivalSplitsGraphStage(name: String = "",
       }
       else splitsCalculator.portDefaultSplits
 
-    def updateFlightsWithManifests(manifests: Seq[BestAvailableManifest],
-                                   flightsById: SortedMap[ArrivalKey, ApiFlightWithSplits]): (SortedMap[ArrivalKey, ApiFlightWithSplits], Map[ArrivalKey, ApiFlightWithSplits]) = {
-      manifests.foldLeft((flightsByFlightId, Map[ArrivalKey, ApiFlightWithSplits]())) {
-        case ((flightsSoFar, flightsWithNewSplits), newManifest) =>
+    def updateFlightsWithManifests(manifests: Seq[BestAvailableManifest]): Map[ArrivalKey, ApiFlightWithSplits] = {
+      manifests.foldLeft(Map[ArrivalKey, ApiFlightWithSplits]()) {
+        case (flightsWithNewSplits, newManifest) =>
           val key = ArrivalKey(newManifest.departurePortCode, newManifest.voyageNumber, newManifest.scheduled.millisSinceEpoch)
-          flightsSoFar.get(key) match {
+          flightsByFlightId.get(key) match {
             case Some(flightForManifest) =>
               val manifestSplits: Splits = splitsFromManifest(flightForManifest.apiFlight, newManifest)
 
               if (isNewManifestForFlight(flightForManifest, manifestSplits)) {
                 val flightWithManifestSplits = updateFlightWithSplits(flightForManifest, manifestSplits)
-                (flightsSoFar.updated(key, flightWithManifestSplits), flightsWithNewSplits.updated(key, flightWithManifestSplits))
-              } else (flightsSoFar, flightsWithNewSplits)
+                flightsByFlightId += (key-> flightWithManifestSplits)
+                flightsWithNewSplits.updated(key, flightWithManifestSplits)
+              } else flightsWithNewSplits
             case None =>
               manifestBuffer = manifestBuffer.updated(key, newManifest)
-              (flightsSoFar, flightsWithNewSplits)
+              flightsWithNewSplits
           }
       }
     }
