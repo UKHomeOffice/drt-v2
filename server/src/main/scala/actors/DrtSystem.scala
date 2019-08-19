@@ -246,7 +246,12 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
           val initialRegisteredArrivals = if (params.resetRegisteredArrivalOnStart) {
             log.info(s"Resetting registered arrivals for manifest lookups")
             val maybeAllArrivals: Option[SortedMap[ArrivalKey, Option[Long]]] = initialPortState
-              .map(state => SortedMap[ArrivalKey, Option[Long]]() ++ state.flights.values.map(fws => (ArrivalKey(fws.apiFlight), None)))
+              .map { state =>
+                val arrivalsByKey = state.flights.values.map(fws => (ArrivalKey(fws.apiFlight), None))
+                val arrivalsByKeySorted = SortedMap[ArrivalKey, Option[MillisSinceEpoch]]() ++ arrivalsByKey
+                log.info(s"Sending ${arrivalsByKeySorted.size} arrivals by key from ${state.flights.size} port state arrivals")
+                arrivalsByKeySorted
+              }
             Option(RegisteredArrivals(maybeAllArrivals.getOrElse(SortedMap())))
           } else maybeRegisteredArrivals
           val manifestsSourceQueue = startManifestsGraph(initialRegisteredArrivals)
