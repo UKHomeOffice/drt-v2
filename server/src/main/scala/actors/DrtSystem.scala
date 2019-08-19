@@ -411,9 +411,14 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   def mergePortStates(maybeForecastPs: Option[PortState],
                       maybeLivePs: Option[PortState]): Option[PortState] = (maybeForecastPs, maybeLivePs) match {
     case (None, None) => None
-    case (Some(fps), None) => Option(fps)
-    case (None, Some(lps)) => Option(lps)
+    case (Some(fps), None) =>
+      log.info(s"We only have initial forecast port state")
+      Option(fps)
+    case (None, Some(lps)) =>
+      log.info(s"We only have initial live port state")
+      Option(lps)
     case (Some(fps), Some(lps)) =>
+      log.info(s"Merging initial live & forecast port states. ${lps.flights.size} live flights, ${fps.flights.size} forecast flights")
       Option(PortState(
         fps.flights ++ lps.flights,
         fps.crunchMinutes ++ lps.crunchMinutes,
