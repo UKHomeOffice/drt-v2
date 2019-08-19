@@ -4,7 +4,7 @@ import actors.Sizes.oneMegaByte
 import akka.actor.Scheduler
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
-import com.trueaccord.scalapb.GeneratedMessage
+import scalapb.GeneratedMessage
 import drt.shared.{FixedPointAssignments, MilliDate, SDateLike, StaffAssignment}
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}

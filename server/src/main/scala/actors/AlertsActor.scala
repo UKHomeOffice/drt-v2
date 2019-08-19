@@ -2,7 +2,7 @@ package actors
 
 import actors.Sizes.oneMegaByte
 import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess, SnapshotSelectionCriteria}
-import com.trueaccord.scalapb.GeneratedMessage
+import scalapb.GeneratedMessage
 import drt.shared.Alert
 import org.joda.time.DateTime
 import org.slf4j.{Logger, LoggerFactory}

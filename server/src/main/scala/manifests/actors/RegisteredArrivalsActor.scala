@@ -1,7 +1,7 @@
 package manifests.actors
 
 import actors.{GetState, PersistentDrtActor, RecoveryActorLike, Sizes}
-import com.trueaccord.scalapb.GeneratedMessage
+import scalapb.GeneratedMessage
 import drt.shared.{ArrivalKey, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.RegisteredArrivalMessage.{RegisteredArrivalMessage, RegisteredArrivalsMessage}

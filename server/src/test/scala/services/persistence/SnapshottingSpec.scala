@@ -3,7 +3,7 @@ package services.persistence
 import actors.RecoveryActorLike
 import akka.actor.{ActorRef, Props}
 import akka.testkit.TestProbe
-import com.trueaccord.scalapb.GeneratedMessage
+import scalapb.GeneratedMessage
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.FlightsMessage.{FlightMessage, FlightsDiffMessage}
 import services.crunch.CrunchTestLike

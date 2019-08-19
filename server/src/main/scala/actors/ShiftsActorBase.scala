@@ -4,7 +4,7 @@ import actors.Sizes.oneMegaByte
 import akka.actor.Scheduler
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
-import com.trueaccord.scalapb.GeneratedMessage
+import scalapb.GeneratedMessage
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.TerminalName
 import drt.shared._

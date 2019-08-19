@@ -3,7 +3,6 @@ package controllers
 import java.nio.ByteBuffer
 import java.util.{Calendar, TimeZone, UUID}
 
-import javax.inject.{Inject, Singleton}
 import actors._
 import actors.pointInTime.{CrunchStateReadActor, FixedPointsReadActor}
 import akka.actor._
@@ -17,13 +16,14 @@ import boopickle.Default._
 import buildinfo.BuildInfo
 import com.typesafe.config.ConfigFactory
 import drt.http.ProdSendAndReceive
-import drt.shared.CrunchApi.{groupCrunchMinutesByX, _}
+import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.{AirportConfig, Api, Arrival, _}
 import drt.staff.ImportStaff
 import drt.users.{KeyCloakClient, KeyCloakGroups}
+import javax.inject.{Inject, Singleton}
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.{HeaderNames, HttpEntity}
@@ -39,10 +39,8 @@ import services.staffing.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import test.TestDrtSystem
-import upickle.default.write
-import upickle.default.read
+import upickle.default.{read, write}
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps

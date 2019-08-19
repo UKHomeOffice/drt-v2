@@ -17,6 +17,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import passengersplits.InMemoryPersistence
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
+import server.protobuf.messages.CrunchState.CrunchDiffMessage
 import services._
 import services.graphstages.Crunch._
 import services.graphstages.{DummySplitsPredictor, TestableCrunchLoadStage}
@@ -29,21 +30,25 @@ import scala.language.implicitConversions
 
 class LiveCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
   extends CrunchStateActor(None, oneMegaByte, s"live-test-$name", queues, now, expireAfterMillis, false) {
-  override def updateStateFromPortState(cs: PortState): Unit = {
+  override def stateFromDiff(cdm: CrunchDiffMessage, existingState: Option[PortState]): Option[PortState] = {
     log.info(s"calling parent updateState...")
-    super.updateStateFromPortState(cs)
+    val newState = super.stateFromDiff(cdm, existingState)
 
-    probe ! state.get
+    probe ! newState.get
+
+    newState
   }
 }
 
 class ForecastCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
   extends CrunchStateActor(None, oneMegaByte, s"forecast-test-$name", queues, now, expireAfterMillis, false) {
-  override def updateStateFromPortState(cs: PortState): Unit = {
+  override def stateFromDiff(cdm: CrunchDiffMessage, existingState: Option[PortState]): Option[PortState] = {
     log.info(s"calling parent updateState...")
-    super.updateStateFromPortState(cs)
+    val newState = super.stateFromDiff(cdm, existingState)
 
-    probe ! state.get
+    probe ! newState.get
+
+    newState
   }
 }
 
