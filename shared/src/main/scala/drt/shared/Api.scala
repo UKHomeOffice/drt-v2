@@ -932,6 +932,12 @@ object CrunchApi {
       IMap[Int, ApiFlightWithSplits]() ++ flights,
       ISortedMap[TQM, CrunchMinute]() ++ crunchMinutes,
       ISortedMap[TM, StaffMinute]() ++ staffMinutes)
+
+    def clear: Unit = {
+      flights.clear
+      crunchMinutes.clear
+      staffMinutes.clear
+    }
   }
 
   object PortState {

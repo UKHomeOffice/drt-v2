@@ -115,30 +115,15 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
   def stateForPeriodForTerminal(start: MillisSinceEpoch, end: MillisSinceEpoch, terminalName: TerminalName): Option[PortState] = Option(state.windowWithTerminalFilter(SDate(start), SDate(end), portQueues.filterKeys(_ == terminalName)))
 
   def setStateFromSnapshot(snapshot: CrunchStateSnapshotMessage, timeWindowEnd: Option[SDateLike] = None): Unit = {
-    val newState = snapshotMessageToState(snapshot, timeWindowEnd)
-    state.flights.empty ++= newState.flights
-    state.staffMinutes.empty ++= newState.staffMinutes
-    state.crunchMinutes.empty ++= newState.crunchMinutes
+    snapshotMessageToState(snapshot, timeWindowEnd, state)
   }
 
   def applyDiff(cdm: CrunchDiffMessage): Unit = {
     val (flightRemovals, flightUpdates, crunchMinuteUpdates, staffMinuteUpdates): (Set[Int], Set[ApiFlightWithSplits], Set[CrunchMinute], Set[StaffMinute]) = crunchDiffFromMessage(cdm)
-    //    println(s"flight updates:\n${flightUpdates.mkString("\n")}")
     state.applyFlightsWithSplitsDiff(flightRemovals, flightUpdates, now().millisSinceEpoch)
     state.applyCrunchDiff(crunchMinuteUpdates, now().millisSinceEpoch)
     state.applyStaffDiff(staffMinuteUpdates, now().millisSinceEpoch)
   }
-
-  //  def applyDiff(cdm: CrunchDiffMessage, existingState: Option[PortStateMutable]): Unit = {
-  //    val (flightRemovals, flightUpdates, crunchMinuteUpdates, staffMinuteUpdates): (Set[Int], Set[ApiFlightWithSplits], Set[CrunchMinute], Set[StaffMinute]) = crunchDiffFromMessage(cdm)
-  //    println(s"flight updates:\n${flightUpdates.mkString("\n")}")
-  //    existingState.foreach { ps =>
-  //      ps.applyFlightsWithSplitsDiff(flightRemovals, flightUpdates, SDate.now().millisSinceEpoch)
-  //      ps.applyCrunchDiff(crunchMinuteUpdates, SDate.now().millisSinceEpoch)
-  //      ps.applyStaffDiff(staffMinuteUpdates, SDate.now().millisSinceEpoch)
-  //      state = Option(ps)
-  //    }
-  //  }
 
   def crunchDiffFromMessage(diffMessage: CrunchDiffMessage): (Set[Int], Set[ApiFlightWithSplits], Set[CrunchMinute], Set[StaffMinute]) = (
     diffMessage.flightIdsToRemove.toSet,
