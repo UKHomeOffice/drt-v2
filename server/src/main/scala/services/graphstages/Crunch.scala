@@ -169,6 +169,13 @@ object Crunch {
       .foreach { case (a, _) => expireable.remove(a) }
   }
 
+  def purgeExpired[A <: WithTimeAccessor](expireable: mutable.SortedSet[A], now: () => SDateLike, expireAfter: Int): Unit = {
+    val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
+    expireable
+      .takeWhile { a: A => a.timeValue < thresholdMillis }
+      .foreach(a => expireable.remove(a))
+  }
+
   def purgeExpired[A <: WithTimeAccessor, B](expireable: SortedMap[A, B], now: () => SDateLike, expireAfter: Int): SortedMap[A, B] = {
     val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
     expireable.dropWhile { case (a: A, _) => a.timeValue < thresholdMillis }

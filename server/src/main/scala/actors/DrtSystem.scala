@@ -46,6 +46,7 @@ import services.prediction.SparkSplitsPredictorFactory
 import slickdb.{ArrivalTable, Tables, VoyageManifestPassengerInfoTable}
 
 import scala.collection.immutable.SortedMap
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -245,14 +246,14 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         if (!params.useLegacyManifests) {
           val initialRegisteredArrivals = if (params.resetRegisteredArrivalOnStart) {
             log.info(s"Resetting registered arrivals for manifest lookups")
-            val maybeAllArrivals: Option[SortedMap[ArrivalKey, Option[Long]]] = initialPortState
+            val maybeAllArrivals: Option[mutable.SortedMap[ArrivalKey, Option[Long]]] = initialPortState
               .map { state =>
-                val arrivalsByKey = state.flights.values.map(fws => (ArrivalKey(fws.apiFlight), None))
-                val arrivalsByKeySorted = SortedMap[ArrivalKey, Option[MillisSinceEpoch]]() ++ arrivalsByKey
+                val arrivalsByKeySorted = mutable.SortedMap[ArrivalKey, Option[MillisSinceEpoch]]()
+                state.flights.values.foreach(fws => arrivalsByKeySorted += (ArrivalKey(fws.apiFlight) -> None))
                 log.info(s"Sending ${arrivalsByKeySorted.size} arrivals by key from ${state.flights.size} port state arrivals")
                 arrivalsByKeySorted
               }
-            Option(RegisteredArrivals(maybeAllArrivals.getOrElse(SortedMap())))
+            Option(RegisteredArrivals(maybeAllArrivals.getOrElse(mutable.SortedMap())))
           } else maybeRegisteredArrivals
           val manifestsSourceQueue = startManifestsGraph(initialRegisteredArrivals)
           voyageManifestsRequestActor ! SubscribeRequestQueue(manifestsSourceQueue)
