@@ -181,11 +181,6 @@ class CrunchTestLike
     val manifestsRequestActor: ActorRef = testProbe("manifests-request").ref
 
     val liveCrunchActor = liveCrunchStateActor(logLabel, liveProbe, now)
-    val askableLive: AskableActorRef = liveCrunchActor
-    askableLive.ask(GetState)(5 seconds).onComplete {
-      case Success(Some(PortState(f, c, s))) =>
-        println(s"new live crunch actor got:\nflights: $f\ncrunch: $c\nstaff: $s")
-    }
     val forecastCrunchActor = forecastCrunchStateActor(logLabel, forecastProbe, now)
 
     val manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)

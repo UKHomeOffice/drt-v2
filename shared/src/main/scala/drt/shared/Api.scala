@@ -197,6 +197,20 @@ object UniqueArrival {
   def apply(arrival: Arrival): UniqueArrival = UniqueArrival(arrival.flightNumber, arrival.Terminal, arrival.Scheduled)
 }
 
+case class CodeShareKey(scheduled: Long, terminalName: TerminalName, origin: String, arrivalKeys: Set[ArrivalKey]) extends Ordered[CodeShareKey] {
+  lazy val comparisonStringForEquality = s"$scheduled-$terminalName-$origin"
+
+  lazy val comparisonStringForOrdering = s"${100 - arrivalKeys.size}-$scheduled-$terminalName-$origin"
+
+  override def equals(o: scala.Any): Boolean = o match {
+    case o: CodeShareKey => o.comparisonStringForEquality == comparisonStringForEquality
+    case _ => false
+  }
+
+  override def compare(that: CodeShareKey): Int =
+    if (this.equals(that)) 0 else this.comparisonStringForOrdering.compareTo(that.comparisonStringForOrdering)
+}
+
 object MinuteHelper {
   def key(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch): TQM = TQM(terminalName, queueName, minute)
 
