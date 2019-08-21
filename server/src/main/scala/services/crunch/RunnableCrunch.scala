@@ -172,8 +172,8 @@ object RunnableCrunch {
           fixedPoints     ~> staff.in1
           staffMovements  ~> staff.in2
 
-          arrivals.out/*.throttle(1, 2 milliseconds)*/ ~> arrivalsGraphKillSwitch ~> arrivalsFanOut ~> arrivalSplits.in0
-                                                                                             arrivalsFanOut ~> manifestsRequestSink
+          arrivals.out ~> arrivalsGraphKillSwitch ~> arrivalsFanOut ~> arrivalSplits.in0
+                                                     arrivalsFanOut ~> manifestsRequestSink
 
           arrivalSplits.out ~> arrivalSplitsFanOut ~> workload
                                arrivalSplitsFanOut ~> portState.in0

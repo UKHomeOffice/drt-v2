@@ -123,7 +123,7 @@ class BatchStage(now: () => SDateLike,
           lookupQueue.take(batchSize)
       }
 
-      nextLookupBatch.foreach(lookupQueue -= _)
+      lookupQueue --= nextLookupBatch
 
       val lookupTime: MillisSinceEpoch = now().millisSinceEpoch
 

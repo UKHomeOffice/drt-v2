@@ -36,18 +36,7 @@ class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, expire
       }
   }
 
-  override def postRecoveryComplete(): Unit = {
-    logPointInTimeCompleted(pointInTime)
-
-//    state = state.map {
-//      case PortStateMutable(fl, cm, _) if staffReconstructionRequired =>
-//        log.info(s"Staff minutes require reconstructing for PortState before 2017-12-04. Attempting to reconstruct")
-//        val updatedPortState = reconstructStaffMinutes(pointInTime, expireAfterMillis, context, fl, cm)
-//        log.info(s"Updating port state with ${updatedPortState.staffMinutes.size} staff minutes")
-//        updatedPortState
-//      case ps => ps
-//    }
-  }
+  override def postRecoveryComplete(): Unit = logPointInTimeCompleted(pointInTime)
 
   override def receiveCommand: Receive = {
     case SaveSnapshotSuccess =>

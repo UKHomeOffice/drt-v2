@@ -68,7 +68,7 @@ class SimulationGraphStage(name: String = "",
 
         val affectedTerminals = incomingLoads.loadMinutes.map { case (TQM(t, _, _), _) => t }.toSet.toSeq
 
-        mergeLoads(incomingLoads.loadMinutes)
+        loadMinutes ++= incomingLoads.loadMinutes
         purgeExpired(loadMinutes, now, expireAfterMillis.toInt)
 
         val allMinuteMillis = incomingLoads.loadMinutes.keys.map(_.minute)
@@ -131,7 +131,7 @@ class SimulationGraphStage(name: String = "",
       val deploymentUpdates = deploymentsForMillis(firstMillis, lastMillis, affectedTerminals)
 
       log.info(s"Merging updated deployments into existing")
-      deploymentUpdates.foreach { case (tqm, staff) => deployments += (tqm -> staff) }
+      deployments ++= deploymentUpdates
     }
 
     setHandler(outSimulationMinutes, new OutHandler {
@@ -380,10 +380,6 @@ class SimulationGraphStage(name: String = "",
       loadDiff
     }
 
-    def mergeLoads(incomingLoads: SortedMap[TQM, LoadMinute]): Unit = incomingLoads.foreach {
-      case (tqm, load) => loadMinutes += (tqm -> load)
-    }
-
     def pullAll(): Unit = {
       if (!hasBeenPulled(inLoads)) {
         log.info(s"Pulling inFlightsWithSplits")
@@ -450,22 +446,6 @@ case class SimulationMinute(terminalName: TerminalName,
 }
 
 case class SimulationMinutes(minutes: Seq[SimulationMinute]) extends PortStateMinutes {
-  def applyTo(maybePortState: Option[PortState], now: MillisSinceEpoch): (PortState, PortStateDiff) = {
-    val portState = maybePortState match {
-      case None => PortState.empty
-      case Some(ps) => ps
-    }
-
-    val (updatedCrunchMinutes, minutesDiff) = minutes
-      .foldLeft((portState.crunchMinutes, List[CrunchMinute]())) {
-        case ((minutesSoFar, updatesSoFar), updatedCm) =>
-          val maybeMinute: Option[CrunchMinute] = minutesSoFar.get(updatedCm.key)
-          val mergedCm: CrunchMinute = mergeMinute(maybeMinute, updatedCm, now)
-          (minutesSoFar.updated(updatedCm.key, mergedCm), mergedCm :: updatesSoFar)
-      }
-    (portState.copy(crunchMinutes = updatedCrunchMinutes), PortStateDiff(Seq(), Seq(), minutesDiff, Seq()))
-  }
-
   def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
     val minutesDiff = minutes.foldLeft(List[CrunchMinute]()) { case (soFar, dm) =>
       val key = dm.key

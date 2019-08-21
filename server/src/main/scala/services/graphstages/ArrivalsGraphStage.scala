@@ -126,7 +126,7 @@ class ArrivalsGraphStage(name: String = "",
     }
 
     def mergeUpdatesFromAllSources(): Option[ArrivalsDiff] = maybeDiffFromAllSources().map(diff => {
-      merged -- diff.toRemove.map(ArrivalKey(_))
+      merged --= diff.toRemove.map(ArrivalKey(_))
       diff.toUpdate.foreach {
         case (ak, updatedArrival) => merged += (ak -> updatedArrival)
       }

@@ -9,10 +9,8 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchMinuteMessage, StaffMinuteMessage}
 import services.SDate
-import services.graphstages.Crunch._
 
-import scala.collection.immutable
-import scala.collection.immutable.{Map, SortedMap}
+import scala.collection.immutable.Map
 
 case class PortStateWithDiff(portState: PortState, diff: PortStateDiff, diffMessage: CrunchDiffMessage) {
   def window(start: SDateLike, end: SDateLike, portQueues: Map[TerminalName, Seq[QueueName]]): PortStateWithDiff = {
@@ -80,7 +78,6 @@ class PortStateGraphStage(name: String = "",
               diff
           }
 
-          //          portState = Option(updatedState)
           maybePortStateDiff = mergeDiff(maybePortStateDiff, stateDiff)
 
           pushIfAppropriate()

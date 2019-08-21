@@ -21,7 +21,8 @@ class PortStateMinutesSpec extends Specification {
 
       "To an empty PortState" >> {
         "Then I should see those flights in the PortState" >> {
-          val (portState, _) = newFlightsWithSplits.applyTo(None, now)
+          val portState = PortStateMutable.empty
+          newFlightsWithSplits.applyTo(portState, now)
           val expected = PortState(newFlightsWithSplits.flightsToUpdate.toList.map(_.copy(lastUpdated = Option(now))), List(), List())
 
           portState.flights === expected.flights
@@ -33,8 +34,9 @@ class PortStateMinutesSpec extends Specification {
           val existingFlights = (1 to 5).map(d =>
             ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA2222", schDt = s"2019-01-0${d}T12:00.00Z", terminal = "T1"), Set()))
 
-          val existingPortState = Option(PortState(existingFlights.toList, List(), List()))
-          val (portState, _) = newFlightsWithSplits.applyTo(existingPortState, now)
+          val existingPortState = PortState(existingFlights.toList, List(), List()).mutable
+          newFlightsWithSplits.applyTo(existingPortState, now)
+          val portState = existingPortState.immutable
           val expected = existingFlights.toSet ++ newFlightsWithSplits.flightsToUpdate.map(_.copy(lastUpdated = Option(now))).toSet
 
           portState.flights.values.toSet === expected
@@ -49,7 +51,8 @@ class PortStateMinutesSpec extends Specification {
 
       "To an empty PortState" >> {
         "Then I should see those minutes in the PortState" >> {
-          val (portState, _) = newStaffMinutes.applyTo(None, now)
+          val portState = PortStateMutable.empty
+          newStaffMinutes.applyTo(portState, now)
           val expected = PortState(List(), List(), newStaffMinutes.minutes.toList.map(_.copy(lastUpdated = Option(now))))
 
           portState.staffMinutes === expected.staffMinutes
@@ -60,8 +63,9 @@ class PortStateMinutesSpec extends Specification {
         "Then I should see the existing and new minutes in the PortState" >> {
           val existingStaffMinutes = StaffMinutes((100 to 105).map(d => StaffMinute("T1", d, d, d, d, None)))
 
-          val existingPortState = Option(PortState(List(), List(), existingStaffMinutes.minutes.toList))
-          val (portState, _) = newStaffMinutes.applyTo(existingPortState, now)
+          val existingPortState = PortState(List(), List(), existingStaffMinutes.minutes.toList).mutable
+          newStaffMinutes.applyTo(existingPortState, now)
+          val portState = existingPortState.immutable
           val expectedMinutes = existingStaffMinutes.minutes ++ newStaffMinutes.minutes.map(_.copy(lastUpdated = Option(now)))
           val expected = PortState(List(), List(), expectedMinutes.toList)
 
@@ -80,7 +84,8 @@ class PortStateMinutesSpec extends Specification {
 
       "To an empty PortState" >> {
         "Then I should see those desk stats in the PortState crunch minutes" >> {
-          val (portState, _) = newActualDeskStats.applyTo(None, now)
+          val portState = PortStateMutable.empty
+          newActualDeskStats.applyTo(portState, now)
           val expected = PortState(List(), newCrunchMinutes.toList, List())
 
           portState.crunchMinutes === expected.crunchMinutes
@@ -93,8 +98,9 @@ class PortStateMinutesSpec extends Specification {
           val existingCrunchMinutes = existingActualDeskStats.minutes.map {
             case (TQM(t, q, m), ds) => CrunchMinute(t, q, m, 0, 0, 0, 0, None, None, ds.desks, ds.waitTime, Option(now))
           }
-          val existingPortState = Option(PortState(List(), existingCrunchMinutes.toList, List()))
-          val (portState, _) = newActualDeskStats.applyTo(existingPortState, now)
+          val existingPortState = PortState(List(), existingCrunchMinutes.toList, List()).mutable
+          newActualDeskStats.applyTo(existingPortState, now)
+          val portState = existingPortState.immutable
           val expectedMinutes = existingCrunchMinutes ++ newCrunchMinutes.map(_.copy(lastUpdated = Option(now)))
           val expected = PortState(List(), expectedMinutes.toList, List())
 
@@ -111,7 +117,8 @@ class PortStateMinutesSpec extends Specification {
 
       "To an empty PortState" >> {
         "Then I should see those minutes in the PortState" >> {
-          val (portState, _) = newDeskRecMinutes.applyTo(None, now)
+          val portState = PortStateMutable.empty
+          newDeskRecMinutes.applyTo(portState, now)
           val expected = PortState(List(), newCrunchMinutes, List())
 
           portState.crunchMinutes === expected.crunchMinutes
@@ -122,8 +129,9 @@ class PortStateMinutesSpec extends Specification {
         "Then I should see the existing and new minutes in the PortState" >> {
           val existingDeskRecMinutes = DeskRecMinutes((100 to 105).map(d => DeskRecMinute("T1", Queues.EeaDesk, d, d, d, d, d)))
           val existingCrunchMinutes = existingDeskRecMinutes.minutes.toList.map(CrunchMinute(_))
-          val existingPortState = Option(PortState(List(), existingCrunchMinutes, List()))
-          val (portState, _) = newDeskRecMinutes.applyTo(existingPortState, now)
+          val existingPortState = PortState(List(), existingCrunchMinutes, List()).mutable
+          newDeskRecMinutes.applyTo(existingPortState, now)
+          val portState = existingPortState.immutable
           val expectedMinutes = existingCrunchMinutes ++ newCrunchMinutes.map(_.copy(lastUpdated = Option(now)))
           val expected = PortState(List(), expectedMinutes, List())
 
@@ -140,7 +148,8 @@ class PortStateMinutesSpec extends Specification {
 
       "To an empty PortState" >> {
         "Then I should see those minutes in the PortState" >> {
-          val (portState, _) = newSimulationMinutes.applyTo(None, now)
+          val portState = PortStateMutable.empty
+          newSimulationMinutes.applyTo(portState, now)
           val expected = PortState(List(), newCrunchMinutes, List())
 
           portState.crunchMinutes === expected.crunchMinutes
@@ -151,8 +160,9 @@ class PortStateMinutesSpec extends Specification {
         "Then I should see the existing and new minutes in the PortState" >> {
           val existingSimulationMinutes = SimulationMinutes((100 to 105).map(d => SimulationMinute("T1", Queues.EeaDesk, d, d, d)))
           val existingCrunchMinutes = existingSimulationMinutes.minutes.toList.map(CrunchMinute(_))
-          val existingPortState = Option(PortState(List(), existingCrunchMinutes, List()))
-          val (portState, _) = newSimulationMinutes.applyTo(existingPortState, now)
+          val existingPortState = PortState(List(), existingCrunchMinutes, List()).mutable
+          newSimulationMinutes.applyTo(existingPortState, now)
+          val portState = existingPortState.immutable
           val expectedMinutes = existingCrunchMinutes ++ newCrunchMinutes.map(_.copy(lastUpdated = Option(now)))
           val expected = PortState(List(), expectedMinutes, List())
 

@@ -100,14 +100,11 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     crunch.liveTestProbe.fishForMessage(3 seconds) {
       case ps: PortState =>
-        println(s"Got ps.crunchMinutes: ${ps.crunchMinutes}")
         val queuePax = ps.crunchMinutes
           .values
           .filter(cm => cm.minute == SDate(scheduled).millisSinceEpoch)
           .map(cm => (cm.queueName, cm.paxLoad))
           .toMap
-        println(s"sched: ${SDate(scheduled).millisSinceEpoch}")
-        println(s"queuePax: $queuePax")
 
         queuePax == expected
     }
@@ -117,133 +114,133 @@ class VoyageManifestsSpec extends CrunchTestLike {
     success
   }
 
-//  "Given a VoyageManifest with 2 transfers and one Eea Passport " +
-//    "When I crunch the flight with 10 pax minus 5 transit " +
-//    "Then I should see the 5 non-transit pax go to the egates" >> {
-//
-//    val scheduled = "2017-01-01T00:00Z"
-//    val portCode = "LHR"
-//
-//    val flight = ArrivalGenerator.arrival(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "TST001", terminal = "T1", actPax = Option(10), tranPax = Option(5))
-//    val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
-//      VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", List(
-//        euPassport,
-//        inTransitFlag,
-//        inTransitCountry
-//      ))
-//    )))
-//    val crunch = runCrunchGraph(
-//      now = () => SDate(scheduled),
-//      airportConfig = airportConfig.copy(
-//        portCode = portCode,
-//        defaultProcessingTimes = Map("T1" -> Map(
-//          eeaMachineReadableToDesk -> 25d / 60,
-//          eeaMachineReadableToEGate -> 25d / 60
-//        )),
-//        terminalNames = Seq("T1"),
-//        queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
-//      ),
-//      initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
-//    )
-//
-//    offerAndWait(crunch.manifestsLiveInput, inputManifests)
-//
-//    val expected = Map(Queues.EeaDesk -> 1.0, Queues.EGate -> 4.0, Queues.NonEeaDesk -> 0.0)
-//
-//    crunch.liveTestProbe.fishForMessage(3 seconds) {
-//      case ps: PortState =>
-//        val queuePax = ps.crunchMinutes
-//          .values
-//          .filter(cm => cm.minute == SDate(scheduled).millisSinceEpoch)
-//          .map(cm => (cm.queueName, cm.paxLoad))
-//          .toMap
-//
-//        queuePax == expected
-//    }
-//
-//    crunch.liveArrivalsInput.complete()
-//
-//    success
-//  }
-//
-//  "Given a voyage manifest then I should get a BestAvailableManifest that matches it" >> {
-//    val vm = VoyageManifest(DqEventCodes.CheckIn, "LHR", "JFK", "0001", "BA", "2017-01-01", "00:00", List(
-//      inTransitFlag,
-//      inTransitCountry,
-//      euPassport,
-//      euIdCard,
-//      visa,
-//      visa
-//    ))
-//
-//    val result = BestAvailableManifest(vm)
-//
-//    val expected = BestAvailableManifest(
-//      ApiSplitsWithHistoricalEGateAndFTPercentages,"LHR","JFK","0001","BA",SDate("2017-01-01"),
-//      List(
-//        ManifestPassengerProfile("GBR",Some("P"),Some(22),Some(true)),
-//        ManifestPassengerProfile("GBR",Some("P"),Some(22),Some(true)),
-//        ManifestPassengerProfile("GBR",Some("P"),Some(22),Some(false)),
-//        ManifestPassengerProfile("GBR",Some("I"),Some(22),Some(false)),
-//        ManifestPassengerProfile("AFG",Some("P"),Some(22),Some(false)),
-//        ManifestPassengerProfile("AFG",Some("P"),Some(22),Some(false))
-//      )
-//    )
-//
-//    result === expected
-//  }
-//
-//  "Given a VoyageManifest with 2 transfers, 1 Eea Passport, 1 Eea Id card, and 2 visa nationals " +
-//    "When I crunch the flight with 4 non-transit pax (10 pax minus 6 transit) " +
-//    "Then I should see the 4 non-transit pax go to egates (1), eea desk (1), and non-eea (2)" >> {
-//
-//    val scheduled = "2017-01-01T00:00Z"
-//    val portCode = "LHR"
-//
-//    val flight = ArrivalGenerator.arrival(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "TST001", terminal = "T1", actPax = Option(10), tranPax = Option(6))
-//    val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
-//      VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "TS", "2017-01-01", "00:00", List(
-//        inTransitFlag,
-//        inTransitCountry,
-//        euPassport,
-//        euIdCard,
-//        visa,
-//        visa
-//      ))
-//    )))
-//    val crunch = runCrunchGraph(
-//      now = () => SDate(scheduled),
-//      airportConfig = airportConfig.copy(
-//        portCode = portCode,
-//        defaultProcessingTimes = Map("T1" -> Map(
-//          eeaMachineReadableToDesk -> 25d / 60,
-//          eeaNonMachineReadableToDesk -> 25d / 60,
-//          eeaMachineReadableToEGate -> 25d / 60,
-//          visaNationalToDesk -> 25d / 60
-//        )),
-//        terminalNames = Seq("T1"),
-//        queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
-//      ),
-//      initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
-//    )
-//
-//    offerAndWait(crunch.manifestsLiveInput, inputManifests)
-//
-//    val expected = Map(Queues.EeaDesk -> 1.2, Queues.EGate -> 0.8, Queues.NonEeaDesk -> 2.0)
-//
-//    crunch.liveTestProbe.fishForMessage(10 seconds) {
-//      case ps: PortState =>
-//        val queuePax = ps.crunchMinutes
-//          .values
-//          .filter(cm => cm.minute == SDate(scheduled).millisSinceEpoch)
-//          .map(cm => (cm.queueName, cm.paxLoad))
-//          .toMap
-//
-//        queuePax == expected
-//    }
-//
-//    success
-//  }
+  "Given a VoyageManifest with 2 transfers and one Eea Passport " +
+    "When I crunch the flight with 10 pax minus 5 transit " +
+    "Then I should see the 5 non-transit pax go to the egates" >> {
+
+    val scheduled = "2017-01-01T00:00Z"
+    val portCode = "LHR"
+
+    val flight = ArrivalGenerator.arrival(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "TST001", terminal = "T1", actPax = Option(10), tranPax = Option(5))
+    val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
+      VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", List(
+        euPassport,
+        inTransitFlag,
+        inTransitCountry
+      ))
+    )))
+    val crunch = runCrunchGraph(
+      now = () => SDate(scheduled),
+      airportConfig = airportConfig.copy(
+        portCode = portCode,
+        defaultProcessingTimes = Map("T1" -> Map(
+          eeaMachineReadableToDesk -> 25d / 60,
+          eeaMachineReadableToEGate -> 25d / 60
+        )),
+        terminalNames = Seq("T1"),
+        queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
+      ),
+      initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
+    )
+
+    offerAndWait(crunch.manifestsLiveInput, inputManifests)
+
+    val expected = Map(Queues.EeaDesk -> 1.0, Queues.EGate -> 4.0, Queues.NonEeaDesk -> 0.0)
+
+    crunch.liveTestProbe.fishForMessage(3 seconds) {
+      case ps: PortState =>
+        val queuePax = ps.crunchMinutes
+          .values
+          .filter(cm => cm.minute == SDate(scheduled).millisSinceEpoch)
+          .map(cm => (cm.queueName, cm.paxLoad))
+          .toMap
+
+        queuePax == expected
+    }
+
+    crunch.liveArrivalsInput.complete()
+
+    success
+  }
+
+  "Given a voyage manifest then I should get a BestAvailableManifest that matches it" >> {
+    val vm = VoyageManifest(DqEventCodes.CheckIn, "LHR", "JFK", "0001", "BA", "2017-01-01", "00:00", List(
+      inTransitFlag,
+      inTransitCountry,
+      euPassport,
+      euIdCard,
+      visa,
+      visa
+    ))
+
+    val result = BestAvailableManifest(vm)
+
+    val expected = BestAvailableManifest(
+      ApiSplitsWithHistoricalEGateAndFTPercentages,"LHR","JFK","0001","BA",SDate("2017-01-01"),
+      List(
+        ManifestPassengerProfile("GBR",Some("P"),Some(22),Some(true)),
+        ManifestPassengerProfile("GBR",Some("P"),Some(22),Some(true)),
+        ManifestPassengerProfile("GBR",Some("P"),Some(22),Some(false)),
+        ManifestPassengerProfile("GBR",Some("I"),Some(22),Some(false)),
+        ManifestPassengerProfile("AFG",Some("P"),Some(22),Some(false)),
+        ManifestPassengerProfile("AFG",Some("P"),Some(22),Some(false))
+      )
+    )
+
+    result === expected
+  }
+
+  "Given a VoyageManifest with 2 transfers, 1 Eea Passport, 1 Eea Id card, and 2 visa nationals " +
+    "When I crunch the flight with 4 non-transit pax (10 pax minus 6 transit) " +
+    "Then I should see the 4 non-transit pax go to egates (1), eea desk (1), and non-eea (2)" >> {
+
+    val scheduled = "2017-01-01T00:00Z"
+    val portCode = "LHR"
+
+    val flight = ArrivalGenerator.arrival(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "TST001", terminal = "T1", actPax = Option(10), tranPax = Option(6))
+    val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
+      VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "TS", "2017-01-01", "00:00", List(
+        inTransitFlag,
+        inTransitCountry,
+        euPassport,
+        euIdCard,
+        visa,
+        visa
+      ))
+    )))
+    val crunch = runCrunchGraph(
+      now = () => SDate(scheduled),
+      airportConfig = airportConfig.copy(
+        portCode = portCode,
+        defaultProcessingTimes = Map("T1" -> Map(
+          eeaMachineReadableToDesk -> 25d / 60,
+          eeaNonMachineReadableToDesk -> 25d / 60,
+          eeaMachineReadableToEGate -> 25d / 60,
+          visaNationalToDesk -> 25d / 60
+        )),
+        terminalNames = Seq("T1"),
+        queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
+      ),
+      initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
+    )
+
+    offerAndWait(crunch.manifestsLiveInput, inputManifests)
+
+    val expected = Map(Queues.EeaDesk -> 1.2, Queues.EGate -> 0.8, Queues.NonEeaDesk -> 2.0)
+
+    crunch.liveTestProbe.fishForMessage(10 seconds) {
+      case ps: PortState =>
+        val queuePax = ps.crunchMinutes
+          .values
+          .filter(cm => cm.minute == SDate(scheduled).millisSinceEpoch)
+          .map(cm => (cm.queueName, cm.paxLoad))
+          .toMap
+
+        queuePax == expected
+    }
+
+    success
+  }
 
 }
 

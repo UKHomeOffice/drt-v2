@@ -262,7 +262,6 @@ class ArrivalSplitsGraphStage(name: String = "",
         val existingEntry: Set[ArrivalKey] = codeShares.getOrElse(csKey, Set())
         val updatedArrivalKeys = existingEntry + arrivalKey
         codeShares += (csKey.copy(arrivalKeys = updatedArrivalKeys) -> updatedArrivalKeys)
-        println(s"codeShares now: ${codeShares}")
       }
   }
 
