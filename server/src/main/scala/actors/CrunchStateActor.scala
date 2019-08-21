@@ -120,9 +120,11 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
 
   def applyDiff(cdm: CrunchDiffMessage): Unit = {
     val (flightRemovals, flightUpdates, crunchMinuteUpdates, staffMinuteUpdates): (Set[Int], Set[ApiFlightWithSplits], Set[CrunchMinute], Set[StaffMinute]) = crunchDiffFromMessage(cdm)
-    state.applyFlightsWithSplitsDiff(flightRemovals, flightUpdates, now().millisSinceEpoch)
-    state.applyCrunchDiff(crunchMinuteUpdates, now().millisSinceEpoch)
-    state.applyStaffDiff(staffMinuteUpdates, now().millisSinceEpoch)
+    val nowMillis = now().millisSinceEpoch
+    state.applyFlightsWithSplitsDiff(flightRemovals, flightUpdates, nowMillis)
+    state.applyCrunchDiff(crunchMinuteUpdates, nowMillis)
+    state.applyStaffDiff(staffMinuteUpdates, nowMillis)
+    state.purgeOlderThanDate(nowMillis - expireAfterMillis)
   }
 
   def crunchDiffFromMessage(diffMessage: CrunchDiffMessage): (Set[Int], Set[ApiFlightWithSplits], Set[CrunchMinute], Set[StaffMinute]) = (

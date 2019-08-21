@@ -767,17 +767,14 @@ object CrunchApi {
       )
     }
 
-    def purgeOlderThanDate(thresholdMillis: MillisSinceEpoch): PortStateMutable = {
-      val cleansedFlights = flights.filter {
+    def purgeOlderThanDate(thresholdMillis: MillisSinceEpoch): Unit = {
+      flights --= flights.filterNot {
         case (_, ApiFlightWithSplits(arrival, _, _)) => arrival.PcpTime.getOrElse(0L) >= thresholdMillis
-      }
-      val cleansedCrunchMinutes = crunchMinutes.dropWhile {
-        case (TQM(_, _, m), _) => m < thresholdMillis
-      }
-      val cleansedStaffMinutes = staffMinutes.dropWhile {
-        case (TM(_, m), _) => m < thresholdMillis
-      }
-      new PortStateMutable(cleansedFlights, cleansedCrunchMinutes, cleansedStaffMinutes)
+      }.keys
+
+      crunchMinutes --= crunchMinutes.takeWhile { case (TQM(_, _, m), _) => m < thresholdMillis }.keys
+
+      staffMinutes --= staffMinutes.takeWhile { case (TM(_, m), _) => m < thresholdMillis }.keys
     }
 
     def crunchMinuteRange(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, portQueues: IMap[TerminalName, Seq[QueueName]]): ISortedMap[TQM, CrunchMinute] = {
