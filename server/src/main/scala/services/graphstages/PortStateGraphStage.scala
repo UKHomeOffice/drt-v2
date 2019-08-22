@@ -51,15 +51,16 @@ class PortStateGraphStage(name: String = "",
   )
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var portState: PortStateMutable = PortStateMutable.empty
+    val portState: PortStateMutable = PortStateMutable.empty
     var maybePortStateDiff: Option[PortStateDiff] = None
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
     override def preStart(): Unit = {
       log.info(s"Received initial port state")
-      portState = optionalInitialPortState match {
-        case None => PortStateMutable.empty
-        case Some(portState) => portState.mutable
+      optionalInitialPortState.map { ps =>
+        portState.flights ++ ps.flights
+        portState.crunchMinutes ++ ps.crunchMinutes
+        portState.staffMinutes ++ ps.staffMinutes
       }
       super.preStart()
     }

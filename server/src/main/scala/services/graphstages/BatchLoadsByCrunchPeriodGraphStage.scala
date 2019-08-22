@@ -8,7 +8,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch._
 
-import scala.collection.immutable.SortedMap
+import scala.collection.mutable
 import scala.language.postfixOps
 
 class BatchLoadsByCrunchPeriodGraphStage(now: () => SDateLike,
@@ -21,7 +21,7 @@ class BatchLoadsByCrunchPeriodGraphStage(now: () => SDateLike,
   override def shape: FlowShape[Loads, Loads] = new FlowShape(inLoads, outLoads)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var loadMinutesQueue: SortedMap[MilliDate, Loads] = SortedMap()
+    val loadMinutesQueue: mutable.SortedMap[MilliDate, Loads] = mutable.SortedMap()
 
     val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -29,9 +29,9 @@ class BatchLoadsByCrunchPeriodGraphStage(now: () => SDateLike,
       override def onPush(): Unit = {
         val start = SDate.now()
         val incomingLoads = grab(inLoads)
-        val updatedMinutes = mergeLoadsIntoQueue(incomingLoads, loadMinutesQueue, crunchPeriodStartMillis)
+        mergeLoadsIntoQueue(incomingLoads, loadMinutesQueue, crunchPeriodStartMillis)
 
-        loadMinutesQueue = Crunch.purgeExpired(updatedMinutes, now, expireAfterMillis.toInt)
+        Crunch.purgeExpired(loadMinutesQueue, now, expireAfterMillis.toInt)
 
         pushIfAvailable()
 
@@ -63,7 +63,7 @@ class BatchLoadsByCrunchPeriodGraphStage(now: () => SDateLike,
           log.info(s"Pushing ${SDate(millis).toLocalDateTimeString()} $loadMinutesCount load minutes for $terminalNames")
           push(outLoads, loadMinutes)
 
-          loadMinutesQueue = loads.drop(1)
+          loadMinutesQueue -= millis
           log.info(s"Queue length now ${loadMinutesQueue.size}")
       }
     }
