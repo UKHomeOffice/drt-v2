@@ -387,10 +387,10 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     crunchInputs
   }
 
-  def initialState[A](askableActor: AskableActorRef, toAsk: Any): Option[A] = Await.result(initialStateFuture[A](askableActor, toAsk), 5 minutes)
+  def initialState[A](askableActor: AskableActorRef, toAsk: Any): Option[A] = Await.result(initialStateFuture[A](askableActor, toAsk), 2 minutes)
 
   def initialStateFuture[A](askableActor: AskableActorRef, toAsk: Any): Future[Option[A]] = {
-    val future = askableActor.ask(toAsk)(new Timeout(5 minutes)).map {
+    val future = askableActor.ask(toAsk)(new Timeout(2 minutes)).map {
       case Some(state: A) if state.isInstanceOf[A] =>
         log.info(s"Got initial state (Some(${state.getClass})) from ${askableActor.toString}")
         Option(state)

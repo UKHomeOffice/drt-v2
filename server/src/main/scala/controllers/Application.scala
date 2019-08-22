@@ -496,7 +496,7 @@ class Application @Inject()(implicit val config: Configuration,
 
   def requestPortState[X](actorRef: AskableActorRef, message: Any): Future[Either[PortStateError, Option[X]]] = {
     actorRef
-      .ask(message)(15 seconds)
+      .ask(message)(30 seconds)
       .map {
         case Some(ps: X) => Right(Option(ps))
         case _ => Right(None)

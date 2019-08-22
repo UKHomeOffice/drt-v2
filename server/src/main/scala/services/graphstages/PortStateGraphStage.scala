@@ -73,7 +73,7 @@ class PortStateGraphStage(name: String = "",
               val startTime = now().millisSinceEpoch
               val expireThreshold = now().addMillis(-1 * expireAfterMillis.toInt).millisSinceEpoch
               val diff = incoming.applyTo(portState, startTime)
-              portState.purgeOlderThanDate(expireThreshold)
+//              portState.purgeOlderThanDate(expireThreshold)
               val elapsedSeconds = (now().millisSinceEpoch - startTime).toDouble / 1000
               log.info(f"Finished processing $inlet data in $elapsedSeconds%.2f seconds")
               diff
