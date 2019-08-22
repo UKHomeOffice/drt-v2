@@ -10,6 +10,7 @@ import services.graphstages.Crunch._
 import services.{OptimizerConfig, OptimizerCrunchResult, SDate, TryCrunch}
 
 import scala.collection.immutable.{Map, SortedMap}
+import scala.collection.mutable
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
@@ -30,19 +31,19 @@ class CrunchLoadGraphStage(name: String = "",
   override val shape = new FlowShape(inLoads, outDeskRecMinutes)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var loadMinutes: SortedMap[TQM, LoadMinute] = SortedMap()
-    var existingDeskRecMinutes: SortedMap[TQM, DeskRecMinute] = SortedMap()
+    val loadMinutes: mutable.SortedMap[TQM, LoadMinute] = mutable.SortedMap()
+    val existingDeskRecMinutes: mutable.SortedMap[TQM, DeskRecMinute] = mutable.SortedMap()
     var deskRecMinutesToPush: Map[TQM, DeskRecMinute] = Map()
 
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
     override def preStart(): Unit = {
-      loadMinutes = optionalInitialCrunchMinutes match {
-        case None => SortedMap[TQM, LoadMinute]()
-        case Some(CrunchMinutes(cms)) => SortedMap[TQM, LoadMinute]() ++ cms.map(cm => {
-          val lm = LoadMinute(cm.terminalName, cm.queueName, cm.paxLoad, cm.workLoad, cm.minute)
-          (lm.uniqueId, lm)
-        })
+      optionalInitialCrunchMinutes.foreach {
+        case CrunchMinutes(cms) =>
+          cms.foreach(cm => {
+            val lm = LoadMinute(cm.terminalName, cm.queueName, cm.paxLoad, cm.workLoad, cm.minute)
+            loadMinutes += (lm.uniqueId -> lm)
+          })
       }
 
       super.preStart()
@@ -60,8 +61,8 @@ class CrunchLoadGraphStage(name: String = "",
         log.info(s"Crunch ${firstMinute.toLocalDateTimeString()} - ${lastMinute.toLocalDateTimeString()}")
         val affectedTerminals = incomingLoads.loadMinutes.keys.map(_.terminalName).toSet
 
-        val updatedLoads = mergeLoads(incomingLoads.loadMinutes, loadMinutes)
-        loadMinutes = purgeExpired(updatedLoads, now, expireAfterMillis.toInt)
+        mergeNewLoads(incomingLoads.loadMinutes)
+        purgeExpired(loadMinutes, now, expireAfterMillis.toInt)
 
         val deskRecMinutes = crunchLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, affectedTerminals)
 
@@ -73,11 +74,9 @@ class CrunchLoadGraphStage(name: String = "",
             }
         }
 
-        val updatedDeskRecs = deskRecMinutes.foldLeft(existingDeskRecMinutes) {
-          case (soFar, (tqm, drm)) => soFar.updated(tqm, drm)
-        }
+        deskRecMinutes.foreach { case (tqm, drm) => existingDeskRecMinutes += (tqm -> drm) }
 
-        existingDeskRecMinutes = purgeExpired(updatedDeskRecs, now, expireAfterMillis.toInt)
+        purgeExpired(existingDeskRecMinutes, now, expireAfterMillis.toInt)
         deskRecMinutesToPush = mergeDeskRecMinutes(affectedDeskRecs, deskRecMinutesToPush)
 
         log.info(s"Now have ${deskRecMinutesToPush.size} desk rec minutes to push")
@@ -130,7 +129,7 @@ class CrunchLoadGraphStage(name: String = "",
       val maybeThings = for {
         terminalName <- terminalsToUpdate
         queueName <- airportConfig.queues.getOrElse(terminalName, Seq())
-        minute <- firstMinute until lastMinute by oneMinuteMillis
+        minute <- firstMinute until lastMinute by Crunch.oneMinuteMillis
       } yield {
         val key = MinuteHelper.key(terminalName, queueName, minute)
         thingsToFilter.get(key)
@@ -153,10 +152,8 @@ class CrunchLoadGraphStage(name: String = "",
       }
     }
 
-    def mergeLoads(incomingLoads: SortedMap[TQM, LoadMinute], existingLoads: SortedMap[TQM, LoadMinute]): SortedMap[TQM, LoadMinute] = incomingLoads
-      .foldLeft(existingLoads) {
-        case (soFar, (tqm, load)) => soFar.updated(tqm, load)
-      }
+    def mergeNewLoads(incomingLoads: SortedMap[TQM, LoadMinute]): Unit = incomingLoads
+      .foreach { case (tqm, load) => loadMinutes += (tqm -> load) }
 
     setHandler(outDeskRecMinutes, new OutHandler {
       override def onPull(): Unit = {
@@ -196,23 +193,16 @@ case class DeskRecMinute(terminalName: TerminalName,
 }
 
 case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateMinutes {
-  def applyTo(maybePortState: Option[PortState], now: MillisSinceEpoch): (PortState, PortStateDiff) = {
-    val portState = maybePortState match {
-      case None => PortState.empty
-      case Some(ps) => ps
+  def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
+    val crunchMinutesDiff = minutes.foldLeft(List[CrunchMinute]()) { case (soFar, dm) =>
+      val key = dm.key
+      val merged = mergeMinute(portState.crunchMinutes.get(key), dm, now)
+      portState.crunchMinutes += (key -> merged)
+      merged :: soFar
     }
-
-    val (updatedCrunchMinutes, crunchMinutesDiff) = minutes
-      .foldLeft((portState.crunchMinutes, List[CrunchMinute]())) {
-        case ((updatesSoFar, diffSoFar), updatedDrm) =>
-          val maybeMinute: Option[CrunchMinute] = updatesSoFar.get(updatedDrm.key)
-          val mergedCm: CrunchMinute = mergeMinute(maybeMinute, updatedDrm, now)
-          (updatesSoFar.updated(updatedDrm.key, mergedCm), mergedCm :: diffSoFar)
-      }
-    val newPortState = portState.copy(crunchMinutes = updatedCrunchMinutes)
     val newDiff = PortStateDiff(Seq(), Seq(), crunchMinutesDiff, Seq())
 
-    (newPortState, newDiff)
+    newDiff
   }
 
   def newCrunchMinutes: SortedMap[TQM, CrunchMinute] = SortedMap[TQM, CrunchMinute]() ++ minutes

@@ -45,7 +45,7 @@ case class AlertsActor() extends RecoveryActorLike with PersistentDrtActor[Seq[A
 
   override def stateToMessage: GeneratedMessage = AlertSnapshotMessage(state.map(serialise))
 
-  override var state: Seq[Alert] = initialState
+  var state: Seq[Alert] = initialState
 
   override def initialState: Seq[Alert] = Seq.empty[Alert]
 

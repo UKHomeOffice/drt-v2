@@ -24,13 +24,13 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
 
   "Code shares " >> {
     "Given 2 flights which are codeshares with each other " +
-    "When I ask for a crunch " +
-    "Then I should see workload representing only the flight with the highest passenger numbers" >> {
+      "When I ask for a crunch " +
+      "Then I should see workload representing only the flight with the highest passenger numbers" >> {
       val scheduled = "2017-01-01T00:00Z"
 
       val flights = Flights(List(
-        ArrivalGenerator.arrival(flightId = Option(1), actPax = Option(10), schDt = scheduled, iata = "BA0001"),
-        ArrivalGenerator.arrival(flightId = Option(2), actPax = Option(10), schDt = scheduled, iata = "FR8819")
+        ArrivalGenerator.arrival(flightId = Option(1), origin = "JFK", actPax = Option(10), schDt = scheduled, iata = "BA0001"),
+        ArrivalGenerator.arrival(flightId = Option(2), origin = "JFK", actPax = Option(10), schDt = scheduled, iata = "FR8819")
       ))
 
       val crunch = runCrunchGraph(

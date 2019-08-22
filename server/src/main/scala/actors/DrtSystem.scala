@@ -46,6 +46,7 @@ import services.prediction.SparkSplitsPredictorFactory
 import slickdb.{ArrivalTable, Tables, VoyageManifestPassengerInfoTable}
 
 import scala.collection.immutable.SortedMap
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -245,9 +246,14 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         if (!params.useLegacyManifests) {
           val initialRegisteredArrivals = if (params.resetRegisteredArrivalOnStart) {
             log.info(s"Resetting registered arrivals for manifest lookups")
-            val maybeAllArrivals: Option[SortedMap[ArrivalKey, Option[Long]]] = initialPortState
-              .map(state => SortedMap[ArrivalKey, Option[Long]]() ++ state.flights.values.map(fws => (ArrivalKey(fws.apiFlight), None)))
-            Option(RegisteredArrivals(maybeAllArrivals.getOrElse(SortedMap())))
+            val maybeAllArrivals: Option[mutable.SortedMap[ArrivalKey, Option[Long]]] = initialPortState
+              .map { state =>
+                val arrivalsByKeySorted = mutable.SortedMap[ArrivalKey, Option[MillisSinceEpoch]]()
+                state.flights.values.foreach(fws => arrivalsByKeySorted += (ArrivalKey(fws.apiFlight) -> None))
+                log.info(s"Sending ${arrivalsByKeySorted.size} arrivals by key from ${state.flights.size} port state arrivals")
+                arrivalsByKeySorted
+              }
+            Option(RegisteredArrivals(maybeAllArrivals.getOrElse(mutable.SortedMap())))
           } else maybeRegisteredArrivals
           val manifestsSourceQueue = startManifestsGraph(initialRegisteredArrivals)
           voyageManifestsRequestActor ! SubscribeRequestQueue(manifestsSourceQueue)
@@ -381,10 +387,10 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     crunchInputs
   }
 
-  def initialState[A](askableActor: AskableActorRef, toAsk: Any): Option[A] = Await.result(initialStateFuture[A](askableActor, toAsk), 5 minutes)
+  def initialState[A](askableActor: AskableActorRef, toAsk: Any): Option[A] = Await.result(initialStateFuture[A](askableActor, toAsk), 2 minutes)
 
   def initialStateFuture[A](askableActor: AskableActorRef, toAsk: Any): Future[Option[A]] = {
-    val future = askableActor.ask(toAsk)(new Timeout(5 minutes)).map {
+    val future = askableActor.ask(toAsk)(new Timeout(2 minutes)).map {
       case Some(state: A) if state.isInstanceOf[A] =>
         log.info(s"Got initial state (Some(${state.getClass})) from ${askableActor.toString}")
         Option(state)
@@ -406,9 +412,14 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   def mergePortStates(maybeForecastPs: Option[PortState],
                       maybeLivePs: Option[PortState]): Option[PortState] = (maybeForecastPs, maybeLivePs) match {
     case (None, None) => None
-    case (Some(fps), None) => Option(fps)
-    case (None, Some(lps)) => Option(lps)
+    case (Some(fps), None) =>
+      log.info(s"We only have initial forecast port state")
+      Option(fps)
+    case (None, Some(lps)) =>
+      log.info(s"We only have initial live port state")
+      Option(lps)
     case (Some(fps), Some(lps)) =>
+      log.info(s"Merging initial live & forecast port states. ${lps.flights.size} live flights, ${fps.flights.size} forecast flights")
       Option(PortState(
         fps.flights ++ lps.flights,
         fps.crunchMinutes ++ lps.crunchMinutes,

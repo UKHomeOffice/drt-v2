@@ -9,6 +9,7 @@ import services._
 import services.workloadcalculator.PaxLoadCalculator.Load
 
 import scala.collection.immutable.{Map, SortedMap, SortedSet}
+import scala.collection.mutable
 import scala.reflect.runtime.universe.{TypeTag, typeOf}
 
 object Crunch {
@@ -30,6 +31,7 @@ object Crunch {
 
   object Loads {
     def apply(lms: Seq[LoadMinute]): Loads = Loads(SortedMap[TQM, LoadMinute]() ++ lms.map(cm => (TQM(cm.terminalName, cm.queueName, cm.minute), cm)))
+
     def fromCrunchMinutes(cms: SortedMap[TQM, CrunchMinute]): Loads = Loads(cms.mapValues(LoadMinute(_)))
   }
 
@@ -130,32 +132,6 @@ object Crunch {
     } else None
   }
 
-  def applyCrunchDiff(crunchMinuteUpdates: Set[CrunchMinute], crunchMinutes: SortedMap[TQM, CrunchMinute], nowMillis: MillisSinceEpoch): SortedMap[TQM, CrunchMinute] = {
-    val withUpdates = crunchMinuteUpdates.foldLeft(crunchMinutes) {
-      case (soFar, cm) if cm.minute % oneMinuteMillis == 0 => soFar.updated(cm.key, cm.copy(lastUpdated = Option(nowMillis)))
-      case (soFar, _) => soFar
-    }
-    withUpdates
-  }
-
-  def applyStaffDiff(staffMinuteUpdates: Set[StaffMinute], staffMinutes: SortedMap[TM, StaffMinute], nowMillis: MillisSinceEpoch): SortedMap[TM, StaffMinute] = {
-    val withUpdates = staffMinuteUpdates.foldLeft(staffMinutes) {
-      case (soFar, sm) if sm.minute % oneMinuteMillis == 0 => soFar.updated(sm.key, sm.copy(lastUpdated = Option(nowMillis)))
-      case (soFar, _) => soFar
-    }
-    withUpdates
-  }
-
-  def applyFlightsWithSplitsDiff(flightRemovals: Set[Int], flightUpdates: Set[ApiFlightWithSplits], flights: Map[Int, ApiFlightWithSplits], nowMillis: MillisSinceEpoch): Map[Int, ApiFlightWithSplits] = {
-    val withoutRemovals = flightRemovals.foldLeft(flights) {
-      case (soFar, flightIdToRemove) => soFar - flightIdToRemove
-    }
-    val withoutRemovalsWithUpdates = flightUpdates.foldLeft(withoutRemovals) {
-      case (soFar, flight) => soFar.updated(flight.apiFlight.uniqueId, flight.copy(lastUpdated = Option(nowMillis)))
-    }
-    withoutRemovalsWithUpdates
-  }
-
   def flightLoadDiff(oldSet: Set[FlightSplitMinute], newSet: Set[FlightSplitMinute]): Set[FlightSplitDiff] = {
     val toRemove = oldSet.map(fsm => FlightSplitMinute(fsm.flightId, fsm.paxType, fsm.terminalName, fsm.queueName, -fsm.paxLoad, -fsm.workLoad, fsm.minute))
     val addAndRemoveGrouped: Map[(Int, TerminalName, QueueName, MillisSinceEpoch, PaxType), Set[FlightSplitMinute]] = newSet
@@ -186,6 +162,20 @@ object Crunch {
     desks(date.getHourOfDay)
   }
 
+  def purgeExpired[A <: WithTimeAccessor, B](expireable: mutable.SortedMap[A, B], now: () => SDateLike, expireAfter: Int): Unit = {
+    val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
+    expireable
+      .takeWhile { case (a: A, _) => a.timeValue < thresholdMillis }
+      .foreach { case (a, _) => expireable.remove(a) }
+  }
+
+  def purgeExpired[A <: WithTimeAccessor](expireable: mutable.SortedSet[A], now: () => SDateLike, expireAfter: Int): Unit = {
+    val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
+    expireable
+      .takeWhile { a: A => a.timeValue < thresholdMillis }
+      .foreach(a => expireable.remove(a))
+  }
+
   def purgeExpired[A <: WithTimeAccessor, B](expireable: SortedMap[A, B], now: () => SDateLike, expireAfter: Int): SortedMap[A, B] = {
     val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
     expireable.dropWhile { case (a: A, _) => a.timeValue < thresholdMillis }
@@ -193,7 +183,9 @@ object Crunch {
 
   def purgeExpired[A <: WithTimeAccessor](expireable: SortedSet[A], now: () => SDateLike, expireAfter: Int): SortedSet[A] = {
     val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
-    expireable.dropWhile {_.timeValue < thresholdMillis}
+    expireable.dropWhile {
+      _.timeValue < thresholdMillis
+    }
   }
 
   def purgeExpired[A: TypeTag](expireable: List[(MillisSinceEpoch, A)], now: () => SDateLike, expireAfter: MillisSinceEpoch): List[(MillisSinceEpoch, A)] = {

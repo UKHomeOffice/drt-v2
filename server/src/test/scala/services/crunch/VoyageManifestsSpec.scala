@@ -18,6 +18,8 @@ import scala.concurrent.duration._
 
 
 class VoyageManifestsSpec extends CrunchTestLike {
+  sequential
+  isolated
 
   "Given 2 DQ messages for a flight, where the DC message arrives after the CI message " +
     "When I crunch the flight " +

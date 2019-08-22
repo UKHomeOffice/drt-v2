@@ -2,7 +2,7 @@ package actors
 
 trait PersistentDrtActor[T] {
 
-  var state: T
+  def state: T
 
   def initialState: T
 }

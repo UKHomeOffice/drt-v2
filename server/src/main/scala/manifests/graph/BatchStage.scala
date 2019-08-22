@@ -8,7 +8,7 @@ import manifests.actors.RegisteredArrivals
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch
 
-import scala.collection.immutable.{SortedMap, SortedSet}
+import scala.collection.mutable
 
 class BatchStage(now: () => SDateLike,
                  isDueLookup: (ArrivalKey, MillisSinceEpoch, SDateLike) => Boolean,
@@ -25,18 +25,18 @@ class BatchStage(now: () => SDateLike,
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var registeredArrivals: SortedMap[ArrivalKey, Option[Long]] = SortedMap()
-    var registeredArrivalsUpdates: SortedMap[ArrivalKey, Option[Long]] = SortedMap()
-    var lookupQueue: SortedSet[ArrivalKey] = SortedSet()
+    val registeredArrivals: mutable.SortedMap[ArrivalKey, Option[Long]] = mutable.SortedMap()
+    val registeredArrivalsUpdates: mutable.SortedMap[ArrivalKey, Option[Long]] = mutable.SortedMap()
+    val lookupQueue: mutable.SortedSet[ArrivalKey] = mutable.SortedSet()
     var lastRefresh: Long = 0L
 
     override def preStart(): Unit = {
       if (maybeInitialState.isEmpty) log.warn(s"Did not receive any initial registered arrivals")
       maybeInitialState.foreach { state =>
         log.info(s"Received ${state.arrivals.size} initial registered arrivals")
-        registeredArrivals = state.arrivals
+        registeredArrivals ++= state.arrivals
 
-        lookupQueue = refreshLookupQueue(now())
+        refreshLookupQueue(now())
 
         log.info(s"${registeredArrivals.size} registered arrivals. ${lookupQueue.size} arrivals in lookup queue")
       }
@@ -52,7 +52,7 @@ class BatchStage(now: () => SDateLike,
           val arrivalKey = ArrivalKey(arrival)
           if (!registeredArrivals.contains(arrivalKey)) {
             registerArrival(arrivalKey)
-            registeredArrivalsUpdates = registeredArrivalsUpdates.updated(arrivalKey, None)
+            registeredArrivalsUpdates += (arrivalKey -> None)
           }
         }
 
@@ -89,8 +89,8 @@ class BatchStage(now: () => SDateLike,
     }
 
     private def prioritiseAndPush(): Unit = {
-      lookupQueue = Crunch.purgeExpired(lookupQueue, now, expireAfterMillis.toInt)
-      registeredArrivals = Crunch.purgeExpired(registeredArrivals, now, expireAfterMillis.toInt)
+      Crunch.purgeExpired(lookupQueue, now, expireAfterMillis.toInt)
+      Crunch.purgeExpired(registeredArrivals, now, expireAfterMillis.toInt)
 
       val lookupBatch = updatePrioritisedAndSubscribers()
 
@@ -103,35 +103,36 @@ class BatchStage(now: () => SDateLike,
     private def pushRegisteredArrivalsUpdates(): Unit = if (registeredArrivalsUpdates.nonEmpty) {
       log.info(s"Pushing ${registeredArrivalsUpdates.size} registered arrivals updates")
       push(outRegisteredArrivals, RegisteredArrivals(registeredArrivalsUpdates))
-      registeredArrivalsUpdates = SortedMap()
+      registeredArrivalsUpdates.clear
     }
 
     private def updatePrioritisedAndSubscribers(): Set[ArrivalKey] = {
-      val (nextLookupBatch, remainingLookups) = (shouldRefreshLookupQueue, registeredArrivals.nonEmpty) match {
+      val nextLookupBatch = (shouldRefreshLookupQueue, registeredArrivals.nonEmpty) match {
         case (true, true) =>
           log.info(s"Refreshing lookup queue")
           lastRefresh = now().millisSinceEpoch
-          refreshLookupQueue(now()).toSeq.sortBy(_.scheduled).splitAt(batchSize)
+          refreshLookupQueue(now())
+          lookupQueue.take(batchSize)
         case (true, false) =>
           log.info(s"No registered arrivals")
-          lookupQueue.toSeq.sortBy(_.scheduled).splitAt(batchSize)
+          lookupQueue.take(batchSize)
         case (false, _) =>
           val minRefreshSeconds = minimumRefreshIntervalMillis / 1000
           val secondsSinceLastRefresh = (now().millisSinceEpoch - lastRefresh) / 1000
           log.info(f"Minimum refresh interval: ${minRefreshSeconds}s. $secondsSinceLastRefresh%ds since last refresh. Not refreshing")
-          lookupQueue.toSeq.sortBy(_.scheduled).splitAt(batchSize)
+          lookupQueue.take(batchSize)
       }
 
-      lookupQueue = SortedSet[ArrivalKey](remainingLookups: _*)
+      lookupQueue --= nextLookupBatch
 
       val lookupTime: MillisSinceEpoch = now().millisSinceEpoch
 
       nextLookupBatch.foreach { arrivalForLookup =>
-        registeredArrivals = registeredArrivals.updated(arrivalForLookup, Option(lookupTime))
-        registeredArrivalsUpdates = registeredArrivalsUpdates.updated(arrivalForLookup, Option(lookupTime))
+        registeredArrivals += (arrivalForLookup -> Option(lookupTime))
+        registeredArrivalsUpdates += (arrivalForLookup -> Option(lookupTime))
       }
 
-      Set[ArrivalKey](nextLookupBatch: _*)
+      nextLookupBatch.toSet
     }
 
     private def shouldRefreshLookupQueue: Boolean = {
@@ -139,22 +140,16 @@ class BatchStage(now: () => SDateLike,
       elapsedMillis >= minimumRefreshIntervalMillis
     }
 
-    private def refreshLookupQueue(currentNow: SDateLike): SortedSet[ArrivalKey] = registeredArrivals
-      .foldLeft(lookupQueue) {
-        case (prioritisedSoFar, (arrival, None)) =>
-          if (!prioritisedSoFar.contains(arrival))
-            prioritisedSoFar + arrival
-          else
-            prioritisedSoFar
-        case (prioritisedSoFar, (arrival, Some(lastLookup))) =>
-          if (!prioritisedSoFar.contains(arrival) && isDueLookup(arrival, lastLookup, currentNow))
-            prioritisedSoFar + arrival
-          else
-            prioritisedSoFar
-      }
+    private def refreshLookupQueue(currentNow: SDateLike): Unit = registeredArrivals.foreach {
+      case (arrival, None) =>
+        lookupQueue += arrival
+      case (arrival, Some(lastLookup)) =>
+        if (!lookupQueue.contains(arrival) && isDueLookup(arrival, lastLookup, currentNow))
+          lookupQueue + arrival
+    }
 
     private def registerArrival(arrival: ArrivalKey): Unit = {
-      registeredArrivals = registeredArrivals.updated(arrival, None)
+      registeredArrivals += (arrival -> None)
     }
   }
 }
