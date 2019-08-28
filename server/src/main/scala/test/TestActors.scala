@@ -14,8 +14,7 @@ object TestActors {
     extends ForecastBaseArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def reset: Receive = {
-      case ResetActor =>
-        state = initialState
+      case ResetActor => state.clear()
     }
 
     override def receiveRecover: Receive = {
@@ -29,8 +28,7 @@ object TestActors {
     extends ForecastPortArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def reset: Receive = {
-      case ResetActor =>
-        state = initialState
+      case ResetActor => state.clear()
     }
 
     override def receiveRecover: Receive = {
@@ -44,8 +42,7 @@ object TestActors {
     extends LiveArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def reset: Receive = {
-      case ResetActor =>
-        state = initialState
+      case ResetActor => state.clear()
     }
 
     override def receiveRecover: Receive = {
