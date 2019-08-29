@@ -33,10 +33,18 @@ message FlightMessage {
     repeated string FeedSources = 23;
 }
 
+message UniqueArrivalMessage {
+    optional int32 number = 1;
+    optional string terminalName = 2;
+    optional int64 scheduled = 3;
+}
+
 message FlightsDiffMessage {
     optional int64 createdAt = 1;
-    repeated int32 removals = 2;
+    repeated UniqueArrivalMessage removals = 4;
     repeated FlightMessage updates = 3;
+
+    repeated int32 removals_OLD = 2;
 }
 
 message FeedStatusesMessage {

@@ -139,7 +139,7 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
 
   def hasPcpPaxIn(start: SDateLike, end: SDateLike): Boolean = apiFlight.hasPcpDuring(start, end)
 
-  lazy val uniqueArrival: UniqueArrival = apiFlight.uniqueArrival
+  lazy val uniqueArrival: UniqueArrival = apiFlight.unique
 }
 
 object ApiFlightWithSplits {
@@ -188,13 +188,39 @@ object TM {
   def apply(staffMinute: StaffMinute): TM = TM(staffMinute.terminalName, staffMinute.minute)
 }
 
-case class UniqueArrival(number: Int, terminalName: TerminalName, scheduled: MillisSinceEpoch) {
+trait WithLegacyUniqueId[LI, I] extends Ordered[I] {
+  def uniqueId: LI
+}
+
+trait WithUnique[I] {
+  def unique: I
+}
+
+case class UniqueArrival(number: Int, terminalName: TerminalName, scheduled: MillisSinceEpoch, pcp: MillisSinceEpoch) extends WithLegacyUniqueId[Int, UniqueArrival] {
+  lazy val comparisonStringForEquality = s"$scheduled-$terminalName-$number"
+  lazy val comparisonStringForOrdering = s"$pcp-$scheduled-$terminalName-$number"
+
+  override def equals(that: scala.Any): Boolean = that match {
+    case o: UniqueArrival => o.comparisonStringForEquality == comparisonStringForEquality
+    case _ => false
+  }
+
+  override def compare(that: UniqueArrival): Int =
+    if (equals(that))
+      0
+    else
+      this.comparisonStringForOrdering.compareTo(that.comparisonStringForOrdering)
+
   lazy val uniqueId: Int = uniqueStr.hashCode
   lazy val uniqueStr: String = s"$terminalName$scheduled$number"
+
+  override val hashCode: Int = uniqueId
 }
 
 object UniqueArrival {
-  def apply(arrival: Arrival): UniqueArrival = UniqueArrival(arrival.flightNumber, arrival.Terminal, arrival.Scheduled)
+  implicit val rw: RW[UniqueArrival] = macroRW
+
+  def apply(arrival: Arrival): UniqueArrival = UniqueArrival(arrival.flightNumber, arrival.Terminal, arrival.Scheduled, arrival.PcpTime.getOrElse(arrival.Scheduled))
 }
 
 case class CodeShareKey(scheduled: Long, terminalName: TerminalName, origin: String, arrivalKeys: Set[ArrivalKey]) extends Ordered[CodeShareKey] {
@@ -242,7 +268,7 @@ case class Arrival(
                     Scheduled: MillisSinceEpoch,
                     PcpTime: Option[MillisSinceEpoch],
                     FeedSources: Set[FeedSource],
-                    LastKnownPax: Option[Int] = None) {
+                    LastKnownPax: Option[Int] = None) extends WithUnique[UniqueArrival] {
   lazy val ICAO: String = Arrival.standardiseFlightCode(rawICAO)
   lazy val IATA: String = Arrival.standardiseFlightCode(rawIATA)
 
@@ -300,7 +326,7 @@ case class Arrival(
     (minutesToDisembark * oneMinuteInMillis).toLong
   }
 
-  lazy val uniqueArrival: UniqueArrival = UniqueArrival(flightNumber, Terminal, Scheduled)
+  lazy val unique: UniqueArrival = UniqueArrival(flightNumber, Terminal, Scheduled, PcpTime.getOrElse(0L))
 }
 
 object Arrival {
