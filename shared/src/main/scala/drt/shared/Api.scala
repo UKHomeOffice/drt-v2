@@ -929,15 +929,15 @@ object CrunchApi {
 
     def applyFlightsWithSplitsDiff(flightRemovals: Set[Int], flightUpdates: Set[ApiFlightWithSplits], nowMillis: MillisSinceEpoch): Unit = {
       flights --= flightRemovals
-      flights ++= flightUpdates.map(f => (f.apiFlight.uniqueId, f.copy(lastUpdated = Option(nowMillis)))).toMap
+      flights ++= flightUpdates.map(f => (f.apiFlight.uniqueId, f.copy(lastUpdated = Option(nowMillis))))
     }
 
     def applyCrunchDiff(crunchMinuteUpdates: Set[CrunchMinute], nowMillis: MillisSinceEpoch): Unit = {
-      crunchMinutes ++= crunchMinuteUpdates.map(cm => (cm.key, cm.copy(lastUpdated = Option(nowMillis)))).toMap
+      crunchMinutes ++= crunchMinuteUpdates.map(cm => (cm.key, cm.copy(lastUpdated = Option(nowMillis))))
     }
 
     def applyStaffDiff(staffMinuteUpdates: Set[StaffMinute], nowMillis: MillisSinceEpoch): Unit = {
-      staffMinutes ++= staffMinuteUpdates.map(sm => (sm.key, sm.copy(lastUpdated = Option(nowMillis)))).toMap
+      staffMinutes ++= staffMinuteUpdates.map(sm => (sm.key, sm.copy(lastUpdated = Option(nowMillis))))
     }
 
     def immutable: PortState = PortState(
