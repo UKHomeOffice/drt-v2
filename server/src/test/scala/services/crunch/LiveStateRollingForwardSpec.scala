@@ -49,15 +49,12 @@ class LiveStateRollingForwardSpec extends CrunchTestLike {
     }
 
     crunch.forecastTestProbe.fishForMessage(2 seconds) {
-      case ps: PortState => ps.flights.contains(futureArrival2.uniqueId)
+      case ps: PortState =>
+        ps.flights.contains(futureArrival.uniqueId) && ps.flights.contains(futureArrival2.uniqueId)
     }
 
-    val askableForecastActor: AskableActorRef = crunch.forecastCrunchActor
-    val forecastPsDay2 = Await.result(askableForecastActor.ask(GetState)(2 seconds), 2 seconds).asInstanceOf[Option[PortState]]
-
     val day1LiveFlightsEmpty = livePsDay1.get.flights.isEmpty
-    val day2ForecastFlightsHaveBoth = forecastPsDay2.get.flights.values.map(_.apiFlight.IATA) == Iterable("BA0001", "BA0002")
 
-    day1LiveFlightsEmpty && day2ForecastFlightsHaveBoth
+    day1LiveFlightsEmpty
   }
 }
