@@ -28,11 +28,7 @@ case class PortStateWithDiff(maybePortState: Option[PortState], diff: PortStateD
   }
 }
 
-class PortStateGraphStage(name: String = "",
-                          optionalInitialPortState: Option[PortState],
-                          airportConfig: AirportConfig,
-                          expireAfterMillis: MillisSinceEpoch,
-                          now: () => SDateLike)
+class PortStateGraphStage(name: String = "", optionalInitialPortState: Option[PortState], airportConfig: AirportConfig, expireAfterMillis: MillisSinceEpoch, now: () => SDateLike, liveDaysAhead: Int)
   extends GraphStage[FanInShape5[FlightsWithSplits, DeskRecMinutes, ActualDeskStats, StaffMinutes, SimulationMinutes, PortStateWithDiff]] {
 
   val inFlightsWithSplits: Inlet[FlightsWithSplits] = Inlet[FlightsWithSplits]("FlightWithSplits.in")
@@ -155,7 +151,7 @@ class PortStateGraphStage(name: String = "",
     }
 
     def livePortStateStart: SDateLike = Crunch.getLocalLastMidnight(now()).addDays(-1)
-    def livePortStateEnd: SDateLike = Crunch.getLocalNextMidnight(now()).addDays(2)
+    def livePortStateEnd: SDateLike = Crunch.getLocalNextMidnight(now()).addDays(liveDaysAhead)
   }
 
   def diffMessage(diff: PortStateDiff): CrunchDiffMessage = CrunchDiffMessage(

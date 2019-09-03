@@ -61,7 +61,8 @@ object RunnableCrunch {
 
                                        crunchPeriodStartMillis: SDateLike => SDateLike,
                                        now: () => SDateLike,
-                                       portQueues: Map[TerminalName, Seq[QueueName]]
+                                       portQueues: Map[TerminalName, Seq[QueueName]],
+                                       liveStateDaysAhead: Int
                                       ): RunnableGraph[(FR, FR, FR, MS, MS, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch)] = {
 
     val arrivalsKillSwitch = KillSwitches.single[ArrivalsDiff]
@@ -189,7 +190,7 @@ object RunnableCrunch {
           simulation.out ~> portState.in4
 
           portState.out ~> portStateFanOut
-                           portStateFanOut.map(_.window(liveStart(now), liveEnd(now), portQueues))                ~> liveSink
+                           portStateFanOut.map(_.window(liveStart(now), liveEnd(now, liveStateDaysAhead), portQueues))                ~> liveSink
                            portStateFanOut.map(_.window(forecastStart(now), forecastEnd(now), portQueues))        ~> fcstSink
                            portStateFanOut.map(pswd => withOnlyDescheduledRemovals(pswd.diff, now())) ~> aggregatedArrivalsSink
           // @formatter:on
@@ -207,7 +208,7 @@ object RunnableCrunch {
 
   def liveStart(now: () => SDateLike): SDateLike = Crunch.getLocalLastMidnight(now()).addDays(-1)
 
-  def liveEnd(now: () => SDateLike): SDateLike = Crunch.getLocalNextMidnight(now()).addDays(2)
+  def liveEnd(now: () => SDateLike, liveStateDaysAhead: Int): SDateLike = Crunch.getLocalNextMidnight(now()).addDays(liveStateDaysAhead)
 
   def forecastEnd(now: () => SDateLike): SDateLike = Crunch.getLocalNextMidnight(now()).addDays(360)
 
