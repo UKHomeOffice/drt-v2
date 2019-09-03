@@ -182,12 +182,15 @@ object CrunchSystem {
       crunchPeriodStartMillis = crunchStartDateProvider,
       minutesToCrunch = props.minutesToCrunch)
 
+    val liveStateDaysAhead = 2
+
     val portStateGraphStage = new PortStateGraphStage(
       name = props.logLabel,
       optionalInitialPortState = props.initialPortState,
       airportConfig = props.airportConfig,
       expireAfterMillis = props.expireAfterMillis,
-      now = props.now)
+      now = props.now,
+      liveDaysAhead = liveStateDaysAhead)
 
     val crunchSystem = RunnableCrunch(
       props.arrivalsBaseSource, props.arrivalsFcstSource, props.arrivalsLiveSource, props.manifestsLiveSource, props.manifestsHistoricSource, shiftsSource, fixedPointsSource, staffMovementsSource, actualDesksAndQueuesSource,
@@ -196,7 +199,7 @@ object CrunchSystem {
       props.voyageManifestsActor, props.voyageManifestsRequestActor,
       props.liveCrunchStateActor, props.forecastCrunchStateActor,
       props.actors("aggregated-arrivals").actorRef,
-      crunchStartDateProvider, props.now, props.airportConfig.queues
+      crunchStartDateProvider, props.now, props.airportConfig.queues, liveStateDaysAhead
     )
 
     val (baseIn, fcstIn, liveIn, manifestsLiveIn, manifestsHistoricIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch) = crunchSystem.run

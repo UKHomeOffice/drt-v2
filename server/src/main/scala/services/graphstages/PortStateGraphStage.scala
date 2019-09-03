@@ -12,26 +12,23 @@ import services.SDate
 
 import scala.collection.immutable.Map
 
-case class PortStateWithDiff(portState: PortState, diff: PortStateDiff, diffMessage: CrunchDiffMessage) {
+case class PortStateWithDiff(maybePortState: Option[PortState], diff: PortStateDiff, diffMessage: CrunchDiffMessage) {
   def window(start: SDateLike, end: SDateLike, portQueues: Map[TerminalName, Seq[QueueName]]): PortStateWithDiff = {
-    PortStateWithDiff(portState.window(start, end, portQueues), diff, crunchDiffWindow(start, end))
+    val maybeWindowedState = maybePortState.map(_.window(start, end, portQueues))
+    PortStateWithDiff(maybeWindowedState, diff, crunchDiffWindow(start, end))
   }
 
   def crunchDiffWindow(start: SDateLike, end: SDateLike): CrunchDiffMessage = {
     val flightsToRemove = diffMessage.flightIdsToRemove
     val flightsToUpdate = diffMessage.flightsToUpdate.filter(smm => smm.flight.exists(f => start.millisSinceEpoch <= f.scheduled.getOrElse(0L) && f.scheduled.getOrElse(0L) <= end.millisSinceEpoch))
-    val staffToUpdate = diffMessage.staffMinutesToUpdate.filter(smm => start.millisSinceEpoch <= smm.minute.getOrElse(0L) && smm.minute.getOrElse(0L) <= end.millisSinceEpoch)
-    val crunchToUpdate = diffMessage.crunchMinutesToUpdate.filter(cmm => start.millisSinceEpoch <= cmm.minute.getOrElse(0L) && cmm.minute.getOrElse(0L) <= end.millisSinceEpoch)
+    val staffToUpdate = diffMessage.staffMinutesToUpdate.filter(smm => start.millisSinceEpoch <= smm.minute.getOrElse(0L) && smm.minute.getOrElse(0L) < end.millisSinceEpoch)
+    val crunchToUpdate = diffMessage.crunchMinutesToUpdate.filter(cmm => start.millisSinceEpoch <= cmm.minute.getOrElse(0L) && cmm.minute.getOrElse(0L) < end.millisSinceEpoch)
 
     CrunchDiffMessage(Option(SDate.now().millisSinceEpoch), None, flightsToRemove, flightsToUpdate, crunchToUpdate, staffToUpdate)
   }
 }
 
-class PortStateGraphStage(name: String = "",
-                          optionalInitialPortState: Option[PortState],
-                          airportConfig: AirportConfig,
-                          expireAfterMillis: MillisSinceEpoch,
-                          now: () => SDateLike)
+class PortStateGraphStage(name: String = "", optionalInitialPortState: Option[PortState], airportConfig: AirportConfig, expireAfterMillis: MillisSinceEpoch, now: () => SDateLike, liveDaysAhead: Int)
   extends GraphStage[FanInShape5[FlightsWithSplits, DeskRecMinutes, ActualDeskStats, StaffMinutes, SimulationMinutes, PortStateWithDiff]] {
 
   val inFlightsWithSplits: Inlet[FlightsWithSplits] = Inlet[FlightsWithSplits]("FlightWithSplits.in")
@@ -40,6 +37,7 @@ class PortStateGraphStage(name: String = "",
   val inStaffMinutes: Inlet[StaffMinutes] = Inlet[StaffMinutes]("StaffMinutes.in")
   val inSimulationMinutes: Inlet[SimulationMinutes] = Inlet[SimulationMinutes]("SimulationMinutes.in")
   val outPortState: Outlet[PortStateWithDiff] = Outlet[PortStateWithDiff]("PortStateWithDiff.out")
+  var lastPushDate: String = ""
 
   override val shape = new FanInShape5(
     inFlightsWithSplits,
@@ -59,8 +57,9 @@ class PortStateGraphStage(name: String = "",
       log.info(s"Received initial port state")
       portState = optionalInitialPortState match {
         case None => PortStateMutable.empty
-        case Some(portState) => portState.mutable
+        case Some(ps) => ps.mutable
       }
+      lastPushDate = now().toISODateOnly
       super.preStart()
     }
 
@@ -137,11 +136,22 @@ class PortStateGraphStage(name: String = "",
           log.info(s"Empty PortStateDiff. Nothing to push")
         case Some(portStateDiff) =>
           log.info(s"Pushing port state with diff")
-          val portStateWithDiff = PortStateWithDiff(PortState.empty, portStateDiff, diffMessage(portStateDiff))
+          val dateNow = now().toISODateOnly
+
+          val fullPortStateForLiveResync = if (dateNow != lastPushDate) {
+            log.info(s"Sending a full port state for live data to resync after crossing midnight")
+            lastPushDate = dateNow
+            Option(portState.window(livePortStateStart, livePortStateEnd, airportConfig.queues))
+          } else None
+
+          val portStateWithDiff = PortStateWithDiff(fullPortStateForLiveResync, portStateDiff, diffMessage(portStateDiff))
           maybePortStateDiff = None
           push(outPortState, portStateWithDiff)
       }
     }
+
+    def livePortStateStart: SDateLike = Crunch.getLocalLastMidnight(now()).addDays(-1)
+    def livePortStateEnd: SDateLike = Crunch.getLocalNextMidnight(now()).addDays(liveDaysAhead)
   }
 
   def diffMessage(diff: PortStateDiff): CrunchDiffMessage = CrunchDiffMessage(
