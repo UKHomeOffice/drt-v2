@@ -3,18 +3,16 @@ package actors
 import actors.PortStateMessageConversion._
 import akka.actor._
 import akka.persistence._
-import scalapb.GeneratedMessage
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi._
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
+import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState._
 import services.SDate
-import services.graphstages.Crunch._
 import services.graphstages.PortStateWithDiff
 
-import scala.collection.immutable.SortedMap
 import scala.language.postfixOps
 
 class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
@@ -23,7 +21,8 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
                        portQueues: Map[TerminalName, Seq[QueueName]],
                        now: () => SDateLike,
                        expireAfterMillis: MillisSinceEpoch,
-                       purgePreviousSnapshots: Boolean) extends PersistentActor with RecoveryActorLike with PersistentDrtActor[PortStateMutable] {
+                       purgePreviousSnapshots: Boolean,
+                       acceptFullStateUpdates: Boolean) extends PersistentActor with RecoveryActorLike with PersistentDrtActor[PortStateMutable] {
   override def persistenceId: String = name
 
   override val maybeSnapshotInterval: Option[Int] = initialMaybeSnapshotInterval
@@ -73,12 +72,23 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
   override def stateToMessage: GeneratedMessage = portStateToSnapshotMessage(state)
 
   override def receiveCommand: Receive = {
-    case PortStateWithDiff(_, _, CrunchDiffMessage(_, _, fr, fu, cu, su, _)) if fr.isEmpty && fu.isEmpty && cu.isEmpty && su.isEmpty =>
+    case PortStateWithDiff(None, _, CrunchDiffMessage(_, _, fr, fu, cu, su, _)) if fr.isEmpty && fu.isEmpty && cu.isEmpty && su.isEmpty =>
       log.info(s"Received port state with empty diff")
 
-    case PortStateWithDiff(_, _, diffMsg) =>
-      logInfo(s"Received port state with diff")
-      applyDiff(diffMsg)
+    case PortStateWithDiff(Some(ps), _, CrunchDiffMessage(_, _, fr, fu, cu, su, _)) if fr.isEmpty && fu.isEmpty && cu.isEmpty && su.isEmpty =>
+      log.info(s"Received port state with empty diff, but with fresh port state")
+      updateFromFullState(ps)
+
+    case PortStateWithDiff(maybeState, _, diffMsg) =>
+      maybeState match {
+        case Some(fullState) if acceptFullStateUpdates =>
+          updateFromFullState(fullState)
+          logInfo("Received full port state")
+        case _ =>
+          applyDiff(diffMsg)
+          logInfo(s"Received port state with diff")
+      }
+
       persistAndMaybeSnapshot(diffMsg)
 
     case GetState =>
@@ -108,6 +118,12 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
 
     case u =>
       log.error(s"Received unexpected message $u")
+  }
+
+  def updateFromFullState(ps: PortState): Unit = {
+    state.flights ++= ps.flights
+    state.crunchMinutes ++= ps.crunchMinutes
+    state.staffMinutes ++= ps.staffMinutes
   }
 
   def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = Option(state.window(SDate(start), SDate(end), portQueues))

@@ -31,21 +31,35 @@ import scala.language.implicitConversions
 import scala.util.Success
 
 
-class LiveCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
-  extends CrunchStateActor(None, oneMegaByte, s"live-test-$name", queues, now, expireAfterMillis, false) {
+class LiveCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long, acceptFullStateUpdates: Boolean)
+  extends CrunchStateActor(None, oneMegaByte, s"live-test-$name", queues, now, expireAfterMillis, false, acceptFullStateUpdates) {
   override def applyDiff(cdm: CrunchDiffMessage): Unit = {
     log.info(s"calling parent updateState...")
     super.applyDiff(cdm)
 
     probe ! state.immutable
   }
+
+  override def updateFromFullState(ps: PortState): Unit = {
+    log.info(s"calling parent updateFromFullState...")
+    super.updateFromFullState(ps)
+
+    probe ! state.immutable
+  }
 }
 
-class ForecastCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long)
-  extends CrunchStateActor(None, oneMegaByte, s"forecast-test-$name", queues, now, expireAfterMillis, false) {
+class ForecastCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long, acceptFullStateUpdates: Boolean)
+  extends CrunchStateActor(None, oneMegaByte, s"forecast-test-$name", queues, now, expireAfterMillis, false, acceptFullStateUpdates) {
   override def applyDiff(cdm: CrunchDiffMessage): Unit = {
     log.info(s"calling parent updateState...")
     super.applyDiff(cdm)
+
+    probe ! state.immutable
+  }
+
+  override def updateFromFullState(ps: PortState): Unit = {
+    log.info(s"calling parent updateFromFullState...")
+    super.updateFromFullState(ps)
 
     probe ! state.immutable
   }
@@ -138,9 +152,9 @@ class CrunchTestLike
     else MilliDate(SDate(a.Scheduled).millisSinceEpoch)
   }
 
-  def liveCrunchStateActor(name: String = "", testProbe: TestProbe, now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[LiveCrunchStateTestActor], name, airportConfig.queues, testProbe.ref, now, 2 * oneDayMillis), name = "crunch-live-state-actor" + UUID.randomUUID().toString)
+  def liveCrunchStateActor(name: String = "", testProbe: TestProbe, now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[LiveCrunchStateTestActor], name, airportConfig.queues, testProbe.ref, now, 2 * oneDayMillis, true), name = "crunch-live-state-actor" + UUID.randomUUID().toString)
 
-  def forecastCrunchStateActor(name: String = "", testProbe: TestProbe, now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[ForecastCrunchStateTestActor], name, airportConfig.queues, testProbe.ref, now, 2 * oneDayMillis), name = "crunch-forecast-state-actor")
+  def forecastCrunchStateActor(name: String = "", testProbe: TestProbe, now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[ForecastCrunchStateTestActor], name, airportConfig.queues, testProbe.ref, now, 2 * oneDayMillis, false), name = "crunch-forecast-state-actor")
 
   def testProbe(name: String) = TestProbe(name = name)
 
