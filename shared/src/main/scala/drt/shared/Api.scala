@@ -196,7 +196,7 @@ trait WithUnique[I] {
   def unique: I
 }
 
-case class UniqueArrival(number: Int, terminalName: TerminalName, scheduled: MillisSinceEpoch, pcp: MillisSinceEpoch) extends WithLegacyUniqueId[Int, UniqueArrival] {
+case class UniqueArrival(number: Int, terminalName: TerminalName, scheduled: MillisSinceEpoch, pcp: MillisSinceEpoch) extends WithLegacyUniqueId[Int, UniqueArrival] with WithTimeAccessor {
   lazy val comparisonStringForEquality = s"$scheduled-$terminalName-$number"
   lazy val comparisonStringForOrdering = s"$pcp-$scheduled-$terminalName-$number"
 
@@ -215,6 +215,8 @@ case class UniqueArrival(number: Int, terminalName: TerminalName, scheduled: Mil
   lazy val uniqueStr: String = s"$terminalName$scheduled$number"
 
   override val hashCode: Int = uniqueId
+
+  override def timeValue: MillisSinceEpoch = if (pcp > 0L) pcp else scheduled
 }
 
 object UniqueArrival {

@@ -27,7 +27,7 @@ trait FeedStateLike {
   }
 }
 
-case class ArrivalsState(arrivals: mutable.Map[UniqueArrival, Arrival], var feedName: String, var maybeFeedStatuses: Option[FeedStatuses]) extends FeedStateLike {
+case class ArrivalsState(arrivals: mutable.SortedMap[UniqueArrival, Arrival], var feedName: String, var maybeFeedStatuses: Option[FeedStatuses]) extends FeedStateLike {
   def clear(): Unit = {
     arrivals.clear()
     maybeFeedStatuses = None
@@ -109,7 +109,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
   val restorer = new RestorerWithLegacy[Int, UniqueArrival, Arrival]
   val state: ArrivalsState = initialState
 
-  override def initialState = ArrivalsState(mutable.Map(), name, None)
+  override def initialState = ArrivalsState(mutable.SortedMap(), name, None)
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case stateMessage: FlightStateSnapshotMessage =>
@@ -134,7 +134,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
     state.arrivals ++= restorer.items
     restorer.clear()
 
-    Crunch.purgeExpired(state.arrivals, (a: Arrival) => a.Scheduled, now, expireAfterMillis)
+    Crunch.purgeExpired(state.arrivals, now, expireAfterMillis.toInt)
 
     log.info(s"Recovered ${state.arrivals.size} arrivals for ${state.feedName}")
     super.postRecoveryComplete()

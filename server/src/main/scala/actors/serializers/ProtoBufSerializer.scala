@@ -5,7 +5,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.Alert.{Alert, AlertSnapshotMessage}
 import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchStateSnapshotMessage}
 import server.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
-import server.protobuf.messages.FlightsMessage.{FeedStatusMessage, FeedStatusesMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
+import server.protobuf.messages.FlightsMessage._
 import server.protobuf.messages.RegisteredArrivalMessage.{RegisteredArrivalMessage, RegisteredArrivalsMessage}
 import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
 import server.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
@@ -30,6 +30,8 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
   final val RemoveStaffMovement: String           = classOf[RemoveStaffMovementMessage].getName
   final val FlightsDiff: String                   = classOf[FlightsDiffMessage].getName
   final val FlightStateSnapshot: String           = classOf[FlightStateSnapshotMessage].getName
+  final val Flight: String                        = classOf[FlightMessage].getName
+  final val UniqueArrival: String                 = classOf[UniqueArrivalMessage].getName
   final val FeedStatus: String                    = classOf[FeedStatusMessage].getName
   final val FeedStatuses: String                  = classOf[FeedStatusesMessage].getName
   final val VoyageManifestStateSnapshot: String   = classOf[VoyageManifestStateSnapshotMessage].getName
@@ -57,6 +59,8 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case m: RemoveStaffMovementMessage => m.toByteArray
       case m: FlightsDiffMessage => m.toByteArray
       case m: FlightStateSnapshotMessage => m.toByteArray
+      case m: FlightMessage => m.toByteArray
+      case m: UniqueArrivalMessage => m.toByteArray
       case m: FeedStatusMessage => m.toByteArray
       case m: FeedStatusesMessage => m.toByteArray
       case m: VoyageManifestStateSnapshotMessage => m.toByteArray
@@ -88,6 +92,8 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case RemoveStaffMovement            => RemoveStaffMovementMessage.parseFrom(bytes)
       case FlightsDiff                    => FlightsDiffMessage.parseFrom(bytes)
       case FlightStateSnapshot            => FlightStateSnapshotMessage.parseFrom(bytes)
+      case Flight                         => FlightMessage.parseFrom(bytes)
+      case UniqueArrival                  => UniqueArrivalMessage.parseFrom(bytes)
       case FeedStatus                     => FeedStatusMessage.parseFrom(bytes)
       case FeedStatuses                   => FeedStatusesMessage.parseFrom(bytes)
       case VoyageManifestStateSnapshot    => VoyageManifestStateSnapshotMessage.parseFrom(bytes)
