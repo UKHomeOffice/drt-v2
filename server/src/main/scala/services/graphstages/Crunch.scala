@@ -162,18 +162,18 @@ object Crunch {
     desks(date.getHourOfDay)
   }
 
-  def purgeExpired[A <: WithTimeAccessor, B](expireable: mutable.SortedMap[A, B], now: () => SDateLike, expireAfter: Int): Unit = {
+  def purgeExpired[A <: WithTimeAccessor, B](expireable: mutable.SortedMap[A, B], atTime: MillisSinceEpoch => A, now: () => SDateLike, expireAfter: Int): Unit = {
     val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
     val sizeBefore = expireable.size
-    val expired = expireable.takeWhile { case (a: A, _) => a.timeValue < thresholdMillis }
+    val expired = expireable.range(atTime(0L), atTime(thresholdMillis + 1))
     expireable --= expired.keys
     log.info(s"Purged ${sizeBefore - expireable.size} items (mutable.SortedMap[A, B])")
   }
 
-  def purgeExpired[A <: WithTimeAccessor](expireable: mutable.SortedSet[A], now: () => SDateLike, expireAfter: Int): Unit = {
+  def purgeExpired[A <: WithTimeAccessor](expireable: mutable.SortedSet[A], atTime: MillisSinceEpoch => A, now: () => SDateLike, expireAfter: Int): Unit = {
     val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
     val sizeBefore = expireable.size
-    val expired = expireable.takeWhile { a: A => a.timeValue < thresholdMillis }
+    val expired = expireable.range(atTime(0L), atTime(thresholdMillis + 1))
     expireable --= expired
     log.info(s"Purged ${sizeBefore - expireable.size} items (mutable.SortedSet[A])")
   }
@@ -189,7 +189,9 @@ object Crunch {
   def purgeExpired[A <: WithTimeAccessor](expireable: SortedSet[A], now: () => SDateLike, expireAfter: Int): SortedSet[A] = {
     val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
     val sizeBefore = expireable.size
-    val unexpired = expireable.dropWhile {_.timeValue < thresholdMillis }
+    val unexpired = expireable.dropWhile {
+      _.timeValue < thresholdMillis
+    }
     log.info(s"Purged ${sizeBefore - expireable.size} items (SortedSet[A])")
     unexpired
   }

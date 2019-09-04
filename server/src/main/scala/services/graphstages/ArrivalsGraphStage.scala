@@ -60,7 +60,7 @@ class ArrivalsGraphStage(name: String = "",
 
     def prepInitialArrivals(initialArrivals: Set[Arrival], arrivals: mutable.SortedMap[ArrivalKey, Arrival]): Unit = {
       arrivals ++= filterAndSetPcp(initialArrivals.toSeq)
-      Crunch.purgeExpired(arrivals, now, expireAfterMillis.toInt)
+      Crunch.purgeExpired(arrivals, ArrivalKey.atTime, now, expireAfterMillis.toInt)
     }
 
     setHandler(inBaseArrivals, new InHandler {
@@ -175,10 +175,10 @@ class ArrivalsGraphStage(name: String = "",
     }
 
     def purgeExpired(): Unit = {
-      Crunch.purgeExpired(liveArrivals, now, expireAfterMillis.toInt)
-      Crunch.purgeExpired(forecastArrivals, now, expireAfterMillis.toInt)
-      Crunch.purgeExpired(baseArrivals, now, expireAfterMillis.toInt)
-      Crunch.purgeExpired(merged, now, expireAfterMillis.toInt)
+      Crunch.purgeExpired(liveArrivals, ArrivalKey.atTime, now, expireAfterMillis.toInt)
+      Crunch.purgeExpired(forecastArrivals, ArrivalKey.atTime, now, expireAfterMillis.toInt)
+      Crunch.purgeExpired(baseArrivals, ArrivalKey.atTime, now, expireAfterMillis.toInt)
+      Crunch.purgeExpired(merged, ArrivalKey.atTime, now, expireAfterMillis.toInt)
     }
 
     def filterAndSetPcp(arrivals: Seq[Arrival]): SortedMap[ArrivalKey, Arrival] = {

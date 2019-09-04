@@ -69,7 +69,7 @@ class SimulationGraphStage(name: String = "",
         val affectedTerminals = incomingLoads.loadMinutes.map { case (TQM(t, _, _), _) => t }.toSet.toSeq
 
         loadMinutes ++= incomingLoads.loadMinutes
-        purgeExpired(loadMinutes, now, expireAfterMillis.toInt)
+        purgeExpired(loadMinutes, TQM.atTime, now, expireAfterMillis.toInt)
 
         val allMinuteMillis = incomingLoads.loadMinutes.keys.map(_.minute)
         val firstMinute = crunchPeriodStartMillis(SDate(allMinuteMillis.min))
@@ -80,7 +80,7 @@ class SimulationGraphStage(name: String = "",
             log.info(s"No affected terminals with deployments. Skipping simulations")
           case affectedTerminalsWithStaff =>
             updateDeployments(affectedTerminalsWithStaff, firstMinute, lastMinute)
-            Crunch.purgeExpired(deployments, now, expireAfterMillis.toInt)
+            Crunch.purgeExpired(deployments, TQM.atTime, now, expireAfterMillis.toInt)
             updateSimulationsForPeriod(firstMinute, lastMinute, affectedTerminalsWithStaff)
             pushStateIfReady()
         }
@@ -101,7 +101,7 @@ class SimulationGraphStage(name: String = "",
         log.info(s"Staff updates affect ${affectedTerminals.mkString(", ")}")
 
         updateStaffMinutes(incomingStaffMinutes)
-        purgeExpired(staffMinutes, now, expireAfterMillis.toInt)
+        purgeExpired(staffMinutes, TM.atTime, now, expireAfterMillis.toInt)
 
         log.info(s"Purged expired staff minutes")
 
@@ -166,7 +166,7 @@ class SimulationGraphStage(name: String = "",
         case (tqm, sm) => allSimulationMinutes += (tqm -> sm)
       }
 
-      purgeExpired(allSimulationMinutes, now, expireAfterMillis.toInt)
+      purgeExpired(allSimulationMinutes, TQM.atTime, now, expireAfterMillis.toInt)
 
       val mergedSimulationMinutesToPush = mergeSimulationMinutes(diff, simulationMinutesToPush)
       simulationMinutesToPush = purgeExpired(mergedSimulationMinutesToPush, now, expireAfterMillis.toInt)

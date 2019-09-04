@@ -134,7 +134,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
     state.arrivals ++= restorer.items
     restorer.clear()
 
-    Crunch.purgeExpired(state.arrivals, now, expireAfterMillis.toInt)
+    Crunch.purgeExpired(state.arrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt)
 
     log.info(s"Recovered ${state.arrivals.size} arrivals for ${state.feedName}")
     super.postRecoveryComplete()

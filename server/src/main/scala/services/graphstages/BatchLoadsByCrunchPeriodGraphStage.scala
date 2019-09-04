@@ -31,7 +31,7 @@ class BatchLoadsByCrunchPeriodGraphStage(now: () => SDateLike,
         val incomingLoads = grab(inLoads)
         mergeLoadsIntoQueue(incomingLoads, loadMinutesQueue, crunchPeriodStartMillis)
 
-        Crunch.purgeExpired(loadMinutesQueue, now, expireAfterMillis.toInt)
+        Crunch.purgeExpired(loadMinutesQueue, MilliDate.atTime, now, expireAfterMillis.toInt)
 
         pushIfAvailable()
 

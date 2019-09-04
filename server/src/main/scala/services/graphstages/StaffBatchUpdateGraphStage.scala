@@ -33,7 +33,7 @@ class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: Millis
           case (dayMillis, staffMinutes) => staffMinutesQueue += (MilliDate(dayMillis) -> StaffMinutes(staffMinutes))
         }
 
-        Crunch.purgeExpired(staffMinutesQueue, now, expireAfterMillis.toInt)
+        Crunch.purgeExpired(staffMinutesQueue, MilliDate.atTime, now, expireAfterMillis.toInt)
 
         pushIfAvailable()
 

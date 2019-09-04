@@ -89,8 +89,8 @@ class BatchStage(now: () => SDateLike,
     }
 
     private def prioritiseAndPush(): Unit = {
-      Crunch.purgeExpired(lookupQueue, now, expireAfterMillis.toInt)
-      Crunch.purgeExpired(registeredArrivals, now, expireAfterMillis.toInt)
+      Crunch.purgeExpired(lookupQueue, ArrivalKey.atTime, now, expireAfterMillis.toInt)
+      Crunch.purgeExpired(registeredArrivals, ArrivalKey.atTime, now, expireAfterMillis.toInt)
 
       val lookupBatch = updatePrioritisedAndSubscribers()
 

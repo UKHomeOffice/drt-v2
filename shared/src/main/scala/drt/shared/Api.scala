@@ -38,6 +38,8 @@ case class MilliDate(millisSinceEpoch: MillisSinceEpoch) extends Ordered[MilliDa
 
 object MilliDate {
   implicit val rw: RW[MilliDate] = macroRW
+
+  def atTime: MillisSinceEpoch => MilliDate = (time: MillisSinceEpoch) => MilliDate(time)
 }
 
 object FlightParsing {
@@ -167,6 +169,8 @@ object TQM {
   implicit val rw: RW[TQM] = macroRW
 
   def apply(crunchMinute: CrunchMinute): TQM = TQM(crunchMinute.terminalName, crunchMinute.queueName, crunchMinute.minute)
+
+  def atTime: MillisSinceEpoch => TQM = (time: MillisSinceEpoch) => TQM("", "", time)
 }
 
 case class TM(terminalName: TerminalName, minute: MillisSinceEpoch) extends Ordered[TM] with WithTimeAccessor {
@@ -186,6 +190,8 @@ object TM {
   implicit val rw: RW[TM] = macroRW
 
   def apply(staffMinute: StaffMinute): TM = TM(staffMinute.terminalName, staffMinute.minute)
+
+  def atTime: MillisSinceEpoch => TM = (time: MillisSinceEpoch) => TM("", time)
 }
 
 trait WithLegacyUniqueId[LI, I] extends Ordered[I] {
@@ -223,6 +229,8 @@ object UniqueArrival {
   implicit val rw: RW[UniqueArrival] = macroRW
 
   def apply(arrival: Arrival): UniqueArrival = UniqueArrival(arrival.flightNumber, arrival.Terminal, arrival.Scheduled, arrival.PcpTime.getOrElse(arrival.Scheduled))
+
+  def atTime: MillisSinceEpoch => UniqueArrival = (time: MillisSinceEpoch) => UniqueArrival(0, "", time, time)
 }
 
 case class CodeShareKey(scheduled: Long, terminalName: TerminalName, origin: String, arrivalKeys: Set[ArrivalKey]) extends Ordered[CodeShareKey] {
@@ -382,13 +390,15 @@ case class ArrivalKey(origin: String, voyageNumber: String, scheduled: Long) ext
 
 object ArrivalKey {
   def apply(arrival: Arrival): ArrivalKey = ArrivalKey(arrival.Origin, arrival.voyageNumberPadded, arrival.Scheduled)
+
+  def atTime: MillisSinceEpoch => ArrivalKey = (time: MillisSinceEpoch) => ArrivalKey("", "", time)
 }
 
 case class ArrivalsDiff(toUpdate: ISortedMap[ArrivalKey, Arrival], toRemove: Set[Arrival])
 
 trait SDateLike {
 
-  def ddMMyyString: String = f"${getDate}%02d/${getMonth}%02d/${getFullYear - 2000}%02d"
+  def ddMMyyString: String = f"$getDate%02d/$getMonth%02d/${getFullYear - 2000}%02d"
 
   val months = List(
     "January", "February", "March", "April", "May", "June",

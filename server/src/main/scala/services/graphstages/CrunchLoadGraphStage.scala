@@ -62,7 +62,7 @@ class CrunchLoadGraphStage(name: String = "",
         val affectedTerminals = incomingLoads.loadMinutes.keys.map(_.terminalName).toSet
 
         mergeNewLoads(incomingLoads.loadMinutes)
-        purgeExpired(loadMinutes, now, expireAfterMillis.toInt)
+        purgeExpired(loadMinutes, TQM.atTime, now, expireAfterMillis.toInt)
 
         val deskRecMinutes = crunchLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, affectedTerminals)
 
@@ -76,7 +76,7 @@ class CrunchLoadGraphStage(name: String = "",
 
         deskRecMinutes.foreach { case (tqm, drm) => existingDeskRecMinutes += (tqm -> drm) }
 
-        purgeExpired(existingDeskRecMinutes, now, expireAfterMillis.toInt)
+        purgeExpired(existingDeskRecMinutes, TQM.atTime, now, expireAfterMillis.toInt)
         deskRecMinutesToPush = mergeDeskRecMinutes(affectedDeskRecs, deskRecMinutesToPush)
 
         log.info(s"Now have ${deskRecMinutesToPush.size} desk rec minutes to push")

@@ -51,7 +51,7 @@ class ArrivalSplitsGraphStage(name: String = "",
         case Some(FlightsWithSplits(flights, _)) =>
           log.info(s"Received initial flights. Setting ${flights.size}")
           flights.foreach(fws => flightsByFlightId += (ArrivalKey(fws.apiFlight) -> fws))
-          purgeExpired(flightsByFlightId, now, expireAfterMillis.toInt)
+          purgeExpired(flightsByFlightId, ArrivalKey.atTime, now, expireAfterMillis.toInt)
 
           flightsByFlightId.foreach { case (arrivalKey, fws) =>
             val csKey = CodeShareKey(fws.apiFlight.Scheduled, fws.apiFlight.Terminal, fws.apiFlight.Origin, Set())
@@ -90,7 +90,7 @@ class ArrivalSplitsGraphStage(name: String = "",
         updateCodeSharesFromDiff(arrivalsDiff)
         updateFlightsFromIncoming(arrivalsDiff)
 
-        purgeExpired(flightsByFlightId, now, expireAfterMillis.toInt)
+        purgeExpired(flightsByFlightId, ArrivalKey.atTime, now, expireAfterMillis.toInt)
 
         val uniqueFlightsWithUpdates = flightsWithUpdates.filterKeys(flightsByFlightId.contains)
 
@@ -143,7 +143,7 @@ class ArrivalSplitsGraphStage(name: String = "",
               log.info(s"We now have ${flightsByFlightId.size} flights")
 
               arrivalsWithSplitsDiff = mergeDiffSets(flightsWithUpdates, arrivalsWithSplitsDiff)
-              purgeExpired(flightsByFlightId, now, expireAfterMillis.toInt)
+              purgeExpired(flightsByFlightId, ArrivalKey.atTime, now, expireAfterMillis.toInt)
               log.info(s"Done diff")
 
               pushStateIfReady()

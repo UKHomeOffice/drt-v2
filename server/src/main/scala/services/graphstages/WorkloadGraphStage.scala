@@ -53,7 +53,7 @@ class WorkloadGraphStage(name: String = "",
         case Some(fws: FlightsWithSplits) =>
           log.info(s"Received ${fws.flightsToUpdate.size} initial flights. Calculating workload.")
           val updatedWorkloads = flightLoadMinutes(fws)
-          purgeExpired(updatedWorkloads, now, expireAfterMillis.toInt)
+          purgeExpired(updatedWorkloads, TQM.atTime, now, expireAfterMillis.toInt)
         case None =>
           log.warn(s"Didn't receive any initial flights to initialise with")
       }
@@ -126,7 +126,7 @@ class WorkloadGraphStage(name: String = "",
           val newLoadMinutes = flightLoadMinutes.getOrElse(tqm, Set()) ++ newLm
           flightLoadMinutes += (tqm -> newLoadMinutes)
       }
-      purgeExpired(flightLoadMinutes, now, expireAfterMillis.toInt)
+      purgeExpired(flightLoadMinutes, TQM.atTime, now, expireAfterMillis.toInt)
     }
 
     def mergeLoadMinutes(updatedLoads: Map[TQM, LoadMinute], existingLoads: SortedMap[TQM, LoadMinute]): SortedMap[TQM, LoadMinute] = updatedLoads.foldLeft(existingLoads) {
