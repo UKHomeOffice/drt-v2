@@ -164,38 +164,34 @@ object Crunch {
 
   def purgeExpired[A <: WithTimeAccessor, B](expireable: mutable.SortedMap[A, B], now: () => SDateLike, expireAfter: Int): Unit = {
     val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
-    expireable
-      .takeWhile { case (a: A, _) => a.timeValue < thresholdMillis }
-      .foreach { case (a, _) => expireable.remove(a) }
+    val sizeBefore = expireable.size
+    val expired = expireable.takeWhile { case (a: A, _) => a.timeValue < thresholdMillis }
+    expireable --= expired.keys
+    log.info(s"Purged ${sizeBefore - expireable.size} items (mutable.SortedMap[A, B])")
   }
 
   def purgeExpired[A <: WithTimeAccessor](expireable: mutable.SortedSet[A], now: () => SDateLike, expireAfter: Int): Unit = {
     val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
-    expireable
-      .takeWhile { a: A => a.timeValue < thresholdMillis }
-      .foreach(a => expireable.remove(a))
+    val sizeBefore = expireable.size
+    val expired = expireable.takeWhile { a: A => a.timeValue < thresholdMillis }
+    expireable --= expired
+    log.info(s"Purged ${sizeBefore - expireable.size} items (mutable.SortedSet[A])")
   }
 
   def purgeExpired[A <: WithTimeAccessor, B](expireable: SortedMap[A, B], now: () => SDateLike, expireAfter: Int): SortedMap[A, B] = {
     val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
-    expireable.dropWhile { case (a: A, _) => a.timeValue < thresholdMillis }
+    val sizeBefore = expireable.size
+    val unexpired = expireable.dropWhile { case (a: A, _) => a.timeValue < thresholdMillis }
+    log.info(s"Purged ${sizeBefore - expireable.size} items (SortedMap[A, B])")
+    unexpired
   }
 
   def purgeExpired[A <: WithTimeAccessor](expireable: SortedSet[A], now: () => SDateLike, expireAfter: Int): SortedSet[A] = {
     val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
-    expireable.dropWhile {
-      _.timeValue < thresholdMillis
-    }
-  }
-
-  def purgeExpired[A: TypeTag](expireable: List[(MillisSinceEpoch, A)], now: () => SDateLike, expireAfter: MillisSinceEpoch): List[(MillisSinceEpoch, A)] = {
-    val expired = hasExpiredForType(identity[MillisSinceEpoch], now, expireAfter)
-    val updated = expireable.filterNot { case (i, _) => expired(i) }
-
-    val numPurged = expireable.size - updated.size
-    if (numPurged > 0) log.info(s"Purged $numPurged ${typeOf[A].toString}")
-
-    updated
+    val sizeBefore = expireable.size
+    val unexpired = expireable.dropWhile {_.timeValue < thresholdMillis }
+    log.info(s"Purged ${sizeBefore - expireable.size} items (SortedSet[A])")
+    unexpired
   }
 
   def purgeExpired[I, A: TypeTag](expireable: Map[I, A], timeAccessor: A => MillisSinceEpoch, now: () => SDateLike, expireAfter: MillisSinceEpoch): Map[I, A] = {
@@ -203,46 +199,7 @@ object Crunch {
     val updated = expireable.filterNot { case (_, a) => expired(a) }
 
     val numPurged = expireable.size - updated.size
-    if (numPurged > 0) log.info(s"Purged $numPurged ${typeOf[A].toString}")
-
-    updated
-  }
-
-  def purgeExpired[I, A: TypeTag](expireable: mutable.Map[I, A], timeAccessor: A => MillisSinceEpoch, now: () => SDateLike, expireAfter: MillisSinceEpoch): Unit = {
-    val expired = hasExpiredForType(timeAccessor, now, expireAfter)
-    val sizeBefore = expireable.size
-    expireable --= expireable.collect { case (idx, a) if expired(a) => idx }
-
-    val numPurged = sizeBefore - expireable.size
-    if (numPurged > 0) log.info(s"Purged $numPurged ${typeOf[A].toString}")
-  }
-
-  def purgeExpiredTuple[A: TypeTag, B](expireable: Map[A, B], timeAccessor: A => MillisSinceEpoch, now: () => SDateLike, expireAfter: MillisSinceEpoch): Map[A, B] = {
-    val expired = hasExpiredForType(timeAccessor, now, expireAfter)
-    val updated = expireable.filterNot { case (a, _) => expired(a) }
-
-    val numPurged = expireable.size - updated.size
-    if (numPurged > 0) log.info(s"Purged $numPurged ${typeOf[A].toString}")
-
-    updated
-  }
-
-  def purgeExpired[A: TypeTag](expireable: Set[A], timeAccessor: A => MillisSinceEpoch, now: () => SDateLike, expireAfter: MillisSinceEpoch): Set[A] = {
-    val expired = hasExpiredForType(timeAccessor, now, expireAfter)
-    val updated = expireable.filterNot(expired)
-
-    val numPurged = expireable.size - updated.size
-    if (numPurged > 0) log.info(s"Purged $numPurged ${typeOf[A].toString}")
-
-    updated
-  }
-
-  def purgeExpired[A: TypeTag](expireable: Seq[A], timeAccessor: A => MillisSinceEpoch, now: () => SDateLike, expireAfter: MillisSinceEpoch): Seq[A] = {
-    val expired = hasExpiredForType(timeAccessor, now, expireAfter)
-    val updated = expireable.filterNot(expired)
-
-    val numPurged = expireable.size - updated.size
-    if (numPurged > 0) log.info(s"Purged $numPurged ${typeOf[A].toString}")
+    if (numPurged > 0) log.info(s"Purged $numPurged ${typeOf[A].toString} (Map[I, A])")
 
     updated
   }
