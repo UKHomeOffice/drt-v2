@@ -130,9 +130,9 @@ abstract class ArrivalsActor(now: () => SDateLike,
   }
 
   override def postRecoveryComplete(): Unit = {
-    restorer.tidyUp()
+    restorer.finish()
     state.arrivals ++= restorer.items
-    restorer.items.clear()
+    restorer.clear()
 
     Crunch.purgeExpired(state.arrivals, (a: Arrival) => a.Scheduled, now, expireAfterMillis)
 

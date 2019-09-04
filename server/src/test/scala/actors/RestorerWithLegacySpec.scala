@@ -20,7 +20,7 @@ class RestorerWithLegacySpec extends Specification {
 
     restorer.update(Seq(item1))
 
-    restorer.tidyUp()
+    restorer.finish()
 
     restorer.legacyMap.isEmpty === true && restorer.items === mutable.Map(item1.unique -> item1)
   }
@@ -33,7 +33,7 @@ class RestorerWithLegacySpec extends Specification {
     restorer.update(items)
     restorer.removeLegacies(Seq(item1.unique.uniqueId))
 
-    restorer.tidyUp()
+    restorer.finish()
 
     restorer.legacyMap.isEmpty === true && restorer.items === mutable.Map(item2.unique -> item2)
   }
@@ -47,7 +47,7 @@ class RestorerWithLegacySpec extends Specification {
     restorer.removeLegacies(Seq(item1.unique.uniqueId))
     restorer.remove(Seq(item2.unique))
 
-    restorer.tidyUp()
+    restorer.finish()
 
     restorer.legacyMap.isEmpty === true && restorer.items === mutable.Map(item3.unique -> item3, item4.unique -> item4)
   }

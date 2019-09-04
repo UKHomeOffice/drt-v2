@@ -22,7 +22,12 @@ class RestorerWithLegacy[LI, I <: WithLegacyUniqueId[LI, I], A <: WithUnique[I]]
     items += (index -> update)
   }
 
-  def tidyUp(): Unit = legacyMap.clear()
+  def finish(): Unit = legacyMap.clear()
+
+  def clear(): Unit = {
+    legacyMap.clear()
+    items.clear()
+  }
 
   private def removeWithLegacyIdx(toRemove: LI): Unit = {
     legacyMap.get(toRemove).foreach { idx =>
