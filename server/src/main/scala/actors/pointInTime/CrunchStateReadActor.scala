@@ -26,7 +26,7 @@ class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, expire
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case cdm@CrunchDiffMessage(createdAtOption, _, _, _, _, _, _) =>
+    case cdm@CrunchDiffMessage(createdAtOption, _, _, _, _, _, _, _) =>
       createdAtOption match {
         case Some(createdAt) if createdAt <= pointInTime.millisSinceEpoch =>
           log.info(s"Applying crunch diff with createdAt (${SDate(createdAt).toISOString()}) <= point in time requested: ${pointInTime.toISOString()}")

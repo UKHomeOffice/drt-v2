@@ -8,6 +8,7 @@ import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchMinuteMessage, StaffMinuteMessage}
+import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 import services.SDate
 
 import scala.collection.immutable.Map
@@ -19,7 +20,7 @@ case class PortStateWithDiff(maybePortState: Option[PortState], diff: PortStateD
   }
 
   def crunchDiffWindow(start: SDateLike, end: SDateLike): CrunchDiffMessage = {
-    val flightsToRemove = diffMessage.flightIdsToRemove
+    val flightsToRemove = diffMessage.flightsToRemove
     val flightsToUpdate = diffMessage.flightsToUpdate.filter(smm => smm.flight.exists(f => start.millisSinceEpoch <= f.scheduled.getOrElse(0L) && f.scheduled.getOrElse(0L) <= end.millisSinceEpoch))
     val staffToUpdate = diffMessage.staffMinutesToUpdate.filter(smm => start.millisSinceEpoch <= smm.minute.getOrElse(0L) && smm.minute.getOrElse(0L) < end.millisSinceEpoch)
     val crunchToUpdate = diffMessage.crunchMinutesToUpdate.filter(cmm => start.millisSinceEpoch <= cmm.minute.getOrElse(0L) && cmm.minute.getOrElse(0L) < end.millisSinceEpoch)
@@ -73,7 +74,7 @@ class PortStateGraphStage(name: String = "", optionalInitialPortState: Option[Po
               val startTime = now().millisSinceEpoch
               val expireThreshold = now().addMillis(-1 * expireAfterMillis.toInt).millisSinceEpoch
               val diff = incoming.applyTo(portState, startTime)
-//              portState.purgeOlderThanDate(expireThreshold)
+              portState.purgeOlderThanDate(expireThreshold)
               val elapsedSeconds = (now().millisSinceEpoch - startTime).toDouble / 1000
               log.info(f"Finished processing $inlet data in $elapsedSeconds%.2f seconds")
               diff
@@ -158,7 +159,7 @@ class PortStateGraphStage(name: String = "", optionalInitialPortState: Option[Po
   def diffMessage(diff: PortStateDiff): CrunchDiffMessage = CrunchDiffMessage(
     createdAt = Option(now().millisSinceEpoch),
     crunchStart = Option(0),
-    flightIdsToRemove = diff.flightRemovals.map(_.flightKey.uniqueId),
+    flightsToRemove = diff.flightRemovals.map { case RemoveFlight(ua) => UniqueArrivalMessage(Option(ua.number), Option(ua.terminalName), Option(ua.scheduled)) },
     flightsToUpdate = diff.flightUpdates.values.map(FlightMessageConversion.flightWithSplitsToMessage).toList,
     crunchMinutesToUpdate = diff.crunchMinuteUpdates.values.map(crunchMinuteToMessage).toList,
     staffMinutesToUpdate = diff.staffMinuteUpdates.values.map(staffMinuteToMessage).toList

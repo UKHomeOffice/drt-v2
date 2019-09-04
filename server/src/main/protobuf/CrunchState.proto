@@ -57,12 +57,13 @@ message StaffMinuteMessage {
 message CrunchDiffMessage {
     optional int64 createdAt = 1;
     optional int64 crunchStart = 2;
-    repeated int32 flightIdsToRemove = 3;
+    repeated UniqueArrivalMessage flightsToRemove = 8;
     repeated FlightWithSplitsMessage flightsToUpdate = 4;
     repeated CrunchMinuteMessage crunchMinutesToUpdate = 6;
     repeated StaffMinuteMessage staffMinutesToUpdate = 7;
 
     repeated RemoveCrunchMinuteMessage CrunchMinutesToRemove__OLD = 5;
+    repeated int32 flightIdsToRemove__OLD = 3;
 }
 
 message RemoveCrunchMinuteMessage {

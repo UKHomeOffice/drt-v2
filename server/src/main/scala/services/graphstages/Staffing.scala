@@ -118,7 +118,7 @@ object Staffing {
     val staffSources = Staffing.staffAvailableByTerminalAndQueue(0L, shifts, fixedPoints, Option(movements))
     val staffMinutes = Staffing.staffMinutesForCrunchMinutes(cm, staffSources)
 
-    new PortStateMutable(fl, cm, mutable.SortedMap[TM, StaffMinute]() ++ staffMinutes)
+    new PortStateMutable(mutable.SortedMap[UniqueArrival, ApiFlightWithSplits]() ++ fl.map { case (_, fws) => (fws.unique, fws) }, cm, mutable.SortedMap[TM, StaffMinute]() ++ staffMinutes)
   }
 
 }
