@@ -40,6 +40,6 @@ class MutableStateSpec extends SpecificationLike {
 
     log.info(s"purge took ${msTaken}ms")
 
-    msTaken < 1000L
+    msTaken must beLessThan(1000L)
   }
 }
