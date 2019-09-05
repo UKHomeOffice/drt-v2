@@ -262,4 +262,17 @@ object Crunch {
       }
       .toSeq
   }
+
+  def baseArrivalsRemovalsAndUpdates(incoming: Map[UniqueArrival, Arrival], existing: mutable.Map[UniqueArrival, Arrival]): (mutable.Set[UniqueArrival], mutable.Set[Arrival]) = {
+    val removals = mutable.Set[UniqueArrival]()
+    val updates = mutable.Set[Arrival]()
+
+    removals ++= existing.keys.toSet -- incoming.keys.toSet
+
+    incoming.foreach {
+      case (k, a)  => if (!existing.contains(k) || existing(k) != a) updates += a
+    }
+
+    (removals, updates)
+  }
 }

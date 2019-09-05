@@ -52,7 +52,7 @@ class ForecastBaseArrivalsActor(initialSnapshotBytesThreshold: Int,
   override def handleFeedSuccess(incomingArrivals: Seq[Arrival], createdAt: SDateLike): Unit = {
     log.info(s"Received arrivals (base)")
     val incomingArrivalsWithKeys = incomingArrivals.map(a => (a.unique, a)).toMap
-    val (removals, updates) = removalsAndUpdates(incomingArrivalsWithKeys, state.arrivals)
+    val (removals, updates) = Crunch.baseArrivalsRemovalsAndUpdates(incomingArrivalsWithKeys, state.arrivals)
     val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, updates.size)
 
     state.arrivals.clear()
@@ -61,18 +61,6 @@ class ForecastBaseArrivalsActor(initialSnapshotBytesThreshold: Int,
 
     if (removals.nonEmpty || updates.nonEmpty) persistArrivalUpdates(removals, updates)
     persistFeedStatus(FeedStatusSuccess(createdAt.millisSinceEpoch, updates.size))
-  }
-
-  def removalsAndUpdates(incoming: Map[UniqueArrival, Arrival], existing: mutable.Map[UniqueArrival, Arrival]): (mutable.Set[UniqueArrival], mutable.Set[Arrival]) = {
-    val removals = mutable.Set[UniqueArrival]()
-    val updates = mutable.Set[Arrival]()
-    existing.keys.foreach { k => if (incoming.contains(k)) removals += k }
-
-    incoming.foreach {
-      case (k, a) => existing.get(k).foreach(a => updates += a)
-    }
-
-    (removals, updates)
   }
 }
 
