@@ -180,7 +180,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
   def handleFeedSuccess(incomingArrivals: Seq[Arrival], createdAt: SDateLike): Unit = {
     log.info(s"Received arrivals")
 
-    mergeArrivals(incomingArrivals, state.arrivals)
+    state.arrivals ++= incomingArrivals.map(a => (a.unique, a))
     val updatedArrivals = incomingArrivals.toSet
     val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, updatedArrivals.size)
     state.maybeFeedStatuses = Option(state.addStatus(newStatus))
@@ -188,11 +188,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
     persistFeedStatus(FeedStatusSuccess(createdAt.millisSinceEpoch, updatedArrivals.size))
     if (updatedArrivals.nonEmpty) persistArrivalUpdates(mutable.Set(), mutable.Set[Arrival]() ++ updatedArrivals)
   }
-
-  def mergeArrivals(incomingArrivals: Seq[Arrival], existingArrivals: mutable.Map[UniqueArrival, Arrival]): Unit = {
-    incomingArrivals.foreach(updatedArrival => existingArrivals += (updatedArrival.unique -> updatedArrival))
-  }
-
+  
   def persistArrivalUpdates(removals: mutable.Set[UniqueArrival], updatedArrivals: mutable.Set[Arrival]): Unit = {
     val updateMessages = updatedArrivals.map(apiFlightToFlightMessage).toSeq
     val removalMessages = removals.map(ua => UniqueArrivalMessage(Option(ua.number), Option(ua.terminalName), Option(ua.scheduled))).toSeq
