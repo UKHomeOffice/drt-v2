@@ -176,14 +176,6 @@ object Crunch {
     log.info(s"Purged ${sizeBefore - expireable.size} items (mutable.SortedSet[A])")
   }
 
-//  def purgeExpired[A <: WithTimeAccessor, B](expireable: SortedMap[A, B], now: () => SDateLike, expireAfter: Int): SortedMap[A, B] = {
-//    val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
-//    val sizeBefore = expireable.size
-//    val unexpired = expireable.dropWhile { case (a: A, _) => a.timeValue < thresholdMillis }
-//    log.info(s"Purged ${sizeBefore - expireable.size} items (SortedMap[A, B])")
-//    unexpired
-//  }
-
   def hasExpired[A](now: SDateLike, expireAfterMillis: Long, toMillis: A => MillisSinceEpoch)(toCompare: A): Boolean = {
     val ageInMillis = now.millisSinceEpoch - toMillis(toCompare)
     ageInMillis > expireAfterMillis

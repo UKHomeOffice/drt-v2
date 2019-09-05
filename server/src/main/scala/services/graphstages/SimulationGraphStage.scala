@@ -79,7 +79,7 @@ class SimulationGraphStage(name: String = "",
             log.info(s"No affected terminals with deployments. Skipping simulations")
           case affectedTerminalsWithStaff =>
             updateDeployments(affectedTerminalsWithStaff, firstMinute, lastMinute)
-            Crunch.purgeExpired(deployments, TQM.atTime, now, expireAfterMillis.toInt)
+            purgeExpired(deployments, TQM.atTime, now, expireAfterMillis.toInt)
             updateSimulationsForPeriod(firstMinute, lastMinute, affectedTerminalsWithStaff)
             pushStateIfReady()
         }
@@ -358,7 +358,7 @@ class SimulationGraphStage(name: String = "",
     }
 
     val deployer: (Seq[(String, Double)], Int, Map[String, (Int, Int)]) => Seq[(String, Int)] = queueRecsToDeployments(_.toInt)
-    
+
     def pullAll(): Unit = {
       if (!hasBeenPulled(inLoads)) {
         log.info(s"Pulling inFlightsWithSplits")
