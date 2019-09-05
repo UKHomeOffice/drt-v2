@@ -10,6 +10,7 @@ import services.SDate
 import services.graphstages.Crunch.{getLocalLastMidnight, movementsUpdateCriteria, purgeExpired}
 
 import scala.collection.immutable.SortedMap
+import scala.collection.mutable
 
 class StaffGraphStage(name: String = "",
                       initialShifts: ShiftAssignments,
@@ -33,8 +34,8 @@ class StaffGraphStage(name: String = "",
     var shifts: ShiftAssignments = ShiftAssignments.empty
     var fixedPoints: FixedPointAssignments = FixedPointAssignments.empty
     var movementsOption: Option[Seq[StaffMovement]] = None
-    var staffMinutes: SortedMap[TM, StaffMinute] = SortedMap()
-    var staffMinuteUpdates: SortedMap[TM, StaffMinute] = SortedMap()
+    val staffMinutes: mutable.SortedMap[TM, StaffMinute] = mutable.SortedMap()
+    val staffMinuteUpdates: mutable.SortedMap[TM, StaffMinute] = mutable.SortedMap()
 
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
@@ -46,7 +47,7 @@ class StaffGraphStage(name: String = "",
       shifts = initialShifts
       fixedPoints = initialFixedPoints
       movementsOption = optionalInitialMovements
-      staffMinutes = SortedMap[TM, StaffMinute]() ++ initialStaffMinutes.minutes.map(sm => (TM(sm.terminalName, sm.minute), sm))
+      staffMinutes ++= initialStaffMinutes.minutes.map(sm => (TM(sm.terminalName, sm.minute), sm))
 
       if (checkRequiredUpdatesOnStartup) {
         val lastMidnightMillis = getLocalLastMidnight(now()).millisSinceEpoch
@@ -59,7 +60,7 @@ class StaffGraphStage(name: String = "",
           case minutes =>
             val updateCriteria = UpdateCriteria(minutes.toList.sorted, airportConfig.terminalNames.toSet)
             log.info(s"${updateCriteria.minuteMillis.length} minutes to add or update")
-            staffMinuteUpdates = updatesFromSources(staffSources, updateCriteria)
+            applyUpdatesFromSources(staffSources, updateCriteria)
             log.info(s"${staffMinuteUpdates.size} minutes generated across terminals")
         }
       } else {
@@ -108,7 +109,7 @@ class StaffGraphStage(name: String = "",
         log.info(s"Grabbed available inShifts")
         val updateCriteria = shiftsUpdateCriteria(shifts, incomingShifts)
         shifts = incomingShifts
-        staffMinuteUpdates = updatesFromSources(staffSources, updateCriteria)
+        applyUpdatesFromSources(staffSources, updateCriteria)
         tryPush()
         pull(inShifts)
         log.info(s"inShifts Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
@@ -123,7 +124,7 @@ class StaffGraphStage(name: String = "",
 
         val updateCriteria = fixedPointsUpdateCriteria(fixedPoints, incomingFixedPoints)
         fixedPoints = incomingFixedPoints
-        staffMinuteUpdates = updatesFromSources(staffSources, updateCriteria)
+        applyUpdatesFromSources(staffSources, updateCriteria)
         tryPush()
         pull(inFixedPoints)
         log.info(s"inFixedPoints Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
@@ -138,8 +139,7 @@ class StaffGraphStage(name: String = "",
         val existingMovements = movementsOption.map(_.toSet).getOrElse(Set())
         val updateCriteria: UpdateCriteria = movementsUpdateCriteria(existingMovements, incomingMovements)
         movementsOption = Option(incomingMovements)
-        val latestUpdates = updatesFromSources(staffSources, updateCriteria)
-        staffMinuteUpdates = mergeStaffMinuteUpdates(latestUpdates, staffMinuteUpdates)
+        applyUpdatesFromSources(staffSources, updateCriteria)
         tryPush()
         pull(inMovements)
         log.info(s"inMovements Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
@@ -192,11 +192,6 @@ class StaffGraphStage(name: String = "",
       UpdateCriteria(minuteMillis, terminalNames)
     }
 
-    def mergeStaffMinuteUpdates(latestUpdates: SortedMap[TM, StaffMinute], existingUpdates: SortedMap[TM, StaffMinute]): SortedMap[TM, StaffMinute] = latestUpdates
-      .foldLeft(existingUpdates) {
-        case (soFar, (id, updatedMinute)) => soFar.updated(id, updatedMinute)
-      }
-
     setHandler(outStaffMinutes, new OutHandler {
       override def onPull(): Unit = {
         val start = SDate.now()
@@ -209,7 +204,7 @@ class StaffGraphStage(name: String = "",
       }
     })
 
-    def updatesFromSources(staff: StaffSources, updateCriteria: UpdateCriteria): SortedMap[TM, StaffMinute] = {
+    def applyUpdatesFromSources(staff: StaffSources, updateCriteria: UpdateCriteria): Unit = {
       log.info(s"about to update ${updateCriteria.minuteMillis.size} staff minutes for ${updateCriteria.terminalNames}")
 
       import SDate.implicits.sdateFromMilliDateLocal
@@ -224,33 +219,21 @@ class StaffGraphStage(name: String = "",
           }
         })
 
-      val mergedMinutes = mergeMinutes(updatedMinutes, staffMinutes)
+      staffMinutes ++= updatedMinutes
+      staffMinuteUpdates ++= updatedMinutes
 
-      staffMinutes = purgeExpired(mergedMinutes, now, expireAfterMillis.toInt)
-
-      mergeMinutes(updatedMinutes, staffMinuteUpdates)
-    }
-
-    def mergeMinutes(updatedMinutes: SortedMap[TM, StaffMinute], existingMinutes: SortedMap[TM, StaffMinute]): SortedMap[TM, StaffMinute] = {
-      updatedMinutes.foldLeft(existingMinutes) {
-        case (soFar, (tm, updatedMinute)) =>
-          soFar.get(tm) match {
-            case Some(existingMinute) if existingMinute.equals(updatedMinute) => soFar
-            case _ => soFar.updated(tm, updatedMinute)
-          }
-      }
+      purgeExpired(staffMinutes, TM.atTime, now, expireAfterMillis.toInt)
     }
 
     def tryPush(): Unit = {
       if (isAvailable(outStaffMinutes)) {
         if (staffMinuteUpdates.nonEmpty) {
           log.info(s"Pushing ${staffMinuteUpdates.size} staff minute updates")
-          push(outStaffMinutes, StaffMinutes(staffMinuteUpdates))
-          staffMinuteUpdates = SortedMap()
+          push(outStaffMinutes, StaffMinutes(Map[TM, StaffMinute]() ++ staffMinuteUpdates))
+          staffMinuteUpdates.clear()
         }
       } else log.info(s"outStaffMinutes not available to push")
     }
-
   }
 
   def allMinuteMillis(fixedPoints: FixedPointAssignments): Set[MillisSinceEpoch] = {

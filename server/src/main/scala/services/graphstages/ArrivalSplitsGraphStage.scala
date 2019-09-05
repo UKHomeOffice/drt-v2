@@ -14,7 +14,6 @@ import services.graphstages.Crunch.purgeExpired
 
 import scala.collection.immutable.Map
 import scala.collection.mutable
-import scala.language.postfixOps
 
 case class UpdateStats(updatesCount: Int, additionsCount: Int)
 

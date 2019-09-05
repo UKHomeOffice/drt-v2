@@ -11,7 +11,6 @@ import services.{OptimizerConfig, OptimizerCrunchResult, SDate, TryCrunch}
 
 import scala.collection.immutable.{Map, SortedMap}
 import scala.collection.mutable
-import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 
@@ -123,19 +122,6 @@ class CrunchLoadGraphStage(name: String = "",
           log.warn(s"failed to crunch: $t")
           SortedMap[TQM, DeskRecMinute]()
       }
-    }
-
-    def filterTerminalQueueMinutes[A <: TerminalQueueMinute](firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Set[TerminalName], thingsToFilter: SortedMap[TQM, A]): Set[A] = {
-      val maybeThings = for {
-        terminalName <- terminalsToUpdate
-        queueName <- airportConfig.queues.getOrElse(terminalName, Seq())
-        minute <- firstMinute until lastMinute by Crunch.oneMinuteMillis
-      } yield {
-        val key = MinuteHelper.key(terminalName, queueName, minute)
-        thingsToFilter.get(key)
-      }
-
-      maybeThings.collect { case Some(thing) => thing }
     }
 
     def minMaxDesksForQueue(deskRecMinutes: Seq[MillisSinceEpoch], tn: TerminalName, qn: QueueName): (Seq[Int], Seq[Int]) = {

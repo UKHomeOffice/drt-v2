@@ -1,10 +1,8 @@
 package manifests.passengers
 
-import akka.NotUsed
-import akka.actor.{ActorSystem, Cancellable, Scheduler}
-import akka.stream.Materializer
+import akka.actor.{ActorSystem, Cancellable}
 import akka.stream.QueueOfferResult.Enqueued
-import akka.stream.scaladsl.{Sink, SinkQueueWithCancel, Source, SourceQueueWithComplete}
+import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.server.feeds.api.ApiProviderLike
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{DqEventCodes, SDateLike}
@@ -12,8 +10,8 @@ import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import server.feeds.{ManifestsFeedFailure, ManifestsFeedResponse, ManifestsFeedSuccess}
+import services.SDate
 import services.graphstages.DqManifests
-import services.{OfferHandler, SDate}
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -24,7 +22,7 @@ import scala.util.{Failure, Success, Try}
 
 
 class S3ManifestPoller(sourceQueue: SourceQueueWithComplete[ManifestsFeedResponse], portCode: String, initialLastSeenFileName: String, provider: ApiProviderLike)
-                      (implicit actorSystem: ActorSystem, materializer: Materializer) {
+                      (implicit actorSystem: ActorSystem) {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -79,15 +77,12 @@ class S3ManifestPoller(sourceQueue: SourceQueueWithComplete[ManifestsFeedRespons
   def startPollingForManifests(): Cancellable = {
     actorSystem.scheduler.schedule(0 seconds, 1 minute, new Runnable {
       def run(): Unit = {
-        implicit val scheduler: Scheduler = actorSystem.scheduler
         fetchNewManifests(lastSeenFileName) match {
           case ManifestsFeedSuccess(DqManifests(latestFileName, manifests), createdAt) =>
             log.info(s"Received live manifests")
             liveManifestsBuffer = updateManifestsBuffer(latestFileName, manifests, createdAt)
             lastSeenFileName = latestFileName
             tryOfferManifests()
-          case ManifestsFeedSuccess(DqManifests(_, manifests), _) if manifests.isEmpty =>
-            log.info(s"No new live manifests")
           case ManifestsFeedFailure(msg, _) =>
             log.warn(s"Failed to fetch new live manifests: $msg")
         }
@@ -100,7 +95,7 @@ class S3ManifestPoller(sourceQueue: SourceQueueWithComplete[ManifestsFeedRespons
       sourceQueue.offer(manifestsToSend).map {
         case Enqueued =>
           liveManifestsBuffer = None
-          log.info(s"Enqueued live manifests")
+          log.info(s"Enqueued live manifests: $manifestsToSend")
         case _ => log.info(s"Couldn't enqueue live manifests. Leaving them in the buffer")
       }.recover {
         case t => log.error(s"Couldn't enqueue live manifests. Leaving them in the buffer", t)

@@ -45,7 +45,6 @@ import services.graphstages._
 import services.prediction.SparkSplitsPredictorFactory
 import slickdb.{ArrivalTable, Tables, VoyageManifestPassengerInfoTable}
 
-import scala.collection.immutable.SortedMap
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._

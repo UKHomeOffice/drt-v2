@@ -9,7 +9,6 @@ import services.SDate
 import services.graphstages.Crunch._
 
 import scala.collection.mutable
-import scala.language.postfixOps
 
 class BatchLoadsByCrunchPeriodGraphStage(now: () => SDateLike,
                                          expireAfterMillis: MillisSinceEpoch,

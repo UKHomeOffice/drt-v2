@@ -1,20 +1,19 @@
 package drt.server.feeds.legacy.bhx
 
 import akka.NotUsed
-import akka.actor.{ActorSystem, Cancellable}
+import akka.actor.Cancellable
 import akka.stream.scaladsl.Source
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, ArrivalsFeedResponse}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 
-import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 object BHXForecastFeedLegacy extends BHXFeedConfig {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply(endPointUrl: String)(implicit actorSystem: ActorSystem): Source[ArrivalsFeedResponse, Cancellable] = {
+  def apply(endPointUrl: String): Source[ArrivalsFeedResponse, Cancellable] = {
 
       val feed = BHXFeed(serviceSoap(endPointUrl))
       val tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)

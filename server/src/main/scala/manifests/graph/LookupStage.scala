@@ -6,7 +6,7 @@ import drt.shared.ArrivalKey
 import manifests.passengers.BestAvailableManifest
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import org.slf4j.{Logger, LoggerFactory}
-import services.{OfferHandler, RetryDelays, SDate}
+import services.SDate
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._

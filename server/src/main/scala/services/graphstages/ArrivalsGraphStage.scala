@@ -10,7 +10,6 @@ import services.SDate
 
 import scala.collection.immutable.{Map, SortedMap}
 import scala.collection.mutable
-import scala.language.postfixOps
 
 
 sealed trait ArrivalsSourceType

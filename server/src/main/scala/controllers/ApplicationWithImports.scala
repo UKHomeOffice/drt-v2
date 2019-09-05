@@ -14,7 +14,6 @@ import server.feeds.StoreFeedImportArrivals
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.language.postfixOps
 
 
 trait ApplicationWithImports {

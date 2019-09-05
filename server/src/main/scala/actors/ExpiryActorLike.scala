@@ -1,8 +1,6 @@
 package actors
 
 import drt.shared.{HasExpireables, SDateLike}
-import services.SDate
-import services.graphstages.Crunch
 
 trait ExpiryActorLike[A <: HasExpireables[A]] {
   def now: () => SDateLike

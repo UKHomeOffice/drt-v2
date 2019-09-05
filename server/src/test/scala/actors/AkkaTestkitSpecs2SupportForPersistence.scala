@@ -10,7 +10,7 @@ import org.specs2.mutable.After
 import scala.collection.JavaConversions._
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
-import scala.language.reflectiveCalls
+import scala.language.postfixOps
 
 
 object PersistenceCleanup {
@@ -43,8 +43,7 @@ abstract class AkkaTestkitSpecs2SupportForPersistence(val dbLocation: String) ex
   def shutDownActorSystem: Future[Terminated] = {
     //TODO figure out how to wait for the actor to finish saving rather than this nasty timer.
     Thread.sleep(200)
-    import scala.language.postfixOps
-    Await.ready(system.terminate(), 2 second)
+        Await.ready(system.terminate(), 2 second)
     Await.ready(system.whenTerminated, 2 second)
   }
 }

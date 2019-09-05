@@ -15,7 +15,6 @@ import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 import services.SDate
 import services.graphstages.PortStateWithDiff
 
-import scala.language.postfixOps
 
 class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
                        initialSnapshotBytesThreshold: Int,

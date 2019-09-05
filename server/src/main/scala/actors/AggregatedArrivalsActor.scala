@@ -10,7 +10,6 @@ import slickdb.ArrivalTableLike
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.language.postfixOps
 
 
 class AggregatedArrivalsActor(portCode: String, arrivalTable: ArrivalTableLike) extends Actor {

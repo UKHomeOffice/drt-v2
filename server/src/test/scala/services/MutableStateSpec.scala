@@ -1,7 +1,7 @@
 package services
 
-import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{SDateLike, TM, TQM, WithTimeAccessor}
+import drt.shared.{SDateLike, TQM}
+import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import services.graphstages.Crunch
 
@@ -9,38 +9,37 @@ import scala.collection.mutable
 
 
 class MutableStateSpec extends SpecificationLike {
-  "Something" >> {
+  val log: Logger = LoggerFactory.getLogger(getClass)
+
+  "Given a few million items in a sorted map " +
+    "When I ask to purge a large chunk of them " +
+    "The purge operation should not take longer than a second" >> {
     val oneDayMillis = 1000L * 60 * 60 * 24
-    val minutes: List[Long] = List.range(1567600000000L, 1567600000000L + (oneDayMillis * 360), 60000)
+    val startDate = SDate("2019-01-01")
+    val endDate = startDate.addDays(180)
+    val minutes: List[Long] = List.range(startDate.millisSinceEpoch, endDate.millisSinceEpoch, 60000L)
 
     val tms = for {
       t <- Seq("T2", "T3", "T4", "T5")
+      q <- Seq("EEA", "NEEA", "FT", "GATES")
       m <- minutes
-    } yield (TM(t, m.toLong), m.toLong)
+    } yield (TQM(t, q, m.toLong), m.toLong)
 
-    println(s"${tms.size} things")
-    val things = mutable.SortedMap[TM, Long]() ++= tms
+    log.info(s"Created ${tms.size} items for sorted map")
+    val things = mutable.SortedMap[TQM, Long]() ++= tms
 
     val start = SDate.now().millisSinceEpoch
-    println(s"${things.size} things")
 
-    val like: () => SDateLike = () => SDate("2019-09-17T00:00")
+    val like: () => SDateLike = () => SDate("2019-02-01T00:00")
 
-//    println(s"${things.take(100).mkString("\n")}")
+    Crunch.purgeExpired(things, TQM.atTime, like, oneDayMillis.toInt * 2)
 
-    Crunch.purgeExpired(things, TM.atTime, like, oneDayMillis.toInt * 2)
-//    val toExpire = things.range(TM("", 0L), TM("", like().millisSinceEpoch - (oneDayMillis * 2)))
-//    println(s"${toExpire.size} things")
-//    things --= toExpire.keys
-//    println(s"${things.size} things")
-
-    timing(start)
-
-    success
-  }
-
-  private def timing(start: MillisSinceEpoch): Unit = {
     val end = SDate.now().millisSinceEpoch
-    println(s"taken ${end - start}ms")
+
+    val msTaken = end - start
+
+    log.info(s"purge took ${msTaken}ms")
+
+    msTaken < 1000L
   }
 }
