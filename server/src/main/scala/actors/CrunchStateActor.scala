@@ -1,6 +1,7 @@
 package actors
 
 import actors.PortStateMessageConversion._
+import actors.restore.RestorerWithLegacy
 import akka.actor._
 import akka.persistence._
 import drt.shared.CrunchApi._
@@ -10,10 +11,10 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState._
+import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 import services.SDate
 import services.graphstages.PortStateWithDiff
 
-import scala.language.postfixOps
 
 class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
                        initialSnapshotBytesThreshold: Int,
@@ -34,6 +35,8 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
 
   def logDebug(msg: String, level: String = "info"): Unit = if (name.isEmpty) log.debug(msg) else log.debug(s"$name $msg")
 
+  val restorer = new RestorerWithLegacy[Int, UniqueArrival, ApiFlightWithSplits]
+
   var state: PortStateMutable = initialState
 
   def initialState: PortStateMutable = PortStateMutable.empty
@@ -44,10 +47,20 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
 
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case diff: CrunchDiffMessage =>
-      applyDiff(diff)
+      applyRecoveryDiff(diff)
       logRecoveryState()
       bytesSinceSnapshotCounter += diff.serializedSize
       messagesPersistedSinceSnapshotCounter += 1
+  }
+
+  override def postRecoveryComplete(): Unit = {
+    restorer.finish()
+    state.flights ++= restorer.items
+    restorer.clear()
+
+    state.purgeOlderThanDate(now().millisSinceEpoch - expireAfterMillis)
+
+    super.postRecoveryComplete()
   }
 
   def logRecoveryState(): Unit = {
@@ -72,10 +85,10 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
   override def stateToMessage: GeneratedMessage = portStateToSnapshotMessage(state)
 
   override def receiveCommand: Receive = {
-    case PortStateWithDiff(None, _, CrunchDiffMessage(_, _, fr, fu, cu, su, _)) if fr.isEmpty && fu.isEmpty && cu.isEmpty && su.isEmpty =>
+    case PortStateWithDiff(None, _, CrunchDiffMessage(_, _, _, fr, fu, cu, su, _)) if fr.isEmpty && fu.isEmpty && cu.isEmpty && su.isEmpty =>
       log.info(s"Received port state with empty diff and no fresh port state")
 
-    case PortStateWithDiff(Some(ps), _, CrunchDiffMessage(_, _, fr, fu, cu, su, _)) if fr.isEmpty && fu.isEmpty && cu.isEmpty && su.isEmpty =>
+    case PortStateWithDiff(Some(ps), _, CrunchDiffMessage(_, _, _, fr, fu, cu, su, _)) if fr.isEmpty && fu.isEmpty && cu.isEmpty && su.isEmpty =>
       log.info(s"Received port state with empty diff, but with fresh port state")
       updateFromFullState(ps)
 
@@ -121,7 +134,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
   }
 
   def updateFromFullState(ps: PortState): Unit = {
-    state.flights ++= ps.flights
+    state.flights ++= ps.flights.map { case (_, fws) => (fws.apiFlight.unique, fws) }
     state.crunchMinutes ++= ps.crunchMinutes
     state.staffMinutes ++= ps.staffMinutes
   }
@@ -134,17 +147,32 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
     snapshotMessageToState(snapshot, timeWindowEnd, state)
   }
 
+  def applyRecoveryDiff(cdm: CrunchDiffMessage): Unit = {
+    val (flightRemovals, flightUpdates, crunchMinuteUpdates, staffMinuteUpdates) = crunchDiffFromMessage(cdm)
+    val nowMillis = now().millisSinceEpoch
+    restorer.update(flightUpdates.toSeq)
+    restorer.removeLegacies(cdm.flightIdsToRemoveOLD)
+    restorer.remove(flightRemovals)
+    state.applyCrunchDiff(crunchMinuteUpdates, nowMillis)
+    state.applyStaffDiff(staffMinuteUpdates, nowMillis)
+  }
+
+  private def uniqueArrivalFromMessage(uam: UniqueArrivalMessage) = {
+    UniqueArrival(uam.getNumber, uam.getTerminalName, uam.getScheduled, uam.getScheduled)
+  }
+
   def applyDiff(cdm: CrunchDiffMessage): Unit = {
-    val (flightRemovals, flightUpdates, crunchMinuteUpdates, staffMinuteUpdates): (Set[Int], Set[ApiFlightWithSplits], Set[CrunchMinute], Set[StaffMinute]) = crunchDiffFromMessage(cdm)
+    val (flightRemovals, flightUpdates, crunchMinuteUpdates, staffMinuteUpdates) = crunchDiffFromMessage(cdm)
     val nowMillis = now().millisSinceEpoch
     state.applyFlightsWithSplitsDiff(flightRemovals, flightUpdates, nowMillis)
     state.applyCrunchDiff(crunchMinuteUpdates, nowMillis)
     state.applyStaffDiff(staffMinuteUpdates, nowMillis)
-//    state.purgeOlderThanDate(nowMillis - expireAfterMillis)
+
+    state.purgeOlderThanDate(now().millisSinceEpoch - expireAfterMillis)
   }
 
-  def crunchDiffFromMessage(diffMessage: CrunchDiffMessage): (Set[Int], Set[ApiFlightWithSplits], Set[CrunchMinute], Set[StaffMinute]) = (
-    diffMessage.flightIdsToRemove.toSet,
+  def crunchDiffFromMessage(diffMessage: CrunchDiffMessage): (Seq[UniqueArrival], Set[ApiFlightWithSplits], Set[CrunchMinute], Set[StaffMinute]) = (
+    diffMessage.flightsToRemove.map(uniqueArrivalFromMessage),
     diffMessage.flightsToUpdate.map(flightWithSplitsFromMessage).toSet,
     diffMessage.crunchMinutesToUpdate.map(crunchMinuteFromMessage).toSet,
     diffMessage.staffMinutesToUpdate.map(staffMinuteFromMessage).toSet

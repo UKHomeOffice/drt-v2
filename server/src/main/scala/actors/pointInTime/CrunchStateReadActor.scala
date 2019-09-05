@@ -3,16 +3,12 @@ package actors.pointInTime
 import actors.Sizes.oneMegaByte
 import actors._
 import akka.persistence._
-import drt.shared.CrunchApi.{MillisSinceEpoch, PortState, PortStateMutable}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchStateSnapshotMessage}
 import services.SDate
-import services.graphstages.Crunch
-import services.graphstages.Staffing._
 
 import scala.collection.immutable._
-import scala.language.postfixOps
 
 case object GetCrunchMinutes
 
@@ -26,7 +22,7 @@ class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, expire
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case cdm@CrunchDiffMessage(createdAtOption, _, _, _, _, _, _) =>
+    case cdm@CrunchDiffMessage(createdAtOption, _, _, _, _, _, _, _) =>
       createdAtOption match {
         case Some(createdAt) if createdAt <= pointInTime.millisSinceEpoch =>
           log.info(s"Applying crunch diff with createdAt (${SDate(createdAt).toISOString()}) <= point in time requested: ${pointInTime.toISOString()}")

@@ -6,11 +6,9 @@ import drt.shared._
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 import services._
-import services.workloadcalculator.PaxLoadCalculator.Load
 
-import scala.collection.immutable.{Map, SortedMap, SortedSet}
+import scala.collection.immutable.{Map, SortedMap}
 import scala.collection.mutable
-import scala.reflect.runtime.universe.{TypeTag, typeOf}
 
 object Crunch {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -162,50 +160,20 @@ object Crunch {
     desks(date.getHourOfDay)
   }
 
-  def purgeExpired[A <: WithTimeAccessor, B](expireable: mutable.SortedMap[A, B], now: () => SDateLike, expireAfter: Int): Unit = {
+  def purgeExpired[A <: WithTimeAccessor, B](expireable: mutable.SortedMap[A, B], atTime: MillisSinceEpoch => A, now: () => SDateLike, expireAfter: Int): Unit = {
     val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
     val sizeBefore = expireable.size
-    val expired = expireable.takeWhile { case (a: A, _) => a.timeValue < thresholdMillis }
+    val expired = expireable.range(atTime(0L), atTime(thresholdMillis + 1))
     expireable --= expired.keys
     log.info(s"Purged ${sizeBefore - expireable.size} items (mutable.SortedMap[A, B])")
   }
 
-  def purgeExpired[A <: WithTimeAccessor](expireable: mutable.SortedSet[A], now: () => SDateLike, expireAfter: Int): Unit = {
+  def purgeExpired[A <: WithTimeAccessor](expireable: mutable.SortedSet[A], atTime: MillisSinceEpoch => A, now: () => SDateLike, expireAfter: Int): Unit = {
     val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
     val sizeBefore = expireable.size
-    val expired = expireable.takeWhile { a: A => a.timeValue < thresholdMillis }
+    val expired = expireable.range(atTime(0L), atTime(thresholdMillis + 1))
     expireable --= expired
     log.info(s"Purged ${sizeBefore - expireable.size} items (mutable.SortedSet[A])")
-  }
-
-  def purgeExpired[A <: WithTimeAccessor, B](expireable: SortedMap[A, B], now: () => SDateLike, expireAfter: Int): SortedMap[A, B] = {
-    val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
-    val sizeBefore = expireable.size
-    val unexpired = expireable.dropWhile { case (a: A, _) => a.timeValue < thresholdMillis }
-    log.info(s"Purged ${sizeBefore - expireable.size} items (SortedMap[A, B])")
-    unexpired
-  }
-
-  def purgeExpired[A <: WithTimeAccessor](expireable: SortedSet[A], now: () => SDateLike, expireAfter: Int): SortedSet[A] = {
-    val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
-    val sizeBefore = expireable.size
-    val unexpired = expireable.dropWhile {_.timeValue < thresholdMillis }
-    log.info(s"Purged ${sizeBefore - expireable.size} items (SortedSet[A])")
-    unexpired
-  }
-
-  def purgeExpired[I, A: TypeTag](expireable: Map[I, A], timeAccessor: A => MillisSinceEpoch, now: () => SDateLike, expireAfter: MillisSinceEpoch): Map[I, A] = {
-    val expired = hasExpiredForType(timeAccessor, now, expireAfter)
-    val updated = expireable.filterNot { case (_, a) => expired(a) }
-
-    val numPurged = expireable.size - updated.size
-    if (numPurged > 0) log.info(s"Purged $numPurged ${typeOf[A].toString} (Map[I, A])")
-
-    updated
-  }
-
-  def hasExpiredForType[A](toMillis: A => MillisSinceEpoch, now: () => SDateLike, expireAfter: MillisSinceEpoch): A => Boolean = {
-    Crunch.hasExpired[A](now(), expireAfter, toMillis)
   }
 
   def hasExpired[A](now: SDateLike, expireAfterMillis: Long, toMillis: A => MillisSinceEpoch)(toCompare: A): Boolean = {
@@ -246,20 +214,19 @@ object Crunch {
       .toSeq
   }
 
-  def mergeLoadsIntoQueue(incomingLoads: Loads, loadMinutesQueue: SortedMap[MilliDate, Loads], crunchPeriodStartMillis: SDateLike => SDateLike): SortedMap[MilliDate, Loads] = {
+  def mergeLoadsIntoQueue(incomingLoads: Loads, existingQueue: mutable.SortedMap[MilliDate, Loads], crunchPeriodStartMillis: SDateLike => SDateLike): Unit = {
     val changedDays: Map[MillisSinceEpoch, SortedMap[TQM, LoadMinute]] = incomingLoads.loadMinutes
       .groupBy { case (_, sm) =>
         crunchPeriodStartMillis(SDate(sm.minute, europeLondonTimeZone)).millisSinceEpoch
       }
 
-    changedDays
-      .foldLeft(loadMinutesQueue) {
-        case (existingQueue, (dayStartMillis, newLoadsForDay)) =>
-          val milliDate = MilliDate(dayStartMillis)
-          val existingLoadsForDay = existingQueue.get(milliDate)
-          val mergedDayMinutes = mergeUpdatedLoads(existingLoadsForDay, newLoadsForDay)
-          existingQueue.updated(milliDate, Loads(mergedDayMinutes))
-      }
+    changedDays.foreach {
+      case (dayStartMillis, newLoadsForDay) =>
+        val milliDate = MilliDate(dayStartMillis)
+        val existingLoadsForDay = existingQueue.get(milliDate)
+        val mergedDayMinutes = mergeUpdatedLoads(existingLoadsForDay, newLoadsForDay)
+        existingQueue += (milliDate -> Loads(mergedDayMinutes))
+    }
   }
 
   def mergeUpdatedLoads(maybeExistingDayLoads: Option[Loads], dayLoadMinutes: SortedMap[TQM, LoadMinute]): SortedMap[TQM, LoadMinute] = {
@@ -294,5 +261,18 @@ object Crunch {
           startMillis until endMillis by 60000
       }
       .toSeq
+  }
+
+  def baseArrivalsRemovalsAndUpdates(incoming: Map[UniqueArrival, Arrival], existing: mutable.Map[UniqueArrival, Arrival]): (mutable.Set[UniqueArrival], mutable.Set[Arrival]) = {
+    val removals = mutable.Set[UniqueArrival]()
+    val updates = mutable.Set[Arrival]()
+
+    removals ++= existing.keys.toSet -- incoming.keys.toSet
+
+    incoming.foreach {
+      case (k, a)  => if (!existing.contains(k) || existing(k) != a) updates += a
+    }
+
+    (removals, updates)
   }
 }

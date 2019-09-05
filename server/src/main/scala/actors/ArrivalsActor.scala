@@ -1,19 +1,23 @@
 package actors
 
 import actors.FlightMessageConversion._
+import actors.restore.RestorerWithLegacy
 import akka.persistence._
 import scalapb.GeneratedMessage
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds._
-import server.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
+import server.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage, FlightsDiffMessage, UniqueArrivalMessage}
 import services.SDate
 import services.graphstages.Crunch
 
+import scala.collection.mutable
+
 trait FeedStateLike {
-  val feedName: String
-  val maybeFeedStatuses: Option[FeedStatuses]
+  def feedName: String
+
+  def maybeFeedStatuses: Option[FeedStatuses]
 
   def addStatus(newStatus: FeedStatus): FeedStatuses = {
     maybeFeedStatuses match {
@@ -23,7 +27,12 @@ trait FeedStateLike {
   }
 }
 
-case class ArrivalsState(arrivals: Map[Int, Arrival], feedName: String, maybeFeedStatuses: Option[FeedStatuses]) extends FeedStateLike
+case class ArrivalsState(arrivals: mutable.SortedMap[UniqueArrival, Arrival], var feedName: String, var maybeFeedStatuses: Option[FeedStatuses]) extends FeedStateLike {
+  def clear(): Unit = {
+    arrivals.clear()
+    maybeFeedStatuses = None
+  }
+}
 
 class ForecastBaseArrivalsActor(initialSnapshotBytesThreshold: Int,
                                 now: () => SDateLike,
@@ -35,31 +44,23 @@ class ForecastBaseArrivalsActor(initialSnapshotBytesThreshold: Int,
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def consumeDiffsMessage(diffsMessage: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState = {
-    val withRemovals = consumeRemovals(diffsMessage, existingState)
-    val withRemovalsAndUpdates = consumeUpdates(diffsMessage, withRemovals)
-
-    withRemovalsAndUpdates
+  def consumeDiffsMessage(diffsMessage: FlightsDiffMessage): Unit = {
+    consumeRemovals(diffsMessage)
+    consumeUpdates(diffsMessage)
   }
 
   override def handleFeedSuccess(incomingArrivals: Seq[Arrival], createdAt: SDateLike): Unit = {
     log.info(s"Received arrivals (base)")
-    val incomingArrivalsWithKeys = incomingArrivals.map(a => (a.uniqueId, a)).toMap
-    val (removals: Set[Int], updates: Set[Arrival]) = removalsAndUpdates(incomingArrivalsWithKeys, state.arrivals)
+    val incomingArrivalsWithKeys = incomingArrivals.map(a => (a.unique, a)).toMap
+    val (removals, updates) = Crunch.baseArrivalsRemovalsAndUpdates(incomingArrivalsWithKeys, state.arrivals)
     val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, updates.size)
 
-    state = state.copy(arrivals = incomingArrivalsWithKeys, maybeFeedStatuses = Option(state.addStatus(newStatus)))
+    state.arrivals.clear()
+    state.arrivals ++= incomingArrivalsWithKeys
+    state.maybeFeedStatuses = Option(state.addStatus(newStatus))
 
     if (removals.nonEmpty || updates.nonEmpty) persistArrivalUpdates(removals, updates)
     persistFeedStatus(FeedStatusSuccess(createdAt.millisSinceEpoch, updates.size))
-  }
-
-  def removalsAndUpdates(incomingArrivalsWithKeys: Map[Int, Arrival], existingArrivalsWithKeys: Map[Int, Arrival]): (Set[Int], Set[Arrival]) = {
-    val currentKeys = existingArrivalsWithKeys.keys.toSet
-    val newKeys = incomingArrivalsWithKeys.keys.toSet
-    val removalKeys = currentKeys -- newKeys
-    val updatedArrivals = incomingArrivalsWithKeys.values.toSet -- existingArrivalsWithKeys.values.toSet
-    (removalKeys, updatedArrivals)
   }
 }
 
@@ -73,8 +74,7 @@ class ForecastPortArrivalsActor(initialSnapshotBytesThreshold: Int,
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def consumeDiffsMessage(diffsMessage: FlightsDiffMessage,
-                          existingState: ArrivalsState): ArrivalsState = consumeUpdates(diffsMessage, existingState)
+  def consumeDiffsMessage(diffsMessage: FlightsDiffMessage): Unit = consumeUpdates(diffsMessage)
 }
 
 class LiveArrivalsActor(initialSnapshotBytesThreshold: Int,
@@ -87,38 +87,42 @@ class LiveArrivalsActor(initialSnapshotBytesThreshold: Int,
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def consumeDiffsMessage(diffsMessage: FlightsDiffMessage,
-                          existingState: ArrivalsState): ArrivalsState = consumeUpdates(diffsMessage, existingState)
+  def consumeDiffsMessage(diffsMessage: FlightsDiffMessage): Unit = consumeUpdates(diffsMessage)
 }
 
 abstract class ArrivalsActor(now: () => SDateLike,
                              expireAfterMillis: Long,
                              name: String) extends RecoveryActorLike with PersistentDrtActor[ArrivalsState] {
 
-  var state: ArrivalsState = initialState
+  val restorer = new RestorerWithLegacy[Int, UniqueArrival, Arrival]
+  val state: ArrivalsState = initialState
 
-  override def initialState = ArrivalsState(Map(), name, None)
+  override def initialState = ArrivalsState(mutable.SortedMap(), name, None)
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case stateMessage: FlightStateSnapshotMessage =>
-      state = arrivalsStateFromSnapshotMessage(stateMessage, name)
+      state.maybeFeedStatuses = feedStatusesFromSnapshotMessage(stateMessage)
+      restoreArrivalsFromSnapshot(restorer, stateMessage)
       logRecoveryMessage(s"restored state to snapshot. ${state.arrivals.size} arrivals")
   }
 
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case diff: FlightsDiffMessage =>
-      state = consumeDiffsMessage(diff, state)
+      consumeDiffsMessage(diff)
       bytesSinceSnapshotCounter += diff.serializedSize
       messagesPersistedSinceSnapshotCounter += 1
 
     case feedStatusMessage: FeedStatusMessage =>
       val status = feedStatusFromFeedStatusMessage(feedStatusMessage)
-      state = state.copy(maybeFeedStatuses = Option(state.addStatus(status)))
+      state.maybeFeedStatuses = Option(state.addStatus(status))
   }
 
   override def postRecoveryComplete(): Unit = {
-    val withoutExpired = Crunch.purgeExpired(state.arrivals, (a: Arrival) => a.Scheduled, now, expireAfterMillis)
-    state = state.copy(arrivals = withoutExpired)
+    restorer.finish()
+    state.arrivals ++= restorer.items
+    restorer.clear()
+
+    Crunch.purgeExpired(state.arrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt)
 
     log.info(s"Recovered ${state.arrivals.size} arrivals for ${state.feedName}")
     super.postRecoveryComplete()
@@ -126,26 +130,19 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
   override def stateToMessage: GeneratedMessage = arrivalsStateToSnapshotMessage(state)
 
-  def consumeDiffsMessage(message: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState
+  def consumeDiffsMessage(message: FlightsDiffMessage): Unit
 
-  def consumeRemovals(diffsMessage: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState = {
+  def consumeRemovals(diffsMessage: FlightsDiffMessage): Unit = {
     logRecoveryMessage(s"Consuming ${diffsMessage.removals.length} removals")
-    val updatedArrivals = existingState.arrivals
-      .filterNot { case (id, _) => diffsMessage.removals.contains(id) }
-
-    existingState.copy(arrivals = updatedArrivals)
+    restorer.removeLegacies(diffsMessage.removalsOLD)
+    restorer.remove(diffsMessage.removals.map(uam =>
+      UniqueArrival(uam.getNumber, uam.getTerminalName, uam.getScheduled, 0L)
+    ))
   }
 
-  def consumeUpdates(diffsMessage: FlightsDiffMessage, existingState: ArrivalsState): ArrivalsState = {
+  def consumeUpdates(diffsMessage: FlightsDiffMessage): Unit = {
     logRecoveryMessage(s"Consuming ${diffsMessage.updates.length} updates")
-    val updatedArrivals = diffsMessage.updates
-      .foldLeft(existingState.arrivals) {
-        case (soFar, fm) =>
-          val arrival = flightMessageToApiFlight(fm)
-          soFar.updated(arrival.uniqueId, arrival)
-      }
-
-    existingState.copy(arrivals = updatedArrivals)
+    restorer.update(diffsMessage.updates.map(flightMessageToApiFlight))
   }
 
   override def receiveCommand: Receive = {
@@ -176,32 +173,29 @@ abstract class ArrivalsActor(now: () => SDateLike,
   def handleFeedFailure(message: String, createdAt: SDateLike): Unit = {
     log.warn("Received feed failure")
     val newStatus = FeedStatusFailure(createdAt.millisSinceEpoch, message)
-    state = state.copy(maybeFeedStatuses = Option(state.addStatus(newStatus)))
+    state.maybeFeedStatuses = Option(state.addStatus(newStatus))
     persistFeedStatus(FeedStatusFailure(createdAt.millisSinceEpoch, message))
   }
 
   def handleFeedSuccess(incomingArrivals: Seq[Arrival], createdAt: SDateLike): Unit = {
     log.info(s"Received arrivals")
 
-    val newStateArrivals = mergeArrivals(incomingArrivals, state.arrivals)
-    val updatedArrivals = newStateArrivals.values.toSet -- state.arrivals.values.toSet
+    state.arrivals ++= incomingArrivals.map(a => (a.unique, a))
+    val updatedArrivals = incomingArrivals.toSet
     val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, updatedArrivals.size)
-
-    state = state.copy(arrivals = newStateArrivals, maybeFeedStatuses = Option(state.addStatus(newStatus)))
+    state.maybeFeedStatuses = Option(state.addStatus(newStatus))
 
     persistFeedStatus(FeedStatusSuccess(createdAt.millisSinceEpoch, updatedArrivals.size))
-    if (updatedArrivals.nonEmpty) persistArrivalUpdates(Set(), updatedArrivals)
+    if (updatedArrivals.nonEmpty) persistArrivalUpdates(mutable.Set(), mutable.Set[Arrival]() ++ updatedArrivals)
   }
-
-  def mergeArrivals(incomingArrivals: Seq[Arrival], existingArrivals: Map[Int, Arrival]): Map[Int, Arrival] = {
-    incomingArrivals.foldLeft(existingArrivals) {
-      case (soFar, updatedArrival) => soFar.updated(updatedArrival.uniqueId, updatedArrival)
-    }
-  }
-
-  def persistArrivalUpdates(removalKeys: Set[Int], updatedArrivals: Set[Arrival]): Unit = {
+  
+  def persistArrivalUpdates(removals: mutable.Set[UniqueArrival], updatedArrivals: mutable.Set[Arrival]): Unit = {
     val updateMessages = updatedArrivals.map(apiFlightToFlightMessage).toSeq
-    val diffMessage = FlightsDiffMessage(Option(SDate.now().millisSinceEpoch), removalKeys.toSeq, updateMessages)
+    val removalMessages = removals.map(ua => UniqueArrivalMessage(Option(ua.number), Option(ua.terminalName), Option(ua.scheduled))).toSeq
+    val diffMessage = FlightsDiffMessage(
+      createdAt = Option(SDate.now().millisSinceEpoch),
+      removals = removalMessages,
+      updates = updateMessages)
 
     persistAndMaybeSnapshot(diffMessage)
   }

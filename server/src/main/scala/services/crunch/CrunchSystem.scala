@@ -1,6 +1,6 @@
 package services.crunch
 
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.ActorRef
 import akka.pattern.AskableActorRef
 import akka.stream._
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
@@ -17,7 +17,6 @@ import services.graphstages.Crunch._
 import services.graphstages._
 
 import scala.collection.immutable.SortedMap
-import scala.language.postfixOps
 
 
 case class CrunchSystem[FR](shifts: SourceQueueWithComplete[ShiftAssignments],
@@ -79,7 +78,7 @@ object CrunchSystem {
   }
 
   def apply[FR](props: CrunchProps[FR])
-               (implicit system: ActorSystem, materializer: Materializer): CrunchSystem[FR] = {
+               (implicit materializer: Materializer): CrunchSystem[FR] = {
 
     val shiftsSource: Source[ShiftAssignments, SourceQueueWithComplete[ShiftAssignments]] = Source.queue[ShiftAssignments](10, OverflowStrategy.backpressure)
     val fixedPointsSource: Source[FixedPointAssignments, SourceQueueWithComplete[FixedPointAssignments]] = Source.queue[FixedPointAssignments](10, OverflowStrategy.backpressure)

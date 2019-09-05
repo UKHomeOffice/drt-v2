@@ -131,7 +131,7 @@ class LGWForecastFeed(boxConfigFilePath: String, userId: String, ukBfGalForecast
     Try {
       val folder = new BoxFolder(boxAPIConnection, ukBfGalForecastFolderId)
 
-      var csvFiles = ListBuffer[BoxFile#Info]()
+      val csvFiles = ListBuffer[BoxFile#Info]()
       for (itemInfo <- folder) {
         itemInfo match {
           case fileInfo: BoxFile#Info =>

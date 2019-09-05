@@ -9,13 +9,11 @@ import bluebus.configuration.SBusConfig
 import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
-import services.SDate
+import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
-import scala.util.{Failure, Success, Try}
 
 case class LGWFeed(namespace: String, sasToKey: String, serviceBusUrl: String)(val system: ActorSystem) {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -35,7 +33,7 @@ case class LGWFeed(namespace: String, sasToKey: String, serviceBusUrl: String)(v
       List()
   })
 
-  def source()(implicit actorSystem: ActorSystem): Source[ArrivalsFeedResponse, Cancellable] = Source
+  def source(): Source[ArrivalsFeedResponse, Cancellable] = Source
     .tick(initialDelayImmediately, pollInterval, NotUsed)
     .withAttributes(ActorAttributes.supervisionStrategy(Supervision.restartingDecider))
     .mapAsync(1)(_ => requestArrivals().recover { case t =>

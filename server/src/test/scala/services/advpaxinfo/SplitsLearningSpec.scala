@@ -11,7 +11,6 @@ import services.graphstages._
 import services.prediction.FeatureSpec
 import services.{CSVPassengerSplitsProvider, CsvPassengerSplitsReader}
 
-import scala.language.postfixOps
 
 
 object Splits {

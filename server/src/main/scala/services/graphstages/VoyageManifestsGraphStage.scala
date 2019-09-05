@@ -1,9 +1,8 @@
 package services.graphstages
 
-import akka.actor.ActorSystem
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, OutHandler}
-import drt.server.feeds.api.{ApiProviderLike, S3ApiProvider}
+import drt.server.feeds.api.ApiProviderLike
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.DqEventCodes
 import org.slf4j.{Logger, LoggerFactory}
@@ -35,9 +34,7 @@ case class DqManifests(lastSeenFileName: String, manifests: Set[VoyageManifest])
 class VoyageManifestsGraphStage(portCode: String,
                                 provider: ApiProviderLike,
                                 initialLastSeenFileName: String,
-                                minCheckIntervalMillis: MillisSinceEpoch = 30000)
-                               (implicit actorSystem: ActorSystem,
-                                materializer: Materializer) extends GraphStage[SourceShape[ManifestsFeedResponse]] {
+                                minCheckIntervalMillis: MillisSinceEpoch = 30000) extends GraphStage[SourceShape[ManifestsFeedResponse]] {
   val out: Outlet[ManifestsFeedResponse] = Outlet("manifestsOut")
   override val shape: SourceShape[ManifestsFeedResponse] = SourceShape(out)
 

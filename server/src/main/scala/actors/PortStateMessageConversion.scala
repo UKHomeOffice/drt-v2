@@ -18,14 +18,14 @@ object PortStateMessageConversion {
       case None =>
         sm.flightWithSplits.foreach(message => {
           val fws = flightWithSplitsFromMessage(message)
-          state.flights += (fws.apiFlight.uniqueId -> fws)
+          state.flights += (fws.unique -> fws)
         })
       case Some(timeWindowEnd) =>
         val windowEndMillis = timeWindowEnd.millisSinceEpoch
         sm.flightWithSplits.collect {
           case message if message.flight.map(fm => fm.pcpTime.getOrElse(0L)).getOrElse(0L) <= windowEndMillis =>
             val fws = flightWithSplitsFromMessage(message)
-            state.flights += (fws.apiFlight.uniqueId -> fws)
+            state.flights += (fws.unique -> fws)
         }
     }
 

@@ -1,5 +1,6 @@
 package actors
 
+import actors.restore.RestorerWithLegacy
 import drt.shared._
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.{Logger, LoggerFactory}
@@ -32,15 +33,13 @@ object FlightMessageConversion {
     case s: FeedStatusFailure => FeedStatusMessage(Option(s.date), None, Option(s.message))
   }
 
-  def arrivalsStateFromSnapshotMessage(snMessage: FlightStateSnapshotMessage, feedName: String): ArrivalsState = {
-    val arrivalsMap = snMessage.flightMessages.map(fm => {
-      val arrival = FlightMessageConversion.flightMessageToApiFlight(fm)
-      (arrival.uniqueId, arrival)
-    }).toMap
+  def restoreArrivalsFromSnapshot(restorer: RestorerWithLegacy[Int, UniqueArrival, Arrival],
+                                  snMessage: FlightStateSnapshotMessage): Unit = {
+    restorer.update(snMessage.flightMessages.map(flightMessageToApiFlight))
+  }
 
-    val maybeStatuses = snMessage.statuses.map(feedStatusesFromFeedStatusesMessage)
-
-    ArrivalsState(arrivalsMap, feedName, maybeStatuses)
+  def feedStatusesFromSnapshotMessage(snMessage: FlightStateSnapshotMessage): Option[FeedStatuses] = {
+    snMessage.statuses.map(feedStatusesFromFeedStatusesMessage)
   }
 
   def feedStatusesFromFeedStatusesMessage(message: FeedStatusesMessage): FeedStatuses = {

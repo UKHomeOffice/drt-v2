@@ -1,15 +1,14 @@
 package services.graphstages
 
-import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
+import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
 import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinutes}
 import drt.shared.{MilliDate, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.graphstages.Crunch.{changedDays, europeLondonTimeZone, getLocalLastMidnight}
+import services.graphstages.Crunch.changedDays
 
-import scala.collection.immutable
-import scala.collection.immutable.SortedMap
+import scala.collection.mutable
 
 class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: MillisSinceEpoch, offsetMinutes: Int) extends GraphStage[FlowShape[StaffMinutes, StaffMinutes]] {
   val inStaffMinutes: Inlet[StaffMinutes] = Inlet[StaffMinutes]("StaffMinutes.in")
@@ -18,7 +17,7 @@ class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: Millis
   override def shape: FlowShape[StaffMinutes, StaffMinutes] = new FlowShape(inStaffMinutes, outStaffMinutes)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var staffMinutesQueue: SortedMap[MilliDate, StaffMinutes] = SortedMap()
+    val staffMinutesQueue: mutable.SortedMap[MilliDate, StaffMinutes] = mutable.SortedMap()
 
     val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -30,11 +29,11 @@ class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: Millis
         val daysToUpdate = changedDays(offsetMinutes, incomingStaffMinutes)
         log.info("daysToUpdate: " + daysToUpdate.keys.toSeq.sorted.map(k => SDate(k).prettyDateTime()).mkString(", "))
 
-        val updatedMinutes = daysToUpdate.foldLeft(staffMinutesQueue) {
-          case (soFar, (dayMillis, staffMinutes)) => soFar.updated(MilliDate(dayMillis), StaffMinutes(staffMinutes))
+        daysToUpdate.foreach {
+          case (dayMillis, staffMinutes) => staffMinutesQueue += (MilliDate(dayMillis) -> StaffMinutes(staffMinutes))
         }
 
-        staffMinutesQueue = Crunch.purgeExpired(updatedMinutes, now, expireAfterMillis.toInt)
+        Crunch.purgeExpired(staffMinutesQueue, MilliDate.atTime, now, expireAfterMillis.toInt)
 
         pushIfAvailable()
 
@@ -65,7 +64,7 @@ class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: Millis
           log.info(s"Pushing ${SDate(millis).toLocalDateTimeString()} ${staffMinutes.minutes.length} staff minutes for ${staffMinutes.minutes.groupBy(_.terminalName).keys.mkString(", ")}")
           push(outStaffMinutes, staffMinutes)
 
-          staffMinutesQueue = minutes.drop(1)
+          staffMinutesQueue -= millis
           log.info(s"Queue length now ${staffMinutesQueue.size}")
       }
     }

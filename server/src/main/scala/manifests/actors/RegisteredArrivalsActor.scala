@@ -67,7 +67,7 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
       }
 
       state.arrivals ++= newArrivals
-      Crunch.purgeExpired(state.arrivals, now, expireAfterMillis.toInt)
+      Crunch.purgeExpired(state.arrivals, ArrivalKey.atTime, now, expireAfterMillis.toInt)
   }
 
   private def findUpdatesToPersist(newArrivals: mutable.SortedMap[ArrivalKey, Option[Long]]): mutable.SortedMap[ArrivalKey, Option[Long]] = {

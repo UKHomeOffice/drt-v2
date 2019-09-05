@@ -12,7 +12,6 @@ import server.feeds.{BestManifestsFeedSuccess, ManifestsFeedResponse}
 import services.{OfferHandler, SDate}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.language.postfixOps
 
 
 object AckingReceiver {

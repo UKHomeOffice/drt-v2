@@ -4,7 +4,6 @@ import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.language.postfixOps
 
 
 case class KeyCloakGroups(groups: List[KeyCloakGroup], client: KeyCloakClient) {
