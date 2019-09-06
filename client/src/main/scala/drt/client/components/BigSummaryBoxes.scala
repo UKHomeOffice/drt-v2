@@ -107,11 +107,6 @@ object BigSummaryBoxes {
   def GraphComponent(source: String, sourceDisplay: String, splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int], paxQueueOrder: Seq[PaxTypeAndQueue]): TagOf[HTMLElement] = {
     val value = Try {
       val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = paxQueueOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
-      val tt: TagMod = <.table(^.className := "table table-responsive table-striped table-hover table-sm ",
-        <.tbody(
-          orderedSplitCounts.map { s =>
-            <.tr(<.td(s._1.passengerType.name), <.td(s._1.queueType), <.td(s._2))
-          }.toTagMod))
 
       val nbsp = "\u00a0"
       <.div(

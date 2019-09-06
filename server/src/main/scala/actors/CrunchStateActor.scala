@@ -54,11 +54,16 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
   }
 
   override def postRecoveryComplete(): Unit = {
+    log.info(s"postRecoveryComplete 1")
     restorer.finish()
+    log.info(s"postRecoveryComplete 1")
     state.flights ++= restorer.items
+    log.info(s"postRecoveryComplete 1")
     restorer.clear()
+    log.info(s"postRecoveryComplete 1")
 
     state.purgeOlderThanDate(now().millisSinceEpoch - expireAfterMillis)
+    log.info(s"postRecoveryComplete 1")
 
     super.postRecoveryComplete()
   }
@@ -105,7 +110,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
       persistAndMaybeSnapshot(diffMsg)
 
     case GetState =>
-      logDebug(s"Received GetState request. Replying with PortState containing ${state.crunchMinutes.size} crunch minutes")
+      logInfo(s"Received GetState request. Replying with PortState containing ${state.crunchMinutes.size} crunch minutes")
       sender() ! Option(state.immutable)
 
     case GetPortState(start, end) =>

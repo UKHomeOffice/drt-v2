@@ -30,7 +30,7 @@ class PortStateMessageConversionSpec extends Specification {
     val expectedCrunchMinutes = SortedMap[TQM, CrunchMinute]() ++ Seq(CrunchMinute("T1", Queues.EeaDesk, validMinuteMilli, 0, 0, 0, 0, None, None, None, None, None)).map(m => (m.key, m))
     val expectedStaffMinutes = SortedMap[TM, StaffMinute]() ++ Seq(StaffMinute("T1", validMinuteMilli, 0, 0, 0, None)).map(m => (m.key, m))
 
-    val expected = PortState(Map[Int, ApiFlightWithSplits](), expectedCrunchMinutes, expectedStaffMinutes)
+    val expected = PortState(Map[UniqueArrival, ApiFlightWithSplits](), expectedCrunchMinutes, expectedStaffMinutes)
 
     state === expected
   }

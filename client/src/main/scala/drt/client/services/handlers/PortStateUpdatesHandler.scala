@@ -6,7 +6,7 @@ import diode.Implicits.runAfterImpl
 import drt.client.actions.Actions._
 import drt.client.logger._
 import drt.client.services._
-import drt.shared.{ApiFlightWithSplits, CrunchApi, TM, TQM}
+import drt.shared._
 import drt.shared.CrunchApi._
 import org.scalajs.dom
 import upickle.default.read
@@ -110,7 +110,7 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
     }
   }
 
-  def updateAndTrimFlights(crunchUpdates: PortStateUpdates, existingState: PortState, keepFromMillis: MillisSinceEpoch): Map[Int, ApiFlightWithSplits] = {
+  def updateAndTrimFlights(crunchUpdates: PortStateUpdates, existingState: PortState, keepFromMillis: MillisSinceEpoch): SortedMap[UniqueArrival, ApiFlightWithSplits] = {
     val thirtyMinutesMillis = 30 * 60000
     val relevantFlights = existingState.flights
       .filter { case (_, fws) => fws.apiFlight.PcpTime.isDefined }
@@ -119,7 +119,7 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
     crunchUpdates.flights.foldLeft(relevantFlights) {
       case (soFar, newFlight) =>
         val withoutOldFlight = soFar.filterNot { case (_, fws) => fws.apiFlight.uniqueId == newFlight.apiFlight.uniqueId }
-        withoutOldFlight.updated(newFlight.apiFlight.uniqueId, newFlight)
+        withoutOldFlight.updated(newFlight.apiFlight.unique, newFlight)
     }
   }
 
