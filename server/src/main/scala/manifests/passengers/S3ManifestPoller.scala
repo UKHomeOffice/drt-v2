@@ -95,7 +95,7 @@ class S3ManifestPoller(sourceQueue: SourceQueueWithComplete[ManifestsFeedRespons
       sourceQueue.offer(manifestsToSend).map {
         case Enqueued =>
           liveManifestsBuffer = None
-          log.info(s"Enqueued live manifests: $manifestsToSend")
+          log.info(s"Enqueued live manifests")
         case _ => log.info(s"Couldn't enqueue live manifests. Leaving them in the buffer")
       }.recover {
         case t => log.error(s"Couldn't enqueue live manifests. Leaving them in the buffer", t)
