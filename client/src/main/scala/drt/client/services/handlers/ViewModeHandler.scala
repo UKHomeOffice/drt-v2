@@ -4,8 +4,8 @@ import diode._
 import diode.data.Pot
 import drt.client.actions.Actions._
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{ViewDay, ViewLive, ViewMode}
-import drt.shared.CrunchApi.{PortState, MillisSinceEpoch}
+import drt.client.services.ViewMode
+import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
 import drt.shared.SDateLike
 
 import scala.concurrent.ExecutionContext.Implicits.global

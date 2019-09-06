@@ -90,7 +90,7 @@ object Staffing {
   def reconstructStaffMinutes(pointInTime: SDateLike,
                               expireAfterMillis: Long,
                               context: ActorContext,
-                              fl: mutable.Map[Int, ApiFlightWithSplits],
+                              fl: mutable.Map[UniqueArrival, ApiFlightWithSplits],
                               cm: mutable.SortedMap[TQM, CrunchApi.CrunchMinute]): PortStateMutable = {
     val uniqueSuffix = pointInTime.toISOString + UUID.randomUUID.toString
     val shiftsActor: ActorRef = context.actorOf(Props(classOf[ShiftsReadActor], pointInTime, () => SDate(expireAfterMillis)), name = s"ShiftsReadActor-$uniqueSuffix")

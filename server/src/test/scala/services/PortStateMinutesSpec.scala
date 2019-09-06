@@ -4,10 +4,10 @@ import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
+import org.specs2.mutable.Specification
 import services.graphstages.{DeskRecMinute, DeskRecMinutes, SimulationMinute, SimulationMinutes}
 
-import scala.collection.immutable.{Map, SortedMap}
-import org.specs2.mutable.Specification
+import scala.collection.immutable.Map
 
 class PortStateMinutesSpec extends Specification {
   val now: MillisSinceEpoch = SDate.now().millisSinceEpoch

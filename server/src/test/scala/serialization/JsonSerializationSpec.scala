@@ -76,7 +76,7 @@ class JsonSerializationSpec extends Specification {
               ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, None)
             ), "source", None, Percentage))
       )
-      val flightsWithSplits = Map(flightWithSplits.apiFlight.uniqueId -> flightWithSplits)
+      val flightsWithSplits = SortedMap(flightWithSplits.apiFlight.unique -> flightWithSplits)
 
       val crunchMinutes = SortedMap[TQM, CrunchMinute]() ++ List(
         CrunchMinute("T1", Queues.NonEeaDesk, 0L, 2.0, 2.0, 1, 1, None, None, None, None, Some(0)),

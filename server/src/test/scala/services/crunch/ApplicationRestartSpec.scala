@@ -52,10 +52,10 @@ class ApplicationRestartSpec extends CrunchTestLike {
     val daysToCrunch = 3
 
     val portState = PortState(
-      flights = Seq(
+      flights = SortedMap[UniqueArrival, ApiFlightWithSplits]() ++ Seq(
         ApiFlightWithSplits(arrivalLive, splits),
         ApiFlightWithSplits(arrivalBase, splits)
-      ).map(f => (f.apiFlight.uniqueId, f)).toMap,
+      ).map(f => (f.apiFlight.unique, f)),
       crunchMinutes = SortedMap[TQM, CrunchMinute](),
       staffMinutes = SortedMap[TM, StaffMinute]() ++ emptyStaffMinutes(now, daysToCrunch, airportConfig.terminalNames.toList)
     )
@@ -115,10 +115,10 @@ class ApplicationRestartSpec extends CrunchTestLike {
     val now: () => SDateLike = () => SDate(scheduledDay1)
 
     val portState = PortState(
-      flights = Seq(
+      flights = SortedMap[UniqueArrival, ApiFlightWithSplits]() ++ Seq(
         ApiFlightWithSplits(arrivalDay1, splits),
         ApiFlightWithSplits(arrivalDay2, splits)
-      ).map(f => (f.apiFlight.uniqueId, f)).toMap,
+      ).map(f => (f.apiFlight.unique, f)),
       crunchMinutes = SortedMap[TQM, CrunchMinute]() ++ existingMinutesDay1.toMap ++ existingMinutesDay2.toMap,
       staffMinutes = SortedMap[TM, StaffMinute]() ++ emptyStaffMinutes(now, daysToCrunch, airportConfig.terminalNames.toList)
     )

@@ -109,11 +109,11 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
       sender() ! Option(state.immutable)
 
     case GetPortState(start, end) =>
-      logInfo(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
+      logDebug(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       sender() ! stateForPeriod(start, end)
 
     case GetPortStateForTerminal(start, end, terminalName) =>
-      logInfo(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
+      logDebug(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       sender() ! stateForPeriodForTerminal(start, end, terminalName)
 
     case GetUpdatesSince(millis, start, end) =>

@@ -7,11 +7,9 @@ import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared._
-import net.schmizz.sshj.SSHClient
-import net.schmizz.sshj.sftp.SFTPClient
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import server.feeds.acl.AclFeed
 import server.feeds.acl.AclFeed._
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import services.SDate
 import services.crunch.CrunchTestLike
 

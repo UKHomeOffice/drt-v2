@@ -105,11 +105,13 @@ class PortStateSpec extends Specification {
     val ps = PortState(List(), cms.toList, sms.toList)
 
     val result = ps.window(SDate("2019-01-02"), SDate("2019-01-03"), terminalQueues)
+
     val expectedCms = for {
       (terminal, queues) <- terminalQueues
       queue <- queues
       minute <- oneDayMillis
     } yield CrunchMinute(terminal, queue, minute, 5, 10, 2, 15)
+
     val expectedSms = for {
       terminal <- terminalQueues.keys
       minute <- oneDayMillis
@@ -119,8 +121,6 @@ class PortStateSpec extends Specification {
 
     result === expected
   }
-
-
 
   private def arrivalsToFlightsWithSplits(arrivals: List[Arrival]): List[ApiFlightWithSplits] = {
     arrivals.map(a => ApiFlightWithSplits(a, Set()))

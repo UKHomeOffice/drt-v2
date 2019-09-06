@@ -8,11 +8,9 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.{SDate, TryRenjin}
-import services.graphstages.Crunch._
 
 import scala.collection.immutable.{List, Seq}
 import scala.concurrent.duration._
-import scala.languageFeature.postfixOps
 
 
 class CrunchEgateBanksSpec extends CrunchTestLike {

@@ -4,9 +4,8 @@ import drt.client.SPAMain.{Loc, TerminalsDashboardLoc}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.shared.{ApiFlightWithSplits, SDateLike}
+import drt.shared.SDateLike
 import japgolly.scalajs.react.extra.router.RouterCtl
-import drt.client.logger.log
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
 
@@ -39,8 +38,6 @@ object TerminalsDashboardPage {
               )
 
               def displayPeriod = periods(p.dashboardPage.period.getOrElse(0))
-
-              def flightWithinPeriod(flight: ApiFlightWithSplits) = DashboardTerminalSummary.flightPcpInPeriod(flight, displayPeriod.start, displayPeriod.end)
 
               def switchDashboardPeriod(period: Int) = (_: ReactEventFromInput) => {
                 GoogleEventTracker.sendEvent("dashboard", "Switch Period", period.toString)

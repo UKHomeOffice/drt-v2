@@ -49,7 +49,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
       ),
-      initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
+      initialPortState = Option(PortState(SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
     )
 
     offerAndWait(crunch.manifestsLiveInput, inputManifestsCi)
@@ -91,7 +91,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(EeaDesk, EGate))
       ),
-      initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
+      initialPortState = Option(PortState(SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
     )
 
     offerAndWait(crunch.manifestsLiveInput, inputManifests)
@@ -140,7 +140,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
       ),
-      initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
+      initialPortState = Option(PortState(SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
     )
 
     offerAndWait(crunch.manifestsLiveInput, inputManifests)
@@ -221,7 +221,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
       ),
-      initialPortState = Option(PortState(Map(flight.uniqueId -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
+      initialPortState = Option(PortState(SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
     )
 
     offerAndWait(crunch.manifestsLiveInput, inputManifests)

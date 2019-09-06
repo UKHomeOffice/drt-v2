@@ -1,17 +1,15 @@
 package drt.client.components
 
 import diode.UseValueEq
-import diode.data.{Pending, Pot}
+import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
-import drt.client.components.TerminalDesksAndQueues.Props
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.shared.CrunchApi.{PortState, ForecastPeriodWithHeadlines}
+import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, PortState}
 import drt.shared._
 import japgolly.scalajs.react.ScalaComponent
-import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 
