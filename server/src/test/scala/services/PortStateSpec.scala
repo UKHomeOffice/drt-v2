@@ -121,7 +121,7 @@ class PortStateSpec extends Specification {
 
     result === expected
   }
-  
+
   private def arrivalsToFlightsWithSplits(arrivals: List[Arrival]): List[ApiFlightWithSplits] = {
     arrivals.map(a => ApiFlightWithSplits(a, Set()))
   }
