@@ -106,7 +106,7 @@ class CrunchTestLike
 
   val airportConfig = AirportConfig(
     portCode = "STN",
-    queues = Map("T1" -> Seq(Queues.EeaDesk, Queues.NonEeaDesk), "T2" -> Seq(Queues.EeaDesk, Queues.NonEeaDesk), "T2" -> Seq(Queues.EeaDesk)),
+    queues = Map("T1" -> Seq(Queues.EeaDesk, Queues.NonEeaDesk), "T2" -> Seq(Queues.EeaDesk, Queues.NonEeaDesk)),
     slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 20, Queues.NonEeaDesk -> 45),
     terminalNames = Seq("T1", "T2"),
     defaultWalkTimeMillis = Map(),
