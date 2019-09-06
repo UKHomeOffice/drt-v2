@@ -10,10 +10,9 @@ import drt.shared.CrunchApi.{CrunchMinute, PortState, StaffMinute}
 import drt.shared.FlightsApi.Flights
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
-import org.specs2.specification.{AfterEach, BeforeEach}
+import org.specs2.specification.BeforeEach
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
-import services.graphstages.Crunch
 import slick.jdbc.SQLActionBuilder
 import slick.jdbc.SetParameter.SetUnit
 import slickdb.{AggregatedArrival, AggregatedArrivals, ArrivalTable, ArrivalTableLike}
@@ -123,7 +122,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     val oldSplits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 100, None)), SplitSources.Historical, None, Percentage)
     val initialFlightsWithSplits = Seq(ApiFlightWithSplits(expiredArrival, Set(oldSplits), None))
-    val initialPortState = PortState(initialFlightsWithSplits.map(f => (f.apiFlight.uniqueId, f)).toMap, SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())
+    val initialPortState = PortState(SortedMap[UniqueArrival, ApiFlightWithSplits]() ++ initialFlightsWithSplits.map(f => (f.apiFlight.unique, f)), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())
 
     val testProbe = TestProbe("arrivals-probe")
 
@@ -167,7 +166,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     val oldSplits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 100, None)), SplitSources.Historical, None, Percentage)
     val initialFlightsWithSplits = Seq(ApiFlightWithSplits(descheduledArrival, Set(oldSplits), None))
-    val initialPortState = PortState(initialFlightsWithSplits.map(f => (f.apiFlight.uniqueId, f)).toMap, SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())
+    val initialPortState = PortState(SortedMap[UniqueArrival, ApiFlightWithSplits]() ++ initialFlightsWithSplits.map(f => (f.apiFlight.unique, f)), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())
 
     val testProbe = TestProbe("arrivals-probe")
 

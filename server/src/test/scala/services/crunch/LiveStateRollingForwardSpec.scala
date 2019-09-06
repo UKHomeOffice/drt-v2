@@ -82,6 +82,6 @@ class LiveStateRollingForwardSpec extends CrunchTestLike {
   }
 
   private def stateContainsArrivals(probe: TestProbe, arrivals: Seq[Arrival]) = probe.fishForMessage(2 seconds) {
-    case ps: PortState => arrivals.foldLeft(true) { case (soFar, a) => soFar && ps.flights.contains(a.uniqueId) }
+    case ps: PortState => arrivals.foldLeft(true) { case (soFar, a) => soFar && ps.flights.contains(a.unique) }
   }
 }

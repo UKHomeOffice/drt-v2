@@ -4,7 +4,7 @@ import drt.client.SPAMain.{Loc, TerminalsDashboardLoc}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.shared.{ApiFlightWithSplits, SDateLike}
+import drt.shared.SDateLike
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}

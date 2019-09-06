@@ -543,7 +543,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       now = () => now,
       initialFixedPoints = fixedPoints,
       maxDaysToCrunch = daysToCrunch,
-      initialPortState = Option(PortState(Map[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), staffMinutes(daysToCrunch, 15, scheduled))),
+      initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), staffMinutes(daysToCrunch, 15, scheduled))),
       checkRequiredStaffUpdatesOnStartup = true
     )
 

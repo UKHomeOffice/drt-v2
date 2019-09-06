@@ -3,7 +3,7 @@ package actors
 import org.specs2.mutable.Specification
 import PortStateMessageConversion._
 import drt.shared.CrunchApi.{CrunchMinute, PortState, PortStateMutable, StaffMinute}
-import drt.shared.{ApiFlightWithSplits, Queues, TM, TQM}
+import drt.shared._
 import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchStateSnapshotMessage, StaffMinuteMessage}
 
 import scala.collection.immutable.SortedMap
@@ -30,7 +30,7 @@ class PortStateMessageConversionSpec extends Specification {
     val expectedCrunchMinutes = SortedMap[TQM, CrunchMinute]() ++ Seq(CrunchMinute("T1", Queues.EeaDesk, validMinuteMilli, 0, 0, 0, 0, None, None, None, None, None)).map(m => (m.key, m))
     val expectedStaffMinutes = SortedMap[TM, StaffMinute]() ++ Seq(StaffMinute("T1", validMinuteMilli, 0, 0, 0, None)).map(m => (m.key, m))
 
-    val expected = PortState(Map[UniqueArrival, ApiFlightWithSplits](), expectedCrunchMinutes, expectedStaffMinutes)
+    val expected = PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), expectedCrunchMinutes, expectedStaffMinutes)
 
     state === expected
   }
