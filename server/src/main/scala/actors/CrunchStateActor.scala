@@ -158,7 +158,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
   }
 
   private def uniqueArrivalFromMessage(uam: UniqueArrivalMessage) = {
-    UniqueArrival(uam.getNumber, uam.getTerminalName, uam.getScheduled, uam.getScheduled)
+    UniqueArrival(uam.getNumber, uam.getTerminalName, uam.getScheduled)
   }
 
   def applyDiff(cdm: CrunchDiffMessage): Unit = {

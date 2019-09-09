@@ -136,7 +136,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
     logRecoveryMessage(s"Consuming ${diffsMessage.removals.length} removals")
     restorer.removeLegacies(diffsMessage.removalsOLD)
     restorer.remove(diffsMessage.removals.map(uam =>
-      UniqueArrival(uam.getNumber, uam.getTerminalName, uam.getScheduled, 0L)
+      UniqueArrival(uam.getNumber, uam.getTerminalName, uam.getScheduled)
     ))
   }
 
@@ -188,7 +188,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
     persistFeedStatus(FeedStatusSuccess(createdAt.millisSinceEpoch, updatedArrivals.size))
     if (updatedArrivals.nonEmpty) persistArrivalUpdates(mutable.Set(), mutable.Set[Arrival]() ++ updatedArrivals)
   }
-  
+
   def persistArrivalUpdates(removals: mutable.Set[UniqueArrival], updatedArrivals: mutable.Set[Arrival]): Unit = {
     val updateMessages = updatedArrivals.map(apiFlightToFlightMessage).toSeq
     val removalMessages = removals.map(ua => UniqueArrivalMessage(Option(ua.number), Option(ua.terminalName), Option(ua.scheduled))).toSeq

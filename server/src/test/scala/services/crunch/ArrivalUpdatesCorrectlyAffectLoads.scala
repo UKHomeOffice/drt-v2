@@ -146,7 +146,7 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
     val flights = ps.flights
     val crunchMins = ps.crunchMinutes
 
-    val arrivalsExist = arrivals.foldLeft(true) { case (soFar, a) => soFar && flights.contains(a.uniqueId) }
+    val arrivalsExist = arrivals.foldLeft(true) { case (soFar, a) => soFar && flights.contains(a.unique) }
 
     val arrivalsPaxTotal = arrivals.map {
       _.ActPax.getOrElse(-1)
