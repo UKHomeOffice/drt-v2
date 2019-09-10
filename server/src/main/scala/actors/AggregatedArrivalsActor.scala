@@ -24,7 +24,7 @@ class AggregatedArrivalsActor(portCode: String, arrivalTable: ArrivalTableLike) 
 
   def handleRemovals(flightRemovals: Set[RemoveFlight]): Unit = {
     flightRemovals.foreach {
-      case RemoveFlight(UniqueArrival(number, terminalName, scheduled, _)) =>
+      case RemoveFlight(UniqueArrival(number, terminalName, scheduled)) =>
         val scheduledIso = SDate(scheduled).toISOString()
         val scheduledTs = new Timestamp(scheduled)
         log.info(s"Removing $portCode / $terminalName / $number / $scheduledIso")
