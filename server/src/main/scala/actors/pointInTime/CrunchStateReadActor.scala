@@ -1,18 +1,23 @@
 package actors.pointInTime
 
+import actors.PortStateMessageConversion.{crunchMinuteFromMessage, flightWithSplitsFromMessage, staffMinuteFromMessage}
 import actors.Sizes.oneMegaByte
 import actors._
 import akka.persistence._
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
-import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchStateSnapshotMessage}
+import server.protobuf.messages.CrunchState._
 import services.SDate
-
-import scala.collection.immutable._
 
 case object GetCrunchMinutes
 
-class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, expireAfterMillis: Long, queues: Map[TerminalName, Seq[QueueName]])
+class CrunchStateReadActor(snapshotInterval: Int,
+                           pointInTime: SDateLike,
+                           expireAfterMillis: Long,
+                           queues: Map[TerminalName, Seq[QueueName]],
+                           startMillis: MillisSinceEpoch,
+                           endMillis: MillisSinceEpoch)
   extends CrunchStateActor(Option(snapshotInterval), oneMegaByte, "crunch-state", queues, () => pointInTime, expireAfterMillis, false, false) {
 
   val staffReconstructionRequired: Boolean = pointInTime.millisSinceEpoch <= SDate("2017-12-04").millisSinceEpoch
@@ -60,5 +65,34 @@ class CrunchStateReadActor(snapshotInterval: Int, pointInTime: SDateLike, expire
       replayMax = snapshotInterval)
     log.info(s"recovery: $recovery")
     recovery
+  }
+
+  override def crunchDiffFromMessage(diffMessage: CrunchDiffMessage): (Seq[UniqueArrival], Seq[ApiFlightWithSplits], Seq[CrunchMinute], Seq[StaffMinute]) = (
+
+    diffMessage.flightsToRemove.collect {
+      case m if queues.contains(m.getTerminalName) => uniqueArrivalFromMessage(m)
+    },
+    diffMessage.flightsToUpdate.collect {
+      case m if isInterestingFlightMessage(m) => flightWithSplitsFromMessage(m)
+    },
+    diffMessage.crunchMinutesToUpdate.collect {
+      case m if isInterestingCrunchMinuteMessage(m) => crunchMinuteFromMessage(m)
+    },
+    diffMessage.staffMinutesToUpdate.collect {
+      case m if isInterestingStaffMinuteMessage(m) => staffMinuteFromMessage(m)
+    }
+  )
+
+  val isInterestingFlightMessage: FlightWithSplitsMessage => Boolean = (fm: FlightWithSplitsMessage) => {
+    val flight = fm.getFlight
+    queues.contains(flight.getTerminal) && startMillis <= flight.getPcpTime && flight.getPcpTime <= endMillis
+  }
+
+  val isInterestingCrunchMinuteMessage: CrunchMinuteMessage => Boolean = (cm: CrunchMinuteMessage) => {
+    queues.contains(cm.getTerminalName) && startMillis <= cm.getMinute && cm.getMinute <= endMillis
+  }
+
+  val isInterestingStaffMinuteMessage: StaffMinuteMessage => Boolean = (sm: StaffMinuteMessage) => {
+    queues.contains(sm.getTerminalName) && startMillis <= sm.getMinute && sm.getMinute <= endMillis
   }
 }
