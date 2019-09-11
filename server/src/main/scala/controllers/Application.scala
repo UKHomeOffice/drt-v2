@@ -5,10 +5,12 @@ import java.util.{Calendar, TimeZone, UUID}
 
 import actors._
 import actors.pointInTime.{CrunchStateReadActor, FixedPointsReadActor}
+import akka.NotUsed
 import akka.actor._
 import akka.event.{Logging, LoggingAdapter}
 import akka.pattern.{AskableActorRef, _}
 import akka.stream._
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.{ByteString, Timeout}
 import api.{KeyCloakAuth, KeyCloakAuthError, KeyCloakAuthResponse, KeyCloakAuthToken}
 import boopickle.CompositePickler
@@ -41,6 +43,7 @@ import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import test.TestDrtSystem
 import upickle.default.{read, write}
 
+import scala.collection.immutable
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
@@ -967,17 +970,28 @@ class Application @Inject()(implicit val config: Configuration,
       val fileName = makeFileName("desks-and-queues", terminalName, startPit, endPit, portCode)
 
       val dayRangeMillis = startPit.millisSinceEpoch to endPit.millisSinceEpoch by oneDayMillis
-      val days: Seq[Future[Option[String]]] = dayRangeMillis.map(
-        millis => exportDesksToCSV(
-          terminalName = terminalName,
-          pointInTime = SDate(millis),
-          startHour = 0,
-          endHour = 24,
-          portStateFuture = loadBestPortStateForPointInTime(millis)
-        )
-      )
+      val daysMillisSource: Future[Seq[Option[String]]] = Source(dayRangeMillis)
+        .mapAsync(2) {
+          millis =>
+            exportDesksToCSV(
+              terminalName = terminalName,
+              pointInTime = SDate(millis),
+              startHour = 0,
+              endHour = 24,
+              portStateFuture = loadBestPortStateForPointInTime(millis)
+            )
+        }.runWith(Sink.seq)
+//      val days: Seq[Future[Option[String]]] = dayRangeMillis.map(
+//        millis => exportDesksToCSV(
+//          terminalName = terminalName,
+//          pointInTime = SDate(millis),
+//          startHour = 0,
+//          endHour = 24,
+//          portStateFuture = loadBestPortStateForPointInTime(millis)
+//        )
+//      )
 
-      CSVData.multiDayToSingleExport(days).map(csvData => {
+      CSVData.multiDayToSingleExport(daysMillisSource).map(csvData => {
         Result(ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
           HttpEntity.Strict(ByteString(
             CSVData.terminalCrunchMinutesToCsvDataHeadings(airportConfig.queues(terminalName)) + CSVData.lineEnding + csvData
