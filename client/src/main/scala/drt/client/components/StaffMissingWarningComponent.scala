@@ -26,7 +26,7 @@ object StaffMissingWarningComponent {
       val hasStaff = p.terminalStaffMinutes.values.exists(_.available > 0)
       if (!hasStaff)
         <.span(^.className := "has-alerts",
-          <.span(^.`class` := s"alert alert-class-warning the-alert", ^.role := "alert",
+          <.span(^.`class` := s"alert alert-class-warning the-alert staff-alert", ^.role := "alert",
             <.strong(s"You have not entered any staff"),
             " for the time period you are viewing, please enter staff on the ",
             if (p.loggedInUser.hasRole(StaffEdit))
