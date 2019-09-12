@@ -9,7 +9,7 @@
   "author": "UK Home Office",
   "license": "UNLICENSED",
   "devDependencies": {
-    "cypress": "^3.3.1",
+    "cypress": "^3.4.1",
     "moment": "^2.22.2",
     "moment-timezone": "^0.5.21"
   }

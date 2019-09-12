@@ -18,6 +18,7 @@ import org.scalajs.dom.html.Div
 import org.scalajs.dom.raw.Node
 import org.scalajs.dom.{DOMList, Element, Event, NodeListOf}
 
+import scala.collection.immutable.SortedMap
 import scala.util.{Success, Try}
 
 
@@ -60,6 +61,7 @@ object TerminalDesksAndQueues {
   implicit val propsReuse: Reusability[Props] = Reusability.by_==[Props]
 
   class Backend(backendScope: BackendScope[Props, State]) {
+
     def render(props: Props, state: State): VdomTagOf[Div] = {
       val slotMinutes = 15
 
@@ -181,6 +183,7 @@ object TerminalDesksAndQueues {
               <.label(^.`for` := "show-actuals", "Show BlackJack Data")
             )
           } else "",
+          StaffMissingWarningComponent(terminalStaffMinutes, props.loggedInUser, props.router, props.terminalPageTab),
           viewTypeControls(viewDepsClass, viewRecsClass)
         ),
         <.table(
