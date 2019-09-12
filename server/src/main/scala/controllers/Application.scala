@@ -730,6 +730,7 @@ class Application @Inject()(implicit val config: Configuration,
     val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], airportConfig.portStateSnapshotInterval, SDate(pointInTime), DrtStaticParameters.expireAfterMillis, terminalsAndQueues, startMillis, endMillis), stateQuery)
     val portCrunchResult = cacheActorRef.ask(query)(new Timeout(15 seconds))
 
+    
     portCrunchResult.map {
       case Some(ps: PortState) =>
         log.info(s"Got point-in-time PortState for ${SDate(pointInTime).toISOString()}")
