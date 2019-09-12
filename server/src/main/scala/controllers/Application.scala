@@ -5,7 +5,6 @@ import java.util.{Calendar, TimeZone, UUID}
 
 import actors._
 import actors.pointInTime.{CrunchStateReadActor, FixedPointsReadActor}
-import akka.NotUsed
 import akka.actor._
 import akka.event.{Logging, LoggingAdapter}
 import akka.pattern.{AskableActorRef, _}
@@ -43,7 +42,6 @@ import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import test.TestDrtSystem
 import upickle.default.{read, write}
 
-import scala.collection.immutable
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
@@ -730,7 +728,7 @@ class Application @Inject()(implicit val config: Configuration,
     val stateQuery = GetPortStateForTerminal(startMillis, endMillis, terminalName)
     val terminalsAndQueues = airportConfig.queues.filterKeys(_ == terminalName)
     val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], airportConfig.portStateSnapshotInterval, SDate(pointInTime), DrtStaticParameters.expireAfterMillis, terminalsAndQueues, startMillis, endMillis), stateQuery)
-    val portCrunchResult = cacheActorRef.ask(query)(new Timeout(180 seconds))
+    val portCrunchResult = cacheActorRef.ask(query)(new Timeout(15 seconds))
 
     portCrunchResult.map {
       case Some(ps: PortState) =>
@@ -872,8 +870,8 @@ class Application @Inject()(implicit val config: Configuration,
       val dateOption = Try(SDate(year, month, day, 0, 0)).toOption
       val terminalNameOption = airportConfig.terminalNames.find(name => name == terminalName)
       val resultOption = for {
-                        date <- dateOption
-                          terminalName <- terminalNameOption
+        date <- dateOption
+        terminalName <- terminalNameOption
       } yield {
         val pit = date.millisSinceEpoch
         val startMillis = dayStartMillisWithHourOffset(startHour, date)
