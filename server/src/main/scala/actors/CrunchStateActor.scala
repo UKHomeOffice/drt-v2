@@ -150,14 +150,14 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
   def applyRecoveryDiff(cdm: CrunchDiffMessage): Unit = {
     val (flightRemovals, flightUpdates, crunchMinuteUpdates, staffMinuteUpdates) = crunchDiffFromMessage(cdm)
     val nowMillis = now().millisSinceEpoch
-    restorer.update(flightUpdates.toSeq)
+    restorer.update(flightUpdates)
     restorer.removeLegacies(cdm.flightIdsToRemoveOLD)
     restorer.remove(flightRemovals)
     state.applyCrunchDiff(crunchMinuteUpdates, nowMillis)
     state.applyStaffDiff(staffMinuteUpdates, nowMillis)
   }
 
-  private def uniqueArrivalFromMessage(uam: UniqueArrivalMessage) = {
+  def uniqueArrivalFromMessage(uam: UniqueArrivalMessage) = {
     UniqueArrival(uam.getNumber, uam.getTerminalName, uam.getScheduled)
   }
 
@@ -171,10 +171,18 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
     state.purgeOlderThanDate(now().millisSinceEpoch - expireAfterMillis)
   }
 
-  def crunchDiffFromMessage(diffMessage: CrunchDiffMessage): (Seq[UniqueArrival], Set[ApiFlightWithSplits], Set[CrunchMinute], Set[StaffMinute]) = (
-    diffMessage.flightsToRemove.map(uniqueArrivalFromMessage),
-    diffMessage.flightsToUpdate.map(flightWithSplitsFromMessage).toSet,
-    diffMessage.crunchMinutesToUpdate.map(crunchMinuteFromMessage).toSet,
-    diffMessage.staffMinutesToUpdate.map(staffMinuteFromMessage).toSet
+  def crunchDiffFromMessage(diffMessage: CrunchDiffMessage): (Seq[UniqueArrival], Seq[ApiFlightWithSplits], Seq[CrunchMinute], Seq[StaffMinute]) = (
+    diffMessage.flightsToRemove.collect {
+      case m if portQueues.contains(m.getTerminalName) => uniqueArrivalFromMessage(m)
+    },
+    diffMessage.flightsToUpdate.collect {
+      case m if portQueues.contains(m.getFlight.getTerminal) => flightWithSplitsFromMessage(m)
+    },
+    diffMessage.crunchMinutesToUpdate.collect {
+      case m if portQueues.contains(m.getTerminalName) => crunchMinuteFromMessage(m)
+    },
+    diffMessage.staffMinutesToUpdate.collect {
+      case m if portQueues.contains(m.getTerminalName) => staffMinuteFromMessage(m)
+    }
   )
 }

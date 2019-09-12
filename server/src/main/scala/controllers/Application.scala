@@ -9,6 +9,7 @@ import akka.actor._
 import akka.event.{Logging, LoggingAdapter}
 import akka.pattern.{AskableActorRef, _}
 import akka.stream._
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.{ByteString, Timeout}
 import api.{KeyCloakAuth, KeyCloakAuthError, KeyCloakAuthResponse, KeyCloakAuthToken}
 import boopickle.CompositePickler
@@ -346,9 +347,9 @@ class Application @Inject()(implicit val config: Configuration,
     (startOfForecast, endOfForecast)
   }
 
-  def loadBestPortStateForPointInTime(day: MillisSinceEpoch): Future[Either[PortStateError, Option[PortState]]] =
+  def loadBestPortStateForPointInTime(day: MillisSinceEpoch, terminalName: TerminalName, startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch): Future[Either[PortStateError, Option[PortState]]] =
     if (isHistoricDate(day)) {
-      portStateForEndOfDay(day)
+      portStateForEndOfDay(day, terminalName)
     } else if (day <= getLocalNextMidnight(SDate.now()).millisSinceEpoch) {
       ctrl.liveCrunchStateActor.ask(GetState).map {
         case Some(ps: PortState) => Right(Option(ps))
@@ -544,7 +545,7 @@ class Application @Inject()(implicit val config: Configuration,
     maybePointInTime match {
       case Some(pit) =>
         log.info(s"Snapshot crunch state query ${SDate(pit).toISOString()}")
-        val tempActor = system.actorOf(Props(classOf[CrunchStateReadActor], airportConfig.portStateSnapshotInterval, SDate(pit), DrtStaticParameters.expireAfterMillis, airportConfig.queues))
+        val tempActor = system.actorOf(Props(classOf[CrunchStateReadActor], airportConfig.portStateSnapshotInterval, SDate(pit), DrtStaticParameters.expireAfterMillis, airportConfig.queues, startMillis, endMillis))
         val futureResult = requestPortState[X](tempActor, request)
         futureResult.onSuccess {
           case _ => tempActor ! PoisonPill
@@ -711,20 +712,24 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def portStateForEndOfDay(day: MillisSinceEpoch): Future[Either[PortStateError, Option[PortState]]] = {
+  def portStateForEndOfDay(day: MillisSinceEpoch, terminalName: TerminalName): Future[Either[PortStateError, Option[PortState]]] = {
     val relativeLastMidnight = getLocalLastMidnight(SDate(day)).millisSinceEpoch
     val startMillis = relativeLastMidnight
     val endMillis = relativeLastMidnight + oneHourMillis * airportConfig.dayLengthHours
     val pointInTime = startMillis + oneDayMillis + oneHourMillis * 3
 
-    portStatePeriodAtPointInTime(startMillis, endMillis, pointInTime)
+    portStatePeriodAtPointInTime(startMillis, endMillis, pointInTime, terminalName)
   }
 
   def portStatePeriodAtPointInTime(startMillis: MillisSinceEpoch,
                                    endMillis: MillisSinceEpoch,
-                                   pointInTime: MillisSinceEpoch): Future[Either[PortStateError, Option[PortState]]] = {
-    val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], airportConfig.portStateSnapshotInterval, SDate(pointInTime), DrtStaticParameters.expireAfterMillis, airportConfig.queues), GetPortState(startMillis, endMillis))
-    val portCrunchResult = cacheActorRef.ask(query)(new Timeout(180 seconds))
+                                   pointInTime: MillisSinceEpoch,
+                                   terminalName: TerminalName): Future[Either[PortStateError, Option[PortState]]] = {
+    val stateQuery = GetPortStateForTerminal(startMillis, endMillis, terminalName)
+    val terminalsAndQueues = airportConfig.queues.filterKeys(_ == terminalName)
+    val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], airportConfig.portStateSnapshotInterval, SDate(pointInTime), DrtStaticParameters.expireAfterMillis, terminalsAndQueues, startMillis, endMillis), stateQuery)
+    val portCrunchResult = cacheActorRef.ask(query)(new Timeout(15 seconds))
+
     portCrunchResult.map {
       case Some(ps: PortState) =>
         log.info(s"Got point-in-time PortState for ${SDate(pointInTime).toISOString()}")
@@ -737,11 +742,10 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def exportDesksAndQueuesAtPointInTimeCSV(
-                                            pointInTime: String,
-                                            terminalName: TerminalName,
-                                            startHour: Int,
-                                            endHour: Int
+  def exportDesksAndQueuesAtPointInTimeCSV(pointInTime: String,
+                                           terminalName: TerminalName,
+                                           startHour: Int,
+                                           endHour: Int
                                           ): Action[AnyContent] =
     authByRole(DesksAndQueuesView) {
       Action.async {
@@ -753,7 +757,9 @@ class Application @Inject()(implicit val config: Configuration,
         val fileName = f"$portCode-$terminalName-desks-and-queues-${pit.getFullYear()}-${pit.getMonth()}%02d-${pit.getDate()}%02dT" +
           f"${pit.getHours()}%02d-${pit.getMinutes()}%02d-hours-$startHour%02d-to-$endHour%02d"
 
-        val portStateForPointInTime = loadBestPortStateForPointInTime(pit.millisSinceEpoch)
+        val startMillis = dayStartMillisWithHourOffset(startHour, pit)
+        val endMillis = dayStartMillisWithHourOffset(endHour, pit)
+        val portStateForPointInTime = loadBestPortStateForPointInTime(pit.millisSinceEpoch, terminalName, startMillis, endMillis)
         exportDesksToCSV(terminalName, pit, startHour, endHour, portStateForPointInTime).map {
           case Some(csvData) =>
             val columnHeadings = CSVData.terminalCrunchMinutesToCsvDataHeadings(airportConfig.queues(terminalName))
@@ -765,6 +771,10 @@ class Application @Inject()(implicit val config: Configuration,
         }
       }
     }
+
+  def dayStartMillisWithHourOffset(startHour: Int, pit: SDateLike): MillisSinceEpoch = {
+    getLocalLastMidnight(pit).addHours(startHour).millisSinceEpoch
+  }
 
   def exportDesksToCSV(terminalName: TerminalName,
                        pointInTime: SDateLike,
@@ -855,6 +865,8 @@ class Application @Inject()(implicit val config: Configuration,
 
   def exportApi(day: Int, month: Int, year: Int, terminalName: TerminalName): Action[AnyContent] = authByRole(ApiViewPortCsv) {
     Action.async { _ =>
+      val startHour = 0
+      val endHour = 24
       val dateOption = Try(SDate(year, month, day, 0, 0)).toOption
       val terminalNameOption = airportConfig.terminalNames.find(name => name == terminalName)
       val resultOption = for {
@@ -862,9 +874,11 @@ class Application @Inject()(implicit val config: Configuration,
         terminalName <- terminalNameOption
       } yield {
         val pit = date.millisSinceEpoch
-        val portStateForPointInTime = loadBestPortStateForPointInTime(pit)
+        val startMillis = dayStartMillisWithHourOffset(startHour, date)
+        val endMillis = dayStartMillisWithHourOffset(endHour, date)
+        val portStateForPointInTime = loadBestPortStateForPointInTime(pit, terminalName, startMillis, endMillis)
         val fileName = f"export-splits-$portCode-$terminalName-${date.getFullYear()}-${date.getMonth()}-${date.getDate()}"
-        flightsForCSVExportWithinRange(terminalName, date, startHour = 0, endHour = 24, portStateForPointInTime).map {
+        flightsForCSVExportWithinRange(terminalName, date, startHour = startHour, endHour = endHour, portStateForPointInTime).map {
           case Some(csvFlights) =>
             val csvData = CSVData.flightsWithSplitsWithAPIActualsToCSVWithHeadings(csvFlights)
             Result(
@@ -897,7 +911,9 @@ class Application @Inject()(implicit val config: Configuration,
         val fileName = f"$portCode-$terminalName-arrivals-${pit.getFullYear()}-${pit.getMonth()}%02d-${pit.getDate()}%02dT" +
           f"${pit.getHours()}%02d-${pit.getMinutes()}%02d-hours-$startHour%02d-to-$endHour%02d"
 
-        val portStateForPointInTime = loadBestPortStateForPointInTime(pit.millisSinceEpoch)
+        val startMillis = dayStartMillisWithHourOffset(startHour, pit)
+        val endMillis = dayStartMillisWithHourOffset(endHour, pit)
+        val portStateForPointInTime = loadBestPortStateForPointInTime(pit.millisSinceEpoch, terminalName, startMillis, endMillis)
         flightsForCSVExportWithinRange(terminalName, pit, startHour, endHour, portStateForPointInTime).map {
           case Some(csvFlights) =>
             val csvData = if (ctrl.getRoles(config, request.headers, request.session).contains(ApiView)) {
@@ -931,16 +947,21 @@ class Application @Inject()(implicit val config: Configuration,
       val fileName = makeFileName("arrivals", terminalName, startPit, endPit, portCode)
 
       val dayRangeInMillis = startPit.millisSinceEpoch to endPit.millisSinceEpoch by oneDayMillis
+      val startHour = 0
+      val endHour = 24
       val days: Seq[Future[Option[String]]] = dayRangeInMillis.zipWithIndex.map {
 
         case (dayMillis, index) =>
+          val day = SDate(dayMillis)
+          val startMillis = dayStartMillisWithHourOffset(startHour, day)
+          val endMillis = dayStartMillisWithHourOffset(endHour, day)
           val csvFunc = if (index == 0) CSVData.flightsWithSplitsToCSVWithHeadings _ else CSVData.flightsWithSplitsToCSV _
           flightsForCSVExportWithinRange(
             terminalName = terminalName,
-            pit = SDate(dayMillis),
-            startHour = 0,
-            endHour = 24,
-            portStateFuture = loadBestPortStateForPointInTime(dayMillis)
+            pit = day,
+            startHour = startHour,
+            endHour = endHour,
+            portStateFuture = loadBestPortStateForPointInTime(dayMillis, terminalName, startMillis, endMillis)
           ).map {
             case Some(fs) => Option(csvFunc(fs))
             case None =>
@@ -967,17 +988,23 @@ class Application @Inject()(implicit val config: Configuration,
       val fileName = makeFileName("desks-and-queues", terminalName, startPit, endPit, portCode)
 
       val dayRangeMillis = startPit.millisSinceEpoch to endPit.millisSinceEpoch by oneDayMillis
-      val days: Seq[Future[Option[String]]] = dayRangeMillis.map(
-        millis => exportDesksToCSV(
-          terminalName = terminalName,
-          pointInTime = SDate(millis),
-          startHour = 0,
-          endHour = 24,
-          portStateFuture = loadBestPortStateForPointInTime(millis)
-        )
-      )
+      val daysMillisSource: Future[Seq[Option[String]]] = Source(dayRangeMillis)
+        .mapAsync(config.get[Int]("multi-day-parallelism")) { millis =>
+          val startHour = 0
+          val endHour = 24
+          val day = SDate(millis)
+          val startMillis = dayStartMillisWithHourOffset(startHour, day)
+          val endMillis = dayStartMillisWithHourOffset(endHour, day)
+          exportDesksToCSV(
+            terminalName = terminalName,
+            pointInTime = day,
+            startHour = startHour,
+            endHour = endHour,
+            portStateFuture = loadBestPortStateForPointInTime(millis, terminalName, startMillis, endMillis)
+          )
+        }.runWith(Sink.seq)
 
-      CSVData.multiDayToSingleExport(days).map(csvData => {
+      CSVData.multiDayToSingleExport(daysMillisSource).map(csvData => {
         Result(ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
           HttpEntity.Strict(ByteString(
             CSVData.terminalCrunchMinutesToCsvDataHeadings(airportConfig.queues(terminalName)) + CSVData.lineEnding + csvData

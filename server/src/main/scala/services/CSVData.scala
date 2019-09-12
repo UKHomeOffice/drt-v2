@@ -55,11 +55,11 @@ object CSVData {
 
   def forecastPeriodToCsv(forecastPeriod: ForecastPeriod): String =
     makeDayHeadingsForPlanningExport(forecastDaysInPeriod(forecastPeriod)) +
-    lineEnding +
-    periodTimeslotsToCSVString(
-      Forecast.timeSlotStartTimes(forecastPeriod, millisToHoursAndMinutesString),
-      Forecast.periodByTimeSlotAcrossDays(forecastPeriod)
-    )
+      lineEnding +
+      periodTimeslotsToCSVString(
+        Forecast.timeSlotStartTimes(forecastPeriod, millisToHoursAndMinutesString),
+        Forecast.periodByTimeSlotAcrossDays(forecastPeriod)
+      )
 
   def millisToHoursAndMinutesString: MillisSinceEpoch => String =
     (millis: MillisSinceEpoch) => SDate(millis, europeLondonTimeZone).toHoursAndMinutes()
@@ -283,4 +283,11 @@ object CSVData {
     })).map(_.collect {
     case Some(s) => s
   }.mkString(lineEnding))
+
+  def multiDayToSingleExport(exportDays: Future[Seq[Option[String]]]): Future[String] =
+    exportDays.map {
+      _.collect {
+        case Some(s) => s
+      }.mkString(lineEnding)
+    }
 }

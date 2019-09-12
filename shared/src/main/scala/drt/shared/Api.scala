@@ -910,16 +910,16 @@ object CrunchApi {
         movements = 0)
     }
 
-    def applyFlightsWithSplitsDiff(flightRemovals: Seq[UniqueArrival], flightUpdates: Set[ApiFlightWithSplits], nowMillis: MillisSinceEpoch): Unit = {
+    def applyFlightsWithSplitsDiff(flightRemovals: Seq[UniqueArrival], flightUpdates: Seq[ApiFlightWithSplits], nowMillis: MillisSinceEpoch): Unit = {
       flights --= flightRemovals
       flights ++= flightUpdates.map(f => (f.apiFlight.unique, f.copy(lastUpdated = Option(nowMillis))))
     }
 
-    def applyCrunchDiff(crunchMinuteUpdates: Set[CrunchMinute], nowMillis: MillisSinceEpoch): Unit = {
+    def applyCrunchDiff(crunchMinuteUpdates: Seq[CrunchMinute], nowMillis: MillisSinceEpoch): Unit = {
       crunchMinutes ++= crunchMinuteUpdates.map(cm => (cm.key, cm.copy(lastUpdated = Option(nowMillis))))
     }
 
-    def applyStaffDiff(staffMinuteUpdates: Set[StaffMinute], nowMillis: MillisSinceEpoch): Unit = {
+    def applyStaffDiff(staffMinuteUpdates: Seq[StaffMinute], nowMillis: MillisSinceEpoch): Unit = {
       staffMinutes ++= staffMinuteUpdates.map(sm => (sm.key, sm.copy(lastUpdated = Option(nowMillis))))
     }
 
