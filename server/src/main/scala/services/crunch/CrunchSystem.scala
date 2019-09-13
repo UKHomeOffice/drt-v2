@@ -91,7 +91,7 @@ object CrunchSystem {
     val maybeStaffMinutes = initialStaffMinutesFromPortState(props.initialPortState)
     val maybeCrunchMinutes = initialCrunchMinutesFromPortState(props.initialPortState)
 
-    val initialFlightsWithSplits = initialFlightsFromPortState(props.initialPortState, props.recrunchOnStart)
+    val initialFlightsWithSplits = initialFlightsFromPortState(props.initialPortState)
 
     val arrivalsStage = new ArrivalsGraphStage(
       name = props.logLabel,
@@ -227,7 +227,7 @@ object CrunchSystem {
 
   def initialLoadsFromPortState(initialPortState: Option[PortState]): Option[Loads] = initialPortState.map(ps => Loads.fromCrunchMinutes(ps.crunchMinutes))
 
-  def initialFlightsFromPortState(initialPortState: Option[PortState], removeSplits: Boolean): Option[FlightsWithSplits] = initialPortState.map { ps =>
+  def initialFlightsFromPortState(initialPortState: Option[PortState]): Option[FlightsWithSplits] = initialPortState.map { ps =>
     val flightsWithSplits = ps.flights.values.toSeq
 
     FlightsWithSplits(flightsWithSplits, Seq())
