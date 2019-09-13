@@ -16,7 +16,7 @@ import services._
 import services.graphstages.Crunch._
 import services.graphstages._
 
-import scala.collection.immutable.SortedMap
+import scala.collection.mutable
 
 
 case class CrunchSystem[FR](shifts: SourceQueueWithComplete[ShiftAssignments],
@@ -55,9 +55,10 @@ case class CrunchProps[FR](logLabel: String = "",
                            cruncher: TryCrunch,
                            simulator: Simulator,
                            initialPortState: Option[PortState] = None,
-                           initialBaseArrivals: Set[Arrival] = Set(),
-                           initialFcstArrivals: Set[Arrival] = Set(),
-                           initialLiveArrivals: Set[Arrival] = Set(),
+                           initialForecastBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap[UniqueArrival, Arrival](),
+                           initialForecastArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap[UniqueArrival, Arrival](),
+                           initialLiveBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap[UniqueArrival, Arrival](),
+                           initialLiveArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap[UniqueArrival, Arrival](),
                            arrivalsBaseSource: Source[ArrivalsFeedResponse, FR],
                            arrivalsFcstSource: Source[ArrivalsFeedResponse, FR],
                            arrivalsLiveSource: Source[ArrivalsFeedResponse, FR],
@@ -95,17 +96,18 @@ object CrunchSystem {
 
     val arrivalsStage = new ArrivalsGraphStage(
       name = props.logLabel,
-      initialBaseArrivals = if (props.refreshArrivalsOnStart) Set() else props.initialBaseArrivals,
-      initialForecastArrivals = if (props.refreshArrivalsOnStart) Set() else props.initialFcstArrivals,
+      initialForecastBaseArrivals = if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialForecastBaseArrivals,
+      initialForecastArrivals = if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialForecastArrivals,
+      initialLiveBaseArrivals = if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialLiveBaseArrivals,
       initialLiveArrivals = props.initialLiveArrivals,
-      initialMergedArrivals = if (props.refreshArrivalsOnStart) SortedMap[ArrivalKey, Arrival]() else SortedMap[ArrivalKey, Arrival]() ++ initialFlightsWithSplits.map(_.flightsToUpdate.map(fws => (ArrivalKey(fws.apiFlight), fws.apiFlight))).getOrElse(List()),
+      initialMergedArrivals = if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else mutable.SortedMap[UniqueArrival, Arrival]() ++ initialFlightsWithSplits.map(_.flightsToUpdate.map(fws => (fws.apiFlight.unique, fws.apiFlight))).getOrElse(List()),
       pcpArrivalTime = props.pcpArrival,
       validPortTerminals = props.airportConfig.terminalNames.toSet,
       expireAfterMillis = props.expireAfterMillis,
       now = props.now)
 
-    val fcstArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) Seq() else props.initialFcstArrivals.toSeq)
-    val liveArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) Seq() else props.initialLiveArrivals.toSeq)
+    val fcstArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialForecastArrivals)
+    val liveArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialLiveArrivals)
 
 
     log.info(s"Using B5JPlus Start Date of ${props.b5JStartDate.toISOString()}")
@@ -216,8 +218,6 @@ object CrunchSystem {
       List(arrivalsKillSwitch, manifestsKillSwitch)
     )
   }
-
-  def arrivalsDiffingStage(initialArrivals: Seq[Arrival]) = new ArrivalsDiffingStage(initialArrivals)
 
   def initialStaffMinutesFromPortState(initialPortState: Option[PortState]): Option[StaffMinutes] = initialPortState.map(
     ps => StaffMinutes(ps.staffMinutes))

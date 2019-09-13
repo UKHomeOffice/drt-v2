@@ -25,8 +25,9 @@ import services.graphstages.Crunch._
 import services.graphstages.{DummySplitsPredictor, TestableCrunchLoadStage}
 import slickdb.Tables
 
+import scala.collection.mutable
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor}
 
 
 class LiveCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long, acceptFullStateUpdates: Boolean)
@@ -96,7 +97,7 @@ class CrunchTestLike
 
   implicit val actorSystem: ActorSystem = system
   implicit val materializer: ActorMaterializer = ActorMaterializer()
-  implicit val ec = ExecutionContext.global
+  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -156,9 +157,10 @@ class CrunchTestLike
 
   def testProbe(name: String) = TestProbe(name = name)
 
-  def runCrunchGraph(initialBaseArrivals: Set[Arrival] = Set(),
-                     initialForecastArrivals: Set[Arrival] = Set(),
-                     initialLiveArrivals: Set[Arrival] = Set(),
+  def runCrunchGraph(initialForecastBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap(),
+                     initialForecastArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap(),
+                     initialLiveBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap(),
+                     initialLiveArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap(),
                      initialPortState: Option[PortState] = None,
                      airportConfig: AirportConfig = airportConfig,
                      csvSplitsProvider: SplitsProvider.SplitProvider = (_, _) => None,
@@ -231,8 +233,9 @@ class CrunchTestLike
       cruncher = cruncher,
       simulator = simulator,
       initialPortState = initialPortState,
-      initialBaseArrivals = initialBaseArrivals,
-      initialFcstArrivals = initialForecastArrivals,
+      initialForecastBaseArrivals = initialForecastBaseArrivals,
+      initialForecastArrivals = initialForecastArrivals,
+      initialLiveBaseArrivals = initialLiveBaseArrivals,
       initialLiveArrivals = initialLiveArrivals,
       arrivalsBaseSource = baseArrivals,
       arrivalsFcstSource = fcstArrivals,

@@ -12,7 +12,6 @@ import akka.stream._
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.{ByteString, Timeout}
 import api.{KeyCloakAuth, KeyCloakAuthError, KeyCloakAuthResponse, KeyCloakAuthToken}
-import boopickle.CompositePickler
 import boopickle.Default._
 import buildinfo.BuildInfo
 import com.typesafe.config.ConfigFactory
@@ -116,8 +115,6 @@ trait ProdPassengerSplitProviders {
 
   def fastTrackPercentageProvider(apiFlight: Arrival): Option[FastTrackPercentages] =
     Option(CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(csvSplitsProvider(apiFlight.IATA, MilliDate(apiFlight.Scheduled)), 0d, 0d))
-
-  private implicit val timeout: Timeout = Timeout(250 milliseconds)
 }
 
 trait ImplicitTimeoutProvider {
@@ -231,24 +228,6 @@ class Application @Inject()(implicit val config: Configuration,
             val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
             val hf = Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queues(terminal).toList)
             Option(ForecastPeriodWithHeadlines(fp, hf))
-          case None =>
-            log.info(s"No forecast available for week beginning ${SDate(startDay).toISOString()} on $terminal")
-            None
-        }
-      }
-
-      def forecastWeekHeadlineFigures(startDay: MillisSinceEpoch,
-                                      terminal: TerminalName): Future[Option[ForecastHeadlineFigures]] = {
-        val (startOfForecast, endOfForecast) = startAndEndForDay(startDay, 7)
-
-        val portStateFuture = forecastCrunchStateActor.ask(
-          GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
-        )(new Timeout(30 seconds))
-
-        portStateFuture.map {
-          case Some(portState: PortState) =>
-            val hf = Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queues(terminal).toList)
-            Option(hf)
           case None =>
             log.info(s"No forecast available for week beginning ${SDate(startDay).toISOString()} on $terminal")
             None
@@ -547,9 +526,7 @@ class Application @Inject()(implicit val config: Configuration,
         log.info(s"Snapshot crunch state query ${SDate(pit).toISOString()}")
         val tempActor = system.actorOf(Props(classOf[CrunchStateReadActor], airportConfig.portStateSnapshotInterval, SDate(pit), DrtStaticParameters.expireAfterMillis, airportConfig.queues, startMillis, endMillis))
         val futureResult = requestPortState[X](tempActor, request)
-        futureResult.onSuccess {
-          case _ => tempActor ! PoisonPill
-        }
+        futureResult.foreach(_ => tempActor ! PoisonPill)
         futureResult
       case _ =>
         if (endMillis > getLocalNextMidnight(SDate.now().addDays(1)).millisSinceEpoch) {
@@ -1124,13 +1101,6 @@ class Application @Inject()(implicit val config: Configuration,
         val b = request.body.asBytes(parse.UNLIMITED).get
 
         // call Autowire route
-
-        implicit val staffAssignmentsPickler: CompositePickler[StaffAssignments] = compositePickler[StaffAssignments].addConcreteType[ShiftAssignments].addConcreteType[FixedPointAssignments]
-        implicit val apiPaxTypeAndQueueCountPickler: Pickler[ApiPaxTypeAndQueueCount] = generatePickler[ApiPaxTypeAndQueueCount]
-        implicit val feedStatusPickler: CompositePickler[FeedStatus] = compositePickler[FeedStatus].
-          addConcreteType[FeedStatusSuccess].
-          addConcreteType[FeedStatusFailure]
-
         val router = Router.route[Api](ApiService(airportConfig, ctrl.shiftsActor, ctrl.fixedPointsActor, ctrl.staffMovementsActor, request.headers, request.session))
 
         router(

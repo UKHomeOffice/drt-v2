@@ -1,8 +1,6 @@
 package services.crunch
 
-import drt.shared.SDateLike
 import services.SDate
-import services.graphstages.Crunch
 
 
 class CrunchOffsetSpec extends CrunchTestLike {

@@ -213,12 +213,12 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     } else userRolesFromHeader(headers)
 
   def run(): Unit = {
-    val futurePortStates: Future[(Option[PortState], Option[PortState], Option[Set[Arrival]], Option[Set[Arrival]], Option[Set[Arrival]], Option[RegisteredArrivals])] = {
+    val futurePortStates: Future[(Option[PortState], Option[PortState], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[RegisteredArrivals])] = {
       val maybeLivePortState = initialStateFuture[PortState](liveCrunchStateActor, GetState)
       val maybeForecastPortState = initialStateFuture[PortState](forecastCrunchStateActor, GetState)
-      val maybeInitialBaseArrivals = initialStateFuture[ArrivalsState](baseArrivalsActor, GetState).map(_.map(_.arrivals.values.toSet))
-      val maybeInitialFcstArrivals = initialStateFuture[ArrivalsState](forecastArrivalsActor, GetState).map(_.map(_.arrivals.values.toSet))
-      val maybeInitialLiveArrivals = initialStateFuture[ArrivalsState](liveArrivalsActor, GetState).map(_.map(_.arrivals.values.toSet))
+      val maybeInitialBaseArrivals = initialStateFuture[ArrivalsState](baseArrivalsActor, GetState).map(_.map(_.arrivals))
+      val maybeInitialFcstArrivals = initialStateFuture[ArrivalsState](forecastArrivalsActor, GetState).map(_.map(_.arrivals))
+      val maybeInitialLiveArrivals = initialStateFuture[ArrivalsState](liveArrivalsActor, GetState).map(_.map(_.arrivals))
       val maybeInitialRegisteredArrivals = initialStateFuture[RegisteredArrivals](registeredArrivalsActor, GetState)
       for {
         lps <- maybeLivePortState
@@ -235,7 +235,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         system.log.info(s"Successfully restored initial state for App")
         val initialPortState: Option[PortState] = mergePortStates(maybeForecastState, maybeLiveState)
 
-        val crunchInputs: CrunchSystem[Cancellable] = startCrunchSystem(initialPortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, params.recrunchOnStart, params.refreshArrivalsOnStart, true)
+        val crunchInputs: CrunchSystem[Cancellable] = startCrunchSystem(initialPortState, maybeBaseArrivals, maybeForecastArrivals, Option(mutable.SortedMap[UniqueArrival, Arrival]()), maybeLiveArrivals, params.recrunchOnStart, params.refreshArrivalsOnStart, true)
 
         if (maybeRegisteredArrivals.isDefined) log.info(s"sending ${maybeRegisteredArrivals.get.arrivals.size} initial registered arrivals to batch stage")
         else log.info(s"sending no registered arrivals to batch stage")
@@ -335,9 +335,10 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   }
 
   def startCrunchSystem(initialPortState: Option[PortState],
-                        initialBaseArrivals: Option[Set[Arrival]],
-                        initialForecastArrivals: Option[Set[Arrival]],
-                        initialLiveArrivals: Option[Set[Arrival]],
+                        initialForecastBaseArrivals: Option[mutable.SortedMap[UniqueArrival, Arrival]],
+                        initialForecastArrivals: Option[mutable.SortedMap[UniqueArrival, Arrival]],
+                        initialLiveBaseArrivals: Option[mutable.SortedMap[UniqueArrival, Arrival]],
+                        initialLiveArrivals: Option[mutable.SortedMap[UniqueArrival, Arrival]],
                         recrunchOnStart: Boolean,
                         refreshArrivalsOnStart: Boolean,
                         checkRequiredStaffUpdatesOnStartup: Boolean): CrunchSystem[Cancellable] = {
@@ -370,9 +371,10 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       cruncher = TryRenjin.crunch,
       simulator = TryRenjin.runSimulationOfWork,
       initialPortState = initialPortState,
-      initialBaseArrivals = initialBaseArrivals.getOrElse(Set()),
-      initialFcstArrivals = initialForecastArrivals.getOrElse(Set()),
-      initialLiveArrivals = initialLiveArrivals.getOrElse(Set()),
+      initialForecastBaseArrivals = initialForecastBaseArrivals.getOrElse(mutable.SortedMap()),
+      initialForecastArrivals = initialForecastArrivals.getOrElse(mutable.SortedMap()),
+      initialLiveBaseArrivals = initialLiveBaseArrivals.getOrElse(mutable.SortedMap()),
+      initialLiveArrivals = initialLiveArrivals.getOrElse(mutable.SortedMap()),
       arrivalsBaseSource = baseArrivalsSource(),
       arrivalsFcstSource = forecastArrivalsSource(airportConfig.feedPortCode),
       arrivalsLiveSource = liveArrivalsSource(airportConfig.feedPortCode),
