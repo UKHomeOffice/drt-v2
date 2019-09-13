@@ -30,7 +30,7 @@ case class LhrSftpLiveContentProvider(host: String, username: String, password: 
     val client = sftpClient
     log.info(s"Latest LHR CSV: $csvFileName")
     val tryContent = Try {
-      val content = client.fileContent(csvFileName + "hello").split("\n").drop(1).mkString("\n")
+      val content = client.fileContent(csvFileName).split("\n").drop(1).mkString("\n")
       client.closeConnection()
       content
     }
