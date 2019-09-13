@@ -228,10 +228,7 @@ object CrunchSystem {
   def initialLoadsFromPortState(initialPortState: Option[PortState]): Option[Loads] = initialPortState.map(ps => Loads.fromCrunchMinutes(ps.crunchMinutes))
 
   def initialFlightsFromPortState(initialPortState: Option[PortState], removeSplits: Boolean): Option[FlightsWithSplits] = initialPortState.map { ps =>
-    val initialFlightsWithSplits = ps.flights.values.toSeq
-    val flightsWithSplits = if (removeSplits) initialFlightsWithSplits.map { fws =>
-      fws.copy(splits = fws.splits.filter(_.source == SplitSources.TerminalAverage))
-    } else initialFlightsWithSplits
+    val flightsWithSplits = ps.flights.values.toSeq
 
     FlightsWithSplits(flightsWithSplits, Seq())
   }
