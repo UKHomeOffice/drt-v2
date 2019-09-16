@@ -420,9 +420,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     case (Some(fps), Some(lps)) =>
       log.info(s"Merging initial live & forecast port states. ${lps.flights.size} live flights, ${fps.flights.size} forecast flights")
       Option(PortState(
-        fps.flights ++ fps.flights,
-        fps.crunchMinutes ++ fps.crunchMinutes,
-        fps.staffMinutes ++ fps.staffMinutes))
+        fps.flights ++ lps.flights,
+        fps.crunchMinutes ++ lps.crunchMinutes,
+        fps.staffMinutes ++ lps.staffMinutes))
   }
 
   def createSplitsPredictionStage(predictSplits: Boolean,
