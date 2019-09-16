@@ -422,14 +422,14 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       log.info(s"Latest crunch minute in Live: ${lps.crunchMinutes.takeRight(1).map(cm => SDate(cm._2.minute).toISOString())}")
       val lpsToday = lps.window(SDate(0L), Crunch.getLocalNextMidnight(now()), airportConfig.queues)
       val inspectionDate = "2019-09-18"
-      val start = SDate(inspectionDate)
-      val end = start.addDays(1)
+      val start = SDate(inspectionDate).addHours(8)
+      val end = start.addHours(4)
       log.info(s"fps eea paxLoads for $inspectionDate:\n${fps.window(start, end, Map("T1" -> Seq(Queues.EeaDesk))).crunchMinutes.map {case (_, cm) => (SDate(cm.minute).toISOString(), cm.paxLoad) }.mkString("\n")}")
       val merged = Option(PortState(
         fps.flights ++ lpsToday.flights,
         fps.crunchMinutes ++ lpsToday.crunchMinutes,
         fps.staffMinutes ++ lpsToday.staffMinutes))
-      log.info(s"Finished merge")
+      log.info(s"Finished merge: ${merged.get.window(start, end, Map("T1" -> Seq(Queues.EeaDesk))).crunchMinutes.map {case (_, cm) => (SDate(cm.minute).toISOString(), cm.paxLoad) }.mkString("\n")}")
       merged
   }
 
