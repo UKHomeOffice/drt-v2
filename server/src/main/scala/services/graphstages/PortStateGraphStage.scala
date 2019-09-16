@@ -74,11 +74,6 @@ class PortStateGraphStage(name: String = "", optionalInitialPortState: Option[Po
               val startTime = now().millisSinceEpoch
               val expireThreshold = now().addMillis(-1 * expireAfterMillis.toInt).millisSinceEpoch
               val diff = incoming.applyTo(portState, startTime)
-              val d = SDate("2019-09-18T08:00")
-              diff.crunchMinuteUpdates.filter(x => x._1.minute == d.millisSinceEpoch).foreach { case (_, cm) =>
-                log.info(s"crunch diff 2019-09-18T08: $cm")
-                log.info(s"incoming: $incoming")
-              }
               portState.purgeOlderThanDate(expireThreshold)
               val elapsedSeconds = (now().millisSinceEpoch - startTime).toDouble / 1000
               log.info(f"Finished processing $inlet data in $elapsedSeconds%.2f seconds")
