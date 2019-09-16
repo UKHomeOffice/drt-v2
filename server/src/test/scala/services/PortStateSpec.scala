@@ -3,9 +3,40 @@ package services
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{CrunchMinute, PortState, StaffMinute}
 import drt.shared._
-import org.specs2.mutable.Specification
+import services.crunch.CrunchTestLike
 
-class PortStateSpec extends Specification {
+import scala.concurrent.duration._
+
+class PortStateSpec extends CrunchTestLike {
+  "Given an initial PortState with some pax loads " +
+    "When I pass in some staffing affecting the same date " +
+    "I should see the pax loads are unaffected" >> {
+    val minute = "2019-01-02T08:00"
+    val millis = SDate(minute).millisSinceEpoch
+    val cm = CrunchMinute("T1", Queues.EeaDesk, millis, 10, 50, 10, 50)
+    val portState = PortState(List(), List(cm), List())
+
+    val crunch = runCrunchGraph(initialPortState = Option(portState), now = () => SDate(minute).addMinutes(-60))
+
+    offerAndWait(crunch.shiftsInput, ShiftAssignments(Seq(StaffAssignment("", "T1", MilliDate(SDate(minute).addMinutes(-15).millisSinceEpoch), MilliDate(SDate(minute).addMinutes(15).millisSinceEpoch), 1, None))))
+
+    crunch.liveTestProbe.fishForMessage(2 seconds) {
+      case ps: PortState =>
+        val staffUpdated = ps.staffMinutes.exists {
+          case (TM("T1", m), sm) =>
+            m == millis && sm.shifts == 1
+        }
+        val paxLoadUnchanged = ps.crunchMinutes.exists {
+          case (TQM("T1", Queues.EeaDesk, m), cm) =>
+            m == millis && cm.paxLoad == 10
+        }
+
+        staffUpdated && paxLoadUnchanged
+    }
+
+    success
+  }
+
   "Given a PortState with no purgable entries " +
     "When I purge " +
     "Then I should still see all the entries" >> {

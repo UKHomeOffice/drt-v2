@@ -60,7 +60,7 @@ class CrunchLoadGraphStage(name: String = "",
         log.info(s"Crunch ${firstMinute.toLocalDateTimeString()} - ${lastMinute.toLocalDateTimeString()}")
         val affectedTerminals = incomingLoads.loadMinutes.keys.map(_.terminalName).toSet
 
-        mergeNewLoads(incomingLoads.loadMinutes)
+        loadMinutes ++= incomingLoads.loadMinutes
         purgeExpired(loadMinutes, TQM.atTime, now, expireAfterMillis.toInt)
 
         val deskRecMinutes = crunchLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, affectedTerminals)
@@ -73,10 +73,10 @@ class CrunchLoadGraphStage(name: String = "",
             }
         }
 
-        deskRecMinutes.foreach { case (tqm, drm) => existingDeskRecMinutes += (tqm -> drm) }
-
+        existingDeskRecMinutes ++= deskRecMinutes
         purgeExpired(existingDeskRecMinutes, TQM.atTime, now, expireAfterMillis.toInt)
-        deskRecMinutesToPush = mergeDeskRecMinutes(affectedDeskRecs, deskRecMinutesToPush)
+
+        deskRecMinutesToPush ++= affectedDeskRecs
 
         log.info(s"Now have ${deskRecMinutesToPush.size} desk rec minutes to push")
 
@@ -131,15 +131,6 @@ class CrunchLoadGraphStage(name: String = "",
       val maxDesks = deskRecMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._2))
       (minDesks, maxDesks)
     }
-
-    def mergeDeskRecMinutes(updatedCms: Map[TQM, DeskRecMinute], existingCms: Map[TQM, DeskRecMinute]): Map[TQM, DeskRecMinute] = {
-      updatedCms.foldLeft(existingCms) {
-        case (soFar, (newId, newLoadMinute)) => soFar.updated(newId, newLoadMinute)
-      }
-    }
-
-    def mergeNewLoads(incomingLoads: SortedMap[TQM, LoadMinute]): Unit = incomingLoads
-      .foreach { case (tqm, load) => loadMinutes += (tqm -> load) }
 
     setHandler(outDeskRecMinutes, new OutHandler {
       override def onPull(): Unit = {
