@@ -60,16 +60,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
 
     state.purgeOlderThanDate(now().millisSinceEpoch - expireAfterMillis)
 
-    dumpDayOfPaxLoads()
-
     super.postRecoveryComplete()
-  }
-
-  def dumpDayOfPaxLoads(): Unit = if (name == "forecast-crunch-state") {
-    val inspectionDate = "2019-09-18"
-    val start = SDate(inspectionDate).addHours(8)
-    val end = start.addHours(4)
-    log.info(s"crunch state eea paxLoads for $inspectionDate:\n${state.window(start, end, Map("T1" -> Seq(Queues.EeaDesk))).crunchMinutes.map { case (_, cm) => (SDate(cm.minute).toISOString(), cm.paxLoad) }.mkString("\n")}")
   }
 
   def logRecoveryState(): Unit = {
@@ -100,18 +91,15 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
     case PortStateWithDiff(Some(ps), _, CrunchDiffMessage(_, _, _, fr, fu, cu, su, _)) if fr.isEmpty && fu.isEmpty && cu.isEmpty && su.isEmpty =>
       log.info(s"Received port state with empty diff, but with fresh port state")
       updateFromFullState(ps)
-      dumpDayOfPaxLoads()
 
     case PortStateWithDiff(maybeState, _, diffMsg) =>
       maybeState match {
         case Some(fullState) if acceptFullStateUpdates =>
           updateFromFullState(fullState)
           logInfo("Received full port state")
-          dumpDayOfPaxLoads()
         case _ =>
           applyDiff(diffMsg)
           logInfo(s"Received port state with diff")
-          dumpDayOfPaxLoads()
       }
 
       persistAndMaybeSnapshot(diffMsg)
