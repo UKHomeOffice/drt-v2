@@ -419,10 +419,12 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       Option(lps)
     case (Some(fps), Some(lps)) =>
       log.info(s"Merging initial live & forecast port states. ${lps.flights.size} live flights, ${fps.flights.size} forecast flights")
+      log.info(s"Latest crunch minute in Live: ${SDate(lps.crunchMinutes.last._2.minute).toISOString()}")
+      val lpsToday = lps.window(SDate(0L), Crunch.getLocalNextMidnight(now()), airportConfig.queues)
       Option(PortState(
-        fps.flights ++ lps.flights,
-        fps.crunchMinutes ++ lps.crunchMinutes,
-        fps.staffMinutes ++ lps.staffMinutes))
+        fps.flights ++ lpsToday.flights,
+        fps.crunchMinutes ++ lpsToday.crunchMinutes,
+        fps.staffMinutes ++ lpsToday.staffMinutes))
   }
 
   def createSplitsPredictionStage(predictSplits: Boolean,
