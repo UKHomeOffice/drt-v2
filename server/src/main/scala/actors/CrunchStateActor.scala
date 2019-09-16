@@ -60,6 +60,11 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
 
     state.purgeOlderThanDate(now().millisSinceEpoch - expireAfterMillis)
 
+    val inspectionDate = "2019-09-18"
+    val start = SDate(inspectionDate)
+    val end = start.addDays(1)
+    log.info(s"recovered crunch state eea paxLoads for $inspectionDate:\n${state.window(start, end, Map("T1" -> Seq(Queues.EeaDesk))).crunchMinutes.map {case (_, cm) => (SDate(cm.minute).toISOString(), cm.paxLoad) }.mkString("\n")}")
+
     super.postRecoveryComplete()
   }
 
