@@ -419,12 +419,18 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       Option(lps)
     case (Some(fps), Some(lps)) =>
       log.info(s"Merging initial live & forecast port states. ${lps.flights.size} live flights, ${fps.flights.size} forecast flights")
-      log.info(s"Latest crunch minute in Live: ${SDate(lps.crunchMinutes.last._2.minute).toISOString()}")
+      log.info(s"Latest crunch minute in Live: ${lps.crunchMinutes.takeRight(1).map(cm => SDate(cm._2.minute).toISOString())}")
       val lpsToday = lps.window(SDate(0L), Crunch.getLocalNextMidnight(now()), airportConfig.queues)
-      Option(PortState(
+      val inspectionDate = "2019-09-18"
+      val start = SDate(inspectionDate)
+      val end = start.addDays(1)
+      log.info(s"fps eea paxLoads for $inspectionDate:\n${fps.window(start, end, Map("T1" -> Seq(Queues.EeaDesk))).crunchMinutes.map {case (_, cm) => (SDate(cm.minute).toISOString(), cm.paxLoad) }.mkString("\n")}")
+      val merged = Option(PortState(
         fps.flights ++ lpsToday.flights,
         fps.crunchMinutes ++ lpsToday.crunchMinutes,
         fps.staffMinutes ++ lpsToday.staffMinutes))
+      log.info(s"Finished merge")
+      merged
   }
 
   def createSplitsPredictionStage(predictSplits: Boolean,
