@@ -106,15 +106,10 @@ class PortStateGraphStage(name: String = "", optionalInitialPortState: Option[Po
         val updatedFlightRemovals = newDiff.flightRemovals.foldLeft(existingDiff.flightRemovals) {
           case (soFar, newRemoval) => if (soFar.contains(newRemoval)) soFar else soFar :+ newRemoval
         }
-        val updatedFlights = newDiff.flightUpdates.foldLeft(existingDiff.flightUpdates) {
-          case (soFar, (id, newFlight)) => if (soFar.contains(id)) soFar else soFar.updated(id, newFlight)
-        }
-        val updatedCms = newDiff.crunchMinuteUpdates.foldLeft(existingDiff.crunchMinuteUpdates) {
-          case (soFar, (id, newCm)) => if (soFar.contains(id)) soFar else soFar.updated(id, newCm)
-        }
-        val updatedSms = newDiff.staffMinuteUpdates.foldLeft(existingDiff.staffMinuteUpdates) {
-          case (soFar, (id, newSm)) => if (soFar.contains(id)) soFar else soFar.updated(id, newSm)
-        }
+        val updatedFlights = existingDiff.flightUpdates ++ newDiff.flightUpdates
+        val updatedCms = existingDiff.crunchMinuteUpdates ++ newDiff.crunchMinuteUpdates
+        val updatedSms = existingDiff.staffMinuteUpdates ++ newDiff.staffMinuteUpdates
+        
         Option(existingDiff.copy(
           flightRemovals = updatedFlightRemovals,
           flightUpdates = updatedFlights,
