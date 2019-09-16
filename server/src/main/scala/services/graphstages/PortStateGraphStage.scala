@@ -57,9 +57,9 @@ class PortStateGraphStage(name: String = "", optionalInitialPortState: Option[Po
     override def preStart(): Unit = {
       log.info(s"Received initial port state")
       optionalInitialPortState.map { ps =>
-        portState.flights ++ ps.flights
-        portState.crunchMinutes ++ ps.crunchMinutes
-        portState.staffMinutes ++ ps.staffMinutes
+        portState.flights ++= ps.flights
+        portState.crunchMinutes ++= ps.crunchMinutes
+        portState.staffMinutes ++= ps.staffMinutes
       }
       lastPushDate = now().toISODateOnly
       super.preStart()
