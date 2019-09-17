@@ -70,6 +70,7 @@ object Summaries {
     val totalMoves = if (moves.nonEmpty) moves.min else 0
     val queueRecs = if (queueSummaries.nonEmpty) queueSummaries.map(_.deskRecs).sum else 0
     val totalRec = queueRecs + totalMisc
-    StaffSummary(avail.max, totalMisc, totalMoves, totalRec)
+    val available = if (avail.nonEmpty) avail.max else 0
+    StaffSummary(available, totalMisc, totalMoves, totalRec)
   }
 }
