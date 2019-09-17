@@ -48,7 +48,10 @@ object Summaries {
             case ((sp, sd, sw, sad, saw), (_, CrunchMinute(_, _, _, p, _, d, w, _, _, ad, aw, _))) =>
               (p :: sp, d :: sd, w :: sw, ad :: sad, aw :: saw)
           }
-          QueueSummary(pax.sum, desks.max, waits.max, optionalMax(actDesks), optionalMax(actWaits))
+          val totalPax = if (pax.nonEmpty) pax.sum else 0
+          val maxDesks = if (desks.nonEmpty) desks.max else 0
+          val maxWait = if (waits.nonEmpty) waits.max else 0
+          QueueSummary(totalPax, maxDesks, maxWait, optionalMax(actDesks), optionalMax(actWaits))
       }
     }
   }
@@ -63,9 +66,10 @@ object Summaries {
       case ((fp, mm, av), (_, StaffMinute(_, _, s, f, m, _))) =>
         (f :: fp, m :: mm, (s + m) :: av)
     }
-    val totalMisc = fixed.max
-    val totalMoves = moves.min
-    val totalRec = queueSummaries.map(_.deskRecs).sum + totalMisc
+    val totalMisc = if (fixed.nonEmpty) fixed.max else 0
+    val totalMoves = if (moves.nonEmpty) moves.min else 0
+    val queueRecs = if (queueSummaries.nonEmpty) queueSummaries.map(_.deskRecs).sum else 0
+    val totalRec = queueRecs + totalMisc
     StaffSummary(avail.max, totalMisc, totalMoves, totalRec)
   }
 }
