@@ -68,6 +68,7 @@ object Settings {
     val pac4jSaml = "2.0.0-RC1"
     val openSaml = "2.6.1"
     val drtBirminghamSchema = "1.2.0"
+    val drtCirium = "0.1.3"
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
     val uPickle = "0.6.7"
@@ -166,9 +167,9 @@ object Settings {
     "org.bitbucket.b_c" % "jose4j" % "0.4.4",
 
     "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
+    "uk.gov.homeoffice" %% "drt-cirium" % drtCirium,
     "uk.gov.homeoffice" %% "bluebus" % bluebus
   ))
-
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */
   val scalajsDependencies = Def.setting(Seq(

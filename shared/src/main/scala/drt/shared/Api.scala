@@ -364,6 +364,8 @@ case object ForecastFeedSource extends FeedSource
 
 case object LiveFeedSource extends FeedSource
 
+case object CiriumFeedSource extends FeedSource
+
 object FeedSource {
   def feedSources: Set[FeedSource] = Set(ApiFeedSource, AclFeedSource, ForecastFeedSource, LiveFeedSource)
 
