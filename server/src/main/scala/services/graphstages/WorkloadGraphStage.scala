@@ -49,6 +49,15 @@ class WorkloadGraphStage(name: String = "",
           log.info(s"Received ${fws.flightsToUpdate.size} initial flights. Calculating workload.")
           val updatedWorkloads = flightLoadMinutes(fws)
           purgeExpired(updatedWorkloads, TQM.atTime, now, expireAfterMillis.toInt)
+          mergeUpdatedFlightLoadMinutes(Set(), updatedWorkloads, fws)
+          if (optionalInitialLoads.isEmpty) {
+            val affectedTQMs = updatedWorkloads.keys.toSet
+            val latestDiff = diffFromTQMs(affectedTQMs)
+            loadMinutes ++= latestDiff
+            purgeExpired(loadMinutes, TQM.atTime, now, expireAfterMillis.toInt)
+            updatedLoadsToPush ++= latestDiff
+            log.info(s"We have ${updatedLoadsToPush.size} minutes of load to push from initial flights")
+          }
         case None =>
           log.warn(s"Didn't receive any initial flights to initialise with")
       }
