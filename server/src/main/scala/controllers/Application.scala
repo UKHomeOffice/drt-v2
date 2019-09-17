@@ -21,6 +21,7 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.SplitRatiosNs.SplitRatios
+import drt.shared.Summaries.terminalSummaryForPeriod
 import drt.shared.{AirportConfig, Api, Arrival, _}
 import drt.staff.ImportStaff
 import drt.users.{KeyCloakClient, KeyCloakGroups}
@@ -767,12 +768,9 @@ class Application @Inject()(implicit val config: Configuration,
 
     portStateFuture.map {
       case Right(Some(ps: PortState)) =>
-        val windowedPortState = ps.windowWithTerminalFilter(startDateTime, endDateTime, airportConfig.queues.filterKeys(_ == terminalName))
-        log.debug(s"Exports: ${localTime.toISOString()} filtered to ${windowedPortState.crunchMinutes.size} CMs and ${windowedPortState.staffMinutes.size} SMs ")
-        Option(CSVData.terminalCrunchMinutesToCsvData(
-          windowedPortState.crunchMinutes.values.toList,
-          windowedPortState.staffMinutes.values.toList,
-          terminalName, airportConfig.queues(terminalName)))
+        val wps = ps.windowWithTerminalFilter(startDateTime, endDateTime, airportConfig.queues.filterKeys(_ == terminalName))
+        log.debug(s"Exports: ${localTime.toISOString()} filtered to ${wps.crunchMinutes.size} CMs and ${wps.staffMinutes.size} SMs ")
+        Option(CSVData.terminalMinutesToCsvData(wps.crunchMinutes, wps.staffMinutes, airportConfig.queues(terminalName), startDateTime, endDateTime, 15))
 
       case unexpected =>
         log.error(s"Exports: Got the wrong thing $unexpected for Point In time: ${localTime.toISOString()}")
