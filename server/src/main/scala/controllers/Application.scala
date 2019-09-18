@@ -740,11 +740,11 @@ class Application @Inject()(implicit val config: Configuration,
         val startMillis = dayStartMillisWithHourOffset(startHour, pit)
         val endMillis = dayStartMillisWithHourOffset(endHour, pit)
         val portStateForPointInTime = loadBestPortStateForPointInTime(pit.millisSinceEpoch, terminalName, startMillis, endMillis)
-        exportDesksToCSV(terminalName, pit, startHour, endHour, portStateForPointInTime, true).map {
+        exportDesksToCSV(terminalName, pit, startHour, endHour, portStateForPointInTime, includeHeader = true).map {
           case Some(csvData) =>
-            Result(
-              ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
-              HttpEntity.Strict(ByteString(csvData), Option("application/csv")))
+            val header = ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv"))
+            val entity = HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
+            Result(header, entity)
           case None =>
             NotFound("Could not find desks and queues for this date.")
         }
