@@ -367,43 +367,20 @@ class Application @Inject()(implicit val config: Configuration,
     val liveEndMillis = getLocalNextMidnight(SDate.now()).millisSinceEpoch
     val liveState = requestPortState[PortState](ctrl.liveCrunchStateActor, GetPortState(liveStartMillis, liveEndMillis))
 
-    val forecastStartMillis = getLocalLastMidnight(SDate.now().addDays(3)).millisSinceEpoch
-    val forecastEndMillis = getLocalNextMidnight(SDate.now()).addDays(3).millisSinceEpoch
-    val forecastState = requestPortState[PortState](ctrl.forecastCrunchStateActor, GetPortState(forecastStartMillis, forecastEndMillis))
-    for {
-      fs <- forecastState
-      ls <- liveState
-    } yield {
-      (fs, ls) match {
-        case (Left(forecastError), Left(liveError)) =>
-          log.error(s"Healthcheck failed to get live or forecast response ${forecastError.message}, ${liveError.message}")
-          BadGateway(
-            """{
-              |   "error": "Unable to retrieve live or forecast state
-              |}
-            """.stripMargin)
-        case (_, Left(liveError)) =>
-          log.error(s"Healthcheck failed to get live response, ${liveError.message}")
-          BadGateway(
-            """{
-              |   "error": "Unable to retrieve live state
-              |}
-            """)
-        case (Left(forecastError), _) =>
-          log.error(s"Healthcheck failed to get forecast response ${forecastError.message}")
-          BadGateway(
-            """{
-              |   "error": "Unable to retrieve forecast state
-              |}
-            """)
-        case _ =>
-          val requestEnd = SDate.now().millisSinceEpoch
-          log.info(s"Health check request started at ${requestStart.toISOString()} and lasted ${(requestStart.millisSinceEpoch - requestEnd) / 1000} seconds ")
-          NoContent
-      }
+    liveState.map {
+      case Left(liveError) =>
+        log.error(s"Healthcheck failed to get live response, ${liveError.message}")
+        BadGateway(
+          """{
+            |   "error": "Unable to retrieve live state
+            |}
+          """)
+      case _ =>
+        val requestEnd = SDate.now().millisSinceEpoch
+        log.info(s"Health check request started at ${requestStart.toISOString()} and lasted ${(requestStart.millisSinceEpoch - requestEnd) / 1000} seconds ")
+        NoContent
     }
   }
-
 
   def getLoggedInUser(): Action[AnyContent] = Action { request =>
     val user = ctrl.getLoggedInUser(config, request.headers, request.session)
@@ -706,6 +683,7 @@ class Application @Inject()(implicit val config: Configuration,
     val terminalsAndQueues = airportConfig.queues.filterKeys(_ == terminalName)
     val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], airportConfig.portStateSnapshotInterval, SDate(pointInTime), DrtStaticParameters.expireAfterMillis, terminalsAndQueues, startMillis, endMillis), stateQuery)
     val portCrunchResult = cacheActorRef.ask(query)(new Timeout(15 seconds))
+
 
     portCrunchResult.map {
       case Some(ps: PortState) =>
