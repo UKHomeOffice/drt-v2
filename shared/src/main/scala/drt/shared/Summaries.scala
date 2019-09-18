@@ -77,17 +77,18 @@ object Summaries {
     queues.map { queue =>
       byQueue.get(queue) match {
         case None => EmptyQueueSummary
-        case Some(queueMins) =>
-          val (pax, desks, waits, actDesks, actWaits) = queueMins.foldLeft((List[Double](), List[Int](), List[Int](), List[Option[Int]](), List[Option[Int]]())) {
-            case ((sp, sd, sw, sad, saw), (_, CrunchMinute(_, _, _, p, _, d, w, _, _, ad, aw, _))) =>
-              (p :: sp, d :: sd, w :: sw, ad :: sad, aw :: saw)
-          }
-          val totalPax = if (pax.nonEmpty) pax.sum else 0
-          val maxDesks = if (desks.nonEmpty) desks.max else 0
-          val maxWait = if (waits.nonEmpty) waits.max else 0
-          QueueSummary(totalPax, maxDesks, maxWait, optionalMax(actDesks), optionalMax(actWaits))
+        case Some(queueMins) if queueMins.isEmpty => EmptyQueueSummary
+        case Some(queueMins) => queueSummaryFromMinutes(queueMins)
       }
     }
+  }
+
+  private def queueSummaryFromMinutes(queueMins: SortedMap[TQM, CrunchMinute]): QueueSummaryLike = {
+    val (pax, desks, waits, actDesks, actWaits) = queueMins.foldLeft((List[Double](), List[Int](), List[Int](), List[Option[Int]](), List[Option[Int]]())) {
+      case ((sp, sd, sw, sad, saw), (_, CrunchMinute(_, _, _, p, _, d, w, _, _, ad, aw, _))) =>
+        (p :: sp, d :: sd, w :: sw, ad :: sad, aw :: saw)
+    }
+    QueueSummary(pax.sum, desks.max, waits.max, optionalMax(actDesks), optionalMax(actWaits))
   }
 
   def staffSummaryForPeriod(terminalSms: SortedMap[TM, StaffMinute], queueSummaries: Seq[QueueSummaryLike], summaryStart: SDateLike, summaryMinutes: Int): StaffSummaryLike = {
@@ -97,17 +98,18 @@ object Summaries {
     val minutes = minutesForPeriod(startMillis, endMillis, TM.atTime, terminalSms)
 
     if (minutes.isEmpty) EmptyStaffSummary
-    else {
-      val (fixed, moves, avail) = minutes.foldLeft((List[Int](), List[Int](), List[Int]())) {
-        case ((fp, mm, av), (_, StaffMinute(_, _, s, f, m, _))) =>
-          (f :: fp, m :: mm, (s + m) :: av)
-      }
-      val totalMisc = fixed.max
-      val totalMoves = moves.min
-      val queueRecs = if (queueSummaries.nonEmpty) queueSummaries.map(_.deskRecs).sum else 0
-      val totalRec = queueRecs + totalMisc
-      val available = avail.max
-      StaffSummary(available, totalMisc, totalMoves, totalRec)
+    else staffSummaryFromMinutes(queueSummaries, minutes)
+  }
+
+  private def staffSummaryFromMinutes(queueSummaries: Seq[QueueSummaryLike], minutes: SortedMap[TM, StaffMinute]): StaffSummaryLike = {
+    val (misc, moves, avail) = minutes.foldLeft((List[Int](), List[Int](), List[Int]())) {
+      case ((smc, smm, sav), (_, StaffMinute(_, _, shifts, miscellaneous, movements, _))) =>
+        val available = shifts + movements
+        (miscellaneous :: smc, movements :: smm, available :: sav)
     }
+    val totalMisc = misc.max
+    val queueRecs = if (queueSummaries.nonEmpty) queueSummaries.map(_.deskRecs).sum else 0
+    val totalRec = queueRecs + totalMisc
+    StaffSummary(avail.max, totalMisc, moves.min, totalRec)
   }
 }
