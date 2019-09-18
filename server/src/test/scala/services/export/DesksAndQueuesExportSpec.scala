@@ -60,7 +60,7 @@ class DesksAndQueuesExportSpec extends SpecificationLike {
       val allCms = mutable.SortedMap(cmNoon05.key -> cmNoon05)
       val result = queueSummariesForPeriod(allCms, queues, summaryStart, summaryPeriodMinutes)
 
-      result === Seq(QueueSummary(pax, deskRec, waitTime, Option(actDesk), Option(actWait)), QueueSummary(0, 0, 0, None, None))
+      result === Seq(QueueSummary(pax, deskRec, waitTime, Option(actDesk), Option(actWait)), EmptyQueueSummary)
     }
 
     "When I ask for a staff summary for a certain period " +
