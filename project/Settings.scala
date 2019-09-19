@@ -68,7 +68,7 @@ object Settings {
     val pac4jSaml = "2.0.0-RC1"
     val openSaml = "2.6.1"
     val drtBirminghamSchema = "1.2.0"
-    val drtCirium = "0.1.3"
+    val drtCirium = "27"
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
     val uPickle = "0.6.7"

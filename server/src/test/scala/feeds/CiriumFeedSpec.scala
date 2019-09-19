@@ -21,7 +21,7 @@ import scala.concurrent.duration._
 class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike with Mockito {
   sequential
   isolated
-  
+
   "Given a CiriumFlightStatus I should be able to parse it to an equivelant DRT Arrival Instance" >> {
     val publishedArrivalTime = "2019-07-15T11:05:00.000Z"
     val estRunwayArrival = "2019-07-15T11:07:00.000Z"

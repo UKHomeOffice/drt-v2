@@ -7,18 +7,17 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import drt.shared.{Arrival, CiriumFeedSource}
 import drt.shared.FlightsApi.Flights
-import io.netty.handler.codec.http2.Http2Connection.Endpoint
+import drt.shared.{Arrival, CiriumFeedSource}
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import uk.gov.homeoffice.cirium.JsonSupport._
 import uk.gov.homeoffice.cirium.services.entities.CiriumFlightStatus
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import uk.gov.homeoffice.cirium.JsonSupport._
 
 case class CiriumFeed(endpoint: String)(implicit actorSystem: ActorSystem, materializer: Materializer) {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -91,5 +90,3 @@ object CiriumFeed {
     "U" -> "Unknown"
   )
 }
-
-
