@@ -172,6 +172,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   lazy val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastBaseArrivalsActor], params.snapshotMegaBytesBaseArrivals, now, expireAfterMillis), name = "base-arrivals-actor")
   lazy val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastPortArrivalsActor], params.snapshotMegaBytesFcstArrivals, now, expireAfterMillis), name = "forecast-arrivals-actor")
+  lazy val liveBaseArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveBaseArrivalsActor], params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis), name = "live-base-arrivals-actor")
   lazy val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor], params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis), name = "live-arrivals-actor")
 
   lazy val arrivalsImportActor: ActorRef = system.actorOf(Props(classOf[ArrivalsImportActor]), name = "arrivals-import-actor")
@@ -235,7 +236,15 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         system.log.info(s"Successfully restored initial state for App")
         val initialPortState: Option[PortState] = mergePortStates(maybeForecastState, maybeLiveState)
 
-        val crunchInputs: CrunchSystem[Cancellable] = startCrunchSystem(initialPortState, maybeBaseArrivals, maybeForecastArrivals, Option(mutable.SortedMap[UniqueArrival, Arrival]()), maybeLiveArrivals, params.recrunchOnStart, params.refreshArrivalsOnStart, true)
+        val crunchInputs: CrunchSystem[Cancellable] = startCrunchSystem(
+          initialPortState,
+          maybeBaseArrivals,
+          maybeForecastArrivals,
+          Option(mutable.SortedMap[UniqueArrival, Arrival]()),
+          maybeLiveArrivals,
+          params.recrunchOnStart,
+          params.refreshArrivalsOnStart,
+          checkRequiredStaffUpdatesOnStartup = true)
 
         if (maybeRegisteredArrivals.isDefined) log.info(s"sending ${maybeRegisteredArrivals.get.arrivals.size} initial registered arrivals to batch stage")
         else log.info(s"sending no registered arrivals to batch stage")
@@ -355,8 +364,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         "shifts" -> shiftsActor,
         "fixed-points" -> fixedPointsActor,
         "staff-movements" -> staffMovementsActor,
-        "base-arrivals" -> baseArrivalsActor,
+        "forecast-base-arrivals" -> baseArrivalsActor,
         "forecast-arrivals" -> forecastArrivalsActor,
+        "live-base-arrivals" -> liveBaseArrivalsActor,
         "live-arrivals" -> liveArrivalsActor,
         "aggregated-arrivals" -> aggregatedArrivalsActor
       ),
@@ -375,8 +385,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       initialForecastArrivals = initialForecastArrivals.getOrElse(mutable.SortedMap()),
       initialLiveBaseArrivals = initialLiveBaseArrivals.getOrElse(mutable.SortedMap()),
       initialLiveArrivals = initialLiveArrivals.getOrElse(mutable.SortedMap()),
-      arrivalsBaseSource = baseArrivalsSource(),
-      arrivalsFcstSource = forecastArrivalsSource(airportConfig.feedPortCode),
+      arrivalsForecastBaseSource = baseArrivalsSource(),
+      arrivalsForecastSource = forecastArrivalsSource(airportConfig.feedPortCode),
+      arrivalsLiveBaseSource = liveBaseArrivalsSource(airportConfig.feedPortCode),
       arrivalsLiveSource = liveArrivalsSource(airportConfig.feedPortCode),
       initialShifts = initialState(shiftsActor, GetState).getOrElse(ShiftAssignments(Seq())),
       initialFixedPoints = initialState(fixedPointsActor, GetState).getOrElse(FixedPointAssignments(Seq())),
@@ -441,6 +452,10 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       .getOrCreate()
   }
 
+  def liveBaseArrivalsSource(str: String): Source[ArrivalsFeedResponse, Cancellable] = {
+    arrivalsNoOp
+  }
+
   def liveArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = {
 
     val feed = portCode match {
@@ -481,15 +496,16 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     feed
   }
 
+  def arrivalsNoOp: Source[ArrivalsFeedResponse, Cancellable] = Source.tick[ArrivalsFeedResponse](100 days, 100 days, ArrivalsFeedSuccess(Flights(Seq()), SDate.now()))
+
   def forecastArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = {
-    val forecastNoOp = Source.tick[ArrivalsFeedResponse](100 days, 100 days, ArrivalsFeedSuccess(Flights(Seq()), SDate.now()))
     val feed = portCode match {
       case "LHR" => createForecastLHRFeed()
       case "BHX" => BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")))
       case "LGW" => LGWForecastFeed()
       case _ =>
         system.log.info(s"No Forecast Feed defined.")
-        forecastNoOp
+        arrivalsNoOp
     }
     feed
   }
