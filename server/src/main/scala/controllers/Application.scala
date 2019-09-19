@@ -751,9 +751,10 @@ class Application @Inject()(implicit val config: Configuration,
       }
     }
 
-  def dayStartMillisWithHourOffset(startHour: Int, pit: SDateLike): MillisSinceEpoch = {
-    getLocalLastMidnight(pit).addHours(startHour).millisSinceEpoch
-  }
+  def dayStartMillisWithHourOffset(startHour: Int, pit: SDateLike): MillisSinceEpoch = dayStartWithHourOffset(startHour, pit).millisSinceEpoch
+
+  def dayStartWithHourOffset(startHour: Int, pit: SDateLike): SDateLike =
+    getLocalLastMidnight(pit).addHours(startHour)
 
   def exportDesksToCSV(terminalName: TerminalName,
                        pointInTime: SDateLike,
@@ -919,83 +920,71 @@ class Application @Inject()(implicit val config: Configuration,
 
   def exportFlightsWithSplitsBetweenTimeStampsCSV(start: String,
                                                   end: String,
-                                                  terminalName: TerminalName): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
-    Action.async {
-      val startPit = getLocalLastMidnight(SDate(start.toLong, europeLondonTimeZone))
-      val endPit = SDate(end.toLong, europeLondonTimeZone)
-
-      val portCode = airportConfig.portCode
-      val fileName = makeFileName("arrivals", terminalName, startPit, endPit, portCode)
-
-      val dayRangeInMillis = startPit.millisSinceEpoch to endPit.millisSinceEpoch by oneDayMillis
-      val startHour = 0
-      val endHour = 24
-      val days: Seq[Future[Option[String]]] = dayRangeInMillis.zipWithIndex.map {
-
-        case (dayMillis, index) =>
-          val day = SDate(dayMillis)
-          val startMillis = dayStartMillisWithHourOffset(startHour, day)
-          val endMillis = dayStartMillisWithHourOffset(endHour, day)
-          val csvFunc = if (index == 0) CSVData.flightsWithSplitsToCSVWithHeadings _ else CSVData.flightsWithSplitsToCSV _
-          flightsForCSVExportWithinRange(
-            terminalName = terminalName,
-            pit = day,
-            startHour = startHour,
-            endHour = endHour,
-            portStateFuture = loadBestPortStateForPointInTime(dayMillis, terminalName, startMillis, endMillis)
-          ).map {
-            case Some(fs) => Option(csvFunc(fs))
-            case None =>
-              log.error(s"Missing a day of flights")
-              None
-          }
+                                                  terminalName: TerminalName): Action[AnyContent] =
+    authByRole(ArrivalsAndSplitsView) {
+      val func = (day: SDateLike, ps: Future[Either[PortStateError, Option[PortState]]], includeHeader: Boolean) => flightsForCSVExportWithinRange(
+        terminalName = terminalName,
+        pit = day,
+        startHour = 0,
+        endHour = 24,
+        portStateFuture = ps
+      ).map {
+        case Some(fs) if includeHeader => Option(CSVData.flightsWithSplitsToCSVWithHeadings(fs))
+        case Some(fs) if !includeHeader => Option(CSVData.flightsWithSplitsToCSV(fs))
+        case None =>
+          log.error(s"Missing a day of flights")
+          None
       }
-
-      CSVData.multiDayToSingleExport(days).map(csvData => {
-        Result(ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
-          HttpEntity.Strict(ByteString(csvData), Option("application/csv")))
-      })
+      exportTerminalDateRangeToCsv(start, end, terminalName, filePrefix = "arrivals", csvFunc = func)
     }
-  }
 
   def exportDesksAndQueuesBetweenTimeStampsCSV(start: String,
                                                end: String,
-                                               terminalName: TerminalName): Action[AnyContent] = authByRole(DesksAndQueuesView) {
-    Action {
-      val startPit = getLocalLastMidnight(SDate(start.toLong, europeLondonTimeZone))
-      val endPit = SDate(end.toLong, europeLondonTimeZone)
-
-      val portCode = airportConfig.portCode
-      val fileName = makeFileName("desks-and-queues", terminalName, startPit, endPit, portCode)
-
-      val dayRangeMillis = startPit.millisSinceEpoch to endPit.millisSinceEpoch by oneDayMillis
-      val daysMillisSource: Source[String, NotUsed] = Source(dayRangeMillis)
-        .mapAsync(config.get[Int]("multi-day-parallelism")) { millis =>
-          val startHour = 0
-          val endHour = 24
-          val day = SDate(millis)
-          val startMillis = dayStartMillisWithHourOffset(startHour, day)
-          val endMillis = dayStartMillisWithHourOffset(endHour, day)
-          val includeHeader = millis == startPit.millisSinceEpoch
-          exportDesksToCSV(
-            terminalName = terminalName,
-            pointInTime = day,
-            startHour = startHour,
-            endHour = endHour,
-            portStateFuture = loadBestPortStateForPointInTime(millis, terminalName, startMillis, endMillis),
-            includeHeader
-          )
-        }
-          .collect { case Some(dayData) => dayData + CSVData.lineEnding }
-
-      implicit val writeable = Writeable((str: String) => ByteString.fromString(str), Option("application/csv"))
-
-      Result(
-        header = ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
-        body = HttpEntity.Chunked(daysMillisSource.map(c => HttpChunk.Chunk(writeable.transform(c))), writeable.contentType)
+                                               terminalName: TerminalName): Action[AnyContent] =
+    authByRole(DesksAndQueuesView) {
+      val func = (day: SDateLike, ps: Future[Either[PortStateError, Option[PortState]]], includeHeader: Boolean) => exportDesksToCSV(
+        terminalName = terminalName,
+        pointInTime = day,
+        startHour = 0,
+        endHour = 24,
+        portStateFuture = ps,
+        includeHeader
       )
+      exportTerminalDateRangeToCsv(start, end, terminalName, filePrefix = "desks-and-queues", csvFunc = func)
     }
+
+  def exportTerminalDateRangeToCsv(start: String,
+                                   end: String,
+                                   terminalName: TerminalName,
+                                   filePrefix: String,
+                                   csvFunc: (SDateLike, Future[Either[PortStateError, Option[PortState]]], Boolean) => Future[Option[String]]
+                                  ): Action[AnyContent] = Action {
+    val startPit = getLocalLastMidnight(SDate(start.toLong, europeLondonTimeZone))
+    val endPit = SDate(end.toLong, europeLondonTimeZone)
+
+    val portCode = airportConfig.portCode
+    val fileName = makeFileName(filePrefix, terminalName, startPit, endPit, portCode)
+
+    val dayRangeMillis = startPit.millisSinceEpoch to endPit.millisSinceEpoch by oneDayMillis
+    val daysMillisSource: Source[String, NotUsed] = Source(dayRangeMillis)
+      .mapAsync(parallelism = 1) { millis =>
+        val day = SDate(millis)
+        val start = dayStartWithHourOffset(0, day)
+        val end = start.addHours(24)
+        val includeHeader = millis == startPit.millisSinceEpoch
+        val psForDay = loadBestPortStateForPointInTime(millis, terminalName, start.millisSinceEpoch, end.millisSinceEpoch)
+        csvFunc(day, psForDay, includeHeader)
+      }
+      .collect { case Some(dayData) => dayData + CSVData.lineEnding }
+
+    implicit val writeable: Writeable[String] = Writeable((str: String) => ByteString.fromString(str), Option("application/csv"))
+
+    Result(
+      header = ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
+      body = HttpEntity.Chunked(daysMillisSource.map(c => HttpChunk.Chunk(writeable.transform(c))), writeable.contentType)
+    )
   }
+
 
   def makeFileName(subject: String,
                    terminalName: TerminalName,
