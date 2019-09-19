@@ -195,7 +195,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   lazy val alertsActor: ActorRef = system.actorOf(Props(classOf[AlertsActor]))
   val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
-  val splitsPredictorStage: SplitsPredictorBase = createSplitsPredictionStage(params.useSplitsPrediction, params.rawSplitsUrl)
 
   val s3ApiProvider = S3ApiProvider(params.awSCredentials, params.dqZipBucketName)
   val initialManifestsState: Option[VoyageManifestState] = initialState(voyageManifestsActor, GetState)
@@ -372,7 +371,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       ),
       useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
       useLegacyManifests = params.useLegacyManifests,
-      splitsPredictorStage = splitsPredictorStage,
       b5JStartDate = params.maybeB5JStartDate.map(SDate(_)).getOrElse(SDate("2019-06-01")),
       manifestsLiveSource = voyageManifestsLiveSource,
       manifestsHistoricSource = voyageManifestsHistoricSource,
@@ -437,12 +435,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         fps.crunchMinutes ++ lps.crunchMinutes,
         fps.staffMinutes ++ lps.staffMinutes))
   }
-
-  def createSplitsPredictionStage(predictSplits: Boolean,
-                                  rawSplitsUrl: String): SplitsPredictorBase = if (predictSplits)
-    new SplitsPredictorStage(SparkSplitsPredictorFactory(createSparkSession(), rawSplitsUrl, airportConfig.feedPortCode))
-  else
-    new DummySplitsPredictor()
 
   def createSparkSession(): SparkSession = {
     SparkSession

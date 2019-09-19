@@ -34,7 +34,6 @@ object RunnableCrunch {
 
                                        arrivalsGraphStage: ArrivalsGraphStage,
                                        arrivalSplitsStage: GraphStage[FanInShape3[ArrivalsDiff, ManifestsFeedResponse, ManifestsFeedResponse, FlightsWithSplits]],
-                                       splitsPredictorStage: SplitsPredictorBase,
                                        workloadGraphStage: WorkloadGraphStage,
                                        loadBatchUpdateGraphStage: BatchLoadsByCrunchPeriodGraphStage,
                                        crunchLoadGraphStage: CrunchLoadGraphStage,

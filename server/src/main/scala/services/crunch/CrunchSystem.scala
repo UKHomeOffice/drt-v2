@@ -46,7 +46,6 @@ case class CrunchProps[FR](logLabel: String = "",
                            useLegacyManifests: Boolean = false,
                            now: () => SDateLike = () => SDate.now(),
                            initialFlightsWithSplits: Option[FlightsWithSplits] = None,
-                           splitsPredictorStage: SplitsPredictorBase,
                            b5JStartDate: SDateLike,
                            manifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]],
                            manifestsHistoricSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]],
@@ -136,8 +135,6 @@ object CrunchSystem {
       now = props.now,
       maxDaysToCrunch = props.maxDaysToCrunch)
 
-    val splitsPredictorStage = props.splitsPredictorStage
-
     val staffGraphStage = new StaffGraphStage(
       name = props.logLabel,
       initialShifts = props.initialShifts,
@@ -199,7 +196,7 @@ object CrunchSystem {
       props.manifestsLiveSource, props.manifestsHistoricSource,
       shiftsSource, fixedPointsSource, staffMovementsSource,
       actualDesksAndQueuesSource,
-      arrivalsStage, arrivalSplitsGraphStage, splitsPredictorStage,
+      arrivalsStage, arrivalSplitsGraphStage,
       workloadGraphStage, loadBatcher, crunchLoadGraphStage,
       staffGraphStage, staffBatcher, simulationGraphStage,
       portStateGraphStage,

@@ -121,6 +121,9 @@ class ArrivalsGraphStage(name: String = "",
         case LiveArrivals =>
           updateArrivalsSource(liveArrivals, filteredArrivals)
           toPush = mergeUpdatesFromKeys(liveArrivals.keys)
+        case LiveBaseArrivals =>
+          updateArrivalsSource(liveBaseArrivals, filteredArrivals)
+          toPush = mergeUpdatesFromKeys(liveBaseArrivals.keys)
         case ForecastArrivals =>
           updateArrivalsSource(forecastArrivals, filteredArrivals)
           toPush = mergeUpdatesFromKeys(forecastArrivals.keys)
