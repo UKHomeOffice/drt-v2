@@ -227,7 +227,6 @@ class CrunchTestLike
       useNationalityBasedProcessingTimes = false,
       useLegacyManifests = useLegacyManifests,
       now = now,
-      splitsPredictorStage = splitsPredictorStage,
       b5JStartDate = SDate("2019-06-01"),
       manifestsLiveSource = manifestsSource,
       manifestsHistoricSource = manifestsSource,
