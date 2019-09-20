@@ -303,7 +303,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   }
 
   override def getFeedStatus: Future[Seq[FeedStatuses]] = {
-    val actors: Seq[AskableActorRef] = Seq(liveArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
+    val actors: Seq[AskableActorRef] = Seq(liveArrivalsActor, liveBaseArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
 
     val statuses: Seq[Future[Option[FeedStatuses]]] = actors.map(a => initialStateFuture[FeedStatuses](a, GetFeedStatuses))
 
