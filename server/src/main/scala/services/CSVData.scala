@@ -2,11 +2,13 @@ package services
 
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared.Summaries.terminalSummaryForPeriod
 import drt.shared._
 import drt.shared.splits.ApiSplitsToSplitRatio
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch.europeLondonTimeZone
 
+import scala.collection.SortedMap
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.Try
@@ -108,71 +110,10 @@ object CSVData {
     headingsLine1 + lineEnding + headingsLine2
   }
 
-  def terminalCrunchMinutesToCsvDataWithHeadings(cms: List[CrunchMinute], staffMinutes: List[StaffMinute], terminalName: TerminalName, queues: Seq[QueueName]): String =
-    terminalCrunchMinutesToCsvDataHeadings(queues) + lineEnding + terminalCrunchMinutesToCsvData(cms, staffMinutes, terminalName, queues)
-
-
-  def terminalCrunchMinutesToCsvData(cms: List[CrunchMinute], staffMinutes: List[StaffMinute], terminalName: TerminalName, queues: Seq[QueueName]): String = {
-
-    val crunchMilliMinutes: Seq[(MillisSinceEpoch, List[CrunchMinute])] = CrunchApi.terminalMinutesByMinute(cms, terminalName)
-    val staffMilliMinutes = CrunchApi
-      .terminalMinutesByMinute(staffMinutes, terminalName)
-      .map { case (minute, sms) => (minute, sms.head) }
-
-    val staffBy15Minutes: Map[MillisSinceEpoch, StaffMinute] = groupStaffMinutesByX(15)(staffMilliMinutes, terminalName).toMap
-
-    val groupCrunchMinutesBy15 = CrunchApi.groupCrunchMinutesByX(15)(crunchMilliMinutes, terminalName, queues.toList)
-    val terminalCrunchMinuteRowsByMinute: Seq[(MillisSinceEpoch, Seq[String])] = groupCrunchMinutesBy15
-      .collect { case (min, cm) =>
-        val byQueue: Map[QueueName, Seq[CrunchMinute]] = cm.groupBy(_.queueName)
-        val terminalQueuesRow: Seq[String] = queues.flatMap(qn => {
-          byQueue.get(qn).map(thisQMinutes => {
-            thisQMinutes.flatMap(cm => {
-              List(
-                s"${Math.round(cm.paxLoad)}",
-                s"${Math.round(cm.waitTime)}",
-                s"${cm.deskRec}",
-                cm.actWait.map(aw => s"$aw").getOrElse(""),
-                cm.actDesks.map(ad => s"$ad").getOrElse("")
-              )
-            })
-          }).getOrElse(Nil)
-        })
-
-        (min, terminalQueuesRow)
-      }
-      .toList
-      .sortBy(m => m._1)
-    val crunchMinutes: Seq[String] = addStaffMinutes(terminalCrunchMinuteRowsByMinute, staffBy15Minutes, crunchMilliMinutes)
-
-    crunchMinutes.mkString(lineEnding)
-  }
-
-  def addStaffMinutes(
-                       terminalCrunchMinuteRowsByMinute: Seq[(MillisSinceEpoch, Seq[String])],
-                       staffMinutesByMinute: Map[MillisSinceEpoch, StaffMinute],
-                       crunchMilliMinutes: Seq[(MillisSinceEpoch, List[CrunchMinute])]
-                     ): Seq[QueueName] = {
-    terminalCrunchMinuteRowsByMinute
-      .map {
-        case (minute, queueData) =>
-
-          val staffMinute = staffMinutesByMinute.getOrElse(minute, StaffMinute.empty)
-
-          val staffData: Seq[String] = List(staffMinute.fixedPoints.toString, staffMinute.movements.toString, staffMinute.available.toString)
-          val reqForMinute = crunchMilliMinutes
-            .toList
-            .find { case (minuteMilli, _) => minuteMilli == minute }
-            .map { case (_, queueCrunchMinutes) => DesksAndQueues.totalRequired(staffMinute, queueCrunchMinutes) }
-            .getOrElse(0)
-
-          val hoursAndMinutes = SDate(minute, europeLondonTimeZone).toHoursAndMinutes()
-          val queueFields = queueData.mkString(",")
-          val pcpFields = staffData.mkString(",")
-          val dateString = SDate(minute, europeLondonTimeZone).toISODateOnly
-
-          dateString + "," + hoursAndMinutes + "," + queueFields + "," + pcpFields + "," + reqForMinute
-      }
+  def terminalMinutesToCsvData(cms: SortedMap[TQM, CrunchMinute], sms: SortedMap[TM, StaffMinute], queues: Seq[String], summaryStart: SDateLike, summaryEnd: SDateLike, summaryPeriodMinutes: Int): String = {
+    (summaryStart.millisSinceEpoch until summaryEnd.millisSinceEpoch by (summaryPeriodMinutes * CrunchApi.oneMinuteMillis)).map { summaryStart =>
+      terminalSummaryForPeriod(cms, sms, queues, SDate(summaryStart, europeLondonTimeZone), summaryPeriodMinutes).toCsv
+    }.mkString(CSVData.lineEnding)
   }
 
   def flightsWithSplitsToCSVWithHeadings(flightsWithSplits: List[ApiFlightWithSplits]): String =
