@@ -295,13 +295,12 @@ class ArrivalsGraphStage(name: String = "",
     }
 
     def feedSources(uniqueArrival: UniqueArrival): Set[FeedSource] = {
-      val s: Set[FeedSource] = List(
+      List(
         liveArrivals.get(uniqueArrival).map(_ => LiveFeedSource),
         forecastArrivals.get(uniqueArrival).map(_ => ForecastFeedSource),
-        forecastBaseArrivals.get(uniqueArrival).map(_ => AclFeedSource)
+        forecastBaseArrivals.get(uniqueArrival).map(_ => AclFeedSource),
+        liveBaseArrivals.get(uniqueArrival).map(_ => LiveBaseFeedSource)
       ).flatten.toSet
-      println(s"sources: $s")
-      s
     }
   }
 
