@@ -7,8 +7,8 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
+import drt.shared.{Arrival, LiveBaseFeedSource}
 import drt.shared.FlightsApi.Flights
-import drt.shared.{Arrival, CiriumFeedSource}
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import uk.gov.homeoffice.cirium.JsonSupport._
@@ -64,7 +64,7 @@ object CiriumFeed {
     f.departureAirportFsCode,
     f.arrivalDate.millis,
     None,
-    Set(CiriumFeedSource),
+    Set(LiveBaseFeedSource),
     None
   )
 

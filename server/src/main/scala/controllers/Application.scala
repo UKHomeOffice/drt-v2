@@ -10,7 +10,7 @@ import akka.actor._
 import akka.event.{Logging, LoggingAdapter}
 import akka.pattern.{AskableActorRef, _}
 import akka.stream._
-import akka.stream.scaladsl.{Sink, Source, StreamConverters}
+import akka.stream.scaladsl.Source
 import akka.util.{ByteString, Timeout}
 import api.{KeyCloakAuth, KeyCloakAuthError, KeyCloakAuthResponse, KeyCloakAuthToken}
 import boopickle.Default._
@@ -21,7 +21,6 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.SplitRatiosNs.SplitRatios
-import drt.shared.Summaries.terminalSummaryForPeriod
 import drt.shared.{AirportConfig, Api, Arrival, _}
 import drt.staff.ImportStaff
 import drt.users.{KeyCloakClient, KeyCloakGroups}
