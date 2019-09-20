@@ -2,14 +2,14 @@ package drt.chroma
 
 import akka.stream._
 import akka.stream.stage._
-import drt.shared.{Arrival, ArrivalKey}
+import drt.shared.{Arrival, UniqueArrival}
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 
 import scala.collection.mutable
 
-final class ArrivalsDiffingStage(initialKnownArrivals: Seq[Arrival]) extends GraphStage[FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse]] {
+final class ArrivalsDiffingStage(initialKnownArrivals: mutable.SortedMap[UniqueArrival, Arrival]) extends GraphStage[FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse]] {
   val in: Inlet[ArrivalsFeedResponse] = Inlet[ArrivalsFeedResponse]("DiffingStage.in")
   val out: Outlet[ArrivalsFeedResponse] = Outlet[ArrivalsFeedResponse]("DiffingStage.out")
 
@@ -18,10 +18,10 @@ final class ArrivalsDiffingStage(initialKnownArrivals: Seq[Arrival]) extends Gra
   override val shape: FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse] = FlowShape.of(in, out)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    val knownArrivals: mutable.SortedMap[ArrivalKey, Arrival] = mutable.SortedMap[ArrivalKey, Arrival]()
+    val knownArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap[UniqueArrival, Arrival]()
     var maybeResponseToPush: Option[ArrivalsFeedResponse] = None
 
-    initialKnownArrivals.foreach(a => knownArrivals += (ArrivalKey(a) -> a))
+    knownArrivals ++= initialKnownArrivals
 
     override def preStart(): Unit = {
       log.info(s"Started with ${knownArrivals.size} known arrivals")
@@ -60,8 +60,8 @@ final class ArrivalsDiffingStage(initialKnownArrivals: Seq[Arrival]) extends Gra
 
     def processFeedResponse(arrivalsFeedResponse: ArrivalsFeedResponse): Option[ArrivalsFeedResponse] = arrivalsFeedResponse match {
       case afs@ArrivalsFeedSuccess(latestArrivals, _) =>
-        val incomingArrivals: Seq[(ArrivalKey, Arrival)] = latestArrivals.flights.map(a => (ArrivalKey(a), a))
-        val newUpdates: Seq[(ArrivalKey, Arrival)] = filterArrivalsWithUpdates(knownArrivals, incomingArrivals)
+        val incomingArrivals: Seq[(UniqueArrival, Arrival)] = latestArrivals.flights.map(a => (UniqueArrival(a), a))
+        val newUpdates: Seq[(UniqueArrival, Arrival)] = filterArrivalsWithUpdates(knownArrivals, incomingArrivals)
         log.info(s"Got ${newUpdates.size} new arrival updates")
         knownArrivals.clear
         knownArrivals ++= incomingArrivals
@@ -74,8 +74,8 @@ final class ArrivalsDiffingStage(initialKnownArrivals: Seq[Arrival]) extends Gra
         None
     }
 
-    def filterArrivalsWithUpdates(existingArrivals: mutable.SortedMap[ArrivalKey, Arrival], newArrivals: Seq[(ArrivalKey, Arrival)]): Seq[(ArrivalKey, Arrival)] = newArrivals
-      .foldLeft(List[(ArrivalKey, Arrival)]()) {
+    def filterArrivalsWithUpdates(existingArrivals: mutable.SortedMap[UniqueArrival, Arrival], newArrivals: Seq[(UniqueArrival, Arrival)]): Seq[(UniqueArrival, Arrival)] = newArrivals
+      .foldLeft(List[(UniqueArrival, Arrival)]()) {
         case (soFar, (key, arrival)) => existingArrivals.get(key) match {
           case None => (key, arrival) :: soFar
           case Some(existingArrival) if existingArrival == arrival => soFar

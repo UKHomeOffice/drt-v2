@@ -142,7 +142,7 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
     }
   }
 
-  private def paxLoadsAreCorrect(ps: PortState, arrivals: Seq[Arrival], queues: Seq[String] = Seq()): Boolean = {
+  private def paxLoadsAreCorrect(ps: PortState, arrivals: Seq[Arrival], queues: Seq[String]): Boolean = {
     val flights = ps.flights
     val crunchMins = ps.crunchMinutes
 

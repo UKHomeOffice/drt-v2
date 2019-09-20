@@ -1,13 +1,12 @@
 package drt.server.feeds.legacy.bhx
 
-import drt.shared.{Arrival, FeedSource, ForecastFeedSource, LiveFeedSource}
+import drt.shared.{Arrival, ForecastFeedSource, LiveFeedSource}
 import javax.xml.datatype.XMLGregorianCalendar
-import org.joda.time.DateTime
-import services.SDate
-import uk.co.bhx.online.flightinformation.{FlightRecord, ScheduledFlightRecord}
-import org.joda.time.DateTimeZone
+import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.format.ISODateTimeFormat
 import org.springframework.util.StringUtils
+import services.SDate
+import uk.co.bhx.online.flightinformation.{FlightRecord, ScheduledFlightRecord}
 
 sealed trait BHXArrivals {
 

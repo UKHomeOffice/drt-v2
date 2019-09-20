@@ -100,7 +100,7 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
     )
     val manifests = Set(VoyageManifest(DqEventCodes.DepartureConfirmed, portCode, "JFK", "0001", "BA", arrivalDate, arrivalTime, PassengerList = paxList))
 
-    arrivalDiffs.offer(ArrivalsDiff(toUpdate = SortedMap(ArrivalKey(arrival) -> arrival), toRemove = Set()))
+    arrivalDiffs.offer(ArrivalsDiff(toUpdate = SortedMap(arrival.unique -> arrival), toRemove = Set()))
 
     probe.fishForMessage(3 seconds) {
       case FlightsWithSplits(flights, _) => flights.nonEmpty

@@ -25,8 +25,9 @@ import services.graphstages.Crunch._
 import services.graphstages.{DummySplitsPredictor, TestableCrunchLoadStage}
 import slickdb.Tables
 
+import scala.collection.mutable
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor}
 
 
 class LiveCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long, acceptFullStateUpdates: Boolean)
@@ -96,7 +97,7 @@ class CrunchTestLike
 
   implicit val actorSystem: ActorSystem = system
   implicit val materializer: ActorMaterializer = ActorMaterializer()
-  implicit val ec = ExecutionContext.global
+  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -156,9 +157,10 @@ class CrunchTestLike
 
   def testProbe(name: String) = TestProbe(name = name)
 
-  def runCrunchGraph(initialBaseArrivals: Set[Arrival] = Set(),
-                     initialForecastArrivals: Set[Arrival] = Set(),
-                     initialLiveArrivals: Set[Arrival] = Set(),
+  def runCrunchGraph(initialForecastBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap(),
+                     initialForecastArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap(),
+                     initialLiveBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap(),
+                     initialLiveArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap(),
                      initialPortState: Option[PortState] = None,
                      airportConfig: AirportConfig = airportConfig,
                      csvSplitsProvider: SplitsProvider.SplitProvider = (_, _) => None,
@@ -181,8 +183,9 @@ class CrunchTestLike
 
     val liveProbe = testProbe("live")
     val forecastProbe = testProbe("forecast")
-    val baseArrivalsProbe = testProbe("base-arrivals")
+    val forecastBaseArrivalsProbe = testProbe("forecast-base-arrivals")
     val forecastArrivalsProbe = testProbe("forecast-arrivals")
+    val liveBaseArrivalsProbe = testProbe("live-base-arrivals")
     val liveArrivalsProbe = testProbe("live-arrivals")
 
     val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], now, DrtStaticParameters.timeBeforeThisMonth(now)))
@@ -197,8 +200,9 @@ class CrunchTestLike
 
     val manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
     val liveArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
-    val fcstArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
-    val baseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
+    val liveBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
+    val forecastArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
+    val forecastBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
 
     val crunchInputs = CrunchSystem(CrunchProps(
       logLabel = logLabel,
@@ -214,15 +218,15 @@ class CrunchTestLike
         "shifts" -> shiftsActor,
         "fixed-points" -> fixedPointsActor,
         "staff-movements" -> staffMovementsActor,
-        "base-arrivals" -> baseArrivalsProbe.ref,
+        "forecast-base-arrivals" -> forecastBaseArrivalsProbe.ref,
         "forecast-arrivals" -> forecastArrivalsProbe.ref,
+        "live-base-arrivals" -> liveBaseArrivalsProbe.ref,
         "live-arrivals" -> liveArrivalsProbe.ref,
         "aggregated-arrivals" -> aggregatedArrivalsActor
       ),
       useNationalityBasedProcessingTimes = false,
       useLegacyManifests = useLegacyManifests,
       now = now,
-      splitsPredictorStage = splitsPredictorStage,
       b5JStartDate = SDate("2019-06-01"),
       manifestsLiveSource = manifestsSource,
       manifestsHistoricSource = manifestsSource,
@@ -231,11 +235,13 @@ class CrunchTestLike
       cruncher = cruncher,
       simulator = simulator,
       initialPortState = initialPortState,
-      initialBaseArrivals = initialBaseArrivals,
-      initialFcstArrivals = initialForecastArrivals,
+      initialForecastBaseArrivals = initialForecastBaseArrivals,
+      initialForecastArrivals = initialForecastArrivals,
+      initialLiveBaseArrivals = initialLiveBaseArrivals,
       initialLiveArrivals = initialLiveArrivals,
-      arrivalsBaseSource = baseArrivals,
-      arrivalsFcstSource = fcstArrivals,
+      arrivalsForecastBaseSource = forecastBaseArrivals,
+      arrivalsForecastSource = forecastArrivals,
+      arrivalsLiveBaseSource = liveBaseArrivals,
       arrivalsLiveSource = liveArrivals,
       initialShifts = initialShifts,
       initialFixedPoints = initialFixedPoints,
@@ -244,7 +250,7 @@ class CrunchTestLike
     ))
 
     CrunchGraphInputsAndProbes(
-      crunchInputs.baseArrivalsResponse,
+      crunchInputs.forecastBaseArrivalsResponse,
       crunchInputs.forecastArrivalsResponse,
       crunchInputs.liveArrivalsResponse,
       crunchInputs.manifestsLiveResponse,
@@ -258,7 +264,7 @@ class CrunchTestLike
       forecastCrunchActor,
       liveProbe,
       forecastProbe,
-      baseArrivalsProbe,
+      forecastBaseArrivalsProbe,
       forecastArrivalsProbe,
       liveArrivalsProbe,
       aggregatedArrivalsActor

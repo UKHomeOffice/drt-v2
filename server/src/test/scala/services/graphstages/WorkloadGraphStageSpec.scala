@@ -213,6 +213,7 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
       case Loads(loadMinutes) =>
         val nonZeroAtNoon = loadMinutes.get(TQM("T1", Queues.EeaDesk, noonMillis)) match {
           case Some(cm) => cm.paxLoad > 0 && cm.workLoad > 0
+          case _ => false
         }
         nonZeroAtNoon
     }
@@ -223,9 +224,11 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
       case Loads(loadMinutes) =>
         val zeroAtNoon = loadMinutes.get(TQM("T1", Queues.EeaDesk, noonMillis)) match {
           case Some(cm) => cm.paxLoad == 0 && cm.workLoad == 0
+          case _ => false
         }
         val nonZeroAtOnePm = loadMinutes.get(TQM("T1", Queues.EeaDesk, onePmMillis)) match {
           case Some(cm) => cm.paxLoad > 0 && cm.workLoad > 0
+          case _ => false
         }
         zeroAtNoon && nonZeroAtOnePm
     }

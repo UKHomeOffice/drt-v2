@@ -8,6 +8,7 @@ import server.feeds.ArrivalsFeedSuccess
 import services.{SDate, TryRenjin}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
+import scala.collection.mutable
 import scala.concurrent.duration._
 
 
@@ -389,24 +390,24 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
     val base = "2017-01-04T00:00Z"
 
-    val initialBaseArrivals = Set(ArrivalGenerator.arrival(schDt = base, iata = "BA0001", terminal = "T1", actPax = Option(21)))
+    val initialBaseArrivals = mutable.SortedMap[UniqueArrival, Arrival]() ++ List(ArrivalGenerator.arrival(schDt = base, iata = "BA0001", terminal = "T1", actPax = Option(21))).map(a => (a.unique, a))
     val initialPortStateArrivals = Seq(
       ArrivalGenerator.arrival(schDt = base, iata = "FR0001", terminal = "T1", actPax = Option(101)),
       ArrivalGenerator.arrival(schDt = base, iata = "EZ1100", terminal = "T1", actPax = Option(250))
     ).map(a => (a.unique, ApiFlightWithSplits(a, Set())))
 
-    val updatedBaseArrivals = List(ArrivalGenerator.arrival(schDt = base, iata = "AA0099", terminal = "T1", actPax = Option(55)))
+    val updatedBaseArrivals = mutable.SortedMap[UniqueArrival, Arrival]() ++ List(ArrivalGenerator.arrival(schDt = base, iata = "AA0099", terminal = "T1", actPax = Option(55))).map(a => (a.unique, a))
 
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
-      initialBaseArrivals = initialBaseArrivals,
+      initialForecastBaseArrivals = initialBaseArrivals,
       initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits]() ++ initialPortStateArrivals, SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())),
       maxDaysToCrunch = 4
     )
 
-    offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(updatedBaseArrivals)))
+    offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(updatedBaseArrivals.values.toSeq)))
 
-    val expectedFlightCodes = updatedBaseArrivals.map(_.IATA)
+    val expectedFlightCodes = updatedBaseArrivals.values.map(_.IATA)
 
     crunch.forecastTestProbe.fishForMessage(2 seconds) {
       case PortState(flightsWithSplits, _, _) =>

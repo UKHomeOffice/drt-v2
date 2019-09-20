@@ -364,7 +364,7 @@ case object ForecastFeedSource extends FeedSource
 
 case object LiveFeedSource extends FeedSource
 
-case object CiriumFeedSource extends FeedSource
+case object LiveBaseFeedSource extends FeedSource
 
 object FeedSource {
   def feedSources: Set[FeedSource] = Set(ApiFeedSource, AclFeedSource, ForecastFeedSource, LiveFeedSource)
@@ -392,7 +392,7 @@ object ArrivalKey {
   def atTime: MillisSinceEpoch => ArrivalKey = (time: MillisSinceEpoch) => ArrivalKey("", "", time)
 }
 
-case class ArrivalsDiff(toUpdate: ISortedMap[ArrivalKey, Arrival], toRemove: Set[Arrival])
+case class ArrivalsDiff(toUpdate: ISortedMap[UniqueArrival, Arrival], toRemove: Set[Arrival])
 
 trait SDateLike {
 
