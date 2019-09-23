@@ -104,6 +104,7 @@ object Settings {
   val jvmDependencies = Def.setting(List(
     "com.amazonaws" % "aws-java-sdk" % awsSdk,
     "com.github.dnvriend" %% "akka-persistence-inmemory" % akkaPersistenceInmemory % "test",
+    "com.pauldijou" %% "jwt-core" % "4.0.0",
     "com.hierynomus" % "sshj" % sshJ,
     "com.lihaoyi" %% "pprint" % pprint,
     "com.lihaoyi" %%% "utest" % uTest % Test,
