@@ -23,6 +23,7 @@ import drt.server.feeds.lhr.live.LegacyLhrLiveContentProvider
 import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.server.feeds.ltn.LtnLiveFeed
+import drt.server.feeds.mag.MagFeed
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared._
@@ -145,7 +146,7 @@ case class SubscribeRequestQueue(subscriber: SourceQueueWithComplete[List[Arriva
 case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsFeedResponse])
 
 case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig)
-                    (implicit actorMaterializer: Materializer) extends DrtSystemInterface {
+                    (implicit materializer: Materializer) extends DrtSystemInterface {
 
   implicit val system: ActorSystem = actorSystem
 
@@ -474,6 +475,13 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
           case None => DateTimeZone.UTC
         }
         LtnLiveFeed(url, token, username, password, timeZone).tickingSource
+      case "MAN" | "STN" | "EMA" =>
+        val keyPriv: String = config.get[String]("feeds.mag.private-key")
+        val claimIss: String = config.get[String]("feeds.mag.claim.iss")
+        val claimRole: String = config.get[String]("feeds.mag.claim.role")
+        val claimSub: String = config.get[String]("feeds.mag.claim.sub")
+        MagFeed(keyPriv, claimIss, claimRole, claimSub, now, airportConfig.portCode).tickingSource
+
       case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
     }
     feed
