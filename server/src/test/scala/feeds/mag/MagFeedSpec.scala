@@ -59,29 +59,18 @@ class MagFeedSpec extends SpecificationLike {
 
     val arrivals = Await.result(feed.requestArrivals(start), 30 seconds) match {
       case MagArrivals(magArrivals) if magArrivals.nonEmpty =>
-        println(s"Got some MAG arrivals")
         magArrivals
       case _ =>
-        println(s"Got no MAG arrivals :(")
         Seq()
     }
 
     val parsedMagArrivalCount = arrivals.length
 
-    "I should get a none-zero length list of MagArrivals" >> {
-      parsedMagArrivalCount >= 10
-    }
+    val nonZeroMagArrivals = parsedMagArrivalCount >= 10
 
     val drtArrivals = arrivals.map(MagFeed.toArrival)
 
-    drtArrivals.groupBy(_.Terminal).foreach {
-      case (terminal, as) => println(s"Terminal $terminal (${as.length} arrivals):\n${as.sortBy(_.Scheduled).map(a => s"${a.IATA} ${SDate(a.Scheduled).toISOString()}, ${a.Estimated.map(SDate(_).toISOString())}-> ${a.ActPax}").mkString("\n")}")
-    }
-
-    "I should get the same number of DRT Arrivals" >> {
-      drtArrivals.length === parsedMagArrivalCount
-    }
-
+    nonZeroMagArrivals === true && drtArrivals.length === parsedMagArrivalCount
   }
 
   val jsonResponseSingleArrival: String =
