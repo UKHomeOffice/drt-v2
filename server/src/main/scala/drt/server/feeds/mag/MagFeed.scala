@@ -81,7 +81,7 @@ case class MagFeed(key: String, claimIss: String, claimRole: String, claimSub: S
       .map(MagFeed.unmarshalResponse)
       .flatten
       .map {
-        _.filter(a => a.arrival.terminal.isDefined && a.domesticInternational == "International")
+        _.filter(a => a.arrival.terminal.isDefined && a.domesticInternational == "International" && a.flightNumber.trackNumber.isDefined)
       }
 
     eventualArrivals.onComplete {
@@ -129,9 +129,9 @@ object MagFeed {
                         arrival: ArrivalDetails,
                         flightStatus: String)
 
-  private def icao(magArrival: MagArrival) = f"${magArrival.operatingAirline.icao}${magArrival.flightNumber.trackNumber.toInt}%04d"
+  private def icao(magArrival: MagArrival) = f"${magArrival.operatingAirline.icao}${magArrival.flightNumber.trackNumber.map(_.toInt).getOrElse(0)}%04d"
 
-  private def iata(magArrival: MagArrival) = f"${magArrival.operatingAirline.iata}${magArrival.flightNumber.trackNumber.toInt}%04d"
+  private def iata(magArrival: MagArrival) = f"${magArrival.operatingAirline.iata}${magArrival.flightNumber.trackNumber.map(_.toInt).getOrElse(0)}%04d"
 
   def toArrival(ma: MagArrival): Arrival = Arrival(
     Operator = Option(ma.operatingAirline.iata),
@@ -142,7 +142,7 @@ object MagFeed {
     ActualChox = ma.onBlockTime.actual.map(str => SDate(str).millisSinceEpoch),
     Gate = ma.gate.map(_.name.replace("Gate ", "")),
     Stand = ma.stand.flatMap(_.name.map(_.replace("Stand ", ""))),
-    MaxPax = Option(ma.passenger.maximum),
+    MaxPax = ma.passenger.maximum,
     ActPax = ma.passenger.count,
     TranPax = ma.passenger.transferCount,
     RunwayID = None,
@@ -160,7 +160,7 @@ object MagFeed {
 
   case class IataIcao(iata: String, icao: String)
 
-  case class FlightNumber(airlineCode: String, trackNumber: String)
+  case class FlightNumber(airlineCode: String, trackNumber: Option[String])
 
   case class Gate(name: String, number: String)
 
@@ -175,9 +175,9 @@ object MagFeed {
   case class Terminal(name: String, short_name: String, number: String)
 
   case class Passenger(count: Option[Int],
-                       maximum: Int,
+                       maximum: Option[Int],
                        transferCount: Option[Int],
-                       prmCount: Int)
+                       prmCount: Option[Int])
 
   case class Timings(scheduled: String, estimated: Option[String], actual: Option[String])
 
