@@ -476,11 +476,17 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         }
         LtnLiveFeed(url, token, username, password, timeZone).tickingSource
       case "MAN" | "STN" | "EMA" =>
-        val keyPriv: String = config.get[String]("feeds.mag.private-key")
-        val claimIss: String = config.get[String]("feeds.mag.claim.iss")
-        val claimRole: String = config.get[String]("feeds.mag.claim.role")
-        val claimSub: String = config.get[String]("feeds.mag.claim.sub")
-        MagFeed(keyPriv, claimIss, claimRole, claimSub, now, airportConfig.portCode).tickingSource
+        if (config.get[Boolean]("feeds.mag.use-legacy")) {
+          log.info(s"Using legacy MAG live feed")
+          createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
+        } else {
+          log.info(s"Using new MAG live feed")
+          val privateKey: String = config.get[String]("feeds.mag.private-key")
+          val claimIss: String = config.get[String]("feeds.mag.claim.iss")
+          val claimRole: String = config.get[String]("feeds.mag.claim.role")
+          val claimSub: String = config.get[String]("feeds.mag.claim.sub")
+          MagFeed(privateKey, claimIss, claimRole, claimSub, now, airportConfig.portCode).tickingSource
+        }
 
       case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
     }
