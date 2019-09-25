@@ -2,22 +2,44 @@ package feeds.mag
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.ActorMaterializer
 import com.typesafe.config.{Config, ConfigFactory}
-import drt.server.feeds.mag.MagFeed
-import drt.server.feeds.mag.MagFeed.{MagArrival, MagArrivals}
+import drt.server.feeds.mag.{FeedRequesterLike, MagFeed}
+import drt.shared.FlightsApi.Flights
 import org.specs2.mutable.SpecificationLike
+import pdi.jwt.JwtAlgorithm
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import services.SDate
-import services.graphstages.Crunch
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor}
+import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
+
+object MockFeedRequester extends FeedRequesterLike {
+  private val defaultResponse = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, "[]"))
+  var mockResponse: HttpResponse = defaultResponse
+
+  override def sendTokenRequest(header: String, claim: String, key: String, algorithm: JwtAlgorithm): String = "Fake token"
+
+  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
+
+  def send(request: HttpRequest)(implicit actorSystem: ActorSystem): Future[HttpResponse] = Future(mockResponse)
+}
+
+case class MockExceptionThrowingFeedRequester(causeException: () => Unit) extends FeedRequesterLike {
+  override def sendTokenRequest(header: String, claim: String, key: String, algorithm: JwtAlgorithm): String = "Fake token"
+
+  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
+
+  def send(request: HttpRequest)(implicit actorSystem: ActorSystem): Future[HttpResponse] = {
+    causeException()
+    Future(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, "[]")))
+  }
+}
 
 class MagFeedSpec extends SpecificationLike {
   val config: Config = ConfigFactory.load()
 
-  val keyPriv: String = config.getString("feeds.mag.private-key")
+  val privateKey: String = config.getString("feeds.mag.private-key")
   val claimIss: String = config.getString("feeds.mag.claim.iss")
   val claimRole: String = config.getString("feeds.mag.claim.role")
   val claimSub: String = config.getString("feeds.mag.claim.sub")
@@ -27,7 +49,7 @@ class MagFeedSpec extends SpecificationLike {
   implicit val materialiser: ActorMaterializer = ActorMaterializer()
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
-  val feed = MagFeed(keyPriv, claimIss, claimRole, claimSub, () => SDate.now(), "MAN")
+  val feed = MagFeed(privateKey, claimIss, claimRole, claimSub, () => SDate.now(), "MAN", MockFeedRequester)
 
   "Given a jwt client " +
     "I can generate an encoded token" >> {
@@ -38,39 +60,28 @@ class MagFeedSpec extends SpecificationLike {
     token.nonEmpty
   }
 
-  "Given a json response containing a single flight " +
-    "I should be able to convert it to a representative case class" >> {
-    skipped("exploratory test")
-    import MagFeed.JsonSupport._
+  "Given a mock json response containing a single valid flight " +
+    "I should get a " >> {
+    MockFeedRequester.mockResponse = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, jsonResponseSingleArrival))
 
-    val response = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, jsonResponseSingleArrival))
-
-    Await.result(Unmarshal(response).to[List[MagArrival]], 1 second) match {
-      case _ => println(s"Got some mag arrivals")
+    val result = Await.result(feed.requestArrivals(SDate.now()), 1 second) match {
+      case ArrivalsFeedSuccess(Flights(arrivals), _) => arrivals
+      case _ => List()
     }
 
-    success
+    result.length === 1
   }
 
-  "Given a jwt token " +
-    "When I request arrivals " >> {
-    skipped("exploratory test")
-    val start = SDate(Crunch.getLocalLastMidnight(SDate.now()).millisSinceEpoch)
+  "Given a mock feed requester that throws an exception " +
+    "I should get an ArrivalsFeedFailure response" >> {
+    val exceptionFeed = MagFeed(privateKey, claimIss, claimRole, claimSub, () => SDate.now(), "MAN", MockExceptionThrowingFeedRequester(()=> new Exception("I'm throwing an exception")))
 
-    val arrivals = Await.result(feed.requestArrivals(start), 30 seconds) match {
-      case MagArrivals(magArrivals) if magArrivals.nonEmpty =>
-        magArrivals
-      case _ =>
-        Seq()
+    val isFeedFailure = Await.result(exceptionFeed.requestArrivals(SDate.now()), 1 second) match {
+      case ArrivalsFeedFailure(_, _) => true
+      case _ => false
     }
 
-    val parsedMagArrivalCount = arrivals.length
-
-    val nonZeroMagArrivals = parsedMagArrivalCount >= 10
-
-    val drtArrivals = arrivals.map(MagFeed.toArrival)
-
-    nonZeroMagArrivals === true && drtArrivals.length === parsedMagArrivalCount
+    isFeedFailure must_== true
   }
 
   val jsonResponseSingleArrival: String =
@@ -100,7 +111,7 @@ class MagFeedSpec extends SpecificationLike {
       |            "icao": "EGCC"
       |        },
       |        "arrivalDeparture": "Arrival",
-      |        "domesticInternational": "Domestic",
+      |        "domesticInternational": "International",
       |        "flightType": "Positioning",
       |        "stand": {
       |            "provisional": true,

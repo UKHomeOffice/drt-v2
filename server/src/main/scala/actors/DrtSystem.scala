@@ -23,7 +23,7 @@ import drt.server.feeds.lhr.live.LegacyLhrLiveContentProvider
 import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.server.feeds.ltn.LtnLiveFeed
-import drt.server.feeds.mag.MagFeed
+import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared._
@@ -493,7 +493,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
           val claimIss: String = config.get[String]("feeds.mag.claim.iss")
           val claimRole: String = config.get[String]("feeds.mag.claim.role")
           val claimSub: String = config.get[String]("feeds.mag.claim.sub")
-          MagFeed(privateKey, claimIss, claimRole, claimSub, now, airportConfig.portCode).tickingSource
+          MagFeed(privateKey, claimIss, claimRole, claimSub, now, airportConfig.portCode, ProdFeedRequester).tickingSource
         }
 
       case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)

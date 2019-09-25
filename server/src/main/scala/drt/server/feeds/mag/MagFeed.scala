@@ -9,21 +9,34 @@ import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
-import drt.server.feeds.mag.MagFeed.{MagArrival, MagArrivals}
+import drt.server.feeds.mag.MagFeed.MagArrival
 import drt.shared.FlightsApi.Flights
 import drt.shared.{Arrival, LiveFeedSource, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import pdi.jwt.{Jwt, JwtAlgorithm, JwtHeader}
-import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
-import scala.util.Failure
+import scala.util.{Failure, Success, Try}
 
-case class MagFeed(key: String, claimIss: String, claimRole: String, claimSub: String, now: () => SDateLike, portCode: String)(implicit val system: ActorSystem, materializer: Materializer, executionContext: ExecutionContext) {
+
+trait FeedRequesterLike {
+  def sendTokenRequest(header: String, claim: String, key: String, algorithm: JwtAlgorithm): String
+
+  def send(request: HttpRequest)(implicit actorSystem: ActorSystem): Future[HttpResponse]
+}
+
+object ProdFeedRequester extends FeedRequesterLike {
+  override def sendTokenRequest(header: String, claim: String, key: String, algorithm: JwtAlgorithm): String = Jwt.encode(header: String, claim: String, key: String, algorithm: JwtAlgorithm)
+
+  override def send(request: HttpRequest)(implicit actorSystem: ActorSystem): Future[HttpResponse] = Http().singleRequest(request)
+}
+
+case class MagFeed(key: String, claimIss: String, claimRole: String, claimSub: String, now: () => SDateLike, portCode: String, feedRequester: FeedRequesterLike)(implicit val system: ActorSystem, materializer: Materializer, executionContext: ExecutionContext) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def claim: String =
@@ -47,24 +60,35 @@ case class MagFeed(key: String, claimIss: String, claimRole: String, claimSub: S
   def makeUri(start: SDateLike, end: SDateLike, from: Int, size: Int) = s"https://$claimSub/v1/flight/$portCode/arrival?startDate=${start.toISOString()}&endDate=${end.toISOString()}&from=$from&size=$size"
 
   def tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source
-    .tick(0 milliseconds, 30 seconds, NotUsed)
-    .mapAsync(1)(_ => requestArrivals(now().addHours(-12)))
-    .map(_.arrivals.map(MagFeed.toArrival))
-    .map(as => ArrivalsFeedSuccess(Flights(as), now()))
+    .tick(initialDelay = 0 milliseconds, interval = 30 seconds, tick = NotUsed)
+    .mapAsync(parallelism = 1)(_ => requestArrivals(now().addHours(hoursToAdd = -12)))
 
-  def requestArrivals(start: SDateLike): Future[MagArrivals] =
-    Source(0 to 500 by 100)
-      .mapAsync(10) { pageFrom =>
-        val end = start.addHours(36)
-        requestArrivalsPage(start, end, pageFrom, 100)
+  def requestArrivals(start: SDateLike): Future[ArrivalsFeedResponse] =
+    Source(0 to 1000 by 100)
+      .mapAsync(parallelism = 10) { pageFrom =>
+        val end = start.addHours(hoursToAdd = 36)
+        requestArrivalsPage(start, end, pageFrom, size = 100)
       }
-      .mapConcat(identity)
+      .mapConcat {
+        case Success(magArrivals) =>
+          magArrivals.map {
+            MagFeed.toArrival
+          }
+        case Failure(t) =>
+          log.error(s"Failed to fetch or parse MAG arrivals: ${t.getMessage}")
+          List()
+      }
       .runWith(Sink.seq)
-      .map(as => MagArrivals(as))
+      .map {
+        case as if as.nonEmpty =>
+          val uniqueArrivals = as.map(a => (a.unique, a)).toMap.values.toSeq
+          ArrivalsFeedSuccess(Flights(uniqueArrivals), now())
+        case as if as.isEmpty =>
+          ArrivalsFeedFailure("No arrivals records received", now())
+      }
 
-  def requestArrivalsPage(start: SDateLike, end: SDateLike, from: Int, size: Int): Future[List[MagArrival]] = {
-
-    val end = start.addHours(24)
+  def requestArrivalsPage(start: SDateLike, end: SDateLike, from: Int, size: Int): Future[Try[List[MagArrival]]] = {
+    val end = start.addHours(hoursToAdd = 24)
     val uri = makeUri(start, end, from, size)
 
     val token = newToken
@@ -76,27 +100,21 @@ case class MagFeed(key: String, claimIss: String, claimRole: String, claimSub: S
       entity = HttpEntity.Empty
     )
 
-    val eventualArrivals = Http()
-      .singleRequest(request)
+    val eventualArrivals = feedRequester
+      .send(request)
       .map(MagFeed.unmarshalResponse)
       .flatten
-      .map {
-        _.filter(a => a.arrival.terminal.isDefined && a.domesticInternational == "International" && a.flightNumber.trackNumber.isDefined)
-      }
+      .map { as => Success(as.filter(isAppropriateArrival)) }
 
-    eventualArrivals.onComplete {
-      case Failure(t) =>
-        log.error(s"Failed to fetch or parse MAG arrivals: $t")
-      case _ =>
-    }
-
-    eventualArrivals.recoverWith {
-      case t =>
-        log.error(s"Failed to fetch or parse MAG arrivals: ${t.getMessage}")
-        Future(None)
+    eventualArrivals.recover {
+      case t => Failure(t)
     }
 
     eventualArrivals
+  }
+
+  private def isAppropriateArrival(a: MagArrival): Boolean = {
+    a.arrival.terminal.isDefined && a.domesticInternational == "International" && a.flightNumber.trackNumber.isDefined
   }
 }
 
