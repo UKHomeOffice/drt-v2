@@ -21,8 +21,9 @@ object RunnableCrunch {
 
   def groupByCodeShares(flights: Seq[ApiFlightWithSplits]): Seq[(ApiFlightWithSplits, Set[Arrival])] = flights.map(f => (f, Set(f.apiFlight)))
 
-  def apply[FR, MS, SS, SFP, SMM, SAD](baseArrivalsSource: Source[ArrivalsFeedResponse, FR],
-                                       fcstArrivalsSource: Source[ArrivalsFeedResponse, FR],
+  def apply[FR, MS, SS, SFP, SMM, SAD](forecastBaseArrivalsSource: Source[ArrivalsFeedResponse, FR],
+                                       forecastArrivalsSource: Source[ArrivalsFeedResponse, FR],
+                                       liveBaseArrivalsSource: Source[ArrivalsFeedResponse, FR],
                                        liveArrivalsSource: Source[ArrivalsFeedResponse, FR],
                                        manifestsLiveSource: Source[ManifestsFeedResponse, MS],
                                        manifestsHistoricSource: Source[ManifestsFeedResponse, MS],
@@ -33,7 +34,6 @@ object RunnableCrunch {
 
                                        arrivalsGraphStage: ArrivalsGraphStage,
                                        arrivalSplitsStage: GraphStage[FanInShape3[ArrivalsDiff, ManifestsFeedResponse, ManifestsFeedResponse, FlightsWithSplits]],
-                                       splitsPredictorStage: SplitsPredictorBase,
                                        workloadGraphStage: WorkloadGraphStage,
                                        loadBatchUpdateGraphStage: BatchLoadsByCrunchPeriodGraphStage,
                                        crunchLoadGraphStage: CrunchLoadGraphStage,
@@ -42,11 +42,13 @@ object RunnableCrunch {
                                        simulationGraphStage: SimulationGraphStage,
                                        portStateGraphStage: PortStateGraphStage,
 
-                                       fcstArrivalsDiffStage: ArrivalsDiffingStage,
+                                       forecastArrivalsDiffStage: ArrivalsDiffingStage,
+                                       liveBaseArrivalsDiffStage: ArrivalsDiffingStage,
                                        liveArrivalsDiffStage: ArrivalsDiffingStage,
 
-                                       baseArrivalsActor: ActorRef,
-                                       fcstArrivalsActor: ActorRef,
+                                       forecastBaseArrivalsActor: ActorRef,
+                                       forecastArrivalsActor: ActorRef,
+                                       liveBaseArrivalsActor: ActorRef,
                                        liveArrivalsActor: ActorRef,
 
                                        manifestsActor: ActorRef,
@@ -60,7 +62,7 @@ object RunnableCrunch {
                                        now: () => SDateLike,
                                        portQueues: Map[TerminalName, Seq[QueueName]],
                                        liveStateDaysAhead: Int
-                                      ): RunnableGraph[(FR, FR, FR, MS, MS, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch)] = {
+                                      ): RunnableGraph[(FR, FR, FR, FR, MS, MS, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch)] = {
 
     val arrivalsKillSwitch = KillSwitches.single[ArrivalsDiff]
 
@@ -70,8 +72,9 @@ object RunnableCrunch {
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
     val graph = GraphDSL.create(
-      baseArrivalsSource.async,
-      fcstArrivalsSource.async,
+      forecastBaseArrivalsSource.async,
+      forecastArrivalsSource.async,
+      liveBaseArrivalsSource.async,
       liveArrivalsSource.async,
       manifestsLiveSource.async,
       manifestsHistoricSource.async,
@@ -81,12 +84,13 @@ object RunnableCrunch {
       actualDesksAndWaitTimesSource.async,
       arrivalsKillSwitch,
       manifestsKillSwitch
-    )((_, _, _, _, _, _, _, _, _, _, _)) {
+    )((_, _, _, _, _, _, _, _, _, _, _, _)) {
 
       implicit builder =>
         (
-          baseArrivals,
-          fcstArrivals,
+          forecastBaseArrivals,
+          forecastArrivals,
+          liveBaseArrivals,
           liveArrivals,
           manifestsLive,
           manifestsHistoric,
@@ -106,11 +110,13 @@ object RunnableCrunch {
           val batchStaff = builder.add(staffBatchUpdateGraphStage.async)
           val simulation = builder.add(simulationGraphStage.async)
           val portState = builder.add(portStateGraphStage.async)
-          val fcstArrivalsDiffing = builder.add(fcstArrivalsDiffStage.async)
+          val fcstArrivalsDiffing = builder.add(forecastArrivalsDiffStage.async)
+          val liveBaseArrivalsDiffing = builder.add(liveBaseArrivalsDiffStage.async)
           val liveArrivalsDiffing = builder.add(liveArrivalsDiffStage.async)
 
-          val baseArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
-          val fcstArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
+          val forecastBaseArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
+          val forecastArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
+          val liveBaseArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
           val liveArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
 
           val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](2))
@@ -121,8 +127,9 @@ object RunnableCrunch {
           val staffFanOut = builder.add(Broadcast[StaffMinutes](2))
           val portStateFanOut = builder.add(Broadcast[PortStateWithDiff](3))
 
-          val baseArrivalsSink = builder.add(Sink.actorRef(baseArrivalsActor, "complete"))
-          val fcstArrivalsSink = builder.add(Sink.actorRef(fcstArrivalsActor, "complete"))
+          val baseArrivalsSink = builder.add(Sink.actorRef(forecastBaseArrivalsActor, "complete"))
+          val fcstArrivalsSink = builder.add(Sink.actorRef(forecastArrivalsActor, "complete"))
+          val liveBaseArrivalsSink = builder.add(Sink.actorRef(liveBaseArrivalsActor, "complete"))
           val liveArrivalsSink = builder.add(Sink.actorRef(liveArrivalsActor, "complete"))
 
           val manifestsSink = builder.add(Sink.actorRef(manifestsActor, "complete"))
@@ -133,13 +140,16 @@ object RunnableCrunch {
           val manifestsRequestSink = builder.add(Sink.actorRef(manifestsRequestActor, "complete"))
 
           // @formatter:off
-          baseArrivals ~> baseArrivalsFanOut ~> arrivals.in0
-                          baseArrivalsFanOut ~> baseArrivalsSink
+          forecastBaseArrivals ~> forecastBaseArrivalsFanOut ~> arrivals.in0
+                                  forecastBaseArrivalsFanOut ~> baseArrivalsSink
 
-          fcstArrivals ~> fcstArrivalsDiffing ~> fcstArrivalsFanOut ~> arrivals.in1
-                                                 fcstArrivalsFanOut ~> fcstArrivalsSink
+          forecastArrivals ~> fcstArrivalsDiffing ~> forecastArrivalsFanOut ~> arrivals.in1
+                                                     forecastArrivalsFanOut ~> fcstArrivalsSink
 
-          liveArrivals ~> liveArrivalsDiffing ~> liveArrivalsFanOut ~> arrivals.in2
+          liveBaseArrivals ~> liveBaseArrivalsDiffing ~> liveBaseArrivalsFanOut ~> arrivals.in2
+                                                         liveBaseArrivalsFanOut ~> liveBaseArrivalsSink
+
+          liveArrivals ~> liveArrivalsDiffing ~> liveArrivalsFanOut ~> arrivals.in3
                                                  liveArrivalsFanOut ~> liveArrivalsSink
 
           manifestsLive ~> manifestsFanOut

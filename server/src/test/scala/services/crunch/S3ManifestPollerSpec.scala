@@ -3,7 +3,6 @@ package services.crunch
 import akka.stream.scaladsl.{Keep, Sink, SinkQueueWithCancel, Source}
 import akka.stream.{Attributes, OverflowStrategy}
 import manifests.passengers.S3ManifestPoller
-import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import server.feeds.{ManifestsFeedResponse, ManifestsFeedSuccess}
 import services.graphstages.{DqManifests, TestApiProvider}
 

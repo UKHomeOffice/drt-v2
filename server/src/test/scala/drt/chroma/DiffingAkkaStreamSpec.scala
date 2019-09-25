@@ -3,15 +3,14 @@ package drt.chroma
 import akka.stream.scaladsl.Source
 import akka.stream.testkit.scaladsl.TestSink
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
-import drt.chroma.chromafetcher.ChromaParserProtocol
 import drt.chroma.chromafetcher.ChromaParserProtocol._
-import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
 import server.feeds.{ArrivalsFeedSuccess, FeedResponse}
 import services.SDate
 import spray.json._
 
 import scala.collection.immutable.Seq
+import scala.collection.mutable
 
 class DiffingAkkaStreamSpec extends AkkaStreamTestKitSpecificationLike with SampleData {
 
@@ -68,7 +67,7 @@ class DiffingAkkaStreamSpec extends AkkaStreamTestKitSpecificationLike with Samp
       source
         .map(content => content.parseJson.convertTo[List[ChromaLiveFlight]])
         .map(chromaArrivals => ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(chromaArrivals)), date))
-        .via(new ArrivalsDiffingStage(Seq()))
+        .via(new ArrivalsDiffingStage(mutable.SortedMap()))
         .runWith(TestSink.probe[FeedResponse])
         .requestNext(ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(List(
           ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
@@ -92,7 +91,7 @@ class DiffingAkkaStreamSpec extends AkkaStreamTestKitSpecificationLike with Samp
     "we really can diff it and parse it" in {
       source
         .map(chromaArrivals => ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(chromaArrivals)), date))
-        .via(new ArrivalsDiffingStage(Seq()))
+        .via(new ArrivalsDiffingStage(mutable.SortedMap()))
         .runWith(TestSink.probe[FeedResponse])
         .requestNext(ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(List(
           ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
@@ -114,7 +113,7 @@ class DiffingAkkaStreamSpec extends AkkaStreamTestKitSpecificationLike with Samp
     }
   }
 
-  val response0 =
+  val response0: String =
     """
       |[
       |  {
@@ -142,7 +141,7 @@ class DiffingAkkaStreamSpec extends AkkaStreamTestKitSpecificationLike with Samp
       |  ]
     """.stripMargin
 
-  val response1 =
+  val response1: String =
     """
       |[
       |  {

@@ -7,7 +7,6 @@ import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi.{ActualDeskStats, CrunchMinutes, PortState, StaffMinutes}
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared.{SDateLike, _}
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
@@ -16,14 +15,15 @@ import services._
 import services.graphstages.Crunch._
 import services.graphstages._
 
-import scala.collection.immutable.SortedMap
+import scala.collection.mutable
 
 
 case class CrunchSystem[FR](shifts: SourceQueueWithComplete[ShiftAssignments],
                             fixedPoints: SourceQueueWithComplete[FixedPointAssignments],
                             staffMovements: SourceQueueWithComplete[Seq[StaffMovement]],
-                            baseArrivalsResponse: FR,
+                            forecastBaseArrivalsResponse: FR,
                             forecastArrivalsResponse: FR,
+                            liveBaseArrivalsResponse: FR,
                             liveArrivalsResponse: FR,
                             manifestsLiveResponse: SourceQueueWithComplete[ManifestsFeedResponse],
                             manifestsHistoricResponse: SourceQueueWithComplete[ManifestsFeedResponse],
@@ -46,7 +46,6 @@ case class CrunchProps[FR](logLabel: String = "",
                            useLegacyManifests: Boolean = false,
                            now: () => SDateLike = () => SDate.now(),
                            initialFlightsWithSplits: Option[FlightsWithSplits] = None,
-                           splitsPredictorStage: SplitsPredictorBase,
                            b5JStartDate: SDateLike,
                            manifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]],
                            manifestsHistoricSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]],
@@ -55,11 +54,13 @@ case class CrunchProps[FR](logLabel: String = "",
                            cruncher: TryCrunch,
                            simulator: Simulator,
                            initialPortState: Option[PortState] = None,
-                           initialBaseArrivals: Set[Arrival] = Set(),
-                           initialFcstArrivals: Set[Arrival] = Set(),
-                           initialLiveArrivals: Set[Arrival] = Set(),
-                           arrivalsBaseSource: Source[ArrivalsFeedResponse, FR],
-                           arrivalsFcstSource: Source[ArrivalsFeedResponse, FR],
+                           initialForecastBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap[UniqueArrival, Arrival](),
+                           initialForecastArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap[UniqueArrival, Arrival](),
+                           initialLiveBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap[UniqueArrival, Arrival](),
+                           initialLiveArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap[UniqueArrival, Arrival](),
+                           arrivalsForecastBaseSource: Source[ArrivalsFeedResponse, FR],
+                           arrivalsForecastSource: Source[ArrivalsFeedResponse, FR],
+                           arrivalsLiveBaseSource: Source[ArrivalsFeedResponse, FR],
                            arrivalsLiveSource: Source[ArrivalsFeedResponse, FR],
                            initialShifts: ShiftAssignments = ShiftAssignments(Seq()),
                            initialFixedPoints: FixedPointAssignments = FixedPointAssignments(Seq()),
@@ -95,18 +96,19 @@ object CrunchSystem {
 
     val arrivalsStage = new ArrivalsGraphStage(
       name = props.logLabel,
-      initialBaseArrivals = if (props.refreshArrivalsOnStart) Set() else props.initialBaseArrivals,
-      initialForecastArrivals = if (props.refreshArrivalsOnStart) Set() else props.initialFcstArrivals,
+      initialForecastBaseArrivals = if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialForecastBaseArrivals,
+      initialForecastArrivals = if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialForecastArrivals,
+      initialLiveBaseArrivals = if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialLiveBaseArrivals,
       initialLiveArrivals = props.initialLiveArrivals,
-      initialMergedArrivals = if (props.refreshArrivalsOnStart) SortedMap[ArrivalKey, Arrival]() else SortedMap[ArrivalKey, Arrival]() ++ initialFlightsWithSplits.map(_.flightsToUpdate.map(fws => (ArrivalKey(fws.apiFlight), fws.apiFlight))).getOrElse(List()),
+      initialMergedArrivals = if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else mutable.SortedMap[UniqueArrival, Arrival]() ++ initialFlightsWithSplits.map(_.flightsToUpdate.map(fws => (fws.apiFlight.unique, fws.apiFlight))).getOrElse(List()),
       pcpArrivalTime = props.pcpArrival,
       validPortTerminals = props.airportConfig.terminalNames.toSet,
       expireAfterMillis = props.expireAfterMillis,
       now = props.now)
 
-    val fcstArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) Seq() else props.initialFcstArrivals.toSeq)
-    val liveArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) Seq() else props.initialLiveArrivals.toSeq)
-
+    val forecastArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialForecastArrivals)
+    val liveBaseArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialLiveBaseArrivals)
+    val liveArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialLiveArrivals)
 
     log.info(s"Using B5JPlus Start Date of ${props.b5JStartDate.toISOString()}")
 
@@ -132,8 +134,6 @@ object CrunchSystem {
       expireAfterMillis = props.expireAfterMillis,
       now = props.now,
       maxDaysToCrunch = props.maxDaysToCrunch)
-
-    val splitsPredictorStage = props.splitsPredictorStage
 
     val staffGraphStage = new StaffGraphStage(
       name = props.logLabel,
@@ -192,23 +192,31 @@ object CrunchSystem {
       liveDaysAhead = liveStateDaysAhead)
 
     val crunchSystem = RunnableCrunch(
-      props.arrivalsBaseSource, props.arrivalsFcstSource, props.arrivalsLiveSource, props.manifestsLiveSource, props.manifestsHistoricSource, shiftsSource, fixedPointsSource, staffMovementsSource, actualDesksAndQueuesSource,
-      arrivalsStage, arrivalSplitsGraphStage, splitsPredictorStage, workloadGraphStage, loadBatcher, crunchLoadGraphStage, staffGraphStage, staffBatcher, simulationGraphStage, portStateGraphStage, fcstArrivalsDiffingStage, liveArrivalsDiffingStage,
-      props.actors("base-arrivals").actorRef, props.actors("forecast-arrivals").actorRef, props.actors("live-arrivals").actorRef,
+      props.arrivalsForecastBaseSource, props.arrivalsForecastSource, props.arrivalsLiveBaseSource, props.arrivalsLiveSource,
+      props.manifestsLiveSource, props.manifestsHistoricSource,
+      shiftsSource, fixedPointsSource, staffMovementsSource,
+      actualDesksAndQueuesSource,
+      arrivalsStage, arrivalSplitsGraphStage,
+      workloadGraphStage, loadBatcher, crunchLoadGraphStage,
+      staffGraphStage, staffBatcher, simulationGraphStage,
+      portStateGraphStage,
+      forecastArrivalsDiffingStage, liveBaseArrivalsDiffingStage, liveArrivalsDiffingStage,
+      props.actors("forecast-base-arrivals").actorRef, props.actors("forecast-arrivals").actorRef, props.actors("live-base-arrivals").actorRef, props.actors("live-arrivals").actorRef,
       props.voyageManifestsActor, props.voyageManifestsRequestActor,
       props.liveCrunchStateActor, props.forecastCrunchStateActor,
       props.actors("aggregated-arrivals").actorRef,
       crunchStartDateProvider, props.now, props.airportConfig.queues, liveStateDaysAhead
     )
 
-    val (baseIn, fcstIn, liveIn, manifestsLiveIn, manifestsHistoricIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch) = crunchSystem.run
+    val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, manifestsHistoricIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch) = crunchSystem.run
 
     CrunchSystem(
       shifts = shiftsIn,
       fixedPoints = fixedPointsIn,
       staffMovements = movementsIn,
-      baseArrivalsResponse = baseIn,
-      forecastArrivalsResponse = fcstIn,
+      forecastBaseArrivalsResponse = forecastBaseIn,
+      forecastArrivalsResponse = forecastIn,
+      liveBaseArrivalsResponse = liveBaseIn,
       liveArrivalsResponse = liveIn,
       manifestsLiveResponse = manifestsLiveIn,
       manifestsHistoricResponse = manifestsHistoricIn,
@@ -216,8 +224,6 @@ object CrunchSystem {
       List(arrivalsKillSwitch, manifestsKillSwitch)
     )
   }
-
-  def arrivalsDiffingStage(initialArrivals: Seq[Arrival]) = new ArrivalsDiffingStage(initialArrivals)
 
   def initialStaffMinutesFromPortState(initialPortState: Option[PortState]): Option[StaffMinutes] = initialPortState.map(
     ps => StaffMinutes(ps.staffMinutes))

@@ -31,7 +31,6 @@ import scala.util.{Failure, Success}
 @Singleton
 class TestController @Inject()(implicit val config: Configuration,
                                implicit val mat: Materializer,
-                               env: Environment,
                                val system: ActorSystem,
                                ec: ExecutionContext) extends InjectedController with AirportConfProvider {
   implicit val timeout: Timeout = Timeout(250 milliseconds)
@@ -164,10 +163,8 @@ class TestController @Inject()(implicit val config: Configuration,
   }
 
   def deleteAllData() = Action {
-    implicit request =>
+    resetData()
 
-      resetData()
-
-      Accepted
+    Accepted
   }
 }

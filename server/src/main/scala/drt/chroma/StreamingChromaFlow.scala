@@ -20,7 +20,6 @@ import scala.util.{Failure, Success, Try}
 object StreamingChromaFlow {
 
   def chromaPollingSourceLive(log: LoggingAdapter, chromaFetcher: ChromaFetcher[ChromaLiveFlight], pollFrequency: FiniteDuration): Source[ArrivalsFeedResponse, Cancellable] = {
-    implicit val l: LoggingAdapter = log
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
     val tickingSource: Source[Try[Seq[ChromaLiveFlight]], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
       .map(_ => Try(chromaFetcher.currentFlightsBlocking))
@@ -34,7 +33,6 @@ object StreamingChromaFlow {
   }
 
   def chromaPollingSourceForecast(log: LoggingAdapter, chromaFetcher: ChromaFetcher[ChromaForecastFlight], pollFrequency: FiniteDuration): Source[ArrivalsFeedResponse, Cancellable] = {
-    implicit val l: LoggingAdapter = log
     val initialDelayImmediately: FiniteDuration = 15 seconds
     val tickingSource: Source[Try[Seq[ChromaForecastFlight]], Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
       .map(_ => Try(chromaFetcher.currentFlightsBlocking))

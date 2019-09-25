@@ -11,6 +11,7 @@ import services.SDate
 import services.graphstages.Crunch
 
 import scala.collection.immutable.{Seq, SortedMap}
+import scala.collection.mutable
 import scala.concurrent.duration._
 
 
@@ -59,14 +60,14 @@ class ApplicationRestartSpec extends CrunchTestLike {
       crunchMinutes = SortedMap[TQM, CrunchMinute](),
       staffMinutes = SortedMap[TM, StaffMinute]() ++ emptyStaffMinutes(now, daysToCrunch, airportConfig.terminalNames.toList)
     )
-    val initialLiveArrivals = Set(arrivalLive)
+    val initialLiveArrivals = mutable.SortedMap[UniqueArrival, Arrival](arrivalLive.unique -> arrivalLive)
 
-    val initialBaseArrivals = Set(arrivalBase)
+    val initialBaseArrivals = mutable.SortedMap[UniqueArrival, Arrival](arrivalBase.unique -> arrivalBase)
     val crunch = runCrunchGraph(
       now = now,
       initialPortState = Option(portState),
       initialLiveArrivals = initialLiveArrivals,
-      initialBaseArrivals = initialBaseArrivals,
+      initialForecastBaseArrivals = initialBaseArrivals,
       maxDaysToCrunch = daysToCrunch
     )
 
@@ -123,7 +124,7 @@ class ApplicationRestartSpec extends CrunchTestLike {
       staffMinutes = SortedMap[TM, StaffMinute]() ++ emptyStaffMinutes(now, daysToCrunch, airportConfig.terminalNames.toList)
     )
 
-    val initialLiveArrivals = Set(arrivalDay1, arrivalDay2)
+    val initialLiveArrivals = mutable.SortedMap[UniqueArrival, Arrival](arrivalDay1.unique -> arrivalDay1, arrivalDay2.unique -> arrivalDay2)
     val crunch = runCrunchGraph(
       now = now,
       initialPortState = Option(portState),

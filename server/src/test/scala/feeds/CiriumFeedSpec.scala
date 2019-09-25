@@ -1,13 +1,12 @@
 package feeds
 
 import akka.actor.ActorSystem
-import akka.pattern.pipe
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.{TestKit, TestProbe}
 import com.typesafe.config.ConfigFactory
 import drt.server.feeds.cirium.CiriumFeed
-import drt.shared.{Arrival, CiriumFeedSource}
+import drt.shared.{Arrival, LiveBaseFeedSource}
 import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecificationLike
 import server.feeds.ArrivalsFeedSuccess
@@ -68,7 +67,7 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
       "JFK",
       SDate(publishedArrivalTime).millisSinceEpoch,
       None,
-      Set(CiriumFeedSource)
+      Set(LiveBaseFeedSource)
     )
   }
 

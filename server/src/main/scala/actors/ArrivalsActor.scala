@@ -77,6 +77,19 @@ class ForecastPortArrivalsActor(initialSnapshotBytesThreshold: Int,
   def consumeDiffsMessage(diffsMessage: FlightsDiffMessage): Unit = consumeUpdates(diffsMessage)
 }
 
+class LiveBaseArrivalsActor(initialSnapshotBytesThreshold: Int,
+                            now: () => SDateLike,
+                            expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, "Port live base") {
+  override def persistenceId: String = s"${getClass.getName}-live-base"
+
+  override val snapshotBytesThreshold: Int = initialSnapshotBytesThreshold
+  override val maybeSnapshotInterval: Option[Int] = Option(500)
+
+  val log: Logger = LoggerFactory.getLogger(getClass)
+
+  def consumeDiffsMessage(diffsMessage: FlightsDiffMessage): Unit = consumeUpdates(diffsMessage)
+}
+
 class LiveArrivalsActor(initialSnapshotBytesThreshold: Int,
                         now: () => SDateLike,
                         expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, "Port live") {

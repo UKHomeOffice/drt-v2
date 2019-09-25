@@ -15,6 +15,7 @@ import services.SDate
 import services.graphstages.DqManifests
 
 import scala.collection.immutable.{List, SortedMap}
+import scala.collection.mutable
 import scala.concurrent.duration._
 
 class ArrivalsGraphStageSpec extends CrunchTestLike {
@@ -37,7 +38,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       airportConfig = airportConfig.copy(terminalNames = Seq("T1")),
       now = () => dateNow,
       initialPortState = Option(PortState(SortedMap(arrival_v2_with_chox_time.unique -> ApiFlightWithSplits(arrival_v2_with_chox_time, Set(terminalSplits))), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())),
-      initialLiveArrivals = Set(arrival_v2_with_chox_time)
+      initialLiveArrivals = mutable.SortedMap[UniqueArrival, Arrival]() ++ List(arrival_v2_with_chox_time).map(a => (a.unique, a))
     )
 
     var messages: Set[Arrival] = Set()
@@ -89,12 +90,12 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       val forecastScheduled = "2017-01-01T10:25Z"
 
       val aclFlight = Flights(List(
-        ArrivalGenerator.arrival(flightId = Option(1), actPax = Option(10), schDt = forecastScheduled, iata = "BA0001", feedSources = Set(AclFeedSource))
+        ArrivalGenerator.arrival(actPax = Option(10), schDt = forecastScheduled, iata = "BA0002", feedSources = Set(AclFeedSource))
       ))
 
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlight))
 
-      val forecastArrival = arrival(schDt = forecastScheduled, iata = "BA0001", terminal = "T1", actPax = Option(21), feedSources = Set(ForecastFeedSource))
+      val forecastArrival = arrival(schDt = forecastScheduled, iata = "BA0002", terminal = "T1", actPax = Option(21), feedSources = Set(ForecastFeedSource))
       val forecastArrivals = ArrivalsFeedSuccess(Flights(List(forecastArrival)))
 
       offerAndWait(crunch.forecastArrivalsInput, forecastArrivals)
@@ -103,7 +104,8 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
       crunch.liveTestProbe.fishForMessage(5 seconds) {
         case ps: PortState =>
-          val portStateSources = ps.flights.values.flatMap(_.apiFlight.FeedSources).toSet
+          val portStateSources = ps.flights.get(forecastArrival.unique).map(_.apiFlight.FeedSources).getOrElse(Set())
+          println(s"sources: $portStateSources")
           portStateSources == expected
       }
 

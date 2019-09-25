@@ -105,14 +105,16 @@ class ArrivalSplitsGraphStage(name: String = "",
 
     def applyUpdatesToFlights(arrivalsDiff: ArrivalsDiff): Map[ArrivalKey, ApiFlightWithSplits] = {
       val flightsWithUpdates = arrivalsDiff.toUpdate.foldLeft(Map[ArrivalKey, ApiFlightWithSplits]()) {
-        case (withUpdatesSoFar, (key, newArrival)) => flightsByFlightId.get(key) match {
+        case (withUpdatesSoFar, (_, newArrival)) =>
+          val arrivalKey = ArrivalKey(newArrival)
+          flightsByFlightId.get(arrivalKey) match {
           case None =>
-            val splits: Set[Splits] = initialSplits(newArrival, key)
+            val splits: Set[Splits] = initialSplits(newArrival, arrivalKey)
             val newFlightWithSplits: ApiFlightWithSplits = ApiFlightWithSplits(newArrival, splits, nowMillis)
-            withUpdatesSoFar.updated(key, newFlightWithSplits)
+            withUpdatesSoFar.updated(arrivalKey, newFlightWithSplits)
           case Some(existingArrival) =>
             if (!existingArrival.apiFlight.equals(newArrival))
-              withUpdatesSoFar.updated(key, existingArrival.copy(apiFlight = newArrival, lastUpdated = nowMillis))
+              withUpdatesSoFar.updated(arrivalKey, existingArrival.copy(apiFlight = newArrival, lastUpdated = nowMillis))
             else withUpdatesSoFar
         }
       }
@@ -259,7 +261,7 @@ class ArrivalSplitsGraphStage(name: String = "",
       .foreach { case (arrivalKey, arrival) =>
         val csKey = CodeShareKey(arrival.Scheduled, arrival.Terminal, arrival.Origin, Set())
         val existingEntry: Set[ArrivalKey] = codeShares.getOrElse(csKey, Set())
-        val updatedArrivalKeys = existingEntry + arrivalKey
+        val updatedArrivalKeys = existingEntry + ArrivalKey(arrival)
         codeShares += (csKey.copy(arrivalKeys = updatedArrivalKeys) -> updatedArrivalKeys)
       }
   }
