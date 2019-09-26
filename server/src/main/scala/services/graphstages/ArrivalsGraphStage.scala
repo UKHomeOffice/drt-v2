@@ -53,7 +53,7 @@ class ArrivalsGraphStage(name: String = "",
 
     override def preStart(): Unit = {
       log.info(s"Received ${initialForecastBaseArrivals.size} initial base arrivals")
-      forecastBaseArrivals ++= filterAndSetPcp(initialForecastBaseArrivals)
+      forecastBaseArrivals ++= filterAndSetPcp(SortedMap[UniqueArrival, Arrival]() ++ initialForecastBaseArrivals)
       log.info(s"Received ${initialForecastArrivals.size} initial forecast arrivals")
       prepInitialArrivals(initialForecastArrivals, forecastArrivals)
 
@@ -67,7 +67,7 @@ class ArrivalsGraphStage(name: String = "",
     }
 
     def prepInitialArrivals(initialArrivals: mutable.SortedMap[UniqueArrival, Arrival], arrivals: mutable.SortedMap[UniqueArrival, Arrival]): Unit = {
-      arrivals ++= filterAndSetPcp(initialArrivals)
+      arrivals ++= filterAndSetPcp(SortedMap[UniqueArrival, Arrival]() ++ initialArrivals)
       Crunch.purgeExpired(arrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt)
     }
 
@@ -115,7 +115,7 @@ class ArrivalsGraphStage(name: String = "",
     }
 
     def handleIncomingArrivals(sourceType: ArrivalsSourceType, incomingArrivals: Seq[Arrival]): Unit = {
-      val filteredArrivals = filterAndSetPcp(mutable.SortedMap[UniqueArrival, Arrival]() ++ incomingArrivals.map(a => (UniqueArrival(a), a)))
+      val filteredArrivals = filterAndSetPcp(SortedMap[UniqueArrival, Arrival]() ++ incomingArrivals.map(a => (UniqueArrival(a), a)))
       log.info(s"${filteredArrivals.size} arrivals after filtering")
       sourceType match {
         case LiveArrivals =>
@@ -158,7 +158,7 @@ class ArrivalsGraphStage(name: String = "",
 
     def updateDiffToPush(updatedLiveArrivals: SortedMap[UniqueArrival, Arrival]): Option[ArrivalsDiff] = {
       toPush match {
-        case None => Option(ArrivalsDiff(updatedLiveArrivals, Set()))
+        case None => Option(ArrivalsDiff(SortedMap[UniqueArrival, Arrival]() ++ updatedLiveArrivals, Set()))
         case Some(diff) =>
           val newToUpdate = updatedLiveArrivals.foldLeft(diff.toUpdate) {
             case (toUpdateSoFar, (ak, arrival)) => toUpdateSoFar.updated(ak, arrival)
@@ -194,17 +194,20 @@ class ArrivalsGraphStage(name: String = "",
       Crunch.purgeExpired(merged, UniqueArrival.atTime, now, expireAfterMillis.toInt)
     }
 
-    def filterAndSetPcp(arrivals: mutable.SortedMap[UniqueArrival, Arrival]): SortedMap[UniqueArrival, Arrival] =
-      SortedMap[UniqueArrival, Arrival]() ++ arrivals
-      .filterNot {
+    def filterAndSetPcp(arrivals: SortedMap[UniqueArrival, Arrival]): SortedMap[UniqueArrival, Arrival] = {
+      val toRemove = arrivals.filter {
         case (_, f) if !isFlightRelevant(f) =>
           log.debug(s"Filtering out irrelevant arrival: ${f.IATA}, ${SDate(f.Scheduled).toISOString()}, ${f.Origin}")
           true
         case _ => false
-      }
-      .mapValues { arrival =>
+      }.keys
+
+      val minusRemovals = arrivals -- toRemove
+
+      minusRemovals.mapValues { arrival =>
         arrival.copy(PcpTime = Some(pcpArrivalTime(arrival).millisSinceEpoch))
       }
+    }
 
     def isFlightRelevant(flight: Arrival): Boolean =
       validPortTerminals.contains(flight.Terminal) && !domesticPorts.contains(flight.Origin)
