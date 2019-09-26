@@ -6,6 +6,7 @@ import akka.stream.ActorMaterializer
 import com.typesafe.config.{Config, ConfigFactory}
 import drt.server.feeds.mag.{FeedRequesterLike, MagFeed}
 import drt.shared.FlightsApi.Flights
+import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import pdi.jwt.JwtAlgorithm
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
@@ -37,6 +38,7 @@ case class MockExceptionThrowingFeedRequester(causeException: () => Unit) extend
 }
 
 class MagFeedSpec extends SpecificationLike {
+  val log: Logger = LoggerFactory.getLogger(getClass)
   val config: Config = ConfigFactory.load()
 
   val privateKey: String = config.getString("feeds.mag.private-key")
@@ -56,6 +58,8 @@ class MagFeedSpec extends SpecificationLike {
     skipped("exploratory test")
 
     val token = feed.newToken
+
+    log.info(s"Token: $token")
 
     token.nonEmpty
   }

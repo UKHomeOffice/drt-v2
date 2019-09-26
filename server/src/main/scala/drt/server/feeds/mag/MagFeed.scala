@@ -71,9 +71,7 @@ case class MagFeed(key: String, claimIss: String, claimRole: String, claimSub: S
       }
       .mapConcat {
         case Success(magArrivals) =>
-          magArrivals.map {
-            MagFeed.toArrival
-          }
+          magArrivals.map(MagFeed.toArrival)
         case Failure(t) =>
           log.error(s"Failed to fetch or parse MAG arrivals: ${t.getMessage}")
           List()
@@ -82,6 +80,7 @@ case class MagFeed(key: String, claimIss: String, claimRole: String, claimSub: S
       .map {
         case as if as.nonEmpty =>
           val uniqueArrivals = as.map(a => (a.unique, a)).toMap.values.toSeq
+          log.info(s"Sending ${uniqueArrivals.length} arrivals")
           ArrivalsFeedSuccess(Flights(uniqueArrivals), now())
         case as if as.isEmpty =>
           ArrivalsFeedFailure("No arrivals records received", now())
@@ -104,7 +103,11 @@ case class MagFeed(key: String, claimIss: String, claimRole: String, claimSub: S
       .send(request)
       .map(MagFeed.unmarshalResponse)
       .flatten
-      .map { as => Success(as.filter(isAppropriateArrival)) }
+      .map { as =>
+        val relevantArrivals = as.filter(isAppropriateArrival)
+        log.info(s"${relevantArrivals.length} relevant arrivals out of ${as.length} in results from offset $from")
+        Success(relevantArrivals)
+      }
 
     eventualArrivals.recover {
       case t => Failure(t)
@@ -139,7 +142,6 @@ object MagFeed {
                         flightType: String,
                         gate: Option[Gate],
                         stand: Option[Stand],
-                        terminal: Option[Terminal],
                         passenger: Passenger,
                         onBlockTime: Timings,
                         touchDownTime: Timings,
@@ -216,7 +218,7 @@ object MagFeed {
     implicit val TimingsFormat: RootJsonFormat[Timings] = jsonFormat3(Timings)
     implicit val iataIcaoFormat: RootJsonFormat[IataIcao] = jsonFormat2(IataIcao)
     implicit val ArrivalDetailsFormat: RootJsonFormat[ArrivalDetails] = jsonFormat6(ArrivalDetails)
-    implicit val magArrivalFormat: RootJsonFormat[MagArrival] = jsonFormat17(MagArrival)
+    implicit val magArrivalFormat: RootJsonFormat[MagArrival] = jsonFormat16(MagArrival)
   }
 
 }
