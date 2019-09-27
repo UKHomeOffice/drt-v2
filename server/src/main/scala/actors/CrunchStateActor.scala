@@ -117,7 +117,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
     case SaveSnapshotSuccess(SnapshotMetadata(_, seqNr, _)) =>
       logInfo("Snapshot success")
       if (purgePreviousSnapshots) {
-        logInfo(s"Purging previous snapshots (with sequence number < $seqNr)"))
+        logInfo(s"Purging previous snapshots (with sequence number < $seqNr)")
         deleteSnapshots(SnapshotSelectionCriteria(maxSequenceNr = seqNr - 1))
       }
 
