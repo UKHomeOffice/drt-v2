@@ -120,8 +120,9 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
       val updates = state.window(SDate(start), SDate(end), portQueues).updates(millis)
       sender() ! updates
 
-    case SaveSnapshotSuccess(md) =>
-      logInfo(s"Snapshot success $md")
+    case SaveSnapshotSuccess(SnapshotMetadata(_, seqNr, _)) =>
+      logInfo(s"Snapshot success. Purging previous snapshots (with sequence number < $seqNr)")
+      deleteSnapshots(SnapshotSelectionCriteria(maxSequenceNr = seqNr - 1))
 
     case SaveSnapshotFailure(md, cause) =>
       logInfo(s"Snapshot failed $md\n$cause")
