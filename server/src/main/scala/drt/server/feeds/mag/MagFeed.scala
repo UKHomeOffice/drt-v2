@@ -55,7 +55,7 @@ case class MagFeed(key: String, claimIss: String, claimRole: String, claimSub: S
     new org.bouncycastle.jce.provider.BouncyCastleProvider()
   )
 
-  def newToken: String = Jwt.encode(header = header, claim = claim, key = key, algorithm = JwtAlgorithm.RS256)
+  def newToken: String = feedRequester.sendTokenRequest(header = header, claim = claim, key = key, algorithm = JwtAlgorithm.RS256)
 
   def makeUri(start: SDateLike, end: SDateLike, from: Int, size: Int) = s"https://$claimSub/v1/flight/$portCode/arrival?startDate=${start.toISOString()}&endDate=${end.toISOString()}&from=$from&size=$size"
 
