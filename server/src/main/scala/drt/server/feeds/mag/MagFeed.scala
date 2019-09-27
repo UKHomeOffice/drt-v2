@@ -209,15 +209,15 @@ object MagFeed {
                             gate: Option[String])
 
   object JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
-    implicit val PassengerFormat: RootJsonFormat[Passenger] = jsonFormat4(Passenger)
-    implicit val TerminalFormat: RootJsonFormat[Terminal] = jsonFormat3(Terminal)
-    implicit val BaggageClaimFormat: RootJsonFormat[BaggageClaim] = jsonFormat4(BaggageClaim)
-    implicit val StandFormat: RootJsonFormat[Stand] = jsonFormat5(Stand)
-    implicit val GateFormat: RootJsonFormat[Gate] = jsonFormat2(Gate)
-    implicit val FlightNumberFormat: RootJsonFormat[FlightNumber] = jsonFormat2(FlightNumber)
-    implicit val TimingsFormat: RootJsonFormat[Timings] = jsonFormat3(Timings)
+    implicit val passengerFormat: RootJsonFormat[Passenger] = jsonFormat4(Passenger)
+    implicit val terminalFormat: RootJsonFormat[Terminal] = jsonFormat3(Terminal)
+    implicit val baggageClaimFormat: RootJsonFormat[BaggageClaim] = jsonFormat4(BaggageClaim)
+    implicit val standFormat: RootJsonFormat[Stand] = jsonFormat5(Stand)
+    implicit val gateFormat: RootJsonFormat[Gate] = jsonFormat2(Gate)
+    implicit val flightNumberFormat: RootJsonFormat[FlightNumber] = jsonFormat2(FlightNumber)
+    implicit val timingsFormat: RootJsonFormat[Timings] = jsonFormat3(Timings)
     implicit val iataIcaoFormat: RootJsonFormat[IataIcao] = jsonFormat2(IataIcao)
-    implicit val ArrivalDetailsFormat: RootJsonFormat[ArrivalDetails] = jsonFormat6(ArrivalDetails)
+    implicit val arrivalDetailsFormat: RootJsonFormat[ArrivalDetails] = jsonFormat6(ArrivalDetails)
     implicit val magArrivalFormat: RootJsonFormat[MagArrival] = jsonFormat16(MagArrival)
   }
 
