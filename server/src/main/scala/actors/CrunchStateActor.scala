@@ -75,13 +75,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
       s", ${state.crunchMinutes.size} crunch minutes " +
       s", ${state.staffMinutes.size} staff minutes ")
   }
-
-  override def postSaveSnapshot(): Unit = if (purgePreviousSnapshots) {
-    val maxSequenceNr = lastSequenceNr - 1
-    logInfo(s"Purging snapshots with sequence number < $maxSequenceNr")
-    deleteSnapshots(SnapshotSelectionCriteria(maxSequenceNr = maxSequenceNr))
-  }
-
+  
   override def stateToMessage: GeneratedMessage = portStateToSnapshotMessage(state)
 
   override def receiveCommand: Receive = {
