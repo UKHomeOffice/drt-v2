@@ -1072,7 +1072,6 @@ class Application @Inject()(implicit val config: Configuration,
 
         val b = request.body.asBytes(parse.UNLIMITED).get
 
-        // call Autowire route
         val router = Router.route[Api](ApiService(airportConfig, ctrl.shiftsActor, ctrl.fixedPointsActor, ctrl.staffMovementsActor, request.headers, request.session))
 
         router(
