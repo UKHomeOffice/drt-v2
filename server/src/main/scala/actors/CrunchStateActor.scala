@@ -75,7 +75,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
       s", ${state.crunchMinutes.size} crunch minutes " +
       s", ${state.staffMinutes.size} staff minutes ")
   }
-  
+
   override def stateToMessage: GeneratedMessage = portStateToSnapshotMessage(state)
 
   override def receiveCommand: Receive = {

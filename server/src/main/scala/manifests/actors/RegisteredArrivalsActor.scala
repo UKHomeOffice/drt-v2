@@ -7,6 +7,7 @@ import scalapb.GeneratedMessage
 import server.protobuf.messages.RegisteredArrivalMessage.{RegisteredArrivalMessage, RegisteredArrivalsMessage}
 import services.graphstages.Crunch
 
+import scala.collection.immutable.SortedMap
 import scala.collection.mutable
 
 
@@ -60,9 +61,9 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
     case RegisteredArrivals(newArrivals) =>
       log.info(s"Received ${newArrivals.size} arrivals updates")
 
-      val updatesToPersist = findUpdatesToPersist(newArrivals)
+      val updatesToPersist = findUpdatesToPersist(SortedMap[ArrivalKey, Option[Long]]() ++ newArrivals)
       if (updatesToPersist.nonEmpty) {
-        val messageToPersist = arrivalsToMessage(updatesToPersist)
+        val messageToPersist = arrivalsToMessage(mutable.SortedMap[ArrivalKey, Option[Long]]() ++ updatesToPersist)
         persistAndMaybeSnapshot(messageToPersist)
       }
 
@@ -70,14 +71,8 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
       Crunch.purgeExpired(state.arrivals, ArrivalKey.atTime, now, expireAfterMillis.toInt)
   }
 
-  private def findUpdatesToPersist(newArrivals: mutable.SortedMap[ArrivalKey, Option[Long]]): mutable.SortedMap[ArrivalKey, Option[Long]] = {
-    val updates = mutable.SortedMap[ArrivalKey, Option[Long]]()
-
-    newArrivals.foreach {
-      case (arrivalToCheck, lastLookup) => if (hasChanged(arrivalToCheck, lastLookup)) updates += (arrivalToCheck -> lastLookup)
-    }
-
-    updates
+  private def findUpdatesToPersist(newArrivals: SortedMap[ArrivalKey, Option[Long]]): SortedMap[ArrivalKey, Option[Long]] = newArrivals.filter {
+    case (arrivalToCheck, lastLookup) if hasChanged(arrivalToCheck, lastLookup) => true
   }
 
   private def hasChanged(arrivalToCheck: ArrivalKey, lastLookup: Option[Long]): Boolean = {
@@ -85,18 +80,11 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
   }
 
   private def addRegisteredArrivalsFromMessages(arrivalMessages: Seq[RegisteredArrivalMessage]): Unit = {
-    val maybeArrivals = arrivalMessages.map(am => {
-      for {
-        origin <- am.origin
-        voyageNumber <- am.voyageNumber
-        scheduled <- am.scheduled
-        lookedUp <- am.lookedUp
-      } yield (ArrivalKey(origin, voyageNumber, scheduled), Option(lookedUp))
-    })
-
-    maybeArrivals.foreach {
-      case Some(keyAndLookup) => state.arrivals += keyAndLookup
-      case None => Unit
+    val arrivalsFromMessages: Seq[(ArrivalKey, Option[Long])] = arrivalMessages.map {
+      case RegisteredArrivalMessage(Some(origin), _, Some(voyageNumber), Some(scheduled), lookedUp) =>
+        (ArrivalKey(origin, voyageNumber, scheduled), lookedUp)
     }
+
+    state.arrivals ++= arrivalsFromMessages
   }
 }
