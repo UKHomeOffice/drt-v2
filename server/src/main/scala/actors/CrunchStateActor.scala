@@ -77,7 +77,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
   }
 
   override def postSaveSnapshot(): Unit = if (purgePreviousSnapshots) {
-    val maxSequenceNr = lastSequenceNr
+    val maxSequenceNr = lastSequenceNr - 1
     logInfo(s"Purging snapshots with sequence number < $maxSequenceNr")
     deleteSnapshots(SnapshotSelectionCriteria(maxSequenceNr = maxSequenceNr))
   }
