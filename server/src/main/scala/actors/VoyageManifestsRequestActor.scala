@@ -3,13 +3,15 @@ package actors
 import actors.AckingReceiver.{Ack, StreamInitialized}
 import akka.actor.{Actor, ActorRef, Scheduler}
 import akka.stream.scaladsl.SourceQueueWithComplete
-import drt.shared.{Arrival, ArrivalsDiff}
+import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.{Arrival, ArrivalsDiff, SDateLike}
 import manifests.ManifestLookupLike
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{BestManifestsFeedSuccess, ManifestsFeedResponse}
 import services.{OfferHandler, SDate}
 
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 
 
@@ -25,11 +27,13 @@ object AckingReceiver {
 
 }
 
-class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLookupLike) extends Actor {
+class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLookupLike, now: () => SDateLike) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   var manifestsRequestQueue: Option[SourceQueueWithComplete[List[Arrival]]] = None
   var manifestsResponseQueue: Option[SourceQueueWithComplete[ManifestsFeedResponse]] = None
+  val manifestBuffer: mutable.ListBuffer[BestAvailableManifest] = mutable.ListBuffer[BestAvailableManifest]()
+  var lastBatchSent: MillisSinceEpoch = 0L
 
   def senderRef(): ActorRef = sender()
 
@@ -51,8 +55,9 @@ class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLook
     case ManifestTries(bestManifests) =>
       log.info(s"Received ${bestManifests.length} BestAvailableManifest tries")
       handleManifestTries(bestManifests)
+      handleManifestBuffer()
 
-    case ArrivalsDiff(arrivals, _) => {
+    case ArrivalsDiff(arrivals, _) =>
       if (manifestsRequestQueue.isEmpty) log.error(s"Got arrivals before source queue is subscribed")
       manifestsRequestQueue.foreach { queue =>
         log.info(s"got ${arrivals.size} arrivals to enqueue")
@@ -60,22 +65,30 @@ class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLook
         log.info(s"offering ${arrivals.size} arrivals to source queue")
         OfferHandler.offerWithRetries(queue, list, 10)
       }
-    }
 
     case unexpected => log.warn(s"received unexpected ${unexpected.getClass}")
   }
 
   def handleManifestTries(bestManifests: List[Option[BestAvailableManifest]]): Unit = {
-    manifestsResponseQueue.foreach(queue => {
-      val successfulManifests = bestManifests.collect { case Some(bm) => bm }
-      val bestManifestsResult = BestManifestsFeedSuccess(successfulManifests, SDate.now())
-      val replyTo = senderRef()
+    manifestBuffer ++= bestManifests.collect { case Some(mf) => mf }
+  }
 
-      OfferHandler.offerWithRetries(queue, bestManifestsResult, 10, Option(() => {
-        log.info(s"Acking back to lookup stage")
-        replyTo ! Ack
-      }))
-    })
+  def handleManifestBuffer(): Unit = {
+    val replyTo = senderRef()
+    val minSecondsBetweenBatches = 60
+    val maxBufferSize = 250
+    if (manifestBuffer.length > maxBufferSize || lastBatchSent < now().millisSinceEpoch - minSecondsBetweenBatches * 1000) {
+      manifestsResponseQueue.foreach(queue => {
+        val bestManifestsResult = BestManifestsFeedSuccess(Seq() ++ manifestBuffer, SDate.now())
+        log.info(s"Sending batch of ${manifestBuffer.length} BestAvailableManifests")
+        manifestBuffer.clear()
+        lastBatchSent = now().millisSinceEpoch
+
+        OfferHandler.offerWithRetries(queue, bestManifestsResult, 10, None)
+      })
+    }
+
+    replyTo ! Ack
   }
 }
 

@@ -41,18 +41,17 @@ object ManifestsGraph {
 
           batchRequests
             .out0
+            .throttle(1, 250 milliseconds)
             .flatMapConcat(arrivals => Source(arrivals))
             .mapAsync(1) { a =>
               val scheduled = SDate(a.scheduled)
-              log.info(s"Looking up $portCode/${a.origin}/${a.voyageNumber}/${scheduled.toISOString()} ")
               manifestLookup.maybeBestAvailableManifest(portCode, a.origin, a.voyageNumber, scheduled)
             }
             .map(_._2)
             .conflateWithSeed(List[Option[BestAvailableManifest]](_)) {
               case (acc, next) => next :: acc
             }
-//            .throttle(1, 30 seconds)
-            .map(mms => ManifestTries(mms)) ~> manifestsSink
+            .map(ManifestTries(_)) ~> manifestsSink
 
           batchRequests.out1 ~> registeredArrivalsSink
 

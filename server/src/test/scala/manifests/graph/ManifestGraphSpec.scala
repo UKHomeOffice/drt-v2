@@ -18,7 +18,7 @@ import scala.collection.mutable
 import scala.concurrent.duration._
 
 
-class TestableVoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLookupLike, probe: TestProbe) extends VoyageManifestsRequestActor(portCode, manifestLookup) {
+class TestableVoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLookupLike, probe: TestProbe, now: () => SDateLike) extends VoyageManifestsRequestActor(portCode, manifestLookup, now) {
   override def senderRef(): ActorRef = probe.ref
 
   override def handleManifestTries(bestManifests: List[Option[BestAvailableManifest]]): Unit = {
@@ -43,7 +43,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
       List()
     )
     val manifestSinkProbe = TestProbe("manifest-test-probe")
-    val manifestSink = system.actorOf(Props(classOf[TestableVoyageManifestsRequestActor], "LHR", MockManifestLookupService(testManifest), manifestSinkProbe))
+    val manifestSink = system.actorOf(Props(classOf[TestableVoyageManifestsRequestActor], "LHR", MockManifestLookupService(testManifest), manifestSinkProbe, () => SDate.now()))
     val registeredArrivalSinkProbe = TestProbe(name = "registered-arrival-test-probe")
 
     val graphInput = createAndRunGraph(manifestSink, registeredArrivalSinkProbe, testManifest, None)
@@ -77,7 +77,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
 
     val testArrival = ArrivalGenerator.arrival(schDt = "2019-03-06T12:00:00Z")
 
-    val manifestSink = system.actorOf(Props(classOf[TestableVoyageManifestsRequestActor], "LHR", MockManifestLookupService(testManifest), manifestSinkProbe))
+    val manifestSink = system.actorOf(Props(classOf[TestableVoyageManifestsRequestActor], "LHR", MockManifestLookupService(testManifest), manifestSinkProbe, () => SDate.now()))
 
     val graphInput = createAndRunGraph(
       manifestSink,

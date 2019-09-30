@@ -185,7 +185,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, Option(params.snapshotIntervalVm)), name = "voyage-manifests-actor")
   lazy val lookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
-  lazy val voyageManifestsRequestActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsRequestActor], airportConfig.portCode, lookup), name = "voyage-manifests-request-actor")
+  lazy val voyageManifestsRequestActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsRequestActor], airportConfig.portCode, lookup, now), name = "voyage-manifests-request-actor")
 
   lazy val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](100, OverflowStrategy.backpressure)
 
