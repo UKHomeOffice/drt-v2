@@ -29,7 +29,7 @@ import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared._
 import manifests.ManifestLookup
 import manifests.actors.{RegisteredArrivals, RegisteredArrivalsActor}
-import manifests.graph.{BatchStage, LookupStage, ManifestsGraph}
+import manifests.graph.{BatchStage, ManifestsGraph}
 import manifests.passengers.S3ManifestPoller
 import org.apache.spark.sql.SparkSession
 import org.joda.time.DateTimeZone
@@ -334,12 +334,10 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   }
 
   def startManifestsGraph(maybeRegisteredArrivals: Option[RegisteredArrivals]): SourceQueueWithComplete[List[Arrival]] = {
-    val minimumRefreshIntervalMillis = 15 * 60 * 1000
+    val batchSize = config.get[Int]("crunch.manifests.lookup-batch-size")
+    lazy val batchStage: BatchStage = new BatchStage(now, Crunch.isDueLookup, batchSize, expireAfterMillis, maybeRegisteredArrivals, 1000)
 
-    lazy val batchStage: BatchStage = new BatchStage(now, Crunch.isDueLookup, params.manifestLookupBatchSize, expireAfterMillis, maybeRegisteredArrivals, minimumRefreshIntervalMillis)
-    lazy val lookupStage: LookupStage = new LookupStage(airportConfig.portCode, lookup)
-
-    ManifestsGraph(manifestsArrivalRequestSource, batchStage, lookupStage, voyageManifestsRequestActor, registeredArrivalsActor).run
+    ManifestsGraph(manifestsArrivalRequestSource, batchStage, voyageManifestsRequestActor, registeredArrivalsActor, airportConfig.portCode, lookup).run
   }
 
   def startCrunchSystem(initialPortState: Option[PortState],

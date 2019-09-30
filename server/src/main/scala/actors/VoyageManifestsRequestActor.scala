@@ -5,7 +5,6 @@ import akka.actor.{Actor, ActorRef, Scheduler}
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.{Arrival, ArrivalsDiff}
 import manifests.ManifestLookupLike
-import manifests.graph.ManifestTries
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{BestManifestsFeedSuccess, ManifestsFeedResponse}
@@ -50,10 +49,18 @@ class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLook
       manifestsResponseQueue = Option(subscriber)
 
     case ManifestTries(bestManifests) =>
-      log.info(s"Received BestAvailableManifest tries")
+      log.info(s"Received ${bestManifests.length} BestAvailableManifest tries")
       handleManifestTries(bestManifests)
 
-    case ArrivalsDiff(arrivals, _) => manifestsRequestQueue.foreach(queue => OfferHandler.offerWithRetries(queue, arrivals.values.toList, 10))
+    case ArrivalsDiff(arrivals, _) => {
+      if (manifestsRequestQueue.isEmpty) log.error(s"Got arrivals before source queue is subscribed")
+      manifestsRequestQueue.foreach { queue =>
+        log.info(s"got ${arrivals.size} arrivals to enqueue")
+        val list = arrivals.values.toList
+        log.info(s"offering ${arrivals.size} arrivals to source queue")
+        OfferHandler.offerWithRetries(queue, list, 10)
+      }
+    }
 
     case unexpected => log.warn(s"received unexpected ${unexpected.getClass}")
   }
@@ -70,4 +77,16 @@ class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLook
       }))
     })
   }
+}
+
+case class ManifestTries(tries: List[Option[BestAvailableManifest]]) {
+  def +(triesToAdd: List[Option[BestAvailableManifest]]) = ManifestTries(tries ++ triesToAdd)
+
+  def nonEmpty: Boolean = tries.nonEmpty
+
+  def length: Int = tries.length
+}
+
+object ManifestTries {
+  def empty: ManifestTries = ManifestTries(List())
 }

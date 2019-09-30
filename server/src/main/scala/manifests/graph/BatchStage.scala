@@ -15,7 +15,7 @@ class BatchStage(now: () => SDateLike,
                  batchSize: Int,
                  expireAfterMillis: MillisSinceEpoch,
                  maybeInitialState: Option[RegisteredArrivals],
-                 minimumRefreshIntervalMillis: Long) extends GraphStage[FanOutShape2[List[Arrival], List[ArrivalKey], RegisteredArrivals]] {
+                 sleepMillisOnEmptyPush: Long) extends GraphStage[FanOutShape2[List[Arrival], List[ArrivalKey], RegisteredArrivals]] {
   val inArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("inArrivals.in")
   val outArrivals: Outlet[List[ArrivalKey]] = Outlet[List[ArrivalKey]]("outArrivals.out")
   val outRegisteredArrivals: Outlet[RegisteredArrivals] = Outlet[RegisteredArrivals]("outRegisteredArrivals.out")
@@ -28,7 +28,6 @@ class BatchStage(now: () => SDateLike,
     val registeredArrivals: mutable.SortedMap[ArrivalKey, Option[Long]] = mutable.SortedMap()
     val registeredArrivalsUpdates: mutable.SortedMap[ArrivalKey, Option[Long]] = mutable.SortedMap()
     val lookupQueue: mutable.SortedSet[ArrivalKey] = mutable.SortedSet()
-    var lastRefresh: Long = 0L
 
     override def preStart(): Unit = {
       if (maybeInitialState.isEmpty) log.warn(s"Did not receive any initial registered arrivals")
@@ -49,6 +48,8 @@ class BatchStage(now: () => SDateLike,
         log.info(s"grabbed ${incoming.length} requests for arrival manifests")
 
         BatchStage.registerNewArrivals(incoming, registeredArrivals, registeredArrivalsUpdates)
+
+        log.info(s"registeredArrivalsUpdates now has ${registeredArrivalsUpdates.size} items")
 
         if (isAvailable(outArrivals)) prioritiseAndPush()
         if (isAvailable(outRegisteredArrivals)) pushRegisteredArrivalsUpdates()
@@ -91,7 +92,11 @@ class BatchStage(now: () => SDateLike,
       if (lookupBatch.nonEmpty) {
         log.info(s"Pushing ${lookupBatch.size} lookup requests. ${lookupQueue.size} lookup requests remaining.")
         push(outArrivals, lookupBatch.toList)
-      } else log.info(s"Nothing to push right now")
+      } else {
+        log.info(s"Nothing to push right now. Sending empty list")
+        Thread.sleep(sleepMillisOnEmptyPush)
+        push(outArrivals, List())
+      }
     }
 
     private def pushRegisteredArrivalsUpdates(): Unit = if (registeredArrivalsUpdates.nonEmpty) {
@@ -101,21 +106,9 @@ class BatchStage(now: () => SDateLike,
     }
 
     private def updatePrioritisedAndSubscribers(): Set[ArrivalKey] = {
-      val nextLookupBatch = (shouldRefreshLookupQueue, registeredArrivals.nonEmpty) match {
-        case (true, true) =>
-          log.info(s"Refreshing lookup queue")
-          lastRefresh = now().millisSinceEpoch
-          refreshLookupQueue(now())
-          lookupQueue.take(batchSize)
-        case (true, false) =>
-          log.info(s"No registered arrivals")
-          lookupQueue.take(batchSize)
-        case (false, _) =>
-          val minRefreshSeconds = minimumRefreshIntervalMillis / 1000
-          val secondsSinceLastRefresh = (now().millisSinceEpoch - lastRefresh) / 1000
-          log.info(f"Minimum refresh interval: ${minRefreshSeconds}s. $secondsSinceLastRefresh%ds since last refresh. Not refreshing")
-          lookupQueue.take(batchSize)
-      }
+      refreshLookupQueue(now())
+
+      val nextLookupBatch = lookupQueue.take(batchSize)
 
       lookupQueue --= nextLookupBatch
 
@@ -129,11 +122,6 @@ class BatchStage(now: () => SDateLike,
       registeredArrivalsUpdates ++= updatedLookupTimes
 
       nextLookupBatch.toSet
-    }
-
-    private def shouldRefreshLookupQueue: Boolean = {
-      val elapsedMillis = now().millisSinceEpoch - lastRefresh
-      elapsedMillis >= minimumRefreshIntervalMillis
     }
 
     private def refreshLookupQueue(currentNow: SDateLike): Unit = registeredArrivals.foreach {

@@ -1,7 +1,6 @@
 package manifests.graph
 
-import actors.AckingReceiver.Ack
-import actors.VoyageManifestsRequestActor
+import actors.{ManifestTries, VoyageManifestsRequestActor}
 import akka.actor.{ActorRef, Props}
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
@@ -15,7 +14,6 @@ import manifests.passengers.BestAvailableManifest
 import services.SDate
 import services.graphstages.Crunch
 
-import scala.collection.immutable.SortedMap
 import scala.collection.mutable
 import scala.concurrent.duration._
 
@@ -23,7 +21,10 @@ import scala.concurrent.duration._
 class TestableVoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLookupLike, probe: TestProbe) extends VoyageManifestsRequestActor(portCode, manifestLookup) {
   override def senderRef(): ActorRef = probe.ref
 
-  override def handleManifestTries(bestManifests: List[Option[BestAvailableManifest]]): Unit = senderRef() ! ManifestTries(bestManifests)
+  override def handleManifestTries(bestManifests: List[Option[BestAvailableManifest]]): Unit = {
+    println(s"Got some maybe best manifests")
+    senderRef() ! ManifestTries(bestManifests)
+  }
 }
 
 
@@ -50,7 +51,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
     val testArrival = ArrivalGenerator.arrival(schDt = "2019-03-06T12:00:00Z")
     graphInput.offer(List(testArrival))
 
-    manifestSinkProbe.expectMsg(ManifestTries(List(Option(testManifest))))
+    manifestSinkProbe.expectMsg(5 seconds, ManifestTries(List(Option(testManifest))))
 
     graphInput.complete()
 
@@ -96,18 +97,16 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
 
   def createAndRunGraph(manifestProbeActor: ActorRef, registeredArrivalSinkProbe: TestProbe, testManifest: BestAvailableManifest, initialRegisteredArrivals: Option[RegisteredArrivals], isDueLookup: (ArrivalKey, MillisSinceEpoch, SDateLike) => Boolean = (_, _, _) => true): SourceQueueWithComplete[List[Arrival]] = {
     val arrivalsSource = Source.queue[List[Arrival]](0, OverflowStrategy.backpressure)
-    val minLookupQueueRefreshIntervalMillis = 50L
     val expireAfterMillis = (3 hours).length
-    val batchStage = new BatchStage(() => SDate("2019-03-06T11:00:00Z"), isDueLookup, 1, expireAfterMillis, initialRegisteredArrivals, minLookupQueueRefreshIntervalMillis)
-
-    val lookupStage = new LookupStage("STN", MockManifestLookupService(testManifest))
+    val batchStage = new BatchStage(() => SDate("2019-03-06T11:00:00Z"), isDueLookup, 1, expireAfterMillis, initialRegisteredArrivals, 1)
 
     val graph = ManifestsGraph(
       arrivalsSource,
       batchStage,
-      lookupStage,
       manifestProbeActor,
-      registeredArrivalSinkProbe.ref
+      registeredArrivalSinkProbe.ref,
+      "STN",
+      MockManifestLookupService(testManifest)
     )
 
     val graphInput: SourceQueueWithComplete[List[Arrival]] = graph.run()
