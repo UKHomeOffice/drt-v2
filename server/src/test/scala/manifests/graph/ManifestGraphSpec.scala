@@ -1,7 +1,6 @@
 package manifests.graph
 
-import actors.AckingReceiver.Ack
-import actors.VoyageManifestsRequestActor
+import actors.{ManifestTries, VoyageManifestsRequestActor}
 import akka.actor.{ActorRef, Props}
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
@@ -15,15 +14,17 @@ import manifests.passengers.BestAvailableManifest
 import services.SDate
 import services.graphstages.Crunch
 
-import scala.collection.immutable.SortedMap
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 
-class TestableVoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLookupLike, probe: TestProbe) extends VoyageManifestsRequestActor(portCode, manifestLookup) {
+class TestableVoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLookupLike, probe: TestProbe, now: () => SDateLike) extends VoyageManifestsRequestActor(portCode, manifestLookup, now, 1, 0) {
   override def senderRef(): ActorRef = probe.ref
 
-  override def handleManifestTries(bestManifests: List[Option[BestAvailableManifest]]): Unit = senderRef() ! ManifestTries(bestManifests)
+  override def handleManifestTries(bestManifests: List[Option[BestAvailableManifest]]): Unit = {
+    senderRef() ! ManifestTries(bestManifests)
+  }
 }
 
 
@@ -42,7 +43,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
       List()
     )
     val manifestSinkProbe = TestProbe("manifest-test-probe")
-    val manifestSink = system.actorOf(Props(classOf[TestableVoyageManifestsRequestActor], "LHR", MockManifestLookupService(testManifest), manifestSinkProbe))
+    val manifestSink = system.actorOf(Props(classOf[TestableVoyageManifestsRequestActor], "LHR", MockManifestLookupService(testManifest), manifestSinkProbe, () => SDate.now()))
     val registeredArrivalSinkProbe = TestProbe(name = "registered-arrival-test-probe")
 
     val graphInput = createAndRunGraph(manifestSink, registeredArrivalSinkProbe, testManifest, None)
@@ -50,7 +51,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
     val testArrival = ArrivalGenerator.arrival(schDt = "2019-03-06T12:00:00Z")
     graphInput.offer(List(testArrival))
 
-    manifestSinkProbe.expectMsg(ManifestTries(List(Option(testManifest))))
+    manifestSinkProbe.expectMsg(5 seconds, ManifestTries(List(Option(testManifest))))
 
     graphInput.complete()
 
@@ -76,7 +77,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
 
     val testArrival = ArrivalGenerator.arrival(schDt = "2019-03-06T12:00:00Z")
 
-    val manifestSink = system.actorOf(Props(classOf[TestableVoyageManifestsRequestActor], "LHR", MockManifestLookupService(testManifest), manifestSinkProbe))
+    val manifestSink = system.actorOf(Props(classOf[TestableVoyageManifestsRequestActor], "LHR", MockManifestLookupService(testManifest), manifestSinkProbe, () => SDate.now()))
 
     val graphInput = createAndRunGraph(
       manifestSink,
@@ -96,18 +97,18 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
 
   def createAndRunGraph(manifestProbeActor: ActorRef, registeredArrivalSinkProbe: TestProbe, testManifest: BestAvailableManifest, initialRegisteredArrivals: Option[RegisteredArrivals], isDueLookup: (ArrivalKey, MillisSinceEpoch, SDateLike) => Boolean = (_, _, _) => true): SourceQueueWithComplete[List[Arrival]] = {
     val arrivalsSource = Source.queue[List[Arrival]](0, OverflowStrategy.backpressure)
-    val minLookupQueueRefreshIntervalMillis = 50L
     val expireAfterMillis = (3 hours).length
-    val batchStage = new BatchStage(() => SDate("2019-03-06T11:00:00Z"), isDueLookup, 1, expireAfterMillis, initialRegisteredArrivals, minLookupQueueRefreshIntervalMillis)
 
-    val lookupStage = new LookupStage("STN", MockManifestLookupService(testManifest))
+    implicit val ec: ExecutionContext = ExecutionContext.global
+    val batchStage = new BatchStage(() => SDate("2019-03-06T11:00:00Z"), isDueLookup, 1, expireAfterMillis, initialRegisteredArrivals, 0)
 
     val graph = ManifestsGraph(
       arrivalsSource,
       batchStage,
-      lookupStage,
       manifestProbeActor,
-      registeredArrivalSinkProbe.ref
+      registeredArrivalSinkProbe.ref,
+      "STN",
+      MockManifestLookupService(testManifest)
     )
 
     val graphInput: SourceQueueWithComplete[List[Arrival]] = graph.run()

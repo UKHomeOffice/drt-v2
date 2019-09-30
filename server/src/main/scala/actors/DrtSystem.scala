@@ -29,7 +29,7 @@ import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared._
 import manifests.ManifestLookup
 import manifests.actors.{RegisteredArrivals, RegisteredArrivalsActor}
-import manifests.graph.{BatchStage, LookupStage, ManifestsGraph}
+import manifests.graph.{BatchStage, ManifestsGraph}
 import manifests.passengers.S3ManifestPoller
 import org.apache.spark.sql.SparkSession
 import org.joda.time.DateTimeZone
@@ -48,7 +48,7 @@ import slickdb.{ArrivalTable, Tables, VoyageManifestPassengerInfoTable}
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
@@ -162,6 +162,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
   val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
 
+  val maxBufferSize: Int = config.get[Int]("crunch.manifests.max-buffer-size")
+  val minSecondsBetweenBatches: Int = config.get[Int]("crunch.manifests.min-seconds-between-batches")
+
   val aggregateArrivalsDbConfigKey = "aggregated-db"
 
   val purgeOldLiveSnapshots = false
@@ -185,7 +188,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, Option(params.snapshotIntervalVm)), name = "voyage-manifests-actor")
   lazy val lookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
-  lazy val voyageManifestsRequestActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsRequestActor], airportConfig.portCode, lookup), name = "voyage-manifests-request-actor")
+  lazy val voyageManifestsRequestActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsRequestActor], airportConfig.portCode, lookup, now, maxBufferSize, minSecondsBetweenBatches), name = "voyage-manifests-request-actor")
 
   lazy val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](100, OverflowStrategy.backpressure)
 
@@ -334,12 +337,10 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   }
 
   def startManifestsGraph(maybeRegisteredArrivals: Option[RegisteredArrivals]): SourceQueueWithComplete[List[Arrival]] = {
-    val minimumRefreshIntervalMillis = 15 * 60 * 1000
+    val batchSize = config.get[Int]("crunch.manifests.lookup-batch-size")
+    lazy val batchStage: BatchStage = new BatchStage(now, Crunch.isDueLookup, batchSize, expireAfterMillis, maybeRegisteredArrivals, 1000)
 
-    lazy val batchStage: BatchStage = new BatchStage(now, Crunch.isDueLookup, params.manifestLookupBatchSize, expireAfterMillis, maybeRegisteredArrivals, minimumRefreshIntervalMillis)
-    lazy val lookupStage: LookupStage = new LookupStage(airportConfig.portCode, lookup)
-
-    ManifestsGraph(manifestsArrivalRequestSource, batchStage, lookupStage, voyageManifestsRequestActor, registeredArrivalsActor).run
+    ManifestsGraph(manifestsArrivalRequestSource, batchStage, voyageManifestsRequestActor, registeredArrivalsActor, airportConfig.portCode, lookup).run
   }
 
   def startCrunchSystem(initialPortState: Option[PortState],

@@ -8,8 +8,8 @@ import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 
-import scala.collection.mutable
 import scala.collection.immutable.SortedMap
+import scala.collection.mutable
 
 
 sealed trait ArrivalsSourceType
