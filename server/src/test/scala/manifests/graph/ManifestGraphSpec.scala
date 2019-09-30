@@ -18,7 +18,7 @@ import scala.collection.mutable
 import scala.concurrent.duration._
 
 
-class TestableVoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLookupLike, probe: TestProbe, now: () => SDateLike) extends VoyageManifestsRequestActor(portCode, manifestLookup, now) {
+class TestableVoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLookupLike, probe: TestProbe, now: () => SDateLike) extends VoyageManifestsRequestActor(portCode, manifestLookup, now, 1, 0) {
   override def senderRef(): ActorRef = probe.ref
 
   override def handleManifestTries(bestManifests: List[Option[BestAvailableManifest]]): Unit = {

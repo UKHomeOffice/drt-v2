@@ -27,7 +27,7 @@ object AckingReceiver {
 
 }
 
-class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLookupLike, now: () => SDateLike) extends Actor {
+class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLookupLike, now: () => SDateLike, maxBufferSize: Int, minSecondsBetweenBatches: Int) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   var manifestsRequestQueue: Option[SourceQueueWithComplete[List[Arrival]]] = None
@@ -74,10 +74,7 @@ class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLook
   }
 
   def handleManifestBuffer(): Unit = {
-    val replyTo = senderRef()
-    val minSecondsBetweenBatches = 60
-    val maxBufferSize = 250
-    if (manifestBuffer.length > maxBufferSize || lastBatchSent < now().millisSinceEpoch - minSecondsBetweenBatches * 1000) {
+    if (manifestBuffer.length >= maxBufferSize || lastBatchSent < now().millisSinceEpoch - minSecondsBetweenBatches * 1000) {
       manifestsResponseQueue.foreach(queue => {
         val bestManifestsResult = BestManifestsFeedSuccess(Seq() ++ manifestBuffer, SDate.now())
         log.info(s"Sending batch of ${manifestBuffer.length} BestAvailableManifests")
@@ -88,7 +85,7 @@ class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLook
       })
     }
 
-    replyTo ! Ack
+    senderRef() ! Ack
   }
 }
 

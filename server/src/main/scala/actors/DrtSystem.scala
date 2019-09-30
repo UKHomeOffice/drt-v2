@@ -162,6 +162,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
   val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
 
+  val maxBufferSize: Int = config.get[Int]("manifest.max-buffer-size")
+  val minSecondsBetweenBatches: Int = config.get[Int]("manifest.min-seconds-between-batches")
+
   val aggregateArrivalsDbConfigKey = "aggregated-db"
 
   val purgeOldLiveSnapshots = false
@@ -185,7 +188,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, Option(params.snapshotIntervalVm)), name = "voyage-manifests-actor")
   lazy val lookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
-  lazy val voyageManifestsRequestActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsRequestActor], airportConfig.portCode, lookup, now), name = "voyage-manifests-request-actor")
+  lazy val voyageManifestsRequestActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsRequestActor], airportConfig.portCode, lookup, now, maxBufferSize, minSecondsBetweenBatches), name = "voyage-manifests-request-actor")
 
   lazy val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](100, OverflowStrategy.backpressure)
 
