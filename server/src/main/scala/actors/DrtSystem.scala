@@ -162,8 +162,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
   val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
 
-  val maxBufferSize: Int = config.get[Int]("manifests.max-buffer-size")
-  val minSecondsBetweenBatches: Int = config.get[Int]("manifests.min-seconds-between-batches")
+  val maxBufferSize: Int = config.get[Int]("crunch.manifests.max-buffer-size")
+  val minSecondsBetweenBatches: Int = config.get[Int]("crunch.manifests.min-seconds-between-batches")
 
   val aggregateArrivalsDbConfigKey = "aggregated-db"
 
