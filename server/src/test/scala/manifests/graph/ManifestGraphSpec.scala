@@ -23,7 +23,6 @@ class TestableVoyageManifestsRequestActor(portCode: String, manifestLookup: Mani
   override def senderRef(): ActorRef = probe.ref
 
   override def handleManifestTries(bestManifests: List[Option[BestAvailableManifest]]): Unit = {
-    println(s"Got some maybe best manifests")
     senderRef() ! ManifestTries(bestManifests)
   }
 }
