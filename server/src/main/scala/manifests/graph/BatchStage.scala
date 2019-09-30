@@ -1,5 +1,6 @@
 package manifests.graph
 
+import akka.actor.ActorSystem
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -9,13 +10,15 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch
 
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 
 class BatchStage(now: () => SDateLike,
                  isDueLookup: (ArrivalKey, MillisSinceEpoch, SDateLike) => Boolean,
                  batchSize: Int,
                  expireAfterMillis: MillisSinceEpoch,
                  maybeInitialState: Option[RegisteredArrivals],
-                 sleepMillisOnEmptyPush: Long) extends GraphStage[FanOutShape2[List[Arrival], List[ArrivalKey], RegisteredArrivals]] {
+                 sleepMillisOnEmptyPush: Long)(implicit actorSystem: ActorSystem, executionContext: ExecutionContext) extends GraphStage[FanOutShape2[List[Arrival], List[ArrivalKey], RegisteredArrivals]] {
   val inArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("inArrivals.in")
   val outArrivals: Outlet[List[ArrivalKey]] = Outlet[List[ArrivalKey]]("outArrivals.out")
   val outRegisteredArrivals: Outlet[RegisteredArrivals] = Outlet[RegisteredArrivals]("outRegisteredArrivals.out")
@@ -94,8 +97,13 @@ class BatchStage(now: () => SDateLike,
         push(outArrivals, lookupBatch.toList)
       } else {
         log.info(s"Nothing to push right now. Sending empty list")
-        Thread.sleep(sleepMillisOnEmptyPush)
-        push(outArrivals, List())
+        object PushAfterDelay extends Runnable {
+          override def run(): Unit = if (isAvailable(outArrivals)) {
+            log.info(s"Pushed after delay of ${sleepMillisOnEmptyPush}ms")
+            push(outArrivals, List())
+          }
+        }
+        actorSystem.scheduler.scheduleOnce(sleepMillisOnEmptyPush milliseconds, PushAfterDelay)
       }
     }
 

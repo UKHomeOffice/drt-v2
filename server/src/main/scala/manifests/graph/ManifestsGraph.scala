@@ -34,18 +34,12 @@ object ManifestsGraph {
           val manifestsSink = builder.add(Sink.actorRefWithAck(manifestsSinkActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
           val registeredArrivalsSink = builder.add(Sink.actorRef(registeredArrivalsActor, "completed"))
 
-          arrivals.out.map { a =>
-            log.info(s"Received ${a.length} arrivals to batch")
-            a
-          } ~> batchRequests.in
+          arrivals ~> batchRequests.in
 
-          batchRequests
-            .out0
-            .throttle(1, 250 milliseconds)
+          batchRequests.out0
             .flatMapConcat(arrivals => Source(arrivals))
             .mapAsync(1) { a =>
-              val scheduled = SDate(a.scheduled)
-              manifestLookup.maybeBestAvailableManifest(portCode, a.origin, a.voyageNumber, scheduled)
+              manifestLookup.maybeBestAvailableManifest(portCode, a.origin, a.voyageNumber, SDate(a.scheduled))
             }
             .map(_._2)
             .conflateWithSeed(List[Option[BestAvailableManifest]](_)) {

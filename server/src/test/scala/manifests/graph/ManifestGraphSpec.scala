@@ -15,6 +15,7 @@ import services.SDate
 import services.graphstages.Crunch
 
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 
@@ -98,7 +99,9 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
   def createAndRunGraph(manifestProbeActor: ActorRef, registeredArrivalSinkProbe: TestProbe, testManifest: BestAvailableManifest, initialRegisteredArrivals: Option[RegisteredArrivals], isDueLookup: (ArrivalKey, MillisSinceEpoch, SDateLike) => Boolean = (_, _, _) => true): SourceQueueWithComplete[List[Arrival]] = {
     val arrivalsSource = Source.queue[List[Arrival]](0, OverflowStrategy.backpressure)
     val expireAfterMillis = (3 hours).length
-    val batchStage = new BatchStage(() => SDate("2019-03-06T11:00:00Z"), isDueLookup, 1, expireAfterMillis, initialRegisteredArrivals, 1)
+
+    implicit val ec: ExecutionContext = ExecutionContext.global
+    val batchStage = new BatchStage(() => SDate("2019-03-06T11:00:00Z"), isDueLookup, 1, expireAfterMillis, initialRegisteredArrivals, 0)
 
     val graph = ManifestsGraph(
       arrivalsSource,
