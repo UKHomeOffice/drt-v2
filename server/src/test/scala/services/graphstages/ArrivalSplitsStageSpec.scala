@@ -32,8 +32,7 @@ object TestableArrivalSplits {
       splitsCalculator = splitsCalculator,
       groupFlightsByCodeShares = groupByCodeShares,
       expireAfterMillis = oneDayMillis,
-      now = now,
-      maxDaysToCrunch = 1)
+      now = now)
 
     val arrivalsDiffSource = Source.queue[ArrivalsDiff](1, OverflowStrategy.backpressure)
     val manifestsLiveSource = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)

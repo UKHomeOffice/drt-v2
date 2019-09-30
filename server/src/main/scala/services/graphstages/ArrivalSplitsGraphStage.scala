@@ -24,8 +24,7 @@ class ArrivalSplitsGraphStage(name: String = "",
                               splitsCalculator: SplitsCalculator, //keep this for now, we'll need to move this into it's own graph stage later..
                               groupFlightsByCodeShares: Seq[ApiFlightWithSplits] => Seq[(ApiFlightWithSplits, Set[Arrival])],
                               expireAfterMillis: Long,
-                              now: () => SDateLike,
-                              maxDaysToCrunch: Int)
+                              now: () => SDateLike)
   extends GraphStage[FanInShape3[ArrivalsDiff, ManifestsFeedResponse, ManifestsFeedResponse, FlightsWithSplits]] {
 
   val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")

@@ -83,8 +83,8 @@ object PostgresTables extends {
 } with Tables
 
 case class DrtConfigParameters(config: Configuration) {
-  val maxDaysToCrunch: Int = config.getOptional[Int]("crunch.forecast.max_days").getOrElse(180)
-  val aclPollMinutes: Int = config.getOptional[Int]("crunch.forecast.poll_minutes").getOrElse(120)
+  val forecastMaxDays: Int = config.get[Int]("crunch.forecast.max_days")
+  val aclPollMinutes: Int = config.get[Int]("crunch.forecast.poll_minutes")
   val snapshotIntervalVm: Int = config.getOptional[Int]("persistence.snapshot-interval.voyage-manifest").getOrElse(1000)
   val snapshotMegaBytesBaseArrivals: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.base-arrivals").getOrElse(1d) * oneMegaByte).toInt
   val snapshotMegaBytesFcstArrivals: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.forecast-arrivals").getOrElse(5d) * oneMegaByte).toInt
@@ -170,8 +170,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val purgeOldLiveSnapshots = false
   val purgeOldForecastSnapshots = true
 
-  val liveCrunchStateProps = Props(classOf[CrunchStateActor], Option(airportConfig.portStateSnapshotInterval), params.snapshotMegaBytesLivePortState, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots, true)
-  val forecastCrunchStateProps = Props(classOf[CrunchStateActor], Option(100), params.snapshotMegaBytesFcstPortState, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots, false)
+  val forecastMaxMillis: () => MillisSinceEpoch = () => now().addDays(params.forecastMaxDays).millisSinceEpoch
+  val liveCrunchStateProps = Props(classOf[CrunchStateActor], Option(airportConfig.portStateSnapshotInterval), params.snapshotMegaBytesLivePortState, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots, true, forecastMaxMillis)
+  val forecastCrunchStateProps = Props(classOf[CrunchStateActor], Option(100), params.snapshotMegaBytesFcstPortState, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots, false, forecastMaxMillis)
 
   lazy val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastBaseArrivalsActor], params.snapshotMegaBytesBaseArrivals, now, expireAfterMillis), name = "base-arrivals-actor")
   lazy val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastPortArrivalsActor], params.snapshotMegaBytesFcstArrivals, now, expireAfterMillis), name = "forecast-arrivals-actor")
@@ -358,7 +359,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       historicalSplitsProvider = historicalSplitsProvider,
       liveCrunchStateActor = liveCrunchStateActor,
       forecastCrunchStateActor = forecastCrunchStateActor,
-      maxDaysToCrunch = params.maxDaysToCrunch,
+      maxDaysToCrunch = params.forecastMaxDays,
       expireAfterMillis = expireAfterMillis,
       actors = Map(
         "shifts" -> shiftsActor,
