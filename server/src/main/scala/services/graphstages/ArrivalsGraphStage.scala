@@ -253,7 +253,6 @@ class ArrivalsGraphStage(name: String = "",
     }
 
     def mergeArrival(key: UniqueArrival): Option[Arrival] = {
-      // put merging code here.
       val maybeBestArrival: Option[Arrival] = (liveArrivals.get(key), liveBaseArrivals.get(key)) match {
         case (Some(liveArrival), None) => Option(liveArrival)
         case (Some(liveArrival), Some(baseLiveArrival)) => Option(LiveArrivalsUtil.mergePortFeedWithBase(liveArrival, baseLiveArrival))
