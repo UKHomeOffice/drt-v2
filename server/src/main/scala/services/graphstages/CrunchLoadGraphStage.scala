@@ -172,11 +172,10 @@ case class DeskRecMinute(terminalName: TerminalName,
 case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateMinutes {
   def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
     val crunchMinutesDiff = minutes.foldLeft(List[CrunchMinute]()) { case (soFar, dm) =>
-      val key = dm.key
-      val merged = mergeMinute(portState.crunchMinutes.get(key), dm, now)
-      portState.crunchMinutes += (key -> merged)
+      val merged = mergeMinute(portState.crunchMinuteByKey(dm.key), dm, now)
       merged :: soFar
     }
+    portState.addCrunchMinutes(crunchMinutesDiff)
     val newDiff = PortStateDiff(Seq(), Seq(), crunchMinutesDiff, Seq())
 
     newDiff

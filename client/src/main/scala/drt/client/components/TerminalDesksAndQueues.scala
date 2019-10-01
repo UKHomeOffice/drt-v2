@@ -18,7 +18,6 @@ import org.scalajs.dom.html.Div
 import org.scalajs.dom.raw.Node
 import org.scalajs.dom.{DOMList, Element, Event, NodeListOf}
 
-import scala.collection.immutable.SortedMap
 import scala.util.{Success, Try}
 
 

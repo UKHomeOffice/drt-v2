@@ -16,41 +16,37 @@ object PortStateMessageConversion {
     log.debug(s"Unwrapping flights messages")
     optionalTimeWindowEnd match {
       case None =>
-        sm.flightWithSplits.foreach(message => {
+        state.addFlights(sm.flightWithSplits.map(message => {
           val fws = flightWithSplitsFromMessage(message)
-          state.flights += (fws.unique -> fws)
-        })
-        sm.crunchMinutes.foreach {
+          (fws.unique, fws)
+        }))
+        state.addIndexedCrunchMinutes(sm.crunchMinutes.collect {
           case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 =>
             val cm = crunchMinuteFromMessage(message)
-            state.crunchMinutes += (cm.key -> cm)
-          case _ => Unit
-        }
-        sm.staffMinutes.foreach {
+            (cm.key, cm)
+        })
+        state.addIndexedStaffMinutes(sm.staffMinutes.collect {
           case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 =>
             val sm = staffMinuteFromMessage(message)
-            state.staffMinutes += (sm.key -> sm)
-          case _ => Unit
-        }
+            (sm.key, sm)
+        })
       case Some(timeWindowEnd) =>
         val windowEndMillis = timeWindowEnd.millisSinceEpoch
-        sm.flightWithSplits.collect {
+        state.addFlights(sm.flightWithSplits.collect {
           case message if message.flight.map(fm => fm.pcpTime.getOrElse(0L)).getOrElse(0L) <= windowEndMillis =>
             val fws = flightWithSplitsFromMessage(message)
-            state.flights += (fws.unique -> fws)
-        }
-        sm.crunchMinutes.foreach {
+            (fws.unique, fws)
+        })
+        state.addIndexedCrunchMinutes(sm.crunchMinutes.collect {
           case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 && message.getMinute <= windowEndMillis =>
             val cm = crunchMinuteFromMessage(message)
-            state.crunchMinutes += (cm.key -> cm)
-          case _ => Unit
-        }
-        sm.staffMinutes.foreach {
+            (cm.key, cm)
+        })
+        state.addIndexedStaffMinutes(sm.staffMinutes.collect {
           case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 && message.getMinute <= windowEndMillis =>
             val sm = staffMinuteFromMessage(message)
-            state.staffMinutes += (sm.key -> sm)
-          case _ => Unit
-        }
+            (sm.key, sm)
+        })
     }
 
     log.debug(s"Finished unwrapping messages")

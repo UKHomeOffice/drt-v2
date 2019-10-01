@@ -427,11 +427,10 @@ case class SimulationMinute(terminalName: TerminalName,
 case class SimulationMinutes(minutes: Seq[SimulationMinute]) extends PortStateMinutes {
   def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
     val minutesDiff = minutes.foldLeft(List[CrunchMinute]()) { case (soFar, dm) =>
-      val key = dm.key
-      val merged = mergeMinute(portState.crunchMinutes.get(key), dm, now)
-      portState.crunchMinutes += (key -> merged)
+      val merged = mergeMinute(portState.crunchMinuteByKey(dm.key), dm, now)
       merged :: soFar
     }
+    portState.addCrunchMinutes(minutesDiff)
     PortStateDiff(Seq(), Seq(), minutesDiff, Seq())
   }
 
