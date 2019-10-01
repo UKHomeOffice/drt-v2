@@ -30,11 +30,11 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor}
 
 
-class LiveCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long, acceptFullStateUpdates: Boolean)
-  extends CrunchStateActor(None, oneMegaByte, s"live-test-$name", queues, now, expireAfterMillis, false, acceptFullStateUpdates) {
-  override def applyDiff(cdm: CrunchDiffMessage): Unit = {
+class LiveCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long, acceptFullStateUpdates: Boolean, forecastMaxMillis: () => MillisSinceEpoch)
+  extends CrunchStateActor(None, oneMegaByte, s"live-test-$name", queues, now, expireAfterMillis, false, acceptFullStateUpdates, forecastMaxMillis) {
+  override def applyDiff(cdm: CrunchDiffMessage, maxMillis: MillisSinceEpoch): Unit = {
     log.info(s"calling parent updateState...")
-    super.applyDiff(cdm)
+    super.applyDiff(cdm, maxMillis)
 
     probe ! state.immutable
   }
@@ -47,11 +47,11 @@ class LiveCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[
   }
 }
 
-class ForecastCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long, acceptFullStateUpdates: Boolean)
-  extends CrunchStateActor(None, oneMegaByte, s"forecast-test-$name", queues, now, expireAfterMillis, false, acceptFullStateUpdates) {
-  override def applyDiff(cdm: CrunchDiffMessage): Unit = {
+class ForecastCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long, acceptFullStateUpdates: Boolean, forecastMaxMillis: () => MillisSinceEpoch)
+  extends CrunchStateActor(None, oneMegaByte, s"forecast-test-$name", queues, now, expireAfterMillis, false, acceptFullStateUpdates, forecastMaxMillis) {
+  override def applyDiff(cdm: CrunchDiffMessage, maxMillis: MillisSinceEpoch): Unit = {
     log.info(s"calling parent updateState...")
-    super.applyDiff(cdm)
+    super.applyDiff(cdm, maxMillis)
 
     probe ! state.immutable
   }
@@ -82,7 +82,6 @@ case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete
                                       forecastArrivalsTestProbe: TestProbe,
                                       liveArrivalsTestProbe: TestProbe,
                                       aggregatedArrivalsActor: ActorRef)
-
 
 
 object H2Tables extends {
@@ -151,9 +150,15 @@ class CrunchTestLike
     else MilliDate(SDate(a.Scheduled).millisSinceEpoch)
   }
 
-  def liveCrunchStateActor(name: String = "", testProbe: TestProbe, now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[LiveCrunchStateTestActor], name, airportConfig.queues, testProbe.ref, now, 2 * oneDayMillis, true), name = "crunch-live-state-actor" + UUID.randomUUID().toString)
+  def liveCrunchStateActor(name: String = "", testProbe: TestProbe, now: () => SDateLike): ActorRef = {
+    val forecastMaxMillis = () => now().addDays(100).millisSinceEpoch
+    system.actorOf(Props(classOf[LiveCrunchStateTestActor], name, airportConfig.queues, testProbe.ref, now, 2 * oneDayMillis, true, forecastMaxMillis), name = "crunch-live-state-actor" + UUID.randomUUID().toString)
+  }
 
-  def forecastCrunchStateActor(name: String = "", testProbe: TestProbe, now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[ForecastCrunchStateTestActor], name, airportConfig.queues, testProbe.ref, now, 2 * oneDayMillis, false), name = "crunch-forecast-state-actor")
+  def forecastCrunchStateActor(name: String = "", testProbe: TestProbe, now: () => SDateLike): ActorRef = {
+    val forecastMaxMillis = () => now().addDays(100).millisSinceEpoch
+    system.actorOf(Props(classOf[ForecastCrunchStateTestActor], name, airportConfig.queues, testProbe.ref, now, 2 * oneDayMillis, false, forecastMaxMillis), name = "crunch-forecast-state-actor")
+  }
 
   def testProbe(name: String) = TestProbe(name = name)
 

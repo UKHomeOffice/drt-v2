@@ -20,6 +20,18 @@ object PortStateMessageConversion {
           val fws = flightWithSplitsFromMessage(message)
           state.flights += (fws.unique -> fws)
         })
+        sm.crunchMinutes.foreach {
+          case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 =>
+            val cm = crunchMinuteFromMessage(message)
+            state.crunchMinutes += (cm.key -> cm)
+          case _ => Unit
+        }
+        sm.staffMinutes.foreach {
+          case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 =>
+            val sm = staffMinuteFromMessage(message)
+            state.staffMinutes += (sm.key -> sm)
+          case _ => Unit
+        }
       case Some(timeWindowEnd) =>
         val windowEndMillis = timeWindowEnd.millisSinceEpoch
         sm.flightWithSplits.collect {
@@ -27,22 +39,18 @@ object PortStateMessageConversion {
             val fws = flightWithSplitsFromMessage(message)
             state.flights += (fws.unique -> fws)
         }
-    }
-
-    log.debug(s"Unwrapping minutes messages")
-
-    sm.crunchMinutes.foreach {
-      case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 =>
-        val cm = crunchMinuteFromMessage(message)
-        state.crunchMinutes += (cm.key -> cm)
-      case _ => Unit
-    }
-
-    sm.staffMinutes.foreach {
-      case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 =>
-        val sm = staffMinuteFromMessage(message)
-        state.staffMinutes += (sm.key -> sm)
-      case _ => Unit
+        sm.crunchMinutes.foreach {
+          case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 && message.getMinute <= windowEndMillis =>
+            val cm = crunchMinuteFromMessage(message)
+            state.crunchMinutes += (cm.key -> cm)
+          case _ => Unit
+        }
+        sm.staffMinutes.foreach {
+          case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 && message.getMinute <= windowEndMillis =>
+            val sm = staffMinuteFromMessage(message)
+            state.staffMinutes += (sm.key -> sm)
+          case _ => Unit
+        }
     }
 
     log.debug(s"Finished unwrapping messages")
