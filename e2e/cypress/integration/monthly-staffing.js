@@ -66,7 +66,6 @@ describe('Monthly Staffing', function () {
     it("should display a warning when there are no staff entered for current period and hide it when there are.", function () {
       cy
         .asABorderForcePlanningOfficer()
-        .saveShifts()
         .visit('#terminal/T1/current/desksAndQueues/?timeRangeStart=0&timeRangeEnd=24')
         .get('.staff-alert')
         .contains("You have not entered any staff ")
