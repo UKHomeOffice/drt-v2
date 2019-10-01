@@ -17,6 +17,7 @@ import drt.http.ProdSendAndReceive
 import drt.server.feeds.api.S3ApiProvider
 import drt.server.feeds.bhx.{BHXClient, BHXFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
+import drt.server.feeds.cirium.CiriumFeed
 import drt.server.feeds.legacy.bhx.{BHXForecastFeedLegacy, BHXLiveFeedLegacy}
 import drt.server.feeds.lgw.{LGWFeed, LGWForecastFeed}
 import drt.server.feeds.lhr.live.LegacyLhrLiveContentProvider
@@ -444,7 +445,10 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   }
 
   def liveBaseArrivalsSource(str: String): Source[ArrivalsFeedResponse, Cancellable] = {
-    arrivalsNoOp
+    if (config.get[Boolean]("feature-flags.use-cirium-feed"))
+      CiriumFeed(config.get[String]("feeds.cirium.host")).tickingSource
+    else
+      arrivalsNoOp
   }
 
   def liveArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = {

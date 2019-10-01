@@ -6,7 +6,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
-import services.SDate
+import services.{SDate, graphstages}
 
 import scala.collection.mutable
 import scala.collection.immutable.SortedMap
@@ -92,7 +92,7 @@ class ArrivalsGraphStage(name: String = "",
         val start = SDate.now()
         pushIfAvailable(toPush, outArrivalsDiff)
 
-        List(inLiveArrivals, inForecastArrivals, inForecastBaseArrivals).foreach(inlet => if (!hasBeenPulled(inlet)) pull(inlet))
+        List(inLiveBaseArrivals, inLiveArrivals, inForecastArrivals, inForecastBaseArrivals).foreach(inlet => if (!hasBeenPulled(inlet)) pull(inlet))
         log.info(s"outArrivalsDiff Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
@@ -146,8 +146,8 @@ class ArrivalsGraphStage(name: String = "",
       diff
     })
 
-    def mergeUpdatesFromKeys(UniqueArrivals: Iterable[UniqueArrival]): Option[ArrivalsDiff] = {
-      val updatedArrivals = getUpdatesFromNonBaseArrivals(UniqueArrivals)
+    def mergeUpdatesFromKeys(uniqueArrivals: Iterable[UniqueArrival]): Option[ArrivalsDiff] = {
+      val updatedArrivals = getUpdatesFromNonBaseArrivals(uniqueArrivals)
 
       updatedArrivals.foreach {
         case (ak, updatedArrival) => merged += (ak -> updatedArrival)
@@ -253,9 +253,12 @@ class ArrivalsGraphStage(name: String = "",
     }
 
     def mergeArrival(key: UniqueArrival): Option[Arrival] = {
-      val maybeBestArrival = liveArrivals.get(key) match {
-        case Some(liveArrival) => Option(liveArrival)
-        case None => forecastBaseArrivals.get(key)
+      // put merging code here.
+      val maybeBestArrival: Option[Arrival] = (liveArrivals.get(key), liveBaseArrivals.get(key)) match {
+        case (Some(liveArrival), None) => Option(liveArrival)
+        case (Some(liveArrival), Some(baseLiveArrival)) => Option(LiveArrivalsUtil.mergePortFeedWithBase(liveArrival, baseLiveArrival))
+        case (None, Some(baseLiveArrival)) if forecastBaseArrivals.contains(key) => Option(baseLiveArrival)
+        case _ => forecastBaseArrivals.get(key)
       }
       maybeBestArrival.map(bestArrival => {
         val arrivalForFlightCode = forecastBaseArrivals.getOrElse(key, bestArrival)
