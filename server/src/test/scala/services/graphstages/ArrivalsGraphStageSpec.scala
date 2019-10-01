@@ -54,11 +54,10 @@ object TestableArrivalsGraphStage {
   }
 }
 
-
 class ArrivalsGraphStageSpec extends CrunchTestLike {
 
   "Given a live arrival and a base live arrival I should get a merged arrival" >> {
-    val probe = TestProbe("staff")
+    val probe = TestProbe("arrivals")
     val arrivalsGraphStage = new ArrivalsGraphStage("",
       mutable.SortedMap[UniqueArrival, Arrival](),
       mutable.SortedMap[UniqueArrival, Arrival](),
@@ -84,6 +83,58 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
         }
     }
 
+    success
+  }
+
+  "Given a base live arrival only we should not get anything back" >> {
+    val probe = TestProbe("arrivals")
+    val arrivalsGraphStage = new ArrivalsGraphStage("",
+      mutable.SortedMap[UniqueArrival, Arrival](),
+      mutable.SortedMap[UniqueArrival, Arrival](),
+      mutable.SortedMap[UniqueArrival, Arrival](),
+      mutable.SortedMap[UniqueArrival, Arrival](),
+      mutable.SortedMap[UniqueArrival, Arrival](),
+      a => MilliDate(a.Scheduled),
+      Set("T1"),
+      Crunch.oneDayMillis,
+      () => SDate(2019, 10, 1, 16, 0)
+    )
+    val (_, liveBaseSource, _, _) = TestableArrivalsGraphStage(probe, arrivalsGraphStage).run
+    val liveBaseActual = Option(SDate(2019, 10, 1, 16, 0).millisSinceEpoch)
+
+    liveBaseSource.offer(ArrivalsFeedSuccess(Flights(List(arrival(actual = liveBaseActual)))))
+
+    probe.fishForMessage(10 seconds) {
+      case a: ArrivalsDiff if a.toUpdate.isEmpty => true
+    }
+    success
+  }
+
+  "Given a base live arrival with an estimated time and a base forecast arrival we should get the arrival with estimated time on it" >> {
+    val probe = TestProbe("arrivals")
+    val arrivalsGraphStage = new ArrivalsGraphStage("",
+      mutable.SortedMap[UniqueArrival, Arrival](),
+      mutable.SortedMap[UniqueArrival, Arrival](),
+      mutable.SortedMap[UniqueArrival, Arrival](),
+      mutable.SortedMap[UniqueArrival, Arrival](),
+      mutable.SortedMap[UniqueArrival, Arrival](),
+      a => MilliDate(a.Scheduled),
+      Set("T1"),
+      Crunch.oneDayMillis,
+      () => SDate(2019, 10, 1, 16, 0)
+    )
+    val (_, liveBaseSource, _, forecastBaseSource) = TestableArrivalsGraphStage(probe, arrivalsGraphStage).run
+    val baseLiveEstimated = Option(SDate(2019, 10, 1, 16, 0).millisSinceEpoch)
+
+    liveBaseSource.offer(ArrivalsFeedSuccess(Flights(List(arrival(estimated = baseLiveEstimated)))))
+    forecastBaseSource.offer(ArrivalsFeedSuccess(Flights(List(arrival()))))
+
+    probe.fishForMessage(10 seconds) {
+      case ArrivalsDiff(toUpdate, _) =>
+        toUpdate.exists {
+          case (_, a) => a.Estimated == baseLiveEstimated
+        }
+    }
     success
   }
 
