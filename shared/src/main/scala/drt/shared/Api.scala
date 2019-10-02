@@ -632,8 +632,8 @@ object CrunchApi {
       val roundedEnd = end.roundToMinute()
 
       val fs = flightsRange(roundedStart, roundedEnd)
-      val cms = crunchMinuteRange(roundedStart.millisSinceEpoch, roundedEnd.millisSinceEpoch, portQueues)
-      val sms = staffMinuteRange(roundedStart.millisSinceEpoch, roundedEnd.millisSinceEpoch, portQueues.keys.toSeq)
+      val cms = crunchMinuteRange(roundedStart.millisSinceEpoch, roundedEnd.millisSinceEpoch)
+      val sms = staffMinuteRange(roundedStart.millisSinceEpoch, roundedEnd.millisSinceEpoch)
 
       PortState(flights = fs, crunchMinutes = cms, staffMinutes = sms)
     }
@@ -665,38 +665,19 @@ object CrunchApi {
     def flightsRangeWithTerminals(roundedStart: SDateLike, roundedEnd: SDateLike, portQueues: IMap[TerminalName, Seq[QueueName]]): ISortedMap[UniqueArrival, ApiFlightWithSplits] = flightsRange(roundedStart, roundedEnd)
       .filter { case (_, fws) => portQueues.contains(fws.apiFlight.Terminal) }
 
-    def crunchMinuteRange(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, portQueues: IMap[TerminalName, Seq[QueueName]]): ISortedMap[TQM, CrunchMinute] = crunchMinutes
+    def crunchMinuteRange(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch): ISortedMap[TQM, CrunchMinute] = crunchMinutes
       .range(TQM.atTime(startMillis), TQM.atTime(endMillis))
 
     def crunchMinuteRangeWithTerminals(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, portQueues: IMap[TerminalName, Seq[QueueName]]): ISortedMap[TQM, CrunchMinute] =
-      crunchMinuteRange(startMillis, endMillis, portQueues)
+      crunchMinuteRange(startMillis, endMillis)
         .filterKeys { tqm => portQueues.contains(tqm.terminalName) && portQueues(tqm.terminalName).contains(tqm.queueName) }
 
-    def staffMinuteRange(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, terminals: Seq[TerminalName]): ISortedMap[TM, StaffMinute] = staffMinutes
+    def staffMinuteRange(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch): ISortedMap[TM, StaffMinute] = staffMinutes
       .range(TM.atTime(startMillis), TM.atTime(endMillis))
 
     def staffMinuteRangeWithTerminals(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, terminals: Seq[TerminalName]): ISortedMap[TM, StaffMinute] =
-      staffMinuteRange(startMillis, endMillis, terminals)
+      staffMinuteRange(startMillis, endMillis)
         .filterKeys { tm => terminals.contains(tm.terminalName) }
-
-    def updates(sinceEpoch: MillisSinceEpoch): Option[PortStateUpdates] = {
-      val updatedFlights = flights.filter(_._2.apiFlight.PcpTime.isDefined).filter {
-        case (_, f) => f.lastUpdated.getOrElse(0L) > sinceEpoch
-      }.values.toSet
-      val updatedCrunch = crunchMinutes.filter {
-        case (_, cm) => cm.lastUpdated.getOrElse(0L) > sinceEpoch
-      }.values.toSet
-      val updatedStaff = staffMinutes.filter {
-        case (_, sm) => sm.lastUpdated.getOrElse(0L) > sinceEpoch
-      }.values.toSet
-      if (updatedFlights.nonEmpty || updatedCrunch.nonEmpty || updatedStaff.nonEmpty) {
-        val flightsLatest = if (updatedFlights.nonEmpty) updatedFlights.map(_.lastUpdated.getOrElse(0L)).max else 0L
-        val crunchLatest = if (updatedCrunch.nonEmpty) updatedCrunch.map(_.lastUpdated.getOrElse(0L)).max else 0L
-        val staffLatest = if (updatedStaff.nonEmpty) updatedStaff.map(_.lastUpdated.getOrElse(0L)).max else 0L
-        val latestUpdate = List(flightsLatest, crunchLatest, staffLatest).max
-        Option(PortStateUpdates(latestUpdate, updatedFlights, updatedCrunch, updatedStaff))
-      } else None
-    }
 
     def crunchSummary(start: SDateLike, periods: Long, periodSize: Long, terminal: TerminalName, queues: List[String]): ISortedMap[Long, IMap[String, CrunchMinute]] = {
       val startMillis = start.roundToMinute().millisSinceEpoch
@@ -796,8 +777,8 @@ object CrunchApi {
       val roundedEnd = end.roundToMinute()
 
       val fs = flightsRange(roundedStart, roundedEnd)
-      val cms = crunchMinuteRange(roundedStart, roundedEnd, portQueues)
-      val sms = staffMinuteRange(roundedStart, roundedEnd, portQueues.keys.toSeq)
+      val cms = crunchMinuteRange(roundedStart, roundedEnd)
+      val sms = staffMinuteRange(roundedStart, roundedEnd)
 
       PortState(flights = fs, crunchMinutes = cms, staffMinutes = sms)
     }
@@ -806,8 +787,8 @@ object CrunchApi {
       val roundedStart = start.roundToMinute()
       val roundedEnd = end.roundToMinute()
 
-      val fs = flightsRangeWithTerminals(roundedStart, roundedEnd, portQueues)
-      val cms = crunchMinuteRangeWithTerminals(roundedStart, roundedEnd, portQueues)
+      val fs = flightsRangeWithTerminals(roundedStart, roundedEnd, portQueues.keys.toSeq)
+      val cms = crunchMinuteRangeWithTerminals(roundedStart, roundedEnd, portQueues.keys.toSeq)
       val sms = staffMinuteRangeWithTerminals(roundedStart, roundedEnd, portQueues.keys.toSeq)
 
       PortState(flights = fs, crunchMinutes = cms, staffMinutes = sms)
@@ -815,8 +796,8 @@ object CrunchApi {
 
     def flightsRange(roundedStart: SDateLike, roundedEnd: SDateLike): ISortedMap[UniqueArrival, ApiFlightWithSplits] = flights.range(roundedStart, roundedEnd)
 
-    def flightsRangeWithTerminals(roundedStart: SDateLike, roundedEnd: SDateLike, portQueues: IMap[TerminalName, Seq[QueueName]]): ISortedMap[UniqueArrival, ApiFlightWithSplits] = flightsRange(roundedStart, roundedEnd)
-      .filter { case (_, fws) => portQueues.contains(fws.apiFlight.Terminal) }
+    def flightsRangeWithTerminals(roundedStart: SDateLike, roundedEnd: SDateLike, terminals: Seq[TerminalName]): ISortedMap[UniqueArrival, ApiFlightWithSplits] =
+      flights.rangeAtTerminals(roundedStart, roundedEnd, terminals)
 
     def purgeOlderThanDate(thresholdMillis: MillisSinceEpoch): Unit = {
       flights.purgeOlderThanDate(thresholdMillis)
@@ -830,17 +811,15 @@ object CrunchApi {
       staffMinutes.purgeRecentUpdates(thresholdMillis)
     }
 
-    def crunchMinuteRange(start: SDateLike, end: SDateLike, portQueues: IMap[TerminalName, Seq[QueueName]]): ISortedMap[TQM, CrunchMinute] = crunchMinutes.range(start, end)
+    def crunchMinuteRange(start: SDateLike, end: SDateLike): ISortedMap[TQM, CrunchMinute] = crunchMinutes.range(start, end)
 
-    def crunchMinuteRangeWithTerminals(start: SDateLike, end: SDateLike, portQueues: IMap[TerminalName, Seq[QueueName]]): ISortedMap[TQM, CrunchMinute] =
-      crunchMinuteRange(start, end, portQueues)
-        .filterKeys { tqm => portQueues.contains(tqm.terminalName) && portQueues(tqm.terminalName).contains(tqm.queueName) }
+    def crunchMinuteRangeWithTerminals(start: SDateLike, end: SDateLike, terminals: Seq[TerminalName]): ISortedMap[TQM, CrunchMinute] =
+      crunchMinutes.rangeAtTerminals(start, end, terminals)
 
-    private def staffMinuteRange(start: SDateLike, end: SDateLike, terminals: Seq[TerminalName]): ISortedMap[TM, StaffMinute] = staffMinutes.range(start, end)
+    def staffMinuteRange(start: SDateLike, end: SDateLike): ISortedMap[TM, StaffMinute] = staffMinutes.range(start, end)
 
-    private def staffMinuteRangeWithTerminals(start: SDateLike, end: SDateLike, terminals: Seq[TerminalName]): ISortedMap[TM, StaffMinute] =
-      staffMinuteRange(start, end, terminals)
-        .filterKeys { tm => terminals.contains(tm.terminalName) }
+    def staffMinuteRangeWithTerminals(start: SDateLike, end: SDateLike, terminals: Seq[TerminalName]): ISortedMap[TM, StaffMinute] =
+      staffMinutes.rangeAtTerminals(start, end, terminals)
 
     def updates(sinceEpoch: MillisSinceEpoch, start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortStateUpdates] = {
       val updatedFlights = flights.updatesSince(sinceEpoch).filter(fws => start <= fws.apiFlight.PcpTime.getOrElse(0L) && fws.apiFlight.PcpTime.getOrElse(0L) < end)
@@ -853,85 +832,6 @@ object CrunchApi {
         val allUpdates = PortStateUpdates(latestUpdate, updatedFlights, updatedCrunch, updatedStaff)
         Option(allUpdates)
       } else None
-    }
-
-    def crunchSummary(start: SDateLike, periods: Long, periodSize: Long, terminal: TerminalName, queues: List[String]): MSortedMap[Long, IMap[String, CrunchMinute]] = {
-      val startMillis = start.roundToMinute().millisSinceEpoch
-      val endMillis = startMillis + (periods * periodSize * 60000)
-      val periodMillis = periodSize * 60000
-      MSortedMap[Long, IMap[String, CrunchMinute]]() ++ (startMillis until endMillis by periodMillis)
-        .map { periodStart =>
-          val queueMinutes = queues
-            .map { queue =>
-              val slotMinutes = (periodStart until (periodStart + periodMillis) by 60000)
-                .map { minute => crunchMinutes.get.get(TQM(terminal, queue, minute)) }
-                .collect { case Some(cm) => cm }
-                .toList
-              (queue, crunchPeriodSummary(terminal, periodStart, queue, slotMinutes))
-            }
-            .toMap
-          (periodStart, queueMinutes)
-        }
-        .toMap
-    }
-
-    def staffSummary(start: SDateLike, periods: Long, periodSize: Long, terminal: TerminalName): MSortedMap[Long, StaffMinute] = {
-      val startMillis = start.roundToMinute().millisSinceEpoch
-      val endMillis = startMillis + (periods * periodSize * 60000)
-      val periodMillis = periodSize * 60000
-      MSortedMap[Long, StaffMinute]() ++ (startMillis until endMillis by periodMillis)
-        .map { periodStart =>
-          val periodEnd = periodStart + periodMillis
-          val slotMinutes = (periodStart until periodEnd by 60000)
-            .map { minute => staffMinutes.get.get(TM(terminal, minute)) }
-            .collect { case Some(cm) => cm }
-            .toList
-          val terminalMinutes = staffPeriodSummary(terminal, periodStart, slotMinutes)
-          (periodStart, terminalMinutes)
-        }
-        .toMap
-    }
-
-    def crunchPeriodSummary(terminal: String, periodStart: MillisSinceEpoch, queue: String, slotMinutes: List[CrunchMinute]): CrunchMinute = {
-      if (slotMinutes.nonEmpty) CrunchMinute(
-        terminalName = terminal,
-        queueName = queue,
-        minute = periodStart,
-        paxLoad = slotMinutes.map(_.paxLoad).sum,
-        workLoad = slotMinutes.map(_.workLoad).sum,
-        deskRec = slotMinutes.map(_.deskRec).max,
-        waitTime = slotMinutes.map(_.waitTime).max,
-        deployedDesks = if (slotMinutes.exists(cm => cm.deployedDesks.isDefined)) Option(slotMinutes.map(_.deployedDesks.getOrElse(0)).max) else None,
-        deployedWait = if (slotMinutes.exists(cm => cm.deployedWait.isDefined)) Option(slotMinutes.map(_.deployedWait.getOrElse(0)).max) else None,
-        actDesks = if (slotMinutes.exists(cm => cm.actDesks.isDefined)) Option(slotMinutes.map(_.actDesks.getOrElse(0)).max) else None,
-        actWait = if (slotMinutes.exists(cm => cm.actWait.isDefined)) Option(slotMinutes.map(_.actWait.getOrElse(0)).max) else None)
-      else CrunchMinute(
-        terminalName = terminal,
-        queueName = queue,
-        minute = periodStart,
-        paxLoad = 0,
-        workLoad = 0,
-        deskRec = 0,
-        waitTime = 0,
-        deployedDesks = None,
-        deployedWait = None,
-        actDesks = None,
-        actWait = None)
-    }
-
-    def staffPeriodSummary(terminal: String, periodStart: MillisSinceEpoch, slotMinutes: List[StaffMinute]): StaffMinute = {
-      if (slotMinutes.nonEmpty) StaffMinute(
-        terminalName = terminal,
-        minute = periodStart,
-        shifts = slotMinutes.map(_.shifts).min,
-        fixedPoints = slotMinutes.map(_.fixedPoints).max,
-        movements = slotMinutes.map(_.movements).max)
-      else StaffMinute(
-        terminalName = terminal,
-        minute = periodStart,
-        shifts = 0,
-        fixedPoints = 0,
-        movements = 0)
     }
 
     def applyFlightsWithSplitsDiff(flightRemovals: Seq[UniqueArrival], flightUpdates: Seq[ApiFlightWithSplits], nowMillis: MillisSinceEpoch): Unit = {

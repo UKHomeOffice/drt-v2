@@ -66,6 +66,12 @@ abstract class IndexedByTerminal[K <: WithTerminal[K], A <: WithLastUpdated] {
     items.foldLeft(ISortedMap[K, A]()) { case (acc, (_, tItems)) => acc ++ tItems.range(start, end) }
   }
 
+  def rangeAtTerminals(roundedStart: SDateLike, roundedEnd: SDateLike, terminals: Seq[TerminalName]): ISortedMap[K, A] = {
+    val start = atTime(roundedStart.millisSinceEpoch)
+    val end = atTime(roundedEnd.millisSinceEpoch)
+    items.filterKeys(terminals.contains(_)).foldLeft(ISortedMap[K, A]()) { case (acc, (_, tItems)) => acc ++ tItems.range(start, end) }
+  }
+
   def purgeOlderThanDate(thresholdMillis: MillisSinceEpoch): Unit = items.foreach {
     case (_, tItems) => purgeExpired(tItems, atTime, thresholdMillis)
   }
