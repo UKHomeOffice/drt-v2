@@ -6,15 +6,12 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, _}
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.SplitRatiosNs.SplitSources
-import jdk.nashorn.internal.ir.Terminal
 import ujson.Js.Value
 import upickle.Js
-import upickle.default.{macroRW, readwriter, ReadWriter => RW}
-import upickle.default._
+import upickle.default.{macroRW, readwriter, ReadWriter => RW, _}
 
-import scala.collection.{Map, SortedMap, mutable}
 import scala.collection.immutable.{Map => IMap, SortedMap => ISortedMap}
-import scala.collection.mutable.{Map => MMap, SortedMap => MSortedMap}
+import scala.collection.{Map, SortedMap}
 import scala.concurrent.Future
 import scala.util.matching.Regex
 
