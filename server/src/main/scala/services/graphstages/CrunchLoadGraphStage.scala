@@ -143,18 +143,18 @@ class CrunchLoadGraphStage(name: String = "",
 
     def pullLoads(): Unit = {
       if (!hasBeenPulled(inLoads)) {
-        log.info(s"Pulling inFlightsWithSplits")
+        log.debug(s"Pulling inFlightsWithSplits")
         pull(inLoads)
       }
     }
 
     def pushStateIfReady(): Unit = {
-      if (deskRecMinutesToPush.isEmpty) log.info(s"We have no crunch minutes. Nothing to push")
+      if (deskRecMinutesToPush.isEmpty) log.debug(s"We have no crunch minutes. Nothing to push")
       else if (isAvailable(outDeskRecMinutes)) {
         log.info(s"Pushing ${deskRecMinutesToPush.size} crunch minutes")
         push(outDeskRecMinutes, DeskRecMinutes(deskRecMinutesToPush.values.toSeq))
         deskRecMinutesToPush = Map()
-      } else log.info(s"outDeskRecMinutes not available to push")
+      } else log.debug(s"outDeskRecMinutes not available to push")
     }
   }
 }
@@ -172,10 +172,10 @@ case class DeskRecMinute(terminalName: TerminalName,
 case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateMinutes {
   def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
     val crunchMinutesDiff = minutes.foldLeft(List[CrunchMinute]()) { case (soFar, dm) =>
-      val merged = mergeMinute(portState.crunchMinuteByKey(dm.key), dm, now)
+      val merged = mergeMinute(portState.crunchMinutes.getByKey(dm.key), dm, now)
       merged :: soFar
     }
-    portState.addCrunchMinutes(crunchMinutesDiff)
+    portState.crunchMinutes +++= crunchMinutesDiff
     val newDiff = PortStateDiff(Seq(), Seq(), crunchMinutesDiff, Seq())
 
     newDiff

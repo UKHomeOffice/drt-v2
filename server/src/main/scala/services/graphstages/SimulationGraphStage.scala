@@ -361,22 +361,22 @@ class SimulationGraphStage(name: String = "",
 
     def pullAll(): Unit = {
       if (!hasBeenPulled(inLoads)) {
-        log.info(s"Pulling inFlightsWithSplits")
+        log.debug(s"Pulling inFlightsWithSplits")
         pull(inLoads)
       }
       if (!hasBeenPulled(inStaffMinutes)) {
-        log.info(s"Pulling inStaffMinutes")
+        log.debug(s"Pulling inStaffMinutes")
         pull(inStaffMinutes)
       }
     }
 
     def pushStateIfReady(): Unit = {
-      if (simulationMinutesToPush.isEmpty) log.info(s"We have no simulation minutes. Nothing to push")
+      if (simulationMinutesToPush.isEmpty) log.debug(s"We have no simulation minutes. Nothing to push")
       else if (isAvailable(outSimulationMinutes)) {
         log.info(s"Pushing ${simulationMinutesToPush.size} simulation minutes")
         push(outSimulationMinutes, SimulationMinutes(simulationMinutesToPush.values.toSeq))
         simulationMinutesToPush.clear()
-      } else log.info(s"outSimulationMinutes not available to push")
+      } else log.debug(s"outSimulationMinutes not available to push")
     }
 
     def availableStaffForPeriod(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalNames: Seq[TerminalName]): Map[TerminalName, Map[MillisSinceEpoch, Int]] =
@@ -427,10 +427,10 @@ case class SimulationMinute(terminalName: TerminalName,
 case class SimulationMinutes(minutes: Seq[SimulationMinute]) extends PortStateMinutes {
   def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
     val minutesDiff = minutes.foldLeft(List[CrunchMinute]()) { case (soFar, dm) =>
-      val merged = mergeMinute(portState.crunchMinuteByKey(dm.key), dm, now)
+      val merged = mergeMinute(portState.crunchMinutes.getByKey(dm.key), dm, now)
       merged :: soFar
     }
-    portState.addCrunchMinutes(minutesDiff)
+    portState.crunchMinutes +++= minutesDiff
     PortStateDiff(Seq(), Seq(), minutesDiff, Seq())
   }
 

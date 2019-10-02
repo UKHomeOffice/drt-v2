@@ -12,6 +12,7 @@ import services.graphstages.Crunch
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
+import scala.language.postfixOps
 
 class BatchStage(now: () => SDateLike,
                  isDueLookup: (ArrivalKey, MillisSinceEpoch, SDateLike) => Boolean,
@@ -63,7 +64,6 @@ class BatchStage(now: () => SDateLike,
 
     setHandler(outArrivals, new OutHandler {
       override def onPull(): Unit = {
-        log.info(s"outArrivals pulled ")
         prioritiseAndPush()
 
         pullIfAvailable()
@@ -72,7 +72,6 @@ class BatchStage(now: () => SDateLike,
 
     setHandler(outRegisteredArrivals, new OutHandler {
       override def onPull(): Unit = {
-        log.info(s"outRegisteredArrivals pulled ")
         pushRegisteredArrivalsUpdates()
 
         pullIfAvailable()
@@ -80,10 +79,7 @@ class BatchStage(now: () => SDateLike,
     })
 
     private def pullIfAvailable(): Unit = {
-      if (!hasBeenPulled(inArrivals)) {
-        log.info(s"Pulling inArrivals")
-        pull(inArrivals)
-      }
+      if (!hasBeenPulled(inArrivals)) pull(inArrivals)
     }
 
     private def prioritiseAndPush(): Unit = {
@@ -93,13 +89,11 @@ class BatchStage(now: () => SDateLike,
       val lookupBatch = updatePrioritisedAndSubscribers()
 
       if (lookupBatch.nonEmpty) {
-        log.info(s"Pushing ${lookupBatch.size} lookup requests. ${lookupQueue.size} lookup requests remaining.")
         push(outArrivals, lookupBatch.toList)
       } else {
-        log.info(s"Nothing to push right now. Sending empty list")
         object PushAfterDelay extends Runnable {
           override def run(): Unit = if (isAvailable(outArrivals)) {
-            log.info(s"Pushed after delay of ${sleepMillisOnEmptyPush}ms")
+            log.info(s"Pushing empty list after delay of ${sleepMillisOnEmptyPush}ms")
             push(outArrivals, List())
           }
         }

@@ -41,7 +41,7 @@ object ManifestsGraph {
             .mapAsync(1) { a =>
               manifestLookup.maybeBestAvailableManifest(portCode, a.origin, a.voyageNumber, SDate(a.scheduled))
             }
-            .map(_._2)
+            .collect { case (_, bam) if bam.isDefined => bam }
             .conflateWithSeed(List[Option[BestAvailableManifest]](_)) {
               case (acc, next) => next :: acc
             }

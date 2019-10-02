@@ -53,8 +53,8 @@ class BatchLoadsByCrunchPeriodGraphStage(now: () => SDateLike,
 
     def pushIfAvailable(): Unit = {
       loadMinutesQueue match {
-        case emptyLoads if emptyLoads.isEmpty => log.info(s"Queue is empty. Nothing to push")
-        case _ if !isAvailable(outLoads) => log.info(s"outLoads not available to push")
+        case emptyLoads if emptyLoads.isEmpty => log.debug(s"Queue is empty. Nothing to push")
+        case _ if !isAvailable(outLoads) => log.debug(s"outLoads not available to push")
         case loads =>
           val (millis, loadMinutes) = loads.head
           val terminalNames = loadMinutes.loadMinutes.groupBy(_._1.terminalName).keys.mkString(", ")

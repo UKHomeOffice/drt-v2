@@ -55,7 +55,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
 
   override def postRecoveryComplete(): Unit = {
     restorer.finish()
-    state.addFlights(restorer.items)
+    state.flights ++= restorer.items
     restorer.clear()
 
     state.purgeOlderThanDate(now().millisSinceEpoch - expireAfterMillis)
@@ -64,9 +64,9 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
   }
 
   def logRecoveryState(): Unit = {
-    logDebug(s"Recovery: state contains ${state.flightsCount} flights " +
-      s", ${state.crunchMinutesCount} crunch minutes " +
-      s", ${state.staffMinutesCount} staff minutes ")
+    logDebug(s"Recovery: state contains ${state.flights.count} flights " +
+      s", ${state.crunchMinutes.count} crunch minutes " +
+      s", ${state.staffMinutes.count} staff minutes ")
   }
 
   override def stateToMessage: GeneratedMessage = portStateToSnapshotMessage(state)
@@ -92,7 +92,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
       persistAndMaybeSnapshot(diffMsg)
 
     case GetState =>
-      logDebug(s"Received GetState request. Replying with PortState containing ${state.crunchMinutesCount} crunch minutes")
+      logDebug(s"Received GetState request. Replying with PortState containing ${state.crunchMinutes.count} crunch minutes")
       sender() ! Option(state.immutable)
 
     case GetPortState(start, end) =>
@@ -104,7 +104,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
       sender() ! stateForPeriodForTerminal(start, end, terminalName)
 
     case GetUpdatesSince(millis, start, end) =>
-      val updates = state.window(SDate(start), SDate(end), portQueues).updates(millis)
+      val updates: Option[PortStateUpdates] = state.updates(millis, start, end)
       sender() ! updates
 
     case SaveSnapshotSuccess(SnapshotMetadata(_, seqNr, _)) =>
@@ -125,9 +125,9 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
   }
 
   def updateFromFullState(ps: PortState): Unit = {
-    state.addFlights(ps.flights.map { case (_, fws) => (fws.apiFlight.unique, fws) })
-    state.addIndexedCrunchMinutes(ps.crunchMinutes)
-    state.addIndexedStaffMinutes(ps.staffMinutes)
+    state.flights ++= ps.flights.map { case (_, fws) => (fws.apiFlight.unique, fws) }
+    state.crunchMinutes ++= ps.crunchMinutes
+    state.staffMinutes ++= ps.staffMinutes
   }
 
   def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = Option(state.window(SDate(start), SDate(end), portQueues))
@@ -160,6 +160,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
     state.applyStaffDiff(staffMinuteUpdates, nowMillis)
 
     state.purgeOlderThanDate(now().millisSinceEpoch - expireAfterMillis)
+    state.purgeRecentUpdates(now().millisSinceEpoch - 60 * 60 * 1000)
   }
 
   def crunchDiffFromMessage(diffMessage: CrunchDiffMessage, maxMillis: MillisSinceEpoch): (Seq[UniqueArrival], Seq[ApiFlightWithSplits], Seq[CrunchMinute], Seq[StaffMinute]) = (
