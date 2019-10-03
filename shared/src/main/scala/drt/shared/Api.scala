@@ -8,7 +8,7 @@ import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.SplitRatiosNs.SplitSources
 import ujson.Js.Value
 import upickle.Js
-import upickle.default.{macroRW, readwriter, ReadWriter => RW, _}
+import upickle.default.{macroRW, readwriter, ReadWriter => RW}
 
 import scala.collection.immutable.{Map => IMap, SortedMap => ISortedMap}
 import scala.collection.{Map, SortedMap}
@@ -859,7 +859,7 @@ object CrunchApi {
   }
 
   object PortState {
-    implicit val rw: ReadWriter[PortState] =
+    implicit val rw: RW[PortState] =
       readwriter[(IMap[UniqueArrival, ApiFlightWithSplits], IMap[TQM, CrunchMinute], IMap[TM, StaffMinute])]
         .bimap[PortState](ps => portStateToTuple(ps), t => tupleToPortState(t))
 
