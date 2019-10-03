@@ -139,7 +139,7 @@ class PortStateGraphStage(name: String = "", optionalInitialPortState: Option[Po
           val fullPortStateForLiveResync = if (dateNow != lastPushDate) {
             log.info(s"Sending a full port state for live data to resync after crossing midnight")
             lastPushDate = dateNow
-            Option(portState.window(livePortStateStart, livePortStateEnd, airportConfig.queues))
+            Option(portState.window(livePortStateStart, livePortStateEnd))
           } else None
 
           val portStateWithDiff = PortStateWithDiff(fullPortStateForLiveResync, portStateDiff, diffMessage(portStateDiff))

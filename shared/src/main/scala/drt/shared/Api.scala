@@ -769,7 +769,7 @@ object CrunchApi {
     val crunchMinutes = new IndexedCrunchMinutes
     val staffMinutes = new IndexedStaffMinutes
 
-    def window(start: SDateLike, end: SDateLike, portQueues: IMap[TerminalName, Seq[QueueName]]): PortState = {
+    def window(start: SDateLike, end: SDateLike): PortState = {
       val roundedStart = start.roundToMinute()
       val roundedEnd = end.roundToMinute()
 
@@ -780,13 +780,13 @@ object CrunchApi {
       PortState(flights = fs, crunchMinutes = cms, staffMinutes = sms)
     }
 
-    def windowWithTerminalFilter(start: SDateLike, end: SDateLike, portQueues: IMap[TerminalName, Seq[QueueName]]): PortState = {
+    def windowWithTerminalFilter(start: SDateLike, end: SDateLike, terminals: Seq[TerminalName]): PortState = {
       val roundedStart = start.roundToMinute()
       val roundedEnd = end.roundToMinute()
 
-      val fs = flightsRangeWithTerminals(roundedStart, roundedEnd, portQueues.keys.toSeq)
-      val cms = crunchMinuteRangeWithTerminals(roundedStart, roundedEnd, portQueues.keys.toSeq)
-      val sms = staffMinuteRangeWithTerminals(roundedStart, roundedEnd, portQueues.keys.toSeq)
+      val fs = flightsRangeWithTerminals(roundedStart, roundedEnd, terminals)
+      val cms = crunchMinuteRangeWithTerminals(roundedStart, roundedEnd, terminals)
+      val sms = staffMinuteRangeWithTerminals(roundedStart, roundedEnd, terminals)
 
       PortState(flights = fs, crunchMinutes = cms, staffMinutes = sms)
     }
