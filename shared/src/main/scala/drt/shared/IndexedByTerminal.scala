@@ -83,14 +83,18 @@ abstract class IndexedByTerminalWithUpdatesCache[K <: WithTerminal[K], A <: With
   }
 
   private def updateRecentUpdates(toAdd: SortedMap[K, A]): Unit = {
-    toAdd.filter(_._2.lastUpdated.getOrElse(0L) > lastUpdated).groupBy(_._2.lastUpdated.getOrElse(0L)).foreach {
-      case (lu, itemsUpdated) =>
-        if (recentUpdates.contains(lu)) {
-          recentUpdates(lu) ++= itemsUpdated
-        } else {
-          recentUpdates(lu) = ListBuffer[(K, A)]() ++= itemsUpdated
-        }
-    }
+    toAdd
+      .groupBy {
+        case (_, item) => item.lastUpdated.getOrElse(0L)
+      }
+      .foreach {
+        case (lu, itemsUpdated) =>
+          if (recentUpdates.contains(lu)) {
+            recentUpdates(lu) ++= itemsUpdated
+          } else {
+            recentUpdates(lu) = ListBuffer[(K, A)]() ++= itemsUpdated
+          }
+      }
     val keys = recentUpdates.keys
     lastUpdated = if (keys.nonEmpty) keys.max else 0L
   }
