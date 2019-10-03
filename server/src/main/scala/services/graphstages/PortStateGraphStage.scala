@@ -56,7 +56,7 @@ class PortStateGraphStage(name: String = "", optionalInitialPortState: Option[Po
 
     override def preStart(): Unit = {
       log.info(s"Received initial port state")
-      optionalInitialPortState.map { ps =>
+      optionalInitialPortState.foreach { ps =>
         portState.flights ++= ps.flights
         portState.crunchMinutes ++= ps.crunchMinutes
         portState.staffMinutes ++= ps.staffMinutes
@@ -75,6 +75,7 @@ class PortStateGraphStage(name: String = "", optionalInitialPortState: Option[Po
               val expireThreshold = now().addMillis(-1 * expireAfterMillis.toInt).millisSinceEpoch
               val diff = incoming.applyTo(portState, startTime)
               portState.purgeOlderThanDate(expireThreshold)
+              portState.purgeRecentUpdates(now().millisSinceEpoch)
               val elapsedSeconds = (now().millisSinceEpoch - startTime).toDouble / 1000
               log.info(f"Finished processing $inlet data in $elapsedSeconds%.2f seconds")
               diff
@@ -119,18 +120,18 @@ class PortStateGraphStage(name: String = "", optionalInitialPortState: Option[Po
 
     def pullAllInlets(): Unit = {
       shape.inlets.foreach(i => if (!hasBeenPulled(i)) {
-        log.info(s"Pulling $i")
+        log.debug(s"Pulling $i")
         pull(i)
       })
     }
 
     def pushIfAppropriate(): Unit = {
       maybePortStateDiff match {
-        case None => log.info(s"No port state diff to push yet")
+        case None => log.debug(s"No port state diff to push yet")
         case Some(_) if !isAvailable(outPortState) =>
-          log.info(s"outPortState not available for pushing")
+          log.debug(s"outPortState not available for pushing")
         case Some(portStateDiff) if portStateDiff.isEmpty =>
-          log.info(s"Empty PortStateDiff. Nothing to push")
+          log.debug(s"Empty PortStateDiff. Nothing to push")
         case Some(portStateDiff) =>
           log.info(s"Pushing port state with diff")
           val dateNow = now().toISODateOnly
@@ -138,7 +139,7 @@ class PortStateGraphStage(name: String = "", optionalInitialPortState: Option[Po
           val fullPortStateForLiveResync = if (dateNow != lastPushDate) {
             log.info(s"Sending a full port state for live data to resync after crossing midnight")
             lastPushDate = dateNow
-            Option(portState.window(livePortStateStart, livePortStateEnd, airportConfig.queues))
+            Option(portState.window(livePortStateStart, livePortStateEnd))
           } else None
 
           val portStateWithDiff = PortStateWithDiff(fullPortStateForLiveResync, portStateDiff, diffMessage(portStateDiff))

@@ -99,13 +99,13 @@ class SplitsPredictorStage(splitsPredictorFactory: SplitsPredictorFactoryLike) e
 
       def tryPushing(): Unit = {
         predictionsToPush match {
-          case None => log.info("No arrivals to push")
+          case None => log.debug("No arrivals to push")
           case Some(toPush) if isAvailable(out) =>
             log.info(s"Pushing ${toPush.length} arrival predictions")
             push(out, toPush)
             predictionsToPush = None
           case Some(arrivalsToPush) =>
-            log.info(s"Can't push ${arrivalsToPush.length} arrivals with prediction. outlet not available")
+            log.debug(s"Can't push ${arrivalsToPush.length} arrivals with prediction. outlet not available")
         }
       }
 

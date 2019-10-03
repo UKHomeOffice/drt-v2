@@ -117,7 +117,6 @@ object BigSummaryBoxTests extends TestSuite {
               ApiFlightWithSplits(apiFlight1, Set()),
               ApiFlightWithSplits(apiFlight2, Set()),
               ApiFlightWithSplits(notOurTerminal, Set()))
-            val rootModel = RootModel(portStatePot = Ready(PortState(flights, List(), List())))
 
             "AND a current time of 2017-05-01T12:00" - {
               val now = SDate("2017-05-01T12:00Z")
@@ -136,8 +135,6 @@ object BigSummaryBoxTests extends TestSuite {
         "Given 3 flights " - {
           "And they have splits" - {
             "Then we can aggregate the splits for a graph" - {
-              val ourTerminal = "T1"
-
               import ApiFlightGenerator._
 
               def mkMillis(t: String) = SDate(t).millisSinceEpoch

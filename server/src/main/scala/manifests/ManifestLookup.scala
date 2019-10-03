@@ -59,10 +59,8 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
   }
 
   def manifestSearch(uniqueArrivalKey: UniqueArrivalKey, queries: List[(String, QueryFunction)]): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] = queries match {
-    case Nil =>
-      log.warn(s"No manifests found for $uniqueArrivalKey")
-      Future((uniqueArrivalKey, None))
-    case (label, nextQuery) :: tail =>
+    case Nil => Future((uniqueArrivalKey, None))
+    case (_, nextQuery) :: tail =>
       paxInfoTable.db
         .run(nextQuery(uniqueArrivalKey))
         .map {

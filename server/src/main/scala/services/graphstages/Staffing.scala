@@ -2,11 +2,6 @@ package services.graphstages
 
 import java.util.UUID
 
-import actors.pointInTime.{FixedPointsReadActor, ShiftsReadActor, StaffMovementsReadActor}
-import actors.{GetState, StaffMovements}
-import akka.actor.{ActorContext, ActorRef, PoisonPill, Props}
-import akka.pattern.AskableActorRef
-import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
@@ -16,9 +11,6 @@ import services.graphstages.Crunch.{desksForHourOfDayInUKLocalTime, europeLondon
 
 import scala.collection.immutable.{NumericRange, SortedMap}
 import scala.collection.mutable
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
-import scala.language.postfixOps
 import scala.util.Try
 
 
@@ -86,41 +78,6 @@ object Staffing {
         (staffMinute.key, staffMinute)
       }
   }
-
-  def reconstructStaffMinutes(pointInTime: SDateLike,
-                              expireAfterMillis: Long,
-                              context: ActorContext,
-                              fl: mutable.Map[UniqueArrival, ApiFlightWithSplits],
-                              cm: mutable.SortedMap[TQM, CrunchApi.CrunchMinute]): PortStateMutable = {
-    val uniqueSuffix = pointInTime.toISOString + UUID.randomUUID.toString
-    val shiftsActor: ActorRef = context.actorOf(Props(classOf[ShiftsReadActor], pointInTime, () => SDate(expireAfterMillis)), name = s"ShiftsReadActor-$uniqueSuffix")
-    val askableShiftsActor: AskableActorRef = shiftsActor
-    val fixedPointsActor: ActorRef = context.actorOf(Props(classOf[FixedPointsReadActor], pointInTime), name = s"FixedPointsReadActor-$uniqueSuffix")
-    val askableFixedPointsActor: AskableActorRef = fixedPointsActor
-    val staffMovementsActor: ActorRef = context.actorOf(Props(classOf[StaffMovementsReadActor], pointInTime, expireAfterMillis), name = s"StaffMovementsReadActor-$uniqueSuffix")
-    val askableStaffMovementsActor: AskableActorRef = staffMovementsActor
-
-    import scala.concurrent.ExecutionContext.Implicits.global
-    implicit val timeout: Timeout = new Timeout(30 seconds)
-
-    val shiftsFuture: Future[ShiftAssignments] = askableShiftsActor.ask(GetState).map { case fp: ShiftAssignments => fp }.recoverWith { case _ => Future(ShiftAssignments.empty) }
-    val fixedPointsFuture: Future[FixedPointAssignments] = askableFixedPointsActor.ask(GetState).map { case fp: FixedPointAssignments => fp }.recoverWith { case _ => Future(FixedPointAssignments.empty) }
-    val movementsFuture: Future[Seq[StaffMovement]] = askableStaffMovementsActor.ask(GetState).map { case StaffMovements(sm) => sm }.recoverWith { case _ => Future(Seq()) }
-
-    val shifts = Await.result(shiftsFuture, 1 minute)
-    val fixedPoints = Await.result(fixedPointsFuture, 1 minute)
-    val movements = Await.result(movementsFuture, 1 minute)
-
-    shiftsActor ! PoisonPill
-    fixedPointsActor ! PoisonPill
-    staffMovementsActor ! PoisonPill
-
-    val staffSources = Staffing.staffAvailableByTerminalAndQueue(0L, shifts, fixedPoints, Option(movements))
-    val staffMinutes = Staffing.staffMinutesForCrunchMinutes(cm, staffSources)
-
-    new PortStateMutable(mutable.SortedMap[UniqueArrival, ApiFlightWithSplits]() ++ fl.map { case (_, fws) => (fws.unique, fws) }, cm, mutable.SortedMap[TM, StaffMinute]() ++ staffMinutes)
-  }
-
 }
 
 object StaffDeploymentCalculator {

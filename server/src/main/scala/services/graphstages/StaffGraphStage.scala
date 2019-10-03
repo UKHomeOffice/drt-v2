@@ -232,7 +232,7 @@ class StaffGraphStage(name: String = "",
           push(outStaffMinutes, StaffMinutes(Map[TM, StaffMinute]() ++ staffMinuteUpdates))
           staffMinuteUpdates.clear()
         }
-      } else log.info(s"outStaffMinutes not available to push")
+      } else log.debug(s"outStaffMinutes not available to push")
     }
   }
 

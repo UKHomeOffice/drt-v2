@@ -53,7 +53,6 @@ class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLook
       manifestsResponseQueue = Option(subscriber)
 
     case ManifestTries(bestManifests) =>
-      log.info(s"Received ${bestManifests.length} BestAvailableManifest tries")
       handleManifestTries(bestManifests)
       handleManifestBuffer()
 

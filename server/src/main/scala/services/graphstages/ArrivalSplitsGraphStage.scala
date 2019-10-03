@@ -157,7 +157,7 @@ class ArrivalSplitsGraphStage(name: String = "",
 
     def pullAll(): Unit = {
       List(inManifestsLive, inManifestsHistoric, inArrivalsDiff).foreach(in => if (!hasBeenPulled(in)) {
-        log.info(s"Pulling ${in.toString}")
+        log.debug(s"Pulling ${in.toString}")
         pull(in)
       })
     }
@@ -241,8 +241,8 @@ class ArrivalSplitsGraphStage(name: String = "",
           push(outArrivalsWithSplits, FlightsWithSplits(arrivalsWithSplitsDiff.values.toSeq, arrivalsToRemove.toSeq))
           arrivalsWithSplitsDiff = Map()
           arrivalsToRemove = Set()
-        } else log.info(s"No updated arrivals with splits to push")
-      } else log.info(s"outArrivalsWithSplits not available to push")
+        } else log.debug(s"No updated arrivals with splits to push")
+      } else log.debug(s"outArrivalsWithSplits not available to push")
     }
 
     def isNewManifestForFlight(flightWithSplits: ApiFlightWithSplits, newSplits: Splits): Boolean = !flightWithSplits.splits.contains(newSplits)
@@ -257,7 +257,7 @@ class ArrivalSplitsGraphStage(name: String = "",
     }
 
     def updateCodeSharesFromDiff(arrivalsDiff: ArrivalsDiff): Unit = arrivalsDiff.toUpdate
-      .foreach { case (arrivalKey, arrival) =>
+      .foreach { case (_, arrival) =>
         val csKey = CodeShareKey(arrival.Scheduled, arrival.Terminal, arrival.Origin, Set())
         val existingEntry: Set[ArrivalKey] = codeShares.getOrElse(csKey, Set())
         val updatedArrivalKeys = existingEntry + ArrivalKey(arrival)

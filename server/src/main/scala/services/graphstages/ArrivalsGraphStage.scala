@@ -222,7 +222,7 @@ class ArrivalsGraphStage(name: String = "",
             push(outArrivalsDiff, diff)
             toPush = None
         }
-      } else log.info(s"outMerged not available to push")
+      } else log.debug(s"outMerged not available to push")
     }
 
     def getUpdatesFromBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival] = {

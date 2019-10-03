@@ -6,14 +6,13 @@ import akka.actor._
 import akka.persistence._
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi._
-import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState._
 import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 import services.SDate
-import services.graphstages.PortStateWithDiff
+import services.graphstages.{Crunch, PortStateWithDiff}
 
 
 class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
@@ -65,16 +64,9 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
   }
 
   def logRecoveryState(): Unit = {
-    val apiCount = state.flights.count {
-      case (_, f) => f.splits.exists {
-        case Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _) => true
-        case _ => false
-      }
-    }
-    logDebug(s"Recovery: state contains ${state.flights.size} flights " +
-      s"with $apiCount Api splits " +
-      s", ${state.crunchMinutes.size} crunch minutes " +
-      s", ${state.staffMinutes.size} staff minutes ")
+    logDebug(s"Recovery: state contains ${state.flights.count} flights " +
+      s", ${state.crunchMinutes.count} crunch minutes " +
+      s", ${state.staffMinutes.count} staff minutes ")
   }
 
   override def stateToMessage: GeneratedMessage = portStateToSnapshotMessage(state)
@@ -100,7 +92,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
       persistAndMaybeSnapshot(diffMsg)
 
     case GetState =>
-      logDebug(s"Received GetState request. Replying with PortState containing ${state.crunchMinutes.size} crunch minutes")
+      logDebug(s"Received GetState request. Replying with PortState containing ${state.crunchMinutes.count} crunch minutes")
       sender() ! Option(state.immutable)
 
     case GetPortState(start, end) =>
@@ -112,7 +104,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
       sender() ! stateForPeriodForTerminal(start, end, terminalName)
 
     case GetUpdatesSince(millis, start, end) =>
-      val updates = state.window(SDate(start), SDate(end), portQueues).updates(millis)
+      val updates: Option[PortStateUpdates] = state.updates(millis, start, end)
       sender() ! updates
 
     case SaveSnapshotSuccess(SnapshotMetadata(_, seqNr, _)) =>
@@ -138,9 +130,9 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
     state.staffMinutes ++= ps.staffMinutes
   }
 
-  def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = Option(state.window(SDate(start), SDate(end), portQueues))
+  def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = Option(state.window(SDate(start), SDate(end)))
 
-  def stateForPeriodForTerminal(start: MillisSinceEpoch, end: MillisSinceEpoch, terminalName: TerminalName): Option[PortState] = Option(state.windowWithTerminalFilter(SDate(start), SDate(end), portQueues.filterKeys(_ == terminalName)))
+  def stateForPeriodForTerminal(start: MillisSinceEpoch, end: MillisSinceEpoch, terminalName: TerminalName): Option[PortState] = Option(state.windowWithTerminalFilter(SDate(start), SDate(end), portQueues.keys.filter(_ == terminalName).toSeq))
 
   def setStateFromSnapshot(snapshot: CrunchStateSnapshotMessage, timeWindowEnd: Option[SDateLike] = None): Unit = {
     snapshotMessageToState(snapshot, timeWindowEnd, state)
@@ -167,7 +159,8 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
     state.applyCrunchDiff(crunchMinuteUpdates, nowMillis)
     state.applyStaffDiff(staffMinuteUpdates, nowMillis)
 
-    state.purgeOlderThanDate(now().millisSinceEpoch - expireAfterMillis)
+    state.purgeOlderThanDate(nowMillis - expireAfterMillis)
+    state.purgeRecentUpdates(nowMillis - Crunch.oneMinuteMillis * 5)
   }
 
   def crunchDiffFromMessage(diffMessage: CrunchDiffMessage, maxMillis: MillisSinceEpoch): (Seq[UniqueArrival], Seq[ApiFlightWithSplits], Seq[CrunchMinute], Seq[StaffMinute]) = (
