@@ -64,7 +64,7 @@ class IndexedByTerminalSpec extends SpecificationLike {
     }
 
     "When I add 2 arrivals, and purge updates up to a point after one of the arrival's updated time, and ask for updates since a point in time earlier than the remaining arrival's updated time " +
-      "I should get the arrival" >> {
+      "I should get arrivals 1 & 2" >> {
       val ps = new PortStateMutable
 
       val arrival1UpdateTime = 1L
@@ -81,6 +81,29 @@ class IndexedByTerminalSpec extends SpecificationLike {
       val result = ps.updates(updatesSinceTime, Long.MinValue, Long.MaxValue)
 
       val expected = Option(PortStateUpdates(10L, Set(arrival1, arrival2), Set(), Set()))
+
+      result === expected
+    }
+
+    "When I add 3 arrivals where the 3rd has a last updated time later than the first but earlier than 2nd, and I ask for updates since just before the 3rd arrival" +
+      "I should get arrivals 2 & 3" >> {
+      val ps = new PortStateMutable
+
+      val arrival1UpdateTime = 1L
+      val arrival2UpdateTime = 10L
+      val arrival3UpdateTime = 5L
+      val updatesSinceTime = 4L
+
+      val arrival1 = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA001", origin = "JFK", schDt = "2019-01-01T00:00"), Set(), lastUpdated = Option(arrival1UpdateTime))
+      val arrival2 = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA002", origin = "JNB", schDt = "2019-01-01T05:00"), Set(), lastUpdated = Option(arrival2UpdateTime))
+      val arrival3 = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA003", origin = "AAA", schDt = "2019-01-01T07:00"), Set(), lastUpdated = Option(arrival3UpdateTime))
+      ps.flights +++= Seq(arrival1)
+      ps.flights +++= Seq(arrival2)
+      ps.flights +++= Seq(arrival3)
+
+      val result = ps.updates(updatesSinceTime, Long.MinValue, Long.MaxValue)
+
+      val expected = Option(PortStateUpdates(10L, Set(arrival2, arrival3), Set(), Set()))
 
       result === expected
     }
