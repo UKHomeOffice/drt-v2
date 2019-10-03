@@ -53,7 +53,7 @@ abstract class IndexedByTerminal[K <: WithTerminal[K], A <: WithLastUpdated]() {
     items.filterKeys(terminals.contains(_)).foldLeft(ISortedMap[K, A]()) { case (acc, (_, tItems)) => acc ++ tItems.range(start, end) }
   }
 
-  def purgeOlderThanDate(thresholdMillis: MillisSinceEpoch): Unit = items.foreach {
+  def purgeDataBefore(thresholdMillis: MillisSinceEpoch): Unit = items.foreach {
     case (_, tItems) => purgeExpired(tItems, atTime, thresholdMillis)
   }
 
@@ -95,7 +95,7 @@ abstract class IndexedByTerminalWithUpdatesCache[K <: WithTerminal[K], A <: With
     lastUpdated = if (keys.nonEmpty) keys.max else 0L
   }
 
-  def purgeRecentUpdates(thresholdMillis: MillisSinceEpoch): Unit = purgeExpired(recentUpdates, (m: MillisSinceEpoch) => m, thresholdMillis)
+  def purgeCacheBefore(thresholdMillis: MillisSinceEpoch): Unit = purgeExpired(recentUpdates, (m: MillisSinceEpoch) => m, thresholdMillis)
 
   override def updatesSince(sinceEpoch: MillisSinceEpoch): Set[A] = {
     if (canUseUpdatesCache(sinceEpoch))

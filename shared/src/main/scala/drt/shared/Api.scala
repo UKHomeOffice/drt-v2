@@ -797,15 +797,15 @@ object CrunchApi {
       flights.rangeAtTerminals(roundedStart, roundedEnd, terminals)
 
     def purgeOlderThanDate(thresholdMillis: MillisSinceEpoch): Unit = {
-      flights.purgeOlderThanDate(thresholdMillis)
-      crunchMinutes.purgeOlderThanDate(thresholdMillis)
-      staffMinutes.purgeOlderThanDate(thresholdMillis)
+      flights.purgeDataBefore(thresholdMillis)
+      crunchMinutes.purgeDataBefore(thresholdMillis)
+      staffMinutes.purgeDataBefore(thresholdMillis)
     }
 
     def purgeRecentUpdates(thresholdMillis: MillisSinceEpoch): Unit = {
-      flights.purgeRecentUpdates(thresholdMillis)
-      crunchMinutes.purgeRecentUpdates(thresholdMillis)
-      staffMinutes.purgeRecentUpdates(thresholdMillis)
+      flights.purgeCacheBefore(thresholdMillis)
+      crunchMinutes.purgeCacheBefore(thresholdMillis)
+      staffMinutes.purgeCacheBefore(thresholdMillis)
     }
 
     def crunchMinuteRange(start: SDateLike, end: SDateLike): ISortedMap[TQM, CrunchMinute] = crunchMinutes.range(start, end)
