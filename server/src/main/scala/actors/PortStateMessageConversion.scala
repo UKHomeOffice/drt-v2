@@ -90,9 +90,9 @@ object PortStateMessageConversion {
   def portStateToSnapshotMessage(portState: PortStateMutable) = CrunchStateSnapshotMessage(
     Option(0L),
     Option(0),
-    portState.flights.get.values.toList.map(flight => FlightMessageConversion.flightWithSplitsToMessage(flight)),
-    portState.crunchMinutes.get.values.toList.map(crunchMinuteToMessage),
-    portState.staffMinutes.get.values.toList.map(staffMinuteToMessage)
+    portState.flights.all.values.toList.map(flight => FlightMessageConversion.flightWithSplitsToMessage(flight)),
+    portState.crunchMinutes.all.values.toList.map(crunchMinuteToMessage),
+    portState.staffMinutes.all.values.toList.map(staffMinuteToMessage)
   )
 
   def splitMessageToApiSplits(sm: SplitMessage): Splits = {

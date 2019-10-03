@@ -31,7 +31,7 @@ abstract class IndexedByTerminal[K <: WithTerminal[K], A <: WithLastUpdated]() {
     case (t, things) => if (items.contains(t)) items(t) --= things
   }
 
-  def get: SortedMap[K, A] = {
+  def all: SortedMap[K, A] = {
     items.foldLeft(SortedMap[K, A]()) { case (acc, (_, tItems)) => acc ++ tItems }
   }
 

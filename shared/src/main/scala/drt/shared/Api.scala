@@ -845,9 +845,9 @@ object CrunchApi {
     }
 
     def immutable: PortState = {
-      val fs = ISortedMap[UniqueArrival, ApiFlightWithSplits]() ++ flights.get
-      val cms = ISortedMap[TQM, CrunchMinute]() ++ crunchMinutes.get
-      val sms = ISortedMap[TM, StaffMinute]() ++ staffMinutes.get
+      val fs = ISortedMap[UniqueArrival, ApiFlightWithSplits]() ++ flights.all
+      val cms = ISortedMap[TQM, CrunchMinute]() ++ crunchMinutes.all
+      val sms = ISortedMap[TM, StaffMinute]() ++ staffMinutes.all
       PortState(fs, cms, sms)
     }
 
