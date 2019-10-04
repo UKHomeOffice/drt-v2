@@ -1,17 +1,14 @@
 package services.crunch
 
 import akka.actor._
-import akka.stream._
 import akka.testkit.TestKit
-import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.PaxTypes.EeaMachineReadable
-import drt.shared.PaxTypesAndQueues._
 import drt.shared._
 import org.specs2.mutable.SpecificationLike
 import passengersplits.InMemoryPersistence
 import services.graphstages.Crunch._
 
-import scala.collection.immutable.{List, Seq}
+import scala.collection.immutable.List
 
 
 class CrunchGraphInputsAndProbesStageFunctionsSpec extends TestKit(ActorSystem("StreamingCrunchTests", InMemoryPersistence.akkaAndAggregateDbConfig)) with SpecificationLike {

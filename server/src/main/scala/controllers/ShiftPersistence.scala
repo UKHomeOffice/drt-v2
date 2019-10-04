@@ -2,9 +2,9 @@ package controllers
 
 import java.util.UUID
 
-import actors.{DrtStaticParameters, GetState}
 import actors.pointInTime.ShiftsReadActor
-import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
+import actors.{DrtStaticParameters, GetState}
+import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import akka.pattern._
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
