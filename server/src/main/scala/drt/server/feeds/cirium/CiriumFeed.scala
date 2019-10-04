@@ -19,7 +19,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-case class CiriumFeed(endpoint: String)(implicit actorSystem: ActorSystem, materializer: Materializer) {
+case class CiriumFeed(endpoint: String, portCode: String)(implicit actorSystem: ActorSystem, materializer: Materializer) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   import CiriumFeed._
@@ -28,21 +28,38 @@ case class CiriumFeed(endpoint: String)(implicit actorSystem: ActorSystem, mater
     val source = Source
       .tick(0 millis, 30 seconds, NotUsed)
       .mapAsync(1)(_ => {
-        log.info(s"Requesting Cirium Feed")
         makeRequest()
       })
-      .map(_.map(toArrival))
+      .map(_.map(a => toArrival(a, portCode)))
       .map(as => ArrivalsFeedSuccess(Flights(as)))
 
     source
   }
 
-  def makeRequest(): Future[List[CiriumFlightStatus]] = requestFeed(endpoint)
+  def makeRequest(): Future[List[CiriumFlightStatus]] = {
+    log.info(s"Requesting Cirium flights from $endpoint")
+    requestFeed(endpoint)
+  }
 
 }
 
 object CiriumFeed {
-  def toArrival(f: CiriumFlightStatus): Arrival = Arrival(
+
+  def terminalMatchForPort(terminal: Option[String], portCode: String): String = {
+    portCode.toUpperCase match {
+      case "LTN" | "STN" | "EMA" =>
+        println(s"terminal: T1 ($terminal)")
+        "T1"
+
+      case "LHR" =>
+        terminal.map(t => s"T$t").getOrElse("No Terminal")
+      case _ if terminal.isDefined  =>
+        println(s"Terminal $terminal")
+        terminal.getOrElse("No Terminal")
+    }
+  }
+
+  def toArrival(f: CiriumFlightStatus, portCode: String): Arrival = Arrival(
     Option(f.carrierFsCode),
     ciriumStatusCodeToStatus(f.status),
     f.operationalTimes.estimatedRunwayArrival.map(_.millis),
@@ -58,7 +75,7 @@ object CiriumFeed {
     f.airportResources.flatMap(_.baggage),
     Option(f.flightId),
     f.arrivalAirportFsCode,
-    f.airportResources.map(_.arrivalTerminal.getOrElse("UNK")).getOrElse("UNK"),
+    terminalMatchForPort(f.airportResources.flatMap(_.arrivalTerminal), portCode),
     f.operatingCarrierFsCode + f.flightNumber,
     f.operatingCarrierFsCode + f.flightNumber,
     f.departureAirportFsCode,

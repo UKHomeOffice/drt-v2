@@ -1,6 +1,7 @@
 package services.graphstages
 
 import drt.shared.Arrival
+import services.SDate
 
 object LiveArrivalsUtil {
 
@@ -14,6 +15,20 @@ object LiveArrivalsUtil {
       Gate = if (portFeedArrival.Gate.isEmpty) baseLiveArrival.Gate else portFeedArrival.Gate,
       Status = if (portFeedArrival.Status == "UNK") baseLiveArrival.Status else portFeedArrival.Status
     )
+  }
+
+  def printArrival(a: Arrival): String = {
+    s"""
+       |flightCode: ${a.IATA}
+       |terminal: ${a.Terminal}
+       |scheduled: ${SDate(a.Scheduled).toISOString()}
+       |Est: ${a.Estimated.map(d => SDate(d).toISOString())}
+       |EstChox: ${a.EstimatedChox.map(d => SDate(d).toISOString())}
+       |Act: ${a.Actual.map(d => SDate(d).toISOString())}
+       |ActChox: ${a.ActualChox.map(d => SDate(d).toISOString())}
+       |Status: ${a.Status}
+       |Gate: ${a.Gate}
+       |""".stripMargin
   }
 
 }

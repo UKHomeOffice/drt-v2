@@ -444,60 +444,67 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       .getOrCreate()
   }
 
-  def liveBaseArrivalsSource(str: String): Source[ArrivalsFeedResponse, Cancellable] = {
-    if (config.get[Boolean]("feature-flags.use-cirium-feed"))
-      CiriumFeed(config.get[String]("feeds.cirium.host")).tickingSource
-    else
+  def liveBaseArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = {
+    if (config.get[Boolean]("feature-flags.use-cirium-feed")) {
+
+      log.info(s"Using Cirium Live Base Feed")
+      CiriumFeed(config.get[String]("feeds.cirium.host"), portCode)
+        .tickingSource
+    }
+    else {
+      log.info(s"Using Noop Base Live Feed")
       arrivalsNoOp
+    }
   }
 
   def liveArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = {
 
-    val feed = portCode match {
-      case "LHR" =>
-        val contentProvider = if (config.get[Boolean]("feeds.lhr.use-legacy-live")) {
-          log.info(s"Using legacy LHR live feed")
-          () => LegacyLhrLiveContentProvider().csvContentsProviderProd()
-        } else {
-          log.info(s"Using new LHR live feed")
-          val host = config.get[String]("feeds.lhr.sftp.live.host")
-          val username = config.get[String]("feeds.lhr.sftp.live.username")
-          val password = config.get[String]("feeds.lhr.sftp.live.password")
-          () => LhrSftpLiveContentProvider(host, username, password).latestContent
-        }
-        LHRFlightFeed(contentProvider)
-      case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
-      case "LGW" =>
-        val lgwNamespace = params.maybeLGWNamespace.getOrElse(throw new Exception("Missing LGW Azure Namespace parameter"))
-        val lgwSasToKey = params.maybeLGWSASToKey.getOrElse(throw new Exception("Missing LGW SAS Key for To Queue"))
-        val lgwServiceBusUri = params.maybeLGWServiceBusUri.getOrElse(throw new Exception("Missing LGW Service Bus Uri"))
-        LGWFeed(lgwNamespace, lgwSasToKey, lgwServiceBusUri)(system).source()
-
-      case "BHX" if !params.bhxIataEndPointUrl.isEmpty =>
-        BHXFeed(BHXClient(params.bhxIataUsername, params.bhxIataEndPointUrl), 80 seconds, 1 milliseconds)(system)
-      case "BHX" => BHXLiveFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX live feed URL")))
-      case "LTN" =>
-        val url = params.maybeLtnLiveFeedUrl.getOrElse(throw new Exception("Missing live feed url"))
-        val username = params.maybeLtnLiveFeedUsername.getOrElse(throw new Exception("Missing live feed username"))
-        val password = params.maybeLtnLiveFeedPassword.getOrElse(throw new Exception("Missing live feed password"))
-        val token = params.maybeLtnLiveFeedToken.getOrElse(throw new Exception("Missing live feed token"))
-        val timeZone = params.maybeLtnLiveFeedTimeZone match {
-          case Some(tz) => DateTimeZone.forID(tz)
-          case None => DateTimeZone.UTC
-        }
-        LtnLiveFeed(url, token, username, password, timeZone).tickingSource
-      case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
-    }
-    feed
+    //    val feed = portCode match {
+    //      case "LHR" =>
+    //        val contentProvider = if (config.get[Boolean]("feeds.lhr.use-legacy-live")) {
+    //          log.info(s"Using legacy LHR live feed")
+    //          () => LegacyLhrLiveContentProvider().csvContentsProviderProd()
+    //        } else {
+    //          log.info(s"Using new LHR live feed")
+    //          val host = config.get[String]("feeds.lhr.sftp.live.host")
+    //          val username = config.get[String]("feeds.lhr.sftp.live.username")
+    //          val password = config.get[String]("feeds.lhr.sftp.live.password")
+    //          () => LhrSftpLiveContentProvider(host, username, password).latestContent
+    //        }
+    //        LHRFlightFeed(contentProvider)
+    //      case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
+    //      case "LGW" =>
+    //        val lgwNamespace = params.maybeLGWNamespace.getOrElse(throw new Exception("Missing LGW Azure Namespace parameter"))
+    //        val lgwSasToKey = params.maybeLGWSASToKey.getOrElse(throw new Exception("Missing LGW SAS Key for To Queue"))
+    //        val lgwServiceBusUri = params.maybeLGWServiceBusUri.getOrElse(throw new Exception("Missing LGW Service Bus Uri"))
+    //        LGWFeed(lgwNamespace, lgwSasToKey, lgwServiceBusUri)(system).source()
+    //
+    //      case "BHX" if !params.bhxIataEndPointUrl.isEmpty =>
+    //        BHXFeed(BHXClient(params.bhxIataUsername, params.bhxIataEndPointUrl), 80 seconds, 1 milliseconds)(system)
+    //      case "BHX" => BHXLiveFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX live feed URL")))
+    //      case "LTN" =>
+    //        val url = params.maybeLtnLiveFeedUrl.getOrElse(throw new Exception("Missing live feed url"))
+    //        val username = params.maybeLtnLiveFeedUsername.getOrElse(throw new Exception("Missing live feed username"))
+    //        val password = params.maybeLtnLiveFeedPassword.getOrElse(throw new Exception("Missing live feed password"))
+    //        val token = params.maybeLtnLiveFeedToken.getOrElse(throw new Exception("Missing live feed token"))
+    //        val timeZone = params.maybeLtnLiveFeedTimeZone match {
+    //          case Some(tz) => DateTimeZone.forID(tz)
+    //          case None => DateTimeZone.UTC
+    //        }
+    //        LtnLiveFeed(url, token, username, password, timeZone).tickingSource
+    //      case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
+    //    }
+    //    feed
+    arrivalsNoOp
   }
 
   def arrivalsNoOp: Source[ArrivalsFeedResponse, Cancellable] = Source.tick[ArrivalsFeedResponse](100 days, 100 days, ArrivalsFeedSuccess(Flights(Seq()), SDate.now()))
 
   def forecastArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = {
     val feed = portCode match {
-      case "LHR" => createForecastLHRFeed()
-      case "BHX" => BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")))
-      case "LGW" => LGWForecastFeed()
+//      case "LHR" => createForecastLHRFeed()
+//      case "BHX" => BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")))
+//      case "LGW" => LGWForecastFeed()
       case _ =>
         system.log.info(s"No Forecast Feed defined.")
         arrivalsNoOp
@@ -505,10 +512,13 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     feed
   }
 
-  def baseArrivalsSource(): Source[ArrivalsFeedResponse, Cancellable] = Source.tick(1 second, 60 minutes, NotUsed).map(_ => {
-    system.log.info(s"Requesting ACL feed")
-    aclFeed.requestArrivals
-  })
+  def baseArrivalsSource(): Source[ArrivalsFeedResponse, Cancellable] = {
+    log.info(s"Getting ACL Source")
+    Source.tick(1 second, 10 minutes, NotUsed).map(_ => {
+      system.log.info(s"Requesting ACL feed")
+      aclFeed.requestArrivals
+    })
+  }
 
   def walkTimeProvider(flight: Arrival): MillisSinceEpoch =
     gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, airportConfig.defaultWalkTimeMillis.getOrElse(flight.Terminal, 300000L))(flight)

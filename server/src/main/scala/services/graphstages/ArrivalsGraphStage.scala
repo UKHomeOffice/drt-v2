@@ -92,7 +92,10 @@ class ArrivalsGraphStage(name: String = "",
         val start = SDate.now()
         pushIfAvailable(toPush, outArrivalsDiff)
 
-        List(inLiveBaseArrivals, inLiveArrivals, inForecastArrivals, inForecastBaseArrivals).foreach(inlet => if (!hasBeenPulled(inlet)) pull(inlet))
+        List(inLiveBaseArrivals, inLiveArrivals, inForecastArrivals, inForecastBaseArrivals).foreach(inlet => if (!hasBeenPulled(inlet)) {
+          log.info(s"Pulling Inlet: ${inlet.toString()}")
+          pull(inlet)
+        })
         log.info(s"outArrivalsDiff Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
@@ -103,7 +106,7 @@ class ArrivalsGraphStage(name: String = "",
 
       grab(arrivalsInlet) match {
         case ArrivalsFeedSuccess(Flights(flights), connectedAt) =>
-          log.info(s"Grabbed ${flights.length} arrivals from connection at ${connectedAt.toISOString()}")
+          log.info(s"Grabbed ${flights.length} arrivals from $arrivalsInlet of $sourceType at ${connectedAt.toISOString()}")
           if (flights.nonEmpty || sourceType == BaseArrivals) handleIncomingArrivals(sourceType, flights)
           else log.info(s"No arrivals to handle")
         case ArrivalsFeedFailure(message, failedAt) =>
@@ -115,14 +118,16 @@ class ArrivalsGraphStage(name: String = "",
     }
 
     def handleIncomingArrivals(sourceType: ArrivalsSourceType, incomingArrivals: Seq[Arrival]): Unit = {
+      log.info(s"${incomingArrivals.size} arrivals in ${sourceType} before filtering")
       val filteredArrivals = filterAndSetPcp(mutable.SortedMap[UniqueArrival, Arrival]() ++ incomingArrivals.map(a => (UniqueArrival(a), a)))
-      log.info(s"${filteredArrivals.size} arrivals after filtering")
+      log.info(s"${filteredArrivals.size} arrivals in ${sourceType} after filtering")
       sourceType match {
         case LiveArrivals =>
           updateArrivalsSource(liveArrivals, filteredArrivals)
           toPush = mergeUpdatesFromKeys(liveArrivals.keys)
         case LiveBaseArrivals =>
           updateArrivalsSource(liveBaseArrivals, filteredArrivals)
+          println(s"CIRIUM: ${liveBaseArrivals.keys}")
           toPush = mergeUpdatesFromKeys(liveBaseArrivals.keys)
         case ForecastArrivals =>
           updateArrivalsSource(forecastArrivals, filteredArrivals)
@@ -196,15 +201,15 @@ class ArrivalsGraphStage(name: String = "",
 
     def filterAndSetPcp(arrivals: mutable.SortedMap[UniqueArrival, Arrival]): SortedMap[UniqueArrival, Arrival] =
       SortedMap[UniqueArrival, Arrival]() ++ arrivals
-      .filterNot {
-        case (_, f) if !isFlightRelevant(f) =>
-          log.debug(s"Filtering out irrelevant arrival: ${f.IATA}, ${SDate(f.Scheduled).toISOString()}, ${f.Origin}")
-          true
-        case _ => false
-      }
-      .mapValues { arrival =>
-        arrival.copy(PcpTime = Some(pcpArrivalTime(arrival).millisSinceEpoch))
-      }
+        .filterNot {
+          case (_, f) if !isFlightRelevant(f) =>
+            log.debug(s"Filtering out irrelevant arrival: ${f.IATA}, ${SDate(f.Scheduled).toISOString()}, ${f.Origin}")
+            true
+          case _ => false
+        }
+        .mapValues { arrival =>
+          arrival.copy(PcpTime = Some(pcpArrivalTime(arrival).millisSinceEpoch))
+        }
 
     def isFlightRelevant(flight: Arrival): Boolean =
       validPortTerminals.contains(flight.Terminal) && !domesticPorts.contains(flight.Origin)
@@ -249,23 +254,26 @@ class ArrivalsGraphStage(name: String = "",
     def mergeBaseArrival(baseArrival: Arrival): Arrival = {
       val key = UniqueArrival(baseArrival)
       val bestArrival = liveArrivals.getOrElse(key, baseArrival)
-      updateArrival(baseArrival, bestArrival)
+      mergeBestFieldsFromSources(baseArrival, bestArrival)
     }
 
     def mergeArrival(key: UniqueArrival): Option[Arrival] = {
       val maybeBestArrival: Option[Arrival] = (liveArrivals.get(key), liveBaseArrivals.get(key)) match {
         case (Some(liveArrival), None) => Option(liveArrival)
         case (Some(liveArrival), Some(baseLiveArrival)) => Option(LiveArrivalsUtil.mergePortFeedWithBase(liveArrival, baseLiveArrival))
-        case (None, Some(baseLiveArrival)) if forecastBaseArrivals.contains(key) => Option(baseLiveArrival)
+        case (None, Some(baseLiveArrival)) if forecastBaseArrivals.contains(key) =>
+          log.info(s"Matched CIRIUM ${key} in ACL ${LiveArrivalsUtil.printArrival(baseLiveArrival)}")
+
+          Option(baseLiveArrival)
         case _ => forecastBaseArrivals.get(key)
       }
       maybeBestArrival.map(bestArrival => {
         val arrivalForFlightCode = forecastBaseArrivals.getOrElse(key, bestArrival)
-        updateArrival(arrivalForFlightCode, bestArrival)
+        mergeBestFieldsFromSources(arrivalForFlightCode, bestArrival)
       })
     }
 
-    def updateArrival(baseArrival: Arrival, bestArrival: Arrival): Arrival = {
+    def mergeBestFieldsFromSources(baseArrival: Arrival, bestArrival: Arrival): Arrival = {
       val key = UniqueArrival(baseArrival)
       val (pax, transPax) = bestPaxNos(key)
       bestArrival.copy(
@@ -278,23 +286,21 @@ class ArrivalsGraphStage(name: String = "",
       )
     }
 
-    def bestPaxNos(UniqueArrival: UniqueArrival): (Option[Int], Option[Int]) = (liveArrivals.get(UniqueArrival), forecastArrivals.get(UniqueArrival), forecastBaseArrivals.get(UniqueArrival)) match {
+    def bestPaxNos(key: UniqueArrival): (Option[Int], Option[Int]) = (liveArrivals.get(key), forecastArrivals.get(key), forecastBaseArrivals.get(key)) match {
       case (Some(liveArrival), _, _) if liveArrival.ActPax.exists(_ > 0) => (liveArrival.ActPax, liveArrival.TranPax)
       case (_, Some(fcstArrival), _) if fcstArrival.ActPax.exists(_ > 0) => (fcstArrival.ActPax, fcstArrival.TranPax)
       case (_, _, Some(baseArrival)) if baseArrival.ActPax.exists(_ > 0) => (baseArrival.ActPax, baseArrival.TranPax)
       case _ => (None, None)
     }
 
-    def bestStatus(UniqueArrival: UniqueArrival): String = liveArrivals.get(UniqueArrival) match {
-      case Some(liveArrival) => liveArrival.Status
-      case _ => forecastArrivals.get(UniqueArrival) match {
-        case Some(forecastArrival) => forecastArrival.Status
-        case _ => forecastBaseArrivals.get(UniqueArrival) match {
-          case Some(baseArrival) => baseArrival.Status
-          case _ => "Unknown"
-        }
+    def bestStatus(key: UniqueArrival): String =
+      (liveArrivals.get(key), liveBaseArrivals.get(key), forecastArrivals.get(key), forecastBaseArrivals.get(key)) match {
+        case (Some(live), _, _, _) => live.Status
+        case (_, Some(liveBase), _, _) => liveBase.Status
+        case (_, _, Some(forecast), _) => forecast.Status
+        case (_, _, _, Some(forecastBase)) => forecastBase.Status
+        case _ => "Unknown"
       }
-    }
 
     def feedSources(uniqueArrival: UniqueArrival): Set[FeedSource] = {
       List(
