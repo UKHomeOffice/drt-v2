@@ -166,11 +166,11 @@ abstract class ArrivalsActor(now: () => SDateLike,
     case ArrivalsFeedFailure(message, createdAt) => handleFeedFailure(message, createdAt)
 
     case GetState =>
-      log.info(s"Received GetState request. Sending ArrivalsState with ${state.arrivals.size} arrivals")
+      log.debug(s"Received GetState request. Sending ArrivalsState with ${state.arrivals.size} arrivals")
       sender() ! state
 
     case GetFeedStatuses =>
-      log.info(s"Received GetFeedStatuses request")
+      log.debug(s"Received GetFeedStatuses request")
       sender() ! state.maybeFeedStatuses
 
     case SaveSnapshotSuccess(md) =>

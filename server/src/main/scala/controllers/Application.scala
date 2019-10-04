@@ -501,17 +501,17 @@ class Application @Inject()(implicit val config: Configuration,
   def futureCrunchState[X](maybePointInTime: Option[MillisSinceEpoch], startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, request: Any): Future[Either[PortStateError, Option[X]]] = {
     maybePointInTime match {
       case Some(pit) =>
-        log.info(s"Snapshot crunch state query ${SDate(pit).toISOString()}")
+        log.debug(s"Snapshot crunch state query ${SDate(pit).toISOString()}")
         val tempActor = system.actorOf(Props(classOf[CrunchStateReadActor], airportConfig.portStateSnapshotInterval, SDate(pit), DrtStaticParameters.expireAfterMillis, airportConfig.queues, startMillis, endMillis))
         val futureResult = requestPortState[X](tempActor, request)
         futureResult.foreach(_ => tempActor ! PoisonPill)
         futureResult
       case _ =>
         if (endMillis > getLocalNextMidnight(SDate.now().addDays(1)).millisSinceEpoch) {
-          log.info(s"Regular forecast crunch state query")
+          log.debug(s"Regular forecast crunch state query")
           requestPortState[X](ctrl.forecastCrunchStateActor, request)
         } else {
-          log.info(s"Regular live crunch state query")
+          log.debug(s"Regular live crunch state query")
           requestPortState[X](ctrl.liveCrunchStateActor, request)
         }
     }

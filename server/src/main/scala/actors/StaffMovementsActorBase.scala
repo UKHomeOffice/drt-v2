@@ -132,7 +132,7 @@ class StaffMovementsActorBase(val now: () => SDateLike,
 
   def receiveCommand: Receive = {
     case GetState =>
-      log.info(s"GetState received")
+      log.debug(s"GetState received")
       val movements = state.staffMovements.purgeExpired(expireBefore)
       sender() ! movements
 

@@ -76,7 +76,7 @@ class FixedPointsActorBase(now: () => SDateLike) extends RecoveryActorLike with 
 
   def receiveCommand: Receive = {
     case GetState =>
-      log.info(s"GetState received")
+      log.debug(s"GetState received")
       sender() ! state
 
     case SetFixedPoints(fixedPointStaffAssignments) =>

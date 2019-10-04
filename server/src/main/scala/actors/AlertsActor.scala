@@ -58,7 +58,7 @@ case class AlertsActor() extends RecoveryActorLike with PersistentDrtActor[Seq[A
       sender() ! alert
 
     case GetState =>
-      log.info(s"Received GetState request. Sending Alerts with ${state.size} alerts")
+      log.debug(s"Received GetState request. Sending Alerts with ${state.size} alerts")
       sender() ! state.filter(a=> a.expires >= DateTime.now.getMillis)
 
     case DeleteAlerts =>
