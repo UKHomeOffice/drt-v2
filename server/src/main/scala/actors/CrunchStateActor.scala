@@ -6,14 +6,13 @@ import akka.actor._
 import akka.persistence._
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi._
-import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState._
 import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 import services.SDate
-import services.graphstages.PortStateWithDiff
+import services.graphstages.{Crunch, PortStateWithDiff}
 
 
 class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
@@ -23,7 +22,8 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
                        now: () => SDateLike,
                        expireAfterMillis: MillisSinceEpoch,
                        purgePreviousSnapshots: Boolean,
-                       acceptFullStateUpdates: Boolean) extends PersistentActor with RecoveryActorLike with PersistentDrtActor[PortStateMutable] {
+                       acceptFullStateUpdates: Boolean,
+                       forecastMaxMillis: () => MillisSinceEpoch) extends PersistentActor with RecoveryActorLike with PersistentDrtActor[PortStateMutable] {
   override def persistenceId: String = name
 
   override val maybeSnapshotInterval: Option[Int] = initialMaybeSnapshotInterval
@@ -42,12 +42,12 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
   def initialState: PortStateMutable = PortStateMutable.empty
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case snapshot: CrunchStateSnapshotMessage => setStateFromSnapshot(snapshot)
+    case snapshot: CrunchStateSnapshotMessage => setStateFromSnapshot(snapshot, timeWindowEnd = Option(SDate(forecastMaxMillis())))
   }
 
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case diff: CrunchDiffMessage =>
-      applyRecoveryDiff(diff)
+      applyRecoveryDiff(diff, forecastMaxMillis())
       logRecoveryState()
       bytesSinceSnapshotCounter += diff.serializedSize
       messagesPersistedSinceSnapshotCounter += 1
@@ -64,22 +64,9 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
   }
 
   def logRecoveryState(): Unit = {
-    val apiCount = state.flights.count {
-      case (_, f) => f.splits.exists {
-        case Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _) => true
-        case _ => false
-      }
-    }
-    logDebug(s"Recovery: state contains ${state.flights.size} flights " +
-      s"with $apiCount Api splits " +
-      s", ${state.crunchMinutes.size} crunch minutes " +
-      s", ${state.staffMinutes.size} staff minutes ")
-  }
-
-  override def postSaveSnapshot(): Unit = if (purgePreviousSnapshots) {
-    val maxSequenceNr = lastSequenceNr
-    logInfo(s"Purging snapshots with sequence number < $maxSequenceNr")
-    deleteSnapshots(SnapshotSelectionCriteria(maxSequenceNr = maxSequenceNr))
+    logDebug(s"Recovery: state contains ${state.flights.count} flights " +
+      s", ${state.crunchMinutes.count} crunch minutes " +
+      s", ${state.staffMinutes.count} staff minutes ")
   }
 
   override def stateToMessage: GeneratedMessage = portStateToSnapshotMessage(state)
@@ -98,14 +85,14 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
           updateFromFullState(fullState)
           logInfo("Received full port state")
         case _ =>
-          applyDiff(diffMsg)
+          applyDiff(diffMsg, forecastMaxMillis())
           logInfo(s"Received port state with diff")
       }
 
       persistAndMaybeSnapshot(diffMsg)
 
     case GetState =>
-      logDebug(s"Received GetState request. Replying with PortState containing ${state.crunchMinutes.size} crunch minutes")
+      logDebug(s"Received GetState request. Replying with PortState containing ${state.crunchMinutes.count} crunch minutes")
       sender() ! Option(state.immutable)
 
     case GetPortState(start, end) =>
@@ -117,11 +104,15 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
       sender() ! stateForPeriodForTerminal(start, end, terminalName)
 
     case GetUpdatesSince(millis, start, end) =>
-      val updates = state.window(SDate(start), SDate(end), portQueues).updates(millis)
+      val updates: Option[PortStateUpdates] = state.updates(millis, start, end)
       sender() ! updates
 
-    case SaveSnapshotSuccess(md) =>
-      logInfo(s"Snapshot success $md")
+    case SaveSnapshotSuccess(SnapshotMetadata(_, seqNr, _)) =>
+      logInfo("Snapshot success")
+      if (purgePreviousSnapshots) {
+        logInfo(s"Purging previous snapshots (with sequence number < $seqNr)")
+        deleteSnapshots(SnapshotSelectionCriteria(maxSequenceNr = seqNr - 1))
+      }
 
     case SaveSnapshotFailure(md, cause) =>
       logInfo(s"Snapshot failed $md\n$cause")
@@ -139,16 +130,16 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
     state.staffMinutes ++= ps.staffMinutes
   }
 
-  def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = Option(state.window(SDate(start), SDate(end), portQueues))
+  def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = Option(state.window(SDate(start), SDate(end)))
 
-  def stateForPeriodForTerminal(start: MillisSinceEpoch, end: MillisSinceEpoch, terminalName: TerminalName): Option[PortState] = Option(state.windowWithTerminalFilter(SDate(start), SDate(end), portQueues.filterKeys(_ == terminalName)))
+  def stateForPeriodForTerminal(start: MillisSinceEpoch, end: MillisSinceEpoch, terminalName: TerminalName): Option[PortState] = Option(state.windowWithTerminalFilter(SDate(start), SDate(end), portQueues.keys.filter(_ == terminalName).toSeq))
 
   def setStateFromSnapshot(snapshot: CrunchStateSnapshotMessage, timeWindowEnd: Option[SDateLike] = None): Unit = {
     snapshotMessageToState(snapshot, timeWindowEnd, state)
   }
 
-  def applyRecoveryDiff(cdm: CrunchDiffMessage): Unit = {
-    val (flightRemovals, flightUpdates, crunchMinuteUpdates, staffMinuteUpdates) = crunchDiffFromMessage(cdm)
+  def applyRecoveryDiff(cdm: CrunchDiffMessage, maxMillis: MillisSinceEpoch): Unit = {
+    val (flightRemovals, flightUpdates, crunchMinuteUpdates, staffMinuteUpdates) = crunchDiffFromMessage(cdm, maxMillis)
     val nowMillis = now().millisSinceEpoch
     restorer.update(flightUpdates)
     restorer.removeLegacies(cdm.flightIdsToRemoveOLD)
@@ -157,32 +148,33 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
     state.applyStaffDiff(staffMinuteUpdates, nowMillis)
   }
 
-  def uniqueArrivalFromMessage(uam: UniqueArrivalMessage) = {
+  def uniqueArrivalFromMessage(uam: UniqueArrivalMessage): UniqueArrival = {
     UniqueArrival(uam.getNumber, uam.getTerminalName, uam.getScheduled)
   }
 
-  def applyDiff(cdm: CrunchDiffMessage): Unit = {
-    val (flightRemovals, flightUpdates, crunchMinuteUpdates, staffMinuteUpdates) = crunchDiffFromMessage(cdm)
+  def applyDiff(cdm: CrunchDiffMessage, maxMillis: MillisSinceEpoch): Unit = {
+    val (flightRemovals, flightUpdates, crunchMinuteUpdates, staffMinuteUpdates) = crunchDiffFromMessage(cdm, maxMillis)
     val nowMillis = now().millisSinceEpoch
     state.applyFlightsWithSplitsDiff(flightRemovals, flightUpdates, nowMillis)
     state.applyCrunchDiff(crunchMinuteUpdates, nowMillis)
     state.applyStaffDiff(staffMinuteUpdates, nowMillis)
 
-    state.purgeOlderThanDate(now().millisSinceEpoch - expireAfterMillis)
+    state.purgeOlderThanDate(nowMillis - expireAfterMillis)
+    state.purgeRecentUpdates(nowMillis - Crunch.oneMinuteMillis * 5)
   }
 
-  def crunchDiffFromMessage(diffMessage: CrunchDiffMessage): (Seq[UniqueArrival], Seq[ApiFlightWithSplits], Seq[CrunchMinute], Seq[StaffMinute]) = (
+  def crunchDiffFromMessage(diffMessage: CrunchDiffMessage, maxMillis: MillisSinceEpoch): (Seq[UniqueArrival], Seq[ApiFlightWithSplits], Seq[CrunchMinute], Seq[StaffMinute]) = (
     diffMessage.flightsToRemove.collect {
       case m if portQueues.contains(m.getTerminalName) => uniqueArrivalFromMessage(m)
     },
     diffMessage.flightsToUpdate.collect {
-      case m if portQueues.contains(m.getFlight.getTerminal) => flightWithSplitsFromMessage(m)
+      case m if portQueues.contains(m.getFlight.getTerminal) && m.getFlight.getScheduled < maxMillis => flightWithSplitsFromMessage(m)
     },
     diffMessage.crunchMinutesToUpdate.collect {
-      case m if portQueues.contains(m.getTerminalName) => crunchMinuteFromMessage(m)
+      case m if portQueues.contains(m.getTerminalName) && m.getMinute < maxMillis => crunchMinuteFromMessage(m)
     },
     diffMessage.staffMinutesToUpdate.collect {
-      case m if portQueues.contains(m.getTerminalName) => staffMinuteFromMessage(m)
+      case m if portQueues.contains(m.getTerminalName) && m.getMinute < maxMillis => staffMinuteFromMessage(m)
     }
   )
 }

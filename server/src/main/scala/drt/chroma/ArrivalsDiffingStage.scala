@@ -2,6 +2,7 @@ package drt.chroma
 
 import akka.stream._
 import akka.stream.stage._
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{Arrival, UniqueArrival}
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
@@ -9,7 +10,7 @@ import services.SDate
 
 import scala.collection.mutable
 
-final class ArrivalsDiffingStage(initialKnownArrivals: mutable.SortedMap[UniqueArrival, Arrival]) extends GraphStage[FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse]] {
+final class ArrivalsDiffingStage(initialKnownArrivals: mutable.SortedMap[UniqueArrival, Arrival], forecastMaxMillis: () => MillisSinceEpoch) extends GraphStage[FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse]] {
   val in: Inlet[ArrivalsFeedResponse] = Inlet[ArrivalsFeedResponse]("DiffingStage.in")
   val out: Outlet[ArrivalsFeedResponse] = Outlet[ArrivalsFeedResponse]("DiffingStage.out")
 
@@ -60,7 +61,8 @@ final class ArrivalsDiffingStage(initialKnownArrivals: mutable.SortedMap[UniqueA
 
     def processFeedResponse(arrivalsFeedResponse: ArrivalsFeedResponse): Option[ArrivalsFeedResponse] = arrivalsFeedResponse match {
       case afs@ArrivalsFeedSuccess(latestArrivals, _) =>
-        val incomingArrivals: Seq[(UniqueArrival, Arrival)] = latestArrivals.flights.map(a => (UniqueArrival(a), a))
+        val maxScheduledMillis = forecastMaxMillis()
+        val incomingArrivals: Seq[(UniqueArrival, Arrival)] = latestArrivals.flights.filter(_.Scheduled <= maxScheduledMillis).map(a => (UniqueArrival(a), a))
         val newUpdates: Seq[(UniqueArrival, Arrival)] = filterArrivalsWithUpdates(knownArrivals, incomingArrivals)
         log.info(s"Got ${newUpdates.size} new arrival updates")
         knownArrivals.clear

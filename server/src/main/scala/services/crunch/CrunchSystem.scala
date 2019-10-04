@@ -5,7 +5,7 @@ import akka.pattern.AskableActorRef
 import akka.stream._
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import drt.chroma.ArrivalsDiffingStage
-import drt.shared.CrunchApi.{ActualDeskStats, CrunchMinutes, PortState, StaffMinutes}
+import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.{SDateLike, _}
 import org.slf4j.{Logger, LoggerFactory}
@@ -94,6 +94,8 @@ object CrunchSystem {
 
     val initialFlightsWithSplits = initialFlightsFromPortState(props.initialPortState)
 
+    val forecastMaxMillis: () => MillisSinceEpoch = () => props.now().addDays(props.maxDaysToCrunch).millisSinceEpoch
+
     val arrivalsStage = new ArrivalsGraphStage(
       name = props.logLabel,
       initialForecastBaseArrivals = if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialForecastBaseArrivals,
@@ -106,9 +108,9 @@ object CrunchSystem {
       expireAfterMillis = props.expireAfterMillis,
       now = props.now)
 
-    val forecastArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialForecastArrivals)
-    val liveBaseArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialLiveBaseArrivals)
-    val liveArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialLiveArrivals)
+    val forecastArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialForecastArrivals, forecastMaxMillis)
+    val liveBaseArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialLiveBaseArrivals, forecastMaxMillis)
+    val liveArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialLiveArrivals, forecastMaxMillis)
 
     log.info(s"Using B5JPlus Start Date of ${props.b5JStartDate.toISOString()}")
 
@@ -132,8 +134,7 @@ object CrunchSystem {
       ),
       groupFlightsByCodeShares = groupFlightsByCodeShares,
       expireAfterMillis = props.expireAfterMillis,
-      now = props.now,
-      maxDaysToCrunch = props.maxDaysToCrunch)
+      now = props.now)
 
     val staffGraphStage = new StaffGraphStage(
       name = props.logLabel,
@@ -205,7 +206,7 @@ object CrunchSystem {
       props.voyageManifestsActor, props.voyageManifestsRequestActor,
       props.liveCrunchStateActor, props.forecastCrunchStateActor,
       props.actors("aggregated-arrivals").actorRef,
-      crunchStartDateProvider, props.now, props.airportConfig.queues, liveStateDaysAhead
+      crunchStartDateProvider, props.now, props.airportConfig.queues, liveStateDaysAhead, forecastMaxMillis
     )
 
     val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, manifestsHistoricIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch) = crunchSystem.run

@@ -25,7 +25,7 @@ class PortStateMinutesSpec extends Specification {
           newFlightsWithSplits.applyTo(portState, now)
           val expected = PortState(newFlightsWithSplits.flightsToUpdate.toList.map(_.copy(lastUpdated = Option(now))), List(), List()).mutable
 
-          portState.flights === expected.flights
+          portState.flights.all === expected.flights.all
         }
       }
 
@@ -55,7 +55,7 @@ class PortStateMinutesSpec extends Specification {
           newStaffMinutes.applyTo(portState, now)
           val expected = PortState(List(), List(), newStaffMinutes.minutes.toList.map(_.copy(lastUpdated = Option(now))))
 
-          portState.staffMinutes === expected.staffMinutes
+          portState.staffMinutes.all === expected.staffMinutes
         }
       }
 
@@ -88,7 +88,7 @@ class PortStateMinutesSpec extends Specification {
           newActualDeskStats.applyTo(portState, now)
           val expected = PortState(List(), newCrunchMinutes.toList, List())
 
-          portState.crunchMinutes === expected.crunchMinutes
+          portState.crunchMinutes.all === expected.crunchMinutes
         }
       }
 
@@ -121,7 +121,7 @@ class PortStateMinutesSpec extends Specification {
           newDeskRecMinutes.applyTo(portState, now)
           val expected = PortState(List(), newCrunchMinutes, List())
 
-          portState.crunchMinutes === expected.crunchMinutes
+          portState.crunchMinutes.all === expected.crunchMinutes
         }
       }
 
@@ -152,7 +152,7 @@ class PortStateMinutesSpec extends Specification {
           newSimulationMinutes.applyTo(portState, now)
           val expected = PortState(List(), newCrunchMinutes, List())
 
-          portState.crunchMinutes === expected.crunchMinutes
+          portState.crunchMinutes.all === expected.crunchMinutes
         }
       }
 

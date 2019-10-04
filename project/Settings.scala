@@ -104,6 +104,7 @@ object Settings {
   val jvmDependencies = Def.setting(List(
     "com.amazonaws" % "aws-java-sdk" % awsSdk,
     "com.github.dnvriend" %% "akka-persistence-inmemory" % akkaPersistenceInmemory % "test",
+    "com.pauldijou" %% "jwt-core" % "4.0.0",
     "com.hierynomus" % "sshj" % sshJ,
     "com.lihaoyi" %% "pprint" % pprint,
     "com.lihaoyi" %%% "utest" % uTest % Test,
@@ -140,6 +141,11 @@ object Settings {
     "com.typesafe.slick" %% "slick-codegen" % slick,
 
     "joda-time" % "joda-time" % jodaTime,
+
+    "ch.qos.logback.contrib" % "logback-json-classic" % "0.1.5",
+    "ch.qos.logback.contrib" % "logback-jackson" % "0.1.5",
+    "com.fasterxml.jackson.core" % "jackson-databind" % "2.10.0",
+
     "org.opensaml" % "opensaml" % openSaml excludeAll(ExclusionRule("org.bouncycastle"), ExclusionRule("xerces")),
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,

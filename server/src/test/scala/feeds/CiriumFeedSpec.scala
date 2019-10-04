@@ -39,7 +39,7 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
 
     val expected = drtArrival(publishedArrivalTime, estRunwayArrival, actRunwayArrival, estGateArrivalTime, actGateArrivalTime)
 
-    val result = CiriumFeed.toArrival(ciriumArrival)
+    val result = CiriumFeed.toArrival(ciriumArrival, "LHR")
 
     result === expected
   }
@@ -61,7 +61,7 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
       Option("12"),
       Option(100000),
       "LHR",
-      "1",
+      "T1",
       "TST1000",
       "TST1000",
       "JFK",
@@ -121,7 +121,7 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
   "When successfully polling for CiriumArrivals I should get a stream of ArrivalFeedSuccess" >> {
     implicit val mat: ActorMaterializer = ActorMaterializer()
 
-    val ciriumFeed = new CiriumFeed("") with MockClientWithSuccess
+    val ciriumFeed = new CiriumFeed("", "LHR") with MockClientWithSuccess
 
     val probe = TestProbe()
 

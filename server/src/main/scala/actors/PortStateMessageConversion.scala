@@ -16,33 +16,37 @@ object PortStateMessageConversion {
     log.debug(s"Unwrapping flights messages")
     optionalTimeWindowEnd match {
       case None =>
-        sm.flightWithSplits.foreach(message => {
+        state.flights ++= sm.flightWithSplits.map(message => {
           val fws = flightWithSplitsFromMessage(message)
-          state.flights += (fws.unique -> fws)
+          (fws.unique, fws)
         })
+        state.crunchMinutes ++= sm.crunchMinutes.collect {
+          case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 =>
+            val cm = crunchMinuteFromMessage(message)
+            (cm.key, cm)
+        }
+        state.staffMinutes ++= sm.staffMinutes.collect {
+          case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 =>
+            val sm = staffMinuteFromMessage(message)
+            (sm.key, sm)
+        }
       case Some(timeWindowEnd) =>
         val windowEndMillis = timeWindowEnd.millisSinceEpoch
-        sm.flightWithSplits.collect {
+        state.flights ++= sm.flightWithSplits.collect {
           case message if message.flight.map(fm => fm.pcpTime.getOrElse(0L)).getOrElse(0L) <= windowEndMillis =>
             val fws = flightWithSplitsFromMessage(message)
-            state.flights += (fws.unique -> fws)
+            (fws.unique, fws)
         }
-    }
-
-    log.debug(s"Unwrapping minutes messages")
-
-    sm.crunchMinutes.foreach {
-      case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 =>
-        val cm = crunchMinuteFromMessage(message)
-        state.crunchMinutes += (cm.key -> cm)
-      case _ => Unit
-    }
-
-    sm.staffMinutes.foreach {
-      case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 =>
-        val sm = staffMinuteFromMessage(message)
-        state.staffMinutes += (sm.key -> sm)
-      case _ => Unit
+        state.crunchMinutes ++= sm.crunchMinutes.collect {
+          case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 && message.getMinute <= windowEndMillis =>
+            val cm = crunchMinuteFromMessage(message)
+            (cm.key, cm)
+        }
+        state.staffMinutes ++= sm.staffMinutes.collect {
+          case message if message.minute.getOrElse(0L) % Crunch.oneMinuteMillis == 0 && message.getMinute <= windowEndMillis =>
+            val sm = staffMinuteFromMessage(message)
+            (sm.key, sm)
+        }
     }
 
     log.debug(s"Finished unwrapping messages")
@@ -86,9 +90,9 @@ object PortStateMessageConversion {
   def portStateToSnapshotMessage(portState: PortStateMutable) = CrunchStateSnapshotMessage(
     Option(0L),
     Option(0),
-    portState.flights.values.toList.map(flight => FlightMessageConversion.flightWithSplitsToMessage(flight)),
-    portState.crunchMinutes.values.toList.map(crunchMinuteToMessage),
-    portState.staffMinutes.values.toList.map(staffMinuteToMessage)
+    portState.flights.all.values.toList.map(flight => FlightMessageConversion.flightWithSplitsToMessage(flight)),
+    portState.crunchMinutes.all.values.toList.map(crunchMinuteToMessage),
+    portState.staffMinutes.all.values.toList.map(staffMinuteToMessage)
   )
 
   def splitMessageToApiSplits(sm: SplitMessage): Splits = {

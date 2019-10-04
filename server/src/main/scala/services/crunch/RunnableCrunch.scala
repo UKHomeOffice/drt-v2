@@ -6,7 +6,7 @@ import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
 import akka.stream.stage.GraphStage
 import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.{FlightsWithSplits, QueueName, TerminalName}
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
 import drt.shared._
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
@@ -61,7 +61,8 @@ object RunnableCrunch {
                                        crunchPeriodStartMillis: SDateLike => SDateLike,
                                        now: () => SDateLike,
                                        portQueues: Map[TerminalName, Seq[QueueName]],
-                                       liveStateDaysAhead: Int
+                                       liveStateDaysAhead: Int,
+                                       forecastMaxMillis: () => MillisSinceEpoch
                                       ): RunnableGraph[(FR, FR, FR, FR, MS, MS, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch)] = {
 
     val arrivalsKillSwitch = KillSwitches.single[ArrivalsDiff]
@@ -139,8 +140,13 @@ object RunnableCrunch {
           val manifestsRequestSink = builder.add(Sink.actorRef(manifestsRequestActor, "complete"))
 
           // @formatter:off
-          forecastBaseArrivals ~> forecastBaseArrivalsFanOut ~> arrivals.in0
-                                  forecastBaseArrivalsFanOut ~> baseArrivalsSink
+          forecastBaseArrivals.out.map {
+            case ArrivalsFeedSuccess(Flights(as), ca) =>
+              val maxScheduledMillis = forecastMaxMillis()
+              ArrivalsFeedSuccess(Flights(as.filter(_.Scheduled < maxScheduledMillis)), ca)
+            case failure => failure
+          } ~> forecastBaseArrivalsFanOut ~> arrivals.in0
+               forecastBaseArrivalsFanOut ~> baseArrivalsSink
 
           forecastArrivals ~> fcstArrivalsDiffing ~> forecastArrivalsFanOut ~> arrivals.in1
                                                      forecastArrivalsFanOut ~> fcstArrivalsSink

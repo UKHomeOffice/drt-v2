@@ -59,10 +59,8 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
   }
 
   def manifestSearch(uniqueArrivalKey: UniqueArrivalKey, queries: List[(String, QueryFunction)]): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] = queries match {
-    case Nil =>
-      log.warn(s"No manifests found for $uniqueArrivalKey")
-      Future((uniqueArrivalKey, None))
-    case (label, nextQuery) :: tail =>
+    case Nil => Future((uniqueArrivalKey, None))
+    case (_, nextQuery) :: tail =>
       paxInfoTable.db
         .run(nextQuery(uniqueArrivalKey))
         .map {
@@ -86,10 +84,12 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
   )
 
   def sameFlightAndDay3WeekWindowPreviousYearQuery(uniqueArrivalKey: UniqueArrivalKey): SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), Effect] = {
-    val earliestWeek = uniqueArrivalKey.scheduled.addMonths(-12).addDays(-7)
-    val latestWeek = uniqueArrivalKey.scheduled.addMonths(-12).addDays(7)
+    val lastYear = uniqueArrivalKey.scheduled.addMonths(-12)
+    val earliestWeek = lastYear.addDays(-7)
+    val latestWeek = lastYear.addDays(7)
     val scheduledTs = uniqueArrivalKey.scheduled.toISODateOnly
     val earliestTs = earliestWeek.toISODateOnly
+    val middleTs = lastYear.toISODateOnly
     val latestTs = latestWeek.toISODateOnly
 
     sql"""SELECT
@@ -105,7 +105,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
             and departure_port_code=${uniqueArrivalKey.departurePort}
             and voyage_number=${uniqueArrivalKey.voyageNumber.toInt}
             and day_of_week = EXTRACT(DOW FROM TIMESTAMP '#$scheduledTs')::int
-            and week_of_year BETWEEN EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs')::int and EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')::int
+            and week_of_year IN (EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$middleTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')::int)
           GROUP BY
             arrival_port_code,
             departure_port_code,
@@ -116,9 +116,11 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
 
 
   def sameFlight3WeekWindowPreviousYearQuery(uniqueArrivalKey: UniqueArrivalKey): SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), Effect] = {
-    val earliestWeek = uniqueArrivalKey.scheduled.addMonths(-12).addDays(-7)
-    val latestWeek = uniqueArrivalKey.scheduled.addMonths(-12).addDays(7)
+    val lastYear = uniqueArrivalKey.scheduled.addMonths(-12)
+    val earliestWeek = lastYear.addDays(-7)
+    val latestWeek = lastYear.addDays(7)
     val earliestTs = earliestWeek.toISODateOnly
+    val middleTs = lastYear.toISODateOnly
     val latestTs = latestWeek.toISODateOnly
     sql"""SELECT
             arrival_port_code,
@@ -132,7 +134,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
             and arrival_port_code=${uniqueArrivalKey.arrivalPort}
             and departure_port_code=${uniqueArrivalKey.departurePort}
             and voyage_number=${uniqueArrivalKey.voyageNumber.toInt}
-            and week_of_year BETWEEN EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs')::int and EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')::int
+            and week_of_year IN (EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$middleTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')::int)
           GROUP BY
             arrival_port_code,
             departure_port_code,
@@ -142,10 +144,12 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
   }
 
   def sameRouteAndDay3WeekWindowPreviousYearQuery(uniqueArrivalKey: UniqueArrivalKey): SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), Effect] = {
-    val earliestWeek = uniqueArrivalKey.scheduled.addMonths(-12).addDays(-7)
-    val latestWeek = uniqueArrivalKey.scheduled.addMonths(-12).addDays(7)
+    val lastYear = uniqueArrivalKey.scheduled.addMonths(-12)
+    val earliestWeek = lastYear.addDays(-7)
+    val latestWeek = lastYear.addDays(7)
     val scheduledTs = uniqueArrivalKey.scheduled.toISODateOnly
     val earliestTs = earliestWeek.toISODateOnly
+    val middleTs = lastYear.toISODateOnly
     val latestTs = latestWeek.toISODateOnly
     sql"""SELECT
             arrival_port_code,
@@ -159,7 +163,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
             and arrival_port_code=${uniqueArrivalKey.arrivalPort}
             and departure_port_code=${uniqueArrivalKey.departurePort}
             and day_of_week = EXTRACT(DOW FROM TIMESTAMP '#$scheduledTs')::int
-            and week_of_year BETWEEN EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs')::int and EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')::int
+            and week_of_year IN (EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$middleTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')::int)
           GROUP BY
             arrival_port_code,
             departure_port_code,

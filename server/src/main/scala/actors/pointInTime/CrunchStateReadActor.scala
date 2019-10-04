@@ -18,7 +18,16 @@ class CrunchStateReadActor(snapshotInterval: Int,
                            queues: Map[TerminalName, Seq[QueueName]],
                            startMillis: MillisSinceEpoch,
                            endMillis: MillisSinceEpoch)
-  extends CrunchStateActor(Option(snapshotInterval), oneMegaByte, "crunch-state", queues, () => pointInTime, expireAfterMillis, false, false) {
+  extends CrunchStateActor(
+    initialMaybeSnapshotInterval = Option(snapshotInterval),
+    initialSnapshotBytesThreshold = oneMegaByte,
+    name = "crunch-state",
+    portQueues = queues,
+    now = () => pointInTime,
+    expireAfterMillis = expireAfterMillis,
+    purgePreviousSnapshots = false,
+    acceptFullStateUpdates = false,
+    forecastMaxMillis = () => endMillis) {
 
   val staffReconstructionRequired: Boolean = pointInTime.millisSinceEpoch <= SDate("2017-12-04").millisSinceEpoch
 
@@ -31,7 +40,7 @@ class CrunchStateReadActor(snapshotInterval: Int,
       createdAtOption match {
         case Some(createdAt) if createdAt <= pointInTime.millisSinceEpoch =>
           log.info(s"Applying crunch diff with createdAt (${SDate(createdAt).toISOString()}) <= point in time requested: ${pointInTime.toISOString()}")
-          applyDiff(cdm)
+          applyDiff(cdm, endMillis)
         case Some(createdAt) =>
           log.info(s"Ignoring crunch diff with createdAt (${SDate(createdAt).toISOString()}) > point in time requested: ${pointInTime.toISOString()}")
       }
@@ -44,6 +53,7 @@ class CrunchStateReadActor(snapshotInterval: Int,
       log.info("Saved PortState Snapshot")
 
     case GetState =>
+      logInfo(s"Received GetState Request (pit: ${pointInTime.toISOString()}")
       sender() ! Option(state)
 
     case GetPortState(start, end) =>
@@ -67,7 +77,7 @@ class CrunchStateReadActor(snapshotInterval: Int,
     recovery
   }
 
-  override def crunchDiffFromMessage(diffMessage: CrunchDiffMessage): (Seq[UniqueArrival], Seq[ApiFlightWithSplits], Seq[CrunchMinute], Seq[StaffMinute]) = (
+  override def crunchDiffFromMessage(diffMessage: CrunchDiffMessage, x: MillisSinceEpoch): (Seq[UniqueArrival], Seq[ApiFlightWithSplits], Seq[CrunchMinute], Seq[StaffMinute]) = (
 
     diffMessage.flightsToRemove.collect {
       case m if queues.contains(m.getTerminalName) => uniqueArrivalFromMessage(m)

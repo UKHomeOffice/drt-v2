@@ -72,24 +72,17 @@ class WorkloadGraphStage(name: String = "",
         log.info(s"Received ${incomingFlights.flightsToUpdate.size} arrivals")
 
         val existingFlightTQMs: Set[TQM] = incomingFlights.flightsToUpdate.flatMap(fws => flightTQMs.getOrElse(fws.apiFlight.uniqueId, List())).toSet
-        log.info(s"Got existing flight TQMs")
         val updatedWorkloads = flightLoadMinutes(incomingFlights)
 
-        log.info(s"Got updated workloads")
-
         mergeUpdatedFlightLoadMinutes(existingFlightTQMs, updatedWorkloads, incomingFlights)
-        log.info(s"Merged updated workloads into existing")
 
         val affectedTQMs = updatedWorkloads.keys.toSet ++ existingFlightTQMs
-        log.info(s"Got affected TQMs")
         val latestDiff = diffFromTQMs(affectedTQMs)
-        log.info(s"Got latestDiff")
 
         loadMinutes ++= latestDiff
         purgeExpired(loadMinutes, TQM.atTime, now, expireAfterMillis.toInt)
-        log.info(s"Merged load minutes")
         updatedLoadsToPush ++= latestDiff
-        log.info(s"${updatedLoadsToPush.size} load minutes to push (${updatedLoadsToPush.values.count(_.paxLoad == 0d)} zero pax minutes)")
+        log.debug(s"${updatedLoadsToPush.size} load minutes to push (${updatedLoadsToPush.values.count(_.paxLoad == 0d)} zero pax minutes)")
 
         pushStateIfReady()
 
@@ -164,20 +157,18 @@ class WorkloadGraphStage(name: String = "",
 
     def pullFlights(): Unit = {
       if (!hasBeenPulled(inFlightsWithSplits)) {
-        log.info(s"Pulling inFlightsWithSplits")
+        log.debug(s"Pulling inFlightsWithSplits")
         pull(inFlightsWithSplits)
       }
     }
 
     def pushStateIfReady(): Unit = {
-      if (updatedLoadsToPush.isEmpty)
-        log.info(s"We have no load minutes. Nothing to push")
-      else if (isAvailable(outLoads)) {
+      if (updatedLoadsToPush.nonEmpty && isAvailable(outLoads)) {
         log.info(s"Pushing ${updatedLoadsToPush.size} load minutes")
         push(outLoads, Loads(SortedMap[TQM, LoadMinute]() ++ updatedLoadsToPush))
         updatedLoadsToPush.clear()
       }
-      else log.info(s"outLoads not available to push")
+      else log.debug(s"outLoads not available to push")
     }
 
     def flightSplitMinutesToQueueLoadMinutes(tqms: Set[TQM]): Map[TQM, LoadMinute] = tqms

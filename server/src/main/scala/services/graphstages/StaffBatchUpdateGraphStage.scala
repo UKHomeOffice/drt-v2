@@ -56,9 +56,9 @@ class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: Millis
 
     def pushIfAvailable(): Unit = {
       staffMinutesQueue match {
-        case empty if empty.isEmpty => log.info(s"Queue is empty. Nothing to push")
+        case empty if empty.isEmpty => log.debug(s"Queue is empty. Nothing to push")
         case _ if !isAvailable(outStaffMinutes) =>
-          log.info(s"outStaffMinutes not available to push")
+          log.debug(s"outStaffMinutes not available to push")
         case minutes =>
           val (millis, staffMinutes) = minutes.head
           log.info(s"Pushing ${SDate(millis).toLocalDateTimeString()} ${staffMinutes.minutes.length} staff minutes for ${staffMinutes.minutes.groupBy(_.terminalName).keys.mkString(", ")}")

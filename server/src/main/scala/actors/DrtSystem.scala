@@ -24,12 +24,13 @@ import drt.server.feeds.lhr.live.LegacyLhrLiveContentProvider
 import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.server.feeds.ltn.LtnLiveFeed
+import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared._
 import manifests.ManifestLookup
 import manifests.actors.{RegisteredArrivals, RegisteredArrivalsActor}
-import manifests.graph.{BatchStage, LookupStage, ManifestsGraph}
+import manifests.graph.{BatchStage, ManifestsGraph}
 import manifests.passengers.S3ManifestPoller
 import org.apache.spark.sql.SparkSession
 import org.joda.time.DateTimeZone
@@ -83,8 +84,8 @@ object PostgresTables extends {
 } with Tables
 
 case class DrtConfigParameters(config: Configuration) {
-  val maxDaysToCrunch: Int = config.getOptional[Int]("crunch.forecast.max_days").getOrElse(180)
-  val aclPollMinutes: Int = config.getOptional[Int]("crunch.forecast.poll_minutes").getOrElse(120)
+  val forecastMaxDays: Int = config.get[Int]("crunch.forecast.max_days")
+  val aclPollMinutes: Int = config.get[Int]("crunch.forecast.poll_minutes")
   val snapshotIntervalVm: Int = config.getOptional[Int]("persistence.snapshot-interval.voyage-manifest").getOrElse(1000)
   val snapshotMegaBytesBaseArrivals: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.base-arrivals").getOrElse(1d) * oneMegaByte).toInt
   val snapshotMegaBytesFcstArrivals: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.forecast-arrivals").getOrElse(5d) * oneMegaByte).toInt
@@ -145,15 +146,13 @@ case class SubscribeRequestQueue(subscriber: SourceQueueWithComplete[List[Arriva
 case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsFeedResponse])
 
 case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig)
-                    (implicit actorMaterializer: Materializer) extends DrtSystemInterface {
+                    (implicit materializer: Materializer) extends DrtSystemInterface {
 
   implicit val system: ActorSystem = actorSystem
 
   val params = DrtConfigParameters(config)
 
   import DrtStaticParameters._
-
-  system.log.info(s"recrunchOnStart: ${params.recrunchOnStart}")
 
   val aclFeed = AclFeed(params.ftpServer, params.username, params.path, airportConfig.feedPortCode, aclTerminalMapping(airportConfig.portCode))
 
@@ -162,13 +161,17 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
   val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
 
+  val maxBufferSize: Int = config.get[Int]("crunch.manifests.max-buffer-size")
+  val minSecondsBetweenBatches: Int = config.get[Int]("crunch.manifests.min-seconds-between-batches")
+
   val aggregateArrivalsDbConfigKey = "aggregated-db"
 
   val purgeOldLiveSnapshots = false
   val purgeOldForecastSnapshots = true
 
-  val liveCrunchStateProps = Props(classOf[CrunchStateActor], Option(airportConfig.portStateSnapshotInterval), params.snapshotMegaBytesLivePortState, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots, true)
-  val forecastCrunchStateProps = Props(classOf[CrunchStateActor], Option(100), params.snapshotMegaBytesFcstPortState, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots, false)
+  val forecastMaxMillis: () => MillisSinceEpoch = () => now().addDays(params.forecastMaxDays).millisSinceEpoch
+  val liveCrunchStateProps = Props(classOf[CrunchStateActor], Option(airportConfig.portStateSnapshotInterval), params.snapshotMegaBytesLivePortState, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots, true, forecastMaxMillis)
+  val forecastCrunchStateProps = Props(classOf[CrunchStateActor], Option(100), params.snapshotMegaBytesFcstPortState, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots, false, forecastMaxMillis)
 
   lazy val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastBaseArrivalsActor], params.snapshotMegaBytesBaseArrivals, now, expireAfterMillis), name = "base-arrivals-actor")
   lazy val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastPortArrivalsActor], params.snapshotMegaBytesFcstArrivals, now, expireAfterMillis), name = "forecast-arrivals-actor")
@@ -178,14 +181,14 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val arrivalsImportActor: ActorRef = system.actorOf(Props(classOf[ArrivalsImportActor]), name = "arrivals-import-actor")
 
   lazy val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(classOf[AggregatedArrivalsActor], airportConfig.portCode, ArrivalTable(airportConfig.portCode, PostgresTables)), name = "aggregated-arrivals-actor")
-  lazy val registeredArrivalsActor: ActorRef = system.actorOf(Props(classOf[RegisteredArrivalsActor], oneMegaByte, None, airportConfig.portCode, now, expireAfterMillis), name = "registered-arrivals-actor")
+  lazy val registeredArrivalsActor: ActorRef = system.actorOf(Props(classOf[RegisteredArrivalsActor], oneMegaByte, Option(500), airportConfig.portCode, now, expireAfterMillis), name = "registered-arrivals-actor")
 
   lazy val liveCrunchStateActor: ActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
   lazy val forecastCrunchStateActor: ActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
 
   lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, Option(params.snapshotIntervalVm)), name = "voyage-manifests-actor")
   lazy val lookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
-  lazy val voyageManifestsRequestActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsRequestActor], airportConfig.portCode, lookup), name = "voyage-manifests-request-actor")
+  lazy val voyageManifestsRequestActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsRequestActor], airportConfig.portCode, lookup, now, maxBufferSize, minSecondsBetweenBatches), name = "voyage-manifests-request-actor")
 
   lazy val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](100, OverflowStrategy.backpressure)
 
@@ -334,12 +337,10 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   }
 
   def startManifestsGraph(maybeRegisteredArrivals: Option[RegisteredArrivals]): SourceQueueWithComplete[List[Arrival]] = {
-    val minimumRefreshIntervalMillis = 15 * 60 * 1000
+    val batchSize = config.get[Int]("crunch.manifests.lookup-batch-size")
+    lazy val batchStage: BatchStage = new BatchStage(now, Crunch.isDueLookup, batchSize, expireAfterMillis, maybeRegisteredArrivals, 1000)
 
-    lazy val batchStage: BatchStage = new BatchStage(now, Crunch.isDueLookup, params.manifestLookupBatchSize, expireAfterMillis, maybeRegisteredArrivals, minimumRefreshIntervalMillis)
-    lazy val lookupStage: LookupStage = new LookupStage(airportConfig.portCode, lookup)
-
-    ManifestsGraph(manifestsArrivalRequestSource, batchStage, lookupStage, voyageManifestsRequestActor, registeredArrivalsActor).run
+    ManifestsGraph(manifestsArrivalRequestSource, batchStage, voyageManifestsRequestActor, registeredArrivalsActor, airportConfig.portCode, lookup).run
   }
 
   def startCrunchSystem(initialPortState: Option[PortState],
@@ -357,7 +358,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       historicalSplitsProvider = historicalSplitsProvider,
       liveCrunchStateActor = liveCrunchStateActor,
       forecastCrunchStateActor = forecastCrunchStateActor,
-      maxDaysToCrunch = params.maxDaysToCrunch,
+      maxDaysToCrunch = params.forecastMaxDays,
       expireAfterMillis = expireAfterMillis,
       actors = Map(
         "shifts" -> shiftsActor,
@@ -458,53 +459,64 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   }
 
   def liveArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = {
+    val feed = portCode match {
+      case "LHR" =>
+        val contentProvider = if (config.get[Boolean]("feeds.lhr.use-legacy-live")) {
+          log.info(s"Using legacy LHR live feed")
+          () => LegacyLhrLiveContentProvider().csvContentsProviderProd()
+        } else {
+          log.info(s"Using new LHR live feed")
+          val host = config.get[String]("feeds.lhr.sftp.live.host")
+          val username = config.get[String]("feeds.lhr.sftp.live.username")
+          val password = config.get[String]("feeds.lhr.sftp.live.password")
+          () => LhrSftpLiveContentProvider(host, username, password).latestContent
+        }
+        LHRFlightFeed(contentProvider)
+      case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
+      case "LGW" =>
+        val lgwNamespace = params.maybeLGWNamespace.getOrElse(throw new Exception("Missing LGW Azure Namespace parameter"))
+        val lgwSasToKey = params.maybeLGWSASToKey.getOrElse(throw new Exception("Missing LGW SAS Key for To Queue"))
+        val lgwServiceBusUri = params.maybeLGWServiceBusUri.getOrElse(throw new Exception("Missing LGW Service Bus Uri"))
+        LGWFeed(lgwNamespace, lgwSasToKey, lgwServiceBusUri)(system).source()
 
-    //    val feed = portCode match {
-    //      case "LHR" =>
-    //        val contentProvider = if (config.get[Boolean]("feeds.lhr.use-legacy-live")) {
-    //          log.info(s"Using legacy LHR live feed")
-    //          () => LegacyLhrLiveContentProvider().csvContentsProviderProd()
-    //        } else {
-    //          log.info(s"Using new LHR live feed")
-    //          val host = config.get[String]("feeds.lhr.sftp.live.host")
-    //          val username = config.get[String]("feeds.lhr.sftp.live.username")
-    //          val password = config.get[String]("feeds.lhr.sftp.live.password")
-    //          () => LhrSftpLiveContentProvider(host, username, password).latestContent
-    //        }
-    //        LHRFlightFeed(contentProvider)
-    //      case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
-    //      case "LGW" =>
-    //        val lgwNamespace = params.maybeLGWNamespace.getOrElse(throw new Exception("Missing LGW Azure Namespace parameter"))
-    //        val lgwSasToKey = params.maybeLGWSASToKey.getOrElse(throw new Exception("Missing LGW SAS Key for To Queue"))
-    //        val lgwServiceBusUri = params.maybeLGWServiceBusUri.getOrElse(throw new Exception("Missing LGW Service Bus Uri"))
-    //        LGWFeed(lgwNamespace, lgwSasToKey, lgwServiceBusUri)(system).source()
-    //
-    //      case "BHX" if !params.bhxIataEndPointUrl.isEmpty =>
-    //        BHXFeed(BHXClient(params.bhxIataUsername, params.bhxIataEndPointUrl), 80 seconds, 1 milliseconds)(system)
-    //      case "BHX" => BHXLiveFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX live feed URL")))
-    //      case "LTN" =>
-    //        val url = params.maybeLtnLiveFeedUrl.getOrElse(throw new Exception("Missing live feed url"))
-    //        val username = params.maybeLtnLiveFeedUsername.getOrElse(throw new Exception("Missing live feed username"))
-    //        val password = params.maybeLtnLiveFeedPassword.getOrElse(throw new Exception("Missing live feed password"))
-    //        val token = params.maybeLtnLiveFeedToken.getOrElse(throw new Exception("Missing live feed token"))
-    //        val timeZone = params.maybeLtnLiveFeedTimeZone match {
-    //          case Some(tz) => DateTimeZone.forID(tz)
-    //          case None => DateTimeZone.UTC
-    //        }
-    //        LtnLiveFeed(url, token, username, password, timeZone).tickingSource
-    //      case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
-    //    }
-    //    feed
-    arrivalsNoOp
+      case "BHX" if !params.bhxIataEndPointUrl.isEmpty =>
+        BHXFeed(BHXClient(params.bhxIataUsername, params.bhxIataEndPointUrl), 80 seconds, 1 milliseconds)(system)
+      case "BHX" => BHXLiveFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX live feed URL")))
+      case "LTN" =>
+        val url = params.maybeLtnLiveFeedUrl.getOrElse(throw new Exception("Missing live feed url"))
+        val username = params.maybeLtnLiveFeedUsername.getOrElse(throw new Exception("Missing live feed username"))
+        val password = params.maybeLtnLiveFeedPassword.getOrElse(throw new Exception("Missing live feed password"))
+        val token = params.maybeLtnLiveFeedToken.getOrElse(throw new Exception("Missing live feed token"))
+        val timeZone = params.maybeLtnLiveFeedTimeZone match {
+          case Some(tz) => DateTimeZone.forID(tz)
+          case None => DateTimeZone.UTC
+        }
+        LtnLiveFeed(url, token, username, password, timeZone).tickingSource
+      case "MAN" | "STN" | "EMA" =>
+        if (config.get[Boolean]("feeds.mag.use-legacy")) {
+          log.info(s"Using legacy MAG live feed")
+          createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
+        } else {
+          log.info(s"Using new MAG live feed")
+          val privateKey: String = config.get[String]("feeds.mag.private-key")
+          val claimIss: String = config.get[String]("feeds.mag.claim.iss")
+          val claimRole: String = config.get[String]("feeds.mag.claim.role")
+          val claimSub: String = config.get[String]("feeds.mag.claim.sub")
+          MagFeed(privateKey, claimIss, claimRole, claimSub, now, airportConfig.portCode, ProdFeedRequester).tickingSource
+        }
+
+      case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
+    }
+    feed
   }
 
   def arrivalsNoOp: Source[ArrivalsFeedResponse, Cancellable] = Source.tick[ArrivalsFeedResponse](100 days, 100 days, ArrivalsFeedSuccess(Flights(Seq()), SDate.now()))
 
   def forecastArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = {
     val feed = portCode match {
-//      case "LHR" => createForecastLHRFeed()
-//      case "BHX" => BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")))
-//      case "LGW" => LGWForecastFeed()
+      case "LHR" => createForecastLHRFeed()
+      case "BHX" => BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")))
+      case "LGW" => LGWForecastFeed()
       case _ =>
         system.log.info(s"No Forecast Feed defined.")
         arrivalsNoOp

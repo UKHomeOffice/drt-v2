@@ -1,7 +1,7 @@
 package services
 
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared.FlightsApi.QueueName
 import drt.shared.Summaries.terminalSummaryForPeriod
 import drt.shared._
 import drt.shared.splits.ApiSplitsToSplitRatio

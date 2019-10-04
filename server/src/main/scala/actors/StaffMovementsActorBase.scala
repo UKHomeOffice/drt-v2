@@ -6,15 +6,13 @@ import actors.Sizes.oneMegaByte
 import akka.actor.Scheduler
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
-import scalapb.GeneratedMessage
 import drt.shared.{HasExpireables, MilliDate, SDateLike, StaffMovement}
 import org.slf4j.{Logger, LoggerFactory}
+import scalapb.GeneratedMessage
 import server.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
-import services.graphstages.Crunch
-import services.{OfferHandler, SDate}
+import services.OfferHandler
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.{Failure, Success}
 
 case class StaffMovements(movements: Seq[StaffMovement]) extends HasExpireables[StaffMovements] {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -132,7 +130,7 @@ class StaffMovementsActorBase(val now: () => SDateLike,
 
   def receiveCommand: Receive = {
     case GetState =>
-      log.info(s"GetState received")
+      log.debug(s"GetState received")
       val movements = state.staffMovements.purgeExpired(expireBefore)
       sender() ! movements
 

@@ -118,7 +118,17 @@ object TestActors {
                                   portQueues: Map[TerminalName, Seq[QueueName]],
                                   now: () => SDateLike,
                                   expireAfterMillis: Long,
-                                  purgePreviousSnapshots: Boolean) extends CrunchStateActor(None, oneMegaByte, name, portQueues, now, expireAfterMillis, purgePreviousSnapshots, false) {
+                                  purgePreviousSnapshots: Boolean)
+    extends CrunchStateActor(
+      initialMaybeSnapshotInterval = None,
+      initialSnapshotBytesThreshold = oneMegaByte,
+      name = name,
+      portQueues = portQueues,
+      now = now,
+      expireAfterMillis = expireAfterMillis,
+      purgePreviousSnapshots = purgePreviousSnapshots,
+      acceptFullStateUpdates = false,
+      forecastMaxMillis = () => now().addDays(2).millisSinceEpoch) {
 
     def reset: Receive = {
       case ResetActor =>

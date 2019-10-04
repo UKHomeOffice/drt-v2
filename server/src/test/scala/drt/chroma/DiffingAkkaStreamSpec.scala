@@ -67,7 +67,7 @@ class DiffingAkkaStreamSpec extends AkkaStreamTestKitSpecificationLike with Samp
       source
         .map(content => content.parseJson.convertTo[List[ChromaLiveFlight]])
         .map(chromaArrivals => ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(chromaArrivals)), date))
-        .via(new ArrivalsDiffingStage(mutable.SortedMap()))
+        .via(new ArrivalsDiffingStage(mutable.SortedMap(), () => SDate.now().millisSinceEpoch))
         .runWith(TestSink.probe[FeedResponse])
         .requestNext(ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(List(
           ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
@@ -91,7 +91,7 @@ class DiffingAkkaStreamSpec extends AkkaStreamTestKitSpecificationLike with Samp
     "we really can diff it and parse it" in {
       source
         .map(chromaArrivals => ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(chromaArrivals)), date))
-        .via(new ArrivalsDiffingStage(mutable.SortedMap()))
+        .via(new ArrivalsDiffingStage(mutable.SortedMap(), () => SDate.now().millisSinceEpoch))
         .runWith(TestSink.probe[FeedResponse])
         .requestNext(ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(List(
           ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
