@@ -53,6 +53,7 @@ class CrunchStateReadActor(snapshotInterval: Int,
       log.info("Saved PortState Snapshot")
 
     case GetState =>
+      logInfo(s"Received GetState Request (pit: ${pointInTime.toISOString()}")
       sender() ! Option(state)
 
     case GetPortState(start, end) =>

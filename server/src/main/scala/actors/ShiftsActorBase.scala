@@ -109,7 +109,7 @@ class ShiftsActorBase(val now: () => SDateLike,
 
   def receiveCommand: Receive = {
     case GetState =>
-      log.info(s"GetState received")
+      log.debug(s"GetState received")
       val assignments = state.purgeExpired(expireBefore)
       sender() ! assignments
 
