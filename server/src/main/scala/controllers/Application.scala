@@ -176,7 +176,7 @@ class Application @Inject()(implicit val config: Configuration,
 
   val virusScanner: VirusScanner = VirusScanner(VirusScanService(virusScannerUrl))
 
-  def log: LoggingAdapter = system.log
+  val log: LoggingAdapter = system.log
 
   log.info(s"Starting DRTv2 build ${BuildInfo.version}")
 
@@ -341,14 +341,13 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def timed[A](description: String)(action: Action[A]): Action[A] = Action.async(action.parser) { request =>
+  def timed[A](description: String)(eventualThing: Future[A]): Future[A] = {
     val startMillis = SDate.now().millisSinceEpoch
-    val actionResponse = action(request)
-    val endMillis = SDate.now().millisSinceEpoch
-
-    log.info(s"$description (${request.uri}) took ${endMillis - startMillis}ms")
-
-    actionResponse
+    eventualThing.foreach { _ =>
+      val endMillis = SDate.now().millisSinceEpoch
+      log.info(s"$description took ${endMillis - startMillis}ms")
+    }
+    eventualThing
   }
 
   def index = Action { request =>
