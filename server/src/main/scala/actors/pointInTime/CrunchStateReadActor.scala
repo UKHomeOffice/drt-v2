@@ -29,8 +29,6 @@ class CrunchStateReadActor(snapshotInterval: Int,
     acceptFullStateUpdates = false,
     forecastMaxMillis = () => endMillis) {
 
-  val staffReconstructionRequired: Boolean = pointInTime.millisSinceEpoch <= SDate("2017-12-04").millisSinceEpoch
-
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: CrunchStateSnapshotMessage => setStateFromSnapshot(snapshot, Option(pointInTime.addDays(2)))
   }
@@ -39,10 +37,10 @@ class CrunchStateReadActor(snapshotInterval: Int,
     case cdm@CrunchDiffMessage(createdAtOption, _, _, _, _, _, _, _) =>
       createdAtOption match {
         case Some(createdAt) if createdAt <= pointInTime.millisSinceEpoch =>
-          log.info(s"Applying crunch diff with createdAt (${SDate(createdAt).toISOString()}) <= point in time requested: ${pointInTime.toISOString()}")
+          log.debug(s"Applying crunch diff with createdAt (${SDate(createdAt).toISOString()}) <= point in time requested: ${pointInTime.toISOString()}")
           applyDiff(cdm, endMillis)
         case Some(createdAt) =>
-          log.info(s"Ignoring crunch diff with createdAt (${SDate(createdAt).toISOString()}) > point in time requested: ${pointInTime.toISOString()}")
+          log.debug(s"Ignoring crunch diff with createdAt (${SDate(createdAt).toISOString()}) > point in time requested: ${pointInTime.toISOString()}")
       }
   }
 

@@ -341,6 +341,16 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
+  def timed[A](description: String)(action: Action[A]): Action[A] = Action.async(action.parser) { request =>
+    val startMillis = SDate.now().millisSinceEpoch
+    val actionResponse = action(request)
+    val endMillis = SDate.now().millisSinceEpoch
+
+    log.info(s"$description (${request.uri}) took ${endMillis - startMillis}ms")
+
+    actionResponse
+  }
+
   def index = Action { request =>
     val user = ctrl.getLoggedInUser(config, request.headers, request.session)
     Ok(views.html.index("DRT - BorderForce", portCode, googleTrackingCode, user.id))
