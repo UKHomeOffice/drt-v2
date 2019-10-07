@@ -1,9 +1,10 @@
-package controllers
+package controllers.application
 
 import java.nio.file.Paths
 import java.util.UUID
 
 import api.ApiResponseBody
+import controllers.Application
 import drt.server.feeds.lhr.forecast.LHRForecastCSVExtractor
 import drt.shared.FlightsApi.Flights
 import drt.shared.PortFeedUpload
@@ -16,7 +17,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 
-trait ApplicationWithImports {
+trait WithImports {
   self: Application =>
 
   def feedImport(feedType: String, portCode: String): Action[Files.TemporaryFile] = authByRole(PortFeedUpload) {
@@ -25,10 +26,6 @@ trait ApplicationWithImports {
 
       request.body.moveTo(Paths.get(filePath), replace = true)
 
-      //    virusScanner
-      //      .fileIsOk(request.path, filePath)
-      //      .map {
-      //        case true =>
       val extractedArrivals = LHRForecastCSVExtractor(filePath)
 
       val response = if (extractedArrivals.nonEmpty) {
@@ -38,15 +35,6 @@ trait ApplicationWithImports {
       } else BadRequest(toJson(ApiResponseBody("No arrivals found")))
 
       Future(response)
-
-      //        case false =>
-      //          BadRequest(toJson(ApiResponseBody("Bad file")))
-      //      }
-      //      .recoverWith {
-      //        case t =>
-      //          log.info(s"feed import failed: ${t.getMessage}")
-      //          Future(BadRequest(toJson(ApiResponseBody("Something went wrong. Try again"))))
-      //      }
     }
   }
 }

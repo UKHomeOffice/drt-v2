@@ -119,7 +119,6 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ShowActualDesksAndQueuesHandler(zoomRW(_.showActualIfAvailable)((m, v) => m.copy(showActualIfAvailable = v))),
       new ShowAlertModalDialogHandler(zoomRW(_.displayAlertDialog)((m, v) => m.copy(displayAlertDialog = v))),
       new RetryHandler(zoomRW(identity)((m, v) => m)),
-      new ShouldReloadHandler(zoomRW(identity)((m, v) => m)),
       new LoggedInStatusHandler(zoomRW(identity)((m, v) => m)),
       new NoopHandler(zoomRW(identity)((m, v) => m)),
       new LoggedInUserHandler(zoomRW(_.loggedInUserPot)((m, v) => m.copy(loggedInUserPot = v))),

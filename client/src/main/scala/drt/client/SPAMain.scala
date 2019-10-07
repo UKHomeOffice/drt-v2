@@ -5,7 +5,7 @@ import java.util.UUID
 import diode.Action
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType}
-import drt.client.components.{AlertsPage, ContactPage, EditKeyCloakUserPage, GlobalStyles, KeyCloakUsersPage, Layout, PortConfigPage, StatusPage, TerminalComponent, TerminalPlanningComponent, TerminalsDashboardPage, TerminalsExportDashboardPage, UserDashboardPage}
+import drt.client.components.{AlertsPage, ContactPage, EditKeyCloakUserPage, GlobalStyles, KeyCloakUsersPage, Layout, PortConfigPage, StatusPage, TerminalComponent, TerminalPlanningComponent, TerminalsDashboardPage, UserDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -141,7 +141,6 @@ object SPAMain {
       GetLoggedInUser,
       GetUserHasPortAccess,
       GetLoggedInStatus,
-      GetShouldReload,
       GetAirportConfig,
       UpdateMinuteTicker,
       GetFeedStatuses(),

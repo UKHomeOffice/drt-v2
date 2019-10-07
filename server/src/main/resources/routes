@@ -36,8 +36,6 @@ GET           /export/desks/:start/:end/:terminalName              controllers.A
 GET           /export/arrivals/:start/:end/:terminalName           controllers.Application.exportFlightsWithSplitsBetweenTimeStampsCSV(start, end, terminalName)
 GET           /export/planning/:weekStarting/:terminalName         controllers.Application.exportForecastWeekToCSV(weekStarting, terminalName)
 GET           /export/headlines/:weekStarting/:terminalName        controllers.Application.exportForecastWeekHeadlinesToCSV(weekStarting, terminalName)
-
-
 GET           /export/users                                        controllers.Application.exportUsers
 
 # Map static resources from the /public folder to the /assets URL path
@@ -49,8 +47,6 @@ GET           /assets/*file                                        controllers.A
 POST          /api/*path                                           controllers.Application.autowireApi(path: String)
 
 GET           /data/user                                           controllers.Application.getLoggedInUser()
-
-GET           /data/should-reload                                  controllers.Application.getShouldReload()
 
 POST          /data/login                                          controllers.Application.apiLogin()
 
