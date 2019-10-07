@@ -1,6 +1,6 @@
 package services.crunch
 
-import controllers.{ArrivalGenerator, Forecast}
+import controllers.{ArrivalGenerator, application}
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
@@ -56,7 +56,7 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
       case ps: PortState =>
         val cs = ps.crunchSummary(SDate(startDate1), 4, 15, "T1", airportConfig.queues("T1").toList)
         val ss = ps.staffSummary(SDate(startDate1), 4, 15, "T1")
-        val weekOf15MinSlots: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = Forecast.rollUpForWeek(cs, ss)
+        val weekOf15MinSlots: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = application.Forecast.rollUpForWeek(cs, ss)
         val firstDayFirstHour = weekOf15MinSlots.getOrElse(SDate("2017-01-02T00:00Z").millisSinceEpoch, Seq()).take(4)
 
         firstDayFirstHour == expected
@@ -84,7 +84,7 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
     val cs = ps.crunchSummary(SDate(0L), 4, 15, "T1", airportConfig.queues("T1").toList)
     val ss = ps.staffSummary(SDate(0L), 4, 15, "T1")
 
-    val result = Forecast.rollUpForWeek(cs, ss).values.head.toSet
+    val result = application.Forecast.rollUpForWeek(cs, ss).values.head.toSet
 
     val expected = Set(
       ForecastTimeSlot(0, 20, 3),

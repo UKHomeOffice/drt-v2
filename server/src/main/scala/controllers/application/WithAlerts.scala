@@ -1,8 +1,9 @@
-package controllers
+package controllers.application
 
 import actors.{DeleteAlerts, GetState}
 import akka.pattern._
 import akka.util.Timeout
+import controllers.Application
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{Alert, CreateAlerts}
 import org.joda.time.DateTime
@@ -15,7 +16,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-trait ApplicationWithAlerts {
+trait WithAlerts {
   self: Application =>
   val pattern = "yyyy-MM-dd HH:mm:ss"
   implicit val dateRead: Reads[DateTime] = JodaReads.jodaDateReads(pattern)
