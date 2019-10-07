@@ -270,7 +270,6 @@ class ArrivalsGraphStage(name: String = "",
         case (Some(liveArrival), None) => Option(liveArrival)
         case (Some(liveArrival), Some(baseLiveArrival)) => Option(LiveArrivalsUtil.mergePortFeedWithBase(liveArrival, baseLiveArrival))
         case (None, Some(baseLiveArrival)) if forecastBaseArrivals.contains(key) =>
-          log.info(s"Matched CIRIUM ${key} in ACL ${LiveArrivalsUtil.printArrival(baseLiveArrival)}")
 
           Option(baseLiveArrival)
         case _ => forecastBaseArrivals.get(key)

@@ -37,8 +37,9 @@ case class CiriumFeed(endpoint: String, portCode: String)(implicit actorSystem: 
   }
 
   def makeRequest(): Future[List[CiriumFlightStatus]] = {
-    log.info(s"Requesting Cirium flights from $endpoint")
-    requestFeed(endpoint)
+    val uri = s"$endpoint/statuses/$portCode"
+    log.info(s"Requesting Cirium flights from $uri")
+    requestFeed(uri)
   }
 
 }
@@ -52,7 +53,7 @@ object CiriumFeed {
         "T1"
       case "LHR" | "MAN" =>
         terminal.map(t => s"T$t").getOrElse("No Terminal")
-      case _  => terminal.getOrElse("No Terminal")
+      case _ => terminal.getOrElse("No Terminal")
     }
   }
 
