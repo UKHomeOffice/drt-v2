@@ -107,8 +107,10 @@ class ArrivalsGraphStage(name: String = "",
       grab(arrivalsInlet) match {
         case ArrivalsFeedSuccess(Flights(flights), connectedAt) =>
           log.info(s"Grabbed ${flights.length} arrivals from $arrivalsInlet of $sourceType at ${connectedAt.toISOString()}")
-          if (flights.nonEmpty || sourceType == BaseArrivals) handleIncomingArrivals(sourceType, flights)
-          else log.info(s"No arrivals to handle")
+          if (flights.nonEmpty || sourceType == BaseArrivals)
+            handleIncomingArrivals(sourceType, flights)
+          else
+            log.info(s"No arrivals to handle")
         case ArrivalsFeedFailure(message, failedAt) =>
           log.warn(s"$arrivalsInlet failed at ${failedAt.toISOString()}: $message")
       }
@@ -126,7 +128,11 @@ class ArrivalsGraphStage(name: String = "",
           toPush = mergeUpdatesFromKeys(liveArrivals.keys)
         case LiveBaseArrivals =>
           updateArrivalsSource(liveBaseArrivals, filteredArrivals)
-          println(s"CIRIUM: ${liveBaseArrivals.keys}")
+          val missingTerminals = liveBaseArrivals.count {
+            case (_, a) if a.Terminal == "No Terminal" => true
+            case _ => false
+          }
+          log.info(s"Got $missingTerminals Cirium Arrivals with no terminal")
           toPush = mergeUpdatesFromKeys(liveBaseArrivals.keys)
         case ForecastArrivals =>
           updateArrivalsSource(forecastArrivals, filteredArrivals)

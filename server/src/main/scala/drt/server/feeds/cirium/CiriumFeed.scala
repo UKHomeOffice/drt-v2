@@ -44,18 +44,15 @@ case class CiriumFeed(endpoint: String, portCode: String)(implicit actorSystem: 
 }
 
 object CiriumFeed {
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   def terminalMatchForPort(terminal: Option[String], portCode: String): String = {
     portCode.toUpperCase match {
-      case "LTN" | "STN" | "EMA" =>
-        println(s"terminal: T1 ($terminal)")
+      case "LTN" | "STN" | "EMA" | "GLA" | "LCY" | "BRS" | "BFS" | "LPL" | "NCL" =>
         "T1"
-
-      case "LHR" =>
+      case "LHR" | "MAN" =>
         terminal.map(t => s"T$t").getOrElse("No Terminal")
-      case _ if terminal.isDefined  =>
-        println(s"Terminal $terminal")
-        terminal.getOrElse("No Terminal")
+      case _  => terminal.getOrElse("No Terminal")
     }
   }
 
