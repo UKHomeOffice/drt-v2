@@ -1,6 +1,6 @@
 package services
 
-import controllers.Forecast
+import controllers.application.Forecast
 import drt.shared.CrunchApi.{CrunchMinute, ForecastHeadlineFigures, PortState, QueueHeadline}
 import drt.shared.Queues
 import org.specs2.mutable.Specification
