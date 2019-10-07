@@ -30,7 +30,10 @@ case class CiriumFeed(endpoint: String, portCode: String)(implicit actorSystem: 
       .mapAsync(1)(_ => {
         makeRequest()
       })
-      .map(_.map(a => toArrival(a, portCode)))
+      .map(fs => {
+        log.info(s"Got ${fs.size} arrivals from Cirium")
+        fs.map(a => toArrival(a, portCode))
+      })
       .map(as => ArrivalsFeedSuccess(Flights(as)))
 
     source
@@ -41,7 +44,6 @@ case class CiriumFeed(endpoint: String, portCode: String)(implicit actorSystem: 
     log.info(s"Requesting Cirium flights from $uri")
     requestFeed(uri)
   }
-
 }
 
 object CiriumFeed {
