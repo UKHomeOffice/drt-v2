@@ -796,7 +796,7 @@ object AirportConfigs {
         Queues.NonEeaDesk -> (List(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2), List(7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7))
       )
     ),
-    role = BRSAccess,
+    role = GLAAccess,
     terminalPaxTypeQueueAllocation = Map(
       "T1" -> (defaultQueueRatios + (EeaMachineReadable -> List(
         EGate -> 0.6993,
@@ -839,7 +839,7 @@ object AirportConfigs {
         Queues.NonEeaDesk -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), List(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4))
       )
     ),
-    role = BRSAccess,
+    role = LCYAccess,
     terminalPaxTypeQueueAllocation = Map(
       "T1" -> (defaultQueueRatios + (EeaMachineReadable -> List(
         EGate -> 0.6993,

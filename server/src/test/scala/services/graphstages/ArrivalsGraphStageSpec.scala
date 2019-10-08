@@ -126,8 +126,8 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     val (_, liveBaseSource, _, forecastBaseSource) = TestableArrivalsGraphStage(probe, arrivalsGraphStage).run
     val baseLiveEstimated = Option(SDate(2019, 10, 1, 16, 0).millisSinceEpoch)
 
-    liveBaseSource.offer(ArrivalsFeedSuccess(Flights(List(arrival(estimated = baseLiveEstimated)))))
     forecastBaseSource.offer(ArrivalsFeedSuccess(Flights(List(arrival()))))
+    liveBaseSource.offer(ArrivalsFeedSuccess(Flights(List(arrival(estimated = baseLiveEstimated)))))
 
     probe.fishForMessage(10 seconds) {
       case ArrivalsDiff(toUpdate, _) =>
