@@ -17,6 +17,7 @@ import drt.http.ProdSendAndReceive
 import drt.server.feeds.api.S3ApiProvider
 import drt.server.feeds.bhx.{BHXClient, BHXFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
+import drt.server.feeds.cirium.CiriumFeed
 import drt.server.feeds.legacy.bhx.{BHXForecastFeedLegacy, BHXLiveFeedLegacy}
 import drt.server.feeds.lgw.{LGWFeed, LGWForecastFeed}
 import drt.server.feeds.lhr.live.LegacyLhrLiveContentProvider
@@ -319,6 +320,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     case "MAN" => (tIn: TerminalName) => Map("T1" -> "T1", "T2" -> "T2", "T3" -> "T3").getOrElse(tIn, "")
     case "EMA" => (tIn: TerminalName) => Map("1I" -> "T1", "1D" -> "T1").getOrElse(tIn, "")
     case "EDI" => (tIn: TerminalName) => Map("1I" -> "A1").getOrElse(tIn, "")
+    case "LCY" => (tIn: TerminalName) => Map("TER" -> "T1").getOrElse(tIn, tIn)
+    case "GLA" => (tIn: TerminalName) => Map("1I" -> "T1").getOrElse(tIn, tIn)
     case _ => (tIn: TerminalName) => s"T${tIn.take(1)}"
   }
 
@@ -447,12 +450,20 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       .getOrCreate()
   }
 
-  def liveBaseArrivalsSource(str: String): Source[ArrivalsFeedResponse, Cancellable] = {
-    arrivalsNoOp
+  def liveBaseArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = {
+    if (config.get[Boolean]("feature-flags.use-cirium-feed")) {
+
+      log.info(s"Using Cirium Live Base Feed")
+      CiriumFeed(config.get[String]("feeds.cirium.host"), portCode)
+        .tickingSource
+    }
+    else {
+      log.info(s"Using Noop Base Live Feed")
+      arrivalsNoOp
+    }
   }
 
   def liveArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = {
-
     val feed = portCode match {
       case "LHR" =>
         val contentProvider = if (config.get[Boolean]("feeds.lhr.use-legacy-live")) {
@@ -518,10 +529,11 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     feed
   }
 
-  def baseArrivalsSource(): Source[ArrivalsFeedResponse, Cancellable] = Source.tick(1 second, 60 minutes, NotUsed).map(_ => {
-    system.log.info(s"Requesting ACL feed")
-    aclFeed.requestArrivals
-  })
+  def baseArrivalsSource(): Source[ArrivalsFeedResponse, Cancellable] =
+    Source.tick(1 second, 10 minutes, NotUsed).map(_ => {
+      system.log.info(s"Requesting ACL feed")
+      aclFeed.requestArrivals
+    })
 
   def walkTimeProvider(flight: Arrival): MillisSinceEpoch =
     gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, airportConfig.defaultWalkTimeMillis.getOrElse(flight.Terminal, 300000L))(flight)

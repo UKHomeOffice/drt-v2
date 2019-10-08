@@ -34,6 +34,8 @@ object Roles {
     EDIAccess,
     EMAAccess,
     LGWAccess,
+    GLAAccess,
+    LCYAccess,
     LHRAccess,
     LTNAccess,
     MANAccess,
@@ -108,6 +110,14 @@ case object EMAAccess extends Role {
 
 case object LGWAccess extends Role {
   override val name: String = "LGW"
+}
+
+case object GLAAccess extends Role {
+  override val name: String = "GLA"
+}
+
+case object LCYAccess extends Role {
+  override val name: String = "LCY"
 }
 
 case object LHRAccess extends Role {
