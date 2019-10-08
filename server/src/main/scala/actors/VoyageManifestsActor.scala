@@ -115,7 +115,7 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
     case _: BestManifestsFeedSuccess =>
 
     case GetFeedStatuses =>
-      log.info(s"Received GetFeedStatuses request")
+      log.debug(s"Received GetFeedStatuses request")
       sender() ! state.maybeFeedStatuses
 
     case GetState =>

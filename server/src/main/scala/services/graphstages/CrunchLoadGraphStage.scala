@@ -110,7 +110,7 @@ class CrunchLoadGraphStage(name: String = "",
       val triedResult: Try[OptimizerCrunchResult] = crunch(adjustedWorkMinutes, minDesks, maxDesks, OptimizerConfig(sla))
       triedResult match {
         case Success(OptimizerCrunchResult(desks, waits)) =>
-          log.info(s"Optimizer for $qn Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+          log.debug(s"Optimizer for $qn Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
           SortedMap[TQM, DeskRecMinute]() ++ minuteMillis.zipWithIndex.map {
             case (minute, idx) =>
               val wl = workMinutes(idx)

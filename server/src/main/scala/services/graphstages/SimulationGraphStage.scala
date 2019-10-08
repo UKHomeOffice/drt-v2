@@ -76,7 +76,7 @@ class SimulationGraphStage(name: String = "",
 
         terminalsWithNonZeroStaff(affectedTerminals, firstMinute, lastMinute) match {
           case affectedTerminalsWithStaff if affectedTerminalsWithStaff.isEmpty =>
-            log.info(s"No affected terminals with deployments. Skipping simulations")
+            log.debug(s"No affected terminals with deployments. Skipping simulations")
           case affectedTerminalsWithStaff =>
             updateDeployments(affectedTerminalsWithStaff, firstMinute, lastMinute)
             purgeExpired(deployments, TQM.atTime, now, expireAfterMillis.toInt)

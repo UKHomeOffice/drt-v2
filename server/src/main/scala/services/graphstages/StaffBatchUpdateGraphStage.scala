@@ -65,7 +65,7 @@ class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: Millis
           push(outStaffMinutes, staffMinutes)
 
           staffMinutesQueue -= millis
-          log.info(s"Queue length now ${staffMinutesQueue.size}")
+          log.info(s"Simulations queue length: ${staffMinutesQueue.size} days")
       }
     }
   }
