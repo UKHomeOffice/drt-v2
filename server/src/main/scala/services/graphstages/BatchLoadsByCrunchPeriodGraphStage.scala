@@ -63,7 +63,7 @@ class BatchLoadsByCrunchPeriodGraphStage(now: () => SDateLike,
           push(outLoads, loadMinutes)
 
           loadMinutesQueue -= millis
-          log.info(s"Queue length now ${loadMinutesQueue.size}")
+          log.info(s"Crunch queue length: ${loadMinutesQueue.size} days")
       }
     }
   }

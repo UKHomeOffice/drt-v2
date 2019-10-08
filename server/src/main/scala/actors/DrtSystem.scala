@@ -199,7 +199,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
 
   val s3ApiProvider = S3ApiProvider(params.awSCredentials, params.dqZipBucketName)
-  val initialManifestsState: Option[VoyageManifestState] = initialState(voyageManifestsActor, GetState)
+  val initialManifestsState: Option[VoyageManifestState] = initialState(voyageManifestsActor)
   val latestZipFileName: String = initialManifestsState.map(_.latestZipFilename).getOrElse("")
 
   lazy val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
@@ -216,12 +216,12 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   def run(): Unit = {
     val futurePortStates: Future[(Option[PortState], Option[PortState], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[RegisteredArrivals])] = {
-      val maybeLivePortState = initialStateFuture[PortState](liveCrunchStateActor, GetState)
-      val maybeForecastPortState = initialStateFuture[PortState](forecastCrunchStateActor, GetState)
-      val maybeInitialBaseArrivals = initialStateFuture[ArrivalsState](baseArrivalsActor, GetState).map(_.map(_.arrivals))
-      val maybeInitialFcstArrivals = initialStateFuture[ArrivalsState](forecastArrivalsActor, GetState).map(_.map(_.arrivals))
-      val maybeInitialLiveArrivals = initialStateFuture[ArrivalsState](liveArrivalsActor, GetState).map(_.map(_.arrivals))
-      val maybeInitialRegisteredArrivals = initialStateFuture[RegisteredArrivals](registeredArrivalsActor, GetState)
+      val maybeLivePortState = initialStateFuture[PortState](liveCrunchStateActor)
+      val maybeForecastPortState = initialStateFuture[PortState](forecastCrunchStateActor)
+      val maybeInitialBaseArrivals = initialStateFuture[ArrivalsState](baseArrivalsActor).map(_.map(_.arrivals))
+      val maybeInitialFcstArrivals = initialStateFuture[ArrivalsState](forecastArrivalsActor).map(_.map(_.arrivals))
+      val maybeInitialLiveArrivals = initialStateFuture[ArrivalsState](liveArrivalsActor).map(_.map(_.arrivals))
+      val maybeInitialRegisteredArrivals = initialStateFuture[RegisteredArrivals](registeredArrivalsActor)
       for {
         lps <- maybeLivePortState
         fps <- maybeForecastPortState
@@ -278,9 +278,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     }
 
     val staffingStates: Future[NotUsed] = {
-      val maybeShifts = initialStateFuture[ShiftAssignments](shiftsActor, GetState)
-      val maybeFixedPoints = initialStateFuture[FixedPointAssignments](fixedPointsActor, GetState)
-      val maybeMovements = initialStateFuture[StaffMovements](staffMovementsActor, GetState)
+      val maybeShifts = initialStateFuture[ShiftAssignments](shiftsActor)
+      val maybeFixedPoints = initialStateFuture[FixedPointAssignments](fixedPointsActor)
+      val maybeMovements = initialStateFuture[StaffMovements](staffMovementsActor)
       for {
         _ <- maybeShifts
         _ <- maybeFixedPoints
@@ -307,7 +307,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   override def getFeedStatus: Future[Seq[FeedStatuses]] = {
     val actors: Seq[AskableActorRef] = Seq(liveArrivalsActor, liveBaseArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
 
-    val statuses: Seq[Future[Option[FeedStatuses]]] = actors.map(a => initialStateFuture[FeedStatuses](a, GetFeedStatuses))
+    val statuses: Seq[Future[Option[FeedStatuses]]] = actors.map(a => queryActorWithRetry[FeedStatuses](a, GetFeedStatuses))
 
     Future
       .sequence(statuses)
@@ -387,9 +387,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       arrivalsForecastSource = forecastArrivalsSource(airportConfig.feedPortCode),
       arrivalsLiveBaseSource = liveBaseArrivalsSource(airportConfig.feedPortCode),
       arrivalsLiveSource = liveArrivalsSource(airportConfig.feedPortCode),
-      initialShifts = initialState(shiftsActor, GetState).getOrElse(ShiftAssignments(Seq())),
-      initialFixedPoints = initialState(fixedPointsActor, GetState).getOrElse(FixedPointAssignments(Seq())),
-      initialStaffMovements = initialState[StaffMovements](staffMovementsActor, GetState).map(_.movements).getOrElse(Seq[StaffMovement]()),
+      initialShifts = initialState(shiftsActor).getOrElse(ShiftAssignments(Seq())),
+      initialFixedPoints = initialState(fixedPointsActor).getOrElse(FixedPointAssignments(Seq())),
+      initialStaffMovements = initialState[StaffMovements](staffMovementsActor).map(_.movements).getOrElse(Seq[StaffMovement]()),
       recrunchOnStart = recrunchOnStart,
       refreshArrivalsOnStart = refreshArrivalsOnStart,
       checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup
@@ -397,22 +397,25 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     crunchInputs
   }
 
-  def initialState[A](askableActor: AskableActorRef, toAsk: Any): Option[A] = Await.result(initialStateFuture[A](askableActor, toAsk), 2 minutes)
+  def initialState[A](askableActor: AskableActorRef): Option[A] = Await.result(initialStateFuture[A](askableActor), 2 minutes)
 
-  def initialStateFuture[A](askableActor: AskableActorRef, toAsk: Any): Future[Option[A]] = {
-    val future = askableActor.ask(toAsk)(new Timeout(2 minutes)).map {
+  def initialStateFuture[A](askableActor: AskableActorRef): Future[Option[A]] = {
+    val actorPath = askableActor.actorRef.path
+    queryActorWithRetry(askableActor, GetState).map {
       case Some(state: A) if state.isInstanceOf[A] =>
-        log.info(s"Got initial state (Some(${state.getClass})) from ${askableActor.toString}")
-        Option(state)
-      case state: A if !state.isInstanceOf[Option[A]] =>
-        log.info(s"Got initial state (${state.getClass}) from ${askableActor.toString}")
+        log.debug(s"Got initial state (Some(${state.getClass})) from $actorPath")
         Option(state)
       case None =>
-        log.info(s"Got no state (None) from ${askableActor.toString}")
+        log.warn(s"Got no state (None) from $actorPath")
         None
-      case _ =>
-        log.info(s"Got unexpected GetState response from ${askableActor.toString}")
-        None
+    }
+  }
+
+  def queryActorWithRetry[A](askableActor: AskableActorRef, toAsk: Any): Future[Option[A]] = {
+    val future = askableActor.ask(toAsk)(new Timeout(2 minutes)).map {
+      case Some(state: A) if state.isInstanceOf[A] => Option(state)
+      case state: A if !state.isInstanceOf[Option[A]] => Option(state)
+      case _ => None
     }
 
     implicit val scheduler: Scheduler = actorSystem.scheduler
