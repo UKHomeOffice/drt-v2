@@ -6,10 +6,10 @@ import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
-import services.SDate
+import services.{SDate, graphstages}
 
-import scala.collection.immutable.SortedMap
 import scala.collection.mutable
+import scala.collection.immutable.SortedMap
 
 
 sealed trait ArrivalsSourceType
@@ -92,7 +92,10 @@ class ArrivalsGraphStage(name: String = "",
         val start = SDate.now()
         pushIfAvailable(toPush, outArrivalsDiff)
 
-        List(inLiveArrivals, inForecastArrivals, inForecastBaseArrivals).foreach(inlet => if (!hasBeenPulled(inlet)) pull(inlet))
+        List(inLiveBaseArrivals, inLiveArrivals, inForecastArrivals, inForecastBaseArrivals).foreach(inlet => if (!hasBeenPulled(inlet)) {
+          log.debug(s"Pulling Inlet: ${inlet.toString()}")
+          pull(inlet)
+        })
         log.info(s"outArrivalsDiff Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
       }
     })
@@ -103,9 +106,11 @@ class ArrivalsGraphStage(name: String = "",
 
       grab(arrivalsInlet) match {
         case ArrivalsFeedSuccess(Flights(flights), connectedAt) =>
-          log.info(s"Grabbed ${flights.length} arrivals from connection at ${connectedAt.toISOString()}")
-          if (flights.nonEmpty || sourceType == BaseArrivals) handleIncomingArrivals(sourceType, flights)
-          else log.info(s"No arrivals to handle")
+          log.info(s"Grabbed ${flights.length} arrivals from $arrivalsInlet of $sourceType at ${connectedAt.toISOString()}")
+          if (flights.nonEmpty || sourceType == BaseArrivals)
+            handleIncomingArrivals(sourceType, flights)
+          else
+            log.info(s"No arrivals to handle")
         case ArrivalsFeedFailure(message, failedAt) =>
           log.warn(s"$arrivalsInlet failed at ${failedAt.toISOString()}: $message")
       }
@@ -123,6 +128,11 @@ class ArrivalsGraphStage(name: String = "",
           toPush = mergeUpdatesFromKeys(liveArrivals.keys)
         case LiveBaseArrivals =>
           updateArrivalsSource(liveBaseArrivals, filteredArrivals)
+          val missingTerminals = liveBaseArrivals.count {
+            case (_, a) if a.Terminal == "No Terminal" => true
+            case _ => false
+          }
+          log.info(s"Got $missingTerminals Cirium Arrivals with no terminal")
           toPush = mergeUpdatesFromKeys(liveBaseArrivals.keys)
         case ForecastArrivals =>
           updateArrivalsSource(forecastArrivals, filteredArrivals)
@@ -146,8 +156,8 @@ class ArrivalsGraphStage(name: String = "",
       diff
     })
 
-    def mergeUpdatesFromKeys(UniqueArrivals: Iterable[UniqueArrival]): Option[ArrivalsDiff] = {
-      val updatedArrivals = getUpdatesFromNonBaseArrivals(UniqueArrivals)
+    def mergeUpdatesFromKeys(uniqueArrivals: Iterable[UniqueArrival]): Option[ArrivalsDiff] = {
+      val updatedArrivals = getUpdatesFromNonBaseArrivals(uniqueArrivals)
 
       updatedArrivals.foreach {
         case (ak, updatedArrival) => merged += (ak -> updatedArrival)
@@ -251,22 +261,26 @@ class ArrivalsGraphStage(name: String = "",
 
     def mergeBaseArrival(baseArrival: Arrival): Arrival = {
       val key = UniqueArrival(baseArrival)
-      val bestArrival = liveArrivals.getOrElse(key, baseArrival)
-      updateArrival(baseArrival, bestArrival)
+      mergeBestFieldsFromSources(baseArrival, mergeArrival(key).getOrElse(baseArrival))
     }
 
     def mergeArrival(key: UniqueArrival): Option[Arrival] = {
-      val maybeBestArrival = liveArrivals.get(key) match {
-        case Some(liveArrival) => Option(liveArrival)
-        case None => forecastBaseArrivals.get(key)
+      val maybeBestArrival: Option[Arrival] = (liveArrivals.get(key), liveBaseArrivals.get(key)) match {
+        case (Some(liveArrival), None) => Option(liveArrival)
+        case (Some(liveArrival), Some(baseLiveArrival)) =>
+          Option(LiveArrivalsUtil.mergePortFeedWithBase(liveArrival, baseLiveArrival))
+        case (None, Some(baseLiveArrival)) if forecastBaseArrivals.contains(key) =>
+
+          Option(baseLiveArrival)
+        case _ => forecastBaseArrivals.get(key)
       }
       maybeBestArrival.map(bestArrival => {
         val arrivalForFlightCode = forecastBaseArrivals.getOrElse(key, bestArrival)
-        updateArrival(arrivalForFlightCode, bestArrival)
+        mergeBestFieldsFromSources(arrivalForFlightCode, bestArrival)
       })
     }
 
-    def updateArrival(baseArrival: Arrival, bestArrival: Arrival): Arrival = {
+    def mergeBestFieldsFromSources(baseArrival: Arrival, bestArrival: Arrival): Arrival = {
       val key = UniqueArrival(baseArrival)
       val (pax, transPax) = bestPaxNos(key)
       bestArrival.copy(
@@ -279,23 +293,22 @@ class ArrivalsGraphStage(name: String = "",
       )
     }
 
-    def bestPaxNos(UniqueArrival: UniqueArrival): (Option[Int], Option[Int]) = (liveArrivals.get(UniqueArrival), forecastArrivals.get(UniqueArrival), forecastBaseArrivals.get(UniqueArrival)) match {
+    def bestPaxNos(key: UniqueArrival): (Option[Int], Option[Int]) = (liveArrivals.get(key), forecastArrivals.get(key), forecastBaseArrivals.get(key)) match {
       case (Some(liveArrival), _, _) if liveArrival.ActPax.exists(_ > 0) => (liveArrival.ActPax, liveArrival.TranPax)
       case (_, Some(fcstArrival), _) if fcstArrival.ActPax.exists(_ > 0) => (fcstArrival.ActPax, fcstArrival.TranPax)
       case (_, _, Some(baseArrival)) if baseArrival.ActPax.exists(_ > 0) => (baseArrival.ActPax, baseArrival.TranPax)
       case _ => (None, None)
     }
 
-    def bestStatus(UniqueArrival: UniqueArrival): String = liveArrivals.get(UniqueArrival) match {
-      case Some(liveArrival) => liveArrival.Status
-      case _ => forecastArrivals.get(UniqueArrival) match {
-        case Some(forecastArrival) => forecastArrival.Status
-        case _ => forecastBaseArrivals.get(UniqueArrival) match {
-          case Some(baseArrival) => baseArrival.Status
-          case _ => "Unknown"
-        }
+    def bestStatus(key: UniqueArrival): String =
+      (liveArrivals.get(key), liveBaseArrivals.get(key), forecastArrivals.get(key), forecastBaseArrivals.get(key)) match {
+        case (Some(live), Some(liveBase), _, _) if live.Status == "UNK" => liveBase.Status
+        case (Some(live), _, _, _) => live.Status
+        case (_, Some(liveBase), _, _) => liveBase.Status
+        case (_, _, Some(forecast), _) => forecast.Status
+        case (_, _, _, Some(forecastBase)) => forecastBase.Status
+        case _ => "Unknown"
       }
-    }
 
     def feedSources(uniqueArrival: UniqueArrival): Set[FeedSource] = {
       List(

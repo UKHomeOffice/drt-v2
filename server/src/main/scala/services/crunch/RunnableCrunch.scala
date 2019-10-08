@@ -69,7 +69,6 @@ object RunnableCrunch {
 
     val manifestsKillSwitch = KillSwitches.single[ManifestsFeedResponse]
 
-
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
     val graph = GraphDSL.create(
@@ -180,7 +179,6 @@ object RunnableCrunch {
               log.info(s"xxxx Conflating historic ${acc.length} + ${newManifests.length}")
               BestManifestsFeedSuccess(acc ++ newManifests, createdAt)
           } ~> arrivalSplits.in2
-
 
           shifts          ~> staff.in0
           fixedPoints     ~> staff.in1
