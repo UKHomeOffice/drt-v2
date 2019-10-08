@@ -31,7 +31,7 @@ case class CiriumFeed(endpoint: String, portCode: String)(implicit actorSystem: 
         makeRequest()
       })
       .map(fs => {
-        log.info(s"Got ${fs.size} arrivals from Cirium")
+        log.debug(s"Got ${fs.size} arrivals from Cirium")
         fs.map(a => toArrival(a, portCode))
       })
       .map(as => ArrivalsFeedSuccess(Flights(as)))
@@ -39,11 +39,7 @@ case class CiriumFeed(endpoint: String, portCode: String)(implicit actorSystem: 
     source
   }
 
-  def makeRequest(): Future[List[CiriumFlightStatus]] = {
-    val uri = s"$endpoint/statuses/$portCode"
-    log.info(s"Requesting Cirium flights from $uri")
-    requestFeed(uri)
-  }
+  def makeRequest(): Future[List[CiriumFlightStatus]] = requestFeed(s"$endpoint/statuses/$portCode")
 }
 
 object CiriumFeed {

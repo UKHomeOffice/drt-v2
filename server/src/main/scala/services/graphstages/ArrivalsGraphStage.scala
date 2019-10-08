@@ -93,7 +93,7 @@ class ArrivalsGraphStage(name: String = "",
         pushIfAvailable(toPush, outArrivalsDiff)
 
         List(inLiveBaseArrivals, inLiveArrivals, inForecastArrivals, inForecastBaseArrivals).foreach(inlet => if (!hasBeenPulled(inlet)) {
-          log.info(s"Pulling Inlet: ${inlet.toString()}")
+          log.debug(s"Pulling Inlet: ${inlet.toString()}")
           pull(inlet)
         })
         log.info(s"outArrivalsDiff Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
@@ -261,14 +261,14 @@ class ArrivalsGraphStage(name: String = "",
 
     def mergeBaseArrival(baseArrival: Arrival): Arrival = {
       val key = UniqueArrival(baseArrival)
-      val bestArrival = liveArrivals.getOrElse(key, baseArrival)
-      mergeBestFieldsFromSources(baseArrival, bestArrival)
+      mergeBestFieldsFromSources(baseArrival, mergeArrival(key).getOrElse(baseArrival))
     }
 
     def mergeArrival(key: UniqueArrival): Option[Arrival] = {
       val maybeBestArrival: Option[Arrival] = (liveArrivals.get(key), liveBaseArrivals.get(key)) match {
         case (Some(liveArrival), None) => Option(liveArrival)
-        case (Some(liveArrival), Some(baseLiveArrival)) => Option(LiveArrivalsUtil.mergePortFeedWithBase(liveArrival, baseLiveArrival))
+        case (Some(liveArrival), Some(baseLiveArrival)) =>
+          Option(LiveArrivalsUtil.mergePortFeedWithBase(liveArrival, baseLiveArrival))
         case (None, Some(baseLiveArrival)) if forecastBaseArrivals.contains(key) =>
 
           Option(baseLiveArrival)
@@ -302,6 +302,7 @@ class ArrivalsGraphStage(name: String = "",
 
     def bestStatus(key: UniqueArrival): String =
       (liveArrivals.get(key), liveBaseArrivals.get(key), forecastArrivals.get(key), forecastBaseArrivals.get(key)) match {
+        case (Some(live), Some(liveBase), _, _) if live.Status == "UNK" => liveBase.Status
         case (Some(live), _, _, _) => live.Status
         case (_, Some(liveBase), _, _) => liveBase.Status
         case (_, _, Some(forecast), _) => forecast.Status
