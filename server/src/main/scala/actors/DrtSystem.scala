@@ -200,7 +200,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
 
   val s3ApiProvider = S3ApiProvider(params.awSCredentials, params.dqZipBucketName)
-  val initialManifestsState: Option[VoyageManifestState] = initialState(voyageManifestsActor)
+  val initialManifestsState: Option[VoyageManifestState] = initialState[VoyageManifestState](voyageManifestsActor)
   val latestZipFileName: String = initialManifestsState.map(_.latestZipFilename).getOrElse("")
 
   lazy val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
@@ -390,8 +390,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       arrivalsForecastSource = forecastArrivalsSource(airportConfig.feedPortCode),
       arrivalsLiveBaseSource = liveBaseArrivalsSource(airportConfig.feedPortCode),
       arrivalsLiveSource = liveArrivalsSource(airportConfig.feedPortCode),
-      initialShifts = initialState(shiftsActor).getOrElse(ShiftAssignments(Seq())),
-      initialFixedPoints = initialState(fixedPointsActor).getOrElse(FixedPointAssignments(Seq())),
+      initialShifts = initialState[ShiftAssignments](shiftsActor).getOrElse(ShiftAssignments(Seq())),
+      initialFixedPoints = initialState[FixedPointAssignments](fixedPointsActor).getOrElse(FixedPointAssignments(Seq())),
       initialStaffMovements = initialState[StaffMovements](staffMovementsActor).map(_.movements).getOrElse(Seq[StaffMovement]()),
       recrunchOnStart = recrunchOnStart,
       refreshArrivalsOnStart = refreshArrivalsOnStart,
@@ -404,7 +404,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   def initialStateFuture[A](askableActor: AskableActorRef): Future[Option[A]] = {
     val actorPath = askableActor.actorRef.path
-    queryActorWithRetry(askableActor, GetState).map {
+    queryActorWithRetry[A](askableActor, GetState).map {
       case Some(state: A) if state.isInstanceOf[A] =>
         log.debug(s"Got initial state (Some(${state.getClass})) from $actorPath")
         Option(state)
