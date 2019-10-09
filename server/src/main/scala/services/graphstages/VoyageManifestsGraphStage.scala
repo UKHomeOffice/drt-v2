@@ -36,7 +36,7 @@ class VoyageManifestsGraphStage(portCode: String,
                                 provider: ApiProviderLike,
                                 initialLastSeenFileName: String,
                                 minCheckIntervalMillis: MillisSinceEpoch = 30000) extends GraphStage[SourceShape[ManifestsFeedResponse]] {
-  val out: Outlet[ManifestsFeedResponse] = Outlet("manifestsOut")
+  val out: Outlet[ManifestsFeedResponse] = Outlet("Manifests.out")
   override val shape: SourceShape[ManifestsFeedResponse] = SourceShape(out)
   val stageName = "voyage-manifests"
 

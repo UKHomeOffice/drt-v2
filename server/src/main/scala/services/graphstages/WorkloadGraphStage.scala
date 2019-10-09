@@ -22,8 +22,8 @@ class WorkloadGraphStage(name: String = "",
                          useNationalityBasedProcessingTimes: Boolean)
   extends GraphStage[FlowShape[FlightsWithSplits, Loads]] {
 
-  val inFlightsWithSplits: Inlet[FlightsWithSplits] = Inlet[FlightsWithSplits]("inFlightsWithSplits.in")
-  val outLoads: Outlet[Loads] = Outlet[Loads]("PortStateOut.out")
+  val inFlightsWithSplits: Inlet[FlightsWithSplits] = Inlet[FlightsWithSplits]("FlightsWithSplits.in")
+  val outLoads: Outlet[Loads] = Outlet[Loads]("Loads.out")
   val stageName = "workload"
 
   val paxDisembarkPerMinute = 20

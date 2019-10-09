@@ -25,8 +25,8 @@ class CrunchLoadGraphStage(name: String = "",
                            minutesToCrunch: Int)
   extends GraphStage[FlowShape[Loads, DeskRecMinutes]] {
 
-  val inLoads: Inlet[Loads] = Inlet[Loads]("inLoads.in")
-  val outDeskRecMinutes: Outlet[DeskRecMinutes] = Outlet[DeskRecMinutes]("outDeskRecMinutes.out")
+  val inLoads: Inlet[Loads] = Inlet[Loads]("Loads.in")
+  val outDeskRecMinutes: Outlet[DeskRecMinutes] = Outlet[DeskRecMinutes]("DeskRecMinutes.out")
 
   val stageName = "crunch"
 

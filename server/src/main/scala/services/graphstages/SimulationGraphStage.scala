@@ -30,9 +30,9 @@ class SimulationGraphStage(name: String = "",
   type TerminalLoad = Map[QueueName, Map[MillisSinceEpoch, Double]]
   type PortLoad = Map[TerminalName, TerminalLoad]
 
-  val inLoads: Inlet[Loads] = Inlet[Loads]("inLoads.in")
-  val inStaffMinutes: Inlet[StaffMinutes] = Inlet[StaffMinutes]("inStaffMinutes.in")
-  val outSimulationMinutes: Outlet[SimulationMinutes] = Outlet[SimulationMinutes]("outSimulationMinutes.out")
+  val inLoads: Inlet[Loads] = Inlet[Loads]("Loads.in")
+  val inStaffMinutes: Inlet[StaffMinutes] = Inlet[StaffMinutes]("StaffMinutes.in")
+  val outSimulationMinutes: Outlet[SimulationMinutes] = Outlet[SimulationMinutes]("SimulationMinutes.out")
   val stageName = "simulation"
 
   override val shape = new FanInShape2[Loads, StaffMinutes, SimulationMinutes](inLoads, inStaffMinutes, outSimulationMinutes)
