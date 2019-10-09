@@ -300,7 +300,7 @@ trait WithExports {
           val end = start.addHours(24)
           val includeHeader = millis == startPit.millisSinceEpoch
           val psForDay = loadBestPortStateForPointInTime(millis, terminalName, start.millisSinceEpoch, end.millisSinceEpoch)
-          timed(s"Multi-day export for terminal $terminalName between ${startPit.toISOString()} & ${endPit.toISOString()} (day ${day.toISOString()})") {
+          timed(s"Export multi-day for terminal $terminalName between ${startPit.toISOString()} & ${endPit.toISOString()} (day ${day.toISOString()})") {
             csvFunc(day, psForDay, includeHeader)
           }
       }

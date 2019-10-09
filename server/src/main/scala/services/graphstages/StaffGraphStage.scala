@@ -8,6 +8,7 @@ import drt.shared.{SDateLike, _}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch.{getLocalLastMidnight, movementsUpdateCriteria, purgeExpired}
+import services.metrics.StageTimer
 
 import scala.collection.immutable.SortedMap
 import scala.collection.mutable
@@ -26,6 +27,7 @@ class StaffGraphStage(name: String = "",
   val inFixedPoints: Inlet[FixedPointAssignments] = Inlet[FixedPointAssignments]("FixedPoints.in")
   val inMovements: Inlet[Seq[StaffMovement]] = Inlet[Seq[StaffMovement]]("Movements.in")
   val outStaffMinutes: Outlet[StaffMinutes] = Outlet[StaffMinutes]("StaffMinutes.out")
+  val stageName = "staff"
 
   override def shape: FanInShape3[ShiftAssignments, FixedPointAssignments, Seq[StaffMovement], StaffMinutes] =
     new FanInShape3(inShifts, inFixedPoints, inMovements, outStaffMinutes)
@@ -104,7 +106,7 @@ class StaffGraphStage(name: String = "",
 
     setHandler(inShifts, new InHandler {
       override def onPush(): Unit = {
-        val start = SDate.now()
+        val timer = StageTimer(stageName, inShifts)
         val incomingShifts = grab(inShifts)
         log.info(s"Grabbed available inShifts")
         val updateCriteria = shiftsUpdateCriteria(shifts, incomingShifts)
@@ -112,13 +114,13 @@ class StaffGraphStage(name: String = "",
         applyUpdatesFromSources(staffSources, updateCriteria)
         tryPush()
         pull(inShifts)
-        log.info(s"inShifts Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        timer.stopAndReport()
       }
     })
 
     setHandler(inFixedPoints, new InHandler {
       override def onPush(): Unit = {
-        val start = SDate.now()
+        val timer = StageTimer(stageName, inFixedPoints)
         val incomingFixedPoints = grab(inFixedPoints)
         log.info(s"Grabbed available inFixedPoints")
 
@@ -127,13 +129,13 @@ class StaffGraphStage(name: String = "",
         applyUpdatesFromSources(staffSources, updateCriteria)
         tryPush()
         pull(inFixedPoints)
-        log.info(s"inFixedPoints Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        timer.stopAndReport()
       }
     })
 
     setHandler(inMovements, new InHandler {
       override def onPush(): Unit = {
-        val start = SDate.now()
+        val timer = StageTimer(stageName, inMovements)
         val incomingMovements = grab(inMovements)
         log.info(s"Grabbed available inMovements")
         val existingMovements = movementsOption.map(_.toSet).getOrElse(Set())
@@ -142,7 +144,7 @@ class StaffGraphStage(name: String = "",
         applyUpdatesFromSources(staffSources, updateCriteria)
         tryPush()
         pull(inMovements)
-        log.info(s"inMovements Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        timer.stopAndReport()
       }
     })
 

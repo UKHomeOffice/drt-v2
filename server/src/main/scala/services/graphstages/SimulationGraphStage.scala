@@ -8,6 +8,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch._
 import services.graphstages.StaffDeploymentCalculator.deploymentWithinBounds
+import services.metrics.StageTimer
 import services.{SDate, _}
 
 import scala.collection.immutable.{Map, NumericRange, SortedMap}
@@ -32,6 +33,7 @@ class SimulationGraphStage(name: String = "",
   val inLoads: Inlet[Loads] = Inlet[Loads]("inLoads.in")
   val inStaffMinutes: Inlet[StaffMinutes] = Inlet[StaffMinutes]("inStaffMinutes.in")
   val outSimulationMinutes: Outlet[SimulationMinutes] = Outlet[SimulationMinutes]("outSimulationMinutes.out")
+  val stageName = "simulation"
 
   override val shape = new FanInShape2[Loads, StaffMinutes, SimulationMinutes](inLoads, inStaffMinutes, outSimulationMinutes)
 
@@ -61,7 +63,7 @@ class SimulationGraphStage(name: String = "",
 
     setHandler(inLoads, new InHandler {
       override def onPush(): Unit = {
-        val start = SDate.now()
+        val timer = StageTimer(stageName, inLoads)
         val incomingLoads = grab(inLoads)
         log.info(s"Received ${incomingLoads.loadMinutes.size} loads")
 
@@ -85,13 +87,13 @@ class SimulationGraphStage(name: String = "",
         }
 
         pullAll()
-        log.info(s"inLoads Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        timer.stopAndReport()
       }
     })
 
     setHandler(inStaffMinutes, new InHandler {
       override def onPush(): Unit = {
-        val start = SDate.now()
+        val timer = StageTimer(stageName, inStaffMinutes)
         val incomingStaffMinutes: StaffMinutes = grab(inStaffMinutes)
         log.info(s"Grabbed ${incomingStaffMinutes.minutes.length} staff minutes")
 
@@ -117,7 +119,7 @@ class SimulationGraphStage(name: String = "",
         pushStateIfReady()
 
         pullAll()
-        log.info(s"inStaffMinutes Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        timer.stopAndReport()
       }
     })
 
@@ -135,11 +137,11 @@ class SimulationGraphStage(name: String = "",
 
     setHandler(outSimulationMinutes, new OutHandler {
       override def onPull(): Unit = {
-        val start = SDate.now()
+        val timer = StageTimer(stageName, outSimulationMinutes)
         log.debug(s"outSimulationMinutes onPull called")
         pushStateIfReady()
         pullAll()
-        log.info(s"outSimulationMinutes Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        timer.stopAndReport()
       }
     })
 

@@ -7,12 +7,14 @@ import drt.shared.{MilliDate, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch.changedDays
+import services.metrics.StageTimer
 
 import scala.collection.mutable
 
 class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: MillisSinceEpoch, offsetMinutes: Int) extends GraphStage[FlowShape[StaffMinutes, StaffMinutes]] {
   val inStaffMinutes: Inlet[StaffMinutes] = Inlet[StaffMinutes]("StaffMinutes.in")
   val outStaffMinutes: Outlet[StaffMinutes] = Outlet[StaffMinutes]("StaffMinutes.out")
+  val stageName = "batch-staff"
 
   override def shape: FlowShape[StaffMinutes, StaffMinutes] = new FlowShape(inStaffMinutes, outStaffMinutes)
 
@@ -23,7 +25,7 @@ class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: Millis
 
     setHandler(inStaffMinutes, new InHandler {
       override def onPush(): Unit = {
-        val start = SDate.now()
+        val timer = StageTimer(stageName, inStaffMinutes)
         val incomingStaffMinutes = grab(inStaffMinutes)
 
         val daysToUpdate = changedDays(offsetMinutes, incomingStaffMinutes)
@@ -38,19 +40,19 @@ class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: Millis
         pushIfAvailable()
 
         pull(inStaffMinutes)
-        log.info(s"inStaffMinutes Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        timer.stopAndReport()
       }
     })
 
     setHandler(outStaffMinutes, new OutHandler {
       override def onPull(): Unit = {
-        val start = SDate.now()
+        val timer = StageTimer(stageName, outStaffMinutes)
         log.info(s"onPull called. ${staffMinutesQueue.size} sets of minutes in the queue")
 
         pushIfAvailable()
 
         if (!hasBeenPulled(inStaffMinutes)) pull(inStaffMinutes)
-        log.info(s"outStaffMinutes Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        timer.stopAndReport()
       }
     })
 

@@ -7,6 +7,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch._
+import services.metrics.StageTimer
 
 import scala.collection.mutable
 
@@ -16,6 +17,7 @@ class BatchLoadsByCrunchPeriodGraphStage(now: () => SDateLike,
                                         ) extends GraphStage[FlowShape[Loads, Loads]] {
   val inLoads: Inlet[Loads] = Inlet[Loads]("Loads.in")
   val outLoads: Outlet[Loads] = Outlet[Loads]("Loads.out")
+  val stageName = "batch-loads"
 
   override def shape: FlowShape[Loads, Loads] = new FlowShape(inLoads, outLoads)
 
@@ -26,7 +28,7 @@ class BatchLoadsByCrunchPeriodGraphStage(now: () => SDateLike,
 
     setHandler(inLoads, new InHandler {
       override def onPush(): Unit = {
-        val start = SDate.now()
+        val timer = StageTimer(stageName, inLoads)
         val incomingLoads = grab(inLoads)
         mergeLoadsIntoQueue(incomingLoads, loadMinutesQueue, crunchPeriodStartMillis)
 
@@ -35,19 +37,19 @@ class BatchLoadsByCrunchPeriodGraphStage(now: () => SDateLike,
         pushIfAvailable()
 
         pull(inLoads)
-        log.info(s"inLoads Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        timer.stopAndReport()
       }
     })
 
     setHandler(outLoads, new OutHandler {
       override def onPull(): Unit = {
-        val start = SDate.now()
+        val timer = StageTimer(stageName, outLoads)
         log.info(s"onPull called. ${loadMinutesQueue.size} sets of minutes in the queue")
 
         pushIfAvailable()
 
         if (!hasBeenPulled(inLoads)) pull(inLoads)
-        log.info(s"outLoads Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        timer.stopAndReport()
       }
     })
 

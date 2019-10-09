@@ -7,6 +7,7 @@ import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch._
+import services.metrics.StageTimer
 import services.{OptimizerConfig, OptimizerCrunchResult, SDate, TryCrunch}
 
 import scala.collection.immutable.{Map, SortedMap}
@@ -26,6 +27,8 @@ class CrunchLoadGraphStage(name: String = "",
 
   val inLoads: Inlet[Loads] = Inlet[Loads]("inLoads.in")
   val outDeskRecMinutes: Outlet[DeskRecMinutes] = Outlet[DeskRecMinutes]("outDeskRecMinutes.out")
+
+  val stageName = "crunch"
 
   override val shape = new FlowShape(inLoads, outDeskRecMinutes)
 
@@ -50,7 +53,7 @@ class CrunchLoadGraphStage(name: String = "",
 
     setHandler(inLoads, new InHandler {
       override def onPush(): Unit = {
-        val start = SDate.now()
+        val timer = StageTimer(stageName, inLoads)
         val incomingLoads = grab(inLoads)
         log.info(s"Received ${incomingLoads.loadMinutes.size} loads")
 
@@ -83,7 +86,7 @@ class CrunchLoadGraphStage(name: String = "",
         pushStateIfReady()
 
         pullLoads()
-        log.info(s"inLoads Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        timer.stopAndReport()
       }
     })
 
@@ -134,10 +137,10 @@ class CrunchLoadGraphStage(name: String = "",
 
     setHandler(outDeskRecMinutes, new OutHandler {
       override def onPull(): Unit = {
-        val start = SDate.now()
+        val timer = StageTimer(stageName, outDeskRecMinutes)
         pushStateIfReady()
         pullLoads()
-        log.info(s"outDeskRecMinutes Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        timer.stopAndReport()
       }
     })
 
