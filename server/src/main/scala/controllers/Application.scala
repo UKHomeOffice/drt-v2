@@ -32,6 +32,7 @@ import services.SplitsProvider.SplitProvider
 import services._
 import services.graphstages.Crunch
 import services.graphstages.Crunch._
+import services.metrics.Metrics
 import services.staffing.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
@@ -345,7 +346,7 @@ class Application @Inject()(implicit val config: Configuration,
     val startMillis = SDate.now().millisSinceEpoch
     eventualThing.foreach { _ =>
       val endMillis = SDate.now().millisSinceEpoch
-      log.info(s"$description took ${endMillis - startMillis}ms")
+      Metrics.timer(s"$description", endMillis - startMillis)
     }
     eventualThing
   }

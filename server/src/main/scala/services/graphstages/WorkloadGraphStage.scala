@@ -7,6 +7,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch._
+import services.metrics.Metrics
 
 import scala.collection.immutable.{Map, SortedMap}
 import scala.collection.mutable
@@ -87,7 +88,7 @@ class WorkloadGraphStage(name: String = "",
         pushStateIfReady()
 
         pullFlights()
-        log.info(s"inFlightsWithSplits Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        Metrics.timer("workload-stage.inFlightsWithSplits", SDate.now().millisSinceEpoch - start.millisSinceEpoch)
       }
     })
 

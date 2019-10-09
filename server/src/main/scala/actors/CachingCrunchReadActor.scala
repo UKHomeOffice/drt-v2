@@ -8,6 +8,7 @@ import akka.http.caching.scaladsl.{Cache, CachingSettings, LfuCacheSettings}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import services.SDate
+import services.metrics.Metrics
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -58,7 +59,7 @@ class CachingCrunchReadActor extends Actor with ActorLogging {
           case Success(s) =>
             actorRef ! PoisonPill
             log.info(s"Res from actor succeeded")
-            log.info(s"Cache generation took ${(SDate.now().millisSinceEpoch - start) / 1000} seconds")
+            Metrics.timer("caching-actor-cache-generation", SDate.now().millisSinceEpoch - start)
 
           case Failure(f) =>
             actorRef ! PoisonPill
