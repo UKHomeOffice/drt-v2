@@ -85,8 +85,7 @@ object LhrForecastArrival {
         Origin = origin(fields),
         Scheduled = scheduled(fields).millisSinceEpoch,
         PcpTime = None,
-        FeedSources = Set(ForecastFeedSource),
-        LastKnownPax = None
+        FeedSources = Set(ForecastFeedSource)
       )
     } match {
       case Failure(t) =>

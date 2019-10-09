@@ -99,8 +99,7 @@ case class LtnLiveFeed(endPoint: String, token: String, username: String, passwo
     Origin = ltnFeedFlight.OriginDestAirportIATA.getOrElse(throw new Exception("Missing origin IATA port code")),
     Scheduled = sdateWithTimeZoneApplied(ltnFeedFlight.ScheduledDateTime.getOrElse(throw new Exception("Missing scheduled date time"))),
     PcpTime = None,
-    FeedSources = Set(LiveFeedSource),
-    LastKnownPax = None
+    FeedSources = Set(LiveFeedSource)
   )
 
   def sdateWithTimeZoneApplied(dt: String): MillisSinceEpoch = {

@@ -51,7 +51,6 @@ object ArrivalGenerator {
       BaggageReclaimId = baggageReclaimId,
       AirportID = airportId,
       PcpTime = if (!StringUtils.isEmpty(schDt)) Some(SDate(schDt, DateTimeZone.UTC).millisSinceEpoch) else None,
-      LastKnownPax = lastKnownPax,
       Scheduled = if (!StringUtils.isEmpty(schDt)) SDate(schDt, DateTimeZone.UTC).millisSinceEpoch else 0,
       FeedSources = feedSources
     )

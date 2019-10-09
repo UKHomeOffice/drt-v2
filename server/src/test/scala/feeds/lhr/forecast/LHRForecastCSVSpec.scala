@@ -140,14 +140,13 @@ class LHRForecastCSVSpec extends Specification {
         "TST",
         SDate("2019-04-04T05:00Z").millisSinceEpoch,
         None,
-        Set(ForecastFeedSource),
-        None
+        Set(ForecastFeedSource)
       ),
       Arrival(None,
         "Port Forecast",
         None,
         None,
-        None,
+        None, 
         None,
         None,
         None,
@@ -164,8 +163,7 @@ class LHRForecastCSVSpec extends Specification {
         "TST",
         SDate("2019-05-04T05:00Z").millisSinceEpoch,
         None,
-        Set(ForecastFeedSource),
-        None
+        Set(ForecastFeedSource)
       )
     )
 

@@ -26,7 +26,7 @@ class BHXLegacyFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFac
   sequential
   isolated
 
-  trait WithScheduledFlightRecord{
+  trait WithScheduledFlightRecord {
 
     def getScheduledFlightRecord: ScheduledFlightRecord = {
       val gregorianCalendar = new GregorianCalendar
@@ -117,8 +117,8 @@ class BHXLegacyFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFac
         Origin = "CPH",
         Scheduled = 1338619560000L,
         PcpTime = None,
-        FeedSources = Set(LiveFeedSource),
-        LastKnownPax = None)
+        FeedSources = Set(LiveFeedSource)
+      )
     }
 
     "we can read forecast flight data with seconds dropped from timestamps" in new Context {
@@ -149,28 +149,28 @@ class BHXLegacyFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFac
         Scheduled = 1338623160000L, // BHX Forecast is incorrect. This should be 1338619613123L or 2012-06-02T06:46:53.123Z
         PcpTime = None,
         FeedSources = Set(ForecastFeedSource),
-        LastKnownPax = None)
+      )
     }
 
     "an exploratory test" in {
       skipped("exploratory test for the BHX live feed")
       val f = new FlightInformation(this.getClass.getClassLoader.getResource("FlightInformation.wsdl"))
       val soapService =
-      f.getFlightInformationSoap match {
-        case binder: BindingProvider =>
-          val endpointURL = "https://online.example.co.uk:4443/flightinformationservice/FlightInformation.asmx"
-          binder.getRequestContext.put("javax.xml.ws.client.connectionTimeout", "300000")
-          binder.getRequestContext.put("javax.xml.ws.client.receiveTimeout", "300000")
-          binder.getRequestContext.put(BindingProvider.ENDPOINT_ADDRESS_PROPERTY, endpointURL)
-          binder
-        case flightInformationSoap => flightInformationSoap
-      }
+        f.getFlightInformationSoap match {
+          case binder: BindingProvider =>
+            val endpointURL = "https://online.example.co.uk:4443/flightinformationservice/FlightInformation.asmx"
+            binder.getRequestContext.put("javax.xml.ws.client.connectionTimeout", "300000")
+            binder.getRequestContext.put("javax.xml.ws.client.receiveTimeout", "300000")
+            binder.getRequestContext.put(BindingProvider.ENDPOINT_ADDRESS_PROPERTY, endpointURL)
+            binder
+          case flightInformationSoap => flightInformationSoap
+        }
       val feed = BHXFeed(soapService)
       val arrivals: List[Arrival] = feed.getLiveArrivals
       println(s"We got ${arrivals.size} Arrivals.")
       arrivals.foreach(println)
       ok
-    }.pendingUntilFixed("used to test if the BHX feed is working locally given you can ssh into a whitelisted IP address")
+      }.pendingUntilFixed("used to test if the BHX feed is working locally given you can ssh into a whitelisted IP address")
   }
 
 }

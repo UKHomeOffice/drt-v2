@@ -83,8 +83,7 @@ class FlightMessageConversionSpec extends Specification {
       Origin = origin,
       Scheduled = scheduledTime,
       PcpTime = Option(pcpTime),
-      FeedSources = feedSources.map(fs => FeedSource(fs)).collect { case Some(fs) => fs },
-      LastKnownPax = Option(lastKnownPax)
+      FeedSources = feedSources.map(fs => FeedSource(fs)).collect { case Some(fs) => fs }
     )
 
     arrival === expected

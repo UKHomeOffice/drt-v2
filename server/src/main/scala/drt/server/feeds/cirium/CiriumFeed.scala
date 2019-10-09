@@ -82,8 +82,7 @@ object CiriumFeed {
     f.departureAirportFsCode,
     f.arrivalDate.millis,
     None,
-    Set(LiveBaseFeedSource),
-    None
+    Set(LiveBaseFeedSource)
   )
 
   def requestFeed(endpoint: String)(implicit actorSystem: ActorSystem, materializer: Materializer): Future[List[CiriumFlightStatus]] = Http()

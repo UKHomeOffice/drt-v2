@@ -57,8 +57,8 @@ trait BHXLiveArrivals extends BHXArrivals {
       Origin = flightRecord.getOrigin,
       Scheduled = convertToUTC(flightRecord.getScheduledTime).map(SDate(_).millisSinceEpoch).getOrElse(0),
       PcpTime = None,
-      FeedSources = Set(LiveFeedSource),
-      None)
+      FeedSources = Set(LiveFeedSource)
+    )
   }
 }
 
@@ -89,7 +89,7 @@ trait BHXForecastArrivals extends BHXArrivals {
       Origin = flightRecord.getOrigin,
       Scheduled = SDate(convertToUTCPlusOneHour(flightRecord.getScheduledTime)).millisSinceEpoch,
       PcpTime = None,
-      FeedSources = Set(ForecastFeedSource),
-      None)
+      FeedSources = Set(ForecastFeedSource)
+    )
   }
 }

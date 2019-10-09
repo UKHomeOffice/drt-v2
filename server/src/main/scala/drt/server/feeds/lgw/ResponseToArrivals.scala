@@ -52,8 +52,8 @@ case class ResponseToArrivals(data: String) {
       Origin = parseOrigin(n),
       Scheduled = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("SCT")).map(n => services.SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
       PcpTime = None,
-      FeedSources = Set(LiveFeedSource),
-      LastKnownPax = None)
+      FeedSources = Set(LiveFeedSource)
+    )
     log.debug(s"parsed arrival: $arrival")
     arrival
   }

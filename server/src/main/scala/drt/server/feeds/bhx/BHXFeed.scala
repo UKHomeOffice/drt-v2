@@ -354,8 +354,7 @@ object BHXFlight extends NodeSeqUnmarshaller {
       f.departureAirport,
       SDate(f.scheduledOnBlocks).millisSinceEpoch,
       None,
-      Set(LiveFeedSource),
-      None
+      Set(LiveFeedSource)
     )
   }
 

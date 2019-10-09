@@ -297,8 +297,7 @@ case class Arrival(
                     Origin: String,
                     Scheduled: MillisSinceEpoch,
                     PcpTime: Option[MillisSinceEpoch],
-                    FeedSources: Set[FeedSource],
-                    LastKnownPax: Option[Int] = None) extends WithUnique[UniqueArrival] {
+                    FeedSources: Set[FeedSource]) extends WithUnique[UniqueArrival] {
   lazy val ICAO: String = Arrival.standardiseFlightCode(rawICAO)
   lazy val IATA: String = Arrival.standardiseFlightCode(rawIATA)
 
@@ -328,7 +327,7 @@ case class Arrival(
     }
   }
 
-  def basicForComparison: Arrival = copy(LastKnownPax = None, PcpTime = None)
+  def basicForComparison: Arrival = copy(PcpTime = None)
 
   def equals(arrival: Arrival): Boolean = arrival.basicForComparison == basicForComparison
 

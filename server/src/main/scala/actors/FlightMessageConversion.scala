@@ -142,7 +142,6 @@ object FlightMessageConversion {
       rawIATA = flightMessage.iATA.getOrElse(""),
       Origin = flightMessage.origin.getOrElse(""),
       PcpTime = flightMessage.pcpTime,
-      LastKnownPax = flightMessage.lastKnownPax,
       Scheduled = flightMessage.scheduled.getOrElse(0L),
       FeedSources = flightMessage.feedSources.flatMap(FeedSource(_)).toSet
     )

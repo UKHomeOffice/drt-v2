@@ -399,8 +399,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       "JNB",
       SDate(scheduledTimeString).millisSinceEpoch,
       None,
-      Set(LiveFeedSource),
-      None
+      Set(LiveFeedSource)
     )
 
     result === expected

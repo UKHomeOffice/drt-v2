@@ -60,8 +60,7 @@ object CSVFixtures {
         fields(Origin),
         timeToSDate(fields(Scheduled)).getOrElse(SDate.now().millisSinceEpoch),
         None,
-        Set(LiveFeedSource),
-        None
+        Set(LiveFeedSource)
       ))
     })
 

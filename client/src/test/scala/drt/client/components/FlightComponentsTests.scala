@@ -96,7 +96,6 @@ object ArrivalGenerator {
       Origin = origin,
       PcpTime = if (schDt != "") Some(SDate(schDt).millisSinceEpoch) else None,
       Scheduled = if (schDt != "") SDate(schDt).millisSinceEpoch else 0L,
-      LastKnownPax = lastKnownPax,
       FeedSources = Set(ApiFeedSource)
     )
 }

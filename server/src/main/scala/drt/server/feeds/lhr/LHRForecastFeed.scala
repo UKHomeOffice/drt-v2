@@ -64,8 +64,7 @@ object LHRForecastFeed {
         Origin = flightRow.origin,
         Scheduled = flightRow.scheduledDate.millisSinceEpoch,
         PcpTime = None,
-        FeedSources = Set(ForecastFeedSource),
-        None
+        FeedSources = Set(ForecastFeedSource)
       )
     }
   }

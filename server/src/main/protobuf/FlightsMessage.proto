@@ -29,8 +29,9 @@ message FlightMessage {
     optional int64 Touchdown = 19;
     optional int64 EstimatedChox = 20;
     optional int64 ActualChox = 21;
-    optional int32 LastKnownPax = 22;
     repeated string FeedSources = 23;
+
+    optional int32 LastKnownPax__OLD = 22;
 }
 
 message UniqueArrivalMessage {
