@@ -342,11 +342,13 @@ class Application @Inject()(implicit val config: Configuration,
     }
   }
 
-  def timed[A](description: String)(eventualThing: Future[A]): Future[A] = {
+  def timedEndPoint[A](name: String, maybeParams: Option[String] = None)(eventualThing: Future[A]): Future[A] = {
     val startMillis = SDate.now().millisSinceEpoch
     eventualThing.foreach { _ =>
       val endMillis = SDate.now().millisSinceEpoch
-      Metrics.timer(s"$description", endMillis - startMillis)
+      val millisTaken = endMillis - startMillis
+      Metrics.timer(s"$name", millisTaken)
+      log.info(s"$name${maybeParams.map(p => s" - $p").getOrElse("")} took ${millisTaken}ms")
     }
     eventualThing
   }

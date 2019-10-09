@@ -33,7 +33,10 @@ object Metrics {
     collector.timer(fullName, milliseconds = milliseconds)
   }
 
-  def graphStageTimer(stageName: String, inletOutletName: String, milliseconds: Double): Unit = timer(s"graphstage-$stageName-$inletOutletName", milliseconds = milliseconds)
+  def graphStageTimer(stageName: String, inletOutletName: String, milliseconds: Double): Unit = {
+    timer(s"graphstage-$stageName", milliseconds = milliseconds)
+    timer(s"graphstage-$stageName-$inletOutletName", milliseconds = milliseconds)
+  }
 }
 
 case class StageTimer(stageName: String, portName: String, startTime: MillisSinceEpoch) {

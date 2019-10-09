@@ -230,6 +230,7 @@ trait AirportConfigLike {
 
 object PaxTypesAndQueues {
   val eeaMachineReadableToDesk = PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk)
+  val eeaChildToDesk = PaxTypeAndQueue(PaxTypes.EeaBelowEGateAge, Queues.EeaDesk)
   val eeaMachineReadableToEGate = PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EGate)
   val eeaNonMachineReadableToDesk = PaxTypeAndQueue(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk)
   val b5jsskToDesk = PaxTypeAndQueue(PaxTypes.B5JPlusNational, Queues.EeaDesk)
@@ -244,6 +245,7 @@ object PaxTypesAndQueues {
   def displayName = Map(
     eeaMachineReadableToEGate -> "eGates",
     eeaMachineReadableToDesk -> "EEA (Machine Readable)",
+    eeaChildToDesk -> "EEA child to Desk",
     eeaNonMachineReadableToDesk -> "EEA (Non Machine Readable)",
     b5jsskToDesk -> "B5JSSK to Desk",
     b5jsskChildToDesk -> "B5JSSK child to Desk",
