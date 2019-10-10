@@ -34,10 +34,7 @@ final class ArrivalsDiffingStage(initialKnownArrivals: mutable.SortedMap[UniqueA
     setHandlers(in, out, new InHandler with OutHandler {
       override def onPush(): Unit = {
         val timer = StageTimer(stageName, in)
-        if (maybeResponseToPush.isEmpty) {
-          log.info(s"Incoming ArrivalsFeedResponse")
-          maybeResponseToPush = processFeedResponse(grab(in))
-        } else log.info(s"Not ready to grab until we've pushed")
+        maybeResponseToPush = processFeedResponse(grab(in))
 
         if (isAvailable(out)) pushAndClear()
         timer.stopAndReport()
@@ -54,11 +51,13 @@ final class ArrivalsDiffingStage(initialKnownArrivals: mutable.SortedMap[UniqueA
 
     def pushAndClear(): Unit = {
       maybeResponseToPush.collect {
-        case afs: ArrivalsFeedSuccess if afs.arrivals.flights.nonEmpty =>
+        case afs: ArrivalsFeedSuccess if !afs.isEmpty =>
           Metrics.counter(s"$stageName.arrival-updates", afs.arrivals.flights.length)
           push(out, afs)
+          maybeResponseToPush = None
+        case empty =>
+          push(out, empty)
       }
-      maybeResponseToPush = None
     }
 
     def processFeedResponse(arrivalsFeedResponse: ArrivalsFeedResponse): Option[ArrivalsFeedResponse] = arrivalsFeedResponse match {
