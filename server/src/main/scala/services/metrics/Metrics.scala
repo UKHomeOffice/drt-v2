@@ -25,7 +25,15 @@ class LoggingMetrics extends MetricsCollectorLike {
 }
 
 object Metrics {
-  val collector: MetricsCollectorLike = if (ConfigFactory.load().getBoolean("enable-statsd")) new StatsDMetrics else new LoggingMetrics
+  val log: Logger = LoggerFactory.getLogger(getClass)
+
+  val collector: MetricsCollectorLike = if (ConfigFactory.load().getBoolean("enable-statsd")) {
+    log.info(s"Using statsd for metrics collection")
+    new StatsDMetrics
+  } else {
+    log.info(s"Using logs for metrics collection")
+    new LoggingMetrics
+  }
 
   private def appPrefix = s"drt"
 

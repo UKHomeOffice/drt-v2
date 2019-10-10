@@ -54,10 +54,10 @@ final class ArrivalsDiffingStage(initialKnownArrivals: mutable.SortedMap[UniqueA
         case afs: ArrivalsFeedSuccess if !afs.isEmpty =>
           Metrics.counter(s"$stageName.arrival-updates", afs.arrivals.flights.length)
           push(out, afs)
-          maybeResponseToPush = None
         case empty =>
           push(out, empty)
       }
+      maybeResponseToPush = None
     }
 
     def processFeedResponse(arrivalsFeedResponse: ArrivalsFeedResponse): Option[ArrivalsFeedResponse] = arrivalsFeedResponse match {
