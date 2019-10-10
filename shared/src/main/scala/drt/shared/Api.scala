@@ -289,7 +289,6 @@ case class Arrival(
                     TranPax: Option[Int],
                     RunwayID: Option[String],
                     BaggageReclaimId: Option[String],
-                    FlightID: Option[Int],
                     AirportID: String,
                     Terminal: String,
                     rawICAO: String,

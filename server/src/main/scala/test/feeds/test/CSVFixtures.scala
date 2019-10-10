@@ -52,7 +52,6 @@ object CSVFixtures {
         Option(fields(TranPax).toInt),
         None,
         None,
-        None,
         "TEST",
         fields(Terminal),
         fields(rawICAO),

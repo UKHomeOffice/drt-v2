@@ -74,7 +74,6 @@ object CiriumFeed {
     None,
     None,
     f.airportResources.flatMap(_.baggage),
-    Option(f.flightId),
     f.arrivalAirportFsCode,
     terminalMatchForPort(f.airportResources.flatMap(_.arrivalTerminal), portCode),
     f.operatingCarrierFsCode + f.flightNumber,

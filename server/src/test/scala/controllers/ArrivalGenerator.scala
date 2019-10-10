@@ -31,7 +31,6 @@ object ArrivalGenerator {
               feedSources: Set[FeedSource] = Set()
              ): Arrival =
     Arrival(
-      FlightID = flightId,
       rawICAO = icao,
       rawIATA = iata,
       ActPax = actPax,

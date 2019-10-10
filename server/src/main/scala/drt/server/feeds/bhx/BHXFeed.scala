@@ -346,7 +346,6 @@ object BHXFlight extends NodeSeqUnmarshaller {
       None,
       None,
       None,
-      None,
       f.arrivalAirport,
       s"T${f.aircraftTerminal}",
       f.airline + f.flightNumber,

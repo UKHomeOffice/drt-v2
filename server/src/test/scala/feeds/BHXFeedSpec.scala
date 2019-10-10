@@ -391,7 +391,6 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       None,
       None,
       None,
-      None,
       "BHX",
       "T1",
       "SA123",

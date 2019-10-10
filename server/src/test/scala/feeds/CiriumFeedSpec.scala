@@ -60,7 +60,6 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
       None,
       None,
       Option("12"),
-      Option(100000),
       "LHR",
       "T1",
       "TST1000",

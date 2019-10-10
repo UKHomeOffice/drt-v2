@@ -53,7 +53,6 @@ class LGWForecastFeedSpec extends Specification with Mockito {
         TranPax = Some(0),
         RunwayID = None,
         BaggageReclaimId = None,
-        FlightID = None,
         AirportID = "LGW",
         Terminal = "S",
         rawICAO = "3O0101",

@@ -44,7 +44,6 @@ case class ResponseToArrivals(data: String) {
       TranPax = if (actPax.isEmpty) None else transPax,
       RunwayID = parseRunwayId(n).filter(StringUtils.isNotBlank(_)),
       BaggageReclaimId = Try(n \\ "BaggageClaimUnit" text).toOption.filter(StringUtils.isNotBlank(_)),
-      FlightID = None,
       AirportID = "LGW",
       Terminal = parseTerminal(n),
       rawICAO = (n \\ "AirlineICAO" text) + parseFlightNumber(n),

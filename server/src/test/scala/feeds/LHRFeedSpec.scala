@@ -51,7 +51,7 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
             EstimatedChox = Some(SDate("2017-03-09T21:43:00.000Z").millisSinceEpoch),
             ActualChox = Some(SDate("2017-03-09T21:45:00.000Z").millisSinceEpoch),
             Gate = None, Stand = Some("10"), MaxPax = Some(795), ActPax = Some(142), TranPax = Some(1), RunwayID = None, BaggageReclaimId = None,
-            FlightID = Some(-54860421), AirportID = "LHR", Terminal = "T4", rawICAO = "QR005", rawIATA = "QR005", Origin = "DOH",
+            AirportID = "LHR", Terminal = "T4", rawICAO = "QR005", rawIATA = "QR005", Origin = "DOH",
             Scheduled = SDate("2017-03-09T22:00:00.000Z").millisSinceEpoch,
             PcpTime = Some(SDate("2017-03-09T22:04:00.000Z").millisSinceEpoch), FeedSources = Set(LiveFeedSource)
           )

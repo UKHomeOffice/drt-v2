@@ -45,7 +45,7 @@ class AclFeedSpec extends CrunchTestLike {
       val arrivals = arrivalsFromCsvContent(csvContent, regularTerminalMapping)
       val expected = List(Arrival(Operator = Some("4U"), Status = "ACL Forecast", Estimated = None, Actual = None,
         EstimatedChox = None, ActualChox = None, Gate = None, Stand = None, MaxPax = Some(180), ActPax = Some(149),
-        TranPax = None, RunwayID = None, BaggageReclaimId = None, FlightID = Some(-904483842), AirportID = "LHR", Terminal = "T2",
+        TranPax = None, RunwayID = None, BaggageReclaimId = None, AirportID = "LHR", Terminal = "T2",
         rawICAO = "4U0460", rawIATA = "4U0460", Origin = "CGN",FeedSources = Set(shared.AclFeedSource),
         Scheduled = 1507878600000L, PcpTime = None))
 
@@ -92,7 +92,7 @@ class AclFeedSpec extends CrunchTestLike {
       val expected = List(Arrival(Operator = Some("4U"), Status = "ACL Forecast", Estimated = None,
         Actual = None, EstimatedChox = None, ActualChox = None, Gate = None,
         Stand = None, MaxPax = Some(180), ActPax = Some(149), TranPax = None, RunwayID = None, BaggageReclaimId = None,
-        FlightID = Some(-904483842), AirportID = "LHR", Terminal = "S", rawICAO = "4U0460", rawIATA = "4U0460",
+        AirportID = "LHR", Terminal = "S", rawICAO = "4U0460", rawIATA = "4U0460",
         Origin = "CGN", Scheduled = 1507878600000L, PcpTime = None, FeedSources = Set(shared.AclFeedSource)))
 
       arrivals === expected
@@ -104,7 +104,7 @@ class AclFeedSpec extends CrunchTestLike {
       "When I ask for a crunch " +
       "Then I should see that flight in the PortState" >> {
       val scheduled = "2017-01-01T00:00Z"
-      val arrival = ArrivalGenerator.arrival(flightId = Option(1), actPax = Option(10), schDt = scheduled, iata = "BA0001")
+      val arrival = ArrivalGenerator.arrival(actPax = Option(10), schDt = scheduled, iata = "BA0001")
       val aclFlight = Flights(List(arrival))
 
       val fiveMinutes = 600d / 60
@@ -132,9 +132,9 @@ class AclFeedSpec extends CrunchTestLike {
       "When I ask for a crunch " +
       "Then I should see the one flight in the PortState with the ACL flightcode and live chox" >> {
       val scheduled = "2017-01-01T00:00Z"
-      val aclFlight = ArrivalGenerator.arrival(flightId = Option(1), actPax = Option(10), schDt = scheduled, iata = "BA0001")
+      val aclFlight = ArrivalGenerator.arrival(actPax = Option(10), schDt = scheduled, iata = "BA0001")
       val aclFlights = Flights(List(aclFlight))
-      val liveFlight = ArrivalGenerator.arrival(flightId = Option(1), actPax = Option(20), schDt = scheduled, iata = "BAW001", actChoxDt = "2017-01-01T00:30Z")
+      val liveFlight = ArrivalGenerator.arrival(actPax = Option(20), schDt = scheduled, iata = "BAW001", actChoxDt = "2017-01-01T00:30Z")
       val liveFlights = Flights(List(liveFlight))
 
       val fiveMinutes = 600d / 60

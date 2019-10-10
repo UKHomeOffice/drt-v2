@@ -77,7 +77,6 @@ object LhrForecastArrival {
         TranPax = if (actPax==0) None else Option(transPax),
         RunwayID = None,
         BaggageReclaimId = None,
-        FlightID = None,
         AirportID = "LHR",
         Terminal = terminal(fields),
         rawIATA = flightCode(fields),

@@ -95,7 +95,6 @@ class LGWForecastFeed(boxConfigFilePath: String, userId: String, ukBfGalForecast
       TranPax = Option(fields(TRANSFER_PAX)).map(_.toInt),
       RunwayID = None,
       BaggageReclaimId = None,
-      FlightID = None,
       AirportID = LGW,
       Terminal = fields(5) match {
         case "South" => "S"

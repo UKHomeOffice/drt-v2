@@ -43,7 +43,6 @@ class FlightMessageConversionSpec extends Specification {
       tranPax = Option(transPax),
       runwayID = Option(runwayId),
       baggageReclaimId = Option(baggageReclaimId),
-      flightID = Option(flightId),
       airportID = Option(airportId),
       terminal = Option(terminalId),
       iCAO = Option(icao),
@@ -55,7 +54,6 @@ class FlightMessageConversionSpec extends Specification {
       touchdown = Option(touchdownTime),
       estimatedChox = Option(estimatedChoxTime),
       actualChox = Option(actualChoxTime),
-      lastKnownPax = Option(lastKnownPax),
       feedSources = feedSources.toSeq
     )
 
@@ -75,7 +73,6 @@ class FlightMessageConversionSpec extends Specification {
       TranPax = Option(transPax),
       RunwayID = Option(runwayId),
       BaggageReclaimId = Option(baggageReclaimId),
-      FlightID = Option(flightId),
       AirportID = airportId,
       Terminal = terminalId,
       rawICAO = icao,
