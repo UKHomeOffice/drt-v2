@@ -10,7 +10,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchMinuteMessage, StaffMinuteMessage}
 import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 import services.SDate
-import services.metrics.StageTimer
+import services.metrics.{Metrics, StageTimer}
 
 import scala.collection.immutable.Map
 
@@ -145,6 +145,10 @@ class PortStateGraphStage(name: String = "", optionalInitialPortState: Option[Po
 
           val portStateWithDiff = PortStateWithDiff(fullPortStateForLiveResync, portStateDiff, diffMessage(portStateDiff))
           maybePortStateDiff = None
+          Metrics.counter(s"$stageName.crunch-minutes", portStateDiff.crunchMinuteUpdates.size)
+          Metrics.counter(s"$stageName.staff-minutes", portStateDiff.staffMinuteUpdates.size)
+          Metrics.counter(s"$stageName.arrivals.updates", portStateDiff.flightUpdates.size)
+          Metrics.counter(s"$stageName.arrivals.removals", portStateDiff.flightRemovals.size)
           push(outPortState, portStateWithDiff)
       }
     }

@@ -10,7 +10,7 @@ import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds._
 import services.graphstages.Crunch.purgeExpired
-import services.metrics.StageTimer
+import services.metrics.{Metrics, StageTimer}
 
 import scala.collection.immutable.Map
 import scala.collection.mutable
@@ -239,7 +239,9 @@ class ArrivalSplitsGraphStage(name: String = "",
     def pushStateIfReady(): Unit = {
       if (isAvailable(outArrivalsWithSplits)) {
         if (arrivalsWithSplitsDiff.nonEmpty || arrivalsToRemove.nonEmpty) {
-          log.info(s"Pushing ${arrivalsWithSplitsDiff.size} updated arrivals with splits and ${arrivalsToRemove.size} removals")
+          Metrics.counter(s"$stageName.arrivals-with-splits.updates", arrivalsWithSplitsDiff.values.size)
+          Metrics.counter(s"$stageName.arrivals-with-splits.removals", arrivalsToRemove.size)
+
           push(outArrivalsWithSplits, FlightsWithSplits(arrivalsWithSplitsDiff.values.toSeq, arrivalsToRemove.toSeq))
           arrivalsWithSplitsDiff = Map()
           arrivalsToRemove = Set()

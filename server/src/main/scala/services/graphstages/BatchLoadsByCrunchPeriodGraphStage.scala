@@ -7,7 +7,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch._
-import services.metrics.StageTimer
+import services.metrics.{Metrics, StageTimer}
 
 import scala.collection.mutable
 
@@ -62,6 +62,8 @@ class BatchLoadsByCrunchPeriodGraphStage(now: () => SDateLike,
           val terminalNames = loadMinutes.loadMinutes.groupBy(_._1.terminalName).keys.mkString(", ")
           val loadMinutesCount = loadMinutes.loadMinutes.size
           log.info(s"Pushing ${SDate(millis).toLocalDateTimeString()} $loadMinutesCount load minutes for $terminalNames")
+          Metrics.counter(s"$stageName.minute-updates", loadMinutes.loadMinutes.size)
+
           push(outLoads, loadMinutes)
 
           loadMinutesQueue -= millis

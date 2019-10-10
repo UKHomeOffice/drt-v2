@@ -7,7 +7,7 @@ import drt.shared.{MilliDate, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch.changedDays
-import services.metrics.StageTimer
+import services.metrics.{Metrics, StageTimer}
 
 import scala.collection.mutable
 
@@ -63,7 +63,7 @@ class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: Millis
           log.debug(s"outStaffMinutes not available to push")
         case minutes =>
           val (millis, staffMinutes) = minutes.head
-          log.info(s"Pushing ${SDate(millis).toLocalDateTimeString()} ${staffMinutes.minutes.length} staff minutes for ${staffMinutes.minutes.groupBy(_.terminalName).keys.mkString(", ")}")
+          Metrics.counter(s"$stageName.minute-updates", staffMinutes.minutes.length)
           push(outStaffMinutes, staffMinutes)
 
           staffMinutesQueue -= millis

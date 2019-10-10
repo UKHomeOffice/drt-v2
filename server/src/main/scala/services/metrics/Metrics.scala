@@ -9,16 +9,19 @@ import services.SDate
 
 trait MetricsCollectorLike {
   def timer(name: String, milliseconds: Double): Unit
+  def counter(name: String, value: Double): Unit
 }
 
 class StatsDMetrics extends MetricsCollectorLike {
   val statsd: StatsDClient = new StatsDClient()
   override def timer(name: String, milliseconds: Double): Unit = statsd.timer(name, milliseconds)
+  override def counter(name: String, value: Double): Unit = statsd.counter(name, value)
 }
 
 class LoggingMetrics extends MetricsCollectorLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
   override def timer(name: String, milliseconds: Double): Unit = log.info(s"$name took ${milliseconds}ms")
+  override def counter(name: String, value: Double): Unit = log.info(s"$name count: $value")
 }
 
 object Metrics {
@@ -26,7 +29,7 @@ object Metrics {
 
   private def appPrefix = s"drt"
 
-  private def prependAppName(name: String): String = s"$appPrefix-$name"
+  private def prependAppName(name: String): String = s"$appPrefix.$name"
 
   def timer(name: String, milliseconds: Double): Unit = {
     val fullName = prependAppName(name)
@@ -34,9 +37,11 @@ object Metrics {
   }
 
   def graphStageTimer(stageName: String, inletOutletName: String, milliseconds: Double): Unit = {
-    timer(s"graphstage-$stageName", milliseconds = milliseconds)
-    timer(s"graphstage-$stageName-$inletOutletName", milliseconds = milliseconds)
+    timer(s"graphstage.$stageName", milliseconds = milliseconds)
+    timer(s"graphstage.$stageName.$inletOutletName", milliseconds = milliseconds)
   }
+
+  def counter(name: String, value: Double): Unit = collector.counter(name, value)
 }
 
 case class StageTimer(stageName: String, portName: String, startTime: MillisSinceEpoch) {

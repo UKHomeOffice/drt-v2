@@ -8,7 +8,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch._
 import services.graphstages.StaffDeploymentCalculator.deploymentWithinBounds
-import services.metrics.StageTimer
+import services.metrics.{Metrics, StageTimer}
 import services.{SDate, _}
 
 import scala.collection.immutable.{Map, NumericRange, SortedMap}
@@ -375,7 +375,7 @@ class SimulationGraphStage(name: String = "",
     def pushStateIfReady(): Unit = {
       if (simulationMinutesToPush.isEmpty) log.debug(s"We have no simulation minutes. Nothing to push")
       else if (isAvailable(outSimulationMinutes)) {
-        log.info(s"Pushing ${simulationMinutesToPush.size} simulation minutes")
+        Metrics.counter(s"$stageName.simulation-minutes", simulationMinutesToPush.size)
         push(outSimulationMinutes, SimulationMinutes(simulationMinutesToPush.values.toSeq))
         simulationMinutesToPush.clear()
       } else log.debug(s"outSimulationMinutes not available to push")

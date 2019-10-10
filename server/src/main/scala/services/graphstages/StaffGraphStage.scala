@@ -8,7 +8,7 @@ import drt.shared.{SDateLike, _}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch.{getLocalLastMidnight, movementsUpdateCriteria, purgeExpired}
-import services.metrics.StageTimer
+import services.metrics.{Metrics, StageTimer}
 
 import scala.collection.immutable.SortedMap
 import scala.collection.mutable
@@ -231,6 +231,7 @@ class StaffGraphStage(name: String = "",
       if (isAvailable(outStaffMinutes)) {
         if (staffMinuteUpdates.nonEmpty) {
           log.info(s"Pushing ${staffMinuteUpdates.size} staff minute updates")
+          Metrics.counter(s"$stageName.minute-updates", staffMinuteUpdates.size)
           push(outStaffMinutes, StaffMinutes(Map[TM, StaffMinute]() ++ staffMinuteUpdates))
           staffMinuteUpdates.clear()
         }

@@ -7,7 +7,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
-import services.metrics.StageTimer
+import services.metrics.{Metrics, StageTimer}
 
 import scala.collection.immutable.SortedMap
 import scala.collection.mutable
@@ -226,13 +226,11 @@ class ArrivalsGraphStage(name: String = "",
 
     def pushIfAvailable(arrivalsToPush: Option[ArrivalsDiff], outlet: Outlet[ArrivalsDiff]): Unit = {
       if (isAvailable(outlet)) {
-        arrivalsToPush match {
-          case None =>
-            log.info(s"No updated arrivals to push")
-          case Some(diff) =>
-            log.info(s"Pushing ${diff.toUpdate.size} updates & ${diff.toRemove.size} removals")
-            push(outArrivalsDiff, diff)
-            toPush = None
+        arrivalsToPush.foreach { diff =>
+          Metrics.counter(s"$stageName.arrivals.updates", diff.toUpdate.size)
+          Metrics.counter(s"$stageName.arrivals.removals", diff.toRemove.size)
+          push(outArrivalsDiff, diff)
+          toPush = None
         }
       } else log.debug(s"outMerged not available to push")
     }

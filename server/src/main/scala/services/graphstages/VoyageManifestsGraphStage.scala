@@ -10,7 +10,7 @@ import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import server.feeds.{ManifestsFeedFailure, ManifestsFeedResponse, ManifestsFeedSuccess}
 import services.SDate
-import services.metrics.StageTimer
+import services.metrics.{Metrics, StageTimer}
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -76,10 +76,11 @@ class VoyageManifestsGraphStage(portCode: String,
         if (isAvailable(out)) {
           if (maybeResponseToPush.isEmpty) log.info(s"Nothing to push right now")
 
-          maybeResponseToPush.foreach(responseToPush => {
-            log.info(s"Pushing ${responseToPush.getClass}")
-            push(out, responseToPush)
-          })
+          maybeResponseToPush.collect {
+            case responseToPush: ManifestsFeedSuccess =>
+              Metrics.counter(s"$stageName", responseToPush.manifests.manifests.size)
+              push(out, responseToPush)
+          }
 
           maybeResponseToPush = None
         }

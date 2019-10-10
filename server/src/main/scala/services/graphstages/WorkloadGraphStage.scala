@@ -6,7 +6,7 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch._
-import services.metrics.StageTimer
+import services.metrics.{Metrics, StageTimer}
 
 import scala.collection.immutable.{Map, SortedMap}
 import scala.collection.mutable
@@ -165,7 +165,7 @@ class WorkloadGraphStage(name: String = "",
 
     def pushStateIfReady(): Unit = {
       if (updatedLoadsToPush.nonEmpty && isAvailable(outLoads)) {
-        log.info(s"Pushing ${updatedLoadsToPush.size} load minutes")
+        Metrics.counter(s"$stageName.minutes", updatedLoadsToPush.size)
         push(outLoads, Loads(SortedMap[TQM, LoadMinute]() ++ updatedLoadsToPush))
         updatedLoadsToPush.clear()
       }

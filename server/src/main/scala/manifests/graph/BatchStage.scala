@@ -8,7 +8,7 @@ import drt.shared.{Arrival, ArrivalKey, SDateLike}
 import manifests.actors.RegisteredArrivals
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch
-import services.metrics.StageTimer
+import services.metrics.{Metrics, StageTimer}
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
@@ -97,6 +97,7 @@ class BatchStage(now: () => SDateLike,
       val lookupBatch = updatePrioritisedAndSubscribers()
 
       if (lookupBatch.nonEmpty) {
+        Metrics.counter(s"$stageName", lookupBatch.size)
         push(outArrivals, lookupBatch.toList)
       } else {
         object PushAfterDelay extends Runnable {

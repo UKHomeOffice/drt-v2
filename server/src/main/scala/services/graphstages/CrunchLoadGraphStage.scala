@@ -7,7 +7,7 @@ import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch._
-import services.metrics.StageTimer
+import services.metrics.{Metrics, StageTimer}
 import services.{OptimizerConfig, OptimizerCrunchResult, SDate, TryCrunch}
 
 import scala.collection.immutable.{Map, SortedMap}
@@ -155,6 +155,7 @@ class CrunchLoadGraphStage(name: String = "",
       if (deskRecMinutesToPush.isEmpty) log.debug(s"We have no crunch minutes. Nothing to push")
       else if (isAvailable(outDeskRecMinutes)) {
         log.info(s"Pushing ${deskRecMinutesToPush.size} crunch minutes")
+        Metrics.counter(s"$stageName.desk-recommendation-minutes", deskRecMinutesToPush.size)
         push(outDeskRecMinutes, DeskRecMinutes(deskRecMinutesToPush.values.toSeq))
         deskRecMinutesToPush = Map()
       } else log.debug(s"outDeskRecMinutes not available to push")

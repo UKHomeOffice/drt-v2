@@ -6,10 +6,9 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{Arrival, UniqueArrival}
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
-import services.metrics.StageTimer
+import services.metrics.{Metrics, StageTimer}
 
 import scala.collection.mutable
-
 
 
 final class ArrivalsDiffingStage(initialKnownArrivals: mutable.SortedMap[UniqueArrival, Arrival], forecastMaxMillis: () => MillisSinceEpoch) extends GraphStage[FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse]] {
@@ -54,8 +53,10 @@ final class ArrivalsDiffingStage(initialKnownArrivals: mutable.SortedMap[UniqueA
     })
 
     def pushAndClear(): Unit = {
-      maybeResponseToPush.foreach { responseToPush =>
-        if (responseToPush.nonEmpty) push(out, responseToPush)
+      maybeResponseToPush.collect {
+        case afs: ArrivalsFeedSuccess if afs.arrivals.flights.nonEmpty =>
+          Metrics.counter(s"$stageName.arrival-updates", afs.arrivals.flights.length)
+          push(out, afs)
       }
       maybeResponseToPush = None
     }
