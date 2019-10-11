@@ -36,6 +36,9 @@ object Roles {
     LGWAccess,
     GLAAccess,
     LCYAccess,
+    BFSAccess,
+    LPLAccess,
+    NCLAccess,
     LHRAccess,
     LTNAccess,
     MANAccess,
@@ -118,6 +121,18 @@ case object GLAAccess extends Role {
 
 case object LCYAccess extends Role {
   override val name: String = "LCY"
+}
+
+case object BFSAccess extends Role {
+  override val name: String = "BFS"
+}
+
+case object LPLAccess extends Role {
+  override val name: String = "LPL"
+}
+
+case object NCLAccess extends Role {
+  override val name: String = "NCL"
 }
 
 case object LHRAccess extends Role {
