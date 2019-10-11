@@ -9,7 +9,7 @@ import drt.server.feeds.cirium.CiriumFeed
 import drt.shared.{Arrival, LiveBaseFeedSource}
 import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecificationLike
-import server.feeds.ArrivalsFeedSuccess
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import services.SDate
 import uk.gov.homeoffice.cirium.services.entities._
 
@@ -136,6 +136,25 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
     success
   }
 
+
+  "When an error occurs polling for cirium then I should get an ArrivalsFeedFailure" >> {
+    implicit val mat: ActorMaterializer = ActorMaterializer()
+
+    val ciriumFeed = new CiriumFeed("", "LHR") with MockClientWithFailure
+
+    val probe = TestProbe()
+
+    val cancellable = ciriumFeed.tickingSource.to(Sink.actorRef(probe.ref, "completed")).run()
+
+    probe.fishForMessage(1 seconds) {
+      case f: ArrivalsFeedFailure  =>
+        println(s"Failure handled gracefully")
+        true
+    }
+
+    success
+  }
+
   trait MockClientWithSuccess {
     self: CiriumFeed =>
     val publishedArrivalTime = "2019-07-15T11:05:00.000Z"
@@ -153,4 +172,19 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
       "1000"
     )))
   }
+
+  trait MockClientWithFailure {
+    self: CiriumFeed =>
+    val publishedArrivalTime = "2019-07-15T11:05:00.000Z"
+    val estRunwayArrival = "2019-07-15T11:07:00.000Z"
+    val actRunwayArrival = "2019-07-15T11:08:00.000Z"
+    val estGateArrivalTime = "2019-07-15T11:09:00.000Z"
+    val actGateArrivalTime = "2019-07-15T11:10:00.000Z"
+
+    override def makeRequest(): Future[List[CiriumFlightStatus]] = {
+
+      Future(throw new Exception("Something went wrong"))
+    }
+  }
+
 }

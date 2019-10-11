@@ -7,10 +7,10 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import drt.shared.{Arrival, LiveBaseFeedSource}
 import drt.shared.FlightsApi.Flights
+import drt.shared.{Arrival, LiveBaseFeedSource}
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import uk.gov.homeoffice.cirium.JsonSupport._
 import uk.gov.homeoffice.cirium.services.entities.CiriumFlightStatus
 
@@ -25,7 +25,7 @@ case class CiriumFeed(endpoint: String, portCode: String)(implicit actorSystem: 
   import CiriumFeed._
 
   def tickingSource: Source[ArrivalsFeedResponse, Cancellable] = {
-    val source = Source
+    val source: Source[ArrivalsFeedResponse, Cancellable] = Source
       .tick(0 millis, 30 seconds, NotUsed)
       .mapAsync(1)(_ => {
         makeRequest()
@@ -35,6 +35,11 @@ case class CiriumFeed(endpoint: String, portCode: String)(implicit actorSystem: 
         fs.map(a => toArrival(a, portCode))
       })
       .map(as => ArrivalsFeedSuccess(Flights(as)))
+      .recover {
+        case throwable: Throwable =>
+          log.error("Failed to connect to Cirium", throwable)
+          ArrivalsFeedFailure("Failed to connect to Cirium.")
+      }
 
     source
   }
