@@ -849,6 +849,126 @@ object AirportConfigs {
       )))
     ))
 
+  val ncl = AirportConfig(
+    portCode = "NCL",
+    queues = Map(
+      "T1" -> Seq(Queues.NonEeaDesk, Queues.EeaDesk, Queues.EGate)
+    ),
+    slaByQueue = Map(
+      Queues.EeaDesk -> 25,
+      Queues.NonEeaDesk -> 45,
+      Queues.EGate -> 25
+    ),
+    terminalNames = Seq("T1"),
+    defaultWalkTimeMillis = Map("T1" -> 600000L),
+    defaultPaxSplits = SplitRatios(
+      SplitSources.TerminalAverage,
+      SplitRatio(eeaMachineReadableToDesk, 0.99 * 0.2),
+      SplitRatio(eeaMachineReadableToEGate, 0.99 * 0.8),
+      SplitRatio(eeaNonMachineReadableToDesk, 0),
+      SplitRatio(visaNationalToDesk, 0.0),
+      SplitRatio(nonVisaNationalToDesk, 0.01)
+    ),
+    defaultProcessingTimes = Map("T1" -> Map(
+      eeaMachineReadableToDesk -> 20d / 60,
+      eeaMachineReadableToEGate -> 30d / 60,
+      eeaNonMachineReadableToDesk -> 50d / 60,
+      visaNationalToDesk -> 100d / 60,
+      nonVisaNationalToDesk -> 80d / 60
+    )),
+    minMaxDesksByTerminalQueue = Map(
+      "T1" -> Map(
+        Queues.EGate -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)),
+        Queues.EeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10)),
+        Queues.NonEeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10))
+      )
+    ),
+    role = NCLAccess,
+    terminalPaxTypeQueueAllocation = Map(
+      "T1" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+        EGate -> 0.6993,
+        EeaDesk -> (1.0 - 0.6993)
+      )))
+    ))
+
+  val bfs = AirportConfig(
+    portCode = "BFS",
+    queues = Map(
+      "T1" -> Seq(Queues.NonEeaDesk, Queues.EeaDesk)
+    ),
+    slaByQueue = Map(
+      Queues.EeaDesk -> 25,
+      Queues.NonEeaDesk -> 45
+    ),
+    terminalNames = Seq("T1"),
+    defaultWalkTimeMillis = Map("T1" -> 600000L),
+    defaultPaxSplits = SplitRatios(
+      SplitSources.TerminalAverage,
+      SplitRatio(eeaMachineReadableToDesk, 0.98),
+      SplitRatio(eeaNonMachineReadableToDesk, 0),
+      SplitRatio(visaNationalToDesk, 0.01),
+      SplitRatio(nonVisaNationalToDesk, 0.01)
+    ),
+    defaultProcessingTimes = Map("T1" -> Map(
+      eeaMachineReadableToDesk -> 20d / 60,
+      eeaMachineReadableToEGate -> 30d / 60,
+      eeaNonMachineReadableToDesk -> 50d / 60,
+      visaNationalToDesk -> 100d / 60,
+      nonVisaNationalToDesk -> 80d / 60
+    )),
+    minMaxDesksByTerminalQueue = Map(
+      "T1" -> Map(
+        Queues.EeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4)),
+        Queues.NonEeaDesk -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), List(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4))
+      )
+    ),
+    role = BFSAccess,
+    terminalPaxTypeQueueAllocation = Map(
+      "T1" -> (defaultQueueRatios + (
+        EeaMachineReadable -> List(EeaDesk -> 1.0),
+        B5JPlusNational -> List(Queues.EeaDesk -> 1.0)
+      )))
+  )
+
+  val lpl = AirportConfig(
+    portCode = "LPL",
+    queues = Map(
+      "T1" -> Seq(Queues.NonEeaDesk, Queues.EeaDesk)
+    ),
+    slaByQueue = Map(
+      Queues.EeaDesk -> 25,
+      Queues.NonEeaDesk -> 45
+    ),
+    terminalNames = Seq("T1"),
+    defaultWalkTimeMillis = Map("T1" -> 600000L),
+    defaultPaxSplits = SplitRatios(
+      SplitSources.TerminalAverage,
+      SplitRatio(eeaMachineReadableToDesk, 0.98),
+      SplitRatio(eeaNonMachineReadableToDesk, 0),
+      SplitRatio(visaNationalToDesk, 0.0),
+      SplitRatio(nonVisaNationalToDesk, 0.01)
+    ),
+    defaultProcessingTimes = Map("T1" -> Map(
+      eeaMachineReadableToDesk -> 20d / 60,
+      eeaMachineReadableToEGate -> 30d / 60,
+      eeaNonMachineReadableToDesk -> 50d / 60,
+      visaNationalToDesk -> 100d / 60,
+      nonVisaNationalToDesk -> 80d / 60
+    )),
+    minMaxDesksByTerminalQueue = Map(
+      "T1" -> Map(
+        Queues.EeaDesk -> (List(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2), List(6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6)),
+        Queues.NonEeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2))
+      )
+    ),
+    role = LPLAccess,
+    terminalPaxTypeQueueAllocation = Map(
+      "T1" -> (defaultQueueRatios + (
+        EeaMachineReadable -> List(EeaDesk -> 1.0 ),
+        B5JPlusNational -> List(Queues.EeaDesk -> 1.0)
+      ))
+    ))
+
   val bhx = AirportConfig(
     portCode = "BHX",
     queues = Map(
@@ -1011,7 +1131,7 @@ object AirportConfigs {
   val lhr_nbp: AirportConfig = lhr.copy(portCode = "LHR_NBP", cloneOfPortCode = Option("LHR"), role = TestAccess)
   val lhr_nbp_halved: AirportConfig = lhr_ppt_halved.copy(portCode = "LHR_NBP_HALVED", nationalityBasedProcTimes = nationalityProcessingTimesHalved, cloneOfPortCode = Option("LHR"), role = TestAccess) //use halved default times and halved nationality based times
 
-  val allPorts: List[AirportConfig] = lcy :: gla :: ema :: edi :: stn :: man :: ltn :: lhr :: lhr_nbp :: lhr_nbp_halved :: lhr_ppt_halved :: lgw :: bhx :: brs :: test :: test2 :: Nil
+  val allPorts: List[AirportConfig] = ncl :: bfs :: lpl :: lcy :: gla :: ema :: edi :: stn :: man :: ltn :: lhr :: lhr_nbp :: lhr_nbp_halved :: lhr_ppt_halved :: lgw :: bhx :: brs :: test :: test2 :: Nil
   val testPorts: List[AirportConfig] = test :: test2 :: lhr_nbp :: lhr_nbp_halved :: lhr_ppt_halved :: Nil
 
   def portGroups: List[String] = allPorts.filterNot(testPorts.contains).map(_.portCode.toUpperCase).sorted
