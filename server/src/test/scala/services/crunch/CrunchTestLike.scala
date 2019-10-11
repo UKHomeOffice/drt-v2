@@ -22,7 +22,7 @@ import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import server.protobuf.messages.CrunchState.CrunchDiffMessage
 import services._
 import services.graphstages.Crunch._
-import services.graphstages.{DummySplitsPredictor, TestableCrunchLoadStage}
+import services.graphstages.TestableCrunchLoadStage
 import slickdb.Tables
 
 import scala.collection.mutable
@@ -138,8 +138,6 @@ class CrunchTestLike
     role = STNAccess,
     terminalPaxTypeQueueAllocation = Map("T1" -> AirportConfigs.defaultQueueRatios)
   )
-
-  val splitsPredictorStage = new DummySplitsPredictor()
 
   val pcpForFlightFromSch: Arrival => MilliDate = (a: Arrival) => MilliDate(SDate(a.Scheduled).millisSinceEpoch)
   val pcpForFlightFromBest: Arrival => MilliDate = (a: Arrival) => {

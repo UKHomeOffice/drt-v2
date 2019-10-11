@@ -8,6 +8,7 @@ import drt.shared.{Arrival, ArrivalKey, SDateLike}
 import manifests.actors.RegisteredArrivals
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch
+import services.metrics.{Metrics, StageTimer}
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
@@ -23,6 +24,7 @@ class BatchStage(now: () => SDateLike,
   val inArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("inArrivals.in")
   val outArrivals: Outlet[List[ArrivalKey]] = Outlet[List[ArrivalKey]]("outArrivals.out")
   val outRegisteredArrivals: Outlet[RegisteredArrivals] = Outlet[RegisteredArrivals]("outRegisteredArrivals.out")
+  val stageName = "batch-manifest-requests"
 
   override def shape = new FanOutShape2(inArrivals, outArrivals, outRegisteredArrivals)
 
@@ -47,6 +49,7 @@ class BatchStage(now: () => SDateLike,
 
     setHandler(inArrivals, new InHandler {
       override def onPush(): Unit = {
+        val timer = StageTimer(stageName, inArrivals)
         val incoming = grab(inArrivals)
 
         log.info(s"grabbed ${incoming.length} requests for arrival manifests")
@@ -59,22 +62,27 @@ class BatchStage(now: () => SDateLike,
         if (isAvailable(outRegisteredArrivals)) pushRegisteredArrivalsUpdates()
 
         pullIfAvailable()
+        timer.stopAndReport()
       }
     })
 
     setHandler(outArrivals, new OutHandler {
       override def onPull(): Unit = {
+        val timer = StageTimer(stageName, outArrivals)
         prioritiseAndPush()
 
         pullIfAvailable()
+        timer.stopAndReport()
       }
     })
 
     setHandler(outRegisteredArrivals, new OutHandler {
       override def onPull(): Unit = {
+        val timer = StageTimer(stageName, outRegisteredArrivals)
         pushRegisteredArrivalsUpdates()
 
         pullIfAvailable()
+        timer.stopAndReport()
       }
     })
 
@@ -89,6 +97,7 @@ class BatchStage(now: () => SDateLike,
       val lookupBatch = updatePrioritisedAndSubscribers()
 
       if (lookupBatch.nonEmpty) {
+        Metrics.counter(s"$stageName", lookupBatch.size)
         push(outArrivals, lookupBatch.toList)
       } else {
         object PushAfterDelay extends Runnable {

@@ -10,6 +10,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchMinuteMessage, StaffMinuteMessage}
 import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 import services.SDate
+import services.metrics.{Metrics, StageTimer}
 
 import scala.collection.immutable.Map
 
@@ -39,6 +40,7 @@ class PortStateGraphStage(name: String = "", optionalInitialPortState: Option[Po
   val inSimulationMinutes: Inlet[SimulationMinutes] = Inlet[SimulationMinutes]("SimulationMinutes.in")
   val outPortState: Outlet[PortStateWithDiff] = Outlet[PortStateWithDiff]("PortStateWithDiff.out")
   var lastPushDate: String = ""
+  val stageName = "crunch-load"
 
   override val shape = new FanInShape5(
     inFlightsWithSplits,
@@ -68,16 +70,15 @@ class PortStateGraphStage(name: String = "", optionalInitialPortState: Option[Po
     shape.inlets.foreach(inlet => {
       setHandler(inlet, new InHandler {
         override def onPush(): Unit = {
+          val timer = StageTimer(stageName, inlet)
+
           val stateDiff = grab(inlet) match {
             case incoming: PortStateMinutes =>
-              log.info(s"Incoming ${inlet.toString}")
               val startTime = now().millisSinceEpoch
               val expireThreshold = now().addMillis(-1 * expireAfterMillis.toInt).millisSinceEpoch
               val diff = incoming.applyTo(portState, startTime)
               portState.purgeOlderThanDate(expireThreshold)
               portState.purgeRecentUpdates(now().millisSinceEpoch)
-              val elapsedSeconds = (now().millisSinceEpoch - startTime).toDouble / 1000
-              log.info(f"Finished processing $inlet data in $elapsedSeconds%.2f seconds")
               diff
           }
 
@@ -86,18 +87,18 @@ class PortStateGraphStage(name: String = "", optionalInitialPortState: Option[Po
           pushIfAppropriate()
 
           pullAllInlets()
+          timer.stopAndReport()
         }
       })
     })
 
     setHandler(outPortState, new OutHandler {
       override def onPull(): Unit = {
-        val start = now()
-        log.info(s"onPull() called")
+        val timer = StageTimer(stageName, outPortState)
         pushIfAppropriate()
 
         pullAllInlets()
-        log.info(s"outPortState Took ${now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        timer.stopAndReport()
       }
     })
 
@@ -144,6 +145,10 @@ class PortStateGraphStage(name: String = "", optionalInitialPortState: Option[Po
 
           val portStateWithDiff = PortStateWithDiff(fullPortStateForLiveResync, portStateDiff, diffMessage(portStateDiff))
           maybePortStateDiff = None
+          Metrics.counter(s"$stageName.crunch-minutes", portStateDiff.crunchMinuteUpdates.size)
+          Metrics.counter(s"$stageName.staff-minutes", portStateDiff.staffMinuteUpdates.size)
+          Metrics.counter(s"$stageName.arrivals.updates", portStateDiff.flightUpdates.size)
+          Metrics.counter(s"$stageName.arrivals.removals", portStateDiff.flightRemovals.size)
           push(outPortState, portStateWithDiff)
       }
     }

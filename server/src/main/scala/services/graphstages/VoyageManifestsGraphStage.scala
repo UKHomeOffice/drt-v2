@@ -10,6 +10,7 @@ import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import server.feeds.{ManifestsFeedFailure, ManifestsFeedResponse, ManifestsFeedSuccess}
 import services.SDate
+import services.metrics.{Metrics, StageTimer}
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -35,8 +36,9 @@ class VoyageManifestsGraphStage(portCode: String,
                                 provider: ApiProviderLike,
                                 initialLastSeenFileName: String,
                                 minCheckIntervalMillis: MillisSinceEpoch = 30000) extends GraphStage[SourceShape[ManifestsFeedResponse]] {
-  val out: Outlet[ManifestsFeedResponse] = Outlet("manifestsOut")
+  val out: Outlet[ManifestsFeedResponse] = Outlet("Manifests.out")
   override val shape: SourceShape[ManifestsFeedResponse] = SourceShape(out)
+  val stageName = "voyage-manifests"
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -50,10 +52,10 @@ class VoyageManifestsGraphStage(portCode: String,
     new GraphStageLogic(shape) {
       setHandler(out, new OutHandler {
         override def onPull(): Unit = {
-          val start = SDate.now()
+          val timer = StageTimer(stageName, out)
           fetchAndUpdateState()
           pushManifests()
-          log.info(s"out Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+          timer.stopAndReport()
         }
       })
 
@@ -74,10 +76,10 @@ class VoyageManifestsGraphStage(portCode: String,
         if (isAvailable(out)) {
           if (maybeResponseToPush.isEmpty) log.info(s"Nothing to push right now")
 
-          maybeResponseToPush.foreach(responseToPush => {
-            log.info(s"Pushing ${responseToPush.getClass}")
+          maybeResponseToPush.foreach { responseToPush: ManifestsFeedResponse =>
+            Metrics.counter(s"$stageName", responseToPush.length)
             push(out, responseToPush)
-          })
+          }
 
           maybeResponseToPush = None
         }

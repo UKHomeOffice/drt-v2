@@ -74,10 +74,10 @@ object Settings {
     val uPickle = "0.6.7"
     val akkaHttp = "10.1.9"
     val slick = "3.3.2"
+    val censorinus = "2.1.13"
   }
 
   import versions._
-
 
   /**
     * These dependencies are shared between JS and JVM projects
@@ -99,11 +99,11 @@ object Settings {
   )
 
   val clientNpmDevDependencies = "expose-loader" -> exposeLoader
-
   /** Dependencies only used by the JVM project */
   val jvmDependencies = Def.setting(List(
     "com.amazonaws" % "aws-java-sdk" % awsSdk,
     "com.github.dnvriend" %% "akka-persistence-inmemory" % akkaPersistenceInmemory % "test",
+    "com.github.gphat" % "censorinus_2.12" % censorinus,
     "com.pauldijou" %% "jwt-core" % "4.0.0",
     "com.hierynomus" % "sshj" % sshJ,
     "com.lihaoyi" %% "pprint" % pprint,
@@ -115,8 +115,9 @@ object Settings {
     "info.folone" %% "poi-scala" % "0.18",
     "net.liftweb" %% "lift-json" % "3.1.0",
 
-    "com.h2database" % "h2" % h2 % Test,
     "net.databinder.dispatch" %% "dispatch-core" % "0.13.4",
+
+    "com.h2database" % "h2" % h2 % Test,
 
     "com.typesafe" % "config" % typesafeConfig,
     "com.typesafe.akka" %% "akka-testkit" % akka % "test",

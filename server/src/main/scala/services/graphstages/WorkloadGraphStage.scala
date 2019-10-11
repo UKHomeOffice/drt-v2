@@ -5,8 +5,8 @@ import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.SDate
 import services.graphstages.Crunch._
+import services.metrics.{Metrics, StageTimer}
 
 import scala.collection.immutable.{Map, SortedMap}
 import scala.collection.mutable
@@ -22,8 +22,9 @@ class WorkloadGraphStage(name: String = "",
                          useNationalityBasedProcessingTimes: Boolean)
   extends GraphStage[FlowShape[FlightsWithSplits, Loads]] {
 
-  val inFlightsWithSplits: Inlet[FlightsWithSplits] = Inlet[FlightsWithSplits]("inFlightsWithSplits.in")
-  val outLoads: Outlet[Loads] = Outlet[Loads]("PortStateOut.out")
+  val inFlightsWithSplits: Inlet[FlightsWithSplits] = Inlet[FlightsWithSplits]("FlightsWithSplits.in")
+  val outLoads: Outlet[Loads] = Outlet[Loads]("Loads.out")
+  val stageName = "workload"
 
   val paxDisembarkPerMinute = 20
 
@@ -67,7 +68,7 @@ class WorkloadGraphStage(name: String = "",
 
     setHandler(inFlightsWithSplits, new InHandler {
       override def onPush(): Unit = {
-        val start = SDate.now()
+        val timer = StageTimer(stageName, inFlightsWithSplits)
         val incomingFlights = grab(inFlightsWithSplits)
         log.info(s"Received ${incomingFlights.flightsToUpdate.size} arrivals")
 
@@ -87,7 +88,7 @@ class WorkloadGraphStage(name: String = "",
         pushStateIfReady()
 
         pullFlights()
-        log.info(s"inFlightsWithSplits Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        timer.stopAndReport()
       }
     })
 
@@ -147,11 +148,11 @@ class WorkloadGraphStage(name: String = "",
 
     setHandler(outLoads, new OutHandler {
       override def onPull(): Unit = {
-        val start = SDate.now()
+        val timer = StageTimer(stageName, outLoads)
         log.debug(s"outLoads onPull called")
         pushStateIfReady()
         pullFlights()
-        log.info(s"outLoads Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        timer.stopAndReport()
       }
     })
 
@@ -164,7 +165,7 @@ class WorkloadGraphStage(name: String = "",
 
     def pushStateIfReady(): Unit = {
       if (updatedLoadsToPush.nonEmpty && isAvailable(outLoads)) {
-        log.info(s"Pushing ${updatedLoadsToPush.size} load minutes")
+        Metrics.counter(s"$stageName.minutes", updatedLoadsToPush.size)
         push(outLoads, Loads(SortedMap[TQM, LoadMinute]() ++ updatedLoadsToPush))
         updatedLoadsToPush.clear()
       }

@@ -7,6 +7,7 @@ import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch._
+import services.metrics.{Metrics, StageTimer}
 import services.{OptimizerConfig, OptimizerCrunchResult, SDate, TryCrunch}
 
 import scala.collection.immutable.{Map, SortedMap}
@@ -24,8 +25,10 @@ class CrunchLoadGraphStage(name: String = "",
                            minutesToCrunch: Int)
   extends GraphStage[FlowShape[Loads, DeskRecMinutes]] {
 
-  val inLoads: Inlet[Loads] = Inlet[Loads]("inLoads.in")
-  val outDeskRecMinutes: Outlet[DeskRecMinutes] = Outlet[DeskRecMinutes]("outDeskRecMinutes.out")
+  val inLoads: Inlet[Loads] = Inlet[Loads]("Loads.in")
+  val outDeskRecMinutes: Outlet[DeskRecMinutes] = Outlet[DeskRecMinutes]("DeskRecMinutes.out")
+
+  val stageName = "crunch"
 
   override val shape = new FlowShape(inLoads, outDeskRecMinutes)
 
@@ -50,7 +53,7 @@ class CrunchLoadGraphStage(name: String = "",
 
     setHandler(inLoads, new InHandler {
       override def onPush(): Unit = {
-        val start = SDate.now()
+        val timer = StageTimer(stageName, inLoads)
         val incomingLoads = grab(inLoads)
         log.info(s"Received ${incomingLoads.loadMinutes.size} loads")
 
@@ -83,7 +86,7 @@ class CrunchLoadGraphStage(name: String = "",
         pushStateIfReady()
 
         pullLoads()
-        log.info(s"inLoads Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        timer.stopAndReport()
       }
     })
 
@@ -134,10 +137,10 @@ class CrunchLoadGraphStage(name: String = "",
 
     setHandler(outDeskRecMinutes, new OutHandler {
       override def onPull(): Unit = {
-        val start = SDate.now()
+        val timer = StageTimer(stageName, outDeskRecMinutes)
         pushStateIfReady()
         pullLoads()
-        log.info(s"outDeskRecMinutes Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        timer.stopAndReport()
       }
     })
 
@@ -152,6 +155,7 @@ class CrunchLoadGraphStage(name: String = "",
       if (deskRecMinutesToPush.isEmpty) log.debug(s"We have no crunch minutes. Nothing to push")
       else if (isAvailable(outDeskRecMinutes)) {
         log.info(s"Pushing ${deskRecMinutesToPush.size} crunch minutes")
+        Metrics.counter(s"$stageName.desk-recommendation-minutes", deskRecMinutesToPush.size)
         push(outDeskRecMinutes, DeskRecMinutes(deskRecMinutesToPush.values.toSeq))
         deskRecMinutesToPush = Map()
       } else log.debug(s"outDeskRecMinutes not available to push")

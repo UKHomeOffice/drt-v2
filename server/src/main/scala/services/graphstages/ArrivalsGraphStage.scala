@@ -6,10 +6,11 @@ import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
-import services.{SDate, graphstages}
+import services.SDate
+import services.metrics.{Metrics, StageTimer}
 
-import scala.collection.mutable
 import scala.collection.immutable.SortedMap
+import scala.collection.mutable
 
 
 sealed trait ArrivalsSourceType
@@ -34,12 +35,13 @@ class ArrivalsGraphStage(name: String = "",
                          now: () => SDateLike)
   extends GraphStage[FanInShape4[ArrivalsFeedResponse, ArrivalsFeedResponse, ArrivalsFeedResponse, ArrivalsFeedResponse, ArrivalsDiff]] {
 
-  val inForecastBaseArrivals: Inlet[ArrivalsFeedResponse] = Inlet[ArrivalsFeedResponse]("inFlightsForecastBase")
-  val inForecastArrivals: Inlet[ArrivalsFeedResponse] = Inlet[ArrivalsFeedResponse]("inFlightsForecast")
-  val inLiveBaseArrivals: Inlet[ArrivalsFeedResponse] = Inlet[ArrivalsFeedResponse]("inFlightsLiveBase")
-  val inLiveArrivals: Inlet[ArrivalsFeedResponse] = Inlet[ArrivalsFeedResponse]("inFlightsLive")
-  val outArrivalsDiff: Outlet[ArrivalsDiff] = Outlet[ArrivalsDiff]("outArrivalsDiff")
+  val inForecastBaseArrivals: Inlet[ArrivalsFeedResponse] = Inlet[ArrivalsFeedResponse]("FlightsForecastBase.in")
+  val inForecastArrivals: Inlet[ArrivalsFeedResponse] = Inlet[ArrivalsFeedResponse]("FlightsForecast.in")
+  val inLiveBaseArrivals: Inlet[ArrivalsFeedResponse] = Inlet[ArrivalsFeedResponse]("FlightsLiveBase.in")
+  val inLiveArrivals: Inlet[ArrivalsFeedResponse] = Inlet[ArrivalsFeedResponse]("FlightsLive.in")
+  val outArrivalsDiff: Outlet[ArrivalsDiff] = Outlet[ArrivalsDiff]("ArrivalsDiff.out")
   override val shape = new FanInShape4(inForecastBaseArrivals, inForecastArrivals, inLiveBaseArrivals, inLiveArrivals, outArrivalsDiff)
+  val stageName = "arrivals"
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     val forecastBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap()
@@ -89,20 +91,19 @@ class ArrivalsGraphStage(name: String = "",
 
     setHandler(outArrivalsDiff, new OutHandler {
       override def onPull(): Unit = {
-        val start = SDate.now()
+        val timer = StageTimer(stageName, outArrivalsDiff)
         pushIfAvailable(toPush, outArrivalsDiff)
 
         List(inLiveBaseArrivals, inLiveArrivals, inForecastArrivals, inForecastBaseArrivals).foreach(inlet => if (!hasBeenPulled(inlet)) {
           log.debug(s"Pulling Inlet: ${inlet.toString()}")
           pull(inlet)
         })
-        log.info(s"outArrivalsDiff Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        timer.stopAndReport()
       }
     })
 
     def onPushArrivals(arrivalsInlet: Inlet[ArrivalsFeedResponse], sourceType: ArrivalsSourceType): Unit = {
-      val start = SDate.now()
-      log.info(s"$arrivalsInlet onPush() grabbing flights")
+      val timer = StageTimer(stageName, outArrivalsDiff)
 
       grab(arrivalsInlet) match {
         case ArrivalsFeedSuccess(Flights(flights), connectedAt) =>
@@ -116,7 +117,8 @@ class ArrivalsGraphStage(name: String = "",
       }
 
       if (!hasBeenPulled(arrivalsInlet)) pull(arrivalsInlet)
-      log.info(s"$arrivalsInlet Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+
+      timer.stopAndReport()
     }
 
     def handleIncomingArrivals(sourceType: ArrivalsSourceType, incomingArrivals: Seq[Arrival]): Unit = {
@@ -224,13 +226,11 @@ class ArrivalsGraphStage(name: String = "",
 
     def pushIfAvailable(arrivalsToPush: Option[ArrivalsDiff], outlet: Outlet[ArrivalsDiff]): Unit = {
       if (isAvailable(outlet)) {
-        arrivalsToPush match {
-          case None =>
-            log.info(s"No updated arrivals to push")
-          case Some(diff) =>
-            log.info(s"Pushing ${diff.toUpdate.size} updates & ${diff.toRemove.size} removals")
-            push(outArrivalsDiff, diff)
-            toPush = None
+        arrivalsToPush.foreach { diff =>
+          Metrics.counter(s"$stageName.arrivals.updates", diff.toUpdate.size)
+          Metrics.counter(s"$stageName.arrivals.removals", diff.toRemove.size)
+          push(outArrivalsDiff, diff)
+          toPush = None
         }
       } else log.debug(s"outMerged not available to push")
     }

@@ -9,8 +9,8 @@ import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds._
-import services._
 import services.graphstages.Crunch.purgeExpired
+import services.metrics.{Metrics, StageTimer}
 
 import scala.collection.immutable.Map
 import scala.collection.mutable
@@ -32,7 +32,9 @@ class ArrivalSplitsGraphStage(name: String = "",
   val inArrivalsDiff: Inlet[ArrivalsDiff] = Inlet[ArrivalsDiff]("ArrivalsDiffIn.in")
   val inManifestsLive: Inlet[ManifestsFeedResponse] = Inlet[ManifestsFeedResponse]("ManifestsLiveIn.in")
   val inManifestsHistoric: Inlet[ManifestsFeedResponse] = Inlet[ManifestsFeedResponse]("ManifestsHistoricIn.in")
-  val outArrivalsWithSplits: Outlet[FlightsWithSplits] = Outlet[FlightsWithSplits]("ArrivalsWithSplitsOut.out")
+  val outArrivalsWithSplits: Outlet[FlightsWithSplits] = Outlet[FlightsWithSplits]("FlightsWithSplitsOut.out")
+
+  val stageName = "arrival-splits"
 
   override val shape = new FanInShape3(inArrivalsDiff, inManifestsLive, inManifestsHistoric, outArrivalsWithSplits)
 
@@ -67,17 +69,17 @@ class ArrivalSplitsGraphStage(name: String = "",
 
     setHandler(outArrivalsWithSplits, new OutHandler {
       override def onPull(): Unit = {
-        val start = SDate.now()
+        val timer = StageTimer(stageName, outArrivalsWithSplits)
         log.debug(s"arrivalsWithSplitsOut onPull called")
         pushStateIfReady()
         pullAll()
-        log.info(s"outArrivalsWithSplits Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        timer.stopAndReport()
       }
     })
 
     setHandler(inArrivalsDiff, new InHandler {
       override def onPush(): Unit = {
-        val start = SDate.now()
+        val timer = StageTimer(stageName, inArrivalsDiff)
         log.debug(s"inFlights onPush called")
         val arrivalsDiff = grab(inArrivalsDiff)
 
@@ -98,7 +100,7 @@ class ArrivalSplitsGraphStage(name: String = "",
 
         pushStateIfReady()
         pullAll()
-        log.info(s"inArrivalsDiff Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        timer.stopAndReport()
       }
     })
 
@@ -127,7 +129,7 @@ class ArrivalSplitsGraphStage(name: String = "",
     def InManifestsHandler(inlet: Inlet[ManifestsFeedResponse]): InHandler =
       new InHandler() {
         override def onPush(): Unit = {
-          val start = SDate.now()
+          val timer = StageTimer(stageName, inlet)
           log.info(s"inSplits onPush called")
 
           val incoming: ManifestsFeedResponse = grab(inlet) match {
@@ -151,7 +153,7 @@ class ArrivalSplitsGraphStage(name: String = "",
             case unexpected => log.error(s"Unexpected feed response: ${unexpected.getClass}")
           }
           pullAll()
-          log.info(s"inManifests Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+          timer.stopAndReport()
         }
       }
 
@@ -237,7 +239,9 @@ class ArrivalSplitsGraphStage(name: String = "",
     def pushStateIfReady(): Unit = {
       if (isAvailable(outArrivalsWithSplits)) {
         if (arrivalsWithSplitsDiff.nonEmpty || arrivalsToRemove.nonEmpty) {
-          log.info(s"Pushing ${arrivalsWithSplitsDiff.size} updated arrivals with splits and ${arrivalsToRemove.size} removals")
+          Metrics.counter(s"$stageName.arrivals-with-splits.updates", arrivalsWithSplitsDiff.values.size)
+          Metrics.counter(s"$stageName.arrivals-with-splits.removals", arrivalsToRemove.size)
+
           push(outArrivalsWithSplits, FlightsWithSplits(arrivalsWithSplitsDiff.values.toSeq, arrivalsToRemove.toSeq))
           arrivalsWithSplitsDiff = Map()
           arrivalsToRemove = Set()

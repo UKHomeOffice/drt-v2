@@ -6,13 +6,15 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{Arrival, UniqueArrival}
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
-import services.SDate
+import services.metrics.{Metrics, StageTimer}
 
 import scala.collection.mutable
+
 
 final class ArrivalsDiffingStage(initialKnownArrivals: mutable.SortedMap[UniqueArrival, Arrival], forecastMaxMillis: () => MillisSinceEpoch) extends GraphStage[FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse]] {
   val in: Inlet[ArrivalsFeedResponse] = Inlet[ArrivalsFeedResponse]("DiffingStage.in")
   val out: Outlet[ArrivalsFeedResponse] = Outlet[ArrivalsFeedResponse]("DiffingStage.out")
+  val stageName = "arrivals-diffing"
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -31,30 +33,27 @@ final class ArrivalsDiffingStage(initialKnownArrivals: mutable.SortedMap[UniqueA
 
     setHandlers(in, out, new InHandler with OutHandler {
       override def onPush(): Unit = {
-        val start = SDate.now()
-        if (maybeResponseToPush.isEmpty) {
-          log.info(s"Incoming ArrivalsFeedResponse")
-          maybeResponseToPush = processFeedResponse(grab(in))
-        } else log.info(s"Not ready to grab until we've pushed")
+        val timer = StageTimer(stageName, in)
+        maybeResponseToPush = processFeedResponse(grab(in))
 
-        if (isAvailable(out))
-          pushAndClear()
-
-        log.info(s"onPush Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        if (isAvailable(out)) pushAndClear()
+        timer.stopAndReport()
       }
 
       override def onPull(): Unit = {
-        val start = SDate.now()
+        val timer = StageTimer(stageName, in)
         pushAndClear()
 
         if (!hasBeenPulled(in)) pull(in)
-        log.info(s"onPull Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        timer.stopAndReport()
       }
     })
 
     def pushAndClear(): Unit = {
-      maybeResponseToPush.foreach { responseToPush =>
-        if (responseToPush.nonEmpty) push(out, responseToPush)
+      maybeResponseToPush.collect {
+        case afs: ArrivalsFeedResponse =>
+          Metrics.counter(s"$stageName.arrival-updates", afs.length)
+          push(out, afs)
       }
       maybeResponseToPush = None
     }

@@ -48,8 +48,7 @@ trait WithExports {
                                           ): Action[AnyContent] =
     authByRole(DesksAndQueuesView) {
       Action.async {
-        timed(s"Export desks & queues for terminal $terminalName @ ${SDate(pointInTime.toLong).toISOString()}") {
-
+        timedEndPoint(s"Export desks & queues", Option(s"$terminalName @ ${SDate(pointInTime.toLong).toISOString()}")) {
           val portCode = airportConfig.portCode
           val pit = SDate(pointInTime.toLong)
 
@@ -71,21 +70,21 @@ trait WithExports {
       }
     }
 
-  def exportForecastWeekToCSV(startDay: String, terminal: TerminalName): Action[AnyContent] = authByRole(ForecastView) {
+  def exportForecastWeekToCSV(startDay: String, terminalName: TerminalName): Action[AnyContent] = authByRole(ForecastView) {
     Action.async {
-      timed(s"Export planning for terminal $terminal") {
+      timedEndPoint(s"Export planning", Option(s"$terminalName")) {
         val (startOfForecast, endOfForecast) = startAndEndForDay(startDay.toLong, 180)
 
         val portStateFuture = ctrl.forecastCrunchStateActor.ask(
-          GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
+          GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminalName)
         )(new Timeout(30 seconds))
 
         val portCode = airportConfig.portCode
 
-        val fileName = f"$portCode-$terminal-forecast-export-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}%02d-${startOfForecast.getDate()}%02d"
+        val fileName = f"$portCode-$terminalName-forecast-export-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}%02d-${startOfForecast.getDate()}%02d"
         portStateFuture.map {
           case Some(portState: PortState) =>
-            val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
+            val fp = Forecast.forecastPeriod(airportConfig, terminalName, startOfForecast, endOfForecast, portState)
             val csvData = CSVData.forecastPeriodToCsv(fp)
             Result(
               ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
@@ -93,16 +92,16 @@ trait WithExports {
             )
 
           case None =>
-            log.error(s"Forecast CSV Export: Missing planning data for ${startOfForecast.ddMMyyString} for Terminal $terminal")
+            log.error(s"Forecast CSV Export: Missing planning data for ${startOfForecast.ddMMyyString} for Terminal $terminalName")
             NotFound(s"Sorry, no planning summary available for week starting ${startOfForecast.ddMMyyString}")
         }
       }
     }
   }
 
-  def exportForecastWeekHeadlinesToCSV(startDay: String, terminal: TerminalName): Action[AnyContent] = authByRole(ForecastView) {
+  def exportForecastWeekHeadlinesToCSV(startDay: String, terminalName: TerminalName): Action[AnyContent] = authByRole(ForecastView) {
     Action.async {
-      timed(s"Export planning headlines for terminal $terminal") {
+      timedEndPoint(s"Export planning headlines", Option(s"$terminalName")) {
         val startOfWeekMidnight = getLocalLastMidnight(SDate(startDay.toLong))
         val endOfForecast = startOfWeekMidnight.addDays(180)
         val now = SDate.now()
@@ -113,13 +112,13 @@ trait WithExports {
         } else startOfWeekMidnight
 
         val portStateFuture = ctrl.forecastCrunchStateActor.ask(
-          GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
+          GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminalName)
         )(new Timeout(30 seconds))
 
-        val fileName = f"${airportConfig.portCode}-$terminal-forecast-export-headlines-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}%02d-${startOfForecast.getDate()}%02d"
+        val fileName = f"${airportConfig.portCode}-$terminalName-forecast-export-headlines-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}%02d-${startOfForecast.getDate()}%02d"
         portStateFuture.map {
           case Some(portState: PortState) =>
-            val hf: ForecastHeadlineFigures = Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queues(terminal).toList)
+            val hf: ForecastHeadlineFigures = Forecast.headlineFigures(startOfForecast, endOfForecast, terminalName, portState, airportConfig.queues(terminalName).toList)
             val csvData = CSVData.forecastHeadlineToCSV(hf, airportConfig.exportQueueOrder)
             Result(
               ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
@@ -128,7 +127,7 @@ trait WithExports {
             )
 
           case None =>
-            log.error(s"Missing headline data for ${startOfWeekMidnight.ddMMyyString} for Terminal $terminal")
+            log.error(s"Missing headline data for ${startOfWeekMidnight.ddMMyyString} for Terminal $terminalName")
             NotFound(s"Sorry, no headlines available for week starting ${startOfWeekMidnight.ddMMyyString}")
         }
       }
@@ -178,7 +177,7 @@ trait WithExports {
                                               endHour: Int): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
     Action.async {
       implicit request =>
-        timed(s"Export flights with splits for terminal $terminalName @ ${SDate(pointInTime.toLong).toISOString()}") {
+        timedEndPoint(s"Export flights with splits", Option(s"$terminalName @ ${SDate(pointInTime.toLong).toISOString()}")) {
           val pit = SDate(pointInTime.toLong)
 
           val portCode = airportConfig.portCode
@@ -300,7 +299,7 @@ trait WithExports {
           val end = start.addHours(24)
           val includeHeader = millis == startPit.millisSinceEpoch
           val psForDay = loadBestPortStateForPointInTime(millis, terminalName, start.millisSinceEpoch, end.millisSinceEpoch)
-          timed(s"Multi-day export for terminal $terminalName between ${startPit.toISOString()} & ${endPit.toISOString()} (day ${day.toISOString()})") {
+          timedEndPoint(s"Export multi-day", Option(s"$terminalName ${startPit.toISOString()} -> ${endPit.toISOString()} (day ${day.toISOString()})")) {
             csvFunc(day, psForDay, includeHeader)
           }
       }
