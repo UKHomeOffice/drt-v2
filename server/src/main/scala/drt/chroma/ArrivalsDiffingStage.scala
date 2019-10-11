@@ -51,11 +51,9 @@ final class ArrivalsDiffingStage(initialKnownArrivals: mutable.SortedMap[UniqueA
 
     def pushAndClear(): Unit = {
       maybeResponseToPush.collect {
-        case afs: ArrivalsFeedSuccess if !afs.isEmpty =>
-          Metrics.counter(s"$stageName.arrival-updates", afs.arrivals.flights.length)
+        case afs: ArrivalsFeedResponse =>
+          Metrics.counter(s"$stageName.arrival-updates", afs.length)
           push(out, afs)
-        case empty =>
-          push(out, empty)
       }
       maybeResponseToPush = None
     }

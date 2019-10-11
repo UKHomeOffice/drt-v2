@@ -76,10 +76,9 @@ class VoyageManifestsGraphStage(portCode: String,
         if (isAvailable(out)) {
           if (maybeResponseToPush.isEmpty) log.info(s"Nothing to push right now")
 
-          maybeResponseToPush.collect {
-            case responseToPush: ManifestsFeedSuccess =>
-              Metrics.counter(s"$stageName", responseToPush.manifests.manifests.size)
-              push(out, responseToPush)
+          maybeResponseToPush.foreach { responseToPush: ManifestsFeedResponse =>
+            Metrics.counter(s"$stageName", responseToPush.length)
+            push(out, responseToPush)
           }
 
           maybeResponseToPush = None
