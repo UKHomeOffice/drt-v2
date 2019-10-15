@@ -13,8 +13,9 @@ import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import services.SDate
 import uk.gov.homeoffice.cirium.services.entities._
 
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
 class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike with Mockito {
@@ -125,7 +126,7 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
 
     val probe = TestProbe()
 
-    val cancellable = ciriumFeed.tickingSource.to(Sink.actorRef(probe.ref, "completed")).run()
+    ciriumFeed.tickingSource(30 seconds).to(Sink.actorRef(probe.ref, "completed")).run()
 
     probe.fishForMessage(1 seconds) {
       case s: ArrivalsFeedSuccess if s.arrivals.flights.head.Scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch =>
@@ -137,19 +138,20 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
   }
 
 
-  "When an error occurs polling for cirium then I should get an ArrivalsFeedFailure" >> {
+  "When an error occurs polling for cirium then it should continue to receive a later update" >> {
     implicit val mat: ActorMaterializer = ActorMaterializer()
 
     val ciriumFeed = new CiriumFeed("", "LHR") with MockClientWithFailure
 
     val probe = TestProbe()
 
-    val cancellable = ciriumFeed.tickingSource.to(Sink.actorRef(probe.ref, "completed")).run()
+    ciriumFeed.tickingSource(100 milliseconds).to(Sink.actorRef(probe.ref, "completed")).run()
 
-    probe.fishForMessage(1 seconds) {
-      case f: ArrivalsFeedFailure  =>
-        println(s"Failure handled gracefully")
+    probe.fishForMessage(2 seconds) {
+      case s: ArrivalsFeedSuccess if s.arrivals.flights.nonEmpty &&  s.arrivals.flights.head.Scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch =>
+        println(s"Successfully got a result")
         true
+      case _ => false
     }
 
     success
@@ -181,9 +183,25 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
     val estGateArrivalTime = "2019-07-15T11:09:00.000Z"
     val actGateArrivalTime = "2019-07-15T11:10:00.000Z"
 
-    override def makeRequest(): Future[List[CiriumFlightStatus]] = {
+    var callCount = 0
 
-      Future(throw new Exception("Something went wrong"))
+    override def makeRequest(): Future[List[CiriumFlightStatus]] = {
+      val result = if (callCount == 0) {
+        Future(List())
+      } else if (callCount == 1) {
+        Future(throw new Exception("Hello"))
+      } else {
+        Future(List(ciriumFlightStatus(
+          publishedArrivalTime,
+          estRunwayArrival,
+          actRunwayArrival,
+          estGateArrivalTime,
+          actGateArrivalTime,
+          "1000"
+        )))
+      }
+      callCount = callCount + 1
+      result
     }
   }
 

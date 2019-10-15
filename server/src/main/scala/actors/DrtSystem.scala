@@ -452,10 +452,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   def liveBaseArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = {
     if (config.get[Boolean]("feature-flags.use-cirium-feed")) {
-
       log.info(s"Using Cirium Live Base Feed")
-      CiriumFeed(config.get[String]("feeds.cirium.host"), portCode)
-        .tickingSource
+      CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).tickingSource(30 seconds)
     }
     else {
       log.info(s"Using Noop Base Live Feed")

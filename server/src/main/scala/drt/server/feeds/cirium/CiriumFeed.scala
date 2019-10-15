@@ -24,22 +24,22 @@ case class CiriumFeed(endpoint: String, portCode: String)(implicit actorSystem: 
 
   import CiriumFeed._
 
-  def tickingSource: Source[ArrivalsFeedResponse, Cancellable] = {
+  def tickingSource(interval: FiniteDuration): Source[ArrivalsFeedResponse, Cancellable] = {
     val source: Source[ArrivalsFeedResponse, Cancellable] = Source
-      .tick(0 millis, 30 seconds, NotUsed)
+      .tick(0 millis, interval, NotUsed)
       .mapAsync(1)(_ => {
         makeRequest()
+          .map(fs => {
+            log.debug(s"Got ${fs.size} arrivals from Cirium")
+            fs.map(a => toArrival(a, portCode))
+          })
+          .map(as => ArrivalsFeedSuccess(Flights(as)))
+          .recover {
+            case throwable: Throwable =>
+              log.error("Failed to connect to Cirium", throwable)
+              ArrivalsFeedFailure("Failed to connect to Cirium.")
+          }
       })
-      .map(fs => {
-        log.debug(s"Got ${fs.size} arrivals from Cirium")
-        fs.map(a => toArrival(a, portCode))
-      })
-      .map(as => ArrivalsFeedSuccess(Flights(as)))
-      .recover {
-        case throwable: Throwable =>
-          log.error("Failed to connect to Cirium", throwable)
-          ArrivalsFeedFailure("Failed to connect to Cirium.")
-      }
 
     source
   }
