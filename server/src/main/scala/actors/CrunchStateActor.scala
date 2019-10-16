@@ -121,8 +121,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
       logInfo(s"Purged snapshots")
 
     case "complete" =>
-      logInfo("Received complete. Shutting down with a PoisonPill")
-      self ! PoisonPill
+      logInfo("Received complete")
 
     case u =>
       log.error(s"Received unexpected message $u")

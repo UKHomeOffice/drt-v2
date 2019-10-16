@@ -8,13 +8,14 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import slickdb.ArrivalTableLike
+import slickdb.{ArrivalTable, ArrivalTableLike}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 
 
-class AggregatedArrivalsActor(portCode: String, arrivalTable: ArrivalTableLike)(implicit ec: ExecutionContext) extends Actor {
+class AggregatedArrivalsActor(portCode: String, arrivalTable: ArrivalTableLike) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
+  implicit val executionContext: ExecutionContextExecutor = ExecutionContext.global
 
   override def receive: Receive = {
     case StreamInitialized =>

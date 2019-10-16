@@ -77,20 +77,21 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
     }
 
     val testActors = List(
-        baseArrivalsActor,
-        forecastArrivalsActor,
-        liveArrivalsActor,
-        voyageManifestsActor,
-        shiftsActor,
-        fixedPointsActor,
-        staffMovementsActor,
-        liveCrunchStateActor,
-        forecastCrunchStateActor
+      baseArrivalsActor,
+      forecastArrivalsActor,
+      liveArrivalsActor,
+      voyageManifestsActor,
+      shiftsActor,
+      fixedPointsActor,
+      staffMovementsActor,
+      liveCrunchStateActor,
+      forecastCrunchStateActor,
+      aggregatedArrivalsActor
     )
 
     val restartActor: ActorRef = system.actorOf(
-        Props(classOf[RestartActor], startSystem, testActors),
-        name = "TestActor-ResetData"
+      Props(classOf[RestartActor], startSystem, testActors),
+      name = "TestActor-ResetData"
     )
 
     restartActor ! StartTestSystem
@@ -105,11 +106,11 @@ case class RestartActor(startSystem: () => List[KillSwitch], testActors: List[Ac
     case ResetData =>
       log.info(s"About to shut down everything")
 
-        log.info(s"Pressing killswitches")
-        currentKillSwitches.zipWithIndex.foreach { case (ks, idx) =>
-          log.info(s"Killswitch ${idx + 1}")
-          ks.shutdown()
-        }
+      log.info(s"Pressing killswitches")
+      currentKillSwitches.zipWithIndex.foreach { case (ks, idx) =>
+        log.info(s"Killswitch ${idx + 1}")
+        ks.shutdown()
+      }
 
       testActors.foreach(a => {
         a ! ResetActor

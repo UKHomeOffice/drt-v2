@@ -20,7 +20,7 @@ import test.feeds.test.GetArrivals
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.collection.mutable
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.Try
 
@@ -29,7 +29,7 @@ object UpdateHandled
 
 object RemovalHandled
 
-class TestAggregatedArrivalsActor(portCode: String, arrivalTable: ArrivalTableLike, probe: ActorRef) extends AggregatedArrivalsActor(portCode, arrivalTable)(ExecutionContext.global) {
+class TestAggregatedArrivalsActor(portCode: String, arrivalTable: ArrivalTableLike, probe: ActorRef) extends AggregatedArrivalsActor(portCode, arrivalTable) {
   def testReceive: Receive = {
     case GetArrivals => sender() ! arrivalTable.selectAll
   }
