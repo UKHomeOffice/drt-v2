@@ -104,7 +104,8 @@ object FlightMessageConversion {
       estimated = apiFlight.Estimated.filter(_ != 0),
       touchdown = apiFlight.Actual.filter(_ != 0),
       estimatedChox = apiFlight.EstimatedChox.filter(_ != 0),
-      actualChox = apiFlight.ActualChox.filter(_ != 0)
+      actualChox = apiFlight.ActualChox.filter(_ != 0),
+      carrierScheduled = apiFlight.CarrierScheduled
     )
   }
 
@@ -141,7 +142,8 @@ object FlightMessageConversion {
       Origin = flightMessage.origin.getOrElse(""),
       PcpTime = flightMessage.pcpTime,
       Scheduled = flightMessage.scheduled.getOrElse(0L),
-      FeedSources = flightMessage.feedSources.flatMap(FeedSource(_)).toSet
+      FeedSources = flightMessage.feedSources.flatMap(FeedSource(_)).toSet,
+      CarrierScheduled = flightMessage.carrierScheduled
     )
   }
 

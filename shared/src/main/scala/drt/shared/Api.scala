@@ -296,7 +296,9 @@ case class Arrival(
                     Origin: String,
                     Scheduled: MillisSinceEpoch,
                     PcpTime: Option[MillisSinceEpoch],
-                    FeedSources: Set[FeedSource]) extends WithUnique[UniqueArrival] {
+                    FeedSources: Set[FeedSource],
+                    CarrierScheduled: Option[MillisSinceEpoch] = None
+                  ) extends WithUnique[UniqueArrival] {
   lazy val ICAO: String = Arrival.standardiseFlightCode(rawICAO)
   lazy val IATA: String = Arrival.standardiseFlightCode(rawIATA)
 
