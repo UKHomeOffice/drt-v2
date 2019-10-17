@@ -390,15 +390,17 @@ case object LiveFeedSource extends FeedSource
 
 case object LiveBaseFeedSource extends FeedSource
 
+case object UnknownFeedSource extends FeedSource
+
 object FeedSource {
-  def feedSources: Set[FeedSource] = Set(ApiFeedSource, AclFeedSource, ForecastFeedSource, LiveFeedSource)
+  def feedSources: Set[FeedSource] = Set(ApiFeedSource, AclFeedSource, ForecastFeedSource, LiveFeedSource, LiveBaseFeedSource)
 
   def apply(name: String): Option[FeedSource] = feedSources.find(fs => fs.toString == name)
 
   implicit val feedSourceReadWriter: RW[FeedSource] =
     readwriter[Js.Value].bimap[FeedSource](
       feedSource => feedSource.toString,
-      (s: Value) => apply(s.str).get
+      (s: Value) => apply(s.str).getOrElse(UnknownFeedSource)
     )
 }
 
@@ -428,10 +430,10 @@ trait SDateLike {
   )
 
   /**
-    * Days of the week 1 to 7 (Monday is 1)
-    *
-    * @return
-    */
+   * Days of the week 1 to 7 (Monday is 1)
+   *
+   * @return
+   */
   def getDayOfWeek(): Int
 
   def getFullYear(): Int
