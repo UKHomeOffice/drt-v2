@@ -1,6 +1,6 @@
 package actors
 
-import actors.AckingReceiver.{Ack, StreamInitialized}
+import actors.acking.AckingReceiver.{Ack, StreamInitialized}
 import akka.actor.{Actor, ActorRef, Scheduler}
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -14,18 +14,6 @@ import services.{OfferHandler, SDate}
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 
-
-object AckingReceiver {
-
-  case object Ack
-
-  case object StreamInitialized
-
-  case object StreamCompleted
-
-  final case class StreamFailure(ex: Throwable)
-
-}
 
 class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLookupLike, now: () => SDateLike, maxBufferSize: Int, minSecondsBetweenBatches: Int) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)

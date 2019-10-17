@@ -1,5 +1,7 @@
 package services.crunch
 
+import actors.acking.AckingReceiver
+import actors.acking.AckingReceiver._
 import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
@@ -125,7 +127,7 @@ object RunnableCrunch {
           val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](2))
           val workloadFanOut = builder.add(Broadcast[Loads](2))
           val staffFanOut = builder.add(Broadcast[StaffMinutes](2))
-          val portStateFanOut = builder.add(Broadcast[PortStateWithDiff](3))
+          val portStateFanOut = builder.add(Broadcast[PortStateWithDiff](4))
 
           val baseArrivalsSink = builder.add(Sink.actorRef(forecastBaseArrivalsActor, "complete"))
           val fcstArrivalsSink = builder.add(Sink.actorRef(forecastArrivalsActor, "complete"))
@@ -136,7 +138,8 @@ object RunnableCrunch {
 
           val liveSink = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
           val fcstSink = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
-          val aggregatedArrivalsSink = builder.add(Sink.actorRef(aggregatedArrivalsStateActor, "complete"))
+          val arrivalUpdatesSink = builder.add(Sink.actorRefWithAck(aggregatedArrivalsStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
+          val arrivalRemovalsSink = builder.add(Sink.actorRefWithAck(aggregatedArrivalsStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
           val manifestsRequestSink = builder.add(Sink.actorRef(manifestsRequestActor, "complete"))
 
           // @formatter:off
@@ -164,11 +167,9 @@ object RunnableCrunch {
               case (ManifestsFeedSuccess(DqManifests(_, acc), _), ManifestsFeedSuccess(DqManifests(_, ms), createdAt)) =>
                 val existingManifests = acc.toSeq.map(vm => BestAvailableManifest(vm))
                 val newManifests = ms.toSeq.map(vm => BestAvailableManifest(vm))
-                log.info(s"xxxx Conflating live (1) ${existingManifests.length} + ${newManifests.length}")
                 BestManifestsFeedSuccess(existingManifests ++ newManifests, createdAt)
               case (BestManifestsFeedSuccess(acc, _), ManifestsFeedSuccess(DqManifests(_, ms), createdAt)) =>
                 val newManifests = ms.toSeq.map(vm => BestAvailableManifest(vm))
-                log.info(s"xxxx Conflating live (2) ${acc.length} + ${newManifests.length}")
                 BestManifestsFeedSuccess(acc ++ newManifests, createdAt)
             } ~> manifestGraphKillSwitch ~> arrivalSplits.in1
 
@@ -176,7 +177,6 @@ object RunnableCrunch {
 
           manifestsHistoric.out.conflate[ManifestsFeedResponse] {
             case (BestManifestsFeedSuccess(acc, _), BestManifestsFeedSuccess(newManifests, createdAt)) =>
-              log.info(s"xxxx Conflating historic ${acc.length} + ${newManifests.length}")
               BestManifestsFeedSuccess(acc ++ newManifests, createdAt)
           } ~> arrivalSplits.in2
 
@@ -201,9 +201,16 @@ object RunnableCrunch {
           simulation.out ~> portState.in4
 
           portState.out ~> portStateFanOut
-                           portStateFanOut.map(_.window(liveStart(now), liveEnd(now, liveStateDaysAhead), portQueues))                ~> liveSink
-                           portStateFanOut.map(_.window(forecastStart(now), forecastEnd(now), portQueues))        ~> fcstSink
-                           portStateFanOut.map(pswd => withOnlyDescheduledRemovals(pswd.diff, now())) ~> aggregatedArrivalsSink
+                           portStateFanOut.map(_.window(liveStart(now), liveEnd(now, liveStateDaysAhead), portQueues))      ~> liveSink
+                           portStateFanOut.map(_.window(forecastStart(now), forecastEnd(now), portQueues))                  ~> fcstSink
+                           portStateFanOut
+                             .map(d => withOnlyDescheduledRemovals(d.diff.flightRemovals.toList, now()))
+                             .conflate[List[RemoveFlight]] { case (acc, incoming) => acc ++ incoming }
+                             .mapConcat(identity)                                                                           ~> arrivalRemovalsSink
+                           portStateFanOut
+                             .map(_.diff.flightUpdates.map(_._2.apiFlight).toList)
+                             .conflate[List[Arrival]] { case (acc, incoming) => acc ++ incoming }
+                             .mapConcat(identity)                                                                           ~> arrivalUpdatesSink
           // @formatter:on
 
           ClosedShape
@@ -212,9 +219,9 @@ object RunnableCrunch {
     RunnableGraph.fromGraph(graph)
   }
 
-  def withOnlyDescheduledRemovals: (PortStateDiff, SDateLike) => PortStateDiff = (diff: PortStateDiff, now: SDateLike) => {
+  def withOnlyDescheduledRemovals(removals: List[RemoveFlight], now: SDateLike): List[RemoveFlight] = {
     val nowMillis = now.millisSinceEpoch
-    diff.copy(flightRemovals = diff.flightRemovals.filterNot(_.flightKey.scheduled <= nowMillis))
+    removals.filterNot(_.flightKey.scheduled <= nowMillis)
   }
 
   def liveStart(now: () => SDateLike): SDateLike = Crunch.getLocalLastMidnight(now()).addDays(-1)
