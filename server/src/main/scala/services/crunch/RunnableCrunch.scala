@@ -203,8 +203,14 @@ object RunnableCrunch {
           portState.out ~> portStateFanOut
                            portStateFanOut.map(_.window(liveStart(now), liveEnd(now, liveStateDaysAhead), portQueues))      ~> liveSink
                            portStateFanOut.map(_.window(forecastStart(now), forecastEnd(now), portQueues))                  ~> fcstSink
-                           portStateFanOut.mapConcat(d => withOnlyDescheduledRemovals(d.diff.flightRemovals.toList, now())) ~> arrivalRemovalsSink
-                           portStateFanOut.mapConcat(_.diff.flightUpdates.map(_._2.apiFlight))                              ~> arrivalUpdatesSink
+                           portStateFanOut
+                             .map(d => withOnlyDescheduledRemovals(d.diff.flightRemovals.toList, now()))
+                             .conflate[List[RemoveFlight]] { case (acc, incoming) => acc ++ incoming }
+                             .mapConcat(identity)                                                                           ~> arrivalRemovalsSink
+                           portStateFanOut
+                             .map(_.diff.flightUpdates.map(_._2.apiFlight).toList)
+                             .conflate[List[Arrival]] { case (acc, incoming) => acc ++ incoming }
+                             .mapConcat(identity)                                                                           ~> arrivalUpdatesSink
           // @formatter:on
 
           ClosedShape
