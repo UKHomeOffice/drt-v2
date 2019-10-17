@@ -1,7 +1,7 @@
 package manifests.graph
 
-import actors.AckingReceiver._
 import actors.ManifestTries
+import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
@@ -12,8 +12,6 @@ import manifests.actors.RegisteredArrivals
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-
-import scala.concurrent.duration._
 
 object ManifestsGraph {
   val log: Logger = LoggerFactory.getLogger(getClass)

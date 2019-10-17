@@ -6,8 +6,8 @@ import akka.pattern.AskableActorRef
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{CrunchMinute, PortState, StaffMinute}
-import drt.shared.FlightsApi.Flights
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, PortState, StaffMinute}
+import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import org.specs2.specification.BeforeEach
@@ -25,9 +25,9 @@ import scala.concurrent.duration._
 import scala.util.Try
 
 
-object UpdatesHandled
+object UpdateHandled
 
-object RemovalsHandled
+object RemovalHandled
 
 class TestAggregatedArrivalsActor(portCode: String, arrivalTable: ArrivalTableLike, probe: ActorRef) extends AggregatedArrivalsActor(portCode, arrivalTable) {
   def testReceive: Receive = {
@@ -36,14 +36,16 @@ class TestAggregatedArrivalsActor(portCode: String, arrivalTable: ArrivalTableLi
 
   override def receive: Receive = testReceive orElse super.receive
 
-  override def handleRemovals(flightRemovals: Set[RemoveFlight]): Unit = {
-    super.handleRemovals(flightRemovals)
-    probe ! RemovalsHandled
+  override def handleRemoval(number: Int, terminal: TerminalName, scheduled: MillisSinceEpoch): Unit = {
+    super.handleRemoval(number, terminal, scheduled)
+    println(s"Removed")
+    probe ! RemovalHandled
   }
 
-  override def handleUpdates(flightUpdates: Set[ApiFlightWithSplits]): Unit = {
-    super.handleUpdates(flightUpdates)
-    probe ! UpdatesHandled
+  override def handleUpdate(flightUpdate: Arrival): Unit = {
+    super.handleUpdate(flightUpdate)
+    println(s"Updated")
+    probe ! UpdateHandled
   }
 }
 
@@ -71,7 +73,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
     }
   }
 
-  def aggregatedArrivalsTestActor(actorProbe: ActorRef, arrivalTable: ArrivalTable): ActorRef = {
+  def aggregatedArrivalsTestActor(actorProbe: ActorRef, arrivalTable: ArrivalTableLike): ActorRef = {
     system.actorOf(Props(classOf[TestAggregatedArrivalsActor], airportConfig.portCode, arrivalTable, actorProbe), name = "aggregated-arrivals-actor")
   }
 
@@ -93,7 +95,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
 
-    testProbe.expectMsg(UpdatesHandled)
+    testProbe.expectMsg(UpdateHandled)
 
     val askableActor: AskableActorRef = crunch.aggregatedArrivalsActor
     val arrivalsResult = Await.result(askableActor.ask(GetArrivals)(new Timeout(5 seconds)), 5 seconds) match {
@@ -137,7 +139,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
 
-    testProbe.receiveN(2).toSet
+    testProbe.expectMsg(UpdateHandled)
 
     val askableActor: AskableActorRef = crunch.aggregatedArrivalsActor
     val arrivalsResult = Await.result(askableActor.ask(GetArrivals)(new Timeout(5 seconds)), 5 seconds) match {
@@ -181,7 +183,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(List())))
 
-    testProbe.receiveN(2).toSet
+    testProbe.expectMsg(RemovalHandled)
 
     val askableActor: AskableActorRef = crunch.aggregatedArrivalsActor
     val arrivalsResult = Await.result(askableActor.ask(GetArrivals)(new Timeout(5 seconds)), 5 seconds) match {

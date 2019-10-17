@@ -2,39 +2,50 @@ package actors
 
 import java.sql.Timestamp
 
+import actors.acking.AckingReceiver.{Ack, StreamInitialized}
 import akka.actor.Actor
-import drt.shared.{ApiFlightWithSplits, PortStateDiff, RemoveFlight, UniqueArrival}
+import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.FlightsApi.TerminalName
+import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.SDate
-import slickdb.ArrivalTableLike
+import slickdb.{ArrivalTable, ArrivalTableLike}
 
-import scala.concurrent.Await
-import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 
 
 class AggregatedArrivalsActor(portCode: String, arrivalTable: ArrivalTableLike) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
+  implicit val executionContext: ExecutionContextExecutor = ExecutionContext.global
 
   override def receive: Receive = {
-    case PortStateDiff(flightRemovals, flightUpdates, _, _) =>
-      handleUpdates(flightUpdates.values.toSet)
+    case StreamInitialized =>
+      log.info("Stream initialized!")
+      sender() ! Ack
 
-      handleRemovals(flightRemovals.toSet)
+    case RemoveFlight(UniqueArrival(number, terminal, scheduled)) =>
+      handleRemoval(number, terminal, scheduled)
+
+    case arrival: Arrival =>
+      handleUpdate(arrival)
   }
 
-  def handleRemovals(flightRemovals: Set[RemoveFlight]): Unit = {
-    flightRemovals.foreach {
-      case RemoveFlight(UniqueArrival(number, terminalName, scheduled)) =>
-        val scheduledIso = SDate(scheduled).toISOString()
-        val scheduledTs = new Timestamp(scheduled)
-        log.info(s"Removing $portCode / $terminalName / $number / $scheduledIso")
-        Await.result(arrivalTable.removeArrival(number, terminalName, scheduledTs), 1 seconds)
-    }
-  }
+  def handleRemoval(number: Int, terminal: TerminalName, scheduled: MillisSinceEpoch): Unit = {
+    val eventualRemoval = arrivalTable.removeArrival(number, terminal, new Timestamp(scheduled))
+    val errorMsg = s"Error on removing arrival ($number/$terminal/$scheduled)"
+    ackOnCompletion(eventualRemoval, errorMsg)}
 
-  def handleUpdates(flightUpdates: Set[ApiFlightWithSplits]): Unit = {
-    flightUpdates.foreach {
-      case ApiFlightWithSplits(f, _, _) => Await.result(arrivalTable.insertOrUpdateArrival(f), 1 seconds)
-    }
+  def handleUpdate(arrival: Arrival): Unit = {
+    val eventualUpdate = arrivalTable.insertOrUpdateArrival(arrival)
+    val errorMsg = s"Error on updating arrival ($arrival)"
+    ackOnCompletion(eventualUpdate, errorMsg)}
+
+  private def ackOnCompletion[X](futureToAck: Future[X], errorMsg: String): Unit = {
+    val replyTo = sender()
+    futureToAck
+      .map { _ => replyTo ! Ack }
+      .recover { case t =>
+        log.error(errorMsg, t)
+        replyTo ! Ack
+      }
   }
 }
