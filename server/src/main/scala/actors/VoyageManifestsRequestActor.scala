@@ -30,7 +30,7 @@ object AckingReceiver {
 class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLookupLike, now: () => SDateLike, maxBufferSize: Int, minSecondsBetweenBatches: Int) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  var manifestsRequestQueue: Option[SourceQueueWithComplete[List[Arrival]]] = None
+  var manifestsRequestQueue: Option[ActorRef] = None
   var manifestsResponseQueue: Option[SourceQueueWithComplete[ManifestsFeedResponse]] = None
   val manifestBuffer: mutable.ListBuffer[BestAvailableManifest] = mutable.ListBuffer[BestAvailableManifest]()
   var lastBatchSent: MillisSinceEpoch = 0L
@@ -62,7 +62,8 @@ class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLook
         log.info(s"got ${arrivals.size} arrivals to enqueue")
         val list = arrivals.values.toList
         log.info(s"offering ${arrivals.size} arrivals to source queue")
-        OfferHandler.offerWithRetries(queue, list, 10)
+        //OfferHandler.offerWithRetries(queue, list, 10)
+        queue ! list
       }
 
     case unexpected => log.warn(s"received unexpected ${unexpected.getClass}")

@@ -59,15 +59,13 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
       sender() ! state
 
     case RegisteredArrivals(incomingArrivals) =>
-      log.info(s"Received ${incomingArrivals.size} arrivals updates")
+      log.debug(s"Received ${incomingArrivals.size} arrivals updates")
 
       val arrivalsToBeRegistered = findUpdatesToPersist(SortedMap[ArrivalKey, Option[Long]]() ++ incomingArrivals)
       if (arrivalsToBeRegistered.nonEmpty) {
         val messageToPersist = arrivalsToMessage(mutable.SortedMap[ArrivalKey, Option[Long]]() ++ arrivalsToBeRegistered)
         persistAndMaybeSnapshot(messageToPersist)
       }
-
-      log.info(s"Adding arrivals to state")
 
       state.arrivals ++= arrivalsToBeRegistered
       Crunch.purgeExpired(state.arrivals, ArrivalKey.atTime, now, expireAfterMillis.toInt)

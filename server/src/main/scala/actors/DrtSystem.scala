@@ -141,7 +141,7 @@ case class DrtConfigParameters(config: Configuration) {
   val snapshotStaffOnStart: Boolean = config.get[Boolean]("feature-flags.snapshot-staffing-on-start")
 }
 
-case class SubscribeRequestQueue(subscriber: SourceQueueWithComplete[List[Arrival]])
+case class SubscribeRequestQueue(subscriber: ActorRef)
 
 case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsFeedResponse])
 
@@ -338,11 +338,11 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     staffMovementsActor ! AddStaffMovementsSubscribers(List(crunchInputs.staffMovements))
   }
 
-  def startManifestsGraph(maybeRegisteredArrivals: Option[RegisteredArrivals]): SourceQueueWithComplete[List[Arrival]] = {
+  def startManifestsGraph(maybeRegisteredArrivals: Option[RegisteredArrivals]): ActorRef = {
     val batchSize = config.get[Int]("crunch.manifests.lookup-batch-size")
     lazy val batchStage: BatchStage = new BatchStage(now, Crunch.isDueLookup, batchSize, expireAfterMillis, maybeRegisteredArrivals, 1000)
 
-    ManifestsGraph(manifestsArrivalRequestSource, batchStage, voyageManifestsRequestActor, registeredArrivalsActor, airportConfig.portCode, lookup).run
+    ManifestsGraph(/*manifestsArrivalRequestSource, */batchStage, voyageManifestsRequestActor, registeredArrivalsActor, airportConfig.portCode, lookup).run
   }
 
   def startCrunchSystem(initialPortState: Option[PortState],

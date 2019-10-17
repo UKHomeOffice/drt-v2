@@ -18,14 +18,16 @@ import scala.concurrent.duration._
 object ManifestsGraph {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply(arrivalsSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]],
+  def apply(//arrivalsSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]],
             batchStage: GraphStage[FanOutShape2[List[Arrival], List[ArrivalKey], RegisteredArrivals]],
             manifestsSinkActor: ActorRef,
             registeredArrivalsActor: ActorRef,
             portCode: String,
             manifestLookup: ManifestLookupLike
-           ): RunnableGraph[SourceQueueWithComplete[List[Arrival]]] = {
+           ): RunnableGraph[ActorRef] = {
     import akka.stream.scaladsl.GraphDSL.Implicits._
+
+    val arrivalsSource = Source.actorRef[List[Arrival]](100, OverflowStrategy.dropNew)
 
     val graph = GraphDSL.create(arrivalsSource.async) {
       implicit builder =>
@@ -34,7 +36,12 @@ object ManifestsGraph {
           val manifestsSink = builder.add(Sink.actorRefWithAck(manifestsSinkActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
           val registeredArrivalsSink = builder.add(Sink.actorRef(registeredArrivalsActor, "completed"))
 
-          arrivals ~> batchRequests.in
+          arrivals.out.conflate[List[Arrival]] {
+            case (acc, incoming) => acc ++ incoming
+          }.map { x =>
+            println(s"Sending ${x.length} manifest request to batch")
+            x
+          } ~> batchRequests.in
 
           batchRequests.out0
             .flatMapConcat(arrivals => Source(arrivals))

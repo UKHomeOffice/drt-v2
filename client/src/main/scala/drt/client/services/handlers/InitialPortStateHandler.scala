@@ -46,10 +46,6 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
         .map { case (_, fws) => fws.apiFlight.Origin }
         .toSet
 
-      portState.crunchMinutes.filter(_._1.queueName == Queues.EeaDesk).take(10).map {
-        case (tqm, cm) => log.warn(s"$tqm, ${SDate(cm.minute).toISOString()} $cm")
-      }
-
       val hideLoader = Effect(Future(HideLoader()))
       val fetchOrigins = Effect(Future(GetAirportInfos(originCodes)))
 

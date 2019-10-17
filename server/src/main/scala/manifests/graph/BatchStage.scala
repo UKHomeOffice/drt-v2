@@ -56,7 +56,7 @@ class BatchStage(now: () => SDateLike,
 
         BatchStage.registerNewArrivals(incoming, registeredArrivals, registeredArrivalsUpdates)
 
-        log.info(s"registeredArrivalsUpdates now has ${registeredArrivalsUpdates.size} items")
+        Metrics.counter("manifests.registered-arrivals", registeredArrivals.size)
 
         if (isAvailable(outArrivals)) prioritiseAndPush()
         if (isAvailable(outRegisteredArrivals)) pushRegisteredArrivalsUpdates()
@@ -111,7 +111,7 @@ class BatchStage(now: () => SDateLike,
     }
 
     private def pushRegisteredArrivalsUpdates(): Unit = if (registeredArrivalsUpdates.nonEmpty) {
-      log.info(s"Pushing ${registeredArrivalsUpdates.size} registered arrivals updates")
+      Metrics.counter("manifests.lookup-requests", registeredArrivalsUpdates.size)
       push(outRegisteredArrivals, RegisteredArrivals(registeredArrivalsUpdates))
       registeredArrivalsUpdates.clear
     }
