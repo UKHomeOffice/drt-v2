@@ -69,7 +69,17 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
   override def run(): Unit = {
 
     val startSystem: () => List[KillSwitch] = () => {
-      val cs = startCrunchSystem(None, None, None, None, None, true, true, true)
+      val cs = startCrunchSystem(
+        initialPortState = None,
+        initialForecastBaseArrivals = None,
+        initialForecastArrivals = None,
+        initialLiveBaseArrivals = None,
+        initialLiveArrivals = None,
+        manifestRequestsSink,
+        recrunchOnStart = true,
+        refreshArrivalsOnStart = true,
+        checkRequiredStaffUpdatesOnStartup = true
+      )
       subscribeStaffingActors(cs)
       startScheduledFeedImports(cs)
       testManifestsActor ! SubscribeResponseQueue(cs.manifestsLiveResponse)

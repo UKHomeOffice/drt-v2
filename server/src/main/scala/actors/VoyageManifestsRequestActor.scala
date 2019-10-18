@@ -2,6 +2,7 @@ package actors
 
 import actors.acking.AckingReceiver.{Ack, StreamInitialized}
 import akka.actor.{Actor, ActorRef, Scheduler}
+import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{Arrival, ArrivalsDiff, SDateLike}
@@ -18,14 +19,16 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLookupLike, now: () => SDateLike, maxBufferSize: Int, minSecondsBetweenBatches: Int) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  var manifestsRequestQueue: Option[ActorRef] = None
+  var manifestsRequestQueue: Option[AskableActorRef] = None
   var manifestsResponseQueue: Option[SourceQueueWithComplete[ManifestsFeedResponse]] = None
   val manifestBuffer: mutable.ListBuffer[BestAvailableManifest] = mutable.ListBuffer[BestAvailableManifest]()
   var lastBatchSent: MillisSinceEpoch = 0L
+  var awaitingRequestQueueAck: Boolean = false
 
   def senderRef(): ActorRef = sender()
 
   implicit val scheduler: Scheduler = this.context.system.scheduler
+
 
   override def receive: Receive = {
     case StreamInitialized =>
@@ -43,16 +46,6 @@ class VoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLook
     case ManifestTries(bestManifests) =>
       handleManifestTries(bestManifests)
       handleManifestBuffer()
-
-    case ArrivalsDiff(arrivals, _) =>
-      if (manifestsRequestQueue.isEmpty) log.error(s"Got arrivals before source queue is subscribed")
-      manifestsRequestQueue.foreach { queue =>
-        log.info(s"got ${arrivals.size} arrivals to enqueue")
-        val list = arrivals.values.toList
-        log.info(s"offering ${arrivals.size} arrivals to source queue")
-        //OfferHandler.offerWithRetries(queue, list, 10)
-        queue ! list
-      }
 
     case unexpected => log.warn(s"received unexpected ${unexpected.getClass}")
   }

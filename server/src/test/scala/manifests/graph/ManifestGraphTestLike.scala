@@ -10,7 +10,7 @@ import org.specs2.mutable.SpecificationLike
 import passengersplits.InMemoryPersistence
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 case class MockManifestLookupService(bestAvailableManifest: BestAvailableManifest) extends ManifestLookupLike {
   override def maybeBestAvailableManifest(arrivalPort: String, departurePort: String,
@@ -25,5 +25,5 @@ class ManifestGraphTestLike extends TestKit(ActorSystem("ManifestTests", InMemor
 
   implicit val actorSystem: ActorSystem = system
   implicit val materializer: ActorMaterializer = ActorMaterializer()
-
+  implicit val ec: ExecutionContext = ExecutionContext.global
 }

@@ -1,9 +1,10 @@
 package services.crunch
 
+import akka.NotUsed
 import akka.actor.ActorRef
 import akka.pattern.AskableActorRef
 import akka.stream._
-import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
+import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
 import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplits
@@ -50,7 +51,7 @@ case class CrunchProps[FR](logLabel: String = "",
                            manifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]],
                            manifestsHistoricSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]],
                            voyageManifestsActor: ActorRef,
-                           voyageManifestsRequestActor: ActorRef,
+                           manifestRequestsSink: Sink[List[Arrival], NotUsed],
                            cruncher: TryCrunch,
                            simulator: Simulator,
                            initialPortState: Option[PortState] = None,
@@ -203,7 +204,7 @@ object CrunchSystem {
       portStateGraphStage,
       forecastArrivalsDiffingStage, liveBaseArrivalsDiffingStage, liveArrivalsDiffingStage,
       props.actors("forecast-base-arrivals").actorRef, props.actors("forecast-arrivals").actorRef, props.actors("live-base-arrivals").actorRef, props.actors("live-arrivals").actorRef,
-      props.voyageManifestsActor, props.voyageManifestsRequestActor,
+      props.voyageManifestsActor, props.manifestRequestsSink,
       props.liveCrunchStateActor, props.forecastCrunchStateActor,
       props.actors("aggregated-arrivals").actorRef,
       crunchStartDateProvider, props.now, props.airportConfig.queues, liveStateDaysAhead, forecastMaxMillis

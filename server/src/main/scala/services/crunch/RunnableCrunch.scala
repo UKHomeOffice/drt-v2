@@ -2,6 +2,7 @@ package services.crunch
 
 import actors.acking.AckingReceiver
 import actors.acking.AckingReceiver._
+import akka.NotUsed
 import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
@@ -54,7 +55,7 @@ object RunnableCrunch {
                                        liveArrivalsActor: ActorRef,
 
                                        manifestsActor: ActorRef,
-                                       manifestsRequestActor: ActorRef,
+                                       manifestRequestsSink: Sink[List[Arrival], NotUsed],
 
                                        liveCrunchStateActor: ActorRef,
                                        fcstCrunchStateActor: ActorRef,
@@ -116,31 +117,30 @@ object RunnableCrunch {
           val liveBaseArrivalsDiffing = builder.add(liveBaseArrivalsDiffStage.async)
           val liveArrivalsDiffing = builder.add(liveArrivalsDiffStage.async)
 
-          val forecastBaseArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
-          val forecastArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
-          val liveBaseArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
-          val liveArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
+          val forecastBaseArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2).async)
+          val forecastArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2).async)
+          val liveBaseArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2).async)
+          val liveArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2).async)
 
-          val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](2))
+          val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](2).async)
 
-          val manifestsFanOut = builder.add(Broadcast[ManifestsFeedResponse](2))
-          val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](2))
-          val workloadFanOut = builder.add(Broadcast[Loads](2))
-          val staffFanOut = builder.add(Broadcast[StaffMinutes](2))
-          val portStateFanOut = builder.add(Broadcast[PortStateWithDiff](4))
+          val manifestsFanOut = builder.add(Broadcast[ManifestsFeedResponse](2).async)
+          val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](2).async)
+          val workloadFanOut = builder.add(Broadcast[Loads](2).async)
+          val staffFanOut = builder.add(Broadcast[StaffMinutes](2).async)
+          val portStateFanOut = builder.add(Broadcast[PortStateWithDiff](4).async)
 
-          val baseArrivalsSink = builder.add(Sink.actorRef(forecastBaseArrivalsActor, "complete"))
-          val fcstArrivalsSink = builder.add(Sink.actorRef(forecastArrivalsActor, "complete"))
-          val liveBaseArrivalsSink = builder.add(Sink.actorRef(liveBaseArrivalsActor, "complete"))
-          val liveArrivalsSink = builder.add(Sink.actorRef(liveArrivalsActor, "complete"))
+          val baseArrivalsSink = builder.add(Sink.actorRef(forecastBaseArrivalsActor, "complete").async)
+          val fcstArrivalsSink = builder.add(Sink.actorRef(forecastArrivalsActor, "complete").async)
+          val liveBaseArrivalsSink = builder.add(Sink.actorRef(liveBaseArrivalsActor, "complete").async)
+          val liveArrivalsSink = builder.add(Sink.actorRef(liveArrivalsActor, "complete").async)
 
-          val manifestsSink = builder.add(Sink.actorRef(manifestsActor, "complete"))
+          val manifestsSink = builder.add(Sink.actorRef(manifestsActor, "complete").async)
 
-          val liveSink = builder.add(Sink.actorRef(liveCrunchStateActor, "complete"))
-          val fcstSink = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete"))
+          val liveSink = builder.add(Sink.actorRef(liveCrunchStateActor, "complete").async)
+          val fcstSink = builder.add(Sink.actorRef(fcstCrunchStateActor, "complete").async)
           val arrivalUpdatesSink = builder.add(Sink.actorRefWithAck(aggregatedArrivalsStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
           val arrivalRemovalsSink = builder.add(Sink.actorRefWithAck(aggregatedArrivalsStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
-          val manifestsRequestSink = builder.add(Sink.actorRef(manifestsRequestActor, "complete"))
 
           // @formatter:off
           forecastBaseArrivals.out.map {
@@ -185,7 +185,10 @@ object RunnableCrunch {
           staffMovements  ~> staff.in2
 
           arrivals.out ~> arrivalsGraphKillSwitch ~> arrivalsFanOut ~> arrivalSplits.in0
-                                                     arrivalsFanOut ~> manifestsRequestSink
+                                                     arrivalsFanOut.map { x =>
+                                                        println(s"sending ${x.toUpdate.size} arrivals to manifest request sink/source")
+                                                        x.toUpdate.values.toList
+                                                     } ~> manifestRequestsSink.async
 
           arrivalSplits.out ~> arrivalSplitsFanOut ~> workload
                                arrivalSplitsFanOut ~> portState.in0

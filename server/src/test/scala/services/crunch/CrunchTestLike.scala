@@ -15,6 +15,7 @@ import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
+import graphs.SinkToSourceBridge
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import passengersplits.InMemoryPersistence
@@ -196,7 +197,6 @@ class CrunchTestLike
     val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], now, DrtStaticParameters.time48HoursAgo(now)))
     val snapshotInterval = 1
     val manifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], oneMegaByte, now, DrtStaticParameters.expireAfterMillis, Option(snapshotInterval)))
-    val manifestsRequestActor: ActorRef = testProbe("manifests-request").ref
 
     val liveCrunchActor = liveCrunchStateActor(logLabel, liveProbe, now)
     val forecastCrunchActor = forecastCrunchStateActor(logLabel, forecastProbe, now)
@@ -206,6 +206,9 @@ class CrunchTestLike
     val liveBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
     val forecastArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
     val forecastBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
+
+    val (_, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
+
 
     val crunchInputs = CrunchSystem(CrunchProps(
       logLabel = logLabel,
@@ -234,7 +237,7 @@ class CrunchTestLike
       manifestsLiveSource = manifestsSource,
       manifestsHistoricSource = manifestsSource,
       voyageManifestsActor = manifestsActor,
-      voyageManifestsRequestActor = manifestsRequestActor,
+      manifestRequestsSink = manifestRequestsSink,
       cruncher = cruncher,
       simulator = simulator,
       initialPortState = initialPortState,

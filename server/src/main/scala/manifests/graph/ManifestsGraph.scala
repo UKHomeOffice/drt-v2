@@ -1,10 +1,12 @@
 package manifests.graph
 
 import actors.ManifestTries
+import actors.acking.AckingReceiver
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
+import akka.NotUsed
 import akka.actor.ActorRef
 import akka.stream._
-import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
+import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
 import akka.stream.stage.GraphStage
 import drt.shared.{Arrival, ArrivalKey}
 import manifests.ManifestLookupLike
@@ -16,15 +18,14 @@ import services.SDate
 object ManifestsGraph {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply(batchStage: GraphStage[FanOutShape2[List[Arrival], List[ArrivalKey], RegisteredArrivals]],
+  def apply(arrivalsSource: Source[List[Arrival], NotUsed],
+            batchStage: GraphStage[FanOutShape2[List[Arrival], List[ArrivalKey], RegisteredArrivals]],
             manifestsSinkActor: ActorRef,
             registeredArrivalsActor: ActorRef,
             portCode: String,
             manifestLookup: ManifestLookupLike
-           ): RunnableGraph[ActorRef] = {
+           ): RunnableGraph[NotUsed] = {
     import akka.stream.scaladsl.GraphDSL.Implicits._
-
-    val arrivalsSource = Source.actorRef[List[Arrival]](100, OverflowStrategy.dropNew)
 
     val graph = GraphDSL.create(arrivalsSource.async) {
       implicit builder =>
@@ -33,7 +34,12 @@ object ManifestsGraph {
           val manifestsSink = builder.add(Sink.actorRefWithAck(manifestsSinkActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
           val registeredArrivalsSink = builder.add(Sink.actorRef(registeredArrivalsActor, "completed"))
 
-          arrivals.out.conflate[List[Arrival]] {
+          arrivals.out
+            .map {x =>
+              println(s"Received ${x.length} arrival manifest requests")
+              x
+            }
+            .conflate[List[Arrival]] {
             case (acc, incoming) => acc ++ incoming
           } ~> batchRequests.in
 
