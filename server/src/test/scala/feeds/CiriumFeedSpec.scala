@@ -78,7 +78,7 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
   }
 
   "Given a CiriumFlightStatus with a non round scheduled time " +
-    "Then I should get a rounded scheduled time back and the cirium scheduled time should be in CarrierScheduledi" >> {
+    "Then I should get a rounded scheduled time back and the cirium scheduled time should be in CarrierScheduled" >> {
     val publishedArrivalTime = "2019-07-15T11:06:00.000Z"
     val publishedArrivalTimeRounded = "2019-07-15T11:05:00.000Z"
     val estRunwayArrival = "2019-07-15T11:07:00.000Z"
