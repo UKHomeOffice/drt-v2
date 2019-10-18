@@ -25,7 +25,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
       val scheduled = "2017-01-01T00:00Z"
 
       val flights = Flights(Seq(
-        ArrivalGenerator.arrival(flightId = Option(1), schDt = scheduled00, iata = "BA0001", terminal = "T1", actPax = Option(15))
+        ArrivalGenerator.arrival(schDt = scheduled00, iata = "BA0001", terminal = "T1", actPax = Option(15))
       ))
 
       val fiveMinutes = 600d / 60
@@ -66,8 +66,8 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
 
     val flights = Flights(Seq(
-      ArrivalGenerator.arrival(flightId = Option(1), schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(15)),
-      ArrivalGenerator.arrival(flightId = Option(2), schDt = scheduled, iata = "FR8819", terminal = "XXX", actPax = Option(10))
+      ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(15)),
+      ArrivalGenerator.arrival(schDt = scheduled, iata = "FR8819", terminal = "XXX", actPax = Option(10))
     ))
 
     val fiveMinutes = 600d / 60

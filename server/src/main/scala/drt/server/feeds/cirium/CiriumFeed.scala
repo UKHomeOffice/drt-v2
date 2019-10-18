@@ -8,10 +8,11 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import drt.shared.FlightsApi.Flights
-import drt.shared.{Arrival, LiveBaseFeedSource}
+import drt.shared.{Arrival, LiveBaseFeedSource, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import uk.gov.homeoffice.cirium.JsonSupport._
+import services.SDate
 import uk.gov.homeoffice.cirium.services.entities.CiriumFlightStatus
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -50,41 +51,52 @@ case class CiriumFeed(endpoint: String, portCode: String)(implicit actorSystem: 
 object CiriumFeed {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def terminalMatchForPort(terminal: Option[String], portCode: String): String = {
-    portCode.toUpperCase match {
-      case "LTN" | "STN" | "EMA" | "GLA" | "LCY" | "BRS" | "BFS" | "LPL" | "NCL" =>
-        "T1"
-      case "LHR" | "MAN" =>
-        terminal.map(t => s"T$t").getOrElse("No Terminal")
-      case _ => terminal.getOrElse("No Terminal")
-    }
+  def terminalMatchForPort(terminal: Option[String], portCode: String): String = portCode.toUpperCase match {
+    case "LTN" | "STN" | "EMA" | "GLA" | "LCY" | "BRS" | "BFS" | "LPL" | "NCL" =>
+      "T1"
+    case "LHR" | "MAN" =>
+      terminal.map(t => s"T$t").getOrElse("No Terminal")
+    case _ => terminal.getOrElse("No Terminal")
   }
 
-  def toArrival(f: CiriumFlightStatus, portCode: String): Arrival = Arrival(
-    Option(f.carrierFsCode),
-    ciriumStatusCodeToStatus(f.status),
-    f.operationalTimes.estimatedRunwayArrival.map(_.millis),
-    f.operationalTimes.actualRunwayArrival.map(_.millis),
-    f.operationalTimes.estimatedGateArrival.map(_.millis),
-    f.operationalTimes.actualGateArrival.map(_.millis),
-    f.airportResources.flatMap(_.arrivalGate),
-    None,
-    None,
-    None,
-    None,
-    None,
-    f.airportResources.flatMap(_.baggage),
-    Option(f.flightId),
-    f.arrivalAirportFsCode,
-    terminalMatchForPort(f.airportResources.flatMap(_.arrivalTerminal), portCode),
-    f.operatingCarrierFsCode + f.flightNumber,
-    f.operatingCarrierFsCode + f.flightNumber,
-    f.departureAirportFsCode,
-    f.arrivalDate.millis,
-    None,
-    Set(LiveBaseFeedSource),
-    None
-  )
+  def timeToNearest5Minutes(date: SDateLike): SDateLike = date.getMinutes() % 5 match {
+    case n if n <= 2 => date.addMinutes(-n)
+    case n if n >= 3 => date.addMinutes(5 - n)
+    case _ => date
+  }
+
+  def toArrival(f: CiriumFlightStatus, portCode: String): Arrival = {
+    val carrierScheduledTime = f.arrivalDate.millis
+    val scheduledToNearest5Mins = timeToNearest5Minutes(SDate(carrierScheduledTime)).millisSinceEpoch
+
+    Arrival(
+      Option(f.carrierFsCode),
+      ciriumStatusCodeToStatus(f.status),
+      f.operationalTimes.estimatedRunwayArrival.map(_.millis),
+      f.operationalTimes.actualRunwayArrival.map(_.millis),
+      f.operationalTimes.estimatedGateArrival.map(_.millis),
+      f.operationalTimes.actualGateArrival.map(_.millis),
+      f.airportResources.flatMap(_.arrivalGate),
+      None,
+      None,
+      None,
+      None,
+      None,
+      f.airportResources.flatMap(_.baggage),
+      f.arrivalAirportFsCode,
+      terminalMatchForPort(f.airportResources.flatMap(_.arrivalTerminal), portCode),
+      f.operatingCarrierFsCode + f.flightNumber,
+      f.operatingCarrierFsCode + f.flightNumber,
+      f.departureAirportFsCode,
+      scheduledToNearest5Mins,
+      None,
+      Set(LiveBaseFeedSource),
+      if (scheduledToNearest5Mins == carrierScheduledTime)
+        None
+      else
+        Option(carrierScheduledTime)
+    )
+  }
 
   def requestFeed(endpoint: String)(implicit actorSystem: ActorSystem, materializer: Materializer): Future[List[CiriumFlightStatus]] = Http()
     .singleRequest(HttpRequest(

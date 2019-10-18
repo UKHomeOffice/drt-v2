@@ -44,7 +44,6 @@ case class ResponseToArrivals(data: String) {
       TranPax = if (actPax.isEmpty) None else transPax,
       RunwayID = parseRunwayId(n).filter(StringUtils.isNotBlank(_)),
       BaggageReclaimId = Try(n \\ "BaggageClaimUnit" text).toOption.filter(StringUtils.isNotBlank(_)),
-      FlightID = None,
       AirportID = "LGW",
       Terminal = parseTerminal(n),
       rawICAO = (n \\ "AirlineICAO" text) + parseFlightNumber(n),
@@ -52,8 +51,8 @@ case class ResponseToArrivals(data: String) {
       Origin = parseOrigin(n),
       Scheduled = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("SCT")).map(n => services.SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
       PcpTime = None,
-      FeedSources = Set(LiveFeedSource),
-      LastKnownPax = None)
+      FeedSources = Set(LiveFeedSource)
+    )
     log.debug(s"parsed arrival: $arrival")
     arrival
   }

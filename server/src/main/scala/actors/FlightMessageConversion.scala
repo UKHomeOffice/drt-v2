@@ -93,7 +93,6 @@ object FlightMessageConversion {
       tranPax = apiFlight.TranPax,
       runwayID = apiFlight.RunwayID,
       baggageReclaimId = apiFlight.BaggageReclaimId,
-      flightID = apiFlight.FlightID.filter(_ != 0),
       airportID = Option(StringUtils.trimToNull(apiFlight.AirportID)),
       terminal = Option(StringUtils.trimToNull(apiFlight.Terminal)),
       iCAO = Option(StringUtils.trimToNull(apiFlight.rawICAO)),
@@ -105,7 +104,8 @@ object FlightMessageConversion {
       estimated = apiFlight.Estimated.filter(_ != 0),
       touchdown = apiFlight.Actual.filter(_ != 0),
       estimatedChox = apiFlight.EstimatedChox.filter(_ != 0),
-      actualChox = apiFlight.ActualChox.filter(_ != 0)
+      actualChox = apiFlight.ActualChox.filter(_ != 0),
+      carrierScheduled = apiFlight.CarrierScheduled
     )
   }
 
@@ -135,16 +135,15 @@ object FlightMessageConversion {
       TranPax = flightMessage.tranPax,
       RunwayID = flightMessage.runwayID,
       BaggageReclaimId = flightMessage.baggageReclaimId,
-      FlightID = flightMessage.flightID,
       AirportID = flightMessage.airportID.getOrElse(""),
       Terminal = flightMessage.terminal.getOrElse(""),
       rawICAO = flightMessage.iCAO.getOrElse(""),
       rawIATA = flightMessage.iATA.getOrElse(""),
       Origin = flightMessage.origin.getOrElse(""),
       PcpTime = flightMessage.pcpTime,
-      LastKnownPax = flightMessage.lastKnownPax,
       Scheduled = flightMessage.scheduled.getOrElse(0L),
-      FeedSources = flightMessage.feedSources.flatMap(FeedSource(_)).toSet
+      FeedSources = flightMessage.feedSources.flatMap(FeedSource(_)).toSet,
+      CarrierScheduled = flightMessage.carrierScheduled
     )
   }
 

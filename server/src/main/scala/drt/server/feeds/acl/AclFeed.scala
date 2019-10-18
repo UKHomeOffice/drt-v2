@@ -199,7 +199,6 @@ object AclFeed {
         TranPax = None,
         RunwayID = None,
         BaggageReclaimId = None,
-        FlightID = Option((fields(AclColIndex.FlightNumber) + fields(AclColIndex.Date) + fields(AclColIndex.Time) + fields(AclColIndex.Origin)).hashCode),
         AirportID = fields(AclColIndex.Airport),
         Terminal = terminalMapping(fields(AclColIndex.Terminal)),
         rawICAO = fields(AclColIndex.FlightNumber),
@@ -207,8 +206,7 @@ object AclFeed {
         Origin = fields(AclColIndex.Origin),
         Scheduled = SDate(dateAndTimeToDateTimeIso(fields(AclColIndex.Date), fields(AclColIndex.Time))).millisSinceEpoch,
         PcpTime = None,
-        FeedSources = Set(shared.AclFeedSource),
-        None
+        FeedSources = Set(shared.AclFeedSource)
       )
     }
   }

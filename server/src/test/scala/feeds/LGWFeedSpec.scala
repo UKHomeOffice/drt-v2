@@ -37,10 +37,9 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       TranPax = None,
       RunwayID = Some("08R"),
       BaggageReclaimId = None,
-      FlightID = None,
       AirportID = "LGW",
       Terminal = "N", rawICAO = "VIR808", rawIATA = "VS808", Origin = "LHR", FeedSources = Set(LiveFeedSource),
-      Scheduled = SDate("2018-06-03T19:50:00Z").millisSinceEpoch, PcpTime = None, LastKnownPax = None)
+      Scheduled = SDate("2018-06-03T19:50:00Z").millisSinceEpoch, PcpTime = None)
 
 
   }

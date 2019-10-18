@@ -91,7 +91,6 @@ case class LtnLiveFeed(endPoint: String, token: String, username: String, passwo
     TranPax = None,
     RunwayID = ltnFeedFlight.Runway,
     BaggageReclaimId = ltnFeedFlight.BaggageClaimUnit,
-    FlightID = None,
     AirportID = "LTN",
     Terminal = ltnFeedFlight.TerminalCode.getOrElse(throw new Exception("Missing terminal")),
     rawICAO = ltnFeedFlight.AirlineICAO.getOrElse(throw new Exception("Missing ICAO carrier code")) + ltnFeedFlight.FlightNumber.getOrElse(throw new Exception("Missing flight number")),
@@ -99,8 +98,7 @@ case class LtnLiveFeed(endPoint: String, token: String, username: String, passwo
     Origin = ltnFeedFlight.OriginDestAirportIATA.getOrElse(throw new Exception("Missing origin IATA port code")),
     Scheduled = sdateWithTimeZoneApplied(ltnFeedFlight.ScheduledDateTime.getOrElse(throw new Exception("Missing scheduled date time"))),
     PcpTime = None,
-    FeedSources = Set(LiveFeedSource),
-    LastKnownPax = None
+    FeedSources = Set(LiveFeedSource)
   )
 
   def sdateWithTimeZoneApplied(dt: String): MillisSinceEpoch = {

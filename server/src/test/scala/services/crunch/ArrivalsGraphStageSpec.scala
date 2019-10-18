@@ -23,7 +23,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
   isolated
 
   trait Context extends Scope {
-    val arrival_v1_with_no_chox_time: Arrival = arrival(flightId = Option(1), iata = "BA0001",
+    val arrival_v1_with_no_chox_time: Arrival = arrival(iata = "BA0001",
       schDt = "2017-01-01T10:25Z", origin = "JFK",
       actPax = Option(100), feedSources = Set(LiveFeedSource))
 

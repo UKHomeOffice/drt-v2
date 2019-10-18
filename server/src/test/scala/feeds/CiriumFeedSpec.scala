@@ -22,6 +22,38 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
   sequential
   isolated
 
+  "When rounding times to the nearest 5 minutes" >> {
+
+    def convert(s: String) = CiriumFeed
+      .timeToNearest5Minutes(SDate(s)).toISOString()
+
+    "A time with minutes ending in a 5 should be unchanged" >> {
+      convert("2019-07-15T11:15:00Z") mustEqual "2019-07-15T11:15:00Z"
+    }
+    "A time with minutes ending in a 0 should be unchanged" >> {
+      convert("2019-07-15T11:10:00Z") mustEqual "2019-07-15T11:10:00Z"
+    }
+    "A time with minutes ending in a 1 should be rounded down" >> {
+      convert("2019-07-15T11:11:00Z") mustEqual "2019-07-15T11:10:00Z"
+    }
+    "A time with minutes ending in a 2 should be rounded down" >> {
+      convert("2019-07-15T11:12:00Z") mustEqual "2019-07-15T11:10:00Z"
+    }
+    "A time with minutes ending in a 3 should be rounded up" >> {
+      convert("2019-07-15T11:13:00Z") mustEqual "2019-07-15T11:15:00Z"
+    }
+    "A time with minutes ending in a 4 should be rounded up" >> {
+      convert("2019-07-15T11:14:00Z") mustEqual "2019-07-15T11:15:00Z"
+    }
+    "A time with minutes ending in a 6 should be rounded down" >> {
+      convert("2019-07-15T11:16:00Z") mustEqual "2019-07-15T11:15:00Z"
+    }
+    "A time with minutes ending in a 9 should be rounded up" >> {
+      convert("2019-07-15T11:19:00Z") mustEqual "2019-07-15T11:20:00Z"
+    }
+
+  }
+
   "Given a CiriumFlightStatus I should be able to parse it to an equivelant DRT Arrival Instance" >> {
     val publishedArrivalTime = "2019-07-15T11:05:00.000Z"
     val estRunwayArrival = "2019-07-15T11:07:00.000Z"
@@ -45,6 +77,37 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
     result === expected
   }
 
+  "Given a CiriumFlightStatus with a non round scheduled time " +
+    "Then I should get a rounded scheduled time back and the cirium scheduled time should be in CarrierScheduled" >> {
+    val publishedArrivalTime = "2019-07-15T11:06:00.000Z"
+    val publishedArrivalTimeRounded = "2019-07-15T11:05:00.000Z"
+    val estRunwayArrival = "2019-07-15T11:07:00.000Z"
+    val actRunwayArrival = "2019-07-15T11:08:00.000Z"
+    val estGateArrivalTime = "2019-07-15T11:09:00.000Z"
+    val actGateArrivalTime = "2019-07-15T11:10:00.000Z"
+
+    val ciriumArrival = ciriumFlightStatus(
+      publishedArrivalTime,
+      estRunwayArrival,
+      actRunwayArrival,
+      estGateArrivalTime,
+      actGateArrivalTime,
+      "1000"
+    )
+
+    val expected = drtArrival(
+      publishedArrivalTimeRounded,
+      estRunwayArrival,
+      actRunwayArrival,
+      estGateArrivalTime,
+      actGateArrivalTime
+    ).copy(CarrierScheduled = Option(SDate(publishedArrivalTime).millisSinceEpoch))
+
+    val result = CiriumFeed.toArrival(ciriumArrival, "LHR")
+
+    result === expected
+  }
+
   private def drtArrival(publishedArrivalTime: String, estRunwayArrival: String, actRunwayArrival: String, estGateArrivalTime: String, actGateArrivalTime: String) = {
     Arrival(
       Some("TST"),
@@ -60,7 +123,6 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
       None,
       None,
       Option("12"),
-      Option(100000),
       "LHR",
       "T1",
       "TST1000",

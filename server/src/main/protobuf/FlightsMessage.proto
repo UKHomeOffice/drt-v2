@@ -17,7 +17,6 @@ message FlightMessage {
     optional int32 TranPax = 7;
     optional string RunwayID = 8;
     optional string BaggageReclaimId = 9;
-    optional int32 FlightID = 10;
     optional string AirportID = 11;
     optional string Terminal = 12;
     optional string ICAO = 13;
@@ -29,8 +28,11 @@ message FlightMessage {
     optional int64 Touchdown = 19;
     optional int64 EstimatedChox = 20;
     optional int64 ActualChox = 21;
-    optional int32 LastKnownPax = 22;
     repeated string FeedSources = 23;
+    optional int64 CarrierScheduled = 24;
+
+    optional int32 FlightID__OLD = 10;
+    optional int32 LastKnownPax__OLD = 22;
 }
 
 message UniqueArrivalMessage {

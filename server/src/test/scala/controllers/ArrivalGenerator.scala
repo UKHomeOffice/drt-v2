@@ -31,7 +31,6 @@ object ArrivalGenerator {
               feedSources: Set[FeedSource] = Set()
              ): Arrival =
     Arrival(
-      FlightID = flightId,
       rawICAO = icao,
       rawIATA = iata,
       ActPax = actPax,
@@ -51,7 +50,6 @@ object ArrivalGenerator {
       BaggageReclaimId = baggageReclaimId,
       AirportID = airportId,
       PcpTime = if (!StringUtils.isEmpty(schDt)) Some(SDate(schDt, DateTimeZone.UTC).millisSinceEpoch) else None,
-      LastKnownPax = lastKnownPax,
       Scheduled = if (!StringUtils.isEmpty(schDt)) SDate(schDt, DateTimeZone.UTC).millisSinceEpoch else 0,
       FeedSources = feedSources
     )
