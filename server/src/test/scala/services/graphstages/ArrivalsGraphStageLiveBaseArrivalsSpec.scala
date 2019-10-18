@@ -9,7 +9,7 @@ import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import services.crunch.CrunchTestLike
 
-import scala.collection.{immutable, mutable}
+import scala.collection.mutable
 import scala.concurrent.duration._
 
 object TestableArrivalsGraphStage {

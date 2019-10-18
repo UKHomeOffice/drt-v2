@@ -16,8 +16,7 @@ import services.SDate
 object ManifestsGraph {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply(//arrivalsSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]],
-            batchStage: GraphStage[FanOutShape2[List[Arrival], List[ArrivalKey], RegisteredArrivals]],
+  def apply(batchStage: GraphStage[FanOutShape2[List[Arrival], List[ArrivalKey], RegisteredArrivals]],
             manifestsSinkActor: ActorRef,
             registeredArrivalsActor: ActorRef,
             portCode: String,
@@ -36,9 +35,6 @@ object ManifestsGraph {
 
           arrivals.out.conflate[List[Arrival]] {
             case (acc, incoming) => acc ++ incoming
-          }.map { x =>
-            println(s"Sending ${x.length} manifest request to batch")
-            x
           } ~> batchRequests.in
 
           batchRequests.out0

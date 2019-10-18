@@ -1,6 +1,6 @@
 package feeds
 
-import com.box.sdk.{BoxAPIResponse, BoxAPIResponseException, BoxConfig, BoxDeveloperEditionAPIConnection}
+import com.box.sdk.{BoxConfig, BoxDeveloperEditionAPIConnection}
 import drt.server.feeds.lgw.LGWForecastFeed
 import drt.shared.{Arrival, ForecastFeedSource}
 import org.specs2.mock.Mockito
@@ -8,7 +8,6 @@ import org.specs2.mutable.Specification
 import org.specs2.specification.Scope
 import services.SDate
 
-import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
 class LGWForecastFeedSpec extends Specification with Mockito {

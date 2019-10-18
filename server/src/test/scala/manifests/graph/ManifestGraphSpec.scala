@@ -2,12 +2,10 @@ package manifests.graph
 
 import actors.{ManifestTries, VoyageManifestsRequestActor}
 import akka.actor.{ActorRef, Props}
-import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{Arrival, ArrivalKey, SDateLike}
+import drt.shared.{ArrivalKey, SDateLike}
 import manifests.ManifestLookupLike
 import manifests.actors.RegisteredArrivals
 import manifests.passengers.BestAvailableManifest
@@ -49,11 +47,9 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
     val graphInput = createAndRunGraph(manifestSink, registeredArrivalSinkProbe, testManifest, None)
 
     val testArrival = ArrivalGenerator.arrival(schDt = "2019-03-06T12:00:00Z")
-    graphInput.offer(List(testArrival))
+    graphInput ! List(testArrival)
 
     manifestSinkProbe.expectMsg(5 seconds, ManifestTries(List(Option(testManifest))))
-
-    graphInput.complete()
 
     success
   }
@@ -86,24 +82,24 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
       Some(RegisteredArrivals(mutable.SortedMap(ArrivalKey(testArrival) -> Option(scheduled.millisSinceEpoch)))),
       Crunch.isDueLookup
     )
-    graphInput.offer(List(testArrival))
+    graphInput ! List(testArrival)
 
     manifestSinkProbe.expectNoMessage(1 second)
-
-    graphInput.complete()
 
     success
   }
 
-  def createAndRunGraph(manifestProbeActor: ActorRef, registeredArrivalSinkProbe: TestProbe, testManifest: BestAvailableManifest, initialRegisteredArrivals: Option[RegisteredArrivals], isDueLookup: (ArrivalKey, MillisSinceEpoch, SDateLike) => Boolean = (_, _, _) => true): SourceQueueWithComplete[List[Arrival]] = {
-    val arrivalsSource = Source.queue[List[Arrival]](0, OverflowStrategy.backpressure)
+  def createAndRunGraph(manifestProbeActor: ActorRef,
+                        registeredArrivalSinkProbe: TestProbe,
+                        testManifest: BestAvailableManifest,
+                        initialRegisteredArrivals: Option[RegisteredArrivals],
+                        isDueLookup: (ArrivalKey, MillisSinceEpoch, SDateLike) => Boolean = (_, _, _) => true): ActorRef = {
     val expireAfterMillis = (3 hours).length
 
     implicit val ec: ExecutionContext = ExecutionContext.global
     val batchStage = new BatchStage(() => SDate("2019-03-06T11:00:00Z"), isDueLookup, 1, expireAfterMillis, initialRegisteredArrivals, 0)
 
     val graph = ManifestsGraph(
-      arrivalsSource,
       batchStage,
       manifestProbeActor,
       registeredArrivalSinkProbe.ref,
@@ -111,7 +107,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
       MockManifestLookupService(testManifest)
     )
 
-    val graphInput: SourceQueueWithComplete[List[Arrival]] = graph.run()
+    val graphInput: ActorRef = graph.run()
 
     graphInput
   }

@@ -1,9 +1,9 @@
 package services
 
-import drt.shared.{ApiFeedSource, Arrival, MilliDate, SDateLike}
+import actors.FlightMessageConversion._
+import drt.shared.{ApiFeedSource, Arrival}
 import org.specs2.mutable.Specification
 import server.protobuf.messages.FlightsMessage.FlightMessage
-import actors.FlightMessageConversion._
 
 class ApiFlightsToProtoBufSpec extends Specification {
 

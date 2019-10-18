@@ -1,6 +1,5 @@
 package services
 
-import com.typesafe.config.ConfigFactory
 import controllers.ArrivalGenerator.arrival
 import drt.shared.{Arrival, MilliDate}
 import org.specs2.mutable.SpecificationLike

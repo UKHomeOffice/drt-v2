@@ -9,13 +9,12 @@ import drt.server.feeds.cirium.CiriumFeed
 import drt.shared.{Arrival, LiveBaseFeedSource}
 import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecificationLike
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
+import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import uk.gov.homeoffice.cirium.services.entities._
 
-import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike with Mockito {
