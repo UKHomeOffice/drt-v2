@@ -165,6 +165,9 @@ class StaffMovementsActorBase(val now: () => SDateLike,
       log.info(s"Received request to snapshot")
       takeSnapshot(stateToMessage)
 
+    case "complete" =>
+      log.info("Received shutdown")
+
     case u =>
       log.info(s"unhandled message: $u")
   }

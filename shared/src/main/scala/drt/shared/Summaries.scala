@@ -61,6 +61,7 @@ object Summaries {
     data.range(atTime(startMillis), atTime(endMillis))
 
   def terminalSummaryForPeriod(terminalCms: SortedMap[TQM, CrunchMinute], terminalSms: SortedMap[TM, StaffMinute], queues: Seq[String], summaryStart: SDateLike, summaryPeriodMinutes: Int): TerminalSummary = {
+
     val queueSummaries = Summaries.queueSummariesForPeriod(terminalCms, queues, summaryStart, summaryPeriodMinutes)
     val smResult = Summaries.staffSummaryForPeriod(terminalSms, queueSummaries, summaryStart, summaryPeriodMinutes)
 
@@ -97,7 +98,7 @@ object Summaries {
 
     val minutes = minutesForPeriod(startMillis, endMillis, TM.atTime, terminalSms)
 
-    if (minutes.isEmpty) EmptyStaffSummary
+    if (minutes.isEmpty && queueSummaries.isEmpty) EmptyStaffSummary
     else staffSummaryFromMinutes(queueSummaries, minutes)
   }
 
@@ -107,9 +108,11 @@ object Summaries {
         val available = shifts + movements
         (miscellaneous :: smc, movements :: smm, available :: sav)
     }
-    val totalMisc = misc.max
+    val totalMisc = if (misc.nonEmpty) misc.max else 0
+    val maxAvail = if (avail.nonEmpty) avail.max else 0
+    val minMoves = if (moves.nonEmpty) moves.min else 0
     val queueRecs = if (queueSummaries.nonEmpty) queueSummaries.map(_.deskRecs).sum else 0
     val totalRec = queueRecs + totalMisc
-    StaffSummary(avail.max, totalMisc, moves.min, totalRec)
+    StaffSummary(maxAvail, totalMisc, minMoves, totalRec)
   }
 }

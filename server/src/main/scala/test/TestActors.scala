@@ -14,7 +14,9 @@ object TestActors {
     extends ForecastBaseArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def reset: Receive = {
-      case ResetActor => state.clear()
+      case ResetActor =>
+        state.clear()
+        log.info("Resetting state")
     }
 
     override def receiveRecover: Receive = {
@@ -28,7 +30,9 @@ object TestActors {
     extends ForecastPortArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def reset: Receive = {
-      case ResetActor => state.clear()
+      case ResetActor =>
+        state.clear()
+        log.info("Resetting state")
     }
 
     override def receiveRecover: Receive = {
@@ -42,7 +46,9 @@ object TestActors {
     extends LiveArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def reset: Receive = {
-      case ResetActor => state.clear()
+      case ResetActor =>
+        state.clear()
+        log.info("Resetting state")
     }
 
     override def receiveRecover: Receive = {
@@ -58,6 +64,7 @@ object TestActors {
     def reset: Receive = {
       case ResetActor =>
         state = initialState
+        log.info("Resetting state")
     }
 
     override def receiveRecover: Receive = {
@@ -73,6 +80,7 @@ object TestActors {
       case ResetActor =>
         state = initialState
         subscribers = List()
+        log.info("Resetting state")
     }
 
     override def receiveRecover: Receive = {
@@ -88,6 +96,7 @@ object TestActors {
       case ResetActor =>
         state = initialState
         subscribers = List()
+        log.info("Resetting state")
     }
 
     override def receiveRecover: Receive = {
@@ -103,7 +112,7 @@ object TestActors {
       case ResetActor =>
         state = initialState
         subscribers = List()
-        log.info(s"Reset staff movements to ${state.staffMovements.movements}")
+        log.info("Resetting state")
     }
 
     override def receiveRecover: Receive = {
@@ -132,6 +141,7 @@ object TestActors {
 
     def reset: Receive = {
       case ResetActor =>
+        log.info("Resetting state")
         state = initialState
     }
 

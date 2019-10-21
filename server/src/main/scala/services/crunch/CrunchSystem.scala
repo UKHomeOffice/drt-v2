@@ -9,6 +9,7 @@ import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.{SDateLike, _}
+import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
@@ -27,9 +28,8 @@ case class CrunchSystem[FR](shifts: SourceQueueWithComplete[ShiftAssignments],
                             liveBaseArrivalsResponse: FR,
                             liveArrivalsResponse: FR,
                             manifestsLiveResponse: SourceQueueWithComplete[ManifestsFeedResponse],
-                            manifestsHistoricResponse: SourceQueueWithComplete[ManifestsFeedResponse],
                             actualDeskStats: SourceQueueWithComplete[ActualDeskStats],
-                            killSwitches: List[KillSwitch]
+                            killSwitches: List[UniqueKillSwitch]
                            )
 
 case class CrunchProps[FR](logLabel: String = "",
@@ -49,7 +49,7 @@ case class CrunchProps[FR](logLabel: String = "",
                            initialFlightsWithSplits: Option[FlightsWithSplits] = None,
                            b5JStartDate: SDateLike,
                            manifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]],
-                           manifestsHistoricSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]],
+                           manifestResponsesSource: Source[List[BestAvailableManifest], NotUsed],
                            voyageManifestsActor: ActorRef,
                            manifestRequestsSink: Sink[List[Arrival], NotUsed],
                            cruncher: TryCrunch,
@@ -195,7 +195,7 @@ object CrunchSystem {
 
     val crunchSystem = RunnableCrunch(
       props.arrivalsForecastBaseSource, props.arrivalsForecastSource, props.arrivalsLiveBaseSource, props.arrivalsLiveSource,
-      props.manifestsLiveSource, props.manifestsHistoricSource,
+      props.manifestsLiveSource, props.manifestResponsesSource,
       shiftsSource, fixedPointsSource, staffMovementsSource,
       actualDesksAndQueuesSource,
       arrivalsStage, arrivalSplitsGraphStage,
@@ -210,7 +210,7 @@ object CrunchSystem {
       crunchStartDateProvider, props.now, props.airportConfig.queues, liveStateDaysAhead, forecastMaxMillis
     )
 
-    val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, manifestsHistoricIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch) = crunchSystem.run
+    val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS) = crunchSystem.run
 
     CrunchSystem(
       shifts = shiftsIn,
@@ -221,9 +221,8 @@ object CrunchSystem {
       liveBaseArrivalsResponse = liveBaseIn,
       liveArrivalsResponse = liveIn,
       manifestsLiveResponse = manifestsLiveIn,
-      manifestsHistoricResponse = manifestsHistoricIn,
       actualDeskStats = actDesksIn,
-      List(arrivalsKillSwitch, manifestsKillSwitch)
+      List(arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS)
     )
   }
 

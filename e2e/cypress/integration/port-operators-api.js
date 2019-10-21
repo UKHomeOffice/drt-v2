@@ -24,8 +24,7 @@ describe('Advanced Passenger Information Splits exposed to Port Operators', func
   const header = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track";
 
   beforeEach(function () {
-    cy
-      .deleteData();
+    cy.deleteData().wait(250);
   });
 
 

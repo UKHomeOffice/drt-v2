@@ -165,12 +165,14 @@ class Application @Inject()(implicit val config: Configuration,
 
   val enableRoleBasedAccessRestrictions: Boolean = config.getOptional[Boolean]("feature-flags.role-based-access-restrictions").getOrElse(false)
 
-  val ctrl: DrtSystemInterface = config.getOptional[String]("env") match {
-    case Some("test") =>
-      new TestDrtSystem(system, config, getPortConfFromEnvVar)
-    case _ =>
+  val ctrl: DrtSystemInterface = if (isTestEnvironment) {
+    new TestDrtSystem(system, config, getPortConfFromEnvVar)
+  } else {
       DrtSystem(system, config, getPortConfFromEnvVar)
   }
+
+  def isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("live") == "test"
+
   ctrl.run()
 
   val virusScannerUrl: String = config.get[String]("virus-scanner-url")

@@ -16,7 +16,7 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 class BatchStage(now: () => SDateLike,
-                 isDueLookup: (ArrivalKey, MillisSinceEpoch, SDateLike) => Boolean,
+                 isDueLookup: (MillisSinceEpoch, MillisSinceEpoch, SDateLike) => Boolean,
                  batchSize: Int,
                  expireAfterMillis: MillisSinceEpoch,
                  maybeInitialState: Option[RegisteredArrivals],
@@ -139,8 +139,12 @@ class BatchStage(now: () => SDateLike,
       case (arrival, None) =>
         lookupQueue += arrival
       case (arrival, Some(lastLookup)) =>
-        if (!lookupQueue.contains(arrival) && isDueLookup(arrival, lastLookup, currentNow))
-          lookupQueue + arrival
+        val dueLookup = isDueLookup(arrival.scheduled, lastLookup, currentNow)
+        val notAlreadyInQueue = !lookupQueue.contains(arrival)
+
+        if (notAlreadyInQueue && dueLookup) {
+          lookupQueue += arrival
+        }
     }
   }
 }

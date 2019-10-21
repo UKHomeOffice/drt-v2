@@ -1,32 +1,21 @@
 package manifests.graph
 
-import actors.{ManifestTries, VoyageManifestsRequestActor}
 import akka.NotUsed
-import akka.actor.{ActorRef, Props}
-import akka.stream.scaladsl.{RunnableGraph, Sink, Source}
+import akka.pattern.pipe
+import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{Arrival, ArrivalKey, SDateLike}
 import graphs.SinkToSourceBridge
-import manifests.ManifestLookupLike
 import manifests.actors.RegisteredArrivals
 import manifests.passengers.BestAvailableManifest
 import services.SDate
 import services.graphstages.Crunch
 
 import scala.collection.mutable
+import scala.concurrent.Await
 import scala.concurrent.duration._
-
-
-class TestableVoyageManifestsRequestActor(portCode: String, manifestLookup: ManifestLookupLike, probe: TestProbe, now: () => SDateLike)
-  extends VoyageManifestsRequestActor(portCode, manifestLookup, now, 1, 0) {
-  override def senderRef(): ActorRef = probe.ref
-
-  override def handleManifestTries(bestManifests: List[Option[BestAvailableManifest]]): Unit = {
-    senderRef() ! ManifestTries(bestManifests)
-  }
-}
 
 
 class ManifestGraphSpec extends ManifestGraphTestLike {
@@ -44,75 +33,131 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
       List()
     )
     val manifestSinkProbe = TestProbe("manifest-test-probe")
-    val manifestSink = system.actorOf(Props(classOf[TestableVoyageManifestsRequestActor], "LHR", MockManifestLookupService(testManifest), manifestSinkProbe, () => SDate.now()))
     val registeredArrivalSinkProbe = TestProbe(name = "registered-arrival-test-probe")
 
     val testArrival = ArrivalGenerator.arrival(schDt = "2019-03-06T12:00:00Z")
 
-    val sink = createAndRunGraph(manifestSink, registeredArrivalSinkProbe, testManifest, None)
+    val (sink, source) = createAndRunGraph(registeredArrivalSinkProbe, testManifest, None, Crunch.isDueLookup, now = () => SDate("2019-03-06T11:00:00Z"))
     Source(List(List(testArrival))).runWith(sink)
 
-    manifestSinkProbe.expectMsg(2 seconds, ManifestTries(List(Option(testManifest))))
+    source.runWith(Sink.seq).pipeTo(manifestSinkProbe.ref)
+
+    manifestSinkProbe.expectMsg(2 seconds, List(List(testManifest)))
 
     success
   }
 
-    "Given an initial registered arrival with a recent lookup time " +
-      "When the same arrival is sent into the ManifestGraph " +
-      "Then no manifests should appear in the sink" >> {
+  "Given an initial registered arrival with a recent lookup time " +
+    "When the same arrival is sent into the ManifestGraph " +
+    "Then no manifests should appear in the sink" >> {
 
-      val manifestSinkProbe = TestProbe(name = "manifest-test-probe")
-      val registeredArrivalSinkProbe = TestProbe(name = "registered-arrival-test-probe")
+    val registeredArrivalSinkProbe = TestProbe(name = "registered-arrival-test-probe")
 
-      val testManifest = BestAvailableManifest(
-        "test",
-        "STN",
-        "TST",
-        "1234",
-        "TST",
-        scheduled,
-        List()
-      )
+    val testManifest = BestAvailableManifest(
+      "test",
+      "STN",
+      "TST",
+      "1234",
+      "TST",
+      scheduled,
+      List()
+    )
 
-      val testArrival = ArrivalGenerator.arrival(schDt = "2019-03-06T12:00:00Z")
+    val testArrival = ArrivalGenerator.arrival(schDt = "2019-03-06T12:00:00Z")
 
-      val manifestSink = system.actorOf(Props(classOf[TestableVoyageManifestsRequestActor], "LHR", MockManifestLookupService(testManifest), manifestSinkProbe, () => SDate.now()))
+    val lastLookup = scheduled.millisSinceEpoch
 
-      val sink = createAndRunGraph(
-        manifestSink,
-        registeredArrivalSinkProbe,
-        testManifest,
-        Some(RegisteredArrivals(mutable.SortedMap(ArrivalKey(testArrival) -> Option(scheduled.millisSinceEpoch)))),
-        Crunch.isDueLookup
-      )
+    val (requestSink, responseSource) = createAndRunGraph(
+      registeredArrivalSinkProbe,
+      testManifest,
+      Some(RegisteredArrivals(mutable.SortedMap(ArrivalKey(testArrival) -> Option(lastLookup)))),
+      Crunch.isDueLookup,
+      () => SDate("2019-03-06T11:00:00Z"))
 
-      Source(List(List(testArrival))).runWith(sink)
+    Source(List(List(testArrival))).runWith(requestSink)
 
-      manifestSinkProbe.expectNoMessage(1 second)
+    val responses = Await.result(responseSource.runWith(Sink.seq), 2 second)
 
-      success
-    }
+    responses.isEmpty
+  }
 
-  def createAndRunGraph(manifestProbeActor: ActorRef,
-                        registeredArrivalSinkProbe: TestProbe,
+  "Given an initial registered arrival with a very olf lookup time " +
+    "When the same arrival is sent into the ManifestGraph " +
+    "Then the manifest should appear in the sink" >> {
+
+    val registeredArrivalSinkProbe = TestProbe(name = "registered-arrival-test-probe")
+
+    val testManifest = BestAvailableManifest(
+      "test",
+      "STN",
+      "TST",
+      "1234",
+      "TST",
+      scheduled,
+      List()
+    )
+
+    val testArrival = ArrivalGenerator.arrival(schDt = "2019-03-06T12:00:00Z")
+
+    val lastLookup = scheduled.addDays(-100).millisSinceEpoch
+
+    val (requestSink, responseSource) = createAndRunGraph(
+      registeredArrivalSinkProbe,
+      testManifest,
+      Some(RegisteredArrivals(mutable.SortedMap(ArrivalKey(testArrival) -> Option(lastLookup)))),
+      Crunch.isDueLookup,
+      () => SDate("2019-03-06T11:00:00Z"))
+
+    Source(List(List(testArrival))).runWith(requestSink)
+
+    val responses = Await.result(responseSource.runWith(Sink.seq), 2 second)
+
+    responses.nonEmpty
+  }
+
+  "Given a lookup time 100 days earlier than now, and a scheduled date within the next day " +
+    "isDueLookup should return true" >> {
+    val now = SDate("2019-01-01")
+    val scheduled = now.addHours(1)
+    val lastLookup = now.addDays(-100)
+
+    val result = Crunch.isDueLookup(scheduled.millisSinceEpoch, lastLookup.millisSinceEpoch, now)
+
+    result === true
+  }
+
+  "Given a lookup time the same time as now, and a scheduled date within the next day " +
+    "isDueLookup should return true" >> {
+    val now = SDate("2019-01-01")
+    val scheduled = now.addHours(1)
+    val lastLookup = now
+
+    val result = Crunch.isDueLookup(scheduled.millisSinceEpoch, lastLookup.millisSinceEpoch, now)
+
+    result === false
+  }
+
+  def createAndRunGraph(registeredArrivalSinkProbe: TestProbe,
                         testManifest: BestAvailableManifest,
                         initialRegisteredArrivals: Option[RegisteredArrivals],
-                        isDueLookup: (ArrivalKey, MillisSinceEpoch, SDateLike) => Boolean = (_, _, _) => true): Sink[List[Arrival], NotUsed] = {
+                        isDueLookup: (MillisSinceEpoch, MillisSinceEpoch, SDateLike) => Boolean,
+                        now: () => SDateLike): (Sink[List[Arrival], NotUsed], Source[List[BestAvailableManifest], NotUsed]) = {
     val expireAfterMillis = (3 hours).length
 
-    val batchStage = new BatchStage(() => SDate("2019-03-06T11:00:00Z"), isDueLookup, 1, expireAfterMillis, initialRegisteredArrivals, 0)
+    val batchStage = new BatchStage(now, isDueLookup, 1, expireAfterMillis, initialRegisteredArrivals, 0)
 
     val (manifestRequestsSource, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
+    val (manifestResponsesSource, manifestResponsesSink) = SinkToSourceBridge[List[BestAvailableManifest]]
 
     ManifestsGraph(
       manifestRequestsSource,
       batchStage,
-      manifestProbeActor,
+      manifestResponsesSink,
       registeredArrivalSinkProbe.ref,
       "STN",
       MockManifestLookupService(testManifest)
     ).run()
 
-    manifestRequestsSink
+    (manifestRequestsSink, manifestResponsesSource)
   }
 }

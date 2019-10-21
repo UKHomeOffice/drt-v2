@@ -1,7 +1,7 @@
 package test.feeds.test
 
 import akka.NotUsed
-import akka.actor.{Actor, ActorLogging, ActorSystem, Cancellable, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props}
 import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
@@ -31,28 +31,20 @@ object TestFixtureFeed {
 
     val pollFrequency = 2 seconds
     val initialDelayImmediately: FiniteDuration = 1 milliseconds
-    val tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed).map(_ => {
-      val eventualArrivals = askableTestArrivalActor.ask(GetArrivals).map {
-        case Arrivals(arrivals) =>
-          log.debug(s"Got these arrivals from the actor: $arrivals")
-          arrivals
-        case x =>
-          log.warn(s"TEST arrivals feed: found this instead $x")
-
-          List()
-      }.recoverWith {
-        case t =>
-          log.error(s"TEST arrivals feed: threw", t)
-
-          Future(List())
+    val tickingSource = Source
+      .tick(initialDelayImmediately, pollFrequency, NotUsed)
+      .mapAsync(1) { _ =>
+        askableTestArrivalActor
+          .ask(GetArrivals)
+          .map { case Arrivals(arrivals) =>
+            println(s"**** Got $arrivals")
+            arrivals
+          }
+          .recover { case _ => List() }
       }
-
-      val testArrivals = Try(Await.result(eventualArrivals, 1 seconds)).getOrElse(List())
-
-      log.debug(s"TEST: Sending arrivals from test feed: $testArrivals")
-
-      ArrivalsFeedSuccess(Flights(testArrivals), SDate.now())
-    })
+      .collect {
+        case arrivals if arrivals.nonEmpty => ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
+      }
 
     tickingSource
   }
@@ -62,21 +54,28 @@ case object GetArrivals
 
 case class Arrivals(arrivals: List[Arrival])
 
-class TestArrivalsActor extends Actor with ActorLogging{
+class TestArrivalsActor extends Actor with ActorLogging {
 
-  var testArrivals: List[Arrival] = List[Arrival]()
+  var testArrivals: Option[List[Arrival]] = None
 
   override def receive: PartialFunction[Any, Unit] = {
     case a: Arrival =>
       log.info(s"TEST: Appending test arrival $a")
 
-      testArrivals = testArrivals :+ a
+      testArrivals = testArrivals match {
+        case None => Option(List(a))
+        case Some(existing) => Option(existing :+ a)
+      }
+
       log.info(s"TEST: Arrivals now equal $testArrivals")
 
     case GetArrivals =>
-      sender ! Arrivals(testArrivals)
+      val toSend = Arrivals(testArrivals.getOrElse(List()))
+      if (toSend.arrivals.nonEmpty) log.info(s"Sending test arrivals: ${toSend.arrivals}")
+      sender() ! toSend
+      testArrivals = None
 
     case ResetActor =>
-      testArrivals = List()
+      testArrivals = None
   }
 }

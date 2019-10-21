@@ -262,6 +262,9 @@ trait WithExports {
     portStateFuture.map {
       case Right(Some(ps: PortState)) =>
         val wps = ps.windowWithTerminalFilter(startDateTime, endDateTime, airportConfig.queues.filterKeys(_ == terminalName))
+        wps.crunchMinutes.foreach {
+          case (_, cm) => if (cm.deskRec != 0) println(s"${SDate(cm.minute).toISOString()}: ${cm.deskRec} desks")
+        }
         val dataLines = CSVData.terminalMinutesToCsvData(wps.crunchMinutes, wps.staffMinutes, airportConfig.nonTransferQueues(terminalName), startDateTime, endDateTime, 15)
         val fullData = if (includeHeader) {
           val headerLines = CSVData.terminalCrunchMinutesToCsvDataHeadings(airportConfig.queues(terminalName))

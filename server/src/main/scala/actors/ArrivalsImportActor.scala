@@ -19,5 +19,11 @@ class ArrivalsImportActor() extends Actor {
       log.info(s"Sending arrivals from import")
       sender() ! maybeArrivalsFromImport
       if (maybeArrivalsFromImport.nonEmpty) maybeArrivalsFromImport = None
+
+    case "complete" =>
+      log.info("Received shutdown")
+
+    case other =>
+      log.error(s"Received unexpected message ${other.getClass}")
   }
 }

@@ -16,6 +16,7 @@ import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
 import graphs.SinkToSourceBridge
+import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import passengersplits.InMemoryPersistence
@@ -69,7 +70,6 @@ case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete
                                       forecastArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
                                       liveArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
                                       manifestsLiveInput: SourceQueueWithComplete[ManifestsFeedResponse],
-                                      manifestsHistoricInput: SourceQueueWithComplete[ManifestsFeedResponse],
                                       shiftsInput: SourceQueueWithComplete[ShiftAssignments],
                                       fixedPointsInput: SourceQueueWithComplete[FixedPointAssignments],
                                       liveStaffMovementsInput: SourceQueueWithComplete[Seq[StaffMovement]],
@@ -208,6 +208,7 @@ class CrunchTestLike
     val forecastBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
 
     val (_, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
+    val (manifestResponsesSource, _) = SinkToSourceBridge[List[BestAvailableManifest]]
 
 
     val crunchInputs = CrunchSystem(CrunchProps(
@@ -235,7 +236,7 @@ class CrunchTestLike
       now = now,
       b5JStartDate = SDate("2019-06-01"),
       manifestsLiveSource = manifestsSource,
-      manifestsHistoricSource = manifestsSource,
+      manifestResponsesSource = manifestResponsesSource,
       voyageManifestsActor = manifestsActor,
       manifestRequestsSink = manifestRequestsSink,
       cruncher = cruncher,
@@ -260,7 +261,6 @@ class CrunchTestLike
       crunchInputs.forecastArrivalsResponse,
       crunchInputs.liveArrivalsResponse,
       crunchInputs.manifestsLiveResponse,
-      crunchInputs.manifestsHistoricResponse,
       crunchInputs.shifts,
       crunchInputs.fixedPoints,
       crunchInputs.staffMovements,

@@ -8,6 +8,7 @@ describe('Alerts system', function () {
 
     it("Should be possible to add an alert, view it and the delete it.", function () {
       cy
+        .deleteData()
         .asADrtSuperUser()
         .navigateHome()
         .get('.alerts-link > a')

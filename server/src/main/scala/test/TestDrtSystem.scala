@@ -5,7 +5,9 @@ import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Prop
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{KillSwitch, Materializer, OverflowStrategy}
 import akka.util.Timeout
-import drt.shared.{AirportConfig, Role}
+import drt.shared.{AirportConfig, Arrival, Role}
+import graphs.SinkToSourceBridge
+import manifests.passengers.BestAvailableManifest
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
@@ -67,8 +69,10 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
   override def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] = TestUserRoleProvider.getRoles(config, headers, session)
 
   override def run(): Unit = {
-
     val startSystem: () => List[KillSwitch] = () => {
+      val (manifestRequestsSource, bridge1Ks, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
+      val (manifestResponsesSource, bridge2Ks, manifestResponsesSink) = SinkToSourceBridge[List[BestAvailableManifest]]
+
       val cs = startCrunchSystem(
         initialPortState = None,
         initialForecastBaseArrivals = None,
@@ -76,14 +80,22 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
         initialLiveBaseArrivals = None,
         initialLiveArrivals = None,
         manifestRequestsSink,
-        recrunchOnStart = true,
-        refreshArrivalsOnStart = true,
-        checkRequiredStaffUpdatesOnStartup = true
+        manifestResponsesSource,
+        recrunchOnStart = false,
+        refreshArrivalsOnStart = false,
+        checkRequiredStaffUpdatesOnStartup = false
       )
+
+      val manifestKillSwitch = startManifestsGraph(None, manifestResponsesSink, manifestRequestsSource)
+
       subscribeStaffingActors(cs)
       startScheduledFeedImports(cs)
+
       testManifestsActor ! SubscribeResponseQueue(cs.manifestsLiveResponse)
-      cs.killSwitches
+
+      log.info(s"Restarted graphs")
+
+      List(bridge1Ks, bridge2Ks, manifestKillSwitch) ++ cs.killSwitches
     }
 
     val testActors = List(
@@ -122,9 +134,10 @@ case class RestartActor(startSystem: () => List[KillSwitch], testActors: List[Ac
         ks.shutdown()
       }
 
-      testActors.foreach(a => {
+      testActors.foreach { a =>
+        log.info(s"Resetting $a")
         a ! ResetActor
-      })
+      }
 
       log.info(s"Shutdown triggered")
       startTestSystem()

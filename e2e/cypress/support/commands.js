@@ -136,7 +136,7 @@ Cypress.Commands.add('deleteData', () => cy.request("DELETE", '/test/data'));
 
 Cypress.Commands.add('saveShifts', (shiftsJson) => cy.request("POST", "/data/staff", shiftsJson));
 
-Cypress.Commands.add('navigateHome', () => cy .visit('/'));
+Cypress.Commands.add('navigateHome', () => cy.visit('/'));
 
 Cypress.Commands.add('navigateToMenuItem', (itemName) => cy
   .get('.navbar-drt li')

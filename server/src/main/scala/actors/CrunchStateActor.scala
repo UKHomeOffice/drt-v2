@@ -31,6 +31,8 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
 
   val log: Logger = LoggerFactory.getLogger(s"$name-$getClass")
 
+  override def preStart(): Unit = {log.info(s"Starting")}
+
   def logInfo(msg: String, level: String = "info"): Unit = if (name.isEmpty) log.info(msg) else log.info(s"$name $msg")
 
   def logDebug(msg: String, level: String = "info"): Unit = if (name.isEmpty) log.debug(msg) else log.debug(s"$name $msg")
@@ -121,7 +123,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
       logInfo(s"Purged snapshots")
 
     case "complete" =>
-      logInfo("Received complete")
+      logInfo("Received shutdown")
 
     case u =>
       log.error(s"Received unexpected message $u")

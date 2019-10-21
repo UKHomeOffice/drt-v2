@@ -1,13 +1,11 @@
 package actors
 
 import actors.Sizes.oneMegaByte
-import actors.acking.AckingReceiver
-import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props, Scheduler}
 import akka.pattern.AskableActorRef
-import akka.stream.scaladsl.{Keep, Sink, Source, SourceQueueWithComplete}
-import akka.stream.{Materializer, OverflowStrategy}
+import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
+import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import com.amazonaws.auth.AWSCredentials
 import com.typesafe.config.ConfigFactory
@@ -34,10 +32,9 @@ import graphs.SinkToSourceBridge
 import manifests.ManifestLookup
 import manifests.actors.{RegisteredArrivals, RegisteredArrivalsActor}
 import manifests.graph.{BatchStage, ManifestsGraph}
-import manifests.passengers.S3ManifestPoller
+import manifests.passengers.{BestAvailableManifest, S3ManifestPoller}
 import org.apache.spark.sql.SparkSession
 import org.joda.time.DateTimeZone
-import org.reactivestreams.{Publisher, Subscriber}
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import server.feeds.acl.AclFeed
@@ -192,7 +189,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, Option(params.snapshotIntervalVm)), name = "voyage-manifests-actor")
   lazy val lookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
-  lazy val voyageManifestsRequestActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsRequestActor], airportConfig.portCode, lookup, now, maxBufferSize, minSecondsBetweenBatches), name = "voyage-manifests-request-actor")
 
   lazy val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](100, OverflowStrategy.backpressure)
 
@@ -209,8 +205,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   lazy val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
   lazy val voyageManifestsHistoricSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
-
-  val (manifestRequestsSource, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
 
   system.log.info(s"useNationalityBasedProcessingTimes: ${params.useNationalityBasedProcessingTimes}")
   system.log.info(s"useSplitsPrediction: ${params.useSplitsPrediction}")
@@ -244,6 +238,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         system.log.info(s"Successfully restored initial state for App")
         val initialPortState: Option[PortState] = mergePortStates(maybeForecastState, maybeLiveState)
 
+        val (manifestRequestsSource, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
+        val (manifestResponsesSource, _, manifestResponsesSink) = SinkToSourceBridge[List[BestAvailableManifest]]
+
         val crunchInputs: CrunchSystem[Cancellable] = startCrunchSystem(
           initialPortState,
           maybeBaseArrivals,
@@ -251,6 +248,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
           Option(mutable.SortedMap[UniqueArrival, Arrival]()),
           maybeLiveArrivals,
           manifestRequestsSink,
+          manifestResponsesSource,
           params.recrunchOnStart,
           params.refreshArrivalsOnStart,
           checkRequiredStaffUpdatesOnStartup = true)
@@ -272,8 +270,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
               }
             Option(RegisteredArrivals(maybeAllArrivals.getOrElse(mutable.SortedMap())))
           } else maybeRegisteredArrivals
-          startManifestsGraph(initialRegisteredArrivals)
-          voyageManifestsRequestActor ! SubscribeResponseQueue(crunchInputs.manifestsHistoricResponse)
+          startManifestsGraph(initialRegisteredArrivals, manifestResponsesSink, manifestRequestsSource)
         }
 
         subscribeStaffingActors(crunchInputs)
@@ -344,11 +341,13 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     staffMovementsActor ! AddStaffMovementsSubscribers(List(crunchInputs.staffMovements))
   }
 
-  def startManifestsGraph(maybeRegisteredArrivals: Option[RegisteredArrivals]): NotUsed = {
+  def startManifestsGraph(maybeRegisteredArrivals: Option[RegisteredArrivals],
+                          manifestResponsesSink: Sink[List[BestAvailableManifest], NotUsed],
+                          manifestRequestsSource: Source[List[Arrival], NotUsed]): UniqueKillSwitch = {
     val batchSize = config.get[Int]("crunch.manifests.lookup-batch-size")
     lazy val batchStage: BatchStage = new BatchStage(now, Crunch.isDueLookup, batchSize, expireAfterMillis, maybeRegisteredArrivals, 1000)
 
-    ManifestsGraph(manifestRequestsSource, batchStage, voyageManifestsRequestActor, registeredArrivalsActor, airportConfig.portCode, lookup).run
+    ManifestsGraph(manifestRequestsSource, batchStage, manifestResponsesSink, registeredArrivalsActor, airportConfig.portCode, lookup).run
   }
 
   def startCrunchSystem(initialPortState: Option[PortState],
@@ -357,6 +356,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
                         initialLiveBaseArrivals: Option[mutable.SortedMap[UniqueArrival, Arrival]],
                         initialLiveArrivals: Option[mutable.SortedMap[UniqueArrival, Arrival]],
                         manifestRequestsSink: Sink[List[Arrival], NotUsed],
+                        manifestResponsesSource: Source[List[BestAvailableManifest], NotUsed],
                         recrunchOnStart: Boolean,
                         refreshArrivalsOnStart: Boolean,
                         checkRequiredStaffUpdatesOnStartup: Boolean): CrunchSystem[Cancellable] = {
@@ -383,7 +383,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       useLegacyManifests = params.useLegacyManifests,
       b5JStartDate = params.maybeB5JStartDate.map(SDate(_)).getOrElse(SDate("2019-06-01")),
       manifestsLiveSource = voyageManifestsLiveSource,
-      manifestsHistoricSource = voyageManifestsHistoricSource,
+      manifestResponsesSource = manifestResponsesSource,
       voyageManifestsActor = voyageManifestsActor,
       manifestRequestsSink = manifestRequestsSink,
       cruncher = TryRenjin.crunch,
@@ -534,11 +534,15 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     feed
   }
 
-  def baseArrivalsSource(): Source[ArrivalsFeedResponse, Cancellable] =
+  def baseArrivalsSource(): Source[ArrivalsFeedResponse, Cancellable] = if (isTestEnvironment)
+    arrivalsNoOp
+  else
     Source.tick(1 second, 10 minutes, NotUsed).map(_ => {
       system.log.info(s"Requesting ACL feed")
       aclFeed.requestArrivals
     })
+
+  private def isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("live") == "test"
 
   def walkTimeProvider(flight: Arrival): MillisSinceEpoch =
     gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, airportConfig.defaultWalkTimeMillis.getOrElse(flight.Terminal, 300000L))(flight)

@@ -1,8 +1,5 @@
 package manifests.graph
 
-import actors.ManifestTries
-import actors.acking.AckingReceiver
-import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import akka.NotUsed
 import akka.actor.ActorRef
 import akka.stream._
@@ -13,6 +10,7 @@ import manifests.ManifestLookupLike
 import manifests.actors.RegisteredArrivals
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
+import server.feeds.ManifestsFeedResponse
 import services.SDate
 
 object ManifestsGraph {
@@ -20,39 +18,35 @@ object ManifestsGraph {
 
   def apply(arrivalsSource: Source[List[Arrival], NotUsed],
             batchStage: GraphStage[FanOutShape2[List[Arrival], List[ArrivalKey], RegisteredArrivals]],
-            manifestsSinkActor: ActorRef,
+            manifestsSink: Sink[List[BestAvailableManifest], NotUsed],
             registeredArrivalsActor: ActorRef,
             portCode: String,
             manifestLookup: ManifestLookupLike
-           ): RunnableGraph[NotUsed] = {
+           ): RunnableGraph[UniqueKillSwitch] = {
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
-    val graph = GraphDSL.create(arrivalsSource.async) {
-      implicit builder =>
-        arrivals =>
-          val batchRequests = builder.add(batchStage.async)
-          val manifestsSink = builder.add(Sink.actorRefWithAck(manifestsSinkActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
-          val registeredArrivalsSink = builder.add(Sink.actorRef(registeredArrivalsActor, "completed"))
+    val killSwitch = KillSwitches.single[List[Arrival]]
 
-          arrivals.out
-            .map {x =>
-              println(s"Received ${x.length} arrival manifest requests")
-              x
-            }
-            .conflate[List[Arrival]] {
+    val graph = GraphDSL.create(killSwitch.async) {
+      implicit builder =>
+        killSwitchAsync =>
+          val arrivalsAsync = builder.add(arrivalsSource.async)
+          val batchRequests = builder.add(batchStage.async)
+          val registeredArrivalsSink = builder.add(Sink.actorRef(registeredArrivalsActor, "completed").async)
+
+          arrivalsAsync.out.conflate[List[Arrival]] {
             case (acc, incoming) => acc ++ incoming
-          } ~> batchRequests.in
+          } ~> killSwitchAsync ~> batchRequests.in
 
           batchRequests.out0
             .flatMapConcat(arrivals => Source(arrivals))
             .mapAsync(1) { a =>
               manifestLookup.maybeBestAvailableManifest(portCode, a.origin, a.voyageNumber, SDate(a.scheduled))
             }
-            .collect { case (_, bam) if bam.isDefined => bam }
-            .conflateWithSeed(List[Option[BestAvailableManifest]](_)) {
+            .collect { case (_, Some(bam)) => bam }
+            .conflateWithSeed(List[BestAvailableManifest](_)) {
               case (acc, next) => next :: acc
-            }
-            .map(ManifestTries(_)) ~> manifestsSink
+            } ~> manifestsSink.async
 
           batchRequests.out1 ~> registeredArrivalsSink
 
