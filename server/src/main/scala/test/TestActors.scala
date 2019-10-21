@@ -4,6 +4,7 @@ import actors.Sizes.oneMegaByte
 import actors._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.SDateLike
+import slickdb.ArrivalTable
 
 
 object TestActors {
@@ -120,6 +121,14 @@ object TestActors {
     }
 
     override def receiveCommand: Receive = reset orElse super.receiveCommand
+  }
+
+  case class TestAggregatedArrivalsActor() extends AggregatedArrivalsActor("LHR", ArrivalTable("LHR", PostgresTables)) {
+    def reset: Receive = {
+      case ResetActor => log.info("Resetting state (noop)")
+    }
+
+    override def receive: Receive = reset orElse super.receive
   }
 
   case class TestCrunchStateActor(snapshotInterval: Int,

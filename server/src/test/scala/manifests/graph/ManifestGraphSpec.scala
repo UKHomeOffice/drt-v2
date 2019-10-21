@@ -146,8 +146,8 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
 
     val batchStage = new BatchStage(now, isDueLookup, 1, expireAfterMillis, initialRegisteredArrivals, 0)
 
-    val (manifestRequestsSource, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
-    val (manifestResponsesSource, manifestResponsesSink) = SinkToSourceBridge[List[BestAvailableManifest]]
+    val (manifestRequestsSource, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
+    val (manifestResponsesSource, _, manifestResponsesSink) = SinkToSourceBridge[List[BestAvailableManifest]]
 
     ManifestsGraph(
       manifestRequestsSource,

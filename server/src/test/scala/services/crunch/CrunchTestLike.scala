@@ -207,8 +207,8 @@ class CrunchTestLike
     val forecastArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
     val forecastBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
 
-    val (_, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
-    val (manifestResponsesSource, _) = SinkToSourceBridge[List[BestAvailableManifest]]
+    val (_, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
+    val (manifestResponsesSource, _, _) = SinkToSourceBridge[List[BestAvailableManifest]]
 
 
     val crunchInputs = CrunchSystem(CrunchProps(
