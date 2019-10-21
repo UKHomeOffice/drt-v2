@@ -1,7 +1,7 @@
 package test.feeds.test
 
 import akka.NotUsed
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props}
+import akka.actor.{Actor, ActorLogging, ActorSystem, Cancellable, Props}
 import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
@@ -12,11 +12,9 @@ import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import test.TestActors.ResetActor
 
-import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.{FiniteDuration, _}
 import scala.language.postfixOps
-import scala.util.Try
 
 object TestFixtureFeed {
 
@@ -36,10 +34,7 @@ object TestFixtureFeed {
       .mapAsync(1) { _ =>
         askableTestArrivalActor
           .ask(GetArrivals)
-          .map { case Arrivals(arrivals) =>
-            println(s"**** Got $arrivals")
-            arrivals
-          }
+          .map { case Arrivals(arrivals) => arrivals }
           .recover { case _ => List() }
       }
       .collect {

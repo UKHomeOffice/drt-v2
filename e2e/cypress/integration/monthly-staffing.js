@@ -20,16 +20,14 @@ describe('Monthly Staffing', function () {
     return moment().tz('Europe/London').startOf('day').hour(12).minute(0);
   }
 
-  Cypress.Commands.add('saveShifts', ()=> {
-    cy
-      .asABorderForcePlanningOfficer()
-      .request("POST", "/data/staff", {
-        "shifts": [
-          {"port_code": "test", "terminal": "T1", "staff": "1", "shift_start": firstMidnightOfThisMonth().toISOString()},
-          {"port_code": "test", "terminal": "T1", "staff": "2", "shift_start": firstMidnightOfNextMonth().toISOString()}
-        ]
-      });
-  });
+  function shifts() {
+    return {
+      "shifts": [
+        {"port_code": "test", "terminal": "T1", "staff": "1", "shift_start": firstMidnightOfThisMonth().toISOString()},
+        {"port_code": "test", "terminal": "T1", "staff": "2", "shift_start": firstMidnightOfNextMonth().toISOString()}
+      ]
+    }
+  }
 
   Cypress.Commands.add('addShiftForToday', ()=> {
     cy
@@ -81,7 +79,7 @@ describe('Monthly Staffing', function () {
     it("If I enter staff for the current month those staff should still be visible if I change months and change back", function () {
       cy
         .asABorderForcePlanningOfficer()
-        .saveShifts()
+        .saveShifts(shifts())
         .visit('#terminal/T1/staffing/15/')
         .get(cellToTest).contains("1")
         .visit('#terminal/T1/staffing/15/?date=' + nextMonthDateString())
