@@ -94,8 +94,6 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
 
       testManifestsActor ! SubscribeResponseQueue(cs.manifestsLiveResponse)
 
-      log.info(s"Restarted graphs")
-
       List(bridge1Ks, bridge2Ks, manifestKillSwitch) ++ cs.killSwitches
     }
 
@@ -136,7 +134,6 @@ case class RestartActor(startSystem: () => List[KillSwitch], testActors: List[Ac
       }
 
       testActors.foreach { a =>
-        log.info(s"Resetting $a")
         a ! ResetActor
       }
 

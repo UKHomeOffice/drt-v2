@@ -15,9 +15,7 @@ object TestActors {
     extends ForecastBaseArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def reset: Receive = {
-      case ResetActor =>
-        state.clear()
-        log.info("Resetting state")
+      case ResetActor => state.clear()
     }
 
     override def receiveRecover: Receive = {
@@ -31,9 +29,7 @@ object TestActors {
     extends ForecastPortArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def reset: Receive = {
-      case ResetActor =>
-        state.clear()
-        log.info("Resetting state")
+      case ResetActor => state.clear()
     }
 
     override def receiveRecover: Receive = {
@@ -47,9 +43,7 @@ object TestActors {
     extends LiveArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def reset: Receive = {
-      case ResetActor =>
-        state.clear()
-        log.info("Resetting state")
+      case ResetActor => state.clear()
     }
 
     override def receiveRecover: Receive = {
@@ -63,9 +57,7 @@ object TestActors {
     extends VoyageManifestsActor(oneMegaByte, now, expireAfterMillis, Option(snapshotInterval)) {
 
     def reset: Receive = {
-      case ResetActor =>
-        state = initialState
-        log.info("Resetting state")
+      case ResetActor => state = initialState
     }
 
     override def receiveRecover: Receive = {
@@ -81,7 +73,6 @@ object TestActors {
       case ResetActor =>
         state = initialState
         subscribers = List()
-        log.info("Resetting state")
     }
 
     override def receiveRecover: Receive = {
@@ -97,7 +88,6 @@ object TestActors {
       case ResetActor =>
         state = initialState
         subscribers = List()
-        log.info("Resetting state")
     }
 
     override def receiveRecover: Receive = {
@@ -113,7 +103,6 @@ object TestActors {
       case ResetActor =>
         state = initialState
         subscribers = List()
-        log.info("Resetting state")
     }
 
     override def receiveRecover: Receive = {
@@ -125,7 +114,7 @@ object TestActors {
 
   case class TestAggregatedArrivalsActor() extends AggregatedArrivalsActor("LHR", ArrivalTable("LHR", PostgresTables)) {
     def reset: Receive = {
-      case ResetActor => log.info("Resetting state (noop)")
+      case ResetActor => Unit
     }
 
     override def receive: Receive = reset orElse super.receive
@@ -149,9 +138,7 @@ object TestActors {
       forecastMaxMillis = () => now().addDays(2).millisSinceEpoch) {
 
     def reset: Receive = {
-      case ResetActor =>
-        log.info("Resetting state")
-        state = initialState
+      case ResetActor => state = initialState
     }
 
     override def receiveRecover: Receive = {
