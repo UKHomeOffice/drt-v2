@@ -95,7 +95,6 @@ class LGWForecastFeed(boxConfigFilePath: String, userId: String, ukBfGalForecast
       TranPax = Option(fields(TRANSFER_PAX)).map(_.toInt),
       RunwayID = None,
       BaggageReclaimId = None,
-      FlightID = None,
       AirportID = LGW,
       Terminal = fields(5) match {
         case "South" => "S"
@@ -107,8 +106,7 @@ class LGWForecastFeed(boxConfigFilePath: String, userId: String, ukBfGalForecast
       Origin = fields(AIRPORT_CODE),
       Scheduled = SDate(dateAsISOStringWithoutZone(fields(DATE_TIME)), Crunch.europeLondonTimeZone).millisSinceEpoch,
       PcpTime = None,
-      FeedSources = Set(ForecastFeedSource),
-      None
+      FeedSources = Set(ForecastFeedSource)
     )
   } match {
     case Success(arrival) => Some(arrival)

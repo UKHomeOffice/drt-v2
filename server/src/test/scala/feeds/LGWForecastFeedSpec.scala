@@ -52,7 +52,6 @@ class LGWForecastFeedSpec extends Specification with Mockito {
         TranPax = Some(0),
         RunwayID = None,
         BaggageReclaimId = None,
-        FlightID = None,
         AirportID = "LGW",
         Terminal = "S",
         rawICAO = "3O0101",
@@ -60,8 +59,8 @@ class LGWForecastFeedSpec extends Specification with Mockito {
         Origin = "TNG",
         Scheduled = SDate("2018-05-19T10:05:00Z").millisSinceEpoch,
         PcpTime = None,
-        FeedSources = Set(ForecastFeedSource),
-        LastKnownPax = None)
+        FeedSources = Set(ForecastFeedSource)
+      )
     }
 
     "Can return the exception if we cannot get the latest file" in new Context {

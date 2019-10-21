@@ -52,7 +52,6 @@ object CSVFixtures {
         Option(fields(TranPax).toInt),
         None,
         None,
-        None,
         "TEST",
         fields(Terminal),
         fields(rawICAO),
@@ -60,8 +59,7 @@ object CSVFixtures {
         fields(Origin),
         timeToSDate(fields(Scheduled)).getOrElse(SDate.now().millisSinceEpoch),
         None,
-        Set(LiveFeedSource),
-        None
+        Set(LiveFeedSource)
       ))
     })
 

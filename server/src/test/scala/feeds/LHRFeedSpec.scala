@@ -41,18 +41,22 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
 
       val flights = Await.result(futureFlightsSeq, 3 seconds).asInstanceOf[Vector[Arrival]]
 
-      flights.toList === List(List(Arrival(
-        Operator = Some("Qatar Airways"),
-        Status = "UNK",
-        Estimated = Some(SDate("2017-03-09T21:32:00.000Z").millisSinceEpoch),
-        Actual = Some(SDate("2017-03-09T21:33:00.000Z").millisSinceEpoch),
-        EstimatedChox = Some(SDate("2017-03-09T21:43:00.000Z").millisSinceEpoch),
-        ActualChox = Some(SDate("2017-03-09T21:45:00.000Z").millisSinceEpoch),
-        Gate = None, Stand = Some("10"), MaxPax = Some(795), ActPax = Some(142), TranPax = Some(1), RunwayID = None, BaggageReclaimId = None,
-        FlightID = Some(-54860421), AirportID = "LHR", Terminal = "T4", rawICAO = "QR005", rawIATA = "QR005", Origin = "DOH",
-        Scheduled = SDate("2017-03-09T22:00:00.000Z").millisSinceEpoch,
-        PcpTime = Some(SDate("2017-03-09T22:04:00.000Z").millisSinceEpoch), FeedSources = Set(LiveFeedSource),
-        LastKnownPax = None)))
+      flights.toList === List(
+        List(
+          Arrival(
+            Operator = Some("Qatar Airways"),
+            Status = "UNK",
+            Estimated = Some(SDate("2017-03-09T21:32:00.000Z").millisSinceEpoch),
+            Actual = Some(SDate("2017-03-09T21:33:00.000Z").millisSinceEpoch),
+            EstimatedChox = Some(SDate("2017-03-09T21:43:00.000Z").millisSinceEpoch),
+            ActualChox = Some(SDate("2017-03-09T21:45:00.000Z").millisSinceEpoch),
+            Gate = None, Stand = Some("10"), MaxPax = Some(795), ActPax = Some(142), TranPax = Some(1), RunwayID = None, BaggageReclaimId = None,
+            AirportID = "LHR", Terminal = "T4", rawICAO = "QR005", rawIATA = "QR005", Origin = "DOH",
+            Scheduled = SDate("2017-03-09T22:00:00.000Z").millisSinceEpoch,
+            PcpTime = Some(SDate("2017-03-09T22:04:00.000Z").millisSinceEpoch), FeedSources = Set(LiveFeedSource)
+          )
+        )
+      )
     }
 
     "Produce an Arrival source with one flight based on a line with missing values from the LHR csv" in {

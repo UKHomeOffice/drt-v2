@@ -167,7 +167,6 @@ object MagFeed {
     TranPax = ma.passenger.transferCount,
     RunwayID = None,
     BaggageReclaimId = None,
-    FlightID = None,
     AirportID = ma.arrivalAirport.iata,
     Terminal = ma.arrival.terminal.getOrElse(""),
     rawICAO = icao(ma),

@@ -108,7 +108,6 @@ case class LHRFlightFeed(csvRecords: Iterator[Int => String]) {
         TranPax = if (actPax.isEmpty) None else flight.connPax,
         RunwayID = None,
         BaggageReclaimId = None,
-        FlightID = if (flight.flightId() == 0) None else Some(flight.flightId()),
         AirportID = "LHR",
         Terminal = flight.term,
         rawICAO = flight.flightCode,

@@ -183,21 +183,19 @@ object ArrivalHelper {
   val defaultPax = 0
 
   def bestPax(flight: Arrival): Int = {
-    (flight.ActPax.getOrElse(0), flight.TranPax.getOrElse(0), flight.LastKnownPax, flight.MaxPax.getOrElse(0)) match {
-      case (actPaxIsLtE0, _, None, maxPaxValid) if actPaxIsLtE0 <= 0 && maxPaxValid > 0 => maxPaxValid
-      case (actPaxIsLt0, _, Some(lastPax), _) if actPaxIsLt0 <= 0 => lastPax
-      case (actPaxIsLt0, _, None, _) if actPaxIsLt0 <= 0 => defaultPax
-      case (actPax, tranPax, _, _) => actPax - tranPax
+    (flight.ActPax.getOrElse(0), flight.TranPax.getOrElse(0), flight.MaxPax.getOrElse(0)) match {
+      case (actPaxIsLtE0, _, maxPaxValid) if actPaxIsLtE0 <= 0 && maxPaxValid > 0 => maxPaxValid
+      case (actPaxIsLt0, _, _) if actPaxIsLt0 <= 0 => defaultPax
+      case (actPax, tranPax, _) => actPax - tranPax
       case _ => defaultPax
     }
   }
 
   def bestPaxIncludingTransit(flight: Arrival): Int = {
-    (flight.ActPax.getOrElse(0), flight.LastKnownPax, flight.MaxPax.getOrElse(0)) match {
-      case (actPaxIsLtE0, None, maxPaxValid) if actPaxIsLtE0 <= 0 && maxPaxValid > 0 => maxPaxValid
-      case (actPaxIsLt0, Some(lastPax), _) if actPaxIsLt0 <= 0 => lastPax
-      case (actPaxIsLt0, None, _) if actPaxIsLt0 <= 0 => defaultPax
-      case (actPax, _, _) => actPax
+    (flight.ActPax.getOrElse(0), flight.MaxPax.getOrElse(0)) match {
+      case (actPaxIsLtE0, maxPaxValid) if actPaxIsLtE0 <= 0 && maxPaxValid > 0 => maxPaxValid
+      case (actPaxIsLt0, _) if actPaxIsLt0 <= 0 => defaultPax
+      case (actPax, _) => actPax
       case _ => defaultPax
     }
   }

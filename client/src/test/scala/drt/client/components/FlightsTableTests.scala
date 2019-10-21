@@ -53,7 +53,6 @@ object FlightsTableTests extends TestSuite {
         TranPax = Some(10),
         RunwayID = Some("1"),
         BaggageReclaimId = Some("A"),
-        FlightID = Some(1000),
         AirportID = "LHR",
         Terminal = "T2",
         rawICAO = "BA0001",

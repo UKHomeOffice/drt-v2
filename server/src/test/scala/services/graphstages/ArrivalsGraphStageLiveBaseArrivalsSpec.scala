@@ -194,7 +194,6 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike {
       None,
       None,
       None,
-      None,
       "STN",
       "T1",
       "TST100",

@@ -77,7 +77,6 @@ object LhrForecastArrival {
         TranPax = if (actPax==0) None else Option(transPax),
         RunwayID = None,
         BaggageReclaimId = None,
-        FlightID = None,
         AirportID = "LHR",
         Terminal = terminal(fields),
         rawIATA = flightCode(fields),
@@ -85,8 +84,7 @@ object LhrForecastArrival {
         Origin = origin(fields),
         Scheduled = scheduled(fields).millisSinceEpoch,
         PcpTime = None,
-        FeedSources = Set(ForecastFeedSource),
-        LastKnownPax = None
+        FeedSources = Set(ForecastFeedSource)
       )
     } match {
       case Failure(t) =>

@@ -28,7 +28,6 @@ class LiveArrivalsUtilSpec extends Specification {
       None,
       None,
       None,
-      None,
       "STN",
       "T1",
       "TST100",

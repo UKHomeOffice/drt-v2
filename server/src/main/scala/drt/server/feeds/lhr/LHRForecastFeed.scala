@@ -56,7 +56,6 @@ object LHRForecastFeed {
         TranPax = if (flightRow.totalPax == 0) None else Option(flightRow.transferPax),
         RunwayID = None,
         BaggageReclaimId = None,
-        FlightID = None,
         AirportID = "LHR",
         Terminal = flightRow.terminal,
         rawICAO = flightRow.flightCode.replace(" ", ""),
@@ -64,8 +63,7 @@ object LHRForecastFeed {
         Origin = flightRow.origin,
         Scheduled = flightRow.scheduledDate.millisSinceEpoch,
         PcpTime = None,
-        FeedSources = Set(ForecastFeedSource),
-        None
+        FeedSources = Set(ForecastFeedSource)
       )
     }
   }

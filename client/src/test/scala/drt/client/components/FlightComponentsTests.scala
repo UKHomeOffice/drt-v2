@@ -13,7 +13,7 @@ object FlightComponentsTests extends TestSuite {
       "When I ask for the pax to display " +
       "Then I get the act pax number" - {
       val actPax = 100
-      val flight = ArrivalGenerator.apiFlight(flightId = Option(1), actPax = Option(actPax))
+      val flight = ArrivalGenerator.apiFlight(actPax = Option(actPax))
       val apiExTransPax = 0
       val portCode = "STN"
 
@@ -27,7 +27,7 @@ object FlightComponentsTests extends TestSuite {
       "When I ask for the pax to display " +
       "Then I get the api pax number" - {
       val actPax = 100
-      val flight = ArrivalGenerator.apiFlight(flightId = Option(1), actPax = Option(actPax))
+      val flight = ArrivalGenerator.apiFlight(actPax = Option(actPax))
       val apiExTransPax = 120
       val result = bestPaxToDisplay(flight, apiExTransPax, "STN")
       val expected = apiExTransPax
@@ -39,7 +39,7 @@ object FlightComponentsTests extends TestSuite {
       "When I ask for the pax to display " +
       "Then I get the act pax number" - {
       val actPax = 100
-      val flight = ArrivalGenerator.apiFlight(flightId = Option(1), actPax = Option(actPax))
+      val flight = ArrivalGenerator.apiFlight(actPax = Option(actPax))
       val apiExTransPax = 121
       val result = bestPaxToDisplay(flight, apiExTransPax, "STN")
       val expected = actPax
@@ -52,7 +52,6 @@ object FlightComponentsTests extends TestSuite {
 object ArrivalGenerator {
 
   def apiFlight(
-                 flightId: Option[Int] = None,
                  iata: String = "",
                  icao: String = "",
                  schDt: String = "",
@@ -88,7 +87,6 @@ object ArrivalGenerator {
       TranPax = tranPax,
       RunwayID = runwayId,
       BaggageReclaimId = baggageReclaimId,
-      FlightID = flightId,
       AirportID = airportId,
       Terminal = terminal,
       rawICAO = icao,
@@ -96,7 +94,6 @@ object ArrivalGenerator {
       Origin = origin,
       PcpTime = if (schDt != "") Some(SDate(schDt).millisSinceEpoch) else None,
       Scheduled = if (schDt != "") SDate(schDt).millisSinceEpoch else 0L,
-      LastKnownPax = lastKnownPax,
       FeedSources = Set(ApiFeedSource)
     )
 }

@@ -30,8 +30,8 @@ class FlightMessageConversionSpec extends Specification {
     val actualChoxTime = 5L
     val feedSources = Set("ACL", "Live")
     val transPax = 10
-    val flightId = 1111
-    val lastKnownPax = 25
+
+    val carrierScheduled = 4L
 
     val flightMessage = new FlightMessage(
       operator = Option(operator),
@@ -43,7 +43,6 @@ class FlightMessageConversionSpec extends Specification {
       tranPax = Option(transPax),
       runwayID = Option(runwayId),
       baggageReclaimId = Option(baggageReclaimId),
-      flightID = Option(flightId),
       airportID = Option(airportId),
       terminal = Option(terminalId),
       iCAO = Option(icao),
@@ -55,8 +54,8 @@ class FlightMessageConversionSpec extends Specification {
       touchdown = Option(touchdownTime),
       estimatedChox = Option(estimatedChoxTime),
       actualChox = Option(actualChoxTime),
-      lastKnownPax = Option(lastKnownPax),
-      feedSources = feedSources.toSeq
+      feedSources = feedSources.toSeq,
+      carrierScheduled = Option(carrierScheduled)
     )
 
     val arrival = FlightMessageConversion.flightMessageToApiFlight(flightMessage)
@@ -75,7 +74,6 @@ class FlightMessageConversionSpec extends Specification {
       TranPax = Option(transPax),
       RunwayID = Option(runwayId),
       BaggageReclaimId = Option(baggageReclaimId),
-      FlightID = Option(flightId),
       AirportID = airportId,
       Terminal = terminalId,
       rawICAO = icao,
@@ -84,7 +82,7 @@ class FlightMessageConversionSpec extends Specification {
       Scheduled = scheduledTime,
       PcpTime = Option(pcpTime),
       FeedSources = feedSources.map(fs => FeedSource(fs)).collect { case Some(fs) => fs },
-      LastKnownPax = Option(lastKnownPax)
+      CarrierScheduled = Option(carrierScheduled)
     )
 
     arrival === expected
