@@ -1,8 +1,8 @@
 package manifests.graph
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorSystem, Cancellable}
 import akka.stream._
-import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
+import akka.stream.stage._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{Arrival, ArrivalKey, SDateLike}
 import manifests.actors.RegisteredArrivals
@@ -20,7 +20,8 @@ class BatchStage(now: () => SDateLike,
                  batchSize: Int,
                  expireAfterMillis: MillisSinceEpoch,
                  maybeInitialState: Option[RegisteredArrivals],
-                 sleepMillisOnEmptyPush: Long)(implicit actorSystem: ActorSystem, executionContext: ExecutionContext) extends GraphStage[FanOutShape2[List[Arrival], List[ArrivalKey], RegisteredArrivals]] {
+                 sleepMillisOnEmptyPush: Long)(implicit actorSystem: ActorSystem, executionContext: ExecutionContext)
+  extends GraphStage[FanOutShape2[List[Arrival], List[ArrivalKey], RegisteredArrivals]] {
   val inArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("inArrivals.in")
   val outArrivals: Outlet[List[ArrivalKey]] = Outlet[List[ArrivalKey]]("outArrivals.out")
   val outRegisteredArrivals: Outlet[RegisteredArrivals] = Outlet[RegisteredArrivals]("outRegisteredArrivals.out")
@@ -29,6 +30,7 @@ class BatchStage(now: () => SDateLike,
   override def shape = new FanOutShape2(inArrivals, outArrivals, outRegisteredArrivals)
 
   val log: Logger = LoggerFactory.getLogger(getClass)
+  var cancellables: Option[Cancellable] = None
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     val registeredArrivals: mutable.SortedMap[ArrivalKey, Option[Long]] = mutable.SortedMap()
@@ -45,6 +47,11 @@ class BatchStage(now: () => SDateLike,
 
         log.info(s"${registeredArrivals.size} registered arrivals. ${lookupQueue.size} arrivals in lookup queue")
       }
+    }
+
+    override def postStop(): Unit = cancellables.foreach { cancellable =>
+      log.warn(s"Cancelling cancellable in postStop()")
+      cancellable.cancel
     }
 
     setHandler(inArrivals, new InHandler {
@@ -99,14 +106,14 @@ class BatchStage(now: () => SDateLike,
       if (lookupBatch.nonEmpty) {
         Metrics.counter(s"$stageName", lookupBatch.size)
         push(outArrivals, lookupBatch.toList)
-      } else {
+      } else if (cancellables.isEmpty) {
         object PushAfterDelay extends Runnable {
-          override def run(): Unit = if (isAvailable(outArrivals)) {
+          override def run(): Unit = if (!isClosed(outArrivals) && isAvailable(outArrivals)) {
             log.info(s"Pushing empty list after delay of ${sleepMillisOnEmptyPush}ms")
             push(outArrivals, List())
           }
         }
-        actorSystem.scheduler.scheduleOnce(sleepMillisOnEmptyPush milliseconds, PushAfterDelay)
+        cancellables = Option(actorSystem.scheduler.scheduleOnce(sleepMillisOnEmptyPush milliseconds, PushAfterDelay))
       }
     }
 
