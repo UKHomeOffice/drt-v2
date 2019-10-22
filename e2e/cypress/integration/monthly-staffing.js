@@ -5,7 +5,7 @@ moment.locale("en-gb");
 describe('Monthly Staffing', function () {
 
   beforeEach(function () {
-    cy.deleteData().wait(250);
+    cy.deleteData();
   });
 
   function firstMidnightOfThisMonth() {

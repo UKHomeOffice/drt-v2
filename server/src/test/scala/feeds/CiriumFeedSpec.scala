@@ -1,5 +1,6 @@
 package feeds
 
+import actors.acking.AckingReceiver.StreamCompleted
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
@@ -187,7 +188,7 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
 
     val probe = TestProbe()
 
-    ciriumFeed.tickingSource(30 seconds).to(Sink.actorRef(probe.ref, "completed")).run()
+    ciriumFeed.tickingSource(30 seconds).to(Sink.actorRef(probe.ref, StreamCompleted)).run()
 
     probe.fishForMessage(1 seconds) {
       case s: ArrivalsFeedSuccess if s.arrivals.flights.head.Scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch =>
@@ -206,7 +207,7 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
 
     val probe = TestProbe()
 
-    ciriumFeed.tickingSource(100 milliseconds).to(Sink.actorRef(probe.ref, "completed")).run()
+    ciriumFeed.tickingSource(100 milliseconds).to(Sink.actorRef(probe.ref, StreamCompleted)).run()
 
     probe.fishForMessage(2 seconds) {
       case s: ArrivalsFeedSuccess if s.arrivals.flights.nonEmpty &&  s.arrivals.flights.head.Scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch =>

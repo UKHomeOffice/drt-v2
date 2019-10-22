@@ -1,13 +1,13 @@
 package passengersplits
 
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 
-import scala.collection.JavaConversions._
+import collection.JavaConverters._
 
 
 object InMemoryPersistence {
-
-  val akkaAndAggregateDbConfig = ConfigFactory.parseMap(Map(
+  val akkaAndAggregateDbConfig: Config = ConfigFactory.parseMap(Map(
+    "akka.loglevel" -> "WARNING",
     "akka.actor.warn-about-java-serializer-usage" -> false,
 
     "akka.persistence.journal.plugin" -> "inmemory-journal",
@@ -18,5 +18,5 @@ object InMemoryPersistence {
     "aggregated-db.driver" -> "org.h2.Driver",
     "aggregated-db.url" -> "jdbc:h2:mem:drt;DB_CLOSE_DELAY=-1",
     "aggregated-db.keepAliveConnection" -> "true"
-  ))
+  ).asJava)
 }

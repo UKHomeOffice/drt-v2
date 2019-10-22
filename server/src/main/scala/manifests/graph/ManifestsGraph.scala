@@ -1,5 +1,6 @@
 package manifests.graph
 
+import actors.acking.AckingReceiver.StreamCompleted
 import akka.NotUsed
 import akka.actor.ActorRef
 import akka.stream._
@@ -10,7 +11,6 @@ import manifests.ManifestLookupLike
 import manifests.actors.RegisteredArrivals
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.ManifestsFeedResponse
 import services.SDate
 
 object ManifestsGraph {
@@ -32,7 +32,7 @@ object ManifestsGraph {
         killSwitchAsync =>
           val arrivalsAsync = builder.add(arrivalsSource.async)
           val batchRequests = builder.add(batchStage.async)
-          val registeredArrivalsSink = builder.add(Sink.actorRef(registeredArrivalsActor, "completed").async)
+          val registeredArrivalsSink = builder.add(Sink.actorRef(registeredArrivalsActor, StreamCompleted).async)
 
           arrivalsAsync.out.conflate[List[Arrival]] {
             case (acc, incoming) => acc ++ incoming

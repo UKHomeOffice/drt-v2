@@ -1,5 +1,6 @@
 package services.graphstages
 
+import actors.acking.AckingReceiver.StreamCompleted
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{ClosedShape, OverflowStrategy}
 import akka.testkit.TestProbe
@@ -42,7 +43,7 @@ object TestableCrunchLoadStage {
       implicit builder =>
         (load) =>
           val crunch = builder.add(crunchLoadStage.async)
-          val sink = builder.add(Sink.actorRef(testProbe.ref, "complete"))
+          val sink = builder.add(Sink.actorRef(testProbe.ref, StreamCompleted))
 
           load ~> crunch ~> sink
 

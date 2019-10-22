@@ -19,6 +19,8 @@ import scala.concurrent.duration._
 
 
 class ManifestGraphSpec extends ManifestGraphTestLike {
+  sequential
+  isolated
 
   val scheduled = SDate("2019-03-06T12:00:00Z")
   "Given an arrival is sent into the ManifestGraph then we should find the manifest for that flight in the sink" >> {
@@ -81,7 +83,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
     responses.isEmpty
   }
 
-  "Given an initial registered arrival with a very olf lookup time " +
+  "Given an initial registered arrival with a very old lookup time " +
     "When the same arrival is sent into the ManifestGraph " +
     "Then the manifest should appear in the sink" >> {
 

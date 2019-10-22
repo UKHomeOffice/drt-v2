@@ -1,6 +1,7 @@
 package actors
 
 import actors.Sizes.oneMegaByte
+import actors.acking.AckingReceiver.StreamCompleted
 import akka.actor.Scheduler
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
@@ -145,11 +146,9 @@ class ShiftsActorBase(val now: () => SDateLike,
       log.info(s"Received request to snapshot")
       takeSnapshot(stateToMessage)
 
-    case "complete" =>
-      log.info("Received shutdown")
+    case StreamCompleted => log.warn("Received shutdown")
 
-    case u =>
-      log.info(s"unhandled message: $u")
+    case unexpected => log.info(s"unhandled message: $unexpected")
   }
 
   def applyUpdatedShifts(existingAssignments: Seq[StaffAssignment], shiftsToUpdate: Seq[StaffAssignment]): Seq[StaffAssignment] = shiftsToUpdate

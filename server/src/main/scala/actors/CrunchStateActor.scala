@@ -1,6 +1,7 @@
 package actors
 
 import actors.PortStateMessageConversion._
+import actors.acking.AckingReceiver.StreamCompleted
 import actors.restore.RestorerWithLegacy
 import akka.actor._
 import akka.persistence._
@@ -30,8 +31,6 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
   override val snapshotBytesThreshold: Int = initialSnapshotBytesThreshold
 
   val log: Logger = LoggerFactory.getLogger(s"$name-$getClass")
-
-  override def preStart(): Unit = {log.info(s"Starting")}
 
   def logInfo(msg: String, level: String = "info"): Unit = if (name.isEmpty) log.info(msg) else log.info(s"$name $msg")
 
@@ -122,11 +121,9 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
     case DeleteSnapshotsSuccess(_) =>
       logInfo(s"Purged snapshots")
 
-    case "complete" =>
-      logInfo("Received shutdown")
+    case StreamCompleted => log.warn("Received shutdown")
 
-    case u =>
-      log.error(s"Received unexpected message $u")
+    case unexpected => log.error(s"Received unexpected message $unexpected")
   }
 
   def updateFromFullState(ps: PortState): Unit = {

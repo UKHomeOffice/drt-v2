@@ -17,7 +17,7 @@ describe('View Modes', function () {
   const timeStringTomorrow = timeOnDay(tomorrowAsScheduledDate, timeString)
 
 
-  beforeEach(() => cy.deleteData().wait(250));
+  beforeEach(() => cy.deleteData());
 
   describe('When switching between view modes in the app', function () {
 

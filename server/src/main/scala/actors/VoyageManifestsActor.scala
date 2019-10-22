@@ -1,6 +1,7 @@
 package actors
 
 import actors.FlightMessageConversion.{feedStatusFromFeedStatusMessage, feedStatusToMessage, feedStatusesFromFeedStatusesMessage}
+import actors.acking.AckingReceiver.StreamCompleted
 import akka.persistence._
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
@@ -132,11 +133,9 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
     case SaveSnapshotFailure(md, cause) =>
       log.info(s"Save snapshot failure: $md, $cause")
 
-    case "complete" =>
-      log.info("Received shutdown")
+    case StreamCompleted => log.warn("Received shutdown")
 
-    case other =>
-      log.info(s"Received unexpected message ${other.getClass}")
+    case unexpected => log.info(s"Received unexpected message ${unexpected.getClass}")
   }
 
   def persistLastSeenFileName(lastSeenFileName: String): Unit = persistAndMaybeSnapshot(latestFilenameToMessage(lastSeenFileName))

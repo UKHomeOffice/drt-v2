@@ -1,5 +1,6 @@
 package actors
 
+import actors.acking.AckingReceiver.StreamCompleted
 import akka.actor.Actor
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
@@ -20,10 +21,8 @@ class ArrivalsImportActor() extends Actor {
       sender() ! maybeArrivalsFromImport
       if (maybeArrivalsFromImport.nonEmpty) maybeArrivalsFromImport = None
 
-    case "complete" =>
-      log.info("Received shutdown")
+    case StreamCompleted => log.warn("Received shutdown")
 
-    case other =>
-      log.error(s"Received unexpected message ${other.getClass}")
+    case unexpected => log.error(s"Received unexpected message ${unexpected.getClass}")
   }
 }

@@ -1,6 +1,7 @@
 package actors
 
 import actors.Sizes.oneMegaByte
+import actors.acking.AckingReceiver.StreamCompleted
 import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess, SnapshotSelectionCriteria}
 import scalapb.GeneratedMessage
 import drt.shared.Alert
@@ -74,11 +75,8 @@ case class AlertsActor() extends RecoveryActorLike with PersistentDrtActor[Seq[A
     case SaveSnapshotFailure(md, cause) =>
       log.info(s"Save snapshot failure: $md, $cause")
 
-    case "complete" =>
-      log.info("Received shutdown")
+    case StreamCompleted => log.warn("Received shutdown")
 
-    case other =>
-      log.error(s"Received unexpected message ${other.getClass}")
-
+    case unexpected => log.error(s"Received unexpected message ${unexpected.getClass}")
   }
 }

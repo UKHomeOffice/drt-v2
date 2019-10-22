@@ -2,6 +2,7 @@ package services.graphstages
 
 import java.io.InputStream
 
+import actors.acking.AckingReceiver.StreamCompleted
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink}
@@ -121,7 +122,7 @@ class VoyageManifestsGraphStageSpec extends TestKit(ActorSystem("VoyageManifests
 object TestableVoyageManifestsGraphStage {
   val oneDayMillis: Int = 60 * 60 * 24 * 1000
 
-  def apply(testProbe: TestProbe, portCode: String, provider: ApiProviderLike)(implicit system: ActorSystem, materializer: Materializer): RunnableGraph[NotUsed] = {
+  def apply(testProbe: TestProbe, portCode: String, provider: ApiProviderLike): RunnableGraph[NotUsed] = {
     val workloadStage = new VoyageManifestsGraphStage(portCode, provider, "", 30000)
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
@@ -130,7 +131,7 @@ object TestableVoyageManifestsGraphStage {
 
       implicit builder =>
         val workload = builder.add(workloadStage.async)
-        val sink = builder.add(Sink.actorRef(testProbe.ref, "complete"))
+        val sink = builder.add(Sink.actorRef(testProbe.ref, StreamCompleted))
 
         workload ~> sink
 

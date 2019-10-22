@@ -1,5 +1,6 @@
 package services.graphstages
 
+import actors.acking.AckingReceiver.StreamCompleted
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{ClosedShape, OverflowStrategy}
 import akka.testkit.TestProbe
@@ -49,7 +50,7 @@ object TestableWorkloadStage {
       implicit builder =>
         flights =>
           val workload = builder.add(workloadStage.async)
-          val sink = builder.add(Sink.actorRef(testProbe.ref, "complete"))
+          val sink = builder.add(Sink.actorRef(testProbe.ref, StreamCompleted))
 
           flights ~> workload ~> sink
 
