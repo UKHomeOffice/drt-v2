@@ -403,7 +403,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       recrunchOnStart = recrunchOnStart,
       refreshArrivalsOnStart = refreshArrivalsOnStart,
       checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup,
-      stageThrottlePer = 1 minute
+      stageThrottlePer = config.get[Int]("crunch.stage-throttle-millis") millisecond
     ))
     crunchInputs
   }
