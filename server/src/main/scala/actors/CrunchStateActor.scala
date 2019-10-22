@@ -116,7 +116,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
       }
 
     case SaveSnapshotFailure(md, cause) =>
-      logInfo(s"Snapshot failed $md\n$cause")
+      log.error(s"Save snapshot failure: $md", cause)
 
     case DeleteSnapshotsSuccess(_) =>
       logInfo(s"Purged snapshots")

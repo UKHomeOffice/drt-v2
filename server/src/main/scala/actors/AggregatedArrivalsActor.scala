@@ -28,8 +28,8 @@ class AggregatedArrivalsActor(portCode: String, arrivalTable: ArrivalTableLike) 
     case arrival: Arrival =>
       handleUpdate(arrival)
 
-    case StreamFailure =>
-      log.info("Received stream failure")
+    case StreamFailure(t) =>
+      log.error("Received stream failure", t)
 
     case StreamCompleted =>
       log.info("Received shutdown")
