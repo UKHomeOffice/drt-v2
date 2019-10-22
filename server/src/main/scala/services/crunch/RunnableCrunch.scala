@@ -16,6 +16,8 @@ import server.feeds._
 import services.graphstages.Crunch.Loads
 import services.graphstages._
 
+import scala.concurrent.duration._
+
 object RunnableCrunch {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -35,7 +37,7 @@ object RunnableCrunch {
                                        actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
 
                                        arrivalsGraphStage: ArrivalsGraphStage,
-                                       arrivalSplitsStage: GraphStage[FanInShape3[ArrivalsDiff, ManifestsFeedResponse, ManifestsFeedResponse, FlightsWithSplits]],
+                                       arrivalSplitsStage: GraphStage[FanInShape3[ArrivalsDiff, List[BestAvailableManifest], List[BestAvailableManifest], FlightsWithSplits]],
                                        workloadGraphStage: WorkloadGraphStage,
                                        loadBatchUpdateGraphStage: BatchLoadsByCrunchPeriodGraphStage,
                                        crunchLoadGraphStage: CrunchLoadGraphStage,
@@ -64,7 +66,8 @@ object RunnableCrunch {
                                        now: () => SDateLike,
                                        portQueues: Map[TerminalName, Seq[QueueName]],
                                        liveStateDaysAhead: Int,
-                                       forecastMaxMillis: () => MillisSinceEpoch
+                                       forecastMaxMillis: () => MillisSinceEpoch,
+                                       throttleDurationPer: FiniteDuration
                                       ): RunnableGraph[(FR, FR, FR, FR, MS, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch)] = {
 
     val arrivalsKillSwitch = KillSwitches.single[ArrivalsFeedResponse]
@@ -153,30 +156,37 @@ object RunnableCrunch {
               val maxScheduledMillis = forecastMaxMillis()
               ArrivalsFeedSuccess(Flights(as.filter(_.Scheduled < maxScheduledMillis)), ca)
             case failure => failure
-          } ~> forecastBaseArrivalsFanOut ~> arrivals.in0
-               forecastBaseArrivalsFanOut ~> baseArrivalsSink
+          } ~> forecastBaseArrivalsFanOut
+          forecastBaseArrivalsFanOut.collect { case ArrivalsFeedSuccess(Flights(as), _) => as.toList } ~> arrivals.in0
+          forecastBaseArrivalsFanOut ~> baseArrivalsSink
 
-          forecastArrivalsSourceAsync ~> fcstArrivalsDiffing ~> forecastArrivalsFanOut ~> arrivals.in1
-                                                     forecastArrivalsFanOut ~> fcstArrivalsSink
+          forecastArrivalsSourceAsync ~> fcstArrivalsDiffing ~> forecastArrivalsFanOut
 
-          liveBaseArrivalsSourceAsync ~> liveBaseArrivalsDiffing ~> liveBaseArrivalsFanOut ~> arrivals.in2
-                                                         liveBaseArrivalsFanOut ~> liveBaseArrivalsSink
+          forecastArrivalsFanOut.collect { case ArrivalsFeedSuccess(Flights(as), _) if as.nonEmpty => as.toList } ~> arrivals.in1
+          forecastArrivalsFanOut ~> fcstArrivalsSink
 
-          liveArrivalsSourceAsync ~> arrivalsKillSwitchAsync ~> liveArrivalsDiffing ~> liveArrivalsFanOut ~> arrivals.in3
-                                                 liveArrivalsFanOut ~> liveArrivalsSink
+          liveBaseArrivalsSourceAsync ~> liveBaseArrivalsDiffing ~> liveBaseArrivalsFanOut
+          liveBaseArrivalsFanOut
+            .collect { case ArrivalsFeedSuccess(Flights(as), _) if as.nonEmpty => as.toList }
+            .conflate[List[Arrival]] { case (acc, incoming) => acc ++ incoming }
+            .throttle(1, throttleDurationPer) ~> arrivals.in2
+          liveBaseArrivalsFanOut ~> liveBaseArrivalsSink
+
+          liveArrivalsSourceAsync ~> arrivalsKillSwitchAsync ~> liveArrivalsDiffing ~> liveArrivalsFanOut
+          liveArrivalsFanOut
+            .collect { case ArrivalsFeedSuccess(Flights(as), _) =>
+              log.info(s"Collecting $arrivals")
+              as.toList }
+            .conflate[List[Arrival]] { case (acc, incoming) => acc ++ incoming }// ~> arrivals.in3
+            .throttle(1, throttleDurationPer) ~> arrivals.in3
+          liveArrivalsFanOut ~> liveArrivalsSink
 
           manifestsLiveSourceAsync ~> manifestsLiveKillSwitchAsync ~> manifestsFanOut
 
-          manifestsFanOut.out(0).conflate[ManifestsFeedResponse] {
-              case (bm, ManifestsFeedFailure(_, _)) => bm
-              case (ManifestsFeedSuccess(DqManifests(_, acc), _), ManifestsFeedSuccess(DqManifests(_, ms), createdAt)) =>
-                val existingManifests = acc.toSeq.map(vm => BestAvailableManifest(vm))
-                val newManifests = ms.toSeq.map(vm => BestAvailableManifest(vm))
-                BestManifestsFeedSuccess(existingManifests ++ newManifests, createdAt)
-              case (BestManifestsFeedSuccess(acc, _), ManifestsFeedSuccess(DqManifests(_, ms), createdAt)) =>
-                val newManifests = ms.toSeq.map(vm => BestAvailableManifest(vm))
-                BestManifestsFeedSuccess(acc ++ newManifests, createdAt)
-            } ~> arrivalSplits.in1
+          manifestsFanOut.out(0)
+            .collect { case ManifestsFeedSuccess(DqManifests(_, manifests), _) if manifests.nonEmpty => manifests.map(BestAvailableManifest(_)).toList }
+            .conflate[List[BestAvailableManifest]] { case (acc, incoming) => acc ++ incoming }
+            .throttle(1, throttleDurationPer) ~> arrivalSplits.in1
 
           manifestsFanOut.out(1) ~> manifestsSink
 
@@ -185,14 +195,14 @@ object RunnableCrunch {
             .grouped(100)
             .map(_.toList)
             .conflate[List[BestAvailableManifest]] { case (acc, incoming) => acc ++ incoming }
-            .map(manifests => BestManifestsFeedSuccess(manifests, now())) ~> arrivalSplits.in2
+            .throttle(1, throttleDurationPer) ~> arrivalSplits.in2
 
           shiftsSourceAsync          ~> shiftsKillSwitchAsync ~> staff.in0
           fixedPointsSourceAsync     ~> fixedPointsKillSwitchAsync ~> staff.in1
           staffMovementsSourceAsync  ~> movementsKillSwitchAsync ~> staff.in2
 
           arrivals.out ~> arrivalsFanOut ~> arrivalSplits.in0
-                                                     arrivalsFanOut.map { _.toUpdate.values.toList } ~> manifestRequestsSink.async
+                          arrivalsFanOut.map { _.toUpdate.values.toList } ~> manifestRequestsSink.async
 
           arrivalSplits.out ~> arrivalSplitsFanOut ~> workload
                                arrivalSplitsFanOut ~> portState.in0

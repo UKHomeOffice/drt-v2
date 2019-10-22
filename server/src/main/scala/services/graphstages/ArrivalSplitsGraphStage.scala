@@ -8,7 +8,6 @@ import drt.shared._
 import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds._
 import services.graphstages.Crunch.purgeExpired
 import services.metrics.{Metrics, StageTimer}
 
@@ -25,13 +24,13 @@ class ArrivalSplitsGraphStage(name: String = "",
                               groupFlightsByCodeShares: Seq[ApiFlightWithSplits] => Seq[(ApiFlightWithSplits, Set[Arrival])],
                               expireAfterMillis: Long,
                               now: () => SDateLike)
-  extends GraphStage[FanInShape3[ArrivalsDiff, ManifestsFeedResponse, ManifestsFeedResponse, FlightsWithSplits]] {
+  extends GraphStage[FanInShape3[ArrivalsDiff, List[BestAvailableManifest], List[BestAvailableManifest], FlightsWithSplits]] {
 
   val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
   val inArrivalsDiff: Inlet[ArrivalsDiff] = Inlet[ArrivalsDiff]("ArrivalsDiffIn.in")
-  val inManifestsLive: Inlet[ManifestsFeedResponse] = Inlet[ManifestsFeedResponse]("ManifestsLiveIn.in")
-  val inManifestsHistoric: Inlet[ManifestsFeedResponse] = Inlet[ManifestsFeedResponse]("ManifestsHistoricIn.in")
+  val inManifestsLive: Inlet[List[BestAvailableManifest]] = Inlet[List[BestAvailableManifest]]("ManifestsLiveIn.in")
+  val inManifestsHistoric: Inlet[List[BestAvailableManifest]] = Inlet[List[BestAvailableManifest]]("ManifestsHistoricIn.in")
   val outArrivalsWithSplits: Outlet[FlightsWithSplits] = Outlet[FlightsWithSplits]("FlightsWithSplitsOut.out")
 
   val stageName = "arrival-splits"
@@ -109,15 +108,15 @@ class ArrivalSplitsGraphStage(name: String = "",
         case (withUpdatesSoFar, (_, newArrival)) =>
           val arrivalKey = ArrivalKey(newArrival)
           flightsByFlightId.get(arrivalKey) match {
-          case None =>
-            val splits: Set[Splits] = initialSplits(newArrival, arrivalKey)
-            val newFlightWithSplits: ApiFlightWithSplits = ApiFlightWithSplits(newArrival, splits, nowMillis)
-            withUpdatesSoFar.updated(arrivalKey, newFlightWithSplits)
-          case Some(existingArrival) =>
-            if (!existingArrival.apiFlight.equals(newArrival))
-              withUpdatesSoFar.updated(arrivalKey, existingArrival.copy(apiFlight = newArrival, lastUpdated = nowMillis))
-            else withUpdatesSoFar
-        }
+            case None =>
+              val splits: Set[Splits] = initialSplits(newArrival, arrivalKey)
+              val newFlightWithSplits: ApiFlightWithSplits = ApiFlightWithSplits(newArrival, splits, nowMillis)
+              withUpdatesSoFar.updated(arrivalKey, newFlightWithSplits)
+            case Some(existingArrival) =>
+              if (!existingArrival.apiFlight.equals(newArrival))
+                withUpdatesSoFar.updated(arrivalKey, existingArrival.copy(apiFlight = newArrival, lastUpdated = nowMillis))
+              else withUpdatesSoFar
+          }
       }
       flightsWithUpdates
     }
@@ -126,32 +125,25 @@ class ArrivalSplitsGraphStage(name: String = "",
 
     setHandler(inManifestsHistoric, InManifestsHandler(inManifestsHistoric))
 
-    def InManifestsHandler(inlet: Inlet[ManifestsFeedResponse]): InHandler =
+    def InManifestsHandler(inlet: Inlet[List[BestAvailableManifest]]): InHandler =
       new InHandler() {
         override def onPush(): Unit = {
           val timer = StageTimer(stageName, inlet)
           log.info(s"inSplits onPush called")
 
-          val incoming: ManifestsFeedResponse = grab(inlet) match {
-            case ManifestsFeedSuccess(DqManifests(_, manifests), createdAt) => BestManifestsFeedSuccess(manifests.toSeq.map(vm => BestAvailableManifest(vm)), createdAt)
-            case other => other
-          }
+          val incoming: List[BestAvailableManifest] = grab(inlet)
 
-          incoming match {
-            case BestManifestsFeedSuccess(bestAvailableManifests, connectedAt) =>
-              log.info(s"Grabbed ${bestAvailableManifests.size} BestAvailableManifests from connection at ${connectedAt.toISOString()}")
+          log.info(s"Grabbed ${incoming.size} BestAvailableManifests from connection")
 
-              val flightsWithUpdates = updateFlightsWithManifests(bestAvailableManifests)
-              log.info(s"We now have ${flightsByFlightId.size} flights")
+          val flightsWithUpdates = updateFlightsWithManifests(incoming)
+          log.info(s"We now have ${flightsByFlightId.size} flights")
 
-              arrivalsWithSplitsDiff = mergeDiffSets(flightsWithUpdates, arrivalsWithSplitsDiff)
-              purgeExpired(flightsByFlightId, ArrivalKey.atTime, now, expireAfterMillis.toInt)
-              log.info(s"Done diff")
+          arrivalsWithSplitsDiff = mergeDiffSets(flightsWithUpdates, arrivalsWithSplitsDiff)
+          purgeExpired(flightsByFlightId, ArrivalKey.atTime, now, expireAfterMillis.toInt)
+          log.info(s"Done diff")
 
-              pushStateIfReady()
+          pushStateIfReady()
 
-            case unexpected => log.error(s"Unexpected feed response: ${unexpected.getClass}")
-          }
           pullAll()
           timer.stopAndReport()
         }

@@ -253,7 +253,8 @@ class CrunchTestLike
       initialShifts = initialShifts,
       initialFixedPoints = initialFixedPoints,
       initialStaffMovements = initialStaffMovements,
-      checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup
+      checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup,
+      stageThrottlePer = 50 milliseconds
     ))
 
     CrunchGraphInputsAndProbes(

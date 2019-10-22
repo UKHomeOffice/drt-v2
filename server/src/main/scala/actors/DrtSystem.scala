@@ -402,7 +402,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       initialStaffMovements = initialState[StaffMovements](staffMovementsActor).map(_.movements).getOrElse(Seq[StaffMovement]()),
       recrunchOnStart = recrunchOnStart,
       refreshArrivalsOnStart = refreshArrivalsOnStart,
-      checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup
+      checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup,
+      stageThrottlePer = 1 minute
     ))
     crunchInputs
   }

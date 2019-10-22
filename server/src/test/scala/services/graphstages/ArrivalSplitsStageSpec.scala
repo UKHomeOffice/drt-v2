@@ -9,10 +9,10 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
+import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import queueus.{B5JPlusWithTransitTypeAllocator, PaxTypeQueueAllocation, TerminalQueueAllocatorWithFastTrack}
-import server.feeds.{ManifestsFeedResponse, ManifestsFeedSuccess}
 import services.SDate
 import services.crunch.{CrunchTestLike, PassengerInfoGenerator}
 
@@ -25,7 +25,7 @@ object TestableArrivalSplits {
 
   def groupByCodeShares(flights: Seq[ApiFlightWithSplits]): Seq[(ApiFlightWithSplits, Set[Arrival])] = flights.map(f => (f, Set(f.apiFlight)))
 
-  def apply(splitsCalculator: SplitsCalculator, testProbe: TestProbe, now: () => SDateLike): RunnableGraph[(SourceQueueWithComplete[ArrivalsDiff], SourceQueueWithComplete[ManifestsFeedResponse], SourceQueueWithComplete[ManifestsFeedResponse])] = {
+  def apply(splitsCalculator: SplitsCalculator, testProbe: TestProbe, now: () => SDateLike): RunnableGraph[(SourceQueueWithComplete[ArrivalsDiff], SourceQueueWithComplete[List[BestAvailableManifest]], SourceQueueWithComplete[List[BestAvailableManifest]])] = {
     val arrivalSplitsStage = new ArrivalSplitsGraphStage(
       name = "",
       optionalInitialFlights = None,
@@ -36,8 +36,8 @@ object TestableArrivalSplits {
       now = now)
 
     val arrivalsDiffSource = Source.queue[ArrivalsDiff](1, OverflowStrategy.backpressure)
-    val manifestsLiveSource = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
-    val manifestsHistoricSource = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
+    val manifestsLiveSource = Source.queue[List[BestAvailableManifest]](1, OverflowStrategy.backpressure)
+    val manifestsHistoricSource = Source.queue[List[BestAvailableManifest]](1, OverflowStrategy.backpressure)
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
@@ -106,7 +106,7 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
       case FlightsWithSplits(flights, _) => flights.nonEmpty
     }
 
-    manifestsLiveInput.offer(ManifestsFeedSuccess(DqManifests("", manifests)))
+    manifestsLiveInput.offer(manifests.map(BestAvailableManifest(_)).toList)
 
     val terminalAverage = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable,Queues.EeaDesk,100.0,None)),SplitSources.TerminalAverage,None,Percentage)
     val apiSplits = Splits(

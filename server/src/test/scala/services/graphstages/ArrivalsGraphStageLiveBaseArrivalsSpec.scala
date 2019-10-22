@@ -4,9 +4,7 @@ import actors.acking.AckingReceiver.StreamCompleted
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{ClosedShape, OverflowStrategy}
 import akka.testkit.TestProbe
-import drt.shared.FlightsApi.Flights
 import drt.shared.{Arrival, ArrivalsDiff, MilliDate, UniqueArrival}
-import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import services.crunch.CrunchTestLike
 
@@ -17,16 +15,16 @@ object TestableArrivalsGraphStage {
   def apply(testProbe: TestProbe,
             arrivalsGraphStage: ArrivalsGraphStage
            ): RunnableGraph[
-    (SourceQueueWithComplete[ArrivalsFeedResponse],
-      SourceQueueWithComplete[ArrivalsFeedResponse],
-      SourceQueueWithComplete[ArrivalsFeedResponse],
-      SourceQueueWithComplete[ArrivalsFeedResponse])
+    (SourceQueueWithComplete[List[Arrival]],
+      SourceQueueWithComplete[List[Arrival]],
+      SourceQueueWithComplete[List[Arrival]],
+      SourceQueueWithComplete[List[Arrival]])
   ] = {
 
-    val liveArrivalsSource = Source.queue[ArrivalsFeedResponse](1, OverflowStrategy.backpressure)
-    val liveBaseArrivalsSource = Source.queue[ArrivalsFeedResponse](1, OverflowStrategy.backpressure)
-    val forecastArrivalsSource = Source.queue[ArrivalsFeedResponse](1, OverflowStrategy.backpressure)
-    val forecastBaseArrivalsSource = Source.queue[ArrivalsFeedResponse](1, OverflowStrategy.backpressure)
+    val liveArrivalsSource = Source.queue[List[Arrival]](1, OverflowStrategy.backpressure)
+    val liveBaseArrivalsSource = Source.queue[List[Arrival]](1, OverflowStrategy.backpressure)
+    val forecastArrivalsSource = Source.queue[List[Arrival]](1, OverflowStrategy.backpressure)
+    val forecastBaseArrivalsSource = Source.queue[List[Arrival]](1, OverflowStrategy.backpressure)
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
     val graph = GraphDSL.create(
@@ -161,8 +159,8 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike {
     val (_, liveBaseSource, _, forecastBaseSource) = TestableArrivalsGraphStage(probe, arrivalsGraphStage).run
     val baseLiveEstimated = Option(SDate(2019, 10, 1, 16, 0).millisSinceEpoch)
 
-    liveBaseSource.offer(ArrivalsFeedSuccess(Flights(List(arrival(estimated = baseLiveEstimated)))))
-    forecastBaseSource.offer(ArrivalsFeedSuccess(Flights(List(arrival()))))
+    liveBaseSource.offer(List(arrival(estimated = baseLiveEstimated)))
+    forecastBaseSource.offer(List(arrival()))
 
     probe.fishForMessage(2 seconds) {
       case ArrivalsDiff(toUpdate, _) =>

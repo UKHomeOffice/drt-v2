@@ -18,6 +18,7 @@ import services.graphstages.Crunch._
 import services.graphstages._
 
 import scala.collection.mutable
+import scala.concurrent.duration._
 
 
 case class CrunchSystem[FR](shifts: SourceQueueWithComplete[ShiftAssignments],
@@ -68,7 +69,8 @@ case class CrunchProps[FR](logLabel: String = "",
                            initialStaffMovements: Seq[StaffMovement] = Seq(),
                            recrunchOnStart: Boolean = false,
                            refreshArrivalsOnStart: Boolean = false,
-                           checkRequiredStaffUpdatesOnStartup: Boolean)
+                           checkRequiredStaffUpdatesOnStartup: Boolean,
+                           stageThrottlePer: FiniteDuration)
 
 object CrunchSystem {
 
@@ -207,7 +209,7 @@ object CrunchSystem {
       props.voyageManifestsActor, props.manifestRequestsSink,
       props.liveCrunchStateActor, props.forecastCrunchStateActor,
       props.actors("aggregated-arrivals").actorRef,
-      crunchStartDateProvider, props.now, props.airportConfig.queues, liveStateDaysAhead, forecastMaxMillis
+      crunchStartDateProvider, props.now, props.airportConfig.queues, liveStateDaysAhead, forecastMaxMillis, props.stageThrottlePer
     )
 
     val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS) = crunchSystem.run
