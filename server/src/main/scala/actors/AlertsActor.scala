@@ -2,7 +2,7 @@ package actors
 
 import actors.Sizes.oneMegaByte
 import actors.acking.AckingReceiver.StreamCompleted
-import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess, SnapshotSelectionCriteria}
+import akka.persistence._
 import scalapb.GeneratedMessage
 import drt.shared.Alert
 import org.joda.time.DateTime
@@ -74,6 +74,14 @@ case class AlertsActor() extends RecoveryActorLike with PersistentDrtActor[Seq[A
 
     case SaveSnapshotFailure(md, cause) =>
       log.error(s"Save snapshot failure: $md", cause)
+
+    case DeleteSnapshotsSuccess(_) =>
+
+    case DeleteMessagesSuccess(_) =>
+
+    case DeleteSnapshotsFailure(_, t) => log.error(s"Failed to delete alerts snapshots", t)
+
+    case DeleteMessagesFailure(_, t) => log.error(s"Failed to delete alerts messages", t)
 
     case StreamCompleted => log.warn("Received shutdown")
 

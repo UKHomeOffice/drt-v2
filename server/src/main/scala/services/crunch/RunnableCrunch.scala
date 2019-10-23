@@ -125,18 +125,18 @@ object RunnableCrunch {
           val liveBaseArrivalsDiffing = builder.add(liveBaseArrivalsDiffStage.async)
           val liveArrivalsDiffing = builder.add(liveArrivalsDiffStage.async)
 
-          val forecastBaseArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2).async)
-          val forecastArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2).async)
-          val liveBaseArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2).async)
-          val liveArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2).async)
+          val forecastBaseArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
+          val forecastArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
+          val liveBaseArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
+          val liveArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
 
-          val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](2).async)
+          val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](2))
 
-          val manifestsFanOut = builder.add(Broadcast[ManifestsFeedResponse](2).async)
-          val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](2).async)
-          val workloadFanOut = builder.add(Broadcast[Loads](2).async)
-          val staffFanOut = builder.add(Broadcast[StaffMinutes](2).async)
-          val portStateFanOut = builder.add(Broadcast[PortStateWithDiff](4).async)
+          val manifestsFanOut = builder.add(Broadcast[ManifestsFeedResponse](2))
+          val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](2))
+          val workloadFanOut = builder.add(Broadcast[Loads](2))
+          val staffFanOut = builder.add(Broadcast[StaffMinutes](2))
+          val portStateFanOut = builder.add(Broadcast[PortStateWithDiff](4))
 
           val baseArrivalsSink = builder.add(Sink.actorRef(forecastBaseArrivalsActor, StreamCompleted))
           val fcstArrivalsSink = builder.add(Sink.actorRef(forecastArrivalsActor, StreamCompleted))
@@ -175,7 +175,7 @@ object RunnableCrunch {
           liveArrivalsSourceAsync ~> arrivalsKillSwitchAsync ~> liveArrivalsDiffing ~> liveArrivalsFanOut
           liveArrivalsFanOut
             .collect { case ArrivalsFeedSuccess(Flights(as), _) =>
-              log.info(s"Collecting $arrivals")
+              log.info(s"Collecting $as")
               as.toList }
             .conflate[List[Arrival]] { case (acc, incoming) => acc ++ incoming }// ~> arrivals.in3
             .throttle(1, throttleDurationPer) ~> arrivals.in3
@@ -191,9 +191,6 @@ object RunnableCrunch {
           manifestsFanOut.out(1) ~> manifestsSink
 
           manifestResponsesSource
-            .mapConcat(identity)
-            .grouped(100)
-            .map(_.toList)
             .conflate[List[BestAvailableManifest]] { case (acc, incoming) => acc ++ incoming }
             .throttle(1, throttleDurationPer) ~> arrivalSplits.in2
 
