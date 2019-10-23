@@ -30,9 +30,9 @@ object ManifestsGraph {
     val graph = GraphDSL.create(killSwitch.async) {
       implicit builder =>
         killSwitchAsync =>
-          val arrivalsAsync = builder.add(arrivalsSource.async)
-          val batchRequests = builder.add(batchStage.async)
-          val registeredArrivalsSink = builder.add(Sink.actorRef(registeredArrivalsActor, StreamCompleted).async)
+          val arrivalsAsync = builder.add(arrivalsSource)
+          val batchRequests = builder.add(batchStage)
+          val registeredArrivalsSink = builder.add(Sink.actorRef(registeredArrivalsActor, StreamCompleted))
 
           arrivalsAsync.out.conflate[List[Arrival]] {
             case (acc, incoming) => acc ++ incoming
@@ -46,7 +46,7 @@ object ManifestsGraph {
             .collect { case (_, Some(bam)) => bam }
             .conflateWithSeed(List[BestAvailableManifest](_)) {
               case (acc, next) => next :: acc
-            } ~> manifestsSink.async
+            } ~> manifestsSink
 
           batchRequests.out1 ~> registeredArrivalsSink
 

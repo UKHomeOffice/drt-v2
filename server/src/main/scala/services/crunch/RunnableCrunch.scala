@@ -79,38 +79,38 @@ object RunnableCrunch {
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
     val graph = GraphDSL.create(
-      forecastBaseArrivalsSource.async,
-      forecastArrivalsSource.async,
-      liveBaseArrivalsSource.async,
-      liveArrivalsSource.async,
-      manifestsLiveSource.async,
+      forecastBaseArrivalsSource,
+      forecastArrivalsSource,
+      liveBaseArrivalsSource,
+      liveArrivalsSource,
+      manifestsLiveSource,
       shiftsSource.async,
       fixedPointsSource.async,
       staffMovementsSource.async,
-      actualDesksAndWaitTimesSource.async,
-      arrivalsKillSwitch.async,
-      manifestsLiveKillSwitch.async,
-      shiftsKillSwitch.async,
-      fixedPointsKillSwitch.async,
-      movementsKillSwitch.async
+      actualDesksAndWaitTimesSource,
+      arrivalsKillSwitch,
+      manifestsLiveKillSwitch,
+      shiftsKillSwitch,
+      fixedPointsKillSwitch,
+      movementsKillSwitch
     )((_, _, _, _, _, _, _, _, _, _, _, _, _, _)) {
 
       implicit builder =>
         (
-          forecastBaseArrivalsSourceAsync,
-          forecastArrivalsSourceAsync,
-          liveBaseArrivalsSourceAsync,
-          liveArrivalsSourceAsync,
-          manifestsLiveSourceAsync,
+          forecastBaseArrivalsSourceSync,
+          forecastArrivalsSourceSync,
+          liveBaseArrivalsSourceSync,
+          liveArrivalsSourceSync,
+          manifestsLiveSourceSync,
           shiftsSourceAsync,
           fixedPointsSourceAsync,
           staffMovementsSourceAsync,
-          actualDesksAndWaitTimesSourceAsync,
-          arrivalsKillSwitchAsync,
-          manifestsLiveKillSwitchAsync,
-          shiftsKillSwitchAsync,
-          fixedPointsKillSwitchAsync,
-          movementsKillSwitchAsync
+          actualDesksAndWaitTimesSourceSync,
+          arrivalsKillSwitchSync,
+          manifestsLiveKillSwitchSync,
+          shiftsKillSwitchSync,
+          fixedPointsKillSwitchSync,
+          movementsKillSwitchSync
         ) =>
           val arrivals = builder.add(arrivalsGraphStage.async)
           val arrivalSplits = builder.add(arrivalSplitsStage.async)
@@ -121,9 +121,9 @@ object RunnableCrunch {
           val batchStaff = builder.add(staffBatchUpdateGraphStage.async)
           val simulation = builder.add(simulationGraphStage.async)
           val portState = builder.add(portStateGraphStage.async)
-          val fcstArrivalsDiffing = builder.add(forecastArrivalsDiffStage.async)
-          val liveBaseArrivalsDiffing = builder.add(liveBaseArrivalsDiffStage.async)
-          val liveArrivalsDiffing = builder.add(liveArrivalsDiffStage.async)
+          val fcstArrivalsDiffing = builder.add(forecastArrivalsDiffStage)
+          val liveBaseArrivalsDiffing = builder.add(liveBaseArrivalsDiffStage)
+          val liveArrivalsDiffing = builder.add(liveArrivalsDiffStage)
 
           val forecastBaseArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
           val forecastArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
@@ -151,7 +151,7 @@ object RunnableCrunch {
           val arrivalRemovalsSink = builder.add(Sink.actorRefWithAck(aggregatedArrivalsStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
 
           // @formatter:off
-          forecastBaseArrivalsSourceAsync.out.map {
+          forecastBaseArrivalsSourceSync.out.map {
             case ArrivalsFeedSuccess(Flights(as), ca) =>
               val maxScheduledMillis = forecastMaxMillis()
               ArrivalsFeedSuccess(Flights(as.filter(_.Scheduled < maxScheduledMillis)), ca)
@@ -160,19 +160,19 @@ object RunnableCrunch {
           forecastBaseArrivalsFanOut.collect { case ArrivalsFeedSuccess(Flights(as), _) => as.toList } ~> arrivals.in0
           forecastBaseArrivalsFanOut ~> baseArrivalsSink
 
-          forecastArrivalsSourceAsync ~> fcstArrivalsDiffing ~> forecastArrivalsFanOut
+          forecastArrivalsSourceSync ~> fcstArrivalsDiffing ~> forecastArrivalsFanOut
 
           forecastArrivalsFanOut.collect { case ArrivalsFeedSuccess(Flights(as), _) if as.nonEmpty => as.toList } ~> arrivals.in1
           forecastArrivalsFanOut ~> fcstArrivalsSink
 
-          liveBaseArrivalsSourceAsync ~> liveBaseArrivalsDiffing ~> liveBaseArrivalsFanOut
+          liveBaseArrivalsSourceSync ~> liveBaseArrivalsDiffing ~> liveBaseArrivalsFanOut
           liveBaseArrivalsFanOut
             .collect { case ArrivalsFeedSuccess(Flights(as), _) if as.nonEmpty => as.toList }
             .conflate[List[Arrival]] { case (acc, incoming) => acc ++ incoming }
             .throttle(1, throttleDurationPer) ~> arrivals.in2
           liveBaseArrivalsFanOut ~> liveBaseArrivalsSink
 
-          liveArrivalsSourceAsync ~> arrivalsKillSwitchAsync ~> liveArrivalsDiffing ~> liveArrivalsFanOut
+          liveArrivalsSourceSync ~> arrivalsKillSwitchSync ~> liveArrivalsDiffing ~> liveArrivalsFanOut
           liveArrivalsFanOut
             .collect { case ArrivalsFeedSuccess(Flights(as), _) =>
               log.info(s"Collecting $as")
@@ -181,7 +181,7 @@ object RunnableCrunch {
             .throttle(1, throttleDurationPer) ~> arrivals.in3
           liveArrivalsFanOut ~> liveArrivalsSink
 
-          manifestsLiveSourceAsync ~> manifestsLiveKillSwitchAsync ~> manifestsFanOut
+          manifestsLiveSourceSync ~> manifestsLiveKillSwitchSync ~> manifestsFanOut
 
           manifestsFanOut.out(0)
             .collect { case ManifestsFeedSuccess(DqManifests(_, manifests), _) if manifests.nonEmpty => manifests.map(BestAvailableManifest(_)).toList }
@@ -194,9 +194,9 @@ object RunnableCrunch {
             .conflate[List[BestAvailableManifest]] { case (acc, incoming) => acc ++ incoming }
             .throttle(1, throttleDurationPer) ~> arrivalSplits.in2
 
-          shiftsSourceAsync          ~> shiftsKillSwitchAsync ~> staff.in0
-          fixedPointsSourceAsync     ~> fixedPointsKillSwitchAsync ~> staff.in1
-          staffMovementsSourceAsync  ~> movementsKillSwitchAsync ~> staff.in2
+          shiftsSourceAsync          ~> shiftsKillSwitchSync ~> staff.in0
+          fixedPointsSourceAsync     ~> fixedPointsKillSwitchSync ~> staff.in1
+          staffMovementsSourceAsync  ~> movementsKillSwitchSync ~> staff.in2
 
           arrivals.out ~> arrivalsFanOut ~> arrivalSplits.in0
                           arrivalsFanOut.map { _.toUpdate.values.toList } ~> manifestRequestsSink.async
@@ -208,7 +208,7 @@ object RunnableCrunch {
                                        workloadFanOut ~> simulation.in0
 
           crunch                   ~> portState.in1
-          actualDesksAndWaitTimesSourceAsync  ~> portState.in2
+          actualDesksAndWaitTimesSourceSync  ~> portState.in2
           staff.out ~> staffFanOut ~> portState.in3
                        staffFanOut ~> batchStaff ~> simulation.in1
 
