@@ -13,7 +13,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import uk.gov.homeoffice.cirium.JsonSupport._
 import services.SDate
-import uk.gov.homeoffice.cirium.services.entities.CiriumFlightStatus
+import uk.gov.homeoffice.cirium.services.entities.{CiriumFlightStatus, CiriumOperationalTimes}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -72,9 +72,9 @@ object CiriumFeed {
     Arrival(
       Option(f.carrierFsCode),
       ciriumStatusCodeToStatus(f.status),
-      f.operationalTimes.estimatedRunwayArrival.map(_.millis),
+      extractEstRunwayArrival(f),
       f.operationalTimes.actualRunwayArrival.map(_.millis),
-      f.operationalTimes.estimatedGateArrival.map(_.millis),
+      extractEstChox(f),
       f.operationalTimes.actualGateArrival.map(_.millis),
       f.airportResources.flatMap(_.arrivalGate),
       None,
@@ -96,6 +96,31 @@ object CiriumFeed {
       else
         Option(carrierScheduledTime)
     )
+  }
+
+  private def extractEstChox(f: CiriumFlightStatus) = {
+    (f.operationalTimes, f.flightDurations) match {
+      case (o, _) if o.estimatedGateArrival.isDefined => o.estimatedGateArrival.map(_.millis)
+      case (o, Some(d)) if o.estimatedRunwayArrival.isDefined && d.scheduledTaxiInMinutes.isDefined =>
+       o.estimatedRunwayArrival
+         .map(date => SDate(date.millis)
+           .addMinutes(d.scheduledTaxiInMinutes.get).millisSinceEpoch)
+      case (o, Some(d)) if o.actualRunwayArrival.isDefined && d.scheduledTaxiInMinutes.isDefined =>
+       o.actualRunwayArrival
+         .map(date => SDate(date.millis)
+           .addMinutes(d.scheduledTaxiInMinutes.get).millisSinceEpoch)
+      case _ => None
+    }
+  }
+  private def extractEstRunwayArrival(f: CiriumFlightStatus) = {
+    (f.operationalTimes, f.flightDurations) match {
+      case (o, _) if o.estimatedRunwayArrival.isDefined => o.estimatedRunwayArrival.map(_.millis)
+      case (o, Some(d)) if o.estimatedGateArrival.isDefined && d.scheduledTaxiInMinutes.isDefined =>
+       o.estimatedGateArrival
+         .map(date => SDate(date.millis)
+           .addMinutes(d.scheduledTaxiInMinutes.get * -1).millisSinceEpoch)
+      case _ => None
+    }
   }
 
   def requestFeed(endpoint: String)(implicit actorSystem: ActorSystem, materializer: Materializer): Future[List[CiriumFlightStatus]] = Http()
