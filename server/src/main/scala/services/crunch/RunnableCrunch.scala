@@ -138,15 +138,15 @@ object RunnableCrunch {
           val staffFanOut = builder.add(Broadcast[StaffMinutes](2).async)
           val portStateFanOut = builder.add(Broadcast[PortStateWithDiff](4).async)
 
-          val baseArrivalsSink = builder.add(Sink.actorRef(forecastBaseArrivalsActor, StreamCompleted).async)
-          val fcstArrivalsSink = builder.add(Sink.actorRef(forecastArrivalsActor, StreamCompleted).async)
-          val liveBaseArrivalsSink = builder.add(Sink.actorRef(liveBaseArrivalsActor, StreamCompleted).async)
-          val liveArrivalsSink = builder.add(Sink.actorRef(liveArrivalsActor, StreamCompleted).async)
+          val baseArrivalsSink = builder.add(Sink.actorRef(forecastBaseArrivalsActor, StreamCompleted))
+          val fcstArrivalsSink = builder.add(Sink.actorRef(forecastArrivalsActor, StreamCompleted))
+          val liveBaseArrivalsSink = builder.add(Sink.actorRef(liveBaseArrivalsActor, StreamCompleted))
+          val liveArrivalsSink = builder.add(Sink.actorRef(liveArrivalsActor, StreamCompleted))
 
-          val manifestsSink = builder.add(Sink.actorRef(manifestsActor, StreamCompleted).async)
+          val manifestsSink = builder.add(Sink.actorRef(manifestsActor, StreamCompleted))
 
-          val liveSink = builder.add(Sink.actorRef(liveCrunchStateActor, StreamCompleted).async)
-          val fcstSink = builder.add(Sink.actorRef(fcstCrunchStateActor, StreamCompleted).async)
+          val liveSink = builder.add(Sink.actorRef(liveCrunchStateActor, StreamCompleted))
+          val fcstSink = builder.add(Sink.actorRef(fcstCrunchStateActor, StreamCompleted))
           val arrivalUpdatesSink = builder.add(Sink.actorRefWithAck(aggregatedArrivalsStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
           val arrivalRemovalsSink = builder.add(Sink.actorRefWithAck(aggregatedArrivalsStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
 

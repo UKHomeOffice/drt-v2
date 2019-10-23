@@ -30,7 +30,7 @@ class BatchStage(now: () => SDateLike,
   override def shape = new FanOutShape2(inArrivals, outArrivals, outRegisteredArrivals)
 
   val log: Logger = LoggerFactory.getLogger(getClass)
-  var cancellables: Option[Cancellable] = None
+  var maybeCancellable: Option[Cancellable] = None
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     val registeredArrivals: mutable.SortedMap[ArrivalKey, Option[Long]] = mutable.SortedMap()
@@ -49,7 +49,7 @@ class BatchStage(now: () => SDateLike,
       }
     }
 
-    override def postStop(): Unit = cancellables.foreach { cancellable =>
+    override def postStop(): Unit = maybeCancellable.foreach { cancellable =>
       log.warn(s"Cancelling cancellable in postStop()")
       cancellable.cancel
     }
@@ -106,14 +106,14 @@ class BatchStage(now: () => SDateLike,
       if (lookupBatch.nonEmpty) {
         Metrics.counter(s"$stageName", lookupBatch.size)
         push(outArrivals, lookupBatch.toList)
-      } else if (cancellables.isEmpty) {
+      } else if (maybeCancellable.isEmpty) {
         object PushAfterDelay extends Runnable {
           override def run(): Unit = if (!isClosed(outArrivals) && isAvailable(outArrivals)) {
             log.info(s"Pushing empty list after delay of ${sleepMillisOnEmptyPush}ms")
             push(outArrivals, List())
           }
         }
-        cancellables = Option(actorSystem.scheduler.scheduleOnce(sleepMillisOnEmptyPush milliseconds, PushAfterDelay))
+        maybeCancellable = Option(actorSystem.scheduler.scheduleOnce(sleepMillisOnEmptyPush milliseconds, PushAfterDelay))
       }
     }
 
