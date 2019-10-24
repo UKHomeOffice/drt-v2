@@ -11,7 +11,6 @@ import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.SDateLike
 import org.specs2.control.LanguageFeatures
 import org.specs2.mutable.SpecificationLike
-import passengersplits.InMemoryPersistence
 
 import scala.collection.immutable.{Map, Seq}
 import scala.concurrent.Await
@@ -28,7 +27,7 @@ class TestActorProbe(pointInTime: SDateLike, queues: Map[TerminalName, Seq[Queue
   }
 }
 
-class CachingCrunchActorSpec extends TestKit(ActorSystem("CacheTests", InMemoryPersistence.akkaAndAggregateDbConfig)) with SpecificationLike with LanguageFeatures {
+class CachingCrunchActorSpec extends TestKit(ActorSystem("CacheTests")) with SpecificationLike with LanguageFeatures {
   isolated
   sequential
 

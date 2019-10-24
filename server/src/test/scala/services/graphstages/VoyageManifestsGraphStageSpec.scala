@@ -6,12 +6,11 @@ import actors.acking.AckingReceiver.StreamCompleted
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink}
-import akka.stream.{ActorMaterializer, ClosedShape, Materializer}
+import akka.stream.{ActorMaterializer, ClosedShape}
 import akka.testkit.{TestKit, TestProbe}
 import drt.server.feeds.api.ApiProviderLike
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
-import passengersplits.InMemoryPersistence
 import server.feeds.ManifestsFeedSuccess
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -57,7 +56,7 @@ class TestApiProvider() extends ApiProviderLike {
   }
 }
 
-class VoyageManifestsGraphStageSpec extends TestKit(ActorSystem("VoyageManifestsGraphStageSpec", InMemoryPersistence.akkaAndAggregateDbConfig))
+class VoyageManifestsGraphStageSpec extends TestKit(ActorSystem("VoyageManifestsGraphStageSpec"))
   with SpecificationLike {
 
   implicit val actorSystem: ActorSystem = system

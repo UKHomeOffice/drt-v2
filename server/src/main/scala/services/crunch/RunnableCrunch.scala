@@ -84,9 +84,9 @@ object RunnableCrunch {
       liveBaseArrivalsSource,
       liveArrivalsSource,
       manifestsLiveSource,
-      shiftsSource.async,
-      fixedPointsSource.async,
-      staffMovementsSource.async,
+      shiftsSource.async("staff-dispatcher"),
+      fixedPointsSource.async("staff-dispatcher"),
+      staffMovementsSource.async("staff-dispatcher"),
       actualDesksAndWaitTimesSource,
       arrivalsKillSwitch,
       manifestsLiveKillSwitch,
@@ -112,15 +112,15 @@ object RunnableCrunch {
           fixedPointsKillSwitchSync,
           movementsKillSwitchSync
         ) =>
-          val arrivals = builder.add(arrivalsGraphStage.async)
-          val arrivalSplits = builder.add(arrivalSplitsStage.async)
-          val workload = builder.add(workloadGraphStage.async)
-          val batchLoad = builder.add(loadBatchUpdateGraphStage.async)
-          val crunch = builder.add(crunchLoadGraphStage.async)
-          val staff = builder.add(staffGraphStage.async)
-          val batchStaff = builder.add(staffBatchUpdateGraphStage.async)
-          val simulation = builder.add(simulationGraphStage.async)
-          val portState = builder.add(portStateGraphStage.async)
+          val arrivals = builder.add(arrivalsGraphStage.async("arrivals-dispatcher"))
+          val arrivalSplits = builder.add(arrivalSplitsStage.async("arrivals-dispatcher"))
+          val workload = builder.add(workloadGraphStage.async("workloads-dispatcher"))
+          val batchLoad = builder.add(loadBatchUpdateGraphStage.async("workloads-dispatcher"))
+          val crunch = builder.add(crunchLoadGraphStage.async("crunch-dispatcher"))
+          val staff = builder.add(staffGraphStage.async("staff-dispatcher"))
+          val batchStaff = builder.add(staffBatchUpdateGraphStage.async("staff-dispatcher"))
+          val simulation = builder.add(simulationGraphStage.async("simulation-dispatcher"))
+          val portState = builder.add(portStateGraphStage.async("port-state-dispatcher"))
           val fcstArrivalsDiffing = builder.add(forecastArrivalsDiffStage)
           val liveBaseArrivalsDiffing = builder.add(liveBaseArrivalsDiffStage)
           val liveArrivalsDiffing = builder.add(liveArrivalsDiffStage)
@@ -145,10 +145,10 @@ object RunnableCrunch {
 
           val manifestsSink = builder.add(Sink.actorRef(manifestsActor, StreamCompleted))
 
-          val liveSink = builder.add(Sink.actorRef(liveCrunchStateActor, StreamCompleted))
-          val fcstSink = builder.add(Sink.actorRef(fcstCrunchStateActor, StreamCompleted))
-          val arrivalUpdatesSink = builder.add(Sink.actorRefWithAck(aggregatedArrivalsStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
-          val arrivalRemovalsSink = builder.add(Sink.actorRefWithAck(aggregatedArrivalsStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
+          val liveSink = builder.add(Sink.actorRef(liveCrunchStateActor, StreamCompleted).async("port-state-dispatcher"))
+          val fcstSink = builder.add(Sink.actorRef(fcstCrunchStateActor, StreamCompleted).async("port-state-dispatcher"))
+          val arrivalUpdatesSink = builder.add(Sink.actorRefWithAck(aggregatedArrivalsStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure).async("aggregated-arrivals-dispatcher"))
+          val arrivalRemovalsSink = builder.add(Sink.actorRefWithAck(aggregatedArrivalsStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure).async("aggregated-arrivals-dispatcher"))
 
           // @formatter:off
           forecastBaseArrivalsSourceSync.out.map {
@@ -199,7 +199,7 @@ object RunnableCrunch {
           staffMovementsSourceAsync  ~> movementsKillSwitchSync ~> staff.in2
 
           arrivals.out ~> arrivalsFanOut ~> arrivalSplits.in0
-                          arrivalsFanOut.map { _.toUpdate.values.toList } ~> manifestRequestsSink.async
+                          arrivalsFanOut.map { _.toUpdate.values.toList } ~> manifestRequestsSink
 
           arrivalSplits.out ~> arrivalSplitsFanOut ~> workload
                                arrivalSplitsFanOut ~> portState.in0

@@ -5,13 +5,12 @@ import akka.testkit.TestKit
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared._
 import org.specs2.mutable.SpecificationLike
-import passengersplits.InMemoryPersistence
 import services.graphstages.Crunch._
 
 import scala.collection.immutable.List
 
 
-class CrunchGraphInputsAndProbesStageFunctionsSpec extends TestKit(ActorSystem("StreamingCrunchTests", InMemoryPersistence.akkaAndAggregateDbConfig)) with SpecificationLike {
+class CrunchGraphInputsAndProbesStageFunctionsSpec extends TestKit(ActorSystem("StreamingCrunchTests")) with SpecificationLike {
   isolated
   sequential
 

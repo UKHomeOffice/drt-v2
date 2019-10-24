@@ -19,7 +19,6 @@ import graphs.SinkToSourceBridge
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
-import passengersplits.InMemoryPersistence
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import server.protobuf.messages.CrunchState.CrunchDiffMessage
 import services._
@@ -90,7 +89,7 @@ object H2Tables extends {
 } with Tables
 
 class CrunchTestLike
-  extends TestKit(ActorSystem("StreamingCrunchTests", InMemoryPersistence.akkaAndAggregateDbConfig))
+  extends TestKit(ActorSystem("StreamingCrunchTests"))
     with SpecificationLike {
   isolated
   sequential
