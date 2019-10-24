@@ -153,7 +153,7 @@ object BigSummaryBoxTests extends TestSuite {
 
               val flights = FlightsWithSplits(
                 List(ApiFlightWithSplits(apiFlight1, Set(splits1)),
-                  ApiFlightWithSplits(apiFlight2, Set(splits2))), Seq())
+                  ApiFlightWithSplits(apiFlight2, Set(splits2))), List())
 
               val aggSplits = aggregateSplits(ArrivalHelper.bestPax)(flights.flightsToUpdate)
 

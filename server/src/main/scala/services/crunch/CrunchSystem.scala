@@ -237,8 +237,6 @@ object CrunchSystem {
   def initialLoadsFromPortState(initialPortState: Option[PortState]): Option[Loads] = initialPortState.map(ps => Loads.fromCrunchMinutes(ps.crunchMinutes))
 
   def initialFlightsFromPortState(initialPortState: Option[PortState]): Option[FlightsWithSplits] = initialPortState.map { ps =>
-    val flightsWithSplits = ps.flights.values.toSeq
-
-    FlightsWithSplits(flightsWithSplits, Seq())
+    FlightsWithSplits(ps.flights.values.toList, List())
   }
 }

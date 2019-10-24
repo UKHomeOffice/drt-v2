@@ -30,25 +30,27 @@ object ManifestsGraph {
     val graph = GraphDSL.create(killSwitch.async) {
       implicit builder =>
         killSwitchAsync =>
-          val arrivalsAsync = builder.add(arrivalsSource)
-          val batchRequests = builder.add(batchStage)
+          val arrivalsAsync = builder.add(arrivalsSource.async)
+          val batchRequestsAsync = builder.add(batchStage.async)
           val registeredArrivalsSink = builder.add(Sink.actorRef(registeredArrivalsActor, StreamCompleted))
 
           arrivalsAsync.out.conflate[List[Arrival]] {
             case (acc, incoming) => acc ++ incoming
-          } ~> killSwitchAsync ~> batchRequests.in
+          } ~> killSwitchAsync ~> batchRequestsAsync.in
 
-          batchRequests.out0
+          batchRequestsAsync.out0
             .flatMapConcat(arrivals => Source(arrivals))
             .mapAsync(1) { a =>
               manifestLookup.maybeBestAvailableManifest(portCode, a.origin, a.voyageNumber, SDate(a.scheduled))
             }
             .collect { case (_, Some(bam)) => bam }
             .conflateWithSeed(List[BestAvailableManifest](_)) {
-              case (acc, next) => next :: acc
+              case (acc, next) =>
+                log.info(s"${acc.length + 1} conflated BestAvailableManifests")
+                next :: acc
             } ~> manifestsSink
 
-          batchRequests.out1 ~> registeredArrivalsSink
+          batchRequestsAsync.out1 ~> registeredArrivalsSink
 
           ClosedShape
     }

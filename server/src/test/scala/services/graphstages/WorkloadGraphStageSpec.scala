@@ -82,7 +82,7 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
         ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 50, None)),
       SplitSources.Historical, None, Percentage)
 
-    val flight = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, Set(historicSplits), None)), Seq())
+    val flight = FlightsWithSplits(List(ApiFlightWithSplits(arrival, Set(historicSplits), None)), List())
 
     flightsWithSplits.offer(flight)
 
@@ -124,7 +124,7 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
         ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 50, None)),
       SplitSources.Historical, None, Percentage)
 
-    val flight = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, Set(historicSplits), None)), Seq())
+    val flight = FlightsWithSplits(List(ApiFlightWithSplits(arrival, Set(historicSplits), None)), List())
 
     flightsWithSplits.offer(flight)
 
@@ -163,8 +163,8 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
       ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 50, None)),
       SplitSources.Historical, None, Percentage)
 
-    val flight = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, Set(historicSplits), None)), Seq())
-    val flight2 = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival2, Set(historicSplits), None)), Seq())
+    val flight = FlightsWithSplits(List(ApiFlightWithSplits(arrival, Set(historicSplits), None)), List())
+    val flight2 = FlightsWithSplits(List(ApiFlightWithSplits(arrival2, Set(historicSplits), None)), List())
 
     flightsWithSplits.offer(flight)
     flightsWithSplits.offer(flight2)
@@ -205,8 +205,8 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
     val noonMillis = SDate(noon).millisSinceEpoch
     val onePmMillis = SDate(onePm).millisSinceEpoch
 
-    val flight1 = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival.copy(PcpTime = Option(noonMillis)), Set(historicSplits), None)), Seq())
-    val flight1Update = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival.copy(PcpTime = Option(onePmMillis)), Set(historicSplits), None)), Seq())
+    val flight1 = FlightsWithSplits(List(ApiFlightWithSplits(arrival.copy(PcpTime = Option(noonMillis)), Set(historicSplits), None)), List())
+    val flight1Update = FlightsWithSplits(List(ApiFlightWithSplits(arrival.copy(PcpTime = Option(onePmMillis)), Set(historicSplits), None)), List())
 
     Await.ready(flightsWithSplits.offer(flight1), 1 second)
 
@@ -421,9 +421,9 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
       ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 50, None)),
       SplitSources.Historical, None, Percentage)
 
-    val flight1 = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, Set(historicSplits), None)), Seq())
-    val flight2 = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival2, Set(historicSplits), None)), Seq())
-    val flight1Update = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival.copy(PcpTime = arrival.PcpTime.map(_ + 60000)), Set(historicSplits), None)), Seq())
+    val flight1 = FlightsWithSplits(List(ApiFlightWithSplits(arrival, Set(historicSplits), None)), List())
+    val flight2 = FlightsWithSplits(List(ApiFlightWithSplits(arrival2, Set(historicSplits), None)), List())
+    val flight1Update = FlightsWithSplits(List(ApiFlightWithSplits(arrival.copy(PcpTime = arrival.PcpTime.map(_ + 60000)), Set(historicSplits), None)), List())
 
     Await.ready(flightsWithSplits.offer(flight1), 1 second)
     Await.ready(flightsWithSplits.offer(flight2), 1 second)
@@ -468,7 +468,7 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
         ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 50, None)),
       SplitSources.Historical, None, Percentage)
 
-    val flight = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, Set(historicSplits), None)), Seq())
+    val flight = FlightsWithSplits(List(ApiFlightWithSplits(arrival, Set(historicSplits), None)), List())
 
     flightsWithSplits.offer(flight)
 

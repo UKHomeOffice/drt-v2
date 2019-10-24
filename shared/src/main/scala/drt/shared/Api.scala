@@ -556,7 +556,7 @@ object FlightsApi {
 
   case class Flights(flights: Seq[Arrival])
 
-  case class FlightsWithSplits(flightsToUpdate: Seq[ApiFlightWithSplits], arrivalsToRemove: Seq[Arrival]) extends PortStateMinutes {
+  case class FlightsWithSplits(flightsToUpdate: List[ApiFlightWithSplits], arrivalsToRemove: List[Arrival]) extends PortStateMinutes {
     def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
       val updatedFlights = flightsToUpdate.map(_.copy(lastUpdated = Option(now)))
 
