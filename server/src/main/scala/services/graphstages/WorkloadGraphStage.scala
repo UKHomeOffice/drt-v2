@@ -70,9 +70,14 @@ class WorkloadGraphStage(name: String = "",
       override def onPush(): Unit = {
         val timer = StageTimer(stageName, inFlightsWithSplits)
         val incomingFlights = grab(inFlightsWithSplits)
-        log.info(s"Received ${incomingFlights.flightsToUpdate.size} arrivals")
+        log.info(s"Received ${incomingFlights.flightsToUpdate.length} updated arrivals and ${incomingFlights.arrivalsToRemove.length} arrivals to remove")
 
-        val existingFlightTQMs: Set[TQM] = incomingFlights.flightsToUpdate.flatMap(fws => flightTQMs.getOrElse(fws.apiFlight.uniqueId, List())).toSet
+        val updatesTqms = incomingFlights.flightsToUpdate.flatMap(fws => flightTQMs.getOrElse(fws.apiFlight.uniqueId, List())).toSet
+        val removalUniqueIds = incomingFlights.arrivalsToRemove.map(_.uniqueId)
+        val removalTqms = incomingFlights.arrivalsToRemove.flatMap(a => flightTQMs.getOrElse(a.uniqueId, List())).toSet
+        val existingFlightTQMs: Set[TQM] = updatesTqms ++ removalTqms
+
+        flightTQMs --= removalUniqueIds
         val updatedWorkloads = flightLoadMinutes(incomingFlights)
 
         mergeUpdatedFlightLoadMinutes(existingFlightTQMs, updatedWorkloads, incomingFlights)
@@ -103,7 +108,7 @@ class WorkloadGraphStage(name: String = "",
     }
 
     def mergeUpdatedFlightLoadMinutes(existingFlightTQMs: Set[TQM], updatedWorkloads: mutable.SortedMap[TQM, Set[FlightSplitMinute]], incomingFlights: FlightsWithSplits): Unit = {
-      val arrivalIds: Set[Int] = incomingFlights.flightsToUpdate.map(_.apiFlight.uniqueId).toSet
+      val arrivalIds: Set[Int] = incomingFlights.flightsToUpdate.map(_.apiFlight.uniqueId).toSet ++ incomingFlights.arrivalsToRemove.map(_.uniqueId)
       existingFlightTQMs.foreach { tqm =>
         val existingFlightSplitsMinutes: Set[FlightSplitMinute] = flightLoadMinutes.getOrElse(tqm, Set[FlightSplitMinute]())
         val minusIncomingSplitMinutes = existingFlightSplitsMinutes.filterNot(fsm => arrivalIds.contains(fsm.flightId))
