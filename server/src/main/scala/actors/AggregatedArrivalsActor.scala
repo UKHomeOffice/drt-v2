@@ -2,13 +2,13 @@ package actors
 
 import java.sql.Timestamp
 
-import actors.acking.AckingReceiver.{Ack, StreamInitialized}
+import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import akka.actor.Actor
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import slickdb.{ArrivalTable, ArrivalTableLike}
+import slickdb.ArrivalTableLike
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 
@@ -27,6 +27,15 @@ class AggregatedArrivalsActor(portCode: String, arrivalTable: ArrivalTableLike) 
 
     case arrival: Arrival =>
       handleUpdate(arrival)
+
+    case StreamFailure(t) =>
+      log.error("Received stream failure", t)
+
+    case StreamCompleted =>
+      log.info("Received shutdown")
+
+    case other =>
+      log.error(s"Received unexpected message ${other.getClass}")
   }
 
   def handleRemoval(number: Int, terminal: TerminalName, scheduled: MillisSinceEpoch): Unit = {

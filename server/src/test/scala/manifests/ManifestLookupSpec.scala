@@ -4,7 +4,6 @@ import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import com.typesafe.config.{Config, ConfigFactory}
 import org.specs2.mutable.{Specification, SpecificationLike}
-import passengersplits.InMemoryPersistence
 import services.SDate
 import slickdb.{Tables, VoyageManifestPassengerInfoTable}
 

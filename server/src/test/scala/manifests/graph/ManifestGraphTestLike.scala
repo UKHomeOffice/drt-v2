@@ -7,10 +7,9 @@ import drt.shared.SDateLike
 import manifests.passengers.BestAvailableManifest
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import org.specs2.mutable.SpecificationLike
-import passengersplits.InMemoryPersistence
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 case class MockManifestLookupService(bestAvailableManifest: BestAvailableManifest) extends ManifestLookupLike {
   override def maybeBestAvailableManifest(arrivalPort: String, departurePort: String,
@@ -18,12 +17,12 @@ case class MockManifestLookupService(bestAvailableManifest: BestAvailableManifes
     Future((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), Option(bestAvailableManifest)))
 }
 
-class ManifestGraphTestLike extends TestKit(ActorSystem("ManifestTests", InMemoryPersistence.akkaAndAggregateDbConfig))
+class ManifestGraphTestLike extends TestKit(ActorSystem("ManifestTests"))
   with SpecificationLike {
   isolated
   sequential
 
   implicit val actorSystem: ActorSystem = system
   implicit val materializer: ActorMaterializer = ActorMaterializer()
-
+  implicit val ec: ExecutionContext = ExecutionContext.global
 }

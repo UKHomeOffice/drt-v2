@@ -4,6 +4,7 @@ import actors.Sizes.oneMegaByte
 import actors._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.SDateLike
+import slickdb.ArrivalTable
 
 
 object TestActors {
@@ -56,8 +57,7 @@ object TestActors {
     extends VoyageManifestsActor(oneMegaByte, now, expireAfterMillis, Option(snapshotInterval)) {
 
     def reset: Receive = {
-      case ResetActor =>
-        state = initialState
+      case ResetActor => state = initialState
     }
 
     override def receiveRecover: Receive = {
@@ -103,7 +103,6 @@ object TestActors {
       case ResetActor =>
         state = initialState
         subscribers = List()
-        log.info(s"Reset staff movements to ${state.staffMovements.movements}")
     }
 
     override def receiveRecover: Receive = {
@@ -111,6 +110,14 @@ object TestActors {
     }
 
     override def receiveCommand: Receive = reset orElse super.receiveCommand
+  }
+
+  case class TestAggregatedArrivalsActor() extends AggregatedArrivalsActor("LHR", ArrivalTable("LHR", PostgresTables)) {
+    def reset: Receive = {
+      case ResetActor => Unit
+    }
+
+    override def receive: Receive = reset orElse super.receive
   }
 
   case class TestCrunchStateActor(snapshotInterval: Int,
@@ -131,8 +138,7 @@ object TestActors {
       forecastMaxMillis = () => now().addDays(2).millisSinceEpoch) {
 
     def reset: Receive = {
-      case ResetActor =>
-        state = initialState
+      case ResetActor => state = initialState
     }
 
     override def receiveRecover: Receive = {

@@ -33,12 +33,12 @@ class ArrivalsGraphStage(name: String = "",
                          validPortTerminals: Set[String],
                          expireAfterMillis: Long,
                          now: () => SDateLike)
-  extends GraphStage[FanInShape4[ArrivalsFeedResponse, ArrivalsFeedResponse, ArrivalsFeedResponse, ArrivalsFeedResponse, ArrivalsDiff]] {
+  extends GraphStage[FanInShape4[List[Arrival], List[Arrival], List[Arrival], List[Arrival], ArrivalsDiff]] {
 
-  val inForecastBaseArrivals: Inlet[ArrivalsFeedResponse] = Inlet[ArrivalsFeedResponse]("FlightsForecastBase.in")
-  val inForecastArrivals: Inlet[ArrivalsFeedResponse] = Inlet[ArrivalsFeedResponse]("FlightsForecast.in")
-  val inLiveBaseArrivals: Inlet[ArrivalsFeedResponse] = Inlet[ArrivalsFeedResponse]("FlightsLiveBase.in")
-  val inLiveArrivals: Inlet[ArrivalsFeedResponse] = Inlet[ArrivalsFeedResponse]("FlightsLive.in")
+  val inForecastBaseArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("FlightsForecastBase.in")
+  val inForecastArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("FlightsForecast.in")
+  val inLiveBaseArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("FlightsLiveBase.in")
+  val inLiveArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("FlightsLive.in")
   val outArrivalsDiff: Outlet[ArrivalsDiff] = Outlet[ArrivalsDiff]("ArrivalsDiff.out")
   override val shape = new FanInShape4(inForecastBaseArrivals, inForecastArrivals, inLiveBaseArrivals, inLiveArrivals, outArrivalsDiff)
   val stageName = "arrivals"
@@ -107,19 +107,13 @@ class ArrivalsGraphStage(name: String = "",
       }
     })
 
-    def onPushArrivals(arrivalsInlet: Inlet[ArrivalsFeedResponse], sourceType: ArrivalsSourceType): Unit = {
+    def onPushArrivals(arrivalsInlet: Inlet[List[Arrival]], sourceType: ArrivalsSourceType): Unit = {
       val timer = StageTimer(stageName, outArrivalsDiff)
 
-      grab(arrivalsInlet) match {
-        case ArrivalsFeedSuccess(Flights(flights), connectedAt) =>
-          log.info(s"Grabbed ${flights.length} arrivals from $arrivalsInlet of $sourceType at ${connectedAt.toISOString()}")
-          if (flights.nonEmpty || sourceType == BaseArrivals)
-            handleIncomingArrivals(sourceType, flights)
-          else
-            log.info(s"No arrivals to handle")
-        case ArrivalsFeedFailure(message, failedAt) =>
-          log.warn(s"$arrivalsInlet failed at ${failedAt.toISOString()}: $message")
-      }
+      val incoming = grab(arrivalsInlet)
+
+      log.info(s"Grabbed ${incoming.length} arrivals from $arrivalsInlet of $sourceType")
+      if (incoming.nonEmpty || sourceType == BaseArrivals) handleIncomingArrivals(sourceType, incoming)
 
       if (!hasBeenPulled(arrivalsInlet)) pull(arrivalsInlet)
 

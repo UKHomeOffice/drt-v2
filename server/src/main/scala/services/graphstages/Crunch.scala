@@ -56,9 +56,9 @@ object Crunch {
     crunchStartDate
   }
 
-  def isDueLookup(arrival: ArrivalKey, lastLookupMillis: MillisSinceEpoch, now: SDateLike): Boolean = {
-    val soonWithExpiredLookup = isWithinHours(arrival.scheduled, 48, now) && !wasWithinHours(lastLookupMillis, 24, now)
-    val notSoonWithExpiredLookup = !isWithinHours(arrival.scheduled, 48, now) && !wasWithinHours(lastLookupMillis, 24 * 7, now)
+  def isDueLookup(scheduled: MillisSinceEpoch, lastLookupMillis: MillisSinceEpoch, now: SDateLike): Boolean = {
+    val soonWithExpiredLookup = isWithinHours(scheduled, 48, now) && !wasWithinHours(lastLookupMillis, 24, now)
+    val notSoonWithExpiredLookup = !isWithinHours(scheduled, 48, now) && !wasWithinHours(lastLookupMillis, 24 * 7, now)
 
     soonWithExpiredLookup || notSoonWithExpiredLookup
   }

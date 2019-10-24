@@ -169,7 +169,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
   }
 
   "Given a request for a full refresh of all flights, if it's successful the client should return all the flights" >> {
-    var client = BHXMockClient(bhxSoapResponse2FlightsXml)
+    val client = BHXMockClient(bhxSoapResponse2FlightsXml)
 
     val result: Flights = Await
       .result(client.initialFlights, 1 second).asInstanceOf[ArrivalsFeedSuccess].arrivals
@@ -182,7 +182,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
   }
 
   "Given a request for a full refresh of all flights, if we are rate limited then we should get an ArrivalsFeedFailure" >> {
-    var client = BHXMockClient(rateLimitReachedResponse)
+    val client = BHXMockClient(rateLimitReachedResponse)
 
     val result = Await.result(client.initialFlights, 1 second)
 
@@ -235,7 +235,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     )
 
     val expected = Seq(firstFailure, secondFailure, success, success)
-    var result = Await.result(feed.take(4).runWith(Sink.seq), 1 second)
+    val result = Await.result(feed.take(4).runWith(Sink.seq), 1 second)
 
     result === expected
   }
@@ -255,7 +255,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     )
 
     val expected = Seq(success, failure, success)
-    var result = Await.result(feed.take(3).runWith(Sink.seq), 1 second)
+    val result = Await.result(feed.take(3).runWith(Sink.seq), 1 second)
 
     result === expected
   }

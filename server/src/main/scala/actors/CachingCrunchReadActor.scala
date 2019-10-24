@@ -45,7 +45,6 @@ class CachingCrunchReadActor extends Actor with ActorLogging {
         log.info(s"Cache miss: $cacheKey - ${caq.props}")
       }
 
-
       val cachedResult = resultCache.getOrLoad(cacheKey, key => {
         val start = SDate.now().millisSinceEpoch
         val actorName = "query-actor" + UUID.randomUUID().toString

@@ -1,6 +1,7 @@
 package actors
 
 import actors.FlightMessageConversion._
+import actors.acking.AckingReceiver.StreamCompleted
 import actors.restore.RestorerWithLegacy
 import akka.persistence._
 import scalapb.GeneratedMessage
@@ -177,10 +178,11 @@ abstract class ArrivalsActor(now: () => SDateLike,
       log.info(s"Save snapshot success: $md")
 
     case SaveSnapshotFailure(md, cause) =>
-      log.info(s"Save snapshot failure: $md, $cause")
+      log.error(s"Save snapshot failure: $md", cause)
 
-    case other =>
-      log.info(s"Received unexpected message ${other.getClass}")
+    case StreamCompleted => log.warn("Received shutdown")
+
+    case unexpected => log.info(s"Received unexpected message ${unexpected.getClass}")
   }
 
   def handleFeedFailure(message: String, createdAt: SDateLike): Unit = {

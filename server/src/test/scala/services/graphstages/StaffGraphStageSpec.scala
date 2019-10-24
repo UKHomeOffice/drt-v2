@@ -2,6 +2,7 @@ package services.graphstages
 
 import java.util.UUID
 
+import actors.acking.AckingReceiver.StreamCompleted
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{ClosedShape, OverflowStrategy}
 import akka.testkit.TestProbe
@@ -29,7 +30,7 @@ object TestableStaffGraphStage {
       implicit builder =>
         (shifts, fixedPoints, movements) =>
           val staffStage = builder.add(staffGraphStage.async)
-          val sink = builder.add(Sink.actorRef(testProbe.ref, "complete"))
+          val sink = builder.add(Sink.actorRef(testProbe.ref, StreamCompleted))
 
           shifts ~> staffStage.in0
           fixedPoints ~> staffStage.in1

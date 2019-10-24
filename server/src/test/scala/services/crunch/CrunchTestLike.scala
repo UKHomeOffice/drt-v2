@@ -15,9 +15,10 @@ import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
+import graphs.SinkToSourceBridge
+import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
-import passengersplits.InMemoryPersistence
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import server.protobuf.messages.CrunchState.CrunchDiffMessage
 import services._
@@ -68,7 +69,6 @@ case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete
                                       forecastArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
                                       liveArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
                                       manifestsLiveInput: SourceQueueWithComplete[ManifestsFeedResponse],
-                                      manifestsHistoricInput: SourceQueueWithComplete[ManifestsFeedResponse],
                                       shiftsInput: SourceQueueWithComplete[ShiftAssignments],
                                       fixedPointsInput: SourceQueueWithComplete[FixedPointAssignments],
                                       liveStaffMovementsInput: SourceQueueWithComplete[Seq[StaffMovement]],
@@ -89,7 +89,7 @@ object H2Tables extends {
 } with Tables
 
 class CrunchTestLike
-  extends TestKit(ActorSystem("StreamingCrunchTests", InMemoryPersistence.akkaAndAggregateDbConfig))
+  extends TestKit(ActorSystem("StreamingCrunchTests"))
     with SpecificationLike {
   isolated
   sequential
@@ -196,7 +196,6 @@ class CrunchTestLike
     val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], now, DrtStaticParameters.time48HoursAgo(now)))
     val snapshotInterval = 1
     val manifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], oneMegaByte, now, DrtStaticParameters.expireAfterMillis, Option(snapshotInterval)))
-    val manifestsRequestActor: ActorRef = testProbe("manifests-request").ref
 
     val liveCrunchActor = liveCrunchStateActor(logLabel, liveProbe, now)
     val forecastCrunchActor = forecastCrunchStateActor(logLabel, forecastProbe, now)
@@ -206,6 +205,10 @@ class CrunchTestLike
     val liveBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
     val forecastArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
     val forecastBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
+
+    val (_, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
+    val (manifestResponsesSource, _, _) = SinkToSourceBridge[List[BestAvailableManifest]]
+
 
     val crunchInputs = CrunchSystem(CrunchProps(
       logLabel = logLabel,
@@ -232,9 +235,9 @@ class CrunchTestLike
       now = now,
       b5JStartDate = SDate("2019-06-01"),
       manifestsLiveSource = manifestsSource,
-      manifestsHistoricSource = manifestsSource,
+      manifestResponsesSource = manifestResponsesSource,
       voyageManifestsActor = manifestsActor,
-      voyageManifestsRequestActor = manifestsRequestActor,
+      manifestRequestsSink = manifestRequestsSink,
       cruncher = cruncher,
       simulator = simulator,
       initialPortState = initialPortState,
@@ -249,7 +252,8 @@ class CrunchTestLike
       initialShifts = initialShifts,
       initialFixedPoints = initialFixedPoints,
       initialStaffMovements = initialStaffMovements,
-      checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup
+      checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup,
+      stageThrottlePer = 50 milliseconds
     ))
 
     CrunchGraphInputsAndProbes(
@@ -257,7 +261,6 @@ class CrunchTestLike
       crunchInputs.forecastArrivalsResponse,
       crunchInputs.liveArrivalsResponse,
       crunchInputs.manifestsLiveResponse,
-      crunchInputs.manifestsHistoricResponse,
       crunchInputs.shifts,
       crunchInputs.fixedPoints,
       crunchInputs.staffMovements,

@@ -1,6 +1,7 @@
 package actors
 
 import actors.PortStateMessageConversion._
+import actors.acking.AckingReceiver.StreamCompleted
 import actors.restore.RestorerWithLegacy
 import akka.actor._
 import akka.persistence._
@@ -115,16 +116,14 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
       }
 
     case SaveSnapshotFailure(md, cause) =>
-      logInfo(s"Snapshot failed $md\n$cause")
+      log.error(s"Save snapshot failure: $md", cause)
 
     case DeleteSnapshotsSuccess(_) =>
       logInfo(s"Purged snapshots")
 
-    case "complete" =>
-      logInfo("Received complete")
+    case StreamCompleted => log.warn("Received shutdown")
 
-    case u =>
-      log.error(s"Received unexpected message $u")
+    case unexpected => log.error(s"Received unexpected message $unexpected")
   }
 
   def updateFromFullState(ps: PortState): Unit = {

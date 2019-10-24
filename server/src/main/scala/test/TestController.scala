@@ -46,6 +46,7 @@ class TestController @Inject()(implicit val config: Configuration,
 
   def saveArrival(arrival: Arrival) = {
     liveArrivalsTestActor.map(actor => {
+      log.info(s"Incoming test arrival")
       actor ! arrival
     })
   }

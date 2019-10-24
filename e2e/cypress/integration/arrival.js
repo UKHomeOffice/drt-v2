@@ -142,6 +142,7 @@ describe('Arrivals page', () => {
 
   it('Allows you to view API splits in the flights export for users with api:view permission', () => {
     cy
+      .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
       .addManifest(manifest)
       .get('.pax-api')
@@ -160,7 +161,6 @@ Cypress.Commands.add('addManifest', (manifest) => cy.request('POST', '/test/mani
 
 Cypress.Commands.add('waitForFlightToAppear', (flightCode) => {
   cy
-    .asABorderForceOfficer()
     .navigateHome()
     .navigateToMenuItem('T1')
     .choose24Hours()

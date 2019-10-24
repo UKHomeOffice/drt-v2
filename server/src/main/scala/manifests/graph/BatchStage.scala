@@ -1,8 +1,8 @@
 package manifests.graph
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorSystem, Cancellable}
 import akka.stream._
-import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
+import akka.stream.stage._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{Arrival, ArrivalKey, SDateLike}
 import manifests.actors.RegisteredArrivals
@@ -16,11 +16,12 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 class BatchStage(now: () => SDateLike,
-                 isDueLookup: (ArrivalKey, MillisSinceEpoch, SDateLike) => Boolean,
+                 isDueLookup: (MillisSinceEpoch, MillisSinceEpoch, SDateLike) => Boolean,
                  batchSize: Int,
                  expireAfterMillis: MillisSinceEpoch,
                  maybeInitialState: Option[RegisteredArrivals],
-                 sleepMillisOnEmptyPush: Long)(implicit actorSystem: ActorSystem, executionContext: ExecutionContext) extends GraphStage[FanOutShape2[List[Arrival], List[ArrivalKey], RegisteredArrivals]] {
+                 sleepMillisOnEmptyPush: Long)(implicit actorSystem: ActorSystem, executionContext: ExecutionContext)
+  extends GraphStage[FanOutShape2[List[Arrival], List[ArrivalKey], RegisteredArrivals]] {
   val inArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("inArrivals.in")
   val outArrivals: Outlet[List[ArrivalKey]] = Outlet[List[ArrivalKey]]("outArrivals.out")
   val outRegisteredArrivals: Outlet[RegisteredArrivals] = Outlet[RegisteredArrivals]("outRegisteredArrivals.out")
@@ -29,6 +30,7 @@ class BatchStage(now: () => SDateLike,
   override def shape = new FanOutShape2(inArrivals, outArrivals, outRegisteredArrivals)
 
   val log: Logger = LoggerFactory.getLogger(getClass)
+  var maybeCancellable: Option[Cancellable] = None
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     val registeredArrivals: mutable.SortedMap[ArrivalKey, Option[Long]] = mutable.SortedMap()
@@ -47,6 +49,11 @@ class BatchStage(now: () => SDateLike,
       }
     }
 
+    override def postStop(): Unit = maybeCancellable.foreach { cancellable =>
+      log.warn(s"Cancelling cancellable in postStop()")
+      cancellable.cancel
+    }
+
     setHandler(inArrivals, new InHandler {
       override def onPush(): Unit = {
         val timer = StageTimer(stageName, inArrivals)
@@ -56,7 +63,7 @@ class BatchStage(now: () => SDateLike,
 
         BatchStage.registerNewArrivals(incoming, registeredArrivals, registeredArrivalsUpdates)
 
-        log.info(s"registeredArrivalsUpdates now has ${registeredArrivalsUpdates.size} items")
+        Metrics.counter("manifests.registered-arrivals", registeredArrivals.size)
 
         if (isAvailable(outArrivals)) prioritiseAndPush()
         if (isAvailable(outRegisteredArrivals)) pushRegisteredArrivalsUpdates()
@@ -99,19 +106,19 @@ class BatchStage(now: () => SDateLike,
       if (lookupBatch.nonEmpty) {
         Metrics.counter(s"$stageName", lookupBatch.size)
         push(outArrivals, lookupBatch.toList)
-      } else {
+      } else if (maybeCancellable.isEmpty) {
         object PushAfterDelay extends Runnable {
-          override def run(): Unit = if (isAvailable(outArrivals)) {
+          override def run(): Unit = if (!isClosed(outArrivals) && isAvailable(outArrivals)) {
             log.info(s"Pushing empty list after delay of ${sleepMillisOnEmptyPush}ms")
             push(outArrivals, List())
           }
         }
-        actorSystem.scheduler.scheduleOnce(sleepMillisOnEmptyPush milliseconds, PushAfterDelay)
+        maybeCancellable = Option(actorSystem.scheduler.scheduleOnce(sleepMillisOnEmptyPush milliseconds, PushAfterDelay))
       }
     }
 
     private def pushRegisteredArrivalsUpdates(): Unit = if (registeredArrivalsUpdates.nonEmpty) {
-      log.info(s"Pushing ${registeredArrivalsUpdates.size} registered arrivals updates")
+      Metrics.counter("manifests.lookup-requests", registeredArrivalsUpdates.size)
       push(outRegisteredArrivals, RegisteredArrivals(registeredArrivalsUpdates))
       registeredArrivalsUpdates.clear
     }
@@ -139,8 +146,12 @@ class BatchStage(now: () => SDateLike,
       case (arrival, None) =>
         lookupQueue += arrival
       case (arrival, Some(lastLookup)) =>
-        if (!lookupQueue.contains(arrival) && isDueLookup(arrival, lastLookup, currentNow))
-          lookupQueue + arrival
+        val dueLookup = isDueLookup(arrival.scheduled, lastLookup, currentNow)
+        val notAlreadyInQueue = !lookupQueue.contains(arrival)
+
+        if (notAlreadyInQueue && dueLookup) {
+          lookupQueue += arrival
+        }
     }
   }
 }

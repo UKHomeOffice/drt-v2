@@ -3,6 +3,7 @@ package actors
 import java.util.UUID
 
 import actors.Sizes.oneMegaByte
+import actors.acking.AckingReceiver.StreamCompleted
 import akka.actor.Scheduler
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
@@ -159,14 +160,15 @@ class StaffMovementsActorBase(val now: () => SDateLike,
       log.info(s"Save snapshot success: $md")
 
     case SaveSnapshotFailure(md, cause) =>
-      log.info(s"Save snapshot failure: $md, $cause")
+      log.error(s"Save snapshot failure: $md", cause)
 
     case SaveSnapshot =>
       log.info(s"Received request to snapshot")
       takeSnapshot(stateToMessage)
 
-    case u =>
-      log.info(s"unhandled message: $u")
+    case StreamCompleted => log.warn("Received shutdown")
+
+    case unexpected => log.info(s"unhandled message: $unexpected")
   }
 
   def staffMovementMessageToStaffMovement(sm: StaffMovementMessage) = StaffMovement(
