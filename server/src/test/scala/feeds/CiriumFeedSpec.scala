@@ -170,6 +170,8 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
         scheduledRunwayArrival = None,
         estimatedRunwayArrival = Option(CiriumDate(estRunwayArrival, None)),
         actualRunwayArrival = Option(CiriumDate(actRunwayArrival, None))),
+      None,
+      None,
       List(CiriumCodeshare("CZ", "1000", "L"), CiriumCodeshare("DL", "2000", "L")),
       Option(CiriumAirportResources(
         departureTerminal = Option("1"),
@@ -178,6 +180,43 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
         arrivalGate = Option("22"),
         baggage = Option("12"))
       ),
+      Seq())
+  }
+
+
+  private val basicCiriumFlightStatus = {
+    CiriumFlightStatus(
+      100000,
+      "TST",
+      "TST",
+      "TST",
+      "100",
+      "JFK",
+      "LHR",
+      CiriumDate("2019-07-15T09:10:00.000Z", None),
+      CiriumDate("2019-07-16T09:10:00.000Z", None),
+      "A",
+      CiriumOperationalTimes(
+        publishedDeparture = None,
+        scheduledGateDeparture = None,
+        estimatedGateDeparture = None,
+        actualGateDeparture = None,
+        flightPlanPlannedDeparture = None,
+        scheduledRunwayDeparture = None,
+        estimatedRunwayDeparture = None,
+        actualRunwayDeparture = None,
+        publishedArrival = Option(CiriumDate("2019-07-16T09:10:00.000Z", None)),
+        flightPlanPlannedArrival = None,
+        scheduledGateArrival = None,
+        estimatedGateArrival = None,
+        actualGateArrival = None,
+        scheduledRunwayArrival = None,
+        estimatedRunwayArrival = None,
+        actualRunwayArrival = None),
+      None,
+      None,
+      List(),
+      None,
       Seq())
   }
 
@@ -210,13 +249,67 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
     ciriumFeed.tickingSource(100 milliseconds).to(Sink.actorRef(probe.ref, StreamCompleted)).run()
 
     probe.fishForMessage(2 seconds) {
-      case s: ArrivalsFeedSuccess if s.arrivals.flights.nonEmpty &&  s.arrivals.flights.head.Scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch =>
+      case s: ArrivalsFeedSuccess if s.arrivals.flights.nonEmpty && s.arrivals.flights.head.Scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch =>
         println(s"Successfully got a result")
         true
       case _ => false
     }
 
     success
+  }
+
+  "Given a flight with an estimated touchdown, no estimated chox time, and scheduledTaxiInMinutes" +
+    " we should calculate estimated chox time" >> {
+    val estimatedRunwayArrivalTime = "2019-07-15T11:05:00.000Z"
+    val ciriumFlight = basicCiriumFlightStatus
+      .copy(
+        operationalTimes = basicCiriumFlightStatus
+          .operationalTimes
+          .copy(estimatedRunwayArrival = Option(CiriumDate(estimatedRunwayArrivalTime, None))),
+        flightDurations = Option(CiriumFlightDurations(None, None, None, None, None, None, Option(5), None))
+      )
+
+    val arrival = CiriumFeed.toArrival(ciriumFlight, "STN")
+    val result = arrival.EstimatedChox
+    val expected = Option(SDate(estimatedRunwayArrivalTime).addMinutes(5).millisSinceEpoch)
+
+    result === expected
+  }
+
+  "Given a flight with an actual touchdown, no estimated chox time, and scheduledTaxiInMinutes" +
+    " we should calculate estimated chox time" >> {
+    val actualRunwayTime = "2019-07-15T11:05:00.000Z"
+    val ciriumFlight = basicCiriumFlightStatus
+      .copy(
+        operationalTimes = basicCiriumFlightStatus
+          .operationalTimes
+          .copy(actualRunwayArrival = Option(CiriumDate(actualRunwayTime, None))),
+        flightDurations = Option(CiriumFlightDurations(None, None, None, None, None, None, Option(5), None))
+      )
+
+    val arrival = CiriumFeed.toArrival(ciriumFlight, "STN")
+    val result = arrival.EstimatedChox
+    val expected = Option(SDate(actualRunwayTime).addMinutes(5).millisSinceEpoch)
+
+    result === expected
+  }
+
+  "Given a flight with an estimated chox time, no estimated touch down time, and scheduledTaxiInMinutes " +
+    "we should calculate estimated touchdown time" >> {
+    val estimatedChoxTime = "2019-07-15T11:05:00.000Z"
+    val ciriumFlight = basicCiriumFlightStatus
+      .copy(
+        operationalTimes = basicCiriumFlightStatus
+          .operationalTimes
+          .copy(estimatedGateArrival = Option(CiriumDate(estimatedChoxTime, None))),
+        flightDurations = Option(CiriumFlightDurations(None, None, None, None, None, None, Option(5), None))
+      )
+
+    val arrival = CiriumFeed.toArrival(ciriumFlight, "STN")
+    val result = arrival.Estimated
+    val expected = Option(SDate(estimatedChoxTime).addMinutes(-5).millisSinceEpoch)
+
+    result === expected
   }
 
   trait MockClientWithSuccess {
