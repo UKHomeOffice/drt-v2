@@ -73,11 +73,12 @@ class WorkloadGraphStage(name: String = "",
         log.info(s"Received ${incomingFlights.flightsToUpdate.length} updated arrivals and ${incomingFlights.arrivalsToRemove.length} arrivals to remove")
 
         val updatesTqms = incomingFlights.flightsToUpdate.flatMap(fws => flightTQMs.getOrElse(fws.apiFlight.uniqueId, List())).toSet
-        val removalUniqueIds = incomingFlights.arrivalsToRemove.map(_.uniqueId)
         val removalTqms = incomingFlights.arrivalsToRemove.flatMap(a => flightTQMs.getOrElse(a.uniqueId, List())).toSet
         val existingFlightTQMs: Set[TQM] = updatesTqms ++ removalTqms
 
+        val removalUniqueIds = incomingFlights.arrivalsToRemove.map(_.uniqueId)
         flightTQMs --= removalUniqueIds
+
         val updatedWorkloads = flightLoadMinutes(incomingFlights)
 
         mergeUpdatedFlightLoadMinutes(existingFlightTQMs, updatedWorkloads, incomingFlights)

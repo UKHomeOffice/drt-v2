@@ -70,11 +70,11 @@ abstract case class ChromaFetcher[F <: ChromaFlightLike](override val feedType: 
   def log: Logger = LoggerFactory.getLogger(classOf[ChromaFetcher[F]])
 
   val logResponse: HttpResponse => HttpResponse = { resp =>
-    log.info(s"Response Object: $resp")
+    log.debug(s"Response Object: $resp")
     log.debug(s"Response: ${resp.entity.toString}")
     if (resp.status.isFailure) {
-      log.warn(s"Failed to talk to chroma ${resp.headers}")
-      log.error(s"Failed to talk to chroma: entity ${resp.entity.toString}")
+      log.warn(s"Failed to talk to chroma: headers ${resp.headers}")
+      log.warn(s"Failed to talk to chroma: entity ${resp.entity.toString}")
     }
 
     resp
@@ -101,7 +101,7 @@ abstract case class ChromaFetcher[F <: ChromaFlightLike](override val feedType: 
   }
 
   def currentFlights: Future[Seq[F]] = {
-    log.info(s"requesting token")
+    log.debug(s"requesting token")
     val tokenRequest = HttpRequest(method = HttpMethods.POST, uri = tokenUrl, entity = chromaTokenRequestCredentials.toEntity)
     val flightsRequest = HttpRequest(method = HttpMethods.GET, uri = url)
     val eventualToken: Future[ChromaToken] = tokenPipeline(tokenRequest)
