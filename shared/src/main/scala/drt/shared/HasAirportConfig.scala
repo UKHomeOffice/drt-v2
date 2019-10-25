@@ -715,7 +715,8 @@ object AirportConfigs {
         EGate -> 0.6993,
         EeaDesk -> (1.0 - 0.6993)
       )))
-    )
+    ),
+    hasEstChox = true
   )
 
   val brs = AirportConfig(
