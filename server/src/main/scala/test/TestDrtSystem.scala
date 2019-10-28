@@ -87,7 +87,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
         checkRequiredStaffUpdatesOnStartup = false
       )
 
-      val manifestKillSwitch = startManifestsGraph(None, manifestResponsesSink, manifestRequestsSource)
+      val manifestKillSwitch = startManifestsGraph(None, manifestResponsesSink, manifestRequestsSource, 250)
 
       subscribeStaffingActors(cs)
       startScheduledFeedImports(cs)

@@ -270,7 +270,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
               }
             Option(RegisteredArrivals(maybeAllArrivals.getOrElse(mutable.SortedMap())))
           } else maybeRegisteredArrivals
-          startManifestsGraph(initialRegisteredArrivals, manifestResponsesSink, manifestRequestsSource)
+          startManifestsGraph(initialRegisteredArrivals, manifestResponsesSink, manifestRequestsSource, 15 * oneMinuteMillis)
         }
 
         subscribeStaffingActors(crunchInputs)
@@ -343,9 +343,10 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   def startManifestsGraph(maybeRegisteredArrivals: Option[RegisteredArrivals],
                           manifestResponsesSink: Sink[List[BestAvailableManifest], NotUsed],
-                          manifestRequestsSource: Source[List[Arrival], NotUsed]): UniqueKillSwitch = {
+                          manifestRequestsSource: Source[List[Arrival], NotUsed],
+                          refreshLookupIntervalMillis: MillisSinceEpoch): UniqueKillSwitch = {
     val batchSize = config.get[Int]("crunch.manifests.lookup-batch-size")
-    lazy val batchStage: BatchStage = new BatchStage(now, Crunch.isDueLookup, batchSize, expireAfterMillis, maybeRegisteredArrivals, 1000)
+    lazy val batchStage: BatchStage = new BatchStage(now, Crunch.isDueLookup, batchSize, expireAfterMillis, maybeRegisteredArrivals, 1000, refreshLookupIntervalMillis)
 
     ManifestsGraph(manifestRequestsSource, batchStage, manifestResponsesSink, registeredArrivalsActor, airportConfig.portCode, lookup).run
   }
