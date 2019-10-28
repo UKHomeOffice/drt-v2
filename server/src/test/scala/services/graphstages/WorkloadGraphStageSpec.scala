@@ -433,15 +433,13 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
 
     val probe = TestProbe("workload")
     val scheduled = "2018-01-01T00:05"
-    val workloadStart = (_: SDateLike) => SDate(scheduled)
-    val workloadEnd = (_: SDateLike) => SDate(scheduled).addMinutes(30)
-    val workloadWindow = (_: Set[ApiFlightWithSplits], _: Set[ApiFlightWithSplits]) => Option((workloadStart(SDate(scheduled)), workloadEnd(SDate(scheduled))))
+    val scheduled2 = "2018-01-01T00:06"
     val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
     val testAirportConfig = airportConfig.copy(
       defaultProcessingTimes = procTimes,
       divertedQueues = Map(Queues.NonEeaDesk -> Queues.EeaDesk)
     )
-    val flightsWithSplits = TestableWorkloadStage(probe, () => SDate(scheduled), testAirportConfig, workloadStart, workloadEnd, workloadWindow).run
+    val flightsWithSplits = TestableWorkloadStage(probe, () => SDate(scheduled), testAirportConfig).run
 
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(25))
     val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = scheduled2, actPax = Option(25))
