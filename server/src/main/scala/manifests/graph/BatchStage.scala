@@ -20,7 +20,8 @@ class BatchStage(now: () => SDateLike,
                  batchSize: Int,
                  expireAfterMillis: MillisSinceEpoch,
                  maybeInitialState: Option[RegisteredArrivals],
-                 sleepMillisOnEmptyPush: Long)(implicit actorSystem: ActorSystem, executionContext: ExecutionContext)
+                 sleepMillisOnEmptyPush: Long,
+                 lookupRefreshDue: MillisSinceEpoch => Boolean)(implicit actorSystem: ActorSystem, executionContext: ExecutionContext)
   extends GraphStage[FanOutShape2[List[Arrival], List[ArrivalKey], RegisteredArrivals]] {
   val inArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("inArrivals.in")
   val outArrivals: Outlet[List[ArrivalKey]] = Outlet[List[ArrivalKey]]("outArrivals.out")
@@ -36,6 +37,7 @@ class BatchStage(now: () => SDateLike,
     val registeredArrivals: mutable.SortedMap[ArrivalKey, Option[Long]] = mutable.SortedMap()
     val registeredArrivalsUpdates: mutable.SortedMap[ArrivalKey, Option[Long]] = mutable.SortedMap()
     val lookupQueue: mutable.SortedSet[ArrivalKey] = mutable.SortedSet()
+    var lastLookupRefresh = 0L
 
     override def preStart(): Unit = {
       if (maybeInitialState.isEmpty) log.warn(s"Did not receive any initial registered arrivals")
@@ -124,7 +126,10 @@ class BatchStage(now: () => SDateLike,
     }
 
     private def updatePrioritisedAndSubscribers(): Set[ArrivalKey] = {
-      refreshLookupQueue(now())
+      if (lookupRefreshDue(lastLookupRefresh)) {
+        refreshLookupQueue(now())
+        lastLookupRefresh = now().millisSinceEpoch
+      }
 
       val nextLookupBatch = lookupQueue.take(batchSize)
 

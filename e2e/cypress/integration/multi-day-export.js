@@ -14,13 +14,13 @@ describe('Multi day export', () => {
   const estTimeString = "01:05:00";
   const actTimeString = "01:07:00";
   const estChoxTimeString = "01:11:00";
-  const actChoxTimeString = "01:12:00";
+  const actChoxTimeString = "01:02:00";
 
-  const schString = schDateString + "T" + schTimeString + "Z";
-  const estString = schDateString + "T" + estTimeString + "Z";
-  const actString = schDateString + "T" + actTimeString + "Z";
-  const estChoxString = schDateString + "T" + estChoxTimeString + "Z";
-  const actChoxString = schDateString + "T" + actChoxTimeString + "Z";
+  const schString = moment.tz(schDateString + " " + schTimeString, "Europe/London").utc().format();
+  const estString = moment.tz(schDateString + " " + estTimeString, "Europe/London").utc().format();
+  const actString = moment.tz(schDateString + " " + actTimeString, "Europe/London").utc().format();
+  const estChoxString = moment.tz(schDateString + " " + estChoxTimeString, "Europe/London").utc().format();
+  const actChoxString = moment.tz(schDateString + " " + actChoxTimeString, "Europe/London").utc().format();
 
   it('Allows you to download API splits using the API splits dialog', () => {
     cy
@@ -73,7 +73,7 @@ describe('Multi day export', () => {
                 .should('have.attr', 'href')
                 .then((href) => {
                   cy.request(href).then((response) => {
-                    expect(response.body).to.contain(",38,4,1,,,13,5,0,,,1,0,1,,,0,0,0,2")
+                    expect(response.body).to.contain(",38,10,1,,,13,0,1,,,1,15,0,,,0,0,0,2")
                   });
                 });
             });

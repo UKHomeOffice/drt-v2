@@ -200,6 +200,7 @@ class ArrivalsGraphStage(name: String = "",
 
     def purgeExpired(): Unit = {
       Crunch.purgeExpired(liveArrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt)
+      Crunch.purgeExpired(liveBaseArrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt)
       Crunch.purgeExpired(forecastArrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt)
       Crunch.purgeExpired(forecastBaseArrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt)
       Crunch.purgeExpired(merged, UniqueArrival.atTime, now, expireAfterMillis.toInt)

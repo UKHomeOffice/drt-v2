@@ -253,17 +253,39 @@ object UniqueArrival {
   def atTime: MillisSinceEpoch => UniqueArrival = (time: MillisSinceEpoch) => UniqueArrival(0, "", time)
 }
 
-case class CodeShareKey(scheduled: Long, terminalName: TerminalName, origin: String, arrivalKeys: Set[ArrivalKey]) extends Ordered[CodeShareKey] {
+case class CodeShareKeyOrderedBySchedule(scheduled: Long, terminalName: TerminalName, origin: String) extends Ordered[CodeShareKeyOrderedBySchedule] with WithTimeAccessor {
+  lazy val comparisonString = s"$scheduled-$terminalName-$origin"
+
+  override def equals(o: scala.Any): Boolean = o match {
+    case o: CodeShareKeyOrderedBySchedule => o.comparisonString == comparisonString
+    case _ => false
+  }
+
+  override def compare(that: CodeShareKeyOrderedBySchedule): Int =
+    if (this.equals(that)) 0 else this.comparisonString.compareTo(that.comparisonString)
+
+  override def timeValue: MillisSinceEpoch = scheduled
+}
+
+object CodeShareKeyOrderedBySchedule {
+  def apply(arrival: Arrival): CodeShareKeyOrderedBySchedule = CodeShareKeyOrderedBySchedule(arrival.Scheduled, arrival.Terminal, arrival.Origin)
+
+  def apply(fws: ApiFlightWithSplits): CodeShareKeyOrderedBySchedule = CodeShareKeyOrderedBySchedule(fws.apiFlight.Scheduled, fws.apiFlight.Terminal, fws.apiFlight.Origin)
+
+  def atTime: MillisSinceEpoch => CodeShareKeyOrderedBySchedule = (millis: MillisSinceEpoch) => CodeShareKeyOrderedBySchedule(millis, "", "")
+}
+
+case class CodeShareKeyOrderedByDupes[A](scheduled: Long, terminalName: TerminalName, origin: String, arrivalKeys: Set[A]) extends Ordered[CodeShareKeyOrderedByDupes[A]] {
   lazy val comparisonStringForEquality = s"$scheduled-$terminalName-$origin"
 
   lazy val comparisonStringForOrdering = s"${100 - arrivalKeys.size}-$scheduled-$terminalName-$origin"
 
   override def equals(o: scala.Any): Boolean = o match {
-    case o: CodeShareKey => o.comparisonStringForEquality == comparisonStringForEquality
+    case o: CodeShareKeyOrderedByDupes[A] => o.comparisonStringForEquality == comparisonStringForEquality
     case _ => false
   }
 
-  override def compare(that: CodeShareKey): Int =
+  override def compare(that: CodeShareKeyOrderedByDupes[A]): Int =
     if (this.equals(that)) 0 else this.comparisonStringForOrdering.compareTo(that.comparisonStringForOrdering)
 }
 
@@ -430,10 +452,10 @@ trait SDateLike {
   )
 
   /**
-   * Days of the week 1 to 7 (Monday is 1)
-   *
-   * @return
-   */
+    * Days of the week 1 to 7 (Monday is 1)
+    *
+    * @return
+    */
   def getDayOfWeek(): Int
 
   def getFullYear(): Int

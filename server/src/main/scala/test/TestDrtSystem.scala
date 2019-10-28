@@ -5,6 +5,7 @@ import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Prop
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{KillSwitch, Materializer, OverflowStrategy}
 import akka.util.Timeout
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{AirportConfig, Arrival, Role}
 import graphs.SinkToSourceBridge
 import manifests.passengers.BestAvailableManifest
@@ -87,7 +88,8 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
         checkRequiredStaffUpdatesOnStartup = false
       )
 
-      val manifestKillSwitch = startManifestsGraph(None, manifestResponsesSink, manifestRequestsSource)
+      val lookupRefreshDue: MillisSinceEpoch => Boolean = (lastLookupMillis: MillisSinceEpoch) => now().millisSinceEpoch - lastLookupMillis > 1000
+      val manifestKillSwitch = startManifestsGraph(None, manifestResponsesSink, manifestRequestsSource, lookupRefreshDue)
 
       subscribeStaffingActors(cs)
       startScheduledFeedImports(cs)
