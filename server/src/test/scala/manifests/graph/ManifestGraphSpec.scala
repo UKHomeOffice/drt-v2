@@ -146,7 +146,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
                         now: () => SDateLike): (Sink[List[Arrival], NotUsed], Source[List[BestAvailableManifest], NotUsed]) = {
     val expireAfterMillis = (3 hours).length
 
-    val batchStage = new BatchStage(now, isDueLookup, 1, expireAfterMillis, initialRegisteredArrivals, 0, 10)
+    val batchStage = new BatchStage(now, isDueLookup, 1, expireAfterMillis, initialRegisteredArrivals, 0, (_: MillisSinceEpoch) => true)
 
     val (manifestRequestsSource, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
     val (manifestResponsesSource, _, manifestResponsesSink) = SinkToSourceBridge[List[BestAvailableManifest]]

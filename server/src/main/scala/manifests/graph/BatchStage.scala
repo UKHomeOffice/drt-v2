@@ -21,7 +21,7 @@ class BatchStage(now: () => SDateLike,
                  expireAfterMillis: MillisSinceEpoch,
                  maybeInitialState: Option[RegisteredArrivals],
                  sleepMillisOnEmptyPush: Long,
-                 refreshLookupIntervalMillis: MillisSinceEpoch)(implicit actorSystem: ActorSystem, executionContext: ExecutionContext)
+                 lookupRefreshDue: MillisSinceEpoch => Boolean)(implicit actorSystem: ActorSystem, executionContext: ExecutionContext)
   extends GraphStage[FanOutShape2[List[Arrival], List[ArrivalKey], RegisteredArrivals]] {
   val inArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("inArrivals.in")
   val outArrivals: Outlet[List[ArrivalKey]] = Outlet[List[ArrivalKey]]("outArrivals.out")
@@ -126,7 +126,7 @@ class BatchStage(now: () => SDateLike,
     }
 
     private def updatePrioritisedAndSubscribers(): Set[ArrivalKey] = {
-      if (now().millisSinceEpoch - lastLookupRefresh > refreshLookupIntervalMillis) {
+      if (lookupRefreshDue(lastLookupRefresh)) {
         refreshLookupQueue(now())
         lastLookupRefresh = now().millisSinceEpoch
       }
