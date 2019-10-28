@@ -252,13 +252,16 @@ class ArrivalSplitsGraphStage(name: String = "",
       )
     }
 
-    def updateCodeSharesFromDiff(arrivalsDiff: ArrivalsDiff): Unit = arrivalsDiff.toUpdate
-      .foreach { case (_, arrival) =>
-        val csKey = CodeShareKeyOrderedByDupes[ArrivalKey](arrival.Scheduled, arrival.Terminal, arrival.Origin, Set())
-        val existingEntry: Set[ArrivalKey] = codeShares.getOrElse(csKey, Set())
-        val updatedArrivalKeys = existingEntry + ArrivalKey(arrival)
-        codeShares += (csKey.copy(arrivalKeys = updatedArrivalKeys) -> updatedArrivalKeys)
-      }
+    def updateCodeSharesFromDiff(arrivalsDiff: ArrivalsDiff): Unit = {
+      arrivalsDiff.toUpdate
+        .foreach { case (_, arrival) =>
+          val csKey = CodeShareKeyOrderedByDupes[ArrivalKey](arrival.Scheduled, arrival.Terminal, arrival.Origin, Set())
+          val existingEntry: Set[ArrivalKey] = codeShares.getOrElse(csKey, Set())
+          val updatedArrivalKeys = existingEntry + ArrivalKey(arrival)
+          codeShares += (csKey.copy(arrivalKeys = updatedArrivalKeys) -> updatedArrivalKeys)
+        }
+      println(s"codeshares: $codeShares")
+    }
   }
 
   def splitsFromManifest(arrival: Arrival, manifest: BestAvailableManifest): Splits = {

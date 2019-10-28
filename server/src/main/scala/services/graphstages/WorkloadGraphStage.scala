@@ -76,6 +76,7 @@ class WorkloadGraphStage(name: String = "",
         val updatesTqms = incomingFlights.flightsToUpdate.flatMap(fws => flightTQMs.getOrElse(CodeShareKeyOrderedBySchedule(fws), List())).toSet
         val removalTqms = incomingFlights.arrivalsToRemove.flatMap(a => flightTQMs.getOrElse(CodeShareKeyOrderedBySchedule(a), List())).toSet
         val existingFlightTQMs: Set[TQM] = updatesTqms ++ removalTqms
+        println(s"existingTQMs: $existingFlightTQMs")
 
         flightTQMs --= incomingFlights.arrivalsToRemove.map(CodeShareKeyOrderedBySchedule(_))
 
@@ -109,9 +110,9 @@ class WorkloadGraphStage(name: String = "",
     }
 
     def mergeUpdatedFlightLoadMinutes(existingUpdatedFlightTQMs: Set[TQM], updatedWorkloads: mutable.SortedMap[TQM, Set[FlightSplitMinute]], incomingFlights: FlightsWithSplits): Unit = {
-      val updateIds = incomingFlights.flightsToUpdate.map(_.apiFlight.uniqueId).toSet
-      val removalIds = incomingFlights.arrivalsToRemove.map(_.uniqueId)
-      val affectedFlightIds: Set[Int] = updateIds ++ removalIds
+      val updateIds = incomingFlights.flightsToUpdate.map(CodeShareKeyOrderedBySchedule(_)).toSet
+      val removalIds = incomingFlights.arrivalsToRemove.map(CodeShareKeyOrderedBySchedule(_))
+      val affectedFlightIds: Set[CodeShareKeyOrderedBySchedule] = updateIds ++ removalIds
 
       removeExistingLoadsForUpdatedArrivals(existingUpdatedFlightTQMs, affectedFlightIds)
 
@@ -128,7 +129,7 @@ class WorkloadGraphStage(name: String = "",
       }
     }
 
-    private def removeExistingLoadsForUpdatedArrivals(existingUpdatedFlightTQMs: Set[TQM], affectedFlightIds: Set[Int]): Unit = {
+    private def removeExistingLoadsForUpdatedArrivals(existingUpdatedFlightTQMs: Set[TQM], affectedFlightIds: Set[CodeShareKeyOrderedBySchedule]): Unit = {
       existingUpdatedFlightTQMs.foreach { tqm =>
         val existingFlightSplitsMinutes: Set[FlightSplitMinute] = flightLoadMinutes.getOrElse(tqm, Set[FlightSplitMinute]())
         val minusIncomingSplitMinutes = existingFlightSplitsMinutes.filterNot(fsm => affectedFlightIds.contains(fsm.flightId))
