@@ -427,114 +427,50 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
     result === expectedLoads
   }
 
-  "Given a flight with splits for the EEA and NonEEA queues and the NonEEA queue is diverted to the EEA queue " +
-    "When I ask for the workload " +
-    "Then I should see the combined workload associated with the best splits for that flight only in the EEA queue " >> {
+  "Given two flights with splits with overlapping pax " +
+    "When the first flight receives an estimated arrival time update and I ask for the workload " +
+    "Then I should see the combined workload for those flights" >> {
 
     val probe = TestProbe("workload")
     val scheduled = "2018-01-01T00:05"
+    val workloadStart = (_: SDateLike) => SDate(scheduled)
+    val workloadEnd = (_: SDateLike) => SDate(scheduled).addMinutes(30)
+    val workloadWindow = (_: Set[ApiFlightWithSplits], _: Set[ApiFlightWithSplits]) => Option((workloadStart(SDate(scheduled)), workloadEnd(SDate(scheduled))))
     val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
     val testAirportConfig = airportConfig.copy(
       defaultProcessingTimes = procTimes,
       divertedQueues = Map(Queues.NonEeaDesk -> Queues.EeaDesk)
     )
-    val flightsWithSplits = TestableWorkloadStage(probe, () => SDate(scheduled), testAirportConfig).run
+    val flightsWithSplits = TestableWorkloadStage(probe, () => SDate(scheduled), testAirportConfig, workloadStart, workloadEnd, workloadWindow).run
 
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(25))
-    val historicSplits = Splits(
-      Set(
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50, None),
-        ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 50, None)),
+    val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = scheduled2, actPax = Option(25))
+    val historicSplits = Splits(Set(
+      ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50, None),
+      ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 50, None)),
       SplitSources.Historical, None, Percentage)
 
-    val flight = FlightsWithSplits(List(ApiFlightWithSplits(arrival, Set(historicSplits), None)), List())
+    val flight1 = FlightsWithSplits(List(ApiFlightWithSplits(arrival, Set(historicSplits), None)), List())
+    val flight2 = FlightsWithSplits(List(ApiFlightWithSplits(arrival2, Set(historicSplits), None)), List())
+    val flight1Update = FlightsWithSplits(List(ApiFlightWithSplits(arrival.copy(PcpTime = arrival.PcpTime.map(_ + 60000)), Set(historicSplits), None)), List())
 
-    flightsWithSplits.offer(flight)
+    Await.ready(flightsWithSplits.offer(flight1), 1 second)
+    Await.ready(flightsWithSplits.offer(flight2), 1 second)
+    Await.ready(flightsWithSplits.offer(flight1Update), 1 second)
 
     val expectedLoads = Loads(Seq(
-      LoadMinute("T1", Queues.EeaDesk, 20, 15, SDate(scheduled).millisSinceEpoch),
-      LoadMinute("T1", Queues.EeaDesk, 5, 3.75, SDate(scheduled).addMinutes(1).millisSinceEpoch)
+      LoadMinute("T1", Queues.EeaDesk, 0, 0, SDate(scheduled).addMinutes(0).millisSinceEpoch),
+      LoadMinute("T1", Queues.EeaDesk, 10 + 10, 5 + 5, SDate(scheduled).addMinutes(1).millisSinceEpoch),
+      LoadMinute("T1", Queues.EeaDesk, 2.5 + 2.5, 1.25 + 1.25, SDate(scheduled).addMinutes(2).millisSinceEpoch),
+      LoadMinute("T1", Queues.NonEeaDesk, 0, 0, SDate(scheduled).addMinutes(0).millisSinceEpoch),
+      LoadMinute("T1", Queues.NonEeaDesk, 10 + 10, 10 + 10, SDate(scheduled).addMinutes(1).millisSinceEpoch),
+      LoadMinute("T1", Queues.NonEeaDesk, 2.5 + 2.5, 2.5 + 2.5, SDate(scheduled).addMinutes(2).millisSinceEpoch)
     )).loadMinutes
 
-    val result = probe.receiveOne(2 seconds) match {
+    val result = probe.receiveN(3, 2 seconds).reverse.head match {
       case Loads(loadMinutes) => loadMinutes
     }
 
     result === expectedLoads
-  }
-
-  "Given a flight with splits which is subsequently removed " +
-    "When I ask for the output loads " +
-    "Then I should see zero loads for the minutes affected by the flight in question" >> {
-
-    val probe = TestProbe("workload")
-    val scheduled = "2018-01-01T00:05"
-    val testAirportConfig = airportConfig
-    val flightsWithSplits = TestableWorkloadStage(probe, () => SDate(scheduled), testAirportConfig).run
-
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(25))
-    val historicSplits = Splits(Set(
-      ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50, None),
-      ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 50, None)),
-      SplitSources.Historical, None, Percentage)
-
-    val flight = FlightsWithSplits(List(ApiFlightWithSplits(arrival, Set(historicSplits), None)), List())
-
-    flightsWithSplits.offer(flight)
-
-    val minute1 = SDate(scheduled).millisSinceEpoch
-    val minute2 = SDate(scheduled).addMinutes(1).millisSinceEpoch
-    val expectedLoads = Map(
-      TQM("T1", Queues.EeaDesk, minute1) -> LoadMinute("T1", Queues.EeaDesk, 0, 0, minute1),
-      TQM("T1", Queues.EeaDesk, minute2) -> LoadMinute("T1", Queues.EeaDesk, 0, 0, minute2),
-      TQM("T1", Queues.NonEeaDesk, minute1) -> LoadMinute("T1", Queues.NonEeaDesk, 0, 0, minute1),
-      TQM("T1", Queues.NonEeaDesk, minute2) -> LoadMinute("T1", Queues.NonEeaDesk, 0, 0, minute2))
-
-    flightsWithSplits.offer(FlightsWithSplits(List(), List(arrival)))
-
-    probe.fishForMessage(2 seconds) {
-      case Loads(loadMinutes) => loadMinutes == expectedLoads
-    }
-
-    success
-  }
-
-  "Given two flights with splits where one is subsequently removed " +
-    "When I ask for the output loads " +
-    "Then I should see the loads for the remaining flight only" >> {
-
-    val probe = TestProbe("workload")
-    val scheduled = "2018-01-01T00:05"
-    val testAirportConfig = airportConfig
-    val flightsWithSplits = TestableWorkloadStage(probe, () => SDate(scheduled), testAirportConfig).run
-
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", origin = "AAA", schDt = scheduled, actPax = Option(25))
-    val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", origin = "BBB", schDt = scheduled, actPax = Option(25))
-    val historicSplits = Splits(Set(
-      ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50, None),
-      ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 50, None)),
-      SplitSources.Historical, None, Percentage)
-
-    val flights = FlightsWithSplits(List(ApiFlightWithSplits(arrival, Set(historicSplits), None), ApiFlightWithSplits(arrival2, Set(historicSplits), None)), List())
-
-    flightsWithSplits.offer(flights)
-
-    val minute1 = SDate(scheduled).millisSinceEpoch
-    val minute2 = SDate(scheduled).addMinutes(1).millisSinceEpoch
-    val expectedLoads = Set(
-      LoadMinute("T1", Queues.EeaDesk, 10.0, 4.166666666666667, minute1),
-      LoadMinute("T1", Queues.EeaDesk, 2.5, 1.0416666666666667, minute2),
-      LoadMinute("T1", Queues.NonEeaDesk, 10.0, 0.0, minute1),
-      LoadMinute("T1", Queues.NonEeaDesk, 2.5, 0.0, minute2))
-
-    flightsWithSplits.offer(FlightsWithSplits(List(), List(arrival)))
-
-    probe.fishForMessage(2 seconds) {
-      case Loads(loadMinutes) =>
-        println(s"loads: $loadMinutes")
-        loadMinutes.values.toSet == expectedLoads
-    }
-
-    success
   }
 }

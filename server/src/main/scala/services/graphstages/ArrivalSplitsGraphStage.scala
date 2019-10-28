@@ -39,7 +39,7 @@ class ArrivalSplitsGraphStage(name: String = "",
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     val flightsByFlightId: mutable.SortedMap[ArrivalKey, ApiFlightWithSplits] = mutable.SortedMap()
-    val codeShares: mutable.SortedMap[CodeShareKey, Set[ArrivalKey]] = mutable.SortedMap()
+    val codeShares: mutable.SortedMap[CodeShareKeyOrderedByDupes[ArrivalKey], Set[ArrivalKey]] = mutable.SortedMap()
     var arrivalsWithSplitsDiff: Map[ArrivalKey, ApiFlightWithSplits] = Map()
     var arrivalsToRemove: Set[Arrival] = Set()
     val manifestBuffer: mutable.Map[ArrivalKey, BestAvailableManifest] = mutable.Map()
@@ -53,7 +53,7 @@ class ArrivalSplitsGraphStage(name: String = "",
           purgeExpired(flightsByFlightId, ArrivalKey.atTime, now, expireAfterMillis.toInt)
 
           flightsByFlightId.foreach { case (arrivalKey, fws) =>
-            val csKey = CodeShareKey(fws.apiFlight.Scheduled, fws.apiFlight.Terminal, fws.apiFlight.Origin, Set())
+            val csKey = CodeShareKeyOrderedByDupes[ArrivalKey](fws.apiFlight.Scheduled, fws.apiFlight.Terminal, fws.apiFlight.Origin, Set())
             val existingEntry: Set[ArrivalKey] = codeShares.getOrElse(csKey, Set())
             val updatedArrivalKeys = existingEntry + arrivalKey
             codeShares += (csKey.copy(arrivalKeys = updatedArrivalKeys) -> updatedArrivalKeys)
@@ -254,7 +254,7 @@ class ArrivalSplitsGraphStage(name: String = "",
 
     def updateCodeSharesFromDiff(arrivalsDiff: ArrivalsDiff): Unit = arrivalsDiff.toUpdate
       .foreach { case (_, arrival) =>
-        val csKey = CodeShareKey(arrival.Scheduled, arrival.Terminal, arrival.Origin, Set())
+        val csKey = CodeShareKeyOrderedByDupes[ArrivalKey](arrival.Scheduled, arrival.Terminal, arrival.Origin, Set())
         val existingEntry: Set[ArrivalKey] = codeShares.getOrElse(csKey, Set())
         val updatedArrivalKeys = existingEntry + ArrivalKey(arrival)
         codeShares += (csKey.copy(arrivalKeys = updatedArrivalKeys) -> updatedArrivalKeys)
