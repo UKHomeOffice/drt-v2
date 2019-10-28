@@ -253,7 +253,7 @@ object UniqueArrival {
   def atTime: MillisSinceEpoch => UniqueArrival = (time: MillisSinceEpoch) => UniqueArrival(0, "", time)
 }
 
-case class CodeShareKeyOrderedBySchedule(scheduled: Long, terminalName: TerminalName, origin: String) extends Ordered[CodeShareKeyOrderedBySchedule] {
+case class CodeShareKeyOrderedBySchedule(scheduled: Long, terminalName: TerminalName, origin: String) extends Ordered[CodeShareKeyOrderedBySchedule] with WithTimeAccessor {
   lazy val comparisonString = s"$scheduled-$terminalName-$origin"
 
   override def equals(o: scala.Any): Boolean = o match {
@@ -263,12 +263,16 @@ case class CodeShareKeyOrderedBySchedule(scheduled: Long, terminalName: Terminal
 
   override def compare(that: CodeShareKeyOrderedBySchedule): Int =
     if (this.equals(that)) 0 else this.comparisonString.compareTo(that.comparisonString)
+
+  override def timeValue: MillisSinceEpoch = scheduled
 }
 
 object CodeShareKeyOrderedBySchedule {
   def apply(arrival: Arrival): CodeShareKeyOrderedBySchedule = CodeShareKeyOrderedBySchedule(arrival.Scheduled, arrival.Terminal, arrival.Origin)
 
   def apply(fws: ApiFlightWithSplits): CodeShareKeyOrderedBySchedule = CodeShareKeyOrderedBySchedule(fws.apiFlight.Scheduled, fws.apiFlight.Terminal, fws.apiFlight.Origin)
+
+  def atTime: MillisSinceEpoch => CodeShareKeyOrderedBySchedule = (millis: MillisSinceEpoch) => CodeShareKeyOrderedBySchedule(millis, "", "")
 }
 
 case class CodeShareKeyOrderedByDupes[A](scheduled: Long, terminalName: TerminalName, origin: String, arrivalKeys: Set[A]) extends Ordered[CodeShareKeyOrderedByDupes[A]] {

@@ -32,7 +32,7 @@ class WorkloadGraphStage(name: String = "",
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     val loadMinutes: mutable.SortedMap[TQM, LoadMinute] = mutable.SortedMap()
-    val flightTQMs: mutable.Map[CodeShareKeyOrderedBySchedule, List[TQM]] = mutable.Map()
+    val flightTQMs: mutable.SortedMap[CodeShareKeyOrderedBySchedule, List[TQM]] = mutable.SortedMap()
     val flightLoadMinutes: mutable.SortedMap[TQM, Set[FlightSplitMinute]] = mutable.SortedMap()
     val updatedLoadsToPush: mutable.SortedMap[TQM, LoadMinute] = mutable.SortedMap()
 
@@ -89,6 +89,7 @@ class WorkloadGraphStage(name: String = "",
 
         loadMinutes ++= latestDiff
         purgeExpired(loadMinutes, TQM.atTime, now, expireAfterMillis.toInt)
+        purgeExpired(flightTQMs, CodeShareKeyOrderedBySchedule.atTime, now, expireAfterMillis.toInt)
         updatedLoadsToPush ++= latestDiff
         log.debug(s"${updatedLoadsToPush.size} load minutes to push (${updatedLoadsToPush.values.count(_.paxLoad == 0d)} zero pax minutes)")
 
