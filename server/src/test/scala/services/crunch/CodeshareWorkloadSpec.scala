@@ -41,13 +41,11 @@ class CodeshareWorkloadSpec extends CrunchTestLike {
       case PortState(_, crunchMinutes, _) =>
         val minute1paxCorrect = crunchMinutes.get(TQM("T1", Queues.EeaDesk, schSdate.millisSinceEpoch)) match {
           case Some(minute) =>
-            println(s"min1: ${minute.paxLoad}")
             minute.paxLoad == 0
           case _ => false
         }
         val minute2paxCorrect = crunchMinutes.get(TQM("T1", Queues.EeaDesk, schSdate.addMinutes(1).millisSinceEpoch)) match {
           case Some(minute) =>
-            println(s"min2: ${minute.paxLoad}")
             minute.paxLoad == 16
           case _ => false
         }

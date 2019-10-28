@@ -76,7 +76,6 @@ class WorkloadGraphStage(name: String = "",
         val updatesTqms = incomingFlights.flightsToUpdate.flatMap(fws => flightTQMs.getOrElse(CodeShareKeyOrderedBySchedule(fws), List())).toSet
         val removalTqms = incomingFlights.arrivalsToRemove.flatMap(a => flightTQMs.getOrElse(CodeShareKeyOrderedBySchedule(a), List())).toSet
         val existingFlightTQMs: Set[TQM] = updatesTqms ++ removalTqms
-        println(s"existingTQMs: $existingFlightTQMs")
 
         flightTQMs --= incomingFlights.arrivalsToRemove.map(CodeShareKeyOrderedBySchedule(_))
 
