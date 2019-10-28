@@ -11,10 +11,11 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, ViewMode}
 import drt.shared._
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomAttr, VdomElement, ^, vdomElementFromComponent, vdomElementFromTag, _}
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
-import japgolly.scalajs.react.{BackendScope, Callback, ScalaComponent}
+import japgolly.scalajs.react.{BackendScope, Callback, CtorType, ScalaComponent}
 import org.scalajs.dom.html.Div
 
 import scala.util.Try
@@ -63,7 +64,7 @@ object TerminalContentComponent {
   }
 
   class Backend(t: BackendScope[Props, State]) {
-    val arrivalsTableComponent = FlightsWithSplitsTable.ArrivalsTable(
+    val arrivalsTableComponent: Component[FlightsWithSplitsTable.Props, Unit, Unit, CtorType.Props] = FlightsWithSplitsTable.ArrivalsTable(
       None,
       originMapper,
       splitsGraphComponentColoured)(paxComp(843))
@@ -176,7 +177,6 @@ object TerminalContentComponent {
           )
         }))
     }
-
   }
 
   def timeRange(props: Props): CustomWindow = {

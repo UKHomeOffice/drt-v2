@@ -1717,3 +1717,284 @@ div.access-restricted {
   margin-left: 1%;
   padding: 0
 }
+
+/***/
+.terminal-dashboard {
+    min-width: 990px;
+    width: fit-content;
+    padding-top: 3%;
+}
+.pax-bar {
+    border-style: solid;
+    padding: 10px;
+    border-radius: 15px;
+    width:97%;
+    background-color: #eee;
+    position:relative;
+    top: 20%;
+    left: 3%;
+    font-size: 27px;
+    font-weight: bold;
+    text-align: center;
+    height: fit-content;
+    margin-bottom: 4%;
+}
+
+.arrivals_btn {
+    border-style: solid;
+    padding: 10px;
+    border-radius: 15px;
+    width:15%;
+    background-color: #d5e8fe;
+    position:relative;
+    transform: translateY(-100%);
+    left: 80%;
+    font-size: 27px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.pax-queue {
+    padding: 10px;
+    border-radius: 15px;
+    width:20%;
+    background-color: #eee;
+    position:relative;
+    font-size: 27px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.arrivals_queue {
+    left: 80%;
+    transform: translateY(-370%);
+    width:15%;
+}
+
+.pax-queue-logo {
+    height: 55px;
+    width: 55px;
+    background-image: url(../images/pax-queue_small.png);
+    background-repeat: no-repeat;
+    position: relative;
+    transform: translateY(10%);
+}
+
+.pax-wait-logo {
+    height: 55px;
+    width: 55px;
+    background-image: url(../images/pax-wait_small.png);
+    position: relative;
+    background-repeat: no-repeat;
+    transform: translateY(25%);
+}
+
+.pax-increase-logo {
+    height: 55px;
+    width: 55px;
+    background-image: url(../images/pax-increase_small.png);
+    position: relative;
+    background-repeat: no-repeat;
+    transform: translateY(50%);
+}
+
+.pax-decrease-logo {
+    height: 55px;
+    width: 55px;
+    background-image: url(../images/pax-decrease_small.png);
+    position: relative;
+    background-repeat: no-repeat;
+    transform: translateY(50%);
+}
+
+.pax-neutral-logo {
+    height: 55px;
+    width: 55px;
+    background-image: url(../images/pax-neutral_small.png);
+    position: relative;
+    background-repeat: no-repeat;
+    transform: translateY(50%);
+}
+
+.queue-box {
+    padding: 10px;
+    height: 250px;
+    border-style: solid;
+    border-radius: 15px;
+    width:20%;
+    background-color: #eee;
+    transform: translateY(-10%);
+    position:relative;
+    left: 3%;
+    font-size: 30px;
+    font-weight: bold;
+    text-align: center;
+    display: inline-block;
+    float: left;
+    margin-right: 3%;
+    min-width: 300px;
+}
+
+.queue-pax-queue-text {
+    background-color: #eee;
+    width:75%;
+    position:absolute;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: left;
+    left: 25%;
+    top: 25%;
+}
+
+.queue-pax-wait-text {
+    background-color: #eee;
+    width:75%;
+    position:absolute;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: left;
+    left: 25%;
+    top: 48%;
+}
+
+.queue-pax-increase-decrease-text {
+    background-color: #eee;
+    width:75%;
+    position:absolute;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: left;
+    left: 25%;
+    top: 74%;
+}
+
+.prev-bar {
+    padding: 10px;
+    border-radius: 15px;
+    width:5%;
+    background-color: #eee;
+    position:absolute;
+    left:3%;
+    top: 77%;
+    font-size: 27px;
+    font-weight: bold;
+    text-align: center;
+    border-style: solid;
+}
+
+.tb-bar {
+    padding: 10px;
+    width:60%;
+    background-color: #d5e8fe;
+    position:absolute;
+    left:8%;
+    top: 77%;
+    font-size: 27px;
+    font-weight: bold;
+    text-align: center;
+    border-style: solid;
+}
+
+.next-bar {
+    padding: 10px;
+    width:5%;
+    border-radius: 15px;
+    background-color: #eee;
+    position:absolute;
+    left:68%;
+    top: 77%;
+    font-size: 27px;
+    font-weight: bold;
+    text-align: center;
+    border-style: solid;
+}
+
+.arrival-tooltip {
+    opacity: 0;
+    position: absolute;
+    top: 23%;
+    left: 3%;
+    width:70%;
+    height: 43%;
+    border-radius: 15px;
+    padding: 10px;
+    background: #d5e8fe;
+    /* text-align: center; */
+    /* border: 1px solid #ddd; */
+    box-shadow: 0 6px 8px rgba(52, 73, 94, .2), 0 1px 1px rgba(52, 73, 94, 0.1);
+    z-index: 10;
+    transition: all 0.2s ease-out;
+    pointer-events: none;
+    border-style: solid;
+}
+
+#arrivals td {
+    text-align: center;
+  }
+
+  #arrivals th {
+    background-color: #2889c6;
+  }
+
+  #arrivals table {
+    width: 97%;
+    text-align: center;
+  }
+
+  #arrivals thead {
+    background-color: #2989C6;
+    color: #fff;
+  }
+
+#svg-container
+{
+    display: flex;
+    align-items:center;
+    height: 270px;
+    width:20%;
+    position:absolute;
+    left: 78%;
+    top : 26%;
+}
+
+.svg-tooltip {
+    opacity: 0;
+    position: absolute;
+    top: 65%;
+    left: 80%;
+    width:15%;
+    height: 10%;
+    border-radius: 15px;
+    padding: 10px;
+    background: #d5e8fe;
+    /* text-align: center; */
+    /* border: 1px solid #ddd; */
+    box-shadow: 0 6px 8px rgba(52, 73, 94, .2), 0 1px 1px rgba(52, 73, 94, 0.1);
+    z-index: 10;
+    transition: all 0.2s ease-out;
+    pointer-events: none;
+    border-style: solid;
+}
+
+
+
+.tooltip {                                                        /* NEW */
+    background: #eee;                                               /* NEW */
+    box-shadow: 0 0 5px #999999;                                    /* NEW */
+    color: #333;                                                    /* NEW */
+    display: none;                                                  /* NEW */
+    font-size: 12px;                                                /* NEW */
+    left: 130px;                                                    /* NEW */
+    padding: 10px;                                                  /* NEW */
+    position: absolute;                                             /* NEW */
+    text-align: center;                                             /* NEW */
+    top: 95px;                                                      /* NEW */
+    width: 80px;                                                    /* NEW */
+    z-index: 10;                                                    /* NEW */
+  }                                                                 /* NEW */
+  .legend {
+    font-size: 12px;
+  }
+  rect {
+    stroke-width: 2;
+  }

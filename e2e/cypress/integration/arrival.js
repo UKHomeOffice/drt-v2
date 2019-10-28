@@ -157,15 +157,4 @@ describe('Arrivals page', () => {
   });
 });
 
-Cypress.Commands.add('addManifest', (manifest) => cy.request('POST', '/test/manifest', manifest));
-
-Cypress.Commands.add('waitForFlightToAppear', (flightCode) => {
-  cy
-    .navigateHome()
-    .navigateToMenuItem('T1')
-    .choose24Hours()
-    .get("#arrivalsTab").click()
-    .get("#arrivals")
-    .contains(flightCode);
-})
 
