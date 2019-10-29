@@ -137,8 +137,6 @@ class OOHCheckerSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
     }
 
     "Given a bank holiday between 09:00 and 17:30 I OOH should be true" >> {
-      val client = new BankHolidayApiClient() with Holidays2019Success
-
       val time = SDate("2019-12-25T17:00:00", Crunch.europeLondonTimeZone)
 
       val result = Await.result(OOHChecker(mockBankHolidayClient).isOOH(time), 1 second)

@@ -17,7 +17,7 @@ import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSucc
 import services.SDate
 import services.graphstages.Crunch
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -127,9 +127,9 @@ class LGWForecastFeed(boxConfigFilePath: String, userId: String, ukBfGalForecast
 
   private def getTheLatestFileInfo(boxAPIConnection: BoxAPIConnection): Try[BoxFile#Info] =
     Try {
-      val folder = new BoxFolder(boxAPIConnection, ukBfGalForecastFolderId)
+      val folder = new BoxFolder(boxAPIConnection, ukBfGalForecastFolderId).asScala
 
-      val csvFiles = ListBuffer[BoxFile#Info]()
+      val csvFiles = ListBuffer[BoxFile#Info]().asJava
       for (itemInfo <- folder) {
         itemInfo match {
           case fileInfo: BoxFile#Info =>
@@ -139,7 +139,7 @@ class LGWForecastFeed(boxConfigFilePath: String, userId: String, ukBfGalForecast
           case _ =>
         }
       }
-      csvFiles.sortBy(f => f.getName).reverse.headOption.getOrElse {
+      csvFiles.asScala.sortBy(f => f.getName).reverse.headOption.getOrElse {
         log.error("Cannot find the latest Forecast CSV file")
         throw new Exception("Cannot find the latest Forecast CSV file.")
       }

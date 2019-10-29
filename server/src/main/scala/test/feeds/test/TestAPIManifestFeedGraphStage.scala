@@ -10,7 +10,6 @@ import services.graphstages.DqManifests
 import test.TestActors.ResetActor
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.language.postfixOps
 
 
 case object GetManifests

@@ -1,7 +1,6 @@
 package controllers
 
-import drt.shared.{Arrival, FeedSource, LiveFeedSource}
-import org.joda.time.DateTimeZone
+import drt.shared.{Arrival, FeedSource}
 import org.springframework.util.StringUtils
 import services.SDate
 
@@ -22,6 +21,7 @@ object ArrivalGenerator {
               actDt: String = "",
               estChoxDt: String = "",
               actChoxDt: String = "",
+              pcpDt: String = "",
               gate: Option[String] = None,
               stand: Option[String] = None,
               tranPax: Option[Int] = None,
@@ -29,7 +29,9 @@ object ArrivalGenerator {
               baggageReclaimId: Option[String] = None,
               airportId: String = "",
               feedSources: Set[FeedSource] = Set()
-             ): Arrival =
+             ): Arrival = {
+    val pcpTime = if (pcpDt.nonEmpty) Option(SDate(pcpDt).millisSinceEpoch) else if (schDt.nonEmpty) Option(SDate(schDt).millisSinceEpoch) else None
+
     Arrival(
       rawICAO = icao,
       rawIATA = iata,
@@ -49,8 +51,9 @@ object ArrivalGenerator {
       RunwayID = runwayId,
       BaggageReclaimId = baggageReclaimId,
       AirportID = airportId,
-      PcpTime = if (!StringUtils.isEmpty(schDt)) Some(SDate(schDt, DateTimeZone.UTC).millisSinceEpoch) else None,
-      Scheduled = if (!StringUtils.isEmpty(schDt)) SDate(schDt, DateTimeZone.UTC).millisSinceEpoch else 0,
+      PcpTime = pcpTime,
+      Scheduled = if (!StringUtils.isEmpty(schDt)) SDate(schDt).millisSinceEpoch else 0,
       FeedSources = feedSources
     )
+  }
 }

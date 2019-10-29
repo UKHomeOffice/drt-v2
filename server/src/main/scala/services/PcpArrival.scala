@@ -5,7 +5,7 @@ import drt.shared.FlightsApi.TerminalName
 import drt.shared.{Arrival, MilliDate}
 import org.slf4j.LoggerFactory
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Success, Try}
 
 object PcpArrival {
 

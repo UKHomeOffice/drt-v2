@@ -20,7 +20,7 @@ case class UpdateStats(updatesCount: Int, additionsCount: Int)
 class ArrivalSplitsGraphStage(name: String = "",
                               portCode: String,
                               optionalInitialFlights: Option[FlightsWithSplits],
-                              splitsCalculator: SplitsCalculator, //keep this for now, we'll need to move this into it's own graph stage later..
+                              splitsCalculator: SplitsCalculator,
                               groupFlightsByCodeShares: Seq[ApiFlightWithSplits] => Seq[(ApiFlightWithSplits, Set[Arrival])],
                               expireAfterMillis: Long,
                               now: () => SDateLike)

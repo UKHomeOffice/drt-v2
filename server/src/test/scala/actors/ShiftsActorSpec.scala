@@ -10,9 +10,8 @@ import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterEach
 import services.SDate
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.concurrent.duration._
-import scala.language.reflectiveCalls
 
 
 object StaffAssignmentGenerator {
@@ -30,7 +29,7 @@ class ShiftsActorSpec extends TestKit(ActorSystem("ShiftsActorSpec", ConfigFacto
   "akka.persistence.journal.leveldb.dir" -> PersistenceHelper.dbLocation,
   "akka.persistence.snapshot-store.plugin" -> "akka.persistence.snapshot-store.local",
   "akka.persistence.snapshot-store.local.dir" -> s"${PersistenceHelper.dbLocation}/snapshot"
-))))
+).asJava)))
   with SpecificationLike
   with AfterEach
   with ImplicitSender {

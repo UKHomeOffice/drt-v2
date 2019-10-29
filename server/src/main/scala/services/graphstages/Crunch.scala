@@ -11,6 +11,8 @@ import scala.collection.immutable.{Map, SortedMap}
 import scala.collection.mutable
 
 object Crunch {
+  val paxOffPerMinute: Int = 20
+
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   case class FlightSplitMinute(flightId: CodeShareKeyOrderedBySchedule, paxType: PaxType, terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
@@ -272,7 +274,7 @@ object Crunch {
     removals ++= existing.keys.toSet -- incoming.keys.toSet
 
     incoming.foreach {
-      case (k, a)  => if (!existing.contains(k) || existing(k) != a) updates += a
+      case (k, a) => if (!existing.contains(k) || existing(k) != a) updates += a
     }
 
     (removals, updates)

@@ -71,6 +71,7 @@ class WorkloadGraphStage(name: String = "",
       override def onPush(): Unit = {
         val timer = StageTimer(stageName, inFlightsWithSplits)
         val incomingFlights = grab(inFlightsWithSplits)
+
         log.info(s"Received ${incomingFlights.flightsToUpdate.length} updated arrivals and ${incomingFlights.arrivalsToRemove.length} arrivals to remove")
 
         val updatesTqms = incomingFlights.flightsToUpdate.flatMap(fws => flightTQMs.getOrElse(CodeShareKeyOrderedBySchedule(fws), List())).toSet

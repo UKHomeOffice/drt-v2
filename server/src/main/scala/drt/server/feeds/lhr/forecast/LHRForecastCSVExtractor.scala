@@ -20,7 +20,6 @@ object LHRForecastCSVExtractor {
     val origin = 3
     val internationalOrDomestic = 4
     val totalPax = 5
-    val pcpPax = 6
     val transferPax = 7
   }
 
@@ -47,7 +46,6 @@ object LHRForecastCSVExtractor {
           val origin = asString(rowFields(FieldIndex.origin))
           val intOrDom = asString(rowFields(FieldIndex.internationalOrDomestic))
           val totalPax = rowFields(FieldIndex.totalPax).toInt
-          val pcpPax = rowFields(FieldIndex.pcpPax).toInt
           val transfer = rowFields(FieldIndex.transferPax).toInt
 
           LHRForecastFlightRow(scheduledDate, flightCode, origin, intOrDom, totalPax, transfer, terminal)
