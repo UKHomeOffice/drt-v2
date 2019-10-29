@@ -86,6 +86,8 @@ class WorkloadGraphStage(name: String = "",
 
         val allDaysAffected: Set[String] = daysAffectedByIncoming(incomingFlights)
 
+        log.info(s"Crunch days affected by workload changes: ${allDaysAffected.mkString(", ")}")
+
         log.info(s"Received ${incomingFlights.flightsToUpdate.length} updated arrivals and ${incomingFlights.arrivalsToRemove.length} arrivals to remove")
 
         val updatesTqms = incomingFlights.flightsToUpdate.flatMap(fws => flightTQMs.getOrElse(CodeShareKeyOrderedBySchedule(fws), List())).toSet
