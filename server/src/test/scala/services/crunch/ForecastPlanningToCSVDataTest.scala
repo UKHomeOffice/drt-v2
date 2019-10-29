@@ -3,7 +3,6 @@ package services.crunch
 import drt.shared.CrunchApi._
 import drt.shared.{Forecast, MilliDate, Queues, SDateLike}
 import org.specs2.mutable.Specification
-import services.graphstages.Crunch
 import services.graphstages.Crunch.getLocalLastMidnight
 import services.{CSVData, SDate}
 
@@ -83,18 +82,18 @@ class ForecastPlanningToCSVDataTest extends Specification {
           ForecastTimeSlot(d1t0100Millis, 9, 10)
         ),
         d2t0000Millis -> Seq(
-          ForecastTimeSlot(d1t0000Millis, 1, 2),
-          ForecastTimeSlot(d1t0015Millis, 3, 4),
-          ForecastTimeSlot(d1t0030Millis, 5, 6),
-          ForecastTimeSlot(d1t0045Millis, 7, 8),
-          ForecastTimeSlot(d1t0100Millis, 9, 10)
+          ForecastTimeSlot(d2t0000Millis, 1, 2),
+          ForecastTimeSlot(d2t0015Millis, 3, 4),
+          ForecastTimeSlot(d2t0030Millis, 5, 6),
+          ForecastTimeSlot(d2t0045Millis, 7, 8),
+          ForecastTimeSlot(d2t0100Millis, 9, 10)
         ),
         d3t0000Millis -> Seq(
-          ForecastTimeSlot(d1t0000Millis, 1, 2),
-          ForecastTimeSlot(d1t0015Millis, 3, 4),
-          ForecastTimeSlot(d1t0030Millis, 5, 6),
-          ForecastTimeSlot(d1t0045Millis, 7, 8),
-          ForecastTimeSlot(d1t0100Millis, 9, 10)
+          ForecastTimeSlot(d3t0000Millis, 1, 2),
+          ForecastTimeSlot(d3t0015Millis, 3, 4),
+          ForecastTimeSlot(d3t0030Millis, 5, 6),
+          ForecastTimeSlot(d3t0045Millis, 7, 8),
+          ForecastTimeSlot(d3t0100Millis, 9, 10)
         )
       ))
 

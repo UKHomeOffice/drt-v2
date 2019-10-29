@@ -2,7 +2,7 @@ package api
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, HttpResponse}
-import akka.stream.{ActorMaterializer, Materializer}
+import akka.stream.ActorMaterializer
 import akka.testkit.TestKit
 import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.SpecificationLike

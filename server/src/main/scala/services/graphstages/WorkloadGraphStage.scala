@@ -38,6 +38,9 @@ class WorkloadGraphStage(name: String = "",
 
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
+    val daysAffectedByArrival: Arrival => Set[String] = Crunch.arrivalDaysAffected(airportConfig.crunchOffsetMinutes, Crunch.paxOffPerMinute)
+    val daysAffectedByTqms: List[TQM] => Set[String] = Crunch.tqmsDaysAffected(airportConfig.crunchOffsetMinutes, Crunch.paxOffPerMinute)
+
     override def preStart(): Unit = {
       optionalInitialLoads.foreach { case Loads(lms) =>
         log.info(s"Received ${lms.size} initial loads")
@@ -68,9 +71,21 @@ class WorkloadGraphStage(name: String = "",
     }
 
     setHandler(inFlightsWithSplits, new InHandler {
+
+      def daysAffectedByIncoming(incoming: FlightsWithSplits): Set[String] = {
+        val daysFromIncomingRemovals = incoming.arrivalsToRemove.flatMap(arrival => daysAffectedByArrival(arrival)).toSet
+        val daysFromIncomingUpdates = incoming.flightsToUpdate.flatMap(fws => daysAffectedByArrival(fws.apiFlight)).toSet
+        val daysFromExistingRemovals = incoming.arrivalsToRemove.flatMap(arrival => flightTQMs.get(CodeShareKeyOrderedBySchedule(arrival)).map(daysAffectedByTqms)).flatten.toSet
+        val daysFromExistingUpdates = incoming.flightsToUpdate.flatMap(fws => flightTQMs.get(CodeShareKeyOrderedBySchedule(fws.apiFlight)).map(daysAffectedByTqms)).flatten.toSet
+        Set(daysFromIncomingRemovals, daysFromExistingRemovals, daysFromIncomingUpdates, daysFromExistingUpdates).flatten
+      }
+
       override def onPush(): Unit = {
         val timer = StageTimer(stageName, inFlightsWithSplits)
         val incomingFlights = grab(inFlightsWithSplits)
+
+        val allDaysAffected: Set[String] = daysAffectedByIncoming(incomingFlights)
+
         log.info(s"Received ${incomingFlights.flightsToUpdate.length} updated arrivals and ${incomingFlights.arrivalsToRemove.length} arrivals to remove")
 
         val updatesTqms = incomingFlights.flightsToUpdate.flatMap(fws => flightTQMs.getOrElse(CodeShareKeyOrderedBySchedule(fws), List())).toSet

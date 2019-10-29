@@ -440,6 +440,8 @@ object ArrivalKey {
   def atTime: MillisSinceEpoch => ArrivalKey = (time: MillisSinceEpoch) => ArrivalKey("", "", time)
 }
 
+case class ArrivalUpdate(old: Arrival, updated: Arrival)
+
 case class ArrivalsDiff(toUpdate: ISortedMap[UniqueArrival, Arrival], toRemove: Set[Arrival])
 
 trait SDateLike {

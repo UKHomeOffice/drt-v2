@@ -1,7 +1,5 @@
 package test.controllers
 
-import javax.inject.{Inject, Singleton}
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.Materializer
 import akka.util.Timeout
@@ -9,12 +7,13 @@ import controllers.AirportConfProvider
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
 import drt.shared.{Arrival, LiveFeedSource, SDateLike}
+import javax.inject.{Inject, Singleton}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.FlightPassengerInfoProtocol._
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
+import play.api.Configuration
 import play.api.http.HeaderNames
 import play.api.mvc.{InjectedController, Session}
-import play.api.{Configuration, Environment}
 import services.SDate
 import spray.json._
 import test.ResetData

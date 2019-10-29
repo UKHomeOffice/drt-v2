@@ -7,7 +7,7 @@ import akka.testkit.{ImplicitSender, TestKit}
 import com.typesafe.config.ConfigFactory
 import org.specs2.mutable.After
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
@@ -30,7 +30,7 @@ abstract class AkkaTestkitSpecs2SupportForPersistence(val dbLocation: String) ex
   "akka.persistence.journal.leveldb.dir" -> dbLocation,
   "akka.persistence.snapshot-store.plugin" -> "akka.persistence.snapshot-store.local",
   "akka.persistence.snapshot-store.local.dir" -> s"$dbLocation/snapshot"
-))))
+).asJava)))
   with After
   with ImplicitSender {
 

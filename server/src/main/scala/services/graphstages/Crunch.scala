@@ -11,6 +11,8 @@ import scala.collection.immutable.{Map, SortedMap}
 import scala.collection.mutable
 
 object Crunch {
+  val paxOffPerMinute: Int = 20
+
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   case class FlightSplitMinute(flightId: CodeShareKeyOrderedBySchedule, paxType: PaxType, terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
@@ -272,9 +274,24 @@ object Crunch {
     removals ++= existing.keys.toSet -- incoming.keys.toSet
 
     incoming.foreach {
-      case (k, a)  => if (!existing.contains(k) || existing(k) != a) updates += a
+      case (k, a) => if (!existing.contains(k) || existing(k) != a) updates += a
     }
 
     (removals, updates)
   }
+
+  def arrivalDaysAffected(crunchOffsetMinutes: Int, paxOffPerMinute: Int)(arrival: Arrival): Set[String] = {
+    arrival.PcpTime.toSet.flatMap { pcpTime: MillisSinceEpoch =>
+      val first = SDate(pcpTime)
+      val minutesOfPaxArrivals: Int = (arrival.ActPax.getOrElse(0).toDouble / paxOffPerMinute).ceil.toInt - 1
+      val last = first.addMinutes(minutesOfPaxArrivals)
+      List(first, last).map(_.addMinutes(-1 * crunchOffsetMinutes).toISODateOnly).toSet
+    }
+  }
+
+  def tqmsDaysAffected(crunchOffsetMinutes: Int, paxOffPerMinute: Int)(tqms: List[TQM]): Set[String] =
+    if (tqms.isEmpty)
+      Set()
+    else
+      Set(tqms.min, tqms.max).map(m => SDate(m.minute).addMinutes(-1 * crunchOffsetMinutes).toISODateOnly)
 }

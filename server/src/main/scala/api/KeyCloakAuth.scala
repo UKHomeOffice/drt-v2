@@ -1,15 +1,14 @@
 package api
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.marshallers.sprayjson.{JsonEntityStreamingSupport, SprayJsonSupport}
+import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.Accept
-import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
+import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import drt.http.WithSendAndReceive
 import org.slf4j.{Logger, LoggerFactory}
-import spray.json.{DefaultJsonProtocol, JsNumber, JsObject, JsString, JsValue}
-import spray.json.RootJsonFormat
+import spray.json.{DefaultJsonProtocol, JsNumber, JsObject, JsString, JsValue, RootJsonFormat}
 
 import scala.concurrent.Future
 

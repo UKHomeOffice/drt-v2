@@ -10,7 +10,6 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source, StreamConverters}
 import akka.util.ByteString
 import com.amazonaws.auth.AWSCredentials
-import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.amazonaws.regions.Regions
 import com.mfglabs.commons.aws.s3._
 import com.typesafe.config.Config
@@ -19,8 +18,8 @@ import org.slf4j.{Logger, LoggerFactory}
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.util.{Failure, Success, Try}
 import scala.util.matching.Regex
+import scala.util.{Failure, Success, Try}
 
 
 trait ApiProviderLike {
