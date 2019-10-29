@@ -232,7 +232,7 @@ object RunnableCrunch {
                            portStateFanOut.map(_.window(liveStart(now), liveEnd(now, liveStateDaysAhead), portQueues))      ~> liveSink
                            portStateFanOut.map(_.window(forecastStart(now), forecastEnd(now), portQueues))                  ~> fcstSink
                            portStateFanOut
-                             .map(d => withOnlyDescheduledRemovals(d.diff.flightRemovals.toList, now()))
+                             .map(d => withOnlyDescheduledRemovals(d.diff.flightRemovals.values.toList, now()))
                              .conflate[List[RemoveFlight]] { case (acc, incoming) =>
                                 log.info(s"${acc.length + incoming.length} conflated arrivals for removal sink")
                                 acc ++ incoming }

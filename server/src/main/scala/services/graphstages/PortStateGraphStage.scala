@@ -106,7 +106,7 @@ class PortStateGraphStage(name: String = "", optionalInitialPortState: Option[Po
       case None => Option(newDiff)
       case Some(existingDiff) =>
         val updatedFlightRemovals = newDiff.flightRemovals.foldLeft(existingDiff.flightRemovals) {
-          case (soFar, newRemoval) => if (soFar.contains(newRemoval)) soFar else soFar :+ newRemoval
+          case (soFar, (uniqueArrival, newRemoval)) => if (soFar.contains(uniqueArrival)) soFar else soFar.updated(uniqueArrival, newRemoval)
         }
         val updatedFlights = existingDiff.flightUpdates ++ newDiff.flightUpdates
         val updatedCms = existingDiff.crunchMinuteUpdates ++ newDiff.crunchMinuteUpdates
@@ -161,7 +161,7 @@ class PortStateGraphStage(name: String = "", optionalInitialPortState: Option[Po
   def diffMessage(diff: PortStateDiff): CrunchDiffMessage = CrunchDiffMessage(
     createdAt = Option(now().millisSinceEpoch),
     crunchStart = Option(0),
-    flightsToRemove = diff.flightRemovals.map { case RemoveFlight(ua) => UniqueArrivalMessage(Option(ua.number), Option(ua.terminalName), Option(ua.scheduled)) },
+    flightsToRemove = diff.flightRemovals.values.map { case RemoveFlight(ua) => UniqueArrivalMessage(Option(ua.number), Option(ua.terminalName), Option(ua.scheduled)) }.toSeq,
     flightsToUpdate = diff.flightUpdates.values.map(FlightMessageConversion.flightWithSplitsToMessage).toList,
     crunchMinutesToUpdate = diff.crunchMinuteUpdates.values.map(crunchMinuteToMessage).toList,
     staffMinutesToUpdate = diff.staffMinuteUpdates.values.map(staffMinuteToMessage).toList
