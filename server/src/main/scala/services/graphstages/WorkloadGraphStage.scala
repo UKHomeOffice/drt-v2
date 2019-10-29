@@ -38,9 +38,6 @@ class WorkloadGraphStage(name: String = "",
 
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
-    val daysAffectedByArrival: Arrival => Set[String] = Crunch.arrivalDaysAffected(airportConfig.crunchOffsetMinutes, Crunch.paxOffPerMinute)
-    val daysAffectedByTqms: List[TQM] => Set[String] = Crunch.tqmsDaysAffected(airportConfig.crunchOffsetMinutes, Crunch.paxOffPerMinute)
-
     override def preStart(): Unit = {
       optionalInitialLoads.foreach { case Loads(lms) =>
         log.info(s"Received ${lms.size} initial loads")
