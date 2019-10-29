@@ -71,22 +71,9 @@ class WorkloadGraphStage(name: String = "",
     }
 
     setHandler(inFlightsWithSplits, new InHandler {
-
-      def daysAffectedByIncoming(incoming: FlightsWithSplits): Set[String] = {
-        val daysFromIncomingRemovals = incoming.arrivalsToRemove.flatMap(arrival => daysAffectedByArrival(arrival)).toSet
-        val daysFromIncomingUpdates = incoming.flightsToUpdate.flatMap(fws => daysAffectedByArrival(fws.apiFlight)).toSet
-        val daysFromExistingRemovals = incoming.arrivalsToRemove.flatMap(arrival => flightTQMs.get(CodeShareKeyOrderedBySchedule(arrival)).map(daysAffectedByTqms)).flatten.toSet
-        val daysFromExistingUpdates = incoming.flightsToUpdate.flatMap(fws => flightTQMs.get(CodeShareKeyOrderedBySchedule(fws.apiFlight)).map(daysAffectedByTqms)).flatten.toSet
-        Set(daysFromIncomingRemovals, daysFromExistingRemovals, daysFromIncomingUpdates, daysFromExistingUpdates).flatten
-      }
-
       override def onPush(): Unit = {
         val timer = StageTimer(stageName, inFlightsWithSplits)
         val incomingFlights = grab(inFlightsWithSplits)
-
-        val allDaysAffected: Set[String] = daysAffectedByIncoming(incomingFlights)
-
-        log.info(s"Crunch days affected by workload changes: ${allDaysAffected.mkString(", ")}")
 
         log.info(s"Received ${incomingFlights.flightsToUpdate.length} updated arrivals and ${incomingFlights.arrivalsToRemove.length} arrivals to remove")
 
