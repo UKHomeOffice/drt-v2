@@ -993,7 +993,6 @@ object AirportConfigs {
       nonVisaNationalToDesk -> 83d / 60
     ), "T2" -> Map(
       eeaMachineReadableToDesk -> 16d / 60,
-      //eeaMachineReadableToEGate -> 30d / 60,
       eeaNonMachineReadableToDesk -> 50d / 60,
       visaNationalToDesk -> 93d / 60,
       nonVisaNationalToDesk -> 83d / 60

@@ -5,7 +5,6 @@ import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 
 case class PaxTypeQueueAllocation(paxTypeAllocator: PaxTypeAllocator, queueAllocator: QueueAllocator) {
-
   def toQueues(terminal: String, bestManifest: BestAvailableManifest): Map[QueueType, List[(QueueType, PaxType, ManifestPassengerProfile, Double)]] = {
     val queueAllocatorForFlight = queueAllocator(terminal, bestManifest) _
     val paxTypeAllocatorForFlight = paxTypeAllocator(bestManifest) _
