@@ -1,9 +1,10 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{ActualDeskStats, DeskStat, PortState}
+import drt.shared.CrunchApi.{ActualDeskStats, DeskStat}
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
+import drt.shared.PortState
 import drt.shared.Queues._
 import passengersplits.parsing.VoyageManifestParser.PassengerInfoJson
 import server.feeds.ArrivalsFeedSuccess

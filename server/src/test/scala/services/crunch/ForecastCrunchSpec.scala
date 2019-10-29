@@ -1,7 +1,7 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, PortState, StaffMinute}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess

@@ -1,7 +1,7 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{CrunchMinute, PortState, StaffMinute}
+import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.SplitSources._

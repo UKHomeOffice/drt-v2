@@ -1,7 +1,7 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
 import drt.shared._

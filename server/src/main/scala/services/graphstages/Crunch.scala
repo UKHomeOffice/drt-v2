@@ -279,4 +279,19 @@ object Crunch {
 
     (removals, updates)
   }
+
+  def arrivalDaysAffected(crunchOffsetMinutes: Int, paxOffPerMinute: Int)(arrival: Arrival): Set[String] = {
+    arrival.PcpTime.toSet.flatMap { pcpTime: MillisSinceEpoch =>
+      val first = SDate(pcpTime)
+      val minutesOfPaxArrivals: Int = (arrival.ActPax.getOrElse(0).toDouble / paxOffPerMinute).ceil.toInt - 1
+      val last = first.addMinutes(minutesOfPaxArrivals)
+      List(first, last).map(_.addMinutes(-1 * crunchOffsetMinutes).toISODateOnly).toSet
+    }
+  }
+
+  def tqmsDaysAffected(crunchOffsetMinutes: Int, paxOffPerMinute: Int)(tqms: List[TQM]): Set[String] =
+    if (tqms.isEmpty)
+      Set()
+    else
+      Set(tqms.min, tqms.max).map(m => SDate(m.minute).addMinutes(-1 * crunchOffsetMinutes).toISODateOnly)
 }

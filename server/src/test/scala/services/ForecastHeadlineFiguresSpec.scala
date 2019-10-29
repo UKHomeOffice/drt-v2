@@ -1,8 +1,8 @@
 package services
 
 import controllers.application.Forecast
-import drt.shared.CrunchApi.{CrunchMinute, ForecastHeadlineFigures, PortState, QueueHeadline}
-import drt.shared.Queues
+import drt.shared.CrunchApi.{CrunchMinute, ForecastHeadlineFigures, QueueHeadline}
+import drt.shared.{PortState, Queues}
 import org.specs2.mutable.Specification
 
 import scala.collection.immutable.Seq

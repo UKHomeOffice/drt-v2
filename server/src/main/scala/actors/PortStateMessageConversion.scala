@@ -1,6 +1,6 @@
 package actors
 
-import drt.shared.CrunchApi.{CrunchMinute, PortStateMutable, StaffMinute}
+import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}

@@ -1,8 +1,8 @@
 package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.CrunchApi.{CrunchMinute, PortState, StaffMinute}
-import drt.shared.{ApiFlightWithSplits, Queues}
+import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
+import drt.shared.{ApiFlightWithSplits, PortState, Queues}
 import utest.{TestSuite, _}
 
 object FilterCrunchByRangeTests extends TestSuite {

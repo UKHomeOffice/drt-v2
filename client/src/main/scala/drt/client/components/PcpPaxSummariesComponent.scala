@@ -3,9 +3,9 @@ package drt.client.components
 import diode.data.Pot
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{ViewLive, ViewMode}
-import drt.shared.CrunchApi.{CrunchMinute, PortState}
+import drt.shared.CrunchApi.CrunchMinute
 import drt.shared.FlightsApi.{QueueName, TerminalName}
-import drt.shared.{Queues, SDateLike, TQM}
+import drt.shared.{PortState, Queues, SDateLike, TQM}
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}

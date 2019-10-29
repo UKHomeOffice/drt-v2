@@ -25,7 +25,7 @@ import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.server.feeds.ltn.LtnLiveFeed
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
-import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared._
 import graphs.SinkToSourceBridge

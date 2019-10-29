@@ -4,9 +4,8 @@ import actors.GetState
 import akka.pattern.AskableActorRef
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
-import drt.shared.{Arrival, SDateLike}
+import drt.shared.{Arrival, PortState, SDateLike}
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 

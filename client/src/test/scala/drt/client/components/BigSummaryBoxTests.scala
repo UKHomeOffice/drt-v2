@@ -3,7 +3,6 @@ package drt.client.components
 import diode.data.Ready
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel
-import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
