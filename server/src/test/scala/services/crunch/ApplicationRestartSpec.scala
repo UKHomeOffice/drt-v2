@@ -2,7 +2,7 @@ package services.crunch
 
 
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{CrunchMinute, PortState, StaffMinute}
+import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._

@@ -1,7 +1,7 @@
 package services
 
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{CrunchMinute, PortState, StaffMinute}
+import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
 import drt.shared._
 import services.crunch.CrunchTestLike
 

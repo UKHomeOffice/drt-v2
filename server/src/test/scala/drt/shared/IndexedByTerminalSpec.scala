@@ -1,7 +1,7 @@
 package drt.shared
 
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{PortStateMutable, PortStateUpdates}
+import drt.shared.CrunchApi.PortStateUpdates
 import org.specs2.mutable.SpecificationLike
 
 class IndexedByTerminalSpec extends SpecificationLike {

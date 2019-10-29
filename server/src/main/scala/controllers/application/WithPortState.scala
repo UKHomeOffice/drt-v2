@@ -5,8 +5,8 @@ import actors.{DrtStaticParameters, GetPortState, GetUpdatesSince}
 import akka.actor.{PoisonPill, Props}
 import controllers.Application
 import controllers.model.ActorDataRequest
-import drt.shared.CrunchApi.{MillisSinceEpoch, PortState, PortStateError, PortStateUpdates}
-import drt.shared.DesksAndQueuesView
+import drt.shared.CrunchApi.{MillisSinceEpoch, PortStateError, PortStateUpdates}
+import drt.shared.{DesksAndQueuesView, PortState}
 import play.api.mvc.{Action, AnyContent, Request}
 import services.SDate
 import services.graphstages.Crunch.getLocalNextMidnight

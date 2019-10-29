@@ -3,7 +3,7 @@ package actors
 import akka.actor.{Actor, ActorRef}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.{AirportConfig, SDateLike}
+import drt.shared.{AirportConfig, PortStateMutable, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.{DeskRecMinutes, SimulationMinutes}
 

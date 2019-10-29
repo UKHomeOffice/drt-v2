@@ -7,7 +7,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, PortState}
+import drt.shared.CrunchApi.ForecastPeriodWithHeadlines
 import drt.shared._
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.extra.router.RouterCtl

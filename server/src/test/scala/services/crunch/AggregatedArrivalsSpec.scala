@@ -6,7 +6,7 @@ import akka.pattern.AskableActorRef
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, PortState, StaffMinute}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._

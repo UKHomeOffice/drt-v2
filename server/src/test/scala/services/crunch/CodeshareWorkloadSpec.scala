@@ -1,9 +1,8 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
-import drt.shared.{Queues, TQM}
+import drt.shared.{PortState, Queues, TQM}
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 

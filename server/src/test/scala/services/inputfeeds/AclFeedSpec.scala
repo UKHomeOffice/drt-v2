@@ -3,7 +3,6 @@ package services.inputfeeds
 import com.typesafe.config.ConfigFactory
 import controllers.ArrivalGenerator
 import drt.shared
-import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared._

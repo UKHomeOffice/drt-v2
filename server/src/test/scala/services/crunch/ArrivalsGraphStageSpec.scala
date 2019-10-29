@@ -2,7 +2,7 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import controllers.ArrivalGenerator.arrival
-import drt.shared.CrunchApi.{CrunchMinute, PortState, StaffMinute}
+import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.Queues.EeaDesk

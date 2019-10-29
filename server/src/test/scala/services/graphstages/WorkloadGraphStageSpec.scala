@@ -5,7 +5,7 @@ import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueW
 import akka.stream.{ClosedShape, OverflowStrategy}
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{CrunchMinute, PortState}
+import drt.shared.CrunchApi.CrunchMinute
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared.PaxTypes.{EeaMachineReadable, VisaNational}
 import drt.shared.PaxTypesAndQueues.{eeaMachineReadableToDesk, visaNationalToDesk}

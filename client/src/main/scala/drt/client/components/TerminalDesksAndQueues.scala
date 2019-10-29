@@ -6,7 +6,7 @@ import drt.client.components.TerminalDesksAndQueues.{NodeListSeq, documentScroll
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.{SPACircuit, ViewMode}
-import drt.shared.CrunchApi.{PortState, StaffMinute}
+import drt.shared.CrunchApi.StaffMinute
 import drt.shared.FlightsApi.QueueName
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability

@@ -2,7 +2,7 @@ package drt.shared
 
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
-import upickle.default.{macroRW, readwriter, ReadWriter => RW}
+import upickle.default.{readwriter, ReadWriter => RW}
 
 import scala.collection.immutable.{Map => IMap, SortedMap => ISortedMap}
 import scala.collection.{Map, SortedMap}

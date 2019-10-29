@@ -1,9 +1,9 @@
 package actors
 
-import org.specs2.mutable.Specification
-import PortStateMessageConversion._
-import drt.shared.CrunchApi.{CrunchMinute, PortState, PortStateMutable, StaffMinute}
+import actors.PortStateMessageConversion._
+import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
 import drt.shared._
+import org.specs2.mutable.Specification
 import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchStateSnapshotMessage, StaffMinuteMessage}
 
 import scala.collection.immutable.SortedMap
