@@ -187,7 +187,14 @@ object TerminalComponent {
                   loggedInUser => if (loggedInUser.roles.contains(TerminalDashboard))
                     <.div(^.id := "dashboard", ^.className := s"tab-pane terminal-dashboard-container $dashboardContentClass",
                       if (props.terminalPageTab.mode == "dashboard") {
-                        TerminalDashboardComponent(props.terminalPageTab.terminal, terminalContentProps.airportConfig)
+                        terminalContentProps.portStatePot.renderReady(ps =>
+                          TerminalDashboardComponent(
+                            props.terminalPageTab.terminal,
+                            terminalContentProps.airportConfig,
+                            ps,
+                            model.minuteTicker
+                          )
+                        )
                       } else ""
                     ) else "")
               )

@@ -1754,16 +1754,7 @@ div.access-restricted {
     text-align: center;
 }
 
-.pax-queue {
-    padding: 10px;
-    border-radius: 15px;
-    width:20%;
-    background-color: #eee;
-    position:relative;
-    font-size: 27px;
-    font-weight: bold;
-    text-align: center;
-}
+
 
 .arrivals_queue {
     left: 80%;
@@ -1771,49 +1762,10 @@ div.access-restricted {
     width:15%;
 }
 
-.pax-queue-logo {
+.queue-box i {
     height: 55px;
-    width: 55px;
-    background-image: url(../images/pax-queue_small.png);
-    background-repeat: no-repeat;
     position: relative;
-    transform: translateY(10%);
-}
-
-.pax-wait-logo {
-    height: 55px;
-    width: 55px;
-    background-image: url(../images/pax-wait_small.png);
-    position: relative;
-    background-repeat: no-repeat;
-    transform: translateY(25%);
-}
-
-.pax-increase-logo {
-    height: 55px;
-    width: 55px;
-    background-image: url(../images/pax-increase_small.png);
-    position: relative;
-    background-repeat: no-repeat;
-    transform: translateY(50%);
-}
-
-.pax-decrease-logo {
-    height: 55px;
-    width: 55px;
-    background-image: url(../images/pax-decrease_small.png);
-    position: relative;
-    background-repeat: no-repeat;
-    transform: translateY(50%);
-}
-
-.pax-neutral-logo {
-    height: 55px;
-    width: 55px;
-    background-image: url(../images/pax-neutral_small.png);
-    position: relative;
-    background-repeat: no-repeat;
-    transform: translateY(50%);
+    padding-right: 10px;
 }
 
 .queue-box {
@@ -1835,37 +1787,22 @@ div.access-restricted {
     min-width: 300px;
 }
 
-.queue-pax-queue-text {
-    background-color: #eee;
-    width:75%;
-    position:absolute;
-    font-size: 24px;
-    font-weight: bold;
-    text-align: left;
-    left: 25%;
-    top: 25%;
+.queue-box.red {
+  background-color: #ff9999;
+}
+.queue-box.amber {
+  background-color: #ffd699;
 }
 
-.queue-pax-wait-text {
-    background-color: #eee;
-    width:75%;
-    position:absolute;
+.queue-box-text {
+    width: 85%;
+    position: relative;
     font-size: 24px;
     font-weight: bold;
     text-align: left;
-    left: 25%;
-    top: 48%;
-}
-
-.queue-pax-increase-decrease-text {
-    background-color: #eee;
-    width:75%;
-    position:absolute;
-    font-size: 24px;
-    font-weight: bold;
-    text-align: left;
-    left: 25%;
-    top: 74%;
+    left: 10%;
+    top: 10%;
+    height: 20%;
 }
 
 .prev-bar {

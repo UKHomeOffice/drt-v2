@@ -837,27 +837,6 @@ object CrunchApi {
     })
   }
 
-  def groupStaffMinutesByX(groupSize: Int)(staffMinutes: Seq[(MillisSinceEpoch, StaffMinute)], terminalName: TerminalName): Seq[(MillisSinceEpoch, StaffMinute)] = {
-    staffMinutes
-      .filter(_._2.terminalName == terminalName)
-      .grouped(groupSize)
-      .toList
-      .map((milliStaffMinutes: Seq[(MillisSinceEpoch, StaffMinute)]) => {
-        val startMinute = milliStaffMinutes.map(_._1).min
-        val minutes = milliStaffMinutes.map(_._2)
-
-        val groupedStaffMinute = StaffMinute(
-          terminalName,
-          startMinute,
-          minutes.map(_.shifts).max,
-          minutes.map(_.fixedPoints).max,
-          minutes.map(_.movements).max
-        )
-
-        (startMinute, groupedStaffMinute)
-      })
-  }
-
   def terminalMinutesByMinute[T <: Minute](minutes: List[T], terminalName: TerminalName): Seq[(MillisSinceEpoch, List[T])] = minutes
     .filter(_.terminalName == terminalName)
     .groupBy(_.minute)
