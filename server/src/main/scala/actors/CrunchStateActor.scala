@@ -13,7 +13,7 @@ import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState._
 import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 import services.SDate
-import services.graphstages.{Crunch, PortStateWithDiff}
+import services.graphstages.Crunch
 
 
 class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
