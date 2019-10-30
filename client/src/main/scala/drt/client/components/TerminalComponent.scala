@@ -90,10 +90,21 @@ object TerminalComponent {
             val staffingContentClass = if (props.terminalPageTab.mode == "staffing") "fade in active" else "fade out"
             val dashboardContentClass = if (props.terminalPageTab.mode == "dashboard") "fade in active" else "fade out"
 
-            val subMode = if (props.terminalPageTab.mode == "staffing") "desksAndQueues" else props.terminalPageTab.subMode
+            val subMode = if (props.terminalPageTab.mode != "current" && props.terminalPageTab.mode != "snapshot")
+              "desksAndQueues"
+            else
+              props.terminalPageTab.subMode
 
             <.div(
               <.ul(^.className := "nav nav-tabs",
+                model.loggedInUserPot.render(
+                  loggedInUser => if (loggedInUser.roles.contains(TerminalDashboard))
+                    <.li(^.className := terminalDashboardClass,
+                      <.a(^.id := "terminalDashboardTab", VdomAttr("data-toggle") := "tab", "Terminal Dashboard"), ^.onClick --> {
+                        GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Terminal Dashboard")
+                        props.router.set(props.terminalPageTab.copy(mode = "dashboard", subMode = "summary", queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams))
+                      }
+                    ) else ""),
                 <.li(^.className := currentClass,
                   <.a(^.id := "currentTab", VdomAttr("data-toggle") := "tab", "Current"), ^.onClick --> {
                     GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Current")
@@ -127,18 +138,23 @@ object TerminalComponent {
                         props.router.set(props.terminalPageTab.copy(mode = "staffing", subMode = "15", queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams))
                       }
                     ) else ""
-                ),
-                model.loggedInUserPot.render(
-                  loggedInUser => if (loggedInUser.roles.contains(TerminalDashboard))
-                    <.li(^.className := terminalDashboardClass,
-                      <.a(^.id := "terminalDashboardTab", VdomAttr("data-toggle") := "tab", "Terminal Dashboard"), ^.onClick --> {
-                        GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Terminal Dashboard")
-                        props.router.set(props.terminalPageTab.copy(mode = "dashboard", subMode = "summary", queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams))
-                      }
-                    ) else ""
                 )
               ),
               <.div(^.className := "tab-content",
+                model.loggedInUserPot.render(
+                  loggedInUser => if (loggedInUser.roles.contains(TerminalDashboard))
+                    <.div(^.id := "dashboard", ^.className := s"tab-pane terminal-dashboard-container $dashboardContentClass",
+                      if (props.terminalPageTab.mode == "dashboard") {
+                        terminalContentProps.portStatePot.renderReady(ps =>
+                          TerminalDashboardComponent(
+                            props.terminalPageTab.terminal,
+                            terminalContentProps.airportConfig,
+                            ps,
+                            model.minuteTicker
+                          )
+                        )
+                      } else ""
+                    ) else ""),
                 <.div(^.id := "current", ^.className := s"tab-pane $currentContentClass", {
                   if (props.terminalPageTab.mode == "current") <.div(
                     <.h2(props.terminalPageTab.dateFromUrlOrNow match {
@@ -181,20 +197,6 @@ object TerminalComponent {
                         model.potMonthOfShifts.render(ms => {
                           MonthlyStaffing(ms.shifts, props.terminalPageTab, props.router)
                         })
-                      } else ""
-                    ) else ""),
-                model.loggedInUserPot.render(
-                  loggedInUser => if (loggedInUser.roles.contains(TerminalDashboard))
-                    <.div(^.id := "dashboard", ^.className := s"tab-pane terminal-dashboard-container $dashboardContentClass",
-                      if (props.terminalPageTab.mode == "dashboard") {
-                        terminalContentProps.portStatePot.renderReady(ps =>
-                          TerminalDashboardComponent(
-                            props.terminalPageTab.terminal,
-                            terminalContentProps.airportConfig,
-                            ps,
-                            model.minuteTicker
-                          )
-                        )
                       } else ""
                     ) else "")
               )

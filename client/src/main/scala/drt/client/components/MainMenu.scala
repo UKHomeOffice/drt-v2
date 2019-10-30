@@ -47,6 +47,7 @@ object MainMenu {
               tptl.withUrlParameters(UrlDateParameter(tptl.date),
                 UrlTimeRangeStart(tptl.timeRangeStartString),
                 UrlTimeRangeEnd(tptl.timeRangeEndString)).queryParams)
+          case _ if userRoles.contains(TerminalDashboard) =>  TerminalPageTabLoc(tn, "dashboard", "summary")
           case _ => TerminalPageTabLoc(tn)
         }
         (BorderForceStaff, (offset: Int) => MenuItem(offset, _ => tn, Icon.calculator, targetLoc))

@@ -34,8 +34,12 @@ object TerminalDashboardComponent {
           val qCMs = ps.crunchMinutes.collect { case (tqm, cm) if tqm.queueName == q => cm }
           val prevSlotCMs = prevSlotPortState.crunchMinutes.collect { case (tqm, cm) if tqm.queueName == q => cm }
           val qPax = qCMs.map(_.paxLoad).sum.round
-          val qWait = qCMs.map(cm => cm.deployedWait.getOrElse(cm.waitTime)).max
-          val prevSlotQWait = prevSlotCMs.map(cm => cm.deployedWait.getOrElse(cm.waitTime)).max
+          val qWait = if (qCMs.nonEmpty)
+            qCMs.map(cm => cm.deployedWait.getOrElse(cm.waitTime)).max
+          else 0
+          val prevSlotQWait = if (prevSlotCMs.nonEmpty)
+            prevSlotCMs.map(cm => cm.deployedWait.getOrElse(cm.waitTime)).max
+          else 0
 
           val waitIcon = (qWait, prevSlotQWait) match {
             case (p, c) if p > c => Icon.arrowDown
