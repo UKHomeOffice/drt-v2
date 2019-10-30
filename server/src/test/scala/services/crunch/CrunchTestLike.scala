@@ -1,10 +1,9 @@
 package services.crunch
 
-import java.util.UUID
-
 import actors.Sizes.oneMegaByte
 import actors._
-import akka.actor.{ActorRef, ActorSystem, Props}
+import actors.acking.AckingReceiver.Ack
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.AskableActorRef
 import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
@@ -20,9 +19,7 @@ import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
-import server.protobuf.messages.CrunchState.CrunchDiffMessage
 import services._
-import services.graphstages.Crunch._
 import services.graphstages.TestableCrunchLoadStage
 import slickdb.Tables
 
@@ -31,38 +28,23 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor}
 
 
-class LiveCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long, acceptFullStateUpdates: Boolean, forecastMaxMillis: () => MillisSinceEpoch)
-  extends CrunchStateActor(None, oneMegaByte, s"live-test-$name", queues, now, expireAfterMillis, false, acceptFullStateUpdates, forecastMaxMillis) {
-  override def applyDiff(cdm: CrunchDiffMessage, maxMillis: MillisSinceEpoch): Unit = {
-    log.info(s"calling parent updateState...")
-    super.applyDiff(cdm, maxMillis)
-
-    probe ! state.immutable
+class CrunchStateMockActor extends Actor {
+  override def receive: Receive = {
+    case _ => sender() ! Ack
   }
+}
 
-  override def updateFromFullState(ps: PortState): Unit = {
-    log.info(s"calling parent updateFromFullState...")
-    super.updateFromFullState(ps)
-
+class PortStateTestActor(liveActor: ActorRef, forecastActor: ActorRef, airportConfig: AirportConfig, probe: ActorRef, expireAfterMillis: Long, now: () => SDateLike, liveDaysAhead: Int)
+  extends PortStateActor(liveActor, forecastActor, airportConfig, expireAfterMillis, now, liveDaysAhead) {
+  override def splitDiffAndSend(diff: PortStateDiff): Unit = {
+    super.splitDiffAndSend(diff)
     probe ! state.immutable
   }
 }
 
-class ForecastCrunchStateTestActor(name: String = "", queues: Map[TerminalName, Seq[QueueName]], probe: ActorRef, now: () => SDateLike, expireAfterMillis: Long, acceptFullStateUpdates: Boolean, forecastMaxMillis: () => MillisSinceEpoch)
-  extends CrunchStateActor(None, oneMegaByte, s"forecast-test-$name", queues, now, expireAfterMillis, false, acceptFullStateUpdates, forecastMaxMillis) {
-  override def applyDiff(cdm: CrunchDiffMessage, maxMillis: MillisSinceEpoch): Unit = {
-    log.info(s"calling parent updateState...")
-    super.applyDiff(cdm, maxMillis)
-
-    probe ! state.immutable
-  }
-
-  override def updateFromFullState(ps: PortState): Unit = {
-    log.info(s"calling parent updateFromFullState...")
-    super.updateFromFullState(ps)
-
-    probe ! state.immutable
-  }
+object PortStateTestActor {
+  def props(liveActor: ActorRef, forecastActor: ActorRef, airportConfig: AirportConfig, probe: ActorRef, expireAfterMillis: Long, now: () => SDateLike, liveDaysAhead: Int): Props =
+    Props(new PortStateTestActor(liveActor, forecastActor, airportConfig, probe, expireAfterMillis, now, liveDaysAhead))
 }
 
 case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
@@ -74,14 +56,12 @@ case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete
                                       liveStaffMovementsInput: SourceQueueWithComplete[Seq[StaffMovement]],
                                       forecastStaffMovementsInput: SourceQueueWithComplete[Seq[StaffMovement]],
                                       actualDesksAndQueuesInput: SourceQueueWithComplete[ActualDeskStats],
-                                      liveCrunchActor: ActorRef,
-                                      forecastCrunchActor: ActorRef,
-                                      liveTestProbe: TestProbe,
-                                      forecastTestProbe: TestProbe,
+                                      portStateTestProbe: TestProbe,
                                       baseArrivalsTestProbe: TestProbe,
                                       forecastArrivalsTestProbe: TestProbe,
                                       liveArrivalsTestProbe: TestProbe,
-                                      aggregatedArrivalsActor: ActorRef)
+                                      aggregatedArrivalsActor: ActorRef,
+                                      portStateActor: ActorRef)
 
 
 object H2Tables extends {
@@ -99,6 +79,8 @@ class CrunchTestLike
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
   val log: Logger = LoggerFactory.getLogger(getClass)
+
+  val crunchStateMockActor: ActorRef = system.actorOf(Props(classOf[CrunchStateMockActor]), "crunch-state-mock")
 
   val oneMinuteMillis = 60000
   val uniquifyArrivals: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] =
@@ -148,14 +130,8 @@ class CrunchTestLike
     else MilliDate(SDate(a.Scheduled).millisSinceEpoch)
   }
 
-  def liveCrunchStateActor(name: String = "", testProbe: TestProbe, now: () => SDateLike): ActorRef = {
-    val forecastMaxMillis = () => now().addDays(100).millisSinceEpoch
-    system.actorOf(Props(classOf[LiveCrunchStateTestActor], name, airportConfig.queues, testProbe.ref, now, 2 * oneDayMillis, true, forecastMaxMillis), name = "crunch-live-state-actor" + UUID.randomUUID().toString)
-  }
-
-  def forecastCrunchStateActor(name: String = "", testProbe: TestProbe, now: () => SDateLike): ActorRef = {
-    val forecastMaxMillis = () => now().addDays(100).millisSinceEpoch
-    system.actorOf(Props(classOf[ForecastCrunchStateTestActor], name, airportConfig.queues, testProbe.ref, now, 2 * oneDayMillis, false, forecastMaxMillis), name = "crunch-forecast-state-actor")
+  def createPortStateActor(name: String = "", testProbe: TestProbe, now: () => SDateLike): ActorRef = {
+    system.actorOf(PortStateTestActor.props(crunchStateMockActor, crunchStateMockActor, airportConfig, testProbe.ref, 24 * 360000L, now, 100), name = "port-state-actor")
   }
 
   def testProbe(name: String) = TestProbe(name = name)
@@ -184,8 +160,7 @@ class CrunchTestLike
                      checkRequiredStaffUpdatesOnStartup: Boolean = false
                     ): CrunchGraphInputsAndProbes = {
 
-    val liveProbe = testProbe("live")
-    val forecastProbe = testProbe("forecast")
+    val portStateProbe = testProbe("portstate")
     val forecastBaseArrivalsProbe = testProbe("forecast-base-arrivals")
     val forecastArrivalsProbe = testProbe("forecast-arrivals")
     val liveBaseArrivalsProbe = testProbe("live-base-arrivals")
@@ -197,8 +172,8 @@ class CrunchTestLike
     val snapshotInterval = 1
     val manifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], oneMegaByte, now, DrtStaticParameters.expireAfterMillis, Option(snapshotInterval)))
 
-    val liveCrunchActor = liveCrunchStateActor(logLabel, liveProbe, now)
-    val forecastCrunchActor = forecastCrunchStateActor(logLabel, forecastProbe, now)
+    val portStateActor = createPortStateActor(logLabel, portStateProbe, now)
+    initialPortState.foreach(ps => portStateActor ! ps)
 
     val manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
     val liveArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
@@ -215,8 +190,7 @@ class CrunchTestLike
       airportConfig = airportConfig,
       pcpArrival = pcpArrivalTime,
       historicalSplitsProvider = csvSplitsProvider,
-      liveCrunchStateActor = liveCrunchActor,
-      forecastCrunchStateActor = forecastCrunchActor,
+      portStateActor = portStateActor,
       maxDaysToCrunch = maxDaysToCrunch,
       expireAfterMillis = expireAfterMillis,
       minutesToCrunch = minutesToCrunch,
@@ -257,23 +231,21 @@ class CrunchTestLike
     ))
 
     CrunchGraphInputsAndProbes(
-      crunchInputs.forecastBaseArrivalsResponse,
-      crunchInputs.forecastArrivalsResponse,
-      crunchInputs.liveArrivalsResponse,
-      crunchInputs.manifestsLiveResponse,
-      crunchInputs.shifts,
-      crunchInputs.fixedPoints,
-      crunchInputs.staffMovements,
-      crunchInputs.staffMovements,
-      crunchInputs.actualDeskStats,
-      liveCrunchActor,
-      forecastCrunchActor,
-      liveProbe,
-      forecastProbe,
-      forecastBaseArrivalsProbe,
-      forecastArrivalsProbe,
-      liveArrivalsProbe,
-      aggregatedArrivalsActor
+      baseArrivalsInput = crunchInputs.forecastBaseArrivalsResponse,
+      forecastArrivalsInput = crunchInputs.forecastArrivalsResponse,
+      liveArrivalsInput = crunchInputs.liveArrivalsResponse,
+      manifestsLiveInput = crunchInputs.manifestsLiveResponse,
+      shiftsInput = crunchInputs.shifts,
+      fixedPointsInput = crunchInputs.fixedPoints,
+      liveStaffMovementsInput = crunchInputs.staffMovements,
+      forecastStaffMovementsInput = crunchInputs.staffMovements,
+      actualDesksAndQueuesInput = crunchInputs.actualDeskStats,
+      portStateTestProbe = portStateProbe,
+      baseArrivalsTestProbe = forecastBaseArrivalsProbe,
+      forecastArrivalsTestProbe = forecastArrivalsProbe,
+      liveArrivalsTestProbe = liveArrivalsProbe,
+      aggregatedArrivalsActor = aggregatedArrivalsActor,
+      portStateActor = portStateActor
     )
   }
 

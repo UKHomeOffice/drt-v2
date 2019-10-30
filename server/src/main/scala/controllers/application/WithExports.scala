@@ -18,7 +18,6 @@ import services.graphstages.Crunch
 import services.graphstages.Crunch._
 import services.{CSVData, SDate}
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -75,7 +74,7 @@ trait WithExports {
       timedEndPoint(s"Export planning", Option(s"$terminalName")) {
         val (startOfForecast, endOfForecast) = startAndEndForDay(startDay.toLong, 180)
 
-        val portStateFuture = ctrl.forecastCrunchStateActor.ask(
+        val portStateFuture = ctrl.portStateActor.ask(
           GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminalName)
         )(new Timeout(30 seconds))
 
@@ -111,7 +110,7 @@ trait WithExports {
           getLocalNextMidnight(now)
         } else startOfWeekMidnight
 
-        val portStateFuture = ctrl.forecastCrunchStateActor.ask(
+        val portStateFuture = ctrl.portStateActor.ask(
           GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminalName)
         )(new Timeout(30 seconds))
 
@@ -364,22 +363,16 @@ trait WithExports {
   }
 
   private def loadBestPortStateForPointInTime(day: MillisSinceEpoch, terminalName: TerminalName, startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch): Future[Either[PortStateError, Option[PortState]]] =
-    if (isHistoricDate(day)) {
+    if (isHistoricDate(day))
       portStateForEndOfDay(day, terminalName)
-    } else if (day <= getLocalNextMidnight(SDate.now()).millisSinceEpoch) {
-      ctrl.liveCrunchStateActor.ask(GetState).map {
-        case Some(ps: PortState) => Right(Option(ps))
-        case _ => Right(None)
-      }
-    } else {
-      portStateForDayInForecast(day)
-    }
+    else
+      portStateForDay(day)
 
-  private def portStateForDayInForecast(day: MillisSinceEpoch): Future[Either[PortStateError, Option[PortState]]] = {
+  private def portStateForDay(day: MillisSinceEpoch): Future[Either[PortStateError, Option[PortState]]] = {
     val firstMinute = getLocalLastMidnight(SDate(day)).millisSinceEpoch
     val lastMinute = SDate(firstMinute).addHours(airportConfig.dayLengthHours).millisSinceEpoch
 
-    val portStateFuture = ctrl.forecastCrunchStateActor.ask(GetPortState(firstMinute, lastMinute))(new Timeout(30 seconds))
+    val portStateFuture = ctrl.portStateActor.ask(GetPortState(firstMinute, lastMinute))(new Timeout(30 seconds))
 
     portStateFuture.map {
       case Some(ps: PortState) => Right(Option(ps))
@@ -410,7 +403,6 @@ trait WithExports {
     val terminalsAndQueues = airportConfig.queues.filterKeys(_ == terminalName)
     val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], airportConfig.portStateSnapshotInterval, SDate(pointInTime), DrtStaticParameters.expireAfterMillis, terminalsAndQueues, startMillis, endMillis), stateQuery)
     val portCrunchResult = cacheActorRef.ask(query)(new Timeout(15 seconds))
-
 
     portCrunchResult.map {
       case Some(ps: PortState) =>

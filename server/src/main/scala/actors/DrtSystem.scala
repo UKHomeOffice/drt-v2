@@ -48,17 +48,15 @@ import services.graphstages._
 import slickdb.{ArrivalTable, Tables, VoyageManifestPassengerInfoTable}
 
 import scala.collection.mutable
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 trait DrtSystemInterface extends UserRoleProviderLike {
   val now: () => SDateLike = () => SDate.now()
 
-  val liveCrunchStateActor: ActorRef
-  val forecastCrunchStateActor: ActorRef
+  val portStateActor: ActorRef
   val shiftsActor: ActorRef
   val fixedPointsActor: ActorRef
   val staffMovementsActor: ActorRef
@@ -73,7 +71,9 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 }
 
 object DrtStaticParameters {
-  val expireAfterMillis: MillisSinceEpoch = 2 * oneDayMillis
+  val expireAfterMillis: Long = 2 * oneDayMillis
+
+  val liveDaysAhead: Int = 2
 
   def time48HoursAgo(now: () => SDateLike): () => SDateLike = () => now().addDays(-2)
 
@@ -147,7 +147,7 @@ case class SubscribeRequestQueue(subscriber: ActorRef)
 case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsFeedResponse])
 
 case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig)
-                    (implicit materializer: Materializer) extends DrtSystemInterface {
+                    (implicit materializer: Materializer, ec: ExecutionContext) extends DrtSystemInterface {
 
   implicit val system: ActorSystem = actorSystem
 
@@ -184,8 +184,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(classOf[AggregatedArrivalsActor], airportConfig.portCode, ArrivalTable(airportConfig.portCode, PostgresTables)), name = "aggregated-arrivals-actor")
   lazy val registeredArrivalsActor: ActorRef = system.actorOf(Props(classOf[RegisteredArrivalsActor], oneMegaByte, Option(500), airportConfig.portCode, now, expireAfterMillis), name = "registered-arrivals-actor")
 
-  lazy val liveCrunchStateActor: ActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
-  lazy val forecastCrunchStateActor: ActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
+  lazy val liveCrunchStateActor: AskableActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
+  lazy val forecastCrunchStateActor: AskableActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
+  lazy val portStateActor: ActorRef = system.actorOf(PortStateActor.props(liveCrunchStateActor, forecastCrunchStateActor, airportConfig, expireAfterMillis, now, liveDaysAhead), name = "port-state-actor")
 
   lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, Option(params.snapshotIntervalVm)), name = "voyage-manifests-actor")
   lazy val lookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
@@ -237,6 +238,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       case Success((maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeRegisteredArrivals)) =>
         system.log.info(s"Successfully restored initial state for App")
         val initialPortState: Option[PortState] = mergePortStates(maybeForecastState, maybeLiveState)
+
+        initialPortState.foreach(ps => portStateActor ! ps)
 
         val (manifestRequestsSource, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
         val (manifestResponsesSource, _, manifestResponsesSink) = SinkToSourceBridge[List[BestAvailableManifest]]
@@ -367,8 +370,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       airportConfig = airportConfig,
       pcpArrival = pcpArrivalTimeCalculator,
       historicalSplitsProvider = historicalSplitsProvider,
-      liveCrunchStateActor = liveCrunchStateActor,
-      forecastCrunchStateActor = forecastCrunchStateActor,
+      portStateActor = portStateActor,
       maxDaysToCrunch = params.forecastMaxDays,
       expireAfterMillis = expireAfterMillis,
       actors = Map(

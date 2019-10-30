@@ -1,7 +1,7 @@
 package actors
 
 import actors.PortStateMessageConversion._
-import actors.acking.AckingReceiver.StreamCompleted
+import actors.acking.AckingReceiver.{Ack, StreamCompleted}
 import actors.restore.RestorerWithLegacy
 import akka.actor._
 import akka.persistence._
@@ -73,40 +73,11 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
   override def stateToMessage: GeneratedMessage = portStateToSnapshotMessage(state)
 
   override def receiveCommand: Receive = {
-    case PortStateWithDiff(None, _, CrunchDiffMessage(_, _, _, fr, fu, cu, su, _)) if fr.isEmpty && fu.isEmpty && cu.isEmpty && su.isEmpty =>
-      log.debug(s"Received port state with empty diff and no fresh port state")
+    case PortStateDiff(fr, fu, cm, sm) =>
+      log.info(s"Got a diff!")
+      sender() ! Ack
 
-    case PortStateWithDiff(Some(ps), _, CrunchDiffMessage(_, _, _, fr, fu, cu, su, _)) if fr.isEmpty && fu.isEmpty && cu.isEmpty && su.isEmpty =>
-      log.info(s"Received port state with empty diff, but with fresh port state")
-      updateFromFullState(ps)
-
-    case PortStateWithDiff(maybeState, _, diffMsg) =>
-      maybeState match {
-        case Some(fullState) if acceptFullStateUpdates =>
-          updateFromFullState(fullState)
-          logInfo("Received full port state")
-        case _ =>
-          applyDiff(diffMsg, forecastMaxMillis())
-          logInfo(s"Received port state with diff")
-      }
-
-      persistAndMaybeSnapshot(diffMsg)
-
-    case GetState =>
-      logDebug(s"Received GetState request. Replying with PortState containing ${state.crunchMinutes.count} crunch minutes")
-      sender() ! Option(state.immutable)
-
-    case GetPortState(start, end) =>
-      logDebug(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
-      sender() ! stateForPeriod(start, end)
-
-    case GetPortStateForTerminal(start, end, terminalName) =>
-      logDebug(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
-      sender() ! stateForPeriodForTerminal(start, end, terminalName)
-
-    case GetUpdatesSince(millis, start, end) =>
-      val updates: Option[PortStateUpdates] = state.updates(millis, start, end)
-      sender() ! updates
+//      persistAndMaybeSnapshot(diffMsg)
 
     case SaveSnapshotSuccess(SnapshotMetadata(_, seqNr, _)) =>
       logInfo("Snapshot success")
@@ -124,12 +95,6 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
     case StreamCompleted => log.warn("Received shutdown")
 
     case unexpected => log.error(s"Received unexpected message $unexpected")
-  }
-
-  def updateFromFullState(ps: PortState): Unit = {
-    state.flights ++= ps.flights.map { case (_, fws) => (fws.apiFlight.unique, fws) }
-    state.crunchMinutes ++= ps.crunchMinutes
-    state.staffMinutes ++= ps.staffMinutes
   }
 
   def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = Option(state.window(SDate(start), SDate(end)))

@@ -11,7 +11,6 @@ import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
 import upickle.default.{read, write}
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps

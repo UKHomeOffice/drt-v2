@@ -52,7 +52,7 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
       ForecastTimeSlot(SDate("2017-01-02T00:45Z").millisSinceEpoch, 20, 0)
     )
 
-    crunch.forecastTestProbe.fishForMessage(10 seconds) {
+    crunch.portStateTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val cs = ps.crunchSummary(SDate(startDate1), 4, 15, "T1", airportConfig.queues("T1").toList)
         val ss = ps.staffSummary(SDate(startDate1), 4, 15, "T1")

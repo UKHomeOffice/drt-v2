@@ -20,7 +20,7 @@ class PortStateSpec extends CrunchTestLike {
 
     offerAndWait(crunch.shiftsInput, ShiftAssignments(Seq(StaffAssignment("", "T1", MilliDate(SDate(minute).addMinutes(-15).millisSinceEpoch), MilliDate(SDate(minute).addMinutes(15).millisSinceEpoch), 1, None))))
 
-    crunch.liveTestProbe.fishForMessage(2 seconds) {
+    crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case ps: PortState =>
         val staffUpdated = ps.staffMinutes.exists {
           case (TM("T1", m), sm) =>

@@ -247,7 +247,7 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival.copy(Estimated = Option(noonMillis))))))
 
-    crunch.liveTestProbe.fishForMessage(2 seconds) {
+    crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case PortState(_, cms, _) =>
         val nonZeroAtNoon = cms.get(TQM("T1", Queues.EeaDesk, noonMillis)) match {
           case None => false
@@ -258,7 +258,7 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival.copy(Estimated = Option(noon30Millis))))))
 
-    crunch.liveTestProbe.fishForMessage(2 seconds) {
+    crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case PortState(_, cms, _) =>
         val zeroAtNoon = cms.get(TQM("T1", Queues.EeaDesk, noonMillis)) match {
           case None => false
@@ -316,7 +316,7 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival.copy(Estimated = Option(noon30Millis))))))
 
-    crunch.liveTestProbe.fishForMessage(2 seconds) {
+    crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case PortState(_, cms, _) =>
         val zeroAtNoon = cms.get(TQM("T1", Queues.EeaDesk, noonMillis)) match {
           case None => false
@@ -358,7 +358,7 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival, arrival2))))
 
-    crunch.liveTestProbe.fishForMessage(2 seconds) {
+    crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case PortState(_, cms, _) =>
         val nonZeroAtNoon = cms.get(TQM("T1", Queues.EeaDesk, noonMillis)) match {
           case None => false
@@ -369,7 +369,7 @@ class WorkloadGraphStageSpec extends CrunchTestLike {
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival.copy(Estimated = Option(noon30Millis))))))
 
-    crunch.liveTestProbe.fishForMessage(2 seconds) {
+    crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case PortState(_, cms, _) =>
         val zeroAtNoon = cms.get(TQM("T1", Queues.EeaDesk, noonMillis)) match {
           case None => false

@@ -1,6 +1,6 @@
 package drt.shared
 
-import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 
 import scala.collection.SortedMap
 
@@ -9,7 +9,13 @@ case class PortStateDiff(flightRemovals: SortedMap[UniqueArrival, RemoveFlight],
                          crunchMinuteUpdates: SortedMap[TQM, CrunchMinute],
                          staffMinuteUpdates: SortedMap[TM, StaffMinute]) {
   val isEmpty: Boolean = flightRemovals.isEmpty && flightUpdates.isEmpty && crunchMinuteUpdates.isEmpty && staffMinuteUpdates.isEmpty
-  //  def window()
+
+  def window(start: MillisSinceEpoch, end: MillisSinceEpoch): PortStateDiff = PortStateDiff(
+    flightRemovals.range(UniqueArrival.atTime(start), UniqueArrival.atTime(end)),
+    flightUpdates.range(UniqueArrival.atTime(start), UniqueArrival.atTime(end)),
+    crunchMinuteUpdates.range(TQM.atTime(start), TQM.atTime(end)),
+    staffMinuteUpdates.range(TM.atTime(start), TM.atTime(end))
+  )
 }
 
 object PortStateDiff {

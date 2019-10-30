@@ -2,8 +2,11 @@ package test
 
 import actors.Sizes.oneMegaByte
 import actors._
+import akka.actor.{ActorRef, Props}
+import akka.pattern.AskableActorRef
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{QueueName, TerminalName}
-import drt.shared.SDateLike
+import drt.shared.{AirportConfig, SDateLike}
 import slickdb.ArrivalTable
 
 
@@ -115,6 +118,20 @@ object TestActors {
   case class TestAggregatedArrivalsActor() extends AggregatedArrivalsActor("LHR", ArrivalTable("LHR", PostgresTables)) {
     def reset: Receive = {
       case ResetActor => Unit
+    }
+
+    override def receive: Receive = reset orElse super.receive
+  }
+
+  object TestPortStateActor {
+    def props(liveStateActor: AskableActorRef, forecastStateActor: AskableActorRef, airportConfig: AirportConfig, expireAfterMillis: Long, now: () => SDateLike, liveDaysAhead: Int): Props =
+      Props(new TestPortStateActor(liveStateActor, forecastStateActor, airportConfig, expireAfterMillis, now, 2))
+  }
+
+  case class TestPortStateActor(live: AskableActorRef, forecast: AskableActorRef, airportConfig: AirportConfig, expireAfterMillis: Long, now: () => SDateLike, liveDaysAhead: Int)
+    extends PortStateActor(live, forecast, airportConfig, expireAfterMillis, now, liveDaysAhead) {
+    def reset: Receive = {
+      case ResetActor => state.clear()
     }
 
     override def receive: Receive = reset orElse super.receive

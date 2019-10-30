@@ -43,7 +43,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
 
       val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
 
-      crunch.liveTestProbe.fishForMessage(2 seconds) {
+      crunch.portStateTestProbe.fishForMessage(2 seconds) {
         case ps: PortState =>
           val resultSummary = paxLoadsFromPortState(ps, 15)
           resultSummary == expected
@@ -83,7 +83,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
           12.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
 
-      crunch.liveTestProbe.fishForMessage(2 seconds) {
+      crunch.portStateTestProbe.fishForMessage(2 seconds) {
         case ps: PortState =>
           val resultSummary = paxLoadsFromPortState(ps, 30)
           resultSummary == expected
