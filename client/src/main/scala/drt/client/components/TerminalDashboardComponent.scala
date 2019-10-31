@@ -3,7 +3,7 @@ package drt.client.components
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.FlightsApi.TerminalName
-import drt.shared.{AirportConfig, PortState, PortStateLike, Queues, SDateLike}
+import drt.shared._
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
 
@@ -34,12 +34,8 @@ object TerminalDashboardComponent {
           val qCMs = ps.crunchMinutes.collect { case (tqm, cm) if tqm.queueName == q => cm }
           val prevSlotCMs = prevSlotPortState.crunchMinutes.collect { case (tqm, cm) if tqm.queueName == q => cm }
           val qPax = qCMs.map(_.paxLoad).sum.round
-          val qWait = if (qCMs.nonEmpty)
-            qCMs.map(cm => cm.deployedWait.getOrElse(cm.waitTime)).max
-          else 0
-          val prevSlotQWait = if (prevSlotCMs.nonEmpty)
-            prevSlotCMs.map(cm => cm.deployedWait.getOrElse(cm.waitTime)).max
-          else 0
+          val qWait = maxWaitInPeriod(qCMs)
+          val prevSlotQWait = maxWaitInPeriod(prevSlotCMs)
 
           val waitIcon = (qWait, prevSlotQWait) match {
             case (p, c) if p > c => Icon.arrowDown
@@ -60,6 +56,12 @@ object TerminalDashboardComponent {
       GoogleEventTracker.sendPageView(s"terminal-dashboard-${p.props.terminal}")
     })
     .build
+
+  def maxWaitInPeriod(cru: Iterable[CrunchApi.CrunchMinute]) = {
+    if (cru.nonEmpty)
+      cru.map(cm => cm.deployedWait.getOrElse(cm.waitTime)).max
+    else 0
+  }
 
   def apply(terminal: TerminalName, airportConfig: AirportConfig, portState: PortState, minuteTicker: Int): VdomElement = component(Props(terminal, airportConfig, portState))
 
