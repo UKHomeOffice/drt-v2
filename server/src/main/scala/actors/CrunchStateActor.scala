@@ -73,11 +73,20 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
   override def stateToMessage: GeneratedMessage = portStateToSnapshotMessage(state)
 
   override def receiveCommand: Receive = {
-    case PortStateDiff(fr, fu, cm, sm) =>
+    case psd: PortStateDiff =>
       log.info(s"Got a diff!")
+
+      if (!psd.isEmpty) {
+        val diffMsg = diffMessage(psd)
+        applyDiff(diffMsg, Long.MaxValue)
+        persistAndMaybeSnapshot(diffMsg)
+      }
+
       sender() ! Ack
 
-//      persistAndMaybeSnapshot(diffMsg)
+    case GetState =>
+      log.debug(s"Received GetState request. Replying with PortState containing ${state.crunchMinutes.count} crunch minutes")
+      sender() ! Option(state.immutable)
 
     case SaveSnapshotSuccess(SnapshotMetadata(_, seqNr, _)) =>
       logInfo("Snapshot success")
@@ -96,6 +105,15 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
 
     case unexpected => log.error(s"Received unexpected message $unexpected")
   }
+
+  def diffMessage(diff: PortStateDiff): CrunchDiffMessage = CrunchDiffMessage(
+    createdAt = Option(now().millisSinceEpoch),
+    crunchStart = Option(0),
+    flightsToRemove = diff.flightRemovals.values.map { case RemoveFlight(ua) => UniqueArrivalMessage(Option(ua.number), Option(ua.terminalName), Option(ua.scheduled)) }.toSeq,
+    flightsToUpdate = diff.flightUpdates.values.map(FlightMessageConversion.flightWithSplitsToMessage).toList,
+    crunchMinutesToUpdate = diff.crunchMinuteUpdates.values.map(crunchMinuteToMessage).toList,
+    staffMinutesToUpdate = diff.staffMinuteUpdates.values.map(staffMinuteToMessage).toList
+  )
 
   def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = Option(state.window(SDate(start), SDate(end)))
 

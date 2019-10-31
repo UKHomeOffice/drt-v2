@@ -212,7 +212,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] =
     if (params.isSuperUserMode) {
-      system.log.info(s"Using Super User Roles")
+      system.log.debug(s"Using Super User Roles")
       Roles.availableRoles
     } else userRolesFromHeader(headers)
 
