@@ -176,7 +176,6 @@ object TerminalContentComponent {
           )
         }))
     }
-
   }
 
   def timeRange(props: Props): CustomWindow = {
