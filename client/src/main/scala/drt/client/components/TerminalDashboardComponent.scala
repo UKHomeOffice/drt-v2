@@ -29,7 +29,7 @@ object TerminalDashboardComponent {
       <.div(^.className := "terminal-dashboard",
         <.div(^.className := "pax-bar", s"$terminalPax passengers presenting at the PCP"),
 
-        p.airportConfig.queues.getOrElse(p.terminal, List()).map((q: String) => {
+        p.airportConfig.nonTransferQueues(p.terminal).map((q: String) => {
 
           val qCMs = ps.crunchMinutes.collect { case (tqm, cm) if tqm.queueName == q => cm }
           val prevSlotCMs = prevSlotPortState.crunchMinutes.collect { case (tqm, cm) if tqm.queueName == q => cm }
