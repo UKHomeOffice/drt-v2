@@ -61,7 +61,7 @@ object TerminalDesksAndQueuesRow {
                 <.td(^.className := queueColour(qn), ^.title := s"Rec: ${cm.deskRec}", s"${cm.deployedDesks.getOrElse("-")}"),
                 <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"With rec: ${cm.waitTime}", s"${cm.deployedWait.map(Math.round(_)).getOrElse("-")}"))
             case ViewRecs =>
-              val ragClass: TerminalName = slaRagStatus(cm.waitTime.toDouble, props.airportConfig.slaByQueue(qn))
+              val ragClass = slaRagStatus(cm.waitTime.toDouble, props.airportConfig.slaByQueue(qn))
               List(paxLoadTd,
                 <.td(^.className := queueColour(qn), ^.title := s"Dep: ${cm.deployedDesks.getOrElse("-")}", s"${cm.deskRec}"),
                 <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"With Dep: ${cm.waitTime}", s"${Math.round(cm.waitTime)}"))
