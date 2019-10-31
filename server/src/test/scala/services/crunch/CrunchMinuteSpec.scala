@@ -1,5 +1,6 @@
 package services.crunch
 
+import drt.shared.CrunchApi.CrunchMinute
 import drt.shared._
 
 
@@ -46,6 +47,17 @@ class CrunchMinuteSpec extends CrunchTestLike {
       val expected = Map()
 
       dupes === expected
+    }
+  }
+
+  "Equality" >> {
+    "Given two CrunchMinutes with the same values but different last updated timestamps " +
+      "When I ask if they're equal " +
+      "The answer should be yes" >> {
+      val cm1 = CrunchMinute("T1", Queues.EGate, 0L, 1, 2, 3, 4, Option(5), Option(6), Option(7), Option(8), None)
+      val cm2 = CrunchMinute("T1", Queues.EGate, 0L, 1, 2, 3, 4, Option(5), Option(6), Option(7), Option(8), Option(1L))
+
+      cm1.isEqual(cm2) === true
     }
   }
 }
