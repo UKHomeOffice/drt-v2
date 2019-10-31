@@ -436,7 +436,7 @@ case class SimulationMinutes(minutes: Seq[SimulationMinute]) extends PortStateMi
   def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
     val minutesDiff = minutes.foldLeft(List[CrunchMinute]()) { case (soFar, dm) =>
       portState.crunchMinutes.getByKey(dm.key) match {
-        case None => CrunchMinute(dm) :: soFar
+        case None => CrunchMinute(dm).copy(lastUpdated = Option(now)) :: soFar
         case Some(existing) => dm.maybeUpdated(existing, now) match {
           case None => soFar
           case Some(updated) => updated :: soFar

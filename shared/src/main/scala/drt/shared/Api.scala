@@ -673,7 +673,7 @@ object CrunchApi {
     def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
       val minutesDiff = minutes.foldLeft(List[StaffMinute]()) { case (soFar, dm) =>
         portState.staffMinutes.getByKey(dm.key) match {
-          case None => dm :: soFar
+          case None => dm.copy(lastUpdated = Option(now)) :: soFar
           case Some(existing) => dm.maybeUpdated(existing, now) match {
             case None => soFar
             case Some(updated) => updated :: soFar
@@ -778,7 +778,7 @@ object CrunchApi {
     def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
       val crunchMinutesDiff = minutes.foldLeft(List[CrunchMinute]()) { case (soFar, (key, dm)) =>
         portState.crunchMinutes.getByKey(key) match {
-          case None => CrunchMinute(key, dm) :: soFar
+          case None => CrunchMinute(key, dm).copy(lastUpdated = Option(now)) :: soFar
           case Some(existing) => dm.maybeUpdated(existing, now) match {
             case None => soFar
             case Some(updated) => updated :: soFar

@@ -184,7 +184,7 @@ case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateMinutes 
   def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
     val crunchMinutesDiff = minutes.foldLeft(List[CrunchMinute]()) { case (soFar, dm) =>
       portState.crunchMinutes.getByKey(dm.key) match {
-        case None => CrunchMinute(dm) :: soFar
+        case None => CrunchMinute(dm).copy(lastUpdated = Option(now)) :: soFar
         case Some(existing) => dm.maybeUpdated(existing, now) match {
           case None => soFar
           case Some(updated) => updated :: soFar
