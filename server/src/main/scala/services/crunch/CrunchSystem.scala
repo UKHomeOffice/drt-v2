@@ -37,8 +37,7 @@ case class CrunchProps[FR](logLabel: String = "",
                            airportConfig: AirportConfig,
                            pcpArrival: Arrival => MilliDate,
                            historicalSplitsProvider: SplitsProvider.SplitProvider,
-                           liveCrunchStateActor: ActorRef,
-                           forecastCrunchStateActor: ActorRef,
+                           portStateActor: ActorRef,
                            maxDaysToCrunch: Int,
                            expireAfterMillis: Long,
                            minutesToCrunch: Int = 1440,
@@ -187,14 +186,6 @@ object CrunchSystem {
 
     val liveStateDaysAhead = 2
 
-    val portStateGraphStage = new PortStateGraphStage(
-      name = props.logLabel,
-      optionalInitialPortState = props.initialPortState,
-      airportConfig = props.airportConfig,
-      expireAfterMillis = props.expireAfterMillis,
-      now = props.now,
-      liveDaysAhead = liveStateDaysAhead)
-
     val crunchSystem = RunnableCrunch(
       props.arrivalsForecastBaseSource, props.arrivalsForecastSource, props.arrivalsLiveBaseSource, props.arrivalsLiveSource,
       props.manifestsLiveSource, props.manifestResponsesSource,
@@ -203,11 +194,10 @@ object CrunchSystem {
       arrivalsStage, arrivalSplitsGraphStage,
       workloadGraphStage, loadBatcher, crunchLoadGraphStage,
       staffGraphStage, staffBatcher, simulationGraphStage,
-      portStateGraphStage,
       forecastArrivalsDiffingStage, liveBaseArrivalsDiffingStage, liveArrivalsDiffingStage,
       props.actors("forecast-base-arrivals").actorRef, props.actors("forecast-arrivals").actorRef, props.actors("live-base-arrivals").actorRef, props.actors("live-arrivals").actorRef,
       props.voyageManifestsActor, props.manifestRequestsSink,
-      props.liveCrunchStateActor, props.forecastCrunchStateActor,
+      props.portStateActor,
       props.actors("aggregated-arrivals").actorRef,
       crunchStartDateProvider, props.now, props.airportConfig.queues, liveStateDaysAhead, forecastMaxMillis, props.stageThrottlePer
     )

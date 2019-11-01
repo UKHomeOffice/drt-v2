@@ -169,34 +169,25 @@ case class DeskRecMinute(terminalName: TerminalName,
                          paxLoad: Double,
                          workLoad: Double,
                          deskRec: Int,
-                         waitTime: Int) extends DeskRecMinuteLike {
+                         waitTime: Int) extends DeskRecMinuteLike with MinuteComparison[CrunchMinute] {
   lazy val key: TQM = MinuteHelper.key(terminalName, queueName, minute)
+
+  override def maybeUpdated(existing: CrunchMinute, now: MillisSinceEpoch): Option[CrunchMinute] =
+    if (existing.paxLoad != paxLoad || existing.workLoad != workLoad || existing.deskRec != deskRec || existing.waitTime != waitTime)
+      Option(existing.copy(
+        paxLoad = paxLoad, workLoad = workLoad, deskRec = deskRec, waitTime = waitTime, lastUpdated = Option(now)
+      ))
+    else None
 }
 
 case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateMinutes {
   def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
     val crunchMinutesDiff = minutes.foldLeft(List[CrunchMinute]()) { case (soFar, dm) =>
-      val merged = mergeMinute(portState.crunchMinutes.getByKey(dm.key), dm, now)
-      merged :: soFar
+      addIfUpdated(portState.crunchMinutes.getByKey(dm.key), now, soFar, dm, () => CrunchMinute(dm, now))
     }
+
     portState.crunchMinutes +++= crunchMinutesDiff
-    val newDiff = PortStateDiff(Seq(), Seq(), crunchMinutesDiff, Seq())
 
-    newDiff
+    PortStateDiff(Seq(), Seq(), crunchMinutesDiff, Seq())
   }
-
-  def newCrunchMinutes: SortedMap[TQM, CrunchMinute] = SortedMap[TQM, CrunchMinute]() ++ minutes
-    .map(CrunchMinute(_))
-    .map(cm => (cm.key, cm))
-    .toMap
-
-  def mergeMinute(maybeMinute: Option[CrunchMinute], updatedDrm: DeskRecMinute, now: MillisSinceEpoch): CrunchMinute = maybeMinute
-    .map(_.copy(
-      paxLoad = updatedDrm.paxLoad,
-      workLoad = updatedDrm.workLoad,
-      deskRec = updatedDrm.deskRec,
-      waitTime = updatedDrm.waitTime
-    ))
-    .getOrElse(CrunchMinute(updatedDrm))
-    .copy(lastUpdated = Option(now))
 }

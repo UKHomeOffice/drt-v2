@@ -10,10 +10,8 @@ import upickle.default.write
 trait WithVersion {
   self: Application =>
 
-  def getApplicationVersion: Action[AnyContent] = Action { _ => {
+  def getApplicationVersion: Action[AnyContent] = Action { _ =>
     val shouldReload = config.getOptional[Boolean]("feature-flags.version-requires-reload").getOrElse(false)
     Ok(write(BuildVersion(BuildInfo.version.toString, requiresReload = shouldReload)))
   }
-  }
-
 }

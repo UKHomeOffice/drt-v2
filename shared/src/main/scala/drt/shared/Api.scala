@@ -534,15 +534,27 @@ trait SDateLike {
 
 case class RemoveFlight(flightKey: UniqueArrival)
 
+trait MinuteComparison[A <: WithLastUpdated] {
+  def maybeUpdated(existing: A, now: MillisSinceEpoch): Option[A]
+}
 
 trait PortStateMinutes {
   def applyTo(portStateMutable: PortStateMutable, now: MillisSinceEpoch): PortStateDiff
+
+  def addIfUpdated[A <: MinuteComparison[C], B <: WithTerminal[B], C <: WithLastUpdated](maybeExisting: Option[C], now: MillisSinceEpoch, existingUpdates: List[C], incoming: A, newMinute: () => C): List[C] = {
+    maybeExisting match {
+      case None => newMinute() :: existingUpdates
+      case Some(existing) => incoming.maybeUpdated(existing, now) match {
+        case None => existingUpdates
+        case Some(updated) => updated :: existingUpdates
+      }
+    }
+  }
 }
 
 object CrunchResult {
   def empty = CrunchResult(0, 0, Vector[Int](), List())
 }
-
 
 case class CrunchResult(firstTimeMillis: MillisSinceEpoch,
                         intervalMillis: MillisSinceEpoch,
@@ -637,7 +649,7 @@ object CrunchApi {
                          shifts: Int,
                          fixedPoints: Int,
                          movements: Int,
-                         lastUpdated: Option[MillisSinceEpoch] = None) extends Minute with TerminalMinute with WithLastUpdated {
+                         lastUpdated: Option[MillisSinceEpoch] = None) extends Minute with TerminalMinute with WithLastUpdated with MinuteComparison[StaffMinute] {
     def equals(candidate: StaffMinute): Boolean =
       this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
 
@@ -652,6 +664,12 @@ object CrunchApi {
         case _ => 0
       }
     }
+
+    override def maybeUpdated(existing: StaffMinute, now: MillisSinceEpoch): Option[StaffMinute] =
+      if (existing.shifts != shifts || existing.fixedPoints != fixedPoints || existing.movements != movements) Option(existing.copy(
+        shifts = shifts, fixedPoints = fixedPoints, movements = movements, lastUpdated = Option(now)
+      ))
+      else None
   }
 
   object StaffMinute {
@@ -662,16 +680,12 @@ object CrunchApi {
 
   case class StaffMinutes(minutes: Seq[StaffMinute]) extends PortStateMinutes {
     def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
-
-      val updatedMinutes = minutes.map(_.copy(lastUpdated = Option(now)))
-
-      val diff = PortStateDiff(Seq(), Seq(), Seq(), updatedMinutes)
-
-      portState.staffMinutes +++= updatedMinutes
-
-      diff
+      val minutesDiff = minutes.foldLeft(List[StaffMinute]()) { case (soFar, sm) =>
+        addIfUpdated(portState.staffMinutes.getByKey(sm.key), now, soFar, sm, () => sm.copy(lastUpdated = Option(now)))
+      }
+      portState.staffMinutes +++= minutesDiff
+      PortStateDiff(Seq(), Seq(), Seq(), minutesDiff)
     }
-
   }
 
   object StaffMinutes {
@@ -692,23 +706,23 @@ object CrunchApi {
                           actDesks: Option[Int] = None,
                           actWait: Option[Int] = None,
                           lastUpdated: Option[MillisSinceEpoch] = None) extends Minute with WithLastUpdated {
-    def equals(candidate: CrunchMinute): Boolean =
-      this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
+    def equals(candidate: CrunchMinute): Boolean = this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
 
     lazy val key: TQM = MinuteHelper.key(terminalName, queueName, minute)
   }
 
   object CrunchMinute {
-    def apply(drm: DeskRecMinuteLike): CrunchMinute = CrunchMinute(
+    def apply(drm: DeskRecMinuteLike, now: MillisSinceEpoch): CrunchMinute = CrunchMinute(
       terminalName = drm.terminalName,
       queueName = drm.queueName,
       minute = drm.minute,
       paxLoad = drm.paxLoad,
       workLoad = drm.workLoad,
       deskRec = drm.deskRec,
-      waitTime = drm.waitTime)
+      waitTime = drm.waitTime,
+      lastUpdated = Option(now))
 
-    def apply(sm: SimulationMinuteLike): CrunchMinute = CrunchMinute(
+    def apply(sm: SimulationMinuteLike, now: MillisSinceEpoch): CrunchMinute = CrunchMinute(
       terminalName = sm.terminalName,
       queueName = sm.queueName,
       minute = sm.minute,
@@ -717,9 +731,10 @@ object CrunchApi {
       deskRec = 0,
       waitTime = 0,
       deployedDesks = Option(sm.desks),
-      deployedWait = Option(sm.waitTime))
+      deployedWait = Option(sm.waitTime),
+      lastUpdated = Option(now))
 
-    def apply(tqm: TQM, ad: DeskStat): CrunchMinute = CrunchMinute(
+    def apply(tqm: TQM, ad: DeskStat, now: MillisSinceEpoch): CrunchMinute = CrunchMinute(
       terminalName = tqm.terminalName,
       queueName = tqm.queueName,
       minute = tqm.minute,
@@ -728,7 +743,8 @@ object CrunchApi {
       deskRec = 0,
       waitTime = 0,
       actDesks = ad.desks,
-      actWait = ad.waitTime
+      actWait = ad.waitTime,
+      lastUpdated = Option(now)
     )
 
     implicit val rw: RW[CrunchMinute] = macroRW
@@ -752,14 +768,20 @@ object CrunchApi {
     val waitTime: Int
   }
 
-  case class DeskStat(desks: Option[Int], waitTime: Option[Int])
+  case class DeskStat(desks: Option[Int], waitTime: Option[Int]) extends MinuteComparison[CrunchMinute] {
+    override def maybeUpdated(existing: CrunchMinute, now: MillisSinceEpoch): Option[CrunchMinute] =
+      if (existing.actDesks != desks || existing.actWait != waitTime) Option(existing.copy(
+        actDesks = desks, actWait = waitTime, lastUpdated = Option(now)
+      ))
+      else None
+  }
 
   case class ActualDeskStats(portDeskSlots: IMap[String, IMap[String, IMap[MillisSinceEpoch, DeskStat]]]) extends PortStateMinutes {
     val oneMinuteMillis: Long = 60 * 1000
 
     def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
       val crunchMinutesDiff = minutes.foldLeft(List[CrunchMinute]()) { case (soFar, (key, dm)) =>
-        mergeMinute(key, portState.crunchMinutes.getByKey(key), dm, now) :: soFar
+        addIfUpdated(portState.crunchMinutes.getByKey(key), now, soFar, dm, () => CrunchMinute(key, dm, now))
       }
       portState.crunchMinutes +++= crunchMinutesDiff
       val newDiff = PortStateDiff(Seq(), Seq(), crunchMinutesDiff, Seq())
@@ -773,17 +795,6 @@ object CrunchApi {
       (startMinute, deskStat) <- deskStats
       minute <- startMinute until startMinute + 15 * oneMinuteMillis by oneMinuteMillis
     } yield (TQM(tn, qn, minute), deskStat)
-
-    def newCrunchMinutes: ISortedMap[TQM, CrunchMinute] = ISortedMap[TQM, CrunchMinute]() ++ minutes
-      .map { case (tqm, ad) => (tqm, CrunchMinute(tqm, ad)) }
-
-    def mergeMinute(tqm: TQM, maybeMinute: Option[CrunchMinute], updatedDeskStat: DeskStat, now: MillisSinceEpoch): CrunchMinute = maybeMinute
-      .map(existingCm => existingCm.copy(
-        actDesks = updatedDeskStat.desks,
-        actWait = updatedDeskStat.waitTime
-      ))
-      .getOrElse(CrunchMinute(tqm, updatedDeskStat))
-      .copy(lastUpdated = Option(now))
   }
 
   case class CrunchMinutes(crunchMinutes: Set[CrunchMinute])

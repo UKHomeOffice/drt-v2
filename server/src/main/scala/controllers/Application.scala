@@ -144,7 +144,7 @@ class Application @Inject()(implicit val config: Configuration,
                             implicit val mat: Materializer,
                             env: Environment,
                             val system: ActorSystem,
-                            ec: ExecutionContext)
+                            implicit val ec: ExecutionContext)
   extends InjectedController
     with AirportConfProvider
     with WithAirportConfig
@@ -227,7 +227,7 @@ class Application @Inject()(implicit val config: Configuration,
                               terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]] = {
         val (startOfForecast, endOfForecast) = startAndEndForDay(startDay, 7)
 
-        val portStateFuture = forecastCrunchStateActor.ask(
+        val portStateFuture = portStateActor.ask(
           GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
         )(new Timeout(30 seconds))
 
@@ -314,9 +314,7 @@ class Application @Inject()(implicit val config: Configuration,
           .map(kcGroups => kcGroups.filter(g => groups.contains(g.name))
             .map(g => keyCloakClient.removeUserFromGroup(userId, g.id)))
 
-      override def liveCrunchStateActor: AskableActorRef = ctrl.liveCrunchStateActor
-
-      override def forecastCrunchStateActor: AskableActorRef = ctrl.forecastCrunchStateActor
+      override def portStateActor: AskableActorRef = ctrl.portStateActor
 
       def getShowAlertModalDialog(): Boolean = config
         .getOptional[Boolean]("feature-flags.display-modal-alert")
@@ -362,11 +360,11 @@ class Application @Inject()(implicit val config: Configuration,
 
   def healthCheck: Action[AnyContent] = Action.async { _ =>
     val requestStart = SDate.now()
-    val liveStartMillis = getLocalLastMidnight(SDate.now()).millisSinceEpoch
-    val liveEndMillis = getLocalNextMidnight(SDate.now()).millisSinceEpoch
-    val liveState = ActorDataRequest.portState[PortState](ctrl.liveCrunchStateActor, GetPortState(liveStartMillis, liveEndMillis))
+    val startMillis = getLocalLastMidnight(SDate.now()).millisSinceEpoch
+    val endMillis = getLocalNextMidnight(SDate.now()).millisSinceEpoch
+    val portState = ActorDataRequest.portState[PortState](ctrl.portStateActor, GetPortState(startMillis, endMillis))
 
-    liveState.map {
+    portState.map {
       case Left(liveError) =>
         log.error(s"Healthcheck failed to get live response, ${liveError.message}")
         BadGateway(

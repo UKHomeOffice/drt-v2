@@ -6,8 +6,6 @@ import play.api.mvc.{Action, AnyContent}
 import services.graphstages.Crunch
 import services.{BankHolidayApiClient, OOHChecker, SDate}
 
-import scala.concurrent.ExecutionContext.Implicits.global
-
 
 trait WithContactDetails {
   self: Application =>

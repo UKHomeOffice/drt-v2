@@ -13,7 +13,6 @@ import play.api.mvc.{Action, AnyContent, Request}
 import services.SDate
 import upickle.default.{read, write}
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 

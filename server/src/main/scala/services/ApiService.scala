@@ -72,9 +72,7 @@ abstract class ApiService(val airportConfig: AirportConfig,
 
   override val log: Logger = LoggerFactory.getLogger(this.getClass)
 
-  def liveCrunchStateActor: AskableActorRef
-
-  def forecastCrunchStateActor: AskableActorRef
+  def portStateActor: AskableActorRef
 
   def actorSystem: ActorSystem
 

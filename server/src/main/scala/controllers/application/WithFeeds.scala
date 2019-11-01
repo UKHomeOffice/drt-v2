@@ -5,8 +5,6 @@ import drt.shared._
 import play.api.mvc.{Action, AnyContent}
 import upickle.default.write
 
-import scala.concurrent.ExecutionContext.Implicits.global
-
 
 trait WithFeeds {
   self: Application =>

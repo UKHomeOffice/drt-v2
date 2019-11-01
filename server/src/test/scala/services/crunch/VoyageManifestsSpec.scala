@@ -58,7 +58,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val expectedNonZeroQueues = Set(NonEeaDesk)
 
-    crunch.liveTestProbe.fishForMessage(3 seconds) {
+    crunch.portStateTestProbe.fishForMessage(3 seconds) {
       case ps: PortState =>
         val nonZeroQueues = ps.crunchMinutes.values.filter(_.paxLoad > 0).groupBy(_.queueName).keys.toSet
         nonZeroQueues == expectedNonZeroQueues
@@ -98,7 +98,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val expected = Map(Queues.EeaDesk -> 2.0, Queues.EGate -> 8.0)
 
-    crunch.liveTestProbe.fishForMessage(3 seconds) {
+    crunch.portStateTestProbe.fishForMessage(3 seconds) {
       case ps: PortState =>
         val queuePax = ps.crunchMinutes
           .values
@@ -147,7 +147,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val expected = Map(Queues.EeaDesk -> 1.0, Queues.EGate -> 4.0, Queues.NonEeaDesk -> 0.0)
 
-    crunch.liveTestProbe.fishForMessage(3 seconds) {
+    crunch.portStateTestProbe.fishForMessage(3 seconds) {
       case ps: PortState =>
         val queuePax = ps.crunchMinutes
           .values
@@ -228,7 +228,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val expected = Map(Queues.EeaDesk -> 1.2, Queues.EGate -> 0.8, Queues.NonEeaDesk -> 2.0)
 
-    crunch.liveTestProbe.fishForMessage(10 seconds) {
+    crunch.portStateTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val queuePax = ps.crunchMinutes
           .values

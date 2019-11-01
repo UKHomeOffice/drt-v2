@@ -422,29 +422,22 @@ case class SimulationMinute(terminalName: TerminalName,
                             queueName: QueueName,
                             minute: MillisSinceEpoch,
                             desks: Int,
-                            waitTime: Int) extends SimulationMinuteLike {
+                            waitTime: Int) extends SimulationMinuteLike with MinuteComparison[CrunchMinute] {
   lazy val key: TQM = MinuteHelper.key(terminalName, queueName, minute)
+
+  override def maybeUpdated(existing: CrunchMinute, now: MillisSinceEpoch): Option[CrunchMinute] =
+    if (existing.deployedDesks.isEmpty || existing.deployedDesks.get != desks || existing.deployedWait.isEmpty || existing.deployedWait.get != waitTime) Option(existing.copy(
+      deployedDesks = Option(desks), deployedWait = Option(waitTime), lastUpdated = Option(now)
+    ))
+    else None
 }
 
 case class SimulationMinutes(minutes: Seq[SimulationMinute]) extends PortStateMinutes {
   def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
     val minutesDiff = minutes.foldLeft(List[CrunchMinute]()) { case (soFar, dm) =>
-      val merged = mergeMinute(portState.crunchMinutes.getByKey(dm.key), dm, now)
-      merged :: soFar
+      addIfUpdated(portState.crunchMinutes.getByKey(dm.key), now, soFar, dm, () => CrunchMinute(dm, now))
     }
     portState.crunchMinutes +++= minutesDiff
     PortStateDiff(Seq(), Seq(), minutesDiff, Seq())
   }
-
-  def newCrunchMinutes: SortedMap[TQM, CrunchMinute] = SortedMap[TQM, CrunchMinute]() ++ minutes
-    .map(CrunchMinute(_))
-    .map(cm => (cm.key, cm))
-
-  def mergeMinute(maybeMinute: Option[CrunchMinute], updatedSm: SimulationMinute, now: MillisSinceEpoch): CrunchMinute = maybeMinute
-    .map(existingCm => existingCm.copy(
-      deployedDesks = Option(updatedSm.desks),
-      deployedWait = Option(updatedSm.waitTime)
-    ))
-    .getOrElse(CrunchMinute(updatedSm))
-    .copy(lastUpdated = Option(now))
 }

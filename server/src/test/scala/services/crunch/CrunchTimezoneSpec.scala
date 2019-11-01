@@ -77,7 +77,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
           )
         ))
 
-        crunch.liveTestProbe.fishForMessage(5 seconds) {
+        crunch.portStateTestProbe.fishForMessage(5 seconds) {
           case ps: PortState =>
             val resultSummary = deskRecsFromPortState(ps, 120)
             resultSummary == expected
