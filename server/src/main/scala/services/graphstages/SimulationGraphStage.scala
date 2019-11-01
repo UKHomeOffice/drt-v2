@@ -435,19 +435,9 @@ case class SimulationMinute(terminalName: TerminalName,
 case class SimulationMinutes(minutes: Seq[SimulationMinute]) extends PortStateMinutes {
   def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
     val minutesDiff = minutes.foldLeft(List[CrunchMinute]()) { case (soFar, dm) =>
-      portState.crunchMinutes.getByKey(dm.key) match {
-        case None => CrunchMinute(dm).copy(lastUpdated = Option(now)) :: soFar
-        case Some(existing) => dm.maybeUpdated(existing, now) match {
-          case None => soFar
-          case Some(updated) => updated :: soFar
-        }
-      }
+      addIfUpdated(portState.crunchMinutes.getByKey(dm.key), now, soFar, dm, () => CrunchMinute(dm, now))
     }
     portState.crunchMinutes +++= minutesDiff
     PortStateDiff(Seq(), Seq(), minutesDiff, Seq())
   }
-
-  def newCrunchMinutes: SortedMap[TQM, CrunchMinute] = SortedMap[TQM, CrunchMinute]() ++ minutes
-    .map(CrunchMinute(_))
-    .map(cm => (cm.key, cm))
 }

@@ -366,13 +366,13 @@ trait WithExports {
     if (isHistoricDate(day))
       portStateForEndOfDay(day, terminalName)
     else
-      portStateForDay(day)
+      portStateForDay(day, terminalName)
 
-  private def portStateForDay(day: MillisSinceEpoch): Future[Either[PortStateError, Option[PortState]]] = {
+  private def portStateForDay(day: MillisSinceEpoch, terminalName: TerminalName): Future[Either[PortStateError, Option[PortState]]] = {
     val firstMinute = getLocalLastMidnight(SDate(day)).millisSinceEpoch
     val lastMinute = SDate(firstMinute).addHours(airportConfig.dayLengthHours).millisSinceEpoch
 
-    val portStateFuture = ctrl.portStateActor.ask(GetPortState(firstMinute, lastMinute))(new Timeout(30 seconds))
+    val portStateFuture = ctrl.portStateActor.ask(GetPortStateForTerminal(firstMinute, lastMinute, terminalName))(new Timeout(30 seconds))
 
     portStateFuture.map {
       case Some(ps: PortState) => Right(Option(ps))

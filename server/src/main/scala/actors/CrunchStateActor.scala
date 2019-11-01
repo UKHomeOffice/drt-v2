@@ -74,8 +74,6 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
 
   override def receiveCommand: Receive = {
     case psd: PortStateDiff =>
-      log.info(s"Got a diff!")
-
       if (!psd.isEmpty) {
         val diffMsg = diffMessage(psd)
         applyDiff(diffMsg, Long.MaxValue)

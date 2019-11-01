@@ -155,7 +155,7 @@ class PortStateSpec extends CrunchTestLike {
   }
 
   "Given a PortState with two crunch minutes " +
-    "When I apply a a set of DeskRecMinutes containing two minutes, only one of which is different to the PortState's " +
+    "When I apply a set of DeskRecMinutes containing two minutes, only one of which is different to the PortState's " +
     "Then the PortStateDiff should only contain the one updated CrunchMinute" >> {
     val cm1 = CrunchMinute("T1", Queues.EGate, 0L, 1, 2, 3, 4, Option(5), Option(6), Option(7), Option(8), None)
     val cm2 = CrunchMinute("T1", Queues.EGate, 1L, 2, 2, 3, 4, Option(5), Option(6), Option(7), Option(8), Option(1L))
@@ -171,7 +171,7 @@ class PortStateSpec extends CrunchTestLike {
   }
 
   "Given a PortState with two crunch minutes " +
-    "When I apply a a set of ActualDeskStats containing two entries representing 30 minutes, only one of which is different to the PortState's " +
+    "When I apply a set of ActualDeskStats containing two entries representing 30 minutes, only one of which is different to the PortState's " +
     "Then the PortStateDiff should only contain the 15 minutes of updated CrunchMinutes" >> {
     val fifteenMins = 15 * 60000L
     val cm1 = fifteenMinsOf(CrunchMinute("T1", Queues.EGate, 0L, 1, 2, 3, 4, Option(5), Option(6), Option(7), Option(8), None))
@@ -194,7 +194,7 @@ class PortStateSpec extends CrunchTestLike {
   }
 
   "Given a PortState with two crunch minutes " +
-    "When I apply a a set of SimulationMinutes containing two minutes, only one of which is different to the PortState's " +
+    "When I apply a set of SimulationMinutes containing two minutes, only one of which is different to the PortState's " +
     "Then the PortStateDiff should only contain the one updated CrunchMinute" >> {
     val cm1 = CrunchMinute("T1", Queues.EGate, 0L, 1, 2, 3, 4, Option(5), Option(6), Option(7), Option(8), None)
     val cm2 = CrunchMinute("T1", Queues.EGate, 1L, 2, 2, 3, 4, Option(5), Option(6), Option(7), Option(8), Option(1L))
@@ -211,7 +211,7 @@ class PortStateSpec extends CrunchTestLike {
   }
 
   "Given a PortState with two crunch minutes " +
-    "When I apply a a set of StaffMinutes containing two minutes, only one of which is different to the PortState's " +
+    "When I apply aset of StaffMinutes containing two minutes, only one of which is different to the PortState's " +
     "Then the PortStateDiff should only contain the one updated StaffMinute" >> {
     val sm1 = StaffMinute("T1", 0L, 1, 2, 3, None)
     val sm2 = StaffMinute("T1", 1L, 2, 2, 3, None)
