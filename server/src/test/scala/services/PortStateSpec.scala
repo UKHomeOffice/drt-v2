@@ -167,7 +167,7 @@ class PortStateSpec extends CrunchTestLike {
     val dr2 = DeskRecMinute("T1", Queues.EGate, 1L, 100, 2, 3, 4)
     val diff = DeskRecMinutes(Seq(dr1, dr2)).applyTo(portState, 10L)
 
-    diff === PortStateDiff(Seq(), Seq(), Seq(CrunchMinute("T1", Queues.EGate, 1L, 100, 2, 3, 4, Option(5), Option(6), Option(7), Option(8), Option(10L))), Seq())
+    diff === PortStateDiff(Seq(), Seq(), Seq(), Seq(CrunchMinute("T1", Queues.EGate, 1L, 100, 2, 3, 4, Option(5), Option(6), Option(7), Option(8), Option(10L))), Seq())
   }
 
   "Given a PortState with two crunch minutes " +
@@ -179,14 +179,14 @@ class PortStateSpec extends CrunchTestLike {
     val portState = PortStateMutable.empty
     portState.crunchMinutes +++= (cm1 ++ cm2)
 
-    val diff = ActualDeskStats(Map("T1"-> Map(Queues.EGate -> Map(
+    val diff = ActualDeskStats(Map("T1" -> Map(Queues.EGate -> Map(
       0L -> DeskStat(Option(7), Option(8)),
       fifteenMins -> DeskStat(Option(100), Option(100))
     )))).applyTo(portState, 10L)
 
     val expectedCms = fifteenMinsOf(CrunchMinute("T1", Queues.EGate, fifteenMins, 2, 2, 3, 4, Option(5), Option(6), Option(100), Option(100), Option(10L)))
 
-    diff === PortStateDiff(Seq(), Seq(), expectedCms, Seq())
+    diff === PortStateDiff(Seq(), Seq(), Seq(), expectedCms, Seq())
   }
 
   private def fifteenMinsOf(crunchMinute: CrunchMinute): IndexedSeq[CrunchMinute] = {
@@ -207,7 +207,7 @@ class PortStateSpec extends CrunchTestLike {
       SimulationMinute("T1", Queues.EGate, 1L, 100, 100)
     )).applyTo(portState, 10L)
 
-    diff === PortStateDiff(Seq(), Seq(), Seq(CrunchMinute("T1", Queues.EGate, 1L, 2, 2, 3, 4, Option(100), Option(100), Option(7), Option(8), Option(10L))), Seq())
+    diff === PortStateDiff(Seq(), Seq(), Seq(), Seq(CrunchMinute("T1", Queues.EGate, 1L, 2, 2, 3, 4, Option(100), Option(100), Option(7), Option(8), Option(10L))), Seq())
   }
 
   "Given a PortState with two crunch minutes " +
@@ -224,7 +224,7 @@ class PortStateSpec extends CrunchTestLike {
       StaffMinute("T1", 1L, 200, 200, 300, None)
     )).applyTo(portState, 10L)
 
-    diff === PortStateDiff(Seq(), Seq(), Seq(), Seq(StaffMinute("T1", 1L, 200, 200, 300, Option(10L))))
+    diff === PortStateDiff(Seq(), Seq(), Seq(), Seq(), Seq(StaffMinute("T1", 1L, 200, 200, 300, Option(10L))))
   }
 
   private def arrivalsToFlightsWithSplits(arrivals: List[Arrival]): List[ApiFlightWithSplits] = {

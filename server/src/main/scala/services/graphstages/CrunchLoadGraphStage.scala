@@ -188,6 +188,6 @@ case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateMinutes 
 
     portState.crunchMinutes +++= crunchMinutesDiff
 
-    PortStateDiff(Seq(), Seq(), crunchMinutesDiff, Seq())
+    PortStateDiff(Seq(), Seq(), Seq(), crunchMinutesDiff, Seq())
   }
 }
