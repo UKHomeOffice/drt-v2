@@ -170,7 +170,6 @@ class TestController @Inject()(implicit val config: Configuration,
         case roles =>
           BadRequest(s"Unable to parse roles: ${roles} from query string ${request.queryString}")
       }
-
   }
 
   def deleteAllData() = Action {
