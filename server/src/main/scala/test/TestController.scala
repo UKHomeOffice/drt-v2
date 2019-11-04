@@ -161,6 +161,17 @@ class TestController @Inject()(implicit val config: Configuration,
       }
   }
 
+  def setMockRolesByQueryString() = Action {
+    implicit request =>
+      request.queryString.get("roles") match {
+        case Some(rs) =>
+
+          Redirect("/").withSession(Session(Map("mock-roles" -> rs.mkString(","))))
+        case roles =>
+          BadRequest(s"Unable to parse roles: ${roles} from query string ${request.queryString}")
+      }
+  }
+
   def deleteAllData() = Action {
     resetData()
 
