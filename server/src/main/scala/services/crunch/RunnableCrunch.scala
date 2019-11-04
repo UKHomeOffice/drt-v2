@@ -38,9 +38,6 @@ object RunnableCrunch {
 
                                        arrivalsGraphStage: ArrivalsGraphStage,
                                        arrivalSplitsStage: GraphStage[FanInShape3[ArrivalsDiff, List[BestAvailableManifest], List[BestAvailableManifest], FlightsWithSplits]],
-                                       workloadGraphStage: WorkloadGraphStage,
-                                       loadBatchUpdateGraphStage: BatchLoadsByCrunchPeriodGraphStage,
-                                       crunchLoadGraphStage: CrunchLoadGraphStage,
                                        staffGraphStage: StaffGraphStage,
                                        staffBatchUpdateGraphStage: StaffBatchUpdateGraphStage,
                                        simulationGraphStage: SimulationGraphStage,
@@ -66,7 +63,7 @@ object RunnableCrunch {
                                        liveStateDaysAhead: Int,
                                        forecastMaxMillis: () => MillisSinceEpoch,
                                        throttleDurationPer: FiniteDuration
-                                      ): RunnableGraph[(FR, FR, FR, FR, MS, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch)] = {
+                                      ): RunnableGraph[(FR, FR, FR, FR, MS, SS, SFP, SMM, ActorRef, SAD, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch)] = {
 
     val arrivalsKillSwitch = KillSwitches.single[ArrivalsFeedResponse]
     val manifestsLiveKillSwitch = KillSwitches.single[ManifestsFeedResponse]
@@ -85,13 +82,14 @@ object RunnableCrunch {
       shiftsSource.async("staff-dispatcher"),
       fixedPointsSource.async("staff-dispatcher"),
       staffMovementsSource.async("staff-dispatcher"),
+      Source.actorRefWithAck[Loads](Ack).async,
       actualDesksAndWaitTimesSource,
       arrivalsKillSwitch,
       manifestsLiveKillSwitch,
       shiftsKillSwitch,
       fixedPointsKillSwitch,
       movementsKillSwitch
-    )((_, _, _, _, _, _, _, _, _, _, _, _, _, _)) {
+    )((_, _, _, _, _, _, _, _, _, _, _, _, _, _, _)) {
 
       implicit builder =>
         (
@@ -103,6 +101,7 @@ object RunnableCrunch {
           shiftsSourceAsync,
           fixedPointsSourceAsync,
           staffMovementsSourceAsync,
+          loadsToSimulateSourceAsync,
           actualDesksAndWaitTimesSourceSync,
           arrivalsKillSwitchSync,
           manifestsLiveKillSwitchSync,
@@ -112,15 +111,12 @@ object RunnableCrunch {
         ) =>
           val arrivals = builder.add(arrivalsGraphStage.async("arrivals-dispatcher"))
           val arrivalSplits = builder.add(arrivalSplitsStage.async("arrivals-dispatcher"))
-          val workload = builder.add(workloadGraphStage.async("workloads-dispatcher"))
-          val batchLoad = builder.add(loadBatchUpdateGraphStage.async("workloads-dispatcher"))
-          val crunch = builder.add(crunchLoadGraphStage.async("crunch-dispatcher"))
           val staff = builder.add(staffGraphStage.async("staff-dispatcher"))
           val batchStaff = builder.add(staffBatchUpdateGraphStage.async("staff-dispatcher"))
           val simulation = builder.add(simulationGraphStage.async("simulation-dispatcher"))
           val deskStatsSink = builder.add(Sink.actorRefWithAck(portStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure).async("port-state-dispatcher"))
-          val deskRecsSink = builder.add(Sink.actorRefWithAck(portStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure).async("port-state-dispatcher"))
           val flightsWithSplitsSink = builder.add(Sink.actorRefWithAck(portStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure).async("port-state-dispatcher"))
+
           val simulationsSink = builder.add(Sink.actorRefWithAck(portStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure).async("port-state-dispatcher"))
           val staffSink = builder.add(Sink.actorRefWithAck(portStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure).async("port-state-dispatcher"))
           val fcstArrivalsDiffing = builder.add(forecastArrivalsDiffStage)
@@ -135,8 +131,7 @@ object RunnableCrunch {
           val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](2))
 
           val manifestsFanOut = builder.add(Broadcast[ManifestsFeedResponse](2))
-          val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](4))
-          val workloadFanOut = builder.add(Broadcast[Loads](2))
+          val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](3))
           val staffFanOut = builder.add(Broadcast[StaffMinutes](2))
 
           val baseArrivalsSink = builder.add(Sink.actorRef(forecastBaseArrivalsActor, StreamCompleted))
@@ -207,14 +202,6 @@ object RunnableCrunch {
                           arrivalsFanOut.map { _.toUpdate.values.toList } ~> manifestRequestsSink
 
           arrivalSplits.out ~> arrivalSplitsFanOut
-                               arrivalSplitsFanOut
-                                 .conflate[FlightsWithSplits] {
-                                   case (FlightsWithSplits(updatesAcc, removalsAcc), FlightsWithSplits(updatesInc, removalsInc)) =>
-                                     log.info(s"${updatesAcc.length + updatesInc.length} conflated arrivals wth splits updates for workload")
-                                     log.info(s"${removalsAcc.length + removalsInc.length} conflated arrivals wth splits removals for workload")
-                                     FlightsWithSplits(updatesAcc ++ updatesInc, removalsAcc ++ removalsInc)
-                                 }
-                                 .throttle(1, throttleDurationPer) ~> workload
                                arrivalSplitsFanOut ~> flightsWithSplitsSink
                                arrivalSplitsFanOut
                                  .map(_.arrivalsToRemove.map(a => RemoveFlight(a.unique)).toList)
@@ -229,11 +216,10 @@ object RunnableCrunch {
                                     acc :+ incoming }
                                  .mapConcat(_.flatten) ~> arrivalUpdatesSink
 
-          workload.out ~> batchLoad ~> workloadFanOut ~> crunch
-                                       workloadFanOut ~> simulation.in0
-
-          crunch                   ~> deskRecsSink
           actualDesksAndWaitTimesSourceSync  ~> deskStatsSink
+
+          loadsToSimulateSourceAsync ~> simulation.in0
+
           staff.out ~> staffFanOut ~> staffSink
                        staffFanOut ~> batchStaff ~> simulation.in1
 

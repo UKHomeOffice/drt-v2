@@ -16,7 +16,7 @@ object WorkloadCalculator {
                                  procTimes: Map[PaxTypeAndQueue, Double],
                                  nationalityProcessingTimes: Map[String, Double],
                                  useNationalityBasedProcTimes: Boolean
-                                ): Set[FlightSplitMinute] = {
+                                ): Seq[FlightSplitMinute] = {
     val flight = flightWithSplits.apiFlight
     val splitsToUseOption = flightWithSplits.bestSplits
 
@@ -57,8 +57,8 @@ object WorkloadCalculator {
                   useNationalityBasedProcTimes
                 )
               })
-        }.toSet
-    }).getOrElse(Set())
+        }
+    }).getOrElse(Seq())
   }
 
   def flightSplitMinute(arrival: Arrival,

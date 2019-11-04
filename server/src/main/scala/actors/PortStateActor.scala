@@ -1,18 +1,20 @@
 package actors
 
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
-import akka.actor.{Actor, Props}
+import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.TerminalName
+import drt.shared.FlightsApi.{FlightsWithSplits, TerminalName}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
+import services.crunch.GetFlights
 import services.graphstages.Crunch
+import services.graphstages.Crunch.{LoadMinute, Loads}
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 
 
 object PortStateActor {
@@ -30,11 +32,22 @@ class PortStateActor(liveStateActor: AskableActorRef,
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
-  val state: PortStateMutable = PortStateMutable.empty
-
   implicit val timeout: Timeout = new Timeout(15 seconds)
 
+  val state: PortStateMutable = PortStateMutable.empty
+
+  var maybeCrunchActor: Option[AskableActorRef] = None
+  var maybeSimActor: Option[AskableActorRef] = None
+
   override def receive: Receive = {
+    case SetCrunchActor(crunchActor) =>
+      log.info(s"Received millisToCrunchSourceActor")
+      maybeCrunchActor = Option(crunchActor)
+
+    case SetSimulationActor(simActor) =>
+      log.info(s"Received millisToCrunchSourceActor")
+      maybeSimActor = Option(simActor)
+
     case ps: PortState =>
       log.info(s"Received initial PortState")
       state.crunchMinutes ++= ps.crunchMinutes
@@ -48,7 +61,8 @@ class PortStateActor(liveStateActor: AskableActorRef,
 
     case StreamFailure(t) => log.error(s"Stream failed", t)
 
-    case updates: PortStateMinutes => splitDiffAndSend(updates.applyTo(state, nowMillis))
+    case updates: PortStateMinutes =>
+      splitDiffAndSend(updates.applyTo(state, nowMillis))
 
     case GetState =>
       log.debug(s"Received GetState request. Replying with PortState containing ${state.crunchMinutes.count} crunch minutes")
@@ -66,6 +80,12 @@ class PortStateActor(liveStateActor: AskableActorRef,
       val updates: Option[PortStateUpdates] = state.updates(millis, start, end)
       sender() ! updates
 
+    case GetFlights(startMillis, endMillis) =>
+      val start = SDate(startMillis)
+      val end = SDate(endMillis)
+      log.info(s"Got request for flights between ${start.toISOString()} - ${end.toISOString()}")
+      sender() ! FlightsWithSplits(state.flights.range(start, end).values.toList, List())
+
     case unexpected => log.warn(s"Got unexpected: $unexpected")
   }
 
@@ -78,10 +98,19 @@ class PortStateActor(liveStateActor: AskableActorRef,
 
     splitDiff(diff) match {
       case (live, forecast) =>
-        for {
-          _ <- liveStateActor.ask(live)
-          _ <- forecastStateActor.ask(forecast)
-        } yield replyTo ! Ack
+        val futures = maybeCrunchActor match {
+          case None => Seq(liveStateActor.ask(live), forecastStateActor.ask(forecast))
+          case Some(crunchActor) => Seq(crunchActor.ask(diff.flightMinuteUpdates.toList), liveStateActor.ask(live), forecastStateActor.ask(forecast))
+        }
+
+        val futuresWithLoads = if (diff.crunchMinuteUpdates.nonEmpty && maybeSimActor.isDefined) {
+          val loads = diff.crunchMinuteUpdates.map {
+            case (_, cm) => LoadMinute(cm)
+          }
+          futures ++ Seq(maybeSimActor.get.ask(Loads(loads.toSeq)))
+        } else futures
+
+        Future.sequence(futuresWithLoads).foreach { _ => replyTo ! Ack }
     }
   }
 

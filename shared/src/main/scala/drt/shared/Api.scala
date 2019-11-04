@@ -592,18 +592,23 @@ object FlightsApi {
 
   case class FlightsWithSplits(flightsToUpdate: List[ApiFlightWithSplits], arrivalsToRemove: List[Arrival]) extends PortStateMinutes {
     def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
+      val minutesFromRemovals: List[MillisSinceEpoch] = arrivalsToRemove.flatMap(r =>
+        portState.flights.getByKey(r.unique).map(_.apiFlight.pcpRange().toList).getOrElse(List())
+      )
+      val minutesFromUpdates = flightsToUpdate.flatMap(_.apiFlight.pcpRange())
+      val updatedMinutesFromFlights = minutesFromRemovals ++ minutesFromUpdates
+
       val updatedFlights = flightsToUpdate.map(_.copy(lastUpdated = Option(now)))
 
       portState.flights --= arrivalsToRemove.map(_.unique)
       portState.flights ++= updatedFlights.map(f => (f.apiFlight.unique, f))
 
-      portStateDiff(updatedFlights)
+      portStateDiff(updatedFlights, updatedMinutesFromFlights)
     }
 
-    def portStateDiff(updatedFlights: Seq[ApiFlightWithSplits]): PortStateDiff = {
+    def portStateDiff(updatedFlights: Seq[ApiFlightWithSplits], flightMinuteUpdates: List[MillisSinceEpoch]): PortStateDiff = {
       val removals = arrivalsToRemove.map(f => RemoveFlight(UniqueArrival(f)))
-      val newDiff = PortStateDiff(removals, updatedFlights, Seq(), Seq(), Seq())
-      newDiff
+      PortStateDiff(removals, updatedFlights, flightMinuteUpdates, Seq(), Seq())
     }
   }
 
@@ -771,6 +776,35 @@ object CrunchApi {
     val workLoad: Double
     val deskRec: Int
     val waitTime: Int
+  }
+
+  case class DeskRecMinute(terminalName: TerminalName,
+                           queueName: QueueName,
+                           minute: MillisSinceEpoch,
+                           paxLoad: Double,
+                           workLoad: Double,
+                           deskRec: Int,
+                           waitTime: Int) extends DeskRecMinuteLike with MinuteComparison[CrunchMinute] {
+    lazy val key: TQM = MinuteHelper.key(terminalName, queueName, minute)
+
+    override def maybeUpdated(existing: CrunchMinute, now: MillisSinceEpoch): Option[CrunchMinute] =
+      if (existing.paxLoad != paxLoad || existing.workLoad != workLoad || existing.deskRec != deskRec || existing.waitTime != waitTime)
+        Option(existing.copy(
+          paxLoad = paxLoad, workLoad = workLoad, deskRec = deskRec, waitTime = waitTime, lastUpdated = Option(now)
+        ))
+      else None
+  }
+
+  case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateMinutes {
+    def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
+      val crunchMinutesDiff = minutes.foldLeft(List[CrunchMinute]()) { case (soFar, dm) =>
+        addIfUpdated(portState.crunchMinutes.getByKey(dm.key), now, soFar, dm, () => CrunchMinute(dm, now))
+      }
+
+      portState.crunchMinutes +++= crunchMinutesDiff
+
+      PortStateDiff(Seq(), Seq(), Seq(), crunchMinutesDiff, Seq())
+    }
   }
 
   trait SimulationMinuteLike {

@@ -7,7 +7,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.AskableActorRef
 import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
-import akka.stream.{ActorMaterializer, OverflowStrategy, QueueOfferResult}
+import akka.stream.{ActorMaterializer, OverflowStrategy, QueueOfferResult, UniqueKillSwitch}
 import akka.testkit.{TestKit, TestProbe}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
@@ -175,6 +175,9 @@ class CrunchTestLike
     val portStateActor = createPortStateActor(logLabel, portStateProbe, now)
     initialPortState.foreach(ps => portStateActor ! ps)
 
+    val (millisToCrunchActor: ActorRef, _: UniqueKillSwitch) = RunnableDeskRecsGraph(portStateActor, minutesToCrunch, TryRenjin.crunch, airportConfig).run()
+    portStateActor ! SetCrunchActor(millisToCrunchActor)
+
     val manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
     val liveArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
     val liveBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
@@ -183,7 +186,6 @@ class CrunchTestLike
 
     val (_, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
     val (manifestResponsesSource, _, _) = SinkToSourceBridge[List[BestAvailableManifest]]
-
 
     val crunchInputs = CrunchSystem(CrunchProps(
       logLabel = logLabel,
@@ -229,6 +231,8 @@ class CrunchTestLike
       checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup,
       stageThrottlePer = 50 milliseconds
     ))
+
+    portStateActor ! SetSimulationActor(crunchInputs.loadsToSimulate)
 
     CrunchGraphInputsAndProbes(
       baseArrivalsInput = crunchInputs.forecastBaseArrivalsResponse,

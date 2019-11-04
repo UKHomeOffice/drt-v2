@@ -93,12 +93,16 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
       val lookupRefreshDue: MillisSinceEpoch => Boolean = (lastLookupMillis: MillisSinceEpoch) => now().millisSinceEpoch - lastLookupMillis > 1000
       val manifestKillSwitch = startManifestsGraph(None, manifestResponsesSink, manifestRequestsSource, lookupRefreshDue)
 
+      val (millisToCrunchActor: ActorRef, crunchKillSwitch) = startCrunchGraph(portStateActor)
+      portStateActor ! SetCrunchActor(millisToCrunchActor)
+      portStateActor ! SetSimulationActor(cs.loadsToSimulate)
+
       subscribeStaffingActors(cs)
       startScheduledFeedImports(cs)
 
       testManifestsActor ! SubscribeResponseQueue(cs.manifestsLiveResponse)
 
-      List(bridge1Ks, bridge2Ks, manifestKillSwitch) ++ cs.killSwitches
+      List(bridge1Ks, bridge2Ks, manifestKillSwitch, crunchKillSwitch) ++ cs.killSwitches
     }
 
     val testActors = List(

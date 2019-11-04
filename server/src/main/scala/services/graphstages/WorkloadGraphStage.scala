@@ -155,14 +155,14 @@ class WorkloadGraphStage(name: String = "",
       flightWorkloadsSoFar
     }
 
-    def mergeWorkloadsFromFlight(existingFlightSplitMinutes: mutable.SortedMap[TQM, Set[FlightSplitMinute]], flightWorkload: Set[FlightSplitMinute]): Unit =
+    def mergeWorkloadsFromFlight(existingFlightSplitMinutes: mutable.SortedMap[TQM, Set[FlightSplitMinute]], flightWorkload: Seq[FlightSplitMinute]): Unit =
       flightWorkload.foreach { fsm =>
         val tqm = TQM(fsm.terminalName, fsm.queueName, fsm.minute)
         val newFlightSplitsMinutes = existingFlightSplitMinutes.getOrElse(tqm, Set[FlightSplitMinute]()) + fsm
         existingFlightSplitMinutes += (tqm -> newFlightSplitsMinutes)
       }
 
-    def updateTQMsForFlight(fws: ApiFlightWithSplits, flightWorkload: Set[FlightSplitMinute]): Unit = {
+    def updateTQMsForFlight(fws: ApiFlightWithSplits, flightWorkload: Seq[FlightSplitMinute]): Unit = {
       val tqms = flightWorkload.map(f => TQM(f.terminalName, f.queueName, f.minute)).toList
       flightTQMs += (CodeShareKeyOrderedBySchedule(fws) -> tqms)
     }

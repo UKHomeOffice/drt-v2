@@ -15,19 +15,45 @@ object Crunch {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  case class FlightSplitMinute(flightId: CodeShareKeyOrderedBySchedule, paxType: PaxType, terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
+  class SplitMinutes {
+    val minutes: mutable.Map[TQM, LoadMinute] = mutable.Map()
+
+    def ++=(incoming: Seq[FlightSplitMinute]): Unit = {
+      incoming.foreach(fsm => +=(LoadMinute(fsm.terminalName, fsm.queueName, fsm.paxLoad, fsm.workLoad, fsm.minute)))
+    }
+
+    def +=(incoming: LoadMinute): Unit = {
+      val key = incoming.uniqueId
+      minutes.get(key) match {
+        case None => minutes += (key -> incoming)
+        case Some(existingFsm) => minutes += (key -> (existingFsm + incoming))
+      }
+    }
+
+    def toLoads: Loads = Loads(SortedMap[TQM, LoadMinute]() ++ minutes)
+  }
+
+  case class FlightSplitMinute(flightId: CodeShareKeyOrderedBySchedule, paxType: PaxType, terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch) {
+    lazy val key: TQM = TQM(terminalName, queueName, minute)
+  }
 
   case class FlightSplitDiff(flightId: CodeShareKeyOrderedBySchedule, paxType: PaxType, terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
 
   case class LoadMinute(terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch) extends TerminalQueueMinute {
     lazy val uniqueId: TQM = TQM(terminalName, queueName, minute)
+
+    def +(other: LoadMinute): LoadMinute = this.copy(
+      paxLoad = this.paxLoad + other.paxLoad,
+      workLoad = this.workLoad + other.workLoad
+    )
   }
 
   object LoadMinute {
     def apply(cm: CrunchMinute): LoadMinute = LoadMinute(cm.terminalName, cm.queueName, cm.paxLoad, cm.workLoad, cm.minute)
   }
 
-  case class Loads(loadMinutes: SortedMap[TQM, LoadMinute])
+  case class Loads(loadMinutes: SortedMap[TQM, LoadMinute]) {
+  }
 
   object Loads {
     def apply(lms: Seq[LoadMinute]): Loads = Loads(SortedMap[TQM, LoadMinute]() ++ lms.map(cm => (TQM(cm.terminalName, cm.queueName, cm.minute), cm)))

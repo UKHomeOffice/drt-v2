@@ -4,7 +4,7 @@ import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
 import drt.shared._
 import services.crunch.CrunchTestLike
-import services.graphstages.{DeskRecMinute, DeskRecMinutes, SimulationMinute, SimulationMinutes}
+import services.graphstages.{SimulationMinute, SimulationMinutes}
 
 import scala.concurrent.duration._
 

@@ -666,7 +666,8 @@ object AirportConfigs {
         EGate -> 0.7922,
         EeaDesk -> (1.0 - 0.7922)
       )))
-    )
+    ),
+    crunchOffsetMinutes = 120
   )
   val ema = AirportConfig(
     portCode = "EMA",

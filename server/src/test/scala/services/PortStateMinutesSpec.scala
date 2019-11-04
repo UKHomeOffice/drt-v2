@@ -5,7 +5,7 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.specs2.mutable.Specification
-import services.graphstages.{DeskRecMinute, DeskRecMinutes, SimulationMinute, SimulationMinutes}
+import services.graphstages.{SimulationMinute, SimulationMinutes}
 
 import scala.collection.immutable.Map
 
