@@ -150,6 +150,7 @@ object TerminalComponent {
                             props.terminalPageTab,
                             terminalContentProps.airportConfig,
                             ps,
+                            props.router,
                             model.minuteTicker
                           )
                         )
