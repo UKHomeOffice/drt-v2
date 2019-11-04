@@ -58,7 +58,7 @@ object JSDateConversions {
 
       def millisSinceEpoch: MillisSinceEpoch = date.unix().toLong * 1000
 
-      override def toISOString(): String = date.toISOString()
+      override def toISOString(): String = date.seconds(0).millisecond(0).toISOString()
 
       def getDayOfWeek(): Int = {
         val dow = date.format("d").toInt

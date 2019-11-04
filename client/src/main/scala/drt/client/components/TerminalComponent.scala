@@ -147,9 +147,10 @@ object TerminalComponent {
                       if (props.terminalPageTab.mode == "dashboard") {
                         terminalContentProps.portStatePot.renderReady(ps =>
                           TerminalDashboardComponent(
-                            props.terminalPageTab.terminal,
+                            props.terminalPageTab,
                             terminalContentProps.airportConfig,
                             ps,
+                            props.router,
                             model.minuteTicker
                           )
                         )
