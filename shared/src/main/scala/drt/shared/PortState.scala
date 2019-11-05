@@ -149,6 +149,7 @@ case class PortState(flights: ISortedMap[UniqueArrival, ApiFlightWithSplits],
     ps
   }
 }
+
 sealed trait PortStateLike {
   val flights: Map[UniqueArrival, ApiFlightWithSplits]
   val crunchMinutes: SortedMap[TQM, CrunchMinute]
@@ -194,7 +195,21 @@ class PortStateMutable {
     PortState(flights = fs, crunchMinutes = cms, staffMinutes = sms)
   }
 
-  def flightsRange(roundedStart: SDateLike, roundedEnd: SDateLike): ISortedMap[UniqueArrival, ApiFlightWithSplits] = flights.range(roundedStart, roundedEnd)
+  def flightsRange(start: SDateLike, end: SDateLike): ISortedMap[UniqueArrival, ApiFlightWithSplits] = {
+    val scheduledEarlier = filterByPcp(flights.range(start.addHours(-24), start), start, end)
+    val scheduledLater = filterByPcp(flights.range(end, end.addHours(24)), start, end)
+    scheduledEarlier ++ flights.range(start, end) ++ scheduledLater
+  }
+
+  private def filterByPcp(flightsToFilter: ISortedMap[UniqueArrival, ApiFlightWithSplits], start: SDateLike, end: SDateLike): ISortedMap[UniqueArrival, ApiFlightWithSplits] =
+    flightsToFilter.filterNot {
+      case (_, ApiFlightWithSplits(arrival, _, _)) =>
+        val firstPcpMin = arrival.pcpRange().min
+        val lastPcpMin = arrival.pcpRange().max
+        val startMillis = start.millisSinceEpoch
+        val endMillis = end.millisSinceEpoch
+        firstPcpMin > endMillis || lastPcpMin < startMillis
+    }
 
   def flightsRangeWithTerminals(roundedStart: SDateLike, roundedEnd: SDateLike, terminals: Seq[TerminalName]): ISortedMap[UniqueArrival, ApiFlightWithSplits] =
     flights.rangeAtTerminals(roundedStart, roundedEnd, terminals)

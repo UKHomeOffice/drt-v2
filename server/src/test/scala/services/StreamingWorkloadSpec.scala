@@ -12,7 +12,6 @@ import scala.concurrent.duration._
 
 class StreamingWorkloadSpec extends Specification {
   val slowCalc: Int => Future[Unit] = (d: Int) => Future {
-    println(s"Calc got day $d")
     Thread.sleep(1000)
   }
 

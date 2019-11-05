@@ -9,7 +9,7 @@ import drt.shared.FlightsApi.{FlightsWithSplits, TerminalName}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.crunch.GetFlights
+import services.crunch.deskrecs.GetFlights
 import services.graphstages.Crunch
 import services.graphstages.Crunch.{LoadMinute, Loads}
 
@@ -84,7 +84,8 @@ class PortStateActor(liveStateActor: AskableActorRef,
       val start = SDate(startMillis)
       val end = SDate(endMillis)
       log.info(s"Got request for flights between ${start.toISOString()} - ${end.toISOString()}")
-      sender() ! FlightsWithSplits(state.flights.range(start, end).values.toList, List())
+      val flightsToSend = state.flights.range(start, end).values.toList
+      sender() ! FlightsWithSplits(flightsToSend, List())
 
     case unexpected => log.warn(s"Got unexpected: $unexpected")
   }

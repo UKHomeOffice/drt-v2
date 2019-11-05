@@ -610,6 +610,8 @@ object FlightsApi {
       val removals = arrivalsToRemove.map(f => RemoveFlight(UniqueArrival(f)))
       PortStateDiff(removals, updatedFlights, flightMinuteUpdates, Seq(), Seq())
     }
+
+    lazy val nonEmpty: Boolean = flightsToUpdate.nonEmpty || arrivalsToRemove.nonEmpty
   }
 
   type TerminalName = String

@@ -1,16 +1,42 @@
 package services.graphstages
 
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.FlightsApi.{FlightsWithSplits, TerminalName}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.PcpArrival
-import services.graphstages.Crunch.FlightSplitMinute
+import services.graphstages.Crunch.{FlightSplitMinute, SplitMinutes}
 import services.workloadcalculator.PaxLoadCalculator.{Load, minutesForHours, paxDeparturesPerMinutes, paxOffFlowRate}
 
 import scala.collection.immutable.Map
 
 object WorkloadCalculator {
   val log: Logger = LoggerFactory.getLogger(getClass)
+
+  def flightLoadMinutes(incomingFlights: FlightsWithSplits, defaultProcTimes: Map[TerminalName, Map[PaxTypeAndQueue, Double]]): SplitMinutes = {
+    val uniqueFlights: Iterable[ApiFlightWithSplits] = incomingFlights
+      .flightsToUpdate
+      .sortBy(_.apiFlight.ActPax.getOrElse(0))
+      .map { fws => (CodeShareKeyOrderedBySchedule(fws), fws) }
+      .toMap.values
+
+    val minutes = new SplitMinutes
+
+    uniqueFlights
+      .filter(fws => !isCancelled(fws) && defaultProcTimes.contains(fws.apiFlight.Terminal))
+      .foreach { incoming =>
+        val procTimes = defaultProcTimes(incoming.apiFlight.Terminal)
+        minutes ++= WorkloadCalculator.flightToFlightSplitMinutes(incoming, procTimes, Map(), false)
+      }
+
+    minutes
+  }
+
+  def isCancelled(f: ApiFlightWithSplits): Boolean = {
+    val cancelled = f.apiFlight.Status == "Cancelled"
+    if (cancelled) log.info(s"No workload for cancelled flight ${f.apiFlight.IATA}")
+    cancelled
+  }
 
   def flightToFlightSplitMinutes(flightWithSplits: ApiFlightWithSplits,
                                  procTimes: Map[PaxTypeAndQueue, Double],

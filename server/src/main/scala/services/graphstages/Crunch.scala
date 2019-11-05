@@ -6,9 +6,11 @@ import drt.shared._
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 import services._
+import services.crunch.deskrecs.RunnableDeskRecs.log
 
 import scala.collection.immutable.{Map, SortedMap}
 import scala.collection.mutable
+import scala.util.{Failure, Success, Try}
 
 object Crunch {
   val paxOffPerMinute: Int = 20
@@ -320,4 +322,62 @@ object Crunch {
       Set()
     else
       Set(tqms.min, tqms.max).map(m => SDate(m.minute).addMinutes(-1 * crunchOffsetMinutes).toISODateOnly)
+
+  def crunchLoads(loadMinutes: mutable.Map[TQM, LoadMinute],
+                  firstMinute: MillisSinceEpoch,
+                  lastMinute: MillisSinceEpoch,
+                  terminals: Set[TerminalName],
+                  airportConfig: AirportConfig,
+                  crunch: TryCrunch): SortedMap[TQM, DeskRecMinute] = {
+    val validTerminals = airportConfig.queues.keys.toList
+    val terminalsToCrunch = terminals.filter(validTerminals.contains(_))
+    val terminalQueueDeskRecs = for {
+      terminal <- terminalsToCrunch
+      queue <- airportConfig.nonTransferQueues(terminal)
+    } yield {
+      val lms = (firstMinute until lastMinute by 60000).map(minute =>
+        loadMinutes.getOrElse(TQM(terminal, queue, minute), LoadMinute(terminal, queue, 0, 0, minute)))
+      crunchQueue(firstMinute, lastMinute, terminal, queue, lms, airportConfig, crunch)
+    }
+    SortedMap[TQM, DeskRecMinute]() ++ terminalQueueDeskRecs.toSeq.flatten
+  }
+
+  def crunchQueue(firstMinute: MillisSinceEpoch,
+                  lastMinute: MillisSinceEpoch,
+                  tn: TerminalName,
+                  qn: QueueName,
+                  qLms: IndexedSeq[LoadMinute],
+                  airportConfig: AirportConfig,
+                  crunch: TryCrunch): SortedMap[TQM, DeskRecMinute] = {
+    val sla = airportConfig.slaByQueue.getOrElse(qn, 15)
+    val paxMinutes = qLms.map(_.paxLoad)
+    val workMinutes = qLms.map(_.workLoad)
+    val adjustedWorkMinutes = if (qn == Queues.EGate) workMinutes.map(_ / airportConfig.eGateBankSize) else workMinutes
+    val minuteMillis: Seq[MillisSinceEpoch] = firstMinute until lastMinute by 60000
+    val (minDesks, maxDesks) = minMaxDesksForQueue(minuteMillis, tn, qn, airportConfig)
+    val start = SDate.now()
+    val triedResult: Try[OptimizerCrunchResult] = crunch(adjustedWorkMinutes, minDesks, maxDesks, OptimizerConfig(sla))
+    triedResult match {
+      case Success(OptimizerCrunchResult(desks, waits)) =>
+        log.debug(s"Optimizer for $qn Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        SortedMap[TQM, DeskRecMinute]() ++ minuteMillis.zipWithIndex.map {
+          case (minute, idx) =>
+            val wl = workMinutes(idx)
+            val pl = paxMinutes(idx)
+            val drm = DeskRecMinute(tn, qn, minute, pl, wl, desks(idx), waits(idx))
+            (drm.key, drm)
+        }
+      case Failure(t) =>
+        log.warn(s"failed to crunch: $t")
+        SortedMap[TQM, DeskRecMinute]()
+    }
+  }
+
+  def minMaxDesksForQueue(deskRecMinutes: Seq[MillisSinceEpoch], tn: TerminalName, qn: QueueName, airportConfig: AirportConfig): (Seq[Int], Seq[Int]) = {
+    val defaultMinMaxDesks = (Seq.fill(24)(0), Seq.fill(24)(10))
+    val queueMinMaxDesks = airportConfig.minMaxDesksByTerminalQueue.getOrElse(tn, Map()).getOrElse(qn, defaultMinMaxDesks)
+    val minDesks = deskRecMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._1))
+    val maxDesks = deskRecMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._2))
+    (minDesks, maxDesks)
+  }
 }
