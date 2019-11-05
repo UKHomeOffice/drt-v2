@@ -42,8 +42,8 @@ object TerminalDashboardComponent {
       val urlPrevTime = URIUtils.encodeURI(prevSlotStart.toISOString())
       val urlNextTime = URIUtils.encodeURI(end.toISOString())
 
-      val terminalPax = ps.crunchMinutes.map {
-        case (_, cm) => cm.paxLoad
+      val terminalPax = ps.crunchMinutes.collect {
+        case (_, cm) if cm.terminalName == p.terminalPageTabLoc.terminal => cm.paxLoad
       }.sum.round
 
       <.div(^.className := "terminal-dashboard",
