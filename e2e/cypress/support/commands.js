@@ -153,11 +153,12 @@ Cypress.Commands.add('chooseArrivalsTab', () => cy.get("#arrivalsTab").click());
 Cypress.Commands.add('addManifest', (manifest) => cy.request('POST', '/test/manifest', manifest));
 
 Cypress.Commands.add('waitForFlightToAppear', (flightCode) => {
-  cy
+  return cy
     .navigateHome()
     .navigateToMenuItem('T1')
-    .choose24Hours()
+    .get("#currentTab").click()
     .get("#arrivalsTab").click()
+    .choose24Hours()
     .get("#arrivals")
     .contains(flightCode);
 })
