@@ -11,11 +11,12 @@ describe('Viewing the terminal dashboard page', function () {
   it("should display a box for every queue in the terminal", () => {
 
     const schDateString = moment().hours(14).minutes(10).seconds(0).toISOString();
+    const viewingDateString = moment().hours(14).minutes(15).seconds(0).toISOString();
     cy
       .addFlightWithFlightCode("TS0100", schDateString)
       .asABorderForceOfficerWithRoles(["terminal-dashboard"])
       .navigateHome()
-      .visit("/#terminal/T1/dashboard/summary/?start=2019-11-05T14:15:00.000Z")
+      .visit("/#terminal/T1/dashboard/summary/?start=" + viewingDateString)
       .get(".pax-bar")
       .contains("51 passengers")
       .get(".time-label")
