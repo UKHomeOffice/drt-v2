@@ -42,15 +42,15 @@ object TerminalDashboardComponent {
       val urlPrevTime = URIUtils.encodeURI(prevSlotStart.toISOString())
       val urlNextTime = URIUtils.encodeURI(end.toISOString())
 
-      val terminalPax = ps.crunchMinutes.map {
-        case (_, cm) => cm.paxLoad
+      val terminalPax = ps.crunchMinutes.collect {
+        case (_, cm) if cm.terminalName == p.terminalPageTabLoc.terminal => cm.paxLoad
       }.sum.round
 
       <.div(^.className := "terminal-dashboard",
         <.div(^.className := "pax-bar row", s"$terminalPax passengers presenting at the PCP"),
 
         <.div(^.className := "row queue-boxes",
-          p.airportConfig.nonTransferQueues(p.terminalPageTabLoc.terminal).map((q: String) => {
+          p.airportConfig.nonTransferQueues(p.terminalPageTabLoc.terminal).filterNot(_ == Queues.FastTrack).map((q: String) => {
 
             val qCMs = cmsForTerminalAndQueue(ps, q, p.terminalPageTabLoc.terminal)
             val prevSlotCMs = cmsForTerminalAndQueue(prevSlotPortState, q, p.terminalPageTabLoc.terminal)
@@ -58,13 +58,13 @@ object TerminalDashboardComponent {
             val qWait = maxWaitInPeriod(qCMs)
             val prevSlotQWait = maxWaitInPeriod(prevSlotCMs)
 
-            val waitIcon = (qWait, prevSlotQWait) match {
+            val waitIcon = (prevSlotQWait, qWait) match {
               case (p, c) if p > c => Icon.arrowDown
               case (p, c) if p < c => Icon.arrowUp
               case _ => Icon.arrowRight
             }
 
-            <.div(^.className := s"queue-box col ${TerminalDesksAndQueuesRow.slaRagStatus(qWait, p.airportConfig.slaByQueue(q))}",
+            <.div(^.className := s"queue-box col $q ${TerminalDesksAndQueuesRow.slaRagStatus(qWait, p.airportConfig.slaByQueue(q))}",
               <.div(^.className := "queue-name", s"${Queues.queueDisplayNames.getOrElse(q, q)}"),
               <.div(^.className := "queue-box-text", Icon.users, s"$qPax pax joining"),
               <.div(^.className := "queue-box-text", Icon.clockO, s"$qWait min wait time"),

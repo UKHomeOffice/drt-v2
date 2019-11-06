@@ -233,7 +233,7 @@ object SPAMain {
   def dashboardRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
     import dsl._
 
-    dynamicRouteCT(("#terminalsDashboard" / int.option).caseClass[PortDashboardLoc]) ~>
+    dynamicRouteCT(("#portDashboard" / int.option).caseClass[PortDashboardLoc]) ~>
       dynRenderR((page: PortDashboardLoc, router) => {
         PortDashboardPage(router, page)
       })

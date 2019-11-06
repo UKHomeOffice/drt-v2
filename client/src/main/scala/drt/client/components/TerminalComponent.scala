@@ -102,7 +102,13 @@ object TerminalComponent {
                     <.li(^.className := terminalDashboardClass,
                       <.a(^.id := "terminalDashboardTab", VdomAttr("data-toggle") := "tab", "Terminal Dashboard"), ^.onClick --> {
                         GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Terminal Dashboard")
-                        props.router.set(props.terminalPageTab.copy(mode = "dashboard", subMode = "summary", queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams))
+                        props.router.set(
+                            props
+                              .terminalPageTab.copy(
+                              mode = "dashboard",
+                              subMode = "summary",
+                              queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams)
+                          )
                       }
                     ) else ""),
                 <.li(^.className := currentClass,
