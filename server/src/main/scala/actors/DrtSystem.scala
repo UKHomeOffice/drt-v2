@@ -424,14 +424,20 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   def initialStateFuture[A](askableActor: AskableActorRef): Future[Option[A]] = {
     val actorPath = askableActor.actorRef.path
-    queryActorWithRetry[A](askableActor, GetState).map {
-      case Some(state: A) if state.isInstanceOf[A] =>
-        log.debug(s"Got initial state (Some(${state.getClass})) from $actorPath")
-        Option(state)
-      case None =>
-        log.warn(s"Got no state (None) from $actorPath")
-        None
-    }
+    queryActorWithRetry[A](askableActor, GetState)
+      .map {
+        case Some(state: A) if state.isInstanceOf[A] =>
+          log.debug(s"Got initial state (Some(${state.getClass})) from $actorPath")
+          Option(state)
+        case None =>
+          log.warn(s"Got no state (None) from $actorPath")
+          None
+      }
+      .recoverWith {
+        case t =>
+          log.error(s"Failed to get response from $askableActor", t)
+          Future(None)
+      }
   }
 
   def queryActorWithRetry[A](askableActor: AskableActorRef, toAsk: Any): Future[Option[A]] = {

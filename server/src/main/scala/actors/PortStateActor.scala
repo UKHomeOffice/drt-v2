@@ -97,6 +97,10 @@ class PortStateActor(liveStateActor: AskableActorRef,
   def splitDiffAndSend(diff: PortStateDiff): Unit = {
     val replyTo = sender()
 
+    if (diff.flightUpdates.nonEmpty) {
+      log.info(s"Received ${diff.flightUpdates.size} flight updates")
+    }
+
     splitDiff(diff) match {
       case (live, forecast) =>
         val futures = maybeCrunchActor match {
