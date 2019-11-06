@@ -13,6 +13,8 @@ import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 
+import scala.util.Try
+
 object ManifestsGraph {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -40,6 +42,7 @@ object ManifestsGraph {
 
           batchRequestsAsync.out0
             .flatMapConcat(arrivals => Source(arrivals))
+            .filter(_.voyageNumber.forall(_.isDigit))
             .mapAsync(1) { a =>
               manifestLookup.maybeBestAvailableManifest(portCode, a.origin, a.voyageNumber, SDate(a.scheduled))
             }
