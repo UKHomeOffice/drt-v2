@@ -34,7 +34,7 @@ class PortStateActor(liveStateActor: AskableActorRef,
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
-  implicit val timeout: Timeout = new Timeout(15 seconds)
+  implicit val timeout: Timeout = new Timeout(60 seconds)
 
   val state: PortStateMutable = PortStateMutable.empty
 

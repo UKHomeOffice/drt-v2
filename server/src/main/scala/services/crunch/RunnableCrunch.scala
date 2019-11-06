@@ -218,7 +218,9 @@ object RunnableCrunch {
 
           actualDesksAndWaitTimesSourceSync  ~> deskStatsSink
 
-          loadsToSimulateSourceAsync ~> simulation.in0
+          loadsToSimulateSourceAsync.out.conflate {
+            case (acc, incomingLoads) => Loads(acc.loadMinutes ++ incomingLoads.loadMinutes)
+          } ~> simulation.in0
 
           staff.out ~> staffFanOut ~> staffSink
                        staffFanOut ~> batchStaff ~> simulation.in1
