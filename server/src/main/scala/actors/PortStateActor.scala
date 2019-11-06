@@ -1,5 +1,7 @@
 package actors
 
+import java.util.UUID
+
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.AskableActorRef
@@ -62,7 +64,8 @@ class PortStateActor(liveStateActor: AskableActorRef,
     case StreamFailure(t) => log.error(s"Stream failed", t)
 
     case updates: PortStateMinutes =>
-      splitDiffAndSend(updates.applyTo(state, nowMillis))
+      val uuid = s"${UUID.randomUUID()}-${updates.getClass}"
+      splitDiffAndSend(updates.applyTo(state, nowMillis), uuid)
 
     case GetState =>
       log.debug(s"Received GetState request. Replying with PortState containing ${state.crunchMinutes.count} crunch minutes")
@@ -94,12 +97,14 @@ class PortStateActor(liveStateActor: AskableActorRef,
 
   def stateForPeriodForTerminal(start: MillisSinceEpoch, end: MillisSinceEpoch, terminalName: TerminalName): Option[PortState] = Option(state.windowWithTerminalFilter(SDate(start), SDate(end), Seq(terminalName)))
 
-  def splitDiffAndSend(diff: PortStateDiff): Unit = {
+  def splitDiffAndSend(diff: PortStateDiff, uuid: String): Unit = {
     val replyTo = sender()
 
     if (diff.flightUpdates.nonEmpty) {
       log.info(s"Received ${diff.flightUpdates.size} flight updates")
     }
+
+    log.info(s"Processing incoming PortStateMinutes: $uuid")
 
     splitDiff(diff) match {
       case (live, forecast) =>
@@ -115,7 +120,15 @@ class PortStateActor(liveStateActor: AskableActorRef,
           futures ++ Seq(maybeSimActor.get.ask(Loads(loads.toSeq)))
         } else futures
 
-        Future.sequence(futuresWithLoads).foreach { _ => replyTo ! Ack }
+        Future
+          .sequence(futuresWithLoads)
+          .recover {
+            case t => log.error("A future failed", t)
+          }
+          .onComplete { _ =>
+            log.info(s"Sending Ack for $uuid")
+            replyTo ! Ack
+          }
     }
   }
 
