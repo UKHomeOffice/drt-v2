@@ -10,7 +10,6 @@ import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
 
-import scala.collection.immutable
 import scala.scalajs.js.URIUtils
 
 
