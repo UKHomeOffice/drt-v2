@@ -14,7 +14,8 @@ import services.graphstages.Crunch._
 import services.graphstages.{Crunch, WorkloadCalculator}
 import services.{SDate, TryCrunch}
 
-import scala.collection.immutable.SortedSet
+import scala.collection.immutable.{SortedMap, SortedSet}
+import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
@@ -44,32 +45,20 @@ object RunnableDeskRecs {
       implicit builder =>
         (daysToCrunchAsync, killSwitch) =>
           val deskRecsSink = builder.add(Sink.actorRefWithAck(portStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
+          val parallelismLevel = 2
 
           daysToCrunchAsync.out
             .map(_.map(min => crunchPeriodStartMillis(SDate(min)).millisSinceEpoch))
-            .conflateWithSeed { initial =>
-              val daysToCrunch = SortedSet[MillisSinceEpoch]() ++ initial
-              log.info(s"initial queue: ${daysToCrunch.map(SDate(_).toISOString())}")
-              daysToCrunch
-            } {
-              case (acc, incoming) =>
-                val daysToCrunchQueue = acc ++ incoming
-                log.info(s"queue now ${daysToCrunchQueue.map(SDate(_).toISOString())}")
-                daysToCrunchQueue
+            .statefulMapConcat {
+              processQueue(parallelismLevel)
             }
-            .mapConcat(identity)
-            .mapAsync(1) { crunchStartMillis =>
+            .mapAsync(parallelismLevel) { crunchStartMillis =>
               log.info(s"Asking for flights for ${SDate(crunchStartMillis).toISOString()}")
               flightsToCrunch(minutesToCrunch, askablePortStateActor, crunchStartMillis)
             }
-            .filter { case (_, fs: FlightsWithSplits) =>
-              fs.nonEmpty }
             .map { case (crunchStartMillis, flights) =>
-              log.info(s"Crunching ${SDate(crunchStartMillis).toISOString()}")
-              val crunchEndMillis = SDate(crunchStartMillis).addMinutes(minutesToCrunch).millisSinceEpoch
-              val terminals = flights.flightsToUpdate.map(_.apiFlight.Terminal).toSet
-              val loadMinutes = WorkloadCalculator.flightLoadMinutes(flights, airportConfig.defaultProcessingTimes).minutes
-              crunchLoads(loadMinutes, crunchStartMillis, crunchEndMillis, terminals, airportConfig, crunch)
+              log.info(s"Crunching ${SDate(crunchStartMillis).toISOString()} flights: ${flights.flightsToUpdate.size}")
+              crunchFlights(flights, crunchStartMillis, minutesToCrunch, crunch, airportConfig)
             }
             .map(drms => DeskRecMinutes(drms.values.toSeq)) ~> killSwitch ~> deskRecsSink
 
@@ -77,6 +66,48 @@ object RunnableDeskRecs {
     }
 
     RunnableGraph.fromGraph(graph)
+  }
+
+  private def crunchFlights(flights: FlightsWithSplits,
+                            crunchStartMillis: MillisSinceEpoch,
+                            minutesToCrunch: Int,
+                            crunch: TryCrunch,
+                            airportConfig: AirportConfig): SortedMap[TQM, CrunchApi.DeskRecMinute] = {
+    val crunchEndMillis = SDate(crunchStartMillis).addMinutes(minutesToCrunch).millisSinceEpoch
+    val terminals = flights.flightsToUpdate.map(_.apiFlight.Terminal).toSet
+    val loadMinutes = WorkloadCalculator.flightLoadMinutes(flights, airportConfig.defaultProcessingTimes).minutes
+
+    val loadsWithDiverts = loadMinutes
+      .groupBy {
+        case (TQM(t, q, m), _) => val finalQueueName = airportConfig.divertedQueues.getOrElse(q, q)
+          TQM(t, finalQueueName, m)
+      }
+      .map {
+        case (tqm, mins) =>
+          val loads = mins.values
+          (tqm, LoadMinute(tqm.terminalName, tqm.queueName, loads.map(_.paxLoad).sum, loads.map(_.workLoad).sum, tqm.minute))
+      }
+
+    crunchLoads(loadsWithDiverts, crunchStartMillis, crunchEndMillis, terminals, airportConfig, crunch)
+  }
+
+  private def processQueue(parallelismLevel: Int): () => List[MillisSinceEpoch] => List[MillisSinceEpoch] = {
+    () =>
+      var queue = SortedSet[MillisSinceEpoch]()
+      incoming => {
+        queue = queue ++ incoming
+        val nextToProcess = queue match {
+          case q if q.nonEmpty =>
+            val head = q.take(parallelismLevel)
+            queue = queue.drop(parallelismLevel)
+            List(head).flatten
+          case _ =>
+            List()
+        }
+        log.info(s"Incoming day to crunch ${incoming.map(SDate(_).toISOString())}. Queue now: ${queue.map(SDate(_).toISOString())}")
+
+        nextToProcess
+      }
   }
 
   private def flightsToCrunch(minutesToCrunch: Int, askablePortStateActor: AskableActorRef, crunchStartMillis: MillisSinceEpoch)

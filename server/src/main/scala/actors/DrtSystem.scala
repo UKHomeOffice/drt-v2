@@ -398,7 +398,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       manifestResponsesSource = manifestResponsesSource,
       voyageManifestsActor = voyageManifestsActor,
       manifestRequestsSink = manifestRequestsSink,
-      cruncher = TryRenjin.crunch,
       simulator = TryRenjin.runSimulationOfWork,
       initialPortState = initialPortState,
       initialForecastBaseArrivals = initialForecastBaseArrivals.getOrElse(mutable.SortedMap()),

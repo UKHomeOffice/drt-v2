@@ -323,7 +323,7 @@ object Crunch {
     else
       Set(tqms.min, tqms.max).map(m => SDate(m.minute).addMinutes(-1 * crunchOffsetMinutes).toISODateOnly)
 
-  def crunchLoads(loadMinutes: mutable.Map[TQM, LoadMinute],
+  def crunchLoads(loadMinutes: Map[TQM, LoadMinute],
                   firstMinute: MillisSinceEpoch,
                   lastMinute: MillisSinceEpoch,
                   terminals: Set[TerminalName],

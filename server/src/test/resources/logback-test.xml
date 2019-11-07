@@ -19,6 +19,7 @@
         <appender-ref ref="STDOUT"/>
     </logger>
     <logger level="WARN" name="org.apache.spark" />
+    <!--<logger level="WARN" name="org.apache.commons.vfs2" />-->
     <logger level="WARN" name="breeze.optimize" />
     <logger level="WARN" name="org.spark_project" />
 </configuration>

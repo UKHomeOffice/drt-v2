@@ -176,7 +176,7 @@ class CrunchTestLike
     val portStateActor = createPortStateActor(logLabel, portStateProbe, now)
     initialPortState.foreach(ps => portStateActor ! ps)
 
-    val (millisToCrunchActor: ActorRef, _: UniqueKillSwitch) = RunnableDeskRecs(portStateActor, minutesToCrunch, TryRenjin.crunch, airportConfig).run()
+    val (millisToCrunchActor: ActorRef, _: UniqueKillSwitch) = RunnableDeskRecs(portStateActor, minutesToCrunch, cruncher, airportConfig).run()
     portStateActor ! SetCrunchActor(millisToCrunchActor)
 
     val manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
@@ -215,7 +215,6 @@ class CrunchTestLike
       manifestResponsesSource = manifestResponsesSource,
       voyageManifestsActor = manifestsActor,
       manifestRequestsSink = manifestRequestsSink,
-      cruncher = cruncher,
       simulator = simulator,
       initialPortState = initialPortState,
       initialForecastBaseArrivals = initialForecastBaseArrivals,

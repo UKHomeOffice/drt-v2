@@ -6,6 +6,7 @@ import akka.stream.{ClosedShape, OverflowStrategy}
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{DeskRecMinute, DeskRecMinutes}
 import drt.shared._
+import org.slf4j.{Logger, LoggerFactory}
 import services.crunch.CrunchTestLike
 import services.graphstages.Crunch.{LoadMinute, Loads}
 import services.{OptimizerConfig, OptimizerCrunchResult, SDate}
@@ -14,9 +15,11 @@ import scala.concurrent.duration._
 import scala.util.Try
 
 object TestableCrunchLoadStage {
+  val log: Logger = LoggerFactory.getLogger(getClass)
   val oneDayMillis: Int = 60 * 60 * 24 * 1000
 
   def mockCrunch(wl: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int], config: OptimizerConfig): Try[OptimizerCrunchResult] = {
+    log.info(s"Using mock crunch!")
     Try(OptimizerCrunchResult(minDesks.toIndexedSeq, Seq.fill(wl.length)(config.sla)))
   }
 
