@@ -77,11 +77,11 @@ class MagFeedSpec extends SpecificationLike {
   }
 
   "Given a mock json response containing invalid json " +
-    "I should get a " >> {
+    "I should get an ArrivalsFeedFailure" >> {
     MockFeedRequester.mockResponse = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, "bad json"))
 
     val result = Await.result(feed.requestArrivals(SDate.now()), 1 second) match {
-      case feedFailure: ArrivalsFeedFailure => true
+      case _: ArrivalsFeedFailure => true
       case _ => false
     }
 
