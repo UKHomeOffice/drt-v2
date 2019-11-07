@@ -246,32 +246,6 @@ object Crunch {
       .toSeq
   }
 
-  def mergeLoadsIntoQueue(incomingLoads: Loads, existingQueue: mutable.SortedMap[MilliDate, Loads], crunchPeriodStartMillis: SDateLike => SDateLike): Unit = {
-    val changedDays: Map[MillisSinceEpoch, SortedMap[TQM, LoadMinute]] = incomingLoads.loadMinutes
-      .groupBy { case (_, sm) =>
-        crunchPeriodStartMillis(SDate(sm.minute, europeLondonTimeZone)).millisSinceEpoch
-      }
-
-    changedDays.foreach {
-      case (dayStartMillis, newLoadsForDay) =>
-        val milliDate = MilliDate(dayStartMillis)
-        val existingLoadsForDay = existingQueue.get(milliDate)
-        val mergedDayMinutes = mergeUpdatedLoads(existingLoadsForDay, newLoadsForDay)
-        existingQueue += (milliDate -> Loads(mergedDayMinutes))
-    }
-  }
-
-  def mergeUpdatedLoads(maybeExistingDayLoads: Option[Loads], dayLoadMinutes: SortedMap[TQM, LoadMinute]): SortedMap[TQM, LoadMinute] = {
-    maybeExistingDayLoads match {
-      case None => dayLoadMinutes
-      case Some(existingDayLoads) =>
-        dayLoadMinutes
-          .foldLeft(existingDayLoads.loadMinutes) {
-            case (daySoFar, (_, loadMinute)) => daySoFar.updated(loadMinute.uniqueId, loadMinute)
-          }
-    }
-  }
-
   def movementsUpdateCriteria(existingMovements: Set[StaffMovement], incomingMovements: Seq[StaffMovement]): UpdateCriteria = {
     val updatedMovements = incomingMovements.toSet -- existingMovements
     val deletedMovements = existingMovements -- incomingMovements.toSet

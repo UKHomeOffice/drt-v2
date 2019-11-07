@@ -21,7 +21,7 @@ import org.specs2.mutable.SpecificationLike
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services._
 import services.crunch.deskrecs.RunnableDeskRecs
-import services.graphstages.TestableCrunchLoadStage
+import services.graphstages.CrunchMocks
 import slickdb.Tables
 
 import scala.collection.mutable
@@ -153,8 +153,8 @@ class CrunchTestLike
                      initialFixedPoints: FixedPointAssignments = FixedPointAssignments.empty,
                      initialStaffMovements: Seq[StaffMovement] = Seq(),
                      logLabel: String = "",
-                     cruncher: TryCrunch = TestableCrunchLoadStage.mockCrunch,
-                     simulator: Simulator = TestableCrunchLoadStage.mockSimulator,
+                     cruncher: TryCrunch = CrunchMocks.mockCrunch,
+                     simulator: Simulator = CrunchMocks.mockSimulator,
                      aggregatedArrivalsActor: ActorRef = testProbe("aggregated-arrivals").ref,
                      useLegacyManifests: Boolean = false,
                      maxDaysToCrunch: Int = 2,

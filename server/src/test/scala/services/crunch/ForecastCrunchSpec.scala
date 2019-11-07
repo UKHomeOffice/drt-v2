@@ -5,7 +5,7 @@ import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
-import services.graphstages.TestableCrunchLoadStage
+import services.graphstages.CrunchMocks
 import services.{SDate, TryRenjin}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
@@ -30,7 +30,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val baseArrival = ArrivalGenerator.arrival(schDt = base, iata = "BA0001", terminal = "T1", actPax = Option(21))
     val baseFlights = Flights(List(baseArrival))
 
-    val crunch = runCrunchGraph(now = () => SDate(scheduled), maxDaysToCrunch = 4, cruncher = TestableCrunchLoadStage.mockCrunch)
+    val crunch = runCrunchGraph(now = () => SDate(scheduled), maxDaysToCrunch = 4, cruncher = CrunchMocks.mockCrunch)
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseFlights))

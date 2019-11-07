@@ -15,7 +15,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.ArrivalsFeedSuccess
 import services.crunch.CrunchTestLike
-import services.graphstages.TestableCrunchLoadStage
+import services.graphstages.CrunchMocks
 import services.{SDate, TryCrunch}
 
 import scala.collection.immutable.Seq
@@ -59,9 +59,13 @@ class MockPortStateActor(probe: TestProbe, responseDelayMillis: Long = 0L) exten
 class RunnableDeskRecsSpec extends CrunchTestLike {
   implicit val timeout: Timeout = new Timeout(250 milliseconds)
 
-  val mockCrunch: TryCrunch = TestableCrunchLoadStage.mockCrunch
+  val mockCrunch: TryCrunch = CrunchMocks.mockCrunch
   val noDelay: Long = 0L
   val longDelay = 500L
+  val historicSplits = Splits(Set(
+    ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50, None),
+    ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 50, None)),
+    SplitSources.Historical, None, Percentage)
 
   "Given a RunnableDescRecs with a mock PortStateActor and mock crunch " +
     "When I give it a millisecond of 2019-01-01T00:00 " +
@@ -110,11 +114,6 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
     success
   }
-  val historicSplits = Splits(
-    Set(
-      ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50, None),
-      ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 50, None)),
-    SplitSources.Historical, None, Percentage)
 
 
   "Given a flight with splits " +
@@ -290,7 +289,6 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     success
   }
 
-
   "Given an existing single flight with pax arriving at PCP at midnight " +
     "When the PCP time updates to 00:30  " +
     "Then the workload in the PortState from noon should disappear and move to 00:30" >> {
@@ -402,7 +400,6 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     success
   }
 
-
   "Given a flight with splits for the EEA and NonEEA queues and the NonEEA queue is diverted to the EEA queue " +
     "When I ask for the workload " +
     "Then I should see the combined workload associated with the best splits for that flight only in the EEA queue " >> {
@@ -484,6 +481,32 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
           case Some(cm) => cm.paxLoad == 20 && cm.workLoad == 10
         }
         fewerAtNoon
+    }
+
+    success
+  }
+
+  "Given loads for a set of minutes within a day for 2 queues at one terminal " +
+    "When I ask for crunch result " +
+    "Then I should see a full day's worth (1440) of crunch minutes per queue crunched - a total of 2880" >> {
+    val scheduled = "2018-01-01T00:05"
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(25))
+    val flight = List(ApiFlightWithSplits(arrival, Set(historicSplits), None))
+
+    val portStateProbe = TestProbe("port-state")
+    val mockPortStateActor = system.actorOf(Props(classOf[MockPortStateActor], portStateProbe, noDelay))
+    mockPortStateActor ! SetFlights(flight)
+
+    val minsInADay = 1440
+    val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, minsInADay, mockCrunch, airportConfig).run()
+    val millisToCrunchSourceActor: AskableActorRef = actor
+
+    val epoch = SDate(scheduled).millisSinceEpoch
+    millisToCrunchSourceActor ? List(epoch)
+
+    portStateProbe.fishForMessage(2 seconds) {
+      case DeskRecMinutes(drms) => drms.length === airportConfig.queues("T1").size * minsInADay
+      case _ => false
     }
 
     success
