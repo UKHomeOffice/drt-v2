@@ -3,7 +3,7 @@ package actors
 import java.util.UUID
 
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
-import akka.actor.{Actor, ActorRef, Props}
+import akka.actor.{Actor, Props}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import drt.shared.CrunchApi._
@@ -17,6 +17,7 @@ import services.graphstages.Crunch.{LoadMinute, Loads}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
+import scala.language.postfixOps
 
 
 object PortStateActor {
@@ -43,11 +44,11 @@ class PortStateActor(liveStateActor: AskableActorRef,
 
   override def receive: Receive = {
     case SetCrunchActor(crunchActor) =>
-      log.info(s"Received millisToCrunchSourceActor")
+      log.info(s"Received crunchSourceActor")
       maybeCrunchActor = Option(crunchActor)
 
     case SetSimulationActor(simActor) =>
-      log.info(s"Received millisToCrunchSourceActor")
+      log.info(s"Received simulationSourceActor")
       maybeSimActor = Option(simActor)
 
     case ps: PortState =>
@@ -100,36 +101,32 @@ class PortStateActor(liveStateActor: AskableActorRef,
   def splitDiffAndSend(diff: PortStateDiff, uuid: String): Unit = {
     val replyTo = sender()
 
-    if (diff.flightUpdates.nonEmpty) {
-      log.info(s"Received ${diff.flightUpdates.size} flight updates")
-    }
-
-    log.info(s"Processing incoming PortStateMinutes: $uuid")
+    log.debug(s"Processing incoming PortStateMinutes: $uuid")
 
     splitDiff(diff) match {
       case (live, forecast) =>
-        val futures = maybeCrunchActor match {
-          case None => Seq(liveStateActor.ask(live), forecastStateActor.ask(forecast))
-          case Some(crunchActor) => Seq(crunchActor.ask(diff.flightMinuteUpdates.toList), liveStateActor.ask(live), forecastStateActor.ask(forecast))
-        }
+        val persistenceFutures = Seq(liveStateActor.ask(live), forecastStateActor.ask(forecast))
 
-        val futuresWithLoads = if (diff.crunchMinuteUpdates.nonEmpty && maybeSimActor.isDefined) {
-          val loads = diff.crunchMinuteUpdates.map {
-            case (_, cm) => LoadMinute(cm)
-          }
-          futures ++ Seq(maybeSimActor.get.ask(Loads(loads.toSeq)))
-        } else futures
+        val maybeFutureCrunchRequest = if (maybeCrunchActor.isDefined && diff.flightMinuteUpdates.nonEmpty)
+          Option(maybeCrunchActor.get.ask(diff.flightMinuteUpdates.toList))
+        else None
+
+        val maybeFutureSimulationRequest = if (maybeSimActor.isDefined && diff.crunchMinuteUpdates.nonEmpty) {
+          Option(maybeSimActor.get.ask(Loads(crunchMinutesToLoads(diff).toSeq)))
+        } else None
 
         Future
-          .sequence(futuresWithLoads)
-          .recover {
-            case t => log.error("A future failed", t)
-          }
+          .sequence(persistenceFutures ++ maybeFutureCrunchRequest ++ maybeFutureSimulationRequest)
+          .recover { case t => log.error("A future failed", t) }
           .onComplete { _ =>
-            log.info(s"Sending Ack for $uuid")
+            log.debug(s"Sending Ack for $uuid")
             replyTo ! Ack
           }
     }
+  }
+
+  private def crunchMinutesToLoads(diff: PortStateDiff): Iterable[LoadMinute] = diff.crunchMinuteUpdates.map {
+    case (_, cm) => LoadMinute(cm)
   }
 
   private def splitDiff(diff: PortStateDiff): (PortStateDiff, PortStateDiff) = {

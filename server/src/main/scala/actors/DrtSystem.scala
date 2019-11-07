@@ -585,7 +585,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   }
 }
 
-case class SetSimulationActor(loadsToSimulate: ActorRef)
+case class SetSimulationActor(loadsToSimulate: AskableActorRef)
 
-case class SetCrunchActor(millisToCrunchActor: ActorRef)
+case class SetCrunchActor(millisToCrunchActor: AskableActorRef)
 
