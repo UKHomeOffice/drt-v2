@@ -101,17 +101,20 @@ case class MagFeed(key: String, claimIss: String, claimRole: String, claimSub: S
 
     val eventualArrivals = feedRequester
       .send(request)
-      .map(MagFeed.unmarshalResponse)
-      .flatten
-      .map { as =>
-        val relevantArrivals = as.filter(isAppropriateArrival)
-        log.info(s"${relevantArrivals.length} relevant arrivals out of ${as.length} in results from offset $from")
-        Success(relevantArrivals)
+      .map { response =>
+        MagFeed
+          .unmarshalResponse(response)
+          .map { arrivals =>
+            val relevantArrivals = arrivals.filter(isAppropriateArrival)
+            log.info(s"${relevantArrivals.length} relevant arrivals out of ${arrivals.length} in results from offset $from")
+            Success(relevantArrivals)
+          }
+          .recover { case t =>
+            log.error("Error receiving MAG arrivals", t)
+            Failure(t)
+          }
       }
-
-    eventualArrivals.recover {
-      case t => Failure(t)
-    }
+      .flatten
 
     eventualArrivals
   }
