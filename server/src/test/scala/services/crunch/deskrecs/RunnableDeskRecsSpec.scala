@@ -103,7 +103,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       case GetFlights(start, end) => start == expectedStart && end == expectedEnd
     }
     portStateProbe.fishForMessage(1 second) {
-      case drm: DeskRecMinutes => true
+      case _: DeskRecMinutes => true
     }
 
     portStateProbe.expectNoMessage(500 milliseconds)
