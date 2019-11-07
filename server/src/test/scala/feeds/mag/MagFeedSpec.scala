@@ -65,7 +65,7 @@ class MagFeedSpec extends SpecificationLike {
   }
 
   "Given a mock json response containing a single valid flight " +
-    "I should get a " >> {
+    "I should get a single flights " >> {
     MockFeedRequester.mockResponse = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, jsonResponseSingleArrival))
 
     val result = Await.result(feed.requestArrivals(SDate.now()), 1 second) match {
@@ -74,6 +74,18 @@ class MagFeedSpec extends SpecificationLike {
     }
 
     result.length === 1
+  }
+
+  "Given a mock json response containing invalid json " +
+    "I should get an ArrivalsFeedFailure" >> {
+    MockFeedRequester.mockResponse = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, "bad json"))
+
+    val result = Await.result(feed.requestArrivals(SDate.now()), 1 second) match {
+      case _: ArrivalsFeedFailure => true
+      case _ => false
+    }
+
+    result === true
   }
 
   "Given a mock feed requester that throws an exception " +
