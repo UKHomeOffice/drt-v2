@@ -138,16 +138,11 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
   def applyDiff(cdm: PortStateDiff, maxMillis: MillisSinceEpoch): Unit = {
     val nowMillis = now().millisSinceEpoch
     state.applyFlightsWithSplitsDiff(cdm.flightRemovals.keys.toSeq, cdm.flightUpdates, nowMillis)
-    log.info(s"$getClass applyFlightsWithSplitsDiff took ${now().millisSinceEpoch - nowMillis}ms")
     state.applyCrunchDiff(cdm.crunchMinuteUpdates, nowMillis)
-    log.info(s"$getClass applyCrunchDiff took ${now().millisSinceEpoch - nowMillis}ms")
     state.applyStaffDiff(cdm.staffMinuteUpdates, nowMillis)
-    log.info(s"$getClass applyStaffDiff took ${now().millisSinceEpoch - nowMillis}ms")
 
     state.purgeOlderThanDate(nowMillis - expireAfterMillis)
-    log.info(s"$getClass purgeOlderThanDate took ${now().millisSinceEpoch - nowMillis}ms")
     state.purgeRecentUpdates(nowMillis - Crunch.oneMinuteMillis * 5)
-    log.info(s"$getClass purgeRecentUpdates took ${now().millisSinceEpoch - nowMillis}ms")
   }
 
   def crunchDiffFromMessage(diffMessage: CrunchDiffMessage, maxMillis: MillisSinceEpoch): (Seq[UniqueArrival], Seq[ApiFlightWithSplits], Seq[CrunchMinute], Seq[StaffMinute]) = (
