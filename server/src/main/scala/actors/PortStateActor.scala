@@ -190,7 +190,7 @@ class PortStateActor(liveStateActor: AskableActorRef,
 
   def forecastEnd(now: () => SDateLike): SDateLike = Crunch.getLocalNextMidnight(now()).addDays(360)
 
-  def forecastStart(now: () => SDateLike): SDateLike = Crunch.getLocalNextMidnight(now())
+  def forecastStart(now: () => SDateLike): SDateLike = Crunch.getLocalNextMidnight(now()).addDays(1)
 }
 
 case object HandleCrunchRequest

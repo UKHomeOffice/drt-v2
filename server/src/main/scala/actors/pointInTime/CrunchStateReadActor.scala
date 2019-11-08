@@ -38,7 +38,7 @@ class CrunchStateReadActor(snapshotInterval: Int,
       createdAtOption match {
         case Some(createdAt) if createdAt <= pointInTime.millisSinceEpoch =>
           log.debug(s"Applying crunch diff with createdAt (${SDate(createdAt).toISOString()}) <= point in time requested: ${pointInTime.toISOString()}")
-          applyDiff(cdm, endMillis)
+          applyRecoveryDiff(cdm, endMillis)
         case Some(createdAt) =>
           log.debug(s"Ignoring crunch diff with createdAt (${SDate(createdAt).toISOString()}) > point in time requested: ${pointInTime.toISOString()}")
       }
