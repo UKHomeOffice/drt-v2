@@ -144,7 +144,6 @@ object RunnableCrunch {
           val arrivalUpdatesSink = builder.add(Sink.actorRefWithAck(aggregatedArrivalsStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure).async("aggregated-arrivals-dispatcher"))
           val arrivalRemovalsSink = builder.add(Sink.actorRefWithAck(aggregatedArrivalsStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure).async("aggregated-arrivals-dispatcher"))
 
-          println(s"throttle: $throttleDurationPer")
           // @formatter:off
           forecastBaseArrivalsSourceSync.out.map {
             case ArrivalsFeedSuccess(Flights(as), ca) =>

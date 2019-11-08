@@ -15,6 +15,7 @@ import services.crunch.deskrecs.GetFlights
 import services.graphstages.Crunch
 import services.graphstages.Crunch.{LoadMinute, Loads}
 
+import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
@@ -35,12 +36,14 @@ class PortStateActor(liveStateActor: AskableActorRef,
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
-  implicit val timeout: Timeout = new Timeout(60 seconds)
+  implicit val timeout: Timeout = new Timeout(15 seconds)
 
   val state: PortStateMutable = PortStateMutable.empty
 
   var maybeCrunchActor: Option[AskableActorRef] = None
+  var awaitingCrunchActor: Boolean = false
   var maybeSimActor: Option[AskableActorRef] = None
+  var awaitingSimulationActor: Boolean = false
 
   override def receive: Receive = {
     case SetCrunchActor(crunchActor) =>
@@ -98,6 +101,9 @@ class PortStateActor(liveStateActor: AskableActorRef,
 
   def stateForPeriodForTerminal(start: MillisSinceEpoch, end: MillisSinceEpoch, terminalName: TerminalName): Option[PortState] = Option(state.windowWithTerminalFilter(SDate(start), SDate(end), Seq(terminalName)))
 
+  val flightMinutesBuffer: mutable.Set[MillisSinceEpoch] = mutable.Set[MillisSinceEpoch]()
+  val loadMinutesBuffer: mutable.Map[TQM, LoadMinute] = mutable.Map[TQM, LoadMinute]()
+
   def splitDiffAndSend(diff: PortStateDiff, uuid: String): Unit = {
     val replyTo = sender()
 
@@ -105,18 +111,17 @@ class PortStateActor(liveStateActor: AskableActorRef,
 
     splitDiff(diff) match {
       case (live, forecast) =>
-        val persistenceFutures = Seq(liveStateActor.ask(live), forecastStateActor.ask(forecast))
+        val asks = List(
+          (liveStateActor, live) -> "live crunch persistence request failed",
+          (forecastStateActor, forecast) -> "forecast crunch persistence request failed")
 
-        val maybeFutureCrunchRequest = if (maybeCrunchActor.isDefined && diff.flightMinuteUpdates.nonEmpty)
-          Option(maybeCrunchActor.get.ask(diff.flightMinuteUpdates.toList))
-        else None
-
-        val maybeFutureSimulationRequest = if (maybeSimActor.isDefined && diff.crunchMinuteUpdates.nonEmpty) {
-          Option(maybeSimActor.get.ask(Loads(crunchMinutesToLoads(diff).toSeq)))
-        } else None
+        handleCrunchRequest(diff)
+        handleSimulationRequest(diff)
 
         Future
-          .sequence(persistenceFutures ++ maybeFutureCrunchRequest ++ maybeFutureSimulationRequest)
+          .sequence(asks.map {
+            case ((actor, question), failureMsg) => askAndLogOnFailure(actor, question, failureMsg)
+          })
           .recover { case t => log.error("A future failed", t) }
           .onComplete { _ =>
             log.debug(s"Sending Ack for $uuid")
@@ -124,6 +129,46 @@ class PortStateActor(liveStateActor: AskableActorRef,
           }
     }
   }
+
+  private def handleSimulationRequest(diff: PortStateDiff) = {
+    if (maybeSimActor.isDefined && diff.crunchMinuteUpdates.nonEmpty)
+      if (!awaitingSimulationActor) {
+        maybeSimActor.get
+          .ask(Loads(crunchMinutesToLoads(diff).toSeq))(new Timeout(10 minutes))
+          .recover {
+            case t => log.error("Error sending loads to simulate", t)
+          }
+          .onComplete { _ =>
+            awaitingSimulationActor = false
+            loadMinutesBuffer.clear()
+          }
+        awaitingSimulationActor = true
+      } else loadMinutesBuffer ++= crunchMinutesToLoads(diff).map(lm => (lm.uniqueId, lm))
+  }
+
+  private def handleCrunchRequest(diff: PortStateDiff) = {
+    if (maybeCrunchActor.isDefined && diff.flightMinuteUpdates.nonEmpty) {
+      if (!awaitingCrunchActor) {
+        maybeCrunchActor.get
+          .ask(diff.flightMinuteUpdates.toList)(new Timeout(10 minutes))
+          .recover {
+            case t => log.error("Error sending minutes to crunch", t)
+          }
+          .onComplete { _ =>
+            awaitingCrunchActor = false
+            flightMinutesBuffer.clear()
+          }
+        awaitingCrunchActor = true
+      }
+      else flightMinutesBuffer ++= diff.flightMinuteUpdates
+    }
+  }
+
+  private def askAndLogOnFailure[A](actor: AskableActorRef, question: Any, msg: String): Future[Any] = actor
+    .ask(question)
+    .recover {
+      case t => log.error(msg, t)
+    }
 
   private def crunchMinutesToLoads(diff: PortStateDiff): Iterable[LoadMinute] = diff.crunchMinuteUpdates.map {
     case (_, cm) => LoadMinute(cm)
