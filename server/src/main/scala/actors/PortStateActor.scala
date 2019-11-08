@@ -41,9 +41,9 @@ class PortStateActor(liveStateActor: AskableActorRef,
   val state: PortStateMutable = PortStateMutable.empty
 
   var maybeCrunchActor: Option[AskableActorRef] = None
-  var awaitingCrunchActor: Boolean = false
+  var crunchSourceIsReady: Boolean = true
   var maybeSimActor: Option[AskableActorRef] = None
-  var awaitingSimulationActor: Boolean = false
+  var simulationActorIsReady: Boolean = true
 
   override def receive: Receive = {
     case SetCrunchActor(crunchActor) =>
@@ -70,6 +70,10 @@ class PortStateActor(liveStateActor: AskableActorRef,
     case updates: PortStateMinutes =>
       val uuid = s"${UUID.randomUUID()}-${updates.getClass}"
       splitDiffAndSend(updates.applyTo(state, nowMillis), uuid)
+
+    case HandleCrunchRequest => handleCrunchRequest()
+
+    case HandleSimulationRequest => handleSimulationRequest()
 
     case GetState =>
       log.debug(s"Received GetState request. Replying with PortState containing ${state.crunchMinutes.count} crunch minutes")
@@ -109,14 +113,17 @@ class PortStateActor(liveStateActor: AskableActorRef,
 
     log.debug(s"Processing incoming PortStateMinutes: $uuid")
 
+    if (diff.flightMinuteUpdates.nonEmpty) flightMinutesBuffer ++= diff.flightMinuteUpdates
+    if (diff.crunchMinuteUpdates.nonEmpty) loadMinutesBuffer ++= crunchMinutesToLoads(diff).map(lm => (lm.uniqueId, lm))
+
+    handleCrunchRequest()
+    handleSimulationRequest()
+
     splitDiff(diff) match {
       case (live, forecast) =>
         val asks = List(
           (liveStateActor, live) -> "live crunch persistence request failed",
           (forecastStateActor, forecast) -> "forecast crunch persistence request failed")
-
-        handleCrunchRequest(diff)
-        handleSimulationRequest(diff)
 
         Future
           .sequence(asks.map {
@@ -130,38 +137,33 @@ class PortStateActor(liveStateActor: AskableActorRef,
     }
   }
 
-  private def handleSimulationRequest(diff: PortStateDiff) = {
-    if (maybeSimActor.isDefined && diff.crunchMinuteUpdates.nonEmpty)
-      if (!awaitingSimulationActor) {
-        maybeSimActor.get
-          .ask(Loads(crunchMinutesToLoads(diff).toSeq))(new Timeout(10 minutes))
-          .recover {
-            case t => log.error("Error sending loads to simulate", t)
-          }
-          .onComplete { _ =>
-            awaitingSimulationActor = false
-            loadMinutesBuffer.clear()
-          }
-        awaitingSimulationActor = true
-      } else loadMinutesBuffer ++= crunchMinutesToLoads(diff).map(lm => (lm.uniqueId, lm))
+  private def handleCrunchRequest(): Unit = if (maybeCrunchActor.isDefined && flightMinutesBuffer.nonEmpty && crunchSourceIsReady) {
+    crunchSourceIsReady = false
+    maybeCrunchActor.get
+      .ask(flightMinutesBuffer.toList)(new Timeout(10 minutes))
+      .recover {
+        case t => log.error("Error sending minutes to crunch", t)
+      }
+      .onComplete { _ =>
+        crunchSourceIsReady = true
+        context.self ! HandleCrunchRequest
+      }
+    flightMinutesBuffer.clear()
   }
 
-  private def handleCrunchRequest(diff: PortStateDiff) = {
-    if (maybeCrunchActor.isDefined && diff.flightMinuteUpdates.nonEmpty) {
-      if (!awaitingCrunchActor) {
-        maybeCrunchActor.get
-          .ask(diff.flightMinuteUpdates.toList)(new Timeout(10 minutes))
-          .recover {
-            case t => log.error("Error sending minutes to crunch", t)
-          }
-          .onComplete { _ =>
-            awaitingCrunchActor = false
-            flightMinutesBuffer.clear()
-          }
-        awaitingCrunchActor = true
+
+  private def handleSimulationRequest(): Unit = if (maybeSimActor.isDefined && loadMinutesBuffer.nonEmpty && simulationActorIsReady) {
+    simulationActorIsReady = false
+    maybeSimActor.get
+      .ask(Loads(loadMinutesBuffer.values.toList))(new Timeout(10 minutes))
+      .recover {
+        case t => log.error("Error sending loads to simulate", t)
       }
-      else flightMinutesBuffer ++= diff.flightMinuteUpdates
-    }
+      .onComplete { _ =>
+        simulationActorIsReady = true
+        context.self ! HandleSimulationRequest
+      }
+    loadMinutesBuffer.clear()
   }
 
   private def askAndLogOnFailure[A](actor: AskableActorRef, question: Any, msg: String): Future[Any] = actor
@@ -190,3 +192,7 @@ class PortStateActor(liveStateActor: AskableActorRef,
 
   def forecastStart(now: () => SDateLike): SDateLike = Crunch.getLocalNextMidnight(now())
 }
+
+case object HandleCrunchRequest
+
+case object HandleSimulationRequest
