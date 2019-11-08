@@ -241,8 +241,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         val initialPortState: Option[PortState] = mergePortStates(maybeForecastState, maybeLiveState)
         initialPortState.foreach(ps => portStateActor ! ps)
 
-        val (millisToCrunchActor: ActorRef, _) = startCrunchGraph(portStateActor)
-        portStateActor ! SetCrunchActor(millisToCrunchActor)
+        val (crunchSourceActor: ActorRef, _) = startCrunchGraph(portStateActor)
+        portStateActor ! SetCrunchActor(crunchSourceActor)
 
         val (manifestRequestsSource, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
 

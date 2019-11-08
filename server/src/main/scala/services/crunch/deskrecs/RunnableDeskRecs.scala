@@ -15,7 +15,6 @@ import services.graphstages.{Crunch, WorkloadCalculator}
 import services.{SDate, TryCrunch}
 
 import scala.collection.immutable.{SortedMap, SortedSet}
-import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
@@ -50,7 +49,7 @@ object RunnableDeskRecs {
           daysToCrunchAsync.out
             .map(_.map(min => crunchPeriodStartMillis(SDate(min)).millisSinceEpoch))
             .statefulMapConcat {
-              processQueue(parallelismLevel)
+              processQueueOfDaysToCrunch(parallelismLevel)
             }
             .mapAsync(parallelismLevel) { crunchStartMillis =>
               log.info(s"Asking for flights for ${SDate(crunchStartMillis).toISOString()}")
@@ -91,16 +90,16 @@ object RunnableDeskRecs {
     crunchLoads(loadsWithDiverts, crunchStartMillis, crunchEndMillis, terminals, airportConfig, crunch)
   }
 
-  private def processQueue(parallelismLevel: Int): () => List[MillisSinceEpoch] => List[MillisSinceEpoch] = {
+  private def processQueueOfDaysToCrunch(parallelismLevel: Int): () => List[MillisSinceEpoch] => List[MillisSinceEpoch] = {
     () =>
       var queue = SortedSet[MillisSinceEpoch]()
       incoming => {
         queue = queue ++ incoming
         val nextToProcess = queue match {
           case q if q.nonEmpty =>
-            val head = q.take(parallelismLevel)
+            val nextToProcess = q.take(parallelismLevel)
             queue = queue.drop(parallelismLevel)
-            List(head).flatten
+            List(nextToProcess).flatten
           case _ =>
             List()
         }

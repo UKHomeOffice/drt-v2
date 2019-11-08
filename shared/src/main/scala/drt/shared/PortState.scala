@@ -195,11 +195,7 @@ class PortStateMutable {
     PortState(flights = fs, crunchMinutes = cms, staffMinutes = sms)
   }
 
-  def flightsRange(start: SDateLike, end: SDateLike): ISortedMap[UniqueArrival, ApiFlightWithSplits] = {
-    val scheduledEarlier = filterByPcp(flights.range(start.addHours(-24), start), start, end)
-    val scheduledLater = filterByPcp(flights.range(end, end.addHours(24)), start, end)
-    scheduledEarlier ++ flights.range(start, end) ++ scheduledLater
-  }
+  def flightsRange(start: SDateLike, end: SDateLike): ISortedMap[UniqueArrival, ApiFlightWithSplits] = flights.range(start, end)
 
   private def filterByPcp(flightsToFilter: ISortedMap[UniqueArrival, ApiFlightWithSplits], start: SDateLike, end: SDateLike): ISortedMap[UniqueArrival, ApiFlightWithSplits] =
     flightsToFilter.filterNot {

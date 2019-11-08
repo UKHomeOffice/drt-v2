@@ -37,8 +37,8 @@ class CrunchStateMockActor extends Actor {
 
 class PortStateTestActor(liveActor: ActorRef, forecastActor: ActorRef, airportConfig: AirportConfig, probe: ActorRef, expireAfterMillis: Long, now: () => SDateLike, liveDaysAhead: Int)
   extends PortStateActor(liveActor, forecastActor, airportConfig, expireAfterMillis, now, liveDaysAhead) {
-  override def splitDiffAndSend(diff: PortStateDiff, uuid: String): Unit = {
-    super.splitDiffAndSend(diff, uuid)
+  override def splitDiffAndSend(diff: PortStateDiff): Unit = {
+    super.splitDiffAndSend(diff)
     probe ! state.immutable
   }
 }

@@ -1,7 +1,5 @@
 package actors
 
-import java.util.UUID
-
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import akka.actor.{Actor, Props}
 import akka.pattern.AskableActorRef
@@ -68,8 +66,17 @@ class PortStateActor(liveStateActor: AskableActorRef,
     case StreamFailure(t) => log.error(s"Stream failed", t)
 
     case updates: PortStateMinutes =>
-      val uuid = s"${UUID.randomUUID()}-${updates.getClass}"
-      splitDiffAndSend(updates.applyTo(state, nowMillis), uuid)
+      log.debug(s"Processing incoming PortStateMinutes ${updates.getClass}")
+
+      val diff = updates.applyTo(state, nowMillis)
+
+      if (diff.flightMinuteUpdates.nonEmpty) flightMinutesBuffer ++= diff.flightMinuteUpdates
+      if (diff.crunchMinuteUpdates.nonEmpty) loadMinutesBuffer ++= crunchMinutesToLoads(diff).map(lm => (lm.uniqueId, lm))
+
+      handleCrunchRequest()
+      handleSimulationRequest()
+
+      splitDiffAndSend(diff)
 
     case HandleCrunchRequest => handleCrunchRequest()
 
@@ -108,62 +115,55 @@ class PortStateActor(liveStateActor: AskableActorRef,
   val flightMinutesBuffer: mutable.Set[MillisSinceEpoch] = mutable.Set[MillisSinceEpoch]()
   val loadMinutesBuffer: mutable.Map[TQM, LoadMinute] = mutable.Map[TQM, LoadMinute]()
 
-  def splitDiffAndSend(diff: PortStateDiff, uuid: String): Unit = {
+  def splitDiffAndSend(diff: PortStateDiff): Unit = {
     val replyTo = sender()
-
-    log.debug(s"Processing incoming PortStateMinutes: $uuid")
-
-    if (diff.flightMinuteUpdates.nonEmpty) flightMinutesBuffer ++= diff.flightMinuteUpdates
-    if (diff.crunchMinuteUpdates.nonEmpty) loadMinutesBuffer ++= crunchMinutesToLoads(diff).map(lm => (lm.uniqueId, lm))
-
-    handleCrunchRequest()
-    handleSimulationRequest()
 
     splitDiff(diff) match {
       case (live, forecast) =>
-        val asks = List(
-          (liveStateActor, live) -> "live crunch persistence request failed",
-          (forecastStateActor, forecast) -> "forecast crunch persistence request failed")
-
         Future
-          .sequence(asks.map {
-            case ((actor, question), failureMsg) => askAndLogOnFailure(actor, question, failureMsg)
-          })
+          .sequence(Seq(
+            askAndLogOnFailure(liveStateActor, live, "live crunch persistence request failed"),
+            askAndLogOnFailure(forecastStateActor, forecast, "forecast crunch persistence request failed"))
+          )
           .recover { case t => log.error("A future failed", t) }
           .onComplete { _ =>
-            log.debug(s"Sending Ack for $uuid")
+            log.debug(s"Sending Ack")
             replyTo ! Ack
           }
     }
   }
 
-  private def handleCrunchRequest(): Unit = if (maybeCrunchActor.isDefined && flightMinutesBuffer.nonEmpty && crunchSourceIsReady) {
-    crunchSourceIsReady = false
-    maybeCrunchActor.get
-      .ask(flightMinutesBuffer.toList)(new Timeout(10 minutes))
-      .recover {
-        case t => log.error("Error sending minutes to crunch", t)
-      }
-      .onComplete { _ =>
-        crunchSourceIsReady = true
-        context.self ! HandleCrunchRequest
-      }
-    flightMinutesBuffer.clear()
+  private def handleCrunchRequest(): Unit = (maybeCrunchActor, flightMinutesBuffer.nonEmpty, crunchSourceIsReady) match {
+    case (Some(crunchActor), true, true) =>
+      crunchSourceIsReady = false
+      crunchActor
+        .ask(flightMinutesBuffer.toList)(new Timeout(10 minutes))
+        .recover {
+          case t => log.error("Error sending minutes to crunch", t)
+        }
+        .onComplete { _ =>
+          crunchSourceIsReady = true
+          context.self ! HandleCrunchRequest
+        }
+      flightMinutesBuffer.clear()
+    case _ => Unit
   }
 
 
-  private def handleSimulationRequest(): Unit = if (maybeSimActor.isDefined && loadMinutesBuffer.nonEmpty && simulationActorIsReady) {
-    simulationActorIsReady = false
-    maybeSimActor.get
-      .ask(Loads(loadMinutesBuffer.values.toList))(new Timeout(10 minutes))
-      .recover {
-        case t => log.error("Error sending loads to simulate", t)
-      }
-      .onComplete { _ =>
-        simulationActorIsReady = true
-        context.self ! HandleSimulationRequest
-      }
-    loadMinutesBuffer.clear()
+  private def handleSimulationRequest(): Unit = (maybeSimActor, loadMinutesBuffer.nonEmpty, simulationActorIsReady) match {
+    case (Some(simActor), true, true) =>
+      simulationActorIsReady = false
+      simActor
+        .ask(Loads(loadMinutesBuffer.values.toList))(new Timeout(10 minutes))
+        .recover {
+          case t => log.error("Error sending loads to simulate", t)
+        }
+        .onComplete { _ =>
+          simulationActorIsReady = true
+          context.self ! HandleSimulationRequest
+        }
+      loadMinutesBuffer.clear()
+    case _ => Unit
   }
 
   private def askAndLogOnFailure[A](actor: AskableActorRef, question: Any, msg: String): Future[Any] = actor
