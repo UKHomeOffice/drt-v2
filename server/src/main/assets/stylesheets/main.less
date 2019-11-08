@@ -1719,10 +1719,37 @@ div.access-restricted {
 }
 
 /***/
-.terminal-dashboard {
+.terminal-dashboard-queues {
     width: 73%;
     padding-top: 3%;
+    display: inline-block;
 }
+
+.terminal-dashboard-side {
+    width: 20%;
+    display: inline-block;
+    vertical-align: top;
+    padding-top: 3%;
+    margin-left: 3%;
+}
+
+.show-arrivals-btn {
+    border-style: solid;
+    padding: 10px;
+    border-radius: 15px;
+    background-color: #d5e8fe;
+    position: relative;
+    font-size: 27px;
+    font-weight: bold;
+    text-align: center;
+    color: black;
+    display: inline-block;
+}
+.show-arrivals-btn:hover {
+    text-decoration: none;
+
+}
+
 .pax-bar {
     border-style: solid;
     padding: 10px;
@@ -1737,24 +1764,43 @@ div.access-restricted {
     margin-bottom: 2%;
 }
 
-.arrivals_btn {
-    border-style: solid;
-    padding: 10px;
-    border-radius: 15px;
-    width:15%;
+
+.dashboard-arrivals-popup {
+    z-index: 1000;
     background-color: #d5e8fe;
-    position:relative;
-    transform: translateY(-100%);
-    left: 80%;
-    font-size: 27px;
-    font-weight: bold;
+    padding: 2%;
+    border: solid;
+    border-radius: 22px;
+    box-shadow: 0 6px 8px rgba(52, 73, 94, .2), 0 1px 1px rgba(52, 73, 94, 0.1);
+    position: fixed;
+    left: -23%;
+    right: 0;
+    top: 18%;
+    margin-left: auto;
+    margin-right: auto;
+    width: 66%;
+    opacity: 95%;
+}
+
+.dashboard-arrivals-popup td {
+    text-align: center;
+}
+.dashboard-arrivals-popup .table {
+    margin:0
+}
+
+.dashboard-arrivals-popup th {
+    background-color: #2889c6;
     text-align: center;
 }
 
-.arrivals_queue {
-    left: 80%;
-    transform: translateY(-370%);
-    width:15%;
+.dashboard-arrivals-popup table {
+    text-align: center;
+}
+
+.dashboard-arrivals-popup thead {
+    background-color: #2989C6;
+    color: #fff;
 }
 
 .queue-box i {
@@ -1837,6 +1883,7 @@ div.access-restricted {
     display: inline-block;
     border-top: solid;
     border-bottom: solid;
+    color: black;
     margin-top: -0.25%;
 }
 
