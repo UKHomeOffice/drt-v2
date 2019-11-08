@@ -36,7 +36,7 @@ class CodeshareWorkloadSpec extends CrunchTestLike {
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(updatedArrival2))))
 
-    crunch.portStateTestProbe.fishForMessage(2 seconds) {
+    crunch.portStateTestProbe.fishForMessage(5 seconds) {
       case PortState(_, crunchMinutes, _) =>
         val minute1paxCorrect = crunchMinutes.get(TQM("T1", Queues.EeaDesk, schSdate.millisSinceEpoch)) match {
           case Some(minute) =>

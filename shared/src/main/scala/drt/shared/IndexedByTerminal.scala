@@ -119,6 +119,40 @@ class IndexedFlights extends IndexedByTerminalWithUpdatesCache[UniqueArrival, Ap
   val atTime: MillisSinceEpoch => UniqueArrival = UniqueArrival.atTime
 
   def +++=(toAdd: Seq[ApiFlightWithSplits]): Unit = ++=(toAdd.map(cm => (cm.unique, cm)))
+
+  def _range(start: SDateLike, end: SDateLike): ISortedMap[UniqueArrival, ApiFlightWithSplits] = {
+    val startMillis = atTime(start.millisSinceEpoch)
+    val endMillis = atTime(end.millisSinceEpoch)
+    items.foldLeft(ISortedMap[UniqueArrival, ApiFlightWithSplits]()) { case (acc, (_, tItems)) => acc ++ tItems.range(startMillis, endMillis) }
+  }
+
+  override def range(start: SDateLike, end: SDateLike): ISortedMap[UniqueArrival, ApiFlightWithSplits] = {
+    val scheduledEarlier = filterByPcp(_range(start.addHours(-24), start), start, end)
+    val scheduledLater = filterByPcp(_range(end, end.addHours(24)), start, end)
+    scheduledEarlier ++ _range(start, end) ++ scheduledLater
+  }
+
+  def _rangeAtTerminals(start: SDateLike, end: SDateLike, terminals: Seq[TerminalName]): ISortedMap[UniqueArrival, ApiFlightWithSplits] = {
+    val startMillis = atTime(start.millisSinceEpoch)
+    val endMillis = atTime(end.millisSinceEpoch)
+    items.filterKeys(terminals.contains(_)).foldLeft(ISortedMap[UniqueArrival, ApiFlightWithSplits]()) { case (acc, (_, tItems)) => acc ++ tItems.range(startMillis, endMillis) }
+  }
+
+  override def rangeAtTerminals(start: SDateLike, end: SDateLike, terminals: Seq[TerminalName]): ISortedMap[UniqueArrival, ApiFlightWithSplits] = {
+    val scheduledEarlier = filterByPcp(_rangeAtTerminals(start.addHours(-24), start, terminals), start, end)
+    val scheduledLater = filterByPcp(_rangeAtTerminals(end, end.addHours(24), terminals), start, end)
+    scheduledEarlier ++ _rangeAtTerminals(start, end, terminals) ++ scheduledLater
+  }
+
+  private def filterByPcp(flightsToFilter: ISortedMap[UniqueArrival, ApiFlightWithSplits], start: SDateLike, end: SDateLike): ISortedMap[UniqueArrival, ApiFlightWithSplits] =
+    flightsToFilter.filterNot {
+      case (_, ApiFlightWithSplits(arrival, _, _)) =>
+        val firstPcpMin = arrival.pcpRange().min
+        val lastPcpMin = arrival.pcpRange().max
+        val startMillis = start.millisSinceEpoch
+        val endMillis = end.millisSinceEpoch
+        firstPcpMin > endMillis || lastPcpMin < startMillis
+    }
 }
 
 class IndexedCrunchMinutes extends IndexedByTerminalWithUpdatesCache[TQM, CrunchMinute] {

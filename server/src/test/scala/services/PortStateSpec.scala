@@ -4,7 +4,7 @@ import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
 import drt.shared._
 import services.crunch.CrunchTestLike
-import services.graphstages.{DeskRecMinute, DeskRecMinutes, SimulationMinute, SimulationMinutes}
+import services.graphstages.{SimulationMinute, SimulationMinutes}
 
 import scala.concurrent.duration._
 
@@ -167,7 +167,7 @@ class PortStateSpec extends CrunchTestLike {
     val dr2 = DeskRecMinute("T1", Queues.EGate, 1L, 100, 2, 3, 4)
     val diff = DeskRecMinutes(Seq(dr1, dr2)).applyTo(portState, 10L)
 
-    diff === PortStateDiff(Seq(), Seq(), Seq(CrunchMinute("T1", Queues.EGate, 1L, 100, 2, 3, 4, Option(5), Option(6), Option(7), Option(8), Option(10L))), Seq())
+    diff === PortStateDiff(Seq(), Seq(), Seq(), Seq(CrunchMinute("T1", Queues.EGate, 1L, 100, 2, 3, 4, Option(5), Option(6), Option(7), Option(8), Option(10L))), Seq())
   }
 
   "Given a PortState with two crunch minutes " +
@@ -179,14 +179,14 @@ class PortStateSpec extends CrunchTestLike {
     val portState = PortStateMutable.empty
     portState.crunchMinutes +++= (cm1 ++ cm2)
 
-    val diff = ActualDeskStats(Map("T1"-> Map(Queues.EGate -> Map(
+    val diff = ActualDeskStats(Map("T1" -> Map(Queues.EGate -> Map(
       0L -> DeskStat(Option(7), Option(8)),
       fifteenMins -> DeskStat(Option(100), Option(100))
     )))).applyTo(portState, 10L)
 
     val expectedCms = fifteenMinsOf(CrunchMinute("T1", Queues.EGate, fifteenMins, 2, 2, 3, 4, Option(5), Option(6), Option(100), Option(100), Option(10L)))
 
-    diff === PortStateDiff(Seq(), Seq(), expectedCms, Seq())
+    diff === PortStateDiff(Seq(), Seq(), Seq(), expectedCms, Seq())
   }
 
   private def fifteenMinsOf(crunchMinute: CrunchMinute): IndexedSeq[CrunchMinute] = {
@@ -207,7 +207,7 @@ class PortStateSpec extends CrunchTestLike {
       SimulationMinute("T1", Queues.EGate, 1L, 100, 100)
     )).applyTo(portState, 10L)
 
-    diff === PortStateDiff(Seq(), Seq(), Seq(CrunchMinute("T1", Queues.EGate, 1L, 2, 2, 3, 4, Option(100), Option(100), Option(7), Option(8), Option(10L))), Seq())
+    diff === PortStateDiff(Seq(), Seq(), Seq(), Seq(CrunchMinute("T1", Queues.EGate, 1L, 2, 2, 3, 4, Option(100), Option(100), Option(7), Option(8), Option(10L))), Seq())
   }
 
   "Given a PortState with two crunch minutes " +
@@ -224,7 +224,33 @@ class PortStateSpec extends CrunchTestLike {
       StaffMinute("T1", 1L, 200, 200, 300, None)
     )).applyTo(portState, 10L)
 
-    diff === PortStateDiff(Seq(), Seq(), Seq(), Seq(StaffMinute("T1", 1L, 200, 200, 300, Option(10L))))
+    diff === PortStateDiff(Seq(), Seq(), Seq(), Seq(), Seq(StaffMinute("T1", 1L, 200, 200, 300, Option(10L))))
+  }
+
+  "Given a PortState with a flight scheduled before midnight and pax arriving after midnight " +
+    "When I ask for a window containing the period immediately after midnight " +
+    "Then the flight should be in the returned PortState" >> {
+    val portStateMutable = PortStateMutable.empty
+    val flight = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-01T12:00", pcpDt = "2019-01-02T00:01", actPax = Option(100)), Set())
+
+    portStateMutable.flights +++= Seq(flight)
+
+    val windowedFlights = portStateMutable.window(SDate("2019-01-02T00:00"), SDate("2019-01-02T12:00")).flights.values.toSet
+
+    windowedFlights === Set(flight)
+  }
+
+  "Given a PortState with a flight scheduled after next midnight and pax arriving before next midnight " +
+    "When I ask for a window containing the period immediately before midnight " +
+    "Then the flight should be in the returned PortState" >> {
+    val portStateMutable = PortStateMutable.empty
+    val flight = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-03T12:00", pcpDt = "2019-01-02T14:00", actPax = Option(100)), Set())
+
+    portStateMutable.flights +++= Seq(flight)
+
+    val windowedFlights = portStateMutable.window(SDate("2019-01-02T00:00"), SDate("2019-01-02T23:59")).flights.values.toSet
+
+    windowedFlights === Set(flight)
   }
 
   private def arrivalsToFlightsWithSplits(arrivals: List[Arrival]): List[ApiFlightWithSplits] = {

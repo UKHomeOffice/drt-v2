@@ -7,7 +7,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.AskableActorRef
 import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
-import akka.stream.{ActorMaterializer, OverflowStrategy, QueueOfferResult}
+import akka.stream.{ActorMaterializer, OverflowStrategy, QueueOfferResult, UniqueKillSwitch}
 import akka.testkit.{TestKit, TestProbe}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
@@ -20,7 +20,8 @@ import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services._
-import services.graphstages.TestableCrunchLoadStage
+import services.crunch.deskrecs.RunnableDeskRecs
+import services.graphstages.CrunchMocks
 import slickdb.Tables
 
 import scala.collection.mutable
@@ -152,8 +153,8 @@ class CrunchTestLike
                      initialFixedPoints: FixedPointAssignments = FixedPointAssignments.empty,
                      initialStaffMovements: Seq[StaffMovement] = Seq(),
                      logLabel: String = "",
-                     cruncher: TryCrunch = TestableCrunchLoadStage.mockCrunch,
-                     simulator: Simulator = TestableCrunchLoadStage.mockSimulator,
+                     cruncher: TryCrunch = CrunchMocks.mockCrunch,
+                     simulator: Simulator = CrunchMocks.mockSimulator,
                      aggregatedArrivalsActor: ActorRef = testProbe("aggregated-arrivals").ref,
                      useLegacyManifests: Boolean = false,
                      maxDaysToCrunch: Int = 2,
@@ -175,6 +176,9 @@ class CrunchTestLike
     val portStateActor = createPortStateActor(logLabel, portStateProbe, now)
     initialPortState.foreach(ps => portStateActor ! ps)
 
+    val (millisToCrunchActor: ActorRef, _: UniqueKillSwitch) = RunnableDeskRecs(portStateActor, minutesToCrunch, cruncher, airportConfig).run()
+    portStateActor ! SetCrunchActor(millisToCrunchActor)
+
     val manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
     val liveArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
     val liveBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
@@ -183,7 +187,6 @@ class CrunchTestLike
 
     val (_, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
     val (manifestResponsesSource, _, _) = SinkToSourceBridge[List[BestAvailableManifest]]
-
 
     val crunchInputs = CrunchSystem(CrunchProps(
       logLabel = logLabel,
@@ -212,7 +215,6 @@ class CrunchTestLike
       manifestResponsesSource = manifestResponsesSource,
       voyageManifestsActor = manifestsActor,
       manifestRequestsSink = manifestRequestsSink,
-      cruncher = cruncher,
       simulator = simulator,
       initialPortState = initialPortState,
       initialForecastBaseArrivals = initialForecastBaseArrivals,
@@ -229,6 +231,8 @@ class CrunchTestLike
       checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup,
       stageThrottlePer = 50 milliseconds
     ))
+
+    portStateActor ! SetSimulationActor(crunchInputs.loadsToSimulate)
 
     CrunchGraphInputsAndProbes(
       baseArrivalsInput = crunchInputs.forecastBaseArrivalsResponse,

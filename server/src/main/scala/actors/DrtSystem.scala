@@ -42,6 +42,7 @@ import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedRes
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services.SplitsProvider.SplitProvider
 import services._
+import services.crunch.deskrecs.RunnableDeskRecs
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.Crunch.{oneDayMillis, oneMinuteMillis}
 import services.graphstages._
@@ -238,10 +239,13 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       case Success((maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeRegisteredArrivals)) =>
         system.log.info(s"Successfully restored initial state for App")
         val initialPortState: Option[PortState] = mergePortStates(maybeForecastState, maybeLiveState)
-
         initialPortState.foreach(ps => portStateActor ! ps)
 
+        val (crunchSourceActor: ActorRef, _) = startCrunchGraph(portStateActor)
+        portStateActor ! SetCrunchActor(crunchSourceActor)
+
         val (manifestRequestsSource, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
+
         val (manifestResponsesSource, _, manifestResponsesSink) = SinkToSourceBridge[List[BestAvailableManifest]]
 
         val crunchInputs: CrunchSystem[Cancellable] = startCrunchSystem(
@@ -255,6 +259,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
           params.recrunchOnStart,
           params.refreshArrivalsOnStart,
           checkRequiredStaffUpdatesOnStartup = true)
+
+        portStateActor ! SetSimulationActor(crunchInputs.loadsToSimulate)
 
         if (maybeRegisteredArrivals.isDefined) log.info(s"sending ${maybeRegisteredArrivals.get.arrivals.size} initial registered arrivals to batch stage")
         else log.info(s"sending no registered arrivals to batch stage")
@@ -311,6 +317,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         System.exit(1)
     }
   }
+
+  def startCrunchGraph(portStateActor: ActorRef): (ActorRef, UniqueKillSwitch) = RunnableDeskRecs(portStateActor, 1440, TryRenjin.crunch, airportConfig).run()
 
   override def getFeedStatus: Future[Seq[FeedStatuses]] = {
     val actors: Seq[AskableActorRef] = Seq(liveArrivalsActor, liveBaseArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
@@ -390,7 +398,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       manifestResponsesSource = manifestResponsesSource,
       voyageManifestsActor = voyageManifestsActor,
       manifestRequestsSink = manifestRequestsSink,
-      cruncher = TryRenjin.crunch,
       simulator = TryRenjin.runSimulationOfWork,
       initialPortState = initialPortState,
       initialForecastBaseArrivals = initialForecastBaseArrivals.getOrElse(mutable.SortedMap()),
@@ -416,14 +423,20 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   def initialStateFuture[A](askableActor: AskableActorRef): Future[Option[A]] = {
     val actorPath = askableActor.actorRef.path
-    queryActorWithRetry[A](askableActor, GetState).map {
-      case Some(state: A) if state.isInstanceOf[A] =>
-        log.debug(s"Got initial state (Some(${state.getClass})) from $actorPath")
-        Option(state)
-      case None =>
-        log.warn(s"Got no state (None) from $actorPath")
-        None
-    }
+    queryActorWithRetry[A](askableActor, GetState)
+      .map {
+        case Some(state: A) if state.isInstanceOf[A] =>
+          log.debug(s"Got initial state (Some(${state.getClass})) from $actorPath")
+          Option(state)
+        case None =>
+          log.warn(s"Got no state (None) from $actorPath")
+          None
+      }
+      .recoverWith {
+        case t =>
+          log.error(s"Failed to get response from $askableActor", t)
+          Future(None)
+      }
   }
 
   def queryActorWithRetry[A](askableActor: AskableActorRef, toAsk: Any): Future[Option[A]] = {
@@ -570,3 +583,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       .map(_ => lhrForecastFeed.requestFeed)
   }
 }
+
+case class SetSimulationActor(loadsToSimulate: AskableActorRef)
+
+case class SetCrunchActor(millisToCrunchActor: AskableActorRef)
+

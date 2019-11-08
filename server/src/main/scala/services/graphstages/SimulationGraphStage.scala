@@ -438,6 +438,6 @@ case class SimulationMinutes(minutes: Seq[SimulationMinute]) extends PortStateMi
       addIfUpdated(portState.crunchMinutes.getByKey(dm.key), now, soFar, dm, () => CrunchMinute(dm, now))
     }
     portState.crunchMinutes +++= minutesDiff
-    PortStateDiff(Seq(), Seq(), minutesDiff, Seq())
+    PortStateDiff(Seq(), Seq(), Seq(), minutesDiff, Seq())
   }
 }
