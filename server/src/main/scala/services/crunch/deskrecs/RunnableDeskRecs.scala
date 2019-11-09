@@ -47,7 +47,7 @@ object RunnableDeskRecs {
           val parallelismLevel = 2
 
           daysToCrunchAsync.out
-            .map(_.map(min => crunchPeriodStartMillis(SDate(min)).millisSinceEpoch))
+            .map(_.toSet.map(min => crunchPeriodStartMillis(SDate(min)).millisSinceEpoch).toList)
             .statefulMapConcat {
               processQueueOfDaysToCrunch(parallelismLevel)
             }
