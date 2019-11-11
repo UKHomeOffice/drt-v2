@@ -65,7 +65,7 @@ class SimulationGraphStage(name: String = "",
       override def onPush(): Unit = {
         val timer = StageTimer(stageName, inLoads)
         val incomingLoads = grab(inLoads)
-        log.info(s"Received ${incomingLoads.loadMinutes.size} loads")
+        log.debug(s"Received ${incomingLoads.loadMinutes.size} loads")
 
         val affectedTerminals = incomingLoads.loadMinutes.map { case (TQM(t, _, _), _) => t }.toSet.toSeq
 
@@ -131,7 +131,6 @@ class SimulationGraphStage(name: String = "",
 
       val deploymentUpdates = deploymentsForMillis(firstMillis, lastMillis, affectedTerminals)
 
-      log.info(s"Merging updated deployments into existing")
       deployments ++= deploymentUpdates
     }
 
@@ -213,7 +212,7 @@ class SimulationGraphStage(name: String = "",
 
       minuteMillis.map(m => deployments.getOrElse(TQM(tn, qn, m), 0)) match {
         case deployedStaff if deployedStaff.sum == 0 =>
-          log.info(s"No deployed staff. Skipping simulations")
+          log.debug(s"No deployed staff. Skipping simulations")
           SortedMap()
         case deployedStaff =>
           log.info(s"Running $tn, $qn simulation with ${adjustedWorkloads.length} workloads & ${deployedStaff.length} desks")

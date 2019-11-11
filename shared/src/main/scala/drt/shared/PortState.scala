@@ -245,13 +245,21 @@ class PortStateMutable {
     } else None
   }
 
-  def applyFlightsWithSplitsDiff(flightRemovals: Seq[UniqueArrival], flightUpdates: Seq[ApiFlightWithSplits], nowMillis: MillisSinceEpoch): Unit = {
+  def applyFlightsWithSplitsDiff(flightRemovals: Seq[UniqueArrival], flightUpdates: SortedMap[UniqueArrival, ApiFlightWithSplits], nowMillis: MillisSinceEpoch): Unit = {
     flights --= flightRemovals
-    flights ++= flightUpdates.map(f => (f.apiFlight.unique, f.copy(lastUpdated = Option(nowMillis))))
+    flights ++= flightUpdates
+  }
+
+  def applyCrunchDiff(crunchMinuteUpdates: SortedMap[TQM, CrunchMinute], nowMillis: MillisSinceEpoch): Unit = {
+    crunchMinutes ++= crunchMinuteUpdates
   }
 
   def applyCrunchDiff(crunchMinuteUpdates: Seq[CrunchMinute], nowMillis: MillisSinceEpoch): Unit = {
     crunchMinutes ++= crunchMinuteUpdates.map(cm => (cm.key, cm.copy(lastUpdated = Option(nowMillis))))
+  }
+
+  def applyStaffDiff(staffMinuteUpdates: SortedMap[TM, StaffMinute], nowMillis: MillisSinceEpoch): Unit = {
+    staffMinutes ++= staffMinuteUpdates
   }
 
   def applyStaffDiff(staffMinuteUpdates: Seq[StaffMinute], nowMillis: MillisSinceEpoch): Unit = {

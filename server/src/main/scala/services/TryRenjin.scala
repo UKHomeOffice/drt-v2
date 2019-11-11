@@ -63,7 +63,7 @@ object TryRenjin {
 
     def processWork(workloads: Seq[Double], desks: Seq[Int], config: OptimizerConfig): Seq[Int] = {
       loadOptimiserScript
-      log.info(s"Setting ${workloads.length} workloads & ${desks.length} desks")
+      log.debug(s"Setting ${workloads.length} workloads & ${desks.length} desks")
       initialiseWorkloads(workloads)
       initialiseDesks("desks", desks)
       runSimulation(desks, "desks", config).toList

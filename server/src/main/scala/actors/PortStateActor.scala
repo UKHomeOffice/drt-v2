@@ -34,7 +34,7 @@ class PortStateActor(liveStateActor: AskableActorRef,
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
-  implicit val timeout: Timeout = new Timeout(15 seconds)
+  implicit val timeout: Timeout = new Timeout(1 minute)
 
   val state: PortStateMutable = PortStateMutable.empty
 
@@ -190,7 +190,7 @@ class PortStateActor(liveStateActor: AskableActorRef,
 
   def forecastEnd(now: () => SDateLike): SDateLike = Crunch.getLocalNextMidnight(now()).addDays(360)
 
-  def forecastStart(now: () => SDateLike): SDateLike = Crunch.getLocalNextMidnight(now())
+  def forecastStart(now: () => SDateLike): SDateLike = Crunch.getLocalNextMidnight(now()).addDays(1)
 }
 
 case object HandleCrunchRequest
