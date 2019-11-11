@@ -22,7 +22,7 @@ import drt.server.feeds.legacy.bhx.{BHXForecastFeedLegacy, BHXLiveFeedLegacy}
 import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed, LGWForecastFeed}
 import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
-import drt.server.feeds.ltn.LtnLiveFeed
+import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{Flights, TerminalName}
@@ -514,7 +514,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
           case Some(tz) => DateTimeZone.forID(tz)
           case None => DateTimeZone.UTC
         }
-        LtnLiveFeed(url, token, username, password, timeZone).tickingSource
+        val requester = LtnFeedRequester(url, token, username, password)
+        LtnLiveFeed(requester, timeZone).tickingSource
       case "MAN" | "STN" | "EMA" =>
         if (config.get[Boolean]("feeds.mag.use-legacy")) {
           log.info(s"Using legacy MAG live feed")

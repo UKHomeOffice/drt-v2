@@ -3,6 +3,7 @@ package drt.server.feeds.ltn
 import akka.NotUsed
 import akka.actor.{ActorSystem, Cancellable}
 import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.HttpEntity.Strict
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
 import akka.stream.Materializer
@@ -17,63 +18,67 @@ import services.SDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
-case class LtnLiveFeed(endPoint: String, token: String, username: String, password: String, timeZone: DateTimeZone)(implicit actorSystem: ActorSystem, materializer: Materializer) {
+trait LtnFeedRequestLike {
+  def getResponse: () => Future[HttpResponse]
+}
+
+case class LtnFeedRequester(endPoint: String, token: String, username: String, password: String)(implicit system: ActorSystem) extends LtnFeedRequestLike {
+  val request = HttpRequest(
+    method = HttpMethods.GET,
+    uri = Uri(endPoint),
+    headers = List(
+      RawHeader("token", token),
+      RawHeader("username", username),
+      RawHeader("password", password)
+    ),
+    entity = HttpEntity.Empty
+  )
+
+  val getResponse: () => Future[HttpResponse] = () => Http().singleRequest(request)
+}
+
+case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone)(implicit materializer: Materializer) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source
     .tick(0 millis, 30 seconds, NotUsed)
-    .map(_ => {
+    .mapAsync(1) { _ =>
       log.info(s"Requesting feed")
       requestFeed()
-    })
+    }
 
-  def requestFeed(): ArrivalsFeedResponse = {
-    val request = HttpRequest(
-      method = HttpMethods.GET,
-      uri = Uri(endPoint),
-      headers = List(
-        RawHeader("token", token),
-        RawHeader("username", username),
-        RawHeader("password", password)
-      ),
-      entity = HttpEntity.Empty
-    )
+  def requestFeed(): Future[ArrivalsFeedResponse] = feedRequester.getResponse()
+    .map {
+      case HttpResponse(StatusCodes.OK, _, entity, _) =>
+        responseToFeedResponse(entity)
 
-    val responseFuture = Http()
-      .singleRequest(request)
-      .map {
-        case HttpResponse(StatusCodes.OK, _, entity, _) =>
-          import LtnLiveFlightProtocol._
-          import spray.json._
+      case HttpResponse(status, _, _, _) =>
+        log.error(s"Got status $status")
+        Future(ArrivalsFeedFailure(status.defaultMessage()))
+    }
+    .recoverWith {
+      case throwable => log.error("Caught error while retrieving the LTN port feed.", throwable)
+        Future(Future(ArrivalsFeedFailure(throwable.toString)))
+    }
+    .flatten
 
-          Try(Await.result(entity.toStrict(10 seconds), 10 seconds).data.utf8String.parseJson.convertTo[Seq[LtnLiveFlight]]) match {
-            case Success(flights) =>
-              val arrivals = flights.filter(_.DepartureArrivalType == Option("A"))
-              log.info(s"parsed ${arrivals.length} arrivals from ${flights.length} flights")
-              ArrivalsFeedSuccess(Flights(arrivals.map(toArrival)))
-            case Failure(t) =>
-              log.error(s"Failed to parse: $t")
-              ArrivalsFeedFailure(t.toString)
-          }
-        case HttpResponse(status, _, _, _) => ArrivalsFeedFailure(status.defaultMessage())
-      }
-      .recoverWith {
-        case throwable => log.error("Caught error while retrieving the LTN port feed.", throwable)
-          Future(ArrivalsFeedFailure(throwable.toString))
-      }
+  private def responseToFeedResponse(entity: ResponseEntity): Future[ArrivalsFeedResponse] = {
+    import LtnLiveFlightProtocol._
+    import spray.json._
 
-    Try {
-      Await.result(responseFuture, 30 seconds)
-    } match {
-      case Success(response) => response
-      case Failure(t) =>
-        log.error(s"Failed to retrieve the LTN port feed", t)
-        ArrivalsFeedFailure(t.toString)
+    entity.toStrict(10 seconds).map {
+      case Strict(_, data) =>
+        Try(data.utf8String.parseJson.convertTo[Seq[LtnLiveFlight]].filter(_.DepartureArrivalType == Option("A"))) match {
+          case Success(flights) => ArrivalsFeedSuccess(Flights(flights.map(toArrival)))
+          case Failure(t) =>
+            log.warn(s"Failed to parse ltn arrivals response", t)
+            ArrivalsFeedFailure(t.getMessage)
+        }
     }
   }
 
