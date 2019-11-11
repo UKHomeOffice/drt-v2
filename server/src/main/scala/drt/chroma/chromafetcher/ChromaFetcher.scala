@@ -117,10 +117,10 @@ abstract case class ChromaFetcher[F <: ChromaFlightLike](override val feedType: 
               Future(Failure(t))
           }
       }
-      .recoverWith {
+      .recover {
         case t =>
           log.warn(s"Error getting chroma token", t)
-          Future(Future(Failure(t)))
+          Future(Failure(t))
       }
       .flatten
   }

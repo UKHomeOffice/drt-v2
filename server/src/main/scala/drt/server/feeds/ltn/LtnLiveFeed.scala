@@ -61,9 +61,9 @@ case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone
         log.error(s"Got status $status")
         Future(ArrivalsFeedFailure(status.defaultMessage()))
     }
-    .recoverWith {
+    .recover {
       case throwable => log.error("Caught error while retrieving the LTN port feed.", throwable)
-        Future(Future(ArrivalsFeedFailure(throwable.toString)))
+        Future(ArrivalsFeedFailure(throwable.toString))
     }
     .flatten
 
