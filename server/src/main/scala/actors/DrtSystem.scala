@@ -19,11 +19,10 @@ import drt.server.feeds.bhx.{BHXClient, BHXFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.cirium.CiriumFeed
 import drt.server.feeds.legacy.bhx.{BHXForecastFeedLegacy, BHXLiveFeedLegacy}
-import drt.server.feeds.lgw.{LGWFeed, LGWForecastFeed}
-import drt.server.feeds.lhr.live.LegacyLhrLiveContentProvider
+import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed, LGWForecastFeed}
 import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
-import drt.server.feeds.ltn.LtnLiveFeed
+import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{Flights, TerminalName}
@@ -489,27 +488,23 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   def liveArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = {
     val feed = portCode match {
       case "LHR" =>
-        val contentProvider = if (config.get[Boolean]("feeds.lhr.use-legacy-live")) {
-          log.info(s"Using legacy LHR live feed")
-          () => LegacyLhrLiveContentProvider().csvContentsProviderProd()
-        } else {
-          log.info(s"Using new LHR live feed")
-          val host = config.get[String]("feeds.lhr.sftp.live.host")
-          val username = config.get[String]("feeds.lhr.sftp.live.username")
-          val password = config.get[String]("feeds.lhr.sftp.live.password")
-          () => LhrSftpLiveContentProvider(host, username, password).latestContent
-        }
+        val host = config.get[String]("feeds.lhr.sftp.live.host")
+        val username = config.get[String]("feeds.lhr.sftp.live.username")
+        val password = config.get[String]("feeds.lhr.sftp.live.password")
+        val contentProvider = () => LhrSftpLiveContentProvider(host, username, password).latestContent
         LHRFlightFeed(contentProvider)
-      case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
+      case "EDI" =>
+        createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
       case "LGW" =>
         val lgwNamespace = params.maybeLGWNamespace.getOrElse(throw new Exception("Missing LGW Azure Namespace parameter"))
         val lgwSasToKey = params.maybeLGWSASToKey.getOrElse(throw new Exception("Missing LGW SAS Key for To Queue"))
         val lgwServiceBusUri = params.maybeLGWServiceBusUri.getOrElse(throw new Exception("Missing LGW Service Bus Uri"))
-        LGWFeed(lgwNamespace, lgwSasToKey, lgwServiceBusUri)(system).source()
-
+        val azureClient = LGWAzureClient(LGWFeed.serviceBusClient(lgwNamespace, lgwSasToKey, lgwServiceBusUri))
+        LGWFeed(azureClient)(system).source()
       case "BHX" if !params.bhxIataEndPointUrl.isEmpty =>
         BHXFeed(BHXClient(params.bhxIataUsername, params.bhxIataEndPointUrl), 80 seconds, 1 milliseconds)(system)
-      case "BHX" => BHXLiveFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX live feed URL")))
+      case "BHX" =>
+        BHXLiveFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX live feed URL")))
       case "LTN" =>
         val url = params.maybeLtnLiveFeedUrl.getOrElse(throw new Exception("Missing live feed url"))
         val username = params.maybeLtnLiveFeedUsername.getOrElse(throw new Exception("Missing live feed username"))
@@ -519,7 +514,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
           case Some(tz) => DateTimeZone.forID(tz)
           case None => DateTimeZone.UTC
         }
-        LtnLiveFeed(url, token, username, password, timeZone).tickingSource
+        val requester = LtnFeedRequester(url, token, username, password)
+        LtnLiveFeed(requester, timeZone).tickingSource
       case "MAN" | "STN" | "EMA" =>
         if (config.get[Boolean]("feeds.mag.use-legacy")) {
           log.info(s"Using legacy MAG live feed")
@@ -569,11 +565,11 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     PaxFlow.pcpArrivalTimeForFlight(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis)(walkTimeProvider)
 
   def createLiveChromaFlightFeed(feedType: ChromaFeedType): ChromaLiveFeed = {
-    ChromaLiveFeed(system.log, new ChromaFetcher[ChromaLiveFlight](feedType, ChromaFlightMarshallers.live) with ProdSendAndReceive)
+    ChromaLiveFeed(new ChromaFetcher[ChromaLiveFlight](feedType, ChromaFlightMarshallers.live) with ProdSendAndReceive)
   }
 
   def createForecastChromaFlightFeed(feedType: ChromaFeedType): ChromaForecastFeed = {
-    ChromaForecastFeed(system.log, new ChromaFetcher[ChromaForecastFlight](feedType, ChromaFlightMarshallers.forecast) with ProdSendAndReceive)
+    ChromaForecastFeed(new ChromaFetcher[ChromaForecastFlight](feedType, ChromaFlightMarshallers.forecast) with ProdSendAndReceive)
   }
 
   def createForecastLHRFeed(): Source[ArrivalsFeedResponse, Cancellable] = {

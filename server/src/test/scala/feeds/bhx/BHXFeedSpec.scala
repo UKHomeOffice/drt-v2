@@ -1,4 +1,4 @@
-package feeds
+package feeds.bhx
 
 import akka.actor.{ActorSystem, Cancellable}
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
@@ -183,6 +183,14 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
 
   "Given a request for a full refresh of all flights, if we are rate limited then we should get an ArrivalsFeedFailure" >> {
     val client = BHXMockClient(rateLimitReachedResponse)
+
+    val result = Await.result(client.initialFlights, 1 second)
+
+    result must haveClass[ArrivalsFeedFailure]
+  }
+
+  "Given a mock client returning an invalid XML response I should get an ArrivalFeedFailure " >> {
+    val client = BHXMockClient(invalidXmlResponse)
 
     val result = Await.result(client.initialFlights, 1 second)
 
@@ -619,7 +627,6 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       |</s:Envelope>
     """.stripMargin
 
-
   val rateLimitReachedResponse: String =
     """
       |<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
@@ -632,5 +639,10 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       |        </IATA_AIDX_FlightLegRS>
       |    </s:Body>
       |</s:Envelope>
+    """.stripMargin
+
+  val invalidXmlResponse: String =
+    """
+      |Blah blah
     """.stripMargin
 }

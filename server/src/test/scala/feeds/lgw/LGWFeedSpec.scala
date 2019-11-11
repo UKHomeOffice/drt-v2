@@ -1,4 +1,4 @@
-package feeds
+package feeds.lgw
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit

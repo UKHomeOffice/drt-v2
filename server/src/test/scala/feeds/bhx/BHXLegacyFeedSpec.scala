@@ -1,4 +1,4 @@
-package feeds
+package feeds.bhx
 
 import java.util.{Calendar, GregorianCalendar, TimeZone}
 
