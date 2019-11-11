@@ -10,7 +10,7 @@ import org.scalajs.dom.html.Div
 
 object FlightComponents {
 
-  def paxComp(maxFlightPax: Int = 100)(flightWithSplits: ApiFlightWithSplits): TagMod = {
+  def paxComp(flightWithSplits: ApiFlightWithSplits): TagMod = {
 
     val flight = flightWithSplits.apiFlight
     val apiSplits = flightWithSplits.apiSplits.getOrElse(Splits(Set(), "no splits - client", None))

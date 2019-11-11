@@ -56,7 +56,7 @@ object TerminalDashboardComponent {
             FlightsWithSplitsTable.ArrivalsTable(
               None,
               originMapper,
-              splitsGraphComponentColoured)(paxComp(843))(
+              splitsGraphComponentColoured)(paxComp)(
               FlightsWithSplitsTable.Props(
                 ps.flights.filter { case (ua, _) => ua.terminal == p.terminalPageTabLoc.terminal }.values.toList,
                 p.airportConfig.queueOrder, p.airportConfig.hasEstChox)

@@ -66,7 +66,7 @@ object TerminalContentComponent {
     val arrivalsTableComponent = FlightsWithSplitsTable.ArrivalsTable(
       None,
       originMapper,
-      splitsGraphComponentColoured)(paxComp(843))
+      splitsGraphComponentColoured)(paxComp)
 
     def render(props: Props, state: State): TagOf[Div] = {
       val queueOrder = props.airportConfig.queueOrder
