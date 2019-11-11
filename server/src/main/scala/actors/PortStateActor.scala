@@ -78,9 +78,19 @@ class PortStateActor(liveStateActor: AskableActorRef,
 
       splitDiffAndSend(diff)
 
-    case HandleCrunchRequest => handleCrunchRequest()
+    case SetCrunchSourceReady =>
+      crunchSourceIsReady = true
+      context.self ! HandleCrunchRequest
 
-    case HandleSimulationRequest => handleSimulationRequest()
+    case SetSimulationSourceReady =>
+      simulationActorIsReady = true
+      context.self ! HandleSimulationRequest
+
+    case HandleCrunchRequest =>
+      handleCrunchRequest()
+
+    case HandleSimulationRequest =>
+      handleSimulationRequest()
 
     case GetState =>
       log.debug(s"Received GetState request. Replying with PortState containing ${state.crunchMinutes.count} crunch minutes")
@@ -142,8 +152,7 @@ class PortStateActor(liveStateActor: AskableActorRef,
           case t => log.error("Error sending minutes to crunch", t)
         }
         .onComplete { _ =>
-          crunchSourceIsReady = true
-          context.self ! HandleCrunchRequest
+          context.self ! SetCrunchSourceReady
         }
       flightMinutesBuffer.clear()
     case _ => Unit
@@ -159,8 +168,7 @@ class PortStateActor(liveStateActor: AskableActorRef,
           case t => log.error("Error sending loads to simulate", t)
         }
         .onComplete { _ =>
-          simulationActorIsReady = true
-          context.self ! HandleSimulationRequest
+          context.self ! SetSimulationSourceReady
         }
       loadMinutesBuffer.clear()
     case _ => Unit
@@ -196,3 +204,7 @@ class PortStateActor(liveStateActor: AskableActorRef,
 case object HandleCrunchRequest
 
 case object HandleSimulationRequest
+
+case object SetCrunchSourceReady
+
+case object SetSimulationSourceReady
