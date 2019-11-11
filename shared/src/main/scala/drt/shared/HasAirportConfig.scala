@@ -963,7 +963,7 @@ object AirportConfigs {
     role = LPLAccess,
     terminalPaxTypeQueueAllocation = Map(
       "T1" -> (defaultQueueRatios + (
-        EeaMachineReadable -> List(EeaDesk -> 1.0 ),
+        EeaMachineReadable -> List(EeaDesk -> 1.0),
         B5JPlusNational -> List(Queues.EeaDesk -> 1.0)
       ))
     ))
@@ -1019,14 +1019,13 @@ object AirportConfigs {
         EGate -> 0.7968,
         EeaDesk -> (1.0 - 0.7968)
       ))),
-      "T2" -> (defaultQueueRatios + (EeaMachineReadable -> List(
-        EGate -> 0.7140,
-        EeaDesk -> (1.0 - 0.7140)
-      ))),
-      "T3" -> (defaultQueueRatios + (EeaMachineReadable -> List(
-        EGate -> 0.7038,
-        EeaDesk -> (1.0 - 0.7038)
-      )))
+      "T2" -> (defaultQueueRatios +
+        (EeaMachineReadable -> List(
+          EeaDesk -> 1.0
+        )) +
+        (B5JPlusNational -> List(
+          EeaDesk -> 1.0
+        )))
     )
   )
 
