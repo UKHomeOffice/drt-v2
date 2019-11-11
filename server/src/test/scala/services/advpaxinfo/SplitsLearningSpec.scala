@@ -7,10 +7,8 @@ import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.regression.LinearRegression
 import org.specs2.mutable.Specification
 import services.SplitsProvider.SplitProvider
-import services.graphstages._
 import services.prediction.FeatureSpec
 import services.{CSVPassengerSplitsProvider, CsvPassengerSplitsReader}
-
 
 
 object Splits {
@@ -211,10 +209,6 @@ class SplitsLearningSpec extends Specification {
         val ssRes = sanitisedNos.map { case (_, _, y, _, h, _) => Math.pow(y - h, 2) }.sum
         val histR2 = 1 - (ssRes / ssTot)
         val histRmse = Math.sqrt(sanitisedNos.map(e => Math.pow(e._5 - e._3, 2)).sum / numExamples)
-
-        val ssResP = sanitisedNos.map { case (_, _, y, p, _, _) => Math.pow(y - p, 2) }.sum
-        val prR2 = 1 - (ssResP / ssTot)
-        val prRmse = Math.sqrt(sanitisedNos.map(e => Math.pow(e._5 - e._4, 2)).sum / numExamples)
 
         val trainRmse = trainingSummary.rootMeanSquaredError
         val trainR2 = trainingSummary.r2

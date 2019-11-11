@@ -1717,3 +1717,192 @@ div.access-restricted {
   margin-left: 1%;
   padding: 0
 }
+
+/***/
+.terminal-dashboard-queues {
+    width: 73%;
+    padding-top: 3%;
+    display: inline-block;
+}
+
+.terminal-dashboard-side {
+    width: 20%;
+    display: inline-block;
+    vertical-align: top;
+    padding-top: 3%;
+    margin-left: 3%;
+}
+
+.show-arrivals-btn {
+    border-style: solid;
+    padding: 10px;
+    border-radius: 15px;
+    background-color: #d5e8fe;
+    position: relative;
+    font-size: 27px;
+    font-weight: bold;
+    text-align: center;
+    color: black;
+    display: inline-block;
+}
+.show-arrivals-btn:hover {
+    text-decoration: none;
+
+}
+
+.pax-bar {
+    border-style: solid;
+    padding: 10px;
+    border-radius: 15px;
+    background-color: #eee;
+    position:relative;
+    top: 20%;
+    font-size: 27px;
+    font-weight: bold;
+    text-align: center;
+    height: 2.5em;
+    margin-bottom: 2%;
+}
+
+
+.dashboard-arrivals-popup {
+    z-index: 1000;
+    background-color: #d5e8fe;
+    padding: 2%;
+    border: solid;
+    border-radius: 22px;
+    box-shadow: 0 6px 8px rgba(52, 73, 94, .2), 0 1px 1px rgba(52, 73, 94, 0.1);
+    position: fixed;
+    left: -23%;
+    right: 0;
+    top: 18%;
+    margin-left: auto;
+    margin-right: auto;
+    width: 66%;
+    opacity: 95%;
+    min-width: 1100px;
+}
+
+
+.dashboard-arrivals-popup td {
+    text-align: left;
+}
+.dashboard-arrivals-popup td.right {
+    text-align: right;
+}
+.dashboard-arrivals-popup .table {
+    margin:0
+}
+.dashboard-arrivals-popup td.queue-split {
+    padding: 0;
+}
+
+.dashboard-arrivals-popup th {
+    background-color: #2889c6;
+    text-align: center;
+}
+
+.dashboard-arrivals-popup table {
+    text-align: center;
+}
+
+.dashboard-arrivals-popup thead {
+    background-color: #2989C6;
+    color: #fff;
+}
+
+.queue-box i {
+    height: 55px;
+    position: relative;
+    padding-right: 10px;
+}
+
+.queue-box:last-child {
+    margin-right: 0px;
+}
+
+.queue-box {
+    padding: 10px;
+    height: 250px;
+    border-style: solid;
+    border-radius: 15px;
+    background-color: #eee;
+    transform: translateY(-10%);
+    position:relative;
+    font-size: 30px;
+    font-weight: bold;
+    text-align: center;
+    display: inline-block;
+    float: left;
+    margin-right: 3%;
+    margin-top: 3%;
+    min-width: 272px;
+    width: 31.3%;
+}
+
+.queue-box.red {
+  background-color: #ff9999;
+}
+
+.queue-box.amber {
+  background-color: #ffd699;
+}
+
+.queue-box-text {
+    width: 85%;
+    position: relative;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: left;
+    left: 10%;
+    top: 10%;
+    height: 20%;
+}
+
+.tb-bar {
+    background-color: #d5e8fe;
+    font-size: 27px;
+    font-weight: bold;
+    text-align: center;
+    border-style: solid;
+    border-radius: 15px;
+    height: 2.5em;
+}
+
+.time-label {
+    width: 60%;
+    display: inline-block;
+    height: 100%;
+    vertical-align: middle;
+    margin: 0;
+    padding: 0.5em;
+}
+
+.dashboard-time-switcher {
+    padding: 10px;
+    width: 8%;
+    border-radius: 15px;
+    background-color: #eee;
+    position: relative;
+    font-size: 27px;
+    font-weight: bold;
+    text-align: center;
+    height: 108%;
+    display: inline-block;
+    border-top: solid;
+    border-bottom: solid;
+    color: black;
+    margin-top: -0.25%;
+}
+
+.prev-bar {
+    left: 0px;
+    border-right: solid;
+    float: left;
+}
+.next-bar {
+    left: 0px;
+    border-left: solid 3px;
+    float: right;
+}
+

@@ -40,7 +40,6 @@ class S3ManifestPoller(sourceQueue: SourceQueueWithComplete[ManifestsFeedRespons
         val (latestFileName, fetchedManifests) = if (fetchedFilesAndManifests.nonEmpty) {
           val lastSeen = fetchedFilesAndManifests.map { case (fileName, _) => fileName }.max
           val manifests = fetchedFilesAndManifests.map { case (_, manifest) => jsonStringToManifest(manifest) }.toSet
-          log.info(s"Got ${manifests.size} manifests")
           (lastSeen, manifests)
         }
         else (startingFileName, Set[Option[VoyageManifest]]())
@@ -79,7 +78,6 @@ class S3ManifestPoller(sourceQueue: SourceQueueWithComplete[ManifestsFeedRespons
       def run(): Unit = {
         fetchNewManifests(lastSeenFileName) match {
           case ManifestsFeedSuccess(DqManifests(latestFileName, manifests), createdAt) =>
-            log.info(s"Received live manifests")
             liveManifestsBuffer = updateManifestsBuffer(latestFileName, manifests, createdAt)
             lastSeenFileName = latestFileName
             tryOfferManifests()
@@ -95,7 +93,6 @@ class S3ManifestPoller(sourceQueue: SourceQueueWithComplete[ManifestsFeedRespons
       sourceQueue.offer(manifestsToSend).map {
         case Enqueued =>
           liveManifestsBuffer = None
-          log.info(s"Enqueued live manifests")
         case _ => log.info(s"Couldn't enqueue live manifests. Leaving them in the buffer")
       }.recover {
         case t => log.error(s"Couldn't enqueue live manifests. Leaving them in the buffer", t)
@@ -106,10 +103,8 @@ class S3ManifestPoller(sourceQueue: SourceQueueWithComplete[ManifestsFeedRespons
   def updateManifestsBuffer(lastFilename: String, manifests: Set[VoyageManifest], createdAt: SDateLike): Option[ManifestsFeedSuccess] = {
     liveManifestsBuffer match {
       case None =>
-        log.info(s"live manifest buffer was empty")
         Option(ManifestsFeedSuccess(DqManifests(lastFilename, manifests), createdAt))
       case Some(ManifestsFeedSuccess(DqManifests(_, existingManifests), _)) =>
-        log.info(s"live manifest buffer was not empty. Adding new manifests to it")
         Option(ManifestsFeedSuccess(DqManifests(lastFilename, existingManifests ++ manifests), createdAt))
     }
   }

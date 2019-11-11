@@ -5,7 +5,6 @@ import drt.shared.{LoggedInUser, Role}
 import play.api.libs.json.{JsObject, Json, Writes}
 import play.api.mvc.{Action, AnyContent, Result}
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 

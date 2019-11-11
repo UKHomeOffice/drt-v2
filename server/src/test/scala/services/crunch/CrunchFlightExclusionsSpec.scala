@@ -1,7 +1,6 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared._
@@ -46,7 +45,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
         15.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
 
-    crunch.liveTestProbe.fishForMessage(5 seconds) {
+    crunch.portStateTestProbe.fishForMessage(5 seconds) {
       case ps: PortState =>
         val resultSummary = paxLoadsFromPortState(ps, 30)
         resultSummary == expected
@@ -88,7 +87,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
         15.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
 
-    crunch.liveTestProbe.fishForMessage(10 seconds) {
+    crunch.portStateTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val resultSummary = paxLoadsFromPortState(ps, 30)
         resultSummary == expected

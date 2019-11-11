@@ -1,4 +1,4 @@
-package feeds
+package feeds.lhr
 
 import akka.NotUsed
 import akka.actor.ActorSystem

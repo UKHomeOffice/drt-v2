@@ -24,6 +24,7 @@ import scala.concurrent.duration._
 case class CrunchSystem[FR](shifts: SourceQueueWithComplete[ShiftAssignments],
                             fixedPoints: SourceQueueWithComplete[FixedPointAssignments],
                             staffMovements: SourceQueueWithComplete[Seq[StaffMovement]],
+                            loadsToSimulate: ActorRef,
                             forecastBaseArrivalsResponse: FR,
                             forecastArrivalsResponse: FR,
                             liveBaseArrivalsResponse: FR,
@@ -37,8 +38,7 @@ case class CrunchProps[FR](logLabel: String = "",
                            airportConfig: AirportConfig,
                            pcpArrival: Arrival => MilliDate,
                            historicalSplitsProvider: SplitsProvider.SplitProvider,
-                           liveCrunchStateActor: ActorRef,
-                           forecastCrunchStateActor: ActorRef,
+                           portStateActor: ActorRef,
                            maxDaysToCrunch: Int,
                            expireAfterMillis: Long,
                            minutesToCrunch: Int = 1440,
@@ -53,7 +53,6 @@ case class CrunchProps[FR](logLabel: String = "",
                            manifestResponsesSource: Source[List[BestAvailableManifest], NotUsed],
                            voyageManifestsActor: ActorRef,
                            manifestRequestsSink: Sink[List[Arrival], NotUsed],
-                           cruncher: TryCrunch,
                            simulator: Simulator,
                            initialPortState: Option[PortState] = None,
                            initialForecastBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap[UniqueArrival, Arrival](),
@@ -152,27 +151,6 @@ object CrunchSystem {
       checkRequiredUpdatesOnStartup = props.checkRequiredStaffUpdatesOnStartup)
 
     val staffBatcher = new StaffBatchUpdateGraphStage(props.now, props.expireAfterMillis, props.airportConfig.crunchOffsetMinutes)
-    val loadBatcher = new BatchLoadsByCrunchPeriodGraphStage(props.now, props.expireAfterMillis, crunchStartDateProvider)
-
-    val workloadGraphStage = new WorkloadGraphStage(
-      name = props.logLabel,
-      optionalInitialLoads = if (props.recrunchOnStart) None else initialLoadsFromPortState(props.initialPortState),
-      optionalInitialFlightsWithSplits = initialFlightsWithSplits,
-      airportConfig = props.airportConfig,
-      natProcTimes = props.airportConfig.nationalityBasedProcTimes,
-      expireAfterMillis = props.expireAfterMillis,
-      now = props.now,
-      useNationalityBasedProcessingTimes = props.useNationalityBasedProcessingTimes)
-
-    val crunchLoadGraphStage = new CrunchLoadGraphStage(
-      name = props.logLabel,
-      optionalInitialCrunchMinutes = maybeCrunchMinutes,
-      airportConfig = props.airportConfig,
-      expireAfterMillis = props.expireAfterMillis,
-      now = props.now,
-      crunch = props.cruncher,
-      crunchPeriodStartMillis = crunchStartDateProvider,
-      minutesToCrunch = props.minutesToCrunch)
 
     val simulationGraphStage = new SimulationGraphStage(
       name = props.logLabel,
@@ -187,37 +165,28 @@ object CrunchSystem {
 
     val liveStateDaysAhead = 2
 
-    val portStateGraphStage = new PortStateGraphStage(
-      name = props.logLabel,
-      optionalInitialPortState = props.initialPortState,
-      airportConfig = props.airportConfig,
-      expireAfterMillis = props.expireAfterMillis,
-      now = props.now,
-      liveDaysAhead = liveStateDaysAhead)
-
     val crunchSystem = RunnableCrunch(
       props.arrivalsForecastBaseSource, props.arrivalsForecastSource, props.arrivalsLiveBaseSource, props.arrivalsLiveSource,
       props.manifestsLiveSource, props.manifestResponsesSource,
       shiftsSource, fixedPointsSource, staffMovementsSource,
       actualDesksAndQueuesSource,
       arrivalsStage, arrivalSplitsGraphStage,
-      workloadGraphStage, loadBatcher, crunchLoadGraphStage,
       staffGraphStage, staffBatcher, simulationGraphStage,
-      portStateGraphStage,
       forecastArrivalsDiffingStage, liveBaseArrivalsDiffingStage, liveArrivalsDiffingStage,
       props.actors("forecast-base-arrivals").actorRef, props.actors("forecast-arrivals").actorRef, props.actors("live-base-arrivals").actorRef, props.actors("live-arrivals").actorRef,
       props.voyageManifestsActor, props.manifestRequestsSink,
-      props.liveCrunchStateActor, props.forecastCrunchStateActor,
+      props.portStateActor,
       props.actors("aggregated-arrivals").actorRef,
       crunchStartDateProvider, props.now, props.airportConfig.queues, liveStateDaysAhead, forecastMaxMillis, props.stageThrottlePer
     )
 
-    val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS) = crunchSystem.run
+    val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, shiftsIn, fixedPointsIn, movementsIn, simloadsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS) = crunchSystem.run
 
     CrunchSystem(
       shifts = shiftsIn,
       fixedPoints = fixedPointsIn,
       staffMovements = movementsIn,
+      loadsToSimulate = simloadsIn,
       forecastBaseArrivalsResponse = forecastBaseIn,
       forecastArrivalsResponse = forecastIn,
       liveBaseArrivalsResponse = liveBaseIn,

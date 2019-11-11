@@ -10,7 +10,6 @@ import drt.client.logger.log
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, ViewMode}
-import drt.shared.CrunchApi.PortState
 import drt.shared._
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomAttr, VdomElement, ^, vdomElementFromComponent, vdomElementFromTag, _}
@@ -67,7 +66,7 @@ object TerminalContentComponent {
     val arrivalsTableComponent = FlightsWithSplitsTable.ArrivalsTable(
       None,
       originMapper,
-      splitsGraphComponentColoured)(paxComp(843))
+      splitsGraphComponentColoured)(paxComp)
 
     def render(props: Props, state: State): TagOf[Div] = {
       val queueOrder = props.airportConfig.queueOrder
@@ -177,7 +176,6 @@ object TerminalContentComponent {
           )
         }))
     }
-
   }
 
   def timeRange(props: Props): CustomWindow = {

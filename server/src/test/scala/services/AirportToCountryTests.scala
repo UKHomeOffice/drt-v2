@@ -3,8 +3,6 @@ package services
 import drt.shared.AirportInfo
 import utest._
 
-import scala.concurrent.ExecutionContext.Implicits.global
-
 object AirportToCountryTests extends TestSuite {
   def tests = TestSuite {
     "can load csv" - {

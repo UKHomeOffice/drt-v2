@@ -63,7 +63,7 @@ trait StaffMovementsPersistence {
 
     val eventualStaffMovements = staffMovementsFuture.collect {
       case Nil =>
-        log.info(s"Got no movements")
+        log.debug(s"Got no movements")
         List()
       case sm: Seq[StaffMovement] => sm
     }

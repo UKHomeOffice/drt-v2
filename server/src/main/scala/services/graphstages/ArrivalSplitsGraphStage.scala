@@ -20,7 +20,7 @@ case class UpdateStats(updatesCount: Int, additionsCount: Int)
 class ArrivalSplitsGraphStage(name: String = "",
                               portCode: String,
                               optionalInitialFlights: Option[FlightsWithSplits],
-                              splitsCalculator: SplitsCalculator, //keep this for now, we'll need to move this into it's own graph stage later..
+                              splitsCalculator: SplitsCalculator,
                               groupFlightsByCodeShares: Seq[ApiFlightWithSplits] => Seq[(ApiFlightWithSplits, Set[Arrival])],
                               expireAfterMillis: Long,
                               now: () => SDateLike)
@@ -129,18 +129,15 @@ class ArrivalSplitsGraphStage(name: String = "",
       new InHandler() {
         override def onPush(): Unit = {
           val timer = StageTimer(stageName, inlet)
-          log.info(s"inSplits onPush called")
 
           val incoming: List[BestAvailableManifest] = grab(inlet)
 
           log.info(s"Grabbed ${incoming.size} BestAvailableManifests from connection")
 
           val flightsWithUpdates = updateFlightsWithManifests(incoming)
-          log.info(s"We now have ${flightsByFlightId.size} flights")
 
           arrivalsWithSplitsDiff = mergeDiffSets(flightsWithUpdates, arrivalsWithSplitsDiff)
           purgeExpired(flightsByFlightId, ArrivalKey.atTime, now, expireAfterMillis.toInt)
-          log.info(s"Done diff")
 
           pushStateIfReady()
 
@@ -157,7 +154,7 @@ class ArrivalSplitsGraphStage(name: String = "",
     }
 
     def updateFlightsFromIncoming(arrivalsDiff: ArrivalsDiff): Unit = {
-      log.info(s"${arrivalsDiff.toUpdate.size} diff updates, ${flightsByFlightId.size} existing flights")
+      log.debug(s"${arrivalsDiff.toUpdate.size} diff updates, ${flightsByFlightId.size} existing flights")
 
       flightsByFlightId --= arrivalsDiff.toRemove.map(ArrivalKey(_))
 
@@ -165,7 +162,7 @@ class ArrivalSplitsGraphStage(name: String = "",
         case (statsSoFar, (_, updatedFlight)) => updateWithFlight(statsSoFar, updatedFlight)
       }
 
-      log.info(s"${flightsByFlightId.size} flights after updates. ${updateStats.updatesCount} updates & ${updateStats.additionsCount} additions")
+      log.debug(s"${flightsByFlightId.size} flights after updates. ${updateStats.updatesCount} updates & ${updateStats.additionsCount} additions")
 
       val codeSharesToRemove = codeShares.foldLeft(Set[ArrivalKey]()) {
         case (removalsSoFar, (_, codeShareArrivalKeys)) =>
@@ -180,7 +177,7 @@ class ArrivalSplitsGraphStage(name: String = "",
 
       flightsByFlightId --= codeSharesToRemove
 
-      log.info(s"${flightsByFlightId.size} flights after accounting for codeshares")
+      log.debug(s"${flightsByFlightId.size} flights after accounting for codeshares")
     }
 
     def updateWithFlight(updatedFlights: UpdateStats, updatedFlight: Arrival): UpdateStats = {

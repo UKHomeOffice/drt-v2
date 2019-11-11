@@ -27,13 +27,11 @@ object BHXFeed {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def apply(client: BHXClientLike, pollFrequency: FiniteDuration, initialDelay: FiniteDuration)(implicit actorSystem: ActorSystem): Source[ArrivalsFeedResponse, Cancellable] = {
-
     var initialRequest = true
     val tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source.tick(initialDelay, pollFrequency, NotUsed)
       .mapAsync(1)(_ => {
         log.info(s"Requesting BHX Feed")
         if (initialRequest)
-
           client.initialFlights.map {
             case s: ArrivalsFeedSuccess =>
               initialRequest = false
@@ -168,7 +166,6 @@ trait BHXClientLike extends ScalaXmlSupport {
           case f: BHXFlightsResponseFailure =>
             ArrivalsFeedFailure(f.message)
         }
-
       })
       .flatMap(identity)
       .recoverWith {

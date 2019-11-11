@@ -134,6 +134,8 @@ lazy val ReleaseCmd = Command.command("release") {
       state
 }
 
+cancelable in Global := true
+
 // code generation task
 val conf = ConfigFactory.parseFile(new File("server/src/main/resources/application.conf")).resolve()
 

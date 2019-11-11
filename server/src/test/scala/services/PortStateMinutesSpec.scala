@@ -5,7 +5,7 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.specs2.mutable.Specification
-import services.graphstages.{DeskRecMinute, DeskRecMinutes, SimulationMinute, SimulationMinutes}
+import services.graphstages.{SimulationMinute, SimulationMinutes}
 
 import scala.collection.immutable.Map
 
@@ -113,7 +113,7 @@ class PortStateMinutesSpec extends Specification {
   "When I apply a DeskRecMinutes " >> {
     "Containing only new minutes " >> {
       val newDeskRecMinutes = DeskRecMinutes((1 to 5).map(d => DeskRecMinute("T1", Queues.EeaDesk, d, d, d, d, d)))
-      val newCrunchMinutes = newDeskRecMinutes.minutes.toList.map(CrunchMinute(_).copy(lastUpdated = Option(now)))
+      val newCrunchMinutes = newDeskRecMinutes.minutes.toList.map(CrunchMinute(_, now))
 
       "To an empty PortState" >> {
         "Then I should see those minutes in the PortState" >> {
@@ -128,7 +128,7 @@ class PortStateMinutesSpec extends Specification {
       "To an existing PortState which already has some minutes" >> {
         "Then I should see the existing and new minutes in the PortState" >> {
           val existingDeskRecMinutes = DeskRecMinutes((100 to 105).map(d => DeskRecMinute("T1", Queues.EeaDesk, d, d, d, d, d)))
-          val existingCrunchMinutes = existingDeskRecMinutes.minutes.toList.map(CrunchMinute(_))
+          val existingCrunchMinutes = existingDeskRecMinutes.minutes.toList.map(CrunchMinute(_, 0L))
           val existingPortState = PortState(List(), existingCrunchMinutes, List()).mutable
           newDeskRecMinutes.applyTo(existingPortState, now)
           val portState = existingPortState.immutable
@@ -144,7 +144,7 @@ class PortStateMinutesSpec extends Specification {
   "When I apply a SimulationMinutes " >> {
     "Containing only new minutes " >> {
       val newSimulationMinutes = SimulationMinutes((1 to 5).map(d => SimulationMinute("T1", Queues.EeaDesk, d, d, d)))
-      val newCrunchMinutes = newSimulationMinutes.minutes.toList.map(CrunchMinute(_).copy(lastUpdated = Option(now)))
+      val newCrunchMinutes = newSimulationMinutes.minutes.toList.map(CrunchMinute(_, now))
 
       "To an empty PortState" >> {
         "Then I should see those minutes in the PortState" >> {
@@ -159,7 +159,7 @@ class PortStateMinutesSpec extends Specification {
       "To an existing PortState which already has some minutes" >> {
         "Then I should see the existing and new minutes in the PortState" >> {
           val existingSimulationMinutes = SimulationMinutes((100 to 105).map(d => SimulationMinute("T1", Queues.EeaDesk, d, d, d)))
-          val existingCrunchMinutes = existingSimulationMinutes.minutes.toList.map(CrunchMinute(_))
+          val existingCrunchMinutes = existingSimulationMinutes.minutes.toList.map(CrunchMinute(_, 0L))
           val existingPortState = PortState(List(), existingCrunchMinutes, List()).mutable
           newSimulationMinutes.applyTo(existingPortState, now)
           val portState = existingPortState.immutable

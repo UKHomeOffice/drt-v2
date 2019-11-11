@@ -19,13 +19,12 @@ import drt.server.feeds.bhx.{BHXClient, BHXFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.cirium.CiriumFeed
 import drt.server.feeds.legacy.bhx.{BHXForecastFeedLegacy, BHXLiveFeedLegacy}
-import drt.server.feeds.lgw.{LGWFeed, LGWForecastFeed}
-import drt.server.feeds.lhr.live.LegacyLhrLiveContentProvider
+import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed, LGWForecastFeed}
 import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
-import drt.server.feeds.ltn.LtnLiveFeed
+import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
-import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared._
 import graphs.SinkToSourceBridge
@@ -42,23 +41,22 @@ import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedRes
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services.SplitsProvider.SplitProvider
 import services._
+import services.crunch.deskrecs.RunnableDeskRecs
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.Crunch.{oneDayMillis, oneMinuteMillis}
 import services.graphstages._
 import slickdb.{ArrivalTable, Tables, VoyageManifestPassengerInfoTable}
 
 import scala.collection.mutable
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 trait DrtSystemInterface extends UserRoleProviderLike {
   val now: () => SDateLike = () => SDate.now()
 
-  val liveCrunchStateActor: ActorRef
-  val forecastCrunchStateActor: ActorRef
+  val portStateActor: ActorRef
   val shiftsActor: ActorRef
   val fixedPointsActor: ActorRef
   val staffMovementsActor: ActorRef
@@ -73,7 +71,9 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 }
 
 object DrtStaticParameters {
-  val expireAfterMillis: MillisSinceEpoch = 2 * oneDayMillis
+  val expireAfterMillis: Long = 2 * oneDayMillis
+
+  val liveDaysAhead: Int = 2
 
   def time48HoursAgo(now: () => SDateLike): () => SDateLike = () => now().addDays(-2)
 
@@ -147,7 +147,7 @@ case class SubscribeRequestQueue(subscriber: ActorRef)
 case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsFeedResponse])
 
 case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportConfig: AirportConfig)
-                    (implicit materializer: Materializer) extends DrtSystemInterface {
+                    (implicit materializer: Materializer, ec: ExecutionContext) extends DrtSystemInterface {
 
   implicit val system: ActorSystem = actorSystem
 
@@ -184,8 +184,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(classOf[AggregatedArrivalsActor], airportConfig.portCode, ArrivalTable(airportConfig.portCode, PostgresTables)), name = "aggregated-arrivals-actor")
   lazy val registeredArrivalsActor: ActorRef = system.actorOf(Props(classOf[RegisteredArrivalsActor], oneMegaByte, Option(500), airportConfig.portCode, now, expireAfterMillis), name = "registered-arrivals-actor")
 
-  lazy val liveCrunchStateActor: ActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
-  lazy val forecastCrunchStateActor: ActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
+  lazy val liveCrunchStateActor: AskableActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
+  lazy val forecastCrunchStateActor: AskableActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
+  lazy val portStateActor: ActorRef = system.actorOf(PortStateActor.props(liveCrunchStateActor, forecastCrunchStateActor, airportConfig, expireAfterMillis, now, liveDaysAhead), name = "port-state-actor")
 
   lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, Option(params.snapshotIntervalVm)), name = "voyage-manifests-actor")
   lazy val lookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
@@ -211,7 +212,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] =
     if (params.isSuperUserMode) {
-      system.log.info(s"Using Super User Roles")
+      system.log.debug(s"Using Super User Roles")
       Roles.availableRoles
     } else userRolesFromHeader(headers)
 
@@ -237,8 +238,13 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       case Success((maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeRegisteredArrivals)) =>
         system.log.info(s"Successfully restored initial state for App")
         val initialPortState: Option[PortState] = mergePortStates(maybeForecastState, maybeLiveState)
+        initialPortState.foreach(ps => portStateActor ! ps)
+
+        val (crunchSourceActor: ActorRef, _) = startCrunchGraph(portStateActor)
+        portStateActor ! SetCrunchActor(crunchSourceActor)
 
         val (manifestRequestsSource, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
+
         val (manifestResponsesSource, _, manifestResponsesSink) = SinkToSourceBridge[List[BestAvailableManifest]]
 
         val crunchInputs: CrunchSystem[Cancellable] = startCrunchSystem(
@@ -252,6 +258,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
           params.recrunchOnStart,
           params.refreshArrivalsOnStart,
           checkRequiredStaffUpdatesOnStartup = true)
+
+        portStateActor ! SetSimulationActor(crunchInputs.loadsToSimulate)
 
         if (maybeRegisteredArrivals.isDefined) log.info(s"sending ${maybeRegisteredArrivals.get.arrivals.size} initial registered arrivals to batch stage")
         else log.info(s"sending no registered arrivals to batch stage")
@@ -308,6 +316,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         System.exit(1)
     }
   }
+
+  def startCrunchGraph(portStateActor: ActorRef): (ActorRef, UniqueKillSwitch) = RunnableDeskRecs(portStateActor, 1440, TryRenjin.crunch, airportConfig).run()
 
   override def getFeedStatus: Future[Seq[FeedStatuses]] = {
     val actors: Seq[AskableActorRef] = Seq(liveArrivalsActor, liveBaseArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
@@ -367,8 +377,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       airportConfig = airportConfig,
       pcpArrival = pcpArrivalTimeCalculator,
       historicalSplitsProvider = historicalSplitsProvider,
-      liveCrunchStateActor = liveCrunchStateActor,
-      forecastCrunchStateActor = forecastCrunchStateActor,
+      portStateActor = portStateActor,
       maxDaysToCrunch = params.forecastMaxDays,
       expireAfterMillis = expireAfterMillis,
       actors = Map(
@@ -388,7 +397,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       manifestResponsesSource = manifestResponsesSource,
       voyageManifestsActor = voyageManifestsActor,
       manifestRequestsSink = manifestRequestsSink,
-      cruncher = TryRenjin.crunch,
       simulator = TryRenjin.runSimulationOfWork,
       initialPortState = initialPortState,
       initialForecastBaseArrivals = initialForecastBaseArrivals.getOrElse(mutable.SortedMap()),
@@ -414,14 +422,20 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   def initialStateFuture[A](askableActor: AskableActorRef): Future[Option[A]] = {
     val actorPath = askableActor.actorRef.path
-    queryActorWithRetry[A](askableActor, GetState).map {
-      case Some(state: A) if state.isInstanceOf[A] =>
-        log.debug(s"Got initial state (Some(${state.getClass})) from $actorPath")
-        Option(state)
-      case None =>
-        log.warn(s"Got no state (None) from $actorPath")
-        None
-    }
+    queryActorWithRetry[A](askableActor, GetState)
+      .map {
+        case Some(state: A) if state.isInstanceOf[A] =>
+          log.debug(s"Got initial state (Some(${state.getClass})) from $actorPath")
+          Option(state)
+        case None =>
+          log.warn(s"Got no state (None) from $actorPath")
+          None
+      }
+      .recoverWith {
+        case t =>
+          log.error(s"Failed to get response from $askableActor", t)
+          Future(None)
+      }
   }
 
   def queryActorWithRetry[A](askableActor: AskableActorRef, toAsk: Any): Future[Option[A]] = {
@@ -474,27 +488,23 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   def liveArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = {
     val feed = portCode match {
       case "LHR" =>
-        val contentProvider = if (config.get[Boolean]("feeds.lhr.use-legacy-live")) {
-          log.info(s"Using legacy LHR live feed")
-          () => LegacyLhrLiveContentProvider().csvContentsProviderProd()
-        } else {
-          log.info(s"Using new LHR live feed")
-          val host = config.get[String]("feeds.lhr.sftp.live.host")
-          val username = config.get[String]("feeds.lhr.sftp.live.username")
-          val password = config.get[String]("feeds.lhr.sftp.live.password")
-          () => LhrSftpLiveContentProvider(host, username, password).latestContent
-        }
+        val host = config.get[String]("feeds.lhr.sftp.live.host")
+        val username = config.get[String]("feeds.lhr.sftp.live.username")
+        val password = config.get[String]("feeds.lhr.sftp.live.password")
+        val contentProvider = () => LhrSftpLiveContentProvider(host, username, password).latestContent
         LHRFlightFeed(contentProvider)
-      case "EDI" => createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
+      case "EDI" =>
+        createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
       case "LGW" =>
         val lgwNamespace = params.maybeLGWNamespace.getOrElse(throw new Exception("Missing LGW Azure Namespace parameter"))
         val lgwSasToKey = params.maybeLGWSASToKey.getOrElse(throw new Exception("Missing LGW SAS Key for To Queue"))
         val lgwServiceBusUri = params.maybeLGWServiceBusUri.getOrElse(throw new Exception("Missing LGW Service Bus Uri"))
-        LGWFeed(lgwNamespace, lgwSasToKey, lgwServiceBusUri)(system).source()
-
+        val azureClient = LGWAzureClient(LGWFeed.serviceBusClient(lgwNamespace, lgwSasToKey, lgwServiceBusUri))
+        LGWFeed(azureClient)(system).source()
       case "BHX" if !params.bhxIataEndPointUrl.isEmpty =>
         BHXFeed(BHXClient(params.bhxIataUsername, params.bhxIataEndPointUrl), 80 seconds, 1 milliseconds)(system)
-      case "BHX" => BHXLiveFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX live feed URL")))
+      case "BHX" =>
+        BHXLiveFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX live feed URL")))
       case "LTN" =>
         val url = params.maybeLtnLiveFeedUrl.getOrElse(throw new Exception("Missing live feed url"))
         val username = params.maybeLtnLiveFeedUsername.getOrElse(throw new Exception("Missing live feed username"))
@@ -504,7 +514,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
           case Some(tz) => DateTimeZone.forID(tz)
           case None => DateTimeZone.UTC
         }
-        LtnLiveFeed(url, token, username, password, timeZone).tickingSource
+        val requester = LtnFeedRequester(url, token, username, password)
+        LtnLiveFeed(requester, timeZone).tickingSource
       case "MAN" | "STN" | "EMA" =>
         if (config.get[Boolean]("feeds.mag.use-legacy")) {
           log.info(s"Using legacy MAG live feed")
@@ -554,11 +565,11 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     PaxFlow.pcpArrivalTimeForFlight(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis)(walkTimeProvider)
 
   def createLiveChromaFlightFeed(feedType: ChromaFeedType): ChromaLiveFeed = {
-    ChromaLiveFeed(system.log, new ChromaFetcher[ChromaLiveFlight](feedType, ChromaFlightMarshallers.live) with ProdSendAndReceive)
+    ChromaLiveFeed(new ChromaFetcher[ChromaLiveFlight](feedType, ChromaFlightMarshallers.live) with ProdSendAndReceive)
   }
 
   def createForecastChromaFlightFeed(feedType: ChromaFeedType): ChromaForecastFeed = {
-    ChromaForecastFeed(system.log, new ChromaFetcher[ChromaForecastFlight](feedType, ChromaFlightMarshallers.forecast) with ProdSendAndReceive)
+    ChromaForecastFeed(new ChromaFetcher[ChromaForecastFlight](feedType, ChromaFlightMarshallers.forecast) with ProdSendAndReceive)
   }
 
   def createForecastLHRFeed(): Source[ArrivalsFeedResponse, Cancellable] = {
@@ -568,3 +579,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       .map(_ => lhrForecastFeed.requestFeed)
   }
 }
+
+case class SetSimulationActor(loadsToSimulate: AskableActorRef)
+
+case class SetCrunchActor(millisToCrunchActor: AskableActorRef)
+

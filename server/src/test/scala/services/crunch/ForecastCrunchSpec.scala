@@ -1,10 +1,11 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, PortState, StaffMinute}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared.FlightsApi.{Flights, QueueName, TerminalName}
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
+import services.graphstages.CrunchMocks
 import services.{SDate, TryRenjin}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
@@ -29,14 +30,14 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val baseArrival = ArrivalGenerator.arrival(schDt = base, iata = "BA0001", terminal = "T1", actPax = Option(21))
     val baseFlights = Flights(List(baseArrival))
 
-    val crunch = runCrunchGraph(now = () => SDate(scheduled), maxDaysToCrunch = 4)
+    val crunch = runCrunchGraph(now = () => SDate(scheduled), maxDaysToCrunch = 4, cruncher = CrunchMocks.mockCrunch)
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseFlights))
 
     val expectedForecast = Map(SDate(base).millisSinceEpoch -> 20, SDate(base).addMinutes(1).millisSinceEpoch -> 1)
 
-    crunch.forecastTestProbe.fishForMessage(10 seconds) {
+    crunch.portStateTestProbe.fishForMessage(10 seconds) {
       case PortState(_, cms, _) =>
         val forecastSummary = interestingPaxLoads(cms)
         forecastSummary == expectedForecast
@@ -89,7 +90,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     val expected = shift1Millis ++ shift2Millis
 
-    crunch.forecastTestProbe.fishForMessage(10 seconds) {
+    crunch.portStateTestProbe.fishForMessage(10 seconds) {
       case PortState(_, cms, _) =>
         val deployedStaff = interestingDeployments(cms).take(30)
         deployedStaff == expected
@@ -135,7 +136,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseFlights))
 
-    crunch.forecastTestProbe.fishForMessage(10 seconds) {
+    crunch.portStateTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val firstInterestingMilli = SDate("2017-01-03T23:59Z").millisSinceEpoch
         val interestingMinuteMillis = firstInterestingMilli to firstInterestingMilli + oneMinuteMillis
@@ -187,7 +188,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val shiftMinuteMillis = (SDate(base).millisSinceEpoch until SDate(base).addMinutes(30).millisSinceEpoch by 60000).toList
     val expected = List.fill(30)(Some(forecastStaffNumber))
 
-    crunch.forecastTestProbe.fishForMessage(10 seconds) {
+    crunch.portStateTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val deployedStaff: Iterable[Option[Int]] = ps.crunchMinutes.values
           .filter(cm => shiftMinuteMillis.contains(cm.minute))
@@ -217,7 +218,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     val expectedForecast = Map(SDate(baseScheduled).millisSinceEpoch -> 20, SDate(baseScheduled).addMinutes(1).millisSinceEpoch -> 1)
 
-    crunch.forecastTestProbe.fishForMessage(10 seconds) {
+    crunch.portStateTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val forecastSummary = interestingPaxLoads(ps.crunchMinutes)
         forecastSummary == expectedForecast
@@ -242,7 +243,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals))
     crunch.liveArrivalsInput.complete()
 
-    val gotAnyFlights = crunch.forecastTestProbe.receiveWhile(2 seconds) {
+    val gotAnyFlights = crunch.portStateTestProbe.receiveWhile(2 seconds) {
       case PortState(flights, _, _) => flights.size
     }.exists(_ > 0)
 
@@ -268,7 +269,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     val expectedForecastArrivals = Set(baseArrival.copy(FeedSources = Set(AclFeedSource)))
 
-    crunch.forecastTestProbe.fishForMessage(10 seconds) {
+    crunch.portStateTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val crunchForecastArrivals = ps.flights.values.map(_.apiFlight).toSet
 
@@ -299,7 +300,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     val expectedForecastArrivals = Set(baseArrival.copy(ActPax = Some(50), TranPax = Some(25), FeedSources = Set(ForecastFeedSource, AclFeedSource)))
 
-    crunch.forecastTestProbe.fishForMessage(10 seconds) {
+    crunch.portStateTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val crunchForecastArrivals = ps.flights.values.map(_.apiFlight).toSet
         crunchForecastArrivals == expectedForecastArrivals
@@ -333,7 +334,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     val expectedForecastArrivals = Set(baseArrival.copy(ActPax = forecastArrival.ActPax, TranPax = forecastArrival.TranPax, Estimated = Some(SDate(liveScheduled).millisSinceEpoch), FeedSources = Set(AclFeedSource, ForecastFeedSource, LiveFeedSource)))
 
-    crunch.forecastTestProbe.fishForMessage(10 seconds) {
+    crunch.portStateTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val crunchForecastArrivals = ps.flights.values.map(_.apiFlight).toSet
 
@@ -363,16 +364,16 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(now = () => SDate(baseScheduled).addDays(-1))
 
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseArrivals))
-    crunch.forecastTestProbe.receiveOne(2 seconds)
+    crunch.portStateTestProbe.receiveOne(2 seconds)
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals1st))
-    crunch.forecastTestProbe.receiveOne(2 seconds)
+    crunch.portStateTestProbe.receiveOne(2 seconds)
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals2nd))
 
     val expectedForecastArrivals = Set(
       baseArrival1.copy(ActPax = Some(51), Status = "Port Forecast", FeedSources = Set(ForecastFeedSource, AclFeedSource)),
       baseArrival2.copy(ActPax = Some(52), Status = "Port Forecast", FeedSources = Set(ForecastFeedSource, AclFeedSource)))
 
-    crunch.forecastTestProbe.fishForMessage(10 seconds) {
+    crunch.portStateTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val crunchForecastArrivals = ps.flights.values.map(_.apiFlight).toSet
         crunchForecastArrivals == expectedForecastArrivals
@@ -409,7 +410,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     val expectedFlightCodes = updatedBaseArrivals.values.map(_.IATA)
 
-    crunch.forecastTestProbe.fishForMessage(2 seconds) {
+    crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case PortState(flightsWithSplits, _, _) =>
         val flightCodes = flightsWithSplits.values.map(_.apiFlight.IATA)
         flightCodes == expectedFlightCodes

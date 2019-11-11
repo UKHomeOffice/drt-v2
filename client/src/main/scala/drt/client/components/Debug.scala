@@ -3,8 +3,7 @@ package drt.client.components
 import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.services._
-import drt.shared.CrunchApi.PortState
-import drt.shared.{FixedPointAssignments, ShiftAssignments, StaffMovement}
+import drt.shared.{FixedPointAssignments, PortState, ShiftAssignments, StaffMovement}
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom

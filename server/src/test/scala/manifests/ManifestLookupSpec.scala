@@ -3,13 +3,13 @@ package manifests
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import com.typesafe.config.{Config, ConfigFactory}
-import org.specs2.mutable.{Specification, SpecificationLike}
+import org.specs2.mutable.SpecificationLike
 import services.SDate
 import slickdb.{Tables, VoyageManifestPassengerInfoTable}
 
+import scala.collection.JavaConverters._
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.collection.JavaConversions._
 
 
 object PostgresPersistence {
@@ -25,7 +25,7 @@ object PostgresPersistence {
     "aggregated-db.driver" -> "org.postgresql.Driver",
     "aggregated-db.url" -> "jdbc:postgresql://localhost:5432/aggregated?user=drt&password=drt&ssl=true",
     "aggregated-db.keepAliveConnection" -> "true"
-  ))
+  ).asJava)
 }
 
 object PostgresTables extends {

@@ -1,13 +1,12 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.shared.{Arrival, DqEventCodes, Queues}
-import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
+import drt.shared.{Arrival, DqEventCodes, PortState, Queues}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import server.feeds.{ArrivalsFeedSuccess, ManifestsFeedSuccess}
 import services.SDate
-import services.crunch.VoyageManifestGenerator.{euPassport, nonVisa, visa, euIdCard}
+import services.crunch.VoyageManifestGenerator.{euIdCard, euPassport, nonVisa, visa}
 import services.graphstages.DqManifests
 
 import scala.collection.immutable.List
@@ -137,7 +136,7 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
   private def offerAndCheckResult(arrivals: Seq[Arrival], queues: Seq[String] = Seq()): Unit = {
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(arrivals)))
 
-    crunch.liveTestProbe.fishForMessage(5 second) {
+    crunch.portStateTestProbe.fishForMessage(5 second) {
       case ps: PortState => paxLoadsAreCorrect(ps, arrivals, queues)
     }
   }

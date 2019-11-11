@@ -61,11 +61,7 @@ object TerminalDesksAndQueuesRow {
                 <.td(^.className := queueColour(qn), ^.title := s"Rec: ${cm.deskRec}", s"${cm.deployedDesks.getOrElse("-")}"),
                 <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"With rec: ${cm.waitTime}", s"${cm.deployedWait.map(Math.round(_)).getOrElse("-")}"))
             case ViewRecs =>
-              val ragClass = cm.waitTime.toDouble / props.airportConfig.slaByQueue(qn) match {
-                case pc if pc >= 1 => "red"
-                case pc if pc >= 0.7 => "amber"
-                case _ => ""
-              }
+              val ragClass = slaRagStatus(cm.waitTime.toDouble, props.airportConfig.slaByQueue(qn))
               List(paxLoadTd,
                 <.td(^.className := queueColour(qn), ^.title := s"Dep: ${cm.deployedDesks.getOrElse("-")}", s"${cm.deskRec}"),
                 <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"With Dep: ${cm.waitTime}", s"${Math.round(cm.waitTime)}"))
@@ -84,8 +80,6 @@ object TerminalDesksAndQueuesRow {
       val totalRequired = DesksAndQueues.totalRequired(props.staffMinute, crunchMinutes)
       val totalDeployed = DesksAndQueues.totalDeployed(props.staffMinute, crunchMinutes)
       val ragClass = ragStatus(totalRequired, available)
-      val slotStart = SDate(props.minuteMillis)
-      val slotEnd = slotStart.addMinutes(props.slotMinutes - 1)
 
       def allowAdjustments: Boolean = props.viewMode.time.millisSinceEpoch > SDate.midnightThisMorning().millisSinceEpoch
 
@@ -108,6 +102,12 @@ object TerminalDesksAndQueuesRow {
     .componentDidMount(_ => Callback.log("TerminalDesksAndQueuesRow did mount"))
     .configure(Reusability.shouldComponentUpdate)
     .build
+
+  def slaRagStatus(waitTime: Double, sla: Int): String = waitTime / sla match {
+    case pc if pc >= 1 => "red"
+    case pc if pc >= 0.7 => "amber"
+    case _ => ""
+  }
 
   def adjustmentLink(props: Props, action: String, label: String): TagOf[html.Div] = {
     val popupState = adjustmentState(props, action, label)

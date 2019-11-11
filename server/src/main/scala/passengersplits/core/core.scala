@@ -1,6 +1,6 @@
 package passengersplits.core
 
-import akka.actor.{ActorSystem, Props}
+import akka.actor.ActorSystem
 import akka.event.LoggingAdapter
 
 /**

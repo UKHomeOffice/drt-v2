@@ -2,7 +2,7 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import controllers.ArrivalGenerator.arrival
-import drt.shared.CrunchApi.{CrunchMinute, PortState, StaffMinute}
+import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.Queues.EeaDesk
@@ -52,7 +52,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
       val expectedArrivals = List(arrival_v3_with_an_update_to_chox_time)
 
-      crunch.liveTestProbe.fishForMessage(5 seconds) {
+      crunch.portStateTestProbe.fishForMessage(5 seconds) {
         case ps: PortState =>
           val arrivals = ps.flights.values.map(_.apiFlight)
           arrivals == expectedArrivals
@@ -75,7 +75,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
       val expected = Set(LiveFeedSource, ApiFeedSource)
 
-      crunch.liveTestProbe.fishForMessage(5 seconds) {
+      crunch.portStateTestProbe.fishForMessage(5 seconds) {
         case ps: PortState =>
           val portStateSources = ps.flights.values.flatMap(_.apiFlight.FeedSources).toSet
           portStateSources == expected
@@ -102,7 +102,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
       val expected = Set(ForecastFeedSource, AclFeedSource)
 
-      crunch.liveTestProbe.fishForMessage(5 seconds) {
+      crunch.portStateTestProbe.fishForMessage(5 seconds) {
         case ps: PortState =>
           val portStateSources = ps.flights.get(forecastArrival.unique).map(_.apiFlight.FeedSources).getOrElse(Set())
           println(s"sources: $portStateSources")

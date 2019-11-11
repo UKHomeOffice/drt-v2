@@ -1,7 +1,6 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
@@ -60,7 +59,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
         Queues.EGate -> Seq.fill(15)(1)
       ))
 
-      crunch.liveTestProbe.fishForMessage(10 seconds) {
+      crunch.portStateTestProbe.fishForMessage(10 seconds) {
         case ps: PortState =>
           val resultSummary = deskRecsFromPortState(ps, 15)
           resultSummary == expected

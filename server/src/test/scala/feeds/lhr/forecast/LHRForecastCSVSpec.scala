@@ -6,8 +6,6 @@ import org.specs2.mutable.Specification
 import services.SDate
 
 class LHRForecastCSVSpec extends Specification {
-
-
   "Given a CSV containing a flight for T1 " +
     "then I should get a list of one arrival containing a flight for T1" >> {
     val lhrCsvFixture =
@@ -99,7 +97,6 @@ class LHRForecastCSVSpec extends Specification {
         |"2","04/04/2019 06:00","TS 0001","TST","I",290,200,90
         |"3","bad date","TS 0002","TST","I",290,200,90
         |"3","04/04/2019 23:10","TS 0003","TST","I",bad number,200,90
-        |"4","03/05/2019 00:00","TS 0004","TST","I",290,bad number,90
         |"5","01/05/2019 23:10","TS 0005","TST","I",290,200,bad number""".stripMargin
 
     val result = LHRForecastCSVExtractor.parse(lhrCsvFixture)

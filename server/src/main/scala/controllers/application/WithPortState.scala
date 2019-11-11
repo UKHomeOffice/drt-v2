@@ -5,14 +5,12 @@ import actors.{DrtStaticParameters, GetPortState, GetUpdatesSince}
 import akka.actor.{PoisonPill, Props}
 import controllers.Application
 import controllers.model.ActorDataRequest
-import drt.shared.CrunchApi.{MillisSinceEpoch, PortState, PortStateError, PortStateUpdates}
-import drt.shared.DesksAndQueuesView
+import drt.shared.CrunchApi.{MillisSinceEpoch, PortStateError, PortStateUpdates}
+import drt.shared.{DesksAndQueuesView, PortState}
 import play.api.mvc.{Action, AnyContent, Request}
 import services.SDate
-import services.graphstages.Crunch.getLocalNextMidnight
 import upickle.default.write
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 
@@ -63,14 +61,7 @@ trait WithPortState {
         val futureResult = ActorDataRequest.portState[X](tempActor, request)
         futureResult.foreach(_ => tempActor ! PoisonPill)
         futureResult
-      case _ =>
-        if (endMillis > getLocalNextMidnight(SDate.now().addDays(1)).millisSinceEpoch) {
-          log.debug(s"Regular forecast crunch state query")
-          ActorDataRequest.portState[X](ctrl.forecastCrunchStateActor, request)
-        } else {
-          log.debug(s"Regular live crunch state query")
-          ActorDataRequest.portState[X](ctrl.liveCrunchStateActor, request)
-        }
+      case _ => ActorDataRequest.portState[X](ctrl.portStateActor, request)
     }
   }
 

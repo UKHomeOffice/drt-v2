@@ -65,7 +65,7 @@ class SimulationGraphStage(name: String = "",
       override def onPush(): Unit = {
         val timer = StageTimer(stageName, inLoads)
         val incomingLoads = grab(inLoads)
-        log.info(s"Received ${incomingLoads.loadMinutes.size} loads")
+        log.debug(s"Received ${incomingLoads.loadMinutes.size} loads")
 
         val affectedTerminals = incomingLoads.loadMinutes.map { case (TQM(t, _, _), _) => t }.toSet.toSeq
 
@@ -131,7 +131,6 @@ class SimulationGraphStage(name: String = "",
 
       val deploymentUpdates = deploymentsForMillis(firstMillis, lastMillis, affectedTerminals)
 
-      log.info(s"Merging updated deployments into existing")
       deployments ++= deploymentUpdates
     }
 
@@ -213,7 +212,7 @@ class SimulationGraphStage(name: String = "",
 
       minuteMillis.map(m => deployments.getOrElse(TQM(tn, qn, m), 0)) match {
         case deployedStaff if deployedStaff.sum == 0 =>
-          log.info(s"No deployed staff. Skipping simulations")
+          log.debug(s"No deployed staff. Skipping simulations")
           SortedMap()
         case deployedStaff =>
           log.info(s"Running $tn, $qn simulation with ${adjustedWorkloads.length} workloads & ${deployedStaff.length} desks")
@@ -422,29 +421,22 @@ case class SimulationMinute(terminalName: TerminalName,
                             queueName: QueueName,
                             minute: MillisSinceEpoch,
                             desks: Int,
-                            waitTime: Int) extends SimulationMinuteLike {
+                            waitTime: Int) extends SimulationMinuteLike with MinuteComparison[CrunchMinute] {
   lazy val key: TQM = MinuteHelper.key(terminalName, queueName, minute)
+
+  override def maybeUpdated(existing: CrunchMinute, now: MillisSinceEpoch): Option[CrunchMinute] =
+    if (existing.deployedDesks.isEmpty || existing.deployedDesks.get != desks || existing.deployedWait.isEmpty || existing.deployedWait.get != waitTime) Option(existing.copy(
+      deployedDesks = Option(desks), deployedWait = Option(waitTime), lastUpdated = Option(now)
+    ))
+    else None
 }
 
 case class SimulationMinutes(minutes: Seq[SimulationMinute]) extends PortStateMinutes {
   def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
     val minutesDiff = minutes.foldLeft(List[CrunchMinute]()) { case (soFar, dm) =>
-      val merged = mergeMinute(portState.crunchMinutes.getByKey(dm.key), dm, now)
-      merged :: soFar
+      addIfUpdated(portState.crunchMinutes.getByKey(dm.key), now, soFar, dm, () => CrunchMinute(dm, now))
     }
     portState.crunchMinutes +++= minutesDiff
-    PortStateDiff(Seq(), Seq(), minutesDiff, Seq())
+    PortStateDiff(Seq(), Seq(), Seq(), minutesDiff, Seq())
   }
-
-  def newCrunchMinutes: SortedMap[TQM, CrunchMinute] = SortedMap[TQM, CrunchMinute]() ++ minutes
-    .map(CrunchMinute(_))
-    .map(cm => (cm.key, cm))
-
-  def mergeMinute(maybeMinute: Option[CrunchMinute], updatedSm: SimulationMinute, now: MillisSinceEpoch): CrunchMinute = maybeMinute
-    .map(existingCm => existingCm.copy(
-      deployedDesks = Option(updatedSm.desks),
-      deployedWait = Option(updatedSm.waitTime)
-    ))
-    .getOrElse(CrunchMinute(updatedSm))
-    .copy(lastUpdated = Option(now))
 }

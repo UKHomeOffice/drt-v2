@@ -17,16 +17,17 @@ import org.joda.time.DateTime
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.immutable.{IndexedSeq, Seq}
 import scala.concurrent.duration._
+import scala.language.postfixOps
 
 
 object TestCrunchConfig {
-  val airportConfig = airportConfigForHours(1)
+  val airportConfig: AirportConfig = airportConfigForHours(1)
   val AirportConfigOrigin = "Airport Config"
 
-  def airportConfigForHours(hours: Int) = {
+  def airportConfigForHours(hours: Int): AirportConfig = {
     val seqOfHoursInts = List.fill[Int](hours) _
     AirportConfig(
       portCode = "EDI",
@@ -99,14 +100,14 @@ object TestCrunchConfig {
     "akka.persistence.journal.leveldb.dir" -> levelDbJournalDir(tn),
     "akka.persistence.snapshot-store.plugin" -> "akka.persistence.snapshot-store.local",
     "akka.persistence.snapshot-store.local.dir" -> s"$tn/snapshot"
-  )).withFallback(ConfigFactory.load(getClass.getResource("/application.conf").getPath.toString)))
+  ).asJava).withFallback(ConfigFactory.load(getClass.getResource("/application.conf").getPath)))
 
   case class TestContext(override val system: ActorSystem) extends
     TestKit(system) with ImplicitSender {
         implicit val timeout: Timeout = Timeout(5 seconds)
   }
 
-  def withContext[T](tn: String = "", timeProvider: () => DateTime = () => DateTime.now())(f: (TestContext) => T): T = {
+  def withContext[T](tn: String = "", timeProvider: () => DateTime = () => DateTime.now())(f: TestContext => T): T = {
     val journalDirName = TestCrunchConfig.levelDbJournalDir(tn)
 
     val journalDir = new File(journalDirName)
@@ -119,10 +120,10 @@ object TestCrunchConfig {
   }
 }
 
-class SplitsRequestRecordingCrunchActor(hours: Int, val airportConfig: AirportConfig, timeProvider: () => DateTime = () => DateTime.now(), _splitRatioProvider: (Arrival => Option[SplitRatios]))
+class SplitsRequestRecordingCrunchActor(hours: Int, val airportConfig: AirportConfig, timeProvider: () => DateTime = () => DateTime.now(), _splitRatioProvider: Arrival => Option[SplitRatios])
   extends AirportConfigHelpers {
 
-  def splitRatioProvider = _splitRatioProvider
+  def splitRatioProvider: Arrival => Option[SplitRatios] = _splitRatioProvider
 
   def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = 1d
 

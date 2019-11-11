@@ -61,7 +61,8 @@ object Roles {
     BorderForceStaff,
     PortOperatorStaff,
     PortFeedUpload,
-    ViewConfig
+    ViewConfig,
+    TerminalDashboard
   ) ++ portRoles
 
   def parse(roleName: String): Option[Role] = availableRoles.find(role => role.name == roleName)
@@ -73,6 +74,10 @@ case object NoOpRole extends Role {
 
 case object StaffEdit extends Role {
   override val name: String = "staff:edit"
+}
+
+case object TerminalDashboard extends Role {
+  override val name: String = "terminal-dashboard"
 }
 
 case object ApiView extends Role {

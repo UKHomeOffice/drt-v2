@@ -240,7 +240,7 @@ class WorkloadSpec extends Specification {
 
     val eeaDeskWorkloadInSeconds = (gbrSeconds * 10 + fraSeconds * 2) / 60
     val nonEEADeskWorkloadInSeconds = (zaSeconds * 6 + zbwSeconds * 6) / 60
-    workloads === Set(
+    workloads.toSet === Set(
       (PaxTypes.EeaMachineReadable, Queues.EeaDesk, eeaDeskWorkloadInSeconds * 10 / 12),
       (PaxTypes.VisaNational, Queues.NonEeaDesk, nonEEADeskWorkloadInSeconds * 10 / 12),
       (PaxTypes.EeaMachineReadable, Queues.EeaDesk, eeaDeskWorkloadInSeconds * 2 / 12),

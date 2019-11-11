@@ -71,5 +71,6 @@ POST          /test/arrivals/:forDate                              test.controll
 POST          /test/manifest                                       test.controllers.TestController.addManifest
 
 POST          /test/mock-roles                                     test.controllers.TestController.setMockRoles()
+GET           /test/mock-roles-set                                 test.controllers.TestController.setMockRolesByQueryString()
 
 DELETE        /test/data                                           test.controllers.TestController.deleteAllData()

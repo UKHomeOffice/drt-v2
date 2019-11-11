@@ -15,18 +15,28 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 
-case class LGWFeed(namespace: String, sasToKey: String, serviceBusUrl: String)(val system: ActorSystem) {
+object LGWFeed {
+  def serviceBusClient(namespace: String, sasToKey: String, serviceBusUrl: String): ServiceBusClient = new ServiceBusClient(
+    SBusConfig(new java.net.URL(serviceBusUrl), s"$namespace/to", s"${namespace}to", sasToKey)
+  )
+}
+
+trait LGWAzureClientLike {
+  def receive: Future[String]
+}
+
+case class LGWAzureClient(azureSasClient: ServiceBusClient) extends LGWAzureClientLike {
+  override def receive: Future[String] = azureSasClient.receive
+}
+
+case class LGWFeed(lGWAzureClient: LGWAzureClient)(val system: ActorSystem) {
   val log: Logger = LoggerFactory.getLogger(getClass)
   val pollInterval: FiniteDuration = 100 milliseconds
   val initialDelayImmediately: FiniteDuration = 1 milliseconds
 
-  val azureSasClient = new ServiceBusClient(
-    SBusConfig(new java.net.URL(serviceBusUrl), s"$namespace/to", s"${namespace}to", sasToKey)
-  )
-
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
-  def requestArrivals(): Future[List[Arrival]] = azureSasClient.receive.map(xmlString => {
+  def requestArrivals(): Future[List[Arrival]] = lGWAzureClient.receive.map(xmlString => {
     if (xmlString.trim().length > 0)
       ResponseToArrivals(xmlString).getArrivals
     else

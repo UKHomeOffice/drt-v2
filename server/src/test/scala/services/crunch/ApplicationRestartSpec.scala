@@ -2,7 +2,7 @@ package services.crunch
 
 
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{CrunchMinute, PortState, StaffMinute}
+import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
 import drt.shared.FlightsApi.{Flights, TerminalName}
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
@@ -73,68 +73,7 @@ class ApplicationRestartSpec extends CrunchTestLike {
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrivalLive)), SDate.now()))
 
-    crunch.liveTestProbe.expectNoMessage(2 second)
-
-    crunch.liveArrivalsInput.complete()
-
-    success
-  }
-
-  "Given an initial PortState to restore from with a flight in day 1 and day 2 " +
-    "When I start the crunch graph and send an updated flight for day 1 " +
-    "Then I should not see any new crunch data in the forecast" >> {
-    val scheduledDay1 = "2018-01-01T00:00"
-    val scheduledDay2 = "2018-01-02T00:00"
-    val arrivalDay1 = ArrivalGenerator.arrival(actPax = Option(1), iata = "BA1010", schDt = scheduledDay1, feedSources = Set(LiveFeedSource))
-    val arrivalDay2 = ArrivalGenerator.arrival(actPax = Option(1), iata = "BA1010", schDt = scheduledDay2, feedSources = Set(LiveFeedSource))
-    val splits = Set(
-      Splits(
-        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None)),
-        SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-        Option(DqEventCodes.DepartureConfirmed),
-        PaxNumbers))
-
-
-    val firstMinuteDay1 = SDate(scheduledDay1)
-    val terminalName = "T1"
-    val existingMinutesDay1 = (firstMinuteDay1.millisSinceEpoch to firstMinuteDay1.addMinutes(59).millisSinceEpoch by oneMinuteMillis)
-      .map(m => {
-        val cm = if (m == firstMinuteDay1.millisSinceEpoch) CrunchMinute(terminalName, Queues.EeaDesk, m, 1.0, 0.4166666666666667, 1, 25, None, None, None, None, None)
-        else CrunchMinute(terminalName, Queues.EeaDesk, m, 0.0, 0.0, 1, 25, None, None, None, None, None)
-        (cm.key, cm)
-      })
-    val firstMinuteDay2 = SDate(scheduledDay2)
-    val existingMinutesDay2 = (firstMinuteDay2.millisSinceEpoch to firstMinuteDay2.addMinutes(59).millisSinceEpoch by oneMinuteMillis)
-      .map(m => {
-        val cm = if (m == firstMinuteDay2.millisSinceEpoch) CrunchMinute(terminalName, Queues.EeaDesk, m, 1.0, 0.4166666666666667, 1, 25, None, None, None, None, None)
-        else CrunchMinute(terminalName, Queues.EeaDesk, m, 0.0, 0.0, 1, 25, None, None, None, None, None)
-        (cm.key, cm)
-      })
-
-    val daysToCrunch = 3
-
-    val now: () => SDateLike = () => SDate(scheduledDay1)
-
-    val portState = PortState(
-      flights = SortedMap[UniqueArrival, ApiFlightWithSplits]() ++ Seq(
-        ApiFlightWithSplits(arrivalDay1, splits),
-        ApiFlightWithSplits(arrivalDay2, splits)
-      ).map(f => (f.apiFlight.unique, f)),
-      crunchMinutes = SortedMap[TQM, CrunchMinute]() ++ existingMinutesDay1.toMap ++ existingMinutesDay2.toMap,
-      staffMinutes = SortedMap[TM, StaffMinute]() ++ emptyStaffMinutes(now, daysToCrunch, airportConfig.terminalNames.toList)
-    )
-
-    val initialLiveArrivals = mutable.SortedMap[UniqueArrival, Arrival](arrivalDay1.unique -> arrivalDay1, arrivalDay2.unique -> arrivalDay2)
-    val crunch = runCrunchGraph(
-      now = now,
-      initialPortState = Option(portState),
-      initialLiveArrivals = initialLiveArrivals,
-      maxDaysToCrunch = daysToCrunch
-    )
-
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrivalDay1.copy(Estimated = Some(SDate("2018-01-01T00:05").millisSinceEpoch)))), SDate.now()))
-
-    crunch.forecastTestProbe.expectNoMessage(2 second)
+    crunch.portStateTestProbe.expectNoMessage(2 second)
 
     crunch.liveArrivalsInput.complete()
 

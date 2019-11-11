@@ -1,7 +1,7 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{MillisSinceEpoch, PortState}
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
 import drt.shared._
@@ -77,7 +77,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
           )
         ))
 
-        crunch.liveTestProbe.fishForMessage(5 seconds) {
+        crunch.portStateTestProbe.fishForMessage(5 seconds) {
           case ps: PortState =>
             val resultSummary = deskRecsFromPortState(ps, 120)
             resultSummary == expected

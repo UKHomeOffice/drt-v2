@@ -1,7 +1,6 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.EeaDesk
@@ -47,7 +46,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
 
       val expected = Set(Queues.EeaDesk)
 
-      crunch.liveTestProbe.fishForMessage(10 seconds) {
+      crunch.portStateTestProbe.fishForMessage(10 seconds) {
         case ps: PortState =>
           val resultSummary = paxLoadsFromPortState(ps, 1).flatMap(_._2.keys).toSet
           resultSummary == expected
@@ -85,7 +84,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
 
     val expected = Map("T1" -> Map(Queues.EeaDesk -> List(15.0)))
 
-    crunch.liveTestProbe.fishForMessage(10 seconds) {
+    crunch.portStateTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
         val resultSummary = paxLoadsFromPortState(ps, 1, SDate(scheduled))
         resultSummary == expected

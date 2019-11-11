@@ -6,26 +6,56 @@ import drt.shared._
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 import services._
+import services.crunch.deskrecs.RunnableDeskRecs.log
 
 import scala.collection.immutable.{Map, SortedMap}
 import scala.collection.mutable
+import scala.util.{Failure, Success, Try}
 
 object Crunch {
+  val paxOffPerMinute: Int = 20
+
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  case class FlightSplitMinute(flightId: CodeShareKeyOrderedBySchedule, paxType: PaxType, terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
+  class SplitMinutes {
+    val minutes: mutable.Map[TQM, LoadMinute] = mutable.Map()
+
+    def ++=(incoming: Seq[FlightSplitMinute]): Unit = {
+      incoming.foreach(fsm => +=(LoadMinute(fsm.terminalName, fsm.queueName, fsm.paxLoad, fsm.workLoad, fsm.minute)))
+    }
+
+    def +=(incoming: LoadMinute): Unit = {
+      val key = incoming.uniqueId
+      minutes.get(key) match {
+        case None => minutes += (key -> incoming)
+        case Some(existingFsm) => minutes += (key -> (existingFsm + incoming))
+      }
+    }
+
+    def toLoads: Loads = Loads(SortedMap[TQM, LoadMinute]() ++ minutes)
+  }
+
+  case class FlightSplitMinute(flightId: CodeShareKeyOrderedBySchedule, paxType: PaxType, terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch) {
+    lazy val key: TQM = TQM(terminalName, queueName, minute)
+  }
 
   case class FlightSplitDiff(flightId: CodeShareKeyOrderedBySchedule, paxType: PaxType, terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
 
   case class LoadMinute(terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch) extends TerminalQueueMinute {
     lazy val uniqueId: TQM = TQM(terminalName, queueName, minute)
+
+    def +(other: LoadMinute): LoadMinute = this.copy(
+      paxLoad = this.paxLoad + other.paxLoad,
+      workLoad = this.workLoad + other.workLoad
+    )
   }
 
   object LoadMinute {
     def apply(cm: CrunchMinute): LoadMinute = LoadMinute(cm.terminalName, cm.queueName, cm.paxLoad, cm.workLoad, cm.minute)
   }
 
-  case class Loads(loadMinutes: SortedMap[TQM, LoadMinute])
+  case class Loads(loadMinutes: SortedMap[TQM, LoadMinute]) {
+  }
 
   object Loads {
     def apply(lms: Seq[LoadMinute]): Loads = Loads(SortedMap[TQM, LoadMinute]() ++ lms.map(cm => (TQM(cm.terminalName, cm.queueName, cm.minute), cm)))
@@ -216,32 +246,6 @@ object Crunch {
       .toSeq
   }
 
-  def mergeLoadsIntoQueue(incomingLoads: Loads, existingQueue: mutable.SortedMap[MilliDate, Loads], crunchPeriodStartMillis: SDateLike => SDateLike): Unit = {
-    val changedDays: Map[MillisSinceEpoch, SortedMap[TQM, LoadMinute]] = incomingLoads.loadMinutes
-      .groupBy { case (_, sm) =>
-        crunchPeriodStartMillis(SDate(sm.minute, europeLondonTimeZone)).millisSinceEpoch
-      }
-
-    changedDays.foreach {
-      case (dayStartMillis, newLoadsForDay) =>
-        val milliDate = MilliDate(dayStartMillis)
-        val existingLoadsForDay = existingQueue.get(milliDate)
-        val mergedDayMinutes = mergeUpdatedLoads(existingLoadsForDay, newLoadsForDay)
-        existingQueue += (milliDate -> Loads(mergedDayMinutes))
-    }
-  }
-
-  def mergeUpdatedLoads(maybeExistingDayLoads: Option[Loads], dayLoadMinutes: SortedMap[TQM, LoadMinute]): SortedMap[TQM, LoadMinute] = {
-    maybeExistingDayLoads match {
-      case None => dayLoadMinutes
-      case Some(existingDayLoads) =>
-        dayLoadMinutes
-          .foldLeft(existingDayLoads.loadMinutes) {
-            case (daySoFar, (_, loadMinute)) => daySoFar.updated(loadMinute.uniqueId, loadMinute)
-          }
-    }
-  }
-
   def movementsUpdateCriteria(existingMovements: Set[StaffMovement], incomingMovements: Seq[StaffMovement]): UpdateCriteria = {
     val updatedMovements = incomingMovements.toSet -- existingMovements
     val deletedMovements = existingMovements -- incomingMovements.toSet
@@ -272,9 +276,82 @@ object Crunch {
     removals ++= existing.keys.toSet -- incoming.keys.toSet
 
     incoming.foreach {
-      case (k, a)  => if (!existing.contains(k) || existing(k) != a) updates += a
+      case (k, a) => if (!existing.contains(k) || existing(k) != a) updates += a
     }
 
     (removals, updates)
+  }
+
+  def arrivalDaysAffected(crunchOffsetMinutes: Int, paxOffPerMinute: Int)(arrival: Arrival): Set[String] = {
+    arrival.PcpTime.toSet.flatMap { pcpTime: MillisSinceEpoch =>
+      val first = SDate(pcpTime)
+      val minutesOfPaxArrivals: Int = (arrival.ActPax.getOrElse(0).toDouble / paxOffPerMinute).ceil.toInt - 1
+      val last = first.addMinutes(minutesOfPaxArrivals)
+      List(first, last).map(_.addMinutes(-1 * crunchOffsetMinutes).toISODateOnly).toSet
+    }
+  }
+
+  def tqmsDaysAffected(crunchOffsetMinutes: Int, paxOffPerMinute: Int)(tqms: List[TQM]): Set[String] =
+    if (tqms.isEmpty)
+      Set()
+    else
+      Set(tqms.min, tqms.max).map(m => SDate(m.minute).addMinutes(-1 * crunchOffsetMinutes).toISODateOnly)
+
+  def crunchLoads(loadMinutes: Map[TQM, LoadMinute],
+                  firstMinute: MillisSinceEpoch,
+                  lastMinute: MillisSinceEpoch,
+                  terminals: Set[TerminalName],
+                  airportConfig: AirportConfig,
+                  crunch: TryCrunch): SortedMap[TQM, DeskRecMinute] = {
+    val validTerminals = airportConfig.queues.keys.toList
+    val terminalsToCrunch = terminals.filter(validTerminals.contains(_))
+    val terminalQueueDeskRecs = for {
+      terminal <- terminalsToCrunch
+      queue <- airportConfig.nonTransferQueues(terminal)
+    } yield {
+      val lms = (firstMinute until lastMinute by 60000).map(minute =>
+        loadMinutes.getOrElse(TQM(terminal, queue, minute), LoadMinute(terminal, queue, 0, 0, minute)))
+      crunchQueue(firstMinute, lastMinute, terminal, queue, lms, airportConfig, crunch)
+    }
+    SortedMap[TQM, DeskRecMinute]() ++ terminalQueueDeskRecs.toSeq.flatten
+  }
+
+  def crunchQueue(firstMinute: MillisSinceEpoch,
+                  lastMinute: MillisSinceEpoch,
+                  tn: TerminalName,
+                  qn: QueueName,
+                  qLms: IndexedSeq[LoadMinute],
+                  airportConfig: AirportConfig,
+                  crunch: TryCrunch): SortedMap[TQM, DeskRecMinute] = {
+    val sla = airportConfig.slaByQueue.getOrElse(qn, 15)
+    val paxMinutes = qLms.map(_.paxLoad)
+    val workMinutes = qLms.map(_.workLoad)
+    val adjustedWorkMinutes = if (qn == Queues.EGate) workMinutes.map(_ / airportConfig.eGateBankSize) else workMinutes
+    val minuteMillis: Seq[MillisSinceEpoch] = firstMinute until lastMinute by 60000
+    val (minDesks, maxDesks) = minMaxDesksForQueue(minuteMillis, tn, qn, airportConfig)
+    val start = SDate.now()
+    val triedResult: Try[OptimizerCrunchResult] = crunch(adjustedWorkMinutes, minDesks, maxDesks, OptimizerConfig(sla))
+    triedResult match {
+      case Success(OptimizerCrunchResult(desks, waits)) =>
+        log.debug(s"Optimizer for $qn Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
+        SortedMap[TQM, DeskRecMinute]() ++ minuteMillis.zipWithIndex.map {
+          case (minute, idx) =>
+            val wl = workMinutes(idx)
+            val pl = paxMinutes(idx)
+            val drm = DeskRecMinute(tn, qn, minute, pl, wl, desks(idx), waits(idx))
+            (drm.key, drm)
+        }
+      case Failure(t) =>
+        log.warn(s"failed to crunch: $t")
+        SortedMap[TQM, DeskRecMinute]()
+    }
+  }
+
+  def minMaxDesksForQueue(deskRecMinutes: Seq[MillisSinceEpoch], tn: TerminalName, qn: QueueName, airportConfig: AirportConfig): (Seq[Int], Seq[Int]) = {
+    val defaultMinMaxDesks = (Seq.fill(24)(0), Seq.fill(24)(10))
+    val queueMinMaxDesks = airportConfig.minMaxDesksByTerminalQueue.getOrElse(tn, Map()).getOrElse(qn, defaultMinMaxDesks)
+    val minDesks = deskRecMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._1))
+    val maxDesks = deskRecMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._2))
+    (minDesks, maxDesks)
   }
 }

@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.client.SPAMain.{Loc, TerminalsDashboardLoc}
+import drt.client.SPAMain.{Loc, PortDashboardLoc}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
@@ -9,9 +9,9 @@ import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
 
-object TerminalsDashboardPage {
+object PortDashboardPage {
 
-  case class Props(router: RouterCtl[Loc], dashboardPage: TerminalsDashboardLoc)
+  case class Props(router: RouterCtl[Loc], dashboardPage: PortDashboardLoc)
 
   case class DisplayPeriod(start: SDateLike, end: SDateLike)
 
@@ -19,7 +19,7 @@ object TerminalsDashboardPage {
     def apply(start: SDateLike, hours: Int = 3): DisplayPeriod = DisplayPeriod(start, start.addHours(hours))
   }
 
-  val component = ScalaComponent.builder[Props]("TerminalsDashboard")
+  val component = ScalaComponent.builder[Props]("PortDashboard")
     .render_P(p => {
 
       val portCodeQueueOrderTerminals = SPACircuit.connect(_.airportConfig)
@@ -88,5 +88,5 @@ object TerminalsDashboardPage {
     })
     .build
 
-  def apply(router: RouterCtl[Loc], dashboardPage: TerminalsDashboardLoc = TerminalsDashboardLoc(None)): VdomElement = component(Props(router, dashboardPage))
+  def apply(router: RouterCtl[Loc], dashboardPage: PortDashboardLoc = PortDashboardLoc(None)): VdomElement = component(Props(router, dashboardPage))
 }

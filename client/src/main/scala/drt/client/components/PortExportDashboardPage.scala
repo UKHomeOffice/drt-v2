@@ -7,11 +7,11 @@ import drt.shared.LoggedInUser
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
 
-object TerminalsExportDashboardPage {
+object PortExportDashboardPage {
 
   case class Props(loggedInUser: LoggedInUser)
 
-  val component = ScalaComponent.builder[Props]("UserDashboard")
+  val component = ScalaComponent.builder[Props]("PortExportDashboard")
     .render_P(p => {
       val airportConfigRCP = SPACircuit.connect(_.airportConfig)
 

@@ -7,7 +7,6 @@ import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import spray.json.{DefaultJsonProtocol, JsValue, RootJsonFormat}
 
-import scala.language.postfixOps
 
 object MockRoles {
   val log: Logger = LoggerFactory.getLogger(getClass)

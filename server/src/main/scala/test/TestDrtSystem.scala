@@ -2,6 +2,7 @@ package test
 
 import actors._
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props}
+import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{KillSwitch, Materializer, OverflowStrategy}
 import akka.util.Timeout
@@ -17,12 +18,12 @@ import test.TestActors.{TestStaffMovementsActor, _}
 import test.feeds.test.{CSVFixtures, TestFixtureFeed, TestManifestsActor}
 import test.roles.TestUserRoleProvider
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.Success
 
-class TestDrtSystem(override val actorSystem: ActorSystem, override val config: Configuration, override val airportConfig: AirportConfig)(implicit actorMaterializer: Materializer)
+class TestDrtSystem(override val actorSystem: ActorSystem, override val config: Configuration, override val airportConfig: AirportConfig)(implicit actorMaterializer: Materializer, ec: ExecutionContext)
   extends DrtSystem(actorSystem, config, airportConfig) {
 
   import DrtStaticParameters._
@@ -35,8 +36,9 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
   val testForecastCrunchStateProps = Props(classOf[TestCrunchStateActor], 100, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots)
   val testManifestsActor: ActorRef = actorSystem.actorOf(Props(classOf[TestManifestsActor]), s"TestActor-APIManifests")
 
-  override lazy val liveCrunchStateActor: ActorRef = system.actorOf(testLiveCrunchStateProps, name = "crunch-live-state-actor")
-  override lazy val forecastCrunchStateActor: ActorRef = system.actorOf(testForecastCrunchStateProps, name = "crunch-forecast-state-actor")
+  override lazy val liveCrunchStateActor: AskableActorRef = system.actorOf(testLiveCrunchStateProps, name = "crunch-live-state-actor")
+  override lazy val forecastCrunchStateActor: AskableActorRef = system.actorOf(testForecastCrunchStateProps, name = "crunch-forecast-state-actor")
+  override lazy val portStateActor: ActorRef = system.actorOf(TestPortStateActor.props(liveCrunchStateActor, forecastCrunchStateActor, airportConfig, expireAfterMillis, now, 2), name = "port-state-actor")
   override lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[TestVoyageManifestsActor], now, expireAfterMillis, params.snapshotIntervalVm), name = "voyage-manifests-actor")
   override lazy val shiftsActor: ActorRef = system.actorOf(Props(classOf[TestShiftsActor], now, timeBeforeThisMonth(now)))
   override lazy val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[TestFixedPointsActor], now))
@@ -91,12 +93,16 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
       val lookupRefreshDue: MillisSinceEpoch => Boolean = (lastLookupMillis: MillisSinceEpoch) => now().millisSinceEpoch - lastLookupMillis > 1000
       val manifestKillSwitch = startManifestsGraph(None, manifestResponsesSink, manifestRequestsSource, lookupRefreshDue)
 
+      val (millisToCrunchActor: ActorRef, crunchKillSwitch) = startCrunchGraph(portStateActor)
+      portStateActor ! SetCrunchActor(millisToCrunchActor)
+      portStateActor ! SetSimulationActor(cs.loadsToSimulate)
+
       subscribeStaffingActors(cs)
       startScheduledFeedImports(cs)
 
       testManifestsActor ! SubscribeResponseQueue(cs.manifestsLiveResponse)
 
-      List(bridge1Ks, bridge2Ks, manifestKillSwitch) ++ cs.killSwitches
+      List(bridge1Ks, bridge2Ks, manifestKillSwitch, crunchKillSwitch) ++ cs.killSwitches
     }
 
     val testActors = List(
@@ -107,8 +113,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
       shiftsActor,
       fixedPointsActor,
       staffMovementsActor,
-      liveCrunchStateActor,
-      forecastCrunchStateActor,
+      portStateActor,
       aggregatedArrivalsActor
     )
 

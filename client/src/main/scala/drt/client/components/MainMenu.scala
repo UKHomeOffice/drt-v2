@@ -41,15 +41,18 @@ object MainMenu {
 
   def menuItems(airportConfig: AirportConfig, currentLoc: Loc, userRoles: Set[Role], feeds: Seq[FeedStatuses]): List[MenuItem] = {
     def terminalDepsMenuItem: List[(Role, Int => MenuItem)] = airportConfig.terminalNames.map { tn =>
-        val targetLoc = currentLoc match {
-          case tptl: TerminalPageTabLoc =>
-            TerminalPageTabLoc(tn, tptl.mode, tptl.subMode,
-              tptl.withUrlParameters(UrlDateParameter(tptl.date),
-                UrlTimeRangeStart(tptl.timeRangeStartString),
-                UrlTimeRangeEnd(tptl.timeRangeEndString)).queryParams)
-          case _ => TerminalPageTabLoc(tn)
-        }
-        (BorderForceStaff, (offset: Int) => MenuItem(offset, _ => tn, Icon.calculator, targetLoc))
+      val targetLoc = currentLoc match {
+        case tptl: TerminalPageTabLoc if tptl.mode == "dashboard" =>
+          TerminalPageTabLoc(tn, tptl.mode, tptl.subMode)
+        case tptl: TerminalPageTabLoc =>
+          TerminalPageTabLoc(tn, tptl.mode, tptl.subMode,
+            tptl.withUrlParameters(UrlDateParameter(tptl.date),
+              UrlTimeRangeStart(tptl.timeRangeStartString),
+              UrlTimeRangeEnd(tptl.timeRangeEndString)).queryParams)
+        case _ if userRoles.contains(TerminalDashboard) => TerminalPageTabLoc(tn, "dashboard", "summary")
+        case _ => TerminalPageTabLoc(tn)
+      }
+      (BorderForceStaff, (offset: Int) => MenuItem(offset, _ => tn, Icon.calculator, targetLoc))
     }.toList
 
     val restrictedMenuItems: List[(Role, Int => MenuItem)] = List(
@@ -62,7 +65,7 @@ object MainMenu {
     val itemsForLoggedInUser: List[MenuItem] = restrictedMenuItemsForRole(restrictedMenuItems, userRoles, nonTerminalUnrestrictedMenuItems.length)
 
     val nonTerminalMenuItems = nonTerminalUnrestrictedMenuItems ::: itemsForLoggedInUser
-    nonTerminalMenuItems  :+ statusMenuItem(nonTerminalMenuItems.length + airportConfig.terminalNames.length, feeds)
+    nonTerminalMenuItems :+ statusMenuItem(nonTerminalMenuItems.length + airportConfig.terminalNames.length, feeds)
   }
 
   def restrictedMenuItemsForRole(restrictedMenuItems: List[(Role, Int => MenuItem)], roles: Set[Role], startIndex: Int): List[MenuItem] = {

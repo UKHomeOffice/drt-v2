@@ -1,14 +1,13 @@
 package drt.client.services.handlers
 
-import diode._
 import diode.Implicits.runAfterImpl
+import diode._
 import diode.data._
 import drt.client.actions.Actions._
 import drt.client.logger._
-import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi._
-import drt.shared.Queues
+import drt.shared.PortState
 import org.scalajs.dom
 import upickle.default.read
 

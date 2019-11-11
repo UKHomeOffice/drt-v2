@@ -1,20 +1,21 @@
 package drt.server.feeds.chroma
 
 import akka.actor.Cancellable
-import akka.event.LoggingAdapter
 import akka.stream.scaladsl.Source
 import drt.chroma.StreamingChromaFlow
 import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveFlight}
 import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
+import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-case class ChromaLiveFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcher[ChromaLiveFlight]) {
-  flightFeed =>
+case class ChromaLiveFeed(chromaFetcher: ChromaFetcher[ChromaLiveFlight]) {
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   object EdiChroma {
     val ArrivalsHall1 = "A1"
@@ -29,8 +30,8 @@ case class ChromaLiveFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcher[Chro
     }
   }
 
-  def chromaEdiFlights(): Source[ArrivalsFeedResponse, Cancellable] = {
-    val chromaFlow = StreamingChromaFlow.chromaPollingSourceLive(log, chromaFetcher, 30 seconds)
+  def chromaEdiFlights()(implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, Cancellable] = {
+    val chromaFlow = StreamingChromaFlow.chromaPollingSource(chromaFetcher, 30 seconds, StreamingChromaFlow.liveChromaToArrival)
 
     chromaFlow.map {
       case aff: ArrivalsFeedFailure => aff
@@ -45,15 +46,15 @@ case class ChromaLiveFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcher[Chro
       case None => csf
     })
 
-  def chromaVanillaFlights(frequency: FiniteDuration): Source[ArrivalsFeedResponse, Cancellable] = {
-    StreamingChromaFlow.chromaPollingSourceLive(log, chromaFetcher, frequency)
+  def chromaVanillaFlights(frequency: FiniteDuration)(implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, Cancellable] = {
+    StreamingChromaFlow.chromaPollingSource(chromaFetcher, frequency, StreamingChromaFlow.liveChromaToArrival)
   }
 }
 
-case class ChromaForecastFeed(log: LoggingAdapter, chromaFetcher: ChromaFetcher[ChromaForecastFlight]) {
+case class ChromaForecastFeed(chromaFetcher: ChromaFetcher[ChromaForecastFlight]) {
   flightFeed =>
 
-  def chromaVanillaFlights(frequency: FiniteDuration): Source[ArrivalsFeedResponse, Cancellable] = {
-    StreamingChromaFlow.chromaPollingSourceForecast(log, chromaFetcher, frequency)
+  def chromaVanillaFlights(frequency: FiniteDuration)(implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, Cancellable] = {
+    StreamingChromaFlow.chromaPollingSource(chromaFetcher, frequency, StreamingChromaFlow.forecastChromaToArrival)
   }
 }

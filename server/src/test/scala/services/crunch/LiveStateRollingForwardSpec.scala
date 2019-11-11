@@ -4,9 +4,8 @@ import actors.GetState
 import akka.pattern.AskableActorRef
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.PortState
 import drt.shared.FlightsApi.Flights
-import drt.shared.{Arrival, SDateLike}
+import drt.shared.{Arrival, PortState, SDateLike}
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 
@@ -20,7 +19,7 @@ class LiveStateRollingForwardSpec extends CrunchTestLike {
   "Given a flight that applies to the few minutes after the live state window, ie in forecast state only " +
     "Followed by an updated after midnight that brings the previous update into live state scope " +
     "When I probe the port state " +
-    "I should see the first update's flight in live, and both flights in forecast" >> {
+    "I should see the first update's flight after crossing midnight" >> {
     val tuesday = "2019-01-01T00:00"
     val wednesday = "2019-01-02T00:00"
 
@@ -36,23 +35,21 @@ class LiveStateRollingForwardSpec extends CrunchTestLike {
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival))))
 
-    stateContainsArrivals(crunch.forecastTestProbe, Seq(futureArrival))
-
-    val day1LiveFlightsEmpty = getState(crunch.liveCrunchActor).flights.isEmpty
+    stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival))
 
     nowDate = SDate(wednesday)
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival2))))
 
-    stateContainsArrivals(crunch.liveTestProbe, Seq(futureArrival))
-    stateContainsArrivals(crunch.forecastTestProbe, Seq(futureArrival, futureArrival2))
+    stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival))
+    stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival, futureArrival2))
 
-    day1LiveFlightsEmpty
+    success
   }
 
   "Given a flight that applies to the few minutes after the live state window, ie in forecast state only " +
     "Followed by another update that applies to the few minutes after the live state window  " +
     "When I probe the port state " +
-    "I should still see no flights in live, but both flights in forecast" >> {
+    "I should see both flights after crossing midnight" >> {
     val tuesday = "2019-01-01T00:00"
 
     val fridayMidnight30 = "2019-01-04T00:30"
@@ -67,14 +64,13 @@ class LiveStateRollingForwardSpec extends CrunchTestLike {
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival))))
 
-    stateContainsArrivals(crunch.forecastTestProbe, Seq(futureArrival))
+    stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival2))))
 
-    stateContainsArrivals(crunch.forecastTestProbe, Seq(futureArrival, futureArrival2))
-    val day1LiveFlightsEmpty = getState(crunch.liveCrunchActor).flights.isEmpty
+    stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival, futureArrival2))
 
-    day1LiveFlightsEmpty
+    success
   }
 
   private def getState(actor: AskableActorRef): PortState = {

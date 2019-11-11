@@ -5,7 +5,7 @@ import java.util.UUID
 import diode.Action
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType}
-import drt.client.components.{AlertsPage, ContactPage, EditKeyCloakUserPage, GlobalStyles, KeyCloakUsersPage, Layout, PortConfigPage, StatusPage, TerminalComponent, TerminalPlanningComponent, TerminalsDashboardPage, UserDashboardPage}
+import drt.client.components.{AlertsPage, ContactPage, EditKeyCloakUserPage, GlobalStyles, KeyCloakUsersPage, Layout, PortConfigPage, StatusPage, TerminalComponent, TerminalPlanningComponent, PortDashboardPage, UserDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -118,7 +118,7 @@ object SPAMain {
 
   def serverLogEndpoint: String = BaseUrl.until_#(Path("/logging")).value
 
-  case class TerminalsDashboardLoc(period: Option[Int]) extends Loc
+  case class PortDashboardLoc(period: Option[Int]) extends Loc
 
   case object StatusLoc extends Loc
 
@@ -158,7 +158,7 @@ object SPAMain {
 
       val rule = homeRoute(dsl) | dashboardRoute(dsl) | terminalRoute(dsl) | statusRoute(dsl) | keyCloakUsersRoute(dsl) | keyCloakUserEditRoute(dsl) | alertRoute(dsl) | contactRoute(dsl) | portConfigRoute(dsl)
 
-      rule.notFound(redirectToPage(TerminalsDashboardLoc(None))(Redirect.Replace))
+      rule.notFound(redirectToPage(PortDashboardLoc(None))(Redirect.Replace))
     }
     .renderWith(layout)
     .onPostRender((maybePrevLoc, currentLoc) => {
@@ -233,9 +233,9 @@ object SPAMain {
   def dashboardRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
     import dsl._
 
-    dynamicRouteCT(("#terminalsDashboard" / int.option).caseClass[TerminalsDashboardLoc]) ~>
-      dynRenderR((page: TerminalsDashboardLoc, router) => {
-        TerminalsDashboardPage(router, page)
+    dynamicRouteCT(("#portDashboard" / int.option).caseClass[PortDashboardLoc]) ~>
+      dynRenderR((page: PortDashboardLoc, router) => {
+        PortDashboardPage(router, page)
       })
   }
 

@@ -56,7 +56,6 @@ class CachingCrunchActorSpec extends TestKit(ActorSystem("CacheTests")) with Spe
 
     val query = CachableActorQuery(Props(classOf[TestActorProbe], SDate("2017-06-01T20:00:00Z"), Map(), inc _), GetTerminalCrunch("T1Ø"))
 
-    val resF1 = cacheActorRef.ask(query)
     val resF2 = cacheActorRef.ask(query)
 
     val res1 = Await.result(resF2, 1 second)

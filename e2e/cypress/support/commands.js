@@ -149,3 +149,16 @@ Cypress.Commands.add('findAndClick', (toFind) => cy.contains(toFind).click({ for
 Cypress.Commands.add('choose24Hours', () => cy.get('#current .date-selector .date-view-picker-container').contains('24 hours').click());
 
 Cypress.Commands.add('chooseArrivalsTab', () => cy.get("#arrivalsTab").click());
+
+Cypress.Commands.add('addManifest', (manifest) => cy.request('POST', '/test/manifest', manifest));
+
+Cypress.Commands.add('waitForFlightToAppear', (flightCode) => {
+  return cy
+    .navigateHome()
+    .navigateToMenuItem('T1')
+    .get("#currentTab").click()
+    .get("#arrivalsTab").click()
+    .choose24Hours()
+    .get("#arrivals")
+    .contains(flightCode);
+})
