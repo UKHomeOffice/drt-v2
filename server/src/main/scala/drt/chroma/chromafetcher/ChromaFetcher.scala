@@ -11,8 +11,8 @@ import drt.http.WithSendAndReceive
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.immutable.Seq
-import scala.concurrent.duration.{Duration, _}
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
+import scala.util.{Failure, Success, Try}
 
 object ChromaFetcher {
 
@@ -42,22 +42,24 @@ object ChromaFetcher {
                               SchDT: String) extends ChromaFlightLike
 
   case class ChromaForecastFlight(
-                                EstPax: Int,
-                                EstTranPax: Int,
-                                FlightID: Int,
-                                AirportID: String,
-                                Terminal: String,
-                                ICAO: String,
-                                IATA: String,
-                                Origin: String,
-                                SchDT: String) extends ChromaFlightLike
+                                   EstPax: Int,
+                                   EstTranPax: Int,
+                                   FlightID: Int,
+                                   AirportID: String,
+                                   Terminal: String,
+                                   ICAO: String,
+                                   IATA: String,
+                                   Origin: String,
+                                   SchDT: String) extends ChromaFlightLike
 
 }
 
 object ChromaFlightMarshallers {
+
   import ChromaParserProtocol._
 
   def live(implicit mat: Materializer): HttpResponse => Future[List[ChromaLiveFlight]] = r => Unmarshal(r).to[List[ChromaLiveFlight]]
+
   def forecast(implicit mat: Materializer): HttpResponse => Future[List[ChromaForecastFlight]] = r => Unmarshal(r).to[List[ChromaForecastFlight]]
 }
 
@@ -93,29 +95,33 @@ abstract case class ChromaFetcher[F <: ChromaFlightLike](override val feedType: 
       val requestWithHeaders = request
         .addHeader(Accept(MediaTypes.`application/json`))
         .addHeader(Authorization(OAuth2BearerToken(token)))
-      sendAndReceive(requestWithHeaders).flatMap {r =>
+      sendAndReceive(requestWithHeaders).flatMap { r =>
         logResponse(r)
         rToFs(r)
       }
     }
   }
 
-  def currentFlights: Future[Seq[F]] = {
+  def currentFlights: Future[Try[Seq[F]]] = {
     log.debug(s"requesting token")
     val tokenRequest = HttpRequest(method = HttpMethods.POST, uri = tokenUrl, entity = chromaTokenRequestCredentials.toEntity)
     val flightsRequest = HttpRequest(method = HttpMethods.GET, uri = url)
-    val eventualToken: Future[ChromaToken] = tokenPipeline(tokenRequest)
-    def eventualLiveFlights(accessToken: String): Future[List[F]] = livePipeline(accessToken).pipeline(flightsRequest)
 
-    for {
-      t <- eventualToken
-      chromaResponse <- eventualLiveFlights(t.access_token)
-    } yield {
-      chromaResponse
-    }
-  }
-
-  def currentFlightsBlocking: Seq[F] = {
-    Await.result(currentFlights, Duration(60, SECONDS))
+    tokenPipeline(tokenRequest)
+      .map { case ChromaToken(token, _, _) =>
+        livePipeline(token).pipeline(flightsRequest)
+          .map(Success(_))
+          .recoverWith {
+            case t =>
+              log.warn(s"Failed to fetch chroma flights", t)
+              Future(Failure(t))
+          }
+      }
+      .recoverWith {
+        case t =>
+          log.warn(s"Error getting chroma token", t)
+          Future(Future(Failure(t)))
+      }
+      .flatten
   }
 }
