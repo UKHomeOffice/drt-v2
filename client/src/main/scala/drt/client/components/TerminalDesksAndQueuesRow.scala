@@ -6,7 +6,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions._
 import drt.client.services.{SPACircuit, ViewMode}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
-import drt.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.TagOf
@@ -80,8 +80,6 @@ object TerminalDesksAndQueuesRow {
       val totalRequired = DesksAndQueues.totalRequired(props.staffMinute, crunchMinutes)
       val totalDeployed = DesksAndQueues.totalDeployed(props.staffMinute, crunchMinutes)
       val ragClass = ragStatus(totalRequired, available)
-      val slotStart = SDate(props.minuteMillis)
-      val slotEnd = slotStart.addMinutes(props.slotMinutes - 1)
 
       def allowAdjustments: Boolean = props.viewMode.time.millisSinceEpoch > SDate.midnightThisMorning().millisSinceEpoch
 
