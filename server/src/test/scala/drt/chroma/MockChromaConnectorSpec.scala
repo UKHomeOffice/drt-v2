@@ -6,24 +6,23 @@ import com.typesafe.config.{Config, ConfigFactory}
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaLiveFlight, ChromaToken}
 import drt.http.WithSendAndReceive
+import org.specs2.matcher.MatchResult
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
-import scala.language.reflectiveCalls
+import scala.language.{postfixOps, reflectiveCalls}
 
 class MockChromaConnectorSpec extends AkkaStreamTestKitSpecificationLike {
   test =>
   val log: LoggingAdapter = system.log
 
-  val mockConfig: Config = ConfigFactory.parseMap(
-    Map(
+  val mockConfig: Config = ConfigFactory.parseMap(Map(
       "chroma.url.live" -> "http://someserver/somepath",
       "chroma.url.token" -> "http://someserve/someotherpath",
       "chroma.username" -> "magicuser",
       "chroma.password" -> "pass"
-    )
-  )
+    ).asJava)
 
   import system.dispatcher
 
@@ -43,10 +42,32 @@ class MockChromaConnectorSpec extends AkkaStreamTestKitSpecificationLike {
         pipeline(HttpRequest(method = HttpMethods.POST, uri = tokenUrl, entity = chromaTokenRequestCredentials.toEntity))
       }
 
-      def await = Await.result(response, 10 seconds) must equalTo(ChromaToken(
+      def await: MatchResult[ChromaToken] = Await.result(response, 10 seconds) must equalTo(ChromaToken(
         "LIk79Cj6NLssRcWePFxkJMIhpmSbe5gBGqOOxNIuxWNVd7JWsWtoOqAZDnM5zADvkbdIJ0BHkJgaya2pYyu8yH2qb8zwXA4TxZ0Jq0JwhgqulMgcv1ottnrUA1U61pu1TNFN5Bm08nvqZpYtwCWfGNGbxdrol-leZry_UD8tgxyZLfj45rgzmxm2u2DBN8TFpB_uG6Pb1B2XHM3py6HgYAmqSTjTK060PyNWTp_czsU",
         "bearer", 86399))
     }
+
+    sut.await
+  }
+
+  "When we request a chroma token, if it returns success for token and result we parse successfully" >> {
+    val sut = new ChromaFetcher(ChromaLive, ChromaFlightMarshallers.live) with WithSendAndReceive {
+      override lazy val config: Config = mockConfig
+      private val pipeline = tokenPipeline _
+
+      def sendAndReceive: HttpRequest => Future[HttpResponse] = (req: HttpRequest) => Future {
+        HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`,"""bas json here""".stripMargin))
+      }
+
+      val response: Future[ChromaToken] = {
+        pipeline(HttpRequest(method = HttpMethods.POST, uri = tokenUrl, entity = chromaTokenRequestCredentials.toEntity))
+      }
+
+      def await: MatchResult[ChromaToken] = Await.result(response, 10 seconds) must equalTo(ChromaToken(
+        "LIk79Cj6NLssRcWePFxkJMIhpmSbe5gBGqOOxNIuxWNVd7JWsWtoOqAZDnM5zADvkbdIJ0BHkJgaya2pYyu8yH2qb8zwXA4TxZ0Jq0JwhgqulMgcv1ottnrUA1U61pu1TNFN5Bm08nvqZpYtwCWfGNGbxdrol-leZry_UD8tgxyZLfj45rgzmxm2u2DBN8TFpB_uG6Pb1B2XHM3py6HgYAmqSTjTK060PyNWTp_czsU",
+        "bearer", 86399))
+    }
+
     sut.await
   }
 
@@ -123,11 +144,12 @@ class MockChromaConnectorSpec extends AkkaStreamTestKitSpecificationLike {
         pipeline
       }
 
-      def await = Await.result(response, 10 seconds) must equalTo(Seq(
+      def await: MatchResult[Seq[ChromaLiveFlight]] = Await.result(response, 10 seconds) must equalTo(Seq(
         SampleData.flight1,
         SampleData.flight2
       ))
     }
+
     sut.await
   }
 }

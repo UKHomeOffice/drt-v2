@@ -1,4 +1,4 @@
-package feeds
+package feeds.lgw
 
 import com.box.sdk.{BoxConfig, BoxDeveloperEditionAPIConnection}
 import drt.server.feeds.lgw.LGWForecastFeed

@@ -1,4 +1,4 @@
-package feeds
+package feeds.cirium
 
 import actors.acking.AckingReceiver.StreamCompleted
 import akka.actor.ActorSystem
