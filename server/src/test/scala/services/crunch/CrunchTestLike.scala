@@ -93,11 +93,11 @@ class CrunchTestLike
     slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 20, Queues.NonEeaDesk -> 45),
     terminalNames = Seq("T1", "T2"),
     defaultWalkTimeMillis = Map(),
-    defaultPaxSplits = SplitRatios(
+    terminalPaxSplits = List("T1", "T2").map(t => (t, SplitRatios(
       SplitSources.TerminalAverage,
       SplitRatio(eeaMachineReadableToDesk, 1)
-    ),
-    defaultProcessingTimes = Map(
+    ))).toMap,
+    terminalProcessingTimes = Map(
       "T1" -> Map(
         eeaMachineReadableToDesk -> 25d / 60,
         eeaNonMachineReadableToDesk -> 25d / 60

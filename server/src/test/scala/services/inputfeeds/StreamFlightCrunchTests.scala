@@ -44,15 +44,15 @@ object TestCrunchConfig {
       timeToChoxMillis = 0L,
       firstPaxOffMillis = 0L,
       defaultWalkTimeMillis = Map("A1" -> 0L, "A2" -> 0L),
-      defaultPaxSplits = SplitRatios(
+      terminalPaxSplits = List("A1", "A2").map(t => (t, SplitRatios(
         AirportConfigOrigin,
         SplitRatio(eeaMachineReadableToDesk, 0.4875),
         SplitRatio(eeaMachineReadableToEGate, 0.1625),
         SplitRatio(eeaNonMachineReadableToDesk, 0.1625),
         SplitRatio(visaNationalToDesk, 0.05),
         SplitRatio(nonVisaNationalToDesk, 0.05)
-      ),
-      defaultProcessingTimes = Map(
+      ))).toMap,
+      terminalProcessingTimes = Map(
         "A1" -> Map(
           eeaMachineReadableToDesk -> 16d / 60,
           eeaMachineReadableToEGate -> 25d / 60,

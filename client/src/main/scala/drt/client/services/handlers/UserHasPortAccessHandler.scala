@@ -1,6 +1,5 @@
 package drt.client.services.handlers
 
-import boopickle.Default._
 import diode.data.{Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW}
 import drt.client.SPAMain
@@ -19,7 +18,7 @@ class UserHasPortAccessHandler[M](modelRW: ModelRW[M, Pot[Boolean]]) extends Log
 
     case GetUserHasPortAccess =>
 
-      val url = SPAMain.absoluteUrl("data/user/has-port-access")
+      val url = SPAMain.absoluteUrl(relativeUrl = "data/user/has-port-access")
 
       val eventualRequest: Future[XMLHttpRequest] = dom.ext.Ajax.get(url = url)
       effectOnly(Effect(eventualRequest.map(r => {

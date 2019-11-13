@@ -37,9 +37,4 @@ object SplitsProvider {
       emptyProvider
     }
   }
-
-  def defaultProvider(airportConf: AirportConfig): (Arrival) => Some[SplitRatios] = {
-    _ => Some(airportConf.defaultPaxSplits)
-  }
-
 }

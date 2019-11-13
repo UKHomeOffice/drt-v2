@@ -223,6 +223,7 @@ object TerminalStaffing {
     .toSeq
     .sortBy {
       case (_, head :: _) => head.time.millisSinceEpoch
+      case (_, Nil) => 0L
     }
 
   def labelAndLink(terminalName: TerminalName,

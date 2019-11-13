@@ -35,12 +35,12 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
         airportConfig = airportConfig.copy(
           terminalNames = Seq("T1"),
           queues = Map("T1" -> Seq(Queues.EeaDesk, Queues.EGate)),
-          defaultPaxSplits = SplitRatios(
+          terminalPaxSplits = Map("T1" -> SplitRatios(
             SplitSources.TerminalAverage,
             SplitRatio(eeaMachineReadableToDesk, 0.5),
             SplitRatio(eeaMachineReadableToEGate, 0.5)
-          ),
-          defaultProcessingTimes = Map("T1" -> Map(
+          )),
+          terminalProcessingTimes = Map("T1" -> Map(
             eeaMachineReadableToDesk -> fiveMinutes,
             eeaMachineReadableToEGate -> fiveMinutes
           )),

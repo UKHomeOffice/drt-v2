@@ -1,32 +1,23 @@
 package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
-
-import japgolly.scalajs.react.CtorType
-import japgolly.scalajs.react.component.Js
-import japgolly.scalajs.react.component.Scala.Unmounted
+import japgolly.scalajs.react.component.Scala.Component
+import org.scalajs.dom.html.Div
 import utest._
-import japgolly.scalajs.react._
-import japgolly.scalajs.react.raw.SyntheticEvent
-import japgolly.scalajs.react.vdom.html_<^
-import japgolly.scalajs.react.vdom.html_<^._
-
-import scala.util.Try
 
 object ExampleReactScalaJsTest extends TestSuite {
 
-  import japgolly.scalajs.react.test._
-  import japgolly.scalajs.react.test
   import japgolly.scalajs.react._
+  import japgolly.scalajs.react.test._
   import japgolly.scalajs.react.vdom.html_<^._
 
   class CP {
     var prev = "none"
 
-    def render(p: String) = <.div(s"$prev → $p")
+    def render(p: String): VdomTagOf[Div] = <.div(s"$prev → $p")
   }
 
-  val CP = ScalaComponent.builder[String]("asd")
+  val CP: Component[String, Unit, CP, CtorType.Props] = ScalaComponent.builder[String](displayName = "asd")
     .backend(_ => new CP)
     .renderBackend
     .componentWillReceiveProps(i => Callback(i.backend.prev = i.currentProps))

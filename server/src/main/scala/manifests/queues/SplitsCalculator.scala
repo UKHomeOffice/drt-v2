@@ -8,7 +8,6 @@ import queueus.PaxTypeQueueAllocation
 
 
 case class SplitsCalculator(portCode: String, ptqa: PaxTypeQueueAllocation, portDefaultSplitRatios: Set[SplitRatio]) {
-
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   val portDefaultSplits: Set[Splits] = {
@@ -18,6 +17,5 @@ case class SplitsCalculator(portCode: String, ptqa: PaxTypeQueueAllocation, port
     Set(Splits(portDefault.map(aptqc => aptqc.copy(paxCount = aptqc.paxCount * 100)), SplitSources.TerminalAverage, None, Percentage))
   }
 
-  def bestSplitsForArrival(manifest: BestAvailableManifest, arrival: Arrival): Splits =
-    ptqa.toSplits(arrival.Terminal, manifest)
+  def bestSplitsForArrival(manifest: BestAvailableManifest, arrival: Arrival): Splits = ptqa.toSplits(arrival.Terminal, manifest)
 }

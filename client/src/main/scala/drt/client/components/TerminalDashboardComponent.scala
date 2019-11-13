@@ -9,9 +9,10 @@ import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.CrunchMinute
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 
 import scala.scalajs.js.URIUtils
 
@@ -29,7 +30,7 @@ object TerminalDashboardComponent {
 
   def timeSlotStart: SDateLike => SDateLike = timeSlotForTime(slotSize)
 
-  val component = ScalaComponent.builder[Props]("TerminalDashboard")
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "TerminalDashboard")
     .render_P(p => {
       val startPoint = p.terminalPageTabLoc.queryParams.get("start")
         .flatMap(s => SDate.stringToSDateLikeOption(s))
@@ -59,7 +60,7 @@ object TerminalDashboardComponent {
               splitsGraphComponentColoured)(paxComp)(
               FlightsWithSplitsTable.Props(
                 ps.flights.filter { case (ua, _) => ua.terminal == p.terminalPageTabLoc.terminal }.values.toList,
-                p.airportConfig.queueOrder, p.airportConfig.hasEstChox)
+                p.airportConfig.queueOrder(p.terminalPageTabLoc.terminal), p.airportConfig.hasEstChox)
             )) else <.div(),
         <.div(^.className := "terminal-dashboard-queues",
           <.div(^.className := "pax-bar row", s"$terminalPax passengers presenting at the PCP"),
@@ -89,9 +90,9 @@ object TerminalDashboardComponent {
           ),
 
           <.div(^.className := "tb-bar row",
-            p.router.link(p.terminalPageTabLoc.copy(queryParams = Map("start" -> s"${urlPrevTime}")))(^.className := "dashboard-time-switcher prev-bar col", Icon.angleDoubleLeft),
+            p.router.link(p.terminalPageTabLoc.copy(queryParams = Map("start" -> s"$urlPrevTime")))(^.className := "dashboard-time-switcher prev-bar col", Icon.angleDoubleLeft),
             <.div(^.className := "time-label col", s"${start.prettyTime()} - ${end.prettyTime()}"),
-            p.router.link(p.terminalPageTabLoc.copy(queryParams = Map("start" -> s"${urlNextTime}")))(^.className := "dashboard-time-switcher next-bar col", Icon.angleDoubleRight)
+            p.router.link(p.terminalPageTabLoc.copy(queryParams = Map("start" -> s"$urlNextTime")))(^.className := "dashboard-time-switcher next-bar col", Icon.angleDoubleRight)
           )
         ),
         <.div(^.className := "terminal-dashboard-side",
@@ -109,7 +110,7 @@ object TerminalDashboardComponent {
       )
     })
     .componentDidMount(p => Callback {
-      GoogleEventTracker.sendPageView(s"terminal-dashboard-${p.props.terminalPageTabLoc.terminal}")
+      GoogleEventTracker.sendPageView(page = s"terminal-dashboard-${p.props.terminalPageTabLoc.terminal}")
     })
     .build
 
@@ -120,7 +121,7 @@ object TerminalDashboardComponent {
       case (tqm, cm) if tqm.queueName == queue && tqm.terminalName == terminal => cm
     }
 
-  def maxWaitInPeriod(cru: Iterable[CrunchApi.CrunchMinute]) = if (cru.nonEmpty)
+  def maxWaitInPeriod(cru: Iterable[CrunchApi.CrunchMinute]): Int = if (cru.nonEmpty)
     cru.map(cm => cm.deployedWait.getOrElse(cm.waitTime)).max
   else 0
 

@@ -10,10 +10,11 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.QueueName
 import drt.shared._
 import drt.shared.splits.ApiSplitsToSplitRatio
-import japgolly.scalajs.react._
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagMod, TagOf}
+import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, TableSection}
 
 import scala.util.{Failure, Success, Try}
@@ -22,7 +23,7 @@ object FlightsWithSplitsTable {
 
   type BestPaxForArrivalF = Arrival => Int
 
-  case class Props(flightsWithSplits: List[ApiFlightWithSplits], queueOrder: List[PaxTypeAndQueue], hasEstChox: Boolean)
+  case class Props(flightsWithSplits: List[ApiFlightWithSplits], queueOrder: Seq[PaxTypeAndQueue], hasEstChox: Boolean)
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
     props.flightsWithSplits.hashCode()
@@ -31,7 +32,7 @@ object FlightsWithSplitsTable {
   def ArrivalsTable(timelineComponent: Option[Arrival => VdomNode] = None,
                     originMapper: String => VdomNode = portCode => portCode,
                     splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
-                   )(paxComponent: ApiFlightWithSplits => TagMod = _.apiFlight.ActPax.getOrElse(0).toInt) = ScalaComponent.builder[Props]("ArrivalsTable")
+                   )(paxComponent: ApiFlightWithSplits => TagMod): Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "ArrivalsTable")
     .render_P(props => {
 
       val flightsWithSplits = props.flightsWithSplits
@@ -75,12 +76,12 @@ object FlightsWithSplitsTable {
       } match {
         case Success(s) => s
         case Failure(f) =>
-          log.error(s"failure in table render $f")
+          log.error(msg = s"failure in table render $f")
           <.div(s"render failure $f")
       }
     })
     .configure(Reusability.shouldComponentUpdate)
-    .componentDidMount((_) => StickyTableHeader("[data-sticky]"))
+    .componentDidMount(_ => StickyTableHeader("[data-sticky]"))
     .build
 
   def tableHead(props: Props, timelineTh: TagMod, queueNames: Seq[String]): TagOf[TableSection] = {
@@ -134,9 +135,9 @@ object FlightTableRow {
                    idx: Int,
                    timelineComponent: Option[Arrival => VdomNode],
                    originMapper: OriginMapperF = portCode => portCode,
-                   paxComponent: ApiFlightWithSplits => TagMod = _.apiFlight.ActPax.getOrElse(0).toInt,
+                   paxComponent: ApiFlightWithSplits => TagMod,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
-                   splitsQueueOrder: List[PaxTypeAndQueue],
+                   splitsQueueOrder: Seq[PaxTypeAndQueue],
                    hasEstChox: Boolean
                   )
 
@@ -160,7 +161,7 @@ object FlightTableRow {
     best.millisSinceEpoch
   }
 
-  val tableRow = ScalaComponent.builder[Props]("TableRow")
+  val tableRow: Component[Props, RowState, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "TableRow")
     .initialState[RowState](RowState(false))
     .render_PS((props, state) => {
       val codeShares = props.codeShares
@@ -215,7 +216,7 @@ object FlightTableRow {
           queueNames.map(q => <.td(<.span(s"${queuePax.getOrElse(q, 0)}"), ^.className := s"queue-split $paxClass right")).toTagMod
         )
       }.recover {
-        case e => log.error(s"couldn't make flight row $e")
+        case e => log.error(msg = s"couldn't make flight row $e")
           <.tr(s"failure $e, ${e.getMessage} ${e.getStackTrace.mkString(",")}")
       }.get
     }

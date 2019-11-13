@@ -3,11 +3,12 @@ package drt.client.components
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.SDateLike
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CallbackTo, ReactEventFromInput, ScalaComponent, _}
-import org.scalajs.dom.html.Div
+import japgolly.scalajs.react.{Callback, CallbackTo, CtorType, ReactEventFromInput, ScalaComponent}
+import org.scalajs.dom.html.{Div, Select}
 
 import scala.scalajs.js.Date
 
@@ -22,7 +23,7 @@ object DateSelector {
 
   val today: SDateLike = SDate.now()
 
-  def daysInMonth(month: Int, year: Int) = new Date(year, month, 0).getDate()
+  def daysInMonth(month: Int, year: Int): Int = new Date(year, month, 0).getDate()
 
   def formRow(label: String, xs: TagMod*): TagOf[Div] = {
     <.div(^.className := "form-group row",
@@ -33,18 +34,16 @@ object DateSelector {
   implicit val propsReuse: Reusability[Props] = Reusability.by(p => p.selectedDate.toISOString())
   implicit val stateReuse: Reusability[State] = Reusability.derive[State]
 
-  val component = ScalaComponent.builder[Props]("DatePicker")
+  val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("DatePicker")
     .initialStateFromProps(
-      p => {
-        State(day = p.selectedDate.getDate(), month = p.selectedDate.getMonth(), year = p.selectedDate.getFullYear())
-      }
+      p => State(day = p.selectedDate.getDate(), month = p.selectedDate.getMonth(), year = p.selectedDate.getFullYear())
     )
     .renderPS(r = (scope, props, state) => {
       val months = Seq("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December").zip(1 to 12)
       val days = 1 to 31
       val years = Seq.range(2017, today.getFullYear() + 2)
 
-      def drawSelect(names: Seq[String], values: Seq[String], defaultValue: Int, callback: (String) => (State) => State) = {
+      def drawSelect(names: Seq[String], values: Seq[String], defaultValue: Int, callback: String => State => State): VdomTagOf[Select] = {
         <.select(^.className := "form-control", ^.value := defaultValue.toString,
           ^.onChange ==> ((e: ReactEventFromInput) => {
 

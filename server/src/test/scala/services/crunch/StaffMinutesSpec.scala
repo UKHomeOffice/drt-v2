@@ -249,12 +249,12 @@ class StaffMinutesSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       airportConfig = airportConfig.copy(
         terminalNames = Seq("T1"),
-        defaultPaxSplits = SplitRatios(
+        terminalPaxSplits = Map("T1" -> SplitRatios(
           SplitSources.TerminalAverage,
           SplitRatio(eeaMachineReadableToDesk, 0.5),
           SplitRatio(visaNationalToDesk, 0.5)
-        ),
-        defaultProcessingTimes = Map(
+        )),
+        terminalProcessingTimes = Map(
           "T1" -> Map(
             eeaMachineReadableToDesk -> 25d / 60,
             visaNationalToDesk -> 75d / 60
@@ -369,12 +369,12 @@ class StaffMinutesSpec extends CrunchTestLike {
       airportConfig = airportConfig.copy(
         terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(Queues.EeaDesk, Queues.EGate)),
-        defaultPaxSplits = SplitRatios(
+        terminalPaxSplits = Map("T1" -> SplitRatios(
           SplitSources.TerminalAverage,
           SplitRatio(eeaMachineReadableToDesk, 0.1),
           SplitRatio(eeaMachineReadableToEGate, 0.9)
-        ),
-        defaultProcessingTimes = Map(
+        )),
+        terminalProcessingTimes = Map(
           "T1" -> Map(
             eeaMachineReadableToDesk -> 20d / 60,
             eeaMachineReadableToEGate -> 20d / 60
@@ -428,13 +428,13 @@ class StaffMinutesSpec extends CrunchTestLike {
         terminalNames = Seq("T1"),
         queues = Map("T1" -> Seq(Queues.EeaDesk, Queues.FastTrack, Queues.NonEeaDesk)),
         slaByQueue = Map(Queues.EeaDesk -> 25, Queues.FastTrack -> 30, Queues.NonEeaDesk -> 20),
-        defaultPaxSplits = SplitRatios(
+        terminalPaxSplits = Map("T1" -> SplitRatios(
           SplitSources.TerminalAverage,
           SplitRatio(eeaMachineReadableToDesk, 0.45),
           SplitRatio(visaNationalToDesk, 0.45),
           SplitRatio(visaNationalToFastTrack, 0.1)
-        ),
-        defaultProcessingTimes = Map(
+        )),
+        terminalProcessingTimes = Map(
           "T1" -> Map(
             eeaMachineReadableToDesk -> 20d / 60,
             visaNationalToDesk -> 20d / 60,

@@ -13,7 +13,7 @@ object ContactPage {
 
   val component = ScalaComponent.builder[Props]("ContactUs")
     .render_P(_ =>
-      <.div(^.className := "contact-us", <.h3("Contact Us"), ContactDetails())
+      <.div(^.className := "contact-us", <.h3("Contact Us"), ContactDetailsComponent())
     )
     .componentDidMount(p => Callback {
       GoogleEventTracker.sendPageView(s"contact")
@@ -25,7 +25,7 @@ object ContactPage {
 
 case class ContactModel(contactDetails: Pot[ContactDetails], oohStatus: Pot[OutOfHoursStatus])
 
-object ContactDetails {
+object ContactDetailsComponent {
 
   case class Props()
 

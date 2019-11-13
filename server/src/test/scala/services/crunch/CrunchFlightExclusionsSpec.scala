@@ -32,7 +32,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
-        defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
+        terminalProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
         queues = Map("T1" -> Seq(Queues.EeaDesk)),
         terminalNames = Seq("T1")
       ),
@@ -74,7 +74,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
-        defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
+        terminalProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
         queues = Map("T1" -> Seq(Queues.EeaDesk)),
         terminalNames = Seq("T1")),
       minutesToCrunch = 120

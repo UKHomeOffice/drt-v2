@@ -141,7 +141,7 @@ object CSVData {
     .map(f => actualAPISplitsForFlightInHeadingOrder(f, headings))
 
 
-  val queueNames: Seq[String] = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrderWithFastTrack)
+  val queueNames: Seq[String] = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrder)
 
 
   def flightsWithSplitsToCSVIncludingAPIDataWithHeadings(flightsWithSplits: List[ApiFlightWithSplits]): String =
@@ -157,7 +157,7 @@ object CSVData {
   }
 
   def flightsWithSplitsToCSV(flightsWithSplits: List[ApiFlightWithSplits]): String = {
-    val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrderWithFastTrack)
+    val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrder)
 
     val csvData = flightsWithSplits.sortBy(_.apiFlight.PcpTime).map(fws => {
 

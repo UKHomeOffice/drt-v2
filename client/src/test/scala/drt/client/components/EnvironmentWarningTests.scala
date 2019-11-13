@@ -1,6 +1,5 @@
 package drt.client.components
 
-import drt.client.services.JSDateConversions._
 import utest.{TestSuite, _}
 
 object EnvironmentWarningTests extends TestSuite {

@@ -6,7 +6,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
-import org.scalajs.dom.html.TableSection
+import org.scalajs.dom.html.{Span, TableCell, TableSection}
 import utest._
 
 import scala.collection.immutable.{Map, Seq}
@@ -19,18 +19,21 @@ object FlightsTableTests extends TestSuite {
   import japgolly.scalajs.react.test._
   import japgolly.scalajs.react.vdom.html_<^._
 
+  val queuesWithoutFastTrack = PaxTypesAndQueues.inOrder.filterNot(_.queueType == Queues.FastTrack)
+
   def tests = Tests {
 
-    val realComponent = ScalaComponent.builder[String]("RealThing")
+    val realComponent = ScalaComponent.builder[String](displayName = "RealThing")
       .renderP((_, p) => <.div(p)).build
 
-
-    def date(dt: Option[MillisSinceEpoch], className: Option[String] = None) = className match {
+    def date(dt: Option[MillisSinceEpoch], className: Option[String] = None): VdomTagOf[TableCell] = className match {
       case Some(cn) => <.td(flightDate(dt.map(millis=> SDate(millis).toISOString().replaceFirst(":00.000Z", "")).getOrElse("")), ^.className := cn)
       case _ => <.td(flightDate(dt.map(millis=> SDate(millis).toISOString().replaceFirst(":00.000Z", "")).getOrElse("")))
     }
 
-    def flightDate(dt: String) = <.span(^.title := dt.replace("T", " "), dt.split("T")(1))
+    def flightDate(dt: String): VdomTagOf[Span] = <.span(^.title := dt.replace("T", " "), dt.split("T")(1))
+
+    val paxComp: ApiFlightWithSplits => TagMod = (fws: ApiFlightWithSplits) => fws.apiFlight.ActPax.getOrElse(0).toString
 
     "How do we test" - {
       "Compare static rendered vdom to actual component for readability" - {
@@ -121,7 +124,7 @@ object FlightsTableTests extends TestSuite {
                   <.td(<.span(0), ^.className := "queue-split pax-unknown right")))))
 
           assertRenderedComponentsAreEqual(
-            ArrivalsTable(timelineComponent = None)()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), PaxTypesAndQueues.inOrderSansFastTrack, hasEstChox = true)),
+            ArrivalsTable(timelineComponent = None)(paxComp)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true)),
             staticComponent(expected)())
         }
 
@@ -157,7 +160,7 @@ object FlightsTableTests extends TestSuite {
                     <.td(<.span(0), ^.className := "queue-split pax-unknown right")))))
 
           assertRenderedComponentsAreEqual(
-            ArrivalsTable(Some(timelineComponent))()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), PaxTypesAndQueues.inOrderSansFastTrack, hasEstChox = true)),
+            ArrivalsTable(Some(timelineComponent))(paxComp)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true)),
             staticComponent(expected)())
         }
 
@@ -196,7 +199,7 @@ object FlightsTableTests extends TestSuite {
 
             val table = ArrivalsTable(timelineComponent = None,
               originMapper = port => originMapperComponent(port)
-            )()(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), PaxTypesAndQueues.inOrderSansFastTrack, hasEstChox = true))
+            )(paxComp)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true))
 
             assertRenderedComponentsAreEqual(table, staticComponent(expected)())
           }
@@ -262,7 +265,7 @@ object FlightsTableTests extends TestSuite {
 
           assertRenderedComponentsAreEqual(
             FlightsWithSplitsTable.ArrivalsTable(timelineComponent = None, originMapper = s => s)(paxComponent)(
-              FlightsWithSplitsTable.Props(withSplits(testFlightT :: Nil), PaxTypesAndQueues.inOrderSansFastTrack, hasEstChox = true)),
+              FlightsWithSplitsTable.Props(withSplits(testFlightT :: Nil), queuesWithoutFastTrack, hasEstChox = true)),
             staticComponent(expected)())
 
         }

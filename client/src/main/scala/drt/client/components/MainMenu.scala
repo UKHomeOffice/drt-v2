@@ -9,7 +9,7 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
-import org.scalajs.dom.html.LI
+import org.scalajs.dom.html.{Div, LI}
 
 import scala.collection.immutable
 
@@ -28,7 +28,7 @@ object MainMenu {
 
   def statusMenuItem(position: Int, feeds: Seq[FeedStatuses]): MenuItem = MenuItem(position, _ => s"Feeds", Icon.barChart, StatusLoc, List(feedsRag(feeds)))
 
-  def portConfigMenuItem(position: Int): MenuItem = MenuItem(position, _ => s"Port Config", Icon.cogs, PortConfigLoc)
+  def portConfigMenuItem: Int => MenuItem = (position: Int) => MenuItem(position, _ => s"Port Config", Icon.cogs, PortConfigLoc)
 
   def feedsRag(feeds: Seq[FeedStatuses]): String = {
     val rag = if (feeds.map(_.ragStatus(SDate.now().millisSinceEpoch)).contains(Red)) Red
@@ -58,7 +58,7 @@ object MainMenu {
     val restrictedMenuItems: List[(Role, Int => MenuItem)] = List(
       (ManageUsers, usersMenuItem _),
       (CreateAlerts, alertsMenuItem _)
-    ) ++ terminalDepsMenuItem :+ (ViewConfig, portConfigMenuItem _)
+    ) ++ terminalDepsMenuItem :+ ((ViewConfig, portConfigMenuItem))
 
     val nonTerminalUnrestrictedMenuItems = dashboardMenuItem :: Nil
 
@@ -85,7 +85,7 @@ object MainMenu {
   }).getOrElse("n/a")
 
   private class Backend($: BackendScope[Props, Unit]) {
-    def render(props: Props) = {
+    def render(props: Props): VdomTagOf[Div] = {
       val children: immutable.Seq[TagOf[LI]] = for (item <- menuItems(props.airportConfig, props.currentLoc, props.roles, props.feeds)) yield {
         val active = (props.currentLoc, item.location) match {
           case (TerminalPageTabLoc(tn, _, _, _), TerminalPageTabLoc(tni, _, _, _)) => tn == tni

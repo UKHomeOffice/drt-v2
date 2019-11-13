@@ -6,41 +6,41 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, ForecastTimeSlot, MillisSinceEpoch}
 import drt.shared.{Forecast, MilliDate, Queues, SDateLike}
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
-import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
-import org.scalajs.dom
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
+import org.scalajs.dom.html.Select
 
 import scala.collection.immutable.Seq
 
 object TerminalPlanningComponent {
 
-  def getLastSunday(start: SDateLike) = {
+  def getLastSunday(start: SDateLike): SDateLike = {
     val sunday = start.getLastSunday
 
     SDate(f"${sunday.getFullYear()}-${sunday.getMonth()}%02d-${sunday.getDate()}%02dT00:00:00")
   }
 
   case class Props(forecastPeriod: ForecastPeriodWithHeadlines, page: TerminalPageTabLoc, router: RouterCtl[Loc]) {
-
-    def hash = {
+    def hash: Int = {
       forecastPeriod.forecast.days.toList.map {
-        case (day, slots) => slots.hashCode
+        case (_, slots) => slots.hashCode
       }
     }.hashCode
   }
 
   val forecastWeeks: Seq[SDateLike] = (0 to 30).map(w => getLastSunday(SDate.now()).addDays(w * 7))
 
-  implicit val propsReuse = Reusability.by((_: Props).hash)
+  implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).hash)
 
-  val component = ScalaComponent.builder[Props]("TerminalForecast")
-    .renderP((scope, props) => {
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "TerminalForecast")
+    .renderP((_, props) => {
       val sortedDays = props.forecastPeriod.forecast.days.toList.sortBy(_._1)
       val byTimeSlot: Seq[List[Option[ForecastTimeSlot]]] = Forecast.periodByTimeSlotAcrossDays(props.forecastPeriod.forecast)
 
-      def drawSelect(names: Seq[String], values: List[String], value: String) = {
+      def drawSelect(names: Seq[String], values: List[String], value: String): VdomTagOf[Select] = {
         <.select(^.className := "form-control", ^.value := value.toString,
           ^.onChange ==> ((e: ReactEventFromInput) => {
             props.router.set(props.page.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toLocalDateTimeString()))))
@@ -136,7 +136,7 @@ object TerminalPlanningComponent {
     })
     .build
 
-  def defaultStartDate(date: SDateLike) = getLastSunday(date)
+  def defaultStartDate(date: SDateLike): SDateLike = getLastSunday(date)
 
   def apply(props: Props): VdomElement = component(props)
 }

@@ -1,29 +1,28 @@
 package drt.client.components
 
-import drt.client.SPAMain.{ContactUsLoc, Loc}
+import drt.client.SPAMain.Loc
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{AirportConfig, AirportConfigs, LoggedInUser, Role}
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.{BaseUrl, RouterCtl}
 import japgolly.scalajs.react.vdom.html_<^.{^, _}
-import japgolly.scalajs.react.{Callback, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import org.scalajs.dom
 
 object RestrictedAccessByPortPage {
-
-
-  val allAirportConfigsToDisplay: List[AirportConfig] = AirportConfigs.allPorts diff AirportConfigs.testPorts
-  val allPorts: List[String] = AirportConfigs.allPorts.map(config => config.portCode.toLowerCase)
+  val allAirportConfigsToDisplay: List[AirportConfig] = AirportConfigs.allPortConfigs diff AirportConfigs.testPorts
+  val allPorts: List[String] = AirportConfigs.allPortConfigs.map(config => config.portCode.toLowerCase)
   val urlLowerCase: String = dom.document.URL.toLowerCase
   val portRequested: String = allPorts.find(port => urlLowerCase.contains(s"$port"))
     .map(_.toUpperCase).getOrElse("[please specify port code]")
 
-  def allPortsAccessible(roles: Set[Role]): Set[String] = AirportConfigs.allPorts
+  def allPortsAccessible(roles: Set[Role]): Set[String] = AirportConfigs.allPortConfigs
     .filter(airportConfig => roles.contains(airportConfig.role)).map(_.portCode).toSet
 
   def userCanAccessPort(loggedInUser: LoggedInUser, portCode: String): Boolean = AirportConfigs.
-    allPorts
+    allPortConfigs
     .find(_.portCode == portCode)
     .exists(c => loggedInUser.hasRole(c.role))
 
@@ -33,7 +32,7 @@ object RestrictedAccessByPortPage {
 
   case class State(title: Option[String] = None, message: Option[String] = None, expiryDateTime: Option[MillisSinceEpoch] = None)
 
-  val component = ScalaComponent.builder[Props]("RestrictedAccessForPort")
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("RestrictedAccessForPort")
     .render_P(props => {
 
       def url(port: String) = urlLowerCase.replace(portRequested.toLowerCase, port.toLowerCase)
@@ -51,7 +50,7 @@ object RestrictedAccessByPortPage {
               " and login again to update your permissions."
             ),
             <.h3("Contact Details"),
-            ContactDetails(),
+            ContactDetailsComponent(),
 
             if (portsAccessible.nonEmpty) {
               <.div(^.id := "alternate-ports",

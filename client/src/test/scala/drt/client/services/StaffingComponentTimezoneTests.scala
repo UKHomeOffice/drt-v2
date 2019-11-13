@@ -32,7 +32,6 @@ object StaffingComponentTimezoneTests extends TestSuite {
         "None for the slots that don't exist" - {
 
         val changeDayTimeslots: Seq[SDateLike] = slotsInDay(utcToBSTChangeDate, 60)
-        val normalDayTimeSlots = 24
 
         val result: List[Option[SDateLike]] = timeZoneSafeTimeSlots(changeDayTimeslots, 60).take(3).toList
 
@@ -49,7 +48,6 @@ object StaffingComponentTimezoneTests extends TestSuite {
         "None for the slots that don't exist when using 15 minute time slots" - {
 
         val changeDayTimeslots: Seq[SDateLike] = slotsInDay(utcToBSTChangeDate, 15)
-        val normalDayTimeSlots = 96
 
         val result: List[Option[SDateLike]] = timeZoneSafeTimeSlots(changeDayTimeslots, 15).take(12).toList
 
@@ -75,7 +73,6 @@ object StaffingComponentTimezoneTests extends TestSuite {
         " should be 2019-03-31T23:00:00Z when using 1 hour time slots" - {
 
         val changeDayTimeslots: Seq[SDateLike] = slotsInDay(utcToBSTChangeDate, 60)
-        val normalDayTimeSlots = 24
 
         val result: Option[String] = timeZoneSafeTimeSlots(changeDayTimeslots, 60).toList.last.map(_.toISOString())
         val expected = Some(SDate("2019-03-31T23:00:00").toISOString())
@@ -87,7 +84,6 @@ object StaffingComponentTimezoneTests extends TestSuite {
         " should be 2019-03-31T23:45:00Z when using 15 minute time slots" - {
 
         val changeDayTimeslots: Seq[SDateLike] = slotsInDay(utcToBSTChangeDate, 15)
-        val normalDayTimeSlots = 96
 
         val result: Option[String] = timeZoneSafeTimeSlots(changeDayTimeslots, 15).toList.last.map(_.toISOString())
         val expected = Option(SDate("2019-03-31T23:45:00").toISOString())
@@ -99,7 +95,6 @@ object StaffingComponentTimezoneTests extends TestSuite {
         val startDate = SDate("2019-01-01")
         val result: Seq[Seq[Option[SDateLike]]] = daysInMonthByTimeSlot((startDate, 60))
         val expectedHeight = 24
-        val expecrtedWidth = 31
 
         assert(result.size == expectedHeight)
         result.foreach(row => assert(row.size == 31))

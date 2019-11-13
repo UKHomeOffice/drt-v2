@@ -9,7 +9,7 @@ import manifests.queues.FastTrackFromCSV
 
 trait QueueAllocator {
 
-  //this is where we'd put an eGates service 
+  //this is where we'd put an eGates service
 
   val defaultRatios: Map[PaxType, Seq[(QueueType, Double)]] = Map(
     EeaMachineReadable -> List(Queues.EGate -> 1.0),
@@ -33,13 +33,11 @@ trait QueueAllocator {
 }
 
 case class TerminalQueueAllocator(queueRatios: Map[String, Map[PaxType, Seq[(QueueType, Double)]]]) extends QueueAllocator {
-
   def apply(terminal: String, bestAvailableManifest: BestAvailableManifest)(paxType: PaxType): Seq[(QueueType, Double)] =
     queueRatios(terminal)(paxType)
 }
 
 case class TerminalQueueAllocatorWithFastTrack(queueRatios: Map[String, Map[PaxType, Seq[(QueueType, Double)]]]) extends QueueAllocator {
-
   def apply(terminal: String, bestAvailableManifest: BestAvailableManifest)(paxType: PaxType): Seq[(QueueType, Double)] =
     if (paxType == NonVisaNational || paxType == VisaNational)
       FastTrackFromCSV.fastTrackCarriers
@@ -50,5 +48,4 @@ case class TerminalQueueAllocatorWithFastTrack(queueRatios: Map[String, Map[PaxT
         .getOrElse(queueRatios(terminal)(paxType))
     else
       queueRatios(terminal)(paxType)
-
 }

@@ -34,7 +34,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
         airportConfig = airportConfig.copy(
-          defaultProcessingTimes = procTimes,
+          terminalProcessingTimes = procTimes,
           queues = Map("T1" -> Seq(Queues.EeaDesk)),
           terminalNames = Seq("T1")
         ))
@@ -70,7 +70,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
         airportConfig = airportConfig.copy(
-          defaultProcessingTimes = procTimes,
+          terminalProcessingTimes = procTimes,
           queues = Map("T1" -> Seq(Queues.EeaDesk), "T2" -> Seq(Queues.EeaDesk))))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))

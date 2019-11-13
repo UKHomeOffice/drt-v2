@@ -5,12 +5,10 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared._
 import drt.shared.splits.ApiSplitsToSplitRatio
-import japgolly.scalajs.react.ScalaComponent
-import japgolly.scalajs.react.component.Scala.Unmounted
+import japgolly.scalajs.react.{CtorType, ScalaComponent}
+import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 
-import scala.collection.immutable
-import scala.collection.immutable.Seq
 
 object DashboardTerminalSummary {
 
@@ -24,7 +22,7 @@ object DashboardTerminalSummary {
 
   def pcpLowest(cms: Seq[CrunchMinute]): CrunchMinute = cms.reduceLeft((cm1, cm2) => if (cm1.paxLoad < cm2.paxLoad) cm1 else cm2)
 
-  def hourRange(start: SDateLike, numHours: Int): immutable.IndexedSeq[SDateLike] = (0 until numHours).map(h => start.addHours(h))
+  def hourRange(start: SDateLike, numHours: Int): IndexedSeq[SDateLike] = (0 until numHours).map(h => start.addHours(h))
 
   def aggregateAcrossQueues(startMinutes: List[CrunchMinute], terminalName: TerminalName): List[CrunchMinute] = {
     val emptyMinute = CrunchMinute(terminalName, "", 0L, 0, 0, 0, 0, None, None, None, None, None)
@@ -112,14 +110,13 @@ object DashboardTerminalSummary {
                    crunchMinutes: List[CrunchMinute],
                    staffMinutes: List[StaffMinute],
                    terminal: TerminalName,
-                   queues: List[PaxTypeAndQueue],
+                   queues: Seq[PaxTypeAndQueue],
                    timeWindowStart: SDateLike,
                    timeWindowEnd: SDateLike)
 
-  val component = ScalaComponent.builder[Props]("SummaryBox")
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("SummaryBox")
     .render_P { props =>
-
-      val crunchMinuteTimeSlots = groupCrunchMinutesByX(15)(CrunchApi.terminalMinutesByMinute(props.crunchMinutes, props.terminal), props.terminal, Queues.queueOrder).flatMap(_._2)
+      val crunchMinuteTimeSlots = groupCrunchMinutesByX(groupSize = 15)(CrunchApi.terminalMinutesByMinute(props.crunchMinutes, props.terminal), props.terminal, Queues.queueOrder).flatMap(_._2)
 
       if (crunchMinuteTimeSlots.isEmpty) {
         <.div(^.className := "dashboard-summary container-fluid", "No data available to display")
@@ -199,15 +196,13 @@ object DashboardTerminalSummary {
       }
     }.build
 
-  def totalsByQueue(summary: Seq[DashboardSummary]): Map[QueueName, MillisSinceEpoch] = {
-    summary
-      .map {
-        case DashboardSummary(_, _, byQ) => byQ
-      }
-      .flatMap(h => h.toList)
-      .groupBy { case (queueName, _) => queueName }
-      .mapValues(queuTotalsbyQ => queuTotalsbyQ.map { case (_, queuePax) => Math.round(queuePax) }.sum)
-  }
+  def totalsByQueue(summary: Seq[DashboardSummary]): Map[QueueName, MillisSinceEpoch] = summary
+    .map {
+      case DashboardSummary(_, _, byQ) => byQ
+    }
+    .flatMap(h => h.toList)
+    .groupBy { case (queueName, _) => queueName }
+    .mapValues(queueTotalsByQ => queueTotalsByQ.map { case (_, queuePax) => Math.round(queuePax) }.sum)
 
   def apply(props: Props): Unmounted[Props, Unit, Unit] = component(props)
 }

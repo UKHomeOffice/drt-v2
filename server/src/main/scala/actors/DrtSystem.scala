@@ -47,7 +47,7 @@ import services.graphstages.Crunch.{oneDayMillis, oneMinuteMillis}
 import services.graphstages._
 import slickdb.{ArrivalTable, Tables, VoyageManifestPassengerInfoTable}
 
-import scala.collection.mutable
+import scala.collection.{immutable, mutable}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
@@ -485,53 +485,60 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     }
   }
 
-  def liveArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = {
-    val feed = portCode match {
-      case "LHR" =>
-        val host = config.get[String]("feeds.lhr.sftp.live.host")
-        val username = config.get[String]("feeds.lhr.sftp.live.username")
-        val password = config.get[String]("feeds.lhr.sftp.live.password")
-        val contentProvider = () => LhrSftpLiveContentProvider(host, username, password).latestContent
-        LHRFlightFeed(contentProvider)
-      case "EDI" =>
-        createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
-      case "LGW" =>
-        val lgwNamespace = params.maybeLGWNamespace.getOrElse(throw new Exception("Missing LGW Azure Namespace parameter"))
-        val lgwSasToKey = params.maybeLGWSASToKey.getOrElse(throw new Exception("Missing LGW SAS Key for To Queue"))
-        val lgwServiceBusUri = params.maybeLGWServiceBusUri.getOrElse(throw new Exception("Missing LGW Service Bus Uri"))
-        val azureClient = LGWAzureClient(LGWFeed.serviceBusClient(lgwNamespace, lgwSasToKey, lgwServiceBusUri))
-        LGWFeed(azureClient)(system).source()
-      case "BHX" if !params.bhxIataEndPointUrl.isEmpty =>
-        BHXFeed(BHXClient(params.bhxIataUsername, params.bhxIataEndPointUrl), 80 seconds, 1 milliseconds)(system)
-      case "BHX" =>
-        BHXLiveFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX live feed URL")))
-      case "LTN" =>
-        val url = params.maybeLtnLiveFeedUrl.getOrElse(throw new Exception("Missing live feed url"))
-        val username = params.maybeLtnLiveFeedUsername.getOrElse(throw new Exception("Missing live feed username"))
-        val password = params.maybeLtnLiveFeedPassword.getOrElse(throw new Exception("Missing live feed password"))
-        val token = params.maybeLtnLiveFeedToken.getOrElse(throw new Exception("Missing live feed token"))
-        val timeZone = params.maybeLtnLiveFeedTimeZone match {
-          case Some(tz) => DateTimeZone.forID(tz)
-          case None => DateTimeZone.UTC
-        }
-        val requester = LtnFeedRequester(url, token, username, password)
-        LtnLiveFeed(requester, timeZone).tickingSource
-      case "MAN" | "STN" | "EMA" =>
-        if (config.get[Boolean]("feeds.mag.use-legacy")) {
-          log.info(s"Using legacy MAG live feed")
-          createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
-        } else {
-          log.info(s"Using new MAG live feed")
-          val privateKey: String = config.get[String]("feeds.mag.private-key")
-          val claimIss: String = config.get[String]("feeds.mag.claim.iss")
-          val claimRole: String = config.get[String]("feeds.mag.claim.role")
-          val claimSub: String = config.get[String]("feeds.mag.claim.sub")
-          MagFeed(privateKey, claimIss, claimRole, claimSub, now, airportConfig.portCode, ProdFeedRequester).tickingSource
-        }
+  def liveArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] =
+    if (config.get[Boolean]("feeds.random-generator")) {
+      portCode match {
+        case "LHR" =>
+          val host = config.get[String]("feeds.lhr.sftp.live.host")
+          val username = config.get[String]("feeds.lhr.sftp.live.username")
+          val password = config.get[String]("feeds.lhr.sftp.live.password")
+          val contentProvider = () => LhrSftpLiveContentProvider(host, username, password).latestContent
+          LHRFlightFeed(contentProvider)
+        case "EDI" =>
+          createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
+        case "LGW" =>
+          val lgwNamespace = params.maybeLGWNamespace.getOrElse(throw new Exception("Missing LGW Azure Namespace parameter"))
+          val lgwSasToKey = params.maybeLGWSASToKey.getOrElse(throw new Exception("Missing LGW SAS Key for To Queue"))
+          val lgwServiceBusUri = params.maybeLGWServiceBusUri.getOrElse(throw new Exception("Missing LGW Service Bus Uri"))
+          val azureClient = LGWAzureClient(LGWFeed.serviceBusClient(lgwNamespace, lgwSasToKey, lgwServiceBusUri))
+          LGWFeed(azureClient)(system).source()
+        case "BHX" if !params.bhxIataEndPointUrl.isEmpty =>
+          BHXFeed(BHXClient(params.bhxIataUsername, params.bhxIataEndPointUrl), 80 seconds, 1 milliseconds)(system)
+        case "BHX" =>
+          BHXLiveFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX live feed URL")))
+        case "LTN" =>
+          val url = params.maybeLtnLiveFeedUrl.getOrElse(throw new Exception("Missing live feed url"))
+          val username = params.maybeLtnLiveFeedUsername.getOrElse(throw new Exception("Missing live feed username"))
+          val password = params.maybeLtnLiveFeedPassword.getOrElse(throw new Exception("Missing live feed password"))
+          val token = params.maybeLtnLiveFeedToken.getOrElse(throw new Exception("Missing live feed token"))
+          val timeZone = params.maybeLtnLiveFeedTimeZone match {
+            case Some(tz) => DateTimeZone.forID(tz)
+            case None => DateTimeZone.UTC
+          }
+          val requester = LtnFeedRequester(url, token, username, password)
+          LtnLiveFeed(requester, timeZone).tickingSource
+        case "MAN" | "STN" | "EMA" =>
+          if (config.get[Boolean]("feeds.mag.use-legacy")) {
+            log.info(s"Using legacy MAG live feed")
+            createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
+          } else {
+            log.info(s"Using new MAG live feed")
+            val privateKey: String = config.get[String]("feeds.mag.private-key")
+            val claimIss: String = config.get[String]("feeds.mag.claim.iss")
+            val claimRole: String = config.get[String]("feeds.mag.claim.role")
+            val claimSub: String = config.get[String]("feeds.mag.claim.sub")
+            MagFeed(privateKey, claimIss, claimRole, claimSub, now, airportConfig.portCode, ProdFeedRequester).tickingSource
+          }
 
-      case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
+        case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
+      }
+    } else randomArrivals()
+
+  private def randomArrivals(): Source[ArrivalsFeedResponse, Cancellable] = {
+    val arrivals = ArrivalGenerator.arrivals(now, airportConfig.terminalNames)
+    Source.tick(1 millisecond, 1 minute, NotUsed).map { _ =>
+      ArrivalsFeedSuccess(Flights(arrivals))
     }
-    feed
   }
 
   def arrivalsNoOp: Source[ArrivalsFeedResponse, Cancellable] = Source.tick[ArrivalsFeedResponse](100 days, 100 days, ArrivalsFeedSuccess(Flights(Seq()), SDate.now()))
@@ -584,3 +591,71 @@ case class SetSimulationActor(loadsToSimulate: AskableActorRef)
 
 case class SetCrunchActor(millisToCrunchActor: AskableActorRef)
 
+object ArrivalGenerator {
+
+  def arrival(flightId: Option[Int] = None,
+              iata: String = "",
+              icao: String = "",
+              schDt: String = "",
+              actPax: Option[Int] = None,
+              maxPax: Option[Int] = None,
+              lastKnownPax: Option[Int] = None,
+              terminal: String = "T1",
+              origin: String = "",
+              operator: Option[String] = None,
+              status: String = "",
+              estDt: String = "",
+              actDt: String = "",
+              estChoxDt: String = "",
+              actChoxDt: String = "",
+              pcpDt: String = "",
+              gate: Option[String] = None,
+              stand: Option[String] = None,
+              tranPax: Option[Int] = None,
+              runwayId: Option[String] = None,
+              baggageReclaimId: Option[String] = None,
+              airportId: String = "",
+              feedSources: Set[FeedSource] = Set()
+             ): Arrival = {
+    val pcpTime = if (pcpDt.nonEmpty) Option(SDate(pcpDt).millisSinceEpoch) else if (schDt.nonEmpty) Option(SDate(schDt).millisSinceEpoch) else None
+
+    Arrival(
+      rawICAO = icao,
+      rawIATA = iata,
+      ActPax = actPax,
+      Terminal = terminal,
+      Origin = origin,
+      Operator = operator,
+      Status = status,
+      Estimated = if (estDt.nonEmpty) Option(SDate.parseString(estDt).millisSinceEpoch) else None,
+      Actual = if (actDt.nonEmpty) Option(SDate.parseString(actDt).millisSinceEpoch) else None,
+      EstimatedChox = if (estChoxDt.nonEmpty) Option(SDate.parseString(estChoxDt).millisSinceEpoch) else None,
+      ActualChox = if (actChoxDt.nonEmpty) Option(SDate.parseString(actChoxDt).millisSinceEpoch) else None,
+      Gate = gate,
+      Stand = stand,
+      MaxPax = maxPax,
+      TranPax = tranPax,
+      RunwayID = runwayId,
+      BaggageReclaimId = baggageReclaimId,
+      AirportID = airportId,
+      PcpTime = pcpTime,
+      Scheduled = if (schDt.nonEmpty) SDate(schDt).millisSinceEpoch else 0,
+      FeedSources = feedSources
+    )
+  }
+
+  def arrivals(now: () => SDateLike, terminalNames: Seq[TerminalName]): Seq[Arrival] = {
+    val today = now().toISODateOnly
+    val arrivals = for {
+      terminal <- terminalNames
+    } yield {
+      (1 to 100).map { _ =>
+        def rand(max: Int): Int = (Math.random() * max).floor.toInt
+
+        ArrivalGenerator.arrival(iata = s"BA${rand(1000)}", terminal = terminal, schDt = s"${today}T${rand(24)}:${rand(60)}", actPax = Option(rand(450)))
+      }
+    }
+
+    arrivals.flatten
+  }
+}

@@ -37,12 +37,12 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         airportConfig = airportConfig.copy(
           queues = Map("T1" -> Seq(Queues.EeaDesk, Queues.EGate)),
           terminalNames = Seq("T1"),
-          defaultPaxSplits = SplitRatios(
+          terminalPaxSplits = Map("T1" -> SplitRatios(
             SplitSources.TerminalAverage,
             SplitRatio(eeaMachineReadableToDesk, edSplit),
             SplitRatio(eeaMachineReadableToEGate, egSplit)
-          ),
-          defaultProcessingTimes = Map("T1" -> Map(
+          )),
+          terminalProcessingTimes = Map("T1" -> Map(
             eeaMachineReadableToDesk -> 20d / 60,
             eeaMachineReadableToEGate -> 35d / 60))
         ))
@@ -110,18 +110,18 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         airportConfig = airportConfig.copy(
           terminalNames = Seq("T1"),
           queues = Map("T1" -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate)),
-          defaultProcessingTimes = Map("T1" -> Map(
+          terminalProcessingTimes = Map("T1" -> Map(
             eeaMachineReadableToDesk -> 0.25,
             eeaMachineReadableToEGate -> 0.3,
             eeaNonMachineReadableToDesk -> 0.4
           )),
-          defaultPaxSplits = SplitRatios(
+          terminalPaxSplits = Map("T1" -> SplitRatios(
             SplitSources.TerminalAverage,
             List(SplitRatio(eeaMachineReadableToDesk, 0.25),
               SplitRatio(eeaMachineReadableToEGate, 0.25),
               SplitRatio(eeaNonMachineReadableToDesk, 0.5)
             )
-          )
+          ))
         ))
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
@@ -156,13 +156,13 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         val crunch = runCrunchGraph(
           now = () => SDate(scheduled),
           airportConfig = airportConfig.copy(
-            defaultProcessingTimes = Map("T1" -> Map(
+            terminalProcessingTimes = Map("T1" -> Map(
               eeaMachineReadableToDesk -> 20d / 60,
               eeaMachineReadableToEGate -> 35d / 60)),
-            defaultPaxSplits = SplitRatios(
+            terminalPaxSplits = Map("T1" -> SplitRatios(
               SplitSources.TerminalAverage,
               SplitRatio(eeaMachineReadableToDesk, 0.25)
-            )
+            ))
           )
         )
 
@@ -199,7 +199,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           airportConfig = airportConfig.copy(
             terminalNames = Seq("T1"),
             queues = Map("T1" -> Seq(Queues.EeaDesk, Queues.EGate)),
-            defaultProcessingTimes = Map("T1" -> Map(
+            terminalProcessingTimes = Map("T1" -> Map(
               eeaMachineReadableToDesk -> 20d / 60,
               eeaMachineReadableToEGate -> 35d / 60))
           ),

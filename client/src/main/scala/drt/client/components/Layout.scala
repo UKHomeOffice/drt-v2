@@ -5,7 +5,8 @@ import diode.data.Pot
 import drt.client.SPAMain._
 import drt.client.services.SPACircuit
 import drt.shared.LoggedInUser
-import japgolly.scalajs.react._
+import japgolly.scalajs.react.{CtorType, _}
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.{Resolution, RouterCtl}
 import japgolly.scalajs.react.vdom.html_<^._
 
@@ -19,9 +20,7 @@ object Layout {
                                displayAlertDialog: Pot[Boolean]
                              ) extends UseValueEq
 
-  @inline private def bss = GlobalStyles.bootstrapStyles
-
-  val component = ScalaComponent.builder[Props]("Layout")
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Layout")
     .renderP((_, props: Props) => {
       val layoutModelItemsRCP = SPACircuit.connect(m => LayoutModelItems(m.loggedInUserPot, m.userHasPortAccess, m.displayAlertDialog))
       layoutModelItemsRCP(layoutModelItemsMP => {
