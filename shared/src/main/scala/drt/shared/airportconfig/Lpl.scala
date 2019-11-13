@@ -1,13 +1,14 @@
 package drt.shared.airportconfig
 
-import drt.shared.AirportConfigs.defaultQueueRatios
 import drt.shared.PaxTypes.{B5JPlusNational, EeaMachineReadable}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.EeaDesk
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.{AirportConfig, AirportConfigLike, LPLAccess, Queues}
+import drt.shared._
 
 object Lpl extends AirportConfigLike {
+  import AirportConfigDefaults._
+
   val config = AirportConfig(
     portCode = "LPL",
     queues = Map(

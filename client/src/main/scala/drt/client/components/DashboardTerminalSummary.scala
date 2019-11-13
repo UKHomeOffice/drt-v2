@@ -110,7 +110,8 @@ object DashboardTerminalSummary {
                    crunchMinutes: List[CrunchMinute],
                    staffMinutes: List[StaffMinute],
                    terminal: TerminalName,
-                   queues: Seq[PaxTypeAndQueue],
+                   paxTypeAndQueues: Seq[PaxTypeAndQueue],
+                   queues: Seq[QueueName],
                    timeWindowStart: SDateLike,
                    timeWindowEnd: SDateLike)
 
@@ -126,8 +127,6 @@ object DashboardTerminalSummary {
         val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePoint.deployedDesks.getOrElse(0))
 
         val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(props.flights)
-
-        val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(props.queues)
 
         val summary: Seq[DashboardSummary] = hourSummary(props.flights, props.crunchMinutes, props.timeWindowStart)
         val queueTotals = totalsByQueue(summary)
@@ -156,11 +155,11 @@ object DashboardTerminalSummary {
               )
             )),
           <.div(^.className := "summary-box-container pax-count col-sm-1", <.div(s"$totalPaxAcrossQueues Pax")),
-          <.div(^.className := "summary-box-container col-sm-1", BigSummaryBoxes.GraphComponent("aggregated", "", splitsForPeriod.values.sum, splitsForPeriod, props.queues)),
+          <.div(^.className := "summary-box-container col-sm-1", BigSummaryBoxes.GraphComponent("aggregated", "", splitsForPeriod.values.sum, splitsForPeriod, props.paxTypeAndQueues)),
           <.div(^.className := "summary-box-container col-sm-4 pax-summary",
             <.table(
               <.tbody(
-                <.tr(<.th(^.colSpan := 2, ^.className := "heading", "Time Range"), <.th("Flights"), <.th("Total Pax"), queueNames.map(q => <.th(Queues.queueDisplayNames(q))).toTagMod),
+                <.tr(<.th(^.colSpan := 2, ^.className := "heading", "Time Range"), <.th("Flights"), <.th("Total Pax"), props.queues.map(q => <.th(Queues.queueDisplayNames(q))).toTagMod),
                 summary.map {
 
                   case DashboardSummary(start, numFlights, paxPerQueue) =>
@@ -170,13 +169,13 @@ object DashboardTerminalSummary {
                       <.td(^.colSpan := 2, ^.className := "heading", s"${SDate(MilliDate(start)).prettyTime()} - ${SDate(MilliDate(start)).addHours(1).prettyTime()}"),
                       <.td(s"$numFlights"),
                       <.td(s"$totalPax"),
-                      queueNames.map(q => <.td(s"${Math.round(paxPerQueue.getOrElse(q, 0.0))}")).toTagMod
+                      props.queues.map(q => <.td(s"${Math.round(paxPerQueue.getOrElse(q, 0.0))}")).toTagMod
                     )
                 }.toTagMod,
                 <.tr(
                   <.th(^.colSpan := 2, ^.className := "heading", "3 Hour Total"),
                   <.th(props.flights.size),
-                  <.th(totalPaxAcrossQueues), queueNames.map(q => <.th(s"${queueTotals.getOrElse(q, 0.0)}")).toTagMod
+                  <.th(totalPaxAcrossQueues), props.queues.map(q => <.th(s"${queueTotals.getOrElse(q, 0.0)}")).toTagMod
                 )
               )
             )

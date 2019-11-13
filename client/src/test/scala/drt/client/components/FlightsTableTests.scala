@@ -19,7 +19,7 @@ object FlightsTableTests extends TestSuite {
   import japgolly.scalajs.react.test._
   import japgolly.scalajs.react.vdom.html_<^._
 
-  val queuesWithoutFastTrack = PaxTypesAndQueues.inOrder.filterNot(_.queueType == Queues.FastTrack)
+  val queuesWithoutFastTrack: List[String] = Queues.queueOrder.filterNot(q => q == Queues.FastTrack || q == Queues.QueueDesk)
 
   def tests = Tests {
 

@@ -1,13 +1,14 @@
 package drt.shared.airportconfig
 
-import drt.shared.AirportConfigs.{defaultProcessingTimes, defaultQueueRatios}
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.{AirportConfig, AirportConfigLike, MANAccess, Queues}
+import drt.shared._
 
 object Man extends AirportConfigLike {
+  import AirportConfigDefaults._
+
   val config = AirportConfig(
     portCode = "MAN",
     queues = Map(

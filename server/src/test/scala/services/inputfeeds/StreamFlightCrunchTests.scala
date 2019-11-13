@@ -28,6 +28,7 @@ object TestCrunchConfig {
   val AirportConfigOrigin = "Airport Config"
 
   def airportConfigForHours(hours: Int): AirportConfig = {
+    import AirportConfigDefaults._
     val seqOfHoursInts = List.fill[Int](hours) _
     AirportConfig(
       portCode = "EDI",
@@ -87,7 +88,7 @@ object TestCrunchConfig {
         "Evening shift, A1, {date}, 17:00, 23:59,17"
       ),
       role = STNAccess,
-      terminalPaxTypeQueueAllocation = Map("T1" -> AirportConfigs.defaultQueueRatios)
+      terminalPaxTypeQueueAllocation = Map("T1" -> defaultQueueRatios)
     )
   }
 

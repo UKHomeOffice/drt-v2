@@ -28,7 +28,7 @@ object PortDashboardPage {
       portCodeQueueOrderTerminals { portMP =>
         <.div(^.className := "terminal-summary-dashboard",
             portMP().render(portConfig => {
-            val (queueOrder, terminals) = (portConfig.queueOrder _, portConfig.terminalNames)
+            val (queues, paxTypeAndQueueOrder, terminals) = (portConfig.queueOrder _, portConfig.paxTypeAndQueueOrder _, portConfig.terminalNames)
             portStateRCP(portStateMP => {
               val currentPeriodStart = DashboardTerminalSummary.windowStart(SDate.now())
               val periods = List(
@@ -67,7 +67,8 @@ object PortDashboardPage {
                         terminalCrunchMinutes,
                         terminalStaffMinutes,
                         terminalName,
-                        queueOrder(terminalName),
+                        paxTypeAndQueueOrder(terminalName),
+                        queues(terminalName),
                         displayPeriod.start,
                         displayPeriod.end
                       ))

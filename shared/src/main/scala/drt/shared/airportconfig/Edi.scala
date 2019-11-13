@@ -1,12 +1,13 @@
 package drt.shared.airportconfig
 
-import drt.shared.AirportConfigs.{defaultQueueRatios, defaultSlas, _}
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
-import drt.shared.{AirportConfig, AirportConfigLike, EDIAccess, Queues}
+import drt.shared._
 
 object Edi extends AirportConfigLike {
+  import AirportConfigDefaults._
+
   val config = AirportConfig(
     portCode = "EDI",
     queues = Map(

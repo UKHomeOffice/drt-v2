@@ -10,6 +10,7 @@ import drt.client.logger.log
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, ViewMode}
+import drt.shared.FlightsApi.QueueName
 import drt.shared._
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -70,7 +71,7 @@ object TerminalContentComponent {
       splitsGraphComponentColoured)(paxComp)
 
     def render(props: Props, state: State): TagOf[Div] = {
-      val queueOrder: Seq[PaxTypeAndQueue] = props.airportConfig.queueOrder(props.terminalPageTab.terminal)
+      val queueOrder: Seq[QueueName] = props.airportConfig.queueOrder(props.terminalPageTab.terminal)
 
       val desksAndQueuesActive = if (state.activeTab == "desksAndQueues") "active" else ""
       val arrivalsActive = if (state.activeTab == "arrivals") "active" else ""

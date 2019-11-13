@@ -1,13 +1,14 @@
 package drt.shared.airportconfig
 
-import drt.shared.AirportConfigs.defaultQueueRatios
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EGate, EeaDesk}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.{AirportConfig, AirportConfigLike, NCLAccess, Queues}
+import drt.shared._
 
 object Ncl extends AirportConfigLike {
+  import AirportConfigDefaults._
+
   val config = AirportConfig(
     portCode = "NCL",
     queues = Map(

@@ -1,13 +1,15 @@
 package drt.shared.airportconfig
 
-import drt.shared.AirportConfigs.{defaultQueueRatios, defaultSlas}
 import drt.shared.PaxTypes.{B5JPlusNational, EeaMachineReadable}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.{AirportConfig, AirportConfigLike, BHXAccess, Queues}
+import drt.shared.{AirportConfig, AirportConfigDefaults, AirportConfigLike, BHXAccess, Queues}
 
 object Bhx extends AirportConfigLike {
+
+  import AirportConfigDefaults._
+
   val config = AirportConfig(
     portCode = "BHX",
     queues = Map(
@@ -17,14 +19,22 @@ object Bhx extends AirportConfigLike {
     slaByQueue = defaultSlas,
     terminalNames = Seq("T1", "T2"),
     defaultWalkTimeMillis = Map("T1" -> 240000L, "T2" -> 240000L),
-    terminalPaxSplits = List("T1", "T2").map(t => (t, SplitRatios(
-      SplitSources.TerminalAverage,
-      SplitRatio(eeaMachineReadableToDesk, 0.92 * 0.2446),
-      SplitRatio(eeaMachineReadableToEGate, 0.92 * 0.7554),
-      SplitRatio(eeaNonMachineReadableToDesk, 0),
-      SplitRatio(visaNationalToDesk, 0.04),
-      SplitRatio(nonVisaNationalToDesk, 0.04)
-    ))).toMap,
+    terminalPaxSplits = Map(
+      "T1" -> SplitRatios(
+        SplitSources.TerminalAverage,
+        SplitRatio(eeaMachineReadableToDesk, 0.92 * 0.2446),
+        SplitRatio(eeaMachineReadableToEGate, 0.92 * 0.7554),
+        SplitRatio(eeaNonMachineReadableToDesk, 0),
+        SplitRatio(visaNationalToDesk, 0.04),
+        SplitRatio(nonVisaNationalToDesk, 0.04)
+      ),
+      "T2" -> SplitRatios(
+        SplitSources.TerminalAverage,
+        SplitRatio(eeaMachineReadableToDesk, 0.92),
+        SplitRatio(eeaNonMachineReadableToDesk, 0),
+        SplitRatio(visaNationalToDesk, 0.04),
+        SplitRatio(nonVisaNationalToDesk, 0.04)
+      )),
     terminalProcessingTimes = Map("T1" -> Map(
       eeaMachineReadableToDesk -> 16d / 60,
       eeaMachineReadableToEGate -> 20d / 60,

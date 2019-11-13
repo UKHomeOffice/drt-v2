@@ -85,7 +85,7 @@ object FlightComponents {
           <.div(^.className := "bars",
             splits.map {
               case (paxTypeAndQueue, paxCount) =>
-                val percentage: Double = paxCount.toDouble / splitTotal * 100
+                val percentage: Double = paxCount.toDouble / splitTotal * 80
                 val label = paxTypeAndQueueString(paxTypeAndQueue)
                 <.div(
                   ^.className := "bar " + paxTypeAndQueue.queueType,

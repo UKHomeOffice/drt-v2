@@ -23,7 +23,7 @@ object FlightsWithSplitsTable {
 
   type BestPaxForArrivalF = Arrival => Int
 
-  case class Props(flightsWithSplits: List[ApiFlightWithSplits], queueOrder: Seq[PaxTypeAndQueue], hasEstChox: Boolean)
+  case class Props(flightsWithSplits: List[ApiFlightWithSplits], queueOrder: Seq[QueueName], hasEstChox: Boolean)
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
     props.flightsWithSplits.hashCode()
@@ -40,7 +40,6 @@ object FlightsWithSplitsTable {
       val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime)
       val isTimeLineSupplied = timelineComponent.isDefined
       val timelineTh = (if (isTimeLineSupplied) <.th("Timeline") :: Nil else List[TagMod]()).toTagMod
-      val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(props.queueOrder)
 
       Try {
         if (sortedFlights.nonEmpty) {
@@ -51,12 +50,12 @@ object FlightsWithSplitsTable {
               <.table(
                 ^.id := "sticky",
                 classesAttr,
-                tableHead(props, timelineTh, queueNames))),
+                tableHead(props, timelineTh, props.queueOrder))),
             <.table(
               ^.id := "sticky-body",
               dataStickyAttr,
               classesAttr,
-              tableHead(props, timelineTh, queueNames),
+              tableHead(props, timelineTh, props.queueOrder),
               <.tbody(
                 sortedFlights.zipWithIndex.map {
                   case ((flightWithSplits, codeShares), idx) =>
@@ -137,7 +136,7 @@ object FlightTableRow {
                    originMapper: OriginMapperF = portCode => portCode,
                    paxComponent: ApiFlightWithSplits => TagMod,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
-                   splitsQueueOrder: Seq[PaxTypeAndQueue],
+                   splitsQueueOrder: Seq[QueueName],
                    hasEstChox: Boolean
                   )
 
@@ -173,7 +172,6 @@ object FlightTableRow {
         val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
         val timeIndicatorClass = if (flight.PcpTime.getOrElse(0L) < SDate.now().millisSinceEpoch) "before-now" else "from-now"
 
-        val queueNames = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(props.splitsQueueOrder)
         val queuePax: Map[QueueName, Int] = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(flightWithSplits).getOrElse(Map())
         val flightFields = List[(Option[String], TagMod)](
           (None, allCodes.mkString(" - ")),
@@ -213,7 +211,7 @@ object FlightTableRow {
           hasChangedStyle,
           props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
           flightFields,
-          queueNames.map(q => <.td(<.span(s"${queuePax.getOrElse(q, 0)}"), ^.className := s"queue-split $paxClass right")).toTagMod
+          props.splitsQueueOrder.map(q => <.td(<.span(s"${queuePax.getOrElse(q, 0)}"), ^.className := s"queue-split $paxClass right")).toTagMod
         )
       }.recover {
         case e => log.error(msg = s"couldn't make flight row $e")

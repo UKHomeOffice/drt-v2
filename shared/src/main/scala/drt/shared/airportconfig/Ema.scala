@@ -1,13 +1,14 @@
 package drt.shared.airportconfig
 
-import drt.shared.AirportConfigs.defaultQueueRatios
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EGate, EeaDesk}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.{AirportConfig, AirportConfigLike, EMAAccess, Queues}
+import drt.shared._
 
 object Ema extends AirportConfigLike {
+  import AirportConfigDefaults._
+
   val config = AirportConfig(
     portCode = "EMA",
     queues = Map(

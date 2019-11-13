@@ -1,21 +1,24 @@
 package manifests.queues
 
-import drt.shared.SplitRatiosNs.{SplitRatio, SplitSources}
+import drt.shared.FlightsApi.TerminalName
+import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import queueus.PaxTypeQueueAllocation
 
 
-case class SplitsCalculator(portCode: String, ptqa: PaxTypeQueueAllocation, portDefaultSplitRatios: Set[SplitRatio]) {
+case class SplitsCalculator(portCode: String, queueAllocator: PaxTypeQueueAllocation, terminalDefaultSplitRatios: Map[TerminalName, SplitRatios]) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  val portDefaultSplits: Set[Splits] = {
-    val portDefault = portDefaultSplitRatios.map {
-      case SplitRatio(ptqc, ratio) => ApiPaxTypeAndQueueCount(ptqc.passengerType, ptqc.queueType, ratio, None)
+  def terminalDefaultSplits(terminalName: TerminalName): Set[Splits] = {
+    val emptySplits = SplitRatios("", List())
+    val portDefault = terminalDefaultSplitRatios.getOrElse(terminalName, emptySplits).splits.map {
+      case SplitRatio(PaxTypeAndQueue(paxType, queue), ratio) => ApiPaxTypeAndQueueCount(paxType, queue, ratio * 100, None)
     }
-    Set(Splits(portDefault.map(aptqc => aptqc.copy(paxCount = aptqc.paxCount * 100)), SplitSources.TerminalAverage, None, Percentage))
+
+    Set(Splits(portDefault.toSet, SplitSources.TerminalAverage, None, Percentage))
   }
 
-  def bestSplitsForArrival(manifest: BestAvailableManifest, arrival: Arrival): Splits = ptqa.toSplits(arrival.Terminal, manifest)
+  def bestSplitsForArrival(manifest: BestAvailableManifest, arrival: Arrival): Splits = queueAllocator.toSplits(arrival.Terminal, manifest)
 }

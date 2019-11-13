@@ -1,7 +1,7 @@
 package drt.shared.airportconfig
 
-import drt.shared.AirportConfigs.defaultQueueRatios
-import drt.shared.PaxTypes.EeaMachineReadable
+import drt.shared.PassengerSplits.QueueType
+import drt.shared.PaxTypes._
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
@@ -18,6 +18,18 @@ object Lhr extends AirportConfigLike {
     visaNationalToFastTrack -> 78d / 60,
     transitToTransfer -> 0d
   )
+
+  val lhrDefaultQueueRatios: Map[PaxType, Seq[(QueueType, Double)]] = Map(
+    EeaMachineReadable -> List(Queues.EGate -> 0.8, Queues.EeaDesk -> 0.2),
+    EeaBelowEGateAge -> List(Queues.EeaDesk -> 1.0),
+    EeaNonMachineReadable -> List(Queues.EeaDesk -> 1.0),
+    Transit -> List(Queues.Transfer -> 1.0),
+    NonVisaNational -> List(Queues.NonEeaDesk -> 1.0),
+    VisaNational -> List(Queues.NonEeaDesk -> 1.0),
+    B5JPlusNational -> List(Queues.EGate -> 0.6, Queues.EeaDesk -> 0.4),
+    B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
+  )
+
   val config = AirportConfig(
     portCode = "LHR",
     queues = Map(
@@ -86,19 +98,19 @@ object Lhr extends AirportConfigLike {
     exportQueueOrder = Queues.exportQueueOrderWithFastTrack,
     role = LHRAccess,
     terminalPaxTypeQueueAllocation = Map(
-      "T2" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+      "T2" -> (lhrDefaultQueueRatios + (EeaMachineReadable -> List(
         EGate -> 0.8102,
         EeaDesk -> (1.0 - 0.8102)
       ))),
-      "T3" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+      "T3" -> (lhrDefaultQueueRatios + (EeaMachineReadable -> List(
         EGate -> 0.8075,
         EeaDesk -> (1.0 - 0.8075)
       ))),
-      "T4" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+      "T4" -> (lhrDefaultQueueRatios + (EeaMachineReadable -> List(
         EGate -> 0.7687,
         EeaDesk -> (1.0 - 0.7687)
       ))),
-      "T5" -> (defaultQueueRatios + (EeaMachineReadable -> List(
+      "T5" -> (lhrDefaultQueueRatios + (EeaMachineReadable -> List(
         EGate -> 0.8466,
         EeaDesk -> (1.0 - 0.8466)
       )))

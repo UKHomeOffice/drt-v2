@@ -8,6 +8,9 @@ import manifests.queues.FastTrackFromCSV
 
 
 trait QueueAllocator {
+  def queueRatios: Map[String, Map[PaxType, Seq[(QueueType, Double)]]]
+
+  def queueRatio(terminal: String, paxType: PaxType): Seq[(QueueType, Double)] = queueRatios.getOrElse(terminal, Map()).getOrElse(paxType, Seq())
 
   //this is where we'd put an eGates service
 
@@ -34,7 +37,7 @@ trait QueueAllocator {
 
 case class TerminalQueueAllocator(queueRatios: Map[String, Map[PaxType, Seq[(QueueType, Double)]]]) extends QueueAllocator {
   def apply(terminal: String, bestAvailableManifest: BestAvailableManifest)(paxType: PaxType): Seq[(QueueType, Double)] =
-    queueRatios(terminal)(paxType)
+    queueRatio(terminal, paxType)
 }
 
 case class TerminalQueueAllocatorWithFastTrack(queueRatios: Map[String, Map[PaxType, Seq[(QueueType, Double)]]]) extends QueueAllocator {
@@ -45,7 +48,6 @@ case class TerminalQueueAllocatorWithFastTrack(queueRatios: Map[String, Map[PaxT
         .map(fts => {
           Seq((Queues.FastTrack, fts.fastTrackSplit), (Queues.NonEeaDesk, 1.0 - fts.fastTrackSplit))
         })
-        .getOrElse(queueRatios(terminal)(paxType))
-    else
-      queueRatios(terminal)(paxType)
+        .getOrElse(queueRatio(terminal, paxType))
+    else queueRatio(terminal, paxType)
 }

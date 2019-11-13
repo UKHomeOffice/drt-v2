@@ -3,11 +3,14 @@ package drt.shared
 import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.PassengerSplits.QueueType
 import drt.shared.PaxTypes._
+import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import ujson.Js.Value
 import upickle.Js
 import upickle.default._
 import upickle.default.{macroRW, ReadWriter => RW}
+
+import scala.collection.immutable
 
 object Queues {
   val EeaDesk = "eeaDesk"
@@ -17,7 +20,7 @@ object Queues {
   val Transfer = "transfer"
   val QueueDesk = "queueDesk"
 
-  val queueOrder = List(QueueDesk, EeaDesk, EGate, NonEeaDesk, FastTrack)
+  val queueOrder = List(QueueDesk, EGate, EeaDesk, NonEeaDesk, FastTrack)
 
   val queueDisplayNames: Map[QueueName, String] = Map(
     EeaDesk -> "EEA",
@@ -153,9 +156,13 @@ case class AirportConfig(portCode: String = "n/a",
                          cloneOfPortCode: Option[String] = None,
                          terminalPaxTypeQueueAllocation: Map[TerminalName, Map[PaxType, Seq[(QueueType, Double)]]]
                         ) {
-  def queueOrder(terminalName: TerminalName): List[PaxTypeAndQueue] = PaxTypesAndQueues.inOrder/*.filter { q =>
+  def queueOrder(terminalName: TerminalName): List[QueueName] = Queues.queueOrder.filter { q =>
+    queues.getOrElse(terminalName, List()).contains(q)
+  }
+
+  def paxTypeAndQueueOrder(terminalName: TerminalName): List[PaxTypeAndQueue] = PaxTypesAndQueues.inOrder.filter { q =>
     queues.getOrElse(terminalName, List()).contains(q.queueType)
-  }*/
+  }
 
   def feedPortCode: String = cloneOfPortCode.getOrElse(portCode)
 
@@ -246,9 +253,9 @@ object PaxTypesAndQueues {
     transitToTransfer -> "Transfer"
   )
 
-//  /*todo - we should move the usages of this to airportConfig */
-//  val inOrderSansFastTrack = List(
-//    eeaMachineReadableToEGate, eeaMachineReadableToDesk, eeaNonMachineReadableToDesk, visaNationalToDesk, nonVisaNationalToDesk)
+  //  /*todo - we should move the usages of this to airportConfig */
+  //  val inOrderSansFastTrack = List(
+  //    eeaMachineReadableToEGate, eeaMachineReadableToDesk, eeaNonMachineReadableToDesk, visaNationalToDesk, nonVisaNationalToDesk)
 
   val inOrder = List(
     eeaMachineReadableToEGate, eeaMachineReadableToDesk, eeaNonMachineReadableToDesk, visaNationalToDesk, nonVisaNationalToDesk, visaNationalToFastTrack, nonVisaNationalToFastTrack)
@@ -261,8 +268,24 @@ object DqEventCodes {
 
 object AirportConfigs {
 
-  import Queues._
+  import drt.shared.airportconfig._
 
+  val allPorts: List[AirportConfigLike] = List(Ncl, Bfs, Lpl, Lcy, Gla, Ema, Edi, Stn, Man, Ltn, Lhr, Lgw, Bhx, Brs, Test, Test2)
+  val testPorts: List[AirportConfigLike] = List(Test, Test2)
+
+  val allPortConfigs: List[AirportConfig] = allPorts.map(_.config)
+  val testPortConfigs: List[AirportConfig] = testPorts.map(_.config)
+
+  def portGroups: List[String] = allPortConfigs.filterNot(testPorts.contains).map(_.portCode.toUpperCase).sorted
+
+  val confByPort: Map[String, AirportConfig] = allPortConfigs.map(c => (c.portCode, c)).toMap
+}
+
+trait AirportConfigLike {
+  val config: AirportConfig
+}
+
+object AirportConfigDefaults {
   val defaultSlas: Map[String, Int] = Map(
     EeaDesk -> 20,
     EGate -> 25,
@@ -284,7 +307,6 @@ object AirportConfigs {
     EeaMachineReadable -> List(Queues.EGate -> 0.8, Queues.EeaDesk -> 0.2),
     EeaBelowEGateAge -> List(Queues.EeaDesk -> 1.0),
     EeaNonMachineReadable -> List(Queues.EeaDesk -> 1.0),
-    Transit -> List(Queues.Transfer -> 1.0),
     NonVisaNational -> List(Queues.NonEeaDesk -> 1.0),
     VisaNational -> List(Queues.NonEeaDesk -> 1.0),
     B5JPlusNational -> List(Queues.EGate -> 0.6, Queues.EeaDesk -> 0.4),
@@ -298,20 +320,4 @@ object AirportConfigs {
     visaNationalToDesk -> 90d / 60,
     nonVisaNationalToDesk -> 78d / 60
   )
-
-  import drt.shared.airportconfig._
-
-  val allPorts: List[AirportConfigLike] = List(Ncl, Bfs, Lpl, Lcy, Gla, Ema, Edi, Stn, Man, Ltn, Lhr, Lgw, Bhx, Brs, Test, Test2)
-  val testPorts: List[AirportConfigLike] = List(Test, Test2)
-
-  val allPortConfigs: List[AirportConfig] = allPorts.map(_.config)
-  val testPortConfigs: List[AirportConfig] = testPorts.map(_.config)
-
-  def portGroups: List[String] = allPortConfigs.filterNot(testPorts.contains).map(_.portCode.toUpperCase).sorted
-
-  val confByPort: Map[String, AirportConfig] = allPortConfigs.map(c => (c.portCode, c)).toMap
-}
-
-trait AirportConfigLike {
-  val config: AirportConfig
 }
