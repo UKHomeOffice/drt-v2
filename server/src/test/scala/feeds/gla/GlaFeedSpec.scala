@@ -26,13 +26,13 @@ case class MockFeedRequester(json: String = "[]") extends GlaFeedRequesterLike {
   def send(request: HttpRequest)(implicit actorSystem: ActorSystem): Future[HttpResponse] = Future(mockResponse)
 }
 
-case class MockExceptionThrowingFeedRequester(causeException: () => Unit) extends GlaFeedRequesterLike {
+case class MockExceptionThrowingFeedRequester() extends GlaFeedRequesterLike {
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
   def send(request: HttpRequest)(implicit actorSystem: ActorSystem): Future[HttpResponse] = {
-    causeException()
-    Future(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, "[]")))
+
+    Future(throw new Exception("Something Broke"))
   }
 }
 
@@ -113,6 +113,19 @@ class GlaFeedSpec extends SpecificationLike {
   "Given a mock json response containing invalid json " +
     "I should get an ArrivalsFeedFailure" >> {
     val mockFeed = mockFeedWithResponse("bad json")
+
+    val result = Await.result(mockFeed.requestArrivals(), 1 second)
+
+    result must haveClass[ArrivalsFeedFailure]
+  }
+
+  "Given a feed connection failure then I should get back an ArrivalsFeedFailure." >> {
+    val mockFeed = GlaFeed(
+      uri = "http://test.com",
+      token = "",
+      password = "",
+      username = "",
+      feedRequester = MockExceptionThrowingFeedRequester())
 
     val result = Await.result(mockFeed.requestArrivals(), 1 second)
 
