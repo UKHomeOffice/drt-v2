@@ -45,8 +45,6 @@ object TerminalContentComponent {
     (startOfView, endOfView)
   }
 
-  val timelineComp: Option[() => Arrival => TagMod] = Some(FlightTableComponents.timelineCompFunc _)
-
   def airportWrapper(portCode: String): ReactConnectProxy[Pot[AirportInfo]] = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
 
   def originMapper(portCode: String): VdomElement = {
