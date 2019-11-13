@@ -18,6 +18,7 @@ import drt.server.feeds.api.S3ApiProvider
 import drt.server.feeds.bhx.{BHXClient, BHXFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.cirium.CiriumFeed
+import drt.server.feeds.gla.{GlaFeed, ProdGlaFeedRequester}
 import drt.server.feeds.legacy.bhx.{BHXForecastFeedLegacy, BHXLiveFeedLegacy}
 import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed, LGWForecastFeed}
 import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
@@ -138,6 +139,11 @@ case class DrtConfigParameters(config: Configuration) {
   val maybeLGWNamespace: Option[String] = config.getOptional[String]("feeds.lgw.live.azure.namespace")
   val maybeLGWSASToKey: Option[String] = config.getOptional[String]("feeds.lgw.live.azure.sas_to_Key")
   val maybeLGWServiceBusUri: Option[String] = config.getOptional[String]("feeds.lgw.live.azure.service_bus_uri")
+
+  val maybeGlaLiveUrl: Option[String] = config.getOptional[String]("feeds.gla.url")
+  val maybeGlaLiveToken: Option[String] = config.getOptional[String]("feeds.gla.token")
+  val maybeGlaLivePassword: Option[String] = config.getOptional[String]("feeds.gla.password")
+  val maybeGlaLiveUsername: Option[String] = config.getOptional[String]("feeds.gla.username")
 
   val snapshotStaffOnStart: Boolean = config.get[Boolean]("feature-flags.snapshot-staffing-on-start")
 }
@@ -528,8 +534,13 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
           val claimSub: String = config.get[String]("feeds.mag.claim.sub")
           MagFeed(privateKey, claimIss, claimRole, claimSub, now, airportConfig.portCode, ProdFeedRequester).tickingSource
         }
-
-      case _ => createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
+      case "GLA" =>
+        val liveUrl = params.maybeGlaLiveUrl.getOrElse(throw new Exception("Missing GLA Live Feed Url"))
+        val livePassword = params.maybeGlaLivePassword.getOrElse(throw new Exception("Missing GLA Live Feed Password"))
+        val liveToken = params.maybeGlaLiveToken.getOrElse(throw new Exception("Missing GLA Live Feed Token"))
+        val liveUsername = params.maybeGlaLiveUsername.getOrElse(throw new Exception("Missing GLA Live Feed Username"))
+        GlaFeed(liveUrl, liveToken, livePassword, liveUsername, ProdGlaFeedRequester).tickingSource
+      case _ => arrivalsNoOp
     }
     feed
   }
