@@ -89,6 +89,27 @@ class GlaFeedSpec extends SpecificationLike {
     success
   }
 
+  "Given a mock json response containing feed with an arrival and a departure " +
+    "I should only get the arrival in the end result " >> {
+    val dsd = "2019-11-13T17:34:00+00:00"
+    val mockFeed = mockFeedWithResponse(containingADepartureJson(dsd))
+
+    val probe = TestProbe()
+
+    mockFeed.tickingSource.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+
+    probe.fishForMessage(1 seconds) {
+      case ArrivalsFeedSuccess(Flights(a), _) if a.size == 1 && !a.exists(_.Scheduled == SDate(dsd).millisSinceEpoch) =>
+        println(s"Successfully filtered out domestic")
+        true
+      case _ =>
+        println("Failed to filter out domestic flights in GLA Live Feed")
+        false
+    }
+
+    success
+  }
+
   "Given a mock json response containing invalid json " +
     "I should get an ArrivalsFeedFailure" >> {
     val mockFeed = mockFeedWithResponse("bad json")
@@ -281,5 +302,57 @@ class GlaFeedSpec extends SpecificationLike {
       |        "TerminalCode": "T1",
       |        "TotalPassengerCount": null
       |}]""".stripMargin
+
+  def containingADepartureJson(domesticScheduledTime: String): String =
+    s"""[{
+        |      "AIBT": "2019-11-13T13:30:00+00:00",
+        |      "AirlineIATA": "TS",
+        |      "AirlineICAO": "TST",
+        |      "ALDT": "2019-11-13T13:31:00+00:00",
+        |      "AODBProbableDateTime": "2019-11-13T13:32:00+00:00",
+        |      "CarouselCode": "2",
+        |      "CodeShareFlights": "",
+        |      "CodeShareInd": "N",
+        |      "DepartureArrivalType": "A",
+        |      "EIBT": "2019-11-13T12:33:00+00:00",
+        |      "FlightNumber": "234",
+        |      "FlightStatus": "S",
+        |      "FlightStatusDesc": "Flight is on schedule",
+        |      "GateCode": "G",
+        |      "MaxPax": 50,
+        |      "OriginDestAirportIATA": "TST",
+        |      "OriginDestAirportICAO": "TSTT",
+        |      "PaxEstimated": null,
+        |      "Runway": "3",
+        |      "ScheduledDateTime": "2019-11-13T12:34:00+00:00",
+        |      "StandCode": "ST",
+        |      "TerminalCode": "T1",
+        |      "TotalPassengerCount": 20
+        |},
+        |{
+        |      "AIBT": null,
+        |      "AirlineIATA": "TT",
+        |      "AirlineICAO": "TTT",
+        |      "ALDT": null,
+        |      "AODBProbableDateTime": null,
+        |      "CarouselCode": null,
+        |      "CodeShareFlights": null,
+        |      "CodeShareInd": null,
+        |      "DepartureArrivalType": "D",
+        |      "EIBT": null,
+        |      "FlightNumber": "244",
+        |      "FlightStatus": "C",
+        |      "FlightStatusDesc": "Flight is cancelled",
+        |      "GateCode": null,
+        |      "MaxPax": null,
+        |      "OriginDestAirportIATA": "TTT",
+        |      "OriginDestAirportICAO": "TTTT",
+        |      "PaxEstimated": null,
+        |      "Runway": null,
+        |      "ScheduledDateTime": "$domesticScheduledTime",
+        |      "StandCode": null,
+        |      "TerminalCode": "T1",
+        |      "TotalPassengerCount": null
+        |}]""".stripMargin
 
 }

@@ -48,7 +48,6 @@ case class GlaFeed(
     .mapAsync(1)(_ => {
       log.info(s"Requesting live feed.")
       requestArrivals()
-
     })
 
   def requestArrivals(): Future[ArrivalsFeedResponse] = feedRequester
@@ -67,7 +66,10 @@ case class GlaFeed(
       Unmarshal[HttpResponse](res).to[List[GlaArrival]]
     }
     .flatten
-    .map(_.map(GlaFeed.toArrival))
+    .map(glaArrivals => glaArrivals
+      .filter(_.DepartureArrivalType == "A")
+      .map(GlaFeed.toArrival)
+    )
     .map(as => ArrivalsFeedSuccess(Flights(as)))
     .recover {
       case e: Exception =>
