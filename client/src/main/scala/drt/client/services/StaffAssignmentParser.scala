@@ -2,16 +2,13 @@ package drt.client.services
 
 import java.util.UUID
 
-import drt.client.services.JSDateConversions.SDate
 import drt.shared.FlightsApi.TerminalName
 import drt.shared._
 
-import scala.language.implicitConversions
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 
 object StaffAssignmentHelper {
-
   import JSDateConversions._
 
   def tryStaffAssignment(name: String, terminalName: TerminalName, startDate: String, startTime: String, endTime: String, numberOfStaff: String = "1", createdBy: Option[String] = None): Try[StaffAssignment] = {

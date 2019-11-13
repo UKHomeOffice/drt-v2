@@ -1,6 +1,5 @@
 package drt.shared
 
-import drt.shared.SplitRatiosNs.SplitRatios
 import org.specs2.mutable.Specification
 
 class AirportConfigsSpec extends Specification {
@@ -9,7 +8,7 @@ class AirportConfigsSpec extends Specification {
 
     "have a list size of 24 of min and max desks by terminal and queue for all ports" in {
       for {
-        port <- AirportConfigs.allPorts
+        port <- AirportConfigs.allPortConfigs
         terminalName <- port.minMaxDesksByTerminalQueue.keySet
         queueName <- port.minMaxDesksByTerminalQueue(terminalName).keySet
         (minDesks, maxDesks) = port.minMaxDesksByTerminalQueue(terminalName)(queueName)
@@ -21,7 +20,7 @@ class AirportConfigsSpec extends Specification {
 
     "Queue names in min max desks by terminal and queues should be defined in Queues" in {
       for {
-        port <- AirportConfigs.allPorts
+        port <- AirportConfigs.allPortConfigs
         terminalName <- port.minMaxDesksByTerminalQueue.keySet
         queueName <- port.minMaxDesksByTerminalQueue(terminalName).keySet
       } yield {
@@ -31,7 +30,7 @@ class AirportConfigsSpec extends Specification {
 
     "All Airport config queues must be defined in Queues" in {
       for {
-        port <- AirportConfigs.allPorts
+        port <- AirportConfigs.allPortConfigs
         queueName <- port.queues.values.flatten
       } yield {
         Queues.queueDisplayNames.get(queueName).aka(s"$queueName not found in Queues") mustNotEqual None
@@ -39,6 +38,8 @@ class AirportConfigsSpec extends Specification {
     }
 
     "A cloned Airport config should return the portcode of the port it is cloned from when calling feedPortCode" in {
+      import AirportConfigDefaults._
+
       val clonedConfig = AirportConfig(
         portCode = "LHR_Clone",
         cloneOfPortCode = Option("LHR"),
@@ -48,11 +49,11 @@ class AirportConfigsSpec extends Specification {
         timeToChoxMillis = 0L,
         firstPaxOffMillis = 0L,
         defaultWalkTimeMillis = Map(),
-        defaultPaxSplits = SplitRatios("queue", Nil),
-        defaultProcessingTimes = Map(),
+        terminalPaxSplits = Map(),
+        terminalProcessingTimes = Map(),
         minMaxDesksByTerminalQueue = Map(),
         role = LHRAccess,
-        terminalPaxTypeQueueAllocation = Map("T1" -> AirportConfigs.defaultQueueRatios)
+        terminalPaxTypeQueueAllocation = Map("T1" -> defaultQueueRatios)
       )
 
       val result = clonedConfig.feedPortCode

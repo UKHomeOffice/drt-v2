@@ -60,8 +60,8 @@ class AlertsHandler[M](modelRW: ModelRW[M, Pot[List[Alert]]]) extends LoggingAct
         }
 
       val pot = value match {
-        case Empty => Ready(List(alert))
         case Ready(alerts) => Ready(alert :: alerts)
+        case _ => Ready(List(alert))
       }
 
       updated(pot, Effect(responseFuture))

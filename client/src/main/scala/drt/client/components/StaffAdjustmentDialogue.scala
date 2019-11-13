@@ -8,14 +8,14 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.FlightsApi.TerminalName
 import drt.shared.{LoggedInUser, SDateLike}
-import japgolly.scalajs.react._
+import japgolly.scalajs.react.{CtorType, _}
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html
 import org.scalajs.dom.html.{Div, Select}
 
 import scala.util.Success
-
 
 
 case class StaffAdjustmentDialogueState(action: String,
@@ -81,13 +81,13 @@ object StaffAdjustmentDialogue {
 
   implicit val stateReuse: Reusability[StaffAdjustmentDialogueState] = Reusability.by(_.hashCode())
 
-  def apply(state: StaffAdjustmentDialogueState) = ScalaComponent.builder[Unit]("staffMovementPopover")
+  def apply(state: StaffAdjustmentDialogueState): Component[Unit, StaffAdjustmentDialogueState, Unit, CtorType.Nullary] = ScalaComponent.builder[Unit]("staffMovementPopover")
     .initialState(state)
     .renderS((scope, state) => {
       def selectFromRange(range: Range,
                           defaultValue: Int,
                           callback: String => StaffAdjustmentDialogueState => StaffAdjustmentDialogueState,
-                          applyRounding: Int => Int) = {
+                          applyRounding: Int => Int): VdomTagOf[Select] = {
         <.select(
           ^.defaultValue := applyRounding(defaultValue),
           ^.onChange ==> ((e: ReactEventFromInput) => {

@@ -228,9 +228,9 @@ object MonthlyStaffing {
                                timeSlotMinutes: Int
                              ): Seq[StaffAssignment] = changes.toSeq.map {
     case ((slotIdx, dayIdx), staff) =>
-      val timeslots = daysInMonthByTimeSlot(startOfMonthMidnight, timeSlotMinutes)
+      val timeSlots = daysInMonthByTimeSlot((startOfMonthMidnight, timeSlotMinutes))
 
-      timeslots(slotIdx)(dayIdx).map((slotStart: SDateLike) => {
+      timeSlots(slotIdx)(dayIdx).map((slotStart: SDateLike) => {
         val startMd = MilliDate(slotStart.millisSinceEpoch)
         val endMd = MilliDate(slotStart.addMinutes(timeSlotMinutes - 1).millisSinceEpoch)
         StaffAssignment(slotStart.toISOString(), terminalName, startMd, endMd, staff, None)
@@ -245,7 +245,7 @@ object MonthlyStaffing {
   }
 
   def memoize[I, O](f: I => O): I => O = new mutable.HashMap[I, O]() {
-    override def apply(key: I) = getOrElseUpdate(key, f(key))
+    override def apply(key: I): O = getOrElseUpdate(key, f(key))
   }
 
   lazy val daysInMonthByTimeSlot: ((SDateLike, Int)) => Seq[Seq[Option[SDateLike]]] = memoize {
@@ -270,7 +270,7 @@ object MonthlyStaffing {
 
     val daysInMonth: Seq[SDateLike] = consecutiveDaysInMonth(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
 
-    val staffTimeSlots: Seq[Seq[Any]] = daysInMonthByTimeSlot(viewingDate, props.timeSlotMinutes).map(_.map {
+    val staffTimeSlots: Seq[Seq[Any]] = daysInMonthByTimeSlot((viewingDate, props.timeSlotMinutes)).map(_.map {
       case Some(slotDateTime) => shiftAssignments.terminalStaffAt(terminalName, slotDateTime)
       case None => "-"
     })

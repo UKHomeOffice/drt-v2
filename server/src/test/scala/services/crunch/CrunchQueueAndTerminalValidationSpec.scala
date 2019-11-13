@@ -32,12 +32,12 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
         airportConfig = airportConfig.copy(
-          defaultPaxSplits = SplitRatios(
+          terminalPaxSplits = Map("T1" -> SplitRatios(
             SplitSources.TerminalAverage,
             SplitRatio(eeaMachineReadableToDesk, 1),
             SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.Transfer), 1)
-          ),
-          defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
+          )),
+          terminalProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
           queues = Map("T1" -> Seq(EeaDesk)),
           terminalNames = Seq("T1")
         ))
@@ -74,7 +74,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
-        defaultProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
+        terminalProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
         queues = Map("T1" -> Seq(EeaDesk)),
         terminalNames = Seq("T1")
       )

@@ -5,12 +5,12 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.SDateLike
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
 
 object PortDashboardPage {
-
   case class Props(router: RouterCtl[Loc], dashboardPage: PortDashboardLoc)
 
   case class DisplayPeriod(start: SDateLike, end: SDateLike)
@@ -19,7 +19,7 @@ object PortDashboardPage {
     def apply(start: SDateLike, hours: Int = 3): DisplayPeriod = DisplayPeriod(start, start.addHours(hours))
   }
 
-  val component = ScalaComponent.builder[Props]("PortDashboard")
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("PortDashboard")
     .render_P(p => {
 
       val portCodeQueueOrderTerminals = SPACircuit.connect(_.airportConfig)
@@ -28,7 +28,7 @@ object PortDashboardPage {
       portCodeQueueOrderTerminals { portMP =>
         <.div(^.className := "terminal-summary-dashboard",
             portMP().render(portConfig => {
-            val (queueOrder, terminals) = (portConfig.queueOrder, portConfig.terminalNames)
+            val (queues, paxTypeAndQueueOrder, terminals) = (portConfig.queueOrder _, portConfig.paxTypeAndQueueOrder _, portConfig.terminalNames)
             portStateRCP(portStateMP => {
               val currentPeriodStart = DashboardTerminalSummary.windowStart(SDate.now())
               val periods = List(
@@ -67,7 +67,8 @@ object PortDashboardPage {
                         terminalCrunchMinutes,
                         terminalStaffMinutes,
                         terminalName,
-                        queueOrder,
+                        paxTypeAndQueueOrder(terminalName),
+                        queues(terminalName),
                         displayPeriod.start,
                         displayPeriod.end
                       ))

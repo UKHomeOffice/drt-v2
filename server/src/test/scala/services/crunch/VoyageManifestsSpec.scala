@@ -41,7 +41,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
-        defaultProcessingTimes = Map("T1" -> Map(
+        terminalProcessingTimes = Map("T1" -> Map(
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60,
           nonVisaNationalToDesk -> 25d / 60
@@ -84,7 +84,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
         portCode = portCode,
-        defaultProcessingTimes = Map("T1" -> Map(
+        terminalProcessingTimes = Map("T1" -> Map(
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60
         )),
@@ -105,7 +105,6 @@ class VoyageManifestsSpec extends CrunchTestLike {
           .filter(cm => cm.minute == SDate(scheduled).millisSinceEpoch)
           .map(cm => (cm.queueName, cm.paxLoad))
           .toMap
-
         queuePax == expected
     }
 
@@ -133,7 +132,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
         portCode = portCode,
-        defaultProcessingTimes = Map("T1" -> Map(
+        terminalProcessingTimes = Map("T1" -> Map(
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60
         )),
@@ -176,14 +175,14 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val result = BestAvailableManifest(vm)
 
     val expected = BestAvailableManifest(
-      ApiSplitsWithHistoricalEGateAndFTPercentages,"LHR","JFK","0001","BA",SDate("2017-01-01"),
+      ApiSplitsWithHistoricalEGateAndFTPercentages, "LHR", "JFK", "0001", "BA", SDate("2017-01-01"),
       List(
-        ManifestPassengerProfile("GBR",Some("P"),Some(22),Some(true)),
-        ManifestPassengerProfile("GBR",Some("P"),Some(22),Some(true)),
-        ManifestPassengerProfile("GBR",Some("P"),Some(22),Some(false)),
-        ManifestPassengerProfile("GBR",Some("I"),Some(22),Some(false)),
-        ManifestPassengerProfile("AFG",Some("P"),Some(22),Some(false)),
-        ManifestPassengerProfile("AFG",Some("P"),Some(22),Some(false))
+        ManifestPassengerProfile("GBR", Some("P"), Some(22), Some(true)),
+        ManifestPassengerProfile("GBR", Some("P"), Some(22), Some(true)),
+        ManifestPassengerProfile("GBR", Some("P"), Some(22), Some(false)),
+        ManifestPassengerProfile("GBR", Some("I"), Some(22), Some(false)),
+        ManifestPassengerProfile("AFG", Some("P"), Some(22), Some(false)),
+        ManifestPassengerProfile("AFG", Some("P"), Some(22), Some(false))
       )
     )
 
@@ -212,7 +211,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
         portCode = portCode,
-        defaultProcessingTimes = Map("T1" -> Map(
+        terminalProcessingTimes = Map("T1" -> Map(
           eeaMachineReadableToDesk -> 25d / 60,
           eeaNonMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60,
@@ -241,7 +240,6 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     success
   }
-
 }
 
 object PassengerInfoGenerator {

@@ -5,7 +5,7 @@ import drt.shared._
 
 object ApiSplitsToSplitRatio {
 
-  def queuesFromPaxTypeAndQueue(ptq: List[PaxTypeAndQueue]): Seq[String] = ptq.map {
+  def queuesFromPaxTypeAndQueue(ptq: Seq[PaxTypeAndQueue]): Seq[String] = ptq.map {
     case PaxTypeAndQueue(_, q) => q
   }.distinct
 

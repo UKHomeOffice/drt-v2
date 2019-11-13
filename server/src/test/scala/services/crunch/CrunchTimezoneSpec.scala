@@ -55,7 +55,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
           now = () => SDate(scheduled),
           airportConfig = airportConfig.copy(
             minMaxDesksByTerminalQueue = minMaxDesks,
-            defaultProcessingTimes = procTimes,
+            terminalProcessingTimes = procTimes,
             terminalNames = Seq("T1")
           ),
           minutesToCrunch = 120)

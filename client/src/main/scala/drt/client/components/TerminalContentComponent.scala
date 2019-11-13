@@ -10,11 +10,13 @@ import drt.client.logger.log
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, ViewMode}
+import drt.shared.FlightsApi.QueueName
 import drt.shared._
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
+import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomAttr, VdomElement, ^, vdomElementFromComponent, vdomElementFromTag, _}
-import japgolly.scalajs.react.vdom.{TagOf, html_<^}
-import japgolly.scalajs.react.{BackendScope, Callback, ScalaComponent}
+import japgolly.scalajs.react.{BackendScope, Callback, CtorType, ScalaComponent}
 import org.scalajs.dom.html.Div
 
 import scala.util.Try
@@ -43,8 +45,6 @@ object TerminalContentComponent {
     (startOfView, endOfView)
   }
 
-  val timelineComp: Option[Arrival => html_<^.VdomElement] = Some(FlightTableComponents.timelineCompFunc _)
-
   def airportWrapper(portCode: String): ReactConnectProxy[Pot[AirportInfo]] = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
 
   def originMapper(portCode: String): VdomElement = {
@@ -63,13 +63,13 @@ object TerminalContentComponent {
   }
 
   class Backend(t: BackendScope[Props, State]) {
-    val arrivalsTableComponent = FlightsWithSplitsTable.ArrivalsTable(
+    val arrivalsTableComponent: Component[FlightsWithSplitsTable.Props, Unit, Unit, CtorType.Props] = FlightsWithSplitsTable.ArrivalsTable(
       None,
       originMapper,
       splitsGraphComponentColoured)(paxComp)
 
     def render(props: Props, state: State): TagOf[Div] = {
-      val queueOrder = props.airportConfig.queueOrder
+      val queueOrder: Seq[QueueName] = props.airportConfig.queueOrder(props.terminalPageTab.terminal)
 
       val desksAndQueuesActive = if (state.activeTab == "desksAndQueues") "active" else ""
       val arrivalsActive = if (state.activeTab == "arrivals") "active" else ""
@@ -185,7 +185,7 @@ object TerminalContentComponent {
     )
   }
 
-  val component = ScalaComponent.builder[Props]("TerminalContentComponent")
+  val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("TerminalContentComponent")
     .initialStateFromProps(p => State(p.terminalPageTab.subMode))
     .renderBackend[TerminalContentComponent.Backend]
     .componentDidMount(p =>

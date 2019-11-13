@@ -2,7 +2,7 @@ package drt.client.services.handlers
 
 import autowire._
 import diode.data.{Pot, Ready}
-import diode.{ActionResult, Effect, ModelRW, NoAction}
+import diode.{ActionResult, Effect, ModelRW}
 import drt.client.actions.Actions.{RetryActionAfter, _}
 import drt.client.logger.log
 import drt.client.services.{AjaxClient, PollDelay}
@@ -34,7 +34,7 @@ class ShowAlertModalDialogHandler[M](modelRW: ModelRW[M, Pot[Boolean]]) extends 
               case f: AjaxException if f.xhr.status == 401 =>
                 Future(UpdateShowAlertModalDialog(false))
               case f =>
-                log.error(s"Error when checking for modal dialog feature switch. $f")
+                log.error(msg = s"Error when checking for modal dialog feature switch. $f")
                 Future(RetryActionAfter(GetShowAlertModalDialog, PollDelay.recoveryDelay))
             }
         ))

@@ -129,7 +129,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     mockPortStateActor ! SetFlights(flight)
 
     val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
-    val testAirportConfig = airportConfig.copy(defaultProcessingTimes = procTimes)
+    val testAirportConfig = airportConfig.copy(terminalProcessingTimes = procTimes)
 
     val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, mockCrunch, testAirportConfig).run()
     val millisToCrunchSourceActor: AskableActorRef = actor
@@ -167,7 +167,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     mockPortStateActor ! SetFlights(flight)
 
     val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
-    val testAirportConfig = airportConfig.copy(defaultProcessingTimes = procTimes)
+    val testAirportConfig = airportConfig.copy(terminalProcessingTimes = procTimes)
 
     val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, mockCrunch, testAirportConfig).run()
     val millisToCrunchSourceActor: AskableActorRef = actor
@@ -207,7 +207,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     mockPortStateActor ! SetFlights(flight)
 
     val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
-    val testAirportConfig = airportConfig.copy(defaultProcessingTimes = procTimes)
+    val testAirportConfig = airportConfig.copy(terminalProcessingTimes = procTimes)
 
     val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, mockCrunch, testAirportConfig).run()
     val millisToCrunchSourceActor: AskableActorRef = actor
@@ -250,7 +250,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val mockPortStateActor = system.actorOf(Props(classOf[MockPortStateActor], portStateProbe, noDelay))
 
     val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60))
-    val testAirportConfig = airportConfig.copy(defaultProcessingTimes = procTimes)
+    val testAirportConfig = airportConfig.copy(terminalProcessingTimes = procTimes)
 
     val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, mockCrunch, testAirportConfig).run()
     val millisToCrunchSourceActor: AskableActorRef = actor
@@ -297,7 +297,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val noon30 = "2018-01-01T00:30"
     val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60))
     val testAirportConfig = airportConfig.copy(
-      defaultProcessingTimes = procTimes,
+      terminalProcessingTimes = procTimes,
       terminalNames = Seq("T1"),
       queues = Map("T1" -> Seq(Queues.EeaDesk))
     )
@@ -355,7 +355,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val noon30 = "2018-01-01T00:30"
     val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60))
     val testAirportConfig = airportConfig.copy(
-      defaultProcessingTimes = procTimes,
+      terminalProcessingTimes = procTimes,
       terminalNames = Seq("T1"),
       queues = Map("T1" -> Seq(Queues.EeaDesk))
     )
@@ -414,7 +414,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
     val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
     val testAirportConfig = airportConfig.copy(
-      defaultProcessingTimes = procTimes,
+      terminalProcessingTimes = procTimes,
       divertedQueues = Map(Queues.NonEeaDesk -> Queues.EeaDesk)
     )
 
@@ -446,7 +446,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val noon = "2018-01-01T00:00"
     val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60))
     val testAirportConfig = airportConfig.copy(
-      defaultProcessingTimes = procTimes,
+      terminalProcessingTimes = procTimes,
       terminalNames = Seq("T1"),
       queues = Map("T1" -> Seq(Queues.EeaDesk))
     )

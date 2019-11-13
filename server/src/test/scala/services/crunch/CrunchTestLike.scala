@@ -11,6 +11,7 @@ import akka.stream.{ActorMaterializer, OverflowStrategy, QueueOfferResult, Uniqu
 import akka.testkit.{TestKit, TestProbe}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared.PaxTypes.{B5JPlusNational, B5JPlusNationalBelowEGateAge, EeaBelowEGateAge, EeaMachineReadable, EeaNonMachineReadable, NonVisaNational, Transit, VisaNational}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared._
@@ -93,11 +94,11 @@ class CrunchTestLike
     slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 20, Queues.NonEeaDesk -> 45),
     terminalNames = Seq("T1", "T2"),
     defaultWalkTimeMillis = Map(),
-    defaultPaxSplits = SplitRatios(
+    terminalPaxSplits = List("T1", "T2").map(t => (t, SplitRatios(
       SplitSources.TerminalAverage,
       SplitRatio(eeaMachineReadableToDesk, 1)
-    ),
-    defaultProcessingTimes = Map(
+    ))).toMap,
+    terminalProcessingTimes = Map(
       "T1" -> Map(
         eeaMachineReadableToDesk -> 25d / 60,
         eeaNonMachineReadableToDesk -> 25d / 60
@@ -119,7 +120,26 @@ class CrunchTestLike
     timeToChoxMillis = 120000L,
     firstPaxOffMillis = 180000L,
     role = STNAccess,
-    terminalPaxTypeQueueAllocation = Map("T1" -> AirportConfigs.defaultQueueRatios)
+    terminalPaxTypeQueueAllocation = Map(
+      "T1" -> Map(
+        EeaMachineReadable -> List(Queues.EGate -> 0.8, Queues.EeaDesk -> 0.2),
+        EeaBelowEGateAge -> List(Queues.EeaDesk -> 1.0),
+        EeaNonMachineReadable -> List(Queues.EeaDesk -> 1.0),
+        NonVisaNational -> List(Queues.NonEeaDesk -> 1.0),
+        VisaNational -> List(Queues.NonEeaDesk -> 1.0),
+        B5JPlusNational -> List(Queues.EGate -> 0.6, Queues.EeaDesk -> 0.4),
+        B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
+      ),
+      "T2" -> Map(
+        EeaMachineReadable -> List(Queues.EeaDesk -> 1),
+        EeaBelowEGateAge -> List(Queues.EeaDesk -> 1.0),
+        EeaNonMachineReadable -> List(Queues.EeaDesk -> 1.0),
+        NonVisaNational -> List(Queues.NonEeaDesk -> 1.0),
+        VisaNational -> List(Queues.NonEeaDesk -> 1.0),
+        B5JPlusNational -> List(Queues.EeaDesk -> 1),
+        B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
+      )
+    )
   )
 
   val pcpForFlightFromSch: Arrival => MilliDate = (a: Arrival) => MilliDate(SDate(a.Scheduled).millisSinceEpoch)

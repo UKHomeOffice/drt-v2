@@ -101,11 +101,11 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   def pointInTimeMillis: MillisSinceEpoch = zoom(_.viewMode).value.millis
 
   override val actionHandler: HandlerFunction = {
-    val composedhandlers: HandlerFunction = composeHandlers(
+    val composedHandlers: HandlerFunction = composeHandlers(
       new InitialPortStateHandler(currentViewMode, zoomRW(m => (m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(portStatePot = v._1, latestUpdateMillis = v._2))),
       new PortStateUpdatesHandler(currentViewMode, zoomRW(m => (m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(portStatePot = v._1, latestUpdateMillis = v._2))),
       new ForecastHandler(zoomRW(_.forecastPeriodPot)((m, v) => m.copy(forecastPeriodPot = v))),
-      new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
+      new AirportCountryHandler(() => timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
       new ContactDetailsHandler(zoomRW(_.contactDetails)((m, v) => m.copy(contactDetails = v))),
       new OohForSupportHandler(zoomRW(_.oohStatus)((m, v) => m.copy(oohStatus = v))),
@@ -118,9 +118,9 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v))),
       new ShowActualDesksAndQueuesHandler(zoomRW(_.showActualIfAvailable)((m, v) => m.copy(showActualIfAvailable = v))),
       new ShowAlertModalDialogHandler(zoomRW(_.displayAlertDialog)((m, v) => m.copy(displayAlertDialog = v))),
-      new RetryHandler(zoomRW(identity)((m, v) => m)),
-      new LoggedInStatusHandler(zoomRW(identity)((m, v) => m)),
-      new NoopHandler(zoomRW(identity)((m, v) => m)),
+      new RetryHandler(zoomRW(identity)((m, _) => m)),
+      new LoggedInStatusHandler(zoomRW(identity)((m, _) => m)),
+      new NoopHandler(zoomRW(identity)((m, _) => m)),
       new LoggedInUserHandler(zoomRW(_.loggedInUserPot)((m, v) => m.copy(loggedInUserPot = v))),
       new UserDashboardHandler(zoomRW(_.loggedInUserPot)((m, v) => m.copy(loggedInUserPot = v))),
       new UserHasPortAccessHandler(zoomRW(_.userHasPortAccess)((m, v) => m.copy(userHasPortAccess = v))),
@@ -132,7 +132,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new StaffAdjustmentDialogueStateHandler(zoomRW(_.maybeStaffDeploymentAdjustmentPopoverState)((m, v) => m.copy(maybeStaffDeploymentAdjustmentPopoverState = v)))
     )
 
-    composedhandlers
+    composedHandlers
   }
 }
 

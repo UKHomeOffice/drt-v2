@@ -132,7 +132,7 @@ object CrunchSystem {
       splitsCalculator = manifests.queues.SplitsCalculator(
         props.airportConfig.feedPortCode,
         ptqa,
-        props.airportConfig.defaultPaxSplits.splits.toSet
+        props.airportConfig.terminalPaxSplits
       ),
       groupFlightsByCodeShares = groupFlightsByCodeShares,
       expireAfterMillis = props.expireAfterMillis,

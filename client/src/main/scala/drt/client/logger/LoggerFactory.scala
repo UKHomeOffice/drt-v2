@@ -4,7 +4,6 @@ import drt.client.SPAMain
 
 import scala.annotation.elidable
 import scala.annotation.elidable._
-import scala.scalajs.js.annotation.JSImport
 
 trait Logger {
   /*
@@ -34,7 +33,7 @@ trait Logger {
 
 
 object LoggerFactory {
-  private[logger] def createLogger(name: String) = {}
+  private[logger] def createLogger(name: String): Unit = {}
 
   lazy val consoleAppender = new BrowserConsoleAppender
   lazy val popupAppender = new PopUpAppender

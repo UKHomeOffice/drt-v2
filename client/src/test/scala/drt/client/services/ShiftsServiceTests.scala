@@ -160,9 +160,6 @@ object ShiftsServiceTests extends TestSuite {
         }
 
         "Given all the assignments" - {
-
-          implicit def milliDateToSdate(md: MilliDate): SDateLike = SDate(md.millisSinceEpoch)
-
           "Staff movements" - {
             "escaped commas are allowed in shift name" - {
               val shiftsRawCsv =
@@ -183,11 +180,6 @@ object ShiftsServiceTests extends TestSuite {
             val shiftsRaw =
               """
                 |Alpha,T1,10/12/16,08:00,16:00,10
-              """.stripMargin
-
-            val fixedPointRaw =
-              """
-                |eGate Monitor,T1,10/12/16,08:00,14:00,1
               """.stripMargin
 
             val shiftService = ShiftAssignments(StaffAssignmentParser(shiftsRaw).parsedAssignments.collect { case Success(sa) => sa })
