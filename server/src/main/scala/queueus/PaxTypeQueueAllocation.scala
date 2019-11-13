@@ -15,14 +15,13 @@ case class PaxTypeQueueAllocation(paxTypeAllocator: PaxTypeAllocator, queueAlloc
         case (queue, allocation) => (queue, paxType, mpp, allocation)
       }
     })
-    }.groupBy {
-    case (queueType, _, _, _) => queueType
-  }
+    }
+    .groupBy {
+      case (queueType, _, _, _) => queueType
+    }
 
   def toSplits(terminal: String, bestManifest: BestAvailableManifest): Splits = {
-    val typeToTuples = toQueues(terminal, bestManifest)
-    println(s"queues: ${typeToTuples.keys.toSet}")
-    val splits = typeToTuples.flatMap {
+    val splits = toQueues(terminal, bestManifest).flatMap {
       case (_, passengerProfileTypeByQueueCount) =>
         passengerProfileTypeByQueueCount.foldLeft(Map[PaxTypeAndQueue, ApiPaxTypeAndQueueCount]()) {
           case (soFar, (queue, paxType, mpp, paxCount)) =>
@@ -41,11 +40,10 @@ case class PaxTypeQueueAllocation(paxTypeAllocator: PaxTypeAllocator, queueAlloc
     Splits(splits, bestManifest.source, None, PaxNumbers)
   }
 
-  def incrementNationalityCount(mpp: ManifestPassengerProfile, paxCount: Double, apiPaxTypeAndQueueCount: ApiPaxTypeAndQueueCount) = {
+  def incrementNationalityCount(mpp: ManifestPassengerProfile, paxCount: Double, apiPaxTypeAndQueueCount: ApiPaxTypeAndQueueCount): Some[Map[String, Double]] =
     apiPaxTypeAndQueueCount.nationalities.map(nats => {
       val existingOfNationality: Double = nats.getOrElse(mpp.nationality, 0)
       val newNats: Map[String, Double] = nats + (mpp.nationality -> (existingOfNationality + paxCount))
       Some(newNats)
     }).getOrElse(Some(Map(mpp.nationality -> paxCount)))
-  }
 }

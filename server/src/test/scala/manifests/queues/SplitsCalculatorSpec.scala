@@ -16,9 +16,8 @@ class SplitsCalculatorSpec extends CrunchTestLike {
   val splitsCalculator = SplitsCalculator(config.portCode, paxTypeQueueAllocation, config.terminalPaxSplits)
 
   "Given a splits calculator with BHX's terminal pax splits " +
-    "When I ask for the default splits for an arrival " +
+    "When I ask for the default splits for T2 " +
     "I should see no EGate split" >> {
-
     val result = splitsCalculator.terminalDefaultSplits("T2")
 
     val expected = Set(Splits(Set(

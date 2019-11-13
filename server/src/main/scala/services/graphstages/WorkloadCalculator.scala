@@ -27,7 +27,6 @@ object WorkloadCalculator {
       .foreach { incoming =>
         val procTimes = defaultProcTimes(incoming.apiFlight.Terminal)
         val flightMinutes = WorkloadCalculator.flightToFlightSplitMinutes(incoming, procTimes, Map(), false)
-        println(s"flightMinutes:\n${flightMinutes.mkString("\n")}")
         minutes ++= flightMinutes
       }
 

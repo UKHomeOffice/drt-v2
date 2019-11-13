@@ -160,9 +160,6 @@ object ShiftsServiceTests extends TestSuite {
         }
 
         "Given all the assignments" - {
-
-//          implicit def milliDateToSdate(md: MilliDate): SDateLike = SDate(md.millisSinceEpoch)
-
           "Staff movements" - {
             "escaped commas are allowed in shift name" - {
               val shiftsRawCsv =

@@ -126,48 +126,4 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
 
     true
   }
-
-  "Given an arrival splits stage " +
-    "When I push an arrival and some splits for that arrival " +
-    "Then I should see a message containing a FlightWithSplits representing them" >> {
-
-    val arrivalDate = "2018-01-01"
-    val arrivalTime = "00:05"
-    val scheduled = s"${arrivalDate}T$arrivalTime"
-    val probe = TestProbe("arrival-splits")
-
-    val (arrivalDiffs, manifestsLiveInput, _) = TestableArrivalSplits(splitsCalculator, probe, () => SDate(scheduled)).run()
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = "T1", origin = "JFK", schDt = scheduled, feedSources = Set(LiveFeedSource))
-    val paxList = List(
-      PassengerInfoGenerator.passengerInfoJson(nationality = "GBR", documentType = "P", issuingCountry = "GBR"),
-      PassengerInfoGenerator.passengerInfoJson(nationality = "ITA", documentType = "P", issuingCountry = "ITA")
-    )
-    val manifests = Set(VoyageManifest(DqEventCodes.DepartureConfirmed, portCode, "JFK", "0001", "BA", arrivalDate, arrivalTime, PassengerList = paxList))
-
-    arrivalDiffs.offer(ArrivalsDiff(toUpdate = SortedMap(arrival.unique -> arrival), toRemove = Set()))
-
-    probe.fishForMessage(3 seconds) {
-      case FlightsWithSplits(flights, _) => flights.nonEmpty
-    }
-
-    manifestsLiveInput.offer(manifests.map(BestAvailableManifest(_)).toList)
-
-    val terminalAverage = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable,Queues.EeaDesk,100.0,None)),SplitSources.TerminalAverage,None,Percentage)
-    val apiSplits = Splits(
-      Set(
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EGate, 1.6, Some(Map("GBR" -> 0.8, "ITA" -> 0.8))),
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 0.4, Some(Map("GBR" -> 0.2, "ITA" -> 0.2)))),
-      SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, None, PaxNumbers)
-
-    val expectedSplits = Set(terminalAverage, apiSplits)
-    val expected = Seq(ApiFlightWithSplits(arrival.copy(FeedSources = Set(LiveFeedSource, ApiFeedSource)), expectedSplits, None))
-
-    probe.fishForMessage(3 seconds) {
-      case fs: FlightsWithSplits =>
-        val fws = fs.flightsToUpdate.map(f => f.copy(lastUpdated = None))
-        fws == expected
-    }
-
-    true
-  }
 }
