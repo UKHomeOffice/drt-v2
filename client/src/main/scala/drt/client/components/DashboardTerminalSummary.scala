@@ -156,26 +156,31 @@ object DashboardTerminalSummary {
             )),
           <.div(^.className := "summary-box-container pax-count col-sm-1", <.div(s"$totalPaxAcrossQueues Pax")),
           <.div(^.className := "summary-box-container col-sm-1", BigSummaryBoxes.GraphComponent("aggregated", "", splitsForPeriod.values.sum, splitsForPeriod, props.paxTypeAndQueues)),
-          <.div(^.className := "summary-box-container col-sm-4 pax-summary",
-            <.table(
+          <.div(^.className := "summary-box-container col-sm-4 dashboard-summary__pax-summary",
+            <.table(^.className := "dashboard-summary__pax-summary-table",
               <.tbody(
-                <.tr(<.th(^.colSpan := 2, ^.className := "heading", "Time Range"), <.th("Flights"), <.th("Total Pax"), props.queues.map(q => <.th(Queues.queueDisplayNames(q))).toTagMod),
+                <.tr(^.className := "dashboard-summary__pax-summary-row",
+                  <.th(^.colSpan := 2, ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--left", "Time Range"),
+                  <.th("Flights", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"),
+                  <.th("Total Pax", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"), props.queues.map(q =>
+                    <.th(Queues.queueDisplayNames(q), ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right")).toTagMod),
                 summary.map {
 
                   case DashboardSummary(start, numFlights, paxPerQueue) =>
 
                     val totalPax = paxPerQueue.values.map(Math.round).sum
-                    <.tr(
-                      <.td(^.colSpan := 2, ^.className := "heading", s"${SDate(MilliDate(start)).prettyTime()} - ${SDate(MilliDate(start)).addHours(1).prettyTime()}"),
-                      <.td(s"$numFlights"),
-                      <.td(s"$totalPax"),
-                      props.queues.map(q => <.td(s"${Math.round(paxPerQueue.getOrElse(q, 0.0))}")).toTagMod
+                    <.tr(^.className := "dashboard-summary__pax-summary-row",
+                      <.td(^.colSpan := 2, ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--left", s"${SDate(MilliDate(start)).prettyTime()} - ${SDate(MilliDate(start)).addHours(1).prettyTime()}"),
+                      <.td(s"$numFlights", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"),
+                      <.td(s"$totalPax", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"),
+                      props.queues.map(q => <.td(s"${Math.round(paxPerQueue.getOrElse(q, 0.0))}", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right")).toTagMod
                     )
                 }.toTagMod,
-                <.tr(
-                  <.th(^.colSpan := 2, ^.className := "heading", "3 Hour Total"),
-                  <.th(props.flights.size),
-                  <.th(totalPaxAcrossQueues), props.queues.map(q => <.th(s"${queueTotals.getOrElse(q, 0.0)}")).toTagMod
+                <.tr(^.className := "dashboard-summary__pax-summary-row",
+                  <.th(^.colSpan := 2, ^.className := "dashboard-summary__pax-summary-cell heading pax-summary-cell--left", "3 Hour Total"),
+                  <.th(props.flights.size, ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"),
+                  <.th(totalPaxAcrossQueues, ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"),
+                  props.queues.map(q => <.th(s"${queueTotals.getOrElse(q, 0.0)}", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right")).toTagMod
                 )
               )
             )

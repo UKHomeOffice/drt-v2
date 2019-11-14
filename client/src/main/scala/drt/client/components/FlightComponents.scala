@@ -78,22 +78,21 @@ object FlightComponents {
 
     def splitsGraphComponentColoured(props: Props): TagOf[Div] = {
       import props._
-      <.div(^.className := "splits",
-        tooltipOption.map(tooltip =>
-          <.div(^.className := "splits-tooltip", <.div(tooltip))).toList.toTagMod,
-        <.div(^.className := "graph",
-          <.div(^.className := "bars",
+      <.div(^.className := "dashboard-summary__splits",
+        tooltipOption.map(tooltip => <.div(^.className := ".dashboard-summary__splits-tooltip", <.div(tooltip))).toList.toTagMod,
+        <.div(^.className := "dashboard-summary__splits-graph",
+          <.div(^.className := "dashboard-summary__splits-graph-bars",
             splits.map {
               case (paxTypeAndQueue, paxCount) =>
                 val divHeightScalingFactor = 80
                 val percentage: Double = paxCount.toDouble / splitTotal * divHeightScalingFactor
                 val label = paxTypeAndQueueString(paxTypeAndQueue)
                 <.div(
-                  ^.className := "bar " + paxTypeAndQueue.queueType,
+                  ^.className := s"dashboard-summary__splits-graph-bar dashboard-summary__splits-graph-bar--${paxTypeAndQueue.queueType}",
                   ^.height := s"$percentage%",
                   ^.title := s"$label")
             }.toTagMod,
-            <.div(^.className := "bar-max bar")
+            <.div(^.className := "dashboard-summary__splits-graph-bar dashboard-summary__splits-graph-bar--max")
           )))
     }
   }

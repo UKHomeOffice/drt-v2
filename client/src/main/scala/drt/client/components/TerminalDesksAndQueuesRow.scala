@@ -22,7 +22,7 @@ object TerminalDesksAndQueuesRow {
     totalRequired.toDouble / totalDeployed match {
       case diff if diff >= 1 => "red"
       case diff if diff >= 0.75 => "amber"
-      case _ => ""
+      case _ => "green"
     }
   }
 
