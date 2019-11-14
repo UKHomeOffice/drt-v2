@@ -103,7 +103,6 @@ object BigSummaryBoxes {
 
   case class Props(flightCount: Int, actPaxCount: Int, bestPaxCount: Int, aggSplits: Map[PaxTypeAndQueue, Int], paxQueueOrder: Seq[PaxTypeAndQueue])
 
-
   def GraphComponent(source: String, sourceDisplay: String, splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int], paxQueueOrder: Seq[PaxTypeAndQueue]): TagOf[HTMLElement] = {
     val value = Try {
       val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = paxQueueOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
@@ -122,15 +121,4 @@ object BigSummaryBoxes {
     }
     g.get
   }
-
-
-  val SummaryBox = ScalaComponent.builder[Props]("SummaryBox")
-    .render_P(p => {
-
-      <.div(^.className := "summary-boxes ",
-        <.div(^.className := "summary-box-container", <.h3(<.span(^.className := "summary-box-count flight-count", f"${p.flightCount}%,d"), <.span(^.className := "sub", " Flights"))),
-        <.div(^.className := "summary-box-container", <.h3(<.span(^.className := "summary-box-count best-pax-count", f"${p.bestPaxCount}%,d "), <.span(^.className := "sub", " Best Pax"))),
-        <.div(^.className := "summary-box-container", GraphComponent("aggregated", "", p.aggSplits.values.sum, p.aggSplits, p.paxQueueOrder)))
-    })
-    .build
 }

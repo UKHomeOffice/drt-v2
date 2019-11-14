@@ -1172,11 +1172,6 @@ th h2 {
   padding-right: 5px;
 }
 
-.summary-box-container td {
-  text-align: center;
-  font-size: 15px;
-}
-
 @pax-bar-height: 20px;
 
 @reliability-low: #ff9999;
@@ -1213,13 +1208,12 @@ th h2 {
   width: 100%;
 }
 
-div.summary-box-container.rag-summary {
-
+.summary-box-container.rag-summary {
   text-align: center;
   padding: 18px;
 }
 
-div.summary-box-container.rag-summary table.rag-desks{
+.summary-box-container.rag-summary table.rag-desks{
   width: 100%;
   margin-top: 10px;
 }
@@ -1230,7 +1224,7 @@ div.summary-box-container.rag-summary table.rag-desks{
   text-align: right;
 }
 
-div.summary-box-container.rag-summary table.rag-desks td, div.summary-box-container.rag-summary table.rag-desks th{
+.summary-box-container.rag-summary table.rag-desks td, .summary-box-container.rag-summary table.rag-desks th{
   width: 60px;
   text-align: center;
 }
@@ -1249,18 +1243,12 @@ div.summary-box-container.rag-summary table.rag-desks td, div.summary-box-contai
   text-align: center;
 }
 
-.dashboard-summary .splits {
+.dashboard-summary__splits {
   width: 100%;
   position: relative;
   height: 150px;
   display: inline-block;
   bottom: 24px;
-}
-
-.col-sm-1.pax-count.summary-box-container {
-  position: relative;
-  text-align: center;
-  padding: 0px;
 }
 
 .col-sm-1.pax-count.summary-box-container div {
@@ -1273,33 +1261,34 @@ div.summary-box-container.rag-summary table.rag-desks td, div.summary-box-contai
   text-align: center;
 }
 
-.dashboard-summary .splits .graph {
+.dashboard-summary__splits-graph {
   height: 150px;
 }
 
-.pax-summary table tr td.heading, .pax-summary table tr th.heading {
+.dashboard-summary__pax-summary-cell {
+  padding: 3px;
+  overflow: hidden;
+  white-space: nowrap;
+  width:10%;
+}
+
+.pax-summary-cell--left {
   text-align: left;
 }
 
-.pax-summary table tr td, .pax-summary table tr th{
+.pax-summary-cell--right {
   text-align: right;
-  padding: 3px;
 }
 
-
-.pax-summary table {
+.dashboard-summary__pax-summary-table {
   height: 100%;
 }
-.pax-summary table tr:nth-child(odd) {
+
+.dashboard-summary__pax-summary-row:nth-child(odd) {
   background-color: darken(#ddd, 10%);
 }
 
-.pax-summary table tr td{
-  padding: 2px;
-}
-
-
-.summary-box-container.pax-summary {
+.dashboard-summary__pax-summary {
   min-width: 490px;
   padding:0;
 }
@@ -1384,18 +1373,11 @@ div.summary-box-container.rag-summary table.rag-desks td, div.summary-box-contai
   margin-bottom: @tdpadding;
 }
 
-.splits {
-  width: 140px;
-  position: relative;
-  height: 28px;
-  display: inline-block;
-}
-
-.splits .splits-tooltip {
+.dashboard-summary__splits-tooltip {
   display: none;
 }
 
-.splits:hover .splits-tooltip {
+.dashboard-summary__splits-tooltip:hover {
   display: block;
   font-size: medium;
   /* position relative to container div.tooltip */
@@ -1423,25 +1405,12 @@ div.summary-box-container.rag-summary table.rag-desks td, div.summary-box-contai
 
 }
 
-.splits .graph {
-  width: 136px;
-  height: 28px;
-  position: absolute;
-  bottom: 0px;
-  left: 0;
-}
-
-.bars {
+.dashboard-summary__splits-graph-bars {
   position: relative;
   height: 150px;
 }
 
-.splits .graph .bars .bar.bar-max {
-  height: 150px;
-  width: 0px;
-}
-
-.splits .graph .bar {
+.dashboard-summary__splits-graph-bar {
   width: 15px;
   margin: 1px;
   display: inline-block;
@@ -1450,20 +1419,24 @@ div.summary-box-container.rag-summary table.rag-desks td, div.summary-box-contai
   vertical-align: baseline;
 }
 
-.splits .graph .bar.eeaDesk {
-  background-color: rgb(0, 161, 222);
-
+.dashboard-summary__splits-graph-bar--max {
+  height: 150px;
+  width: 0px;
 }
 
-.splits .graph .bar.eGate {
+.dashboard-summary__splits-graph-bar--eeaDesk {
+  background-color: rgb(0, 161, 222);
+}
+
+.dashboard-summary__splits-graph-bar--eGate {
   background-color: rgb(145, 125, 84);
 }
 
-.splits .graph .bar.nonEeaDesk {
+.dashboard-summary__splits-graph-bar--nonEeaDesk {
   background-color: rgb(247, 144, 30);
 }
 
-.splits .graph .bar.fastTrack {
+.dashboard-summary__splits-graph-bar--fastTrack {
   background-color: purple;
 }
 
