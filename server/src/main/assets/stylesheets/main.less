@@ -1773,20 +1773,23 @@ div.access-restricted {
     border-radius: 22px;
     box-shadow: 0 6px 8px rgba(52, 73, 94, .2), 0 1px 1px rgba(52, 73, 94, 0.1);
     position: fixed;
-    left: -23%;
+    left: 0;
     right: 0;
     top: 18%;
     margin-left: auto;
     margin-right: auto;
-    width: 66%;
+    width: 85%;
     opacity: 95%;
     min-width: 1100px;
 }
-
-
-.dashboard-arrivals-popup td {
-    text-align: left;
+.close-arrivals-popup{
+    float:right;
 }
+
+.dashboard-arrivals-popup table tbody tr td {
+    vertical-align: middle;
+}
+
 .dashboard-arrivals-popup td.right {
     text-align: right;
 }
@@ -1799,11 +1802,6 @@ div.access-restricted {
 
 .dashboard-arrivals-popup th {
     background-color: #2889c6;
-    text-align: center;
-}
-
-.dashboard-arrivals-popup table {
-    text-align: center;
 }
 
 .dashboard-arrivals-popup thead {

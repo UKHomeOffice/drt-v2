@@ -51,17 +51,25 @@ object TerminalDashboardComponent {
 
       <.div(^.className := "terminal-dashboard",
 
+        if (p.terminalPageTabLoc.queryParams.get("showArrivals").isDefined) {
+          val closeArrivalsPopupLink = p.terminalPageTabLoc.copy(
+            queryParams = p.terminalPageTabLoc.queryParams - "showArrivals"
+          )
+          <.div(<.div(^.className := "popover-overlay",
+            ^.onClick --> p.router.set(closeArrivalsPopupLink)),
 
-        if (p.terminalPageTabLoc.queryParams.get("showArrivals").isDefined)
-          <.div(^.className := "dashboard-arrivals-popup",
-            FlightsWithSplitsTable.ArrivalsTable(
-              None,
-              originMapper,
-              splitsGraphComponentColoured)(paxComp)(
-              FlightsWithSplitsTable.Props(
-                ps.flights.filter { case (ua, _) => ua.terminal == p.terminalPageTabLoc.terminal }.values.toList,
-                p.airportConfig.queueOrder(p.terminalPageTabLoc.terminal), p.airportConfig.hasEstChox)
-            )) else <.div(),
+            <.div(^.className := "dashboard-arrivals-popup",
+              FlightsWithSplitsTable.ArrivalsTable(
+                None,
+                originMapper,
+                splitsGraphComponentColoured)(paxComp)(
+                FlightsWithSplitsTable.Props(
+                  ps.flights.filter { case (ua, _) => ua.terminal == p.terminalPageTabLoc.terminal }.values.toList,
+                  p.airportConfig.queueOrder(p.terminalPageTabLoc.terminal), p.airportConfig.hasEstChox)
+              ), p.router.link(closeArrivalsPopupLink)(^.className := "close-arrivals-popup btn btn-default", "close")
+          ))
+        } else <.div()
+        ,
         <.div(^.className := "terminal-dashboard-queues",
           <.div(^.className := "pax-bar row", s"$terminalPax passengers presenting at the PCP"),
 
@@ -94,18 +102,13 @@ object TerminalDashboardComponent {
             <.div(^.className := "time-label col", s"${start.prettyTime()} - ${end.prettyTime()}"),
             p.router.link(p.terminalPageTabLoc.copy(queryParams = Map("start" -> s"$urlNextTime")))(^.className := "dashboard-time-switcher next-bar col", Icon.angleDoubleRight)
           )
-        ),
+        )
+        ,
         <.div(^.className := "terminal-dashboard-side",
-          if (p.terminalPageTabLoc.queryParams.get("showArrivals").isDefined)
-            p.router
-              .link(p.terminalPageTabLoc.copy(
-                queryParams = p.terminalPageTabLoc.queryParams - "showArrivals"
-              ))(^.className := "show-arrivals-btn", "Hide Arrivals")
-          else
-            p.router
-              .link(p.terminalPageTabLoc.copy(
-                queryParams = p.terminalPageTabLoc.queryParams + ("showArrivals" -> "true")
-              ))(^.className := "show-arrivals-btn", "View Arrivals")
+          p.router
+            .link(p.terminalPageTabLoc.copy(
+              queryParams = p.terminalPageTabLoc.queryParams + ("showArrivals" -> "true")
+            ))(^.className := "show-arrivals-btn", "View Arrivals")
         )
       )
     })
