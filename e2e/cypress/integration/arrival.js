@@ -26,65 +26,69 @@ describe('Arrivals page', () => {
       .addFlight(estString, actString, estChoxString, actChoxString, schString);
   });
 
-  const manifest = {
-    "EventCode": "DC",
-    "DeparturePortCode": "AMS",
-    "VoyageNumberTrailingLetter": "",
-    "ArrivalPortCode": "STN",
-    "DeparturePortCountryCode": "MAR",
-    "VoyageNumber": "0123",
-    "VoyageKey": "key",
-    "ScheduledDateOfDeparture": schDateString,
-    "ScheduledDateOfArrival": schDateString,
-    "CarrierType": "AIR",
-    "CarrierCode": "TS",
-    "ScheduledTimeOfDeparture": "06:30:00",
-    "ScheduledTimeOfArrival": schTimeString,
-    "FileId": "fileID",
-    "PassengerList": [
-      {
-        "DocumentIssuingCountryCode": "GBR",
-        "PersonType": "P",
-        "DocumentLevel": "Primary",
-        "Age": "30",
-        "DisembarkationPortCode": "",
-        "InTransitFlag": "N",
-        "DisembarkationPortCountryCode": "",
-        "NationalityCountryEEAFlag": "EEA",
-        "PassengerIdentifier": "",
-        "DocumentType": "Passport",
-        "PoavKey": "1",
-        "NationalityCountryCode": "GBR"
-      },
-      {
-        "DocumentIssuingCountryCode": "ZWE",
-        "PersonType": "P",
-        "DocumentLevel": "Primary",
-        "Age": "30",
-        "DisembarkationPortCode": "",
-        "InTransitFlag": "N",
-        "DisembarkationPortCountryCode": "",
-        "NationalityCountryEEAFlag": "",
-        "PassengerIdentifier": "",
-        "DocumentType": "P",
-        "PoavKey": "2",
-        "NationalityCountryCode": "ZWE"
-      },
-      {
-        "DocumentIssuingCountryCode": "AUS",
-        "PersonType": "P",
-        "DocumentLevel": "Primary",
-        "Age": "30",
-        "DisembarkationPortCode": "",
-        "InTransitFlag": "N",
-        "DisembarkationPortCountryCode": "",
-        "NationalityCountryEEAFlag": "",
-        "PassengerIdentifier": "",
-        "DocumentType": "P",
-        "PoavKey": "3",
-        "NationalityCountryCode": "AUS"
-      }
-    ]
+  const passengerListMixed = [
+    {
+      "DocumentIssuingCountryCode": "GBR",
+      "PersonType": "P",
+      "DocumentLevel": "Primary",
+      "Age": "30",
+      "DisembarkationPortCode": "",
+      "InTransitFlag": "N",
+      "DisembarkationPortCountryCode": "",
+      "NationalityCountryEEAFlag": "EEA",
+      "PassengerIdentifier": "",
+      "DocumentType": "Passport",
+      "PoavKey": "1",
+      "NationalityCountryCode": "GBR"
+    },
+    {
+      "DocumentIssuingCountryCode": "ZWE",
+      "PersonType": "P",
+      "DocumentLevel": "Primary",
+      "Age": "30",
+      "DisembarkationPortCode": "",
+      "InTransitFlag": "N",
+      "DisembarkationPortCountryCode": "",
+      "NationalityCountryEEAFlag": "",
+      "PassengerIdentifier": "",
+      "DocumentType": "P",
+      "PoavKey": "2",
+      "NationalityCountryCode": "ZWE"
+    },
+    {
+      "DocumentIssuingCountryCode": "AUS",
+      "PersonType": "P",
+      "DocumentLevel": "Primary",
+      "Age": "30",
+      "DisembarkationPortCode": "",
+      "InTransitFlag": "N",
+      "DisembarkationPortCountryCode": "",
+      "NationalityCountryEEAFlag": "",
+      "PassengerIdentifier": "",
+      "DocumentType": "P",
+      "PoavKey": "3",
+      "NationalityCountryCode": "AUS"
+    }
+  ];
+
+  function manifest(passengerList) {
+    return {
+      "EventCode": "DC",
+      "DeparturePortCode": "AMS",
+      "VoyageNumberTrailingLetter": "",
+      "ArrivalPortCode": "STN",
+      "DeparturePortCountryCode": "MAR",
+      "VoyageNumber": "0123",
+      "VoyageKey": "key",
+      "ScheduledDateOfDeparture": schDateString,
+      "ScheduledDateOfArrival": schDateString,
+      "CarrierType": "AIR",
+      "CarrierCode": "TS",
+      "ScheduledTimeOfDeparture": "06:30:00",
+      "ScheduledTimeOfArrival": schTimeString,
+      "FileId": "fileID",
+      "PassengerList": passengerList
+    }
   };
 
   const schTimeLocal = moment(schString).tz("Europe/London").format("HH:mm")
@@ -95,24 +99,24 @@ describe('Arrivals page', () => {
   const pcpTimeLocal = moment(actChoxString).add(13, "minutes").tz("Europe/London").format("HH:mm")
 
   const headersWithoutActApi = "IATA,ICAO,Origin,Gate/Stand,Status," +
-                               "Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP," +
-                               "Total Pax,PCP Pax," +
-                               "API e-Gates,API EEA,API Non-EEA,API Fast Track," +
-                               "Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track," +
-                               "Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track";
-  const actApiHeaders        = "API Actual - B5JSSK to Desk,API Actual - B5JSSK to eGates,API Actual - EEA (Machine Readable),API Actual - Non EEA (Visa),API Actual - eGates";
+    "Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP," +
+    "Total Pax,PCP Pax," +
+    "API e-Gates,API EEA,API Non-EEA,API Fast Track," +
+    "Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track," +
+    "Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track";
+  const actApiHeaders = "API Actual - B5JSSK to Desk,API Actual - B5JSSK to eGates,API Actual - EEA (Machine Readable),API Actual - Non EEA (Visa),API Actual - eGates";
 
-  const headersWithActApi    = headersWithoutActApi + "," + actApiHeaders;
+  const headersWithActApi = headersWithoutActApi + "," + actApiHeaders;
 
-  const dataWithoutActApi    = "TS0123,TS0123,AMS,46/44R,On Chocks," +
-                               schDateString + "," + schTimeLocal + "," + estTimeLocal + "," + actTimeLocal + "," + estChoxTimeLocal + "," + actChoxTimeLocal + "," + pcpTimeLocal + "," +
-                               "51,51," +
-                               "24,10,17,," +
-                               ",,,," +
-                               "13,37,1,";
-  const actApiData           = "0.0,1.0,0.0,1.0,1.0";
+  const dataWithoutActApi = "TS0123,TS0123,AMS,46/44R,On Chocks," +
+    schDateString + "," + schTimeLocal + "," + estTimeLocal + "," + actTimeLocal + "," + estChoxTimeLocal + "," + actChoxTimeLocal + "," + pcpTimeLocal + "," +
+    "51,51," +
+    "24,10,17,," +
+    ",,,," +
+    "13,37,1,";
+  const actApiData = "0.0,1.0,0.0,1.0,1.0";
 
-  const dataWithActApi       = dataWithoutActApi + "," + actApiData;
+  const dataWithActApi = dataWithoutActApi + "," + actApiData;
 
   const csvWithNoApiSplits = headersWithoutActApi + "\n" + dataWithoutActApi;
   const csvWithAPISplits = headersWithActApi + "\n" + dataWithActApi;
@@ -129,7 +133,7 @@ describe('Arrivals page', () => {
     cy
       .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
-      .addManifest(manifest)
+      .addManifest(manifest(passengerListMixed))
       .get('.pax-api')
       .request({
         method: 'GET',
@@ -144,7 +148,7 @@ describe('Arrivals page', () => {
     cy
       .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
-      .addManifest(manifest)
+      .addManifest(manifest(passengerListMixed))
       .get('.pax-api')
       .asABorderForceOfficerWithRoles(["api:view"])
       .request({
@@ -154,6 +158,55 @@ describe('Arrivals page', () => {
       .then((resp) => {
         expect(resp.body).to.equal(csvWithAPISplits, "Api splits incorrect for users with API reporting role")
       })
+  });
+
+  const passengerListBadDocTypes = [
+    {
+      "DocumentIssuingCountryCode": "GBR",
+      "PersonType": "P",
+      "DocumentLevel": "Primary",
+      "Age": "30",
+      "DisembarkationPortCode": "",
+      "InTransitFlag": "N",
+      "DisembarkationPortCountryCode": "",
+      "NationalityCountryEEAFlag": "EEA",
+      "PassengerIdentifier": "",
+      "DocumentType": "",
+      "PoavKey": "1",
+      "NationalityCountryCode": "GBR"
+    },
+    {
+      "DocumentIssuingCountryCode": "FRA",
+      "PersonType": "P",
+      "DocumentLevel": "Primary",
+      "Age": "30",
+      "DisembarkationPortCode": "",
+      "InTransitFlag": "N",
+      "DisembarkationPortCountryCode": "",
+      "NationalityCountryEEAFlag": "EEA",
+      "PassengerIdentifier": "",
+      "DocumentType": "passport",
+      "PoavKey": "1",
+      "NationalityCountryCode": "GBR"
+    }
+  ];
+
+
+  it('handles manifests where the doctype is specified incorectly or left off', () => {
+    const eGatesCellSelector = ':nth-child(12) > span';
+    const eeaCellSelector = ':nth-child(13) > span';
+    const nonEeaCellSelector = ':nth-child(14) > span';
+    cy
+      .asABorderForceOfficer()
+      .waitForFlightToAppear("TS0123")
+      .addManifest(manifest(passengerListBadDocTypes))
+      .get('.pax-api')
+      .get(eGatesCellSelector)
+      .contains("41")
+      .get(eeaCellSelector)
+      .contains("10")
+      .get(nonEeaCellSelector)
+      .contains("0")
   });
 });
 

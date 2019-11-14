@@ -1,9 +1,11 @@
 package manifests.passengers
 
+import drt.shared.PaxTypes.B5JPlusNational
 import drt.shared.SDateLike
 import drt.shared.SplitRatiosNs.SplitSources
 import manifests.UniqueArrivalKey
-import passengersplits.core.PassengerTypeCalculatorValues.DocType
+import passengersplits.core.PassengerTypeCalculatorValues
+import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocType}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import services.SDate
 
@@ -47,7 +49,10 @@ case class ManifestPassengerProfile(nationality: String,
 object ManifestPassengerProfile {
   def apply(pij: PassengerInfoJson, portCode: String): ManifestPassengerProfile = {
     val nationality = pij.NationalityCountryCode.getOrElse("")
-    val documentType: Option[String] = pij.DocumentType.map(DocType(_))
+    val documentType: Option[String] = if (nationality == CountryCodes.UK)
+      Option(DocType.Passport)
+    else
+      pij.DocumentType.map(DocType(_))
     val maybeAge = pij.Age.flatMap(a => Try(a.toInt).toOption)
     val maybeInTransit = Option(pij.InTransitFlag == "Y" || pij.DisembarkationPortCode.exists(_ != portCode))
     ManifestPassengerProfile(nationality, documentType, maybeAge, maybeInTransit)

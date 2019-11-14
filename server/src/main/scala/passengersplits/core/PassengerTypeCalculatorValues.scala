@@ -107,7 +107,7 @@ object PassengerTypeCalculatorValues {
     }
   }
 
-  val nonMachineReadableCountries = Set(Italy, Greece, Slovakia, Portugal)
+  val nonMachineReadableCountries: Set[String] = Set(Italy, Greece, Slovakia, Portugal)
 
   val EEA = "EEA"
 }
