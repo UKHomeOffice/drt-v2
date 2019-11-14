@@ -52,7 +52,7 @@ describe('Arrivals page', () => {
         "DisembarkationPortCountryCode": "",
         "NationalityCountryEEAFlag": "EEA",
         "PassengerIdentifier": "",
-        "DocumentType": "P",
+        "DocumentType": "Passport",
         "PoavKey": "1",
         "NationalityCountryCode": "GBR"
       },

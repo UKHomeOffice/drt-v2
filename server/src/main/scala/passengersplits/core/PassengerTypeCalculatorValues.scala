@@ -99,6 +99,12 @@ object PassengerTypeCalculatorValues {
   object DocType {
     val Visa = "V"
     val Passport = "P"
+
+    def apply(docTypeCode: String) = docTypeCode.toUpperCase() match {
+      case "V" => Visa
+      case "P" | "PASSPORT" => Passport
+      case _ => docTypeCode
+    }
   }
 
   val nonMachineReadableCountries = Set(Italy, Greece, Slovakia, Portugal)

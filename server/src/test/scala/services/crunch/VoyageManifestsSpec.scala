@@ -7,6 +7,7 @@ import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.SplitSources._
 import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
+import passengersplits.core.PassengerTypeCalculatorValues.DocType
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import server.feeds.ManifestsFeedSuccess
 import services.SDate
@@ -167,6 +168,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
       inTransitFlag,
       inTransitCountry,
       euPassport,
+      euPassport2,
       euIdCard,
       visa,
       visa
@@ -180,9 +182,27 @@ class VoyageManifestsSpec extends CrunchTestLike {
         ManifestPassengerProfile("GBR", Some("P"), Some(22), Some(true)),
         ManifestPassengerProfile("GBR", Some("P"), Some(22), Some(true)),
         ManifestPassengerProfile("GBR", Some("P"), Some(22), Some(false)),
+        ManifestPassengerProfile("GBR", Some("P"), Some(22), Some(false)),
         ManifestPassengerProfile("GBR", Some("I"), Some(22), Some(false)),
         ManifestPassengerProfile("AFG", Some("P"), Some(22), Some(false)),
         ManifestPassengerProfile("AFG", Some("P"), Some(22), Some(false))
+      )
+    )
+
+    result === expected
+  }
+
+  "Given a voyage manifest `Passport` instead of `P` for doctype it should still be accepted as a passport doctype" >> {
+    val vm = VoyageManifest(DqEventCodes.CheckIn, "LHR", "JFK", "0001", "BA", "2017-01-01", "00:00", List(
+      PassengerInfoJson(Some("Passport"), "GBR", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("GBR"), None)
+    ))
+
+    val result = BestAvailableManifest(vm)
+
+    val expected = BestAvailableManifest(
+      ApiSplitsWithHistoricalEGateAndFTPercentages, "LHR", "JFK", "0001", "BA", SDate("2017-01-01"),
+      List(
+        ManifestPassengerProfile("GBR", Some(DocType.Passport), Some(22), Some(false))
       )
     )
 
