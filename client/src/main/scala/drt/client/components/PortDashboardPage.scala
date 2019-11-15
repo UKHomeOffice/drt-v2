@@ -4,6 +4,7 @@ import drt.client.SPAMain.{Loc, PortDashboardLoc}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
+import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.SDateLike
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -28,7 +29,7 @@ object PortDashboardPage {
       portCodeQueueOrderTerminals { portMP =>
         <.div(^.className := "terminal-summary-dashboard",
             portMP().render(portConfig => {
-            val (queues, paxTypeAndQueueOrder, terminals) = (portConfig.queueTypeSplitOrder _, portConfig.paxTypeAndQueueOrder _, portConfig.terminalNames)
+            val (queues, paxTypeAndQueueOrder, terminals) = (portConfig.queues, portConfig.paxTypeAndQueueOrder _, portConfig.terminalNames)
             portStateRCP(portStateMP => {
               val currentPeriodStart = DashboardTerminalSummary.windowStart(SDate.now())
               val periods = List(
@@ -62,13 +63,15 @@ object PortDashboardPage {
                       val terminalCrunchMinutes = portStateForDashboard.crunchMinutes.values.toList
                       val terminalStaffMinutes = portStateForDashboard.staffMinutes.values.toList
 
+                      val queuesToDisplay = queues.getOrElse(terminalName, Seq())
+
                       DashboardTerminalSummary(DashboardTerminalSummary.Props(
                         flightsInTerminal,
                         terminalCrunchMinutes,
                         terminalStaffMinutes,
                         terminalName,
                         paxTypeAndQueueOrder(terminalName),
-                        queues(terminalName),
+                        queuesToDisplay,
                         displayPeriod.start,
                         displayPeriod.end
                       ))
