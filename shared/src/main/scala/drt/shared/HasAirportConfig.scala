@@ -21,6 +21,8 @@ object Queues {
 
   val queueOrder = List(QueueDesk, EGate, EeaDesk, NonEeaDesk, FastTrack)
 
+  def inOrder(queuesToSort: Seq[QueueName]): Seq[QueueName] = queueOrder.filter(q => queuesToSort.contains(q))
+
   val queueDisplayNames: Map[QueueName, String] = Map(
     EeaDesk -> "EEA",
     NonEeaDesk -> "Non-EEA",

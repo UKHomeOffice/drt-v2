@@ -5,7 +5,7 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.FlightsApi.{QueueName, TerminalName}
-import drt.shared.SDateLike
+import drt.shared.{Queues, SDateLike}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
@@ -62,8 +62,7 @@ object PortDashboardPage {
                       val flightsInTerminal = portStateForDashboard.flights.values.toList
                       val terminalCrunchMinutes = portStateForDashboard.crunchMinutes.values.toList
                       val terminalStaffMinutes = portStateForDashboard.staffMinutes.values.toList
-
-                      val queuesToDisplay = queues.getOrElse(terminalName, Seq())
+                      val terminalQueuesInOrder = Queues.inOrder(queues.getOrElse(terminalName, Seq()))
 
                       DashboardTerminalSummary(DashboardTerminalSummary.Props(
                         flightsInTerminal,
@@ -71,7 +70,7 @@ object PortDashboardPage {
                         terminalStaffMinutes,
                         terminalName,
                         paxTypeAndQueueOrder(terminalName),
-                        queuesToDisplay,
+                        terminalQueuesInOrder,
                         displayPeriod.start,
                         displayPeriod.end
                       ))
