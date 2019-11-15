@@ -22,6 +22,6 @@ class AirportConfigSpec extends Specification {
 
   private def splitOrder(port: AirportConfigLike, terminalName: TerminalName, expectedSplitOrder: List[String]): Fragment =
     s"${port.config.portCode} $terminalName split order should be $expectedSplitOrder" >> {
-      port.config.splitOrder(terminalName) === expectedSplitOrder
+      port.config.queueTypeSplitOrder(terminalName) === expectedSplitOrder
     }
 }
