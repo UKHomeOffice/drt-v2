@@ -69,7 +69,7 @@ object TerminalContentComponent {
       splitsGraphComponentColoured)(paxComp)
 
     def render(props: Props, state: State): TagOf[Div] = {
-      val queueOrder: Seq[QueueName] = props.airportConfig.queueOrder(props.terminalPageTab.terminal)
+      val queueOrder: Seq[QueueName] = props.airportConfig.queueTypeSplitOrder(props.terminalPageTab.terminal)
 
       val desksAndQueuesActive = if (state.activeTab == "desksAndQueues") "active" else ""
       val arrivalsActive = if (state.activeTab == "arrivals") "active" else ""
