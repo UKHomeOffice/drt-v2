@@ -10,7 +10,6 @@ import upickle.Js
 import upickle.default._
 import upickle.default.{macroRW, ReadWriter => RW}
 
-import scala.collection.immutable
 
 object Queues {
   val EeaDesk = "eeaDesk"
@@ -156,8 +155,13 @@ case class AirportConfig(portCode: String = "n/a",
                          cloneOfPortCode: Option[String] = None,
                          terminalPaxTypeQueueAllocation: Map[TerminalName, Map[PaxType, Seq[(QueueType, Double)]]]
                         ) {
-  def queueOrder(terminalName: TerminalName): List[QueueName] = Queues.queueOrder.filter { q =>
-    queues.getOrElse(terminalName, List()).contains(q)
+  val terminalSplits: Map[TerminalName, Set[QueueType]] = terminalPaxSplits.map {
+    case (terminal, splitRatios) =>
+      (terminal, splitRatios.splits.map(_.paxType.queueType).toSet)
+  }
+
+  def splitOrder(terminalName: TerminalName): List[QueueName] = Queues.queueOrder.filter { q =>
+    terminalSplits.getOrElse(terminalName, Set()).contains(q)
   }
 
   def paxTypeAndQueueOrder(terminalName: TerminalName): List[PaxTypeAndQueue] = PaxTypesAndQueues.inOrder.filter { q =>
