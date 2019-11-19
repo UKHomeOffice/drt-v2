@@ -44,7 +44,10 @@ class CrunchStateReadActor(snapshotInterval: Int,
       }
   }
 
-  override def postRecoveryComplete(): Unit = logPointInTimeCompleted(pointInTime)
+  override def postRecoveryComplete(): Unit = {
+    super.postRecoveryComplete()
+    logPointInTimeCompleted(pointInTime)
+  }
 
   override def receiveCommand: Receive = {
     case SaveSnapshotSuccess =>
