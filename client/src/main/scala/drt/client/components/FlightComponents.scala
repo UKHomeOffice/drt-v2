@@ -1,6 +1,5 @@
 package drt.client.components
 
-import drt.client.services.SPACircuit
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import japgolly.scalajs.react.vdom.html_<^._
@@ -13,23 +12,14 @@ object FlightComponents {
   def paxComp(flightWithSplits: ApiFlightWithSplits): TagMod = {
 
     val flight = flightWithSplits.apiFlight
-    val apiSplits = flightWithSplits.apiSplits.getOrElse(Splits(Set(), "no splits - client", None))
-    val apiPax: Int = Splits.totalPax(apiSplits.splits).toInt
-    val apiExTransPax: Int = Splits.totalExcludingTransferPax(apiSplits.splits).toInt
 
-    val featureFlagsRCP = SPACircuit.connect(_.featureFlags)
-    featureFlagsRCP(featureFlags => {
+    <.div(
       <.div(
-        featureFlags().render(features => {
-          val paxToDisplay: Int = ArrivalHelper.bestPax(flight)
-
-          <.div(
-            ^.title := paxComponentTitle(flight, apiExTransPax, apiPax),
-            ^.className := "pax-cell",
-            <.div(^.className := "right", paxToDisplay)
-          )
-        }))
-    })
+        ^.title := paxComponentTitle(flight),
+        ^.className := "pax-cell",
+        <.div(^.className := "right", ArrivalHelper.bestPax(flight))
+      )
+    )
   }
 
   def paxClassFromSplits(flightWithSplits: ApiFlightWithSplits): String = {
@@ -42,18 +32,18 @@ object FlightComponents {
   }
 
 
-  def paxComponentTitle(flight: Arrival, apiPax: Int, apiIncTrans: Int): String = {
+  def paxComponentTitle(flight: Arrival): String = {
     val max: String = flight.MaxPax.filter(_ > 0).map(_.toString).getOrElse("n/a")
     val portDirectPax: Int = flight.ActPax.getOrElse(0) - flight.TranPax.getOrElse(0)
     s"""|Pax: $portDirectPax (${flight.ActPax.getOrElse(0)} - ${flight.TranPax.getOrElse(0)} transfer)
         |Max: $max
-        |API: $apiIncTrans""".stripMargin
+        |${flight.ApiPax.map{api => s"API: ${api}"}}he""".stripMargin
   }
 
   def maxCapacityLine(maxFlightPax: Int, flight: Arrival): TagMod = {
-    flight.MaxPax.filter(_ > 0).map{ maxPaxMillis =>
+    flight.MaxPax.filter(_ > 0).map { maxPaxMillis =>
       <.div(^.className := "pax-capacity", ^.width := paxBarWidth(maxFlightPax, maxPaxMillis))
-    }.getOrElse{
+    }.getOrElse {
       VdomArray.empty()
     }
   }

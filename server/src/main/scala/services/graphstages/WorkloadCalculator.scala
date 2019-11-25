@@ -10,7 +10,7 @@ import services.workloadcalculator.PaxLoadCalculator.{Load, minutesForHours, pax
 
 import scala.collection.immutable.Map
 
-case class WorkloadCalculator(bestPaxFn: Arrival => Int) {
+object WorkloadCalculator {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def flightLoadMinutes(incomingFlights: FlightsWithSplits, defaultProcTimes: Map[TerminalName, Map[PaxTypeAndQueue, Double]]): SplitMinutes = {
@@ -50,7 +50,7 @@ case class WorkloadCalculator(bestPaxFn: Arrival => Int) {
     splitsToUseOption.map(splitsToUse => {
       val totalPax = splitsToUse.splitStyle match {
         case UndefinedSplitStyle => 0
-        case _ => bestPaxFn(flight)
+        case _ => ArrivalHelper.bestPax(flight)
       }
       val splitRatios: Set[ApiPaxTypeAndQueueCount] = splitsToUse.splitStyle match {
         case UndefinedSplitStyle => splitsToUse.splits.map(qc => qc.copy(paxCount = 0))
@@ -104,7 +104,7 @@ case class WorkloadCalculator(bestPaxFn: Arrival => Int) {
 
     val splitWorkLoadInMinute = (apiSplitRatio.nationalities, useNationalityBasedProcTimes) match {
       case (Some(nats), true) if nats.values.sum > 0 =>
-        val bestPax = bestPaxFn(arrival)
+        val bestPax = ArrivalHelper.bestPax(arrival)
         val natsToPaxRatio = totalPaxWithNationality / bestPax
         val natFactor = (flightPaxInMinute.toDouble / bestPax) / natsToPaxRatio
         log.debug(s"totalNats: $totalPaxWithNationality / bestPax: $bestPax, natFactor: $natFactor - ($flightPaxInMinute / $bestPax) / $natsToPaxRatio")

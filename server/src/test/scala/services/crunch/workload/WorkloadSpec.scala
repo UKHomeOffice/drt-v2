@@ -8,7 +8,7 @@ import services.SDate
 import services.graphstages.WorkloadCalculator
 
 class WorkloadSpec extends Specification {
-  val workloadCalculator = WorkloadCalculator(ArrivalHelper.bestPax)
+
   "Given an arrival with 1 pax and 1 split containing 1 pax with no nationality data " +
     "When I ask for the workload for this arrival " +
     "Then I see the 1x the proc time provided" >> {
@@ -22,7 +22,7 @@ class WorkloadSpec extends Specification {
         PaxNumbers))
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
     val emptyNatProcTimes: Map[String, Double] = Map()
-    val workloads = workloadCalculator
+    val workloads = WorkloadCalculator
       .flightToFlightSplitMinutes(ApiFlightWithSplits(arrival, splits, None), procTimes, emptyNatProcTimes, true)
       .toList
       .map(_.workLoad)
@@ -42,7 +42,7 @@ class WorkloadSpec extends Specification {
         PaxNumbers))
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
 
-    val flightSplitMinutes = workloadCalculator
+    val flightSplitMinutes = WorkloadCalculator
       .flightToFlightSplitMinutes(ApiFlightWithSplits(arrival, splits, None), procTimes, Map(), false)
       .toList
 
@@ -65,7 +65,7 @@ class WorkloadSpec extends Specification {
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
     val gbrSeconds = 45d
     val natProcTimes: Map[String, Double] = Map("GBR" -> gbrSeconds)
-    val workloads = workloadCalculator
+    val workloads = WorkloadCalculator
       .flightToFlightSplitMinutes(ApiFlightWithSplits(arrival, splits, None), procTimes, natProcTimes, true)
       .toList
       .map(_.workLoad)
@@ -87,7 +87,7 @@ class WorkloadSpec extends Specification {
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
     val gbrSeconds = 45d
     val natProcTimes: Map[String, Double] = Map("GBR" -> gbrSeconds)
-    val workloads = workloadCalculator
+    val workloads = WorkloadCalculator
       .flightToFlightSplitMinutes(ApiFlightWithSplits(arrival, splits, None), procTimes, natProcTimes, true)
       .toList
       .map(_.workLoad)
@@ -109,7 +109,7 @@ class WorkloadSpec extends Specification {
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
     val gbrSeconds = 45d
     val natProcTimes: Map[String, Double] = Map("GBR" -> gbrSeconds)
-    val workloads = workloadCalculator
+    val workloads = WorkloadCalculator
       .flightToFlightSplitMinutes(ApiFlightWithSplits(arrival, splits, None), procTimes, natProcTimes, true)
       .toList
       .map(_.workLoad)
@@ -132,7 +132,7 @@ class WorkloadSpec extends Specification {
     val gbrSeconds = 45d
     val fraSeconds = 45d
     val natProcTimes: Map[String, Double] = Map("GBR" -> gbrSeconds, "FRA" -> fraSeconds)
-    val workloads = workloadCalculator
+    val workloads = WorkloadCalculator
       .flightToFlightSplitMinutes(ApiFlightWithSplits(arrival, splits, None), procTimes, natProcTimes, true)
       .toList
       .map(_.workLoad)
@@ -163,7 +163,7 @@ class WorkloadSpec extends Specification {
     val gbrSeconds = 45d
     val zaSeconds = 100d
     val natProcTimes: Map[String, Double] = Map("GBR" -> gbrSeconds, "ZAR" -> zaSeconds)
-    val workloads = workloadCalculator
+    val workloads = WorkloadCalculator
       .flightToFlightSplitMinutes(ApiFlightWithSplits(arrival, splits, None), procTimes, natProcTimes, true)
       .toList
       .map(_.workLoad)
@@ -199,7 +199,7 @@ class WorkloadSpec extends Specification {
       "ZBW" -> zbwSeconds,
       "ZAR" -> zaSeconds
     )
-    val workloads = workloadCalculator
+    val workloads = WorkloadCalculator
       .flightToFlightSplitMinutes(ApiFlightWithSplits(arrival, splits, None), procTimes, natProcTimes, true)
       .toList
       .map(_.workLoad)
@@ -235,7 +235,7 @@ class WorkloadSpec extends Specification {
       "ZBW" -> zbwSeconds,
       "ZAR" -> zaSeconds
     )
-    val workloads = workloadCalculator
+    val workloads = WorkloadCalculator
       .flightToFlightSplitMinutes(ApiFlightWithSplits(arrival, splits, None), procTimes, natProcTimes, true)
       .map(m => (m.paxType, m.queueName, m.workLoad))
 

@@ -14,7 +14,7 @@ import scala.concurrent.Future
 import scala.util.Try
 
 
-case object CSVData {
+object CSVData {
   val log: Logger = LoggerFactory.getLogger(getClass)
   val lineEnding = "\n"
 

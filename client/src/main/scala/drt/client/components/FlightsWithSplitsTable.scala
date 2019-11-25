@@ -59,7 +59,17 @@ object FlightsWithSplitsTable {
               <.tbody(
                 sortedFlights.zipWithIndex.map {
                   case ((flightWithSplits, codeShares), idx) =>
-                    FlightTableRow.component(FlightTableRow.Props(flightWithSplits, codeShares, idx, timelineComponent = timelineComponent, originMapper = originMapper, paxComponent = paxComponent, splitsGraphComponent = splitsGraphComponent, splitsQueueOrder = props.queueOrder, hasEstChox = props.hasEstChox))
+                    FlightTableRow.component(FlightTableRow.Props(
+                      flightWithSplits,
+                      codeShares,
+                      idx,
+                      timelineComponent = timelineComponent,
+                      originMapper = originMapper,
+                      paxComponent = paxComponent,
+                      splitsGraphComponent = splitsGraphComponent,
+                      splitsQueueOrder = props.queueOrder,
+                      hasEstChox = props.hasEstChox
+                    ))
                 }.toTagMod)))
         }
         else

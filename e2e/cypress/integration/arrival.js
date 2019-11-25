@@ -120,47 +120,47 @@ describe('Arrivals page', () => {
   const csvWithNoApiSplits = headersWithoutActApi + "\n" + dataWithoutActApi;
   const csvWithAPISplits = headersWithActApi + "\n" + dataWithActApi;
 
-  // it('Displays a flight after it has been ingested via the live feed', () => {
-  //   cy
-  //     .addFlight(estString, actString, estChoxString, actChoxString, schString)
-  //     .asABorderForceOfficer()
-  //     .waitForFlightToAppear("TS0123")
-  //     .get('.before-now > :nth-child(2) > span > span')
-  //     .should('have.attr', 'title', 'Schiphol, Amsterdam, Netherlands')
-  // });
+  it('Displays a flight after it has been ingested via the live feed', () => {
+    cy
+      .addFlight(estString, actString, estChoxString, actChoxString, schString)
+      .asABorderForceOfficer()
+      .waitForFlightToAppear("TS0123")
+      .get('.before-now > :nth-child(2) > span > span')
+      .should('have.attr', 'title', 'Schiphol, Amsterdam, Netherlands')
+  });
 
-  // it('Does not show API splits in the flights export for regular users', () => {
-  //   cy
-  //     .addFlight(estString, actString, estChoxString, actChoxString, schString)
-  //     .asABorderForceOfficer()
-  //     .waitForFlightToAppear("TS0123")
-  //     .addManifest(manifest(passengerListMixed))
-  //     .get('.pax-api')
-  //     .request({
-  //       method: 'GET',
-  //       url: '/export/arrivals/' + millis + '/T1?startHour=0&endHour=24',
-  //     })
-  //     .then((resp) => {
-  //       expect(resp.body).to.equal(csvWithNoApiSplits, "Api splits incorrect for regular users");
-  //     });
-  // });
+  it('Does not show API splits in the flights export for regular users', () => {
+    cy
+      .addFlight(estString, actString, estChoxString, actChoxString, schString)
+      .asABorderForceOfficer()
+      .waitForFlightToAppear("TS0123")
+      .addManifest(manifest(passengerListMixed))
+      .get('.pax-api')
+      .request({
+        method: 'GET',
+        url: '/export/arrivals/' + millis + '/T1?startHour=0&endHour=24',
+      })
+      .then((resp) => {
+        expect(resp.body).to.equal(csvWithNoApiSplits, "Api splits incorrect for regular users");
+      });
+  });
 
-  // it('Allows you to view API splits in the flights export for users with api:view permission', () => {
-  //   cy
-  //     .addFlight(estString, actString, estChoxString, actChoxString, schString)
-  //     .asABorderForceOfficer()
-  //     .waitForFlightToAppear("TS0123")
-  //     .addManifest(manifest(passengerListMixed))
-  //     .get('.pax-api')
-  //     .asABorderForceOfficerWithRoles(["api:view"])
-  //     .request({
-  //       method: 'GET',
-  //       url: '/export/arrivals/' + millis + '/T1?startHour=0&endHour=24',
-  //     })
-  //     .then((resp) => {
-  //       expect(resp.body).to.equal(csvWithAPISplits, "Api splits incorrect for users with API reporting role")
-  //     })
-  // });
+  it('Allows you to view API splits in the flights export for users with api:view permission', () => {
+    cy
+      .addFlight(estString, actString, estChoxString, actChoxString, schString)
+      .asABorderForceOfficer()
+      .waitForFlightToAppear("TS0123")
+      .addManifest(manifest(passengerListMixed))
+      .get('.pax-api')
+      .asABorderForceOfficerWithRoles(["api:view"])
+      .request({
+        method: 'GET',
+        url: '/export/arrivals/' + millis + '/T1?startHour=0&endHour=24',
+      })
+      .then((resp) => {
+        expect(resp.body).to.equal(csvWithAPISplits, "Api splits incorrect for users with API reporting role")
+      })
+  });
 
   const passengerListBadDocTypes = [
     {
@@ -194,23 +194,23 @@ describe('Arrivals page', () => {
   ];
 
 
-  // it('handles manifests where the doctype is specified incorectly or left off', () => {
-  //   const eGatesCellSelector = ':nth-child(12) > span';
-  //   const eeaCellSelector = ':nth-child(13) > span';
-  //   const nonEeaCellSelector = ':nth-child(14) > span';
-  //   cy
-  //     .addFlight(estString, actString, estChoxString, actChoxString, schString)
-  //     .asABorderForceOfficer()
-  //     .waitForFlightToAppear("TS0123")
-  //     .addManifest(manifest(passengerListBadDocTypes))
-  //     .get('.pax-api')
-  //     .get(eGatesCellSelector)
-  //     .contains("41")
-  //     .get(eeaCellSelector)
-  //     .contains("10")
-  //     .get(nonEeaCellSelector)
-  //     .contains("0")
-  // });
+  it('handles manifests where the doctype is specified incorectly or left off', () => {
+    const eGatesCellSelector = ':nth-child(12) > span';
+    const eeaCellSelector = ':nth-child(13) > span';
+    const nonEeaCellSelector = ':nth-child(14) > span';
+    cy
+      .addFlight(estString, actString, estChoxString, actChoxString, schString)
+      .asABorderForceOfficer()
+      .waitForFlightToAppear("TS0123")
+      .addManifest(manifest(passengerListBadDocTypes))
+      .get('.pax-api')
+      .get(eGatesCellSelector)
+      .contains("41")
+      .get(eeaCellSelector)
+      .contains("10")
+      .get(nonEeaCellSelector)
+      .contains("0")
+  });
 
   it('uses passenger numbers calculated from API data if no live pax number exists', () => {
 
