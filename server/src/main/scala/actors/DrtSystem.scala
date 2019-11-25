@@ -148,7 +148,7 @@ case class DrtConfigParameters(config: Configuration) {
   val snapshotStaffOnStart: Boolean = config.get[Boolean]("feature-flags.snapshot-staffing-on-start")
 
   val useApiPaxNos: Boolean  = config.getOptional[Boolean]("feature-flags.use-api-pax-nos").getOrElse(false)
-  println(s"Using apiPaxNos: $useApiPaxNos")
+  
 }
 
 case class SubscribeRequestQueue(subscriber: ActorRef)
