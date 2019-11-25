@@ -107,7 +107,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new InitialPortStateHandler(currentViewMode, zoomRW(m => (m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(portStatePot = v._1, latestUpdateMillis = v._2))),
       new PortStateUpdatesHandler(currentViewMode, zoomRW(m => (m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(portStatePot = v._1, latestUpdateMillis = v._2))),
       new ForecastHandler(zoomRW(_.forecastPeriodPot)((m, v) => m.copy(forecastPeriodPot = v))),
-      new AirportCountryHandler(() => timeProvider(), zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
+      new AirportCountryHandler(() => timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
       new ContactDetailsHandler(zoomRW(_.contactDetails)((m, v) => m.copy(contactDetails = v))),
       new OohForSupportHandler(zoomRW(_.oohStatus)((m, v) => m.copy(oohStatus = v))),
