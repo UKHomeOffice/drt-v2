@@ -61,19 +61,14 @@ object TerminalDashboardComponent {
             ^.onClick --> p.router.set(closeArrivalsPopupLink)),
 
             <.div(^.className := "dashboard-arrivals-popup",
-              p.featureFlags.renderReady(ffs =>
+
                 FlightsWithSplitsTable.ArrivalsTable(
                   None,
                   originMapper,
                   splitsGraphComponentColoured)(paxComp)(
-                  FlightsWithSplitsTable.Props(
-                    ps.flights.filter { case (ua, _) => ua.terminal == p.terminalPageTabLoc.terminal }.values.toList,
-                    p.airportConfig.queueTypeSplitOrder(p.terminalPageTabLoc.terminal),
-                    p.airportConfig.hasEstChox,
-                    ffs.getOrElse("use-api-pax-nos", false)
-                  )
+                  FlightsWithSplitsTable.Props(ps.flights.filter { case (ua, _) => ua.terminal == p.terminalPageTabLoc.terminal }.values.toList, p.airportConfig.queueTypeSplitOrder(p.terminalPageTabLoc.terminal), p.airportConfig.hasEstChox)
                 )
-              )),
+              ),
             p.router.link(closeArrivalsPopupLink)(^.className := "close-arrivals-popup btn btn-default", "close")
           )
 

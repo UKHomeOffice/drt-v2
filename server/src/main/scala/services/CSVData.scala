@@ -14,7 +14,7 @@ import scala.concurrent.Future
 import scala.util.Try
 
 
-case class CSVData(bestPaxFn: Arrival => Int) {
+case object CSVData {
   val log: Logger = LoggerFactory.getLogger(getClass)
   val lineEnding = "\n"
 
@@ -195,7 +195,7 @@ case class CSVData(bestPaxFn: Arrival => Int) {
       fws.apiFlight.ActualChox.map(SDate(_, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
       fws.apiFlight.PcpTime.map(SDate(_, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
       fws.apiFlight.ActPax.getOrElse(0),
-      bestPaxFn(fws.apiFlight)
+      ArrivalHelper.bestPax(fws.apiFlight)
     ) ++
       queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages).getOrElse(q, "")}") ++
       queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, SplitRatiosNs.SplitSources.Historical).getOrElse(q, "")}") ++
@@ -206,7 +206,7 @@ case class CSVData(bestPaxFn: Arrival => Int) {
     fws
       .splits
       .find(_.source == splitSource)
-      .map(splits => ApiSplitsToSplitRatio.flightPaxPerQueueUsingSplitsAsRatio(bestPaxFn)(splits, fws.apiFlight))
+      .map(splits => ApiSplitsToSplitRatio.flightPaxPerQueueUsingSplitsAsRatio(splits, fws.apiFlight))
       .getOrElse(Map())
 
   def headingsForSplitSource(queueNames: Seq[String], source: String): String = queueNames

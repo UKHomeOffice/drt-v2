@@ -147,7 +147,8 @@ case class DrtConfigParameters(config: Configuration) {
 
   val snapshotStaffOnStart: Boolean = config.get[Boolean]("feature-flags.snapshot-staffing-on-start")
 
-  val useApiPaxNos: Boolean  = config.getOptional[Boolean]("use-api-pax-nos").getOrElse(false)
+  val useApiPaxNos: Boolean  = config.getOptional[Boolean]("feature-flags.use-api-pax-nos").getOrElse(false)
+  println(s"Using apiPaxNos: $useApiPaxNos")
 }
 
 case class SubscribeRequestQueue(subscriber: ActorRef)
@@ -324,7 +325,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     }
   }
 
-  def startCrunchGraph(portStateActor: ActorRef): (ActorRef, UniqueKillSwitch) = RunnableDeskRecs(portStateActor, 1440, TryRenjin.crunch, airportConfig, ArrivalHelper.bestPax(params.useApiPaxNos)).run()
+  def startCrunchGraph(portStateActor: ActorRef): (ActorRef, UniqueKillSwitch) = RunnableDeskRecs(portStateActor, 1440, TryRenjin.crunch, airportConfig, ArrivalHelper.bestPax).run()
 
   override def getFeedStatus: Future[Seq[FeedStatuses]] = {
     val actors: Seq[AskableActorRef] = Seq(liveArrivalsActor, liveBaseArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
@@ -419,7 +420,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       recrunchOnStart = recrunchOnStart,
       refreshArrivalsOnStart = refreshArrivalsOnStart,
       checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup,
-      stageThrottlePer = config.get[Int]("crunch.stage-throttle-millis") millisecond
+      stageThrottlePer = config.get[Int]("crunch.stage-throttle-millis") millisecond,
+      useApiPaxNos = params.useApiPaxNos
     ))
     crunchInputs
   }

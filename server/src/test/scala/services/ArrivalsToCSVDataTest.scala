@@ -9,8 +9,8 @@ import scala.concurrent.{Await, Future}
 
 
 class ArrivalsToCSVDataTest extends Specification {
-  val csvData = CSVData(ArrivalHelper.bestPax(true))
-  import csvData._
+
+  import CSVData._
 
   import controllers.ArrivalGenerator.arrival
 
@@ -99,7 +99,7 @@ class ArrivalsToCSVDataTest extends Specification {
            |Day 2, csv, export
            |Day 3, csv, export""".stripMargin
 
-      val resultFuture = CSVData(ArrivalHelper.bestPax(useApiPaxNos = true)).multiDayToSingleExport(futureDays)
+      val resultFuture = CSVData.multiDayToSingleExport(futureDays)
       val result = Await.result(resultFuture, 5 seconds)
 
       result === expected
@@ -109,7 +109,7 @@ class ArrivalsToCSVDataTest extends Specification {
 
   "When asking for Actual API Split Data" >> {
     "Given a list of Flights With Splits then I should get a list of headings for each of the API Splits" >> {
-      val headings = CSVData(ArrivalHelper.bestPax(useApiPaxNos = true)).actualAPIHeadings(List(flightWithoutFastTrackApiSplits, flightWithAllTypesOfAPISplit))
+      val headings = CSVData.actualAPIHeadings(List(flightWithoutFastTrackApiSplits, flightWithAllTypesOfAPISplit))
 
       val expected = List(
         "API Actual - EEA (Machine Readable)",
@@ -125,7 +125,7 @@ class ArrivalsToCSVDataTest extends Specification {
     }
 
     "Given a list of Flights With Splits then I should get Api Split data for each flight" >> {
-      val result = CSVData(ArrivalHelper.bestPax(useApiPaxNos = true)).actualAPIDataForFlights(flights, CSVData(ArrivalHelper.bestPax(useApiPaxNos = true)).actualAPIHeadings(flights))
+      val result = CSVData.actualAPIDataForFlights(flights, CSVData.actualAPIHeadings(flights))
 
       val expected = List(
         List(1.0, 3.0, 6.0, 7.0, 4.0, 5.0, 2.0),

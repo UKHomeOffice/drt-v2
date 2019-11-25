@@ -196,7 +196,7 @@ class CrunchTestLike
     val portStateActor = createPortStateActor(logLabel, portStateProbe, now)
     initialPortState.foreach(ps => portStateActor ! ps)
 
-    val (millisToCrunchActor: ActorRef, _: UniqueKillSwitch) = RunnableDeskRecs(portStateActor, minutesToCrunch, cruncher, airportConfig, ArrivalHelper.bestPax(true)).run()
+    val (millisToCrunchActor: ActorRef, _: UniqueKillSwitch) = RunnableDeskRecs(portStateActor, minutesToCrunch, cruncher, airportConfig, ArrivalHelper.bestPax).run()
     portStateActor ! SetCrunchActor(millisToCrunchActor)
 
     val manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
@@ -248,7 +248,8 @@ class CrunchTestLike
       initialFixedPoints = initialFixedPoints,
       initialStaffMovements = initialStaffMovements,
       checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup,
-      stageThrottlePer = 50 milliseconds
+      stageThrottlePer = 50 milliseconds,
+      useApiPaxNos = true
     ))
 
     portStateActor ! SetSimulationActor(crunchInputs.loadsToSimulate)

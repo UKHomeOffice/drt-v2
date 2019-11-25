@@ -21,7 +21,7 @@ object FlightComponents {
     featureFlagsRCP(featureFlags => {
       <.div(
         featureFlags().render(features => {
-          val paxToDisplay: Int = ArrivalHelper.bestPax(features.getOrElse("use-api-pax-nos", false))(flight)
+          val paxToDisplay: Int = ArrivalHelper.bestPax(flight)
 
           <.div(
             ^.title := paxComponentTitle(flight, apiExTransPax, apiPax),

@@ -102,20 +102,11 @@ object DashboardTerminalSummary {
     }
   }
 
-  def aggSplits(useApiPaxNos: Boolean): Seq[ApiFlightWithSplits] => Map[PaxTypeAndQueue, Int] = BigSummaryBoxes.aggregateSplits(ArrivalHelper.bestPax(useApiPaxNos))
+  def aggSplits: Seq[ApiFlightWithSplits] => Map[PaxTypeAndQueue, Int] = BigSummaryBoxes.aggregateSplits(ArrivalHelper.bestPax)
 
   def paxInPeriod(cms: Seq[CrunchMinute]): Double = cms.map(_.paxLoad).sum
 
-  case class Props(flights: List[ApiFlightWithSplits],
-                   crunchMinutes: List[CrunchMinute],
-                   staffMinutes: List[StaffMinute],
-                   terminal: TerminalName,
-                   paxTypeAndQueues: Seq[PaxTypeAndQueue],
-                   queues: Seq[QueueName],
-                   timeWindowStart: SDateLike,
-                   timeWindowEnd: SDateLike,
-                   useApiPaxNos: Boolean
-                  )
+  case class Props(flights: List[ApiFlightWithSplits], crunchMinutes: List[CrunchMinute], staffMinutes: List[StaffMinute], terminal: TerminalName, paxTypeAndQueues: Seq[PaxTypeAndQueue], queues: Seq[QueueName], timeWindowStart: SDateLike, timeWindowEnd: SDateLike)
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("SummaryBox")
     .render_P { props =>
@@ -128,7 +119,7 @@ object DashboardTerminalSummary {
         val pressurePoint = worstTimeslot(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal))
         val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePoint.deployedDesks.getOrElse(0))
 
-        val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(props.useApiPaxNos)(props.flights)
+        val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(props.flights)
 
         val summary: Seq[DashboardSummary] = hourSummary(props.flights, props.crunchMinutes, props.timeWindowStart)
         val queueTotals = totalsByQueue(summary)

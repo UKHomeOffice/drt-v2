@@ -124,7 +124,7 @@ object FlightsTableTests extends TestSuite {
                   <.td(<.span(0), ^.className := "queue-split pax-unknown right")))))
 
           assertRenderedComponentsAreEqual(
-            ArrivalsTable(timelineComponent = None)(paxComp)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, useApiPaxNos = true)),
+            ArrivalsTable(timelineComponent = None)(paxComp)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true)),
             staticComponent(expected)())
         }
 
@@ -160,7 +160,7 @@ object FlightsTableTests extends TestSuite {
                     <.td(<.span(0), ^.className := "queue-split pax-unknown right")))))
 
           assertRenderedComponentsAreEqual(
-            ArrivalsTable(Some(timelineComponent))(paxComp)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, useApiPaxNos = true)),
+            ArrivalsTable(Some(timelineComponent))(paxComp)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true)),
             staticComponent(expected)())
         }
 
@@ -199,7 +199,7 @@ object FlightsTableTests extends TestSuite {
 
             val table = ArrivalsTable(timelineComponent = None,
               originMapper = port => originMapperComponent(port)
-            )(paxComp)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, useApiPaxNos = true))
+            )(paxComp)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true))
 
             assertRenderedComponentsAreEqual(table, staticComponent(expected)())
           }
@@ -265,7 +265,7 @@ object FlightsTableTests extends TestSuite {
 
           assertRenderedComponentsAreEqual(
             FlightsWithSplitsTable.ArrivalsTable(timelineComponent = None, originMapper = s => s)(paxComponent)(
-              FlightsWithSplitsTable.Props(withSplits(testFlightT :: Nil), queuesWithoutFastTrack, hasEstChox = true, useApiPaxNos = true)),
+              FlightsWithSplitsTable.Props(withSplits(testFlightT :: Nil), queuesWithoutFastTrack, hasEstChox = true)),
             staticComponent(expected)())
 
         }

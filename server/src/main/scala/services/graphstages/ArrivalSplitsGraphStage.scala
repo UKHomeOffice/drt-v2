@@ -24,7 +24,9 @@ class ArrivalSplitsGraphStage(name: String = "",
                               splitsCalculator: SplitsCalculator,
                               groupFlightsByCodeShares: Seq[ApiFlightWithSplits] => Seq[(ApiFlightWithSplits, Set[Arrival])],
                               expireAfterMillis: Long,
-                              now: () => SDateLike)
+                              now: () => SDateLike,
+                              useApiPaxNos: Boolean
+                             )
   extends GraphStage[FanInShape3[ArrivalsDiff, List[BestAvailableManifest], List[BestAvailableManifest], FlightsWithSplits]] {
 
   val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
@@ -130,7 +132,10 @@ class ArrivalSplitsGraphStage(name: String = "",
 
       val flightWithAvailableApiData = liveApiSplits match {
         case Some(splits) =>
-          flight.copy(FeedSources = flight.FeedSources + ApiFeedSource, ApiPax = Option(Math.round(splits.totalPax).toInt))
+          if (useApiPaxNos)
+            flight.copy(FeedSources = flight.FeedSources + ApiFeedSource, ApiPax = Option(Math.round(splits.totalPax).toInt))
+          else
+            flight.copy(FeedSources = flight.FeedSources + ApiFeedSource)
         case _ => flight
       }
 

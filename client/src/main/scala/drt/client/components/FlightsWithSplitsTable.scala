@@ -10,10 +10,10 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.QueueName
 import drt.shared._
 import drt.shared.splits.ApiSplitsToSplitRatio
-import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.vdom.{TagMod, TagOf}
+import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, TableSection}
 
@@ -23,12 +23,7 @@ object FlightsWithSplitsTable {
 
   type BestPaxForArrivalF = Arrival => Int
 
-  case class Props(
-                    flightsWithSplits: List[ApiFlightWithSplits],
-                    queueOrder: Seq[QueueName],
-                    hasEstChox: Boolean,
-                    useApiPaxNos: Boolean
-                  )
+  case class Props(flightsWithSplits: List[ApiFlightWithSplits], queueOrder: Seq[QueueName], hasEstChox: Boolean)
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
     props.flightsWithSplits.hashCode()
@@ -64,16 +59,7 @@ object FlightsWithSplitsTable {
               <.tbody(
                 sortedFlights.zipWithIndex.map {
                   case ((flightWithSplits, codeShares), idx) =>
-                    FlightTableRow.component(FlightTableRow.Props(
-                      flightWithSplits, codeShares, idx,
-                      timelineComponent = timelineComponent,
-                      originMapper = originMapper,
-                      paxComponent = paxComponent,
-                      splitsGraphComponent = splitsGraphComponent,
-                      splitsQueueOrder = props.queueOrder,
-                      hasEstChox = props.hasEstChox,
-                      useApiPaxNos = props.useApiPaxNos
-                    ))
+                    FlightTableRow.component(FlightTableRow.Props(flightWithSplits, codeShares, idx, timelineComponent = timelineComponent, originMapper = originMapper, paxComponent = paxComponent, splitsGraphComponent = splitsGraphComponent, splitsQueueOrder = props.queueOrder, hasEstChox = props.hasEstChox))
                 }.toTagMod)))
         }
         else
@@ -138,13 +124,12 @@ object FlightTableRow {
   case class Props(flightWithSplits: ApiFlightWithSplits,
                    codeShares: Set[Arrival],
                    idx: Int,
-                   timelineComponent: Option[Arrival => VdomNode],
+                   timelineComponent: Option[Arrival => html_<^.VdomNode],
                    originMapper: OriginMapperF = portCode => portCode,
                    paxComponent: ApiFlightWithSplits => TagMod,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                    splitsQueueOrder: Seq[QueueName],
-                   hasEstChox: Boolean,
-                   useApiPaxNos: Boolean
+                   hasEstChox: Boolean
                   )
 
   case class RowState(hasChanged: Boolean)
@@ -179,7 +164,7 @@ object FlightTableRow {
       val timeIndicatorClass = if (flight.PcpTime.getOrElse(0L) < SDate.now().millisSinceEpoch) "before-now" else "from-now"
 
       val queuePax: Map[QueueName, Int] = ApiSplitsToSplitRatio
-        .paxPerQueueUsingBestSplitsAsRatio(ArrivalHelper.bestPax(props.useApiPaxNos))(flightWithSplits).getOrElse(Map())
+        .paxPerQueueUsingBestSplitsAsRatio(flightWithSplits).getOrElse(Map())
       val flightFields = List[(Option[String], TagMod)](
         (None, allCodes.mkString(" - ")),
         (None, props.originMapper(flight.Origin)),
@@ -196,7 +181,7 @@ object FlightTableRow {
         (None, localDateTimeWithPopup(flight.Actual)),
         (Option("est-chox"), localDateTimeWithPopup(flight.EstimatedChox)),
         (None, localDateTimeWithPopup(flight.ActualChox)),
-        (None, pcpTimeRange(flight, ArrivalHelper.bestPax(props.useApiPaxNos))),
+        (None, pcpTimeRange(flight, ArrivalHelper.bestPax)),
         (Option("right"), props.paxComponent(flightWithSplits))
       )
         .filterNot {

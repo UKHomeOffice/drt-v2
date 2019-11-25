@@ -75,17 +75,7 @@ object PortDashboardPage {
                       val terminalStaffMinutes = portStateForDashboard.staffMinutes.values.toList
                       val terminalQueuesInOrder = Queues.inOrder(queues.getOrElse(terminalName, Seq()))
 
-                      DashboardTerminalSummary(DashboardTerminalSummary.Props(
-                        flightsInTerminal,
-                        terminalCrunchMinutes,
-                        terminalStaffMinutes,
-                        terminalName,
-                        paxTypeAndQueueOrder(terminalName),
-                        terminalQueuesInOrder,
-                        displayPeriod.start,
-                        displayPeriod.end,
-                        featureFlags.getOrElse("use-api-pax-nos", false)
-                      ))
+                      DashboardTerminalSummary(DashboardTerminalSummary.Props(flightsInTerminal, terminalCrunchMinutes, terminalStaffMinutes, terminalName, paxTypeAndQueueOrder(terminalName), terminalQueuesInOrder, displayPeriod.start, displayPeriod.end))
                     })
                   })
                 )

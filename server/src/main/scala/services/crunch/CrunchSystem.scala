@@ -68,7 +68,9 @@ case class CrunchProps[FR](logLabel: String = "",
                            recrunchOnStart: Boolean = false,
                            refreshArrivalsOnStart: Boolean = false,
                            checkRequiredStaffUpdatesOnStartup: Boolean,
-                           stageThrottlePer: FiniteDuration)
+                           stageThrottlePer: FiniteDuration,
+                           useApiPaxNos: Boolean
+                          )
 
 object CrunchSystem {
 
@@ -133,7 +135,9 @@ object CrunchSystem {
       ),
       groupFlightsByCodeShares = groupFlightsByCodeShares,
       expireAfterMillis = props.expireAfterMillis,
-      now = props.now)
+      now = props.now,
+      useApiPaxNos = props.useApiPaxNos
+    )
 
     val staffGraphStage = new StaffGraphStage(
       name = props.logLabel,
