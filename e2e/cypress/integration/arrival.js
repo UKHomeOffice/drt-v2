@@ -25,49 +25,66 @@ describe('Arrivals page', () => {
     cy.deleteData();
   });
 
+  const ukPassport = {
+    "DocumentIssuingCountryCode": "GBR",
+    "PersonType": "P",
+    "DocumentLevel": "Primary",
+    "Age": "30",
+    "DisembarkationPortCode": "",
+    "InTransitFlag": "N",
+    "DisembarkationPortCountryCode": "",
+    "NationalityCountryEEAFlag": "EEA",
+    "PassengerIdentifier": "",
+    "DocumentType": "Passport",
+    "PoavKey": "1",
+    "NationalityCountryCode": "GBR"
+  };
+  const visaNational = {
+    "DocumentIssuingCountryCode": "ZWE",
+    "PersonType": "P",
+    "DocumentLevel": "Primary",
+    "Age": "30",
+    "DisembarkationPortCode": "",
+    "InTransitFlag": "N",
+    "DisembarkationPortCountryCode": "",
+    "NationalityCountryEEAFlag": "",
+    "PassengerIdentifier": "",
+    "DocumentType": "P",
+    "PoavKey": "2",
+    "NationalityCountryCode": "ZWE"
+  };
+  const nonVisaNational = {
+    "DocumentIssuingCountryCode": "MRU",
+    "PersonType": "P",
+    "DocumentLevel": "Primary",
+    "Age": "30",
+    "DisembarkationPortCode": "",
+    "InTransitFlag": "N",
+    "DisembarkationPortCountryCode": "",
+    "NationalityCountryEEAFlag": "",
+    "PassengerIdentifier": "",
+    "DocumentType": "P",
+    "PoavKey": "3",
+    "NationalityCountryCode": "MRU"
+  };
+  const b5JNational = {
+    "DocumentIssuingCountryCode": "AUS",
+    "PersonType": "P",
+    "DocumentLevel": "Primary",
+    "Age": "30",
+    "DisembarkationPortCode": "",
+    "InTransitFlag": "N",
+    "DisembarkationPortCountryCode": "",
+    "NationalityCountryEEAFlag": "",
+    "PassengerIdentifier": "",
+    "DocumentType": "P",
+    "PoavKey": "3",
+    "NationalityCountryCode": "AUS"
+  };
   const passengerListMixed = [
-    {
-      "DocumentIssuingCountryCode": "GBR",
-      "PersonType": "P",
-      "DocumentLevel": "Primary",
-      "Age": "30",
-      "DisembarkationPortCode": "",
-      "InTransitFlag": "N",
-      "DisembarkationPortCountryCode": "",
-      "NationalityCountryEEAFlag": "EEA",
-      "PassengerIdentifier": "",
-      "DocumentType": "Passport",
-      "PoavKey": "1",
-      "NationalityCountryCode": "GBR"
-    },
-    {
-      "DocumentIssuingCountryCode": "ZWE",
-      "PersonType": "P",
-      "DocumentLevel": "Primary",
-      "Age": "30",
-      "DisembarkationPortCode": "",
-      "InTransitFlag": "N",
-      "DisembarkationPortCountryCode": "",
-      "NationalityCountryEEAFlag": "",
-      "PassengerIdentifier": "",
-      "DocumentType": "P",
-      "PoavKey": "2",
-      "NationalityCountryCode": "ZWE"
-    },
-    {
-      "DocumentIssuingCountryCode": "AUS",
-      "PersonType": "P",
-      "DocumentLevel": "Primary",
-      "Age": "30",
-      "DisembarkationPortCode": "",
-      "InTransitFlag": "N",
-      "DisembarkationPortCountryCode": "",
-      "NationalityCountryEEAFlag": "",
-      "PassengerIdentifier": "",
-      "DocumentType": "P",
-      "PoavKey": "3",
-      "NationalityCountryCode": "AUS"
-    }
+    ukPassport,
+    visaNational,
+    nonVisaNational
   ];
 
   function manifest(passengerList) {
@@ -90,6 +107,15 @@ describe('Arrivals page', () => {
     }
   };
 
+  function manifestWithPaxSplits(euPax, visaNationals, nonVisaNationals, b5JNationals) {
+    const pax = Array(euPax).fill(ukPassport)
+      .concat(Array(visaNationals).fill(visaNational))
+      .concat(Array(nonVisaNationals).fill(nonVisaNational))
+      .concat(Array(b5JNationals).fill(b5JNational))
+
+    return manifest(pax)
+  }
+
   const schTimeLocal = moment(schString).tz("Europe/London").format("HH:mm")
   const estTimeLocal = moment(estString).tz("Europe/London").format("HH:mm")
   const actTimeLocal = moment(actString).tz("Europe/London").format("HH:mm")
@@ -103,17 +129,21 @@ describe('Arrivals page', () => {
     "API e-Gates,API EEA,API Non-EEA,API Fast Track," +
     "Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track," +
     "Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track";
-  const actApiHeaders = "API Actual - B5JSSK to Desk,API Actual - B5JSSK to eGates,API Actual - EEA (Machine Readable),API Actual - Non EEA (Visa),API Actual - eGates";
+  const actApiHeaders = "API Actual - B5JSSK to Desk,API Actual - B5JSSK to eGates,API Actual - EEA (Machine Readable),API Actual - Non EEA (Non Visa),API Actual - Non EEA (Visa),API Actual - eGates";
 
   const headersWithActApi = headersWithoutActApi + "," + actApiHeaders;
 
+  const totalPax = "51";
+  const eGatePax = "25";
+  const eeaDesk = "9";
+  const nonEEADesk = "17";
   const dataWithoutActApi = "TS0123,TS0123,AMS,46/44R,On Chocks," +
     schDateString + "," + schTimeLocal + "," + estTimeLocal + "," + actTimeLocal + "," + estChoxTimeLocal + "," + actChoxTimeLocal + "," + pcpTimeLocal + "," +
-    "51,51," +
-    "24,10,17,," +
+    totalPax + "," + totalPax + "," +
+    eGatePax + "," + eeaDesk + "," + nonEEADesk + ",," +
     ",,,," +
     "13,37,1,";
-  const actApiData = "0.0,1.0,0.0,1.0,1.0";
+  const actApiData = "4.0,6.0,5.0,7.0,10.0,19.0";
 
   const dataWithActApi = dataWithoutActApi + "," + actApiData;
 
@@ -134,7 +164,7 @@ describe('Arrivals page', () => {
       .addFlight(estString, actString, estChoxString, actChoxString, schString)
       .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
-      .addManifest(manifest(passengerListMixed))
+      .addManifest(manifestWithPaxSplits(24, 10, 7, 10))
       .get('.pax-api')
       .request({
         method: 'GET',
@@ -150,7 +180,7 @@ describe('Arrivals page', () => {
       .addFlight(estString, actString, estChoxString, actChoxString, schString)
       .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
-      .addManifest(manifest(passengerListMixed))
+      .addManifest(manifestWithPaxSplits(24, 10, 7, 10))
       .get('.pax-api')
       .asABorderForceOfficerWithRoles(["api:view"])
       .request({
@@ -199,15 +229,15 @@ describe('Arrivals page', () => {
     const eeaCellSelector = ':nth-child(13) > span';
     const nonEeaCellSelector = ':nth-child(14) > span';
     cy
-      .addFlight(estString, actString, estChoxString, actChoxString, schString)
+      .addFlightWithPaX("TS0123", 2, schString)
       .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
       .addManifest(manifest(passengerListBadDocTypes))
       .get('.pax-api')
       .get(eGatesCellSelector)
-      .contains("41")
+      .contains("2")
       .get(eeaCellSelector)
-      .contains("10")
+      .contains("0")
       .get(nonEeaCellSelector)
       .contains("0")
   });
@@ -227,7 +257,4 @@ describe('Arrivals page', () => {
 
   });
 
-
 });
-
-
