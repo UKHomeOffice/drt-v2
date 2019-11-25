@@ -27,8 +27,6 @@ import scala.util.Try
 trait WithExports {
   self: Application =>
 
-  val bestPax: Arrival => Int = ArrivalHelper.bestPax
-
   def exportUsers(): Action[AnyContent] = authByRole(ManageUsers) {
     Action.async { request =>
       val client = keyCloakClient(request.headers)

@@ -325,7 +325,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     }
   }
 
-  def startCrunchGraph(portStateActor: ActorRef): (ActorRef, UniqueKillSwitch) = RunnableDeskRecs(portStateActor, 1440, TryRenjin.crunch, airportConfig, ArrivalHelper.bestPax).run()
+  def startCrunchGraph(portStateActor: ActorRef): (ActorRef, UniqueKillSwitch) =
+    RunnableDeskRecs(portStateActor, 1440, TryRenjin.crunch, airportConfig).run()
 
   override def getFeedStatus: Future[Seq[FeedStatuses]] = {
     val actors: Seq[AskableActorRef] = Seq(liveArrivalsActor, liveBaseArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)

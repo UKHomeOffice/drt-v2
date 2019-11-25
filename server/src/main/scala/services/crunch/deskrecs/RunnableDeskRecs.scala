@@ -30,8 +30,7 @@ object RunnableDeskRecs {
   def apply(portStateActor: ActorRef,
             minutesToCrunch: Int,
             crunch: TryCrunch,
-            airportConfig: AirportConfig,
-            bestPaxFn: Arrival => Int
+            airportConfig: AirportConfig
            )(implicit executionContext: ExecutionContext, timeout: Timeout = new Timeout(10 seconds)): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
@@ -58,7 +57,7 @@ object RunnableDeskRecs {
             }
             .map { case (crunchStartMillis, flights) =>
               log.info(s"Crunching ${SDate(crunchStartMillis).toISOString()} flights: ${flights.flightsToUpdate.size}")
-              crunchFlights(flights, crunchStartMillis, minutesToCrunch, crunch, airportConfig, bestPaxFn)
+              crunchFlights(flights, crunchStartMillis, minutesToCrunch, crunch, airportConfig)
             }
             .map(drms => DeskRecMinutes(drms.values.toSeq)) ~> killSwitch ~> deskRecsSink
 
@@ -72,9 +71,8 @@ object RunnableDeskRecs {
                             crunchStartMillis: MillisSinceEpoch,
                             minutesToCrunch: Int,
                             crunch: TryCrunch,
-                            airportConfig: AirportConfig,
-                            bestPaxFn: Arrival => Int
-                           ): SortedMap[TQM, CrunchApi.DeskRecMinute] = {
+                            airportConfig: AirportConfig
+                           ) = {
     val crunchEndMillis = SDate(crunchStartMillis).addMinutes(minutesToCrunch).millisSinceEpoch
     val terminals = flights.flightsToUpdate.map(_.apiFlight.Terminal).toSet
     val loadMinutes = WorkloadCalculator.flightLoadMinutes(flights, airportConfig.terminalProcessingTimes).minutes
