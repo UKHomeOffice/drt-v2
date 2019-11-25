@@ -132,7 +132,7 @@ Cypress.Commands.add('addFlightWithFlightCode', (flightCode, estString, actStrin
   cy.request('POST', '/test/arrival', flightPayload);
 });
 
-Cypress.Commands.add('addFlightWithPaX', (flightCode, actPax, estString, actString, estChoxString, actChoxString, schString) => {
+Cypress.Commands.add('addFlightWithPax', (flightCode, actPax, estString, actString, estChoxString, actChoxString, schString) => {
 
   let act = actString || estString;
   let estChox = estChoxString || estString;

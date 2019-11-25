@@ -62,13 +62,17 @@ object TerminalDashboardComponent {
 
             <.div(^.className := "dashboard-arrivals-popup",
 
-                FlightsWithSplitsTable.ArrivalsTable(
-                  None,
-                  originMapper,
-                  splitsGraphComponentColoured)(paxComp)(
-                  FlightsWithSplitsTable.Props(ps.flights.filter { case (ua, _) => ua.terminal == p.terminalPageTabLoc.terminal }.values.toList, p.airportConfig.queueTypeSplitOrder(p.terminalPageTabLoc.terminal), p.airportConfig.hasEstChox)
+              FlightsWithSplitsTable.ArrivalsTable(
+                None,
+                originMapper,
+                splitsGraphComponentColoured)(paxComp)(
+                FlightsWithSplitsTable.Props(
+                  ps.flights.filter { case (ua, _) => ua.terminal == p.terminalPageTabLoc.terminal }.values.toList,
+                  p.airportConfig.queueTypeSplitOrder(p.terminalPageTabLoc.terminal),
+                  p.airportConfig.hasEstChox
                 )
-              ),
+              )
+            ),
             p.router.link(closeArrivalsPopupLink)(^.className := "close-arrivals-popup btn btn-default", "close")
           )
 

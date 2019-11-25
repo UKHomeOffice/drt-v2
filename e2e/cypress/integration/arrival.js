@@ -229,7 +229,7 @@ describe('Arrivals page', () => {
     const eeaCellSelector = ':nth-child(13) > span';
     const nonEeaCellSelector = ':nth-child(14) > span';
     cy
-      .addFlightWithPaX("TS0123", 2, schString)
+      .addFlightWithPax("TS0123", 2, schString)
       .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
       .addManifest(manifest(passengerListBadDocTypes))
@@ -246,7 +246,7 @@ describe('Arrivals page', () => {
 
     const totalPaxSelector = '.before-now > :nth-child(11)';
     cy
-      .addFlightWithPaX("TS0123", 0, schString)
+      .addFlightWithPax("TS0123", 0, schString)
       .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
       .get(totalPaxSelector)

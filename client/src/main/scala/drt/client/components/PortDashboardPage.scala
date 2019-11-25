@@ -69,13 +69,26 @@ object PortDashboardPage {
                   <.h3(s"Terminal $terminalName"),
                   portDashboardModel.portState.render(portState => {
                     portDashboardModel.featureFlags.render(featureFlags => {
-                      val portStateForDashboard = portState.windowWithTerminalFilter(displayPeriod.start, displayPeriod.end, portConfig.queues.filterKeys(_ == terminalName))
+                      val portStateForDashboard = portState.windowWithTerminalFilter(
+                        displayPeriod.start,
+                        displayPeriod.end,
+                        portConfig.queues.filterKeys(_ == terminalName)
+                      )
                       val flightsInTerminal = portStateForDashboard.flights.values.toList
                       val terminalCrunchMinutes = portStateForDashboard.crunchMinutes.values.toList
                       val terminalStaffMinutes = portStateForDashboard.staffMinutes.values.toList
                       val terminalQueuesInOrder = Queues.inOrder(queues.getOrElse(terminalName, Seq()))
 
-                      DashboardTerminalSummary(DashboardTerminalSummary.Props(flightsInTerminal, terminalCrunchMinutes, terminalStaffMinutes, terminalName, paxTypeAndQueueOrder(terminalName), terminalQueuesInOrder, displayPeriod.start, displayPeriod.end))
+                      DashboardTerminalSummary(
+                        DashboardTerminalSummary.Props(flightsInTerminal,
+                          terminalCrunchMinutes,
+                          terminalStaffMinutes,
+                          terminalName,
+                          paxTypeAndQueueOrder(terminalName),
+                          terminalQueuesInOrder,
+                          displayPeriod.start,
+                          displayPeriod.end)
+                      )
                     })
                   })
                 )
