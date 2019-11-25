@@ -1,7 +1,7 @@
 package services.crunch
 
 import drt.shared.CrunchApi._
-import drt.shared.{Forecast, MilliDate, Queues, SDateLike}
+import drt.shared.{ArrivalHelper, Forecast, MilliDate, Queues, SDateLike}
 import org.specs2.mutable.Specification
 import services.graphstages.Crunch.getLocalLastMidnight
 import services.{CSVData, SDate}
@@ -27,7 +27,7 @@ class ForecastPlanningToCSVDataTest extends Specification {
         )
       ))
 
-      val result = CSVData.forecastPeriodToCsv(forecast)
+      val result = CSVData(ArrivalHelper.bestPax(true)).forecastPeriodToCsv(forecast)
 
       val expected =
         s"""|,${day1Midnight.getDate()}/${day1Midnight.getMonth()} - available,25/10 - required,25/10 - difference
@@ -44,7 +44,7 @@ class ForecastPlanningToCSVDataTest extends Specification {
 
       val forecast = ForecastPeriod(Map())
 
-      val result = Forecast.timeSlotStartTimes(forecast, CSVData.millisToHoursAndMinutesString)
+      val result = Forecast.timeSlotStartTimes(forecast, CSVData(ArrivalHelper.bestPax(true)).millisToHoursAndMinutesString)
 
       val expected = List()
 
@@ -97,7 +97,7 @@ class ForecastPlanningToCSVDataTest extends Specification {
         )
       ))
 
-      val result = CSVData.forecastPeriodToCsv(forecast)
+      val result = CSVData(ArrivalHelper.bestPax(true)).forecastPeriodToCsv(forecast)
 
       val dt1 = s"""${day1Midnight.getDate()}/${day1Midnight.getMonth()}"""
       val dt2 = s"""${day2Midnight.getDate()}/${day2Midnight.getMonth()}"""
@@ -131,7 +131,7 @@ class ForecastPlanningToCSVDataTest extends Specification {
 
     val forecastPeriod = forecastForPeriodStartingOnDay(2, SDate("2018-10-28T00:00:00Z"))
 
-    val result = Forecast.timeSlotStartTimes(forecastPeriod, CSVData.millisToHoursAndMinutesString).take(12)
+    val result = Forecast.timeSlotStartTimes(forecastPeriod, CSVData(ArrivalHelper.bestPax(true)).millisToHoursAndMinutesString).take(12)
 
     val expected = List(
       "00:00", "00:15", "00:30", "00:45",
@@ -144,7 +144,7 @@ class ForecastPlanningToCSVDataTest extends Specification {
   "Given a ForecastPeriod which includes a period that spans a timezone change from BST to UTC " +
     "Then I should get a CSV with two rows for 1am with empty values for all days other than the timezone change day" >> {
     val forecastPeriodDays: ForecastPeriod = forecastForPeriodStartingOnDay(2, SDate("2018-10-28T00:00:00Z"))
-    val result = CSVData.forecastPeriodToCsv(forecastPeriodDays)
+    val result = CSVData(ArrivalHelper.bestPax(true)).forecastPeriodToCsv(forecastPeriodDays)
 
     val expected =
       s"""|,28/10 - available,28/10 - required,28/10 - difference,29/10 - available,29/10 - required,29/10 - difference
@@ -255,7 +255,7 @@ class ForecastPlanningToCSVDataTest extends Specification {
   "Given a ForecastPeriod which includes a period that spans a timezone change from BST to UTC starting before the switch date " +
     "Then I should get a CSV with two rows for 1am with empty values for all days other than the timezone change day" >> {
     val forecastPeriodDays: ForecastPeriod = forecastForPeriodStartingOnDay(3, SDate("2018-10-27T00:00:00Z"))
-    val result = CSVData.forecastPeriodToCsv(forecastPeriodDays)
+    val result = CSVData(ArrivalHelper.bestPax(true)).forecastPeriodToCsv(forecastPeriodDays)
 
     val expected =
       s"""|,27/10 - available,27/10 - required,27/10 - difference,28/10 - available,28/10 - required,28/10 - difference,29/10 - available,29/10 - required,29/10 - difference
@@ -367,7 +367,7 @@ class ForecastPlanningToCSVDataTest extends Specification {
     "Then then the switch over day should have blank entries for the period between 1am and 2am" >> {
 
     val forecastPeriodDays: ForecastPeriod = forecastForPeriodStartingOnDay(3, SDate("2019-03-30T00:00:00Z"))
-    val result = CSVData.forecastPeriodToCsv(forecastPeriodDays)
+    val result = CSVData(ArrivalHelper.bestPax(true)).forecastPeriodToCsv(forecastPeriodDays)
 
     val expected =
       s"""|,30/03 - available,30/03 - required,30/03 - difference,31/03 - available,31/03 - required,31/03 - difference,01/04 - available,01/04 - required,01/04 - difference
@@ -496,7 +496,7 @@ class ForecastPlanningToCSVDataTest extends Specification {
         QueueHeadline(day3StartMinute.millisSinceEpoch, Queues.EGate, 1, 2)
       ))
 
-      val result = CSVData.forecastHeadlineToCSV(headlines, Queues.exportQueueOrderSansFastTrack)
+      val result = CSVData(ArrivalHelper.bestPax(useApiPaxNos = true)).forecastHeadlineToCSV(headlines, Queues.exportQueueOrderSansFastTrack)
 
       val expected =
         f"""|,${day1StartMinute.getDate()}%02d/${day1StartMinute.getMonth()}%02d,${day2StartMinute.getDate()}%02d/${day2StartMinute.getMonth()}%02d,${day3StartMinute.getDate()}%02d/${day3StartMinute.getMonth()}%02d

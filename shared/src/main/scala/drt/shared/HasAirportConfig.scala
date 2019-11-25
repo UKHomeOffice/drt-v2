@@ -196,11 +196,15 @@ object OutOfHoursStatus {
 object ArrivalHelper {
   val defaultPax = 0
 
-  def bestPax(flight: Arrival): Int = {
-    (flight.ActPax.getOrElse(0), flight.TranPax.getOrElse(0), flight.MaxPax.getOrElse(0)) match {
-      case (actPaxIsLtE0, _, maxPaxValid) if actPaxIsLtE0 <= 0 && maxPaxValid > 0 => maxPaxValid
-      case (actPaxIsLt0, _, _) if actPaxIsLt0 <= 0 => defaultPax
-      case (actPax, tranPax, _) => actPax - tranPax
+  def bestPax(useApiPaxNos: Boolean)(flight: Arrival): Int = {
+    println(s"Using API Pax Numbers: $useApiPaxNos")
+
+    (flight.ApiPax, flight.ActPax.getOrElse(0), flight.TranPax.getOrElse(0), flight.MaxPax.getOrElse(0)) match {
+      case (Some(apiPax), _, _, _) if useApiPaxNos =>
+        apiPax
+      case (_, actPaxIsLtE0, _, maxPaxValid) if actPaxIsLtE0 <= 0 && maxPaxValid > 0 => maxPaxValid
+      case (_, actPaxIsLt0, _, _) if actPaxIsLt0 <= 0 => defaultPax
+      case (_, actPax, tranPax, _) => actPax - tranPax
       case _ => defaultPax
     }
   }

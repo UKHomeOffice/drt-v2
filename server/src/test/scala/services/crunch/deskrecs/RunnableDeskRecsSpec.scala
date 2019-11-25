@@ -72,7 +72,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     "I should see a request for flights for 2019-01-01 00:00 to 00:30" >> {
     val portStateProbe = TestProbe("port-state")
     val mockPortStateActor = system.actorOf(Props(classOf[MockPortStateActor], portStateProbe, noDelay))
-    val (millisToCrunchSourceActor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, mockCrunch, airportConfig).run()
+    val (millisToCrunchSourceActor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, mockCrunch, airportConfig, ArrivalHelper.bestPax(true)).run()
     val askableSource: AskableActorRef = millisToCrunchSourceActor
 
     val midnight20190101 = SDate("2019-01-01T00:00")
@@ -94,7 +94,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val portStateProbe = TestProbe("port-state")
     val mockPortStateActor = system.actorOf(Props(classOf[MockPortStateActor], portStateProbe, longDelay))
 
-    val (millisToCrunchSourceActor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, mockCrunch, airportConfig).run()
+    val (millisToCrunchSourceActor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, mockCrunch, airportConfig, ArrivalHelper.bestPax(true)).run()
     val askableSource: AskableActorRef = millisToCrunchSourceActor
 
     val midnight20190101 = SDate("2019-01-01T00:00")
@@ -131,7 +131,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
     val testAirportConfig = airportConfig.copy(terminalProcessingTimes = procTimes)
 
-    val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, mockCrunch, testAirportConfig).run()
+    val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, mockCrunch, testAirportConfig, ArrivalHelper.bestPax(true)).run()
     val millisToCrunchSourceActor: AskableActorRef = actor
 
     val epoch = SDate(scheduled).millisSinceEpoch
@@ -169,7 +169,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
     val testAirportConfig = airportConfig.copy(terminalProcessingTimes = procTimes)
 
-    val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, mockCrunch, testAirportConfig).run()
+    val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, mockCrunch, testAirportConfig, ArrivalHelper.bestPax(true)).run()
     val millisToCrunchSourceActor: AskableActorRef = actor
 
     val epoch = SDate(scheduled).millisSinceEpoch
@@ -209,7 +209,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
     val testAirportConfig = airportConfig.copy(terminalProcessingTimes = procTimes)
 
-    val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, mockCrunch, testAirportConfig).run()
+    val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, mockCrunch, testAirportConfig, ArrivalHelper.bestPax(true)).run()
     val millisToCrunchSourceActor: AskableActorRef = actor
 
     val scheduledSd = SDate(scheduled)
@@ -252,7 +252,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60))
     val testAirportConfig = airportConfig.copy(terminalProcessingTimes = procTimes)
 
-    val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, mockCrunch, testAirportConfig).run()
+    val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, mockCrunch, testAirportConfig, ArrivalHelper.bestPax(true)).run()
     val millisToCrunchSourceActor: AskableActorRef = actor
 
     val noonMillis = SDate(pcpOne).millisSinceEpoch
@@ -365,8 +365,8 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       pcpArrivalTime = pcpForFlightFromBest
     )
 
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", origin = "JFK", schDt = noon, actPax = Option(25))
-    val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", origin = "AAA", schDt = noon, actPax = Option(25))
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = noon, actPax = Option(25), origin = "JFK")
+    val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = noon, actPax = Option(25), origin = "AAA")
 
     val noonMillis = SDate(noon).millisSinceEpoch
     val noon30Millis = SDate(noon30).millisSinceEpoch
@@ -418,7 +418,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       divertedQueues = Map(Queues.NonEeaDesk -> Queues.EeaDesk)
     )
 
-    val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, mockCrunch, testAirportConfig).run()
+    val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, mockCrunch, testAirportConfig, ArrivalHelper.bestPax(true)).run()
     val millisToCrunchSourceActor: AskableActorRef = actor
 
     val epoch = SDate(scheduled).millisSinceEpoch
@@ -456,8 +456,8 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       pcpArrivalTime = pcpForFlightFromBest
     )
 
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", origin = "JFK", schDt = noon, actPax = Option(25))
-    val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", origin = "AAA", schDt = noon, actPax = Option(25))
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = noon, actPax = Option(25), origin = "JFK")
+    val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = noon, actPax = Option(25), origin = "AAA")
 
     val noonMillis = SDate(noon).millisSinceEpoch
 
@@ -498,7 +498,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     mockPortStateActor ! SetFlights(flight)
 
     val minsInADay = 1440
-    val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, minsInADay, mockCrunch, airportConfig).run()
+    val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, minsInADay, mockCrunch, airportConfig, ArrivalHelper.bestPax(true)).run()
     val millisToCrunchSourceActor: AskableActorRef = actor
 
     val epoch = SDate(scheduled).millisSinceEpoch

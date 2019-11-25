@@ -4,6 +4,7 @@ import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
@@ -80,11 +81,11 @@ class ArrivalSplitsGraphStage(name: String = "",
       override def onPush(): Unit = {
         val timer = StageTimer(stageName, inArrivalsDiff)
         log.debug(s"inFlights onPush called")
-        val arrivalsDiff = grab(inArrivalsDiff)
+        val arrivalsDiff: ArrivalsDiff = grab(inArrivalsDiff)
 
         log.info(s"Grabbed ${arrivalsDiff.toUpdate.size} updates, ${arrivalsDiff.toRemove.size} removals")
 
-        val flightsWithUpdates = applyUpdatesToFlights(arrivalsDiff)
+        val flightsWithUpdates: Map[ArrivalKey, ApiFlightWithSplits] = applyUpdatesToFlights(arrivalsDiff)
 
         updateCodeSharesFromDiff(arrivalsDiff)
         updateFlightsFromIncoming(arrivalsDiff)
@@ -105,20 +106,39 @@ class ArrivalSplitsGraphStage(name: String = "",
 
     def applyUpdatesToFlights(arrivalsDiff: ArrivalsDiff): Map[ArrivalKey, ApiFlightWithSplits] = {
       val flightsWithUpdates = arrivalsDiff.toUpdate.foldLeft(Map[ArrivalKey, ApiFlightWithSplits]()) {
-        case (withUpdatesSoFar, (_, newArrival)) =>
+        case (withUpdatesSoFar: Map[ArrivalKey, ApiFlightWithSplits], (_, newArrival)) =>
           val arrivalKey = ArrivalKey(newArrival)
           flightsByFlightId.get(arrivalKey) match {
             case None =>
               val splits: Set[Splits] = initialSplits(newArrival, arrivalKey)
-              val newFlightWithSplits: ApiFlightWithSplits = ApiFlightWithSplits(newArrival, splits, nowMillis)
+              val newFlightWithSplits: ApiFlightWithSplits = makeFlightWithSplits(newArrival, splits)
               withUpdatesSoFar.updated(arrivalKey, newFlightWithSplits)
             case Some(existingArrival) =>
               if (!existingArrival.apiFlight.equals(newArrival))
-                withUpdatesSoFar.updated(arrivalKey, existingArrival.copy(apiFlight = newArrival, lastUpdated = nowMillis))
+                withUpdatesSoFar.updated(arrivalKey, makeFlightWithSplits(newArrival, existingArrival.splits))
               else withUpdatesSoFar
           }
       }
       flightsWithUpdates
+    }
+
+    def makeFlightWithSplits(flight: Arrival, splits: Set[Splits]) = {
+      val liveApiSplits: Option[Splits] = splits.find {
+        case Splits(_, source, _, _) if source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages => true
+        case _ => false
+      }
+
+      val flightWithAvailableApiData = liveApiSplits match {
+        case Some(splits) =>
+          flight.copy(FeedSources = flight.FeedSources + ApiFeedSource, ApiPax = Option(Math.round(splits.totalPax).toInt))
+        case _ => flight
+      }
+
+      ApiFlightWithSplits(
+        flightWithAvailableApiData,
+        splits,
+        nowMillis
+      )
     }
 
     setHandler(inManifestsLive, InManifestsHandler(inManifestsLive))
@@ -185,7 +205,7 @@ class ArrivalSplitsGraphStage(name: String = "",
       flightsByFlightId.get(key) match {
         case None =>
           val splits: Set[Splits] = initialSplits(updatedFlight, key)
-          val newFlightWithSplits: ApiFlightWithSplits = ApiFlightWithSplits(updatedFlight, splits, nowMillis)
+          val newFlightWithSplits: ApiFlightWithSplits = makeFlightWithSplits(updatedFlight, splits)
           flightsByFlightId += (key -> newFlightWithSplits.copy(lastUpdated = nowMillis))
           updatedFlights.copy(additionsCount = updatedFlights.additionsCount + 1)
 
@@ -215,7 +235,10 @@ class ArrivalSplitsGraphStage(name: String = "",
               val manifestSplits: Splits = splitsFromManifest(flightForManifest.apiFlight, newManifest)
 
               if (isNewManifestForFlight(flightForManifest, manifestSplits)) {
-                val flightWithManifestSplits = updateFlightWithSplits(flightForManifest, manifestSplits)
+                val flightWithManifestSplits: ApiFlightWithSplits = makeFlightWithSplits(
+                  flightForManifest.apiFlight,
+                  updateSplitsWithNewManifest(manifestSplits, flightForManifest.splits)
+                )
                 flightsByFlightId += (key -> flightWithManifestSplits)
                 flightsWithNewSplits.updated(key, flightWithManifestSplits)
               } else flightsWithNewSplits
@@ -241,15 +264,6 @@ class ArrivalSplitsGraphStage(name: String = "",
 
     def isNewManifestForFlight(flightWithSplits: ApiFlightWithSplits, newSplits: Splits): Boolean = !flightWithSplits.splits.contains(newSplits)
 
-    def updateFlightWithSplits(flightWithSplits: ApiFlightWithSplits,
-                               newSplits: Splits): ApiFlightWithSplits = {
-      val apiFlight = flightWithSplits.apiFlight
-      flightWithSplits.copy(
-        apiFlight = apiFlight.copy(FeedSources = apiFlight.FeedSources + ApiFeedSource),
-        splits = flightWithSplits.splits.filterNot(_.source == newSplits.source) ++ Set(newSplits)
-      )
-    }
-
     def updateCodeSharesFromDiff(arrivalsDiff: ArrivalsDiff): Unit = arrivalsDiff.toUpdate
       .foreach { case (_, arrival) =>
         val csKey = CodeShareKeyOrderedByDupes[ArrivalKey](arrival.Scheduled, arrival.Terminal, arrival.Origin, Set())
@@ -257,6 +271,10 @@ class ArrivalSplitsGraphStage(name: String = "",
         val updatedArrivalKeys = existingEntry + ArrivalKey(arrival)
         codeShares += (csKey.copy(arrivalKeys = updatedArrivalKeys) -> updatedArrivalKeys)
       }
+  }
+
+  def updateSplitsWithNewManifest(manifestSplits: Splits, existingSplits: Set[Splits]): Set[Splits] = {
+    existingSplits.filterNot(_.source == manifestSplits.source) ++ Set(manifestSplits)
   }
 
   def splitsFromManifest(arrival: Arrival, manifest: BestAvailableManifest): Splits = {

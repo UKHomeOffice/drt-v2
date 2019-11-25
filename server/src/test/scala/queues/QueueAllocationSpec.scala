@@ -82,7 +82,7 @@ class QueueAllocationSpec extends Specification {
     result === expected
   }
 
-  "Given a BestAvailableManifest for LHR with 1 B5J National after June 2019 and a B5JPlus start date of 2019-06-01" +
+  "Given a BestAvailableManifest for LHR with 1 B5J National " +
     "then I should get a Splits containing 0.75 pax of type B5JPlus to EGate and .25 B5JPlus to EEADesk" >> {
 
     val bestManifest = BestAvailableManifest(
@@ -95,7 +95,6 @@ class QueueAllocationSpec extends Specification {
       List(ManifestPassengerProfile("USA", Some(DocType.Passport), Some(21), Some(true)))
     )
 
-    val b5JStartDate = SDate("2019-06-01T00:00:00Z")
     val expected = Splits(
       Set(
         ApiPaxTypeAndQueueCount(PaxTypes.B5JPlusNational, Queues.EGate, 0.75, Some(Map("USA" -> 0.75))),
@@ -106,39 +105,10 @@ class QueueAllocationSpec extends Specification {
       PaxNumbers
     )
 
-    val result = PaxTypeQueueAllocation(B5JPlusTypeAllocator(b5JStartDate), testQueueAllocator).toSplits("T1", bestManifest)
+    val result = PaxTypeQueueAllocation(B5JPlusTypeAllocator(), testQueueAllocator).toSplits("T1", bestManifest)
 
-    result === expected
-  }
+    result === expected}
 
-  "Given a BestAvailableManifest for LHR with 1 B5J National before April 2019 and a B5JPlus start date of 2019-06-01" +
-    "then I should get a Splits containing 1 pax of type B5JPlus to NonEEADesk" >> {
-
-    val bestManifest = BestAvailableManifest(
-      "DC",
-      "LHR",
-      "USA",
-      "234",
-      "SA",
-      SDate("2019-03-22T06:24:00Z"),
-      List(ManifestPassengerProfile("USA", Some(DocType.Passport), Some(21), Some(true)))
-    )
-
-    val b5JStartDate = SDate("2019-06-01T00:00:00Z")
-
-    val expected = Splits(
-      Set(
-        ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 1, Some(Map("USA" -> 1)))
-      ),
-      "DC",
-      None,
-      PaxNumbers
-    )
-
-    val result = PaxTypeQueueAllocation(B5JPlusTypeAllocator(b5JStartDate), testQueueAllocator).toSplits("T1", bestManifest)
-
-    result === expected
-  }
 
   "Given a BestAvailableManifest with an under 12 B5J National we should get 1 passenger to EEADesk" >> {
 
@@ -154,8 +124,6 @@ class QueueAllocationSpec extends Specification {
       )
     )
 
-    val b5JStartDate = SDate("2019-06-01T00:00:00Z")
-
     val expected = Splits(
       Set(
         ApiPaxTypeAndQueueCount(PaxTypes.B5JPlusNationalBelowEGateAge, Queues.EeaDesk, 1, Some(Map("USA" -> 1)))
@@ -166,7 +134,7 @@ class QueueAllocationSpec extends Specification {
     )
 
     val result = PaxTypeQueueAllocation(
-      B5JPlusTypeAllocator(b5JStartDate),
+      B5JPlusTypeAllocator(),
       testQueueAllocator
     ).toSplits("T1", bestManifest)
 
@@ -187,7 +155,6 @@ class QueueAllocationSpec extends Specification {
       )
     )
 
-    val b5JStartDate = SDate("2019-06-01T00:00:00Z")
 
     val expected = Splits(
       Set(
@@ -199,14 +166,14 @@ class QueueAllocationSpec extends Specification {
     )
 
     val result = PaxTypeQueueAllocation(
-      B5JPlusTypeAllocator(b5JStartDate),
+      B5JPlusTypeAllocator(),
       testQueueAllocator
     ).toSplits("T1", bestManifest)
 
     result === expected
   }
 
-  "Given a BestAvailableManifest with 1 GBR PCP passenger and 1 GBR Transit Passenger before B5J is turned on " +
+  "Given a BestAvailableManifest with 1 GBR PCP passenger and 1 GBR Transit Passenger " +
     "Then we should get back a split with the Transit" >> {
 
     val bestManifest = BestAvailableManifest(
@@ -222,8 +189,6 @@ class QueueAllocationSpec extends Specification {
       )
     )
 
-    val b5JStartDate = SDate("2019-06-01T00:00:00Z")
-
     val expected = Splits(
       Set(
         ApiPaxTypeAndQueueCount(PaxTypes.EeaBelowEGateAge, Queues.EeaDesk, 1, Some(Map("GBR" -> 1))),
@@ -235,7 +200,7 @@ class QueueAllocationSpec extends Specification {
     )
 
     val result = PaxTypeQueueAllocation(
-      B5JPlusWithTransitTypeAllocator(b5JStartDate),
+      B5JPlusWithTransitTypeAllocator(),
       testQueueAllocator
     ).toSplits("T1", bestManifest)
 
@@ -259,8 +224,6 @@ class QueueAllocationSpec extends Specification {
       )
     )
 
-    val b5JStartDate = SDate("2019-06-01T00:00:00Z")
-
     val expected = Splits(
       Set(
         ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 0.1, Some(Map("ZWE" -> 0.1))),
@@ -272,7 +235,7 @@ class QueueAllocationSpec extends Specification {
     )
 
     val result = PaxTypeQueueAllocation(
-      B5JPlusWithTransitTypeAllocator(b5JStartDate),
+      B5JPlusWithTransitTypeAllocator(),
       fastTrackQueueAllocator
     ).toSplits("T1", bestManifest)
 
@@ -294,8 +257,6 @@ class QueueAllocationSpec extends Specification {
       )
     )
 
-    val b5JStartDate = SDate("2019-06-01T00:00:00Z")
-
     val expected = Splits(
       Set(
         ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Some(Map("ZWE" -> 1)))
@@ -306,7 +267,7 @@ class QueueAllocationSpec extends Specification {
     )
 
     val result = PaxTypeQueueAllocation(
-      B5JPlusWithTransitTypeAllocator(b5JStartDate),
+      B5JPlusWithTransitTypeAllocator(),
       fastTrackQueueAllocator
     ).toSplits("T1", bestManifest)
 
@@ -328,8 +289,6 @@ class QueueAllocationSpec extends Specification {
       )
     )
 
-    val b5JStartDate = SDate("2019-06-01T00:00:00Z")
-
     val expected = Splits(
       Set(
         ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 0.1, Some(Map("ZWE" -> 0.1))),
@@ -341,7 +300,7 @@ class QueueAllocationSpec extends Specification {
     )
 
     val result = PaxTypeQueueAllocation(
-      B5JPlusWithTransitTypeAllocator(b5JStartDate),
+      B5JPlusWithTransitTypeAllocator(),
       fastTrackQueueAllocator
     ).toSplits("T1", bestManifest)
 

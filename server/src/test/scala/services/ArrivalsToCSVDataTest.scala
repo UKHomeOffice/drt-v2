@@ -9,14 +9,13 @@ import scala.concurrent.{Await, Future}
 
 
 class ArrivalsToCSVDataTest extends Specification {
+  val csvData = CSVData(ArrivalHelper.bestPax(true))
+  import csvData._
 
-  import CSVData._
   import controllers.ArrivalGenerator.arrival
 
   private val flightWithAllTypesOfAPISplit = ApiFlightWithSplits(
-    arrival(iata = "SA324", icao = "SA0324", schDt = "2017-01-01T20:00:00Z",
-      actPax = Option(100), maxPax = Option(100), lastKnownPax = None, terminal = "T1",
-      origin = "JHB", operator = Option("SA"), status = "UNK", estDt = "2017-01-01T20:00:00Z"),
+    arrival(iata = "SA324", icao = "SA0324", schDt = "2017-01-01T20:00:00Z", actPax = Option(100), maxPax = Option(100), terminal = "T1", origin = "JHB", operator = Option("SA"), status = "UNK", estDt = "2017-01-01T20:00:00Z"),
     Set(Splits(
       Set(
         ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 2, None),
@@ -39,9 +38,7 @@ class ArrivalsToCSVDataTest extends Specification {
         ), SplitRatiosNs.SplitSources.Historical, None))
   )
   val flightWithoutFastTrackApiSplits = ApiFlightWithSplits(
-    arrival(iata = "SA325", icao = "SA0325", schDt = "2017-01-01T20:00:00Z",
-      actPax = Option(100), maxPax = Option(100), lastKnownPax = None, terminal = "T1", origin = "JHB",
-      operator = Option("SA"), status = "UNK", estDt = "2017-01-01T20:00:00Z"),
+    arrival(iata = "SA325", icao = "SA0325", schDt = "2017-01-01T20:00:00Z", actPax = Option(100), maxPax = Option(100), terminal = "T1", origin = "JHB", operator = Option("SA"), status = "UNK", estDt = "2017-01-01T20:00:00Z"),
     Set(Splits(
       Set(
         ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 3, None),
@@ -54,9 +51,7 @@ class ArrivalsToCSVDataTest extends Specification {
     flightWithAllTypesOfAPISplit,
     flightWithoutFastTrackApiSplits,
     ApiFlightWithSplits(
-      arrival(iata = "SA326", icao = "SA0326", schDt = "2017-01-01T20:00:00Z",
-        actPax = Option(100), maxPax = Option(100), lastKnownPax = None, terminal = "T1", origin = "JHB",
-        operator = Option("SA"), status = "UNK", estDt = "2017-01-01T20:00:00Z"),
+      arrival(iata = "SA326", icao = "SA0326", schDt = "2017-01-01T20:00:00Z", actPax = Option(100), maxPax = Option(100), terminal = "T1", origin = "JHB", operator = Option("SA"), status = "UNK", estDt = "2017-01-01T20:00:00Z"),
       Set(Splits(
         Set(
           ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 30, None),
@@ -104,7 +99,7 @@ class ArrivalsToCSVDataTest extends Specification {
            |Day 2, csv, export
            |Day 3, csv, export""".stripMargin
 
-      val resultFuture = CSVData.multiDayToSingleExport(futureDays)
+      val resultFuture = CSVData(ArrivalHelper.bestPax(useApiPaxNos = true)).multiDayToSingleExport(futureDays)
       val result = Await.result(resultFuture, 5 seconds)
 
       result === expected
@@ -114,7 +109,7 @@ class ArrivalsToCSVDataTest extends Specification {
 
   "When asking for Actual API Split Data" >> {
     "Given a list of Flights With Splits then I should get a list of headings for each of the API Splits" >> {
-      val headings = CSVData.actualAPIHeadings(List(flightWithoutFastTrackApiSplits, flightWithAllTypesOfAPISplit))
+      val headings = CSVData(ArrivalHelper.bestPax(useApiPaxNos = true)).actualAPIHeadings(List(flightWithoutFastTrackApiSplits, flightWithAllTypesOfAPISplit))
 
       val expected = List(
         "API Actual - EEA (Machine Readable)",
@@ -130,7 +125,7 @@ class ArrivalsToCSVDataTest extends Specification {
     }
 
     "Given a list of Flights With Splits then I should get Api Split data for each flight" >> {
-      val result = CSVData.actualAPIDataForFlights(flights, CSVData.actualAPIHeadings(flights))
+      val result = CSVData(ArrivalHelper.bestPax(useApiPaxNos = true)).actualAPIDataForFlights(flights, CSVData(ArrivalHelper.bestPax(useApiPaxNos = true)).actualAPIHeadings(flights))
 
       val expected = List(
         List(1.0, 3.0, 6.0, 7.0, 4.0, 5.0, 2.0),

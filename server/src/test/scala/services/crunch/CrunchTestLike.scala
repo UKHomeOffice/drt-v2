@@ -196,7 +196,7 @@ class CrunchTestLike
     val portStateActor = createPortStateActor(logLabel, portStateProbe, now)
     initialPortState.foreach(ps => portStateActor ! ps)
 
-    val (millisToCrunchActor: ActorRef, _: UniqueKillSwitch) = RunnableDeskRecs(portStateActor, minutesToCrunch, cruncher, airportConfig).run()
+    val (millisToCrunchActor: ActorRef, _: UniqueKillSwitch) = RunnableDeskRecs(portStateActor, minutesToCrunch, cruncher, airportConfig, ArrivalHelper.bestPax(true)).run()
     portStateActor ! SetCrunchActor(millisToCrunchActor)
 
     val manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
@@ -230,7 +230,6 @@ class CrunchTestLike
       useNationalityBasedProcessingTimes = false,
       useLegacyManifests = useLegacyManifests,
       now = now,
-      b5JStartDate = SDate("2019-06-01"),
       manifestsLiveSource = manifestsSource,
       manifestResponsesSource = manifestResponsesSource,
       voyageManifestsActor = manifestsActor,

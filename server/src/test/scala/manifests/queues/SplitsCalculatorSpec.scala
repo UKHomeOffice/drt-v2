@@ -2,15 +2,14 @@ package manifests.queues
 
 import drt.shared.PaxTypes._
 import drt.shared.airportconfig.Bhx
-import drt.shared.{AirportConfig, ApiPaxTypeAndQueueCount, Percentage, Queues, Splits}
+import drt.shared._
 import queueus.{B5JPlusWithTransitTypeAllocator, PaxTypeQueueAllocation, TerminalQueueAllocatorWithFastTrack}
-import services.SDate
 import services.crunch.CrunchTestLike
 
 class SplitsCalculatorSpec extends CrunchTestLike {
   private val config: AirportConfig = Bhx.config
   val paxTypeQueueAllocation = PaxTypeQueueAllocation(
-    B5JPlusWithTransitTypeAllocator(SDate("2019-05-01T00:00:00")),
+    B5JPlusWithTransitTypeAllocator(),
     TerminalQueueAllocatorWithFastTrack(config.terminalPaxTypeQueueAllocation))
 
   val splitsCalculator = SplitsCalculator(config.portCode, paxTypeQueueAllocation, config.terminalPaxSplits)

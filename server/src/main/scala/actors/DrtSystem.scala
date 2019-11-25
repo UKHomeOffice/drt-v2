@@ -48,7 +48,7 @@ import services.graphstages.Crunch.{oneDayMillis, oneMinuteMillis}
 import services.graphstages._
 import slickdb.{ArrivalTable, Tables, VoyageManifestPassengerInfoTable}
 
-import scala.collection.{immutable, mutable}
+import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
@@ -63,6 +63,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val staffMovementsActor: ActorRef
   val alertsActor: ActorRef
   val arrivalsImportActor: ActorRef
+  val params: DrtConfigParameters
 
   val aclFeed: AclFeed
 
@@ -111,7 +112,7 @@ case class DrtConfigParameters(config: Configuration) {
   val manifestLookupBatchSize: Int = config.getOptional[Int]("crunch.manifests.lookup-batch-size").getOrElse(10)
 
   val useLegacyManifests: Boolean = config.getOptional[Boolean]("feature-flags.use-legacy-manifests").getOrElse(false)
-  val useSplitsPrediction: Boolean = config.getOptional[String]("feature-flags.use-splits-prediction").isDefined
+
   val rawSplitsUrl: String = config.getOptional[String]("crunch.splits.raw-data-path").getOrElse("/dev/null")
   val dqZipBucketName: String = config.getOptional[String]("dq.s3.bucket").getOrElse(throw new Exception("You must set DQ_S3_BUCKET for us to poll for AdvPaxInfo"))
   val apiS3PollFrequencyMillis: MillisSinceEpoch = config.getOptional[Int]("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
@@ -122,7 +123,6 @@ case class DrtConfigParameters(config: Configuration) {
   val bhxIataEndPointUrl: String = config.get[String]("feeds.bhx.iata.endPointUrl")
   val bhxIataUsername: String = config.get[String]("feeds.bhx.iata.username")
 
-  val useNewLhrFeed: Boolean = config.getOptional[String]("feature-flags.lhr.use-new-lhr-feed").isDefined
   val newLhrFeedApiUrl: String = config.getOptional[String]("feeds.lhr.live.api_url").getOrElse("")
   val newLhrFeedApiToken: String = config.getOptional[String]("feeds.lhr.live.token").getOrElse("")
 
@@ -146,6 +146,8 @@ case class DrtConfigParameters(config: Configuration) {
   val maybeGlaLiveUsername: Option[String] = config.getOptional[String]("feeds.gla.username")
 
   val snapshotStaffOnStart: Boolean = config.get[Boolean]("feature-flags.snapshot-staffing-on-start")
+
+  val useApiPaxNos: Boolean  = config.getOptional[Boolean]("use-api-pax-nos").getOrElse(false)
 }
 
 case class SubscribeRequestQueue(subscriber: ActorRef)
@@ -214,7 +216,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val voyageManifestsHistoricSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
 
   system.log.info(s"useNationalityBasedProcessingTimes: ${params.useNationalityBasedProcessingTimes}")
-  system.log.info(s"useSplitsPrediction: ${params.useSplitsPrediction}")
 
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] =
     if (params.isSuperUserMode) {
@@ -323,7 +324,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     }
   }
 
-  def startCrunchGraph(portStateActor: ActorRef): (ActorRef, UniqueKillSwitch) = RunnableDeskRecs(portStateActor, 1440, TryRenjin.crunch, airportConfig).run()
+  def startCrunchGraph(portStateActor: ActorRef): (ActorRef, UniqueKillSwitch) = RunnableDeskRecs(portStateActor, 1440, TryRenjin.crunch, airportConfig, ArrivalHelper.bestPax(params.useApiPaxNos)).run()
 
   override def getFeedStatus: Future[Seq[FeedStatuses]] = {
     val actors: Seq[AskableActorRef] = Seq(liveArrivalsActor, liveBaseArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
@@ -398,7 +399,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       ),
       useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
       useLegacyManifests = params.useLegacyManifests,
-      b5JStartDate = params.maybeB5JStartDate.map(SDate(_)).getOrElse(SDate("2019-06-01")),
       manifestsLiveSource = voyageManifestsLiveSource,
       manifestResponsesSource = manifestResponsesSource,
       voyageManifestsActor = voyageManifestsActor,

@@ -132,6 +132,39 @@ Cypress.Commands.add('addFlightWithFlightCode', (flightCode, estString, actStrin
   cy.request('POST', '/test/arrival', flightPayload);
 });
 
+Cypress.Commands.add('addFlightWithPaX', (flightCode, actPax, estString, actString, estChoxString, actChoxString, schString) => {
+
+  let act = actString || estString;
+  let estChox = estChoxString || estString;
+  let actChox = actChoxString || estString;
+  let sch = schString || estString;
+
+  const flightPayload = {
+    "Operator": "TestAir",
+    "Status": "On Chocks",
+    "EstDT": estString,
+    "ActDT": act,
+    "EstChoxDT": estChox,
+    "ActChoxDT": actChox,
+    "Gate": "46",
+    "Stand": "44R",
+    "MaxPax": actPax,
+    "ActPax": actPax,
+    "TranPax": 0,
+    "RunwayID": "05L",
+    "FlightID" : 100,
+    "BaggageReclaimId": "05",
+    "AirportID": "MAN",
+    "Terminal": "T1",
+    "ICAO": flightCode,
+    "IATA": flightCode,
+    "Origin": "AMS",
+    "SchDT": sch
+  };
+
+  cy.request('POST', '/test/arrival', flightPayload);
+});
+
 Cypress.Commands.add('deleteData', () => cy.request("DELETE", '/test/data'));
 
 Cypress.Commands.add('saveShifts', (shiftsJson) => cy.request("POST", "/data/staff", shiftsJson));

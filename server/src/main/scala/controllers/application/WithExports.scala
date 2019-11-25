@@ -27,6 +27,8 @@ import scala.util.Try
 trait WithExports {
   self: Application =>
 
+  val bestPax: Arrival => Int = ArrivalHelper.bestPax(ctrl.params.useApiPaxNos)
+
   def exportUsers(): Action[AnyContent] = authByRole(ManageUsers) {
     Action.async { request =>
       val client = keyCloakClient(request.headers)
@@ -84,7 +86,7 @@ trait WithExports {
         portStateFuture.map {
           case Some(portState: PortState) =>
             val fp = Forecast.forecastPeriod(airportConfig, terminalName, startOfForecast, endOfForecast, portState)
-            val csvData = CSVData.forecastPeriodToCsv(fp)
+            val csvData = CSVData(bestPax).forecastPeriodToCsv(fp)
             Result(
               ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
               HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
@@ -118,7 +120,7 @@ trait WithExports {
         portStateFuture.map {
           case Some(portState: PortState) =>
             val hf: ForecastHeadlineFigures = Forecast.headlineFigures(startOfForecast, endOfForecast, terminalName, portState, airportConfig.queues(terminalName).toList)
-            val csvData = CSVData.forecastHeadlineToCSV(hf, airportConfig.exportQueueOrder)
+            val csvData = CSVData(bestPax).forecastHeadlineToCSV(hf, airportConfig.exportQueueOrder)
             Result(
               ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
               HttpEntity.Strict(ByteString(csvData), Option("application/csv")
@@ -151,7 +153,7 @@ trait WithExports {
         val fileName = f"export-splits-$portCode-$terminalName-${date.getFullYear()}-${date.getMonth()}-${date.getDate()}"
         flightsForCSVExportWithinRange(terminalName, date, startHour = startHour, endHour = endHour, portStateForPointInTime).map {
           case Some(csvFlights) =>
-            val csvData = CSVData.flightsWithSplitsWithAPIActualsToCSVWithHeadings(csvFlights)
+            val csvData = CSVData(bestPax).flightsWithSplitsWithAPIActualsToCSVWithHeadings(csvFlights)
             Result(
               ResponseHeader(OK, Map(
                 CONTENT_LENGTH -> csvData.length.toString,
@@ -190,11 +192,11 @@ trait WithExports {
             case Some(csvFlights) =>
               val csvData = if (ctrl.getRoles(config, request.headers, request.session).contains(ApiView)) {
                 log.info(s"Sending Flights CSV with API data")
-                CSVData.flightsWithSplitsWithAPIActualsToCSVWithHeadings(csvFlights)
+                CSVData(bestPax).flightsWithSplitsWithAPIActualsToCSVWithHeadings(csvFlights)
               }
               else {
                 log.info(s"Sending Flights CSV with no API data")
-                CSVData.flightsWithSplitsToCSVWithHeadings(csvFlights)
+                CSVData(bestPax).flightsWithSplitsToCSVWithHeadings(csvFlights)
               }
               Result(
                 ResponseHeader(200, Map(
@@ -220,8 +222,8 @@ trait WithExports {
       endHour = 24,
       portStateFuture = ps
     ).map {
-      case Some(fs) if includeHeader => Option(CSVData.flightsWithSplitsToCSVWithHeadings(fs))
-      case Some(fs) if !includeHeader => Option(CSVData.flightsWithSplitsToCSV(fs))
+      case Some(fs) if includeHeader => Option(CSVData(bestPax).flightsWithSplitsToCSVWithHeadings(fs))
+      case Some(fs) if !includeHeader => Option(CSVData(bestPax).flightsWithSplitsToCSV(fs))
       case None =>
         log.error(s"Missing a day of flights")
         None
@@ -261,10 +263,10 @@ trait WithExports {
     portStateFuture.map {
       case Right(Some(ps: PortState)) =>
         val wps = ps.windowWithTerminalFilter(startDateTime, endDateTime, airportConfig.queues.filterKeys(_ == terminalName))
-        val dataLines = CSVData.terminalMinutesToCsvData(wps.crunchMinutes, wps.staffMinutes, airportConfig.nonTransferQueues(terminalName), startDateTime, endDateTime, 15)
+        val dataLines = CSVData(bestPax).terminalMinutesToCsvData(wps.crunchMinutes, wps.staffMinutes, airportConfig.nonTransferQueues(terminalName), startDateTime, endDateTime, 15)
         val fullData = if (includeHeader) {
-          val headerLines = CSVData.terminalCrunchMinutesToCsvDataHeadings(airportConfig.queues(terminalName))
-          headerLines + CSVData.lineEnding + dataLines
+          val headerLines = CSVData(bestPax).terminalCrunchMinutesToCsvDataHeadings(airportConfig.queues(terminalName))
+          headerLines + CSVData(bestPax).lineEnding + dataLines
         } else dataLines
         Option(fullData)
 
@@ -303,7 +305,7 @@ trait WithExports {
           }
       }
       .collect {
-        case Some(dayData) => dayData + CSVData.lineEnding
+        case Some(dayData) => dayData + CSVData(bestPax).lineEnding
       }
 
     implicit val writeable: Writeable[String] = Writeable((str: String) => ByteString.fromString(str), Option("application/csv"))

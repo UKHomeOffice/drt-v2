@@ -1,7 +1,7 @@
 package services.crunch
 
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
-import drt.shared.{Queues, TM, TQM}
+import drt.shared.{ArrivalHelper, Queues, TM, TQM}
 import org.specs2.matcher.Scope
 import org.specs2.mutable.Specification
 import services.{CSVData, SDate}
@@ -27,7 +27,7 @@ class CrunchMinutesToCSVDataTest extends Specification {
       StaffMinute("T1", startDateTime.millisSinceEpoch, 5, fixedPoints = 1, movements = -1)
     ).map(sm => (sm.key, sm))
 
-    val result = CSVData.terminalMinutesToCsvData(cms, staffMins, Seq("Q1", "Q2", "Q3"), startDateTime, startDateTime.addMinutes(14), 15)
+    val result = CSVData(ArrivalHelper.bestPax(useApiPaxNos = true)).terminalMinutesToCsvData(cms, staffMins, Seq("Q1", "Q2", "Q3"), startDateTime, startDateTime.addMinutes(14), 15)
 
     val expected = s"2017-11-10,00:00,1,1,1,,,1,1,1,,,1,1,1,,,1,-1,4,4"
 
@@ -53,7 +53,7 @@ class CrunchMinutesToCSVDataTest extends Specification {
       StaffMinute("T1", startDateTime.addMinutes(min).millisSinceEpoch, 5, fixedPoints = 1, movements = -1)
     }).map(sm => (sm.key, sm))
 
-    val result = CSVData.terminalMinutesToCsvData(cms, staffMins, Seq("Q1", "Q2", "Q3"), startDateTime, startDateTime.addMinutes(29), 15)
+    val result = CSVData(ArrivalHelper.bestPax(useApiPaxNos = true)).terminalMinutesToCsvData(cms, staffMins, Seq("Q1", "Q2", "Q3"), startDateTime, startDateTime.addMinutes(29), 15)
 
     val expected =
       s"""2017-11-10,00:00,15,1,1,,,15,1,1,,,15,1,1,,,1,-1,4,4
@@ -76,7 +76,7 @@ class CrunchMinutesToCSVDataTest extends Specification {
 
     val expected = "2017-11-10,00:00,1,100,1,100,2,1,100,1,100,2,1,100,1,100,2,1,-1,4,4"
 
-    val result = CSVData.terminalMinutesToCsvData(cms, staffMins, Seq(Queues.EeaDesk, Queues.EGate, Queues.NonEeaDesk), startDateTime, startDateTime.addMinutes(14), 15)
+    val result = CSVData(ArrivalHelper.bestPax(useApiPaxNos = true)).terminalMinutesToCsvData(cms, staffMins, Seq(Queues.EeaDesk, Queues.EGate, Queues.NonEeaDesk), startDateTime, startDateTime.addMinutes(14), 15)
 
     result === expected
   }
@@ -95,7 +95,7 @@ class CrunchMinutesToCSVDataTest extends Specification {
 
     val expected = "2017-11-10,00:00,1,100,1,100,2,1,100,1,100,2,1,100,1,100,2,1,-1,4,4"
 
-    val result = CSVData.terminalMinutesToCsvData(cms, staffMins, Seq(Queues.EeaDesk, Queues.EGate, Queues.NonEeaDesk), startDateTime, startDateTime.addMinutes(14), 15)
+    val result = CSVData(ArrivalHelper.bestPax(useApiPaxNos = true)).terminalMinutesToCsvData(cms, staffMins, Seq(Queues.EeaDesk, Queues.EGate, Queues.NonEeaDesk), startDateTime, startDateTime.addMinutes(14), 15)
 
     result === expected
   }

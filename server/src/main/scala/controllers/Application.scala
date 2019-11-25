@@ -94,7 +94,6 @@ trait AirportConfProvider extends AirportConfiguration {
   def getPortConfFromEnvVar: AirportConfig = AirportConfigs.confByPort(portCode)
 
   def airportConfig: AirportConfig = getPortConfFromEnvVar.copy(
-    useStaffingInput = useStaffingInput,
     contactEmail = contactEmail,
     outOfHoursContactPhone = oohPhone
   )
@@ -152,6 +151,7 @@ class Application @Inject()(implicit val config: Configuration,
     with WithAlerts
     with WithAuth
     with WithContactDetails
+    with WithFeatureFlags
     with WithExports
     with WithFeeds
     with WithImports
@@ -162,8 +162,6 @@ class Application @Inject()(implicit val config: Configuration,
     with ImplicitTimeoutProvider {
 
   val googleTrackingCode: String = config.get[String]("googleTrackingCode")
-
-  val enableRoleBasedAccessRestrictions: Boolean = config.getOptional[Boolean]("feature-flags.role-based-access-restrictions").getOrElse(false)
 
   val ctrl: DrtSystemInterface = if (isTestEnvironment) {
     new TestDrtSystem(system, config, getPortConfFromEnvVar)

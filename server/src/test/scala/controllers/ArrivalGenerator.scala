@@ -6,13 +6,11 @@ import services.SDate
 
 object ArrivalGenerator {
 
-  def arrival(flightId: Option[Int] = None,
-              iata: String = "",
+  def arrival(iata: String = "",
               icao: String = "",
               schDt: String = "",
               actPax: Option[Int] = None,
               maxPax: Option[Int] = None,
-              lastKnownPax: Option[Int] = None,
               terminal: String = "T1",
               origin: String = "",
               operator: Option[String] = None,

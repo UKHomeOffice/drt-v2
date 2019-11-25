@@ -224,7 +224,7 @@ object PaxSplitsDisplayTests extends TestSuite {
             ApiPaxTypeAndQueueCount(PaxTypes.EeaNonMachineReadable, "eeaDesk", 15, None),
             ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, "fastTrack", 0.3, None)), "Historical", None, Percentage)
 
-        val result = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(ApiFlightWithSplits(flight, Set(splits)))
+        val result = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(ArrivalHelper.bestPax(true))(ApiFlightWithSplits(flight, Set(splits)))
 
         val expected = Option(Map(
           Queues.EeaDesk -> 69,

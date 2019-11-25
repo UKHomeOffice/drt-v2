@@ -27,8 +27,8 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val scheduled = "2017-01-01T00:00Z"
 
       val flights = Flights(List(
-        ArrivalGenerator.arrival(origin = "JFK", actPax = Option(10), schDt = scheduled, iata = "BA0001"),
-        ArrivalGenerator.arrival(origin = "JFK", actPax = Option(10), schDt = scheduled, iata = "FR8819")
+        ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(10), origin = "JFK"),
+        ArrivalGenerator.arrival(iata = "FR8819", schDt = scheduled, actPax = Option(10), origin = "JFK")
       ))
 
       val crunch = runCrunchGraph(
@@ -62,9 +62,9 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val scheduled = "2017-01-01T00:00Z"
 
       val flights = Flights(List(
-        ArrivalGenerator.arrival(schDt = scheduled00, iata = "BA0001", terminal = "T1", actPax = Option(15)),
-        ArrivalGenerator.arrival(schDt = scheduled00, iata = "FR8819", terminal = "T1", actPax = Option(10)),
-        ArrivalGenerator.arrival(schDt = scheduled15, iata = "EZ1010", terminal = "T2", actPax = Option(12))
+        ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled00, actPax = Option(15), terminal = "T1"),
+        ArrivalGenerator.arrival(iata = "FR8819", schDt = scheduled00, actPax = Option(10), terminal = "T1"),
+        ArrivalGenerator.arrival(iata = "EZ1010", schDt = scheduled15, actPax = Option(12), terminal = "T2")
       ))
 
       val crunch = runCrunchGraph(

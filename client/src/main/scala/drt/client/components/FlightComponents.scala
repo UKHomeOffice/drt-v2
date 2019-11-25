@@ -17,11 +17,11 @@ object FlightComponents {
     val apiPax: Int = Splits.totalPax(apiSplits.splits).toInt
     val apiExTransPax: Int = Splits.totalExcludingTransferPax(apiSplits.splits).toInt
 
-    val airportConfigRCP = SPACircuit.connect(_.airportConfig)
-    airportConfigRCP(acPot => {
+    val featureFlagsRCP = SPACircuit.connect(_.featureFlags)
+    featureFlagsRCP(featureFlags => {
       <.div(
-        acPot().render(_ => {
-          val paxToDisplay: Int = ArrivalHelper.bestPax(flight)
+        featureFlags().render(features => {
+          val paxToDisplay: Int = ArrivalHelper.bestPax(features.getOrElse("use-api-pax-nos", false))(flight)
 
           <.div(
             ^.title := paxComponentTitle(flight, apiExTransPax, apiPax),
@@ -41,20 +41,13 @@ object FlightComponents {
     }
   }
 
-  def bestPaxToDisplay(flight: Arrival, apiExTransPax: Int, portCode: String): Int = {
-    val bestNonApiPax = ArrivalHelper.bestPax(flight)
-    val apiDiffTrustThreshold = 0.2
-    val absPercentageDifference = Math.abs(apiExTransPax - bestNonApiPax).toDouble / bestNonApiPax
-    val trustApi = absPercentageDifference <= apiDiffTrustThreshold
-    val paxToDisplay = if (apiExTransPax > 0 && trustApi) apiExTransPax else bestNonApiPax
-    paxToDisplay
-  }
 
   def paxComponentTitle(flight: Arrival, apiPax: Int, apiIncTrans: Int): String = {
     val max: String = flight.MaxPax.filter(_ > 0).map(_.toString).getOrElse("n/a")
     val portDirectPax: Int = flight.ActPax.getOrElse(0) - flight.TranPax.getOrElse(0)
     s"""|Pax: $portDirectPax (${flight.ActPax.getOrElse(0)} - ${flight.TranPax.getOrElse(0)} transfer)
-        |Max: $max""".stripMargin
+        |Max: $max
+        |API: $apiIncTrans""".stripMargin
   }
 
   def maxCapacityLine(maxFlightPax: Int, flight: Arrival): TagMod = {

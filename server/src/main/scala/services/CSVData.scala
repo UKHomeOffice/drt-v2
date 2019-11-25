@@ -14,7 +14,7 @@ import scala.concurrent.Future
 import scala.util.Try
 
 
-object CSVData {
+case class CSVData(bestPaxFn: Arrival => Int) {
   val log: Logger = LoggerFactory.getLogger(getClass)
   val lineEnding = "\n"
 
@@ -113,7 +113,7 @@ object CSVData {
   def terminalMinutesToCsvData(cms: SortedMap[TQM, CrunchMinute], sms: SortedMap[TM, StaffMinute], queues: Seq[String], summaryStart: SDateLike, summaryEnd: SDateLike, summaryPeriodMinutes: Int): String = {
     (summaryStart.millisSinceEpoch until summaryEnd.millisSinceEpoch by (summaryPeriodMinutes * CrunchApi.oneMinuteMillis)).map { summaryStart =>
       terminalSummaryForPeriod(cms, sms, queues, SDate(summaryStart, europeLondonTimeZone), summaryPeriodMinutes).toCsv
-    }.mkString(CSVData.lineEnding)
+    }.mkString(lineEnding)
   }
 
   def flightsWithSplitsToCSVWithHeadings(flightsWithSplits: List[ApiFlightWithSplits]): String =
@@ -195,7 +195,7 @@ object CSVData {
       fws.apiFlight.ActualChox.map(SDate(_, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
       fws.apiFlight.PcpTime.map(SDate(_, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
       fws.apiFlight.ActPax.getOrElse(0),
-      ArrivalHelper.bestPax(fws.apiFlight)
+      bestPaxFn(fws.apiFlight)
     ) ++
       queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages).getOrElse(q, "")}") ++
       queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, SplitRatiosNs.SplitSources.Historical).getOrElse(q, "")}") ++
@@ -206,7 +206,7 @@ object CSVData {
     fws
       .splits
       .find(_.source == splitSource)
-      .map(splits => ApiSplitsToSplitRatio.flightPaxPerQueueUsingSplitsAsRatio(splits, fws.apiFlight))
+      .map(splits => ApiSplitsToSplitRatio.flightPaxPerQueueUsingSplitsAsRatio(bestPaxFn)(splits, fws.apiFlight))
       .getOrElse(Map())
 
   def headingsForSplitSource(queueNames: Seq[String], source: String): String = queueNames

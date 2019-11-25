@@ -10,7 +10,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.QueueName
 import drt.shared._
 import drt.shared.splits.ApiSplitsToSplitRatio
-import japgolly.scalajs.react.component.Scala.Component
+import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagMod, TagOf}
@@ -23,7 +23,12 @@ object FlightsWithSplitsTable {
 
   type BestPaxForArrivalF = Arrival => Int
 
-  case class Props(flightsWithSplits: List[ApiFlightWithSplits], queueOrder: Seq[QueueName], hasEstChox: Boolean)
+  case class Props(
+                    flightsWithSplits: List[ApiFlightWithSplits],
+                    queueOrder: Seq[QueueName],
+                    hasEstChox: Boolean,
+                    useApiPaxNos: Boolean
+                  )
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
     props.flightsWithSplits.hashCode()
@@ -59,14 +64,15 @@ object FlightsWithSplitsTable {
               <.tbody(
                 sortedFlights.zipWithIndex.map {
                   case ((flightWithSplits, codeShares), idx) =>
-                    FlightTableRow.tableRow(FlightTableRow.Props(
+                    FlightTableRow.component(FlightTableRow.Props(
                       flightWithSplits, codeShares, idx,
                       timelineComponent = timelineComponent,
                       originMapper = originMapper,
                       paxComponent = paxComponent,
                       splitsGraphComponent = splitsGraphComponent,
                       splitsQueueOrder = props.queueOrder,
-                      hasEstChox = props.hasEstChox
+                      hasEstChox = props.hasEstChox,
+                      useApiPaxNos = props.useApiPaxNos
                     ))
                 }.toTagMod)))
         }
@@ -137,7 +143,8 @@ object FlightTableRow {
                    paxComponent: ApiFlightWithSplits => TagMod,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                    splitsQueueOrder: Seq[QueueName],
-                   hasEstChox: Boolean
+                   hasEstChox: Boolean,
+                   useApiPaxNos: Boolean
                   )
 
   case class RowState(hasChanged: Boolean)
@@ -160,7 +167,7 @@ object FlightTableRow {
     best.millisSinceEpoch
   }
 
-  val tableRow: Component[Props, RowState, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "TableRow")
+  val component: Component[Props, RowState, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "TableRow")
     .initialState[RowState](RowState(false))
     .render_PS((props, state) => {
       val codeShares = props.codeShares
@@ -168,58 +175,51 @@ object FlightTableRow {
       val flight = flightWithSplits.apiFlight
       val allCodes = flight.ICAO :: codeShares.map(_.ICAO).toList
 
-      Try {
-        val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
-        val timeIndicatorClass = if (flight.PcpTime.getOrElse(0L) < SDate.now().millisSinceEpoch) "before-now" else "from-now"
+      val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
+      val timeIndicatorClass = if (flight.PcpTime.getOrElse(0L) < SDate.now().millisSinceEpoch) "before-now" else "from-now"
 
-        val queuePax: Map[QueueName, Int] = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(flightWithSplits).getOrElse(Map())
-        val flightFields = List[(Option[String], TagMod)](
-          (None, allCodes.mkString(" - ")),
-          (None, props.originMapper(flight.Origin)),
-          (None, TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
-            <.span(
-              proxy().renderEmpty(<.span()),
-              proxy().render(ai => <.span(ai.country))
-            )
-          }),
-          (None, s"${flight.Gate.getOrElse("")}/${flight.Stand.getOrElse("")}"),
-          (None, flight.Status),
-          (None, localDateTimeWithPopup(Option(flight.Scheduled))),
-          (None, localDateTimeWithPopup(flight.Estimated)),
-          (None, localDateTimeWithPopup(flight.Actual)),
-          (Option("est-chox"), localDateTimeWithPopup(flight.EstimatedChox)),
-          (None, localDateTimeWithPopup(flight.ActualChox)),
-          (None, pcpTimeRange(flight, ArrivalHelper.bestPax)),
-          (Option("right"), props.paxComponent(flightWithSplits))
-        )
-          .filterNot {
-            case (Some("est-chox"), _) if !props.hasEstChox => true
-            case _ => false
-          }
-          .map {
-            case (Some(className), tm) => <.td(tm, ^.className := className)
-            case (_, tm) => <.td(tm)
-          }
-          .toTagMod
+      val queuePax: Map[QueueName, Int] = ApiSplitsToSplitRatio
+        .paxPerQueueUsingBestSplitsAsRatio(ArrivalHelper.bestPax(props.useApiPaxNos))(flightWithSplits).getOrElse(Map())
+      val flightFields = List[(Option[String], TagMod)](
+        (None, allCodes.mkString(" - ")),
+        (None, props.originMapper(flight.Origin)),
+        (None, TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
+          <.span(
+            proxy().renderEmpty(<.span()),
+            proxy().render(ai => <.span(ai.country))
+          )
+        }),
+        (None, s"${flight.Gate.getOrElse("")}/${flight.Stand.getOrElse("")}"),
+        (None, flight.Status),
+        (None, localDateTimeWithPopup(Option(flight.Scheduled))),
+        (None, localDateTimeWithPopup(flight.Estimated)),
+        (None, localDateTimeWithPopup(flight.Actual)),
+        (Option("est-chox"), localDateTimeWithPopup(flight.EstimatedChox)),
+        (None, localDateTimeWithPopup(flight.ActualChox)),
+        (None, pcpTimeRange(flight, ArrivalHelper.bestPax(props.useApiPaxNos))),
+        (Option("right"), props.paxComponent(flightWithSplits))
+      )
+        .filterNot {
+          case (Some("est-chox"), _) if !props.hasEstChox => true
+          case _ => false
+        }
+        .map {
+          case (Some(className), tm) => <.td(tm, ^.className := className)
+          case (_, tm) => <.td(tm)
+        }
+        .toTagMod
 
+      val paxClass = FlightComponents.paxClassFromSplits(flightWithSplits)
 
-        val paxClass = FlightComponents.paxClassFromSplits(flightWithSplits)
-
-        <.tr(
-          ^.key := flight.uniqueId.toString,
-          ^.className := s"${offScheduleClass(flight)} $timeIndicatorClass",
-          hasChangedStyle,
-          props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
-          flightFields,
-          props.splitsQueueOrder.map(q => <.td(<.span(s"${queuePax.getOrElse(q, 0)}"), ^.className := s"queue-split $paxClass right")).toTagMod
-        )
-      }.recover {
-        case e => log.error(msg = s"couldn't make flight row $e")
-          <.tr(s"failure $e, ${e.getMessage} ${e.getStackTrace.mkString(",")}")
-      }.get
-    }
-
-    )
+      <.tr(
+        ^.key := flight.uniqueId.toString,
+        ^.className := s"${offScheduleClass(flight)} $timeIndicatorClass",
+        hasChangedStyle,
+        props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
+        flightFields,
+        props.splitsQueueOrder.map(q => <.td(<.span(s"${queuePax.getOrElse(q, 0)}"), ^.className := s"queue-split $paxClass right")).toTagMod
+      )
+    })
     .configure(Reusability.shouldComponentUpdate)
     .build
 
@@ -232,5 +232,7 @@ object FlightTableRow {
     else ""
     offScheduleClass
   }
+
+  def apply(props: Props) = component(props)
 }
 
