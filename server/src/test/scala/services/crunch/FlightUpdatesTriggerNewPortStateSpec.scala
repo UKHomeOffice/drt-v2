@@ -24,7 +24,7 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
 
     val scheduled = "2017-01-01T00:00Z"
 
-    val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(21))
+    val flight = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(21), terminal = "T1")
     val inputFlightsBefore = Flights(List(flight))
     val updatedArrival = flight.copy(ActPax = Some(50))
     val inputFlightsAfter = Flights(List(updatedArrival))
@@ -63,7 +63,7 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
 
     val scheduled = "2017-01-01T00:00Z"
 
-    val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(21))
+    val flight = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(21), terminal = "T1")
     val inputFlightsBefore = Flights(List(flight))
     val updatedArrival = flight.copy(ActPax = Some(50))
     val inputFlightsAfter = Flights(List(updatedArrival))

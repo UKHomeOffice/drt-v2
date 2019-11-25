@@ -83,7 +83,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     val scheduled = "2017-01-01T00:00Z"
 
-    val liveArrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(21))
+    val liveArrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(21), terminal = "T1")
     val liveFlights = Flights(List(liveArrival))
 
     val testProbe = TestProbe("arrivals-probe")
@@ -116,11 +116,11 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
     val scheduledExpired = "2017-01-05T00:00Z"
     val scheduled = "2017-01-05T00:01Z"
 
-    val expiredArrival = ArrivalGenerator.arrival(schDt = scheduledExpired, iata = "BA0022", terminal = "T1", actPax = Option(21))
+    val expiredArrival = ArrivalGenerator.arrival(iata = "BA0022", schDt = scheduledExpired, actPax = Option(21), terminal = "T1")
 
     table.insertOrUpdateArrival(expiredArrival)
 
-    val liveArrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(21))
+    val liveArrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(21), terminal = "T1")
     val liveFlights = Flights(List(liveArrival))
 
     val oldSplits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 100, None)), SplitSources.Historical, None, Percentage)
@@ -163,7 +163,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
     val scheduledDescheduled = "2017-01-10T00:00Z"
     val scheduled = "2017-01-05T00:00Z"
 
-    val descheduledArrival = ArrivalGenerator.arrival(schDt = scheduledDescheduled, iata = "BA0022", terminal = "T1", actPax = Option(21))
+    val descheduledArrival = ArrivalGenerator.arrival(iata = "BA0022", schDt = scheduledDescheduled, actPax = Option(21), terminal = "T1")
 
     table.insertOrUpdateArrival(descheduledArrival)
 

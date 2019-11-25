@@ -12,7 +12,7 @@ class CodeSharesSpec extends Specification {
   "Given one flight " +
     "When we ask for unique arrivals " +
     "Then we should see that flight with zero code shares " >> {
-    val flight: Arrival = arrival(iata = "BA0001", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = Option(100))
+    val flight: Arrival = arrival(iata = "BA0001", schDt = "2016-01-01T10:25Z", actPax = Option(100), terminal = "T1", origin = "JFK")
 
     val result = uniqueArrivalsWithCodeShares(identity[Arrival])(Seq(flight))
 
@@ -24,8 +24,8 @@ class CodeSharesSpec extends Specification {
   "Given two flights which are codeshares of each other " +
     "When we ask for unique flights " +
     "Then we should see a tuple of only one flight with its code share" >> {
-    val flight1: Arrival = arrival(iata = "BA0001", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = Option(100))
-    val flight2: Arrival = arrival(iata = "AA8778", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = Option(150))
+    val flight1: Arrival = arrival(iata = "BA0001", schDt = "2016-01-01T10:25Z", actPax = Option(100), terminal = "T1", origin = "JFK")
+    val flight2: Arrival = arrival(iata = "AA8778", schDt = "2016-01-01T10:25Z", actPax = Option(150), terminal = "T1", origin = "JFK")
 
     val result = uniqueArrivalsWithCodeShares(identity[Arrival])(Seq(flight1, flight2))
 
@@ -37,9 +37,9 @@ class CodeSharesSpec extends Specification {
   "Given three flights which are codeshares of each other " +
     "When we ask for unique flights " +
     "Then we should see a tuple of only one flight with its two code shares" >> {
-    val flight1: Arrival = arrival(iata = "BA0001", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = Option(100))
-    val flight2: Arrival = arrival(iata = "AA8778", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = Option(150))
-    val flight3: Arrival = arrival(iata = "ZZ5566", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = Option(175))
+    val flight1: Arrival = arrival(iata = "BA0001", schDt = "2016-01-01T10:25Z", actPax = Option(100), terminal = "T1", origin = "JFK")
+    val flight2: Arrival = arrival(iata = "AA8778", schDt = "2016-01-01T10:25Z", actPax = Option(150), terminal = "T1", origin = "JFK")
+    val flight3: Arrival = arrival(iata = "ZZ5566", schDt = "2016-01-01T10:25Z", actPax = Option(175), terminal = "T1", origin = "JFK")
 
     val result = uniqueArrivalsWithCodeShares(identity[Arrival])(Seq(flight1, flight2, flight3))
 
@@ -51,11 +51,11 @@ class CodeSharesSpec extends Specification {
   "Given 5 flight, where there are 2 sets of code shares and one unique flight " +
     "When we ask for unique flights " +
     "Then we should see a 3 tuples; one flight with no code shares and 2 flights with their two code shares" >> {
-    val flightCS1a: Arrival = arrival(iata = "BA0001", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = Option(100))
-    val flightCS1b: Arrival = arrival(iata = "AA8778", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = Option(150))
-    val flightCS2a: Arrival = arrival(iata = "ZZ5566", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "CDG", actPax = Option(55))
-    val flightCS2b: Arrival = arrival(iata = "TG8000", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "CDG", actPax = Option(180))
-    val flight: Arrival = arrival(iata = "KL1010", schDt = "2016-01-01T10:25Z", terminal = "T2", origin = "JFK", actPax = Option(175))
+    val flightCS1a: Arrival = arrival(iata = "BA0001", schDt = "2016-01-01T10:25Z", actPax = Option(100), terminal = "T1", origin = "JFK")
+    val flightCS1b: Arrival = arrival(iata = "AA8778", schDt = "2016-01-01T10:25Z", actPax = Option(150), terminal = "T1", origin = "JFK")
+    val flightCS2a: Arrival = arrival(iata = "ZZ5566", schDt = "2016-01-01T10:25Z", actPax = Option(55), terminal = "T1", origin = "CDG")
+    val flightCS2b: Arrival = arrival(iata = "TG8000", schDt = "2016-01-01T10:25Z", actPax = Option(180), terminal = "T1", origin = "CDG")
+    val flight: Arrival = arrival(iata = "KL1010", schDt = "2016-01-01T10:25Z", actPax = Option(175), terminal = "T2", origin = "JFK")
 
     val result = uniqueArrivalsWithCodeShares(identity[Arrival])(Seq(flightCS1a, flightCS1b, flightCS2a, flightCS2b, flight)).toSet
 
@@ -71,8 +71,8 @@ class CodeSharesSpec extends Specification {
   "Given two flights with the same scheduled time, the same terminal, but different origins " +
     "When we ask for unique flights " +
     "Then we should see two tuples, each with one of the flights and no code shares" >> {
-    val flight1: Arrival = arrival(iata = "BA0001", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = Option(100))
-    val flight2: Arrival = arrival(iata = "AA8778", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "CDG", actPax = Option(150))
+    val flight1: Arrival = arrival(iata = "BA0001", schDt = "2016-01-01T10:25Z", actPax = Option(100), terminal = "T1", origin = "JFK")
+    val flight2: Arrival = arrival(iata = "AA8778", schDt = "2016-01-01T10:25Z", actPax = Option(150), terminal = "T1", origin = "CDG")
 
     val result = uniqueArrivalsWithCodeShares(identity[Arrival])(Seq(flight1, flight2)).toSet
 
@@ -87,8 +87,8 @@ class CodeSharesSpec extends Specification {
   "Given two flights with the same scheduled time, the same origins, but different terminals " +
     "When we ask for unique flights " +
     "Then we should see two tuples, each with one of the flights and no code shares" >> {
-    val flight1: Arrival = arrival(iata = "BA0001", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = Option(100))
-    val flight2: Arrival = arrival(iata = "AA8778", schDt = "2016-01-01T10:25Z", terminal = "T2", origin = "JFK", actPax = Option(150))
+    val flight1: Arrival = arrival(iata = "BA0001", schDt = "2016-01-01T10:25Z", actPax = Option(100), terminal = "T1", origin = "JFK")
+    val flight2: Arrival = arrival(iata = "AA8778", schDt = "2016-01-01T10:25Z", actPax = Option(150), terminal = "T2", origin = "JFK")
 
     val result = uniqueArrivalsWithCodeShares(identity[Arrival])(Seq(flight1, flight2)).toSet
 
@@ -103,8 +103,8 @@ class CodeSharesSpec extends Specification {
   "Given two flights with the same origins, the same different terminals, but different scheduled times" +
     "When we ask for unique flights " +
     "Then we should see two tuples, each with one of the flights and no code shares" >> {
-    val flight1: Arrival = arrival(iata = "BA0001", schDt = "2016-01-01T10:30Z", terminal = "T1", origin = "JFK", actPax = Option(100))
-    val flight2: Arrival = arrival(iata = "AA8778", schDt = "2016-01-01T10:25Z", terminal = "T1", origin = "JFK", actPax = Option(150))
+    val flight1: Arrival = arrival(iata = "BA0001", schDt = "2016-01-01T10:30Z", actPax = Option(100), terminal = "T1", origin = "JFK")
+    val flight2: Arrival = arrival(iata = "AA8778", schDt = "2016-01-01T10:25Z", actPax = Option(150), terminal = "T1", origin = "JFK")
 
     val result = uniqueArrivalsWithCodeShares(identity[Arrival])(Seq(flight1, flight2)).toSet
 

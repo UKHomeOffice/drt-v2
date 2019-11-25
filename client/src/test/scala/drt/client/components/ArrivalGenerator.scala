@@ -1,53 +1,9 @@
 package drt.client.components
 
-import drt.client.components.FlightComponents.bestPaxToDisplay
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.{Arrival, ApiFeedSource}
-import utest._
+import drt.shared.{ApiFeedSource, Arrival}
 
 
-object FlightComponentsTests extends TestSuite {
-  def tests = Tests {
-
-    "Given a flight with only act pax " +
-      "When I ask for the pax to display " +
-      "Then I get the act pax number" - {
-      val actPax = 100
-      val flight = ArrivalGenerator.apiFlight(actPax = Option(actPax))
-      val apiExTransPax = 0
-      val portCode = "STN"
-
-      val result = bestPaxToDisplay(flight, apiExTransPax, portCode)
-      val expected = actPax
-
-      assert(result == expected)
-    }
-
-    "Given a flight with act pax and api pax with less than 20% difference " +
-      "When I ask for the pax to display " +
-      "Then I get the api pax number" - {
-      val actPax = 100
-      val flight = ArrivalGenerator.apiFlight(actPax = Option(actPax))
-      val apiExTransPax = 120
-      val result = bestPaxToDisplay(flight, apiExTransPax, "STN")
-      val expected = apiExTransPax
-
-      assert(result == expected)
-    }
-
-    "Given a flight with act pax and api pax with more than 20% difference " +
-      "When I ask for the pax to display " +
-      "Then I get the act pax number" - {
-      val actPax = 100
-      val flight = ArrivalGenerator.apiFlight(actPax = Option(actPax))
-      val apiExTransPax = 121
-      val result = bestPaxToDisplay(flight, apiExTransPax, "STN")
-      val expected = actPax
-
-      assert(result == expected)
-    }
-  }
-}
 
 object ArrivalGenerator {
 

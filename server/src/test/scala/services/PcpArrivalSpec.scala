@@ -201,7 +201,7 @@ class PcpArrivalSpec extends SpecificationLike {
     "Given an Arrival with an act chox time, and no walk times, " +
       "when we ask for the pcpFrom time, " +
       "then we should get act chox + first pax off time + default walk time" >> {
-      val flight = arrival(actChoxDt = "2017-01-01T00:20.00Z", terminal = "T1", gate = Option("2"))
+      val flight = arrival(terminal = "T1", actChoxDt = "2017-01-01T00:20.00Z", gate = Option("2"))
       val walkTimes: Map[(String, String), Long] = Map()
       val timeToChoxMillis = 120000L // 2 minutes
       val firstPaxOffMillis = 180000L // 3 minutes
@@ -224,7 +224,7 @@ class PcpArrivalSpec extends SpecificationLike {
       "then we should get act chox + first pax off time + gate walk time" >> {
       val t1 = "T1"
       val g2 = "2"
-      val flight = arrival(actChoxDt = "2017-01-01T00:20.00Z", terminal = t1, gate = Option(g2))
+      val flight = arrival(terminal = t1, actChoxDt = "2017-01-01T00:20.00Z", gate = Option(g2))
       val gateWalkTimeMillis = 600000L
       val walkTimes = Map((g2, t1) -> gateWalkTimeMillis)
 

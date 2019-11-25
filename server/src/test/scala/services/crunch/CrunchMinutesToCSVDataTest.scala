@@ -1,7 +1,7 @@
 package services.crunch
 
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
-import drt.shared.{Queues, TM, TQM}
+import drt.shared.{ArrivalHelper, Queues, TM, TQM}
 import org.specs2.matcher.Scope
 import org.specs2.mutable.Specification
 import services.{CSVData, SDate}

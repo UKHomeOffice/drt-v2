@@ -38,7 +38,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
     val manifestSinkProbe = TestProbe("manifest-test-probe")
     val registeredArrivalSinkProbe = TestProbe(name = "registered-arrival-test-probe")
 
-    val testArrival = ArrivalGenerator.arrival(schDt = "2019-03-06T12:00:00Z", iata = "---")
+    val testArrival = ArrivalGenerator.arrival(iata = "---", schDt = "2019-03-06T12:00:00Z")
 
     val (sink, source) = createAndRunGraph(registeredArrivalSinkProbe, testManifest, None, Crunch.isDueLookup, now = () => SDate("2019-03-06T11:00:00Z"))
     Source(List(List(testArrival))).runWith(sink)
@@ -64,7 +64,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
     val manifestSinkProbe = TestProbe("manifest-test-probe")
     val registeredArrivalSinkProbe = TestProbe(name = "registered-arrival-test-probe")
 
-    val testArrival = ArrivalGenerator.arrival(schDt = "2019-03-06T12:00:00Z", iata = "BA0001")
+    val testArrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-03-06T12:00:00Z")
 
     val (sink, source) = createAndRunGraph(registeredArrivalSinkProbe, testManifest, None, Crunch.isDueLookup, now = () => SDate("2019-03-06T11:00:00Z"))
     Source(List(List(testArrival))).runWith(sink)
@@ -92,7 +92,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
       List()
     )
 
-    val testArrival = ArrivalGenerator.arrival(schDt = "2019-03-06T12:00:00Z", iata = "BA0001")
+    val testArrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-03-06T12:00:00Z")
 
     val lastLookup = scheduled.millisSinceEpoch
 
@@ -126,7 +126,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
       List()
     )
 
-    val testArrival = ArrivalGenerator.arrival(schDt = "2019-03-06T12:00:00Z", iata = "BA0001")
+    val testArrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-03-06T12:00:00Z")
 
     val lastLookup = scheduled.addDays(-100).millisSinceEpoch
 

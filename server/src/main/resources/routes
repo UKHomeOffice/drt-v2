@@ -10,6 +10,7 @@ GET           /airport-config                                      controllers.A
 GET           /contact-details                                     controllers.Application.getContactDetails
 
 GET           /ooh-status                                          controllers.Application.getOOHStatus
+GET           /feature-flags                                       controllers.Application.getFeatureFlags
 
 GET           /airport-info                                        controllers.Application.getAirportInfo
 

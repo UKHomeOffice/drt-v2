@@ -71,7 +71,8 @@ object RunnableDeskRecs {
                             crunchStartMillis: MillisSinceEpoch,
                             minutesToCrunch: Int,
                             crunch: TryCrunch,
-                            airportConfig: AirportConfig): SortedMap[TQM, CrunchApi.DeskRecMinute] = {
+                            airportConfig: AirportConfig
+                           ) = {
     val crunchEndMillis = SDate(crunchStartMillis).addMinutes(minutesToCrunch).millisSinceEpoch
     val terminals = flights.flightsToUpdate.map(_.apiFlight.Terminal).toSet
     val loadMinutes = WorkloadCalculator.flightLoadMinutes(flights, airportConfig.terminalProcessingTimes).minutes

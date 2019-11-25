@@ -39,7 +39,7 @@ trait WithAuth {
   def authByRole[A](allowedRole: Role)(action: Action[A]): Action[A] = Action.async(action.parser) { request =>
     val loggedInUser: LoggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
     log.debug(s"${loggedInUser.roles}, allowed role $allowedRole")
-    val preventAccess = !loggedInUser.hasRole(allowedRole) && enableRoleBasedAccessRestrictions
+    val preventAccess = !loggedInUser.hasRole(allowedRole)
 
     if (!preventAccess) {
       auth(action)(request)
@@ -63,16 +63,13 @@ trait WithAuth {
     val loggedInUser: LoggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
     val allowedRole = airportConfig.role
 
-    val enablePortAccessRestrictions =
-      config.getOptional[Boolean]("feature-flags.port-access-restrictions").getOrElse(false)
-
     if (!loggedInUser.hasRole(allowedRole))
       log.warning(
         s"User missing port role: ${loggedInUser.email} is accessing ${airportConfig.portCode} " +
           s"and has ${loggedInUser.roles.mkString(", ")} (needs $allowedRole)"
       )
 
-    val preventAccess = !loggedInUser.hasRole(allowedRole) && enablePortAccessRestrictions
+    val preventAccess = !loggedInUser.hasRole(allowedRole)
 
     if (preventAccess) {
       Future(Unauthorized(

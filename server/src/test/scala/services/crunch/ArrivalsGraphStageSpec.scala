@@ -23,9 +23,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
   isolated
 
   trait Context extends Scope {
-    val arrival_v1_with_no_chox_time: Arrival = arrival(iata = "BA0001",
-      schDt = "2017-01-01T10:25Z", origin = "JFK",
-      actPax = Option(100), feedSources = Set(LiveFeedSource))
+    val arrival_v1_with_no_chox_time: Arrival = arrival(iata = "BA0001", schDt = "2017-01-01T10:25Z", actPax = Option(100), origin = "JFK", feedSources = Set(LiveFeedSource))
 
     val arrival_v2_with_chox_time: Arrival = arrival_v1_with_no_chox_time.copy(Stand = Some("Stand1"), ActualChox = Some(SDate("2017-01-01T10:25Z").millisSinceEpoch))
 
@@ -66,7 +64,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     "once an API (advanced passenger information) input arrives for the flight, it will update the arrivals FeedSource so that it has a LiveFeed and a ApiFeed" in new Context {
 
       val voyageManifests = ManifestsFeedSuccess(DqManifests("", Set(
-        VoyageManifest(DqEventCodes.CheckIn, "STN", "JFK", "0001", "BA", "2017-01-01", "10:25", List(
+        VoyageManifest(DqEventCodes.DepartureConfirmed, "STN", "JFK", "0001", "BA", "2017-01-01", "10:25", List(
           PassengerInfoJson(Some("P"), "GBR", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("GBR"), None)
         ))
       )))
@@ -90,12 +88,12 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       val forecastScheduled = "2017-01-01T10:25Z"
 
       val aclFlight = Flights(List(
-        ArrivalGenerator.arrival(actPax = Option(10), schDt = forecastScheduled, iata = "BA0002", feedSources = Set(AclFeedSource))
+        ArrivalGenerator.arrival(iata = "BA0002", schDt = forecastScheduled, actPax = Option(10), feedSources = Set(AclFeedSource))
       ))
 
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlight))
 
-      val forecastArrival = arrival(schDt = forecastScheduled, iata = "BA0002", terminal = "T1", actPax = Option(21), feedSources = Set(ForecastFeedSource))
+      val forecastArrival = arrival(iata = "BA0002", schDt = forecastScheduled, actPax = Option(21), terminal = "T1", feedSources = Set(ForecastFeedSource))
       val forecastArrivals = ArrivalsFeedSuccess(Flights(List(forecastArrival)))
 
       offerAndWait(crunch.forecastArrivalsInput, forecastArrivals)

@@ -26,8 +26,8 @@ class LiveStateRollingForwardSpec extends CrunchTestLike {
     val fridayMidnight30 = "2019-01-04T00:30"
     val saturdayMidnight30 = "2019-01-05T00:30"
 
-    val futureArrival = ArrivalGenerator.arrival(iata = "BA0001", origin = "JFK", schDt = fridayMidnight30, terminal = "T1", actPax = Option(100))
-    val futureArrival2 = ArrivalGenerator.arrival(iata = "BA0002", origin = "JFK", schDt = saturdayMidnight30, terminal = "T1", actPax = Option(200))
+    val futureArrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = fridayMidnight30, actPax = Option(100), terminal = "T1", origin = "JFK")
+    val futureArrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = saturdayMidnight30, actPax = Option(200), terminal = "T1", origin = "JFK")
 
     nowDate = SDate(tuesday)
 
@@ -55,8 +55,8 @@ class LiveStateRollingForwardSpec extends CrunchTestLike {
     val fridayMidnight30 = "2019-01-04T00:30"
     val saturdayMidnight30 = "2019-01-05T00:30"
 
-    val futureArrival = ArrivalGenerator.arrival(iata = "BA0001", origin = "JFK", schDt = fridayMidnight30, terminal = "T1", actPax = Option(100))
-    val futureArrival2 = ArrivalGenerator.arrival(iata = "BA0002", origin = "JFK", schDt = saturdayMidnight30, terminal = "T1", actPax = Option(200))
+    val futureArrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = fridayMidnight30, actPax = Option(100), terminal = "T1", origin = "JFK")
+    val futureArrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = saturdayMidnight30, actPax = Option(200), terminal = "T1", origin = "JFK")
 
     nowDate = SDate(tuesday)
 

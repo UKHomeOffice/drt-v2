@@ -6,7 +6,6 @@ import drt.shared._
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 import services._
-import services.crunch.deskrecs.RunnableDeskRecs.log
 
 import scala.collection.immutable.{Map, SortedMap}
 import scala.collection.mutable

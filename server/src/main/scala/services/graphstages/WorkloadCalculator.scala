@@ -26,7 +26,7 @@ object WorkloadCalculator {
       .filter(fws => !isCancelled(fws) && defaultProcTimes.contains(fws.apiFlight.Terminal))
       .foreach { incoming =>
         val procTimes = defaultProcTimes(incoming.apiFlight.Terminal)
-        val flightMinutes = WorkloadCalculator.flightToFlightSplitMinutes(incoming, procTimes, Map(), false)
+        val flightMinutes = flightToFlightSplitMinutes(incoming, procTimes, Map(), false)
         minutes ++= flightMinutes
       }
 
