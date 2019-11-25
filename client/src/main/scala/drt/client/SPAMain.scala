@@ -5,12 +5,13 @@ import java.util.UUID
 import diode.Action
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType}
-import drt.client.components.{AlertsPage, ContactPage, EditKeyCloakUserPage, GlobalStyles, KeyCloakUsersPage, Layout, PortConfigPage, StatusPage, TerminalComponent, TerminalPlanningComponent, PortDashboardPage, UserDashboardPage}
+import drt.client.components.{AlertsPage, ContactPage, EditKeyCloakUserPage, GlobalStyles, KeyCloakUsersPage, Layout, PortConfigPage, PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, UserDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.client.services.handlers.GetFeedStatuses
 import drt.shared.SDateLike
+import drt.shared.Terminals.Terminal
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
@@ -66,11 +67,12 @@ object SPAMain {
     }
   }
 
-  case class TerminalPageTabLoc(terminal: String,
+  case class TerminalPageTabLoc(terminalName: String,
                                 mode: String = "current",
                                 subMode: String = "desksAndQueues",
                                 queryParams: Map[String, String] = Map.empty[String, String]
                                ) extends Loc {
+    val terminal = Terminal(terminalName)
     val date: Option[String] = queryParams.get(UrlDateParameter.paramName).filter(_.matches(".+"))
     val timeRangeStartString: Option[String] = queryParams.get(UrlTimeRangeStart.paramName).filter(_.matches("[0-9]+"))
     val timeRangeEndString: Option[String] = queryParams.get(UrlTimeRangeEnd.paramName).filter(_.matches("[0-9]+"))

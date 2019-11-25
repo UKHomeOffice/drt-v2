@@ -1,7 +1,9 @@
 package actors
 
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
+import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.SplitSources
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState._
@@ -53,8 +55,8 @@ object PortStateMessageConversion {
   }
 
   def crunchMinuteFromMessage(cmm: CrunchMinuteMessage): CrunchMinute = CrunchMinute(
-    terminalName = cmm.terminalName.getOrElse(""),
-    queueName = cmm.queueName.getOrElse(""),
+    terminal = Terminal(cmm.terminalName.getOrElse("")),
+    queue = Queue(cmm.queueName.getOrElse("")),
     minute = cmm.minute.getOrElse(0L),
     paxLoad = cmm.paxLoad.getOrElse(0d),
     workLoad = cmm.workLoad.getOrElse(0d),
@@ -67,7 +69,7 @@ object PortStateMessageConversion {
   )
 
   def staffMinuteFromMessage(smm: StaffMinuteMessage): StaffMinute = StaffMinute(
-    terminalName = smm.terminalName.getOrElse(""),
+    terminal = Terminal(smm.terminalName.getOrElse("")),
     minute = smm.minute.getOrElse(0L),
     shifts = smm.shifts.getOrElse(0),
     fixedPoints = smm.fixedPoints.getOrElse(0),
@@ -81,7 +83,7 @@ object PortStateMessageConversion {
   )
 
   def staffMinuteToMessage(sm: StaffMinute): StaffMinuteMessage = StaffMinuteMessage(
-    terminalName = Option(sm.terminalName),
+    terminalName = Option(sm.terminal.toString),
     minute = Option(sm.minute),
     shifts = Option(sm.shifts),
     fixedPoints = Option(sm.fixedPoints),
@@ -104,7 +106,7 @@ object PortStateMessageConversion {
     Splits(
       sm.paxTypeAndQueueCount.map(ptqcm => ApiPaxTypeAndQueueCount(
         PaxType(ptqcm.paxType.getOrElse("")),
-        ptqcm.queueType.getOrElse(""),
+        Queue(ptqcm.queueType.getOrElse("")),
         ptqcm.paxValue.getOrElse(0d),
         None
       )).toSet,
@@ -115,8 +117,8 @@ object PortStateMessageConversion {
   }
 
   def crunchMinuteToMessage(cm: CrunchMinute): CrunchMinuteMessage = CrunchMinuteMessage(
-    terminalName = Option(cm.terminalName),
-    queueName = Option(cm.queueName),
+    terminalName = Option(cm.terminal.toString),
+    queueName = Option(cm.queue.toString),
     minute = Option(cm.minute),
     paxLoad = Option(cm.paxLoad),
     workLoad = Option(cm.workLoad),
@@ -127,5 +129,4 @@ object PortStateMessageConversion {
     actDesks = cm.actDesks,
     actWait = cm.actWait
   )
-
 }

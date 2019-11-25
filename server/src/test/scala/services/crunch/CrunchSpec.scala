@@ -1,6 +1,7 @@
 package services.crunch
 
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.Terminals.T1
 import org.specs2.mutable.Specification
 import services.SDate
 import services.graphstages.Crunch
@@ -30,7 +31,7 @@ class CrunchSpec extends Specification {
   "Given a start time of zero milliseconds " +
     "When I ask for 24 hours worth of minute milliseconds " +
     "Then I should see 60 * 24 (1440) milliseconds" >> {
-    val millisFor24Hours: Seq[MillisSinceEpoch] = Crunch.minuteMillisFor24hours(0L)
+    val millisFor24Hours: Seq[MillisSinceEpoch] = Crunch.minuteMillisFor24hours(0L).toList
 
     val minutesInADay = 60 * 24
 
@@ -40,7 +41,7 @@ class CrunchSpec extends Specification {
   "Given a start time of zero milliseconds " +
     "When I ask for 24 hours worth of minute milliseconds " +
     "Then the first millisecond should be zero milliseconds" >> {
-    val millisFor24Hours: Seq[MillisSinceEpoch] = Crunch.minuteMillisFor24hours(0L)
+    val millisFor24Hours: Seq[MillisSinceEpoch] = Crunch.minuteMillisFor24hours(0L).toList
 
     val firstMillis: MillisSinceEpoch = 0L
 
@@ -50,7 +51,7 @@ class CrunchSpec extends Specification {
   "Given a start time of zero milliseconds " +
     "When I ask for 24 hours worth of minute milliseconds " +
     "Then the second millisecond should be one minute of milliseconds, ie 60 * 1000, or oneMinuteMillis" >> {
-    val millisFor24Hours: Seq[MillisSinceEpoch] = Crunch.minuteMillisFor24hours(0L)
+    val millisFor24Hours: Seq[MillisSinceEpoch] = Crunch.minuteMillisFor24hours(0L).toList
 
     val secondMillis: MillisSinceEpoch = Crunch.oneMinuteMillis
 
@@ -60,7 +61,7 @@ class CrunchSpec extends Specification {
   "Given a start time of zero milliseconds " +
     "When I ask for 24 hours worth of minute milliseconds " +
     "Then the last millisecond should be 1439 minutes after the first, ie 1439 * oneMinuteMillis" >> {
-    val millisFor24Hours: Seq[MillisSinceEpoch] = Crunch.minuteMillisFor24hours(0L)
+    val millisFor24Hours: Seq[MillisSinceEpoch] = Crunch.minuteMillisFor24hours(0L).toList
 
     val lastMillis: MillisSinceEpoch = 1439 * Crunch.oneMinuteMillis
 
@@ -71,7 +72,7 @@ class CrunchSpec extends Specification {
     "When I ask for the missing minutes for a given range " +
     "Then I should only see milliseconds lying on whole minute boundaries" >> {
     val millisecondInDay = SDate("2019-01-01T13:12:11Z").millisSinceEpoch
-    val minutes = Crunch.missingMinutesForDay(millisecondInDay, (_, _) => false, List("T1"), 1)
+    val minutes = Crunch.missingMinutesForDay(millisecondInDay, (_, _) => false, List(T1), 1)
 
     val nonMinuteBoundaryMilliseconds = minutes.filter(_ % Crunch.oneMinuteMillis != 0)
 
@@ -82,7 +83,7 @@ class CrunchSpec extends Specification {
     "When I ask for the missing minutes for a given range " +
     "Then I the first millisecond should be the previous midnight" >> {
     val millisecondInDay = SDate("2019-01-01T13:12:11Z").millisSinceEpoch
-    val minutes = Crunch.missingMinutesForDay(millisecondInDay, (_, _) => false, List("T1"), 1)
+    val minutes = Crunch.missingMinutesForDay(millisecondInDay, (_, _) => false, List(T1), 1)
 
     val previousMidnightMillis = SDate("2019-01-01T00:00:00Z").millisSinceEpoch
 
@@ -93,7 +94,7 @@ class CrunchSpec extends Specification {
     "When I ask for the missing minutes for one day " +
     "Then I should see 1440 minutes, ie one day's worth" >> {
     val millisecondInDay = SDate("2019-01-01T13:12:11Z").millisSinceEpoch
-    val minutes = Crunch.missingMinutesForDay(millisecondInDay, (_, _) => false, List("T1"), 1)
+    val minutes = Crunch.missingMinutesForDay(millisecondInDay, (_, _) => false, List(T1), 1)
 
     minutes.size === Crunch.minutesInADay
   }
@@ -102,7 +103,7 @@ class CrunchSpec extends Specification {
     "When I ask for the missing minutes for a given range " +
     "Then I the last millisecond should be one minute before the following midnight" >> {
     val millisecondInDay = SDate("2019-01-01T13:12:11Z").millisSinceEpoch
-    val minutes = Crunch.missingMinutesForDay(millisecondInDay, (_, _) => false, List("T1"), 1)
+    val minutes = Crunch.missingMinutesForDay(millisecondInDay, (_, _) => false, List(T1), 1)
 
     val oneMinuteBeforeNextMidnight = SDate("2019-01-01T23:59:00Z").millisSinceEpoch
 

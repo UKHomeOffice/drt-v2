@@ -3,8 +3,9 @@ package services.inputfeeds
 import com.typesafe.config.ConfigFactory
 import controllers.ArrivalGenerator
 import drt.shared
-import drt.shared.FlightsApi.{Flights, TerminalName}
+import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
+import drt.shared.Terminals._
 import drt.shared._
 import server.feeds.acl.AclFeed
 import server.feeds.acl.AclFeed._
@@ -18,11 +19,11 @@ import scala.concurrent.duration._
 
 
 class AclFeedSpec extends CrunchTestLike {
-  val regularTerminalMapping: TerminalName => TerminalName = (t: TerminalName) => s"T${t.take(1)}"
-  val lgwTerminalMapping: TerminalName => TerminalName = (t: TerminalName) => Map("2I" -> "S").getOrElse(t, "")
+  val regularTerminalMapping: Terminal => Terminal = (t: Terminal) => t
+  val lgwTerminalMapping: Terminal => Terminal = (t: Terminal) => Map[Terminal, Terminal](T2 -> S).getOrElse(t, InvalidTerminal)
 
   "ACL feed failures" >> {
-    val aclFeed = AclFeed("nowhere.nowhere", "badusername", "badpath", "BAD", (t: TerminalName) => "T1")
+    val aclFeed = AclFeed("nowhere.nowhere", "badusername", "badpath", "BAD", (t: Terminal) => T1)
 
     val result = aclFeed.requestArrivals.getClass
 
@@ -44,7 +45,7 @@ class AclFeedSpec extends CrunchTestLike {
       val arrivals = arrivalsFromCsvContent(csvContent, regularTerminalMapping)
       val expected = List(Arrival(Operator = Some("4U"), Status = "ACL Forecast", Estimated = None, Actual = None,
         EstimatedChox = None, ActualChox = None, Gate = None, Stand = None, MaxPax = Some(180), ActPax = Some(149),
-        TranPax = None, RunwayID = None, BaggageReclaimId = None, AirportID = "LHR", Terminal = "T2",
+        TranPax = None, RunwayID = None, BaggageReclaimId = None, AirportID = "LHR", Terminal = T2,
         rawICAO = "4U0460", rawIATA = "4U0460", Origin = "CGN",FeedSources = Set(shared.AclFeedSource),
         Scheduled = 1507878600000L, PcpTime = None))
 
@@ -91,7 +92,7 @@ class AclFeedSpec extends CrunchTestLike {
       val expected = List(Arrival(Operator = Some("4U"), Status = "ACL Forecast", Estimated = None,
         Actual = None, EstimatedChox = None, ActualChox = None, Gate = None,
         Stand = None, MaxPax = Some(180), ActPax = Some(149), TranPax = None, RunwayID = None, BaggageReclaimId = None,
-        AirportID = "LHR", Terminal = "S", rawICAO = "4U0460", rawIATA = "4U0460",
+        AirportID = "LHR", Terminal = S, rawICAO = "4U0460", rawIATA = "4U0460",
         Origin = "CGN", Scheduled = 1507878600000L, PcpTime = None, FeedSources = Set(shared.AclFeedSource)))
 
       arrivals === expected
@@ -110,7 +111,7 @@ class AclFeedSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        airportConfig = airportConfig.copy(terminalProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))))
+        airportConfig = airportConfig.copy(terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes))))
 
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlight))
 
@@ -140,7 +141,7 @@ class AclFeedSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        airportConfig = airportConfig.copy(terminalProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))))
+        airportConfig = airportConfig.copy(terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes))))
 
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlights))
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))

@@ -1,27 +1,27 @@
 package drt.shared.splits
 
-import drt.shared.FlightsApi.QueueName
+import drt.shared.Queues.Queue
 import drt.shared._
 
 object ApiSplitsToSplitRatio {
 
-  def queuesFromPaxTypeAndQueue(ptq: Seq[PaxTypeAndQueue]): Seq[String] = ptq.map {
+  def queuesFromPaxTypeAndQueue(ptq: Seq[PaxTypeAndQueue]): Seq[Queue] = ptq.map {
     case PaxTypeAndQueue(_, q) => q
   }.distinct
 
-  def queueTotals(splits: Map[PaxTypeAndQueue, Int]): Map[QueueName, Int] = splits
-    .foldLeft(Map[QueueName, Int]())((map, ptqc) => {
+  def queueTotals(splits: Map[PaxTypeAndQueue, Int]): Map[Queue, Int] = splits
+    .foldLeft(Map[Queue, Int]())((map, ptqc) => {
       ptqc match {
         case (PaxTypeAndQueue(_, q), pax) =>
           map + (q -> (map.getOrElse(q, 0) + pax))
       }
     })
 
-  def paxPerQueueUsingBestSplitsAsRatio(flightWithSplits: ApiFlightWithSplits): Option[Map[QueueName, Int]] = {
+  def paxPerQueueUsingBestSplitsAsRatio(flightWithSplits: ApiFlightWithSplits): Option[Map[Queue, Int]] = {
     flightWithSplits.bestSplits.map(s => flightPaxPerQueueUsingSplitsAsRatio(s, flightWithSplits.apiFlight))
   }
 
-  def flightPaxPerQueueUsingSplitsAsRatio(splits: Splits, flight: Arrival): Map[QueueName, Int] = queueTotals(
+  def flightPaxPerQueueUsingSplitsAsRatio(splits: Splits, flight: Arrival): Map[Queue, Int] = queueTotals(
     ApiSplitsToSplitRatio.applyPaxSplitsToFlightPax(splits, ArrivalHelper.bestPax(flight))
       .splits
       .map(ptqc => PaxTypeAndQueue(ptqc.passengerType, ptqc.queueType) -> ptqc.paxCount.toInt)

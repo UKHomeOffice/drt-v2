@@ -8,7 +8,8 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import drt.shared.FlightsApi.Flights
-import drt.shared.{Arrival, LiveBaseFeedSource, SDateLike}
+import drt.shared.Terminals.{InvalidTerminal, T1, Terminal}
+import drt.shared.{Arrival, LiveBaseFeedSource, SDateLike, Terminals}
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
@@ -51,12 +52,12 @@ case class CiriumFeed(endpoint: String, portCode: String)(implicit actorSystem: 
 object CiriumFeed {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def terminalMatchForPort(terminal: Option[String], portCode: String): String = portCode.toUpperCase match {
+  def terminalMatchForPort(terminal: Option[String], portCode: String): Terminal = portCode.toUpperCase match {
     case "LTN" | "STN" | "EMA" | "GLA" | "LCY" | "BRS" | "BFS" | "LPL" | "NCL" =>
-      "T1"
+      T1
     case "LHR" | "MAN" =>
-      terminal.map(t => s"T$t").getOrElse("No Terminal")
-    case _ => terminal.getOrElse("No Terminal")
+      terminal.map(t => Terminal(s"T$t")).getOrElse(InvalidTerminal)
+    case _ => Terminal(terminal.getOrElse(""))
   }
 
   def timeToNearest5Minutes(date: SDateLike): SDateLike = date.getMinutes() % 5 match {

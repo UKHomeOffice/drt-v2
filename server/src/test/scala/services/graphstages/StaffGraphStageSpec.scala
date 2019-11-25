@@ -7,6 +7,7 @@ import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueW
 import akka.stream.{ClosedShape, OverflowStrategy}
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{StaffMinute, StaffMinutes}
+import drt.shared.Terminals.T1
 import drt.shared._
 import services.SDate
 import services.crunch.CrunchTestLike
@@ -53,16 +54,15 @@ class StaffGraphStageSpec extends CrunchTestLike {
     val existingMovements = Set[StaffMovement]()
     val movementStart = MilliDate(SDate("2018-01-01T00:05").millisSinceEpoch)
     val movementEnd = MilliDate(SDate("2018-01-01T00:10").millisSinceEpoch)
-    val terminal = "T1"
     val uuid = UUID.randomUUID()
     val incomingMovements = Seq(
-      StaffMovement(terminal, "", movementStart, -1, uuid, None, createdBy = None),
-      StaffMovement(terminal, "", movementEnd, 1, uuid, None, createdBy = None)
+      StaffMovement(T1, "", movementStart, -1, uuid, None, createdBy = None),
+      StaffMovement(T1, "", movementEnd, 1, uuid, None, createdBy = None)
     )
 
     val result = Crunch.movementsUpdateCriteria(existingMovements, incomingMovements)
     val affectedMinuteMillis = movementStart.millisSinceEpoch until movementEnd.millisSinceEpoch by 60000
-    val expected = UpdateCriteria(affectedMinuteMillis, Set(terminal))
+    val expected = UpdateCriteria(affectedMinuteMillis, Set(T1))
 
     result === expected
   }
@@ -72,17 +72,16 @@ class StaffGraphStageSpec extends CrunchTestLike {
     "Then I should see the terminal from the existing movements and a start and end time matching the existing pair" >> {
     val movementStart = MilliDate(SDate("2018-01-01T00:05").millisSinceEpoch)
     val movementEnd = MilliDate(SDate("2018-01-01T00:10").millisSinceEpoch)
-    val terminal = "T1"
     val uuid = UUID.randomUUID()
     val existingMovements = Set(
-      StaffMovement(terminal, "", movementStart, -1, uuid, None, createdBy = None),
-      StaffMovement(terminal, "", movementEnd, 1, uuid, None, createdBy = None)
+      StaffMovement(T1, "", movementStart, -1, uuid, None, createdBy = None),
+      StaffMovement(T1, "", movementEnd, 1, uuid, None, createdBy = None)
     )
     val incomingMovements = Seq[StaffMovement]()
 
     val result = Crunch.movementsUpdateCriteria(existingMovements, incomingMovements)
     val affectedMinuteMillis = movementStart.millisSinceEpoch until movementEnd.millisSinceEpoch by 60000
-    val expected = UpdateCriteria(affectedMinuteMillis, Set(terminal))
+    val expected = UpdateCriteria(affectedMinuteMillis, Set(T1))
 
     result === expected
   }
@@ -99,7 +98,7 @@ class StaffGraphStageSpec extends CrunchTestLike {
       StaffMinutes(Seq()),
       () => SDate(date),
       oneDayMillis,
-      airportConfig.copy(terminalNames = Seq("T1")),
+      airportConfig.copy(terminals = Seq(T1)),
       numDays,
       false)
     val probe = TestProbe("staff")
@@ -107,13 +106,13 @@ class StaffGraphStageSpec extends CrunchTestLike {
 
     val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
     val endDate1 = MilliDate(SDate("2017-01-01T00:02").millisSinceEpoch)
-    val assignment1 = StaffAssignment("shift a", "T1", startDate1, endDate1, 2, None)
+    val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 2, None)
     Await.ready(sh.offer(ShiftAssignments(Seq(assignment1))), 1 second)
 
     val expected = Set(
-      StaffMinute("T1", SDate("2017-01-01T00:00").millisSinceEpoch, 2, 0, 0, None),
-      StaffMinute("T1", SDate("2017-01-01T00:01").millisSinceEpoch, 2, 0, 0, None),
-      StaffMinute("T1", SDate("2017-01-01T00:02").millisSinceEpoch, 2, 0, 0, None))
+      StaffMinute(T1, SDate("2017-01-01T00:00").millisSinceEpoch, 2, 0, 0, None),
+      StaffMinute(T1, SDate("2017-01-01T00:01").millisSinceEpoch, 2, 0, 0, None),
+      StaffMinute(T1, SDate("2017-01-01T00:02").millisSinceEpoch, 2, 0, 0, None))
 
     probe.fishForMessage(10 seconds) {
       case StaffMinutes(minutes) =>
@@ -136,32 +135,32 @@ class StaffGraphStageSpec extends CrunchTestLike {
       StaffMinutes(Seq()),
       () => SDate(date),
       oneDayMillis,
-      airportConfig.copy(terminalNames = Seq("T1")),
+      airportConfig.copy(terminals = Seq(T1)),
       numDays,
       false)
     val probe = TestProbe("staff")
     val (sh, fp, mm) = TestableStaffGraphStage(probe, staffGraphStage).run
     val movementUuid = UUID.randomUUID()
     val movements = Seq(
-      StaffMovement("T1", "lunch start", MilliDate(SDate(s"${date}T00:00").millisSinceEpoch), -1, movementUuid, createdBy = None),
-      StaffMovement("T1", "lunch end", MilliDate(SDate(s"${date}T00:01").millisSinceEpoch), 1, movementUuid, createdBy = None)
+      StaffMovement(T1, "lunch start", MilliDate(SDate(s"${date}T00:00").millisSinceEpoch), -1, movementUuid, createdBy = None),
+      StaffMovement(T1, "lunch end", MilliDate(SDate(s"${date}T00:01").millisSinceEpoch), 1, movementUuid, createdBy = None)
     )
 
     val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
     val endDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
-    val assignment1 = StaffAssignment("shift a", "T1", startDate1, endDate1, 1, None)
+    val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 1, None)
     Await.ready(fp.offer(FixedPointAssignments(Seq(assignment1))), 1 second)
     Await.ready(mm.offer(movements), 1 second)
     Thread.sleep(250L)
     val startDate2 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
     val endDate2 = MilliDate(SDate("2017-01-01T00:02").millisSinceEpoch)
-    val assignment2 = StaffAssignment("shift a", "T1", startDate2, endDate2, 2, None)
+    val assignment2 = StaffAssignment("shift a", T1, startDate2, endDate2, 2, None)
     Await.ready(sh.offer(ShiftAssignments(Seq(assignment2))), 1 second)
 
     val expected = Set(
-      StaffMinute("T1", SDate("2017-01-01T00:00").millisSinceEpoch, 2, 1, -1, None),
-      StaffMinute("T1", SDate("2017-01-01T00:01").millisSinceEpoch, 2, 0, 0, None),
-      StaffMinute("T1", SDate("2017-01-01T00:02").millisSinceEpoch, 2, 0, 0, None))
+      StaffMinute(T1, SDate("2017-01-01T00:00").millisSinceEpoch, 2, 1, -1, None),
+      StaffMinute(T1, SDate("2017-01-01T00:01").millisSinceEpoch, 2, 0, 0, None),
+      StaffMinute(T1, SDate("2017-01-01T00:02").millisSinceEpoch, 2, 0, 0, None))
 
     probe.fishForMessage(10 seconds) {
       case StaffMinutes(minutes) =>
@@ -184,7 +183,7 @@ class StaffGraphStageSpec extends CrunchTestLike {
       StaffMinutes(Seq()),
       () => SDate(date),
       oneDayMillis,
-      airportConfig.copy(terminalNames = Seq("T1")),
+      airportConfig.copy(terminals = Seq(T1)),
       numDays,
       false)
     val probe = TestProbe("staff")
@@ -192,12 +191,12 @@ class StaffGraphStageSpec extends CrunchTestLike {
 
     val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
     val endDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
-    val assignment1 = StaffAssignment("shift a", "T1", startDate1, endDate1, 1, None)
+    val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 1, None)
     Await.ready(fp.offer(FixedPointAssignments(Seq(assignment1))), 1 second)
 
     val expected = Set(
-      StaffMinute("T1", SDate("2017-01-01T00:00").millisSinceEpoch, 0, 1, 0, None),
-      StaffMinute("T1", SDate("2017-01-01T00:00").addDays(1).millisSinceEpoch, 0, 1, 0, None))
+      StaffMinute(T1, SDate("2017-01-01T00:00").millisSinceEpoch, 0, 1, 0, None),
+      StaffMinute(T1, SDate("2017-01-01T00:00").addDays(1).millisSinceEpoch, 0, 1, 0, None))
 
     probe.fishForMessage(5 seconds) {
       case StaffMinutes(minutes) => minutes.map(_.copy(lastUpdated = None)).toSet == expected
@@ -213,11 +212,11 @@ class StaffGraphStageSpec extends CrunchTestLike {
     val date = "2017-01-01"
     val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
     val endDate1 = MilliDate(SDate("2017-01-01T00:05").millisSinceEpoch)
-    val assignment1 = StaffAssignment("shift a", "T1", startDate1, endDate1, 2, None)
+    val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 2, None)
     val initialShifts = ShiftAssignments(Seq(assignment1))
     val startDate2 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
     val endDate2 = MilliDate(SDate("2017-01-01T00:05").millisSinceEpoch)
-    val assignment2 = StaffAssignment("shift a", "T1", startDate2, endDate2, 1, None)
+    val assignment2 = StaffAssignment("shift a", T1, startDate2, endDate2, 1, None)
     val initialFixedPoints = FixedPointAssignments(Seq(assignment2))
     val staffGraphStage = new StaffGraphStage("",
       initialShifts,
@@ -226,7 +225,7 @@ class StaffGraphStageSpec extends CrunchTestLike {
       StaffMinutes(Seq()),
       () => SDate(date),
       oneDayMillis,
-      airportConfig.copy(terminalNames = Seq("T1")),
+      airportConfig.copy(terminals = Seq(T1)),
       numDays,
       false)
     val probe = TestProbe("staff")
@@ -234,15 +233,15 @@ class StaffGraphStageSpec extends CrunchTestLike {
 
     val movementUuid = UUID.randomUUID()
     val movements = Seq(
-      StaffMovement("T1", "lunch start", MilliDate(SDate(s"${date}T00:01").millisSinceEpoch), -1, movementUuid, createdBy = None),
-      StaffMovement("T1", "lunch end", MilliDate(SDate(s"${date}T00:03").millisSinceEpoch), 1, movementUuid, createdBy = None)
+      StaffMovement(T1, "lunch start", MilliDate(SDate(s"${date}T00:01").millisSinceEpoch), -1, movementUuid, createdBy = None),
+      StaffMovement(T1, "lunch end", MilliDate(SDate(s"${date}T00:03").millisSinceEpoch), 1, movementUuid, createdBy = None)
     )
 
     Await.ready(mm.offer(movements), 1 second)
 
     val expected = Set(
-      StaffMinute("T1", SDate("2017-01-01T00:01").millisSinceEpoch, 2, 1, -1, None),
-      StaffMinute("T1", SDate("2017-01-01T00:02").millisSinceEpoch, 2, 1, -1, None))
+      StaffMinute(T1, SDate("2017-01-01T00:01").millisSinceEpoch, 2, 1, -1, None),
+      StaffMinute(T1, SDate("2017-01-01T00:02").millisSinceEpoch, 2, 1, -1, None))
 
     probe.fishForMessage(5 seconds) {
       case StaffMinutes(minutes) => minutes.map(_.copy(lastUpdated = None)).toSet == expected

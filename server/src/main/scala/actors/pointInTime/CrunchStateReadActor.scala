@@ -5,7 +5,8 @@ import actors.Sizes.oneMegaByte
 import actors._
 import akka.persistence._
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
-import drt.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared.Queues.Queue
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import server.protobuf.messages.CrunchState._
 import services.SDate
@@ -15,7 +16,7 @@ case object GetCrunchMinutes
 class CrunchStateReadActor(snapshotInterval: Int,
                            pointInTime: SDateLike,
                            expireAfterMillis: Long,
-                           queues: Map[TerminalName, Seq[QueueName]],
+                           queues: Map[Terminal, Seq[Queue]],
                            startMillis: MillisSinceEpoch,
                            endMillis: MillisSinceEpoch)
   extends CrunchStateActor(
@@ -81,7 +82,7 @@ class CrunchStateReadActor(snapshotInterval: Int,
   override def crunchDiffFromMessage(diffMessage: CrunchDiffMessage, x: MillisSinceEpoch): (Seq[UniqueArrival], Seq[ApiFlightWithSplits], Seq[CrunchMinute], Seq[StaffMinute]) = (
 
     diffMessage.flightsToRemove.collect {
-      case m if queues.contains(m.getTerminalName) => uniqueArrivalFromMessage(m)
+      case m if queues.contains(Terminal(m.getTerminalName)) => uniqueArrivalFromMessage(m)
     },
     diffMessage.flightsToUpdate.collect {
       case m if isInterestingFlightMessage(m) => flightWithSplitsFromMessage(m)
@@ -96,14 +97,14 @@ class CrunchStateReadActor(snapshotInterval: Int,
 
   val isInterestingFlightMessage: FlightWithSplitsMessage => Boolean = (fm: FlightWithSplitsMessage) => {
     val flight = fm.getFlight
-    queues.contains(flight.getTerminal) && startMillis <= flight.getPcpTime && flight.getPcpTime <= endMillis
+    queues.contains(Terminal(flight.getTerminal)) && startMillis <= flight.getPcpTime && flight.getPcpTime <= endMillis
   }
 
   val isInterestingCrunchMinuteMessage: CrunchMinuteMessage => Boolean = (cm: CrunchMinuteMessage) => {
-    queues.contains(cm.getTerminalName) && startMillis <= cm.getMinute && cm.getMinute <= endMillis
+    queues.contains(Terminal(cm.getTerminalName)) && startMillis <= cm.getMinute && cm.getMinute <= endMillis
   }
 
   val isInterestingStaffMinuteMessage: StaffMinuteMessage => Boolean = (sm: StaffMinuteMessage) => {
-    queues.contains(sm.getTerminalName) && startMillis <= sm.getMinute && sm.getMinute <= endMillis
+    queues.contains(Terminal(sm.getTerminalName)) && startMillis <= sm.getMinute && sm.getMinute <= endMillis
   }
 }

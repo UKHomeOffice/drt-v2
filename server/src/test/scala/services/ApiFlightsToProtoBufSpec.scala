@@ -1,6 +1,7 @@
 package services
 
 import actors.FlightMessageConversion._
+import drt.shared.Terminals.T2
 import drt.shared.{ApiFeedSource, Arrival}
 import org.specs2.mutable.Specification
 import server.protobuf.messages.FlightsMessage.FlightMessage
@@ -24,7 +25,7 @@ class ApiFlightsToProtoBufSpec extends Specification {
         RunwayID = Option("1"),
         BaggageReclaimId = Option("A"),
         AirportID = "LHR",
-        Terminal = "T2",
+        Terminal = T2,
         rawICAO = "BA0001",
         rawIATA = "BAA0001",
         Origin = "JFK",

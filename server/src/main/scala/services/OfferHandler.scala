@@ -9,7 +9,7 @@ import services.OfferHandler.log
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
-import scala.util.Failure
+import scala.util.{Failure, Success}
 
 object OfferHandler {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -22,6 +22,7 @@ object OfferHandler {
     Retry.retry(eventualResult, RetryDelays.fibonacci.drop(1), retries, 5 seconds).onComplete {
       case Failure(throwable) =>
         log.error(s"Failed to enqueue ${thingToOffer.getClass} after . $retries", throwable)
+      case _ =>
     }
   }
 }

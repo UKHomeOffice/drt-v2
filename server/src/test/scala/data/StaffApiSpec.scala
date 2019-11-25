@@ -1,5 +1,6 @@
 package data
 
+import drt.shared.Terminals.T1
 import drt.shared.{MilliDate, ShiftAssignments, StaffAssignment}
 import org.specs2.mutable.SpecificationLike
 import services.SDate
@@ -13,7 +14,6 @@ class StaffApiSpec extends SpecificationLike {
   "Given a json string containing 1 hour of 5 staff numbers in 15 minute periods UTC time blocks" >> {
     "When we parse the json" >> {
       "Then we should see 4 15 minute shifts strings each with 5 staff members in them Europe/London time blocks" >> {
-
         val staffJson =
           """
             |{
@@ -28,12 +28,14 @@ class StaffApiSpec extends SpecificationLike {
 
         val shifts = staffJsonToShifts(Json.parse(staffJson))
 
+        println(s"shifts:\n$shifts")
+
         val baseDateTime = SDate("2017-06-28T01:00", Crunch.europeLondonTimeZone)
         val assignments = 0 to 3 map(i => {
           val offset = i * 15
           val startDate = MilliDate(baseDateTime.addMinutes(offset).millisSinceEpoch)
           val endDate = MilliDate(baseDateTime.addMinutes(offset + 14).millisSinceEpoch)
-          StaffAssignment(i.toString, "T1", startDate, endDate, 5, Option("API"))
+          StaffAssignment(i.toString, T1, startDate, endDate, 5, Option("API"))
         })
 
         val expected = Some(ShiftAssignments(assignments))
@@ -66,7 +68,7 @@ class StaffApiSpec extends SpecificationLike {
           val offset = i * 15
           val startDate = MilliDate(baseDateTime.addMinutes(offset).millisSinceEpoch)
           val endDate = MilliDate(baseDateTime.addMinutes(offset + 14).millisSinceEpoch)
-          StaffAssignment(i.toString, "T1", startDate, endDate, 0, Option("API"))
+          StaffAssignment(i.toString, T1, startDate, endDate, 0, Option("API"))
         })
 
         val expected = Some(ShiftAssignments(assignments))

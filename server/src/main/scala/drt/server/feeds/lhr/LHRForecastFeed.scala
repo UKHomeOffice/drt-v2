@@ -4,6 +4,7 @@ import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import drt.server.feeds.lhr.forecast.LHRForecastFlightRow
 import drt.shared.FlightsApi.Flights
+import drt.shared.Terminals.Terminal
 import drt.shared.{Arrival, ForecastFeedSource}
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, GetFeedImportArrivals}
@@ -57,7 +58,7 @@ object LHRForecastFeed {
         RunwayID = None,
         BaggageReclaimId = None,
         AirportID = "LHR",
-        Terminal = flightRow.terminal,
+        Terminal = Terminal(flightRow.terminal),
         rawICAO = flightRow.flightCode.replace(" ", ""),
         rawIATA = flightRow.flightCode.replace(" ", ""),
         Origin = flightRow.origin,

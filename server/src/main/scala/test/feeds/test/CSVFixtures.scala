@@ -1,6 +1,6 @@
 package test.feeds.test
 
-import drt.shared.{Arrival, LiveFeedSource}
+import drt.shared.{Arrival, LiveFeedSource, Terminals}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 
@@ -53,7 +53,7 @@ object CSVFixtures {
         None,
         None,
         "TEST",
-        fields(Terminal),
+        Terminals.Terminal(fields(Terminal)),
         fields(rawICAO),
         fields(rawIATA),
         fields(Origin),

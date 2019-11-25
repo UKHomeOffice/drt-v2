@@ -1,6 +1,7 @@
 package actors
 
 import actors.restore.RestorerWithLegacy
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.{Logger, LoggerFactory}
@@ -77,7 +78,7 @@ object FlightMessageConversion {
   def paxTypeAndQueueCountToMessage(ptqc: ApiPaxTypeAndQueueCount): PaxTypeAndQueueCountMessage = {
     PaxTypeAndQueueCountMessage(
       Option(ptqc.passengerType.name),
-      Option(ptqc.queueType),
+      Option(ptqc.queueType.toString),
       Option(ptqc.paxCount)
     )
   }
@@ -94,7 +95,7 @@ object FlightMessageConversion {
       runwayID = apiFlight.RunwayID,
       baggageReclaimId = apiFlight.BaggageReclaimId,
       airportID = Option(StringUtils.trimToNull(apiFlight.AirportID)),
-      terminal = Option(StringUtils.trimToNull(apiFlight.Terminal)),
+      terminal = Option(StringUtils.trimToNull(apiFlight.Terminal.toString)),
       iCAO = Option(StringUtils.trimToNull(apiFlight.rawICAO)),
       iATA = Option(StringUtils.trimToNull(apiFlight.rawIATA)),
       origin = Option(StringUtils.trimToNull(apiFlight.Origin)),
@@ -136,7 +137,7 @@ object FlightMessageConversion {
       RunwayID = flightMessage.runwayID,
       BaggageReclaimId = flightMessage.baggageReclaimId,
       AirportID = flightMessage.airportID.getOrElse(""),
-      Terminal = flightMessage.terminal.getOrElse(""),
+      Terminal = Terminal(flightMessage.terminal.getOrElse("")),
       rawICAO = flightMessage.iCAO.getOrElse(""),
       rawIATA = flightMessage.iATA.getOrElse(""),
       Origin = flightMessage.origin.getOrElse(""),

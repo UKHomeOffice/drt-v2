@@ -11,7 +11,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import drt.server.feeds.mag.MagFeed.MagArrival
 import drt.shared.FlightsApi.Flights
-import drt.shared.{Arrival, LiveFeedSource, SDateLike}
+import drt.shared.{Arrival, LiveFeedSource, SDateLike, Terminals}
 import org.slf4j.{Logger, LoggerFactory}
 import pdi.jwt.{Jwt, JwtAlgorithm, JwtHeader}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
@@ -171,7 +171,7 @@ object MagFeed {
     RunwayID = None,
     BaggageReclaimId = None,
     AirportID = ma.arrivalAirport.iata,
-    Terminal = ma.arrival.terminal.getOrElse(""),
+    Terminal = Terminals.Terminal(ma.arrival.terminal.getOrElse("")),
     rawICAO = icao(ma),
     rawIATA = iata(ma),
     Origin = ma.departureAirport.iata,

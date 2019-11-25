@@ -1,6 +1,6 @@
 package services.staffing
 
-import drt.shared.FlightsApi.TerminalName
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
@@ -45,14 +45,14 @@ object StaffTimeSlots {
         val assignmentSdate = SDate(assignment.startDt.millisSinceEpoch, Crunch.europeLondonTimeZone)
         val sameMonth = assignmentSdate.getMonth() == slotSdate.getMonth()
         val sameYear = assignmentSdate.getFullYear() == slotSdate.getFullYear()
-        val sameTerminal = assignment.terminalName == slots.terminalName
+        val sameTerminal = assignment.terminal == slots.terminalName
         sameMonth && sameYear && sameTerminal
       })
 
     ShiftAssignments(StaffTimeSlots.slotsToShiftsAssignments(slots) ++ shiftsExcludingNewMonth)
   }
 
-  def getShiftsForMonth(shifts: ShiftAssignments, month: SDateLike, terminalName: TerminalName): ShiftAssignments = {
+  def getShiftsForMonth(shifts: ShiftAssignments, month: SDateLike, terminal: Terminal): ShiftAssignments = {
     val assignmentsForMonth = shifts.assignments
       .filter(assignment => {
         val assignmentSdate = SDate(assignment.startDt.millisSinceEpoch, Crunch.europeLondonTimeZone)

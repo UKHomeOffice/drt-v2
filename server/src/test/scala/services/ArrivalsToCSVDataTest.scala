@@ -1,5 +1,6 @@
 package services
 
+import drt.shared.Terminals.T1
 import drt.shared._
 import org.specs2.mutable.Specification
 
@@ -15,7 +16,7 @@ class ArrivalsToCSVDataTest extends Specification {
 
   private val flightWithAllTypesOfAPISplit = ApiFlightWithSplits(
     arrival(iata = "SA324", icao = "SA0324", schDt = "2017-01-01T20:00:00Z",
-      actPax = Option(100), maxPax = Option(100), lastKnownPax = None, terminal = "T1",
+      actPax = Option(100), maxPax = Option(100), lastKnownPax = None, terminal = T1,
       origin = "JHB", operator = Option("SA"), status = "UNK", estDt = "2017-01-01T20:00:00Z"),
     Set(Splits(
       Set(
@@ -40,7 +41,7 @@ class ArrivalsToCSVDataTest extends Specification {
   )
   val flightWithoutFastTrackApiSplits = ApiFlightWithSplits(
     arrival(iata = "SA325", icao = "SA0325", schDt = "2017-01-01T20:00:00Z",
-      actPax = Option(100), maxPax = Option(100), lastKnownPax = None, terminal = "T1", origin = "JHB",
+      actPax = Option(100), maxPax = Option(100), lastKnownPax = None, terminal = T1, origin = "JHB",
       operator = Option("SA"), status = "UNK", estDt = "2017-01-01T20:00:00Z"),
     Set(Splits(
       Set(
@@ -55,7 +56,7 @@ class ArrivalsToCSVDataTest extends Specification {
     flightWithoutFastTrackApiSplits,
     ApiFlightWithSplits(
       arrival(iata = "SA326", icao = "SA0326", schDt = "2017-01-01T20:00:00Z",
-        actPax = Option(100), maxPax = Option(100), lastKnownPax = None, terminal = "T1", origin = "JHB",
+        actPax = Option(100), maxPax = Option(100), lastKnownPax = None, terminal = T1, origin = "JHB",
         operator = Option("SA"), status = "UNK", estDt = "2017-01-01T20:00:00Z"),
       Set(Splits(
         Set(

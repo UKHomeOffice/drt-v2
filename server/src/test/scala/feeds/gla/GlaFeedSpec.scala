@@ -8,6 +8,7 @@ import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
 import drt.server.feeds.gla.{GlaFeed, GlaFeedRequesterLike, ProdGlaFeedRequester}
 import drt.shared.FlightsApi.Flights
+import drt.shared.Terminals.T1
 import drt.shared.{Arrival, LiveFeedSource}
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
@@ -153,7 +154,7 @@ class GlaFeedSpec extends SpecificationLike {
       RunwayID = Some("3"),
       BaggageReclaimId = Some("2"),
       AirportID = "GLA",
-      Terminal = "T1",
+      Terminal = T1,
       rawICAO = "TST234",
       rawIATA = "TS234",
       Origin = "TST",
@@ -214,7 +215,7 @@ class GlaFeedSpec extends SpecificationLike {
       RunwayID = Some("4"),
       BaggageReclaimId = Some("2"),
       AirportID = "GLA",
-      Terminal = "T1",
+      Terminal = T1,
       rawICAO = "TTT244",
       rawIATA = "TT244",
       Origin = "TTT",
@@ -276,7 +277,7 @@ class GlaFeedSpec extends SpecificationLike {
       RunwayID = None,
       BaggageReclaimId = None,
       AirportID = "GLA",
-      Terminal = "T1",
+      Terminal = T1,
       rawICAO = "TTT244",
       rawIATA = "TT244",
       Origin = "TTT",

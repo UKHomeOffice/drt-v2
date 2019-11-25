@@ -84,7 +84,7 @@ object RunnableDeskRecs {
       .map {
         case (tqm, mins) =>
           val loads = mins.values
-          (tqm, LoadMinute(tqm.terminalName, tqm.queueName, loads.map(_.paxLoad).sum, loads.map(_.workLoad).sum, tqm.minute))
+          (tqm, LoadMinute(tqm.terminal, tqm.queue, loads.map(_.paxLoad).sum, loads.map(_.workLoad).sum, tqm.minute))
       }
 
     crunchLoads(loadsWithDiverts, crunchStartMillis, crunchEndMillis, terminals, airportConfig, crunch)

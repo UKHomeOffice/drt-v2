@@ -2,6 +2,7 @@ package services.graphstages
 
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
@@ -28,7 +29,7 @@ class ArrivalsGraphStage(name: String = "",
                          initialLiveArrivals: mutable.SortedMap[UniqueArrival, Arrival],
                          initialMergedArrivals: mutable.SortedMap[UniqueArrival, Arrival],
                          pcpArrivalTime: Arrival => MilliDate,
-                         validPortTerminals: Set[String],
+                         validPortTerminals: Set[Terminal],
                          expireAfterMillis: Long,
                          now: () => SDateLike)
   extends GraphStage[FanInShape4[List[Arrival], List[Arrival], List[Arrival], List[Arrival], ArrivalsDiff]] {

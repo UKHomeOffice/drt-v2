@@ -1,11 +1,12 @@
 package queueus
 
-import drt.shared.PassengerSplits.QueueType
+import drt.shared.Queues.Queue
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 
 case class PaxTypeQueueAllocation(paxTypeAllocator: PaxTypeAllocator, queueAllocator: QueueAllocator) {
-  def toQueues(terminal: String, bestManifest: BestAvailableManifest): Map[QueueType, List[(QueueType, PaxType, ManifestPassengerProfile, Double)]] = {
+  def toQueues(terminal: Terminal, bestManifest: BestAvailableManifest): Map[Queue, List[(Queue, PaxType, ManifestPassengerProfile, Double)]] = {
     val queueAllocatorForFlight = queueAllocator(terminal, bestManifest) _
     val paxTypeAllocatorForFlight = paxTypeAllocator(bestManifest) _
     bestManifest.passengerList.flatMap(mpp => {
@@ -20,7 +21,7 @@ case class PaxTypeQueueAllocation(paxTypeAllocator: PaxTypeAllocator, queueAlloc
       case (queueType, _, _, _) => queueType
     }
 
-  def toSplits(terminal: String, bestManifest: BestAvailableManifest): Splits = {
+  def toSplits(terminal: Terminal, bestManifest: BestAvailableManifest): Splits = {
     val splits = toQueues(terminal, bestManifest).flatMap {
       case (_, passengerProfileTypeByQueueCount) =>
         passengerProfileTypeByQueueCount.foldLeft(Map[PaxTypeAndQueue, ApiPaxTypeAndQueueCount]()) {

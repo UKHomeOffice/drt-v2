@@ -5,6 +5,7 @@ import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.SplitSources._
+import drt.shared.Terminals.T1
 import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import passengersplits.core.PassengerTypeCalculatorValues.DocType
@@ -28,7 +29,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val scheduled = "2017-01-01T00:00Z"
 
-    val flight = ArrivalGenerator.arrival(origin = "JFK", schDt = scheduled, iata = "TST001", terminal = "T1", actPax = Option(21))
+    val flight = ArrivalGenerator.arrival(origin = "JFK", schDt = scheduled, iata = "TST001", terminal = T1, actPax = Option(21))
     val inputManifestsCi = ManifestsFeedSuccess(DqManifests("", Set(
       VoyageManifest(DqEventCodes.CheckIn, "STN", "JFK", "0001", "TS", "2017-01-01", "00:00", List(
         PassengerInfoGenerator.passengerInfoJson("GBR", "P", "GBR")
@@ -42,13 +43,13 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
-        terminalProcessingTimes = Map("T1" -> Map(
+        terminalProcessingTimes = Map(T1 -> Map(
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60,
           nonVisaNationalToDesk -> 25d / 60
         )),
-        terminalNames = Seq("T1"),
-        queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
+        terminals = Seq(T1),
+        queues = Map(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
       ),
       initialPortState = Option(PortState(SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
     )
@@ -61,7 +62,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     crunch.portStateTestProbe.fishForMessage(3 seconds) {
       case ps: PortState =>
-        val nonZeroQueues = ps.crunchMinutes.values.filter(_.paxLoad > 0).groupBy(_.queueName).keys.toSet
+        val nonZeroQueues = ps.crunchMinutes.values.filter(_.paxLoad > 0).groupBy(_.queue).keys.toSet
         nonZeroQueues == expectedNonZeroQueues
     }
 
@@ -77,7 +78,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
     val portCode = "LHR"
 
-    val flight = ArrivalGenerator.arrival(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "TST001", terminal = "T1", actPax = Option(10))
+    val flight = ArrivalGenerator.arrival(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "TST001", terminal = T1, actPax = Option(10))
     val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
       VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", List(euPassport))
     )))
@@ -85,12 +86,12 @@ class VoyageManifestsSpec extends CrunchTestLike {
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
         portCode = portCode,
-        terminalProcessingTimes = Map("T1" -> Map(
+        terminalProcessingTimes = Map(T1 -> Map(
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60
         )),
-        terminalNames = Seq("T1"),
-        queues = Map("T1" -> Seq(EeaDesk, EGate))
+        terminals = Seq(T1),
+        queues = Map(T1 -> Seq(EeaDesk, EGate))
       ),
       initialPortState = Option(PortState(SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
     )
@@ -104,7 +105,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         val queuePax = ps.crunchMinutes
           .values
           .filter(cm => cm.minute == SDate(scheduled).millisSinceEpoch)
-          .map(cm => (cm.queueName, cm.paxLoad))
+          .map(cm => (cm.queue, cm.paxLoad))
           .toMap
         queuePax == expected
     }
@@ -121,7 +122,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
     val portCode = "LHR"
 
-    val flight = ArrivalGenerator.arrival(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "TST001", terminal = "T1", actPax = Option(10), tranPax = Option(5))
+    val flight = ArrivalGenerator.arrival(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "TST001", terminal = T1, actPax = Option(10), tranPax = Option(5))
     val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
       VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", List(
         euPassport,
@@ -133,12 +134,12 @@ class VoyageManifestsSpec extends CrunchTestLike {
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
         portCode = portCode,
-        terminalProcessingTimes = Map("T1" -> Map(
+        terminalProcessingTimes = Map(T1 -> Map(
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60
         )),
-        terminalNames = Seq("T1"),
-        queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
+        terminals = Seq(T1),
+        queues = Map(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
       ),
       initialPortState = Option(PortState(SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
     )
@@ -152,7 +153,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         val queuePax = ps.crunchMinutes
           .values
           .filter(cm => cm.minute == SDate(scheduled).millisSinceEpoch)
-          .map(cm => (cm.queueName, cm.paxLoad))
+          .map(cm => (cm.queue, cm.paxLoad))
           .toMap
 
         queuePax == expected
@@ -231,7 +232,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
     val portCode = "LHR"
 
-    val flight = ArrivalGenerator.arrival(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "TST001", terminal = "T1", actPax = Option(10), tranPax = Option(6))
+    val flight = ArrivalGenerator.arrival(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "TST001", terminal = T1, actPax = Option(10), tranPax = Option(6))
     val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
       VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "TS", "2017-01-01", "00:00", List(
         inTransitFlag,
@@ -246,14 +247,14 @@ class VoyageManifestsSpec extends CrunchTestLike {
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
         portCode = portCode,
-        terminalProcessingTimes = Map("T1" -> Map(
+        terminalProcessingTimes = Map(T1 -> Map(
           eeaMachineReadableToDesk -> 25d / 60,
           eeaNonMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60,
           visaNationalToDesk -> 25d / 60
         )),
-        terminalNames = Seq("T1"),
-        queues = Map("T1" -> Seq(EeaDesk, EGate, NonEeaDesk))
+        terminals = Seq(T1),
+        queues = Map(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
       ),
       initialPortState = Option(PortState(SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
     )
@@ -267,7 +268,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         val queuePax = ps.crunchMinutes
           .values
           .filter(cm => cm.minute == SDate(scheduled).millisSinceEpoch)
-          .map(cm => (cm.queueName, cm.paxLoad))
+          .map(cm => (cm.queue, cm.paxLoad))
           .toMap
 
         queuePax == expected

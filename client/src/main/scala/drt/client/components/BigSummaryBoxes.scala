@@ -5,6 +5,7 @@ import drt.client.components.FlightComponents._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.vdom.TagOf
@@ -93,7 +94,7 @@ object BigSummaryBoxes {
     "Aggregated", None, PaxNumbers
   )
 
-  def flightsAtTerminal(flightsPcp: Seq[ApiFlightWithSplits], ourTerminal: String): Seq[ApiFlightWithSplits] = {
+  def flightsAtTerminal(flightsPcp: Seq[ApiFlightWithSplits], ourTerminal: Terminal): Seq[ApiFlightWithSplits] = {
     flightsPcp.filter(f => f.apiFlight.Terminal == ourTerminal)
   }
 

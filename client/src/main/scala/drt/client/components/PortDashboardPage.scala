@@ -4,7 +4,6 @@ import drt.client.SPAMain.{Loc, PortDashboardLoc}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.{Queues, SDateLike}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -29,7 +28,7 @@ object PortDashboardPage {
       portCodeQueueOrderTerminals { portMP =>
         <.div(^.className := "terminal-summary-dashboard",
             portMP().render(portConfig => {
-            val (queues, paxTypeAndQueueOrder, terminals) = (portConfig.queues, portConfig.paxTypeAndQueueOrder _, portConfig.terminalNames)
+            val (queues, paxTypeAndQueueOrder, terminals) = (portConfig.queues, portConfig.paxTypeAndQueueOrder _, portConfig.terminals)
             portStateRCP(portStateMP => {
               val currentPeriodStart = DashboardTerminalSummary.windowStart(SDate.now())
               val periods = List(
@@ -54,22 +53,22 @@ object PortDashboardPage {
                         s"${p.start.prettyTime()}-${p.end.prettyTime()}", ^.onClick ==> switchDashboardPeriod(index)
                       )
                     }.toTagMod)),
-                terminals.map { terminalName =>
+                terminals.map { terminal =>
                   <.div(
-                    <.h3(s"Terminal $terminalName"),
+                    <.h3(s"Terminal $terminal"),
                     portStateMP().render(portState => {
-                      val portStateForDashboard = portState.windowWithTerminalFilter(displayPeriod.start, displayPeriod.end, portConfig.queues.filterKeys(_ == terminalName))
+                      val portStateForDashboard = portState.windowWithTerminalFilter(displayPeriod.start, displayPeriod.end, portConfig.queues.filterKeys(_ == terminal))
                       val flightsInTerminal = portStateForDashboard.flights.values.toList
                       val terminalCrunchMinutes = portStateForDashboard.crunchMinutes.values.toList
                       val terminalStaffMinutes = portStateForDashboard.staffMinutes.values.toList
-                      val terminalQueuesInOrder = Queues.inOrder(queues.getOrElse(terminalName, Seq()))
+                      val terminalQueuesInOrder = Queues.inOrder(queues.getOrElse(terminal, Seq()))
 
                       DashboardTerminalSummary(DashboardTerminalSummary.Props(
                         flightsInTerminal,
                         terminalCrunchMinutes,
                         terminalStaffMinutes,
-                        terminalName,
-                        paxTypeAndQueueOrder(terminalName),
+                        terminal,
+                        paxTypeAndQueueOrder(terminal),
                         terminalQueuesInOrder,
                         displayPeriod.start,
                         displayPeriod.end

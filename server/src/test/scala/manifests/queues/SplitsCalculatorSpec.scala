@@ -1,6 +1,7 @@
 package manifests.queues
 
 import drt.shared.PaxTypes._
+import drt.shared.Terminals.T2
 import drt.shared.airportconfig.Bhx
 import drt.shared.{AirportConfig, ApiPaxTypeAndQueueCount, Percentage, Queues, Splits}
 import queueus.{B5JPlusWithTransitTypeAllocator, PaxTypeQueueAllocation, TerminalQueueAllocatorWithFastTrack}
@@ -18,7 +19,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
   "Given a splits calculator with BHX's terminal pax splits " +
     "When I ask for the default splits for T2 " +
     "I should see no EGate split" >> {
-    val result = splitsCalculator.terminalDefaultSplits("T2")
+    val result = splitsCalculator.terminalDefaultSplits(T2)
 
     val expected = Set(Splits(Set(
       ApiPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, 4.0, None),

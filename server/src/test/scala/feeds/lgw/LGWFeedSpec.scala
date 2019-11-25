@@ -4,6 +4,7 @@ import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import com.typesafe.config.ConfigFactory
 import drt.server.feeds.lgw.ResponseToArrivals
+import drt.shared.Terminals.N
 import drt.shared.{Arrival, LiveFeedSource}
 import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecificationLike
@@ -38,7 +39,7 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       RunwayID = Some("08R"),
       BaggageReclaimId = None,
       AirportID = "LGW",
-      Terminal = "N", rawICAO = "VIR808", rawIATA = "VS808", Origin = "LHR", FeedSources = Set(LiveFeedSource),
+      Terminal = N, rawICAO = "VIR808", rawIATA = "VS808", Origin = "LHR", FeedSources = Set(LiveFeedSource),
       Scheduled = SDate("2018-06-03T19:50:00Z").millisSinceEpoch, PcpTime = None)
 
 

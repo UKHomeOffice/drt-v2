@@ -3,6 +3,7 @@ package services.crunch
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
+import drt.shared.Terminals.{InvalidTerminal, T1}
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
@@ -23,8 +24,8 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
 
     val flights = Flights(List(
-      ArrivalGenerator.arrival(schDt = scheduled00, iata = "BA0001", terminal = "T1", actPax = Option(15)),
-      ArrivalGenerator.arrival(schDt = scheduled01, iata = "FR8819", terminal = "XXX", actPax = Option(10))
+      ArrivalGenerator.arrival(schDt = scheduled00, iata = "BA0001", terminal = T1, actPax = Option(15)),
+      ArrivalGenerator.arrival(schDt = scheduled01, iata = "FR8819", terminal = InvalidTerminal, actPax = Option(10))
     ))
 
     val fiveMinutes = 600d / 60
@@ -32,16 +33,16 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
-        terminalProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
-        queues = Map("T1" -> Seq(Queues.EeaDesk)),
-        terminalNames = Seq("T1")
+        terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
+        queues = Map(T1 -> Seq(Queues.EeaDesk)),
+        terminals = Seq(T1)
       ),
       minutesToCrunch = 120)
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
     val expected = Map(
-      "T1" -> Map(Queues.EeaDesk -> Seq(
+      T1 -> Map(Queues.EeaDesk -> Seq(
         15.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
 
@@ -65,8 +66,8 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
 
     val flights = Flights(List(
-      ArrivalGenerator.arrival(schDt = scheduled00, iata = "BA0001", terminal = "T1", actPax = Option(15)),
-      ArrivalGenerator.arrival(schDt = scheduled01, iata = "FR8819", terminal = "T1", actPax = Option(10), status = "Cancelled")
+      ArrivalGenerator.arrival(schDt = scheduled00, iata = "BA0001", terminal = T1, actPax = Option(15)),
+      ArrivalGenerator.arrival(schDt = scheduled01, iata = "FR8819", terminal = T1, actPax = Option(10), status = "Cancelled")
     ))
 
     val fiveMinutes = 600d / 60
@@ -74,16 +75,16 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
-        terminalProcessingTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
-        queues = Map("T1" -> Seq(Queues.EeaDesk)),
-        terminalNames = Seq("T1")),
+        terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
+        queues = Map(T1 -> Seq(Queues.EeaDesk)),
+        terminals = Seq(T1)),
       minutesToCrunch = 120
     )
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
     val expected = Map(
-      "T1" -> Map(Queues.EeaDesk -> Seq(
+      T1 -> Map(Queues.EeaDesk -> Seq(
         15.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
 

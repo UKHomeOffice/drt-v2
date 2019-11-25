@@ -7,6 +7,7 @@ import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveFlight}
 import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
+import drt.shared.Terminals._
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 
@@ -18,11 +19,11 @@ case class ChromaLiveFeed(chromaFetcher: ChromaFetcher[ChromaLiveFlight]) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   object EdiChroma {
-    val ArrivalsHall1 = "A1"
-    val ArrivalsHall2 = "A2"
-    val ediMapTerminals = Map(
-      "T1" -> ArrivalsHall1,
-      "T2" -> ArrivalsHall2
+    val ArrivalsHall1: Terminal = A1
+    val ArrivalsHall2: Terminal = A2
+    val ediMapTerminals: Map[Terminal, Terminal] = Map(
+      T1 -> ArrivalsHall1,
+      T2 -> ArrivalsHall2
     )
 
     def ediBaggageTerminalHack(csf: Arrival): Arrival = {

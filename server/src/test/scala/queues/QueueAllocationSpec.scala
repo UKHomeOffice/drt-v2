@@ -1,6 +1,8 @@
 package queues
 
 import drt.shared.PaxTypes._
+import drt.shared.Queues.Queue
+import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.{PaxTypes, _}
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import org.specs2.mutable.Specification
@@ -9,8 +11,7 @@ import queueus._
 import services.SDate
 
 class QueueAllocationSpec extends Specification {
-
-  val terminalQueueAllocationMap: Map[String, Map[PaxType, List[(String, Double)]]] = Map("T1" -> Map(
+  val terminalQueueAllocationMap: Map[Terminal, Map[PaxType, List[(Queue, Double)]]] = Map(T1 -> Map(
     EeaMachineReadable -> List(Queues.EGate -> 1.0),
     EeaNonMachineReadable -> List(Queues.EeaDesk -> 1.0),
     Transit -> List(Queues.Transfer -> 1.0),
@@ -46,7 +47,7 @@ class QueueAllocationSpec extends Specification {
       Some(Map("GBR" -> 1))
     )), "DC", None, PaxNumbers)
 
-    val result = PaxTypeQueueAllocation(DefaultPaxTypeAllocator, testQueueAllocator).toSplits("T1", bestManifest)
+    val result = PaxTypeQueueAllocation(DefaultPaxTypeAllocator, testQueueAllocator).toSplits(T1, bestManifest)
 
     result === expected
   }
@@ -77,7 +78,7 @@ class QueueAllocationSpec extends Specification {
       PaxNumbers
     )
 
-    val result = PaxTypeQueueAllocation(DefaultPaxTypeAllocator, testQueueAllocator).toSplits("T1", bestManifest)
+    val result = PaxTypeQueueAllocation(DefaultPaxTypeAllocator, testQueueAllocator).toSplits(T1, bestManifest)
 
     result === expected
   }
@@ -106,7 +107,7 @@ class QueueAllocationSpec extends Specification {
       PaxNumbers
     )
 
-    val result = PaxTypeQueueAllocation(B5JPlusTypeAllocator(b5JStartDate), testQueueAllocator).toSplits("T1", bestManifest)
+    val result = PaxTypeQueueAllocation(B5JPlusTypeAllocator(b5JStartDate), testQueueAllocator).toSplits(T1, bestManifest)
 
     result === expected
   }
@@ -135,7 +136,7 @@ class QueueAllocationSpec extends Specification {
       PaxNumbers
     )
 
-    val result = PaxTypeQueueAllocation(B5JPlusTypeAllocator(b5JStartDate), testQueueAllocator).toSplits("T1", bestManifest)
+    val result = PaxTypeQueueAllocation(B5JPlusTypeAllocator(b5JStartDate), testQueueAllocator).toSplits(T1, bestManifest)
 
     result === expected
   }
@@ -168,7 +169,7 @@ class QueueAllocationSpec extends Specification {
     val result = PaxTypeQueueAllocation(
       B5JPlusTypeAllocator(b5JStartDate),
       testQueueAllocator
-    ).toSplits("T1", bestManifest)
+    ).toSplits(T1, bestManifest)
 
     result === expected
   }
@@ -201,7 +202,7 @@ class QueueAllocationSpec extends Specification {
     val result = PaxTypeQueueAllocation(
       B5JPlusTypeAllocator(b5JStartDate),
       testQueueAllocator
-    ).toSplits("T1", bestManifest)
+    ).toSplits(T1, bestManifest)
 
     result === expected
   }
@@ -237,7 +238,7 @@ class QueueAllocationSpec extends Specification {
     val result = PaxTypeQueueAllocation(
       B5JPlusWithTransitTypeAllocator(b5JStartDate),
       testQueueAllocator
-    ).toSplits("T1", bestManifest)
+    ).toSplits(T1, bestManifest)
 
     result === expected
   }
@@ -274,7 +275,7 @@ class QueueAllocationSpec extends Specification {
     val result = PaxTypeQueueAllocation(
       B5JPlusWithTransitTypeAllocator(b5JStartDate),
       fastTrackQueueAllocator
-    ).toSplits("T1", bestManifest)
+    ).toSplits(T1, bestManifest)
 
     result === expected
   }
@@ -308,7 +309,7 @@ class QueueAllocationSpec extends Specification {
     val result = PaxTypeQueueAllocation(
       B5JPlusWithTransitTypeAllocator(b5JStartDate),
       fastTrackQueueAllocator
-    ).toSplits("T1", bestManifest)
+    ).toSplits(T1, bestManifest)
 
     result === expected
   }
@@ -343,7 +344,7 @@ class QueueAllocationSpec extends Specification {
     val result = PaxTypeQueueAllocation(
       B5JPlusWithTransitTypeAllocator(b5JStartDate),
       fastTrackQueueAllocator
-    ).toSplits("T1", bestManifest)
+    ).toSplits(T1, bestManifest)
 
     result === expected
   }

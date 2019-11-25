@@ -6,7 +6,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions._
 import drt.client.services.{SPACircuit, ViewMode}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
-import drt.shared.FlightsApi.TerminalName
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.TagOf
@@ -30,7 +30,7 @@ object TerminalDesksAndQueuesRow {
                    queueMinutes: Seq[CrunchMinute],
                    staffMinute: StaffMinute,
                    airportConfig: AirportConfig,
-                   terminalName: TerminalName,
+                   terminal: Terminal,
                    showActuals: Boolean,
                    viewType: ViewType,
                    hasActualDeskStats: Boolean,
@@ -45,8 +45,8 @@ object TerminalDesksAndQueuesRow {
 
   val component = ScalaComponent.builder[Props]("TerminalDesksAndQueuesRow")
     .render_P(props => {
-      val crunchMinutesByQueue = props.queueMinutes.filter(qm => props.airportConfig.queues(props.terminalName).contains(qm.queueName)).map(
-        qm => Tuple2(qm.queueName, qm)).toMap
+      val crunchMinutesByQueue = props.queueMinutes.filter(qm => props.airportConfig.queues(props.terminal).contains(qm.queue)).map(
+        qm => Tuple2(qm.queue, qm)).toMap
       val queueTds = crunchMinutesByQueue.flatMap {
         case (qn, cm) =>
           val paxLoadTd = <.td(^.className := queueColour(qn), s"${Math.round(cm.paxLoad)}")
@@ -117,8 +117,8 @@ object TerminalDesksAndQueuesRow {
 
   def adjustmentState(props: Props, action: String, label: String): StaffAdjustmentDialogueState =
     StaffAdjustmentDialogueState(
-      props.airportConfig.terminalNames,
-      Option(props.terminalName),
+      props.airportConfig.terminals,
+      Option(props.terminal),
       action,
       "Staff " + label + "...",
       SDate(props.minuteMillis),

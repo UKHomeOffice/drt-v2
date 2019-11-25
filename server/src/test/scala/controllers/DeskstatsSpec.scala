@@ -4,6 +4,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import controllers.Deskstats._
 import drt.shared.CrunchApi.DeskStat
 import drt.shared.Queues
+import drt.shared.Terminals.T2
 import org.specs2.mutable.Specification
 import services.SDate
 
@@ -49,7 +50,7 @@ class DeskstatsSpec extends Specification {
         val data = csvData(deskstatsContent)
 
         val expected = Map(
-          "T2" -> Map(
+          T2 -> Map(
             Queues.EeaDesk -> Map(1498768200000L -> DeskStat(Some(2), Some(9))),
             Queues.NonEeaDesk -> Map(1498768200000L -> DeskStat(Some(16), None)),
             Queues.FastTrack -> Map(1498768200000L -> DeskStat(Some(2), Some(0)))))
@@ -67,7 +68,7 @@ class DeskstatsSpec extends Specification {
         val data = csvData(deskstatsContent)
 
         val expected = Map(
-          "T2" -> Map(
+          T2 -> Map(
             Queues.EeaDesk -> Map(1483306200000L -> DeskStat(Some(2), Some(9))),
             Queues.NonEeaDesk -> Map(1483306200000L -> DeskStat(Some(16), None)),
             Queues.FastTrack -> Map(1483306200000L -> DeskStat(Some(2), Some(0)))))
@@ -84,7 +85,7 @@ class DeskstatsSpec extends Specification {
         val data = csvData(deskstatsContent)
 
         val expected = Map(
-          "T2" -> Map(
+          T2 -> Map(
             Queues.EeaDesk -> Map(1483306200000L -> DeskStat(Some(1), None)),
             Queues.NonEeaDesk -> Map(1483306200000L -> DeskStat(None, None)),
             Queues.FastTrack -> Map(1483306200000L -> DeskStat(None, None))))

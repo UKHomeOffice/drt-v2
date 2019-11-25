@@ -1,6 +1,7 @@
 package services.export
 
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
+import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import org.specs2.mutable.SpecificationLike
 import services.SDate
@@ -11,7 +12,7 @@ class DesksAndQueuesExportSpec extends SpecificationLike {
 
   import Summaries._
 
-  val terminalQueues = Map("T1" -> Seq(Queues.EeaDesk, Queues.NonEeaDesk))
+  val terminalQueues: Map[Terminal, Seq[Queues.Queue]] = Map(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk))
 
   "Given a list of optional ints where there are no values " +
     "When I ask for the max value" +
@@ -32,7 +33,7 @@ class DesksAndQueuesExportSpec extends SpecificationLike {
   }
 
   "Given a SortedMap of a single CrunchMinute with a TQM key and a SortedMap of a single StaffMinute with a TM key " >> {
-    val terminal = "T1"
+    val terminal = T1
     val queues = Seq(Queues.EeaDesk, Queues.NonEeaDesk)
 
     val noon05 = SDate("2019-01-01T12:05:00")

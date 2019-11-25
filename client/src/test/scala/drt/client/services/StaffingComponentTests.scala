@@ -1,6 +1,7 @@
 package drt.client.services
 
 import drt.client.services.JSDateConversions.SDate
+import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.{SDateLike, StaffTimeSlot, StaffTimeSlotsForTerminalMonth}
 import utest._
 
@@ -172,16 +173,16 @@ object StaffingComponentTests extends TestSuite {
 
         val start = SDate("2017-12-24")
 
-        val terminal = "T1"
+        val terminal = T1
 
         val result = StaffTimeSlotsForTerminalMonth(start, staff, terminal, 15)
 
         val expected = StaffTimeSlotsForTerminalMonth(
           start.millisSinceEpoch, terminal, List(
-            StaffTimeSlot("T1", start.millisSinceEpoch, 1, 15 * 60000),
-            StaffTimeSlot("T1", start.addMinutes(15).millisSinceEpoch, 1, 15 * 60000),
-            StaffTimeSlot("T1", start.addMinutes(30).millisSinceEpoch, 1, 15 * 60000),
-            StaffTimeSlot("T1", start.addMinutes(45).millisSinceEpoch, 1, 15 * 60000)
+            StaffTimeSlot(T1, start.millisSinceEpoch, 1, 15 * 60000),
+            StaffTimeSlot(T1, start.addMinutes(15).millisSinceEpoch, 1, 15 * 60000),
+            StaffTimeSlot(T1, start.addMinutes(30).millisSinceEpoch, 1, 15 * 60000),
+            StaffTimeSlot(T1, start.addMinutes(45).millisSinceEpoch, 1, 15 * 60000)
           ))
 
         assert(result == expected)
@@ -196,20 +197,20 @@ object StaffingComponentTests extends TestSuite {
 
         val start = SDate("2017-12-24")
 
-        val terminal = "T1"
+        val terminal = T1
 
         val result = StaffTimeSlotsForTerminalMonth(start, staff, terminal, 15)
 
         val expected = StaffTimeSlotsForTerminalMonth(
           start.millisSinceEpoch, terminal, List(
-            StaffTimeSlot("T1", start.millisSinceEpoch, 1, 15 * 60000),
-            StaffTimeSlot("T1", start.addMinutes(15).millisSinceEpoch, 1, 15 * 60000),
-            StaffTimeSlot("T1", start.addMinutes(30).millisSinceEpoch, 1, 15 * 60000),
-            StaffTimeSlot("T1", start.addMinutes(45).millisSinceEpoch, 1, 15 * 60000),
-            StaffTimeSlot("T1", start.addDays(1).millisSinceEpoch, 2, 15 * 60000),
-            StaffTimeSlot("T1", start.addDays(1).addMinutes(15).millisSinceEpoch, 2, 15 * 60000),
-            StaffTimeSlot("T1", start.addDays(1).addMinutes(30).millisSinceEpoch, 2, 15 * 60000),
-            StaffTimeSlot("T1", start.addDays(1).addMinutes(45).millisSinceEpoch, 2, 15 * 60000)
+            StaffTimeSlot(T1, start.millisSinceEpoch, 1, 15 * 60000),
+            StaffTimeSlot(T1, start.addMinutes(15).millisSinceEpoch, 1, 15 * 60000),
+            StaffTimeSlot(T1, start.addMinutes(30).millisSinceEpoch, 1, 15 * 60000),
+            StaffTimeSlot(T1, start.addMinutes(45).millisSinceEpoch, 1, 15 * 60000),
+            StaffTimeSlot(T1, start.addDays(1).millisSinceEpoch, 2, 15 * 60000),
+            StaffTimeSlot(T1, start.addDays(1).addMinutes(15).millisSinceEpoch, 2, 15 * 60000),
+            StaffTimeSlot(T1, start.addDays(1).addMinutes(30).millisSinceEpoch, 2, 15 * 60000),
+            StaffTimeSlot(T1, start.addDays(1).addMinutes(45).millisSinceEpoch, 2, 15 * 60000)
           ))
 
         assert(result == expected)
@@ -224,20 +225,20 @@ object StaffingComponentTests extends TestSuite {
 
         val start = SDate("2017-12-24")
 
-        val terminal = "T1"
+        val terminal = T1
 
         val result = StaffTimeSlotsForTerminalMonth(start, staff, terminal, 60)
 
         val expected = StaffTimeSlotsForTerminalMonth(
           start.millisSinceEpoch, terminal, List(
-            StaffTimeSlot("T1", start.millisSinceEpoch, 1, 60 * 60000),
-            StaffTimeSlot("T1", start.addMinutes(60).millisSinceEpoch, 1, 60 * 60000),
-            StaffTimeSlot("T1", start.addMinutes(120).millisSinceEpoch, 1, 60 * 60000),
-            StaffTimeSlot("T1", start.addMinutes(180).millisSinceEpoch, 1, 60 * 60000),
-            StaffTimeSlot("T1", start.addDays(1).millisSinceEpoch, 2, 60 * 60000),
-            StaffTimeSlot("T1", start.addDays(1).addMinutes(60).millisSinceEpoch, 2, 60 * 60000),
-            StaffTimeSlot("T1", start.addDays(1).addMinutes(120).millisSinceEpoch, 2, 60 * 60000),
-            StaffTimeSlot("T1", start.addDays(1).addMinutes(180).millisSinceEpoch, 2, 60 * 60000)
+            StaffTimeSlot(T1, start.millisSinceEpoch, 1, 60 * 60000),
+            StaffTimeSlot(T1, start.addMinutes(60).millisSinceEpoch, 1, 60 * 60000),
+            StaffTimeSlot(T1, start.addMinutes(120).millisSinceEpoch, 1, 60 * 60000),
+            StaffTimeSlot(T1, start.addMinutes(180).millisSinceEpoch, 1, 60 * 60000),
+            StaffTimeSlot(T1, start.addDays(1).millisSinceEpoch, 2, 60 * 60000),
+            StaffTimeSlot(T1, start.addDays(1).addMinutes(60).millisSinceEpoch, 2, 60 * 60000),
+            StaffTimeSlot(T1, start.addDays(1).addMinutes(120).millisSinceEpoch, 2, 60 * 60000),
+            StaffTimeSlot(T1, start.addDays(1).addMinutes(180).millisSinceEpoch, 2, 60 * 60000)
           )
         )
 

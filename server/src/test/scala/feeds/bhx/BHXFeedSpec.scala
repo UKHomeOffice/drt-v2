@@ -10,6 +10,7 @@ import akka.testkit.TestKit
 import com.typesafe.config.ConfigFactory
 import drt.server.feeds.bhx._
 import drt.shared.FlightsApi.Flights
+import drt.shared.Terminals.T1
 import drt.shared.{Arrival, LiveFeedSource}
 import org.specs2.mutable.SpecificationLike
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
@@ -400,7 +401,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       None,
       None,
       "BHX",
-      "T1",
+      T1,
       "SA123",
       "SA123",
       "JNB",

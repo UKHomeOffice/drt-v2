@@ -8,6 +8,7 @@ import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
+import drt.shared.Terminals.T1
 import drt.shared._
 import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
@@ -93,7 +94,7 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
     val probe = TestProbe("arrival-splits")
 
     val (arrivalDiffs, manifestsLiveInput, _) = TestableArrivalSplits(splitsCalculator, probe, () => SDate(scheduled)).run()
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = "T1", origin = "JFK", schDt = scheduled, feedSources = Set(LiveFeedSource))
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = "JFK", schDt = scheduled, feedSources = Set(LiveFeedSource))
     val paxList = List(
       PassengerInfoGenerator.passengerInfoJson(nationality = "GBR", documentType = "P", issuingCountry = "GBR"),
       PassengerInfoGenerator.passengerInfoJson(nationality = "ITA", documentType = "P", issuingCountry = "ITA")

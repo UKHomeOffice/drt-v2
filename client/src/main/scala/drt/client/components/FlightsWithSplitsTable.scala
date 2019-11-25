@@ -7,7 +7,7 @@ import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.QueueName
+import drt.shared.Queues.Queue
 import drt.shared._
 import drt.shared.splits.ApiSplitsToSplitRatio
 import japgolly.scalajs.react.component.Scala.Component
@@ -23,7 +23,7 @@ object FlightsWithSplitsTable {
 
   type BestPaxForArrivalF = Arrival => Int
 
-  case class Props(flightsWithSplits: List[ApiFlightWithSplits], queueOrder: Seq[QueueName], hasEstChox: Boolean)
+  case class Props(flightsWithSplits: List[ApiFlightWithSplits], queueOrder: Seq[Queue], hasEstChox: Boolean)
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
     props.flightsWithSplits.hashCode()
@@ -83,7 +83,7 @@ object FlightsWithSplitsTable {
     .componentDidMount(_ => StickyTableHeader("[data-sticky]"))
     .build
 
-  def tableHead(props: Props, timelineTh: TagMod, queueNames: Seq[String]): TagOf[TableSection] = {
+  def tableHead(props: Props, timelineTh: TagMod, queues: Seq[Queue]): TagOf[TableSection] = {
     val columns = List(
       ("Flight", None),
       ("Origin", None),
@@ -112,7 +112,7 @@ object FlightsWithSplitsTable {
       <.tr(
         timelineTh,
         portColumnThs,
-        queueNames.map(
+        queues.map(
           q => <.th(Queues.queueDisplayNames(q))
         ).toTagMod
       )
@@ -136,7 +136,7 @@ object FlightTableRow {
                    originMapper: OriginMapperF = portCode => portCode,
                    paxComponent: ApiFlightWithSplits => TagMod,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
-                   splitsQueueOrder: Seq[QueueName],
+                   splitsQueueOrder: Seq[Queue],
                    hasEstChox: Boolean
                   )
 
@@ -172,7 +172,7 @@ object FlightTableRow {
         val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
         val timeIndicatorClass = if (flight.PcpTime.getOrElse(0L) < SDate.now().millisSinceEpoch) "before-now" else "from-now"
 
-        val queuePax: Map[QueueName, Int] = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(flightWithSplits).getOrElse(Map())
+        val queuePax: Map[Queue, Int] = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(flightWithSplits).getOrElse(Map())
         val flightFields = List[(Option[String], TagMod)](
           (None, allCodes.mkString(" - ")),
           (None, props.originMapper(flight.Origin)),

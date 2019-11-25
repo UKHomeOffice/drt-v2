@@ -17,9 +17,9 @@ import controllers.application._
 import controllers.model.ActorDataRequest
 import drt.http.ProdSendAndReceive
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.TerminalName
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.SplitRatiosNs.SplitRatios
+import drt.shared.Terminals.Terminal
 import drt.shared.{AirportConfig, Arrival, _}
 import drt.users.KeyCloakClient
 import javax.inject.{Inject, Singleton}
@@ -224,7 +224,7 @@ class Application @Inject()(implicit val config: Configuration,
       def getLoggedInUser(): LoggedInUser = ctrl.getLoggedInUser(config, headers, session)
 
       def forecastWeekSummary(startDay: MillisSinceEpoch,
-                              terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]] = {
+                              terminal: Terminal): Future[Option[ForecastPeriodWithHeadlines]] = {
         val (startOfForecast, endOfForecast) = startAndEndForDay(startDay, 7)
 
         val portStateFuture = portStateActor.ask(
@@ -250,14 +250,14 @@ class Application @Inject()(implicit val config: Configuration,
         } else throw new Exception("You do not have permission to edit staffing.")
       }
 
-      def getShiftsForMonth(month: MillisSinceEpoch, terminalName: TerminalName): Future[ShiftAssignments] = {
+      def getShiftsForMonth(month: MillisSinceEpoch, terminal: Terminal): Future[ShiftAssignments] = {
         val shiftsFuture = shiftsActor ? GetState
 
         shiftsFuture.collect {
           case shifts: ShiftAssignments =>
             log.info(s"Shifts: Retrieved shifts from actor for month starting: ${SDate(month).toISOString()}")
             val monthInLocalTime = SDate(month, Crunch.europeLondonTimeZone)
-            StaffTimeSlots.getShiftsForMonth(shifts, monthInLocalTime, terminalName)
+            StaffTimeSlots.getShiftsForMonth(shifts, monthInLocalTime, terminal)
         }
       }
 
@@ -475,4 +475,4 @@ class Application @Inject()(implicit val config: Configuration,
   }
 }
 
-case class GetTerminalCrunch(terminalName: TerminalName)
+case class GetTerminalCrunch(terminalName: Terminal)

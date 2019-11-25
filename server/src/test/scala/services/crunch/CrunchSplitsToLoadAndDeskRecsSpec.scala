@@ -5,6 +5,7 @@ import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
+import drt.shared.Terminals.T1
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import server.feeds.{ArrivalsFeedSuccess, ManifestsFeedSuccess}
@@ -29,27 +30,27 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
       val egSplit = 0.75
 
       val flights = Flights(List(
-        ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(21))
+        ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(21))
       ))
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
         airportConfig = airportConfig.copy(
-          queues = Map("T1" -> Seq(Queues.EeaDesk, Queues.EGate)),
-          terminalNames = Seq("T1"),
-          terminalPaxSplits = Map("T1" -> SplitRatios(
+          queues = Map(T1 -> Seq(Queues.EeaDesk, Queues.EGate)),
+          terminals = Seq(T1),
+          terminalPaxSplits = Map(T1 -> SplitRatios(
             SplitSources.TerminalAverage,
             SplitRatio(eeaMachineReadableToDesk, edSplit),
             SplitRatio(eeaMachineReadableToEGate, egSplit)
           )),
-          terminalProcessingTimes = Map("T1" -> Map(
+          terminalProcessingTimes = Map(T1 -> Map(
             eeaMachineReadableToDesk -> 20d / 60,
             eeaMachineReadableToEGate -> 35d / 60))
         ))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
-      val expected = Map("T1" -> Map(
+      val expected = Map(T1 -> Map(
         Queues.EeaDesk -> Seq(20 * edSplit, 1 * edSplit),
         Queues.EGate -> Seq(20 * egSplit, 1 * egSplit)
       ))
@@ -72,15 +73,15 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
       val scheduled2 = "2017-01-01T00:01Z"
 
       val flights = Flights(List(
-        ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(1)),
-        ArrivalGenerator.arrival(schDt = scheduled2, iata = "SA123", terminal = "T1", actPax = Option(1))
+        ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(1)),
+        ArrivalGenerator.arrival(schDt = scheduled2, iata = "SA123", terminal = T1, actPax = Option(1))
       ))
 
       val crunch = runCrunchGraph(now = () => SDate(scheduled))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
-      val expected = Map("T1" -> Map(
+      val expected = Map(T1 -> Map(
         Queues.EeaDesk -> Seq(1.0, 1.0, 0.0, 0.0, 0.0),
         Queues.NonEeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0)
       ))
@@ -102,20 +103,20 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
       val scheduled = "2017-01-01T00:00Z"
 
       val flights = Flights(List(
-        ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(100))
+        ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(100))
       ))
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
         airportConfig = airportConfig.copy(
-          terminalNames = Seq("T1"),
-          queues = Map("T1" -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate)),
-          terminalProcessingTimes = Map("T1" -> Map(
+          terminals = Seq(T1),
+          queues = Map(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate)),
+          terminalProcessingTimes = Map(T1 -> Map(
             eeaMachineReadableToDesk -> 0.25,
             eeaMachineReadableToEGate -> 0.3,
             eeaNonMachineReadableToDesk -> 0.4
           )),
-          terminalPaxSplits = Map("T1" -> SplitRatios(
+          terminalPaxSplits = Map(T1 -> SplitRatios(
             SplitSources.TerminalAverage,
             List(SplitRatio(eeaMachineReadableToDesk, 0.25),
               SplitRatio(eeaMachineReadableToEGate, 0.25),
@@ -125,7 +126,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         ))
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
-      val expected = Map("T1" -> Map(
+      val expected = Map(T1 -> Map(
         Queues.EeaDesk -> List(5.25, 5.25, 5.25, 5.25, 5.25),
         Queues.EGate -> List(1.5, 1.5, 1.5, 1.5, 1.5),
         Queues.NonEeaDesk -> List(0, 0, 0, 0, 0)
@@ -148,7 +149,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         "Then I should see a pax load of 5 (20 * 0.25)" >> {
         val scheduled = "2017-01-01T00:00Z"
 
-        val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(20))
+        val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(20))
         val flights = Flights(List(
           flight
         ))
@@ -156,10 +157,10 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         val crunch = runCrunchGraph(
           now = () => SDate(scheduled),
           airportConfig = airportConfig.copy(
-            terminalProcessingTimes = Map("T1" -> Map(
+            terminalProcessingTimes = Map(T1 -> Map(
               eeaMachineReadableToDesk -> 20d / 60,
               eeaMachineReadableToEGate -> 35d / 60)),
-            terminalPaxSplits = Map("T1" -> SplitRatios(
+            terminalPaxSplits = Map(T1 -> SplitRatios(
               SplitSources.TerminalAverage,
               SplitRatio(eeaMachineReadableToDesk, 0.25)
             ))
@@ -168,7 +169,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
-        val expected = Map("T1" -> Map(
+        val expected = Map(T1 -> Map(
           Queues.EeaDesk -> Seq(5.0, 0.0, 0.0, 0.0, 0.0),
           Queues.NonEeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0)
         ))
@@ -192,14 +193,14 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
         val scheduled = "2017-01-01T00:00Z"
 
-        val arrival = ArrivalGenerator.arrival(origin = "JFK", schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(10), airportId = "LHR")
+        val arrival = ArrivalGenerator.arrival(origin = "JFK", schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(10), airportId = "LHR")
 
         val crunch = runCrunchGraph(
           now = () => SDate(scheduled),
           airportConfig = airportConfig.copy(
-            terminalNames = Seq("T1"),
-            queues = Map("T1" -> Seq(Queues.EeaDesk, Queues.EGate)),
-            terminalProcessingTimes = Map("T1" -> Map(
+            terminals = Seq(T1),
+            queues = Map(T1 -> Seq(Queues.EeaDesk, Queues.EGate)),
+            terminalProcessingTimes = Map(T1 -> Map(
               eeaMachineReadableToDesk -> 20d / 60,
               eeaMachineReadableToEGate -> 35d / 60))
           ),
@@ -214,7 +215,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
         offerAndWait(crunch.manifestsLiveInput, voyageManifests)
 
-        val expected = Map("T1" -> Map(
+        val expected = Map(T1 -> Map(
           Queues.EeaDesk -> Seq(2.0, 0.0, 0.0, 0.0, 0.0),
           Queues.EGate -> Seq(8.0, 0.0, 0.0, 0.0, 0.0)
         ))

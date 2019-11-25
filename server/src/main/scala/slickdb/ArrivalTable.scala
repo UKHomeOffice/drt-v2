@@ -5,12 +5,12 @@ import java.sql.Timestamp
 import drt.shared
 import drt.shared.Arrival
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.TerminalName
+import drt.shared.Terminals.Terminal
 import org.slf4j.{Logger, LoggerFactory}
 
-import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 
 
@@ -24,7 +24,7 @@ object AggregatedArrival {
     arrival.Scheduled,
     arrival.Origin,
     destination,
-    terminalName = arrival.Terminal
+    terminalName = arrival.Terminal.toString
   )
 }
 
@@ -45,9 +45,9 @@ case class ArrivalTable(portCode: String, tables: Tables) extends ArrivalTableLi
     AggregatedArrivals(arrivals)
   }
 
-  def removeArrival(number: Int, terminalName: TerminalName, scheduledTs: Timestamp): Future[Int] = {
-    val idx = matchIndex(number, terminalName, scheduledTs)
-    log.info(s"removing: $number / $terminalName / $scheduledTs")
+  def removeArrival(number: Int, terminal: Terminal, scheduledTs: Timestamp): Future[Int] = {
+    val idx = matchIndex(number, terminal, scheduledTs)
+    log.info(s"removing: $number / ${terminal.toString} / $scheduledTs")
     db.run(arrivalsTableQuery.filter(idx).delete) recover {
       case throwable =>
         log.error(s"delete failed", throwable)
@@ -63,13 +63,13 @@ case class ArrivalTable(portCode: String, tables: Tables) extends ArrivalTableLi
     }
   }
 
-  def matchIndex(number: Int, terminalName: String, scheduledTs: Timestamp) = (arrival: Arrival) =>
+  def matchIndex(number: Int, terminal: Terminal, scheduledTs: Timestamp): tables.Arrival => Rep[Boolean] = (arrival: Arrival) =>
     arrival.number === number &&
-      arrival.terminal === terminalName &&
+      arrival.terminal === terminal.toString &&
       arrival.scheduled === scheduledTs &&
       arrival.destination === portCode
 
-  def arrivalRow(f: shared.Arrival) = {
+  def arrivalRow(f: shared.Arrival): tables.ArrivalRow = {
     val sch = new Timestamp(f.Scheduled)
     val est = f.Estimated.map(new Timestamp(_))
     val act = f.Actual.map(new Timestamp(_))
@@ -78,6 +78,6 @@ case class ArrivalTable(portCode: String, tables: Tables) extends ArrivalTableLi
     val pcp = new Timestamp(f.PcpTime.getOrElse(f.Scheduled))
     val pcpPax = f.ActPax.map(ap => ap - f.TranPax.getOrElse(0))
 
-    ArrivalRow(f.IATA, f.flightNumber, portCode, f.Origin, f.Terminal, f.Gate, f.Stand, f.Status, sch, est, act, estChox, actChox, pcp, f.ActPax, pcpPax)
+    ArrivalRow(f.IATA, f.flightNumber, portCode, f.Origin, f.Terminal.toString, f.Gate, f.Stand, f.Status, sch, est, act, estChox, actChox, pcp, f.ActPax, pcpPax)
   }
 }

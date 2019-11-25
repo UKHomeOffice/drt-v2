@@ -5,6 +5,7 @@ import akka.actor.Cancellable
 import akka.stream.scaladsl.Source
 import drt.server.feeds.lhr.LHRFlightFeed.{emptyStringToOption, parseDateTime}
 import drt.shared.FlightsApi.Flights
+import drt.shared.Terminals.Terminal
 import drt.shared.{Arrival, LiveFeedSource}
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import org.joda.time.DateTime
@@ -19,7 +20,7 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 case class LHRLiveFlight(
-                          term: String,
+                          term: Terminal,
                           flightCode: String,
                           operator: String,
                           from: String,
@@ -58,7 +59,7 @@ case class LHRFlightFeed(csvRecords: Iterator[Int => String]) {
     csvRecords.zipWithIndex.map { case (splitRow, lineNo) =>
       val t = Try {
         LHRLiveFlight(
-          term = s"T${splitRow(0)}",
+          term = Terminal(s"T${splitRow(0)}"),
           flightCode = splitRow(1),
           operator = splitRow(2),
           from = splitRow(3),

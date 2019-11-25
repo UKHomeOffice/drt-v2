@@ -74,24 +74,24 @@ object DatePickerComponent {
       }
 
       def selectPointInTime = (_: ReactEventFromInput) => {
-        GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Point In time", state.selectedDateTime.toISODateOnly)
+        GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Point In time", state.selectedDateTime.toISODateOnly)
         updateUrlWithDateCallback(Option(state.selectedDateTime))
       }
 
       def selectYesterday = (_: ReactEventFromInput) => {
         val yesterday = SDate.midnightThisMorning().addMinutes(-1)
-        GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Yesterday", yesterday.toISODateOnly)
+        GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Yesterday", yesterday.toISODateOnly)
         updateUrlWithDateCallback(Option(yesterday))
       }
 
       def selectTomorrow = (_: ReactEventFromInput) => {
         val tomorrow = SDate.midnightThisMorning().addDays(2).addMinutes(-1)
-        GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Tomorrow", tomorrow.toISODateOnly)
+        GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Tomorrow", tomorrow.toISODateOnly)
         updateUrlWithDateCallback(Option(tomorrow))
       }
 
       def selectToday = (_: ReactEventFromInput) => {
-        GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Today", "Today")
+        GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Today", "Today")
         updateUrlWithDateCallback(None)
       }
 

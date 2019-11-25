@@ -1,29 +1,116 @@
 package drt.shared
 
-import drt.shared.FlightsApi.{QueueName, TerminalName}
-import drt.shared.PassengerSplits.QueueType
 import drt.shared.PaxTypes._
-import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
+import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
+import drt.shared.Terminals.Terminal
 import ujson.Js.Value
 import upickle.Js
-import upickle.default._
-import upickle.default.{macroRW, ReadWriter => RW}
+import upickle.default.{ReadWriter, macroRW, readwriter}
 
+
+object Terminals {
+
+  sealed trait Terminal {
+    override val toString: String = getClass.toString.split("\\$").last
+  }
+
+  object Terminal {
+    implicit val rw: ReadWriter[Terminal] = macroRW
+
+    def apply(terminalName: String): Terminal = terminalName.toLowerCase match {
+      case "t1" => T1
+      case "t2" => T2
+      case "t3" => T3
+      case "t4" => T4
+      case "t5" => T5
+      case "a1" => A1
+      case "a2" => A2
+      case "1i" => ACL1I
+      case "2i" => ACL2I
+      case "1d" => ACL1D
+      case "ter" => ACLTER
+      case "n" => N
+      case "s" => S
+      case _ => InvalidTerminal
+    }
+  }
+
+  case object InvalidTerminal extends Terminal {
+    override val toString: String = ""
+  }
+
+  case object T1 extends Terminal
+
+  case object T2 extends Terminal
+
+  case object T3 extends Terminal
+
+  case object T4 extends Terminal
+
+  case object T5 extends Terminal
+
+  case object A1 extends Terminal
+
+  case object A2 extends Terminal
+
+  case object ACL1I extends Terminal
+
+  case object ACL2I extends Terminal
+
+  case object ACL1D extends Terminal
+
+  case object ACLTER extends Terminal
+
+  case object N extends Terminal
+
+  case object S extends Terminal
+
+}
 
 object Queues {
-  val EeaDesk = "eeaDesk"
-  val EGate = "eGate"
-  val NonEeaDesk = "nonEeaDesk"
-  val FastTrack = "fastTrack"
-  val Transfer = "transfer"
-  val QueueDesk = "queueDesk"
+
+  sealed trait Queue extends Ordered[Queue] {
+    override val toString: String = getClass.toString.split("\\$").last
+
+    override def compare(that: Queue): Int = this.toString.compareTo(that.toString)
+  }
+
+  object Queue {
+    implicit val rw: ReadWriter[Queue] = macroRW
+
+    def apply(queueName: String): Queue = queueName.toLowerCase match {
+      case "eeadesk" => EeaDesk
+      case "egate" => EGate
+      case "noneeadesk" => NonEeaDesk
+      case "fasttrack" => FastTrack
+      case "transfer" => Transfer
+      case "queuedesk" => QueueDesk
+      case _ => InvalidQueue
+    }
+  }
+
+  case object InvalidQueue extends Queue {
+    override val toString: String = ""
+  }
+
+  case object EeaDesk extends Queue
+
+  case object EGate extends Queue
+
+  case object NonEeaDesk extends Queue
+
+  case object FastTrack extends Queue
+
+  case object Transfer extends Queue
+
+  case object QueueDesk extends Queue
 
   val queueOrder = List(QueueDesk, EGate, EeaDesk, NonEeaDesk, FastTrack)
 
-  def inOrder(queuesToSort: Seq[QueueName]): Seq[QueueName] = queueOrder.filter(q => queuesToSort.contains(q))
+  def inOrder(queuesToSort: Seq[Queue]): Seq[Queue] = queueOrder.filter(q => queuesToSort.contains(q))
 
-  val queueDisplayNames: Map[QueueName, String] = Map(
+  val queueDisplayNames: Map[Queue, String] = Map(
     EeaDesk -> "EEA",
     NonEeaDesk -> "Non-EEA",
     EGate -> "e-Gates",
@@ -34,7 +121,7 @@ object Queues {
 
   val exportQueueOrderSansFastTrack = List(EeaDesk, NonEeaDesk, EGate)
   val exportQueueOrderWithFastTrack = List(EeaDesk, NonEeaDesk, EGate, FastTrack)
-  val exportQueueDisplayNames: Map[QueueName, String] = Map(
+  val exportQueueDisplayNames: Map[Queue, String] = Map(
     EeaDesk -> "EEA",
     NonEeaDesk -> "NON-EEA",
     EGate -> "E-GATES",
@@ -98,16 +185,16 @@ object PaxTypes {
   }
 }
 
-case class PaxTypeAndQueue(passengerType: PaxType, queueType: String)
+case class PaxTypeAndQueue(passengerType: PaxType, queueType: Queue)
 
 object PaxTypeAndQueue {
   def apply(split: ApiPaxTypeAndQueueCount): PaxTypeAndQueue = PaxTypeAndQueue(split.passengerType, split.queueType)
 
-  implicit val rw: RW[PaxTypeAndQueue] = macroRW
+  implicit val rw: ReadWriter[PaxTypeAndQueue] = macroRW
 }
 
 object ProcessingTimes {
-  val nationalityProcessingTimes: Map[QueueType, Double] = Map(
+  val nationalityProcessingTimes: Map[String, Double] = Map(
     "AUT" -> 22.7, "BEL" -> 22.7, "BGR" -> 22.7, "HRV" -> 22.7, "CYP" -> 22.7, "CZE" -> 22.7, "DNK" -> 22.7,
     "EST" -> 22.7, "FIN" -> 22.7, "FRA" -> 22.7, "DEU" -> 22.7, "HUN" -> 22.7, "IRL" -> 22.7, "LVA" -> 22.7,
     "LTU" -> 22.7, "LUX" -> 22.7, "MLT" -> 22.7, "NLD" -> 22.7, "POL" -> 22.7, "PRT" -> 22.7, "ROU" -> 22.7,
@@ -128,18 +215,17 @@ object ProcessingTimes {
   )
 }
 
-
 case class AirportConfig(portCode: String = "n/a",
-                         queues: Map[TerminalName, Seq[QueueName]],
-                         divertedQueues: Map[QueueName, QueueName] = Map(),
-                         slaByQueue: Map[String, Int],
-                         terminalNames: Seq[TerminalName],
+                         queues: Map[Terminal, Seq[Queue]],
+                         divertedQueues: Map[Queue, Queue] = Map(),
+                         slaByQueue: Map[Queue, Int],
+                         terminals: Seq[Terminal],
                          timeToChoxMillis: Long = 300000L,
                          firstPaxOffMillis: Long = 180000L,
-                         defaultWalkTimeMillis: Map[TerminalName, Long],
-                         terminalPaxSplits: Map[TerminalName, SplitRatios],
-                         terminalProcessingTimes: Map[TerminalName, Map[PaxTypeAndQueue, Double]],
-                         minMaxDesksByTerminalQueue: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]],
+                         defaultWalkTimeMillis: Map[Terminal, Long],
+                         terminalPaxSplits: Map[Terminal, SplitRatios],
+                         terminalProcessingTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],
+                         minMaxDesksByTerminalQueue: Map[Terminal, Map[Queue, (List[Int], List[Int])]],
                          shiftExamples: Seq[String] = Seq(),
                          fixedPointExamples: Seq[String] = Seq(),
                          hasActualDeskStats: Boolean = false,
@@ -148,49 +234,49 @@ case class AirportConfig(portCode: String = "n/a",
                          crunchOffsetMinutes: Int = 0,
                          hasEstChox: Boolean = false,
                          useStaffingInput: Boolean = false,
-                         exportQueueOrder: List[String] = Queues.exportQueueOrderSansFastTrack,
+                         exportQueueOrder: List[Queue] = Queues.exportQueueOrderSansFastTrack,
                          contactEmail: Option[String] = None,
                          outOfHoursContactPhone: Option[String] = None,
                          dayLengthHours: Int = 36,
                          nationalityBasedProcTimes: Map[String, Double] = ProcessingTimes.nationalityProcessingTimes,
                          role: Role,
                          cloneOfPortCode: Option[String] = None,
-                         terminalPaxTypeQueueAllocation: Map[TerminalName, Map[PaxType, Seq[(QueueType, Double)]]]
+                         terminalPaxTypeQueueAllocation: Map[Terminal, Map[PaxType, Seq[(Queue, Double)]]]
                         ) {
-  val terminalSplitQueueTypes: Map[TerminalName, Set[QueueType]] = terminalPaxSplits.map {
+  val terminalSplitQueueTypes: Map[Terminal, Set[Queue]] = terminalPaxSplits.map {
     case (terminal, splitRatios) =>
       (terminal, splitRatios.splits.map(_.paxType.queueType).toSet)
   }
 
-  def queueTypeSplitOrder(terminalName: TerminalName): List[QueueName] = Queues.queueOrder.filter { q =>
-    terminalSplitQueueTypes.getOrElse(terminalName, Set()).contains(q)
+  def queueTypeSplitOrder(terminal: Terminal): List[Queue] = Queues.queueOrder.filter { q =>
+    terminalSplitQueueTypes.getOrElse(terminal, Set()).contains(q)
   }
 
-  def paxTypeAndQueueOrder(terminalName: TerminalName): List[PaxTypeAndQueue] = PaxTypesAndQueues.inOrder.filter { q =>
+  def paxTypeAndQueueOrder(terminalName: Terminal): List[PaxTypeAndQueue] = PaxTypesAndQueues.inOrder.filter { q =>
     queues.getOrElse(terminalName, List()).contains(q.queueType)
   }
 
   def feedPortCode: String = cloneOfPortCode.getOrElse(portCode)
 
-  def nonTransferQueues(terminalName: TerminalName): Seq[QueueName] = queues(terminalName).collect {
-    case queueName: String if queueName != Queues.Transfer => queueName
+  def nonTransferQueues(terminalName: Terminal): Seq[Queue] = queues(terminalName).collect {
+    case queue if queue != Queues.Transfer => queue
   }
 }
 
 object AirportConfig {
-  implicit val rw: RW[AirportConfig] = macroRW
+  implicit val rw: ReadWriter[AirportConfig] = macroRW
 }
 
 case class ContactDetails(supportEmail: Option[String], oohPhone: Option[String])
 
 object ContactDetails {
-  implicit val rw: RW[ContactDetails] = macroRW
+  implicit val rw: ReadWriter[ContactDetails] = macroRW
 }
 
 case class OutOfHoursStatus(localTime: String, isOoh: Boolean)
 
 object OutOfHoursStatus {
-  implicit val rw: RW[OutOfHoursStatus] = macroRW
+  implicit val rw: ReadWriter[OutOfHoursStatus] = macroRW
 }
 
 object ArrivalHelper {
@@ -244,7 +330,7 @@ object PaxTypesAndQueues {
   val transitToTransfer = PaxTypeAndQueue(PaxTypes.Transit, Queues.Transfer)
   val nonVisaNationalToFastTrack = PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.FastTrack)
 
-  def displayName: Map[PaxTypeAndQueue, QueueType] = Map(
+  def displayName: Map[PaxTypeAndQueue, String] = Map(
     eeaMachineReadableToEGate -> "eGates",
     eeaMachineReadableToDesk -> "EEA (Machine Readable)",
     eeaChildToDesk -> "EEA child to Desk",
@@ -288,7 +374,7 @@ trait AirportConfigLike {
 }
 
 object AirportConfigDefaults {
-  val defaultSlas: Map[String, Int] = Map(
+  val defaultSlas: Map[Queue, Int] = Map(
     EeaDesk -> 20,
     EGate -> 25,
     NonEeaDesk -> 45
@@ -305,7 +391,7 @@ object AirportConfigDefaults {
     SplitRatio(nonVisaNationalToDesk, 0.05)
   )
 
-  val defaultQueueRatios: Map[PaxType, Seq[(QueueType, Double)]] = Map(
+  val defaultQueueRatios: Map[PaxType, Seq[(Queue, Double)]] = Map(
     EeaMachineReadable -> List(Queues.EGate -> 0.8, Queues.EeaDesk -> 0.2),
     EeaBelowEGateAge -> List(Queues.EeaDesk -> 1.0),
     EeaNonMachineReadable -> List(Queues.EeaDesk -> 1.0),

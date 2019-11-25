@@ -1,7 +1,7 @@
 package services
 
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.QueueName
+import drt.shared.Queues.Queue
 import drt.shared.Summaries.terminalSummaryForPeriod
 import drt.shared._
 import drt.shared.splits.ApiSplitsToSplitRatio
@@ -18,7 +18,7 @@ object CSVData {
   val log: Logger = LoggerFactory.getLogger(getClass)
   val lineEnding = "\n"
 
-  def forecastHeadlineToCSV(headlines: ForecastHeadlineFigures, queueOrder: List[String]): String = {
+  def forecastHeadlineToCSV(headlines: ForecastHeadlineFigures, queueOrder: List[Queue]): String = {
     val headings = "," + headlines.queueDayHeadlines.map(_.day).toSet.toList.sorted.map(
       day => {
         val localDate = SDate(day, europeLondonTimeZone)
@@ -81,7 +81,7 @@ object CSVData {
       s",,"
   }
 
-  def makeDayHeadingsForPlanningExport(daysInPeriod: Seq[MillisSinceEpoch]): QueueName = {
+  def makeDayHeadingsForPlanningExport(daysInPeriod: Seq[MillisSinceEpoch]): String = {
     "," + daysInPeriod.map(day => {
       val localDate = SDate(day, europeLondonTimeZone)
       val date = localDate.getDate()
@@ -93,13 +93,13 @@ object CSVData {
 
   def forecastDaysInPeriod(forecastPeriod: ForecastPeriod): Seq[MillisSinceEpoch] = forecastPeriod.days.toList.map(_._1).sorted
 
-  def terminalCrunchMinutesToCsvDataHeadings(queues: Seq[QueueName]): String = {
+  def terminalCrunchMinutesToCsvDataHeadings(queues: Seq[Queue]): String = {
     val colHeadings = List("Pax", "Wait", "Desks req", "Act. wait time", "Act. desks")
     val eGatesHeadings = List("Pax", "Wait", "Staff req", "Act. wait time", "Act. desks")
     val relevantQueues = queues
       .filterNot(_ == Queues.Transfer)
-    val queueHeadings = relevantQueues.map(queue => Queues.queueDisplayNames.getOrElse(queue, queue))
-      .flatMap(qn => List.fill(colHeadings.length)(Queues.exportQueueDisplayNames.getOrElse(qn, qn))).mkString(",")
+    val queueHeadings = relevantQueues.map(queue => Queues.queueDisplayNames.getOrElse(queue, queue.toString))
+      .flatMap(qn => List.fill(colHeadings.length)(Queues.exportQueueDisplayNames.getOrElse(Queue(qn), qn))).mkString(",")
     val headingsLine1 = "Date,," + queueHeadings +
       ",Misc,Moves,PCP Staff,PCP Staff"
     val headingsLine2 = ",Start," + relevantQueues.flatMap(q => {
@@ -110,7 +110,7 @@ object CSVData {
     headingsLine1 + lineEnding + headingsLine2
   }
 
-  def terminalMinutesToCsvData(cms: SortedMap[TQM, CrunchMinute], sms: SortedMap[TM, StaffMinute], queues: Seq[String], summaryStart: SDateLike, summaryEnd: SDateLike, summaryPeriodMinutes: Int): String = {
+  def terminalMinutesToCsvData(cms: SortedMap[TQM, CrunchMinute], sms: SortedMap[TM, StaffMinute], queues: Seq[Queue], summaryStart: SDateLike, summaryEnd: SDateLike, summaryPeriodMinutes: Int): String = {
     (summaryStart.millisSinceEpoch until summaryEnd.millisSinceEpoch by (summaryPeriodMinutes * CrunchApi.oneMinuteMillis)).map { summaryStart =>
       terminalSummaryForPeriod(cms, sms, queues, SDate(summaryStart, europeLondonTimeZone), summaryPeriodMinutes).toCsv
     }.mkString(CSVData.lineEnding)
@@ -141,7 +141,7 @@ object CSVData {
     .map(f => actualAPISplitsForFlightInHeadingOrder(f, headings))
 
 
-  val queueNames: Seq[String] = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrder)
+  val queueNames: Seq[Queue] = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrder)
 
 
   def flightsWithSplitsToCSVIncludingAPIDataWithHeadings(flightsWithSplits: List[ApiFlightWithSplits]): String =
@@ -180,7 +180,7 @@ object CSVData {
   }
 
 
-  def flightToCsvRow(queueNames: Seq[String], fws: ApiFlightWithSplits): List[Any] = {
+  def flightToCsvRow(queueNames: Seq[Queue], fws: ApiFlightWithSplits): List[Any] = {
     List(
       fws.apiFlight.IATA,
       fws.apiFlight.ICAO,
@@ -202,14 +202,14 @@ object CSVData {
       queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, SplitRatiosNs.SplitSources.TerminalAverage).getOrElse(q, "")}")
   }
 
-  def queuePaxForFlightUsingSplits(fws: ApiFlightWithSplits, splitSource: String): Map[QueueName, Int] =
+  def queuePaxForFlightUsingSplits(fws: ApiFlightWithSplits, splitSource: String): Map[Queue, Int] =
     fws
       .splits
       .find(_.source == splitSource)
       .map(splits => ApiSplitsToSplitRatio.flightPaxPerQueueUsingSplitsAsRatio(splits, fws.apiFlight))
       .getOrElse(Map())
 
-  def headingsForSplitSource(queueNames: Seq[String], source: String): String = queueNames
+  def headingsForSplitSource(queueNames: Seq[Queue], source: String): String = queueNames
     .map(q => {
       val queueName = Queues.queueDisplayNames(q)
       s"$source $queueName"

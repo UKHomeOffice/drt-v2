@@ -2,10 +2,10 @@ package test
 
 import actors.Sizes.oneMegaByte
 import actors._
-import akka.actor.{ActorRef, Props}
+import akka.actor.Props
 import akka.pattern.AskableActorRef
-import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared.Queues.Queue
+import drt.shared.Terminals.Terminal
 import drt.shared.{AirportConfig, SDateLike}
 import slickdb.ArrivalTable
 
@@ -139,7 +139,7 @@ object TestActors {
 
   case class TestCrunchStateActor(snapshotInterval: Int,
                                   name: String,
-                                  portQueues: Map[TerminalName, Seq[QueueName]],
+                                  portQueues: Map[Terminal, Seq[Queue]],
                                   now: () => SDateLike,
                                   expireAfterMillis: Long,
                                   purgePreviousSnapshots: Boolean)

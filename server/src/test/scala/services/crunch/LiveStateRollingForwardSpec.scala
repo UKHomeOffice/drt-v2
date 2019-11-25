@@ -5,6 +5,7 @@ import akka.pattern.AskableActorRef
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
+import drt.shared.Terminals.T1
 import drt.shared.{Arrival, PortState, SDateLike}
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
@@ -26,8 +27,8 @@ class LiveStateRollingForwardSpec extends CrunchTestLike {
     val fridayMidnight30 = "2019-01-04T00:30"
     val saturdayMidnight30 = "2019-01-05T00:30"
 
-    val futureArrival = ArrivalGenerator.arrival(iata = "BA0001", origin = "JFK", schDt = fridayMidnight30, terminal = "T1", actPax = Option(100))
-    val futureArrival2 = ArrivalGenerator.arrival(iata = "BA0002", origin = "JFK", schDt = saturdayMidnight30, terminal = "T1", actPax = Option(200))
+    val futureArrival = ArrivalGenerator.arrival(iata = "BA0001", origin = "JFK", schDt = fridayMidnight30, terminal = T1, actPax = Option(100))
+    val futureArrival2 = ArrivalGenerator.arrival(iata = "BA0002", origin = "JFK", schDt = saturdayMidnight30, terminal = T1, actPax = Option(200))
 
     nowDate = SDate(tuesday)
 
@@ -55,8 +56,8 @@ class LiveStateRollingForwardSpec extends CrunchTestLike {
     val fridayMidnight30 = "2019-01-04T00:30"
     val saturdayMidnight30 = "2019-01-05T00:30"
 
-    val futureArrival = ArrivalGenerator.arrival(iata = "BA0001", origin = "JFK", schDt = fridayMidnight30, terminal = "T1", actPax = Option(100))
-    val futureArrival2 = ArrivalGenerator.arrival(iata = "BA0002", origin = "JFK", schDt = saturdayMidnight30, terminal = "T1", actPax = Option(200))
+    val futureArrival = ArrivalGenerator.arrival(iata = "BA0001", origin = "JFK", schDt = fridayMidnight30, terminal = T1, actPax = Option(100))
+    val futureArrival2 = ArrivalGenerator.arrival(iata = "BA0002", origin = "JFK", schDt = saturdayMidnight30, terminal = T1, actPax = Option(200))
 
     nowDate = SDate(tuesday)
 

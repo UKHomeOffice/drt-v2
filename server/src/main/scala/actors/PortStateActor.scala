@@ -5,7 +5,8 @@ import akka.actor.{Actor, Props}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.{FlightsWithSplits, TerminalName}
+import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
@@ -100,9 +101,9 @@ class PortStateActor(liveStateActor: AskableActorRef,
       log.debug(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       sender() ! stateForPeriod(start, end)
 
-    case GetPortStateForTerminal(start, end, terminalName) =>
+    case GetPortStateForTerminal(start, end, terminal) =>
       log.debug(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
-      sender() ! stateForPeriodForTerminal(start, end, terminalName)
+      sender() ! stateForPeriodForTerminal(start, end, terminal)
 
     case GetUpdatesSince(millis, start, end) =>
       val updates: Option[PortStateUpdates] = state.updates(millis, start, end)
@@ -120,7 +121,7 @@ class PortStateActor(liveStateActor: AskableActorRef,
 
   def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = Option(state.window(SDate(start), SDate(end)))
 
-  def stateForPeriodForTerminal(start: MillisSinceEpoch, end: MillisSinceEpoch, terminalName: TerminalName): Option[PortState] = Option(state.windowWithTerminalFilter(SDate(start), SDate(end), Seq(terminalName)))
+  def stateForPeriodForTerminal(start: MillisSinceEpoch, end: MillisSinceEpoch, terminalName: Terminal): Option[PortState] = Option(state.windowWithTerminalFilter(SDate(start), SDate(end), Seq(terminalName)))
 
   val flightMinutesBuffer: mutable.Set[MillisSinceEpoch] = mutable.Set[MillisSinceEpoch]()
   val loadMinutesBuffer: mutable.Map[TQM, LoadMinute] = mutable.Map[TQM, LoadMinute]()

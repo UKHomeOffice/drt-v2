@@ -5,6 +5,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.Terminals.Terminal
 import drt.shared.{ArrivalsAndSplitsView, DesksAndQueuesView, LoggedInUser, SDateLike}
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
@@ -14,11 +15,9 @@ object MultiDayExportComponent {
   val today: SDateLike = SDate.now()
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(
-                    terminal: String,
-                    selectedDate: SDateLike,
-                    loggedInUser: LoggedInUser
-                  )
+  case class Props(terminal: Terminal,
+                   selectedDate: SDateLike,
+                   loggedInUser: LoggedInUser)
 
   case class State(startDay: Int,
                    startMonth: Int,
@@ -34,6 +33,7 @@ object MultiDayExportComponent {
   }
 
   implicit val stateReuse: Reusability[State] = Reusability.derive[State]
+  implicit val terminalReuse: Reusability[Terminal] = Reusability.derive[Terminal]
   implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.terminal, p.selectedDate.millisSinceEpoch))
 
   val component = ScalaComponent.builder[Props]("SnapshotSelector")
@@ -83,7 +83,7 @@ object MultiDayExportComponent {
                         ^.href := SPAMain.absoluteUrl(s"export/arrivals/${state.startMillis}/${state.endMillis}/${props.terminal}"),
                         ^.target := "_blank",
                         ^.onClick --> {
-                          Callback(GoogleEventTracker.sendEvent(props.terminal, "click", "Export Arrivals", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
+                          Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Arrivals", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
                         }
                       ) else EmptyVdom,
                     if (props.loggedInUser.hasRole(DesksAndQueuesView))
@@ -92,7 +92,7 @@ object MultiDayExportComponent {
                         ^.href := SPAMain.absoluteUrl(s"export/desks/${state.startMillis}/${state.endMillis}/${props.terminal}"),
                         ^.target := "_blank",
                         ^.onClick --> {
-                          Callback(GoogleEventTracker.sendEvent(props.terminal, "click", "Export Desks", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
+                          Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Desks", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
                         }
                       ) else EmptyVdom
                   )
@@ -113,5 +113,5 @@ object MultiDayExportComponent {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def apply(terminal: String, selectedDate: SDateLike, loggedInUser: LoggedInUser): VdomElement = component(Props(terminal, selectedDate, loggedInUser: LoggedInUser))
+  def apply(terminal: Terminal, selectedDate: SDateLike, loggedInUser: LoggedInUser): VdomElement = component(Props(terminal, selectedDate, loggedInUser: LoggedInUser))
 }

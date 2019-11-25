@@ -1,6 +1,7 @@
 package drt.shared
 
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
+import drt.shared.Queues.Queue
 
 import scala.collection.SortedMap
 
@@ -60,20 +61,19 @@ object Summaries {
   def minutesForPeriod[A, B](startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, atTime: MillisSinceEpoch => A, data: SortedMap[A, B]): SortedMap[A, B] =
     data.range(atTime(startMillis), atTime(endMillis))
 
-  def terminalSummaryForPeriod(terminalCms: SortedMap[TQM, CrunchMinute], terminalSms: SortedMap[TM, StaffMinute], queues: Seq[String], summaryStart: SDateLike, summaryPeriodMinutes: Int): TerminalSummary = {
-
+  def terminalSummaryForPeriod(terminalCms: SortedMap[TQM, CrunchMinute], terminalSms: SortedMap[TM, StaffMinute], queues: Seq[Queue], summaryStart: SDateLike, summaryPeriodMinutes: Int): TerminalSummary = {
     val queueSummaries = Summaries.queueSummariesForPeriod(terminalCms, queues, summaryStart, summaryPeriodMinutes)
     val smResult = Summaries.staffSummaryForPeriod(terminalSms, queueSummaries, summaryStart, summaryPeriodMinutes)
 
     TerminalSummary(start = summaryStart, queueSummaries = queueSummaries, staffSummary = smResult)
   }
 
-  def queueSummariesForPeriod(terminalCms: SortedMap[TQM, CrunchMinute], queues: Seq[String], summaryStart: SDateLike, summaryMinutes: Int): Seq[QueueSummaryLike] = {
+  def queueSummariesForPeriod(terminalCms: SortedMap[TQM, CrunchMinute], queues: Seq[Queue], summaryStart: SDateLike, summaryMinutes: Int): Seq[QueueSummaryLike] = {
     val startMillis = summaryStart.millisSinceEpoch
     val endMillis = summaryStart.addMinutes(summaryMinutes).millisSinceEpoch
 
     val byQueue = minutesForPeriod(startMillis, endMillis, TQM.atTime, terminalCms)
-      .groupBy { case (tqm, _) => tqm.queueName }
+      .groupBy { case (tqm, _) => tqm.queue }
 
     queues.map { queue =>
       byQueue.get(queue) match {

@@ -8,6 +8,7 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.ForecastPeriodWithHeadlines
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -95,13 +96,14 @@ object TerminalComponent {
             else
               props.terminalPageTab.subMode
 
+            val terminalName = props.terminalPageTab.terminal.toString
             <.div(
               <.ul(^.className := "nav nav-tabs",
                 model.loggedInUserPot.render(
                   loggedInUser => if (loggedInUser.roles.contains(TerminalDashboard))
                     <.li(^.className := terminalDashboardClass,
                       <.a(^.id := "terminalDashboardTab", VdomAttr("data-toggle") := "tab", "Terminal Dashboard"), ^.onClick --> {
-                        GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Terminal Dashboard")
+                        GoogleEventTracker.sendEvent(terminalName, "click", "Terminal Dashboard")
                         props.router.set(
                             props
                               .terminalPageTab.copy(
@@ -113,7 +115,7 @@ object TerminalComponent {
                     ) else ""),
                 <.li(^.className := currentClass,
                   <.a(^.id := "currentTab", VdomAttr("data-toggle") := "tab", "Current"), ^.onClick --> {
-                    GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Current")
+                    GoogleEventTracker.sendEvent(terminalName, "click", "Current")
                     props.router.set(props.terminalPageTab.copy(
                       mode = "current",
                       subMode = subMode,
@@ -122,7 +124,7 @@ object TerminalComponent {
                   }),
                 <.li(^.className := snapshotDataClass,
                   <.a(^.id := "snapshotTab", VdomAttr("data-toggle") := "tab", "Snapshot"), ^.onClick --> {
-                    GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Snapshot")
+                    GoogleEventTracker.sendEvent(terminalName, "click", "Snapshot")
                     props.router.set(props.terminalPageTab.copy(
                       mode = "snapshot",
                       subMode = subMode,
@@ -132,7 +134,7 @@ object TerminalComponent {
                 ),
                 <.li(^.className := planningClass,
                   <.a(^.id := "planningTab", VdomAttr("data-toggle") := "tab", "Planning"), ^.onClick --> {
-                    GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Planning")
+                    GoogleEventTracker.sendEvent(terminalName, "click", "Planning")
                     props.router.set(props.terminalPageTab.copy(mode = "planning", subMode = subMode, queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams))
                   }
                 ),
@@ -140,7 +142,7 @@ object TerminalComponent {
                   loggedInUser => if (loggedInUser.roles.contains(StaffEdit))
                     <.li(^.className := staffingClass,
                       <.a(^.id := "monthlyStaffingTab", VdomAttr("data-toggle") := "tab", "Monthly Staffing"), ^.onClick --> {
-                        GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "click", "Monthly Staffing")
+                        GoogleEventTracker.sendEvent(terminalName, "click", "Monthly Staffing")
                         props.router.set(props.terminalPageTab.copy(mode = "staffing", subMode = "15", queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams))
                       }
                     ) else ""

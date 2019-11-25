@@ -4,6 +4,8 @@ import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
+import drt.shared.Queues.Queue
+import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
@@ -40,29 +42,29 @@ class CrunchTimezoneSpec extends CrunchTestLike {
       "Given flights with one passenger and one split to eea desk " +
         "When the date falls within BST " +
         "Then I should see min desks allocated in alignment with BST" >> {
-        val minMaxDesks = Map("T1" -> Map(Queues.EeaDesk -> Tuple2(0 :: 5 :: List.fill[Int](22)(0), List.fill[Int](24)(20))))
+        val minMaxDesks: Map[Terminal, Map[Queue, (List[Int], List[Int])]] = Map(T1 -> Map(Queues.EeaDesk -> Tuple2(0 :: 5 :: List.fill[Int](22)(0), List.fill[Int](24)(20))))
 
         val scheduled = "2017-06-01T00:00Z"
 
         val flights = Flights(List(
-          ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = "T1", actPax = Option(1))
+          ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(1))
         ))
 
         val fiveMinutes = 600d / 60
-        val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes))
+        val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes))
 
         val crunch = runCrunchGraph(
           now = () => SDate(scheduled),
           airportConfig = airportConfig.copy(
             minMaxDesksByTerminalQueue = minMaxDesks,
             terminalProcessingTimes = procTimes,
-            terminalNames = Seq("T1")
+            terminals = Seq(T1)
           ),
           minutesToCrunch = 120)
 
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
-        val expected = Map("T1" -> Map(
+        val expected = Map(T1 -> Map(
           Queues.EeaDesk -> Seq(
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

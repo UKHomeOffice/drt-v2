@@ -5,8 +5,9 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.util.zip.{ZipEntry, ZipInputStream}
 
 import drt.shared
-import drt.shared.Arrival
-import drt.shared.FlightsApi.{Flights, TerminalName}
+import drt.shared.{Arrival, Terminals}
+import drt.shared.FlightsApi.Flights
+import drt.shared.Terminals.Terminal
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.{RemoteResourceInfo, SFTPClient}
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
@@ -20,7 +21,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.util.{Failure, Success, Try}
 
-case class AclFeed(ftpServer: String, username: String, path: String, portCode: String, terminalMapping: TerminalName => TerminalName) {
+case class AclFeed(ftpServer: String, username: String, path: String, portCode: String, terminalMapping: Terminal => Terminal) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def ssh: SSHClient = sshClient(ftpServer, username, path)
@@ -90,7 +91,7 @@ object AclFeed {
     latestFileOver100KB.getPath
   }
 
-  def arrivalsFromCsvContent(csvContent: String, terminalMapping: TerminalName => TerminalName): List[Arrival] = {
+  def arrivalsFromCsvContent(csvContent: String, terminalMapping: Terminal => Terminal): List[Arrival] = {
     val flightEntries = csvContent
       .split("\n")
       .drop(1)
@@ -180,11 +181,15 @@ object AclFeed {
     case (hour, minute) => s"$hour:$minute:00Z"
   }
 
-  def aclFieldsToArrival(fields: List[String], terminalMapping: TerminalName => TerminalName): Try[Arrival] = {
+  def aclFieldsToArrival(fields: List[String], aclToPortTerminal: Terminal => Terminal): Try[Arrival] = {
     Try {
       val operator = fields(AclColIndex.Operator)
       val maxPax = fields(AclColIndex.MaxPax).toInt
       val actPax = (fields(AclColIndex.MaxPax).toInt * fields(AclColIndex.LoadFactor).toDouble).round.toInt
+      val aclTerminal = Terminals.Terminal(s"T${fields(AclColIndex.Terminal).take(1)}")
+      println(s"aclTerminal: $aclTerminal")
+      val portTerminal = aclToPortTerminal(aclTerminal)
+      println(s"portTerminal: $portTerminal")
       Arrival(
         Operator = if (operator!= "") Option(operator) else None,
         Status = "ACL Forecast",
@@ -200,7 +205,7 @@ object AclFeed {
         RunwayID = None,
         BaggageReclaimId = None,
         AirportID = fields(AclColIndex.Airport),
-        Terminal = terminalMapping(fields(AclColIndex.Terminal)),
+        Terminal = portTerminal,
         rawICAO = fields(AclColIndex.FlightNumber),
         rawIATA = fields(AclColIndex.FlightNumber),
         Origin = fields(AclColIndex.Origin),

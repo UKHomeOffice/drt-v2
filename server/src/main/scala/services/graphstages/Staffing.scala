@@ -3,7 +3,8 @@ package services.graphstages
 import java.util.UUID
 
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared.Queues.Queue
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
@@ -53,7 +54,7 @@ object Staffing {
     val staff = maybeSources
     SortedMap[TM, StaffMinute]() ++ crunchMinutes
       .values
-      .groupBy(_.terminalName)
+      .groupBy(_.terminal)
       .flatMap {
         case (tn, tcms) =>
           val minutes = tcms.map(_.minute)
@@ -65,7 +66,7 @@ object Staffing {
   }
 
   def staffMinutesForPeriod(staff: StaffSources,
-                            tn: TerminalName,
+                            tn: Terminal,
                             minuteMillis: NumericRange[MillisSinceEpoch]): SortedMap[TM, StaffMinute] = {
     import SDate.implicits.sdateFromMilliDateLocal
 
@@ -83,44 +84,44 @@ object Staffing {
 object StaffDeploymentCalculator {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  type Deployer = (Seq[(String, Int)], Int, Map[String, (Int, Int)]) => Seq[(String, Int)]
+  type Deployer = (Seq[(Queue, Int)], Int, Map[Queue, (Int, Int)]) => Seq[(Queue, Int)]
 
   def addDeployments(crunchMinutes: Map[TQM, CrunchMinute],
                      deployer: Deployer,
                      optionalStaffSources: Option[StaffSources],
-                     minMaxDesks: Map[TerminalName, Map[QueueName, (List[Int], List[Int])]]): Map[TQM, CrunchMinute] = crunchMinutes
+                     minMaxDesks: Map[Terminal, Map[Queue, (List[Int], List[Int])]]): Map[TQM, CrunchMinute] = crunchMinutes
     .values
-    .groupBy(_.terminalName)
+    .groupBy(_.terminal)
     .flatMap {
       case (tn, tCrunchMinutes) =>
         val terminalByMinute: Map[TQM, CrunchMinute] = tCrunchMinutes
           .groupBy(_.minute)
           .flatMap {
             case (minute, mCrunchMinutes) =>
-              val deskRecAndQueueNames: Seq[(QueueName, Int)] = mCrunchMinutes.map(cm => (cm.queueName, cm.deskRec)).toSeq.sortBy(_._1)
-              val queueMinMaxDesks: Map[QueueName, (List[Int], List[Int])] = minMaxDesks.getOrElse(tn, Map())
-              val minMaxByQueue: Map[QueueName, (Int, Int)] = queueMinMaxDesks.map {
+              val deskRecAndQueueNames: Seq[(Queue, Int)] = mCrunchMinutes.map(cm => (cm.queue, cm.deskRec)).toSeq.sortBy(_._1)
+              val queueMinMaxDesks: Map[Queue, (List[Int], List[Int])] = minMaxDesks.getOrElse(tn, Map())
+              val minMaxByQueue: Map[Queue, (Int, Int)] = queueMinMaxDesks.map {
                 case (qn, minMaxList) =>
                   val minDesks = desksForHourOfDayInUKLocalTime(minute, minMaxList._1)
                   val maxDesks = desksForHourOfDayInUKLocalTime(minute, minMaxList._2)
                   (qn, (minDesks, maxDesks))
               }
               val available = optionalStaffSources.map(_.available(minute, tn)).getOrElse(0)
-              val deploymentsAndQueueNames: Map[String, Int] = deployer(deskRecAndQueueNames, available, minMaxByQueue).toMap
-              mCrunchMinutes.map(cm => (cm.key, cm.copy(deployedDesks = Option(deploymentsAndQueueNames(cm.queueName))))).toMap
+              val deploymentsAndQueueNames: Map[Queue, Int] = deployer(deskRecAndQueueNames, available, minMaxByQueue).toMap
+              mCrunchMinutes.map(cm => (cm.key, cm.copy(deployedDesks = Option(deploymentsAndQueueNames(cm.queue))))).toMap
           }
         terminalByMinute
     }
 
   def queueRecsToDeployments(round: Double => Int)
-                            (queueRecs: Seq[(String, Int)],
+                            (queueRecs: Seq[(Queue, Int)],
                              staffAvailable: Int,
-                             minMaxDesks: Map[String, (Int, Int)]): Seq[(String, Int)] = {
+                             minMaxDesks: Map[Queue, (Int, Int)]): Seq[(Queue, Int)] = {
     val queueRecsCorrected = if (queueRecs.map(_._2).sum == 0) queueRecs.map(qr => (qr._1, 1)) else queueRecs
 
     val totalStaffRec = queueRecsCorrected.map(_._2).sum
 
-    queueRecsCorrected.foldLeft(List[(String, Int)]()) {
+    queueRecsCorrected.foldLeft(List[(Queue, Int)]()) {
       case (agg, (queue, deskRec)) if agg.length < queueRecsCorrected.length - 1 =>
         val ideal = round(staffAvailable * (deskRec.toDouble / totalStaffRec))
         val totalRecommended = agg.map(_._2).sum
@@ -146,7 +147,7 @@ object StaffDeploymentCalculator {
 
 object StaffAssignmentHelper {
   def tryStaffAssignment(name: String,
-                         terminalName: TerminalName,
+                         terminalName: Terminal,
                          startDate: String,
                          startTime: String,
                          endTime: String,
@@ -198,16 +199,16 @@ object StaffAssignmentHelper {
 case class StaffSources(shifts: ShiftAssignmentsLike,
                         fixedPoints: FixedPointAssignmentsLike,
                         movements: StaffAssignmentService,
-                        available: (MillisSinceEpoch, TerminalName) => Int)
+                        available: (MillisSinceEpoch, Terminal) => Int)
 
 trait StaffAssignmentService {
-  def terminalStaffAt(terminalName: TerminalName, dateMillis: MillisSinceEpoch): Int
+  def terminalStaffAt(terminalName: Terminal, dateMillis: MillisSinceEpoch): Int
 }
 
 case class StaffMovementsService(movements: Seq[StaffMovement])
   extends StaffAssignmentService {
-  def terminalStaffAt(terminalName: TerminalName, dateMillis: MillisSinceEpoch): Int = {
-    StaffMovementsHelper.adjustmentsAt(movements.filter(_.terminalName == terminalName))(dateMillis)
+  def terminalStaffAt(terminalName: Terminal, dateMillis: MillisSinceEpoch): Int = {
+    StaffMovementsHelper.adjustmentsAt(movements.filter(_.terminal == terminalName))(dateMillis)
   }
 }
 
@@ -215,8 +216,8 @@ object StaffMovementsHelper {
   def assignmentsToMovements(staffAssignments: Seq[StaffAssignment]): Seq[StaffMovement] = {
     staffAssignments.flatMap(assignment => {
       val uuid: UUID = UUID.randomUUID()
-      StaffMovement(assignment.terminalName, assignment.name + " start", time = assignment.startDt, assignment.numberOfStaff, uuid, createdBy = None) ::
-        StaffMovement(assignment.terminalName, assignment.name + " end", time = assignment.endDt, -assignment.numberOfStaff, uuid, createdBy = None) :: Nil
+      StaffMovement(assignment.terminal, assignment.name + " start", time = assignment.startDt, assignment.numberOfStaff, uuid, createdBy = None) ::
+        StaffMovement(assignment.terminal, assignment.name + " end", time = assignment.endDt, -assignment.numberOfStaff, uuid, createdBy = None) :: Nil
     }).sortBy(_.time.millisSinceEpoch)
   }
 
@@ -225,13 +226,13 @@ object StaffMovementsHelper {
 
   def terminalStaffAt(shifts: ShiftAssignments, fixedPoints: FixedPointAssignments)
                      (movements: Seq[StaffMovement])
-                     (dateTimeMillis: MillisSinceEpoch, terminalName: TerminalName): Int = {
+                     (dateTimeMillis: MillisSinceEpoch, terminalName: Terminal): Int = {
     val baseStaff = shifts.terminalStaffAt(terminalName, SDate(dateTimeMillis))
 
     import SDate.implicits.sdateFromMilliDateLocal
     val fixedPointStaff = fixedPoints.terminalStaffAt(terminalName, SDate(dateTimeMillis, Crunch.europeLondonTimeZone))
 
-    val movementAdjustments = adjustmentsAt(movements.filter(_.terminalName == terminalName))(dateTimeMillis)
+    val movementAdjustments = adjustmentsAt(movements.filter(_.terminal == terminalName))(dateTimeMillis)
     val staffAvailable = baseStaff - fixedPointStaff + movementAdjustments match {
       case sa if sa >= 0 => sa
       case _ => 0

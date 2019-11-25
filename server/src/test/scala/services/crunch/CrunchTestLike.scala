@@ -10,10 +10,11 @@ import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, OverflowStrategy, QueueOfferResult, UniqueKillSwitch}
 import akka.testkit.{TestKit, TestProbe}
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.{QueueName, TerminalName}
 import drt.shared.PaxTypes.{B5JPlusNational, B5JPlusNationalBelowEGateAge, EeaBelowEGateAge, EeaMachineReadable, EeaNonMachineReadable, NonVisaNational, Transit, VisaNational}
 import drt.shared.PaxTypesAndQueues._
+import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
+import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared._
 import graphs.SinkToSourceBridge
 import manifests.passengers.BestAvailableManifest
@@ -90,30 +91,30 @@ class CrunchTestLike
 
   val airportConfig = AirportConfig(
     portCode = "STN",
-    queues = Map("T1" -> Seq(Queues.EeaDesk, Queues.NonEeaDesk), "T2" -> Seq(Queues.EeaDesk, Queues.NonEeaDesk)),
+    queues = Map(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk), T2 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk)),
     slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 20, Queues.NonEeaDesk -> 45),
-    terminalNames = Seq("T1", "T2"),
+    terminals = Seq(T1, T2),
     defaultWalkTimeMillis = Map(),
-    terminalPaxSplits = List("T1", "T2").map(t => (t, SplitRatios(
+    terminalPaxSplits = List(T1, T2).map(t => (t, SplitRatios(
       SplitSources.TerminalAverage,
       SplitRatio(eeaMachineReadableToDesk, 1)
     ))).toMap,
     terminalProcessingTimes = Map(
-      "T1" -> Map(
+      T1 -> Map(
         eeaMachineReadableToDesk -> 25d / 60,
         eeaNonMachineReadableToDesk -> 25d / 60
       ),
-      "T2" -> Map(
+      T2 -> Map(
         eeaMachineReadableToDesk -> 25d / 60,
         eeaNonMachineReadableToDesk -> 25d / 60
       )
     ),
     minMaxDesksByTerminalQueue = Map(
-      "T1" -> Map(
+      T1 -> Map(
         Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
         Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
         Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(20)))),
-      "T2" -> Map(
+      T2 -> Map(
         Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
         Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
         Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))))),
@@ -121,7 +122,7 @@ class CrunchTestLike
     firstPaxOffMillis = 180000L,
     role = STNAccess,
     terminalPaxTypeQueueAllocation = Map(
-      "T1" -> Map(
+      T1 -> Map(
         EeaMachineReadable -> List(Queues.EGate -> 0.8, Queues.EeaDesk -> 0.2),
         EeaBelowEGateAge -> List(Queues.EeaDesk -> 1.0),
         EeaNonMachineReadable -> List(Queues.EeaDesk -> 1.0),
@@ -130,7 +131,7 @@ class CrunchTestLike
         B5JPlusNational -> List(Queues.EGate -> 0.6, Queues.EeaDesk -> 0.4),
         B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
       ),
-      "T2" -> Map(
+      T2 -> Map(
         EeaMachineReadable -> List(Queues.EeaDesk -> 1),
         EeaBelowEGateAge -> List(Queues.EeaDesk -> 1.0),
         EeaNonMachineReadable -> List(Queues.EeaDesk -> 1.0),
@@ -273,14 +274,14 @@ class CrunchTestLike
     )
   }
 
-  def paxLoadsFromPortState(portState: PortState, minsToTake: Int, startFromMinuteIdx: Int = 0): Map[TerminalName, Map[QueueName, List[Double]]] = portState
+  def paxLoadsFromPortState(portState: PortState, minsToTake: Int, startFromMinuteIdx: Int = 0): Map[Terminal, Map[Queue, List[Double]]] = portState
     .crunchMinutes
     .values
-    .groupBy(_.terminalName)
+    .groupBy(_.terminal)
     .map {
       case (tn, tms) =>
         val terminalLoads = tms
-          .groupBy(_.queueName)
+          .groupBy(_.queue)
           .map {
             case (qn, qms) =>
               val paxLoad = qms
@@ -293,17 +294,17 @@ class CrunchTestLike
         (tn, terminalLoads)
     }
 
-  def paxLoadsFromPortState(portState: PortState, minsToTake: Int, startFromMinute: SDateLike): Map[TerminalName, Map[QueueName, List[Double]]] = {
+  def paxLoadsFromPortState(portState: PortState, minsToTake: Int, startFromMinute: SDateLike): Map[Terminal, Map[Queue, List[Double]]] = {
     val startFromMillis = startFromMinute.millisSinceEpoch
 
     portState
       .crunchMinutes
       .values
-      .groupBy(_.terminalName)
+      .groupBy(_.terminal)
       .map {
         case (tn, tms) =>
           val terminalLoads = tms
-            .groupBy(_.queueName)
+            .groupBy(_.queue)
             .map {
               case (qn, qms) =>
                 val startIdx = qms
@@ -321,14 +322,14 @@ class CrunchTestLike
       }
   }
 
-  def allWorkLoadsFromPortState(portState: PortState): Map[TerminalName, Map[QueueName, List[Double]]] = portState
+  def allWorkLoadsFromPortState(portState: PortState): Map[Terminal, Map[Queue, List[Double]]] = portState
     .crunchMinutes
     .values
-    .groupBy(_.terminalName)
+    .groupBy(_.terminal)
     .map {
       case (tn, tms) =>
         val terminalLoads = tms
-          .groupBy(_.queueName)
+          .groupBy(_.queue)
           .map {
             case (qn, qms) =>
               val sortedCms = qms.toList.sortBy(_.minute)
@@ -338,14 +339,14 @@ class CrunchTestLike
         (tn, terminalLoads)
     }
 
-  def workLoadsFromPortState(portState: PortState, minsToTake: Int): Map[TerminalName, Map[QueueName, List[Double]]] = portState
+  def workLoadsFromPortState(portState: PortState, minsToTake: Int): Map[Terminal, Map[Queue, List[Double]]] = portState
     .crunchMinutes
     .values
-    .groupBy(_.terminalName)
+    .groupBy(_.terminal)
     .map {
       case (tn, tms) =>
         val terminalLoads = tms
-          .groupBy(_.queueName)
+          .groupBy(_.queue)
           .map {
             case (qn, qms) =>
               val sortedCms = qms.toList.sortBy(_.minute)
@@ -355,14 +356,14 @@ class CrunchTestLike
         (tn, terminalLoads)
     }
 
-  def deskRecsFromPortState(portState: PortState, minsToTake: Int): Map[TerminalName, Map[QueueName, List[Int]]] = portState
+  def deskRecsFromPortState(portState: PortState, minsToTake: Int): Map[Terminal, Map[Queue, List[Int]]] = portState
     .crunchMinutes
     .values
-    .groupBy(_.terminalName)
+    .groupBy(_.terminal)
     .map {
       case (tn, tms) =>
         val terminalLoads = tms
-          .groupBy(_.queueName)
+          .groupBy(_.queue)
           .map {
             case (qn, qms) =>
               val sortedCms = qms.toList.sortBy(_.minute)

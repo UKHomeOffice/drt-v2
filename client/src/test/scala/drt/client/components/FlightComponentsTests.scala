@@ -2,7 +2,8 @@ package drt.client.components
 
 import drt.client.components.FlightComponents.bestPaxToDisplay
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.{Arrival, ApiFeedSource}
+import drt.shared.Terminals.Terminal
+import drt.shared.{ApiFeedSource, Arrival}
 import utest._
 
 
@@ -58,7 +59,7 @@ object ArrivalGenerator {
                  actPax: Option[Int] = None,
                  maxPax: Option[Int] = None,
                  lastKnownPax: Option[Int] = None,
-                 terminal: String = "T1",
+                 terminal: Terminal = Terminal("T1"),
                  origin: String = "",
                  operator: Option[String] = None,
                  status: String = "",

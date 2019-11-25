@@ -8,6 +8,7 @@ import drt.client.services.ViewMode
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
+import drt.shared.Terminals.Terminal
 import drt.shared._
 
 import scala.concurrent.duration.FiniteDuration
@@ -48,7 +49,7 @@ object Actions {
 
   case class UpdatePortStateFromUpdates(viewMode: ViewMode, portStateUpdates: PortStateUpdates) extends Action
 
-  case class GetForecastWeek(startDay: SDateLike, terminalName: TerminalName) extends Action
+  case class GetForecastWeek(startDay: SDateLike, terminal: Terminal) extends Action
 
   case class SetForecastPeriod(forecastPeriodOption: Option[ForecastPeriodWithHeadlines]) extends Action
 
@@ -66,7 +67,7 @@ object Actions {
 
   case class SetFixedPoints(viewMode: ViewMode, fixedPoints: FixedPointAssignments, terminalName: Option[String]) extends Action
 
-  case class SaveFixedPoints(fixedPoints: FixedPointAssignments, terminalName: TerminalName) extends Action
+  case class SaveFixedPoints(fixedPoints: FixedPointAssignments, terminal: Terminal) extends Action
 
   case class GetFixedPoints(viewMode: ViewMode) extends Action
 
@@ -76,7 +77,7 @@ object Actions {
 
   case class SetShiftsForMonth(shiftsForMonth: MonthOfShifts) extends Action
 
-  case class GetShiftsForMonth(month: SDateLike, terminalName: TerminalName) extends Action
+  case class GetShiftsForMonth(month: SDateLike, terminal: Terminal) extends Action
 
   case class SaveMonthTimeSlotsToShifts(staffTimeSlots: StaffTimeSlotsForTerminalMonth) extends Action
 

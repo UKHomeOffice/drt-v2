@@ -1,5 +1,6 @@
 package actors
 
+import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.{Arrival, FeedSource}
 import org.specs2.mutable.Specification
 import server.protobuf.messages.FlightsMessage.FlightMessage
@@ -18,7 +19,7 @@ class FlightMessageConversionSpec extends Specification {
     val runwayId = "R1"
     val baggageReclaimId = "B1"
     val airportId = "LHR"
-    val terminalId = "T1"
+    val terminal = T1
     val icao = "BAA1111"
     val iata = "BA1111"
     val origin = "JFK"
@@ -44,7 +45,7 @@ class FlightMessageConversionSpec extends Specification {
       runwayID = Option(runwayId),
       baggageReclaimId = Option(baggageReclaimId),
       airportID = Option(airportId),
-      terminal = Option(terminalId),
+      terminal = Option(terminal.toString),
       iCAO = Option(icao),
       iATA = Option(iata),
       origin = Option(origin),
@@ -75,7 +76,7 @@ class FlightMessageConversionSpec extends Specification {
       RunwayID = Option(runwayId),
       BaggageReclaimId = Option(baggageReclaimId),
       AirportID = airportId,
-      Terminal = terminalId,
+      Terminal = terminal,
       rawICAO = icao,
       rawIATA = iata,
       Origin = origin,
