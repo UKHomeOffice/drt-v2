@@ -9,7 +9,7 @@ import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared.Terminals.Terminal
 import ujson.Js.Value
 import upickle.Js
-import upickle.default.{macroRW, readwriter, ReadWriter}
+import upickle.default.{ReadWriter, macroRW, readwriter}
 
 import scala.collection.immutable.{NumericRange, Map => IMap, SortedMap => ISortedMap}
 import scala.concurrent.Future
@@ -165,9 +165,9 @@ case class TQM(terminal: Terminal, queue: Queue, minute: MillisSinceEpoch)
     case _ => false
   }
 
-  lazy val comparisonString = s"$minute-$queue-$terminal"
+  lazy val comparisonVal: MillisSinceEpoch = minute + 1024L * queue.orderingVal + terminal.orderingVal
 
-  override def compare(that: TQM): Int = this.comparisonString.compareTo(that.comparisonString)
+  override def compare(that: TQM): Int = this.comparisonVal.compareTo(that.comparisonVal)
 
   override def timeValue: MillisSinceEpoch = minute
 }
@@ -191,9 +191,9 @@ case class TM(terminal: Terminal, minute: MillisSinceEpoch)
     case _ => false
   }
 
-  lazy val comparisonString = s"$minute-$terminal"
+  lazy val comparisonVal: MillisSinceEpoch = minute + terminal.orderingVal
 
-  override def compare(that: TM): Int = this.comparisonString.compareTo(that.comparisonString)
+  override def compare(that: TM): Int = this.comparisonVal.compareTo(that.comparisonVal)
 
   override def timeValue: MillisSinceEpoch = minute
 }

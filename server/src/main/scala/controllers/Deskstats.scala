@@ -25,10 +25,6 @@ import scala.util.{Failure, Success, Try}
 object Deskstats {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  type PortDeskStats = Map[Terminal, Map[Queue, Map[Long, DeskStat]]]
-  type QueueDeskStats = Map[Long, DeskStat]
-  type TerminalDeskStats = Map[String, QueueDeskStats]
-
   class NaiveTrustManager extends X509TrustManager {
     override def checkClientTrusted(cert: Array[X509Certificate], authType: String) {}
 

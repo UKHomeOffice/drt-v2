@@ -13,6 +13,7 @@ object Terminals {
 
   sealed trait Terminal {
     override val toString: String = getClass.toString.split("\\$").last
+    val orderingVal: Int
   }
 
   object Terminal {
@@ -38,33 +39,60 @@ object Terminals {
 
   case object InvalidTerminal extends Terminal {
     override val toString: String = ""
+    override val orderingVal: Int = 0
   }
 
-  case object T1 extends Terminal
+  case object T1 extends Terminal {
+    override val orderingVal: Int = 1
+  }
 
-  case object T2 extends Terminal
+  case object T2 extends Terminal {
+    override val orderingVal: Int = 2
+  }
 
-  case object T3 extends Terminal
+  case object T3 extends Terminal {
+    override val orderingVal: Int = 3
+  }
 
-  case object T4 extends Terminal
+  case object T4 extends Terminal {
+    override val orderingVal: Int = 4
+  }
 
-  case object T5 extends Terminal
+  case object T5 extends Terminal {
+    override val orderingVal: Int = 5
+  }
 
-  case object A1 extends Terminal
+  case object A1 extends Terminal {
+    override val orderingVal: Int = 6
+  }
 
-  case object A2 extends Terminal
+  case object A2 extends Terminal {
+    override val orderingVal: Int = 7
+  }
 
-  case object ACL1I extends Terminal
+  case object ACL1I extends Terminal {
+    override val orderingVal: Int = 8
+  }
 
-  case object ACL2I extends Terminal
+  case object ACL2I extends Terminal {
+    override val orderingVal: Int = 9
+  }
 
-  case object ACL1D extends Terminal
+  case object ACL1D extends Terminal {
+    override val orderingVal: Int = 10
+  }
 
-  case object ACLTER extends Terminal
+  case object ACLTER extends Terminal {
+    override val orderingVal: Int = 11
+  }
 
-  case object N extends Terminal
+  case object N extends Terminal {
+    override val orderingVal: Int = 12
+  }
 
-  case object S extends Terminal
+  case object S extends Terminal {
+    override val orderingVal: Int = 13
+  }
 
 }
 
@@ -73,7 +101,9 @@ object Queues {
   sealed trait Queue extends Ordered[Queue] {
     override val toString: String = getClass.toString.split("\\$").last
 
-    override def compare(that: Queue): Int = this.toString.compareTo(that.toString)
+    override def compare(that: Queue): Int = this.orderingVal.compareTo(that.orderingVal)
+
+    val orderingVal: Int
   }
 
   object Queue {
@@ -92,19 +122,32 @@ object Queues {
 
   case object InvalidQueue extends Queue {
     override val toString: String = ""
+    override val orderingVal: Int = 0
   }
 
-  case object EeaDesk extends Queue
+  case object EeaDesk extends Queue {
+    override val orderingVal: Int = 1
+  }
 
-  case object EGate extends Queue
+  case object EGate extends Queue {
+    override val orderingVal: Int = 2
+  }
 
-  case object NonEeaDesk extends Queue
+  case object NonEeaDesk extends Queue {
+    override val orderingVal: Int = 3
+  }
 
-  case object FastTrack extends Queue
+  case object FastTrack extends Queue {
+    override val orderingVal: Int = 4
+  }
 
-  case object Transfer extends Queue
+  case object Transfer extends Queue {
+    override val orderingVal: Int = 5
+  }
 
-  case object QueueDesk extends Queue
+  case object QueueDesk extends Queue {
+    override val orderingVal: Int = 6
+  }
 
   val queueOrder = List(QueueDesk, EGate, EeaDesk, NonEeaDesk, FastTrack)
 
