@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
 import drt.client.components.FlightComponents.paxComp
@@ -24,7 +25,8 @@ object TerminalDashboardComponent {
                     terminalPageTabLoc: TerminalPageTabLoc,
                     airportConfig: AirportConfig,
                     router: RouterCtl[Loc],
-                    portState: PortState
+                    portState: PortState,
+                    featureFlags: Pot[Map[String, Boolean]]
                   )
 
   val slotSize = 15
@@ -62,15 +64,21 @@ object TerminalDashboardComponent {
             ^.onClick --> p.router.set(closeArrivalsPopupLink)),
 
             <.div(^.className := "dashboard-arrivals-popup",
+
               FlightsWithSplitsTable.ArrivalsTable(
                 None,
                 originMapper,
                 splitsGraphComponentColoured)(paxComp)(
                 FlightsWithSplitsTable.Props(
-                  ps.flights.filter { case (ua, _) => ua.terminal == terminal }.values.toList,
-                  p.airportConfig.queueTypeSplitOrder(terminal), p.airportConfig.hasEstChox)
-              ), p.router.link(closeArrivalsPopupLink)(^.className := "close-arrivals-popup btn btn-default", "close")
-          ))
+                  ps.flights.filter { case (ua, _) => ua.terminal == p.terminalPageTabLoc.terminal }.values.toList,
+                  p.airportConfig.queueTypeSplitOrder(p.terminalPageTabLoc.terminal),
+                  p.airportConfig.hasEstChox
+                )
+              )
+            ),
+            p.router.link(closeArrivalsPopupLink)(^.className := "close-arrivals-popup btn btn-default", "close")
+          )
+
         } else <.div()
         ,
         <.div(^.className := "terminal-dashboard-queues",
@@ -135,8 +143,9 @@ object TerminalDashboardComponent {
              airportConfig: AirportConfig,
              portState: PortState,
              router: RouterCtl[Loc],
-             minuteTicker: Int
-           ): VdomElement = component(Props(terminalPageTabLoc, airportConfig, router, portState))
+             minuteTicker: Int,
+             featureFlags: Pot[Map[String, Boolean]]
+           ): VdomElement = component(Props(terminalPageTabLoc, airportConfig, router, portState, featureFlags))
 
   def timeSlotForTime(slotSize: Int)(sd: SDateLike): SDateLike = {
     val offset: Int = sd.getMinutes() % slotSize

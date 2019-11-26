@@ -37,7 +37,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     )))
     val inputManifestsDc = ManifestsFeedSuccess(DqManifests("", Set(
       VoyageManifest(DqEventCodes.DepartureConfirmed, "STN", "JFK", "0001", "TS", "2017-01-01", "00:00", List(
-        PassengerInfoGenerator.passengerInfoJson("USA", "P", "USA")
+        PassengerInfoGenerator.passengerInfoJson("ZAF", "P", "ZAF")
       ))
     )))
     val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(
@@ -78,9 +78,9 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
     val portCode = "LHR"
 
-    val flight = ArrivalGenerator.arrival(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "TST001", terminal = T1, actPax = Option(10))
+    val flight = ArrivalGenerator.arrival(origin = "JFK", schDt = scheduled, iata = "TST001", terminal = T1, actPax = Option(10))
     val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
-      VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", List(euPassport))
+      VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", manifestPax(10, euPassport))
     )))
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
@@ -107,6 +107,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           .filter(cm => cm.minute == SDate(scheduled).millisSinceEpoch)
           .map(cm => (cm.queue, cm.paxLoad))
           .toMap
+        println(s"QueuePax: $queuePax, Expected: $expected")
         queuePax == expected
     }
 
@@ -121,14 +122,11 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val scheduled = "2017-01-01T00:00Z"
     val portCode = "LHR"
-
-    val flight = ArrivalGenerator.arrival(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "TST001", terminal = T1, actPax = Option(10), tranPax = Option(5))
+    val flight = ArrivalGenerator.arrival(origin = "JFK", schDt = scheduled, iata = "TST001", terminal = T1, actPax = Option(10), tranPax = Option(5))
     val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
-      VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00", List(
-        euPassport,
-        inTransitFlag,
-        inTransitCountry
-      ))
+      VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "BA", "2017-01-01", "00:00",
+        manifestPax(5, euPassport) ++ manifestPax(2, inTransitFlag) ++ manifestPax(3, inTransitCountry)
+      )
     )))
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
@@ -156,6 +154,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           .map(cm => (cm.queue, cm.paxLoad))
           .toMap
 
+        println(s"QueuePax $queuePax, expected $expected")
         queuePax == expected
     }
 
@@ -232,7 +231,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
     val portCode = "LHR"
 
-    val flight = ArrivalGenerator.arrival(flightId = Option(1), origin = "JFK", schDt = scheduled, iata = "TST001", terminal = T1, actPax = Option(10), tranPax = Option(6))
+    val flight = ArrivalGenerator.arrival(origin = "JFK", schDt = scheduled, iata = "TST001", terminal = T1, actPax = Option(10), tranPax = Option(6))
     val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
       VoyageManifest(DqEventCodes.CheckIn, portCode, "JFK", "0001", "TS", "2017-01-01", "00:00", List(
         inTransitFlag,
@@ -271,6 +270,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           .map(cm => (cm.queue, cm.paxLoad))
           .toMap
 
+        println(s"QueuePax $queuePax, expected $expected")
         queuePax == expected
     }
 

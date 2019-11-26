@@ -43,24 +43,20 @@ case object DefaultWithTransitPaxTypeAllocator extends PaxTypeAllocator {
   def apply(bestAvailableManifest: BestAvailableManifest)(manifestPassengerProfile: ManifestPassengerProfile): PaxType = withTransit(manifestPassengerProfile)
 }
 
-case class B5JPlusTypeAllocator(b5JStartDate: SDateLike) extends PaxTypeAllocator {
+case class B5JPlusTypeAllocator() extends PaxTypeAllocator {
 
   val withB5JPlus: PartialFunction[ManifestPassengerProfile, PaxType] = b5JPlus orElse countryAndDocumentTypes
 
   def apply(bestAvailableManifest: BestAvailableManifest)(manifestPassengerProfile: ManifestPassengerProfile): PaxType =
-    if (bestAvailableManifest.scheduled.millisSinceEpoch > b5JStartDate.millisSinceEpoch)
       withB5JPlus(manifestPassengerProfile)
-    else
-      noTransit(manifestPassengerProfile)
+
 }
 
-case class B5JPlusWithTransitTypeAllocator(b5JStartDate: SDateLike) extends PaxTypeAllocator {
+case class B5JPlusWithTransitTypeAllocator() extends PaxTypeAllocator {
 
   val withTransitAndB5JPlus: PartialFunction[ManifestPassengerProfile, PaxType] = transit orElse b5JPlus orElse countryAndDocumentTypes
 
   def apply(bestAvailableManifest: BestAvailableManifest)(manifestPassengerProfile: ManifestPassengerProfile): PaxType =
-    if (bestAvailableManifest.scheduled.millisSinceEpoch > b5JStartDate.millisSinceEpoch)
-      withTransitAndB5JPlus(manifestPassengerProfile)
-    else
-      withTransit(manifestPassengerProfile)
+    withTransitAndB5JPlus(manifestPassengerProfile)
+
 }

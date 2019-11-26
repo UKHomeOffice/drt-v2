@@ -8,6 +8,7 @@ import services.SDate
 import services.graphstages.WorkloadCalculator
 
 class WorkloadSpec extends Specification {
+
   "Given an arrival with 1 pax and 1 split containing 1 pax with no nationality data " +
     "When I ask for the workload for this arrival " +
     "Then I see the 1x the proc time provided" >> {

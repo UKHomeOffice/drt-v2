@@ -104,7 +104,7 @@ class AclFeedSpec extends CrunchTestLike {
       "When I ask for a crunch " +
       "Then I should see that flight in the PortState" >> {
       val scheduled = "2017-01-01T00:00Z"
-      val arrival = ArrivalGenerator.arrival(actPax = Option(10), schDt = scheduled, iata = "BA0001")
+      val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(10))
       val aclFlight = Flights(List(arrival))
 
       val fiveMinutes = 600d / 60
@@ -132,9 +132,9 @@ class AclFeedSpec extends CrunchTestLike {
       "When I ask for a crunch " +
       "Then I should see the one flight in the PortState with the ACL flightcode and live chox" >> {
       val scheduled = "2017-01-01T00:00Z"
-      val aclFlight = ArrivalGenerator.arrival(actPax = Option(10), schDt = scheduled, iata = "BA0001")
+      val aclFlight = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(10))
       val aclFlights = Flights(List(aclFlight))
-      val liveFlight = ArrivalGenerator.arrival(actPax = Option(20), schDt = scheduled, iata = "BAW001", actChoxDt = "2017-01-01T00:30Z")
+      val liveFlight = ArrivalGenerator.arrival(iata = "BAW001", schDt = scheduled, actPax = Option(20), actChoxDt = "2017-01-01T00:30Z")
       val liveFlights = Flights(List(liveFlight))
 
       val fiveMinutes = 600d / 60
@@ -165,13 +165,13 @@ class AclFeedSpec extends CrunchTestLike {
       val scheduledLive = "2017-01-01T00:00Z"
 
       val initialAcl = Set(
-        ArrivalGenerator.arrival(actPax = Option(150), schDt = "2017-01-01T00:05Z", iata = "BA0001", status = "forecast"),
-        ArrivalGenerator.arrival(actPax = Option(151), schDt = "2017-01-01T00:15Z", iata = "BA0002", status = "forecast"))
+        ArrivalGenerator.arrival(iata = "BA0001", schDt = "2017-01-01T00:05Z", actPax = Option(150), status = "forecast"),
+        ArrivalGenerator.arrival(iata = "BA0002", schDt = "2017-01-01T00:15Z", actPax = Option(151), status = "forecast"))
       val initialLive = Set(
-        ArrivalGenerator.arrival(actPax = Option(99), schDt = "2017-01-01T00:25Z", iata = "BA0003", status = "scheduled"))
+        ArrivalGenerator.arrival(iata = "BA0003", schDt = "2017-01-01T00:25Z", actPax = Option(99), status = "scheduled"))
 
       val newAcl = Set(
-        ArrivalGenerator.arrival(actPax = Option(105), schDt = "2017-01-01T00:10Z", iata = "BA0011", status = "forecast"))
+        ArrivalGenerator.arrival(iata = "BA0011", schDt = "2017-01-01T00:10Z", actPax = Option(105), status = "forecast"))
 
       val crunch = runCrunchGraph(now = () => SDate(scheduledLive))
 
@@ -197,13 +197,13 @@ class AclFeedSpec extends CrunchTestLike {
       "Then I should only see the initial arrivals updated with the live arrival" >> {
       val scheduledLive = "2017-01-01T00:00Z"
 
-      val initialAcl1 = ArrivalGenerator.arrival(actPax = Option(150), schDt = "2017-01-01T00:05Z", iata = "BA0001", status = "forecast")
-      val initialAcl2 = ArrivalGenerator.arrival(actPax = Option(151), schDt = "2017-01-01T00:15Z", iata = "BA0002", status = "forecast")
+      val initialAcl1 = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2017-01-01T00:05Z", actPax = Option(150), status = "forecast")
+      val initialAcl2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = "2017-01-01T00:15Z", actPax = Option(151), status = "forecast")
       val initialAcl = Set(initialAcl1, initialAcl2)
-      val initialLive = mutable.SortedMap[UniqueArrival, Arrival]() ++ List(ArrivalGenerator.arrival(actPax = Option(99), schDt = "2017-01-01T00:05Z", iata = "BA0001", status = "scheduled")).map(a => (a.unique, a))
+      val initialLive = mutable.SortedMap[UniqueArrival, Arrival]() ++ List(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2017-01-01T00:05Z", actPax = Option(99), status = "scheduled")).map(a => (a.unique, a))
 
       val newLive = Set(
-        ArrivalGenerator.arrival(actPax = Option(105), schDt = "2017-01-01T00:05Z", estDt = "2017-01-01T00:06Z", iata = "BAW0001", status = "estimated"))
+        ArrivalGenerator.arrival(iata = "BAW0001", schDt = "2017-01-01T00:05Z", actPax = Option(105), status = "estimated", estDt = "2017-01-01T00:06Z"))
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduledLive),
@@ -231,13 +231,13 @@ class AclFeedSpec extends CrunchTestLike {
       "Then I should only see the new ACL & live arrivals plus the initial live arrival" >> {
       val scheduledLive = "2017-01-01T00:00Z"
 
-      val initialAcl1 = ArrivalGenerator.arrival(actPax = Option(150), schDt = "2017-01-01T00:05Z", iata = "BA0001", status = "forecast")
-      val initialAcl2 = ArrivalGenerator.arrival(actPax = Option(151), schDt = "2017-01-01T00:15Z", iata = "BA0002", status = "forecast")
+      val initialAcl1 = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2017-01-01T00:05Z", actPax = Option(150), status = "forecast")
+      val initialAcl2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = "2017-01-01T00:15Z", actPax = Option(151), status = "forecast")
       val initialAcl = mutable.SortedMap[UniqueArrival, Arrival]() ++ List(initialAcl1, initialAcl2).map(a => (a.unique, a))
-      val initialLive = mutable.SortedMap[UniqueArrival, Arrival]() ++ List(ArrivalGenerator.arrival(actPax = Option(99), schDt = "2017-01-01T00:05Z", iata = "BA0001", status = "scheduled")).map(a => (a.unique, a))
+      val initialLive = mutable.SortedMap[UniqueArrival, Arrival]() ++ List(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2017-01-01T00:05Z", actPax = Option(99), status = "scheduled")).map(a => (a.unique, a))
 
-      val newAcl = Flights(Seq(ArrivalGenerator.arrival(actPax = Option(105), schDt = "2017-01-01T00:07Z", iata = "BA0001")))
-      val newLive = Flights(Seq(ArrivalGenerator.arrival(actPax = Option(105), schDt = "2017-01-01T00:06Z", iata = "BAW0001")))
+      val newAcl = Flights(Seq(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2017-01-01T00:07Z", actPax = Option(105))))
+      val newLive = Flights(Seq(ArrivalGenerator.arrival(iata = "BAW0001", schDt = "2017-01-01T00:06Z", actPax = Option(105))))
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduledLive),
@@ -268,7 +268,7 @@ class AclFeedSpec extends CrunchTestLike {
       "Then I should still see the arrival, ie it should not have been removed" >> {
       val scheduledLive = "2017-01-01T00:00Z"
 
-      val aclArrival = ArrivalGenerator.arrival(actPax = Option(150), schDt = "2017-01-01T00:05Z", iata = "BA0001", status = "forecast", feedSources = Set(AclFeedSource))
+      val aclArrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2017-01-01T00:05Z", actPax = Option(150), status = "forecast", feedSources = Set(AclFeedSource))
 
       val aclInput1 = Flights(Seq(aclArrival))
       val aclInput2 = Flights(Seq(aclArrival))

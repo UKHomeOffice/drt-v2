@@ -113,7 +113,7 @@ object CSVData {
   def terminalMinutesToCsvData(cms: SortedMap[TQM, CrunchMinute], sms: SortedMap[TM, StaffMinute], queues: Seq[Queue], summaryStart: SDateLike, summaryEnd: SDateLike, summaryPeriodMinutes: Int): String = {
     (summaryStart.millisSinceEpoch until summaryEnd.millisSinceEpoch by (summaryPeriodMinutes * CrunchApi.oneMinuteMillis)).map { summaryStart =>
       terminalSummaryForPeriod(cms, sms, queues, SDate(summaryStart, europeLondonTimeZone), summaryPeriodMinutes).toCsv
-    }.mkString(CSVData.lineEnding)
+    }.mkString(lineEnding)
   }
 
   def flightsWithSplitsToCSVWithHeadings(flightsWithSplits: List[ApiFlightWithSplits]): String =

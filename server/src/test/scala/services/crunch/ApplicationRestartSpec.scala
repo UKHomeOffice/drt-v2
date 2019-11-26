@@ -41,8 +41,8 @@ class ApplicationRestartSpec extends CrunchTestLike {
     val scheduledBase = "2018-01-01T00:05"
     val now: () => SDateLike = () => SDate(scheduledLive)
 
-    val arrivalLive = ArrivalGenerator.arrival(actPax = Option(1), iata = "BA1010", schDt = scheduledLive)
-    val arrivalBase = ArrivalGenerator.arrival(actPax = Option(1), iata = "BA2010", schDt = scheduledBase)
+    val arrivalLive = ArrivalGenerator.arrival(iata = "BA1010", schDt = scheduledLive, actPax = Option(1))
+    val arrivalBase = ArrivalGenerator.arrival(iata = "BA2010", schDt = scheduledBase, actPax = Option(1))
 
     val splits = Set(
       Splits(

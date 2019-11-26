@@ -231,7 +231,6 @@ class CrunchTestLike
       useNationalityBasedProcessingTimes = false,
       useLegacyManifests = useLegacyManifests,
       now = now,
-      b5JStartDate = SDate("2019-06-01"),
       manifestsLiveSource = manifestsSource,
       manifestResponsesSource = manifestResponsesSource,
       voyageManifestsActor = manifestsActor,
@@ -250,7 +249,8 @@ class CrunchTestLike
       initialFixedPoints = initialFixedPoints,
       initialStaffMovements = initialStaffMovements,
       checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup,
-      stageThrottlePer = 50 milliseconds
+      stageThrottlePer = 50 milliseconds,
+      useApiPaxNos = true
     ))
 
     portStateActor ! SetSimulationActor(crunchInputs.loadsToSimulate)

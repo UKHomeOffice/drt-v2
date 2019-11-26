@@ -5,10 +5,9 @@ import drt.shared.CrunchApi._
 import drt.shared.Queues.{InvalidQueue, Queue}
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import drt.shared.splits.ApiSplitsToSplitRatio
-import japgolly.scalajs.react.{CtorType, ScalaComponent}
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
+import japgolly.scalajs.react.{CtorType, ScalaComponent}
 
 
 object DashboardTerminalSummary {
@@ -118,7 +117,11 @@ object DashboardTerminalSummary {
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("SummaryBox")
     .render_P { props =>
-      val crunchMinuteTimeSlots = groupCrunchMinutesByX(groupSize = 15)(CrunchApi.terminalMinutesByMinute(props.crunchMinutes, props.terminal), props.terminal, Queues.queueOrder).flatMap(_._2)
+      val crunchMinuteTimeSlots = groupCrunchMinutesByX(groupSize = 15)(
+        CrunchApi.terminalMinutesByMinute(props.crunchMinutes, props.terminal),
+        props.terminal,
+        Queues.queueOrder).flatMap(_._2
+      )
 
       if (crunchMinuteTimeSlots.isEmpty) {
         <.div(^.className := "dashboard-summary container-fluid", "No data available to display")

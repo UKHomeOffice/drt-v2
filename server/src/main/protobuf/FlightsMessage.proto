@@ -30,6 +30,7 @@ message FlightMessage {
     optional int64 ActualChox = 21;
     repeated string FeedSources = 23;
     optional int64 CarrierScheduled = 24;
+    optional int32 ApiPax = 25;
 
     optional int32 FlightID__OLD = 10;
     optional int32 LastKnownPax__OLD = 22;

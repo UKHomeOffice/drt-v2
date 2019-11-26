@@ -61,6 +61,10 @@ object Actions {
 
   case class UpdateOohStatus(oohStatus: OutOfHoursStatus) extends Action
 
+  case object GetFeatureFlags extends Action
+
+  case class UpdateFeatureFlags(featureFlags: Map[String, Boolean]) extends Action
+
   case object GetContactDetails extends Action
 
   case class UpdateContactDetails(contactDetails: ContactDetails) extends Action

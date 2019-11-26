@@ -225,7 +225,7 @@ class PcpArrivalSpec extends SpecificationLike {
       "then we should get act chox + first pax off time + gate walk time" >> {
       val t1 = T1
       val g2 = "2"
-      val flight = arrival(actChoxDt = "2017-01-01T00:20.00Z", terminal = t1, gate = Option(g2))
+      val flight = arrival(terminal = t1, actChoxDt = "2017-01-01T00:20.00Z", gate = Option(g2))
       val gateWalkTimeMillis = 600000L
       val walkTimes: Map[(GateOrStand, Terminal), Long] = Map((g2, t1) -> gateWalkTimeMillis)
 

@@ -34,7 +34,9 @@ object TestableArrivalSplits {
       splitsCalculator = splitsCalculator,
       groupFlightsByCodeShares = groupByCodeShares,
       expireAfterMillis = oneDayMillis,
-      now = now)
+      now = now,
+      useApiPaxNos = true
+    )
 
     val arrivalsDiffSource = Source.queue[ArrivalsDiff](1, OverflowStrategy.backpressure)
     val manifestsLiveSource = Source.queue[List[BestAvailableManifest]](1, OverflowStrategy.backpressure)
@@ -79,7 +81,7 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
   }
 
   val paxTypeQueueAllocation = PaxTypeQueueAllocation(
-    B5JPlusWithTransitTypeAllocator(SDate("2019-05-01T00:00:00")),
+    B5JPlusWithTransitTypeAllocator(),
     TerminalQueueAllocatorWithFastTrack(airportConfig.terminalPaxTypeQueueAllocation))
 
   val splitsCalculator = SplitsCalculator(portCode, paxTypeQueueAllocation, airportConfig.terminalPaxSplits)
@@ -109,7 +111,7 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
 
     manifestsLiveInput.offer(manifests.map(BestAvailableManifest(_)).toList)
 
-    val terminalAverage = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable,Queues.EeaDesk,100.0,None)),SplitSources.TerminalAverage,None,Percentage)
+    val terminalAverage = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 100.0, None)), SplitSources.TerminalAverage, None, Percentage)
     val apiSplits = Splits(
       Set(
         ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EGate, 1.6, Some(Map("GBR" -> 0.8, "ITA" -> 0.8))),
@@ -117,12 +119,16 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
       SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, None, PaxNumbers)
 
     val expectedSplits = Set(terminalAverage, apiSplits)
-    val expected = Seq(ApiFlightWithSplits(arrival.copy(FeedSources = Set(LiveFeedSource, ApiFeedSource)), expectedSplits, None))
+    val expected = Seq(ApiFlightWithSplits(
+      arrival.copy(FeedSources = Set(LiveFeedSource, ApiFeedSource), ApiPax = Option(2)),
+      expectedSplits,
+      None
+    ))
 
     probe.fishForMessage(3 seconds) {
       case fs: FlightsWithSplits =>
         val fws = fs.flightsToUpdate.map(f => f.copy(lastUpdated = None))
-        fws == expected
+        fws === expected
     }
 
     true

@@ -8,13 +8,14 @@ import drt.shared.{Arrival, DqEventCodes, PortState, Queues}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import server.feeds.{ArrivalsFeedSuccess, ManifestsFeedSuccess}
 import services.SDate
-import services.crunch.VoyageManifestGenerator.{euIdCard, euPassport, nonVisa, visa}
+import services.crunch.VoyageManifestGenerator.{euIdCard, euPassport, manifestPax, nonVisa, visa, _}
 import services.graphstages.DqManifests
 
 import scala.collection.immutable.List
 import scala.concurrent.duration._
 
-class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
+class
+ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
   val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(
     now = () => SDate("2019-01-01T01:00"),
     pcpArrivalTime = pcpForFlightFromBest,
@@ -22,21 +23,9 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
       queues = Map(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate), T2 -> Seq())
     )
   )
-  val arrivalOne: Arrival = ArrivalGenerator.arrival(
-    iata = "BA0001",
-    terminal = T1,
-    origin = "JFK",
-    schDt = "2019-01-01T00:00",
-    actPax = Option(100)
-  )
+  val arrivalOne: Arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = "JFK", schDt = "2019-01-01T00:00", actPax = Option(100))
 
-  val arrivalTwo: Arrival = ArrivalGenerator.arrival(
-    iata = "BA0002",
-    terminal = T1,
-    origin = "JFK",
-    schDt = "2019-01-01T00:05",
-    actPax = Option(117)
-  )
+  val arrivalTwo: Arrival = ArrivalGenerator.arrival(iata = "BA0002", terminal = T1, origin = "JFK", schDt = "2019-01-01T00:05", actPax = Option(117))
 
   "Given crunch inputs and an arrival" >> {
 
@@ -73,7 +62,9 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
         ActPax = Option(76)
       )
       val voyageManifests = ManifestsFeedSuccess(DqManifests("", Set(
-        manifestForArrival(updatedArrival, List(visa, euPassport, nonVisa))
+        manifestForArrival(updatedArrival, manifestPax(25, visa) ++
+          manifestPax(26, euPassport) ++
+          manifestPax(25, nonVisa))
       )))
 
       offerAndWait(crunch.manifestsLiveInput, voyageManifests)
@@ -87,7 +78,12 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
         ActPax = Option(35)
       )
       val voyageManifests = ManifestsFeedSuccess(DqManifests("", Set(
-        manifestForArrival(updatedArrival, List(visa, euPassport, euPassport, euPassport, nonVisa))
+        manifestForArrival(updatedArrival,
+          manifestPax(7,visa) ++
+          manifestPax(7,euPassport) ++
+          manifestPax(7,euPassport) ++
+          manifestPax(7,euPassport) ++
+          manifestPax(7,nonVisa))
       )))
 
       offerAndWait(crunch.manifestsLiveInput, voyageManifests)
@@ -101,8 +97,11 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
         ActPax = Option(211)
       )
       val voyageManifests = ManifestsFeedSuccess(DqManifests("", Set(
-        manifestForArrival(updatedArrival, List(visa, euPassport, euPassport, euPassport, nonVisa)),
-        manifestForArrival(arrivalTwo, List(euIdCard, nonVisa))
+        manifestForArrival(updatedArrival,
+          manifestPax(42, visa) ++
+          manifestPax(127, euPassport) ++
+          manifestPax(42, nonVisa)),
+        manifestForArrival(arrivalTwo, manifestPax(110, euIdCard) ++ manifestPax(7, nonVisa))
       )))
 
       offerAndWait(crunch.manifestsLiveInput, voyageManifests)
@@ -120,8 +119,8 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
         ActPax = Option(176)
       )
       val voyageManifests = ManifestsFeedSuccess(DqManifests("", Set(
-        manifestForArrival(updatedArrivalOne, List(visa, visa, visa, euPassport, euPassport, euPassport, nonVisa)),
-        manifestForArrival(updatedArrivalTwo, List(euIdCard, nonVisa, nonVisa, nonVisa, euPassport))
+        manifestForArrival(updatedArrivalOne, manifestPax(300, visa) ++ manifestPax(99, euPassport) ++ manifestPax(2, nonVisa)),
+        manifestForArrival(updatedArrivalTwo, manifestPax(30, euIdCard) ++ manifestPax( 30, nonVisa) ++ manifestPax(116, euPassport))
       )))
 
       offerAndWait(crunch.manifestsLiveInput, voyageManifests)

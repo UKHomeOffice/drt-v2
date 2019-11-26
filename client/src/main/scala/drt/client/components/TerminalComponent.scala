@@ -33,7 +33,8 @@ object TerminalComponent {
                            loggedInUserPot: Pot[LoggedInUser],
                            viewMode: ViewMode,
                            minuteTicker: Int,
-                           maybeStaffAdjustmentsPopoverState: Option[StaffAdjustmentDialogueState]
+                           maybeStaffAdjustmentsPopoverState: Option[StaffAdjustmentDialogueState],
+                           featureFlags: Pot[Map[String, Boolean]]
                           ) extends UseValueEq
 
   val component = ScalaComponent.builder[Props]("Terminal")
@@ -51,7 +52,8 @@ object TerminalComponent {
         model.loggedInUserPot,
         model.viewMode,
         model.minuteTicker,
-        model.maybeStaffDeploymentAdjustmentPopoverState
+        model.maybeStaffDeploymentAdjustmentPopoverState,
+        model.featureFlags
       ))
 
       val dialogueStateRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
@@ -76,7 +78,8 @@ object TerminalComponent {
               model.showActuals,
               model.viewMode,
               model.loggedInUserPot,
-              model.minuteTicker
+              model.minuteTicker,
+              model.featureFlags
             )
 
             val currentClass = if (props.terminalPageTab.mode == "current") "active" else ""
@@ -159,7 +162,8 @@ object TerminalComponent {
                             terminalContentProps.airportConfig,
                             ps,
                             props.router,
-                            model.minuteTicker
+                            model.minuteTicker,
+                            model.featureFlags
                           )
                         )
                       } else ""

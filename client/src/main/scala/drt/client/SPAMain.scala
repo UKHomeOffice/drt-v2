@@ -148,7 +148,8 @@ object SPAMain {
       GetFeedStatuses(),
       GetAlerts(0L),
       GetShowAlertModalDialog,
-      GetOohStatus
+      GetOohStatus,
+      GetFeatureFlags
     )
 
     initActions.foreach(SPACircuit.dispatch(_))

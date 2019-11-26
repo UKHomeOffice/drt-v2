@@ -11,6 +11,7 @@ import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageMa
 import server.feeds.{ArrivalsFeedSuccess, ManifestsFeedSuccess}
 import services.SDate
 import services.graphstages.DqManifests
+import VoyageManifestGenerator._
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._
@@ -150,9 +151,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         val scheduled = "2017-01-01T00:00Z"
 
         val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(20))
-        val flights = Flights(List(
-          flight
-        ))
+        val flights = Flights(List(flight))
 
         val crunch = runCrunchGraph(
           now = () => SDate(scheduled),
@@ -208,9 +207,9 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         )
 
         val voyageManifests = ManifestsFeedSuccess(DqManifests("", Set(
-          VoyageManifest(DqEventCodes.CheckIn, "STN", "JFK", "0001", "BA", "2017-01-01", "00:00", List(
-            PassengerInfoJson(Some("P"), "GBR", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("GBR"), None)
-          ))
+          VoyageManifest(DqEventCodes.CheckIn, "STN", "JFK", "0001", "BA", "2017-01-01", "00:00",
+            manifestPax(10, euPassport)
+          )
         )))
 
         offerAndWait(crunch.manifestsLiveInput, voyageManifests)

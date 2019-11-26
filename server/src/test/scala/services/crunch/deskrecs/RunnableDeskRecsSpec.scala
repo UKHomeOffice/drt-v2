@@ -366,8 +366,8 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       pcpArrivalTime = pcpForFlightFromBest
     )
 
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", origin = "JFK", schDt = noon, actPax = Option(25))
-    val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", origin = "AAA", schDt = noon, actPax = Option(25))
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = noon, actPax = Option(25), origin = "JFK")
+    val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = noon, actPax = Option(25), origin = "AAA")
 
     val noonMillis = SDate(noon).millisSinceEpoch
     val noon30Millis = SDate(noon30).millisSinceEpoch
@@ -457,8 +457,8 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       pcpArrivalTime = pcpForFlightFromBest
     )
 
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", origin = "JFK", schDt = noon, actPax = Option(25))
-    val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", origin = "AAA", schDt = noon, actPax = Option(25))
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = noon, actPax = Option(25), origin = "JFK")
+    val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = noon, actPax = Option(25), origin = "AAA")
 
     val noonMillis = SDate(noon).millisSinceEpoch
 

@@ -72,8 +72,8 @@ class IndexedByTerminalSpec extends SpecificationLike {
       val purgeEarlierThanTime = 5L
       val updatesSinceTime = 0L
 
-      val arrival1 = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA001", origin = "JFK", schDt = "2019-01-01T00:00"), Set(), lastUpdated = Option(arrival1UpdateTime))
-      val arrival2 = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA001", origin = "JNB", schDt = "2019-01-01T05:00"), Set(), lastUpdated = Option(arrival2UpdateTime))
+      val arrival1 = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA001", schDt = "2019-01-01T00:00", origin = "JFK"), Set(), lastUpdated = Option(arrival1UpdateTime))
+      val arrival2 = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA001", schDt = "2019-01-01T05:00", origin = "JNB"), Set(), lastUpdated = Option(arrival2UpdateTime))
       ps.flights +++= Seq(arrival1, arrival2)
 
       ps.purgeRecentUpdates(purgeEarlierThanTime)
@@ -94,9 +94,9 @@ class IndexedByTerminalSpec extends SpecificationLike {
       val arrival3UpdateTime = 5L
       val updatesSinceTime = 4L
 
-      val arrival1 = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA001", origin = "JFK", schDt = "2019-01-01T00:00"), Set(), lastUpdated = Option(arrival1UpdateTime))
-      val arrival2 = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA002", origin = "JNB", schDt = "2019-01-01T05:00"), Set(), lastUpdated = Option(arrival2UpdateTime))
-      val arrival3 = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA003", origin = "AAA", schDt = "2019-01-01T07:00"), Set(), lastUpdated = Option(arrival3UpdateTime))
+      val arrival1 = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA001", schDt = "2019-01-01T00:00", origin = "JFK"), Set(), lastUpdated = Option(arrival1UpdateTime))
+      val arrival2 = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA002", schDt = "2019-01-01T05:00", origin = "JNB"), Set(), lastUpdated = Option(arrival2UpdateTime))
+      val arrival3 = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA003", schDt = "2019-01-01T07:00", origin = "AAA"), Set(), lastUpdated = Option(arrival3UpdateTime))
       ps.flights +++= Seq(arrival1)
       ps.flights +++= Seq(arrival2)
       ps.flights +++= Seq(arrival3)

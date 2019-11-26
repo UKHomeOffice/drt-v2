@@ -48,7 +48,6 @@ case class CrunchProps[FR](logLabel: String = "",
                            useLegacyManifests: Boolean = false,
                            now: () => SDateLike = () => SDate.now(),
                            initialFlightsWithSplits: Option[FlightsWithSplits] = None,
-                           b5JStartDate: SDateLike,
                            manifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]],
                            manifestResponsesSource: Source[List[BestAvailableManifest], NotUsed],
                            voyageManifestsActor: ActorRef,
@@ -69,7 +68,9 @@ case class CrunchProps[FR](logLabel: String = "",
                            recrunchOnStart: Boolean = false,
                            refreshArrivalsOnStart: Boolean = false,
                            checkRequiredStaffUpdatesOnStartup: Boolean,
-                           stageThrottlePer: FiniteDuration)
+                           stageThrottlePer: FiniteDuration,
+                           useApiPaxNos: Boolean
+                          )
 
 object CrunchSystem {
 
@@ -114,15 +115,13 @@ object CrunchSystem {
     val liveBaseArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialLiveBaseArrivals, forecastMaxMillis)
     val liveArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialLiveArrivals, forecastMaxMillis)
 
-    log.info(s"Using B5JPlus Start Date of ${props.b5JStartDate.toISOString()}")
-
     val ptqa = if (props.airportConfig.portCode == "LHR")
       PaxTypeQueueAllocation(
-        B5JPlusWithTransitTypeAllocator(props.b5JStartDate),
+        B5JPlusWithTransitTypeAllocator(),
         TerminalQueueAllocatorWithFastTrack(props.airportConfig.terminalPaxTypeQueueAllocation))
     else
       PaxTypeQueueAllocation(
-        B5JPlusTypeAllocator(props.b5JStartDate),
+        B5JPlusTypeAllocator(),
         TerminalQueueAllocator(props.airportConfig.terminalPaxTypeQueueAllocation))
 
     val arrivalSplitsGraphStage = new ArrivalSplitsGraphStage(
@@ -136,7 +135,9 @@ object CrunchSystem {
       ),
       groupFlightsByCodeShares = groupFlightsByCodeShares,
       expireAfterMillis = props.expireAfterMillis,
-      now = props.now)
+      now = props.now,
+      useApiPaxNos = props.useApiPaxNos
+    )
 
     val staffGraphStage = new StaffGraphStage(
       name = props.logLabel,

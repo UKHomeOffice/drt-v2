@@ -96,7 +96,9 @@ case class Splits(splits: Set[ApiPaxTypeAndQueueCount], source: String, eventTyp
 object Splits {
   def totalExcludingTransferPax(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.filter(s => s.queueType != Queues.Transfer).toList.map(_.paxCount).sum
 
-  def totalPax(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.toList.map(_.paxCount).sum
+  def totalPax(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.toList.map(s => {
+    s.paxCount
+  }).sum
 
   implicit val rw: ReadWriter[Splits] = macroRW
 }
@@ -320,7 +322,8 @@ case class Arrival(
                     Scheduled: MillisSinceEpoch,
                     PcpTime: Option[MillisSinceEpoch],
                     FeedSources: Set[FeedSource],
-                    CarrierScheduled: Option[MillisSinceEpoch] = None
+                    CarrierScheduled: Option[MillisSinceEpoch] = None,
+                    ApiPax: Option[Int] = None
                   ) extends WithUnique[UniqueArrival] {
   lazy val ICAO: String = Arrival.standardiseFlightCode(rawICAO)
   lazy val IATA: String = Arrival.standardiseFlightCode(rawIATA)

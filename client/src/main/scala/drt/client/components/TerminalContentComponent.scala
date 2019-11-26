@@ -34,7 +34,9 @@ object TerminalContentComponent {
                    showActuals: Boolean,
                    viewMode: ViewMode,
                    loggedInUserPot: Pot[LoggedInUser],
-                   minuteTicker: Int)
+                   minuteTicker: Int,
+                   featureFlags: Pot[Map[String, Boolean]]
+                  )
 
   case class State(activeTab: String, showExportDialogue: Boolean = false)
 
@@ -159,7 +161,8 @@ object TerminalContentComponent {
               <.div(^.id := "arrivals", ^.className := s"tab-pane in $arrivalsPanelActive", {
                 if (state.activeTab == "arrivals") {
                   val flightsForTerminal = filteredPortState.flights.values.toList
-                  arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsForTerminal, queueOrder, props.airportConfig.hasEstChox))
+                  props.featureFlags.renderReady(ffs =>
+                    arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsForTerminal, queueOrder, props.airportConfig.hasEstChox)))
                 } else ""
               }),
               <.div(^.id := "available-staff", ^.className := s"tab-pane terminal-staffing-container $staffingPanelActive",

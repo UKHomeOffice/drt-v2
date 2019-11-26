@@ -28,7 +28,7 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
     val day1 = "2017-01-02T00:00Z"
     val weekBeginning = "2017-01-02T00:00Z"
 
-    val forecastArrivalDay1 = ArrivalGenerator.arrival(flightId = Option(1), schDt = day1, iata = "BA0001", terminal = T1, actPax = Option(5))
+    val forecastArrivalDay1 = ArrivalGenerator.arrival(schDt = day1, iata = "BA0001", terminal = T1, actPax = Option(5))
     val forecastFlights = Set(forecastArrivalDay1)
     val startDate1 = MilliDate(SDate("2017-01-02T00:00").millisSinceEpoch)
     val endDate1 = MilliDate(SDate("2017-01-02T23:59").millisSinceEpoch)
