@@ -13,9 +13,9 @@ case class TM(terminal: Terminal, minute: MillisSinceEpoch)
     case _ => false
   }
 
-  lazy val comparisonVal: MillisSinceEpoch = minute + terminal.orderingVal
+  lazy val comparisonValue: Long = minute + terminal.orderingValue
 
-  override def compare(that: TM): Int = this.comparisonVal.compareTo(that.comparisonVal)
+  override def compare(that: TM): Int = this.comparisonValue.compareTo(that.comparisonValue)
 
   override def timeValue: MillisSinceEpoch = minute
 }

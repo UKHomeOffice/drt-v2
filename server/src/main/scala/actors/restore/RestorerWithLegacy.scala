@@ -9,13 +9,13 @@ class RestorerWithLegacy[LI, I <: WithLegacyUniqueId[LI, I], A <: WithUnique[I]]
   val legacyMap: mutable.Map[LI, I] = mutable.Map()
   val items: mutable.SortedMap[I, A] = mutable.SortedMap[I, A]()
 
-  def removeLegacies(theRemoves: Seq[LI]): Unit = theRemoves.foreach(removeWithLegacyIdx)
-  def remove(theRemoves: Seq[I]): Unit = theRemoves.foreach { toRemoveNew =>
+  def removeLegacies(theRemoves: Iterable[LI]): Unit = theRemoves.foreach(removeWithLegacyIdx)
+  def remove(theRemoves: Iterable[I]): Unit = theRemoves.foreach { toRemoveNew =>
     val legacyIdx = toRemoveNew.uniqueId
     removeWithLegacyIdx(legacyIdx)
   }
 
-  def update(theUpdates: Seq[A]): Unit = theUpdates.foreach { update =>
+  def update(theUpdates: Iterable[A]): Unit = theUpdates.foreach { update =>
     val index = update.unique
     val legacyIdx = index.uniqueId
     legacyMap += (legacyIdx -> index)

@@ -13,7 +13,7 @@ object Terminals {
 
   sealed trait Terminal {
     override val toString: String = getClass.toString.split("\\$").last
-    val orderingVal: Int
+    val orderingValue: Int
   }
 
   object Terminal {
@@ -39,59 +39,59 @@ object Terminals {
 
   case object InvalidTerminal extends Terminal {
     override val toString: String = ""
-    override val orderingVal: Int = 0
+    override val orderingValue: Int = 0
   }
 
   case object T1 extends Terminal {
-    override val orderingVal: Int = 1
+    override val orderingValue: Int = 1
   }
 
   case object T2 extends Terminal {
-    override val orderingVal: Int = 2
+    override val orderingValue: Int = 2
   }
 
   case object T3 extends Terminal {
-    override val orderingVal: Int = 3
+    override val orderingValue: Int = 3
   }
 
   case object T4 extends Terminal {
-    override val orderingVal: Int = 4
+    override val orderingValue: Int = 4
   }
 
   case object T5 extends Terminal {
-    override val orderingVal: Int = 5
+    override val orderingValue: Int = 5
   }
 
   case object A1 extends Terminal {
-    override val orderingVal: Int = 6
+    override val orderingValue: Int = 6
   }
 
   case object A2 extends Terminal {
-    override val orderingVal: Int = 7
+    override val orderingValue: Int = 7
   }
 
   case object ACL1I extends Terminal {
-    override val orderingVal: Int = 8
+    override val orderingValue: Int = 8
   }
 
   case object ACL2I extends Terminal {
-    override val orderingVal: Int = 9
+    override val orderingValue: Int = 9
   }
 
   case object ACL1D extends Terminal {
-    override val orderingVal: Int = 10
+    override val orderingValue: Int = 10
   }
 
   case object ACLTER extends Terminal {
-    override val orderingVal: Int = 11
+    override val orderingValue: Int = 11
   }
 
   case object N extends Terminal {
-    override val orderingVal: Int = 12
+    override val orderingValue: Int = 12
   }
 
   case object S extends Terminal {
-    override val orderingVal: Int = 13
+    override val orderingValue: Int = 13
   }
 
 }

@@ -14,9 +14,9 @@ case class TQM(terminal: Terminal, queue: Queue, minute: MillisSinceEpoch)
     case _ => false
   }
 
-  lazy val comparisonVal: MillisSinceEpoch = minute + 1024L * queue.orderingVal + terminal.orderingVal
+  lazy val comparisonValue: Long = minute + (1024L * queue.orderingVal) + terminal.orderingValue
 
-  override def compare(that: TQM): Int = this.comparisonVal.compareTo(that.comparisonVal)
+  override def compare(that: TQM): Int = this.comparisonValue.compareTo(that.comparisonValue)
 
   override def timeValue: MillisSinceEpoch = minute
 }
