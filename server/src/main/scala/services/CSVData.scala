@@ -2,6 +2,7 @@ package services
 
 import drt.shared.CrunchApi._
 import drt.shared.Queues.Queue
+import drt.shared.SplitRatiosNs.SplitSource
 import drt.shared.Summaries.terminalSummaryForPeriod
 import drt.shared._
 import drt.shared.splits.ApiSplitsToSplitRatio
@@ -202,7 +203,7 @@ object CSVData {
       queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, SplitRatiosNs.SplitSources.TerminalAverage).getOrElse(q, "")}")
   }
 
-  def queuePaxForFlightUsingSplits(fws: ApiFlightWithSplits, splitSource: String): Map[Queue, Int] =
+  def queuePaxForFlightUsingSplits(fws: ApiFlightWithSplits, splitSource: SplitSource): Map[Queue, Int] =
     fws
       .splits
       .find(_.source == splitSource)

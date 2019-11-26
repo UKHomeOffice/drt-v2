@@ -6,6 +6,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.SplitRatiosNs.SplitSources.Historical
 import drt.shared.{Arrival, ArrivalKey, SDateLike}
 import graphs.SinkToSourceBridge
 import manifests.actors.RegisteredArrivals
@@ -27,7 +28,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
   "Given an arrival with a non-numeric flight number is sent into the ManifestGraph then we should not find any manifests in the sink" >> {
 
     val testManifest = BestAvailableManifest(
-      "test",
+      Historical,
       "STN",
       "TST",
       "1234",
@@ -53,7 +54,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
   "Given an arrival is sent into the ManifestGraph then we should find the manifest for that flight in the sink" >> {
 
     val testManifest = BestAvailableManifest(
-      "test",
+      Historical,
       "STN",
       "TST",
       "1234",
@@ -83,7 +84,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
     val registeredArrivalSinkProbe = TestProbe(name = "registered-arrival-test-probe")
 
     val testManifest = BestAvailableManifest(
-      "test",
+      Historical,
       "STN",
       "TST",
       "1234",
@@ -117,7 +118,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
     val registeredArrivalSinkProbe = TestProbe(name = "registered-arrival-test-probe")
 
     val testManifest = BestAvailableManifest(
-      "test",
+      Historical,
       "STN",
       "TST",
       "1234",

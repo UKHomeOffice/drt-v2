@@ -27,7 +27,7 @@ import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
-import drt.shared.Terminals.{A1, ACL1D, ACL1I, ACL2I, ACLTER, InvalidTerminal, N, S, T1, T2, T3, Terminal}
+import drt.shared.Terminals._
 import drt.shared._
 import graphs.SinkToSourceBridge
 import manifests.ManifestLookup
@@ -149,7 +149,7 @@ case class DrtConfigParameters(config: Configuration) {
   val snapshotStaffOnStart: Boolean = config.get[Boolean]("feature-flags.snapshot-staffing-on-start")
 
   val useApiPaxNos: Boolean  = config.getOptional[Boolean]("feature-flags.use-api-pax-nos").getOrElse(false)
-  
+
 }
 
 case class SubscribeRequestQueue(subscriber: ActorRef)

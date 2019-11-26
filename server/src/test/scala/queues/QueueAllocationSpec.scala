@@ -2,6 +2,7 @@ package queues
 
 import drt.shared.PaxTypes._
 import drt.shared.Queues.Queue
+import drt.shared.SplitRatiosNs.SplitSources.Historical
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.{PaxTypes, _}
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
@@ -30,7 +31,7 @@ class QueueAllocationSpec extends Specification {
     "then I should get a Splits of 100% EEA to EGate" >> {
 
     val bestManifest = BestAvailableManifest(
-      "DC",
+      Historical,
       "LHR",
       "JHB",
       "234",
@@ -45,7 +46,7 @@ class QueueAllocationSpec extends Specification {
       PaxTypes.EeaMachineReadable,
       Queues.EGate, 1,
       Some(Map("GBR" -> 1))
-    )), "DC", None, PaxNumbers)
+    )), Historical, None, PaxNumbers)
 
     val result = PaxTypeQueueAllocation(DefaultPaxTypeAllocator, testQueueAllocator).toSplits(T1, bestManifest)
 
@@ -56,7 +57,7 @@ class QueueAllocationSpec extends Specification {
     "then I should get a Splits of 50% EEA to EGate and 50% visa national to Non EEA Desk" >> {
 
     val bestManifest = BestAvailableManifest(
-      "DC",
+      Historical,
       "LHR",
       "JHB",
       "234",
@@ -73,7 +74,7 @@ class QueueAllocationSpec extends Specification {
         ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 1, Some(Map("GBR" -> 1))),
         ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Some(Map("ZAF" -> 1)))
       ),
-      "DC",
+      Historical,
       None,
       PaxNumbers
     )
@@ -87,7 +88,7 @@ class QueueAllocationSpec extends Specification {
     "then I should get a Splits containing 0.75 pax of type B5JPlus to EGate and .25 B5JPlus to EEADesk" >> {
 
     val bestManifest = BestAvailableManifest(
-      "DC",
+      Historical,
       "LHR",
       "USA",
       "234",
@@ -101,7 +102,7 @@ class QueueAllocationSpec extends Specification {
         ApiPaxTypeAndQueueCount(PaxTypes.B5JPlusNational, Queues.EGate, 0.75, Some(Map("USA" -> 0.75))),
         ApiPaxTypeAndQueueCount(PaxTypes.B5JPlusNational, Queues.EeaDesk, 0.25, Some(Map("USA" -> 0.25)))
       ),
-      "DC",
+      Historical,
       None,
       PaxNumbers
     )
@@ -114,7 +115,7 @@ class QueueAllocationSpec extends Specification {
   "Given a BestAvailableManifest with an under 12 B5J National we should get 1 passenger to EEADesk" >> {
 
     val bestManifest = BestAvailableManifest(
-      "DC",
+      Historical,
       "LHR",
       "USA",
       "234",
@@ -129,7 +130,7 @@ class QueueAllocationSpec extends Specification {
       Set(
         ApiPaxTypeAndQueueCount(PaxTypes.B5JPlusNationalBelowEGateAge, Queues.EeaDesk, 1, Some(Map("USA" -> 1)))
       ),
-      "DC",
+      Historical,
       None,
       PaxNumbers
     )
@@ -145,7 +146,7 @@ class QueueAllocationSpec extends Specification {
   "Given a BestAvailableManifest with an under 12 EU National we should get 1 passenger to EEADesk" >> {
 
     val bestManifest = BestAvailableManifest(
-      "DC",
+      Historical,
       "LHR",
       "USA",
       "234",
@@ -161,7 +162,7 @@ class QueueAllocationSpec extends Specification {
       Set(
         ApiPaxTypeAndQueueCount(PaxTypes.EeaBelowEGateAge, Queues.EeaDesk, 1, Some(Map("GBR" -> 1)))
       ),
-      "DC",
+      Historical,
       None,
       PaxNumbers
     )
@@ -178,7 +179,7 @@ class QueueAllocationSpec extends Specification {
     "Then we should get back a split with the Transit" >> {
 
     val bestManifest = BestAvailableManifest(
-      "DC",
+      Historical,
       "LHR",
       "USA",
       "234",
@@ -195,7 +196,7 @@ class QueueAllocationSpec extends Specification {
         ApiPaxTypeAndQueueCount(PaxTypes.EeaBelowEGateAge, Queues.EeaDesk, 1, Some(Map("GBR" -> 1))),
         ApiPaxTypeAndQueueCount(PaxTypes.Transit, Queues.Transfer, 1, Some(Map("GBR" -> 1)))
       ),
-      "DC",
+      Historical,
       None,
       PaxNumbers
     )
@@ -214,7 +215,7 @@ class QueueAllocationSpec extends Specification {
     "Then I should get 0.8 Pax to NonEEA Queue and 0.1 to FastTrack" >> {
 
     val bestManifest = BestAvailableManifest(
-      "DC",
+      Historical,
       "LHR",
       "USA",
       "234",
@@ -230,7 +231,7 @@ class QueueAllocationSpec extends Specification {
         ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 0.1, Some(Map("ZWE" -> 0.1))),
         ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 0.9, Some(Map("ZWE" -> 0.9)))
       ),
-      "DC",
+      Historical,
       None,
       PaxNumbers
     )
@@ -247,7 +248,7 @@ class QueueAllocationSpec extends Specification {
     "Then I should get 1 Pax to NonEEA Queue and 0 to FastTrack" >> {
 
     val bestManifest = BestAvailableManifest(
-      "DC",
+      Historical,
       "LHR",
       "USA",
       "234",
@@ -262,7 +263,7 @@ class QueueAllocationSpec extends Specification {
       Set(
         ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Some(Map("ZWE" -> 1)))
       ),
-      "DC",
+      Historical,
       None,
       PaxNumbers
     )
@@ -279,7 +280,7 @@ class QueueAllocationSpec extends Specification {
     "Then I should get 0.8 Pax to NonEEA Queue and 0.1 to FastTrack" >> {
 
     val bestManifest = BestAvailableManifest(
-      "DC",
+      Historical,
       "LHR",
       "USA",
       "234",
@@ -295,7 +296,7 @@ class QueueAllocationSpec extends Specification {
         ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 0.1, Some(Map("ZWE" -> 0.1))),
         ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 0.9, Some(Map("ZWE" -> 0.9)))
       ),
-      "DC",
+      Historical,
       None,
       PaxNumbers
     )

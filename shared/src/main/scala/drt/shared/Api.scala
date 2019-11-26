@@ -5,7 +5,7 @@ import java.util.UUID
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.Queues.Queue
-import drt.shared.SplitRatiosNs.SplitSources
+import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
 import drt.shared.Terminals.Terminal
 import ujson.Js.Value
 import upickle.Js
@@ -88,7 +88,7 @@ object ApiPaxTypeAndQueueCount {
   implicit val rw: ReadWriter[ApiPaxTypeAndQueueCount] = macroRW
 }
 
-case class Splits(splits: Set[ApiPaxTypeAndQueueCount], source: String, eventType: Option[String], splitStyle: SplitStyle = PaxNumbers) {
+case class Splits(splits: Set[ApiPaxTypeAndQueueCount], source: SplitSource, eventType: Option[String], splitStyle: SplitStyle = PaxNumbers) {
   lazy val totalExcludingTransferPax: Double = Splits.totalExcludingTransferPax(splits)
   lazy val totalPax: Double = Splits.totalPax(splits)
 }

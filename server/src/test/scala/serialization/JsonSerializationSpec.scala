@@ -2,6 +2,7 @@ package serialization
 
 import drt.shared.CrunchApi._
 import drt.shared.PaxTypes._
+import drt.shared.SplitRatiosNs.SplitSources.Historical
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import org.specs2.mutable.Specification
@@ -86,7 +87,7 @@ class JsonSerializationSpec extends Specification {
             Set(
               ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, None),
               ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, None)
-            ), "source", None, Percentage))
+            ), Historical, None, Percentage))
       )
       val flightsWithSplits = SortedMap(flightWithSplits.apiFlight.unique -> flightWithSplits)
 
@@ -125,7 +126,7 @@ class JsonSerializationSpec extends Specification {
         Set(
           ApiFlightWithSplits(
             Arrival(None, "scheduled", None, None, None, None, None, None, None, None, None, None, None, "test", T1, "test", "test", "test", 0L, None, Set(AclFeedSource, LiveFeedSource)),
-            Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Option(Map("tw" -> 7.0)))), "source", None, Percentage))
+            Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Option(Map("tw" -> 7.0)))), Historical, None, Percentage))
           )
         ),
         Set(CrunchMinute(T1, Queues.NonEeaDesk, 0L, 2.0, 2.0, 1, 1, None, None, None, None, Some(0))),

@@ -86,14 +86,6 @@ object BigSummaryBoxes {
     aggSplitsInts
   }
 
-  def convertMapToAggSplits(aggSplits: Map[PaxTypeAndQueue, Double]) = Splits(
-    aggSplits.map {
-      case (k, v) =>
-        ApiPaxTypeAndQueueCount(k.passengerType, k.queueType, v, None)
-    }.toSet,
-    "Aggregated", None, PaxNumbers
-  )
-
   def flightsAtTerminal(flightsPcp: Seq[ApiFlightWithSplits], ourTerminal: Terminal): Seq[ApiFlightWithSplits] = {
     flightsPcp.filter(f => f.apiFlight.Terminal == ourTerminal)
   }

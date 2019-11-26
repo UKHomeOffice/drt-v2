@@ -10,6 +10,7 @@ import com.typesafe.config.ConfigFactory
 import drt.services.AirportConfigHelpers
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.PaxTypesAndQueues._
+import drt.shared.SplitRatiosNs.SplitSources.Historical
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared.Terminals.{A1, A2, Terminal}
 import drt.shared.{Arrival, _}
@@ -25,7 +26,7 @@ import scala.language.postfixOps
 
 object TestCrunchConfig {
   val airportConfig: AirportConfig = airportConfigForHours(1)
-  val AirportConfigOrigin = "Airport Config"
+  val AirportConfigOrigin = Historical
 
   def airportConfigForHours(hours: Int): AirportConfig = {
     import AirportConfigDefaults._

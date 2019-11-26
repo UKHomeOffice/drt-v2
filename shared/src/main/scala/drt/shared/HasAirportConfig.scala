@@ -8,11 +8,13 @@ import ujson.Js.Value
 import upickle.Js
 import upickle.default.{ReadWriter, macroRW, readwriter}
 
+trait ClassNameForToString {
+  override val toString: String = getClass.toString.split("\\$").last
+}
 
 object Terminals {
 
-  sealed trait Terminal {
-    override val toString: String = getClass.toString.split("\\$").last
+  sealed trait Terminal extends ClassNameForToString {
     val orderingValue: Int
   }
 
@@ -98,9 +100,7 @@ object Terminals {
 
 object Queues {
 
-  sealed trait Queue extends Ordered[Queue] {
-    override val toString: String = getClass.toString.split("\\$").last
-
+  sealed trait Queue extends ClassNameForToString with Ordered[Queue] {
     override def compare(that: Queue): Int = this.orderingVal.compareTo(that.orderingVal)
 
     val orderingVal: Int
@@ -327,7 +327,7 @@ object ArrivalHelper {
 
   def bestPax(flight: Arrival): Int = {
     (flight.ApiPax, flight.ActPax.getOrElse(0), flight.TranPax.getOrElse(0), flight.MaxPax.getOrElse(0)) match {
-      case (Some(apiPax), _, _, _)  => apiPax
+      case (Some(apiPax), _, _, _) => apiPax
       case (_, actPaxIsLtE0, _, maxPaxValid) if actPaxIsLtE0 <= 0 && maxPaxValid > 0 => maxPaxValid
       case (_, actPaxIsLt0, _, _) if actPaxIsLt0 <= 0 => defaultPax
       case (_, actPax, tranPax, _) => actPax - tranPax
