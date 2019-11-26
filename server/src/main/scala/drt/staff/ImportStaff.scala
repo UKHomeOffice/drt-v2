@@ -20,7 +20,7 @@ object ImportStaff {
       }
     }
     implicit val terminalWrites: Writes[Terminal] = new Writes[Terminal] {
-      override def writes(o: Terminal): JsValue = JsString(o.toString)//Json.obj("name" -> o.toString)
+      override def writes(o: Terminal): JsValue = JsString(o.toString)
     }
     implicit val shiftFormat: OFormat[StaffShift] = Json.format[StaffShift]
     implicit val shiftsFormat: OFormat[StaffShifts] = Json.format[StaffShifts]
