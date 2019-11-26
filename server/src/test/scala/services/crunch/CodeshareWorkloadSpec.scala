@@ -2,6 +2,7 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
+import drt.shared.Terminals.T1
 import drt.shared.{PortState, Queues, TQM}
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
@@ -26,7 +27,7 @@ class CodeshareWorkloadSpec extends CrunchTestLike {
 
     crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case PortState(_, crunchMinutes, _) =>
-        crunchMinutes.get(TQM("T1", Queues.EeaDesk, schSdate.millisSinceEpoch)) match {
+        crunchMinutes.get(TQM(T1, Queues.EeaDesk, schSdate.millisSinceEpoch)) match {
           case Some(minute) => minute.paxLoad == 15
           case _ => false
         }
@@ -38,12 +39,12 @@ class CodeshareWorkloadSpec extends CrunchTestLike {
 
     crunch.portStateTestProbe.fishForMessage(5 seconds) {
       case PortState(_, crunchMinutes, _) =>
-        val minute1paxCorrect = crunchMinutes.get(TQM("T1", Queues.EeaDesk, schSdate.millisSinceEpoch)) match {
+        val minute1paxCorrect = crunchMinutes.get(TQM(T1, Queues.EeaDesk, schSdate.millisSinceEpoch)) match {
           case Some(minute) =>
             minute.paxLoad == 0
           case _ => false
         }
-        val minute2paxCorrect = crunchMinutes.get(TQM("T1", Queues.EeaDesk, schSdate.addMinutes(1).millisSinceEpoch)) match {
+        val minute2paxCorrect = crunchMinutes.get(TQM(T1, Queues.EeaDesk, schSdate.addMinutes(1).millisSinceEpoch)) match {
           case Some(minute) =>
             minute.paxLoad == 16
           case _ => false

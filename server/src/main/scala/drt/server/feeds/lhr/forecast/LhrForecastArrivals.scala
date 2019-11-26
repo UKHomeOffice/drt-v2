@@ -1,5 +1,6 @@
 package drt.server.feeds.lhr.forecast
 
+import drt.shared.Terminals.Terminal
 import drt.shared.{Arrival, ForecastFeedSource, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.util.StringUtils
@@ -29,7 +30,7 @@ object LhrForecastArrivals {
 object LhrForecastArrival {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def terminal(fields: Seq[String]): String = s"T${fields(0)}"
+  def terminal(fields: Seq[String]): Terminal = Terminal(s"T${fields(0)}")
 
   def isArrival(fields: Seq[String]): Boolean = fields(1) == "A"
 

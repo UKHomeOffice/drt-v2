@@ -6,6 +6,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.PortState
 import drt.shared.Queues._
+import drt.shared.Terminals.T1
 import passengersplits.parsing.VoyageManifestParser.PassengerInfoJson
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
@@ -22,10 +23,10 @@ class BlackJackFlowSpec extends CrunchTestLike {
     "Then the updated blackjack numbers should appear in the PortState" >> {
     val scheduled = "2017-01-01T00:00Z"
 
-    val flight = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(21), terminal = "T1")
+    val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(21))
     val initialBaseArrivals = Set(flight)
     val deskStats = ActualDeskStats(Map(
-      "T1" -> Map(
+      T1 -> Map(
         EeaDesk -> Map(
           SDate(scheduled).millisSinceEpoch -> DeskStat(Option(1), Option(5)),
           SDate(scheduled).addMinutes(15).millisSinceEpoch -> DeskStat(Option(2), Option(10))
@@ -34,11 +35,11 @@ class BlackJackFlowSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
-        terminalProcessingTimes = Map("T1" -> Map(
+        terminalProcessingTimes = Map(T1 -> Map(
           eeaMachineReadableToDesk -> 25d / 60
         )),
-        terminalNames = Seq("T1"),
-        queues = Map("T1" -> Seq(EeaDesk)))
+        terminals = Seq(T1),
+        queues = Map(T1 -> Seq(EeaDesk)))
     )
 
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(initialBaseArrivals.toSeq)))
@@ -69,10 +70,10 @@ class BlackJackFlowSpec extends CrunchTestLike {
 
     val scheduled = "2017-01-01T00:00Z"
 
-    val flight = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(21), terminal = "T1")
+    val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(21))
     val initialBaseArrivals = Set(flight)
     val deskStats = ActualDeskStats(Map(
-      "T1" -> Map(
+      T1 -> Map(
         EeaDesk -> Map(
           SDate(scheduled).millisSinceEpoch -> DeskStat(Option(1), None),
           SDate(scheduled).addMinutes(15).millisSinceEpoch -> DeskStat(None, Option(10))
@@ -81,12 +82,12 @@ class BlackJackFlowSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
-        terminalProcessingTimes = Map("T1" -> Map(
+        terminalProcessingTimes = Map(T1 -> Map(
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60
         )),
-        terminalNames = Seq("T1"),
-        queues = Map("T1" -> Seq(EeaDesk)))
+        terminals = Seq(T1),
+        queues = Map(T1 -> Seq(EeaDesk)))
     )
 
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(initialBaseArrivals.toSeq)))

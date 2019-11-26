@@ -2,6 +2,8 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
+import drt.shared.Queues.Queue
+import drt.shared.Terminals.{T1, T2}
 import drt.shared.{Arrival, DqEventCodes, PortState, Queues}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import server.feeds.{ArrivalsFeedSuccess, ManifestsFeedSuccess}
@@ -18,12 +20,12 @@ ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
     now = () => SDate("2019-01-01T01:00"),
     pcpArrivalTime = pcpForFlightFromBest,
     airportConfig = airportConfig.copy(
-      queues = Map("T1" -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate), "T2" -> Seq())
+      queues = Map(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate), T2 -> Seq())
     )
   )
-  val arrivalOne: Arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-01T00:00", actPax = Option(100), terminal = "T1", origin = "JFK")
+  val arrivalOne: Arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = "JFK", schDt = "2019-01-01T00:00", actPax = Option(100))
 
-  val arrivalTwo: Arrival = ArrivalGenerator.arrival(iata = "BA0002", schDt = "2019-01-01T00:05", actPax = Option(117), terminal = "T1", origin = "JFK")
+  val arrivalTwo: Arrival = ArrivalGenerator.arrival(iata = "BA0002", terminal = T1, origin = "JFK", schDt = "2019-01-01T00:05", actPax = Option(117))
 
   "Given crunch inputs and an arrival" >> {
 
@@ -132,7 +134,7 @@ ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
     VoyageManifest(DqEventCodes.CheckIn, "STN", updatedArrival.Origin, f"${updatedArrival.flightNumber}%04d", updatedArrival.carrierCode, schDateTime.toISODateOnly, schDateTime.toHoursAndMinutes(), paxInfos)
   }
 
-  private def offerAndCheckResult(arrivals: Seq[Arrival], queues: Seq[String] = Seq()): Unit = {
+  private def offerAndCheckResult(arrivals: Seq[Arrival], queues: Seq[Queue] = Seq()): Unit = {
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(arrivals)))
 
     crunch.portStateTestProbe.fishForMessage(5 second) {
@@ -140,7 +142,7 @@ ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
     }
   }
 
-  private def paxLoadsAreCorrect(ps: PortState, arrivals: Seq[Arrival], queues: Seq[String]): Boolean = {
+  private def paxLoadsAreCorrect(ps: PortState, arrivals: Seq[Arrival], queues: Seq[Queue]): Boolean = {
     val flights = ps.flights
     val crunchMins = ps.crunchMinutes
 
@@ -156,7 +158,7 @@ ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
         val nonZeroLoadMinutes = cms.values.filter(_.paxLoad > 0).toSeq
         val firstPaxMin = nonZeroLoadMinutes.map(_.minute).min
         val paxExistInCorrectQueues = queues.foldLeft(true) {
-          case (okSoFar, q) => okSoFar && nonZeroLoadMinutes.map(_.queueName).contains(q)
+          case (okSoFar, q) => okSoFar && nonZeroLoadMinutes.map(_.queue).contains(q)
         }
         (firstPaxMin, Math.round(totalPax), paxExistInCorrectQueues)
       case _ => (0L, 0, false)

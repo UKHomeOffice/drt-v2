@@ -26,7 +26,8 @@ import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.{Flights, TerminalName}
+import drt.shared.FlightsApi.Flights
+import drt.shared.Terminals.{A1, ACL1D, ACL1I, ACL2I, ACLTER, InvalidTerminal, N, S, T1, T2, T3, Terminal}
 import drt.shared._
 import graphs.SinkToSourceBridge
 import manifests.ManifestLookup
@@ -97,9 +98,9 @@ case class DrtConfigParameters(config: Configuration) {
   val snapshotMegaBytesLivePortState: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.live-portstate").getOrElse(25d) * oneMegaByte).toInt
   val snapshotMegaBytesVoyageManifests: Int = (config.getOptional[Double]("persistence.snapshot-megabytes.voyage-manifest").getOrElse(100d) * oneMegaByte).toInt
   val awSCredentials: AWSCredentials = new AWSCredentials {
-    override def getAWSAccessKeyId: TerminalName = config.getOptional[String]("aws.credentials.access_key_id").getOrElse("")
+    override def getAWSAccessKeyId: String = config.getOptional[String]("aws.credentials.access_key_id").getOrElse("")
 
-    override def getAWSSecretKey: TerminalName = config.getOptional[String]("aws.credentials.secret_key").getOrElse("")
+    override def getAWSSecretKey: String = config.getOptional[String]("aws.credentials.secret_key").getOrElse("")
   }
   val ftpServer: String = ConfigFactory.load.getString("acl.host")
   val username: String = ConfigFactory.load.getString("acl.username")
@@ -338,14 +339,14 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       .map(maybeStatuses => maybeStatuses.collect { case Some(fs) => fs })
   }
 
-  def aclTerminalMapping(portCode: String): TerminalName => TerminalName = portCode match {
-    case "LGW" => (tIn: TerminalName) => Map("1I" -> "S", "2I" -> "N").getOrElse(tIn, "")
-    case "MAN" => (tIn: TerminalName) => Map("T1" -> "T1", "T2" -> "T2", "T3" -> "T3").getOrElse(tIn, "")
-    case "EMA" => (tIn: TerminalName) => Map("1I" -> "T1", "1D" -> "T1").getOrElse(tIn, "")
-    case "EDI" => (tIn: TerminalName) => Map("1I" -> "A1").getOrElse(tIn, "")
-    case "LCY" => (tIn: TerminalName) => Map("TER" -> "T1").getOrElse(tIn, tIn)
-    case "GLA" => (tIn: TerminalName) => Map("1I" -> "T1").getOrElse(tIn, tIn)
-    case _ => (tIn: TerminalName) => s"T${tIn.take(1)}"
+  def aclTerminalMapping(portCode: String): Terminal => Terminal = portCode match {
+    case "LGW" => (tIn: Terminal) => Map[Terminal, Terminal](T2 -> S, T1 -> N).getOrElse(tIn, tIn)
+    case "MAN" => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> T1, T2 -> T2, T3 -> T3).getOrElse(tIn, tIn)
+    case "EMA" => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> T1).getOrElse(tIn, tIn)
+    case "EDI" => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> A1).getOrElse(tIn, tIn)
+    case "LCY" => (tIn: Terminal) => Map[Terminal, Terminal](ACLTER -> T1).getOrElse(tIn, tIn)
+    case "GLA" => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> T1).getOrElse(tIn, tIn)
+    case _ => (tIn: Terminal) => tIn
   }
 
   def startScheduledFeedImports(crunchInputs: CrunchSystem[Cancellable]): Unit = {
@@ -548,7 +549,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     }
 
   private def randomArrivals(): Source[ArrivalsFeedResponse, Cancellable] = {
-    val arrivals = ArrivalGenerator.arrivals(now, airportConfig.terminalNames)
+    val arrivals = ArrivalGenerator.arrivals(now, airportConfig.terminals)
     Source.tick(1 millisecond, 1 minute, NotUsed).map { _ =>
       ArrivalsFeedSuccess(Flights(arrivals))
     }
@@ -613,7 +614,7 @@ object ArrivalGenerator {
               actPax: Option[Int] = None,
               maxPax: Option[Int] = None,
               lastKnownPax: Option[Int] = None,
-              terminal: String = "T1",
+              terminal: Terminal = T1,
               origin: String = "",
               operator: Option[String] = None,
               status: String = "",
@@ -657,7 +658,7 @@ object ArrivalGenerator {
     )
   }
 
-  def arrivals(now: () => SDateLike, terminalNames: Seq[TerminalName]): Seq[Arrival] = {
+  def arrivals(now: () => SDateLike, terminalNames: Seq[Terminal]): Seq[Arrival] = {
     val today = now().toISODateOnly
     val arrivals = for {
       terminal <- terminalNames

@@ -8,7 +8,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.shared.FlightsApi.TerminalName
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.component.Scala.Unmounted
@@ -156,8 +156,7 @@ object MonthlyStaffing {
             quarterHourlyChanges,
             startOfMonthMidnight,
             props.terminalPageTab.terminal,
-            saveAsTimeSlotMinutes
-          )
+            saveAsTimeSlotMinutes)
 
           val updatedMonth = props.terminalPageTab.dateFromUrlOrNow.getMonthString()
           val changedDays = whatDayChanged(initialTimeSlots, updatedTimeSlots)
@@ -224,7 +223,7 @@ object MonthlyStaffing {
   def updatedShiftAssignments(
                                changes: Map[(Int, Int), Int],
                                startOfMonthMidnight: SDateLike,
-                               terminalName: TerminalName,
+                               terminalName: Terminal,
                                timeSlotMinutes: Int
                              ): Seq[StaffAssignment] = changes.toSeq.map {
     case ((slotIdx, dayIdx), staff) =>
@@ -264,14 +263,14 @@ object MonthlyStaffing {
     import drt.client.services.JSDateConversions._
 
     val viewingDate = props.terminalPageTab.dateFromUrlOrNow
-    val terminalName = props.terminalPageTab.terminal
-    val terminalShifts = props.shifts.forTerminal(terminalName)
+    val terminal = props.terminalPageTab.terminal
+    val terminalShifts = props.shifts.forTerminal(terminal)
     val shiftAssignments = ShiftAssignments(terminalShifts)
 
     val daysInMonth: Seq[SDateLike] = consecutiveDaysInMonth(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
 
     val staffTimeSlots: Seq[Seq[Any]] = daysInMonthByTimeSlot((viewingDate, props.timeSlotMinutes)).map(_.map {
-      case Some(slotDateTime) => shiftAssignments.terminalStaffAt(terminalName, slotDateTime)
+      case Some(slotDateTime) => shiftAssignments.terminalStaffAt(terminal, slotDateTime)
       case None => "-"
     })
 

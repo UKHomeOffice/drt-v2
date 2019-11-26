@@ -11,6 +11,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
+import drt.shared.Terminals.Terminal
 import drt.shared.{Arrival, LiveFeedSource}
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
@@ -344,7 +345,7 @@ object BHXFlight extends NodeSeqUnmarshaller {
       None,
       None,
       f.arrivalAirport,
-      s"T${f.aircraftTerminal}",
+      Terminal(s"T${f.aircraftTerminal}"),
       f.airline + f.flightNumber,
       f.airline + f.flightNumber,
       f.departureAirport,

@@ -1,17 +1,27 @@
 package drt.staff
 
-import drt.shared.{MilliDate, ShiftAssignments, StaffAssignment}
+import drt.shared.Terminals.Terminal
+import drt.shared.{MilliDate, ShiftAssignments, StaffAssignment, Terminals}
 import org.joda.time.DateTime
-import play.api.libs.json.{JsValue, Json, OFormat}
+import play.api.libs.json.{JsError, JsObject, JsResult, JsString, JsSuccess, JsValue, Json, OFormat, Reads, Writes}
 import services.SDate.implicits._
 import services.graphstages.Crunch.europeLondonTimeZone
 
-case class StaffShift(port_code: String, terminal: String, staff: String, shift_start: String)
+case class StaffShift(port_code: String, terminal: Terminal, staff: String, shift_start: String)
 
 case class StaffShifts(shifts: List[StaffShift])
 
 object ImportStaff {
   def staffJsonToShifts(staffJson: JsValue): Option[ShiftAssignments] = {
+    implicit val terminalReads: Reads[Terminal] = new Reads[Terminal] {
+      override def reads(json: JsValue): JsResult[Terminal] = json match {
+        case j: JsString => JsSuccess(Terminals.Terminal(j.value))
+        case u => JsError(s"invalid terminal json value: $u")
+      }
+    }
+    implicit val terminalWrites: Writes[Terminal] = new Writes[Terminal] {
+      override def writes(o: Terminal): JsValue = JsString(o.toString)
+    }
     implicit val shiftFormat: OFormat[StaffShift] = Json.format[StaffShift]
     implicit val shiftsFormat: OFormat[StaffShifts] = Json.format[StaffShifts]
 

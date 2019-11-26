@@ -2,7 +2,8 @@ package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared.Queues.{InvalidQueue, Queue}
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
@@ -14,7 +15,7 @@ object DashboardTerminalSummary {
   case class DashboardSummary(
                                startTime: MillisSinceEpoch,
                                numFlights: Int,
-                               paxPerQueue: Map[QueueName, Double]
+                               paxPerQueue: Map[Queue, Double]
                              )
 
   def pcpHighest(cms: Seq[CrunchMinute]): CrunchMinute = cms.reduceLeft((cm1, cm2) => if (cm1.paxLoad > cm2.paxLoad) cm1 else cm2)
@@ -23,8 +24,8 @@ object DashboardTerminalSummary {
 
   def hourRange(start: SDateLike, numHours: Int): IndexedSeq[SDateLike] = (0 until numHours).map(h => start.addHours(h))
 
-  def aggregateAcrossQueues(startMinutes: List[CrunchMinute], terminalName: TerminalName): List[CrunchMinute] = {
-    val emptyMinute = CrunchMinute(terminalName, "", 0L, 0, 0, 0, 0, None, None, None, None, None)
+  def aggregateAcrossQueues(startMinutes: List[CrunchMinute], terminal: Terminal): List[CrunchMinute] = {
+    val emptyMinute = CrunchMinute(terminal, InvalidQueue, 0L, 0, 0, 0, 0, None, None, None, None, None)
 
     startMinutes
       .groupBy(_.minute)
@@ -32,8 +33,8 @@ object DashboardTerminalSummary {
         case (minute, cms) =>
           cms.foldLeft(emptyMinute) {
             case (minuteSoFar, cm) => CrunchMinute(
-              minuteSoFar.terminalName,
-              "All",
+              minuteSoFar.terminal,
+              InvalidQueue,
               minute,
               minuteSoFar.paxLoad + cm.paxLoad,
               minuteSoFar.workLoad + cm.workLoad,
@@ -57,7 +58,7 @@ object DashboardTerminalSummary {
       h.millisSinceEpoch,
       groupedFlights.getOrElse(h.millisSinceEpoch, Set()).size,
       groupedCrunchMinutes.getOrElse(h.millisSinceEpoch, List())
-        .groupBy(_.queueName)
+        .groupBy(_.queue)
         .mapValues(q => q.map(cm => cm.paxLoad).sum))
     )
   }
@@ -108,9 +109,9 @@ object DashboardTerminalSummary {
   case class Props(flights: List[ApiFlightWithSplits],
                    crunchMinutes: List[CrunchMinute],
                    staffMinutes: List[StaffMinute],
-                   terminal: TerminalName,
+                   terminal: Terminal,
                    paxTypeAndQueues: Seq[PaxTypeAndQueue],
-                   queues: Seq[QueueName],
+                   queues: Seq[Queue],
                    timeWindowStart: SDateLike,
                    timeWindowEnd: SDateLike)
 
@@ -203,7 +204,7 @@ object DashboardTerminalSummary {
       }
     }.build
 
-  def totalsByQueue(summary: Seq[DashboardSummary]): Map[QueueName, MillisSinceEpoch] = summary
+  def totalsByQueue(summary: Seq[DashboardSummary]): Map[Queue, MillisSinceEpoch] = summary
     .map {
       case DashboardSummary(_, _, byQ) => byQ
     }

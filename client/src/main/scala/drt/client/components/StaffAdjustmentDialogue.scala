@@ -6,7 +6,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.shared.FlightsApi.TerminalName
+import drt.shared.Terminals.Terminal
 import drt.shared.{LoggedInUser, SDateLike}
 import japgolly.scalajs.react.{CtorType, _}
 import japgolly.scalajs.react.component.Scala.Component
@@ -21,8 +21,8 @@ import scala.util.Success
 case class StaffAdjustmentDialogueState(action: String,
                                         reasonPlaceholder: String,
                                         reason: String,
-                                        terminalNames: Seq[TerminalName],
-                                        terminalName: TerminalName,
+                                        terminalNames: Seq[Terminal],
+                                        terminal: Terminal,
                                         date: String,
                                         startTimeHours: Int,
                                         startTimeMinutes: Int,
@@ -45,8 +45,8 @@ case class StaffAdjustmentDialogueState(action: String,
 }
 
 object StaffAdjustmentDialogueState {
-  def apply(terminalNames: Seq[TerminalName],
-            terminal: Option[TerminalName],
+  def apply(terminalNames: Seq[Terminal],
+            terminal: Option[Terminal],
             trigger: String,
             reasonPlaceholder: String,
             startDate: SDateLike,
@@ -60,7 +60,7 @@ object StaffAdjustmentDialogueState {
       reasonPlaceholder = reasonPlaceholder,
       reason = "",
       terminalNames = terminalNames,
-      terminalName = terminal.getOrElse(terminalNames.head),
+      terminal = terminal.getOrElse(terminalNames.head),
       date = f"${startDate.getDate()}%02d/${startDate.getMonth()}%02d/${startDate.getFullYear - 2000}%02d",
       startTimeHours = startDate.getHours(),
       startTimeMinutes = roundToNearest(5)(startDate.getMinutes()),
@@ -104,11 +104,11 @@ object StaffAdjustmentDialogue {
         val numberOfStaff: String = s"${state.action}${state.numberOfStaff.toString}"
 
         StaffAssignmentHelper
-          .tryStaffAssignment(state.reason, state.terminalName, state.date, startTime, endTime, numberOfStaff, createdBy = Some(state.loggedInUser.email)) match {
+          .tryStaffAssignment(state.reason, state.terminal.toString, state.date, startTime, endTime, numberOfStaff, createdBy = Some(state.loggedInUser.email)) match {
           case Success(movement) =>
             val movementsToAdd = for (movement <- StaffMovements.assignmentsToMovements(Seq(movement))) yield movement
             SPACircuit.dispatch(AddStaffMovements(movementsToAdd))
-            GoogleEventTracker.sendEvent(state.terminalName, "Add StaffMovement", movement.copy(createdBy = None).toString)
+            GoogleEventTracker.sendEvent(state.terminal.toString, "Add StaffMovement", movement.copy(createdBy = None).toString)
             killPopover()
           case _ =>
         }

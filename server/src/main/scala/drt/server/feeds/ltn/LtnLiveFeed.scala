@@ -10,6 +10,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
+import drt.shared.Terminals.Terminal
 import drt.shared.{Arrival, LiveFeedSource}
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
@@ -97,7 +98,7 @@ case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone
     RunwayID = ltnFeedFlight.Runway,
     BaggageReclaimId = ltnFeedFlight.BaggageClaimUnit,
     AirportID = "LTN",
-    Terminal = ltnFeedFlight.TerminalCode.getOrElse(throw new Exception("Missing terminal")),
+    Terminal = Terminal(ltnFeedFlight.TerminalCode.getOrElse(throw new Exception("Missing terminal"))),
     rawICAO = ltnFeedFlight.AirlineICAO.getOrElse(throw new Exception("Missing ICAO carrier code")) + ltnFeedFlight.FlightNumber.getOrElse(throw new Exception("Missing flight number")),
     rawIATA = ltnFeedFlight.AirlineIATA.getOrElse(throw new Exception("Missing IATA carrier code")) + ltnFeedFlight.FlightNumber.getOrElse(throw new Exception("Missing flight number")),
     Origin = ltnFeedFlight.OriginDestAirportIATA.getOrElse(throw new Exception("Missing origin IATA port code")),

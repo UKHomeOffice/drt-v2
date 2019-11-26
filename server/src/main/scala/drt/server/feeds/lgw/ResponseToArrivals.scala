@@ -1,7 +1,8 @@
 package drt.server.feeds.lgw
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{Arrival, LiveFeedSource}
+import drt.shared.Terminals.{InvalidTerminal, N, S}
+import drt.shared.{Arrival, LiveFeedSource, Terminals}
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -57,12 +58,12 @@ case class ResponseToArrivals(data: String) {
     arrival
   }
 
-  private def parseTerminal(n: Node): String = {
+  private def parseTerminal(n: Node): Terminals.Terminal = {
     val terminal = (n \\ "AirportResources" \ "Resource").find(n => (n \ "@DepartureOrArrival" text).equals("Arrival")).map(n => n \\ "AircraftTerminal" text).getOrElse("")
     val mappedTerminal = terminal match {
-      case "1" => "S"
-      case "2" => "N"
-      case _ => ""
+      case "1" => S
+      case "2" => N
+      case _ => InvalidTerminal
     }
     mappedTerminal
   }

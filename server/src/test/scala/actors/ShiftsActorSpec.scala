@@ -4,7 +4,7 @@ import actors.pointInTime.ShiftsReadActor
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.testkit.{ImplicitSender, TestKit}
 import com.typesafe.config.ConfigFactory
-import drt.shared.FlightsApi.TerminalName
+import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterEach
@@ -15,10 +15,10 @@ import scala.concurrent.duration._
 
 
 object StaffAssignmentGenerator {
-  def generateStaffAssignment(name: String, terminalName: TerminalName, startTime: String, endTime: String, staff: Int): StaffAssignment = {
+  def generateStaffAssignment(name: String, terminal: Terminal, startTime: String, endTime: String, staff: Int): StaffAssignment = {
     val start = MilliDate(SDate(startTime).millisSinceEpoch)
     val end = MilliDate(SDate(endTime).millisSinceEpoch)
-    StaffAssignment(name, terminalName, start, end, staff, None)
+    StaffAssignment(name, terminal, start, end, staff, None)
   }
 }
 
@@ -47,7 +47,7 @@ class ShiftsActorSpec extends TestKit(ActorSystem("ShiftsActorSpec", ConfigFacto
     "remember a shift staff assignment added before a shutdown" in {
       val startTime = MilliDate(SDate(s"2017-01-01T07:00").millisSinceEpoch)
       val endTime = MilliDate(SDate(s"2017-01-01T15:00").millisSinceEpoch)
-      val shifts = ShiftAssignments(Seq(StaffAssignment("Morning", "T1", startTime, endTime, 10, None)))
+      val shifts = ShiftAssignments(Seq(StaffAssignment("Morning", T1, startTime, endTime, 10, None)))
 
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
       val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
@@ -68,8 +68,8 @@ class ShiftsActorSpec extends TestKit(ActorSystem("ShiftsActorSpec", ConfigFacto
     }
 
     "correctly remember an update to a shift after a restart" in {
-      val shift1 = generateStaffAssignment("Morning 1", "T1", "2017-01-01T07:00", "2017-01-01T15:00", 10)
-      val shift2 = generateStaffAssignment("Morning 2", "T1", "2017-01-01T07:30", "2017-01-01T15:30", 10)
+      val shift1 = generateStaffAssignment("Morning 1", T1, "2017-01-01T07:00", "2017-01-01T15:00", 10)
+      val shift2 = generateStaffAssignment("Morning 2", T1, "2017-01-01T07:30", "2017-01-01T15:30", 10)
 
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
       val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
@@ -95,10 +95,10 @@ class ShiftsActorSpec extends TestKit(ActorSystem("ShiftsActorSpec", ConfigFacto
     }
 
     "remember multiple added shifts and correctly remember movements after a restart" in {
-      val shift1 = generateStaffAssignment("Morning 1", "T1", "2017-01-01T07:00", "2017-01-01T15:00", 10)
-      val shift2 = generateStaffAssignment("Morning 2", "T1", "2017-01-01T07:30", "2017-01-01T15:30", 5)
-      val shift3 = generateStaffAssignment("Evening 1", "T1", "2017-01-01T17:00", "2017-01-01T23:00", 11)
-      val shift4 = generateStaffAssignment("Evening 2", "T1", "2017-01-01T17:30", "2017-01-01T23:30", 6)
+      val shift1 = generateStaffAssignment("Morning 1", T1, "2017-01-01T07:00", "2017-01-01T15:00", 10)
+      val shift2 = generateStaffAssignment("Morning 2", T1, "2017-01-01T07:30", "2017-01-01T15:30", 5)
+      val shift3 = generateStaffAssignment("Evening 1", T1, "2017-01-01T17:00", "2017-01-01T23:00", 11)
+      val shift4 = generateStaffAssignment("Evening 2", T1, "2017-01-01T17:30", "2017-01-01T23:30", 6)
 
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
       val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
@@ -127,10 +127,10 @@ class ShiftsActorSpec extends TestKit(ActorSystem("ShiftsActorSpec", ConfigFacto
     }
 
     "restore shifts to a point in time view" in {
-      val shift1 = generateStaffAssignment("Morning 1", "T1", "2017-01-01T07:00", "2017-01-01T15:00", 10)
-      val shift2 = generateStaffAssignment("Morning 2", "T1", "2017-01-01T07:30", "2017-01-01T15:30", 5)
-      val shift3 = generateStaffAssignment("Evening 1", "T1", "2017-01-01T17:00", "2017-01-01T23:00", 11)
-      val shift4 = generateStaffAssignment("Evening 2", "T1", "2017-01-01T17:30", "2017-01-01T23:30", 6)
+      val shift1 = generateStaffAssignment("Morning 1", T1, "2017-01-01T07:00", "2017-01-01T15:00", 10)
+      val shift2 = generateStaffAssignment("Morning 2", T1, "2017-01-01T07:30", "2017-01-01T15:30", 5)
+      val shift3 = generateStaffAssignment("Evening 1", T1, "2017-01-01T17:00", "2017-01-01T23:00", 11)
+      val shift4 = generateStaffAssignment("Evening 2", T1, "2017-01-01T17:30", "2017-01-01T23:30", 6)
 
       val actor2000 = newStaffActor(nowAs("2017-01-01T20:00"))
 

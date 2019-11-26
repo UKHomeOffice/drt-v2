@@ -1,6 +1,7 @@
 package services.graphstages
 
 import drt.shared.Arrival
+import drt.shared.Terminals.T1
 import org.specs2.mutable.Specification
 import services.SDate
 
@@ -29,7 +30,7 @@ class LiveArrivalsUtilSpec extends Specification {
       None,
       None,
       "STN",
-      "T1",
+      T1,
       "TST100",
       "TST100",
       "TST",

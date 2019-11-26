@@ -8,7 +8,8 @@ import javax.net.ssl._
 import akka.actor.{ActorSystem, Scheduler}
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.CrunchApi.{ActualDeskStats, DeskStat}
-import drt.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared.Queues.Queue
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
@@ -23,10 +24,6 @@ import scala.util.{Failure, Success, Try}
 
 object Deskstats {
   val log: Logger = LoggerFactory.getLogger(getClass)
-
-  type PortDeskStats = Map[TerminalName, Map[QueueName, Map[Long, DeskStat]]]
-  type QueueDeskStats = Map[Long, DeskStat]
-  type TerminalDeskStats = Map[String, QueueDeskStats]
 
   class NaiveTrustManager extends X509TrustManager {
     override def checkClientTrusted(cert: Array[X509Certificate], authType: String) {}
@@ -58,7 +55,7 @@ object Deskstats {
     }
   }
 
-  def blackjackDeskstats(blackjackBaseUrl: String, parseSince: SDateLike): Map[String, Map[String, Map[Long, DeskStat]]] = {
+  def blackjackDeskstats(blackjackBaseUrl: String, parseSince: SDateLike): Map[Terminal, Map[Queue, Map[Long, DeskStat]]] = {
     val blackjackFullUrl = blackjackBaseUrl + uriForDate(parseSince)
 
     val sc = SSLContext.getInstance("SSL")
@@ -131,7 +128,7 @@ object Deskstats {
     }.toMap
   }
 
-  def csvData(deskstatsContent: String): Map[String, Map[String, Map[Long, DeskStat]]] = {
+  def csvData(deskstatsContent: String): Map[Terminal, Map[Queue, Map[Long, DeskStat]]] = {
     val headings = csvHeadings(deskstatsContent)
     log.debug(s"DeskStats: headings: $headings")
     val columnIndices = Map(
@@ -148,16 +145,16 @@ object Deskstats {
     val dataByTerminalAndQueue =
       dataByTerminal.map {
         case (terminal, rs) =>
-          terminal -> queueColumns.map {
+          Terminal(terminal) -> queueColumns.map {
             case (queueName, desksAndWaitIndexes) =>
-              queueName -> desksForQueueByMillis(queueName, columnIndices("date"), columnIndices("time"), desksAndWaitIndexes("desks"), desksAndWaitIndexes("wait"), rs)
+              queueName -> desksForQueueByMillis(queueName.toString, columnIndices("date"), columnIndices("time"), desksAndWaitIndexes("desks"), desksAndWaitIndexes("wait"), rs)
           }
       }
 
     dataByTerminalAndQueue
   }
 
-  def queueColumnIndexes(headings: Seq[String]): Map[QueueName, Map[QueueName, Int]] = {
+  def queueColumnIndexes(headings: Seq[String]): Map[Queue, Map[String, Int]] = {
     Map(
       Queues.EeaDesk -> Map(
         "desks" -> headings.indexOf("EEA desks open"),

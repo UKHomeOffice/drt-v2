@@ -11,6 +11,7 @@ import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared.PaxTypes.{EeaMachineReadable, VisaNational}
 import drt.shared.PaxTypesAndQueues.{eeaMachineReadableToDesk, visaNationalToDesk}
 import drt.shared.SplitRatiosNs.SplitSources
+import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.ArrivalsFeedSuccess
@@ -128,7 +129,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val mockPortStateActor = system.actorOf(Props(classOf[MockPortStateActor], portStateProbe, noDelay))
     mockPortStateActor ! SetFlights(flight)
 
-    val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
+    val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
     val testAirportConfig = airportConfig.copy(terminalProcessingTimes = procTimes)
 
     val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, mockCrunch, testAirportConfig).run()
@@ -166,7 +167,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val mockPortStateActor = system.actorOf(Props(classOf[MockPortStateActor], portStateProbe, noDelay))
     mockPortStateActor ! SetFlights(flight)
 
-    val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
+    val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
     val testAirportConfig = airportConfig.copy(terminalProcessingTimes = procTimes)
 
     val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, mockCrunch, testAirportConfig).run()
@@ -206,7 +207,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val mockPortStateActor = system.actorOf(Props(classOf[MockPortStateActor], portStateProbe, noDelay))
     mockPortStateActor ! SetFlights(flight)
 
-    val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
+    val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
     val testAirportConfig = airportConfig.copy(terminalProcessingTimes = procTimes)
 
     val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, mockCrunch, testAirportConfig).run()
@@ -249,7 +250,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val portStateProbe = TestProbe("port-state")
     val mockPortStateActor = system.actorOf(Props(classOf[MockPortStateActor], portStateProbe, noDelay))
 
-    val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60))
+    val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> 30d / 60))
     val testAirportConfig = airportConfig.copy(terminalProcessingTimes = procTimes)
 
     val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, mockCrunch, testAirportConfig).run()
@@ -263,7 +264,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     portStateProbe.fishForMessage(2 seconds) {
       case DeskRecMinutes(drms) =>
         drms.exists {
-          case DeskRecMinute("T1", Queues.EeaDesk, m, p, w, _, _) => m == noonMillis && p > 0
+          case DeskRecMinute(T1, Queues.EeaDesk, m, p, w, _, _) => m == noonMillis && p > 0
           case _ => false
         }
       case _ => false
@@ -275,11 +276,11 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     portStateProbe.fishForMessage(2 seconds) {
       case DeskRecMinutes(drms) =>
         val zeroAtNoon = drms.exists {
-          case DeskRecMinute("T1", Queues.EeaDesk, m, p, w, _, _) => m == noonMillis && p == 0
+          case DeskRecMinute(T1, Queues.EeaDesk, m, p, w, _, _) => m == noonMillis && p == 0
           case _ => false
         }
         val nonZeroAtOne = drms.exists {
-          case DeskRecMinute("T1", Queues.EeaDesk, m, p, w, _, _) => m == onePmMillis && p > 0
+          case DeskRecMinute(T1, Queues.EeaDesk, m, p, w, _, _) => m == onePmMillis && p > 0
           case _ => false
         }
         zeroAtNoon && nonZeroAtOne
@@ -295,11 +296,11 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
     val noon = "2018-01-01T00:00"
     val noon30 = "2018-01-01T00:30"
-    val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60))
+    val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> 30d / 60))
     val testAirportConfig = airportConfig.copy(
       terminalProcessingTimes = procTimes,
-      terminalNames = Seq("T1"),
-      queues = Map("T1" -> Seq(Queues.EeaDesk))
+      terminals = Seq(T1),
+      queues = Map(T1 -> Seq(Queues.EeaDesk))
     )
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = noon, actPax = Option(25))
 
@@ -315,10 +316,10 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val initialPortState = PortState(
       flightsWithSplits = List(flight1),
       crunchMinutes = List(
-        CrunchMinute("T1", Queues.EeaDesk, noonMillis, 30, 10, 0, 0),
-        CrunchMinute("T1", Queues.EeaDesk, noonMillis + 60000, 5, 2.5, 0, 0),
-        CrunchMinute("T1", Queues.EeaDesk, noonMillis + 120000, 1, 1, 0, 0),
-        CrunchMinute("T1", Queues.EeaDesk, noonMillis + 180000, 1, 1, 0, 0)
+        CrunchMinute(T1, Queues.EeaDesk, noonMillis, 30, 10, 0, 0),
+        CrunchMinute(T1, Queues.EeaDesk, noonMillis + 60000, 5, 2.5, 0, 0),
+        CrunchMinute(T1, Queues.EeaDesk, noonMillis + 120000, 1, 1, 0, 0),
+        CrunchMinute(T1, Queues.EeaDesk, noonMillis + 180000, 1, 1, 0, 0)
       ),
       staffMinutes = List()
     )
@@ -333,11 +334,11 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
     crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case PortState(_, cms, _) =>
-        val zeroAtNoon = cms.get(TQM("T1", Queues.EeaDesk, noonMillis)) match {
+        val zeroAtNoon = cms.get(TQM(T1, Queues.EeaDesk, noonMillis)) match {
           case None => false
           case Some(cm) => cm.paxLoad == 0 && cm.workLoad == 0
         }
-        val nonZeroAtOnePm = cms.get(TQM("T1", Queues.EeaDesk, noon30Millis)) match {
+        val nonZeroAtOnePm = cms.get(TQM(T1, Queues.EeaDesk, noon30Millis)) match {
           case None => false
           case Some(cm) => cm.paxLoad == 20 && cm.workLoad == 10
         }
@@ -353,11 +354,11 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
     val noon = "2018-01-01T00:00"
     val noon30 = "2018-01-01T00:30"
-    val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60))
+    val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> 30d / 60))
     val testAirportConfig = airportConfig.copy(
       terminalProcessingTimes = procTimes,
-      terminalNames = Seq("T1"),
-      queues = Map("T1" -> Seq(Queues.EeaDesk))
+      terminals = Seq(T1),
+      queues = Map(T1 -> Seq(Queues.EeaDesk))
     )
     val crunch = runCrunchGraph(
       airportConfig = testAirportConfig,
@@ -375,7 +376,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
     crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case PortState(_, cms, _) =>
-        val nonZeroAtNoon = cms.get(TQM("T1", Queues.EeaDesk, noonMillis)) match {
+        val nonZeroAtNoon = cms.get(TQM(T1, Queues.EeaDesk, noonMillis)) match {
           case None => false
           case Some(cm) => cm.paxLoad == 40 && cm.workLoad == 20
         }
@@ -386,11 +387,11 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
     crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case PortState(_, cms, _) =>
-        val zeroAtNoon = cms.get(TQM("T1", Queues.EeaDesk, noonMillis)) match {
+        val zeroAtNoon = cms.get(TQM(T1, Queues.EeaDesk, noonMillis)) match {
           case None => false
           case Some(cm) => cm.paxLoad == 20 && cm.workLoad == 10
         }
-        val nonZeroAtOnePm = cms.get(TQM("T1", Queues.EeaDesk, noon30Millis)) match {
+        val nonZeroAtOnePm = cms.get(TQM(T1, Queues.EeaDesk, noon30Millis)) match {
           case None => false
           case Some(cm) => cm.paxLoad == 20 && cm.workLoad == 10
         }
@@ -412,7 +413,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val mockPortStateActor = system.actorOf(Props(classOf[MockPortStateActor], portStateProbe, noDelay))
     mockPortStateActor ! SetFlights(flight)
 
-    val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
+    val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
     val testAirportConfig = airportConfig.copy(
       terminalProcessingTimes = procTimes,
       divertedQueues = Map(Queues.NonEeaDesk -> Queues.EeaDesk)
@@ -444,11 +445,11 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     "When I ask for the output loads " +
     "Then I should see zero loads for the minutes affected by the flight in question" >> {
     val noon = "2018-01-01T00:00"
-    val procTimes = Map("T1" -> Map(eeaMachineReadableToDesk -> 30d / 60))
+    val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> 30d / 60))
     val testAirportConfig = airportConfig.copy(
       terminalProcessingTimes = procTimes,
-      terminalNames = Seq("T1"),
-      queues = Map("T1" -> Seq(Queues.EeaDesk))
+      terminals = Seq(T1),
+      queues = Map(T1 -> Seq(Queues.EeaDesk))
     )
     val crunch = runCrunchGraph(
       airportConfig = testAirportConfig,
@@ -465,7 +466,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
     crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case PortState(_, cms, _) =>
-        val nonZeroAtNoon = cms.get(TQM("T1", Queues.EeaDesk, noonMillis)) match {
+        val nonZeroAtNoon = cms.get(TQM(T1, Queues.EeaDesk, noonMillis)) match {
           case None => false
           case Some(cm) => cm.paxLoad == 40 && cm.workLoad == 20
         }
@@ -476,7 +477,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
     crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case PortState(_, cms, _) =>
-        val fewerAtNoon = cms.get(TQM("T1", Queues.EeaDesk, noonMillis)) match {
+        val fewerAtNoon = cms.get(TQM(T1, Queues.EeaDesk, noonMillis)) match {
           case None => false
           case Some(cm) => cm.paxLoad == 20 && cm.workLoad == 10
         }
@@ -505,7 +506,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     millisToCrunchSourceActor ? List(epoch)
 
     portStateProbe.fishForMessage(2 seconds) {
-      case DeskRecMinutes(drms) => drms.length === airportConfig.queues("T1").size * minsInADay
+      case DeskRecMinutes(drms) => drms.length === airportConfig.queues(T1).size * minsInADay
       case _ => false
     }
 

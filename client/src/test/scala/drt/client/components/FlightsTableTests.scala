@@ -3,6 +3,8 @@ package drt.client.components
 import diode.data.{Pot, Ready}
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.Queues.Queue
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
@@ -19,7 +21,7 @@ object FlightsTableTests extends TestSuite {
   import japgolly.scalajs.react.test._
   import japgolly.scalajs.react.vdom.html_<^._
 
-  val queuesWithoutFastTrack: List[String] = Queues.queueOrder.filterNot(q => q == Queues.FastTrack || q == Queues.QueueDesk)
+  val queuesWithoutFastTrack: List[Queue] = Queues.queueOrder.filterNot(q => q == Queues.FastTrack || q == Queues.QueueDesk)
 
   def tests = Tests {
 
@@ -57,7 +59,7 @@ object FlightsTableTests extends TestSuite {
         RunwayID = Some("1"),
         BaggageReclaimId = Some("A"),
         AirportID = "LHR",
-        Terminal = "T2",
+        Terminal = Terminal("T2"),
         rawICAO = "BA0001",
         rawIATA = "BAA0001",
         Origin = "JFK",

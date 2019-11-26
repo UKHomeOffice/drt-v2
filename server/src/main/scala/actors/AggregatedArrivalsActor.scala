@@ -5,7 +5,7 @@ import java.sql.Timestamp
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import akka.actor.Actor
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.TerminalName
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import slickdb.ArrivalTableLike
@@ -38,7 +38,7 @@ class AggregatedArrivalsActor(portCode: String, arrivalTable: ArrivalTableLike) 
       log.error(s"Received unexpected message ${other.getClass}")
   }
 
-  def handleRemoval(number: Int, terminal: TerminalName, scheduled: MillisSinceEpoch): Unit = {
+  def handleRemoval(number: Int, terminal: Terminal, scheduled: MillisSinceEpoch): Unit = {
     val eventualRemoval = arrivalTable.removeArrival(number, terminal, new Timestamp(scheduled))
     val errorMsg = s"Error on removing arrival ($number/$terminal/$scheduled)"
     ackOnCompletion(eventualRemoval, errorMsg)}

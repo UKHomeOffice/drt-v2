@@ -1,6 +1,7 @@
 package feeds.lhr.forecast
 
 import drt.server.feeds.lhr.forecast.{LHRForecastCSVExtractor, LHRForecastFlightRow}
+import drt.shared.Terminals.T2
 import drt.shared.{Arrival, ForecastFeedSource}
 import org.specs2.mutable.Specification
 import services.SDate
@@ -130,7 +131,7 @@ class LHRForecastCSVSpec extends Specification {
         None,
         None,
         "LHR",
-        "T2",
+        T2,
         "TS0001",
         "TS0001",
         "TST",
@@ -152,7 +153,7 @@ class LHRForecastCSVSpec extends Specification {
         None,
         None,
         "LHR",
-        "T2",
+        T2,
         "TS0002",
         "TS0002",
         "TST",

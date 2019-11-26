@@ -7,6 +7,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.Queues.EeaDesk
 import drt.shared.SplitRatiosNs.SplitSources.TerminalAverage
+import drt.shared.Terminals.T1
 import drt.shared._
 import org.specs2.matcher.Scope
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
@@ -33,7 +34,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 100.0, None)), TerminalAverage, None, Percentage)
 
     val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(
-      airportConfig = airportConfig.copy(terminalNames = Seq("T1")),
+      airportConfig = airportConfig.copy(terminals = Seq(T1)),
       now = () => dateNow,
       initialPortState = Option(PortState(SortedMap(arrival_v2_with_chox_time.unique -> ApiFlightWithSplits(arrival_v2_with_chox_time, Set(terminalSplits))), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())),
       initialLiveArrivals = mutable.SortedMap[UniqueArrival, Arrival]() ++ List(arrival_v2_with_chox_time).map(a => (a.unique, a))
@@ -93,7 +94,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlight))
 
-      val forecastArrival = arrival(iata = "BA0002", schDt = forecastScheduled, actPax = Option(21), terminal = "T1", feedSources = Set(ForecastFeedSource))
+      val forecastArrival = arrival(schDt = forecastScheduled, iata = "BA0002", terminal = T1, actPax = Option(21), feedSources = Set(ForecastFeedSource))
       val forecastArrivals = ArrivalsFeedSuccess(Flights(List(forecastArrival)))
 
       offerAndWait(crunch.forecastArrivalsInput, forecastArrivals)

@@ -4,6 +4,7 @@ import actors.acking.AckingReceiver.StreamCompleted
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{ClosedShape, OverflowStrategy}
 import akka.testkit.TestProbe
+import drt.shared.Terminals.T1
 import drt.shared.{Arrival, ArrivalsDiff, UniqueArrival}
 import services.crunch.CrunchTestLike
 import services.{PcpArrival, SDate}
@@ -134,7 +135,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike {
       mutable.SortedMap[UniqueArrival, Arrival](),
       mutable.SortedMap[UniqueArrival, Arrival](),
       pcpTimeCalc,
-      Set("T1"),
+      Set(T1),
       Crunch.oneDayMillis,
       () => SDate(2019, 10, 1, 16, 0)
     )
@@ -201,7 +202,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike {
       None,
       None,
       "STN",
-      "T1",
+      T1,
       "TST100",
       "TST100",
       "TST",

@@ -7,8 +7,8 @@ import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import controllers.{ShiftPersistence, StaffMovementsPersistence}
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.TerminalName
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.mvc.{Headers, Session}
@@ -76,9 +76,9 @@ abstract class ApiService(val airportConfig: AirportConfig,
 
   def actorSystem: ActorSystem
 
-  def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: TerminalName): Future[Option[ForecastPeriodWithHeadlines]]
+  def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: Terminal): Future[Option[ForecastPeriodWithHeadlines]]
 
-  def getShiftsForMonth(month: MillisSinceEpoch, terminalName: TerminalName): Future[ShiftAssignments]
+  def getShiftsForMonth(month: MillisSinceEpoch, terminal: Terminal): Future[ShiftAssignments]
 
   def updateShifts(shiftsToUpdate: Seq[StaffAssignment]): Unit
 

@@ -4,6 +4,7 @@ import actors.pointInTime.FixedPointsReadActor
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.testkit.{ImplicitSender, TestKit}
 import com.typesafe.config.ConfigFactory
+import drt.shared.Terminals.T1
 import drt.shared._
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterEach
@@ -38,7 +39,7 @@ class FixedPointsActorSpec extends TestKit(ActorSystem("FixedPointsActorSpec", C
     "remember a fixedPoint staff assignmesnt added before a shutdown" in {
       val startTime = MilliDate(SDate(s"2017-01-01T07:00").millisSinceEpoch)
       val endTime = MilliDate(SDate(s"2017-01-01T15:00").millisSinceEpoch)
-      val fixedPoints = FixedPointAssignments(Seq(StaffAssignment("Morning", "T1", startTime, endTime, 10, None)))
+      val fixedPoints = FixedPointAssignments(Seq(StaffAssignment("Morning", T1, startTime, endTime, 10, None)))
 
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
       val actor = system.actorOf(Props(classOf[FixedPointsActor], now), "fixedPointsActor1")
@@ -58,8 +59,8 @@ class FixedPointsActorSpec extends TestKit(ActorSystem("FixedPointsActorSpec", C
   }
 
   "correctly remember an update to a fixed point after a restart" in {
-    val fixedPoint1 = generateStaffAssignment("Morning 1", "T1", "2017-01-01T07:00", "2017-01-01T15:00", 10)
-    val fixedPoint2 = generateStaffAssignment("Morning 2", "T1", "2017-01-01T07:30", "2017-01-01T15:30", 10)
+    val fixedPoint1 = generateStaffAssignment("Morning 1", T1, "2017-01-01T07:00", "2017-01-01T15:00", 10)
+    val fixedPoint2 = generateStaffAssignment("Morning 2", T1, "2017-01-01T07:30", "2017-01-01T15:30", 10)
 
     val now: () => SDateLike = () => SDate("2017-01-01T23:59")
 
@@ -84,10 +85,10 @@ class FixedPointsActorSpec extends TestKit(ActorSystem("FixedPointsActorSpec", C
   }
 
   "remember multiple added fixed points and correctly remember updates after a restart" in {
-    val fixedPoint1 = generateStaffAssignment("Morning 1", "T1", "2017-01-01T07:00", "2017-01-01T15:00", 10)
-    val fixedPoint2 = generateStaffAssignment("Morning 2", "T1", "2017-01-01T07:30", "2017-01-01T15:30", 5)
-    val fixedPoint3 = generateStaffAssignment("Evening 1", "T1", "2017-01-01T17:00", "2017-01-01T23:00", 11)
-    val fixedPoint4 = generateStaffAssignment("Evening 2", "T1", "2017-01-01T17:30", "2017-01-01T23:30", 6)
+    val fixedPoint1 = generateStaffAssignment("Morning 1", T1, "2017-01-01T07:00", "2017-01-01T15:00", 10)
+    val fixedPoint2 = generateStaffAssignment("Morning 2", T1, "2017-01-01T07:30", "2017-01-01T15:30", 5)
+    val fixedPoint3 = generateStaffAssignment("Evening 1", T1, "2017-01-01T17:00", "2017-01-01T23:00", 11)
+    val fixedPoint4 = generateStaffAssignment("Evening 2", T1, "2017-01-01T17:30", "2017-01-01T23:30", 6)
 
     val now: () => SDateLike = () => SDate("2017-01-01T23:59")
 
@@ -115,10 +116,10 @@ class FixedPointsActorSpec extends TestKit(ActorSystem("FixedPointsActorSpec", C
   }
 
   "restore fixed points to a point in time view" in {
-    val fixedPoint1 = generateStaffAssignment("Morning 1", "T1", "2017-01-01T07:00", "2017-01-01T15:00", 10)
-    val fixedPoint2 = generateStaffAssignment("Morning 2", "T1", "2017-01-01T07:30", "2017-01-01T15:30", 5)
-    val fixedPoint3 = generateStaffAssignment("Evening 1", "T1", "2017-01-01T17:00", "2017-01-01T23:00", 11)
-    val fixedPoint4 = generateStaffAssignment("Evening 2", "T1", "2017-01-01T17:30", "2017-01-01T23:30", 6)
+    val fixedPoint1 = generateStaffAssignment("Morning 1", T1, "2017-01-01T07:00", "2017-01-01T15:00", 10)
+    val fixedPoint2 = generateStaffAssignment("Morning 2", T1, "2017-01-01T07:30", "2017-01-01T15:30", 5)
+    val fixedPoint3 = generateStaffAssignment("Evening 1", T1, "2017-01-01T17:00", "2017-01-01T23:00", 11)
+    val fixedPoint4 = generateStaffAssignment("Evening 2", T1, "2017-01-01T17:30", "2017-01-01T23:30", 6)
 
     val actor2000 = newStaffActor(nowAs("2017-01-01T20:00"))
 

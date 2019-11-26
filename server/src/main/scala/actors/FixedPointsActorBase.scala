@@ -5,6 +5,7 @@ import actors.acking.AckingReceiver.StreamCompleted
 import akka.actor.Scheduler
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
+import drt.shared.Terminals.Terminal
 import drt.shared.{FixedPointAssignments, MilliDate, SDateLike, StaffAssignment}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
@@ -113,7 +114,7 @@ object FixedPointsMessageParser {
 
   def staffAssignmentToMessage(assignment: StaffAssignment, createdAt: SDateLike): FixedPointMessage = FixedPointMessage(
     name = Option(assignment.name),
-    terminalName = Option(assignment.terminalName),
+    terminalName = Option(assignment.terminal.toString),
     numberOfStaff = Option(assignment.numberOfStaff.toString),
     startTimestamp = Option(assignment.startDt.millisSinceEpoch),
     endTimestamp = Option(assignment.endDt.millisSinceEpoch),
@@ -122,7 +123,7 @@ object FixedPointsMessageParser {
 
   def fixedPointMessageToStaffAssignment(fixedPointMessage: FixedPointMessage) = StaffAssignment(
     name = fixedPointMessage.name.getOrElse(""),
-    terminalName = fixedPointMessage.terminalName.getOrElse(""),
+    terminal = Terminal(fixedPointMessage.terminalName.getOrElse("")),
     startDt = MilliDate(fixedPointMessage.startTimestamp.getOrElse(0L)),
     endDt = MilliDate(fixedPointMessage.endTimestamp.getOrElse(0L)),
     numberOfStaff = fixedPointMessage.numberOfStaff.getOrElse("0").toInt,

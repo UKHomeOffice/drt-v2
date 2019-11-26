@@ -1,5 +1,6 @@
 package drt.client.services
 
+import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import utest._
 
@@ -18,14 +19,15 @@ object ShiftsServiceTests extends TestSuite {
         "So that I can easily get an initial state for the system" - {
 
         "Given a shift of 10 people, if we ask how many staff are available" - {
-          val shifts = StaffAssignment("alpha", "T1", SDate(2016, 12, 10, 10, 0), SDate(2016, 12, 10, 19, 0), 10, None)
+          val shifts = StaffAssignment("alpha", T1, SDate(2016, 12, 10, 10, 0), SDate(2016, 12, 10, 19, 0), 10, None)
           val shiftService = ShiftAssignments(shifts :: Nil)
+
           "at its first bound, then we get 10" - {
-            val result = shiftService.terminalStaffAt("T1", SDate(2016, 12, 10, 10, 0))
+            val result = shiftService.terminalStaffAt(T1, SDate(2016, 12, 10, 10, 0))
             assert(result == 10)
           }
           "at its upper bound, then we get 10" - {
-            val result = shiftService.terminalStaffAt("T1", SDate(2016, 12, 10, 19, 0))
+            val result = shiftService.terminalStaffAt(T1, SDate(2016, 12, 10, 19, 0))
             assert(result == 10)
           }
           "can compare dates" - {
@@ -37,34 +39,34 @@ object ShiftsServiceTests extends TestSuite {
         "some implicits make things nicer whether we're server side or client side " - {
           val startDt = SDate(2016, 12, 10, 10, 0)
           val endDate = SDate(2016, 12, 19, 12, 0)
-          val shifts = StaffAssignment("alpha", "T1", startDt, endDate, 10, None)
+          val shifts = StaffAssignment("alpha", T1, startDt, endDate, 10, None)
 
-          val result = StaffAssignment("alpha", "T1", 1481364000000L, 1482148800000L, 10, createdBy = None)
+          val result = StaffAssignment("alpha", T1, 1481364000000L, 1482148800000L, 10, createdBy = None)
           assert(shifts == result)
         }
 
         "Given two overlapping assignments" - {
-          val shifts = StaffAssignment("alpha", "T1", SDate(2016, 12, 10, 10, 0), SDate(2016, 12, 10, 19, 0), 10, None) ::
-            StaffAssignment("beta", "T1", SDate(2016, 12, 10, 18, 0), SDate(2016, 12, 10, 23, 0), 5, None) :: Nil
+          val shifts = StaffAssignment("alpha", T1, SDate(2016, 12, 10, 10, 0), SDate(2016, 12, 10, 19, 0), 10, None) ::
+            StaffAssignment("beta", T1, SDate(2016, 12, 10, 18, 0), SDate(2016, 12, 10, 23, 0), 5, None) :: Nil
           val shiftService = ShiftAssignments(shifts)
           "on the overlap the staff is the sum of both" - {
-            val result = shiftService.terminalStaffAt("T1", SDate(2016, 12, 10, 18, 30))
+            val result = shiftService.terminalStaffAt(T1, SDate(2016, 12, 10, 18, 30))
             assert(result == 15)
           }
           "on the lower bound of the second shift the staff is the sum of both (15)" - {
-            val result = shiftService.terminalStaffAt("T1", SDate(2016, 12, 10, 18, 0))
+            val result = shiftService.terminalStaffAt(T1, SDate(2016, 12, 10, 18, 0))
             assert(result == 15)
           }
           "on the upper bound of the second shift the staff the number of the second shift (5)" - {
-            val result = shiftService.terminalStaffAt("T1", SDate(2016, 12, 10, 23, 0))
+            val result = shiftService.terminalStaffAt(T1, SDate(2016, 12, 10, 23, 0))
             assert(result == 5)
           }
           "after the upper bound of the second shift the staff is 0" - {
-            val result = shiftService.terminalStaffAt("T1", SDate(2016, 12, 10, 23, 1))
+            val result = shiftService.terminalStaffAt(T1, SDate(2016, 12, 10, 23, 1))
             assert(result == 0)
           }
           "before the lower bound of the first shift the staff is 0" - {
-            val result = shiftService.terminalStaffAt("T1", SDate(2016, 12, 10, 9, 59))
+            val result = shiftService.terminalStaffAt(T1, SDate(2016, 12, 10, 9, 59))
             assert(result == 0)
           }
         }
@@ -77,7 +79,7 @@ object ShiftsServiceTests extends TestSuite {
               """.stripMargin
 
             val shifts = StaffAssignmentParser(shiftsRawCsv).parsedAssignments.toList
-            assert(shifts == Success(StaffAssignment("StaffAssignment 1", "T1", SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), 2, None)) :: Nil)
+            assert(shifts == Success(StaffAssignment("StaffAssignment 1", T1, SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), 2, None)) :: Nil)
           }
 
           " Parse a couple of shift lines" - {
@@ -88,8 +90,8 @@ object ShiftsServiceTests extends TestSuite {
               """.stripMargin
 
             val shifts = StaffAssignmentParser(shiftsRawCsv).parsedAssignments.toList
-            val expectedShifts = Success(StaffAssignment("StaffAssignment 1", "T1", SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), 2, None)) ::
-              Success(StaffAssignment("StaffAssignment 2", "T1", SDate(2016, 12, 1, 19, 0), SDate(2016, 12, 1, 22, 24), 4, None)) ::
+            val expectedShifts = Success(StaffAssignment("StaffAssignment 1", T1, SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), 2, None)) ::
+              Success(StaffAssignment("StaffAssignment 2", T1, SDate(2016, 12, 1, 19, 0), SDate(2016, 12, 1, 22, 24), 4, None)) ::
               Nil
             assert(shifts == expectedShifts
             )
@@ -102,7 +104,7 @@ object ShiftsServiceTests extends TestSuite {
               """.stripMargin
 
             val shifts = StaffAssignmentParser(shiftsRawCsv).parsedAssignments.toList
-            val expectedShifts = Success(StaffAssignment("StaffAssignment 1", "T1", SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), -2, None)) :: Nil
+            val expectedShifts = Success(StaffAssignment("StaffAssignment 1", T1, SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), -2, None)) :: Nil
             assert(shifts == expectedShifts)
           }
 
@@ -114,7 +116,7 @@ object ShiftsServiceTests extends TestSuite {
               """.stripMargin
 
             val shifts = StaffAssignmentParser(shiftsRawCsv).parsedAssignments.toList
-            val expectedShifts = Success(StaffAssignment("StaffAssignment 1", "T1", SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), -2, None)) :: Nil
+            val expectedShifts = Success(StaffAssignment("StaffAssignment 1", T1, SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), -2, None)) :: Nil
             assert(shifts == expectedShifts)
           }
 
@@ -126,7 +128,7 @@ object ShiftsServiceTests extends TestSuite {
               """.stripMargin
 
             val shifts = StaffAssignmentParser(shiftsRawCsv).parsedAssignments.toList
-            val expectedShifts = Success(StaffAssignment("StaffAssignment 1", "T1", SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), -2, None)) :: Nil
+            val expectedShifts = Success(StaffAssignment("StaffAssignment 1", T1, SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), -2, None)) :: Nil
             assert(shifts == expectedShifts)
           }
 
@@ -148,7 +150,7 @@ object ShiftsServiceTests extends TestSuite {
 
         "StaffAssignment to csv string representation" - {
           "Given a shift when I ask for a csv string then I should get a string with the fields separated by commas" - {
-            val shiftTry: Try[StaffAssignment] = StaffAssignmentHelper.tryStaffAssignment("My shift", "T1", "01/01/17", "08:00", "11:59", "2")
+            val shiftTry: Try[StaffAssignment] = StaffAssignmentHelper.tryStaffAssignment("My shift", T1.toString, "01/01/17", "08:00", "11:59", "2")
             val shift = shiftTry.get
 
             val csvString = StaffAssignmentHelper.toCsv(shift)
@@ -186,14 +188,14 @@ object ShiftsServiceTests extends TestSuite {
 
             "Contain staff for a terminal shift" - {
               val sDate = SDate(2016, 12, 10, 10, 0)
-              val result = terminalStaffAt(shiftService)(Nil)("T1", sDate)
+              val result = terminalStaffAt(shiftService)(Nil)(T1, sDate)
 
               assert(result == 10)
             }
 
             "Fixed Points should only be included for the time specified" - {
               val sDate = SDate(2016, 12, 10, 15, 0)
-              val result = terminalStaffAt(shiftService)(Nil)("T1", sDate)
+              val result = terminalStaffAt(shiftService)(Nil)(T1, sDate)
 
               assert(result == 10)
             }

@@ -8,7 +8,8 @@ import drt.client.components.TerminalContentComponent.originMapper
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.CrunchMinute
-import drt.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared.Queues.Queue
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -48,8 +49,10 @@ object TerminalDashboardComponent {
       val urlNextTime = URIUtils.encodeURI(end.toISOString())
 
       val terminalPax = ps.crunchMinutes.collect {
-        case (_, cm) if cm.terminalName == p.terminalPageTabLoc.terminal => cm.paxLoad
+        case (_, cm) if cm.terminal == p.terminalPageTabLoc.terminal => cm.paxLoad
       }.sum.round
+
+      val terminal = p.terminalPageTabLoc.terminal
 
       <.div(^.className := "terminal-dashboard",
 
@@ -82,10 +85,9 @@ object TerminalDashboardComponent {
           <.div(^.className := "pax-bar row", s"$terminalPax passengers presenting at the PCP"),
 
           <.div(^.className := "row queue-boxes",
-            p.airportConfig.nonTransferQueues(p.terminalPageTabLoc.terminal).filterNot(_ == Queues.FastTrack).map((q: String) => {
-
-              val qCMs = cmsForTerminalAndQueue(ps, q, p.terminalPageTabLoc.terminal)
-              val prevSlotCMs = cmsForTerminalAndQueue(prevSlotPortState, q, p.terminalPageTabLoc.terminal)
+            p.airportConfig.nonTransferQueues(terminal).filterNot(_ == Queues.FastTrack).map(q => {
+              val qCMs = cmsForTerminalAndQueue(ps, q, terminal)
+              val prevSlotCMs = cmsForTerminalAndQueue(prevSlotPortState, q, terminal)
               val qPax = qCMs.map(_.paxLoad).sum.round
               val qWait = maxWaitInPeriod(qCMs)
               val prevSlotQWait = maxWaitInPeriod(prevSlotCMs)
@@ -96,7 +98,7 @@ object TerminalDashboardComponent {
                 case _ => Icon.arrowRight
               }
 
-              <.div(^.className := s"queue-box col $q ${TerminalDesksAndQueuesRow.slaRagStatus(qWait, p.airportConfig.slaByQueue(q))}",
+              <.div(^.className := s"queue-box col ${q.toString.toLowerCase} ${TerminalDesksAndQueuesRow.slaRagStatus(qWait, p.airportConfig.slaByQueue(q))}",
                 <.div(^.className := "queue-name", s"${Queues.queueDisplayNames.getOrElse(q, q)}"),
                 <.div(^.className := "queue-box-text", Icon.users, s"$qPax pax joining"),
                 <.div(^.className := "queue-box-text", Icon.clockO, s"$qWait min wait time"),
@@ -126,10 +128,10 @@ object TerminalDashboardComponent {
     .build
 
 
-  def cmsForTerminalAndQueue(ps: PortStateLike, queue: QueueName, terminal: TerminalName): Iterable[CrunchMinute] = ps
+  def cmsForTerminalAndQueue(ps: PortStateLike, queue: Queue, terminal: Terminal): Iterable[CrunchMinute] = ps
     .crunchMinutes
     .collect {
-      case (tqm, cm) if tqm.queueName == queue && tqm.terminalName == terminal => cm
+      case (tqm, cm) if tqm.queue == queue && tqm.terminal == terminal => cm
     }
 
   def maxWaitInPeriod(cru: Iterable[CrunchApi.CrunchMinute]): Int = if (cru.nonEmpty)

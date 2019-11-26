@@ -1,6 +1,7 @@
 package actors
 
 import controllers.ArrivalGenerator
+import drt.shared.Terminals.T1
 import drt.shared.{Arrival, UniqueArrival}
 import org.specs2.mutable.Specification
 import services.graphstages.Crunch
@@ -8,9 +9,9 @@ import services.graphstages.Crunch
 import scala.collection.mutable
 
 class ArrivalsActorSpec extends Specification {
-  val arrival1: Arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = "T1", origin = "JFK", schDt = "2019-01-01T00:05", actPax = Option(100))
-  val arrival2: Arrival = ArrivalGenerator.arrival(iata = "BA0002", terminal = "T1", origin = "ABC", schDt = "2019-01-01T00:35", actPax = Option(200))
-  val arrival3: Arrival = ArrivalGenerator.arrival(iata = "BA0003", terminal = "T1", origin = "ZZZ", schDt = "2019-01-01T00:55", actPax = Option(250))
+  val arrival1: Arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = "JFK", schDt = "2019-01-01T00:05", actPax = Option(100))
+  val arrival2: Arrival = ArrivalGenerator.arrival(iata = "BA0002", terminal = T1, origin = "ABC", schDt = "2019-01-01T00:35", actPax = Option(200))
+  val arrival3: Arrival = ArrivalGenerator.arrival(iata = "BA0003", terminal = T1, origin = "ZZZ", schDt = "2019-01-01T00:55", actPax = Option(250))
 
   "Given no existing arrivals and one incoming " +
   "When I ask for removals and updates " +

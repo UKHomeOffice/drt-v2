@@ -10,6 +10,7 @@ import akka.stream.{ActorAttributes, Supervision}
 import com.box.sdk.{BoxFile, BoxFolder, _}
 import drt.shared.{Arrival, ForecastFeedSource}
 import drt.shared.FlightsApi.Flights
+import drt.shared.Terminals.{N, S}
 import org.apache.commons.lang3.StringUtils
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter, ISODateTimeFormat}
 import org.slf4j.{Logger, LoggerFactory}
@@ -97,8 +98,8 @@ class LGWForecastFeed(boxConfigFilePath: String, userId: String, ukBfGalForecast
       BaggageReclaimId = None,
       AirportID = LGW,
       Terminal = fields(5) match {
-        case "South" => "S"
-        case "North" => "N"
+        case "South" => S
+        case "North" => N
         case unknown => throw new Exception(s"Unknown Terminal in Gatwick Forecast feed $unknown.")
       },
       rawICAO = fields(FLIGHT_NUMBER),

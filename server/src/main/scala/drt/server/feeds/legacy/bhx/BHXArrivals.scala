@@ -1,5 +1,6 @@
 package drt.server.feeds.legacy.bhx
 
+import drt.shared.Terminals.Terminal
 import drt.shared.{Arrival, ForecastFeedSource, LiveFeedSource}
 import javax.xml.datatype.XMLGregorianCalendar
 import org.joda.time.{DateTime, DateTimeZone}
@@ -50,7 +51,7 @@ trait BHXLiveArrivals extends BHXArrivals {
       RunwayID = if (StringUtils.isEmpty(flightRecord.getRunway)) None else Option(flightRecord.getRunway),
       BaggageReclaimId = Option(flightRecord.getBelt),
       AirportID = "BHX",
-      Terminal = s"T${flightRecord.getTerminal}",
+      Terminal = Terminal(s"T${flightRecord.getTerminal}"),
       rawICAO = flightRecord.getFlightNumber,
       rawIATA = flightRecord.getFlightNumber,
       Origin = flightRecord.getOrigin,
@@ -81,7 +82,7 @@ trait BHXForecastArrivals extends BHXArrivals {
       RunwayID = None,
       BaggageReclaimId = None,
       AirportID = "BHX",
-      Terminal = s"T${flightRecord.getTerminal}",
+      Terminal = Terminal(s"T${flightRecord.getTerminal}"),
       rawICAO = flightRecord.getFlightNumber,
       rawIATA = flightRecord.getFlightNumber,
       Origin = flightRecord.getOrigin,

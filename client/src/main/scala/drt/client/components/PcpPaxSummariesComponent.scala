@@ -4,17 +4,18 @@ import diode.data.Pot
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{ViewLive, ViewMode}
 import drt.shared.CrunchApi.CrunchMinute
-import drt.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared.Queues.Queue
+import drt.shared.Terminals.Terminal
 import drt.shared.{PortState, Queues, SDateLike, TQM}
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
 import org.scalajs.dom.html.Div
 
-case class PcpPaxSummary(totalPax: Int, queuesPax: Map[QueueName, Double])
+case class PcpPaxSummary(totalPax: Int, queuesPax: Map[Queue, Double])
 
 object PcpPaxSummary {
-  def apply(start: SDateLike, durationMinutes: Int, crunchMinutes: Map[TQM, CrunchMinute], terminalName: TerminalName, queues: Set[QueueName]): PcpPaxSummary = {
+  def apply(start: SDateLike, durationMinutes: Int, crunchMinutes: Map[TQM, CrunchMinute], terminalName: Terminal, queues: Set[Queue]): PcpPaxSummary = {
     val startRounded = start.roundToMinute()
     val minuteMillisRange = (startRounded.millisSinceEpoch until startRounded.addMinutes(durationMinutes).millisSinceEpoch by 60000).toList
     val relevantMinutes = crunchMinutes.filterKeys {
@@ -23,8 +24,8 @@ object PcpPaxSummary {
 
     val paxTotal = relevantMinutes.map { case (_, cm) => cm.paxLoad }.sum
     val queueLoads = relevantMinutes.values
-      .filter(cm => queues.contains(cm.queueName))
-      .groupBy(_.queueName)
+      .filter(cm => queues.contains(cm.queue))
+      .groupBy(_.queue)
       .map {
         case (qn, cms) => (qn, cms.map(_.paxLoad).sum)
       }
@@ -35,7 +36,7 @@ object PcpPaxSummary {
 
 object PcpPaxSummariesComponent {
 
-  case class Props(portStatePot: Pot[PortState], viewMode: ViewMode, terminalName: TerminalName, minuteTicker: Int)
+  case class Props(portStatePot: Pot[PortState], viewMode: ViewMode, terminalName: Terminal, minuteTicker: Int)
 
   class Backend {
     def render(props: Props): TagOf[Div] = {
@@ -61,7 +62,7 @@ object PcpPaxSummariesComponent {
     }
   }
 
-  def summaryBox(boxNumber: Int, label: String, now: SDateLike, queues: Seq[QueueName], summary: PcpPaxSummary): TagOf[Div] = {
+  def summaryBox(boxNumber: Int, label: String, now: SDateLike, queues: Seq[Queue], summary: PcpPaxSummary): TagOf[Div] = {
     <.div(^.className := s"pcp-pax-summary b$boxNumber",
       <.div(^.className := "total", s"${summary.totalPax}"),
       <.div(^.className := "queues",
@@ -85,6 +86,6 @@ object PcpPaxSummariesComponent {
     })
     .build
 
-  def apply(portStatePot: Pot[PortState], viewMode: ViewMode, terminalName: TerminalName, minuteTicker: Int): VdomElement =
+  def apply(portStatePot: Pot[PortState], viewMode: ViewMode, terminalName: Terminal, minuteTicker: Int): VdomElement =
     component(Props(portStatePot, viewMode, terminalName, minuteTicker))
 }

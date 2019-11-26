@@ -1,7 +1,8 @@
 package services.graphstages
 
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.{QueueName, TerminalName}
+import drt.shared.Queues.Queue
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
@@ -34,14 +35,14 @@ object Crunch {
     def toLoads: Loads = Loads(SortedMap[TQM, LoadMinute]() ++ minutes)
   }
 
-  case class FlightSplitMinute(flightId: CodeShareKeyOrderedBySchedule, paxType: PaxType, terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch) {
+  case class FlightSplitMinute(flightId: CodeShareKeyOrderedBySchedule, paxType: PaxType, terminalName: Terminal, queueName: Queue, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch) {
     lazy val key: TQM = TQM(terminalName, queueName, minute)
   }
 
-  case class FlightSplitDiff(flightId: CodeShareKeyOrderedBySchedule, paxType: PaxType, terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
+  case class FlightSplitDiff(flightId: CodeShareKeyOrderedBySchedule, paxType: PaxType, terminalName: Terminal, queueName: Queue, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
 
-  case class LoadMinute(terminalName: TerminalName, queueName: QueueName, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch) extends TerminalQueueMinute {
-    lazy val uniqueId: TQM = TQM(terminalName, queueName, minute)
+  case class LoadMinute(terminal: Terminal, queueName: Queue, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch) extends TerminalQueueMinute {
+    lazy val uniqueId: TQM = TQM(terminal, queueName, minute)
 
     def +(other: LoadMinute): LoadMinute = this.copy(
       paxLoad = this.paxLoad + other.paxLoad,
@@ -50,19 +51,19 @@ object Crunch {
   }
 
   object LoadMinute {
-    def apply(cm: CrunchMinute): LoadMinute = LoadMinute(cm.terminalName, cm.queueName, cm.paxLoad, cm.workLoad, cm.minute)
+    def apply(cm: CrunchMinute): LoadMinute = LoadMinute(cm.terminal, cm.queue, cm.paxLoad, cm.workLoad, cm.minute)
   }
 
   case class Loads(loadMinutes: SortedMap[TQM, LoadMinute]) {
   }
 
   object Loads {
-    def apply(lms: Seq[LoadMinute]): Loads = Loads(SortedMap[TQM, LoadMinute]() ++ lms.map(cm => (TQM(cm.terminalName, cm.queueName, cm.minute), cm)))
+    def apply(lms: Seq[LoadMinute]): Loads = Loads(SortedMap[TQM, LoadMinute]() ++ lms.map(cm => (TQM(cm.terminal, cm.queueName, cm.minute), cm)))
 
     def fromCrunchMinutes(cms: SortedMap[TQM, CrunchMinute]): Loads = Loads(cms.mapValues(LoadMinute(_)))
   }
 
-  case class RemoveCrunchMinute(terminalName: TerminalName, queueName: QueueName, minute: MillisSinceEpoch) {
+  case class RemoveCrunchMinute(terminalName: Terminal, queueName: Queue, minute: MillisSinceEpoch) {
     lazy val key: TQM = MinuteHelper.key(terminalName, queueName, minute)
   }
 
@@ -127,17 +128,17 @@ object Crunch {
     SDate(localMidnight, europeLondonTimeZone)
   }
 
-  def minuteMillisFor24hours(dayMillis: MillisSinceEpoch): Seq[MillisSinceEpoch] =
+  def minuteMillisFor24hours(dayMillis: MillisSinceEpoch): Iterable[MillisSinceEpoch] =
     (0 until minutesInADay).map(m => dayMillis + (m * oneMinuteMillis))
 
-  def missingMinutesForDay(fromMillis: MillisSinceEpoch, minuteExistsTerminals: (MillisSinceEpoch, List[TerminalName]) => Boolean, terminals: List[TerminalName], days: Int): Set[MillisSinceEpoch] = {
+  def missingMinutesForDay(fromMillis: MillisSinceEpoch, minuteExistsTerminals: (MillisSinceEpoch, List[Terminal]) => Boolean, terminals: List[Terminal], days: Int): Set[MillisSinceEpoch] = {
     val fromMillisMidnight = getLocalLastMidnight(fromMillis).millisSinceEpoch
 
-    (0 until days).foldLeft(List[MillisSinceEpoch]()) {
+    (0 until days).foldLeft(Iterable[MillisSinceEpoch]()) {
       case (missingSoFar, day) =>
         val dayMillis = fromMillisMidnight + (day * Crunch.oneDayMillis)
         val isMissing = !minuteExistsTerminals(dayMillis, terminals)
-        if (isMissing) Crunch.minuteMillisFor24hours(dayMillis) ++: missingSoFar
+        if (isMissing) Crunch.minuteMillisFor24hours(dayMillis) ++ missingSoFar
         else missingSoFar
     }.toSet
   }
@@ -161,7 +162,7 @@ object Crunch {
 
   def flightLoadDiff(oldSet: Set[FlightSplitMinute], newSet: Set[FlightSplitMinute]): Set[FlightSplitDiff] = {
     val toRemove = oldSet.map(fsm => FlightSplitMinute(fsm.flightId, fsm.paxType, fsm.terminalName, fsm.queueName, -fsm.paxLoad, -fsm.workLoad, fsm.minute))
-    val addAndRemoveGrouped: Map[(CodeShareKeyOrderedBySchedule, TerminalName, QueueName, MillisSinceEpoch, PaxType), Set[FlightSplitMinute]] = newSet
+    val addAndRemoveGrouped: Map[(CodeShareKeyOrderedBySchedule, Terminal, Queue, MillisSinceEpoch, PaxType), Set[FlightSplitMinute]] = newSet
       .union(toRemove)
       .groupBy(fsm => (fsm.flightId, fsm.terminalName, fsm.queueName, fsm.minute, fsm.paxType))
 
@@ -175,7 +176,7 @@ object Crunch {
 
   def collapseQueueLoadMinutesToSet(queueLoadMinutes: List[LoadMinute]): Set[LoadMinute] = {
     queueLoadMinutes
-      .groupBy(qlm => (qlm.terminalName, qlm.queueName, qlm.minute))
+      .groupBy(qlm => (qlm.terminal, qlm.queueName, qlm.minute))
       .map {
         case ((t, q, m), qlm) =>
           val summedPaxLoad = qlm.map(_.paxLoad).sum
@@ -251,7 +252,7 @@ object Crunch {
     val affectedMovements = updatedMovements ++ deletedMovements
     log.info(s"affected movements: $affectedMovements")
     val minutesToUpdate = allMinuteMillis(affectedMovements.toSeq)
-    val terminalsToUpdate = affectedMovements.map(_.terminalName)
+    val terminalsToUpdate = affectedMovements.map(_.terminal)
 
     UpdateCriteria(minutesToUpdate, terminalsToUpdate)
   }
@@ -299,7 +300,7 @@ object Crunch {
   def crunchLoads(loadMinutes: Map[TQM, LoadMinute],
                   firstMinute: MillisSinceEpoch,
                   lastMinute: MillisSinceEpoch,
-                  terminals: Set[TerminalName],
+                  terminals: Set[Terminal],
                   airportConfig: AirportConfig,
                   crunch: TryCrunch): SortedMap[TQM, DeskRecMinute] = {
     val validTerminals = airportConfig.queues.keys.toList
@@ -317,8 +318,8 @@ object Crunch {
 
   def crunchQueue(firstMinute: MillisSinceEpoch,
                   lastMinute: MillisSinceEpoch,
-                  tn: TerminalName,
-                  qn: QueueName,
+                  tn: Terminal,
+                  qn: Queue,
                   qLms: IndexedSeq[LoadMinute],
                   airportConfig: AirportConfig,
                   crunch: TryCrunch): SortedMap[TQM, DeskRecMinute] = {
@@ -346,7 +347,7 @@ object Crunch {
     }
   }
 
-  def minMaxDesksForQueue(deskRecMinutes: Seq[MillisSinceEpoch], tn: TerminalName, qn: QueueName, airportConfig: AirportConfig): (Seq[Int], Seq[Int]) = {
+  def minMaxDesksForQueue(deskRecMinutes: Seq[MillisSinceEpoch], tn: Terminal, qn: Queue, airportConfig: AirportConfig): (Seq[Int], Seq[Int]) = {
     val defaultMinMaxDesks = (Seq.fill(24)(0), Seq.fill(24)(10))
     val queueMinMaxDesks = airportConfig.minMaxDesksByTerminalQueue.getOrElse(tn, Map()).getOrElse(qn, defaultMinMaxDesks)
     val minDesks = deskRecMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._1))

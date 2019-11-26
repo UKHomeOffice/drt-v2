@@ -3,6 +3,7 @@ package services.crunch
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
+import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
@@ -16,9 +17,9 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
   isolated
 
   val fiveMinutes = 600d / 60
-  val procTimes = Map(
-    "T1" -> Map(eeaMachineReadableToDesk -> fiveMinutes),
-    "T2" -> Map(eeaMachineReadableToDesk -> fiveMinutes))
+  val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(
+    T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes),
+    T2 -> Map(eeaMachineReadableToDesk -> fiveMinutes))
 
   "Code shares " >> {
     "Given 2 flights which are codeshares with each other " +
@@ -35,13 +36,13 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
         now = () => SDate(scheduled),
         airportConfig = airportConfig.copy(
           terminalProcessingTimes = procTimes,
-          queues = Map("T1" -> Seq(Queues.EeaDesk)),
-          terminalNames = Seq("T1")
+          queues = Map(T1 -> Seq(Queues.EeaDesk)),
+          terminals = Seq(T1)
         ))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
-      val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
+      val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
 
       crunch.portStateTestProbe.fishForMessage(2 seconds) {
         case ps: PortState =>
@@ -62,24 +63,24 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val scheduled = "2017-01-01T00:00Z"
 
       val flights = Flights(List(
-        ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled00, actPax = Option(15), terminal = "T1"),
-        ArrivalGenerator.arrival(iata = "FR8819", schDt = scheduled00, actPax = Option(10), terminal = "T1"),
-        ArrivalGenerator.arrival(iata = "EZ1010", schDt = scheduled15, actPax = Option(12), terminal = "T2")
+        ArrivalGenerator.arrival(schDt = scheduled00, iata = "BA0001", terminal = T1, actPax = Option(15)),
+        ArrivalGenerator.arrival(schDt = scheduled00, iata = "FR8819", terminal = T1, actPax = Option(10)),
+        ArrivalGenerator.arrival(schDt = scheduled15, iata = "EZ1010", terminal = T2, actPax = Option(12))
       ))
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
         airportConfig = airportConfig.copy(
           terminalProcessingTimes = procTimes,
-          queues = Map("T1" -> Seq(Queues.EeaDesk), "T2" -> Seq(Queues.EeaDesk))))
+          queues = Map(T1 -> Seq(Queues.EeaDesk), T2 -> Seq(Queues.EeaDesk))))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
       val expected = Map(
-        "T1" -> Map(Queues.EeaDesk -> Seq(
+        T1 -> Map(Queues.EeaDesk -> Seq(
           15.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)),
-        "T2" -> Map(Queues.EeaDesk -> Seq(
+        T2 -> Map(Queues.EeaDesk -> Seq(
           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
           12.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
 

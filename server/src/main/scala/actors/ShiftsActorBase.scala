@@ -7,7 +7,7 @@ import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
 import scalapb.GeneratedMessage
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.TerminalName
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
@@ -24,7 +24,7 @@ case object GetFeedStatuses
 
 case class GetPortState(from: MillisSinceEpoch, to: MillisSinceEpoch)
 
-case class GetPortStateForTerminal(from: MillisSinceEpoch, to: MillisSinceEpoch, terminalName: TerminalName)
+case class GetPortStateForTerminal(from: MillisSinceEpoch, to: MillisSinceEpoch, terminalName: Terminal)
 
 case class GetUpdatesSince(millis: MillisSinceEpoch, from: MillisSinceEpoch, to: MillisSinceEpoch)
 
@@ -155,7 +155,7 @@ class ShiftsActorBase(val now: () => SDateLike,
     .foldLeft(existingAssignments) {
       case (assignmentsSoFar, updatedAssignment) =>
         assignmentsSoFar.filterNot(existing =>
-          existing.startDt == updatedAssignment.startDt && existing.terminalName == updatedAssignment.terminalName)
+          existing.startDt == updatedAssignment.startDt && existing.terminal == updatedAssignment.terminal)
     } ++ shiftsToUpdate
 }
 
@@ -164,7 +164,7 @@ object ShiftsMessageParser {
 
   def staffAssignmentToMessage(assignment: StaffAssignment, createdAt: SDateLike): ShiftMessage = ShiftMessage(
     name = Option(assignment.name),
-    terminalName = Option(assignment.terminalName),
+    terminalName = Option(assignment.terminal.toString),
     numberOfStaff = Option(assignment.numberOfStaff.toString),
     startTimestamp = Option(assignment.startDt.millisSinceEpoch),
     endTimestamp = Option(assignment.endDt.millisSinceEpoch),
@@ -179,7 +179,7 @@ object ShiftsMessageParser {
       endDt <- maybeEt
     } yield StaffAssignment(
       name = shiftMessage.name.getOrElse(""),
-      terminalName = shiftMessage.terminalName.getOrElse(""),
+      terminal = Terminal(shiftMessage.terminalName.getOrElse("")),
       startDt = MilliDate(startDt.millisSinceEpoch),
       endDt = MilliDate(endDt.millisSinceEpoch),
       numberOfStaff = shiftMessage.numberOfStaff.getOrElse("0").toInt,
@@ -205,7 +205,7 @@ object ShiftsMessageParser {
 
   def shiftMessageToStaffAssignmentv2(shiftMessage: ShiftMessage): Option[StaffAssignment] = Option(StaffAssignment(
     name = shiftMessage.name.getOrElse(""),
-    terminalName = shiftMessage.terminalName.getOrElse(""),
+    terminal = Terminal(shiftMessage.terminalName.getOrElse("")),
     startDt = MilliDate(shiftMessage.startTimestamp.getOrElse(0L)),
     endDt = MilliDate(shiftMessage.endTimestamp.getOrElse(0L)),
     numberOfStaff = shiftMessage.numberOfStaff.getOrElse("0").toInt,

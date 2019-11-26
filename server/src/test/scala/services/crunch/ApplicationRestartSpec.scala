@@ -3,8 +3,9 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
-import drt.shared.FlightsApi.{Flights, TerminalName}
+import drt.shared.FlightsApi.Flights
 import drt.shared.SplitRatiosNs.SplitSources
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
@@ -17,7 +18,7 @@ import scala.concurrent.duration._
 
 class ApplicationRestartSpec extends CrunchTestLike {
 
-  def emptyStaffMinutes(now: () => SDateLike, numDays: Int, terminals: List[TerminalName]): Map[TM, StaffMinute] = {
+  def emptyStaffMinutes(now: () => SDateLike, numDays: Int, terminals: List[Terminal]): Map[TM, StaffMinute] = {
     val startMillis = Crunch.getLocalLastMidnight(now()).millisSinceEpoch
     val minutesInADay = 1440
     val millisInAMinute = 60 * 1000
@@ -58,7 +59,7 @@ class ApplicationRestartSpec extends CrunchTestLike {
         ApiFlightWithSplits(arrivalBase, splits)
       ).map(f => (f.apiFlight.unique, f)),
       crunchMinutes = SortedMap[TQM, CrunchMinute](),
-      staffMinutes = SortedMap[TM, StaffMinute]() ++ emptyStaffMinutes(now, daysToCrunch, airportConfig.terminalNames.toList)
+      staffMinutes = SortedMap[TM, StaffMinute]() ++ emptyStaffMinutes(now, daysToCrunch, airportConfig.terminals.toList)
     )
     val initialLiveArrivals = mutable.SortedMap[UniqueArrival, Arrival](arrivalLive.unique -> arrivalLive)
 

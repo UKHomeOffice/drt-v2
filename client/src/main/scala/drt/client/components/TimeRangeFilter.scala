@@ -81,11 +81,11 @@ object TimeRangeFilter {
           <.div(^.className := "btn-group no-gutters", VdomAttr("data-toggle") := "buttons",
             if (props.showNow)
               <.div(^.id := "now", ^.className := s"btn btn-primary $nowActive", "Now", ^.onClick ==> ((_: ReactEventFromInput) => {
-                GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Time Range", "now")
+                GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Time Range", "now")
                 props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(props.terminalPageTab.date), UrlTimeRangeStart(None), UrlTimeRangeEnd(None)))
               })) else "",
             <.div(^.id := "hours24", ^.className := s"btn btn-primary $dayActive", "24 hours", ^.onClick ==> ((_: ReactEventFromInput) => {
-              GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Time Range", "24 hours")
+              GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Time Range", "24 hours")
               props.router.set(props.terminalPageTab.withUrlParameters(
                 UrlDateParameter(props.terminalPageTab.date), UrlTimeRangeStart(Option(wholeDayWindow.start.toString)), UrlTimeRangeEnd(Option(wholeDayWindow.end.toString)))
               )

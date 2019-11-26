@@ -1,5 +1,6 @@
 package services
 
+import drt.shared.Terminals.T1
 import drt.shared._
 import org.specs2.mutable.Specification
 
@@ -15,7 +16,7 @@ class ArrivalsToCSVDataTest extends Specification {
   import controllers.ArrivalGenerator.arrival
 
   private val flightWithAllTypesOfAPISplit = ApiFlightWithSplits(
-    arrival(iata = "SA324", icao = "SA0324", schDt = "2017-01-01T20:00:00Z", actPax = Option(100), maxPax = Option(100), terminal = "T1", origin = "JHB", operator = Option("SA"), status = "UNK", estDt = "2017-01-01T20:00:00Z"),
+    arrival(iata = "SA324", icao = "SA0324", schDt = "2017-01-01T20:00:00Z", actPax = Option(100), maxPax = Option(100), terminal = T1, origin = "JHB", operator = Option("SA"), status = "UNK", estDt = "2017-01-01T20:00:00Z"),
     Set(Splits(
       Set(
         ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 2, None),
@@ -38,7 +39,7 @@ class ArrivalsToCSVDataTest extends Specification {
         ), SplitRatiosNs.SplitSources.Historical, None))
   )
   val flightWithoutFastTrackApiSplits = ApiFlightWithSplits(
-    arrival(iata = "SA325", icao = "SA0325", schDt = "2017-01-01T20:00:00Z", actPax = Option(100), maxPax = Option(100), terminal = "T1", origin = "JHB", operator = Option("SA"), status = "UNK", estDt = "2017-01-01T20:00:00Z"),
+    arrival(iata = "SA325", icao = "SA0325", schDt = "2017-01-01T20:00:00Z", actPax = Option(100), maxPax = Option(100), terminal = T1, origin = "JHB", operator = Option("SA"), status = "UNK", estDt = "2017-01-01T20:00:00Z"),
     Set(Splits(
       Set(
         ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 3, None),
@@ -51,7 +52,7 @@ class ArrivalsToCSVDataTest extends Specification {
     flightWithAllTypesOfAPISplit,
     flightWithoutFastTrackApiSplits,
     ApiFlightWithSplits(
-      arrival(iata = "SA326", icao = "SA0326", schDt = "2017-01-01T20:00:00Z", actPax = Option(100), maxPax = Option(100), terminal = "T1", origin = "JHB", operator = Option("SA"), status = "UNK", estDt = "2017-01-01T20:00:00Z"),
+      arrival(iata = "SA326", icao = "SA0326", schDt = "2017-01-01T20:00:00Z", actPax = Option(100), maxPax = Option(100), terminal = T1, origin = "JHB", operator = Option("SA"), status = "UNK", estDt = "2017-01-01T20:00:00Z"),
       Set(Splits(
         Set(
           ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 30, None),

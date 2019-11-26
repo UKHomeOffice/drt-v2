@@ -11,6 +11,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import drt.server.feeds.gla.GlaFeed.GlaArrival
 import drt.shared.FlightsApi.Flights
+import drt.shared.Terminals.Terminal
 import drt.shared.{Arrival, LiveFeedSource}
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
@@ -31,12 +32,11 @@ object ProdGlaFeedRequester extends GlaFeedRequesterLike {
   override def send(request: HttpRequest)(implicit actorSystem: ActorSystem): Future[HttpResponse] = Http().singleRequest(request)
 }
 
-case class GlaFeed(
-                    uri: String,
-                    token: String,
-                    password: String,
-                    username: String,
-                    feedRequester: GlaFeedRequesterLike)
+case class GlaFeed(uri: String,
+                   token: String,
+                   password: String,
+                   username: String,
+                   feedRequester: GlaFeedRequesterLike)
                   (implicit system: ActorSystem, materializer: Materializer, executionContext: ExecutionContext) {
 
   import GlaFeed.JsonSupport._
@@ -120,7 +120,7 @@ object GlaFeed {
     RunwayID = ga.Runway,
     BaggageReclaimId = ga.CarouselCode,
     AirportID = "GLA",
-    Terminal = ga.TerminalCode,
+    Terminal = Terminal(ga.TerminalCode),
     rawIATA = ga.AirlineIATA + ga.FlightNumber,
     rawICAO = ga.AirlineICAO + ga.FlightNumber,
     Origin = ga.OriginDestAirportIATA,

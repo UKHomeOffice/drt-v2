@@ -17,7 +17,7 @@ object PortExportDashboardPage {
 
       airportConfigRCP(airportConfigMP => {
         <.div(^.className := "terminal-export-dashboard", airportConfigMP().renderReady(config => {
-          <.div(config.terminalNames.map(tn => {
+          <.div(config.terminals.map(tn => {
             <.div(
               <.h3(s"Terminal $tn"),
               MultiDayExportComponent(tn, SDate.now(), p.loggedInUser)

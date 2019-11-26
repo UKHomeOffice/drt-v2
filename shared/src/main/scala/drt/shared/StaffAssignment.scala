@@ -1,11 +1,11 @@
 package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.TerminalName
+import drt.shared.Terminals.Terminal
 import upickle.default.{macroRW, ReadWriter => RW}
 
 case class StaffAssignment(name: String,
-                           terminalName: TerminalName,
+                           terminal: Terminal,
                            startDt: MilliDate,
                            endDt: MilliDate,
                            numberOfStaff: Int,
@@ -20,18 +20,18 @@ object StaffAssignment {
 sealed trait StaffAssignments {
   val assignments: Seq[StaffAssignment]
 
-  def forTerminal(terminalName: String): Seq[StaffAssignment] = assignments.filter(_.terminalName == terminalName)
+  def forTerminal(terminalName: Terminal): Seq[StaffAssignment] = assignments.filter(_.terminal == terminalName)
 
-  def notForTerminal(terminalName: TerminalName): Seq[StaffAssignment] =
-    assignments.filterNot(_.terminalName == terminalName)
+  def notForTerminal(terminalName: Terminal): Seq[StaffAssignment] =
+    assignments.filterNot(_.terminal == terminalName)
 }
 
 trait FixedPointAssignmentsLike extends StaffAssignments {
-  def terminalStaffAt(terminalName: TerminalName, date: SDateLike)(implicit mdToSd: MilliDate => SDateLike): Int
+  def terminalStaffAt(terminalName: Terminal, date: SDateLike)(implicit mdToSd: MilliDate => SDateLike): Int
 }
 
 trait ShiftAssignmentsLike extends StaffAssignments {
-  def terminalStaffAt(terminalName: TerminalName, date: SDateLike): Int
+  def terminalStaffAt(terminalName: Terminal, date: SDateLike): Int
 }
 
 object ShiftAssignments {
@@ -43,13 +43,13 @@ object ShiftAssignments {
 case class FixedPointAssignments(assignments: Seq[StaffAssignment]) extends FixedPointAssignmentsLike {
   def +(staffAssignments: Seq[StaffAssignment]): FixedPointAssignments = copy(assignments ++ staffAssignments)
 
-  def terminalStaffAt(terminalName: TerminalName, date: SDateLike)
+  def terminalStaffAt(terminalName: Terminal, date: SDateLike)
                      (implicit mdToSd: MilliDate => SDateLike): Int = {
     val hoursAndMinutes = date.toHoursAndMinutes()
 
     assignments
       .filter { assignment =>
-        assignment.terminalName == terminalName &&
+        assignment.terminal == terminalName &&
           hoursAndMinutes >= mdToSd(assignment.startDt).toHoursAndMinutes() &&
           hoursAndMinutes <= mdToSd(assignment.endDt).toHoursAndMinutes()
       }
@@ -66,12 +66,12 @@ object FixedPointAssignments {
 case class ShiftAssignments(assignments: Seq[StaffAssignment]) extends ShiftAssignmentsLike with HasExpireables[ShiftAssignments] {
   def +(staffAssignments: Seq[StaffAssignment]): ShiftAssignments = copy(assignments ++ staffAssignments)
 
-  def terminalStaffAt(terminalName: TerminalName, date: SDateLike): Int = {
+  def terminalStaffAt(terminalName: Terminal, date: SDateLike): Int = {
     val dateMillis = date.millisSinceEpoch
 
     assignments
       .filter { assignment =>
-        assignment.startDt.millisSinceEpoch <= dateMillis && dateMillis <= assignment.endDt.millisSinceEpoch && assignment.terminalName == terminalName
+        assignment.startDt.millisSinceEpoch <= dateMillis && dateMillis <= assignment.endDt.millisSinceEpoch && assignment.terminal == terminalName
       }
       .map(_.numberOfStaff)
       .sum

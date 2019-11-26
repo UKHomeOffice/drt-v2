@@ -1,4 +1,5 @@
-import drt.shared.TQM
+import drt.shared.{Queues, TQM}
+import drt.shared.Terminals.{T2, T3, T4, T5}
 import org.specs2.mutable.Specification
 import services.graphstages.Crunch.LoadMinute
 
@@ -13,8 +14,8 @@ class MemorySpec extends Specification {
     "How much memory allocation is triggered" >> {
     skipped("exploratory")
 
-    val terminals = Seq("T2", "T3", "T4", "T5")
-    val queues = Seq("EEA", "NonEEA", "EGates", "FastTrack")
+    val terminals = Seq(T2, T3, T4, T5)
+    val queues = Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate, Queues.FastTrack)
     val sixMonthsInMinutes = 180 * 24 * 60 * 60
     val minutesRange = 1548674630957L to (1548674630957L + (sixMonthsInMinutes * 1000L)) by 60000L
     val minutes: Seq[Long] = minutesRange.take(sixMonthsInMinutes)

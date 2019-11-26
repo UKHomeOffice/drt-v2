@@ -6,7 +6,8 @@ import actors.restore.RestorerWithLegacy
 import akka.actor._
 import akka.persistence._
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi._
+import drt.shared.Queues.Queue
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
@@ -19,7 +20,7 @@ import services.graphstages.Crunch
 class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
                        initialSnapshotBytesThreshold: Int,
                        name: String,
-                       portQueues: Map[TerminalName, Seq[QueueName]],
+                       portQueues: Map[Terminal, Seq[Queue]],
                        now: () => SDateLike,
                        expireAfterMillis: MillisSinceEpoch,
                        purgePreviousSnapshots: Boolean,
@@ -107,7 +108,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
   def diffMessage(diff: PortStateDiff): CrunchDiffMessage = CrunchDiffMessage(
     createdAt = Option(now().millisSinceEpoch),
     crunchStart = Option(0),
-    flightsToRemove = diff.flightRemovals.values.map { case RemoveFlight(ua) => UniqueArrivalMessage(Option(ua.number), Option(ua.terminalName), Option(ua.scheduled)) }.toSeq,
+    flightsToRemove = diff.flightRemovals.values.map { case RemoveFlight(ua) => UniqueArrivalMessage(Option(ua.number), Option(ua.terminal.toString), Option(ua.scheduled)) }.toSeq,
     flightsToUpdate = diff.flightUpdates.values.map(FlightMessageConversion.flightWithSplitsToMessage).toList,
     crunchMinutesToUpdate = diff.crunchMinuteUpdates.values.map(crunchMinuteToMessage).toList,
     staffMinutesToUpdate = diff.staffMinuteUpdates.values.map(staffMinuteToMessage).toList
@@ -115,7 +116,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
 
   def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = Option(state.window(SDate(start), SDate(end)))
 
-  def stateForPeriodForTerminal(start: MillisSinceEpoch, end: MillisSinceEpoch, terminalName: TerminalName): Option[PortState] = Option(state.windowWithTerminalFilter(SDate(start), SDate(end), portQueues.keys.filter(_ == terminalName).toSeq))
+  def stateForPeriodForTerminal(start: MillisSinceEpoch, end: MillisSinceEpoch, terminalName: Terminal): Option[PortState] = Option(state.windowWithTerminalFilter(SDate(start), SDate(end), portQueues.keys.filter(_ == terminalName).toSeq))
 
   def setStateFromSnapshot(snapshot: CrunchStateSnapshotMessage, timeWindowEnd: Option[SDateLike] = None): Unit = {
     snapshotMessageToState(snapshot, timeWindowEnd, state)
@@ -147,16 +148,16 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
 
   def crunchDiffFromMessage(diffMessage: CrunchDiffMessage, maxMillis: MillisSinceEpoch): (Seq[UniqueArrival], Seq[ApiFlightWithSplits], Seq[CrunchMinute], Seq[StaffMinute]) = (
     diffMessage.flightsToRemove.collect {
-      case m if portQueues.contains(m.getTerminalName) => uniqueArrivalFromMessage(m)
+      case m if portQueues.contains(Terminal(m.getTerminalName)) => uniqueArrivalFromMessage(m)
     },
     diffMessage.flightsToUpdate.collect {
-      case m if portQueues.contains(m.getFlight.getTerminal) && m.getFlight.getScheduled < maxMillis => flightWithSplitsFromMessage(m)
+      case m if portQueues.contains(Terminal(m.getFlight.getTerminal)) && m.getFlight.getScheduled < maxMillis => flightWithSplitsFromMessage(m)
     },
     diffMessage.crunchMinutesToUpdate.collect {
-      case m if portQueues.contains(m.getTerminalName) && m.getMinute < maxMillis => crunchMinuteFromMessage(m)
+      case m if portQueues.contains(Terminal(m.getTerminalName)) && m.getMinute < maxMillis => crunchMinuteFromMessage(m)
     },
     diffMessage.staffMinutesToUpdate.collect {
-      case m if portQueues.contains(m.getTerminalName) && m.getMinute < maxMillis => staffMinuteFromMessage(m)
+      case m if portQueues.contains(Terminal(m.getTerminalName)) && m.getMinute < maxMillis => staffMinuteFromMessage(m)
     }
   )
 }

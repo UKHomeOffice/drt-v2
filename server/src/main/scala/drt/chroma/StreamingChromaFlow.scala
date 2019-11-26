@@ -6,6 +6,7 @@ import akka.stream.scaladsl.Source
 import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaFlightLike, ChromaForecastFlight, ChromaLiveFlight}
 import drt.shared.FlightsApi.Flights
+import drt.shared.Terminals.Terminal
 import drt.shared.{Arrival, ForecastFeedSource, LiveFeedSource}
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.util.StringUtils
@@ -60,7 +61,7 @@ object StreamingChromaFlow {
         RunwayID = if (StringUtils.isEmpty(flight.RunwayID)) None else Option(flight.RunwayID),
         BaggageReclaimId = if (StringUtils.isEmpty(flight.BaggageReclaimId)) None else Option(flight.BaggageReclaimId),
         AirportID = flight.AirportID,
-        Terminal = flight.Terminal,
+        Terminal = Terminal(flight.Terminal),
         rawICAO = flight.ICAO,
         rawIATA = flight.IATA,
         Origin = flight.Origin,
@@ -90,7 +91,7 @@ object StreamingChromaFlow {
         RunwayID = None,
         BaggageReclaimId = None,
         AirportID = flight.AirportID,
-        Terminal = flight.Terminal,
+        Terminal = Terminal(flight.Terminal),
         rawICAO = flight.ICAO,
         rawIATA = flight.IATA,
         Origin = flight.Origin,

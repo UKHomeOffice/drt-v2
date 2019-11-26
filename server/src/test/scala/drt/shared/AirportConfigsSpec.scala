@@ -1,5 +1,6 @@
 package drt.shared
 
+import drt.shared.Terminals.T1
 import org.specs2.mutable.Specification
 
 class AirportConfigsSpec extends Specification {
@@ -45,7 +46,7 @@ class AirportConfigsSpec extends Specification {
         cloneOfPortCode = Option("LHR"),
         queues = Map(),
         slaByQueue = Map(),
-        terminalNames = Seq(),
+        terminals = Seq(),
         timeToChoxMillis = 0L,
         firstPaxOffMillis = 0L,
         defaultWalkTimeMillis = Map(),
@@ -53,7 +54,7 @@ class AirportConfigsSpec extends Specification {
         terminalProcessingTimes = Map(),
         minMaxDesksByTerminalQueue = Map(),
         role = LHRAccess,
-        terminalPaxTypeQueueAllocation = Map("T1" -> defaultQueueRatios)
+        terminalPaxTypeQueueAllocation = Map(T1 -> defaultQueueRatios)
       )
 
       val result = clonedConfig.feedPortCode

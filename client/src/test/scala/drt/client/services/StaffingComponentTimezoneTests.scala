@@ -1,6 +1,7 @@
 package drt.client.services
 
 import drt.client.services.JSDateConversions.SDate
+import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import utest._
 
@@ -124,12 +125,12 @@ object StaffingComponentTimezoneTests extends TestSuite {
           " 15 minute slot" - {
           val change: Map[(Int, Int), Int] = Map((0, 30) -> 1)
           val startOfMonth = SDate("2019-03-01")
-          val result = updatedShiftAssignments(change, startOfMonth, "T1", 15).head
+          val result = updatedShiftAssignments(change, startOfMonth, T1, 15).head
 
           val shiftStart = SDate("2019-03-31T00:00:00Z")
           val expected = StaffAssignment(
             shiftStart.toISOString(),
-            "T1",
+            T1,
             MilliDate(shiftStart.millisSinceEpoch),
             MilliDate(shiftStart.addMinutes(14).millisSinceEpoch),
             1,
@@ -143,12 +144,12 @@ object StaffingComponentTimezoneTests extends TestSuite {
           " 1 hour slot" - {
           val change: Map[(Int, Int), Int] = Map((0, 30) -> 1)
           val startOfMonth = SDate("2019-03-01")
-          val result = updatedShiftAssignments(change, startOfMonth, "T1", 60).head
+          val result = updatedShiftAssignments(change, startOfMonth, T1, 60).head
 
           val shiftStart = SDate("2019-03-31T00:00:00Z")
           val expected = StaffAssignment(
             shiftStart.toISOString(),
-            "T1",
+            T1,
             MilliDate(shiftStart.millisSinceEpoch),
             MilliDate(shiftStart.addMinutes(59).millisSinceEpoch),
             1,
@@ -162,12 +163,12 @@ object StaffingComponentTimezoneTests extends TestSuite {
           " 1 hour slot" - {
           val change: Map[(Int, Int), Int] = Map((1, 29) -> 1)
           val startOfMonth = SDate("2019-03-01")
-          val result = updatedShiftAssignments(change, startOfMonth, "T1", 60).head
+          val result = updatedShiftAssignments(change, startOfMonth, T1, 60).head
 
           val shiftStart = SDate("2019-03-30T01:00:00Z")
           val expected = StaffAssignment(
             shiftStart.toISOString(),
-            "T1",
+            T1,
             MilliDate(shiftStart.millisSinceEpoch),
             MilliDate(shiftStart.addMinutes(59).millisSinceEpoch),
             1,
@@ -181,12 +182,12 @@ object StaffingComponentTimezoneTests extends TestSuite {
           "StaffAssignment for that 1 hour slot - which is the 3rd slot for the day" - {
           val change: Map[(Int, Int), Int] = Map((2, 30) -> 1)
           val startOfMonth = SDate("2019-03-01")
-          val result = updatedShiftAssignments(change, startOfMonth, "T1", 60).head
+          val result = updatedShiftAssignments(change, startOfMonth, T1, 60).head
 
           val shiftStart = SDate("2019-03-31T01:00:00Z")
           val expected = StaffAssignment(
             shiftStart.toISOString(),
-            "T1",
+            T1,
             MilliDate(shiftStart.millisSinceEpoch),
             MilliDate(shiftStart.addMinutes(59).millisSinceEpoch),
             1,

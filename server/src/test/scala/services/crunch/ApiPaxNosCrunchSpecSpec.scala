@@ -3,6 +3,7 @@ package services.crunch
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
+import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import server.feeds.{ArrivalsFeedSuccess, ManifestsFeedSuccess}
@@ -17,8 +18,7 @@ class ApiPaxNosCrunchSpecSpec extends CrunchTestLike {
   isolated
 
   val tenMinutes: Double = 600d / 60
-  val procTimes: Map[String, Map[PaxTypeAndQueue, Double]] = Map(
-    "T1" -> Map(eeaChildToDesk -> tenMinutes))
+  val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaChildToDesk -> tenMinutes))
 
   val scheduled = "2019-11-20T00:00Z"
 
@@ -42,14 +42,14 @@ class ApiPaxNosCrunchSpecSpec extends CrunchTestLike {
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
         terminalProcessingTimes = procTimes,
-        queues = Map("T1" -> Seq(Queues.EeaDesk)),
-        terminalNames = Seq("T1")
+        queues = Map(T1 -> Seq(Queues.EeaDesk)),
+        terminals = Seq(T1)
       ))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
     offerAndWait(crunch.manifestsLiveInput, manifests)
 
-    val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
+    val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
 
     crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case ps: PortState =>
@@ -70,14 +70,14 @@ class ApiPaxNosCrunchSpecSpec extends CrunchTestLike {
       now = () => SDate(scheduled),
       airportConfig = airportConfig.copy(
         terminalProcessingTimes = procTimes,
-        queues = Map("T1" -> Seq(Queues.EeaDesk)),
-        terminalNames = Seq("T1")
+        queues = Map(T1 -> Seq(Queues.EeaDesk)),
+        terminals = Seq(T1)
       ))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
     offerAndWait(crunch.manifestsLiveInput, manifests)
 
-    val expected = Map("T1" -> Map(Queues.EeaDesk -> Seq(20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
+    val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
 
     crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case ps: PortState =>

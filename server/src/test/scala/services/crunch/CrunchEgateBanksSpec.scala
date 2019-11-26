@@ -4,6 +4,7 @@ import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
+import drt.shared.Terminals.T1
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.{SDate, TryRenjin}
@@ -25,7 +26,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
       val scheduled = "2017-01-01T00:00Z"
 
       val flights = Flights(List(
-        ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled00, actPax = Option(20), terminal = "T1")
+        ArrivalGenerator.arrival(schDt = scheduled00, iata = "BA0001", terminal = T1, actPax = Option(20))
       ))
 
       val fiveMinutes = 600d / 60
@@ -33,18 +34,18 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
         airportConfig = airportConfig.copy(
-          terminalNames = Seq("T1"),
-          queues = Map("T1" -> Seq(Queues.EeaDesk, Queues.EGate)),
-          terminalPaxSplits = Map("T1" -> SplitRatios(
+          terminals = Seq(T1),
+          queues = Map(T1 -> Seq(Queues.EeaDesk, Queues.EGate)),
+          terminalPaxSplits = Map(T1 -> SplitRatios(
             SplitSources.TerminalAverage,
             SplitRatio(eeaMachineReadableToDesk, 0.5),
             SplitRatio(eeaMachineReadableToEGate, 0.5)
           )),
-          terminalProcessingTimes = Map("T1" -> Map(
+          terminalProcessingTimes = Map(T1 -> Map(
             eeaMachineReadableToDesk -> fiveMinutes,
             eeaMachineReadableToEGate -> fiveMinutes
           )),
-          minMaxDesksByTerminalQueue = Map("T1" -> Map(
+          minMaxDesksByTerminalQueue = Map(T1 -> Map(
             Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(20))),
             Queues.EGate -> ((List.fill[Int](24)(0), List.fill[Int](24)(20))))),
           slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 25)
@@ -54,7 +55,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
-      val expected = Map("T1" -> Map(
+      val expected = Map(T1 -> Map(
         Queues.EeaDesk -> Seq.fill(15)(7),
         Queues.EGate -> Seq.fill(15)(1)
       ))

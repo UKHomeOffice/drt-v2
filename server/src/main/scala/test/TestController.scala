@@ -6,6 +6,7 @@ import akka.util.Timeout
 import controllers.AirportConfProvider
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
+import drt.shared.Terminals.Terminal
 import drt.shared.{Arrival, LiveFeedSource, SDateLike}
 import javax.inject.{Inject, Singleton}
 import org.slf4j.{Logger, LoggerFactory}
@@ -95,7 +96,7 @@ class TestController @Inject()(implicit val config: Configuration,
             RunwayID = Some(flight.RunwayID),
             BaggageReclaimId = Some(flight.BaggageReclaimId),
             AirportID = flight.AirportID,
-            Terminal = flight.Terminal,
+            Terminal = Terminal(flight.Terminal),
             rawICAO = flight.ICAO,
             rawIATA = flight.IATA,
             Origin = flight.Origin,

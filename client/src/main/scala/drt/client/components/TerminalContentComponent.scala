@@ -10,7 +10,7 @@ import drt.client.logger.log
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, ViewMode}
-import drt.shared.FlightsApi.QueueName
+import drt.shared.Queues.Queue
 import drt.shared._
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -71,7 +71,8 @@ object TerminalContentComponent {
       splitsGraphComponentColoured)(paxComp)
 
     def render(props: Props, state: State): TagOf[Div] = {
-      val queueOrder: Seq[QueueName] = props.airportConfig.queueTypeSplitOrder(props.terminalPageTab.terminal)
+      val terminal = props.terminalPageTab.terminal
+      val queueOrder: Seq[Queue] = props.airportConfig.queueTypeSplitOrder(terminal)
 
       val desksAndQueuesActive = if (state.activeTab == "desksAndQueues") "active" else ""
       val arrivalsActive = if (state.activeTab == "arrivals") "active" else ""
@@ -90,48 +91,49 @@ object TerminalContentComponent {
           <.div(^.id := "terminal-data", "Nothing to show for this time period")
         } else ""),
         props.portStatePot.render((portState: PortState) => {
-          val queues = props.airportConfig.queues.filterKeys(_ == props.terminalPageTab.terminal)
+          val queues = props.airportConfig.queues.filterKeys(_ == terminal)
           val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.time, timeRangeHours)
           val filteredPortState = portState.windowWithTerminalFilter(viewStart, viewEnd, queues)
+          val terminalName = terminal.toString
           <.div(^.className := s"view-mode-content $viewModeStr",
             <.div(^.className := "tabs-with-export",
               <.ul(^.className := "nav nav-tabs",
                 <.li(^.className := desksAndQueuesActive,
                   <.a(^.id := "desksAndQueuesTab", VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {
-                    GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Desks & Queues", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
+                    GoogleEventTracker.sendEvent(terminalName, "Desks & Queues", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
                     props.router.set(props.terminalPageTab.copy(subMode = "desksAndQueues"))
                   }),
                 <.li(^.className := arrivalsActive,
                   <.a(^.id := "arrivalsTab", VdomAttr("data-toggle") := "tab", "Arrivals"), ^.onClick --> {
-                    GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Arrivals", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
+                    GoogleEventTracker.sendEvent(terminalName, "Arrivals", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
                     props.router.set(props.terminalPageTab.copy(subMode = "arrivals"))
                   }),
                 <.li(^.className := staffingActive,
                   <.a(^.id := "staffMovementsTab", VdomAttr("data-toggle") := "tab", "Staff Movements"), ^.onClick --> {
-                    GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Staff Movements", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
+                    GoogleEventTracker.sendEvent(terminalName, "Staff Movements", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
                     props.router.set(props.terminalPageTab.copy(subMode = "staffing"))
                   })
               ),
               <.div(^.className := "exports",
                 <.a("Export Arrivals",
                   ^.className := "btn btn-default",
-                  ^.href := SPAMain.absoluteUrl(s"export/arrivals/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}"),
+                  ^.href := SPAMain.absoluteUrl(s"export/arrivals/${props.terminalPageTab.viewMode.millis}/${terminal}?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}"),
                   ^.target := "_blank",
                   ^.onClick --> {
-                    Callback(GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Export Arrivals", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly))
+                    Callback(GoogleEventTracker.sendEvent(terminalName, "Export Arrivals", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly))
                   }
                 ),
                 <.a(
                   "Export Desks",
                   ^.className := "btn btn-default",
-                  ^.href := SPAMain.absoluteUrl(s"export/desks/${props.terminalPageTab.viewMode.millis}/${props.terminalPageTab.terminal}?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}"),
+                  ^.href := SPAMain.absoluteUrl(s"export/desks/${props.terminalPageTab.viewMode.millis}/${terminal}?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}"),
                   ^.target := "_blank",
                   ^.onClick --> {
-                    Callback(GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Export Desks", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly))
+                    Callback(GoogleEventTracker.sendEvent(terminalName, "Export Desks", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly))
                   }
                 ),
                 props.loggedInUserPot.render(loggedInUser => {
-                  MultiDayExportComponent(props.terminalPageTab.terminal, props.terminalPageTab.dateFromUrlOrNow, loggedInUser)
+                  MultiDayExportComponent(terminal, props.terminalPageTab.dateFromUrlOrNow, loggedInUser)
                 })
               )
             ),
@@ -166,7 +168,7 @@ object TerminalContentComponent {
               <.div(^.id := "available-staff", ^.className := s"tab-pane terminal-staffing-container $staffingPanelActive",
                 if (state.activeTab == "staffing") {
                   TerminalStaffing(TerminalStaffing.Props(
-                    props.terminalPageTab.terminal,
+                    terminal,
                     props.potShifts,
                     props.potFixedPoints,
                     props.potStaffMovements,

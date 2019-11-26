@@ -3,7 +3,7 @@ package services.graphstages
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute, StaffMinutes}
-import drt.shared.FlightsApi.TerminalName
+import drt.shared.Terminals.Terminal
 import drt.shared.{SDateLike, _}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
@@ -49,18 +49,18 @@ class StaffGraphStage(name: String = "",
       shifts = initialShifts
       fixedPoints = initialFixedPoints
       movementsOption = optionalInitialMovements
-      staffMinutes ++= initialStaffMinutes.minutes.map(sm => (TM(sm.terminalName, sm.minute), sm))
+      staffMinutes ++= initialStaffMinutes.minutes.map(sm => (TM(sm.terminal, sm.minute), sm))
 
       if (checkRequiredUpdatesOnStartup) {
         val lastMidnightMillis = getLocalLastMidnight(now()).millisSinceEpoch
 
-        val missing = Crunch.missingMinutesForDay(lastMidnightMillis, minuteExists, airportConfig.terminalNames.toList, numberOfDays)
+        val missing = Crunch.missingMinutesForDay(lastMidnightMillis, minuteExists, airportConfig.terminals.toList, numberOfDays)
         val requiringUpdate = minutesRequiringUpdate(lastMidnightMillis)
 
         missing ++ requiringUpdate match {
           case m if m.isEmpty => log.info(s"No minutes to add or update")
           case minutes =>
-            val updateCriteria = UpdateCriteria(minutes.toList.sorted, airportConfig.terminalNames.toSet)
+            val updateCriteria = UpdateCriteria(minutes.toList.sorted, airportConfig.terminals.toSet)
             log.info(s"${updateCriteria.minuteMillis.length} minutes to add or update")
             applyUpdatesFromSources(staffSources, updateCriteria)
             log.info(s"${staffMinuteUpdates.size} minutes generated across terminals")
@@ -77,7 +77,7 @@ class StaffGraphStage(name: String = "",
 
       log.info(s"Checking $numberOfDays days worth of minutes (${minutesMillis.length} minutes starting at ${SDate(minutesMillis.head).toISOString()}")
       val maybeUpdates = for {
-        terminal <- airportConfig.terminalNames
+        terminal <- airportConfig.terminals
         minuteMillis <- minutesMillis
       } yield {
         val shifts = staffSources.shifts.terminalStaffAt(terminal, SDate(minuteMillis))
@@ -98,7 +98,7 @@ class StaffGraphStage(name: String = "",
       requiringUpdate.toSet
     }
 
-    def minuteExists(millis: MillisSinceEpoch, terminals: List[TerminalName]): Boolean = terminals match {
+    def minuteExists(millis: MillisSinceEpoch, terminals: List[Terminal]): Boolean = terminals match {
       case Nil => false
       case t :: _ if staffMinutes.contains(TM(t, millis)) => true
       case _ :: tail => minuteExists(millis, tail)
@@ -159,7 +159,7 @@ class StaffGraphStage(name: String = "",
         val endMillis = a.endDt.millisSinceEpoch
         startMillis to endMillis by 60000
       }).toSeq
-      val terminalNames = diff.map(_.terminalName)
+      val terminalNames = diff.map(_.terminal)
 
       UpdateCriteria(minuteMillis, terminalNames)
     }
@@ -189,7 +189,7 @@ class StaffGraphStage(name: String = "",
 
       val oldAssignments = oldFixedPoints.assignments.toSet
       val newAssignments = newFixedPoints.assignments.toSet
-      val terminalNames = ((newAssignments -- oldAssignments) union (oldAssignments -- newAssignments)).map(_.terminalName)
+      val terminalNames = ((newAssignments -- oldAssignments) union (oldAssignments -- newAssignments)).map(_.terminal)
 
       UpdateCriteria(minuteMillis, terminalNames)
     }
@@ -250,4 +250,4 @@ class StaffGraphStage(name: String = "",
   }
 }
 
-case class UpdateCriteria(minuteMillis: Seq[MillisSinceEpoch], terminalNames: Set[TerminalName])
+case class UpdateCriteria(minuteMillis: Seq[MillisSinceEpoch], terminalNames: Set[Terminal])

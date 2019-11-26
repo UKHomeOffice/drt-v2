@@ -107,7 +107,7 @@ object CrunchSystem {
       initialLiveArrivals = props.initialLiveArrivals,
       initialMergedArrivals = if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else mutable.SortedMap[UniqueArrival, Arrival]() ++ initialFlightsWithSplits.map(_.flightsToUpdate.map(fws => (fws.apiFlight.unique, fws.apiFlight))).getOrElse(List()),
       pcpArrivalTime = props.pcpArrival,
-      validPortTerminals = props.airportConfig.terminalNames.toSet,
+      validPortTerminals = props.airportConfig.terminals.toSet,
       expireAfterMillis = props.expireAfterMillis,
       now = props.now)
 

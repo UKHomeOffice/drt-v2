@@ -6,6 +6,7 @@ import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import com.typesafe.config.ConfigFactory
 import drt.server.feeds.legacy.bhx.BHXFeed
+import drt.shared.Terminals.T1
 import drt.shared.{Arrival, ForecastFeedSource, LiveFeedSource}
 import javax.xml.datatype.DatatypeFactory
 import javax.xml.ws.BindingProvider
@@ -110,7 +111,7 @@ class BHXLegacyFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFac
         RunwayID = Some("R1"),
         BaggageReclaimId = Some("7A"),
         AirportID = "BHX",
-        Terminal = "T1",
+        Terminal = T1,
         rawICAO = "AF1164",
         rawIATA = "AF1164",
         Origin = "CPH",
@@ -140,7 +141,7 @@ class BHXLegacyFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFac
         RunwayID = None,
         BaggageReclaimId = None,
         AirportID = "BHX",
-        Terminal = "T1",
+        Terminal = T1,
         rawICAO = "AF1164",
         rawIATA = "AF1164",
         Origin = "CPH",

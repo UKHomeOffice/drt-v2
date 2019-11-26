@@ -7,14 +7,15 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.{SPACircuit, ViewMode}
 import drt.shared.CrunchApi.StaffMinute
-import drt.shared.FlightsApi.QueueName
+import drt.shared.Queues.{EGate, Queue}
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{BackendScope, Callback, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom
-import org.scalajs.dom.html.Div
+import org.scalajs.dom.html.{Div, TableHeaderCell}
 import org.scalajs.dom.raw.Node
 import org.scalajs.dom.{DOMList, Element, Event, NodeListOf}
 
@@ -25,11 +26,11 @@ object TerminalDesksAndQueues {
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  def queueDisplayName(name: String): QueueName = Queues.queueDisplayNames.getOrElse(name, name)
+  def queueDisplayName(name: String): String = Queues.queueDisplayNames.getOrElse(Queue(name), name)
 
-  def queueColour(queueName: String): String = queueName + "-user-desk-rec"
+  def queueColour(queue: Queue): String = queue.toString.toLowerCase + "-user-desk-rec"
 
-  def queueActualsColour(queueName: String): String = s"${queueColour(queueName)} actuals"
+  def queueActualsColour(queue: Queue): String = s"${queueColour(queue)} actuals"
 
   case class Props(router: RouterCtl[Loc],
                    portState: PortState,
@@ -64,20 +65,20 @@ object TerminalDesksAndQueues {
     def render(props: Props, state: State): VdomTagOf[Div] = {
       val slotMinutes = 15
 
-      def deskUnitLabel(queueName: QueueName): String = {
-        queueName match {
-          case "eGate" => "Banks"
+      def deskUnitLabel(queue: Queue): String = {
+        queue match {
+          case EGate => "Banks"
           case _ => "Desks"
         }
       }
 
-      val terminalName = props.terminalPageTab.terminal
+      val terminal = props.terminalPageTab.terminal
 
-      def queueNames: Seq[QueueName] = {
-        props.airportConfig.nonTransferQueues(terminalName)
+      def queueNames: Seq[Queue] = {
+        props.airportConfig.nonTransferQueues(terminal)
       }
 
-      def staffDeploymentSubheadings(queueName: QueueName) = {
+      def staffDeploymentSubheadings(queueName: Queue): List[VdomTagOf[TableHeaderCell]] = {
         val queueColumnClass = queueColour(queueName)
         val queueColumnActualsClass = queueActualsColour(queueName)
         val headings = state.viewType match {
@@ -98,7 +99,7 @@ object TerminalDesksAndQueues {
         else headings
       }
 
-      def subHeadingLevel2(queueNames: Seq[QueueName]) = {
+      def subHeadingLevel2(queueNames: Seq[Queue]) = {
         val queueSubHeadings = queueNames.flatMap(queueName => <.th(^.className := queueColour(queueName), "Pax") :: staffDeploymentSubheadings(queueName)).toTagMod
 
         List(queueSubHeadings,
@@ -109,11 +110,11 @@ object TerminalDesksAndQueues {
           <.th(^.className := "total-deployed", "Avail", ^.colSpan := 2, ^.title := "Total staff available based on staff entered"))
       }
 
-      def qth(queueName: String, xs: TagMod*) = <.th((^.className := queueName + "-user-desk-rec") :: xs.toList: _*)
+      def qth(queue: Queue, xs: TagMod*) = <.th((^.className := queue.toString.toLowerCase + "-user-desk-rec") :: xs.toList: _*)
 
-      val queueHeadings: List[TagMod] = queueNames.map(queueName => {
+      val queueHeadings: List[TagMod] = queueNames.map(queue => {
         val colsToSpan = if (state.showActuals) 5 else 3
-        qth(queueName, queueDisplayName(queueName), ^.colSpan := colsToSpan, ^.className := "top-heading")
+        qth(queue, queueDisplayName(queue.toString), ^.colSpan := colsToSpan, ^.className := "top-heading")
       }).toList
 
       val headings: List[TagMod] = queueHeadings ++ List(
@@ -121,9 +122,9 @@ object TerminalDesksAndQueues {
         <.th(^.className := "total-deployed", ^.colSpan := 4, "PCP")
       )
 
-      val queues = props.airportConfig.nonTransferQueues(terminalName).toList
-      val terminalCrunchMinutes = props.portState.crunchSummary(props.viewStart, props.hoursToView * 4, 15, terminalName, queues)
-      val terminalStaffMinutes = props.portState.staffSummary(props.viewStart, props.hoursToView * 4, 15, terminalName)
+      val queues = props.airportConfig.nonTransferQueues(terminal).toList
+      val terminalCrunchMinutes = props.portState.crunchSummary(props.viewStart, props.hoursToView * 4, 15, terminal, queues)
+      val terminalStaffMinutes = props.portState.staffSummary(props.viewStart, props.hoursToView * 4, 15, terminal)
       val viewMinutes = props.viewStart.millisSinceEpoch until (props.viewStart.millisSinceEpoch + (props.hoursToView * 60 * 60000)) by 15 * 60000
 
       val toggleShowActuals = (e: ReactEventFromInput) => {
@@ -135,7 +136,7 @@ object TerminalDesksAndQueues {
       }
 
       def toggleViewType(newViewType: ViewType) = (e: ReactEventFromInput) => {
-        GoogleEventTracker.sendEvent(s"$terminalName", "Desks & Queues", newViewType.toString)
+        GoogleEventTracker.sendEvent(s"$terminal", "Desks & Queues", newViewType.toString)
         props.router.set(
           props.terminalPageTab.withUrlParameters(UrlViewType(Option(newViewType)))
         )
@@ -200,7 +201,7 @@ object TerminalDesksAndQueues {
                 queues.map(q => terminalCrunchMinutes(millis)(q)),
                 terminalStaffMinutes.getOrElse(millis, StaffMinute.empty),
                 props.airportConfig,
-                terminalName,
+                terminal,
                 state.showActuals,
                 state.viewType,
                 props.airportConfig.hasActualDeskStats,

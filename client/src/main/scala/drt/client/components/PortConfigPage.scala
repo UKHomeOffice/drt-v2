@@ -3,8 +3,7 @@ package drt.client.components
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.QueueName
-import drt.shared.PassengerSplits.QueueType
+import drt.shared.Queues.Queue
 import drt.shared._
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
@@ -37,9 +36,9 @@ object PortConfigDetails {
       <.div(
         airportConfigRCP(airportConfigMP =>
           <.div(airportConfigMP().renderReady(config => <.div(
-            config.terminalNames.map(tn =>
+            config.terminals.map(tn =>
               <.div(
-                <.h2(tn),
+                <.h2(tn.toString),
                 <.div(^.className := "container config-container",
                   <.h4("Min / Max Desks or eGate Banks by hour of day"),
                   minMaxDesksTable(config.minMaxDesksByTerminalQueue(tn))
@@ -63,7 +62,7 @@ object PortConfigDetails {
     }
     .build
 
-  def minMaxDesksTable(minMaxDesksByTerminalQueue: Map[QueueName, (List[Int], List[Int])]): TagMod = minMaxDesksByTerminalQueue.map {
+  def minMaxDesksTable(minMaxDesksByTerminalQueue: Map[Queue, (List[Int], List[Int])]): TagMod = minMaxDesksByTerminalQueue.map {
     case (queue, (min, max)) =>
       <.div(^.className := "config-block float-left",
         <.h4(Queues.queueDisplayNames(queue)),
@@ -95,7 +94,7 @@ object PortConfigDetails {
         defaultProcessingTimes
           .toList
           .sortBy {
-            case (paxTypeAndQueue, _) => paxTypeAndQueue.queueType + paxTypeAndQueue.passengerType
+            case (paxTypeAndQueue, _) => paxTypeAndQueue.queueType.toString + paxTypeAndQueue.passengerType
           }
           .map {
             case (ptq, time) =>
@@ -124,7 +123,7 @@ object PortConfigDetails {
     )
   )
 
-  def defaultPaxSplits(defaultPaxTypeQueueAllocation: Map[PaxType, Seq[(QueueType, Double)]]): VdomTagOf[Div] = <.div(^.className := "config-block float-left",
+  def defaultPaxSplits(defaultPaxTypeQueueAllocation: Map[PaxType, Seq[(Queue, Double)]]): VdomTagOf[Div] = <.div(^.className := "config-block float-left",
     <.table(^.className := "table table-bordered table-hover",
       <.tbody(
         <.tr(

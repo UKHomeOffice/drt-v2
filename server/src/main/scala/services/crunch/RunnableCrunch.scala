@@ -8,7 +8,9 @@ import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
 import akka.stream.stage.GraphStage
 import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.{Flights, FlightsWithSplits, QueueName, TerminalName}
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
+import drt.shared.Queues.Queue
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
@@ -59,7 +61,7 @@ object RunnableCrunch {
 
                                        crunchPeriodStartMillis: SDateLike => SDateLike,
                                        now: () => SDateLike,
-                                       portQueues: Map[TerminalName, Seq[QueueName]],
+                                       portQueues: Map[Terminal, Seq[Queue]],
                                        liveStateDaysAhead: Int,
                                        forecastMaxMillis: () => MillisSinceEpoch,
                                        throttleDurationPer: FiniteDuration

@@ -7,6 +7,7 @@ import actors.pointInTime.StaffMovementsReadActor
 import akka.actor.{ActorSystem, PoisonPill, Props}
 import akka.testkit.{ImplicitSender, TestKit}
 import com.typesafe.config.ConfigFactory
+import drt.shared.Terminals.T1
 import drt.shared.{MilliDate, SDateLike, StaffMovement}
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterEach
@@ -42,7 +43,7 @@ class StaffMovementsActorSpec extends TestKit(ActorSystem("StaffMovementsActorSp
   "StaffMovementsActor" should {
     "remember a movement added before a shutdown" in {
       val movementUuid1: UUID = UUID.randomUUID()
-      val staffMovements = StaffMovements(Seq(StaffMovement("T1", "lunch start", MilliDate(SDate(s"2017-01-01T00:00").millisSinceEpoch), -1, movementUuid1, createdBy = Some("batman"))))
+      val staffMovements = StaffMovements(Seq(StaffMovement(T1, "lunch start", MilliDate(SDate(s"2017-01-01T00:00").millisSinceEpoch), -1, movementUuid1, createdBy = Some("batman"))))
 
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
       val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
@@ -68,8 +69,8 @@ class StaffMovementsActorSpec extends TestKit(ActorSystem("StaffMovementsActorSp
       val movementUuid1: UUID = UUID.randomUUID()
       val movementUuid2: UUID = UUID.randomUUID()
 
-      val movement1 = StaffMovement("T1", "lunch start", MilliDate(SDate(s"2017-01-01T00:00").millisSinceEpoch), -1, movementUuid1, createdBy = Some("batman"))
-      val movement2 = StaffMovement("T1", "coffee start", MilliDate(SDate(s"2017-01-01T01:15").millisSinceEpoch), -1, movementUuid2, createdBy = Some("robin"))
+      val movement1 = StaffMovement(T1, "lunch start", MilliDate(SDate(s"2017-01-01T00:00").millisSinceEpoch), -1, movementUuid1, createdBy = Some("batman"))
+      val movement2 = StaffMovement(T1, "coffee start", MilliDate(SDate(s"2017-01-01T01:15").millisSinceEpoch), -1, movementUuid2, createdBy = Some("robin"))
       val staffMovements = StaffMovements(Seq(movement1, movement2))
 
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
@@ -102,10 +103,10 @@ class StaffMovementsActorSpec extends TestKit(ActorSystem("StaffMovementsActorSp
       val movementUuid3: UUID = UUID.randomUUID()
       val movementUuid4: UUID = UUID.randomUUID()
 
-      val movement1 = StaffMovement("T1", "lunch start", MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch), -1, movementUuid1, createdBy = Some("batman"))
-      val movement2 = StaffMovement("T1", "coffee start", MilliDate(SDate("2017-01-01T01:15").millisSinceEpoch), -1, movementUuid2, createdBy = Some("robin"))
-      val movement3 = StaffMovement("T1", "supper start", MilliDate(SDate("2017-01-01T21:30").millisSinceEpoch), -1, movementUuid3, createdBy = Some("bruce"))
-      val movement4 = StaffMovement("T1", "supper start", MilliDate(SDate("2017-01-01T21:40").millisSinceEpoch), -1, movementUuid4, createdBy = Some("bruce"))
+      val movement1 = StaffMovement(T1, "lunch start", MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch), -1, movementUuid1, createdBy = Some("batman"))
+      val movement2 = StaffMovement(T1, "coffee start", MilliDate(SDate("2017-01-01T01:15").millisSinceEpoch), -1, movementUuid2, createdBy = Some("robin"))
+      val movement3 = StaffMovement(T1, "supper start", MilliDate(SDate("2017-01-01T21:30").millisSinceEpoch), -1, movementUuid3, createdBy = Some("bruce"))
+      val movement4 = StaffMovement(T1, "supper start", MilliDate(SDate("2017-01-01T21:40").millisSinceEpoch), -1, movementUuid4, createdBy = Some("bruce"))
 
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
       val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
@@ -144,10 +145,10 @@ class StaffMovementsActorSpec extends TestKit(ActorSystem("StaffMovementsActorSp
       val movementUuid3: UUID = UUID.randomUUID()
       val movementUuid4: UUID = UUID.randomUUID()
 
-      val expiredMovement1 = StaffMovement("T1", "lunch start", MilliDate(SDate(s"2017-01-01T00:00").millisSinceEpoch), -1, movementUuid1, createdBy = Some("batman"))
-      val expiredMovement2 = StaffMovement("T1", "coffee start", MilliDate(SDate(s"2017-01-01T01:15").millisSinceEpoch), -1, movementUuid2, createdBy = Some("robin"))
-      val unexpiredMovement1 = StaffMovement("T1", "supper start", MilliDate(SDate(s"2017-01-01T21:30").millisSinceEpoch), -1, movementUuid3, createdBy = Some("bruce"))
-      val unexpiredMovement2 = StaffMovement("T1", "supper start", MilliDate(SDate(s"2017-01-01T21:40").millisSinceEpoch), -1, movementUuid4, createdBy = Some("bruce"))
+      val expiredMovement1 = StaffMovement(T1, "lunch start", MilliDate(SDate(s"2017-01-01T00:00").millisSinceEpoch), -1, movementUuid1, createdBy = Some("batman"))
+      val expiredMovement2 = StaffMovement(T1, "coffee start", MilliDate(SDate(s"2017-01-01T01:15").millisSinceEpoch), -1, movementUuid2, createdBy = Some("robin"))
+      val unexpiredMovement1 = StaffMovement(T1, "supper start", MilliDate(SDate(s"2017-01-01T21:30").millisSinceEpoch), -1, movementUuid3, createdBy = Some("bruce"))
+      val unexpiredMovement2 = StaffMovement(T1, "supper start", MilliDate(SDate(s"2017-01-01T21:40").millisSinceEpoch), -1, movementUuid4, createdBy = Some("bruce"))
 
       val now_is_20170102_0200: () => SDateLike = () => SDate("2017-01-02T02:00")
       val expireAfterOneDay: () => SDateLike = () => now_is_20170102_0200().addDays(-1)
@@ -171,10 +172,10 @@ class StaffMovementsActorSpec extends TestKit(ActorSystem("StaffMovementsActorSp
     }
 
     "purge movements created more than the specified expiry period ago when requested via a point in time actor" in {
-      val expiredMovement1 = StaffMovement("T1", "lunch start", MilliDate(SDate(s"2017-01-01T00:00").millisSinceEpoch), -1, UUID.randomUUID(), createdBy = Some("batman"))
-      val expiredMovement2 = StaffMovement("T1", "coffee start", MilliDate(SDate(s"2017-01-01T01:15").millisSinceEpoch), -1, UUID.randomUUID(), createdBy = Some("robin"))
-      val unexpiredMovement1 = StaffMovement("T1", "supper start", MilliDate(SDate(s"2017-01-01T21:30").millisSinceEpoch), -1, UUID.randomUUID(), createdBy = Some("bruce"))
-      val unexpiredMovement2 = StaffMovement("T1", "supper start", MilliDate(SDate(s"2017-01-01T21:40").millisSinceEpoch), -1, UUID.randomUUID(), createdBy = Some("bruce"))
+      val expiredMovement1 = StaffMovement(T1, "lunch start", MilliDate(SDate(s"2017-01-01T00:00").millisSinceEpoch), -1, UUID.randomUUID(), createdBy = Some("batman"))
+      val expiredMovement2 = StaffMovement(T1, "coffee start", MilliDate(SDate(s"2017-01-01T01:15").millisSinceEpoch), -1, UUID.randomUUID(), createdBy = Some("robin"))
+      val unexpiredMovement1 = StaffMovement(T1, "supper start", MilliDate(SDate(s"2017-01-01T21:30").millisSinceEpoch), -1, UUID.randomUUID(), createdBy = Some("bruce"))
+      val unexpiredMovement2 = StaffMovement(T1, "supper start", MilliDate(SDate(s"2017-01-01T21:40").millisSinceEpoch), -1, UUID.randomUUID(), createdBy = Some("bruce"))
 
       val now_is_20170102_0200: () => SDateLike = () => SDate("2017-01-02T02:00")
       val expireAfterOneDay: () => SDateLike = () => now_is_20170102_0200().addDays(-1)
@@ -203,11 +204,11 @@ class StaffMovementsActorSpec extends TestKit(ActorSystem("StaffMovementsActorSp
 
     "keep pairs of movements when only one was created more than the specified expiry period ago when requested via a point in time actor" in {
       val pair1 = UUID.randomUUID()
-      val expiredMovement1 = StaffMovement("T1", "lunch start", MilliDate(SDate(s"2017-01-01T00:00").millisSinceEpoch), -1, pair1, createdBy = Some("batman"))
-      val expiredMovement2 = StaffMovement("T1", "lunch end", MilliDate(SDate(s"2017-01-01T01:15").millisSinceEpoch), 1, pair1, createdBy = Some("robin"))
+      val expiredMovement1 = StaffMovement(T1, "lunch start", MilliDate(SDate(s"2017-01-01T00:00").millisSinceEpoch), -1, pair1, createdBy = Some("batman"))
+      val expiredMovement2 = StaffMovement(T1, "lunch end", MilliDate(SDate(s"2017-01-01T01:15").millisSinceEpoch), 1, pair1, createdBy = Some("robin"))
       val pair2 = UUID.randomUUID()
-      val unexpiredMovement1 = StaffMovement("T1", "supper start", MilliDate(SDate(s"2017-01-01T21:30").millisSinceEpoch), -1, pair2, createdBy = Some("bruce"))
-      val unexpiredMovement2 = StaffMovement("T1", "supper enmd", MilliDate(SDate(s"2017-01-01T21:40").millisSinceEpoch), 1, pair2, createdBy = Some("ed"))
+      val unexpiredMovement1 = StaffMovement(T1, "supper start", MilliDate(SDate(s"2017-01-01T21:30").millisSinceEpoch), -1, pair2, createdBy = Some("bruce"))
+      val unexpiredMovement2 = StaffMovement(T1, "supper enmd", MilliDate(SDate(s"2017-01-01T21:40").millisSinceEpoch), 1, pair2, createdBy = Some("ed"))
 
       val now_is_20170102_0200: () => SDateLike = () => SDate("2017-01-02T01:00")
       val expireAfterOneDay: () => SDateLike = () => now_is_20170102_0200().addDays(-1)
@@ -236,11 +237,11 @@ class StaffMovementsActorSpec extends TestKit(ActorSystem("StaffMovementsActorSp
 
     "purge pairs of movements where both were created more than the specified expiry period ago when requested via a point in time actor" in {
       val pair1 = UUID.randomUUID()
-      val expiredMovement1 = StaffMovement("T1", "lunch start", MilliDate(SDate(s"2017-01-01T00:00").millisSinceEpoch), -1, pair1, createdBy = Some("batman"))
-      val expiredMovement2 = StaffMovement("T1", "lunch end", MilliDate(SDate(s"2017-01-01T01:15").millisSinceEpoch), 1, pair1, createdBy = Some("robin"))
+      val expiredMovement1 = StaffMovement(T1, "lunch start", MilliDate(SDate(s"2017-01-01T00:00").millisSinceEpoch), -1, pair1, createdBy = Some("batman"))
+      val expiredMovement2 = StaffMovement(T1, "lunch end", MilliDate(SDate(s"2017-01-01T01:15").millisSinceEpoch), 1, pair1, createdBy = Some("robin"))
       val pair2 = UUID.randomUUID()
-      val unexpiredMovement1 = StaffMovement("T1", "supper start", MilliDate(SDate(s"2017-01-01T21:30").millisSinceEpoch), -1, pair2, createdBy = Some("bruce"))
-      val unexpiredMovement2 = StaffMovement("T1", "supper end", MilliDate(SDate(s"2017-01-01T21:40").millisSinceEpoch), 1, pair2, createdBy = Some("ed"))
+      val unexpiredMovement1 = StaffMovement(T1, "supper start", MilliDate(SDate(s"2017-01-01T21:30").millisSinceEpoch), -1, pair2, createdBy = Some("bruce"))
+      val unexpiredMovement2 = StaffMovement(T1, "supper end", MilliDate(SDate(s"2017-01-01T21:40").millisSinceEpoch), 1, pair2, createdBy = Some("ed"))
 
       val now_is_20170102_0200: () => SDateLike = () => SDate("2017-01-02T21:35")
       val expireAfterOneDay: () => SDateLike = () => now_is_20170102_0200().addDays(-1)

@@ -9,9 +9,9 @@ import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import drt.services.AirportConfigHelpers
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.TerminalName
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
+import drt.shared.Terminals.{A1, A2, Terminal}
 import drt.shared.{Arrival, _}
 import org.joda.time.DateTime
 import services.workloadcalculator.PaxLoadCalculator
@@ -33,19 +33,19 @@ object TestCrunchConfig {
     AirportConfig(
       portCode = "EDI",
       queues = Map(
-        "A1" -> Seq(Queues.EeaDesk, Queues.EGate, Queues.NonEeaDesk),
-        "A2" -> Seq(Queues.EeaDesk, Queues.EGate, Queues.NonEeaDesk)
+        A1 -> Seq(Queues.EeaDesk, Queues.EGate, Queues.NonEeaDesk),
+        A2 -> Seq(Queues.EeaDesk, Queues.EGate, Queues.NonEeaDesk)
       ),
       slaByQueue = Map(
         Queues.EeaDesk -> 20,
         Queues.EGate -> 25,
         Queues.NonEeaDesk -> 45
       ),
-      terminalNames = Seq("A1", "A2"),
+      terminals = Seq(A1, A2),
       timeToChoxMillis = 0L,
       firstPaxOffMillis = 0L,
-      defaultWalkTimeMillis = Map("A1" -> 0L, "A2" -> 0L),
-      terminalPaxSplits = List("A1", "A2").map(t => (t, SplitRatios(
+      defaultWalkTimeMillis = Map(A1 -> 0L, A2 -> 0L),
+      terminalPaxSplits = List(A1, A2).map(t => (t, SplitRatios(
         AirportConfigOrigin,
         SplitRatio(eeaMachineReadableToDesk, 0.4875),
         SplitRatio(eeaMachineReadableToEGate, 0.1625),
@@ -54,14 +54,14 @@ object TestCrunchConfig {
         SplitRatio(nonVisaNationalToDesk, 0.05)
       ))).toMap,
       terminalProcessingTimes = Map(
-        "A1" -> Map(
+        A1 -> Map(
           eeaMachineReadableToDesk -> 16d / 60,
           eeaMachineReadableToEGate -> 25d / 60,
           eeaNonMachineReadableToDesk -> 50d / 60,
           visaNationalToDesk -> 75d / 60,
           nonVisaNationalToDesk -> 64d / 60
         ),
-        "A2" -> Map(
+        A2 -> Map(
           eeaMachineReadableToDesk -> 30d / 60,
           eeaMachineReadableToEGate -> 25d / 60,
           eeaNonMachineReadableToDesk -> 50d / 60,
@@ -69,12 +69,12 @@ object TestCrunchConfig {
           nonVisaNationalToDesk -> 120d / 60
         )),
       minMaxDesksByTerminalQueue = Map(
-        "A1" -> Map(
+        A1 -> Map(
           Queues.EeaDesk -> Tuple2(seqOfHoursInts(2), seqOfHoursInts(25)),
           Queues.NonEeaDesk -> Tuple2(seqOfHoursInts(2), seqOfHoursInts(25)),
           Queues.EGate -> Tuple2(seqOfHoursInts(2), seqOfHoursInts(25))
         ),
-        "A2" -> Map(
+        A2 -> Map(
           Queues.EeaDesk -> Tuple2(seqOfHoursInts(2), seqOfHoursInts(25)),
           Queues.NonEeaDesk -> Tuple2(seqOfHoursInts(2), seqOfHoursInts(25)),
           Queues.EGate -> Tuple2(seqOfHoursInts(2), seqOfHoursInts(25))
@@ -88,7 +88,7 @@ object TestCrunchConfig {
         "Evening shift, A1, {date}, 17:00, 23:59,17"
       ),
       role = STNAccess,
-      terminalPaxTypeQueueAllocation = Map("T1" -> defaultQueueRatios)
+      terminalPaxTypeQueueAllocation = Map(A1 -> defaultQueueRatios, A2 -> defaultQueueRatios)
     )
   }
 
@@ -126,7 +126,7 @@ class SplitsRequestRecordingCrunchActor(hours: Int, val airportConfig: AirportCo
 
   def splitRatioProvider: Arrival => Option[SplitRatios] = _splitRatioProvider
 
-  def procTimesProvider(terminalName: TerminalName)(paxTypeAndQueue: PaxTypeAndQueue): Double = 1d
+  def procTimesProvider(terminal: Terminal)(paxTypeAndQueue: PaxTypeAndQueue): Double = 1d
 
   def pcpArrivalTimeProvider(flight: Arrival): MilliDate = MilliDate(flight.Scheduled)
 

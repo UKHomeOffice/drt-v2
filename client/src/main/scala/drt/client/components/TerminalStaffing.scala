@@ -10,13 +10,13 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions._
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.TerminalName
+import drt.shared.Terminals.Terminal
 import drt.shared._
-import japgolly.scalajs.react._
-import japgolly.scalajs.react.component.Scala.Unmounted
+import japgolly.scalajs.react.{CtorType, _}
+import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.Reusability
-import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import org.scalajs.dom.html.{Anchor, Div, Table}
 import org.scalajs.dom.raw.HTMLElement
 
@@ -31,7 +31,7 @@ object TerminalStaffing {
   val oneMinute = 60000L
 
   case class Props(
-                    terminalName: TerminalName,
+                    terminalName: Terminal,
                     potShifts: Pot[ShiftAssignments],
                     potFixedPoints: Pot[FixedPointAssignments],
                     potStaffMovements: Pot[Seq[StaffMovement]],
@@ -112,7 +112,7 @@ object TerminalStaffing {
 
     def staffOverTheDay(movements: Seq[StaffMovement],
                         shifts: ShiftAssignments,
-                        terminalName: TerminalName): VdomTagOf[Div] = {
+                        terminalName: Terminal): VdomTagOf[Div] = {
       val terminalShifts = ShiftAssignments(shifts.forTerminal(terminalName))
       val staffWithShiftsAndMovementsAt = StaffMovements.terminalStaffAt(terminalShifts)(movements) _
       <.div(
@@ -121,20 +121,20 @@ object TerminalStaffing {
       )
     }
 
-    def movementsEditor(movements: Seq[StaffMovement], terminalName: TerminalName): VdomTagOf[Div] = {
-      val terminalMovements = movements.filter(_.terminalName == terminalName)
+    def movementsEditor(movements: Seq[StaffMovement], terminalName: Terminal): VdomTagOf[Div] = {
+      val terminalMovements = movements.filter(_.terminal == terminalName)
       <.div(<.h2("Movements"), movementsListTagMod(terminalMovements, terminalName))
     }
 
     case class FixedPointsProps(fixedPoints: FixedPointAssignments,
                                 airportConfig: AirportConfig,
-                                terminalName: TerminalName,
+                                terminalName: Terminal,
                                 loggedInUser: Pot[LoggedInUser])
 
     case class FixedPointsState(rawFixedPoints: String)
 
     object FixedPointsEditor {
-      val component = ScalaComponent.builder[FixedPointsProps]("FixedPointsEditor")
+      val component: Component[FixedPointsProps, FixedPointsState, Unit, CtorType.Props] = ScalaComponent.builder[FixedPointsProps]("FixedPointsEditor")
         .initialStateFromProps(props => FixedPointsState(StaffAssignmentHelper.fixedPointsFormat(props.fixedPoints)))
         .renderPS((scope, props, state) => {
 
@@ -177,9 +177,9 @@ object TerminalStaffing {
       startOfDay.millisSinceEpoch until timeMinPlusOneDay.millisSinceEpoch by (oneMinute * 15)
     }
 
-    def staffingTableHourPerColumn(terminalName: TerminalName,
+    def staffingTableHourPerColumn(terminalName: Terminal,
                                    daysWorthOf15Minutes: NumericRange[Long],
-                                   staffWithShiftsAndMovements: (TerminalName, SDateLike) => Int): VdomTagOf[Table] =
+                                   staffWithShiftsAndMovements: (Terminal, SDateLike) => Int): VdomTagOf[Table] =
       <.table(
         ^.className := "table table-striped table-xcondensed table-sm",
         <.tbody(
@@ -203,14 +203,14 @@ object TerminalStaffing {
       )
   }
 
-  def movementsListTagMod(terminalMovements: Seq[StaffMovement], terminalName: TerminalName): TagOf[HTMLElement] = {
+  def movementsListTagMod(terminalMovements: Seq[StaffMovement], terminalName: Terminal): TagOf[HTMLElement] = {
     if (terminalMovements.nonEmpty)
       <.ul(^.className := "list-unstyled", movementsLiElements(terminalMovements, terminalName).toTagMod)
     else
       <.p("No movements recorded")
   }
 
-  def movementsLiElements(terminalMovements: Seq[StaffMovement], terminalName: TerminalName): Seq[TagMod] = sortedMovements(terminalMovements).map {
+  def movementsLiElements(terminalMovements: Seq[StaffMovement], terminalName: Terminal): Seq[TagMod] = sortedMovements(terminalMovements).map {
     case (_, movementPair) =>
       labelAndLink(terminalName, movementPair) match {
         case Some((label, link)) => <.li(link, " ", <.span(^.`class` := "movement-display", label))
@@ -226,7 +226,7 @@ object TerminalStaffing {
       case (_, Nil) => 0L
     }
 
-  def labelAndLink(terminalName: TerminalName,
+  def labelAndLink(terminalName: Terminal,
                    movementPair: Seq[StaffMovement]): Option[(String, html_<^.VdomTagOf[Anchor])] =
     movementPair
       .toList
@@ -238,10 +238,10 @@ object TerminalStaffing {
         None
     }
 
-  def removeLink(terminalName: TerminalName, movement: StaffMovement): VdomTagOf[Anchor] =
+  def removeLink(terminal: Terminal, movement: StaffMovement): VdomTagOf[Anchor] =
     <.a(Icon.remove, ^.key := movement.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) =>
       Callback {
-        GoogleEventTracker.sendEvent(terminalName, "Remove Staff Movement", movement.copy(createdBy = None).toString)
+        GoogleEventTracker.sendEvent(terminal.toString, "Remove Staff Movement", movement.copy(createdBy = None).toString)
         SPACircuit.dispatch(RemoveStaffMovements(movement.uUID))
       }))
 
@@ -254,7 +254,7 @@ object TerminalStaffing {
 
   object MovementDisplay {
     def toCsv(movement: StaffMovement): String = {
-      s"${movement.terminalName}, ${movement.reason}, ${displayDate(movement.time)}, ${displayTime(movement.time)}, ${movement.delta} staff"
+      s"${movement.terminal}, ${movement.reason}, ${displayDate(movement.time)}, ${displayTime(movement.time)}, ${movement.delta} staff"
     }
 
     def displayPair(start: StaffMovement, end: StaffMovement): String = {
@@ -307,14 +307,14 @@ object FixedPoints {
     lines.mkString("\n")
   }
 
-  def addTerminalNameAndDate(rawFixedPoints: String, terminalName: String): String = {
+  def addTerminalNameAndDate(rawFixedPoints: String, terminalName: Terminal): String = {
     val today: SDateLike = SDate.midnightThisMorning()
     val todayString = today.ddMMyyString
 
     val lines = rawFixedPoints.split("\n").toList.map(line => {
       val withoutTerminal = line.split(",").toList.map(_.trim)
       val withTerminal = withoutTerminal match {
-        case fpName :: tail => fpName.toString :: terminalName :: todayString :: tail
+        case fpName :: tail => fpName.toString :: terminalName.toString :: todayString :: tail
         case _ => Nil
       }
       withTerminal.mkString(", ")

@@ -14,7 +14,7 @@ class CrunchMinuteSpec extends CrunchTestLike {
       val daysInMinutes = 60 * 60 * 24 * days
       val daysInMillis = 1000 * 60 * daysInMinutes
       val tqms = for {
-        terminal <- airportConfig.terminalNames
+        terminal <- airportConfig.terminals
         queue <- airportConfig.queues.getOrElse(terminal, Seq())
         minute <- (1525222800000L to (1525222800000L + daysInMillis) by 60000).take(daysInMinutes)
       } yield (terminal, queue, minute)
@@ -36,7 +36,7 @@ class CrunchMinuteSpec extends CrunchTestLike {
       val daysInMinutes = 60 * 60 * 24 * days
       val daysInMillis = 1000 * 60 * daysInMinutes
       val tms = for {
-        terminal <- airportConfig.terminalNames
+        terminal <- airportConfig.terminals
         minute <- (1525222800000L to (1525222800000L + daysInMillis) by 60000).take(daysInMinutes)
       } yield (terminal, minute)
 

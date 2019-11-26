@@ -7,6 +7,8 @@ import actors.acking.AckingReceiver.StreamCompleted
 import akka.actor.Scheduler
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
+import drt.shared.Queues.Queue
+import drt.shared.Terminals.Terminal
 import drt.shared.{HasExpireables, MilliDate, SDateLike, StaffMovement}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
@@ -172,12 +174,12 @@ class StaffMovementsActorBase(val now: () => SDateLike,
   }
 
   def staffMovementMessageToStaffMovement(sm: StaffMovementMessage) = StaffMovement(
-    terminalName = sm.terminalName.getOrElse(""),
+    terminal = Terminal(sm.terminalName.getOrElse("")),
     reason = sm.reason.getOrElse(""),
     time = MilliDate(sm.time.getOrElse(0L)),
     delta = sm.delta.getOrElse(0),
     uUID = UUID.fromString(sm.uUID.getOrElse("")),
-    queue = sm.queueName,
+    queue = sm.queueName.map(Queue(_)),
     createdBy = sm.createdBy
   )
 
@@ -185,12 +187,12 @@ class StaffMovementsActorBase(val now: () => SDateLike,
     staffMovements.movements.map(staffMovementToStaffMovementMessage)
 
   def staffMovementToStaffMovementMessage(sm: StaffMovement) = StaffMovementMessage(
-    terminalName = Some(sm.terminalName),
+    terminalName = Some(sm.terminal.toString),
     reason = Some(sm.reason),
     time = Some(sm.time.millisSinceEpoch),
     delta = Some(sm.delta),
     uUID = Some(sm.uUID.toString),
-    queueName = sm.queue,
+    queueName = sm.queue.map(_.toString),
     createdAt = Option(now().millisSinceEpoch),
     createdBy = sm.createdBy
   )

@@ -98,11 +98,11 @@ object SnapshotSelector {
 
       def selectPointInTime = (_: ReactEventFromInput) => {
         if (isValidSnapshotDate) {
-          GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Snapshot", state.snapshotDateTime.toLocalDateTimeString())
+          GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Snapshot", state.snapshotDateTime.toLocalDateTimeString())
           log.info(s"state.snapshotDateTime: ${state.snapshotDateTime.toLocalDateTimeString()}")
           props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Option(state.snapshotDateTime.toLocalDateTimeString()))))
         } else {
-          GoogleEventTracker.sendEvent(props.terminalPageTab.terminal, "Snapshot", "Invalid Date")
+          GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Snapshot", "Invalid Date")
           scope.modState(_.copy(showDatePicker = true))
         }
       }
