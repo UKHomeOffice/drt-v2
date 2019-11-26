@@ -98,7 +98,7 @@ object TerminalDashboardComponent {
                 case _ => Icon.arrowRight
               }
 
-              <.div(^.className := s"queue-box col $q ${TerminalDesksAndQueuesRow.slaRagStatus(qWait, p.airportConfig.slaByQueue(q))}",
+              <.div(^.className := s"queue-box col ${q.toString.toLowerCase} ${TerminalDesksAndQueuesRow.slaRagStatus(qWait, p.airportConfig.slaByQueue(q))}",
                 <.div(^.className := "queue-name", s"${Queues.queueDisplayNames.getOrElse(q, q)}"),
                 <.div(^.className := "queue-box-text", Icon.users, s"$qPax pax joining"),
                 <.div(^.className := "queue-box-text", Icon.clockO, s"$qWait min wait time"),
