@@ -115,7 +115,7 @@ object CrunchSystem {
     val liveBaseArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialLiveBaseArrivals, forecastMaxMillis)
     val liveArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialLiveArrivals, forecastMaxMillis)
 
-    val ptqa = if (props.airportConfig.portCode == "LHR")
+    val ptqa = if (props.airportConfig.portCode == PortCode("LHR"))
       PaxTypeQueueAllocation(
         B5JPlusWithTransitTypeAllocator(),
         TerminalQueueAllocatorWithFastTrack(props.airportConfig.terminalPaxTypeQueueAllocation))
@@ -126,13 +126,8 @@ object CrunchSystem {
 
     val arrivalSplitsGraphStage = new ArrivalSplitsGraphStage(
       name = props.logLabel,
-      props.airportConfig.portCode,
       optionalInitialFlights = initialFlightsWithSplits,
-      splitsCalculator = manifests.queues.SplitsCalculator(
-        props.airportConfig.feedPortCode,
-        ptqa,
-        props.airportConfig.terminalPaxSplits
-      ),
+      splitsCalculator = manifests.queues.SplitsCalculator(ptqa, props.airportConfig.terminalPaxSplits),
       groupFlightsByCodeShares = groupFlightsByCodeShares,
       expireAfterMillis = props.expireAfterMillis,
       now = props.now,

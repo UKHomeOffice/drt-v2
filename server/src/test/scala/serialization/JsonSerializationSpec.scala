@@ -17,7 +17,7 @@ class JsonSerializationSpec extends Specification {
 
     "Terminal" >> {
 
-      val terminal = T1
+      val terminal: Terminal = T1
 
       val terminalAsJson: String = write(terminal)
 
@@ -28,7 +28,7 @@ class JsonSerializationSpec extends Specification {
 
     "AirportConfig" >> {
 
-      val lhrAirportConfig = AirportConfigs.confByPort("LHR")
+      val lhrAirportConfig = AirportConfigs.confByPort(PortCode("LHR"))
 
       val lhrAirportConfigAsJson: String = write(lhrAirportConfig)
 
@@ -81,7 +81,7 @@ class JsonSerializationSpec extends Specification {
 
     "PortState" >> {
       val flightWithSplits = ApiFlightWithSplits(
-        Arrival(None, "scheduled", None, None, None, None, None, None, None, None, None, None, None, "test", T1, "test", "test", "test", 0L, None, Set(AclFeedSource, LiveFeedSource)),
+        Arrival(None, "scheduled", None, None, None, None, None, None, None, None, None, None, None, PortCode("test"), T1, "test", "test", PortCode("test"), 0L, None, Set(AclFeedSource, LiveFeedSource)),
         Set(
           Splits(
             Set(
@@ -125,7 +125,7 @@ class JsonSerializationSpec extends Specification {
         0L,
         Set(
           ApiFlightWithSplits(
-            Arrival(None, "scheduled", None, None, None, None, None, None, None, None, None, None, None, "test", T1, "test", "test", "test", 0L, None, Set(AclFeedSource, LiveFeedSource)),
+            Arrival(None, "scheduled", None, None, None, None, None, None, None, None, None, None, None, PortCode("test"), T1, "test", "test", PortCode("test"), 0L, None, Set(AclFeedSource, LiveFeedSource)),
             Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Option(Map("tw" -> 7.0)))), Historical, None, Percentage))
           )
         ),

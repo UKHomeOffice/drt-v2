@@ -1,10 +1,10 @@
 package passengersplits.parsing
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{ArrivalKey, SDateLike}
-import spray.json.{DefaultJsonProtocol, RootJsonFormat}
+import drt.shared.{ArrivalKey, EventType, PortCode, SDateLike}
 import org.joda.time.DateTime
 import services.SDate.JodaSDate
+import spray.json.{DefaultJsonProtocol, JsString, JsValue, RootJsonFormat}
 
 import scala.util.Try
 
@@ -36,9 +36,9 @@ object VoyageManifestParser {
 
   case class VoyageManifests(manifests: Set[VoyageManifest])
 
-  case class VoyageManifest(EventCode: String,
-                            ArrivalPortCode: String,
-                            DeparturePortCode: String,
+  case class VoyageManifest(EventCode: EventType,
+                            ArrivalPortCode: PortCode,
+                            DeparturePortCode: PortCode,
                             VoyageNumber: String,
                             CarrierCode: String,
                             ScheduledDateOfArrival: String,
@@ -73,6 +73,20 @@ object VoyageManifestParser {
       "NationalityCountryCode",
       "PassengerIdentifier"
     )
+    implicit object EventTypeJsonFormat extends RootJsonFormat[EventType] {
+      def write(c: EventType) = JsString(c.toString)
+
+      def read(value: JsValue): EventType = value match {
+        case str: JsString => EventType(str.value)
+      }
+    }
+    implicit object PortCodeJsonFormat extends RootJsonFormat[PortCode] {
+      def write(c: PortCode) = JsString(c.toString)
+
+      def read(value: JsValue): PortCode = value match {
+        case str: JsString => PortCode(str.value)
+      }
+    }
     implicit val passengerInfoResponseConverter: RootJsonFormat[VoyageManifest] = jsonFormat8(VoyageManifest)
   }
 

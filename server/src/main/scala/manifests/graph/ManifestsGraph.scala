@@ -6,7 +6,7 @@ import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
 import akka.stream.stage.GraphStage
-import drt.shared.{Arrival, ArrivalKey}
+import drt.shared.{Arrival, ArrivalKey, PortCode}
 import manifests.ManifestLookupLike
 import manifests.actors.RegisteredArrivals
 import manifests.passengers.BestAvailableManifest
@@ -22,7 +22,7 @@ object ManifestsGraph {
             batchStage: GraphStage[FanOutShape2[List[Arrival], List[ArrivalKey], RegisteredArrivals]],
             manifestsSink: Sink[List[BestAvailableManifest], NotUsed],
             registeredArrivalsActor: ActorRef,
-            portCode: String,
+            portCode: PortCode,
             manifestLookup: ManifestLookupLike
            ): RunnableGraph[UniqueKillSwitch] = {
     import akka.stream.scaladsl.GraphDSL.Implicits._

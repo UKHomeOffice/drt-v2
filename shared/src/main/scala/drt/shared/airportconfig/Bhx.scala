@@ -5,14 +5,14 @@ import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.{T1, T2}
-import drt.shared.{AirportConfig, AirportConfigDefaults, AirportConfigLike, BHXAccess, Queues}
+import drt.shared.{AirportConfig, AirportConfigDefaults, AirportConfigLike, BHXAccess, PortCode, Queues}
 
 object Bhx extends AirportConfigLike {
 
   import AirportConfigDefaults._
 
   val config = AirportConfig(
-    portCode = "BHX",
+    portCode = PortCode("BHX"),
     queues = Map(
       T1 -> Seq(EeaDesk, EGate, NonEeaDesk),
       T2 -> Seq(EeaDesk, NonEeaDesk)

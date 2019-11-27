@@ -11,7 +11,7 @@ object Ncl extends AirportConfigLike {
   import AirportConfigDefaults._
 
   val config = AirportConfig(
-    portCode = "NCL",
+    portCode = PortCode("NCL"),
     queues = Map(
       T1 -> Seq(Queues.NonEeaDesk, Queues.EeaDesk, Queues.EGate)
     ),

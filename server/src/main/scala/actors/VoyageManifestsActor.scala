@@ -172,9 +172,9 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
   def voyageManifestToMessage(vm: VoyageManifest): VoyageManifestMessage = {
     VoyageManifestMessage(
       createdAt = Option(SDate.now().millisSinceEpoch),
-      eventCode = Option(vm.EventCode),
-      arrivalPortCode = Option(vm.ArrivalPortCode),
-      departurePortCode = Option(vm.DeparturePortCode),
+      eventCode = Option(vm.EventCode.toString),
+      arrivalPortCode = Option(vm.ArrivalPortCode.iata),
+      departurePortCode = Option(vm.DeparturePortCode.iata),
       voyageNumber = Option(vm.VoyageNumber),
       carrierCode = Option(vm.CarrierCode),
       scheduledDateOfArrival = Option(vm.ScheduledDateOfArrival),
@@ -206,9 +206,9 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
 
   def voyageManifestFromMessage(m: VoyageManifestMessage): VoyageManifest = {
     VoyageManifest(
-      EventCode = m.eventCode.getOrElse(""),
-      ArrivalPortCode = m.arrivalPortCode.getOrElse(""),
-      DeparturePortCode = m.departurePortCode.getOrElse(""),
+      EventCode = EventType(m.eventCode.getOrElse("")),
+      ArrivalPortCode = PortCode(m.arrivalPortCode.getOrElse("")),
+      DeparturePortCode = PortCode(m.departurePortCode.getOrElse("")),
       VoyageNumber = m.voyageNumber.getOrElse(""),
       CarrierCode = m.carrierCode.getOrElse(""),
       ScheduledDateOfArrival = m.scheduledDateOfArrival.getOrElse(""),

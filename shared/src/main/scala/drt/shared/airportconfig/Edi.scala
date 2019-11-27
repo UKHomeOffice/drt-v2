@@ -10,7 +10,7 @@ object Edi extends AirportConfigLike {
   import AirportConfigDefaults._
 
   val config = AirportConfig(
-    portCode = "EDI",
+    portCode = PortCode("EDI"),
     queues = Map(
       A1 -> Seq(EeaDesk, EGate, NonEeaDesk),
       A2 -> Seq(EeaDesk, EGate, NonEeaDesk)

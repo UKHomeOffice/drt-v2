@@ -1,13 +1,31 @@
-import drt.shared.{Queues, TQM}
+import Ports.Lhr
+import drt.shared.{PortCode, Queues, TQM}
 import drt.shared.Terminals.{T2, T3, T4, T5}
 import org.specs2.mutable.Specification
 import services.graphstages.Crunch.LoadMinute
 
 
+sealed trait Port
+
+object Ports {
+  object Lhr extends Port
+}
+
 class MemorySpec extends Specification {
   val runtime = Runtime.getRuntime
   val kb = 1024
   val mb = 1024 * 1024
+
+  "Hello" >> {
+    skipped("exploratory")
+    val portCodes = 1 to 1000000 map { _ =>
+      PortCode("a very very long string that is the port code to see if it takes up proportionally more memory")
+    }
+
+    Thread.sleep(60000)
+
+    success
+  }
 
   "Given a Map of stuff " +
     "When I transform it to a Set " +

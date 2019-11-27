@@ -14,7 +14,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
     B5JPlusWithTransitTypeAllocator(),
     TerminalQueueAllocatorWithFastTrack(config.terminalPaxTypeQueueAllocation))
 
-  val splitsCalculator = SplitsCalculator(config.portCode, paxTypeQueueAllocation, config.terminalPaxSplits)
+  val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, config.terminalPaxSplits)
 
   "Given a splits calculator with BHX's terminal pax splits " +
     "When I ask for the default splits for T2 " +

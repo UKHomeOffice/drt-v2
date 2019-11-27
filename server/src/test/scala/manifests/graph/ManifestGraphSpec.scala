@@ -7,7 +7,7 @@ import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SplitRatiosNs.SplitSources.Historical
-import drt.shared.{Arrival, ArrivalKey, SDateLike}
+import drt.shared.{Arrival, ArrivalKey, PortCode, SDateLike}
 import graphs.SinkToSourceBridge
 import manifests.actors.RegisteredArrivals
 import manifests.passengers.BestAvailableManifest
@@ -29,8 +29,8 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
 
     val testManifest = BestAvailableManifest(
       Historical,
-      "STN",
-      "TST",
+      PortCode("STN"),
+      PortCode("TST"),
       "1234",
       "TST",
       scheduled,
@@ -55,8 +55,8 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
 
     val testManifest = BestAvailableManifest(
       Historical,
-      "STN",
-      "TST",
+      PortCode("STN"),
+      PortCode("TST"),
       "1234",
       "TST",
       scheduled,
@@ -85,8 +85,8 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
 
     val testManifest = BestAvailableManifest(
       Historical,
-      "STN",
-      "TST",
+      PortCode("STN"),
+      PortCode("TST"),
       "1234",
       "TST",
       scheduled,
@@ -119,8 +119,8 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
 
     val testManifest = BestAvailableManifest(
       Historical,
-      "STN",
-      "TST",
+      PortCode("STN"),
+      PortCode("TST"),
       "1234",
       "TST",
       scheduled,
@@ -184,7 +184,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
       batchStage,
       manifestResponsesSink,
       registeredArrivalSinkProbe.ref,
-      "STN",
+      PortCode("STN"),
       MockManifestLookupService(testManifest)
     ).run()
 

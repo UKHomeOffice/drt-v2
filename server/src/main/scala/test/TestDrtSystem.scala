@@ -7,7 +7,7 @@ import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{KillSwitch, Materializer, OverflowStrategy}
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{AirportConfig, Arrival, Role}
+import drt.shared.{AirportConfig, Arrival, PortCode, Role}
 import graphs.SinkToSourceBridge
 import manifests.passengers.BestAvailableManifest
 import play.api.Configuration
@@ -57,7 +57,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
   config.getOptional[String]("test.live_fixture_csv").foreach { file =>
     implicit val timeout: Timeout = Timeout(250 milliseconds)
     log.info(s"Loading fixtures from $file")
-    val testActor = system.actorSelection(s"akka://${airportConfig.portCode.toLowerCase}-drt-actor-system/user/TestActor-LiveArrivals").resolveOne()
+    val testActor = system.actorSelection(s"akka://${airportConfig.portCode.iata.toLowerCase}-drt-actor-system/user/TestActor-LiveArrivals").resolveOne()
     actorSystem.scheduler.schedule(1 second, 1 day)({
       val day = SDate.now().toISODateOnly
       CSVFixtures.csvPathToArrivalsOnDate(day, file).collect {
@@ -68,7 +68,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
 
   }
 
-  override def liveArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = testFeed
+  override def liveArrivalsSource(portCode: PortCode): Source[ArrivalsFeedResponse, Cancellable] = testFeed
 
   override def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] = TestUserRoleProvider.getRoles(config, headers, session)
 

@@ -3,6 +3,7 @@ package manifests
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import com.typesafe.config.{Config, ConfigFactory}
+import drt.shared.PortCode
 import org.specs2.mutable.SpecificationLike
 import services.SDate
 import slickdb.{Tables, VoyageManifestPassengerInfoTable}
@@ -63,7 +64,7 @@ class ManifestLookupSpec extends TestKit(ActorSystem("ManifestLookup", PostgresP
     skipped("Exploratory")
     val lookupService = ManifestLookup(table)
 
-    Await.result(lookupService.maybeBestAvailableManifest("LHR", "ORD", "0938", SDate("2019-04-01T00:00:00Z")), 5 seconds)
+    Await.result(lookupService.maybeBestAvailableManifest(PortCode("LHR"), PortCode("ORD"), "0938", SDate("2019-04-01T00:00:00Z")), 5 seconds)
 
     success
   }

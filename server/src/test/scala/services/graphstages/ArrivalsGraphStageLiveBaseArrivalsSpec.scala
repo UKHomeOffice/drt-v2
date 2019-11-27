@@ -5,7 +5,7 @@ import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueW
 import akka.stream.{ClosedShape, OverflowStrategy}
 import akka.testkit.TestProbe
 import drt.shared.Terminals.T1
-import drt.shared.{Arrival, ArrivalsDiff, UniqueArrival}
+import drt.shared.{Arrival, ArrivalsDiff, PortCode, UniqueArrival}
 import services.crunch.CrunchTestLike
 import services.{PcpArrival, SDate}
 
@@ -201,11 +201,11 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike {
       None,
       None,
       None,
-      "STN",
+      PortCode("STN"),
       T1,
       "TST100",
       "TST100",
-      "TST",
+      PortCode("TST"),
       SDate(2019,
         10,
         1,

@@ -4,7 +4,7 @@ import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.{T1, T2}
-import drt.shared.{Arrival, DqEventCodes, PortState, Queues}
+import drt.shared.{Arrival, EventTypes, PortCode, PortState, Queues}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import server.feeds.{ArrivalsFeedSuccess, ManifestsFeedSuccess}
 import services.SDate
@@ -23,9 +23,9 @@ ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
       queues = Map(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate), T2 -> Seq())
     )
   )
-  val arrivalOne: Arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = "JFK", schDt = "2019-01-01T00:00", actPax = Option(100))
+  val arrivalOne: Arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("JFK"), schDt = "2019-01-01T00:00", actPax = Option(100))
 
-  val arrivalTwo: Arrival = ArrivalGenerator.arrival(iata = "BA0002", terminal = T1, origin = "JFK", schDt = "2019-01-01T00:05", actPax = Option(117))
+  val arrivalTwo: Arrival = ArrivalGenerator.arrival(iata = "BA0002", terminal = T1, origin = PortCode("JFK"), schDt = "2019-01-01T00:05", actPax = Option(117))
 
   "Given crunch inputs and an arrival" >> {
 
@@ -131,7 +131,7 @@ ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
 
   private def manifestForArrival(updatedArrival: Arrival, paxInfos: List[PassengerInfoJson]) = {
     val schDateTime = SDate(updatedArrival.Scheduled)
-    VoyageManifest(DqEventCodes.CheckIn, "STN", updatedArrival.Origin, f"${updatedArrival.flightNumber}%04d", updatedArrival.carrierCode, schDateTime.toISODateOnly, schDateTime.toHoursAndMinutes(), paxInfos)
+    VoyageManifest(EventTypes.CI, PortCode("STN"), updatedArrival.Origin, f"${updatedArrival.flightNumber}%04d", updatedArrival.carrierCode, schDateTime.toISODateOnly, schDateTime.toHoursAndMinutes(), paxInfos)
   }
 
   private def offerAndCheckResult(arrivals: Seq[Arrival], queues: Seq[Queue] = Seq()): Unit = {

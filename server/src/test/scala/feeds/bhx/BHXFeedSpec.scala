@@ -11,7 +11,7 @@ import com.typesafe.config.ConfigFactory
 import drt.server.feeds.bhx._
 import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.T1
-import drt.shared.{Arrival, LiveFeedSource}
+import drt.shared.{Arrival, LiveFeedSource, PortCode}
 import org.specs2.mutable.SpecificationLike
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
@@ -400,11 +400,11 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       None,
       None,
       None,
-      "BHX",
+      PortCode("BHX"),
       T1,
       "SA123",
       "SA123",
-      "JNB",
+      PortCode("JNB"),
       SDate(scheduledTimeString).millisSinceEpoch,
       None,
       Set(LiveFeedSource)

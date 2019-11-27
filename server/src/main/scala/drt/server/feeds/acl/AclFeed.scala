@@ -1,19 +1,20 @@
-package server.feeds.acl
+package drt.server.feeds.acl
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.zip.{ZipEntry, ZipInputStream}
 
+import drt.server.feeds.Implicits._
+import drt.server.feeds.acl.AclFeed._
 import drt.shared
-import drt.shared.{Arrival, Terminals}
 import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.Terminal
+import drt.shared.{Arrival, PortCode, Terminals}
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.{RemoteResourceInfo, SFTPClient}
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.InMemoryDestFile
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.acl.AclFeed._
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 
@@ -21,7 +22,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.util.{Failure, Success, Try}
 
-case class AclFeed(ftpServer: String, username: String, path: String, portCode: String, terminalMapping: Terminal => Terminal) {
+case class AclFeed(ftpServer: String, username: String, path: String, portCode: PortCode, terminalMapping: Terminal => Terminal) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def ssh: SSHClient = sshClient(ftpServer, username, path)
@@ -67,14 +68,14 @@ object AclFeed {
     sshClient.newSFTPClient
   }
 
-  def latestFileForPort(sftp: SFTPClient, portCode: String): String = {
+  def latestFileForPort(sftp: SFTPClient, portCode: PortCode): String = {
     val portRegex = "([A-Z]{3})[S][0-9]{2}_HOMEOFFICEROLL180_[0-9]{8}.zip".r
     val dateRegex = "[A-Z]{3}[S][0-9]{2}_HOMEOFFICEROLL180_([0-9]{8}).zip".r
 
     val filesByDate = sftp
       .ls("/180_Days/").asScala
       .filter(_.getName match {
-        case portRegex(pc) if pc == portCode => true
+        case portRegex(pc) if pc == portCode.toString => true
         case _ => false
       })
       .sortBy(_.getName match {

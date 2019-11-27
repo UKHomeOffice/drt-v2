@@ -58,11 +58,11 @@ object FlightsTableTests extends TestSuite {
         TranPax = Some(10),
         RunwayID = Some("1"),
         BaggageReclaimId = Some("A"),
-        AirportID = "LHR",
+        AirportID = PortCode("LHR"),
         Terminal = Terminal("T2"),
         rawICAO = "BA0001",
         rawIATA = "BAA0001",
-        Origin = "JFK",
+        Origin = PortCode("JFK"),
         PcpTime = Some(1451655000000L), // 2016-01-01 13:30:00 UTC
         Scheduled = SDate("2016-01-01T13:00").millisSinceEpoch,
         FeedSources = Set(ApiFeedSource)
@@ -111,7 +111,7 @@ object FlightsTableTests extends TestSuite {
               thead(),
               <.tbody(
                 <.tr(^.className := " before-now",
-                  <.td(testFlight.ICAO), <.td(testFlight.Origin), <.td(<.span(<.span())),
+                  <.td(testFlight.ICAO), <.td(testFlight.Origin.toString), <.td(<.span(<.span())),
                   <.td(s"${testFlight.Gate.getOrElse("")}/${testFlight.Stand.getOrElse("")}"),
                   <.td(testFlight.Status),
                   <.td(<.span(^.title := "2016-01-01 13:00", "13:00")), //sch
@@ -147,7 +147,7 @@ object FlightsTableTests extends TestSuite {
                 <.tbody(
                   <.tr(^.className := " before-now",
                     <.td(<.span("herebecallback")),
-                    <.td(testFlight.ICAO), <.td(testFlight.Origin), <.td(<.span(<.span())),
+                    <.td(testFlight.ICAO), <.td(testFlight.Origin.toString), <.td(<.span(<.span())),
                     <.td(s"${testFlight.Gate.getOrElse("")}/${testFlight.Stand.getOrElse("")}"),
                     <.td(testFlight.Status),
                     date(Some(testFlight.Scheduled)),
@@ -182,7 +182,7 @@ object FlightsTableTests extends TestSuite {
                 <.tbody(
                   <.tr(^.className := " before-now",
                     <.td(testFlight.ICAO),
-                    <.td(<.span(^.title := "JFK, New York, USA", testFlight.Origin)), <.td(<.span(<.span())),
+                    <.td(<.span(^.title := "JFK, New York, USA", testFlight.Origin.toString)), <.td(<.span(<.span())),
                     <.td(s"${testFlight.Gate.getOrElse("")}/${testFlight.Stand.getOrElse("")}"),
                     <.td(testFlight.Status),
                     date(Some(testFlight.Scheduled)),
@@ -197,7 +197,7 @@ object FlightsTableTests extends TestSuite {
                     <.td(<.span(0), ^.className := "queue-split pax-unknown right")))))
 
 
-            def originMapperComponent(portCode: String): VdomNode = <.span(^.title := "JFK, New York, USA", portCode)
+            def originMapperComponent(portCode: PortCode): VdomNode = <.span(^.title := "JFK, New York, USA", portCode.toString)
 
             val table = ArrivalsTable(timelineComponent = None,
               originMapper = port => originMapperComponent(port)
@@ -248,7 +248,7 @@ object FlightsTableTests extends TestSuite {
               <.tbody(
                 <.tr(^.className := " before-now",
                   <.td(testFlightT.ICAO),
-                  <.td(testFlightT.Origin), <.td(<.span(<.span())),
+                  <.td(testFlightT.Origin.toString), <.td(<.span(<.span())),
                   <.td(s"${testFlightT.Gate.getOrElse("")}/${testFlightT.Stand.getOrElse("")}"),
                   <.td(testFlightT.Status),
                   date(Some(testFlightT.Scheduled)),
@@ -266,7 +266,7 @@ object FlightsTableTests extends TestSuite {
           def paxComponent(f: ApiFlightWithSplits): VdomNode = <.div(f.apiFlight.ActPax.getOrElse(0).toInt, ^.className := "pax-portfeed", ^.width := s"$width%")
 
           assertRenderedComponentsAreEqual(
-            FlightsWithSplitsTable.ArrivalsTable(timelineComponent = None, originMapper = s => s)(paxComponent)(
+            FlightsWithSplitsTable.ArrivalsTable(timelineComponent = None, originMapper = s => s.toString)(paxComponent)(
               FlightsWithSplitsTable.Props(withSplits(testFlightT :: Nil), queuesWithoutFastTrack, hasEstChox = true)),
             staticComponent(expected)())
 

@@ -24,7 +24,7 @@ object Navbar {
             <.ul(^.className := "nav navbar-nav navbar-right",
               <.li(^.className := "contact-us-link",ctl.link(ContactUsLoc)(Icon.envelope, " ", "Contact Us")),
               <.li(<.a(Icon.signOut, "Log Out", ^.href := "/oauth/logout?redirect=" + BaseUrl.until_#.value,
-                ^.onClick --> Callback(GoogleEventTracker.sendEvent(airportConfig.portCode, "Log Out", loggedInUser.id))))
+                ^.onClick --> Callback(GoogleEventTracker.sendEvent(airportConfig.portCode.toString, "Log Out", loggedInUser.id))))
             ))
         )}
       ))

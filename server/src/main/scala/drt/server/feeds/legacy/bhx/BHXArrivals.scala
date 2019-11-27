@@ -1,10 +1,11 @@
 package drt.server.feeds.legacy.bhx
 
+import drt.server.feeds.Implicits._
 import drt.shared.Terminals.Terminal
-import drt.shared.{Arrival, ForecastFeedSource, LiveFeedSource}
+import drt.shared.{Arrival, ForecastFeedSource, LiveFeedSource, PortCode}
 import javax.xml.datatype.XMLGregorianCalendar
-import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.format.ISODateTimeFormat
+import org.joda.time.{DateTime, DateTimeZone}
 import org.springframework.util.StringUtils
 import services.SDate
 import uk.co.bhx.online.flightinformation.{FlightRecord, ScheduledFlightRecord}
@@ -54,7 +55,7 @@ trait BHXLiveArrivals extends BHXArrivals {
       Terminal = Terminal(s"T${flightRecord.getTerminal}"),
       rawICAO = flightRecord.getFlightNumber,
       rawIATA = flightRecord.getFlightNumber,
-      Origin = flightRecord.getOrigin,
+      Origin = PortCode(flightRecord.getOrigin),
       Scheduled = convertToUTC(flightRecord.getScheduledTime).map(SDate(_).millisSinceEpoch).getOrElse(0),
       PcpTime = None,
       FeedSources = Set(LiveFeedSource)

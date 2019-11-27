@@ -8,7 +8,7 @@ import akka.testkit.{TestKit, TestProbe}
 import com.typesafe.config.ConfigFactory
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRLiveFlight}
 import drt.shared.Terminals.{T1, T4}
-import drt.shared.{Arrival, LiveFeedSource}
+import drt.shared.{Arrival, LiveFeedSource, PortCode}
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import org.specs2.mutable.SpecificationLike
 import services.SDate
@@ -52,7 +52,7 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
             EstimatedChox = Some(SDate("2017-03-09T21:43:00.000Z").millisSinceEpoch),
             ActualChox = Some(SDate("2017-03-09T21:45:00.000Z").millisSinceEpoch),
             Gate = None, Stand = Some("10"), MaxPax = Some(795), ActPax = Some(142), TranPax = Some(1), RunwayID = None, BaggageReclaimId = None,
-            AirportID = "LHR", Terminal = T4, rawICAO = "QR005", rawIATA = "QR005", Origin = "DOH",
+            AirportID = PortCode("LHR"), Terminal = T4, rawICAO = "QR005", rawIATA = "QR005", Origin = PortCode("DOH"),
             Scheduled = SDate("2017-03-09T22:00:00.000Z").millisSinceEpoch,
             PcpTime = Some(SDate("2017-03-09T22:04:00.000Z").millisSinceEpoch), FeedSources = Set(LiveFeedSource)
           )

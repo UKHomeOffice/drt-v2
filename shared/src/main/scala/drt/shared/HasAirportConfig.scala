@@ -258,7 +258,7 @@ object ProcessingTimes {
   )
 }
 
-case class AirportConfig(portCode: String = "n/a",
+case class AirportConfig(portCode: PortCode,
                          queues: Map[Terminal, Seq[Queue]],
                          divertedQueues: Map[Queue, Queue] = Map(),
                          slaByQueue: Map[Queue, Int],
@@ -283,7 +283,7 @@ case class AirportConfig(portCode: String = "n/a",
                          dayLengthHours: Int = 36,
                          nationalityBasedProcTimes: Map[String, Double] = ProcessingTimes.nationalityProcessingTimes,
                          role: Role,
-                         cloneOfPortCode: Option[String] = None,
+                         cloneOfPortCode: Option[PortCode] = None,
                          terminalPaxTypeQueueAllocation: Map[Terminal, Map[PaxType, Seq[(Queue, Double)]]]
                         ) {
   val terminalSplitQueueTypes: Map[Terminal, Set[Queue]] = terminalPaxSplits.map {
@@ -299,7 +299,7 @@ case class AirportConfig(portCode: String = "n/a",
     queues.getOrElse(terminalName, List()).contains(q.queueType)
   }
 
-  def feedPortCode: String = cloneOfPortCode.getOrElse(portCode)
+  def feedPortCode: PortCode = cloneOfPortCode.getOrElse(portCode)
 
   def nonTransferQueues(terminalName: Terminal): Seq[Queue] = queues(terminalName).collect {
     case queue if queue != Queues.Transfer => queue
@@ -393,9 +393,12 @@ object PaxTypesAndQueues {
     eeaMachineReadableToEGate, eeaMachineReadableToDesk, eeaNonMachineReadableToDesk, visaNationalToDesk, nonVisaNationalToDesk, visaNationalToFastTrack, nonVisaNationalToFastTrack)
 }
 
-object DqEventCodes {
-  val DepartureConfirmed = "DC"
-  val CheckIn = "CI"
+case class PortCode(iata: String) {
+  override def toString: String = iata
+}
+
+object PortCode {
+  implicit val rw: ReadWriter[PortCode] = macroRW
 }
 
 object AirportConfigs {
@@ -408,9 +411,9 @@ object AirportConfigs {
   val allPortConfigs: List[AirportConfig] = allPorts.map(_.config)
   val testPortConfigs: List[AirportConfig] = testPorts.map(_.config)
 
-  def portGroups: List[String] = allPortConfigs.filterNot(testPorts.contains).map(_.portCode.toUpperCase).sorted
+  def portGroups: List[String] = allPortConfigs.filterNot(testPorts.contains).map(_.portCode.toString.toUpperCase).sorted
 
-  val confByPort: Map[String, AirportConfig] = allPortConfigs.map(c => (c.portCode, c)).toMap
+  val confByPort: Map[PortCode, AirportConfig] = allPortConfigs.map(c => (c.portCode, c)).toMap
 }
 
 trait AirportConfigLike {

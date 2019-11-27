@@ -1,6 +1,6 @@
 package services.graphstages
 
-import drt.shared.Arrival
+import drt.shared.{Arrival, PortCode}
 import drt.shared.Terminals.T1
 import org.specs2.mutable.Specification
 import services.SDate
@@ -29,11 +29,11 @@ class LiveArrivalsUtilSpec extends Specification {
       None,
       None,
       None,
-      "STN",
+      PortCode("STN"),
       T1,
       "TST100",
       "TST100",
-      "TST",
+      PortCode("TST"),
       SDate(2019,
         9,
         30,

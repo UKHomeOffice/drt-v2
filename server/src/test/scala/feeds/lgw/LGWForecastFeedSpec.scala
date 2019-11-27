@@ -3,7 +3,7 @@ package feeds.lgw
 import com.box.sdk.{BoxConfig, BoxDeveloperEditionAPIConnection}
 import drt.server.feeds.lgw.LGWForecastFeed
 import drt.shared.Terminals.S
-import drt.shared.{Arrival, ForecastFeedSource}
+import drt.shared.{Arrival, ForecastFeedSource, PortCode}
 import org.specs2.mock.Mockito
 import org.specs2.mutable.Specification
 import org.specs2.specification.Scope
@@ -53,11 +53,11 @@ class LGWForecastFeedSpec extends Specification with Mockito {
         TranPax = Some(0),
         RunwayID = None,
         BaggageReclaimId = None,
-        AirportID = "LGW",
+        AirportID = PortCode("LGW"),
         Terminal = S,
         rawICAO = "3O0101",
         rawIATA = "3O0101",
-        Origin = "TNG",
+        Origin = PortCode("TNG"),
         Scheduled = SDate("2018-05-19T10:05:00Z").millisSinceEpoch,
         PcpTime = None,
         FeedSources = Set(ForecastFeedSource)

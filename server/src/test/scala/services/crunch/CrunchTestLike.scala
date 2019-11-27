@@ -90,7 +90,7 @@ class CrunchTestLike
     CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight)
 
   val airportConfig = AirportConfig(
-    portCode = "STN",
+    portCode = PortCode("STN"),
     queues = Map(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk), T2 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk)),
     slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 20, Queues.NonEeaDesk -> 45),
     terminals = Seq(T1, T2),

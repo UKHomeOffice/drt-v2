@@ -30,7 +30,6 @@ object TestableArrivalSplits {
     val arrivalSplitsStage = new ArrivalSplitsGraphStage(
       name = "",
       optionalInitialFlights = None,
-      portCode = "LHR",
       splitsCalculator = splitsCalculator,
       groupFlightsByCodeShares = groupByCodeShares,
       expireAfterMillis = oneDayMillis,
@@ -73,7 +72,7 @@ object TestableArrivalSplits {
 }
 
 class ArrivalSplitsStageSpec extends CrunchTestLike {
-  val portCode = "LHR"
+  val portCode = PortCode("LHR")
   val splitsProvider: (String, MilliDate) => Option[SplitRatios] = (_, _) => {
     val eeaMrToDeskSplit = SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 0.5)
     val eeaNmrToDeskSplit = SplitRatio(PaxTypeAndQueue(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk), 0.5)
@@ -84,7 +83,7 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
     B5JPlusWithTransitTypeAllocator(),
     TerminalQueueAllocatorWithFastTrack(airportConfig.terminalPaxTypeQueueAllocation))
 
-  val splitsCalculator = SplitsCalculator(portCode, paxTypeQueueAllocation, airportConfig.terminalPaxSplits)
+  val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, airportConfig.terminalPaxSplits)
 
   "Given an arrival splits stage " +
     "When I push an arrival and some splits for that arrival " +
@@ -96,12 +95,12 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
     val probe = TestProbe("arrival-splits")
 
     val (arrivalDiffs, manifestsLiveInput, _) = TestableArrivalSplits(splitsCalculator, probe, () => SDate(scheduled)).run()
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = "JFK", schDt = scheduled, feedSources = Set(LiveFeedSource))
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("JFK"), schDt = scheduled, feedSources = Set(LiveFeedSource))
     val paxList = List(
       PassengerInfoGenerator.passengerInfoJson(nationality = "GBR", documentType = "P", issuingCountry = "GBR"),
       PassengerInfoGenerator.passengerInfoJson(nationality = "ITA", documentType = "P", issuingCountry = "ITA")
     )
-    val manifests = Set(VoyageManifest(DqEventCodes.DepartureConfirmed, portCode, "JFK", "0001", "BA", arrivalDate, arrivalTime, PassengerList = paxList))
+    val manifests = Set(VoyageManifest(EventTypes.DC, portCode, PortCode("JFK"), "0001", "BA", arrivalDate, arrivalTime, PassengerList = paxList))
 
     arrivalDiffs.offer(ArrivalsDiff(toUpdate = SortedMap(arrival.unique -> arrival), toRemove = Set()))
 

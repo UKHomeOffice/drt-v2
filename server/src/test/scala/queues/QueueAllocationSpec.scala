@@ -32,8 +32,8 @@ class QueueAllocationSpec extends Specification {
 
     val bestManifest = BestAvailableManifest(
       Historical,
-      "LHR",
-      "JHB",
+      PortCode("LHR"),
+      PortCode("JHB"),
       "234",
       "SA",
       SDate("2019-02-22T06:24:00Z"),
@@ -58,8 +58,8 @@ class QueueAllocationSpec extends Specification {
 
     val bestManifest = BestAvailableManifest(
       Historical,
-      "LHR",
-      "JHB",
+      PortCode("LHR"),
+      PortCode("JHB"),
       "234",
       "SA",
       SDate("2019-02-22T06:24:00Z"),
@@ -89,8 +89,8 @@ class QueueAllocationSpec extends Specification {
 
     val bestManifest = BestAvailableManifest(
       Historical,
-      "LHR",
-      "USA",
+      PortCode("LHR"),
+      PortCode("USA"),
       "234",
       "SA",
       SDate("2019-07-22T06:24:00Z"),
@@ -116,8 +116,8 @@ class QueueAllocationSpec extends Specification {
 
     val bestManifest = BestAvailableManifest(
       Historical,
-      "LHR",
-      "USA",
+      PortCode("LHR"),
+      PortCode("USA"),
       "234",
       "SA",
       SDate("2019-06-22T06:24:00Z"),
@@ -147,8 +147,8 @@ class QueueAllocationSpec extends Specification {
 
     val bestManifest = BestAvailableManifest(
       Historical,
-      "LHR",
-      "USA",
+      PortCode("LHR"),
+      PortCode("USA"),
       "234",
       "SA",
       SDate("2019-06-22T06:24:00Z"),
@@ -180,8 +180,8 @@ class QueueAllocationSpec extends Specification {
 
     val bestManifest = BestAvailableManifest(
       Historical,
-      "LHR",
-      "USA",
+      PortCode("LHR"),
+      PortCode("USA"),
       "234",
       "SA",
       SDate("2019-01-22T06:24:00Z"),
@@ -216,8 +216,8 @@ class QueueAllocationSpec extends Specification {
 
     val bestManifest = BestAvailableManifest(
       Historical,
-      "LHR",
-      "USA",
+      PortCode("LHR"),
+      PortCode("USA"),
       "234",
       "SA",
       SDate("2019-01-22T06:24:00Z"),
@@ -249,8 +249,8 @@ class QueueAllocationSpec extends Specification {
 
     val bestManifest = BestAvailableManifest(
       Historical,
-      "LHR",
-      "USA",
+      PortCode("LHR"),
+      PortCode("USA"),
       "234",
       "TM",
       SDate("2019-01-22T06:24:00Z"),
@@ -281,8 +281,8 @@ class QueueAllocationSpec extends Specification {
 
     val bestManifest = BestAvailableManifest(
       Historical,
-      "LHR",
-      "USA",
+      PortCode("LHR"),
+      PortCode("USA"),
       "234",
       "SAA",
       SDate("2019-01-22T06:24:00Z"),

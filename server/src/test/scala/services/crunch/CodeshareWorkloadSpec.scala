@@ -3,7 +3,7 @@ package services.crunch
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.T1
-import drt.shared.{PortState, Queues, TQM}
+import drt.shared.{PortCode, PortState, Queues, TQM}
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 
@@ -14,8 +14,8 @@ class CodeshareWorkloadSpec extends CrunchTestLike {
     "When I monitor pax loads " +
     "I should see only pax loads from the highest pax arrival" >> {
     val sch = "2019-01-01T00:00"
-    val arrival1 = ArrivalGenerator.arrival(iata="BA0001", schDt = sch, actPax = Option(15), origin = "AAA")
-    val arrival2 = ArrivalGenerator.arrival(iata="AA0002", schDt = sch, actPax = Option(10), origin = "AAA")
+    val arrival1 = ArrivalGenerator.arrival(iata="BA0001", schDt = sch, actPax = Option(15), origin = PortCode("AAA"))
+    val arrival2 = ArrivalGenerator.arrival(iata="AA0002", schDt = sch, actPax = Option(10), origin = PortCode("AAA"))
 
     val schSdate = SDate(sch)
     val crunch = runCrunchGraph(

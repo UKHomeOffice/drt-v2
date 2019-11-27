@@ -1,7 +1,7 @@
 package manifests.actors
 
 import actors.{GetState, PersistentDrtActor, RecoveryActorLike, Sizes}
-import drt.shared.{ArrivalKey, SDateLike}
+import drt.shared.{ArrivalKey, PortCode, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.RegisteredArrivalMessage.{RegisteredArrivalMessage, RegisteredArrivalsMessage}
@@ -15,7 +15,7 @@ case class RegisteredArrivals(arrivals: mutable.SortedMap[ArrivalKey, Option[Lon
 
 class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
                               val initialMaybeSnapshotInterval: Option[Int],
-                              portCode: String,
+                              portCode: PortCode,
                               now: () => SDateLike,
                               expireAfterMillis: Long
                               ) extends RecoveryActorLike with PersistentDrtActor[RegisteredArrivals] {
@@ -34,7 +34,7 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
   private def arrivalsToMessage(arrivalWithLastLookup: mutable.SortedMap[ArrivalKey, Option[Long]]): RegisteredArrivalsMessage = {
     RegisteredArrivalsMessage(
       arrivalWithLastLookup
-        .map { case (ArrivalKey(o, v, s), l) => RegisteredArrivalMessage(Option(o), Option(portCode), Option(v), Option(s), l) }
+        .map { case (ArrivalKey(o, v, s), l) => RegisteredArrivalMessage(Option(o.toString), Option(portCode.toString), Option(v), Option(s), l) }
         .toSeq
     )
   }
@@ -82,7 +82,7 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
   private def addRegisteredArrivalsFromMessages(arrivalMessages: Seq[RegisteredArrivalMessage]): Unit = {
     val arrivalsFromMessages: Seq[(ArrivalKey, Option[Long])] = arrivalMessages.map {
       case RegisteredArrivalMessage(Some(origin), _, Some(voyageNumber), Some(scheduled), lookedUp) =>
-        (ArrivalKey(origin, voyageNumber, scheduled), lookedUp)
+        (ArrivalKey(PortCode(origin), voyageNumber, scheduled), lookedUp)
     }
 
     state.arrivals ++= arrivalsFromMessages

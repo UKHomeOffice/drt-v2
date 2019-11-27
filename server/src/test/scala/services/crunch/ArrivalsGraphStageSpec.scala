@@ -24,7 +24,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
   isolated
 
   trait Context extends Scope {
-    val arrival_v1_with_no_chox_time: Arrival = arrival(iata = "BA0001", schDt = "2017-01-01T10:25Z", actPax = Option(100), origin = "JFK", feedSources = Set(LiveFeedSource))
+    val arrival_v1_with_no_chox_time: Arrival = arrival(iata = "BA0001", schDt = "2017-01-01T10:25Z", actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(LiveFeedSource))
 
     val arrival_v2_with_chox_time: Arrival = arrival_v1_with_no_chox_time.copy(Stand = Some("Stand1"), ActualChox = Some(SDate("2017-01-01T10:25Z").millisSinceEpoch))
 
@@ -65,7 +65,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     "once an API (advanced passenger information) input arrives for the flight, it will update the arrivals FeedSource so that it has a LiveFeed and a ApiFeed" in new Context {
 
       val voyageManifests = ManifestsFeedSuccess(DqManifests("", Set(
-        VoyageManifest(DqEventCodes.DepartureConfirmed, "STN", "JFK", "0001", "BA", "2017-01-01", "10:25", List(
+        VoyageManifest(EventTypes.DC, PortCode("STN"), PortCode("JFK"), "0001", "BA", "2017-01-01", "10:25", List(
           PassengerInfoJson(Some("P"), "GBR", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("GBR"), None)
         ))
       )))

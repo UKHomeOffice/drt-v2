@@ -19,7 +19,6 @@ case class UpdateStats(updatesCount: Int, additionsCount: Int)
 
 
 class ArrivalSplitsGraphStage(name: String = "",
-                              portCode: String,
                               optionalInitialFlights: Option[FlightsWithSplits],
                               splitsCalculator: SplitsCalculator,
                               groupFlightsByCodeShares: Seq[ApiFlightWithSplits] => Seq[(ApiFlightWithSplits, Set[Arrival])],

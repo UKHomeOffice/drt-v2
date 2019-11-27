@@ -3,6 +3,7 @@ package drt.shared
 import java.util.UUID
 
 import drt.shared.CrunchApi._
+import drt.shared.EventTypes.{CI, DC, InvalidEventType}
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
@@ -88,7 +89,26 @@ object ApiPaxTypeAndQueueCount {
   implicit val rw: ReadWriter[ApiPaxTypeAndQueueCount] = macroRW
 }
 
-case class Splits(splits: Set[ApiPaxTypeAndQueueCount], source: SplitSource, eventType: Option[String], splitStyle: SplitStyle = PaxNumbers) {
+sealed trait EventType extends ClassNameForToString
+
+object EventType {
+  implicit val rw: ReadWriter[EventType] = macroRW
+
+  def apply(eventType: String): EventType = eventType match {
+    case "DC" => DC
+    case "CI" => CI
+    case _ => InvalidEventType
+  }
+}
+
+object EventTypes {
+  object DC extends EventType
+  object CI extends EventType
+  object InvalidEventType extends EventType
+}
+
+
+case class Splits(splits: Set[ApiPaxTypeAndQueueCount], source: SplitSource, maybeEventType: Option[EventType], splitStyle: SplitStyle = PaxNumbers) {
   lazy val totalExcludingTransferPax: Double = Splits.totalExcludingTransferPax(splits)
   lazy val totalPax: Double = Splits.totalPax(splits)
 }
@@ -123,8 +143,8 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
   }
 
   def bestSplits: Option[Splits] = {
-    val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.eventType == Option(DqEventCodes.DepartureConfirmed))
-    val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.eventType == Option(DqEventCodes.CheckIn))
+    val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.DC))
+    val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.CI))
     val apiSplitsAny = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
     val predictedSplits = splits.find(s => s.source == SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages)
     val historicalSplits = splits.find(_.source == SplitSources.Historical)
@@ -201,8 +221,8 @@ object Uniqueness {
   }.sum
 }
 
-case class CodeShareKeyOrderedBySchedule(scheduled: Long, terminal: Terminal, origin: String) extends Ordered[CodeShareKeyOrderedBySchedule] with WithTimeAccessor {
-  lazy val comparisonValue: Int = (scheduled / 60000).toInt + 16384 * terminal.orderingValue + Uniqueness.stringHash(origin)
+case class CodeShareKeyOrderedBySchedule(scheduled: Long, terminal: Terminal, origin: PortCode) extends Ordered[CodeShareKeyOrderedBySchedule] with WithTimeAccessor {
+  lazy val comparisonValue: Int = (scheduled / 60000).toInt + 16384 * terminal.orderingValue + Uniqueness.stringHash(origin.toString)
 
   override def compare(that: CodeShareKeyOrderedBySchedule): Int = comparisonValue.compareTo(that.comparisonValue)
 
@@ -214,15 +234,15 @@ object CodeShareKeyOrderedBySchedule {
 
   def apply(fws: ApiFlightWithSplits): CodeShareKeyOrderedBySchedule = CodeShareKeyOrderedBySchedule(fws.apiFlight.Scheduled, fws.apiFlight.Terminal, fws.apiFlight.Origin)
 
-  def apply(scheduled: Long, terminalName: String, origin: String): CodeShareKeyOrderedBySchedule = CodeShareKeyOrderedBySchedule(scheduled, Terminal(terminalName), origin)
+  def apply(scheduled: Long, terminalName: String, origin: PortCode): CodeShareKeyOrderedBySchedule = CodeShareKeyOrderedBySchedule(scheduled, Terminal(terminalName), origin)
 
-  def atTime: MillisSinceEpoch => CodeShareKeyOrderedBySchedule = (millis: MillisSinceEpoch) => CodeShareKeyOrderedBySchedule(millis, "", "")
+  def atTime: MillisSinceEpoch => CodeShareKeyOrderedBySchedule = (millis: MillisSinceEpoch) => CodeShareKeyOrderedBySchedule(millis, "", PortCode(""))
 }
 
-case class CodeShareKeyOrderedByDupes[A](scheduled: Long, terminal: Terminal, origin: String, arrivalKeys: Set[A]) extends Ordered[CodeShareKeyOrderedByDupes[A]] {
+case class CodeShareKeyOrderedByDupes[A](scheduled: Long, terminal: Terminal, origin: PortCode, arrivalKeys: Set[A]) extends Ordered[CodeShareKeyOrderedByDupes[A]] {
   lazy val codeShareKey = CodeShareKey(scheduled, terminal, origin)
 
-  lazy val comparisonValue: Long = (Int.MaxValue.toLong * (100 - arrivalKeys.size)) + (scheduled / 60000).toInt + 16384 * terminal.orderingValue + Uniqueness.stringHash(origin)
+  lazy val comparisonValue: Long = (Int.MaxValue.toLong * (100 - arrivalKeys.size)) + (scheduled / 60000).toInt + 16384 * terminal.orderingValue + Uniqueness.stringHash(origin.toString)
 
   override def equals(o: scala.Any): Boolean = codeShareKey.equals(o)
 
@@ -251,11 +271,11 @@ case class Arrival(
                     TranPax: Option[Int],
                     RunwayID: Option[String],
                     BaggageReclaimId: Option[String],
-                    AirportID: String,
+                    AirportID: PortCode,
                     Terminal: Terminal,
                     rawICAO: String,
                     rawIATA: String,
-                    Origin: String,
+                    Origin: PortCode,
                     Scheduled: MillisSinceEpoch,
                     PcpTime: Option[MillisSinceEpoch],
                     FeedSources: Set[FeedSource],
@@ -351,7 +371,8 @@ object Arrival {
     }
   }
 
-  implicit val rw: ReadWriter[Arrival] = macroRW
+  implicit val portCodeRw: ReadWriter[PortCode] = macroRW
+  implicit val arrivalRw: ReadWriter[Arrival] = macroRW
 }
 
 sealed trait FeedSource
@@ -380,8 +401,8 @@ object FeedSource {
     )
 }
 
-case class ArrivalKey(origin: String, voyageNumber: String, scheduled: Long) extends Ordered[ArrivalKey] with WithTimeAccessor {
-  lazy val comparisonValue: MillisSinceEpoch = scheduled + 16384 * Uniqueness.stringHash(origin) + Uniqueness.stringHash(voyageNumber)
+case class ArrivalKey(origin: PortCode, voyageNumber: String, scheduled: Long) extends Ordered[ArrivalKey] with WithTimeAccessor {
+  lazy val comparisonValue: MillisSinceEpoch = scheduled + 16384 * Uniqueness.stringHash(origin.toString) + Uniqueness.stringHash(voyageNumber)
 
   override def compare(that: ArrivalKey): Int = this.comparisonValue.compareTo(that.comparisonValue)
 
@@ -391,7 +412,7 @@ case class ArrivalKey(origin: String, voyageNumber: String, scheduled: Long) ext
 object ArrivalKey {
   def apply(arrival: Arrival): ArrivalKey = ArrivalKey(arrival.Origin, arrival.voyageNumberPadded, arrival.Scheduled)
 
-  def atTime: MillisSinceEpoch => ArrivalKey = (time: MillisSinceEpoch) => ArrivalKey("", "", time)
+  def atTime: MillisSinceEpoch => ArrivalKey = (time: MillisSinceEpoch) => ArrivalKey(PortCode(""), "", time)
 }
 
 case class ArrivalUpdate(old: Arrival, updated: Arrival)
@@ -872,6 +893,6 @@ trait Api {
   def getShowAlertModalDialog(): Boolean
 }
 
-case class CodeShareKey(scheduled: MillisSinceEpoch, terminal: Terminal, origin: String)
+case class CodeShareKey(scheduled: MillisSinceEpoch, terminal: Terminal, origin: PortCode)
 
 

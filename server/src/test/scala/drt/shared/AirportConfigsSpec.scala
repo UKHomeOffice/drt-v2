@@ -42,8 +42,8 @@ class AirportConfigsSpec extends Specification {
       import AirportConfigDefaults._
 
       val clonedConfig = AirportConfig(
-        portCode = "LHR_Clone",
-        cloneOfPortCode = Option("LHR"),
+        portCode = PortCode("LHR_Clone"),
+        cloneOfPortCode = Option(PortCode("LHR")),
         queues = Map(),
         slaByQueue = Map(),
         terminals = Seq(),
@@ -58,7 +58,7 @@ class AirportConfigsSpec extends Specification {
       )
 
       val result = clonedConfig.feedPortCode
-      val expected = "LHR"
+      val expected = PortCode("LHR")
       result === expected
     }
 

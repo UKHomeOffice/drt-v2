@@ -9,7 +9,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import queueus.PaxTypeQueueAllocation
 
 
-case class SplitsCalculator(portCode: String, queueAllocator: PaxTypeQueueAllocation, terminalDefaultSplitRatios: Map[Terminal, SplitRatios]) {
+case class SplitsCalculator(queueAllocator: PaxTypeQueueAllocation, terminalDefaultSplitRatios: Map[Terminal, SplitRatios]) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def terminalDefaultSplits(terminalName: Terminal): Set[Splits] = {

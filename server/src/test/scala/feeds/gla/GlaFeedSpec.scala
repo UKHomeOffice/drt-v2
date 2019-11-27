@@ -9,7 +9,7 @@ import akka.testkit.TestProbe
 import drt.server.feeds.gla.{GlaFeed, GlaFeedRequesterLike, ProdGlaFeedRequester}
 import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.T1
-import drt.shared.{Arrival, LiveFeedSource}
+import drt.shared.{Arrival, LiveFeedSource, PortCode}
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
@@ -153,11 +153,11 @@ class GlaFeedSpec extends SpecificationLike {
       TranPax = None,
       RunwayID = Some("3"),
       BaggageReclaimId = Some("2"),
-      AirportID = "GLA",
+      AirportID = PortCode("GLA"),
       Terminal = T1,
       rawICAO = "TST234",
       rawIATA = "TS234",
-      Origin = "TST",
+      Origin = PortCode("TST"),
       Scheduled = SDate("2019-11-13T12:34:00Z").millisSinceEpoch,
       PcpTime = None,
       FeedSources = Set(LiveFeedSource),
@@ -214,11 +214,11 @@ class GlaFeedSpec extends SpecificationLike {
       TranPax = None,
       RunwayID = Some("4"),
       BaggageReclaimId = Some("2"),
-      AirportID = "GLA",
+      AirportID = PortCode("GLA"),
       Terminal = T1,
       rawICAO = "TTT244",
       rawIATA = "TT244",
-      Origin = "TTT",
+      Origin = PortCode("TTT"),
       Scheduled = SDate("2019-11-14T12:44:00Z").millisSinceEpoch,
       PcpTime = None,
       FeedSources = Set(LiveFeedSource),
@@ -276,11 +276,11 @@ class GlaFeedSpec extends SpecificationLike {
       TranPax = None,
       RunwayID = None,
       BaggageReclaimId = None,
-      AirportID = "GLA",
+      AirportID = PortCode("GLA"),
       Terminal = T1,
       rawICAO = "TTT244",
       rawIATA = "TT244",
-      Origin = "TTT",
+      Origin = PortCode("TTT"),
       Scheduled = SDate("2019-11-14T12:44:00Z").millisSinceEpoch,
       PcpTime = None,
       FeedSources = Set(LiveFeedSource),

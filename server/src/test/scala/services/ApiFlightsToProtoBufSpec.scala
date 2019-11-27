@@ -2,7 +2,7 @@ package services
 
 import actors.FlightMessageConversion._
 import drt.shared.Terminals.T2
-import drt.shared.{ApiFeedSource, Arrival}
+import drt.shared.{ApiFeedSource, Arrival, PortCode}
 import org.specs2.mutable.Specification
 import server.protobuf.messages.FlightsMessage.FlightMessage
 
@@ -24,11 +24,11 @@ class ApiFlightsToProtoBufSpec extends Specification {
         TranPax = Option(10),
         RunwayID = Option("1"),
         BaggageReclaimId = Option("A"),
-        AirportID = "LHR",
+        AirportID = PortCode("LHR"),
         Terminal = T2,
         rawICAO = "BA0001",
         rawIATA = "BAA0001",
-        Origin = "JFK",
+        Origin = PortCode("JFK"),
         PcpTime = Option(1451655000000L), // 2016-01-01 13:30:00 UTC
         Scheduled = SDate("2016-01-01T13:00:00Z").millisSinceEpoch,
         FeedSources = Set(ApiFeedSource),

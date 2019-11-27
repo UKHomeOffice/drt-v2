@@ -2,7 +2,7 @@ package manifests
 
 import java.sql.Timestamp
 
-import drt.shared.SDateLike
+import drt.shared.{PortCode, SDateLike}
 import drt.shared.SplitRatiosNs.SplitSources
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import org.slf4j.{Logger, LoggerFactory}
@@ -15,10 +15,10 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
 trait ManifestLookupLike {
-  def maybeBestAvailableManifest(arrivalPort: String, departurePort: String, voyageNumber: String, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])]
+  def maybeBestAvailableManifest(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: String, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])]
 }
 
-case class UniqueArrivalKey(arrivalPort: String, departurePort: String, voyageNumber: String, scheduled: SDateLike) {
+case class UniqueArrivalKey(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: String, scheduled: SDateLike) {
   override def toString: String = s"$arrivalPort -> $departurePort: $voyageNumber @ ${scheduled.toISOString()}"
 }
 
@@ -72,7 +72,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
         .flatMap(identity)
   }
 
-  def maybeBestAvailableManifest(arrivalPort: String, departurePort: String, voyageNumber: String, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
+  def maybeBestAvailableManifest(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: String, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
     manifestSearch(UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), queryHierarchy)
 
   type QueryFunction = UniqueArrivalKey => SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), paxInfoTable.tables.profile.api.Effect]
@@ -101,8 +101,8 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
             voyage_manifest_passenger_info
           WHERE
             event_code ='DC'
-            and arrival_port_code=${uniqueArrivalKey.arrivalPort}
-            and departure_port_code=${uniqueArrivalKey.departurePort}
+            and arrival_port_code=${uniqueArrivalKey.arrivalPort.toString}
+            and departure_port_code=${uniqueArrivalKey.departurePort.toString}
             and voyage_number=${uniqueArrivalKey.voyageNumber.toInt}
             and day_of_week = EXTRACT(DOW FROM TIMESTAMP '#$scheduledTs')::int
             and week_of_year IN (EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$middleTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')::int)
@@ -131,8 +131,8 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
             voyage_manifest_passenger_info
           WHERE
             event_code ='DC'
-            and arrival_port_code=${uniqueArrivalKey.arrivalPort}
-            and departure_port_code=${uniqueArrivalKey.departurePort}
+            and arrival_port_code=${uniqueArrivalKey.arrivalPort.toString}
+            and departure_port_code=${uniqueArrivalKey.departurePort.toString}
             and voyage_number=${uniqueArrivalKey.voyageNumber.toInt}
             and week_of_year IN (EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$middleTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')::int)
           GROUP BY
@@ -160,8 +160,8 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
             voyage_manifest_passenger_info
           WHERE
             event_code ='DC'
-            and arrival_port_code=${uniqueArrivalKey.arrivalPort}
-            and departure_port_code=${uniqueArrivalKey.departurePort}
+            and arrival_port_code=${uniqueArrivalKey.arrivalPort.toString}
+            and departure_port_code=${uniqueArrivalKey.departurePort.toString}
             and day_of_week = EXTRACT(DOW FROM TIMESTAMP '#$scheduledTs')::int
             and week_of_year IN (EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$middleTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')::int)
           GROUP BY

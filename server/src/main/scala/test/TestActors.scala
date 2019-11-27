@@ -6,7 +6,7 @@ import akka.actor.Props
 import akka.pattern.AskableActorRef
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
-import drt.shared.{AirportConfig, SDateLike}
+import drt.shared.{AirportConfig, PortCode, SDateLike}
 import slickdb.ArrivalTable
 
 
@@ -115,7 +115,9 @@ object TestActors {
     override def receiveCommand: Receive = reset orElse super.receiveCommand
   }
 
-  case class TestAggregatedArrivalsActor() extends AggregatedArrivalsActor("LHR", ArrivalTable("LHR", PostgresTables)) {
+  case class TestAggregatedArrivalsActor() extends {
+    private val portCode = PortCode("LHR")
+  } with AggregatedArrivalsActor(ArrivalTable(portCode, PostgresTables)) {
     def reset: Receive = {
       case ResetActor => Unit
     }

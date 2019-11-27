@@ -70,7 +70,7 @@ object FlightMessageConversion {
     SplitMessage(
       paxTypeAndQueueCount = s.splits.map(paxTypeAndQueueCountToMessage).toList,
       source = Option(s.source.toString),
-      eventType = s.eventType,
+      eventType = s.maybeEventType.map(_.toString),
       style = Option(s.splitStyle.name)
     )
   }
@@ -94,11 +94,11 @@ object FlightMessageConversion {
       tranPax = apiFlight.TranPax,
       runwayID = apiFlight.RunwayID,
       baggageReclaimId = apiFlight.BaggageReclaimId,
-      airportID = Option(StringUtils.trimToNull(apiFlight.AirportID)),
+      airportID = Option(StringUtils.trimToNull(apiFlight.AirportID.iata)),
       terminal = Option(StringUtils.trimToNull(apiFlight.Terminal.toString)),
       iCAO = Option(StringUtils.trimToNull(apiFlight.rawICAO)),
       iATA = Option(StringUtils.trimToNull(apiFlight.rawIATA)),
-      origin = Option(StringUtils.trimToNull(apiFlight.Origin)),
+      origin = Option(StringUtils.trimToNull(apiFlight.Origin.toString)),
       pcpTime = apiFlight.PcpTime.filter(_ != 0),
       feedSources = apiFlight.FeedSources.map(_.toString).toSeq,
       scheduled = Option(apiFlight.Scheduled).filter(_ != 0),
@@ -137,11 +137,11 @@ object FlightMessageConversion {
       TranPax = flightMessage.tranPax,
       RunwayID = flightMessage.runwayID,
       BaggageReclaimId = flightMessage.baggageReclaimId,
-      AirportID = flightMessage.airportID.getOrElse(""),
+      AirportID = PortCode(flightMessage.airportID.getOrElse("")),
       Terminal = Terminal(flightMessage.terminal.getOrElse("")),
       rawICAO = flightMessage.iCAO.getOrElse(""),
       rawIATA = flightMessage.iATA.getOrElse(""),
-      Origin = flightMessage.origin.getOrElse(""),
+      Origin = PortCode(flightMessage.origin.getOrElse("")),
       PcpTime = flightMessage.pcpTime,
       Scheduled = flightMessage.scheduled.getOrElse(0L),
       FeedSources = flightMessage.feedSources.flatMap(FeedSource(_)).toSet,

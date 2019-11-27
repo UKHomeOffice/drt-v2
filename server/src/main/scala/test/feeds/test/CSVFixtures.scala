@@ -1,6 +1,7 @@
 package test.feeds.test
 
-import drt.shared.{Arrival, LiveFeedSource, Terminals}
+import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.{Arrival, LiveFeedSource, PortCode, Terminals}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 
@@ -31,7 +32,7 @@ object CSVFixtures {
 
   }
 
-  def csvPathToArrivalsOnDate(forDate: String, path: String) = {
+  def csvPathToArrivalsOnDate(forDate: String, path: String): Seq[Try[Arrival]] = {
 
     def timeToSDate = timeToSDateOnDate(forDate) _
 
@@ -52,11 +53,11 @@ object CSVFixtures {
         Option(fields(TranPax).toInt),
         None,
         None,
-        "TEST",
+        PortCode("TEST"),
         Terminals.Terminal(fields(Terminal)),
         fields(rawICAO),
         fields(rawIATA),
-        fields(Origin),
+        PortCode(fields(Origin)),
         timeToSDate(fields(Scheduled)).getOrElse(SDate.now().millisSinceEpoch),
         None,
         Set(LiveFeedSource)
@@ -68,7 +69,7 @@ object CSVFixtures {
     maybeArrivals
   }
 
-  def timeToSDateOnDate(forDate: String)(time: String) = SDate.tryParseString(forDate + "T" + time + "Z")
+  def timeToSDateOnDate(forDate: String)(time: String): Option[MillisSinceEpoch] = SDate.tryParseString(forDate + "T" + time + "Z")
     .toOption
     .map(_.millisSinceEpoch)
 

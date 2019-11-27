@@ -101,11 +101,11 @@ object Actions {
 
   case class HideLoader() extends Action
 
-  case class GetAirportInfos(code: Set[String]) extends Action
+  case class GetAirportInfos(codes: Set[PortCode]) extends Action
 
-  case class UpdateAirportInfo(code: String, info: Option[AirportInfo]) extends Action
+  case class UpdateAirportInfo(code: PortCode, info: Option[AirportInfo]) extends Action
 
-  case class UpdateAirportInfos(infos: Map[String, AirportInfo]) extends Action
+  case class UpdateAirportInfos(infos: Map[PortCode, AirportInfo]) extends Action
 
   case class UpdateShowActualDesksAndQueues(state: Boolean) extends Action
 

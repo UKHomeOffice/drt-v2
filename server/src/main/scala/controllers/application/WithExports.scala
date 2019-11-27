@@ -153,7 +153,7 @@ trait WithExports {
         val startMillis = dayStartMillisWithHourOffset(startHour, date)
         val endMillis = dayStartMillisWithHourOffset(endHour, date)
         val portStateForPointInTime = loadBestPortStateForPointInTime(pit, terminalName, startMillis, endMillis)
-        val fileName = f"export-splits-$portCode-$terminalName-${date.getFullYear()}-${date.getMonth()}-${date.getDate()}"
+        val fileName = f"export-splits-${portCode.toString}-$terminalName-${date.getFullYear()}-${date.getMonth()}-${date.getDate()}"
         flightsForCSVExportWithinRange(terminalName, date, startHour = startHour, endHour = endHour, portStateForPointInTime).map {
           case Some(csvFlights) =>
             val csvData = CSVData.flightsWithSplitsWithAPIActualsToCSVWithHeadings(csvFlights)
@@ -354,7 +354,7 @@ trait WithExports {
                            terminalName: Terminal,
                            startPit: SDateLike,
                            endPit: SDateLike,
-                           portCode: String): String = {
+                           portCode: PortCode): String = {
     f"$portCode-$terminalName-$subject-" +
       f"${startPit.getFullYear()}-${startPit.getMonth()}%02d-${startPit.getDate()}-to-" +
       f"${endPit.getFullYear()}-${endPit.getMonth()}%02d-${endPit.getDate()}"

@@ -2,13 +2,13 @@ package services.inputfeeds
 
 import com.typesafe.config.ConfigFactory
 import controllers.ArrivalGenerator
+import drt.server.feeds.acl.AclFeed
+import drt.server.feeds.acl.AclFeed.{arrivalsFromCsvContent, contentFromFileName, latestFileForPort, sftpClient}
 import drt.shared
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Terminals._
 import drt.shared._
-import server.feeds.acl.AclFeed
-import server.feeds.acl.AclFeed._
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import services.SDate
 import services.crunch.CrunchTestLike
@@ -23,7 +23,7 @@ class AclFeedSpec extends CrunchTestLike {
   val lgwTerminalMapping: Terminal => Terminal = (t: Terminal) => Map[Terminal, Terminal](T2 -> S).getOrElse(t, InvalidTerminal)
 
   "ACL feed failures" >> {
-    val aclFeed = AclFeed("nowhere.nowhere", "badusername", "badpath", "BAD", (t: Terminal) => T1)
+    val aclFeed = AclFeed("nowhere.nowhere", "badusername", "badpath", PortCode("BAD"), (t: Terminal) => T1)
 
     val result = aclFeed.requestArrivals.getClass
 
@@ -45,8 +45,8 @@ class AclFeedSpec extends CrunchTestLike {
       val arrivals = arrivalsFromCsvContent(csvContent, regularTerminalMapping)
       val expected = List(Arrival(Operator = Some("4U"), Status = "ACL Forecast", Estimated = None, Actual = None,
         EstimatedChox = None, ActualChox = None, Gate = None, Stand = None, MaxPax = Some(180), ActPax = Some(149),
-        TranPax = None, RunwayID = None, BaggageReclaimId = None, AirportID = "LHR", Terminal = T2,
-        rawICAO = "4U0460", rawIATA = "4U0460", Origin = "CGN",FeedSources = Set(shared.AclFeedSource),
+        TranPax = None, RunwayID = None, BaggageReclaimId = None, AirportID = PortCode("LHR"), Terminal = T2,
+        rawICAO = "4U0460", rawIATA = "4U0460", Origin = PortCode("CGN"),FeedSources = Set(shared.AclFeedSource),
         Scheduled = 1507878600000L, PcpTime = None))
 
       arrivals === expected
@@ -92,8 +92,8 @@ class AclFeedSpec extends CrunchTestLike {
       val expected = List(Arrival(Operator = Some("4U"), Status = "ACL Forecast", Estimated = None,
         Actual = None, EstimatedChox = None, ActualChox = None, Gate = None,
         Stand = None, MaxPax = Some(180), ActPax = Some(149), TranPax = None, RunwayID = None, BaggageReclaimId = None,
-        AirportID = "LHR", Terminal = S, rawICAO = "4U0460", rawIATA = "4U0460",
-        Origin = "CGN", Scheduled = 1507878600000L, PcpTime = None, FeedSources = Set(shared.AclFeedSource)))
+        AirportID = PortCode("LHR"), Terminal = S, rawICAO = "4U0460", rawIATA = "4U0460",
+        Origin = PortCode("CGN"), Scheduled = 1507878600000L, PcpTime = None, FeedSources = Set(shared.AclFeedSource)))
 
       arrivals === expected
     }
@@ -297,8 +297,8 @@ class AclFeedSpec extends CrunchTestLike {
     val username = ConfigFactory.load.getString("acl.username")
     val path = ConfigFactory.load.getString("acl.keypath")
 
-    val sftp = sftpClient(sshClient(ftpServer, username, path))
-    val latestFile = latestFileForPort(sftp, "MAN")
+    val sftp = sftpClient(AclFeed.sshClient(ftpServer, username, path))
+    val latestFile = latestFileForPort(sftp, PortCode("MAN"))
     println(s"latestFile: $latestFile")
     val aclArrivals: List[Arrival] = arrivalsFromCsvContent(contentFromFileName(sftp, latestFile), regularTerminalMapping)
 

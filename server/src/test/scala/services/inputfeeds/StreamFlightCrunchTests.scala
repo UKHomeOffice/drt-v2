@@ -32,7 +32,7 @@ object TestCrunchConfig {
     import AirportConfigDefaults._
     val seqOfHoursInts = List.fill[Int](hours) _
     AirportConfig(
-      portCode = "EDI",
+      portCode = PortCode("EDI"),
       queues = Map(
         A1 -> Seq(Queues.EeaDesk, Queues.EGate, Queues.NonEeaDesk),
         A2 -> Seq(Queues.EeaDesk, Queues.EGate, Queues.NonEeaDesk)

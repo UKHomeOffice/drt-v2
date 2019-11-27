@@ -47,20 +47,20 @@ object TerminalContentComponent {
     (startOfView, endOfView)
   }
 
-  def airportWrapper(portCode: String): ReactConnectProxy[Pot[AirportInfo]] = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
+  def airportWrapper(portCode: PortCode): ReactConnectProxy[Pot[AirportInfo]] = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
 
-  def originMapper(portCode: String): VdomElement = {
+  def originMapper(portCode: PortCode): VdomElement = {
     Try {
       vdomElementFromComponent(airportWrapper(portCode) { proxy: ModelProxy[Pot[AirportInfo]] =>
         <.span(
-          proxy().render(ai => <.span(^.title := s"${ai.airportName}, ${ai.city}, ${ai.country}", portCode)),
-          proxy().renderEmpty(<.span(portCode))
+          proxy().render(ai => <.span(^.title := s"${ai.airportName}, ${ai.city}, ${ai.country}", portCode.toString)),
+          proxy().renderEmpty(<.span(portCode.toString))
         )
       })
     }.recover {
       case e =>
         log.error(s"origin mapper error $e")
-        vdomElementFromTag(<.div(portCode))
+        vdomElementFromTag(<.div(portCode.toString))
     }.get
   }
 

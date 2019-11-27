@@ -111,7 +111,7 @@ object PortStateMessageConversion {
         None
       )).toSet,
       splitSource,
-      sm.eventType,
+      sm.eventType.map(EventType(_)),
       SplitStyle(sm.style.getOrElse(""))
     )
   }

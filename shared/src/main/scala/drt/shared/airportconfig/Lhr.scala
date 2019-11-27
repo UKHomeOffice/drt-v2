@@ -31,7 +31,7 @@ object Lhr extends AirportConfigLike {
   )
 
   val config = AirportConfig(
-    portCode = "LHR",
+    portCode = PortCode("LHR"),
     queues = Map(
       T2 -> Seq(EeaDesk, EGate, NonEeaDesk, FastTrack, Transfer),
       T3 -> Seq(EeaDesk, EGate, NonEeaDesk, FastTrack, Transfer),

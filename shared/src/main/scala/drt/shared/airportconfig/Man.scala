@@ -11,7 +11,7 @@ object Man extends AirportConfigLike {
   import AirportConfigDefaults._
 
   val config = AirportConfig(
-    portCode = "MAN",
+    portCode = PortCode("MAN"),
     queues = Map(
       T1 -> Seq(EeaDesk, EGate, NonEeaDesk),
       T2 -> Seq(EeaDesk, EGate, NonEeaDesk),
