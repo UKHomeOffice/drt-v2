@@ -100,7 +100,7 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
       PassengerInfoGenerator.passengerInfoJson(nationality = "GBR", documentType = "P", issuingCountry = "GBR"),
       PassengerInfoGenerator.passengerInfoJson(nationality = "ITA", documentType = "P", issuingCountry = "ITA")
     )
-    val manifests = Set(VoyageManifest(EventTypes.DC, portCode, PortCode("JFK"), "0001", "BA", arrivalDate, arrivalTime, PassengerList = paxList))
+    val manifests = Set(VoyageManifest(EventTypes.DC, portCode, PortCode("JFK"), VoyageNumber("0001"), "BA", arrivalDate, arrivalTime, PassengerList = paxList))
 
     arrivalDiffs.offer(ArrivalsDiff(toUpdate = SortedMap(arrival.unique -> arrival), toRemove = Set()))
 

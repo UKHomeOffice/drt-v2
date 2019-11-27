@@ -206,7 +206,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         )
 
         val voyageManifests = ManifestsFeedSuccess(DqManifests("", Set(
-          VoyageManifest(EventTypes.CI, PortCode("STN"), PortCode("JFK"), "0001", "BA", "2017-01-01", "00:00",
+          VoyageManifest(EventTypes.CI, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), "BA", "2017-01-01", "00:00",
             manifestPax(10, euPassport)
           )
         )))

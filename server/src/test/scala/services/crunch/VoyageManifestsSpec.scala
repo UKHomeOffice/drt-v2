@@ -30,12 +30,12 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, actPax = Option(21))
     val inputManifestsCi = ManifestsFeedSuccess(DqManifests("", Set(
-      VoyageManifest(EventTypes.CI, PortCode("STN"), PortCode("JFK"), "0001", "TS", "2017-01-01", "00:00", List(
+      VoyageManifest(EventTypes.CI, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), "TS", "2017-01-01", "00:00", List(
         PassengerInfoGenerator.passengerInfoJson("GBR", "P", "GBR")
       ))
     )))
     val inputManifestsDc = ManifestsFeedSuccess(DqManifests("", Set(
-      VoyageManifest(EventTypes.DC, PortCode("STN"), PortCode("JFK"), "0001", "TS", "2017-01-01", "00:00", List(
+      VoyageManifest(EventTypes.DC, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), "TS", "2017-01-01", "00:00", List(
         PassengerInfoGenerator.passengerInfoJson("ZAF", "P", "ZAF")
       ))
     )))
@@ -79,7 +79,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, actPax = Option(10))
     val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
-      VoyageManifest(EventTypes.CI, portCode, PortCode("JFK"), "0001", "BA", "2017-01-01", "00:00", manifestPax(10, euPassport))
+      VoyageManifest(EventTypes.CI, portCode, PortCode("JFK"), VoyageNumber("0001"), "BA", "2017-01-01", "00:00", manifestPax(10, euPassport))
     )))
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
@@ -123,7 +123,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val portCode = PortCode("LHR")
     val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, actPax = Option(10), tranPax = Option(5))
     val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
-      VoyageManifest(EventTypes.CI, portCode, PortCode("JFK"), "0001", "BA", "2017-01-01", "00:00",
+      VoyageManifest(EventTypes.CI, portCode, PortCode("JFK"), VoyageNumber("0001"), "BA", "2017-01-01", "00:00",
         manifestPax(5, euPassport) ++ manifestPax(2, inTransitFlag) ++ manifestPax(3, inTransitCountry)
       )
     )))
@@ -163,7 +163,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
   }
 
   "Given a voyage manifest then I should get a BestAvailableManifest that matches it" >> {
-    val vm = VoyageManifest(EventTypes.CI, PortCode("LHR"), PortCode("JFK"), "0001", "BA", "2017-01-01", "00:00", List(
+    val vm = VoyageManifest(EventTypes.CI, PortCode("LHR"), PortCode("JFK"), VoyageNumber("0001"), "BA", "2017-01-01", "00:00", List(
       inTransitFlag,
       inTransitCountry,
       euPassport,
@@ -175,7 +175,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val result = BestAvailableManifest(vm)
 
     val expected = BestAvailableManifest(
-      ApiSplitsWithHistoricalEGateAndFTPercentages, PortCode("LHR"), PortCode("JFK"), "0001", "BA", SDate("2017-01-01"),
+      ApiSplitsWithHistoricalEGateAndFTPercentages, PortCode("LHR"), PortCode("JFK"), VoyageNumber("0001"), "BA", SDate("2017-01-01"),
       List(
         ManifestPassengerProfile("GBR", Some("P"), Some(22), Some(true)),
         ManifestPassengerProfile("GBR", Some("P"), Some(22), Some(true)),
@@ -190,14 +190,14 @@ class VoyageManifestsSpec extends CrunchTestLike {
   }
 
   "Given a voyage manifest `Passport` instead of `P` for doctype it should still be accepted as a passport doctype" >> {
-    val vm = VoyageManifest(EventTypes.CI, PortCode("LHR"), PortCode("JFK"), "0001", "BA", "2017-01-01", "00:00", List(
+    val vm = VoyageManifest(EventTypes.CI, PortCode("LHR"), PortCode("JFK"), VoyageNumber("0001"), "BA", "2017-01-01", "00:00", List(
       PassengerInfoJson(Some("Passport"), "GBR", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("GBR"), None)
     ))
 
     val result = BestAvailableManifest(vm)
 
     val expected = BestAvailableManifest(
-      ApiSplitsWithHistoricalEGateAndFTPercentages, PortCode("LHR"), PortCode("JFK"), "0001", "BA", SDate("2017-01-01"),
+      ApiSplitsWithHistoricalEGateAndFTPercentages, PortCode("LHR"), PortCode("JFK"), VoyageNumber("0001"), "BA", SDate("2017-01-01"),
       List(
         ManifestPassengerProfile("GBR", Some(DocType.Passport), Some(22), Some(false))
       )
@@ -207,14 +207,14 @@ class VoyageManifestsSpec extends CrunchTestLike {
   }
 
   "Given a voyage manifest with a UK National and no doctype, Passport should be assumed" >> {
-    val vm = VoyageManifest(EventTypes.CI, PortCode("LHR"), PortCode("JFK"), "0001", "BA", "2017-01-01", "00:00", List(
+    val vm = VoyageManifest(EventTypes.CI, PortCode("LHR"), PortCode("JFK"), VoyageNumber("0001"), "BA", "2017-01-01", "00:00", List(
       PassengerInfoJson(None, "GBR", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("GBR"), None)
     ))
 
     val result = BestAvailableManifest(vm)
 
     val expected = BestAvailableManifest(
-      ApiSplitsWithHistoricalEGateAndFTPercentages, PortCode("LHR"), PortCode("JFK"), "0001", "BA", SDate("2017-01-01"),
+      ApiSplitsWithHistoricalEGateAndFTPercentages, PortCode("LHR"), PortCode("JFK"), VoyageNumber("0001"), "BA", SDate("2017-01-01"),
       List(
         ManifestPassengerProfile("GBR", Some(DocType.Passport), Some(22), Some(false))
       )
@@ -232,7 +232,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, actPax = Option(10), tranPax = Option(6))
     val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
-      VoyageManifest(EventTypes.CI, portCode, PortCode("JFK"), "0001", "TS", "2017-01-01", "00:00", List(
+      VoyageManifest(EventTypes.CI, portCode, PortCode("JFK"), VoyageNumber("0001"), "TS", "2017-01-01", "00:00", List(
         inTransitFlag,
         inTransitCountry,
         euPassport,

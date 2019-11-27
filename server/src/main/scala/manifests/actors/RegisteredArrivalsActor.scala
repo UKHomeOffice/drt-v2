@@ -1,7 +1,7 @@
 package manifests.actors
 
 import actors.{GetState, PersistentDrtActor, RecoveryActorLike, Sizes}
-import drt.shared.{ArrivalKey, PortCode, SDateLike}
+import drt.shared.{ArrivalHelper, ArrivalKey, PortCode, SDateLike, VoyageNumber}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.RegisteredArrivalMessage.{RegisteredArrivalMessage, RegisteredArrivalsMessage}
@@ -9,6 +9,7 @@ import services.graphstages.Crunch
 
 import scala.collection.immutable.SortedMap
 import scala.collection.mutable
+import scala.util.Try
 
 
 case class RegisteredArrivals(arrivals: mutable.SortedMap[ArrivalKey, Option[Long]])
@@ -18,7 +19,7 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
                               portCode: PortCode,
                               now: () => SDateLike,
                               expireAfterMillis: Long
-                              ) extends RecoveryActorLike with PersistentDrtActor[RegisteredArrivals] {
+                             ) extends RecoveryActorLike with PersistentDrtActor[RegisteredArrivals] {
   override def persistenceId: String = "registered-arrivals"
 
   override def initialState: RegisteredArrivals = RegisteredArrivals(mutable.SortedMap())
@@ -34,7 +35,10 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
   private def arrivalsToMessage(arrivalWithLastLookup: mutable.SortedMap[ArrivalKey, Option[Long]]): RegisteredArrivalsMessage = {
     RegisteredArrivalsMessage(
       arrivalWithLastLookup
-        .map { case (ArrivalKey(o, v, s), l) => RegisteredArrivalMessage(Option(o.toString), Option(portCode.toString), Option(v), Option(s), l) }
+        .map { case (ArrivalKey(o, v, s), l) =>
+          val paddedVoyageNumber = ArrivalHelper.padTo4Digits(v.toString)
+          RegisteredArrivalMessage(Option(o.toString), Option(portCode.toString), Option(paddedVoyageNumber), Option(s), l)
+        }
         .toSeq
     )
   }
@@ -80,10 +84,15 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
   }
 
   private def addRegisteredArrivalsFromMessages(arrivalMessages: Seq[RegisteredArrivalMessage]): Unit = {
-    val arrivalsFromMessages: Seq[(ArrivalKey, Option[Long])] = arrivalMessages.map {
-      case RegisteredArrivalMessage(Some(origin), _, Some(voyageNumber), Some(scheduled), lookedUp) =>
-        (ArrivalKey(PortCode(origin), voyageNumber, scheduled), lookedUp)
-    }
+    val arrivalsFromMessages: Seq[(ArrivalKey, Option[Long])] = arrivalMessages
+      .map {
+        case RegisteredArrivalMessage(Some(origin), _, Some(voyageNumberString), Some(scheduled), lookedUp) =>
+          VoyageNumber(voyageNumberString) match {
+            case vn: VoyageNumber => Option((ArrivalKey(PortCode(origin), vn, scheduled), lookedUp))
+            case _ => None
+          }
+      }
+      .collect { case Some(keyAndLookedUp) => keyAndLookedUp }
 
     state.arrivals ++= arrivalsFromMessages
   }

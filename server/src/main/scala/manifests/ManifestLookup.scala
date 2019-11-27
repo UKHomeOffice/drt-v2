@@ -2,7 +2,7 @@ package manifests
 
 import java.sql.Timestamp
 
-import drt.shared.{PortCode, SDateLike}
+import drt.shared.{PortCode, SDateLike, VoyageNumber}
 import drt.shared.SplitRatiosNs.SplitSources
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import org.slf4j.{Logger, LoggerFactory}
@@ -15,10 +15,10 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
 trait ManifestLookupLike {
-  def maybeBestAvailableManifest(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: String, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])]
+  def maybeBestAvailableManifest(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: VoyageNumber, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])]
 }
 
-case class UniqueArrivalKey(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: String, scheduled: SDateLike) {
+case class UniqueArrivalKey(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: VoyageNumber, scheduled: SDateLike) {
   override def toString: String = s"$arrivalPort -> $departurePort: $voyageNumber @ ${scheduled.toISOString()}"
 }
 
@@ -72,7 +72,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
         .flatMap(identity)
   }
 
-  def maybeBestAvailableManifest(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: String, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
+  override def maybeBestAvailableManifest(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: VoyageNumber, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
     manifestSearch(UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), queryHierarchy)
 
   type QueryFunction = UniqueArrivalKey => SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), paxInfoTable.tables.profile.api.Effect]
@@ -103,7 +103,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
             event_code ='DC'
             and arrival_port_code=${uniqueArrivalKey.arrivalPort.toString}
             and departure_port_code=${uniqueArrivalKey.departurePort.toString}
-            and voyage_number=${uniqueArrivalKey.voyageNumber.toInt}
+            and voyage_number=${uniqueArrivalKey.voyageNumber.numeric}
             and day_of_week = EXTRACT(DOW FROM TIMESTAMP '#$scheduledTs')::int
             and week_of_year IN (EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$middleTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')::int)
           GROUP BY
@@ -133,7 +133,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
             event_code ='DC'
             and arrival_port_code=${uniqueArrivalKey.arrivalPort.toString}
             and departure_port_code=${uniqueArrivalKey.departurePort.toString}
-            and voyage_number=${uniqueArrivalKey.voyageNumber.toInt}
+            and voyage_number=${uniqueArrivalKey.voyageNumber.numeric}
             and week_of_year IN (EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$middleTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')::int)
           GROUP BY
             arrival_port_code,
@@ -175,7 +175,8 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
 
   def paxForArrivalQuery(flightKeys: Vector[(String, String, String, Timestamp)]): Vector[SQLActionBuilder] =
     flightKeys.map {
-      case (destination, origin, voyageNumber, scheduled) =>
+      case (destination, origin, voyageNumberString, scheduled) =>
+        val voyageNumber = VoyageNumber(voyageNumberString)
         sql"""select
             nationality_country_code,
             document_type,
@@ -188,7 +189,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
             event_code ='DC'
             and arrival_port_code=$destination
             and departure_port_code=$origin
-            and voyage_number=${voyageNumber.toInt}
+            and voyage_number=${voyageNumber.numeric}
             and scheduled_date=$scheduled"""
     }
 

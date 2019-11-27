@@ -1,6 +1,6 @@
 package services.crunch
 
-import drt.shared.{EventType, EventTypes, PortCode}
+import drt.shared.{EventType, EventTypes, PortCode, VoyageNumber}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 
 object VoyageManifestGenerator {
@@ -18,11 +18,11 @@ object VoyageManifestGenerator {
   def voyageManifest(dqEventCode: EventType = EventTypes.DC,
                      portCode: PortCode = PortCode("STN"),
                      departurePortCode: PortCode = PortCode("JFK"),
-                     flightNumber: String = "0001",
+                     voyageNumber: VoyageNumber = VoyageNumber(0),
                      carrierCode: String = "BA",
                      scheduledDate: String = "2017-01-01",
                      scheduledTime: String = "00:00",
                      paxInfos: List[PassengerInfoJson] = List()): VoyageManifest = {
-    VoyageManifest(dqEventCode, portCode, departurePortCode, flightNumber, carrierCode, scheduledDate, scheduledTime, paxInfos)
+    VoyageManifest(dqEventCode, portCode, departurePortCode, voyageNumber, carrierCode, scheduledDate, scheduledTime, paxInfos)
   }
 }

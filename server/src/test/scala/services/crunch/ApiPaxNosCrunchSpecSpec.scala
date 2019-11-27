@@ -27,7 +27,7 @@ class ApiPaxNosCrunchSpecSpec extends CrunchTestLike {
 
   val manifests =
     ManifestsFeedSuccess(DqManifests("", Set(
-      VoyageManifest(EventTypes.DC, airportConfig.portCode, PortCode("JFK"), "0001", "BA", "2019-11-20", "00:00",
+      VoyageManifest(EventTypes.DC, airportConfig.portCode, PortCode("JFK"), VoyageNumber("0001"), "BA", "2019-11-20", "00:00",
         List(
           PassengerInfoJson(Some("P"), "GBR", "EEA", Some("11"), Some("LHR"), "N", Some("GBR"), Option("GBR"), None),
           PassengerInfoJson(Some("P"), "GBR", "EEA", Some("11"), Some("LHR"), "N", Some("GBR"), Option("GBR"), None)

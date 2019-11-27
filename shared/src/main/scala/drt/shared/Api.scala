@@ -14,6 +14,7 @@ import upickle.default.{ReadWriter, macroRW, readwriter}
 
 import scala.collection.immutable.{NumericRange, Map => IMap, SortedMap => ISortedMap}
 import scala.concurrent.Future
+import scala.util.{Failure, Success, Try}
 import scala.util.matching.Regex
 
 object DeskAndPaxTypeCombinations {
@@ -102,9 +103,13 @@ object EventType {
 }
 
 object EventTypes {
+
   object DC extends EventType
+
   object CI extends EventType
+
   object InvalidEventType extends EventType
+
 }
 
 
@@ -216,6 +221,7 @@ object UniqueArrival {
 
 object Uniqueness {
   val primes: Seq[Int] = Seq(2, 3, 5, 7, 11, 13, 17, 19, 23, 29)
+
   def stringHash(string: String): Int = string.zipWithIndex.map {
     case (char, idx) => primes(idx) * char.toByte.toInt
   }.sum
@@ -256,6 +262,39 @@ object MinuteHelper {
 }
 
 case class FlightsNotReady()
+
+sealed trait VoyageNumberLike {
+  def numeric: Int
+}
+
+case class VoyageNumber(numeric: Int) extends VoyageNumberLike {
+  override def toString: String = numeric.toString
+
+  def toPaddedString: String = {
+    val string = numeric.toString
+    val prefix = string.length match {
+      case 4 => ""
+      case 3 => "0"
+      case 2 => "00"
+      case 1 => "000"
+      case _ => ""
+    }
+    prefix + string
+  }
+}
+
+case class InvalidVoyageNumber(exception: Throwable) extends VoyageNumberLike {
+  override def toString: String = "invalid"
+
+  override def numeric: Int = 0
+}
+
+case object VoyageNumber {
+  def apply(string: String): VoyageNumberLike = Try(string.toInt) match {
+    case Success(value) => VoyageNumber(value)
+    case Failure(exception) => InvalidVoyageNumber(exception)
+  }
+}
 
 case class Arrival(
                     Operator: Option[String],
@@ -312,16 +351,13 @@ case class Arrival(
     }
   }
 
+  lazy val voyageNumber: VoyageNumber = VoyageNumber(flightNumber)
+
   def basicForComparison: Arrival = copy(PcpTime = None)
 
   def equals(arrival: Arrival): Boolean = arrival.basicForComparison == basicForComparison
 
-  def voyageNumberPadded: String = {
-    val number = FlightParsing.parseIataToCarrierCodeVoyageNumber(IATA)
-    ArrivalHelper.padTo4Digits(number.map(_._2).getOrElse("-"))
-  }
-
-  lazy val manifestKey: Int = s"$voyageNumberPadded-${this.Scheduled}".hashCode
+  lazy val manifestKey: Int = s"${voyageNumber.toPaddedString}-${this.Scheduled}".hashCode
 
   lazy val uniqueId: Int = uniqueStr.hashCode
   lazy val uniqueStr: String = s"$Terminal$Scheduled$flightNumber"
@@ -401,8 +437,8 @@ object FeedSource {
     )
 }
 
-case class ArrivalKey(origin: PortCode, voyageNumber: String, scheduled: Long) extends Ordered[ArrivalKey] with WithTimeAccessor {
-  lazy val comparisonValue: MillisSinceEpoch = scheduled + 16384 * Uniqueness.stringHash(origin.toString) + Uniqueness.stringHash(voyageNumber)
+case class ArrivalKey(origin: PortCode, voyageNumber: VoyageNumber, scheduled: Long) extends Ordered[ArrivalKey] with WithTimeAccessor {
+  lazy val comparisonValue: MillisSinceEpoch = scheduled + 16384 * Uniqueness.stringHash(origin.toString) + voyageNumber.numeric
 
   override def compare(that: ArrivalKey): Int = this.comparisonValue.compareTo(that.comparisonValue)
 
@@ -410,9 +446,9 @@ case class ArrivalKey(origin: PortCode, voyageNumber: String, scheduled: Long) e
 }
 
 object ArrivalKey {
-  def apply(arrival: Arrival): ArrivalKey = ArrivalKey(arrival.Origin, arrival.voyageNumberPadded, arrival.Scheduled)
+  def apply(arrival: Arrival): ArrivalKey = ArrivalKey(arrival.Origin, arrival.voyageNumber, arrival.Scheduled)
 
-  def atTime: MillisSinceEpoch => ArrivalKey = (time: MillisSinceEpoch) => ArrivalKey(PortCode(""), "", time)
+  def atTime: MillisSinceEpoch => ArrivalKey = (time: MillisSinceEpoch) => ArrivalKey(PortCode(""), VoyageNumber(0), time)
 }
 
 case class ArrivalUpdate(old: Arrival, updated: Arrival)

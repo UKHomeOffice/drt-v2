@@ -130,7 +130,7 @@ ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
 
   private def manifestForArrival(updatedArrival: Arrival, paxInfos: List[PassengerInfoJson]) = {
     val schDateTime = SDate(updatedArrival.Scheduled)
-    VoyageManifest(EventTypes.CI, PortCode("STN"), updatedArrival.Origin, f"${updatedArrival.flightNumber}%04d", updatedArrival.carrierCode, schDateTime.toISODateOnly, schDateTime.toHoursAndMinutes(), paxInfos)
+    VoyageManifest(EventTypes.CI, PortCode("STN"), updatedArrival.Origin, updatedArrival.voyageNumber, updatedArrival.carrierCode, schDateTime.toISODateOnly, schDateTime.toHoursAndMinutes(), paxInfos)
   }
 
   private def offerAndCheckResult(arrivals: Seq[Arrival], queues: Seq[Queue] = Seq()): Unit = {

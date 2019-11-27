@@ -1,7 +1,7 @@
 package manifests.passengers
 
 import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
-import drt.shared.{PortCode, SDateLike}
+import drt.shared.{PortCode, SDateLike, VoyageNumber, VoyageNumberLike}
 import manifests.UniqueArrivalKey
 import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocType}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
@@ -12,7 +12,7 @@ import scala.util.Try
 case class BestAvailableManifest(source: SplitSource,
                                  arrivalPortCode: PortCode,
                                  departurePortCode: PortCode,
-                                 voyageNumber: String,
+                                 voyageNumber: VoyageNumberLike,
                                  carrierCode: String,
                                  scheduled: SDateLike,
                                  passengerList: List[ManifestPassengerProfile])

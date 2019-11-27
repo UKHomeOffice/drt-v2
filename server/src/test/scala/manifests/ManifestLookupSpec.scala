@@ -3,7 +3,7 @@ package manifests
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import com.typesafe.config.{Config, ConfigFactory}
-import drt.shared.PortCode
+import drt.shared.{PortCode, VoyageNumber}
 import org.specs2.mutable.SpecificationLike
 import services.SDate
 import slickdb.{Tables, VoyageManifestPassengerInfoTable}
@@ -37,34 +37,11 @@ class ManifestLookupSpec extends TestKit(ActorSystem("ManifestLookup", PostgresP
   with SpecificationLike {
   val table = VoyageManifestPassengerInfoTable(PostgresTables)
 
-//  override def before: Any = {
-//    clearDatabase()
-//  }
-//
-//  def clearDatabase(): Unit = {
-//    Try(dropTables())
-//    createTables()
-//  }
-//
-//  def createTables(): Unit = {
-//    H2Tables.schema.createStatements.toList.foreach { query =>
-//      println(s"running $query")
-//      Await.ready(table.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10 seconds)
-//    }
-//  }
-//
-//  def dropTables(): Unit = {
-//    H2Tables.schema.dropStatements.toList.reverse.foreach { query =>
-//      println(s"running $query")
-//      Await.ready(table.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10 seconds)
-//    }
-//  }
-
   "something" >> {
     skipped("Exploratory")
     val lookupService = ManifestLookup(table)
 
-    Await.result(lookupService.maybeBestAvailableManifest(PortCode("LHR"), PortCode("ORD"), "0938", SDate("2019-04-01T00:00:00Z")), 5 seconds)
+    Await.result(lookupService.maybeBestAvailableManifest(PortCode("LHR"), PortCode("ORD"), VoyageNumber(938), SDate("2019-04-01T00:00:00Z")), 5 seconds)
 
     success
   }

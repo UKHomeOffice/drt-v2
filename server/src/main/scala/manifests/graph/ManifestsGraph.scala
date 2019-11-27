@@ -6,7 +6,7 @@ import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
 import akka.stream.stage.GraphStage
-import drt.shared.{Arrival, ArrivalKey, PortCode}
+import drt.shared.{Arrival, ArrivalKey, PortCode, VoyageNumber}
 import manifests.ManifestLookupLike
 import manifests.actors.RegisteredArrivals
 import manifests.passengers.BestAvailableManifest
@@ -42,7 +42,6 @@ object ManifestsGraph {
 
           batchRequestsAsync.out0
             .flatMapConcat(arrivals => Source(arrivals))
-            .filter(_.voyageNumber.forall(_.isDigit))
             .mapAsync(1) { a =>
               manifestLookup.maybeBestAvailableManifest(portCode, a.origin, a.voyageNumber, SDate(a.scheduled))
             }

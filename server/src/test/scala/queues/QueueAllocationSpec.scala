@@ -34,7 +34,7 @@ class QueueAllocationSpec extends Specification {
       Historical,
       PortCode("LHR"),
       PortCode("JHB"),
-      "234",
+      VoyageNumber("234"),
       "SA",
       SDate("2019-02-22T06:24:00Z"),
       List(
@@ -60,7 +60,7 @@ class QueueAllocationSpec extends Specification {
       Historical,
       PortCode("LHR"),
       PortCode("JHB"),
-      "234",
+      VoyageNumber("234"),
       "SA",
       SDate("2019-02-22T06:24:00Z"),
       List(
@@ -91,7 +91,7 @@ class QueueAllocationSpec extends Specification {
       Historical,
       PortCode("LHR"),
       PortCode("USA"),
-      "234",
+      VoyageNumber("234"),
       "SA",
       SDate("2019-07-22T06:24:00Z"),
       List(ManifestPassengerProfile("USA", Some(DocType.Passport), Some(21), Some(true)))
@@ -118,7 +118,7 @@ class QueueAllocationSpec extends Specification {
       Historical,
       PortCode("LHR"),
       PortCode("USA"),
-      "234",
+      VoyageNumber("234"),
       "SA",
       SDate("2019-06-22T06:24:00Z"),
       List(
@@ -149,7 +149,7 @@ class QueueAllocationSpec extends Specification {
       Historical,
       PortCode("LHR"),
       PortCode("USA"),
-      "234",
+      VoyageNumber("234"),
       "SA",
       SDate("2019-06-22T06:24:00Z"),
       List(
@@ -182,7 +182,7 @@ class QueueAllocationSpec extends Specification {
       Historical,
       PortCode("LHR"),
       PortCode("USA"),
-      "234",
+      VoyageNumber("234"),
       "SA",
       SDate("2019-01-22T06:24:00Z"),
       List(
@@ -218,7 +218,7 @@ class QueueAllocationSpec extends Specification {
       Historical,
       PortCode("LHR"),
       PortCode("USA"),
-      "234",
+      VoyageNumber("234"),
       "SA",
       SDate("2019-01-22T06:24:00Z"),
       List(
@@ -251,7 +251,7 @@ class QueueAllocationSpec extends Specification {
       Historical,
       PortCode("LHR"),
       PortCode("USA"),
-      "234",
+      VoyageNumber("234"),
       "TM",
       SDate("2019-01-22T06:24:00Z"),
       List(
@@ -283,7 +283,7 @@ class QueueAllocationSpec extends Specification {
       Historical,
       PortCode("LHR"),
       PortCode("USA"),
-      "234",
+      VoyageNumber("234"),
       "SAA",
       SDate("2019-01-22T06:24:00Z"),
       List(
