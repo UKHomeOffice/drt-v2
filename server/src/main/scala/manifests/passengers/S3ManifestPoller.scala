@@ -9,9 +9,8 @@ import drt.shared.{EventTypes, PortCode, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
-import server.feeds.{ManifestsFeedFailure, ManifestsFeedResponse, ManifestsFeedSuccess}
+import server.feeds.{DqManifests, ManifestsFeedFailure, ManifestsFeedResponse, ManifestsFeedSuccess}
 import services.SDate
-import services.graphstages.DqManifests
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global

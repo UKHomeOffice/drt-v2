@@ -6,9 +6,8 @@ import drt.shared.PaxTypesAndQueues._
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
-import server.feeds.{ArrivalsFeedSuccess, ManifestsFeedSuccess}
+import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
-import services.graphstages.DqManifests
 
 import scala.collection.immutable.{List, Seq}
 import scala.concurrent.duration._

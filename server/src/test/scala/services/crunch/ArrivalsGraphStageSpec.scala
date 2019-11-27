@@ -11,9 +11,8 @@ import drt.shared.Terminals.T1
 import drt.shared._
 import org.specs2.matcher.Scope
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
-import server.feeds.{ArrivalsFeedSuccess, ManifestsFeedSuccess}
+import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
-import services.graphstages.DqManifests
 
 import scala.collection.immutable.{List, SortedMap}
 import scala.collection.mutable

@@ -10,10 +10,9 @@ import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import passengersplits.core.PassengerTypeCalculatorValues.DocType
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
-import server.feeds.ManifestsFeedSuccess
+import server.feeds.{DqManifests, ManifestsFeedSuccess}
 import services.SDate
 import services.crunch.VoyageManifestGenerator._
-import services.graphstages.DqManifests
 
 import scala.collection.immutable.{Seq, SortedMap}
 import scala.concurrent.duration._

@@ -7,11 +7,10 @@ import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.T1
 import drt.shared._
-import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
-import server.feeds.{ArrivalsFeedSuccess, ManifestsFeedSuccess}
+import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
-import services.graphstages.DqManifests
-import VoyageManifestGenerator._
+import services.crunch.VoyageManifestGenerator._
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._

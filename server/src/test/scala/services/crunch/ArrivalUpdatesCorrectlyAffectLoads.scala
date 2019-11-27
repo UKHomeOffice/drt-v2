@@ -4,12 +4,11 @@ import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.{T1, T2}
-import drt.shared.{Arrival, EventTypes, PortCode, PortState, Queues}
+import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
-import server.feeds.{ArrivalsFeedSuccess, ManifestsFeedSuccess}
+import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
-import services.crunch.VoyageManifestGenerator.{euIdCard, euPassport, manifestPax, nonVisa, visa, _}
-import services.graphstages.DqManifests
+import services.crunch.VoyageManifestGenerator._
 
 import scala.collection.immutable.List
 import scala.concurrent.duration._
