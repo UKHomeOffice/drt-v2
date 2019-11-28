@@ -154,7 +154,7 @@ object AclFeed {
   def unzipAllFilesInStream(unzippedStream: ZipInputStream, zipEntryOption: Option[ZipEntry]): Stream[String] = {
     zipEntryOption match {
       case None => Stream.empty
-      case Some(zipEntry) =>
+      case Some(_) =>
         val entry: String = getZipEntry(unzippedStream)
         val maybeEntry1: Option[ZipEntry] = Option(unzippedStream.getNextEntry)
         entry #::

@@ -4,18 +4,19 @@ import diode.data.Pot
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
 import drt.shared.{ContactDetails, OutOfHoursStatus}
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 
 object ContactPage {
 
   case class Props()
 
-  val component = ScalaComponent.builder[Props]("ContactUs")
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ContactUs")
     .render_P(_ =>
       <.div(^.className := "contact-us", <.h3("Contact Us"), ContactDetailsComponent())
     )
-    .componentDidMount(p => Callback {
+    .componentDidMount(_ => Callback {
       GoogleEventTracker.sendPageView(s"contact")
     })
     .build
@@ -29,8 +30,8 @@ object ContactDetailsComponent {
 
   case class Props()
 
-  val component = ScalaComponent.builder[Props]("ContactUs")
-    .render_P(p => {
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ContactUs")
+    .render_P { _ =>
       val contactDetailsRCP = SPACircuit.connect(m => ContactModel(m.contactDetails, m.oohStatus))
       <.div(
         contactDetailsRCP(contactDetailsMP => {
@@ -59,7 +60,7 @@ object ContactDetailsComponent {
           ))
         })
       )
-    })
+    }
     .build
 
   def apply(): VdomElement = component(Props())

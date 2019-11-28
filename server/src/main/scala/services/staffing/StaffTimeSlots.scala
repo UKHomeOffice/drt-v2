@@ -1,6 +1,5 @@
 package services.staffing
 
-import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate

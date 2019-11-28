@@ -81,34 +81,31 @@ object TerminalStaffing {
     startOfDayMillis <= movementMillis && movementMillis <= endOfDayMillis
   }
 
-  class Backend($: BackendScope[Props, Unit]) {
-
-    def render(props: Props): VdomTagOf[Div] = {
-
-      <.div(
-        props.potShifts.render(shifts => {
-          props.potFixedPoints.render(fixedPoints => {
-            props.potStaffMovements.render((movements: Seq[StaffMovement]) => {
-              <.div(
-                <.div(^.className := "container",
-                  <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(FixedPointAssignments(fixedPoints.forTerminal(props.terminalName)), props.airportConfig, props.terminalName, props.loggedInUser))),
-                  <.div(^.className := "col-md-4", movementsEditor(movementsForDay(movements, props.viewMode.time), props.terminalName))
-                ),
-                <.div(^.className := "container",
-                  <.div(^.className := "col-md-10", staffOverTheDay(movementsForDay(movements, props.viewMode.time), shifts, props.terminalName)))
-              )
-            })
+  class Backend() {
+    def render(props: Props): VdomTagOf[Div] = <.div(
+      props.potShifts.render(shifts => {
+        props.potFixedPoints.render(fixedPoints => {
+          props.potStaffMovements.render((movements: Seq[StaffMovement]) => {
+            <.div(
+              <.div(^.className := "container",
+                <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(FixedPointAssignments(fixedPoints.forTerminal(props.terminalName)), props.airportConfig, props.terminalName, props.loggedInUser))),
+                <.div(^.className := "col-md-4", movementsEditor(movementsForDay(movements, props.viewMode.time), props.terminalName))
+              ),
+              <.div(^.className := "container",
+                <.div(^.className := "col-md-10", staffOverTheDay(movementsForDay(movements, props.viewMode.time), shifts, props.terminalName)))
+            )
           })
         })
-      )
-    }
+      })
+    )
 
-    def filterByTerminal(fixedPoints: String, terminalName: String): String = {
-      fixedPoints.split("\n").filter(line => {
+    def filterByTerminal(fixedPoints: String, terminalName: String): String = fixedPoints
+      .split("\n")
+      .filter { line =>
         val cells = line.split(",").map(cell => cell.trim())
         cells(1) == terminalName
-      }).mkString("\n")
-    }
+      }
+      .mkString("\n")
 
     def staffOverTheDay(movements: Seq[StaffMovement],
                         shifts: ShiftAssignments,
@@ -147,24 +144,22 @@ object TerminalStaffing {
           <.div(
             <.h2("Miscellaneous Staff"),
             props.loggedInUser.render(loggedInUser => {
-              if (loggedInUser.roles.contains(StaffEdit)) {
-                <.div(
-                  <.p("One entry per line with values separated by commas, e.g.:"),
-                  <.pre(<.div(examples.map(line => <.div(line)).toTagMod)),
-                  <.textarea(^.value := state.rawFixedPoints, ^.className := "staffing-editor"),
-                  ^.onChange ==> ((e: ReactEventFromInput) => {
-                    log.info(s"fixed points changed")
-                    val newRawFixedPoints = e.target.value
-                    scope.modState(_.copy(rawFixedPoints = newRawFixedPoints))
-                  }),
-                  <.button("Save", ^.onClick ==> ((e: ReactEventFromInput) => {
-                    val withTerminalName = addTerminalNameAndDate(state.rawFixedPoints, props.terminalName)
-                    val newAssignments = FixedPointAssignments(StaffAssignmentParser(withTerminalName).parsedAssignments.toList.collect { case Success(sa) => sa })
-                    GoogleEventTracker.sendEvent(withTerminalName, "Save Fixed Points", FixedPointAssignments(newAssignments.assignments.map(_.copy(createdBy = None))).toString)
-                    Callback(SPACircuit.dispatch(SaveFixedPoints(newAssignments, props.terminalName)))
-                  }))
-                )
-              } else <.pre(state.rawFixedPoints, ^.className := "staffing-editor")
+              if (loggedInUser.roles.contains(StaffEdit)) <.div(
+                <.p("One entry per line with values separated by commas, e.g.:"),
+                <.pre(<.div(examples.map(line => <.div(line)).toTagMod)),
+                <.textarea(^.value := state.rawFixedPoints, ^.className := "staffing-editor"),
+                ^.onChange ==> ((e: ReactEventFromInput) => {
+                  log.info(s"fixed points changed")
+                  val newRawFixedPoints = e.target.value
+                  scope.modState(_.copy(rawFixedPoints = newRawFixedPoints))
+                }),
+                <.button("Save", ^.onClick ==> ((_: ReactEventFromInput) => {
+                  val withTerminalName = addTerminalNameAndDate(state.rawFixedPoints, props.terminalName)
+                  val newAssignments = FixedPointAssignments(StaffAssignmentParser(withTerminalName).parsedAssignments.toList.collect { case Success(sa) => sa })
+                  GoogleEventTracker.sendEvent(withTerminalName, "Save Fixed Points", FixedPointAssignments(newAssignments.assignments.map(_.copy(createdBy = None))).toString)
+                  Callback(SPACircuit.dispatch(SaveFixedPoints(newAssignments, props.terminalName)))
+                }))
+              ) else <.pre(state.rawFixedPoints, ^.className := "staffing-editor")
             }
             ))
         }).build

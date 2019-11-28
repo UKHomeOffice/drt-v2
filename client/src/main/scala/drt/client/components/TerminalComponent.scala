@@ -162,7 +162,6 @@ object TerminalComponent {
                             terminalContentProps.airportConfig,
                             ps,
                             props.router,
-                            model.minuteTicker,
                             model.featureFlags
                           )
                         )

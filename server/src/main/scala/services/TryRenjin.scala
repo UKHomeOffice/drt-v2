@@ -55,7 +55,7 @@ object TryRenjin {
 
         val deskRecs = engine.eval("optimised").asInstanceOf[DoubleVector]
         val deskRecsScala = (0 until deskRecs.length()) map deskRecs.getElementAsInt
-        OptimizerCrunchResult(deskRecsScala, runSimulation(deskRecsScala, "optimised", config))
+        OptimizerCrunchResult(deskRecsScala, runSimulation("optimised", config))
       }
       tryCrunchRes
     }
@@ -65,10 +65,10 @@ object TryRenjin {
       log.debug(s"Setting ${workloads.length} workloads & ${desks.length} desks")
       initialiseWorkloads(workloads)
       initialiseDesks("desks", desks)
-      runSimulation(desks, "desks", config).toList
+      runSimulation("desks", config).toList
     }
 
-    def runSimulation(deskRecsScala: Seq[Int], desks: String, config: OptimizerConfig): Seq[Int] = {
+    def runSimulation(desks: String, config: OptimizerConfig): Seq[Int] = {
       engine.put("sla", config.sla)
       engine.eval("processed <- process.work(w, " + desks + ", sla, 0)")
 

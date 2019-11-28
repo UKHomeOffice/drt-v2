@@ -17,10 +17,9 @@ object AjaxClient extends autowire.Client[ByteBuffer, Pickler, Pickler] {
     addConcreteType[FeedStatusSuccess].
     addConcreteType[FeedStatusFailure]
 
-
-  implicit val sDatePickler = compositePickler[SDateLike]
-  implicit val staffAssignmentPickler = compositePickler[StaffAssignment]
-  implicit val staffAssignmentsPickler = compositePickler[StaffAssignments].addConcreteType[FixedPointAssignments].addConcreteType[ShiftAssignments]
+  implicit val sDatePickler: CompositePickler[SDateLike] = compositePickler[SDateLike]
+  implicit val staffAssignmentPickler: CompositePickler[StaffAssignment] = compositePickler[StaffAssignment]
+  implicit val staffAssignmentsPickler: CompositePickler[StaffAssignments] = compositePickler[StaffAssignments].addConcreteType[FixedPointAssignments].addConcreteType[ShiftAssignments]
 
   override def doCall(req: Request): Future[ByteBuffer] = {
     dom.ext.Ajax.post(
@@ -29,10 +28,6 @@ object AjaxClient extends autowire.Client[ByteBuffer, Pickler, Pickler] {
       responseType = "arraybuffer",
       headers = Map("Content-Type" -> "application/octet-stream")
     ).map(r => TypedArrayBuffer.wrap(r.response.asInstanceOf[ArrayBuffer]))
-  }
-
-  def monkeyPatchDoCallImpl(impl: AjaxClient.Request => Future[ByteBuffer]): Unit = {
-    println(s"would mock - but disabled mocking ajax impl")
   }
 
   override def read[Result: Pickler](p: ByteBuffer): Result = {

@@ -1,7 +1,7 @@
 package queueus
 
+import drt.shared.PaxType
 import drt.shared.PaxTypes._
-import drt.shared.{PaxType, SDateLike}
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import passengersplits.core.PassengerTypeCalculator.{isB5JPlus, isEea, isVisaNational}
 import passengersplits.core.PassengerTypeCalculatorValues.DocType

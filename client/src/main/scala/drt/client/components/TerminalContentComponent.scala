@@ -16,7 +16,7 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomAttr, VdomElement, ^, vdomElementFromComponent, vdomElementFromTag, _}
-import japgolly.scalajs.react.{BackendScope, Callback, CtorType, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import org.scalajs.dom.html.Div
 
 import scala.util.Try
@@ -117,7 +117,7 @@ object TerminalContentComponent {
               <.div(^.className := "exports",
                 <.a("Export Arrivals",
                   ^.className := "btn btn-default",
-                  ^.href := SPAMain.absoluteUrl(s"export/arrivals/${props.terminalPageTab.viewMode.millis}/${terminal}?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}"),
+                  ^.href := SPAMain.absoluteUrl(s"export/arrivals/${props.terminalPageTab.viewMode.millis}/$terminal?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}"),
                   ^.target := "_blank",
                   ^.onClick --> {
                     Callback(GoogleEventTracker.sendEvent(terminalName, "Export Arrivals", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly))
@@ -126,7 +126,7 @@ object TerminalContentComponent {
                 <.a(
                   "Export Desks",
                   ^.className := "btn btn-default",
-                  ^.href := SPAMain.absoluteUrl(s"export/desks/${props.terminalPageTab.viewMode.millis}/${terminal}?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}"),
+                  ^.href := SPAMain.absoluteUrl(s"export/desks/${props.terminalPageTab.viewMode.millis}/$terminal?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}"),
                   ^.target := "_blank",
                   ^.onClick --> {
                     Callback(GoogleEventTracker.sendEvent(terminalName, "Export Desks", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly))
@@ -161,7 +161,7 @@ object TerminalContentComponent {
               <.div(^.id := "arrivals", ^.className := s"tab-pane in $arrivalsPanelActive", {
                 if (state.activeTab == "arrivals") {
                   val flightsForTerminal = filteredPortState.flights.values.toList
-                  props.featureFlags.renderReady(ffs =>
+                  props.featureFlags.renderReady(_ =>
                     arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsForTerminal, queueOrder, props.airportConfig.hasEstChox)))
                 } else ""
               }),

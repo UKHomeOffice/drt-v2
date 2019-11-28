@@ -127,6 +127,7 @@ trait KeyCloakAuthTokenParserProtocol extends SprayJsonSupport with DefaultJsonP
           fields.get("error").map(_.convertTo[String]).getOrElse(""),
           fields.get("error_description").map(_.convertTo[String]).getOrElse("")
         )
+      case _ => KeyCloakAuthError("", "")
     }
   }
 }

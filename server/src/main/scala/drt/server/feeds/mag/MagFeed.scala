@@ -67,7 +67,6 @@ case class MagFeed(key: String, claimIss: String, claimRole: String, claimSub: S
   def requestArrivals(start: SDateLike): Future[ArrivalsFeedResponse] =
     Source(0 to 1000 by 100)
       .mapAsync(parallelism = 10) { pageFrom =>
-        val end = start.addHours(hoursToAdd = 36)
         requestArrivalsPage(start, pageFrom, size = 100)
       }
       .mapConcat {

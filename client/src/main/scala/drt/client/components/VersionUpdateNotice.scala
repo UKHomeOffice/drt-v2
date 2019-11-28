@@ -12,22 +12,21 @@ object VersionUpdateNotice {
   case class Props()
 
   val component = ScalaComponent.builder[Props]("VersionUpdateNotice")
-    .render(p => {
+    .render { _ =>
       val appVersionRCP = SPACircuit.connect(_.applicationVersion)
       appVersionRCP(appVersionMP => {
         appVersionMP.value match {
           case Ready(ClientServerVersions(client, server)) if client != server =>
             <.div(^.className := "notice-box alert alert-info", s"Newer version available ($client -> $server). ",
               <.br(),
-              <.a("Click here to update", ^.onClick --> Callback{
+              <.a("Click here to update", ^.onClick --> Callback {
                 GoogleEventTracker.sendEvent("VersionUpdateNotice", "click", "Version Update Notice")
-                dom.document.location.reload(true)}))
+                dom.document.location.reload(true)
+              }))
           case _ => <.div()
         }
       })
-    })
-    .componentDidMount(p => Callback.log("mounted loader"))
-    .componentDidUpdate(p => Callback.log("updated loader"))
+    }
     .build
 
   def apply(): VdomElement = component(Props())

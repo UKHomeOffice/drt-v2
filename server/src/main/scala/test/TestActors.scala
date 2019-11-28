@@ -6,7 +6,7 @@ import akka.actor.Props
 import akka.pattern.AskableActorRef
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
-import drt.shared.{AirportConfig, PortCode, SDateLike}
+import drt.shared.{PortCode, SDateLike}
 import slickdb.ArrivalTable
 
 

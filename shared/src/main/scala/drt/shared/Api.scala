@@ -219,14 +219,6 @@ object UniqueArrival {
   def atTime: MillisSinceEpoch => UniqueArrival = (time: MillisSinceEpoch) => UniqueArrival(0, "", time)
 }
 
-object Uniqueness {
-  val primes: Seq[Int] = Seq(2, 3, 5, 7, 11, 13, 17, 19, 23, 29)
-
-  def stringHash(string: String): Int = string.zipWithIndex.map {
-    case (char, idx) => primes(idx) * char.toByte.toInt
-  }.sum
-}
-
 case class CodeShareKeyOrderedBySchedule(scheduled: Long, terminal: Terminal, origin: PortCode) extends Ordered[CodeShareKeyOrderedBySchedule] with WithTimeAccessor {
   override def compare(that: CodeShareKeyOrderedBySchedule): Int = scheduled.compare(that.scheduled) match {
     case 0 => terminal.compare(that.terminal) match {
