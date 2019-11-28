@@ -2,7 +2,7 @@ package services.graphstages
 
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import drt.shared.Terminals.Terminal
+import drt.shared.Terminals.{InvalidTerminal, Terminal}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
@@ -129,7 +129,7 @@ class ArrivalsGraphStage(name: String = "",
         case LiveBaseArrivals =>
           updateArrivalsSource(liveBaseArrivals, filteredArrivals)
           val missingTerminals = liveBaseArrivals.count {
-            case (_, a) if a.Terminal == "No Terminal" => true
+            case (_, a) if a.Terminal == InvalidTerminal => true
             case _ => false
           }
           log.info(s"Got $missingTerminals Cirium Arrivals with no terminal")
@@ -318,7 +318,7 @@ class ArrivalsGraphStage(name: String = "",
     }
   }
 
-  val domesticPorts = Seq(
+  val domesticPorts: Seq[PortCode] = Seq(
     "ABB", "ABZ", "ACI", "ADV", "ADX", "AYH",
     "BBP", "BBS", "BEB", "BEQ", "BEX", "BFS", "BHD", "BHX", "BLK", "BLY", "BOH", "BOL", "BQH", "BRF", "BRR", "BRS", "BSH", "BUT", "BWF", "BWY", "BYT", "BZZ",
     "CAL", "CAX", "CBG", "CEG", "CFN", "CHE", "CLB", "COL", "CRN", "CSA", "CVT", "CWL",
@@ -342,5 +342,5 @@ class ArrivalsGraphStage(name: String = "",
     "UHF", "ULL", "UNT", "UPV",
     "WAT", "WEM", "WEX", "WFD", "WHS", "WIC", "WOB", "WRY", "WTN", "WXF",
     "YEO"
-  )
+  ).map(PortCode(_))
 }
