@@ -35,9 +35,13 @@ object FlightComponents {
   def paxComponentTitle(flight: Arrival): String = {
     val max: String = flight.MaxPax.filter(_ > 0).map(_.toString).getOrElse("n/a")
     val portDirectPax: Int = flight.ActPax.getOrElse(0) - flight.TranPax.getOrElse(0)
+    val apiPax = flight.ApiPax match {
+      case Some(api) =>
+        s"\nAPI: $api"
+      case _ => ""
+    }
     s"""|Pax: $portDirectPax (${flight.ActPax.getOrElse(0)} - ${flight.TranPax.getOrElse(0)} transfer)
-        |Max: $max
-        |${flight.ApiPax.map{api => s"API: ${api}"}}he""".stripMargin
+        |Max: $max $apiPax""".stripMargin
   }
 
   def maxCapacityLine(maxFlightPax: Int, flight: Arrival): TagMod = {
