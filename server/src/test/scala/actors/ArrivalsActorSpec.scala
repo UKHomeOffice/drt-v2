@@ -1,6 +1,5 @@
 package actors
 
-import controllers.ArrivalGenerator
 import drt.shared.Terminals.T1
 import drt.shared.{Arrival, PortCode, UniqueArrival}
 import org.specs2.mutable.Specification

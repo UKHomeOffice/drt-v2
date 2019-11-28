@@ -264,7 +264,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     portStateProbe.fishForMessage(2 seconds) {
       case DeskRecMinutes(drms) =>
         drms.exists {
-          case DeskRecMinute(T1, Queues.EeaDesk, m, p, w, _, _) => m == noonMillis && p > 0
+          case DeskRecMinute(T1, Queues.EeaDesk, m, p, _, _, _) => m == noonMillis && p > 0
           case _ => false
         }
       case _ => false
@@ -276,11 +276,11 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     portStateProbe.fishForMessage(2 seconds) {
       case DeskRecMinutes(drms) =>
         val zeroAtNoon = drms.exists {
-          case DeskRecMinute(T1, Queues.EeaDesk, m, p, w, _, _) => m == noonMillis && p == 0
+          case DeskRecMinute(T1, Queues.EeaDesk, m, p, _, _, _) => m == noonMillis && p == 0
           case _ => false
         }
         val nonZeroAtOne = drms.exists {
-          case DeskRecMinute(T1, Queues.EeaDesk, m, p, w, _, _) => m == onePmMillis && p > 0
+          case DeskRecMinute(T1, Queues.EeaDesk, m, p, _, _, _) => m == onePmMillis && p > 0
           case _ => false
         }
         zeroAtNoon && nonZeroAtOne

@@ -1,6 +1,5 @@
-import Ports.Lhr
-import drt.shared.{PortCode, Queues, TQM}
 import drt.shared.Terminals.{T2, T3, T4, T5}
+import drt.shared.{PortCode, Queues, TQM}
 import org.specs2.mutable.Specification
 import services.graphstages.Crunch.LoadMinute
 

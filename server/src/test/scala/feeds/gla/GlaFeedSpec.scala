@@ -135,9 +135,6 @@ class GlaFeedSpec extends SpecificationLike {
 
   "Given some valid GLA Feed Json I should get back a valid Arrival object" >> {
     val mockFeed = mockFeedWithResponse(firstJsonExample)
-    val arrivalResult = Await.result(mockFeed.requestArrivals(), 1 second) match {
-      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival
-    }
 
     val expected = Arrival(
       Operator = None,
@@ -164,7 +161,9 @@ class GlaFeedSpec extends SpecificationLike {
       CarrierScheduled = None
     )
 
-    arrivalResult === expected
+    Await.result(mockFeed.requestArrivals(), 1 second) match {
+      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival === expected
+    }
   }
 
   val firstJsonExample: String =
@@ -196,9 +195,6 @@ class GlaFeedSpec extends SpecificationLike {
 
   "Given a different arrival with valid GLA Feed Json I should get back a valid Arrival object" >> {
     val mockFeed = mockFeedWithResponse(secondJsonExample)
-    val arrivalResult = Await.result(mockFeed.requestArrivals(), 1 second) match {
-      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival
-    }
 
     val expected = Arrival(
       Operator = None,
@@ -225,7 +221,9 @@ class GlaFeedSpec extends SpecificationLike {
       CarrierScheduled = None
     )
 
-    arrivalResult === expected
+    Await.result(mockFeed.requestArrivals(), 1 second) match {
+      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival === expected
+    }
   }
 
   val secondJsonExample: String =
@@ -258,9 +256,6 @@ class GlaFeedSpec extends SpecificationLike {
 
   "Given a different arrival with only required JSON fields then I should still get an arrival object with those fields" >> {
     val mockFeed = mockFeedWithResponse(requiredFieldsOnlyJson)
-    val arrivalResult = Await.result(mockFeed.requestArrivals(), 1 second) match {
-      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival
-    }
 
     val expected = Arrival(
       Operator = None,
@@ -287,7 +282,9 @@ class GlaFeedSpec extends SpecificationLike {
       CarrierScheduled = None
     )
 
-    arrivalResult === expected
+    Await.result(mockFeed.requestArrivals(), 1 second) match {
+      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival === expected
+    }
   }
 
   val requiredFieldsOnlyJson: String =

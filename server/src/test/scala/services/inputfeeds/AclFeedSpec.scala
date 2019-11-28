@@ -23,7 +23,7 @@ class AclFeedSpec extends CrunchTestLike {
   val lgwTerminalMapping: Terminal => Terminal = (t: Terminal) => Map[Terminal, Terminal](T2 -> S).getOrElse(t, InvalidTerminal)
 
   "ACL feed failures" >> {
-    val aclFeed = AclFeed("nowhere.nowhere", "badusername", "badpath", PortCode("BAD"), (t: Terminal) => T1)
+    val aclFeed = AclFeed("nowhere.nowhere", "badusername", "badpath", PortCode("BAD"), (_: Terminal) => T1)
 
     val result = aclFeed.requestArrivals.getClass
 

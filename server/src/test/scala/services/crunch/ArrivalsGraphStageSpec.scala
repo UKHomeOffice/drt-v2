@@ -112,6 +112,29 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       success
     }
 
+    "Given 2 arrivals, one international and the other domestic " +
+      "I should only see the international arrival in the port state" in new Context {
+      val scheduled = "2017-01-01T10:25Z"
+
+      private val arrivalInt: Arrival = ArrivalGenerator.arrival(iata = "BA0002", origin = PortCode("JFK"), schDt = scheduled, actPax = Option(10), feedSources = Set(AclFeedSource))
+      private val arrivalDom: Arrival = ArrivalGenerator.arrival(iata = "BA0003", origin = PortCode("BHX"), schDt = scheduled, actPax = Option(10), feedSources = Set(AclFeedSource))
+
+      val aclFlight = Flights(List(arrivalInt, arrivalDom))
+
+      offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlight))
+
+      crunch.portStateTestProbe.fishForMessage(5 seconds) {
+        case ps: PortState =>
+          val intExists = ps.flights.contains(UniqueArrival(arrivalInt))
+          val domDoesNotExist = !ps.flights.contains(UniqueArrival(arrivalDom))
+          intExists && domDoesNotExist
+      }
+
+      crunch.liveArrivalsInput.complete()
+
+      success
+    }
+
   }
 
 }

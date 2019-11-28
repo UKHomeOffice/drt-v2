@@ -9,10 +9,10 @@ import scala.collection.mutable
 class RestorerWithLegacySpec extends Specification {
   def newRestorer = new RestorerWithLegacy[Int, MyIndex, MyItem]
 
-  private val item1 = new MyItem("1", 1)
-  private val item2 = new MyItem("2", 2)
-  private val item3 = new MyItem("3", 3)
-  private val item4 = new MyItem("4", 4)
+  private val item1 = new MyItem("1")
+  private val item2 = new MyItem("2")
+  private val item3 = new MyItem("3")
+  private val item4 = new MyItem("4")
 
   "Given one update and no removals " +
     "The state after tidyUp() should have an empty legacyMap and the one item" >> {
@@ -59,6 +59,6 @@ class MyIndex(val name: String) extends WithLegacyUniqueId[Int, MyIndex] {
   override def compare(that: MyIndex): Int = this.name.compare(that.name)
 }
 
-class MyItem(name: String, number: Int) extends WithUnique[MyIndex] {
+class MyItem(name: String) extends WithUnique[MyIndex] {
   override val unique: MyIndex = new MyIndex(name)
 }

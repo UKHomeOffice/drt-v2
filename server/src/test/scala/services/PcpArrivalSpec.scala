@@ -2,7 +2,7 @@ package services
 
 import controllers.ArrivalGenerator.arrival
 import drt.shared.Terminals.{T1, Terminal}
-import drt.shared.{Arrival, MilliDate, Terminals}
+import drt.shared.{Arrival, MilliDate}
 import org.specs2.mutable.SpecificationLike
 
 class PcpArrivalSpec extends SpecificationLike {

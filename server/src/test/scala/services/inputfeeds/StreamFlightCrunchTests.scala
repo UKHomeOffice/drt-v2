@@ -121,16 +121,3 @@ object TestCrunchConfig {
     res
   }
 }
-
-class SplitsRequestRecordingCrunchActor(hours: Int, val airportConfig: AirportConfig, timeProvider: () => DateTime = () => DateTime.now(), _splitRatioProvider: Arrival => Option[SplitRatios])
-  extends AirportConfigHelpers {
-
-  def splitRatioProvider: Arrival => Option[SplitRatios] = _splitRatioProvider
-
-  def procTimesProvider(terminal: Terminal)(paxTypeAndQueue: PaxTypeAndQueue): Double = 1d
-
-  def pcpArrivalTimeProvider(flight: Arrival): MilliDate = MilliDate(flight.Scheduled)
-
-  def flightPaxTypeAndQueueCountsFlow(flight: Arrival): IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] =
-    PaxLoadCalculator.flightPaxFlowProvider(splitRatioProvider, ArrivalHelper.bestPax)(flight)
-}

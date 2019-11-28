@@ -1,7 +1,7 @@
 package drt.client.services
 
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.Terminals.{T1, Terminal}
+import drt.shared.Terminals.T1
 import drt.shared._
 import utest._
 

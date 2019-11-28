@@ -18,12 +18,11 @@ import org.specs2.mutable.SpecificationLike
 import services.SDate
 import uk.co.bhx.online.flightinformation._
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
-class BHXLegacyFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.parseMap(
-  Map(
-    "feeds.bhx.soap.endPointUrl" -> ""
-  )))) with SpecificationLike with Mockito {
+class BHXLegacyFeedSpec extends TestKit(
+  ActorSystem("testActorSystem", ConfigFactory.parseMap(Map("feeds.bhx.soap.endPointUrl" -> "").asJava)))
+  with SpecificationLike with Mockito {
   sequential
   isolated
 

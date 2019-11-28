@@ -14,7 +14,6 @@ object ArrivalGenerator {
                  schDt: String = "",
                  actPax: Option[Int] = None,
                  maxPax: Option[Int] = None,
-                 lastKnownPax: Option[Int] = None,
                  terminal: Terminal = Terminal("T1"),
                  origin: PortCode = PortCode(""),
                  operator: Option[String] = None,

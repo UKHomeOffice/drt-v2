@@ -131,7 +131,7 @@ object FlightsTableTests extends TestSuite {
         }
 
         "ArrivalsTableComponent has a hook for a timeline column" - {
-          val timelineComponent: Arrival => VdomNode = (f: Arrival) => <.span("herebecallback")
+          val timelineComponent: Arrival => VdomNode = (_: Arrival) => <.span("herebecallback")
           val expected =
             <.div(
               <.div(^.id := "toStick", ^.className := "container sticky",

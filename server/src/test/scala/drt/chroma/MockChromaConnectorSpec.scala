@@ -5,15 +5,14 @@ import akka.http.scaladsl.model._
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
 import com.typesafe.config.{Config, ConfigFactory}
-import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaLiveFlight, ChromaToken}
+import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.http.WithSendAndReceive
 import drt.server.feeds.chroma.ChromaLiveFeed
 import org.specs2.matcher.MatchResult
 import server.feeds.ArrivalsFeedFailure
 
 import scala.collection.JavaConverters._
-import scala.collection.immutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.language.reflectiveCalls

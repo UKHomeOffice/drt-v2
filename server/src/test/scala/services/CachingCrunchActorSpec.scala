@@ -19,7 +19,7 @@ import scala.concurrent.duration._
 
 case object WasCalled
 
-class TestActorProbe(pointInTime: SDateLike, queues: Map[Terminal, Seq[Queue]], incrementer: () => Unit) extends Actor {
+class TestActorProbe(pointInTime: SDateLike, incrementer: () => Unit) extends Actor {
 
   def receive: Receive = {
     case _: GetTerminalCrunch =>
@@ -40,7 +40,7 @@ class CachingCrunchActorSpec extends TestKit(ActorSystem("CacheTests")) with Spe
   "Should pass a message onto the crunch actor and return the response" >> {
 
     def inc() = {}
-    val query = CachableActorQuery(Props(classOf[TestActorProbe], SDate("2017-06-01T20:00:00Z"), Map(), inc _), GetTerminalCrunch(T1))
+    val query = CachableActorQuery(Props(classOf[TestActorProbe], SDate("2017-06-01T20:00:00Z"), inc _), GetTerminalCrunch(T1))
     val resultFuture = cacheActorRef.ask(query)
 
     val result = Await.result(resultFuture, 1 second)
@@ -55,7 +55,7 @@ class CachingCrunchActorSpec extends TestKit(ActorSystem("CacheTests")) with Spe
       called +=1
     }
 
-    val query = CachableActorQuery(Props(classOf[TestActorProbe], SDate("2017-06-01T20:00:00Z"), Map(), inc _), GetTerminalCrunch(T1))
+    val query = CachableActorQuery(Props(classOf[TestActorProbe], SDate("2017-06-01T20:00:00Z"), inc _), GetTerminalCrunch(T1))
 
     val resF2 = cacheActorRef.ask(query)
 
@@ -76,11 +76,11 @@ class CachingCrunchActorSpec extends TestKit(ActorSystem("CacheTests")) with Spe
       called +=1
     }
 
-    val query1 = CachableActorQuery(Props(classOf[TestActorProbe], SDate("2017-06-01T20:00:00Z"), Map(), inc _), GetTerminalCrunch(T1))
+    val query1 = CachableActorQuery(Props(classOf[TestActorProbe], SDate("2017-06-01T20:00:00Z"), inc _), GetTerminalCrunch(T1))
     val resF1 = cacheActorRef.ask(query1)
     val res1 = Await.result(resF1, 1 second)
 
-    val query2 = CachableActorQuery(Props(classOf[TestActorProbe], SDate("2017-06-01T20:05:00Z"), Map(), inc _), GetTerminalCrunch(T1))
+    val query2 = CachableActorQuery(Props(classOf[TestActorProbe], SDate("2017-06-01T20:05:00Z"), inc _), GetTerminalCrunch(T1))
     val resF2 = cacheActorRef.ask(query2)
     val res2 = Await.result(resF2, 1 second)
 

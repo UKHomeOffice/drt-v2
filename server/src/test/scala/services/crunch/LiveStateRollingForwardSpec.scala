@@ -74,10 +74,6 @@ class LiveStateRollingForwardSpec extends CrunchTestLike {
     success
   }
 
-  private def getState(actor: AskableActorRef): PortState = {
-    Await.result(actor.ask(GetState)(2 seconds), 2 seconds).asInstanceOf[Option[PortState]].get
-  }
-
   private def stateContainsArrivals(probe: TestProbe, arrivals: Seq[Arrival]) = probe.fishForMessage(2 seconds) {
     case ps: PortState => arrivals.foldLeft(true) { case (soFar, a) => soFar && ps.flights.contains(a.unique) }
   }

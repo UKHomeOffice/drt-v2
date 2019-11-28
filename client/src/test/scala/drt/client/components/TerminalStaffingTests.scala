@@ -2,11 +2,11 @@ package drt.client.components
 
 import java.util.UUID
 
+import drt.client.components.TerminalStaffing.movementsForDay
 import drt.client.services.JSDateConversions._
 import drt.shared.StaffMovement
+import drt.shared.Terminals.T1
 import utest.{TestSuite, _}
-import TerminalStaffing.movementsForDay
-import drt.shared.Terminals.{T1, Terminal}
 
 import scala.collection.immutable._
 
