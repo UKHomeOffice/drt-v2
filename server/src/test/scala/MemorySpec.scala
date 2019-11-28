@@ -15,17 +15,6 @@ class MemorySpec extends Specification {
   val kb = 1024
   val mb = 1024 * 1024
 
-  "Hello" >> {
-    skipped("exploratory")
-    val portCodes = 1 to 1000000 map { _ =>
-      PortCode("a very very long string that is the port code to see if it takes up proportionally more memory")
-    }
-
-    Thread.sleep(60000)
-
-    success
-  }
-
   "Given a Map of stuff " +
     "When I transform it to a Set " +
     "How much memory allocation is triggered" >> {
