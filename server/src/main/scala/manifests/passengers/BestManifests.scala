@@ -1,7 +1,7 @@
 package manifests.passengers
 
 import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
-import drt.shared.{PortCode, SDateLike, VoyageNumber, VoyageNumberLike}
+import drt.shared.{PortCode, SDateLike, VoyageNumberLike}
 import manifests.UniqueArrivalKey
 import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocType}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}

@@ -155,7 +155,6 @@ object AclFeed {
     zipEntryOption match {
       case None => Stream.empty
       case Some(zipEntry) =>
-        val name: String = zipEntry.getName
         val entry: String = getZipEntry(unzippedStream)
         val maybeEntry1: Option[ZipEntry] = Option(unzippedStream.getNextEntry)
         entry #::

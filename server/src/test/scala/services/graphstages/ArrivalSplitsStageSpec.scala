@@ -31,7 +31,6 @@ object TestableArrivalSplits {
       name = "",
       optionalInitialFlights = None,
       splitsCalculator = splitsCalculator,
-      groupFlightsByCodeShares = groupByCodeShares,
       expireAfterMillis = oneDayMillis,
       now = now,
       useApiPaxNos = true

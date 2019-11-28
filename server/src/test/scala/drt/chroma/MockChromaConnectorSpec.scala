@@ -36,7 +36,7 @@ class MockChromaConnectorSpec extends AkkaStreamTestKitSpecificationLike {
       override lazy val config: Config = mockConfig
       private val pipeline = tokenPipeline _
 
-      def sendAndReceive: HttpRequest => Future[HttpResponse] = (req: HttpRequest) => Future {
+      def sendAndReceive: HttpRequest => Future[HttpResponse] = (_: HttpRequest) => Future {
         HttpResponse().withEntity(
           HttpEntity(ContentTypes.`application/json`,
             """{"access_token":"LIk79Cj6NLssRcWePFxkJMIhpmSbe5gBGqOOxNIuxWNVd7JWsWtoOqAZDnM5zADvkbdIJ0BHkJgaya2pYyu8yH2qb8zwXA4TxZ0Jq0JwhgqulMgcv1ottnrUA1U61pu1TNFN5Bm08nvqZpYtwCWfGNGbxdrol-leZry_UD8tgxyZLfj45rgzmxm2u2DBN8TFpB_uG6Pb1B2XHM3py6HgYAmqSTjTK060PyNWTp_czsU",
@@ -59,7 +59,7 @@ class MockChromaConnectorSpec extends AkkaStreamTestKitSpecificationLike {
     val fetcher = new ChromaFetcher(ChromaLive, ChromaFlightMarshallers.live) with WithSendAndReceive {
       override lazy val config: Config = mockConfig
 
-      def sendAndReceive: HttpRequest => Future[HttpResponse] = (req: HttpRequest) => Future {
+      def sendAndReceive: HttpRequest => Future[HttpResponse] = (_: HttpRequest) => Future {
         HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`,"""bad json here""".stripMargin))
       }
     }

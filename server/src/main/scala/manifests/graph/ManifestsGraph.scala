@@ -6,14 +6,12 @@ import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
 import akka.stream.stage.GraphStage
-import drt.shared.{Arrival, ArrivalKey, PortCode, VoyageNumber}
+import drt.shared.{Arrival, ArrivalKey, PortCode}
 import manifests.ManifestLookupLike
 import manifests.actors.RegisteredArrivals
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-
-import scala.util.Try
 
 object ManifestsGraph {
   val log: Logger = LoggerFactory.getLogger(getClass)

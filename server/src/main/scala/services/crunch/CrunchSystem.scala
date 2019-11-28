@@ -128,7 +128,6 @@ object CrunchSystem {
       name = props.logLabel,
       optionalInitialFlights = initialFlightsWithSplits,
       splitsCalculator = manifests.queues.SplitsCalculator(ptqa, props.airportConfig.terminalPaxSplits),
-      groupFlightsByCodeShares = groupFlightsByCodeShares,
       expireAfterMillis = props.expireAfterMillis,
       now = props.now,
       useApiPaxNos = props.useApiPaxNos
@@ -159,8 +158,6 @@ object CrunchSystem {
       crunchPeriodStartMillis = crunchStartDateProvider,
       minutesToCrunch = props.minutesToCrunch)
 
-    val liveStateDaysAhead = 2
-
     val crunchSystem = RunnableCrunch(
       props.arrivalsForecastBaseSource, props.arrivalsForecastSource, props.arrivalsLiveBaseSource, props.arrivalsLiveSource,
       props.manifestsLiveSource, props.manifestResponsesSource,
@@ -173,7 +170,7 @@ object CrunchSystem {
       props.voyageManifestsActor, props.manifestRequestsSink,
       props.portStateActor,
       props.actors("aggregated-arrivals").actorRef,
-      crunchStartDateProvider, props.now, props.airportConfig.queues, liveStateDaysAhead, forecastMaxMillis, props.stageThrottlePer
+      forecastMaxMillis, props.stageThrottlePer
     )
 
     val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, shiftsIn, fixedPointsIn, movementsIn, simloadsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS) = crunchSystem.run

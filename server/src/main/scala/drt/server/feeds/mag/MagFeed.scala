@@ -68,7 +68,7 @@ case class MagFeed(key: String, claimIss: String, claimRole: String, claimSub: S
     Source(0 to 1000 by 100)
       .mapAsync(parallelism = 10) { pageFrom =>
         val end = start.addHours(hoursToAdd = 36)
-        requestArrivalsPage(start, end, pageFrom, size = 100)
+        requestArrivalsPage(start, pageFrom, size = 100)
       }
       .mapConcat {
         case Success(magArrivals) =>
@@ -87,7 +87,7 @@ case class MagFeed(key: String, claimIss: String, claimRole: String, claimSub: S
           ArrivalsFeedFailure("No arrivals records received", now())
       }
 
-  def requestArrivalsPage(start: SDateLike, end: SDateLike, from: Int, size: Int): Future[Try[List[MagArrival]]] = {
+  def requestArrivalsPage(start: SDateLike, from: Int, size: Int): Future[Try[List[MagArrival]]] = {
     val end = start.addHours(hoursToAdd = 24)
     val uri = makeUri(start, end, from, size)
 

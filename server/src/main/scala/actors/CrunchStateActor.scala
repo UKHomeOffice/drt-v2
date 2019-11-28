@@ -24,7 +24,6 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
                        now: () => SDateLike,
                        expireAfterMillis: MillisSinceEpoch,
                        purgePreviousSnapshots: Boolean,
-                       acceptFullStateUpdates: Boolean,
                        forecastMaxMillis: () => MillisSinceEpoch) extends PersistentActor with RecoveryActorLike with PersistentDrtActor[PortStateMutable] {
   override def persistenceId: String = name
 
@@ -33,9 +32,9 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
 
   val log: Logger = LoggerFactory.getLogger(s"$name-$getClass")
 
-  def logInfo(msg: String, level: String = "info"): Unit = if (name.isEmpty) log.info(msg) else log.info(s"$name $msg")
+  def logInfo(msg: String): Unit = if (name.isEmpty) log.info(msg) else log.info(s"$name $msg")
 
-  def logDebug(msg: String, level: String = "info"): Unit = if (name.isEmpty) log.debug(msg) else log.debug(s"$name $msg")
+  def logDebug(msg: String): Unit = if (name.isEmpty) log.debug(msg) else log.debug(s"$name $msg")
 
   val restorer = new RestorerWithLegacy[Int, UniqueArrival, ApiFlightWithSplits]
 
@@ -77,7 +76,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
     case psd: PortStateDiff =>
       if (!psd.isEmpty) {
         val diffMsg = diffMessage(psd)
-        applyDiff(psd, Long.MaxValue)
+        applyDiff(psd)
         persistAndMaybeSnapshot(diffMsg)
       }
 
@@ -136,7 +135,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
     UniqueArrival(uam.getNumber, uam.getTerminalName, uam.getScheduled)
   }
 
-  def applyDiff(cdm: PortStateDiff, maxMillis: MillisSinceEpoch): Unit = {
+  def applyDiff(cdm: PortStateDiff): Unit = {
     val nowMillis = now().millisSinceEpoch
     state.applyFlightsWithSplitsDiff(cdm.flightRemovals.keys.toSeq, cdm.flightUpdates, nowMillis)
     state.applyCrunchDiff(cdm.crunchMinuteUpdates, nowMillis)

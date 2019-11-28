@@ -22,8 +22,7 @@ class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map
           UpdateAirportInfos(codeToInfo)
         }
         .recoverWith {
-          case t =>
-            Future(RetryActionAfter(GetAirportConfig, PollDelay.recoveryDelay))
+          case _ => Future(RetryActionAfter(GetAirportConfig, PollDelay.recoveryDelay))
         }))
     case UpdateAirportInfos(infos) =>
       val infosReady = infos.map(kv => (kv._1, Ready(kv._2)))

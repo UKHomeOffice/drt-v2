@@ -1,7 +1,5 @@
 package services.crunch
 
-import actors.GetState
-import akka.pattern.AskableActorRef
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
@@ -10,7 +8,6 @@ import drt.shared.{Arrival, PortCode, PortState, SDateLike}
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 
-import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class LiveStateRollingForwardSpec extends CrunchTestLike {

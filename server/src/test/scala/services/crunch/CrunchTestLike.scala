@@ -37,8 +37,8 @@ class CrunchStateMockActor extends Actor {
   }
 }
 
-class PortStateTestActor(liveActor: ActorRef, forecastActor: ActorRef, airportConfig: AirportConfig, probe: ActorRef, expireAfterMillis: Long, now: () => SDateLike, liveDaysAhead: Int)
-  extends PortStateActor(liveActor, forecastActor, airportConfig, expireAfterMillis, now, liveDaysAhead) {
+class PortStateTestActor(liveActor: ActorRef, forecastActor: ActorRef, probe: ActorRef, now: () => SDateLike, liveDaysAhead: Int)
+  extends PortStateActor(liveActor, forecastActor, now, liveDaysAhead) {
   override def splitDiffAndSend(diff: PortStateDiff): Unit = {
     super.splitDiffAndSend(diff)
     probe ! state.immutable
@@ -46,8 +46,8 @@ class PortStateTestActor(liveActor: ActorRef, forecastActor: ActorRef, airportCo
 }
 
 object PortStateTestActor {
-  def props(liveActor: ActorRef, forecastActor: ActorRef, airportConfig: AirportConfig, probe: ActorRef, expireAfterMillis: Long, now: () => SDateLike, liveDaysAhead: Int): Props =
-    Props(new PortStateTestActor(liveActor, forecastActor, airportConfig, probe, expireAfterMillis, now, liveDaysAhead))
+  def props(liveActor: ActorRef, forecastActor: ActorRef, probe: ActorRef, now: () => SDateLike, liveDaysAhead: Int) =
+    Props(new PortStateTestActor(liveActor, forecastActor, probe, now, liveDaysAhead))
 }
 
 case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
@@ -153,7 +153,7 @@ class CrunchTestLike
   }
 
   def createPortStateActor(testProbe: TestProbe, now: () => SDateLike): ActorRef = {
-    system.actorOf(PortStateTestActor.props(crunchStateMockActor, crunchStateMockActor, airportConfig, testProbe.ref, 24 * 360000L, now, 100), name = "port-state-actor")
+    system.actorOf(PortStateTestActor.props(crunchStateMockActor, crunchStateMockActor, testProbe.ref, now, 100), name = "port-state-actor")
   }
 
   def testProbe(name: String) = TestProbe(name = name)

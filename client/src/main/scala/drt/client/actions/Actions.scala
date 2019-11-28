@@ -6,7 +6,6 @@ import diode.Action
 import drt.client.components.StaffAdjustmentDialogueState
 import drt.client.services.ViewMode
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.Terminals.Terminal
 import drt.shared._

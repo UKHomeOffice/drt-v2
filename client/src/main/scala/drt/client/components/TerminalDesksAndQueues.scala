@@ -8,7 +8,6 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.{SPACircuit, ViewMode}
 import drt.shared.CrunchApi.StaffMinute
 import drt.shared.Queues.{EGate, Queue}
-import drt.shared.Terminals.Terminal
 import drt.shared._
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -135,7 +134,7 @@ object TerminalDesksAndQueues {
         backendScope.modState(_.copy(showActuals = newValue))
       }
 
-      def toggleViewType(newViewType: ViewType) = (e: ReactEventFromInput) => {
+      def toggleViewType(newViewType: ViewType) = (_: ReactEventFromInput) => {
         GoogleEventTracker.sendEvent(s"$terminal", "Desks & Queues", newViewType.toString)
         props.router.set(
           props.terminalPageTab.withUrlParameters(UrlViewType(Option(newViewType)))
@@ -256,7 +255,6 @@ object StickyTableHeader {
 
   def handleStickyClass(top: Double,
                         bottom: Double,
-                        mainWidth: Double,
                         elements: NodeListSeq[Element],
                         toStick: Element): Unit = {
     elements.foreach(sticky => {
@@ -282,12 +280,11 @@ object StickyTableHeader {
 
     val stickies: NodeListSeq[Element] = dom.document.querySelectorAll(selector).asInstanceOf[NodeListOf[Element]]
 
-    dom.document.addEventListener("scroll", (e: Event) => {
+    dom.document.addEventListener("scroll", (_: Event) => {
       val top = documentScrollTop
       val bottom = documentScrollHeight
       Option(dom.document.querySelector("#sticky-body")).foreach(stickyBody => {
-        val mainWidth = stickyBody.getBoundingClientRect().width
-        handleStickyClass(top, bottom, mainWidth, stickies, dom.document.querySelector("#toStick"))
+        handleStickyClass(top, bottom, stickies, dom.document.querySelector("#toStick"))
       })
     })
 

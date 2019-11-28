@@ -27,7 +27,6 @@ class CrunchStateReadActor(snapshotInterval: Int,
     now = () => pointInTime,
     expireAfterMillis = expireAfterMillis,
     purgePreviousSnapshots = false,
-    acceptFullStateUpdates = false,
     forecastMaxMillis = () => endMillis) {
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {

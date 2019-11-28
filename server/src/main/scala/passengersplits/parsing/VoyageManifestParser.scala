@@ -1,7 +1,8 @@
 package passengersplits.parsing
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{ArrivalKey, EventType, PortCode, SDateLike, VoyageNumber, VoyageNumberLike}
+import drt.shared.EventTypes.InvalidEventType
+import drt.shared._
 import org.joda.time.DateTime
 import services.SDate.JodaSDate
 import spray.json.{DefaultJsonProtocol, JsString, JsValue, RootJsonFormat}
@@ -76,6 +77,7 @@ object VoyageManifestParser {
 
       def read(value: JsValue): EventType = value match {
         case str: JsString => EventType(str.value)
+        case _ => InvalidEventType
       }
     }
     implicit object PortCodeJsonFormat extends RootJsonFormat[PortCode] {
@@ -83,6 +85,7 @@ object VoyageManifestParser {
 
       def read(value: JsValue): PortCode = value match {
         case str: JsString => PortCode(str.value)
+        case _ => PortCode("")
       }
     }
     implicit object VoyageNumberJsonFormat extends RootJsonFormat[VoyageNumberLike] {
@@ -90,6 +93,7 @@ object VoyageManifestParser {
 
       def read(value: JsValue): VoyageNumberLike = value match {
         case str: JsString => VoyageNumber(str.value)
+        case unexpected => InvalidVoyageNumber(new Exception(s"unexpected json value: $unexpected"))
       }
     }
     implicit val passengerInfoResponseConverter: RootJsonFormat[VoyageManifest] = jsonFormat8(VoyageManifest)

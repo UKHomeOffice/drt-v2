@@ -126,12 +126,12 @@ object TestActors {
   }
 
   object TestPortStateActor {
-    def props(liveStateActor: AskableActorRef, forecastStateActor: AskableActorRef, airportConfig: AirportConfig, expireAfterMillis: Long, now: () => SDateLike, liveDaysAhead: Int): Props =
-      Props(new TestPortStateActor(liveStateActor, forecastStateActor, airportConfig, expireAfterMillis, now, 2))
+    def props(liveStateActor: AskableActorRef, forecastStateActor: AskableActorRef, now: () => SDateLike, liveDaysAhead: Int) =
+      Props(new TestPortStateActor(liveStateActor, forecastStateActor, now, liveDaysAhead))
   }
 
-  case class TestPortStateActor(live: AskableActorRef, forecast: AskableActorRef, airportConfig: AirportConfig, expireAfterMillis: Long, now: () => SDateLike, liveDaysAhead: Int)
-    extends PortStateActor(live, forecast, airportConfig, expireAfterMillis, now, liveDaysAhead) {
+  case class TestPortStateActor(live: AskableActorRef, forecast: AskableActorRef, now: () => SDateLike, liveDaysAhead: Int)
+    extends PortStateActor(live, forecast, now, liveDaysAhead) {
     def reset: Receive = {
       case ResetActor => state.clear()
     }
@@ -153,7 +153,6 @@ object TestActors {
       now = now,
       expireAfterMillis = expireAfterMillis,
       purgePreviousSnapshots = purgePreviousSnapshots,
-      acceptFullStateUpdates = false,
       forecastMaxMillis = () => now().addDays(2).millisSinceEpoch) {
 
     def reset: Receive = {

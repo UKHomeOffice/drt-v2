@@ -8,9 +8,9 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.ForecastPeriodWithHeadlines
-import drt.shared.Terminals.Terminal
 import drt.shared._
-import japgolly.scalajs.react.ScalaComponent
+import japgolly.scalajs.react.{CtorType, ScalaComponent}
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 
@@ -37,7 +37,7 @@ object TerminalComponent {
                            featureFlags: Pot[Map[String, Boolean]]
                           ) extends UseValueEq
 
-  val component = ScalaComponent.builder[Props]("Terminal")
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Terminal")
     .render_P(props => {
       val modelRCP = SPACircuit.connect(model => TerminalModel(
         model.portStatePot,

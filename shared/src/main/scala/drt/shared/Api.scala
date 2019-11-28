@@ -26,11 +26,6 @@ object DeskAndPaxTypeCombinations {
 }
 
 case class MilliDate(millisSinceEpoch: MillisSinceEpoch) extends Ordered[MilliDate] with WithTimeAccessor {
-  override def equals(o: scala.Any): Boolean = o match {
-    case MilliDate(millis) => millis == millisSinceEpoch
-    case _ => false
-  }
-
   override def compare(that: MilliDate): Int = millisSinceEpoch.compare(that.millisSinceEpoch)
 
   override def timeValue: MillisSinceEpoch = millisSinceEpoch
@@ -200,9 +195,14 @@ case class UniqueArrival(number: Int, terminal: Terminal, scheduled: MillisSince
     with WithTimeAccessor
     with WithTerminal[UniqueArrival] {
 
-  lazy val comparisonValue: Long = scheduled + (16384 * terminal.orderingValue) + number
-
-  override def compare(that: UniqueArrival): Int = this.comparisonValue.compareTo(that.comparisonValue)
+  override def compare(that: UniqueArrival): Int =
+    scheduled.compare(that.scheduled) match {
+      case 0 => terminal.compare(that.terminal) match {
+        case 0 => number.compare(that.number)
+        case c => c
+      }
+      case c => c
+    }
 
   override def timeValue: MillisSinceEpoch = scheduled
 
@@ -228,9 +228,13 @@ object Uniqueness {
 }
 
 case class CodeShareKeyOrderedBySchedule(scheduled: Long, terminal: Terminal, origin: PortCode) extends Ordered[CodeShareKeyOrderedBySchedule] with WithTimeAccessor {
-  lazy val comparisonValue: Int = (scheduled / 60000).toInt + 16384 * terminal.orderingValue + Uniqueness.stringHash(origin.toString)
-
-  override def compare(that: CodeShareKeyOrderedBySchedule): Int = comparisonValue.compareTo(that.comparisonValue)
+  override def compare(that: CodeShareKeyOrderedBySchedule): Int = scheduled.compare(that.scheduled) match {
+    case 0 => terminal.compare(that.terminal) match {
+      case 0 => origin.compare(that.origin)
+      case c => c
+    }
+    case c => c
+  }
 
   override def timeValue: MillisSinceEpoch = scheduled
 }
@@ -246,13 +250,18 @@ object CodeShareKeyOrderedBySchedule {
 }
 
 case class CodeShareKeyOrderedByDupes[A](scheduled: Long, terminal: Terminal, origin: PortCode, arrivalKeys: Set[A]) extends Ordered[CodeShareKeyOrderedByDupes[A]] {
-  lazy val codeShareKey = CodeShareKey(scheduled, terminal, origin)
+  private val dupeCountReversed: Int = 100 - arrivalKeys.size
 
-  lazy val comparisonValue: Long = (Int.MaxValue.toLong * (100 - arrivalKeys.size)) + (scheduled / 60000).toInt + 16384 * terminal.orderingValue + Uniqueness.stringHash(origin.toString)
-
-  override def equals(o: scala.Any): Boolean = codeShareKey.equals(o)
-
-  override def compare(that: CodeShareKeyOrderedByDupes[A]): Int = comparisonValue.compareTo(that.comparisonValue)
+  override def compare(that: CodeShareKeyOrderedByDupes[A]): Int = dupeCountReversed.compare(that.dupeCountReversed) match {
+    case 0 => scheduled.compare(that.scheduled) match {
+      case 0 => terminal.compare(that.terminal) match {
+        case 0 => origin.compare(that.origin)
+        case c => c
+      }
+      case c => c
+    }
+    case c => c
+  }
 }
 
 object MinuteHelper {
@@ -267,7 +276,7 @@ sealed trait VoyageNumberLike {
   def numeric: Int
 }
 
-case class VoyageNumber(numeric: Int) extends VoyageNumberLike {
+case class VoyageNumber(numeric: Int) extends VoyageNumberLike with Ordered[VoyageNumber] {
   override def toString: String = numeric.toString
 
   def toPaddedString: String = {
@@ -281,6 +290,8 @@ case class VoyageNumber(numeric: Int) extends VoyageNumberLike {
     }
     prefix + string
   }
+
+  override def compare(that: VoyageNumber): Int = numeric.compare(that.numeric)
 }
 
 case class InvalidVoyageNumber(exception: Throwable) extends VoyageNumberLike {
@@ -438,9 +449,14 @@ object FeedSource {
 }
 
 case class ArrivalKey(origin: PortCode, voyageNumber: VoyageNumber, scheduled: Long) extends Ordered[ArrivalKey] with WithTimeAccessor {
-  lazy val comparisonValue: MillisSinceEpoch = scheduled + 16384 * Uniqueness.stringHash(origin.toString) + voyageNumber.numeric
-
-  override def compare(that: ArrivalKey): Int = this.comparisonValue.compareTo(that.comparisonValue)
+  override def compare(that: ArrivalKey): Int =
+    scheduled.compareTo(that.scheduled) match {
+      case 0 => origin.compare(that.origin) match {
+        case 0 => voyageNumber.compare(that.voyageNumber)
+        case c => c
+      }
+      case c => c
+    }
 
   override def timeValue: MillisSinceEpoch = scheduled
 }
@@ -928,7 +944,4 @@ trait Api {
 
   def getShowAlertModalDialog(): Boolean
 }
-
-case class CodeShareKey(scheduled: MillisSinceEpoch, terminal: Terminal, origin: PortCode)
-
 

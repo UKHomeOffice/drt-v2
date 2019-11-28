@@ -21,7 +21,6 @@ case class UpdateStats(updatesCount: Int, additionsCount: Int)
 class ArrivalSplitsGraphStage(name: String = "",
                               optionalInitialFlights: Option[FlightsWithSplits],
                               splitsCalculator: SplitsCalculator,
-                              groupFlightsByCodeShares: Seq[ApiFlightWithSplits] => Seq[(ApiFlightWithSplits, Set[Arrival])],
                               expireAfterMillis: Long,
                               now: () => SDateLike,
                               useApiPaxNos: Boolean

@@ -7,13 +7,11 @@ import akka.stream._
 import akka.testkit.TestKit
 import akka.util.Timeout
 import controllers.GetTerminalCrunch
-import drt.shared.Queues.Queue
 import drt.shared.SDateLike
-import drt.shared.Terminals.{T1, Terminal}
+import drt.shared.Terminals.T1
 import org.specs2.control.LanguageFeatures
 import org.specs2.mutable.SpecificationLike
 
-import scala.collection.immutable.{Map, Seq}
 import scala.concurrent.Await
 import scala.concurrent.duration._
 

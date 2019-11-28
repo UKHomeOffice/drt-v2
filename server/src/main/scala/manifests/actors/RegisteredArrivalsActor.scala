@@ -1,7 +1,7 @@
 package manifests.actors
 
 import actors.{GetState, PersistentDrtActor, RecoveryActorLike, Sizes}
-import drt.shared.{ArrivalHelper, ArrivalKey, PortCode, SDateLike, VoyageNumber}
+import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.RegisteredArrivalMessage.{RegisteredArrivalMessage, RegisteredArrivalsMessage}
@@ -9,7 +9,6 @@ import services.graphstages.Crunch
 
 import scala.collection.immutable.SortedMap
 import scala.collection.mutable
-import scala.util.Try
 
 
 case class RegisteredArrivals(arrivals: mutable.SortedMap[ArrivalKey, Option[Long]])
@@ -85,7 +84,7 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
 
   private def addRegisteredArrivalsFromMessages(arrivalMessages: Seq[RegisteredArrivalMessage]): Unit = {
     val arrivalsFromMessages: Seq[(ArrivalKey, Option[Long])] = arrivalMessages
-      .map {
+      .collect {
         case RegisteredArrivalMessage(Some(origin), _, Some(voyageNumberString), Some(scheduled), lookedUp) =>
           VoyageNumber(voyageNumberString) match {
             case vn: VoyageNumber => Option((ArrivalKey(PortCode(origin), vn, scheduled), lookedUp))

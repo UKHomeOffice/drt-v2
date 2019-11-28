@@ -5,17 +5,11 @@ import drt.shared.Terminals.Terminal
 import upickle.default.{macroRW, ReadWriter}
 
 case class TM(terminal: Terminal, minute: MillisSinceEpoch)
-  extends Ordered[TM]
-    with WithTimeAccessor
-    with WithTerminal[TM] {
-  override def equals(o: scala.Any): Boolean = o match {
-    case TM(t, m) => t == terminal && m == minute
-    case _ => false
+  extends Ordered[TM] with WithTimeAccessor with WithTerminal[TM] {
+  override def compare(that: TM): Int = this.minute.compare(that.minute) match {
+    case 0 => terminal.compare(that.terminal)
+    case c => c
   }
-
-  lazy val comparisonValue: Long = minute + terminal.orderingValue
-
-  override def compare(that: TM): Int = this.comparisonValue.compareTo(that.comparisonValue)
 
   override def timeValue: MillisSinceEpoch = minute
 }

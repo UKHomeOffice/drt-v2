@@ -197,7 +197,7 @@ object SPAMain {
   def statusRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
     import dsl._
 
-    staticRoute("#status", StatusLoc) ~> renderR((router: RouterCtl[Loc]) => StatusPage())
+    staticRoute("#status", StatusLoc) ~> renderR((_: RouterCtl[Loc]) => StatusPage())
   }
 
   def keyCloakUsersRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
@@ -210,7 +210,7 @@ object SPAMain {
     import dsl._
 
     dynamicRouteCT(("#editUser" / uuid).caseClass[KeyCloakUserEditLoc]) ~>
-      dynRenderR((page: KeyCloakUserEditLoc, router) => {
+      dynRenderR((page: KeyCloakUserEditLoc, _) => {
         EditKeyCloakUserPage(page.userId)
       })
   }
@@ -218,7 +218,7 @@ object SPAMain {
   def alertRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
     import dsl._
 
-    staticRoute("#alerts", AlertLoc) ~> renderR((router: RouterCtl[Loc]) => AlertsPage())
+    staticRoute("#alerts", AlertLoc) ~> renderR((_: RouterCtl[Loc]) => AlertsPage())
   }
 
   def contactRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {

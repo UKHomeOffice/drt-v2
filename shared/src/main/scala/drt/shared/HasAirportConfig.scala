@@ -14,8 +14,8 @@ trait ClassNameForToString {
 
 object Terminals {
 
-  sealed trait Terminal extends ClassNameForToString {
-    val orderingValue: Int
+  sealed trait Terminal extends ClassNameForToString with Ordered[Terminal] {
+    override def compare(that: Terminal): Int = toString.compare(that.toString)
   }
 
   object Terminal {
@@ -41,69 +41,39 @@ object Terminals {
 
   case object InvalidTerminal extends Terminal {
     override val toString: String = ""
-    override val orderingValue: Int = 0
   }
 
-  case object T1 extends Terminal {
-    override val orderingValue: Int = 1
-  }
+  case object T1 extends Terminal
 
-  case object T2 extends Terminal {
-    override val orderingValue: Int = 2
-  }
+  case object T2 extends Terminal
 
-  case object T3 extends Terminal {
-    override val orderingValue: Int = 3
-  }
+  case object T3 extends Terminal
 
-  case object T4 extends Terminal {
-    override val orderingValue: Int = 4
-  }
+  case object T4 extends Terminal
 
-  case object T5 extends Terminal {
-    override val orderingValue: Int = 5
-  }
+  case object T5 extends Terminal
 
-  case object A1 extends Terminal {
-    override val orderingValue: Int = 6
-  }
+  case object A1 extends Terminal
 
-  case object A2 extends Terminal {
-    override val orderingValue: Int = 7
-  }
+  case object A2 extends Terminal
 
-  case object ACL1I extends Terminal {
-    override val orderingValue: Int = 8
-  }
+  case object ACL1I extends Terminal
 
-  case object ACL2I extends Terminal {
-    override val orderingValue: Int = 9
-  }
+  case object ACL2I extends Terminal
 
-  case object ACL1D extends Terminal {
-    override val orderingValue: Int = 10
-  }
+  case object ACL1D extends Terminal
 
-  case object ACLTER extends Terminal {
-    override val orderingValue: Int = 11
-  }
+  case object ACLTER extends Terminal
 
-  case object N extends Terminal {
-    override val orderingValue: Int = 12
-  }
+  case object N extends Terminal
 
-  case object S extends Terminal {
-    override val orderingValue: Int = 13
-  }
+  case object S extends Terminal
 
 }
 
 object Queues {
-
   sealed trait Queue extends ClassNameForToString with Ordered[Queue] {
-    override def compare(that: Queue): Int = this.orderingVal.compareTo(that.orderingVal)
-
-    val orderingVal: Int
+    override def compare(that: Queue): Int = toString.compareTo(that.toString)
   }
 
   object Queue {
@@ -122,32 +92,19 @@ object Queues {
 
   case object InvalidQueue extends Queue {
     override val toString: String = ""
-    override val orderingVal: Int = 0
   }
 
-  case object EeaDesk extends Queue {
-    override val orderingVal: Int = 1
-  }
+  case object EeaDesk extends Queue
 
-  case object EGate extends Queue {
-    override val orderingVal: Int = 2
-  }
+  case object EGate extends Queue
 
-  case object NonEeaDesk extends Queue {
-    override val orderingVal: Int = 3
-  }
+  case object NonEeaDesk extends Queue
 
-  case object FastTrack extends Queue {
-    override val orderingVal: Int = 4
-  }
+  case object FastTrack extends Queue
 
-  case object Transfer extends Queue {
-    override val orderingVal: Int = 5
-  }
+  case object Transfer extends Queue
 
-  case object QueueDesk extends Queue {
-    override val orderingVal: Int = 6
-  }
+  case object QueueDesk extends Queue
 
   val queueOrder = List(QueueDesk, EGate, EeaDesk, NonEeaDesk, FastTrack)
 
@@ -393,8 +350,10 @@ object PaxTypesAndQueues {
     eeaMachineReadableToEGate, eeaMachineReadableToDesk, eeaNonMachineReadableToDesk, visaNationalToDesk, nonVisaNationalToDesk, visaNationalToFastTrack, nonVisaNationalToFastTrack)
 }
 
-case class PortCode(iata: String) {
+case class PortCode(iata: String) extends Ordered[PortCode] {
   override def toString: String = iata
+
+  override def compare(that: PortCode): Int = iata.compareTo(that.iata)
 }
 
 object PortCode {

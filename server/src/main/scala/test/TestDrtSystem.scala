@@ -38,7 +38,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
 
   override lazy val liveCrunchStateActor: AskableActorRef = system.actorOf(testLiveCrunchStateProps, name = "crunch-live-state-actor")
   override lazy val forecastCrunchStateActor: AskableActorRef = system.actorOf(testForecastCrunchStateProps, name = "crunch-forecast-state-actor")
-  override lazy val portStateActor: ActorRef = system.actorOf(TestPortStateActor.props(liveCrunchStateActor, forecastCrunchStateActor, airportConfig, expireAfterMillis, now, 2), name = "port-state-actor")
+  override lazy val portStateActor: ActorRef = system.actorOf(TestPortStateActor.props(liveCrunchStateActor, forecastCrunchStateActor, now, 2), name = "port-state-actor")
   override lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[TestVoyageManifestsActor], now, expireAfterMillis, params.snapshotIntervalVm), name = "voyage-manifests-actor")
   override lazy val shiftsActor: ActorRef = system.actorOf(Props(classOf[TestShiftsActor], now, timeBeforeThisMonth(now)))
   override lazy val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[TestFixedPointsActor], now))

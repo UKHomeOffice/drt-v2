@@ -148,7 +148,7 @@ case class DrtConfigParameters(config: Configuration) {
 
   val snapshotStaffOnStart: Boolean = config.get[Boolean]("feature-flags.snapshot-staffing-on-start")
 
-  val useApiPaxNos: Boolean  = config.getOptional[Boolean]("feature-flags.use-api-pax-nos").getOrElse(false)
+  val useApiPaxNos: Boolean = config.getOptional[Boolean]("feature-flags.use-api-pax-nos").getOrElse(false)
 
 }
 
@@ -196,7 +196,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   lazy val liveCrunchStateActor: AskableActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
   lazy val forecastCrunchStateActor: AskableActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
-  lazy val portStateActor: ActorRef = system.actorOf(PortStateActor.props(liveCrunchStateActor, forecastCrunchStateActor, airportConfig, expireAfterMillis, now, liveDaysAhead), name = "port-state-actor")
+  lazy val portStateActor: ActorRef = system.actorOf(PortStateActor.props(liveCrunchStateActor, forecastCrunchStateActor, now, liveDaysAhead), name = "port-state-actor")
 
   lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, Option(params.snapshotIntervalVm)), name = "voyage-manifests-actor")
   lazy val lookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
@@ -606,14 +606,11 @@ case class SetSimulationActor(loadsToSimulate: AskableActorRef)
 case class SetCrunchActor(millisToCrunchActor: AskableActorRef)
 
 object ArrivalGenerator {
-
-  def arrival(flightId: Option[Int] = None,
-              iata: String = "",
+  def arrival(iata: String = "",
               icao: String = "",
               schDt: String = "",
               actPax: Option[Int] = None,
               maxPax: Option[Int] = None,
-              lastKnownPax: Option[Int] = None,
               terminal: Terminal = T1,
               origin: PortCode = PortCode(""),
               operator: Option[String] = None,

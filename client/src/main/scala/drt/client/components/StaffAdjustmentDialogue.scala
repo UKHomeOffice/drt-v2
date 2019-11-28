@@ -47,11 +47,9 @@ case class StaffAdjustmentDialogueState(action: String,
 object StaffAdjustmentDialogueState {
   def apply(terminalNames: Seq[Terminal],
             terminal: Option[Terminal],
-            trigger: String,
             reasonPlaceholder: String,
             startDate: SDateLike,
             endDate: SDateLike,
-            popoverPosition: String,
             action: String,
             numberOfStaff: Int,
             loggedInUser: LoggedInUser): StaffAdjustmentDialogueState =
@@ -116,8 +114,7 @@ object StaffAdjustmentDialogue {
 
       def labelledInput(labelText: String,
                         value: String,
-                        callback: String => StaffAdjustmentDialogueState => StaffAdjustmentDialogueState,
-                        placeHolder: String = ""): VdomTagOf[html.Div] = {
+                        callback: String => StaffAdjustmentDialogueState => StaffAdjustmentDialogueState): VdomTagOf[html.Div] = {
         val textInput = <.input.text(^.value := value, ^.placeholder := state.reasonPlaceholder, ^.onChange ==> ((e: ReactEventFromInput) => {
           val newText = e.target.value
           val updatedState = callback(newText)(state)

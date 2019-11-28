@@ -64,7 +64,7 @@ object TerminalContentComponent {
     }.get
   }
 
-  class Backend(t: BackendScope[Props, State]) {
+  class Backend() {
     val arrivalsTableComponent: Component[FlightsWithSplitsTable.Props, Unit, Unit, CtorType.Props] = FlightsWithSplitsTable.ArrivalsTable(
       None,
       originMapper,

@@ -42,7 +42,7 @@ object PortRestrictionsModalAlert {
         )
       )
     })
-    .componentDidMount(p => Callback(GoogleEventTracker.sendPageView("port-restrictions-warning-modal")))
+    .componentDidMount(_ => Callback(GoogleEventTracker.sendPageView("port-restrictions-warning-modal")))
     .build
 
   def apply(display: Boolean, loggedInUser: LoggedInUser): VdomElement = component(Props(display, loggedInUser))

@@ -59,10 +59,6 @@ object RunnableCrunch {
                                        portStateActor: ActorRef,
                                        aggregatedArrivalsStateActor: ActorRef,
 
-                                       crunchPeriodStartMillis: SDateLike => SDateLike,
-                                       now: () => SDateLike,
-                                       portQueues: Map[Terminal, Seq[Queue]],
-                                       liveStateDaysAhead: Int,
                                        forecastMaxMillis: () => MillisSinceEpoch,
                                        throttleDurationPer: FiniteDuration
                                       ): RunnableGraph[(FR, FR, FR, FR, MS, SS, SFP, SMM, ActorRef, SAD, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch)] = {

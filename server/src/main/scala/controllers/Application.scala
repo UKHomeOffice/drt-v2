@@ -253,7 +253,7 @@ class Application @Inject()(implicit val config: Configuration,
           case shifts: ShiftAssignments =>
             log.info(s"Shifts: Retrieved shifts from actor for month starting: ${SDate(month).toISOString()}")
             val monthInLocalTime = SDate(month, Crunch.europeLondonTimeZone)
-            StaffTimeSlots.getShiftsForMonth(shifts, monthInLocalTime, terminal)
+            StaffTimeSlots.getShiftsForMonth(shifts, monthInLocalTime)
         }
       }
 
