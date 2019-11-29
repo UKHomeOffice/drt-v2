@@ -23,11 +23,11 @@ abstract class IndexedByTerminal[K <: WithTerminal[K], A <: WithLastUpdated]() {
     }
   }
 
-  def ++=(toAdd: Seq[(K, A)]): Unit = ++=(SortedMap[K, A]() ++ toAdd)
+  def ++=(toAdd: Iterable[(K, A)]): Unit = ++=(SortedMap[K, A]() ++ toAdd)
 
-  def +++=(toAdd: Seq[A]): Unit
+  def +++=(toAdd: Iterable[A]): Unit
 
-  def --=(toRemove: Seq[K]): Unit = toRemove.groupBy(_.terminal).foreach {
+  def --=(toRemove: Iterable[K]): Unit = toRemove.groupBy(_.terminal).foreach {
     case (t, things) => if (items.contains(t)) items(t) --= things
   }
 
@@ -118,7 +118,7 @@ abstract class IndexedByTerminalWithUpdatesCache[K <: WithTerminal[K], A <: With
 class IndexedFlights extends IndexedByTerminalWithUpdatesCache[UniqueArrival, ApiFlightWithSplits] {
   val atTime: MillisSinceEpoch => UniqueArrival = UniqueArrival.atTime
 
-  def +++=(toAdd: Seq[ApiFlightWithSplits]): Unit = ++=(toAdd.map(cm => (cm.unique, cm)))
+  def +++=(toAdd: Iterable[ApiFlightWithSplits]): Unit = ++=(toAdd.map(cm => (cm.unique, cm)))
 
   def _range(start: SDateLike, end: SDateLike): ISortedMap[UniqueArrival, ApiFlightWithSplits] = {
     val startMillis = atTime(start.millisSinceEpoch)
@@ -158,11 +158,11 @@ class IndexedFlights extends IndexedByTerminalWithUpdatesCache[UniqueArrival, Ap
 class IndexedCrunchMinutes extends IndexedByTerminalWithUpdatesCache[TQM, CrunchMinute] {
   val atTime: MillisSinceEpoch => TQM = TQM.atTime
 
-  def +++=(toAdd: Seq[CrunchMinute]): Unit = ++=(toAdd.map(cm => (cm.key, cm)))
+  def +++=(toAdd: Iterable[CrunchMinute]): Unit = ++=(toAdd.map(cm => (cm.key, cm)))
 }
 
 class IndexedStaffMinutes extends IndexedByTerminalWithUpdatesCache[TM, StaffMinute] {
   val atTime: MillisSinceEpoch => TM = TM.atTime
 
-  def +++=(toAdd: Seq[StaffMinute]): Unit = ++=(toAdd.map(cm => (cm.key, cm)))
+  def +++=(toAdd: Iterable[StaffMinute]): Unit = ++=(toAdd.map(cm => (cm.key, cm)))
 }

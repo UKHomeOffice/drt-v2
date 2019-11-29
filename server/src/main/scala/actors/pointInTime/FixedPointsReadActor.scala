@@ -3,7 +3,7 @@ package actors.pointInTime
 import actors.FixedPointsActorBase
 import actors.FixedPointsMessageParser.fixedPointMessagesToFixedPoints
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
-import drt.shared.SDateLike
+import drt.shared.{FixedPointAssignments, SDateLike}
 import server.protobuf.messages.FixedPointMessage.{FixedPointsMessage, FixedPointsStateSnapshotMessage}
 
 class FixedPointsReadActor(pointInTime: SDateLike) extends FixedPointsActorBase(() => pointInTime) {
@@ -28,4 +28,6 @@ class FixedPointsReadActor(pointInTime: SDateLike) extends FixedPointsActorBase(
     log.info(s"Recovery: $recovery")
     recovery
   }
+
+  override def onUpdateState(data: FixedPointAssignments): Unit = Unit
 }

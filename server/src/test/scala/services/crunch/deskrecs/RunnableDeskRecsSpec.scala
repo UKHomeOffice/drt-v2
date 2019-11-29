@@ -264,7 +264,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     portStateProbe.fishForMessage(2 seconds) {
       case DeskRecMinutes(drms) =>
         drms.exists {
-          case DeskRecMinute(T1, Queues.EeaDesk, m, p, w, _, _) => m == noonMillis && p > 0
+          case DeskRecMinute(T1, Queues.EeaDesk, m, p, _, _, _) => m == noonMillis && p > 0
           case _ => false
         }
       case _ => false
@@ -276,11 +276,11 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     portStateProbe.fishForMessage(2 seconds) {
       case DeskRecMinutes(drms) =>
         val zeroAtNoon = drms.exists {
-          case DeskRecMinute(T1, Queues.EeaDesk, m, p, w, _, _) => m == noonMillis && p == 0
+          case DeskRecMinute(T1, Queues.EeaDesk, m, p, _, _, _) => m == noonMillis && p == 0
           case _ => false
         }
         val nonZeroAtOne = drms.exists {
-          case DeskRecMinute(T1, Queues.EeaDesk, m, p, w, _, _) => m == onePmMillis && p > 0
+          case DeskRecMinute(T1, Queues.EeaDesk, m, p, _, _, _) => m == onePmMillis && p > 0
           case _ => false
         }
         zeroAtNoon && nonZeroAtOne
@@ -366,8 +366,8 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       pcpArrivalTime = pcpForFlightFromBest
     )
 
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = noon, actPax = Option(25), origin = "JFK")
-    val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = noon, actPax = Option(25), origin = "AAA")
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = noon, actPax = Option(25), origin = PortCode("JFK"))
+    val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = noon, actPax = Option(25), origin = PortCode("AAA"))
 
     val noonMillis = SDate(noon).millisSinceEpoch
     val noon30Millis = SDate(noon30).millisSinceEpoch
@@ -457,8 +457,8 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       pcpArrivalTime = pcpForFlightFromBest
     )
 
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = noon, actPax = Option(25), origin = "JFK")
-    val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = noon, actPax = Option(25), origin = "AAA")
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = noon, actPax = Option(25), origin = PortCode("JFK"))
+    val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = noon, actPax = Option(25), origin = PortCode("AAA"))
 
     val noonMillis = SDate(noon).millisSinceEpoch
 

@@ -13,7 +13,7 @@ import slickdb.ArrivalTableLike
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 
 
-class AggregatedArrivalsActor(portCode: String, arrivalTable: ArrivalTableLike) extends Actor {
+class AggregatedArrivalsActor(arrivalTable: ArrivalTableLike) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
   implicit val executionContext: ExecutionContextExecutor = ExecutionContext.global
 

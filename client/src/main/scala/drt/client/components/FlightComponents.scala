@@ -84,7 +84,7 @@ object FlightComponents {
     }
   }
 
-  def splitsSummaryTooltip(splitTotal: Int, splits: Seq[(String, Int)]): TagMod = {
+  def splitsSummaryTooltip(splits: Seq[(String, Int)]): TagMod = {
     <.table(^.className := "table table-responsive table-striped table-hover table-sm ",
       <.tbody(
         splits.map {

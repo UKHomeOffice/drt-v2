@@ -14,6 +14,7 @@ import drt.chroma._
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveFlight}
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.http.ProdSendAndReceive
+import drt.server.feeds.acl.AclFeed
 import drt.server.feeds.api.S3ApiProvider
 import drt.server.feeds.bhx.{BHXClient, BHXFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
@@ -27,7 +28,7 @@ import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
-import drt.shared.Terminals.{A1, ACL1D, ACL1I, ACL2I, ACLTER, InvalidTerminal, N, S, T1, T2, T3, Terminal}
+import drt.shared.Terminals._
 import drt.shared._
 import graphs.SinkToSourceBridge
 import manifests.ManifestLookup
@@ -38,7 +39,6 @@ import org.apache.spark.sql.SparkSession
 import org.joda.time.DateTimeZone
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import server.feeds.acl.AclFeed
 import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse}
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services.SplitsProvider.SplitProvider
@@ -148,8 +148,8 @@ case class DrtConfigParameters(config: Configuration) {
 
   val snapshotStaffOnStart: Boolean = config.get[Boolean]("feature-flags.snapshot-staffing-on-start")
 
-  val useApiPaxNos: Boolean  = config.getOptional[Boolean]("feature-flags.use-api-pax-nos").getOrElse(false)
-  
+  val useApiPaxNos: Boolean = config.getOptional[Boolean]("feature-flags.use-api-pax-nos").getOrElse(false)
+
 }
 
 case class SubscribeRequestQueue(subscriber: ActorRef)
@@ -181,8 +181,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val purgeOldForecastSnapshots = true
 
   val forecastMaxMillis: () => MillisSinceEpoch = () => now().addDays(params.forecastMaxDays).millisSinceEpoch
-  val liveCrunchStateProps = Props(classOf[CrunchStateActor], Option(airportConfig.portStateSnapshotInterval), params.snapshotMegaBytesLivePortState, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots, true, forecastMaxMillis)
-  val forecastCrunchStateProps = Props(classOf[CrunchStateActor], Option(100), params.snapshotMegaBytesFcstPortState, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots, false, forecastMaxMillis)
+  val liveCrunchStateProps: Props = CrunchStateActor.props(Option(airportConfig.portStateSnapshotInterval), params.snapshotMegaBytesLivePortState, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots, forecastMaxMillis)
+  val forecastCrunchStateProps: Props = CrunchStateActor.props(Option(100), params.snapshotMegaBytesFcstPortState, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots, forecastMaxMillis)
 
   lazy val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastBaseArrivalsActor], params.snapshotMegaBytesBaseArrivals, now, expireAfterMillis), name = "base-arrivals-actor")
   lazy val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastPortArrivalsActor], params.snapshotMegaBytesFcstArrivals, now, expireAfterMillis), name = "forecast-arrivals-actor")
@@ -191,12 +191,12 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   lazy val arrivalsImportActor: ActorRef = system.actorOf(Props(classOf[ArrivalsImportActor]), name = "arrivals-import-actor")
 
-  lazy val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(classOf[AggregatedArrivalsActor], airportConfig.portCode, ArrivalTable(airportConfig.portCode, PostgresTables)), name = "aggregated-arrivals-actor")
+  lazy val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(classOf[AggregatedArrivalsActor], ArrivalTable(airportConfig.portCode, PostgresTables)), name = "aggregated-arrivals-actor")
   lazy val registeredArrivalsActor: ActorRef = system.actorOf(Props(classOf[RegisteredArrivalsActor], oneMegaByte, Option(500), airportConfig.portCode, now, expireAfterMillis), name = "registered-arrivals-actor")
 
   lazy val liveCrunchStateActor: AskableActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
   lazy val forecastCrunchStateActor: AskableActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
-  lazy val portStateActor: ActorRef = system.actorOf(PortStateActor.props(liveCrunchStateActor, forecastCrunchStateActor, airportConfig, expireAfterMillis, now, liveDaysAhead), name = "port-state-actor")
+  lazy val portStateActor: ActorRef = system.actorOf(PortStateActor.props(liveCrunchStateActor, forecastCrunchStateActor, now, liveDaysAhead), name = "port-state-actor")
 
   lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, Option(params.snapshotIntervalVm)), name = "voyage-manifests-actor")
   lazy val lookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
@@ -339,18 +339,18 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       .map(maybeStatuses => maybeStatuses.collect { case Some(fs) => fs })
   }
 
-  def aclTerminalMapping(portCode: String): Terminal => Terminal = portCode match {
-    case "LGW" => (tIn: Terminal) => Map[Terminal, Terminal](T2 -> S, T1 -> N).getOrElse(tIn, tIn)
-    case "MAN" => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> T1, T2 -> T2, T3 -> T3).getOrElse(tIn, tIn)
-    case "EMA" => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> T1).getOrElse(tIn, tIn)
-    case "EDI" => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> A1).getOrElse(tIn, tIn)
-    case "LCY" => (tIn: Terminal) => Map[Terminal, Terminal](ACLTER -> T1).getOrElse(tIn, tIn)
-    case "GLA" => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> T1).getOrElse(tIn, tIn)
+  def aclTerminalMapping(portCode: PortCode): Terminal => Terminal = portCode match {
+    case PortCode("LGW") => (tIn: Terminal) => Map[Terminal, Terminal](T2 -> S, T1 -> N).getOrElse(tIn, tIn)
+    case PortCode("MAN") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> T1, T2 -> T2, T3 -> T3).getOrElse(tIn, tIn)
+    case PortCode("EMA") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> T1).getOrElse(tIn, tIn)
+    case PortCode("EDI") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> A1).getOrElse(tIn, tIn)
+    case PortCode("LCY") => (tIn: Terminal) => Map[Terminal, Terminal](ACLTER -> T1).getOrElse(tIn, tIn)
+    case PortCode("GLA") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> T1).getOrElse(tIn, tIn)
     case _ => (tIn: Terminal) => tIn
   }
 
   def startScheduledFeedImports(crunchInputs: CrunchSystem[Cancellable]): Unit = {
-    if (airportConfig.feedPortCode == "LHR") params.maybeBlackJackUrl.map(csvUrl => {
+    if (airportConfig.feedPortCode == PortCode("LHR")) params.maybeBlackJackUrl.map(csvUrl => {
       val requestIntervalMillis = 5 * oneMinuteMillis
       Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, requestIntervalMillis milliseconds, () => SDate.now().addDays(-1))
     })
@@ -484,7 +484,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       .getOrCreate()
   }
 
-  def liveBaseArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = {
+  def liveBaseArrivalsSource(portCode: PortCode): Source[ArrivalsFeedResponse, Cancellable] = {
     if (config.get[Boolean]("feature-flags.use-cirium-feed")) {
       log.info(s"Using Cirium Live Base Feed")
       CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).tickingSource(30 seconds)
@@ -495,9 +495,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     }
   }
 
-  def liveArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] =
+  def liveArrivalsSource(portCode: PortCode): Source[ArrivalsFeedResponse, Cancellable] =
     if (config.get[Boolean]("feeds.random-generator")) randomArrivals()
-    else portCode match {
+    else portCode.iata match {
       case "LHR" =>
         val host = config.get[String]("feeds.lhr.sftp.live.host")
         val username = config.get[String]("feeds.lhr.sftp.live.username")
@@ -557,11 +557,11 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   def arrivalsNoOp: Source[ArrivalsFeedResponse, Cancellable] = Source.tick[ArrivalsFeedResponse](100 days, 100 days, ArrivalsFeedSuccess(Flights(Seq()), SDate.now()))
 
-  def forecastArrivalsSource(portCode: String): Source[ArrivalsFeedResponse, Cancellable] = {
+  def forecastArrivalsSource(portCode: PortCode): Source[ArrivalsFeedResponse, Cancellable] = {
     val feed = portCode match {
-      case "LHR" => createForecastLHRFeed()
-      case "BHX" => BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")))
-      case "LGW" => LGWForecastFeed()
+      case PortCode("LHR") => createForecastLHRFeed()
+      case PortCode("BHX") => BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")))
+      case PortCode("LGW") => LGWForecastFeed()
       case _ =>
         system.log.info(s"No Forecast Feed defined.")
         arrivalsNoOp
@@ -606,16 +606,13 @@ case class SetSimulationActor(loadsToSimulate: AskableActorRef)
 case class SetCrunchActor(millisToCrunchActor: AskableActorRef)
 
 object ArrivalGenerator {
-
-  def arrival(flightId: Option[Int] = None,
-              iata: String = "",
+  def arrival(iata: String = "",
               icao: String = "",
               schDt: String = "",
               actPax: Option[Int] = None,
               maxPax: Option[Int] = None,
-              lastKnownPax: Option[Int] = None,
               terminal: Terminal = T1,
-              origin: String = "",
+              origin: PortCode = PortCode(""),
               operator: Option[String] = None,
               status: String = "",
               estDt: String = "",
@@ -628,7 +625,7 @@ object ArrivalGenerator {
               tranPax: Option[Int] = None,
               runwayId: Option[String] = None,
               baggageReclaimId: Option[String] = None,
-              airportId: String = "",
+              airportId: PortCode = PortCode(""),
               feedSources: Set[FeedSource] = Set()
              ): Arrival = {
     val pcpTime = if (pcpDt.nonEmpty) Option(SDate(pcpDt).millisSinceEpoch) else if (schDt.nonEmpty) Option(SDate(schDt).millisSinceEpoch) else None

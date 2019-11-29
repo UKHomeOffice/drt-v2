@@ -1,5 +1,6 @@
 package drt.client.components
 
+import drt.shared.SplitRatiosNs.SplitSources.{Historical, TerminalAverage}
 import drt.shared._
 import drt.shared.splits.ApiSplitsToSplitRatio
 import utest.{TestSuite, _}
@@ -15,7 +16,7 @@ object PaxSplitsDisplayTests extends TestSuite {
 
         val splits = Splits(
           Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 1, None)),
-          "whatevs",
+          TerminalAverage,
           None
         )
 
@@ -23,7 +24,7 @@ object PaxSplitsDisplayTests extends TestSuite {
 
         val expected = Splits(
           Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 1, None)),
-          "whatevs",
+          TerminalAverage,
           None,
           SplitStyle("Ratio")
         )
@@ -34,7 +35,7 @@ object PaxSplitsDisplayTests extends TestSuite {
 
         val splits = Splits(
           Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 1, None)),
-          "whatevs",
+          TerminalAverage,
           None
         )
 
@@ -42,7 +43,7 @@ object PaxSplitsDisplayTests extends TestSuite {
 
         val expected = Splits(
           Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 2, None)),
-          "whatevs",
+          TerminalAverage,
           None,
           SplitStyle("Ratio")
         )
@@ -57,7 +58,7 @@ object PaxSplitsDisplayTests extends TestSuite {
             ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 1, None),
             ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None)
           ),
-          "whatevs",
+          TerminalAverage,
           None
         )
 
@@ -68,7 +69,7 @@ object PaxSplitsDisplayTests extends TestSuite {
             ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 1, None),
             ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None)
           ),
-          "whatevs",
+          TerminalAverage,
           None,
           SplitStyle("Ratio")
         )
@@ -83,7 +84,7 @@ object PaxSplitsDisplayTests extends TestSuite {
             ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 1, None),
             ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None)
           ),
-          "whatevs",
+          TerminalAverage,
           None
         )
 
@@ -101,7 +102,7 @@ object PaxSplitsDisplayTests extends TestSuite {
             ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 1, None),
             ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None)
           ),
-          "whatevs",
+          TerminalAverage,
           None
         )
 
@@ -120,7 +121,7 @@ object PaxSplitsDisplayTests extends TestSuite {
             ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 1, None),
             ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None)
           ),
-          "whatevs",
+          TerminalAverage,
           None
         )
 
@@ -139,7 +140,7 @@ object PaxSplitsDisplayTests extends TestSuite {
             ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 10, None),
             ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None)
           ),
-          "whatevs",
+          TerminalAverage,
           None
         )
 
@@ -150,7 +151,7 @@ object PaxSplitsDisplayTests extends TestSuite {
             ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 11, None),
             ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None)
           ),
-          "whatevs",
+          TerminalAverage,
           None,
           SplitStyle("Ratio")
         )
@@ -168,7 +169,7 @@ object PaxSplitsDisplayTests extends TestSuite {
             ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 5.699999999999999, None),
             ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 30.150000000000006, None),
             ApiPaxTypeAndQueueCount(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk, 15, None),
-            ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 0.3, None)), "Historical", None, Percentage)
+            ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 0.3, None)), Historical, None, Percentage)
 
         val expected = Splits(
           Set(
@@ -178,7 +179,7 @@ object PaxSplitsDisplayTests extends TestSuite {
             ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 9, None),
             ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 46, None),
             ApiPaxTypeAndQueueCount(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk, 23, None),
-            ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 0, None)), "Historical", None, Ratio)
+            ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 0, None)), Historical, None, Ratio)
 
         val result = applyPaxSplitsToFlightPax(splits, pax)
 
@@ -193,7 +194,7 @@ object PaxSplitsDisplayTests extends TestSuite {
             ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None),
             ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.Transfer, 5, None)
           ),
-          "whatevs",
+          TerminalAverage,
           None
         )
 
@@ -204,7 +205,7 @@ object PaxSplitsDisplayTests extends TestSuite {
             ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 11, None),
             ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None)
           ),
-          "whatevs",
+          TerminalAverage,
           None,
           SplitStyle("Ratio")
         )
@@ -222,7 +223,7 @@ object PaxSplitsDisplayTests extends TestSuite {
             ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 5.699999999999999, None),
             ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 30.150000000000006, None),
             ApiPaxTypeAndQueueCount(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk, 15, None),
-            ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 0.3, None)), "Historical", None, Percentage)
+            ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 0.3, None)), Historical, None, Percentage)
 
         val result = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(ApiFlightWithSplits(flight, Set(splits)))
 

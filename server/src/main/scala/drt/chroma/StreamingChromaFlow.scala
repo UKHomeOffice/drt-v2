@@ -5,6 +5,7 @@ import akka.actor.Cancellable
 import akka.stream.scaladsl.Source
 import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaFlightLike, ChromaForecastFlight, ChromaLiveFlight}
+import drt.server.feeds.Implicits._
 import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.Terminal
 import drt.shared.{Arrival, ForecastFeedSource, LiveFeedSource}
@@ -14,8 +15,8 @@ import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSucc
 import services.SDate
 
 import scala.collection.immutable.Seq
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 

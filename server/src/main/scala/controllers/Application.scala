@@ -82,7 +82,7 @@ trait AirportConfiguration {
 }
 
 trait AirportConfProvider extends AirportConfiguration {
-  val portCode: String = ConfigFactory.load().getString("portcode").toUpperCase
+  val portCode: PortCode = PortCode(ConfigFactory.load().getString("portcode").toUpperCase)
   val config: Configuration
 
   def useStaffingInput: Boolean = config.getOptional[String]("feature-flags.use-v2-staff-input").isDefined
@@ -253,7 +253,7 @@ class Application @Inject()(implicit val config: Configuration,
           case shifts: ShiftAssignments =>
             log.info(s"Shifts: Retrieved shifts from actor for month starting: ${SDate(month).toISOString()}")
             val monthInLocalTime = SDate(month, Crunch.europeLondonTimeZone)
-            StaffTimeSlots.getShiftsForMonth(shifts, monthInLocalTime, terminal)
+            StaffTimeSlots.getShiftsForMonth(shifts, monthInLocalTime)
         }
       }
 
@@ -351,7 +351,7 @@ class Application @Inject()(implicit val config: Configuration,
 
   def index = Action { request =>
     val user = ctrl.getLoggedInUser(config, request.headers, request.session)
-    Ok(views.html.index("DRT - BorderForce", portCode, googleTrackingCode, user.id))
+    Ok(views.html.index("DRT - BorderForce", portCode.toString, googleTrackingCode, user.id))
   }
 
   def healthCheck: Action[AnyContent] = Action.async { _ =>

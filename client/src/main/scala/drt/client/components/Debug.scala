@@ -4,7 +4,8 @@ import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.services._
 import drt.shared.{FixedPointAssignments, PortState, ShiftAssignments, StaffMovement}
-import japgolly.scalajs.react.ScalaComponent
+import japgolly.scalajs.react.{CtorType, ScalaComponent}
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom
 
@@ -14,8 +15,8 @@ object Debug {
 
   case class Props()
 
-  val component = ScalaComponent.builder[Props]("Debug")
-    .render_P(p => {
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Debug")
+    .render_P { _ =>
       val staffingRCP = SPACircuit.connect(
         m => (
           m.shifts,
@@ -46,8 +47,7 @@ object Debug {
           <.div()
         }
       })
-    }
-    ).build
+    }.build
 
   def apply(): VdomElement = component(Props())
 }

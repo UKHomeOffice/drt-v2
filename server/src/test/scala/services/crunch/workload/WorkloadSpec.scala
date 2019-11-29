@@ -18,7 +18,7 @@ class WorkloadSpec extends Specification {
       Splits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None)),
         SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-        Option(DqEventCodes.DepartureConfirmed),
+        Option(EventTypes.DC),
         PaxNumbers))
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
     val emptyNatProcTimes: Map[String, Double] = Map()
@@ -38,7 +38,7 @@ class WorkloadSpec extends Specification {
       Splits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None)),
         SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-        Option(DqEventCodes.DepartureConfirmed),
+        Option(EventTypes.DC),
         PaxNumbers))
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
 
@@ -60,7 +60,7 @@ class WorkloadSpec extends Specification {
       Splits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, Option(Map("GBR" -> 1)))),
         SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-        Option(DqEventCodes.DepartureConfirmed),
+        Option(EventTypes.DC),
         PaxNumbers))
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
     val gbrSeconds = 45d
@@ -82,7 +82,7 @@ class WorkloadSpec extends Specification {
       Splits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, Option(Map("GBR" -> 1)))),
         SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-        Option(DqEventCodes.DepartureConfirmed),
+        Option(EventTypes.DC),
         PaxNumbers))
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
     val gbrSeconds = 45d
@@ -104,7 +104,7 @@ class WorkloadSpec extends Specification {
       Splits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, Option(Map("GBR" -> 1)))),
         SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-        Option(DqEventCodes.DepartureConfirmed),
+        Option(EventTypes.DC),
         PaxNumbers))
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
     val gbrSeconds = 45d
@@ -126,7 +126,7 @@ class WorkloadSpec extends Specification {
       Splits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 3, Option(Map("GBR" -> 1, "FRA" -> 2)))),
         SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-        Option(DqEventCodes.DepartureConfirmed),
+        Option(EventTypes.DC),
         PaxNumbers))
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
     val gbrSeconds = 45d
@@ -154,7 +154,7 @@ class WorkloadSpec extends Specification {
           ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Option(Map("ZAR" -> 1)))
         ),
         SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-        Option(DqEventCodes.DepartureConfirmed),
+        Option(EventTypes.DC),
         PaxNumbers))
     val procTimes = Map(
       PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5,
@@ -183,7 +183,7 @@ class WorkloadSpec extends Specification {
           ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 2, Option(Map("ZAR" -> 1, "ZBW" -> 1)))
         ),
         SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-        Option(DqEventCodes.DepartureConfirmed),
+        Option(EventTypes.DC),
         PaxNumbers))
     val procTimes = Map(
       PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5,
@@ -219,7 +219,7 @@ class WorkloadSpec extends Specification {
           ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 12, Option(Map("ZAR" -> 6, "ZBW" -> 6)))
         ),
         SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-        Option(DqEventCodes.DepartureConfirmed),
+        Option(EventTypes.DC),
         PaxNumbers))
     val procTimes = Map(
       PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5,

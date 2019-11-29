@@ -11,7 +11,7 @@ object Lgw extends AirportConfigLike {
   import AirportConfigDefaults._
 
   val config = AirportConfig(
-    portCode = "LGW",
+    portCode = PortCode("LGW"),
     queues = Map(
       N -> Seq(EeaDesk, EGate, NonEeaDesk),
       S -> Seq(EeaDesk, EGate, NonEeaDesk)

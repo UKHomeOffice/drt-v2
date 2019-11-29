@@ -9,9 +9,10 @@ import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
+import drt.server.feeds.Implicits._
 import drt.server.feeds.mag.MagFeed.MagArrival
 import drt.shared.FlightsApi.Flights
-import drt.shared.{Arrival, LiveFeedSource, SDateLike, Terminals}
+import drt.shared.{Arrival, LiveFeedSource, PortCode, SDateLike, Terminals}
 import org.slf4j.{Logger, LoggerFactory}
 import pdi.jwt.{Jwt, JwtAlgorithm, JwtHeader}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
@@ -36,7 +37,7 @@ object ProdFeedRequester extends FeedRequesterLike {
   override def send(request: HttpRequest)(implicit actorSystem: ActorSystem): Future[HttpResponse] = Http().singleRequest(request)
 }
 
-case class MagFeed(key: String, claimIss: String, claimRole: String, claimSub: String, now: () => SDateLike, portCode: String, feedRequester: FeedRequesterLike)(implicit val system: ActorSystem, materializer: Materializer, executionContext: ExecutionContext) {
+case class MagFeed(key: String, claimIss: String, claimRole: String, claimSub: String, now: () => SDateLike, portCode: PortCode, feedRequester: FeedRequesterLike)(implicit val system: ActorSystem, materializer: Materializer, executionContext: ExecutionContext) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def claim: String =
@@ -66,8 +67,7 @@ case class MagFeed(key: String, claimIss: String, claimRole: String, claimSub: S
   def requestArrivals(start: SDateLike): Future[ArrivalsFeedResponse] =
     Source(0 to 1000 by 100)
       .mapAsync(parallelism = 10) { pageFrom =>
-        val end = start.addHours(hoursToAdd = 36)
-        requestArrivalsPage(start, end, pageFrom, size = 100)
+        requestArrivalsPage(start, pageFrom, size = 100)
       }
       .mapConcat {
         case Success(magArrivals) =>
@@ -86,7 +86,7 @@ case class MagFeed(key: String, claimIss: String, claimRole: String, claimSub: S
           ArrivalsFeedFailure("No arrivals records received", now())
       }
 
-  def requestArrivalsPage(start: SDateLike, end: SDateLike, from: Int, size: Int): Future[Try[List[MagArrival]]] = {
+  def requestArrivalsPage(start: SDateLike, from: Int, size: Int): Future[Try[List[MagArrival]]] = {
     val end = start.addHours(hoursToAdd = 24)
     val uri = makeUri(start, end, from, size)
 

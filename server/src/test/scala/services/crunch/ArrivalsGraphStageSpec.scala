@@ -11,9 +11,8 @@ import drt.shared.Terminals.T1
 import drt.shared._
 import org.specs2.matcher.Scope
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
-import server.feeds.{ArrivalsFeedSuccess, ManifestsFeedSuccess}
+import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
-import services.graphstages.DqManifests
 
 import scala.collection.immutable.{List, SortedMap}
 import scala.collection.mutable
@@ -24,7 +23,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
   isolated
 
   trait Context extends Scope {
-    val arrival_v1_with_no_chox_time: Arrival = arrival(iata = "BA0001", schDt = "2017-01-01T10:25Z", actPax = Option(100), origin = "JFK", feedSources = Set(LiveFeedSource))
+    val arrival_v1_with_no_chox_time: Arrival = arrival(iata = "BA0001", schDt = "2017-01-01T10:25Z", actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(LiveFeedSource))
 
     val arrival_v2_with_chox_time: Arrival = arrival_v1_with_no_chox_time.copy(Stand = Some("Stand1"), ActualChox = Some(SDate("2017-01-01T10:25Z").millisSinceEpoch))
 
@@ -65,7 +64,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     "once an API (advanced passenger information) input arrives for the flight, it will update the arrivals FeedSource so that it has a LiveFeed and a ApiFeed" in new Context {
 
       val voyageManifests = ManifestsFeedSuccess(DqManifests("", Set(
-        VoyageManifest(DqEventCodes.DepartureConfirmed, "STN", "JFK", "0001", "BA", "2017-01-01", "10:25", List(
+        VoyageManifest(EventTypes.DC, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), "BA", "2017-01-01", "10:25", List(
           PassengerInfoJson(Some("P"), "GBR", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("GBR"), None)
         ))
       )))
@@ -106,6 +105,29 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
           val portStateSources = ps.flights.get(forecastArrival.unique).map(_.apiFlight.FeedSources).getOrElse(Set())
           println(s"sources: $portStateSources")
           portStateSources == expected
+      }
+
+      crunch.liveArrivalsInput.complete()
+
+      success
+    }
+
+    "Given 2 arrivals, one international and the other domestic " +
+      "I should only see the international arrival in the port state" in new Context {
+      val scheduled = "2017-01-01T10:25Z"
+
+      private val arrivalInt: Arrival = ArrivalGenerator.arrival(iata = "BA0002", origin = PortCode("JFK"), schDt = scheduled, actPax = Option(10), feedSources = Set(AclFeedSource))
+      private val arrivalDom: Arrival = ArrivalGenerator.arrival(iata = "BA0003", origin = PortCode("BHX"), schDt = scheduled, actPax = Option(10), feedSources = Set(AclFeedSource))
+
+      val aclFlight = Flights(List(arrivalInt, arrivalDom))
+
+      offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlight))
+
+      crunch.portStateTestProbe.fishForMessage(5 seconds) {
+        case ps: PortState =>
+          val intExists = ps.flights.contains(UniqueArrival(arrivalInt))
+          val domDoesNotExist = !ps.flights.contains(UniqueArrival(arrivalDom))
+          intExists && domDoesNotExist
       }
 
       crunch.liveArrivalsInput.complete()

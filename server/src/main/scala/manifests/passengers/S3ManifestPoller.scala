@@ -5,13 +5,12 @@ import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.server.feeds.api.ApiProviderLike
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{DqEventCodes, SDateLike}
+import drt.shared.{EventTypes, PortCode, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
-import server.feeds.{ManifestsFeedFailure, ManifestsFeedResponse, ManifestsFeedSuccess}
+import server.feeds.{DqManifests, ManifestsFeedFailure, ManifestsFeedResponse, ManifestsFeedSuccess}
 import services.SDate
-import services.graphstages.DqManifests
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -21,7 +20,7 @@ import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
 
-class S3ManifestPoller(sourceQueue: SourceQueueWithComplete[ManifestsFeedResponse], portCode: String, initialLastSeenFileName: String, provider: ApiProviderLike)
+class S3ManifestPoller(sourceQueue: SourceQueueWithComplete[ManifestsFeedResponse], portCode: PortCode, initialLastSeenFileName: String, provider: ApiProviderLike)
                       (implicit actorSystem: ActorSystem) {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -62,7 +61,7 @@ class S3ManifestPoller(sourceQueue: SourceQueueWithComplete[ManifestsFeedRespons
   def jsonStringToManifest(content: String): Option[VoyageManifest] = {
     VoyageManifestParser.parseVoyagePassengerInfo(content) match {
       case Success(m) =>
-        if (m.EventCode == DqEventCodes.DepartureConfirmed && m.ArrivalPortCode == portCode) {
+        if (m.EventCode == EventTypes.DC && m.ArrivalPortCode == portCode) {
           log.info(s"Using ${m.EventCode} manifest for ${m.ArrivalPortCode} arrival ${m.flightCode}")
           Option(m)
         }

@@ -1,5 +1,6 @@
 package drt.server.feeds.lgw
 
+import drt.server.feeds.Implicits._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.{InvalidTerminal, N, S}
 import drt.shared.{Arrival, LiveFeedSource, Terminals}

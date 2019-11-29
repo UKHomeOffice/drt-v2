@@ -30,7 +30,7 @@ object FlightsWithSplitsTable {
   })
 
   def ArrivalsTable(timelineComponent: Option[Arrival => VdomNode] = None,
-                    originMapper: String => VdomNode = portCode => portCode,
+                    originMapper: PortCode => VdomNode = portCode => portCode.toString,
                     splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
                    )(paxComponent: ApiFlightWithSplits => TagMod): Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "ArrivalsTable")
     .render_P(props => {
@@ -126,7 +126,7 @@ object FlightTableRow {
 
   import FlightTableComponents._
 
-  type OriginMapperF = String => VdomNode
+  type OriginMapperF = PortCode => VdomNode
   type BestPaxForArrivalF = Arrival => Int
 
   type SplitsGraphComponentFn = SplitsGraph.Props => TagOf[Div]
@@ -135,7 +135,7 @@ object FlightTableRow {
                    codeShares: Set[Arrival],
                    idx: Int,
                    timelineComponent: Option[Arrival => html_<^.VdomNode],
-                   originMapper: OriginMapperF = portCode => portCode,
+                   originMapper: OriginMapperF = portCode => portCode.toString,
                    paxComponent: ApiFlightWithSplits => TagMod,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                    splitsQueueOrder: Seq[Queue],

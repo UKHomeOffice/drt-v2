@@ -138,13 +138,11 @@ object TerminalDashboardComponent {
     cru.map(cm => cm.deployedWait.getOrElse(cm.waitTime)).max
   else 0
 
-  def apply(
-             terminalPageTabLoc: TerminalPageTabLoc,
-             airportConfig: AirportConfig,
-             portState: PortState,
-             router: RouterCtl[Loc],
-             minuteTicker: Int,
-             featureFlags: Pot[Map[String, Boolean]]
+  def apply(terminalPageTabLoc: TerminalPageTabLoc,
+            airportConfig: AirportConfig,
+            portState: PortState,
+            router: RouterCtl[Loc],
+            featureFlags: Pot[Map[String, Boolean]]
            ): VdomElement = component(Props(terminalPageTabLoc, airportConfig, router, portState, featureFlags))
 
   def timeSlotForTime(slotSize: Int)(sd: SDateLike): SDateLike = {

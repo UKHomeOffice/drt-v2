@@ -2,6 +2,7 @@ package serialization
 
 import drt.shared.CrunchApi._
 import drt.shared.PaxTypes._
+import drt.shared.SplitRatiosNs.SplitSources.Historical
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import org.specs2.mutable.Specification
@@ -16,7 +17,7 @@ class JsonSerializationSpec extends Specification {
 
     "Terminal" >> {
 
-      val terminal = T1
+      val terminal: Terminal = T1
 
       val terminalAsJson: String = write(terminal)
 
@@ -27,7 +28,7 @@ class JsonSerializationSpec extends Specification {
 
     "AirportConfig" >> {
 
-      val lhrAirportConfig = AirportConfigs.confByPort("LHR")
+      val lhrAirportConfig = AirportConfigs.confByPort(PortCode("LHR"))
 
       val lhrAirportConfigAsJson: String = write(lhrAirportConfig)
 
@@ -80,13 +81,13 @@ class JsonSerializationSpec extends Specification {
 
     "PortState" >> {
       val flightWithSplits = ApiFlightWithSplits(
-        Arrival(None, "scheduled", None, None, None, None, None, None, None, None, None, None, None, "test", T1, "test", "test", "test", 0L, None, Set(AclFeedSource, LiveFeedSource)),
+        Arrival(None, "scheduled", None, None, None, None, None, None, None, None, None, None, None, PortCode("test"), T1, "test", "test", PortCode("test"), 0L, None, Set(AclFeedSource, LiveFeedSource)),
         Set(
           Splits(
             Set(
               ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, None),
               ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, None)
-            ), "source", None, Percentage))
+            ), Historical, None, Percentage))
       )
       val flightsWithSplits = SortedMap(flightWithSplits.apiFlight.unique -> flightWithSplits)
 
@@ -124,8 +125,8 @@ class JsonSerializationSpec extends Specification {
         0L,
         Set(
           ApiFlightWithSplits(
-            Arrival(None, "scheduled", None, None, None, None, None, None, None, None, None, None, None, "test", T1, "test", "test", "test", 0L, None, Set(AclFeedSource, LiveFeedSource)),
-            Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Option(Map("tw" -> 7.0)))), "source", None, Percentage))
+            Arrival(None, "scheduled", None, None, None, None, None, None, None, None, None, None, None, PortCode("test"), T1, "test", "test", PortCode("test"), 0L, None, Set(AclFeedSource, LiveFeedSource)),
+            Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Option(Map("tw" -> 7.0)))), Historical, None, Percentage))
           )
         ),
         Set(CrunchMinute(T1, Queues.NonEeaDesk, 0L, 2.0, 2.0, 1, 1, None, None, None, None, Some(0))),

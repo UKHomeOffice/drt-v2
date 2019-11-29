@@ -10,7 +10,7 @@ import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, OverflowStrategy, QueueOfferResult, UniqueKillSwitch}
 import akka.testkit.{TestKit, TestProbe}
 import drt.shared.CrunchApi._
-import drt.shared.PaxTypes.{B5JPlusNational, B5JPlusNationalBelowEGateAge, EeaBelowEGateAge, EeaMachineReadable, EeaNonMachineReadable, NonVisaNational, Transit, VisaNational}
+import drt.shared.PaxTypes._
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
@@ -37,8 +37,8 @@ class CrunchStateMockActor extends Actor {
   }
 }
 
-class PortStateTestActor(liveActor: ActorRef, forecastActor: ActorRef, airportConfig: AirportConfig, probe: ActorRef, expireAfterMillis: Long, now: () => SDateLike, liveDaysAhead: Int)
-  extends PortStateActor(liveActor, forecastActor, airportConfig, expireAfterMillis, now, liveDaysAhead) {
+class PortStateTestActor(liveActor: ActorRef, forecastActor: ActorRef, probe: ActorRef, now: () => SDateLike, liveDaysAhead: Int)
+  extends PortStateActor(liveActor, forecastActor, now, liveDaysAhead) {
   override def splitDiffAndSend(diff: PortStateDiff): Unit = {
     super.splitDiffAndSend(diff)
     probe ! state.immutable
@@ -46,8 +46,8 @@ class PortStateTestActor(liveActor: ActorRef, forecastActor: ActorRef, airportCo
 }
 
 object PortStateTestActor {
-  def props(liveActor: ActorRef, forecastActor: ActorRef, airportConfig: AirportConfig, probe: ActorRef, expireAfterMillis: Long, now: () => SDateLike, liveDaysAhead: Int): Props =
-    Props(new PortStateTestActor(liveActor, forecastActor, airportConfig, probe, expireAfterMillis, now, liveDaysAhead))
+  def props(liveActor: ActorRef, forecastActor: ActorRef, probe: ActorRef, now: () => SDateLike, liveDaysAhead: Int) =
+    Props(new PortStateTestActor(liveActor, forecastActor, probe, now, liveDaysAhead))
 }
 
 case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
@@ -90,7 +90,7 @@ class CrunchTestLike
     CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight)
 
   val airportConfig = AirportConfig(
-    portCode = "STN",
+    portCode = PortCode("STN"),
     queues = Map(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk), T2 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk)),
     slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 20, Queues.NonEeaDesk -> 45),
     terminals = Seq(T1, T2),
@@ -152,8 +152,8 @@ class CrunchTestLike
     else MilliDate(SDate(a.Scheduled).millisSinceEpoch)
   }
 
-  def createPortStateActor(name: String = "", testProbe: TestProbe, now: () => SDateLike): ActorRef = {
-    system.actorOf(PortStateTestActor.props(crunchStateMockActor, crunchStateMockActor, airportConfig, testProbe.ref, 24 * 360000L, now, 100), name = "port-state-actor")
+  def createPortStateActor(testProbe: TestProbe, now: () => SDateLike): ActorRef = {
+    system.actorOf(PortStateTestActor.props(crunchStateMockActor, crunchStateMockActor, testProbe.ref, now, 100), name = "port-state-actor")
   }
 
   def testProbe(name: String) = TestProbe(name = name)
@@ -168,7 +168,6 @@ class CrunchTestLike
                      pcpArrivalTime: Arrival => MilliDate = pcpForFlightFromSch,
                      minutesToCrunch: Int = 60,
                      expireAfterMillis: Long = DrtStaticParameters.expireAfterMillis,
-                     calcPcpWindow: (Set[ApiFlightWithSplits], Set[ApiFlightWithSplits]) => Option[(SDateLike, SDateLike)] = (_, _) => Some((SDate.now(), SDate.now())),
                      now: () => SDateLike,
                      initialShifts: ShiftAssignments = ShiftAssignments.empty,
                      initialFixedPoints: FixedPointAssignments = FixedPointAssignments.empty,
@@ -194,7 +193,7 @@ class CrunchTestLike
     val snapshotInterval = 1
     val manifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], oneMegaByte, now, DrtStaticParameters.expireAfterMillis, Option(snapshotInterval)))
 
-    val portStateActor = createPortStateActor(logLabel, portStateProbe, now)
+    val portStateActor = createPortStateActor(portStateProbe, now)
     initialPortState.foreach(ps => portStateActor ! ps)
 
     val (millisToCrunchActor: ActorRef, _: UniqueKillSwitch) = RunnableDeskRecs(portStateActor, minutesToCrunch, cruncher, airportConfig).run()

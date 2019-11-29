@@ -2,7 +2,7 @@ package actors
 
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
 import drt.shared.Queues.Queue
-import drt.shared.SplitRatiosNs.SplitSources
+import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
@@ -13,7 +13,7 @@ object PortStateMessageConversion {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def snapshotMessageToState(sm: CrunchStateSnapshotMessage, optionalTimeWindowEnd: Option[SDateLike], state: PortStateMutable): Unit = {
-    state.clear
+    state.clear()
 
     log.debug(s"Unwrapping flights messages")
     optionalTimeWindowEnd match {
@@ -98,7 +98,7 @@ object PortStateMessageConversion {
   )
 
   def splitMessageToApiSplits(sm: SplitMessage): Splits = {
-    val splitSource = sm.source.getOrElse("") match {
+    val splitSource = SplitSource(sm.source.getOrElse("")) match {
       case SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages_Old => SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
       case s => s
     }
@@ -111,7 +111,7 @@ object PortStateMessageConversion {
         None
       )).toSet,
       splitSource,
-      sm.eventType,
+      sm.eventType.map(EventType(_)),
       SplitStyle(sm.style.getOrElse(""))
     )
   }

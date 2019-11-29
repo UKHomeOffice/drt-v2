@@ -48,7 +48,7 @@ class ApplicationRestartSpec extends CrunchTestLike {
       Splits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None)),
         SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-        Option(DqEventCodes.DepartureConfirmed),
+        Option(EventTypes.DC),
         PaxNumbers))
 
     val daysToCrunch = 3

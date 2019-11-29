@@ -13,11 +13,11 @@ trait WithAirportInfo {
     Action { request =>
       import upickle.default._
 
-      val res: Map[String, AirportInfo] = request.queryString.get("portCode")
+      val res: Map[PortCode, AirportInfo] = request.queryString.get("portCode")
         .flatMap(_.headOption)
         .map(codes => codes
           .split(",")
-          .map(code => (code, AirportToCountry.airportInfo.get(code)))
+          .map(code => (PortCode(code), AirportToCountry.airportInfo.get(code)))
           .collect {
             case (code, Some(info)) => (code, info)
           }

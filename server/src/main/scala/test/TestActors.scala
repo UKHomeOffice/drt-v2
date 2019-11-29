@@ -6,7 +6,7 @@ import akka.actor.Props
 import akka.pattern.AskableActorRef
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
-import drt.shared.{AirportConfig, SDateLike}
+import drt.shared.{PortCode, SDateLike}
 import slickdb.ArrivalTable
 
 
@@ -115,7 +115,9 @@ object TestActors {
     override def receiveCommand: Receive = reset orElse super.receiveCommand
   }
 
-  case class TestAggregatedArrivalsActor() extends AggregatedArrivalsActor("LHR", ArrivalTable("LHR", PostgresTables)) {
+  case class TestAggregatedArrivalsActor() extends {
+    private val portCode = PortCode("LHR")
+  } with AggregatedArrivalsActor(ArrivalTable(portCode, PostgresTables)) {
     def reset: Receive = {
       case ResetActor => Unit
     }
@@ -124,17 +126,35 @@ object TestActors {
   }
 
   object TestPortStateActor {
-    def props(liveStateActor: AskableActorRef, forecastStateActor: AskableActorRef, airportConfig: AirportConfig, expireAfterMillis: Long, now: () => SDateLike, liveDaysAhead: Int): Props =
-      Props(new TestPortStateActor(liveStateActor, forecastStateActor, airportConfig, expireAfterMillis, now, 2))
+    def props(liveStateActor: AskableActorRef, forecastStateActor: AskableActorRef, now: () => SDateLike, liveDaysAhead: Int) =
+      Props(new TestPortStateActor(liveStateActor, forecastStateActor, now, liveDaysAhead))
   }
 
-  case class TestPortStateActor(live: AskableActorRef, forecast: AskableActorRef, airportConfig: AirportConfig, expireAfterMillis: Long, now: () => SDateLike, liveDaysAhead: Int)
-    extends PortStateActor(live, forecast, airportConfig, expireAfterMillis, now, liveDaysAhead) {
+  case class TestPortStateActor(live: AskableActorRef, forecast: AskableActorRef, now: () => SDateLike, liveDaysAhead: Int)
+    extends PortStateActor(live, forecast, now, liveDaysAhead) {
     def reset: Receive = {
       case ResetActor => state.clear()
     }
 
     override def receive: Receive = reset orElse super.receive
+  }
+
+  object TestCrunchStateActor {
+    def props(snapshotInterval: Int,
+              name: String,
+              portQueues: Map[Terminal, Seq[Queue]],
+              now: () => SDateLike,
+              expireAfterMillis: Long,
+              purgePreviousSnapshots: Boolean): Props = Props(
+      new TestCrunchStateActor(
+        snapshotInterval,
+        name,
+        portQueues,
+        now,
+        expireAfterMillis,
+        purgePreviousSnapshots
+      )
+    )
   }
 
   case class TestCrunchStateActor(snapshotInterval: Int,
@@ -151,7 +171,6 @@ object TestActors {
       now = now,
       expireAfterMillis = expireAfterMillis,
       purgePreviousSnapshots = purgePreviousSnapshots,
-      acceptFullStateUpdates = false,
       forecastMaxMillis = () => now().addDays(2).millisSinceEpoch) {
 
     def reset: Receive = {

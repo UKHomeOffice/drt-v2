@@ -30,7 +30,7 @@ object UpdateHandled
 
 object RemovalHandled
 
-class TestAggregatedArrivalsActor(portCode: String, arrivalTable: ArrivalTableLike, probe: ActorRef) extends AggregatedArrivalsActor(portCode, arrivalTable) {
+class TestAggregatedArrivalsActor(arrivalTable: ArrivalTableLike, probe: ActorRef) extends AggregatedArrivalsActor(arrivalTable) {
   def testReceive: Receive = {
     case GetArrivals => sender() ! arrivalTable.selectAll
   }
@@ -75,7 +75,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
   }
 
   def aggregatedArrivalsTestActor(actorProbe: ActorRef, arrivalTable: ArrivalTableLike): ActorRef = {
-    system.actorOf(Props(classOf[TestAggregatedArrivalsActor], airportConfig.portCode, arrivalTable, actorProbe), name = "aggregated-arrivals-actor")
+    system.actorOf(Props(classOf[TestAggregatedArrivalsActor], arrivalTable, actorProbe), name = "aggregated-arrivals-actor")
   }
 
   "Given a live arrival " +
@@ -103,7 +103,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
       case ag: AggregatedArrivals => ag
     }
 
-    val expected = AggregatedArrival(liveArrival, airportConfig.portCode)
+    val expected = AggregatedArrival(liveArrival, airportConfig.portCode.iata)
 
     crunch.liveArrivalsInput.complete()
 
@@ -148,8 +148,8 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
     }
 
     val expected = Set(
-      AggregatedArrival(liveArrival, airportConfig.portCode),
-      AggregatedArrival(expiredArrival, airportConfig.portCode)
+      AggregatedArrival(liveArrival, airportConfig.portCode.iata),
+      AggregatedArrival(expiredArrival, airportConfig.portCode.iata)
     )
 
     crunch.liveArrivalsInput.complete()

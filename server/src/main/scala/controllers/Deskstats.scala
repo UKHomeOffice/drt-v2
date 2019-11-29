@@ -104,7 +104,7 @@ object Deskstats {
     parseCsvLine(firstLine)
   }
 
-  def desksForQueueByMillis(queueName: String, dateIndex: Int, timeIndex: Int, deskIndex: Int, waitTimeIndex: Int, rows: Seq[Seq[String]]): Map[Long, DeskStat] = {
+  def desksForQueueByMillis(deskIndex: Int, waitTimeIndex: Int, rows: Seq[Seq[String]]): Map[Long, DeskStat] = {
     rows.map { columnData: Seq[String] =>
       val desksOption = Try {
         columnData(deskIndex).toInt
@@ -147,7 +147,7 @@ object Deskstats {
         case (terminal, rs) =>
           Terminal(terminal) -> queueColumns.map {
             case (queueName, desksAndWaitIndexes) =>
-              queueName -> desksForQueueByMillis(queueName.toString, columnIndices("date"), columnIndices("time"), desksAndWaitIndexes("desks"), desksAndWaitIndexes("wait"), rs)
+              queueName -> desksForQueueByMillis(desksAndWaitIndexes("desks"), desksAndWaitIndexes("wait"), rs)
           }
       }
 

@@ -7,9 +7,10 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
+import drt.server.feeds.Implicits._
 import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.{InvalidTerminal, T1, Terminal}
-import drt.shared.{Arrival, LiveBaseFeedSource, SDateLike, Terminals}
+import drt.shared.{Arrival, LiveBaseFeedSource, PortCode, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
@@ -21,7 +22,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-case class CiriumFeed(endpoint: String, portCode: String)(implicit actorSystem: ActorSystem, materializer: Materializer) {
+case class CiriumFeed(endpoint: String, portCode: PortCode)(implicit actorSystem: ActorSystem, materializer: Materializer) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   import CiriumFeed._
@@ -52,7 +53,7 @@ case class CiriumFeed(endpoint: String, portCode: String)(implicit actorSystem: 
 object CiriumFeed {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def terminalMatchForPort(terminal: Option[String], portCode: String): Terminal = portCode.toUpperCase match {
+  def terminalMatchForPort(terminal: Option[String], portCode: PortCode): Terminal = portCode.iata match {
     case "LTN" | "STN" | "EMA" | "GLA" | "LCY" | "BRS" | "BFS" | "LPL" | "NCL" =>
       T1
     case "LHR" | "MAN" =>
@@ -66,7 +67,7 @@ object CiriumFeed {
     case _ => date
   }
 
-  def toArrival(f: CiriumFlightStatus, portCode: String): Arrival = {
+  def toArrival(f: CiriumFlightStatus, portCode: PortCode): Arrival = {
     val carrierScheduledTime = f.arrivalDate.millis
     val scheduledToNearest5Mins = timeToNearest5Minutes(SDate(carrierScheduledTime)).millisSinceEpoch
 

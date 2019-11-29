@@ -7,7 +7,6 @@ import drt.client.services.RootModel
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import org.scalajs.dom.raw.HTMLElement
@@ -22,7 +21,7 @@ object BigSummaryBoxes {
 
   def bestFlightSplitPax(bestFlightPax: Arrival => Int): PartialFunction[ApiFlightWithSplits, Double] = {
     case ApiFlightWithSplits(flight, splits, _) =>
-      splits.find { case api@Splits(_, _, _, t) => t == PaxNumbers } match {
+      splits.find { case Splits(_, _, _, t) => t == PaxNumbers } match {
         case None => bestFlightPax(flight)
         case Some(apiSplits) => apiSplits.totalExcludingTransferPax
       }
@@ -85,14 +84,6 @@ object BigSummaryBoxes {
 
     aggSplitsInts
   }
-
-  def convertMapToAggSplits(aggSplits: Map[PaxTypeAndQueue, Double]) = Splits(
-    aggSplits.map {
-      case (k, v) =>
-        ApiPaxTypeAndQueueCount(k.passengerType, k.queueType, v, None)
-    }.toSet,
-    "Aggregated", None, PaxNumbers
-  )
 
   def flightsAtTerminal(flightsPcp: Seq[ApiFlightWithSplits], ourTerminal: Terminal): Seq[ApiFlightWithSplits] = {
     flightsPcp.filter(f => f.apiFlight.Terminal == ourTerminal)

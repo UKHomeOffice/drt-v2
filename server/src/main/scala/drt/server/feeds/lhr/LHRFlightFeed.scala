@@ -3,6 +3,7 @@ package drt.server.feeds.lhr
 import akka.NotUsed
 import akka.actor.Cancellable
 import akka.stream.scaladsl.Source
+import drt.server.feeds.Implicits._
 import drt.server.feeds.lhr.LHRFlightFeed.{emptyStringToOption, parseDateTime}
 import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.Terminal

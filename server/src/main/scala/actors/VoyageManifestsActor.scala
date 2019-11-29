@@ -6,11 +6,11 @@ import akka.persistence._
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
-import server.feeds.{BestManifestsFeedSuccess, ManifestsFeedFailure, ManifestsFeedSuccess}
+import server.feeds.{BestManifestsFeedSuccess, DqManifests, ManifestsFeedFailure, ManifestsFeedSuccess}
 import server.protobuf.messages.FlightsMessage.FeedStatusMessage
 import server.protobuf.messages.VoyageManifest._
 import services.SDate
-import services.graphstages.{Crunch, DqManifests}
+import services.graphstages.Crunch
 
 import scala.collection.mutable
 
@@ -172,10 +172,10 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
   def voyageManifestToMessage(vm: VoyageManifest): VoyageManifestMessage = {
     VoyageManifestMessage(
       createdAt = Option(SDate.now().millisSinceEpoch),
-      eventCode = Option(vm.EventCode),
-      arrivalPortCode = Option(vm.ArrivalPortCode),
-      departurePortCode = Option(vm.DeparturePortCode),
-      voyageNumber = Option(vm.VoyageNumber),
+      eventCode = Option(vm.EventCode.toString),
+      arrivalPortCode = Option(vm.ArrivalPortCode.iata),
+      departurePortCode = Option(vm.DeparturePortCode.iata),
+      voyageNumber = Option(vm.VoyageNumber.toString),
       carrierCode = Option(vm.CarrierCode),
       scheduledDateOfArrival = Option(vm.ScheduledDateOfArrival),
       scheduledTimeOfArrival = Option(vm.ScheduledTimeOfArrival),
@@ -206,10 +206,10 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
 
   def voyageManifestFromMessage(m: VoyageManifestMessage): VoyageManifest = {
     VoyageManifest(
-      EventCode = m.eventCode.getOrElse(""),
-      ArrivalPortCode = m.arrivalPortCode.getOrElse(""),
-      DeparturePortCode = m.departurePortCode.getOrElse(""),
-      VoyageNumber = m.voyageNumber.getOrElse(""),
+      EventCode = EventType(m.eventCode.getOrElse("")),
+      ArrivalPortCode = PortCode(m.arrivalPortCode.getOrElse("")),
+      DeparturePortCode = PortCode(m.departurePortCode.getOrElse("")),
+      VoyageNumber = VoyageNumber(m.voyageNumber.getOrElse("")),
       CarrierCode = m.carrierCode.getOrElse(""),
       ScheduledDateOfArrival = m.scheduledDateOfArrival.getOrElse(""),
       ScheduledTimeOfArrival = m.scheduledTimeOfArrival.getOrElse(""),

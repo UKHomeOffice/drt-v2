@@ -7,7 +7,7 @@ import akka.testkit.TestKit
 import com.typesafe.config.ConfigFactory
 import drt.server.feeds.legacy.bhx.BHXFeed
 import drt.shared.Terminals.T1
-import drt.shared.{Arrival, ForecastFeedSource, LiveFeedSource}
+import drt.shared.{Arrival, ForecastFeedSource, LiveFeedSource, PortCode}
 import javax.xml.datatype.DatatypeFactory
 import javax.xml.ws.BindingProvider
 import org.joda.time.DateTimeZone
@@ -18,12 +18,11 @@ import org.specs2.mutable.SpecificationLike
 import services.SDate
 import uk.co.bhx.online.flightinformation._
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
-class BHXLegacyFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.parseMap(
-  Map(
-    "feeds.bhx.soap.endPointUrl" -> ""
-  )))) with SpecificationLike with Mockito {
+class BHXLegacyFeedSpec extends TestKit(
+  ActorSystem("testActorSystem", ConfigFactory.parseMap(Map("feeds.bhx.soap.endPointUrl" -> "").asJava)))
+  with SpecificationLike with Mockito {
   sequential
   isolated
 
@@ -110,11 +109,11 @@ class BHXLegacyFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFac
         TranPax = Some(35),
         RunwayID = Some("R1"),
         BaggageReclaimId = Some("7A"),
-        AirportID = "BHX",
+        AirportID = PortCode("BHX"),
         Terminal = T1,
         rawICAO = "AF1164",
         rawIATA = "AF1164",
-        Origin = "CPH",
+        Origin = PortCode("CPH"),
         Scheduled = 1338619560000L,
         PcpTime = None,
         FeedSources = Set(LiveFeedSource)
@@ -140,11 +139,11 @@ class BHXLegacyFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFac
         TranPax = Some(35),
         RunwayID = None,
         BaggageReclaimId = None,
-        AirportID = "BHX",
+        AirportID = PortCode("BHX"),
         Terminal = T1,
         rawICAO = "AF1164",
         rawIATA = "AF1164",
-        Origin = "CPH",
+        Origin = PortCode("CPH"),
         Scheduled = 1338623160000L, // BHX Forecast is incorrect. This should be 1338619613123L or 2012-06-02T06:46:53.123Z
         PcpTime = None,
         FeedSources = Set(ForecastFeedSource),

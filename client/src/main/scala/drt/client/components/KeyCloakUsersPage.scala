@@ -18,9 +18,8 @@ object KeyCloakUsersPage {
   case class Props(router: RouterCtl[Loc])
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ListKeyCloakUsers")
-    .renderP((scope, p) => {
-
-      def editUser(userId: UUID) = (_: ReactEventFromInput) => p.router.set(KeyCloakUserEditLoc(userId))
+    .render_P { p =>
+      def editUser(userId: UUID): ReactEventFromInput => Callback = (_: ReactEventFromInput) => p.router.set(KeyCloakUserEditLoc(userId))
 
       val keyCloakUsers = SPACircuit.connect(_.keyCloakUsers)
       keyCloakUsers(usersMP => {
@@ -43,7 +42,6 @@ object KeyCloakUsersPage {
         )
       })
     }
-    )
     .componentDidMount(_ => Callback(GoogleEventTracker.sendPageView("users")))
     .build
 

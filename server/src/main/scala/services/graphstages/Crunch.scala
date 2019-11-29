@@ -291,7 +291,7 @@ object Crunch {
     }
   }
 
-  def tqmsDaysAffected(crunchOffsetMinutes: Int, paxOffPerMinute: Int)(tqms: List[TQM]): Set[String] =
+  def tqmsDaysAffected(crunchOffsetMinutes: Int)(tqms: List[TQM]): Set[String] =
     if (tqms.isEmpty)
       Set()
     else

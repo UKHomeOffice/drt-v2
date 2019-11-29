@@ -1,8 +1,14 @@
-import drt.shared.{Queues, TQM}
 import drt.shared.Terminals.{T2, T3, T4, T5}
+import drt.shared.{Queues, TQM}
 import org.specs2.mutable.Specification
 import services.graphstages.Crunch.LoadMinute
 
+
+sealed trait Port
+
+object Ports {
+  object Lhr extends Port
+}
 
 class MemorySpec extends Specification {
   val runtime = Runtime.getRuntime

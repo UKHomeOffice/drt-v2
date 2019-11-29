@@ -16,7 +16,7 @@ object StatusPage {
   case class Props()
 
   val component = ScalaComponent.builder[Props]("StatusPage")
-    .render_P(_ => {
+    .render_P { _ =>
 
       val feedStatusesRCP = SPACircuit.connect(_.feedStatuses)
 
@@ -48,7 +48,7 @@ object StatusPage {
                 <.ul(
                   feed.statuses.sortBy(_.date).reverse.map {
                     case FeedStatusSuccess(date, updates) => <.li(s"${displayTime(date)}: $updates updates")
-                    case FeedStatusFailure(date, msg) => <.li(s"${displayTime(date)}: Connection failed")
+                    case FeedStatusFailure(date, _) => <.li(s"${displayTime(date)}: Connection failed")
                   }.toVdomArray
                 )
               )
@@ -56,8 +56,8 @@ object StatusPage {
           })
         )
       }
-    })
-    .componentDidMount(p => Callback(GoogleEventTracker.sendPageView("feed-status")))
+    }
+    .componentDidMount(_ => Callback(GoogleEventTracker.sendPageView("feed-status")))
     .build
 
   private def displayTime(date: MillisSinceEpoch): String = {

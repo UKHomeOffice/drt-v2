@@ -26,7 +26,7 @@ object PortExportDashboardPage {
         }))
       })
     })
-    .componentDidMount(p => Callback {
+    .componentDidMount(_ => Callback {
       GoogleEventTracker.sendPageView(s"dashboard")
     })
     .build

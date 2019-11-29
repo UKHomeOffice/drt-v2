@@ -79,7 +79,6 @@ object WorkloadCalculator {
                   minuteMillis,
                   flightPaxInMinute,
                   apiSplit,
-                  Percentage,
                   nationalityProcessingTimes,
                   totalPaxWithNationality,
                   useNationalityBasedProcTimes
@@ -94,7 +93,6 @@ object WorkloadCalculator {
                         minuteMillis: MillisSinceEpoch,
                         flightPaxInMinute: Int,
                         apiSplitRatio: ApiPaxTypeAndQueueCount,
-                        splitStyle: SplitStyle,
                         nationalityProcessingTimes: Map[String, Double],
                         totalPaxWithNationality: Double,
                         useNationalityBasedProcTimes: Boolean

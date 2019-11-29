@@ -1,7 +1,7 @@
 package services.crunch
 
 import drt.shared.CrunchApi._
-import drt.shared.{ArrivalHelper, Forecast, MilliDate, Queues, SDateLike}
+import drt.shared.{Forecast, MilliDate, Queues, SDateLike}
 import org.specs2.mutable.Specification
 import services.graphstages.Crunch.getLocalLastMidnight
 import services.{CSVData, SDate}
