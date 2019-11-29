@@ -3,6 +3,7 @@ package actors.pointInTime
 import actors.PortStateMessageConversion.{crunchMinuteFromMessage, flightWithSplitsFromMessage, staffMinuteFromMessage}
 import actors.Sizes.oneMegaByte
 import actors._
+import akka.actor.Props
 import akka.persistence._
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared.Queues.Queue
@@ -12,6 +13,24 @@ import server.protobuf.messages.CrunchState._
 import services.SDate
 
 case object GetCrunchMinutes
+
+object CrunchStateReadActor {
+  def props(snapshotInterval: Int,
+            pointInTime: SDateLike,
+            expireAfterMillis: Long,
+            queues: Map[Terminal, Seq[Queue]],
+            startMillis: MillisSinceEpoch,
+            endMillis: MillisSinceEpoch): Props = Props(
+    new CrunchStateReadActor(
+      snapshotInterval,
+      pointInTime,
+      expireAfterMillis,
+      queues,
+      startMillis,
+      endMillis
+    )
+  )
+}
 
 class CrunchStateReadActor(snapshotInterval: Int,
                            pointInTime: SDateLike,

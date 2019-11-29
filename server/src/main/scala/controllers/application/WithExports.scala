@@ -3,7 +3,6 @@ package controllers.application
 import actors._
 import actors.pointInTime.CrunchStateReadActor
 import akka.NotUsed
-import akka.actor.Props
 import akka.pattern._
 import akka.stream.scaladsl.Source
 import akka.util.{ByteString, Timeout}
@@ -401,7 +400,7 @@ trait WithExports {
                                            terminalName: Terminal): Future[Either[PortStateError, Option[PortState]]] = {
     val stateQuery = GetPortStateForTerminal(startMillis, endMillis, terminalName)
     val terminalsAndQueues = airportConfig.queues.filterKeys(_ == terminalName)
-    val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], airportConfig.portStateSnapshotInterval, SDate(pointInTime), DrtStaticParameters.expireAfterMillis, terminalsAndQueues, startMillis, endMillis), stateQuery)
+    val query = CachableActorQuery(CrunchStateReadActor.props(airportConfig.portStateSnapshotInterval, SDate(pointInTime), DrtStaticParameters.expireAfterMillis, terminalsAndQueues, startMillis, endMillis), stateQuery)
     val portCrunchResult = cacheActorRef.ask(query)(new Timeout(15 seconds))
 
     portCrunchResult.map {

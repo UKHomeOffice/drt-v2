@@ -139,6 +139,24 @@ object TestActors {
     override def receive: Receive = reset orElse super.receive
   }
 
+  object TestCrunchStateActor {
+    def props(snapshotInterval: Int,
+              name: String,
+              portQueues: Map[Terminal, Seq[Queue]],
+              now: () => SDateLike,
+              expireAfterMillis: Long,
+              purgePreviousSnapshots: Boolean): Props = Props(
+      new TestCrunchStateActor(
+        snapshotInterval,
+        name,
+        portQueues,
+        now,
+        expireAfterMillis,
+        purgePreviousSnapshots
+      )
+    )
+  }
+
   case class TestCrunchStateActor(snapshotInterval: Int,
                                   name: String,
                                   portQueues: Map[Terminal, Seq[Queue]],

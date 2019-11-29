@@ -17,6 +17,27 @@ import services.SDate
 import services.graphstages.Crunch
 
 
+object CrunchStateActor {
+  def props(initialMaybeSnapshotInterval: Option[Int],
+            initialSnapshotBytesThreshold: Int,
+            name: String,
+            portQueues: Map[Terminal, Seq[Queue]],
+            now: () => SDateLike,
+            expireAfterMillis: MillisSinceEpoch,
+            purgePreviousSnapshots: Boolean,
+            forecastMaxMillis: () => MillisSinceEpoch) = Props(
+    new CrunchStateActor(
+      initialMaybeSnapshotInterval,
+      initialSnapshotBytesThreshold,
+      name,
+      portQueues,
+      now,
+      expireAfterMillis,
+      purgePreviousSnapshots,
+      forecastMaxMillis
+    ))
+}
+
 class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
                        initialSnapshotBytesThreshold: Int,
                        name: String,
