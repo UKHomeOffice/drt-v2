@@ -42,7 +42,7 @@ object WorkloadCalculator {
 
   def flightToFlightSplitMinutes(flightWithSplits: ApiFlightWithSplits,
                                  procTimes: Map[PaxTypeAndQueue, Double],
-                                 nationalityProcessingTimes: Map[String, Double],
+                                 nationalityProcessingTimes: Map[Nationality, Double],
                                  useNationalityBasedProcTimes: Boolean
                                 ): Seq[FlightSplitMinute] = {
     val flight = flightWithSplits.apiFlight
@@ -93,7 +93,7 @@ object WorkloadCalculator {
                         minuteMillis: MillisSinceEpoch,
                         flightPaxInMinute: Int,
                         apiSplitRatio: ApiPaxTypeAndQueueCount,
-                        nationalityProcessingTimes: Map[String, Double],
+                        nationalityProcessingTimes: Map[Nationality, Double],
                         totalPaxWithNationality: Double,
                         useNationalityBasedProcTimes: Boolean
                        ): FlightSplitMinute = {

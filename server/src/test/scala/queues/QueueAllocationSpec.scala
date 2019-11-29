@@ -7,7 +7,7 @@ import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.{PaxTypes, _}
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import org.specs2.mutable.Specification
-import passengersplits.core.PassengerTypeCalculatorValues.DocType
+import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import queueus._
 import services.SDate
 
@@ -35,17 +35,17 @@ class QueueAllocationSpec extends Specification {
       PortCode("LHR"),
       PortCode("JHB"),
       VoyageNumber("234"),
-      "SA",
+      CarrierCode("SA"),
       SDate("2019-02-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile("GBR", Some(DocType.Passport), Some(21), Some(false))
+        ManifestPassengerProfile(Nationality("GBR"), Some(DocumentType.Passport), Some(21), Some(false))
       )
     )
 
     val expected = Splits(Set(ApiPaxTypeAndQueueCount(
       PaxTypes.EeaMachineReadable,
       Queues.EGate, 1,
-      Some(Map("GBR" -> 1))
+      Option(Map(Nationality("GBR") -> 1))
     )), Historical, None, PaxNumbers)
 
     val result = PaxTypeQueueAllocation(DefaultPaxTypeAllocator, testQueueAllocator).toSplits(T1, bestManifest)
@@ -61,18 +61,18 @@ class QueueAllocationSpec extends Specification {
       PortCode("LHR"),
       PortCode("JHB"),
       VoyageNumber("234"),
-      "SA",
+      CarrierCode("SA"),
       SDate("2019-02-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile("GBR", Some(DocType.Passport), Some(21), Some(false)),
-        ManifestPassengerProfile("ZAF", Some(DocType.Passport), Some(21), Some(false))
+        ManifestPassengerProfile(Nationality("GBR"), Some(DocumentType.Passport), Some(21), Some(false)),
+        ManifestPassengerProfile(Nationality("ZAF"), Some(DocumentType.Passport), Some(21), Some(false))
       )
     )
 
     val expected = Splits(
       Set(
-        ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 1, Some(Map("GBR" -> 1))),
-        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Some(Map("ZAF" -> 1)))
+        ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 1, Option(Map(Nationality("GBR") -> 1))),
+        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Option(Map(Nationality("ZAF") -> 1)))
       ),
       Historical,
       None,
@@ -92,15 +92,15 @@ class QueueAllocationSpec extends Specification {
       PortCode("LHR"),
       PortCode("USA"),
       VoyageNumber("234"),
-      "SA",
+      CarrierCode("SA"),
       SDate("2019-07-22T06:24:00Z"),
-      List(ManifestPassengerProfile("USA", Some(DocType.Passport), Some(21), Some(true)))
+      List(ManifestPassengerProfile(Nationality("USA"), Some(DocumentType.Passport), Some(21), Some(true)))
     )
 
     val expected = Splits(
       Set(
-        ApiPaxTypeAndQueueCount(PaxTypes.B5JPlusNational, Queues.EGate, 0.75, Some(Map("USA" -> 0.75))),
-        ApiPaxTypeAndQueueCount(PaxTypes.B5JPlusNational, Queues.EeaDesk, 0.25, Some(Map("USA" -> 0.25)))
+        ApiPaxTypeAndQueueCount(PaxTypes.B5JPlusNational, Queues.EGate, 0.75, Option(Map(Nationality("USA") -> 0.75))),
+        ApiPaxTypeAndQueueCount(PaxTypes.B5JPlusNational, Queues.EeaDesk, 0.25, Option(Map(Nationality("USA") -> 0.25)))
       ),
       Historical,
       None,
@@ -119,16 +119,16 @@ class QueueAllocationSpec extends Specification {
       PortCode("LHR"),
       PortCode("USA"),
       VoyageNumber("234"),
-      "SA",
+      CarrierCode("SA"),
       SDate("2019-06-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile("USA", Some(DocType.Passport), Some(11), Some(false))
+        ManifestPassengerProfile(Nationality("USA"), Some(DocumentType.Passport), Some(11), Some(false))
       )
     )
 
     val expected = Splits(
       Set(
-        ApiPaxTypeAndQueueCount(PaxTypes.B5JPlusNationalBelowEGateAge, Queues.EeaDesk, 1, Some(Map("USA" -> 1)))
+        ApiPaxTypeAndQueueCount(PaxTypes.B5JPlusNationalBelowEGateAge, Queues.EeaDesk, 1, Option(Map(Nationality("USA") -> 1)))
       ),
       Historical,
       None,
@@ -150,17 +150,17 @@ class QueueAllocationSpec extends Specification {
       PortCode("LHR"),
       PortCode("USA"),
       VoyageNumber("234"),
-      "SA",
+      CarrierCode("SA"),
       SDate("2019-06-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile("GBR", Some(DocType.Passport), Some(11), Some(false))
+        ManifestPassengerProfile(Nationality("GBR"), Some(DocumentType.Passport), Some(11), Some(false))
       )
     )
 
 
     val expected = Splits(
       Set(
-        ApiPaxTypeAndQueueCount(PaxTypes.EeaBelowEGateAge, Queues.EeaDesk, 1, Some(Map("GBR" -> 1)))
+        ApiPaxTypeAndQueueCount(PaxTypes.EeaBelowEGateAge, Queues.EeaDesk, 1, Option(Map(Nationality("GBR") -> 1)))
       ),
       Historical,
       None,
@@ -183,18 +183,18 @@ class QueueAllocationSpec extends Specification {
       PortCode("LHR"),
       PortCode("USA"),
       VoyageNumber("234"),
-      "SA",
+      CarrierCode("SA"),
       SDate("2019-01-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile("GBR", Some(DocType.Passport), Some(11), Some(false)),
-        ManifestPassengerProfile("GBR", Some(DocType.Passport), Some(11), Some(true))
+        ManifestPassengerProfile(Nationality("GBR"), Some(DocumentType.Passport), Some(11), Some(false)),
+        ManifestPassengerProfile(Nationality("GBR"), Some(DocumentType.Passport), Some(11), Some(true))
       )
     )
 
     val expected = Splits(
       Set(
-        ApiPaxTypeAndQueueCount(PaxTypes.EeaBelowEGateAge, Queues.EeaDesk, 1, Some(Map("GBR" -> 1))),
-        ApiPaxTypeAndQueueCount(PaxTypes.Transit, Queues.Transfer, 1, Some(Map("GBR" -> 1)))
+        ApiPaxTypeAndQueueCount(PaxTypes.EeaBelowEGateAge, Queues.EeaDesk, 1, Option(Map(Nationality("GBR") -> 1))),
+        ApiPaxTypeAndQueueCount(PaxTypes.Transit, Queues.Transfer, 1, Option(Map(Nationality("GBR") -> 1)))
       ),
       Historical,
       None,
@@ -219,17 +219,17 @@ class QueueAllocationSpec extends Specification {
       PortCode("LHR"),
       PortCode("USA"),
       VoyageNumber("234"),
-      "SA",
+      CarrierCode("SA"),
       SDate("2019-01-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile("ZWE", Some(DocType.Passport), Some(22), Some(false))
+        ManifestPassengerProfile(Nationality("ZWE"), Some(DocumentType.Passport), Some(22), Some(false))
       )
     )
 
     val expected = Splits(
       Set(
-        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 0.1, Some(Map("ZWE" -> 0.1))),
-        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 0.9, Some(Map("ZWE" -> 0.9)))
+        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 0.1, Option(Map(Nationality("ZWE") -> 0.1))),
+        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 0.9, Option(Map(Nationality("ZWE") -> 0.9)))
       ),
       Historical,
       None,
@@ -252,16 +252,16 @@ class QueueAllocationSpec extends Specification {
       PortCode("LHR"),
       PortCode("USA"),
       VoyageNumber("234"),
-      "TM",
+      CarrierCode("TM"),
       SDate("2019-01-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile("ZWE", Some(DocType.Passport), Some(22), Some(false))
+        ManifestPassengerProfile(Nationality("ZWE"), Some(DocumentType.Passport), Some(22), Some(false))
       )
     )
 
     val expected = Splits(
       Set(
-        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Some(Map("ZWE" -> 1)))
+        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Option(Map(Nationality("ZWE") -> 1)))
       ),
       Historical,
       None,
@@ -284,17 +284,17 @@ class QueueAllocationSpec extends Specification {
       PortCode("LHR"),
       PortCode("USA"),
       VoyageNumber("234"),
-      "SAA",
+      CarrierCode("SAA"),
       SDate("2019-01-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile("ZWE", Some(DocType.Passport), Some(22), Some(false))
+        ManifestPassengerProfile(Nationality("ZWE"), Some(DocumentType.Passport), Some(22), Some(false))
       )
     )
 
     val expected = Splits(
       Set(
-        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 0.1, Some(Map("ZWE" -> 0.1))),
-        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 0.9, Some(Map("ZWE" -> 0.9)))
+        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 0.1, Option(Map(Nationality("ZWE") -> 0.1))),
+        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 0.9, Option(Map(Nationality("ZWE") -> 0.9)))
       ),
       Historical,
       None,

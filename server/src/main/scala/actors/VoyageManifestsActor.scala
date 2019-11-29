@@ -5,7 +5,8 @@ import actors.acking.AckingReceiver.StreamCompleted
 import akka.persistence._
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
+import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
+import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, VoyageManifest}
 import server.feeds.{BestManifestsFeedSuccess, DqManifests, ManifestsFeedFailure, ManifestsFeedSuccess}
 import server.protobuf.messages.FlightsMessage.FeedStatusMessage
 import server.protobuf.messages.VoyageManifest._
@@ -157,14 +158,14 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
 
   def passengerInfoToMessage(pi: PassengerInfoJson): PassengerInfoJsonMessage = {
     PassengerInfoJsonMessage(
-      documentType = pi.DocumentType,
-      documentIssuingCountryCode = Option(pi.DocumentIssuingCountryCode),
+      documentType = pi.DocumentType.map(_.toString),
+      documentIssuingCountryCode = Option(pi.DocumentIssuingCountryCode.toString),
       eeaFlag = Option(pi.EEAFlag),
       age = pi.Age,
-      disembarkationPortCode = pi.DisembarkationPortCode,
+      disembarkationPortCode = pi.DisembarkationPortCode.map(_.toString),
       inTransitFlag = Option(pi.InTransitFlag),
-      disembarkationPortCountryCode = pi.DisembarkationPortCountryCode,
-      nationalityCountryCode = pi.NationalityCountryCode,
+      disembarkationPortCountryCode = pi.DisembarkationPortCountryCode.map(_.toString),
+      nationalityCountryCode = pi.NationalityCountryCode.map(_.toString),
       passengerIdentifier = pi.PassengerIdentifier
     )
   }
@@ -176,9 +177,9 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
       arrivalPortCode = Option(vm.ArrivalPortCode.iata),
       departurePortCode = Option(vm.DeparturePortCode.iata),
       voyageNumber = Option(vm.VoyageNumber.toString),
-      carrierCode = Option(vm.CarrierCode),
-      scheduledDateOfArrival = Option(vm.ScheduledDateOfArrival),
-      scheduledTimeOfArrival = Option(vm.ScheduledTimeOfArrival),
+      carrierCode = Option(vm.CarrierCode.code),
+      scheduledDateOfArrival = Option(vm.ScheduledDateOfArrival.date),
+      scheduledTimeOfArrival = Option(vm.ScheduledTimeOfArrival.time),
       passengerList = vm.PassengerList.map(passengerInfoToMessage)
     )
   }
@@ -192,14 +193,14 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
 
   def passengerInfoFromMessage(m: PassengerInfoJsonMessage): PassengerInfoJson = {
     PassengerInfoJson(
-      DocumentType = m.documentType,
-      DocumentIssuingCountryCode = m.documentIssuingCountryCode.getOrElse(""),
+      DocumentType = m.documentType.map(DocumentType(_)),
+      DocumentIssuingCountryCode = Nationality(m.documentIssuingCountryCode.getOrElse("")),
       EEAFlag = m.eeaFlag.getOrElse(""),
       Age = m.age,
-      DisembarkationPortCode = m.disembarkationPortCode,
+      DisembarkationPortCode = m.disembarkationPortCode.map(PortCode(_)),
       InTransitFlag = m.inTransitFlag.getOrElse(""),
-      DisembarkationPortCountryCode = m.disembarkationPortCountryCode,
-      NationalityCountryCode = m.nationalityCountryCode,
+      DisembarkationPortCountryCode = m.disembarkationPortCountryCode.map(Nationality(_)),
+      NationalityCountryCode = m.nationalityCountryCode.map(Nationality(_)),
       PassengerIdentifier = m.passengerIdentifier
     )
   }
@@ -210,9 +211,9 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
       ArrivalPortCode = PortCode(m.arrivalPortCode.getOrElse("")),
       DeparturePortCode = PortCode(m.departurePortCode.getOrElse("")),
       VoyageNumber = VoyageNumber(m.voyageNumber.getOrElse("")),
-      CarrierCode = m.carrierCode.getOrElse(""),
-      ScheduledDateOfArrival = m.scheduledDateOfArrival.getOrElse(""),
-      ScheduledTimeOfArrival = m.scheduledTimeOfArrival.getOrElse(""),
+      CarrierCode = CarrierCode(m.carrierCode.getOrElse("")),
+      ScheduledDateOfArrival = ManifestDateOfArrival(m.scheduledDateOfArrival.getOrElse("")),
+      ScheduledTimeOfArrival = ManifestTimeOfArrival(m.scheduledTimeOfArrival.getOrElse("")),
       PassengerList = m.passengerList.toList.map(passengerInfoFromMessage)
     )
   }

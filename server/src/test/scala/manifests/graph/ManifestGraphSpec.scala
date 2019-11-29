@@ -7,7 +7,7 @@ import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SplitRatiosNs.SplitSources.Historical
-import drt.shared.{Arrival, ArrivalKey, PortCode, SDateLike, VoyageNumber}
+import drt.shared.{Arrival, ArrivalKey, CarrierCode, PortCode, SDateLike, VoyageNumber}
 import graphs.SinkToSourceBridge
 import manifests.actors.RegisteredArrivals
 import manifests.passengers.BestAvailableManifest
@@ -24,7 +24,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
   isolated
 
   val scheduled = SDate("2019-03-06T12:00:00Z")
-  
+
   "Given an arrival is sent into the ManifestGraph then we should find the manifest for that flight in the sink" >> {
 
     val testManifest = BestAvailableManifest(
@@ -32,7 +32,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
       PortCode("STN"),
       PortCode("TST"),
       VoyageNumber("1234"),
-      "TST",
+      CarrierCode("TST"),
       scheduled,
       List()
     )
@@ -62,7 +62,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
       PortCode("STN"),
       PortCode("TST"),
       VoyageNumber("1234"),
-      "TST",
+      CarrierCode("TST"),
       scheduled,
       List()
     )
@@ -96,7 +96,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
       PortCode("STN"),
       PortCode("TST"),
       VoyageNumber("1234"),
-      "TST",
+      CarrierCode("TST"),
       scheduled,
       List()
     )

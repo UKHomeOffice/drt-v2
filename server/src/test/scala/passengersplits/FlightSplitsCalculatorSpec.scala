@@ -1,5 +1,6 @@
 package passengersplits
 
+import drt.shared.Nationality
 import drt.shared.PaxTypes._
 import org.specs2.matcher.Matchers
 import org.specs2.mutable.Specification
@@ -7,7 +8,7 @@ import org.specs2.specification.Tables
 import org.specs2.specification.core.Fragments
 import passengersplits.core.PassengerTypeCalculator
 import passengersplits.core.PassengerTypeCalculator.PaxTypeInfo
-import passengersplits.core.PassengerTypeCalculatorValues.CountryCodes
+import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocumentType}
 
 
 class FlightSplitsCalculatorSpec extends Specification with Matchers with Tables {
@@ -46,7 +47,7 @@ class FlightSplitsCalculatorSpec extends Specification with Matchers with Tables
         "P" ! Latvia ! EeaMachineReadable |
         "I" ! Slovakia ! EeaNonMachineReadable | {
         (docType, documentCountry, passengerType) =>
-          PassengerTypeCalculator.mostAirports(PaxTypeInfo(None, "N", documentCountry, Option(docType), None)) must_== passengerType
+          PassengerTypeCalculator.mostAirports(PaxTypeInfo(None, "N", Nationality(documentCountry), Option(DocumentType(docType)), None)) must_== passengerType
       }
     }"""
   }

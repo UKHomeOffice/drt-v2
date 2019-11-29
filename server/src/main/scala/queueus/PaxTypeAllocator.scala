@@ -4,7 +4,7 @@ import drt.shared.PaxType
 import drt.shared.PaxTypes._
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import passengersplits.core.PassengerTypeCalculator.{isB5JPlus, isEea, isVisaNational}
-import passengersplits.core.PassengerTypeCalculatorValues.DocType
+import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 
 trait PaxTypeAllocator {
 
@@ -14,8 +14,8 @@ trait PaxTypeAllocator {
   }
 
   val countryAndDocumentTypes: PartialFunction[ManifestPassengerProfile, PaxType] = {
-    case ManifestPassengerProfile(country, Some(docType), Some(age), _) if isEea(country) && docType == DocType.Passport && age < 12 => EeaBelowEGateAge
-    case ManifestPassengerProfile(country, Some(docType), _, _) if isEea(country) && docType == DocType.Passport => EeaMachineReadable
+    case ManifestPassengerProfile(country, Some(docType), Some(age), _) if isEea(country) && docType == DocumentType.Passport && age < 12 => EeaBelowEGateAge
+    case ManifestPassengerProfile(country, Some(docType), _, _) if isEea(country) && docType == DocumentType.Passport => EeaMachineReadable
     case ManifestPassengerProfile(country, _, _, _) if isEea(country) => EeaNonMachineReadable
     case ManifestPassengerProfile(country, _, _, _) if !isEea(country) && isVisaNational(country) => VisaNational
     case ManifestPassengerProfile(country, _, _, _) if !isEea(country) => NonVisaNational

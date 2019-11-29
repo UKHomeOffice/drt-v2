@@ -79,7 +79,13 @@ case object Ratio extends SplitStyle
 
 case object UndefinedSplitStyle extends SplitStyle
 
-case class ApiPaxTypeAndQueueCount(passengerType: PaxType, queueType: Queue, paxCount: Double, nationalities: Option[IMap[String, Double]])
+case class Nationality(code: String)
+
+object Nationality {
+  implicit val rw: ReadWriter[Nationality] = macroRW
+}
+
+case class ApiPaxTypeAndQueueCount(passengerType: PaxType, queueType: Queue, paxCount: Double, nationalities: Option[IMap[Nationality, Double]])
 
 object ApiPaxTypeAndQueueCount {
   implicit val rw: ReadWriter[ApiPaxTypeAndQueueCount] = macroRW
@@ -341,7 +347,7 @@ case class Arrival(
     }
   }
 
-  lazy val carrierCode: String = {
+  lazy val carrierCode: CarrierCode = {
     val bestCode = (IATA, ICAO) match {
       case (iata, _) if iata != "" => iata
       case (_, icao) if icao != "" => icao
@@ -349,8 +355,8 @@ case class Arrival(
     }
 
     bestCode match {
-      case Arrival.flightCodeRegex(cc, _, _) => cc
-      case _ => ""
+      case Arrival.flightCodeRegex(cc, _, _) => CarrierCode(cc)
+      case _ => CarrierCode("")
     }
   }
 

@@ -1,9 +1,9 @@
 package passengersplits.parsing
 
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.EventTypes.InvalidEventType
 import drt.shared._
 import org.joda.time.DateTime
+import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import services.SDate.JodaSDate
 import spray.json.{DefaultJsonProtocol, JsString, JsValue, RootJsonFormat}
 
@@ -16,17 +16,17 @@ object VoyageManifestParser {
     Try(content.parseJson.convertTo[VoyageManifest])
   }
 
-  case class PassengerInfo(DocumentType: Option[String],
-                           DocumentIssuingCountryCode: String, Age: Option[Int] = None)
+  case class PassengerInfo(DocumentType: Option[DocumentType],
+                           DocumentIssuingCountryCode: Nationality, Age: Option[Int] = None)
 
-  case class PassengerInfoJson(DocumentType: Option[String],
-                               DocumentIssuingCountryCode: String,
+  case class PassengerInfoJson(DocumentType: Option[DocumentType],
+                               DocumentIssuingCountryCode: Nationality,
                                EEAFlag: String,
                                Age: Option[String] = None,
-                               DisembarkationPortCode: Option[String],
+                               DisembarkationPortCode: Option[PortCode],
                                InTransitFlag: String = "N",
-                               DisembarkationPortCountryCode: Option[String] = None,
-                               NationalityCountryCode: Option[String] = None,
+                               DisembarkationPortCountryCode: Option[Nationality] = None,
+                               NationalityCountryCode: Option[Nationality] = None,
                                PassengerIdentifier: Option[String]
                               ) {
     def toPassengerInfo = PassengerInfo(DocumentType, DocumentIssuingCountryCode, Age match {
@@ -37,30 +37,53 @@ object VoyageManifestParser {
 
   case class VoyageManifests(manifests: Set[VoyageManifest])
 
+  case class ManifestDateOfArrival(date: String) {
+    override def toString: String = date
+  }
+  case class ManifestTimeOfArrival(time: String) {
+    override def toString: String = time
+  }
+
   case class VoyageManifest(EventCode: EventType,
                             ArrivalPortCode: PortCode,
                             DeparturePortCode: PortCode,
                             VoyageNumber: VoyageNumberLike,
-                            CarrierCode: String,
-                            ScheduledDateOfArrival: String,
-                            ScheduledTimeOfArrival: String,
+                            CarrierCode: CarrierCode,
+                            ScheduledDateOfArrival: ManifestDateOfArrival,
+                            ScheduledTimeOfArrival: ManifestTimeOfArrival,
                             PassengerList: List[PassengerInfoJson]) {
-    def flightCode: String = CarrierCode + VoyageNumber
+    def flightCode: String = CarrierCode.code + VoyageNumber
 
     def scheduleArrivalDateTime: Option[SDateLike] = Try(DateTime.parse(scheduleDateTimeString)).toOption.map(JodaSDate)
 
     def passengerInfos: Seq[PassengerInfo] = PassengerList.map(_.toPassengerInfo)
 
     def scheduleDateTimeString: String = s"${ScheduledDateOfArrival}T${ScheduledTimeOfArrival}Z"
-
-    def millis: MillisSinceEpoch = scheduleArrivalDateTime.map(_.millisSinceEpoch).getOrElse(0L)
-
-    def summary: String = s"$DeparturePortCode->$ArrivalPortCode/$CarrierCode$VoyageNumber@$scheduleDateTimeString"
-
-    def key: Int = s"$VoyageNumber-${scheduleArrivalDateTime.map(_.millisSinceEpoch).getOrElse(0L)}".hashCode
   }
 
   object FlightPassengerInfoProtocol extends DefaultJsonProtocol {
+    implicit object DocumentTypeJsonFormat extends RootJsonFormat[DocumentType] {
+      def write(c: DocumentType) = JsString(c.toString)
+
+      def read(value: JsValue): DocumentType = value match {
+        case str: JsString => DocumentType(str.value)
+      }
+    }
+    implicit object NationalityJsonFormat extends RootJsonFormat[Nationality] {
+      def write(c: Nationality) = JsString(c.toString)
+
+      def read(value: JsValue): Nationality = value match {
+        case str: JsString => Nationality(str.value)
+      }
+    }
+    implicit object PortCodeJsonFormat extends RootJsonFormat[PortCode] {
+      def write(c: PortCode) = JsString(c.toString)
+
+      def read(value: JsValue): PortCode = value match {
+        case str: JsString => PortCode(str.value)
+        case _ => PortCode("")
+      }
+    }
     implicit val passengerInfoConverter: RootJsonFormat[PassengerInfoJson] = jsonFormat(PassengerInfoJson,
       "DocumentType",
       "DocumentIssuingCountryCode",
@@ -80,12 +103,11 @@ object VoyageManifestParser {
         case _ => InvalidEventType
       }
     }
-    implicit object PortCodeJsonFormat extends RootJsonFormat[PortCode] {
-      def write(c: PortCode) = JsString(c.toString)
+    implicit object CarrierCodeJsonFormat extends RootJsonFormat[CarrierCode] {
+      def write(c: CarrierCode) = JsString(c.toString)
 
-      def read(value: JsValue): PortCode = value match {
-        case str: JsString => PortCode(str.value)
-        case _ => PortCode("")
+      def read(value: JsValue): CarrierCode = value match {
+        case str: JsString => CarrierCode(str.value)
       }
     }
     implicit object VoyageNumberJsonFormat extends RootJsonFormat[VoyageNumberLike] {
@@ -94,6 +116,20 @@ object VoyageManifestParser {
       def read(value: JsValue): VoyageNumberLike = value match {
         case str: JsString => VoyageNumber(str.value)
         case unexpected => InvalidVoyageNumber(new Exception(s"unexpected json value: $unexpected"))
+      }
+    }
+    implicit object ManifestDateOfArrivalJsonFormat extends RootJsonFormat[ManifestDateOfArrival] {
+      def write(c: ManifestDateOfArrival) = JsString(c.toString)
+
+      def read(value: JsValue): ManifestDateOfArrival = value match {
+        case str: JsString => ManifestDateOfArrival(str.value)
+      }
+    }
+    implicit object ManifestTimeOfArrivalJsonFormat extends RootJsonFormat[ManifestTimeOfArrival] {
+      def write(c: ManifestTimeOfArrival) = JsString(c.toString)
+
+      def read(value: JsValue): ManifestTimeOfArrival = value match {
+        case str: JsString => ManifestTimeOfArrival(str.value)
       }
     }
     implicit val passengerInfoResponseConverter: RootJsonFormat[VoyageManifest] = jsonFormat8(VoyageManifest)

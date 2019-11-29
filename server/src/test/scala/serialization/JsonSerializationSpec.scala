@@ -126,7 +126,7 @@ class JsonSerializationSpec extends Specification {
         Set(
           ApiFlightWithSplits(
             Arrival(None, "scheduled", None, None, None, None, None, None, None, None, None, None, None, PortCode("test"), T1, "test", "test", PortCode("test"), 0L, None, Set(AclFeedSource, LiveFeedSource)),
-            Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Option(Map("tw" -> 7.0)))), Historical, None, Percentage))
+            Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Option(Map(Nationality("tw") -> 7.0)))), Historical, None, Percentage))
           )
         ),
         Set(CrunchMinute(T1, Queues.NonEeaDesk, 0L, 2.0, 2.0, 1, 1, None, None, None, None, Some(0))),
