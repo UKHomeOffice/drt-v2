@@ -41,7 +41,7 @@ class LGWForecastFeedSpec extends Specification with Mockito {
 
       val arrivals: List[Arrival] = feed.getArrivalsFromData("aFile.csv", exampleData)
       arrivals.length mustEqual 1
-      arrivals.head mustEqual new Arrival(
+      arrivals.head mustEqual Arrival(
         Operator = None,
         Status = "Port Forecast",
         Estimated = None,

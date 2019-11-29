@@ -98,7 +98,7 @@ class BHXLegacyFeedSpec extends TestKit(
 
       import drt.server.feeds.Implicits._
 
-      arrivals.head mustEqual new Arrival(
+      arrivals.head mustEqual Arrival(
         Operator = None,
         Status = "Arrived",
         Estimated = Some(SDate("2012-06-02T06:46:00Z", DateTimeZone.UTC).millisSinceEpoch),
@@ -131,7 +131,7 @@ class BHXLegacyFeedSpec extends TestKit(
 
       import drt.server.feeds.Implicits._
 
-      arrivals.head mustEqual new Arrival(
+      arrivals.head mustEqual Arrival(
         Operator = None,
         Status = "Port Forecast",
         Estimated = None,

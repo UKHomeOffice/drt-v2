@@ -146,7 +146,7 @@ class AclFeedSpec extends CrunchTestLike {
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlights))
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
 
-      val expected = Set(liveFlight.copy(rawIATA = aclFlight.rawIATA, rawICAO = aclFlight.rawICAO, FeedSources = Set(AclFeedSource, LiveFeedSource)))
+      val expected = Set(liveFlight.copy(CarrierCode = aclFlight.CarrierCode, VoyageNumber = aclFlight.VoyageNumber, FeedSources = Set(AclFeedSource, LiveFeedSource)))
 
       crunch.portStateTestProbe.fishForMessage(3 seconds) {
         case ps: PortState =>
@@ -213,7 +213,7 @@ class AclFeedSpec extends CrunchTestLike {
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(initialAcl.toList)))
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(newLive.toList)))
 
-      val expected = newLive.map(_.copy(rawIATA = "BA0001", FeedSources = Set(LiveFeedSource, AclFeedSource))) + initialAcl2.copy(FeedSources = Set(AclFeedSource))
+      val expected = newLive.map(_.copy(CarrierCode = CarrierCode("BA"), VoyageNumber = VoyageNumber(1), FeedSources = Set(LiveFeedSource, AclFeedSource))) + initialAcl2.copy(FeedSources = Set(AclFeedSource))
 
       crunch.portStateTestProbe.fishForMessage(3 seconds) {
         case ps: PortState =>

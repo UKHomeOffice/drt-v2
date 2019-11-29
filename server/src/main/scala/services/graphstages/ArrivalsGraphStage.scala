@@ -204,7 +204,7 @@ class ArrivalsGraphStage(name: String = "",
     def relevantFlights(arrivals: SortedMap[UniqueArrival, Arrival]): SortedMap[UniqueArrival, Arrival] = {
       val toRemove = arrivals.filter {
         case (_, f) if !isFlightRelevant(f) =>
-          log.debug(s"Filtering out irrelevant arrival: ${f.IATA}, ${SDate(f.Scheduled).toISOString()}, ${f.Origin}")
+          log.debug(s"Filtering out irrelevant arrival: ${f.flightCode}, ${SDate(f.Scheduled).toISOString()}, ${f.Origin}")
           true
         case _ => false
       }.keys
@@ -277,8 +277,8 @@ class ArrivalsGraphStage(name: String = "",
       val key = UniqueArrival(baseArrival)
       val (pax, transPax) = bestPaxNos(key)
       bestArrival.copy(
-        rawIATA = baseArrival.rawIATA,
-        rawICAO = baseArrival.rawICAO,
+        CarrierCode = baseArrival.CarrierCode,
+        VoyageNumber = baseArrival.VoyageNumber,
         ActPax = pax,
         TranPax = transPax,
         Status = bestStatus(key),

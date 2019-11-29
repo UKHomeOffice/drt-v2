@@ -105,11 +105,11 @@ trait ProdPassengerSplitProviders {
   val csvSplitsProvider: SplitsProvider.SplitProvider = SplitsProvider.csvProvider
 
   def egatePercentageProvider(apiFlight: Arrival): Double = {
-    CSVPassengerSplitsProvider.egatePercentageFromSplit(csvSplitsProvider(apiFlight.IATA, MilliDate(apiFlight.Scheduled)), 0.6)
+    CSVPassengerSplitsProvider.egatePercentageFromSplit(csvSplitsProvider(apiFlight.flightCode, MilliDate(apiFlight.Scheduled)), 0.6)
   }
 
   def fastTrackPercentageProvider(apiFlight: Arrival): Option[FastTrackPercentages] =
-    Option(CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(csvSplitsProvider(apiFlight.IATA, MilliDate(apiFlight.Scheduled)), 0d, 0d))
+    Option(CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(csvSplitsProvider(apiFlight.flightCode, MilliDate(apiFlight.Scheduled)), 0d, 0d))
 }
 
 trait ImplicitTimeoutProvider {

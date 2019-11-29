@@ -111,7 +111,7 @@ object FlightsTableTests extends TestSuite {
               thead(),
               <.tbody(
                 <.tr(^.className := " before-now",
-                  <.td(testFlight.ICAO), <.td(testFlight.Origin.toString), <.td(<.span(<.span())),
+                  <.td(testFlight.flightCode), <.td(testFlight.Origin.toString), <.td(<.span(<.span())),
                   <.td(s"${testFlight.Gate.getOrElse("")}/${testFlight.Stand.getOrElse("")}"),
                   <.td(testFlight.Status.description),
                   <.td(<.span(^.title := "2016-01-01 13:00", "13:00")), //sch
@@ -147,7 +147,7 @@ object FlightsTableTests extends TestSuite {
                 <.tbody(
                   <.tr(^.className := " before-now",
                     <.td(<.span("herebecallback")),
-                    <.td(testFlight.ICAO), <.td(testFlight.Origin.toString), <.td(<.span(<.span())),
+                    <.td(testFlight.flightCode), <.td(testFlight.Origin.toString), <.td(<.span(<.span())),
                     <.td(s"${testFlight.Gate.getOrElse("")}/${testFlight.Stand.getOrElse("")}"),
                     <.td(testFlight.Status.description),
                     date(Option(testFlight.Scheduled)),
@@ -181,7 +181,7 @@ object FlightsTableTests extends TestSuite {
                 thead(),
                 <.tbody(
                   <.tr(^.className := " before-now",
-                    <.td(testFlight.ICAO),
+                    <.td(testFlight.flightCode),
                     <.td(<.span(^.title := "JFK, New York, USA", testFlight.Origin.toString)), <.td(<.span(<.span())),
                     <.td(s"${testFlight.Gate.getOrElse("")}/${testFlight.Stand.getOrElse("")}"),
                     <.td(testFlight.Status.description),
@@ -247,7 +247,7 @@ object FlightsTableTests extends TestSuite {
               thead(),
               <.tbody(
                 <.tr(^.className := " before-now",
-                  <.td(testFlightT.ICAO),
+                  <.td(testFlightT.flightCode),
                   <.td(testFlightT.Origin.toString), <.td(<.span(<.span())),
                   <.td(s"${testFlightT.Gate.getOrElse("")}/${testFlightT.Stand.getOrElse("")}"),
                   <.td(testFlightT.Status.description),

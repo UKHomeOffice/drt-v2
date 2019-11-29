@@ -218,7 +218,7 @@ case class UniqueArrival(number: Int, terminal: Terminal, scheduled: MillisSince
 object UniqueArrival {
   implicit val rw: ReadWriter[UniqueArrival] = macroRW
 
-  def apply(arrival: Arrival): UniqueArrival = UniqueArrival(arrival.flightNumber, arrival.Terminal, arrival.Scheduled)
+  def apply(arrival: Arrival): UniqueArrival = UniqueArrival(arrival.VoyageNumber.numeric, arrival.Terminal, arrival.Scheduled)
 
   def apply(number: Int, terminalName: String, scheduled: MillisSinceEpoch): UniqueArrival = UniqueArrival(number, Terminal(terminalName), scheduled)
 
@@ -312,6 +312,8 @@ case class ArrivalStatus(description: String) {
 }
 
 case class Arrival(Operator: Option[Operator],
+                   CarrierCode: CarrierCode,
+                   VoyageNumber: VoyageNumber,
                    Status: ArrivalStatus,
                    Estimated: Option[MillisSinceEpoch],
                    Actual: Option[MillisSinceEpoch],
@@ -326,55 +328,23 @@ case class Arrival(Operator: Option[Operator],
                    BaggageReclaimId: Option[String],
                    AirportID: PortCode,
                    Terminal: Terminal,
-                   rawICAO: String,
-                   rawIATA: String,
                    Origin: PortCode,
                    Scheduled: MillisSinceEpoch,
                    PcpTime: Option[MillisSinceEpoch],
                    FeedSources: Set[FeedSource],
-                   CarrierScheduled: Option[MillisSinceEpoch] = None,
-                   ApiPax: Option[Int] = None
+                   CarrierScheduled: Option[MillisSinceEpoch],
+                   ApiPax: Option[Int]
                   ) extends WithUnique[UniqueArrival] {
-  lazy val ICAO: String = Arrival.standardiseFlightCode(rawICAO)
-  lazy val IATA: String = Arrival.standardiseFlightCode(rawIATA)
   val paxOffPerMinute = 20
 
-  lazy val flightNumber: Int = {
-    val bestCode = (IATA, ICAO) match {
-      case (iata, _) if iata != "" => iata
-      case (_, icao) if icao != "" => icao
-      case _ => ""
-    }
-
-    bestCode match {
-      case Arrival.flightCodeRegex(_, fn, _) => fn.toInt
-      case _ => 0
-    }
-  }
-
-  lazy val carrierCode: CarrierCode = {
-    val bestCode = (IATA, ICAO) match {
-      case (iata, _) if iata != "" => iata
-      case (_, icao) if icao != "" => icao
-      case _ => ""
-    }
-
-    bestCode match {
-      case Arrival.flightCodeRegex(cc, _, _) => CarrierCode(cc)
-      case _ => CarrierCode("")
-    }
-  }
-
-  lazy val voyageNumber: VoyageNumber = VoyageNumber(flightNumber)
+  def flightCode: String = s"$CarrierCode${VoyageNumber.toPaddedString}"
 
   def basicForComparison: Arrival = copy(PcpTime = None)
 
   def equals(arrival: Arrival): Boolean = arrival.basicForComparison == basicForComparison
 
-  lazy val manifestKey: Int = s"${voyageNumber.toPaddedString}-${this.Scheduled}".hashCode
-
   lazy val uniqueId: Int = uniqueStr.hashCode
-  lazy val uniqueStr: String = s"$Terminal$Scheduled$flightNumber"
+  lazy val uniqueStr: String = s"$Terminal$Scheduled${VoyageNumber.numeric}"
 
   def hasPcpDuring(start: SDateLike, end: SDateLike): Boolean = {
     val firstPcpMilli = PcpTime.getOrElse(0L)
@@ -402,13 +372,13 @@ case class Arrival(Operator: Option[Operator],
     pcpStart to pcpEnd by oneMinuteMillis
   }
 
-  lazy val unique: UniqueArrival = UniqueArrival(flightNumber, Terminal, Scheduled)
+  lazy val unique: UniqueArrival = UniqueArrival(VoyageNumber.numeric, Terminal, Scheduled)
 }
 
 object Arrival {
   val flightCodeRegex: Regex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r
 
-  def summaryString(arrival: Arrival): String = arrival.AirportID + "/" + arrival.Terminal + "@" + arrival.Scheduled + "!" + arrival.IATA
+  def summaryString(arrival: Arrival): String = arrival.AirportID + "/" + arrival.Terminal + "@" + arrival.Scheduled + "!" + arrival.flightCode
 
   def standardiseFlightCode(flightCode: String): String = {
     val flightCodeRegex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r
@@ -422,9 +392,74 @@ object Arrival {
   }
 
   implicit val arrivalStatusRw: ReadWriter[ArrivalStatus] = macroRW
+  implicit val voyageNumberRw: ReadWriter[VoyageNumber] = macroRW
   implicit val operatorRw: ReadWriter[Operator] = macroRW
   implicit val portCodeRw: ReadWriter[PortCode] = macroRW
   implicit val arrivalRw: ReadWriter[Arrival] = macroRW
+
+  def apply(Operator: Option[Operator],
+            Status: ArrivalStatus,
+            Estimated: Option[MillisSinceEpoch],
+            Actual: Option[MillisSinceEpoch],
+            EstimatedChox: Option[MillisSinceEpoch],
+            ActualChox: Option[MillisSinceEpoch],
+            Gate: Option[String],
+            Stand: Option[String],
+            MaxPax: Option[Int],
+            ActPax: Option[Int],
+            TranPax: Option[Int],
+            RunwayID: Option[String],
+            BaggageReclaimId: Option[String],
+            AirportID: PortCode,
+            Terminal: Terminal,
+            rawICAO: String,
+            rawIATA: String,
+            Origin: PortCode,
+            Scheduled: MillisSinceEpoch,
+            PcpTime: Option[MillisSinceEpoch],
+            FeedSources: Set[FeedSource],
+            CarrierScheduled: Option[MillisSinceEpoch] = None,
+            ApiPax: Option[Int] = None
+           ): Arrival = {
+    val (carrierCode: CarrierCode, voyageNumber: VoyageNumber) = {
+      val bestCode = (rawIATA, rawICAO) match {
+        case (iata, _) if iata != "" => iata
+        case (_, icao) if icao != "" => icao
+        case _ => ""
+      }
+
+      bestCode match {
+        case Arrival.flightCodeRegex(cc, vn, _) => (CarrierCode(cc), VoyageNumber(vn))
+        case _ => (CarrierCode(""), VoyageNumber(0))
+      }
+    }
+
+    Arrival(
+      Operator,
+      carrierCode,
+      voyageNumber,
+      Status,
+      Estimated,
+      Actual,
+      EstimatedChox,
+      ActualChox,
+      Gate,
+      Stand,
+      MaxPax,
+      ActPax,
+      TranPax,
+      RunwayID,
+      BaggageReclaimId,
+      AirportID,
+      Terminal,
+      Origin,
+      Scheduled,
+      PcpTime,
+      FeedSources,
+      CarrierScheduled,
+      ApiPax
+    )
+  }
 }
 
 sealed trait FeedSource
@@ -467,7 +502,7 @@ case class ArrivalKey(origin: PortCode, voyageNumber: VoyageNumber, scheduled: L
 }
 
 object ArrivalKey {
-  def apply(arrival: Arrival): ArrivalKey = ArrivalKey(arrival.Origin, arrival.voyageNumber, arrival.Scheduled)
+  def apply(arrival: Arrival): ArrivalKey = ArrivalKey(arrival.Origin, arrival.VoyageNumber, arrival.Scheduled)
 
   def atTime: MillisSinceEpoch => ArrivalKey = (time: MillisSinceEpoch) => ArrivalKey(PortCode(""), VoyageNumber(0), time)
 }

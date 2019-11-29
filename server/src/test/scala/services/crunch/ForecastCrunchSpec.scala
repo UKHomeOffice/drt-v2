@@ -410,11 +410,11 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(updatedBaseArrivals.values.toSeq)))
 
-    val expectedFlightCodes = updatedBaseArrivals.values.map(_.IATA)
+    val expectedFlightCodes = updatedBaseArrivals.values.map(_.flightCode)
 
     crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case PortState(flightsWithSplits, _, _) =>
-        val flightCodes = flightsWithSplits.values.map(_.apiFlight.IATA)
+        val flightCodes = flightsWithSplits.values.map(_.apiFlight.flightCode)
         flightCodes == expectedFlightCodes
     }
 

@@ -168,7 +168,7 @@ object FlightTableRow {
       val codeShares = props.codeShares
       val flightWithSplits = props.flightWithSplits
       val flight = flightWithSplits.apiFlight
-      val allCodes = flight.ICAO :: codeShares.map(_.ICAO).toList
+      val allCodes = flight.flightCode :: codeShares.map(_.flightCode).toList
 
       val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
       val timeIndicatorClass = if (flight.PcpTime.getOrElse(0L) < SDate.now().millisSinceEpoch) "before-now" else "from-now"

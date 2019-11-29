@@ -26,7 +26,7 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     val arrivals: Seq[Arrival] = ResponseToArrivals(xml).getArrivals
 
     arrivals.size mustEqual 1
-    arrivals.head mustEqual new Arrival(
+    arrivals.head mustEqual Arrival(
       Operator = None,
       Status = "Landed",
       Estimated = Some(SDate("2018-06-03T19:28:00Z").millisSinceEpoch),
@@ -41,7 +41,11 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       RunwayID = Some("08R"),
       BaggageReclaimId = None,
       AirportID = PortCode("LGW"),
-      Terminal = N, rawICAO = "VIR808", rawIATA = "VS808", Origin = PortCode("LHR"), FeedSources = Set(LiveFeedSource),
+      Terminal = N,
+      rawICAO = "VIR808",
+      rawIATA = "VS808",
+      Origin = PortCode("LHR"),
+      FeedSources = Set(LiveFeedSource),
       Scheduled = SDate("2018-06-03T19:50:00Z").millisSinceEpoch, PcpTime = None)
 
 

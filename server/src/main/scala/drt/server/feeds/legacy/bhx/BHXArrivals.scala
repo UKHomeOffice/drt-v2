@@ -38,7 +38,9 @@ trait BHXLiveArrivals extends BHXArrivals {
   def toLiveArrival(flightRecord: FlightRecord): Arrival = {
     val actPax = flightRecord.getPassengers
     val transPax = flightRecord.getTransits
-    new Arrival(Operator = None,
+
+    Arrival(
+      Operator = None,
       Status = flightRecord.getFlightStatus,
       Estimated = convertToUTC(flightRecord.getEstimatedTime).map(SDate(_).millisSinceEpoch),
       Actual = convertToUTC(flightRecord.getTouchdownTime).map(SDate(_).millisSinceEpoch),

@@ -183,8 +183,8 @@ object CSVData {
 
   def flightToCsvRow(queueNames: Seq[Queue], fws: ApiFlightWithSplits): List[Any] = {
     List(
-      fws.apiFlight.IATA,
-      fws.apiFlight.ICAO,
+      fws.apiFlight.flightCode,
+      fws.apiFlight.flightCode,
       fws.apiFlight.Origin,
       fws.apiFlight.Gate.getOrElse("") + "/" + fws.apiFlight.Stand.getOrElse(""),
       fws.apiFlight.Status.description,

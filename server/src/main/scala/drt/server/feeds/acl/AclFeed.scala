@@ -113,7 +113,7 @@ object AclFeed {
 
     if (arrivals.nonEmpty) {
       val latestArrival = arrivals.maxBy(_.Scheduled)
-      log.info(s"ACL: ${arrivals.length} arrivals. Latest scheduled arrival: ${SDate(latestArrival.Scheduled).toLocalDateTimeString()} (${latestArrival.IATA})")
+      log.info(s"ACL: ${arrivals.length} arrivals. Latest scheduled arrival: ${SDate(latestArrival.Scheduled).toLocalDateTimeString()} (${latestArrival.flightCode})")
     }
     arrivals
   }
@@ -121,7 +121,7 @@ object AclFeed {
   def contentFromFileName(sftp: SFTPClient, latestFileName: String): String = {
     val outputStream: ByteArrayOutputStream = new ByteArrayOutputStream()
 
-    val file = new InMemoryDestFile {
+    val file: InMemoryDestFile = new InMemoryDestFile {
       def getOutputStream: ByteArrayOutputStream = outputStream
     }
 

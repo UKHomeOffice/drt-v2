@@ -26,8 +26,8 @@ class ApiFlightsToProtoBufSpec extends Specification {
         BaggageReclaimId = Option("A"),
         AirportID = PortCode("LHR"),
         Terminal = T2,
-        rawICAO = "BA0001",
-        rawIATA = "BAA0001",
+        rawICAO = "BAA0001",
+        rawIATA = "BA0001",
         Origin = PortCode("JFK"),
         PcpTime = Option(1451655000000L), // 2016-01-01 13:30:00 UTC
         Scheduled = SDate("2016-01-01T13:00:00Z").millisSinceEpoch,
@@ -49,7 +49,7 @@ class ApiFlightsToProtoBufSpec extends Specification {
         airportID = Option("LHR"),
         terminal = Option("T2"),
         iCAO = Option("BA0001"),
-        iATA = Option("BAA0001"),
+        iATA = Option("BA0001"),
         origin = Option("JFK"),
         feedSources = Seq("ApiFeedSource"),
         pcpTime = Option(1451655000000L), // 2016-01-01 13:30:00 UTC

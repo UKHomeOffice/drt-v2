@@ -20,7 +20,7 @@ case class AggregatedArrival(code: String, scheduled: MillisSinceEpoch, origin: 
 
 object AggregatedArrival {
   def apply(arrival: Arrival, destination: String): AggregatedArrival = AggregatedArrival(
-    arrival.IATA,
+    arrival.flightCode,
     arrival.Scheduled,
     arrival.Origin.toString,
     destination,
@@ -78,6 +78,6 @@ case class ArrivalTable(portCode: PortCode, tables: Tables) extends ArrivalTable
     val pcp = new Timestamp(f.PcpTime.getOrElse(f.Scheduled))
     val pcpPax = f.ActPax.map(ap => ap - f.TranPax.getOrElse(0))
 
-    ArrivalRow(f.IATA, f.flightNumber, portCode.iata, f.Origin.toString, f.Terminal.toString, f.Gate, f.Stand, f.Status.description, sch, est, act, estChox, actChox, pcp, f.ActPax, pcpPax)
+    ArrivalRow(f.flightCode, f.VoyageNumber.numeric, portCode.iata, f.Origin.toString, f.Terminal.toString, f.Gate, f.Stand, f.Status.description, sch, est, act, estChox, actChox, pcp, f.ActPax, pcpPax)
   }
 }
