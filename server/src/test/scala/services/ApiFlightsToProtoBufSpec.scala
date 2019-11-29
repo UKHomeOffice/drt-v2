@@ -2,7 +2,7 @@ package services
 
 import actors.FlightMessageConversion._
 import drt.shared.Terminals.T2
-import drt.shared.{ApiFeedSource, Arrival, PortCode}
+import drt.shared.{ApiFeedSource, Arrival, ArrivalStatus, Operator, PortCode}
 import org.specs2.mutable.Specification
 import server.protobuf.messages.FlightsMessage.FlightMessage
 
@@ -11,8 +11,8 @@ class ApiFlightsToProtoBufSpec extends Specification {
   "apiFlightToFlightMessage" should {
     "take a single Arrival and return a FlightMessage representing it" in {
       val apiFlight = Arrival(
-        Operator = Option("Op"),
-        Status = "scheduled",
+        Operator = Option(Operator("Op")),
+        Status = ArrivalStatus("scheduled"),
         Estimated = Option(SDate("2016-01-01T13:05:00Z").millisSinceEpoch),
         Actual = Option(SDate("2016-01-01T13:10:00Z").millisSinceEpoch),
         EstimatedChox = Option(SDate("2016-01-01T13:15:00Z").millisSinceEpoch),

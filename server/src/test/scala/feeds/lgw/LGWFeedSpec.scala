@@ -17,6 +17,8 @@ class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
   sequential
   isolated
 
+  import drt.server.feeds.Implicits._
+
   "Can convert response XML into an Arrival" in  {
 
     val xml: String = Source.fromInputStream(getClass.getClassLoader.getResourceAsStream("lgw.xml")).mkString

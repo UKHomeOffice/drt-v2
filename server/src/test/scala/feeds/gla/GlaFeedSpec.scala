@@ -9,7 +9,7 @@ import akka.testkit.TestProbe
 import drt.server.feeds.gla.{GlaFeed, GlaFeedRequesterLike, ProdGlaFeedRequester}
 import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.T1
-import drt.shared.{Arrival, LiveFeedSource, PortCode}
+import drt.shared.{Arrival, ArrivalStatus, LiveFeedSource, PortCode}
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
@@ -138,7 +138,7 @@ class GlaFeedSpec extends SpecificationLike {
 
     val expected = Arrival(
       Operator = None,
-      Status = "Flight is on schedule",
+      Status = ArrivalStatus("Flight is on schedule"),
       Estimated = Some(SDate("2019-11-13T13:32:00Z").millisSinceEpoch),
       Actual = Some(SDate("2019-11-13T13:31:00Z").millisSinceEpoch),
       EstimatedChox = Some(SDate("2019-11-13T12:33:00Z").millisSinceEpoch),
@@ -198,7 +198,7 @@ class GlaFeedSpec extends SpecificationLike {
 
     val expected = Arrival(
       Operator = None,
-      Status = "Flight is cancelled",
+      Status = ArrivalStatus("Flight is cancelled"),
       Estimated = None,
       Actual = Some(SDate("2019-11-14T14:41:00Z").millisSinceEpoch),
       EstimatedChox = Some(SDate("2019-11-14T12:44:00Z").millisSinceEpoch),
@@ -259,7 +259,7 @@ class GlaFeedSpec extends SpecificationLike {
 
     val expected = Arrival(
       Operator = None,
-      Status = "Flight is cancelled",
+      Status = ArrivalStatus("Flight is cancelled"),
       Estimated = None,
       Actual = None,
       EstimatedChox = None,

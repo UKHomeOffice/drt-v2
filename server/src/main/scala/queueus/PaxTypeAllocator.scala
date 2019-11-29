@@ -9,12 +9,12 @@ import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 trait PaxTypeAllocator {
 
   val b5JPlus: PartialFunction[ManifestPassengerProfile, PaxType] = {
-    case ManifestPassengerProfile(country, _, Some(age), _) if isB5JPlus(country) && age < 12 => B5JPlusNationalBelowEGateAge
+    case ManifestPassengerProfile(country, _, Some(age), _) if isB5JPlus(country) && age.isUnder(12) => B5JPlusNationalBelowEGateAge
     case ManifestPassengerProfile(country, _, _, _) if isB5JPlus(country) => B5JPlusNational
   }
 
   val countryAndDocumentTypes: PartialFunction[ManifestPassengerProfile, PaxType] = {
-    case ManifestPassengerProfile(country, Some(docType), Some(age), _) if isEea(country) && docType == DocumentType.Passport && age < 12 => EeaBelowEGateAge
+    case ManifestPassengerProfile(country, Some(docType), Some(age), _) if isEea(country) && docType == DocumentType.Passport && age.isUnder(12) => EeaBelowEGateAge
     case ManifestPassengerProfile(country, Some(docType), _, _) if isEea(country) && docType == DocumentType.Passport => EeaMachineReadable
     case ManifestPassengerProfile(country, _, _, _) if isEea(country) => EeaNonMachineReadable
     case ManifestPassengerProfile(country, _, _, _) if !isEea(country) && isVisaNational(country) => VisaNational

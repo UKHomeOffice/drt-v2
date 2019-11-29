@@ -4,11 +4,9 @@ import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{ActualDeskStats, DeskStat}
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
-import drt.shared.{Nationality, PortCode, PortState}
+import drt.shared.PortState
 import drt.shared.Queues._
 import drt.shared.Terminals.T1
-import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
-import passengersplits.parsing.VoyageManifestParser.PassengerInfoJson
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 

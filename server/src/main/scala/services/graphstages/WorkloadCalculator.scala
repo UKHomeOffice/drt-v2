@@ -35,7 +35,7 @@ object WorkloadCalculator {
   }
 
   def isCancelled(f: ApiFlightWithSplits): Boolean = {
-    val cancelled = f.apiFlight.Status == "Cancelled"
+    val cancelled = f.apiFlight.Status.description == "Cancelled"
     if (cancelled) log.info(s"No workload for cancelled flight ${f.apiFlight.IATA}")
     cancelled
   }

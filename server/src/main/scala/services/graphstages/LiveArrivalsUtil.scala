@@ -13,7 +13,7 @@ object LiveArrivalsUtil {
       EstimatedChox = if (portFeedArrival.EstimatedChox.isEmpty) baseLiveArrival.EstimatedChox else portFeedArrival.EstimatedChox,
       Estimated = if (portFeedArrival.Estimated.isEmpty) baseLiveArrival.Estimated else portFeedArrival.Estimated,
       Gate = if (portFeedArrival.Gate.isEmpty) baseLiveArrival.Gate else portFeedArrival.Gate,
-      Status = if (portFeedArrival.Status == "UNK") baseLiveArrival.Status else portFeedArrival.Status
+      Status = if (portFeedArrival.Status.description == "UNK") baseLiveArrival.Status else portFeedArrival.Status
     )
   }
 
@@ -26,7 +26,7 @@ object LiveArrivalsUtil {
        |EstChox: ${a.EstimatedChox.map(d => SDate(d).toISOString())}
        |Act: ${a.Actual.map(d => SDate(d).toISOString())}
        |ActChox: ${a.ActualChox.map(d => SDate(d).toISOString())}
-       |Status: ${a.Status}
+       |Status: ${a.Status.description}
        |Gate: ${a.Gate}
        |""".stripMargin
   }

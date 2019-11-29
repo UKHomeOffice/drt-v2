@@ -85,10 +85,10 @@ object FlightMessageConversion {
 
   def apiFlightToFlightMessage(apiFlight: Arrival): FlightMessage = {
     FlightMessage(
-      operator = apiFlight.Operator,
+      operator = apiFlight.Operator.map(_.code),
       gate = apiFlight.Gate,
       stand = apiFlight.Stand,
-      status = Option(StringUtils.trimToNull(apiFlight.Status)),
+      status = Option(apiFlight.Status.description),
       maxPax = apiFlight.MaxPax.filter(_ != 0),
       actPax = apiFlight.ActPax.filter(_ != 0),
       tranPax = apiFlight.TranPax,
@@ -124,8 +124,8 @@ object FlightMessageConversion {
 
   def flightMessageToApiFlight(flightMessage: FlightMessage): Arrival = {
     Arrival(
-      Operator = flightMessage.operator,
-      Status = flightMessage.status.getOrElse(""),
+      Operator = flightMessage.operator.map(Operator),
+      Status = ArrivalStatus(flightMessage.status.getOrElse("")),
       Estimated = flightMessage.estimated,
       Actual = flightMessage.touchdown,
       EstimatedChox = flightMessage.estimatedChox,

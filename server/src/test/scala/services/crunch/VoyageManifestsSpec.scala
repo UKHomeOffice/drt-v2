@@ -9,7 +9,7 @@ import drt.shared.Terminals.T1
 import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
-import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, VoyageManifest}
+import passengersplits.parsing.VoyageManifestParser.{EeaFlag, InTransit, ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, PaxAge, VoyageManifest}
 import server.feeds.{DqManifests, ManifestsFeedSuccess}
 import services.SDate
 import services.crunch.VoyageManifestGenerator._
@@ -177,12 +177,12 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val expected = BestAvailableManifest(
       ApiSplitsWithHistoricalEGateAndFTPercentages, PortCode("LHR"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), SDate("2017-01-01"),
       List(
-        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType("P")), Option(22), Option(true)),
-        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType("P")), Option(22), Option(true)),
-        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType("P")), Option(22), Option(false)),
-        ManifestPassengerProfile(Nationality("ITA"), Option(DocumentType("I")), Option(22), Option(false)),
-        ManifestPassengerProfile(Nationality("AFG"), Option(DocumentType("P")), Option(22), Option(false)),
-        ManifestPassengerProfile(Nationality("AFG"), Option(DocumentType("P")), Option(22), Option(false))
+        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType("P")), Option(PaxAge(22)), Option(true)),
+        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType("P")), Option(PaxAge(22)), Option(true)),
+        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType("P")), Option(PaxAge(22)), Option(false)),
+        ManifestPassengerProfile(Nationality("ITA"), Option(DocumentType("I")), Option(PaxAge(22)), Option(false)),
+        ManifestPassengerProfile(Nationality("AFG"), Option(DocumentType("P")), Option(PaxAge(22)), Option(false)),
+        ManifestPassengerProfile(Nationality("AFG"), Option(DocumentType("P")), Option(PaxAge(22)), Option(false))
       )
     )
 
@@ -191,7 +191,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
   "Given a voyage manifest `Passport` instead of `P` for doctype it should still be accepted as a passport doctype" >> {
     val vm = VoyageManifest(EventTypes.CI, PortCode("LHR"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"), List(
-      PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), "EEA", Option("22"), Option(PortCode("LHR")), "N", Option(Nationality("GBR")), Option(Nationality("GBR")), None)
+      PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(22)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None)
     ))
 
     val result = BestAvailableManifest(vm)
@@ -199,7 +199,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val expected = BestAvailableManifest(
       ApiSplitsWithHistoricalEGateAndFTPercentages, PortCode("LHR"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), SDate("2017-01-01"),
       List(
-        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(22), Option(false))
+        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(22)), Option(false))
       )
     )
 
@@ -208,7 +208,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
   "Given a voyage manifest with a UK National and no doctype, Passport should be assumed" >> {
     val vm = VoyageManifest(EventTypes.CI, PortCode("LHR"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"), List(
-      PassengerInfoJson(None, Nationality("GBR"), "EEA", Option("22"), Option(PortCode("LHR")), "N", Option(Nationality("GBR")), Option(Nationality("GBR")), None)
+      PassengerInfoJson(None, Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(22)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None)
     ))
 
     val result = BestAvailableManifest(vm)
@@ -216,7 +216,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val expected = BestAvailableManifest(
       ApiSplitsWithHistoricalEGateAndFTPercentages, PortCode("LHR"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), SDate("2017-01-01"),
       List(
-        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(22), Option(false))
+        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(22)), Option(false))
       )
     )
 
@@ -279,6 +279,6 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
 object PassengerInfoGenerator {
   def passengerInfoJson(nationality: Nationality, documentType: DocumentType, issuingCountry: Nationality): PassengerInfoJson = {
-    PassengerInfoJson(Option(documentType), issuingCountry, "", Option("22"), Option(PortCode("LHR")), "N", Option(Nationality("GBR")), Option(nationality), None)
+    PassengerInfoJson(Option(documentType), issuingCountry, EeaFlag(""), Option(PaxAge(22)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(nationality), None)
   }
 }

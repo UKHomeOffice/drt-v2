@@ -305,30 +305,35 @@ case object VoyageNumber {
   }
 }
 
-case class Arrival(
-                    Operator: Option[String],
-                    Status: String,
-                    Estimated: Option[MillisSinceEpoch],
-                    Actual: Option[MillisSinceEpoch],
-                    EstimatedChox: Option[MillisSinceEpoch],
-                    ActualChox: Option[MillisSinceEpoch],
-                    Gate: Option[String],
-                    Stand: Option[String],
-                    MaxPax: Option[Int],
-                    ActPax: Option[Int],
-                    TranPax: Option[Int],
-                    RunwayID: Option[String],
-                    BaggageReclaimId: Option[String],
-                    AirportID: PortCode,
-                    Terminal: Terminal,
-                    rawICAO: String,
-                    rawIATA: String,
-                    Origin: PortCode,
-                    Scheduled: MillisSinceEpoch,
-                    PcpTime: Option[MillisSinceEpoch],
-                    FeedSources: Set[FeedSource],
-                    CarrierScheduled: Option[MillisSinceEpoch] = None,
-                    ApiPax: Option[Int] = None
+case class Operator(code: String)
+
+case class ArrivalStatus(description: String) {
+  override def toString: String = description
+}
+
+case class Arrival(Operator: Option[Operator],
+                   Status: ArrivalStatus,
+                   Estimated: Option[MillisSinceEpoch],
+                   Actual: Option[MillisSinceEpoch],
+                   EstimatedChox: Option[MillisSinceEpoch],
+                   ActualChox: Option[MillisSinceEpoch],
+                   Gate: Option[String],
+                   Stand: Option[String],
+                   MaxPax: Option[Int],
+                   ActPax: Option[Int],
+                   TranPax: Option[Int],
+                   RunwayID: Option[String],
+                   BaggageReclaimId: Option[String],
+                   AirportID: PortCode,
+                   Terminal: Terminal,
+                   rawICAO: String,
+                   rawIATA: String,
+                   Origin: PortCode,
+                   Scheduled: MillisSinceEpoch,
+                   PcpTime: Option[MillisSinceEpoch],
+                   FeedSources: Set[FeedSource],
+                   CarrierScheduled: Option[MillisSinceEpoch] = None,
+                   ApiPax: Option[Int] = None
                   ) extends WithUnique[UniqueArrival] {
   lazy val ICAO: String = Arrival.standardiseFlightCode(rawICAO)
   lazy val IATA: String = Arrival.standardiseFlightCode(rawIATA)
@@ -416,6 +421,8 @@ object Arrival {
     }
   }
 
+  implicit val arrivalStatusRw: ReadWriter[ArrivalStatus] = macroRW
+  implicit val operatorRw: ReadWriter[Operator] = macroRW
   implicit val portCodeRw: ReadWriter[PortCode] = macroRW
   implicit val arrivalRw: ReadWriter[Arrival] = macroRW
 }
@@ -942,4 +949,5 @@ trait Api {
 
   def getShowAlertModalDialog(): Boolean
 }
+
 

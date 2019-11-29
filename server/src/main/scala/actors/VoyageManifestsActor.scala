@@ -6,7 +6,7 @@ import akka.persistence._
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
-import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, VoyageManifest}
+import passengersplits.parsing.VoyageManifestParser._
 import server.feeds.{BestManifestsFeedSuccess, DqManifests, ManifestsFeedFailure, ManifestsFeedSuccess}
 import server.protobuf.messages.FlightsMessage.FeedStatusMessage
 import server.protobuf.messages.VoyageManifest._
@@ -14,6 +14,7 @@ import services.SDate
 import services.graphstages.Crunch
 
 import scala.collection.mutable
+import scala.util.Try
 
 case class VoyageManifestState(manifests: mutable.SortedMap[MilliDate, VoyageManifest],
                                var latestZipFilename: String,
@@ -160,10 +161,10 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
     PassengerInfoJsonMessage(
       documentType = pi.DocumentType.map(_.toString),
       documentIssuingCountryCode = Option(pi.DocumentIssuingCountryCode.toString),
-      eeaFlag = Option(pi.EEAFlag),
-      age = pi.Age,
+      eeaFlag = Option(pi.EEAFlag.value),
+      age = pi.Age.map(_.toString),
       disembarkationPortCode = pi.DisembarkationPortCode.map(_.toString),
-      inTransitFlag = Option(pi.InTransitFlag),
+      inTransitFlag = Option(pi.InTransitFlag.toString),
       disembarkationPortCountryCode = pi.DisembarkationPortCountryCode.map(_.toString),
       nationalityCountryCode = pi.NationalityCountryCode.map(_.toString),
       passengerIdentifier = pi.PassengerIdentifier
@@ -195,10 +196,10 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
     PassengerInfoJson(
       DocumentType = m.documentType.map(DocumentType(_)),
       DocumentIssuingCountryCode = Nationality(m.documentIssuingCountryCode.getOrElse("")),
-      EEAFlag = m.eeaFlag.getOrElse(""),
-      Age = m.age,
+      EEAFlag = EeaFlag(m.eeaFlag.getOrElse("")),
+      Age = m.age.flatMap(ageString => Try(ageString.toInt).toOption.map(PaxAge)),
       DisembarkationPortCode = m.disembarkationPortCode.map(PortCode(_)),
-      InTransitFlag = m.inTransitFlag.getOrElse(""),
+      InTransitFlag = InTransit(m.inTransitFlag.getOrElse("")),
       DisembarkationPortCountryCode = m.disembarkationPortCountryCode.map(Nationality(_)),
       NationalityCountryCode = m.nationalityCountryCode.map(Nationality(_)),
       PassengerIdentifier = m.passengerIdentifier

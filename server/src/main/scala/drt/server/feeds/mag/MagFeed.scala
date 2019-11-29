@@ -157,7 +157,7 @@ object MagFeed {
   private def iata(magArrival: MagArrival) = f"${magArrival.operatingAirline.iata}${magArrival.flightNumber.trackNumber.map(_.toInt).getOrElse(0)}%04d"
 
   def toArrival(ma: MagArrival): Arrival = Arrival(
-    Operator = Option(ma.operatingAirline.iata),
+    Operator = ma.operatingAirline.iata,
     Status = if (ma.onBlockTime.actual.isDefined) "On Chocks" else if (ma.touchDownTime.actual.isDefined) "Landed" else ma.flightStatus,
     Estimated = ma.arrival.estimated.map(str => SDate(str).millisSinceEpoch),
     Actual = ma.arrival.actual.map(str => SDate(str).millisSinceEpoch),

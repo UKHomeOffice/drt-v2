@@ -3,7 +3,7 @@ package drt.server.feeds.lgw
 import drt.server.feeds.Implicits._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.{InvalidTerminal, N, S}
-import drt.shared.{Arrival, LiveFeedSource, Terminals}
+import drt.shared.{Arrival, LiveFeedSource, Operator, Terminals}
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -33,7 +33,7 @@ case class ResponseToArrivals(data: String) {
     val actPax = parsePaxCount(n, "70A").filter(_!= 0).orElse(None)
     val transPax = parsePaxCount(n, "TIP")
     val arrival = new Arrival(
-      Operator = if (operator.isEmpty) None else Some(operator) ,
+      Operator = if (operator.isEmpty) None else Option(Operator(operator)) ,
       Status = parseStatus(n),
       Estimated = parseDateTime(n, operationQualifier = "TDN", timeType = "EST"),
       Actual  = parseDateTime(n, operationQualifier = "TDN", timeType = "ACT"),

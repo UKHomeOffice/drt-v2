@@ -185,7 +185,7 @@ object FlightTableRow {
           )
         }),
         (None, s"${flight.Gate.getOrElse("")}/${flight.Stand.getOrElse("")}"),
-        (None, flight.Status),
+        (None, flight.Status.description),
         (None, localDateTimeWithPopup(Option(flight.Scheduled))),
         (None, localDateTimeWithPopup(flight.Estimated)),
         (None, localDateTimeWithPopup(flight.Actual)),

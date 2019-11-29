@@ -8,7 +8,7 @@ import akka.testkit.{TestKit, TestProbe}
 import com.typesafe.config.ConfigFactory
 import drt.server.feeds.cirium.CiriumFeed
 import drt.shared.Terminals.T1
-import drt.shared.{Arrival, LiveBaseFeedSource, PortCode}
+import drt.shared.{Arrival, ArrivalStatus, LiveBaseFeedSource, Operator, PortCode}
 import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecificationLike
 import server.feeds.ArrivalsFeedSuccess
@@ -111,8 +111,8 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
 
   private def drtArrival(publishedArrivalTime: String, estRunwayArrival: String, actRunwayArrival: String, estGateArrivalTime: String, actGateArrivalTime: String) = {
     Arrival(
-      Some("TST"),
-      "Active",
+      Option(Operator("TST")),
+      ArrivalStatus("Active"),
       Option(SDate(estRunwayArrival).millisSinceEpoch),
       Option(SDate(actRunwayArrival).millisSinceEpoch),
       Option(SDate(estGateArrivalTime).millisSinceEpoch),

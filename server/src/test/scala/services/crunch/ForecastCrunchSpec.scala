@@ -355,10 +355,10 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val baseScheduled = "2017-01-01T00:00Z"
     val forecastScheduled = baseScheduled
 
-    val baseArrival1 = ArrivalGenerator.arrival(schDt = baseScheduled, iata = "BA0001", terminal = T1, actPax = Option(21), status = "ACL Forecast")
-    val baseArrival2 = ArrivalGenerator.arrival(schDt = baseScheduled, iata = "AA1110", terminal = T1, actPax = Option(22), status = "ACL Forecast")
-    val forecastArrival1 = ArrivalGenerator.arrival(schDt = forecastScheduled, iata = "BAW0001", terminal = T1, actPax = Option(51), status = "Port Forecast")
-    val forecastArrival2 = ArrivalGenerator.arrival(schDt = forecastScheduled, iata = "AAW1110", terminal = T1, actPax = Option(52), status = "Port Forecast")
+    val baseArrival1 = ArrivalGenerator.arrival(schDt = baseScheduled, iata = "BA0001", terminal = T1, actPax = Option(21), status = ArrivalStatus("ACL Forecast"))
+    val baseArrival2 = ArrivalGenerator.arrival(schDt = baseScheduled, iata = "AA1110", terminal = T1, actPax = Option(22), status = ArrivalStatus("ACL Forecast"))
+    val forecastArrival1 = ArrivalGenerator.arrival(schDt = forecastScheduled, iata = "BAW0001", terminal = T1, actPax = Option(51), status = ArrivalStatus("Port Forecast"))
+    val forecastArrival2 = ArrivalGenerator.arrival(schDt = forecastScheduled, iata = "AAW1110", terminal = T1, actPax = Option(52), status = ArrivalStatus("Port Forecast"))
     val baseArrivals = Flights(List(baseArrival1, baseArrival2))
     val forecastArrivals1st = Flights(List(forecastArrival1))
     val forecastArrivals2nd = Flights(List(forecastArrival2))
@@ -372,8 +372,8 @@ class ForecastCrunchSpec extends CrunchTestLike {
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals2nd))
 
     val expectedForecastArrivals = Set(
-      baseArrival1.copy(ActPax = Some(51), Status = "Port Forecast", FeedSources = Set(ForecastFeedSource, AclFeedSource)),
-      baseArrival2.copy(ActPax = Some(52), Status = "Port Forecast", FeedSources = Set(ForecastFeedSource, AclFeedSource)))
+      baseArrival1.copy(ActPax = Some(51), Status = ArrivalStatus("Port Forecast"), FeedSources = Set(ForecastFeedSource, AclFeedSource)),
+      baseArrival2.copy(ActPax = Some(52), Status = ArrivalStatus("Port Forecast"), FeedSources = Set(ForecastFeedSource, AclFeedSource)))
 
     crunch.portStateTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>

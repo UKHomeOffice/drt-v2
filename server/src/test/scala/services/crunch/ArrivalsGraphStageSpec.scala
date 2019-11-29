@@ -11,7 +11,7 @@ import drt.shared.Terminals.T1
 import drt.shared._
 import org.specs2.matcher.Scope
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
-import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, VoyageManifest}
+import passengersplits.parsing.VoyageManifestParser.{EeaFlag, InTransit, ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, PaxAge, VoyageManifest}
 import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
 
@@ -66,7 +66,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
       val voyageManifests = ManifestsFeedSuccess(DqManifests("", Set(
         VoyageManifest(EventTypes.DC, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("10:25"), List(
-          PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), "EEA", Option("22"), Option(PortCode("LHR")), "N", Option(Nationality("GBR")), Option(Nationality("GBR")), None)
+          PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(22)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None)
         ))
       )))
 

@@ -2,7 +2,7 @@ package drt.server.feeds.lhr.forecast
 
 import drt.server.feeds.Implicits._
 import drt.shared.Terminals.Terminal
-import drt.shared.{Arrival, ForecastFeedSource, SDateLike}
+import drt.shared.{Arrival, ForecastFeedSource, Operator, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.util.StringUtils
 import services.SDate
@@ -66,7 +66,7 @@ object LhrForecastArrival {
       val actPax = paxTotal(fields)
       val transPax = paxTransit(fields)
       Arrival(
-        Operator = if (StringUtils.isEmpty(operator)) None else Option(operator),
+        Operator = operator,
         Status = "Forecast",
         Estimated = None,
         Actual = None,

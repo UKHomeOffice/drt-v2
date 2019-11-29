@@ -183,7 +183,7 @@ object AclFeed {
 
   def aclFieldsToArrival(fields: List[String], aclToPortTerminal: Terminal => Terminal): Try[Arrival] = {
     Try {
-      val operator = fields(AclColIndex.Operator)
+      val operator: String = fields(AclColIndex.Operator)
       val maxPax = fields(AclColIndex.MaxPax).toInt
       val actPax = (fields(AclColIndex.MaxPax).toInt * fields(AclColIndex.LoadFactor).toDouble).round.toInt
       val aclTerminal = Terminals.Terminal(s"T${fields(AclColIndex.Terminal).take(1)}")
@@ -191,7 +191,7 @@ object AclFeed {
       val portTerminal = aclToPortTerminal(aclTerminal)
       println(s"portTerminal: $portTerminal")
       Arrival(
-        Operator = if (operator!= "") Option(operator) else None,
+        Operator = operator,
         Status = "ACL Forecast",
         Estimated = None,
         Actual = None,

@@ -7,6 +7,7 @@ import drt.shared.{Nationality, PortCode, SDateLike, VoyageNumber}
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
+import passengersplits.parsing.VoyageManifestParser.PaxAge
 import slick.jdbc.SQLActionBuilder
 import slick.sql.SqlStreamingAction
 import slickdb.VoyageManifestPassengerInfoTable
@@ -202,6 +203,6 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
         case (_, _, t) if t => true
         case _ => false
       }
-      ManifestPassengerProfile(Nationality(nat), Option(DocumentType(doc)), Try(age.toInt).toOption, Option(transit))
+      ManifestPassengerProfile(Nationality(nat), Option(DocumentType(doc)), Try(PaxAge(age.toInt)).toOption, Option(transit))
   }
 }

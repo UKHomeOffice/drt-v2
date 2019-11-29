@@ -294,14 +294,14 @@ class ArrivalsGraphStage(name: String = "",
       case _ => (None, None)
     }
 
-    def bestStatus(key: UniqueArrival): String =
+    def bestStatus(key: UniqueArrival): ArrivalStatus =
       (liveArrivals.get(key), liveBaseArrivals.get(key), forecastArrivals.get(key), forecastBaseArrivals.get(key)) match {
-        case (Some(live), Some(liveBase), _, _) if live.Status == "UNK" => liveBase.Status
+        case (Some(live), Some(liveBase), _, _) if live.Status.description == "UNK" => liveBase.Status
         case (Some(live), _, _, _) => live.Status
         case (_, Some(liveBase), _, _) => liveBase.Status
         case (_, _, Some(forecast), _) => forecast.Status
         case (_, _, _, Some(forecastBase)) => forecastBase.Status
-        case _ => "Unknown"
+        case _ => ArrivalStatus("Unknown")
       }
 
     def feedSources(uniqueArrival: UniqueArrival): Set[FeedSource] = {

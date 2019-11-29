@@ -67,7 +67,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
 
     val flights = Flights(List(
       ArrivalGenerator.arrival(schDt = scheduled00, iata = "BA0001", terminal = T1, actPax = Option(15)),
-      ArrivalGenerator.arrival(schDt = scheduled01, iata = "FR8819", terminal = T1, actPax = Option(10), status = "Cancelled")
+      ArrivalGenerator.arrival(schDt = scheduled01, iata = "FR8819", terminal = T1, actPax = Option(10), status = ArrivalStatus("Cancelled"))
     ))
 
     val fiveMinutes = 600d / 60

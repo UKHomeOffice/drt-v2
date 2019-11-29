@@ -1,6 +1,6 @@
 package services.graphstages
 
-import drt.shared.{Arrival, PortCode}
+import drt.shared.{Arrival, ArrivalStatus, PortCode}
 import drt.shared.Terminals.T1
 import org.specs2.mutable.Specification
 import services.SDate
@@ -13,7 +13,7 @@ class LiveArrivalsUtilSpec extends Specification {
                estChox: Option[Long] = None,
                actChox: Option[Long] = None,
                gate: Option[String] = None,
-               status: String = "test"
+               status: ArrivalStatus = ArrivalStatus("test")
              ): Arrival =
     Arrival(
       None,
@@ -43,7 +43,7 @@ class LiveArrivalsUtilSpec extends Specification {
     )
 
   "Given a BaseLiveArrival with all landing times set and port arrival with none then I should get the BaseArrival times" >> {
-    val baseArrival = arrival(Option(SDate(2019, 9, 30, 16, 1).millisSinceEpoch), Option(SDate(2019, 9, 30, 16, 2).millisSinceEpoch), Option(SDate(2019, 9, 30, 16, 3).millisSinceEpoch), Option(SDate(2019, 9, 30, 16, 4).millisSinceEpoch), None, "Test")
+    val baseArrival = arrival(Option(SDate(2019, 9, 30, 16, 1).millisSinceEpoch), Option(SDate(2019, 9, 30, 16, 2).millisSinceEpoch), Option(SDate(2019, 9, 30, 16, 3).millisSinceEpoch), Option(SDate(2019, 9, 30, 16, 4).millisSinceEpoch), None, ArrivalStatus("Test"))
     val liveArrival = arrival(gate = None)
 
     val expected = liveArrival.copy(
@@ -59,7 +59,7 @@ class LiveArrivalsUtilSpec extends Specification {
   }
 
   "Given a BaseLiveArrival with no gate and a port arrival with a gate then I should use the gate from port arrival" >> {
-    val baseArrival = arrival(status = "Test")
+    val baseArrival = arrival(status = ArrivalStatus("Test"))
     val liveArrival = arrival(gate = Option("Gate"))
     val expected = liveArrival.copy()
 
@@ -81,7 +81,7 @@ class LiveArrivalsUtilSpec extends Specification {
 
   "Given a BaseLiveArrival with a gate and a port arrival with no gate then I should use the gate from base arrival" >> {
     val baseArrival = arrival(gate = Option("Gate"))
-    val liveArrival = arrival(status = "Test")
+    val liveArrival = arrival(status = ArrivalStatus("Test"))
 
     val expected = liveArrival.copy(Gate = baseArrival.Gate)
 
@@ -102,8 +102,8 @@ class LiveArrivalsUtilSpec extends Specification {
   }
 
   "Given a BaseLiveArrival with a status and a port arrival with a status of UNK then I should use the base status" >> {
-    val baseArrival = arrival(status = "Landed")
-    val liveArrival = arrival(status = "UNK")
+    val baseArrival = arrival(status = ArrivalStatus("Landed"))
+    val liveArrival = arrival(status = ArrivalStatus("UNK"))
 
     val expected = liveArrival.copy(Status = baseArrival.Status)
 

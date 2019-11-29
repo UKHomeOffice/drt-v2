@@ -1,16 +1,16 @@
 package services.crunch
 
-import drt.shared.{CarrierCode, EventType, EventTypes, Nationality, PortCode, VoyageNumber}
+import drt.shared._
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
-import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, VoyageManifest}
+import passengersplits.parsing.VoyageManifestParser.{EeaFlag, InTransit, ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, PaxAge, VoyageManifest}
 
 object VoyageManifestGenerator {
-  val euPassport = PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), "EEA", Option("22"), Option(PortCode("LHR")), "N", Option(Nationality("GBR")), Option(Nationality("GBR")), None)
-  val euIdCard = PassengerInfoJson(Option(DocumentType("I")), Nationality("ITA"), "EEA", Option("22"), Option(PortCode("LHR")), "N", Option(Nationality("GBR")), Option(Nationality("ITA")), None)
-  val visa = PassengerInfoJson(Option(DocumentType("P")), Nationality("EGY"), "EEA", Option("22"), Option(PortCode("LHR")), "N", Option(Nationality("GBR")), Option(Nationality("AFG")), None)
-  val nonVisa = PassengerInfoJson(Option(DocumentType("P")), Nationality("SLV"), "EEA", Option("22"), Option(PortCode("LHR")), "N", Option(Nationality("GBR")), Option(Nationality("ALA")), None)
-  val inTransitFlag = PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), "EEA", Option("22"), Option(PortCode("LHR")), "Y", Option(Nationality("GBR")), Option(Nationality("GBR")), None)
-  val inTransitCountry = PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), "EEA", Option("22"), Option(PortCode("JFK")), "N", Option(Nationality("GBR")), Option(Nationality("GBR")), None)
+  val euPassport = PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(22)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None)
+  val euIdCard = PassengerInfoJson(Option(DocumentType("I")), Nationality("ITA"), EeaFlag("EEA"), Option(PaxAge(22)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("ITA")), None)
+  val visa = PassengerInfoJson(Option(DocumentType("P")), Nationality("EGY"), EeaFlag("EEA"), Option(PaxAge(22)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("AFG")), None)
+  val nonVisa = PassengerInfoJson(Option(DocumentType("P")), Nationality("SLV"), EeaFlag("EEA"), Option(PaxAge(22)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("ALA")), None)
+  val inTransitFlag = PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(22)), Option(PortCode("LHR")), InTransit("Y"), Option(Nationality("GBR")), Option(Nationality("GBR")), None)
+  val inTransitCountry = PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(22)), Option(PortCode("JFK")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None)
 
   def manifestPax(qty: Int, passport: PassengerInfoJson): List[PassengerInfoJson] = {
     List.fill(qty)(passport)

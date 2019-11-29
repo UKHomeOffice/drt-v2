@@ -2,7 +2,7 @@ package services.inputfeeds
 
 import drt.server.feeds.lhr.forecast.{LhrForecastArrival, LhrForecastArrivals}
 import drt.shared.Terminals.T3
-import drt.shared.{Arrival, ForecastFeedSource, PortCode}
+import drt.shared.{Arrival, ArrivalStatus, ForecastFeedSource, Operator, PortCode}
 import org.specs2.mutable.Specification
 import services.SDate
 
@@ -23,9 +23,9 @@ class LhrForecastSpec extends Specification {
 
     val arrival = LhrForecastArrivals(arrivalLines).head
 
-    val expected = Arrival(Operator = Some("BA"), Status = "Forecast", Estimated = None, Actual = None,
-      EstimatedChox = None, ActualChox = None, Gate = None, Stand = None, MaxPax = Some(337),
-      ActPax = Some(333), TranPax = Some(142), RunwayID = None, BaggageReclaimId = None, AirportID = PortCode("LHR"), Terminal = T3,
+    val expected = Arrival(Operator = Option(Operator("BA")), Status = ArrivalStatus("Forecast"), Estimated = None, Actual = None,
+      EstimatedChox = None, ActualChox = None, Gate = None, Stand = None, MaxPax = Option(337),
+      ActPax = Option(333), TranPax = Option(142), RunwayID = None, BaggageReclaimId = None, AirportID = PortCode("LHR"), Terminal = T3,
       rawICAO = "BA0058", rawIATA = "BA0058", Origin = PortCode("CPT"), FeedSources = Set(ForecastFeedSource),
       Scheduled = SDate("2018-02-22T04:45:00").millisSinceEpoch, PcpTime = None)
 
@@ -37,7 +37,8 @@ class LhrForecastSpec extends Specification {
     "Then I should see all the valid lines from the CSV as Arrivals" >> {
     skipped("exploratory")
     val filename = "/tmp/lhr-forecast.csv"
-    val arrivalTries = Source.fromFile(filename).getLines.toSeq.drop(1).map(LhrForecastArrival(_))
+    val fileSource = Source.fromFile(filename)
+    val arrivalTries = fileSource.getLines.toSeq.drop(1).map(LhrForecastArrival(_))
     val totalEntries = arrivalTries.length
     val arrivals = arrivalTries
       .filter {
@@ -49,6 +50,8 @@ class LhrForecastSpec extends Specification {
       .collect {
         case Success(a) => a
       }
+
+    fileSource.close()
 
     val totalArrivals = arrivals.length
 

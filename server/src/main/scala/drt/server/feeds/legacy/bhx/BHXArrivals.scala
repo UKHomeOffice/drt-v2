@@ -65,11 +65,12 @@ trait BHXLiveArrivals extends BHXArrivals {
 
 trait BHXForecastArrivals extends BHXArrivals {
 
-  def toForecastArrival(flightRecord: ScheduledFlightRecord) : Arrival = {
+  def toForecastArrival(flightRecord: ScheduledFlightRecord): Arrival = {
     val maxPax = flightRecord.getCapacity
     val actPax = flightRecord.getPassengers
     val transPax = flightRecord.getTransits
-    new Arrival(Operator = None,
+    Arrival(
+      Operator = None,
       Status = "Port Forecast",
       Estimated = None,
       Actual = None,
@@ -78,8 +79,8 @@ trait BHXForecastArrivals extends BHXArrivals {
       Gate = None,
       Stand = None,
       MaxPax = if (maxPax == 0) None else Option(maxPax),
-      ActPax = if (actPax==0) None else Option(actPax),
-      TranPax = if (actPax==0) None else Option(transPax),
+      ActPax = if (actPax == 0) None else Option(actPax),
+      TranPax = if (actPax == 0) None else Option(transPax),
       RunwayID = None,
       BaggageReclaimId = None,
       AirportID = "BHX",

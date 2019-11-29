@@ -4,10 +4,8 @@ import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
 import drt.shared._
 import manifests.UniqueArrivalKey
 import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocumentType}
-import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
+import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, PaxAge, VoyageManifest}
 import services.SDate
-
-import scala.util.Try
 
 case class BestAvailableManifest(source: SplitSource,
                                  arrivalPortCode: PortCode,
@@ -41,7 +39,7 @@ object BestAvailableManifest {
 
 case class ManifestPassengerProfile(nationality: Nationality,
                                     documentType: Option[DocumentType],
-                                    age: Option[Int],
+                                    age: Option[PaxAge],
                                     inTransit: Option[Boolean])
 
 object ManifestPassengerProfile {
@@ -51,8 +49,7 @@ object ManifestPassengerProfile {
       Option(DocumentType.Passport)
     else
       pij.DocumentType
-    val maybeAge = pij.Age.flatMap(a => Try(a.toInt).toOption)
-    val maybeInTransit = Option(pij.InTransitFlag == "Y" || pij.DisembarkationPortCode.exists(_ != portCode))
-    ManifestPassengerProfile(nationality, documentType, maybeAge, maybeInTransit)
+    val maybeInTransit = Option(pij.InTransitFlag.isInTransit|| pij.DisembarkationPortCode.exists(_ != portCode))
+    ManifestPassengerProfile(nationality, documentType, pij.Age, maybeInTransit)
   }
 }

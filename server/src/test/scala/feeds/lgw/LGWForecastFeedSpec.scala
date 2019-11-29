@@ -29,6 +29,8 @@ class LGWForecastFeedSpec extends Specification with Mockito {
       """.stripMargin
   }
 
+  import drt.server.feeds.Implicits._
+
   "Can access a Box" should {
 
     "Can parse the arrivals given a CSV" in new ExampleContext {

@@ -8,6 +8,7 @@ import drt.shared.{PaxTypes, _}
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import org.specs2.mutable.Specification
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
+import passengersplits.parsing.VoyageManifestParser.PaxAge
 import queueus._
 import services.SDate
 
@@ -38,7 +39,7 @@ class QueueAllocationSpec extends Specification {
       CarrierCode("SA"),
       SDate("2019-02-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile(Nationality("GBR"), Some(DocumentType.Passport), Some(21), Some(false))
+        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(21)), Option(false))
       )
     )
 
@@ -64,8 +65,8 @@ class QueueAllocationSpec extends Specification {
       CarrierCode("SA"),
       SDate("2019-02-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile(Nationality("GBR"), Some(DocumentType.Passport), Some(21), Some(false)),
-        ManifestPassengerProfile(Nationality("ZAF"), Some(DocumentType.Passport), Some(21), Some(false))
+        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(21)), Option(false)),
+        ManifestPassengerProfile(Nationality("ZAF"), Option(DocumentType.Passport), Option(PaxAge(21)), Option(false))
       )
     )
 
@@ -94,7 +95,7 @@ class QueueAllocationSpec extends Specification {
       VoyageNumber("234"),
       CarrierCode("SA"),
       SDate("2019-07-22T06:24:00Z"),
-      List(ManifestPassengerProfile(Nationality("USA"), Some(DocumentType.Passport), Some(21), Some(true)))
+      List(ManifestPassengerProfile(Nationality("USA"), Option(DocumentType.Passport), Option(PaxAge(21)), Option(true)))
     )
 
     val expected = Splits(
@@ -122,7 +123,7 @@ class QueueAllocationSpec extends Specification {
       CarrierCode("SA"),
       SDate("2019-06-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile(Nationality("USA"), Some(DocumentType.Passport), Some(11), Some(false))
+        ManifestPassengerProfile(Nationality("USA"), Option(DocumentType.Passport), Option(PaxAge(11)), Option(false))
       )
     )
 
@@ -153,7 +154,7 @@ class QueueAllocationSpec extends Specification {
       CarrierCode("SA"),
       SDate("2019-06-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile(Nationality("GBR"), Some(DocumentType.Passport), Some(11), Some(false))
+        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(11)), Option(false))
       )
     )
 
@@ -186,8 +187,8 @@ class QueueAllocationSpec extends Specification {
       CarrierCode("SA"),
       SDate("2019-01-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile(Nationality("GBR"), Some(DocumentType.Passport), Some(11), Some(false)),
-        ManifestPassengerProfile(Nationality("GBR"), Some(DocumentType.Passport), Some(11), Some(true))
+        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(11)), Option(false)),
+        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(11)), Option(true))
       )
     )
 
@@ -222,7 +223,7 @@ class QueueAllocationSpec extends Specification {
       CarrierCode("SA"),
       SDate("2019-01-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile(Nationality("ZWE"), Some(DocumentType.Passport), Some(22), Some(false))
+        ManifestPassengerProfile(Nationality("ZWE"), Option(DocumentType.Passport), Option(PaxAge(22)), Option(false))
       )
     )
 
@@ -255,7 +256,7 @@ class QueueAllocationSpec extends Specification {
       CarrierCode("TM"),
       SDate("2019-01-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile(Nationality("ZWE"), Some(DocumentType.Passport), Some(22), Some(false))
+        ManifestPassengerProfile(Nationality("ZWE"), Option(DocumentType.Passport), Option(PaxAge(22)), Option(false))
       )
     )
 
@@ -287,7 +288,7 @@ class QueueAllocationSpec extends Specification {
       CarrierCode("SAA"),
       SDate("2019-01-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile(Nationality("ZWE"), Some(DocumentType.Passport), Some(22), Some(false))
+        ManifestPassengerProfile(Nationality("ZWE"), Option(DocumentType.Passport), Option(PaxAge(22)), Option(false))
       )
     )
 
