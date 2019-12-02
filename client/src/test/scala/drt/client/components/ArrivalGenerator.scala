@@ -1,8 +1,9 @@
 package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.Terminal
-import drt.shared.{ApiFeedSource, Arrival}
+import drt.shared.{ApiFeedSource, Arrival, ArrivalStatus, Operator, PortCode}
 
 
 object ArrivalGenerator {
@@ -13,11 +14,10 @@ object ArrivalGenerator {
                  schDt: String = "",
                  actPax: Option[Int] = None,
                  maxPax: Option[Int] = None,
-                 lastKnownPax: Option[Int] = None,
                  terminal: Terminal = Terminal("T1"),
-                 origin: String = "",
-                 operator: Option[String] = None,
-                 status: String = "",
+                 origin: PortCode = PortCode(""),
+                 operator: Option[Operator] = None,
+                 status: ArrivalStatus = ArrivalStatus(""),
                  estDt: String = "",
                  actDt: String = "",
                  estChoxDt: String = "",
@@ -27,7 +27,8 @@ object ArrivalGenerator {
                  tranPax: Option[Int] = None,
                  runwayId: Option[String] = None,
                  baggageReclaimId: Option[String] = None,
-                 airportId: String = ""
+                 airportId: PortCode = PortCode(""),
+                 pcpTime: Option[MillisSinceEpoch] = None
                ): Arrival =
     Arrival(
       Operator = operator,
@@ -48,7 +49,7 @@ object ArrivalGenerator {
       rawICAO = icao,
       rawIATA = iata,
       Origin = origin,
-      PcpTime = if (schDt != "") Some(SDate(schDt).millisSinceEpoch) else None,
+      PcpTime = if (pcpTime.isDefined) Option(pcpTime.get) else if (schDt != "") Some(SDate(schDt).millisSinceEpoch) else None,
       Scheduled = if (schDt != "") SDate(schDt).millisSinceEpoch else 0L,
       FeedSources = Set(ApiFeedSource)
     )

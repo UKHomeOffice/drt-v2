@@ -1,6 +1,7 @@
 package manifests.queues
 
 import drt.shared.PaxTypes._
+import drt.shared.SplitRatiosNs.SplitSources.TerminalAverage
 import drt.shared.Terminals.T2
 import drt.shared.airportconfig.Bhx
 import drt.shared._
@@ -13,7 +14,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
     B5JPlusWithTransitTypeAllocator(),
     TerminalQueueAllocatorWithFastTrack(config.terminalPaxTypeQueueAllocation))
 
-  val splitsCalculator = SplitsCalculator(config.portCode, paxTypeQueueAllocation, config.terminalPaxSplits)
+  val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, config.terminalPaxSplits)
 
   "Given a splits calculator with BHX's terminal pax splits " +
     "When I ask for the default splits for T2 " +
@@ -25,7 +26,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
       ApiPaxTypeAndQueueCount(EeaNonMachineReadable, Queues.EeaDesk, 0.0, None),
       ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 92.0, None),
       ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 4.0, None)),
-      "TerminalAverage", None, Percentage))
+      TerminalAverage, None, Percentage))
 
     result === expected
   }

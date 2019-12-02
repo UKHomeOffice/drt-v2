@@ -235,7 +235,7 @@ class SimulationGraphStage(name: String = "",
             (qn, minuteMillis.map(m => (m, workload.getOrElse(TQM(tn, qn, m), 0d))).toMap)
           }.toMap
 
-          deploymentsByQueueAndSlot(minuteMillis, minMaxDesks.getOrElse(tn, Map()), tn, terminalWorkloads, queues, availableStaff.getOrElse(tn, Map()))
+          deploymentsByQueueAndSlot(minuteMillis, minMaxDesks.getOrElse(tn, Map()), tn, terminalWorkloads, availableStaff.getOrElse(tn, Map()))
         })
     }
 
@@ -243,13 +243,12 @@ class SimulationGraphStage(name: String = "",
                                   minMaxDesks: Map[Queue, Map[MillisSinceEpoch, (Int, Int)]],
                                   tn: Terminal,
                                   terminalWorkloads: Map[Queue, Map[MillisSinceEpoch, Double]],
-                                  queues: Seq[Queue],
                                   availableStaff: Map[MillisSinceEpoch, Int]): SortedMap[TQM, Int] = SortedMap[TQM, Int]() ++ minuteMillis
       .sliding(15, 15)
       .flatMap(slotMillis => {
         val queueDeps = availableStaff.getOrElse(slotMillis.min, 0) match {
           case 0 => zeroQueueDeployments(tn)
-          case availableForSlot => queueDeployments(availableForSlot, minMaxDesks, tn, queues, terminalWorkloads, slotMillis)
+          case availableForSlot => queueDeployments(availableForSlot, minMaxDesks, tn, terminalWorkloads, slotMillis)
         }
         queueDeps.flatMap { case (qn, staff) => slotMillis.map(millis => (TQM(tn, qn, millis), staff)) }
       })
@@ -257,7 +256,6 @@ class SimulationGraphStage(name: String = "",
     def queueDeployments(available: Int,
                          minMaxDesks: Map[Queue, Map[MillisSinceEpoch, (Int, Int)]],
                          terminalName: Terminal,
-                         queues: Seq[Queue],
                          terminalWorkloads: Map[Queue, Map[MillisSinceEpoch, Double]],
                          slotMillis: immutable.IndexedSeq[MillisSinceEpoch]
                         ): Seq[(Queue, Int)] = {

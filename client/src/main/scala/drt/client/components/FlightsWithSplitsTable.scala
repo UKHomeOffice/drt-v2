@@ -30,7 +30,7 @@ object FlightsWithSplitsTable {
   })
 
   def ArrivalsTable(timelineComponent: Option[Arrival => VdomNode] = None,
-                    originMapper: String => VdomNode = portCode => portCode,
+                    originMapper: PortCode => VdomNode = portCode => portCode.toString,
                     splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
                    )(paxComponent: ApiFlightWithSplits => TagMod): Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "ArrivalsTable")
     .render_P(props => {
@@ -126,7 +126,7 @@ object FlightTableRow {
 
   import FlightTableComponents._
 
-  type OriginMapperF = String => VdomNode
+  type OriginMapperF = PortCode => VdomNode
   type BestPaxForArrivalF = Arrival => Int
 
   type SplitsGraphComponentFn = SplitsGraph.Props => TagOf[Div]
@@ -135,7 +135,7 @@ object FlightTableRow {
                    codeShares: Set[Arrival],
                    idx: Int,
                    timelineComponent: Option[Arrival => html_<^.VdomNode],
-                   originMapper: OriginMapperF = portCode => portCode,
+                   originMapper: OriginMapperF = portCode => portCode.toString,
                    paxComponent: ApiFlightWithSplits => TagMod,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                    splitsQueueOrder: Seq[Queue],
@@ -168,7 +168,7 @@ object FlightTableRow {
       val codeShares = props.codeShares
       val flightWithSplits = props.flightWithSplits
       val flight = flightWithSplits.apiFlight
-      val allCodes = flight.ICAO :: codeShares.map(_.ICAO).toList
+      val allCodes = flight.flightCode :: codeShares.map(_.flightCode).toList
 
       val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
       val timeIndicatorClass = if (flight.PcpTime.getOrElse(0L) < SDate.now().millisSinceEpoch) "before-now" else "from-now"
@@ -185,7 +185,7 @@ object FlightTableRow {
           )
         }),
         (None, s"${flight.Gate.getOrElse("")}/${flight.Stand.getOrElse("")}"),
-        (None, flight.Status),
+        (None, flight.Status.description),
         (None, localDateTimeWithPopup(Option(flight.Scheduled))),
         (None, localDateTimeWithPopup(flight.Estimated)),
         (None, localDateTimeWithPopup(flight.Actual)),

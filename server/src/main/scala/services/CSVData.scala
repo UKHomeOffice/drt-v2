@@ -2,6 +2,7 @@ package services
 
 import drt.shared.CrunchApi._
 import drt.shared.Queues.Queue
+import drt.shared.SplitRatiosNs.SplitSource
 import drt.shared.Summaries.terminalSummaryForPeriod
 import drt.shared._
 import drt.shared.splits.ApiSplitsToSplitRatio
@@ -182,11 +183,11 @@ object CSVData {
 
   def flightToCsvRow(queueNames: Seq[Queue], fws: ApiFlightWithSplits): List[Any] = {
     List(
-      fws.apiFlight.IATA,
-      fws.apiFlight.ICAO,
+      fws.apiFlight.flightCode,
+      fws.apiFlight.flightCode,
       fws.apiFlight.Origin,
       fws.apiFlight.Gate.getOrElse("") + "/" + fws.apiFlight.Stand.getOrElse(""),
-      fws.apiFlight.Status,
+      fws.apiFlight.Status.description,
       Try(SDate(fws.apiFlight.Scheduled, europeLondonTimeZone).toISODateOnly).getOrElse(""),
       Try(SDate(fws.apiFlight.Scheduled, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
       fws.apiFlight.Estimated.map(SDate(_, europeLondonTimeZone).toHoursAndMinutes()).getOrElse(""),
@@ -202,7 +203,7 @@ object CSVData {
       queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, SplitRatiosNs.SplitSources.TerminalAverage).getOrElse(q, "")}")
   }
 
-  def queuePaxForFlightUsingSplits(fws: ApiFlightWithSplits, splitSource: String): Map[Queue, Int] =
+  def queuePaxForFlightUsingSplits(fws: ApiFlightWithSplits, splitSource: SplitSource): Map[Queue, Int] =
     fws
       .splits
       .find(_.source == splitSource)

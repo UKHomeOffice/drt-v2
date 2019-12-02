@@ -11,7 +11,7 @@ object Brs extends AirportConfigLike {
   import AirportConfigDefaults._
 
   val config = AirportConfig(
-    portCode = "BRS",
+    portCode = PortCode("BRS"),
     queues = Map(
       T1 -> Seq(Queues.QueueDesk, Queues.EGate)
     ),

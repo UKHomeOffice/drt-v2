@@ -11,7 +11,7 @@ object Lcy extends AirportConfigLike {
   import AirportConfigDefaults._
 
   val config = AirportConfig(
-    portCode = "LCY",
+    portCode = PortCode("LCY"),
     queues = Map(
       T1 -> Seq(Queues.NonEeaDesk, Queues.EeaDesk, Queues.EGate)
     ),

@@ -1,7 +1,6 @@
 package drt.client.components
 
 import diode.data.{Pot, Ready}
-import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
@@ -10,7 +9,6 @@ import japgolly.scalajs.react.vdom.{TagMod, TagOf}
 import org.scalajs.dom.html.{Div, Span}
 
 import scala.scalajs.js
-import scala.util.Try
 
 object FlightTableComponents {
 

@@ -129,7 +129,7 @@ class StaffTimeSlotsSpec extends Specification {
 
       val expected = ShiftAssignments.empty
 
-      val result = getShiftsForMonth(shifts, month, T1)
+      val result = getShiftsForMonth(shifts, month)
 
       result === expected
     }
@@ -142,7 +142,7 @@ class StaffTimeSlotsSpec extends Specification {
 
       val expected = shifts
 
-      val result = getShiftsForMonth(shifts, month, T1)
+      val result = getShiftsForMonth(shifts, month)
 
       result === expected
     }
@@ -163,7 +163,7 @@ class StaffTimeSlotsSpec extends Specification {
         StaffAssignment("shift0120180", T1, expectedStart, expectedEnd, 10, None)
       ))
 
-      val result = getShiftsForMonth(shifts, month, T1)
+      val result = getShiftsForMonth(shifts, month)
 
       result === expected
     }

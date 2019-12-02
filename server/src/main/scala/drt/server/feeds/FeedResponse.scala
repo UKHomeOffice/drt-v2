@@ -3,8 +3,8 @@ package server.feeds
 import drt.shared.FlightsApi.Flights
 import drt.shared.SDateLike
 import manifests.passengers.BestAvailableManifest
+import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import services.SDate
-import services.graphstages.DqManifests
 
 sealed trait FeedResponse {
   val createdAt: SDateLike
@@ -52,4 +52,14 @@ object ManifestsFeedFailure {
 
 case class BestManifestsFeedSuccess(manifests: Seq[BestAvailableManifest], createdAt: SDateLike) extends ManifestsFeedResponse {
   override val length: Int = manifests.length
+}
+
+case class DqManifests(lastSeenFileName: String, manifests: Set[VoyageManifest]) {
+  def isEmpty: Boolean = manifests.isEmpty
+  def nonEmpty: Boolean = !isEmpty
+  def length: Int = manifests.size
+  def update(newLastSeenFileName: String, newManifests: Set[VoyageManifest]): DqManifests = {
+    val mergedManifests = manifests ++ newManifests
+    DqManifests(newLastSeenFileName, mergedManifests)
+  }
 }

@@ -1,10 +1,9 @@
 package drt.client.services
 
-import drt.shared.Terminals.{T1, Terminal}
+import drt.shared.Terminals.T1
 import drt.shared._
 import utest._
 
-import scala.language.implicitConversions
 import scala.scalajs.js.Date
 import scala.util.{Failure, Success, Try}
 
@@ -140,7 +139,7 @@ object ShiftsServiceTests extends TestSuite {
 
             val shifts = StaffAssignmentParser(shiftsRawCsv).parsedAssignments.toList
             shifts match {
-              case Failure(t) :: Nil => assert(true)
+              case Failure(_) :: Nil => assert(true)
               case other =>
                 println(s"Should have failed that bad line $other")
                 assert(false)

@@ -5,7 +5,7 @@ import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueW
 import akka.stream.{ClosedShape, OverflowStrategy}
 import akka.testkit.TestProbe
 import drt.shared.Terminals.T1
-import drt.shared.{Arrival, ArrivalsDiff, UniqueArrival}
+import drt.shared.{Arrival, ArrivalStatus, ArrivalsDiff, PortCode, UniqueArrival}
 import services.crunch.CrunchTestLike
 import services.{PcpArrival, SDate}
 
@@ -83,13 +83,13 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike {
     val (_, _, liveBaseSource, liveSource) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
     val liveBaseActual = Option(SDate(2019, 10, 1, 16, 0).millisSinceEpoch)
 
-    liveSource.offer(List(arrival(estimated = liveBaseActual, status = "UNK")))
-    liveBaseSource.offer(List(arrival(actual = liveBaseActual, status = "Scheduled")))
+    liveSource.offer(List(arrival(estimated = liveBaseActual, status = ArrivalStatus("UNK"))))
+    liveBaseSource.offer(List(arrival(actual = liveBaseActual, status = ArrivalStatus("Scheduled"))))
 
     probe.fishForMessage(2 seconds) {
       case ArrivalsDiff(toUpdate, _) =>
         toUpdate.exists {
-          case (_, a) => a.Status == "Scheduled"
+          case (_, a) => a.Status.description == "Scheduled"
         }
     }
 
@@ -185,7 +185,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike {
                estChox: Option[Long] = None,
                actChox: Option[Long] = None,
                gate: Option[String] = None,
-               status: String = "test"
+               status: ArrivalStatus = ArrivalStatus("test")
              ): Arrival =
     Arrival(
       None,
@@ -201,11 +201,11 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike {
       None,
       None,
       None,
-      "STN",
+      PortCode("STN"),
       T1,
       "TST100",
       "TST100",
-      "TST",
+      PortCode("TST"),
       SDate(2019,
         10,
         1,

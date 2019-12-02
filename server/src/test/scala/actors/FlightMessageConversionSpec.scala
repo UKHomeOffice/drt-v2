@@ -1,7 +1,7 @@
 package actors
 
 import drt.shared.Terminals.{T1, Terminal}
-import drt.shared.{Arrival, FeedSource}
+import drt.shared.{Arrival, FeedSource, Operator, PortCode}
 import org.specs2.mutable.Specification
 import server.protobuf.messages.FlightsMessage.FlightMessage
 
@@ -18,11 +18,11 @@ class FlightMessageConversionSpec extends Specification {
     val actPax = 122
     val runwayId = "R1"
     val baggageReclaimId = "B1"
-    val airportId = "LHR"
+    val airportId = PortCode("LHR")
     val terminal = T1
     val icao = "BAA1111"
     val iata = "BA1111"
-    val origin = "JFK"
+    val origin = PortCode("JFK")
     val pcpTime = 10L
     val scheduledTime = 1L
     val estimatedTime = 2L
@@ -44,11 +44,11 @@ class FlightMessageConversionSpec extends Specification {
       tranPax = Option(transPax),
       runwayID = Option(runwayId),
       baggageReclaimId = Option(baggageReclaimId),
-      airportID = Option(airportId),
+      airportID = Option(airportId.iata),
       terminal = Option(terminal.toString),
       iCAO = Option(icao),
       iATA = Option(iata),
-      origin = Option(origin),
+      origin = Option(origin.iata),
       pcpTime = Option(pcpTime),
       scheduled = Option(scheduledTime),
       estimated = Option(estimatedTime),
@@ -61,8 +61,10 @@ class FlightMessageConversionSpec extends Specification {
 
     val arrival = FlightMessageConversion.flightMessageToApiFlight(flightMessage)
 
+    import drt.server.feeds.Implicits._
+
     val expected = Arrival(
-      Operator = Option(operator),
+      Operator = Option(Operator(operator)),
       Status = status,
       Estimated = Option(estimatedTime),
       Actual = Option(touchdownTime),

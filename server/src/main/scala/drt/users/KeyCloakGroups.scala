@@ -39,7 +39,7 @@ case class KeyCloakGroups(groups: List[KeyCloakGroup], client: KeyCloakClient) {
   def usersWithGroupsByUser(groups: List[KeyCloakGroup]): Future[Map[KeyCloakUser, List[String]]] =
     usersWithGroups(groups).map(usersAndGroups => {
       usersAndGroups.groupBy {
-        case (user, group) => user
+        case (user, _) => user
       }.mapValues(_.map {
         case (_, group) => group
       })

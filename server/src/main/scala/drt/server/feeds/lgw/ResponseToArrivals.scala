@@ -1,8 +1,9 @@
 package drt.server.feeds.lgw
 
+import drt.server.feeds.Implicits._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.{InvalidTerminal, N, S}
-import drt.shared.{Arrival, LiveFeedSource, Terminals}
+import drt.shared.{Arrival, CarrierCode, LiveFeedSource, Operator, Terminals, VoyageNumber}
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -29,14 +30,14 @@ case class ResponseToArrivals(data: String) {
   def nodeToArrival: Node => Arrival = (n: Node) => {
 
     val operator = (n \ "AirlineIATA") text
-    val actPax = parsePaxCount(n, "70A").filter(_!= 0).orElse(None)
+    val actPax = parsePaxCount(n, "70A").filter(_ != 0).orElse(None)
     val transPax = parsePaxCount(n, "TIP")
     val arrival = new Arrival(
-      Operator = if (operator.isEmpty) None else Some(operator) ,
+      Operator = if (operator.isEmpty) None else Option(Operator(operator)),
       Status = parseStatus(n),
       Estimated = parseDateTime(n, operationQualifier = "TDN", timeType = "EST"),
-      Actual  = parseDateTime(n, operationQualifier = "TDN", timeType = "ACT"),
-      EstimatedChox = parseDateTime(n, operationQualifier = "ONB", timeType = "EST") ,
+      Actual = parseDateTime(n, operationQualifier = "TDN", timeType = "ACT"),
+      EstimatedChox = parseDateTime(n, operationQualifier = "ONB", timeType = "EST"),
       ActualChox = parseDateTime(n, operationQualifier = "ONB", timeType = "ACT"),
       Gate = (n \\ "PassengerGate").headOption.map(n => n text).filter(StringUtils.isNotBlank(_)),
       Stand = (n \\ "ArrivalStand").headOption.map(n => n text).filter(StringUtils.isNotBlank(_)),
@@ -47,12 +48,14 @@ case class ResponseToArrivals(data: String) {
       BaggageReclaimId = Try(n \\ "BaggageClaimUnit" text).toOption.filter(StringUtils.isNotBlank(_)),
       AirportID = "LGW",
       Terminal = parseTerminal(n),
-      rawICAO = (n \\ "AirlineICAO" text) + parseFlightNumber(n),
-      rawIATA = (n \\ "AirlineIATA" text) + parseFlightNumber(n),
+      CarrierCode = CarrierCode((n \\ "AirlineIATA" text)),
+      VoyageNumber = VoyageNumber(parseFlightNumber(n)),
       Origin = parseOrigin(n),
       Scheduled = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("SCT")).map(n => services.SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
       PcpTime = None,
-      FeedSources = Set(LiveFeedSource)
+      FeedSources = Set(LiveFeedSource),
+      CarrierScheduled = None,
+      ApiPax = None
     )
     log.debug(s"parsed arrival: $arrival")
     arrival
@@ -68,8 +71,8 @@ case class ResponseToArrivals(data: String) {
     mappedTerminal
   }
 
-  private def parseFlightNumber(n: Node) = {
-    ((n \ "FlightLeg").head \ "LegIdentifier").head \ "FlightNumber" text
+  private def parseFlightNumber(n: Node): Int = {
+    (((n \ "FlightLeg").head \ "LegIdentifier").head \ "FlightNumber" text).toInt
   }
 
   def parseStatus(n: Node): String = {
@@ -99,7 +102,7 @@ case class ResponseToArrivals(data: String) {
       case "OFB" | "TX" => "Taxied (Departure Only)"
       case "TKO" | "AB" => "Airborne (Departure Only)"
       case unknownCode => unknownCode
-     }
+    }
   }
 
   def parseOrigin(n: Node): String = {
@@ -111,7 +114,7 @@ case class ResponseToArrivals(data: String) {
   }
 
   def parsePaxCount(n: Node, qualifier: String): Option[Int] = {
-    (n \\ "CabinClass").find(n =>  (n \ "@Class").isEmpty).flatMap(n=> (n \ "PaxCount").find(n=> (n \ "@Qualifier" text).equals(qualifier)).map(n => (n text).toInt ) )
+    (n \\ "CabinClass").find(n => (n \ "@Class").isEmpty).flatMap(n => (n \ "PaxCount").find(n => (n \ "@Qualifier" text).equals(qualifier)).map(n => (n text).toInt))
   }
 
   def parseDateTime(n: Node, operationQualifier: String, timeType: String): Option[MillisSinceEpoch] = {

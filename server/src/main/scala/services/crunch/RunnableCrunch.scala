@@ -9,8 +9,6 @@ import akka.stream.stage.GraphStage
 import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
 import drt.shared._
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
@@ -59,10 +57,6 @@ object RunnableCrunch {
                                        portStateActor: ActorRef,
                                        aggregatedArrivalsStateActor: ActorRef,
 
-                                       crunchPeriodStartMillis: SDateLike => SDateLike,
-                                       now: () => SDateLike,
-                                       portQueues: Map[Terminal, Seq[Queue]],
-                                       liveStateDaysAhead: Int,
                                        forecastMaxMillis: () => MillisSinceEpoch,
                                        throttleDurationPer: FiniteDuration
                                       ): RunnableGraph[(FR, FR, FR, FR, MS, SS, SFP, SMM, ActorRef, SAD, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch)] = {

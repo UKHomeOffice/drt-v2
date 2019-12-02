@@ -21,16 +21,11 @@ import scala.language.postfixOps
 
 
 object PortStateActor {
-  def props(liveStateActor: AskableActorRef, forecastStateActor: AskableActorRef, airportConfig: AirportConfig, expireAfterMillis: Long, now: () => SDateLike, liveDaysAhead: Int): Props =
-    Props(new PortStateActor(liveStateActor, forecastStateActor, airportConfig, expireAfterMillis, now, 2))
+  def props(liveStateActor: AskableActorRef, forecastStateActor: AskableActorRef, now: () => SDateLike, liveDaysAhead: Int) =
+    Props(new PortStateActor(liveStateActor, forecastStateActor, now, liveDaysAhead))
 }
 
-class PortStateActor(liveStateActor: AskableActorRef,
-                     forecastStateActor: AskableActorRef,
-                     airportConfig: AirportConfig,
-                     expireAfterMillis: Long,
-                     now: () => SDateLike,
-                     liveDaysAhead: Int) extends Actor {
+class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: AskableActorRef, now: () => SDateLike, liveDaysAhead: Int) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global

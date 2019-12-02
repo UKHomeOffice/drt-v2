@@ -75,7 +75,7 @@ object FlightComponents {
                 val percentage: Double = paxCount.toDouble / splitTotal * divHeightScalingFactor
                 val label = paxTypeAndQueueString(paxTypeAndQueue)
                 <.div(
-                  ^.className := s"dashboard-summary__splits-graph-bar dashboard-summary__splits-graph-bar--${paxTypeAndQueue.queueType}",
+                  ^.className := s"dashboard-summary__splits-graph-bar dashboard-summary__splits-graph-bar--${paxTypeAndQueue.queueType.toString.toLowerCase}",
                   ^.height := s"$percentage%",
                   ^.title := s"$label")
             }.toTagMod,
@@ -84,7 +84,7 @@ object FlightComponents {
     }
   }
 
-  def splitsSummaryTooltip(splitTotal: Int, splits: Seq[(String, Int)]): TagMod = {
+  def splitsSummaryTooltip(splits: Seq[(String, Int)]): TagMod = {
     <.table(^.className := "table table-responsive table-striped table-hover table-sm ",
       <.tbody(
         splits.map {

@@ -4,8 +4,8 @@ import java.util.UUID
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import akka.http.scaladsl.model.headers.{Accept, Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.model._
+import akka.http.scaladsl.model.headers.{Accept, Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.util.Timeout
@@ -15,8 +15,8 @@ import org.slf4j.{Logger, LoggerFactory}
 import spray.json.{DefaultJsonProtocol, JsObject, JsValue, RootJsonFormat}
 
 import scala.concurrent.duration._
-import scala.language.postfixOps
 import scala.concurrent.{Await, Future}
+import scala.language.postfixOps
 
 abstract case class KeyCloakClient(token: String, keyCloakUrl: String)(implicit val system: ActorSystem, mat: Materializer)
   extends WithSendAndReceive with KeyCloakUserParserProtocol {

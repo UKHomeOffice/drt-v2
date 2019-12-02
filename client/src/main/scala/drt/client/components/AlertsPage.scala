@@ -128,7 +128,7 @@ object AlertsPage {
           modelRCP { modelMP: ModelProxy[Pot[List[Alert]]] =>
             val alertsPot = modelMP()
             <.div(
-              alertsPot.render((alerts: List[Alert]) => {
+              alertsPot.render { _ =>
                 <.div(
                   <.div(^.`class` := "col-md-3"),
                   <.div(
@@ -136,7 +136,7 @@ object AlertsPage {
                     <.div(^.`class` := "col-md-6")
                   )
                 )
-              }),
+              },
               alertsPot.renderEmpty(<.div(^.id := "no-alerts-to-delete"))
             )
           }
@@ -148,7 +148,7 @@ object AlertsPage {
         )
       )
     })
-    .componentDidMount(p => Callback(GoogleEventTracker.sendPageView("alerts")))
+    .componentDidMount(_ => Callback(GoogleEventTracker.sendPageView("alerts")))
     .build
 
   def apply(): VdomElement = component()

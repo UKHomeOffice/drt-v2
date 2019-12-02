@@ -2,6 +2,7 @@ package drt.server.feeds.lhr
 
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
+import drt.server.feeds.Implicits._
 import drt.server.feeds.lhr.forecast.LHRForecastFlightRow
 import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.Terminal
@@ -10,9 +11,9 @@ import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, GetFeedImportArrivals}
 import services.SDate
 
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 import scala.util.Try
 

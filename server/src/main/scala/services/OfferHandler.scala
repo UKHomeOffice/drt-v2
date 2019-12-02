@@ -9,7 +9,7 @@ import services.OfferHandler.log
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
-import scala.util.{Failure, Success}
+import scala.util.Failure
 
 object OfferHandler {
   val log: Logger = LoggerFactory.getLogger(getClass)

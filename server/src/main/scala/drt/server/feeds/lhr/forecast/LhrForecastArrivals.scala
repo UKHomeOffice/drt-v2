@@ -1,7 +1,8 @@
 package drt.server.feeds.lhr.forecast
 
+import drt.server.feeds.Implicits._
 import drt.shared.Terminals.Terminal
-import drt.shared.{Arrival, ForecastFeedSource, SDateLike}
+import drt.shared.{Arrival, ForecastFeedSource, Operator, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.util.StringUtils
 import services.SDate
@@ -48,7 +49,7 @@ object LhrForecastArrival {
 
   def flightCode(fields: Seq[String]): String = fields(6).replace(" ", "")
 
-  def origin(fields: Seq[String]) = fields(7)
+  def origin(fields: Seq[String]): String = fields(7)
 
   def maxPax(fields: Seq[String]): Int = fields(12).toInt
 
@@ -65,7 +66,7 @@ object LhrForecastArrival {
       val actPax = paxTotal(fields)
       val transPax = paxTransit(fields)
       Arrival(
-        Operator = if (StringUtils.isEmpty(operator)) None else Option(operator),
+        Operator = operator,
         Status = "Forecast",
         Estimated = None,
         Actual = None,

@@ -18,7 +18,7 @@ object PortConfigPage {
     .render_P(_ =>
       <.div(^.className := "port-config", <.h3("Port Config"), PortConfigDetails())
     )
-    .componentDidMount(p => Callback {
+    .componentDidMount(_ => Callback {
       GoogleEventTracker.sendPageView(s"port-config")
     })
     .build

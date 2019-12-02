@@ -15,7 +15,7 @@ import services.SDate
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.language.{implicitConversions, postfixOps}
+import scala.language.postfixOps
 
 trait ShiftPersistence {
   implicit val timeout: Timeout = Timeout(250 milliseconds)

@@ -14,7 +14,7 @@ import services.graphstages.Crunch._
 import services.graphstages.{Crunch, WorkloadCalculator}
 import services.{SDate, TryCrunch}
 
-import scala.collection.immutable.{SortedMap, SortedSet}
+import scala.collection.immutable.SortedSet
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps

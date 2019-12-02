@@ -2,7 +2,7 @@ package services
 
 import com.typesafe.config.{Config, ConfigFactory}
 import drt.shared.SplitRatiosNs.SplitRatios
-import drt.shared.{AirportConfig, Arrival, MilliDate}
+import drt.shared.{Arrival, MilliDate}
 import org.slf4j.{Logger, LoggerFactory}
 
 object SplitsProvider {
@@ -12,8 +12,8 @@ object SplitsProvider {
   def splitsForFlight(providers: List[SplitProvider])(apiFlight: Arrival): Option[SplitRatios] = {
     providers.foldLeft(None: Option[SplitRatios])((prev, provider) => {
       prev match {
-        case Some(split) => prev
-        case None => provider(apiFlight.IATA, MilliDate(apiFlight.Scheduled))
+        case Some(_) => prev
+        case None => provider(apiFlight.flightCode, MilliDate(apiFlight.Scheduled))
       }
     })
   }

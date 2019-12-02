@@ -9,7 +9,7 @@ import akka.testkit.TestProbe
 import drt.server.feeds.gla.{GlaFeed, GlaFeedRequesterLike, ProdGlaFeedRequester}
 import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.T1
-import drt.shared.{Arrival, LiveFeedSource}
+import drt.shared.{Arrival, ArrivalStatus, LiveFeedSource, PortCode}
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
@@ -135,13 +135,10 @@ class GlaFeedSpec extends SpecificationLike {
 
   "Given some valid GLA Feed Json I should get back a valid Arrival object" >> {
     val mockFeed = mockFeedWithResponse(firstJsonExample)
-    val arrivalResult = Await.result(mockFeed.requestArrivals(), 1 second) match {
-      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival
-    }
 
     val expected = Arrival(
       Operator = None,
-      Status = "Flight is on schedule",
+      Status = ArrivalStatus("Flight is on schedule"),
       Estimated = Some(SDate("2019-11-13T13:32:00Z").millisSinceEpoch),
       Actual = Some(SDate("2019-11-13T13:31:00Z").millisSinceEpoch),
       EstimatedChox = Some(SDate("2019-11-13T12:33:00Z").millisSinceEpoch),
@@ -153,18 +150,20 @@ class GlaFeedSpec extends SpecificationLike {
       TranPax = None,
       RunwayID = Some("3"),
       BaggageReclaimId = Some("2"),
-      AirportID = "GLA",
+      AirportID = PortCode("GLA"),
       Terminal = T1,
       rawICAO = "TST234",
       rawIATA = "TS234",
-      Origin = "TST",
+      Origin = PortCode("TST"),
       Scheduled = SDate("2019-11-13T12:34:00Z").millisSinceEpoch,
       PcpTime = None,
       FeedSources = Set(LiveFeedSource),
       CarrierScheduled = None
     )
 
-    arrivalResult === expected
+    Await.result(mockFeed.requestArrivals(), 1 second) match {
+      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival === expected
+    }
   }
 
   val firstJsonExample: String =
@@ -196,13 +195,10 @@ class GlaFeedSpec extends SpecificationLike {
 
   "Given a different arrival with valid GLA Feed Json I should get back a valid Arrival object" >> {
     val mockFeed = mockFeedWithResponse(secondJsonExample)
-    val arrivalResult = Await.result(mockFeed.requestArrivals(), 1 second) match {
-      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival
-    }
 
     val expected = Arrival(
       Operator = None,
-      Status = "Flight is cancelled",
+      Status = ArrivalStatus("Flight is cancelled"),
       Estimated = None,
       Actual = Some(SDate("2019-11-14T14:41:00Z").millisSinceEpoch),
       EstimatedChox = Some(SDate("2019-11-14T12:44:00Z").millisSinceEpoch),
@@ -214,18 +210,20 @@ class GlaFeedSpec extends SpecificationLike {
       TranPax = None,
       RunwayID = Some("4"),
       BaggageReclaimId = Some("2"),
-      AirportID = "GLA",
+      AirportID = PortCode("GLA"),
       Terminal = T1,
       rawICAO = "TTT244",
       rawIATA = "TT244",
-      Origin = "TTT",
+      Origin = PortCode("TTT"),
       Scheduled = SDate("2019-11-14T12:44:00Z").millisSinceEpoch,
       PcpTime = None,
       FeedSources = Set(LiveFeedSource),
       CarrierScheduled = None
     )
 
-    arrivalResult === expected
+    Await.result(mockFeed.requestArrivals(), 1 second) match {
+      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival === expected
+    }
   }
 
   val secondJsonExample: String =
@@ -258,13 +256,10 @@ class GlaFeedSpec extends SpecificationLike {
 
   "Given a different arrival with only required JSON fields then I should still get an arrival object with those fields" >> {
     val mockFeed = mockFeedWithResponse(requiredFieldsOnlyJson)
-    val arrivalResult = Await.result(mockFeed.requestArrivals(), 1 second) match {
-      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival
-    }
 
     val expected = Arrival(
       Operator = None,
-      Status = "Flight is cancelled",
+      Status = ArrivalStatus("Flight is cancelled"),
       Estimated = None,
       Actual = None,
       EstimatedChox = None,
@@ -276,18 +271,20 @@ class GlaFeedSpec extends SpecificationLike {
       TranPax = None,
       RunwayID = None,
       BaggageReclaimId = None,
-      AirportID = "GLA",
+      AirportID = PortCode("GLA"),
       Terminal = T1,
       rawICAO = "TTT244",
       rawIATA = "TT244",
-      Origin = "TTT",
+      Origin = PortCode("TTT"),
       Scheduled = SDate("2019-11-14T12:44:00Z").millisSinceEpoch,
       PcpTime = None,
       FeedSources = Set(LiveFeedSource),
       CarrierScheduled = None
     )
 
-    arrivalResult === expected
+    Await.result(mockFeed.requestArrivals(), 1 second) match {
+      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival === expected
+    }
   }
 
   val requiredFieldsOnlyJson: String =

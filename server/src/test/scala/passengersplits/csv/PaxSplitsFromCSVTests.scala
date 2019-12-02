@@ -1,12 +1,13 @@
 package passengersplits.csv
 
+import drt.shared.SplitRatiosNs.SplitSources.Historical
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios}
 import drt.shared._
 import org.specs2.mutable.SpecificationLike
 import services.{CSVPassengerSplitsProvider, CsvPassengerSplitsReader, SDate}
 
 class PaxSplitsFromCSVTests extends SpecificationLike {
-  val CsvSplitSource = "Historical"
+  val CsvSplitSource = Historical
 
   import CsvPassengerSplitsReader._
 

@@ -89,7 +89,6 @@ object CrunchSystem {
     val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](10, OverflowStrategy.backpressure)
     val actualDesksAndQueuesSource: Source[ActualDeskStats, SourceQueueWithComplete[ActualDeskStats]] = Source.queue[ActualDeskStats](10, OverflowStrategy.backpressure)
 
-    val groupFlightsByCodeShares = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight) _
     val crunchStartDateProvider: SDateLike => SDateLike = crunchStartWithOffset(props.airportConfig.crunchOffsetMinutes)
 
     val maybeStaffMinutes = initialStaffMinutesFromPortState(props.initialPortState)
@@ -115,7 +114,7 @@ object CrunchSystem {
     val liveBaseArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialLiveBaseArrivals, forecastMaxMillis)
     val liveArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialLiveArrivals, forecastMaxMillis)
 
-    val ptqa = if (props.airportConfig.portCode == "LHR")
+    val ptqa = if (props.airportConfig.portCode == PortCode("LHR"))
       PaxTypeQueueAllocation(
         B5JPlusWithTransitTypeAllocator(),
         TerminalQueueAllocatorWithFastTrack(props.airportConfig.terminalPaxTypeQueueAllocation))
@@ -126,14 +125,8 @@ object CrunchSystem {
 
     val arrivalSplitsGraphStage = new ArrivalSplitsGraphStage(
       name = props.logLabel,
-      props.airportConfig.portCode,
       optionalInitialFlights = initialFlightsWithSplits,
-      splitsCalculator = manifests.queues.SplitsCalculator(
-        props.airportConfig.feedPortCode,
-        ptqa,
-        props.airportConfig.terminalPaxSplits
-      ),
-      groupFlightsByCodeShares = groupFlightsByCodeShares,
+      splitsCalculator = manifests.queues.SplitsCalculator(ptqa, props.airportConfig.terminalPaxSplits),
       expireAfterMillis = props.expireAfterMillis,
       now = props.now,
       useApiPaxNos = props.useApiPaxNos
@@ -164,8 +157,6 @@ object CrunchSystem {
       crunchPeriodStartMillis = crunchStartDateProvider,
       minutesToCrunch = props.minutesToCrunch)
 
-    val liveStateDaysAhead = 2
-
     val crunchSystem = RunnableCrunch(
       props.arrivalsForecastBaseSource, props.arrivalsForecastSource, props.arrivalsLiveBaseSource, props.arrivalsLiveSource,
       props.manifestsLiveSource, props.manifestResponsesSource,
@@ -178,7 +169,7 @@ object CrunchSystem {
       props.voyageManifestsActor, props.manifestRequestsSink,
       props.portStateActor,
       props.actors("aggregated-arrivals").actorRef,
-      crunchStartDateProvider, props.now, props.airportConfig.queues, liveStateDaysAhead, forecastMaxMillis, props.stageThrottlePer
+      forecastMaxMillis, props.stageThrottlePer
     )
 
     val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, shiftsIn, fixedPointsIn, movementsIn, simloadsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS) = crunchSystem.run

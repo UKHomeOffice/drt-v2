@@ -2,13 +2,13 @@ package services.inputfeeds
 
 import com.typesafe.config.ConfigFactory
 import controllers.ArrivalGenerator
+import drt.server.feeds.acl.AclFeed
+import drt.server.feeds.acl.AclFeed.{arrivalsFromCsvContent, contentFromFileName, latestFileForPort, sftpClient}
 import drt.shared
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Terminals._
 import drt.shared._
-import server.feeds.acl.AclFeed
-import server.feeds.acl.AclFeed._
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import services.SDate
 import services.crunch.CrunchTestLike
@@ -23,7 +23,7 @@ class AclFeedSpec extends CrunchTestLike {
   val lgwTerminalMapping: Terminal => Terminal = (t: Terminal) => Map[Terminal, Terminal](T2 -> S).getOrElse(t, InvalidTerminal)
 
   "ACL feed failures" >> {
-    val aclFeed = AclFeed("nowhere.nowhere", "badusername", "badpath", "BAD", (t: Terminal) => T1)
+    val aclFeed = AclFeed("nowhere.nowhere", "badusername", "badpath", PortCode("BAD"), (_: Terminal) => T1)
 
     val result = aclFeed.requestArrivals.getClass
 
@@ -43,10 +43,10 @@ class AclFeedSpec extends CrunchTestLike {
         """.stripMargin
 
       val arrivals = arrivalsFromCsvContent(csvContent, regularTerminalMapping)
-      val expected = List(Arrival(Operator = Some("4U"), Status = "ACL Forecast", Estimated = None, Actual = None,
-        EstimatedChox = None, ActualChox = None, Gate = None, Stand = None, MaxPax = Some(180), ActPax = Some(149),
-        TranPax = None, RunwayID = None, BaggageReclaimId = None, AirportID = "LHR", Terminal = T2,
-        rawICAO = "4U0460", rawIATA = "4U0460", Origin = "CGN",FeedSources = Set(shared.AclFeedSource),
+      val expected = List(Arrival(Operator = Option(Operator("4U")), Status = ArrivalStatus("ACL Forecast"), Estimated = None, Actual = None,
+        EstimatedChox = None, ActualChox = None, Gate = None, Stand = None, MaxPax = Option(180), ActPax = Option(149),
+        TranPax = None, RunwayID = None, BaggageReclaimId = None, AirportID = PortCode("LHR"), Terminal = T2,
+        rawICAO = "4U0460", rawIATA = "4U0460", Origin = PortCode("CGN"),FeedSources = Set(shared.AclFeedSource),
         Scheduled = 1507878600000L, PcpTime = None))
 
       arrivals === expected
@@ -89,11 +89,11 @@ class AclFeedSpec extends CrunchTestLike {
         """.stripMargin
 
       val arrivals = arrivalsFromCsvContent(csvContent, lgwTerminalMapping)
-      val expected = List(Arrival(Operator = Some("4U"), Status = "ACL Forecast", Estimated = None,
+      val expected = List(Arrival(Operator = Option(Operator("4U")), Status = ArrivalStatus("ACL Forecast"), Estimated = None,
         Actual = None, EstimatedChox = None, ActualChox = None, Gate = None,
-        Stand = None, MaxPax = Some(180), ActPax = Some(149), TranPax = None, RunwayID = None, BaggageReclaimId = None,
-        AirportID = "LHR", Terminal = S, rawICAO = "4U0460", rawIATA = "4U0460",
-        Origin = "CGN", Scheduled = 1507878600000L, PcpTime = None, FeedSources = Set(shared.AclFeedSource)))
+        Stand = None, MaxPax = Option(180), ActPax = Option(149), TranPax = None, RunwayID = None, BaggageReclaimId = None,
+        AirportID = PortCode("LHR"), Terminal = S, rawICAO = "4U0460", rawIATA = "4U0460",
+        Origin = PortCode("CGN"), Scheduled = 1507878600000L, PcpTime = None, FeedSources = Set(shared.AclFeedSource)))
 
       arrivals === expected
     }
@@ -146,7 +146,7 @@ class AclFeedSpec extends CrunchTestLike {
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlights))
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
 
-      val expected = Set(liveFlight.copy(rawIATA = aclFlight.rawIATA, rawICAO = aclFlight.rawICAO, FeedSources = Set(AclFeedSource, LiveFeedSource)))
+      val expected = Set(liveFlight.copy(CarrierCode = aclFlight.CarrierCode, VoyageNumber = aclFlight.VoyageNumber, FeedSources = Set(AclFeedSource, LiveFeedSource)))
 
       crunch.portStateTestProbe.fishForMessage(3 seconds) {
         case ps: PortState =>
@@ -165,13 +165,13 @@ class AclFeedSpec extends CrunchTestLike {
       val scheduledLive = "2017-01-01T00:00Z"
 
       val initialAcl = Set(
-        ArrivalGenerator.arrival(iata = "BA0001", schDt = "2017-01-01T00:05Z", actPax = Option(150), status = "forecast"),
-        ArrivalGenerator.arrival(iata = "BA0002", schDt = "2017-01-01T00:15Z", actPax = Option(151), status = "forecast"))
+        ArrivalGenerator.arrival(iata = "BA0001", schDt = "2017-01-01T00:05Z", actPax = Option(150), status = ArrivalStatus("forecast")),
+        ArrivalGenerator.arrival(iata = "BA0002", schDt = "2017-01-01T00:15Z", actPax = Option(151), status = ArrivalStatus("forecast")))
       val initialLive = Set(
-        ArrivalGenerator.arrival(iata = "BA0003", schDt = "2017-01-01T00:25Z", actPax = Option(99), status = "scheduled"))
+        ArrivalGenerator.arrival(iata = "BA0003", schDt = "2017-01-01T00:25Z", actPax = Option(99), status = ArrivalStatus("scheduled")))
 
       val newAcl = Set(
-        ArrivalGenerator.arrival(iata = "BA0011", schDt = "2017-01-01T00:10Z", actPax = Option(105), status = "forecast"))
+        ArrivalGenerator.arrival(iata = "BA0011", schDt = "2017-01-01T00:10Z", actPax = Option(105), status = ArrivalStatus("forecast")))
 
       val crunch = runCrunchGraph(now = () => SDate(scheduledLive))
 
@@ -197,13 +197,13 @@ class AclFeedSpec extends CrunchTestLike {
       "Then I should only see the initial arrivals updated with the live arrival" >> {
       val scheduledLive = "2017-01-01T00:00Z"
 
-      val initialAcl1 = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2017-01-01T00:05Z", actPax = Option(150), status = "forecast")
-      val initialAcl2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = "2017-01-01T00:15Z", actPax = Option(151), status = "forecast")
+      val initialAcl1 = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2017-01-01T00:05Z", actPax = Option(150), status = ArrivalStatus("forecast"))
+      val initialAcl2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = "2017-01-01T00:15Z", actPax = Option(151), status = ArrivalStatus("forecast"))
       val initialAcl = Set(initialAcl1, initialAcl2)
-      val initialLive = mutable.SortedMap[UniqueArrival, Arrival]() ++ List(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2017-01-01T00:05Z", actPax = Option(99), status = "scheduled")).map(a => (a.unique, a))
+      val initialLive = mutable.SortedMap[UniqueArrival, Arrival]() ++ List(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2017-01-01T00:05Z", actPax = Option(99), status = ArrivalStatus("scheduled"))).map(a => (a.unique, a))
 
       val newLive = Set(
-        ArrivalGenerator.arrival(iata = "BAW0001", schDt = "2017-01-01T00:05Z", actPax = Option(105), status = "estimated", estDt = "2017-01-01T00:06Z"))
+        ArrivalGenerator.arrival(iata = "BAW0001", schDt = "2017-01-01T00:05Z", actPax = Option(105), status = ArrivalStatus("estimated"), estDt = "2017-01-01T00:06Z"))
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduledLive),
@@ -213,7 +213,7 @@ class AclFeedSpec extends CrunchTestLike {
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(initialAcl.toList)))
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(newLive.toList)))
 
-      val expected = newLive.map(_.copy(rawIATA = "BA0001", FeedSources = Set(LiveFeedSource, AclFeedSource))) + initialAcl2.copy(FeedSources = Set(AclFeedSource))
+      val expected = newLive.map(_.copy(CarrierCode = CarrierCode("BA"), VoyageNumber = VoyageNumber(1), FeedSources = Set(LiveFeedSource, AclFeedSource))) + initialAcl2.copy(FeedSources = Set(AclFeedSource))
 
       crunch.portStateTestProbe.fishForMessage(3 seconds) {
         case ps: PortState =>
@@ -231,10 +231,10 @@ class AclFeedSpec extends CrunchTestLike {
       "Then I should only see the new ACL & live arrivals plus the initial live arrival" >> {
       val scheduledLive = "2017-01-01T00:00Z"
 
-      val initialAcl1 = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2017-01-01T00:05Z", actPax = Option(150), status = "forecast")
-      val initialAcl2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = "2017-01-01T00:15Z", actPax = Option(151), status = "forecast")
+      val initialAcl1 = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2017-01-01T00:05Z", actPax = Option(150), status = ArrivalStatus("forecast"))
+      val initialAcl2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = "2017-01-01T00:15Z", actPax = Option(151), status = ArrivalStatus("forecast"))
       val initialAcl = mutable.SortedMap[UniqueArrival, Arrival]() ++ List(initialAcl1, initialAcl2).map(a => (a.unique, a))
-      val initialLive = mutable.SortedMap[UniqueArrival, Arrival]() ++ List(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2017-01-01T00:05Z", actPax = Option(99), status = "scheduled")).map(a => (a.unique, a))
+      val initialLive = mutable.SortedMap[UniqueArrival, Arrival]() ++ List(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2017-01-01T00:05Z", actPax = Option(99), status = ArrivalStatus("scheduled"))).map(a => (a.unique, a))
 
       val newAcl = Flights(Seq(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2017-01-01T00:07Z", actPax = Option(105))))
       val newLive = Flights(Seq(ArrivalGenerator.arrival(iata = "BAW0001", schDt = "2017-01-01T00:06Z", actPax = Option(105))))
@@ -268,7 +268,7 @@ class AclFeedSpec extends CrunchTestLike {
       "Then I should still see the arrival, ie it should not have been removed" >> {
       val scheduledLive = "2017-01-01T00:00Z"
 
-      val aclArrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2017-01-01T00:05Z", actPax = Option(150), status = "forecast", feedSources = Set(AclFeedSource))
+      val aclArrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2017-01-01T00:05Z", actPax = Option(150), status = ArrivalStatus("forecast"), feedSources = Set(AclFeedSource))
 
       val aclInput1 = Flights(Seq(aclArrival))
       val aclInput2 = Flights(Seq(aclArrival))
@@ -297,8 +297,8 @@ class AclFeedSpec extends CrunchTestLike {
     val username = ConfigFactory.load.getString("acl.username")
     val path = ConfigFactory.load.getString("acl.keypath")
 
-    val sftp = sftpClient(sshClient(ftpServer, username, path))
-    val latestFile = latestFileForPort(sftp, "MAN")
+    val sftp = sftpClient(AclFeed.sshClient(ftpServer, username, path))
+    val latestFile = latestFileForPort(sftp, PortCode("MAN"))
     println(s"latestFile: $latestFile")
     val aclArrivals: List[Arrival] = arrivalsFromCsvContent(contentFromFileName(sftp, latestFile), regularTerminalMapping)
 

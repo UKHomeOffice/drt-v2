@@ -68,7 +68,7 @@ object PortDashboardPage {
                 <.div(
                   <.h3(s"Terminal $terminalName"),
                   portDashboardModel.portState.render(portState => {
-                    portDashboardModel.featureFlags.render(featureFlags => {
+                    portDashboardModel.featureFlags.render(_ => {
                       val portStateForDashboard = portState.windowWithTerminalFilter(
                         displayPeriod.start,
                         displayPeriod.end,

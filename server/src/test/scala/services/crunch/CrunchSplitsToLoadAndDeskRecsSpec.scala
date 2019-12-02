@@ -7,11 +7,10 @@ import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.T1
 import drt.shared._
-import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
-import server.feeds.{ArrivalsFeedSuccess, ManifestsFeedSuccess}
+import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, VoyageManifest}
+import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
-import services.graphstages.DqManifests
-import VoyageManifestGenerator._
+import services.crunch.VoyageManifestGenerator._
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._
@@ -192,7 +191,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
         val scheduled = "2017-01-01T00:00Z"
 
-        val arrival = ArrivalGenerator.arrival(origin = "JFK", schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(10), airportId = "LHR")
+        val arrival = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(10), airportId = PortCode("LHR"))
 
         val crunch = runCrunchGraph(
           now = () => SDate(scheduled),
@@ -207,7 +206,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         )
 
         val voyageManifests = ManifestsFeedSuccess(DqManifests("", Set(
-          VoyageManifest(DqEventCodes.CheckIn, "STN", "JFK", "0001", "BA", "2017-01-01", "00:00",
+          VoyageManifest(EventTypes.CI, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"),
             manifestPax(10, euPassport)
           )
         )))

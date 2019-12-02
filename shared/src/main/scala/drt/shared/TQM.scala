@@ -6,17 +6,14 @@ import drt.shared.Terminals.Terminal
 import upickle.default.{macroRW, ReadWriter}
 
 case class TQM(terminal: Terminal, queue: Queue, minute: MillisSinceEpoch)
-  extends Ordered[TQM]
-    with WithTimeAccessor
-    with WithTerminal[TQM] {
-  override def equals(o: scala.Any): Boolean = o match {
-    case TQM(t, q, m) => t == terminal && q == queue && m == minute
-    case _ => false
+  extends Ordered[TQM] with WithTimeAccessor with WithTerminal[TQM] {
+  override def compare(that: TQM): Int = minute.compare(that.minute) match {
+    case 0 => queue.compare(that.queue) match {
+      case 0 => terminal.compare(that.terminal)
+      case c => c
+    }
+    case c => c
   }
-
-  lazy val comparisonVal: MillisSinceEpoch = minute + 1024L * queue.orderingVal + terminal.orderingVal
-
-  override def compare(that: TQM): Int = this.comparisonVal.compareTo(that.comparisonVal)
 
   override def timeValue: MillisSinceEpoch = minute
 }

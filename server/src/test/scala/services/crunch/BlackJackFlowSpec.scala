@@ -7,7 +7,6 @@ import drt.shared.PaxTypesAndQueues._
 import drt.shared.PortState
 import drt.shared.Queues._
 import drt.shared.Terminals.T1
-import passengersplits.parsing.VoyageManifestParser.PassengerInfoJson
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 
@@ -121,10 +120,6 @@ class BlackJackFlowSpec extends CrunchTestLike {
     val requestUri = controllers.Deskstats.uriForDate(now)
 
     requestUri === s"?date_limit=&start_date=2019-01-10&end_date=2019-01-12"
-  }
-
-  def passengerInfoJson(nationality: String, documentType: String, issuingCountry: String): PassengerInfoJson = {
-    PassengerInfoJson(Some(documentType), issuingCountry, "", Some("22"), Some("LHR"), "N", Some("GBR"), Option(nationality), None)
   }
 }
 

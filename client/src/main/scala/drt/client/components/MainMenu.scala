@@ -85,7 +85,7 @@ object MainMenu {
     if (minutesAgo > 1) s"$minutesAgo mins" else if (minutesAgo == 1) s"$minutesAgo min" else "< 1 min"
   }).getOrElse("n/a")
 
-  private class Backend($: BackendScope[Props, Unit]) {
+  private class Backend() {
     def render(props: Props): VdomTagOf[Div] = {
       val children: immutable.Seq[TagOf[LI]] = for (item <- menuItems(props.airportConfig, props.currentLoc, props.roles, props.feeds)) yield {
         val active = (props.currentLoc, item.location) match {
@@ -105,7 +105,6 @@ object MainMenu {
 
   private val component = ScalaComponent.builder[Props]("MainMenu")
     .renderBackend[Backend]
-    .componentDidMount(p => Callback.log("mainmenu did mount"))
     .build
 
   def apply(ctl: RouterCtl[Loc], currentLoc: Loc, feeds: Seq[FeedStatuses], airportConfig: AirportConfig, roles: Set[Role]): VdomElement

@@ -6,7 +6,8 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{Arrival, ArrivalKey, SDateLike}
+import drt.shared.SplitRatiosNs.SplitSources.Historical
+import drt.shared.{Arrival, ArrivalKey, CarrierCode, PortCode, SDateLike, VoyageNumber}
 import graphs.SinkToSourceBridge
 import manifests.actors.RegisteredArrivals
 import manifests.passengers.BestAvailableManifest
@@ -24,40 +25,14 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
 
   val scheduled = SDate("2019-03-06T12:00:00Z")
 
-  "Given an arrival with a non-numeric flight number is sent into the ManifestGraph then we should not find any manifests in the sink" >> {
-
-    val testManifest = BestAvailableManifest(
-      "test",
-      "STN",
-      "TST",
-      "1234",
-      "TST",
-      scheduled,
-      List()
-    )
-    val manifestSinkProbe = TestProbe("manifest-test-probe")
-    val registeredArrivalSinkProbe = TestProbe(name = "registered-arrival-test-probe")
-
-    val testArrival = ArrivalGenerator.arrival(iata = "---", schDt = "2019-03-06T12:00:00Z")
-
-    val (sink, source) = createAndRunGraph(registeredArrivalSinkProbe, testManifest, None, Crunch.isDueLookup, now = () => SDate("2019-03-06T11:00:00Z"))
-    Source(List(List(testArrival))).runWith(sink)
-
-    source.runWith(Sink.seq).pipeTo(manifestSinkProbe.ref)
-
-    manifestSinkProbe.expectMsg(2 seconds, List())
-
-    success
-  }
-
   "Given an arrival is sent into the ManifestGraph then we should find the manifest for that flight in the sink" >> {
 
     val testManifest = BestAvailableManifest(
-      "test",
-      "STN",
-      "TST",
-      "1234",
-      "TST",
+      Historical,
+      PortCode("STN"),
+      PortCode("TST"),
+      VoyageNumber("1234"),
+      CarrierCode("TST"),
       scheduled,
       List()
     )
@@ -83,11 +58,11 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
     val registeredArrivalSinkProbe = TestProbe(name = "registered-arrival-test-probe")
 
     val testManifest = BestAvailableManifest(
-      "test",
-      "STN",
-      "TST",
-      "1234",
-      "TST",
+      Historical,
+      PortCode("STN"),
+      PortCode("TST"),
+      VoyageNumber("1234"),
+      CarrierCode("TST"),
       scheduled,
       List()
     )
@@ -117,11 +92,11 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
     val registeredArrivalSinkProbe = TestProbe(name = "registered-arrival-test-probe")
 
     val testManifest = BestAvailableManifest(
-      "test",
-      "STN",
-      "TST",
-      "1234",
-      "TST",
+      Historical,
+      PortCode("STN"),
+      PortCode("TST"),
+      VoyageNumber("1234"),
+      CarrierCode("TST"),
       scheduled,
       List()
     )
@@ -183,7 +158,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
       batchStage,
       manifestResponsesSink,
       registeredArrivalSinkProbe.ref,
-      "STN",
+      PortCode("STN"),
       MockManifestLookupService(testManifest)
     ).run()
 

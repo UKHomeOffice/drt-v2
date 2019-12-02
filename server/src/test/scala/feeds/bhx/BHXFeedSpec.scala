@@ -11,7 +11,7 @@ import com.typesafe.config.ConfigFactory
 import drt.server.feeds.bhx._
 import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.T1
-import drt.shared.{Arrival, LiveFeedSource}
+import drt.shared.{Arrival, ArrivalStatus, LiveFeedSource, Operator, PortCode}
 import org.specs2.mutable.SpecificationLike
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
@@ -387,8 +387,8 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     val result = BHXFlight.bhxFlightToArrival(bhxFlight)
 
     val expected = Arrival(
-      Option("SA"),
-      "ARRIVED ON STAND",
+      Option(Operator("SA")),
+      ArrivalStatus("ARRIVED ON STAND"),
       Option(SDate(estimatedTouchDownTimeString).millisSinceEpoch),
       Option(SDate(actualTouchDownTimeString).millisSinceEpoch),
       None,
@@ -400,11 +400,11 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       None,
       None,
       None,
-      "BHX",
+      PortCode("BHX"),
       T1,
       "SA123",
       "SA123",
-      "JNB",
+      PortCode("JNB"),
       SDate(scheduledTimeString).millisSinceEpoch,
       None,
       Set(LiveFeedSource)

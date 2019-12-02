@@ -3,7 +3,6 @@ package controllers.application
 import actors._
 import actors.pointInTime.CrunchStateReadActor
 import akka.NotUsed
-import akka.actor.Props
 import akka.pattern._
 import akka.stream.scaladsl.Source
 import akka.util.{ByteString, Timeout}
@@ -56,9 +55,7 @@ trait WithExports {
           val fileName = f"$portCode-$terminal-desks-and-queues-${pit.getFullYear()}-${pit.getMonth()}%02d-${pit.getDate()}%02dT" +
             f"${pit.getHours()}%02d-${pit.getMinutes()}%02d-hours-$startHour%02d-to-$endHour%02d"
 
-          val startMillis = dayStartMillisWithHourOffset(startHour, pit)
-          val endMillis = dayStartMillisWithHourOffset(endHour, pit)
-          val portStateForPointInTime = loadBestPortStateForPointInTime(pit.millisSinceEpoch, terminal, startMillis, endMillis)
+          val portStateForPointInTime = loadBestPortStateForPointInTime(pit.millisSinceEpoch, terminal)
           exportDesksToCSV(terminal, pit, startHour, endHour, portStateForPointInTime, includeHeader = true).map {
             case Some(csvData) =>
               val header = ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv"))
@@ -150,10 +147,8 @@ trait WithExports {
         terminalName <- terminalNameOption
       } yield {
         val pit = date.millisSinceEpoch
-        val startMillis = dayStartMillisWithHourOffset(startHour, date)
-        val endMillis = dayStartMillisWithHourOffset(endHour, date)
-        val portStateForPointInTime = loadBestPortStateForPointInTime(pit, terminalName, startMillis, endMillis)
-        val fileName = f"export-splits-$portCode-$terminalName-${date.getFullYear()}-${date.getMonth()}-${date.getDate()}"
+        val portStateForPointInTime = loadBestPortStateForPointInTime(pit, terminalName)
+        val fileName = f"export-splits-${portCode.toString}-$terminalName-${date.getFullYear()}-${date.getMonth()}-${date.getDate()}"
         flightsForCSVExportWithinRange(terminalName, date, startHour = startHour, endHour = endHour, portStateForPointInTime).map {
           case Some(csvFlights) =>
             val csvData = CSVData.flightsWithSplitsWithAPIActualsToCSVWithHeadings(csvFlights)
@@ -189,9 +184,7 @@ trait WithExports {
           val fileName = f"$portCode-$terminal-arrivals-${pit.getFullYear()}-${pit.getMonth()}%02d-${pit.getDate()}%02dT" +
             f"${pit.getHours()}%02d-${pit.getMinutes()}%02d-hours-$startHour%02d-to-$endHour%02d"
 
-          val startMillis = dayStartMillisWithHourOffset(startHour, pit)
-          val endMillis = dayStartMillisWithHourOffset(endHour, pit)
-          val portStateForPointInTime = loadBestPortStateForPointInTime(pit.millisSinceEpoch, terminal, startMillis, endMillis)
+          val portStateForPointInTime = loadBestPortStateForPointInTime(pit.millisSinceEpoch, terminal)
           flightsForCSVExportWithinRange(terminal, pit, startHour, endHour, portStateForPointInTime).map {
             case Some(csvFlights) =>
               val csvData = if (ctrl.getRoles(config, request.headers, request.session).contains(ApiView)) {
@@ -302,10 +295,8 @@ trait WithExports {
       .mapAsync(parallelism = 1) {
         millis =>
           val day = SDate(millis)
-          val start = dayStartWithHourOffset(0, day)
-          val end = start.addHours(24)
           val includeHeader = millis == startPit.millisSinceEpoch
-          val psForDay = loadBestPortStateForPointInTime(millis, terminalName, start.millisSinceEpoch, end.millisSinceEpoch)
+          val psForDay = loadBestPortStateForPointInTime(millis, terminalName)
           timedEndPoint(s"Export multi-day", Option(s"$terminalName ${startPit.toISOString()} -> ${endPit.toISOString()} (day ${day.toISOString()})")) {
             csvFunc(day, psForDay, includeHeader)
           }
@@ -354,7 +345,7 @@ trait WithExports {
                            terminalName: Terminal,
                            startPit: SDateLike,
                            endPit: SDateLike,
-                           portCode: String): String = {
+                           portCode: PortCode): String = {
     f"$portCode-$terminalName-$subject-" +
       f"${startPit.getFullYear()}-${startPit.getMonth()}%02d-${startPit.getDate()}-to-" +
       f"${endPit.getFullYear()}-${endPit.getMonth()}%02d-${endPit.getDate()}"
@@ -370,7 +361,7 @@ trait WithExports {
     (startOfForecast, endOfForecast)
   }
 
-  private def loadBestPortStateForPointInTime(day: MillisSinceEpoch, terminalName: Terminal, startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch): Future[Either[PortStateError, Option[PortState]]] =
+  private def loadBestPortStateForPointInTime(day: MillisSinceEpoch, terminalName: Terminal): Future[Either[PortStateError, Option[PortState]]] =
     if (isHistoricDate(day))
       portStateForEndOfDay(day, terminalName)
     else
@@ -409,7 +400,7 @@ trait WithExports {
                                            terminalName: Terminal): Future[Either[PortStateError, Option[PortState]]] = {
     val stateQuery = GetPortStateForTerminal(startMillis, endMillis, terminalName)
     val terminalsAndQueues = airportConfig.queues.filterKeys(_ == terminalName)
-    val query = CachableActorQuery(Props(classOf[CrunchStateReadActor], airportConfig.portStateSnapshotInterval, SDate(pointInTime), DrtStaticParameters.expireAfterMillis, terminalsAndQueues, startMillis, endMillis), stateQuery)
+    val query = CachableActorQuery(CrunchStateReadActor.props(airportConfig.portStateSnapshotInterval, SDate(pointInTime), DrtStaticParameters.expireAfterMillis, terminalsAndQueues, startMillis, endMillis), stateQuery)
     val portCrunchResult = cacheActorRef.ask(query)(new Timeout(15 seconds))
 
     portCrunchResult.map {
@@ -425,12 +416,6 @@ trait WithExports {
         Left(PortStateError(t.getMessage))
     }
   }
-
-
-  private def dayStartMillisWithHourOffset(startHour: Int, pit: SDateLike): MillisSinceEpoch = dayStartWithHourOffset(startHour, pit).millisSinceEpoch
-
-  private def dayStartWithHourOffset(startHour: Int, pit: SDateLike): SDateLike =
-    getLocalLastMidnight(pit).addHours(startHour)
 }
 
 object Forecast {

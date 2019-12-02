@@ -5,17 +5,18 @@ import akka.actor.Cancellable
 import akka.stream.scaladsl.Source
 import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaFlightLike, ChromaForecastFlight, ChromaLiveFlight}
+import drt.server.feeds.Implicits._
 import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.Terminal
-import drt.shared.{Arrival, ForecastFeedSource, LiveFeedSource}
+import drt.shared.{Arrival, ForecastFeedSource, LiveFeedSource, Operator}
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.util.StringUtils
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 
 import scala.collection.immutable.Seq
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
@@ -47,7 +48,7 @@ object StreamingChromaFlow {
       val estChox = Try(SDate(flight.EstChoxDT).millisSinceEpoch).getOrElse(0L)
       val actChox = Try(SDate(flight.ActChoxDT).millisSinceEpoch).getOrElse(0L)
       Arrival(
-        Operator = if (StringUtils.isEmpty(flight.Operator)) None else Option(flight.Operator),
+        Operator = if (flight.Operator.isEmpty) None else Option(Operator(flight.Operator)),
         Status = flight.Status,
         Estimated = if (est == 0) None else Option(est),
         Actual = if (act == 0) None else Option(act),

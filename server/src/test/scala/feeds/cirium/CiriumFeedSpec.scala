@@ -8,7 +8,7 @@ import akka.testkit.{TestKit, TestProbe}
 import com.typesafe.config.ConfigFactory
 import drt.server.feeds.cirium.CiriumFeed
 import drt.shared.Terminals.T1
-import drt.shared.{Arrival, LiveBaseFeedSource}
+import drt.shared.{Arrival, ArrivalStatus, LiveBaseFeedSource, Operator, PortCode}
 import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecificationLike
 import server.feeds.ArrivalsFeedSuccess
@@ -73,7 +73,7 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
 
     val expected = drtArrival(publishedArrivalTime, estRunwayArrival, actRunwayArrival, estGateArrivalTime, actGateArrivalTime)
 
-    val result = CiriumFeed.toArrival(ciriumArrival, "LHR")
+    val result = CiriumFeed.toArrival(ciriumArrival, PortCode("LHR"))
 
     result === expected
   }
@@ -104,15 +104,15 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
       actGateArrivalTime
     ).copy(CarrierScheduled = Option(SDate(publishedArrivalTime).millisSinceEpoch))
 
-    val result = CiriumFeed.toArrival(ciriumArrival, "LHR")
+    val result = CiriumFeed.toArrival(ciriumArrival, PortCode("LHR"))
 
     result === expected
   }
 
   private def drtArrival(publishedArrivalTime: String, estRunwayArrival: String, actRunwayArrival: String, estGateArrivalTime: String, actGateArrivalTime: String) = {
     Arrival(
-      Some("TST"),
-      "Active",
+      Option(Operator("TST")),
+      ArrivalStatus("Active"),
       Option(SDate(estRunwayArrival).millisSinceEpoch),
       Option(SDate(actRunwayArrival).millisSinceEpoch),
       Option(SDate(estGateArrivalTime).millisSinceEpoch),
@@ -124,11 +124,11 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
       None,
       None,
       Option("12"),
-      "LHR",
+      PortCode("LHR"),
       T1,
       "TST1000",
       "TST1000",
-      "JFK",
+      PortCode("JFK"),
       SDate(publishedArrivalTime).millisSinceEpoch,
       None,
       Set(LiveBaseFeedSource)
@@ -224,7 +224,7 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
   "When successfully polling for CiriumArrivals I should get a stream of ArrivalFeedSuccess" >> {
     implicit val mat: ActorMaterializer = ActorMaterializer()
 
-    val ciriumFeed = new CiriumFeed("", "LHR") with MockClientWithSuccess
+    val ciriumFeed = new CiriumFeed("", PortCode("LHR")) with MockClientWithSuccess
 
     val probe = TestProbe()
 
@@ -243,7 +243,7 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
   "When an error occurs polling for cirium then it should continue to receive a later update" >> {
     implicit val mat: ActorMaterializer = ActorMaterializer()
 
-    val ciriumFeed = new CiriumFeed("", "LHR") with MockClientWithFailure
+    val ciriumFeed = new CiriumFeed("", PortCode("LHR")) with MockClientWithFailure
 
     val probe = TestProbe()
 
@@ -270,7 +270,7 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
         flightDurations = Option(CiriumFlightDurations(None, None, None, None, None, None, Option(5), None))
       )
 
-    val arrival = CiriumFeed.toArrival(ciriumFlight, "STN")
+    val arrival = CiriumFeed.toArrival(ciriumFlight, PortCode("STN"))
     val result = arrival.EstimatedChox
     val expected = Option(SDate(estimatedRunwayArrivalTime).addMinutes(5).millisSinceEpoch)
 
@@ -288,7 +288,7 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
         flightDurations = Option(CiriumFlightDurations(None, None, None, None, None, None, Option(5), None))
       )
 
-    val arrival = CiriumFeed.toArrival(ciriumFlight, "STN")
+    val arrival = CiriumFeed.toArrival(ciriumFlight, PortCode("STN"))
     val result = arrival.EstimatedChox
     val expected = Option(SDate(actualRunwayTime).addMinutes(5).millisSinceEpoch)
 
@@ -306,7 +306,7 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
         flightDurations = Option(CiriumFlightDurations(None, None, None, None, None, None, Option(5), None))
       )
 
-    val arrival = CiriumFeed.toArrival(ciriumFlight, "STN")
+    val arrival = CiriumFeed.toArrival(ciriumFlight, PortCode("STN"))
     val result = arrival.Estimated
     val expected = Option(SDate(estimatedChoxTime).addMinutes(-5).millisSinceEpoch)
 

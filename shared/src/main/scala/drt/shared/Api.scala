@@ -3,9 +3,10 @@ package drt.shared
 import java.util.UUID
 
 import drt.shared.CrunchApi._
+import drt.shared.EventTypes.{CI, DC, InvalidEventType}
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.Queues.Queue
-import drt.shared.SplitRatiosNs.SplitSources
+import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
 import drt.shared.Terminals.Terminal
 import ujson.Js.Value
 import upickle.Js
@@ -13,6 +14,7 @@ import upickle.default.{ReadWriter, macroRW, readwriter}
 
 import scala.collection.immutable.{NumericRange, Map => IMap, SortedMap => ISortedMap}
 import scala.concurrent.Future
+import scala.util.{Failure, Success, Try}
 import scala.util.matching.Regex
 
 object DeskAndPaxTypeCombinations {
@@ -24,11 +26,6 @@ object DeskAndPaxTypeCombinations {
 }
 
 case class MilliDate(millisSinceEpoch: MillisSinceEpoch) extends Ordered[MilliDate] with WithTimeAccessor {
-  override def equals(o: scala.Any): Boolean = o match {
-    case MilliDate(millis) => millis == millisSinceEpoch
-    case _ => false
-  }
-
   override def compare(that: MilliDate): Int = millisSinceEpoch.compare(that.millisSinceEpoch)
 
   override def timeValue: MillisSinceEpoch = millisSinceEpoch
@@ -82,13 +79,42 @@ case object Ratio extends SplitStyle
 
 case object UndefinedSplitStyle extends SplitStyle
 
-case class ApiPaxTypeAndQueueCount(passengerType: PaxType, queueType: Queue, paxCount: Double, nationalities: Option[IMap[String, Double]])
+case class Nationality(code: String)
+
+object Nationality {
+  implicit val rw: ReadWriter[Nationality] = macroRW
+}
+
+case class ApiPaxTypeAndQueueCount(passengerType: PaxType, queueType: Queue, paxCount: Double, nationalities: Option[IMap[Nationality, Double]])
 
 object ApiPaxTypeAndQueueCount {
   implicit val rw: ReadWriter[ApiPaxTypeAndQueueCount] = macroRW
 }
 
-case class Splits(splits: Set[ApiPaxTypeAndQueueCount], source: String, eventType: Option[String], splitStyle: SplitStyle = PaxNumbers) {
+sealed trait EventType extends ClassNameForToString
+
+object EventType {
+  implicit val rw: ReadWriter[EventType] = macroRW
+
+  def apply(eventType: String): EventType = eventType match {
+    case "DC" => DC
+    case "CI" => CI
+    case _ => InvalidEventType
+  }
+}
+
+object EventTypes {
+
+  object DC extends EventType
+
+  object CI extends EventType
+
+  object InvalidEventType extends EventType
+
+}
+
+
+case class Splits(splits: Set[ApiPaxTypeAndQueueCount], source: SplitSource, maybeEventType: Option[EventType], splitStyle: SplitStyle = PaxNumbers) {
   lazy val totalExcludingTransferPax: Double = Splits.totalExcludingTransferPax(splits)
   lazy val totalPax: Double = Splits.totalPax(splits)
 }
@@ -123,8 +149,8 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
   }
 
   def bestSplits: Option[Splits] = {
-    val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.eventType == Option(DqEventCodes.DepartureConfirmed))
-    val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.eventType == Option(DqEventCodes.CheckIn))
+    val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.DC))
+    val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.CI))
     val apiSplitsAny = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
     val predictedSplits = splits.find(s => s.source == SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages)
     val historicalSplits = splits.find(_.source == SplitSources.Historical)
@@ -174,44 +200,39 @@ case class UniqueArrival(number: Int, terminal: Terminal, scheduled: MillisSince
   extends WithLegacyUniqueId[Int, UniqueArrival]
     with WithTimeAccessor
     with WithTerminal[UniqueArrival] {
-  lazy val comparisonStringForEquality = s"$scheduled-$terminal-$number"
-
-  override def equals(that: scala.Any): Boolean = that match {
-    case o: UniqueArrival => o.hashCode == hashCode
-    case _ => false
-  }
 
   override def compare(that: UniqueArrival): Int =
-    this.comparisonStringForEquality.compareTo(that.comparisonStringForEquality)
-
-  lazy val uniqueId: Int = uniqueStr.hashCode
-  lazy val uniqueStr: String = s"$terminal$scheduled$number"
-
-  override val hashCode: Int = uniqueId
+    scheduled.compare(that.scheduled) match {
+      case 0 => terminal.compare(that.terminal) match {
+        case 0 => number.compare(that.number)
+        case c => c
+      }
+      case c => c
+    }
 
   override def timeValue: MillisSinceEpoch = scheduled
+
+  override def uniqueId: Int = s"$terminal$scheduled$number".hashCode
 }
 
 object UniqueArrival {
   implicit val rw: ReadWriter[UniqueArrival] = macroRW
 
-  def apply(arrival: Arrival): UniqueArrival = UniqueArrival(arrival.flightNumber, arrival.Terminal, arrival.Scheduled)
+  def apply(arrival: Arrival): UniqueArrival = UniqueArrival(arrival.VoyageNumber.numeric, arrival.Terminal, arrival.Scheduled)
 
   def apply(number: Int, terminalName: String, scheduled: MillisSinceEpoch): UniqueArrival = UniqueArrival(number, Terminal(terminalName), scheduled)
 
   def atTime: MillisSinceEpoch => UniqueArrival = (time: MillisSinceEpoch) => UniqueArrival(0, "", time)
 }
 
-case class CodeShareKeyOrderedBySchedule(scheduled: Long, terminalName: Terminal, origin: String) extends Ordered[CodeShareKeyOrderedBySchedule] with WithTimeAccessor {
-  lazy val comparisonString = s"$scheduled-$terminalName-$origin"
-
-  override def equals(o: scala.Any): Boolean = o match {
-    case o: CodeShareKeyOrderedBySchedule => o.comparisonString == comparisonString
-    case _ => false
+case class CodeShareKeyOrderedBySchedule(scheduled: Long, terminal: Terminal, origin: PortCode) extends Ordered[CodeShareKeyOrderedBySchedule] with WithTimeAccessor {
+  override def compare(that: CodeShareKeyOrderedBySchedule): Int = scheduled.compare(that.scheduled) match {
+    case 0 => terminal.compare(that.terminal) match {
+      case 0 => origin.compare(that.origin)
+      case c => c
+    }
+    case c => c
   }
-
-  override def compare(that: CodeShareKeyOrderedBySchedule): Int =
-    if (this.equals(that)) 0 else this.comparisonString.compareTo(that.comparisonString)
 
   override def timeValue: MillisSinceEpoch = scheduled
 }
@@ -221,23 +242,24 @@ object CodeShareKeyOrderedBySchedule {
 
   def apply(fws: ApiFlightWithSplits): CodeShareKeyOrderedBySchedule = CodeShareKeyOrderedBySchedule(fws.apiFlight.Scheduled, fws.apiFlight.Terminal, fws.apiFlight.Origin)
 
-  def apply(scheduled: Long, terminalName: String, origin: String): CodeShareKeyOrderedBySchedule = CodeShareKeyOrderedBySchedule(scheduled, Terminal(terminalName), origin)
+  def apply(scheduled: Long, terminalName: String, origin: PortCode): CodeShareKeyOrderedBySchedule = CodeShareKeyOrderedBySchedule(scheduled, Terminal(terminalName), origin)
 
-  def atTime: MillisSinceEpoch => CodeShareKeyOrderedBySchedule = (millis: MillisSinceEpoch) => CodeShareKeyOrderedBySchedule(millis, "", "")
+  def atTime: MillisSinceEpoch => CodeShareKeyOrderedBySchedule = (millis: MillisSinceEpoch) => CodeShareKeyOrderedBySchedule(millis, "", PortCode(""))
 }
 
-case class CodeShareKeyOrderedByDupes[A](scheduled: Long, terminalName: Terminal, origin: String, arrivalKeys: Set[A]) extends Ordered[CodeShareKeyOrderedByDupes[A]] {
-  lazy val comparisonStringForEquality = s"$scheduled-$terminalName-$origin"
+case class CodeShareKeyOrderedByDupes[A](scheduled: Long, terminal: Terminal, origin: PortCode, arrivalKeys: Set[A]) extends Ordered[CodeShareKeyOrderedByDupes[A]] {
+  private val dupeCountReversed: Int = 100 - arrivalKeys.size
 
-  lazy val comparisonStringForOrdering = s"${100 - arrivalKeys.size}-$scheduled-$terminalName-$origin"
-
-  override def equals(o: scala.Any): Boolean = o match {
-    case o: CodeShareKeyOrderedByDupes[A] => o.comparisonStringForEquality == comparisonStringForEquality
-    case _ => false
+  override def compare(that: CodeShareKeyOrderedByDupes[A]): Int = dupeCountReversed.compare(that.dupeCountReversed) match {
+    case 0 => scheduled.compare(that.scheduled) match {
+      case 0 => terminal.compare(that.terminal) match {
+        case 0 => origin.compare(that.origin)
+        case c => c
+      }
+      case c => c
+    }
+    case c => c
   }
-
-  override def compare(that: CodeShareKeyOrderedByDupes[A]): Int =
-    if (this.equals(that)) 0 else this.comparisonStringForOrdering.compareTo(that.comparisonStringForOrdering)
 }
 
 object MinuteHelper {
@@ -248,74 +270,81 @@ object MinuteHelper {
 
 case class FlightsNotReady()
 
-case class Arrival(
-                    Operator: Option[String],
-                    Status: String,
-                    Estimated: Option[MillisSinceEpoch],
-                    Actual: Option[MillisSinceEpoch],
-                    EstimatedChox: Option[MillisSinceEpoch],
-                    ActualChox: Option[MillisSinceEpoch],
-                    Gate: Option[String],
-                    Stand: Option[String],
-                    MaxPax: Option[Int],
-                    ActPax: Option[Int],
-                    TranPax: Option[Int],
-                    RunwayID: Option[String],
-                    BaggageReclaimId: Option[String],
-                    AirportID: String,
-                    Terminal: Terminal,
-                    rawICAO: String,
-                    rawIATA: String,
-                    Origin: String,
-                    Scheduled: MillisSinceEpoch,
-                    PcpTime: Option[MillisSinceEpoch],
-                    FeedSources: Set[FeedSource],
-                    CarrierScheduled: Option[MillisSinceEpoch] = None,
-                    ApiPax: Option[Int] = None
+sealed trait VoyageNumberLike {
+  def numeric: Int
+}
+
+case class VoyageNumber(numeric: Int) extends VoyageNumberLike with Ordered[VoyageNumber] {
+  override def toString: String = numeric.toString
+
+  def toPaddedString: String = {
+    val string = numeric.toString
+    val prefix = string.length match {
+      case 4 => ""
+      case 3 => "0"
+      case 2 => "00"
+      case 1 => "000"
+      case _ => ""
+    }
+    prefix + string
+  }
+
+  override def compare(that: VoyageNumber): Int = numeric.compare(that.numeric)
+}
+
+case class InvalidVoyageNumber(exception: Throwable) extends VoyageNumberLike {
+  override def toString: String = "invalid"
+
+  override def numeric: Int = 0
+}
+
+case object VoyageNumber {
+  def apply(string: String): VoyageNumberLike = Try(string.toInt) match {
+    case Success(value) => VoyageNumber(value)
+    case Failure(exception) => InvalidVoyageNumber(exception)
+  }
+}
+
+case class Operator(code: String)
+
+case class ArrivalStatus(description: String) {
+  override def toString: String = description
+}
+
+case class Arrival(Operator: Option[Operator],
+                   CarrierCode: CarrierCode,
+                   VoyageNumber: VoyageNumber,
+                   Status: ArrivalStatus,
+                   Estimated: Option[MillisSinceEpoch],
+                   Actual: Option[MillisSinceEpoch],
+                   EstimatedChox: Option[MillisSinceEpoch],
+                   ActualChox: Option[MillisSinceEpoch],
+                   Gate: Option[String],
+                   Stand: Option[String],
+                   MaxPax: Option[Int],
+                   ActPax: Option[Int],
+                   TranPax: Option[Int],
+                   RunwayID: Option[String],
+                   BaggageReclaimId: Option[String],
+                   AirportID: PortCode,
+                   Terminal: Terminal,
+                   Origin: PortCode,
+                   Scheduled: MillisSinceEpoch,
+                   PcpTime: Option[MillisSinceEpoch],
+                   FeedSources: Set[FeedSource],
+                   CarrierScheduled: Option[MillisSinceEpoch],
+                   ApiPax: Option[Int]
                   ) extends WithUnique[UniqueArrival] {
-  lazy val ICAO: String = Arrival.standardiseFlightCode(rawICAO)
-  lazy val IATA: String = Arrival.standardiseFlightCode(rawIATA)
   val paxOffPerMinute = 20
 
-  lazy val flightNumber: Int = {
-    val bestCode = (IATA, ICAO) match {
-      case (iata, _) if iata != "" => iata
-      case (_, icao) if icao != "" => icao
-      case _ => ""
-    }
-
-    bestCode match {
-      case Arrival.flightCodeRegex(_, fn, _) => fn.toInt
-      case _ => 0
-    }
-  }
-
-  lazy val carrierCode: String = {
-    val bestCode = (IATA, ICAO) match {
-      case (iata, _) if iata != "" => iata
-      case (_, icao) if icao != "" => icao
-      case _ => ""
-    }
-
-    bestCode match {
-      case Arrival.flightCodeRegex(cc, _, _) => cc
-      case _ => ""
-    }
-  }
+  def flightCode: String = s"$CarrierCode${VoyageNumber.toPaddedString}"
 
   def basicForComparison: Arrival = copy(PcpTime = None)
 
   def equals(arrival: Arrival): Boolean = arrival.basicForComparison == basicForComparison
 
-  def voyageNumberPadded: String = {
-    val number = FlightParsing.parseIataToCarrierCodeVoyageNumber(IATA)
-    ArrivalHelper.padTo4Digits(number.map(_._2).getOrElse("-"))
-  }
-
-  lazy val manifestKey: Int = s"$voyageNumberPadded-${this.Scheduled}".hashCode
-
   lazy val uniqueId: Int = uniqueStr.hashCode
-  lazy val uniqueStr: String = s"$Terminal$Scheduled$flightNumber"
+  lazy val uniqueStr: String = s"$Terminal$Scheduled${VoyageNumber.numeric}"
 
   def hasPcpDuring(start: SDateLike, end: SDateLike): Boolean = {
     val firstPcpMilli = PcpTime.getOrElse(0L)
@@ -343,13 +372,13 @@ case class Arrival(
     pcpStart to pcpEnd by oneMinuteMillis
   }
 
-  lazy val unique: UniqueArrival = UniqueArrival(flightNumber, Terminal, Scheduled)
+  lazy val unique: UniqueArrival = UniqueArrival(VoyageNumber.numeric, Terminal, Scheduled)
 }
 
 object Arrival {
   val flightCodeRegex: Regex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r
 
-  def summaryString(arrival: Arrival): String = arrival.AirportID + "/" + arrival.Terminal + "@" + arrival.Scheduled + "!" + arrival.IATA
+  def summaryString(arrival: Arrival): String = arrival.AirportID + "/" + arrival.Terminal + "@" + arrival.Scheduled + "!" + arrival.flightCode
 
   def standardiseFlightCode(flightCode: String): String = {
     val flightCodeRegex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r
@@ -362,7 +391,75 @@ object Arrival {
     }
   }
 
-  implicit val rw: ReadWriter[Arrival] = macroRW
+  implicit val arrivalStatusRw: ReadWriter[ArrivalStatus] = macroRW
+  implicit val voyageNumberRw: ReadWriter[VoyageNumber] = macroRW
+  implicit val operatorRw: ReadWriter[Operator] = macroRW
+  implicit val portCodeRw: ReadWriter[PortCode] = macroRW
+  implicit val arrivalRw: ReadWriter[Arrival] = macroRW
+
+  def apply(Operator: Option[Operator],
+            Status: ArrivalStatus,
+            Estimated: Option[MillisSinceEpoch],
+            Actual: Option[MillisSinceEpoch],
+            EstimatedChox: Option[MillisSinceEpoch],
+            ActualChox: Option[MillisSinceEpoch],
+            Gate: Option[String],
+            Stand: Option[String],
+            MaxPax: Option[Int],
+            ActPax: Option[Int],
+            TranPax: Option[Int],
+            RunwayID: Option[String],
+            BaggageReclaimId: Option[String],
+            AirportID: PortCode,
+            Terminal: Terminal,
+            rawICAO: String,
+            rawIATA: String,
+            Origin: PortCode,
+            Scheduled: MillisSinceEpoch,
+            PcpTime: Option[MillisSinceEpoch],
+            FeedSources: Set[FeedSource],
+            CarrierScheduled: Option[MillisSinceEpoch] = None,
+            ApiPax: Option[Int] = None
+           ): Arrival = {
+    val (carrierCode: CarrierCode, voyageNumber: VoyageNumber) = {
+      val bestCode = (rawIATA, rawICAO) match {
+        case (iata, _) if iata != "" => iata
+        case (_, icao) if icao != "" => icao
+        case _ => ""
+      }
+
+      bestCode match {
+        case Arrival.flightCodeRegex(cc, vn, _) => (CarrierCode(cc), VoyageNumber(vn))
+        case _ => (CarrierCode(""), VoyageNumber(0))
+      }
+    }
+
+    Arrival(
+      Operator,
+      carrierCode,
+      voyageNumber,
+      Status,
+      Estimated,
+      Actual,
+      EstimatedChox,
+      ActualChox,
+      Gate,
+      Stand,
+      MaxPax,
+      ActPax,
+      TranPax,
+      RunwayID,
+      BaggageReclaimId,
+      AirportID,
+      Terminal,
+      Origin,
+      Scheduled,
+      PcpTime,
+      FeedSources,
+      CarrierScheduled,
+      ApiPax
+    )
+  }
 }
 
 sealed trait FeedSource
@@ -391,18 +488,23 @@ object FeedSource {
     )
 }
 
-case class ArrivalKey(origin: String, voyageNumber: String, scheduled: Long) extends Ordered[ArrivalKey] with WithTimeAccessor {
-  lazy val comparisonString = s"$scheduled-$origin-$voyageNumber"
-
-  override def compare(that: ArrivalKey): Int = this.comparisonString.compareTo(that.comparisonString)
+case class ArrivalKey(origin: PortCode, voyageNumber: VoyageNumber, scheduled: Long) extends Ordered[ArrivalKey] with WithTimeAccessor {
+  override def compare(that: ArrivalKey): Int =
+    scheduled.compareTo(that.scheduled) match {
+      case 0 => origin.compare(that.origin) match {
+        case 0 => voyageNumber.compare(that.voyageNumber)
+        case c => c
+      }
+      case c => c
+    }
 
   override def timeValue: MillisSinceEpoch = scheduled
 }
 
 object ArrivalKey {
-  def apply(arrival: Arrival): ArrivalKey = ArrivalKey(arrival.Origin, arrival.voyageNumberPadded, arrival.Scheduled)
+  def apply(arrival: Arrival): ArrivalKey = ArrivalKey(arrival.Origin, arrival.VoyageNumber, arrival.Scheduled)
 
-  def atTime: MillisSinceEpoch => ArrivalKey = (time: MillisSinceEpoch) => ArrivalKey("", "", time)
+  def atTime: MillisSinceEpoch => ArrivalKey = (time: MillisSinceEpoch) => ArrivalKey(PortCode(""), VoyageNumber(0), time)
 }
 
 case class ArrivalUpdate(old: Arrival, updated: Arrival)
@@ -419,10 +521,10 @@ trait SDateLike {
   )
 
   /**
-    * Days of the week 1 to 7 (Monday is 1)
-    *
-    * @return
-    */
+   * Days of the week 1 to 7 (Monday is 1)
+   *
+   * @return
+   */
   def getDayOfWeek(): Int
 
   def getFullYear(): Int
@@ -565,6 +667,7 @@ object FlightsApi {
 
     lazy val nonEmpty: Boolean = flightsToUpdate.nonEmpty || arrivalsToRemove.nonEmpty
   }
+
 }
 
 object PassengerSplits {

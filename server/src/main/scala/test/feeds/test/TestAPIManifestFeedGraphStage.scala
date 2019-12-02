@@ -4,9 +4,8 @@ import actors.SubscribeResponseQueue
 import akka.actor.{Actor, ActorLogging, Scheduler}
 import akka.stream.scaladsl.SourceQueueWithComplete
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
-import server.feeds.{ManifestsFeedResponse, ManifestsFeedSuccess}
+import server.feeds.{DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
 import services.OfferHandler
-import services.graphstages.DqManifests
 import test.TestActors.ResetActor
 
 import scala.concurrent.ExecutionContext.Implicits.global

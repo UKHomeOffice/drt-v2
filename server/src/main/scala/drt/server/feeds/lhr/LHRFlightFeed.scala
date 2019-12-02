@@ -3,10 +3,11 @@ package drt.server.feeds.lhr
 import akka.NotUsed
 import akka.actor.Cancellable
 import akka.stream.scaladsl.Source
+import drt.server.feeds.Implicits._
 import drt.server.feeds.lhr.LHRFlightFeed.{emptyStringToOption, parseDateTime}
 import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.Terminal
-import drt.shared.{Arrival, LiveFeedSource}
+import drt.shared.{Arrival, LiveFeedSource, Operator}
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
@@ -96,7 +97,7 @@ case class LHRFlightFeed(csvRecords: Iterator[Int => String]) {
       val schDtIso = flight.scheduled.toDateTimeISO.toString()
       val actPax = flight.actPax.filter(_ != 0)
       Arrival(
-        Operator = if (flight.operator.equals("")) None else Some(flight.operator),
+        Operator = flight.operator,
         Status = "UNK",
         Estimated = flight.estimated.map(_.toDate.getTime),
         Actual = flight.touchdown.map(_.toDate.getTime),

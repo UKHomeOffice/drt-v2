@@ -1,7 +1,7 @@
 package controllers
 
 import drt.shared.Terminals.{T1, Terminal}
-import drt.shared.{Arrival, FeedSource}
+import drt.shared.{Arrival, ArrivalStatus, FeedSource, Operator, PortCode}
 import org.springframework.util.StringUtils
 import services.SDate
 
@@ -13,9 +13,9 @@ object ArrivalGenerator {
               actPax: Option[Int] = None,
               maxPax: Option[Int] = None,
               terminal: Terminal = T1,
-              origin: String = "",
-              operator: Option[String] = None,
-              status: String = "",
+              origin: PortCode = PortCode(""),
+              operator: Option[Operator] = None,
+              status: ArrivalStatus = ArrivalStatus(""),
               estDt: String = "",
               actDt: String = "",
               estChoxDt: String = "",
@@ -26,7 +26,7 @@ object ArrivalGenerator {
               tranPax: Option[Int] = None,
               runwayId: Option[String] = None,
               baggageReclaimId: Option[String] = None,
-              airportId: String = "",
+              airportId: PortCode = PortCode(""),
               feedSources: Set[FeedSource] = Set()
              ): Arrival = {
     val pcpTime = if (pcpDt.nonEmpty) Option(SDate(pcpDt).millisSinceEpoch) else if (schDt.nonEmpty) Option(SDate(schDt).millisSinceEpoch) else None

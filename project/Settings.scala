@@ -17,7 +17,9 @@ object Settings {
     "-Xlint",
     "-unchecked",
     "-deprecation",
-    "-feature"
+    "-feature",
+    "-Ywarn-dead-code",
+    "-Ywarn-unused"
   )
 
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */

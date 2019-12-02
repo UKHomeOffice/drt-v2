@@ -12,15 +12,13 @@ import scala.reflect.macros.blackbox
 
 abstract class AkkaStreamTestKitSpecificationLike extends
   TestKit(ActorSystem("AkkaStreamTestKitSpecificationLike", ConfigFactory.empty())) with SpecificationLike {
-  implicit val materializer = ActorMaterializer()
+  implicit val materializer: ActorMaterializer = ActorMaterializer()
 
   implicit def probe2Success[R <: Probe[_]](r: R): Result = success
-
-  //  implicit def probe2MatchResult[R](r: R): MatchResult[Any] = ok
 }
 
 object MatcherHelper {
-  def matcherhelper(c: blackbox.Context)(r: c.Tree) = {
+  def matcherhelper(c: blackbox.Context)(r: c.Tree): Unit = {
     c.error(c.enclosingPosition, "test should finish with a Matcher or a Probe[T]")
     c.abort(c.enclosingPosition, "blah")
   }

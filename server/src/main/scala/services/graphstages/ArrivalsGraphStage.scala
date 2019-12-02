@@ -1,8 +1,9 @@
 package services.graphstages
 
+import actors.Ports
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import drt.shared.Terminals.Terminal
+import drt.shared.Terminals.{InvalidTerminal, Terminal}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
@@ -72,11 +73,6 @@ class ArrivalsGraphStage(name: String = "",
       Crunch.purgeExpired(arrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt)
     }
 
-    def setPCP(arrivals: mutable.SortedMap[UniqueArrival, Arrival]): collection.SortedMap[UniqueArrival, Arrival] =
-      arrivals.mapValues { arrival =>
-        arrival.copy(PcpTime = Some(pcpArrivalTime(arrival).millisSinceEpoch))
-      }
-
     setHandler(inForecastBaseArrivals, new InHandler {
       override def onPush(): Unit = onPushArrivals(inForecastBaseArrivals, BaseArrivals)
     })
@@ -129,7 +125,7 @@ class ArrivalsGraphStage(name: String = "",
         case LiveBaseArrivals =>
           updateArrivalsSource(liveBaseArrivals, filteredArrivals)
           val missingTerminals = liveBaseArrivals.count {
-            case (_, a) if a.Terminal == "No Terminal" => true
+            case (_, a) if a.Terminal == InvalidTerminal => true
             case _ => false
           }
           log.info(s"Got $missingTerminals Cirium Arrivals with no terminal")
@@ -208,7 +204,7 @@ class ArrivalsGraphStage(name: String = "",
     def relevantFlights(arrivals: SortedMap[UniqueArrival, Arrival]): SortedMap[UniqueArrival, Arrival] = {
       val toRemove = arrivals.filter {
         case (_, f) if !isFlightRelevant(f) =>
-          log.debug(s"Filtering out irrelevant arrival: ${f.IATA}, ${SDate(f.Scheduled).toISOString()}, ${f.Origin}")
+          log.debug(s"Filtering out irrelevant arrival: ${f.flightCode}, ${SDate(f.Scheduled).toISOString()}, ${f.Origin}")
           true
         case _ => false
       }.keys
@@ -219,7 +215,7 @@ class ArrivalsGraphStage(name: String = "",
     }
 
     def isFlightRelevant(flight: Arrival): Boolean =
-      validPortTerminals.contains(flight.Terminal) && !domesticPorts.contains(flight.Origin)
+      validPortTerminals.contains(flight.Terminal) && !Ports.domesticPorts.contains(flight.Origin)
 
     def pushIfAvailable(arrivalsToPush: Option[ArrivalsDiff], outlet: Outlet[ArrivalsDiff]): Unit = {
       if (isAvailable(outlet)) {
@@ -281,8 +277,8 @@ class ArrivalsGraphStage(name: String = "",
       val key = UniqueArrival(baseArrival)
       val (pax, transPax) = bestPaxNos(key)
       bestArrival.copy(
-        rawIATA = baseArrival.rawIATA,
-        rawICAO = baseArrival.rawICAO,
+        CarrierCode = baseArrival.CarrierCode,
+        VoyageNumber = baseArrival.VoyageNumber,
         ActPax = pax,
         TranPax = transPax,
         Status = bestStatus(key),
@@ -298,14 +294,14 @@ class ArrivalsGraphStage(name: String = "",
       case _ => (None, None)
     }
 
-    def bestStatus(key: UniqueArrival): String =
+    def bestStatus(key: UniqueArrival): ArrivalStatus =
       (liveArrivals.get(key), liveBaseArrivals.get(key), forecastArrivals.get(key), forecastBaseArrivals.get(key)) match {
-        case (Some(live), Some(liveBase), _, _) if live.Status == "UNK" => liveBase.Status
+        case (Some(live), Some(liveBase), _, _) if live.Status.description == "UNK" => liveBase.Status
         case (Some(live), _, _, _) => live.Status
         case (_, Some(liveBase), _, _) => liveBase.Status
         case (_, _, Some(forecast), _) => forecast.Status
         case (_, _, _, Some(forecastBase)) => forecastBase.Status
-        case _ => "Unknown"
+        case _ => ArrivalStatus("Unknown")
       }
 
     def feedSources(uniqueArrival: UniqueArrival): Set[FeedSource] = {
@@ -317,30 +313,4 @@ class ArrivalsGraphStage(name: String = "",
       ).flatten.toSet
     }
   }
-
-  val domesticPorts = Seq(
-    "ABB", "ABZ", "ACI", "ADV", "ADX", "AYH",
-    "BBP", "BBS", "BEB", "BEQ", "BEX", "BFS", "BHD", "BHX", "BLK", "BLY", "BOH", "BOL", "BQH", "BRF", "BRR", "BRS", "BSH", "BUT", "BWF", "BWY", "BYT", "BZZ",
-    "CAL", "CAX", "CBG", "CEG", "CFN", "CHE", "CLB", "COL", "CRN", "CSA", "CVT", "CWL",
-    "DCS", "DGX", "DND", "DOC", "DSA", "DUB",
-    "EDI", "EMA", "ENK", "EOI", "ESH", "EWY", "EXT",
-    "FAB", "FEA", "FFD", "FIE", "FKH", "FLH", "FOA", "FSS", "FWM", "FZO",
-    "GCI", "GLA", "GLO", "GQJ", "GSY", "GWY", "GXH",
-    "HAW", "HEN", "HLY", "HOY", "HRT", "HTF", "HUY", "HYC",
-    "IIA", "ILY", "INQ", "INV", "IOM", "IOR", "IPW", "ISC",
-    "JER",
-    "KIR", "KKY", "KNF", "KOI", "KRH", "KYN",
-    "LBA", "LCY", "LDY", "LEQ", "LGW", "LHR", "LKZ", "LMO", "LON", "LPH", "LPL", "LSI", "LTN", "LTR", "LWK", "LYE", "LYM", "LYX",
-    "MAN", "MHZ", "MME", "MSE",
-    "NCL", "NDY", "NHT", "NNR", "NOC", "NQT", "NQY", "NRL", "NWI",
-    "OBN", "ODH", "OHP", "OKH", "ORK", "ORM", "OUK", "OXF",
-    "PIK", "PLH", "PME", "PPW", "PSL", "PSV", "PZE",
-    "QCY", "QFO", "QLA", "QUG",
-    "RAY", "RCS",
-    "SCS", "SDZ", "SEN", "SKL", "SNN", "SOU", "SOY", "SQZ", "STN", "SWI", "SWS", "SXL", "SYY", "SZD",
-    "TRE", "TSO", "TTK",
-    "UHF", "ULL", "UNT", "UPV",
-    "WAT", "WEM", "WEX", "WFD", "WHS", "WIC", "WOB", "WRY", "WTN", "WXF",
-    "YEO"
-  )
 }

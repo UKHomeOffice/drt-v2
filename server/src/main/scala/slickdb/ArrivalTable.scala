@@ -3,7 +3,7 @@ package slickdb
 import java.sql.Timestamp
 
 import drt.shared
-import drt.shared.Arrival
+import drt.shared.{Arrival, PortCode}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.Terminal
 import org.slf4j.{Logger, LoggerFactory}
@@ -20,15 +20,15 @@ case class AggregatedArrival(code: String, scheduled: MillisSinceEpoch, origin: 
 
 object AggregatedArrival {
   def apply(arrival: Arrival, destination: String): AggregatedArrival = AggregatedArrival(
-    arrival.IATA,
+    arrival.flightCode,
     arrival.Scheduled,
-    arrival.Origin,
+    arrival.Origin.toString,
     destination,
     terminalName = arrival.Terminal.toString
   )
 }
 
-case class ArrivalTable(portCode: String, tables: Tables) extends ArrivalTableLike {
+case class ArrivalTable(portCode: PortCode, tables: Tables) extends ArrivalTableLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   import tables.profile.api._
@@ -67,7 +67,7 @@ case class ArrivalTable(portCode: String, tables: Tables) extends ArrivalTableLi
     arrival.number === number &&
       arrival.terminal === terminal.toString &&
       arrival.scheduled === scheduledTs &&
-      arrival.destination === portCode
+      arrival.destination === portCode.toString
 
   def arrivalRow(f: shared.Arrival): tables.ArrivalRow = {
     val sch = new Timestamp(f.Scheduled)
@@ -78,6 +78,6 @@ case class ArrivalTable(portCode: String, tables: Tables) extends ArrivalTableLi
     val pcp = new Timestamp(f.PcpTime.getOrElse(f.Scheduled))
     val pcpPax = f.ActPax.map(ap => ap - f.TranPax.getOrElse(0))
 
-    ArrivalRow(f.IATA, f.flightNumber, portCode, f.Origin, f.Terminal.toString, f.Gate, f.Stand, f.Status, sch, est, act, estChox, actChox, pcp, f.ActPax, pcpPax)
+    ArrivalRow(f.flightCode, f.VoyageNumber.numeric, portCode.iata, f.Origin.toString, f.Terminal.toString, f.Gate, f.Stand, f.Status.description, sch, est, act, estChox, actChox, pcp, f.ActPax, pcpPax)
   }
 }

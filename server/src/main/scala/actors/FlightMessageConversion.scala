@@ -69,8 +69,8 @@ object FlightMessageConversion {
   def apiSplitsToMessage(s: Splits): SplitMessage = {
     SplitMessage(
       paxTypeAndQueueCount = s.splits.map(paxTypeAndQueueCountToMessage).toList,
-      source = Option(s.source),
-      eventType = s.eventType,
+      source = Option(s.source.toString),
+      eventType = s.maybeEventType.map(_.toString),
       style = Option(s.splitStyle.name)
     )
   }
@@ -85,20 +85,20 @@ object FlightMessageConversion {
 
   def apiFlightToFlightMessage(apiFlight: Arrival): FlightMessage = {
     FlightMessage(
-      operator = apiFlight.Operator,
+      operator = apiFlight.Operator.map(_.code),
       gate = apiFlight.Gate,
       stand = apiFlight.Stand,
-      status = Option(StringUtils.trimToNull(apiFlight.Status)),
+      status = Option(apiFlight.Status.description),
       maxPax = apiFlight.MaxPax.filter(_ != 0),
       actPax = apiFlight.ActPax.filter(_ != 0),
       tranPax = apiFlight.TranPax,
       runwayID = apiFlight.RunwayID,
       baggageReclaimId = apiFlight.BaggageReclaimId,
-      airportID = Option(StringUtils.trimToNull(apiFlight.AirportID)),
+      airportID = Option(StringUtils.trimToNull(apiFlight.AirportID.iata)),
       terminal = Option(StringUtils.trimToNull(apiFlight.Terminal.toString)),
-      iCAO = Option(StringUtils.trimToNull(apiFlight.rawICAO)),
-      iATA = Option(StringUtils.trimToNull(apiFlight.rawIATA)),
-      origin = Option(StringUtils.trimToNull(apiFlight.Origin)),
+      iCAO = Option(StringUtils.trimToNull(apiFlight.flightCode)),
+      iATA = Option(StringUtils.trimToNull(apiFlight.flightCode)),
+      origin = Option(StringUtils.trimToNull(apiFlight.Origin.toString)),
       pcpTime = apiFlight.PcpTime.filter(_ != 0),
       feedSources = apiFlight.FeedSources.map(_.toString).toSeq,
       scheduled = Option(apiFlight.Scheduled).filter(_ != 0),
@@ -124,8 +124,8 @@ object FlightMessageConversion {
 
   def flightMessageToApiFlight(flightMessage: FlightMessage): Arrival = {
     Arrival(
-      Operator = flightMessage.operator,
-      Status = flightMessage.status.getOrElse(""),
+      Operator = flightMessage.operator.map(Operator),
+      Status = ArrivalStatus(flightMessage.status.getOrElse("")),
       Estimated = flightMessage.estimated,
       Actual = flightMessage.touchdown,
       EstimatedChox = flightMessage.estimatedChox,
@@ -137,11 +137,11 @@ object FlightMessageConversion {
       TranPax = flightMessage.tranPax,
       RunwayID = flightMessage.runwayID,
       BaggageReclaimId = flightMessage.baggageReclaimId,
-      AirportID = flightMessage.airportID.getOrElse(""),
+      AirportID = PortCode(flightMessage.airportID.getOrElse("")),
       Terminal = Terminal(flightMessage.terminal.getOrElse("")),
       rawICAO = flightMessage.iCAO.getOrElse(""),
       rawIATA = flightMessage.iATA.getOrElse(""),
-      Origin = flightMessage.origin.getOrElse(""),
+      Origin = PortCode(flightMessage.origin.getOrElse("")),
       PcpTime = flightMessage.pcpTime,
       Scheduled = flightMessage.scheduled.getOrElse(0L),
       FeedSources = flightMessage.feedSources.flatMap(FeedSource(_)).toSet,

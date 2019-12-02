@@ -2,7 +2,7 @@ package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.CrunchMinute
-import drt.shared.Terminals.{T1, Terminal}
+import drt.shared.Terminals.T1
 import drt.shared._
 import drt.shared.splits.ApiSplitsToSplitRatio
 import utest._

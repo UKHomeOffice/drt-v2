@@ -55,7 +55,7 @@ class CachingCrunchReadActor extends Actor with ActorLogging {
         val resToCache: Future[Any] = askableActorRef.ask(caq.query)
 
         resToCache.onComplete {
-          case Success(s) =>
+          case Success(_) =>
             actorRef ! PoisonPill
             log.info(s"Res from actor succeeded")
             Metrics.timer("caching-actor-cache-generation", SDate.now().millisSinceEpoch - start)

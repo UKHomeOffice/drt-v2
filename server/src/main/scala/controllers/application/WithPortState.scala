@@ -2,7 +2,7 @@ package controllers.application
 
 import actors.pointInTime.CrunchStateReadActor
 import actors.{DrtStaticParameters, GetPortState, GetUpdatesSince}
-import akka.actor.{PoisonPill, Props}
+import akka.actor.PoisonPill
 import controllers.Application
 import controllers.model.ActorDataRequest
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortStateError, PortStateUpdates}
@@ -57,7 +57,7 @@ trait WithPortState {
     maybePointInTime match {
       case Some(pit) =>
         log.debug(s"Snapshot crunch state query ${SDate(pit).toISOString()}")
-        val tempActor = system.actorOf(Props(classOf[CrunchStateReadActor], airportConfig.portStateSnapshotInterval, SDate(pit), DrtStaticParameters.expireAfterMillis, airportConfig.queues, startMillis, endMillis))
+        val tempActor = system.actorOf(CrunchStateReadActor.props(airportConfig.portStateSnapshotInterval, SDate(pit), DrtStaticParameters.expireAfterMillis, airportConfig.queues, startMillis, endMillis))
         val futureResult = ActorDataRequest.portState[X](tempActor, request)
         futureResult.foreach(_ => tempActor ! PoisonPill)
         futureResult

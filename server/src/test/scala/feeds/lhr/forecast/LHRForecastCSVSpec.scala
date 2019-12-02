@@ -2,7 +2,7 @@ package feeds.lhr.forecast
 
 import drt.server.feeds.lhr.forecast.{LHRForecastCSVExtractor, LHRForecastFlightRow}
 import drt.shared.Terminals.T2
-import drt.shared.{Arrival, ForecastFeedSource}
+import drt.shared.{Arrival, ArrivalStatus, ForecastFeedSource, PortCode}
 import org.specs2.mutable.Specification
 import services.SDate
 
@@ -118,7 +118,7 @@ class LHRForecastCSVSpec extends Specification {
 
     val expected = Seq(
       Arrival(None,
-        "Port Forecast",
+        ArrivalStatus("Port Forecast"),
         None,
         None,
         None,
@@ -130,17 +130,17 @@ class LHRForecastCSVSpec extends Specification {
         Option(90),
         None,
         None,
-        "LHR",
+        PortCode("LHR"),
         T2,
         "TS0001",
         "TS0001",
-        "TST",
+        PortCode("TST"),
         SDate("2019-04-04T05:00Z").millisSinceEpoch,
         None,
         Set(ForecastFeedSource)
       ),
       Arrival(None,
-        "Port Forecast",
+        ArrivalStatus("Port Forecast"),
         None,
         None,
         None,
@@ -152,11 +152,11 @@ class LHRForecastCSVSpec extends Specification {
         Option(90),
         None,
         None,
-        "LHR",
+        PortCode("LHR"),
         T2,
         "TS0002",
         "TS0002",
-        "TST",
+        PortCode("TST"),
         SDate("2019-05-04T05:00Z").millisSinceEpoch,
         None,
         Set(ForecastFeedSource)

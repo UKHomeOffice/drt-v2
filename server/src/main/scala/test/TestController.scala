@@ -6,15 +6,16 @@ import akka.util.Timeout
 import controllers.AirportConfProvider
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
+import drt.server.feeds.Implicits._
 import drt.shared.Terminals.Terminal
-import drt.shared.{Arrival, LiveFeedSource, SDateLike}
+import drt.shared.{Arrival, LiveFeedSource, PortCode, SDateLike}
 import javax.inject.{Inject, Singleton}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.FlightPassengerInfoProtocol._
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import play.api.Configuration
 import play.api.http.HeaderNames
-import play.api.mvc.{InjectedController, Session}
+import play.api.mvc.{Action, AnyContent, InjectedController, Session}
 import services.SDate
 import spray.json._
 import test.ResetData
@@ -39,19 +40,19 @@ class TestController @Inject()(implicit val config: Configuration,
 
   val baseTime: SDateLike = SDate.now()
 
-  val liveArrivalsTestActor: Future[ActorRef] = system.actorSelection(s"akka://${portCode.toLowerCase}-drt-actor-system/user/TestActor-LiveArrivals").resolveOne()
-  val apiManifestsTestActor: Future[ActorRef] = system.actorSelection(s"akka://${portCode.toLowerCase}-drt-actor-system/user/TestActor-APIManifests").resolveOne()
-  val staffMovementsTestActor: Future[ActorRef] = system.actorSelection(s"akka://${portCode.toLowerCase}-drt-actor-system/user/TestActor-StaffMovements").resolveOne()
-  val mockRolesTestActor: Future[ActorRef] = system.actorSelection(s"akka://${portCode.toLowerCase}-drt-actor-system/user/TestActor-MockRoles").resolveOne()
+  val liveArrivalsTestActor: Future[ActorRef] = system.actorSelection(s"akka://${portCode.toString.toLowerCase}-drt-actor-system/user/TestActor-LiveArrivals").resolveOne()
+  val apiManifestsTestActor: Future[ActorRef] = system.actorSelection(s"akka://${portCode.toString.toLowerCase}-drt-actor-system/user/TestActor-APIManifests").resolveOne()
+  val staffMovementsTestActor: Future[ActorRef] = system.actorSelection(s"akka://${portCode.toString.toLowerCase}-drt-actor-system/user/TestActor-StaffMovements").resolveOne()
+  val mockRolesTestActor: Future[ActorRef] = system.actorSelection(s"akka://${portCode.toString.toLowerCase}-drt-actor-system/user/TestActor-MockRoles").resolveOne()
 
-  def saveArrival(arrival: Arrival) = {
+  def saveArrival(arrival: Arrival): Future[Unit] = {
     liveArrivalsTestActor.map(actor => {
       log.info(s"Incoming test arrival")
       actor ! arrival
     })
   }
 
-  def saveVoyageManifest(voyageManifest: VoyageManifest) = {
+  def saveVoyageManifest(voyageManifest: VoyageManifest): Future[Unit] = {
     apiManifestsTestActor.map(actor => {
 
       log.info(s"Sending Splits: ${voyageManifest.EventCode} to Test Actor")
@@ -60,8 +61,8 @@ class TestController @Inject()(implicit val config: Configuration,
     })
   }
 
-  def resetData() = {
-    system.actorSelection(s"akka://${portCode.toLowerCase}-drt-actor-system/user/TestActor-ResetData").resolveOne().map(actor => {
+  def resetData(): Future[Unit] = {
+    system.actorSelection(s"akka://${portCode.toString.toLowerCase}-drt-actor-system/user/TestActor-ResetData").resolveOne().map(actor => {
 
       log.info(s"Sending reset message")
 
@@ -73,7 +74,7 @@ class TestController @Inject()(implicit val config: Configuration,
     staffMovementsTestActor.map(_ ! ResetActor)
   }
 
-  def addArrival() = Action {
+  def addArrival(): Action[AnyContent] = Action {
     implicit request =>
 
       request.body.asJson.map(s => s.toString.parseJson.convertTo[ChromaLiveFlight]) match {
@@ -82,7 +83,7 @@ class TestController @Inject()(implicit val config: Configuration,
           val pcpTime: Long = org.joda.time.DateTime.parse(flight.SchDT).plusMinutes(walkTimeMinutes).getMillis
           val actPax = Some(flight.ActPax).filter(_ != 0)
           val arrival = Arrival(
-            Operator = if (flight.Operator.contains("")) None else Some(flight.Operator),
+            Operator = flight.Operator,
             Status = flight.Status,
             Estimated = Some(SDate(flight.EstDT).millisSinceEpoch),
             Actual = Some(SDate(flight.ActDT).millisSinceEpoch),
@@ -95,11 +96,11 @@ class TestController @Inject()(implicit val config: Configuration,
             TranPax = if (actPax.isEmpty) None else Some(flight.TranPax),
             RunwayID = Some(flight.RunwayID),
             BaggageReclaimId = Some(flight.BaggageReclaimId),
-            AirportID = flight.AirportID,
+            AirportID = PortCode(flight.AirportID),
             Terminal = Terminal(flight.Terminal),
             rawICAO = flight.ICAO,
             rawIATA = flight.IATA,
-            Origin = flight.Origin,
+            Origin = PortCode(flight.Origin),
             PcpTime = Some(pcpTime),
             FeedSources = Set(LiveFeedSource),
             Scheduled = SDate(flight.SchDT).millisSinceEpoch
@@ -111,7 +112,7 @@ class TestController @Inject()(implicit val config: Configuration,
       }
   }
 
-  def addArrivals(forDate: String) = Action {
+  def addArrivals(forDate: String): Action[AnyContent] = Action {
     implicit request =>
 
       request.body.asMultipartFormData.flatMap(_.files.find(_.key == "data")) match {
@@ -132,7 +133,7 @@ class TestController @Inject()(implicit val config: Configuration,
       }
   }
 
-  def addManifest() = Action {
+  def addManifest(): Action[AnyContent] = Action {
     implicit request =>
 
       request.body.asJson.map(s => s.toString.parseJson.convertTo[VoyageManifest]) match {
@@ -145,9 +146,9 @@ class TestController @Inject()(implicit val config: Configuration,
       }
   }
 
-  def saveMockRoles(roles: MockRoles) = mockRolesTestActor.map(a => a ! roles)
+  def saveMockRoles(roles: MockRoles): Future[Unit] = mockRolesTestActor.map(a => a ! roles)
 
-  def setMockRoles() = Action {
+  def setMockRoles(): Action[AnyContent] = Action {
     implicit request =>
       request.body.asJson.map(s => s.toString.parseJson.convertTo[MockRoles]) match {
         case Some(roles) =>
@@ -162,18 +163,18 @@ class TestController @Inject()(implicit val config: Configuration,
       }
   }
 
-  def setMockRolesByQueryString() = Action {
+  def setMockRolesByQueryString(): Action[AnyContent] = Action {
     implicit request =>
       request.queryString.get("roles") match {
         case Some(rs) =>
 
           Redirect("/").withSession(Session(Map("mock-roles" -> rs.mkString(","))))
         case roles =>
-          BadRequest(s"Unable to parse roles: ${roles} from query string ${request.queryString}")
+          BadRequest(s"""Unable to parse roles: $roles from query string ${request.queryString}""")
       }
   }
 
-  def deleteAllData() = Action {
+  def deleteAllData(): Action[AnyContent] = Action {
     resetData()
 
     Accepted

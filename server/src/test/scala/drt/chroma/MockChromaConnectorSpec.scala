@@ -5,15 +5,14 @@ import akka.http.scaladsl.model._
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
 import com.typesafe.config.{Config, ConfigFactory}
-import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaLiveFlight, ChromaToken}
+import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.http.WithSendAndReceive
 import drt.server.feeds.chroma.ChromaLiveFeed
 import org.specs2.matcher.MatchResult
 import server.feeds.ArrivalsFeedFailure
 
 import scala.collection.JavaConverters._
-import scala.collection.immutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.language.reflectiveCalls
@@ -37,7 +36,7 @@ class MockChromaConnectorSpec extends AkkaStreamTestKitSpecificationLike {
       override lazy val config: Config = mockConfig
       private val pipeline = tokenPipeline _
 
-      def sendAndReceive: HttpRequest => Future[HttpResponse] = (req: HttpRequest) => Future {
+      def sendAndReceive: HttpRequest => Future[HttpResponse] = (_: HttpRequest) => Future {
         HttpResponse().withEntity(
           HttpEntity(ContentTypes.`application/json`,
             """{"access_token":"LIk79Cj6NLssRcWePFxkJMIhpmSbe5gBGqOOxNIuxWNVd7JWsWtoOqAZDnM5zADvkbdIJ0BHkJgaya2pYyu8yH2qb8zwXA4TxZ0Jq0JwhgqulMgcv1ottnrUA1U61pu1TNFN5Bm08nvqZpYtwCWfGNGbxdrol-leZry_UD8tgxyZLfj45rgzmxm2u2DBN8TFpB_uG6Pb1B2XHM3py6HgYAmqSTjTK060PyNWTp_czsU",
@@ -60,7 +59,7 @@ class MockChromaConnectorSpec extends AkkaStreamTestKitSpecificationLike {
     val fetcher = new ChromaFetcher(ChromaLive, ChromaFlightMarshallers.live) with WithSendAndReceive {
       override lazy val config: Config = mockConfig
 
-      def sendAndReceive: HttpRequest => Future[HttpResponse] = (req: HttpRequest) => Future {
+      def sendAndReceive: HttpRequest => Future[HttpResponse] = (_: HttpRequest) => Future {
         HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`,"""bad json here""".stripMargin))
       }
     }

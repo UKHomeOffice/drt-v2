@@ -43,7 +43,7 @@ class FixedPointsActor(now: () => SDateLike) extends FixedPointsActorBase(now) {
   }
 }
 
-class FixedPointsActorBase(now: () => SDateLike) extends RecoveryActorLike with PersistentDrtActor[FixedPointAssignments] {
+abstract class FixedPointsActorBase(now: () => SDateLike) extends RecoveryActorLike with PersistentDrtActor[FixedPointAssignments] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def persistenceId = "fixedPoints-store"
@@ -61,7 +61,7 @@ class FixedPointsActorBase(now: () => SDateLike) extends RecoveryActorLike with 
 
   def updateState(fixedPoints: FixedPointAssignments): Unit = state = fixedPoints
 
-  def onUpdateState(data: FixedPointAssignments): Unit = {}
+  def onUpdateState(data: FixedPointAssignments): Unit
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: FixedPointsStateSnapshotMessage =>

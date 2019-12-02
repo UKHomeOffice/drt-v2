@@ -6,6 +6,7 @@ import akka.stream.ActorMaterializer
 import com.typesafe.config.{Config, ConfigFactory}
 import drt.server.feeds.mag.{FeedRequesterLike, MagFeed}
 import drt.shared.FlightsApi.Flights
+import drt.shared.PortCode
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import pdi.jwt.JwtAlgorithm
@@ -51,7 +52,7 @@ class MagFeedSpec extends SpecificationLike {
   implicit val materialiser: ActorMaterializer = ActorMaterializer()
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
-  val feed = MagFeed(privateKey, claimIss, claimRole, claimSub, () => SDate.now(), "MAN", MockFeedRequester)
+  val feed = MagFeed(privateKey, claimIss, claimRole, claimSub, () => SDate.now(), PortCode("MAN"), MockFeedRequester)
 
   "Given a jwt client " +
     "I can generate an encoded token" >> {
@@ -90,7 +91,7 @@ class MagFeedSpec extends SpecificationLike {
 
   "Given a mock feed requester that throws an exception " +
     "I should get an ArrivalsFeedFailure response" >> {
-    val exceptionFeed = MagFeed(privateKey, claimIss, claimRole, claimSub, () => SDate.now(), "MAN", MockExceptionThrowingFeedRequester(()=> new Exception("I'm throwing an exception")))
+    val exceptionFeed = MagFeed(privateKey, claimIss, claimRole, claimSub, () => SDate.now(), PortCode("MAN"), MockExceptionThrowingFeedRequester(()=> new Exception("I'm throwing an exception")))
 
     val isFeedFailure = Await.result(exceptionFeed.requestArrivals(SDate.now()), 1 second) match {
       case ArrivalsFeedFailure(_, _) => true

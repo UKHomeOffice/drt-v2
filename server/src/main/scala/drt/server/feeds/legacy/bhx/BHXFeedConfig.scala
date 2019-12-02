@@ -3,6 +3,7 @@ package drt.server.feeds.legacy.bhx
 import javax.xml.ws.BindingProvider
 import org.slf4j.Logger
 import uk.co.bhx.online.flightinformation.{FlightInformation, FlightInformationSoap}
+
 import scala.concurrent.duration.{FiniteDuration, _}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}

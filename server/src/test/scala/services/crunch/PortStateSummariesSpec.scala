@@ -7,7 +7,6 @@ import drt.shared._
 import org.specs2.mutable.Specification
 import services.SDate
 
-import scala.collection.immutable
 import scala.collection.immutable.SortedMap
 
 class PortStateSummariesSpec extends Specification {

@@ -12,7 +12,7 @@ object Stn extends AirportConfigLike {
   import AirportConfigDefaults._
 
   val config = AirportConfig(
-    portCode = "STN",
+    portCode = PortCode("STN"),
     queues = Map(
       T1 -> Seq(EeaDesk, EGate, NonEeaDesk)
     ),

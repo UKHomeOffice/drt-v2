@@ -19,10 +19,8 @@ case class UpdateStats(updatesCount: Int, additionsCount: Int)
 
 
 class ArrivalSplitsGraphStage(name: String = "",
-                              portCode: String,
                               optionalInitialFlights: Option[FlightsWithSplits],
                               splitsCalculator: SplitsCalculator,
-                              groupFlightsByCodeShares: Seq[ApiFlightWithSplits] => Seq[(ApiFlightWithSplits, Set[Arrival])],
                               expireAfterMillis: Long,
                               now: () => SDateLike,
                               useApiPaxNos: Boolean
@@ -124,7 +122,7 @@ class ArrivalSplitsGraphStage(name: String = "",
       flightsWithUpdates
     }
 
-    def makeFlightWithSplits(flight: Arrival, splits: Set[Splits]) = {
+    def makeFlightWithSplits(flight: Arrival, splits: Set[Splits]): ApiFlightWithSplits = {
       val liveApiSplits: Option[Splits] = splits.find {
         case Splits(_, source, _, _) if source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages => true
         case _ => false
@@ -234,23 +232,28 @@ class ArrivalSplitsGraphStage(name: String = "",
     def updateFlightsWithManifests(manifests: Seq[BestAvailableManifest]): Map[ArrivalKey, ApiFlightWithSplits] = {
       manifests.foldLeft(Map[ArrivalKey, ApiFlightWithSplits]()) {
         case (flightsWithNewSplits, newManifest) =>
-          val key = ArrivalKey(newManifest.departurePortCode, newManifest.voyageNumber, newManifest.scheduled.millisSinceEpoch)
-          flightsByFlightId.get(key) match {
-            case Some(flightForManifest) =>
-              val manifestSplits: Splits = splitsFromManifest(flightForManifest.apiFlight, newManifest)
+          newManifest.voyageNumber match {
+            case InvalidVoyageNumber(_) => flightsWithNewSplits
+            case vn: VoyageNumber =>
+              val key = ArrivalKey(newManifest.departurePortCode, vn, newManifest.scheduled.millisSinceEpoch)
+              flightsByFlightId.get(key) match {
+                case Some(flightForManifest) =>
+                  val manifestSplits: Splits = splitsFromManifest(flightForManifest.apiFlight, newManifest)
 
-              if (isNewManifestForFlight(flightForManifest, manifestSplits)) {
-                val flightWithManifestSplits: ApiFlightWithSplits = makeFlightWithSplits(
-                  flightForManifest.apiFlight,
-                  updateSplitsWithNewManifest(manifestSplits, flightForManifest.splits)
-                )
-                flightsByFlightId += (key -> flightWithManifestSplits)
-                flightsWithNewSplits.updated(key, flightWithManifestSplits)
-              } else flightsWithNewSplits
-            case None =>
-              manifestBuffer += (key -> newManifest)
-              flightsWithNewSplits
+                  if (isNewManifestForFlight(flightForManifest, manifestSplits)) {
+                    val flightWithManifestSplits: ApiFlightWithSplits = makeFlightWithSplits(
+                      flightForManifest.apiFlight,
+                      updateSplitsWithNewManifest(manifestSplits, flightForManifest.splits)
+                    )
+                    flightsByFlightId += (key -> flightWithManifestSplits)
+                    flightsWithNewSplits.updated(key, flightWithManifestSplits)
+                  } else flightsWithNewSplits
+                case None =>
+                  manifestBuffer += (key -> newManifest)
+                  flightsWithNewSplits
+              }
           }
+
       }
     }
 
@@ -283,7 +286,7 @@ class ArrivalSplitsGraphStage(name: String = "",
   }
 
   def splitsFromManifest(arrival: Arrival, manifest: BestAvailableManifest): Splits = {
-    splitsCalculator.bestSplitsForArrival(manifest.copy(carrierCode = arrival.carrierCode), arrival)
+    splitsCalculator.bestSplitsForArrival(manifest.copy(carrierCode = arrival.CarrierCode), arrival)
   }
 
   def nowMillis: Option[MillisSinceEpoch] = {

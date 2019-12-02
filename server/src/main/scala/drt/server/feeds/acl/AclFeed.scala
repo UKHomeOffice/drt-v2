@@ -1,19 +1,20 @@
-package server.feeds.acl
+package drt.server.feeds.acl
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.zip.{ZipEntry, ZipInputStream}
 
+import drt.server.feeds.Implicits._
+import drt.server.feeds.acl.AclFeed._
 import drt.shared
-import drt.shared.{Arrival, Terminals}
 import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.Terminal
+import drt.shared.{Arrival, PortCode, Terminals}
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.{RemoteResourceInfo, SFTPClient}
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.InMemoryDestFile
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.acl.AclFeed._
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 
@@ -21,7 +22,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.util.{Failure, Success, Try}
 
-case class AclFeed(ftpServer: String, username: String, path: String, portCode: String, terminalMapping: Terminal => Terminal) {
+case class AclFeed(ftpServer: String, username: String, path: String, portCode: PortCode, terminalMapping: Terminal => Terminal) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def ssh: SSHClient = sshClient(ftpServer, username, path)
@@ -67,14 +68,14 @@ object AclFeed {
     sshClient.newSFTPClient
   }
 
-  def latestFileForPort(sftp: SFTPClient, portCode: String): String = {
+  def latestFileForPort(sftp: SFTPClient, portCode: PortCode): String = {
     val portRegex = "([A-Z]{3})[S][0-9]{2}_HOMEOFFICEROLL180_[0-9]{8}.zip".r
     val dateRegex = "[A-Z]{3}[S][0-9]{2}_HOMEOFFICEROLL180_([0-9]{8}).zip".r
 
     val filesByDate = sftp
       .ls("/180_Days/").asScala
       .filter(_.getName match {
-        case portRegex(pc) if pc == portCode => true
+        case portRegex(pc) if pc == portCode.toString => true
         case _ => false
       })
       .sortBy(_.getName match {
@@ -112,7 +113,7 @@ object AclFeed {
 
     if (arrivals.nonEmpty) {
       val latestArrival = arrivals.maxBy(_.Scheduled)
-      log.info(s"ACL: ${arrivals.length} arrivals. Latest scheduled arrival: ${SDate(latestArrival.Scheduled).toLocalDateTimeString()} (${latestArrival.IATA})")
+      log.info(s"ACL: ${arrivals.length} arrivals. Latest scheduled arrival: ${SDate(latestArrival.Scheduled).toLocalDateTimeString()} (${latestArrival.flightCode})")
     }
     arrivals
   }
@@ -120,7 +121,7 @@ object AclFeed {
   def contentFromFileName(sftp: SFTPClient, latestFileName: String): String = {
     val outputStream: ByteArrayOutputStream = new ByteArrayOutputStream()
 
-    val file = new InMemoryDestFile {
+    val file: InMemoryDestFile = new InMemoryDestFile {
       def getOutputStream: ByteArrayOutputStream = outputStream
     }
 
@@ -153,8 +154,7 @@ object AclFeed {
   def unzipAllFilesInStream(unzippedStream: ZipInputStream, zipEntryOption: Option[ZipEntry]): Stream[String] = {
     zipEntryOption match {
       case None => Stream.empty
-      case Some(zipEntry) =>
-        val name: String = zipEntry.getName
+      case Some(_) =>
         val entry: String = getZipEntry(unzippedStream)
         val maybeEntry1: Option[ZipEntry] = Option(unzippedStream.getNextEntry)
         entry #::
@@ -183,15 +183,14 @@ object AclFeed {
 
   def aclFieldsToArrival(fields: List[String], aclToPortTerminal: Terminal => Terminal): Try[Arrival] = {
     Try {
-      val operator = fields(AclColIndex.Operator)
+      val operator: String = fields(AclColIndex.Operator)
       val maxPax = fields(AclColIndex.MaxPax).toInt
       val actPax = (fields(AclColIndex.MaxPax).toInt * fields(AclColIndex.LoadFactor).toDouble).round.toInt
       val aclTerminal = Terminals.Terminal(s"T${fields(AclColIndex.Terminal).take(1)}")
-
       val portTerminal = aclToPortTerminal(aclTerminal)
-      
+
       Arrival(
-        Operator = if (operator!= "") Option(operator) else None,
+        Operator = operator,
         Status = "ACL Forecast",
         Estimated = None,
         Actual = None,
