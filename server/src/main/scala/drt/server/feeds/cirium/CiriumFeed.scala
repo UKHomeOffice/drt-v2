@@ -72,7 +72,7 @@ object CiriumFeed {
     val scheduledToNearest5Mins = timeToNearest5Minutes(SDate(carrierScheduledTime)).millisSinceEpoch
 
     Arrival(
-      Option(f.carrierFsCode),
+      f.carrierFsCode,
       ciriumStatusCodeToStatus(f.status),
       extractEstRunwayArrival(f),
       f.operationalTimes.actualRunwayArrival.map(_.millis),

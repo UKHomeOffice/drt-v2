@@ -5,7 +5,8 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
-import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
+import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
+import passengersplits.parsing.VoyageManifestParser.{EeaFlag, InTransit, ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, PaxAge, VoyageManifest}
 import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
 
@@ -27,10 +28,10 @@ class ApiPaxNosCrunchSpecSpec extends CrunchTestLike {
 
   val manifests =
     ManifestsFeedSuccess(DqManifests("", Set(
-      VoyageManifest(EventTypes.DC, airportConfig.portCode, PortCode("JFK"), VoyageNumber("0001"), "BA", "2019-11-20", "00:00",
+      VoyageManifest(EventTypes.DC, airportConfig.portCode, PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2019-11-20"), ManifestTimeOfArrival("00:00"),
         List(
-          PassengerInfoJson(Some("P"), "GBR", "EEA", Some("11"), Some("LHR"), "N", Some("GBR"), Option("GBR"), None),
-          PassengerInfoJson(Some("P"), "GBR", "EEA", Some("11"), Some("LHR"), "N", Some("GBR"), Option("GBR"), None)
+          PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(11)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None),
+          PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(11)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None)
         ))
     )))
 

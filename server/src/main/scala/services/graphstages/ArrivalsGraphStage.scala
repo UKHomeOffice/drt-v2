@@ -204,7 +204,7 @@ class ArrivalsGraphStage(name: String = "",
     def relevantFlights(arrivals: SortedMap[UniqueArrival, Arrival]): SortedMap[UniqueArrival, Arrival] = {
       val toRemove = arrivals.filter {
         case (_, f) if !isFlightRelevant(f) =>
-          log.debug(s"Filtering out irrelevant arrival: ${f.IATA}, ${SDate(f.Scheduled).toISOString()}, ${f.Origin}")
+          log.debug(s"Filtering out irrelevant arrival: ${f.flightCode}, ${SDate(f.Scheduled).toISOString()}, ${f.Origin}")
           true
         case _ => false
       }.keys
@@ -277,8 +277,8 @@ class ArrivalsGraphStage(name: String = "",
       val key = UniqueArrival(baseArrival)
       val (pax, transPax) = bestPaxNos(key)
       bestArrival.copy(
-        rawIATA = baseArrival.rawIATA,
-        rawICAO = baseArrival.rawICAO,
+        CarrierCode = baseArrival.CarrierCode,
+        VoyageNumber = baseArrival.VoyageNumber,
         ActPax = pax,
         TranPax = transPax,
         Status = bestStatus(key),
@@ -294,14 +294,14 @@ class ArrivalsGraphStage(name: String = "",
       case _ => (None, None)
     }
 
-    def bestStatus(key: UniqueArrival): String =
+    def bestStatus(key: UniqueArrival): ArrivalStatus =
       (liveArrivals.get(key), liveBaseArrivals.get(key), forecastArrivals.get(key), forecastBaseArrivals.get(key)) match {
-        case (Some(live), Some(liveBase), _, _) if live.Status == "UNK" => liveBase.Status
+        case (Some(live), Some(liveBase), _, _) if live.Status.description == "UNK" => liveBase.Status
         case (Some(live), _, _, _) => live.Status
         case (_, Some(liveBase), _, _) => liveBase.Status
         case (_, _, Some(forecast), _) => forecast.Status
         case (_, _, _, Some(forecastBase)) => forecastBase.Status
-        case _ => "Unknown"
+        case _ => ArrivalStatus("Unknown")
       }
 
     def feedSources(uniqueArrival: UniqueArrival): Set[FeedSource] = {

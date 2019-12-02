@@ -12,7 +12,8 @@ import drt.shared.Terminals.T1
 import drt.shared._
 import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
-import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
+import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, VoyageManifest}
 import queueus.{B5JPlusWithTransitTypeAllocator, PaxTypeQueueAllocation, TerminalQueueAllocatorWithFastTrack}
 import services.SDate
 import services.crunch.{CrunchTestLike, PassengerInfoGenerator}
@@ -96,10 +97,10 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
     val (arrivalDiffs, manifestsLiveInput, _) = TestableArrivalSplits(splitsCalculator, probe, () => SDate(scheduled)).run()
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("JFK"), schDt = scheduled, feedSources = Set(LiveFeedSource))
     val paxList = List(
-      PassengerInfoGenerator.passengerInfoJson(nationality = "GBR", documentType = "P", issuingCountry = "GBR"),
-      PassengerInfoGenerator.passengerInfoJson(nationality = "ITA", documentType = "P", issuingCountry = "ITA")
+      PassengerInfoGenerator.passengerInfoJson(nationality = Nationality("GBR"), documentType = DocumentType("P"), issuingCountry = Nationality("GBR")),
+      PassengerInfoGenerator.passengerInfoJson(nationality = Nationality("ITA"), documentType = DocumentType("P"), issuingCountry = Nationality("ITA"))
     )
-    val manifests = Set(VoyageManifest(EventTypes.DC, portCode, PortCode("JFK"), VoyageNumber("0001"), "BA", arrivalDate, arrivalTime, PassengerList = paxList))
+    val manifests = Set(VoyageManifest(EventTypes.DC, portCode, PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival(arrivalDate), ManifestTimeOfArrival(arrivalTime), PassengerList = paxList))
 
     arrivalDiffs.offer(ArrivalsDiff(toUpdate = SortedMap(arrival.unique -> arrival), toRemove = Set()))
 
@@ -112,8 +113,8 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
     val terminalAverage = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 100.0, None)), SplitSources.TerminalAverage, None, Percentage)
     val apiSplits = Splits(
       Set(
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EGate, 1.6, Some(Map("GBR" -> 0.8, "ITA" -> 0.8))),
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 0.4, Some(Map("GBR" -> 0.2, "ITA" -> 0.2)))),
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EGate, 1.6, Some(Map(Nationality("GBR") -> 0.8, Nationality("ITA") -> 0.8))),
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 0.4, Some(Map(Nationality("GBR") -> 0.2, Nationality("ITA") -> 0.2)))),
       SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, None, PaxNumbers)
 
     val expectedSplits = Set(terminalAverage, apiSplits)

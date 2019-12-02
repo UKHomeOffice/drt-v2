@@ -1,7 +1,7 @@
 package controllers
 
 import drt.shared.Terminals.{T1, Terminal}
-import drt.shared.{Arrival, FeedSource, PortCode}
+import drt.shared.{Arrival, ArrivalStatus, FeedSource, Operator, PortCode}
 import org.springframework.util.StringUtils
 import services.SDate
 
@@ -14,8 +14,8 @@ object ArrivalGenerator {
               maxPax: Option[Int] = None,
               terminal: Terminal = T1,
               origin: PortCode = PortCode(""),
-              operator: Option[String] = None,
-              status: String = "",
+              operator: Option[Operator] = None,
+              status: ArrivalStatus = ArrivalStatus(""),
               estDt: String = "",
               actDt: String = "",
               estChoxDt: String = "",

@@ -286,7 +286,7 @@ class ArrivalSplitsGraphStage(name: String = "",
   }
 
   def splitsFromManifest(arrival: Arrival, manifest: BestAvailableManifest): Splits = {
-    splitsCalculator.bestSplitsForArrival(manifest.copy(carrierCode = arrival.carrierCode), arrival)
+    splitsCalculator.bestSplitsForArrival(manifest.copy(carrierCode = arrival.CarrierCode), arrival)
   }
 
   def nowMillis: Option[MillisSinceEpoch] = {

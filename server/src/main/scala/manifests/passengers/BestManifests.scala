@@ -1,19 +1,17 @@
 package manifests.passengers
 
 import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
-import drt.shared.{PortCode, SDateLike, VoyageNumberLike}
+import drt.shared._
 import manifests.UniqueArrivalKey
-import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocType}
-import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
+import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocumentType}
+import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, PaxAge, VoyageManifest}
 import services.SDate
-
-import scala.util.Try
 
 case class BestAvailableManifest(source: SplitSource,
                                  arrivalPortCode: PortCode,
                                  departurePortCode: PortCode,
                                  voyageNumber: VoyageNumberLike,
-                                 carrierCode: String,
+                                 carrierCode: CarrierCode,
                                  scheduled: SDateLike,
                                  passengerList: List[ManifestPassengerProfile])
 
@@ -34,26 +32,24 @@ object BestAvailableManifest {
     uniqueArrivalKey.arrivalPort,
     uniqueArrivalKey.departurePort,
     uniqueArrivalKey.voyageNumber,
-    "",
+    CarrierCode(""),
     uniqueArrivalKey.scheduled,
     passengerList)
 }
 
-case class ManifestPassengerProfile(nationality: String,
-                                    documentType: Option[String],
-                                    age: Option[Int],
+case class ManifestPassengerProfile(nationality: Nationality,
+                                    documentType: Option[DocumentType],
+                                    age: Option[PaxAge],
                                     inTransit: Option[Boolean])
 
 object ManifestPassengerProfile {
   def apply(pij: PassengerInfoJson, portCode: PortCode): ManifestPassengerProfile = {
-    val nationality = pij.NationalityCountryCode.getOrElse("")
-    val documentType: Option[String] = if (nationality == CountryCodes.UK)
-      Option(DocType.Passport)
+    val nationality = pij.NationalityCountryCode.getOrElse(Nationality(""))
+    val documentType: Option[DocumentType] = if (nationality.code == CountryCodes.UK)
+      Option(DocumentType.Passport)
     else
-      pij.DocumentType.map(DocType(_))
-    val maybeAge = pij.Age.flatMap(a => Try(a.toInt).toOption)
-    val maybeInTransit = Option(pij.InTransitFlag == "Y" || pij.DisembarkationPortCode.exists(_ != portCode.toString))
-    ManifestPassengerProfile(nationality, documentType, maybeAge, maybeInTransit)
+      pij.DocumentType
+    val maybeInTransit = Option(pij.InTransitFlag.isInTransit|| pij.DisembarkationPortCode.exists(_ != portCode))
+    ManifestPassengerProfile(nationality, documentType, pij.Age, maybeInTransit)
   }
 }
-

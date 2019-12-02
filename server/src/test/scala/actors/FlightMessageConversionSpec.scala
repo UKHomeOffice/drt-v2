@@ -1,7 +1,7 @@
 package actors
 
 import drt.shared.Terminals.{T1, Terminal}
-import drt.shared.{Arrival, FeedSource, PortCode}
+import drt.shared.{Arrival, FeedSource, Operator, PortCode}
 import org.specs2.mutable.Specification
 import server.protobuf.messages.FlightsMessage.FlightMessage
 
@@ -61,8 +61,10 @@ class FlightMessageConversionSpec extends Specification {
 
     val arrival = FlightMessageConversion.flightMessageToApiFlight(flightMessage)
 
+    import drt.server.feeds.Implicits._
+
     val expected = Arrival(
-      Operator = Option(operator),
+      Operator = Option(Operator(operator)),
       Status = status,
       Estimated = Option(estimatedTime),
       Actual = Option(touchdownTime),

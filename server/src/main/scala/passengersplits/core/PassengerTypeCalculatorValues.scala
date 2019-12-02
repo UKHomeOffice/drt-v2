@@ -1,5 +1,6 @@
 package passengersplits.core
 
+
 object PassengerTypeCalculatorValues {
 
   object CountryCodes {
@@ -95,15 +96,23 @@ object PassengerTypeCalculatorValues {
     Singapore
   )
 
+  sealed trait DocumentType
 
-  object DocType {
-    val Visa = "V"
-    val Passport = "P"
+  object DocumentType {
+    object Visa extends DocumentType {
+      override def toString: String = "V"
+    }
+    object Passport extends DocumentType {
+      override def toString: String = "P"
+    }
+    object InvalidDocument extends DocumentType {
+      override def toString: String = "_"
+    }
 
-    def apply(docTypeCode: String) = docTypeCode.toUpperCase() match {
+    def apply(docTypeCode: String): DocumentType = docTypeCode.toUpperCase() match {
       case "V" => Visa
       case "P" | "PASSPORT" => Passport
-      case _ => docTypeCode
+      case _ => InvalidDocument
     }
   }
 

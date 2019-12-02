@@ -2,10 +2,12 @@ package manifests
 
 import java.sql.Timestamp
 
-import drt.shared.{PortCode, SDateLike, VoyageNumber}
 import drt.shared.SplitRatiosNs.SplitSources
+import drt.shared.{Nationality, PortCode, SDateLike, VoyageNumber}
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import org.slf4j.{Logger, LoggerFactory}
+import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
+import passengersplits.parsing.VoyageManifestParser.PaxAge
 import slick.jdbc.SQLActionBuilder
 import slick.sql.SqlStreamingAction
 import slickdb.VoyageManifestPassengerInfoTable
@@ -193,17 +195,14 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
             and scheduled_date=$scheduled"""
     }
 
-  def passengerProfiles(rows: Vector[(String, String, String, String, String, Boolean)]): Vector[ManifestPassengerProfile] = {
-    val paxProfiles = rows.map {
-      case (nat, doc, age, transitFlag, endCountry, inTransit) =>
-        val transit = (transitFlag, endCountry, inTransit) match {
-          case (t, _, _) if t == "Y" => true
-          case (_, c, _) if c != "GBR" => true
-          case (_, _, t) if t => true
-          case _ => false
-        }
-        ManifestPassengerProfile(nat, Option(doc), Try(age.toInt).toOption, Option(transit))
-    }
-    paxProfiles
+  def passengerProfiles(rows: Vector[(String, String, String, String, String, Boolean)]): Vector[ManifestPassengerProfile] = rows.map {
+    case (nat, doc, age, transitFlag, endCountry, inTransit) =>
+      val transit = (transitFlag, endCountry, inTransit) match {
+        case (t, _, _) if t == "Y" => true
+        case (_, c, _) if c != "GBR" => true
+        case (_, _, t) if t => true
+        case _ => false
+      }
+      ManifestPassengerProfile(Nationality(nat), Option(DocumentType(doc)), Try(PaxAge(age.toInt)).toOption, Option(transit))
   }
 }

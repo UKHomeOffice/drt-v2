@@ -1,7 +1,7 @@
 package test.feeds.test
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{Arrival, LiveFeedSource, PortCode, Terminals}
+import drt.shared.{Arrival, ArrivalStatus, LiveFeedSource, PortCode, Terminals}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 
@@ -34,14 +34,14 @@ object CSVFixtures {
 
   def csvPathToArrivalsOnDate(forDate: String, path: String): Seq[Try[Arrival]] = {
 
-    def timeToSDate = timeToSDateOnDate(forDate) _
+    def timeToSDate: String => Option[MillisSinceEpoch] = timeToSDateOnDate(forDate)
 
     val maybeArrivals: Seq[Try[Arrival]] = csvPathToRows(path).drop(1).map(csvRow => {
       val fields = csvRow.split(",")
       import ArrivalsCSVFixture.fieldMap._
       Try(Arrival(
         None,
-        "Unk",
+        ArrivalStatus("Unk"),
         timeToSDate(fields(Estimated)),
         timeToSDate(fields(Actual)),
         timeToSDate(fields(EstimatedChox)),

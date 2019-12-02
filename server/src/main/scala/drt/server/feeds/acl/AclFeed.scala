@@ -113,7 +113,7 @@ object AclFeed {
 
     if (arrivals.nonEmpty) {
       val latestArrival = arrivals.maxBy(_.Scheduled)
-      log.info(s"ACL: ${arrivals.length} arrivals. Latest scheduled arrival: ${SDate(latestArrival.Scheduled).toLocalDateTimeString()} (${latestArrival.IATA})")
+      log.info(s"ACL: ${arrivals.length} arrivals. Latest scheduled arrival: ${SDate(latestArrival.Scheduled).toLocalDateTimeString()} (${latestArrival.flightCode})")
     }
     arrivals
   }
@@ -121,7 +121,7 @@ object AclFeed {
   def contentFromFileName(sftp: SFTPClient, latestFileName: String): String = {
     val outputStream: ByteArrayOutputStream = new ByteArrayOutputStream()
 
-    val file = new InMemoryDestFile {
+    val file: InMemoryDestFile = new InMemoryDestFile {
       def getOutputStream: ByteArrayOutputStream = outputStream
     }
 
@@ -183,15 +183,14 @@ object AclFeed {
 
   def aclFieldsToArrival(fields: List[String], aclToPortTerminal: Terminal => Terminal): Try[Arrival] = {
     Try {
-      val operator = fields(AclColIndex.Operator)
+      val operator: String = fields(AclColIndex.Operator)
       val maxPax = fields(AclColIndex.MaxPax).toInt
       val actPax = (fields(AclColIndex.MaxPax).toInt * fields(AclColIndex.LoadFactor).toDouble).round.toInt
       val aclTerminal = Terminals.Terminal(s"T${fields(AclColIndex.Terminal).take(1)}")
-
       val portTerminal = aclToPortTerminal(aclTerminal)
-      
+
       Arrival(
-        Operator = if (operator!= "") Option(operator) else None,
+        Operator = operator,
         Status = "ACL Forecast",
         Estimated = None,
         Actual = None,

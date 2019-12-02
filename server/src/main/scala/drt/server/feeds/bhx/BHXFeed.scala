@@ -332,7 +332,7 @@ object BHXFlight extends NodeSeqUnmarshaller {
 
   def bhxFlightToArrival(f: BHXFlight) = {
     Arrival(
-      Option(f.airline),
+      f.airline,
       BHXFlightStatus(f.status),
       maybeTimeStringToMaybeMillis(f.estimatedTouchDown),
       maybeTimeStringToMaybeMillis(f.actualTouchDown),

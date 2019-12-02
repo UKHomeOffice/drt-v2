@@ -2,7 +2,7 @@ package controllers.application
 
 import actors.pointInTime.CrunchStateReadActor
 import actors.{DrtStaticParameters, GetPortState, GetUpdatesSince}
-import akka.actor.{PoisonPill, Props}
+import akka.actor.PoisonPill
 import controllers.Application
 import controllers.model.ActorDataRequest
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortStateError, PortStateUpdates}

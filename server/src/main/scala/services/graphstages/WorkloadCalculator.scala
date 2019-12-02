@@ -35,14 +35,14 @@ object WorkloadCalculator {
   }
 
   def isCancelled(f: ApiFlightWithSplits): Boolean = {
-    val cancelled = f.apiFlight.Status == "Cancelled"
-    if (cancelled) log.info(s"No workload for cancelled flight ${f.apiFlight.IATA}")
+    val cancelled = f.apiFlight.Status.description == "Cancelled"
+    if (cancelled) log.info(s"No workload for cancelled flight ${f.apiFlight.flightCode}")
     cancelled
   }
 
   def flightToFlightSplitMinutes(flightWithSplits: ApiFlightWithSplits,
                                  procTimes: Map[PaxTypeAndQueue, Double],
-                                 nationalityProcessingTimes: Map[String, Double],
+                                 nationalityProcessingTimes: Map[Nationality, Double],
                                  useNationalityBasedProcTimes: Boolean
                                 ): Seq[FlightSplitMinute] = {
     val flight = flightWithSplits.apiFlight
@@ -93,7 +93,7 @@ object WorkloadCalculator {
                         minuteMillis: MillisSinceEpoch,
                         flightPaxInMinute: Int,
                         apiSplitRatio: ApiPaxTypeAndQueueCount,
-                        nationalityProcessingTimes: Map[String, Double],
+                        nationalityProcessingTimes: Map[Nationality, Double],
                         totalPaxWithNationality: Double,
                         useNationalityBasedProcTimes: Boolean
                        ): FlightSplitMinute = {

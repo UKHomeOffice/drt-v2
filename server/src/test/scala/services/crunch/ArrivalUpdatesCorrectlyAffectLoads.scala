@@ -5,7 +5,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.{T1, T2}
 import drt.shared._
-import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
+import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, VoyageManifest}
 import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
 import services.crunch.VoyageManifestGenerator._
@@ -128,9 +128,9 @@ ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
     }
   }
 
-  private def manifestForArrival(updatedArrival: Arrival, paxInfos: List[PassengerInfoJson]) = {
+  private def manifestForArrival(updatedArrival: Arrival, paxInfos: List[PassengerInfoJson]): VoyageManifest = {
     val schDateTime = SDate(updatedArrival.Scheduled)
-    VoyageManifest(EventTypes.CI, PortCode("STN"), updatedArrival.Origin, updatedArrival.voyageNumber, updatedArrival.carrierCode, schDateTime.toISODateOnly, schDateTime.toHoursAndMinutes(), paxInfos)
+    VoyageManifest(EventTypes.CI, PortCode("STN"), updatedArrival.Origin, updatedArrival.VoyageNumber, updatedArrival.CarrierCode, ManifestDateOfArrival(schDateTime.toISODateOnly), ManifestTimeOfArrival(schDateTime.toHoursAndMinutes()), paxInfos)
   }
 
   private def offerAndCheckResult(arrivals: Seq[Arrival], queues: Seq[Queue] = Seq()): Unit = {

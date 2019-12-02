@@ -95,7 +95,10 @@ class BHXLegacyFeedSpec extends TestKit(
       val arrivals: List[Arrival] = feed.getLiveArrivals
       verify(serviceSoap).bfGetFlights
       arrivals.size mustEqual 1
-      arrivals.head mustEqual new Arrival(
+
+      import drt.server.feeds.Implicits._
+
+      arrivals.head mustEqual Arrival(
         Operator = None,
         Status = "Arrived",
         Estimated = Some(SDate("2012-06-02T06:46:00Z", DateTimeZone.UTC).millisSinceEpoch),
@@ -125,7 +128,10 @@ class BHXLegacyFeedSpec extends TestKit(
       val arrivals: List[Arrival] = feed.getForecastArrivals
       verify(serviceSoap).bfGetScheduledFlights()
       arrivals.size mustEqual 1
-      arrivals.head mustEqual new Arrival(
+
+      import drt.server.feeds.Implicits._
+
+      arrivals.head mustEqual Arrival(
         Operator = None,
         Status = "Port Forecast",
         Estimated = None,

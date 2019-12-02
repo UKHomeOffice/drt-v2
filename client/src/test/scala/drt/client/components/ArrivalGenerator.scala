@@ -3,7 +3,7 @@ package drt.client.components
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.Terminal
-import drt.shared.{ApiFeedSource, Arrival, PortCode}
+import drt.shared.{ApiFeedSource, Arrival, ArrivalStatus, Operator, PortCode}
 
 
 object ArrivalGenerator {
@@ -16,8 +16,8 @@ object ArrivalGenerator {
                  maxPax: Option[Int] = None,
                  terminal: Terminal = Terminal("T1"),
                  origin: PortCode = PortCode(""),
-                 operator: Option[String] = None,
-                 status: String = "",
+                 operator: Option[Operator] = None,
+                 status: ArrivalStatus = ArrivalStatus(""),
                  estDt: String = "",
                  actDt: String = "",
                  estChoxDt: String = "",

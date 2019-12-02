@@ -2,7 +2,7 @@ package services
 
 import actors.FlightMessageConversion._
 import drt.shared.Terminals.T2
-import drt.shared.{ApiFeedSource, Arrival, PortCode}
+import drt.shared.{ApiFeedSource, Arrival, ArrivalStatus, Operator, PortCode}
 import org.specs2.mutable.Specification
 import server.protobuf.messages.FlightsMessage.FlightMessage
 
@@ -11,8 +11,8 @@ class ApiFlightsToProtoBufSpec extends Specification {
   "apiFlightToFlightMessage" should {
     "take a single Arrival and return a FlightMessage representing it" in {
       val apiFlight = Arrival(
-        Operator = Option("Op"),
-        Status = "scheduled",
+        Operator = Option(Operator("Op")),
+        Status = ArrivalStatus("scheduled"),
         Estimated = Option(SDate("2016-01-01T13:05:00Z").millisSinceEpoch),
         Actual = Option(SDate("2016-01-01T13:10:00Z").millisSinceEpoch),
         EstimatedChox = Option(SDate("2016-01-01T13:15:00Z").millisSinceEpoch),
@@ -26,8 +26,8 @@ class ApiFlightsToProtoBufSpec extends Specification {
         BaggageReclaimId = Option("A"),
         AirportID = PortCode("LHR"),
         Terminal = T2,
-        rawICAO = "BA0001",
-        rawIATA = "BAA0001",
+        rawICAO = "BAA0001",
+        rawIATA = "BA0001",
         Origin = PortCode("JFK"),
         PcpTime = Option(1451655000000L), // 2016-01-01 13:30:00 UTC
         Scheduled = SDate("2016-01-01T13:00:00Z").millisSinceEpoch,
@@ -49,7 +49,7 @@ class ApiFlightsToProtoBufSpec extends Specification {
         airportID = Option("LHR"),
         terminal = Option("T2"),
         iCAO = Option("BA0001"),
-        iATA = Option("BAA0001"),
+        iATA = Option("BA0001"),
         origin = Option("JFK"),
         feedSources = Seq("ApiFeedSource"),
         pcpTime = Option(1451655000000L), // 2016-01-01 13:30:00 UTC

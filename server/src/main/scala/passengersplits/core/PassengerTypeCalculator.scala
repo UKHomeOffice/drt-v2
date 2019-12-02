@@ -1,7 +1,7 @@
 package passengersplits.core
 
-import drt.shared.PaxType
 import drt.shared.PaxTypes._
+import drt.shared.{Nationality, PaxType, PortCode}
 import org.slf4j.{Logger, LoggerFactory}
 
 object PassengerTypeCalculator {
@@ -9,27 +9,20 @@ object PassengerTypeCalculator {
 
   import PassengerTypeCalculatorValues._
 
-  case class PaxTypeInfo(disembarkationPortCode: Option[String], inTransitFlag: String, documentCountry: String, documentType: Option[String], nationalityCode: Option[String])
+  case class PaxTypeInfo(disembarkationPortCode: Option[PortCode], inTransitFlag: String, documentCountry: Nationality, documentType: Option[DocumentType], nationalityCode: Option[Nationality])
 
-  def isEea(country: String): Boolean = EEACountries contains country
+  def isEea(country: Nationality): Boolean = EEACountries contains country.code
 
-  def isB5JPlus(country: String): Boolean = B5JPlusCountries contains country
-
-  def isNonMachineReadable(country: String): Boolean = nonMachineReadableCountries contains country
-
-  def transitMatters(portCode: String): PartialFunction[PaxTypeInfo, PaxType] = {
-    case PaxTypeInfo(_, "Y", _, _, _) => Transit
-    case PaxTypeInfo(Some(disembarkPortCode), _, _, _, _) if disembarkPortCode.nonEmpty && disembarkPortCode != portCode => Transit
-  }
+  def isB5JPlus(country: Nationality): Boolean = B5JPlusCountries contains country.code
 
   val countryAndDocumentTypes: PartialFunction[PaxTypeInfo, PaxType] = {
-    case PaxTypeInfo(_, _, country, Some(docType), _) if isEea(country) && docType == DocType.Passport => EeaMachineReadable
+    case PaxTypeInfo(_, _, country, Some(docType), _) if isEea(country) && docType == DocumentType.Passport => EeaMachineReadable
     case PaxTypeInfo(_, _, country, _, _) if isEea(country) => EeaNonMachineReadable
     case PaxTypeInfo(_, _, country, _, _) if !isEea(country) && isVisaNational(country) => VisaNational
     case PaxTypeInfo(_, _, country, _, _) if !isEea(country) => NonVisaNational
   }
 
-  def isVisaNational(countryCode: String): Boolean = visaCountyCodes.contains(countryCode)
+  def isVisaNational(countryCode: Nationality): Boolean = visaCountyCodes.contains(countryCode.code)
 
   val defaultToVisaNational: PartialFunction[PaxTypeInfo, PaxType] = {
     case _ => VisaNational

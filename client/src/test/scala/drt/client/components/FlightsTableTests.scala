@@ -45,25 +45,25 @@ object FlightsTableTests extends TestSuite {
       }
 
       val testFlight = Arrival(
-        Operator = Some("Op"),
-        Status = "scheduled",
-        Estimated = Some(SDate("2016-01-01T13:05").millisSinceEpoch),
-        Actual =  Some(SDate("2016-01-01T13:10").millisSinceEpoch),
-        EstimatedChox =  Some(SDate("2016-01-01T13:15").millisSinceEpoch),
-        ActualChox =  Some(SDate("2016-01-01T13:20").millisSinceEpoch),
-        Gate = Some("10"),
-        Stand = Some("10A"),
-        MaxPax = Some(200),
-        ActPax = Some(150),
-        TranPax = Some(10),
-        RunwayID = Some("1"),
-        BaggageReclaimId = Some("A"),
+        Operator = Option(Operator("Op")),
+        Status = ArrivalStatus("scheduled"),
+        Estimated = Option(SDate("2016-01-01T13:05").millisSinceEpoch),
+        Actual =  Option(SDate("2016-01-01T13:10").millisSinceEpoch),
+        EstimatedChox =  Option(SDate("2016-01-01T13:15").millisSinceEpoch),
+        ActualChox =  Option(SDate("2016-01-01T13:20").millisSinceEpoch),
+        Gate = Option("10"),
+        Stand = Option("10A"),
+        MaxPax = Option(200),
+        ActPax = Option(150),
+        TranPax = Option(10),
+        RunwayID = Option("1"),
+        BaggageReclaimId = Option("A"),
         AirportID = PortCode("LHR"),
         Terminal = Terminal("T2"),
         rawICAO = "BA0001",
         rawIATA = "BAA0001",
         Origin = PortCode("JFK"),
-        PcpTime = Some(1451655000000L), // 2016-01-01 13:30:00 UTC
+        PcpTime = Option(1451655000000L), // 2016-01-01 13:30:00 UTC
         Scheduled = SDate("2016-01-01T13:00").millisSinceEpoch,
         FeedSources = Set(ApiFeedSource)
       )
@@ -111,9 +111,9 @@ object FlightsTableTests extends TestSuite {
               thead(),
               <.tbody(
                 <.tr(^.className := " before-now",
-                  <.td(testFlight.ICAO), <.td(testFlight.Origin.toString), <.td(<.span(<.span())),
+                  <.td(testFlight.flightCode), <.td(testFlight.Origin.toString), <.td(<.span(<.span())),
                   <.td(s"${testFlight.Gate.getOrElse("")}/${testFlight.Stand.getOrElse("")}"),
-                  <.td(testFlight.Status),
+                  <.td(testFlight.Status.description),
                   <.td(<.span(^.title := "2016-01-01 13:00", "13:00")), //sch
                   <.td(<.span(^.title := "2016-01-01 13:05", "13:05")),
                   <.td(<.span(^.title := "2016-01-01 13:10", "13:10")),
@@ -147,10 +147,10 @@ object FlightsTableTests extends TestSuite {
                 <.tbody(
                   <.tr(^.className := " before-now",
                     <.td(<.span("herebecallback")),
-                    <.td(testFlight.ICAO), <.td(testFlight.Origin.toString), <.td(<.span(<.span())),
+                    <.td(testFlight.flightCode), <.td(testFlight.Origin.toString), <.td(<.span(<.span())),
                     <.td(s"${testFlight.Gate.getOrElse("")}/${testFlight.Stand.getOrElse("")}"),
-                    <.td(testFlight.Status),
-                    date(Some(testFlight.Scheduled)),
+                    <.td(testFlight.Status.description),
+                    date(Option(testFlight.Scheduled)),
                     date(testFlight.Estimated),
                     date(testFlight.Actual),
                     date(testFlight.EstimatedChox, Option("est-chox")),
@@ -162,7 +162,7 @@ object FlightsTableTests extends TestSuite {
                     <.td(<.span(0), ^.className := "queue-split pax-unknown right")))))
 
           assertRenderedComponentsAreEqual(
-            ArrivalsTable(Some(timelineComponent))(paxComp)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true)),
+            ArrivalsTable(Option(timelineComponent))(paxComp)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true)),
             staticComponent(expected)())
         }
 
@@ -181,11 +181,11 @@ object FlightsTableTests extends TestSuite {
                 thead(),
                 <.tbody(
                   <.tr(^.className := " before-now",
-                    <.td(testFlight.ICAO),
+                    <.td(testFlight.flightCode),
                     <.td(<.span(^.title := "JFK, New York, USA", testFlight.Origin.toString)), <.td(<.span(<.span())),
                     <.td(s"${testFlight.Gate.getOrElse("")}/${testFlight.Stand.getOrElse("")}"),
-                    <.td(testFlight.Status),
-                    date(Some(testFlight.Scheduled)),
+                    <.td(testFlight.Status.description),
+                    date(Option(testFlight.Scheduled)),
                     date(testFlight.Estimated),
                     date(testFlight.Actual),
                     date(testFlight.EstimatedChox, Option("est-chox")),
@@ -233,7 +233,7 @@ object FlightsTableTests extends TestSuite {
           val paxToDisplay = 120
           val biggestCapacityFlightInTheWorldRightNow = 853
           val width = ((120.toDouble / biggestCapacityFlightInTheWorldRightNow) * 100).round
-          val testFlightT = testFlight.copy(ActPax = Some(paxToDisplay))
+          val testFlightT = testFlight.copy(ActPax = Option(paxToDisplay))
           val expected = <.div(
             <.div(^.id := "toStick", ^.className := "container sticky",
               <.table(
@@ -247,11 +247,11 @@ object FlightsTableTests extends TestSuite {
               thead(),
               <.tbody(
                 <.tr(^.className := " before-now",
-                  <.td(testFlightT.ICAO),
+                  <.td(testFlightT.flightCode),
                   <.td(testFlightT.Origin.toString), <.td(<.span(<.span())),
                   <.td(s"${testFlightT.Gate.getOrElse("")}/${testFlightT.Stand.getOrElse("")}"),
-                  <.td(testFlightT.Status),
-                  date(Some(testFlightT.Scheduled)),
+                  <.td(testFlightT.Status.description),
+                  date(Option(testFlightT.Scheduled)),
                   date(testFlightT.Estimated),
                   date(testFlightT.Actual),
                   date(testFlightT.EstimatedChox, Option("est-chox")),

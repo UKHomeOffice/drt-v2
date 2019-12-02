@@ -354,10 +354,20 @@ case class PortCode(iata: String) extends Ordered[PortCode] {
   override def toString: String = iata
 
   override def compare(that: PortCode): Int = iata.compareTo(that.iata)
+
+  def nonEmpty: Boolean = iata.nonEmpty
 }
 
 object PortCode {
   implicit val rw: ReadWriter[PortCode] = macroRW
+}
+
+case class CarrierCode(code: String) {
+  override def toString: String = code
+}
+
+object CarrierCode {
+  implicit val rw: ReadWriter[CarrierCode] = macroRW
 }
 
 object AirportConfigs {

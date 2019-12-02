@@ -6,6 +6,7 @@ import akka.util.Timeout
 import controllers.AirportConfProvider
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
+import drt.server.feeds.Implicits._
 import drt.shared.Terminals.Terminal
 import drt.shared.{Arrival, LiveFeedSource, PortCode, SDateLike}
 import javax.inject.{Inject, Singleton}
@@ -82,7 +83,7 @@ class TestController @Inject()(implicit val config: Configuration,
           val pcpTime: Long = org.joda.time.DateTime.parse(flight.SchDT).plusMinutes(walkTimeMinutes).getMillis
           val actPax = Some(flight.ActPax).filter(_ != 0)
           val arrival = Arrival(
-            Operator = if (flight.Operator.contains("")) None else Some(flight.Operator),
+            Operator = flight.Operator,
             Status = flight.Status,
             Estimated = Some(SDate(flight.EstDT).millisSinceEpoch),
             Actual = Some(SDate(flight.ActDT).millisSinceEpoch),
