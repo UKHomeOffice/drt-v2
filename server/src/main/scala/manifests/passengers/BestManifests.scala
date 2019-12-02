@@ -1,10 +1,8 @@
 package manifests.passengers
 
-import drt.shared.PaxTypes.B5JPlusNational
 import drt.shared.SDateLike
 import drt.shared.SplitRatiosNs.SplitSources
 import manifests.UniqueArrivalKey
-import passengersplits.core.PassengerTypeCalculatorValues
 import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocType}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import services.SDate
@@ -23,9 +21,12 @@ object BestAvailableManifest {
   def apply(manifest: VoyageManifest): BestAvailableManifest = {
 
     val uniquePax: List[PassengerInfoJson] = if (manifest.PassengerList.exists(_.PassengerIdentifier.exists(_ != "")))
-      manifest.PassengerList.map { passengerInfo =>
-        passengerInfo.PassengerIdentifier -> passengerInfo
+      manifest.PassengerList.collect {
+        case p@PassengerInfoJson(_, _, _, _, _, _, _, _, Some(id)) if id != "" => p
       }
+        .map { passengerInfo =>
+          passengerInfo.PassengerIdentifier -> passengerInfo
+        }
         .toMap
         .values
         .toList
