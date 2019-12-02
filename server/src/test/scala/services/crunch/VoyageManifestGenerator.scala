@@ -6,6 +6,8 @@ import passengersplits.parsing.VoyageManifestParser.{EeaFlag, InTransit, Manifes
 
 object VoyageManifestGenerator {
   val euPassport = PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(22)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None)
+  def euPassportWithIdentifier(id: String) =
+    PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(22)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), Option(id))
   val euIdCard = PassengerInfoJson(Option(DocumentType("I")), Nationality("ITA"), EeaFlag("EEA"), Option(PaxAge(22)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("ITA")), None)
   val visa = PassengerInfoJson(Option(DocumentType("P")), Nationality("EGY"), EeaFlag("EEA"), Option(PaxAge(22)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("AFG")), None)
   val nonVisa = PassengerInfoJson(Option(DocumentType("P")), Nationality("SLV"), EeaFlag("EEA"), Option(PaxAge(22)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("ALA")), None)

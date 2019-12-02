@@ -1,7 +1,7 @@
 package manifests.passengers
 
 import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
-import drt.shared._
+import drt.shared.{SDateLike, _}
 import manifests.UniqueArrivalKey
 import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocumentType}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, PaxAge, VoyageManifest}
@@ -16,14 +16,31 @@ case class BestAvailableManifest(source: SplitSource,
                                  passengerList: List[ManifestPassengerProfile])
 
 object BestAvailableManifest {
-  def apply(manifest: VoyageManifest): BestAvailableManifest = BestAvailableManifest(
-    SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-    manifest.ArrivalPortCode,
-    manifest.DeparturePortCode,
-    manifest.VoyageNumber,
-    manifest.CarrierCode,
-    manifest.scheduleArrivalDateTime.getOrElse(SDate.now()),
-    manifest.PassengerList.map(p => ManifestPassengerProfile(p, manifest.ArrivalPortCode)))
+  def apply(manifest: VoyageManifest): BestAvailableManifest = {
+
+    val uniquePax: List[PassengerInfoJson] = if (manifest.PassengerList.exists(_.PassengerIdentifier.exists(_ != "")))
+      manifest.PassengerList.collect {
+        case p@PassengerInfoJson(_, _, _, _, _, _, _, _, Some(id)) if id != "" => p
+      }
+        .map { passengerInfo =>
+          passengerInfo.PassengerIdentifier -> passengerInfo
+        }
+        .toMap
+        .values
+        .toList
+    else
+      manifest.PassengerList
+
+    BestAvailableManifest(
+      SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
+      manifest.ArrivalPortCode,
+      manifest.DeparturePortCode,
+      manifest.VoyageNumber,
+      manifest.CarrierCode,
+      manifest.scheduleArrivalDateTime.getOrElse(SDate.now()),
+      uniquePax.map(p => ManifestPassengerProfile(p, manifest.ArrivalPortCode))
+    )
+  }
 
   def apply(source: SplitSource,
             uniqueArrivalKey: UniqueArrivalKey,

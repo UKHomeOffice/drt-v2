@@ -275,6 +275,165 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     success
   }
+
+  "Given a VoyageManifest with multiple records for each passenger " +
+    "I should get a BestAvailableManifests with records for each unique passenger identifier only" >> {
+
+    val scheduled = "2017-01-01T00:00Z"
+    val portCode = PortCode("LHR")
+
+    val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, actPax = Option(10), tranPax = Option(6))
+    val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
+      VoyageManifest(EventTypes.CI, portCode, PortCode("JFK"), VoyageNumber(1), CarrierCode("TS"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"), List(
+        euPassportWithIdentifier("ID1"),
+        euPassportWithIdentifier("ID1"),
+        euPassportWithIdentifier("ID2")
+      ))
+    )))
+    val crunch = runCrunchGraph(
+      now = () => SDate(scheduled),
+      airportConfig = airportConfig.copy(
+        portCode = portCode,
+        terminalProcessingTimes = Map(T1 -> Map(
+          eeaMachineReadableToDesk -> 25d / 60,
+          eeaNonMachineReadableToDesk -> 25d / 60,
+          eeaMachineReadableToEGate -> 25d / 60,
+          visaNationalToDesk -> 25d / 60
+        )),
+        terminals = Seq(T1),
+        queues = Map(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
+      ),
+      initialPortState = Option(
+        PortState(
+          SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())),
+          SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()
+        )
+      )
+    )
+
+    offerAndWait(crunch.manifestsLiveInput, inputManifests)
+
+    val expected = 2
+
+    crunch.portStateTestProbe.fishForMessage(1 seconds) {
+      case ps: PortState =>
+        val queuePax = paxLoadsFromPortState(ps, 60, 0)
+          .values
+          .flatMap((_.values))
+          .flatten
+          .sum
+
+        Math.round(queuePax) == expected
+    }
+
+    success
+  }
+
+  "Given a VoyageManifest with multiple records for each passenger and no Passenger Identifier" +
+    "I should get a BestAvailableManifests with records for each entry in the passenger list" >> {
+
+    val scheduled = "2017-01-01T00:00Z"
+    val portCode = PortCode("LHR")
+
+    val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, actPax = Option(10), tranPax = Option(6))
+    val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
+      VoyageManifest(EventTypes.CI, portCode, PortCode("JFK"), VoyageNumber(1), CarrierCode("TS"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"), List(
+        euPassport,
+        euPassport,
+        euPassport,
+      ))
+    )))
+    val crunch = runCrunchGraph(
+      now = () => SDate(scheduled),
+      airportConfig = airportConfig.copy(
+        portCode = portCode,
+        terminalProcessingTimes = Map(T1 -> Map(
+          eeaMachineReadableToDesk -> 25d / 60,
+          eeaNonMachineReadableToDesk -> 25d / 60,
+          eeaMachineReadableToEGate -> 25d / 60,
+          visaNationalToDesk -> 25d / 60
+        )),
+        terminals = Seq(T1),
+        queues = Map(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
+      ),
+      initialPortState = Option(
+        PortState(
+          SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())),
+          SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()
+        )
+      )
+    )
+
+    offerAndWait(crunch.manifestsLiveInput, inputManifests)
+
+    val expected = 3
+
+    crunch.portStateTestProbe.fishForMessage(1 seconds) {
+      case ps: PortState =>
+        val queuePax = paxLoadsFromPortState(ps, 60, 0)
+          .values
+          .flatMap((_.values))
+          .flatten
+          .sum
+
+        Math.round(queuePax) == expected
+    }
+
+    success
+  }
+
+  "Given a VoyageManifest containing some records with a passenger identifier, we should ignore all records without one." >> {
+
+    val scheduled = "2017-01-01T00:00Z"
+    val portCode = PortCode("LHR")
+
+    val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, actPax = Option(10), tranPax = Option(6))
+    val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
+      VoyageManifest(EventTypes.CI, portCode, PortCode("JFK"), VoyageNumber(1), CarrierCode("TS"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"), List(
+        euPassportWithIdentifier("Id1"),
+        euPassportWithIdentifier("Id2"),
+        euPassport,
+        euPassport,
+      ))
+    )))
+    val crunch = runCrunchGraph(
+      now = () => SDate(scheduled),
+      airportConfig = airportConfig.copy(
+        portCode = portCode,
+        terminalProcessingTimes = Map(T1 -> Map(
+          eeaMachineReadableToDesk -> 25d / 60,
+          eeaNonMachineReadableToDesk -> 25d / 60,
+          eeaMachineReadableToEGate -> 25d / 60,
+          visaNationalToDesk -> 25d / 60
+        )),
+        terminals = Seq(T1),
+        queues = Map(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
+      ),
+      initialPortState = Option(
+        PortState(
+          SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())),
+          SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()
+        )
+      )
+    )
+
+    offerAndWait(crunch.manifestsLiveInput, inputManifests)
+
+    val expected = 2
+
+    crunch.portStateTestProbe.fishForMessage(5000 seconds) {
+      case ps: PortState =>
+        val queuePax = paxLoadsFromPortState(ps, 60, 0)
+          .values
+          .flatMap((_.values))
+          .flatten
+          .sum
+        println(s"pax: $queuePax")
+        Math.round(queuePax) == expected
+    }
+
+    success
+  }
 }
 
 object PassengerInfoGenerator {
