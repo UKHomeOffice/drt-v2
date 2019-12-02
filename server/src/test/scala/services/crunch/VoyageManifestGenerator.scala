@@ -5,6 +5,8 @@ import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageMa
 
 object VoyageManifestGenerator {
   val euPassport = PassengerInfoJson(Some("P"), "GBR", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("GBR"), None)
+  def euPassportWithIdentifier(id: String) =
+    PassengerInfoJson(Some("P"), "GBR", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("GBR"), Option(id))
   val euIdCard = PassengerInfoJson(Some("I"), "ITA", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("ITA"), None)
   val visa = PassengerInfoJson(Some("P"), "EGY", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("AFG"), None)
   val nonVisa = PassengerInfoJson(Some("P"), "SLV", "EEA", Some("22"), Some("LHR"), "N", Some("GBR"), Option("ALA"), None)

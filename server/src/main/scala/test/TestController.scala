@@ -54,7 +54,7 @@ class TestController @Inject()(implicit val config: Configuration,
   def saveVoyageManifest(voyageManifest: VoyageManifest) = {
     apiManifestsTestActor.map(actor => {
 
-      log.info(s"Sending Splits: $voyageManifest to Test Actor")
+      log.info(s"Sending Splits: ${voyageManifest.EventCode} to Test Actor")
 
       actor ! VoyageManifests(Set(voyageManifest))
     })
@@ -137,7 +137,7 @@ class TestController @Inject()(implicit val config: Configuration,
 
       request.body.asJson.map(s => s.toString.parseJson.convertTo[VoyageManifest]) match {
         case Some(vm) =>
-          log.info(s"Got a manifest to save $vm")
+          log.info(s"Got a manifest to save ${vm.CarrierCode}${vm.VoyageNumber}")
           saveVoyageManifest(vm)
           Created
         case None =>

@@ -81,11 +81,6 @@ describe('Arrivals page', () => {
     "PoavKey": "3",
     "NationalityCountryCode": "AUS"
   };
-  const passengerListMixed = [
-    ukPassport,
-    visaNational,
-    nonVisaNational
-  ];
 
   function manifest(passengerList) {
     return {
@@ -252,6 +247,46 @@ describe('Arrivals page', () => {
       .get(totalPaxSelector)
       .contains("0")
       .addManifest(manifest(passengerListBadDocTypes))
+      .get('.pax-api')
+      .contains("2")
+
+  });
+
+
+  function ukPassportWithIdentifier(id) {
+    return {
+      "DocumentIssuingCountryCode": "GBR",
+      "PersonType": "P",
+      "DocumentLevel": "Primary",
+      "Age": "30",
+      "DisembarkationPortCode": "",
+      "InTransitFlag": "N",
+      "DisembarkationPortCountryCode": "",
+      "NationalityCountryEEAFlag": "EEA",
+      "PassengerIdentifier": id,
+      "DocumentType": "Passport",
+      "PoavKey": "1",
+      "NationalityCountryCode": "GBR"
+    };
+  }
+
+  it('only counts each passenger once if API data contains multiple entries for each passenger', () => {
+
+    const totalPaxSelector = '.before-now > :nth-child(11)';
+    cy
+      .addFlightWithPax("TS0123", 0, schString)
+      .asABorderForceOfficer()
+      .waitForFlightToAppear("TS0123")
+      .get(totalPaxSelector)
+      .contains("0")
+      .addManifest(manifest(
+        [
+          ukPassportWithIdentifier("id1"),
+          ukPassportWithIdentifier("id1"),
+          ukPassportWithIdentifier("id2"),
+          ukPassportWithIdentifier("id2")
+        ]
+      ))
       .get('.pax-api')
       .contains("2")
 

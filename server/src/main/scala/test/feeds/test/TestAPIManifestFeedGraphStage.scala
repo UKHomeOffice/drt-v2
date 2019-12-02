@@ -23,7 +23,7 @@ class TestManifestsActor extends Actor with ActorLogging {
 
   override def receive: PartialFunction[Any, Unit] = {
     case VoyageManifests(manifests) =>
-      log.info(s"Got these VMS: $manifests")
+      log.info(s"Got these VMS: ${manifests.map{m => s"${m.EventCode} ${m.CarrierCode}${m.flightCode}"}}")
 
       maybeSubscriber match {
         case Some(subscriber) =>
@@ -40,7 +40,6 @@ class TestManifestsActor extends Actor with ActorLogging {
     case SubscribeResponseQueue(manifestsResponse) =>
       maybeSubscriber = Option(manifestsResponse)
       maybeManifests.map(manifests => ManifestsFeedSuccess(DqManifests("", manifests)))
-
   }
 }
 

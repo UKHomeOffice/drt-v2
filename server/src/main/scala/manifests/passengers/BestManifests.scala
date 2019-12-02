@@ -20,14 +20,28 @@ case class BestAvailableManifest(source: String,
                                  passengerList: List[ManifestPassengerProfile])
 
 object BestAvailableManifest {
-  def apply(manifest: VoyageManifest): BestAvailableManifest = BestAvailableManifest(
-    SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-    manifest.ArrivalPortCode,
-    manifest.DeparturePortCode,
-    manifest.VoyageNumber,
-    manifest.CarrierCode,
-    manifest.scheduleArrivalDateTime.getOrElse(SDate.now()),
-    manifest.PassengerList.map(p => ManifestPassengerProfile(p, manifest.ArrivalPortCode)))
+  def apply(manifest: VoyageManifest): BestAvailableManifest = {
+
+    val uniquePax: List[PassengerInfoJson] = if (manifest.PassengerList.exists(_.PassengerIdentifier.exists(_ != "")))
+      manifest.PassengerList.map { passengerInfo =>
+        passengerInfo.PassengerIdentifier -> passengerInfo
+      }
+        .toMap
+        .values
+        .toList
+    else
+      manifest.PassengerList
+
+    BestAvailableManifest(
+      SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
+      manifest.ArrivalPortCode,
+      manifest.DeparturePortCode,
+      manifest.VoyageNumber,
+      manifest.CarrierCode,
+      manifest.scheduleArrivalDateTime.getOrElse(SDate.now()),
+      uniquePax.map(p => ManifestPassengerProfile(p, manifest.ArrivalPortCode))
+    )
+  }
 
   def apply(source: String,
             uniqueArrivalKey: UniqueArrivalKey,
@@ -44,7 +58,8 @@ object BestAvailableManifest {
 case class ManifestPassengerProfile(nationality: String,
                                     documentType: Option[String],
                                     age: Option[Int],
-                                    inTransit: Option[Boolean])
+                                    inTransit: Option[Boolean]
+                                   )
 
 object ManifestPassengerProfile {
   def apply(pij: PassengerInfoJson, portCode: String): ManifestPassengerProfile = {
