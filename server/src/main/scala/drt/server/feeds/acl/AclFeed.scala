@@ -188,6 +188,7 @@ object AclFeed {
       val actPax = (fields(AclColIndex.MaxPax).toInt * fields(AclColIndex.LoadFactor).toDouble).round.toInt
       val aclTerminal = Terminals.Terminal(s"T${fields(AclColIndex.Terminal).take(1)}")
       val portTerminal = aclToPortTerminal(aclTerminal)
+
       Arrival(
         Operator = operator,
         Status = "ACL Forecast",
