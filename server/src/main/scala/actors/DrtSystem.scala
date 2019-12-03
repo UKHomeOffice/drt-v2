@@ -165,7 +165,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   import DrtStaticParameters._
 
-  val aclFeed = AclFeed(params.ftpServer, params.username, params.path, airportConfig.feedPortCode, aclTerminalMapping(airportConfig.portCode))
+  val aclFeed = AclFeed(params.ftpServer, params.username, params.path, airportConfig.feedPortCode, AclFeed.aclToPortMapping(airportConfig.portCode))
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
 
@@ -337,16 +337,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     Future
       .sequence(statuses)
       .map(maybeStatuses => maybeStatuses.collect { case Some(fs) => fs })
-  }
-
-  def aclTerminalMapping(portCode: PortCode): Terminal => Terminal = portCode match {
-    case PortCode("LGW") => (tIn: Terminal) => Map[Terminal, Terminal](T2 -> S, T1 -> N).getOrElse(tIn, tIn)
-    case PortCode("MAN") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> T1, T2 -> T2, T3 -> T3).getOrElse(tIn, tIn)
-    case PortCode("EMA") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> T1).getOrElse(tIn, tIn)
-    case PortCode("EDI") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> A1).getOrElse(tIn, tIn)
-    case PortCode("LCY") => (tIn: Terminal) => Map[Terminal, Terminal](ACLTER -> T1).getOrElse(tIn, tIn)
-    case PortCode("GLA") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> T1).getOrElse(tIn, tIn)
-    case _ => (tIn: Terminal) => tIn
   }
 
   def startScheduledFeedImports(crunchInputs: CrunchSystem[Cancellable]): Unit = {
