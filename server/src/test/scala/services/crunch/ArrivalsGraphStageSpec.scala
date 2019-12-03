@@ -104,7 +104,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       crunch.portStateTestProbe.fishForMessage(5 seconds) {
         case ps: PortState =>
           val portStateSources = ps.flights.get(forecastArrival.unique).map(_.apiFlight.FeedSources).getOrElse(Set())
-          println(s"sources: $portStateSources")
+
           portStateSources == expected
       }
 
