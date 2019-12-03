@@ -1,4 +1,4 @@
-FROM openjdk:alpine
+FROM openjdk:8
 WORKDIR /opt/docker
 ADD server/target/docker/stage/opt /opt
 RUN adduser -D -u 1000 drt-admin
