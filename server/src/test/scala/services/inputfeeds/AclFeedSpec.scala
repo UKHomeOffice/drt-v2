@@ -20,7 +20,6 @@ import scala.concurrent.duration._
 
 class AclFeedSpec extends CrunchTestLike {
   val regularTerminalMapping: Terminal => Terminal = (t: Terminal) => t
-  val lgwTerminalMapping: Terminal => Terminal = (t: Terminal) => Map[Terminal, Terminal](T2 -> S).getOrElse(t, InvalidTerminal)
 
   "ACL feed failures" >> {
     val aclFeed = AclFeed("nowhere.nowhere", "badusername", "badpath", PortCode("BAD"), (_: Terminal) => T1)
@@ -85,10 +84,10 @@ class AclFeedSpec extends CrunchTestLike {
       "Then I should see the arrival with its mapped terminal name" >> {
       val csvContent =
         """A/C,ACReg,Airport,ArrDep,CreDate,Date,DOOP,EditDate,Icao Aircraft Type,Icao Last/Next Station,Icao Orig/Dest Station,LastNext,LastNextCountry,Ope,OpeGroup,OpeName,OrigDest,OrigDestCountry,Res,Season,Seats,ServNo,ST,ove.ind,Term,Time,TurnOpe,TurnServNo,OpeFlightNo,LoadFactor
-          |32A,,LHR,A,09SEP2016 0606,2017-10-13,0000500,29SEP2017 0959,A320,EDDK,EDDK,CGN,DE,4U,STAR ALLIANCE,GERMANWINGS GMBH,CGN,DE,T2-Intl & CTA,S17,180,0460,J,,2I,0710,4U,0461,4U0460,0.827777802944183
+          |32A,,LHR,A,09SEP2016 0606,2017-10-13,0000500,29SEP2017 0959,A320,EDDK,EDDK,CGN,DE,4U,STAR ALLIANCE,GERMANWINGS GMBH,CGN,DE,T2-Intl & CTA,S17,180,0460,J,,1I,0710,4U,0461,4U0460,0.827777802944183
         """.stripMargin
 
-      val arrivals = arrivalsFromCsvContent(csvContent, lgwTerminalMapping)
+      val arrivals = arrivalsFromCsvContent(csvContent, AclFeed.aclToPortMapping(PortCode("LGW")))
       val expected = List(Arrival(Operator = Option(Operator("4U")), Status = ArrivalStatus("ACL Forecast"), Estimated = None,
         Actual = None, EstimatedChox = None, ActualChox = None, Gate = None,
         Stand = None, MaxPax = Option(180), ActPax = Option(149), TranPax = None, RunwayID = None, BaggageReclaimId = None,

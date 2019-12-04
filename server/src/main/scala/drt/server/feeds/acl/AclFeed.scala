@@ -8,7 +8,7 @@ import drt.server.feeds.Implicits._
 import drt.server.feeds.acl.AclFeed._
 import drt.shared
 import drt.shared.FlightsApi.Flights
-import drt.shared.Terminals.Terminal
+import drt.shared.Terminals.{A1, ACLTER, N, S, T1, T2, T3, Terminal}
 import drt.shared.{Arrival, PortCode, Terminals}
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.{RemoteResourceInfo, SFTPClient}
@@ -239,4 +239,13 @@ object AclFeed {
     val FlightType: Int = allFields("ST")
   }
 
+  def aclToPortMapping(portCode: PortCode): Terminal => Terminal = portCode match {
+    case PortCode("LGW") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> S, T2 -> N).getOrElse(tIn, tIn)
+    case PortCode("MAN") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> T1, T2 -> T2, T3 -> T3).getOrElse(tIn, tIn)
+    case PortCode("EMA") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> T1).getOrElse(tIn, tIn)
+    case PortCode("EDI") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> A1).getOrElse(tIn, tIn)
+    case PortCode("LCY") => (tIn: Terminal) => Map[Terminal, Terminal](ACLTER -> T1).getOrElse(tIn, tIn)
+    case PortCode("GLA") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> T1).getOrElse(tIn, tIn)
+    case _ => (tIn: Terminal) => tIn
+  }
 }
