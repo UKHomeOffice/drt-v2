@@ -27,7 +27,12 @@ object RunnableDeskRecs {
     Crunch.getLocalLastMidnight(MilliDate(adjustedMinute.millisSinceEpoch)).addMinutes(offsetMinutes)
   }
 
-  def apply(portStateActor: ActorRef, minutesToCrunch: Int, airportConfig: AirportConfig, flightsToDeskRecs: (FlightsWithSplits, MillisSinceEpoch) => DeskRecMinutes, now: () => SDateLike)
+  def apply(portStateActor: ActorRef,
+            minutesToCrunch: Int,
+            airportConfig: AirportConfig,
+            flightsToDeskRecs: (FlightsWithSplits, MillisSinceEpoch) => DeskRecMinutes,
+            now: () => SDateLike,
+            minimumTime: Long = 0L)
            (implicit executionContext: ExecutionContext, timeout: Timeout = new Timeout(10 seconds)): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
@@ -41,7 +46,7 @@ object RunnableDeskRecs {
       implicit builder =>
         (daysToCrunchAsync, killSwitch) =>
           val deskRecsSink = builder.add(Sink.actorRefWithAck(portStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
-          val buffer = builder.add(Buffer(now))
+          val buffer = builder.add(Buffer(now, minimumTime))
           val parallelismLevel = 2
 
           daysToCrunchAsync.out

@@ -30,13 +30,11 @@ trait BufferImpl[T] {
   def clear(): Unit
 }
 
-class SortedSetBuffer(now: () => SDateLike) extends BufferImpl[Long] {
+class SortedSetBuffer(now: () => SDateLike, minimumTime: Long) extends BufferImpl[Long] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   val values: mutable.SortedSet[Long] = mutable.SortedSet[Long]()
   val lastSent: mutable.Map[Long, Long] = mutable.Map()
-
-  val minimumTime = 60000L
 
   def isEligible(element: Long): Boolean = lastSent.get(element) match {
     case None => true
@@ -60,6 +58,7 @@ class SortedSetBuffer(now: () => SDateLike) extends BufferImpl[Long] {
       case Some(nextEligible) => nextEligible
     }
     values -= nextElement
+    lastSent(nextElement) = now().millisSinceEpoch
     log.info(s"Removed ${SDate(nextElement).toISODateOnly} leaving ${values.map(ms => SDate(ms).toISODateOnly).mkString(", ")}")
     nextElement
   }
@@ -67,13 +66,13 @@ class SortedSetBuffer(now: () => SDateLike) extends BufferImpl[Long] {
   override def clear(): Unit = values.clear()
 }
 
-case class Buffer(now: () => SDateLike) extends GraphStage[FlowShape[List[Long], Long]] {
+case class Buffer(now: () => SDateLike, minimumTime: Long) extends GraphStage[FlowShape[List[Long], Long]] {
   val in: Inlet[List[Long]] = Inlet[List[Long]](Logging.simpleName(this) + ".in")
   val out: Outlet[Long] = Outlet[Long](Logging.simpleName(this) + ".out")
   override val shape = FlowShape(in, out)
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
     new GraphStageLogic(shape) with InHandler with OutHandler with StageLogging {
-      private val buffer: SortedSetBuffer = new SortedSetBuffer(now)
+      private val buffer: SortedSetBuffer = new SortedSetBuffer(now, minimumTime)
 
       override def onPush(): Unit = {
         val elems = grab(in)
