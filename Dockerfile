@@ -25,7 +25,7 @@ RUN chown 1000:1000 -R /var/data
 COPY certs/rds-combined-ca-bundle.pem /etc/drt/rds-combined-ca-bundle.pem
 
 RUN echo keytool $KEYTOOL_PASSWORD
-RUN keytool -noprompt -storepass changeit -import -alias rds -keystore $JAVA_HOME/jre/lib/security/cacerts -file /etc/drt/rds-combined-ca-bundle.pem
+RUN keytool -noprompt -storepass changeit -import -alias rds -keystore $JAVA_HOME/lib/security/cacerts -file /etc/drt/rds-combined-ca-bundle.pem
 
 USER 1000
 
