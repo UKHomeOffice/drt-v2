@@ -27,7 +27,7 @@ import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.Flights
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared.Terminals._
 import drt.shared._
 import graphs.SinkToSourceBridge
@@ -45,7 +45,7 @@ import services.SplitsProvider.SplitProvider
 import services._
 import services.crunch.deskrecs.RunnableDeskRecs
 import services.crunch.{CrunchProps, CrunchSystem}
-import services.graphstages.Crunch.{oneDayMillis, oneMinuteMillis}
+import services.graphstages.Crunch.{LoadMinute, crunchLoads, oneDayMillis, oneMinuteMillis}
 import services.graphstages._
 import slickdb.{ArrivalTable, Tables, VoyageManifestPassengerInfoTable}
 
@@ -165,7 +165,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   import DrtStaticParameters._
 
-  val aclFeed = AclFeed(params.ftpServer, params.username, params.path, airportConfig.feedPortCode, aclTerminalMapping(airportConfig.portCode))
+  val aclFeed = AclFeed(params.ftpServer, params.username, params.path, airportConfig.feedPortCode, AclFeed.aclToPortMapping(airportConfig.portCode))
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
 
@@ -326,8 +326,11 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     }
   }
 
-  def startCrunchGraph(portStateActor: ActorRef): (ActorRef, UniqueKillSwitch) =
-    RunnableDeskRecs(portStateActor, 1440, TryRenjin.crunch, airportConfig).run()
+  def startCrunchGraph(portStateActor: ActorRef): (ActorRef, UniqueKillSwitch) = {
+    val minutesToCrunch = 1440
+    val flightsToDeskRecs = Crunch.flightsToDeskRecs(minutesToCrunch, airportConfig, TryRenjin.crunch)
+    RunnableDeskRecs(portStateActor, minutesToCrunch, airportConfig, flightsToDeskRecs).run()
+  }
 
   override def getFeedStatus: Future[Seq[FeedStatuses]] = {
     val actors: Seq[AskableActorRef] = Seq(liveArrivalsActor, liveBaseArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
@@ -337,16 +340,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     Future
       .sequence(statuses)
       .map(maybeStatuses => maybeStatuses.collect { case Some(fs) => fs })
-  }
-
-  def aclTerminalMapping(portCode: PortCode): Terminal => Terminal = portCode match {
-    case PortCode("LGW") => (tIn: Terminal) => Map[Terminal, Terminal](T2 -> S, T1 -> N).getOrElse(tIn, tIn)
-    case PortCode("MAN") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> T1, T2 -> T2, T3 -> T3).getOrElse(tIn, tIn)
-    case PortCode("EMA") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> T1).getOrElse(tIn, tIn)
-    case PortCode("EDI") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> A1).getOrElse(tIn, tIn)
-    case PortCode("LCY") => (tIn: Terminal) => Map[Terminal, Terminal](ACLTER -> T1).getOrElse(tIn, tIn)
-    case PortCode("GLA") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> T1).getOrElse(tIn, tIn)
-    case _ => (tIn: Terminal) => tIn
   }
 
   def startScheduledFeedImports(crunchInputs: CrunchSystem[Cancellable]): Unit = {

@@ -29,10 +29,12 @@ object Terminals {
       case "t5" => T5
       case "a1" => A1
       case "a2" => A2
-      case "1i" => ACL1I
-      case "2i" => ACL2I
-      case "1d" => ACL1D
-      case "ter" => ACLTER
+      case "1i" => T1
+      case "2i" => T2
+      case "3i" => T3
+      case "4i" => T4
+      case "5i" => T5
+      case "ter" => T1
       case "n" => N
       case "s" => S
       case _ => InvalidTerminal

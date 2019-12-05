@@ -61,7 +61,8 @@ lazy val client: Project = (project in file("client"))
     // use uTest framework for tests
     testFrameworks += new TestFramework("utest.runner.Framework"),
     scalaJSUseMainModuleInitializer := true,
-    parallelExecution in Test := false
+    parallelExecution in Test := false,
+    sources in doc in Compile := List()
   )
   .enablePlugins(ScalaJSPlugin)
   .enablePlugins(ScalaJSBundlerPlugin)
@@ -78,50 +79,51 @@ lazy val server = (project in file("server"))
   .enablePlugins(BuildInfoPlugin)
   .disablePlugins(PlayLayoutPlugin) // use the standard directory layout instead of Play's custom
   .settings(
-  name := "drt",
-  version := Settings.version,
-  scalaVersion := Settings.versions.scala,
-  scalacOptions ++= Settings.scalacOptions,
-  buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
-  buildInfoPackage := "buildinfo",
-  javaOptions in Test += "-Duser.timezone=UTC",
-  javaOptions in Test += "-Xmx1750m",
-  javaOptions in Runtime += "-Duser.timezone=UTC",
-  libraryDependencies ++= Settings.jvmDependencies.value,
-  libraryDependencies += specs2 % Test,
-  libraryDependencies += guice,
-  dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-core" % "2.8.7",
-  dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-databind" % "2.8.7",
-  dependencyOverrides += "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.8.7",
-  commands += ReleaseCmd,
-  // connect to the client project
-  scalaJSProjects := clients,
-  pipelineStages := Seq(scalaJSProd, digest, gzip),
-  pipelineStages in Assets := Seq(scalaJSPipeline),
-  // triggers scalaJSPipeline when using compile or continuous compilation
-  compile in Compile := ((compile in Compile) dependsOn scalaJSPipeline).value,
-  testFrameworks += new TestFramework("utest.runner.Framework"),
-  resolvers += Resolver.bintrayRepo("dwhjames", "maven"),
-  resolvers += Resolver.bintrayRepo("mfglabs", "maven"),
-  resolvers += "Artifactory Release Realm" at "https://artifactory.digital.homeoffice.gov.uk/",
-  resolvers += "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
+    name := "drt",
+    version := Settings.version,
+    scalaVersion := Settings.versions.scala,
+    scalacOptions ++= Settings.scalacOptions,
+    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
+    buildInfoPackage := "buildinfo",
+    javaOptions in Test += "-Duser.timezone=UTC",
+    javaOptions in Test += "-Xmx1750m",
+    javaOptions in Runtime += "-Duser.timezone=UTC",
+    libraryDependencies ++= Settings.jvmDependencies.value,
+    libraryDependencies += specs2 % Test,
+    libraryDependencies += guice,
+    dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-core" % "2.8.7",
+    dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-databind" % "2.8.7",
+    dependencyOverrides += "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.8.7",
+    commands += ReleaseCmd,
+    // connect to the client project
+    scalaJSProjects := clients,
+    pipelineStages := Seq(scalaJSProd, digest, gzip),
+    pipelineStages in Assets := Seq(scalaJSPipeline),
+    // triggers scalaJSPipeline when using compile or continuous compilation
+    compile in Compile := ((compile in Compile) dependsOn scalaJSPipeline).value,
+    testFrameworks += new TestFramework("utest.runner.Framework"),
+    resolvers += Resolver.bintrayRepo("dwhjames", "maven"),
+    resolvers += Resolver.bintrayRepo("mfglabs", "maven"),
+    resolvers += "Artifactory Release Realm" at "https://artifactory.digital.homeoffice.gov.uk/",
+    resolvers += "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
 
-  //dependencyOverrides += "com.github.dwhjames" %% "aws-wrap" % "0.9.0",
-  publishArtifact in(Compile, packageBin) := false,
-  // Disable scaladoc generation for this project (useless)
-  publishArtifact in(Compile, packageDoc) := false,
-  // Disable source jar for this project (useless)
-  publishArtifact in(Compile, packageSrc) := false,
-  credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
-  // compress CSS
-  LessKeys.compress in Assets := true,
-  PB.targets in Compile := Seq(
-    scalapb.gen() -> (sourceManaged in Compile).value / "protobuf"
-  ),
-  PB.deleteTargetDirectory := false,
-  TwirlKeys.templateImports += "buildinfo._",
-  parallelExecution in Test := false
-)
+    //dependencyOverrides += "com.github.dwhjames" %% "aws-wrap" % "0.9.0",
+    publishArtifact in(Compile, packageBin) := false,
+    // Disable scaladoc generation for this project (useless)
+    publishArtifact in(Compile, packageDoc) := false,
+    // Disable source jar for this project (useless)
+    publishArtifact in(Compile, packageSrc) := false,
+    credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
+    // compress CSS
+    LessKeys.compress in Assets := true,
+    PB.targets in Compile := Seq(
+      scalapb.gen() -> (sourceManaged in Compile).value / "protobuf"
+    ),
+    PB.deleteTargetDirectory := false,
+    TwirlKeys.templateImports += "buildinfo._",
+    parallelExecution in Test := false,
+    sources in doc in Compile := List()
+  )
   .aggregate(clients.map(projectToRef): _*)
   .dependsOn(sharedJVM)
 

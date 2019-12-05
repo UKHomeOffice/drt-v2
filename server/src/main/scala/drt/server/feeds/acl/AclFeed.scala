@@ -8,7 +8,7 @@ import drt.server.feeds.Implicits._
 import drt.server.feeds.acl.AclFeed._
 import drt.shared
 import drt.shared.FlightsApi.Flights
-import drt.shared.Terminals.Terminal
+import drt.shared.Terminals.{A1, ACLTER, N, S, T1, T2, T3, Terminal}
 import drt.shared.{Arrival, PortCode, Terminals}
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.{RemoteResourceInfo, SFTPClient}
@@ -69,8 +69,8 @@ object AclFeed {
   }
 
   def latestFileForPort(sftp: SFTPClient, portCode: PortCode): String = {
-    val portRegex = "([A-Z]{3})[S][0-9]{2}_HOMEOFFICEROLL180_[0-9]{8}.zip".r
-    val dateRegex = "[A-Z]{3}[S][0-9]{2}_HOMEOFFICEROLL180_([0-9]{8}).zip".r
+    val portRegex = "([A-Z]{3})[SW][0-9]{2}_HOMEOFFICEROLL180_[0-9]{8}.zip".r
+    val dateRegex = "[A-Z]{3}[SW][0-9]{2}_HOMEOFFICEROLL180_([0-9]{8}).zip".r
 
     val filesByDate = sftp
       .ls("/180_Days/").asScala
@@ -87,7 +87,7 @@ object AclFeed {
       .find(_.getAttributes.getSize > oneHundredKbInBytes)
       .getOrElse(filesByDate.head)
 
-    log.info(s"Latest File Size: ${latestFileOver100KB.getAttributes.getSize}")
+    log.info(s"Latest File ${latestFileOver100KB}. Size: ${latestFileOver100KB.getAttributes.getSize}")
 
     latestFileOver100KB.getPath
   }
@@ -186,7 +186,7 @@ object AclFeed {
       val operator: String = fields(AclColIndex.Operator)
       val maxPax = fields(AclColIndex.MaxPax).toInt
       val actPax = (fields(AclColIndex.MaxPax).toInt * fields(AclColIndex.LoadFactor).toDouble).round.toInt
-      val aclTerminal = Terminals.Terminal(s"T${fields(AclColIndex.Terminal).take(1)}")
+      val aclTerminal = Terminals.Terminal(fields(AclColIndex.Terminal))
       val portTerminal = aclToPortTerminal(aclTerminal)
 
       Arrival(
@@ -239,4 +239,10 @@ object AclFeed {
     val FlightType: Int = allFields("ST")
   }
 
+  def aclToPortMapping(portCode: PortCode): Terminal => Terminal = portCode match {
+    case PortCode("LGW") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> S, T2 -> N).getOrElse(tIn, tIn)
+    case PortCode("EDI") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> A1).getOrElse(tIn, tIn)
+    case PortCode("LCY") => (tIn: Terminal) => Map[Terminal, Terminal](ACLTER -> T1).getOrElse(tIn, tIn)
+    case _ => (tIn: Terminal) => tIn
+  }
 }
