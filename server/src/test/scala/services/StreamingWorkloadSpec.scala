@@ -28,7 +28,7 @@ class StreamingWorkloadSpec extends CrunchTestLike {
     DeskRecMinutes(Seq(DeskRecMinute(T1, Queues.EeaDesk, ms, 0, 0, 0, 0)))
   }
   val mockPortStateActor = system.actorOf(MockPortStateActor.props(portStateProbe, smallDelay))
-  val (millisToCrunchSourceActor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, airportConfig, flightsToDeskRecs).run()
+  val (millisToCrunchSourceActor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, airportConfig, flightsToDeskRecs, () => SDate.now()).run()
   val askableSource: AskableActorRef = millisToCrunchSourceActor
 
   var days = List(List(0, 1, 2, 3, 4, 5, 6, 7), List(0))

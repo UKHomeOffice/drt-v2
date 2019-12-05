@@ -198,7 +198,7 @@ class CrunchTestLike
 
     val flightsToDeskRecs = Crunch.flightsToDeskRecs(minutesToCrunch, airportConfig, cruncher)
 
-    val (millisToCrunchActor: ActorRef, _: UniqueKillSwitch) = RunnableDeskRecs(portStateActor, minutesToCrunch, airportConfig, flightsToDeskRecs).run()
+    val (millisToCrunchActor: ActorRef, _: UniqueKillSwitch) = RunnableDeskRecs(portStateActor, minutesToCrunch, airportConfig, flightsToDeskRecs, now).run()
     portStateActor ! SetCrunchActor(millisToCrunchActor)
 
     val manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)

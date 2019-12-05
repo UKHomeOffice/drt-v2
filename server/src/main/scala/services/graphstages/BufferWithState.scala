@@ -3,6 +3,9 @@ package services.graphstages
 import akka.event.Logging
 import akka.stream.stage._
 import akka.stream._
+import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.SDateLike
+import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 
 import scala.collection.{SortedSet, mutable}
@@ -27,8 +30,18 @@ trait BufferImpl[T] {
   def clear(): Unit
 }
 
-class SortedSetBuffer() extends BufferImpl[Long] {
+class SortedSetBuffer(now: () => SDateLike) extends BufferImpl[Long] {
+  val log: Logger = LoggerFactory.getLogger(getClass)
+
   val values: mutable.SortedSet[Long] = mutable.SortedSet[Long]()
+  val lastSent: mutable.Map[Long, Long] = mutable.Map()
+
+  val minimumTime = 60000L
+
+  def isEligible(element: Long): Boolean = lastSent.get(element) match {
+    case None => true
+    case Some(last) => (now().millisSinceEpoch - last) >= minimumTime
+  }
 
   override def used: Int = values.size
 
@@ -37,25 +50,30 @@ class SortedSetBuffer() extends BufferImpl[Long] {
   override def nonEmpty: Boolean = !isEmpty
 
   override def enqueue(elem: Long): Unit = {
+    log.info(s"Adding ${SDate(elem).toISODateOnly} to ${values.map(ms => SDate(ms).toISODateOnly).mkString(", ")}")
     values += elem
   }
 
   override def dequeue(): Long = {
-    val head = values.head
-    values -= head
-    head
+    val nextElement = values.find(isEligible) match {
+      case None => values.head
+      case Some(nextEligible) => nextEligible
+    }
+    values -= nextElement
+    log.info(s"Removed ${SDate(nextElement).toISODateOnly} leaving ${values.map(ms => SDate(ms).toISODateOnly).mkString(", ")}")
+    nextElement
   }
 
   override def clear(): Unit = values.clear()
 }
 
-case class Buffer() extends GraphStage[FlowShape[List[Long], Long]] {
+case class Buffer(now: () => SDateLike) extends GraphStage[FlowShape[List[Long], Long]] {
   val in: Inlet[List[Long]] = Inlet[List[Long]](Logging.simpleName(this) + ".in")
   val out: Outlet[Long] = Outlet[Long](Logging.simpleName(this) + ".out")
   override val shape = FlowShape(in, out)
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
     new GraphStageLogic(shape) with InHandler with OutHandler with StageLogging {
-      private val buffer: SortedSetBuffer = new SortedSetBuffer()
+      private val buffer: SortedSetBuffer = new SortedSetBuffer(now)
 
       override def onPush(): Unit = {
         val elems = grab(in)

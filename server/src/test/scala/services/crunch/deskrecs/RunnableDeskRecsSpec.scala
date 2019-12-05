@@ -73,6 +73,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 50, None)),
     SplitSources.Historical, None, Percentage)
   val minutesToCrunch = 30
+  val nowFromSDate: () => SDateLike = () => SDate.now()
 
   def flightsToDeskRecs(airportConfig: AirportConfig, minutesToCrunch: Int): (FlightsWithSplits, MillisSinceEpoch) => DeskRecMinutes =
     Crunch.flightsToDeskRecs(minutesToCrunch, airportConfig, TryRenjin.crunch)
@@ -82,7 +83,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     "I should see a request for flights for 2019-01-01 00:00 to 00:30" >> {
     val portStateProbe = TestProbe("port-state")
     val mockPortStateActor = system.actorOf(Props(classOf[MockPortStateActor], portStateProbe, noDelay))
-    val (millisToCrunchSourceActor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, minutesToCrunch, airportConfig, flightsToDeskRecs(airportConfig, minutesToCrunch)).run()
+    val (millisToCrunchSourceActor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, minutesToCrunch, airportConfig, flightsToDeskRecs(airportConfig, minutesToCrunch), nowFromSDate).run()
     val askableSource: AskableActorRef = millisToCrunchSourceActor
 
     val midnight20190101 = SDate("2019-01-01T00:00")
@@ -104,7 +105,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val portStateProbe = TestProbe("port-state")
     val mockPortStateActor = system.actorOf(Props(classOf[MockPortStateActor], portStateProbe, longDelay))
 
-    val (millisToCrunchSourceActor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, minutesToCrunch, airportConfig, flightsToDeskRecs(airportConfig, minutesToCrunch)).run()
+    val (millisToCrunchSourceActor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, minutesToCrunch, airportConfig, flightsToDeskRecs(airportConfig, minutesToCrunch), nowFromSDate).run()
     val askableSource: AskableActorRef = millisToCrunchSourceActor
 
     val midnight20190101 = SDate("2019-01-01T00:00")
@@ -141,7 +142,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
     val testAirportConfig = airportConfig.copy(terminalProcessingTimes = procTimes)
 
-    val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, minutesToCrunch, testAirportConfig, flightsToDeskRecs(testAirportConfig, minutesToCrunch)).run()
+    val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, minutesToCrunch, testAirportConfig, flightsToDeskRecs(testAirportConfig, minutesToCrunch), nowFromSDate).run()
     val millisToCrunchSourceActor: AskableActorRef = actor
 
     val epoch = SDate(scheduled).millisSinceEpoch
@@ -179,7 +180,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
     val testAirportConfig = airportConfig.copy(terminalProcessingTimes = procTimes)
 
-    val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, minutesToCrunch, testAirportConfig, flightsToDeskRecs(testAirportConfig, minutesToCrunch)).run()
+    val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, minutesToCrunch, testAirportConfig, flightsToDeskRecs(testAirportConfig, minutesToCrunch), nowFromSDate).run()
     val millisToCrunchSourceActor: AskableActorRef = actor
 
     val epoch = SDate(scheduled).millisSinceEpoch
@@ -219,7 +220,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
     val testAirportConfig = airportConfig.copy(terminalProcessingTimes = procTimes)
 
-    val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, minutesToCrunch, testAirportConfig, flightsToDeskRecs(testAirportConfig, minutesToCrunch)).run()
+    val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, minutesToCrunch, testAirportConfig, flightsToDeskRecs(testAirportConfig, minutesToCrunch), nowFromSDate).run()
     val millisToCrunchSourceActor: AskableActorRef = actor
 
     val scheduledSd = SDate(scheduled)
@@ -262,7 +263,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> 30d / 60))
     val testAirportConfig = airportConfig.copy(terminalProcessingTimes = procTimes)
 
-    val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, minutesToCrunch, testAirportConfig, flightsToDeskRecs(testAirportConfig, minutesToCrunch)).run()
+    val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, minutesToCrunch, testAirportConfig, flightsToDeskRecs(testAirportConfig, minutesToCrunch), nowFromSDate).run()
     val millisToCrunchSourceActor: AskableActorRef = actor
 
     val noonMillis = SDate(pcpOne).millisSinceEpoch
@@ -428,7 +429,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       divertedQueues = Map(Queues.NonEeaDesk -> Queues.EeaDesk)
     )
 
-    val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, minutesToCrunch, testAirportConfig, flightsToDeskRecs(testAirportConfig, minutesToCrunch)).run()
+    val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, minutesToCrunch, testAirportConfig, flightsToDeskRecs(testAirportConfig, minutesToCrunch), nowFromSDate).run()
     val millisToCrunchSourceActor: AskableActorRef = actor
 
     val scheduledMillis = SDate(scheduled).millisSinceEpoch
@@ -508,7 +509,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     mockPortStateActor ! SetFlights(flight)
 
     val minsInADay = 1440
-    val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, minsInADay, airportConfig, flightsToDeskRecs(airportConfig, minsInADay)).run()
+    val (actor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, minsInADay, airportConfig, flightsToDeskRecs(airportConfig, minsInADay), nowFromSDate).run()
     val millisToCrunchSourceActor: AskableActorRef = actor
 
     val epoch = SDate(scheduled).millisSinceEpoch

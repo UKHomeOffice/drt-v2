@@ -329,7 +329,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   def startCrunchGraph(portStateActor: ActorRef): (ActorRef, UniqueKillSwitch) = {
     val minutesToCrunch = 1440
     val flightsToDeskRecs = Crunch.flightsToDeskRecs(minutesToCrunch, airportConfig, TryRenjin.crunch)
-    RunnableDeskRecs(portStateActor, minutesToCrunch, airportConfig, flightsToDeskRecs).run()
+    RunnableDeskRecs(portStateActor, minutesToCrunch, airportConfig, flightsToDeskRecs, now).run()
   }
 
   override def getFeedStatus: Future[Seq[FeedStatuses]] = {
