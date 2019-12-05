@@ -1,6 +1,7 @@
 package services.graphstages
 
 import drt.shared.CrunchApi._
+import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
@@ -302,7 +303,7 @@ object Crunch {
                   lastMinute: MillisSinceEpoch,
                   terminals: Set[Terminal],
                   airportConfig: AirportConfig,
-                  crunch: TryCrunch): SortedMap[TQM, DeskRecMinute] = {
+                  crunch: TryCrunch): DeskRecMinutes = {
     val validTerminals = airportConfig.queues.keys.toList
     val terminalsToCrunch = terminals.filter(validTerminals.contains(_))
     val terminalQueueDeskRecs = for {
@@ -313,7 +314,7 @@ object Crunch {
         loadMinutes.getOrElse(TQM(terminal, queue, minute), LoadMinute(terminal, queue, 0, 0, minute)))
       crunchQueue(firstMinute, lastMinute, terminal, queue, lms, airportConfig, crunch)
     }
-    SortedMap[TQM, DeskRecMinute]() ++ terminalQueueDeskRecs.toSeq.flatten
+    DeskRecMinutes(terminalQueueDeskRecs.toSeq.flatten)
   }
 
   def crunchQueue(firstMinute: MillisSinceEpoch,
@@ -322,7 +323,7 @@ object Crunch {
                   qn: Queue,
                   qLms: IndexedSeq[LoadMinute],
                   airportConfig: AirportConfig,
-                  crunch: TryCrunch): SortedMap[TQM, DeskRecMinute] = {
+                  crunch: TryCrunch): Seq[DeskRecMinute] = {
     val sla = airportConfig.slaByQueue.getOrElse(qn, 15)
     val paxMinutes = qLms.map(_.paxLoad)
     val workMinutes = qLms.map(_.workLoad)
@@ -334,16 +335,16 @@ object Crunch {
     triedResult match {
       case Success(OptimizerCrunchResult(desks, waits)) =>
         log.debug(s"Optimizer for $qn Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
-        SortedMap[TQM, DeskRecMinute]() ++ minuteMillis.zipWithIndex.map {
+        minuteMillis.zipWithIndex.map {
           case (minute, idx) =>
             val wl = workMinutes(idx)
             val pl = paxMinutes(idx)
             val drm = DeskRecMinute(tn, qn, minute, pl, wl, desks(idx), waits(idx))
-            (drm.key, drm)
+            drm
         }
       case Failure(t) =>
         log.warn(s"failed to crunch: $t")
-        SortedMap[TQM, DeskRecMinute]()
+        Seq()
     }
   }
 
@@ -353,5 +354,28 @@ object Crunch {
     val minDesks = deskRecMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._1))
     val maxDesks = deskRecMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._2))
     (minDesks, maxDesks)
+  }
+
+  def flightsToDeskRecs(minutesToCrunch: Int, airportConfig: AirportConfig, cruncher: TryCrunch): (FlightsWithSplits, MillisSinceEpoch) => CrunchApi.DeskRecMinutes =
+    crunchFlights(minutesToCrunch, cruncher, airportConfig)
+
+  private def crunchFlights(minutesToCrunch: Int, crunch: TryCrunch, airportConfig: AirportConfig)
+                           (flights: FlightsWithSplits, crunchStartMillis: MillisSinceEpoch): CrunchApi.DeskRecMinutes = {
+    val crunchEndMillis = SDate(crunchStartMillis).addMinutes(minutesToCrunch).millisSinceEpoch
+    val terminals = flights.flightsToUpdate.map(_.apiFlight.Terminal).toSet
+    val loadMinutes = WorkloadCalculator.flightLoadMinutes(flights, airportConfig.terminalProcessingTimes).minutes
+
+    val loadsWithDiverts = loadMinutes
+      .groupBy {
+        case (TQM(t, q, m), _) => val finalQueueName = airportConfig.divertedQueues.getOrElse(q, q)
+          TQM(t, finalQueueName, m)
+      }
+      .map {
+        case (tqm, mins) =>
+          val loads = mins.values
+          (tqm, LoadMinute(tqm.terminal, tqm.queue, loads.map(_.paxLoad).sum, loads.map(_.workLoad).sum, tqm.minute))
+      }
+
+    crunchLoads(loadsWithDiverts, crunchStartMillis, crunchEndMillis, terminals, airportConfig, crunch)
   }
 }

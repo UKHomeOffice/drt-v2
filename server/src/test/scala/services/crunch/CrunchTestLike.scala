@@ -23,7 +23,7 @@ import org.specs2.mutable.SpecificationLike
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services._
 import services.crunch.deskrecs.RunnableDeskRecs
-import services.graphstages.CrunchMocks
+import services.graphstages.{Crunch, CrunchMocks}
 import slickdb.Tables
 
 import scala.collection.mutable
@@ -196,7 +196,9 @@ class CrunchTestLike
     val portStateActor = createPortStateActor(portStateProbe, now)
     initialPortState.foreach(ps => portStateActor ! ps)
 
-    val (millisToCrunchActor: ActorRef, _: UniqueKillSwitch) = RunnableDeskRecs(portStateActor, minutesToCrunch, cruncher, airportConfig).run()
+    val flightsToDeskRecs = Crunch.flightsToDeskRecs(minutesToCrunch, airportConfig, cruncher)
+
+    val (millisToCrunchActor: ActorRef, _: UniqueKillSwitch) = RunnableDeskRecs(portStateActor, minutesToCrunch, airportConfig, flightsToDeskRecs).run()
     portStateActor ! SetCrunchActor(millisToCrunchActor)
 
     val manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
