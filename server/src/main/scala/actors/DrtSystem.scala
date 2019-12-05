@@ -27,7 +27,7 @@ import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.Flights
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared.Terminals._
 import drt.shared._
 import graphs.SinkToSourceBridge
@@ -45,7 +45,7 @@ import services.SplitsProvider.SplitProvider
 import services._
 import services.crunch.deskrecs.RunnableDeskRecs
 import services.crunch.{CrunchProps, CrunchSystem}
-import services.graphstages.Crunch.{oneDayMillis, oneMinuteMillis}
+import services.graphstages.Crunch.{LoadMinute, crunchLoads, oneDayMillis, oneMinuteMillis}
 import services.graphstages._
 import slickdb.{ArrivalTable, Tables, VoyageManifestPassengerInfoTable}
 
@@ -326,8 +326,11 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     }
   }
 
-  def startCrunchGraph(portStateActor: ActorRef): (ActorRef, UniqueKillSwitch) =
-    RunnableDeskRecs(portStateActor, 1440, TryRenjin.crunch, airportConfig).run()
+  def startCrunchGraph(portStateActor: ActorRef): (ActorRef, UniqueKillSwitch) = {
+    val minutesToCrunch = 1440
+    val flightsToDeskRecs = Crunch.flightsToDeskRecs(minutesToCrunch, airportConfig, TryRenjin.crunch)
+    RunnableDeskRecs(portStateActor, minutesToCrunch, airportConfig, flightsToDeskRecs).run()
+  }
 
   override def getFeedStatus: Future[Seq[FeedStatuses]] = {
     val actors: Seq[AskableActorRef] = Seq(liveArrivalsActor, liveBaseArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
