@@ -18,13 +18,14 @@ case class OptimizerCrunchResult(
 object TryRenjin {
   val log: Logger = LoggerFactory.getLogger(getClass)
   lazy val manager = new ScriptEngineManager()
-  val optimizer = Optimizer(engine = manager.getEngineByName("Renjin"))
 
   def crunch(workloads: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int], config: OptimizerConfig): Try[OptimizerCrunchResult] = {
+    val optimizer = Optimizer(engine = manager.getEngineByName("Renjin"))
     optimizer.crunch(workloads, minDesks, maxDesks, config)
   }
 
   def runSimulationOfWork(workloads: Seq[Double], desks: Seq[Int], config: OptimizerConfig): Seq[Int] = {
+    val optimizer = Optimizer(engine = manager.getEngineByName("Renjin"))
     optimizer.processWork(workloads, desks, config)
   }
 
