@@ -356,6 +356,8 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
         zeroAtNoon && nonZeroAtOnePm
     }
 
+    crunch.liveArrivalsInput.complete()
+
     success
   }
 
@@ -408,6 +410,8 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
         }
         zeroAtNoon && nonZeroAtOnePm
     }
+
+    crunch.liveArrivalsInput.complete()
 
     success
   }
@@ -493,6 +497,8 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
         }
         fewerAtNoon
     }
+
+    crunch.liveArrivalsInput.complete()
 
     success
   }

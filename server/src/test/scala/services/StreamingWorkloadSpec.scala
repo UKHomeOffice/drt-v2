@@ -65,7 +65,6 @@ class StreamingWorkloadSpec extends CrunchTestLike {
     }
 
     "The 2nd 2019-01-01 should not be at the end of the list, ie it should have shuffled to the front of the queue when it was added" >> {
-      println(s"days: ${crunchedDaysInSequence.mkString(", ")}")
       crunchedDaysInSequence.takeRight(1).head != "2019-01-01"
     }
   }

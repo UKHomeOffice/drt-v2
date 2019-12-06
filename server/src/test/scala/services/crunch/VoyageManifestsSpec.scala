@@ -270,6 +270,8 @@ class VoyageManifestsSpec extends CrunchTestLike {
         queuePax == expected
     }
 
+    crunch.liveArrivalsInput.complete()
+
     success
   }
 
