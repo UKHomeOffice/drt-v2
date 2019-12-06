@@ -43,14 +43,14 @@ class SortedSetBuffer(initialValues: Iterable[Long]) extends BufferImpl[Long] {
   override def nonEmpty: Boolean = !isEmpty
 
   override def enqueue(elem: Long): Unit = {
-    log.info(s"Adding ${SDate(elem).toISODateOnly} to ${values.map(ms => SDate(ms).toISODateOnly).mkString(", ")}")
+    log.debug(s"Adding ${SDate(elem).toISODateOnly} to ${values.map(ms => SDate(ms).toISODateOnly).mkString(", ")}")
     values += elem
   }
 
   override def dequeue(): Long = {
     val nextElement = values.head
     values -= nextElement
-    log.info(s"Removed ${SDate(nextElement).toISODateOnly} leaving ${values.map(ms => SDate(ms).toISODateOnly).mkString(", ")}")
+    log.debug(s"Removed ${SDate(nextElement).toISODateOnly} leaving ${values.map(ms => SDate(ms).toISODateOnly).mkString(", ")}")
     nextElement
   }
 
