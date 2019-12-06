@@ -249,6 +249,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         val initialPortState: Option[PortState] = mergePortStates(maybeForecastState, maybeLiveState)
         initialPortState.foreach(ps => portStateActor ! ps)
 
+        if (params.recrunchOnStart) portStateActor ! ResetForecastCrunch
+
         val (crunchSourceActor: ActorRef, _) = startCrunchGraph(portStateActor)
         portStateActor ! SetCrunchActor(crunchSourceActor)
 
