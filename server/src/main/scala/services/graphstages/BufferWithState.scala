@@ -30,16 +30,11 @@ trait BufferImpl[T] {
   def clear(): Unit
 }
 
-class SortedSetBuffer(now: () => SDateLike, minimumTime: Long) extends BufferImpl[Long] {
+class SortedSetBuffer(initialValues: Iterable[Long]) extends BufferImpl[Long] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  val values: mutable.SortedSet[Long] = mutable.SortedSet[Long]()
+  val values: mutable.SortedSet[Long] = mutable.SortedSet[Long]() ++ initialValues
   val lastSent: mutable.Map[Long, Long] = mutable.Map()
-
-  def isEligible(element: Long): Boolean = lastSent.get(element) match {
-    case None => true
-    case Some(last) => (now().millisSinceEpoch - last) >= minimumTime
-  }
 
   override def used: Int = values.size
 
@@ -53,12 +48,8 @@ class SortedSetBuffer(now: () => SDateLike, minimumTime: Long) extends BufferImp
   }
 
   override def dequeue(): Long = {
-    val nextElement = values.find(isEligible) match {
-      case None => values.head
-      case Some(nextEligible) => nextEligible
-    }
+    val nextElement = values.head
     values -= nextElement
-    lastSent(nextElement) = now().millisSinceEpoch
     log.info(s"Removed ${SDate(nextElement).toISODateOnly} leaving ${values.map(ms => SDate(ms).toISODateOnly).mkString(", ")}")
     nextElement
   }
@@ -66,13 +57,13 @@ class SortedSetBuffer(now: () => SDateLike, minimumTime: Long) extends BufferImp
   override def clear(): Unit = values.clear()
 }
 
-case class Buffer(now: () => SDateLike, minimumTime: Long) extends GraphStage[FlowShape[List[Long], Long]] {
-  val in: Inlet[List[Long]] = Inlet[List[Long]](Logging.simpleName(this) + ".in")
+case class Buffer(initialValues: Iterable[Long]) extends GraphStage[FlowShape[Iterable[Long], Long]] {
+  val in: Inlet[Iterable[Long]] = Inlet[Iterable[Long]](Logging.simpleName(this) + ".in")
   val out: Outlet[Long] = Outlet[Long](Logging.simpleName(this) + ".out")
   override val shape = FlowShape(in, out)
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
     new GraphStageLogic(shape) with InHandler with OutHandler with StageLogging {
-      private val buffer: SortedSetBuffer = new SortedSetBuffer(now, minimumTime)
+      private val buffer: SortedSetBuffer = new SortedSetBuffer(initialValues)
 
       override def onPush(): Unit = {
         val elems = grab(in)
