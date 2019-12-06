@@ -249,6 +249,8 @@ class ForecastCrunchSpec extends CrunchTestLike {
       case PortState(flights, _, _) => flights.size
     }.exists(_ > 0)
 
+    crunch.liveArrivalsInput.complete()
+
     gotAnyFlights === false
   }
 

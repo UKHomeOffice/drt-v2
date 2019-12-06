@@ -126,6 +126,9 @@ ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
       offerAndCheckResult(Seq(updatedArrivalOne, updatedArrivalTwo), Seq(Queues.NonEeaDesk))
       success
     }
+
+    crunch.liveArrivalsInput.complete()
+    success
   }
 
   private def manifestForArrival(updatedArrival: Arrival, paxInfos: List[PassengerInfoJson]): VoyageManifest = {

@@ -12,7 +12,7 @@ import drt.shared.Queues
 import drt.shared.Terminals.T1
 import services.crunch.CrunchTestLike
 import services.crunch.deskrecs.{MockPortStateActor, RunnableDeskRecs}
-import services.graphstages.CrunchMocks
+import services.graphstages.{Buffer, CrunchMocks}
 
 import scala.concurrent.duration._
 
@@ -27,8 +27,10 @@ class StreamingWorkloadSpec extends CrunchTestLike {
   val flightsToDeskRecs: (FlightsWithSplits, MillisSinceEpoch) => DeskRecMinutes = (fws: FlightsWithSplits, ms: MillisSinceEpoch) => {
     DeskRecMinutes(Seq(DeskRecMinute(T1, Queues.EeaDesk, ms, 0, 0, 0, 0)))
   }
-  val mockPortStateActor = system.actorOf(MockPortStateActor.props(portStateProbe, smallDelay))
-  val (millisToCrunchSourceActor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, airportConfig, flightsToDeskRecs).run()
+  def newBuffer = Buffer(Iterable())
+  val mockPortStateActor: ActorRef = system.actorOf(MockPortStateActor.props(portStateProbe, smallDelay))
+  val (millisToCrunchSourceActor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, airportConfig, flightsToDeskRecs, newBuffer).run()
+
   val askableSource: AskableActorRef = millisToCrunchSourceActor
 
   var days = List(List(0, 1, 2, 3, 4, 5, 6, 7), List(0))
@@ -45,7 +47,7 @@ class StreamingWorkloadSpec extends CrunchTestLike {
   "Given 11 days to crunch, with a mock request delay of 75ms, and days being added at a rate of 50ms " +
     "When I look at the crunched days " >> {
 
-    Source.tick(0 milliseconds, 100 milliseconds, NotUsed)
+    Source.tick(0 milliseconds, 120 milliseconds, NotUsed)
       .map { _ => askableSource ? nextDays.map(d => midnight20190101.addDays(d).millisSinceEpoch) }
       .runWith(Sink.seq)
 

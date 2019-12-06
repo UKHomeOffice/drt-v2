@@ -4,17 +4,15 @@ import actors.acking.AckingReceiver._
 import akka.actor.ActorRef
 import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
-import akka.stream.{ClosedShape, KillSwitches, UniqueKillSwitch}
+import akka.stream.{Attributes, ClosedShape, KillSwitches, UniqueKillSwitch}
 import akka.util.Timeout
 import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.graphstages.Crunch._
-import services.graphstages.{Buffer, Crunch, WorkloadCalculator}
-import services.{SDate, TryCrunch}
+import services.SDate
+import services.graphstages.{Buffer, Crunch}
 
-import scala.collection.immutable.SortedSet
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
@@ -27,7 +25,11 @@ object RunnableDeskRecs {
     Crunch.getLocalLastMidnight(MilliDate(adjustedMinute.millisSinceEpoch)).addMinutes(offsetMinutes)
   }
 
-  def apply(portStateActor: ActorRef, minutesToCrunch: Int, airportConfig: AirportConfig, flightsToDeskRecs: (FlightsWithSplits, MillisSinceEpoch) => DeskRecMinutes)
+  def apply(portStateActor: ActorRef,
+            minutesToCrunch: Int,
+            airportConfig: AirportConfig,
+            flightsToDeskRecs: (FlightsWithSplits, MillisSinceEpoch) => DeskRecMinutes,
+            buffer: Buffer)
            (implicit executionContext: ExecutionContext, timeout: Timeout = new Timeout(10 seconds)): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
@@ -36,18 +38,18 @@ object RunnableDeskRecs {
     val crunchPeriodStartMillis: SDateLike => SDateLike = crunchStartWithOffset(airportConfig.crunchOffsetMinutes)
 
     val graph = GraphDSL.create(
-      Source.actorRefWithAck[List[Long]](Ack).async,
+      Source.actorRefWithAck[List[Long]](Ack).async.addAttributes(Attributes.inputBuffer(1, 1000)),
       KillSwitches.single[DeskRecMinutes])((_, _)) {
       implicit builder =>
         (daysToCrunchAsync, killSwitch) =>
           val deskRecsSink = builder.add(Sink.actorRefWithAck(portStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
-          val buffer = builder.add(new Buffer())
+          val bufferAsync = builder.add(buffer.async)
           val parallelismLevel = 2
 
           daysToCrunchAsync.out
-            .map(_.map(min => crunchPeriodStartMillis(SDate(min)).millisSinceEpoch).toSet.toList) ~> buffer
+            .map(_.map(min => crunchPeriodStartMillis(SDate(min)).millisSinceEpoch).toSet.toList) ~> bufferAsync
 
-          buffer
+          bufferAsync
             .mapAsync(parallelismLevel) { crunchStartMillis =>
               log.info(s"Asking for flights for ${SDate(crunchStartMillis).toISOString()}")
               flightsToCrunch(askablePortStateActor)(minutesToCrunch, crunchStartMillis)
@@ -60,7 +62,7 @@ object RunnableDeskRecs {
           ClosedShape
     }
 
-    RunnableGraph.fromGraph(graph)
+    RunnableGraph.fromGraph(graph).addAttributes(Attributes.inputBuffer(1, 1))
   }
 
   private def flightsToCrunch(askablePortStateActor: AskableActorRef)(minutesToCrunch: Int, crunchStartMillis: MillisSinceEpoch)
