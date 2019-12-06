@@ -39,13 +39,11 @@ class TestAggregatedArrivalsActor(arrivalTable: ArrivalTableLike, probe: ActorRe
 
   override def handleRemoval(number: Int, terminal: Terminal, scheduled: MillisSinceEpoch): Unit = {
     super.handleRemoval(number, terminal, scheduled)
-    println(s"Removed")
     probe ! RemovalHandled
   }
 
   override def handleUpdate(flightUpdate: Arrival): Unit = {
     super.handleUpdate(flightUpdate)
-    println(s"Updated")
     probe ! UpdateHandled
   }
 }

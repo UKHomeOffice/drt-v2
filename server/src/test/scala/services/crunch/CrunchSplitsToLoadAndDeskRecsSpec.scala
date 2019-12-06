@@ -221,7 +221,6 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         crunch.portStateTestProbe.fishForMessage(5 seconds) {
           case ps: PortState =>
             val resultSummary = paxLoadsFromPortState(ps, 5)
-            println(s"resultSummary: $resultSummary")
             resultSummary == expected
         }
 

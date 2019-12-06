@@ -228,12 +228,11 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
 
     val probe = TestProbe()
 
-    ciriumFeed.tickingSource(30 seconds).to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    ciriumFeed.tickingSource(250 milliseconds).to(Sink.actorRef(probe.ref, StreamCompleted)).run()
 
-    probe.fishForMessage(1 seconds) {
-      case s: ArrivalsFeedSuccess if s.arrivals.flights.head.Scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch =>
-        println(s"Successfully got a result")
-        true
+    probe.fishForMessage(2 seconds) {
+      case s: ArrivalsFeedSuccess if s.arrivals.flights.head.Scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch => true
+      case _ => false
     }
 
     success
@@ -250,9 +249,7 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
     ciriumFeed.tickingSource(100 milliseconds).to(Sink.actorRef(probe.ref, StreamCompleted)).run()
 
     probe.fishForMessage(2 seconds) {
-      case s: ArrivalsFeedSuccess if s.arrivals.flights.nonEmpty && s.arrivals.flights.head.Scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch =>
-        println(s"Successfully got a result")
-        true
+      case s: ArrivalsFeedSuccess if s.arrivals.flights.nonEmpty && s.arrivals.flights.head.Scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch => true
       case _ => false
     }
 

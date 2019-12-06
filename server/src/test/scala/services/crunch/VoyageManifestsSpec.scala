@@ -153,7 +153,6 @@ class VoyageManifestsSpec extends CrunchTestLike {
           .map(cm => (cm.queue, cm.paxLoad))
           .toMap
 
-        println(s"QueuePax $queuePax, expected $expected")
         queuePax == expected
     }
 
@@ -269,9 +268,10 @@ class VoyageManifestsSpec extends CrunchTestLike {
           .map(cm => (cm.queue, cm.paxLoad))
           .toMap
 
-        println(s"QueuePax $queuePax, expected $expected")
         queuePax == expected
     }
+
+    crunch.liveArrivalsInput.complete()
 
     success
   }
