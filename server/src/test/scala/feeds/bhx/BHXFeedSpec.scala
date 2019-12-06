@@ -38,7 +38,7 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     val username = sys.env("BHX_IATA_USERNAME")
 
     val bhxClient = BHXClient(username, endpoint)
-    println(Await.result(bhxClient.initialFlights(system), 30 seconds))
+    Await.result(bhxClient.initialFlights(system), 30 seconds)
 
     false
   }

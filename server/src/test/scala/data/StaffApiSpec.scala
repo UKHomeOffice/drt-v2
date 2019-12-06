@@ -28,8 +28,6 @@ class StaffApiSpec extends SpecificationLike {
 
         val shifts = staffJsonToShifts(Json.parse(staffJson))
 
-        println(s"shifts:\n$shifts")
-
         val baseDateTime = SDate("2017-06-28T01:00", Crunch.europeLondonTimeZone)
         val assignments = 0 to 3 map(i => {
           val offset = i * 15

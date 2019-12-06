@@ -82,9 +82,8 @@ class GlaFeedSpec extends SpecificationLike {
     mockFeed.tickingSource.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
 
     probe.fishForMessage(1 seconds) {
-      case s: ArrivalsFeedSuccess if s.arrivals.flights.head.Scheduled == SDate("2019-11-13T12:34:00Z").millisSinceEpoch =>
-        println(s"Successfully got a result")
-        true
+      case s: ArrivalsFeedSuccess if s.arrivals.flights.head.Scheduled == SDate("2019-11-13T12:34:00Z").millisSinceEpoch => true
+      case _ => false
     }
 
     success
@@ -100,12 +99,8 @@ class GlaFeedSpec extends SpecificationLike {
     mockFeed.tickingSource.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
 
     probe.fishForMessage(1 seconds) {
-      case ArrivalsFeedSuccess(Flights(a), _) if a.size == 1 && !a.exists(_.Scheduled == SDate(dsd).millisSinceEpoch) =>
-        println(s"Successfully filtered out domestic")
-        true
-      case _ =>
-        println("Failed to filter out domestic flights in GLA Live Feed")
-        false
+      case ArrivalsFeedSuccess(Flights(a), _) if a.size == 1 && !a.exists(_.Scheduled == SDate(dsd).millisSinceEpoch) => true
+      case _ => false
     }
 
     success

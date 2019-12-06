@@ -106,7 +106,6 @@ class VoyageManifestsSpec extends CrunchTestLike {
           .filter(cm => cm.minute == SDate(scheduled).millisSinceEpoch)
           .map(cm => (cm.queue, cm.paxLoad))
           .toMap
-        println(s"QueuePax: $queuePax, Expected: $expected")
         queuePax == expected
     }
 
@@ -153,7 +152,6 @@ class VoyageManifestsSpec extends CrunchTestLike {
           .map(cm => (cm.queue, cm.paxLoad))
           .toMap
 
-        println(s"QueuePax $queuePax, expected $expected")
         queuePax == expected
     }
 
@@ -269,7 +267,6 @@ class VoyageManifestsSpec extends CrunchTestLike {
           .map(cm => (cm.queue, cm.paxLoad))
           .toMap
 
-        println(s"QueuePax $queuePax, expected $expected")
         queuePax == expected
     }
 
@@ -428,7 +425,6 @@ class VoyageManifestsSpec extends CrunchTestLike {
           .flatMap((_.values))
           .flatten
           .sum
-        println(s"pax: $queuePax")
         Math.round(queuePax) == expected
     }
 
