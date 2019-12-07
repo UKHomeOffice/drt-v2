@@ -1,6 +1,7 @@
 package services.crunch
 
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.{MilliDate, SDateLike}
 import drt.shared.Terminals.T1
 import org.specs2.mutable.Specification
 import services.SDate
@@ -117,4 +118,41 @@ class CrunchSpec extends Specification {
     val endDateTime = SDate(now)
     Crunch.isInRangeOnDay(startDateTime, endDateTime)(endDateTime) must beTrue
   }
+
+  "Given 2019-01-01T02:00 with a crunch offset of 120 minutes " +
+    "The crunch start should be 2019-01-01T02:00" >> {
+    val timeInQuestion = SDate("2019-01-01T02:00")
+    val crunchStart = crunchStartWithOffset(120)(timeInQuestion)
+
+    val expected = SDate("2019-01-01T02:00")
+
+    crunchStart.millisSinceEpoch === expected.millisSinceEpoch
+  }
+
+  "Given 2019-01-01T01:59 with a crunch offset of 120 minutes " +
+    "The crunch start should be 2018-12-31T02:00" >> {
+    val timeInQuestion = SDate("2019-01-01T01:59")
+    val crunchStart = crunchStartWithOffset(120)(timeInQuestion)
+
+    val expected = SDate("2018-12-31T02:00")
+
+    crunchStart.toISOString === expected.toISOString
+  }
+
+  "Given 2019-01-01T02:01:33 with a crunch offset of 120 minutes " +
+    "The crunch start should be 2018-12-31T02:00" >> {
+    val timeInQuestion = SDate("2019-01-01T02:01")
+    val crunchStart = crunchStartWithOffset(120)(timeInQuestion)
+
+    val expected = SDate("2019-01-01T02:00")
+
+    crunchStart.toISOString === expected.toISOString
+  }
+
+  def crunchStartWithOffset(offsetMinutes: Int)(minuteInQuestion: SDateLike): SDateLike = {
+    val adjustedMinute = minuteInQuestion.addMinutes(-1 * offsetMinutes)
+    println(s"Adjusted minute: ${adjustedMinute.toISOString}")
+    Crunch.getLocalLastMidnight(MilliDate(adjustedMinute.millisSinceEpoch)).addMinutes(offsetMinutes)
+  }
+
 }
