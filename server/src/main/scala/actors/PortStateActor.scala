@@ -67,7 +67,7 @@ class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: Askabl
       val diff = updates.applyTo(state, nowMillis)
 
       if (diff.flightMinuteUpdates.nonEmpty) flightMinutesBuffer ++= diff.flightMinuteUpdates
-      if (diff.crunchMinuteUpdates.nonEmpty) loadMinutesBuffer ++= crunchMinutesToLoads(diff).map(lm => (lm.uniqueId, lm))
+      if (diff.crunchMinuteUpdates.nonEmpty) loadMinutesBuffer ++= crunchMinutesToLoads(diff)
 
       handleCrunchRequest()
       handleSimulationRequest()
@@ -176,8 +176,8 @@ class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: Askabl
       case t => log.error(msg, t)
     }
 
-  private def crunchMinutesToLoads(diff: PortStateDiff): Iterable[LoadMinute] = diff.crunchMinuteUpdates.map {
-    case (_, cm) => LoadMinute(cm)
+  private def crunchMinutesToLoads(diff: PortStateDiff): Iterable[(TQM, LoadMinute)] = diff.crunchMinuteUpdates.map {
+    case (tqm, cm) => (tqm, LoadMinute(cm))
   }
 
   private def splitDiff(diff: PortStateDiff): (PortStateDiff, PortStateDiff) = {

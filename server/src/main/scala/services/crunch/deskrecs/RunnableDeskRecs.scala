@@ -20,11 +20,6 @@ import scala.language.postfixOps
 object RunnableDeskRecs {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def crunchStartWithOffset(offsetMinutes: Int)(minuteInQuestion: SDateLike): SDateLike = {
-    val adjustedMinute = minuteInQuestion.addMinutes(-offsetMinutes)
-    Crunch.getLocalLastMidnight(MilliDate(adjustedMinute.millisSinceEpoch)).addMinutes(offsetMinutes)
-  }
-
   def apply(portStateActor: ActorRef,
             minutesToCrunch: Int,
             airportConfig: AirportConfig,
@@ -35,7 +30,7 @@ object RunnableDeskRecs {
 
     val askablePortStateActor: AskableActorRef = portStateActor
 
-    val crunchPeriodStartMillis: SDateLike => SDateLike = crunchStartWithOffset(airportConfig.crunchOffsetMinutes)
+    val crunchPeriodStartMillis: SDateLike => SDateLike = Crunch.crunchStartWithOffset(airportConfig.crunchOffsetMinutes)
 
     val graph = GraphDSL.create(
       Source.actorRefWithAck[List[Long]](Ack).async.addAttributes(Attributes.inputBuffer(1, 1000)),
@@ -44,18 +39,17 @@ object RunnableDeskRecs {
         (daysToCrunchAsync, killSwitch) =>
           val deskRecsSink = builder.add(Sink.actorRefWithAck(portStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
           val bufferAsync = builder.add(buffer.async)
-          val parallelismLevel = 2
 
           daysToCrunchAsync.out
-            .map(_.map(min => crunchPeriodStartMillis(SDate(min)).millisSinceEpoch).toSet.toList) ~> bufferAsync
+            .map(_.map { min => crunchPeriodStartMillis(SDate(min)).millisSinceEpoch }.distinct) ~> bufferAsync
 
           bufferAsync
-            .mapAsync(parallelismLevel) { crunchStartMillis =>
-              log.info(s"Asking for flights for ${SDate(crunchStartMillis).toISOString()}")
+            .mapAsync(1) { crunchStartMillis =>
+              log.info(s"Asking for flights for ${SDate(crunchStartMillis).toISOString}")
               flightsToCrunch(askablePortStateActor)(minutesToCrunch, crunchStartMillis)
             }
             .map { case (crunchStartMillis, flights) =>
-              log.info(s"Crunching ${SDate(crunchStartMillis).toISOString()} flights: ${flights.flightsToUpdate.size}")
+              log.info(s"Crunching ${SDate(crunchStartMillis).toISOString} flights: ${flights.flightsToUpdate.size}")
               flightsToDeskRecs(flights, crunchStartMillis)
             } ~> killSwitch ~> deskRecsSink
 
