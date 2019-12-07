@@ -334,7 +334,10 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
     val initialDaysToCrunch = if (params.recrunchOnStart) {
       val today = now()
-      (0 until params.forecastMaxDays).map(d => today.addDays(d).millisSinceEpoch)
+      val millisToCrunchStart = Crunch.crunchStartWithOffset(airportConfig.crunchOffsetMinutes) _
+      (0 until params.forecastMaxDays).map(d => {
+        millisToCrunchStart(today.addDays(d)).millisSinceEpoch
+      })
     } else Iterable()
 
     val buffer = Buffer(initialDaysToCrunch)

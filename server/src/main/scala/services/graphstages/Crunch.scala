@@ -378,4 +378,10 @@ object Crunch {
 
     crunchLoads(loadsWithDiverts, crunchStartMillis, crunchEndMillis, terminals, airportConfig, crunch)
   }
+
+  def crunchStartWithOffset(offsetMinutes: Int)(minuteInQuestion: SDateLike): SDateLike = {
+    val adjustedMinute = minuteInQuestion.addMinutes(-1 * offsetMinutes)
+    Crunch.getLocalLastMidnight(MilliDate(adjustedMinute.millisSinceEpoch)).addMinutes(offsetMinutes)
+  }
+
 }

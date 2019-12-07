@@ -43,14 +43,14 @@ class SortedSetBuffer(initialValues: Iterable[Long]) extends BufferImpl[Long] {
   override def nonEmpty: Boolean = !isEmpty
 
   override def enqueue(elem: Long): Unit = {
-    log.debug(s"Adding ${SDate(elem).toISODateOnly} to ${values.map(ms => SDate(ms).toISODateOnly).mkString(", ")}")
+    log.debug(s"Adding ${SDate(elem).toISOString()} to ${values.map(ms => SDate(ms).toISOString).mkString(", ")}")
     values += elem
   }
 
   override def dequeue(): Long = {
     val nextElement = values.head
     values -= nextElement
-    log.debug(s"Removed ${SDate(nextElement).toISODateOnly} leaving ${values.map(ms => SDate(ms).toISODateOnly).mkString(", ")}")
+    log.debug(s"Removed ${SDate(nextElement).toISOString} leaving ${values.map(ms => SDate(ms).toISOString).mkString(", ")}")
     nextElement
   }
 
@@ -78,7 +78,10 @@ case class Buffer(initialValues: Iterable[Long]) extends GraphStage[FlowShape[It
       }
 
       def pushAndPullIfPossible(): Unit = {
-        if (isAvailable(out) && buffer.nonEmpty) push(out, buffer.dequeue())
+        if (isAvailable(out) && buffer.nonEmpty) {
+          val nextElement: MillisSinceEpoch = buffer.dequeue()
+          push(out, nextElement)
+        }
         if (isClosed(in)) {
           if (buffer.isEmpty) completeStage()
         } else if (!hasBeenPulled(in)) {
