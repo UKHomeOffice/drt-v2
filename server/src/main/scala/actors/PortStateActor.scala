@@ -67,10 +67,7 @@ class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: Askabl
       val diff = updates.applyTo(state, nowMillis)
 
       if (diff.flightMinuteUpdates.nonEmpty) flightMinutesBuffer ++= diff.flightMinuteUpdates
-      if (diff.crunchMinuteUpdates.nonEmpty) {
-        loadMinutesBuffer ++= crunchMinutesToLoads(diff)
-        log.info(s"Received ${diff.crunchMinuteUpdates.size} updated crunch minutes from ${SDate(diff.crunchMinuteUpdates.values.minBy(_.minute).minute).toISOString()}")
-      }
+      if (diff.crunchMinuteUpdates.nonEmpty) loadMinutesBuffer ++= crunchMinutesToLoads(diff)
 
       handleCrunchRequest()
       handleSimulationRequest()
