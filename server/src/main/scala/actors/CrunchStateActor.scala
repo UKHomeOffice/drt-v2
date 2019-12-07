@@ -103,9 +103,6 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
 
       sender() ! Ack
 
-    case ResetForecastCrunch =>
-      state.crunchMinutes.clear()
-
     case GetState =>
       log.debug(s"Received GetState request. Replying with PortState containing ${state.crunchMinutes.count} crunch minutes")
       sender() ! Option(state.immutable)

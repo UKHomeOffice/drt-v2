@@ -77,9 +77,6 @@ class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: Askabl
 
       splitDiffAndSend(diff)
 
-    case ResetForecastCrunch =>
-      forecastStateActor ? ResetForecastCrunch
-
     case SetCrunchSourceReady =>
       crunchSourceIsReady = true
       context.self ! HandleCrunchRequest
@@ -210,5 +207,3 @@ case object HandleSimulationRequest
 case object SetCrunchSourceReady
 
 case object SetSimulationSourceReady
-
-object ResetForecastCrunch
