@@ -178,7 +178,9 @@ class CrunchTestLike
                      aggregatedArrivalsActor: ActorRef = testProbe("aggregated-arrivals").ref,
                      useLegacyManifests: Boolean = false,
                      maxDaysToCrunch: Int = 2,
-                     checkRequiredStaffUpdatesOnStartup: Boolean = false
+                     checkRequiredStaffUpdatesOnStartup: Boolean = false,
+                     refreshArrivalsOnStart: Boolean = false,
+                     recrunchOnStart: Boolean = false
                     ): CrunchGraphInputsAndProbes = {
 
     val portStateProbe = testProbe("portstate")
@@ -196,11 +198,7 @@ class CrunchTestLike
     val portStateActor = createPortStateActor(portStateProbe, now)
     initialPortState.foreach(ps => portStateActor ! ps)
 
-    val flightsToDeskRecs = Crunch.flightsToDeskRecs(minutesToCrunch, airportConfig, cruncher)
-
-    val buffer = Buffer(Iterable())
-
-    val (millisToCrunchActor: ActorRef, _: UniqueKillSwitch) = RunnableDeskRecs(portStateActor, minutesToCrunch, airportConfig, flightsToDeskRecs, buffer).run()
+    val (millisToCrunchActor: ActorRef, _: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, airportConfig, now, recrunchOnStart, maxDaysToCrunch, minutesToCrunch, cruncher)
     portStateActor ! SetCrunchActor(millisToCrunchActor)
 
     val manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
@@ -253,7 +251,8 @@ class CrunchTestLike
       initialStaffMovements = initialStaffMovements,
       checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup,
       stageThrottlePer = 50 milliseconds,
-      useApiPaxNos = true
+      useApiPaxNos = true,
+      refreshArrivalsOnStart = refreshArrivalsOnStart
     ))
 
     portStateActor ! SetSimulationActor(crunchInputs.loadsToSimulate)

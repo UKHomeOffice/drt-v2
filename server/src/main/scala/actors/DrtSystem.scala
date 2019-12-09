@@ -249,7 +249,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         val initialPortState: Option[PortState] = mergePortStates(maybeForecastState, maybeLiveState)
         initialPortState.foreach(ps => portStateActor ! ps)
 
-        val (crunchSourceActor: ActorRef, _) = startCrunchGraph(portStateActor)
+        val (crunchSourceActor: ActorRef, _) = RunnableDeskRecs.start(portStateActor, airportConfig, now, params.recrunchOnStart, params.forecastMaxDays, 1440, TryRenjin.crunch)
         portStateActor ! SetCrunchActor(crunchSourceActor)
 
         val (manifestRequestsSource, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
@@ -324,23 +324,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         system.log.error(error, s"Failed to restore initial staffing state for App")
         System.exit(1)
     }
-  }
-
-  def startCrunchGraph(portStateActor: ActorRef): (ActorRef, UniqueKillSwitch) = {
-    val minutesToCrunch = 1440
-    val flightsToDeskRecs = Crunch.flightsToDeskRecs(minutesToCrunch, airportConfig, TryRenjin.crunch)
-
-    val initialDaysToCrunch = if (params.recrunchOnStart) {
-      val today = now()
-      val millisToCrunchStart = Crunch.crunchStartWithOffset(airportConfig.crunchOffsetMinutes) _
-      (0 until params.forecastMaxDays).map(d => {
-        millisToCrunchStart(today.addDays(d)).millisSinceEpoch
-      })
-    } else Iterable()
-
-    val buffer = Buffer(initialDaysToCrunch)
-
-    RunnableDeskRecs(portStateActor, minutesToCrunch, airportConfig, flightsToDeskRecs, buffer).run()
   }
 
   override def getFeedStatus: Future[Seq[FeedStatuses]] = {
@@ -423,7 +406,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       initialShifts = initialState[ShiftAssignments](shiftsActor).getOrElse(ShiftAssignments(Seq())),
       initialFixedPoints = initialState[FixedPointAssignments](fixedPointsActor).getOrElse(FixedPointAssignments(Seq())),
       initialStaffMovements = initialState[StaffMovements](staffMovementsActor).map(_.movements).getOrElse(Seq[StaffMovement]()),
-      recrunchOnStart = recrunchOnStart,
       refreshArrivalsOnStart = refreshArrivalsOnStart,
       checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup,
       stageThrottlePer = config.get[Int]("crunch.stage-throttle-millis") millisecond,

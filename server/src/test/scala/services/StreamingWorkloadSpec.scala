@@ -24,7 +24,7 @@ class StreamingWorkloadSpec extends CrunchTestLike {
   val smallDelay: Long = 66L
 
   val portStateProbe = TestProbe("port-state")
-  val flightsToDeskRecs: (FlightsWithSplits, MillisSinceEpoch) => DeskRecMinutes = (fws: FlightsWithSplits, ms: MillisSinceEpoch) => {
+  val flightsToDeskRecs: (FlightsWithSplits, MillisSinceEpoch) => DeskRecMinutes = (_: FlightsWithSplits, ms: MillisSinceEpoch) => {
     DeskRecMinutes(Seq(DeskRecMinute(T1, Queues.EeaDesk, ms, 0, 0, 0, 0)))
   }
   def newBuffer = Buffer(Iterable())
