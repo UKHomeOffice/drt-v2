@@ -91,8 +91,6 @@ object Crunch {
     val soonWithExpiredLookup = isWithinHours(scheduled, 48, now) && !wasWithinHours(lastLookupMillis, 24, now)
     val notSoonWithExpiredLookup = !isWithinHours(scheduled, 48, now) && !wasWithinHours(lastLookupMillis, 24 * 7, now)
 
-    println(s"soonWithExpiredLookup: $soonWithExpiredLookup, notSoonWithExpiredLookup: $notSoonWithExpiredLookup")
-
     soonWithExpiredLookup || notSoonWithExpiredLookup
   }
 

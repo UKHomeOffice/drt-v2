@@ -114,7 +114,7 @@ case class DrtConfigParameters(config: Configuration) {
     log.warn("Refresh arrivals flag is active. Turning on historic manifest refresh")
     true
   } else config.getOptional[Boolean]("crunch.manifests.reset-registered-arrivals-on-start").getOrElse(false)
-  
+
   val useNationalityBasedProcessingTimes: Boolean = config.getOptional[String]("feature-flags.nationality-based-processing-times").isDefined
 
   val manifestLookupBatchSize: Int = config.getOptional[Int]("crunch.manifests.lookup-batch-size").getOrElse(10)
