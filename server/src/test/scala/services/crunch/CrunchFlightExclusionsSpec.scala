@@ -52,7 +52,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
         resultSummary == expected
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }
@@ -94,7 +94,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
         resultSummary == expected
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }

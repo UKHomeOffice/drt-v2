@@ -65,7 +65,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         nonZeroQueues == expectedNonZeroQueues
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }
@@ -110,7 +110,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         queuePax == expected
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }
@@ -156,7 +156,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         queuePax == expected
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }
@@ -271,7 +271,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         queuePax == expected
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }

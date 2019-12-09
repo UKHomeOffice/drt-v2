@@ -57,7 +57,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
           arrivals == expectedArrivals
       }
 
-      crunch.liveArrivalsInput.complete()
+      crunch.shutdown
 
       success
     }
@@ -80,7 +80,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
           portStateSources == expected
       }
 
-      crunch.liveArrivalsInput.complete()
+      crunch.shutdown
 
       success
     }
@@ -108,7 +108,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
           portStateSources == expected
       }
 
-      crunch.liveArrivalsInput.complete()
+      crunch.shutdown
 
       success
     }
@@ -131,7 +131,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
           intExists && domDoesNotExist
       }
 
-      crunch.liveArrivalsInput.complete()
+      crunch.shutdown
 
       success
     }

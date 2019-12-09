@@ -352,7 +352,7 @@ class AclFeedSpec extends CrunchTestLike {
           flightsResult == expected
       }
 
-      crunch.liveArrivalsInput.complete()
+      crunch.shutdown
 
       success
     }
@@ -383,7 +383,7 @@ class AclFeedSpec extends CrunchTestLike {
           flightsResult == expected
       }
 
-      crunch.liveArrivalsInput.complete()
+      crunch.shutdown
 
       success
     }
@@ -416,7 +416,7 @@ class AclFeedSpec extends CrunchTestLike {
           flightsResult == expected
       }
 
-      crunch.liveArrivalsInput.complete()
+      crunch.shutdown
 
       success
     }
@@ -450,7 +450,7 @@ class AclFeedSpec extends CrunchTestLike {
           flightsResult == expected
       }
 
-      crunch.liveArrivalsInput.complete()
+      crunch.shutdown
 
       success
     }
@@ -487,7 +487,7 @@ class AclFeedSpec extends CrunchTestLike {
           flightsResult == expected
       }
 
-      crunch.liveArrivalsInput.complete()
+      crunch.shutdown
 
       success
     }
@@ -514,7 +514,7 @@ class AclFeedSpec extends CrunchTestLike {
       val nonEmptyFlightsList = List(aclArrival.copy(FeedSources = Set(AclFeedSource)))
       val expected = List(nonEmptyFlightsList)
 
-      crunch.liveArrivalsInput.complete()
+      crunch.shutdown
 
       portStateFlightLists.distinct === expected
     }

@@ -59,7 +59,7 @@ class PlanningPageSpec() extends CrunchTestLike {
         firstDayFirstHour == expected
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }

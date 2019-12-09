@@ -51,7 +51,7 @@ class StaffMinutesSpec extends CrunchTestLike {
         (staffMillis, staff) == Tuple2(expectedMillis, expectedStaff)
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }
@@ -102,7 +102,7 @@ class StaffMinutesSpec extends CrunchTestLike {
         staffAvailable == expectedStaffAvailable
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }
@@ -137,7 +137,7 @@ class StaffMinutesSpec extends CrunchTestLike {
         actualAvailableAndMovements == expectedStaffAvailableAndMovements
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }
@@ -177,7 +177,7 @@ class StaffMinutesSpec extends CrunchTestLike {
         actualAvailableAndMovements == expectedStaffAvailableAndMovements
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }
@@ -224,7 +224,7 @@ class StaffMinutesSpec extends CrunchTestLike {
         staffMovements == expectedStaffMovements
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }
@@ -297,7 +297,7 @@ class StaffMinutesSpec extends CrunchTestLike {
         deployments == expectedCrunchDeployments
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }
@@ -345,7 +345,7 @@ class StaffMinutesSpec extends CrunchTestLike {
         fixedPoints == expectedFixedPoints
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }
@@ -409,7 +409,7 @@ class StaffMinutesSpec extends CrunchTestLike {
         deployments == expectedCrunchDeployments
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }
@@ -478,7 +478,7 @@ class StaffMinutesSpec extends CrunchTestLike {
         deployments == expectedCrunchDeployments
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }
@@ -515,7 +515,7 @@ class StaffMinutesSpec extends CrunchTestLike {
         actualMinutes == expectedStaffMinutes
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }
@@ -562,7 +562,7 @@ class StaffMinutesSpec extends CrunchTestLike {
         actualMinutes == expectedStaffMinutes
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }

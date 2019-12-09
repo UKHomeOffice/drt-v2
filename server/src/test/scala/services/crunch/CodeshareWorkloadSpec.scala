@@ -52,7 +52,7 @@ class CodeshareWorkloadSpec extends CrunchTestLike {
         minute1paxCorrect && minute2paxCorrect
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }
