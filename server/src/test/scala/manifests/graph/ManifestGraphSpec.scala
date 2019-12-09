@@ -2,6 +2,7 @@ package manifests.graph
 
 import akka.NotUsed
 import akka.pattern.pipe
+import akka.stream.UniqueKillSwitch
 import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
@@ -41,12 +42,14 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
 
     val testArrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-03-06T12:00:00Z")
 
-    val (sink, source) = createAndRunGraph(registeredArrivalSinkProbe, testManifest, None, Crunch.isDueLookup, now = () => SDate("2019-03-06T11:00:00Z"))
+    val (killSwitch, sink, source) = createAndRunGraph(registeredArrivalSinkProbe, testManifest, None, Crunch.isDueLookup, now = () => SDate("2019-03-06T11:00:00Z"))
     Source(List(List(testArrival))).runWith(sink)
 
     source.runWith(Sink.seq).pipeTo(manifestSinkProbe.ref)
 
     manifestSinkProbe.expectMsg(2 seconds, List(List(testManifest)))
+
+    killSwitch.shutdown()
 
     success
   }
@@ -71,7 +74,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
 
     val lastLookup = scheduled.millisSinceEpoch
 
-    val (requestSink, responseSource) = createAndRunGraph(
+    val (killSwitch, requestSink, responseSource) = createAndRunGraph(
       registeredArrivalSinkProbe,
       testManifest,
       Some(RegisteredArrivals(mutable.SortedMap(ArrivalKey(testArrival) -> Option(lastLookup)))),
@@ -81,6 +84,8 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
     Source(List(List(testArrival))).runWith(requestSink)
 
     val responses = Await.result(responseSource.runWith(Sink.seq), 2 second)
+
+    killSwitch.shutdown()
 
     responses.isEmpty
   }
@@ -105,7 +110,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
 
     val lastLookup = scheduled.addDays(-100).millisSinceEpoch
 
-    val (requestSink, responseSource) = createAndRunGraph(
+    val (killSwitch, requestSink, responseSource) = createAndRunGraph(
       registeredArrivalSinkProbe,
       testManifest,
       Some(RegisteredArrivals(mutable.SortedMap(ArrivalKey(testArrival) -> Option(lastLookup)))),
@@ -116,6 +121,8 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
 
     val responses = Await.result(responseSource.runWith(Sink.seq), 2 second)
 
+    killSwitch.shutdown()
+
     responses.nonEmpty
   }
 
@@ -124,6 +131,17 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
     val now = SDate("2019-01-01")
     val scheduled = now.addHours(1)
     val lastLookup = now.addDays(-100)
+
+    val result = Crunch.isDueLookup(scheduled.millisSinceEpoch, lastLookup.millisSinceEpoch, now)
+
+    result === true
+  }
+
+  "Given a lookup time 8 days ago, and a scheduled date in 3 days time " +
+    "isDueLookup should return true" >> {
+    val now = SDate("2019-01-01")
+    val scheduled = now.addDays(3)
+    val lastLookup = now.addDays(-8)
 
     val result = Crunch.isDueLookup(scheduled.millisSinceEpoch, lastLookup.millisSinceEpoch, now)
 
@@ -145,7 +163,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
                         testManifest: BestAvailableManifest,
                         initialRegisteredArrivals: Option[RegisteredArrivals],
                         isDueLookup: (MillisSinceEpoch, MillisSinceEpoch, SDateLike) => Boolean,
-                        now: () => SDateLike): (Sink[List[Arrival], NotUsed], Source[List[BestAvailableManifest], NotUsed]) = {
+                        now: () => SDateLike): (UniqueKillSwitch, Sink[List[Arrival], NotUsed], Source[List[BestAvailableManifest], NotUsed]) = {
     val expireAfterMillis = (3 hours).length
 
     val batchStage = new BatchStage(now, isDueLookup, 1, expireAfterMillis, initialRegisteredArrivals, 0, (_: MillisSinceEpoch) => true)
@@ -153,7 +171,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
     val (manifestRequestsSource, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
     val (manifestResponsesSource, _, manifestResponsesSink) = SinkToSourceBridge[List[BestAvailableManifest]]
 
-    ManifestsGraph(
+    val killSwitch: UniqueKillSwitch = ManifestsGraph(
       manifestRequestsSource,
       batchStage,
       manifestResponsesSink,
@@ -162,6 +180,6 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
       MockManifestLookupService(testManifest)
     ).run()
 
-    (manifestRequestsSink, manifestResponsesSource)
+    (killSwitch, manifestRequestsSink, manifestResponsesSource)
   }
 }

@@ -64,7 +64,21 @@ case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete
                                       forecastArrivalsTestProbe: TestProbe,
                                       liveArrivalsTestProbe: TestProbe,
                                       aggregatedArrivalsActor: ActorRef,
-                                      portStateActor: ActorRef)
+                                      portStateActor: ActorRef,
+                                      deskRecsGraphKillSwitch: UniqueKillSwitch) {
+  def shutdown: Unit = {
+    baseArrivalsInput.complete()
+    forecastArrivalsInput.complete()
+    liveArrivalsInput.complete()
+    manifestsLiveInput.complete()
+    shiftsInput.complete()
+    fixedPointsInput.complete()
+    liveStaffMovementsInput.complete()
+    forecastStaffMovementsInput.complete()
+    actualDesksAndQueuesInput.complete()
+    deskRecsGraphKillSwitch.shutdown()
+  }
+}
 
 
 object H2Tables extends {
@@ -198,7 +212,7 @@ class CrunchTestLike
     val portStateActor = createPortStateActor(portStateProbe, now)
     initialPortState.foreach(ps => portStateActor ! ps)
 
-    val (millisToCrunchActor: ActorRef, _: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, airportConfig, now, recrunchOnStart, maxDaysToCrunch, minutesToCrunch, cruncher)
+    val (millisToCrunchActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, airportConfig, now, recrunchOnStart, maxDaysToCrunch, minutesToCrunch, cruncher)
     portStateActor ! SetCrunchActor(millisToCrunchActor)
 
     val manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
@@ -272,7 +286,8 @@ class CrunchTestLike
       forecastArrivalsTestProbe = forecastArrivalsProbe,
       liveArrivalsTestProbe = liveArrivalsProbe,
       aggregatedArrivalsActor = aggregatedArrivalsActor,
-      portStateActor = portStateActor
+      portStateActor = portStateActor,
+      deskRecsGraphKillSwitch = deskRecsKillSwitch
     )
   }
 

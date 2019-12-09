@@ -37,6 +37,7 @@ import manifests.graph.{BatchStage, ManifestsGraph}
 import manifests.passengers.{BestAvailableManifest, S3ManifestPoller}
 import org.apache.spark.sql.SparkSession
 import org.joda.time.DateTimeZone
+import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse}
@@ -88,6 +89,8 @@ object PostgresTables extends {
 } with Tables
 
 case class DrtConfigParameters(config: Configuration) {
+  val log: Logger = LoggerFactory.getLogger(getClass)
+
   val forecastMaxDays: Int = config.get[Int]("crunch.forecast.max_days")
   val aclPollMinutes: Int = config.get[Int]("crunch.forecast.poll_minutes")
   val snapshotIntervalVm: Int = config.getOptional[Int]("persistence.snapshot-interval.voyage-manifest").getOrElse(1000)
@@ -107,7 +110,11 @@ case class DrtConfigParameters(config: Configuration) {
   val path: String = ConfigFactory.load.getString("acl.keypath")
   val refreshArrivalsOnStart: Boolean = config.getOptional[Boolean]("crunch.refresh-arrivals-on-start").getOrElse(false)
   val recrunchOnStart: Boolean = config.getOptional[Boolean]("crunch.recrunch-on-start").getOrElse(false)
-  val resetRegisteredArrivalOnStart: Boolean = config.getOptional[Boolean]("crunch.manifests.reset-registered-arrivals-on-start").getOrElse(false)
+  val resetRegisteredArrivalOnStart: Boolean = if (refreshArrivalsOnStart) {
+    log.warn("Refresh arrivals flag is active. Turning on historic manifest refresh")
+    true
+  } else config.getOptional[Boolean]("crunch.manifests.reset-registered-arrivals-on-start").getOrElse(false)
+
   val useNationalityBasedProcessingTimes: Boolean = config.getOptional[String]("feature-flags.nationality-based-processing-times").isDefined
 
   val manifestLookupBatchSize: Int = config.getOptional[Int]("crunch.manifests.lookup-batch-size").getOrElse(10)

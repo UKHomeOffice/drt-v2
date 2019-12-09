@@ -53,7 +53,7 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
         flightsAfterUpdate == expectedFlights
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }
@@ -93,7 +93,7 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
         flightsAfterUpdate == expectedFlights
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }

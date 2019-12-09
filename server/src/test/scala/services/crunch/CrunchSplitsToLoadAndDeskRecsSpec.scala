@@ -61,7 +61,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           resultSummary == expected
       }
 
-      crunch.liveArrivalsInput.complete()
+      crunch.shutdown
 
       success
     }
@@ -92,7 +92,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           resultSummary == expected
       }
 
-      crunch.liveArrivalsInput.complete()
+      crunch.shutdown
 
       success
     }
@@ -138,7 +138,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           resultSummary == expected
       }
 
-      crunch.liveArrivalsInput.complete()
+      crunch.shutdown
 
       success
     }
@@ -178,7 +178,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             resultSummary == expected
         }
 
-        crunch.liveArrivalsInput.complete()
+        crunch.shutdown
 
         success
       }
@@ -224,7 +224,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             resultSummary == expected
         }
 
-        crunch.liveArrivalsInput.complete()
+        crunch.shutdown
 
         success
       }

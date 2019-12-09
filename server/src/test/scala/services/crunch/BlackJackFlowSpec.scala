@@ -59,7 +59,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
         actDesks == expected
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }
@@ -107,7 +107,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
         actDesks == expected
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }

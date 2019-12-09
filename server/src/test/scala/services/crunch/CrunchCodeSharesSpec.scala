@@ -50,7 +50,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
           resultSummary == expected
       }
 
-      crunch.liveArrivalsInput.complete()
+      crunch.shutdown
 
       success
     }
@@ -90,7 +90,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
           resultSummary == expected
       }
 
-      crunch.liveArrivalsInput.complete()
+      crunch.shutdown
 
       success
     }

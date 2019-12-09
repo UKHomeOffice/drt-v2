@@ -63,7 +63,7 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
         firstDayFirstHour == expected
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }
