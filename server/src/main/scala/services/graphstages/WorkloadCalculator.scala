@@ -24,7 +24,7 @@ object WorkloadCalculator {
     val minutes = new SplitMinutes
 
     uniqueFlights
-      .filter(fws => !isCancelled(fws) && defaultProcTimes.contains(fws.apiFlight.Terminal))
+      .filter(fws => !fws.apiFlight.isCancelled && defaultProcTimes.contains(fws.apiFlight.Terminal))
       .foreach { incoming =>
         val procTimes = defaultProcTimes(incoming.apiFlight.Terminal)
         val flightMinutes = flightToFlightSplitMinutes(incoming, procTimes, Map(), false)
@@ -32,12 +32,6 @@ object WorkloadCalculator {
       }
 
     minutes
-  }
-
-  def isCancelled(f: ApiFlightWithSplits): Boolean = {
-    val cancelled = f.apiFlight.Status.description == "Cancelled"
-    if (cancelled) log.info(s"No workload for cancelled flight ${f.apiFlight.flightCode}")
-    cancelled
   }
 
   def flightToFlightSplitMinutes(flightWithSplits: ApiFlightWithSplits,

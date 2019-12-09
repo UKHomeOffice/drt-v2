@@ -208,7 +208,7 @@ object FlightTableRow {
 
       <.tr(
         ^.key := flight.uniqueId.toString,
-        ^.className := s"${offScheduleClass(flight)} $timeIndicatorClass",
+        ^.className := s"${offScheduleClass(flight)} $timeIndicatorClass${if (flight.isCancelled) " arrival-cancelled" else ""}",
         hasChangedStyle,
         props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
         flightFields,
