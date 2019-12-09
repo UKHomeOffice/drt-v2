@@ -373,6 +373,13 @@ case class Arrival(Operator: Option[Operator],
   }
 
   lazy val unique: UniqueArrival = UniqueArrival(VoyageNumber.numeric, Terminal, Scheduled)
+
+  def isCancelled: Boolean = Status.description match {
+    case st if st.toLowerCase.contains("cancelled") => true
+    case st if st.toLowerCase.contains("canceled") => true
+    case st if st.toLowerCase.contains("deleted") => true
+    case _ => false
+  }
 }
 
 object Arrival {
