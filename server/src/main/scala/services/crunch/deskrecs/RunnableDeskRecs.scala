@@ -4,14 +4,14 @@ import actors.acking.AckingReceiver._
 import akka.actor.ActorRef
 import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
-import akka.stream.{Attributes, ClosedShape, KillSwitches, UniqueKillSwitch}
+import akka.stream._
 import akka.util.Timeout
 import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.SDate
 import services.graphstages.{Buffer, Crunch}
+import services.{SDate, TryCrunch, TryRenjin}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -69,6 +69,24 @@ object RunnableDeskRecs {
         log.error("Failed to fetch flights from PortStateActor", t)
         Future((crunchStartMillis, FlightsWithSplits(List(), List())))
     }
+
+  def start(portStateActor: ActorRef, airportConfig: AirportConfig, now: () => SDateLike, recrunchOnStart: Boolean, forecastMaxDays: Int, minutesPerDay: Int, tryCrunch: TryCrunch)
+           (implicit ec: ExecutionContext, mat: Materializer): (ActorRef, UniqueKillSwitch) = {
+    val flightsToDeskRecs = Crunch.flightsToDeskRecs(minutesPerDay, airportConfig, tryCrunch)
+
+    val initialDaysToCrunch = if (recrunchOnStart) {
+      val today = now()
+      val millisToCrunchStart = Crunch.crunchStartWithOffset(airportConfig.crunchOffsetMinutes) _
+      (0 until forecastMaxDays).map(d => {
+        millisToCrunchStart(today.addDays(d)).millisSinceEpoch
+      })
+    } else Iterable()
+
+    val buffer = Buffer(initialDaysToCrunch)
+
+    RunnableDeskRecs(portStateActor, minutesPerDay, airportConfig, flightsToDeskRecs, buffer).run()
+  }
+
 }
 
 case class GetFlights(from: MillisSinceEpoch, to: MillisSinceEpoch)

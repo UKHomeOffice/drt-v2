@@ -53,7 +53,7 @@ class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: Askabl
       state.crunchMinutes ++= ps.crunchMinutes
       state.staffMinutes ++= ps.staffMinutes
       state.flights ++= ps.flights
-      log.info(s"Finished setting state")
+      log.info(s"Finished setting state (${state.crunchMinutes.all.size} crunch minutes, ${state.staffMinutes.all.size} staff minutes, ${state.flights.all.size} flights)")
 
     case StreamInitialized => sender() ! Ack
 
