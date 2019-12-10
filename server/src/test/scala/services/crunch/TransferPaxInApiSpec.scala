@@ -36,7 +36,8 @@ class TransferPaxInApiSpec extends CrunchTestLike {
         B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
       )
     ),
-    terminals = Seq(T1)
+    terminals = Seq(T1),
+    hasTransfer = true
   )
 
   "Given a flight with transfer passengers " +
@@ -122,7 +123,7 @@ class TransferPaxInApiSpec extends CrunchTestLike {
 
     val expected = 1
 
-    crunch.portStateTestProbe.fishForMessage(1000 seconds) {
+    crunch.portStateTestProbe.fishForMessage(1 seconds) {
       case ps: PortState =>
         val totalPaxAtPCP = paxLoadsFromPortState(ps, 1, 0)
           .values
