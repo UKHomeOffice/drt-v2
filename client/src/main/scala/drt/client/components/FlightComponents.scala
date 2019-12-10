@@ -9,26 +9,17 @@ import org.scalajs.dom.html.Div
 
 object FlightComponents {
 
-  def paxComp(flightWithSplits: ApiFlightWithSplits): TagMod = {
+  def paxComp(flightWithSplits: ApiFlightWithSplits): TagMod = <.div(
+    ^.title := paxComponentTitle(flightWithSplits.apiFlight),
+    ^.className := "right",
+    ArrivalHelper.bestPax(flightWithSplits.apiFlight)
+  )
 
-    val flight = flightWithSplits.apiFlight
-
-    <.div(
-      <.div(
-        ^.title := paxComponentTitle(flight),
-        ^.className := "pax-cell",
-        <.div(^.className := "right", ArrivalHelper.bestPax(flight))
-      )
-    )
-  }
-
-  def paxClassFromSplits(flightWithSplits: ApiFlightWithSplits): String = {
-    flightWithSplits.bestSplits match {
-      case Some(Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) => "pax-api"
-      case Some(Splits(_, SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages, _, _)) => "pax-predicted"
-      case Some(Splits(_, SplitSources.Historical, _, _)) => "pax-portfeed"
-      case _ => "pax-unknown"
-    }
+  def paxClassFromSplits(flightWithSplits: ApiFlightWithSplits): String = flightWithSplits.bestSplits match {
+    case Some(Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) => "pax-api"
+    case Some(Splits(_, SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages, _, _)) => "pax-predicted"
+    case Some(Splits(_, SplitSources.Historical, _, _)) => "pax-portfeed"
+    case _ => "pax-unknown"
   }
 
 

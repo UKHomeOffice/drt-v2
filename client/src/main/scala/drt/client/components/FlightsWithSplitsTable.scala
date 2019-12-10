@@ -192,7 +192,7 @@ object FlightTableRow {
         (Option("est-chox"), localDateTimeWithPopup(flight.EstimatedChox)),
         (None, localDateTimeWithPopup(flight.ActualChox)),
         (None, pcpTimeRange(flight, ArrivalHelper.bestPax)),
-        (Option("right"), props.paxComponent(flightWithSplits))
+        (None, props.paxComponent(flightWithSplits))
       )
         .filterNot {
           case (Some("est-chox"), _) if !props.hasEstChox => true
