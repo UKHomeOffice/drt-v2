@@ -74,7 +74,7 @@ class TransferPaxInApiSpec extends CrunchTestLike {
         totalPaxAtPCP == expected
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }
@@ -134,7 +134,7 @@ class TransferPaxInApiSpec extends CrunchTestLike {
         totalPaxAtPCP == expected
     }
 
-    crunch.liveArrivalsInput.complete()
+    crunch.shutdown
 
     success
   }
