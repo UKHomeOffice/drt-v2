@@ -120,7 +120,7 @@ object FlightsTableTests extends TestSuite {
                   <.td(<.span(^.title := "2016-01-01 13:15", "13:15"), ^.className := "est-chox"),
                   <.td(<.span(^.title := "2016-01-01 13:20", "13:20")),
                   <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:37", "13:37"))),
-                  <.td(testFlight.ActPax.getOrElse(0).toInt, ^.className := "right"),
+                  <.td(s"${testFlight.ActPax.getOrElse(0)}"),
                   <.td(<.span(0), ^.className := "queue-split pax-unknown right"),
                   <.td(<.span(0), ^.className := "queue-split pax-unknown right"),
                   <.td(<.span(0), ^.className := "queue-split pax-unknown right")))))
@@ -156,7 +156,7 @@ object FlightsTableTests extends TestSuite {
                     date(testFlight.EstimatedChox, Option("est-chox")),
                     date(testFlight.ActualChox),
                     <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:37", "13:37"))),
-                    <.td(testFlight.ActPax.getOrElse(0).toInt, ^.className := "right"),
+                    <.td(s"${testFlight.ActPax.getOrElse(0)}"),
                     <.td(<.span(0), ^.className := "queue-split pax-unknown right"),
                     <.td(<.span(0), ^.className := "queue-split pax-unknown right"),
                     <.td(<.span(0), ^.className := "queue-split pax-unknown right")))))
@@ -191,7 +191,7 @@ object FlightsTableTests extends TestSuite {
                     date(testFlight.EstimatedChox, Option("est-chox")),
                     date(testFlight.ActualChox),
                     <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:37", "13:37"))),
-                    <.td(testFlight.ActPax.getOrElse(0).toInt, ^.className := "right"),
+                    <.td(s"${testFlight.ActPax.getOrElse(0)}"),
                     <.td(<.span(0), ^.className := "queue-split pax-unknown right"),
                     <.td(<.span(0), ^.className := "queue-split pax-unknown right"),
                     <.td(<.span(0), ^.className := "queue-split pax-unknown right")))))
@@ -257,7 +257,7 @@ object FlightsTableTests extends TestSuite {
                   date(testFlightT.EstimatedChox, Option("est-chox")),
                   date(testFlightT.ActualChox),
                   <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:36", "13:36"))),
-                  <.td(<.div(paxToDisplay, ^.className := "pax-portfeed", ^.width := s"$width%"), ^.className := "right"),
+                  <.td(<.div(paxToDisplay, ^.className := "pax-portfeed", ^.width := s"$width%")),
                   <.td(<.span(0), ^.className := "queue-split pax-unknown right"),
                   <.td(<.span(0), ^.className := "queue-split pax-unknown right"),
                   <.td(<.span(0), ^.className := "queue-split pax-unknown right")
