@@ -149,7 +149,7 @@ object ShiftsServiceTests extends TestSuite {
 
         "StaffAssignment to csv string representation" - {
           "Given a shift when I ask for a csv string then I should get a string with the fields separated by commas" - {
-            val shiftTry: Try[StaffAssignment] = StaffAssignmentHelper.tryStaffAssignment("My shift", T1.toString, "01/01/17", "08:00", "11:59", "2")
+            val shiftTry: Try[StaffAssignment] = StaffAssignmentHelper.tryStaffAssignment("My shift", T1.toString, "01/01/17", "08:00", "11:59", "2", None)
             val shift = shiftTry.get
 
             val csvString = StaffAssignmentHelper.toCsv(shift)
@@ -208,7 +208,7 @@ object ShiftsServiceTests extends TestSuite {
     val lines = shiftsRawTsv.split("\n")
     val parsedShifts = lines.map(l => l.split("\t"))
       .filter(_.length == 5)
-      .map(pl => StaffAssignmentHelper.tryStaffAssignment(pl(0), pl(1), pl(2), pl(3), pl(4)))
+      .map(pl => StaffAssignmentHelper.tryStaffAssignment(pl(0), pl(1), pl(2), pl(3), pl(4), "1", None))
     parsedShifts
   }
 }

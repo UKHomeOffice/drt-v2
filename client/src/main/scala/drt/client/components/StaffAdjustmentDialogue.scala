@@ -26,8 +26,7 @@ case class StaffAdjustmentDialogueState(action: String,
                                         date: String,
                                         startTimeHours: Int,
                                         startTimeMinutes: Int,
-                                        endTimeHours: Int,
-                                        endTimeMinutes: Int,
+                                        lengthOfTimeMinutes: Int,
                                         numberOfStaff: String,
                                         loggedInUser: LoggedInUser) {
   def isApplicableToSlot(slotStart: SDateLike, slotEnd: SDateLike): Boolean = {
@@ -49,7 +48,7 @@ object StaffAdjustmentDialogueState {
             terminal: Option[Terminal],
             reasonPlaceholder: String,
             startDate: SDateLike,
-            endDate: SDateLike,
+            timeLengthMinutes: Int,
             action: String,
             numberOfStaff: Int,
             loggedInUser: LoggedInUser): StaffAdjustmentDialogueState =
@@ -62,8 +61,7 @@ object StaffAdjustmentDialogueState {
       date = f"${startDate.getDate()}%02d/${startDate.getMonth()}%02d/${startDate.getFullYear - 2000}%02d",
       startTimeHours = startDate.getHours(),
       startTimeMinutes = roundToNearest(5)(startDate.getMinutes()),
-      endTimeHours = endDate.getHours(),
-      endTimeMinutes = roundToNearest(5)(endDate.getMinutes()),
+      lengthOfTimeMinutes = timeLengthMinutes,
       numberOfStaff = numberOfStaff.toString,
       loggedInUser = loggedInUser
     )
@@ -98,11 +96,10 @@ object StaffAdjustmentDialogue {
 
       def trySaveMovement(): Unit = {
         val startTime: String = f"${state.startTimeHours}%02d:${state.startTimeMinutes}%02d"
-        val endTime: String = f"${state.endTimeHours}%02d:${state.endTimeMinutes}%02d"
         val numberOfStaff: String = s"${state.action}${state.numberOfStaff.toString}"
 
         StaffAssignmentHelper
-          .tryStaffAssignment(state.reason, state.terminal.toString, state.date, startTime, endTime, numberOfStaff, createdBy = Some(state.loggedInUser.email)) match {
+          .tryStaffAssignment(state.reason, state.terminal.toString, state.date, startTime, state.lengthOfTimeMinutes, numberOfStaff, createdBy = Option(state.loggedInUser.email)) match {
           case Success(movement) =>
             val movementsToAdd = for (movement <- StaffMovements.assignmentsToMovements(Seq(movement))) yield movement
             SPACircuit.dispatch(AddStaffMovements(movementsToAdd))
@@ -129,7 +126,7 @@ object StaffAdjustmentDialogue {
           <.div(^.className := "col-sm-4", xs.toTagMod))
       }
 
-      def timeSelector(label: String,
+      def hourMinuteSelector(label: String,
                        hourDefault: Int,
                        minuteDefault: Int,
                        hourCallback: String => StaffAdjustmentDialogueState => StaffAdjustmentDialogueState,
@@ -145,17 +142,23 @@ object StaffAdjustmentDialogue {
         )
       }
 
+      def timeSelector(label: String,
+                       minutesDefault: Int,
+                       minutesCallback: String => StaffAdjustmentDialogueState => StaffAdjustmentDialogueState
+                      ): VdomTagOf[Div] = {
+        popoverFormRow(label, selectFromRange(15 to 120 by 15, minutesDefault, minutesCallback, x => x))
+      }
+
       def killPopover(): Unit = SPACircuit.dispatch(UpdateStaffAdjustmentDialogueState(None))
 
       <.div(<.div(^.className := "popover-overlay", ^.onClick --> Callback(killPopover())),
         <.div(^.className := "container", ^.id := "staff-adjustment-dialogue", ^.onClick ==> ((e: ReactEvent) => Callback(e.stopPropagation())), ^.key := "StaffAdjustments",
           labelledInput("Reason", state.reason, (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(reason = v)),
-          timeSelector("Start time", state.startTimeHours, state.startTimeMinutes,
+          hourMinuteSelector("Start time", state.startTimeHours, state.startTimeMinutes,
             (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(startTimeHours = v.toInt),
             (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(startTimeMinutes = v.toInt)),
-          timeSelector("End time", state.endTimeHours, state.endTimeMinutes,
-            (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(endTimeHours = v.toInt),
-            (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(endTimeMinutes = v.toInt)),
+
+          timeSelector("Length of time", state.lengthOfTimeMinutes, (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(lengthOfTimeMinutes = v.toInt)),
           popoverFormRow("Number of staff", <.input.text(^.value := state.numberOfStaff.toString, ^.onChange ==> ((e: ReactEventFromInput) => {
             val newStaff = e.target.value
             val updatedState = state.copy(numberOfStaff = newStaff)

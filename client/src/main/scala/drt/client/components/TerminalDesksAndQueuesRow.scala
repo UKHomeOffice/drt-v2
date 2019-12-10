@@ -121,7 +121,7 @@ object TerminalDesksAndQueuesRow {
       Option(props.terminal),
       "Staff " + label + "...",
       SDate(props.minuteMillis),
-      SDate(props.minuteMillis).addHours(1),
+      60,
       action,
       1,
       props.loggedInUser
