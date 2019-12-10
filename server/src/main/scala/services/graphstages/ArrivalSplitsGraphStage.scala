@@ -131,7 +131,10 @@ class ArrivalSplitsGraphStage(name: String = "",
       val flightWithAvailableApiData = liveApiSplits match {
         case Some(splits) =>
           if (useApiPaxNos)
-            flight.copy(FeedSources = flight.FeedSources + ApiFeedSource, ApiPax = Option(Math.round(splits.totalPax).toInt))
+            flight.copy(
+              FeedSources = flight.FeedSources + ApiFeedSource,
+              ApiPax = Option(Math.round(splits.totalExcludingTransferPax).toInt)
+            )
           else
             flight.copy(FeedSources = flight.FeedSources + ApiFeedSource)
         case _ => flight

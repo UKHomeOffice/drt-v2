@@ -114,6 +114,7 @@ object Lhr extends AirportConfigLike {
         EGate -> 0.8466,
         EeaDesk -> (1.0 - 0.8466)
       )))
-    )
+    ),
+    hasTransfer = true
   )
 }

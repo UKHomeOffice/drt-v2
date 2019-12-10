@@ -8,7 +8,7 @@ import manifests.passengers.BestAvailableManifest
 import manifests.queues.FastTrackFromCSV
 
 
-trait QueueAllocator {
+trait   QueueAllocator {
   def queueRatios: Map[Terminal, Map[PaxType, Seq[(Queue, Double)]]]
 
   def queueRatio(terminal: Terminal, paxType: PaxType): Seq[(Queue, Double)] = queueRatios.getOrElse(terminal, Map()).getOrElse(paxType, Seq())

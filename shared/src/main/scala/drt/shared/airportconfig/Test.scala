@@ -48,6 +48,7 @@ object Test extends AirportConfigLike {
         EGate -> 0.7968,
         EeaDesk -> (1.0 - 0.7968)
       )))
-    )
+    ),
+    hasTransfer = true
   )
 }
