@@ -30,9 +30,23 @@ describe('Arrivals page', () => {
     "PersonType": "P",
     "DocumentLevel": "Primary",
     "Age": "30",
-    "DisembarkationPortCode": "",
+    "DisembarkationPortCode": "TST",
     "InTransitFlag": "N",
-    "DisembarkationPortCountryCode": "",
+    "DisembarkationPortCountryCode": "TST",
+    "NationalityCountryEEAFlag": "EEA",
+    "PassengerIdentifier": "",
+    "DocumentType": "Passport",
+    "PoavKey": "1",
+    "NationalityCountryCode": "GBR"
+  };
+  const inTransitPassenger = {
+    "DocumentIssuingCountryCode": "GBR",
+    "PersonType": "P",
+    "DocumentLevel": "Primary",
+    "Age": "30",
+    "DisembarkationPortCode": "TST",
+    "InTransitFlag": "Y",
+    "DisembarkationPortCountryCode": "TST",
     "NationalityCountryEEAFlag": "EEA",
     "PassengerIdentifier": "",
     "DocumentType": "Passport",
@@ -44,9 +58,9 @@ describe('Arrivals page', () => {
     "PersonType": "P",
     "DocumentLevel": "Primary",
     "Age": "30",
-    "DisembarkationPortCode": "",
+    "DisembarkationPortCode": "TST",
     "InTransitFlag": "N",
-    "DisembarkationPortCountryCode": "",
+    "DisembarkationPortCountryCode": "TST",
     "NationalityCountryEEAFlag": "",
     "PassengerIdentifier": "",
     "DocumentType": "P",
@@ -58,9 +72,9 @@ describe('Arrivals page', () => {
     "PersonType": "P",
     "DocumentLevel": "Primary",
     "Age": "30",
-    "DisembarkationPortCode": "",
+    "DisembarkationPortCode": "TST",
     "InTransitFlag": "N",
-    "DisembarkationPortCountryCode": "",
+    "DisembarkationPortCountryCode": "TST",
     "NationalityCountryEEAFlag": "",
     "PassengerIdentifier": "",
     "DocumentType": "P",
@@ -72,9 +86,9 @@ describe('Arrivals page', () => {
     "PersonType": "P",
     "DocumentLevel": "Primary",
     "Age": "30",
-    "DisembarkationPortCode": "",
+    "DisembarkationPortCode": "TST",
     "InTransitFlag": "N",
-    "DisembarkationPortCountryCode": "",
+    "DisembarkationPortCountryCode": "TST",
     "NationalityCountryEEAFlag": "",
     "PassengerIdentifier": "",
     "DocumentType": "P",
@@ -87,7 +101,7 @@ describe('Arrivals page', () => {
       "EventCode": "DC",
       "DeparturePortCode": "AMS",
       "VoyageNumberTrailingLetter": "",
-      "ArrivalPortCode": "STN",
+      "ArrivalPortCode": "TST",
       "DeparturePortCountryCode": "MAR",
       "VoyageNumber": "0123",
       "VoyageKey": "key",
@@ -193,9 +207,9 @@ describe('Arrivals page', () => {
       "PersonType": "P",
       "DocumentLevel": "Primary",
       "Age": "30",
-      "DisembarkationPortCode": "",
+      "DisembarkationPortCode": "TST",
       "InTransitFlag": "N",
-      "DisembarkationPortCountryCode": "",
+      "DisembarkationPortCountryCode": "TST",
       "NationalityCountryEEAFlag": "EEA",
       "PassengerIdentifier": "",
       "DocumentType": "",
@@ -207,9 +221,9 @@ describe('Arrivals page', () => {
       "PersonType": "P",
       "DocumentLevel": "Primary",
       "Age": "30",
-      "DisembarkationPortCode": "",
+      "DisembarkationPortCode": "TST",
       "InTransitFlag": "N",
-      "DisembarkationPortCountryCode": "",
+      "DisembarkationPortCountryCode": "TST",
       "NationalityCountryEEAFlag": "EEA",
       "PassengerIdentifier": "",
       "DocumentType": "passport",
@@ -259,9 +273,9 @@ describe('Arrivals page', () => {
       "PersonType": "P",
       "DocumentLevel": "Primary",
       "Age": "30",
-      "DisembarkationPortCode": "",
+      "DisembarkationPortCode": "TST",
       "InTransitFlag": "N",
-      "DisembarkationPortCountryCode": "",
+      "DisembarkationPortCountryCode": "TST",
       "NationalityCountryEEAFlag": "EEA",
       "PassengerIdentifier": id,
       "DocumentType": "Passport",
@@ -289,7 +303,28 @@ describe('Arrivals page', () => {
       ))
       .get('.pax-api')
       .contains("2")
+  });
 
+  it('does not add transit passengers to the total pax when using API pax', () => {
+
+    const totalPaxSelector = '.before-now > :nth-child(11)';
+    cy
+      .addFlightWithPax("TS0123", 0, schString)
+      .asABorderForceOfficer()
+      .waitForFlightToAppear("TS0123")
+      .get(totalPaxSelector)
+      .contains("0")
+      .addManifest(manifest(
+        [
+          ukPassport,
+          ukPassport,
+          inTransitPassenger,
+          inTransitPassenger
+
+        ]
+      ))
+      .get('.pax-api')
+      .contains("2")
   });
 
 });

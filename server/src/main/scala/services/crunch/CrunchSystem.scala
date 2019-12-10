@@ -113,7 +113,7 @@ object CrunchSystem {
     val liveBaseArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialLiveBaseArrivals, forecastMaxMillis)
     val liveArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else props.initialLiveArrivals, forecastMaxMillis)
 
-    val ptqa = if (props.airportConfig.portCode == PortCode("LHR"))
+    val ptqa = if (props.airportConfig.hasTransfer)
       PaxTypeQueueAllocation(
         B5JPlusWithTransitTypeAllocator(),
         TerminalQueueAllocatorWithFastTrack(props.airportConfig.terminalPaxTypeQueueAllocation))

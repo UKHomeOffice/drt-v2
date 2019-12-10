@@ -136,7 +136,8 @@ class VoyageManifestsSpec extends CrunchTestLike {
           eeaMachineReadableToEGate -> 25d / 60
         )),
         terminals = Seq(T1),
-        queues = Map(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
+        queues = Map(T1 -> Seq(EeaDesk, EGate, NonEeaDesk)),
+        hasTransfer = true
       ),
       initialPortState = Option(PortState(SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
     )
@@ -251,7 +252,8 @@ class VoyageManifestsSpec extends CrunchTestLike {
           visaNationalToDesk -> 25d / 60
         )),
         terminals = Seq(T1),
-        queues = Map(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
+        queues = Map(T1 -> Seq(EeaDesk, EGate, NonEeaDesk)),
+        hasTransfer = true
       ),
       initialPortState = Option(PortState(SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
     )

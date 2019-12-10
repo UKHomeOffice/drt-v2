@@ -243,7 +243,8 @@ case class AirportConfig(portCode: PortCode,
                          nationalityBasedProcTimes: Map[String, Double] = ProcessingTimes.nationalityProcessingTimes,
                          role: Role,
                          cloneOfPortCode: Option[PortCode] = None,
-                         terminalPaxTypeQueueAllocation: Map[Terminal, Map[PaxType, Seq[(Queue, Double)]]]
+                         terminalPaxTypeQueueAllocation: Map[Terminal, Map[PaxType, Seq[(Queue, Double)]]],
+                         hasTransfer: Boolean = false
                         ) {
   val terminalSplitQueueTypes: Map[Terminal, Set[Queue]] = terminalPaxSplits.map {
     case (terminal, splitRatios) =>
