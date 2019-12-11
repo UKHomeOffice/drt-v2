@@ -2,10 +2,10 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
-import drt.shared.PaxTypes.{B5JPlusNational, B5JPlusNationalBelowEGateAge, EeaBelowEGateAge, EeaMachineReadable, EeaNonMachineReadable, NonVisaNational, Transit, VisaNational}
+import drt.shared.PaxTypes._
 import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
-import drt.shared.Queues.{EeaDesk, NonEeaDesk}
-import drt.shared.Terminals.{T1, T2}
+import drt.shared.Queues.EeaDesk
+import drt.shared.Terminals.T1
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, VoyageManifest}
 import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
@@ -19,9 +19,9 @@ class TransferPaxInApiSpec extends CrunchTestLike {
   sequential
   isolated
 
-  val fiveMinutes = 600d / 60
+  val fiveMinutes: Double = 600d / 60
 
-  val lhrAirportConfig = airportConfig.copy(
+  val lhrAirportConfig: AirportConfig = airportConfig.copy(
     portCode = PortCode("LHR"),
     terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
     queues = Map(T1 -> Seq(EeaDesk)),
@@ -59,8 +59,7 @@ class TransferPaxInApiSpec extends CrunchTestLike {
       airportConfig = lhrAirportConfig
     )
 
-    offerAndWait(crunch.liveArrivalsInput,
-      ArrivalsFeedSuccess(flights))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
     val expected = 1
 
@@ -96,22 +95,22 @@ class TransferPaxInApiSpec extends CrunchTestLike {
 
     val portCode = PortCode("LHR")
 
-    val inputManifests = ManifestsFeedSuccess(DqManifests("",
-      Set(
-        VoyageManifest(EventTypes.CI,
-          portCode,
-          PortCode("JFK"),
-          VoyageNumber(1),
-          CarrierCode("TS"),
-          ManifestDateOfArrival("2017-01-01"),
-          ManifestTimeOfArrival("00:00"),
-          List(
-            euPassport,
-            inTransitFlag
-          ))
-      )))
-
-    val fiveMinutes = 600d / 60
+    val inputManifests = ManifestsFeedSuccess(
+      DqManifests("",
+        Set(
+          VoyageManifest(EventTypes.CI,
+            portCode,
+            PortCode("JFK"),
+            VoyageNumber(1),
+            CarrierCode("TS"),
+            ManifestDateOfArrival("2017-01-01"),
+            ManifestTimeOfArrival("00:00"),
+            List(
+              euPassport,
+              inTransitFlag
+            ))
+        ))
+    )
 
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),

@@ -2,28 +2,16 @@ let moment = require('moment-timezone');
 require('moment/locale/en-gb');
 moment.locale("en-gb");
 
+const todayAtUtcString = require('../support/functions').todayAtUtcString
+const inDaysAtTimeUtcString = require('../support/functions').inDaysAtTimeUtcString
+
 describe('View Modes', function () {
-
-  const todayAsScheduledDate = moment().format("YYYY-MM-DD");
-  const tomorrowAsScheduledDate = moment().add(1, "day").format("YYYY-MM-DD");
-  const timeString = "00:55:00";
-
-  function timeOnDay(dayString, timeString) {
-
-    return dayString + "T" + timeString + "Z";
-  }
-
-  const timeStringToday = timeOnDay(todayAsScheduledDate, timeString)
-  const timeStringTomorrow = timeOnDay(tomorrowAsScheduledDate, timeString)
-
 
   beforeEach(() => cy.deleteData());
 
   describe('When switching between view modes in the app', function () {
 
     it("should poll for updates when looking at future days", function () {
-      const endOfTheDayTomorrow = timeOnDay(tomorrowAsScheduledDate, "22:59:59")
-
       cy
         .asABorderForceOfficer()
         .navigateHome()
@@ -31,13 +19,27 @@ describe('View Modes', function () {
         .chooseArrivalsTab()
         .get('#tomorrow').click()
         .reload()
-        .addFlightWithFlightCode("TS0123", timeStringTomorrow)
-        .addFlightWithFlightCode("TS0234", timeOnDay(todayAsScheduledDate, "04:45"))
-        .addFlightWithFlightCode("TS0235", timeOnDay(todayAsScheduledDate, "05:45"))
-        .get("#arrivals").contains("TS0123")
-
+        .addFlight({
+          "ICAO": "TS0123",
+          "IATA": "TS0123",
+          "SchDT": inDaysAtTimeUtcString(1, 0, 55),
+          "ActChoxDT": inDaysAtTimeUtcString(1, 0, 55)
+        })
+        .addFlight({
+          "ICAO": "TS0234",
+          "IATA": "TS0234",
+          "SchDT": todayAtUtcString(4, 45),
+          "ActChoxDT": todayAtUtcString(4, 45)
+        })
+        .addFlight({
+          "ICAO": "TS0235",
+          "IATA": "TS0235",
+          "SchDT": todayAtUtcString(5, 45),
+          "ActChoxDT": todayAtUtcString(5, 45)
+        })
+        .get("#arrivals")
+        .contains("TS0123")
     });
-
 
     it("should poll for updates when looking at the live view", function () {
       cy
@@ -46,18 +48,28 @@ describe('View Modes', function () {
         .navigateToMenuItem('T1')
         .chooseArrivalsTab()
         .choose24Hours()
-        .addFlightWithFlightCode("TS0123", timeStringToday)
-        .get("#arrivals").contains("TS0123")
+        .addFlight({
+          "ICAO": "TS0123",
+          "IATA": "TS0123",
+          "SchDT": todayAtUtcString(0, 55),
+          "ActChoxDT": todayAtUtcString(0, 55)
+        })
+        .get("#arrivals")
+        .contains("TS0123")
     });
 
     it("should successfully load data when a url for a future date is requested", function () {
-      const endOfTheDayTomorrow = timeOnDay(tomorrowAsScheduledDate, "22:59:59")
-
       cy
-        .addFlightWithFlightCode("TS0123", timeStringTomorrow)
+        .addFlight({
+          "ICAO": "TS0123",
+          "IATA": "TS0123",
+          "SchDT": inDaysAtTimeUtcString(1, 0, 55),
+          "ActChoxDT": inDaysAtTimeUtcString(1, 0, 55)
+        })
         .asABorderForceOfficer()
-        .visit('#terminal/T1/current/arrivals/?date=' + endOfTheDayTomorrow)
-        .get("#arrivals").contains("TS0123")
+        .visit('#terminal/T1/current/arrivals/?date=' + inDaysAtTimeUtcString(1, 22, 59))
+        .get("#arrivals")
+        .contains("TS0123")
 
     });
 
@@ -71,10 +83,22 @@ describe('View Modes', function () {
         .get('#arrivals').contains("No flights to display")
         .get('#today').click()
         .choose24Hours()
-        .addFlightWithFlightCode("TS0123", timeOnDay(todayAsScheduledDate, "01:30"))
-        .get('#arrivals').contains("TS0123")
-        .addFlightWithFlightCode("TS0234", timeOnDay(todayAsScheduledDate, "04:45"))
-        .get('#arrivals').contains("td", "TS0234", { log: true, timeout: 60000});
+        .addFlight({
+          "ICAO": "TS0123",
+          "IATA": "TS0123",
+          "SchDT": todayAtUtcString(1, 30),
+          "ActChoxDT": todayAtUtcString(1, 30)
+        })
+        .get('#arrivals')
+        .contains("TS0123")
+        .addFlight({
+          "ICAO": "TS0234",
+          "IATA": "TS0234",
+          "SchDT": todayAtUtcString(4, 45),
+          "ActChoxDT": todayAtUtcString(4, 45)
+        })
+        .get('#arrivals')
+        .contains("td", "TS0234", { log: true, timeout: 60000 });
     });
   });
 });
