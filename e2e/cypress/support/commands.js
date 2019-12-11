@@ -23,6 +23,9 @@
 //
 // -- This is will overwrite an existing command --
 // Cypress.Commands.overwrite("visit", (originalFn, url, options) => { ... })
+
+let todayAtString = require ('../support/functions').todayAtUtcString
+
 Cypress.Commands.add('setRoles', (roles = []) => {
   return cy.request("POST", '/test/mock-roles', { "roles": roles});
 });
@@ -72,14 +75,14 @@ Cypress.Commands.add('asABorderForceOfficerWithRoles', (roles = []) => {
   return cy.request("POST", '/test/mock-roles', { "roles": withRoles})
 });
 
-Cypress.Commands.add('addFlight', (estString, actString, estChoxString, actChoxString, schString) => {
-  const flightPayload = {
+Cypress.Commands.add('addFlight', (params) => {
+  let defaults = {
     "Operator": "TestAir",
-    "Status": "On Chocks",
-    "EstDT": estString,
-    "ActDT": actString,
-    "EstChoxDT": estChoxString,
-    "ActChoxDT": actChoxString,
+    "Status": "On Chox",
+    "EstDT": todayAtString(12, 0),
+    "ActDT": todayAtString(12, 0),
+    "EstChoxDT": todayAtString(12, 0),
+    "ActChoxDT": todayAtString(12, 0),
     "Gate": "46",
     "Stand": "44R",
     "MaxPax": 78,
@@ -93,74 +96,10 @@ Cypress.Commands.add('addFlight', (estString, actString, estChoxString, actChoxS
     "ICAO": "TS123",
     "IATA": "TS123",
     "Origin": "AMS",
-    "SchDT": schString
+    "SchDT": todayAtString(12, 0)
   };
 
-  cy.request('POST', '/test/arrival', flightPayload);
-});
-
-Cypress.Commands.add('addFlightWithFlightCode', (flightCode, estString, actString, estChoxString, actChoxString, schString) => {
-
-  let act = actString || estString;
-  let estChox = estChoxString || estString;
-  let actChox = actChoxString || estString;
-  let sch = schString || estString;
-
-  const flightPayload = {
-    "Operator": "TestAir",
-    "Status": "On Chocks",
-    "EstDT": estString,
-    "ActDT": act,
-    "EstChoxDT": estChox,
-    "ActChoxDT": actChox,
-    "Gate": "46",
-    "Stand": "44R",
-    "MaxPax": 78,
-    "ActPax": 51,
-    "TranPax": 0,
-    "RunwayID": "05L",
-    "FlightID" : 100,
-    "BaggageReclaimId": "05",
-    "AirportID": "MAN",
-    "Terminal": "T1",
-    "ICAO": flightCode,
-    "IATA": flightCode,
-    "Origin": "AMS",
-    "SchDT": sch
-  };
-
-  cy.request('POST', '/test/arrival', flightPayload);
-});
-
-Cypress.Commands.add('addFlightWithPax', (flightCode, actPax, estString, actString, estChoxString, actChoxString, schString) => {
-
-  let act = actString || estString;
-  let estChox = estChoxString || estString;
-  let actChox = actChoxString || estString;
-  let sch = schString || estString;
-
-  const flightPayload = {
-    "Operator": "TestAir",
-    "Status": "On Chocks",
-    "EstDT": estString,
-    "ActDT": act,
-    "EstChoxDT": estChox,
-    "ActChoxDT": actChox,
-    "Gate": "46",
-    "Stand": "44R",
-    "MaxPax": actPax,
-    "ActPax": actPax,
-    "TranPax": 0,
-    "RunwayID": "05L",
-    "FlightID" : 100,
-    "BaggageReclaimId": "05",
-    "AirportID": "MAN",
-    "Terminal": "T1",
-    "ICAO": flightCode,
-    "IATA": flightCode,
-    "Origin": "AMS",
-    "SchDT": sch
-  };
+  const flightPayload = Object.assign({}, defaults, params);
 
   cy.request('POST', '/test/arrival', flightPayload);
 });

@@ -1,4 +1,6 @@
 let moment = require('moment-timezone');
+let todayAtUtcString = require('../support/functions').todayAtUtcString
+
 require('moment/locale/en-gb');
 moment.locale("en-gb");
 
@@ -8,23 +10,9 @@ describe('Multi day export', () => {
     cy.deleteData();
   });
 
-  const schDateString = moment().format("YYYY-MM-DD");
-
-  const schTimeString = "00:55:00";
-  const estTimeString = "01:05:00";
-  const actTimeString = "01:07:00";
-  const estChoxTimeString = "01:11:00";
-  const actChoxTimeString = "01:02:00";
-
-  const schString = moment.tz(schDateString + " " + schTimeString, "Europe/London").utc().format();
-  const estString = moment.tz(schDateString + " " + estTimeString, "Europe/London").utc().format();
-  const actString = moment.tz(schDateString + " " + actTimeString, "Europe/London").utc().format();
-  const estChoxString = moment.tz(schDateString + " " + estChoxTimeString, "Europe/London").utc().format();
-  const actChoxString = moment.tz(schDateString + " " + actChoxTimeString, "Europe/London").utc().format();
-
   it('Allows you to download API splits using the API splits dialog', () => {
     cy
-      .addFlight(estString, actString, estChoxString, actChoxString, schString)
+      .addFlight()
       .asABorderForceOfficer()
       .navigateHome()
       .navigateToMenuItem('T1')
@@ -41,7 +29,7 @@ describe('Multi day export', () => {
 
   it('The multi day export dialog is still visible after 5 seconds', () => {
     cy
-      .addFlight(estString, actString, estChoxString, actChoxString, schString)
+      .addFlight()
       .asABorderForceOfficer()
       .navigateHome()
       .navigateToMenuItem('T1')
@@ -57,7 +45,11 @@ describe('Multi day export', () => {
 
   it('Exporting desks & queues results in a file with desk recommendations', () => {
     cy
-      .addFlight(estString, actString, estChoxString, actChoxString, schString)
+      .addFlight({
+        "SchDT": todayAtUtcString(0, 55),
+        "ActChoxDT": todayAtUtcString(1, 2),
+        "ActPax": 51
+      })
       .asABorderForceOfficer()
       .navigateHome()
       .navigateToMenuItem('T1')

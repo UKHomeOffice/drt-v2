@@ -41,45 +41,40 @@ object FlightsWithSplitsTable {
       val isTimeLineSupplied = timelineComponent.isDefined
       val timelineTh = (if (isTimeLineSupplied) <.th("Timeline") :: Nil else List[TagMod]()).toTagMod
 
-      Try {
-        if (sortedFlights.nonEmpty) {
-          val dataStickyAttr = VdomAttr("data-sticky") := "data-sticky"
-          val classesAttr = ^.className := "table table-responsive table-striped table-hover table-sm"
-          <.div(
-            <.div(^.id := "toStick", ^.className := "container sticky",
-              <.table(
-                ^.id := "sticky",
-                classesAttr,
-                tableHead(props, timelineTh, props.queueOrder))),
+      if (sortedFlights.nonEmpty) {
+        val dataStickyAttr = VdomAttr("data-sticky") := "data-sticky"
+        val classesAttr = ^.className := "table table-responsive table-striped table-hover table-sm"
+        <.div(
+          <.div(^.id := "toStick", ^.className := "container sticky",
             <.table(
-              ^.id := "sticky-body",
-              dataStickyAttr,
+              ^.id := "sticky",
               classesAttr,
-              tableHead(props, timelineTh, props.queueOrder),
-              <.tbody(
-                sortedFlights.zipWithIndex.map {
-                  case ((flightWithSplits, codeShares), idx) =>
-                    FlightTableRow.component(FlightTableRow.Props(
-                      flightWithSplits,
-                      codeShares,
-                      idx,
-                      timelineComponent = timelineComponent,
-                      originMapper = originMapper,
-                      paxComponent = paxComponent,
-                      splitsGraphComponent = splitsGraphComponent,
-                      splitsQueueOrder = props.queueOrder,
-                      hasEstChox = props.hasEstChox
-                    ))
-                }.toTagMod)))
-        }
-        else
-          <.div("No flights to display")
-      } match {
-        case Success(s) => s
-        case Failure(f) =>
-          log.error(msg = s"failure in table render $f")
-          <.div(s"render failure $f")
+              tableHead(props, timelineTh, props.queueOrder))),
+          <.table(
+            ^.id := "sticky-body",
+            dataStickyAttr,
+            classesAttr,
+            tableHead(props, timelineTh, props.queueOrder),
+            <.tbody(
+              sortedFlights.zipWithIndex.map {
+                case ((flightWithSplits, codeShares), idx) =>
+                  FlightTableRow.component(FlightTableRow.Props(
+                    flightWithSplits,
+                    codeShares,
+                    idx,
+                    timelineComponent = timelineComponent,
+                    originMapper = originMapper,
+                    paxComponent = paxComponent,
+                    splitsGraphComponent = splitsGraphComponent,
+                    splitsQueueOrder = props.queueOrder,
+                    hasEstChox = props.hasEstChox
+                  ))
+              }.toTagMod)
+          )
+        )
       }
+      else
+        <.div("No flights to display")
     })
     .configure(Reusability.shouldComponentUpdate)
     .componentDidMount(_ => StickyTableHeader("[data-sticky]"))

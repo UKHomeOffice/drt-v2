@@ -8,7 +8,7 @@ describe('Staff movements', function () {
   beforeEach(function () {
     var schDT = new Date().toISOString().split("T")[0];
     cy.deleteData()
-      .addFlight(schDT + "T00:55:00Z", schDT + "T00:55:00Z", schDT + "T01:01:00Z", schDT + "T01:05:00Z", schDT + "T00:15:00Z");
+      .addFlight();
   });
 
   function midnightThisMorning() {

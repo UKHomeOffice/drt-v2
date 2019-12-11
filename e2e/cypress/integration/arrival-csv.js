@@ -2,7 +2,9 @@ let moment = require('moment-timezone');
 require('moment/locale/en-gb');
 moment.locale("en-gb");
 
-describe('Arrivals page', () => {
+let todayAtUtcString = require('../support/functions').todayAtUtcString
+
+describe('Arrivals CSV Export', () => {
 
   const schDateString = moment().format("YYYY-MM-DD");
 
@@ -21,7 +23,6 @@ describe('Arrivals page', () => {
   const millis = moment(schString).unix() * 1000;
 
   beforeEach(function () {
-    var schDT = new Date().toISOString().split("T")[0];
     cy.deleteData();
   });
 
@@ -39,20 +40,7 @@ describe('Arrivals page', () => {
     "PoavKey": "1",
     "NationalityCountryCode": "GBR"
   };
-  const inTransitPassenger = {
-    "DocumentIssuingCountryCode": "GBR",
-    "PersonType": "P",
-    "DocumentLevel": "Primary",
-    "Age": "30",
-    "DisembarkationPortCode": "TST",
-    "InTransitFlag": "Y",
-    "DisembarkationPortCountryCode": "TST",
-    "NationalityCountryEEAFlag": "EEA",
-    "PassengerIdentifier": "",
-    "DocumentType": "Passport",
-    "PoavKey": "1",
-    "NationalityCountryCode": "GBR"
-  };
+
   const visaNational = {
     "DocumentIssuingCountryCode": "ZWE",
     "PersonType": "P",
@@ -146,7 +134,7 @@ describe('Arrivals page', () => {
   const eGatePax = "25";
   const eeaDesk = "9";
   const nonEEADesk = "17";
-  const dataWithoutActApi = "TS0123,TS0123,AMS,46/44R,On Chocks," +
+  const dataWithoutActApi = "TS0123,TS0123,AMS,46/44R,On Chox," +
     schDateString + "," + schTimeLocal + "," + estTimeLocal + "," + actTimeLocal + "," + estChoxTimeLocal + "," + actChoxTimeLocal + "," + pcpTimeLocal + "," +
     totalPax + "," + totalPax + "," +
     eGatePax + "," + eeaDesk + "," + nonEEADesk + ",," +
@@ -159,18 +147,17 @@ describe('Arrivals page', () => {
   const csvWithNoApiSplits = headersWithoutActApi + "\n" + dataWithoutActApi;
   const csvWithAPISplits = headersWithActApi + "\n" + dataWithActApi;
 
-  it('Displays a flight after it has been ingested via the live feed', () => {
-    cy
-      .addFlight(estString, actString, estChoxString, actChoxString, schString)
-      .asABorderForceOfficer()
-      .waitForFlightToAppear("TS0123")
-      .get('.before-now > :nth-child(2) > span > span')
-      .should('have.attr', 'title', 'Schiphol, Amsterdam, Netherlands')
-  });
-
   it('Does not show API splits in the flights export for regular users', () => {
     cy
-      .addFlight(estString, actString, estChoxString, actChoxString, schString)
+      .addFlight(
+        {
+          "SchDT": todayAtUtcString(0, 55),
+          "EstDT": todayAtUtcString(1, 5),
+          "EstChoxDT": todayAtUtcString(1, 11),
+          "ActDT": todayAtUtcString(1, 7),
+          "ActChoxDT": todayAtUtcString(1, 12)
+        }
+      )
       .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
       .addManifest(manifestWithPaxSplits(24, 10, 7, 10))
@@ -180,13 +167,23 @@ describe('Arrivals page', () => {
         url: '/export/arrivals/' + millis + '/T1?startHour=0&endHour=24',
       })
       .then((resp) => {
-        expect(resp.body).to.equal(csvWithNoApiSplits, "Api splits incorrect for regular users");
+        expect(resp.body)
+          .to
+          .equal(csvWithNoApiSplits, "Api splits incorrect for regular users");
       });
   });
 
   it('Allows you to view API splits in the flights export for users with api:view permission', () => {
     cy
-      .addFlight(estString, actString, estChoxString, actChoxString, schString)
+      .addFlight(
+        {
+          "SchDT": todayAtUtcString(0, 55),
+          "EstDT": todayAtUtcString(1, 5),
+          "EstChoxDT": todayAtUtcString(1, 11),
+          "ActDT": todayAtUtcString(1, 7),
+          "ActChoxDT": todayAtUtcString(1, 12)
+        }
+      )
       .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
       .addManifest(manifestWithPaxSplits(24, 10, 7, 10))
@@ -200,131 +197,4 @@ describe('Arrivals page', () => {
         expect(resp.body).to.equal(csvWithAPISplits, "Api splits incorrect for users with API reporting role")
       })
   });
-
-  const passengerListBadDocTypes = [
-    {
-      "DocumentIssuingCountryCode": "GBR",
-      "PersonType": "P",
-      "DocumentLevel": "Primary",
-      "Age": "30",
-      "DisembarkationPortCode": "TST",
-      "InTransitFlag": "N",
-      "DisembarkationPortCountryCode": "TST",
-      "NationalityCountryEEAFlag": "EEA",
-      "PassengerIdentifier": "",
-      "DocumentType": "",
-      "PoavKey": "1",
-      "NationalityCountryCode": "GBR"
-    },
-    {
-      "DocumentIssuingCountryCode": "FRA",
-      "PersonType": "P",
-      "DocumentLevel": "Primary",
-      "Age": "30",
-      "DisembarkationPortCode": "TST",
-      "InTransitFlag": "N",
-      "DisembarkationPortCountryCode": "TST",
-      "NationalityCountryEEAFlag": "EEA",
-      "PassengerIdentifier": "",
-      "DocumentType": "passport",
-      "PoavKey": "1",
-      "NationalityCountryCode": "GBR"
-    }
-  ];
-
-
-  it('handles manifests where the doctype is specified incorectly or left off', () => {
-    const eGatesCellSelector = ':nth-child(12) > span';
-    const eeaCellSelector = ':nth-child(13) > span';
-    const nonEeaCellSelector = ':nth-child(14) > span';
-    cy
-      .addFlightWithPax("TS0123", 2, schString)
-      .asABorderForceOfficer()
-      .waitForFlightToAppear("TS0123")
-      .addManifest(manifest(passengerListBadDocTypes))
-      .get('.pax-api')
-      .get(eGatesCellSelector)
-      .contains("2")
-      .get(eeaCellSelector)
-      .contains("0")
-      .get(nonEeaCellSelector)
-      .contains("0")
-  });
-
-  it('uses passenger numbers calculated from API data if no live pax number exists', () => {
-
-    const totalPaxSelector = '.before-now > :nth-child(11)';
-    cy
-      .addFlightWithPax("TS0123", 0, schString)
-      .asABorderForceOfficer()
-      .waitForFlightToAppear("TS0123")
-      .get(totalPaxSelector)
-      .contains("0")
-      .addManifest(manifest(passengerListBadDocTypes))
-      .get('.pax-api')
-      .contains("2")
-
-  });
-
-
-  function ukPassportWithIdentifier(id) {
-    return {
-      "DocumentIssuingCountryCode": "GBR",
-      "PersonType": "P",
-      "DocumentLevel": "Primary",
-      "Age": "30",
-      "DisembarkationPortCode": "TST",
-      "InTransitFlag": "N",
-      "DisembarkationPortCountryCode": "TST",
-      "NationalityCountryEEAFlag": "EEA",
-      "PassengerIdentifier": id,
-      "DocumentType": "Passport",
-      "PoavKey": "1",
-      "NationalityCountryCode": "GBR"
-    };
-  }
-
-  it('only counts each passenger once if API data contains multiple entries for each passenger', () => {
-
-    const totalPaxSelector = '.before-now > :nth-child(11)';
-    cy
-      .addFlightWithPax("TS0123", 0, schString)
-      .asABorderForceOfficer()
-      .waitForFlightToAppear("TS0123")
-      .get(totalPaxSelector)
-      .contains("0")
-      .addManifest(manifest(
-        [
-          ukPassportWithIdentifier("id1"),
-          ukPassportWithIdentifier("id1"),
-          ukPassportWithIdentifier("id2"),
-          ukPassportWithIdentifier("id2")
-        ]
-      ))
-      .get('.pax-api')
-      .contains("2")
-  });
-
-  it('does not add transit passengers to the total pax when using API pax', () => {
-
-    const totalPaxSelector = '.before-now > :nth-child(11)';
-    cy
-      .addFlightWithPax("TS0123", 0, schString)
-      .asABorderForceOfficer()
-      .waitForFlightToAppear("TS0123")
-      .get(totalPaxSelector)
-      .contains("0")
-      .addManifest(manifest(
-        [
-          ukPassport,
-          ukPassport,
-          inTransitPassenger,
-          inTransitPassenger
-
-        ]
-      ))
-      .get('.pax-api')
-      .contains("2")
-  });
-
 });
