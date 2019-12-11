@@ -43,8 +43,11 @@ case class PortState(flights: ISortedMap[UniqueArrival, ApiFlightWithSplits],
     expireable -- expireable.range(atTime(0L), atTime(thresholdMillis - 1)).keys
   }
 
-  def flightsRange(roundedStart: SDateLike, roundedEnd: SDateLike): ISortedMap[UniqueArrival, ApiFlightWithSplits] = ISortedMap[UniqueArrival, ApiFlightWithSplits]() ++ flights
-    .range(UniqueArrival.atTime(roundedStart.millisSinceEpoch), UniqueArrival.atTime(roundedEnd.millisSinceEpoch))
+  def flightsRange(roundedStart: SDateLike, roundedEnd: SDateLike): ISortedMap[UniqueArrival, ApiFlightWithSplits]
+  = ISortedMap[UniqueArrival, ApiFlightWithSplits]() ++ flights
+    .filter {
+      case (_, f) => f.apiFlight.hasPcpDuring(roundedStart, roundedEnd)
+    }
 
   def flightsRangeWithTerminals(roundedStart: SDateLike, roundedEnd: SDateLike, portQueues: IMap[Terminal, Seq[Queue]]): ISortedMap[UniqueArrival, ApiFlightWithSplits] = flightsRange(roundedStart, roundedEnd)
     .filter { case (_, fws) => portQueues.contains(fws.apiFlight.Terminal) }
