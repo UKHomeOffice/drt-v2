@@ -121,7 +121,7 @@ object TerminalDesksAndQueuesRow {
       Option(props.terminal),
       "Additional info",
       SDate(props.minuteMillis),
-      60,
+      30,
       action,
       1,
       props.loggedInUser
