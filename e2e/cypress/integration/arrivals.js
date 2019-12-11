@@ -6,7 +6,6 @@ let todayAtUtcString = require('../support/functions').todayAtUtcString
 
 describe('Arrivals page', () => {
 
-
   beforeEach(function () {
     cy.deleteData();
   });

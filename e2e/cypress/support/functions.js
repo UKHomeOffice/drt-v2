@@ -2,7 +2,6 @@ let moment = require('moment-timezone');
 require('moment/locale/en-gb');
 moment.locale("en-gb");
 
-
 const todayAtUtcString = (hours, minutes) =>
     moment()
         .hour(hours)
@@ -26,8 +25,6 @@ const todayAtUtc = (hours, minutes) =>
         .minute(minutes)
         .seconds(0)
         .utc()
-
-
 
 exports.todayAtUtc = todayAtUtc
 
