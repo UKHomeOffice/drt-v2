@@ -49,4 +49,36 @@ describe('Viewing the terminal dashboard page', function () {
       .should('have.class', 'fa-arrow-right')
   })
 
+  it("should display flights with PCP time in the window", () => {
+    cy
+      .addFlight({
+        "ICAO": "TS0123",
+        "IATA": "TS0123",
+        "SchDT": todayAtString(10, 30),
+        "ActChoxDT": todayAtString(14, 15),
+        "ActPax": 300
+      })
+      .addFlight({
+        "ICAO": "TS0124",
+        "IATA": "TS0124",
+        "SchDT": todayAtString(14, 10),
+        "ActChoxDT": todayAtString(14, 30),
+        "ActPax": 51
+      })
+      .asABorderForceOfficerWithRoles(["terminal-dashboard"])
+      .navigateHome()
+      .visit("/#terminal/T1/dashboard/summary/?start=" + todayAtString(14,15))
+      .get(".show-arrivals-btn").click()
+      .get(".dashboard-arrivals-popup tbody tr").contains("TS0123")
+      .get(".dashboard-arrivals-popup tbody tr").should('have.length', 1)
+      .get(".popover-overlay")
+      .click()
+      .get(".next-bar")
+      .click()
+      .get(".show-arrivals-btn").click()
+      .get(".dashboard-arrivals-popup tbody tr").contains("TS0123")
+      .get(".dashboard-arrivals-popup tbody tr").contains("TS0124")
+      .get(".dashboard-arrivals-popup tbody tr").should('have.length', 2)
+  })
+
 });
