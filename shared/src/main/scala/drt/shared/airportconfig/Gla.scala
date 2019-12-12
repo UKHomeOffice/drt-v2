@@ -15,6 +15,7 @@ object Gla extends AirportConfigLike {
     queues = Map(
       T1 -> Seq(Queues.NonEeaDesk, Queues.EeaDesk, Queues.EGate)
     ),
+    eGateBankSize = 5,
     slaByQueue = Map(
       Queues.EeaDesk -> 25,
       Queues.NonEeaDesk -> 45,
