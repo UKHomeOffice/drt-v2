@@ -120,7 +120,7 @@ object TerminalStaffing {
 
     def movementsEditor(movements: Seq[StaffMovement], terminalName: Terminal): VdomTagOf[Div] = {
       val terminalMovements = movements.filter(_.terminal == terminalName)
-      <.div(<.h2("Movements"), movementsListTagMod(terminalMovements, terminalName))
+      <.div(^.className := "staff-movements-list", <.h2("Movements"), movementsListTagMod(terminalMovements, terminalName))
     }
 
     case class FixedPointsProps(fixedPoints: FixedPointAssignments,
