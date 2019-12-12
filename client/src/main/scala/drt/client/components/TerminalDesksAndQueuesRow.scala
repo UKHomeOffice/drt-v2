@@ -119,9 +119,9 @@ object TerminalDesksAndQueuesRow {
     StaffAdjustmentDialogueState(
       props.airportConfig.terminals,
       Option(props.terminal),
-      "Staff " + label + "...",
+      "Additional info",
       SDate(props.minuteMillis),
-      SDate(props.minuteMillis).addHours(1),
+      30,
       action,
       1,
       props.loggedInUser

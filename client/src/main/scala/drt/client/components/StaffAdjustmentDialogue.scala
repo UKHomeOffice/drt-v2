@@ -11,24 +11,25 @@ import drt.shared.{LoggedInUser, SDateLike}
 import japgolly.scalajs.react.{CtorType, _}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.Reusability
+import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html
 import org.scalajs.dom.html.{Div, Select}
 
-import scala.util.Success
+import scala.util.{Success, Try}
 
 
 case class StaffAdjustmentDialogueState(action: String,
                                         reasonPlaceholder: String,
                                         reason: String,
+                                        maybeReasonAdditional: Option[String],
                                         terminalNames: Seq[Terminal],
                                         terminal: Terminal,
                                         date: String,
                                         startTimeHours: Int,
                                         startTimeMinutes: Int,
-                                        endTimeHours: Int,
-                                        endTimeMinutes: Int,
-                                        numberOfStaff: String,
+                                        lengthOfTimeMinutes: Int,
+                                        numberOfStaff: Int,
                                         loggedInUser: LoggedInUser) {
   def isApplicableToSlot(slotStart: SDateLike, slotEnd: SDateLike): Boolean = {
     date.split("/").toList match {
@@ -42,6 +43,18 @@ case class StaffAdjustmentDialogueState(action: String,
       case _ => false
     }
   }
+
+  def staffLabel: String = if (action == "+") "Additional staff" else "Staff removed"
+
+  def fullReason: String = (List(reason) ++ maybeReasonAdditional.toList).mkString(": ")
+
+  def endHoursAndMinutes: (Int, Int) = {
+    val endTime = (startTimeHours * 60) + startTimeMinutes + lengthOfTimeMinutes
+    val endHours = endTime / 60
+    val endMinutes = endTime % 60
+    (endHours, endMinutes)
+  }
+
 }
 
 object StaffAdjustmentDialogueState {
@@ -49,22 +62,22 @@ object StaffAdjustmentDialogueState {
             terminal: Option[Terminal],
             reasonPlaceholder: String,
             startDate: SDateLike,
-            endDate: SDateLike,
+            timeLengthMinutes: Int,
             action: String,
             numberOfStaff: Int,
             loggedInUser: LoggedInUser): StaffAdjustmentDialogueState =
     StaffAdjustmentDialogueState(
       action = action,
       reasonPlaceholder = reasonPlaceholder,
-      reason = "",
+      reason = "Other",
+      None,
       terminalNames = terminalNames,
       terminal = terminal.getOrElse(terminalNames.head),
       date = f"${startDate.getDate()}%02d/${startDate.getMonth()}%02d/${startDate.getFullYear - 2000}%02d",
       startTimeHours = startDate.getHours(),
       startTimeMinutes = roundToNearest(5)(startDate.getMinutes()),
-      endTimeHours = endDate.getHours(),
-      endTimeMinutes = roundToNearest(5)(endDate.getMinutes()),
-      numberOfStaff = numberOfStaff.toString,
+      lengthOfTimeMinutes = timeLengthMinutes,
+      numberOfStaff = numberOfStaff,
       loggedInUser = loggedInUser
     )
 }
@@ -81,28 +94,36 @@ object StaffAdjustmentDialogue {
 
   def apply(state: StaffAdjustmentDialogueState): Component[Unit, StaffAdjustmentDialogueState, Unit, CtorType.Nullary] = ScalaComponent.builder[Unit]("staffMovementPopover")
     .initialState(state)
-    .renderS((scope, state) => {
-      def selectFromRange(range: Range,
-                          defaultValue: Int,
-                          callback: String => StaffAdjustmentDialogueState => StaffAdjustmentDialogueState,
-                          applyRounding: Int => Int): VdomTagOf[Select] = {
+    .renderS { (scope, state) =>
+      def timesBy15Minutes(startHour: Int): Iterable[String] = for {
+        hour <- startHour until 24
+        minute <- 0 to 45 by 15
+      } yield f"$hour%02d:$minute%02d"
+
+      def selectFromRange(range: Iterable[String],
+                          defaultValue: String,
+                          className: String,
+                          callback: String => StaffAdjustmentDialogueState => StaffAdjustmentDialogueState
+                         ): VdomTagOf[Select] = {
         <.select(
-          ^.defaultValue := applyRounding(defaultValue),
+          ^.value := defaultValue,
+          ^.className := className,
           ^.onChange ==> ((e: ReactEventFromInput) => {
             val newFromValue = e.target.value
-            val updatedState = callback(newFromValue)(state)
-            scope.modState(_ => updatedState)
+            val updatedState = callback(newFromValue)(scope.state)
+            scope.setState(updatedState)
           }),
-          range.map(x => <.option(^.value := x, f"$x%02d")).toTagMod)
+          range.map { value => <.option(^.value := value, value) }.toTagMod)
       }
+
+      def killPopover(): Unit = SPACircuit.dispatch(UpdateStaffAdjustmentDialogueState(None))
 
       def trySaveMovement(): Unit = {
         val startTime: String = f"${state.startTimeHours}%02d:${state.startTimeMinutes}%02d"
-        val endTime: String = f"${state.endTimeHours}%02d:${state.endTimeMinutes}%02d"
         val numberOfStaff: String = s"${state.action}${state.numberOfStaff.toString}"
 
         StaffAssignmentHelper
-          .tryStaffAssignment(state.reason, state.terminal.toString, state.date, startTime, endTime, numberOfStaff, createdBy = Some(state.loggedInUser.email)) match {
+          .tryStaffAssignment(state.fullReason, state.terminal.toString, state.date, startTime, state.lengthOfTimeMinutes, numberOfStaff, createdBy = Option(state.loggedInUser.email)) match {
           case Success(movement) =>
             val movementsToAdd = for (movement <- StaffMovements.assignmentsToMovements(Seq(movement))) yield movement
             SPACircuit.dispatch(AddStaffMovements(movementsToAdd))
@@ -112,61 +133,152 @@ object StaffAdjustmentDialogue {
         }
       }
 
-      def labelledInput(labelText: String,
-                        value: String,
-                        callback: String => StaffAdjustmentDialogueState => StaffAdjustmentDialogueState): VdomTagOf[html.Div] = {
-        val textInput = <.input.text(^.value := value, ^.placeholder := state.reasonPlaceholder, ^.onChange ==> ((e: ReactEventFromInput) => {
-          val newText = e.target.value
-          val updatedState = callback(newText)(state)
-          scope.modState(_ => updatedState)
-        }))
-        popoverFormRow(labelText, textInput)
+      def additionalInfoInput(state: StaffAdjustmentDialogueState): VdomTagOf[html.Div] = {
+        val callback = (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(maybeReasonAdditional = Option(v))
+        val value = state.maybeReasonAdditional.getOrElse("")
+        val textInput = <.input.text(
+          ^.value := value,
+          ^.className := "staff-adjustment--additional-info",
+          ^.placeholder := state.reasonPlaceholder,
+          ^.onChange ==> ((e: ReactEventFromInput) => {
+            val newText = e.target.value
+            val updatedState = callback(newText)(state)
+            scope.setState(updatedState)
+          }))
+        popoverFormRow("", None, textInput)
       }
 
-      def popoverFormRow(label: String, xs: TagMod*) = {
-        <.div(^.className := "form-group row",
-          <.label(label, ^.className := "col-sm-4 col-form-label"),
-          <.div(^.className := "col-sm-4", xs.toTagMod))
+      val adjustStartAndEndTimeFromString: String => StaffAdjustmentDialogueState => StaffAdjustmentDialogueState = (v: String) => (s: StaffAdjustmentDialogueState) => {
+        val Array(hours, minutes) = v.split(":").map(_.toInt)
+        s.copy(startTimeHours = hours, startTimeMinutes = minutes)
       }
 
-      def timeSelector(label: String,
-                       hourDefault: Int,
-                       minuteDefault: Int,
-                       hourCallback: String => StaffAdjustmentDialogueState => StaffAdjustmentDialogueState,
-                       minuteCallback: String => StaffAdjustmentDialogueState => StaffAdjustmentDialogueState
-                      ): VdomTagOf[Div] = {
-        popoverFormRow(label,
-          selectFromRange(
-            0 to 23, hourDefault, hourCallback, x => x
-          ), ":",
-          selectFromRange(
-            0 to 59 by 5, minuteDefault, minuteCallback, roundToNearest(5)
-          )
+      val adjustLengthFromString = (v: String) => (s: StaffAdjustmentDialogueState) => {
+        s.copy(lengthOfTimeMinutes = v.toInt)
+      }
+
+      def timeSelector(): VdomTagOf[Div] = popoverFormRow(
+        "Time",
+        Option("staff-adjustment--start-time"),
+        selectFromRange(timesBy15Minutes(0), f"${state.startTimeHours}%02d:${state.startTimeMinutes}%02d", "staff-adjustment--select-start-time", adjustStartAndEndTimeFromString),
+        " for ",
+        selectFromRange(0 until 1440 by 15 map (m => s"$m"), s"${state.lengthOfTimeMinutes}", "staff-adjustment--select-time-length", adjustLengthFromString),
+        " minutes"
+      )
+
+      val adjustLengthFromEndTime: String => StaffAdjustmentDialogueState => StaffAdjustmentDialogueState = (v: String) => (s: StaffAdjustmentDialogueState) => {
+        val Array(hours, minutes) = v.split(":").map(_.toInt)
+        val startMins = (state.startTimeHours * 60) + state.startTimeMinutes
+        val endMins = (hours * 60) + minutes
+        val diff = endMins - startMins
+
+        s.copy(lengthOfTimeMinutes = diff)
+      }
+
+      def endTimeSelector(): VdomTagOf[Div] = {
+        val (endHours, endMinutes) = state.endHoursAndMinutes
+        popoverFormRow(
+          "Ending at",
+          Option("staff-adjustment--end-time"),
+          selectFromRange(timesBy15Minutes(state.startTimeHours), f"${endHours}%02d:${endMinutes}%02d", "staff-adjustment--select-end-time", adjustLengthFromEndTime)
         )
       }
 
-      def killPopover(): Unit = SPACircuit.dispatch(UpdateStaffAdjustmentDialogueState(None))
+      def reasonSelector(): VdomTagOf[Div] = popoverFormRow(
+        "Reason",
+        Option("staff-adjustment--start-time"),
+        selectFromRange(movementReasons, "Other", "staff-adjustment--select-reason", (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(reason = v))
+      )
 
-      <.div(<.div(^.className := "popover-overlay", ^.onClick --> Callback(killPopover())),
-        <.div(^.className := "container", ^.id := "staff-adjustment-dialogue", ^.onClick ==> ((e: ReactEvent) => Callback(e.stopPropagation())), ^.key := "StaffAdjustments",
-          labelledInput("Reason", state.reason, (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(reason = v)),
-          timeSelector("Start time", state.startTimeHours, state.startTimeMinutes,
-            (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(startTimeHours = v.toInt),
-            (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(startTimeMinutes = v.toInt)),
-          timeSelector("End time", state.endTimeHours, state.endTimeMinutes,
-            (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(endTimeHours = v.toInt),
-            (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(endTimeMinutes = v.toInt)),
-          popoverFormRow("Number of staff", <.input.text(^.value := state.numberOfStaff.toString, ^.onChange ==> ((e: ReactEventFromInput) => {
-            val newStaff = e.target.value
-            val updatedState = state.copy(numberOfStaff = newStaff)
-            scope.modState(_ => updatedState)
-          }))),
-          <.div(^.className := "form-group-row",
-            <.div(^.className := "col-sm-4"),
-            <.div(^.className := "col-sm-6 btn-toolbar",
-              <.button("Save", ^.className := "btn btn-primary", ^.onClick --> Callback(trySaveMovement())),
-              <.button("Cancel", ^.className := "btn btn-default", ^.onClick --> Callback(killPopover()))))))
-    })
+      def staffAdjustments(): html_<^.VdomTagOf[Div] = {
+        popoverFormRow(
+          state.staffLabel,
+          None,
+          <.a(
+            Icon.minus,
+            ^.className := "staff-adjustment--adjustment-button",
+            ^.onClick ==> ((e: ReactEventFromInput) => {
+              val newValue = if (state.numberOfStaff > 1) state.numberOfStaff - 1 else 0
+              val updatedState = state.copy(numberOfStaff = newValue)
+              scope.setState(updatedState)
+            })),
+          <.input.text(
+            ^.value := state.numberOfStaff.toString,
+            ^.className := "staff-adjustment--num-staff",
+            ^.onChange ==> ((e: ReactEventFromInput) => {
+              val newStaff = Try(e.target.value.toInt).getOrElse(0)
+              val updatedState = state.copy(numberOfStaff = newStaff)
+              scope.setState(updatedState)
+            })),
+          <.a(
+            Icon.plus,
+            ^.className := "staff-adjustment--adjustment-button",
+            ^.onClick ==> ((e: ReactEventFromInput) => {
+              val newValue = state.numberOfStaff + 1
+              val updatedState = state.copy(numberOfStaff = newValue)
+              scope.setState(updatedState)
+            }))
+        )
+      }
+
+      <.div(
+        <.div(^.className := "popover-overlay", ^.onClick --> Callback(killPopover())),
+        <.div(
+          ^.className := "container",
+          ^.id := "staff-adjustment-dialogue",
+          ^.onClick ==> ((e: ReactEvent) => Callback(e.stopPropagation())),
+          <.h2(titleFromAction(state.action)),
+          reasonSelector(),
+          additionalInfoInput(state),
+          timeSelector(),
+          endTimeSelector(),
+          staffAdjustments(),
+          saveAndCancel(killPopover _, trySaveMovement _)
+        )
+      )
+    }
     .configure(Reusability.shouldComponentUpdate)
     .build
+
+  def popoverFormRow(label: String, maybeClassName: Option[String], xs: TagMod*): VdomTagOf[Div] = {
+    val classes = List("form-group", "row") ++ maybeClassName.toList
+    <.div(^.className := classes.mkString(" "),
+      <.label(label, ^.className := "col-sm-4 col-form-label"),
+      <.div(^.className := "col-sm-7", xs.toTagMod))
+  }
+
+  val movementReasons = Iterable(
+    "Acting up",
+    "Bag search",
+    "Briefing",
+    "Case working",
+    "CL - Compensatory leave",
+    "CWA - Controlled waiting area",
+    "Discipline move (customs / immigration)",
+    "Emergency leave",
+    "Medical",
+    "Meeting",
+    "No show",
+    "Other",
+    "SEA - Secondary Examination Area",
+    "Shift Change / Swap",
+    "Sick",
+    "Special Ops (CTA, BDO duties, Gate checks etc)",
+    "Terminal move",
+    "TOIL - Time off in lieu",
+    "Training"
+  )
+
+  def saveAndCancel(killPopover: () => Unit, trySaveMovement: () => Unit): VdomTagOf[Div] = {
+    <.div(^.className := "form-group-row",
+      <.div(^.className := "col-sm-4"),
+      <.div(^.className := "col-sm-8 btn-toolbar",
+        <.button("Cancel", ^.className := "btn btn-default staff-adjustment--save-cancel", ^.onClick --> Callback(killPopover())),
+        <.button("Save", ^.className := "btn btn-primary staff-adjustment--save-cancel", ^.onClick --> Callback(trySaveMovement()))
+      ))
+  }
+
+  def titleFromAction(action: String): String = {
+    if (action == "+") "Increase available staff" else "Decrease available staff"
+  }
 }

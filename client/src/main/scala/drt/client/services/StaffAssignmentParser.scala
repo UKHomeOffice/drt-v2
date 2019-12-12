@@ -9,9 +9,10 @@ import scala.util.Try
 
 
 object StaffAssignmentHelper {
+
   import JSDateConversions._
 
-  def tryStaffAssignment(name: String, terminalName: String, startDate: String, startTime: String, endTime: String, numberOfStaff: String = "1", createdBy: Option[String] = None): Try[StaffAssignment] = {
+  def tryStaffAssignment(name: String, terminalName: String, startDate: String, startTime: String, endTime: String, numberOfStaff: String, createdBy: Option[String]): Try[StaffAssignment] = {
     val staffDeltaTry = Try(numberOfStaff.toInt)
     val ymd = startDate.split("/").toVector
 
@@ -27,6 +28,25 @@ object StaffAssignmentHelper {
       endDt <- endDtTry
       staffDelta: Int <- staffDeltaTry
     } yield {
+      StaffAssignment(name, Terminal(terminalName), startDt, adjustEndDateIfEndTimeIsBeforeStartTime(d, m, y, startDt, endDt), staffDelta, createdBy = createdBy)
+    }
+  }
+
+  def tryStaffAssignment(name: String, terminalName: String, startDate: String, startTime: String, lengthOfTimeMinutes: Int, numberOfStaff: String, createdBy: Option[String]): Try[StaffAssignment] = {
+    val staffDeltaTry = Try(numberOfStaff.toInt)
+    val ymd = startDate.split("/").toVector
+
+    val tryDMY: Try[(Int, Int, Int)] = Try((ymd(0).toInt, ymd(1).toInt, ymd(2).toInt + 2000))
+
+    for {
+      dmy <- tryDMY
+      (d, m, y) = dmy
+
+      startDtTry: Try[SDateLike] = parseTimeWithStartTime(startTime, d, m, y)
+      startDt <- startDtTry
+      staffDelta: Int <- staffDeltaTry
+    } yield {
+      val endDt = startDt.addMinutes(lengthOfTimeMinutes)
       StaffAssignment(name, Terminal(terminalName), startDt, adjustEndDateIfEndTimeIsBeforeStartTime(d, m, y, startDt, endDt), staffDelta, createdBy = createdBy)
     }
   }
@@ -72,16 +92,15 @@ object StaffAssignmentHelper {
 }
 
 case class StaffAssignmentParser(rawStaffAssignments: String) {
-  val lines: Array[String] = rawStaffAssignments.split("\n")
-  val parsedAssignments: Array[Try[StaffAssignment]] = lines.map(l => {
-    l.replaceAll("([^\\\\]),", "$1\",\"").split("\",\"").toList.map(_.trim)
-  })
+  val parsedAssignments: Array[Try[StaffAssignment]] = rawStaffAssignments
+    .split("\n")
+    .map(_.replaceAll("([^\\\\]),", "$1\",\"").split("\",\"").toList.map(_.trim))
     .filter(parts => parts.length == 5 || parts.length == 6)
     .map {
       case List(description, terminalName, startDay, startTime, endTime) =>
-        StaffAssignmentHelper.tryStaffAssignment(description, terminalName, startDay, startTime, endTime)
+        StaffAssignmentHelper.tryStaffAssignment(description, terminalName, startDay, startTime, endTime, "1", None)
       case List(description, terminalName, startDay, startTime, endTime, staffNumberDelta) =>
-        StaffAssignmentHelper.tryStaffAssignment(description, terminalName, startDay, startTime, endTime, staffNumberDelta)
+        StaffAssignmentHelper.tryStaffAssignment(description, terminalName, startDay, startTime, endTime, staffNumberDelta, None)
     }
 }
 

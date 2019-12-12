@@ -164,9 +164,14 @@ Cypress.Commands.add('addOrRemoveMovementFor1HourAt', (addOrRemove, numStaff, ho
     for (let i = 0; i < numStaff; i++) {
       cy.get('.staff-adjustments > :nth-child(' + (hour + 1) + ') > :nth-child(' + buttonNth + ')').contains(buttonLabel).then((el) => {
         el.click();
-        cy.get('#staff-adjustment-dialogue').contains("Save").then((saveButton) => {
-          saveButton.click();
-        })
+        cy
+          .get('#staff-adjustment-dialogue')
+          .get('.staff-adjustment--select-time-length')
+          .select('60')
+          .get('.btn-primary.staff-adjustment--save-cancel')
+          .then((saveButton) => {
+            saveButton.click();
+          })
       });
     }
   });
