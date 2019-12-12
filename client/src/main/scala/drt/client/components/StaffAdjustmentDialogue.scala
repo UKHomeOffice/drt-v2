@@ -102,10 +102,12 @@ object StaffAdjustmentDialogue {
 
       def selectFromRange(range: Iterable[String],
                           defaultValue: String,
+                          className: String,
                           callback: String => StaffAdjustmentDialogueState => StaffAdjustmentDialogueState
                          ): VdomTagOf[Select] = {
         <.select(
           ^.value := defaultValue,
+          ^.className := className,
           ^.onChange ==> ((e: ReactEventFromInput) => {
             val newFromValue = e.target.value
             val updatedState = callback(newFromValue)(scope.state)
@@ -158,9 +160,9 @@ object StaffAdjustmentDialogue {
       def timeSelector(): VdomTagOf[Div] = popoverFormRow(
         "Time",
         Option("staff-adjustment--start-time"),
-        selectFromRange(timesBy15Minutes(0), f"${state.startTimeHours}%02d:${state.startTimeMinutes}%02d", adjustStartAndEndTimeFromString),
+        selectFromRange(timesBy15Minutes(0), f"${state.startTimeHours}%02d:${state.startTimeMinutes}%02d", "staff-adjustment--select-start-time", adjustStartAndEndTimeFromString),
         " for ",
-        selectFromRange(0 until 1440 by 15 map (m => s"$m"), s"${state.lengthOfTimeMinutes}", adjustLengthFromString),
+        selectFromRange(0 until 1440 by 15 map (m => s"$m"), s"${state.lengthOfTimeMinutes}", "staff-adjustment--select-time-length", adjustLengthFromString),
         " minutes"
       )
 
@@ -178,14 +180,14 @@ object StaffAdjustmentDialogue {
         popoverFormRow(
           "Ending at",
           Option("staff-adjustment--end-time"),
-          selectFromRange(timesBy15Minutes(state.startTimeHours), f"${endHours}%02d:${endMinutes}%02d", adjustLengthFromEndTime)
+          selectFromRange(timesBy15Minutes(state.startTimeHours), f"${endHours}%02d:${endMinutes}%02d", "staff-adjustment--select-end-time", adjustLengthFromEndTime)
         )
       }
 
       def reasonSelector(): VdomTagOf[Div] = popoverFormRow(
         "Reason",
         Option("staff-adjustment--start-time"),
-        selectFromRange(movementReasons, "Other", (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(reason = v))
+        selectFromRange(movementReasons, "Other", "staff-adjustment--select-reason", (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(reason = v))
       )
 
       def staffAdjustments(): html_<^.VdomTagOf[Div] = {

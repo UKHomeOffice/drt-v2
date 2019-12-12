@@ -111,21 +111,21 @@ Cypress.Commands.add('staffOverTheDayAtSlot', (slot) => {
 });
 
 Cypress.Commands.add('checkStaffAvailableOnDesksAndQueuesTabAre', (numStaff) => {
-  [0, 1].map((row) => {
+  [0, 1, 2, 3].map((row) => {
     cy.staffAvailableAtRow(row).contains(numStaff);
   });
   cy.staffAvailableAtRow(4, 0).contains(0);
 });
 
 Cypress.Commands.add('checkStaffMovementsOnDesksAndQueuesTabAre', (numStaff) => {
-  [0, 1].map((row) => {
+  [0, 1, 2, 3].map((row) => {
     cy.staffMovementsAtRow(row).contains(numStaff);
   });
   cy.staffMovementsAtRow(4).contains(0);
 });
 
 Cypress.Commands.add('checkStaffDeployedOnDesksAndQueuesTabAre', (numStaff) => {
-  [0, 1].map((row) => {
+  [0, 1, 2, 3].map((row) => {
     cy.staffDeployedAtRow(row).contains(numStaff);
   });
   cy.staffDeployedAtRow(4).contains(0);
@@ -133,7 +133,7 @@ Cypress.Commands.add('checkStaffDeployedOnDesksAndQueuesTabAre', (numStaff) => {
 
 Cypress.Commands.add('checkStaffNumbersOnMovementsTabAre', (numStaff) => {
   cy.contains("Staff Movements").click().then(() => {
-    [0, 1].map((slot) => { cy.staffOverTheDayAtSlot(slot).contains(numStaff) });
+    [0, 1, 2, 3].map((slot) => { cy.staffOverTheDayAtSlot(slot).contains(numStaff) });
     cy.staffOverTheDayAtSlot(4).contains("0");
   });
 });
@@ -164,9 +164,14 @@ Cypress.Commands.add('addOrRemoveMovementFor1HourAt', (addOrRemove, numStaff, ho
     for (let i = 0; i < numStaff; i++) {
       cy.get('.staff-adjustments > :nth-child(' + (hour + 1) + ') > :nth-child(' + buttonNth + ')').contains(buttonLabel).then((el) => {
         el.click();
-        cy.get('#staff-adjustment-dialogue').contains("Save").then((saveButton) => {
-          saveButton.click();
-        })
+        cy
+          .get('#staff-adjustment-dialogue')
+          .get('.staff-adjustment--select-time-length')
+          .select('60')
+          .get('.btn-primary.staff-adjustment--save-cancel')
+          .then((saveButton) => {
+            saveButton.click();
+          })
       });
     }
   });
