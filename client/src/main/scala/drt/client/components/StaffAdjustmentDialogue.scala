@@ -187,7 +187,7 @@ object StaffAdjustmentDialogue {
       def reasonSelector(): VdomTagOf[Div] = popoverFormRow(
         "Reason",
         Option("staff-adjustment--start-time"),
-        selectFromRange(movementReasons, "Other", "staff-adjustment--select-reason", (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(reason = v))
+        selectFromRange(movementReasons, state.reason, "staff-adjustment--select-reason", (v: String) => (s: StaffAdjustmentDialogueState) => s.copy(reason = v))
       )
 
       def staffAdjustments(): html_<^.VdomTagOf[Div] = {
@@ -196,7 +196,7 @@ object StaffAdjustmentDialogue {
           None,
           <.a(
             Icon.minus,
-            ^.className := "staff-adjustment--adjustment-button",
+            ^.className := "staff-adjustment--adjustment-button staff-adjustment--adjustment-button__decrease",
             ^.onClick ==> ((e: ReactEventFromInput) => {
               val newValue = if (state.numberOfStaff > 1) state.numberOfStaff - 1 else 0
               val updatedState = state.copy(numberOfStaff = newValue)
@@ -212,7 +212,7 @@ object StaffAdjustmentDialogue {
             })),
           <.a(
             Icon.plus,
-            ^.className := "staff-adjustment--adjustment-button",
+            ^.className := "staff-adjustment--adjustment-button staff-adjustment--adjustment-button__increase",
             ^.onClick ==> ((e: ReactEventFromInput) => {
               val newValue = state.numberOfStaff + 1
               val updatedState = state.copy(numberOfStaff = newValue)

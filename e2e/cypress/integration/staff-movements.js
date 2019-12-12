@@ -27,13 +27,15 @@ describe('Staff movements', function () {
   }
 
   describe('When adding staff movements on the desks and queues page', function () {
-    it("Should update the available staff when 1 staff member is added for 1 hour", function () {
+    it("Should update the available staff when 1 staff member is added for 1 hour, and record the correct reason", function () {
       cy
         .asABorderForcePlanningOfficer()
         .navigateHome()
         .navigateToMenuItem('T1')
         .choose24Hours()
-        .addMovementFor1HourAt(1, 0)
+        .openAdjustmentDialogueForHour('add', 0)
+        .adjustMinutes(60)
+        .adjustStaffBy(1)
         .checkStaffMovementsOnDesksAndQueuesTabAre(1)
         .checkStaffDeployedOnDesksAndQueuesTabAre(1)
         .checkStaffAvailableOnDesksAndQueuesTabAre(1)
@@ -50,7 +52,9 @@ describe('Staff movements', function () {
         .navigateHome()
         .navigateToMenuItem('T1')
         .choose24Hours()
-        .removeMovementFor1HourAt(1, 0)
+        .openAdjustmentDialogueForHour('remove', 0)
+        .adjustMinutes(60)
+        .adjustStaffBy(1)
         .checkStaffMovementsOnDesksAndQueuesTabAre(-1)
         .checkStaffDeployedOnDesksAndQueuesTabAre(1)
         .checkStaffAvailableOnDesksAndQueuesTabAre(1)
@@ -60,35 +64,47 @@ describe('Staff movements', function () {
         .removeXMovements(1);
     });
 
-    it("Should update the available staff when 1 staff member is added for 1 hour twice", function () {
+    it("Should update the available staff when 2 staff members are added for 1 hour, and record the reason", function () {
       cy
         .asABorderForceOfficer()
         .navigateHome()
         .navigateToMenuItem('T1')
         .choose24Hours()
-        .addMovementFor1HourAt(1, 0)
-        .checkStaffMovementsOnDesksAndQueuesTabAre(1)
-        .checkStaffDeployedOnDesksAndQueuesTabAre(1)
-        .checkStaffAvailableOnDesksAndQueuesTabAre(1)
-        .findAndClick('Staff Movements')
-        .checkStaffNumbersOnMovementsTabAre(1)
-        .checkUserNameOnMovementsTab(1, "Unknown")
-        .findAndClick('Desks & Queues')
-        .addMovementFor1HourAt(1, 0)
+        .openAdjustmentDialogueForHour('add', 0)
+        .selectReason('Case working')
+        .selectAdditionalReason('extra case work')
+        .adjustMinutes(60)
+        .adjustStaffBy(2)
         .checkStaffMovementsOnDesksAndQueuesTabAre(2)
         .checkStaffDeployedOnDesksAndQueuesTabAre(2)
         .checkStaffAvailableOnDesksAndQueuesTabAre(2)
         .findAndClick('Staff Movements')
         .checkStaffNumbersOnMovementsTabAre(2)
-        .checkUserNameOnMovementsTab(2, "Unknown")
-        .removeXMovements(2);
+        .checkUserNameOnMovementsTab(1, "Unknown")
+        .checkReasonOnMovementsTab('Case working: extra case work')
+        .removeXMovements(1);
     });
   });
 });
 
-Cypress.Commands.add('addMovementFor1HourAt', (numStaff, hour) => cy.addOrRemoveMovementFor1HourAt("add", numStaff, hour));
+Cypress.Commands.add('selectReason', (reason) => {
+  cy
+    .get('.staff-adjustment--select-reason')
+    .select(reason)
+    .should('have.value', reason)
+});
 
-Cypress.Commands.add('removeMovementFor1HourAt', (numStaff, hour) => cy.addOrRemoveMovementFor1HourAt("remove", numStaff, hour));
+Cypress.Commands.add('selectAdditionalReason', (reason) => {
+  cy
+    .get('.staff-adjustment--additional-info')
+    .type(reason)
+});
+
+Cypress.Commands.add('incrementStaffInput', (reason) => {
+  cy
+    .get('.staff-adjustment--num-staff__increase')
+    .click()
+});
 
 Cypress.Commands.add('staffDeployedAtRow', (row) => {
   const selector = '#sticky-body > :nth-child(' + (row + 1) + ') > :nth-child(14)';
@@ -156,23 +172,37 @@ Cypress.Commands.add('checkUserNameOnMovementsTab', (numMovements, userName) => 
     });
 });
 
-Cypress.Commands.add('addOrRemoveMovementFor1HourAt', (addOrRemove, numStaff, hour) => {
+Cypress.Commands.add('checkReasonOnMovementsTab', (reason) => {
+  cy
+    .get('.staff-movements-list')
+    .contains(reason);
+});
+
+Cypress.Commands.add('openAdjustmentDialogueForHour', (addOrRemove, hour) => {
   const buttonLabel = addOrRemove == "add" ? "+" : "-";
   const buttonNth = addOrRemove == "add" ? 3 : 1;
 
-  cy.get('#sticky-body tr:nth-child(1) td').should('have.length', 15).then(() => {
-    for (let i = 0; i < numStaff; i++) {
-      cy.get('.staff-adjustments > :nth-child(' + (hour + 1) + ') > :nth-child(' + buttonNth + ')').contains(buttonLabel).then((el) => {
-        el.click();
-        cy
-          .get('#staff-adjustment-dialogue')
-          .get('.staff-adjustment--select-time-length')
-          .select('60')
-          .get('.btn-primary.staff-adjustment--save-cancel')
-          .then((saveButton) => {
-            saveButton.click();
-          })
-      });
-    }
-  });
+  cy
+    .get('.staff-adjustments > :nth-child(' + (hour + 1) + ') > :nth-child(' + buttonNth + ')')
+    .contains(buttonLabel)
+    .click();
+});
+
+Cypress.Commands.add('adjustStaffBy', (numStaff) => {
+  const adjustmentSelector = numStaff > 0 ? '.staff-adjustment--adjustment-button__increase' : '.staff-adjustment--adjustment-button__decrease';
+
+  for (let i = 1; i < numStaff; i++) {
+    cy.get(adjustmentSelector).click();
+  }
+
+  cy
+    .get('.btn-primary.staff-adjustment--save-cancel')
+    .click();
+});
+
+Cypress.Commands.add('adjustMinutes', (minutes) => {
+  cy
+    .get('.staff-adjustment--select-time-length')
+    .select('' + minutes)
+    .should('have.value', '' + minutes);
 });
