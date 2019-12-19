@@ -114,23 +114,27 @@ class OptimiserSpec extends Specification {
   }
 
   "optimise.win comparison" >> {
+    skipped("exploratory")
     loadOptimiserScript
 
-    val workloads = (1 to 1440).map(_ => (Math.random() * 20).toInt)
-    val maxDesks = (1 to 1440).map(_ => 10)
-    val minDesks = (1 to 1440).map(_ => 1)
+    val workloads = (1 to 720).map(_ => (Math.random() * 20))
+    val maxDesks = (1 to 720).map(_ => 10)
+    val minDesks = (1 to 720).map(_ => 1)
+    val adjustedSla = (0.75d * 25).toInt
+
+    val weightChurn = 50
+    val weightPax = 0.05
+    val weightStaff = 3
+    val weightSla = 10
+
     engine.put("work", workloads.toArray)
     engine.put("xmax", maxDesks.toArray)
     engine.put("xmin", minDesks.toArray)
-    val adjustedSla = (0.75d * 25).toInt
     engine.put("sla", adjustedSla)
-    val weightChurn = 50
+
     engine.put("w_churn", weightChurn)
-    val weightPax = 0.05
     engine.put("w_pax", weightPax)
-    val weightStaff = 3
     engine.put("w_staff", weightStaff)
-    val weightSla = 10
     engine.put("w_sla", weightSla)
 
     val rStartTime = SDate.now().millisSinceEpoch
@@ -141,7 +145,6 @@ class OptimiserSpec extends Specification {
     val sStartTime = SDate.now().millisSinceEpoch
     val newResult = Optimiser.optimiseWin(workloads.toList, minDesks.toList, maxDesks.toList, adjustedSla, weightChurn, weightPax, weightStaff, weightSla)
     val sTook = SDate.now().millisSinceEpoch - sStartTime
-
     println(s"r took ${rTook}ms. s took ${sTook}ms")
 
     newResult === rResult
