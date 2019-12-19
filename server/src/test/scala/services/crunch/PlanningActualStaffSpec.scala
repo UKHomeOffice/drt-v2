@@ -5,7 +5,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.{T1, T2}
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
-import services.{SDate, TryRenjin}
+import services.{Optimiser, SDate, TryRenjin}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -40,7 +40,7 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
         terminals = Seq(T1),
         minMaxDesksByTerminalQueue = Map(T1 -> Map(Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1)))))
       ),
-      cruncher = TryRenjin.crunch
+      cruncher = Optimiser.crunch
     )
 
     Await.ready(crunch.baseArrivalsInput.offer(ArrivalsFeedSuccess(Flights(forecastFlights.toSeq))), 1 second)

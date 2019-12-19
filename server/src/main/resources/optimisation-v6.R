@@ -18,7 +18,7 @@
 # case where xmin is a vector and initial guess <= some xmin
 
 # Prevented it from reducing xmax to zero when there is finite work (which
-# resulted in no breach being detected, as there's only an excess wait 
+# resulted in no breach being detected, as there's only an excess wait
 # once you process a passenger!).
 
 # Changes in v4 12/05/2015:
@@ -44,8 +44,8 @@
 # unnecessary, and undocumented, rounding of the inputs.
 
 # v1 04/09/2013
-# This was based on the final version received back from JZ, with 
-# AH modifications 
+# This was based on the final version received back from JZ, with
+# AH modifications
 
 
 running.avg = function(x, npoint)
@@ -122,6 +122,7 @@ process.work = function(work, capacity, sla, qstart)
     for (t in 1 : length(work))
     {
         q = c(work[t], q)         # add workload arriving in current time slot to queue
+
         resource = capacity[t]    # resource available in the current time slot
         age = length(q)           # oldest work on the queue, where age 1 is new work this slot
         while (age > 0)
@@ -148,6 +149,7 @@ process.work = function(work, capacity, sla, qstart)
         util[t] = 1 - resource / capacity[t]   # proportion of capacity that was used this slot
     }
     util[! is.finite(util)] = 0    # replace NaNs by 0 (where was zero capacity)
+
     return(list(util = util, wait = wait, residual = q, total.wait = total.wait, excess.wait = excess.wait))
 }
 
@@ -167,9 +169,7 @@ churn = function(churn.start, x)
 }
 
 
-cost = function(work, capacity, sla,
-weight.pax, weight.staff, weight.churn, weight.sla,
-overrun = NULL, qstart, churn.start)
+cost = function(work, capacity, sla, weight.pax, weight.staff, weight.churn, weight.sla, overrun = NULL, qstart, churn.start)
 # --------------------------------------------
 
 # Evaluate a cost function for processing a queue, with the given weights.
@@ -180,7 +180,7 @@ overrun = NULL, qstart, churn.start)
 
 # Passenger waiting time is counted for all the passengers in "work",
 # and for any in qstart (the latter not documented prior to v3).
-# Staff idle time is only counted for the time span corresponding to the 
+# Staff idle time is only counted for the time span corresponding to the
 # capacity vector. Churn is counted throughout.
 
 # From v3, the overrun parameter is IGNORED. Overrun is now calculated
@@ -211,8 +211,7 @@ overrun = NULL, qstart, churn.start)
         # if capacity in last slot was zero, assume 1 desk opened to process residual queue
         # otherwise, cost would be infinite
         cum.backlog = cumsum(backlog)
-        cum.capacity = seq(from = 0, by = final.capacity,
-        length = ceiling(total.backlog / final.capacity) + 1)
+        cum.capacity = seq(from = 0, by = final.capacity, length = ceiling(total.backlog / final.capacity) + 1)
         overrun.slots = (1 : length(cum.capacity)) - 1
         # time slots at which overrun capacity becomes available
         backlog.boundaries = approx(cum.capacity, overrun.slots, cum.backlog, rule = 2)$y
@@ -232,12 +231,15 @@ overrun = NULL, qstart, churn.start)
         # some didn't (sometimes not a very good approximation!)
         # Add waiting times due to backlog to previous running totals from simulation
         simres$total.wait = simres$total.wait + sum(backlog * mean.waits)
+        # if (ceiling(simres$total.wait) != simres$total.wait) print(sprintf("got %f", simres$total.wait))
+
         simres$excess.wait = simres$excess.wait + sum(backlog[excess.filter] * mean.waits[excess.filter])
     }
 
     pax.penalty = simres$total.wait
     sla.penalty = simres$excess.wait
     staff.penalty = sum((1 - simres$util[1 : length(capacity)]) * capacity)
+
     churn.penalty = churn(churn.start, c(capacity, final.capacity))
     # concatenate final capacity for churn calculation in case a desk was re-opened for backlog
     total.penalty = weight.pax * pax.penalty +
@@ -245,11 +247,9 @@ overrun = NULL, qstart, churn.start)
         weight.churn * churn.penalty +
         weight.sla * sla.penalty
 
-    return(list(pax = pax.penalty,
-    sla.p = sla.penalty,
-    staff = staff.penalty,
-    churn = churn.penalty,
-    total = total.penalty))
+    # print(sprintf("%f * %f + %f * %f + %f * %f + %f * %f = %f", weight.pax, pax.penalty, weight.staff, staff.penalty, weight.churn, churn.penalty, weight.sla, sla.penalty, total.penalty))
+
+    return(list(pax = pax.penalty, sla.p = sla.penalty, staff = staff.penalty, churn = churn.penalty, total = total.penalty))
 }
 
 
@@ -276,11 +276,11 @@ branch.bound = function(starting.x, objective.func, xmin, xmax, concavity.limit)
 # function.
 
 # The algorithm is designed to be used when no suitable bounding function is
-# available. Instead, subtrees are discarded if the objective function at the 
-# initial node exceeds the best feasible solution so far by more than 
-# the concavity.limit parameter. A concavity.limit of Inf would correspond to 
-# an exhaustive search and would take exponential time; a concavity.limit of 
-# zero would dispose of unpromising subtrees rather quickly, and would in fact 
+# available. Instead, subtrees are discarded if the objective function at the
+# initial node exceeds the best feasible solution so far by more than
+# the concavity.limit parameter. A concavity.limit of Inf would correspond to
+# an exhaustive search and would take exponential time; a concavity.limit of
+# zero would dispose of unpromising subtrees rather quickly, and would in fact
 # sometimes miss minima even for a convex objective.func.
 
 # Branching is on x[1] first, then on x[2], etc.
@@ -310,6 +310,7 @@ branch.bound = function(starting.x, objective.func, xmin, xmax, concavity.limit)
             candidates[[cursor]] = candidates[[cursor]][- 1]
             # cat(x, "\n")
             trial.z = objective.func(x)
+
             if (trial.z > best.so.far + concavity.limit)### * (n - cursor + 1))
             {
                 # current x is so bad it is not worth exploring its subtree any further
@@ -344,7 +345,7 @@ weight.staff = 3, weight.churn = 45, concavity.limit = 30, win.width = 90,
 win.step=60, block.width=15, xmin = 1, xmax = 6, starting.est=NULL, quiet=T)
 # ----------------------------------------------------------------------------
 # Obtain an optimised vector of desks for the given vector of workload,
-# each with one element per time slot. The length of the work vector must be 
+# each with one element per time slot. The length of the work vector must be
 # an exact multiple of the block.width, which gives the time resolution for
 # changing staffing levels. And the window width, win.width, must be an even
 # multiple of block.width.
@@ -451,8 +452,9 @@ leftward.desks = function(work, xmin=1, xmax=6, block.size=15, backlog=0)
         work.block = work[i : (i + block.size - 1)]            # vector of work in the current block
         guess = (backlog + sum(work.block)) %/% block.size   # starting guess for desks
         guess = min(guess, xmax[i])                          # ensure within xmax
-        while (min(backlog + cumsum(work.block - guess)) < 0)
-        guess = guess - 1          # reduce guess for number of desks until desks never idle
+        while (min(backlog + cumsum(work.block - guess)) < 0) {
+            guess = guess - 1          # reduce guess for number of desks until desks never idle
+        }
         guess = max(guess, xmin[i])   # but top up the desks if they are now below xmin
 
         for (j in 1 : block.size)# update backlog after processing current block
@@ -470,7 +472,7 @@ leftward.desks = function(work, xmin=1, xmax=6, block.size=15, backlog=0)
 
 fair.xmax = function(work, xmin=1, block.size=15, sla=25)
 # -------------------------------------------------------
-# Find the lowest (scalar) xmax for work, such that the desks returned by 
+# Find the lowest (scalar) xmax for work, such that the desks returned by
 # leftward.desks just avoid a breach; zero backlog assumed.
 
 # In principle, the "desks never idle" rule means there are some combinations
@@ -482,7 +484,7 @@ fair.xmax = function(work, xmin=1, block.size=15, sla=25)
 
 # Empirically, this function tends to return quite a generous xmax, especially
 # if the block.size is not much shorter than the sla. Experiments with one
-# week's data suggest that calling this function with an xmin of 1 (even if 
+# week's data suggest that calling this function with an xmin of 1 (even if
 # the real xmin is 0) and a block.size of 5 (instead of the default 15) minutes
 # gives a pragmatically sensible xmax.
 
@@ -513,7 +515,7 @@ fair.xmax = function(work, xmin=1, block.size=15, sla=25)
 legacy.rolling.fair.xmax = function(work, xmin=1, block.size=5, sla=0.75 * 25,
 target.width=60, rolling.buffer=120)
 # -------------------------------------------------------
-# Legacy version of rolling.fair.xmax, for closer compatibility (at time of 
+# Legacy version of rolling.fair.xmax, for closer compatibility (at time of
 # writing, 26/08/2015) with live DRT. The main difference from the current version
 # is that it ignores any carry-over queue between windows, so a conservative
 # sla (typically 75% of the real sla) should be used. Also a longer rolling.buffer
@@ -546,15 +548,15 @@ target.width=60, rolling.buffer=60)
 
 # Upgraded in v6 to take into account carry-over work between windows, so you
 # no longer need the fudge of setting the sla to 75% of its true value. Also
-# it now prevents the xmax ever dropping below the mean level of work in each 
+# it now prevents the xmax ever dropping below the mean level of work in each
 # window.
 
 # Experiments suggest that a block.size of 5 gives a smoother xmax than
-# the value of 15 used in live DRT (at time of writing). Also the xmax 
-# will avoid some unnecessarily large peaks if you call this function with an 
+# the value of 15 used in live DRT (at time of writing). Also the xmax
+# will avoid some unnecessarily large peaks if you call this function with an
 # xmin of 1 or more, even if the real xmin is zero.
 
-# Experiments also suggest that the rolling.buffer can now be 60 mins for 
+# Experiments also suggest that the rolling.buffer can now be 60 mins for
 # both EEA and NEEA, instead of 120 mins in the legacy version. This allows
 # the fair xmax to follow the work more closely.
 
@@ -601,8 +603,12 @@ target.width=60, rolling.buffer=60)
                 trial.process = process.work(win.work, trial$desks, sla, 0)
                 if (trial.process$excess.wait > 0)
                 # have a breach, so revert to previous xmax and terminate repeat loop
-                { win.xmax = min(win.xmax + 1, guess.max); break}
-                if (win.xmax <= lower.limit)break   # no breach, but have reached lower limit
+                {
+                    win.xmax = min(win.xmax + 1, guess.max);
+                    break
+                }
+                if (win.xmax <= lower.limit)
+                break   # no breach, but have reached lower limit
                 win.xmax = win.xmax - 1             # reduce xmax and loop
             }
         }

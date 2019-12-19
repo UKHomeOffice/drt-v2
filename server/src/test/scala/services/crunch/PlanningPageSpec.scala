@@ -5,7 +5,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.T1
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
-import services.{SDate, TryRenjin}
+import services.{Optimiser, SDate, TryRenjin}
 
 import scala.concurrent.duration._
 
@@ -34,7 +34,7 @@ class PlanningPageSpec() extends CrunchTestLike {
         minMaxDesksByTerminalQueue = Map(T1 -> Map(Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1)))))
       ),
       initialShifts = ShiftAssignments(Seq(assignment1)),
-      cruncher = TryRenjin.crunch,
+      cruncher = Optimiser.crunch,
       checkRequiredStaffUpdatesOnStartup = true
     )
 

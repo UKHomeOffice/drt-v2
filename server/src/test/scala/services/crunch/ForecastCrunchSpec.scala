@@ -8,7 +8,7 @@ import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.graphstages.CrunchMocks
-import services.{SDate, TryRenjin}
+import services.{Optimiser, SDate, TryRenjin}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.collection.mutable
@@ -132,7 +132,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
       now = () => SDate(scheduled),
       minutesToCrunch = 1440,
       initialShifts = ShiftAssignments(Seq(assignment1, assignment2)),
-      cruncher = TryRenjin.crunch,
+      cruncher = Optimiser.crunch,
       maxDaysToCrunch = 4
     )
 
