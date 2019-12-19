@@ -11,8 +11,8 @@ import scala.util.{Success, Try}
 object Optimiser {
   val manager: ScriptEngineManager = new ScriptEngineManager()
   val engine: ScriptEngine = manager.getEngineByName("Renjin")
-  var checkAllAgainstR = true
-  var checkOptimiserAgainstR = true
+  var checkAllAgainstR = false
+  var checkOptimiserAgainstR = false
 
   def loadOptimiserScript: AnyRef = {
     if (engine == null) throw new scala.RuntimeException("Couldn't load Renjin script engine on the classpath")
