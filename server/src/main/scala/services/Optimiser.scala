@@ -4,11 +4,13 @@ import java.io.InputStream
 
 import javax.script.{ScriptEngine, ScriptEngineManager}
 import org.renjin.sexp.{DoubleVector, IntVector}
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.mutable
 import scala.util.{Success, Try}
 
 object Optimiser {
+  val log: Logger = LoggerFactory.getLogger(getClass)
   val manager: ScriptEngineManager = new ScriptEngineManager()
   val engine: ScriptEngine = manager.getEngineByName("Renjin")
   var checkAllAgainstR = false
@@ -28,10 +30,18 @@ object Optimiser {
   val weightChurn = 50
   val weightPax = 0.05
   val weightStaff = 3
+  val blockSize = 5
+  val targetWidth = 60
+  val rollingBuffer = 120
 
   def crunch(workloads: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int], config: OptimizerConfig): Try[OptimizerCrunchResult] = {
-    val desks = optimiseWin(workloads.toList, minDesks.toList, maxDesks.toList, config.sla, weightChurn, weightPax, weightStaff, weightSla)
+    log.info(s"Starting optimisation for ${workloads.length} minutes of workload")
+    val fairMaxD = rollingFairXmax(workloads.toList, minDesks.toList, blockSize, config.sla, targetWidth, rollingBuffer)
+    val desks = optimiseWin(workloads.toList, minDesks.toList, fairMaxD, config.sla, weightChurn, weightPax, weightStaff, weightSla)
+    log.info(s"Finished. Desk recs: ${/*desks.mkString(", ")*/}")
+    log.info(s"Finished. Starting simulation for wait times")
     val waits = processWork(workloads.toList, desks.toList, config.sla, List()).waits
+    log.info(s"Finished. Wait times: ${/*waits.mkString(", ")*/}")
 
     Success(OptimizerCrunchResult(desks.toIndexedSeq, waits))
   }
@@ -490,8 +500,6 @@ object Optimiser {
       .map {
         case (d, min) => List(d, min).max
       }
-
-    //    println(s"$weightChurn, $weightPax, $weightSla, $weightStaff")
 
     def myCost(costWork: List[Double], costQStart: List[Double], costChurnStart: Int)(capacity: List[Int]): Cost =
       cost(costWork, sla, weightChurn, weightPax, weightStaff, weightSla, costQStart, costChurnStart)(capacity.flatMap(c => List.fill(blockWidth)(c)))

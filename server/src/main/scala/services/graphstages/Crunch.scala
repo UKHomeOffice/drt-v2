@@ -312,7 +312,10 @@ object Crunch {
     } yield {
       val lms = (firstMinute until lastMinute by 60000).map(minute =>
         loadMinutes.getOrElse(TQM(terminal, queue, minute), LoadMinute(terminal, queue, 0, 0, minute)))
-      crunchQueue(firstMinute, lastMinute, terminal, queue, lms, airportConfig, crunch)
+      val start = SDate.now().millisSinceEpoch
+      val result = crunchQueue(firstMinute, lastMinute, terminal, queue, lms, airportConfig, crunch)
+      log.info(s"(services.Optimiser) Finished optimising $terminal / $queue: Took ${SDate.now().millisSinceEpoch - start}ms")
+      result
     }
     DeskRecMinutes(terminalQueueDeskRecs.toSeq.flatten)
   }
