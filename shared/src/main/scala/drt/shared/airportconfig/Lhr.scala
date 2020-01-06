@@ -115,6 +115,7 @@ object Lhr extends AirportConfigLike {
         EeaDesk -> (1.0 - 0.8466)
       )))
     ),
-    hasTransfer = true
+    hasTransfer = true,
+    maybeCiriumEstThresholdHours = Option(6)
   )
 }
