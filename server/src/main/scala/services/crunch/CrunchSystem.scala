@@ -14,6 +14,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import queueus._
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services._
+import services.arrivals.ArrivalDataSanitiser
 import services.graphstages.Crunch._
 import services.graphstages._
 
@@ -106,6 +107,10 @@ object CrunchSystem {
       initialMergedArrivals = if (props.refreshArrivalsOnStart) mutable.SortedMap[UniqueArrival, Arrival]() else mutable.SortedMap[UniqueArrival, Arrival]() ++ initialFlightsWithSplits.map(_.flightsToUpdate.map(fws => (fws.apiFlight.unique, fws.apiFlight))).getOrElse(List()),
       pcpArrivalTime = props.pcpArrival,
       validPortTerminals = props.airportConfig.terminals.toSet,
+      ArrivalDataSanitiser(
+        props.airportConfig.maybeCiriumEstThresholdHours,
+        props.airportConfig.maybeCiriumTaxiThresholdMinutes
+      ),
       expireAfterMillis = props.expireAfterMillis,
       now = props.now)
 
