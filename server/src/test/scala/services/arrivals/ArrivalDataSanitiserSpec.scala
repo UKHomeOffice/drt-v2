@@ -97,17 +97,4 @@ class ArrivalDataSanitiserSpec extends Specification {
 
     saneArrival.EstimatedChox === None
   }
-
-  "Given a base live arrival with an actual touchdown time and a different estimated touch down time " +
-    "Then the estimated should be set to the actual time" >> {
-    val arrivalWithIrrationalEstimation = arrival(
-      actual = Option(scheduled.millisSinceEpoch),
-      estimated = Option(scheduled.addMinutes(5).millisSinceEpoch)
-    )
-    val sanitiser = ArrivalDataSanitiser(Option(4), Option(20))
-    val saneArrival = sanitiser.withSaneEstimates(arrivalWithIrrationalEstimation)
-
-    saneArrival.Estimated === saneArrival.Actual
-  }
-
 }

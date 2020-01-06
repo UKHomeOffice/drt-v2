@@ -13,11 +13,9 @@ case class ArrivalDataSanitiser(
   def withSaneEstimates(arrival: Arrival): Arrival = withSaneEstimatedChox(withSaneEstimatedTouchDown(arrival))
 
   def withSaneEstimatedTouchDown(arrival: Arrival): Arrival =
-    (maybeEstThresholdMillis, arrival.Estimated, arrival.Actual) match {
-      case (Some(threshold), Some(est), _) if (Math.abs(est - arrival.Scheduled) > threshold) =>
+    (maybeEstThresholdMillis, arrival.Estimated) match {
+      case (Some(threshold), Some(est)) if (Math.abs(est - arrival.Scheduled) > threshold) =>
         arrival.copy(Estimated = None)
-      case (_, Some(est), Some(act)) if est != act =>
-        arrival.copy(Estimated = arrival.Actual)
       case _ => arrival
     }
 
