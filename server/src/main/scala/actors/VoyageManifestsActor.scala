@@ -18,7 +18,7 @@ import scala.util.Try
 
 case class VoyageManifestState(manifests: mutable.SortedMap[MilliDate, VoyageManifest],
                                var latestZipFilename: String,
-                               feedName: String,
+                               feedSource: FeedSource,
                                var maybeFeedStatuses: Option[FeedStatuses]) extends FeedStateLike
 
 case object GetLatestZipFilename
@@ -29,7 +29,7 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
                            val initialMaybeSnapshotInterval: Option[Int]) extends RecoveryActorLike with PersistentDrtActor[VoyageManifestState] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  val name = "API"
+  val feedSource = ApiFeedSource
 
   var state: VoyageManifestState = initialState
 
@@ -39,7 +39,7 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
   def initialState = VoyageManifestState(
     manifests = mutable.SortedMap[MilliDate, VoyageManifest](),
     latestZipFilename = defaultLatestZipFilename,
-    feedName = name,
+    feedSource = feedSource,
     maybeFeedStatuses = None
   )
 

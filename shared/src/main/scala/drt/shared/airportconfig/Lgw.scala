@@ -75,6 +75,7 @@ object Lgw extends AirportConfigLike {
       S -> (defaultQueueRatios + (EeaMachineReadable -> List(
         EGate -> 0.8375,
         EeaDesk -> (1.0 - 0.8375)
-      ))))
+      )))),
+    feedSources = Seq(LiveBaseFeedSource, LiveFeedSource, ForecastFeedSource, AclFeedSource, ApiFeedSource)
   )
 }

@@ -44,8 +44,14 @@ object FlightMessageConversion {
   }
 
   def feedStatusesFromFeedStatusesMessage(message: FeedStatusesMessage): FeedStatuses = {
+    val maybeFeedSource = (message.feedSource, message.nameOLD) match {
+      case (Some(s), _) => FeedSource(s)
+      case (_, Some(n)) => FeedSource(n)
+      case _ => None
+    }
+
     FeedStatuses(
-      name = message.name.getOrElse("n/a"),
+      maybeFeedSource.getOrElse(UnknownFeedSource),
       statuses = message.statuses.map(feedStatusFromFeedStatusMessage).toList,
       lastSuccessAt = message.lastSuccessAt,
       lastFailureAt = message.lastFailureAt,

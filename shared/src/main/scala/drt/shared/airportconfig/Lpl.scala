@@ -47,5 +47,7 @@ object Lpl extends AirportConfigLike {
         EeaMachineReadable -> List(EeaDesk -> 1.0),
         B5JPlusNational -> List(Queues.EeaDesk -> 1.0)
       ))
-    ))
+    ),
+    feedSources = Seq(LiveBaseFeedSource, AclFeedSource, ApiFeedSource)
+  )
 }

@@ -50,5 +50,6 @@ object Ncl extends AirportConfigLike {
         EGate -> 0.6993,
         EeaDesk -> (1.0 - 0.6993)
       )))
-    ))
+    ),
+    feedSources = Seq(LiveBaseFeedSource, AclFeedSource, ApiFeedSource))
 }

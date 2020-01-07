@@ -16,19 +16,19 @@ import services.graphstages.Crunch
 import scala.collection.mutable
 
 trait FeedStateLike {
-  def feedName: String
+  def feedSource: FeedSource
 
   def maybeFeedStatuses: Option[FeedStatuses]
 
   def addStatus(newStatus: FeedStatus): FeedStatuses = {
     maybeFeedStatuses match {
       case Some(feedStatuses) => feedStatuses.add(newStatus)
-      case None => FeedStatuses(feedName, List(), None, None, None).add(newStatus)
+      case None => FeedStatuses(feedSource, List(), None, None, None).add(newStatus)
     }
   }
 }
 
-case class ArrivalsState(arrivals: mutable.SortedMap[UniqueArrival, Arrival], var feedName: String, var maybeFeedStatuses: Option[FeedStatuses]) extends FeedStateLike {
+case class ArrivalsState(arrivals: mutable.SortedMap[UniqueArrival, Arrival], var feedSource: FeedSource, var maybeFeedStatuses: Option[FeedStatuses]) extends FeedStateLike {
   def clear(): Unit = {
     arrivals.clear()
     maybeFeedStatuses = None
@@ -37,7 +37,7 @@ case class ArrivalsState(arrivals: mutable.SortedMap[UniqueArrival, Arrival], va
 
 class ForecastBaseArrivalsActor(initialSnapshotBytesThreshold: Int,
                                 now: () => SDateLike,
-                                expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, "ACL forecast") {
+                                expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, AclFeedSource) {
   override def persistenceId: String = s"${getClass.getName}-forecast-base"
 
   override val snapshotBytesThreshold: Int = initialSnapshotBytesThreshold
@@ -67,7 +67,7 @@ class ForecastBaseArrivalsActor(initialSnapshotBytesThreshold: Int,
 
 class ForecastPortArrivalsActor(initialSnapshotBytesThreshold: Int,
                                 now: () => SDateLike,
-                                expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, "Port forecast") {
+                                expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, ForecastFeedSource) {
   override def persistenceId: String = s"${getClass.getName}-forecast-port"
 
   override val snapshotBytesThreshold: Int = initialSnapshotBytesThreshold
@@ -80,7 +80,7 @@ class ForecastPortArrivalsActor(initialSnapshotBytesThreshold: Int,
 
 class LiveBaseArrivalsActor(initialSnapshotBytesThreshold: Int,
                             now: () => SDateLike,
-                            expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, "Port live base") {
+                            expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, LiveBaseFeedSource) {
   override def persistenceId: String = s"${getClass.getName}-live-base"
 
   override val snapshotBytesThreshold: Int = initialSnapshotBytesThreshold
@@ -93,7 +93,7 @@ class LiveBaseArrivalsActor(initialSnapshotBytesThreshold: Int,
 
 class LiveArrivalsActor(initialSnapshotBytesThreshold: Int,
                         now: () => SDateLike,
-                        expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, "Port live") {
+                        expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, LiveFeedSource) {
   override def persistenceId: String = s"${getClass.getName}-live"
 
   override val snapshotBytesThreshold: Int = initialSnapshotBytesThreshold
@@ -106,7 +106,7 @@ class LiveArrivalsActor(initialSnapshotBytesThreshold: Int,
 
 abstract class ArrivalsActor(now: () => SDateLike,
                              expireAfterMillis: Long,
-                             name: String) extends RecoveryActorLike with PersistentDrtActor[ArrivalsState] {
+                             name: FeedSource) extends RecoveryActorLike with PersistentDrtActor[ArrivalsState] {
 
   val restorer = new RestorerWithLegacy[Int, UniqueArrival, Arrival]
   val state: ArrivalsState = initialState
@@ -138,7 +138,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
     Crunch.purgeExpired(state.arrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt)
 
-    log.info(s"Recovered ${state.arrivals.size} arrivals for ${state.feedName}")
+    log.info(s"Recovered ${state.arrivals.size} arrivals for ${state.feedSource}")
     super.postRecoveryComplete()
   }
 

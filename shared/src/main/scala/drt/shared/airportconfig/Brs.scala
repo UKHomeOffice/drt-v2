@@ -52,6 +52,7 @@ object Brs extends AirportConfigLike {
         EGate -> 0.7742,
         EeaDesk -> (1.0 - 0.7742)
       )))
-    )
+    ),
+    feedSources = Seq(LiveBaseFeedSource, AclFeedSource, ApiFeedSource)
   )
 }

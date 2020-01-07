@@ -38,12 +38,14 @@ case object Green extends RagStatus {
   override def toString = "green"
 }
 
-case class FeedStatuses(name: String,
+case class FeedStatuses(feedSource: FeedSource,
                         statuses: List[FeedStatus],
                         lastSuccessAt: Option[MillisSinceEpoch],
                         lastFailureAt: Option[MillisSinceEpoch],
                         lastUpdatesAt: Option[MillisSinceEpoch]) {
   val oneMinuteMillis: Int = 60 * 1000
+
+  def name: String = feedSource.name
 
   def ragStatus(now: MillisSinceEpoch): RagStatus = (lastSuccessAt, lastFailureAt) match {
     case (Some(s), Some(f)) if f > s => Red
