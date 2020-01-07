@@ -257,10 +257,6 @@ case class AirportConfig(portCode: PortCode,
     terminalSplitQueueTypes.getOrElse(terminal, Set()).contains(q)
   }
 
-  def paxTypeAndQueueOrder(terminalName: Terminal): List[PaxTypeAndQueue] = PaxTypesAndQueues.inOrder.filter { q =>
-    queues.getOrElse(terminalName, List()).contains(q.queueType)
-  }
-
   def feedPortCode: PortCode = cloneOfPortCode.getOrElse(portCode)
 
   def nonTransferQueues(terminalName: Terminal): Seq[Queue] = queues(terminalName).collect {

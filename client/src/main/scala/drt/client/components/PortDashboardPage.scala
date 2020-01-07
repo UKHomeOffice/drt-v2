@@ -39,7 +39,7 @@ object PortDashboardPage {
 
           portDashboardModel.airportConfig.renderReady(portConfig => {
 
-            val (queues, paxTypeAndQueueOrder, terminals) = (portConfig.queues, portConfig.paxTypeAndQueueOrder _, portConfig.terminals)
+            val (queues, paxTypeAndQueueOrder, terminals) = (portConfig.queues, portConfig.terminalPaxSplits, portConfig.terminals)
 
             val currentPeriodStart = DashboardTerminalSummary.windowStart(SDate.now())
             val periods = List(
@@ -84,7 +84,7 @@ object PortDashboardPage {
                           terminalCrunchMinutes,
                           terminalStaffMinutes,
                           terminalName,
-                          paxTypeAndQueueOrder(terminalName),
+                          paxTypeAndQueueOrder(terminalName).splits.map(_.paxType),
                           terminalQueuesInOrder,
                           displayPeriod.start,
                           displayPeriod.end)

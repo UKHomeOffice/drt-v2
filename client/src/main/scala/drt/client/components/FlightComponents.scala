@@ -52,26 +52,27 @@ object FlightComponents {
 
   object SplitsGraph {
 
-    case class Props(splitTotal: Int, splits: Seq[(PaxTypeAndQueue, Int)], tooltipOption: Option[TagMod])
+    case class Props(splitTotal: Int, splits: Seq[(PaxTypeAndQueue, Int)])
 
     def splitsGraphComponentColoured(props: Props): TagOf[Div] = {
       import props._
-      <.div(^.className := "dashboard-summary__splits",
-        tooltipOption.map(tooltip => <.div(^.className := ".dashboard-summary__splits-tooltip", <.div(tooltip))).toList.toTagMod,
-        <.div(^.className := "dashboard-summary__splits-graph",
-          <.div(^.className := "dashboard-summary__splits-graph-bars",
-            splits.map {
-              case (paxTypeAndQueue, paxCount) =>
-                val divHeightScalingFactor = 80
-                val percentage: Double = paxCount.toDouble / splitTotal * divHeightScalingFactor
-                val label = paxTypeAndQueueString(paxTypeAndQueue)
-                <.div(
-                  ^.className := s"dashboard-summary__splits-graph-bar dashboard-summary__splits-graph-bar--${paxTypeAndQueue.queueType.toString.toLowerCase}",
-                  ^.height := s"$percentage%",
-                  ^.title := s"$label")
-            }.toTagMod,
-            <.div(^.className := "dashboard-summary__splits-graph-bar dashboard-summary__splits-graph-bar--max")
-          )))
+      val maxSplit = props.splits.map(_._2).max
+      <.div(
+        ^.className := "dashboard-summary__pax",
+        <.div(^.className := "dashboard-summary__total-pax", s"${props.splitTotal} Pax"),
+        <.div(^.className := "dashboard-summary__splits-graph-bars",
+          splits.map {
+            case (paxTypeAndQueue, paxCount) =>
+              val percentage = ((paxCount.toDouble / maxSplit) * 100).toInt
+              val label = paxTypeAndQueueString(paxTypeAndQueue)
+              <.div(
+                ^.className := s"dashboard-summary__splits-graph-bar dashboard-summary__splits-graph-bar--${paxTypeAndQueue.queueType.toString.toLowerCase}",
+                ^.height := s"$percentage%",
+                ^.title := s"$label")
+          }.toTagMod,
+          <.div(^.className := "dashboard-summary__splits-graph-bar dashboard-summary__splits-graph-bar--max")
+        )
+      )
     }
   }
 

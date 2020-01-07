@@ -95,18 +95,10 @@ object BigSummaryBoxes {
 
   case class Props(flightCount: Int, actPaxCount: Int, bestPaxCount: Int, aggSplits: Map[PaxTypeAndQueue, Int], paxQueueOrder: Seq[PaxTypeAndQueue])
 
-  def GraphComponent(source: String, sourceDisplay: String, splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int], paxQueueOrder: Seq[PaxTypeAndQueue]): TagOf[HTMLElement] = {
+  def GraphComponent(splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int], paxQueueOrder: Seq[PaxTypeAndQueue]): TagOf[HTMLElement] = {
     val value = Try {
       val orderedSplitCounts: Seq[(PaxTypeAndQueue, Int)] = paxQueueOrder.map(ptq => ptq -> queuePax.getOrElse(ptq, 0))
-
-      val nbsp = "\u00a0"
-      <.div(
-        nbsp,
-        <.span(
-          // summary-box-count best-pax-count are here as a dirty hack for alignment with the other boxes
-          <.div(^.className := "summary-box-count best-pax-count split-graph-container splitsource-" + source,
-            SplitsGraph.splitsGraphComponentColoured(SplitsGraph.Props(splitTotal, orderedSplitCounts, None)), sourceDisplay))
-      )
+      SplitsGraph.splitsGraphComponentColoured(SplitsGraph.Props(splitTotal, orderedSplitCounts))
     }
     val g: Try[TagOf[HTMLElement]] = value recoverWith {
       case f => Try(<.div(f.toString()))
