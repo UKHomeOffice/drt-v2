@@ -15,7 +15,7 @@ object FlightMessageConversion {
   val log: Logger = LoggerFactory.getLogger(getClass.toString)
 
   def arrivalsStateToSnapshotMessage(state: ArrivalsState): FlightStateSnapshotMessage = {
-    val maybeStatusMessages = state.maybeFeedStatuses.flatMap(feedStatuses => feedStatusesToMessage(feedStatuses))
+    val maybeStatusMessages = state.maybeSourceStatuses.flatMap(feedStatuses => feedStatusesToMessage(feedStatuses.feedStatuses))
 
     FlightStateSnapshotMessage(
       state.arrivals.values.map(apiFlightToFlightMessage).toSeq,
@@ -26,7 +26,7 @@ object FlightMessageConversion {
   def feedStatusesToMessage(statuses: FeedStatuses): Option[FeedStatusesMessage] = {
     val statusMessages = statuses.statuses.map(feedStatusToMessage)
 
-    Option(FeedStatusesMessage(Option(statuses.name), statusMessages, statuses.lastSuccessAt, statuses.lastFailureAt, statuses.lastUpdatesAt))
+    Option(FeedStatusesMessage(statusMessages, statuses.lastSuccessAt, statuses.lastFailureAt, statuses.lastUpdatesAt))
   }
 
   def feedStatusToMessage(feedStatus: FeedStatus): FeedStatusMessage = feedStatus match {
@@ -43,21 +43,12 @@ object FlightMessageConversion {
     snMessage.statuses.map(feedStatusesFromFeedStatusesMessage)
   }
 
-  def feedStatusesFromFeedStatusesMessage(message: FeedStatusesMessage): FeedStatuses = {
-    val maybeFeedSource = (message.feedSource, message.nameOLD) match {
-      case (Some(s), _) => FeedSource(s)
-      case (_, Some(n)) => FeedSource(n)
-      case _ => None
-    }
-
-    FeedStatuses(
-      maybeFeedSource.getOrElse(UnknownFeedSource),
-      statuses = message.statuses.map(feedStatusFromFeedStatusMessage).toList,
-      lastSuccessAt = message.lastSuccessAt,
-      lastFailureAt = message.lastFailureAt,
-      lastUpdatesAt = message.lastUpdatesAt
-    )
-  }
+  def feedStatusesFromFeedStatusesMessage(message: FeedStatusesMessage): FeedStatuses = FeedStatuses(
+    statuses = message.statuses.map(feedStatusFromFeedStatusMessage).toList,
+    lastSuccessAt = message.lastSuccessAt,
+    lastFailureAt = message.lastFailureAt,
+    lastUpdatesAt = message.lastUpdatesAt
+  )
 
   def feedStatusFromFeedStatusMessage(message: FeedStatusMessage): FeedStatus = {
     if (message.updates.isDefined)

@@ -16,30 +16,29 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-case class GetFeedStatuses() extends Action
+case class GetFeedSourceStatuses() extends Action
 
-case class SetFeedStatuses(statuses: Seq[FeedStatuses]) extends Action
+case class SetFeedSourceStatuses(statuses: Seq[FeedSourceStatuses]) extends Action
 
-
-class FeedsStatusHandler[M](modelRW: ModelRW[M, Pot[Seq[FeedStatuses]]]) extends LoggingActionHandler(modelRW) {
+class FeedsStatusHandler[M](modelRW: ModelRW[M, Pot[Seq[FeedSourceStatuses]]]) extends LoggingActionHandler(modelRW) {
   implicit val pickler: CompositePickler[FeedStatus] = compositePickler[FeedStatus].
     addConcreteType[FeedStatusSuccess].
     addConcreteType[FeedStatusFailure]
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case SetFeedStatuses(statuses) =>
-      val scheduledRequest = Effect(Future(GetFeedStatuses())).after(15 seconds)
+    case SetFeedSourceStatuses(statuses) =>
+      val scheduledRequest = Effect(Future(GetFeedSourceStatuses())).after(15 seconds)
       updated(Ready(statuses), scheduledRequest)
 
-    case GetFeedStatuses() =>
+    case GetFeedSourceStatuses() =>
       log.info(s"Calling getFeedStatuses")
 
       val apiCallEffect = Effect(DrtApi.get("feed-statuses")
-        .map(r => SetFeedStatuses(read[Seq[FeedStatuses]](r.responseText)))
+        .map(r => SetFeedSourceStatuses(read[Seq[FeedSourceStatuses]](r.responseText)))
         .recoverWith {
           case _ =>
             log.error(s"Failed to get feed statuses. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(RetryActionAfter(GetFeedStatuses(), PollDelay.recoveryDelay))
+            Future(RetryActionAfter(GetFeedSourceStatuses(), PollDelay.recoveryDelay))
         })
 
       effectOnly(apiCallEffect)

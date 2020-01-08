@@ -71,7 +71,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   def run(): Unit
 
-  def getFeedStatus: Future[Seq[FeedStatuses]]
+  def getFeedStatus: Future[Seq[FeedSourceStatuses]]
 }
 
 object DrtStaticParameters {
@@ -333,11 +333,11 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     }
   }
 
-  override def getFeedStatus: Future[Seq[FeedStatuses]] = {
+  override def getFeedStatus: Future[Seq[FeedSourceStatuses]] = {
     val actors: Seq[AskableActorRef] = Seq(liveArrivalsActor, liveBaseArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
 
-    val statuses: Seq[Future[Option[FeedStatuses]]] = actors
-      .map(a => queryActorWithRetry[FeedStatuses](a, GetFeedStatuses))
+    val statuses: Seq[Future[Option[FeedSourceStatuses]]] = actors
+      .map(a => queryActorWithRetry[FeedSourceStatuses](a, GetFeedStatuses))
 
     Future
       .sequence(statuses)

@@ -19,7 +19,7 @@ import scala.util.Try
 case class VoyageManifestState(manifests: mutable.SortedMap[MilliDate, VoyageManifest],
                                var latestZipFilename: String,
                                feedSource: FeedSource,
-                               var maybeFeedStatuses: Option[FeedStatuses]) extends FeedStateLike
+                               var maybeSourceStatuses: Option[FeedSourceStatuses]) extends FeedStateLike
 
 case object GetLatestZipFilename
 
@@ -40,7 +40,7 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
     manifests = mutable.SortedMap[MilliDate, VoyageManifest](),
     latestZipFilename = defaultLatestZipFilename,
     feedSource = feedSource,
-    maybeFeedStatuses = None
+    maybeSourceStatuses = None
   )
 
   def defaultLatestZipFilename: String = {
@@ -54,9 +54,12 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case VoyageManifestStateSnapshotMessage(Some(latestFilename), manifests, maybeStatusMessages) =>
       newStateManifests(state.manifests, manifests.map(voyageManifestFromMessage))
-      val maybeStatuses = maybeStatusMessages.map(feedStatusesFromFeedStatusesMessage)
+      val maybeStatuses = maybeStatusMessages
+        .map(feedStatusesFromFeedStatusesMessage)
+        .map(fs => FeedSourceStatuses(feedSource, fs))
+
       state.latestZipFilename = latestFilename
-      state.maybeFeedStatuses = maybeStatuses
+      state.maybeSourceStatuses = maybeStatuses
 
     case lzf: String =>
       log.info(s"Updating state from latestZipFilename $lzf")
@@ -80,7 +83,7 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
 
     case feedStatusMessage: FeedStatusMessage =>
       val status = feedStatusFromFeedStatusMessage(feedStatusMessage)
-      state = state.copy(maybeFeedStatuses = Option(state.addStatus(status)))
+      state = state.copy(maybeSourceStatuses = Option(state.addStatus(status)))
       bytesSinceSnapshotCounter += feedStatusMessage.serializedSize
       messagesPersistedSinceSnapshotCounter += 1
   }
@@ -104,14 +107,14 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
       if (updatedLZF != state.latestZipFilename) persistLastSeenFileName(updatedLZF)
 
       state.latestZipFilename = updatedLZF
-      state.maybeFeedStatuses = Option(state.addStatus(newStatus))
+      state.maybeSourceStatuses = Option(state.addStatus(newStatus))
 
       persistFeedStatus(newStatus)
 
     case ManifestsFeedFailure(message, failedAt) =>
       log.error(s"Failed to connect to AWS S3 for API data at ${failedAt.toISOString()}. $message")
       val newStatus = FeedStatusFailure(failedAt.millisSinceEpoch, message)
-      state = state.copy(maybeFeedStatuses = Option(state.addStatus(newStatus)))
+      state = state.copy(maybeSourceStatuses = Option(state.addStatus(newStatus)))
 
       persistFeedStatus(newStatus)
 
@@ -119,7 +122,7 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
 
     case GetFeedStatuses =>
       log.debug(s"Received GetFeedStatuses request")
-      sender() ! state.maybeFeedStatuses
+      sender() ! state.maybeSourceStatuses
 
     case GetState =>
       log.info(s"Being asked for state. Sending ${state.manifests.size} manifests and latest filename: ${state.latestZipFilename}")
@@ -186,7 +189,10 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
   }
 
   override def stateToMessage: VoyageManifestStateSnapshotMessage = VoyageManifestStateSnapshotMessage(
-    Option(state.latestZipFilename), stateVoyageManifestsToMessages(state.manifests), state.maybeFeedStatuses.flatMap(FlightMessageConversion.feedStatusesToMessage))
+    Option(state.latestZipFilename),
+    stateVoyageManifestsToMessages(state.manifests),
+    state.maybeSourceStatuses.flatMap(mss => FlightMessageConversion.feedStatusesToMessage(mss.feedStatuses))
+  )
 
   def stateVoyageManifestsToMessages(manifests: mutable.SortedMap[MilliDate, VoyageManifest]): Seq[VoyageManifestMessage] = {
     manifests.map { case (_, vm) => voyageManifestToMessage(vm) }.toList

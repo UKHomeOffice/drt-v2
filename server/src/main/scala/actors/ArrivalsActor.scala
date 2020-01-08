@@ -18,20 +18,25 @@ import scala.collection.mutable
 trait FeedStateLike {
   def feedSource: FeedSource
 
-  def maybeFeedStatuses: Option[FeedStatuses]
+  def maybeSourceStatuses: Option[FeedSourceStatuses]
 
-  def addStatus(newStatus: FeedStatus): FeedStatuses = {
-    maybeFeedStatuses match {
-      case Some(feedStatuses) => feedStatuses.add(newStatus)
-      case None => FeedStatuses(feedSource, List(), None, None, None).add(newStatus)
+  def addStatus(newStatus: FeedStatus): FeedSourceStatuses = {
+    maybeSourceStatuses match {
+      case Some(feedSourceStatuses) => feedSourceStatuses.copy(
+        feedStatuses = feedSourceStatuses.feedStatuses.add(newStatus)
+      )
+      case None => FeedSourceStatuses(feedSource, FeedStatuses(List(), None, None, None).add(newStatus))
     }
   }
 }
 
-case class ArrivalsState(arrivals: mutable.SortedMap[UniqueArrival, Arrival], var feedSource: FeedSource, var maybeFeedStatuses: Option[FeedStatuses]) extends FeedStateLike {
+case class ArrivalsState(
+                          arrivals: mutable.SortedMap[UniqueArrival, Arrival],
+                          var feedSource: FeedSource,
+                          var maybeSourceStatuses: Option[FeedSourceStatuses]) extends FeedStateLike {
   def clear(): Unit = {
     arrivals.clear()
-    maybeFeedStatuses = None
+    maybeSourceStatuses = None
   }
 }
 
@@ -58,7 +63,7 @@ class ForecastBaseArrivalsActor(initialSnapshotBytesThreshold: Int,
 
     state.arrivals.clear()
     state.arrivals ++= incomingArrivalsWithKeys
-    state.maybeFeedStatuses = Option(state.addStatus(newStatus))
+    state.maybeSourceStatuses = Option(state.addStatus(newStatus))
 
     if (removals.nonEmpty || updates.nonEmpty) persistArrivalUpdates(removals, updates)
     persistFeedStatus(FeedStatusSuccess(createdAt.millisSinceEpoch, updates.size))
@@ -106,16 +111,18 @@ class LiveArrivalsActor(initialSnapshotBytesThreshold: Int,
 
 abstract class ArrivalsActor(now: () => SDateLike,
                              expireAfterMillis: Long,
-                             name: FeedSource) extends RecoveryActorLike with PersistentDrtActor[ArrivalsState] {
+                             feedSource: FeedSource) extends RecoveryActorLike with PersistentDrtActor[ArrivalsState] {
 
   val restorer = new RestorerWithLegacy[Int, UniqueArrival, Arrival]
   val state: ArrivalsState = initialState
 
-  override def initialState = ArrivalsState(mutable.SortedMap(), name, None)
+  override def initialState = ArrivalsState(mutable.SortedMap(), feedSource, None)
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case stateMessage: FlightStateSnapshotMessage =>
-      state.maybeFeedStatuses = feedStatusesFromSnapshotMessage(stateMessage)
+      state.maybeSourceStatuses = feedStatusesFromSnapshotMessage(stateMessage)
+        .map(fs => FeedSourceStatuses(feedSource, fs))
+
       restoreArrivalsFromSnapshot(restorer, stateMessage)
       logRecoveryMessage(s"restored state to snapshot. ${state.arrivals.size} arrivals")
   }
@@ -128,7 +135,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
     case feedStatusMessage: FeedStatusMessage =>
       val status = feedStatusFromFeedStatusMessage(feedStatusMessage)
-      state.maybeFeedStatuses = Option(state.addStatus(status))
+      state.maybeSourceStatuses = Option(state.addStatus(status))
   }
 
   override def postRecoveryComplete(): Unit = {
@@ -172,7 +179,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
     case GetFeedStatuses =>
       log.debug(s"Received GetFeedStatuses request")
-      sender() ! state.maybeFeedStatuses
+      sender() ! state.maybeSourceStatuses
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")
@@ -188,7 +195,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
   def handleFeedFailure(message: String, createdAt: SDateLike): Unit = {
     log.warn("Received feed failure")
     val newStatus = FeedStatusFailure(createdAt.millisSinceEpoch, message)
-    state.maybeFeedStatuses = Option(state.addStatus(newStatus))
+    state.maybeSourceStatuses = Option(state.addStatus(newStatus))
     persistFeedStatus(FeedStatusFailure(createdAt.millisSinceEpoch, message))
   }
 
@@ -198,7 +205,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
     state.arrivals ++= incomingArrivals.map(a => (a.unique, a))
     val updatedArrivals = incomingArrivals.toSet
     val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, updatedArrivals.size)
-    state.maybeFeedStatuses = Option(state.addStatus(newStatus))
+    state.maybeSourceStatuses = Option(state.addStatus(newStatus))
 
     persistFeedStatus(FeedStatusSuccess(createdAt.millisSinceEpoch, updatedArrivals.size))
     if (updatedArrivals.nonEmpty) persistArrivalUpdates(mutable.Set(), mutable.Set[Arrival]() ++ updatedArrivals)

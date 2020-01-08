@@ -16,7 +16,7 @@ import scala.collection.immutable
 object MainMenu {
   @inline private def bss: BootstrapStyles.type = GlobalStyles.bootstrapStyles
 
-  case class Props(router: RouterCtl[Loc], currentLoc: Loc, feeds: Seq[FeedStatuses], airportConfig: AirportConfig, roles: Set[Role])
+  case class Props(router: RouterCtl[Loc], currentLoc: Loc, feeds: Seq[FeedSourceStatuses], airportConfig: AirportConfig, roles: Set[Role])
 
   case class MenuItem(idx: Int, label: Props => VdomNode, icon: Icon, location: Loc, classes: List[String] = List())
 
@@ -26,20 +26,20 @@ object MainMenu {
 
   def alertsMenuItem(position: Int): MenuItem = MenuItem(position, _ => "Alerts", Icon.briefcase, AlertLoc, List("alerts-link"))
 
-  def statusMenuItem(position: Int, feeds: Seq[FeedStatuses]): MenuItem = MenuItem(position, _ => s"Feeds", Icon.barChart, StatusLoc, List(feedsRag(feeds)))
+  def statusMenuItem(position: Int, feeds: Seq[FeedSourceStatuses]): MenuItem = MenuItem(position, _ => s"Feeds", Icon.barChart, StatusLoc, List(feedsRag(feeds)))
 
   def portConfigMenuItem: Int => MenuItem = (position: Int) => MenuItem(position, _ => s"Port Config", Icon.cogs, PortConfigLoc)
 
-  def feedsRag(feeds: Seq[FeedStatuses]): String = {
-    val rag = if (feeds.map(_.ragStatus(SDate.now().millisSinceEpoch)).contains(Red)) Red
-    else if (feeds.map(_.ragStatus(SDate.now().millisSinceEpoch)).contains(Amber)) Amber
+  def feedsRag(feeds: Seq[FeedSourceStatuses]): String = {
+    val rag = if (feeds.map(_.feedStatuses.ragStatus(SDate.now().millisSinceEpoch)).contains(Red)) Red
+    else if (feeds.map(_.feedStatuses.ragStatus(SDate.now().millisSinceEpoch)).contains(Amber)) Amber
     else Green
 
     rag.toString
   }
 
 
-  def menuItems(airportConfig: AirportConfig, currentLoc: Loc, userRoles: Set[Role], feeds: Seq[FeedStatuses]): List[MenuItem] = {
+  def menuItems(airportConfig: AirportConfig, currentLoc: Loc, userRoles: Set[Role], feeds: Seq[FeedSourceStatuses]): List[MenuItem] = {
     def terminalDepsMenuItem: List[(Role, Int => MenuItem)] = airportConfig.terminals.map { tn =>
       val terminalName = tn.toString
       val targetLoc = currentLoc match {
@@ -107,6 +107,6 @@ object MainMenu {
     .renderBackend[Backend]
     .build
 
-  def apply(ctl: RouterCtl[Loc], currentLoc: Loc, feeds: Seq[FeedStatuses], airportConfig: AirportConfig, roles: Set[Role]): VdomElement
+  def apply(ctl: RouterCtl[Loc], currentLoc: Loc, feeds: Seq[FeedSourceStatuses], airportConfig: AirportConfig, roles: Set[Role]): VdomElement
   = component(Props(ctl, currentLoc, feeds, airportConfig, roles))
 }

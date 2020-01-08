@@ -51,7 +51,6 @@ message FlightsDiffMessage {
 }
 
 message FeedStatusesMessage {
-    optional string feedSource = 6;
     repeated FeedStatusMessage statuses = 2;
     optional int64 lastSuccessAt = 3;
     optional int64 lastFailureAt = 4;

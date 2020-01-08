@@ -142,7 +142,6 @@ class JsonSerializationSpec extends Specification {
 
     "FeedStatuses" >> {
       val fss = FeedStatuses(
-        AclFeedSource,
         List(
           FeedStatusFailure(0L, "failure"),
           FeedStatusSuccess(0L, 3)
