@@ -134,7 +134,7 @@ object DashboardTerminalSummary {
 
         val summary: Seq[DashboardSummary] = hourSummary(props.flights, props.crunchMinutes, props.timeWindowStart)
         val queueTotals = totalsByQueue(summary)
-        val totalPaxAcrossQueues = queueTotals.values.sum
+        val totalPaxAcrossQueues: Int = queueTotals.values.sum.toInt
 
         val pcpLowestTimeSlot = pcpLowest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal)).minute
         val pcpHighestTimeSlot = pcpHighest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal)).minute
@@ -158,8 +158,7 @@ object DashboardTerminalSummary {
                 )
               )
             )),
-          <.div(^.className := "summary-box-container pax-count col-sm-1", <.div(s"$totalPaxAcrossQueues Pax")),
-          <.div(^.className := "summary-box-container col-sm-1", BigSummaryBoxes.GraphComponent("aggregated", "", splitsForPeriod.values.sum, splitsForPeriod, props.paxTypeAndQueues)),
+          <.div(^.className := "summary-box-container col-sm-1", BigSummaryBoxes.GraphComponent(totalPaxAcrossQueues, splitsForPeriod, props.paxTypeAndQueues)),
           <.div(^.className := "summary-box-container col-sm-4 dashboard-summary__pax-summary",
             <.table(^.className := "dashboard-summary__pax-summary-table",
               <.tbody(
@@ -193,10 +192,10 @@ object DashboardTerminalSummary {
             <.div(^.className := "pcp-pressure",
               <.div(^.className := "title", "PCP Pressure"),
               <.div(^.className := "highest",
-                Icon.chevronUp, s"${SDate(MilliDate(pcpHighestTimeSlot)).prettyTime()}-${SDate(MilliDate(pcpHighestTimeSlot)).addMinutes(15).prettyTime()}"
+                Icon.chevronUp, s" ${SDate(MilliDate(pcpHighestTimeSlot)).prettyTime()}-${SDate(MilliDate(pcpHighestTimeSlot)).addMinutes(15).prettyTime()}"
               ),
               <.div(^.className := "lowest",
-                Icon.chevronDown, s"${SDate(MilliDate(pcpLowestTimeSlot)).prettyTime()}-${SDate(MilliDate(pcpLowestTimeSlot)).addMinutes(15).prettyTime()}"
+                Icon.chevronDown, s" ${SDate(MilliDate(pcpLowestTimeSlot)).prettyTime()}-${SDate(MilliDate(pcpLowestTimeSlot)).addMinutes(15).prettyTime()}"
               )
             )
           )
