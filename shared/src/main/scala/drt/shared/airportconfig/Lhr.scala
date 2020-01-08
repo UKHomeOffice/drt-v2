@@ -116,6 +116,7 @@ object Lhr extends AirportConfigLike {
       )))
     ),
     hasTransfer = true,
-    maybeCiriumEstThresholdHours = Option(6)
+    maybeCiriumEstThresholdHours = Option(6),
+    feedSources = Seq(LiveBaseFeedSource, LiveFeedSource, ForecastFeedSource, AclFeedSource, ApiFeedSource)
   )
 }

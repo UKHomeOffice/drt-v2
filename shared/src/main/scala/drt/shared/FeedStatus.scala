@@ -38,7 +38,15 @@ case object Green extends RagStatus {
   override def toString = "green"
 }
 
-case class FeedStatuses(name: String,
+case class FeedSourceStatuses(feedSource: FeedSource, feedStatuses: FeedStatuses) {
+  def name = feedSource.name
+}
+
+object FeedSourceStatuses {
+  implicit val rw: RW[FeedSourceStatuses] = macroRW
+}
+
+case class FeedStatuses(
                         statuses: List[FeedStatus],
                         lastSuccessAt: Option[MillisSinceEpoch],
                         lastFailureAt: Option[MillisSinceEpoch],

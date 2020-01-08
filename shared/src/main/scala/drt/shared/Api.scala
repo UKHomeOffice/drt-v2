@@ -469,24 +469,50 @@ object Arrival {
   }
 }
 
-sealed trait FeedSource
+trait FeedSource {
+  def name: String
+}
 
-case object ApiFeedSource extends FeedSource
+case object ApiFeedSource extends FeedSource {
+  def name: String = "API"
 
-case object AclFeedSource extends FeedSource
+  override def toString: String = "ApiFeedSource"
+}
 
-case object ForecastFeedSource extends FeedSource
+case object AclFeedSource extends FeedSource {
+  def name: String = "ACL"
 
-case object LiveFeedSource extends FeedSource
+  override def toString: String = "AclFeedSource"
+}
 
-case object LiveBaseFeedSource extends FeedSource
+case object ForecastFeedSource extends FeedSource {
+  def name: String = "Port Forecast"
 
-case object UnknownFeedSource extends FeedSource
+  override def toString: String = "ForecastFeedSource"
+}
+
+case object LiveFeedSource extends FeedSource {
+  def name: String = "Port Live"
+
+  override def toString: String = "LiveFeedSource"
+}
+
+case object LiveBaseFeedSource extends FeedSource {
+  def name: String = "Cirium Live"
+
+  override def toString: String = "LiveBaseFeedSource"
+}
+
+case object UnknownFeedSource extends FeedSource {
+  def name: String = "Unknown"
+
+  override def toString: String = "UnknownFeedSource"
+}
 
 object FeedSource {
   def feedSources: Set[FeedSource] = Set(ApiFeedSource, AclFeedSource, ForecastFeedSource, LiveFeedSource, LiveBaseFeedSource)
 
-  def apply(name: String): Option[FeedSource] = feedSources.find(fs => fs.toString == name)
+  def apply(feedSource: String): Option[FeedSource] = feedSources.find(fs => fs.toString == feedSource)
 
   implicit val feedSourceReadWriter: ReadWriter[FeedSource] =
     readwriter[Js.Value].bimap[FeedSource](

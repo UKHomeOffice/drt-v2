@@ -51,5 +51,6 @@ object Gla extends AirportConfigLike {
         EGate -> 0.6993,
         EeaDesk -> (1.0 - 0.6993)
       )))
-    ))
+    )
+  )
 }

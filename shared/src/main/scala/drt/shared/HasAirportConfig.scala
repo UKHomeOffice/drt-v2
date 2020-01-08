@@ -246,7 +246,8 @@ case class AirportConfig(portCode: PortCode,
                          terminalPaxTypeQueueAllocation: Map[Terminal, Map[PaxType, Seq[(Queue, Double)]]],
                          hasTransfer: Boolean = false,
                          maybeCiriumEstThresholdHours: Option[Int] = None,
-                         maybeCiriumTaxiThresholdMinutes: Option[Int] = Option(20)
+                         maybeCiriumTaxiThresholdMinutes: Option[Int] = Option(20),
+                         feedSources: Seq[FeedSource] = Seq(LiveBaseFeedSource, LiveFeedSource, AclFeedSource, ApiFeedSource)
                         ) {
   val terminalSplitQueueTypes: Map[Terminal, Set[Queue]] = terminalPaxSplits.map {
     case (terminal, splitRatios) =>

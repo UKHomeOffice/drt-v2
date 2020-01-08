@@ -11,12 +11,16 @@ trait WithFeeds {
 
   def getFeedStatuses: Action[AnyContent] = auth {
     Action.async { _ =>
-      ctrl.getFeedStatus.map(s => {
-        val safeStatusMessages = s.map(statusMessage => statusMessage.copy(statuses = statusMessage.statuses.map {
+      ctrl.getFeedStatus.map((s: Seq[FeedSourceStatuses]) => {
+        val safeStatusMessages = s
+          .map(feedSourceStatuses => feedSourceStatuses
+            .copy(feedStatuses = feedSourceStatuses
+              .feedStatuses
+              .copy(feedSourceStatuses.feedStatuses.statuses.map {
           case f: FeedStatusFailure =>
             f.copy(message = "Unable to connect to feed.")
           case s => s
-        }))
+        })))
         Ok(write(safeStatusMessages))
       })
     }
