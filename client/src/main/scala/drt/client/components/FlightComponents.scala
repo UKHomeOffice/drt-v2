@@ -69,8 +69,7 @@ object FlightComponents {
                 ^.className := s"dashboard-summary__splits-graph-bar dashboard-summary__splits-graph-bar--${paxTypeAndQueue.queueType.toString.toLowerCase}",
                 ^.height := s"$percentage%",
                 ^.title := s"$label")
-          }.toTagMod,
-          <.div(^.className := "dashboard-summary__splits-graph-bar dashboard-summary__splits-graph-bar--max")
+          }.toTagMod
         )
       )
     }
