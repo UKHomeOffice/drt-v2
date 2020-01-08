@@ -124,6 +124,9 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
       log.debug(s"Received GetFeedStatuses request")
       sender() ! state.maybeSourceStatuses
 
+    case ua: UniqueArrival =>
+      sender() ! None
+
     case GetState =>
       log.info(s"Being asked for state. Sending ${state.manifests.size} manifests and latest filename: ${state.latestZipFilename}")
       sender() ! state

@@ -181,6 +181,9 @@ abstract class ArrivalsActor(now: () => SDateLike,
       log.debug(s"Received GetFeedStatuses request")
       sender() ! state.maybeSourceStatuses
 
+    case ua: UniqueArrival =>
+      sender() ! state.arrivals.get(ua).map(a => FeedSourceArrival(feedSource, a))
+
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")
 
