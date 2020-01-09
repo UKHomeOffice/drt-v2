@@ -30,7 +30,7 @@ trait WithFeeds {
     }
   }
 
-  def getArrival(number: Int, terminal: String, scheduled: MillisSinceEpoch): Action[AnyContent] = auth {
+  def getArrival(number: Int, terminal: String, scheduled: MillisSinceEpoch): Action[AnyContent] = authByRole(ArrivalSource) {
     Action.async { _ =>
       val futureArrivalSources = ctrl.feedActors
         .map(feed =>
