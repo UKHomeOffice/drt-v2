@@ -8,6 +8,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 object Icon {
   type Icon = VdomNode
   def apply(name: String): Icon = <.i(^.className := s"fa fa-$name")
+  def apply(name: String, className: String): Icon = <.i(^.className := s"fa fa-$name $className")
 
   def adjust = apply("adjust")
   def adn = apply("adn")

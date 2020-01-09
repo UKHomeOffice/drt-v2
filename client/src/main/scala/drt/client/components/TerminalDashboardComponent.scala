@@ -72,7 +72,9 @@ object TerminalDashboardComponent {
                 FlightsWithSplitsTable.Props(
                   ps.flights.filter { case (ua, _) => ua.terminal == p.terminalPageTabLoc.terminal }.values.toList,
                   p.airportConfig.queueTypeSplitOrder(p.terminalPageTabLoc.terminal),
-                  p.airportConfig.hasEstChox
+                  p.airportConfig.hasEstChox,
+                  None,
+                  false
                 )
               )
             ),
