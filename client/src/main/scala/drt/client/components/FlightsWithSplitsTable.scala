@@ -14,6 +14,7 @@ import drt.shared._
 import drt.shared.splits.ApiSplitsToSplitRatio
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.Reusability
+import japgolly.scalajs.react.vdom.Attr.Event
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
@@ -49,9 +50,11 @@ object FlightsWithSplitsTable {
         val classesAttr = ^.className := "table table-responsive table-striped table-hover table-sm"
         <.div(
           (props.hasArrivalSourcesAccess, props.arrivalSources) match {
-            case (true, Some((_, sourcesPot))) => <.div(
-              <.div(^.className := "popover-overlay", ^.onClick --> Callback(SPACircuit.dispatch(RemoveArrivalSources))),
-              <.div(^.className := "dashboard-arrivals-popup", ArrivalInfo.SourcesTable(ArrivalInfo.Props(sourcesPot))))
+            case (true, Some((_, sourcesPot))) =>
+              <.div(^.tabIndex := 0,
+                <.div(^.className := "popover-overlay", ^.onClick --> Callback(SPACircuit.dispatch(RemoveArrivalSources))),
+                <.div(^.className := "dashboard-arrivals-popup", ArrivalInfo.SourcesTable(ArrivalInfo.Props(sourcesPot)))
+              )
             case _ => <.div()
           },
 
@@ -184,15 +187,15 @@ object FlightTableRow {
       val queuePax: Map[Queue, Int] = ApiSplitsToSplitRatio
         .paxPerQueueUsingBestSplitsAsRatio(flightWithSplits).getOrElse(Map())
 
+      val flightCodeClass = if (props.hasArrivalSourcesAccess) "arrivals__table__flight-code" else ""
+
       val flightCodeCell = if (props.hasArrivalSourcesAccess) <.div(
-        ^.className := "arrivals__table__flight-code",
         ^.onClick --> Callback(SPACircuit.dispatch(GetArrivalSources(props.flightWithSplits.unique))),
-        Icon("info", "arrivals__table__flight-code--info"),
         allCodes.mkString(" - "))
       else <.div(allCodes.mkString(" - "))
 
       val firstCells = List[TagMod](
-        <.td(^.className := "arrivals__table__flight-code", flightCodeCell),
+        <.td(^.className := flightCodeClass, flightCodeCell),
         <.td(props.originMapper(flight.Origin)),
         <.td(TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
           <.span(

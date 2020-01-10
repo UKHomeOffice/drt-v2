@@ -171,6 +171,8 @@ class Application @Inject()(implicit val config: Configuration,
 
   ctrl.run()
 
+  val now: () => SDateLike = SDate.now
+
   val virusScannerUrl: String = config.get[String]("virus-scanner-url")
 
   val virusScanner: VirusScanner = VirusScanner(VirusScanService(virusScannerUrl))

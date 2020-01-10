@@ -64,7 +64,7 @@ object TerminalDashboardComponent {
             ^.onClick --> p.router.set(closeArrivalsPopupLink)),
 
             <.div(^.className := "dashboard-arrivals-popup",
-
+              <.h2("Arrivals"),
               FlightsWithSplitsTable.ArrivalsTable(
                 None,
                 originMapper,

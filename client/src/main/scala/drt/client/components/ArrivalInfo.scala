@@ -19,7 +19,7 @@ object ArrivalInfo {
         case Ready(sources) =>
           <.div(
             <.h2(s"Feed sources for arrival"),
-            <.table(
+            <.table(^.className := "arrivals-table table-striped",
               tableHead(props),
               <.tbody(
                 sources.collect { case Some(sourceArrival) =>

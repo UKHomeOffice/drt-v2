@@ -24,7 +24,7 @@ case class VoyageManifestState(manifests: mutable.SortedMap[MilliDate, VoyageMan
 case object GetLatestZipFilename
 
 class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
-                           now: () => SDateLike,
+                           val now: () => SDateLike,
                            expireAfterMillis: Long,
                            val initialMaybeSnapshotInterval: Option[Int]) extends RecoveryActorLike with PersistentDrtActor[VoyageManifestState] {
   val log: Logger = LoggerFactory.getLogger(getClass)

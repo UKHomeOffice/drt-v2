@@ -4,14 +4,14 @@ import actors.Sizes.oneMegaByte
 import actors.acking.AckingReceiver.StreamCompleted
 import akka.persistence._
 import scalapb.GeneratedMessage
-import drt.shared.Alert
+import drt.shared.{Alert, SDateLike}
 import org.joda.time.DateTime
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.Alert.{AlertSnapshotMessage, Alert => ProtobufAlert}
 
 case object DeleteAlerts
 
-case class AlertsActor() extends RecoveryActorLike with PersistentDrtActor[Seq[Alert]] {
+case class AlertsActor(now: () => SDateLike) extends RecoveryActorLike with PersistentDrtActor[Seq[Alert]] {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def persistenceId: String = "alerts-store"
