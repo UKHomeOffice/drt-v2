@@ -16,7 +16,7 @@ describe('Viewing the terminal dashboard page', function () {
         "ActChoxDT": todayAtString(14, 10),
         "ActPax": 51
       })
-      .asABorderForceOfficerWithRoles(["terminal-dashboard"])
+      .asABorderForceOfficer()
       .navigateHome()
       .visit("/#terminal/T1/dashboard/15/?start=" + todayAtString(14,15))
       .get(".pax-bar")
@@ -65,7 +65,7 @@ describe('Viewing the terminal dashboard page', function () {
         "ActChoxDT": todayAtString(14, 30),
         "ActPax": 51
       })
-      .asABorderForceOfficerWithRoles(["terminal-dashboard"])
+      .asABorderForceOfficer()
       .navigateHome()
       .visit("/#terminal/T1/dashboard/15/?start=" + todayAtString(14,15))
       .get("a.terminal-dashboard-side__sidebar_widget").click()
