@@ -16,6 +16,7 @@ describe('Multi day export', () => {
       .asABorderForceOfficer()
       .navigateHome()
       .navigateToMenuItem('T1')
+      .selectCurrentTab()
       .choose24Hours()
       .get("#arrivalsTab").click().then(() => {
         cy.contains('Multi Day Export').click().then(() => {
@@ -33,6 +34,7 @@ describe('Multi day export', () => {
       .asABorderForceOfficer()
       .navigateHome()
       .navigateToMenuItem('T1')
+      .selectCurrentTab()
       .choose24Hours()
       .then(() => {
         cy.contains('Multi Day Export').click().then(() => {
@@ -53,6 +55,7 @@ describe('Multi day export', () => {
       .asABorderForceOfficer()
       .navigateHome()
       .navigateToMenuItem('T1')
+      .selectCurrentTab()
       .choose24Hours()
       .then(() => {
         cy
