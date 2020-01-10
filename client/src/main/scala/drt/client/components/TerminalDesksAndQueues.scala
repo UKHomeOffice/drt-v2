@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.UseValueEq
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlViewType}
 import drt.client.actions.Actions.UpdateShowActualDesksAndQueues
 import drt.client.components.TerminalDesksAndQueues.{NodeListSeq, documentScrollHeight, documentScrollTop}
@@ -40,7 +41,7 @@ object TerminalDesksAndQueues {
                    showActuals: Boolean,
                    viewMode: ViewMode,
                    loggedInUser: LoggedInUser
-                  )
+                  ) extends UseValueEq
 
   sealed trait ViewType {
     val queryParamsValue: String
