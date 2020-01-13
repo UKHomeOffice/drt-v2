@@ -218,7 +218,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], now))
   lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], now, time48HoursAgo(now)))
 
-  lazy val alertsActor: ActorRef = system.actorOf(Props(classOf[AlertsActor]))
+  lazy val alertsActor: ActorRef = system.actorOf(Props(classOf[AlertsActor], now))
   val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
 
   val s3ApiProvider = S3ApiProvider(params.awSCredentials, params.dqZipBucketName)
