@@ -185,7 +185,7 @@ object FlightTableRow {
       val queuePax: Map[Queue, Int] = ApiSplitsToSplitRatio
         .paxPerQueueUsingBestSplitsAsRatio(flightWithSplits).getOrElse(Map())
 
-      val flightCodeClass = if (props.hasArrivalSourcesAccess) "arrivals__table__flight-code" else ""
+      val flightCodeClass = if (props.hasArrivalSourcesAccess) "arrivals__table__flight-code arrivals__table__flight-code--clickable" else "arrivals__table__flight-code"
 
       val flightCodeCell = if (props.hasArrivalSourcesAccess) <.div(
         ^.onClick --> Callback(SPACircuit.dispatch(GetArrivalSources(props.flightWithSplits.unique))),
