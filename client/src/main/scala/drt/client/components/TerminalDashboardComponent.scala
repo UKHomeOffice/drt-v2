@@ -126,11 +126,11 @@ object TerminalDashboardComponent {
             ))(^.className := "terminal-dashboard-side__sidebar_widget", "View Arrivals"),
           <.div(
             ^.className := "terminal-dashboard-side__sidebar_widget time-slot-changer",
-            <.label("Time slot duration"),
+            <.label(^.className := "terminal-dashboard-side__sidebar_widget__label", "Time slot duration"),
             <.select(
               ^.onChange ==> ((e: ReactEventFromInput) =>
                 p.router.set(p.terminalPageTabLoc.copy(subMode = e.target.value))),
-              ^.value := p.terminalPageTabLoc.subMode,
+              ^.value := slotSize,
               <.option("15 minutes", ^.value := "15"),
               <.option("30 minutes", ^.value := "30"),
               <.option("1 hour", ^.value := "60"),
