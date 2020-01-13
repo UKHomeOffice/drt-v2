@@ -153,7 +153,6 @@ object TerminalContentComponent {
                       props.loggedInUser
                     )
                   )
-                  //                  })
                 } else ""
               ),
               <.div(^.id := "arrivals", ^.className := s"tab-pane in $arrivalsPanelActive", {
