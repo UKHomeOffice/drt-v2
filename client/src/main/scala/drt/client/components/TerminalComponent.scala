@@ -108,19 +108,17 @@ object TerminalComponent {
 
               <.div(
                 <.ul(^.className := "nav nav-tabs",
-                  if (loggedInUser.roles.contains(TerminalDashboard))
-                    <.li(^.className := terminalDashboardClass,
-                      <.a(^.id := "terminalDashboardTab", VdomAttr("data-toggle") := "tab", "Terminal Dashboard"), ^.onClick --> {
-                        GoogleEventTracker.sendEvent(terminalName, "click", "Terminal Dashboard")
-                        props.router.set(
-                          props
-                            .terminalPageTab.copy(
-                            mode = "dashboard",
-                            subMode = "summary",
-                            queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams)
-                        )
-                      }
-                    ) else "",
+                  <.li(^.className := terminalDashboardClass,
+                    <.a(^.id := "terminalDashboardTab", VdomAttr("data-toggle") := "tab", "Terminal Dashboard"), ^.onClick --> {
+                      GoogleEventTracker.sendEvent(terminalName, "click", "Terminal Dashboard")
+                      props.router.set(
+                        props.terminalPageTab.copy(
+                          mode = "dashboard",
+                          subMode = "summary",
+                          queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams)
+                      )
+                    }
+                  ),
                   <.li(^.className := currentClass,
                     <.a(^.id := "currentTab", VdomAttr("data-toggle") := "tab", "Current"), ^.onClick --> {
                       GoogleEventTracker.sendEvent(terminalName, "click", "Current")
@@ -155,21 +153,19 @@ object TerminalComponent {
                     ) else ""
                 ),
                 <.div(^.className := "tab-content",
-
-                  if (loggedInUser.roles.contains(TerminalDashboard))
-                    <.div(^.id := "dashboard", ^.className := s"tab-pane terminal-dashboard-container $dashboardContentClass",
-                      if (props.terminalPageTab.mode == "dashboard") {
-                        terminalContentProps.portStatePot.renderReady(ps =>
-                          TerminalDashboardComponent(
-                            props.terminalPageTab,
-                            terminalContentProps.airportConfig,
-                            ps,
-                            props.router,
-                            model.featureFlags
-                          )
+                  <.div(^.id := "dashboard", ^.className := s"tab-pane terminal-dashboard-container $dashboardContentClass",
+                    if (props.terminalPageTab.mode == "dashboard") {
+                      terminalContentProps.portStatePot.renderReady(ps =>
+                        TerminalDashboardComponent(
+                          props.terminalPageTab,
+                          terminalContentProps.airportConfig,
+                          ps,
+                          props.router,
+                          model.featureFlags
                         )
-                      } else ""
-                    ) else "",
+                      )
+                    } else ""
+                  ),
                   <.div(^.id := "current", ^.className := s"tab-pane $currentContentClass", {
                     if (props.terminalPageTab.mode == "current") <.div(
                       <.h2(props.terminalPageTab.dateFromUrlOrNow match {

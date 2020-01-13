@@ -5,7 +5,7 @@ import java.util.UUID
 import diode.Action
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType}
-import drt.client.components.{AlertsPage, ContactPage, EditKeyCloakUserPage, GlobalStyles, KeyCloakUsersPage, Layout, PortConfigPage, PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, UserDashboardPage}
+import drt.client.components.{AlertsPage, ContactPage, EditKeyCloakUserPage, GlobalStyles, KeyCloakUsersPage, Layout, PortConfigPage, PortDashboardPage, StatusPage, TerminalComponent, TerminalDashboardComponent, TerminalPlanningComponent, UserDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -68,8 +68,8 @@ object SPAMain {
   }
 
   case class TerminalPageTabLoc(terminalName: String,
-                                mode: String = "current",
-                                subMode: String = "desksAndQueues",
+                                mode: String = "dashboard",
+                                subMode: String = "summary",
                                 queryParams: Map[String, String] = Map.empty[String, String]
                                ) extends Loc {
     val terminal = Terminal(terminalName)

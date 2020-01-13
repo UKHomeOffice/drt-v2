@@ -1,5 +1,6 @@
 package drt.client.components
 
+
 import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
@@ -15,8 +16,10 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
+import japgolly.scalajs.react.ReactEventFromInput
 
 import scala.scalajs.js.URIUtils
+import scala.util.Try
 
 
 object TerminalDashboardComponent {
@@ -29,12 +32,16 @@ object TerminalDashboardComponent {
                     featureFlags: Pot[Map[String, Boolean]]
                   )
 
-  val slotSize = 15
-
-  def timeSlotStart: SDateLike => SDateLike = timeSlotForTime(slotSize)
+  val defaultSlotSize = 120
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "TerminalDashboard")
     .render_P(p => {
+      val slotSize = Try {
+        p.terminalPageTabLoc.subMode.toInt
+      }.getOrElse(defaultSlotSize)
+
+      def timeSlotStart: SDateLike => SDateLike = timeSlotForTime(slotSize)
+
       val startPoint = p.terminalPageTabLoc.queryParams.get("start")
         .flatMap(s => SDate.stringToSDateLikeOption(s))
         .getOrElse(SDate.now())
@@ -76,13 +83,11 @@ object TerminalDashboardComponent {
                   None,
                   false
                 )
-              )
-            ),
-            p.router.link(closeArrivalsPopupLink)(^.className := "close-arrivals-popup btn btn-default", "close")
-          )
+              ),
+              p.router.link(closeArrivalsPopupLink)(^.className := "close-arrivals-popup btn btn-default", "close")
+            ))
 
-        } else <.div()
-        ,
+        } else <.div(),
         <.div(^.className := "terminal-dashboard-queues",
           <.div(^.className := "pax-bar row", s"$terminalPax passengers presenting at the PCP"),
 
@@ -120,7 +125,19 @@ object TerminalDashboardComponent {
           p.router
             .link(p.terminalPageTabLoc.copy(
               queryParams = p.terminalPageTabLoc.queryParams + ("showArrivals" -> "true")
-            ))(^.className := "show-arrivals-btn", "View Arrivals")
+            ))(^.className := "terminal-dashboard-side__sidebar_widget", "View Arrivals"),
+          <.div(
+            ^.className := "terminal-dashboard-side__sidebar_widget time-slot-changer",
+            <.label(^.className := "terminal-dashboard-side__sidebar_widget__label", "Time slot duration"),
+            <.select(
+              ^.onChange ==> ((e: ReactEventFromInput) =>
+                p.router.set(p.terminalPageTabLoc.copy(subMode = e.target.value))),
+              ^.value := slotSize,
+              <.option("15 minutes", ^.value := "15"),
+              <.option("30 minutes", ^.value := "30"),
+              <.option("1 hour", ^.value := "60"),
+              <.option("2 hours", ^.value := "120"),
+              <.option("3 hours", ^.value := "180")))
         )
       )
     })
