@@ -1,10 +1,9 @@
 package drt.client.components
 
-import diode.data.{Pending, Pot}
+import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.actions.Actions.{GetArrivalSources, RemoveArrivalSources}
-import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
-import drt.client.components.FlightComponents.{SplitsGraph, paxComp}
+import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
@@ -14,7 +13,6 @@ import drt.shared._
 import drt.shared.splits.ApiSplitsToSplitRatio
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.Reusability
-import japgolly.scalajs.react.vdom.Attr.Event
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}

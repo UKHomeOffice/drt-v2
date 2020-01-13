@@ -4,7 +4,7 @@ import drt.client.services.JSDateConversions.SDate
 import utest._
 
 object BestArrivalTimeTests extends TestSuite {
-  import ArrivalInfoFeedSourceRow._
+  import FlightTableRow._
 
   def tests = Tests {
 
