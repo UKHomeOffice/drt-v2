@@ -24,7 +24,7 @@ case class VoyageManifestState(manifests: mutable.SortedMap[MilliDate, VoyageMan
 case object GetLatestZipFilename
 
 class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
-                           now: () => SDateLike,
+                           val now: () => SDateLike,
                            expireAfterMillis: Long,
                            val initialMaybeSnapshotInterval: Option[Int]) extends RecoveryActorLike with PersistentDrtActor[VoyageManifestState] {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -123,6 +123,9 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
     case GetFeedStatuses =>
       log.debug(s"Received GetFeedStatuses request")
       sender() ! state.maybeSourceStatuses
+
+    case ua: UniqueArrival =>
+      sender() ! None
 
     case GetState =>
       log.info(s"Being asked for state. Sending ${state.manifests.size} manifests and latest filename: ${state.latestZipFilename}")

@@ -152,7 +152,7 @@ class FixedPointsActorSpec extends TestKit(ActorSystem("FixedPointsActorSpec", C
   }
 
   def newStaffActor(now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[FixedPointsActor], now))
-  def newStaffPointInTimeActor(now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[FixedPointsReadActor], now()))
+  def newStaffPointInTimeActor(now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[FixedPointsReadActor], now(), now))
 
   def nowAs(date: String): () => SDateLike = () => SDate(date)
 }

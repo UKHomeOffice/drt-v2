@@ -16,7 +16,7 @@ case class RegisteredArrivals(arrivals: mutable.SortedMap[ArrivalKey, Option[Lon
 class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
                               val initialMaybeSnapshotInterval: Option[Int],
                               portCode: PortCode,
-                              now: () => SDateLike,
+                              val now: () => SDateLike,
                               expireAfterMillis: Long
                              ) extends RecoveryActorLike with PersistentDrtActor[RegisteredArrivals] {
   override def persistenceId: String = "registered-arrivals"

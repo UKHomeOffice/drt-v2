@@ -2,10 +2,11 @@ package drt.client.components
 
 import diode.data.Pot
 import diode.react.ModelProxy
+import drt.client.actions.Actions.{GetArrivalSources, RemoveArrivalSources}
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
-import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
+import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
 import drt.shared._
@@ -17,16 +18,17 @@ import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, TableSection}
 
-import scala.util.{Failure, Success, Try}
-
 object FlightsWithSplitsTable {
 
   type BestPaxForArrivalF = Arrival => Int
 
-  case class Props(flightsWithSplits: List[ApiFlightWithSplits], queueOrder: Seq[Queue], hasEstChox: Boolean)
+  case class Props(flightsWithSplits: List[ApiFlightWithSplits],
+                   queueOrder: Seq[Queue], hasEstChox: Boolean,
+                   arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
+                   hasArrivalSourcesAccess: Boolean)
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
-    props.flightsWithSplits.hashCode()
+    (props.flightsWithSplits, props.arrivalSources).hashCode()
   })
 
   def ArrivalsTable(timelineComponent: Option[Arrival => VdomNode] = None,
@@ -45,11 +47,21 @@ object FlightsWithSplitsTable {
         val dataStickyAttr = VdomAttr("data-sticky") := "data-sticky"
         val classesAttr = ^.className := "table table-responsive table-striped table-hover table-sm"
         <.div(
+          (props.hasArrivalSourcesAccess, props.arrivalSources) match {
+            case (true, Some((_, sourcesPot))) =>
+              <.div(^.tabIndex := 0,
+                <.div(^.className := "popover-overlay", ^.onClick --> Callback(SPACircuit.dispatch(RemoveArrivalSources))),
+                <.div(^.className := "dashboard-arrivals-popup", ArrivalInfo.SourcesTable(ArrivalInfo.Props(sourcesPot)))
+              )
+            case _ => <.div()
+          },
+
           <.div(^.id := "toStick", ^.className := "container sticky",
             <.table(
               ^.id := "sticky",
               classesAttr,
-              tableHead(props, timelineTh, props.queueOrder))),
+              tableHead(props, timelineTh, props.queueOrder)))
+          ,
           <.table(
             ^.id := "sticky-body",
             dataStickyAttr,
@@ -67,7 +79,8 @@ object FlightsWithSplitsTable {
                     paxComponent = paxComponent,
                     splitsGraphComponent = splitsGraphComponent,
                     splitsQueueOrder = props.queueOrder,
-                    hasEstChox = props.hasEstChox
+                    hasEstChox = props.hasEstChox,
+                    props.hasArrivalSourcesAccess
                   ))
               }.toTagMod)
           )
@@ -134,7 +147,8 @@ object FlightTableRow {
                    paxComponent: ApiFlightWithSplits => TagMod,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                    splitsQueueOrder: Seq[Queue],
-                   hasEstChox: Boolean
+                   hasEstChox: Boolean,
+                   hasArrivalSourcesAccess: Boolean
                   )
 
   case class RowState(hasChanged: Boolean)
@@ -159,7 +173,7 @@ object FlightTableRow {
 
   val component: Component[Props, RowState, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "TableRow")
     .initialState[RowState](RowState(false))
-    .render_PS((props, state) => {
+    .renderPS((scope, props, state) => {
       val codeShares = props.codeShares
       val flightWithSplits = props.flightWithSplits
       val flight = flightWithSplits.apiFlight
@@ -170,34 +184,36 @@ object FlightTableRow {
 
       val queuePax: Map[Queue, Int] = ApiSplitsToSplitRatio
         .paxPerQueueUsingBestSplitsAsRatio(flightWithSplits).getOrElse(Map())
-      val flightFields = List[(Option[String], TagMod)](
-        (None, allCodes.mkString(" - ")),
-        (None, props.originMapper(flight.Origin)),
-        (None, TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
+
+      val flightCodeClass = if (props.hasArrivalSourcesAccess) "arrivals__table__flight-code arrivals__table__flight-code--clickable" else "arrivals__table__flight-code"
+
+      val flightCodeCell = if (props.hasArrivalSourcesAccess) <.div(
+        ^.onClick --> Callback(SPACircuit.dispatch(GetArrivalSources(props.flightWithSplits.unique))),
+        allCodes.mkString(" - "))
+      else <.div(allCodes.mkString(" - "))
+
+      val firstCells = List[TagMod](
+        <.td(^.className := flightCodeClass, flightCodeCell),
+        <.td(props.originMapper(flight.Origin)),
+        <.td(TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
           <.span(
             proxy().renderEmpty(<.span()),
             proxy().render(ai => <.span(ai.country))
           )
         }),
-        (None, s"${flight.Gate.getOrElse("")}/${flight.Stand.getOrElse("")}"),
-        (None, flight.Status.description),
-        (None, localDateTimeWithPopup(Option(flight.Scheduled))),
-        (None, localDateTimeWithPopup(flight.Estimated)),
-        (None, localDateTimeWithPopup(flight.Actual)),
-        (Option("est-chox"), localDateTimeWithPopup(flight.EstimatedChox)),
-        (None, localDateTimeWithPopup(flight.ActualChox)),
-        (None, pcpTimeRange(flight, ArrivalHelper.bestPax)),
-        (None, props.paxComponent(flightWithSplits))
+        <.td(s"${flight.Gate.getOrElse("")}/${flight.Stand.getOrElse("")}"),
+        <.td(flight.Status.description),
+        <.td(localDateTimeWithPopup(Option(flight.Scheduled))),
+        <.td(localDateTimeWithPopup(flight.Estimated)),
+        <.td(localDateTimeWithPopup(flight.Actual))
       )
-        .filterNot {
-          case (Some("est-chox"), _) if !props.hasEstChox => true
-          case _ => false
-        }
-        .map {
-          case (Some(className), tm) => <.td(tm, ^.className := className)
-          case (_, tm) => <.td(tm)
-        }
-        .toTagMod
+      val estCell = List(<.td(localDateTimeWithPopup(flight.EstimatedChox)))
+      val lastCells = List[TagMod](
+        <.td(localDateTimeWithPopup(flight.ActualChox)),
+        <.td(pcpTimeRange(flight, ArrivalHelper.bestPax)),
+        <.td(props.paxComponent(flightWithSplits))
+      )
+      val flightFields = if (props.hasEstChox) firstCells ++ estCell ++ lastCells else firstCells ++ lastCells
 
       val paxClass = FlightComponents.paxClassFromSplits(flightWithSplits)
 
@@ -206,7 +222,7 @@ object FlightTableRow {
         ^.className := s"${offScheduleClass(flight)} $timeIndicatorClass${if (flight.isCancelled) " arrival-cancelled" else ""}",
         hasChangedStyle,
         props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
-        flightFields,
+        flightFields.toTagMod,
         props.splitsQueueOrder.map(q => <.td(<.span(s"${queuePax.getOrElse(q, 0)}"), ^.className := s"queue-split $paxClass right")).toTagMod
       )
     })
@@ -225,4 +241,3 @@ object FlightTableRow {
 
   def apply(props: Props): Unmounted[Props, RowState, Unit] = component(props)
 }
-

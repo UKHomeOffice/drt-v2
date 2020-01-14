@@ -42,7 +42,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
                        initialSnapshotBytesThreshold: Int,
                        name: String,
                        portQueues: Map[Terminal, Seq[Queue]],
-                       now: () => SDateLike,
+                       val now: () => SDateLike,
                        expireAfterMillis: MillisSinceEpoch,
                        purgePreviousSnapshots: Boolean,
                        forecastMaxMillis: () => MillisSinceEpoch) extends PersistentActor with RecoveryActorLike with PersistentDrtActor[PortStateMutable] {

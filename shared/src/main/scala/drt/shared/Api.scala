@@ -469,6 +469,12 @@ object Arrival {
   }
 }
 
+case class FeedSourceArrival(feedSource: FeedSource, arrival: Arrival)
+
+object FeedSourceArrival {
+  implicit val rw: ReadWriter[FeedSourceArrival] = macroRW
+}
+
 trait FeedSource {
   def name: String
 }

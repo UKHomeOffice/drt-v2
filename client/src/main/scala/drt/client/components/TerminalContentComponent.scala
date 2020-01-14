@@ -1,6 +1,6 @@
 package drt.client.components
 
-import diode.data.{Pending, Pot}
+import diode.data.{Empty, Pending, Pot}
 import diode.react.{ModelProxy, ReactConnectProxy}
 import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
@@ -33,9 +33,10 @@ object TerminalContentComponent {
                    router: RouterCtl[Loc],
                    showActuals: Boolean,
                    viewMode: ViewMode,
-                   loggedInUserPot: Pot[LoggedInUser],
+                   loggedInUser: LoggedInUser,
                    minuteTicker: Int,
-                   featureFlags: Pot[Map[String, Boolean]]
+                   featureFlags: Pot[Map[String, Boolean]],
+                   arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                   )
 
   case class State(activeTab: String, showExportDialogue: Boolean = false)
@@ -132,37 +133,33 @@ object TerminalContentComponent {
                     Callback(GoogleEventTracker.sendEvent(terminalName, "Export Desks", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly))
                   }
                 ),
-                props.loggedInUserPot.render(loggedInUser => {
-                  MultiDayExportComponent(terminal, props.terminalPageTab.dateFromUrlOrNow, loggedInUser)
-                })
+                MultiDayExportComponent(terminal, props.terminalPageTab.dateFromUrlOrNow, props.loggedInUser)
               )
             ),
             <.div(^.className := "tab-content",
               <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
                 if (state.activeTab == "desksAndQueues") {
-                  props.loggedInUserPot.render(loggedInUser => {
-                    val (viewStart, _) = viewStartAndEnd(props.terminalPageTab.viewMode.time, timeRangeHours)
-                    TerminalDesksAndQueues(
-                      TerminalDesksAndQueues.Props(
-                        props.router,
-                        filteredPortState,
-                        viewStart,
-                        timeRangeHours.end - timeRangeHours.start,
-                        props.airportConfig,
-                        props.terminalPageTab,
-                        props.showActuals,
-                        props.viewMode,
-                        loggedInUser
-                      )
+                  val (viewStart, _) = viewStartAndEnd(props.terminalPageTab.viewMode.time, timeRangeHours)
+                  TerminalDesksAndQueues(
+                    TerminalDesksAndQueues.Props(
+                      props.router,
+                      filteredPortState,
+                      viewStart,
+                      timeRangeHours.end - timeRangeHours.start,
+                      props.airportConfig,
+                      props.terminalPageTab,
+                      props.showActuals,
+                      props.viewMode,
+                      props.loggedInUser
                     )
-                  })
+                  )
                 } else ""
               ),
               <.div(^.id := "arrivals", ^.className := s"tab-pane in $arrivalsPanelActive", {
                 if (state.activeTab == "arrivals") {
                   val flightsForTerminal = filteredPortState.flights.values.toList
                   props.featureFlags.renderReady(_ =>
-                    arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsForTerminal, queueOrder, props.airportConfig.hasEstChox)))
+                    arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsForTerminal, queueOrder, props.airportConfig.hasEstChox, props.arrivalSources, props.loggedInUser.hasRole(ArrivalSource))))
                 } else ""
               }),
               <.div(^.id := "available-staff", ^.className := s"tab-pane terminal-staffing-container $staffingPanelActive",
@@ -173,7 +170,7 @@ object TerminalContentComponent {
                     props.potFixedPoints,
                     props.potStaffMovements,
                     props.airportConfig,
-                    props.loggedInUserPot,
+                    props.loggedInUser,
                     props.viewMode
                   ))
                 } else ""

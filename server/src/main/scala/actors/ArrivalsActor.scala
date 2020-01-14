@@ -41,7 +41,7 @@ case class ArrivalsState(
 }
 
 class ForecastBaseArrivalsActor(initialSnapshotBytesThreshold: Int,
-                                now: () => SDateLike,
+                                val now: () => SDateLike,
                                 expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, AclFeedSource) {
   override def persistenceId: String = s"${getClass.getName}-forecast-base"
 
@@ -71,7 +71,7 @@ class ForecastBaseArrivalsActor(initialSnapshotBytesThreshold: Int,
 }
 
 class ForecastPortArrivalsActor(initialSnapshotBytesThreshold: Int,
-                                now: () => SDateLike,
+                                val now: () => SDateLike,
                                 expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, ForecastFeedSource) {
   override def persistenceId: String = s"${getClass.getName}-forecast-port"
 
@@ -84,7 +84,7 @@ class ForecastPortArrivalsActor(initialSnapshotBytesThreshold: Int,
 }
 
 class LiveBaseArrivalsActor(initialSnapshotBytesThreshold: Int,
-                            now: () => SDateLike,
+                            val now: () => SDateLike,
                             expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, LiveBaseFeedSource) {
   override def persistenceId: String = s"${getClass.getName}-live-base"
 
@@ -97,7 +97,7 @@ class LiveBaseArrivalsActor(initialSnapshotBytesThreshold: Int,
 }
 
 class LiveArrivalsActor(initialSnapshotBytesThreshold: Int,
-                        now: () => SDateLike,
+                        val now: () => SDateLike,
                         expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, LiveFeedSource) {
   override def persistenceId: String = s"${getClass.getName}-live"
 
@@ -180,6 +180,9 @@ abstract class ArrivalsActor(now: () => SDateLike,
     case GetFeedStatuses =>
       log.debug(s"Received GetFeedStatuses request")
       sender() ! state.maybeSourceStatuses
+
+    case ua: UniqueArrival =>
+      sender() ! state.arrivals.get(ua).map(a => FeedSourceArrival(feedSource, a))
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")

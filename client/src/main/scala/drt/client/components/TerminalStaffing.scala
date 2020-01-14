@@ -36,7 +36,7 @@ object TerminalStaffing {
                     potFixedPoints: Pot[FixedPointAssignments],
                     potStaffMovements: Pot[Seq[StaffMovement]],
                     airportConfig: AirportConfig,
-                    loggedInUser: Pot[LoggedInUser],
+                    loggedInUser: LoggedInUser,
                     viewMode: ViewMode
                   )
 
@@ -126,7 +126,7 @@ object TerminalStaffing {
     case class FixedPointsProps(fixedPoints: FixedPointAssignments,
                                 airportConfig: AirportConfig,
                                 terminalName: Terminal,
-                                loggedInUser: Pot[LoggedInUser])
+                                loggedInUser: LoggedInUser)
 
     case class FixedPointsState(rawFixedPoints: String)
 
@@ -143,8 +143,7 @@ object TerminalStaffing {
 
           <.div(
             <.h2("Miscellaneous Staff"),
-            props.loggedInUser.render(loggedInUser => {
-              if (loggedInUser.roles.contains(StaffEdit)) <.div(
+              if (props.loggedInUser.roles.contains(StaffEdit)) <.div(
                 <.p("One entry per line with values separated by commas, e.g.:"),
                 <.pre(<.div(examples.map(line => <.div(line)).toTagMod)),
                 <.textarea(^.value := state.rawFixedPoints, ^.className := "staffing-editor"),
@@ -160,8 +159,7 @@ object TerminalStaffing {
                   Callback(SPACircuit.dispatch(SaveFixedPoints(newAssignments, props.terminalName)))
                 }))
               ) else <.pre(state.rawFixedPoints, ^.className := "staffing-editor")
-            }
-            ))
+            )
         }).build
 
       def apply(props: FixedPointsProps): Unmounted[FixedPointsProps, FixedPointsState, Unit] = component(props)

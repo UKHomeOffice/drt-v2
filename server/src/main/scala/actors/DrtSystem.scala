@@ -71,6 +71,10 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   def run(): Unit
 
+  val feedActors: Seq[AskableActorRef]
+
+  def isValidFeedSource(fs: FeedSource): Boolean
+
   def getFeedStatus: Future[Seq[FeedSourceStatuses]]
 }
 
@@ -214,7 +218,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], now))
   lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], now, time48HoursAgo(now)))
 
-  lazy val alertsActor: ActorRef = system.actorOf(Props(classOf[AlertsActor]))
+  lazy val alertsActor: ActorRef = system.actorOf(Props(classOf[AlertsActor], now))
   val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
 
   val s3ApiProvider = S3ApiProvider(params.awSCredentials, params.dqZipBucketName)
@@ -333,20 +337,21 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     }
   }
 
-  override def getFeedStatus: Future[Seq[FeedSourceStatuses]] = {
-    val actors: Seq[AskableActorRef] = Seq(liveArrivalsActor, liveBaseArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
+  override val feedActors: Seq[AskableActorRef] = Seq(liveArrivalsActor, liveBaseArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
 
-    val statuses: Seq[Future[Option[FeedSourceStatuses]]] = actors
-      .map(a => queryActorWithRetry[FeedSourceStatuses](a, GetFeedStatuses))
+  override def getFeedStatus: Future[Seq[FeedSourceStatuses]] = {
+    val futureMaybeStatuses = feedActors.map(a => queryActorWithRetry[FeedSourceStatuses](a, GetFeedStatuses))
 
     Future
-      .sequence(statuses)
+      .sequence(futureMaybeStatuses)
       .map(
         maybeStatuses => maybeStatuses
           .collect { case Some(fs) => fs }
-          .filter(fs => airportConfig.feedSources.contains(fs.feedSource))
+          .filter(fss => isValidFeedSource(fss.feedSource))
       )
   }
+
+  override def isValidFeedSource(fs: FeedSource): Boolean = airportConfig.feedSources.contains(fs)
 
   def startScheduledFeedImports(crunchInputs: CrunchSystem[Cancellable]): Unit = {
     if (airportConfig.feedPortCode == PortCode("LHR")) params.maybeBlackJackUrl.map(csvUrl => {

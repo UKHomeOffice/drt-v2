@@ -1466,6 +1466,11 @@ th h2 {
   background-color: purple;
 }
 
+.arrivals__table__flight-code--clickable:hover {
+  background-color: #CCCCCC;
+  cursor: pointer;
+}
+
 #arrivals td.queue-split {
   padding: 0px;
 }
@@ -1766,7 +1771,7 @@ div.access-restricted {
 .dashboard-arrivals-popup {
     z-index: 1000;
     background-color: #d5e8fe;
-    padding: 2%;
+    padding: 0 2% 2% 2%;
     border: solid;
     border-radius: 22px;
     box-shadow: 0 6px 8px rgba(52, 73, 94, .2), 0 1px 1px rgba(52, 73, 94, 0.1);
@@ -1780,7 +1785,16 @@ div.access-restricted {
     opacity: 95%;
     min-width: 1100px;
 }
-.close-arrivals-popup{
+
+.arrivals-table__body:nth-child(odd) {
+  background-color: #00bcd4;
+}
+
+.arrivals-table__body:nth-child(odd) tr {
+  background-color: #00bcd4;
+}
+
+.close-arrivals-popup {
     float:right;
 }
 

@@ -32,7 +32,7 @@ trait WithStaffing {
           val date = SDate(millis)
 
           val actorName = "fixed-points-read-actor-" + UUID.randomUUID().toString
-          val fixedPointsReadActor: ActorRef = system.actorOf(Props(classOf[FixedPointsReadActor], date), actorName)
+          val fixedPointsReadActor: ActorRef = system.actorOf(Props(classOf[FixedPointsReadActor], date, self.now), actorName)
 
           fixedPointsReadActor.ask(GetState)
             .map { case sa: FixedPointAssignments =>

@@ -71,7 +71,7 @@ object TerminalDashboardComponent {
             ^.onClick --> p.router.set(closeArrivalsPopupLink)),
 
             <.div(^.className := "dashboard-arrivals-popup",
-
+              <.h2("Arrivals"),
               FlightsWithSplitsTable.ArrivalsTable(
                 None,
                 originMapper,
@@ -79,7 +79,9 @@ object TerminalDashboardComponent {
                 FlightsWithSplitsTable.Props(
                   ps.flights.filter { case (ua, _) => ua.terminal == p.terminalPageTabLoc.terminal }.values.toList,
                   p.airportConfig.queueTypeSplitOrder(p.terminalPageTabLoc.terminal),
-                  p.airportConfig.hasEstChox
+                  p.airportConfig.hasEstChox,
+                  None,
+                  false
                 )
               ),
               p.router.link(closeArrivalsPopupLink)(^.className := "close-arrivals-popup btn btn-default", "close")

@@ -1,6 +1,8 @@
 package actors
 
 import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotOffer}
+import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.SDateLike
 import scalapb.GeneratedMessage
 import org.slf4j.Logger
 
@@ -10,6 +12,8 @@ object Sizes {
 
 trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   val log: Logger
+  def now: () => SDateLike
+  var recoveryStartMillis: MillisSinceEpoch = 0L
 
   val snapshotBytesThreshold: Int
   val maybeSnapshotInterval: Option[Int] = None
@@ -77,10 +81,12 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
 
   override def receiveRecover: Receive = {
     case SnapshotOffer(md, ss) =>
+      recoveryStartMillis = now().millisSinceEpoch
       logSnapshotOffer(md)
       playSnapshotMessage(ss)
 
     case RecoveryCompleted =>
+      log.info(s"Recovery took ${now().millisSinceEpoch - recoveryStartMillis}ms")
       postRecoveryComplete()
 
     case event =>
