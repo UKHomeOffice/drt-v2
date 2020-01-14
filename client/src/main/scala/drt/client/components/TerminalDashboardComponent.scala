@@ -72,6 +72,7 @@ object TerminalDashboardComponent {
 
             <.div(^.className := "dashboard-arrivals-popup",
               <.h2("Arrivals"),
+              <.div(^.className := "terminal-dashboard__arrivals_popup_table",
               FlightsWithSplitsTable.ArrivalsTable(
                 None,
                 originMapper,
@@ -83,7 +84,7 @@ object TerminalDashboardComponent {
                   None,
                   false
                 )
-              ),
+              )),
               p.router.link(closeArrivalsPopupLink)(^.className := "close-arrivals-popup btn btn-default", "close")
             ))
 
