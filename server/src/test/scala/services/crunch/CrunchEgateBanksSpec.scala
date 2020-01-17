@@ -62,7 +62,6 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
       crunch.portStateTestProbe.fishForMessage(10 seconds) {
         case ps: PortState =>
           val resultSummary = deskRecsFromPortState(ps, 15)
-          println(s"resultSummary: $resultSummary")
           resultSummary == expected
       }
 
