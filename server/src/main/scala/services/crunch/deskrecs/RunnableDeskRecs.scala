@@ -86,7 +86,6 @@ object RunnableDeskRecs {
 
     RunnableDeskRecs(portStateActor, minutesPerDay, airportConfig, flightsToDeskRecs, buffer).run()
   }
-
 }
 
 case class GetFlights(from: MillisSinceEpoch, to: MillisSinceEpoch)

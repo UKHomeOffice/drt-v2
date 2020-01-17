@@ -59,7 +59,7 @@ class ApplicationRestartSpec extends CrunchTestLike {
         ApiFlightWithSplits(arrivalBase, splits)
       ).map(f => (f.apiFlight.unique, f)),
       crunchMinutes = SortedMap[TQM, CrunchMinute](),
-      staffMinutes = SortedMap[TM, StaffMinute]() ++ emptyStaffMinutes(now, daysToCrunch, airportConfig.terminals.toList)
+      staffMinutes = SortedMap[TM, StaffMinute]() ++ emptyStaffMinutes(now, daysToCrunch, defaultAirportConfig.terminals.toList)
     )
     val initialLiveArrivals = mutable.SortedMap[UniqueArrival, Arrival](arrivalLive.unique -> arrivalLive)
 

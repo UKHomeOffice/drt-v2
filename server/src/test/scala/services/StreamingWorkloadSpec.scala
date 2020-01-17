@@ -29,7 +29,7 @@ class StreamingWorkloadSpec extends CrunchTestLike {
   }
   def newBuffer = Buffer(Iterable())
   val mockPortStateActor: ActorRef = system.actorOf(MockPortStateActor.props(portStateProbe, smallDelay))
-  val (millisToCrunchSourceActor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, airportConfig, flightsToDeskRecs, newBuffer).run()
+  val (millisToCrunchSourceActor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, 30, defaultAirportConfig, flightsToDeskRecs, newBuffer).run()
 
   val askableSource: AskableActorRef = millisToCrunchSourceActor
 

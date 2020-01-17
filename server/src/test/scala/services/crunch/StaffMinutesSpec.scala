@@ -33,7 +33,9 @@ class StaffMinutesSpec extends CrunchTestLike {
     val assignment2 = StaffAssignment("shift b", T1, startDate2, endDate2, 2, None)
     val initialShifts = ShiftAssignments(Seq(assignment1, assignment2))
     val crunch = runCrunchGraph(
-      airportConfig = airportConfig.copy(terminals = Seq(T1)),
+      airportConfig = defaultAirportConfig.copy(
+        queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
+      ),
       now = () => shiftStart,
       initialShifts = initialShifts,
       checkRequiredStaffUpdatesOnStartup = true
@@ -74,7 +76,9 @@ class StaffMinutesSpec extends CrunchTestLike {
     )
 
     val crunch = runCrunchGraph(
-      airportConfig = airportConfig.copy(terminals = Seq(T1)),
+      airportConfig = defaultAirportConfig.copy(
+        queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
+      ),
       now = () => shiftStart
     )
 
@@ -120,7 +124,9 @@ class StaffMinutesSpec extends CrunchTestLike {
     )
 
     val crunch = runCrunchGraph(
-      airportConfig = airportConfig.copy(terminals = Seq(T1)),
+      airportConfig = defaultAirportConfig.copy(
+        queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
+      ),
       now = () => startDate,
       checkRequiredStaffUpdatesOnStartup = true,
       initialStaffMovements = initialMovements
@@ -159,7 +165,9 @@ class StaffMinutesSpec extends CrunchTestLike {
     )
 
     val crunch = runCrunchGraph(
-      airportConfig = airportConfig.copy(terminals = Seq(T1)),
+      airportConfig = defaultAirportConfig.copy(
+        queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
+      ),
       now = () => startDate
     )
 
@@ -197,7 +205,9 @@ class StaffMinutesSpec extends CrunchTestLike {
     )
 
     val crunch = runCrunchGraph(
-      airportConfig = airportConfig.copy(terminals = Seq(T1)),
+      airportConfig = defaultAirportConfig.copy(
+        queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
+      ),
       now = () => shiftStart
     )
 
@@ -248,8 +258,8 @@ class StaffMinutesSpec extends CrunchTestLike {
     val flight = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(100))
 
     val crunch = runCrunchGraph(
-      airportConfig = airportConfig.copy(
-        terminals = Seq(T1),
+      airportConfig = defaultAirportConfig.copy(
+        queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1),
         terminalPaxSplits = Map(T1 -> SplitRatios(
           SplitSources.TerminalAverage,
           SplitRatio(eeaMachineReadableToDesk, 0.5),
@@ -314,8 +324,8 @@ class StaffMinutesSpec extends CrunchTestLike {
     val initialFixedPoints = FixedPointAssignments(Seq(assignment1))
 
     val crunch = runCrunchGraph(
-      airportConfig = airportConfig.copy(
-        terminals = Seq(T1)
+      airportConfig = defaultAirportConfig.copy(
+        queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
       ),
       now = () => shiftStart
     )
@@ -367,9 +377,8 @@ class StaffMinutesSpec extends CrunchTestLike {
     val flight = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(100))
 
     val crunch = runCrunchGraph(
-      airportConfig = airportConfig.copy(
-        terminals = Seq(T1),
-        queues = Map(T1 -> Seq(Queues.EeaDesk, Queues.EGate)),
+      airportConfig = defaultAirportConfig.copy(
+        queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.EGate)),
         terminalPaxSplits = Map(T1 -> SplitRatios(
           SplitSources.TerminalAverage,
           SplitRatio(eeaMachineReadableToDesk, 0.1),
@@ -425,9 +434,8 @@ class StaffMinutesSpec extends CrunchTestLike {
     val initialShifts = ShiftAssignments(Seq(assignment1))
 
     val crunch = runCrunchGraph(
-      airportConfig = airportConfig.copy(
-        terminals = Seq(T1),
-        queues = Map(T1 -> Seq(Queues.EeaDesk, Queues.FastTrack, Queues.NonEeaDesk)),
+      airportConfig = defaultAirportConfig.copy(
+        queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.FastTrack, Queues.NonEeaDesk)),
         slaByQueue = Map(Queues.EeaDesk -> 25, Queues.FastTrack -> 30, Queues.NonEeaDesk -> 20),
         terminalPaxSplits = Map(T1 -> SplitRatios(
           SplitSources.TerminalAverage,

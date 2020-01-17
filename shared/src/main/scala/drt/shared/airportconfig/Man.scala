@@ -7,18 +7,19 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.{T1, T2, T3}
 import drt.shared._
 
+import scala.collection.immutable.SortedMap
+
 object Man extends AirportConfigLike {
   import AirportConfigDefaults._
 
   val config = AirportConfig(
     portCode = PortCode("MAN"),
-    queues = Map(
+    queuesByTerminal = SortedMap(
       T1 -> Seq(EeaDesk, EGate, NonEeaDesk),
       T2 -> Seq(EeaDesk, EGate, NonEeaDesk),
       T3 -> Seq(EeaDesk, EGate, NonEeaDesk)
     ),
     slaByQueue = Map(EeaDesk -> 25, EGate -> 10, NonEeaDesk -> 45),
-    terminals = Seq(T1, T2, T3),
     defaultWalkTimeMillis = Map(T1 -> 180000L, T2 -> 600000L, T3 -> 180000L),
     terminalPaxSplits = List(T1, T2, T3).map(t => (t, SplitRatios(
       SplitSources.TerminalAverage,

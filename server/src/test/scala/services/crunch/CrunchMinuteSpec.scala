@@ -14,13 +14,13 @@ class CrunchMinuteSpec extends CrunchTestLike {
       val daysInMillis = 1000 * 60 * daysInMinutes
       val tqms = for {
         terminal <- airportConfig.terminals
-        queue <- airportConfig.queues.getOrElse(terminal, Seq())
+        queue <- airportConfig.queuesByTerminal.getOrElse(terminal, Seq())
         minute <- (1525222800000L to (1525222800000L + daysInMillis) by 60000).take(daysInMinutes)
       } yield (terminal, queue, minute)
 
       val dupes = tqms
         .groupBy { case (t, q, m) => MinuteHelper.key(t, q, m) }
-        .collect { case (id, values) if values.length > 1 => (id, values) }
+        .collect { case (id, values) if values.size > 1 => (id, values) }
 
       val expected = Map()
 
@@ -41,7 +41,7 @@ class CrunchMinuteSpec extends CrunchTestLike {
 
       val dupes = tms
         .groupBy { case (t, m) => MinuteHelper.key(t, m) }
-        .collect { case (id, values) if values.length > 1 => (id, values) }
+        .collect { case (id, values) if values.size > 1 => (id, values) }
 
       val expected = Map()
 

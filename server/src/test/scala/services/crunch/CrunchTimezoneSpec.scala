@@ -18,7 +18,7 @@ import scala.concurrent.duration._
 class CrunchTimezoneSpec extends CrunchTestLike {
   "Crunch timezone " >> {
     "Given an SDateLike for a date outside BST" +
-      "When I ask for a corresponding cunch start time " +
+      "When I ask for a corresponding crunch start time " +
       "Then I should get an SDateLike representing the previous midnight UTC" >> {
       val now = SDate("2010-01-02T11:39", europeLondonTimeZone)
 
@@ -29,7 +29,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
     }
 
     "Given an SDateLike for a date inside BST" +
-      "When I ask for a corresponding cunch start time " +
+      "When I ask for a corresponding crunch start time " +
       "Then I should get an SDateLike representing the previous midnight UTC" >> {
       val now = SDate("2010-07-02T11:39", europeLondonTimeZone)
       val result: MillisSinceEpoch = getLocalLastMidnight(now).millisSinceEpoch
@@ -42,7 +42,12 @@ class CrunchTimezoneSpec extends CrunchTestLike {
       "Given flights with one passenger and one split to eea desk " +
         "When the date falls within BST " +
         "Then I should see min desks allocated in alignment with BST" >> {
-        val minMaxDesks: Map[Terminal, Map[Queue, (List[Int], List[Int])]] = Map(T1 -> Map(Queues.EeaDesk -> Tuple2(0 :: 5 :: List.fill[Int](22)(0), List.fill[Int](24)(20))))
+        val minMaxDesks: Map[Terminal, Map[Queue, (List[Int], List[Int])]] = Map(
+          T1 -> Map(
+            Queues.EeaDesk -> Tuple2(0 :: 5 :: List.fill[Int](22)(0), List.fill[Int](24)(20)),
+            Queues.NonEeaDesk -> Tuple2(0 :: 5 :: List.fill[Int](22)(0), List.fill[Int](24)(20))
+          )
+        )
 
         val scheduled = "2017-06-01T00:00Z"
 
@@ -55,33 +60,34 @@ class CrunchTimezoneSpec extends CrunchTestLike {
 
         val crunch = runCrunchGraph(
           now = () => SDate(scheduled),
-          airportConfig = airportConfig.copy(
+          airportConfig = defaultAirportConfig.copy(
             minMaxDesksByTerminalQueue = minMaxDesks,
             terminalProcessingTimes = procTimes,
-            terminals = Seq(T1)
+            queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
           ),
           minutesToCrunch = 120)
 
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
         val expected = Map(T1 -> Map(
-          Queues.EeaDesk -> Seq(
+          Queues.EeaDesk -> List(
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
             5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5
           ),
-          Queues.NonEeaDesk -> Seq(
+          Queues.NonEeaDesk -> List(
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+            5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+            5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5
           )
         ))
 
         crunch.portStateTestProbe.fishForMessage(5 seconds) {
           case ps: PortState =>
             val resultSummary = deskRecsFromPortState(ps, 120)
+            println(s"got $resultSummary")
             resultSummary == expected
         }
 

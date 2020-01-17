@@ -26,6 +26,7 @@ import services.crunch.deskrecs.RunnableDeskRecs
 import services.graphstages.{Buffer, Crunch, CrunchMocks}
 import slickdb.Tables
 
+import scala.collection.immutable.SortedMap
 import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor}
@@ -103,11 +104,10 @@ class CrunchTestLike
   val uniquifyArrivals: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] =
     CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight)
 
-  val airportConfig = AirportConfig(
+  val defaultAirportConfig = AirportConfig(
     portCode = PortCode("STN"),
-    queues = Map(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk), T2 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk)),
+    queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk), T2 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk)),
     slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 20, Queues.NonEeaDesk -> 45),
-    terminals = Seq(T1, T2),
     defaultWalkTimeMillis = Map(),
     terminalPaxSplits = List(T1, T2).map(t => (t, SplitRatios(
       SplitSources.TerminalAverage,
@@ -177,7 +177,7 @@ class CrunchTestLike
                      initialLiveBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap(),
                      initialLiveArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap(),
                      initialPortState: Option[PortState] = None,
-                     airportConfig: AirportConfig = airportConfig,
+                     airportConfig: AirportConfig = defaultAirportConfig,
                      csvSplitsProvider: SplitsProvider.SplitProvider = (_, _) => None,
                      pcpArrivalTime: Arrival => MilliDate = pcpForFlightFromSch,
                      minutesToCrunch: Int = 60,
@@ -196,6 +196,8 @@ class CrunchTestLike
                      refreshArrivalsOnStart: Boolean = false,
                      recrunchOnStart: Boolean = false
                     ): CrunchGraphInputsAndProbes = {
+
+    airportConfig.assertValid()
 
     val portStateProbe = testProbe("portstate")
     val forecastBaseArrivalsProbe = testProbe("forecast-base-arrivals")

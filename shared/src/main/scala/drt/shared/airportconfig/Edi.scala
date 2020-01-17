@@ -6,17 +6,18 @@ import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
 import drt.shared.Terminals.{A1, A2}
 import drt.shared._
 
+import scala.collection.immutable.SortedMap
+
 object Edi extends AirportConfigLike {
   import AirportConfigDefaults._
 
   val config = AirportConfig(
     portCode = PortCode("EDI"),
-    queues = Map(
+    queuesByTerminal = SortedMap(
       A1 -> Seq(EeaDesk, EGate, NonEeaDesk),
       A2 -> Seq(EeaDesk, EGate, NonEeaDesk)
     ),
     slaByQueue = defaultSlas,
-    terminals = Seq(A1, A2),
     defaultWalkTimeMillis = Map(A1 -> 180000L, A2 -> 120000L),
     terminalPaxSplits = List(A1, A2).map(t => (t, defaultPaxSplits)).toMap,
     terminalProcessingTimes = Map(

@@ -7,19 +7,20 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.T1
 import drt.shared.{AclFeedSource, AirportConfig, AirportConfigDefaults, AirportConfigLike, ApiFeedSource, BFSAccess, ForecastFeedSource, LiveBaseFeedSource, LiveFeedSource, PortCode, Queues}
 
+import scala.collection.immutable.SortedMap
+
 object Bfs extends AirportConfigLike {
   import AirportConfigDefaults._
 
   val config = AirportConfig(
     portCode = PortCode("BFS"),
-    queues = Map(
+    queuesByTerminal = SortedMap(
       T1 -> Seq(Queues.NonEeaDesk, Queues.EeaDesk)
     ),
     slaByQueue = Map(
       Queues.EeaDesk -> 25,
       Queues.NonEeaDesk -> 45
     ),
-    terminals = Seq(T1),
     defaultWalkTimeMillis = Map(T1 -> 600000L),
     terminalPaxSplits = Map(T1 -> SplitRatios(
       SplitSources.TerminalAverage,

@@ -47,10 +47,10 @@ object TerminalDashboardComponent {
         .getOrElse(SDate.now())
       val start = timeSlotStart(startPoint)
       val end = start.addMinutes(slotSize)
-      val ps = p.portState.window(start, end, p.airportConfig.queues)
+      val ps = p.portState.window(start, end, p.airportConfig.queuesByTerminal)
       val prevSlotStart = start.addMinutes(-slotSize)
 
-      val prevSlotPortState = p.portState.window(prevSlotStart, start, p.airportConfig.queues)
+      val prevSlotPortState = p.portState.window(prevSlotStart, start, p.airportConfig.queuesByTerminal)
 
       val urlPrevTime = URIUtils.encodeURI(prevSlotStart.toISOString())
       val urlNextTime = URIUtils.encodeURI(end.toISOString())

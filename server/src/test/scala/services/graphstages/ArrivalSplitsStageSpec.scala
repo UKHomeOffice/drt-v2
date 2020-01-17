@@ -81,9 +81,9 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
 
   val paxTypeQueueAllocation = PaxTypeQueueAllocation(
     B5JPlusWithTransitTypeAllocator(),
-    TerminalQueueAllocatorWithFastTrack(airportConfig.terminalPaxTypeQueueAllocation))
+    TerminalQueueAllocatorWithFastTrack(defaultAirportConfig.terminalPaxTypeQueueAllocation))
 
-  val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, airportConfig.terminalPaxSplits)
+  val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, defaultAirportConfig.terminalPaxSplits)
 
   "Given an arrival splits stage " +
     "When I push an arrival and some splits for that arrival " +

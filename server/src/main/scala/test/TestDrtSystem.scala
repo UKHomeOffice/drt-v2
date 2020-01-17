@@ -33,8 +33,8 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
   override lazy val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[TestForecastPortArrivalsActor], now, expireAfterMillis), name = "forecast-arrivals-actor")
   override lazy val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[TestLiveArrivalsActor], now, expireAfterMillis), name = "live-arrivals-actor")
 
-  val testLiveCrunchStateProps: Props = TestCrunchStateActor.props(airportConfig.portStateSnapshotInterval, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots)
-  val testForecastCrunchStateProps: Props = TestCrunchStateActor.props(100, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots)
+  val testLiveCrunchStateProps: Props = TestCrunchStateActor.props(airportConfig.portStateSnapshotInterval, "crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldLiveSnapshots)
+  val testForecastCrunchStateProps: Props = TestCrunchStateActor.props(100, "forecast-crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldForecastSnapshots)
   val testManifestsActor: ActorRef = actorSystem.actorOf(Props(classOf[TestManifestsActor]), s"TestActor-APIManifests")
 
   override lazy val liveCrunchStateActor: AskableActorRef = system.actorOf(testLiveCrunchStateProps, name = "crunch-live-state-actor")

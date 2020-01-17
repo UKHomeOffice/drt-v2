@@ -118,7 +118,7 @@ trait WithExports {
         val fileName = f"${airportConfig.portCode}-$terminal-forecast-export-headlines-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}%02d-${startOfForecast.getDate()}%02d"
         portStateFuture.map {
           case Some(portState: PortState) =>
-            val hf: ForecastHeadlineFigures = Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queues(terminal).toList)
+            val hf: ForecastHeadlineFigures = Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
             val csvData = CSVData.forecastHeadlineToCSV(hf, airportConfig.exportQueueOrder)
             Result(
               ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
@@ -261,10 +261,10 @@ trait WithExports {
 
     portStateFuture.map {
       case Right(Some(ps: PortState)) =>
-        val wps = ps.windowWithTerminalFilter(startDateTime, endDateTime, airportConfig.queues.filterKeys(_ == terminalName))
+        val wps = ps.windowWithTerminalFilter(startDateTime, endDateTime, airportConfig.queuesByTerminal.filterKeys(_ == terminalName))
         val dataLines = CSVData.terminalMinutesToCsvData(wps.crunchMinutes, wps.staffMinutes, airportConfig.nonTransferQueues(terminalName), startDateTime, endDateTime, 15)
         val fullData = if (includeHeader) {
-          val headerLines = CSVData.terminalCrunchMinutesToCsvDataHeadings(airportConfig.queues(terminalName))
+          val headerLines = CSVData.terminalCrunchMinutesToCsvDataHeadings(airportConfig.queuesByTerminal(terminalName))
           headerLines + CSVData.lineEnding + dataLines
         } else dataLines
         Option(fullData)
@@ -399,7 +399,7 @@ trait WithExports {
                                            pointInTime: MillisSinceEpoch,
                                            terminalName: Terminal): Future[Either[PortStateError, Option[PortState]]] = {
     val stateQuery = GetPortStateForTerminal(startMillis, endMillis, terminalName)
-    val terminalsAndQueues = airportConfig.queues.filterKeys(_ == terminalName)
+    val terminalsAndQueues = airportConfig.queuesByTerminal.filterKeys(_ == terminalName)
     val query = CachableActorQuery(CrunchStateReadActor.props(airportConfig.portStateSnapshotInterval, SDate(pointInTime), DrtStaticParameters.expireAfterMillis, terminalsAndQueues, startMillis, endMillis), stateQuery)
     val portCrunchResult = cacheActorRef.ask(query)(new Timeout(15 seconds))
 

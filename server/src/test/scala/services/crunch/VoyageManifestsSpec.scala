@@ -41,14 +41,13 @@ class VoyageManifestsSpec extends CrunchTestLike {
     )))
     val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(
       now = () => SDate(scheduled),
-      airportConfig = airportConfig.copy(
+      airportConfig = defaultAirportConfig.copy(
         terminalProcessingTimes = Map(T1 -> Map(
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60,
           nonVisaNationalToDesk -> 25d / 60
         )),
-        terminals = Seq(T1),
-        queues = Map(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
+        queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
       ),
       initialPortState = Option(PortState(SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
     )
@@ -83,14 +82,13 @@ class VoyageManifestsSpec extends CrunchTestLike {
     )))
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
-      airportConfig = airportConfig.copy(
+      airportConfig = defaultAirportConfig.copy(
         portCode = portCode,
         terminalProcessingTimes = Map(T1 -> Map(
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60
         )),
-        terminals = Seq(T1),
-        queues = Map(T1 -> Seq(EeaDesk, EGate))
+        queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate))
       ),
       initialPortState = Option(PortState(SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
     )
@@ -129,14 +127,13 @@ class VoyageManifestsSpec extends CrunchTestLike {
     )))
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
-      airportConfig = airportConfig.copy(
+      airportConfig = defaultAirportConfig.copy(
         portCode = portCode,
         terminalProcessingTimes = Map(T1 -> Map(
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60
         )),
-        terminals = Seq(T1),
-        queues = Map(T1 -> Seq(EeaDesk, EGate, NonEeaDesk)),
+        queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate, NonEeaDesk)),
         hasTransfer = true
       ),
       initialPortState = Option(PortState(SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
@@ -243,7 +240,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     )))
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
-      airportConfig = airportConfig.copy(
+      airportConfig = defaultAirportConfig.copy(
         portCode = portCode,
         terminalProcessingTimes = Map(T1 -> Map(
           eeaMachineReadableToDesk -> 25d / 60,
@@ -251,8 +248,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           eeaMachineReadableToEGate -> 25d / 60,
           visaNationalToDesk -> 25d / 60
         )),
-        terminals = Seq(T1),
-        queues = Map(T1 -> Seq(EeaDesk, EGate, NonEeaDesk)),
+        queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate, NonEeaDesk)),
         hasTransfer = true
       ),
       initialPortState = Option(PortState(SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
@@ -294,7 +290,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     )))
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
-      airportConfig = airportConfig.copy(
+      airportConfig = defaultAirportConfig.copy(
         portCode = portCode,
         terminalProcessingTimes = Map(T1 -> Map(
           eeaMachineReadableToDesk -> 25d / 60,
@@ -302,8 +298,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           eeaMachineReadableToEGate -> 25d / 60,
           visaNationalToDesk -> 25d / 60
         )),
-        terminals = Seq(T1),
-        queues = Map(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
+        queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
       ),
       initialPortState = Option(
         PortState(
@@ -347,7 +342,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     )))
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
-      airportConfig = airportConfig.copy(
+      airportConfig = defaultAirportConfig.copy(
         portCode = portCode,
         terminalProcessingTimes = Map(T1 -> Map(
           eeaMachineReadableToDesk -> 25d / 60,
@@ -355,8 +350,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           eeaMachineReadableToEGate -> 25d / 60,
           visaNationalToDesk -> 25d / 60
         )),
-        terminals = Seq(T1),
-        queues = Map(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
+        queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
       ),
       initialPortState = Option(
         PortState(
@@ -400,7 +394,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     )))
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
-      airportConfig = airportConfig.copy(
+      airportConfig = defaultAirportConfig.copy(
         portCode = portCode,
         terminalProcessingTimes = Map(T1 -> Map(
           eeaMachineReadableToDesk -> 25d / 60,
@@ -408,8 +402,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           eeaMachineReadableToEGate -> 25d / 60,
           visaNationalToDesk -> 25d / 60
         )),
-        terminals = Seq(T1),
-        queues = Map(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
+        queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
       ),
       initialPortState = Option(
         PortState(
