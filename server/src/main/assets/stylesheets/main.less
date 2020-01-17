@@ -54,6 +54,16 @@
           color: @colHighlight;
         }
       }
+      > span {
+          > a {
+            color: @colDefault;
+            &:hover, &:focus {
+              color: @colHighlight;
+              text-decoration: none;
+              cursor: pointer;
+            }
+          }
+      }
       .ddm;
       > span {
         padding: 15px;
@@ -121,6 +131,10 @@
       }
     }
   }
+}
+
+.dropdown-menu {
+  margin-top: -2px;
 }
 
 /////////////
