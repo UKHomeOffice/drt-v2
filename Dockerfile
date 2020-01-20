@@ -22,10 +22,10 @@ RUN chown -R 1000:1000 /home/drt-admin/.ssh
 RUN mkdir -p /var/data
 RUN chown 1000:1000 -R /var/data
 
-COPY certs/rds-combined-ca-bundle.pem /etc/drt/rds-combined-ca-bundle.pem
+COPY certs/rds-combined-ca-bundle-2020-01.pem /etc/drt/rds-combined-ca-bundle-2020-01.pem
 
 RUN echo keytool $KEYTOOL_PASSWORD
-RUN keytool -noprompt -storepass changeit -import -alias rds -keystore $JAVA_HOME/lib/security/cacerts -file /etc/drt/rds-combined-ca-bundle.pem
+RUN keytool -noprompt -storepass changeit -import -alias rds -keystore $JAVA_HOME/lib/security/cacerts -file /etc/drt/rds-combined-ca-bundle-2020-01.pem
 
 USER 1000
 
