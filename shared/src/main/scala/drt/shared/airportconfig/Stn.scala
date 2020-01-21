@@ -4,7 +4,7 @@ import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.Terminals.T1
+import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 
 import scala.collection.immutable.SortedMap
@@ -60,6 +60,8 @@ object Stn extends AirportConfigLike {
         EGate -> 0.8084,
         EeaDesk -> (1.0 - 0.8084)
       )))
-    )
+    ),
+    desksByTerminal = _ => List.fill(24)(22),
+    doesDeskFlexing = true
   )
 }

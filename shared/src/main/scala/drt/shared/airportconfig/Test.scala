@@ -50,6 +50,8 @@ object Test extends AirportConfigLike {
         EeaDesk -> (1.0 - 0.7968)
       )))
     ),
-    hasTransfer = true
+    hasTransfer = true,
+    desksByTerminal = _ => List.fill(24)(22),
+    doesDeskFlexing = false
   )
 }

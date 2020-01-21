@@ -57,6 +57,8 @@ object Test2 extends AirportConfigLike {
       T1 -> (defaultQueueRatios + (EeaMachineReadable -> List(
         EGate -> 0.7968,
         EeaDesk -> (1.0 - 0.7968)
-      ))))
+      )))),
+    desksByTerminal = _ => List.fill(24)(22),
+    doesDeskFlexing = false
   )
 }

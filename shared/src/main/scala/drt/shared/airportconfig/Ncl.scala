@@ -52,5 +52,8 @@ object Ncl extends AirportConfigLike {
         EeaDesk -> (1.0 - 0.6993)
       )))
     ),
-    feedSources = Seq(LiveBaseFeedSource, AclFeedSource, ApiFeedSource))
+    feedSources = Seq(LiveBaseFeedSource, AclFeedSource, ApiFeedSource),
+    desksByTerminal = _ => List.fill(24)(20),
+    doesDeskFlexing = false
+  )
 }

@@ -54,6 +54,8 @@ object Brs extends AirportConfigLike {
         EeaDesk -> (1.0 - 0.7742)
       )))
     ),
-    feedSources = Seq(LiveBaseFeedSource, AclFeedSource, ApiFeedSource)
+    feedSources = Seq(LiveBaseFeedSource, AclFeedSource, ApiFeedSource),
+    desksByTerminal = _ => List.fill(24)(5),
+    doesDeskFlexing = false
   )
 }

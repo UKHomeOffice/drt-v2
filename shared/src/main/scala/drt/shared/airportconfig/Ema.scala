@@ -59,6 +59,8 @@ object Ema extends AirportConfigLike {
         EeaDesk -> (1.0 - 0.6993)
       )))
     ),
-    hasEstChox = true
+    hasEstChox = true,
+    desksByTerminal = _ => List.fill(24)(5),
+    doesDeskFlexing = false
   )
 }

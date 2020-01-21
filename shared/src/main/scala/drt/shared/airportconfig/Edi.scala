@@ -3,7 +3,7 @@ package drt.shared.airportconfig
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
-import drt.shared.Terminals.{A1, A2}
+import drt.shared.Terminals.{A1, A2, Terminal}
 import drt.shared._
 
 import scala.collection.immutable.SortedMap
@@ -64,7 +64,12 @@ object Edi extends AirportConfigLike {
         EGate -> 0.7894,
         EeaDesk -> (1.0 - 0.7894)
       )))
-    )
+    ),
+    desksByTerminal = (terminal: Terminal) => Map[Terminal, List[Int]](
+      A1 -> List.fill(24)(11),
+      A2 -> List.fill(24)(9)
+    ).getOrElse(terminal, List.fill(24)(0)),
+    doesDeskFlexing = false
   )
 
 }

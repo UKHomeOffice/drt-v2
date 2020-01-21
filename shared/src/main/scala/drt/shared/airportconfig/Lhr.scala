@@ -118,6 +118,13 @@ object Lhr extends AirportConfigLike {
     ),
     hasTransfer = true,
     maybeCiriumEstThresholdHours = Option(6),
-    feedSources = Seq(LiveBaseFeedSource, LiveFeedSource, ForecastFeedSource, AclFeedSource, ApiFeedSource)
+    feedSources = Seq(LiveBaseFeedSource, LiveFeedSource, ForecastFeedSource, AclFeedSource, ApiFeedSource),
+    desksByTerminal = (terminal: Terminal) => Map[Terminal, List[Int]](
+      T2 -> List.fill(24)(36),
+      T3 -> List.fill(24)(28),
+      T4 -> List.fill(24)(39),
+      T5 -> List.fill(24)(34)
+    ).getOrElse(terminal, List.fill(24)(0)),
+    doesDeskFlexing = true
   )
 }

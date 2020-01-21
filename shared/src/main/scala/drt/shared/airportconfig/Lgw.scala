@@ -4,7 +4,7 @@ import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.Terminals.{N, S}
+import drt.shared.Terminals.{N, S, Terminal}
 import drt.shared._
 
 import scala.collection.immutable.SortedMap
@@ -77,6 +77,11 @@ object Lgw extends AirportConfigLike {
         EGate -> 0.8375,
         EeaDesk -> (1.0 - 0.8375)
       )))),
-    feedSources = Seq(LiveBaseFeedSource, LiveFeedSource, ForecastFeedSource, AclFeedSource, ApiFeedSource)
+    feedSources = Seq(LiveBaseFeedSource, LiveFeedSource, ForecastFeedSource, AclFeedSource, ApiFeedSource),
+    desksByTerminal = (terminal: Terminal) => Map[Terminal, List[Int]](
+      N -> List.fill(24)(28),
+      S -> List.fill(24)(25)
+    ).getOrElse(terminal, List.fill(24)(0)),
+    doesDeskFlexing = false
   )
 }

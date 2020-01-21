@@ -4,8 +4,8 @@ import drt.shared.PaxTypes.{B5JPlusNational, EeaMachineReadable}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.Terminals.{T1, T2}
-import drt.shared.{AirportConfig, AirportConfigDefaults, AirportConfigLike, BHXAccess, PortCode, Queues}
+import drt.shared.Terminals.{T1, T2, Terminal}
+import drt.shared._
 
 import scala.collection.immutable.SortedMap
 
@@ -75,6 +75,11 @@ object Bhx extends AirportConfigLike {
         (EeaMachineReadable -> List(EeaDesk -> 1.0)),
         (B5JPlusNational -> List(EeaDesk -> 1.0))
       ))
-    )
+    ),
+    desksByTerminal = (terminal: Terminal) => Map[Terminal, List[Int]](
+      T1 -> List.fill(24)(8),
+      T2 -> List.fill(24)(8)
+    ).getOrElse(terminal, List.fill(24)(0)),
+    doesDeskFlexing = false
   )
 }

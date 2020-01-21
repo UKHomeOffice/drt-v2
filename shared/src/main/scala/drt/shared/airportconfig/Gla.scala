@@ -52,6 +52,8 @@ object Gla extends AirportConfigLike {
         EGate -> 0.6993,
         EeaDesk -> (1.0 - 0.6993)
       )))
-    )
+    ),
+    desksByTerminal = _ => List.fill(24)(14),
+    doesDeskFlexing = false
   )
 }

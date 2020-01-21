@@ -4,7 +4,7 @@ import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.Terminals.{T1, T2, T3}
+import drt.shared.Terminals.{T1, T2, T3, Terminal}
 import drt.shared._
 
 import scala.collection.immutable.SortedMap
@@ -67,6 +67,12 @@ object Man extends AirportConfigLike {
       T3 -> (defaultQueueRatios + (EeaMachineReadable -> List(
         EGate -> 0.7038,
         EeaDesk -> (1.0 - 0.7038)
-      ))))
+      )))),
+    desksByTerminal = (terminal: Terminal) => Map[Terminal, List[Int]](
+      T1 -> List.fill(24)(14),
+      T2 -> List.fill(24)(11),
+      T3 -> List.fill(24)(9)
+    ).getOrElse(terminal, List.fill(24)(0)),
+    doesDeskFlexing = true
   )
 }

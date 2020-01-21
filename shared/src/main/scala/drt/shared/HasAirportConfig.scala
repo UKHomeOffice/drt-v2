@@ -249,7 +249,9 @@ case class AirportConfig(portCode: PortCode,
                          hasTransfer: Boolean = false,
                          maybeCiriumEstThresholdHours: Option[Int] = None,
                          maybeCiriumTaxiThresholdMinutes: Option[Int] = Option(20),
-                         feedSources: Seq[FeedSource] = Seq(LiveBaseFeedSource, LiveFeedSource, AclFeedSource, ApiFeedSource)
+                         feedSources: Seq[FeedSource] = Seq(LiveBaseFeedSource, LiveFeedSource, AclFeedSource, ApiFeedSource),
+                         desksByTerminal: Terminal => List[Int],
+                         doesDeskFlexing: Boolean = false
                         ) {
   def assertValid(): Unit = {
     queuesByTerminal.values.flatten.toSet.foreach { queue: Queue =>
@@ -274,13 +276,6 @@ case class AirportConfig(portCode: PortCode,
     terminalSplitQueueTypes.getOrElse(terminal, Set()).contains(q)
   }
 
-  def desksByTerminal(terminal: Terminal): List[Int] = minMaxDesksByTerminalQueue(terminal)
-    .filterKeys(_ != EGate)
-    .map { case (_, (_, max)) => max }
-    .reduce[List[Int]] {
-      case (max1, max2) => max1.zip(max2).map { case (m1, m2) => m1 + m2 }
-    }
-
   def feedPortCode: PortCode = cloneOfPortCode.getOrElse(portCode)
 
   def nonTransferQueues(terminalName: Terminal): Seq[Queue] = queuesByTerminal(terminalName).collect {
@@ -295,6 +290,13 @@ object AirportConfig {
   )
 
   implicit val rw: ReadWriter[AirportConfig] = macroRW
+
+  def desksByTerminalDefault(minMaxDesksByTerminalQueue: Map[Terminal, Map[Queue, (List[Int], List[Int])]])(terminal: Terminal): List[Int] = minMaxDesksByTerminalQueue.getOrElse(terminal, Map())
+    .filterKeys(_ != EGate)
+    .map { case (_, (_, max)) => max }
+    .reduce[List[Int]] {
+      case (max1, max2) => max1.zip(max2).map { case (m1, m2) => m1 + m2 }
+    }
 }
 
 case class ContactDetails(supportEmail: Option[String], oohPhone: Option[String])
