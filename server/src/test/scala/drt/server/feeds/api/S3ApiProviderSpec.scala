@@ -36,55 +36,48 @@ class S3ApiProviderSpec extends TestKit(ActorSystem("testActorSystem", ConfigFac
     result must be_==(("drt_dq_181108_000233_2957.zip", List.empty))
   }
 
-  val nowString = "2020-01-15T12:10:15"
-  val nowProvider: () => SDateLike = () => SDate(nowString)
-  val oneHourMillis: Int = 60 * 60 * 1000
-  val expiredFilename = "drt_dq_200115_110000"
-  val unexpiredFilename = "drt_dq_200115_111015"
-  val defaultLatestFilename = "drt_dq_200115_111015"
+  "DQ latest file name for zips" >> {
+    val nowString = "2020-01-15T12:10:15"
+    val nowProvider: () => SDateLike = () => SDate(nowString)
+    val oneHourMillis: Int = 60 * 60 * 1000
+    val expiredFilename = "drt_dq_200115_110000"
+    val unexpiredFilename = "drt_dq_200115_111015"
+    val defaultLatestFilename = "drt_dq_200115_111015"
 
-  s"Given a 'now' of $nowString and a 1 hour expiry time" >> {
-    "When I ask for the default latest zip file name" >> {
-      val expected = defaultLatestFilename
+    s"Given a 'now' of $nowString and a 1 hour expiry time" >> {
+      "When I ask for the default latest zip file name" >> {
+        s"I should get $defaultLatestFilename" >> {
+          val latest = S3ApiProvider.defaultApiLatestZipFilename(nowProvider, oneHourMillis)
 
-      s"I should get $expected" >> {
-        val latest = S3ApiProvider.defaultApiLatestZipFilename(nowProvider, oneHourMillis)
+          latest === defaultLatestFilename
+        }
+      }
+    }
 
-        latest === expected
+    "When I ask for a latest file name" >> {
+      s"Given no existing latest file name, a 'now' of $nowString and a 1 hour expiry time" >> {
+        s"I should get $defaultLatestFilename" >> {
+          val latest = S3ApiProvider.latestUnexpiredDqZipFilename(None, nowProvider, oneHourMillis)
+
+          latest === defaultLatestFilename
+        }
+      }
+
+      s"Given an existing latest file name that has expired ($expiredFilename) and a 1 hour expiry time" >> {
+        s"I should get $defaultLatestFilename" >> {
+          val latest = S3ApiProvider.latestUnexpiredDqZipFilename(Option(expiredFilename), nowProvider, oneHourMillis)
+
+          latest === defaultLatestFilename
+        }
+      }
+
+      s"Given an existing latest file name that has not expired ($unexpiredFilename)" >> {
+        s"I should get $unexpiredFilename" >> {
+          val latest = S3ApiProvider.latestUnexpiredDqZipFilename(Option(unexpiredFilename), nowProvider, oneHourMillis)
+
+          latest === unexpiredFilename
+        }
       }
     }
   }
-
-  "When I ask for a latest file name" >> {
-    s"Given no existing latest file name, a 'now' of $nowString and a 1 hour expiry time" >> {
-      val expected = defaultLatestFilename
-
-      s"I should get $expected" >> {
-        val latest = S3ApiProvider.latestUnexpiredDqZipFilename(None, nowProvider, oneHourMillis)
-
-        latest === expected
-      }
-    }
-
-    s"Given an existing latest file name that has expired ($expiredFilename) and a 1 hour expiry time" >> {
-      val expected = defaultLatestFilename
-
-      s"I should get $expected" >> {
-        val latest = S3ApiProvider.latestUnexpiredDqZipFilename(Option(expiredFilename), nowProvider, oneHourMillis)
-
-        latest === expected
-      }
-    }
-
-    s"Given an existing latest file name that has not expired ($unexpiredFilename)" >> {
-      val expected = unexpiredFilename
-
-      s"I should get $expected" >> {
-        val latest = S3ApiProvider.latestUnexpiredDqZipFilename(Option(unexpiredFilename), nowProvider, oneHourMillis)
-
-        latest === expected
-      }
-    }
-  }
-
 }
