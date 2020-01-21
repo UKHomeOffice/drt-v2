@@ -65,10 +65,7 @@ object Edi extends AirportConfigLike {
         EeaDesk -> (1.0 - 0.7894)
       )))
     ),
-    desksByTerminal = (terminal: Terminal) => Map[Terminal, List[Int]](
-      A1 -> List.fill(24)(11),
-      A2 -> List.fill(24)(9)
-    ).getOrElse(terminal, List.fill(24)(0)),
+    desksByTerminal = Map[Terminal, Int](A1 -> 11, A2 -> 9),
     doesDeskFlexing = false
   )
 

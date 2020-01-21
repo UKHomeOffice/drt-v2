@@ -51,7 +51,7 @@ object Test extends AirportConfigLike {
       )))
     ),
     hasTransfer = true,
-    desksByTerminal = _ => List.fill(24)(22),
+    desksByTerminal = Map(T1 -> 22),
     doesDeskFlexing = false
   )
 }

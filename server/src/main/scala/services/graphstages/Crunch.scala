@@ -322,11 +322,17 @@ object Crunch {
       val minDesks = minMaxDesks.mapValues(_._1)
       val maxDesks = minMaxDesks.mapValues(_._2)
 
-      crunchLoadsWithoutFlexing(terminalWork, minDesks, maxDesks, airportConfig.slaByQueue, crunch).flatMap {
+      val queueDesksAndWaits =
+        if (airportConfig.doesDeskFlexing)
+          crunchLoadsWithFlexing(terminalWork, airportConfig.desksByTerminal(terminal), minDesks, maxDesks, airportConfig.slaByQueue, airportConfig.flexedQueuesPriority, crunch)
+        else
+          crunchLoadsWithoutFlexing(terminalWork, minDesks, maxDesks, airportConfig.slaByQueue, crunch)
+
+      queueDesksAndWaits.flatMap {
         case (queue, (desks, waits)) =>
           minuteMillis.zip(terminalLoads(queue)).zip(desks.zip(waits)).map {
-          case ((minute, (work, pax)), (desk, wait)) => DeskRecMinute(terminal, queue, minute, pax, work, desk, wait)
-        }
+            case ((minute, (work, pax)), (desk, wait)) => DeskRecMinute(terminal, queue, minute, pax, work, desk, wait)
+          }
       }
     }
 
@@ -372,7 +378,7 @@ object Crunch {
     val unflexedQueuesToOptimise = queuesToOptimise.filter(q => !flexedQueuesPriority.contains(q))
 
     val flexedQueueRecs = flexedQueuesPriority
-      .filter(pq => flexedQueuesToOptimise.toList.contains(pq))
+      .filter(flexedQueued => flexedQueuesToOptimise.toList.contains(flexedQueued))
       .foldLeft(Map[Queue, (List[Int], List[Int])]()) {
         case (queueRecsSoFar, queueProcessing) =>
           val queuesProcessed = queueRecsSoFar.keys.toSet
@@ -380,9 +386,11 @@ object Crunch {
           val availableMinusRemainingMinimums: List[Int] = queuesToBeProcessed.foldLeft(List.fill(24)(terminalDesks)) {
             case (availableSoFar, queue) => availableSoFar.zip(minDesks(queue)).map { case (a, b) => a - b }
           }
+          println(s"$queueProcessing: availableMinusRemainingMinimums: $availableMinusRemainingMinimums")
           val actualAvailable: List[Int] = queueRecsSoFar.values.foldLeft(availableMinusRemainingMinimums) {
             case (availableSoFar, (recs, _)) => availableSoFar.zip(recs).map { case (a, b) => a - b }
           }
+          println(s"$queueProcessing: actualAvailable: $actualAvailable")
           cruncher(loads(queueProcessing), minDesks(queueProcessing), actualAvailable, OptimizerConfig(slas(queueProcessing))) match {
             case Success(OptimizerCrunchResult(desks, waits)) => queueRecsSoFar + (queueProcessing -> ((desks.toList, waits.toList)))
             case Failure(_) => queueRecsSoFar

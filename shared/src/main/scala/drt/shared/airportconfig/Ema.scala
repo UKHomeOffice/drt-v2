@@ -60,7 +60,7 @@ object Ema extends AirportConfigLike {
       )))
     ),
     hasEstChox = true,
-    desksByTerminal = _ => List.fill(24)(5),
+    desksByTerminal = Map(T1 -> 5),
     doesDeskFlexing = false
   )
 }

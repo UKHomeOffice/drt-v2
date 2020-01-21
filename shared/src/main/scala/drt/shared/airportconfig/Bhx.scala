@@ -76,10 +76,7 @@ object Bhx extends AirportConfigLike {
         (B5JPlusNational -> List(EeaDesk -> 1.0))
       ))
     ),
-    desksByTerminal = (terminal: Terminal) => Map[Terminal, List[Int]](
-      T1 -> List.fill(24)(8),
-      T2 -> List.fill(24)(8)
-    ).getOrElse(terminal, List.fill(24)(0)),
+    desksByTerminal = Map[Terminal, Int](T1 -> 8, T2 -> 8),
     doesDeskFlexing = false
   )
 }

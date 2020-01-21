@@ -250,8 +250,9 @@ case class AirportConfig(portCode: PortCode,
                          maybeCiriumEstThresholdHours: Option[Int] = None,
                          maybeCiriumTaxiThresholdMinutes: Option[Int] = Option(20),
                          feedSources: Seq[FeedSource] = Seq(LiveBaseFeedSource, LiveFeedSource, AclFeedSource, ApiFeedSource),
-                         desksByTerminal: Terminal => List[Int],
-                         doesDeskFlexing: Boolean = false
+                         desksByTerminal: Map[Terminal, Int],
+                         doesDeskFlexing: Boolean = false,
+                         flexedQueuesPriority: List[Queue] = List(EeaDesk, NonEeaDesk, QueueDesk, FastTrack)
                         ) {
   def assertValid(): Unit = {
     queuesByTerminal.values.flatten.toSet.foreach { queue: Queue =>

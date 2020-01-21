@@ -55,7 +55,7 @@ object Brs extends AirportConfigLike {
       )))
     ),
     feedSources = Seq(LiveBaseFeedSource, AclFeedSource, ApiFeedSource),
-    desksByTerminal = _ => List.fill(24)(5),
+    desksByTerminal = Map(T1 -> 5),
     doesDeskFlexing = false
   )
 }

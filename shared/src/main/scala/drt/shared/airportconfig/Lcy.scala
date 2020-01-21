@@ -52,7 +52,7 @@ object Lcy extends AirportConfigLike {
         EeaDesk -> (1.0 - 0.6993)
       )))
     ),
-    desksByTerminal = _ => List.fill(24)(9),
+    desksByTerminal = Map(T1 -> 9),
     doesDeskFlexing = false
   )
 }

@@ -68,11 +68,11 @@ object Man extends AirportConfigLike {
         EGate -> 0.7038,
         EeaDesk -> (1.0 - 0.7038)
       )))),
-    desksByTerminal = (terminal: Terminal) => Map[Terminal, List[Int]](
-      T1 -> List.fill(24)(14),
-      T2 -> List.fill(24)(11),
-      T3 -> List.fill(24)(9)
-    ).getOrElse(terminal, List.fill(24)(0)),
+    desksByTerminal = Map[Terminal, Int](
+      T1 -> 14,
+      T2 -> 11,
+      T3 -> 9
+    ),
     doesDeskFlexing = true
   )
 }
