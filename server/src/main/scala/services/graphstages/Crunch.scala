@@ -11,6 +11,7 @@ import services._
 
 import scala.collection.immutable.{Map, SortedMap}
 import scala.collection.mutable
+import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
 object Crunch {
@@ -70,9 +71,9 @@ object Crunch {
 
   case class CrunchRequest(flights: List[ApiFlightWithSplits], crunchStart: MillisSinceEpoch)
 
-  val oneMinuteMillis: MillisSinceEpoch = 60000L
-  val oneHourMillis: MillisSinceEpoch = oneMinuteMillis * 60
-  val oneDayMillis: MillisSinceEpoch = oneHourMillis * 24
+  val oneMinuteMillis: Int = 60000
+  val oneHourMillis: Int = oneMinuteMillis * 60
+  val oneDayMillis: Int = oneHourMillis * 24
   val minutesInADay: Int = 60 * 24
 
   val europeLondonId = "Europe/London"
@@ -383,5 +384,4 @@ object Crunch {
     val adjustedMinute = minuteInQuestion.addMinutes(-1 * offsetMinutes)
     Crunch.getLocalLastMidnight(MilliDate(adjustedMinute.millisSinceEpoch)).addMinutes(offsetMinutes)
   }
-
 }
