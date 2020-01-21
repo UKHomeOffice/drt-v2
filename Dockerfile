@@ -22,9 +22,11 @@ RUN chown -R 1000:1000 /home/drt-admin/.ssh
 RUN mkdir -p /var/data
 RUN chown 1000:1000 -R /var/data
 
+COPY certs/rds-combined-ca-bundle.der /etc/drt/rds-combined-ca-bundle.der
 COPY certs/rds-ca-2019-root.der /etc/drt/rds-ca-2019-root.der
 
 RUN echo keytool $KEYTOOL_PASSWORD
+RUN keytool -noprompt -storepass changeit -import -alias rds-root -keystore $JAVA_HOME/lib/security/cacerts -file /etc/drt/rds-combined-ca-bundle.der
 RUN keytool -noprompt -storepass changeit -import -alias rds-root -keystore $JAVA_HOME/lib/security/cacerts -file /etc/drt/rds-ca-2019-root.der
 
 USER 1000
