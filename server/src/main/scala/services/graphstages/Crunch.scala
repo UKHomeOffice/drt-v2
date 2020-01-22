@@ -210,7 +210,7 @@ object Crunch {
     if (purgedCount > 0) log.info(s"Purged $purgedCount items (mutable.SortedSet[A])")
   }
 
-  def hasExpired[A](now: SDateLike, expireAfterMillis: Long, toMillis: A => MillisSinceEpoch)(toCompare: A): Boolean = {
+  def hasExpired[A](now: SDateLike, expireAfterMillis: Int, toMillis: A => MillisSinceEpoch)(toCompare: A): Boolean = {
     val ageInMillis = now.millisSinceEpoch - toMillis(toCompare)
     ageInMillis > expireAfterMillis
   }

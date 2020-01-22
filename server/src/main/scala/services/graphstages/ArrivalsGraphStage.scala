@@ -33,7 +33,7 @@ class ArrivalsGraphStage(name: String = "",
                          pcpArrivalTime: Arrival => MilliDate,
                          validPortTerminals: Set[Terminal],
                          arrivalDataSanitiser: ArrivalDataSanitiser,
-                         expireAfterMillis: Long,
+                         expireAfterMillis: Int,
                          now: () => SDateLike)
   extends GraphStage[FanInShape4[List[Arrival], List[Arrival], List[Arrival], List[Arrival], ArrivalsDiff]] {
 

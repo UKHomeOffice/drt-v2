@@ -17,7 +17,7 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
                               val initialMaybeSnapshotInterval: Option[Int],
                               portCode: PortCode,
                               val now: () => SDateLike,
-                              expireAfterMillis: Long
+                              expireAfterMillis: Int
                              ) extends RecoveryActorLike with PersistentDrtActor[RegisteredArrivals] {
   override def persistenceId: String = "registered-arrivals"
 

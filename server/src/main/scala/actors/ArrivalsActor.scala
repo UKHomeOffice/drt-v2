@@ -42,7 +42,7 @@ case class ArrivalsState(
 
 class ForecastBaseArrivalsActor(initialSnapshotBytesThreshold: Int,
                                 val now: () => SDateLike,
-                                expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, AclFeedSource) {
+                                expireAfterMillis: Int) extends ArrivalsActor(now, expireAfterMillis, AclFeedSource) {
   override def persistenceId: String = s"${getClass.getName}-forecast-base"
 
   override val snapshotBytesThreshold: Int = initialSnapshotBytesThreshold
@@ -72,7 +72,7 @@ class ForecastBaseArrivalsActor(initialSnapshotBytesThreshold: Int,
 
 class ForecastPortArrivalsActor(initialSnapshotBytesThreshold: Int,
                                 val now: () => SDateLike,
-                                expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, ForecastFeedSource) {
+                                expireAfterMillis: Int) extends ArrivalsActor(now, expireAfterMillis, ForecastFeedSource) {
   override def persistenceId: String = s"${getClass.getName}-forecast-port"
 
   override val snapshotBytesThreshold: Int = initialSnapshotBytesThreshold
@@ -85,7 +85,7 @@ class ForecastPortArrivalsActor(initialSnapshotBytesThreshold: Int,
 
 class LiveBaseArrivalsActor(initialSnapshotBytesThreshold: Int,
                             val now: () => SDateLike,
-                            expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, LiveBaseFeedSource) {
+                            expireAfterMillis: Int) extends ArrivalsActor(now, expireAfterMillis, LiveBaseFeedSource) {
   override def persistenceId: String = s"${getClass.getName}-live-base"
 
   override val snapshotBytesThreshold: Int = initialSnapshotBytesThreshold
@@ -98,7 +98,7 @@ class LiveBaseArrivalsActor(initialSnapshotBytesThreshold: Int,
 
 class LiveArrivalsActor(initialSnapshotBytesThreshold: Int,
                         val now: () => SDateLike,
-                        expireAfterMillis: Long) extends ArrivalsActor(now, expireAfterMillis, LiveFeedSource) {
+                        expireAfterMillis: Int) extends ArrivalsActor(now, expireAfterMillis, LiveFeedSource) {
   override def persistenceId: String = s"${getClass.getName}-live"
 
   override val snapshotBytesThreshold: Int = initialSnapshotBytesThreshold
@@ -110,7 +110,7 @@ class LiveArrivalsActor(initialSnapshotBytesThreshold: Int,
 }
 
 abstract class ArrivalsActor(now: () => SDateLike,
-                             expireAfterMillis: Long,
+                             expireAfterMillis: Int,
                              feedSource: FeedSource) extends RecoveryActorLike with PersistentDrtActor[ArrivalsState] {
 
   val restorer = new RestorerWithLegacy[Int, UniqueArrival, Arrival]
