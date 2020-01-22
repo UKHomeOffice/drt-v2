@@ -79,7 +79,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 }
 
 object DrtStaticParameters {
-  val expireAfterMillis: Long = 2 * oneDayMillis
+  val expireAfterMillis: Int = 2 * oneDayMillis
 
   val liveDaysAhead: Int = 2
 
@@ -223,7 +223,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   val s3ApiProvider = S3ApiProvider(params.awSCredentials, params.dqZipBucketName)
   val initialManifestsState: Option[VoyageManifestState] = initialState[VoyageManifestState](voyageManifestsActor)
-  val latestZipFileName: String = initialManifestsState.map(_.latestZipFilename).getOrElse("")
+  val latestZipFileName: String = S3ApiProvider.latestUnexpiredDqZipFilename(initialManifestsState.map(_.latestZipFilename), now, expireAfterMillis)
 
   lazy val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
   lazy val voyageManifestsHistoricSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
