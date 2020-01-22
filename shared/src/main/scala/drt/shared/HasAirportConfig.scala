@@ -1,7 +1,7 @@
 package drt.shared
 
 import drt.shared.PaxTypes._
-import drt.shared.Queues.{EGate, EeaDesk, FastTrack, NonEeaDesk, Queue, QueueDesk}
+import drt.shared.Queues.{EGate, EeaDesk, FastTrack, NonEeaDesk, Queue, QueueDesk, Transfer}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.Terminal
 import ujson.Js.Value
@@ -255,16 +255,24 @@ case class AirportConfig(portCode: PortCode,
                          flexedQueuesPriority: List[Queue] = List(EeaDesk, NonEeaDesk, QueueDesk, FastTrack)
                         ) {
   def assertValid(): Unit = {
-    queuesByTerminal.values.flatten.toSet.foreach { queue: Queue =>
-      assert(slaByQueue.contains(queue), s"Missing sla for $queue")
-    }
+    queuesByTerminal.values.flatten.toSet
+      .filterNot(_ == Transfer)
+      .foreach { queue: Queue =>
+        assert(slaByQueue.contains(queue), s"Missing sla for $queue")
+      }
     queuesByTerminal.foreach { case (terminal, tQueues) =>
       assert(minMaxDesksByTerminalQueue.contains(terminal), s"Missing min/max desks for terminal $terminal")
-      tQueues.foreach { tQueue =>
-        assert(minMaxDesksByTerminalQueue(terminal).contains(tQueue), s"Missing min/max desks for $tQueue for terminal $terminal")
-      }
+      tQueues
+        .filterNot(_ == Transfer)
+        .foreach { tQueue =>
+          assert(minMaxDesksByTerminalQueue(terminal).contains(tQueue), s"Missing min/max desks for $tQueue for terminal $terminal")
+        }
     }
   }
+
+  def minDesksForTerminal(tn: Terminal): Map[Queue, List[Int]] = minMaxDesksByTerminalQueue.getOrElse(tn, Map()).mapValues(_._1)
+
+  def maxDesksForTerminal(tn: Terminal): Map[Queue, List[Int]] = minMaxDesksByTerminalQueue.getOrElse(tn, Map()).mapValues(_._2)
 
   val terminals: Iterable[Terminal] = queuesByTerminal.keys
 

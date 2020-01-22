@@ -43,6 +43,6 @@ object Ltn extends AirportConfigLike {
       )))
     ),
     desksByTerminal = Map(T1 -> 14),
-    doesDeskFlexing = false
+    doesDeskFlexing = true
   )
 }

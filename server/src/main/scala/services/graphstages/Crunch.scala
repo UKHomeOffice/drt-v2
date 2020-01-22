@@ -2,7 +2,7 @@ package services.graphstages
 
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.Queues.{EGate, Queue}
+import drt.shared.Queues.{EGate, Queue, Transfer}
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.joda.time.{DateTime, DateTimeZone}
@@ -341,6 +341,7 @@ object Crunch {
 
   def terminalLoadsByQueue(airportConfig: AirportConfig, terminal: Terminal, minuteMillis: NumericRange[MillisSinceEpoch], loadMinutes: Map[TQM, LoadMinute]): Map[Queue, Seq[(Double, Double)]] = airportConfig
     .queuesByTerminal(terminal)
+    .filterNot(_ == Transfer)
     .map { queue =>
       val lms: Seq[(Double, Double)] = minuteMillis.map { minute =>
         val lm = loadMinutes.getOrElse(TQM(terminal, queue, minute), LoadMinute(terminal, queue, 0, 0, minute))
@@ -374,6 +375,7 @@ object Crunch {
                              flexedQueuesPriority: List[Queue],
                              cruncher: TryCrunch): Map[Queue, (List[Int], List[Int])] = {
     val queuesToOptimise: Set[Queue] = loads.keys.toSet
+    println(s"queues to optimise: $queuesToOptimise")
     val flexedQueuesToOptimise = queuesToOptimise.filter(q => flexedQueuesPriority.contains(q))
     val unflexedQueuesToOptimise = queuesToOptimise.filter(q => !flexedQueuesPriority.contains(q))
 
@@ -383,17 +385,18 @@ object Crunch {
         case (queueRecsSoFar, queueProcessing) =>
           val queuesProcessed = queueRecsSoFar.keys.toSet
           val queuesToBeProcessed = flexedQueuesToOptimise -- (queuesProcessed + queueProcessing)
-          val availableMinusRemainingMinimums: List[Int] = queuesToBeProcessed.foldLeft(List.fill(24)(terminalDesks)) {
+          val availableMinusRemainingMinimums: List[Int] = queuesToBeProcessed.foldLeft(List.fill(loads(queueProcessing).length)(terminalDesks)) {
             case (availableSoFar, queue) => availableSoFar.zip(minDesks(queue)).map { case (a, b) => a - b }
           }
-          println(s"$queueProcessing: availableMinusRemainingMinimums: $availableMinusRemainingMinimums")
-          val actualAvailable: List[Int] = queueRecsSoFar.values.foldLeft(availableMinusRemainingMinimums) {
-            case (availableSoFar, (recs, _)) => availableSoFar.zip(recs).map { case (a, b) => a - b }
-          }
-          println(s"$queueProcessing: actualAvailable: $actualAvailable")
+          val actualAvailable: List[Int] = queueRecsSoFar.values
+            .foldLeft(availableMinusRemainingMinimums) {
+              case (availableSoFar, (recs, _)) => availableSoFar.zip(recs).map { case (a, b) => a - b }
+            }
           cruncher(loads(queueProcessing), minDesks(queueProcessing), actualAvailable, OptimizerConfig(slas(queueProcessing))) match {
             case Success(OptimizerCrunchResult(desks, waits)) => queueRecsSoFar + (queueProcessing -> ((desks.toList, waits.toList)))
-            case Failure(_) => queueRecsSoFar
+            case Failure(t) =>
+              log.error(s"Crunch failed for $queueProcessing", t)
+              queueRecsSoFar
           }
       }
 
@@ -448,6 +451,12 @@ object Crunch {
     val maxDesks = deskRecMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._2))
     (minDesks.toList, maxDesks.toList)
   }
+
+  def minDesksForQueueByMinute(deskRecMinutes: Iterable[MillisSinceEpoch], tn: Terminal, qn: Queue, airportConfig: AirportConfig): List[Int] = deskRecMinutes
+    .map(desksForHourOfDayInUKLocalTime(_, airportConfig.minDesksForTerminal(tn).getOrElse(qn, List.fill(24)(0)))).toList
+
+  def maxDesksForQueueByMinute(deskRecMinutes: Iterable[MillisSinceEpoch], tn: Terminal, qn: Queue, airportConfig: AirportConfig): List[Int] = deskRecMinutes
+    .map(desksForHourOfDayInUKLocalTime(_, airportConfig.maxDesksForTerminal(tn).getOrElse(qn, List.fill(24)(10)))).toList
 
   def flightsToDeskRecs(minutesToCrunch: Int, airportConfig: AirportConfig, cruncher: TryCrunch): (FlightsWithSplits, MillisSinceEpoch) => CrunchApi.DeskRecMinutes =
     crunchFlights(minutesToCrunch, cruncher, airportConfig)
