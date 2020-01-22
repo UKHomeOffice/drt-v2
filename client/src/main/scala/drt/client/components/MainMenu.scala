@@ -129,7 +129,7 @@ object PortSwitcher {
 
   val component: Js.ComponentSimple[Props, CtorType.Props, Unmounted[Props, State, Unit]] =
     ScalaComponent.builder[Props]("PortSwitcher")
-      .initialStateFromProps(props => {
+      .initialStateFromProps(_ => {
         State()
       })
       .renderPS((scope, props, state) => {
