@@ -15,7 +15,7 @@ trait HasExpireables[A] {
 }
 
 trait Expireable {
-  def isExpired(expireAfterMillis: MillisSinceEpoch): Boolean
+  def isExpired(expireBeforeMillis: MillisSinceEpoch): Boolean
 }
 
 case class StaffMovement(terminal: Terminal,

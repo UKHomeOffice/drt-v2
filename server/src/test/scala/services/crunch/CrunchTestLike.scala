@@ -181,7 +181,7 @@ class CrunchTestLike
                      csvSplitsProvider: SplitsProvider.SplitProvider = (_, _) => None,
                      pcpArrivalTime: Arrival => MilliDate = pcpForFlightFromSch,
                      minutesToCrunch: Int = 60,
-                     expireAfterMillis: Long = DrtStaticParameters.expireAfterMillis,
+                     expireAfterMillis: Int = DrtStaticParameters.expireAfterMillis,
                      now: () => SDateLike,
                      initialShifts: ShiftAssignments = ShiftAssignments.empty,
                      initialFixedPoints: FixedPointAssignments = FixedPointAssignments.empty,

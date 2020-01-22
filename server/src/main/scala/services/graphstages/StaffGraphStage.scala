@@ -19,7 +19,7 @@ class StaffGraphStage(name: String = "",
                       optionalInitialMovements: Option[Seq[StaffMovement]],
                       initialStaffMinutes: StaffMinutes,
                       now: () => SDateLike,
-                      expireAfterMillis: MillisSinceEpoch,
+                      expireAfterMillis: Int,
                       airportConfig: AirportConfig,
                       numberOfDays: Int,
                       checkRequiredUpdatesOnStartup: Boolean) extends GraphStage[FanInShape3[ShiftAssignments, FixedPointAssignments, Seq[StaffMovement], StaffMinutes]] {

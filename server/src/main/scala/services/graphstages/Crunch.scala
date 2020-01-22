@@ -70,9 +70,9 @@ object Crunch {
 
   case class CrunchRequest(flights: List[ApiFlightWithSplits], crunchStart: MillisSinceEpoch)
 
-  val oneMinuteMillis: MillisSinceEpoch = 60000L
-  val oneHourMillis: MillisSinceEpoch = oneMinuteMillis * 60
-  val oneDayMillis: MillisSinceEpoch = oneHourMillis * 24
+  val oneMinuteMillis: Int = 60000
+  val oneHourMillis: Int = oneMinuteMillis * 60
+  val oneDayMillis: Int = oneHourMillis * 24
   val minutesInADay: Int = 60 * 24
 
   val europeLondonId = "Europe/London"
@@ -209,7 +209,7 @@ object Crunch {
     if (purgedCount > 0) log.info(s"Purged $purgedCount items (mutable.SortedSet[A])")
   }
 
-  def hasExpired[A](now: SDateLike, expireAfterMillis: Long, toMillis: A => MillisSinceEpoch)(toCompare: A): Boolean = {
+  def hasExpired[A](now: SDateLike, expireAfterMillis: Int, toMillis: A => MillisSinceEpoch)(toCompare: A): Boolean = {
     val ageInMillis = now.millisSinceEpoch - toMillis(toCompare)
     ageInMillis > expireAfterMillis
   }
@@ -476,5 +476,4 @@ object Crunch {
     val adjustedMinute = minuteInQuestion.addMinutes(-1 * offsetMinutes)
     Crunch.getLocalLastMidnight(MilliDate(adjustedMinute.millisSinceEpoch)).addMinutes(offsetMinutes)
   }
-
 }

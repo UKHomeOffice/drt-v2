@@ -10,7 +10,7 @@ case class StaffAssignment(name: String,
                            endDt: MilliDate,
                            numberOfStaff: Int,
                            createdBy: Option[String]) extends Expireable {
-  def isExpired(expireAfterMillis: MillisSinceEpoch): Boolean = endDt.millisSinceEpoch < expireAfterMillis
+  def isExpired(expireBeforeMillis: MillisSinceEpoch): Boolean = endDt.millisSinceEpoch < expireBeforeMillis
 }
 
 object StaffAssignment {

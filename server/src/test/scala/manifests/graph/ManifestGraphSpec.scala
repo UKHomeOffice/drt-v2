@@ -164,7 +164,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
                         initialRegisteredArrivals: Option[RegisteredArrivals],
                         isDueLookup: (MillisSinceEpoch, MillisSinceEpoch, SDateLike) => Boolean,
                         now: () => SDateLike): (UniqueKillSwitch, Sink[List[Arrival], NotUsed], Source[List[BestAvailableManifest], NotUsed]) = {
-    val expireAfterMillis = (3 hours).length
+    val expireAfterMillis = 3 * Crunch.oneHourMillis
 
     val batchStage = new BatchStage(now, isDueLookup, 1, expireAfterMillis, initialRegisteredArrivals, 0, (_: MillisSinceEpoch) => true)
 

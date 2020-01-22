@@ -5,13 +5,15 @@ import drt.client.components.Icon._
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
-import japgolly.scalajs.react._
+import japgolly.scalajs.react.{CtorType, _}
+import japgolly.scalajs.react.component.Js
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html.{Div, LI}
 
-import scala.collection.immutable
+
+import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 
 object MainMenu {
   @inline private def bss: BootstrapStyles.type = GlobalStyles.bootstrapStyles
@@ -86,7 +88,7 @@ object MainMenu {
 
   private class Backend() {
     def render(props: Props): VdomTagOf[Div] = {
-      val children: immutable.Seq[TagOf[LI]] = for (item <- menuItems(props.airportConfig, props.currentLoc, props.roles, props.feeds)) yield {
+      val children: Seq[TagOf[LI]] = for (item <- menuItems(props.airportConfig, props.currentLoc, props.roles, props.feeds)) yield {
         val active = (props.currentLoc, item.location) match {
           case (TerminalPageTabLoc(tn, _, _, _), TerminalPageTabLoc(tni, _, _, _)) => tn == tni
           case (current, itemLoc) => current == itemLoc
@@ -96,8 +98,13 @@ object MainMenu {
           props.router.link(item.location)(item.icon, " ", item.label(props))
         )
       }
+
+      val navItems: Seq[VdomTagOf[LI]] = if (PortSwitcher.userCanSwitchPort(props.roles))
+        children :+ <.li(PortSwitcher(props.roles, props.airportConfig.portCode))
+      else
+        children
       <.div(
-        <.ul(^.classSet(bss.navbarClsSet.map(cn => (cn, true)): _*), ^.className := "mr-auto")(children.toTagMod)
+        <.ul(^.classSet(bss.navbarClsSet.map(cn => (cn, true)): _*), ^.className := "main-menu")(navItems.toTagMod)
       )
     }
   }
@@ -108,4 +115,44 @@ object MainMenu {
 
   def apply(ctl: RouterCtl[Loc], currentLoc: Loc, feeds: Seq[FeedSourceStatuses], airportConfig: AirportConfig, roles: Set[Role]): VdomElement
   = component(Props(ctl, currentLoc, feeds, airportConfig, roles))
+}
+
+object PortSwitcher {
+
+  def userCanSwitchPort(roles: Set[Role]): Boolean = RestrictedAccessByPortPage
+    .allPortsAccessible(roles)
+    .size > 1
+
+  case class Props(loggedInUserRoles: Set[Role], portCode: PortCode)
+
+  case class State(showDropDown: Boolean = false)
+
+  val component: Js.ComponentSimple[Props, CtorType.Props, Unmounted[Props, State, Unit]] =
+    ScalaComponent.builder[Props]("PortSwitcher")
+      .initialStateFromProps(props => {
+        State()
+      })
+      .renderPS((scope, props, state) => {
+        val showClass = if (state.showDropDown) "show" else ""
+        val otherPorts = RestrictedAccessByPortPage.allPortsAccessible(props.loggedInUserRoles).filter(p => {
+          p != props.portCode
+        })
+        if (otherPorts.size == 1) {
+          <.a(Icon.plane, " ", ^.href := RestrictedAccessByPortPage.url(otherPorts.head), otherPorts.head.iata)
+        } else {
+          <.span(
+            ^.className := "dropdown",
+            <.a(Icon.plane, " ", "Switch port"),
+            ^.onClick --> scope.modState(_.copy(showDropDown = !state.showDropDown)),
+            ^.onMouseLeave --> scope.modState(_ => State()),
+
+            <.ul(^.className := s"main-menu__port-switcher dropdown-menu $showClass",
+              otherPorts.toList.sorted.map(p => <.li(^.className := "dropdown-item",
+                <.a(^.href := RestrictedAccessByPortPage.url(p), p.iata))).toTagMod
+            )
+          )
+        }
+      }).build
+
+  def apply(loggedInUserRoles: Set[Role], portCode: PortCode): VdomElement = component(Props(loggedInUserRoles, portCode))
 }

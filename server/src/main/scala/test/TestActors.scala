@@ -14,7 +14,7 @@ object TestActors {
 
   case object ResetActor
 
-  case class TestForecastBaseArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Long)
+  case class TestForecastBaseArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
     extends ForecastBaseArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def reset: Receive = {
@@ -28,7 +28,7 @@ object TestActors {
     override def receiveCommand: Receive = reset orElse super.receiveCommand
   }
 
-  case class TestForecastPortArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Long)
+  case class TestForecastPortArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
     extends ForecastPortArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def reset: Receive = {
@@ -42,7 +42,7 @@ object TestActors {
     override def receiveCommand: Receive = reset orElse super.receiveCommand
   }
 
-  case class TestLiveArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Long)
+  case class TestLiveArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
     extends LiveArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def reset: Receive = {
@@ -56,7 +56,7 @@ object TestActors {
     override def receiveCommand: Receive = reset orElse super.receiveCommand
   }
 
-  case class TestVoyageManifestsActor(override val now: () => SDateLike, expireAfterMillis: Long, snapshotInterval: Int)
+  case class TestVoyageManifestsActor(override val now: () => SDateLike, expireAfterMillis: Int, snapshotInterval: Int)
     extends VoyageManifestsActor(oneMegaByte, now, expireAfterMillis, Option(snapshotInterval)) {
 
     def reset: Receive = {
@@ -144,7 +144,7 @@ object TestActors {
               name: String,
               portQueues: Map[Terminal, Seq[Queue]],
               now: () => SDateLike,
-              expireAfterMillis: Long,
+              expireAfterMillis: Int,
               purgePreviousSnapshots: Boolean): Props = Props(
       new TestCrunchStateActor(
         snapshotInterval,
@@ -161,7 +161,7 @@ object TestActors {
                                   name: String,
                                   portQueues: Map[Terminal, Seq[Queue]],
                                   override val now: () => SDateLike,
-                                  expireAfterMillis: Long,
+                                  expireAfterMillis: Int,
                                   purgePreviousSnapshots: Boolean)
     extends CrunchStateActor(
       initialMaybeSnapshotInterval = None,

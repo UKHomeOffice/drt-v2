@@ -3,6 +3,7 @@ package actors
 import actors.FlightMessageConversion.{feedStatusFromFeedStatusMessage, feedStatusToMessage, feedStatusesFromFeedStatusesMessage}
 import actors.acking.AckingReceiver.StreamCompleted
 import akka.persistence._
+import drt.server.feeds.api.S3ApiProvider
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
@@ -25,7 +26,7 @@ case object GetLatestZipFilename
 
 class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
                            val now: () => SDateLike,
-                           expireAfterMillis: Long,
+                           expireAfterMillis: Int,
                            val initialMaybeSnapshotInterval: Option[Int]) extends RecoveryActorLike with PersistentDrtActor[VoyageManifestState] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -38,16 +39,10 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
 
   def initialState = VoyageManifestState(
     manifests = mutable.SortedMap[MilliDate, VoyageManifest](),
-    latestZipFilename = defaultLatestZipFilename,
+    latestZipFilename = S3ApiProvider.defaultApiLatestZipFilename(now, expireAfterMillis),
     feedSource = feedSource,
     maybeSourceStatuses = None
   )
-
-  def defaultLatestZipFilename: String = {
-    val yesterday = SDate.now().addDays(-1)
-    val yymmddYesterday = f"${yesterday.getFullYear() - 2000}%02d${yesterday.getMonth()}%02d${yesterday.getDate()}%02d"
-    s"drt_dq_$yymmddYesterday"
-  }
 
   override def persistenceId: String = "arrival-manifests"
 
