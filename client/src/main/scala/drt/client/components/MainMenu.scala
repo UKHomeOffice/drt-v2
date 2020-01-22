@@ -147,7 +147,7 @@ object PortSwitcher {
             ^.onMouseLeave --> scope.modState(_ => State()),
 
             <.ul(^.className := s"main-menu__port-switcher dropdown-menu $showClass",
-              otherPorts.map(p => <.li(^.className := "dropdown-item",
+              otherPorts.toList.sorted.map(p => <.li(^.className := "dropdown-item",
                 <.a(^.href := RestrictedAccessByPortPage.url(p), p.iata))).toTagMod
             )
           )
