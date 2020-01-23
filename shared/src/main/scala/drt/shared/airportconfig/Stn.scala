@@ -61,7 +61,6 @@ object Stn extends AirportConfigLike {
         EeaDesk -> (1.0 - 0.8084)
       )))
     ),
-    desksByTerminal = Map(T1 -> 22),
-    doesDeskFlexing = true
+    desksByTerminal = Map(T1 -> 22)
   )
 }

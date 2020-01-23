@@ -14,6 +14,7 @@ class DeskFlexingSpec extends Specification {
   val roWMinDesks = 2
   val ftMinDesks = 3
   val egateMinDesks = 4
+  val egateMaxDesks = 15
 
   val minsToCrunch = 30
 
@@ -22,6 +23,7 @@ class DeskFlexingSpec extends Specification {
   val roWMinDesks24: List[Int] = List.fill(minsToCrunch)(roWMinDesks)
   val ftMinDesks24: List[Int] = List.fill(minsToCrunch)(ftMinDesks)
   val egateMinDesks24: List[Int] = List.fill(minsToCrunch)(egateMinDesks)
+  val egateMaxDesks24: List[Int] = List.fill(minsToCrunch)(egateMaxDesks)
 
   val minDesks: Map[Queue, List[Int]] = Map(
     FastTrack -> ftMinDesks24,
@@ -29,6 +31,8 @@ class DeskFlexingSpec extends Specification {
     EeaDesk -> eeaMinDesks24,
     EGate -> egateMinDesks24
   )
+
+  val maxDesks: Map[Queue, List[Int]] = Map(EGate -> egateMaxDesks24)
 
   val slas: Map[Queue, Int] = List(FastTrack, NonEeaDesk, EeaDesk, EGate).map(q => (q, 20)).toMap
 
@@ -61,7 +65,7 @@ class DeskFlexingSpec extends Specification {
 
         val observer = new MockWithObserver
 
-        crunchLoadsWithFlexing(mockLoads(List(EeaDesk, NonEeaDesk)), totalDesks, minDesks, Map(), slas, flexedQueuesPriority, observer.mockDeskRecs)
+        crunchLoadsWithFlexing(totalDesks, flexedQueuesPriority, observer.mockDeskRecs, 10)(mockLoads(List(EeaDesk, NonEeaDesk)), minDesks, maxDesks, slas)
 
         val expectedMaxEea = totalDesks24.map(_ - roWMinDesks)
         val expectedMaxRoW = totalDesks24.map(_ - eeaMinDesks)
@@ -82,7 +86,7 @@ class DeskFlexingSpec extends Specification {
       val roWMaxDesks = totalDesks - ftMinDesks - eeaMinDesks
       val ftMaxDesks = totalDesks - eeaMinDesks - roWMinDesks
 
-      crunchLoadsWithFlexing(mockLoads(queues), totalDesks, minDesks, Map(), slas, flexedQueuesPriority, observer.mockDeskRecs)
+      crunchLoadsWithFlexing(totalDesks, flexedQueuesPriority, observer.mockDeskRecs, 10)(mockLoads(queues), minDesks, maxDesks, slas)
 
       s"I should observe the max desks as EEA: $eeaMaxDesks, RoW: $roWMaxDesks, FT: $ftMaxDesks" >> {
         val expectedMaxEea = List.fill(minsToCrunch)(eeaMaxDesks)
@@ -107,7 +111,7 @@ class DeskFlexingSpec extends Specification {
       val roWMaxDesks = totalDesks - ftMinDesks - eeaMinDesks
       val ftMaxDesks = totalDesks - eeaMinDesks - roWMinDesks
 
-      crunchLoadsWithFlexing(mockLoads(queues), totalDesks, minDesks, Map(EGate -> egateMaxDesks24), slas, flexedQueuesPriority, observer.mockDeskRecs)
+      crunchLoadsWithFlexing(totalDesks, flexedQueuesPriority, observer.mockDeskRecs, 10)(mockLoads(queues), minDesks, maxDesks, slas)
 
       s"I should observe the max desks as EEA: $eeaMaxDesks, RoW: $roWMaxDesks, FT: $ftMaxDesks, EGate: $egateMaxDesks" >> {
         val expectedMaxEea = List.fill(minsToCrunch)(eeaMaxDesks)

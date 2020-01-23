@@ -53,7 +53,6 @@ object Ncl extends AirportConfigLike {
       )))
     ),
     feedSources = Seq(LiveBaseFeedSource, AclFeedSource, ApiFeedSource),
-    desksByTerminal = Map(T1 -> 20),
-    doesDeskFlexing = false
+    desksByTerminal = Map(T1 -> 20)
   )
 }

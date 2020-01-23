@@ -65,8 +65,7 @@ object Edi extends AirportConfigLike {
         EeaDesk -> (1.0 - 0.7894)
       )))
     ),
-    desksByTerminal = Map[Terminal, Int](A1 -> 11, A2 -> 9),
-    doesDeskFlexing = false
+    desksByTerminal = Map[Terminal, Int](A1 -> 11, A2 -> 9)
   )
 
 }

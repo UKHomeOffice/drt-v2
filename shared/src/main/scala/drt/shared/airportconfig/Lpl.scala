@@ -50,7 +50,6 @@ object Lpl extends AirportConfigLike {
       ))
     ),
     feedSources = Seq(LiveBaseFeedSource, AclFeedSource, ApiFeedSource),
-    desksByTerminal = Map(T1 -> 8),
-    doesDeskFlexing = false
+    desksByTerminal = Map(T1 -> 8)
   )
 }

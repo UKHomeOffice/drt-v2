@@ -124,7 +124,6 @@ object Lhr extends AirportConfigLike {
       T3 -> 28,
       T4 -> 39,
       T5 -> 34
-    ),
-    doesDeskFlexing = true
+    )
   )
 }

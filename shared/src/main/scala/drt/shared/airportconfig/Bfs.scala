@@ -49,7 +49,6 @@ object Bfs extends AirportConfigLike {
         B5JPlusNational -> List(Queues.EeaDesk -> 1.0)
       ))),
     feedSources = Seq(LiveBaseFeedSource, AclFeedSource, ApiFeedSource),
-    desksByTerminal = Map(T1 -> 8),
-    doesDeskFlexing = false
+    desksByTerminal = Map(T1 -> 8)
   )
 }

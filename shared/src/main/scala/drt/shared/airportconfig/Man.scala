@@ -72,7 +72,6 @@ object Man extends AirportConfigLike {
       T1 -> 14,
       T2 -> 11,
       T3 -> 9
-    ),
-    doesDeskFlexing = true
+    )
   )
 }
