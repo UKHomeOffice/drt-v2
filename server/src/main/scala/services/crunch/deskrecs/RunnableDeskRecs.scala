@@ -21,16 +21,14 @@ object RunnableDeskRecs {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def apply(portStateActor: ActorRef,
-            minutesToCrunch: Int,
-            airportConfig: AirportConfig,
-            flightsToDeskRecs: (FlightsWithSplits, MillisSinceEpoch) => DeskRecMinutes,
+            portDeskRecs: PortDescRecsLike,
             buffer: Buffer)
            (implicit executionContext: ExecutionContext, timeout: Timeout = new Timeout(10 seconds)): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
     val askablePortStateActor: AskableActorRef = portStateActor
 
-    val crunchPeriodStartMillis: SDateLike => SDateLike = Crunch.crunchStartWithOffset(airportConfig.crunchOffsetMinutes)
+    val crunchPeriodStartMillis: SDateLike => SDateLike = Crunch.crunchStartWithOffset(portDeskRecs.airportConfig.crunchOffsetMinutes)
 
     val graph = GraphDSL.create(
       Source.actorRefWithAck[List[Long]](Ack).async.addAttributes(Attributes.inputBuffer(1, 1000)),
@@ -46,11 +44,11 @@ object RunnableDeskRecs {
           bufferAsync
             .mapAsync(1) { crunchStartMillis =>
               log.info(s"Asking for flights for ${SDate(crunchStartMillis).toISOString}")
-              flightsToCrunch(askablePortStateActor)(minutesToCrunch, crunchStartMillis)
+              flightsToCrunch(askablePortStateActor)(portDeskRecs.minutesToCrunch, crunchStartMillis)
             }
             .map { case (crunchStartMillis, flights) =>
               log.info(s"Crunching ${SDate(crunchStartMillis).toISOString} flights: ${flights.flightsToUpdate.size}")
-              flightsToDeskRecs(flights, crunchStartMillis)
+              portDeskRecs.flightsToDeskRecs(flights, crunchStartMillis)
             } ~> killSwitch ~> deskRecsSink
 
           ClosedShape
@@ -71,19 +69,14 @@ object RunnableDeskRecs {
     }
 
   def start(portStateActor: ActorRef,
-            airportConfig: AirportConfig,
+            portDeskRecs: PortDeskRecs,
             now: () => SDateLike,
             recrunchOnStart: Boolean,
-            forecastMaxDays: Int,
-            minutesPerDay: Int,
-            flexDesks: Boolean,
-            tryCrunch: TryCrunch)
+            forecastMaxDays: Int)
            (implicit ec: ExecutionContext, mat: Materializer): (ActorRef, UniqueKillSwitch) = {
-    val flightsToDeskRecs = Crunch.flightsToDeskRecs(minutesPerDay, airportConfig, flexDesks, tryCrunch) _
-
     val initialDaysToCrunch = if (recrunchOnStart) {
       val today = now()
-      val millisToCrunchStart = Crunch.crunchStartWithOffset(airportConfig.crunchOffsetMinutes) _
+      val millisToCrunchStart = Crunch.crunchStartWithOffset(portDeskRecs.airportConfig.crunchOffsetMinutes) _
       (0 until forecastMaxDays).map(d => {
         millisToCrunchStart(today.addDays(d)).millisSinceEpoch
       })
@@ -91,7 +84,7 @@ object RunnableDeskRecs {
 
     val buffer = Buffer(initialDaysToCrunch)
 
-    RunnableDeskRecs(portStateActor, minutesPerDay, airportConfig, flightsToDeskRecs, buffer).run()
+    RunnableDeskRecs(portStateActor, portDeskRecs, buffer).run()
   }
 }
 

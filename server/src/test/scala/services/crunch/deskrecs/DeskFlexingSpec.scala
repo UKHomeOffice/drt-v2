@@ -2,13 +2,12 @@ package services.crunch.deskrecs
 
 import drt.shared.Queues._
 import org.specs2.mutable.Specification
-import services.graphstages.Crunch
-import services.graphstages.Crunch.crunchLoadsWithFlexing
-import services.{OptimizerConfig, OptimizerCrunchResult, TryCrunch}
+import services.crunch.CrunchTestLike
+import services.{OptimizerConfig, OptimizerCrunchResult}
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Success, Try}
 
-class DeskFlexingSpec extends Specification {
+class DeskFlexingSpec extends CrunchTestLike {
   val totalDesks = 20
   val eeaMinDesks = 1
   val roWMinDesks = 2
@@ -65,7 +64,7 @@ class DeskFlexingSpec extends Specification {
 
         val observer = new MockWithObserver
 
-        crunchLoadsWithFlexing(totalDesks, flexedQueuesPriority, observer.mockDeskRecs, 10)(mockLoads(List(EeaDesk, NonEeaDesk)), minDesks, maxDesks, slas)
+        FlexedTerminal(defaultAirportConfig, totalDesks, flexedQueuesPriority, observer.mockDeskRecs, 10).desksAndWaits(mockLoads(List(EeaDesk, NonEeaDesk)), minDesks, maxDesks, slas)
 
         val expectedMaxEea = totalDesks24.map(_ - roWMinDesks)
         val expectedMaxRoW = totalDesks24.map(_ - eeaMinDesks)
@@ -86,7 +85,7 @@ class DeskFlexingSpec extends Specification {
       val roWMaxDesks = totalDesks - ftMinDesks - eeaMinDesks
       val ftMaxDesks = totalDesks - eeaMinDesks - roWMinDesks
 
-      crunchLoadsWithFlexing(totalDesks, flexedQueuesPriority, observer.mockDeskRecs, 10)(mockLoads(queues), minDesks, maxDesks, slas)
+      FlexedTerminal(defaultAirportConfig, totalDesks, flexedQueuesPriority, observer.mockDeskRecs, 10).desksAndWaits(mockLoads(queues), minDesks, maxDesks, slas)
 
       s"I should observe the max desks as EEA: $eeaMaxDesks, RoW: $roWMaxDesks, FT: $ftMaxDesks" >> {
         val expectedMaxEea = List.fill(minsToCrunch)(eeaMaxDesks)
@@ -111,7 +110,7 @@ class DeskFlexingSpec extends Specification {
       val roWMaxDesks = totalDesks - ftMinDesks - eeaMinDesks
       val ftMaxDesks = totalDesks - eeaMinDesks - roWMinDesks
 
-      crunchLoadsWithFlexing(totalDesks, flexedQueuesPriority, observer.mockDeskRecs, 10)(mockLoads(queues), minDesks, maxDesks, slas)
+      FlexedTerminal(defaultAirportConfig, totalDesks, flexedQueuesPriority, observer.mockDeskRecs, 10).desksAndWaits(mockLoads(queues), minDesks, maxDesks, slas)
 
       s"I should observe the max desks as EEA: $eeaMaxDesks, RoW: $roWMaxDesks, FT: $ftMaxDesks, EGate: $egateMaxDesks" >> {
         val expectedMaxEea = List.fill(minsToCrunch)(eeaMaxDesks)

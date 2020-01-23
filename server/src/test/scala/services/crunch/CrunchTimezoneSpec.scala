@@ -9,6 +9,7 @@ import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
+import services.crunch.deskrecs.DeskRecs
 import services.graphstages.Crunch._
 
 import scala.collection.immutable.{List, Seq}
@@ -104,7 +105,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
           val startTimes = startTimeMidnightBST to startTimeMidnightBST + (oneHour * 5) by oneHour
 
           val expected = List(0, 1, 2, 3, 4, 5)
-          startTimes.map(desksForHourOfDayInUKLocalTime(_, testMaxDesks)) === expected
+          startTimes.map(DeskRecs.desksForHourOfDayInUKLocalTime(_, testMaxDesks)) === expected
         }
         "When parsing a GMT date then we should get BST min/max desks" >> {
           val testMaxDesks = List(0, 1, 2, 3, 4, 5)
@@ -114,7 +115,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
           val startTimes = startTimeMidnightGMT to startTimeMidnightGMT + (oneHour * 5) by oneHour
 
           val expected = List(0, 1, 2, 3, 4, 5)
-          startTimes.map(desksForHourOfDayInUKLocalTime(_, testMaxDesks)) === expected
+          startTimes.map(DeskRecs.desksForHourOfDayInUKLocalTime(_, testMaxDesks)) === expected
         }
       }
     }
