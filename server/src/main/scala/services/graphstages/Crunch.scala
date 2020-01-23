@@ -370,11 +370,11 @@ object Crunch {
 
     val unflexedQueueRecs: Map[Queue, (List[Int], List[Int])] = unflexedQueuesToOptimise
       .map { queueProcessing =>
-        val doubles = loads(queueProcessing)
-        val ints = minDesks(queueProcessing)
-        val ints1 = maxDesks(queueProcessing)
-        val i = slas(queueProcessing)
-        cruncher(doubles, ints, ints1, OptimizerConfig(i)) match {
+        val work = adjustedWork(queueProcessing, loads(queueProcessing), bankSize)
+        val queueMinDesks = minDesks(queueProcessing)
+        val queueMaxDesks = maxDesks(queueProcessing)
+        val queueSla = slas(queueProcessing)
+        cruncher(work, queueMinDesks, queueMaxDesks, OptimizerConfig(queueSla)) match {
           case Success(OptimizerCrunchResult(desks, waits)) => Option(queueProcessing -> ((desks.toList, waits.toList)))
           case Failure(_) => None
         }
