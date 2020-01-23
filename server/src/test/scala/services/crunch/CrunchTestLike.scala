@@ -154,7 +154,8 @@ class CrunchTestLike
         B5JPlusNational -> List(Queues.EeaDesk -> 1),
         B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
       )
-    )
+    ),
+    desksByTerminal = Map(T1 -> 40, T2 -> 40)
   )
 
   val pcpForFlightFromSch: Arrival => MilliDate = (a: Arrival) => MilliDate(SDate(a.Scheduled).millisSinceEpoch)

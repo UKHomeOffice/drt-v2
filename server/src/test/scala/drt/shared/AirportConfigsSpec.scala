@@ -1,6 +1,6 @@
 package drt.shared
 
-import drt.shared.Terminals.T1
+import drt.shared.Terminals.{T1, Terminal}
 import org.specs2.mutable.Specification
 
 import scala.collection.immutable.SortedMap
@@ -55,7 +55,8 @@ class AirportConfigsSpec extends Specification {
         terminalProcessingTimes = Map(),
         minMaxDesksByTerminalQueue = Map(),
         role = LHRAccess,
-        terminalPaxTypeQueueAllocation = Map(T1 -> defaultQueueRatios)
+        terminalPaxTypeQueueAllocation = Map(T1 -> defaultQueueRatios),
+        desksByTerminal = Map[Terminal, Int]()
       )
 
       val result = clonedConfig.feedPortCode
