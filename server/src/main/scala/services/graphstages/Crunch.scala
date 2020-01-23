@@ -430,12 +430,9 @@ object Crunch {
   def maxDesksForQueueByMinute(deskRecMinutes: Iterable[MillisSinceEpoch], tn: Terminal, qn: Queue, airportConfig: AirportConfig): List[Int] = deskRecMinutes
     .map(desksForHourOfDayInUKLocalTime(_, airportConfig.maxDesksForTerminal(tn).getOrElse(qn, List.fill(24)(10)))).toList
 
-  def flightsToDeskRecs(minutesToCrunch: Int, airportConfig: AirportConfig, cruncher: TryCrunch): (FlightsWithSplits, MillisSinceEpoch) => CrunchApi.DeskRecMinutes =
-    crunchFlights(minutesToCrunch, cruncher, airportConfig)
-
   type TerminalDeskRecs = (Map[Queue, Seq[Double]], Map[Queue, List[Int]], Map[Queue, List[Int]], Map[Queue, Int]) => Map[Queue, (List[Int], List[Int])]
 
-  def crunchFlights(minutesToCrunch: Int, crunch: TryCrunch, airportConfig: AirportConfig)
+  def flightsToDeskRecs(minutesToCrunch: Int, airportConfig: AirportConfig, flexDesks: Boolean, crunch: TryCrunch)
                    (flights: FlightsWithSplits, crunchStartMillis: MillisSinceEpoch): CrunchApi.DeskRecMinutes = {
     val crunchEndMillis = SDate(crunchStartMillis).addMinutes(minutesToCrunch).millisSinceEpoch
     val minuteMillis = crunchStartMillis until crunchEndMillis by 60000
@@ -449,7 +446,7 @@ object Crunch {
     val terminalQueueDeskRecs = terminalsToCrunch.map { terminal =>
       val terminalPax = terminalPaxLoadsByQueue(airportConfig, terminal, minuteMillis, loadsWithDiverts)
       val terminalWork = terminalWorkLoadsByQueue(airportConfig, terminal, minuteMillis, loadsWithDiverts)
-      val deskRecsForTerminal: TerminalDeskRecs = if (true)
+      val deskRecsForTerminal: TerminalDeskRecs = if (flexDesks)
         crunchLoadsWithFlexing(airportConfig.desksByTerminal(terminal), airportConfig.flexedQueuesPriority, crunch, airportConfig.eGateBankSize)
       else
         crunchLoadsWithoutFlexing(crunch, airportConfig.eGateBankSize)

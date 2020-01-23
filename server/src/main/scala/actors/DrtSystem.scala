@@ -254,13 +254,15 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       } yield (lps, fps, ba, fa, la, ra)
     }
 
+    val flexDesks = config.get[Boolean]("crunch.flex-desks")
+
     futurePortStates.onComplete {
       case Success((maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeRegisteredArrivals)) =>
         system.log.info(s"Successfully restored initial state for App")
         val initialPortState: Option[PortState] = mergePortStates(maybeForecastState, maybeLiveState)
         initialPortState.foreach(ps => portStateActor ! ps)
 
-        val (crunchSourceActor: ActorRef, _) = RunnableDeskRecs.start(portStateActor, airportConfig, now, params.recrunchOnStart, params.forecastMaxDays, 1440, TryRenjin.crunch)
+        val (crunchSourceActor: ActorRef, _) = RunnableDeskRecs.start(portStateActor, airportConfig, now, params.recrunchOnStart, params.forecastMaxDays, 1440, flexDesks, TryRenjin.crunch)
         portStateActor ! SetCrunchActor(crunchSourceActor)
 
         val (manifestRequestsSource, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]

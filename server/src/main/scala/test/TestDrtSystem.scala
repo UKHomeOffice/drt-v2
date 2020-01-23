@@ -73,6 +73,8 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
 
   override def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] = TestUserRoleProvider.getRoles(config, headers, session)
 
+  val flexDesks: Boolean = config.get[Boolean]("crunch.flex-desks")
+
   override def run(): Unit = {
     val startSystem: () => List[KillSwitch] = () => {
       val (manifestRequestsSource, bridge1Ks, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
@@ -93,7 +95,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
       val lookupRefreshDue: MillisSinceEpoch => Boolean = (lastLookupMillis: MillisSinceEpoch) => now().millisSinceEpoch - lastLookupMillis > 1000
       val manifestKillSwitch = startManifestsGraph(None, manifestResponsesSink, manifestRequestsSource, lookupRefreshDue)
 
-      val (millisToCrunchActor: ActorRef, crunchKillSwitch) = RunnableDeskRecs.start(portStateActor, airportConfig, now, params.recrunchOnStart, params.forecastMaxDays, 1440, TryRenjin.crunch)
+      val (millisToCrunchActor: ActorRef, crunchKillSwitch) = RunnableDeskRecs.start(portStateActor, airportConfig, now, params.recrunchOnStart, params.forecastMaxDays, 1440, flexDesks, TryRenjin.crunch)
       portStateActor ! SetCrunchActor(millisToCrunchActor)
       portStateActor ! SetSimulationActor(cs.loadsToSimulate)
 

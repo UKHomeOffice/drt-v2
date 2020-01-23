@@ -70,9 +70,16 @@ object RunnableDeskRecs {
         Future((crunchStartMillis, FlightsWithSplits(List(), List())))
     }
 
-  def start(portStateActor: ActorRef, airportConfig: AirportConfig, now: () => SDateLike, recrunchOnStart: Boolean, forecastMaxDays: Int, minutesPerDay: Int, tryCrunch: TryCrunch)
+  def start(portStateActor: ActorRef,
+            airportConfig: AirportConfig,
+            now: () => SDateLike,
+            recrunchOnStart: Boolean,
+            forecastMaxDays: Int,
+            minutesPerDay: Int,
+            flexDesks: Boolean,
+            tryCrunch: TryCrunch)
            (implicit ec: ExecutionContext, mat: Materializer): (ActorRef, UniqueKillSwitch) = {
-    val flightsToDeskRecs = Crunch.flightsToDeskRecs(minutesPerDay, airportConfig, tryCrunch)
+    val flightsToDeskRecs = Crunch.flightsToDeskRecs(minutesPerDay, airportConfig, flexDesks, tryCrunch) _
 
     val initialDaysToCrunch = if (recrunchOnStart) {
       val today = now()

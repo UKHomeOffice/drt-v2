@@ -195,7 +195,8 @@ class CrunchTestLike
                      maxDaysToCrunch: Int = 2,
                      checkRequiredStaffUpdatesOnStartup: Boolean = false,
                      refreshArrivalsOnStart: Boolean = false,
-                     recrunchOnStart: Boolean = false
+                     recrunchOnStart: Boolean = false,
+                     flexDesks: Boolean = false
                     ): CrunchGraphInputsAndProbes = {
 
     airportConfig.assertValid()
@@ -215,7 +216,7 @@ class CrunchTestLike
     val portStateActor = createPortStateActor(portStateProbe, now)
     initialPortState.foreach(ps => portStateActor ! ps)
 
-    val (millisToCrunchActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, airportConfig, now, recrunchOnStart, maxDaysToCrunch, minutesToCrunch, cruncher)
+    val (millisToCrunchActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, airportConfig, now, recrunchOnStart, maxDaysToCrunch, minutesToCrunch, flexDesks, cruncher)
     portStateActor ! SetCrunchActor(millisToCrunchActor)
 
     val manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)

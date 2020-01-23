@@ -68,16 +68,18 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
   val mockCrunch: TryCrunch = CrunchMocks.mockCrunch
   val noDelay: Long = 0L
   val longDelay = 500L
-  val historicSplits = Splits(Set(
+  val historicSplits: Splits = Splits(Set(
     ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50, None),
     ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 50, None)),
     SplitSources.Historical, None, Percentage)
   val minutesToCrunch = 30
   val nowFromSDate: () => SDateLike = () => SDate.now()
-  def newBuffer = Buffer(Iterable())
+  def newBuffer: Buffer = Buffer(Iterable())
+  val flexDesks = false
 
-  def flightsToDeskRecs(airportConfig: AirportConfig, minutesToCrunch: Int): (FlightsWithSplits, MillisSinceEpoch) => DeskRecMinutes =
-    Crunch.flightsToDeskRecs(minutesToCrunch, airportConfig, CrunchMocks.mockCrunch)
+  def flightsToDeskRecs(airportConfig: AirportConfig, minutesToCrunch: Int): (FlightsWithSplits, MillisSinceEpoch) => DeskRecMinutes = {
+    Crunch.flightsToDeskRecs(minutesToCrunch, airportConfig, flexDesks, CrunchMocks.mockCrunch)
+  }
 
   "Given a RunnableDescRecs with a mock PortStateActor and mock crunch " +
     "When I give it a millisecond of 2019-01-01T00:00 " +
