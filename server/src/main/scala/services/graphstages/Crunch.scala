@@ -345,44 +345,66 @@ object Crunch {
                              slas: Map[Queue, Int]): Map[Queue, (List[Int], List[Int])] = {
     val queuesToOptimise: Set[Queue] = loads.keys.toSet
     val flexedQueuesToOptimise = queuesToOptimise.filter(q => flexedQueuesPriority.contains(q))
-    val unflexedQueuesToOptimise = queuesToOptimise.filter(q => !flexedQueuesPriority.contains(q))
+    val staticQueuesToOptimise = queuesToOptimise.filter(q => !flexedQueuesPriority.contains(q))
 
-    val flexedQueueRecs = flexedQueuesPriority
+    val flexedRecs = flexedQueuesPriority
       .filter(flexedQueued => flexedQueuesToOptimise.toList.contains(flexedQueued))
       .foldLeft(Map[Queue, (List[Int], List[Int])]()) {
         case (queueRecsSoFar, queueProcessing) =>
-          val queuesProcessed = queueRecsSoFar.keys.toSet
-          val queuesToBeProcessed = flexedQueuesToOptimise -- (queuesProcessed + queueProcessing)
-          val availableMinusRemainingMinimums: List[Int] = queuesToBeProcessed.foldLeft(List.fill(loads(queueProcessing).length)(terminalDesks)) {
-            case (availableSoFar, queue) => availableSoFar.zip(minDesks(queue)).map { case (a, b) => a - b }
-          }
-          val actualAvailable: List[Int] = queueRecsSoFar.values
-            .foldLeft(availableMinusRemainingMinimums) {
-              case (availableSoFar, (recs, _)) => availableSoFar.zip(recs).map { case (a, b) => a - b }
-            }
-          cruncher(adjustedWork(queueProcessing, loads(queueProcessing), bankSize), minDesks(queueProcessing), actualAvailable, OptimizerConfig(slas(queueProcessing))) match {
-            case Success(OptimizerCrunchResult(desks, waits)) => queueRecsSoFar + (queueProcessing -> ((desks.toList, waits.toList)))
-            case Failure(t) =>
-              log.error(s"Crunch failed for $queueProcessing", t)
-              queueRecsSoFar
-          }
+          flexedQueueTerminalRecs(terminalDesks, cruncher, bankSize, loads, minDesks, slas, flexedQueuesToOptimise, queueRecsSoFar, queueProcessing)
       }
 
-    val unflexedQueueRecs: Map[Queue, (List[Int], List[Int])] = unflexedQueuesToOptimise
+    val staticRecs: Map[Queue, (List[Int], List[Int])] = staticQueuesToOptimise
       .map { queueProcessing =>
-        val work = adjustedWork(queueProcessing, loads(queueProcessing), bankSize)
-        val queueMinDesks = minDesks(queueProcessing)
-        val queueMaxDesks = maxDesks(queueProcessing)
-        val queueSla = slas(queueProcessing)
-        cruncher(work, queueMinDesks, queueMaxDesks, OptimizerConfig(queueSla)) match {
-          case Success(OptimizerCrunchResult(desks, waits)) => Option(queueProcessing -> ((desks.toList, waits.toList)))
-          case Failure(_) => None
-        }
+        staticQueueTerminalRecs(cruncher, bankSize, loads, minDesks, maxDesks, slas, queueProcessing)
       }
       .collect { case Some(result) => result }
       .toMap
 
-    flexedQueueRecs ++ unflexedQueueRecs
+    flexedRecs ++ staticRecs
+  }
+
+  def staticQueueTerminalRecs(cruncher: TryCrunch,
+                              bankSize: Int,
+                              loads: Map[Queue, Seq[Double]],
+                              minDesks: Map[Queue, List[Int]],
+                              maxDesks: Map[Queue, List[Int]],
+                              slas: Map[Queue, Int],
+                              queueProcessing: Queue): Option[(Queue, (List[Int], List[Int]))] = {
+    val work = adjustedWork(queueProcessing, loads(queueProcessing), bankSize)
+    val queueMinDesks = minDesks(queueProcessing)
+    val queueMaxDesks = maxDesks(queueProcessing)
+    val queueSla = slas(queueProcessing)
+    cruncher(work, queueMinDesks, queueMaxDesks, OptimizerConfig(queueSla)) match {
+      case Success(OptimizerCrunchResult(desks, waits)) => Option(queueProcessing -> ((desks.toList, waits.toList)))
+      case Failure(_) => None
+    }
+  }
+
+  def flexedQueueTerminalRecs(terminalDesks: Int,
+                              cruncher: TryCrunch,
+                              bankSize: Int,
+                              loads: Map[Queue, Seq[Double]],
+                              minDesks: Map[Queue, List[Int]],
+                              slas: Map[Queue, Int],
+                              flexedQueuesToOptimise: Set[Queue],
+                              queueRecsSoFar: Map[Queue, (List[Int], List[Int])],
+                              queueProcessing: Queue): Map[Queue, (List[Int], List[Int])] = {
+    val queuesProcessed = queueRecsSoFar.keys.toSet
+    val queuesToBeProcessed = flexedQueuesToOptimise -- (queuesProcessed + queueProcessing)
+    val availableMinusRemainingMinimums: List[Int] = queuesToBeProcessed.foldLeft(List.fill(loads(queueProcessing).length)(terminalDesks)) {
+      case (availableSoFar, queue) => availableSoFar.zip(minDesks(queue)).map { case (a, b) => a - b }
+    }
+    val actualAvailable: List[Int] = queueRecsSoFar.values
+      .foldLeft(availableMinusRemainingMinimums) {
+        case (availableSoFar, (recs, _)) => availableSoFar.zip(recs).map { case (a, b) => a - b }
+      }
+    cruncher(adjustedWork(queueProcessing, loads(queueProcessing), bankSize), minDesks(queueProcessing), actualAvailable, OptimizerConfig(slas(queueProcessing))) match {
+      case Success(OptimizerCrunchResult(desks, waits)) => queueRecsSoFar + (queueProcessing -> ((desks.toList, waits.toList)))
+      case Failure(t) =>
+        log.error(s"Crunch failed for $queueProcessing", t)
+        queueRecsSoFar
+    }
   }
 
   def crunchQueue(firstMinute: MillisSinceEpoch,
@@ -433,7 +455,7 @@ object Crunch {
   type TerminalDeskRecs = (Map[Queue, Seq[Double]], Map[Queue, List[Int]], Map[Queue, List[Int]], Map[Queue, Int]) => Map[Queue, (List[Int], List[Int])]
 
   def flightsToDeskRecs(minutesToCrunch: Int, airportConfig: AirportConfig, flexDesks: Boolean, crunch: TryCrunch)
-                   (flights: FlightsWithSplits, crunchStartMillis: MillisSinceEpoch): CrunchApi.DeskRecMinutes = {
+                       (flights: FlightsWithSplits, crunchStartMillis: MillisSinceEpoch): CrunchApi.DeskRecMinutes = {
     val crunchEndMillis = SDate(crunchStartMillis).addMinutes(minutesToCrunch).millisSinceEpoch
     val minuteMillis = crunchStartMillis until crunchEndMillis by 60000
 
