@@ -13,8 +13,8 @@ import manifests.passengers.BestAvailableManifest
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
+import services.crunch.deskrecs.{FlexedPortDeskRecs, RunnableDeskRecs}
 import services.{SDate, TryRenjin}
-import services.crunch.deskrecs.{FlexedPortDeskRecs, PortDeskRecs, RunnableDeskRecs}
 import test.TestActors.{TestStaffMovementsActor, _}
 import test.feeds.test.{CSVFixtures, TestFixtureFeed, TestManifestsActor}
 import test.roles.TestUserRoleProvider

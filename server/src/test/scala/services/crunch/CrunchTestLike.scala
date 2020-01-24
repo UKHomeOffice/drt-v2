@@ -22,8 +22,8 @@ import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services._
-import services.crunch.deskrecs.{FlexedPortDeskRecs, PortDeskRecs, RunnableDeskRecs}
-import services.graphstages.{Buffer, Crunch, CrunchMocks}
+import services.crunch.deskrecs.{FlexedPortDeskRecs, RunnableDeskRecs, StaticPortDeskRecs}
+import services.graphstages.CrunchMocks
 import slickdb.Tables
 
 import scala.collection.immutable.SortedMap
@@ -67,7 +67,7 @@ case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete
                                       aggregatedArrivalsActor: ActorRef,
                                       portStateActor: ActorRef,
                                       deskRecsGraphKillSwitch: UniqueKillSwitch) {
-  def shutdown: Unit = {
+  def shutdown(): Unit = {
     baseArrivalsInput.complete()
     forecastArrivalsInput.complete()
     liveArrivalsInput.complete()
@@ -216,7 +216,10 @@ class CrunchTestLike
     val portStateActor = createPortStateActor(portStateProbe, now)
     initialPortState.foreach(ps => portStateActor ! ps)
 
-    val portDescRecs = FlexedPortDeskRecs(airportConfig, minutesToCrunch, cruncher)
+    val portDescRecs = if (flexDesks)
+      FlexedPortDeskRecs(airportConfig, minutesToCrunch, cruncher)
+    else
+      StaticPortDeskRecs(airportConfig, minutesToCrunch, cruncher)
 
     val (millisToCrunchActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDescRecs, now, recrunchOnStart, maxDaysToCrunch)
     portStateActor ! SetCrunchActor(millisToCrunchActor)

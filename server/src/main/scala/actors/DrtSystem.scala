@@ -44,7 +44,7 @@ import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedRes
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services.SplitsProvider.SplitProvider
 import services._
-import services.crunch.deskrecs.{FlexedPortDeskRecs, PortDeskRecs, RunnableDeskRecs, StaticPortDeskRecs}
+import services.crunch.deskrecs.{FlexedPortDeskRecs, RunnableDeskRecs, StaticPortDeskRecs}
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.Crunch.{oneDayMillis, oneMinuteMillis}
 import services.graphstages._

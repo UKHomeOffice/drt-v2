@@ -8,15 +8,15 @@ import akka.testkit.TestProbe
 import akka.util.Timeout
 import drt.shared.CrunchApi.{DeskRecMinute, DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.{AirportConfig, Queues}
+import drt.shared.Queues
 import drt.shared.Terminals.T1
 import services.crunch.CrunchTestLike
-import services.crunch.deskrecs.{MockPortStateActor, PortDescRecsLike, PortDeskRecs, RunnableDeskRecs}
+import services.crunch.deskrecs.{MockPortStateActor, PortDescRecsLike, RunnableDeskRecs}
 import services.graphstages.{Buffer, CrunchMocks}
 
 import scala.concurrent.duration._
 
-case class MockPortDescRecs(airportConfig: AirportConfig, minutesToCrunch: Int) extends PortDescRecsLike {
+case class MockPortDescRecs(minutesToCrunch: Int, crunchOffsetMinutes: Int) extends PortDescRecsLike {
   override def flightsToDeskRecs(flights: FlightsWithSplits, crunchStartMillis: MillisSinceEpoch): DeskRecMinutes = {
     DeskRecMinutes(Seq(DeskRecMinute(T1, Queues.EeaDesk, crunchStartMillis, 0, 0, 0, 0)))
   }
@@ -32,7 +32,7 @@ class StreamingWorkloadSpec extends CrunchTestLike {
   val portStateProbe = TestProbe("port-state")
   def newBuffer = Buffer(Iterable())
   val mockPortStateActor: ActorRef = system.actorOf(MockPortStateActor.props(portStateProbe, smallDelay))
-  val portDeskRecs = MockPortDescRecs(defaultAirportConfig, 1440)
+  val portDeskRecs = MockPortDescRecs(1440, defaultAirportConfig.crunchOffsetMinutes)
   val (millisToCrunchSourceActor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, portDeskRecs, newBuffer).run()
 
   val askableSource: AskableActorRef = millisToCrunchSourceActor

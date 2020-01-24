@@ -10,8 +10,8 @@ import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
+import services.SDate
 import services.graphstages.{Buffer, Crunch}
-import services.{SDate, TryCrunch}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -28,7 +28,7 @@ object RunnableDeskRecs {
 
     val askablePortStateActor: AskableActorRef = portStateActor
 
-    val crunchPeriodStartMillis: SDateLike => SDateLike = Crunch.crunchStartWithOffset(portDeskRecs.airportConfig.crunchOffsetMinutes)
+    val crunchPeriodStartMillis: SDateLike => SDateLike = Crunch.crunchStartWithOffset(portDeskRecs.crunchOffsetMinutes)
 
     val graph = GraphDSL.create(
       Source.actorRefWithAck[List[Long]](Ack).async.addAttributes(Attributes.inputBuffer(1, 1000)),
@@ -69,14 +69,14 @@ object RunnableDeskRecs {
     }
 
   def start(portStateActor: ActorRef,
-            portDeskRecs: PortDeskRecs,
+            portDeskRecs: ProductionPortDeskRecs,
             now: () => SDateLike,
             recrunchOnStart: Boolean,
             forecastMaxDays: Int)
            (implicit ec: ExecutionContext, mat: Materializer): (ActorRef, UniqueKillSwitch) = {
     val initialDaysToCrunch = if (recrunchOnStart) {
       val today = now()
-      val millisToCrunchStart = Crunch.crunchStartWithOffset(portDeskRecs.airportConfig.crunchOffsetMinutes) _
+      val millisToCrunchStart = Crunch.crunchStartWithOffset(portDeskRecs.crunchOffsetMinutes) _
       (0 until forecastMaxDays).map(d => {
         millisToCrunchStart(today.addDays(d)).millisSinceEpoch
       })
