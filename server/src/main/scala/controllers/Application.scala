@@ -297,7 +297,7 @@ class Application @Inject()(implicit val config: Configuration,
           futureGroupIds.map {
             case KeyCloakGroups(gps) if gps.nonEmpty =>
               log.info(s"Adding ${gps.map(_.name)} to $userId")
-              gps.map(group => {
+              gps.foreach(group => {
                 val response = keyCloakClient.addUserToGroup(userId, group.id)
                 response.map(res => log.info(s"Added group and got: ${res.status}  $res")
                 )
@@ -310,7 +310,7 @@ class Application @Inject()(implicit val config: Configuration,
         keyCloakClient
           .getGroups
           .map(kcGroups => kcGroups.filter(g => groups.contains(g.name))
-            .map(g => keyCloakClient.removeUserFromGroup(userId, g.id)))
+            .foreach(g => keyCloakClient.removeUserFromGroup(userId, g.id)))
 
       override def portStateActor: AskableActorRef = ctrl.portStateActor
 

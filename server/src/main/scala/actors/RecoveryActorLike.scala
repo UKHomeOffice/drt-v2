@@ -35,7 +35,7 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   def postRecoveryComplete(): Unit =
     log.info("Recovery complete")
 
-  def postSaveSnapshot(): Unit = Unit
+  def postSaveSnapshot(): Unit = {}
 
   def stateToMessage: GeneratedMessage
 

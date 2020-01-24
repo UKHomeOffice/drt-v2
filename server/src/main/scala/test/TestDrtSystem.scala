@@ -86,7 +86,6 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
         initialLiveArrivals = None,
         manifestRequestsSink,
         manifestResponsesSource,
-        recrunchOnStart = false,
         refreshArrivalsOnStart = false,
         checkRequiredStaffUpdatesOnStartup = false
       )

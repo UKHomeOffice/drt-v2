@@ -13,11 +13,9 @@ import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.regions.Regions
 import com.mfglabs.commons.aws.s3._
 import com.typesafe.config.Config
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.graphstages.Crunch
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext.Implicits.global

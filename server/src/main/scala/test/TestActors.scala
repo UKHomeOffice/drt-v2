@@ -119,7 +119,7 @@ object TestActors {
     private val portCode = PortCode("LHR")
   } with AggregatedArrivalsActor(ArrivalTable(portCode, PostgresTables)) {
     def reset: Receive = {
-      case ResetActor => Unit
+      case ResetActor =>
     }
 
     override def receive: Receive = reset orElse super.receive

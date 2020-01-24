@@ -11,7 +11,6 @@ import services._
 
 import scala.collection.immutable.{Map, SortedMap}
 import scala.collection.mutable
-import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
 object Crunch {

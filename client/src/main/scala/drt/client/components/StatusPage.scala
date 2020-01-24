@@ -5,7 +5,7 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{FeedSourceStatuses, FeedStatusFailure, FeedStatusSuccess, FeedStatuses}
+import drt.shared.{FeedSourceStatuses, FeedStatusFailure, FeedStatusSuccess}
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
 

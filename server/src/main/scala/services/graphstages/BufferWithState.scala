@@ -1,14 +1,13 @@
 package services.graphstages
 
 import akka.event.Logging
-import akka.stream.stage._
 import akka.stream._
+import akka.stream.stage._
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 
-import scala.collection.{SortedSet, mutable}
+import scala.collection.mutable
 
 abstract class SimpleLinearGraphStage[T] extends GraphStage[FlowShape[T, T]] {
   val in: Inlet[T] = Inlet[T](Logging.simpleName(this) + ".in")

@@ -173,7 +173,7 @@ object FlightTableRow {
 
   val component: Component[Props, RowState, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "TableRow")
     .initialState[RowState](RowState(false))
-    .renderPS((scope, props, state) => {
+    .render_PS((props, state) => {
       val codeShares = props.codeShares
       val flightWithSplits = props.flightWithSplits
       val flight = flightWithSplits.apiFlight

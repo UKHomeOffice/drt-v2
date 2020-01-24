@@ -5,15 +5,13 @@ import drt.client.components.Icon._
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
-import japgolly.scalajs.react.{CtorType, _}
 import japgolly.scalajs.react.component.Js
+import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, LI}
-
-
-import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 
 object MainMenu {
   @inline private def bss: BootstrapStyles.type = GlobalStyles.bootstrapStyles

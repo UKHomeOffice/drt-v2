@@ -8,7 +8,7 @@ import drt.server.feeds.Implicits._
 import drt.server.feeds.acl.AclFeed._
 import drt.shared
 import drt.shared.FlightsApi.Flights
-import drt.shared.Terminals.{A1, ACLTER, N, S, T1, T2, T3, Terminal}
+import drt.shared.Terminals._
 import drt.shared.{Arrival, PortCode, Terminals}
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.{RemoteResourceInfo, SFTPClient}

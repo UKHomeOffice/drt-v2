@@ -2,7 +2,6 @@ package controllers.application
 
 import controllers.Application
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Terminals.Terminal
 import drt.shared._
 import play.api.mvc.{Action, AnyContent}
 import upickle.default.write
