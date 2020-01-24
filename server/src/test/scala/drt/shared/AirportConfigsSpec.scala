@@ -1,7 +1,9 @@
 package drt.shared
 
-import drt.shared.Terminals.T1
+import drt.shared.Terminals.{T1, Terminal}
 import org.specs2.mutable.Specification
+
+import scala.collection.immutable.SortedMap
 
 class AirportConfigsSpec extends Specification {
 
@@ -32,7 +34,7 @@ class AirportConfigsSpec extends Specification {
     "All Airport config queues must be defined in Queues" in {
       for {
         port <- AirportConfigs.allPortConfigs
-        queueName <- port.queues.values.flatten
+        queueName <- port.queuesByTerminal.values.flatten
       } yield {
         Queues.queueDisplayNames.get(queueName).aka(s"$queueName not found in Queues") mustNotEqual None
       }
@@ -44,9 +46,8 @@ class AirportConfigsSpec extends Specification {
       val clonedConfig = AirportConfig(
         portCode = PortCode("LHR_Clone"),
         cloneOfPortCode = Option(PortCode("LHR")),
-        queues = Map(),
+        queuesByTerminal = SortedMap(),
         slaByQueue = Map(),
-        terminals = Seq(),
         timeToChoxMillis = 0L,
         firstPaxOffMillis = 0L,
         defaultWalkTimeMillis = Map(),
@@ -54,7 +55,8 @@ class AirportConfigsSpec extends Specification {
         terminalProcessingTimes = Map(),
         minMaxDesksByTerminalQueue = Map(),
         role = LHRAccess,
-        terminalPaxTypeQueueAllocation = Map(T1 -> defaultQueueRatios)
+        terminalPaxTypeQueueAllocation = Map(T1 -> defaultQueueRatios),
+        desksByTerminal = Map[Terminal, Int]()
       )
 
       val result = clonedConfig.feedPortCode
@@ -62,6 +64,11 @@ class AirportConfigsSpec extends Specification {
       result === expected
     }
 
+    "All configurations should be valid with no missing queues or terminals" in {
+      AirportConfigs.allPortConfigs.foreach(_.assertValid())
+
+      success
+    }
   }
 
 }

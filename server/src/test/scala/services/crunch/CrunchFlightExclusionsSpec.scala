@@ -8,7 +8,7 @@ import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 
-import scala.collection.immutable.{List, Seq}
+import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._
 
 class CrunchFlightExclusionsSpec extends CrunchTestLike {
@@ -32,10 +32,9 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
-      airportConfig = airportConfig.copy(
+      airportConfig = defaultAirportConfig.copy(
         terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
-        queues = Map(T1 -> Seq(Queues.EeaDesk)),
-        terminals = Seq(T1)
+        queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
       ),
       minutesToCrunch = 120)
 
@@ -78,10 +77,10 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
-      airportConfig = airportConfig.copy(
+      airportConfig = defaultAirportConfig.copy(
         terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
-        queues = Map(T1 -> Seq(Queues.EeaDesk)),
-        terminals = Seq(T1)),
+        queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
+      ),
       minutesToCrunch = 120
     )
 

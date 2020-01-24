@@ -8,7 +8,8 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.graphstages.Crunch.{desksForHourOfDayInUKLocalTime, europeLondonTimeZone}
+import services.crunch.deskrecs.DeskRecs
+import services.graphstages.Crunch.europeLondonTimeZone
 
 import scala.collection.immutable.{NumericRange, SortedMap}
 import scala.collection.mutable
@@ -102,8 +103,8 @@ object StaffDeploymentCalculator {
               val queueMinMaxDesks: Map[Queue, (List[Int], List[Int])] = minMaxDesks.getOrElse(tn, Map())
               val minMaxByQueue: Map[Queue, (Int, Int)] = queueMinMaxDesks.map {
                 case (qn, minMaxList) =>
-                  val minDesks = desksForHourOfDayInUKLocalTime(minute, minMaxList._1)
-                  val maxDesks = desksForHourOfDayInUKLocalTime(minute, minMaxList._2)
+                  val minDesks = DeskRecs.desksForHourOfDayInUKLocalTime(minute, minMaxList._1)
+                  val maxDesks = DeskRecs.desksForHourOfDayInUKLocalTime(minute, minMaxList._2)
                   (qn, (minDesks, maxDesks))
               }
               val available = optionalStaffSources.map(_.available(minute, tn)).getOrElse(0)

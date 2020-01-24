@@ -10,7 +10,7 @@ import passengersplits.parsing.VoyageManifestParser.{EeaFlag, InTransit, Manifes
 import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
 
-import scala.collection.immutable.{List, Seq}
+import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._
 
 class ApiPaxNosCrunchSpecSpec extends CrunchTestLike {
@@ -28,7 +28,7 @@ class ApiPaxNosCrunchSpecSpec extends CrunchTestLike {
 
   val manifests =
     ManifestsFeedSuccess(DqManifests("", Set(
-      VoyageManifest(EventTypes.DC, airportConfig.portCode, PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2019-11-20"), ManifestTimeOfArrival("00:00"),
+      VoyageManifest(EventTypes.DC, defaultAirportConfig.portCode, PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2019-11-20"), ManifestTimeOfArrival("00:00"),
         List(
           PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(11)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None),
           PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(11)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None)
@@ -40,10 +40,9 @@ class ApiPaxNosCrunchSpecSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
-      airportConfig = airportConfig.copy(
+      airportConfig = defaultAirportConfig.copy(
         terminalProcessingTimes = procTimes,
-        queues = Map(T1 -> Seq(Queues.EeaDesk)),
-        terminals = Seq(T1)
+        queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
       ))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
@@ -68,10 +67,9 @@ class ApiPaxNosCrunchSpecSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
-      airportConfig = airportConfig.copy(
+      airportConfig = defaultAirportConfig.copy(
         terminalProcessingTimes = procTimes,
-        queues = Map(T1 -> Seq(Queues.EeaDesk)),
-        terminals = Seq(T1)
+        queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
       ))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))

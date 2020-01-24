@@ -92,7 +92,7 @@ object TerminalContentComponent {
           <.div(^.id := "terminal-data", "Nothing to show for this time period")
         } else ""),
         props.portStatePot.render((portState: PortState) => {
-          val queues = props.airportConfig.queues.filterKeys(_ == terminal)
+          val queues = props.airportConfig.queuesByTerminal.filterKeys(_ == terminal)
           val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.time, timeRangeHours)
           val filteredPortState = portState.windowWithTerminalFilter(viewStart, viewEnd, queues)
           val terminalName = terminal.toString

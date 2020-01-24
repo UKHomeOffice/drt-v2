@@ -53,7 +53,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
     clearDatabase()
   }
 
-  val table = ArrivalTable(airportConfig.portCode, H2Tables)
+  val table = ArrivalTable(defaultAirportConfig.portCode, H2Tables)
 
   def clearDatabase(): Unit = {
     Try(dropTables())
@@ -101,7 +101,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
       case ag: AggregatedArrivals => ag
     }
 
-    val expected = AggregatedArrival(liveArrival, airportConfig.portCode.iata)
+    val expected = AggregatedArrival(liveArrival, defaultAirportConfig.portCode.iata)
 
     crunch.shutdown
 
@@ -146,8 +146,8 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
     }
 
     val expected = Set(
-      AggregatedArrival(liveArrival, airportConfig.portCode.iata),
-      AggregatedArrival(expiredArrival, airportConfig.portCode.iata)
+      AggregatedArrival(liveArrival, defaultAirportConfig.portCode.iata),
+      AggregatedArrival(expiredArrival, defaultAirportConfig.portCode.iata)
     )
 
     crunch.shutdown

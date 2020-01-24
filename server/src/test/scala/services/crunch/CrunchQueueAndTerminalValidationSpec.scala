@@ -10,7 +10,7 @@ import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 
-import scala.collection.immutable.{List, Seq}
+import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._
 
 class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
@@ -32,15 +32,14 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        airportConfig = airportConfig.copy(
+        airportConfig = defaultAirportConfig.copy(
           terminalPaxSplits = Map(T1 -> SplitRatios(
             SplitSources.TerminalAverage,
             SplitRatio(eeaMachineReadableToDesk, 1),
             SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.Transfer), 1)
           )),
           terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
-          queues = Map(T1 -> Seq(EeaDesk)),
-          terminals = Seq(T1)
+          queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk))
         ))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
@@ -74,10 +73,9 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
-      airportConfig = airportConfig.copy(
+      airportConfig = defaultAirportConfig.copy(
         terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
-        queues = Map(T1 -> Seq(EeaDesk)),
-        terminals = Seq(T1)
+        queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk))
       )
     )
 

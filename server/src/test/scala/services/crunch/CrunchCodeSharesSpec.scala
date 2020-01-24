@@ -8,7 +8,7 @@ import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 
-import scala.collection.immutable.{List, Seq}
+import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._
 
 
@@ -34,10 +34,9 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        airportConfig = airportConfig.copy(
+        airportConfig = defaultAirportConfig.copy(
           terminalProcessingTimes = procTimes,
-          queues = Map(T1 -> Seq(Queues.EeaDesk)),
-          terminals = Seq(T1)
+          queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
         ))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
@@ -70,9 +69,9 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        airportConfig = airportConfig.copy(
+        airportConfig = defaultAirportConfig.copy(
           terminalProcessingTimes = procTimes,
-          queues = Map(T1 -> Seq(Queues.EeaDesk), T2 -> Seq(Queues.EeaDesk))))
+          queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk), T2 -> Seq(Queues.EeaDesk))))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
