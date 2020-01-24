@@ -11,14 +11,14 @@ import services.{SDate, TryCrunch}
 
 import scala.collection.immutable.{Map, NumericRange, SortedMap}
 
-trait PortDescRecsLike {
+trait PortDeskRecsProviderLike {
   val minutesToCrunch: Int
   val crunchOffsetMinutes: Int
 
   def flightsToDeskRecs(flights: FlightsWithSplits, crunchStartMillis: MillisSinceEpoch): CrunchApi.DeskRecMinutes
 }
 
-trait ProductionPortDeskRecs extends PortDescRecsLike {
+trait ProductionPortDeskRecsProviderLike extends PortDeskRecsProviderLike {
   val queuesByTerminal: SortedMap[Terminal, Seq[Queue]]
   val terminalProcessingTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]]
   val divertedQueues: Map[Queue, Queue]
@@ -37,7 +37,9 @@ trait ProductionPortDeskRecs extends PortDescRecsLike {
         (tqm, LoadMinute(tqm.terminal, tqm.queue, loads.map(_.paxLoad).sum, loads.map(_.workLoad).sum, tqm.minute))
     }
 
-  def terminalWorkLoadsByQueue(terminal: Terminal, minuteMillis: NumericRange[MillisSinceEpoch], loadMinutes: Map[TQM, LoadMinute]): Map[Queue, Seq[Double]] = queuesByTerminal(terminal)
+  def terminalWorkLoadsByQueue(terminal: Terminal,
+                               minuteMillis: NumericRange[MillisSinceEpoch],
+                               loadMinutes: Map[TQM, LoadMinute]): Map[Queue, Seq[Double]] = queuesByTerminal(terminal)
     .filterNot(_ == Transfer)
     .map { queue =>
       val lms = minuteMillis.map(minute => loadMinutes.getOrElse(TQM(terminal, queue, minute), LoadMinute(terminal, queue, 0, 0, minute)).workLoad)
@@ -45,7 +47,8 @@ trait ProductionPortDeskRecs extends PortDescRecsLike {
     }
     .toMap
 
-  def terminalPaxLoadsByQueue(terminal: Terminal, minuteMillis: NumericRange[MillisSinceEpoch], loadMinutes: Map[TQM, LoadMinute]): Map[Queue, Seq[Double]] = queuesByTerminal(terminal)
+  def terminalPaxLoadsByQueue(terminal: Terminal, minuteMillis: NumericRange[MillisSinceEpoch],
+                              loadMinutes: Map[TQM, LoadMinute]): Map[Queue, Seq[Double]] = queuesByTerminal(terminal)
     .filterNot(_ == Transfer)
     .map { queue =>
       val paxLoads = minuteMillis.map(minute => loadMinutes.getOrElse(TQM(terminal, queue, minute), LoadMinute(terminal, queue, 0, 0, minute)).paxLoad)
@@ -66,7 +69,7 @@ trait ProductionPortDeskRecs extends PortDescRecsLike {
     val terminalQueueDeskRecs = terminalsToCrunch.map { terminal =>
       val terminalPax = terminalPaxLoadsByQueue(terminal, minuteMillis, loadsWithDiverts)
       val terminalWork = terminalWorkLoadsByQueue(terminal, minuteMillis, loadsWithDiverts)
-      val deskRecsForTerminal: TerminalDeskRecsLike = terminalDescRecs(terminal)
+      val deskRecsForTerminal: TerminalDeskRecsProviderLike = terminalDescRecs(terminal)
 
       deskRecsForTerminal.terminalWorkToDeskRecs(terminal, minuteMillis, terminalPax, terminalWork, deskRecsForTerminal)
     }
@@ -74,43 +77,61 @@ trait ProductionPortDeskRecs extends PortDescRecsLike {
     DeskRecMinutes(terminalQueueDeskRecs.toSeq.flatten)
   }
 
-  def terminalDescRecs(terminal: Terminal): TerminalDeskRecsLike
+  def terminalDescRecs(terminal: Terminal): TerminalDeskRecsProviderLike
 }
 
-case class FlexedPortDeskRecs(queuesByTerminal: SortedMap[Terminal, Seq[Queue]],
-                              divertedQueues: Map[Queue, Queue],
-                              minMaxDesks: Map[Terminal, Map[Queue, (List[Int], List[Int])]],
-                              desksByTerminal: Map[Terminal, Int],
-                              flexedQueuesPriority: List[Queue],
-                              slas: Map[Queue, Int],
-                              terminalProcessingTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],
-                              minutesToCrunch: Int,
-                              crunchOffsetMinutes: Int,
-                              eGateBankSize: Int,
-                              tryCrunch: TryCrunch) extends ProductionPortDeskRecs {
-  def terminalDescRecs(terminal: Terminal): TerminalDeskRecsLike =
-    FlexedTerminal(queuesByTerminal, minMaxDesks, slas, desksByTerminal(terminal), flexedQueuesPriority, tryCrunch, eGateBankSize)
+case class FlexedPortDeskRecsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Queue]],
+                                      divertedQueues: Map[Queue, Queue],
+                                      minMaxDesks: Map[Terminal, Map[Queue, (List[Int], List[Int])]],
+                                      desksByTerminal: Map[Terminal, Int],
+                                      flexedQueuesPriority: List[Queue],
+                                      slas: Map[Queue, Int],
+                                      terminalProcessingTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],
+                                      minutesToCrunch: Int,
+                                      crunchOffsetMinutes: Int,
+                                      eGateBankSize: Int,
+                                      tryCrunch: TryCrunch) extends ProductionPortDeskRecsProviderLike {
+  def terminalDescRecs(terminal: Terminal): TerminalDeskRecsProviderLike =
+    FlexedTerminalDeskRecsProvider(queuesByTerminal, minMaxDesks, slas, desksByTerminal(terminal), flexedQueuesPriority, tryCrunch, eGateBankSize)
 }
 
-object FlexedPortDeskRecs {
-  def apply(airportConfig: AirportConfig, minutesToCrunch: Int, tryCrunch: TryCrunch): FlexedPortDeskRecs =
-    FlexedPortDeskRecs(airportConfig.queuesByTerminal, airportConfig.divertedQueues, airportConfig.minMaxDesksByTerminalQueue, airportConfig.desksByTerminal, airportConfig.flexedQueuesPriority, airportConfig.slaByQueue, airportConfig.terminalProcessingTimes, minutesToCrunch, airportConfig.crunchOffsetMinutes, airportConfig.eGateBankSize, tryCrunch)
+object FlexedPortDeskRecsProvider {
+  def apply(airportConfig: AirportConfig, minutesToCrunch: Int, tryCrunch: TryCrunch): FlexedPortDeskRecsProvider =
+    FlexedPortDeskRecsProvider(airportConfig.queuesByTerminal,
+                               airportConfig.divertedQueues,
+                               airportConfig.minMaxDesksByTerminalQueue,
+                               airportConfig.desksByTerminal,
+                               airportConfig.flexedQueuesPriority,
+                               airportConfig.slaByQueue,
+                               airportConfig.terminalProcessingTimes,
+                               minutesToCrunch,
+                               airportConfig.crunchOffsetMinutes,
+                               airportConfig.eGateBankSize,
+                               tryCrunch)
 }
 
-case class StaticPortDeskRecs(queuesByTerminal: SortedMap[Terminal, Seq[Queue]],
-                              divertedQueues: Map[Queue, Queue],
-                              minMaxDesks: Map[Terminal, Map[Queue, (List[Int], List[Int])]],
-                              slas: Map[Queue, Int],
-                              terminalProcessingTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],
-                              minutesToCrunch: Int,
-                              crunchOffsetMinutes: Int,
-                              eGateBankSize: Int,
-                              tryCrunch: TryCrunch) extends ProductionPortDeskRecs {
-  def terminalDescRecs(terminal: Terminal): TerminalDeskRecsLike =
-    StaticTerminal(queuesByTerminal, minMaxDesks, slas, tryCrunch, eGateBankSize)
+case class StaticPortDeskRecsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Queue]],
+                                      divertedQueues: Map[Queue, Queue],
+                                      minMaxDesks: Map[Terminal, Map[Queue, (List[Int], List[Int])]],
+                                      slas: Map[Queue, Int],
+                                      terminalProcessingTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],
+                                      minutesToCrunch: Int,
+                                      crunchOffsetMinutes: Int,
+                                      eGateBankSize: Int,
+                                      tryCrunch: TryCrunch) extends ProductionPortDeskRecsProviderLike {
+  def terminalDescRecs(terminal: Terminal): TerminalDeskRecsProviderLike =
+    StaticTerminalDeskRecsProvider(queuesByTerminal, minMaxDesks, slas, tryCrunch, eGateBankSize)
 }
 
-object StaticPortDeskRecs {
-  def apply(airportConfig: AirportConfig, minutesToCrunch: Int, tryCrunch: TryCrunch): StaticPortDeskRecs =
-    StaticPortDeskRecs(airportConfig.queuesByTerminal, airportConfig.divertedQueues, airportConfig.minMaxDesksByTerminalQueue, airportConfig.slaByQueue, airportConfig.terminalProcessingTimes, minutesToCrunch, airportConfig.crunchOffsetMinutes, airportConfig.eGateBankSize, tryCrunch)
+object StaticPortDeskRecsProvider {
+  def apply(airportConfig: AirportConfig, minutesToCrunch: Int, tryCrunch: TryCrunch): StaticPortDeskRecsProvider =
+    StaticPortDeskRecsProvider(airportConfig.queuesByTerminal,
+                               airportConfig.divertedQueues,
+                               airportConfig.minMaxDesksByTerminalQueue,
+                               airportConfig.slaByQueue,
+                               airportConfig.terminalProcessingTimes,
+                               minutesToCrunch,
+                               airportConfig.crunchOffsetMinutes,
+                               airportConfig.eGateBankSize,
+                               tryCrunch)
 }

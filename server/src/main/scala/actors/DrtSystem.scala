@@ -44,7 +44,7 @@ import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedRes
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services.SplitsProvider.SplitProvider
 import services._
-import services.crunch.deskrecs.{FlexedPortDeskRecs, RunnableDeskRecs, StaticPortDeskRecs}
+import services.crunch.deskrecs.{FlexedPortDeskRecsProvider, RunnableDeskRecs, StaticPortDeskRecsProvider}
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.Crunch.{oneDayMillis, oneMinuteMillis}
 import services.graphstages._
@@ -255,9 +255,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     }
 
     val portDeskRecs = if (config.get[Boolean]("crunch.flex-desks"))
-      FlexedPortDeskRecs(airportConfig, 1440, TryRenjin.crunch)
+      FlexedPortDeskRecsProvider(airportConfig, 1440, TryRenjin.crunch)
     else
-      StaticPortDeskRecs(airportConfig, 1440, TryRenjin.crunch)
+      StaticPortDeskRecsProvider(airportConfig, 1440, TryRenjin.crunch)
 
     futurePortStates.onComplete {
       case Success((maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeRegisteredArrivals)) =>

@@ -11,12 +11,12 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues
 import drt.shared.Terminals.T1
 import services.crunch.CrunchTestLike
-import services.crunch.deskrecs.{MockPortStateActor, PortDescRecsLike, RunnableDeskRecs}
+import services.crunch.deskrecs.{MockPortStateActor, PortDeskRecsProviderLike, RunnableDeskRecs}
 import services.graphstages.{Buffer, CrunchMocks}
 
 import scala.concurrent.duration._
 
-case class MockPortDescRecs(minutesToCrunch: Int, crunchOffsetMinutes: Int) extends PortDescRecsLike {
+case class MockPortDescRecs(minutesToCrunch: Int, crunchOffsetMinutes: Int) extends PortDeskRecsProviderLike {
   override def flightsToDeskRecs(flights: FlightsWithSplits, crunchStartMillis: MillisSinceEpoch): DeskRecMinutes = {
     DeskRecMinutes(Seq(DeskRecMinute(T1, Queues.EeaDesk, crunchStartMillis, 0, 0, 0, 0)))
   }

@@ -21,7 +21,7 @@ object RunnableDeskRecs {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def apply(portStateActor: ActorRef,
-            portDeskRecs: PortDescRecsLike,
+            portDeskRecs: PortDeskRecsProviderLike,
             buffer: Buffer)
            (implicit executionContext: ExecutionContext, timeout: Timeout = new Timeout(10 seconds)): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
     import akka.stream.scaladsl.GraphDSL.Implicits._
@@ -69,7 +69,7 @@ object RunnableDeskRecs {
     }
 
   def start(portStateActor: ActorRef,
-            portDeskRecs: ProductionPortDeskRecs,
+            portDeskRecs: ProductionPortDeskRecsProviderLike,
             now: () => SDateLike,
             recrunchOnStart: Boolean,
             forecastMaxDays: Int)

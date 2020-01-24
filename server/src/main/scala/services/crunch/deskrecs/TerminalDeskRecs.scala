@@ -1,17 +1,16 @@
 package services.crunch.deskrecs
 
-import drt.shared.AirportConfig
 import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch}
 import drt.shared.Queues.{EGate, Queue}
 import drt.shared.Terminals.Terminal
 import org.slf4j.{Logger, LoggerFactory}
-import services.{OptimizerConfig, OptimizerCrunchResult, TryCrunch}
 import services.crunch.deskrecs.DeskRecs.desksForHourOfDayInUKLocalTime
+import services.{OptimizerConfig, OptimizerCrunchResult, TryCrunch}
 
 import scala.collection.immutable.{Map, NumericRange, SortedMap}
 import scala.util.{Failure, Success}
 
-trait TerminalDeskRecsLike {
+trait TerminalDeskRecsProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   val queuesByTerminal: SortedMap[Terminal, Seq[Queue]]
@@ -53,7 +52,7 @@ trait TerminalDeskRecsLike {
                              minuteMillis: NumericRange[MillisSinceEpoch],
                              terminalPax: Map[Queue, Seq[Double]],
                              terminalWork: Map[Queue, Seq[Double]],
-                             terminalRecs: TerminalDeskRecsLike): Iterable[DeskRecMinute] = {
+                             terminalRecs: TerminalDeskRecsProviderLike): Iterable[DeskRecMinute] = {
     val terminalMinMaxDesks = queuesByTerminal(terminal).map { queue =>
       (queue, minMaxDesksForQueue(minuteMillis, terminal, queue, minMaxDesks))
     }.toMap
@@ -71,9 +70,9 @@ trait TerminalDeskRecsLike {
   }
 }
 
-case class StaticTerminal(queuesByTerminal: SortedMap[Terminal, Seq[Queue]], minMaxDesks: Map[Terminal, Map[Queue, (List[Int], List[Int])]], slas: Map[Queue, Int], cruncher: TryCrunch, bankSize: Int) extends TerminalDeskRecsLike
+case class StaticTerminalDeskRecsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Queue]], minMaxDesks: Map[Terminal, Map[Queue, (List[Int], List[Int])]], slas: Map[Queue, Int], cruncher: TryCrunch, bankSize: Int) extends TerminalDeskRecsProviderLike
 
-case class FlexedTerminal(queuesByTerminal: SortedMap[Terminal, Seq[Queue]], minMaxDesks: Map[Terminal, Map[Queue, (List[Int], List[Int])]], slas: Map[Queue, Int], terminalDesks: Int, flexedQueuesPriority: List[Queue], cruncher: TryCrunch, bankSize: Int) extends TerminalDeskRecsLike {
+case class FlexedTerminalDeskRecsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Queue]], minMaxDesks: Map[Terminal, Map[Queue, (List[Int], List[Int])]], slas: Map[Queue, Int], terminalDesks: Int, flexedQueuesPriority: List[Queue], cruncher: TryCrunch, bankSize: Int) extends TerminalDeskRecsProviderLike {
   override def desksAndWaits(loads: Map[Queue, Seq[Double]],
                              minDesks: Map[Queue, List[Int]],
                              maxDesks: Map[Queue, List[Int]],

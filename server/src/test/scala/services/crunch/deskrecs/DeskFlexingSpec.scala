@@ -66,7 +66,7 @@ class DeskFlexingSpec extends CrunchTestLike {
 
         val observer = new MockWithObserver
 
-        FlexedTerminal(ac.queuesByTerminal, ac.minMaxDesksByTerminalQueue, ac.slaByQueue, totalDesks, flexedQueuesPriority, observer.mockDeskRecs, 10).desksAndWaits(mockLoads(List(EeaDesk, NonEeaDesk)), minDesks, maxDesks, slas)
+        FlexedTerminalDeskRecsProvider(ac.queuesByTerminal, ac.minMaxDesksByTerminalQueue, ac.slaByQueue, totalDesks, flexedQueuesPriority, observer.mockDeskRecs, 10).desksAndWaits(mockLoads(List(EeaDesk, NonEeaDesk)), minDesks, maxDesks, slas)
 
         val expectedMaxEea = totalDesks24.map(_ - roWMinDesks)
         val expectedMaxRoW = totalDesks24.map(_ - eeaMinDesks)
@@ -87,7 +87,7 @@ class DeskFlexingSpec extends CrunchTestLike {
       val roWMaxDesks = totalDesks - ftMinDesks - eeaMinDesks
       val ftMaxDesks = totalDesks - eeaMinDesks - roWMinDesks
 
-      FlexedTerminal(ac.queuesByTerminal, ac.minMaxDesksByTerminalQueue, ac.slaByQueue, totalDesks, flexedQueuesPriority, observer.mockDeskRecs, 10).desksAndWaits(mockLoads(queues), minDesks, maxDesks, slas)
+      FlexedTerminalDeskRecsProvider(ac.queuesByTerminal, ac.minMaxDesksByTerminalQueue, ac.slaByQueue, totalDesks, flexedQueuesPriority, observer.mockDeskRecs, 10).desksAndWaits(mockLoads(queues), minDesks, maxDesks, slas)
 
       s"I should observe the max desks as EEA: $eeaMaxDesks, RoW: $roWMaxDesks, FT: $ftMaxDesks" >> {
         val expectedMaxEea = List.fill(minsToCrunch)(eeaMaxDesks)
@@ -112,7 +112,7 @@ class DeskFlexingSpec extends CrunchTestLike {
       val roWMaxDesks = totalDesks - ftMinDesks - eeaMinDesks
       val ftMaxDesks = totalDesks - eeaMinDesks - roWMinDesks
 
-      FlexedTerminal(ac.queuesByTerminal, ac.minMaxDesksByTerminalQueue, ac.slaByQueue, totalDesks, flexedQueuesPriority, observer.mockDeskRecs, 10).desksAndWaits(mockLoads(queues), minDesks, maxDesks, slas)
+      FlexedTerminalDeskRecsProvider(ac.queuesByTerminal, ac.minMaxDesksByTerminalQueue, ac.slaByQueue, totalDesks, flexedQueuesPriority, observer.mockDeskRecs, 10).desksAndWaits(mockLoads(queues), minDesks, maxDesks, slas)
 
       s"I should observe the max desks as EEA: $eeaMaxDesks, RoW: $roWMaxDesks, FT: $ftMaxDesks, EGate: $egateMaxDesks" >> {
         val expectedMaxEea = List.fill(minsToCrunch)(eeaMaxDesks)

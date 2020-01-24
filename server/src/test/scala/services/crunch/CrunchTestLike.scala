@@ -22,7 +22,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services._
-import services.crunch.deskrecs.{FlexedPortDeskRecs, RunnableDeskRecs, StaticPortDeskRecs}
+import services.crunch.deskrecs.{FlexedPortDeskRecsProvider, RunnableDeskRecs, StaticPortDeskRecsProvider}
 import services.graphstages.CrunchMocks
 import slickdb.Tables
 
@@ -217,9 +217,9 @@ class CrunchTestLike
     initialPortState.foreach(ps => portStateActor ! ps)
 
     val portDescRecs = if (flexDesks)
-      FlexedPortDeskRecs(airportConfig, minutesToCrunch, cruncher)
+      FlexedPortDeskRecsProvider(airportConfig, minutesToCrunch, cruncher)
     else
-      StaticPortDeskRecs(airportConfig, minutesToCrunch, cruncher)
+      StaticPortDeskRecsProvider(airportConfig, minutesToCrunch, cruncher)
 
     val (millisToCrunchActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDescRecs, now, recrunchOnStart, maxDaysToCrunch)
     portStateActor ! SetCrunchActor(millisToCrunchActor)
