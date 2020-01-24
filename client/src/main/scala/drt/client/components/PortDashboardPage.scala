@@ -39,7 +39,7 @@ object PortDashboardPage {
 
           portDashboardModel.airportConfig.renderReady(portConfig => {
 
-            val (queues, paxTypeAndQueueOrder, terminals) = (portConfig.queues, portConfig.terminalPaxSplits, portConfig.terminals)
+            val (queues, paxTypeAndQueueOrder, terminals) = (portConfig.queuesByTerminal, portConfig.terminalPaxSplits, portConfig.terminals)
 
             val currentPeriodStart = DashboardTerminalSummary.windowStart(SDate.now())
             val periods = List(
@@ -72,7 +72,7 @@ object PortDashboardPage {
                       val portStateForDashboard = portState.windowWithTerminalFilter(
                         displayPeriod.start,
                         displayPeriod.end,
-                        portConfig.queues.filterKeys(_ == terminalName)
+                        portConfig.queuesByTerminal.filterKeys(_ == terminalName)
                       )
                       val flightsInTerminal = portStateForDashboard.flights.values.toList
                       val terminalCrunchMinutes = portStateForDashboard.crunchMinutes.values.toList

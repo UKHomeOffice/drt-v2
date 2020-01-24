@@ -93,10 +93,16 @@ trait AirportConfProvider extends AirportConfiguration {
 
   def getPortConfFromEnvVar: AirportConfig = AirportConfigs.confByPort(portCode)
 
-  def airportConfig: AirportConfig = getPortConfFromEnvVar.copy(
-    contactEmail = contactEmail,
-    outOfHoursContactPhone = oohPhone
-  )
+  def airportConfig: AirportConfig = {
+    val configForPort = getPortConfFromEnvVar.copy(
+      contactEmail = contactEmail,
+      outOfHoursContactPhone = oohPhone
+    )
+
+    configForPort.assertValid()
+
+    configForPort
+  }
 }
 
 trait ProdPassengerSplitProviders {
@@ -233,7 +239,7 @@ class Application @Inject()(implicit val config: Configuration,
           case Some(portState: PortState) =>
             log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString()} on $terminal")
             val fp = application.Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
-            val hf = application.Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queues(terminal).toList)
+            val hf = application.Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
             Option(ForecastPeriodWithHeadlines(fp, hf))
           case None =>
             log.info(s"No forecast available for week beginning ${SDate(startDay).toISOString()} on $terminal")

@@ -5,15 +5,13 @@ import drt.client.components.Icon._
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
-import japgolly.scalajs.react.{CtorType, _}
 import japgolly.scalajs.react.component.Js
+import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, LI}
-
-
-import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 
 object MainMenu {
   @inline private def bss: BootstrapStyles.type = GlobalStyles.bootstrapStyles
@@ -67,7 +65,7 @@ object MainMenu {
     val itemsForLoggedInUser: List[MenuItem] = restrictedMenuItemsForRole(restrictedMenuItems, userRoles, nonTerminalUnrestrictedMenuItems.length)
 
     val nonTerminalMenuItems = nonTerminalUnrestrictedMenuItems ::: itemsForLoggedInUser
-    nonTerminalMenuItems :+ statusMenuItem(nonTerminalMenuItems.length + airportConfig.terminals.length, feeds)
+    nonTerminalMenuItems :+ statusMenuItem(nonTerminalMenuItems.length + airportConfig.terminals.size, feeds)
   }
 
   def restrictedMenuItemsForRole(restrictedMenuItems: List[(Role, Int => MenuItem)], roles: Set[Role], startIndex: Int): List[MenuItem] = {
@@ -129,9 +127,7 @@ object PortSwitcher {
 
   val component: Js.ComponentSimple[Props, CtorType.Props, Unmounted[Props, State, Unit]] =
     ScalaComponent.builder[Props]("PortSwitcher")
-      .initialStateFromProps(_ => {
-        State()
-      })
+      .initialState(State())
       .renderPS((scope, props, state) => {
         val showClass = if (state.showDropDown) "show" else ""
         val otherPorts = RestrictedAccessByPortPage.allPortsAccessible(props.loggedInUserRoles).filter(p => {

@@ -57,7 +57,7 @@ trait WithPortState {
     maybePointInTime match {
       case Some(pit) =>
         log.debug(s"Snapshot crunch state query ${SDate(pit).toISOString()}")
-        val tempActor = system.actorOf(CrunchStateReadActor.props(airportConfig.portStateSnapshotInterval, SDate(pit), DrtStaticParameters.expireAfterMillis, airportConfig.queues, startMillis, endMillis))
+        val tempActor = system.actorOf(CrunchStateReadActor.props(airportConfig.portStateSnapshotInterval, SDate(pit), DrtStaticParameters.expireAfterMillis, airportConfig.queuesByTerminal, startMillis, endMillis))
         val futureResult = ActorDataRequest.portState[X](tempActor, request)
         futureResult.foreach(_ => tempActor ! PoisonPill)
         futureResult

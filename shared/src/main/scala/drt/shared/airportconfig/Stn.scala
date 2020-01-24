@@ -4,8 +4,10 @@ import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.Terminals.T1
+import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
+
+import scala.collection.immutable.SortedMap
 
 
 object Stn extends AirportConfigLike {
@@ -13,11 +15,10 @@ object Stn extends AirportConfigLike {
 
   val config = AirportConfig(
     portCode = PortCode("STN"),
-    queues = Map(
+    queuesByTerminal = SortedMap(
       T1 -> Seq(EeaDesk, EGate, NonEeaDesk)
     ),
     slaByQueue = Map(EeaDesk -> 25, EGate -> 5, NonEeaDesk -> 45),
-    terminals = Seq(T1),
     crunchOffsetMinutes = 240,
     dayLengthHours = 36,
     defaultWalkTimeMillis = Map(T1 -> 600000L),
@@ -59,6 +60,7 @@ object Stn extends AirportConfigLike {
         EGate -> 0.8084,
         EeaDesk -> (1.0 - 0.8084)
       )))
-    )
+    ),
+    desksByTerminal = Map(T1 -> 22)
   )
 }

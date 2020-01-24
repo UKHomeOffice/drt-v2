@@ -10,7 +10,7 @@ case class LoggedInUser(userName: String, id: String, email: String, roles: Set[
 }
 
 object LoggedInUser {
-  implicit val rw: RW[AirportConfig] = macroRW
+  implicit val rw: RW[LoggedInUser] = macroRW
 }
 
 case class ShouldReload(shouldReload: Boolean)

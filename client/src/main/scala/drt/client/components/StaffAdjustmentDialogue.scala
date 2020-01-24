@@ -23,7 +23,7 @@ case class StaffAdjustmentDialogueState(action: String,
                                         reasonPlaceholder: String,
                                         reason: String,
                                         maybeReasonAdditional: Option[String],
-                                        terminalNames: Seq[Terminal],
+                                        terminalNames: Iterable[Terminal],
                                         terminal: Terminal,
                                         date: String,
                                         startTimeHours: Int,
@@ -58,7 +58,7 @@ case class StaffAdjustmentDialogueState(action: String,
 }
 
 object StaffAdjustmentDialogueState {
-  def apply(terminalNames: Seq[Terminal],
+  def apply(terminalNames: Iterable[Terminal],
             terminal: Option[Terminal],
             reasonPlaceholder: String,
             startDate: SDateLike,

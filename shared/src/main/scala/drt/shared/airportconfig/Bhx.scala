@@ -4,8 +4,10 @@ import drt.shared.PaxTypes.{B5JPlusNational, EeaMachineReadable}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.Terminals.{T1, T2}
-import drt.shared.{AirportConfig, AirportConfigDefaults, AirportConfigLike, BHXAccess, PortCode, Queues}
+import drt.shared.Terminals.{T1, T2, Terminal}
+import drt.shared._
+
+import scala.collection.immutable.SortedMap
 
 object Bhx extends AirportConfigLike {
 
@@ -13,12 +15,11 @@ object Bhx extends AirportConfigLike {
 
   val config = AirportConfig(
     portCode = PortCode("BHX"),
-    queues = Map(
+    queuesByTerminal = SortedMap(
       T1 -> Seq(EeaDesk, EGate, NonEeaDesk),
       T2 -> Seq(EeaDesk, NonEeaDesk)
     ),
     slaByQueue = defaultSlas,
-    terminals = Seq(T1, T2),
     defaultWalkTimeMillis = Map(T1 -> 240000L, T2 -> 240000L),
     terminalPaxSplits = Map(
       T1 -> SplitRatios(
@@ -74,6 +75,7 @@ object Bhx extends AirportConfigLike {
         (EeaMachineReadable -> List(EeaDesk -> 1.0)),
         (B5JPlusNational -> List(EeaDesk -> 1.0))
       ))
-    )
+    ),
+    desksByTerminal = Map[Terminal, Int](T1 -> 8, T2 -> 8)
   )
 }
