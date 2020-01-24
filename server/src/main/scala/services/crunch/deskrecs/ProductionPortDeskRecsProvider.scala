@@ -11,13 +11,6 @@ import services.{SDate, TryCrunch}
 
 import scala.collection.immutable.{Map, NumericRange, SortedMap}
 
-trait PortDeskRecsProviderLike {
-  val minutesToCrunch: Int
-  val crunchOffsetMinutes: Int
-
-  def flightsToDeskRecs(flights: FlightsWithSplits, crunchStartMillis: MillisSinceEpoch): CrunchApi.DeskRecMinutes
-}
-
 trait ProductionPortDeskRecsProviderLike extends PortDeskRecsProviderLike {
   val queuesByTerminal: SortedMap[Terminal, Seq[Queue]]
   val terminalProcessingTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]]

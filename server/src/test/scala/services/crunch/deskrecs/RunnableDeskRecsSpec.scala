@@ -6,7 +6,7 @@ import akka.pattern.AskableActorRef
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, DeskRecMinutes, MillisSinceEpoch}
+import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, DeskRecMinutes}
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared.PaxTypes.{EeaMachineReadable, VisaNational}
 import drt.shared.PaxTypesAndQueues.{eeaMachineReadableToDesk, visaNationalToDesk}
@@ -16,8 +16,8 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.ArrivalsFeedSuccess
 import services.crunch.CrunchTestLike
-import services.graphstages.{Buffer, Crunch, CrunchMocks}
-import services.{SDate, TryCrunch, TryRenjin}
+import services.graphstages.{Buffer, CrunchMocks}
+import services.{SDate, TryCrunch}
 
 import scala.collection.immutable.{Seq, SortedMap}
 import scala.concurrent.duration._
