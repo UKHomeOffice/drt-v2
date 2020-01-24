@@ -110,7 +110,10 @@ case class FlexedTerminalDeskRecsProvider(queuesByTerminal: SortedMap[Terminal, 
       .foldLeft(availableMinusRemainingMinimums) {
         case (availableSoFar, (recs, _)) => availableSoFar.zip(recs).map { case (a, b) => a - b }
       }
-    cruncher(adjustedWork(queueProcessing, loads(queueProcessing)), minDesks(queueProcessing), actualAvailable, OptimizerConfig(slas(queueProcessing))) match {
+    val queueWork = adjustedWork(queueProcessing, loads(queueProcessing))
+    val queueMinDesks = minDesks(queueProcessing)
+    val queueSlas = slas(queueProcessing)
+    cruncher(queueWork, queueMinDesks, actualAvailable, OptimizerConfig(queueSlas)) match {
       case Success(OptimizerCrunchResult(desks, waits)) => queueRecsSoFar + (queueProcessing -> ((desks.toList, waits.toList)))
       case Failure(t) =>
         log.error(s"Crunch failed for $queueProcessing", t)
