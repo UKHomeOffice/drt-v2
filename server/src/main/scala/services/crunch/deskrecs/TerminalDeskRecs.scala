@@ -21,6 +21,10 @@ trait TerminalDeskRecsProviderLike {
 
   def desksAndWaits(loads: Map[Queue, Seq[Double]],
                     minDesks: Map[Queue, List[Int]],
+                    maxDesks: Map[Queue, List[Int]]): Map[Queue, (List[Int], List[Int])]
+
+  def staticDesksAndWaits(loads: Map[Queue, Seq[Double]],
+                    minDesks: Map[Queue, List[Int]],
                     maxDesks: Map[Queue, List[Int]]): Map[Queue, (List[Int], List[Int])] = loads
     .map { case (queueProcessing, loadsForQueue) =>
       val min = minDesks(queueProcessing)
@@ -69,7 +73,12 @@ trait TerminalDeskRecsProviderLike {
   }
 }
 
-case class StaticTerminalDeskRecsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Queue]], minMaxDesks: Map[Terminal, Map[Queue, (List[Int], List[Int])]], slas: Map[Queue, Int], cruncher: TryCrunch, bankSize: Int) extends TerminalDeskRecsProviderLike
+case class StaticTerminalDeskRecsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Queue]], minMaxDesks: Map[Terminal, Map[Queue, (List[Int], List[Int])]], slas: Map[Queue, Int], cruncher: TryCrunch, bankSize: Int) extends TerminalDeskRecsProviderLike {
+  override def desksAndWaits(loads: Map[Queue, Seq[Double]],
+                             minDesks: Map[Queue, List[Int]],
+                             maxDesks: Map[Queue, List[Int]]): Map[Queue, (List[Int], List[Int])] =
+    staticDesksAndWaits(loads, minDesks, maxDesks)
+}
 
 case class FlexedTerminalDeskRecsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Queue]], minMaxDesks: Map[Terminal, Map[Queue, (List[Int], List[Int])]], slas: Map[Queue, Int], terminalDesks: Int, flexedQueuesPriority: List[Queue], cruncher: TryCrunch, bankSize: Int) extends TerminalDeskRecsProviderLike {
   override def desksAndWaits(loads: Map[Queue, Seq[Double]],
@@ -81,7 +90,7 @@ case class FlexedTerminalDeskRecsProvider(queuesByTerminal: SortedMap[Terminal, 
 
     val flexedRecs = flexedDesksAndWaits(flexedQueuesToOptimise, loads, minDesks)
 
-    val staticRecs = super.desksAndWaits(loads.filterKeys(staticQueuesToOptimise), minDesks, maxDesks)
+    val staticRecs = staticDesksAndWaits(loads.filterKeys(staticQueuesToOptimise), minDesks, maxDesks)
 
     flexedRecs ++ staticRecs
   }
