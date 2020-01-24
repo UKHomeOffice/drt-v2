@@ -83,8 +83,8 @@ object TerminalDesksAndQueuesRow {
 
       def allowAdjustments: Boolean = props.viewMode.time.millisSinceEpoch > SDate.midnightThisMorning().millisSinceEpoch
 
-      val minus: TagMod = adjustmentLink(props, "-", "decrease")
-      val plus: TagMod = adjustmentLink(props, "+", "increase")
+      val minus: TagMod = adjustmentLink(props, "-")
+      val plus: TagMod = adjustmentLink(props, "+")
 
       val pcpTds = List(
         <.td(^.className := s"non-pcp", fixedPoints),
@@ -109,13 +109,13 @@ object TerminalDesksAndQueuesRow {
     case _ => ""
   }
 
-  def adjustmentLink(props: Props, action: String, label: String): TagOf[html.Div] = {
-    val popupState = adjustmentState(props, action, label)
+  def adjustmentLink(props: Props, action: String): TagOf[html.Div] = {
+    val popupState = adjustmentState(props, action)
     val initialiseDialogue = Callback(SPACircuit.dispatch(UpdateStaffAdjustmentDialogueState(Option(popupState))))
     <.div(^.className := "staff-deployment-adjustment-container", <.div(^.className := "popover-trigger", action, ^.onClick --> initialiseDialogue))
   }
 
-  def adjustmentState(props: Props, action: String, label: String): StaffAdjustmentDialogueState =
+  def adjustmentState(props: Props, action: String): StaffAdjustmentDialogueState =
     StaffAdjustmentDialogueState(
       props.airportConfig.terminals,
       Option(props.terminal),

@@ -2,7 +2,7 @@ package services.graphstages
 
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
-import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinutes}
+import drt.shared.CrunchApi.StaffMinutes
 import drt.shared.{MilliDate, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate

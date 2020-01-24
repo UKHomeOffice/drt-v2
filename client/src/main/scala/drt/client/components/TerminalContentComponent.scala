@@ -1,6 +1,6 @@
 package drt.client.components
 
-import diode.data.{Empty, Pending, Pot}
+import diode.data.{Pending, Pot}
 import diode.react.{ModelProxy, ReactConnectProxy}
 import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}

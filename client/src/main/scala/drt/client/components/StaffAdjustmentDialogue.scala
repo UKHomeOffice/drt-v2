@@ -197,7 +197,7 @@ object StaffAdjustmentDialogue {
           <.a(
             Icon.minus,
             ^.className := "staff-adjustment--adjustment-button staff-adjustment--adjustment-button__decrease",
-            ^.onClick ==> ((e: ReactEventFromInput) => {
+            ^.onClick ==> ((_: ReactEventFromInput) => {
               val newValue = if (state.numberOfStaff > 1) state.numberOfStaff - 1 else 0
               val updatedState = state.copy(numberOfStaff = newValue)
               scope.setState(updatedState)
@@ -213,7 +213,7 @@ object StaffAdjustmentDialogue {
           <.a(
             Icon.plus,
             ^.className := "staff-adjustment--adjustment-button staff-adjustment--adjustment-button__increase",
-            ^.onClick ==> ((e: ReactEventFromInput) => {
+            ^.onClick ==> ((_: ReactEventFromInput) => {
               val newValue = state.numberOfStaff + 1
               val updatedState = state.copy(numberOfStaff = newValue)
               scope.setState(updatedState)

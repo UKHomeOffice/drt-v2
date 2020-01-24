@@ -1,6 +1,6 @@
 package drt.client.components
 
-import diode.data.{Empty, Pending, Pot, Ready}
+import diode.data.{Pending, Pot, Ready}
 import drt.client.components.FlightTableComponents.localDateTimeWithPopup
 import drt.shared._
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
@@ -20,7 +20,7 @@ object ArrivalInfo {
           <.div(
             <.h2(s"Feed sources for arrival"),
             <.table(^.className := "arrivals-table table-striped",
-              tableHead(props),
+              tableHead,
               <.tbody(
                 sources.collect { case Some(sourceArrival) =>
                   FeedSourceRow.component(FeedSourceRow.Props(sourceArrival))
@@ -32,7 +32,7 @@ object ArrivalInfo {
     })
     .build
 
-  def tableHead(props: Props): TagOf[TableSection] = {
+  def tableHead: TagOf[TableSection] = {
     val columns = List(
       ("Feed", None),
       ("Flight", None),

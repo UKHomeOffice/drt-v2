@@ -2,9 +2,8 @@ package drt.server.feeds.lhr.forecast
 
 import drt.server.feeds.Implicits._
 import drt.shared.Terminals.Terminal
-import drt.shared.{Arrival, ForecastFeedSource, Operator, SDateLike}
+import drt.shared.{Arrival, ForecastFeedSource, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
-import org.springframework.util.StringUtils
 import services.SDate
 import services.graphstages.Crunch.europeLondonTimeZone
 

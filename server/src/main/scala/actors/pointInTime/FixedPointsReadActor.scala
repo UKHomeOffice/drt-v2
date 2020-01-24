@@ -29,5 +29,5 @@ class FixedPointsReadActor(pointInTime: SDateLike, val now: () => SDateLike) ext
     recovery
   }
 
-  override def onUpdateState(data: FixedPointAssignments): Unit = Unit
+  override def onUpdateState(data: FixedPointAssignments): Unit = {}
 }

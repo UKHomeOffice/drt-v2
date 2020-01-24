@@ -19,7 +19,10 @@ object Settings {
     "-deprecation",
     "-feature",
     "-Ywarn-dead-code",
-    "-Ywarn-unused"
+    "-Ywarn-unused",
+    "-Ywarn-unused-import",
+    "-Ywarn-value-discard",
+    "-Ywarn-inaccessible"
   )
 
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */

@@ -119,7 +119,7 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
       log.debug(s"Received GetFeedStatuses request")
       sender() ! state.maybeSourceStatuses
 
-    case ua: UniqueArrival =>
+    case _: UniqueArrival =>
       sender() ! None
 
     case GetState =>

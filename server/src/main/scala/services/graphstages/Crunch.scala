@@ -10,6 +10,7 @@ import services._
 
 import scala.collection.immutable.{Map, SortedMap}
 import scala.collection.mutable
+import scala.util.{Failure, Success, Try}
 
 object Crunch {
   val paxOffPerMinute: Int = 20

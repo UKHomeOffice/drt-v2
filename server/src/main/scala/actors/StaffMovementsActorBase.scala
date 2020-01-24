@@ -101,7 +101,7 @@ class StaffMovementsActorBase(val now: () => SDateLike,
 
   def updateState(data: StaffMovements): Unit = state = state.updated(data)
 
-  def onUpdateState(newState: StaffMovements): Unit = Unit
+  def onUpdateState(newState: StaffMovements): Unit = {}
 
   def staffMovementMessagesToStaffMovements(messages: Seq[StaffMovementMessage]): StaffMovements = StaffMovements(messages.map(staffMovementMessageToStaffMovement))
 

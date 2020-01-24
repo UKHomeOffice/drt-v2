@@ -151,7 +151,7 @@ class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: Askabl
           context.self ! SetCrunchSourceReady
         }
       flightMinutesBuffer.clear()
-    case _ => Unit
+    case _ =>
   }
 
 
@@ -167,7 +167,7 @@ class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: Askabl
           context.self ! SetSimulationSourceReady
         }
       loadMinutesBuffer.clear()
-    case _ => Unit
+    case _ =>
   }
 
   private def askAndLogOnFailure[A](actor: AskableActorRef, question: Any, msg: String): Future[Any] = actor
