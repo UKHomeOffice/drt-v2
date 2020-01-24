@@ -257,14 +257,14 @@ case class AirportConfig(portCode: PortCode,
     queuesByTerminal.values.flatten.toSet
       .filterNot(_ == Transfer)
       .foreach { queue: Queue =>
-        assert(slaByQueue.contains(queue), s"Missing sla for $queue")
+        assert(slaByQueue.contains(queue), s"Missing sla for $queue @ $portCode")
       }
     queuesByTerminal.foreach { case (terminal, tQueues) =>
-      assert(minMaxDesksByTerminalQueue.contains(terminal), s"Missing min/max desks for terminal $terminal")
+      assert(minMaxDesksByTerminalQueue.contains(terminal), s"Missing min/max desks for terminal $terminal @ $portCode")
       tQueues
         .filterNot(_ == Transfer)
         .foreach { tQueue =>
-          assert(minMaxDesksByTerminalQueue(terminal).contains(tQueue), s"Missing min/max desks for $tQueue for terminal $terminal")
+          assert(minMaxDesksByTerminalQueue(terminal).contains(tQueue), s"Missing min/max desks for $tQueue for terminal $terminal @ $portCode")
         }
     }
   }

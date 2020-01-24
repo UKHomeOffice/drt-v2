@@ -64,6 +64,11 @@ class AirportConfigsSpec extends Specification {
       result === expected
     }
 
+    "All configurations should be valid with no missing queues or terminals" in {
+      AirportConfigs.allPortConfigs.foreach(_.assertValid())
+
+      success
+    }
   }
 
 }
