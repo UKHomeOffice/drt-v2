@@ -63,6 +63,7 @@ trait ProductionPortDeskRecsProviderLike extends PortDeskRecsProviderLike {
       val terminalPax = terminalPaxLoadsByQueue(terminal, minuteMillis, loadsWithDiverts)
       val terminalWork = terminalWorkLoadsByQueue(terminal, minuteMillis, loadsWithDiverts)
       val deskRecsForTerminal: TerminalDeskRecsProviderLike = terminalDescRecs(terminal)
+      log.info(s"Optimising $terminal")
 
       deskRecsForTerminal.terminalWorkToDeskRecs(terminal, minuteMillis, terminalPax, terminalWork, deskRecsForTerminal)
     }

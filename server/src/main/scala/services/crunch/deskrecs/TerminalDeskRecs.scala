@@ -27,6 +27,7 @@ trait TerminalDeskRecsProviderLike {
                     minDesks: Map[Queue, List[Int]],
                     maxDesks: Map[Queue, List[Int]]): Map[Queue, (List[Int], List[Int])] = loads
     .map { case (queueProcessing, loadsForQueue) =>
+      log.info(s"Static optimising $queueProcessing")
       val min = minDesks(queueProcessing)
       val max = maxDesks(queueProcessing)
       val sla = slas(queueProcessing)
@@ -101,6 +102,7 @@ case class FlexedTerminalDeskRecsProvider(queuesByTerminal: SortedMap[Terminal, 
     .filter(flexedQueued => flexedQueuesToOptimise.toList.contains(flexedQueued))
     .foldLeft(Map[Queue, (List[Int], List[Int])]()) {
       case (queueRecsSoFar, queueProcessing) =>
+        log.info(s"Flexed optimising $queueProcessing")
         flexedQueueDesksAndWaits(terminalDesks, loads, minDesks, flexedQueuesToOptimise, queueRecsSoFar, queueProcessing)
     }
 

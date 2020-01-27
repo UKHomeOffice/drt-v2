@@ -593,7 +593,12 @@ object Optimiser {
       val rResult = optimiseWinR(work, minDesks, maxDesks, sla, weightChurn, weightPax, weightStaff, weightSla)
       val endR = SDate.now().millisSinceEpoch
 
-      log.info(s"Scala Vs R: ${endS - startS} / ${endR - startR}")
+      val scalaTook = s"${endS - startS}"
+      val rTook = s"${endR - startR}"
+      log.info(s"Scala Vs R: $scalaTook / $rTook")
+      if (scalaTook > rTook) {
+        log.warn(s"scala slow for (${work.mkString(",")})")
+      }
 
       result
         .zip(rResult)
