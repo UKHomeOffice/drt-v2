@@ -5,6 +5,7 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.{Queue, Transfer}
 import drt.shared.Terminals.Terminal
 import drt.shared.{AirportConfig, CrunchApi, PaxTypeAndQueue, TQM}
+import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch.LoadMinute
 import services.graphstages.WorkloadCalculator
 import services.{SDate, TryCrunch}
@@ -12,6 +13,7 @@ import services.{SDate, TryCrunch}
 import scala.collection.immutable.{Map, NumericRange, SortedMap}
 
 trait ProductionPortDeskRecsProviderLike extends PortDeskRecsProviderLike {
+  val log: Logger
   val queuesByTerminal: SortedMap[Terminal, Seq[Queue]]
   val terminalProcessingTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]]
   val divertedQueues: Map[Queue, Queue]
@@ -85,6 +87,8 @@ case class FlexedPortDeskRecsProvider(queuesByTerminal: SortedMap[Terminal, Seq[
                                       crunchOffsetMinutes: Int,
                                       eGateBankSize: Int,
                                       tryCrunch: TryCrunch) extends ProductionPortDeskRecsProviderLike {
+  val log: Logger = LoggerFactory.getLogger(getClass)
+
   def terminalDescRecs(terminal: Terminal): TerminalDeskRecsProviderLike =
     FlexedTerminalDeskRecsProvider(queuesByTerminal, minMaxDesks, slas, desksByTerminal(terminal), flexedQueuesPriority, tryCrunch, eGateBankSize)
 }
@@ -113,6 +117,8 @@ case class StaticPortDeskRecsProvider(queuesByTerminal: SortedMap[Terminal, Seq[
                                       crunchOffsetMinutes: Int,
                                       eGateBankSize: Int,
                                       tryCrunch: TryCrunch) extends ProductionPortDeskRecsProviderLike {
+  val log: Logger = LoggerFactory.getLogger(getClass)
+  
   def terminalDescRecs(terminal: Terminal): TerminalDeskRecsProviderLike =
     StaticTerminalDeskRecsProvider(queuesByTerminal, minMaxDesks, slas, tryCrunch, eGateBankSize)
 }
