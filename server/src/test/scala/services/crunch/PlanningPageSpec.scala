@@ -2,7 +2,7 @@ package services.crunch
 
 import controllers.{ArrivalGenerator, application}
 import drt.shared.FlightsApi.Flights
-import drt.shared.Terminals.T1
+import drt.shared.Terminals.{T1, T2}
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.{Optimiser, SDate, TryRenjin}
@@ -30,8 +30,17 @@ class PlanningPageSpec() extends CrunchTestLike {
     val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 20, None)
     val crunch = runCrunchGraph(
       now = () => SDate(weekBeginning).addDays(-1),
-      airportConfig = airportConfig.copy(
-        minMaxDesksByTerminalQueue = Map(T1 -> Map(Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1)))))
+      airportConfig = defaultAirportConfig.copy(
+        minMaxDesksByTerminalQueue = Map(
+          T1 -> Map(
+            Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1))),
+            Queues.NonEeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1)))
+          ),
+          T2 -> Map(
+            Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1))),
+            Queues.NonEeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1)))
+          )
+        )
       ),
       initialShifts = ShiftAssignments(Seq(assignment1)),
       cruncher = Optimiser.crunch,
@@ -51,7 +60,7 @@ class PlanningPageSpec() extends CrunchTestLike {
 
     crunch.portStateTestProbe.fishForMessage(5 seconds) {
       case ps: PortState =>
-        val cs = ps.crunchSummary(SDate(startDate1), 4, 15, T1, airportConfig.queues(T1).toList)
+        val cs = ps.crunchSummary(SDate(startDate1), 4, 15, T1, defaultAirportConfig.queuesByTerminal(T1).toList)
         val ss = ps.staffSummary(SDate(startDate1), 4, 15, T1)
         val weekOf15MinSlots: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = application.Forecast.rollUpForWeek(cs, ss)
         val firstDayFirstHour = weekOf15MinSlots.getOrElse(SDate("2017-01-02T00:00Z").millisSinceEpoch, Seq()).take(4)

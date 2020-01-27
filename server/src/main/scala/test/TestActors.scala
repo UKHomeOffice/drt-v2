@@ -14,7 +14,7 @@ object TestActors {
 
   case object ResetActor
 
-  case class TestForecastBaseArrivalsActor(now: () => SDateLike, expireAfterMillis: Long)
+  case class TestForecastBaseArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
     extends ForecastBaseArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def reset: Receive = {
@@ -28,7 +28,7 @@ object TestActors {
     override def receiveCommand: Receive = reset orElse super.receiveCommand
   }
 
-  case class TestForecastPortArrivalsActor(now: () => SDateLike, expireAfterMillis: Long)
+  case class TestForecastPortArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
     extends ForecastPortArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def reset: Receive = {
@@ -42,7 +42,7 @@ object TestActors {
     override def receiveCommand: Receive = reset orElse super.receiveCommand
   }
 
-  case class TestLiveArrivalsActor(now: () => SDateLike, expireAfterMillis: Long)
+  case class TestLiveArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
     extends LiveArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def reset: Receive = {
@@ -56,7 +56,7 @@ object TestActors {
     override def receiveCommand: Receive = reset orElse super.receiveCommand
   }
 
-  case class TestVoyageManifestsActor(now: () => SDateLike, expireAfterMillis: Long, snapshotInterval: Int)
+  case class TestVoyageManifestsActor(override val now: () => SDateLike, expireAfterMillis: Int, snapshotInterval: Int)
     extends VoyageManifestsActor(oneMegaByte, now, expireAfterMillis, Option(snapshotInterval)) {
 
     def reset: Receive = {
@@ -85,7 +85,7 @@ object TestActors {
     override def receiveCommand: Receive = reset orElse super.receiveCommand
   }
 
-  case class TestFixedPointsActor(now: () => SDateLike) extends FixedPointsActor(now) {
+  case class TestFixedPointsActor(override val now: () => SDateLike) extends FixedPointsActor(now) {
 
     def reset: Receive = {
       case ResetActor =>
@@ -119,7 +119,7 @@ object TestActors {
     private val portCode = PortCode("LHR")
   } with AggregatedArrivalsActor(ArrivalTable(portCode, PostgresTables)) {
     def reset: Receive = {
-      case ResetActor => Unit
+      case ResetActor =>
     }
 
     override def receive: Receive = reset orElse super.receive
@@ -144,7 +144,7 @@ object TestActors {
               name: String,
               portQueues: Map[Terminal, Seq[Queue]],
               now: () => SDateLike,
-              expireAfterMillis: Long,
+              expireAfterMillis: Int,
               purgePreviousSnapshots: Boolean): Props = Props(
       new TestCrunchStateActor(
         snapshotInterval,
@@ -160,8 +160,8 @@ object TestActors {
   case class TestCrunchStateActor(snapshotInterval: Int,
                                   name: String,
                                   portQueues: Map[Terminal, Seq[Queue]],
-                                  now: () => SDateLike,
-                                  expireAfterMillis: Long,
+                                  override val now: () => SDateLike,
+                                  expireAfterMillis: Int,
                                   purgePreviousSnapshots: Boolean)
     extends CrunchStateActor(
       initialMaybeSnapshotInterval = None,

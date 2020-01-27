@@ -5,7 +5,7 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{FeedStatusFailure, FeedStatusSuccess, FeedStatuses}
+import drt.shared.{FeedSourceStatuses, FeedStatusFailure, FeedStatusSuccess}
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
 
@@ -25,15 +25,15 @@ object StatusPage {
 
         <.div(
           <.h2("Feeds status"),
-          feedStatusesPot.render((allFeedStatuses: Seq[FeedStatuses]) => {
+          feedStatusesPot.render((allFeedStatuses: Seq[FeedSourceStatuses]) => {
             allFeedStatuses.map(feed => {
-              <.div(^.className := s"feed-status ${feed.ragStatus(SDate.now().millisSinceEpoch)}",
-                <.h3(feed.name),
+              <.div(^.className := s"feed-status ${feed.feedStatuses.ragStatus(SDate.now().millisSinceEpoch)}",
+                <.h3(feed.feedSource.name),
                 {
                   val times = Seq(
-                    (("Updated", "When we last received new data"), feed.lastUpdatesAt),
-                    (("Checked", "When we last checked for new data"), feed.lastSuccessAt),
-                    (("Failed", "When we last experienced a failure with the feed"), feed.lastFailureAt)
+                    (("Updated", "When we last received new data"), feed.feedStatuses.lastUpdatesAt),
+                    (("Checked", "When we last checked for new data"), feed.feedStatuses.lastSuccessAt),
+                    (("Failed", "When we last experienced a failure with the feed"), feed.feedStatuses.lastFailureAt)
                   )
                   <.ul(^.className := "times-summary", times.zipWithIndex.map {
                     case (((label, description), maybeSDate), idx) =>
@@ -46,7 +46,7 @@ object StatusPage {
                 <.div(^.className := "clear"),
                 <.h4("Recent connections"),
                 <.ul(
-                  feed.statuses.sortBy(_.date).reverse.map {
+                  feed.feedStatuses.statuses.sortBy(_.date).reverse.map {
                     case FeedStatusSuccess(date, updates) => <.li(s"${displayTime(date)}: $updates updates")
                     case FeedStatusFailure(date, _) => <.li(s"${displayTime(date)}: Connection failed")
                   }.toVdomArray

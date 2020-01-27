@@ -3,15 +3,16 @@ package services.crunch.deskrecs
 import actors.acking.AckingReceiver._
 import akka.actor.ActorRef
 import akka.pattern.AskableActorRef
-import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
 import akka.stream._
+import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
+import services.SDate
 import services.graphstages.{Buffer, Crunch}
-import services.{SDate, TryCrunch, TryRenjin}
+import services.{SDate, TryCrunch}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -21,16 +22,14 @@ object RunnableDeskRecs {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def apply(portStateActor: ActorRef,
-            minutesToCrunch: Int,
-            airportConfig: AirportConfig,
-            flightsToDeskRecs: (FlightsWithSplits, MillisSinceEpoch) => DeskRecMinutes,
+            portDeskRecs: PortDeskRecsProviderLike,
             buffer: Buffer)
            (implicit executionContext: ExecutionContext, timeout: Timeout = new Timeout(10 seconds)): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
     val askablePortStateActor: AskableActorRef = portStateActor
 
-    val crunchPeriodStartMillis: SDateLike => SDateLike = Crunch.crunchStartWithOffset(airportConfig.crunchOffsetMinutes)
+    val crunchPeriodStartMillis: SDateLike => SDateLike = Crunch.crunchStartWithOffset(portDeskRecs.crunchOffsetMinutes)
 
     val graph = GraphDSL.create(
       Source.actorRefWithAck[List[Long]](Ack).async.addAttributes(Attributes.inputBuffer(1, 1000)),
@@ -46,13 +45,11 @@ object RunnableDeskRecs {
           bufferAsync
             .mapAsync(1) { crunchStartMillis =>
               log.info(s"Asking for flights for ${SDate(crunchStartMillis).toISOString}")
-              flightsToCrunch(askablePortStateActor)(minutesToCrunch, crunchStartMillis)
+              flightsToCrunch(askablePortStateActor)(portDeskRecs.minutesToCrunch, crunchStartMillis)
             }
             .map { case (crunchStartMillis, flights) =>
               log.info(s"Crunching ${SDate(crunchStartMillis).toISOString} flights: ${flights.flightsToUpdate.size}")
-              val deskRecs = flightsToDeskRecs(flights, crunchStartMillis)
-              log.info(s"Finished crunching")
-              deskRecs
+              portDeskRecs.flightsToDeskRecs(flights, crunchStartMillis)
             } ~> killSwitch ~> deskRecsSink
 
           ClosedShape
@@ -72,13 +69,15 @@ object RunnableDeskRecs {
         Future((crunchStartMillis, FlightsWithSplits(List(), List())))
     }
 
-  def start(portStateActor: ActorRef, airportConfig: AirportConfig, now: () => SDateLike, recrunchOnStart: Boolean, forecastMaxDays: Int, minutesPerDay: Int, tryCrunch: TryCrunch)
+  def start(portStateActor: ActorRef,
+            portDeskRecs: ProductionPortDeskRecsProviderLike,
+            now: () => SDateLike,
+            recrunchOnStart: Boolean,
+            forecastMaxDays: Int)
            (implicit ec: ExecutionContext, mat: Materializer): (ActorRef, UniqueKillSwitch) = {
-    val flightsToDeskRecs = Crunch.flightsToDeskRecs(minutesPerDay, airportConfig, tryCrunch)
-
     val initialDaysToCrunch = if (recrunchOnStart) {
       val today = now()
-      val millisToCrunchStart = Crunch.crunchStartWithOffset(airportConfig.crunchOffsetMinutes) _
+      val millisToCrunchStart = Crunch.crunchStartWithOffset(portDeskRecs.crunchOffsetMinutes) _
       (0 until forecastMaxDays).map(d => {
         millisToCrunchStart(today.addDays(d)).millisSinceEpoch
       })
@@ -86,9 +85,8 @@ object RunnableDeskRecs {
 
     val buffer = Buffer(initialDaysToCrunch)
 
-    RunnableDeskRecs(portStateActor, minutesPerDay, airportConfig, flightsToDeskRecs, buffer).run()
+    RunnableDeskRecs(portStateActor, portDeskRecs, buffer).run()
   }
-
 }
 
 case class GetFlights(from: MillisSinceEpoch, to: MillisSinceEpoch)

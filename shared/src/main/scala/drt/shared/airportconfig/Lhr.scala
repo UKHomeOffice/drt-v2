@@ -7,6 +7,8 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals._
 import drt.shared._
 
+import scala.collection.immutable.SortedMap
+
 object Lhr extends AirportConfigLike {
   val lhrDefaultTerminalProcessingTimes: Map[PaxTypeAndQueue, Double] = Map(
     eeaMachineReadableToDesk -> 25d / 60,
@@ -32,7 +34,7 @@ object Lhr extends AirportConfigLike {
 
   val config = AirportConfig(
     portCode = PortCode("LHR"),
-    queues = Map(
+    queuesByTerminal = SortedMap(
       T2 -> Seq(EeaDesk, EGate, NonEeaDesk, FastTrack, Transfer),
       T3 -> Seq(EeaDesk, EGate, NonEeaDesk, FastTrack, Transfer),
       T4 -> Seq(EeaDesk, EGate, NonEeaDesk, FastTrack, Transfer),
@@ -41,7 +43,6 @@ object Lhr extends AirportConfigLike {
     slaByQueue = Map(EeaDesk -> 25, EGate -> 15, NonEeaDesk -> 45, FastTrack -> 15),
     crunchOffsetMinutes = 120,
     dayLengthHours = 36,
-    terminals = Seq(T2, T3, T4, T5),
     defaultWalkTimeMillis = Map(T2 -> 900000L, T3 -> 660000L, T4 -> 900000L, T5 -> 660000L),
     terminalPaxSplits = List(T2, T3, T4, T5).map(t => (t, SplitRatios(
       SplitSources.TerminalAverage,
@@ -115,6 +116,14 @@ object Lhr extends AirportConfigLike {
         EeaDesk -> (1.0 - 0.8466)
       )))
     ),
-    hasTransfer = true
+    hasTransfer = true,
+    maybeCiriumEstThresholdHours = Option(6),
+    feedSources = Seq(LiveBaseFeedSource, LiveFeedSource, ForecastFeedSource, AclFeedSource, ApiFeedSource),
+    desksByTerminal = Map[Terminal, Int](
+      T2 -> 36,
+      T3 -> 28,
+      T4 -> 39,
+      T5 -> 34
+    )
   )
 }

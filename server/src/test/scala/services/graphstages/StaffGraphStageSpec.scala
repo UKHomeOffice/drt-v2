@@ -98,7 +98,9 @@ class StaffGraphStageSpec extends CrunchTestLike {
       StaffMinutes(Seq()),
       () => SDate(date),
       oneDayMillis,
-      airportConfig.copy(terminals = Seq(T1)),
+      defaultAirportConfig.copy(
+        queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
+      ),
       numDays,
       false)
     val probe = TestProbe("staff")
@@ -135,7 +137,9 @@ class StaffGraphStageSpec extends CrunchTestLike {
       StaffMinutes(Seq()),
       () => SDate(date),
       oneDayMillis,
-      airportConfig.copy(terminals = Seq(T1)),
+      defaultAirportConfig.copy(
+        queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
+      ),
       numDays,
       false)
     val probe = TestProbe("staff")
@@ -183,7 +187,9 @@ class StaffGraphStageSpec extends CrunchTestLike {
       StaffMinutes(Seq()),
       () => SDate(date),
       oneDayMillis,
-      airportConfig.copy(terminals = Seq(T1)),
+      defaultAirportConfig.copy(
+        queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
+      ),
       numDays,
       false)
     val probe = TestProbe("staff")
@@ -225,7 +231,9 @@ class StaffGraphStageSpec extends CrunchTestLike {
       StaffMinutes(Seq()),
       () => SDate(date),
       oneDayMillis,
-      airportConfig.copy(terminals = Seq(T1)),
+      defaultAirportConfig.copy(
+        queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
+      ),
       numDays,
       false)
     val probe = TestProbe("staff")

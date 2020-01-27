@@ -27,7 +27,7 @@ import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
+import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals._
 import drt.shared._
 import graphs.SinkToSourceBridge
@@ -44,9 +44,9 @@ import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedRes
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services.SplitsProvider.SplitProvider
 import services._
-import services.crunch.deskrecs.RunnableDeskRecs
+import services.crunch.deskrecs.{FlexedPortDeskRecsProvider, RunnableDeskRecs, StaticPortDeskRecsProvider}
 import services.crunch.{CrunchProps, CrunchSystem}
-import services.graphstages.Crunch.{LoadMinute, crunchLoads, oneDayMillis, oneMinuteMillis}
+import services.graphstages.Crunch.{oneDayMillis, oneMinuteMillis}
 import services.graphstages._
 import slickdb.{ArrivalTable, Tables, VoyageManifestPassengerInfoTable}
 
@@ -71,11 +71,15 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   def run(): Unit
 
-  def getFeedStatus: Future[Seq[FeedStatuses]]
+  val feedActors: Seq[AskableActorRef]
+
+  def isValidFeedSource(fs: FeedSource): Boolean
+
+  def getFeedStatus: Future[Seq[FeedSourceStatuses]]
 }
 
 object DrtStaticParameters {
-  val expireAfterMillis: Long = 2 * oneDayMillis
+  val expireAfterMillis: Int = 2 * oneDayMillis
 
   val liveDaysAhead: Int = 2
 
@@ -188,8 +192,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   val purgeOldForecastSnapshots = true
 
   val forecastMaxMillis: () => MillisSinceEpoch = () => now().addDays(params.forecastMaxDays).millisSinceEpoch
-  val liveCrunchStateProps: Props = CrunchStateActor.props(Option(airportConfig.portStateSnapshotInterval), params.snapshotMegaBytesLivePortState, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots, forecastMaxMillis)
-  val forecastCrunchStateProps: Props = CrunchStateActor.props(Option(100), params.snapshotMegaBytesFcstPortState, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots, forecastMaxMillis)
+  val liveCrunchStateProps: Props = CrunchStateActor.props(Option(airportConfig.portStateSnapshotInterval), params.snapshotMegaBytesLivePortState, "crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldLiveSnapshots, forecastMaxMillis)
+  val forecastCrunchStateProps: Props = CrunchStateActor.props(Option(100), params.snapshotMegaBytesFcstPortState, "forecast-crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldForecastSnapshots, forecastMaxMillis)
 
   lazy val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastBaseArrivalsActor], params.snapshotMegaBytesBaseArrivals, now, expireAfterMillis), name = "base-arrivals-actor")
   lazy val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastPortArrivalsActor], params.snapshotMegaBytesFcstArrivals, now, expireAfterMillis), name = "forecast-arrivals-actor")
@@ -214,12 +218,12 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], now))
   lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], now, time48HoursAgo(now)))
 
-  lazy val alertsActor: ActorRef = system.actorOf(Props(classOf[AlertsActor]))
+  lazy val alertsActor: ActorRef = system.actorOf(Props(classOf[AlertsActor], now))
   val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
 
   val s3ApiProvider = S3ApiProvider(params.awSCredentials, params.dqZipBucketName)
   val initialManifestsState: Option[VoyageManifestState] = initialState[VoyageManifestState](voyageManifestsActor)
-  val latestZipFileName: String = initialManifestsState.map(_.latestZipFilename).getOrElse("")
+  val latestZipFileName: String = S3ApiProvider.latestUnexpiredDqZipFilename(initialManifestsState.map(_.latestZipFilename), now, expireAfterMillis)
 
   lazy val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
   lazy val voyageManifestsHistoricSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
@@ -250,13 +254,18 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       } yield (lps, fps, ba, fa, la, ra)
     }
 
+    val portDeskRecs = if (config.get[Boolean]("crunch.flex-desks"))
+      FlexedPortDeskRecsProvider(airportConfig, 1440, Optimiser.crunch)
+    else
+      StaticPortDeskRecsProvider(airportConfig, 1440, Optimiser.crunch)
+
     futurePortStates.onComplete {
       case Success((maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeRegisteredArrivals)) =>
         system.log.info(s"Successfully restored initial state for App")
         val initialPortState: Option[PortState] = mergePortStates(maybeForecastState, maybeLiveState)
         initialPortState.foreach(ps => portStateActor ! ps)
 
-        val (crunchSourceActor: ActorRef, _) = RunnableDeskRecs.start(portStateActor, airportConfig, now, params.recrunchOnStart, params.forecastMaxDays, 1440, Optimiser.crunch)
+        val (crunchSourceActor: ActorRef, _) = RunnableDeskRecs.start(portStateActor, portDeskRecs, now, params.recrunchOnStart, params.forecastMaxDays)
         portStateActor ! SetCrunchActor(crunchSourceActor)
 
         val (manifestRequestsSource, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
@@ -271,7 +280,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
           maybeLiveArrivals,
           manifestRequestsSink,
           manifestResponsesSource,
-          params.recrunchOnStart,
           params.refreshArrivalsOnStart,
           checkRequiredStaffUpdatesOnStartup = true)
 
@@ -333,15 +341,21 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
     }
   }
 
-  override def getFeedStatus: Future[Seq[FeedStatuses]] = {
-    val actors: Seq[AskableActorRef] = Seq(liveArrivalsActor, liveBaseArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
+  override val feedActors: Seq[AskableActorRef] = Seq(liveArrivalsActor, liveBaseArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
 
-    val statuses: Seq[Future[Option[FeedStatuses]]] = actors.map(a => queryActorWithRetry[FeedStatuses](a, GetFeedStatuses))
+  override def getFeedStatus: Future[Seq[FeedSourceStatuses]] = {
+    val futureMaybeStatuses = feedActors.map(a => queryActorWithRetry[FeedSourceStatuses](a, GetFeedStatuses))
 
     Future
-      .sequence(statuses)
-      .map(maybeStatuses => maybeStatuses.collect { case Some(fs) => fs })
+      .sequence(futureMaybeStatuses)
+      .map(
+        maybeStatuses => maybeStatuses
+          .collect { case Some(fs) => fs }
+          .filter(fss => isValidFeedSource(fss.feedSource))
+      )
   }
+
+  override def isValidFeedSource(fs: FeedSource): Boolean = airportConfig.feedSources.contains(fs)
 
   def startScheduledFeedImports(crunchInputs: CrunchSystem[Cancellable]): Unit = {
     if (airportConfig.feedPortCode == PortCode("LHR")) params.maybeBlackJackUrl.map(csvUrl => {
@@ -373,7 +387,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
                         initialLiveArrivals: Option[mutable.SortedMap[UniqueArrival, Arrival]],
                         manifestRequestsSink: Sink[List[Arrival], NotUsed],
                         manifestResponsesSource: Source[List[BestAvailableManifest], NotUsed],
-                        recrunchOnStart: Boolean,
                         refreshArrivalsOnStart: Boolean,
                         checkRequiredStaffUpdatesOnStartup: Boolean): CrunchSystem[Cancellable] = {
 
@@ -544,7 +557,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   private def randomArrivals(): Source[ArrivalsFeedResponse, Cancellable] = {
     val arrivals = ArrivalGenerator.arrivals(now, airportConfig.terminals)
     Source.tick(1 millisecond, 1 minute, NotUsed).map { _ =>
-      ArrivalsFeedSuccess(Flights(arrivals))
+      ArrivalsFeedSuccess(Flights(arrivals.toSeq))
     }
   }
 
@@ -648,7 +661,7 @@ object ArrivalGenerator {
     )
   }
 
-  def arrivals(now: () => SDateLike, terminalNames: Seq[Terminal]): Seq[Arrival] = {
+  def arrivals(now: () => SDateLike, terminalNames: Iterable[Terminal]): Iterable[Arrival] = {
     val today = now().toISODateOnly
     val arrivals = for {
       terminal <- terminalNames

@@ -9,6 +9,7 @@ import drt.shared.Alert
 import org.joda.time.DateTime
 import org.specs2.matcher.Scope
 import org.specs2.mutable.Specification
+import services.SDate
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -19,7 +20,7 @@ class AlertsActorSpec extends Specification {
   isolated
 
   private def alertsActor(system: ActorSystem) = {
-    val actor = system.actorOf(Props(classOf[AlertsActor]), "alertsActor")
+    val actor = system.actorOf(Props(classOf[AlertsActor], () => SDate.now), "alertsActor")
     actor
   }
 

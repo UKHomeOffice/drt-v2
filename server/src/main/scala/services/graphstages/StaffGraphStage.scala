@@ -19,7 +19,7 @@ class StaffGraphStage(name: String = "",
                       optionalInitialMovements: Option[Seq[StaffMovement]],
                       initialStaffMinutes: StaffMinutes,
                       now: () => SDateLike,
-                      expireAfterMillis: MillisSinceEpoch,
+                      expireAfterMillis: Int,
                       airportConfig: AirportConfig,
                       numberOfDays: Int,
                       checkRequiredUpdatesOnStartup: Boolean) extends GraphStage[FanInShape3[ShiftAssignments, FixedPointAssignments, Seq[StaffMovement], StaffMinutes]] {
@@ -93,7 +93,7 @@ class StaffGraphStage(name: String = "",
 
       val requiringUpdate = maybeUpdates.collect { case Some(millis) => millis }
 
-      log.info(s"Finished checking. Found ${requiringUpdate.length} minutes requiring an update")
+      log.info(s"Finished checking. Found ${requiringUpdate.size} minutes requiring an update")
 
       requiringUpdate.toSet
     }

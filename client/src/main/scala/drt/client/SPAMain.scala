@@ -9,7 +9,7 @@ import drt.client.components.{AlertsPage, ContactPage, EditKeyCloakUserPage, Glo
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.client.services.handlers.GetFeedStatuses
+import drt.client.services.handlers.GetFeedSourceStatuses
 import drt.shared.SDateLike
 import drt.shared.Terminals.Terminal
 import japgolly.scalajs.react.Callback
@@ -68,8 +68,8 @@ object SPAMain {
   }
 
   case class TerminalPageTabLoc(terminalName: String,
-                                mode: String = "current",
-                                subMode: String = "desksAndQueues",
+                                mode: String = "dashboard",
+                                subMode: String = "summary",
                                 queryParams: Map[String, String] = Map.empty[String, String]
                                ) extends Loc {
     val terminal = Terminal(terminalName)
@@ -145,7 +145,7 @@ object SPAMain {
       GetLoggedInStatus,
       GetAirportConfig,
       UpdateMinuteTicker,
-      GetFeedStatuses(),
+      GetFeedSourceStatuses(),
       GetAlerts(0L),
       GetShowAlertModalDialog,
       GetOohStatus,

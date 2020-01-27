@@ -38,7 +38,6 @@ class TestManifestsActor extends Actor with ActorLogging {
 
     case SubscribeResponseQueue(manifestsResponse) =>
       maybeSubscriber = Option(manifestsResponse)
-      maybeManifests.map(manifests => ManifestsFeedSuccess(DqManifests("", manifests)))
+      maybeManifests.foreach(manifests => ManifestsFeedSuccess(DqManifests("", manifests)))
   }
 }
-

@@ -7,6 +7,7 @@ import drt.shared.Terminals.{InvalidTerminal, Terminal}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
+import services.arrivals.{ArrivalDataSanitiser, LiveArrivalsUtil}
 import services.metrics.{Metrics, StageTimer}
 
 import scala.collection.immutable.SortedMap
@@ -31,7 +32,8 @@ class ArrivalsGraphStage(name: String = "",
                          initialMergedArrivals: mutable.SortedMap[UniqueArrival, Arrival],
                          pcpArrivalTime: Arrival => MilliDate,
                          validPortTerminals: Set[Terminal],
-                         expireAfterMillis: Long,
+                         arrivalDataSanitiser: ArrivalDataSanitiser,
+                         expireAfterMillis: Int,
                          now: () => SDateLike)
   extends GraphStage[FanInShape4[List[Arrival], List[Arrival], List[Arrival], List[Arrival], ArrivalsDiff]] {
 
@@ -257,11 +259,19 @@ class ArrivalsGraphStage(name: String = "",
       mergeBestFieldsFromSources(baseArrival, mergeArrival(key).getOrElse(baseArrival))
     }
 
+
     def mergeArrival(key: UniqueArrival): Option[Arrival] = {
-      val maybeBestArrival: Option[Arrival] = (liveArrivals.get(key), liveBaseArrivals.get(key)) match {
+      val maybeLiveBaseArrivalWithSanitisedData = liveBaseArrivals.get(key).map(arrivalDataSanitiser.withSaneEstimates)
+      val maybeBestArrival: Option[Arrival] = (
+        liveArrivals.get(key),
+        maybeLiveBaseArrivalWithSanitisedData) match {
         case (Some(liveArrival), None) => Option(liveArrival)
         case (Some(liveArrival), Some(baseLiveArrival)) =>
-          Option(LiveArrivalsUtil.mergePortFeedWithBase(liveArrival, baseLiveArrival))
+          val mergedLiveArrival = LiveArrivalsUtil.mergePortFeedWithBase(liveArrival, baseLiveArrival)
+          val sanitisedLiveArrival = ArrivalDataSanitiser
+            .arrivalDataSanitiserWithoutThresholds
+            .withSaneEstimates(mergedLiveArrival)
+          Option(sanitisedLiveArrival)
         case (None, Some(baseLiveArrival)) if forecastBaseArrivals.contains(key) =>
 
           Option(baseLiveArrival)

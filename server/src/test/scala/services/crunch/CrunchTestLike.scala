@@ -22,10 +22,11 @@ import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services._
-import services.crunch.deskrecs.RunnableDeskRecs
-import services.graphstages.{Buffer, Crunch, CrunchMocks}
+import services.crunch.deskrecs.{FlexedPortDeskRecsProvider, RunnableDeskRecs, StaticPortDeskRecsProvider}
+import services.graphstages.CrunchMocks
 import slickdb.Tables
 
+import scala.collection.immutable.SortedMap
 import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor}
@@ -66,7 +67,7 @@ case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete
                                       aggregatedArrivalsActor: ActorRef,
                                       portStateActor: ActorRef,
                                       deskRecsGraphKillSwitch: UniqueKillSwitch) {
-  def shutdown: Unit = {
+  def shutdown(): Unit = {
     baseArrivalsInput.complete()
     forecastArrivalsInput.complete()
     liveArrivalsInput.complete()
@@ -103,11 +104,10 @@ class CrunchTestLike
   val uniquifyArrivals: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] =
     CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight)
 
-  val airportConfig = AirportConfig(
+  val defaultAirportConfig = AirportConfig(
     portCode = PortCode("STN"),
-    queues = Map(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk), T2 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk)),
+    queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk), T2 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk)),
     slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 20, Queues.NonEeaDesk -> 45),
-    terminals = Seq(T1, T2),
     defaultWalkTimeMillis = Map(),
     terminalPaxSplits = List(T1, T2).map(t => (t, SplitRatios(
       SplitSources.TerminalAverage,
@@ -154,7 +154,8 @@ class CrunchTestLike
         B5JPlusNational -> List(Queues.EeaDesk -> 1),
         B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
       )
-    )
+    ),
+    desksByTerminal = Map(T1 -> 40, T2 -> 40)
   )
 
   val pcpForFlightFromSch: Arrival => MilliDate = (a: Arrival) => MilliDate(SDate(a.Scheduled).millisSinceEpoch)
@@ -177,11 +178,11 @@ class CrunchTestLike
                      initialLiveBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap(),
                      initialLiveArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap(),
                      initialPortState: Option[PortState] = None,
-                     airportConfig: AirportConfig = airportConfig,
+                     airportConfig: AirportConfig = defaultAirportConfig,
                      csvSplitsProvider: SplitsProvider.SplitProvider = (_, _) => None,
                      pcpArrivalTime: Arrival => MilliDate = pcpForFlightFromSch,
                      minutesToCrunch: Int = 60,
-                     expireAfterMillis: Long = DrtStaticParameters.expireAfterMillis,
+                     expireAfterMillis: Int = DrtStaticParameters.expireAfterMillis,
                      now: () => SDateLike,
                      initialShifts: ShiftAssignments = ShiftAssignments.empty,
                      initialFixedPoints: FixedPointAssignments = FixedPointAssignments.empty,
@@ -194,8 +195,11 @@ class CrunchTestLike
                      maxDaysToCrunch: Int = 2,
                      checkRequiredStaffUpdatesOnStartup: Boolean = false,
                      refreshArrivalsOnStart: Boolean = false,
-                     recrunchOnStart: Boolean = false
+                     recrunchOnStart: Boolean = false,
+                     flexDesks: Boolean = false
                     ): CrunchGraphInputsAndProbes = {
+
+    airportConfig.assertValid()
 
     val portStateProbe = testProbe("portstate")
     val forecastBaseArrivalsProbe = testProbe("forecast-base-arrivals")
@@ -212,7 +216,12 @@ class CrunchTestLike
     val portStateActor = createPortStateActor(portStateProbe, now)
     initialPortState.foreach(ps => portStateActor ! ps)
 
-    val (millisToCrunchActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, airportConfig, now, recrunchOnStart, maxDaysToCrunch, minutesToCrunch, cruncher)
+    val portDescRecs = if (flexDesks)
+      FlexedPortDeskRecsProvider(airportConfig, minutesToCrunch, cruncher)
+    else
+      StaticPortDeskRecsProvider(airportConfig, minutesToCrunch, cruncher)
+
+    val (millisToCrunchActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDescRecs, now, recrunchOnStart, maxDaysToCrunch)
     portStateActor ! SetCrunchActor(millisToCrunchActor)
 
     val manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)

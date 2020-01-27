@@ -12,7 +12,7 @@ import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
 import services.crunch.VoyageManifestGenerator.{euPassport, inTransitFlag}
 
-import scala.collection.immutable.Seq
+import scala.collection.immutable.{Seq, SortedMap}
 import scala.concurrent.duration._
 
 class TransferPaxInApiSpec extends CrunchTestLike {
@@ -21,10 +21,10 @@ class TransferPaxInApiSpec extends CrunchTestLike {
 
   val fiveMinutes: Double = 600d / 60
 
-  val lhrAirportConfig: AirportConfig = airportConfig.copy(
+  val lhrAirportConfig: AirportConfig = defaultAirportConfig.copy(
     portCode = PortCode("LHR"),
     terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
-    queues = Map(T1 -> Seq(EeaDesk)),
+    queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk)),
     terminalPaxTypeQueueAllocation = Map(
       T1 -> Map(
         EeaMachineReadable -> List(Queues.EeaDesk -> 1.0),
@@ -36,7 +36,6 @@ class TransferPaxInApiSpec extends CrunchTestLike {
         B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
       )
     ),
-    terminals = Seq(T1),
     hasTransfer = true
   )
 

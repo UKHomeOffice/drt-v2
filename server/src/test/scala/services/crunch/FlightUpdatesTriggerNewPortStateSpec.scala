@@ -11,7 +11,7 @@ import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 
-import scala.collection.immutable.Seq
+import scala.collection.immutable.{Seq, SortedMap}
 import scala.concurrent.duration._
 
 
@@ -31,13 +31,12 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
     val inputFlightsAfter = Flights(List(updatedArrival))
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
-      airportConfig = airportConfig.copy(
+      airportConfig = defaultAirportConfig.copy(
         terminalProcessingTimes = Map(T1 -> Map(
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60
         )),
-        terminals = Seq(T1),
-        queues = Map(T1 -> Seq(EeaDesk, EGate))
+        queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate))
       ))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore))
@@ -70,13 +69,12 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
     val inputFlightsAfter = Flights(List(updatedArrival))
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
-      airportConfig = airportConfig.copy(
+      airportConfig = defaultAirportConfig.copy(
         terminalProcessingTimes = Map(T1 -> Map(
           eeaMachineReadableToDesk -> 25d / 60,
           eeaMachineReadableToEGate -> 25d / 60
         )),
-        terminals = Seq(T1),
-        queues = Map(T1 -> Seq(EeaDesk, EGate))
+        queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate))
       ))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore))

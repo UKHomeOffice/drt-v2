@@ -1,12 +1,14 @@
 package drt.shared
 
 import drt.shared.PaxTypes._
-import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
+import drt.shared.Queues.{EGate, EeaDesk, FastTrack, NonEeaDesk, Queue, QueueDesk, Transfer}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.Terminal
 import ujson.Js.Value
 import upickle.Js
 import upickle.default.{ReadWriter, macroRW, readwriter}
+
+import scala.collection.immutable.SortedMap
 
 trait ClassNameForToString {
   override val toString: String = getClass.toString.split("\\$").last
@@ -74,6 +76,7 @@ object Terminals {
 }
 
 object Queues {
+
   sealed trait Queue extends ClassNameForToString with Ordered[Queue] {
     override def compare(that: Queue): Int = toString.compareTo(that.toString)
   }
@@ -218,10 +221,9 @@ object ProcessingTimes {
 }
 
 case class AirportConfig(portCode: PortCode,
-                         queues: Map[Terminal, Seq[Queue]],
+                         queuesByTerminal: SortedMap[Terminal, Seq[Queue]],
                          divertedQueues: Map[Queue, Queue] = Map(),
                          slaByQueue: Map[Queue, Int],
-                         terminals: Seq[Terminal],
                          timeToChoxMillis: Long = 300000L,
                          firstPaxOffMillis: Long = 180000L,
                          defaultWalkTimeMillis: Map[Terminal, Long],
@@ -244,8 +246,35 @@ case class AirportConfig(portCode: PortCode,
                          role: Role,
                          cloneOfPortCode: Option[PortCode] = None,
                          terminalPaxTypeQueueAllocation: Map[Terminal, Map[PaxType, Seq[(Queue, Double)]]],
-                         hasTransfer: Boolean = false
+                         hasTransfer: Boolean = false,
+                         maybeCiriumEstThresholdHours: Option[Int] = None,
+                         maybeCiriumTaxiThresholdMinutes: Option[Int] = Option(20),
+                         feedSources: Seq[FeedSource] = Seq(LiveBaseFeedSource, LiveFeedSource, AclFeedSource, ApiFeedSource),
+                         desksByTerminal: Map[Terminal, Int],
+                         flexedQueuesPriority: List[Queue] = List(EeaDesk, NonEeaDesk, QueueDesk, FastTrack)
                         ) {
+  def assertValid(): Unit = {
+    queuesByTerminal.values.flatten.toSet
+      .filterNot(_ == Transfer)
+      .foreach { queue: Queue =>
+        assert(slaByQueue.contains(queue), s"Missing sla for $queue @ $portCode")
+      }
+    queuesByTerminal.foreach { case (terminal, tQueues) =>
+      assert(minMaxDesksByTerminalQueue.contains(terminal), s"Missing min/max desks for terminal $terminal @ $portCode")
+      tQueues
+        .filterNot(_ == Transfer)
+        .foreach { tQueue =>
+          assert(minMaxDesksByTerminalQueue(terminal).contains(tQueue), s"Missing min/max desks for $tQueue for terminal $terminal @ $portCode")
+        }
+    }
+  }
+
+  def minDesksForTerminal(tn: Terminal): Map[Queue, List[Int]] = minMaxDesksByTerminalQueue.getOrElse(tn, Map()).mapValues(_._1)
+
+  def maxDesksForTerminal(tn: Terminal): Map[Queue, List[Int]] = minMaxDesksByTerminalQueue.getOrElse(tn, Map()).mapValues(_._2)
+
+  val terminals: Iterable[Terminal] = queuesByTerminal.keys
+
   val terminalSplitQueueTypes: Map[Terminal, Set[Queue]] = terminalPaxSplits.map {
     case (terminal, splitRatios) =>
       (terminal, splitRatios.splits.map(_.paxType.queueType).toSet)
@@ -255,19 +284,27 @@ case class AirportConfig(portCode: PortCode,
     terminalSplitQueueTypes.getOrElse(terminal, Set()).contains(q)
   }
 
-  def paxTypeAndQueueOrder(terminalName: Terminal): List[PaxTypeAndQueue] = PaxTypesAndQueues.inOrder.filter { q =>
-    queues.getOrElse(terminalName, List()).contains(q.queueType)
-  }
-
   def feedPortCode: PortCode = cloneOfPortCode.getOrElse(portCode)
 
-  def nonTransferQueues(terminalName: Terminal): Seq[Queue] = queues(terminalName).collect {
+  def nonTransferQueues(terminalName: Terminal): Seq[Queue] = queuesByTerminal(terminalName).collect {
     case queue if queue != Queues.Transfer => queue
   }
 }
 
 object AirportConfig {
+  implicit val rwQueues: ReadWriter[SortedMap[Terminal, Seq[Queue]]] = readwriter[Map[Terminal, Seq[Queue]]].bimap[SortedMap[Terminal, Seq[Queue]]](
+    sm => Map[Terminal, Seq[Queue]]() ++ sm,
+    m => SortedMap[Terminal, Seq[Queue]]() ++ m
+  )
+
   implicit val rw: ReadWriter[AirportConfig] = macroRW
+
+  def desksByTerminalDefault(minMaxDesksByTerminalQueue: Map[Terminal, Map[Queue, (List[Int], List[Int])]])(terminal: Terminal): List[Int] = minMaxDesksByTerminalQueue.getOrElse(terminal, Map())
+    .filterKeys(_ != EGate)
+    .map { case (_, (_, max)) => max }
+    .reduce[List[Int]] {
+      case (max1, max2) => max1.zip(max2).map { case (m1, m2) => m1 + m2 }
+    }
 }
 
 case class ContactDetails(supportEmail: Option[String], oohPhone: Option[String])

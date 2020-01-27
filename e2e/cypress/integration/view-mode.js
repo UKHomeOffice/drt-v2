@@ -16,6 +16,7 @@ describe('View Modes', function () {
         .asABorderForceOfficer()
         .navigateHome()
         .navigateToMenuItem('T1')
+        .selectCurrentTab()
         .chooseArrivalsTab()
         .get('#tomorrow').click()
         .reload()
@@ -46,6 +47,7 @@ describe('View Modes', function () {
         .asABorderForceOfficer()
         .navigateHome()
         .navigateToMenuItem('T1')
+        .selectCurrentTab()
         .chooseArrivalsTab()
         .choose24Hours()
         .addFlight({
@@ -78,6 +80,7 @@ describe('View Modes', function () {
         .asABorderForceOfficer()
         .navigateHome()
         .navigateToMenuItem('T1')
+        .selectCurrentTab()
         .chooseArrivalsTab()
         .get('#yesterday').click()
         .get('#arrivals').contains("No flights to display")

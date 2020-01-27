@@ -23,7 +23,7 @@ object CrunchStateActor {
             name: String,
             portQueues: Map[Terminal, Seq[Queue]],
             now: () => SDateLike,
-            expireAfterMillis: MillisSinceEpoch,
+            expireAfterMillis: Int,
             purgePreviousSnapshots: Boolean,
             forecastMaxMillis: () => MillisSinceEpoch) = Props(
     new CrunchStateActor(
@@ -42,8 +42,8 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
                        initialSnapshotBytesThreshold: Int,
                        name: String,
                        portQueues: Map[Terminal, Seq[Queue]],
-                       now: () => SDateLike,
-                       expireAfterMillis: MillisSinceEpoch,
+                       val now: () => SDateLike,
+                       expireAfterMillis: Int,
                        purgePreviousSnapshots: Boolean,
                        forecastMaxMillis: () => MillisSinceEpoch) extends PersistentActor with RecoveryActorLike with PersistentDrtActor[PortStateMutable] {
   override def persistenceId: String = name

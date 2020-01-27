@@ -10,7 +10,7 @@ import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
 import services.crunch.VoyageManifestGenerator._
 
-import scala.collection.immutable.List
+import scala.collection.immutable.{List, SortedMap}
 import scala.concurrent.duration._
 
 class
@@ -18,8 +18,8 @@ ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
   val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(
     now = () => SDate("2019-01-01T01:00"),
     pcpArrivalTime = pcpForFlightFromBest,
-    airportConfig = airportConfig.copy(
-      queues = Map(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate), T2 -> Seq())
+    airportConfig = defaultAirportConfig.copy(
+      queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate), T2 -> Seq())
     )
   )
   val arrivalOne: Arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("JFK"), schDt = "2019-01-01T00:00", actPax = Option(100))
@@ -128,6 +128,7 @@ ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
     }
 
     crunch.shutdown
+
     success
   }
 

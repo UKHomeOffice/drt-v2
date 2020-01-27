@@ -13,6 +13,8 @@ import manifests.passengers.BestAvailableManifest
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
+import services.crunch.deskrecs.{FlexedPortDeskRecsProvider, RunnableDeskRecs}
+import services.{SDate, TryRenjin}
 import services.{Optimiser, SDate, TryRenjin}
 import services.crunch.deskrecs.RunnableDeskRecs
 import test.TestActors.{TestStaffMovementsActor, _}
@@ -33,8 +35,8 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
   override lazy val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[TestForecastPortArrivalsActor], now, expireAfterMillis), name = "forecast-arrivals-actor")
   override lazy val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[TestLiveArrivalsActor], now, expireAfterMillis), name = "live-arrivals-actor")
 
-  val testLiveCrunchStateProps: Props = TestCrunchStateActor.props(airportConfig.portStateSnapshotInterval, "crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldLiveSnapshots)
-  val testForecastCrunchStateProps: Props = TestCrunchStateActor.props(100, "forecast-crunch-state", airportConfig.queues, now, expireAfterMillis, purgeOldForecastSnapshots)
+  val testLiveCrunchStateProps: Props = TestCrunchStateActor.props(airportConfig.portStateSnapshotInterval, "crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldLiveSnapshots)
+  val testForecastCrunchStateProps: Props = TestCrunchStateActor.props(100, "forecast-crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldForecastSnapshots)
   val testManifestsActor: ActorRef = actorSystem.actorOf(Props(classOf[TestManifestsActor]), s"TestActor-APIManifests")
 
   override lazy val liveCrunchStateActor: AskableActorRef = system.actorOf(testLiveCrunchStateProps, name = "crunch-live-state-actor")
@@ -73,6 +75,8 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
 
   override def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] = TestUserRoleProvider.getRoles(config, headers, session)
 
+  val flexDesks: Boolean = config.get[Boolean]("crunch.flex-desks")
+
   override def run(): Unit = {
     val startSystem: () => List[KillSwitch] = () => {
       val (manifestRequestsSource, bridge1Ks, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
@@ -86,7 +90,6 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
         initialLiveArrivals = None,
         manifestRequestsSink,
         manifestResponsesSource,
-        recrunchOnStart = false,
         refreshArrivalsOnStart = false,
         checkRequiredStaffUpdatesOnStartup = false
       )
@@ -94,7 +97,9 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
       val lookupRefreshDue: MillisSinceEpoch => Boolean = (lastLookupMillis: MillisSinceEpoch) => now().millisSinceEpoch - lastLookupMillis > 1000
       val manifestKillSwitch = startManifestsGraph(None, manifestResponsesSink, manifestRequestsSource, lookupRefreshDue)
 
-      val (millisToCrunchActor: ActorRef, crunchKillSwitch) = RunnableDeskRecs.start(portStateActor, airportConfig, now, params.recrunchOnStart, params.forecastMaxDays, 1440, Optimiser.crunch)
+      val portDescRecs = FlexedPortDeskRecsProvider(airportConfig, 1440, Optimiser.crunch)
+
+      val (millisToCrunchActor: ActorRef, crunchKillSwitch) = RunnableDeskRecs.start(portStateActor, portDescRecs, now, params.recrunchOnStart, params.forecastMaxDays)
       portStateActor ! SetCrunchActor(millisToCrunchActor)
       portStateActor ! SetSimulationActor(cs.loadsToSimulate)
 

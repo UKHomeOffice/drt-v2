@@ -10,7 +10,7 @@ case class LoggedInUser(userName: String, id: String, email: String, roles: Set[
 }
 
 object LoggedInUser {
-  implicit val rw: RW[AirportConfig] = macroRW
+  implicit val rw: RW[LoggedInUser] = macroRW
 }
 
 case class ShouldReload(shouldReload: Boolean)
@@ -62,7 +62,8 @@ object Roles {
     PortOperatorStaff,
     PortFeedUpload,
     ViewConfig,
-    TerminalDashboard
+    TerminalDashboard,
+    ArrivalSource
   ) ++ portRoles
 
   def parse(roleName: String): Option[Role] = availableRoles.find(role => role.name == roleName)
@@ -78,6 +79,10 @@ case object StaffEdit extends Role {
 
 case object TerminalDashboard extends Role {
   override val name: String = "terminal-dashboard"
+}
+
+case object ArrivalSource extends Role {
+  override val name: String = "arrival-source"
 }
 
 case object ApiView extends Role {

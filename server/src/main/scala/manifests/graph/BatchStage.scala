@@ -18,7 +18,7 @@ import scala.language.postfixOps
 class BatchStage(now: () => SDateLike,
                  isDueLookup: (MillisSinceEpoch, MillisSinceEpoch, SDateLike) => Boolean,
                  batchSize: Int,
-                 expireAfterMillis: MillisSinceEpoch,
+                 expireAfterMillis: Int,
                  maybeInitialState: Option[RegisteredArrivals],
                  sleepMillisOnEmptyPush: Long,
                  lookupRefreshDue: MillisSinceEpoch => Boolean)(implicit actorSystem: ActorSystem, executionContext: ExecutionContext)

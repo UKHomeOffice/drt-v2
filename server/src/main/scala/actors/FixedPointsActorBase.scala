@@ -19,7 +19,7 @@ case class SetFixedPoints(newFixedPoints: Seq[StaffAssignment])
 
 case class SetFixedPointsAck(newFixedPoints: Seq[StaffAssignment])
 
-class FixedPointsActor(now: () => SDateLike) extends FixedPointsActorBase(now) {
+class FixedPointsActor(val now: () => SDateLike) extends FixedPointsActorBase(now) {
   var subscribers: List[SourceQueueWithComplete[FixedPointAssignments]] = List()
   implicit val scheduler: Scheduler = this.context.system.scheduler
 

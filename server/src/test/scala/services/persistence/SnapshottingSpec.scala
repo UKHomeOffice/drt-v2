@@ -3,14 +3,17 @@ package services.persistence
 import actors.RecoveryActorLike
 import akka.actor.{ActorRef, Props}
 import akka.testkit.TestProbe
+import drt.shared.SDateLike
 import scalapb.GeneratedMessage
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.FlightsMessage.{FlightMessage, FlightsDiffMessage}
+import services.SDate
 import services.crunch.CrunchTestLike
 
 import scala.concurrent.duration._
 
 class TestSnapshottingActor(probe: ActorRef, snapshotMessage: GeneratedMessage, override val snapshotBytesThreshold: Int = 0, override val maybeSnapshotInterval: Option[Int] = None) extends RecoveryActorLike {
+  override val now: () => SDateLike = () => SDate.now
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {

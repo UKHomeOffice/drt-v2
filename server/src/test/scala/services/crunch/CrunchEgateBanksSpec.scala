@@ -9,7 +9,7 @@ import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.{Optimiser, SDate, TryRenjin}
 
-import scala.collection.immutable.{List, Seq}
+import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._
 
 
@@ -33,9 +33,8 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        airportConfig = airportConfig.copy(
-          terminals = Seq(T1),
-          queues = Map(T1 -> Seq(Queues.EeaDesk, Queues.EGate)),
+        airportConfig = defaultAirportConfig.copy(
+          queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.EGate)),
           terminalPaxSplits = Map(T1 -> SplitRatios(
             SplitSources.TerminalAverage,
             SplitRatio(eeaMachineReadableToDesk, 0.5),

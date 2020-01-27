@@ -7,6 +7,7 @@ import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
+import services.crunch.deskrecs.DeskRecs
 import services.graphstages.Crunch._
 import services.graphstages.StaffDeploymentCalculator.deploymentWithinBounds
 import services.metrics.{Metrics, StageTimer}
@@ -21,7 +22,7 @@ class SimulationGraphStage(name: String = "",
                            optionalInitialCrunchMinutes: Option[CrunchMinutes],
                            optionalInitialStaffMinutes: Option[StaffMinutes],
                            airportConfig: AirportConfig,
-                           expireAfterMillis: MillisSinceEpoch,
+                           expireAfterMillis: Int,
                            now: () => SDateLike,
                            simulate: Simulator,
                            crunchPeriodStartMillis: SDateLike => SDateLike,
@@ -284,8 +285,8 @@ class SimulationGraphStage(name: String = "",
       .mapValues(qmm => qmm.mapValues {
         case (minDesks, maxDesks) =>
           minuteMillis.map(m => {
-            val min = desksForHourOfDayInUKLocalTime(m, minDesks)
-            val max = desksForHourOfDayInUKLocalTime(m, maxDesks)
+            val min = DeskRecs.desksForHourOfDayInUKLocalTime(m, minDesks)
+            val max = DeskRecs.desksForHourOfDayInUKLocalTime(m, maxDesks)
             (m, (min, max))
           }).toMap
       })

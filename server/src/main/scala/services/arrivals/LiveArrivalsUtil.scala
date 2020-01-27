@@ -1,4 +1,4 @@
-package services.graphstages
+package services.arrivals
 
 import drt.shared.Arrival
 import services.SDate

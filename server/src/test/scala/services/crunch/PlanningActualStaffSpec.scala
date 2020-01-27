@@ -36,9 +36,13 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
 
     val crunch = runCrunchGraph(
       now = () => SDate(weekBeginning).addDays(-1),
-      airportConfig = airportConfig.copy(
-        terminals = Seq(T1),
-        minMaxDesksByTerminalQueue = Map(T1 -> Map(Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1)))))
+      airportConfig = defaultAirportConfig.copy(
+        queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1),
+        minMaxDesksByTerminalQueue = Map(
+          T1 -> Map(
+            Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1))),
+            Queues.NonEeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1)))
+          ))
       ),
       cruncher = Optimiser.crunch
     )
@@ -55,7 +59,7 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
 
     crunch.portStateTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
-        val cs = ps.crunchSummary(SDate(startDate1), 4, 15, T1, airportConfig.queues(T1).toList)
+        val cs = ps.crunchSummary(SDate(startDate1), 4, 15, T1, defaultAirportConfig.queuesByTerminal(T1).toList)
         val ss = ps.staffSummary(SDate(startDate1), 4, 15, T1)
         val weekOf15MinSlots: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = application.Forecast.rollUpForWeek(cs, ss)
         val firstDayFirstHour = weekOf15MinSlots.getOrElse(SDate("2017-01-02T00:00Z").millisSinceEpoch, Seq()).take(4)
@@ -82,7 +86,7 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
     val crunchMinutesT2 = crunchMinutesT1.map(_.copy(terminal = T2, deskRec = 2))
 
     val ps = PortState(List(), (crunchMinutesT1 ++ crunchMinutesT2).toList, (staffMinutesT1 ++ staffMinutesT2).toList)
-    val cs = ps.crunchSummary(SDate(0L), 4, 15, T1, airportConfig.queues(T1).toList)
+    val cs = ps.crunchSummary(SDate(0L), 4, 15, T1, defaultAirportConfig.queuesByTerminal(T1).toList)
     val ss = ps.staffSummary(SDate(0L), 4, 15, T1)
 
     val result = application.Forecast.rollUpForWeek(cs, ss).values.head.toSet

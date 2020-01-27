@@ -1,7 +1,6 @@
 package services.graphstages
 
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
@@ -70,9 +69,9 @@ object Crunch {
 
   case class CrunchRequest(flights: List[ApiFlightWithSplits], crunchStart: MillisSinceEpoch)
 
-  val oneMinuteMillis: MillisSinceEpoch = 60000L
-  val oneHourMillis: MillisSinceEpoch = oneMinuteMillis * 60
-  val oneDayMillis: MillisSinceEpoch = oneHourMillis * 24
+  val oneMinuteMillis: Int = 60000
+  val oneHourMillis: Int = oneMinuteMillis * 60
+  val oneDayMillis: Int = oneHourMillis * 24
   val minutesInADay: Int = 60 * 24
 
   val europeLondonId = "Europe/London"
@@ -186,11 +185,6 @@ object Crunch {
       }.toSet
   }
 
-  def desksForHourOfDayInUKLocalTime(dateTimeMillis: MillisSinceEpoch, desks: Seq[Int]): Int = {
-    val date = new DateTime(dateTimeMillis).withZone(europeLondonTimeZone)
-    desks(date.getHourOfDay)
-  }
-
   def purgeExpired[A <: WithTimeAccessor, B](expireable: mutable.SortedMap[A, B], atTime: MillisSinceEpoch => A, now: () => SDateLike, expireAfter: Int): Unit = {
     val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
     val sizeBefore = expireable.size
@@ -209,7 +203,7 @@ object Crunch {
     if (purgedCount > 0) log.info(s"Purged $purgedCount items (mutable.SortedSet[A])")
   }
 
-  def hasExpired[A](now: SDateLike, expireAfterMillis: Long, toMillis: A => MillisSinceEpoch)(toCompare: A): Boolean = {
+  def hasExpired[A](now: SDateLike, expireAfterMillis: Int, toMillis: A => MillisSinceEpoch)(toCompare: A): Boolean = {
     val ageInMillis = now.millisSinceEpoch - toMillis(toCompare)
     ageInMillis > expireAfterMillis
   }
@@ -298,93 +292,8 @@ object Crunch {
     else
       Set(tqms.min, tqms.max).map(m => SDate(m.minute).addMinutes(-1 * crunchOffsetMinutes).toISODateOnly)
 
-  def crunchLoads(loadMinutes: Map[TQM, LoadMinute],
-                  firstMinute: MillisSinceEpoch,
-                  lastMinute: MillisSinceEpoch,
-                  terminals: Set[Terminal],
-                  airportConfig: AirportConfig,
-                  crunch: TryCrunch): DeskRecMinutes = {
-    val validTerminals = airportConfig.queues.keys.toList
-    val terminalsToCrunch = terminals.filter(validTerminals.contains(_))
-    val terminalQueueDeskRecs = for {
-      terminal <- terminalsToCrunch
-      queue <- airportConfig.nonTransferQueues(terminal)
-    } yield {
-      val lms = (firstMinute until lastMinute by 60000).map(minute =>
-        loadMinutes.getOrElse(TQM(terminal, queue, minute), LoadMinute(terminal, queue, 0, 0, minute)))
-      val start = SDate.now().millisSinceEpoch
-      val result = crunchQueue(firstMinute, lastMinute, terminal, queue, lms, airportConfig, crunch)
-      log.info(s"(services.Optimiser) Finished optimising $terminal / $queue: Took ${SDate.now().millisSinceEpoch - start}ms")
-      result
-    }
-    DeskRecMinutes(terminalQueueDeskRecs.toSeq.flatten)
-  }
-
-  def crunchQueue(firstMinute: MillisSinceEpoch,
-                  lastMinute: MillisSinceEpoch,
-                  tn: Terminal,
-                  qn: Queue,
-                  qLms: IndexedSeq[LoadMinute],
-                  airportConfig: AirportConfig,
-                  crunch: TryCrunch): Seq[DeskRecMinute] = {
-    val sla = airportConfig.slaByQueue.getOrElse(qn, 15)
-    val paxMinutes = qLms.map(_.paxLoad)
-    val workMinutes = qLms.map(_.workLoad)
-    val adjustedWorkMinutes = if (qn == Queues.EGate) workMinutes.map(_ / airportConfig.eGateBankSize) else workMinutes
-    val minuteMillis: Seq[MillisSinceEpoch] = firstMinute until lastMinute by 60000
-    val (minDesks, maxDesks) = minMaxDesksForQueue(minuteMillis, tn, qn, airportConfig)
-    val start = SDate.now()
-    val triedResult: Try[OptimizerCrunchResult] = crunch(adjustedWorkMinutes, minDesks, maxDesks, OptimizerConfig(sla))
-    triedResult match {
-      case Success(OptimizerCrunchResult(desks, waits)) =>
-        log.debug(s"Optimizer for $qn Took ${SDate.now().millisSinceEpoch - start.millisSinceEpoch}ms")
-        minuteMillis.zipWithIndex.map {
-          case (minute, idx) =>
-            val wl = workMinutes(idx)
-            val pl = paxMinutes(idx)
-            val drm = DeskRecMinute(tn, qn, minute, pl, wl, desks(idx), waits(idx))
-            drm
-        }
-      case Failure(t) =>
-        log.warn(s"failed to crunch: $t")
-        Seq()
-    }
-  }
-
-  def minMaxDesksForQueue(deskRecMinutes: Seq[MillisSinceEpoch], tn: Terminal, qn: Queue, airportConfig: AirportConfig): (Seq[Int], Seq[Int]) = {
-    val defaultMinMaxDesks = (Seq.fill(24)(0), Seq.fill(24)(10))
-    val queueMinMaxDesks = airportConfig.minMaxDesksByTerminalQueue.getOrElse(tn, Map()).getOrElse(qn, defaultMinMaxDesks)
-    val minDesks = deskRecMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._1))
-    val maxDesks = deskRecMinutes.map(desksForHourOfDayInUKLocalTime(_, queueMinMaxDesks._2))
-    (minDesks, maxDesks)
-  }
-
-  def flightsToDeskRecs(minutesToCrunch: Int, airportConfig: AirportConfig, cruncher: TryCrunch): (FlightsWithSplits, MillisSinceEpoch) => CrunchApi.DeskRecMinutes =
-    crunchFlights(minutesToCrunch, cruncher, airportConfig)
-
-  private def crunchFlights(minutesToCrunch: Int, crunch: TryCrunch, airportConfig: AirportConfig)
-                           (flights: FlightsWithSplits, crunchStartMillis: MillisSinceEpoch): CrunchApi.DeskRecMinutes = {
-    val crunchEndMillis = SDate(crunchStartMillis).addMinutes(minutesToCrunch).millisSinceEpoch
-    val terminals = flights.flightsToUpdate.map(_.apiFlight.Terminal).toSet
-    val loadMinutes = WorkloadCalculator.flightLoadMinutes(flights, airportConfig.terminalProcessingTimes).minutes
-
-    val loadsWithDiverts = loadMinutes
-      .groupBy {
-        case (TQM(t, q, m), _) => val finalQueueName = airportConfig.divertedQueues.getOrElse(q, q)
-          TQM(t, finalQueueName, m)
-      }
-      .map {
-        case (tqm, mins) =>
-          val loads = mins.values
-          (tqm, LoadMinute(tqm.terminal, tqm.queue, loads.map(_.paxLoad).sum, loads.map(_.workLoad).sum, tqm.minute))
-      }
-
-    crunchLoads(loadsWithDiverts, crunchStartMillis, crunchEndMillis, terminals, airportConfig, crunch)
-  }
-
   def crunchStartWithOffset(offsetMinutes: Int)(minuteInQuestion: SDateLike): SDateLike = {
     val adjustedMinute = minuteInQuestion.addMinutes(-1 * offsetMinutes)
     Crunch.getLocalLastMidnight(MilliDate(adjustedMinute.millisSinceEpoch)).addMinutes(offsetMinutes)
   }
-
 }

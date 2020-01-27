@@ -16,7 +16,6 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
 
@@ -25,14 +24,13 @@ class S3ManifestPoller(sourceQueue: SourceQueueWithComplete[ManifestsFeedRespons
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  val dqRegex: Regex = "(drt_dq_[0-9]{6}_[0-9]{6})(_[0-9]{4}\\.zip)".r
-
   var liveManifestsBuffer: Option[ManifestsFeedSuccess] = None
   var lastSeenFileName: String = initialLastSeenFileName
   var lastFetchedMillis: MillisSinceEpoch = 0
 
   def fetchNewManifests(startingFileName: String): ManifestsFeedResponse = {
     log.info(s"Fetching manifests from files newer than $startingFileName")
+
     val eventualFileNameAndManifests = provider
       .manifestsFuture(startingFileName)
       .map(fetchedFilesAndManifests => {

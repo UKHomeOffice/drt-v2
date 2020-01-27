@@ -93,10 +93,16 @@ trait AirportConfProvider extends AirportConfiguration {
 
   def getPortConfFromEnvVar: AirportConfig = AirportConfigs.confByPort(portCode)
 
-  def airportConfig: AirportConfig = getPortConfFromEnvVar.copy(
-    contactEmail = contactEmail,
-    outOfHoursContactPhone = oohPhone
-  )
+  def airportConfig: AirportConfig = {
+    val configForPort = getPortConfFromEnvVar.copy(
+      contactEmail = contactEmail,
+      outOfHoursContactPhone = oohPhone
+    )
+
+    configForPort.assertValid()
+
+    configForPort
+  }
 }
 
 trait ProdPassengerSplitProviders {
@@ -171,6 +177,8 @@ class Application @Inject()(implicit val config: Configuration,
 
   ctrl.run()
 
+  val now: () => SDateLike = (() => SDate.now())
+
   val virusScannerUrl: String = config.get[String]("virus-scanner-url")
 
   val virusScanner: VirusScanner = VirusScanner(VirusScanService(virusScannerUrl))
@@ -231,7 +239,7 @@ class Application @Inject()(implicit val config: Configuration,
           case Some(portState: PortState) =>
             log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString()} on $terminal")
             val fp = application.Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
-            val hf = application.Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queues(terminal).toList)
+            val hf = application.Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
             Option(ForecastPeriodWithHeadlines(fp, hf))
           case None =>
             log.info(s"No forecast available for week beginning ${SDate(startDay).toISOString()} on $terminal")
@@ -295,7 +303,7 @@ class Application @Inject()(implicit val config: Configuration,
           futureGroupIds.map {
             case KeyCloakGroups(gps) if gps.nonEmpty =>
               log.info(s"Adding ${gps.map(_.name)} to $userId")
-              gps.map(group => {
+              gps.foreach(group => {
                 val response = keyCloakClient.addUserToGroup(userId, group.id)
                 response.map(res => log.info(s"Added group and got: ${res.status}  $res")
                 )
@@ -308,7 +316,7 @@ class Application @Inject()(implicit val config: Configuration,
         keyCloakClient
           .getGroups
           .map(kcGroups => kcGroups.filter(g => groups.contains(g.name))
-            .map(g => keyCloakClient.removeUserFromGroup(userId, g.id)))
+            .foreach(g => keyCloakClient.removeUserFromGroup(userId, g.id)))
 
       override def portStateActor: AskableActorRef = ctrl.portStateActor
 

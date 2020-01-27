@@ -6,7 +6,7 @@ import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.{FixedPointAssignments, SDateLike}
 import server.protobuf.messages.FixedPointMessage.{FixedPointsMessage, FixedPointsStateSnapshotMessage}
 
-class FixedPointsReadActor(pointInTime: SDateLike) extends FixedPointsActorBase(() => pointInTime) {
+class FixedPointsReadActor(pointInTime: SDateLike, val now: () => SDateLike) extends FixedPointsActorBase(() => pointInTime) {
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: FixedPointsStateSnapshotMessage => state = fixedPointMessagesToFixedPoints(snapshot.fixedPoints.toList)
   }
@@ -29,5 +29,5 @@ class FixedPointsReadActor(pointInTime: SDateLike) extends FixedPointsActorBase(
     recovery
   }
 
-  override def onUpdateState(data: FixedPointAssignments): Unit = Unit
+  override def onUpdateState(data: FixedPointAssignments): Unit = {}
 }

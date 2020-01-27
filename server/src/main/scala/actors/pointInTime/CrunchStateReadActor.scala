@@ -17,7 +17,7 @@ case object GetCrunchMinutes
 object CrunchStateReadActor {
   def props(snapshotInterval: Int,
             pointInTime: SDateLike,
-            expireAfterMillis: Long,
+            expireAfterMillis: Int,
             queues: Map[Terminal, Seq[Queue]],
             startMillis: MillisSinceEpoch,
             endMillis: MillisSinceEpoch): Props = Props(
@@ -34,7 +34,7 @@ object CrunchStateReadActor {
 
 class CrunchStateReadActor(snapshotInterval: Int,
                            pointInTime: SDateLike,
-                           expireAfterMillis: Long,
+                           expireAfterMillis: Int,
                            queues: Map[Terminal, Seq[Queue]],
                            startMillis: MillisSinceEpoch,
                            endMillis: MillisSinceEpoch)

@@ -4,15 +4,17 @@ import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.Terminals.{N, S}
+import drt.shared.Terminals.{N, S, Terminal}
 import drt.shared._
+
+import scala.collection.immutable.SortedMap
 
 object Lgw extends AirportConfigLike {
   import AirportConfigDefaults._
 
   val config = AirportConfig(
     portCode = PortCode("LGW"),
-    queues = Map(
+    queuesByTerminal = SortedMap(
       N -> Seq(EeaDesk, EGate, NonEeaDesk),
       S -> Seq(EeaDesk, EGate, NonEeaDesk)
     ),
@@ -22,7 +24,6 @@ object Lgw extends AirportConfigLike {
       NonEeaDesk -> 45
     ),
     hasEstChox = true,
-    terminals = Seq(N, S),
     defaultWalkTimeMillis = Map(N -> 180000L, S -> 180000L),
     terminalPaxSplits = List(N, S).map(t => (t, SplitRatios(
       SplitSources.TerminalAverage,
@@ -75,6 +76,8 @@ object Lgw extends AirportConfigLike {
       S -> (defaultQueueRatios + (EeaMachineReadable -> List(
         EGate -> 0.8375,
         EeaDesk -> (1.0 - 0.8375)
-      ))))
+      )))),
+    feedSources = Seq(LiveBaseFeedSource, LiveFeedSource, ForecastFeedSource, AclFeedSource, ApiFeedSource),
+    desksByTerminal = Map[Terminal, Int](N -> 28, S -> 25)
   )
 }

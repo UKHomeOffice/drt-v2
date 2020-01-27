@@ -1,7 +1,7 @@
-package services.graphstages
+package services.arrivals
 
-import drt.shared.{Arrival, ArrivalStatus, PortCode}
 import drt.shared.Terminals.T1
+import drt.shared.{Arrival, ArrivalStatus, PortCode}
 import org.specs2.mutable.Specification
 import services.SDate
 

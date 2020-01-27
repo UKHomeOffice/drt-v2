@@ -2,7 +2,7 @@ package services.graphstages
 
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
-import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinutes}
+import drt.shared.CrunchApi.StaffMinutes
 import drt.shared.{MilliDate, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
@@ -11,7 +11,7 @@ import services.metrics.{Metrics, StageTimer}
 
 import scala.collection.mutable
 
-class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: MillisSinceEpoch, offsetMinutes: Int) extends GraphStage[FlowShape[StaffMinutes, StaffMinutes]] {
+class StaffBatchUpdateGraphStage(now: () => SDateLike, expireAfterMillis: Int, offsetMinutes: Int) extends GraphStage[FlowShape[StaffMinutes, StaffMinutes]] {
   val inStaffMinutes: Inlet[StaffMinutes] = Inlet[StaffMinutes]("StaffMinutes.in")
   val outStaffMinutes: Outlet[StaffMinutes] = Outlet[StaffMinutes]("StaffMinutes.out")
   val stageName = "batch-staff"

@@ -35,9 +35,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        airportConfig = airportConfig.copy(
-          queues = Map(T1 -> Seq(Queues.EeaDesk, Queues.EGate)),
-          terminals = Seq(T1),
+        airportConfig = defaultAirportConfig.copy(
+          queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.EGate)),
           terminalPaxSplits = Map(T1 -> SplitRatios(
             SplitSources.TerminalAverage,
             SplitRatio(eeaMachineReadableToDesk, edSplit),
@@ -108,9 +107,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(
         now = () => SDate(scheduled),
-        airportConfig = airportConfig.copy(
-          terminals = Seq(T1),
-          queues = Map(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate)),
+        airportConfig = defaultAirportConfig.copy(
+          queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate)),
           terminalProcessingTimes = Map(T1 -> Map(
             eeaMachineReadableToDesk -> 0.25,
             eeaMachineReadableToEGate -> 0.3,
@@ -135,6 +133,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
       crunch.portStateTestProbe.fishForMessage(5 seconds) {
         case ps: PortState =>
           val resultSummary = workLoadsFromPortState(ps, 5)
+          println(s"resultSummary: $resultSummary")
           resultSummary == expected
       }
 
@@ -154,7 +153,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
         val crunch = runCrunchGraph(
           now = () => SDate(scheduled),
-          airportConfig = airportConfig.copy(
+          airportConfig = defaultAirportConfig.copy(
             terminalProcessingTimes = Map(T1 -> Map(
               eeaMachineReadableToDesk -> 20d / 60,
               eeaMachineReadableToEGate -> 35d / 60)),
@@ -195,9 +194,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
         val crunch = runCrunchGraph(
           now = () => SDate(scheduled),
-          airportConfig = airportConfig.copy(
-            terminals = Seq(T1),
-            queues = Map(T1 -> Seq(Queues.EeaDesk, Queues.EGate)),
+          airportConfig = defaultAirportConfig.copy(
+            queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.EGate)),
             terminalProcessingTimes = Map(T1 -> Map(
               eeaMachineReadableToDesk -> 20d / 60,
               eeaMachineReadableToEGate -> 35d / 60))
