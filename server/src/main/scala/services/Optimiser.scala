@@ -2,19 +2,45 @@ package services
 
 import java.io.InputStream
 
+import drt.shared.CrunchApi.MillisSinceEpoch
 import javax.script.{ScriptEngine, ScriptEngineManager}
-import org.renjin.sexp.{DoubleVector, IntVector}
+import org.renjin.sexp.{DoubleArrayVector, DoubleVector, IntVector}
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.mutable
 import scala.util.{Success, Try}
+
+class Timer {
+  val log: Logger = LoggerFactory.getLogger(getClass)
+
+  val startMillis: MillisSinceEpoch = nowMillis
+  var takenMillis: MillisSinceEpoch = 0l
+
+  private def nowMillis: MillisSinceEpoch = SDate.now().millisSinceEpoch
+
+  private def soFarMillis: MillisSinceEpoch = nowMillis - startMillis
+
+  def stop: MillisSinceEpoch = {
+    takenMillis = nowMillis - startMillis
+    takenMillis
+  }
+
+  def report(msg: String) = log.warn(s"${soFarMillis}ms $msg")
+
+  def compare(other: Timer, msg: String) = {
+    val otherMillis = other.soFarMillis - soFarMillis
+
+    if (otherMillis > soFarMillis && soFarMillis > 0) log.warn(s"$msg **slower**: ${otherMillis} > $soFarMillis")
+    else log.warn(s"$msg quicker: $otherMillis < $soFarMillis")
+  }
+}
 
 object Optimiser {
   val log: Logger = LoggerFactory.getLogger(getClass)
   val manager: ScriptEngineManager = new ScriptEngineManager()
   val engine: ScriptEngine = manager.getEngineByName("Renjin")
   var checkAllAgainstR = false
-  var checkOptimiserAgainstR = true
+  var checkOptimiserAgainstR = false
 
   def loadOptimiserScript: AnyRef = {
     if (engine == null) throw new scala.RuntimeException("Couldn't load Renjin script engine on the classpath")
@@ -40,14 +66,23 @@ object Optimiser {
              config: OptimizerConfig): Try[OptimizerCrunchResult] = {
     log.info(s"Starting optimisation for ${workloads.length} minutes of workload")
     val fairMaxD = if (workloads.length >= 60) {
+      val stimer = new Timer
       val fairXmax = rollingFairXmax(workloads.toList, minDesks.toList, blockSize, config.sla, targetWidth, rollingBuffer)
+      val rtimer = new Timer
+      rollingFairXmaxR(workloads.toList, minDesks.toList, config.sla)
+      rtimer.compare(stimer, "fair xmax")
       fairXmax.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
     } else maxDesks.toList
+    val stimer = new Timer
     val desks = optimiseWin(workloads.toList, minDesks.toList, fairMaxD, config.sla, weightChurn, weightPax, weightStaff, weightSla)
-    log.info(s"Finished. Desk recs: ${/*desks.mkString(", ")*/}")
-    log.info(s"Finished. Starting simulation for wait times")
+    val rtimer = new Timer
+    optimiseWinR(workloads.toList, minDesks.toList, fairMaxD, config.sla, weightChurn, weightPax, weightStaff, weightSla)
+    rtimer.compare(stimer, "optimise win")
+    val stimer2 = new Timer
     val waits = processWork(workloads.toList, desks.toList, config.sla, List()).waits
-    log.info(s"Finished. Wait times: ${/*waits.mkString(", ")*/}")
+    val rtimer2 = new Timer
+    processWorkR(workloads.toList, desks.toList, config.sla, List()).waits
+    rtimer2.compare(stimer2, "process work")
 
     Success(OptimizerCrunchResult(desks.toIndexedSeq, waits))
   }
@@ -67,6 +102,7 @@ object Optimiser {
                     xmax: List[Int],
                     blockSize: Int,
                     backlog: Double): List[Int] = {
+    val timer = new Timer
     val workWithMinMaxDesks: Iterator[(List[Double], (List[Int], List[Int]))] = work.grouped(blockSize).zip(xmin.grouped(blockSize).zip(xmax.grouped(blockSize)))
 
     val result = workWithMinMaxDesks.foldLeft((List[Int](), backlog)) {
@@ -87,13 +123,14 @@ object Optimiser {
         (desks ++ List.fill(blockSize)(guess), newBacklog)
     }._1
 
-    if (checkAllAgainstR) {
-      val rResult = leftwardDesksR(work, xmin, xmax, blockSize, backlog)
-
-      if (rResult != result) {
-        println(s"leftwardDesks mismatch:\n$result\n$rResult")
-      }
-    }
+    //    if (checkAllAgainstR) {
+    //      val rtimer = new Timer
+    //      val rResult = leftwardDesksR(work, xmin, xmax, blockSize, backlog)
+    //      rtimer.compare(timer, "leftward desks")
+    ////      if (rResult != result) {
+    ////        println(s"leftwardDesks mismatch:\n$result\n$rResult")
+    ////      }
+    //    }
 
     result
   }
@@ -119,6 +156,8 @@ object Optimiser {
                            excessWait: Double)
 
   def processWork(work: List[Double], capacity: List[Int], sla: Int, qstart: List[Double]): ProcessedWork = {
+    val timer = new Timer
+
     var q = qstart
     var totalWait: Double = 0d
     var excessWait: Double = 0d
@@ -153,29 +192,32 @@ object Optimiser {
     val waitReversed = finalWait.reverse
     val utilReversed = finalUtil.reverse
 
-    if (checkAllAgainstR) {
-      val rResult = processWorkR(work, capacity, sla, qstart)
-
-      if (rResult.util != utilReversed) {
-        println(s"processWork util mismatch:\n$utilReversed\n${rResult.util}")
-      }
-
-      if (rResult.waits != waitReversed) {
-        println(s"processWork waits mismatch:\n$waitReversed\n${rResult.waits}")
-      }
-
-      if (rResult.residual != q) {
-        println(s"processWork residual mismatch:\n$q\n${rResult.residual}")
-      }
-
-      if (rResult.totalWait != totalWait) {
-        println(s"processWork totalWait mismatch:\n$totalWait\n${rResult.totalWait}")
-      }
-
-      if (rResult.excessWait != excessWait) {
-        println(s"processWork excessWait mismatch:\n$excessWait\n${rResult.excessWait}")
-      }
-    }
+    //    if (checkAllAgainstR) {
+    //      val rtimer = new Timer
+    //
+    //      val rResult = processWorkR(work, capacity, sla, qstart)
+    //      rtimer.compare(timer, "process work")
+    //
+    ////      if (rResult.util != utilReversed) {
+    ////        println(s"processWork util mismatch:\n$utilReversed\n${rResult.util}")
+    ////      }
+    ////
+    ////      if (rResult.waits != waitReversed) {
+    ////        println(s"processWork waits mismatch:\n$waitReversed\n${rResult.waits}")
+    ////      }
+    ////
+    ////      if (rResult.residual != q) {
+    ////        println(s"processWork residual mismatch:\n$q\n${rResult.residual}")
+    ////      }
+    ////
+    ////      if (rResult.totalWait != totalWait) {
+    ////        println(s"processWork totalWait mismatch:\n$totalWait\n${rResult.totalWait}")
+    ////      }
+    ////
+    ////      if (rResult.excessWait != excessWait) {
+    ////        println(s"processWork excessWait mismatch:\n$excessWait\n${rResult.excessWait}")
+    ////      }
+    //    }
 
     ProcessedWork(utilReversed, waitReversed, q, totalWait, excessWait)
   }
@@ -201,10 +243,12 @@ object Optimiser {
                       sla: Int,
                       targetWidth: Int,
                       rollingBuffer: Int): List[Int] = {
+    val timer = new Timer
+
     val workWithOverrun = work ++ List.fill(targetWidth)(0d)
     val xminWithOverrun = xmin ++ List.fill(targetWidth)(xmin.takeRight(1).head)
 
-    (workWithOverrun.indices by targetWidth).foldLeft(List[Int]()) { case (acc, startSlot) =>
+    val result = (workWithOverrun.indices by targetWidth).foldLeft(List[Int]()) { case (acc, startSlot) =>
       val winStart: Int = List(startSlot - rollingBuffer, 0).max
       val i = startSlot + targetWidth + rollingBuffer
       val i1 = workWithOverrun.size
@@ -247,22 +291,40 @@ object Optimiser {
       0 until targetWidth foreach (j => backlog = List(backlog + winWork(j) - newXmax(winStart), 0).max)
       newXmax
     }.take(work.size)
+
+    if (checkAllAgainstR) {
+      val rtimer = new Timer
+      rollingFairXmaxR(work, xmin, sla)
+      rtimer.compare(timer, "rolling fair xmax")
+    }
+
+    result
+  }
+
+  def rollingFairXmaxR(work: List[Double], xmin: List[Int], sla: Int): List[Int] = {
+    engine.put("w", work.toArray)
+    engine.put("xmin", xmin.toArray)
+    engine.put("adjustedSla", sla)
+    engine.eval("rolling.fair.xmax(w, xmin=xmin, block.size=5, sla=adjustedSla, target.width=60, rolling.buffer=120)").asInstanceOf[DoubleArrayVector].toIntArray.toList
   }
 
   def runningAverage(values: Iterable[Double], windowLength: Int): Iterable[Double] = {
+    val timer = new Timer
     val averages = values
       .sliding(windowLength)
-      .map(_.map(_ / windowLength).sum
-           ).toList
+      .map(_.map(_ / windowLength).sum).toList
 
     val result = List.fill(windowLength - 1)(averages.head) ::: averages
 
-    if (checkAllAgainstR) {
-      val rResult = runningAverageR(values, windowLength)
-      if (rResult.map(x => BigDecimal(x).setScale(2, BigDecimal.RoundingMode.HALF_UP).toDouble) != result.map(x => BigDecimal(x).setScale(2, BigDecimal.RoundingMode.HALF_UP).toDouble)) {
-        println(s"runningAverage mismatch:\n$result\n$rResult")
-      }
-    }
+    //    if (checkAllAgainstR) {
+    //      val rtimer = new Timer
+    //      val rResult = runningAverageR(values, windowLength)
+    //      rtimer.compare(timer, "running average xmas")
+    //
+    ////      if (rResult.map(x => BigDecimal(x).setScale(2, BigDecimal.RoundingMode.HALF_UP).toDouble) != result.map(x => BigDecimal(x).setScale(2, BigDecimal.RoundingMode.HALF_UP).toDouble)) {
+    ////        println(s"runningAverage mismatch:\n$result\n$rResult")
+    ////      }
+    //    }
 
     result
   }
@@ -275,17 +337,20 @@ object Optimiser {
   }
 
   def cumulativeSum(values: Iterable[Double]): Iterable[Double] = {
+    val timer = new Timer
     val result = values.foldLeft(List[Double]()) {
       case (Nil, element) => List(element)
       case (head :: tail, element) => element + head :: head :: tail
     }.reverse
 
-    if (checkAllAgainstR) {
-      val rResult = cumulativeSumR(values)
-      if (rResult != result) {
-        println(s"cumulativeSum mismatch:\n$result\n$rResult")
-      }
-    }
+    //    if (checkAllAgainstR) {
+    //      val rtimer = new Timer
+    //      val rResult = cumulativeSumR(values)
+    //      rtimer.compare(timer, "cumulative sum")
+    ////      if (rResult != result) {
+    ////        println(s"cumulativeSum mismatch:\n$result\n$rResult")
+    ////      }
+    //    }
 
     result
   }
@@ -297,18 +362,21 @@ object Optimiser {
   }
 
   def blockMean(values: Iterable[Double], blockWidth: Int): Iterable[Double] = {
+    val timer = new Timer
     val result = values
       .grouped(blockWidth)
       .flatMap(nos => List.fill(blockWidth)(nos.sum / blockWidth))
       .toIterable
 
-    if (checkAllAgainstR) {
-      val rResult = blockMeanR(values, blockWidth)
-
-      if (rResult != result) {
-        println(s"blockMean mismatch:\n$result\n$rResult")
-      }
-    }
+    //    if (checkAllAgainstR) {
+    //      val rtimer = new Timer
+    //      val rResult = blockMeanR(values, blockWidth)
+    //      rtimer.compare(timer, "block mean")
+    //
+    ////      if (rResult != result) {
+    ////        println(s"blockMean mismatch:\n$result\n$rResult")
+    ////      }
+    //    }
 
     result
   }
@@ -321,18 +389,21 @@ object Optimiser {
   }
 
   def blockMax(values: Iterable[Double], blockWidth: Int): Iterable[Double] = {
+    val timer = new Timer
+
     val result = values
       .grouped(blockWidth)
       .flatMap(nos => List.fill(blockWidth)(nos.max))
       .toIterable
 
-    if (checkAllAgainstR) {
-      val rResult = blockMeanR(values, blockWidth)
-
-      if (rResult != result) {
-        println(s"blockMax mismatch:\n$result\n$rResult")
-      }
-    }
+    //    if (checkAllAgainstR) {
+    //      val rtimer = new Timer
+    //      val rResult = blockMeanR(values, blockWidth)
+    //      rtimer.compare(timer, "block max")
+    ////      if (rResult != result) {
+    ////        println(s"blockMax mismatch:\n$result\n$rResult")
+    ////      }
+    //    }
 
     result
   }
@@ -340,18 +411,21 @@ object Optimiser {
   def seqR(from: Int, by: Int, length: Int): List[Int] = (0 to length map (i => (i + from) * by)).toList
 
   def churn(churnStart: Int, capacity: List[Int]): Int = {
+    val timer = new Timer
     val result = capacity.zip((churnStart :: capacity))
       .collect { case (x, xlag) => x - xlag }
       .filter(_ > 0)
       .sum
 
-    if (checkAllAgainstR) {
-      val rResult = churnR(churnStart, capacity)
-
-      if (rResult != result) {
-        println(s"churn mismatch:\n$result\n$rResult")
-      }
-    }
+    //    if (checkAllAgainstR) {
+    //      val rtimer = new Timer
+    //      val rResult = churnR(churnStart, capacity)
+    //      rtimer.compare(timer, "churn")
+    //
+    ////      if (rResult != result) {
+    ////        println(s"churn mismatch:\n$result\n$rResult")
+    ////      }
+    //    }
 
     result
   }
@@ -373,6 +447,7 @@ object Optimiser {
            weightSla: Double,
            qStart: List[Double],
            churnStart: Int)(capacity: List[Int]): Cost = {
+    val timer = new Timer
     var simres = processWork(work, capacity, sla, qStart)
 
     var finalCapacity = capacity.takeRight(1).head
@@ -420,29 +495,31 @@ object Optimiser {
 
     val result = Cost(paxPenalty.toInt, slaPenalty.toInt, staffPenalty, churnPenalty, totalPenalty)
 
-    if (checkAllAgainstR) {
-      val rResult = costR(work, sla, weightChurn, weightPax, weightStaff, weightSla, qStart, churnStart)(capacity)
-
-      if (rResult.staffPenalty != result.staffPenalty) {
-        println(s"cost staffPenalty mismatch:\n${result.staffPenalty}\n${rResult.staffPenalty}")
-      }
-
-      if (rResult.churnPenalty != result.churnPenalty) {
-        println(s"cost churnPenalty mismatch:\n${result.churnPenalty}\n${rResult.churnPenalty}")
-      }
-
-      if (rResult.paxPenalty != result.paxPenalty) {
-        println(s"cost paxPenalty mismatch:\n${result.paxPenalty}\n${rResult.paxPenalty}")
-      }
-
-      if (rResult.slaPenalty != result.slaPenalty) {
-        println(s"cost slaPenalty mismatch:\n${result.slaPenalty}\n${rResult.slaPenalty}")
-      }
-
-      if (rResult.totalPenalty != result.totalPenalty) {
-        println(s"cost totalPenalty mismatch:\n${result.totalPenalty}\n${rResult.totalPenalty}")
-      }
-    }
+//    if (checkAllAgainstR) {
+//      val rtimer = new Timer
+//      val rResult = costR(work, sla, weightChurn, weightPax, weightStaff, weightSla, qStart, churnStart)(capacity)
+//      rtimer.compare(timer, "cost")
+//
+//      if (rResult.staffPenalty != result.staffPenalty) {
+//        println(s"cost staffPenalty mismatch:\n${result.staffPenalty}\n${rResult.staffPenalty}")
+//      }
+//
+//      if (rResult.churnPenalty != result.churnPenalty) {
+//        println(s"cost churnPenalty mismatch:\n${result.churnPenalty}\n${rResult.churnPenalty}")
+//      }
+//
+//      if (rResult.paxPenalty != result.paxPenalty) {
+//        println(s"cost paxPenalty mismatch:\n${result.paxPenalty}\n${rResult.paxPenalty}")
+//      }
+//
+//      if (rResult.slaPenalty != result.slaPenalty) {
+//        println(s"cost slaPenalty mismatch:\n${result.slaPenalty}\n${rResult.slaPenalty}")
+//      }
+//
+//      if (rResult.totalPenalty != result.totalPenalty) {
+//        println(s"cost totalPenalty mismatch:\n${result.totalPenalty}\n${rResult.totalPenalty}")
+//      }
+//    }
 
     result
   }
@@ -526,6 +603,8 @@ object Optimiser {
                   weightPax: Double,
                   weightStaff: Double,
                   weightSla: Double): Seq[Int] = {
+    val timer = new Timer
+
     val blockWidth = 15
     val concavityLimit = 30
     val winStep = 60
@@ -536,8 +615,6 @@ object Optimiser {
     var winStop = winWidth
     var qStart = List(0d)
     var churnStart = 0
-
-    val startS = SDate.now().millisSinceEpoch
 
     val desks: mutable.Seq[Int] = mutable.Seq[Int]() ++ blockMean(runningAverage(work, smoothingWidth), blockWidth)
       .map(_.ceil.toInt)
@@ -586,19 +663,11 @@ object Optimiser {
     } while (!shouldStop)
 
     val result = desks.toList
-    val endS = SDate.now().millisSinceEpoch
 
     if (checkOptimiserAgainstR) {
-      val startR = SDate.now().millisSinceEpoch
+      val rtimer = new Timer
       val rResult = optimiseWinR(work, minDesks, maxDesks, sla, weightChurn, weightPax, weightStaff, weightSla)
-      val endR = SDate.now().millisSinceEpoch
-
-      val scalaTook = s"${endS - startS}"
-      val rTook = s"${endR - startR}"
-      log.info(s"Scala Vs R: $scalaTook / $rTook")
-      if (scalaTook > rTook) {
-        log.warn(s"scala slow for (${work.mkString(",")})")
-      }
+      rtimer.compare(timer, "optimise win")
 
       result
         .zip(rResult)

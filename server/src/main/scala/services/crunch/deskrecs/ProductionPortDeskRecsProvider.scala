@@ -118,7 +118,7 @@ case class StaticPortDeskRecsProvider(queuesByTerminal: SortedMap[Terminal, Seq[
                                       eGateBankSize: Int,
                                       tryCrunch: TryCrunch) extends ProductionPortDeskRecsProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
-  
+
   def terminalDescRecs(terminal: Terminal): TerminalDeskRecsProviderLike =
     StaticTerminalDeskRecsProvider(queuesByTerminal, minMaxDesks, slas, tryCrunch, eGateBankSize)
 }
