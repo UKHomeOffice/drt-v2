@@ -18,7 +18,7 @@ class Timer {
 
   private def nowMillis: MillisSinceEpoch = SDate.now().millisSinceEpoch
 
-  private def soFarMillis: MillisSinceEpoch = nowMillis - startMillis
+  def soFarMillis: MillisSinceEpoch = nowMillis - startMillis
 
   def stop: MillisSinceEpoch = {
     takenMillis = nowMillis - startMillis
@@ -66,23 +66,24 @@ object Optimiser {
              config: OptimizerConfig): Try[OptimizerCrunchResult] = {
     log.info(s"Starting optimisation for ${workloads.length} minutes of workload")
     val fairMaxD = if (workloads.length >= 60) {
-      val stimer = new Timer
+//      val stimer = new Timer
       val fairXmax = rollingFairXmax(workloads.toList, minDesks.toList, blockSize, config.sla, targetWidth, rollingBuffer)
-      val rtimer = new Timer
-      rollingFairXmaxR(workloads.toList, minDesks.toList, config.sla)
-      rtimer.compare(stimer, "fair xmax")
+//      val rtimer = new Timer
+//      rollingFairXmaxR(workloads.toList, minDesks.toList, config.sla)
+//      rtimer.compare(stimer, "fair xmax")
       fairXmax.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
     } else maxDesks.toList
     val stimer = new Timer
     val desks = optimiseWin(workloads.toList, minDesks.toList, fairMaxD, config.sla, weightChurn, weightPax, weightStaff, weightSla)
-    val rtimer = new Timer
-    optimiseWinR(workloads.toList, minDesks.toList, fairMaxD, config.sla, weightChurn, weightPax, weightStaff, weightSla)
-    rtimer.compare(stimer, "optimise win")
-    val stimer2 = new Timer
+    if (stimer.soFarMillis > 2000) log.warn(s"${stimer.soFarMillis}ms slow optimising workload (sla ${config.sla}) ${workloads.mkString(",")}")
+//    val rtimer = new Timer
+//    optimiseWinR(workloads.toList, minDesks.toList, fairMaxD, config.sla, weightChurn, weightPax, weightStaff, weightSla)
+//    rtimer.compare(stimer, "optimise win")
+//    val stimer2 = new Timer
     val waits = processWork(workloads.toList, desks.toList, config.sla, List()).waits
-    val rtimer2 = new Timer
-    processWorkR(workloads.toList, desks.toList, config.sla, List()).waits
-    rtimer2.compare(stimer2, "process work")
+//    val rtimer2 = new Timer
+//    processWorkR(workloads.toList, desks.toList, config.sla, List()).waits
+//    rtimer2.compare(stimer2, "process work")
 
     Success(OptimizerCrunchResult(desks.toIndexedSeq, waits))
   }
