@@ -142,7 +142,7 @@ class OptimiserSpec extends Specification {
     val rTook = SDate.now().millisSinceEpoch - rStartTime
 
     val sStartTime = SDate.now().millisSinceEpoch
-    val newResult = Optimiser.optimiseWin(workloads, minDesks.toList, maxDesks.toList, adjustedSla, weightChurn, weightPax, weightStaff, weightSla)
+    val newResult = Optimiser.optimiseWin(workloads, minDesks.toIndexedSeq, maxDesks.toIndexedSeq, adjustedSla, weightChurn, weightPax, weightStaff, weightSla)
     val sTook = SDate.now().millisSinceEpoch - sStartTime
     println(s"r took ${rTook}ms. s took ${sTook}ms")
 
