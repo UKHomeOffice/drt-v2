@@ -53,6 +53,6 @@ object Gla extends AirportConfigLike {
         EeaDesk -> (1.0 - 0.6993)
       )))
     ),
-    desksByTerminal = Map(T1 -> 14)
+    desksByTerminal = Map(T1 -> 7)
   )
 }
