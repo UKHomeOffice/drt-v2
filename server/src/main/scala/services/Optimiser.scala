@@ -404,7 +404,7 @@ object Optimiser {
 //    Cost(rpax, rsla, rstaff, rchurn, rtotal)
 //  }
 
-  def neighbouringPoints(x0: Int, xmin: Int, xmax: Int): Seq[Int] = (xmin to xmax)
+  def neighbouringPoints(x0: Int, xmin: Int, xmax: Int): IndexedSeq[Int] = (xmin to xmax)
     .filterNot(_ == x0)
     .sortBy(x => (x - x0).abs)
 
@@ -417,7 +417,7 @@ object Optimiser {
     var incumbent = startingX
     val minutes = x.length
     var bestSoFar = cost(incumbent).totalPenalty
-    val candidates: mutable.Seq[Seq[Int]] = mutable.Seq() ++ (0 until minutes).map(i => neighbouringPoints(startingX(i), xmin(i), xmax(i)))
+    val candidates: mutable.IndexedSeq[Seq[Int]] = mutable.IndexedSeq() ++ (0 until minutes).map(i => neighbouringPoints(startingX(i), xmin(i), xmax(i)))
 
     var cursor = minutes - 1
 
@@ -456,7 +456,7 @@ object Optimiser {
                   weightChurn: Double,
                   weightPax: Double,
                   weightStaff: Double,
-                  weightSla: Double): Seq[Int] = {
+                  weightSla: Double): IndexedSeq[Int] = {
     val timer = new Timer
 
     val blockWidth = 15
@@ -516,7 +516,7 @@ object Optimiser {
       }
     } while (!shouldStop)
 
-    val result = desks.toList
+    val result = desks.toIndexedSeq
 
     if (checkOptimiserAgainstR) {
       val rtimer = new Timer
