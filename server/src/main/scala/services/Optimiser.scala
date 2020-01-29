@@ -73,7 +73,7 @@ object Optimiser {
       fairXmax.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
     } else maxDesks.toIndexedSeq
     val stimer = new Timer
-    println(s"fair xmax: $fairMaxD")
+//    println(s"fair xmax: $fairMaxD")
     val desks = optimiseWin(indexedWorkload, minDesks.toIndexedSeq, fairMaxD, config.sla, weightChurn, weightPax, weightStaff, weightSla)
     if (stimer.soFarMillis > 2000) log.warn(s"${stimer.soFarMillis}ms slow optimising workload (sla ${config.sla}) ${workloads.mkString(",")}")
 //    val rtimer = new Timer
