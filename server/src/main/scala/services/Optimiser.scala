@@ -73,16 +73,16 @@ object Optimiser {
     val desks = optimiseWin(workloads.toList, minDesks.toList, fairMaxD, config.sla, weightChurn, weightPax, weightStaff, weightSla)
     log.info(s"Finished. Desk recs: ${/*desks.mkString(", ")*/}")
     log.info(s"Finished. Starting simulation for wait times")
-    val waits = processWork(workloads.toList, desks.toList, config.sla, List()).waits
+    val waits = processWork(workloads.toIndexedSeq, desks.toIndexedSeq, config.sla, IndexedSeq()).waits
     log.info(s"Finished. Wait times: ${/*waits.mkString(", ")*/}")
 
     Success(OptimizerCrunchResult(desks.toIndexedSeq, waits))
   }
 
   def runSimulationOfWork(workloads: Seq[Double], desks: Seq[Int], config: OptimizerConfig): Seq[Int] =
-    Optimiser.processWork(workloads.toList, desks.toList, config.sla, List()).waits
+    Optimiser.processWork(workloads.toIndexedSeq, desks.toIndexedSeq, config.sla, IndexedSeq()).waits
 
-  def approx(x: Seq[Int], y: Seq[Int], i: Seq[Double]): List[Double] = {
+  def approx(x: IndexedSeq[Int], y: IndexedSeq[Int], i: Seq[Double]): List[Double] = {
     val diffX = x(1) - x.head
     val diffY = y(1) - y.head
     val ratio = diffY.toDouble / diffX
@@ -145,14 +145,14 @@ object Optimiser {
                            totalWait: Double,
                            excessWait: Double)
 
-  def processWork(work: List[Double], capacity: List[Int], sla: Int, qstart: List[Double]): ProcessedWork = {
+  def processWork(work: IndexedSeq[Double], capacity: IndexedSeq[Int], sla: Int, qstart: IndexedSeq[Double]): ProcessedWork = {
     var q = qstart
     var totalWait: Double = 0d
     var excessWait: Double = 0d
 
     val (finalWait, finalUtil) = work.indices.foldLeft((List[Int](), List[Double]())) {
       case ((wait, util), minute) =>
-        q = work(minute) :: q
+        q = work(minute) +: q
         var resource: Double = capacity(minute)
         var age = q.size
 
@@ -168,7 +168,7 @@ object Optimiser {
           } else {
             totalWait = totalWait + resource * (age - 1)
             if (age - 1 >= sla) excessWait = excessWait + resource * (age - 1)
-            q = q.dropRight(1) ::: List(nextWorkToProcess - resource)
+            q = q.dropRight(1) :+ (nextWorkToProcess - resource)
             resource = 0
             age = 0
           }
@@ -204,10 +204,10 @@ object Optimiser {
       }
     }
 
-    ProcessedWork(utilReversed, waitReversed, q, totalWait, excessWait)
+    ProcessedWork(utilReversed, waitReversed, q.toList, totalWait, excessWait)
   }
 
-  def processWorkR(work: List[Double], capacity: List[Int], sla: Int, qstart: List[Double]): ProcessedWork = {
+  def processWorkR(work: IndexedSeq[Double], capacity: IndexedSeq[Int], sla: Int, qstart: IndexedSeq[Double]): ProcessedWork = {
     engine.put("work", work.toArray)
     engine.put("capacity", capacity.toArray)
     engine.put("sla", sla)
@@ -257,7 +257,7 @@ object Optimiser {
       else {
         do {
           val trialDesks = leftwardDesks(winWork.toIndexedSeq, winXmin.toIndexedSeq, IndexedSeq.fill(winXmin.size)(winXmax), blockSize, backlog)
-          val trialProcess = processWork(winWork, trialDesks.toList, sla, List(0))
+          val trialProcess = processWork(winWork.toIndexedSeq, trialDesks.toIndexedSeq, sla, IndexedSeq(0))
           if (trialProcess.excessWait > 0) {
             winXmax = List(winXmax + 1, guessMax).min
             hasExcessWait = true
@@ -364,7 +364,7 @@ object Optimiser {
     result
   }
 
-  def seqR(from: Int, by: Int, length: Int): List[Int] = (0 to length map (i => (i + from) * by)).toList
+  def seqR(from: Int, by: Int, length: Int): IndexedSeq[Int] = (0 to length map (i => (i + from) * by)).toIndexedSeq
 
   def churn(churnStart: Int, capacity: List[Int]): Int = {
     val result = capacity.zip((churnStart :: capacity))
@@ -400,7 +400,7 @@ object Optimiser {
            weightSla: Double,
            qStart: List[Double],
            churnStart: Int)(capacity: List[Int]): Cost = {
-    var simres = processWork(work, capacity, sla, qStart)
+    var simres = processWork(work.toIndexedSeq, capacity.toIndexedSeq, sla, qStart.toIndexedSeq)
 
     var finalCapacity = capacity.takeRight(1).head
     val backlog = simres.residual.reverse
@@ -605,7 +605,7 @@ object Optimiser {
         val stop = winStart + winStep
         val workToProcess = work.slice(winStart, stop)
         val desksToProcess = desks.slice(winStart, stop).toList
-        qStart = processWork(workToProcess, desksToProcess, sla, qStart).residual
+        qStart = processWork(workToProcess.toIndexedSeq, desksToProcess.toIndexedSeq, sla, qStart.toIndexedSeq).residual
         churnStart = desks(stop)
         winStart = winStart + winStep
         winStop = List(winStop + winStep, work.length).min
