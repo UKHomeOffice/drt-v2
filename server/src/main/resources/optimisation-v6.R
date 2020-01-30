@@ -231,7 +231,6 @@ cost = function(work, capacity, sla, weight.pax, weight.staff, weight.churn, wei
         # some didn't (sometimes not a very good approximation!)
         # Add waiting times due to backlog to previous running totals from simulation
         simres$total.wait = simres$total.wait + sum(backlog * mean.waits)
-        # if (ceiling(simres$total.wait) != simres$total.wait) print(sprintf("got %f", simres$total.wait))
 
         simres$excess.wait = simres$excess.wait + sum(backlog[excess.filter] * mean.waits[excess.filter])
     }
@@ -246,8 +245,6 @@ cost = function(work, capacity, sla, weight.pax, weight.staff, weight.churn, wei
         weight.staff * staff.penalty +
         weight.churn * churn.penalty +
         weight.sla * sla.penalty
-
-    # print(sprintf("%f * %f + %f * %f + %f * %f + %f * %f = %f", weight.pax, pax.penalty, weight.staff, staff.penalty, weight.churn, churn.penalty, weight.sla, sla.penalty, total.penalty))
 
     return(list(pax = pax.penalty, sla.p = sla.penalty, staff = staff.penalty, churn = churn.penalty, total = total.penalty))
 }
