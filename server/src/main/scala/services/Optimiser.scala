@@ -69,7 +69,7 @@ object Optimiser {
     val indexedMinDesks = minDesks.toIndexedSeq
 
     val fairMaxD = if (workloads.length >= 60) {
-      val fairXmax = rollingFairXmax(indexedWork, indexedMinDesks, blockSize, config.sla, targetWidth, rollingBuffer)
+      val fairXmax = rollingFairXmax(indexedWork, indexedMinDesks, blockSize, (0.75 * config.sla).round.toInt, targetWidth, rollingBuffer)
       fairXmax.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
     } else maxDesks.toIndexedSeq
 
@@ -145,7 +145,10 @@ object Optimiser {
                            totalWait: Double,
                            excessWait: Double)
 
-  def processWork(work: IndexedSeq[Double], capacity: IndexedSeq[Int], sla: Int, qstart: IndexedSeq[Double]): ProcessedWork = {
+  def processWork(work: IndexedSeq[Double],
+                  capacity: IndexedSeq[Int],
+                  sla: Int,
+                  qstart: IndexedSeq[Double]): ProcessedWork = {
     var q = qstart
     var totalWait: Double = 0d
     var excessWait: Double = 0d
@@ -207,7 +210,10 @@ object Optimiser {
     ProcessedWork(utilReversed, waitReversed, q, totalWait, excessWait)
   }
 
-  def processWorkR(work: IndexedSeq[Double], capacity: IndexedSeq[Int], sla: Int, qstart: IndexedSeq[Double]): ProcessedWork = {
+  def processWorkR(work: IndexedSeq[Double],
+                   capacity: IndexedSeq[Int],
+                   sla: Int,
+                   qstart: IndexedSeq[Double]): ProcessedWork = {
     engine.put("work", work.toArray)
     engine.put("capacity", capacity.toArray)
     engine.put("sla", sla)
@@ -231,7 +237,7 @@ object Optimiser {
     val workWithOverrun = work ++ List.fill(targetWidth)(0d)
     val xminWithOverrun = xmin ++ List.fill(targetWidth)(xmin.takeRight(1).head)
 
-    (workWithOverrun.indices by targetWidth).foldLeft(IndexedSeq[Int]()) { case (acc, startSlot) =>
+    val result = (workWithOverrun.indices by targetWidth).foldLeft(IndexedSeq[Int]()) { case (acc, startSlot) =>
       val winStart: Int = List(startSlot - rollingBuffer, 0).max
       val i = startSlot + targetWidth + rollingBuffer
       val i1 = workWithOverrun.size
@@ -262,11 +268,8 @@ object Optimiser {
             winXmax = List(winXmax + 1, guessMax).min
             hasExcessWait = true
           }
-          if (winXmax <= lowerLimit)
-            lowerLimitReached = true
-
-          if (!lowerLimitReached && !hasExcessWait)
-            winXmax = winXmax - 1
+          if (winXmax <= lowerLimit) lowerLimitReached = true
+          if (!lowerLimitReached && !hasExcessWait) winXmax = winXmax - 1
         } while (!lowerLimitReached && !hasExcessWait)
       }
 
@@ -274,6 +277,22 @@ object Optimiser {
       0 until targetWidth foreach (j => backlog = List(backlog + winWork(j) - newXmax(winStart), 0).max)
       newXmax
     }.take(work.size)
+
+    result
+  }
+
+  def rollingFairXmaxR(work: IndexedSeq[Double],
+                       xmin: IndexedSeq[Int],
+                       blockSize: Int,
+                       sla: Int,
+                       targetWidth: Int,
+                       rollingBuffer: Int): IndexedSeq[Int] = {
+    engine.put("w", work.toArray)
+    engine.put("xmin", xmin.toArray)
+    engine.put("blockSize", blockSize)
+    engine.put("sla", sla)
+    engine.eval("rollingfairxmax <- rolling.fair.xmax(w, xmin=xmin, block.size=blockSize, sla=sla, target.width=60, rolling.buffer=120)")
+    engine.eval("rollingfairxmax").asInstanceOf[DoubleVector].toIntArray
   }
 
   def runningAverage(values: Iterable[Double], windowLength: Int): Iterable[Double] = {
@@ -442,8 +461,6 @@ object Optimiser {
       (weightChurn * churnPenalty.toDouble) +
       (weightSla * slaPenalty.toDouble)
 
-    //    println(s"$weightPax * $paxPenalty + $weightStaff * $staffPenalty + $weightChurn * $churnPenalty + $weightSla * $slaPenalty = $totalPenalty")
-
     val result = Cost(paxPenalty.toInt, slaPenalty.toInt, staffPenalty, churnPenalty, totalPenalty)
 
     if (checkAllAgainstR) {
@@ -576,7 +593,8 @@ object Optimiser {
         case (d, min) => List(d, min).max
       }
 
-    def myCost(costWork: IndexedSeq[Double], costQStart: IndexedSeq[Double], costChurnStart: Int)(capacity: IndexedSeq[Int]): Cost =
+    def myCost(costWork: IndexedSeq[Double], costQStart: IndexedSeq[Double], costChurnStart: Int)
+              (capacity: IndexedSeq[Int]): Cost =
       cost(costWork, sla, weightChurn, weightPax, weightStaff, weightSla, costQStart, costChurnStart)(capacity.flatMap(c => IndexedSeq.fill(blockWidth)(c)))
 
     var shouldStop = false
@@ -619,17 +637,13 @@ object Optimiser {
       val scalaTook = s"${endS - startS}"
       val rTook = s"${endR - startR}"
       log.info(s"Scala Vs R: $scalaTook / $rTook")
-      if (scalaTook > rTook) {
-        log.warn(s"scala slow for (${work.mkString(",")})")
-      }
 
       result
         .zip(rResult)
         .grouped(15)
-        .map(_.head)
         .zipWithIndex
         .foreach {
-          case ((s, r), i) if s != r => log.warn(s"optimiser comparison - ${i * 15}: scala $s vs r $r")
+          case (sr, i) if sr.head._1 != sr.head._2 => log.warn(s"optimiser comparison - ${i * 15}: $sr")
           case _ =>
         }
     }
