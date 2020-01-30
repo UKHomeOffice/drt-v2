@@ -7,7 +7,7 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.T1
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
-import services.{Optimiser, SDate, TryRenjin}
+import services.{Optimiser, SDate}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._
@@ -55,13 +55,14 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
       val expected = Map(T1 -> Map(
-        Queues.EeaDesk -> Seq.fill(15)(4),
+        Queues.EeaDesk -> Seq.fill(15)(7),
         Queues.EGate -> Seq.fill(15)(1)
       ))
 
-      crunch.portStateTestProbe.fishForMessage(10 seconds) {
+      crunch.portStateTestProbe.fishForMessage(3 seconds) {
         case ps: PortState =>
           val resultSummary = deskRecsFromPortState(ps, 15)
+          println(s"result: $resultSummary")
           resultSummary == expected
       }
 

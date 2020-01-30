@@ -581,7 +581,9 @@ target.width=60, rolling.buffer=60)
         win.xmin = xmin[win.start : win.stop]
         if (win.start == 1)backlog = 0   # (re-)zero backlog if window still at start of work
 
-        guess.max = ceiling(max(running.avg(win.work, min(block.size, sla))))
+        running.average = running.avg(win.work, min(block.size, sla))
+
+        guess.max = ceiling(max(running.average))
         # initial guess; only values of xmax less than or equal to this will be considered
         # Set a lower limit so that xmax can't be less than xmin (or highest value in xmin, if
         # it's a vector). Also do not allow xmax to be less than even the mean work in the window.
@@ -589,7 +591,7 @@ target.width=60, rolling.buffer=60)
         lower.limit = max(lower.limit, ceiling(mean(win.work)))
 
         if (guess.max <= lower.limit)
-        win.xmax = lower.limit
+            win.xmax = lower.limit
         else
         {
             win.xmax = guess.max
@@ -614,8 +616,9 @@ target.width=60, rolling.buffer=60)
         # Update backlog, assuming xmax desks during the relevant time period.
         # We need the backlog after the first target.width time slots (not
         # the entire window), ready for the next iteration of start.slot
-        for (j in 1 : target.width)
-        backlog = max(backlog + win.work[j] - xmax[win.start], 0)
+        for (j in 1 : target.width) {
+            backlog = max(backlog + win.work[j] - xmax[win.start], 0)
+        }
     }
 
     xmax = xmax[- overrun]   # drop the overrun period

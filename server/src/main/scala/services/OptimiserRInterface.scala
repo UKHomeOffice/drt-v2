@@ -38,11 +38,11 @@ object OptimiserRInterface {
                      backlog: Double): IndexedSeq[Int] = {
     engine.put("work", work.toArray)
     engine.put("xmin", xmin.toArray)
-    engine.put("xmax", xmax.toArray)
+    engine.put("xmax", xmax.head)
     engine.put("blockSize", blockSize)
     engine.put("backlog", backlog)
     engine.eval("result <- leftward.desks(work, xmin, xmax, blockSize, backlog)$desks")
-    engine.eval("result").asInstanceOf[DoubleVector].toDoubleArray.toIndexedSeq.map(_.toInt)
+    engine.eval("result").asInstanceOf[DoubleVector].toIntArray.toIndexedSeq
   }
 
   def processWorkR(work: IndexedSeq[Double],

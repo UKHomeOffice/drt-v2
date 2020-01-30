@@ -154,20 +154,20 @@ object Optimiser {
     val workWithOverrun = work ++ List.fill(targetWidth)(0d)
     val xminWithOverrun = xmin ++ List.fill(targetWidth)(xmin.takeRight(1).head)
 
+    var backlog = 0d
+
     val result = (workWithOverrun.indices by targetWidth).foldLeft(IndexedSeq[Int]()) { case (acc, startSlot) =>
       val winStart: Int = List(startSlot - rollingBuffer, 0).max
       val i = startSlot + targetWidth + rollingBuffer
       val i1 = workWithOverrun.size
-
       val winStop: Int = List(i, i1).min
       val winWork = workWithOverrun.slice(winStart, winStop)
       val winXmin = xminWithOverrun.slice(winStart, winStop)
 
-      var backlog = 0d
-
       if (winStart == 0) backlog = 0
 
-      val guessMax: Int = runningAverage(workWithOverrun, List(blockSize, sla).min).max.ceil.toInt
+      val runAv = runningAverage(winWork, List(blockSize, sla).min)
+      val guessMax: Int = runAv.max.ceil.toInt
 
       val lowerLimit = List(winXmin.max, (winWork.sum / winWork.size).ceil.toInt).max
 
@@ -179,8 +179,8 @@ object Optimiser {
         winXmax = lowerLimit
       else {
         do {
-          val trialDesks = leftwardDesks(winWork.toIndexedSeq, winXmin.toIndexedSeq, IndexedSeq.fill(winXmin.size)(winXmax), blockSize, backlog)
-          val trialProcess = processWork(winWork.toIndexedSeq, trialDesks.toIndexedSeq, sla, IndexedSeq(0))
+          val trialDesks = leftwardDesks(winWork, winXmin, IndexedSeq.fill(winXmin.size)(winXmax), blockSize, backlog)
+          val trialProcess = processWork(winWork, trialDesks, sla, IndexedSeq(0))
           if (trialProcess.excessWait > 0) {
             winXmax = List(winXmax + 1, guessMax).min
             hasExcessWait = true
@@ -191,7 +191,9 @@ object Optimiser {
       }
 
       val newXmax = acc ++ List.fill(targetWidth)(winXmax)
-      0 until targetWidth foreach (j => backlog = List(backlog + winWork(j) - newXmax(winStart), 0).max)
+      0 until targetWidth foreach { j =>
+        backlog = List(backlog + winWork(j) - newXmax(winStart), 0).max
+      }
       newXmax
     }.take(work.size)
 
@@ -201,7 +203,7 @@ object Optimiser {
   def runningAverage(values: Iterable[Double], windowLength: Int): Iterable[Double] = {
     val averages = values
       .sliding(windowLength)
-      .map(_.map(_ / windowLength).sum).toList
+      .map(_.sum / windowLength).toList
 
     List.fill(windowLength - 1)(averages.head) ::: averages
   }

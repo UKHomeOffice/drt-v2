@@ -52,28 +52,47 @@ class OptimiserSpec extends Specification {
     rResult === newResult
   }
 
-  "rolling.fair.xmax comparison" >> {
-    loadOptimiserScript
+  0 to 10 map { i =>
+    s"leftward.desks comparison with random workload #$i" >> {
+      loadOptimiserScript
 
-    val workloads = (1 to 1440).map(_ => (Math.random() * 20))
-    val maxDesks = (1 to 1440).map(_ => 10)
-    val minDesks = (1 to 1440).map(_ => 1)
-    engine.put("work", workloads.toArray)
-    engine.put("xmax", maxDesks.toArray)
-    engine.put("xmin", minDesks.toArray)
-    engine.put("sla", 25)
-    engine.put("adjustedSla", (0.75d * 25).toInt)
-    engine.put("weight_churn", 50)
-    engine.put("weight_pax", 0.05)
-    engine.put("weight_staff", 3)
-    engine.put("weight_sla", 10)
+      val winWork = (1 to 360).map(_ => (Math.random() * 20))
+      val winXmin = IndexedSeq.fill(winWork.size)(1)
+      val winXmax = IndexedSeq.fill(winWork.size)(9)
+      val blockSize = 5
 
-    engine.eval("result <- rolling.fair.xmax(work, xmin=xmin, block.size=5, sla=adjustedSla, target.width=60, rolling.buffer=120)")
-    val fairXmax = engine.eval("result").asInstanceOf[DoubleVector].toDoubleArray.map(_.toInt).toList
+      val rDesks = OptimiserRInterface.leftwardDesksR(winWork, winXmin, winXmax, blockSize, backlog = 0d)
+      val sDesks = Optimiser.leftwardDesks(winWork, winXmin, winXmax, blockSize, backlog = 0d)
 
-    val newResult = Optimiser.rollingFairXmax(workloads, minDesks, 5, (0.75d * 25).toInt, 60, 120)
+      rDesks === sDesks
+    }
+  }
 
-    newResult === fairXmax
+  0 to 3 map { i =>
+    s"rolling.fair.xmax comparison with random work #$i" >> {
+      loadOptimiserScript
+
+      val workloads = (1 to 1440).map(_ => Math.random() * 20)
+      val maxDesks = (1 to 1440).map(_ => 10)
+      val minDesks = (1 to 1440).map(_ => 1)
+      val sla = 25
+
+      engine.put("work", workloads.toArray)
+      engine.put("xmax", maxDesks.toArray)
+      engine.put("xmin", minDesks.toArray)
+      engine.put("sla", sla)
+      engine.put("weight_churn", 50)
+      engine.put("weight_pax", 0.05)
+      engine.put("weight_staff", 3)
+      engine.put("weight_sla", 10)
+
+      engine.eval("result <- rolling.fair.xmax(work, xmin=xmin, block.size=5, sla=sla, target.width=60, rolling.buffer=120)")
+      val fairXmax = engine.eval("result").asInstanceOf[DoubleVector].toDoubleArray.map(_.toInt).toList
+
+      val newResult = Optimiser.rollingFairXmax(workloads, minDesks, 5, sla, 60, 120)
+
+      newResult == fairXmax.toIndexedSeq === true
+    }
   }
 
   "block.mean comparison" >> {
