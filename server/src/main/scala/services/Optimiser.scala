@@ -89,12 +89,12 @@ object Optimiser {
     i.map(_ * ratio).toList
   }
 
-  def leftwardDesks(work: List[Double],
-                    xmin: List[Int],
-                    xmax: List[Int],
+  def leftwardDesks(work: IndexedSeq[Double],
+                    xmin: IndexedSeq[Int],
+                    xmax: IndexedSeq[Int],
                     blockSize: Int,
-                    backlog: Double): List[Int] = {
-    val workWithMinMaxDesks: Iterator[(List[Double], (List[Int], List[Int]))] = work.grouped(blockSize).zip(xmin.grouped(blockSize).zip(xmax.grouped(blockSize)))
+                    backlog: Double): IndexedSeq[Int] = {
+    val workWithMinMaxDesks: Iterator[(IndexedSeq[Double], (IndexedSeq[Int], IndexedSeq[Int]))] = work.grouped(blockSize).zip(xmin.grouped(blockSize).zip(xmax.grouped(blockSize)))
 
     val result = workWithMinMaxDesks.foldLeft((List[Int](), backlog)) {
       case ((desks, bl), (workBlock, (xminBlock, xmaxBlock))) =>
@@ -112,7 +112,7 @@ object Optimiser {
         }
 
         (desks ++ List.fill(blockSize)(guess), newBacklog)
-    }._1
+    }._1.toIndexedSeq
 
     if (checkAllAgainstR) {
       val rResult = leftwardDesksR(work, xmin, xmax, blockSize, backlog)
@@ -125,18 +125,18 @@ object Optimiser {
     result
   }
 
-  def leftwardDesksR(work: List[Double],
-                     xmin: List[Int],
-                     xmax: List[Int],
+  def leftwardDesksR(work: IndexedSeq[Double],
+                     xmin: IndexedSeq[Int],
+                     xmax: IndexedSeq[Int],
                      blockSize: Int,
-                     backlog: Double): List[Int] = {
+                     backlog: Double): IndexedSeq[Int] = {
     engine.put("work", work.toArray)
     engine.put("xmin", xmin.toArray)
     engine.put("xmax", xmax.toArray)
     engine.put("blockSize", blockSize)
     engine.put("backlog", backlog)
     engine.eval("result <- leftward.desks(work, xmin, xmax, blockSize, backlog)$desks")
-    engine.eval("result").asInstanceOf[DoubleVector].toDoubleArray.toList.map(_.toInt)
+    engine.eval("result").asInstanceOf[DoubleVector].toDoubleArray.toIndexedSeq.map(_.toInt)
   }
 
   case class ProcessedWork(util: List[Double],
@@ -256,8 +256,8 @@ object Optimiser {
         winXmax = lowerLimit
       else {
         do {
-          val trialDesks = leftwardDesks(winWork, winXmin, List.fill(winXmin.size)(winXmax), blockSize, backlog)
-          val trialProcess = processWork(winWork, trialDesks, sla, List(0))
+          val trialDesks = leftwardDesks(winWork.toIndexedSeq, winXmin.toIndexedSeq, IndexedSeq.fill(winXmin.size)(winXmax), blockSize, backlog)
+          val trialProcess = processWork(winWork, trialDesks.toList, sla, List(0))
           if (trialProcess.excessWait > 0) {
             winXmax = List(winXmax + 1, guessMax).min
             hasExcessWait = true
