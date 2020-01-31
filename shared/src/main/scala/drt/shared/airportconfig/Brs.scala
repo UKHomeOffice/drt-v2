@@ -15,14 +15,11 @@ object Brs extends AirportConfigLike {
   val config = AirportConfig(
     portCode = PortCode("BRS"),
     queuesByTerminal = SortedMap(
-      T1 -> Seq(Queues.QueueDesk, Queues.EGate)
-    ),
-    divertedQueues = Map(
-      Queues.NonEeaDesk -> Queues.QueueDesk,
-      Queues.EeaDesk -> Queues.QueueDesk
+      T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate)
     ),
     slaByQueue = Map(
-      Queues.QueueDesk -> 20,
+      Queues.EeaDesk -> 25,
+      Queues.NonEeaDesk -> 45,
       Queues.EGate -> 25
     ),
     defaultWalkTimeMillis = Map(T1 -> 780000L),
@@ -44,7 +41,8 @@ object Brs extends AirportConfigLike {
     minMaxDesksByTerminalQueue = Map(
       T1 -> Map(
         Queues.EGate -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)),
-        Queues.QueueDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5))
+        Queues.EeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5)),
+        Queues.NonEeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5))
       )
     ),
     role = BRSAccess,
@@ -55,6 +53,6 @@ object Brs extends AirportConfigLike {
       )))
     ),
     feedSources = Seq(LiveBaseFeedSource, AclFeedSource, ApiFeedSource),
-    desksByTerminal = Map(T1 -> 5)
+    desksByTerminal = Map(T1 -> 9)
   )
 }
