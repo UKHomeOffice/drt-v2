@@ -5,7 +5,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.{T1, T2}
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
-import services.{SDate, TryRenjin}
+import services.{Optimiser, SDate, TryRenjin}
 
 import scala.concurrent.duration._
 
@@ -43,7 +43,7 @@ class PlanningPageSpec() extends CrunchTestLike {
         )
       ),
       initialShifts = ShiftAssignments(Seq(assignment1)),
-      cruncher = TryRenjin.crunch,
+      cruncher = Optimiser.crunch,
       checkRequiredStaffUpdatesOnStartup = true
     )
 

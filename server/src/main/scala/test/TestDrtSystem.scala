@@ -15,6 +15,8 @@ import play.api.mvc.{Headers, Session}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services.crunch.deskrecs.{FlexedPortDeskRecsProvider, RunnableDeskRecs}
 import services.{SDate, TryRenjin}
+import services.{Optimiser, SDate, TryRenjin}
+import services.crunch.deskrecs.RunnableDeskRecs
 import test.TestActors.{TestStaffMovementsActor, _}
 import test.feeds.test.{CSVFixtures, TestFixtureFeed, TestManifestsActor}
 import test.roles.TestUserRoleProvider
@@ -95,7 +97,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
       val lookupRefreshDue: MillisSinceEpoch => Boolean = (lastLookupMillis: MillisSinceEpoch) => now().millisSinceEpoch - lastLookupMillis > 1000
       val manifestKillSwitch = startManifestsGraph(None, manifestResponsesSink, manifestRequestsSource, lookupRefreshDue)
 
-      val portDescRecs = FlexedPortDeskRecsProvider(airportConfig, 1440, TryRenjin.crunch)
+      val portDescRecs = FlexedPortDeskRecsProvider(airportConfig, 1440, Optimiser.crunch)
 
       val (millisToCrunchActor: ActorRef, crunchKillSwitch) = RunnableDeskRecs.start(portStateActor, portDescRecs, now, params.recrunchOnStart, params.forecastMaxDays)
       portStateActor ! SetCrunchActor(millisToCrunchActor)

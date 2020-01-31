@@ -254,10 +254,12 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       } yield (lps, fps, ba, fa, la, ra)
     }
 
+    val optimiser: TryCrunch = if (config.get[Boolean]("crunch.use-legacy-optimiser")) TryRenjin.crunch else Optimiser.crunch
+
     val portDeskRecs = if (config.get[Boolean]("crunch.flex-desks"))
-      FlexedPortDeskRecsProvider(airportConfig, 1440, TryRenjin.crunch)
+      FlexedPortDeskRecsProvider(airportConfig, 1440, optimiser)
     else
-      StaticPortDeskRecsProvider(airportConfig, 1440, TryRenjin.crunch)
+      StaticPortDeskRecsProvider(airportConfig, 1440, optimiser)
 
     futurePortStates.onComplete {
       case Success((maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeRegisteredArrivals)) =>
@@ -413,7 +415,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       manifestResponsesSource = manifestResponsesSource,
       voyageManifestsActor = voyageManifestsActor,
       manifestRequestsSink = manifestRequestsSink,
-      simulator = TryRenjin.runSimulationOfWork,
+      simulator = Optimiser.runSimulationOfWork,
       initialPortState = initialPortState,
       initialForecastBaseArrivals = initialForecastBaseArrivals.getOrElse(mutable.SortedMap()),
       initialForecastArrivals = initialForecastArrivals.getOrElse(mutable.SortedMap()),

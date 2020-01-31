@@ -1,7 +1,7 @@
 package services.crunch
 
 import org.specs2.mutable.Specification
-import services.{OptimizerConfig, TryRenjin}
+import services.{Optimiser, OptimizerConfig, TryRenjin}
 
 object Memory {
   val runtime: Runtime = Runtime.getRuntime
@@ -13,7 +13,7 @@ object Memory {
 }
 
 class SimulationSpec extends Specification {
-  val simService: (Seq[Double], Seq[Int], OptimizerConfig) => Seq[Int] = TryRenjin.runSimulationOfWork
+  val simService: (Seq[Double], Seq[Int], OptimizerConfig) => Seq[Int] = Optimiser.runSimulationOfWork
   val optimizerConfig = OptimizerConfig(25)
 
   def randomWorkload: Seq[Double] = 1 to 1440 map (_ => Math.random() * 25)
