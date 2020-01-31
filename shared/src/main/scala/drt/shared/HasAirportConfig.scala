@@ -414,7 +414,7 @@ object AirportConfigs {
 
   import drt.shared.airportconfig._
 
-  val allPorts: List[AirportConfigLike] = List(Ncl, Bfs, Lpl, Lcy, Gla, Ema, Edi, Stn, Man, Ltn, Lhr, Lgw, Bhx, Brs, Test, Test2)
+  val allPorts: List[AirportConfigLike] = List(Bfs, Bhd, Bhx, Brs, Edi, Ema, Gla, Lcy, Lgw, Lhr, Lpl, Ltn, Man, Ncl, Stn, Test, Test2)
   val testPorts: List[AirportConfigLike] = List(Test, Test2)
 
   val allPortConfigs: List[AirportConfig] = allPorts.map(_.config)
