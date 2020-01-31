@@ -1,35 +1,10 @@
 package services
 
-import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.mutable
 import scala.util.{Success, Try}
 
-class Timer {
-  val log: Logger = LoggerFactory.getLogger(getClass)
-
-  val startMillis: MillisSinceEpoch = nowMillis
-  var takenMillis: MillisSinceEpoch = 0L
-
-  private def nowMillis: MillisSinceEpoch = SDate.now().millisSinceEpoch
-
-  def soFarMillis: MillisSinceEpoch = nowMillis - startMillis
-
-  def stop: MillisSinceEpoch = {
-    takenMillis = nowMillis - startMillis
-    takenMillis
-  }
-
-  def report(msg: String): Unit = log.warn(s"${soFarMillis}ms $msg")
-
-  def compare(other: Timer, msg: String): Unit = {
-    val otherMillis = other.soFarMillis - soFarMillis
-
-    if (otherMillis > soFarMillis && soFarMillis > 0) log.warn(s"$msg **slower**: $otherMillis > $soFarMillis")
-    else log.warn(s"$msg quicker: $otherMillis < $soFarMillis")
-  }
-}
 
 case class ProcessedWork(util: List[Double],
                          waits: List[Int],
@@ -248,7 +223,7 @@ object Optimiser {
     if (backlog.nonEmpty) {
       finalCapacity = List(finalCapacity, 1).max
       val cumBacklog = cumulativeSum(backlog)
-      val cumCapacity = seqR(0, finalCapacity, (totalBacklog.toDouble / finalCapacity).ceil.toInt)
+      val cumCapacity = seqR(0, finalCapacity, (totalBacklog / finalCapacity).ceil.toInt)
       val overrunSlots = cumCapacity.indices
       val backlogBoundaries = approx(cumCapacity, overrunSlots, cumBacklog.toList)
       val startSlots = 0d :: backlogBoundaries.dropRight(1).map(_.floor)
@@ -256,7 +231,7 @@ object Optimiser {
       val alreadyWaited = (1 to backlog.length).reverse
       val meanWaits = startSlots
         .zip(endSlots)
-        .map { case (x, y) => (x.toDouble + y) / 2 }
+        .map { case (x, y) => (x + y) / 2 }
         .zip(alreadyWaited)
         .map { case (x, y) => x + y }
 

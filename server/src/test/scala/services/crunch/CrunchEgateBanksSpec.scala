@@ -20,7 +20,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
   "Egate banks handling " >> {
     "Given flights with 20 very expensive passengers and splits to eea desk & egates " +
       "When I ask for desk recs " +
-      "Then I should see lower egates recs by a factor of 4 (rounded up)" >> {
+      "Then I should see lower egates recs by a factor of 7 (rounded up)" >> {
 
       val scheduled00 = "2017-01-01T00:00Z"
       val scheduled = "2017-01-01T00:00Z"
