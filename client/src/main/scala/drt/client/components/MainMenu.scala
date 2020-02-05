@@ -140,8 +140,7 @@ object PortSwitcher {
             ^.className := "dropdown",
             <.a(Icon.plane, " ", "Switch port"),
             ^.onClick --> scope.modState(_.copy(showDropDown = !state.showDropDown)),
-            ^.onMouseLeave --> scope.modState(_ => State()),
-
+            if (state.showDropDown) <.div(^.className :="menu-overlay", ^.onClick --> scope.modState(_ => State())) else "",
             <.ul(^.className := s"main-menu__port-switcher dropdown-menu $showClass",
               otherPorts.toList.sorted.map(p => <.li(^.className := "dropdown-item",
                 <.a(^.href := RestrictedAccessByPortPage.url(p), p.iata))).toTagMod
