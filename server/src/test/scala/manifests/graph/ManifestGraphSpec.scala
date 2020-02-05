@@ -83,7 +83,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
 
     Source(List(List(testArrival))).runWith(requestSink)
 
-    val responses = Await.result(responseSource.runWith(Sink.seq), 2 second)
+    val responses = Await.result(responseSource.runWith(Sink.seq), 5 seconds)
 
     killSwitch.shutdown()
 

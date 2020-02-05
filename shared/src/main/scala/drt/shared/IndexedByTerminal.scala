@@ -11,11 +11,13 @@ import scala.collection.{SortedMap, mutable}
 abstract class IndexedByTerminal[K <: WithTerminal[K], A <: WithLastUpdated]() {
   protected val items: mutable.Map[Terminal, MSortedMap[K, A]] = mutable.Map()
 
-  def ++=(toAdd: SortedMap[K, A]): Unit = toAdd.groupBy(_._1.terminal).foreach {
-    case (t, things) => updateTerminalItems(t, things)
+  def ++=(toAdd: Iterable[(K, A)]): Unit = {
+    toAdd.groupBy(_._1.terminal).foreach {
+      case (t, things) => updateTerminalItems(t, things)
+    }
   }
 
-  protected def updateTerminalItems(t: Terminal, things: SortedMap[K, A]): Unit = {
+  protected def updateTerminalItems(t: Terminal, things: Iterable[(K, A)]): Unit = {
     if (items.contains(t)) {
       items(t) ++= things
     } else {
@@ -23,7 +25,7 @@ abstract class IndexedByTerminal[K <: WithTerminal[K], A <: WithLastUpdated]() {
     }
   }
 
-  def ++=(toAdd: Iterable[(K, A)]): Unit = ++=(SortedMap[K, A]() ++ toAdd)
+//  def ++=(toAdd: Iterable[(K, A)]): Unit = ++=(Map[K, A]() ++ toAdd)
 
   def +++=(toAdd: Iterable[A]): Unit
 
@@ -44,7 +46,13 @@ abstract class IndexedByTerminal[K <: WithTerminal[K], A <: WithLastUpdated]() {
   def range(roundedStart: SDateLike, roundedEnd: SDateLike): ISortedMap[K, A] = {
     val start = atTime(roundedStart.millisSinceEpoch)
     val end = atTime(roundedEnd.millisSinceEpoch)
-    items.foldLeft(ISortedMap[K, A]()) { case (acc, (_, tItems)) => acc ++ tItems.range(start, end) }
+    items.foldLeft(ISortedMap[K, A]()) {
+      case (acc, (_, tItems)) =>
+        val kToA = tItems.range(start, end)
+        if (roundedStart.toISOString() == "2020-02-03T00:00:00Z" && tItems.size == 2352)
+          println(s"Found ${kToA.size} from ${tItems.values.mkString("\n")}")
+        acc ++ kToA
+    }
   }
 
   def rangeAtTerminals(roundedStart: SDateLike, roundedEnd: SDateLike, terminals: Seq[Terminal]): ISortedMap[K, A] = {
@@ -57,7 +65,9 @@ abstract class IndexedByTerminal[K <: WithTerminal[K], A <: WithLastUpdated]() {
     case (_, tItems) => purgeExpired(tItems, atTime, thresholdMillis)
   }
 
-  def purgeExpired[X, Y](expireable: mutable.SortedMap[X, Y], atTime: MillisSinceEpoch => X, thresholdMillis: MillisSinceEpoch): Unit = {
+  def purgeExpired[X, Y](expireable: mutable.SortedMap[X, Y],
+                         atTime: MillisSinceEpoch => X,
+                         thresholdMillis: MillisSinceEpoch): Unit = {
     val expired = expireable.range(atTime(0L), atTime(thresholdMillis - 1))
     expireable --= expired.keys
   }
@@ -77,12 +87,12 @@ abstract class IndexedByTerminalWithUpdatesCache[K <: WithTerminal[K], A <: With
 
   val recentUpdates: mutable.SortedMap[MillisSinceEpoch, ListBuffer[(K, A)]] = mutable.SortedMap()
 
-  override def updateTerminalItems(t: Terminal, things: SortedMap[K, A]): Unit = {
+  override def updateTerminalItems(t: Terminal, things: Iterable[(K, A)]): Unit = {
     super.updateTerminalItems(t, things)
     updateRecentUpdates(things)
   }
 
-  private def updateRecentUpdates(toAdd: SortedMap[K, A]): Unit = {
+  private def updateRecentUpdates(toAdd: Iterable[(K, A)]): Unit = {
     toAdd
       .groupBy {
         case (_, item) => item.lastUpdated.getOrElse(0L)
@@ -132,19 +142,25 @@ class IndexedFlights extends IndexedByTerminalWithUpdatesCache[UniqueArrival, Ap
     scheduledEarlier ++ _range(start, end) ++ scheduledLater
   }
 
-  def _rangeAtTerminals(start: SDateLike, end: SDateLike, terminals: Seq[Terminal]): ISortedMap[UniqueArrival, ApiFlightWithSplits] = {
+  def _rangeAtTerminals(start: SDateLike,
+                        end: SDateLike,
+                        terminals: Seq[Terminal]): ISortedMap[UniqueArrival, ApiFlightWithSplits] = {
     val startMillis = atTime(start.millisSinceEpoch)
     val endMillis = atTime(end.millisSinceEpoch)
     items.filterKeys(terminals.contains(_)).foldLeft(ISortedMap[UniqueArrival, ApiFlightWithSplits]()) { case (acc, (_, tItems)) => acc ++ tItems.range(startMillis, endMillis) }
   }
 
-  override def rangeAtTerminals(start: SDateLike, end: SDateLike, terminals: Seq[Terminal]): ISortedMap[UniqueArrival, ApiFlightWithSplits] = {
+  override def rangeAtTerminals(start: SDateLike,
+                                end: SDateLike,
+                                terminals: Seq[Terminal]): ISortedMap[UniqueArrival, ApiFlightWithSplits] = {
     val scheduledEarlier = filterByPcp(_rangeAtTerminals(start.addHours(-24), start, terminals), start, end)
     val scheduledLater = filterByPcp(_rangeAtTerminals(end, end.addHours(24), terminals), start, end)
     scheduledEarlier ++ _rangeAtTerminals(start, end, terminals) ++ scheduledLater
   }
 
-  private def filterByPcp(flightsToFilter: ISortedMap[UniqueArrival, ApiFlightWithSplits], start: SDateLike, end: SDateLike): ISortedMap[UniqueArrival, ApiFlightWithSplits] =
+  private def filterByPcp(flightsToFilter: ISortedMap[UniqueArrival, ApiFlightWithSplits],
+                          start: SDateLike,
+                          end: SDateLike): ISortedMap[UniqueArrival, ApiFlightWithSplits] =
     flightsToFilter.filterNot {
       case (_, ApiFlightWithSplits(arrival, _, _)) =>
         val firstPcpMin = arrival.pcpRange().min

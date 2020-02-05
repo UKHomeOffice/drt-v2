@@ -25,10 +25,14 @@ object DeskAndPaxTypeCombinations {
   val nationalsDeskNonVisa = "Non-VISA"
 }
 
-case class MilliDate(millisSinceEpoch: MillisSinceEpoch) extends Ordered[MilliDate] with WithTimeAccessor {
-  override def compare(that: MilliDate): Int = millisSinceEpoch.compare(that.millisSinceEpoch)
+case class MilliDate(_millisSinceEpoch: MillisSinceEpoch) extends Ordered[MilliDate] with WithTimeAccessor {
+  lazy val secondsOffset: MillisSinceEpoch = _millisSinceEpoch % 60000
 
-  override def timeValue: MillisSinceEpoch = millisSinceEpoch
+  lazy val millisSinceEpoch: MillisSinceEpoch = _millisSinceEpoch - secondsOffset
+
+  override def compare(that: MilliDate): Int = _millisSinceEpoch.compare(that._millisSinceEpoch)
+
+  override def timeValue: MillisSinceEpoch = _millisSinceEpoch
 }
 
 object MilliDate {
@@ -582,6 +586,8 @@ trait SDateLike {
 
   def millisSinceEpoch: MillisSinceEpoch
 
+  def millisSinceEpochToMinuteBoundary: MillisSinceEpoch = millisSinceEpoch - (millisSinceEpoch % 60000)
+
   def toISOString(): String
 
   def addDays(daysToAdd: Int): SDateLike
@@ -761,7 +767,7 @@ object CrunchApi {
     def equals(candidate: StaffMinute): Boolean =
       this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
 
-    lazy val key: TM = MinuteHelper.key(terminal, minute)
+    lazy val key: TM = TM(terminal, minute)
     lazy val available: Int = shifts + movements match {
       case sa if sa >= 0 => sa
       case _ => 0

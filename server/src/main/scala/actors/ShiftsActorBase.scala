@@ -177,14 +177,19 @@ object ShiftsMessageParser {
     for {
       startDt <- maybeSt
       endDt <- maybeEt
-    } yield StaffAssignment(
-      name = shiftMessage.name.getOrElse(""),
-      terminal = Terminal(shiftMessage.terminalName.getOrElse("")),
-      startDt = MilliDate(startDt.millisSinceEpoch),
-      endDt = MilliDate(endDt.millisSinceEpoch),
-      numberOfStaff = shiftMessage.numberOfStaff.getOrElse("0").toInt,
-      createdBy = None
-    )
+    } yield {
+      val minuteMillis = startDt.millisSinceEpoch
+      val secondsOffset = minuteMillis % 60000
+      if (secondsOffset != 0) println(s"${shiftMessage.name.getOrElse("")} Seconds offset: $secondsOffset")
+      StaffAssignment(
+        name = shiftMessage.name.getOrElse(""),
+        terminal = Terminal(shiftMessage.terminalName.getOrElse("")),
+        startDt = MilliDate(minuteMillis - secondsOffset),
+        endDt = MilliDate(endDt.millisSinceEpoch),
+        numberOfStaff = shiftMessage.numberOfStaff.getOrElse("0").toInt,
+        createdBy = None
+        )
+    }
   }
 
   def parseDayAndTimeToSdate(maybeDay: Option[String], maybeTime: Option[String]): Option[SDateLike] = {
