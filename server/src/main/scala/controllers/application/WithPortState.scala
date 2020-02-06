@@ -49,13 +49,7 @@ trait WithPortState {
       val message = GetPortState(startMillis, endMillis)
       val futureState = futureCrunchState[PortState](Option(pointInTime), startMillis, endMillis, message)
 
-      futureState.map { updates =>
-        updates match {
-          case Right(Some(ps)) =>
-            println(s"got snapshot:\n${ps.staffMinutes.values.toSeq.sortBy(_.minute).map(s => (SDate(s.minute).toISOString(), s.shifts)).mkString("\n")}")
-        }
-        Ok(write(updates))
-      }
+      futureState.map { updates => Ok(write(updates)) }
     }
   }
 

@@ -178,14 +178,11 @@ object ShiftsMessageParser {
       startDt <- maybeSt
       endDt <- maybeEt
     } yield {
-      val minuteMillis = startDt.millisSinceEpoch
-      val secondsOffset = minuteMillis % 60000
-      if (secondsOffset != 0) println(s"${shiftMessage.name.getOrElse("")} Seconds offset: $secondsOffset")
       StaffAssignment(
         name = shiftMessage.name.getOrElse(""),
         terminal = Terminal(shiftMessage.terminalName.getOrElse("")),
-        startDt = MilliDate(minuteMillis - secondsOffset),
-        endDt = MilliDate(endDt.millisSinceEpoch),
+        startDt = MilliDate(startDt.roundToMinute().millisSinceEpoch),
+        endDt = MilliDate(endDt.roundToMinute().millisSinceEpoch),
         numberOfStaff = shiftMessage.numberOfStaff.getOrElse("0").toInt,
         createdBy = None
         )

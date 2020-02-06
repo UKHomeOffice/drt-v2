@@ -49,24 +49,7 @@ class CrunchStateReadActor(snapshotInterval: Int,
     forecastMaxMillis = () => endMillis) {
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case snapshot: CrunchStateSnapshotMessage =>
-      println(s"processSnapshotMessage total staff messages: ${snapshot.staffMinutes.length}")
-      val dates = snapshot.staffMinutes.groupBy(m => SDate(m.minute.get).toISODateOnly)
-      snapshot.staffMinutes.foreach(m => println(s"snapshot msg: ${SDate(m.minute.get).toISOString()} ${m.shifts.get}"))
-      dates.get("2020-02-03").map { msgs =>
-        msgs.sortBy(_.minute).foreach(m => println(s"snapshot msg: ${SDate(m.minute.get).toISOString()} ${m.shifts.get}"))
-      }
-      println(s"processSnapshotMessage got ${snapshot.staffMinutes.filter(sm => sm.minute.isDefined && sm.minute.get > 1580688000000L && sm.minute.get < 1580774400000L).size} staff minutes")
-
-      println(s"state before: ${state.staffMinutes.all.size}")
-
-      setStateFromSnapshot(snapshot, Option(pointInTime.addDays(2)))
-      println(s"state after: ${state.staffMinutes.all.size}")
-
-      val dates2 = state.staffMinutes.all.values.groupBy(m => SDate(m.minute).toISODateOnly)
-      dates2.get("2020-02-03").map { msgs =>
-        msgs.toSeq.sortBy(_.minute).foreach(m => println(s"state: ${SDate(m.minute).toISOString()} ${m.shifts}"))
-      }
+    case snapshot: CrunchStateSnapshotMessage => setStateFromSnapshot(snapshot, Option(pointInTime.addDays(2)))
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {

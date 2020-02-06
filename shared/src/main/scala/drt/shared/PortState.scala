@@ -91,8 +91,7 @@ case class PortState(flights: ISortedMap[UniqueArrival, ApiFlightWithSplits],
     val startMillis = start.roundToMinute().millisSinceEpoch
     val endMillis = startMillis + (periods * periodSize * 60000)
     val periodMillis = periodSize * 60000
-//    println(s"Looking up staff for ${start.toISOString()} to ${start.addMillis(periods.toInt * periodSize.toInt * 60000)}")
-    val result = ISortedMap[Long, StaffMinute]() ++ (startMillis until endMillis by periodMillis)
+    ISortedMap[Long, StaffMinute]() ++ (startMillis until endMillis by periodMillis)
       .map { periodStart =>
         val periodEnd = periodStart + periodMillis
         val slotMinutes = (periodStart until periodEnd by 60000)
@@ -106,10 +105,6 @@ case class PortState(flights: ISortedMap[UniqueArrival, ApiFlightWithSplits],
         (periodStart, staffPeriodSummary(terminal, periodStart, slotMinutes))
       }
       .toMap
-
-    //println(s"Got results: ${result.values.toSeq.sortBy(_.minute).map(sm => (sm.shifts, sm.available)).mkString("\n")}")
-
-    result
   }
 
   def crunchPeriodSummary(terminal: Terminal, periodStart: MillisSinceEpoch, queue: Queue, slotMinutes: List[CrunchMinute]): CrunchMinute = {
@@ -216,8 +211,6 @@ class PortStateMutable {
     val fs = flightsRange(roundedStart, roundedEnd)
     val cms = crunchMinuteRange(roundedStart, roundedEnd)
     val sms = staffMinuteRange(roundedStart, roundedEnd)
-
-    println(s"sms: ${sms.size} from ${staffMinutes.count} for ${roundedStart.toISOString()} -> ${roundedEnd.toISOString()}")
 
     PortState(flights = fs, crunchMinutes = cms, staffMinutes = sms)
   }

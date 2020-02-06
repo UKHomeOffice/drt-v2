@@ -64,8 +64,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
   def initialState: PortStateMutable = PortStateMutable.empty
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case snapshot: CrunchStateSnapshotMessage =>
-      setStateFromSnapshot(snapshot, timeWindowEnd = Option(SDate(forecastMaxMillis())))
+    case snapshot: CrunchStateSnapshotMessage => setStateFromSnapshot(snapshot, timeWindowEnd = Option(SDate(forecastMaxMillis())))
   }
 
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
@@ -92,12 +91,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
       s", ${state.staffMinutes.count} staff minutes ")
   }
 
-  override def stateToMessage: GeneratedMessage = {
-    val x = portStateToSnapshotMessage(state)
-    println(s"snapshot created ${x.staffMinutes.filter(sm => sm.minute.isDefined && sm.minute.get > 1580688000000L && sm.minute.get < 1580774400000L).size} staff minutes")
-    x
-
-  }
+  override def stateToMessage: GeneratedMessage = portStateToSnapshotMessage(state)
 
   override def receiveCommand: Receive = {
     case psd: PortStateDiff =>

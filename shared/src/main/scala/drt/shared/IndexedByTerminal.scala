@@ -25,8 +25,6 @@ abstract class IndexedByTerminal[K <: WithTerminal[K], A <: WithLastUpdated]() {
     }
   }
 
-//  def ++=(toAdd: Iterable[(K, A)]): Unit = ++=(Map[K, A]() ++ toAdd)
-
   def +++=(toAdd: Iterable[A]): Unit
 
   def --=(toRemove: Iterable[K]): Unit = toRemove.groupBy(_.terminal).foreach {
@@ -46,13 +44,7 @@ abstract class IndexedByTerminal[K <: WithTerminal[K], A <: WithLastUpdated]() {
   def range(roundedStart: SDateLike, roundedEnd: SDateLike): ISortedMap[K, A] = {
     val start = atTime(roundedStart.millisSinceEpoch)
     val end = atTime(roundedEnd.millisSinceEpoch)
-    items.foldLeft(ISortedMap[K, A]()) {
-      case (acc, (_, tItems)) =>
-        val kToA = tItems.range(start, end)
-        if (roundedStart.toISOString() == "2020-02-03T00:00:00Z" && tItems.size == 2352)
-          println(s"Found ${kToA.size} from ${tItems.values.mkString("\n")}")
-        acc ++ kToA
-    }
+    items.foldLeft(ISortedMap[K, A]()) { case (acc, (_, tItems)) => acc ++ tItems.range(start, end) }
   }
 
   def rangeAtTerminals(roundedStart: SDateLike, roundedEnd: SDateLike, terminals: Seq[Terminal]): ISortedMap[K, A] = {
