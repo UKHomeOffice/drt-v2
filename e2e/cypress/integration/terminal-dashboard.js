@@ -1,7 +1,7 @@
 let moment = require('moment-timezone');
 require('moment/locale/en-gb');
 moment.locale("en-gb");
-let todayAtString = require('../support/functions').todayAtUtcString
+let todayAtString = require('../support/time-helpers').todayAtUtcString
 
 describe('Viewing the terminal dashboard page', function () {
 

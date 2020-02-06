@@ -21,7 +21,8 @@ case class PaxTypeQueueAllocation(paxTypeAllocator: PaxTypeAllocator, queueAlloc
       case (queueType, _, _, _) => queueType
     }
 
-  def toSplits(terminal: Terminal, bestManifest: BestAvailableManifest): Splits = {
+  def toSplits(terminal: Terminal, bestManifest:  BestAvailableManifest): Splits = {
+
     val splits = toQueues(terminal, bestManifest).flatMap {
       case (_, passengerProfileTypeByQueueCount) =>
         passengerProfileTypeByQueueCount.foldLeft(Map[PaxTypeAndQueue, ApiPaxTypeAndQueueCount]()) {

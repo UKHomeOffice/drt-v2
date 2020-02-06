@@ -2,8 +2,8 @@ let moment = require('moment-timezone');
 require('moment/locale/en-gb');
 moment.locale("en-gb");
 
-let todayAt = require('../support/functions').todayAtUtc
-let todayAtString = require('../support/functions').todayAtUtcString
+let todayAt = require('../support/time-helpers').todayAtUtc
+let todayAtString = require('../support/time-helpers').todayAtUtcString
 
 Cypress.Commands.add('downloadCsv', (terminalName, year, month, day) => {
   cy.request({url: '/export/api/'+terminalName+'/'+year+'/'+month+'/'+day, failOnStatusCode: false})

@@ -24,7 +24,7 @@
 // -- This is will overwrite an existing command --
 // Cypress.Commands.overwrite("visit", (originalFn, url, options) => { ... })
 
-let todayAtString = require ('../support/functions').todayAtUtcString
+let todayAtString = require ('./time-helpers').todayAtUtcString
 
 Cypress.Commands.add('setRoles', (roles = []) => {
   return cy.request("POST", '/test/mock-roles', { "roles": roles});
@@ -120,7 +120,9 @@ Cypress.Commands.add('selectCurrentTab', () => cy.get('#currentTab').click())
 
 Cypress.Commands.add('findAndClick', (toFind) => cy.contains(toFind).click({ force: true }));
 
-Cypress.Commands.add('choose24Hours', () => cy.get('#current .date-selector .date-view-picker-container').contains('24 hours').click());
+Cypress.Commands.add('choose24Hours', () => cy.get('#current .date-selector .date-view-picker-container')
+.contains('24 hours')
+.click());
 
 Cypress.Commands.add('chooseArrivalsTab', () => cy.get("#arrivalsTab").click());
 

@@ -69,7 +69,8 @@ case class CrunchProps[FR](logLabel: String = "",
                            refreshArrivalsOnStart: Boolean,
                            checkRequiredStaffUpdatesOnStartup: Boolean,
                            stageThrottlePer: FiniteDuration,
-                           useApiPaxNos: Boolean
+                           useApiPaxNos: Boolean,
+                           adjustEGateUseByUnder12s: Boolean
                           )
 
 object CrunchSystem {
@@ -127,10 +128,15 @@ object CrunchSystem {
         B5JPlusTypeAllocator(),
         TerminalQueueAllocator(props.airportConfig.terminalPaxTypeQueueAllocation))
 
+    val splitAdjustments = if(props.adjustEGateUseByUnder12s)
+      ChildEGateAdjustments(props.airportConfig.assumedAdultsPerChild)
+    else
+      AdjustmentsNoop()
+
     val arrivalSplitsGraphStage = new ArrivalSplitsGraphStage(
       name = props.logLabel,
       optionalInitialFlights = initialFlightsWithSplits,
-      splitsCalculator = manifests.queues.SplitsCalculator(ptqa, props.airportConfig.terminalPaxSplits),
+      splitsCalculator = manifests.queues.SplitsCalculator(ptqa, props.airportConfig.terminalPaxSplits, splitAdjustments),
       expireAfterMillis = props.expireAfterMillis,
       now = props.now,
       useApiPaxNos = props.useApiPaxNos

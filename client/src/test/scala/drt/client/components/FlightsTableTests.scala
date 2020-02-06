@@ -123,9 +123,9 @@ object FlightsTableTests extends TestSuite {
                   <.td(<.span(^.title := "2016-01-01 13:20", "13:20")),
                   <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:37", "13:37"))),
                   <.td(s"${testFlight.ActPax.getOrElse(0)}"),
-                  <.td(<.span(0), ^.className := "queue-split pax-unknown right"),
-                  <.td(<.span(0), ^.className := "queue-split pax-unknown right"),
-                  <.td(<.span(0), ^.className := "queue-split pax-unknown right")))))
+                  <.td(<.span(0), ^.className := "queue-split pax-unknown egate-queue-pax right"),
+                  <.td(<.span(0), ^.className := "queue-split pax-unknown eeadesk-queue-pax right"),
+                  <.td(<.span(0), ^.className := "queue-split pax-unknown noneeadesk-queue-pax right")))))
 
           assertRenderedComponentsAreEqual(
             ArrivalsTable(timelineComponent = None)(paxComp)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, false)),
@@ -162,9 +162,9 @@ object FlightsTableTests extends TestSuite {
                     date(testFlight.ActualChox),
                     <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:37", "13:37"))),
                     <.td(s"${testFlight.ActPax.getOrElse(0)}"),
-                    <.td(<.span(0), ^.className := "queue-split pax-unknown right"),
-                    <.td(<.span(0), ^.className := "queue-split pax-unknown right"),
-                    <.td(<.span(0), ^.className := "queue-split pax-unknown right")))))
+                    <.td(<.span(0), ^.className := "queue-split pax-unknown egate-queue-pax right"),
+                    <.td(<.span(0), ^.className := "queue-split pax-unknown eeadesk-queue-pax right"),
+                    <.td(<.span(0), ^.className := "queue-split pax-unknown noneeadesk-queue-pax right")))))
 
           assertRenderedComponentsAreEqual(
             ArrivalsTable(Option(timelineComponent))(paxComp)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, false)),
@@ -198,9 +198,9 @@ object FlightsTableTests extends TestSuite {
                     date(testFlight.ActualChox),
                     <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:37", "13:37"))),
                     <.td(s"${testFlight.ActPax.getOrElse(0)}"),
-                    <.td(<.span(0), ^.className := "queue-split pax-unknown right"),
-                    <.td(<.span(0), ^.className := "queue-split pax-unknown right"),
-                    <.td(<.span(0), ^.className := "queue-split pax-unknown right")))))
+                    <.td(<.span(0), ^.className := "queue-split pax-unknown egate-queue-pax right"),
+                    <.td(<.span(0), ^.className := "queue-split pax-unknown eeadesk-queue-pax right"),
+                    <.td(<.span(0), ^.className := "queue-split pax-unknown noneeadesk-queue-pax right")))))
 
             def originMapperComponent(portCode: PortCode): VdomNode = <.span(^.title := "JFK, New York, USA", portCode.toString)
 
@@ -264,9 +264,9 @@ object FlightsTableTests extends TestSuite {
                   date(testFlightT.ActualChox),
                   <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:36", "13:36"))),
                   <.td(<.div(paxToDisplay, ^.className := "pax-portfeed", ^.width := s"$width%")),
-                  <.td(<.span(0), ^.className := "queue-split pax-unknown right"),
-                  <.td(<.span(0), ^.className := "queue-split pax-unknown right"),
-                  <.td(<.span(0), ^.className := "queue-split pax-unknown right")
+                  <.td(<.span(0), ^.className := "queue-split pax-unknown egate-queue-pax right"),
+                  <.td(<.span(0), ^.className := "queue-split pax-unknown eeadesk-queue-pax right"),
+                  <.td(<.span(0), ^.className := "queue-split pax-unknown noneeadesk-queue-pax right")
                 ))))
 
           def paxComponent(f: ApiFlightWithSplits): VdomNode = <.div(f.apiFlight.ActPax.getOrElse(0).toInt, ^.className := "pax-portfeed", ^.width := s"$width%")

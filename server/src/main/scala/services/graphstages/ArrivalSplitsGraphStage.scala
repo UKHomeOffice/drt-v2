@@ -256,7 +256,6 @@ class ArrivalSplitsGraphStage(name: String = "",
                   flightsWithNewSplits
               }
           }
-
       }
     }
 
@@ -273,7 +272,8 @@ class ArrivalSplitsGraphStage(name: String = "",
       } else log.debug(s"outArrivalsWithSplits not available to push")
     }
 
-    def isNewManifestForFlight(flightWithSplits: ApiFlightWithSplits, newSplits: Splits): Boolean = !flightWithSplits.splits.contains(newSplits)
+    def isNewManifestForFlight(flightWithSplits: ApiFlightWithSplits, newSplits: Splits): Boolean =
+        !flightWithSplits.splits.contains(newSplits)
 
     def updateCodeSharesFromDiff(arrivalsDiff: ArrivalsDiff): Unit = arrivalsDiff.toUpdate
       .foreach { case (_, arrival) =>
@@ -292,9 +292,7 @@ class ArrivalSplitsGraphStage(name: String = "",
     splitsCalculator.bestSplitsForArrival(manifest.copy(carrierCode = arrival.CarrierCode), arrival)
   }
 
-  def nowMillis: Option[MillisSinceEpoch] = {
-    Option(now().millisSinceEpoch)
-  }
+  def nowMillis: Option[MillisSinceEpoch] = Option(now().millisSinceEpoch)
 
   def mergeDiffSets(latestDiff: Map[ArrivalKey, ApiFlightWithSplits],
                     existingDiff: Map[ArrivalKey, ApiFlightWithSplits]

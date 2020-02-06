@@ -160,6 +160,7 @@ case class DrtConfigParameters(config: Configuration) {
   val snapshotStaffOnStart: Boolean = config.get[Boolean]("feature-flags.snapshot-staffing-on-start")
 
   val useApiPaxNos: Boolean = config.getOptional[Boolean]("feature-flags.use-api-pax-nos").getOrElse(false)
+  val adjustEGateUseByUnder12s: Boolean = config.getOptional[Boolean]("feature-flags.adjust-egates-use-by-u12s").getOrElse(false)
 
 }
 
@@ -431,7 +432,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       refreshArrivalsOnStart = refreshArrivalsOnStart,
       checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup,
       stageThrottlePer = config.get[Int]("crunch.stage-throttle-millis") millisecond,
-      useApiPaxNos = params.useApiPaxNos
+      useApiPaxNos = params.useApiPaxNos,
+      adjustEGateUseByUnder12s = params.adjustEGateUseByUnder12s
     ))
     crunchInputs
   }
