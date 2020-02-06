@@ -20,8 +20,8 @@ case class ChildEGateAdjustments(assumedAdultsPerChild: Double) extends QueueAdj
     val totalEEAUnderEGateAge = paxOfTypeInQueue(s, EeaBelowEGateAge, EeaDesk)
     val totalB5JUnderEGateAge = paxOfTypeInQueue(s, B5JPlusNationalBelowEGateAge, EeaDesk)
 
-    val eeaAdjustments: Double = adjustMentsForPaxTypes(s, totalEEAUnderEGateAge, EeaMachineReadable)
-    val b5JAdjustments = adjustMentsForPaxTypes(s, totalB5JUnderEGateAge, B5JPlusNational)
+    val eeaAdjustments: Double = adjustmentsForPaxTypes(s, totalEEAUnderEGateAge, EeaMachineReadable)
+    val b5JAdjustments = adjustmentsForPaxTypes(s, totalB5JUnderEGateAge, B5JPlusNational)
 
     val withEEAAdjustments = eGateToDesk(s.splits, EeaMachineReadable, eeaAdjustments)
     val withB5JAdjustments = eGateToDesk(withEEAAdjustments, B5JPlusNational, b5JAdjustments)
@@ -36,7 +36,7 @@ case class ChildEGateAdjustments(assumedAdultsPerChild: Double) extends QueueAdj
       .getOrElse(0.0)
   }
 
-  def adjustMentsForPaxTypes(s: Splits, underAgePax: Double, paxType: PaxType): Double = {
+  def adjustmentsForPaxTypes(s: Splits, underAgePax: Double, paxType: PaxType): Double = {
     val maxAdjustments = paxOfTypeInQueue(s, paxType, EGate)
     val desiredAdjustments = underAgePax * assumedAdultsPerChild
     if (desiredAdjustments <= maxAdjustments) desiredAdjustments else maxAdjustments
