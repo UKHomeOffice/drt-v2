@@ -2,7 +2,9 @@ let moment = require('moment-timezone');
 require('moment/locale/en-gb');
 moment.locale("en-gb");
 
-let todayAtUtcString = require('../support/functions').todayAtUtcString
+let todayAtUtcString = require('../support/time-helpers').todayAtUtcString;
+let manifestForDateTime = require('../support/manifest-helpers').manifestForDateTime;
+let passengerList = require('../support/manifest-helpers').passengerList;
 
 describe('Arrivals CSV Export', () => {
 
@@ -26,92 +28,7 @@ describe('Arrivals CSV Export', () => {
     cy.deleteData();
   });
 
-  const ukPassport = {
-    "DocumentIssuingCountryCode": "GBR",
-    "PersonType": "P",
-    "DocumentLevel": "Primary",
-    "Age": "30",
-    "DisembarkationPortCode": "TST",
-    "InTransitFlag": "N",
-    "DisembarkationPortCountryCode": "TST",
-    "NationalityCountryEEAFlag": "EEA",
-    "PassengerIdentifier": "",
-    "DocumentType": "Passport",
-    "PoavKey": "1",
-    "NationalityCountryCode": "GBR"
-  };
-
-  const visaNational = {
-    "DocumentIssuingCountryCode": "ZWE",
-    "PersonType": "P",
-    "DocumentLevel": "Primary",
-    "Age": "30",
-    "DisembarkationPortCode": "TST",
-    "InTransitFlag": "N",
-    "DisembarkationPortCountryCode": "TST",
-    "NationalityCountryEEAFlag": "",
-    "PassengerIdentifier": "",
-    "DocumentType": "P",
-    "PoavKey": "2",
-    "NationalityCountryCode": "ZWE"
-  };
-  const nonVisaNational = {
-    "DocumentIssuingCountryCode": "MRU",
-    "PersonType": "P",
-    "DocumentLevel": "Primary",
-    "Age": "30",
-    "DisembarkationPortCode": "TST",
-    "InTransitFlag": "N",
-    "DisembarkationPortCountryCode": "TST",
-    "NationalityCountryEEAFlag": "",
-    "PassengerIdentifier": "",
-    "DocumentType": "P",
-    "PoavKey": "3",
-    "NationalityCountryCode": "MRU"
-  };
-  const b5JNational = {
-    "DocumentIssuingCountryCode": "AUS",
-    "PersonType": "P",
-    "DocumentLevel": "Primary",
-    "Age": "30",
-    "DisembarkationPortCode": "TST",
-    "InTransitFlag": "N",
-    "DisembarkationPortCountryCode": "TST",
-    "NationalityCountryEEAFlag": "",
-    "PassengerIdentifier": "",
-    "DocumentType": "P",
-    "PoavKey": "3",
-    "NationalityCountryCode": "AUS"
-  };
-
-  function manifest(passengerList) {
-    return {
-      "EventCode": "DC",
-      "DeparturePortCode": "AMS",
-      "VoyageNumberTrailingLetter": "",
-      "ArrivalPortCode": "TST",
-      "DeparturePortCountryCode": "MAR",
-      "VoyageNumber": "0123",
-      "VoyageKey": "key",
-      "ScheduledDateOfDeparture": schDateString,
-      "ScheduledDateOfArrival": schDateString,
-      "CarrierType": "AIR",
-      "CarrierCode": "TS",
-      "ScheduledTimeOfDeparture": "06:30:00",
-      "ScheduledTimeOfArrival": schTimeString,
-      "FileId": "fileID",
-      "PassengerList": passengerList
-    }
-  };
-
-  function manifestWithPaxSplits(euPax, visaNationals, nonVisaNationals, b5JNationals) {
-    const pax = Array(euPax).fill(ukPassport)
-      .concat(Array(visaNationals).fill(visaNational))
-      .concat(Array(nonVisaNationals).fill(nonVisaNational))
-      .concat(Array(b5JNationals).fill(b5JNational))
-
-    return manifest(pax)
-  }
+  const manifest = (passengerList) => manifestForDateTime(schDateString, schTimeString, passengerList)
 
   const schTimeLocal = moment(schString).tz("Europe/London").format("HH:mm")
   const estTimeLocal = moment(estString).tz("Europe/London").format("HH:mm")
@@ -160,7 +77,7 @@ describe('Arrivals CSV Export', () => {
       )
       .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
-      .addManifest(manifestWithPaxSplits(24, 10, 7, 10))
+      .addManifest(manifest(passengerList(24, 10, 7, 10)))
       .get('.pax-api')
       .request({
         method: 'GET',
@@ -186,7 +103,7 @@ describe('Arrivals CSV Export', () => {
       )
       .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
-      .addManifest(manifestWithPaxSplits(24, 10, 7, 10))
+      .addManifest(manifest(passengerList(24, 10, 7, 10)))
       .get('.pax-api')
       .asABorderForceOfficerWithRoles(["api:view"])
       .request({

@@ -2,8 +2,8 @@ let moment = require('moment-timezone');
 require('moment/locale/en-gb');
 moment.locale("en-gb");
 
-const todayAtUtcString = require('../support/functions').todayAtUtcString
-const inDaysAtTimeUtcString = require('../support/functions').inDaysAtTimeUtcString
+const todayAtUtcString = require('../support/time-helpers').todayAtUtcString
+const inDaysAtTimeUtcString = require('../support/time-helpers').inDaysAtTimeUtcString
 
 describe('View Modes', function () {
 

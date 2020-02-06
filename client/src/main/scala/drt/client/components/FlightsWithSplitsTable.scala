@@ -223,7 +223,7 @@ object FlightTableRow {
         hasChangedStyle,
         props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
         flightFields.toTagMod,
-        props.splitsQueueOrder.map(q => <.td(<.span(s"${queuePax.getOrElse(q, 0)}"), ^.className := s"queue-split $paxClass right")).toTagMod
+        props.splitsQueueOrder.map(q => <.td(<.span(s"${queuePax.getOrElse(q, 0)}"), ^.className := s"queue-split $paxClass ${q.toString.toLowerCase()}-queue-pax right")).toTagMod
       )
     })
     .configure(Reusability.shouldComponentUpdate)

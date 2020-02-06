@@ -102,9 +102,11 @@ object PassengerTypeCalculatorValues {
     object Visa extends DocumentType {
       override def toString: String = "V"
     }
+
     object Passport extends DocumentType {
       override def toString: String = "P"
     }
+    
     object InvalidDocument extends DocumentType {
       override def toString: String = "_"
     }
