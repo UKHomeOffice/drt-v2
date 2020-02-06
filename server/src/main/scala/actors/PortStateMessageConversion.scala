@@ -48,7 +48,7 @@ object PortStateMessageConversion {
             (cm.key, cm)
         }
         state.staffMinutes ++= sm.staffMinutes.collect {
-          case message if message.getShifts > 0 && message.getMinute <= windowEndMillis =>
+          case message if message.getMinute <= windowEndMillis =>
             val sm = staffMinuteFromMessage(message)
             (sm.key, sm)
         }
@@ -100,13 +100,15 @@ object PortStateMessageConversion {
     fixedPoints = Option(sm.fixedPoints),
     movements = Option(sm.movements))
 
-  def portStateToSnapshotMessage(portState: PortStateMutable): CrunchStateSnapshotMessage = CrunchStateSnapshotMessage(
-    Option(0L),
-    Option(0),
-    portState.flights.all.values.toList.map(flight => FlightMessageConversion.flightWithSplitsToMessage(flight)),
-    portState.crunchMinutes.all.values.toList.map(crunchMinuteToMessage),
-    portState.staffMinutes.all.values.toList.map(staffMinuteToMessage)
-    )
+  def portStateToSnapshotMessage(portState: PortStateMutable): CrunchStateSnapshotMessage = {
+    CrunchStateSnapshotMessage(
+      Option(0L),
+      Option(0),
+      portState.flights.all.values.toList.map(flight => FlightMessageConversion.flightWithSplitsToMessage(flight)),
+      portState.crunchMinutes.all.values.toList.map(crunchMinuteToMessage),
+      portState.staffMinutes.all.values.toList.map(staffMinuteToMessage)
+      )
+  }
 
   def splitMessageToApiSplits(sm: SplitMessage): Splits = {
     val splitSource = SplitSource(sm.source.getOrElse("")) match {
