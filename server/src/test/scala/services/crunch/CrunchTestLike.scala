@@ -275,7 +275,8 @@ class CrunchTestLike
       checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup,
       stageThrottlePer = 50 milliseconds,
       useApiPaxNos = true,
-      refreshArrivalsOnStart = refreshArrivalsOnStart
+      refreshArrivalsOnStart = refreshArrivalsOnStart,
+      adjustEGateUseByUnder12s = false
     ))
 
     portStateActor ! SetSimulationActor(crunchInputs.loadsToSimulate)
