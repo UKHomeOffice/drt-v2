@@ -74,7 +74,8 @@ case class PortState(flights: ISortedMap[UniqueArrival, ApiFlightWithSplits],
       .map { periodStart =>
         val queueMinutes = queues
           .map { queue =>
-            val slotMinutes = (periodStart until (periodStart + periodMillis) by 60000)
+            val periodEnd = periodStart + periodMillis
+            val slotMinutes = (periodStart until periodEnd by 60000)
               .map { minute => crunchMinutes.get(TQM(terminal, queue, minute)) }
               .collect { case Some(cm) => cm }
               .toList
@@ -95,10 +96,10 @@ case class PortState(flights: ISortedMap[UniqueArrival, ApiFlightWithSplits],
         val periodEnd = periodStart + periodMillis
         val slotMinutes = (periodStart until periodEnd by 60000)
           .map { minute => staffMinutes.get(TM(terminal, minute)) }
-          .collect { case Some(cm) => cm }
+          .collect { case Some(sm) => sm }
           .toList
-        val terminalMinutes = staffPeriodSummary(terminal, periodStart, slotMinutes)
-        (periodStart, terminalMinutes)
+        val completeList = staffMinutes.range(TM.atTime(startMillis), TM.atTime(endMillis))
+        (periodStart, staffPeriodSummary(terminal, periodStart, slotMinutes))
       }
       .toMap
   }

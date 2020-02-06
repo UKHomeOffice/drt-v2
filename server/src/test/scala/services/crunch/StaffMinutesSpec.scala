@@ -575,4 +575,121 @@ class StaffMinutesSpec extends CrunchTestLike {
     success
   }
 
+  "Given a shift not starting on a minute boundary " +
+    "When I inspect the staff minutes " +
+    "Then I should see the affected staff minutes rounded to the nearest minute" >> {
+
+    val nowString = "2017-01-01T00:00:15Z"
+    val now = SDate(nowString)
+    val startDate1 = MilliDate(SDate("2017-01-01T00:00:15").millisSinceEpoch)
+    val endDate1 = MilliDate(SDate("2017-01-01T00:02:15").millisSinceEpoch)
+    val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 50, None)
+    val shifts = ShiftAssignments(Seq(assignment1))
+
+    val daysToCrunch = 1
+
+    val crunch = runCrunchGraph(
+      now = () => now,
+      airportConfig = defaultAirportConfig.copy(queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)),
+      maxDaysToCrunch = daysToCrunch,
+      initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
+    )
+
+    offerAndWait(crunch.shiftsInput, shifts)
+
+    val expectedIsoMinutes = Seq(
+      "2017-01-01T00:00:00Z",
+      "2017-01-01T00:01:00Z",
+      "2017-01-01T00:02:00Z"
+      )
+
+    crunch.portStateTestProbe.fishForMessage(2 seconds, s"Didn't find expected minutes ($expectedIsoMinutes)") {
+      case PortState(_, _, staffMinutes) =>
+        val isoMinutes = staffMinutes.values.toSeq.sortBy(_.minute).map(m => SDate(m.minute).toISOString())
+        isoMinutes == expectedIsoMinutes
+    }
+
+    crunch.shutdown
+
+    success
+  }
+
+  "Given a fixed point not starting on a minute boundary " +
+    "When I inspect the staff minutes " +
+    "Then I should see the affected staff minutes rounded to the nearest minute" >> {
+
+    val nowString = "2017-01-01T00:00:15Z"
+    val now = SDate(nowString)
+    val startDate1 = MilliDate(SDate("2017-01-01T00:00:15").millisSinceEpoch)
+    val endDate1 = MilliDate(SDate("2017-01-01T00:02:15").millisSinceEpoch)
+    val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 50, None)
+    val fixedPoints = FixedPointAssignments(Seq(assignment1))
+
+    val daysToCrunch = 1
+
+    val crunch = runCrunchGraph(
+      now = () => now,
+      airportConfig = defaultAirportConfig.copy(queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)),
+      maxDaysToCrunch = daysToCrunch,
+      initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
+    )
+
+    offerAndWait(crunch.fixedPointsInput, fixedPoints)
+
+    val expectedIsoMinutes = Seq(
+      "2017-01-01T00:00:00Z",
+      "2017-01-01T00:01:00Z",
+      "2017-01-01T00:02:00Z"
+      )
+
+    crunch.portStateTestProbe.fishForMessage(2 seconds, s"Didn't find expected minutes ($expectedIsoMinutes)") {
+      case PortState(_, _, staffMinutes) =>
+        val isoMinutes = staffMinutes.values.toSeq.sortBy(_.minute).map(m => SDate(m.minute).toISOString())
+        isoMinutes == expectedIsoMinutes
+    }
+
+    crunch.shutdown
+
+    success
+  }
+
+  "Given a fixed point not starting on a minute boundary " +
+    "When I inspect the staff minutes " +
+    "Then I should see the affected staff minutes rounded to the nearest minute" >> {
+
+    val nowString = "2017-01-01T00:00:15Z"
+    val now = SDate(nowString)
+    val startDate1 = MilliDate(SDate("2017-01-01T00:00:15").millisSinceEpoch)
+    val endDate1 = MilliDate(SDate("2017-01-01T00:02:15").millisSinceEpoch)
+    val uuid = UUID.randomUUID()
+    val staffMovement1 = StaffMovement(T1, "some reason", startDate1, 1, uuid, None, None)
+    val staffMovement2 = StaffMovement(T1, "some reason", endDate1, -1, uuid, None, None)
+
+    val daysToCrunch = 1
+
+    val crunch = runCrunchGraph(
+      now = () => now,
+      airportConfig = defaultAirportConfig.copy(queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)),
+      maxDaysToCrunch = daysToCrunch,
+      initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
+    )
+
+    offerAndWait(crunch.liveStaffMovementsInput, Seq(staffMovement1, staffMovement2))
+
+    val expectedIsoMinutes = Seq(
+      "2017-01-01T00:00:00Z",
+      "2017-01-01T00:01:00Z"
+      )
+
+    crunch.portStateTestProbe.fishForMessage(2 seconds, s"Didn't find expected minutes ($expectedIsoMinutes)") {
+      case PortState(_, _, staffMinutes) =>
+        val isoMinutes = staffMinutes.values.toSeq.sortBy(_.minute).map(m => SDate(m.minute).toISOString())
+        isoMinutes == expectedIsoMinutes
+    }
+
+    crunch.shutdown
+
+    success
+  }
+
 }

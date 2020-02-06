@@ -252,17 +252,15 @@ object Crunch {
     UpdateCriteria(minutesToUpdate, terminalsToUpdate)
   }
 
-  def allMinuteMillis(movements: Seq[StaffMovement]): Seq[MillisSinceEpoch] = {
-    movements
-      .groupBy(_.uUID)
-      .flatMap {
-        case (_, mmPair) =>
-          val startMillis = mmPair.map(_.time.millisSinceEpoch).min
-          val endMillis = mmPair.map(_.time.millisSinceEpoch).max
-          startMillis until endMillis by 60000
-      }
-      .toSeq
-  }
+  def allMinuteMillis(movements: Seq[StaffMovement]): Seq[MillisSinceEpoch] = movements
+    .groupBy(_.uUID)
+    .flatMap {
+      case (_, mmPair) =>
+        val startMillis = mmPair.map(_.time.millisSinceEpoch).min
+        val endMillis = mmPair.map(_.time.millisSinceEpoch).max
+        startMillis until endMillis by 60000
+    }
+    .toSeq
 
   def baseArrivalsRemovalsAndUpdates(incoming: Map[UniqueArrival, Arrival], existing: mutable.Map[UniqueArrival, Arrival]): (mutable.Set[UniqueArrival], mutable.Set[Arrival]) = {
     val removals = mutable.Set[UniqueArrival]()
