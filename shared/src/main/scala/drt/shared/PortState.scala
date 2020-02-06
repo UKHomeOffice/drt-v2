@@ -96,10 +96,9 @@ case class PortState(flights: ISortedMap[UniqueArrival, ApiFlightWithSplits],
         val periodEnd = periodStart + periodMillis
         val slotMinutes = (periodStart until periodEnd by 60000)
           .map { minute => staffMinutes.get(TM(terminal, minute)) }
-          .collect { case Some(sm) /*if sm.shifts > 0 || sm.movements > 0*/ => sm }
+          .collect { case Some(sm) => sm }
           .toList
         val completeList = staffMinutes.range(TM.atTime(startMillis), TM.atTime(endMillis))
-        println(s"completeList: ${completeList.size}")
         (periodStart, staffPeriodSummary(terminal, periodStart, slotMinutes))
       }
       .toMap
