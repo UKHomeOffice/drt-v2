@@ -265,6 +265,30 @@ describe('Restrict access to endpoint by role', function () {
       endpoint: "/ooh-status",
       method: "GET",
       shouldBeGranted: true
+    },
+    {
+      roles: ["test"],
+      endpoint: "/arrival/234/T1/100",
+      method: "GET",
+      shouldBeGranted: false
+    },
+    {
+      roles: ["test", "arrival-source"],
+      endpoint: "/arrival/234/T1/100",
+      method: "GET",
+      shouldBeGranted: true
+    },
+    {
+      roles: ["test"],
+      endpoint: "/arrival/1000/234/T1/100",
+      method: "GET",
+      shouldBeGranted: false
+    },
+    {
+      roles: ["test", "arrival-source"],
+      endpoint: "/arrival/1000/234/T1/100",
+      method: "GET",
+      shouldBeGranted: true
     }
   ]
 

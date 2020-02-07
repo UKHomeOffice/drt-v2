@@ -54,7 +54,11 @@ trait WithFeeds {
     }
   }
 
-  def getArrivalAtPointInTime(pointInTime: MillisSinceEpoch, number: Int, terminal: String, scheduled: MillisSinceEpoch): Action[AnyContent] = authByRole(ArrivalSource) {
+  def getArrivalAtPointInTime(
+                               pointInTime: MillisSinceEpoch,
+                               number: Int, terminal: String,
+                               scheduled: MillisSinceEpoch
+                             ): Action[AnyContent] = authByRole(ArrivalSource) {
     val arrivalActorPersistenceIds = Seq(
       "actors.LiveBaseArrivalsActor-live-base",
       "actors.LiveArrivalsActor-live",
@@ -71,6 +75,7 @@ trait WithFeeds {
       val futureArrivalSources = pointInTimeActorSources.map((feedActor: ActorRef) => {
 
         val askableActorRef: AskableActorRef = feedActor
+
         askableActorRef
           .ask(UniqueArrival(number, terminal, scheduled))
           .map {
@@ -81,8 +86,7 @@ trait WithFeeds {
               feedActor ! PoisonPill
               None
           }
-      }
-      )
+      })
       Future
         .sequence(futureArrivalSources)
         .map(arrivalSources => Ok(write(arrivalSources.filter(_.isDefined))))
