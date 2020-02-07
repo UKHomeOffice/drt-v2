@@ -108,6 +108,8 @@ object Actions {
 
   case class GetArrivalSources(unique: UniqueArrival) extends Action
 
+  case class GetArrivalSourcesForPointInTime(pointInTime: SDateLike, unique: UniqueArrival) extends Action
+
   case class UpdateArrivalSources(uniqueArrival: UniqueArrival, arrivalSources: List[Option[FeedSourceArrival]]) extends Action
 
   case object RemoveArrivalSources extends Action

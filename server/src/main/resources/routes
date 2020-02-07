@@ -25,6 +25,7 @@ GET           /crunch-snapshot/:pit                                controllers.A
 
 GET           /feed-statuses                                       controllers.Application.getFeedStatuses
 GET           /arrival/:number/:terminal/:scheduled                controllers.Application.getArrival(number: Int, terminal: String, scheduled: Long)
+GET           /arrival/:pointInTime/:number/:terminal/:scheduled   controllers.Application.getArrivalAtPointInTime(pointInTime: Long, number: Int, terminal: String, scheduled: Long)
 
 GET           /logged-in                                           controllers.Application.isLoggedIn
 

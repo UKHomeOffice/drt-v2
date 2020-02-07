@@ -8,6 +8,7 @@ import drt.client.components.FlightComponents.paxComp
 import drt.client.components.TerminalContentComponent.originMapper
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
+import drt.client.services.ViewLive
 import drt.shared.CrunchApi.CrunchMinute
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
@@ -82,7 +83,8 @@ object TerminalDashboardComponent {
                   p.airportConfig.queueTypeSplitOrder(p.terminalPageTabLoc.terminal),
                   p.airportConfig.hasEstChox,
                   None,
-                  false
+                  false,
+                  ViewLive
                 )
               )),
               p.router.link(closeArrivalsPopupLink)(^.className := "close-arrivals-popup btn btn-default", "close")
