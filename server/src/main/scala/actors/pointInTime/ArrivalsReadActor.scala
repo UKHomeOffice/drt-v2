@@ -3,17 +3,17 @@ package actors.pointInTime
 import actors.ArrivalsActor
 import akka.actor.Props
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
-import drt.shared.{LiveFeedSource, SDateLike}
+import drt.shared.{FeedSource, LiveFeedSource, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightsDiffMessage}
 
 object ArrivalsReadActor {
-  def props(pointInTime: SDateLike, persistenceId: String): Props = Props(
-    new ArrivalsReadActor(pointInTime, persistenceId)
+  def props(pointInTime: SDateLike, persistenceId: String, feedSource: FeedSource): Props = Props(
+    new ArrivalsReadActor(pointInTime, persistenceId, feedSource)
   )
 }
 
-class ArrivalsReadActor(pointInTime: SDateLike, persistenceIdString: String) extends ArrivalsActor(() => pointInTime, Int.MaxValue, LiveFeedSource) {
+class ArrivalsReadActor(pointInTime: SDateLike, persistenceIdString: String, feedSource: FeedSource) extends ArrivalsActor(() => pointInTime, Int.MaxValue, feedSource) {
   override def persistenceId: String = persistenceIdString
 
   def now: () => SDateLike = () => pointInTime

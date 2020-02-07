@@ -60,16 +60,19 @@ trait WithFeeds {
                                scheduled: MillisSinceEpoch
                              ): Action[AnyContent] = authByRole(ArrivalSource) {
     val arrivalActorPersistenceIds = Seq(
-      "actors.LiveBaseArrivalsActor-live-base",
-      "actors.LiveArrivalsActor-live",
-      "actors.ForecastBaseArrivalsActor-forecast-base",
-      "actors.ForecastPortArrivalsActor-forecast-port"
+      ("actors.LiveBaseArrivalsActor-live-base", LiveBaseFeedSource),
+      ("actors.LiveArrivalsActor-live", LiveFeedSource),
+      ("actors.ForecastBaseArrivalsActor-forecast-base", AclFeedSource),
+      ("actors.ForecastPortArrivalsActor-forecast-port", ForecastFeedSource)
     )
 
-    val pointInTimeActorSources: Seq[ActorRef] = arrivalActorPersistenceIds.map(id => system.actorOf(
-      ArrivalsReadActor.props(SDate(pointInTime), id),
-      name = s"arrival-read-$id-${UUID.randomUUID()}"
-    ))
+    val pointInTimeActorSources: Seq[ActorRef] = arrivalActorPersistenceIds.map {
+      case (id, source) =>
+        system.actorOf(
+          ArrivalsReadActor.props(SDate(pointInTime), id, source),
+          name = s"arrival-read-$id-${UUID.randomUUID()}"
+        )
+    }
     Action.async { _ =>
 
       val futureArrivalSources = pointInTimeActorSources.map((feedActor: ActorRef) => {
