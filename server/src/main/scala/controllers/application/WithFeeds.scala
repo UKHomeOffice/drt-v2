@@ -1,9 +1,16 @@
 package controllers.application
 
+import java.util.UUID
+
+import actors.GetState
+import actors.pointInTime.ArrivalsReadActor
+import akka.actor.{ActorRef, PoisonPill}
+import akka.pattern.AskableActorRef
 import controllers.Application
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import play.api.mvc.{Action, AnyContent}
+import services.SDate
 import upickle.default.write
 
 import scala.concurrent.Future
@@ -41,6 +48,48 @@ trait WithFeeds {
             }
         )
 
+      Future
+        .sequence(futureArrivalSources)
+        .map(arrivalSources => Ok(write(arrivalSources.filter(_.isDefined))))
+    }
+  }
+
+  def getArrivalAtPointInTime(
+                               pointInTime: MillisSinceEpoch,
+                               number: Int, terminal: String,
+                               scheduled: MillisSinceEpoch
+                             ): Action[AnyContent] = authByRole(ArrivalSource) {
+    val arrivalActorPersistenceIds = Seq(
+      ("actors.LiveBaseArrivalsActor-live-base", LiveBaseFeedSource),
+      ("actors.LiveArrivalsActor-live", LiveFeedSource),
+      ("actors.ForecastBaseArrivalsActor-forecast-base", AclFeedSource),
+      ("actors.ForecastPortArrivalsActor-forecast-port", ForecastFeedSource)
+    )
+
+    val pointInTimeActorSources: Seq[ActorRef] = arrivalActorPersistenceIds.map {
+      case (id, source) =>
+        system.actorOf(
+          ArrivalsReadActor.props(SDate(pointInTime), id, source),
+          name = s"arrival-read-$id-${UUID.randomUUID()}"
+        )
+    }
+    Action.async { _ =>
+
+      val futureArrivalSources = pointInTimeActorSources.map((feedActor: ActorRef) => {
+
+        val askableActorRef: AskableActorRef = feedActor
+
+        askableActorRef
+          .ask(UniqueArrival(number, terminal, scheduled))
+          .map {
+            case Some(fsa: FeedSourceArrival) =>
+              feedActor ! PoisonPill
+              Option(fsa)
+            case _ =>
+              feedActor ! PoisonPill
+              None
+          }
+      })
       Future
         .sequence(futureArrivalSources)
         .map(arrivalSources => Ok(write(arrivalSources.filter(_.isDefined))))

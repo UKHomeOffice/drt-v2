@@ -159,7 +159,7 @@ object TerminalContentComponent {
                 if (state.activeTab == "arrivals") {
                   val flightsForTerminal = filteredPortState.flights.values.toList
                   props.featureFlags.renderReady(_ =>
-                    arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsForTerminal, queueOrder, props.airportConfig.hasEstChox, props.arrivalSources, props.loggedInUser.hasRole(ArrivalSource))))
+                    arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsForTerminal, queueOrder, props.airportConfig.hasEstChox, props.arrivalSources, props.loggedInUser.hasRole(ArrivalSource), props.viewMode)))
                 } else ""
               }),
               <.div(^.id := "available-staff", ^.className := s"tab-pane terminal-staffing-container $staffingPanelActive",

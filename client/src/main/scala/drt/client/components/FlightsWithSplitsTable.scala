@@ -2,11 +2,11 @@ package drt.client.components
 
 import diode.data.Pot
 import diode.react.ModelProxy
-import drt.client.actions.Actions.{GetArrivalSources, RemoveArrivalSources}
+import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime, RemoveArrivalSources}
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.SPACircuit
+import drt.client.services.{SPACircuit, ViewLive, ViewMode}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
 import drt.shared._
@@ -25,7 +25,9 @@ object FlightsWithSplitsTable {
   case class Props(flightsWithSplits: List[ApiFlightWithSplits],
                    queueOrder: Seq[Queue], hasEstChox: Boolean,
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
-                   hasArrivalSourcesAccess: Boolean)
+                   hasArrivalSourcesAccess: Boolean,
+                   viewMode: ViewMode
+                  )
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
     (props.flightsWithSplits, props.arrivalSources).hashCode()
@@ -80,7 +82,8 @@ object FlightsWithSplitsTable {
                     splitsGraphComponent = splitsGraphComponent,
                     splitsQueueOrder = props.queueOrder,
                     hasEstChox = props.hasEstChox,
-                    props.hasArrivalSourcesAccess
+                    props.hasArrivalSourcesAccess,
+                    props.viewMode
                   ))
               }.toTagMod)
           )
@@ -148,7 +151,8 @@ object FlightTableRow {
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                    splitsQueueOrder: Seq[Queue],
                    hasEstChox: Boolean,
-                   hasArrivalSourcesAccess: Boolean
+                   hasArrivalSourcesAccess: Boolean,
+                   viewMode: ViewMode
                   )
 
   case class RowState(hasChanged: Boolean)
@@ -188,7 +192,12 @@ object FlightTableRow {
       val flightCodeClass = if (props.hasArrivalSourcesAccess) "arrivals__table__flight-code arrivals__table__flight-code--clickable" else "arrivals__table__flight-code"
 
       val flightCodeCell = if (props.hasArrivalSourcesAccess) <.div(
-        ^.onClick --> Callback(SPACircuit.dispatch(GetArrivalSources(props.flightWithSplits.unique))),
+        ^.onClick --> Callback(SPACircuit.dispatch {
+          if (props.viewMode.isHistoric)
+            GetArrivalSourcesForPointInTime(props.viewMode.time, props.flightWithSplits.unique)
+          else
+            GetArrivalSources(props.flightWithSplits.unique)
+        }),
         allCodes.mkString(" - "))
       else <.div(allCodes.mkString(" - "))
 
