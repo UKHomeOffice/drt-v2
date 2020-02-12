@@ -49,7 +49,8 @@ object RunnableDeskRecs {
             }
             .map { case (crunchStartMillis, flights) =>
               log.info(s"Crunching ${SDate(crunchStartMillis).toISOString} flights: ${flights.flightsToUpdate.size}")
-              portDeskRecs.flightsToDeskRecs(flights, crunchStartMillis)
+              val maxDeskProvider = StaffProviders.maxDesksForTerminal
+              portDeskRecs.flightsToDeskRecs(flights, crunchStartMillis, maxDeskProvider)
             } ~> killSwitch ~> deskRecsSink
 
           ClosedShape

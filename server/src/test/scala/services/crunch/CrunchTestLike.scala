@@ -196,7 +196,8 @@ class CrunchTestLike
                      checkRequiredStaffUpdatesOnStartup: Boolean = false,
                      refreshArrivalsOnStart: Boolean = false,
                      recrunchOnStart: Boolean = false,
-                     flexDesks: Boolean = false
+                     flexDesks: Boolean = false,
+                     useLegacyDeployments: Boolean = false
                     ): CrunchGraphInputsAndProbes = {
 
     airportConfig.assertValid()
@@ -276,7 +277,9 @@ class CrunchTestLike
       stageThrottlePer = 50 milliseconds,
       useApiPaxNos = true,
       refreshArrivalsOnStart = refreshArrivalsOnStart,
-      adjustEGateUseByUnder12s = false
+      adjustEGateUseByUnder12s = false,
+      useLegacyDeployments = useLegacyDeployments,
+      optimiser = cruncher
     ))
 
     portStateActor ! SetSimulationActor(crunchInputs.loadsToSimulate)

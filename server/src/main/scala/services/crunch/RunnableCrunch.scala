@@ -40,7 +40,7 @@ object RunnableCrunch {
                                        arrivalSplitsStage: GraphStage[FanInShape3[ArrivalsDiff, List[BestAvailableManifest], List[BestAvailableManifest], FlightsWithSplits]],
                                        staffGraphStage: StaffGraphStage,
                                        staffBatchUpdateGraphStage: StaffBatchUpdateGraphStage,
-                                       simulationGraphStage: SimulationGraphStage,
+                                       deploymentGraphStage: GraphStage[FanInShape2[Loads, StaffMinutes, SimulationMinutes]],
 
                                        forecastArrivalsDiffStage: ArrivalsDiffingStage,
                                        liveBaseArrivalsDiffStage: ArrivalsDiffingStage,
@@ -109,7 +109,7 @@ object RunnableCrunch {
           val arrivalSplits = builder.add(arrivalSplitsStage.async("arrivals-dispatcher"))
           val staff = builder.add(staffGraphStage.async("staff-dispatcher"))
           val batchStaff = builder.add(staffBatchUpdateGraphStage.async("staff-dispatcher"))
-          val simulation = builder.add(simulationGraphStage.async("simulation-dispatcher"))
+          val simulation = builder.add(deploymentGraphStage.async("simulation-dispatcher"))
           val deskStatsSink = builder.add(Sink.actorRefWithAck(portStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure).async("port-state-dispatcher"))
           val flightsWithSplitsSink = builder.add(Sink.actorRefWithAck(portStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure).async("port-state-dispatcher"))
 

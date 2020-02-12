@@ -237,6 +237,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       Roles.availableRoles
     } else userRolesFromHeader(headers)
 
+  def optimiser: TryCrunch = if (config.get[Boolean]("crunch.use-legacy-optimiser")) TryRenjin.crunch else Optimiser.crunch
+
   def run(): Unit = {
     val futurePortStates: Future[(Option[PortState], Option[PortState], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[RegisteredArrivals])] = {
       val maybeLivePortState = initialStateFuture[PortState](liveCrunchStateActor)
@@ -254,8 +256,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         ra <- maybeInitialRegisteredArrivals
       } yield (lps, fps, ba, fa, la, ra)
     }
-
-    val optimiser: TryCrunch = if (config.get[Boolean]("crunch.use-legacy-optimiser")) TryRenjin.crunch else Optimiser.crunch
 
     val portDeskRecs = if (config.get[Boolean]("crunch.flex-desks"))
       FlexedPortDeskRecsProvider(airportConfig, 1440, optimiser)
@@ -433,7 +433,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup,
       stageThrottlePer = config.get[Int]("crunch.stage-throttle-millis") millisecond,
       useApiPaxNos = params.useApiPaxNos,
-      adjustEGateUseByUnder12s = params.adjustEGateUseByUnder12s
+      adjustEGateUseByUnder12s = params.adjustEGateUseByUnder12s,
+      useLegacyDeployments = false,
+      optimiser = optimiser
     ))
     crunchInputs
   }

@@ -72,7 +72,7 @@ object SplitStyle {
     readwriter[Js.Value].bimap[SplitStyle](
       feedSource => feedSource.toString,
       (s: Value) => apply(s.str)
-    )
+      )
 }
 
 case object PaxNumbers extends SplitStyle
@@ -89,7 +89,10 @@ object Nationality {
   implicit val rw: ReadWriter[Nationality] = macroRW
 }
 
-case class ApiPaxTypeAndQueueCount(passengerType: PaxType, queueType: Queue, paxCount: Double, nationalities: Option[IMap[Nationality, Double]])
+case class ApiPaxTypeAndQueueCount(passengerType: PaxType,
+                                   queueType: Queue,
+                                   paxCount: Double,
+                                   nationalities: Option[IMap[Nationality, Double]])
 
 object ApiPaxTypeAndQueueCount {
   implicit val rw: ReadWriter[ApiPaxTypeAndQueueCount] = macroRW
@@ -118,7 +121,10 @@ object EventTypes {
 }
 
 
-case class Splits(splits: Set[ApiPaxTypeAndQueueCount], source: SplitSource, maybeEventType: Option[EventType], splitStyle: SplitStyle = PaxNumbers) {
+case class Splits(splits: Set[ApiPaxTypeAndQueueCount],
+                  source: SplitSource,
+                  maybeEventType: Option[EventType],
+                  splitStyle: SplitStyle = PaxNumbers) {
   lazy val totalExcludingTransferPax: Double = Splits.totalExcludingTransferPax(splits)
   lazy val totalPax: Double = Splits.totalPax(splits)
 }
@@ -224,12 +230,16 @@ object UniqueArrival {
 
   def apply(arrival: Arrival): UniqueArrival = UniqueArrival(arrival.VoyageNumber.numeric, arrival.Terminal, arrival.Scheduled)
 
-  def apply(number: Int, terminalName: String, scheduled: MillisSinceEpoch): UniqueArrival = UniqueArrival(number, Terminal(terminalName), scheduled)
+  def apply(number: Int,
+            terminalName: String,
+            scheduled: MillisSinceEpoch): UniqueArrival = UniqueArrival(number, Terminal(terminalName), scheduled)
 
   def atTime: MillisSinceEpoch => UniqueArrival = (time: MillisSinceEpoch) => UniqueArrival(0, "", time)
 }
 
-case class CodeShareKeyOrderedBySchedule(scheduled: Long, terminal: Terminal, origin: PortCode) extends Ordered[CodeShareKeyOrderedBySchedule] with WithTimeAccessor {
+case class CodeShareKeyOrderedBySchedule(scheduled: Long,
+                                         terminal: Terminal,
+                                         origin: PortCode) extends Ordered[CodeShareKeyOrderedBySchedule] with WithTimeAccessor {
   override def compare(that: CodeShareKeyOrderedBySchedule): Int = scheduled.compare(that.scheduled) match {
     case 0 => terminal.compare(that.terminal) match {
       case 0 => origin.compare(that.origin)
@@ -246,12 +256,17 @@ object CodeShareKeyOrderedBySchedule {
 
   def apply(fws: ApiFlightWithSplits): CodeShareKeyOrderedBySchedule = CodeShareKeyOrderedBySchedule(fws.apiFlight.Scheduled, fws.apiFlight.Terminal, fws.apiFlight.Origin)
 
-  def apply(scheduled: Long, terminalName: String, origin: PortCode): CodeShareKeyOrderedBySchedule = CodeShareKeyOrderedBySchedule(scheduled, Terminal(terminalName), origin)
+  def apply(scheduled: Long,
+            terminalName: String,
+            origin: PortCode): CodeShareKeyOrderedBySchedule = CodeShareKeyOrderedBySchedule(scheduled, Terminal(terminalName), origin)
 
   def atTime: MillisSinceEpoch => CodeShareKeyOrderedBySchedule = (millis: MillisSinceEpoch) => CodeShareKeyOrderedBySchedule(millis, "", PortCode(""))
 }
 
-case class CodeShareKeyOrderedByDupes[A](scheduled: Long, terminal: Terminal, origin: PortCode, arrivalKeys: Set[A]) extends Ordered[CodeShareKeyOrderedByDupes[A]] {
+case class CodeShareKeyOrderedByDupes[A](scheduled: Long,
+                                         terminal: Terminal,
+                                         origin: PortCode,
+                                         arrivalKeys: Set[A]) extends Ordered[CodeShareKeyOrderedByDupes[A]] {
   private val dupeCountReversed: Int = 100 - arrivalKeys.size
 
   override def compare(that: CodeShareKeyOrderedByDupes[A]): Int = dupeCountReversed.compare(that.dupeCountReversed) match {
@@ -267,7 +282,9 @@ case class CodeShareKeyOrderedByDupes[A](scheduled: Long, terminal: Terminal, or
 }
 
 object MinuteHelper {
-  def key(terminalName: Terminal, queueName: Queue, minute: MillisSinceEpoch): TQM = TQM(terminalName, queueName, minute)
+  def key(terminalName: Terminal,
+          queueName: Queue,
+          minute: MillisSinceEpoch): TQM = TQM(terminalName, queueName, minute)
 
   def key(terminalName: Terminal, minute: MillisSinceEpoch): TM = TM(terminalName, minute)
 }
@@ -469,7 +486,7 @@ object Arrival {
       FeedSources,
       CarrierScheduled,
       ApiPax
-    )
+      )
   }
 }
 
@@ -528,10 +545,12 @@ object FeedSource {
     readwriter[Js.Value].bimap[FeedSource](
       feedSource => feedSource.toString,
       (s: Value) => apply(s.str).getOrElse(UnknownFeedSource)
-    )
+      )
 }
 
-case class ArrivalKey(origin: PortCode, voyageNumber: VoyageNumber, scheduled: Long) extends Ordered[ArrivalKey] with WithTimeAccessor {
+case class ArrivalKey(origin: PortCode,
+                      voyageNumber: VoyageNumber,
+                      scheduled: Long) extends Ordered[ArrivalKey] with WithTimeAccessor {
   override def compare(that: ArrivalKey): Int =
     scheduled.compareTo(that.scheduled) match {
       case 0 => origin.compare(that.origin) match {
@@ -561,7 +580,7 @@ trait SDateLike {
   val months = List(
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
-  )
+    )
 
   /**
    * Days of the week 1 to 7 (Monday is 1)
@@ -653,7 +672,11 @@ trait MinuteComparison[A <: WithLastUpdated] {
 trait PortStateMinutes {
   def applyTo(portStateMutable: PortStateMutable, now: MillisSinceEpoch): PortStateDiff
 
-  def addIfUpdated[A <: MinuteComparison[C], B <: WithTerminal[B], C <: WithLastUpdated](maybeExisting: Option[C], now: MillisSinceEpoch, existingUpdates: List[C], incoming: A, newMinute: () => C): List[C] = {
+  def addIfUpdated[A <: MinuteComparison[C], B <: WithTerminal[B], C <: WithLastUpdated](maybeExisting: Option[C],
+                                                                                         now: MillisSinceEpoch,
+                                                                                         existingUpdates: List[C],
+                                                                                         incoming: A,
+                                                                                         newMinute: () => C): List[C] = {
     maybeExisting match {
       case None => newMinute() :: existingUpdates
       case Some(existing) => incoming.maybeUpdated(existing, now) match {
@@ -689,11 +712,12 @@ object FlightsApi {
 
   case class Flights(flights: Seq[Arrival])
 
-  case class FlightsWithSplits(flightsToUpdate: List[ApiFlightWithSplits], arrivalsToRemove: List[Arrival]) extends PortStateMinutes {
+  case class FlightsWithSplits(flightsToUpdate: List[ApiFlightWithSplits],
+                               arrivalsToRemove: List[Arrival]) extends PortStateMinutes {
     def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
       val minutesFromRemovals: List[MillisSinceEpoch] = arrivalsToRemove.flatMap(r =>
-        portState.flights.getByKey(r.unique).map(_.apiFlight.pcpRange().toList).getOrElse(List())
-      )
+                                                                                   portState.flights.getByKey(r.unique).map(_.apiFlight.pcpRange().toList).getOrElse(List())
+                                                                                 )
       val minutesFromUpdates = flightsToUpdate.flatMap(_.apiFlight.pcpRange())
       val updatedMinutesFromFlights = minutesFromRemovals ++ minutesFromUpdates
 
@@ -705,7 +729,8 @@ object FlightsApi {
       portStateDiff(updatedFlights, updatedMinutesFromFlights)
     }
 
-    def portStateDiff(updatedFlights: Seq[ApiFlightWithSplits], flightMinuteUpdates: List[MillisSinceEpoch]): PortStateDiff = {
+    def portStateDiff(updatedFlights: Seq[ApiFlightWithSplits],
+                      flightMinuteUpdates: List[MillisSinceEpoch]): PortStateDiff = {
       val removals = arrivalsToRemove.map(f => RemoveFlight(UniqueArrival(f)))
       PortStateDiff(removals, updatedFlights, flightMinuteUpdates, Seq(), Seq())
     }
@@ -782,7 +807,7 @@ object CrunchApi {
     override def maybeUpdated(existing: StaffMinute, now: MillisSinceEpoch): Option[StaffMinute] =
       if (existing.shifts != shifts || existing.fixedPoints != fixedPoints || existing.movements != movements) Option(existing.copy(
         shifts = shifts, fixedPoints = fixedPoints, movements = movements, lastUpdated = Option(now)
-      ))
+        ))
       else None
   }
 
@@ -859,7 +884,7 @@ object CrunchApi {
       actDesks = ad.desks,
       actWait = ad.waitTime,
       lastUpdated = Option(now)
-    )
+      )
 
     implicit val rw: ReadWriter[CrunchMinute] = macroRW
   }
@@ -872,6 +897,19 @@ object CrunchApi {
     val workLoad: Double
     val deskRec: Int
     val waitTime: Int
+  }
+
+  case class DeploymentMinute(tqm: TQM,
+                              deployedDesks: Int,
+                              deployedWait: Int) extends MinuteComparison[CrunchMinute] {
+    lazy val key: TQM = tqm
+
+    override def maybeUpdated(existing: CrunchMinute, now: MillisSinceEpoch): Option[CrunchMinute] =
+      if (existing.deployedDesks != Option(deployedDesks) || existing.deployedWait != Option(deployedWait))
+        Option(existing.copy(
+          deployedDesks = Option(deployedDesks), deployedWait = Option(deployedWait), lastUpdated = Option(now)
+          ))
+      else None
   }
 
   case class DeskRecMinute(terminalName: Terminal,
@@ -887,7 +925,7 @@ object CrunchApi {
       if (existing.paxLoad != paxLoad || existing.workLoad != workLoad || existing.deskRec != deskRec || existing.waitTime != waitTime)
         Option(existing.copy(
           paxLoad = paxLoad, workLoad = workLoad, deskRec = deskRec, waitTime = waitTime, lastUpdated = Option(now)
-        ))
+          ))
       else None
   }
 
@@ -915,7 +953,7 @@ object CrunchApi {
     override def maybeUpdated(existing: CrunchMinute, now: MillisSinceEpoch): Option[CrunchMinute] =
       if (existing.actDesks != desks || existing.actWait != waitTime) Option(existing.copy(
         actDesks = desks, actWait = waitTime, lastUpdated = Option(now)
-      ))
+        ))
       else None
   }
 
@@ -942,7 +980,10 @@ object CrunchApi {
 
   case class CrunchMinutes(crunchMinutes: Set[CrunchMinute])
 
-  case class PortStateUpdates(latest: MillisSinceEpoch, flights: Set[ApiFlightWithSplits], minutes: Set[CrunchMinute], staff: Set[StaffMinute])
+  case class PortStateUpdates(latest: MillisSinceEpoch,
+                              flights: Set[ApiFlightWithSplits],
+                              minutes: Set[CrunchMinute],
+                              staff: Set[StaffMinute])
 
   object PortStateUpdates {
     implicit val rw: ReadWriter[PortStateUpdates] = macroRW
@@ -958,7 +999,10 @@ object CrunchApi {
 
   case class QueueHeadline(day: MillisSinceEpoch, queue: Queue, paxNos: Int, workload: Int)
 
-  def groupCrunchMinutesByX(groupSize: Int)(crunchMinutes: Seq[(MillisSinceEpoch, List[CrunchMinute])], terminalName: Terminal, queueOrder: List[Queue]): Seq[(MillisSinceEpoch, Seq[CrunchMinute])] = {
+  def groupCrunchMinutesByX(groupSize: Int)
+                           (crunchMinutes: Seq[(MillisSinceEpoch, List[CrunchMinute])],
+                            terminalName: Terminal,
+                            queueOrder: List[Queue]): Seq[(MillisSinceEpoch, Seq[CrunchMinute])] = {
     crunchMinutes.grouped(groupSize).toList.map(group => {
       val byQueueName = group.flatMap(_._2).groupBy(_.queue)
       val startMinute = group.map(_._1).min
@@ -985,13 +1029,14 @@ object CrunchApi {
             deployedWait = Option(queueMinutes.map(_.deployedWait.getOrElse(0)).max),
             actDesks = actDesks,
             actWait = actWaits
-          )
+            )
       }
       (startMinute, queueCrunchMinutes)
     })
   }
 
-  def terminalMinutesByMinute[T <: Minute](minutes: List[T], terminalName: Terminal): Seq[(MillisSinceEpoch, List[T])] = minutes
+  def terminalMinutesByMinute[T <: Minute](minutes: List[T],
+                                           terminalName: Terminal): Seq[(MillisSinceEpoch, List[T])] = minutes
     .filter(_.terminal == terminalName)
     .groupBy(_.minute)
     .toList

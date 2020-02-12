@@ -18,15 +18,15 @@ import scala.collection.{immutable, mutable}
 import scala.util.{Failure, Success, Try}
 
 
-class SimulationGraphStage(name: String = "",
-                           optionalInitialCrunchMinutes: Option[CrunchMinutes],
-                           optionalInitialStaffMinutes: Option[StaffMinutes],
-                           airportConfig: AirportConfig,
-                           expireAfterMillis: Int,
-                           now: () => SDateLike,
-                           simulate: Simulator,
-                           crunchPeriodStartMillis: SDateLike => SDateLike,
-                           minutesToCrunch: Int)
+class LegacyDeploymentGraphStage(name: String = "",
+                                 optionalInitialCrunchMinutes: Option[CrunchMinutes],
+                                 optionalInitialStaffMinutes: Option[StaffMinutes],
+                                 airportConfig: AirportConfig,
+                                 expireAfterMillis: Int,
+                                 now: () => SDateLike,
+                                 simulate: Simulator,
+                                 crunchPeriodStartMillis: SDateLike => SDateLike,
+                                 minutesToCrunch: Int)
   extends GraphStage[FanInShape2[Loads, StaffMinutes, SimulationMinutes]] {
 
   type TerminalLoad = Map[Queue, Map[MillisSinceEpoch, Double]]

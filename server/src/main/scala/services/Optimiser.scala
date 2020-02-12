@@ -83,6 +83,7 @@ object Optimiser {
                   capacity: IndexedSeq[Int],
                   sla: Int,
                   qstart: IndexedSeq[Double]): ProcessedWork = {
+    assert(capacity.length == work.length, s"capacity & work don't match: ${capacity.length} vs ${work.length}")
     var q = qstart
     var totalWait: Double = 0d
     var excessWait: Double = 0d

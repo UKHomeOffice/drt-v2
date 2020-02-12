@@ -6,11 +6,59 @@ import drt.shared.Queues.{Queue, Transfer}
 import drt.shared.Terminals.Terminal
 import drt.shared.{AirportConfig, CrunchApi, PaxTypeAndQueue, TQM}
 import org.slf4j.{Logger, LoggerFactory}
+import services.crunch.deskrecs.StaffProviders.MaxDesksProvider
 import services.graphstages.Crunch.LoadMinute
 import services.graphstages.WorkloadCalculator
 import services.{SDate, TryCrunch}
 
 import scala.collection.immutable.{Map, NumericRange, SortedMap}
+
+object StaffProviders {
+  type AvailableStaffProvider = List[Int] => MaxDesksProvider
+  type MaxDesksProvider = (List[Int], Set[Queue], Map[Queue, List[Int]], Map[Queue, (List[Int], List[Int])], Queue) => List[Int]
+
+  def maxStaff: AvailableStaffProvider =
+    (totalStaff: List[Int]) =>
+      (terminalDesks: List[Int], flexedQueues: Set[Queue], minDesks: Map[Queue, List[Int]], queueRecsSoFar: Map[Queue, (List[Int], List[Int])], queueProcessing: Queue) => {
+        val deployedByQueue = queueRecsSoFar.values.map(_._1).toList
+        val totalDeployed = if (deployedByQueue.nonEmpty) deployedByQueue.reduce(listOp[Int](_ + _)) else List()
+        val processedQueues = queueRecsSoFar.keys.toSet
+        val remainingFlexedQueues = flexedQueues -- (processedQueues + queueProcessing)
+        val minDesksForRemainingFlexedQueues: List[List[Int]] = minDesks.filterKeys(remainingFlexedQueues.contains).values.toList
+        val availableDesks = (terminalDesks :: totalDeployed :: minDesksForRemainingFlexedQueues).reduce(listOp[Int](_ - _))
+
+        val remainingQueues = minDesks.keys.toSet -- (processedQueues + queueProcessing)
+        val minDesksForRemainingQueues = minDesks.filterKeys(remainingQueues.contains).values.toList
+        val minimumPromisedStaff = if (minDesksForRemainingQueues.nonEmpty) minDesksForRemainingQueues.reduce(listOp[Int](_ + _)) else List()
+        val availableStaff = List(totalStaff, totalDeployed, minimumPromisedStaff).reduce(listOp[Int](_ - _))
+
+        List(availableDesks, availableStaff).reduce(listOp[Int](Math.min))
+      }
+
+  def maxDesks: MaxDesksProvider =
+    (terminalDesks: List[Int], flexedQueues: Set[Queue], minDesks: Map[Queue, List[Int]], queueRecsSoFar: Map[Queue, (List[Int], List[Int])], queueProcessing: Queue) => {
+      val deployedByQueue = queueRecsSoFar.values.map(_._1).toList
+      val totalDeployed = if (deployedByQueue.nonEmpty) deployedByQueue.reduce(listOp[Int](_ + _)) else List()
+      val processedQueues = queueRecsSoFar.keys.toSet
+      val remainingFlexedQueues = flexedQueues -- (processedQueues + queueProcessing)
+      val remainingMinDesks = minDesks.filterKeys(remainingFlexedQueues.contains).values.toList
+
+      (terminalDesks :: totalDeployed :: remainingMinDesks).reduce(listOp[Int](_ - _))
+    }
+
+  def listOp[A](op: (A, A) => A)(v1: List[A], v2: List[A]): List[A] = (v1, v2) match {
+    case (Nil, b) => b
+    case (a, Nil) => a
+    case (a, b) => a.zip(b).map {
+      case (a, b) => op(a, b)
+    }
+  }
+
+  def maxDesksForTerminal: Terminal => MaxDesksProvider = (_: Terminal) => StaffProviders.maxDesks
+
+  def maxStaffForTerminal: Map[Terminal, List[Int]] => Terminal => MaxDesksProvider =
+    (availableStaff: Map[Terminal, List[Int]]) => (terminal: Terminal) => StaffProviders.maxStaff(availableStaff(terminal))
+}
 
 trait ProductionPortDeskRecsProviderLike extends PortDeskRecsProviderLike {
   val log: Logger
@@ -51,7 +99,9 @@ trait ProductionPortDeskRecsProviderLike extends PortDeskRecsProviderLike {
     }
     .toMap
 
-  def flightsToDeskRecs(flights: FlightsWithSplits, crunchStartMillis: MillisSinceEpoch): CrunchApi.DeskRecMinutes = {
+  override def flightsToDeskRecs(flights: FlightsWithSplits,
+                                 crunchStartMillis: MillisSinceEpoch,
+                                 maxDesksProvider: Terminal => MaxDesksProvider): CrunchApi.DeskRecMinutes = {
     val crunchEndMillis = SDate(crunchStartMillis).addMinutes(minutesToCrunch).millisSinceEpoch
     val minuteMillis = crunchStartMillis until crunchEndMillis by 60000
 
@@ -61,13 +111,21 @@ trait ProductionPortDeskRecsProviderLike extends PortDeskRecsProviderLike {
 
     val loadsWithDiverts = queueLoadsFromFlights(flights)
 
+    loadsToDesks(maxDesksProvider, minuteMillis, terminalsToCrunch, loadsWithDiverts)
+  }
+
+  def loadsToDesks(maxDesksProvider: Terminal => MaxDesksProvider,
+                   minuteMillis: NumericRange[MillisSinceEpoch],
+                   terminalsToCrunch: Set[Terminal],
+                   loadsWithDiverts: Map[TQM, LoadMinute]): DeskRecMinutes = {
     val terminalQueueDeskRecs = terminalsToCrunch.map { terminal =>
       val terminalPax = terminalPaxLoadsByQueue(terminal, minuteMillis, loadsWithDiverts)
       val terminalWork = terminalWorkLoadsByQueue(terminal, minuteMillis, loadsWithDiverts)
-      val deskRecsForTerminal: TerminalDeskRecsProviderLike = terminalDescRecs(terminal)
       log.info(s"Optimising $terminal")
 
-      deskRecsForTerminal.terminalWorkToDeskRecs(terminal, minuteMillis, terminalPax, terminalWork, deskRecsForTerminal)
+      val maxDesksForQueue = maxDesksProvider(terminal)
+
+      terminalDescRecs(terminal).workToDeskRecs(terminal, minuteMillis, terminalPax, terminalWork, maxDesksForQueue)
     }
 
     DeskRecMinutes(terminalQueueDeskRecs.toSeq.flatten)
