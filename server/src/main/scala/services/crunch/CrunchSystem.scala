@@ -5,7 +5,6 @@ import akka.actor.ActorRef
 import akka.pattern.AskableActorRef
 import akka.stream._
 import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
-import akka.stream.stage.GraphStage
 import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplits
@@ -14,9 +13,10 @@ import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
+import services.SplitsProvider.SplitProvider
 import services._
 import services.arrivals.ArrivalDataSanitiser
-import services.crunch.deskrecs.FlexedPortDeskRecsProvider
+import services.crunch.deskrecs.flexed.FlexedPortDeploymentsProvider
 import services.graphstages.Crunch._
 import services.graphstages._
 
@@ -40,12 +40,11 @@ case class CrunchSystem[FR](shifts: SourceQueueWithComplete[ShiftAssignments],
 case class CrunchProps[FR](logLabel: String = "",
                            airportConfig: AirportConfig,
                            pcpArrival: Arrival => MilliDate,
-                           historicalSplitsProvider: SplitsProvider.SplitProvider,
+                           historicalSplitsProvider: SplitProvider,
                            portStateActor: ActorRef,
                            maxDaysToCrunch: Int,
                            expireAfterMillis: Int,
-                           minutesToCrunch: Int = 1440,
-                           crunchOffsetMillis: Long = 0,
+                           crunchOffsetMillis: MillisSinceEpoch = 0,
                            actors: Map[String, AskableActorRef],
                            useNationalityBasedProcessingTimes: Boolean,
                            useLegacyManifests: Boolean = false,
@@ -74,8 +73,7 @@ case class CrunchProps[FR](logLabel: String = "",
                            useApiPaxNos: Boolean,
                            adjustEGateUseByUnder12s: Boolean,
                            optimiser: TryCrunch,
-                           useLegacyDeployments: Boolean
-                          )
+                           useLegacyDeployments: Boolean)
 
 object CrunchSystem {
 
@@ -169,8 +167,7 @@ object CrunchSystem {
         expireAfterMillis = props.expireAfterMillis,
         now = props.now,
         simulate = props.simulator,
-        crunchPeriodStartMillis = crunchStartDateProvider,
-        minutesToCrunch = props.minutesToCrunch)
+        crunchPeriodStartMillis = crunchStartDateProvider)
     else
       new DeploymentGraphStage(
         name = props.logLabel,
@@ -180,8 +177,7 @@ object CrunchSystem {
         expireAfterMillis = props.expireAfterMillis,
         now = props.now,
         crunchPeriodStartMillis = crunchStartDateProvider,
-        minutesToCrunch = props.minutesToCrunch,
-        FlexedPortDeskRecsProvider(props.airportConfig, 1440, props.optimiser))
+        FlexedPortDeploymentsProvider(props.airportConfig, 1440, props.optimiser))
 
     val crunchSystem = RunnableCrunch(
       props.arrivalsForecastBaseSource, props.arrivalsForecastSource, props.arrivalsLiveBaseSource, props.arrivalsLiveSource,

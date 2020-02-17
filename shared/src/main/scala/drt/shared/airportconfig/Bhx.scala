@@ -49,7 +49,7 @@ object Bhx extends AirportConfigLike {
       visaNationalToDesk -> 93d / 60,
       nonVisaNationalToDesk -> 83d / 60
     )),
-    minMaxDesksByTerminalQueue = Map(
+    minMaxDesksByTerminalQueue24Hrs = Map(
       T1 -> Map(
         Queues.EGate -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
           List(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2)),
@@ -77,5 +77,5 @@ object Bhx extends AirportConfigLike {
       ))
     ),
     desksByTerminal = Map[Terminal, Int](T1 -> 9, T2 -> 5)
-  )
+    )
 }

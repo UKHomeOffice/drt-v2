@@ -1,15 +1,8 @@
 package services.graphstages
 
-import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
-import drt.shared.TQM
-import drt.shared.Terminals.Terminal
 import org.slf4j.{Logger, LoggerFactory}
-import services.crunch.deskrecs.StaffProviders.MaxDesksProvider
-import services.graphstages.Crunch.LoadMinute
 import services.{OptimizerConfig, OptimizerCrunchResult}
 
-import scala.collection.immutable
-import scala.collection.immutable.{Map, NumericRange}
 import scala.util.Try
 
 object CrunchMocks {

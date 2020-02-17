@@ -36,7 +36,7 @@ object Test extends AirportConfigLike {
       visaNationalToDesk -> 90d / 60,
       nonVisaNationalToDesk -> 78d / 60
     )),
-    minMaxDesksByTerminalQueue = Map(
+    minMaxDesksByTerminalQueue24Hrs = Map(
       T1 -> Map(
         Queues.EGate -> (List(0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(3, 3, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3)),
         Queues.EeaDesk -> (List(0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13)),
@@ -52,5 +52,5 @@ object Test extends AirportConfigLike {
     ),
     hasTransfer = true,
     desksByTerminal = Map(T1 -> 22)
-  )
+    )
 }

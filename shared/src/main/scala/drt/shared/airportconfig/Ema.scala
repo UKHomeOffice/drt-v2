@@ -41,7 +41,7 @@ object Ema extends AirportConfigLike {
       visaNationalToDesk -> 100d / 60,
       nonVisaNationalToDesk -> 80d / 60
     )),
-    minMaxDesksByTerminalQueue = Map(
+    minMaxDesksByTerminalQueue24Hrs = Map(
       T1 -> Map(
         Queues.EGate -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)),
         Queues.QueueDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5))
@@ -61,5 +61,5 @@ object Ema extends AirportConfigLike {
     ),
     hasEstChox = true,
     desksByTerminal = Map(T1 -> 5)
-  )
+    )
 }

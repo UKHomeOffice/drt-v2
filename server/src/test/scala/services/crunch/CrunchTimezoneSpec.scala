@@ -12,7 +12,7 @@ import services.SDate
 import services.crunch.deskrecs.DeskRecs
 import services.graphstages.Crunch._
 
-import scala.collection.immutable.{List, Seq}
+import scala.collection.immutable.List
 import scala.concurrent.duration._
 
 
@@ -62,11 +62,11 @@ class CrunchTimezoneSpec extends CrunchTestLike {
         val crunch = runCrunchGraph(
           now = () => SDate(scheduled),
           airportConfig = defaultAirportConfig.copy(
-            minMaxDesksByTerminalQueue = minMaxDesks,
+            minMaxDesksByTerminalQueue24Hrs = minMaxDesks,
             terminalProcessingTimes = procTimes,
-            queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
-          ),
-          minutesToCrunch = 120)
+            queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1),
+            minutesToCrunch = 120
+            ))
 
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
@@ -98,23 +98,23 @@ class CrunchTimezoneSpec extends CrunchTestLike {
 
       "Given a list of Min or Max desks" >> {
         "When parsing a BST date then we should get BST min/max desks" >> {
-          val testMaxDesks = List(0, 1, 2, 3, 4, 5)
+          val testMaxDesks = IndexedSeq(0, 1, 2, 3, 4, 5)
           val startTimeMidnightBST = SDate("2017-06-01T00:00Z").addHours(-1).millisSinceEpoch
 
           val oneHour = oneMinuteMillis * 60
           val startTimes = startTimeMidnightBST to startTimeMidnightBST + (oneHour * 5) by oneHour
 
-          val expected = List(0, 1, 2, 3, 4, 5)
+          val expected = IndexedSeq(0, 1, 2, 3, 4, 5)
           startTimes.map(DeskRecs.desksForHourOfDayInUKLocalTime(_, testMaxDesks)) === expected
         }
         "When parsing a GMT date then we should get BST min/max desks" >> {
-          val testMaxDesks = List(0, 1, 2, 3, 4, 5)
+          val testMaxDesks = IndexedSeq(0, 1, 2, 3, 4, 5)
           val startTimeMidnightGMT = SDate("2017-01-01T00:00Z").millisSinceEpoch
 
           val oneHour = oneMinuteMillis * 60
           val startTimes = startTimeMidnightGMT to startTimeMidnightGMT + (oneHour * 5) by oneHour
 
-          val expected = List(0, 1, 2, 3, 4, 5)
+          val expected = IndexedSeq(0, 1, 2, 3, 4, 5)
           startTimes.map(DeskRecs.desksForHourOfDayInUKLocalTime(_, testMaxDesks)) === expected
         }
       }

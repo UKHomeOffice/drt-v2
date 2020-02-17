@@ -171,10 +171,10 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       airportConfig = defaultAirportConfig.copy(
         crunchOffsetMinutes = 240,
-        queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
+        queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk)),
+        minutesToCrunch = 1440
       ),
       now = () => SDate(scheduled),
-      minutesToCrunch = 1440,
       initialShifts = ShiftAssignments(Seq(assignment1, assignment2)),
       cruncher = Optimiser.crunch,
       maxDaysToCrunch = 4

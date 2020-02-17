@@ -8,12 +8,14 @@ import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
+import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.graphstages.{Buffer, Crunch}
-import services.{SDate, TryCrunch}
 
+import scala.collection.immutable.Map
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
@@ -23,7 +25,8 @@ object RunnableDeskRecs {
 
   def apply(portStateActor: ActorRef,
             portDeskRecs: PortDeskRecsProviderLike,
-            buffer: Buffer)
+            buffer: Buffer,
+            maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike])
            (implicit executionContext: ExecutionContext, timeout: Timeout = new Timeout(10 seconds)): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
@@ -49,8 +52,18 @@ object RunnableDeskRecs {
             }
             .map { case (crunchStartMillis, flights) =>
               log.info(s"Crunching ${SDate(crunchStartMillis).toISOString} flights: ${flights.flightsToUpdate.size}")
-              val maxDeskProvider = StaffProviders.maxDesksForTerminal
-              portDeskRecs.flightsToDeskRecs(flights, crunchStartMillis, maxDeskProvider)
+
+              val loads = portDeskRecs.flightsToLoads(flights, crunchStartMillis)
+
+              val crunchEndMillis = SDate(crunchStartMillis).addMinutes(portDeskRecs.minutesToCrunch).millisSinceEpoch
+              val minuteMillis = crunchStartMillis until crunchEndMillis by 60000
+              val terminals = flights.terminals
+              val validTerminals = loads.keys.map(_.terminal).toSet
+              val maxDesksByTerminal = terminals.intersect(validTerminals).map { terminal =>
+                (terminal, maxDesksProviders(terminal))
+              }.toMap
+
+              portDeskRecs.loadsToDesks(minuteMillis, loads, maxDesksByTerminal)
             } ~> killSwitch ~> deskRecsSink
 
           ClosedShape
@@ -74,7 +87,8 @@ object RunnableDeskRecs {
             portDeskRecs: ProductionPortDeskRecsProviderLike,
             now: () => SDateLike,
             recrunchOnStart: Boolean,
-            forecastMaxDays: Int)
+            forecastMaxDays: Int,
+            maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike])
            (implicit ec: ExecutionContext, mat: Materializer): (ActorRef, UniqueKillSwitch) = {
     val initialDaysToCrunch = if (recrunchOnStart) {
       val today = now()
@@ -86,7 +100,7 @@ object RunnableDeskRecs {
 
     val buffer = Buffer(initialDaysToCrunch)
 
-    RunnableDeskRecs(portStateActor, portDeskRecs, buffer).run()
+    RunnableDeskRecs(portStateActor, portDeskRecs, buffer, maxDesksProvider).run()
   }
 }
 

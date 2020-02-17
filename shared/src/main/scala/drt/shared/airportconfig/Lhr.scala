@@ -60,7 +60,7 @@ object Lhr extends AirportConfigLike {
       T4 -> lhrDefaultTerminalProcessingTimes,
       T5 -> lhrDefaultTerminalProcessingTimes
     ),
-    minMaxDesksByTerminalQueue = Map(
+    minMaxDesksByTerminalQueue24Hrs = Map(
       T2 -> Map(
         Queues.EGate -> (List(0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2)),
         Queues.EeaDesk -> (List(0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2), List(9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9)),
@@ -125,5 +125,5 @@ object Lhr extends AirportConfigLike {
       T4 -> 39,
       T5 -> 34
     )
-  )
+    )
 }

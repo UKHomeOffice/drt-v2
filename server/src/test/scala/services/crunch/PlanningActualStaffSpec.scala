@@ -29,7 +29,7 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
     val weekBeginning = "2017-01-02T00:00Z"
 
     val forecastArrivalDay1 = ArrivalGenerator.arrival(schDt = day1, iata = "BA0001", terminal = T1, actPax = Option(5))
-    val forecastFlights = Set(forecastArrivalDay1)
+    val baseFlights = Flights(List(forecastArrivalDay1))
     val startDate1 = MilliDate(SDate("2017-01-02T00:00").millisSinceEpoch)
     val endDate1 = MilliDate(SDate("2017-01-02T23:59").millisSinceEpoch)
     val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 20, None)
@@ -37,18 +37,25 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
     val crunch = runCrunchGraph(
       now = () => SDate(weekBeginning).addDays(-1),
       airportConfig = defaultAirportConfig.copy(
-        queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1),
-        minMaxDesksByTerminalQueue = Map(
+        minMaxDesksByTerminalQueue24Hrs = Map(
           T1 -> Map(
             Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1))),
             Queues.NonEeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1)))
-          ))
-      ),
-      cruncher = Optimiser.crunch
-    )
+            ),
+          T2 -> Map(
+            Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1))),
+            Queues.NonEeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(1)))
+            )
+          )
+        ),
+      initialShifts = ShiftAssignments(Seq(assignment1)),
+      cruncher = Optimiser.crunch,
+      checkRequiredStaffUpdatesOnStartup = true
+      )
 
-    Await.ready(crunch.baseArrivalsInput.offer(ArrivalsFeedSuccess(Flights(forecastFlights.toSeq))), 1 second)
-    Await.ready(crunch.shiftsInput.offer(ShiftAssignments(Seq(assignment1))), 1 second)
+    crunch.portStateTestProbe.receiveOne(5 seconds)
+
+    offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseFlights))
 
     val expected = List(
       ForecastTimeSlot(SDate("2017-01-02T00:00Z").millisSinceEpoch, 20, 1),

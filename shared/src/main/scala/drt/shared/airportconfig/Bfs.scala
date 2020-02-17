@@ -36,7 +36,7 @@ object Bfs extends AirportConfigLike {
       visaNationalToDesk -> 100d / 60,
       nonVisaNationalToDesk -> 80d / 60
     )),
-    minMaxDesksByTerminalQueue = Map(
+    minMaxDesksByTerminalQueue24Hrs = Map(
       T1 -> Map(
         Queues.EeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4)),
         Queues.NonEeaDesk -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), List(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4))
@@ -50,5 +50,5 @@ object Bfs extends AirportConfigLike {
       ))),
     feedSources = Seq(LiveBaseFeedSource, AclFeedSource, ApiFeedSource),
     desksByTerminal = Map(T1 -> 8)
-  )
+    )
 }

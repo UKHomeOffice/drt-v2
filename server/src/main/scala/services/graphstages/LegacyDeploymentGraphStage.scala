@@ -25,8 +25,7 @@ class LegacyDeploymentGraphStage(name: String = "",
                                  expireAfterMillis: Int,
                                  now: () => SDateLike,
                                  simulate: Simulator,
-                                 crunchPeriodStartMillis: SDateLike => SDateLike,
-                                 minutesToCrunch: Int)
+                                 crunchPeriodStartMillis: SDateLike => SDateLike)
   extends GraphStage[FanInShape2[Loads, StaffMinutes, SimulationMinutes]] {
 
   type TerminalLoad = Map[Queue, Map[MillisSinceEpoch, Double]]
@@ -76,7 +75,7 @@ class LegacyDeploymentGraphStage(name: String = "",
 
         val allMinuteMillis = incomingLoads.loadMinutes.keys.map(_.minute)
         val firstMinute = crunchPeriodStartMillis(SDate(allMinuteMillis.min))
-        val lastMinute = firstMinute.addMinutes(minutesToCrunch)
+        val lastMinute = firstMinute.addMinutes(airportConfig.minutesToCrunch)
 
         terminalsWithNonZeroStaff(affectedTerminals, firstMinute, lastMinute) match {
           case affectedTerminalsWithStaff if affectedTerminalsWithStaff.isEmpty =>
@@ -196,7 +195,9 @@ class LegacyDeploymentGraphStage(name: String = "",
     def updateStaffMinutes(incomingStaffMinutes: StaffMinutes): Unit = incomingStaffMinutes.minutes
       .foreach(sm => staffMinutes += (sm.key -> sm))
 
-    def simulateLoads(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Seq[Terminal]): SortedMap[TQM, SimulationMinute] = {
+    def simulateLoads(firstMinute: MillisSinceEpoch,
+                      lastMinute: MillisSinceEpoch,
+                      terminalsToUpdate: Seq[Terminal]): SortedMap[TQM, SimulationMinute] = {
       val workload = workloadForPeriod(firstMinute, lastMinute, terminalsToUpdate)
       val minuteMillis = firstMinute until lastMinute by 60000
 
@@ -208,7 +209,10 @@ class LegacyDeploymentGraphStage(name: String = "",
       }
     }
 
-    def simulationForQueue(minuteMillis: NumericRange[MillisSinceEpoch], tn: Terminal, qn: Queue, queueWorkload: IndexedSeq[Double]): SortedMap[TQM, SimulationMinute] = {
+    def simulationForQueue(minuteMillis: NumericRange[MillisSinceEpoch],
+                           tn: Terminal,
+                           qn: Queue,
+                           queueWorkload: IndexedSeq[Double]): SortedMap[TQM, SimulationMinute] = {
       val sla = airportConfig.slaByQueue.getOrElse(qn, 15)
       val adjustedWorkloads = if (qn == Queues.EGate) adjustEgatesWorkload(queueWorkload) else queueWorkload
 
@@ -222,7 +226,9 @@ class LegacyDeploymentGraphStage(name: String = "",
       }
     }
 
-    def deploymentsForMillis(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Seq[Terminal]): SortedMap[TQM, Int] = {
+    def deploymentsForMillis(firstMinute: MillisSinceEpoch,
+                             lastMinute: MillisSinceEpoch,
+                             terminalsToUpdate: Seq[Terminal]): SortedMap[TQM, Int] = {
       val workload = workloadForPeriod(firstMinute, lastMinute, terminalsToUpdate)
 
       val minuteMillis = firstMinute until lastMinute by 60000
@@ -268,7 +274,9 @@ class LegacyDeploymentGraphStage(name: String = "",
       deployer(queueWl, available, queueMm)
     }
 
-    def slaWeightedLoadByQueue(queuesWithoutTransfer: Seq[Queue], terminalWorkloads: TerminalLoad, slotMillis: IndexedSeq[Long]): Seq[(Queue, Double)] = queuesWithoutTransfer
+    def slaWeightedLoadByQueue(queuesWithoutTransfer: Seq[Queue],
+                               terminalWorkloads: TerminalLoad,
+                               slotMillis: IndexedSeq[Long]): Seq[(Queue, Double)] = queuesWithoutTransfer
       .map(qn => {
         val queueWorkloads = terminalWorkloads.getOrElse(qn, Map())
         val slaWeight = Math.log(airportConfig.slaByQueue(qn))
@@ -281,22 +289,26 @@ class LegacyDeploymentGraphStage(name: String = "",
       })
 
     def minMaxDesksForMillis(minuteMillis: Seq[Long]): Map[Terminal, Map[Queue, Map[MillisSinceEpoch, (Int, Int)]]] = airportConfig
-      .minMaxDesksByTerminalQueue
+      .minMaxDesksByTerminalQueue24Hrs
       .mapValues(qmm => qmm.mapValues {
         case (minDesks, maxDesks) =>
           minuteMillis.map(m => {
-            val min = DeskRecs.desksForHourOfDayInUKLocalTime(m, minDesks)
-            val max = DeskRecs.desksForHourOfDayInUKLocalTime(m, maxDesks)
+            val min = DeskRecs.desksForHourOfDayInUKLocalTime(m, minDesks.toIndexedSeq)
+            val max = DeskRecs.desksForHourOfDayInUKLocalTime(m, maxDesks.toIndexedSeq)
             (m, (min, max))
           }).toMap
       })
 
-    def workloadForPeriod(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Seq[Terminal]): SortedMap[TQM, Double] =
+    def workloadForPeriod(firstMinute: MillisSinceEpoch,
+                          lastMinute: MillisSinceEpoch,
+                          terminalsToUpdate: Seq[Terminal]): SortedMap[TQM, Double] =
       forPeriod(firstMinute, lastMinute, terminalsToUpdate, loadMinutes).mapValues {
         case LoadMinute(_, _, _, workLoad, _) => workLoad
       }
 
-    def filterTerminalMinutes(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalsToUpdate: Seq[Terminal]): Seq[StaffMinute] = {
+    def filterTerminalMinutes(firstMinute: MillisSinceEpoch,
+                              lastMinute: MillisSinceEpoch,
+                              terminalsToUpdate: Seq[Terminal]): Seq[StaffMinute] = {
       val maybeThings = for {
         terminalName <- terminalsToUpdate
         minute <- firstMinute until lastMinute by Crunch.oneMinuteMillis
@@ -313,7 +325,10 @@ class LegacyDeploymentGraphStage(name: String = "",
     val deploymentCache: Map[Int, Seq[(Queue, Int)]] = Map()
 
     @scala.annotation.tailrec
-    def addOneStaffToQueueAtIndex(deployments: List[(Queue, Int, Int)], index: Int, numberOfQueues: Int, staffAvailable: Int): List[(Queue, Int, Int)] = {
+    def addOneStaffToQueueAtIndex(deployments: List[(Queue, Int, Int)],
+                                  index: Int,
+                                  numberOfQueues: Int,
+                                  staffAvailable: Int): List[(Queue, Int, Int)] = {
       val safeIndex = if (index > numberOfQueues - 1) 0 else index
       val deployedStaff = deployments.map(_._2).sum
       val maxStaff = deployments.map(_._3).sum
@@ -329,7 +344,9 @@ class LegacyDeploymentGraphStage(name: String = "",
     }
 
     def queueRecsToDeployments(round: Double => Int)
-                              (queueRecs: Seq[(Queue, Double)], staffAvailable: Int, minMaxDesks: Map[Queue, (Int, Int)]): Seq[(Queue, Int)] = {
+                              (queueRecs: Seq[(Queue, Double)],
+                               staffAvailable: Int,
+                               minMaxDesks: Map[Queue, (Int, Int)]): Seq[(Queue, Int)] = {
       val key = (queueRecs, staffAvailable, minMaxDesks).hashCode()
 
       deploymentCache.get(key) match {
@@ -380,14 +397,18 @@ class LegacyDeploymentGraphStage(name: String = "",
       } else log.debug(s"outSimulationMinutes not available to push")
     }
 
-    def availableStaffForPeriod(firstMinute: MillisSinceEpoch, lastMinute: MillisSinceEpoch, terminalNames: Seq[Terminal]): Map[Terminal, Map[MillisSinceEpoch, Int]] =
+    def availableStaffForPeriod(firstMinute: MillisSinceEpoch,
+                                lastMinute: MillisSinceEpoch,
+                                terminalNames: Seq[Terminal]): Map[Terminal, Map[MillisSinceEpoch, Int]] =
       filterTerminalMinutes(firstMinute, lastMinute, terminalNames)
         .groupBy(_.terminal)
         .mapValues { sms =>
           sms.map(sm => (sm.minute, sm.availableAtPcp)).toMap
         }
 
-    def terminalsWithNonZeroStaff(allTerminals: Seq[Terminal], firstMinute: SDateLike, lastMinute: SDateLike): Seq[Terminal] = {
+    def terminalsWithNonZeroStaff(allTerminals: Seq[Terminal],
+                                  firstMinute: SDateLike,
+                                  lastMinute: SDateLike): Seq[Terminal] = {
       availableStaffForPeriod(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, allTerminals)
         .foldLeft(List[Terminal]()) {
           case (nonZeroTerminals, (terminal, staffByMillis)) =>
@@ -397,7 +418,12 @@ class LegacyDeploymentGraphStage(name: String = "",
     }
   }
 
-  def runSimulation(minuteMillis: NumericRange[MillisSinceEpoch], tn: Terminal, qn: Queue, sla: Int, fullWorkMinutes: IndexedSeq[Double], deployedStaff: IndexedSeq[Int]): SortedMap[TQM, SimulationMinute] = {
+  def runSimulation(minuteMillis: NumericRange[MillisSinceEpoch],
+                    tn: Terminal,
+                    qn: Queue,
+                    sla: Int,
+                    fullWorkMinutes: IndexedSeq[Double],
+                    deployedStaff: IndexedSeq[Int]): SortedMap[TQM, SimulationMinute] = {
     Try(simulate(fullWorkMinutes, deployedStaff, OptimizerConfig(sla))) match {
       case Success(waits) =>
         SortedMap[TQM, SimulationMinute]() ++ minuteMillis.zipWithIndex.map {
@@ -427,7 +453,7 @@ case class SimulationMinute(terminalName: Terminal,
   override def maybeUpdated(existing: CrunchMinute, now: MillisSinceEpoch): Option[CrunchMinute] =
     if (existing.deployedDesks.isEmpty || existing.deployedDesks.get != desks || existing.deployedWait.isEmpty || existing.deployedWait.get != waitTime) Option(existing.copy(
       deployedDesks = Option(desks), deployedWait = Option(waitTime), lastUpdated = Option(now)
-    ))
+      ))
     else None
 }
 

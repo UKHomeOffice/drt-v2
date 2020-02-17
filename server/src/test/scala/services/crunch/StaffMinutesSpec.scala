@@ -10,7 +10,7 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.T1
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
-import services.SDate
+import services.{Optimiser, SDate}
 import services.graphstages.Crunch
 
 import scala.collection.immutable.{List, SortedMap}
@@ -185,7 +185,7 @@ class StaffMinutesSpec extends CrunchTestLike {
               visaNationalToFastTrack -> 5d / 60
               )
             ),
-          minMaxDesksByTerminalQueue = Map(
+          minMaxDesksByTerminalQueue24Hrs = Map(
             T1 -> Map(
               Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
               Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
@@ -231,7 +231,7 @@ class StaffMinutesSpec extends CrunchTestLike {
   "Upgraded deployments" >> {
     "Given a shift with 10 staff and passengers split to 2 queues " +
       "When I ask for the PortState " +
-      "Then I should see deployed staff totalling the number on shift" >> {
+      "Then I should see 1 EEA desk & 2 Non-EEA desks deployed " >> {
       val scheduled = "2017-01-01T00:00Z"
       val shiftStart = SDate(scheduled)
 
@@ -262,7 +262,8 @@ class StaffMinutesSpec extends CrunchTestLike {
               )
             )
           ),
-        now = () => shiftStart
+        now = () => shiftStart,
+        cruncher = Optimiser.crunch
         )
 
       offerAndWait(crunch.shiftsInput, initialShifts)
@@ -278,16 +279,16 @@ class StaffMinutesSpec extends CrunchTestLike {
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
 
       val expectedCrunchDeployments = Set(
-        (Queues.EeaDesk, shiftStart.addMinutes(0), 2),
-        (Queues.EeaDesk, shiftStart.addMinutes(1), 2),
-        (Queues.EeaDesk, shiftStart.addMinutes(2), 2),
-        (Queues.EeaDesk, shiftStart.addMinutes(3), 2),
-        (Queues.EeaDesk, shiftStart.addMinutes(4), 2),
-        (Queues.NonEeaDesk, shiftStart.addMinutes(0), 6),
-        (Queues.NonEeaDesk, shiftStart.addMinutes(1), 6),
-        (Queues.NonEeaDesk, shiftStart.addMinutes(2), 6),
-        (Queues.NonEeaDesk, shiftStart.addMinutes(3), 6),
-        (Queues.NonEeaDesk, shiftStart.addMinutes(4), 6))
+        (Queues.EeaDesk, shiftStart.addMinutes(0), 1),
+        (Queues.EeaDesk, shiftStart.addMinutes(1), 1),
+        (Queues.EeaDesk, shiftStart.addMinutes(2), 1),
+        (Queues.EeaDesk, shiftStart.addMinutes(3), 1),
+        (Queues.EeaDesk, shiftStart.addMinutes(4), 1),
+        (Queues.NonEeaDesk, shiftStart.addMinutes(0), 2),
+        (Queues.NonEeaDesk, shiftStart.addMinutes(1), 2),
+        (Queues.NonEeaDesk, shiftStart.addMinutes(2), 2),
+        (Queues.NonEeaDesk, shiftStart.addMinutes(3), 2),
+        (Queues.NonEeaDesk, shiftStart.addMinutes(4), 2))
 
       crunch.portStateTestProbe.fishForMessage(10 seconds) {
         case ps: PortState =>

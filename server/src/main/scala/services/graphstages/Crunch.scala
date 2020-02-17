@@ -10,7 +10,6 @@ import services._
 
 import scala.collection.immutable.{Map, SortedMap}
 import scala.collection.mutable
-import scala.util.{Failure, Success, Try}
 
 object Crunch {
   val paxOffPerMinute: Int = 20
@@ -293,5 +292,13 @@ object Crunch {
   def crunchStartWithOffset(offsetMinutes: Int)(minuteInQuestion: SDateLike): SDateLike = {
     val adjustedMinute = minuteInQuestion.addMinutes(-1 * offsetMinutes)
     Crunch.getLocalLastMidnight(MilliDate(adjustedMinute.millisSinceEpoch)).addMinutes(offsetMinutes)
+  }
+
+  def listOp[A](op: (A, A) => A)(v1: Iterable[A], v2: Iterable[A]): Iterable[A] = (v1, v2) match {
+    case (Nil, b) => b
+    case (a, Nil) => a
+    case (a, b) => a.zip(b).map {
+      case (a, b) => op(a, b)
+    }
   }
 }

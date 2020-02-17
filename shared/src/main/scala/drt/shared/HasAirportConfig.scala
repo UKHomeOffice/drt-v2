@@ -122,7 +122,7 @@ object Queues {
     FastTrack -> "Fast Track",
     Transfer -> "Tx",
     QueueDesk -> "Desk"
-  )
+    )
 
   val exportQueueOrderSansFastTrack = List(EeaDesk, NonEeaDesk, EGate)
   val exportQueueOrderWithFastTrack = List(EeaDesk, NonEeaDesk, EGate, FastTrack)
@@ -131,7 +131,7 @@ object Queues {
     NonEeaDesk -> "NON-EEA",
     EGate -> "E-GATES",
     FastTrack -> "FAST TRACK"
-  )
+    )
 }
 
 sealed trait PaxType {
@@ -217,7 +217,7 @@ object ProcessingTimes {
     "ECU" -> 78.6, "LBY" -> 82.2, "URY" -> 94.5, "CRI" -> 89.1, "ZMB" -> 85.4, "BIH" -> 72.3, "COD" -> 90.2,
     "ISL" -> 28.3, "None" -> 30.0, "MKD" -> 72.6, "GEO" -> 83.4, "AGO" -> 94.8, "GMB" -> 81.3, "UZB" -> 72.6,
     "KNA" -> 83.8, "SOM" -> 90.6, "LCA" -> 89.3, "GRD" -> 105.9
-  )
+    )
 }
 
 case class AirportConfig(portCode: PortCode,
@@ -229,12 +229,13 @@ case class AirportConfig(portCode: PortCode,
                          defaultWalkTimeMillis: Map[Terminal, Long],
                          terminalPaxSplits: Map[Terminal, SplitRatios],
                          terminalProcessingTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],
-                         minMaxDesksByTerminalQueue: Map[Terminal, Map[Queue, (List[Int], List[Int])]],
+                         minMaxDesksByTerminalQueue24Hrs: Map[Terminal, Map[Queue, (List[Int], List[Int])]],
                          shiftExamples: Seq[String] = Seq(),
                          fixedPointExamples: Seq[String] = Seq(),
                          hasActualDeskStats: Boolean = false,
                          portStateSnapshotInterval: Int = 1000,
                          eGateBankSize: Int = 10,
+                         minutesToCrunch: Int = 1440,
                          crunchOffsetMinutes: Int = 0,
                          hasEstChox: Boolean = false,
                          useStaffingInput: Boolean = false,
@@ -261,18 +262,22 @@ case class AirportConfig(portCode: PortCode,
         assert(slaByQueue.contains(queue), s"Missing sla for $queue @ $portCode")
       }
     queuesByTerminal.foreach { case (terminal, tQueues) =>
-      assert(minMaxDesksByTerminalQueue.contains(terminal), s"Missing min/max desks for terminal $terminal @ $portCode")
+      assert(minMaxDesksByTerminalQueue24Hrs.contains(terminal), s"Missing min/max desks for terminal $terminal @ $portCode")
       tQueues
         .filterNot(_ == Transfer)
         .foreach { tQueue =>
-          assert(minMaxDesksByTerminalQueue(terminal).contains(tQueue), s"Missing min/max desks for $tQueue for terminal $terminal @ $portCode")
+          assert(minMaxDesksByTerminalQueue24Hrs(terminal).contains(tQueue), s"Missing min/max desks for $tQueue for terminal $terminal @ $portCode")
         }
     }
   }
 
-  def minDesksForTerminal(tn: Terminal): Map[Queue, List[Int]] = minMaxDesksByTerminalQueue.getOrElse(tn, Map()).mapValues(_._1)
+  def minDesksByTerminalAndQueue24Hrs: Map[Terminal, Map[Queue, IndexedSeq[Int]]] = minMaxDesksByTerminalQueue24Hrs.mapValues(_.mapValues(_._1.toIndexedSeq))
 
-  def maxDesksForTerminal(tn: Terminal): Map[Queue, List[Int]] = minMaxDesksByTerminalQueue.getOrElse(tn, Map()).mapValues(_._2)
+  def maxDesksByTerminalAndQueue24Hrs: Map[Terminal, Map[Queue, IndexedSeq[Int]]] = minMaxDesksByTerminalQueue24Hrs.mapValues(_.mapValues(_._2.toIndexedSeq))
+
+  def minDesksForTerminal24Hrs(tn: Terminal): Map[Queue, IndexedSeq[Int]] = minMaxDesksByTerminalQueue24Hrs.getOrElse(tn, Map()).mapValues(_._1.toIndexedSeq)
+
+  def maxDesksForTerminal24Hrs(tn: Terminal): Map[Queue, IndexedSeq[Int]] = minMaxDesksByTerminalQueue24Hrs.getOrElse(tn, Map()).mapValues(_._2.toIndexedSeq)
 
   val terminals: Iterable[Terminal] = queuesByTerminal.keys
 
@@ -296,11 +301,12 @@ object AirportConfig {
   implicit val rwQueues: ReadWriter[SortedMap[Terminal, Seq[Queue]]] = readwriter[Map[Terminal, Seq[Queue]]].bimap[SortedMap[Terminal, Seq[Queue]]](
     sm => Map[Terminal, Seq[Queue]]() ++ sm,
     m => SortedMap[Terminal, Seq[Queue]]() ++ m
-  )
+    )
 
   implicit val rw: ReadWriter[AirportConfig] = macroRW
 
-  def desksByTerminalDefault(minMaxDesksByTerminalQueue: Map[Terminal, Map[Queue, (List[Int], List[Int])]])(terminal: Terminal): List[Int] = minMaxDesksByTerminalQueue.getOrElse(terminal, Map())
+  def desksByTerminalDefault(minMaxDesksByTerminalQueue: Map[Terminal, Map[Queue, (List[Int], List[Int])]])
+                            (terminal: Terminal): List[Int] = minMaxDesksByTerminalQueue.getOrElse(terminal, Map())
     .filterKeys(_ != EGate)
     .map { case (_, (_, max)) => max }
     .reduce[List[Int]] {
@@ -385,7 +391,7 @@ object PaxTypesAndQueues {
     visaNationalToFastTrack -> "Fast Track (Visa)",
     nonVisaNationalToFastTrack -> "Fast Track (Non Visa)",
     transitToTransfer -> "Transfer"
-  )
+    )
 
   val inOrder = List(
     eeaMachineReadableToEGate, eeaMachineReadableToDesk, eeaNonMachineReadableToDesk, visaNationalToDesk, nonVisaNationalToDesk, visaNationalToFastTrack, nonVisaNationalToFastTrack)
@@ -435,7 +441,7 @@ object AirportConfigDefaults {
     EeaDesk -> 20,
     EGate -> 25,
     NonEeaDesk -> 45
-  )
+    )
 
   import PaxTypesAndQueues._
 
@@ -446,7 +452,7 @@ object AirportConfigDefaults {
     SplitRatio(eeaNonMachineReadableToDesk, 0.1625),
     SplitRatio(visaNationalToDesk, 0.05),
     SplitRatio(nonVisaNationalToDesk, 0.05)
-  )
+    )
 
   val defaultQueueRatios: Map[PaxType, Seq[(Queue, Double)]] = Map(
     EeaMachineReadable -> List(Queues.EGate -> 0.8, Queues.EeaDesk -> 0.2),
@@ -456,7 +462,7 @@ object AirportConfigDefaults {
     VisaNational -> List(Queues.NonEeaDesk -> 1.0),
     B5JPlusNational -> List(Queues.EGate -> 0.6, Queues.EeaDesk -> 0.4),
     B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
-  )
+    )
 
   val defaultProcessingTimes: Map[PaxTypeAndQueue, Double] = Map(
     eeaMachineReadableToDesk -> 20d / 60,
@@ -464,5 +470,5 @@ object AirportConfigDefaults {
     eeaNonMachineReadableToDesk -> 50d / 60,
     visaNationalToDesk -> 90d / 60,
     nonVisaNationalToDesk -> 78d / 60
-  )
+    )
 }

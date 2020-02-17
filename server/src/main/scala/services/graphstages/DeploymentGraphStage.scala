@@ -7,10 +7,11 @@ import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.crunch.deskrecs.{PortDeskRecsProviderLike, StaffProviders}
+import services.SDate
+import services.crunch.desklimits.flexed.FlexedPortDeskLimitsForAvailableStaff
+import services.crunch.deskrecs.flexed.FlexedPortDeploymentsProvider
 import services.graphstages.Crunch._
 import services.metrics.{Metrics, StageTimer}
-import services.{SDate, _}
 
 import scala.collection.immutable.{Map, SortedMap}
 import scala.collection.mutable
@@ -23,8 +24,7 @@ class DeploymentGraphStage(name: String = "",
                            expireAfterMillis: Int,
                            now: () => SDateLike,
                            crunchPeriodStartMillis: SDateLike => SDateLike,
-                           minutesToCrunch: Int,
-                           portDeskRecs: PortDeskRecsProviderLike)
+                           portDeskRecs: FlexedPortDeploymentsProvider)
   extends GraphStage[FanInShape2[Loads, StaffMinutes, SimulationMinutes]] {
 
   type TerminalLoad = Map[Queue, Map[MillisSinceEpoch, Double]]
@@ -74,7 +74,7 @@ class DeploymentGraphStage(name: String = "",
 
         val allMinuteMillis = incomingLoads.loadMinutes.keys.map(_.minute)
         val firstMinute = crunchPeriodStartMillis(SDate(allMinuteMillis.min))
-        val lastMinute = firstMinute.addMinutes(minutesToCrunch)
+        val lastMinute = firstMinute.addMinutes(airportConfig.minutesToCrunch)
 
         terminalsWithNonZeroStaff(affectedTerminals, firstMinute, lastMinute) match {
           case affectedTerminalsWithStaff if affectedTerminalsWithStaff.isEmpty =>
@@ -194,25 +194,19 @@ class DeploymentGraphStage(name: String = "",
                       terminalsToUpdate: Seq[Terminal]): SortedMap[TQM, SimulationMinute] = {
       val workload: Map[TQM, LoadMinute] = forPeriod(firstMinute, lastMinute, terminalsToUpdate, loadMinutes)
       val minuteMillis = firstMinute until lastMinute by 60000
+      val staff = availableStaff(firstMinute, lastMinute, terminalsToUpdate)
 
-      val maxDesksProvider = StaffProviders.maxStaffForTerminal(availableStaff(firstMinute, lastMinute, terminalsToUpdate))
-      SortedMap[TQM, SimulationMinute]() ++ portDeskRecs.loadsToDesks(maxDesksProvider, minuteMillis, terminalsToUpdate.toSet, workload).minutes.map {
-        case DeskRecMinute(t, q, m, _, _, d, w) =>
+      val maxDesksProvider = FlexedPortDeskLimitsForAvailableStaff(airportConfig).maxDesksByTerminal(staff)
 
-          (TQM(t, q, m), SimulationMinute(t, q, m, d, w))
-      }.toMap
+      SortedMap[TQM, SimulationMinute]() ++ portDeskRecs.loadsToDeployments(minuteMillis, workload, maxDesksProvider)
     }
 
     def filterTerminalMinutes(firstMinute: MillisSinceEpoch,
                               lastMinute: MillisSinceEpoch,
-                              terminalsToUpdate: Seq[Terminal]): Seq[StaffMinute] = {
-      val maybeThings = for {
-        terminalName <- terminalsToUpdate
-        minute <- firstMinute until lastMinute by Crunch.oneMinuteMillis
-      } yield staffMinutes.get(MinuteHelper.key(terminalName, minute))
-
-      maybeThings.collect { case Some(thing) => thing }
-    }
+                              terminalsToUpdate: Seq[Terminal]): Seq[StaffMinute] = for {
+      terminal <- terminalsToUpdate
+      minute <- firstMinute until lastMinute by Crunch.oneMinuteMillis
+    } yield staffMinutes.getOrElse(MinuteHelper.key(terminal, minute), StaffMinute(terminal, minute, 0, 0, 0))
 
     def pullAll(): Unit = {
       if (!hasBeenPulled(inLoads)) {

@@ -6,13 +6,16 @@ import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import akka.util.Timeout
+import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{DeskRecMinute, DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.{Queues, TQM, Terminals}
+import drt.shared.Queues.EeaDesk
 import drt.shared.Terminals.{T1, Terminal}
+import drt.shared.{ApiFlightWithSplits, PortCode, Queues, SDateLike, TQM}
 import services.crunch.CrunchTestLike
-import services.crunch.deskrecs.StaffProviders.MaxDesksProvider
-import services.crunch.deskrecs.{MockPortStateActor, PortDeskRecsProviderLike, RunnableDeskRecs}
+import services.crunch.desklimits.TerminalDeskLimitsLike
+import services.crunch.desklimits.flexed.FlexedPortDeskLimits
+import services.crunch.deskrecs.{MockPortStateActor, PortDeskRecsProviderLike, RunnableDeskRecs, SetFlights}
 import services.graphstages.Crunch.LoadMinute
 import services.graphstages.{Buffer, CrunchMocks}
 
@@ -20,17 +23,14 @@ import scala.collection.immutable.{Map, NumericRange}
 import scala.concurrent.duration._
 
 case class MockPortDeskRecs(minutesToCrunch: Int, crunchOffsetMinutes: Int) extends PortDeskRecsProviderLike {
-  override def flightsToDeskRecs(flights: FlightsWithSplits,
-                                 crunchStartMillis: MillisSinceEpoch,
-                                 maxDesksProvider: Terminal => MaxDesksProvider): DeskRecMinutes = {
-    DeskRecMinutes(Seq(DeskRecMinute(T1, Queues.EeaDesk, crunchStartMillis, 0, 0, 0, 0)))
-  }
+  override def flightsToLoads(flights: FlightsWithSplits,
+                              crunchStartMillis: MillisSinceEpoch): Map[TQM, LoadMinute] =
+    Seq(LoadMinute(T1, Queues.EeaDesk, crunchStartMillis, 0, 0)).map(lm => (lm.uniqueId, lm)).toMap
 
-  override def loadsToDesks(maxDesksProvider: Terminal => MaxDesksProvider,
-                   minuteMillis: NumericRange[MillisSinceEpoch],
-                   terminalsToCrunch: Set[Terminal],
-                   loadsWithDiverts: Map[TQM, LoadMinute]): DeskRecMinutes = DeskRecMinutes(Seq())
-
+  override def loadsToDesks(minuteMillis: NumericRange[MillisSinceEpoch],
+                            loads: Map[TQM, LoadMinute],
+                            maxDesksByTerminal: Map[Terminal, TerminalDeskLimitsLike]
+                           ): DeskRecMinutes = DeskRecMinutes(Seq(DeskRecMinute(T1, EeaDesk, minuteMillis(0), 1, 1, 1, 1)))
 }
 
 class StreamingWorkloadSpec extends CrunchTestLike {
@@ -40,13 +40,15 @@ class StreamingWorkloadSpec extends CrunchTestLike {
   val noDelay: Long = 0L
   val smallDelay: Long = 66L
 
-  val portStateProbe = TestProbe("port-state")
+  val portStateProbe: TestProbe = TestProbe("port-state")
 
-  def newBuffer = Buffer(Iterable())
+  def newBuffer: Buffer = Buffer(Iterable())
 
   val mockPortStateActor: ActorRef = system.actorOf(MockPortStateActor.props(portStateProbe, smallDelay))
-  val portDeskRecs = MockPortDeskRecs(1440, defaultAirportConfig.crunchOffsetMinutes)
-  val (millisToCrunchSourceActor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, portDeskRecs, newBuffer).run()
+  mockPortStateActor ! SetFlights(List(ApiFlightWithSplits(ArrivalGenerator.arrival(terminal = T1, origin = PortCode("JFK"), actPax = Option(100)), Set())))
+  val portDeskRecs: MockPortDeskRecs = MockPortDeskRecs(1440, defaultAirportConfig.crunchOffsetMinutes)
+  val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = FlexedPortDeskLimits(defaultAirportConfig, 1440).maxDesksByTerminal
+  val (millisToCrunchSourceActor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, portDeskRecs, newBuffer, maxDesksProvider).run()
 
   val askableSource: AskableActorRef = millisToCrunchSourceActor
 
@@ -59,7 +61,7 @@ class StreamingWorkloadSpec extends CrunchTestLike {
       head
   }
 
-  val midnight20190101 = SDate("2019-01-01T00:00")
+  val midnight20190101: SDateLike = SDate("2019-01-01T00:00")
 
   "Given 11 days to crunch, with a mock request delay of 75ms, and days being added at a rate of 50ms " +
     "When I look at the crunched days " >> {

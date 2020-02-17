@@ -35,7 +35,7 @@ object Edi extends AirportConfigLike {
         visaNationalToDesk -> 75d / 60,
         nonVisaNationalToDesk -> 64d / 60
       )),
-    minMaxDesksByTerminalQueue = Map(
+    minMaxDesksByTerminalQueue24Hrs = Map(
       A1 -> Map(
         Queues.EGate -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)),
         Queues.EeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9)),
@@ -66,6 +66,6 @@ object Edi extends AirportConfigLike {
       )))
     ),
     desksByTerminal = Map[Terminal, Int](A1 -> 11, A2 -> 9)
-  )
+    )
 
 }

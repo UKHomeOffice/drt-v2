@@ -1,8 +1,6 @@
 package services.crunch.deskrecs
 
-import drt.shared.AirportConfig
 import drt.shared.Queues._
-import drt.shared.Terminals.T1
 import services.crunch.CrunchTestLike
 import services.{OptimizerConfig, OptimizerCrunchResult}
 
@@ -78,7 +76,7 @@ class DeploymentFlexingSpec extends CrunchTestLike {
       }
     }
 
-    val flexedDesksInPriorityOrder = List(EeaDesk, NonEeaDesk, QueueDesk)
+    import services.graphstages.Crunch.listOp
 
     val list1 = List(1, 2, 3)
     val list2 = List(5, 5, 5)
@@ -86,7 +84,7 @@ class DeploymentFlexingSpec extends CrunchTestLike {
       "When I ask for them to be reduced with a + operation " >> {
         val expected = List(6, 7, 8)
         s"I should get $expected" >> {
-          val result = List(list1, list2).reduce(StaffProviders.listOp[Int](_ + _))
+          val result = List(list1, list2).reduce(listOp[Int](_ + _))
           result === expected
         }
       }
@@ -94,7 +92,7 @@ class DeploymentFlexingSpec extends CrunchTestLike {
       "When I ask for them to be reduced with a - operation " >> {
         val expected = List(-4, -3, -2)
         s"I should get $expected" >> {
-          val result = List(list1, list2).reduce(StaffProviders.listOp[Int](_ - _))
+          val result = List(list1, list2).reduce(listOp[Int](_ - _))
           result === expected
         }
       }
@@ -105,7 +103,7 @@ class DeploymentFlexingSpec extends CrunchTestLike {
       "When I ask for them to be reduced with a - operation " >> {
         val expected = List(-5, -5, -5)
         s"I should get $expected" >> {
-          val result = List(list1, list2, list3).reduce(StaffProviders.listOp[Int](_ - _))
+          val result = List(list1, list2, list3).reduce(listOp[Int](_ - _))
           result === expected
         }
       }

@@ -26,7 +26,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
     val flights = Flights(List(
       ArrivalGenerator.arrival(schDt = scheduled00, iata = "BA0001", terminal = T1, actPax = Option(15)),
       ArrivalGenerator.arrival(schDt = scheduled01, iata = "FR8819", terminal = InvalidTerminal, actPax = Option(10))
-    ))
+      ))
 
     val fiveMinutes = 600d / 60
 
@@ -34,9 +34,9 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
       now = () => SDate(scheduled),
       airportConfig = defaultAirportConfig.copy(
         terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
-        queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
-      ),
-      minutesToCrunch = 120)
+        queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk)),
+        minutesToCrunch = 120
+        ))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
@@ -71,7 +71,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
       ArrivalGenerator.arrival(schDt = scheduled01, iata = "FR8819", terminal = T1, actPax = Option(10), status = ArrivalStatus("xx cancelled xx")),
       ArrivalGenerator.arrival(schDt = scheduled02, iata = "BA1000", terminal = T1, actPax = Option(10), status = ArrivalStatus("xx canceled xx")),
       ArrivalGenerator.arrival(schDt = scheduled03, iata = "ZX0888", terminal = T1, actPax = Option(10), status = ArrivalStatus("xx deleted xx"))
-    ))
+      ))
 
     val fiveMinutes = 600d / 60
 
@@ -79,10 +79,10 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
       now = () => SDate(scheduled),
       airportConfig = defaultAirportConfig.copy(
         terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
-        queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
-      ),
-      minutesToCrunch = 120
-    )
+        queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk)),
+        minutesToCrunch = 120
+        )
+      )
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 

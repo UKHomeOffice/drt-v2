@@ -36,7 +36,7 @@ object Bhd extends AirportConfigLike {
       visaNationalToDesk -> 90d / 60,
       nonVisaNationalToDesk -> 78d / 60
       )),
-    minMaxDesksByTerminalQueue = Map(T1 -> Map(
+    minMaxDesksByTerminalQueue24Hrs = Map(T1 -> Map(
       Queues.EeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3)),
       Queues.NonEeaDesk -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), List(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4))
       )),

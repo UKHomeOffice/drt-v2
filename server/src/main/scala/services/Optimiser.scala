@@ -25,14 +25,14 @@ object Optimiser {
   val targetWidth = 60
   val rollingBuffer = 120
 
-  def crunch(workloads: Seq[Double],
-             minDesks: Seq[Int],
-             maxDesks: Seq[Int],
+  def crunch(workloads: Iterable[Double],
+             minDesks: Iterable[Int],
+             maxDesks: Iterable[Int],
              config: OptimizerConfig): Try[OptimizerCrunchResult] = {
     val indexedWork = workloads.toIndexedSeq
     val indexedMinDesks = minDesks.toIndexedSeq
 
-    val fairMaxD = if (workloads.length >= 60) {
+    val fairMaxD = if (workloads.size >= 60) {
       val fairXmax = rollingFairXmax(indexedWork, indexedMinDesks, blockSize, (0.75 * config.sla).round.toInt, targetWidth, rollingBuffer)
       fairXmax.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
     } else maxDesks.toIndexedSeq
@@ -43,7 +43,7 @@ object Optimiser {
     Success(OptimizerCrunchResult(desks.toIndexedSeq, waits))
   }
 
-  def runSimulationOfWork(workloads: Seq[Double], desks: Seq[Int], config: OptimizerConfig): Seq[Int] =
+  def runSimulationOfWork(workloads: Iterable[Double], desks: Iterable[Int], config: OptimizerConfig): Seq[Int] =
     Optimiser.processWork(workloads.toIndexedSeq, desks.toIndexedSeq, config.sla, IndexedSeq()).waits
 
   def approx(x: IndexedSeq[Int], y: IndexedSeq[Int], i: Seq[Double]): List[Double] = {

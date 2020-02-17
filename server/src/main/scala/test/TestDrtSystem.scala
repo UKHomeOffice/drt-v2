@@ -13,10 +13,10 @@ import manifests.passengers.BestAvailableManifest
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
-import services.crunch.deskrecs.{FlexedPortDeskRecsProvider, RunnableDeskRecs}
-import services.{SDate, TryRenjin}
-import services.{Optimiser, SDate, TryRenjin}
+import services.crunch.desklimits.flexed.FlexedPortDeskLimits
 import services.crunch.deskrecs.RunnableDeskRecs
+import services.crunch.deskrecs.flexed.FlexedPortDeskRecsProvider
+import services.{Optimiser, SDate}
 import test.TestActors.{TestStaffMovementsActor, _}
 import test.feeds.test.{CSVFixtures, TestFixtureFeed, TestManifestsActor}
 import test.roles.TestUserRoleProvider
@@ -97,9 +97,10 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
       val lookupRefreshDue: MillisSinceEpoch => Boolean = (lastLookupMillis: MillisSinceEpoch) => now().millisSinceEpoch - lastLookupMillis > 1000
       val manifestKillSwitch = startManifestsGraph(None, manifestResponsesSink, manifestRequestsSource, lookupRefreshDue)
 
-      val portDescRecs = FlexedPortDeskRecsProvider(airportConfig, 1440, Optimiser.crunch)
+      val portDescRecs = FlexedPortDeskRecsProvider(airportConfig, Optimiser.crunch)
+      val maxDesksProvider = FlexedPortDeskLimits(airportConfig, 1440).maxDesksByTerminal
 
-      val (millisToCrunchActor: ActorRef, crunchKillSwitch) = RunnableDeskRecs.start(portStateActor, portDescRecs, now, params.recrunchOnStart, params.forecastMaxDays)
+      val (millisToCrunchActor: ActorRef, crunchKillSwitch) = RunnableDeskRecs.start(portStateActor, portDescRecs, now, params.recrunchOnStart, params.forecastMaxDays, maxDesksProvider)
       portStateActor ! SetCrunchActor(millisToCrunchActor)
       portStateActor ! SetSimulationActor(cs.loadsToSimulate)
 
