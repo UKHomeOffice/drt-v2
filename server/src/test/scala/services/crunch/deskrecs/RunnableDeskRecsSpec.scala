@@ -16,8 +16,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.ArrivalsFeedSuccess
 import services.crunch.CrunchTestLike
-import services.crunch.desklimits.TerminalDeskLimitsLike
-import services.crunch.desklimits.flexed.FlexedPortDeskLimits
+import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.graphstages.{Buffer, CrunchMocks}
 import services.{SDate, TryCrunch}
 
@@ -83,7 +82,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
   val flexDesks = false
 
-  val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = FlexedPortDeskLimits(defaultAirportConfig).maxDesksByTerminal
+  val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = PortDeskLimits.flexed(defaultAirportConfig)
 
   "Given a RunnableDescRecs with a mock PortStateActor and mock crunch " +
     "When I give it a millisecond of 2019-01-01T00:00 " +

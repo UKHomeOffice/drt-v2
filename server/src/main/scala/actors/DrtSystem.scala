@@ -44,8 +44,7 @@ import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedRes
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services.SplitsProvider.SplitProvider
 import services._
-import services.crunch.desklimits.fixed.FixedPortDeskLimits
-import services.crunch.desklimits.flexed.FlexedPortDeskLimits
+import services.crunch.desklimits.PortDeskLimits
 import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeskRecs}
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.Crunch.{oneDayMillis, oneMinuteMillis}
@@ -268,9 +267,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         initialPortState.foreach(ps => portStateActor ! ps)
 
         val maxDesksProvider = if (config.get[Boolean]("crunch.flex-desks"))
-          FlexedPortDeskLimits(airportConfig).maxDesksByTerminal
+          PortDeskLimits.flexed(airportConfig)
         else
-          FixedPortDeskLimits(airportConfig).maxDesksByTerminal
+          PortDeskLimits.fixed(airportConfig)
 
         val (crunchSourceActor: ActorRef, _) = RunnableDeskRecs.start(portStateActor, portDeskRecs, now, params.recrunchOnStart, params.forecastMaxDays, maxDesksProvider)
         portStateActor ! SetCrunchActor(crunchSourceActor)

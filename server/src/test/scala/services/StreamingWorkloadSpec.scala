@@ -13,9 +13,8 @@ import drt.shared.Queues.EeaDesk
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.{ApiFlightWithSplits, PortCode, Queues, SDateLike, TQM}
 import services.crunch.CrunchTestLike
-import services.crunch.desklimits.TerminalDeskLimitsLike
-import services.crunch.desklimits.flexed.FlexedPortDeskLimits
-import services.crunch.deskrecs.{MockPortStateActor, DesksAndWaitsPortProviderLike, RunnableDeskRecs, SetFlights}
+import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
+import services.crunch.deskrecs.{DesksAndWaitsPortProviderLike, MockPortStateActor, RunnableDeskRecs, SetFlights}
 import services.graphstages.Crunch.LoadMinute
 import services.graphstages.{Buffer, CrunchMocks}
 
@@ -47,7 +46,7 @@ class StreamingWorkloadSpec extends CrunchTestLike {
   val mockPortStateActor: ActorRef = system.actorOf(MockPortStateActor.props(portStateProbe, smallDelay))
   mockPortStateActor ! SetFlights(List(ApiFlightWithSplits(ArrivalGenerator.arrival(terminal = T1, origin = PortCode("JFK"), actPax = Option(100)), Set())))
   val portDeskRecs: MockDesksAndWaitsPort = MockDesksAndWaitsPort(1440, defaultAirportConfig.crunchOffsetMinutes)
-  val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = FlexedPortDeskLimits(defaultAirportConfig).maxDesksByTerminal
+  val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = PortDeskLimits.flexed(defaultAirportConfig)
   val (millisToCrunchSourceActor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, portDeskRecs, newBuffer, maxDesksProvider).run()
 
   val askableSource: AskableActorRef = millisToCrunchSourceActor

@@ -13,7 +13,7 @@ import manifests.passengers.BestAvailableManifest
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
-import services.crunch.desklimits.flexed.FlexedPortDeskLimits
+import services.crunch.desklimits.PortDeskLimits
 import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeskRecs}
 import services.{Optimiser, SDate}
 import test.TestActors.{TestStaffMovementsActor, _}
@@ -97,7 +97,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
       val manifestKillSwitch = startManifestsGraph(None, manifestResponsesSink, manifestRequestsSource, lookupRefreshDue)
 
       val portDescRecs = DesksAndWaitsPortProvider(airportConfig, Optimiser.crunch)
-      val maxDesksProvider = FlexedPortDeskLimits(airportConfig).maxDesksByTerminal
+      val maxDesksProvider = PortDeskLimits.flexed(airportConfig)
 
       val (millisToCrunchActor: ActorRef, crunchKillSwitch) = RunnableDeskRecs.start(portStateActor, portDescRecs, now, params.recrunchOnStart, params.forecastMaxDays, maxDesksProvider)
       portStateActor ! SetCrunchActor(millisToCrunchActor)

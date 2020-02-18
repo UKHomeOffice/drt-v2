@@ -8,7 +8,8 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.crunch.desklimits.flexed.FlexedPortDeskLimitsForAvailableStaff
+import services.crunch.desklimits.PortDeskLimits
+import services.crunch.desklimits.PortDeskLimits.StaffToDeskLimits
 import services.crunch.deskrecs.DesksAndWaitsPortProvider
 import services.graphstages.Crunch._
 import services.metrics.{Metrics, StageTimer}
@@ -34,6 +35,8 @@ class DeploymentGraphStage(name: String = "",
   val inStaffMinutes: Inlet[StaffMinutes] = Inlet[StaffMinutes]("StaffMinutes.in")
   val outSimulationMinutes: Outlet[SimulationMinutes] = Outlet[SimulationMinutes]("SimulationMinutes.out")
   val stageName = "simulation"
+
+  val staffToDeskLimits: StaffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig)
 
   override val shape = new FanInShape2[Loads, StaffMinutes, SimulationMinutes](inLoads, inStaffMinutes, outSimulationMinutes)
 
@@ -196,9 +199,9 @@ class DeploymentGraphStage(name: String = "",
       val minuteMillis = firstMinute until lastMinute by 60000
       val staff = availableStaff(firstMinute, lastMinute, terminalsToUpdate)
 
-      val maxDesksProvider = FlexedPortDeskLimitsForAvailableStaff(airportConfig).maxDesksByTerminal(staff)
+      val deskLimitsProvider = staffToDeskLimits(staff)
 
-      SortedMap[TQM, SimulationMinute]() ++ portDeskRecs.loadsToSimulations(minuteMillis, workload, maxDesksProvider)
+      SortedMap[TQM, SimulationMinute]() ++ portDeskRecs.loadsToSimulations(minuteMillis, workload, deskLimitsProvider)
     }
 
     def filterTerminalMinutes(firstMinute: MillisSinceEpoch,
