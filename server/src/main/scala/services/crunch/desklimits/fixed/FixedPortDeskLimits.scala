@@ -19,3 +19,8 @@ case class FixedPortDeskLimits(terminals: Iterable[Terminal],
     maybeDesks.toMap
   }
 }
+
+object FixedPortDeskLimits {
+  def apply(airportConfig: AirportConfig): FixedPortDeskLimits =
+    FixedPortDeskLimits(airportConfig.terminals, airportConfig.minDesksByTerminalAndQueue24Hrs, airportConfig.maxDesksByTerminalAndQueue24Hrs)
+}

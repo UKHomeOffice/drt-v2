@@ -44,10 +44,9 @@ import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedRes
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services.SplitsProvider.SplitProvider
 import services._
+import services.crunch.desklimits.fixed.FixedPortDeskLimits
 import services.crunch.desklimits.flexed.FlexedPortDeskLimits
-import services.crunch.deskrecs.RunnableDeskRecs
-import services.crunch.deskrecs.fixed.FixedPortDeskRecsProvider
-import services.crunch.deskrecs.flexed.FlexedPortDeskRecsProvider
+import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeskRecs}
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.Crunch.{oneDayMillis, oneMinuteMillis}
 import services.graphstages._
@@ -260,10 +259,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       } yield (lps, fps, ba, fa, la, ra)
     }
 
-    val portDeskRecs = if (config.get[Boolean]("crunch.flex-desks"))
-      FlexedPortDeskRecsProvider(airportConfig, optimiser)
-    else
-      FixedPortDeskRecsProvider(airportConfig, optimiser)
+    val portDeskRecs = DesksAndWaitsPortProvider(airportConfig, optimiser)
 
     futurePortStates.onComplete {
       case Success((maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeRegisteredArrivals)) =>
@@ -271,7 +267,10 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         val initialPortState: Option[PortState] = mergePortStates(maybeForecastState, maybeLiveState)
         initialPortState.foreach(ps => portStateActor ! ps)
 
-        val maxDesksProvider = FlexedPortDeskLimits(airportConfig).maxDesksByTerminal
+        val maxDesksProvider = if (config.get[Boolean]("crunch.flex-desks"))
+          FlexedPortDeskLimits(airportConfig).maxDesksByTerminal
+        else
+          FixedPortDeskLimits(airportConfig).maxDesksByTerminal
 
         val (crunchSourceActor: ActorRef, _) = RunnableDeskRecs.start(portStateActor, portDeskRecs, now, params.recrunchOnStart, params.forecastMaxDays, maxDesksProvider)
         portStateActor ! SetCrunchActor(crunchSourceActor)

@@ -1,7 +1,7 @@
 package services.crunch.desklimits.flexed
 
 import drt.shared.AirportConfig
-import drt.shared.Queues.Queue
+import drt.shared.Queues.{EeaDesk, NonEeaDesk, Queue}
 import drt.shared.Terminals.Terminal
 import services.crunch.desklimits.TerminalDeskLimitsLike
 
@@ -27,6 +27,6 @@ object FlexedPortDeskLimits {
     val minDesks24Hrs = airportConfig.minDesksByTerminalAndQueue24Hrs
     val maxDesks24Hrs = airportConfig.maxDesksByTerminalAndQueue24Hrs
     val desksByTerminal24Hrs = airportConfig.desksByTerminal.mapValues(desks => List.fill(airportConfig.minutesToCrunch)(desks))
-    FlexedPortDeskLimits(desksByTerminal24Hrs, minDesks24Hrs, maxDesks24Hrs, airportConfig.flexedQueuesPriority.toSet)
+    FlexedPortDeskLimits(desksByTerminal24Hrs, minDesks24Hrs, maxDesks24Hrs, Set(EeaDesk, NonEeaDesk))
   }
 }

@@ -9,7 +9,7 @@ import services.graphstages.Crunch.LoadMinute
 
 import scala.collection.immutable.{Map, NumericRange}
 
-trait PortDeskRecsProviderLike {
+trait DesksAndWaitsPortProviderLike {
   val minutesToCrunch: Int
   val crunchOffsetMinutes: Int
 

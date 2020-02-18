@@ -28,6 +28,6 @@ object FlexedPortDeskLimitsForAvailableStaff {
     val minDesks24Hrs = airportConfig.minDesksByTerminalAndQueue24Hrs
     val maxDesks24Hrs = airportConfig.maxDesksByTerminalAndQueue24Hrs
     val desksByTerminalByMinute = airportConfig.desksByTerminal.mapValues(d => List.fill(airportConfig.minutesToCrunch)(d))
-    FlexedPortDeskLimitsForAvailableStaff(desksByTerminalByMinute, minDesks24Hrs, maxDesks24Hrs, airportConfig.flexedQueuesPriority.toSet)
+    FlexedPortDeskLimitsForAvailableStaff(desksByTerminalByMinute, minDesks24Hrs, maxDesks24Hrs, airportConfig.queuePriority.toSet)
   }
 }

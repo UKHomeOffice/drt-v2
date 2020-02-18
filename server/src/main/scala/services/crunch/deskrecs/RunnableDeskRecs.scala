@@ -24,7 +24,7 @@ object RunnableDeskRecs {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def apply(portStateActor: ActorRef,
-            portDeskRecs: PortDeskRecsProviderLike,
+            portDeskRecs: DesksAndWaitsPortProviderLike,
             buffer: Buffer,
             maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike])
            (implicit executionContext: ExecutionContext, timeout: Timeout = new Timeout(10 seconds)): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
@@ -84,7 +84,7 @@ object RunnableDeskRecs {
     }
 
   def start(portStateActor: ActorRef,
-            portDeskRecs: ProductionPortDeskRecsProviderLike,
+            portDeskRecs: DesksAndWaitsPortProviderLike,
             now: () => SDateLike,
             recrunchOnStart: Boolean,
             forecastMaxDays: Int,

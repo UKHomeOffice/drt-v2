@@ -15,14 +15,14 @@ import drt.shared.{ApiFlightWithSplits, PortCode, Queues, SDateLike, TQM}
 import services.crunch.CrunchTestLike
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.desklimits.flexed.FlexedPortDeskLimits
-import services.crunch.deskrecs.{MockPortStateActor, PortDeskRecsProviderLike, RunnableDeskRecs, SetFlights}
+import services.crunch.deskrecs.{MockPortStateActor, DesksAndWaitsPortProviderLike, RunnableDeskRecs, SetFlights}
 import services.graphstages.Crunch.LoadMinute
 import services.graphstages.{Buffer, CrunchMocks}
 
 import scala.collection.immutable.{Map, NumericRange}
 import scala.concurrent.duration._
 
-case class MockPortDeskRecs(minutesToCrunch: Int, crunchOffsetMinutes: Int) extends PortDeskRecsProviderLike {
+case class MockDesksAndWaitsPort(minutesToCrunch: Int, crunchOffsetMinutes: Int) extends DesksAndWaitsPortProviderLike {
   override def flightsToLoads(flights: FlightsWithSplits,
                               crunchStartMillis: MillisSinceEpoch): Map[TQM, LoadMinute] =
     Seq(LoadMinute(T1, Queues.EeaDesk, crunchStartMillis, 0, 0)).map(lm => (lm.uniqueId, lm)).toMap
@@ -46,7 +46,7 @@ class StreamingWorkloadSpec extends CrunchTestLike {
 
   val mockPortStateActor: ActorRef = system.actorOf(MockPortStateActor.props(portStateProbe, smallDelay))
   mockPortStateActor ! SetFlights(List(ApiFlightWithSplits(ArrivalGenerator.arrival(terminal = T1, origin = PortCode("JFK"), actPax = Option(100)), Set())))
-  val portDeskRecs: MockPortDeskRecs = MockPortDeskRecs(1440, defaultAirportConfig.crunchOffsetMinutes)
+  val portDeskRecs: MockDesksAndWaitsPort = MockDesksAndWaitsPort(1440, defaultAirportConfig.crunchOffsetMinutes)
   val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = FlexedPortDeskLimits(defaultAirportConfig).maxDesksByTerminal
   val (millisToCrunchSourceActor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, portDeskRecs, newBuffer, maxDesksProvider).run()
 

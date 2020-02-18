@@ -14,8 +14,7 @@ import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services.crunch.desklimits.flexed.FlexedPortDeskLimits
-import services.crunch.deskrecs.RunnableDeskRecs
-import services.crunch.deskrecs.flexed.FlexedPortDeskRecsProvider
+import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeskRecs}
 import services.{Optimiser, SDate}
 import test.TestActors.{TestStaffMovementsActor, _}
 import test.feeds.test.{CSVFixtures, TestFixtureFeed, TestManifestsActor}
@@ -55,7 +54,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
   override lazy val voyageManifestsHistoricSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = voyageManifestTestSourceGraph
 
 
-  val testFeed = TestFixtureFeed(system)
+  val testFeed: Source[ArrivalsFeedResponse, Cancellable] = TestFixtureFeed(system)
 
   config.getOptional[String]("test.live_fixture_csv").foreach { file =>
     implicit val timeout: Timeout = Timeout(250 milliseconds)
@@ -97,7 +96,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
       val lookupRefreshDue: MillisSinceEpoch => Boolean = (lastLookupMillis: MillisSinceEpoch) => now().millisSinceEpoch - lastLookupMillis > 1000
       val manifestKillSwitch = startManifestsGraph(None, manifestResponsesSink, manifestRequestsSource, lookupRefreshDue)
 
-      val portDescRecs = FlexedPortDeskRecsProvider(airportConfig, Optimiser.crunch)
+      val portDescRecs = DesksAndWaitsPortProvider(airportConfig, Optimiser.crunch)
       val maxDesksProvider = FlexedPortDeskLimits(airportConfig).maxDesksByTerminal
 
       val (millisToCrunchActor: ActorRef, crunchKillSwitch) = RunnableDeskRecs.start(portStateActor, portDescRecs, now, params.recrunchOnStart, params.forecastMaxDays, maxDesksProvider)

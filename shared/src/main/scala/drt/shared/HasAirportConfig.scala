@@ -252,7 +252,7 @@ case class AirportConfig(portCode: PortCode,
                          maybeCiriumTaxiThresholdMinutes: Option[Int] = Option(20),
                          feedSources: Seq[FeedSource] = Seq(LiveBaseFeedSource, LiveFeedSource, AclFeedSource, ApiFeedSource),
                          desksByTerminal: Map[Terminal, Int],
-                         flexedQueuesPriority: List[Queue] = List(EeaDesk, NonEeaDesk, QueueDesk, FastTrack),
+                         queuePriority: List[Queue] = List(EeaDesk, NonEeaDesk, QueueDesk, FastTrack, EGate),
                          assumedAdultsPerChild: Double = 1.0
                         ) {
   def assertValid(): Unit = {

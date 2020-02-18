@@ -9,7 +9,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.crunch.desklimits.flexed.FlexedPortDeskLimitsForAvailableStaff
-import services.crunch.deskrecs.flexed.FlexedPortDeploymentsProvider
+import services.crunch.deskrecs.DesksAndWaitsPortProvider
 import services.graphstages.Crunch._
 import services.metrics.{Metrics, StageTimer}
 
@@ -24,7 +24,7 @@ class DeploymentGraphStage(name: String = "",
                            expireAfterMillis: Int,
                            now: () => SDateLike,
                            crunchPeriodStartMillis: SDateLike => SDateLike,
-                           portDeskRecs: FlexedPortDeploymentsProvider)
+                           portDeskRecs: DesksAndWaitsPortProvider)
   extends GraphStage[FanInShape2[Loads, StaffMinutes, SimulationMinutes]] {
 
   type TerminalLoad = Map[Queue, Map[MillisSinceEpoch, Double]]
@@ -198,7 +198,7 @@ class DeploymentGraphStage(name: String = "",
 
       val maxDesksProvider = FlexedPortDeskLimitsForAvailableStaff(airportConfig).maxDesksByTerminal(staff)
 
-      SortedMap[TQM, SimulationMinute]() ++ portDeskRecs.loadsToDeployments(minuteMillis, workload, maxDesksProvider)
+      SortedMap[TQM, SimulationMinute]() ++ portDeskRecs.loadsToSimulations(minuteMillis, workload, maxDesksProvider)
     }
 
     def filterTerminalMinutes(firstMinute: MillisSinceEpoch,

@@ -16,7 +16,7 @@ import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services.SplitsProvider.SplitProvider
 import services._
 import services.arrivals.ArrivalDataSanitiser
-import services.crunch.deskrecs.flexed.FlexedPortDeploymentsProvider
+import services.crunch.deskrecs.DesksAndWaitsPortProvider
 import services.graphstages.Crunch._
 import services.graphstages._
 
@@ -177,7 +177,7 @@ object CrunchSystem {
         expireAfterMillis = props.expireAfterMillis,
         now = props.now,
         crunchPeriodStartMillis = crunchStartDateProvider,
-        FlexedPortDeploymentsProvider(props.airportConfig, props.optimiser))
+        DesksAndWaitsPortProvider(props.airportConfig, props.optimiser))
 
     val crunchSystem = RunnableCrunch(
       props.arrivalsForecastBaseSource, props.arrivalsForecastSource, props.arrivalsLiveBaseSource, props.arrivalsLiveSource,

@@ -23,10 +23,9 @@ import org.specs2.mutable.SpecificationLike
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services._
 import services.crunch.desklimits.TerminalDeskLimitsLike
+import services.crunch.desklimits.fixed.FixedPortDeskLimits
 import services.crunch.desklimits.flexed.FlexedPortDeskLimits
-import services.crunch.deskrecs.RunnableDeskRecs
-import services.crunch.deskrecs.fixed.FixedPortDeskRecsProvider
-import services.crunch.deskrecs.flexed.FlexedPortDeskRecsProvider
+import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeskRecs}
 import services.graphstages.CrunchMocks
 import slickdb.Tables
 
@@ -34,6 +33,7 @@ import scala.collection.immutable.{Map, SortedMap}
 import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor}
+import scala.languageFeature.postfixOps
 
 
 class CrunchStateMockActor extends Actor {
@@ -42,7 +42,11 @@ class CrunchStateMockActor extends Actor {
   }
 }
 
-class PortStateTestActor(liveActor: ActorRef, forecastActor: ActorRef, probe: ActorRef, now: () => SDateLike, liveDaysAhead: Int)
+class PortStateTestActor(liveActor: ActorRef,
+                         forecastActor: ActorRef,
+                         probe: ActorRef,
+                         now: () => SDateLike,
+                         liveDaysAhead: Int)
   extends PortStateActor(liveActor, forecastActor, now, liveDaysAhead) {
   override def splitDiffAndSend(diff: PortStateDiff): Unit = {
     super.splitDiffAndSend(diff)
@@ -51,7 +55,11 @@ class PortStateTestActor(liveActor: ActorRef, forecastActor: ActorRef, probe: Ac
 }
 
 object PortStateTestActor {
-  def props(liveActor: ActorRef, forecastActor: ActorRef, probe: ActorRef, now: () => SDateLike, liveDaysAhead: Int) =
+  def props(liveActor: ActorRef,
+            forecastActor: ActorRef,
+            probe: ActorRef,
+            now: () => SDateLike,
+            liveDaysAhead: Int): Props =
     Props(new PortStateTestActor(liveActor, forecastActor, probe, now, liveDaysAhead))
 }
 
@@ -108,7 +116,7 @@ class CrunchTestLike
   val uniquifyArrivals: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] =
     CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight)
 
-  val defaultAirportConfig = AirportConfig(
+  val defaultAirportConfig: AirportConfig = AirportConfig(
     portCode = PortCode("STN"),
     queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk), T2 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk)),
     slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 20, Queues.NonEeaDesk -> 45),
@@ -117,17 +125,17 @@ class CrunchTestLike
     terminalPaxSplits = List(T1, T2).map(t => (t, SplitRatios(
       SplitSources.TerminalAverage,
       SplitRatio(eeaMachineReadableToDesk, 1)
-    ))).toMap,
+      ))).toMap,
     terminalProcessingTimes = Map(
       T1 -> Map(
         eeaMachineReadableToDesk -> 25d / 60,
         eeaNonMachineReadableToDesk -> 25d / 60
-      ),
+        ),
       T2 -> Map(
         eeaMachineReadableToDesk -> 25d / 60,
         eeaNonMachineReadableToDesk -> 25d / 60
-      )
-    ),
+        )
+      ),
     minMaxDesksByTerminalQueue24Hrs = Map(
       T1 -> Map(
         Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
@@ -138,7 +146,6 @@ class CrunchTestLike
         Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
         Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))))),
     timeToChoxMillis = 120000L,
-    firstPaxOffMillis = 180000L,
     role = STNAccess,
     terminalPaxTypeQueueAllocation = Map(
       T1 -> Map(
@@ -149,7 +156,7 @@ class CrunchTestLike
         VisaNational -> List(Queues.NonEeaDesk -> 1.0),
         B5JPlusNational -> List(Queues.EGate -> 0.6, Queues.EeaDesk -> 0.4),
         B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
-      ),
+        ),
       T2 -> Map(
         EeaMachineReadable -> List(Queues.EeaDesk -> 1),
         EeaBelowEGateAge -> List(Queues.EeaDesk -> 1.0),
@@ -158,8 +165,8 @@ class CrunchTestLike
         VisaNational -> List(Queues.NonEeaDesk -> 1.0),
         B5JPlusNational -> List(Queues.EeaDesk -> 1),
         B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
-      )
-    ),
+        )
+      ),
     desksByTerminal = Map(T1 -> 40, T2 -> 40)
     )
 
@@ -176,7 +183,7 @@ class CrunchTestLike
     system.actorOf(PortStateTestActor.props(crunchStateMockActor, crunchStateMockActor, testProbe.ref, now, 100), name = "port-state-actor")
   }
 
-  def testProbe(name: String) = TestProbe(name = name)
+  def testProbe(name: String): TestProbe = TestProbe(name = name)
 
   def runCrunchGraph(initialForecastBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap(),
                      initialForecastArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap(),
@@ -221,12 +228,12 @@ class CrunchTestLike
     val portStateActor = createPortStateActor(portStateProbe, now)
     initialPortState.foreach(ps => portStateActor ! ps)
 
-    val portDescRecs = if (flexDesks)
-      FlexedPortDeskRecsProvider(airportConfig, cruncher)
-    else
-      FixedPortDeskRecsProvider(airportConfig, cruncher)
+    val portDescRecs = DesksAndWaitsPortProvider(airportConfig, cruncher)
 
-    val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = FlexedPortDeskLimits(airportConfig).maxDesksByTerminal
+    val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = if (flexDesks)
+      FlexedPortDeskLimits(airportConfig).maxDesksByTerminal
+    else
+      FixedPortDeskLimits(airportConfig).maxDesksByTerminal
 
     val (millisToCrunchActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDescRecs, now, recrunchOnStart, maxDaysToCrunch, maxDesksProvider)
     portStateActor ! SetCrunchActor(millisToCrunchActor)
@@ -240,16 +247,51 @@ class CrunchTestLike
     val (_, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
     val (manifestResponsesSource, _, _) = SinkToSourceBridge[List[BestAvailableManifest]]
 
-    val crunchInputs = CrunchSystem(CrunchProps(logLabel = logLabel, airportConfig = airportConfig, pcpArrival = pcpArrivalTime, historicalSplitsProvider = csvSplitsProvider, portStateActor = portStateActor, maxDaysToCrunch = maxDaysToCrunch, expireAfterMillis = expireAfterMillis, actors = Map[String, AskableActorRef](
-            "shifts" -> shiftsActor,
-            "fixed-points" -> fixedPointsActor,
-            "staff-movements" -> staffMovementsActor,
-            "forecast-base-arrivals" -> forecastBaseArrivalsProbe.ref,
-            "forecast-arrivals" -> forecastArrivalsProbe.ref,
-            "live-base-arrivals" -> liveBaseArrivalsProbe.ref,
-            "live-arrivals" -> liveArrivalsProbe.ref,
-            "aggregated-arrivals" -> aggregatedArrivalsActor
-          ), useNationalityBasedProcessingTimes = false, useLegacyManifests = useLegacyManifests, now = now, manifestsLiveSource = manifestsSource, manifestResponsesSource = manifestResponsesSource, voyageManifestsActor = manifestsActor, manifestRequestsSink = manifestRequestsSink, simulator = simulator, initialPortState = initialPortState, initialForecastBaseArrivals = initialForecastBaseArrivals, initialForecastArrivals = initialForecastArrivals, initialLiveBaseArrivals = initialLiveBaseArrivals, initialLiveArrivals = initialLiveArrivals, arrivalsForecastBaseSource = forecastBaseArrivals, arrivalsForecastSource = forecastArrivals, arrivalsLiveBaseSource = liveBaseArrivals, arrivalsLiveSource = liveArrivals, initialShifts = initialShifts, initialFixedPoints = initialFixedPoints, initialStaffMovements = initialStaffMovements, refreshArrivalsOnStart = refreshArrivalsOnStart, checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup, stageThrottlePer = 50 milliseconds, useApiPaxNos = true, adjustEGateUseByUnder12s = false, optimiser = cruncher, useLegacyDeployments = useLegacyDeployments))
+    val crunchInputs = CrunchSystem(CrunchProps(
+      logLabel = logLabel,
+      airportConfig = airportConfig,
+      pcpArrival = pcpArrivalTime,
+      historicalSplitsProvider = csvSplitsProvider,
+      portStateActor = portStateActor,
+      maxDaysToCrunch = maxDaysToCrunch,
+      expireAfterMillis = expireAfterMillis,
+      actors = Map[String, AskableActorRef](
+        "shifts" -> shiftsActor,
+        "fixed-points" -> fixedPointsActor,
+        "staff-movements" -> staffMovementsActor,
+        "forecast-base-arrivals" -> forecastBaseArrivalsProbe.ref,
+        "forecast-arrivals" -> forecastArrivalsProbe.ref,
+        "live-base-arrivals" -> liveBaseArrivalsProbe.ref,
+        "live-arrivals" -> liveArrivalsProbe.ref,
+        "aggregated-arrivals" -> aggregatedArrivalsActor
+        ),
+      useNationalityBasedProcessingTimes = false,
+      useLegacyManifests = useLegacyManifests,
+      now = now,
+      manifestsLiveSource = manifestsSource,
+      manifestResponsesSource = manifestResponsesSource,
+      voyageManifestsActor = manifestsActor,
+      manifestRequestsSink = manifestRequestsSink,
+      simulator = simulator,
+      initialPortState = initialPortState,
+      initialForecastBaseArrivals = initialForecastBaseArrivals,
+      initialForecastArrivals = initialForecastArrivals,
+      initialLiveBaseArrivals = initialLiveBaseArrivals,
+      initialLiveArrivals = initialLiveArrivals,
+      arrivalsForecastBaseSource = forecastBaseArrivals,
+      arrivalsForecastSource = forecastArrivals,
+      arrivalsLiveBaseSource = liveBaseArrivals,
+      arrivalsLiveSource = liveArrivals,
+      initialShifts = initialShifts,
+      initialFixedPoints = initialFixedPoints,
+      initialStaffMovements = initialStaffMovements,
+      refreshArrivalsOnStart = refreshArrivalsOnStart,
+      checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup,
+      stageThrottlePer = 50 milliseconds,
+      useApiPaxNos = true,
+      adjustEGateUseByUnder12s = false,
+      optimiser = cruncher,
+      useLegacyDeployments = useLegacyDeployments))
 
     portStateActor ! SetSimulationActor(crunchInputs.loadsToSimulate)
 
@@ -270,10 +312,12 @@ class CrunchTestLike
       aggregatedArrivalsActor = aggregatedArrivalsActor,
       portStateActor = portStateActor,
       deskRecsGraphKillSwitch = deskRecsKillSwitch
-    )
+      )
   }
 
-  def paxLoadsFromPortState(portState: PortState, minsToTake: Int, startFromMinuteIdx: Int = 0): Map[Terminal, Map[Queue, List[Double]]] = portState
+  def paxLoadsFromPortState(portState: PortState,
+                            minsToTake: Int,
+                            startFromMinuteIdx: Int = 0): Map[Terminal, Map[Queue, List[Double]]] = portState
     .crunchMinutes
     .values
     .groupBy(_.terminal)
@@ -293,7 +337,9 @@ class CrunchTestLike
         (tn, terminalLoads)
     }
 
-  def paxLoadsFromPortState(portState: PortState, minsToTake: Int, startFromMinute: SDateLike): Map[Terminal, Map[Queue, List[Double]]] = {
+  def paxLoadsFromPortState(portState: PortState,
+                            minsToTake: Int,
+                            startFromMinute: SDateLike): Map[Terminal, Map[Queue, List[Double]]] = {
     val startFromMillis = startFromMinute.millisSinceEpoch
 
     portState
