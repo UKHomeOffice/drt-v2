@@ -14,5 +14,5 @@ trait TerminalDeskLimitsLike {
 
   def maxDesksForMinutes(minuteMillis: NumericRange[Long],
                          queue: Queue,
-                         existingAllocations: Map[Queue, (List[Int], List[Int])]): Iterable[Int]
+                         existingAllocations: Map[Queue, List[Int]]): Iterable[Int]
 }

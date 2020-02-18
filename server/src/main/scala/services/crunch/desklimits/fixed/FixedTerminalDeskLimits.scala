@@ -10,6 +10,6 @@ case class FixedTerminalDeskLimits(minDesksByQueue24Hrs: Map[Queue, IndexedSeq[I
                                    maxDesksByQueue24Hrs: Map[Queue, IndexedSeq[Int]]) extends TerminalDeskLimitsLike {
   def maxDesksForMinutes(minuteMillis: NumericRange[Long],
                          queue: Queue,
-                         allocatedDesks: Map[Queue, (List[Int], List[Int])]): List[Int] =
+                         allocatedDesks: Map[Queue, List[Int]]): List[Int] =
     DeskRecs.desksByMinute(minuteMillis, maxDesksByQueue24Hrs.getOrElse(queue, IndexedSeq.fill(24)(0))).toList
 }

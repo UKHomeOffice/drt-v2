@@ -1,7 +1,6 @@
 package services.crunch.desklimits.flexed
 
 import drt.shared.Queues.Queue
-import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs.DeskRecs
 import services.graphstages.Crunch.listOp
 
@@ -11,23 +10,25 @@ case class FlexedTerminalDeskLimitsFromAvailableStaff(totalStaffByMinute: List[I
                                                       terminalDesksByMinute: List[Int],
                                                       flexedQueues: Set[Queue],
                                                       minDesksByQueue24Hrs: Map[Queue, IndexedSeq[Int]],
-                                                      maxDesksByQueue24Hrs: Map[Queue, IndexedSeq[Int]]) extends TerminalDeskLimitsLike {
-  def maxDesksForMinutes(minuteMillis: NumericRange[Long], queue: Queue, allocatedDesks: Map[Queue, (List[Int], List[Int])]): Iterable[Int] = {
-    val processedQueues = allocatedDesks.keys.toSet
-    val deployedByQueue = allocatedDesks.values.map(_._1).toList
-    val totalDeployedByMinute = if (deployedByQueue.nonEmpty) deployedByQueue.reduce(listOp[Int](_ + _)) else List()
+                                                      maxDesksByQueue24Hrs: Map[Queue, IndexedSeq[Int]]) extends FlexedTerminalDeskLimitsLike {
+  def maxDesksForMinutes(minuteMillis: NumericRange[Long], queue: Queue, allocatedDesks: Map[Queue, List[Int]]): Iterable[Int] = {
+    val availableDesksByMinute = maxDesks(minuteMillis, queue, allocatedDesks)
+    val availableStaffByMinute = availableStaffForMinutes(minuteMillis, queue, allocatedDesks)
 
-    val availableDesksByMinute = if (flexedQueues.contains(queue)) {
-      val remainingFlexedQueues = flexedQueues -- (processedQueues + queue)
-      val minDesksForRemainingFlexedQueuesByMinute = DeskRecs.desksByMinuteForQueues(minDesksByQueue24Hrs, minuteMillis, remainingFlexedQueues).values.toList
-      (terminalDesksByMinute :: totalDeployedByMinute :: minDesksForRemainingFlexedQueuesByMinute).reduce(listOp[Int](_ - _))
-    } else DeskRecs.desksByMinute(minuteMillis, maxDesksByQueue24Hrs(queue))
+    List(availableDesksByMinute, availableStaffByMinute).reduce(listOp[Int](Math.min))
+  }
+
+  def availableStaffForMinutes(minuteMillis: NumericRange[Long],
+                               queue: Queue,
+                               allocatedDesks: Map[Queue, List[Int]]): Iterable[Int] = {
+    val processedQueues = allocatedDesks.keys.toSet
+    val deployedByQueue = allocatedDesks.values.toList
+    val totalDeployedByMinute = if (deployedByQueue.nonEmpty) deployedByQueue.reduce(listOp[Int](_ + _)) else List()
 
     val remainingQueues = minDesksByQueue24Hrs.keys.toSet -- (processedQueues + queue)
     val minDesksForRemainingQueuesByMinute = DeskRecs.desksByMinuteForQueues(minDesksByQueue24Hrs, minuteMillis, remainingQueues).values.toList
     val minimumPromisedStaffByMinute = if (minDesksForRemainingQueuesByMinute.nonEmpty) minDesksForRemainingQueuesByMinute.reduce(listOp[Int](_ + _)) else List()
-    val availableStaff = List(totalStaffByMinute, totalDeployedByMinute, minimumPromisedStaffByMinute).reduce(listOp[Int](_ - _))
 
-    List(availableDesksByMinute, availableStaff).reduce(listOp[Int](Math.min))
+    List(totalStaffByMinute, totalDeployedByMinute, minimumPromisedStaffByMinute).reduce(listOp[Int](_ - _))
   }
 }

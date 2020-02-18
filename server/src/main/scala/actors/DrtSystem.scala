@@ -358,7 +358,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         maybeStatuses => maybeStatuses
           .collect { case Some(fs) => fs }
           .filter(fss => isValidFeedSource(fss.feedSource))
-      )
+        )
   }
 
   override def isValidFeedSource(fs: FeedSource): Boolean = airportConfig.feedSources.contains(fs)
@@ -396,16 +396,49 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
                         refreshArrivalsOnStart: Boolean,
                         checkRequiredStaffUpdatesOnStartup: Boolean): CrunchSystem[Cancellable] = {
 
-    val crunchInputs = CrunchSystem(CrunchProps(airportConfig = airportConfig, pcpArrival = pcpArrivalTimeCalculator, historicalSplitsProvider = historicalSplitsProvider, portStateActor = portStateActor, maxDaysToCrunch = params.forecastMaxDays, expireAfterMillis = expireAfterMillis, actors = Map(
-            "shifts" -> shiftsActor,
-            "fixed-points" -> fixedPointsActor,
-            "staff-movements" -> staffMovementsActor,
-            "forecast-base-arrivals" -> baseArrivalsActor,
-            "forecast-arrivals" -> forecastArrivalsActor,
-            "live-base-arrivals" -> liveBaseArrivalsActor,
-            "live-arrivals" -> liveArrivalsActor,
-            "aggregated-arrivals" -> aggregatedArrivalsActor
-          ), useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes, useLegacyManifests = params.useLegacyManifests, manifestsLiveSource = voyageManifestsLiveSource, manifestResponsesSource = manifestResponsesSource, voyageManifestsActor = voyageManifestsActor, manifestRequestsSink = manifestRequestsSink, simulator = Optimiser.runSimulationOfWork, initialPortState = initialPortState, initialForecastBaseArrivals = initialForecastBaseArrivals.getOrElse(mutable.SortedMap()), initialForecastArrivals = initialForecastArrivals.getOrElse(mutable.SortedMap()), initialLiveBaseArrivals = initialLiveBaseArrivals.getOrElse(mutable.SortedMap()), initialLiveArrivals = initialLiveArrivals.getOrElse(mutable.SortedMap()), arrivalsForecastBaseSource = baseArrivalsSource(), arrivalsForecastSource = forecastArrivalsSource(airportConfig.feedPortCode), arrivalsLiveBaseSource = liveBaseArrivalsSource(airportConfig.feedPortCode), arrivalsLiveSource = liveArrivalsSource(airportConfig.feedPortCode), initialShifts = initialState[ShiftAssignments](shiftsActor).getOrElse(ShiftAssignments(Seq())), initialFixedPoints = initialState[FixedPointAssignments](fixedPointsActor).getOrElse(FixedPointAssignments(Seq())), initialStaffMovements = initialState[StaffMovements](staffMovementsActor).map(_.movements).getOrElse(Seq[StaffMovement]()), refreshArrivalsOnStart = refreshArrivalsOnStart, checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup, stageThrottlePer = config.get[Int]("crunch.stage-throttle-millis") millisecond, useApiPaxNos = params.useApiPaxNos, adjustEGateUseByUnder12s = params.adjustEGateUseByUnder12s, optimiser = optimiser, useLegacyDeployments = false))
+    val crunchInputs = CrunchSystem(CrunchProps(
+      airportConfig = airportConfig,
+      pcpArrival = pcpArrivalTimeCalculator,
+      historicalSplitsProvider = historicalSplitsProvider,
+      portStateActor = portStateActor,
+      maxDaysToCrunch = params.forecastMaxDays,
+      expireAfterMillis = expireAfterMillis,
+      actors = Map(
+        "shifts" -> shiftsActor,
+        "fixed-points" -> fixedPointsActor,
+        "staff-movements" -> staffMovementsActor,
+        "forecast-base-arrivals" -> baseArrivalsActor,
+        "forecast-arrivals" -> forecastArrivalsActor,
+        "live-base-arrivals" -> liveBaseArrivalsActor,
+        "live-arrivals" -> liveArrivalsActor,
+        "aggregated-arrivals" -> aggregatedArrivalsActor
+        ),
+      useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
+      useLegacyManifests = params.useLegacyManifests,
+      manifestsLiveSource = voyageManifestsLiveSource,
+      manifestResponsesSource = manifestResponsesSource,
+      voyageManifestsActor = voyageManifestsActor,
+      manifestRequestsSink = manifestRequestsSink,
+      simulator = Optimiser.runSimulationOfWork,
+      initialPortState = initialPortState,
+      initialForecastBaseArrivals = initialForecastBaseArrivals.getOrElse(mutable.SortedMap()),
+      initialForecastArrivals = initialForecastArrivals.getOrElse(mutable.SortedMap()),
+      initialLiveBaseArrivals = initialLiveBaseArrivals.getOrElse(mutable.SortedMap()),
+      initialLiveArrivals = initialLiveArrivals.getOrElse(mutable.SortedMap()),
+      arrivalsForecastBaseSource = baseArrivalsSource(),
+      arrivalsForecastSource = forecastArrivalsSource(airportConfig.feedPortCode),
+      arrivalsLiveBaseSource = liveBaseArrivalsSource(airportConfig.feedPortCode),
+      arrivalsLiveSource = liveArrivalsSource(airportConfig.feedPortCode),
+      initialShifts = initialState[ShiftAssignments](shiftsActor).getOrElse(ShiftAssignments(Seq())),
+      initialFixedPoints = initialState[FixedPointAssignments](fixedPointsActor).getOrElse(FixedPointAssignments(Seq())),
+      initialStaffMovements = initialState[StaffMovements](staffMovementsActor).map(_.movements).getOrElse(Seq[StaffMovement]()),
+      refreshArrivalsOnStart = refreshArrivalsOnStart,
+      checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup,
+      stageThrottlePer = config.get[Int]("crunch.stage-throttle-millis") millisecond,
+      useApiPaxNos = params.useApiPaxNos,
+      adjustEGateUseByUnder12s = params.adjustEGateUseByUnder12s,
+      optimiser = optimiser,
+      useLegacyDeployments = false))
     crunchInputs
   }
 
@@ -633,7 +666,7 @@ object ArrivalGenerator {
       PcpTime = pcpTime,
       Scheduled = if (schDt.nonEmpty) SDate(schDt).millisSinceEpoch else 0,
       FeedSources = feedSources
-    )
+      )
   }
 
   def arrivals(now: () => SDateLike, terminalNames: Iterable[Terminal]): Iterable[Arrival] = {

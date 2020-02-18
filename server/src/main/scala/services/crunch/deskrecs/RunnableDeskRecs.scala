@@ -51,17 +51,13 @@ object RunnableDeskRecs {
               flightsToCrunch(askablePortStateActor)(portDeskRecs.minutesToCrunch, crunchStartMillis)
             }
             .map { case (crunchStartMillis, flights) =>
-              log.info(s"Crunching ${SDate(crunchStartMillis).toISOString} flights: ${flights.flightsToUpdate.size}")
-
-              val loads = portDeskRecs.flightsToLoads(flights, crunchStartMillis)
-
               val crunchEndMillis = SDate(crunchStartMillis).addMinutes(portDeskRecs.minutesToCrunch).millisSinceEpoch
               val minuteMillis = crunchStartMillis until crunchEndMillis by 60000
-              val terminals = flights.terminals
-              val validTerminals = loads.keys.map(_.terminal).toSet
-              val maxDesksByTerminal = terminals.intersect(validTerminals).map { terminal =>
-                (terminal, maxDesksProviders(terminal))
-              }.toMap
+
+              log.info(s"Crunching ${minuteMillis.length} minutes (${SDate(crunchStartMillis).toISOString} to ${SDate(crunchEndMillis).toISOString})")
+
+              val loads = portDeskRecs.flightsToLoads(flights, crunchStartMillis)
+              val maxDesksByTerminal = deskLimits(maxDesksProviders, flights.terminals, loads)
 
               portDeskRecs.loadsToDesks(minuteMillis, loads, maxDesksByTerminal)
             } ~> killSwitch ~> deskRecsSink
@@ -70,6 +66,15 @@ object RunnableDeskRecs {
     }
 
     RunnableGraph.fromGraph(graph).addAttributes(Attributes.inputBuffer(1, 1))
+  }
+
+  def deskLimits(maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
+                         terminals: Set[Terminal],
+                         loads: Map[TQM, Crunch.LoadMinute]): Map[Terminal, TerminalDeskLimitsLike] = {
+    val validTerminals = loads.keys.map(_.terminal).toSet
+    terminals.intersect(validTerminals).map { terminal =>
+      (terminal, maxDesksProviders(terminal))
+    }.toMap
   }
 
   private def flightsToCrunch(askablePortStateActor: AskableActorRef)(minutesToCrunch: Int, crunchStartMillis: MillisSinceEpoch)

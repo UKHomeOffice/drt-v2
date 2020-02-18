@@ -48,7 +48,8 @@ case class DesksAndWaitsTerminalProvider(slas: Map[Queue, Int],
           log.info(s"Optimising $queue")
           val queueWork = adjustedWork(queue, loadsByQueue(queue))
           val minDesks = deskLimitsProvider.minDesksForMinutes(minuteMillis, queue).toSeq
-          val maxDesks = deskLimitsProvider.maxDesksForMinutes(minuteMillis, queue, queueRecsSoFar).toSeq
+          val queueDeskAllocations = queueRecsSoFar.mapValues(_._1)
+          val maxDesks = deskLimitsProvider.maxDesksForMinutes(minuteMillis, queue, queueDeskAllocations).toSeq
           cruncher(queueWork, minDesks, maxDesks, OptimizerConfig(slas(queue))) match {
             case Success(OptimizerCrunchResult(desks, waits)) => queueRecsSoFar + (queue -> ((desks.toList, waits.toList)))
             case Failure(t) =>
