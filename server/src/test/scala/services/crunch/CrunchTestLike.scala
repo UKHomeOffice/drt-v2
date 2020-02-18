@@ -112,6 +112,7 @@ class CrunchTestLike
     portCode = PortCode("STN"),
     queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk), T2 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk)),
     slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 20, Queues.NonEeaDesk -> 45),
+    minutesToCrunch = 30,
     defaultWalkTimeMillis = Map(),
     terminalPaxSplits = List(T1, T2).map(t => (t, SplitRatios(
       SplitSources.TerminalAverage,
@@ -225,7 +226,7 @@ class CrunchTestLike
     else
       FixedPortDeskRecsProvider(airportConfig, cruncher)
 
-    val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = FlexedPortDeskLimits(airportConfig, 1440).maxDesksByTerminal
+    val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = FlexedPortDeskLimits(airportConfig).maxDesksByTerminal
 
     val (millisToCrunchActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDescRecs, now, recrunchOnStart, maxDaysToCrunch, maxDesksProvider)
     portStateActor ! SetCrunchActor(millisToCrunchActor)

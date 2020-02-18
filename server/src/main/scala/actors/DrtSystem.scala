@@ -271,7 +271,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         val initialPortState: Option[PortState] = mergePortStates(maybeForecastState, maybeLiveState)
         initialPortState.foreach(ps => portStateActor ! ps)
 
-        val maxDesksProvider = FlexedPortDeskLimits(airportConfig, 1440).maxDesksByTerminal
+        val maxDesksProvider = FlexedPortDeskLimits(airportConfig).maxDesksByTerminal
 
         val (crunchSourceActor: ActorRef, _) = RunnableDeskRecs.start(portStateActor, portDeskRecs, now, params.recrunchOnStart, params.forecastMaxDays, maxDesksProvider)
         portStateActor ! SetCrunchActor(crunchSourceActor)

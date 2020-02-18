@@ -177,7 +177,7 @@ object CrunchSystem {
         expireAfterMillis = props.expireAfterMillis,
         now = props.now,
         crunchPeriodStartMillis = crunchStartDateProvider,
-        FlexedPortDeploymentsProvider(props.airportConfig, 1440, props.optimiser))
+        FlexedPortDeploymentsProvider(props.airportConfig, props.optimiser))
 
     val crunchSystem = RunnableCrunch(
       props.arrivalsForecastBaseSource, props.arrivalsForecastSource, props.arrivalsLiveBaseSource, props.arrivalsLiveSource,

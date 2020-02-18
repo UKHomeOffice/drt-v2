@@ -98,7 +98,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
       val manifestKillSwitch = startManifestsGraph(None, manifestResponsesSink, manifestRequestsSource, lookupRefreshDue)
 
       val portDescRecs = FlexedPortDeskRecsProvider(airportConfig, Optimiser.crunch)
-      val maxDesksProvider = FlexedPortDeskLimits(airportConfig, 1440).maxDesksByTerminal
+      val maxDesksProvider = FlexedPortDeskLimits(airportConfig).maxDesksByTerminal
 
       val (millisToCrunchActor: ActorRef, crunchKillSwitch) = RunnableDeskRecs.start(portStateActor, portDescRecs, now, params.recrunchOnStart, params.forecastMaxDays, maxDesksProvider)
       portStateActor ! SetCrunchActor(millisToCrunchActor)

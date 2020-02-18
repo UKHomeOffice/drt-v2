@@ -302,7 +302,6 @@ class StaffMinutesSpec extends CrunchTestLike {
 
       success
     }
-
   }
 
   "Given two consecutive shifts " +
@@ -774,5 +773,4 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     success
   }
-
 }

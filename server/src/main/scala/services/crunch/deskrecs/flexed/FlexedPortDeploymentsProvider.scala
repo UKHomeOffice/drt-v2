@@ -50,14 +50,14 @@ case class FlexedPortDeploymentsProvider(queuesByTerminal: SortedMap[Terminal, S
 }
 
 object FlexedPortDeploymentsProvider {
-  def apply(airportConfig: AirportConfig, minutesToCrunch: Int, tryCrunch: TryCrunch): FlexedPortDeploymentsProvider =
+  def apply(airportConfig: AirportConfig, tryCrunch: TryCrunch): FlexedPortDeploymentsProvider =
     FlexedPortDeploymentsProvider(airportConfig.queuesByTerminal,
                                   airportConfig.divertedQueues,
                                   airportConfig.desksByTerminal,
                                   airportConfig.flexedQueuesPriority,
                                   airportConfig.slaByQueue,
                                   airportConfig.terminalProcessingTimes,
-                                  minutesToCrunch,
+                                  airportConfig.minutesToCrunch,
                                   airportConfig.crunchOffsetMinutes,
                                   airportConfig.eGateBankSize,
                                   tryCrunch)

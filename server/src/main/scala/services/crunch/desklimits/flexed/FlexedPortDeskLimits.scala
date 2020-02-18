@@ -23,10 +23,10 @@ case class FlexedPortDeskLimits(desksByTerminalByMinute: Map[Terminal, List[Int]
 }
 
 object FlexedPortDeskLimits {
-  def apply(airportConfig: AirportConfig, minutesToCrunch: Int): FlexedPortDeskLimits = {
+  def apply(airportConfig: AirportConfig): FlexedPortDeskLimits = {
     val minDesks24Hrs = airportConfig.minDesksByTerminalAndQueue24Hrs
     val maxDesks24Hrs = airportConfig.maxDesksByTerminalAndQueue24Hrs
-    val desksByTerminal24Hrs = airportConfig.desksByTerminal.mapValues(desks => List.fill(minutesToCrunch)(desks))
+    val desksByTerminal24Hrs = airportConfig.desksByTerminal.mapValues(desks => List.fill(airportConfig.minutesToCrunch)(desks))
     FlexedPortDeskLimits(desksByTerminal24Hrs, minDesks24Hrs, maxDesks24Hrs, airportConfig.flexedQueuesPriority.toSet)
   }
 }

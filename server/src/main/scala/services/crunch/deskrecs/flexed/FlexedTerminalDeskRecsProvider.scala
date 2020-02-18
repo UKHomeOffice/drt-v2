@@ -20,9 +20,10 @@ case class FlexedTerminalDeskRecsProvider(slas: Map[Queue, Int],
     val flexedQueuesToOptimise = queuesToOptimise.filter(q => flexedQueuesPriority.contains(q))
     val staticQueuesToOptimise = queuesToOptimise.filter(q => !flexedQueuesPriority.contains(q))
 
-    val flexedRecs = flexedDesksAndWaits(minuteMillis, loads.filterKeys(flexedQueuesToOptimise.contains), minMaxDeskProvider)
+    val flexedQueueLoads = loads.filterKeys(flexedQueuesToOptimise.contains)
+    val flexedRecs = flexedDesksAndWaits(minuteMillis, flexedQueueLoads, minMaxDeskProvider)
 
-    val staticQueueLoads = loads.filterKeys(staticQueuesToOptimise)
+    val staticQueueLoads = loads.filterKeys(staticQueuesToOptimise.contains)
     val staticRecs = staticDesksAndWaits(minuteMillis, staticQueueLoads, flexedRecs, minMaxDeskProvider)
 
     flexedRecs ++ staticRecs

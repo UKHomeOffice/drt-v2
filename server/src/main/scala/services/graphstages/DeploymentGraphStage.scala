@@ -107,7 +107,7 @@ class DeploymentGraphStage(name: String = "",
         log.info(s"Purged expired staff minutes")
 
         val firstMinute = crunchPeriodStartMillis(SDate(incomingStaffMinutes.minutes.map(_.minute).min))
-        val lastMinute = firstMinute.addDays(1)
+        val lastMinute = firstMinute.addMinutes(airportConfig.minutesToCrunch)
 
         log.info(s"Got first ${firstMinute.toLocalDateTimeString()} and last minutes ${lastMinute.toLocalDateTimeString()}")
 

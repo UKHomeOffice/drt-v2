@@ -28,11 +28,11 @@ trait TerminalDeskRecsProviderLike {
                           minMaxDesksProvider: TerminalDeskLimitsLike): Map[Queue, (List[Int], List[Int])] = loads
     .foldLeft(List[Option[(Queue, (List[Int], List[Int]))]]()) { case (deskRecsSoFar, (queue, loadsForQueue)) =>
       log.info(s"Static optimising $queue")
-      val min = minMaxDesksProvider.minDesksForMinutes(minuteMillis, queue).toList
+      val minDesks = minMaxDesksProvider.minDesksForMinutes(minuteMillis, queue).toList
       val alreadyRecommended = recsSoFar ++ deskRecsSoFar.collect { case Some(stuff) => stuff }
-      val max = minMaxDesksProvider.maxDesksForMinutes(minuteMillis, queue, alreadyRecommended).toList
+      val maxDesks = minMaxDesksProvider.maxDesksForMinutes(minuteMillis, queue, alreadyRecommended).toList
       val sla = slas(queue)
-      val maybeDeskRecs: Option[(Queue, (List[Int], List[Int]))] = cruncher(adjustedWork(queue, loadsForQueue), min, max, OptimizerConfig(sla)) match {
+      val maybeDeskRecs: Option[(Queue, (List[Int], List[Int]))] = cruncher(adjustedWork(queue, loadsForQueue), minDesks, maxDesks, OptimizerConfig(sla)) match {
         case Success(OptimizerCrunchResult(desks, waits)) => Option(queue -> ((desks.toList, waits.toList)))
         case Failure(_) => None
       }

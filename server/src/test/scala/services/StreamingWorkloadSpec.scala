@@ -47,7 +47,7 @@ class StreamingWorkloadSpec extends CrunchTestLike {
   val mockPortStateActor: ActorRef = system.actorOf(MockPortStateActor.props(portStateProbe, smallDelay))
   mockPortStateActor ! SetFlights(List(ApiFlightWithSplits(ArrivalGenerator.arrival(terminal = T1, origin = PortCode("JFK"), actPax = Option(100)), Set())))
   val portDeskRecs: MockPortDeskRecs = MockPortDeskRecs(1440, defaultAirportConfig.crunchOffsetMinutes)
-  val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = FlexedPortDeskLimits(defaultAirportConfig, 1440).maxDesksByTerminal
+  val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = FlexedPortDeskLimits(defaultAirportConfig).maxDesksByTerminal
   val (millisToCrunchSourceActor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, portDeskRecs, newBuffer, maxDesksProvider).run()
 
   val askableSource: AskableActorRef = millisToCrunchSourceActor
