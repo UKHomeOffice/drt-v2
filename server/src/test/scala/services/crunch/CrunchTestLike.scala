@@ -228,12 +228,12 @@ class CrunchTestLike
 
     val portDescRecs = DesksAndWaitsPortProvider(airportConfig, cruncher)
 
-    val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = if (flexDesks)
+    val deskLimitsProvider: Map[Terminal, TerminalDeskLimitsLike] = if (flexDesks)
       PortDeskLimits.flexed(airportConfig)
     else
       PortDeskLimits.fixed(airportConfig)
 
-    val (millisToCrunchActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDescRecs, now, recrunchOnStart, maxDaysToCrunch, maxDesksProvider)
+    val (millisToCrunchActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDescRecs, now, recrunchOnStart, maxDaysToCrunch, deskLimitsProvider)
     portStateActor ! SetCrunchActor(millisToCrunchActor)
 
     val manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)

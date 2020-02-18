@@ -901,19 +901,6 @@ object CrunchApi {
     val waitTime: Int
   }
 
-  case class DeploymentMinute(tqm: TQM,
-                              deployedDesks: Int,
-                              deployedWait: Int) extends MinuteComparison[CrunchMinute] {
-    lazy val key: TQM = tqm
-
-    override def maybeUpdated(existing: CrunchMinute, now: MillisSinceEpoch): Option[CrunchMinute] =
-      if (existing.deployedDesks != Option(deployedDesks) || existing.deployedWait != Option(deployedWait))
-        Option(existing.copy(
-          deployedDesks = Option(deployedDesks), deployedWait = Option(deployedWait), lastUpdated = Option(now)
-          ))
-      else None
-  }
-
   case class DeskRecMinute(terminalName: Terminal,
                            queueName: Queue,
                            minute: MillisSinceEpoch,

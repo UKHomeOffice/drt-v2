@@ -27,7 +27,8 @@ object RunnableDeskRecs {
             portDeskRecs: DesksAndWaitsPortProviderLike,
             buffer: Buffer,
             maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike])
-           (implicit executionContext: ExecutionContext, timeout: Timeout = new Timeout(10 seconds)): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
+           (implicit executionContext: ExecutionContext,
+            timeout: Timeout = new Timeout(10 seconds)): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
     val askablePortStateActor: AskableActorRef = portStateActor
@@ -69,16 +70,18 @@ object RunnableDeskRecs {
   }
 
   def deskLimits(maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
-                         terminals: Set[Terminal],
-                         loads: Map[TQM, Crunch.LoadMinute]): Map[Terminal, TerminalDeskLimitsLike] = {
+                 terminals: Set[Terminal],
+                 loads: Map[TQM, Crunch.LoadMinute]): Map[Terminal, TerminalDeskLimitsLike] = {
     val validTerminals = loads.keys.map(_.terminal).toSet
     terminals.intersect(validTerminals).map { terminal =>
       (terminal, maxDesksProviders(terminal))
     }.toMap
   }
 
-  private def flightsToCrunch(askablePortStateActor: AskableActorRef)(minutesToCrunch: Int, crunchStartMillis: MillisSinceEpoch)
-                             (implicit executionContext: ExecutionContext, timeout: Timeout): Future[(MillisSinceEpoch, FlightsWithSplits)] = askablePortStateActor
+  private def flightsToCrunch(askablePortStateActor: AskableActorRef)
+                             (minutesToCrunch: Int, crunchStartMillis: MillisSinceEpoch)
+                             (implicit executionContext: ExecutionContext,
+                              timeout: Timeout): Future[(MillisSinceEpoch, FlightsWithSplits)] = askablePortStateActor
     .ask(GetFlights(crunchStartMillis, crunchStartMillis + (minutesToCrunch * 60000L)))
     .asInstanceOf[Future[FlightsWithSplits]]
     .map { fs => (crunchStartMillis, fs) }
