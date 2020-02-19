@@ -22,9 +22,8 @@ trait FlexedTerminalDeskLimitsLike extends TerminalDeskLimitsLike {
       val processedQueues = allocatedDesks.keys.toSet
       val remainingFlexedQueues = flexedQueues -- (processedQueues + queue)
       val remainingMinDesks = DeskRecs.desksByMinuteForQueues(minDesksByQueue24Hrs, minuteMillis, remainingFlexedQueues).values.toList
-
       (terminalDesksByMinute :: totalDeployed :: remainingMinDesks).reduce(listOp[Int](_ - _))
-    } else DeskRecs.desksByMinute(minuteMillis, maxDesksByQueue24Hrs(queue)).toList
+    } else DeskRecs.desksForMillis(minuteMillis, maxDesksByQueue24Hrs(queue)).toList
 }
 
 case class FlexedTerminalDeskLimits(terminalDesksByMinute: List[Int],

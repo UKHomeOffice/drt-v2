@@ -10,7 +10,7 @@ trait TerminalDeskLimitsLike {
 
   def minDesksForMinutes(minuteMillis: NumericRange[Long],
                          queue: Queue): Iterable[Int] =
-    DeskRecs.desksByMinute(minuteMillis, minDesksByQueue24Hrs(queue)).toList
+    DeskRecs.desksForMillis(minuteMillis, minDesksByQueue24Hrs(queue)).toList
 
   def maxDesksForMinutes(minuteMillis: NumericRange[Long],
                          queue: Queue,
