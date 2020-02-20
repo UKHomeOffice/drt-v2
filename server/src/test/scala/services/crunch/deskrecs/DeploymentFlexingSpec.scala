@@ -2,6 +2,7 @@ package services.crunch.deskrecs
 
 import drt.shared.Queues._
 import services.crunch.CrunchTestLike
+import services.graphstages.Crunch
 import services.{OptimizerConfig, OptimizerCrunchResult}
 
 import scala.util.{Success, Try}
@@ -76,15 +77,21 @@ class DeploymentFlexingSpec extends CrunchTestLike {
       }
     }
 
-    import services.graphstages.Crunch.listOp
-
     val list1 = List(1, 2, 3)
     val list2 = List(5, 5, 5)
     s"Given 2 Lists of Ints - $list1 & $list2" >> {
       "When I ask for them to be reduced with a + operation " >> {
         val expected = List(6, 7, 8)
         s"I should get $expected" >> {
-          val result = List(list1, list2).reduce(listOp[Int](_ + _))
+          val result = Crunch.reduceIterables[Int](List(list1, list2))(_ + _)
+          result === expected
+        }
+      }
+
+      "When I ask for them to be reduced with a + operation " >> {
+        val expected = List(6, 7, 8)
+        s"I should get $expected" >> {
+          val result = Crunch.reduceIterables[Int](List(list1, list2))(_ + _)
           result === expected
         }
       }
@@ -92,7 +99,29 @@ class DeploymentFlexingSpec extends CrunchTestLike {
       "When I ask for them to be reduced with a - operation " >> {
         val expected = List(-4, -3, -2)
         s"I should get $expected" >> {
-          val result = List(list1, list2).reduce(listOp[Int](_ - _))
+          val result = Crunch.reduceIterables[Int](List(list1, list2))(_ - _)
+          result === expected
+        }
+      }
+    }
+
+    val emptyList = List()
+
+    s"Given 2 Lists of Ints where the first is empty - $emptyList & $list2" >> {
+      "When I ask for them to be reduced with a + operation " >> {
+        val expected = list2
+        s"The empty list should be ignored and I should get back the second list: $expected" >> {
+          val result = Crunch.reduceIterables[Int](List(emptyList, list2))(_ + _)
+          result === expected
+        }
+      }
+    }
+
+    s"Given 2 Lists of Ints where the second is empty - $list1 & $emptyList" >> {
+      "When I ask for them to be reduced with a + operation " >> {
+        val expected = list1
+        s"The empty list should be ignored and I should get back the first list: $expected" >> {
+          val result = Crunch.reduceIterables[Int](List(list1, emptyList))(_ + _)
           result === expected
         }
       }
@@ -103,7 +132,7 @@ class DeploymentFlexingSpec extends CrunchTestLike {
       "When I ask for them to be reduced with a - operation " >> {
         val expected = List(-5, -5, -5)
         s"I should get $expected" >> {
-          val result = List(list1, list2, list3).reduce(listOp[Int](_ - _))
+          val result = Crunch.reduceIterables[Int](List(list1, list2, list3))(_ - _)
           result === expected
         }
       }

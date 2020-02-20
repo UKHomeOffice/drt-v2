@@ -2,7 +2,7 @@ package services.crunch.desklimits.flexed
 
 import drt.shared.Queues.Queue
 import services.crunch.deskrecs.DeskRecs
-import services.graphstages.Crunch.listOp
+import services.graphstages.Crunch
 
 import scala.collection.immutable.{Map, NumericRange}
 
@@ -15,7 +15,7 @@ case class FlexedTerminalDeskLimitsFromAvailableStaff(totalStaffByMinute: List[I
     val availableDesksByMinute = maxDesks(minuteMillis, queue, allocatedDesks)
     val availableStaffByMinute = availableStaffForMinutes(minuteMillis, queue, allocatedDesks)
 
-    List(availableDesksByMinute, availableStaffByMinute).reduce(listOp[Int](Math.min))
+    Crunch.reduceIterables[Int](List(availableDesksByMinute, availableStaffByMinute))(Math.min)
   }
 
   def availableStaffForMinutes(minuteMillis: NumericRange[Long],
@@ -23,12 +23,12 @@ case class FlexedTerminalDeskLimitsFromAvailableStaff(totalStaffByMinute: List[I
                                allocatedDesks: Map[Queue, List[Int]]): Iterable[Int] = {
     val processedQueues = allocatedDesks.keys.toSet
     val deployedByQueue = allocatedDesks.values.toList
-    val totalDeployedByMinute = if (deployedByQueue.nonEmpty) deployedByQueue.reduce(listOp[Int](_ + _)) else List()
+    val totalDeployedByMinute = if (deployedByQueue.nonEmpty) Crunch.reduceIterables[Int](deployedByQueue)(_ + _) else List()
 
     val remainingQueues = minDesksByQueue24Hrs.keys.toSet -- (processedQueues + queue)
     val minDesksForRemainingQueuesByMinute = DeskRecs.desksByMinuteForQueues(minDesksByQueue24Hrs, minuteMillis, remainingQueues).values.toList
-    val minimumPromisedStaffByMinute = if (minDesksForRemainingQueuesByMinute.nonEmpty) minDesksForRemainingQueuesByMinute.reduce(listOp[Int](_ + _)) else List()
+    val minimumPromisedStaffByMinute = if (minDesksForRemainingQueuesByMinute.nonEmpty) Crunch.reduceIterables[Int](minDesksForRemainingQueuesByMinute)(_ + _) else List()
 
-    List(totalStaffByMinute, totalDeployedByMinute, minimumPromisedStaffByMinute).reduce(listOp[Int](_ - _))
+    Crunch.reduceIterables[Int](List(totalStaffByMinute, totalDeployedByMinute, minimumPromisedStaffByMinute))(_ - _)
   }
 }

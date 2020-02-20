@@ -34,19 +34,35 @@ object Crunch {
     def toLoads: Loads = Loads(SortedMap[TQM, LoadMinute]() ++ minutes)
   }
 
-  case class FlightSplitMinute(flightId: CodeShareKeyOrderedBySchedule, paxType: PaxType, terminalName: Terminal, queueName: Queue, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch) {
+  case class FlightSplitMinute(flightId: CodeShareKeyOrderedBySchedule,
+                               paxType: PaxType,
+                               terminalName: Terminal,
+                               queueName: Queue,
+                               paxLoad: Double,
+                               workLoad: Double,
+                               minute: MillisSinceEpoch) {
     lazy val key: TQM = TQM(terminalName, queueName, minute)
   }
 
-  case class FlightSplitDiff(flightId: CodeShareKeyOrderedBySchedule, paxType: PaxType, terminalName: Terminal, queueName: Queue, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch)
+  case class FlightSplitDiff(flightId: CodeShareKeyOrderedBySchedule,
+                             paxType: PaxType,
+                             terminalName: Terminal,
+                             queueName: Queue,
+                             paxLoad: Double,
+                             workLoad: Double,
+                             minute: MillisSinceEpoch)
 
-  case class LoadMinute(terminal: Terminal, queueName: Queue, paxLoad: Double, workLoad: Double, minute: MillisSinceEpoch) extends TerminalQueueMinute {
+  case class LoadMinute(terminal: Terminal,
+                        queueName: Queue,
+                        paxLoad: Double,
+                        workLoad: Double,
+                        minute: MillisSinceEpoch) extends TerminalQueueMinute {
     lazy val uniqueId: TQM = TQM(terminal, queueName, minute)
 
     def +(other: LoadMinute): LoadMinute = this.copy(
       paxLoad = this.paxLoad + other.paxLoad,
       workLoad = this.workLoad + other.workLoad
-    )
+      )
   }
 
   object LoadMinute {
@@ -130,7 +146,10 @@ object Crunch {
   def minuteMillisFor24hours(dayMillis: MillisSinceEpoch): Iterable[MillisSinceEpoch] =
     (0 until minutesInADay).map(m => dayMillis + (m * oneMinuteMillis))
 
-  def missingMinutesForDay(fromMillis: MillisSinceEpoch, minuteExistsTerminals: (MillisSinceEpoch, List[Terminal]) => Boolean, terminals: List[Terminal], days: Int): Set[MillisSinceEpoch] = {
+  def missingMinutesForDay(fromMillis: MillisSinceEpoch,
+                           minuteExistsTerminals: (MillisSinceEpoch, List[Terminal]) => Boolean,
+                           terminals: List[Terminal],
+                           days: Int): Set[MillisSinceEpoch] = {
     val fromMillisMidnight = getLocalLastMidnight(fromMillis).millisSinceEpoch
 
     (0 until days).foldLeft(Iterable[MillisSinceEpoch]()) {
@@ -144,7 +163,9 @@ object Crunch {
 
   def filterNonMinuteBoundaryMillis(millis: List[MillisSinceEpoch]): List[MillisSinceEpoch] = millis.filter(_ % oneMinuteMillis == 0)
 
-  def earliestAndLatestAffectedPcpTimeFromFlights(maxDays: Int)(existingFlights: Set[ApiFlightWithSplits], updatedFlights: Set[ApiFlightWithSplits]): Option[(SDateLike, SDateLike)] = {
+  def earliestAndLatestAffectedPcpTimeFromFlights(maxDays: Int)
+                                                 (existingFlights: Set[ApiFlightWithSplits],
+                                                  updatedFlights: Set[ApiFlightWithSplits]): Option[(SDateLike, SDateLike)] = {
     val differences: Set[ApiFlightWithSplits] = updatedFlights -- existingFlights
     val latestPcpTimes = differences
       .toList
@@ -184,7 +205,10 @@ object Crunch {
       }.toSet
   }
 
-  def purgeExpired[A <: WithTimeAccessor, B](expireable: mutable.SortedMap[A, B], atTime: MillisSinceEpoch => A, now: () => SDateLike, expireAfter: Int): Unit = {
+  def purgeExpired[A <: WithTimeAccessor, B](expireable: mutable.SortedMap[A, B],
+                                             atTime: MillisSinceEpoch => A,
+                                             now: () => SDateLike,
+                                             expireAfter: Int): Unit = {
     val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
     val sizeBefore = expireable.size
     val expired = expireable.range(atTime(0L), atTime(thresholdMillis + 1))
@@ -193,7 +217,10 @@ object Crunch {
     if (purgedCount > 0) log.info(s"Purged $purgedCount items (mutable.SortedMap[A, B])")
   }
 
-  def purgeExpired[A <: WithTimeAccessor](expireable: mutable.SortedSet[A], atTime: MillisSinceEpoch => A, now: () => SDateLike, expireAfter: Int): Unit = {
+  def purgeExpired[A <: WithTimeAccessor](expireable: mutable.SortedSet[A],
+                                          atTime: MillisSinceEpoch => A,
+                                          now: () => SDateLike,
+                                          expireAfter: Int): Unit = {
     val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
     val sizeBefore = expireable.size
     val expired = expireable.range(atTime(0L), atTime(thresholdMillis + 1))
@@ -207,7 +234,8 @@ object Crunch {
     ageInMillis > expireAfterMillis
   }
 
-  def mergeMaybePortStates(maybePortState1: Option[PortState], maybePortState2: Option[PortState]): Option[PortState] = {
+  def mergeMaybePortStates(maybePortState1: Option[PortState],
+                           maybePortState2: Option[PortState]): Option[PortState] = {
     (maybePortState1, maybePortState2) match {
       case (None, None) => None
       case (Some(ps), None) => Option(ps)
@@ -223,7 +251,8 @@ object Crunch {
     PortState(mergedFlights, mergedCrunchMinutes, mergedStaffMinutes)
   }
 
-  def combineArrivalsWithMaybeSplits(as1: Seq[(Arrival, Option[Splits])], as2: Seq[(Arrival, Option[Splits])]): Seq[(Arrival, Option[Splits])] = {
+  def combineArrivalsWithMaybeSplits(as1: Seq[(Arrival, Option[Splits])],
+                                     as2: Seq[(Arrival, Option[Splits])]): Seq[(Arrival, Option[Splits])] = {
     val arrivalsWithMaybeSplitsById = as1
       .map {
         case (arrival, maybeSplits) => (arrival.uniqueId, (arrival, maybeSplits))
@@ -240,7 +269,8 @@ object Crunch {
       .toSeq
   }
 
-  def movementsUpdateCriteria(existingMovements: Set[StaffMovement], incomingMovements: Seq[StaffMovement]): UpdateCriteria = {
+  def movementsUpdateCriteria(existingMovements: Set[StaffMovement],
+                              incomingMovements: Seq[StaffMovement]): UpdateCriteria = {
     val updatedMovements = incomingMovements.toSet -- existingMovements
     val deletedMovements = existingMovements -- incomingMovements.toSet
     val affectedMovements = updatedMovements ++ deletedMovements
@@ -261,7 +291,8 @@ object Crunch {
     }
     .toSeq
 
-  def baseArrivalsRemovalsAndUpdates(incoming: Map[UniqueArrival, Arrival], existing: mutable.Map[UniqueArrival, Arrival]): (mutable.Set[UniqueArrival], mutable.Set[Arrival]) = {
+  def baseArrivalsRemovalsAndUpdates(incoming: Map[UniqueArrival, Arrival],
+                                     existing: mutable.Map[UniqueArrival, Arrival]): (mutable.Set[UniqueArrival], mutable.Set[Arrival]) = {
     val removals = mutable.Set[UniqueArrival]()
     val updates = mutable.Set[Arrival]()
 
@@ -294,11 +325,16 @@ object Crunch {
     Crunch.getLocalLastMidnight(MilliDate(adjustedMinute.millisSinceEpoch)).addMinutes(offsetMinutes)
   }
 
-  def listOp[A](op: (A, A) => A)(v1: Iterable[A], v2: Iterable[A]): Iterable[A] = (v1, v2) match {
-    case (Nil, b) => b
-    case (a, Nil) => a
-    case (a, b) => a.zip(b).map {
-      case (a, b) => op(a, b)
-    }
+  @scala.annotation.tailrec
+  def reduceIterables[A](iterables: List[Iterable[A]])(combine: (A, A) => A): Iterable[A] = iterables match {
+    case Nil => Nil
+    case head :: Nil => head
+    case emptyHead1 :: head2 :: tail if emptyHead1.isEmpty => reduceIterables(head2 :: tail)(combine)
+    case head1 :: emptyHead2 :: tail if emptyHead2.isEmpty => reduceIterables(head1 :: tail)(combine)
+    case head1 :: head2 :: tail =>
+      val reducedHead = head1.zip(head2).map {
+        case (a, b) => combine(a, b)
+      }
+      reduceIterables(reducedHead :: tail)(combine)
   }
 }
