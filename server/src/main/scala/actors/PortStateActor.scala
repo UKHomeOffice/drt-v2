@@ -40,6 +40,7 @@ class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: Askabl
   var simulationActorIsReady: Boolean = true
 
   override def receive: Receive = {
+
     case SetCrunchActor(crunchActor) =>
       log.info(s"Received crunchSourceActor")
       maybeCrunchActor = Option(crunchActor)
@@ -145,7 +146,9 @@ class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: Askabl
       crunchActor
         .ask(flightMinutesBuffer.toList)(new Timeout(10 minutes))
         .recover {
-          case t => log.error("Error sending minutes to crunch", t)
+          case e =>
+            log.error("Error sending minutes to crunch - non recoverable error. Terminating App.", e)
+            System.exit(1)
         }
         .onComplete { _ =>
           context.self ! SetCrunchSourceReady
