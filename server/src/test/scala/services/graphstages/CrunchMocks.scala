@@ -3,8 +3,7 @@ package services.graphstages
 import org.slf4j.{Logger, LoggerFactory}
 import services.{OptimizerConfig, OptimizerCrunchResult}
 
-import scala.collection.immutable
-import scala.util.Try
+import scala.util.{Success, Try}
 
 object CrunchMocks {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -15,7 +14,7 @@ object CrunchMocks {
     Try(OptimizerCrunchResult(minDesks.toIndexedSeq, Seq.fill(wl.length)(config.sla)))
   }
 
-  def mockSimulator(workloads: Seq[Double], desks: Seq[Int], config: OptimizerConfig): Seq[Int] = {
-    Seq.fill(workloads.length)(config.sla)
+  def mockSimulator(workloads: Seq[Double], desks: Seq[Int], config: OptimizerConfig): Try[Seq[Int]] = {
+    Success(Seq.fill(workloads.length)(config.sla))
   }
 }

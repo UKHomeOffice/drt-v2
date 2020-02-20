@@ -14,8 +14,8 @@ import scala.collection.immutable.Map
 object WorkloadCalculator {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def flightLoadMinutes(incomingFlights: FlightsWithSplits, defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]]): SplitMinutes = {
-    val uniqueFlights: Iterable[ApiFlightWithSplits] = incomingFlights
+  def flightLoadMinutes(flights: FlightsWithSplits, defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]]): SplitMinutes = {
+    val uniqueFlights: Iterable[ApiFlightWithSplits] = flights
       .flightsToUpdate
       .sortBy(_.apiFlight.ActPax.getOrElse(0))
       .map { fws => (CodeShareKeyOrderedBySchedule(fws), fws) }

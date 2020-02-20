@@ -103,8 +103,8 @@ object StaffDeploymentCalculator {
               val queueMinMaxDesks: Map[Queue, (List[Int], List[Int])] = minMaxDesks.getOrElse(tn, Map())
               val minMaxByQueue: Map[Queue, (Int, Int)] = queueMinMaxDesks.map {
                 case (qn, minMaxList) =>
-                  val minDesks = DeskRecs.desksForHourOfDayInUKLocalTime(minute, minMaxList._1)
-                  val maxDesks = DeskRecs.desksForHourOfDayInUKLocalTime(minute, minMaxList._2)
+                  val minDesks = DeskRecs.desksForHourOfDayInUKLocalTime(minute, minMaxList._1.toIndexedSeq)
+                  val maxDesks = DeskRecs.desksForHourOfDayInUKLocalTime(minute, minMaxList._2.toIndexedSeq)
                   (qn, (minDesks, maxDesks))
               }
               val available = optionalStaffSources.map(_.available(minute, tn)).getOrElse(0)

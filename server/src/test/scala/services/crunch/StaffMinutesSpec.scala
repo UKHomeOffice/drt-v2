@@ -10,7 +10,7 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.T1
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
-import services.SDate
+import services.{Optimiser, SDate}
 import services.graphstages.Crunch
 
 import scala.collection.immutable.{List, SortedMap}
@@ -19,6 +19,290 @@ import scala.concurrent.duration._
 class StaffMinutesSpec extends CrunchTestLike {
   sequential
   isolated
+
+  "Legacy deployments" >> {
+    "Given a shift with 10 staff and passengers split to 2 queues " +
+      "When I ask for the PortState " +
+      "Then I should see deployed staff totalling the number on shift" >> {
+      val scheduled = "2017-01-01T00:00Z"
+      val shiftStart = SDate(scheduled)
+
+      val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+      val endDate1 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
+      val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 10, None)
+      val initialShifts = ShiftAssignments(Seq(assignment1))
+
+      val startDate2 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+      val endDate2 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
+      val assignment2 = StaffAssignment("egate monitor", T1, startDate2, endDate2, 2, None)
+      val initialFixedPoints = FixedPointAssignments(Seq(assignment2))
+
+      val flight = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(100))
+
+      val crunch = runCrunchGraph(
+        airportConfig = defaultAirportConfig.copy(
+          queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1),
+          terminalPaxSplits = Map(T1 -> SplitRatios(
+            SplitSources.TerminalAverage,
+            SplitRatio(eeaMachineReadableToDesk, 0.5),
+            SplitRatio(visaNationalToDesk, 0.5)
+            )),
+          terminalProcessingTimes = Map(
+            T1 -> Map(
+              eeaMachineReadableToDesk -> 25d / 60,
+              visaNationalToDesk -> 75d / 60
+              )
+            )
+          ),
+        useLegacyDeployments = true,
+        now = () => shiftStart
+        )
+
+      offerAndWait(crunch.shiftsInput, initialShifts)
+
+      crunch.portStateTestProbe.fishForMessage(2 seconds) {
+        case ps: PortState => ps.staffMinutes.get(TM(T1, startDate1.millisSinceEpoch)).map(_.shifts) == Option(10)
+      }
+      offerAndWait(crunch.fixedPointsInput, initialFixedPoints)
+
+      crunch.portStateTestProbe.fishForMessage(5 seconds) {
+        case ps: PortState => ps.staffMinutes.get(TM(T1, startDate1.millisSinceEpoch)).map(_.fixedPoints) == Option(2)
+      }
+      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
+
+      val expectedCrunchDeployments = Set(
+        (Queues.EeaDesk, shiftStart.addMinutes(0), 2),
+        (Queues.EeaDesk, shiftStart.addMinutes(1), 2),
+        (Queues.EeaDesk, shiftStart.addMinutes(2), 2),
+        (Queues.EeaDesk, shiftStart.addMinutes(3), 2),
+        (Queues.EeaDesk, shiftStart.addMinutes(4), 2),
+        (Queues.NonEeaDesk, shiftStart.addMinutes(0), 6),
+        (Queues.NonEeaDesk, shiftStart.addMinutes(1), 6),
+        (Queues.NonEeaDesk, shiftStart.addMinutes(2), 6),
+        (Queues.NonEeaDesk, shiftStart.addMinutes(3), 6),
+        (Queues.NonEeaDesk, shiftStart.addMinutes(4), 6))
+
+      crunch.portStateTestProbe.fishForMessage(10 seconds) {
+        case ps: PortState =>
+          val minutesInOrder = ps.crunchMinutes.values.toList.sortBy(cm => (cm.minute, cm.queue)).take(10)
+          val deployments = minutesInOrder.map(cm => (cm.queue, SDate(cm.minute), cm.deployedDesks.getOrElse(0))).toSet
+
+          deployments == expectedCrunchDeployments
+      }
+
+      crunch.shutdown
+
+      success
+    }
+
+    "Given a shift with 10 staff and passengers split to Eea desk & egates " +
+      "When I ask for the PortState " +
+      "Then I should see deployed staff totalling the number on shift" >> {
+      val scheduled = "2017-01-01T00:00Z"
+      val shiftStart = SDate(scheduled)
+      val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+      val endDate1 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
+      val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 10, None)
+      val initialShifts = ShiftAssignments(Seq(assignment1))
+      val startDate2 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+      val endDate2 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
+      val assignment2 = StaffAssignment("egate monitor", T1, startDate2, endDate2, 2, None)
+      val initialFixedPoints = FixedPointAssignments(Seq(assignment2))
+      val flight = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(100))
+
+      val crunch = runCrunchGraph(
+        airportConfig = defaultAirportConfig.copy(
+          queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.EGate)),
+          terminalPaxSplits = Map(T1 -> SplitRatios(
+            SplitSources.TerminalAverage,
+            SplitRatio(eeaMachineReadableToDesk, 0.1),
+            SplitRatio(eeaMachineReadableToEGate, 0.9)
+            )),
+          terminalProcessingTimes = Map(
+            T1 -> Map(
+              eeaMachineReadableToDesk -> 20d / 60,
+              eeaMachineReadableToEGate -> 20d / 60
+              )
+            )
+          ),
+        useLegacyDeployments = true,
+        now = () => shiftStart
+        )
+
+      offerAndWait(crunch.shiftsInput, initialShifts)
+      offerAndWait(crunch.fixedPointsInput, initialFixedPoints)
+      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
+
+      val expectedCrunchDeployments = Set(
+        (Queues.EeaDesk, shiftStart.addMinutes(0), 4),
+        (Queues.EeaDesk, shiftStart.addMinutes(1), 4),
+        (Queues.EeaDesk, shiftStart.addMinutes(2), 4),
+        (Queues.EeaDesk, shiftStart.addMinutes(3), 4),
+        (Queues.EeaDesk, shiftStart.addMinutes(4), 4),
+        (Queues.EGate, shiftStart.addMinutes(0), 4),
+        (Queues.EGate, shiftStart.addMinutes(1), 4),
+        (Queues.EGate, shiftStart.addMinutes(2), 4),
+        (Queues.EGate, shiftStart.addMinutes(3), 4),
+        (Queues.EGate, shiftStart.addMinutes(4), 4))
+
+      crunch.portStateTestProbe.fishForMessage(5 seconds) {
+        case ps: PortState =>
+          val minutesInOrder = ps.crunchMinutes.values.toList.sortBy(cm => (cm.minute, cm.queue)).take(10)
+          val deployments = minutesInOrder.map(cm => (cm.queue, SDate(cm.minute), cm.deployedDesks.getOrElse(0))).toSet
+
+          deployments == expectedCrunchDeployments
+      }
+
+      crunch.shutdown
+
+      success
+    }
+
+    "Given a shift with 50 staff and a max of 45 split to Eea desk, egates and fastrack " +
+      "When I ask for the PortState " +
+      "Then I should see deployed staff maxed out on each desk" >> {
+      val scheduled = "2017-01-01T00:00Z"
+      val shiftStart = SDate(scheduled)
+      val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+      val endDate1 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
+      val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 50, None)
+      val initialShifts = ShiftAssignments(Seq(assignment1))
+
+      val crunch = runCrunchGraph(
+        airportConfig = defaultAirportConfig.copy(
+          queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.FastTrack, Queues.NonEeaDesk)),
+          slaByQueue = Map(Queues.EeaDesk -> 25, Queues.FastTrack -> 30, Queues.NonEeaDesk -> 20),
+          terminalPaxSplits = Map(T1 -> SplitRatios(
+            SplitSources.TerminalAverage,
+            SplitRatio(eeaMachineReadableToDesk, 0.45),
+            SplitRatio(visaNationalToDesk, 0.45),
+            SplitRatio(visaNationalToFastTrack, 0.1)
+            )),
+          terminalProcessingTimes = Map(
+            T1 -> Map(
+              eeaMachineReadableToDesk -> 20d / 60,
+              visaNationalToDesk -> 20d / 60,
+              visaNationalToFastTrack -> 5d / 60
+              )
+            ),
+          minMaxDesksByTerminalQueue24Hrs = Map(
+            T1 -> Map(
+              Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
+              Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
+              Queues.FastTrack -> ((List.fill[Int](24)(1), List.fill[Int](24)(5)))
+              ))
+          ),
+        useLegacyDeployments = true,
+        now = () => shiftStart
+        )
+
+      offerAndWait(crunch.shiftsInput, initialShifts)
+
+      val flight = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(100))
+      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
+
+      val expectedCrunchDeployments = Set(
+        (Queues.EeaDesk, shiftStart.addMinutes(0).toISOString(), 20),
+        (Queues.EeaDesk, shiftStart.addMinutes(1).toISOString(), 20),
+        (Queues.EeaDesk, shiftStart.addMinutes(2).toISOString(), 20),
+        (Queues.FastTrack, shiftStart.addMinutes(0).toISOString(), 5),
+        (Queues.FastTrack, shiftStart.addMinutes(1).toISOString(), 5),
+        (Queues.FastTrack, shiftStart.addMinutes(2).toISOString(), 5),
+        (Queues.NonEeaDesk, shiftStart.addMinutes(0).toISOString(), 20),
+        (Queues.NonEeaDesk, shiftStart.addMinutes(1).toISOString(), 20),
+        (Queues.NonEeaDesk, shiftStart.addMinutes(2).toISOString(), 20)
+        )
+
+      crunch.portStateTestProbe.fishForMessage(5 seconds) {
+        case ps: PortState =>
+          val minutesInOrder = ps.crunchMinutes.values.toList.sortBy(cm => (cm.minute, cm.queue)).take(9)
+          val deployments = minutesInOrder.map(cm => (cm.queue, SDate(cm.minute).toISOString(), cm.deployedDesks.getOrElse(0))).toSet
+
+          println(s"deployments: $deployments")
+          deployments == expectedCrunchDeployments
+      }
+
+      crunch.shutdown
+
+      success
+    }
+  }
+
+  "Upgraded deployments" >> {
+    "Given a shift with 10 staff and passengers split to 2 queues " +
+      "When I ask for the PortState " +
+      "Then I should see 1 EEA desk & 2 Non-EEA desks deployed " >> {
+      val scheduled = "2017-01-01T00:00Z"
+      val shiftStart = SDate(scheduled)
+
+      val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+      val endDate1 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
+      val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 10, None)
+      val initialShifts = ShiftAssignments(Seq(assignment1))
+
+      val startDate2 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
+      val endDate2 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
+      val assignment2 = StaffAssignment("egate monitor", T1, startDate2, endDate2, 2, None)
+      val initialFixedPoints = FixedPointAssignments(Seq(assignment2))
+
+      val flight = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(100))
+
+      val crunch = runCrunchGraph(
+        airportConfig = defaultAirportConfig.copy(
+          queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1),
+          terminalPaxSplits = Map(T1 -> SplitRatios(
+            SplitSources.TerminalAverage,
+            SplitRatio(eeaMachineReadableToDesk, 0.5),
+            SplitRatio(visaNationalToDesk, 0.5)
+            )),
+          terminalProcessingTimes = Map(
+            T1 -> Map(
+              eeaMachineReadableToDesk -> 25d / 60,
+              visaNationalToDesk -> 75d / 60
+              )
+            )
+          ),
+        now = () => shiftStart,
+        cruncher = Optimiser.crunch
+        )
+
+      offerAndWait(crunch.shiftsInput, initialShifts)
+
+      crunch.portStateTestProbe.fishForMessage(2 seconds) {
+        case ps: PortState => ps.staffMinutes.get(TM(T1, startDate1.millisSinceEpoch)).map(_.shifts) == Option(10)
+      }
+      offerAndWait(crunch.fixedPointsInput, initialFixedPoints)
+
+      crunch.portStateTestProbe.fishForMessage(5 seconds) {
+        case ps: PortState => ps.staffMinutes.get(TM(T1, startDate1.millisSinceEpoch)).map(_.fixedPoints) == Option(2)
+      }
+      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
+
+      val expectedCrunchDeployments = Set(
+        (Queues.EeaDesk, shiftStart.addMinutes(0), 1),
+        (Queues.EeaDesk, shiftStart.addMinutes(1), 1),
+        (Queues.EeaDesk, shiftStart.addMinutes(2), 1),
+        (Queues.EeaDesk, shiftStart.addMinutes(3), 1),
+        (Queues.EeaDesk, shiftStart.addMinutes(4), 1),
+        (Queues.NonEeaDesk, shiftStart.addMinutes(0), 2),
+        (Queues.NonEeaDesk, shiftStart.addMinutes(1), 2),
+        (Queues.NonEeaDesk, shiftStart.addMinutes(2), 2),
+        (Queues.NonEeaDesk, shiftStart.addMinutes(3), 2),
+        (Queues.NonEeaDesk, shiftStart.addMinutes(4), 2))
+
+      crunch.portStateTestProbe.fishForMessage(10 seconds) {
+        case ps: PortState =>
+          val minutesInOrder = ps.crunchMinutes.values.toList.sortBy(cm => (cm.minute, cm.queue)).take(10)
+          val deployments = minutesInOrder.map(cm => (cm.queue, SDate(cm.minute), cm.deployedDesks.getOrElse(0))).toSet
+
+          deployments == expectedCrunchDeployments
+      }
+
+      crunch.shutdown
+
+      success
+    }
+  }
 
   "Given two consecutive shifts " +
     "When I ask for the PortState " +
@@ -35,11 +319,11 @@ class StaffMinutesSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       airportConfig = defaultAirportConfig.copy(
         queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
-      ),
+        ),
       now = () => shiftStart,
       initialShifts = initialShifts,
       checkRequiredStaffUpdatesOnStartup = true
-    )
+      )
 
     val expectedStaff = List.fill(15)(1) ::: List.fill(15)(2)
     val expectedMillis = (shiftStart.millisSinceEpoch to (shiftStart.millisSinceEpoch + 29 * Crunch.oneMinuteMillis) by Crunch.oneMinuteMillis).toList
@@ -73,14 +357,14 @@ class StaffMinutesSpec extends CrunchTestLike {
     val initialMovements = Seq(
       StaffMovement(T1, "lunch start", MilliDate(shiftStart.millisSinceEpoch), -1, uuid, createdBy = None),
       StaffMovement(T1, "lunch end", MilliDate(shiftStart.addMinutes(15).millisSinceEpoch), 1, uuid, createdBy = None)
-    )
+      )
 
     val crunch = runCrunchGraph(
       airportConfig = defaultAirportConfig.copy(
         queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
-      ),
+        ),
       now = () => shiftStart
-    )
+      )
 
     offerAndWait(crunch.shiftsInput, initialShifts)
     offerAndWait(crunch.liveStaffMovementsInput, initialMovements)
@@ -96,7 +380,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       shiftStart.addMinutes(7).millisSinceEpoch -> 1,
       shiftStart.addMinutes(8).millisSinceEpoch -> 1,
       shiftStart.addMinutes(9).millisSinceEpoch -> 1
-    )
+      )
 
     crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case ps: PortState =>
@@ -121,16 +405,16 @@ class StaffMinutesSpec extends CrunchTestLike {
     val initialMovements = Seq(
       StaffMovement(T1, "lunch start", MilliDate(startDate.millisSinceEpoch), -1, uuid, createdBy = None),
       StaffMovement(T1, "lunch end", MilliDate(endDate.millisSinceEpoch), 1, uuid, createdBy = None)
-    )
+      )
 
     val crunch = runCrunchGraph(
       airportConfig = defaultAirportConfig.copy(
         queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
-      ),
+        ),
       now = () => startDate,
       checkRequiredStaffUpdatesOnStartup = true,
       initialStaffMovements = initialMovements
-    )
+      )
 
     val minutesToCheck = 5
     val expectedStaffAvailableAndMovements = List.fill(minutesToCheck)((0, -1))
@@ -162,14 +446,14 @@ class StaffMinutesSpec extends CrunchTestLike {
     val initialMovements = Seq(
       StaffMovement(T1, "lunch start", MilliDate(startDate.millisSinceEpoch), -1, uuid, createdBy = None),
       StaffMovement(T1, "lunch end", MilliDate(endDate.addMinutes(1).millisSinceEpoch), 1, uuid, createdBy = None)
-    )
+      )
 
     val crunch = runCrunchGraph(
       airportConfig = defaultAirportConfig.copy(
         queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
-      ),
+        ),
       now = () => startDate
-    )
+      )
 
     offerAndWait(crunch.shiftsInput, initialShifts)
     offerAndWait(crunch.liveStaffMovementsInput, initialMovements)
@@ -202,14 +486,14 @@ class StaffMinutesSpec extends CrunchTestLike {
       StaffMovement(T1, "lunch end", MilliDate(shiftStart.addMinutes(15).millisSinceEpoch), 1, uuid1, createdBy = None),
       StaffMovement(T1, "lunch start", MilliDate(shiftStart.millisSinceEpoch), -5, uuid2, createdBy = None),
       StaffMovement(T1, "lunch end", MilliDate(shiftStart.addMinutes(15).millisSinceEpoch), 5, uuid2, createdBy = None)
-    )
+      )
 
     val crunch = runCrunchGraph(
       airportConfig = defaultAirportConfig.copy(
         queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
-      ),
+        ),
       now = () => shiftStart
-    )
+      )
 
     offerAndWait(crunch.liveStaffMovementsInput, initialMovements)
 
@@ -224,7 +508,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       shiftStart.addMinutes(7).millisSinceEpoch -> -6,
       shiftStart.addMinutes(8).millisSinceEpoch -> -6,
       shiftStart.addMinutes(9).millisSinceEpoch -> -6
-    )
+      )
 
     crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case ps: PortState =>
@@ -232,79 +516,6 @@ class StaffMinutesSpec extends CrunchTestLike {
         val staffMovements = minutesInOrder.filter(_.minute >= shiftStart.millisSinceEpoch).map(sm => (sm.minute, sm.movements)).take(10)
 
         staffMovements == expectedStaffMovements
-    }
-
-    crunch.shutdown
-
-    success
-  }
-
-  "Given a shift with 10 staff and passengers split to 2 queues " +
-    "When I ask for the PortState " +
-    "Then I should see deployed staff totalling the number on shift" >> {
-    val scheduled = "2017-01-01T00:00Z"
-    val shiftStart = SDate(scheduled)
-
-    val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
-    val endDate1 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
-    val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 10, None)
-    val initialShifts = ShiftAssignments(Seq(assignment1))
-
-    val startDate2 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
-    val endDate2 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
-    val assignment2 = StaffAssignment("egate monitor", T1, startDate2, endDate2, 2, None)
-    val initialFixedPoints = FixedPointAssignments(Seq(assignment2))
-
-    val flight = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(100))
-
-    val crunch = runCrunchGraph(
-      airportConfig = defaultAirportConfig.copy(
-        queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1),
-        terminalPaxSplits = Map(T1 -> SplitRatios(
-          SplitSources.TerminalAverage,
-          SplitRatio(eeaMachineReadableToDesk, 0.5),
-          SplitRatio(visaNationalToDesk, 0.5)
-        )),
-        terminalProcessingTimes = Map(
-          T1 -> Map(
-            eeaMachineReadableToDesk -> 25d / 60,
-            visaNationalToDesk -> 75d / 60
-          )
-        )
-      ),
-      now = () => shiftStart
-    )
-
-    offerAndWait(crunch.shiftsInput, initialShifts)
-
-    crunch.portStateTestProbe.fishForMessage(2 seconds) {
-      case ps: PortState => ps.staffMinutes.get(TM(T1, startDate1.millisSinceEpoch)).map(_.shifts) == Option(10)
-    }
-    offerAndWait(crunch.fixedPointsInput, initialFixedPoints)
-
-    crunch.portStateTestProbe.fishForMessage(5 seconds) {
-      case ps: PortState => ps.staffMinutes.get(TM(T1, startDate1.millisSinceEpoch)).map(_.fixedPoints) == Option(2)
-    }
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
-
-    val expectedCrunchDeployments = Set(
-      (Queues.EeaDesk, shiftStart.addMinutes(0), 2),
-      (Queues.EeaDesk, shiftStart.addMinutes(1), 2),
-      (Queues.EeaDesk, shiftStart.addMinutes(2), 2),
-      (Queues.EeaDesk, shiftStart.addMinutes(3), 2),
-      (Queues.EeaDesk, shiftStart.addMinutes(4), 2),
-      (Queues.NonEeaDesk, shiftStart.addMinutes(0), 6),
-      (Queues.NonEeaDesk, shiftStart.addMinutes(1), 6),
-      (Queues.NonEeaDesk, shiftStart.addMinutes(2), 6),
-      (Queues.NonEeaDesk, shiftStart.addMinutes(3), 6),
-      (Queues.NonEeaDesk, shiftStart.addMinutes(4), 6))
-
-    crunch.portStateTestProbe.fishForMessage(10 seconds) {
-      case ps: PortState =>
-        val minutesInOrder = ps.crunchMinutes.values.toList.sortBy(cm => (cm.minute, cm.queue)).take(10)
-        val deployments = minutesInOrder.map(cm => (cm.queue, SDate(cm.minute), cm.deployedDesks.getOrElse(0))).toSet
-
-        deployments == expectedCrunchDeployments
     }
 
     crunch.shutdown
@@ -326,9 +537,9 @@ class StaffMinutesSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(
       airportConfig = defaultAirportConfig.copy(
         queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
-      ),
+        ),
       now = () => shiftStart
-    )
+      )
 
     offerAndWait(crunch.fixedPointsInput, initialFixedPoints)
 
@@ -345,7 +556,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       shiftStart.addMinutes(7).millisSinceEpoch -> 0,
       shiftStart.addMinutes(8).millisSinceEpoch -> 0,
       shiftStart.addMinutes(9).millisSinceEpoch -> 0
-    )
+      )
 
     crunch.portStateTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
@@ -353,137 +564,6 @@ class StaffMinutesSpec extends CrunchTestLike {
         val fixedPoints = minutesInOrder.map(sm => (sm.minute, sm.fixedPoints))
 
         fixedPoints == expectedFixedPoints
-    }
-
-    crunch.shutdown
-
-    success
-  }
-
-
-  "Given a shift with 10 staff and passengers split to Eea desk & egates " +
-    "When I ask for the PortState " +
-    "Then I should see deployed staff totalling the number on shift" >> {
-    val scheduled = "2017-01-01T00:00Z"
-    val shiftStart = SDate(scheduled)
-    val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
-    val endDate1 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
-    val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 10, None)
-    val initialShifts = ShiftAssignments(Seq(assignment1))
-    val startDate2 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
-    val endDate2 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
-    val assignment2 = StaffAssignment("egate monitor", T1, startDate2, endDate2, 2, None)
-    val initialFixedPoints = FixedPointAssignments(Seq(assignment2))
-    val flight = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(100))
-
-    val crunch = runCrunchGraph(
-      airportConfig = defaultAirportConfig.copy(
-        queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.EGate)),
-        terminalPaxSplits = Map(T1 -> SplitRatios(
-          SplitSources.TerminalAverage,
-          SplitRatio(eeaMachineReadableToDesk, 0.1),
-          SplitRatio(eeaMachineReadableToEGate, 0.9)
-        )),
-        terminalProcessingTimes = Map(
-          T1 -> Map(
-            eeaMachineReadableToDesk -> 20d / 60,
-            eeaMachineReadableToEGate -> 20d / 60
-          )
-        )
-      ),
-      now = () => shiftStart
-    )
-
-    offerAndWait(crunch.shiftsInput, initialShifts)
-    offerAndWait(crunch.fixedPointsInput, initialFixedPoints)
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
-
-    val expectedCrunchDeployments = Set(
-      (Queues.EeaDesk, shiftStart.addMinutes(0), 4),
-      (Queues.EeaDesk, shiftStart.addMinutes(1), 4),
-      (Queues.EeaDesk, shiftStart.addMinutes(2), 4),
-      (Queues.EeaDesk, shiftStart.addMinutes(3), 4),
-      (Queues.EeaDesk, shiftStart.addMinutes(4), 4),
-      (Queues.EGate, shiftStart.addMinutes(0), 4),
-      (Queues.EGate, shiftStart.addMinutes(1), 4),
-      (Queues.EGate, shiftStart.addMinutes(2), 4),
-      (Queues.EGate, shiftStart.addMinutes(3), 4),
-      (Queues.EGate, shiftStart.addMinutes(4), 4))
-
-    crunch.portStateTestProbe.fishForMessage(5 seconds) {
-      case ps: PortState =>
-        val minutesInOrder = ps.crunchMinutes.values.toList.sortBy(cm => (cm.minute, cm.queue)).take(10)
-        val deployments = minutesInOrder.map(cm => (cm.queue, SDate(cm.minute), cm.deployedDesks.getOrElse(0))).toSet
-
-        deployments == expectedCrunchDeployments
-    }
-
-    crunch.shutdown
-
-    success
-  }
-
-  "Given a shift with 50 staff and a max of 45 split to Eea desk, egates and fastrack " +
-    "When I ask for the PortState " +
-    "Then I should see deployed staff maxed out on each desk" >> {
-    val scheduled = "2017-01-01T00:00Z"
-    val shiftStart = SDate(scheduled)
-    val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
-    val endDate1 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
-    val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 50, None)
-    val initialShifts = ShiftAssignments(Seq(assignment1))
-
-    val crunch = runCrunchGraph(
-      airportConfig = defaultAirportConfig.copy(
-        queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.FastTrack, Queues.NonEeaDesk)),
-        slaByQueue = Map(Queues.EeaDesk -> 25, Queues.FastTrack -> 30, Queues.NonEeaDesk -> 20),
-        terminalPaxSplits = Map(T1 -> SplitRatios(
-          SplitSources.TerminalAverage,
-          SplitRatio(eeaMachineReadableToDesk, 0.45),
-          SplitRatio(visaNationalToDesk, 0.45),
-          SplitRatio(visaNationalToFastTrack, 0.1)
-        )),
-        terminalProcessingTimes = Map(
-          T1 -> Map(
-            eeaMachineReadableToDesk -> 20d / 60,
-            visaNationalToDesk -> 20d / 60,
-            visaNationalToFastTrack -> 5d / 60
-          )
-        ),
-        minMaxDesksByTerminalQueue = Map(
-          T1 -> Map(
-            Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
-            Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
-            Queues.FastTrack -> ((List.fill[Int](24)(1), List.fill[Int](24)(5)))
-          ))
-      ),
-      now = () => shiftStart
-    )
-
-
-    offerAndWait(crunch.shiftsInput, initialShifts)
-
-    val flight = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(100))
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
-
-    val expectedCrunchDeployments = Set(
-      (Queues.EeaDesk, shiftStart.addMinutes(0), 20),
-      (Queues.EeaDesk, shiftStart.addMinutes(1), 20),
-      (Queues.EeaDesk, shiftStart.addMinutes(2), 20),
-      (Queues.FastTrack, shiftStart.addMinutes(0), 5),
-      (Queues.FastTrack, shiftStart.addMinutes(1), 5),
-      (Queues.FastTrack, shiftStart.addMinutes(2), 5),
-      (Queues.NonEeaDesk, shiftStart.addMinutes(0), 20),
-      (Queues.NonEeaDesk, shiftStart.addMinutes(1), 20),
-      (Queues.NonEeaDesk, shiftStart.addMinutes(2), 20)
-    )
-
-    crunch.portStateTestProbe.fishForMessage(5 seconds) {
-      case ps: PortState =>
-        val minutesInOrder = ps.crunchMinutes.values.toList.sortBy(cm => (cm.minute, cm.queue)).take(9)
-        val deployments = minutesInOrder.map(cm => (cm.queue, SDate(cm.minute), cm.deployedDesks.getOrElse(0))).toSet
-
-        deployments == expectedCrunchDeployments
     }
 
     crunch.shutdown
@@ -507,7 +587,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       initialFixedPoints = fixedPoints,
       maxDaysToCrunch = 5,
       checkRequiredStaffUpdatesOnStartup = true
-    )
+      )
 
     val expectedStaffMinutes = (0 until 5).map { day =>
       val date = SDate(scheduled).addDays(day).toISODateOnly
@@ -541,7 +621,9 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     val daysToCrunch = 5
 
-    def staffMinutes(days: Int, minutes: Int, startDate: String): SortedMap[TM, StaffMinute] = SortedMap[TM, StaffMinute]() ++ (0 until days).flatMap { day =>
+    def staffMinutes(days: Int,
+                     minutes: Int,
+                     startDate: String): SortedMap[TM, StaffMinute] = SortedMap[TM, StaffMinute]() ++ (0 until days).flatMap { day =>
       (0 until minutes).map { minute =>
         val currentMinute = SDate(startDate).addDays(day).addMinutes(minute).millisSinceEpoch
         (TM(T1, currentMinute), StaffMinute(T1, currentMinute, 0, 1, 0))
@@ -554,7 +636,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       maxDaysToCrunch = daysToCrunch,
       initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), staffMinutes(daysToCrunch, 15, scheduled))),
       checkRequiredStaffUpdatesOnStartup = true
-    )
+      )
 
     val expectedStaffMinutes = (0 until 5).map { day =>
       val date = SDate(scheduled).addDays(day).toISODateOnly
@@ -593,7 +675,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       airportConfig = defaultAirportConfig.copy(queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)),
       maxDaysToCrunch = daysToCrunch,
       initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
-    )
+      )
 
     offerAndWait(crunch.shiftsInput, shifts)
 
@@ -632,7 +714,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       airportConfig = defaultAirportConfig.copy(queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)),
       maxDaysToCrunch = daysToCrunch,
       initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
-    )
+      )
 
     offerAndWait(crunch.fixedPointsInput, fixedPoints)
 
@@ -672,7 +754,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       airportConfig = defaultAirportConfig.copy(queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)),
       maxDaysToCrunch = daysToCrunch,
       initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
-    )
+      )
 
     offerAndWait(crunch.liveStaffMovementsInput, Seq(staffMovement1, staffMovement2))
 
@@ -691,5 +773,4 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     success
   }
-
 }

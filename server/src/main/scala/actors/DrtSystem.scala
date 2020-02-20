@@ -44,7 +44,8 @@ import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedRes
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services.SplitsProvider.SplitProvider
 import services._
-import services.crunch.deskrecs.{FlexedPortDeskRecsProvider, RunnableDeskRecs, StaticPortDeskRecsProvider}
+import services.crunch.desklimits.PortDeskLimits
+import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeskRecs}
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.Crunch.{oneDayMillis, oneMinuteMillis}
 import services.graphstages._
@@ -237,6 +238,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       Roles.availableRoles
     } else userRolesFromHeader(headers)
 
+  def optimiser: TryCrunch = if (config.get[Boolean]("crunch.use-legacy-optimiser")) TryRenjin.crunch else Optimiser.crunch
+
   def run(): Unit = {
     val futurePortStates: Future[(Option[PortState], Option[PortState], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[RegisteredArrivals])] = {
       val maybeLivePortState = initialStateFuture[PortState](liveCrunchStateActor)
@@ -255,12 +258,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       } yield (lps, fps, ba, fa, la, ra)
     }
 
-    val optimiser: TryCrunch = if (config.get[Boolean]("crunch.use-legacy-optimiser")) TryRenjin.crunch else Optimiser.crunch
-
-    val portDeskRecs = if (config.get[Boolean]("crunch.flex-desks"))
-      FlexedPortDeskRecsProvider(airportConfig, 1440, optimiser)
-    else
-      StaticPortDeskRecsProvider(airportConfig, 1440, optimiser)
+    val portDeskRecs = DesksAndWaitsPortProvider(airportConfig, optimiser)
 
     futurePortStates.onComplete {
       case Success((maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeRegisteredArrivals)) =>
@@ -268,7 +266,12 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         val initialPortState: Option[PortState] = mergePortStates(maybeForecastState, maybeLiveState)
         initialPortState.foreach(ps => portStateActor ! ps)
 
-        val (crunchSourceActor: ActorRef, _) = RunnableDeskRecs.start(portStateActor, portDeskRecs, now, params.recrunchOnStart, params.forecastMaxDays)
+        val maxDesksProvider = if (config.get[Boolean]("crunch.flex-desks"))
+          PortDeskLimits.flexed(airportConfig)
+        else
+          PortDeskLimits.fixed(airportConfig)
+
+        val (crunchSourceActor: ActorRef, _) = RunnableDeskRecs.start(portStateActor, portDeskRecs, now, params.recrunchOnStart, params.forecastMaxDays, maxDesksProvider)
         portStateActor ! SetCrunchActor(crunchSourceActor)
 
         val (manifestRequestsSource, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
@@ -355,7 +358,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         maybeStatuses => maybeStatuses
           .collect { case Some(fs) => fs }
           .filter(fss => isValidFeedSource(fss.feedSource))
-      )
+        )
   }
 
   override def isValidFeedSource(fs: FeedSource): Boolean = airportConfig.feedSources.contains(fs)
@@ -409,7 +412,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         "live-base-arrivals" -> liveBaseArrivalsActor,
         "live-arrivals" -> liveArrivalsActor,
         "aggregated-arrivals" -> aggregatedArrivalsActor
-      ),
+        ),
       useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
       useLegacyManifests = params.useLegacyManifests,
       manifestsLiveSource = voyageManifestsLiveSource,
@@ -433,8 +436,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup,
       stageThrottlePer = config.get[Int]("crunch.stage-throttle-millis") millisecond,
       useApiPaxNos = params.useApiPaxNos,
-      adjustEGateUseByUnder12s = params.adjustEGateUseByUnder12s
-    ))
+      adjustEGateUseByUnder12s = params.adjustEGateUseByUnder12s,
+      optimiser = optimiser,
+      useLegacyDeployments = false))
     crunchInputs
   }
 
@@ -662,7 +666,7 @@ object ArrivalGenerator {
       PcpTime = pcpTime,
       Scheduled = if (schDt.nonEmpty) SDate(schDt).millisSinceEpoch else 0,
       FeedSources = feedSources
-    )
+      )
   }
 
   def arrivals(now: () => SDateLike, terminalNames: Iterable[Terminal]): Iterable[Arrival] = {

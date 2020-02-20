@@ -185,7 +185,7 @@ class PortStateSpec extends CrunchTestLike {
     val diff = ActualDeskStats(Map(T1 -> Map(Queues.EGate -> Map(
       0L -> DeskStat(Option(7), Option(8)),
       fifteenMins -> DeskStat(Option(100), Option(100))
-    )))).applyTo(portState, 10L)
+      )))).applyTo(portState, 10L)
 
     val expectedCms = fifteenMinsOf(CrunchMinute(T1, Queues.EGate, fifteenMins, 2, 2, 3, 4, Option(5), Option(6), Option(100), Option(100), Option(10L)))
 
@@ -208,7 +208,7 @@ class PortStateSpec extends CrunchTestLike {
     val diff = SimulationMinutes(Seq(
       SimulationMinute(T1, Queues.EGate, 0L, 5, 6),
       SimulationMinute(T1, Queues.EGate, 1L, 100, 100)
-    )).applyTo(portState, 10L)
+      )).applyTo(portState, 10L)
 
     diff === PortStateDiff(Seq(), Seq(), Seq(), Seq(CrunchMinute(T1, Queues.EGate, 1L, 2, 2, 3, 4, Option(100), Option(100), Option(7), Option(8), Option(10L))), Seq())
   }
@@ -225,7 +225,7 @@ class PortStateSpec extends CrunchTestLike {
     val diff = StaffMinutes(Seq(
       StaffMinute(T1, 0L, 1, 2, 3, None),
       StaffMinute(T1, 1L, 200, 200, 300, None)
-    )).applyTo(portState, 10L)
+      )).applyTo(portState, 10L)
 
     diff === PortStateDiff(Seq(), Seq(), Seq(), Seq(), Seq(StaffMinute(T1, 1L, 200, 200, 300, Option(10L))))
   }

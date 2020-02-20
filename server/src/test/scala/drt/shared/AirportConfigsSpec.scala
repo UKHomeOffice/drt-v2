@@ -12,9 +12,9 @@ class AirportConfigsSpec extends Specification {
     "have a list size of 24 of min and max desks by terminal and queue for all ports" in {
       for {
         port <- AirportConfigs.allPortConfigs
-        terminalName <- port.minMaxDesksByTerminalQueue.keySet
-        queueName <- port.minMaxDesksByTerminalQueue(terminalName).keySet
-        (minDesks, maxDesks) = port.minMaxDesksByTerminalQueue(terminalName)(queueName)
+        terminalName <- port.minMaxDesksByTerminalQueue24Hrs.keySet
+        queueName <- port.minMaxDesksByTerminalQueue24Hrs(terminalName).keySet
+        (minDesks, maxDesks) = port.minMaxDesksByTerminalQueue24Hrs(terminalName)(queueName)
       } yield {
         minDesks.size.aka(s"minDesk-> ${port.portCode} -> $terminalName -> $queueName") mustEqual 24
         maxDesks.size.aka(s"maxDesk-> ${port.portCode} -> $terminalName -> $queueName") mustEqual 24
@@ -24,8 +24,8 @@ class AirportConfigsSpec extends Specification {
     "Queue names in min max desks by terminal and queues should be defined in Queues" in {
       for {
         port <- AirportConfigs.allPortConfigs
-        terminalName <- port.minMaxDesksByTerminalQueue.keySet
-        queueName <- port.minMaxDesksByTerminalQueue(terminalName).keySet
+        terminalName <- port.minMaxDesksByTerminalQueue24Hrs.keySet
+        queueName <- port.minMaxDesksByTerminalQueue24Hrs(terminalName).keySet
       } yield {
         Queues.queueDisplayNames.get(queueName).aka(s"$queueName not found in Queues") mustNotEqual None
       }
@@ -53,11 +53,11 @@ class AirportConfigsSpec extends Specification {
         defaultWalkTimeMillis = Map(),
         terminalPaxSplits = Map(),
         terminalProcessingTimes = Map(),
-        minMaxDesksByTerminalQueue = Map(),
+        minMaxDesksByTerminalQueue24Hrs = Map(),
         role = LHRAccess,
         terminalPaxTypeQueueAllocation = Map(T1 -> defaultQueueRatios),
         desksByTerminal = Map[Terminal, Int]()
-      )
+        )
 
       val result = clonedConfig.feedPortCode
       val expected = PortCode("LHR")

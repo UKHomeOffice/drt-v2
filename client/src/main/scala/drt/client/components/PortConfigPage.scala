@@ -41,7 +41,7 @@ object PortConfigDetails {
                 <.h2(tn.toString),
                 <.div(^.className := "container config-container",
                   <.h4("Min / Max Desks or eGate Banks by hour of day"),
-                  minMaxDesksTable(config.minMaxDesksByTerminalQueue(tn))
+                  minMaxDesksTable(config.minMaxDesksByTerminalQueue24Hrs(tn))
                 ),
                 <.div(^.className := "container config-container",
                   <.h4("Default Processing Times"),

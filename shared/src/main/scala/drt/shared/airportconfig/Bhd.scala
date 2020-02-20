@@ -2,7 +2,7 @@ package drt.shared.airportconfig
 
 import drt.shared.PaxTypes.{B5JPlusNational, EeaMachineReadable}
 import drt.shared.PaxTypesAndQueues._
-import drt.shared.Queues.EeaDesk
+import drt.shared.Queues.{EeaDesk, NonEeaDesk}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.T1
 import drt.shared._
@@ -36,7 +36,7 @@ object Bhd extends AirportConfigLike {
       visaNationalToDesk -> 90d / 60,
       nonVisaNationalToDesk -> 78d / 60
       )),
-    minMaxDesksByTerminalQueue = Map(T1 -> Map(
+    minMaxDesksByTerminalQueue24Hrs = Map(T1 -> Map(
       Queues.EeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3)),
       Queues.NonEeaDesk -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), List(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4))
       )),
@@ -47,6 +47,7 @@ object Bhd extends AirportConfigLike {
         B5JPlusNational -> List(Queues.EeaDesk -> 1.0)
       ))),
     feedSources = Seq(LiveBaseFeedSource, AclFeedSource, ApiFeedSource),
+    flexedQueues = Set(EeaDesk, NonEeaDesk),
     desksByTerminal = Map(T1 -> 7)
     )
 }

@@ -157,7 +157,6 @@ class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: Askabl
     case _ =>
   }
 
-
   private def handleSimulationRequest(): Unit = (maybeSimActor, loadMinutesBuffer.nonEmpty, simulationActorIsReady) match {
     case (Some(simActor), true, true) =>
       simulationActorIsReady = false

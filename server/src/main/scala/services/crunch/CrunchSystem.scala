@@ -13,8 +13,10 @@ import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
+import services.SplitsProvider.SplitProvider
 import services._
 import services.arrivals.ArrivalDataSanitiser
+import services.crunch.deskrecs.DesksAndWaitsPortProvider
 import services.graphstages.Crunch._
 import services.graphstages._
 
@@ -38,12 +40,11 @@ case class CrunchSystem[FR](shifts: SourceQueueWithComplete[ShiftAssignments],
 case class CrunchProps[FR](logLabel: String = "",
                            airportConfig: AirportConfig,
                            pcpArrival: Arrival => MilliDate,
-                           historicalSplitsProvider: SplitsProvider.SplitProvider,
+                           historicalSplitsProvider: SplitProvider,
                            portStateActor: ActorRef,
                            maxDaysToCrunch: Int,
                            expireAfterMillis: Int,
-                           minutesToCrunch: Int = 1440,
-                           crunchOffsetMillis: Long = 0,
+                           crunchOffsetMillis: MillisSinceEpoch = 0,
                            actors: Map[String, AskableActorRef],
                            useNationalityBasedProcessingTimes: Boolean,
                            useLegacyManifests: Boolean = false,
@@ -70,8 +71,9 @@ case class CrunchProps[FR](logLabel: String = "",
                            checkRequiredStaffUpdatesOnStartup: Boolean,
                            stageThrottlePer: FiniteDuration,
                            useApiPaxNos: Boolean,
-                           adjustEGateUseByUnder12s: Boolean
-                          )
+                           adjustEGateUseByUnder12s: Boolean,
+                           optimiser: TryCrunch,
+                           useLegacyDeployments: Boolean)
 
 object CrunchSystem {
 
@@ -111,7 +113,7 @@ object CrunchSystem {
       ArrivalDataSanitiser(
         props.airportConfig.maybeCiriumEstThresholdHours,
         props.airportConfig.maybeCiriumTaxiThresholdMinutes
-      ),
+        ),
       expireAfterMillis = props.expireAfterMillis,
       now = props.now)
 
@@ -128,7 +130,7 @@ object CrunchSystem {
         B5JPlusTypeAllocator(),
         TerminalQueueAllocator(props.airportConfig.terminalPaxTypeQueueAllocation))
 
-    val splitAdjustments = if(props.adjustEGateUseByUnder12s)
+    val splitAdjustments = if (props.adjustEGateUseByUnder12s)
       ChildEGateAdjustments(props.airportConfig.assumedAdultsPerChild)
     else
       AdjustmentsNoop()
@@ -140,7 +142,7 @@ object CrunchSystem {
       expireAfterMillis = props.expireAfterMillis,
       now = props.now,
       useApiPaxNos = props.useApiPaxNos
-    )
+      )
 
     val staffGraphStage = new StaffGraphStage(
       name = props.logLabel,
@@ -156,16 +158,26 @@ object CrunchSystem {
 
     val staffBatcher = new StaffBatchUpdateGraphStage(props.now, props.expireAfterMillis, props.airportConfig.crunchOffsetMinutes)
 
-    val simulationGraphStage = new SimulationGraphStage(
-      name = props.logLabel,
-      optionalInitialCrunchMinutes = maybeCrunchMinutes,
-      optionalInitialStaffMinutes = maybeStaffMinutes,
-      airportConfig = props.airportConfig,
-      expireAfterMillis = props.expireAfterMillis,
-      now = props.now,
-      simulate = props.simulator,
-      crunchPeriodStartMillis = crunchStartDateProvider,
-      minutesToCrunch = props.minutesToCrunch)
+    val deploymentGraphStage = if (props.useLegacyDeployments)
+      new LegacyDeploymentGraphStage(
+        name = props.logLabel,
+        optionalInitialCrunchMinutes = maybeCrunchMinutes,
+        optionalInitialStaffMinutes = maybeStaffMinutes,
+        airportConfig = props.airportConfig,
+        expireAfterMillis = props.expireAfterMillis,
+        now = props.now,
+        simulate = props.simulator,
+        crunchPeriodStartMillis = crunchStartDateProvider)
+    else
+      new DeploymentGraphStage(
+        name = props.logLabel,
+        optionalInitialCrunchMinutes = maybeCrunchMinutes,
+        optionalInitialStaffMinutes = maybeStaffMinutes,
+        airportConfig = props.airportConfig,
+        expireAfterMillis = props.expireAfterMillis,
+        now = props.now,
+        crunchPeriodStartMillis = crunchStartDateProvider,
+        DesksAndWaitsPortProvider(props.airportConfig, props.optimiser))
 
     val crunchSystem = RunnableCrunch(
       props.arrivalsForecastBaseSource, props.arrivalsForecastSource, props.arrivalsLiveBaseSource, props.arrivalsLiveSource,
@@ -173,14 +185,14 @@ object CrunchSystem {
       shiftsSource, fixedPointsSource, staffMovementsSource,
       actualDesksAndQueuesSource,
       arrivalsStage, arrivalSplitsGraphStage,
-      staffGraphStage, staffBatcher, simulationGraphStage,
+      staffGraphStage, staffBatcher, deploymentGraphStage,
       forecastArrivalsDiffingStage, liveBaseArrivalsDiffingStage, liveArrivalsDiffingStage,
       props.actors("forecast-base-arrivals").actorRef, props.actors("forecast-arrivals").actorRef, props.actors("live-base-arrivals").actorRef, props.actors("live-arrivals").actorRef,
       props.voyageManifestsActor, props.manifestRequestsSink,
       props.portStateActor,
       props.actors("aggregated-arrivals").actorRef,
       forecastMaxMillis, props.stageThrottlePer
-    )
+      )
 
     val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, shiftsIn, fixedPointsIn, movementsIn, simloadsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS) = crunchSystem.run
 
@@ -196,7 +208,7 @@ object CrunchSystem {
       manifestsLiveResponse = manifestsLiveIn,
       actualDeskStats = actDesksIn,
       List(arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS)
-    )
+      )
   }
 
   def initialStaffMinutesFromPortState(initialPortState: Option[PortState]): Option[StaffMinutes] = initialPortState.map(
