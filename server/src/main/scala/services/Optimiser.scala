@@ -43,11 +43,8 @@ object Optimiser {
     } yield OptimizerCrunchResult(desks.toIndexedSeq, processedWork.waits)
   }
 
-  def runSimulationOfWork(workloads: Iterable[Double], desks: Iterable[Int], config: OptimizerConfig): Seq[Int] =
-    Optimiser.tryProcessWork(workloads.toIndexedSeq, desks.toIndexedSeq, config.sla, IndexedSeq()) match {
-      case Success(pw) => pw.waits
-      case Failure(t) => throw t
-    }
+  def runSimulationOfWork(workloads: Iterable[Double], desks: Iterable[Int], config: OptimizerConfig): Try[Seq[Int]] =
+    Optimiser.tryProcessWork(workloads.toIndexedSeq, desks.toIndexedSeq, config.sla, IndexedSeq()).map(_.waits)
 
   def approx(x: IndexedSeq[Int], y: IndexedSeq[Int], i: Seq[Double]): List[Double] = {
     val diffX = x(1) - x.head

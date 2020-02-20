@@ -68,6 +68,7 @@ object Man extends AirportConfigLike {
         EGate -> 0.7038,
         EeaDesk -> (1.0 - 0.7038)
       )))),
+    flexedQueues = Set(EeaDesk, NonEeaDesk),
     desksByTerminal = Map[Terminal, Int](
       T1 -> 14,
       T2 -> 11,

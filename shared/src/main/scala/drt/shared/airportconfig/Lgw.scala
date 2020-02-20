@@ -78,6 +78,7 @@ object Lgw extends AirportConfigLike {
         EeaDesk -> (1.0 - 0.8375)
       )))),
     feedSources = Seq(LiveBaseFeedSource, LiveFeedSource, ForecastFeedSource, AclFeedSource, ApiFeedSource),
+    flexedQueues = Set(EeaDesk, NonEeaDesk),
     desksByTerminal = Map[Terminal, Int](N -> 31, S -> 28)
     )
 }

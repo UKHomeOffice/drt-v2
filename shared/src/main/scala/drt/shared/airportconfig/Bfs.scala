@@ -2,7 +2,7 @@ package drt.shared.airportconfig
 
 import drt.shared.PaxTypes.{B5JPlusNational, EeaMachineReadable}
 import drt.shared.PaxTypesAndQueues._
-import drt.shared.Queues.EeaDesk
+import drt.shared.Queues.{EeaDesk, NonEeaDesk, Queue}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.T1
 import drt.shared.{AclFeedSource, AirportConfig, AirportConfigDefaults, AirportConfigLike, ApiFeedSource, BFSAccess, ForecastFeedSource, LiveBaseFeedSource, LiveFeedSource, PortCode, Queues}
@@ -49,6 +49,7 @@ object Bfs extends AirportConfigLike {
         B5JPlusNational -> List(Queues.EeaDesk -> 1.0)
       ))),
     feedSources = Seq(LiveBaseFeedSource, AclFeedSource, ApiFeedSource),
+    flexedQueues = Set(EeaDesk, NonEeaDesk),
     desksByTerminal = Map(T1 -> 8)
     )
 }

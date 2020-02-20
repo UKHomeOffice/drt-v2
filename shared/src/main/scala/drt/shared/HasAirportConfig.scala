@@ -223,6 +223,7 @@ object ProcessingTimes {
 case class AirportConfig(portCode: PortCode,
                          queuesByTerminal: SortedMap[Terminal, Seq[Queue]],
                          divertedQueues: Map[Queue, Queue] = Map(),
+                         flexedQueues: Set[Queue] = Set(),
                          slaByQueue: Map[Queue, Int],
                          timeToChoxMillis: Long = 300000L,
                          firstPaxOffMillis: Long = 180000L,

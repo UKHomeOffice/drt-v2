@@ -76,6 +76,7 @@ object Bhx extends AirportConfigLike {
         (B5JPlusNational -> List(EeaDesk -> 1.0))
       ))
     ),
+    flexedQueues = Set(EeaDesk, NonEeaDesk),
     desksByTerminal = Map[Terminal, Int](T1 -> 9, T2 -> 5)
     )
 }

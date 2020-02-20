@@ -42,6 +42,7 @@ object Ltn extends AirportConfigLike {
         EeaDesk -> (1.0 - 0.7922)
       )))
     ),
+    flexedQueues = Set(EeaDesk, NonEeaDesk),
     desksByTerminal = Map(T1 -> 14)
     )
 }

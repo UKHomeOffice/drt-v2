@@ -2,7 +2,7 @@ package drt.shared.airportconfig
 
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
-import drt.shared.Queues.{EGate, EeaDesk}
+import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.T1
 import drt.shared._
@@ -60,6 +60,7 @@ object Ema extends AirportConfigLike {
       )))
     ),
     hasEstChox = true,
+    flexedQueues = Set(),
     desksByTerminal = Map(T1 -> 5)
     )
 }

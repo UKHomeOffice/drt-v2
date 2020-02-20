@@ -1,7 +1,6 @@
 package services.crunch.desklimits
 
 import drt.shared.AirportConfig
-import drt.shared.Queues.{EeaDesk, NonEeaDesk}
 import drt.shared.Terminals.Terminal
 import services.crunch.desklimits.fixed.FixedTerminalDeskLimits
 import services.crunch.desklimits.flexed.{FlexedTerminalDeskLimits, FlexedTerminalDeskLimitsFromAvailableStaff}
@@ -25,7 +24,7 @@ object PortDeskLimits {
       for {
         minDesksByQueue24Hrs <- airportConfig.minDesksByTerminalAndQueue24Hrs.get(terminal)
         maxDesksByQueue24Hrs <- airportConfig.maxDesksByTerminalAndQueue24Hrs.get(terminal)
-      } yield (terminal, FlexedTerminalDeskLimits(terminalDesksByMinute, Set(EeaDesk, NonEeaDesk), minDesksByQueue24Hrs, maxDesksByQueue24Hrs))
+      } yield (terminal, FlexedTerminalDeskLimits(terminalDesksByMinute, airportConfig.flexedQueues, minDesksByQueue24Hrs, maxDesksByQueue24Hrs))
     }
     .collect { case Some(terminalDesks) => terminalDesks }
     .toMap
@@ -40,7 +39,7 @@ object PortDeskLimits {
           minDesksByQueue24Hrs <- airportConfig.minDesksByTerminalAndQueue24Hrs.get(terminal)
           maxDesksByQueue24Hrs <- airportConfig.maxDesksByTerminalAndQueue24Hrs.get(terminal)
           terminalDesksByMinute <- desksByTerminalByMinute.get(terminal)
-        } yield (terminal, FlexedTerminalDeskLimitsFromAvailableStaff(terminalStaffByMinute, terminalDesksByMinute, Set(EeaDesk, NonEeaDesk), minDesksByQueue24Hrs, maxDesksByQueue24Hrs))
+        } yield (terminal, FlexedTerminalDeskLimitsFromAvailableStaff(terminalStaffByMinute, terminalDesksByMinute, airportConfig.flexedQueues, minDesksByQueue24Hrs, maxDesksByQueue24Hrs))
       }
       .collect { case Some(terminalDesks) => terminalDesks }
       .toMap

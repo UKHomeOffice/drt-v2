@@ -424,7 +424,7 @@ class LegacyDeploymentGraphStage(name: String = "",
                     sla: Int,
                     fullWorkMinutes: IndexedSeq[Double],
                     deployedStaff: IndexedSeq[Int]): SortedMap[TQM, SimulationMinute] = {
-    Try(simulate(fullWorkMinutes, deployedStaff, OptimizerConfig(sla))) match {
+    simulate(fullWorkMinutes, deployedStaff, OptimizerConfig(sla)) match {
       case Success(waits) =>
         SortedMap[TQM, SimulationMinute]() ++ minuteMillis.zipWithIndex.map {
           case (minute, idx) => (TQM(tn, qn, minute), SimulationMinute(tn, qn, minute, deployedStaff(idx), waits(idx)))

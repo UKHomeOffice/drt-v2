@@ -43,9 +43,11 @@ case class DesksAndWaitsPortProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                          deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike]): Map[TQM, SimulationMinute] =
     deskRecsToSimulations(loadsToDeskRecs(minuteMillis, loadsByQueue, deskLimitProviders))
 
-  def deskRecsToSimulations(terminalQueueDeskRecs: Seq[DeskRecMinute]): Map[TQM, SimulationMinute] = terminalQueueDeskRecs.map {
-    case DeskRecMinute(t, q, m, _, _, d, w) => (TQM(t, q, m), SimulationMinute(t, q, m, d, w))
-  }.toMap
+  def deskRecsToSimulations(terminalQueueDeskRecs: Seq[DeskRecMinute]): Map[TQM, SimulationMinute] = terminalQueueDeskRecs
+    .map {
+      case DeskRecMinute(t, q, m, _, _, d, w) => (TQM(t, q, m), SimulationMinute(t, q, m, d, w))
+    }.toMap
+
   def terminalDescRecs(terminal: Terminal): DesksAndWaitsTerminalProvider =
     deskrecs.DesksAndWaitsTerminalProvider(slas, flexedQueuesPriority, tryCrunch, eGateBankSize)
 
