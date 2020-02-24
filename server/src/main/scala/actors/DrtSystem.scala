@@ -279,16 +279,17 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
         val (manifestResponsesSource, _, manifestResponsesSink) = SinkToSourceBridge[List[BestAvailableManifest]]
 
-        val crunchInputs: CrunchSystem[Cancellable] = startCrunchSystem(initialPortState,
-                                                                        maybeBaseArrivals,
-                                                                        maybeForecastArrivals,
-                                                                        Option(mutable.SortedMap[UniqueArrival, Arrival]()),
-                                                                        maybeLiveArrivals,
-                                                                        manifestRequestsSink,
-                                                                        manifestResponsesSource,
-                                                                        params.refreshArrivalsOnStart,
-                                                                        checkRequiredStaffUpdatesOnStartup = true,
-                                                                        useLegacyDeployments)
+        val crunchInputs: CrunchSystem[Cancellable] = startCrunchSystem(
+          initialPortState,
+          maybeBaseArrivals,
+          maybeForecastArrivals,
+          Option(mutable.SortedMap[UniqueArrival, Arrival]()),
+          maybeLiveArrivals,
+          manifestRequestsSink,
+          manifestResponsesSource,
+          params.refreshArrivalsOnStart,
+          checkRequiredStaffUpdatesOnStartup = true,
+          useLegacyDeployments)
 
         portStateActor ! SetSimulationActor(crunchInputs.loadsToSimulate)
 

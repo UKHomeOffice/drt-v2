@@ -25,7 +25,10 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.Success
 
-class TestDrtSystem(override val actorSystem: ActorSystem, override val config: Configuration, override val airportConfig: AirportConfig)(implicit actorMaterializer: Materializer, ec: ExecutionContext)
+class TestDrtSystem(override val actorSystem: ActorSystem,
+                    override val config: Configuration,
+                    override val airportConfig: AirportConfig)
+                   (implicit actorMaterializer: Materializer, ec: ExecutionContext)
   extends DrtSystem(actorSystem, config, airportConfig) {
 
   import DrtStaticParameters._
@@ -72,7 +75,9 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
 
   override def liveArrivalsSource(portCode: PortCode): Source[ArrivalsFeedResponse, Cancellable] = testFeed
 
-  override def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] = TestUserRoleProvider.getRoles(config, headers, session)
+  override def getRoles(config: Configuration,
+                        headers: Headers,
+                        session: Session): Set[Role] = TestUserRoleProvider.getRoles(config, headers, session)
 
   val flexDesks: Boolean = config.get[Boolean]("crunch.flex-desks")
 
@@ -81,16 +86,17 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
       val (manifestRequestsSource, bridge1Ks, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
       val (manifestResponsesSource, bridge2Ks, manifestResponsesSink) = SinkToSourceBridge[List[BestAvailableManifest]]
 
-      val cs = startCrunchSystem(initialPortState = None,
-                                 initialForecastBaseArrivals = None,
-                                 initialForecastArrivals = None,
-                                 initialLiveBaseArrivals = None,
-                                 initialLiveArrivals = None,
-                                 manifestRequestsSink,
-                                 manifestResponsesSource,
-                                 refreshArrivalsOnStart = false,
-                                 checkRequiredStaffUpdatesOnStartup = false,
-                                 useLegacyDeployments)
+      val cs = startCrunchSystem(
+        initialPortState = None,
+        initialForecastBaseArrivals = None,
+        initialForecastArrivals = None,
+        initialLiveBaseArrivals = None,
+        initialLiveArrivals = None,
+        manifestRequestsSink,
+        manifestResponsesSource,
+        refreshArrivalsOnStart = false,
+        checkRequiredStaffUpdatesOnStartup = false,
+        useLegacyDeployments)
 
       val lookupRefreshDue: MillisSinceEpoch => Boolean = (lastLookupMillis: MillisSinceEpoch) => now().millisSinceEpoch - lastLookupMillis > 1000
       val manifestKillSwitch = startManifestsGraph(None, manifestResponsesSink, manifestRequestsSource, lookupRefreshDue)
@@ -120,18 +126,19 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
       staffMovementsActor,
       portStateActor,
       aggregatedArrivalsActor
-    )
+      )
 
     val restartActor: ActorRef = system.actorOf(
       Props(classOf[RestartActor], startSystem, testActors),
       name = "TestActor-ResetData"
-    )
+      )
 
     restartActor ! StartTestSystem
   }
 }
 
-case class RestartActor(startSystem: () => List[KillSwitch], testActors: List[ActorRef]) extends Actor with ActorLogging {
+case class RestartActor(startSystem: () => List[KillSwitch],
+                        testActors: List[ActorRef]) extends Actor with ActorLogging {
 
   var currentKillSwitches: List[KillSwitch] = List()
 
