@@ -81,17 +81,16 @@ class TestDrtSystem(override val actorSystem: ActorSystem, override val config: 
       val (manifestRequestsSource, bridge1Ks, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
       val (manifestResponsesSource, bridge2Ks, manifestResponsesSink) = SinkToSourceBridge[List[BestAvailableManifest]]
 
-      val cs = startCrunchSystem(
-        initialPortState = None,
-        initialForecastBaseArrivals = None,
-        initialForecastArrivals = None,
-        initialLiveBaseArrivals = None,
-        initialLiveArrivals = None,
-        manifestRequestsSink,
-        manifestResponsesSource,
-        refreshArrivalsOnStart = false,
-        checkRequiredStaffUpdatesOnStartup = false
-      )
+      val cs = startCrunchSystem(initialPortState = None,
+                                 initialForecastBaseArrivals = None,
+                                 initialForecastArrivals = None,
+                                 initialLiveBaseArrivals = None,
+                                 initialLiveArrivals = None,
+                                 manifestRequestsSink,
+                                 manifestResponsesSource,
+                                 refreshArrivalsOnStart = false,
+                                 checkRequiredStaffUpdatesOnStartup = false,
+                                 useLegacyDeployments)
 
       val lookupRefreshDue: MillisSinceEpoch => Boolean = (lastLookupMillis: MillisSinceEpoch) => now().millisSinceEpoch - lastLookupMillis > 1000
       val manifestKillSwitch = startManifestsGraph(None, manifestResponsesSink, manifestRequestsSource, lookupRefreshDue)
