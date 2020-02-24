@@ -229,6 +229,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   lazy val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
   lazy val voyageManifestsHistoricSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
+  lazy val useLegacyDeployments: Boolean = config.get[Boolean]("crunch.use-legacy-deployments")
 
   system.log.info(s"useNationalityBasedProcessingTimes: ${params.useNationalityBasedProcessingTimes}")
 
@@ -287,7 +288,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
           manifestRequestsSink,
           manifestResponsesSource,
           params.refreshArrivalsOnStart,
-          checkRequiredStaffUpdatesOnStartup = true)
+          checkRequiredStaffUpdatesOnStartup = true,
+          useLegacyDeployments)
 
         portStateActor ! SetSimulationActor(crunchInputs.loadsToSimulate)
 
@@ -394,7 +396,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
                         manifestRequestsSink: Sink[List[Arrival], NotUsed],
                         manifestResponsesSource: Source[List[BestAvailableManifest], NotUsed],
                         refreshArrivalsOnStart: Boolean,
-                        checkRequiredStaffUpdatesOnStartup: Boolean): CrunchSystem[Cancellable] = {
+                        checkRequiredStaffUpdatesOnStartup: Boolean,
+                        useLegacyDeployments: Boolean): CrunchSystem[Cancellable] = {
 
     val crunchInputs = CrunchSystem(CrunchProps(
       airportConfig = airportConfig,
@@ -438,7 +441,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       useApiPaxNos = params.useApiPaxNos,
       adjustEGateUseByUnder12s = params.adjustEGateUseByUnder12s,
       optimiser = optimiser,
-      useLegacyDeployments = false))
+      useLegacyDeployments = useLegacyDeployments))
     crunchInputs
   }
 
