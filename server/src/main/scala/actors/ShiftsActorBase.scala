@@ -24,7 +24,7 @@ case object GetFeedStatuses
 
 case class GetPortState(from: MillisSinceEpoch, to: MillisSinceEpoch)
 
-case class GetPortStateForTerminal(from: MillisSinceEpoch, to: MillisSinceEpoch, terminalName: Terminal)
+case class GetPortStateForTerminal(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal)
 
 case class GetUpdatesSince(millis: MillisSinceEpoch, from: MillisSinceEpoch, to: MillisSinceEpoch)
 

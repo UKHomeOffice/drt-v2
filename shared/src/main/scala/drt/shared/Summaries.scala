@@ -48,9 +48,13 @@ case class StaffSummary(available: Int, misc: Int, moves: Int, recommended: Int)
 }
 
 case class TerminalSummary(start: SDateLike, queueSummaries: Seq[QueueSummaryLike], staffSummary: StaffSummaryLike) {
-  lazy val toCsv = s"${start.toISODateOnly},${start.toHoursAndMinutes()},${queueSummaries.map(_.toCsv).mkString(",")},${staffSummary.toCsv}"
+  private val dateAndTimeCells = List(start.toISODateOnly, start.toHoursAndMinutes())
+  private val queueCells: Seq[String] = queueSummaries.map(_.toCsv)
+  private val staffCells: String = staffSummary.toCsv
+  lazy val toCsv: String = (dateAndTimeCells ++ queueCells :+ staffCells).mkString(",")
 }
 
+case class TerminalSummaries(summaries: Iterable[TerminalSummary])
 
 object Summaries {
   def optionalMax(optionalInts: Seq[Option[Int]]): Option[Int] = {
