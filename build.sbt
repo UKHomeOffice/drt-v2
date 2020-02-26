@@ -104,7 +104,8 @@ lazy val server = (project in file("server"))
     testFrameworks += new TestFramework("utest.runner.Framework"),
     resolvers += Resolver.bintrayRepo("dwhjames", "maven"),
     resolvers += Resolver.bintrayRepo("mfglabs", "maven"),
-    resolvers += "Artifactory Release Realm" at "https://artifactory.digital.homeoffice.gov.uk/",
+    resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/",
+    resolvers += "Artifactory Realm release local" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local/",
     resolvers += "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
 
     //dependencyOverrides += "com.github.dwhjames" %% "aws-wrap" % "0.9.0",
