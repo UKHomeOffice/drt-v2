@@ -1,6 +1,7 @@
 package services
 
 import org.specs2.mutable.Specification
+import services.graphstages.Crunch
 
 class ServerSDateSpec extends Specification {
   "When calling getDayOfWeek" >> {
@@ -75,6 +76,18 @@ class ServerSDateSpec extends Specification {
     "Given 12 for month, we should get December" >> {
       val d = SDate("2017-12-25T18:00:00")
       d.getMonthString === "December"
+    }
+  }
+  "Given a local SDate of 10am less than 24 hours before a clock change" >> {
+    val dayBeforeClockChange10am = SDate("2020-03-28T10:00:00", Crunch.europeLondonTimeZone)
+
+    "When I add a day to that date" >> {
+      val oneDayLaterMillis = dayBeforeClockChange10am.addDays(1).millisSinceEpoch
+      val expectedMillis = SDate("2020-03-29T10:00:00", Crunch.europeLondonTimeZone).millisSinceEpoch
+
+      "I should get an SDate with milliseconds representing 10am local time the following day rather than a straight 24 hrs later" >> {
+        oneDayLaterMillis === expectedMillis
+      }
     }
   }
 }
