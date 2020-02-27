@@ -47,14 +47,43 @@ case class StaffSummary(available: Int, misc: Int, moves: Int, recommended: Int)
   lazy val toCsv: String = s"$misc,$moves,$available,$recommended"
 }
 
-case class TerminalSummary(start: SDateLike, queueSummaries: Seq[QueueSummaryLike], staffSummary: StaffSummaryLike) {
+case class QueuesSummary(start: SDateLike, queueSummaries: Seq[QueueSummaryLike], staffSummary: StaffSummaryLike) {
   private val dateAndTimeCells = List(start.toISODateOnly, start.toHoursAndMinutes())
   private val queueCells: Seq[String] = queueSummaries.map(_.toCsv)
   private val staffCells: String = staffSummary.toCsv
   lazy val toCsv: String = (dateAndTimeCells ++ queueCells :+ staffCells).mkString(",")
 }
 
-case class TerminalSummaries(summaries: Iterable[TerminalSummary])
+sealed trait TerminalSummaryLike {
+  val lineEnding = "\r\n"
+
+  def toCsv: String
+  def toCsvWithHeader: String
+}
+
+case class TerminalQueuesSummary(queues: Seq[Queue], summaries: Iterable[QueuesSummary]) extends TerminalSummaryLike {
+  override lazy val toCsv: String = summaries.map(_.toCsv).mkString(lineEnding)
+  override lazy val toCsvWithHeader: String = csvHeader + lineEnding + toCsv
+
+  lazy val csvHeader: String = {
+    val colHeadings = List("Pax", "Wait", "Desks req", "Act. wait time", "Act. desks")
+    val eGatesHeadings = List("Pax", "Wait", "Staff req", "Act. wait time", "Act. desks")
+    val relevantQueues = queues
+      .filterNot(_ == Queues.Transfer)
+    val queueHeadings = relevantQueues.map(queue => Queues.queueDisplayNames.getOrElse(queue, queue.toString))
+      .flatMap(qn => List.fill(colHeadings.length)(Queues.exportQueueDisplayNames.getOrElse(Queue(qn), qn))).mkString(",")
+    val headingsLine1 = "Date,," + queueHeadings +
+      ",Misc,Moves,PCP Staff,PCP Staff"
+    val headingsLine2 = ",Start," + relevantQueues.flatMap(q => {
+      if (q == Queues.EGate) eGatesHeadings else colHeadings
+    }).mkString(",") +
+      ",Staff req,Staff movements,Avail,Req"
+
+    headingsLine1 + lineEnding + headingsLine2
+  }
+}
+
+case object GetSummaries
 
 object Summaries {
   def optionalMax(optionalInts: Seq[Option[Int]]): Option[Int] = {
@@ -65,11 +94,11 @@ object Summaries {
   def minutesForPeriod[A, B](startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, atTime: MillisSinceEpoch => A, data: SortedMap[A, B]): SortedMap[A, B] =
     data.range(atTime(startMillis), atTime(endMillis))
 
-  def terminalSummaryForPeriod(terminalCms: SortedMap[TQM, CrunchMinute], terminalSms: SortedMap[TM, StaffMinute], queues: Seq[Queue], summaryStart: SDateLike, summaryPeriodMinutes: Int): TerminalSummary = {
+  def terminalSummaryForPeriod(terminalCms: SortedMap[TQM, CrunchMinute], terminalSms: SortedMap[TM, StaffMinute], queues: Seq[Queue], summaryStart: SDateLike, summaryPeriodMinutes: Int): QueuesSummary = {
     val queueSummaries = Summaries.queueSummariesForPeriod(terminalCms, queues, summaryStart, summaryPeriodMinutes)
     val smResult = Summaries.staffSummaryForPeriod(terminalSms, queueSummaries, summaryStart, summaryPeriodMinutes)
 
-    TerminalSummary(start = summaryStart, queueSummaries = queueSummaries, staffSummary = smResult)
+    QueuesSummary(start = summaryStart, queueSummaries = queueSummaries, staffSummary = smResult)
   }
 
   def queueSummariesForPeriod(terminalCms: SortedMap[TQM, CrunchMinute], queues: Seq[Queue], summaryStart: SDateLike, summaryMinutes: Int): Seq[QueueSummaryLike] = {

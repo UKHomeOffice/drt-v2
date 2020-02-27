@@ -94,7 +94,7 @@ object CSVData {
 
   def forecastDaysInPeriod(forecastPeriod: ForecastPeriod): Seq[MillisSinceEpoch] = forecastPeriod.days.toList.map(_._1).sorted
 
-  def terminalCrunchMinutesToCsvDataHeadings(queues: Seq[Queue]): String = {
+  def csvHeadingsForQueuesExport(queues: Seq[Queue]): String = {
     val colHeadings = List("Pax", "Wait", "Desks req", "Act. wait time", "Act. desks")
     val eGatesHeadings = List("Pax", "Wait", "Staff req", "Act. wait time", "Act. desks")
     val relevantQueues = queues
