@@ -313,6 +313,41 @@ trait WithExports {
     )
   }
 
+  private def newExportTerminalDateRangeToCsv(start: String,
+                                           end: String,
+                                           terminalName: Terminal,
+                                           filePrefix: String,
+                                           csvFunc: (SDateLike, Future[Either[PortStateError, Option[PortState]]], Boolean) => Future[Option[String]]
+                                          ): Action[AnyContent] = Action {
+    val startPit = getLocalLastMidnight(SDate(start.toLong, europeLondonTimeZone))
+    val endPit = SDate(end.toLong, europeLondonTimeZone)
+
+    val portCode = airportConfig.portCode
+    val fileName = makeFileName(filePrefix, terminalName, startPit, endPit, portCode)
+
+    val dayRangeMillis = startPit.millisSinceEpoch to endPit.millisSinceEpoch by Crunch.oneDayMillis
+    val daysMillisSource: Source[String, NotUsed] = Source(dayRangeMillis)
+      .mapAsync(parallelism = 1) {
+        millis =>
+          val day = SDate(millis)
+          val includeHeader = millis == startPit.millisSinceEpoch
+          val psForDay = loadBestPortStateForPointInTime(millis, terminalName)
+          timedEndPoint(s"Export multi-day", Option(s"$terminalName ${startPit.toISOString()} -> ${endPit.toISOString()} (day ${day.toISOString()})")) {
+            csvFunc(day, psForDay, includeHeader)
+          }
+      }
+      .collect {
+        case Some(dayData) => dayData + CSVData.lineEnding
+      }
+
+    implicit val writeable: Writeable[String] = Writeable((str: String) => ByteString.fromString(str), Option("application/csv"))
+
+    Result(
+      header = ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
+      body = HttpEntity.Chunked(daysMillisSource.map(c => HttpChunk.Chunk(writeable.transform(c))), writeable.contentType)
+    )
+  }
+
   private def flightsForCSVExportWithinRange(terminalName: Terminal,
                                              pit: SDateLike,
                                              startHour: Int,
