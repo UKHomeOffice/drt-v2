@@ -13,10 +13,6 @@
                 <appendLineSeparator>true</appendLineSeparator>
             </layout>
         </encoder>
-
-
-
-
     </appender>
 
 
