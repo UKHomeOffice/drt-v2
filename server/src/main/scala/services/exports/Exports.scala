@@ -24,7 +24,7 @@ object Exports {
                               numberOfDays: Int,
                               now: () => SDateLike,
                               terminal: Terminal,
-                              summaryActorProvider: SDateLike => ActorRef,
+                              maybeSummaryActorProvider: Option[(SDateLike, Terminal) => ActorRef],
                               queryPortState: (SDateLike, Any) => Future[Option[PortState]],
                               portStateToSummaries: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike])
                              (implicit sys: ActorSystem,
@@ -34,10 +34,11 @@ object Exports {
       val from = startDate.addDays(dayOffset)
       val addHeader = dayOffset == 0
 
-      val summaryForDay = if (isHistoric(now, from)) {
-        historicSummaryForDay(terminal, from, summaryActorProvider(from), GetSummaries, queryPortState, portStateToSummaries)
-      } else {
-        extractDayFromPortStateForTerminal(terminal, from, queryPortState, portStateToSummaries)
+      val summaryForDay = (maybeSummaryActorProvider, isHistoric(now, from)) match {
+        case (Some(actorProvider), true) =>
+          historicSummaryForDay(terminal, from, actorProvider(from, terminal), GetSummaries, queryPortState, portStateToSummaries)
+        case _ =>
+          extractDayFromPortStateForTerminal(terminal, from, queryPortState, portStateToSummaries)
       }
 
       summaryForDay.map {

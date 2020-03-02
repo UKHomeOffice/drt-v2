@@ -24,10 +24,9 @@ trait WithFlightsExport extends ExportToCsv {
     Try(SDate(year, month, day, 0, 0, europeLondonTimeZone)) match {
       case Success(start) =>
         val summaryFromPortState = Exports.flightSummariesWithActualApiFromPortState(terminal)
-        val summaryActorProvider = (_: SDateLike) => system.actorOf(SummaryActor.props)
-        Action(exportToCsv(start, start, "export-splits", terminal, summaryFromPortState, summaryActorProvider))
+        Action(exportToCsv(start, start, "export-splits", terminal, None, summaryFromPortState))
       case Failure(t) =>
-        log.info(s"Bad date date $year/$month/$day")
+        log.error(s"Bad date date $year/$month/$day", t)
         Action(BadRequest(s"Bad date date $year/$month/$day"))
     }
   }
@@ -41,7 +40,7 @@ trait WithFlightsExport extends ExportToCsv {
         val terminal = Terminal(terminalName)
         val start = Crunch.getLocalLastMidnight(SDate(pointInTime.toLong))
         val (summaryFromPortState, summaryActorProvider) = summaryProviderByRole(request, terminal)
-        exportToCsv(start, start, "flights", terminal, summaryFromPortState, summaryActorProvider)
+        exportToCsv(start, start, "flights", terminal, summaryActorProvider, summaryFromPortState)
     }
   }
 
@@ -54,16 +53,16 @@ trait WithFlightsExport extends ExportToCsv {
         val start = Crunch.getLocalLastMidnight(SDate(startMillis.toLong))
         val end = Crunch.getLocalLastMidnight(SDate(endMillis.toLong))
         val (summaryFromPortState, summaryActorProvider) = summaryProviderByRole(request, terminal)
-        exportToCsv(start, end, "flights", terminal, summaryFromPortState, summaryActorProvider)
+        exportToCsv(start, end, "flights", terminal, summaryActorProvider, summaryFromPortState)
     }
   }
 
   def summaryProviderByRole(request: Request[AnyContent],
-                            terminal: Terminal): ((SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike], SDateLike => ActorRef) = {
+                            terminal: Terminal): ((SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike], Option[(SDateLike, Terminal) => ActorRef]) = {
     if (ctrl.getRoles(config, request.headers, request.session).contains(ApiView)) {
-      (Exports.flightSummariesWithActualApiFromPortState(terminal), (_: SDateLike) => system.actorOf(SummaryActor.props))
+      (Exports.flightSummariesWithActualApiFromPortState(terminal), None)
     } else {
-      (Exports.flightSummariesFromPortState(terminal), (_: SDateLike) => system.actorOf(SummaryActor.props))
+      (Exports.flightSummariesFromPortState(terminal), None)
     }
   }
 }

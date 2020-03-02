@@ -19,8 +19,8 @@ trait WithDesksExport extends ExportToCsv {
       val terminal = Terminal(terminalName)
       val start = Crunch.getLocalLastMidnight(SDate(pointInTime.toLong))
       val summaryFromPortState = Exports.queueSummariesFromPortState(airportConfig.queuesByTerminal(terminal), 15)
-      val summaryActorProvider = (_: SDateLike) => system.actorOf(SummaryActor.props)
-      Action(exportToCsv(start, start, "desks and queues", terminal, summaryFromPortState, summaryActorProvider))
+      val summaryActorProvider = (_: SDateLike, _: Terminal) => system.actorOf(SummaryActor.props)
+      Action(exportToCsv(start, start, "desks and queues", terminal, Option(summaryActorProvider), summaryFromPortState))
     }
 
   def exportDesksAndQueuesBetweenTimeStampsCSV(startMillis: String,
@@ -30,7 +30,7 @@ trait WithDesksExport extends ExportToCsv {
     val start = Crunch.getLocalLastMidnight(SDate(startMillis.toLong))
     val end = Crunch.getLocalLastMidnight(SDate(endMillis.toLong))
     val summaryFromPortState = Exports.queueSummariesFromPortState(airportConfig.queuesByTerminal(terminal), 15)
-    val summaryActorProvider = (_: SDateLike) => system.actorOf(SummaryActor.props)
-    Action(exportToCsv(start, end, "desks and queues", terminal, summaryFromPortState, summaryActorProvider))
+    val summaryActorProvider = (_: SDateLike, _: Terminal) => system.actorOf(SummaryActor.props)
+    Action(exportToCsv(start, end, "desks and queues", terminal, Option(summaryActorProvider), summaryFromPortState))
   }
 }
