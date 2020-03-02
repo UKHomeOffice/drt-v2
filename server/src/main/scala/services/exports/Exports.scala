@@ -68,12 +68,8 @@ object Exports {
       .flatMap {
         case None =>
           extractDayFromPortStateForTerminal(terminal, from, queryPortState, fromPortState).flatMap {
-            case None =>
-              Future(None)
-            case Some(extract) =>
-              askableActor
-                .ask(extract)
-                .map(_ => Option(extract))
+            case None => Future(None)
+            case Some(extract) => askableActor.ask(extract).map(_ => Option(extract))
           }
         case someSummaries =>
           Future(someSummaries)
@@ -140,11 +136,4 @@ object Exports {
         })
     }
     .flatten
-
-  def actualApiHeadings(flights: Seq[ApiFlightWithSplits]): Seq[String] =
-    flights.flatMap(f => Exports.actualAPISplitsAndHeadingsFromFlight(f).map(_._1)).distinct.sorted
-
-  def actualAPISplitsForFlightInHeadingOrder(flight: ApiFlightWithSplits, headings: Seq[String]): Seq[Double] =
-    headings.map(h => Exports.actualAPISplitsAndHeadingsFromFlight(flight).toMap.getOrElse(h, 0.0))
-      .map(n => Math.round(n).toDouble)
 }

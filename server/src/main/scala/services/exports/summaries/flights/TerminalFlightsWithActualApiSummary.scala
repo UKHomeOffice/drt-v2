@@ -8,10 +8,12 @@ import services.exports.Exports
 case class TerminalFlightsWithActualApiSummary(flights: Seq[ApiFlightWithSplits],
                                                millisToDateOnly: MillisSinceEpoch => String,
                                                millisToHoursAndMinutes: MillisSinceEpoch => String) extends TerminalFlightsSummaryLike {
-  lazy val actualApiHeadings: Seq[String] = Exports.actualApiHeadings(flights)
+  import TerminalFlightsWithActualApiSummary._
+
+  lazy val actualApiHeadings: Seq[String] = actualApiHeadingsForFlights(flights)
 
   def actualAPISplitsForFlightInHeadingOrder(fws: ApiFlightWithSplits, headings: Seq[String]): Seq[Double] =
-    Exports.actualAPISplitsForFlightInHeadingOrder(fws, actualApiHeadings)
+    actualAPISplitsForFlightInHeadingOrder(fws, actualApiHeadings)
 
   override lazy val csvHeader: String = standardCsvHeader + "," + actualApiHeadings.mkString(",")
 
@@ -27,4 +29,13 @@ case class TerminalFlightsWithActualApiSummary(flights: Seq[ApiFlightWithSplits]
       headingsForSplitSource(queueNames, "API") + "," +
       headingsForSplitSource(queueNames, "Historical") + "," +
       headingsForSplitSource(queueNames, "Terminal Average")
+}
+
+object TerminalFlightsWithActualApiSummary {
+  def actualApiHeadingsForFlights(flights: Seq[ApiFlightWithSplits]): Seq[String] =
+    flights.flatMap(f => Exports.actualAPISplitsAndHeadingsFromFlight(f).map(_._1)).distinct.sorted
+
+  def actualAPISplitsForFlightInHeadingOrder(flight: ApiFlightWithSplits, headings: Seq[String]): Seq[Double] =
+    headings.map(h => Exports.actualAPISplitsAndHeadingsFromFlight(flight).toMap.getOrElse(h, 0.0))
+      .map(n => Math.round(n).toDouble)
 }

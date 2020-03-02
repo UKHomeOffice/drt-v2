@@ -6,14 +6,8 @@ import org.specs2.mutable.Specification
 import services.exports.Exports
 import services.exports.summaries.flights.{TerminalFlightsSummary, TerminalFlightsWithActualApiSummary}
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
-
 
 class ArrivalsToCSVDataTest extends Specification {
-
-  import CSVData._
 
   import controllers.ArrivalGenerator.arrival
 
@@ -89,9 +83,11 @@ class ArrivalsToCSVDataTest extends Specification {
     result === expected
   }
 
+  import TerminalFlightsWithActualApiSummary._
+
   "When asking for Actual API Split Data" >> {
     "Given a list of Flights With Splits then I should get a list of headings for each of the API Splits" >> {
-      val headings = Exports.actualApiHeadings(List(flightWithoutFastTrackApiSplits, flightWithAllTypesOfAPISplit))
+      val headings = actualApiHeadingsForFlights(List(flightWithoutFastTrackApiSplits, flightWithAllTypesOfAPISplit))
 
       val expected = List(
         "API Actual - EEA (Machine Readable)",
@@ -108,7 +104,7 @@ class ArrivalsToCSVDataTest extends Specification {
 
     "Given a list of Flights With Splits then I should get Api Split data for each flight" >> {
       val result = flights.map { flight =>
-        Exports.actualAPISplitsForFlightInHeadingOrder(flight, Exports.actualApiHeadings(flights))
+        actualAPISplitsForFlightInHeadingOrder(flight, actualApiHeadingsForFlights(flights))
       }
 
       val expected = List(
