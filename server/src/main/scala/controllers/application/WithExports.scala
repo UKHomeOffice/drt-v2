@@ -2,20 +2,18 @@ package controllers.application
 
 import actors._
 import actors.pointInTime.CrunchStateReadActor
-import akka.NotUsed
-import akka.actor.{Actor, ActorRef, PoisonPill, Props}
+import akka.actor.{Actor, PoisonPill, Props}
 import akka.pattern._
-import akka.stream.scaladsl.Source
 import akka.util.{ByteString, Timeout}
 import controllers.Application
+import controllers.application.exports.{WithDesksExport, WithFlightsExport}
 import drt.shared.CrunchApi._
-import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
-import drt.shared._
+import drt.shared.{ForecastView, ManageUsers, PortState, SDateLike}
 import drt.users.KeyCloakGroups
-import play.api.http.{HeaderNames, HttpChunk, HttpEntity, Writeable}
+import play.api.http.HttpEntity
 import play.api.mvc._
-import services.exports.Exports
+import services.exports.Forecast
 import services.graphstages.Crunch
 import services.graphstages.Crunch._
 import services.{CSVData, SDate}
@@ -23,10 +21,9 @@ import services.{CSVData, SDate}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import scala.util.Try
 
 
-trait WithExports {
+trait WithExports extends WithDesksExport with WithFlightsExport {
   self: Application =>
 
   def exportUsers(): Action[AnyContent] = authByRole(ManageUsers) {
@@ -41,34 +38,6 @@ trait WithExports {
           ))
     }
   }
-
-  def exportDesksAndQueuesAtPointInTimeCSV(pointInTime: String,
-                                           terminalName: String,
-                                           startHour: Int,
-                                           endHour: Int
-                                          ): Action[AnyContent] =
-    authByRole(DesksAndQueuesView) {
-      val terminal = Terminal(terminalName)
-      Action.async {
-        timedEndPoint(s"Export desks & queues", Option(s"$terminal @ ${SDate(pointInTime.toLong).toISOString()}")) {
-          val portCode = airportConfig.portCode
-          val pit = SDate(pointInTime.toLong)
-
-          val fileName = f"$portCode-$terminal-desks-and-queues-${pit.getFullYear()}-${pit.getMonth()}%02d-${pit.getDate()}%02dT" +
-            f"${pit.getHours()}%02d-${pit.getMinutes()}%02d-hours-$startHour%02d-to-$endHour%02d"
-
-          val portStateForPointInTime = loadBestPortStateForPointInTime(pit.millisSinceEpoch, terminal)
-          exportDesksToCSV(terminal, pit, startHour, endHour, portStateForPointInTime, includeHeader = true).map {
-            case Some(csvData) =>
-              val header = ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv"))
-              val entity = HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
-              Result(header, entity)
-            case None =>
-              NotFound("Could not find desks and queues for this date.")
-          }
-        }
-      }
-    }
 
   def exportForecastWeekToCSV(startDay: String, terminalName: String): Action[AnyContent] = authByRole(ForecastView) {
     val terminal = Terminal(terminalName)
@@ -135,189 +104,16 @@ trait WithExports {
         }
       }
     }
-
-  }
-
-  def exportApi(day: Int,
-                month: Int,
-                year: Int,
-                terminalName: String): Action[AnyContent] = authByRole(ApiViewPortCsv) {
-    val terminal = Terminal(terminalName)
-    Action.async { _ =>
-      val startHour = 0
-      val endHour = 24
-      val dateOption = Try(SDate(year, month, day, 0, 0)).toOption
-      val terminalNameOption = airportConfig.terminals.find(_ == terminal)
-      val resultOption = for {
-        date <- dateOption
-        terminalName <- terminalNameOption
-      } yield {
-        val pit = date.millisSinceEpoch
-        val portStateForPointInTime = loadBestPortStateForPointInTime(pit, terminalName)
-        val fileName = f"export-splits-${portCode.toString}-$terminalName-${date.getFullYear()}-${date.getMonth()}-${date.getDate()}"
-        flightsForCSVExportWithinRange(terminalName, date, startHour = startHour, endHour = endHour, portStateForPointInTime).map {
-          case Some(csvFlights) =>
-            val csvData = CSVData.flightsWithSplitsWithAPIActualsToCSVWithHeadings(csvFlights)
-            Result(
-              ResponseHeader(OK, Map(
-                CONTENT_LENGTH -> csvData.length.toString,
-                CONTENT_TYPE -> "text/csv",
-                CONTENT_DISPOSITION -> s"attachment; filename=$fileName.csv",
-                CACHE_CONTROL -> "no-cache")
-                             ),
-              HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
-              )
-          case None => NotFound("No data for this date")
-        }
-      }
-      resultOption.getOrElse(
-        Future(BadRequest("Invalid terminal name or date"))
-        )
-    }
-  }
-
-  def exportFlightsWithSplitsAtPointInTimeCSV(pointInTime: String,
-                                              terminalName: String,
-                                              startHour: Int,
-                                              endHour: Int): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
-    Action.async {
-      implicit request =>
-        val terminal = Terminal(terminalName)
-        timedEndPoint(s"Export flights with splits", Option(s"$terminal @ ${SDate(pointInTime.toLong).toISOString()}")) {
-          val pit = SDate(pointInTime.toLong)
-
-          val portCode = airportConfig.portCode
-          val fileName = f"$portCode-$terminal-arrivals-${pit.getFullYear()}-${pit.getMonth()}%02d-${pit.getDate()}%02dT" +
-            f"${pit.getHours()}%02d-${pit.getMinutes()}%02d-hours-$startHour%02d-to-$endHour%02d"
-
-          val portStateForPointInTime = loadBestPortStateForPointInTime(pit.millisSinceEpoch, terminal)
-          flightsForCSVExportWithinRange(terminal, pit, startHour, endHour, portStateForPointInTime).map {
-            case Some(csvFlights) =>
-              val csvData = if (ctrl.getRoles(config, request.headers, request.session).contains(ApiView)) {
-                log.info(s"Sending Flights CSV with API data")
-                CSVData.flightsWithSplitsWithAPIActualsToCSVWithHeadings(csvFlights)
-              }
-              else {
-                log.info(s"Sending Flights CSV with no API data")
-                CSVData.flightsWithSplitsToCSVWithHeadings(csvFlights)
-              }
-              Result(
-                ResponseHeader(200, Map(
-                  "Content-Disposition" -> s"attachment; filename=$fileName.csv",
-                  HeaderNames.CACHE_CONTROL -> "no-cache")
-                               ),
-                HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
-                )
-            case None => NotFound("No data for this date")
-          }
-        }
-    }
-  }
-
-  def exportFlightsWithSplitsBetweenTimeStampsCSV(start: String,
-                                                  end: String,
-                                                  terminalName: String): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
-    val terminal = Terminal(terminalName)
-    log.info(s"Export flights with splits for terminal $terminal between ${SDate(start.toLong).toISOString()} & ${SDate(end.toLong).toISOString()}")
-    val func = (day: SDateLike, ps: Future[Either[PortStateError, Option[PortState]]], includeHeader: Boolean) => flightsForCSVExportWithinRange(
-      terminalName = terminal,
-      pit = day,
-      startHour = 0,
-      endHour = 24,
-      portStateFuture = ps
-      ).map {
-      case Some(fs) if includeHeader => Option(CSVData.flightsWithSplitsToCSVWithHeadings(fs))
-      case Some(fs) if !includeHeader => Option(CSVData.flightsWithSplitsToCSV(fs))
-      case None =>
-        log.error(s"Missing a day of flights")
-        None
-    }
-    exportTerminalDateRangeToCsv(start, end, terminal, filePrefix = "arrivals", csvFunc = func)
-
-  }
-
-  def exportDesksAndQueuesBetweenTimeStampsCSV(start: String,
-                                               end: String,
-                                               terminalName: String): Action[AnyContent] = authByRole(DesksAndQueuesView) {
-    val terminal = Terminal(terminalName)
-    log.info(s"Export desks & queues for terminal $terminal between ${SDate(start.toLong).toISOString()} & ${SDate(end.toLong).toISOString()}")
-    val func = (day: SDateLike, ps: Future[Either[PortStateError, Option[PortState]]], includeHeader: Boolean) => exportDesksToCSV(
-      terminalName = terminal,
-      pointInTime = day,
-      startHour = 0,
-      endHour = 24,
-      portStateFuture = ps,
-      includeHeader
-      )
-    exportTerminalDateRangeToCsv(start, end, terminal, filePrefix = "desks-and-queues", csvFunc = func)
-
-  }
-
-  private def exportDesksToCSV(terminalName: Terminal,
-                               pointInTime: SDateLike,
-                               startHour: Int,
-                               endHour: Int,
-                               portStateFuture: Future[Either[PortStateError, Option[PortState]]],
-                               includeHeader: Boolean
-                              ): Future[Option[String]] = {
-
-    val startDateTime = getLocalLastMidnight(pointInTime).addHours(startHour)
-    val endDateTime = getLocalLastMidnight(pointInTime).addHours(endHour)
-    val localTime = SDate(pointInTime, europeLondonTimeZone)
-
-    portStateFuture.map {
-      case Right(Some(ps: PortState)) =>
-        val wps = ps.windowWithTerminalFilter(startDateTime, endDateTime, airportConfig.queuesByTerminal.filterKeys(_ == terminalName))
-        val dataLines = CSVData.terminalMinutesToCsvData(wps.crunchMinutes, wps.staffMinutes, airportConfig.nonTransferQueues(terminalName), startDateTime, endDateTime, 15)
-        val fullData = if (includeHeader) {
-          val headerLines = CSVData.csvHeadingsForQueuesExport(airportConfig.queuesByTerminal(terminalName))
-          headerLines + CSVData.lineEnding + dataLines
-        } else dataLines
-        Option(fullData)
-
-      case unexpected =>
-        log.error(s"Exports: Got the wrong thing $unexpected for Point In time: ${
-          localTime.toISOString()
-        }")
-
-        None
-    }
   }
 
   class SummaryActor extends Actor {
     override def receive: Receive = {
-      case _ => None
+      case _ => sender() ! None
     }
   }
 
   object SummaryActor {
     def props: Props = Props(classOf[SummaryActor])
-  }
-
-  private def exportTerminalDateRangeToCsv(start: String,
-                                           end: String,
-                                           terminal: Terminal,
-                                           filePrefix: String,
-                                           csvFunc: (SDateLike, Future[Either[PortStateError, Option[PortState]]], Boolean) => Future[Option[String]]
-                                          ): Action[AnyContent] = Action {
-    val startPit = getLocalLastMidnight(SDate(start.toLong, europeLondonTimeZone))
-    val endPit = getLocalLastMidnight(SDate(end.toLong, europeLondonTimeZone))
-    val numberOfDays = (endPit.millisSinceEpoch - startPit.millisSinceEpoch).toInt / Crunch.oneDayMillis
-
-    val portCode = airportConfig.portCode
-    val fileName = makeFileName(filePrefix, terminal, startPit, endPit, portCode)
-
-    val summaryActorProvider: SDateLike => AskableActorRef = (from: SDateLike) => system.actorOf(SummaryActor.props)
-    val summaryProvider = Exports.terminalSummariesFromPortState(airportConfig.queuesByTerminal(terminal), 15)
-
-    val daysMillisSource = Exports.summaryForDaysCsvSource(startPit, numberOfDays, now, terminal, summaryActorProvider, queryPortStateActor, summaryProvider)
-
-    implicit val writeable: Writeable[String] = Writeable((str: String) => ByteString.fromString(str), Option("application/csv"))
-
-    Result(
-      header = ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
-      body = HttpEntity.Chunked(daysMillisSource.map(c => HttpChunk.Chunk(writeable.transform(c))), writeable.contentType)
-      )
   }
 
   def queryPortStateActor: (SDateLike, Any) => Future[Option[PortState]] = (from: SDateLike, message: Any) => {
@@ -340,44 +136,6 @@ trait WithExports {
     }
   }
 
-  private def flightsForCSVExportWithinRange(terminalName: Terminal,
-                                             pit: SDateLike,
-                                             startHour: Int,
-                                             endHour: Int,
-                                             portStateFuture: Future[Either[PortStateError, Option[PortState]]]
-                                            ): Future[Option[List[ApiFlightWithSplits]]] = {
-
-    val startDateTime = getLocalLastMidnight(pit).addHours(startHour)
-    val endDateTime = getLocalLastMidnight(pit).addHours(endHour)
-    val isInRange = isInRangeOnDay(startDateTime, endDateTime) _
-
-    portStateFuture.map {
-      case Right(Some(PortState(fs, _, _))) =>
-
-        val flightsForTerminalInRange = fs.values
-          .filter(_.apiFlight.Terminal == terminalName)
-          .filter(_.apiFlight.PcpTime.isDefined)
-          .filter(f => isInRange(SDate(f.apiFlight.PcpTime.getOrElse(0L), europeLondonTimeZone)))
-          .toList
-
-        Option(flightsForTerminalInRange)
-      case unexpected =>
-        log.error(s"got the wrong thing extracting flights from PortState (terminal: $terminalName, millis: $pit," +
-                    s" start hour: $startHour, endHour: $endHour): Error: $unexpected")
-        None
-    }
-  }
-
-  private def makeFileName(subject: String,
-                           terminalName: Terminal,
-                           startPit: SDateLike,
-                           endPit: SDateLike,
-                           portCode: PortCode): String = {
-    f"$portCode-$terminalName-$subject-" +
-      f"${startPit.getFullYear()}-${startPit.getMonth()}%02d-${startPit.getDate()}-to-" +
-      f"${endPit.getFullYear()}-${endPit.getMonth()}%02d-${endPit.getDate()}"
-  }
-
   def startAndEndForDay(startDay: MillisSinceEpoch, numberOfDays: Int): (SDateLike, SDateLike) = {
     val startOfWeekMidnight = getLocalLastMidnight(SDate(startDay))
     val endOfForecast = startOfWeekMidnight.addDays(numberOfDays)
@@ -388,115 +146,5 @@ trait WithExports {
     (startOfForecast, endOfForecast)
   }
 
-  private def loadBestPortStateForPointInTime(day: MillisSinceEpoch,
-                                              terminalName: Terminal): Future[Either[PortStateError, Option[PortState]]] =
-    if (isHistoricDate(day))
-      portStateForEndOfDay(day, terminalName)
-    else
-      portStateForDay(day, terminalName)
-
-  private def portStateForDay(day: MillisSinceEpoch,
-                              terminalName: Terminal): Future[Either[PortStateError, Option[PortState]]] = {
-    val firstMinute = getLocalLastMidnight(SDate(day)).millisSinceEpoch
-    val lastMinute = SDate(firstMinute).addHours(airportConfig.dayLengthHours).millisSinceEpoch
-
-    val portStateFuture = ctrl.portStateActor.ask(GetPortStateForTerminal(firstMinute, lastMinute, terminalName))(new Timeout(30 seconds))
-
-    portStateFuture.map {
-      case Some(ps: PortState) => Right(Option(ps))
-      case _ => Right(None)
-    } recover {
-      case t =>
-        log.warning(s"Didn't get a PortState: $t")
-        Left(PortStateError(t.getMessage))
-    }
-  }
-
   private def isHistoricDate(day: MillisSinceEpoch): Boolean = day < getLocalLastMidnight(SDate.now()).millisSinceEpoch
-
-  private def portStateForEndOfDay(day: MillisSinceEpoch,
-                                   terminalName: Terminal): Future[Either[PortStateError, Option[PortState]]] = {
-    val relativeLastMidnight = getLocalLastMidnight(SDate(day)).millisSinceEpoch
-    val startMillis = relativeLastMidnight
-    val endMillis = relativeLastMidnight + oneHourMillis * airportConfig.dayLengthHours
-    val pointInTime = startMillis + oneDayMillis + oneHourMillis * 3
-
-    portStatePeriodAtPointInTime(startMillis, endMillis, pointInTime, terminalName)
-  }
-
-  def portStateActorForPointInTime(pit: SDateLike, now: () => SDateLike): ActorRef = {
-    val start = Crunch.getLocalLastMidnight(pit)
-    val end = start.addDays(1)
-    if (isHistoricDate(pit.millisSinceEpoch))
-      system.actorOf(CrunchStateReadActor.props(airportConfig.portStateSnapshotInterval, pit, DrtStaticParameters.expireAfterMillis, airportConfig.queuesByTerminal, start.millisSinceEpoch, end.millisSinceEpoch))
-    else ctrl.portStateActor
-  }
-
-  private def portStatePeriodAtPointInTime(startMillis: MillisSinceEpoch,
-                                           endMillis: MillisSinceEpoch,
-                                           pointInTime: MillisSinceEpoch,
-                                           terminalName: Terminal): Future[Either[PortStateError, Option[PortState]]] = {
-    val stateQuery = GetPortStateForTerminal(startMillis, endMillis, terminalName)
-    val terminalsAndQueues = airportConfig.queuesByTerminal.filterKeys(_ == terminalName)
-    val query = CachableActorQuery(CrunchStateReadActor.props(airportConfig.portStateSnapshotInterval, SDate(pointInTime), DrtStaticParameters.expireAfterMillis, terminalsAndQueues, startMillis, endMillis), stateQuery)
-    val portCrunchResult = cacheActorRef.ask(query)(new Timeout(15 seconds))
-
-    portCrunchResult.map {
-      case Some(ps: PortState) =>
-        log.info(s"Got point-in-time PortState for ${
-          SDate(pointInTime).toISOString()
-        }")
-        Right(Option(ps))
-      case _ => Right(None)
-    }.recover {
-      case t =>
-        log.warning(s"Didn't get a point-in-time PortState: $t")
-        Left(PortStateError(t.getMessage))
-    }
-  }
-}
-
-object Forecast {
-  def headlineFigures(startOfForecast: SDateLike,
-                      endOfForecast: SDateLike,
-                      terminal: Terminal,
-                      portState: PortState,
-                      queues: List[Queue]): ForecastHeadlineFigures = {
-    val dayMillis = 60 * 60 * 24 * 1000
-    val periods = (endOfForecast.millisSinceEpoch - startOfForecast.millisSinceEpoch) / dayMillis
-    val crunchSummaryDaily = portState.crunchSummary(startOfForecast, periods, 1440, terminal, queues)
-
-    val figures = for {
-      (dayMillis, queueMinutes) <- crunchSummaryDaily
-      (queue, queueMinute) <- queueMinutes
-    } yield {
-      QueueHeadline(dayMillis, queue, queueMinute.paxLoad.toInt, queueMinute.workLoad.toInt)
-    }
-    ForecastHeadlineFigures(figures.toSeq)
-  }
-
-  def forecastPeriod(airportConfig: AirportConfig,
-                     terminal: Terminal,
-                     startOfForecast: SDateLike,
-                     endOfForecast: SDateLike,
-                     portState: PortState): ForecastPeriod = {
-    val fifteenMinuteMillis = 15 * 60 * 1000
-    val periods = (endOfForecast.millisSinceEpoch - startOfForecast.millisSinceEpoch) / fifteenMinuteMillis
-    val staffSummary = portState.staffSummary(startOfForecast, periods, 15, terminal)
-    val crunchSummary15Mins = portState.crunchSummary(startOfForecast, periods, 15, terminal, airportConfig.nonTransferQueues(terminal).toList)
-    val timeSlotsByDay = Forecast.rollUpForWeek(crunchSummary15Mins, staffSummary)
-    ForecastPeriod(timeSlotsByDay)
-  }
-
-  def rollUpForWeek(crunchSummary: Map[MillisSinceEpoch, Map[Queue, CrunchMinute]],
-                    staffSummary: Map[MillisSinceEpoch, StaffMinute]
-                   ): Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] =
-    crunchSummary
-      .map { case (millis, cms) =>
-        val (available, fixedPoints) = staffSummary.get(millis).map(sm => (sm.shifts, sm.fixedPoints)).getOrElse((0, 0))
-        val deskStaff = if (cms.nonEmpty) cms.values.map(_.deskRec).sum else 0
-        ForecastTimeSlot(millis, available, fixedPoints + deskStaff)
-      }
-      .groupBy(forecastTimeSlot => getLocalLastMidnight(SDate(forecastTimeSlot.startMillis)).millisSinceEpoch)
-      .mapValues(_.toSeq)
 }

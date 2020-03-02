@@ -189,7 +189,7 @@ class DesksAndQueuesExportSpec extends SpecificationLike {
     "When I ask for terminal summaries for that day" >> {
       "I should get back a None, in reflection of the missing data" >> {
         val mockTerminalSummariesActor = system.actorOf(Props(classOf[MockTerminalSummariesActor], None, None))
-        val portStateToSummaries = terminalSummariesFromPortState(Seq(EeaDesk), 15)
+        val portStateToSummaries = queueSummariesFromPortState(Seq(EeaDesk), 15)
 
         val result = Await.result(historicSummaryForDay(terminal, from, mockTerminalSummariesActor, GetSummaries, eventualPortState(None), portStateToSummaries), 1 second)
 
@@ -213,7 +213,7 @@ class DesksAndQueuesExportSpec extends SpecificationLike {
         val staffMinutes = Iterable(StaffMinute(terminal, from.millisSinceEpoch, shifts, misc, moves, None))
         val portState = PortState(noFlights, crunchMinutes, staffMinutes)
 
-        val portStateToSummaries = terminalSummariesFromPortState(Seq(EeaDesk), 15)
+        val portStateToSummaries = queueSummariesFromPortState(Seq(EeaDesk), 15)
 
         val result = Await.result(historicSummaryForDay(terminal, from, mockTerminalSummariesActor, GetSummaries, eventualPortState(Option(portState)), portStateToSummaries), 1 second)
           .get.asInstanceOf[TerminalQueuesSummary].summaries
@@ -237,7 +237,7 @@ class DesksAndQueuesExportSpec extends SpecificationLike {
         val persistedSummaries = TerminalQueuesSummary(queues, Iterable(QueuesSummary(from, List(QueueSummary(pax, deskRec, waitTime, None, None)), StaffSummary(shifts + moves, misc, moves, deskRec + misc))))
         val mockTerminalSummariesActor = system.actorOf(Props(classOf[MockTerminalSummariesActor], Option(persistedSummaries), None))
 
-        val portStateToSummaries = terminalSummariesFromPortState(Seq(EeaDesk), 15)
+        val portStateToSummaries = queueSummariesFromPortState(Seq(EeaDesk), 15)
         val result = Await.result(historicSummaryForDay(terminal, from, mockTerminalSummariesActor, GetSummaries, eventualPortState(None), portStateToSummaries), 1 second).get
 
         result === persistedSummaries
@@ -258,7 +258,7 @@ class DesksAndQueuesExportSpec extends SpecificationLike {
     val portState = PortState(noFlights, crunchMinutes, staffMinutes)
 
     "When I ask for terminal summaries for that day" >> {
-      val portStateToSummaries = terminalSummariesFromPortState(Seq(EeaDesk), 15)
+      val portStateToSummaries = queueSummariesFromPortState(Seq(EeaDesk), 15)
 
       def eventualMaybeSummaries(actorProbe: ActorRef): Future[Option[TerminalSummaryLike]] = {
         historicSummaryForDay(terminal, from, actorProbe, GetSummaries, eventualPortState(Option(portState)), portStateToSummaries)
@@ -303,7 +303,7 @@ class DesksAndQueuesExportSpec extends SpecificationLike {
 
         val now: () => SDateLike = () => SDate("2020-06-01")
         val startDate = SDate("2020-01-01T00:00", Crunch.europeLondonTimeZone)
-        val portStateToSummary = terminalSummariesFromPortState(Seq(EeaDesk), 15)
+        val portStateToSummary = queueSummariesFromPortState(Seq(EeaDesk), 15)
 
         val exportStream = summaryForDaysCsvSource(startDate, 3, now, terminal, summaryActorProvider, eventualPortState(None), portStateToSummary)
 

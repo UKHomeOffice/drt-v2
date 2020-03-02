@@ -238,8 +238,8 @@ class Application @Inject()(implicit val config: Configuration,
         portStateFuture.map {
           case Some(portState: PortState) =>
             log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString()} on $terminal")
-            val fp = application.Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
-            val hf = application.Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
+            val fp = services.exports.Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
+            val hf = services.exports.Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
             Option(ForecastPeriodWithHeadlines(fp, hf))
           case None =>
             log.info(s"No forecast available for week beginning ${SDate(startDay).toISOString()} on $terminal")

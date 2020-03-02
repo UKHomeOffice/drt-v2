@@ -2,19 +2,21 @@ package services.exports
 
 import actors.GetPortStateForTerminal
 import akka.NotUsed
-import akka.actor.ActorSystem
+import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
-import drt.shared.Summaries.terminalSummaryForPeriod
-import drt.shared.{GetSummaries, PortState, SDateLike, TerminalQueuesSummary, TerminalSummaryLike}
 import drt.shared.Terminals.Terminal
+import drt.shared._
 import services.SDate
+import services.exports.summaries.flights.{TerminalFlightsSummary, TerminalFlightsWithActualApiSummary}
+import services.exports.summaries.queues.TerminalQueuesSummary
+import services.exports.summaries.{GetSummaries, Summaries, TerminalSummaryLike}
 import services.graphstages.Crunch
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration._
 
 
 object Exports {
@@ -22,65 +24,66 @@ object Exports {
                               numberOfDays: Int,
                               now: () => SDateLike,
                               terminal: Terminal,
-                              summaryActorProvider: SDateLike => AskableActorRef,
+                              summaryActorProvider: SDateLike => ActorRef,
                               queryPortState: (SDateLike, Any) => Future[Option[PortState]],
-                              portStateToSummaries: (SDateLike, SDateLike, PortState) => Option[TerminalQueuesSummary])
+                              portStateToSummaries: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike])
                              (implicit sys: ActorSystem,
                               ec: ExecutionContext,
                               ti: Timeout): Source[String, NotUsed] = Source(0 until numberOfDays)
     .mapAsync(1) { dayOffset =>
       val from = startDate.addDays(dayOffset)
       val addHeader = dayOffset == 0
-      summaryForDay(now, terminal, from, summaryActorProvider(from), GetSummaries, queryPortState, portStateToSummaries).map {
+
+      val summaryForDay = if (isHistoric(now, from)) {
+        historicSummaryForDay(terminal, from, summaryActorProvider(from), GetSummaries, queryPortState, portStateToSummaries)
+      } else {
+        extractDayFromPortStateForTerminal(terminal, from, queryPortState, portStateToSummaries)
+      }
+
+      summaryForDay.map {
         case None => ""
         case Some(summaryLike) if addHeader => summaryLike.toCsvWithHeader
         case Some(summaryLike) => summaryLike.toCsv
       }
     }
 
-  def summaryForDay(now: () => SDateLike,
-                    terminal: Terminal,
-                    from: SDateLike,
-                    summaryActor: AskableActorRef,
-                    request: Any,
-                    queryPortState: (SDateLike, Any) => Future[Option[PortState]],
-                    summaryFromPortState: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike])
-                   (implicit system: ActorSystem,
-                    ec: ExecutionContext,
-                    timeout: Timeout): Future[Option[TerminalSummaryLike]] = {
-    val isHistoric = from.millisSinceEpoch < Crunch.getLocalLastMidnight(now().addDays(-2)).millisSinceEpoch
-
-    if (isHistoric) historicSummaryForDay(terminal, from, summaryActor, request, queryPortState, summaryFromPortState)
-    else extractDayForTerminal(terminal, from, queryPortState, summaryFromPortState)
+  private def isHistoric(now: () => SDateLike, from: SDateLike) = {
+    from.millisSinceEpoch < Crunch.getLocalLastMidnight(now().addDays(-2)).millisSinceEpoch
   }
 
   def historicSummaryForDay(terminal: Terminal,
                             from: SDateLike,
-                            summaryActor: AskableActorRef,
+                            summaryActor: ActorRef,
                             request: Any,
                             queryPortState: (SDateLike, Any) => Future[Option[PortState]],
                             fromPortState: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike])
                            (implicit system: ActorSystem,
                             ec: ExecutionContext,
-                            timeout: Timeout): Future[Option[TerminalSummaryLike]] = summaryActor
-    .ask(request)
-    .asInstanceOf[Future[Option[TerminalSummaryLike]]]
-    .flatMap {
-      case None =>
-        extractDayForTerminal(terminal, from, queryPortState, fromPortState).flatMap {
-          case None => Future(None)
-          case Some(extract) => summaryActor
-            .ask(extract)
-            .map(_ => Option(extract))
-        }
-      case someSummaries => Future(someSummaries)
-    }
+                            timeout: Timeout): Future[Option[TerminalSummaryLike]] = {
+    val askableActor: AskableActorRef = summaryActor
+    askableActor
+      .ask(request)
+      .asInstanceOf[Future[Option[TerminalSummaryLike]]]
+      .flatMap {
+        case None =>
+          extractDayFromPortStateForTerminal(terminal, from, queryPortState, fromPortState).flatMap {
+            case None =>
+              Future(None)
+            case Some(extract) =>
+              askableActor
+                .ask(extract)
+                .map(_ => Option(extract))
+          }
+        case someSummaries =>
+          Future(someSummaries)
+      }
+  }
 
-  def extractDayForTerminal[TerminalSummaryLike](terminal: Terminal,
-                                                 startTime: SDateLike,
-                                                 queryPortState: (SDateLike, Any) => Future[Option[PortState]],
-                                                 fromPortState: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike])
-                                                (implicit ec: ExecutionContext): Future[Option[TerminalSummaryLike]] = {
+  def extractDayFromPortStateForTerminal(terminal: Terminal,
+                                         startTime: SDateLike,
+                                         queryPortState: (SDateLike, Any) => Future[Option[PortState]],
+                                         fromPortState: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike])
+                                        (implicit ec: ExecutionContext): Future[Option[TerminalSummaryLike]] = {
     val endTime = startTime.addDays(1)
     val terminalRequest = GetPortStateForTerminal(startTime.millisSinceEpoch, endTime.millisSinceEpoch, terminal)
     val pointInTime = startTime.addHours(2)
@@ -90,11 +93,39 @@ object Exports {
     }
   }
 
-  def terminalSummariesFromPortState: (Seq[Queue], Int) => (SDateLike, SDateLike, PortState) => Option[TerminalQueuesSummary] =
+  def queueSummariesFromPortState: (Seq[Queue], Int) => (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike] =
     (queues: Seq[Queue], summaryLengthMinutes: Int) => (from: SDateLike, to: SDateLike, portState: PortState) => {
       val queueSummaries = (from.millisSinceEpoch until to.millisSinceEpoch by summaryLengthMinutes * Crunch.oneMinuteMillis).map { millis =>
-        terminalSummaryForPeriod(portState.crunchMinutes, portState.staffMinutes, queues, SDate(millis), summaryLengthMinutes)
+        Summaries.terminalSummaryForPeriod(portState.crunchMinutes, portState.staffMinutes, queues, SDate(millis), summaryLengthMinutes)
       }
       Option(TerminalQueuesSummary(queues, queueSummaries))
     }
+
+  def flightSummariesFromPortState: Terminal => (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike] =
+    (terminal: Terminal) => (from: SDateLike, to: SDateLike, portState: PortState) => {
+      val terminalFlights = flightsForTerminal(terminal, portState, from, to)
+      Option(TerminalFlightsSummary(terminalFlights, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes))
+    }
+
+  def flightSummariesWithActualApiFromPortState: Terminal => (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike] =
+    (terminal: Terminal) => (from: SDateLike, to: SDateLike, portState: PortState) => {
+      val terminalFlights = flightsForTerminal(terminal, portState, from, to)
+      Option(TerminalFlightsWithActualApiSummary(terminalFlights, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes))
+    }
+
+  def flightsForTerminal(terminal: Terminal,
+                         portState: PortState,
+                         from: SDateLike,
+                         to: SDateLike): Seq[ApiFlightWithSplits] = {
+    val flights = portState.flights.values.filter { fws =>
+      val minPcp = fws.apiFlight.pcpRange().min
+      from.millisSinceEpoch <= minPcp && minPcp < to.millisSinceEpoch
+    }
+
+    flights.filter(_.apiFlight.Terminal == terminal).toSeq
+  }
+
+  def millisToLocalIsoDateOnly: MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate(millis, Crunch.europeLondonTimeZone).toISODateOnly
+
+  def millisToLocalHoursAndMinutes: MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate(millis, Crunch.europeLondonTimeZone).toHoursAndMinutes()
 }
