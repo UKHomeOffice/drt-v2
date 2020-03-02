@@ -1,11 +1,10 @@
 package services.export
 
 import actors.GetPortStateForTerminal
-import akka.NotUsed
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.AskableActorRef
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
@@ -13,6 +12,10 @@ import drt.shared.Queues.{EeaDesk, Queue}
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.{SDateLike, _}
 import org.specs2.mutable.SpecificationLike
+import services.exports.Exports
+import services.exports.summaries.{GetSummaries, Summaries, TerminalSummaryLike}
+import services.exports.summaries.Summaries.{optionalMax, queueSummariesForPeriod, staffSummaryForPeriod, terminalSummaryForPeriod}
+import services.exports.summaries.queues.{EmptyQueueSummary, EmptyStaffSummary, QueueSummary, QueuesSummary, StaffSummary, TerminalQueuesSummary}
 import services.graphstages.Crunch
 import services.{CSVData, SDate}
 
@@ -21,8 +24,6 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
 
 class DesksAndQueuesExportSpec extends SpecificationLike {
-
-  import Summaries._
 
   "CSV formatting" >> {
     val pax = 10d
@@ -294,24 +295,23 @@ class DesksAndQueuesExportSpec extends SpecificationLike {
 
     def persistedSummaries(queues: Seq[Queue], from: SDateLike) = TerminalQueuesSummary(queues, Iterable(QueuesSummary(from, List(QueueSummary(pax, deskRec, waitTime, None, None)), StaffSummary(shifts + moves, misc, moves, deskRec + misc))))
 
-    def mockTerminalSummariesActor: SDateLike => AskableActorRef = (from: SDateLike) => system.actorOf(Props(classOf[MockTerminalSummariesActor], Option(persistedSummaries(Seq(EeaDesk), from)), None))
+    def mockTerminalSummariesActor: (SDateLike, Terminal) => ActorRef = (from: SDateLike, _: Terminal) => system.actorOf(Props(classOf[MockTerminalSummariesActor], Option(persistedSummaries(Seq(EeaDesk), from)), None))
 
     "When I ask for the summary data for the range of dates" >> {
       "Then I should see each date's mock actor's summary data" >> {
-        val headers = CSVData.csvHeadingsForQueuesExport(Seq(EeaDesk))
         val summaryActorProvider = mockTerminalSummariesActor
 
         val now: () => SDateLike = () => SDate("2020-06-01")
         val startDate = SDate("2020-01-01T00:00", Crunch.europeLondonTimeZone)
         val portStateToSummary = queueSummariesFromPortState(Seq(EeaDesk), 15)
 
-        val exportStream = summaryForDaysCsvSource(startDate, 3, now, terminal, summaryActorProvider, eventualPortState(None), portStateToSummary)
+        val exportStream = summaryForDaysCsvSource(startDate, 3, now, terminal, Option(summaryActorProvider), eventualPortState(None), portStateToSummary)
 
         val value1 = exportStream.runWith(Sink.seq)(ActorMaterializer())
         val result = Await.result(value1, 1 second)
 
         val firstIncHeader = persistedSummaries(queues, SDate("2020-01-01")).summaries.zipWithIndex.map {
-          case (summary, 0) => (CSVData.csvHeadingsForQueuesExport(Seq(EeaDesk)) + "\r\n") + summary.toCsv
+          case (summary, 0) => (TerminalQueuesSummary.queueHeadings(Seq(EeaDesk)) + "\r\n") + summary.toCsv
           case (summary, _) => summary.toCsv
         }
 

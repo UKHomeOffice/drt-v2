@@ -2,16 +2,22 @@ package services.exports.summaries.flights
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
+import services.exports.Exports
 
 
 case class TerminalFlightsWithActualApiSummary(flights: Seq[ApiFlightWithSplits],
                                                millisToDateOnly: MillisSinceEpoch => String,
                                                millisToHoursAndMinutes: MillisSinceEpoch => String) extends TerminalFlightsSummaryLike {
-  override lazy val csvHeader: String = standardCsvHeader + "," + actualAPIHeadings.mkString(",")
+  lazy val actualApiHeadings: Seq[String] = Exports.actualApiHeadings(flights)
+
+  def actualAPISplitsForFlightInHeadingOrder(fws: ApiFlightWithSplits, headings: Seq[String]): Seq[Double] =
+    Exports.actualAPISplitsForFlightInHeadingOrder(fws, actualApiHeadings)
+
+  override lazy val csvHeader: String = standardCsvHeader + "," + actualApiHeadings.mkString(",")
 
   override def toCsv: String =  {
     val csvData = flights.sortBy(_.apiFlight.PcpTime).map(fws => {
-      flightToCsvRow(queueNames, fws) ::: actualAPISplitsForFlightInHeadingOrder(fws, actualAPIHeadings).toList
+      flightToCsvRow(queueNames, fws) ::: actualAPISplitsForFlightInHeadingOrder(fws, actualApiHeadings).toList
     })
     asCSV(csvData)
   }
@@ -21,23 +27,4 @@ case class TerminalFlightsWithActualApiSummary(flights: Seq[ApiFlightWithSplits]
       headingsForSplitSource(queueNames, "API") + "," +
       headingsForSplitSource(queueNames, "Historical") + "," +
       headingsForSplitSource(queueNames, "Terminal Average")
-
-  lazy val actualAPIHeadings: Seq[String] =
-    flights.flatMap(f => actualAPISplitsAndHeadingsFromFlight(f).map(_._1)).distinct.sorted
-
-  def actualAPISplitsAndHeadingsFromFlight(flightWithSplits: ApiFlightWithSplits): Set[(String, Double)] = flightWithSplits
-    .splits
-    .collect {
-      case s: Splits if s.source == SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages =>
-        s.splits.map(s => {
-          val ptaq = PaxTypeAndQueue(s.passengerType, s.queueType)
-          (s"API Actual - ${PaxTypesAndQueues.displayName(ptaq)}", s.paxCount)
-        })
-    }
-    .flatten
-
-  def actualAPISplitsForFlightInHeadingOrder(flight: ApiFlightWithSplits, headings: Seq[String]): Seq[Double] =
-    headings.map(h => actualAPISplitsAndHeadingsFromFlight(flight).toMap.getOrElse(h, 0.0))
-      .map(n => Math.round(n).toDouble)
-
 }

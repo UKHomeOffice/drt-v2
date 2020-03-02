@@ -129,4 +129,22 @@ object Exports {
   def millisToLocalIsoDateOnly: MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate(millis, Crunch.europeLondonTimeZone).toISODateOnly
 
   def millisToLocalHoursAndMinutes: MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate(millis, Crunch.europeLondonTimeZone).toHoursAndMinutes()
+
+  def actualAPISplitsAndHeadingsFromFlight(flightWithSplits: ApiFlightWithSplits): Set[(String, Double)] = flightWithSplits
+    .splits
+    .collect {
+      case s: Splits if s.source == SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages =>
+        s.splits.map(s => {
+          val paxTypeAndQueue = PaxTypeAndQueue(s.passengerType, s.queueType)
+          (s"API Actual - ${PaxTypesAndQueues.displayName(paxTypeAndQueue)}", s.paxCount)
+        })
+    }
+    .flatten
+
+  def actualApiHeadings(flights: Seq[ApiFlightWithSplits]): Seq[String] =
+    flights.flatMap(f => Exports.actualAPISplitsAndHeadingsFromFlight(f).map(_._1)).distinct.sorted
+
+  def actualAPISplitsForFlightInHeadingOrder(flight: ApiFlightWithSplits, headings: Seq[String]): Seq[Double] =
+    headings.map(h => Exports.actualAPISplitsAndHeadingsFromFlight(flight).toMap.getOrElse(h, 0.0))
+      .map(n => Math.round(n).toDouble)
 }

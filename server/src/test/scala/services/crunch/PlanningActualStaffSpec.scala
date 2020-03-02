@@ -1,25 +1,24 @@
 package services.crunch
 
-import controllers.{ArrivalGenerator, application}
+import controllers.ArrivalGenerator
+import drt.shared.CrunchApi.{CrunchMinute, ForecastTimeSlot, MillisSinceEpoch, StaffMinute}
 import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.{T1, T2}
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
-import services.{Optimiser, SDate, TryRenjin}
+import services.exports.Forecast
+import services.{Optimiser, SDate}
 
-import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class PlanningActualStaffSpec() extends CrunchTestLike {
   sequential
   isolated
 
-  val slot0To14 = 0 * 60000
-  val slot15To29 = 15 * 60000
-  val slot30To44 = 30 * 60000
-  val slot45To59 = 45 * 60000
-
-  import CrunchApi._
+  val slot0To14: Int = 0 * 60000
+  val slot15To29: Int = 15 * 60000
+  val slot30To44: Int = 30 * 60000
+  val slot45To59: Int = 45 * 60000
 
   "Given a forecast arriving on 2017-01-02T00:00Z with 5 pax and on 2017-01-03T00:00Z with 20 staff on shift and 1 max desk" +
     "When I ask for 1 day of forecast on 2017-01-02T00:00Z " +
@@ -68,13 +67,13 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
       case ps: PortState =>
         val cs = ps.crunchSummary(SDate(startDate1), 4, 15, T1, defaultAirportConfig.queuesByTerminal(T1).toList)
         val ss = ps.staffSummary(SDate(startDate1), 4, 15, T1)
-        val weekOf15MinSlots: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = application.Forecast.rollUpForWeek(cs, ss)
+        val weekOf15MinSlots: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]] = Forecast.rollUpForWeek(cs, ss)
         val firstDayFirstHour = weekOf15MinSlots.getOrElse(SDate("2017-01-02T00:00Z").millisSinceEpoch, Seq()).take(4)
 
         firstDayFirstHour == expected
     }
 
-    crunch.shutdown
+    crunch.shutdown()
 
     success
   }
@@ -96,7 +95,7 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
     val cs = ps.crunchSummary(SDate(0L), 4, 15, T1, defaultAirportConfig.queuesByTerminal(T1).toList)
     val ss = ps.staffSummary(SDate(0L), 4, 15, T1)
 
-    val result = application.Forecast.rollUpForWeek(cs, ss).values.head.toSet
+    val result = Forecast.rollUpForWeek(cs, ss).values.head.toSet
 
     val expected = Set(
       ForecastTimeSlot(0, 20, 3),

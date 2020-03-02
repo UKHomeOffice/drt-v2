@@ -5,17 +5,15 @@ import drt.shared.Queues.Queue
 import services.exports.summaries.TerminalSummaryLike
 
 case class TerminalQueuesSummary(queues: Seq[Queue], summaries: Iterable[QueuesSummary]) extends TerminalSummaryLike {
+
+  import TerminalQueuesSummary._
+
   override lazy val toCsv: String = summaries.map(_.toCsv).mkString(lineEnding)
 
   override lazy val csvHeader: String = {
-    val colHeadings = List("Pax", "Wait", "Desks req", "Act. wait time", "Act. desks")
-    val eGatesHeadings = List("Pax", "Wait", "Staff req", "Act. wait time", "Act. desks")
     val relevantQueues = queues
       .filterNot(_ == Queues.Transfer)
-    val queueHeadings = relevantQueues.map(queue => Queues.queueDisplayNames.getOrElse(queue, queue.toString))
-      .flatMap(qn => List.fill(colHeadings.length)(Queues.exportQueueDisplayNames.getOrElse(Queue(qn), qn))).mkString(",")
-    val headingsLine1 = "Date,," + queueHeadings +
-      ",Misc,Moves,PCP Staff,PCP Staff"
+    val headingsLine1 = "Date,," + queueHeadings(relevantQueues) + ",Misc,Moves,PCP Staff,PCP Staff"
     val headingsLine2 = ",Start," + relevantQueues.flatMap(q => {
       if (q == Queues.EGate) eGatesHeadings else colHeadings
     }).mkString(",") +
@@ -23,4 +21,12 @@ case class TerminalQueuesSummary(queues: Seq[Queue], summaries: Iterable[QueuesS
 
     headingsLine1 + lineEnding + headingsLine2
   }
+}
+
+object TerminalQueuesSummary {
+  val colHeadings = List("Pax", "Wait", "Desks req", "Act. wait time", "Act. desks")
+  val eGatesHeadings = List("Pax", "Wait", "Staff req", "Act. wait time", "Act. desks")
+
+  def queueHeadings(queues: Seq[Queue]): String = queues.map(queue => Queues.queueDisplayNames.getOrElse(queue, queue.toString))
+    .flatMap(qn => List.fill(colHeadings.length)(Queues.exportQueueDisplayNames.getOrElse(Queue(qn), qn))).mkString(",")
 }
