@@ -49,7 +49,7 @@ object Exports {
     }
 
   private def isHistoric(now: () => SDateLike, from: SDateLike) = {
-    from.millisSinceEpoch < Crunch.getLocalLastMidnight(now().addDays(-2)).millisSinceEpoch
+    from.millisSinceEpoch <= Crunch.getLocalLastMidnight(now().addDays(-2)).millisSinceEpoch
   }
 
   def historicSummaryForDay(terminal: Terminal,

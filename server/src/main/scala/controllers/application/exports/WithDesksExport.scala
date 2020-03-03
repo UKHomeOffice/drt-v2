@@ -1,5 +1,7 @@
 package controllers.application.exports
 
+import actors.summaries.TerminalQueuesSummaryActor
+import akka.actor.ActorRef
 import controllers.Application
 import drt.shared.Terminals.Terminal
 import drt.shared.{DesksAndQueuesView, SDateLike}
@@ -10,6 +12,11 @@ import services.graphstages.Crunch
 
 trait WithDesksExport extends ExportToCsv {
   self: Application =>
+
+  val summaryActorProvider: (SDateLike, Terminal) => ActorRef = (date: SDateLike, terminal: Terminal) => {
+    system.actorOf(TerminalQueuesSummaryActor.props(date, terminal, now))
+  }
+
   def exportDesksAndQueuesAtPointInTimeCSV(pointInTime: String,
                                            terminalName: String,
                                            startHour: Int,
@@ -19,7 +26,6 @@ trait WithDesksExport extends ExportToCsv {
       val terminal = Terminal(terminalName)
       val start = Crunch.getLocalLastMidnight(SDate(pointInTime.toLong))
       val summaryFromPortState = Exports.queueSummariesFromPortState(airportConfig.queuesByTerminal(terminal), 15)
-      val summaryActorProvider = (_: SDateLike, _: Terminal) => system.actorOf(SummaryActor.props)
       Action(exportToCsv(start, start, "desks and queues", terminal, Option(summaryActorProvider), summaryFromPortState))
     }
 
@@ -30,7 +36,6 @@ trait WithDesksExport extends ExportToCsv {
     val start = Crunch.getLocalLastMidnight(SDate(startMillis.toLong))
     val end = Crunch.getLocalLastMidnight(SDate(endMillis.toLong))
     val summaryFromPortState = Exports.queueSummariesFromPortState(airportConfig.queuesByTerminal(terminal), 15)
-    val summaryActorProvider = (_: SDateLike, _: Terminal) => system.actorOf(SummaryActor.props)
     Action(exportToCsv(start, end, "desks and queues", terminal, Option(summaryActorProvider), summaryFromPortState))
   }
 }
