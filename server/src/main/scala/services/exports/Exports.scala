@@ -2,7 +2,7 @@ package services.exports
 
 import actors.GetPortStateForTerminal
 import akka.NotUsed
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
@@ -36,7 +36,10 @@ object Exports {
 
       val summaryForDay = (maybeSummaryActorProvider, isHistoric(now, from)) match {
         case (Some(actorProvider), true) =>
-          historicSummaryForDay(terminal, from, actorProvider(from, terminal), GetSummaries, queryPortState, portStateToSummaries)
+          val actorForDayAndTerminal = actorProvider(from, terminal)
+          val eventualThing = historicSummaryForDay(terminal, from, actorForDayAndTerminal, GetSummaries, queryPortState, portStateToSummaries)
+          eventualThing.onComplete(_ => actorForDayAndTerminal ! PoisonPill)
+          eventualThing
         case _ =>
           extractDayFromPortStateForTerminal(terminal, from, queryPortState, portStateToSummaries)
       }
