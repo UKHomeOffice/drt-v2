@@ -12,9 +12,6 @@ case class TerminalFlightsWithActualApiSummary(flights: Seq[ApiFlightWithSplits]
 
   lazy val actualApiHeadings: Seq[String] = actualApiHeadingsForFlights(flights)
 
-  def actualAPISplitsForFlightInHeadingOrder(fws: ApiFlightWithSplits, headings: Seq[String]): Seq[Double] =
-    actualAPISplitsForFlightInHeadingOrder(fws, actualApiHeadings)
-
   override lazy val csvHeader: String = standardCsvHeader + "," + actualApiHeadings.mkString(",")
 
   override def toCsv: String =  {
