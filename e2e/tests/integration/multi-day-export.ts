@@ -1,7 +1,6 @@
-let moment = require('moment-timezone');
-let todayAtUtcString = require('../support/time-helpers').todayAtUtcString
+import moment from 'moment-timezone'
+import { todayAtUtcString } from '../support/time-helpers'
 
-require('moment/locale/en-gb');
 moment.locale("en-gb");
 
 describe('Multi day export', () => {
@@ -12,7 +11,7 @@ describe('Multi day export', () => {
 
   it('Allows you to download API splits using the API splits dialog', () => {
     cy
-      .addFlight()
+      .addFlight({})
       .asABorderForceOfficer()
       .navigateHome()
       .navigateToMenuItem('T1')
@@ -30,7 +29,7 @@ describe('Multi day export', () => {
 
   it('The multi day export dialog is still visible after 5 seconds', () => {
     cy
-      .addFlight()
+      .addFlight({})
       .asABorderForceOfficer()
       .navigateHome()
       .navigateToMenuItem('T1')
@@ -60,18 +59,26 @@ describe('Multi day export', () => {
       .then(() => {
         cy
           .get("#desksAndQueues")
-          .contains("38").then(() => {
-            cy.contains('Multi Day Export').click().then(() => {
-              cy
-                .get('.modal-body')
-                .contains("Export Desks")
-                .should('have.attr', 'href')
-                .then((href) => {
-                  cy.request(href).then((response) => {
-                    expect(response.body).to.contain(",38,10,1,,,13,0,1,,,1,0,1,,,0,0,0,3")
+          .contains("38")
+          .then(() => {
+            cy
+              .contains('Multi Day Export')
+              .click()
+              .then(() => {
+                cy
+                  .get('.modal-body')
+                  .contains("Export Desks")
+                  .should('have.attr', 'href')
+                  .then((href) => {
+                    if (typeof href === 'string') {
+                      cy
+                        .request(href)
+                        .then((response) => {
+                          expect(response.body).to.contain(",38,10,1,,,13,0,1,,,1,0,1,,,0,0,0,3")
+                        });
+                    }
                   });
-                });
-            });
+              });
           });
       });
   });

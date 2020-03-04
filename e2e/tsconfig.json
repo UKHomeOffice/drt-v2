@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+        "allowJs": true,
+        "allowSyntheticDefaultImports": true,
+        "module": "es6",
+        "moduleResolution": "node",
+        "noImplicitAny": false,
+        "outDir": "./cypress/",
+        "removeComments": true,
+        "target": "es5",
+        "types": ["cypress", "node"],
+    },
+}

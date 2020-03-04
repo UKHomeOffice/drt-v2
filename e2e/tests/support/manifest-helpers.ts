@@ -78,7 +78,7 @@ const passengerProfiles = {
 }
 
 
-function manifestForDateTime(dateString, timeString, passengerList) {
+const manifestForDateTime = (dateString, timeString, passengerList): object => {
     return {
         "EventCode": "DC",
         "DeparturePortCode": "AMS",
@@ -99,7 +99,7 @@ function manifestForDateTime(dateString, timeString, passengerList) {
 };
 
 
-function passengerList(euPax, visaNationals, nonVisaNationals, b5JNationals) {
+const passengerList = (euPax, visaNationals, nonVisaNationals, b5JNationals): object[] => {
 
     return Array(euPax).fill(passengerProfiles.ukPassport)
         .concat(Array(visaNationals).fill(passengerProfiles.visaNational))
@@ -107,9 +107,8 @@ function passengerList(euPax, visaNationals, nonVisaNationals, b5JNationals) {
         .concat(Array(b5JNationals).fill(passengerProfiles.b5JNational))
 };
 
-
-exports.manifestForDateTime = manifestForDateTime;
-
-exports.passengerList = passengerList;
-
-exports.passengerProfiles = passengerProfiles;
+export {
+    manifestForDateTime,
+    passengerList,
+    passengerProfiles,
+}
