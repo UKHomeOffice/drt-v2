@@ -57,7 +57,7 @@ trait ExportToCsv {
                         (implicit timeout: Timeout): Source[String, NotUsed] = {
     val startPit = getLocalLastMidnight(SDate(start.toLong, europeLondonTimeZone))
     val endPit = getLocalLastMidnight(SDate(end.toLong, europeLondonTimeZone))
-    val numberOfDays = (((endPit.millisSinceEpoch - startPit.millisSinceEpoch) / Crunch.oneDayMillis) + 1).toInt
+    val numberOfDays = startPit.daysBetweenInclusive(endPit)
 
     log.info(s"Export $description for terminal $terminal between ${SDate(start.toLong).toISOString()} & ${SDate(end.toLong).toISOString()} ($numberOfDays days)")
 

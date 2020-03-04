@@ -574,6 +574,10 @@ case class ArrivalUpdate(old: Arrival, updated: Arrival)
 case class ArrivalsDiff(toUpdate: ISortedMap[UniqueArrival, Arrival], toRemove: Set[Arrival])
 
 trait SDateLike {
+  val oneMinuteMillis: Int = 60000
+  val oneHourMillis: Int = oneMinuteMillis * 60
+  val oneDayMillis: Int = oneHourMillis * 24
+  val minutesInADay: Int = 60 * 24
 
   def ddMMyyString: String = f"$getDate%02d/$getMonth%02d/${getFullYear - 2000}%02d"
 
@@ -661,6 +665,8 @@ trait SDateLike {
   def compare(that: SDateLike): Int = millisSinceEpoch.compare(that.millisSinceEpoch)
 
   def <=(compareTo: SDateLike): Boolean = millisSinceEpoch <= compareTo.millisSinceEpoch
+
+  def daysBetweenInclusive(that: SDateLike): Int = ((millisSinceEpoch - that.millisSinceEpoch) / oneDayMillis).abs.toInt + 1
 }
 
 case class RemoveFlight(flightKey: UniqueArrival)

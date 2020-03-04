@@ -34,7 +34,9 @@ class CrunchMinutesToCSVDataTest extends Specification {
 
     val summary: String = Exports.queueSummariesFromPortState(Seq(EeaDesk, NonEeaDesk, EGate), 15)(startDateTime, endDateTime, PortState(Iterable(), cms, sms)).get.toCsv
 
-    val expected = s"2017-11-10,00:00,1,1,1,,,1,1,1,,,1,1,1,,,1,-1,4,4"
+    val expected =
+      s"""2017-11-10,00:00,1,1,1,,,1,1,1,,,1,1,1,,,1,-1,4,4
+         |""".stripMargin
 
     summary === expected
   }
@@ -63,7 +65,8 @@ class CrunchMinutesToCSVDataTest extends Specification {
 
     val expected =
       s"""2017-11-10,00:00,15,1,1,,,15,1,1,,,15,1,1,,,1,-1,4,4
-         |2017-11-10,00:15,1,1,1,,,1,1,1,,,1,1,1,,,1,-1,4,4""".stripMargin
+         |2017-11-10,00:15,1,1,1,,,1,1,1,,,1,1,1,,,1,-1,4,4
+         |""".stripMargin
 
     summary === expected
   }
@@ -81,7 +84,9 @@ class CrunchMinutesToCSVDataTest extends Specification {
       StaffMinute(T1, startDateTime.millisSinceEpoch, 5, fixedPoints = 1, movements = -1)
     )
 
-    val expected = "2017-11-10,00:00,1,100,1,100,2,1,100,1,100,2,1,100,1,100,2,1,-1,4,4"
+    val expected =
+      """2017-11-10,00:00,1,100,1,100,2,1,100,1,100,2,1,100,1,100,2,1,-1,4,4
+        |""".stripMargin
 
     val summary: String = Exports.queueSummariesFromPortState(Seq(EeaDesk, NonEeaDesk, EGate), 15)(startDateTime, endDateTime, PortState(Iterable(), cms, sms)).get.toCsv
 
@@ -101,7 +106,9 @@ class CrunchMinutesToCSVDataTest extends Specification {
       StaffMinute(T1, startDateTime.millisSinceEpoch, 5, fixedPoints = 1, movements = -1)
     )
 
-    val expected = "2017-11-10,00:00,1,100,1,100,2,1,100,1,100,2,1,100,1,100,2,1,-1,4,4"
+    val expected =
+      """2017-11-10,00:00,1,100,1,100,2,1,100,1,100,2,1,100,1,100,2,1,-1,4,4
+        |""".stripMargin
 
     val summary: String = Exports.queueSummariesFromPortState(Seq(EeaDesk, NonEeaDesk, EGate), 15)(startDateTime, endDateTime, PortState(Iterable(), cms, sms)).get.toCsv
 

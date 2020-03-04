@@ -90,4 +90,33 @@ class ServerSDateSpec extends Specification {
       }
     }
   }
+  "Given a date of 2020-02-01" >> {
+    val baseDate = SDate("2020-02-01")
+    "When I ask for the inclusive number of days between that and the same date" >> {
+      val dateLaterInMonth = SDate("2020-02-01")
+      val daysDiff = baseDate.daysBetweenInclusive(dateLaterInMonth)
+      val oneDay = 1
+      s"I should get $oneDay" >> {
+        daysDiff === oneDay
+      }
+    }
+
+    "When I ask for the inclusive number of days between that and the next day" >> {
+      val dateLaterInMonth = SDate("2020-02-02")
+      val daysDiff = baseDate.daysBetweenInclusive(dateLaterInMonth)
+      val twoDays = 2
+      s"I should get $twoDays" >> {
+        daysDiff === twoDays
+      }
+    }
+
+    "When I ask for the inclusive number of days between that and the last day of the month (29th)" >> {
+      val dateLaterInMonth = SDate("2020-02-29")
+      val daysDiff = baseDate.daysBetweenInclusive(dateLaterInMonth)
+      val twentyNine = 29
+      s"I should get $twentyNine" >> {
+        daysDiff === twentyNine
+      }
+    }
+  }
 }
