@@ -10,6 +10,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.exports.summaries.flights.{TerminalFlightsSummary, TerminalFlightsWithActualApiSummary}
 import services.exports.summaries.queues.TerminalQueuesSummary
@@ -20,6 +21,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 
 object Exports {
+  val log: Logger = LoggerFactory.getLogger(getClass)
+
   def summaryForDaysCsvSource(startDate: SDateLike,
                               numberOfDays: Int,
                               now: () => SDateLike,
@@ -64,15 +67,21 @@ object Exports {
                            (implicit system: ActorSystem,
                             ec: ExecutionContext,
                             timeout: Timeout): Future[Option[TerminalSummaryLike]] = {
-    val askableActor: AskableActorRef = summaryActor
-    askableActor
+    val askableSummaryActor: AskableActorRef = summaryActor
+    askableSummaryActor
       .ask(request)
       .asInstanceOf[Future[Option[TerminalSummaryLike]]]
       .flatMap {
         case None =>
           extractDayFromPortStateForTerminal(terminal, from, queryPortState, fromPortState).flatMap {
             case None => Future(None)
-            case Some(extract) => askableActor.ask(extract).map(_ => Option(extract))
+            case Some(extract) => askableSummaryActor.ask(extract)
+              .map(_ => Option(extract))
+              .recoverWith{
+                case t =>
+                  log.error("Didn't get a summary from the summary actor", t)
+                  Future(None)
+              }
           }
         case someSummaries =>
           Future(someSummaries)

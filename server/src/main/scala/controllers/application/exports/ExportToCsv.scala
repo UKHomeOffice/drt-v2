@@ -3,7 +3,7 @@ package controllers.application.exports
 import akka.NotUsed
 import akka.actor.ActorRef
 import akka.stream.scaladsl.Source
-import akka.util.ByteString
+import akka.util.{ByteString, Timeout}
 import controllers.Application
 import drt.shared.Terminals.Terminal
 import drt.shared.{PortCode, PortState, SDateLike}
@@ -15,23 +15,37 @@ import services.exports.summaries.TerminalSummaryLike
 import services.graphstages.Crunch
 import services.graphstages.Crunch.{europeLondonTimeZone, getLocalLastMidnight}
 
+import scala.concurrent.duration._
+import scala.util.{Failure, Success, Try}
+
 trait ExportToCsv {
   self: Application =>
+
+  implicit val timeout: Timeout = new Timeout(5 seconds)
 
   def exportToCsv(start: SDateLike,
                   end: SDateLike,
                   description: String,
                   terminal: Terminal,
                   maybeSummaryActorProvider: Option[(SDateLike, Terminal) => ActorRef],
-                  summaryFromPortState: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike]): Result = {
+                  summaryFromPortState: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike])
+                 (implicit timeout: Timeout): Result = {
     if (airportConfig.terminals.toSet.contains(terminal)) {
       val startString = start.millisSinceEpoch.toString
       val endString = end.millisSinceEpoch.toString
       val exportSource = exportBetweenDates(startString, endString, terminal, description, maybeSummaryActorProvider, summaryFromPortState)
       val fileName = makeFileName(description, terminal, start, end, airportConfig.portCode)
 
-      sourceToCsvResponse(exportSource, fileName)
-    } else BadRequest(s"Invalid terminal $terminal")
+      Try(sourceToCsvResponse(exportSource, fileName)) match {
+        case Success(value) => value
+        case Failure(t) =>
+          log.error("Failed to get CSV export", t)
+          BadRequest("Failed to get CSV export")
+      }
+    } else {
+      log.error(s"Bad terminal: $terminal")
+      BadRequest(s"Invalid terminal $terminal")
+    }
   }
 
   def exportBetweenDates(start: String,
@@ -39,12 +53,13 @@ trait ExportToCsv {
                          terminal: Terminal,
                          description: String,
                          maybeSummaryActorProvider: Option[(SDateLike, Terminal) => ActorRef],
-                         summaryFromPortStateProvider: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike]): Source[String, NotUsed] = {
+                         summaryFromPortStateProvider: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike])
+                        (implicit timeout: Timeout): Source[String, NotUsed] = {
     val startPit = getLocalLastMidnight(SDate(start.toLong, europeLondonTimeZone))
     val endPit = getLocalLastMidnight(SDate(end.toLong, europeLondonTimeZone))
-    val numberOfDays = ((endPit.millisSinceEpoch - startPit.millisSinceEpoch).toInt / Crunch.oneDayMillis) + 1
+    val numberOfDays = (((endPit.millisSinceEpoch - startPit.millisSinceEpoch) / Crunch.oneDayMillis) + 1).toInt
 
-    log.info(s"Export $description for terminal $terminal between ${SDate(start.toLong).toISOString()} & ${SDate(end.toLong).toISOString()}")
+    log.info(s"Export $description for terminal $terminal between ${SDate(start.toLong).toISOString()} & ${SDate(end.toLong).toISOString()} ($numberOfDays days)")
 
     Exports.summaryForDaysCsvSource(startPit, numberOfDays, now, terminal, maybeSummaryActorProvider, queryPortStateActor, summaryFromPortStateProvider)
   }

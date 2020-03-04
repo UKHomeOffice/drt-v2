@@ -118,10 +118,6 @@ trait ProdPassengerSplitProviders {
     Option(CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(csvSplitsProvider(apiFlight.flightCode, MilliDate(apiFlight.Scheduled)), 0d, 0d))
 }
 
-trait ImplicitTimeoutProvider {
-  implicit val timeout: Timeout = Timeout(1 second)
-}
-
 trait UserRoleProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -162,8 +158,7 @@ class Application @Inject()(implicit val config: Configuration,
     with WithPortState
     with WithStaffing
     with WithVersion
-    with ProdPassengerSplitProviders
-    with ImplicitTimeoutProvider {
+    with ProdPassengerSplitProviders {
 
   val googleTrackingCode: String = config.get[String]("googleTrackingCode")
 

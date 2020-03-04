@@ -37,8 +37,8 @@ trait WithFlightsExport extends ExportToCsv {
                                               endHour: Int): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
     Action.apply {
       implicit request =>
-        val terminal = Terminal(terminalName)
         val start = Crunch.getLocalLastMidnight(SDate(pointInTime.toLong))
+        val terminal = Terminal(terminalName)
         val (summaryFromPortState, summaryActorProvider) = summaryProviderByRole(request, terminal)
         exportToCsv(start, start, "flights", terminal, summaryActorProvider, summaryFromPortState)
     }
@@ -49,9 +49,9 @@ trait WithFlightsExport extends ExportToCsv {
                                                   terminalName: String): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
     Action.apply {
       implicit request =>
-        val terminal = Terminal(terminalName)
         val start = Crunch.getLocalLastMidnight(SDate(startMillis.toLong))
         val end = Crunch.getLocalLastMidnight(SDate(endMillis.toLong))
+        val terminal = Terminal(terminalName)
         val (summaryFromPortState, summaryActorProvider) = summaryProviderByRole(request, terminal)
         exportToCsv(start, end, "flights", terminal, summaryActorProvider, summaryFromPortState)
     }

@@ -8,7 +8,7 @@ case class TerminalQueuesSummary(queues: Seq[Queue], summaries: Iterable[QueuesS
 
   import TerminalQueuesSummary._
 
-  override lazy val toCsv: String = summaries.map(_.toCsv).mkString(lineEnding)
+  override lazy val toCsv: String = summaries.map(_.toCsv).mkString(lineEnding) + lineEnding
 
   override lazy val csvHeader: String = {
     val relevantQueues = queues
