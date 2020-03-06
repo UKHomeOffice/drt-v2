@@ -3,14 +3,11 @@ package services.crunch
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
 import drt.shared.Terminals.T1
-import drt.shared.{PortState, Queues, SDateLike, TM, TQM}
+import drt.shared.{PortState, Queues, SDateLike}
 import org.specs2.matcher.Scope
 import org.specs2.mutable.Specification
+import services.SDate
 import services.exports.Exports
-import services.exports.summaries.queues.TerminalQueuesSummary
-import services.{CSVData, SDate}
-
-import scala.collection.SortedMap
 
 class CrunchMinutesToCSVDataTest extends Specification {
 

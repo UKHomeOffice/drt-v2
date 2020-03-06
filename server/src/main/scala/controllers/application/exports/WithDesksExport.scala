@@ -20,22 +20,22 @@ trait WithDesksExport extends ExportToCsv {
   def exportDesksAndQueuesAtPointInTimeCSV(pointInTime: String,
                                            terminalName: String,
                                            startHour: Int,
-                                           endHour: Int
-                                          ): Action[AnyContent] =
-    authByRole(DesksAndQueuesView) {
-      val terminal = Terminal(terminalName)
-      val start = Crunch.getLocalLastMidnight(SDate(pointInTime.toLong))
-      val summaryFromPortState = Exports.queueSummariesFromPortState(airportConfig.queuesByTerminal(terminal), 15)
-      Action(exportToCsv(start, start, "desks and queues", terminal, Option(summaryActorProvider), summaryFromPortState))
-    }
+                                           endHour: Int): Action[AnyContent] =
+    authByRole(DesksAndQueuesView)(export(pointInTime, pointInTime, terminalName))
 
   def exportDesksAndQueuesBetweenTimeStampsCSV(startMillis: String,
                                                endMillis: String,
-                                               terminalName: String): Action[AnyContent] = authByRole(DesksAndQueuesView) {
-    val terminal = Terminal(terminalName)
-    val start = Crunch.getLocalLastMidnight(SDate(startMillis.toLong))
-    val end = Crunch.getLocalLastMidnight(SDate(endMillis.toLong))
-    val summaryFromPortState = Exports.queueSummariesFromPortState(airportConfig.queuesByTerminal(terminal), 15)
-    Action(exportToCsv(start, end, "desks and queues", terminal, Option(summaryActorProvider), summaryFromPortState))
+                                               terminalName: String): Action[AnyContent] =
+    authByRole(DesksAndQueuesView)(export(startMillis, endMillis, terminalName))
+
+  private def localLastMidnight(pointInTime: String): SDateLike = Crunch.getLocalLastMidnight(SDate(pointInTime.toLong))
+
+  private def terminal(terminalName: String): Terminal = Terminal(terminalName)
+
+  private def export(startMillis: String, endMillis: String, terminalName: String): Action[AnyContent] = {
+    val start = localLastMidnight(startMillis)
+    val end = localLastMidnight(endMillis)
+    val summaryFromPortState = Exports.queueSummariesFromPortState(airportConfig.queuesByTerminal(terminal(terminalName)), 15)
+    Action(exportToCsv(start, end, "desks and queues", terminal(terminalName), Option(summaryActorProvider), summaryFromPortState))
   }
 }

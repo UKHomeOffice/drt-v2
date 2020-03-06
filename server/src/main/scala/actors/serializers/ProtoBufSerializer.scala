@@ -9,6 +9,7 @@ import server.protobuf.messages.FlightsMessage._
 import server.protobuf.messages.RegisteredArrivalMessage.{RegisteredArrivalMessage, RegisteredArrivalsMessage}
 import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
 import server.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
+import server.protobuf.messages.TerminalQueuesSummary.TerminalQueuesSummaryMessage
 import server.protobuf.messages.VoyageManifest.{VoyageManifestLatestFileNameMessage, VoyageManifestMessage, VoyageManifestStateSnapshotMessage, VoyageManifestsMessage}
 
 class ProtoBufSerializer extends SerializerWithStringManifest {
@@ -42,6 +43,7 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
   final val AlertSnapshot: String                 = classOf[AlertSnapshotMessage].getName
   final val RegisteredArrivals: String            = classOf[RegisteredArrivalsMessage].getName
   final val RegisteredArrival: String             = classOf[RegisteredArrivalMessage].getName
+  final val TerminalQueuesSummary: String         = classOf[TerminalQueuesSummaryMessage].getName
 
   override def toBinary(objectToSerialize: AnyRef): Array[Byte] = {
     objectToSerialize match {
@@ -71,6 +73,7 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case m: AlertSnapshotMessage => m.toByteArray
       case m: RegisteredArrivalMessage => m.toByteArray
       case m: RegisteredArrivalsMessage => m.toByteArray
+      case m: TerminalQueuesSummaryMessage => m.toByteArray
     }
   }
 
@@ -104,6 +107,7 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case Alerts                         => Alert.parseFrom(bytes)
       case RegisteredArrival              => RegisteredArrivalMessage.parseFrom(bytes)
       case RegisteredArrivals             => RegisteredArrivalsMessage.parseFrom(bytes)
+      case TerminalQueuesSummary          => TerminalQueuesSummaryMessage.parseFrom(bytes)
     }
   }
 }

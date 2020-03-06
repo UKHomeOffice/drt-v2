@@ -77,7 +77,7 @@ object Exports {
             case None => Future(None)
             case Some(extract) => askableSummaryActor.ask(extract)
               .map(_ => Option(extract))
-              .recoverWith{
+              .recoverWith {
                 case t =>
                   log.error("Didn't get a summary from the summary actor", t)
                   Future(None)
@@ -103,12 +103,13 @@ object Exports {
   }
 
   def queueSummariesFromPortState: (Seq[Queue], Int) => (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike] =
-    (queues: Seq[Queue], summaryLengthMinutes: Int) => (from: SDateLike, to: SDateLike, portState: PortState) => {
-      val queueSummaries = (from.millisSinceEpoch until to.millisSinceEpoch by summaryLengthMinutes * Crunch.oneMinuteMillis).map { millis =>
-        Summaries.terminalSummaryForPeriod(portState.crunchMinutes, portState.staffMinutes, queues, SDate(millis), summaryLengthMinutes)
+    (queues: Seq[Queue], summaryLengthMinutes: Int) =>
+      (from: SDateLike, to: SDateLike, portState: PortState) => {
+        val queueSummaries = (from.millisSinceEpoch until to.millisSinceEpoch by summaryLengthMinutes * Crunch.oneMinuteMillis).map { millis =>
+          Summaries.terminalSummaryForPeriod(portState.crunchMinutes, portState.staffMinutes, queues, SDate(millis), summaryLengthMinutes)
+        }
+        Option(TerminalQueuesSummary(queues, queueSummaries))
       }
-      Option(TerminalQueuesSummary(queues, queueSummaries))
-    }
 
   def flightSummariesFromPortState: Terminal => (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike] =
     (terminal: Terminal) => (from: SDateLike, to: SDateLike, portState: PortState) => {
