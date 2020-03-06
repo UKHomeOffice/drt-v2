@@ -1,17 +1,15 @@
-let moment = require('moment-timezone');
-require('moment/locale/en-gb');
+import moment from 'moment-timezone'
 moment.locale("en-gb");
 
-const todayAtUtcString = require('../support/time-helpers').todayAtUtcString
-const inDaysAtTimeUtcString = require('../support/time-helpers').inDaysAtTimeUtcString
+import { todayAtUtcString, inDaysAtTimeUtcString } from '../support/time-helpers'
 
-describe('View Modes', function () {
+describe('View Modes', () => {
 
   beforeEach(() => cy.deleteData());
 
-  describe('When switching between view modes in the app', function () {
+  describe('When switching between view modes in the app', () => {
 
-    it("should poll for updates when looking at future days", function () {
+    it("should poll for updates when looking at future days", () => {
       cy
         .asABorderForceOfficer()
         .navigateHome()
@@ -42,7 +40,7 @@ describe('View Modes', function () {
         .contains("TS0123")
     });
 
-    it("should poll for updates when looking at the live view", function () {
+    it("should poll for updates when looking at the live view", () => {
       cy
         .asABorderForceOfficer()
         .navigateHome()
@@ -60,7 +58,7 @@ describe('View Modes', function () {
         .contains("TS0123")
     });
 
-    it("should successfully load data when a url for a future date is requested", function () {
+    it("should successfully load data when a url for a future date is requested", () => {
       cy
         .addFlight({
           "ICAO": "TS0123",
@@ -75,7 +73,7 @@ describe('View Modes', function () {
 
     });
 
-    it("should poll for updates when switching from historic to live view", function () {
+    it("should poll for updates when switching from historic to live view", () => {
       cy
         .asABorderForceOfficer()
         .navigateHome()

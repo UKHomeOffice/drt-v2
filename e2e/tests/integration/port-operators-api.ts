@@ -1,15 +1,13 @@
-let moment = require('moment-timezone');
-require('moment/locale/en-gb');
+import moment from 'moment-timezone'
 moment.locale("en-gb");
 
-let todayAt = require('../support/time-helpers').todayAtUtc
-let todayAtString = require('../support/time-helpers').todayAtUtcString
+import { todayAtUtc, todayAtUtcString } from '../support/time-helpers'
 
 Cypress.Commands.add('downloadCsv', (terminalName, year, month, day) => {
-  cy.request({url: '/export/api/'+terminalName+'/'+year+'/'+month+'/'+day, failOnStatusCode: false})
+  cy.request({ url: '/export/api/' + terminalName + '/' + year + '/' + month + '/' + day, failOnStatusCode: false })
 });
 
-describe('Advanced Passenger Information Splits exposed to Port Operators', function () {
+describe('Advanced Passenger Information Splits exposed to Port Operators', () => {
   const now = moment.utc();
 
   const day = now.date();
@@ -28,32 +26,35 @@ describe('Advanced Passenger Information Splits exposed to Port Operators', func
     cy.deleteData();
   });
 
-  it("Bad Request when the date is invalid", function () {
+  it("Bad Request when the date is invalid", () => {
     cy
       .asAPortOperator()
-      .downloadCsv("T1", year, month, 40).then((response) => {
+      .downloadCsv("T1", year, month, 40)
+      .then((response) => {
         expect(response.status).to.eq(400);
       });
   });
 
-  it("Bad Request when the terminal is invalid", function () {
+  it("Bad Request when the terminal is invalid", () => {
     cy
       .setRoles(["test", "api:view-port-arrivals"])
-      .downloadCsv("InvalidTerminalName", year, month, day).then((response) => {
+      .downloadCsv("InvalidTerminalName", year, month, day)
+      .then((response) => {
         expect(response.status).to.eq(400);
       });
   });
 
-  it("Ok when there are arrivals on the date and user has the correct role", function () {
-    const localTimeScheduledDate = todayAt(0, 52).tz("Europe/London")
+  it("Ok when there are arrivals on the date and user has the correct role", () => {
+    const localTimeScheduledDate = todayAtUtc(0, 52).tz("Europe/London")
     cy
       .asATestSetupUser()
       .addFlight({
-        "SchDT": todayAtString(0, 52)
+        "SchDT": todayAtUtcString(0, 52)
       })
       .waitForFlightToAppear("TS0123")
       .asAPortOperator()
-      .downloadCsv("T1", year, month, day).then((response) => {
+      .downloadCsv("T1", year, month, day)
+      .then((response) => {
         expect(response.status).to.eq(200);
         expect(response.body).to.contain(header);
         expect(response.body).to.contain(localTimeScheduledDate.format("YYYY-MM-DD") + ',' + localTimeScheduledDate.format("HH:mm"));

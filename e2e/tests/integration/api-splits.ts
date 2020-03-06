@@ -1,16 +1,13 @@
-let moment = require('moment-timezone');
-require('moment/locale/en-gb');
+import moment from 'moment-timezone'
 moment.locale("en-gb");
 
-let todayAtUtc = require('../support/time-helpers').todayAtUtc
-let manifestForDateTime = require('../support/manifest-helpers').manifestForDateTime;
-let passengerProfiles = require('../support/manifest-helpers').passengerProfiles;
-let passengerList = require('../support/manifest-helpers').passengerList;
+import { manifestForDateTime, passengerProfiles } from '../support/manifest-helpers'
+import { todayAtUtc } from '../support/time-helpers'
 
 
 describe('API splits', () => {
 
-  beforeEach(function () {
+  beforeEach(() => {
     cy.deleteData();
   });
 
@@ -19,13 +16,13 @@ describe('API splits', () => {
   const scheduledDateString = scheduledTime.format("YYYY-MM-DD");
   const scheduledTimeString = scheduledTime.format("HH:mm:ss");
 
-  const manifest = (passengerList) => manifestForDateTime(
+  const manifest = (passengerList): object => manifestForDateTime(
     scheduledDateString,
     scheduledTimeString,
     passengerList
   )
 
-  function ofPassengerProfile(passengerProfile, qty) {
+  const ofPassengerProfile = (passengerProfile, qty): object[] => {
     return Array(qty).fill(passengerProfile);
   }
 

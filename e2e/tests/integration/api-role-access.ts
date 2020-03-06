@@ -1,8 +1,8 @@
-describe('Restrict access to endpoint by role', function () {
+import moment from 'moment-timezone'
+moment.locale("en-gb");
 
-  let moment = require('moment-timezone');
-  require('moment/locale/en-gb');
-  moment.locale("en-gb");
+describe('Restrict access to endpoint by role', () => {
+
   const todayDateString = moment().format("YYYY-MM-DD");
   const todayString = todayDateString + "T00:00:00Z";
   const millis = moment(todayString).unix() * 1000;
@@ -160,13 +160,13 @@ describe('Restrict access to endpoint by role', function () {
     },
     {
       roles: ["test", "desks-and-queues:view"],
-      endpoint: "/export/desks/"+millis+"/"+millis+"/T1",
+      endpoint: "/export/desks/" + millis + "/" + millis + "/T1",
       method: "GET",
       shouldBeGranted: true
     },
     {
       roles: ["test"],
-      endpoint: "/export/desks/"+millis+"/"+millis+"/T1",
+      endpoint: "/export/desks/" + millis + "/" + millis + "/T1",
       method: "GET",
       shouldBeGranted: false
     },
@@ -292,10 +292,10 @@ describe('Restrict access to endpoint by role', function () {
     }
   ]
 
-  describe('Restrict access by role', function () {
+  describe('Restrict access by role', () => {
 
     testCases.map(testCase => {
-      it("Expects " + (testCase.shouldBeGranted ? "access ALLOWED" : "access DENIED") + " for a "+ testCase.method + " request to " + testCase.endpoint + " with roles: [" + testCase.roles.join(", ") + "]", function () {
+      it("Expects " + (testCase.shouldBeGranted ? "access ALLOWED" : "access DENIED") + " for a " + testCase.method + " request to " + testCase.endpoint + " with roles: [" + testCase.roles.join(", ") + "]", () => {
 
         cy.setRoles(testCase.roles)
           .request({
@@ -306,8 +306,8 @@ describe('Restrict access to endpoint by role', function () {
           .then(resp => {
             const accessGranted = resp.status != 401
             expect(accessGranted)
-            .to
-            .eq(testCase.shouldBeGranted, "Role: " + testCase.roles.join(", ") + " has incorrect permissions to " + testCase.method + " on " + testCase.endpoint)
+              .to
+              .eq(testCase.shouldBeGranted, "Role: " + testCase.roles.join(", ") + " has incorrect permissions to " + testCase.method + " on " + testCase.endpoint)
           });
       });
     });

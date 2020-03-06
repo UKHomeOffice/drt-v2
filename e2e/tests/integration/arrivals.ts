@@ -1,8 +1,7 @@
-let moment = require('moment-timezone');
-require('moment/locale/en-gb');
+import moment from 'moment-timezone'
 moment.locale("en-gb");
 
-let todayAtUtcString = require('../support/time-helpers').todayAtUtcString
+import { todayAtUtcString } from '../support/time-helpers'
 
 describe('Arrivals page', () => {
 
@@ -39,50 +38,50 @@ describe('Arrivals page', () => {
     "PoavKey": "1",
     "NationalityCountryCode": "GBR"
   };
-  const visaNational = {
-    "DocumentIssuingCountryCode": "ZWE",
-    "PersonType": "P",
-    "DocumentLevel": "Primary",
-    "Age": "30",
-    "DisembarkationPortCode": "TST",
-    "InTransitFlag": "N",
-    "DisembarkationPortCountryCode": "TST",
-    "NationalityCountryEEAFlag": "",
-    "PassengerIdentifier": "",
-    "DocumentType": "P",
-    "PoavKey": "2",
-    "NationalityCountryCode": "ZWE"
-  };
-  const nonVisaNational = {
-    "DocumentIssuingCountryCode": "MRU",
-    "PersonType": "P",
-    "DocumentLevel": "Primary",
-    "Age": "30",
-    "DisembarkationPortCode": "TST",
-    "InTransitFlag": "N",
-    "DisembarkationPortCountryCode": "TST",
-    "NationalityCountryEEAFlag": "",
-    "PassengerIdentifier": "",
-    "DocumentType": "P",
-    "PoavKey": "3",
-    "NationalityCountryCode": "MRU"
-  };
-  const b5JNational = {
-    "DocumentIssuingCountryCode": "AUS",
-    "PersonType": "P",
-    "DocumentLevel": "Primary",
-    "Age": "30",
-    "DisembarkationPortCode": "TST",
-    "InTransitFlag": "N",
-    "DisembarkationPortCountryCode": "TST",
-    "NationalityCountryEEAFlag": "",
-    "PassengerIdentifier": "",
-    "DocumentType": "P",
-    "PoavKey": "3",
-    "NationalityCountryCode": "AUS"
-  };
+  // const visaNational = {
+  //   "DocumentIssuingCountryCode": "ZWE",
+  //   "PersonType": "P",
+  //   "DocumentLevel": "Primary",
+  //   "Age": "30",
+  //   "DisembarkationPortCode": "TST",
+  //   "InTransitFlag": "N",
+  //   "DisembarkationPortCountryCode": "TST",
+  //   "NationalityCountryEEAFlag": "",
+  //   "PassengerIdentifier": "",
+  //   "DocumentType": "P",
+  //   "PoavKey": "2",
+  //   "NationalityCountryCode": "ZWE"
+  // };
+  // const nonVisaNational = {
+  //   "DocumentIssuingCountryCode": "MRU",
+  //   "PersonType": "P",
+  //   "DocumentLevel": "Primary",
+  //   "Age": "30",
+  //   "DisembarkationPortCode": "TST",
+  //   "InTransitFlag": "N",
+  //   "DisembarkationPortCountryCode": "TST",
+  //   "NationalityCountryEEAFlag": "",
+  //   "PassengerIdentifier": "",
+  //   "DocumentType": "P",
+  //   "PoavKey": "3",
+  //   "NationalityCountryCode": "MRU"
+  // };
+  // const b5JNational = {
+  //   "DocumentIssuingCountryCode": "AUS",
+  //   "PersonType": "P",
+  //   "DocumentLevel": "Primary",
+  //   "Age": "30",
+  //   "DisembarkationPortCode": "TST",
+  //   "InTransitFlag": "N",
+  //   "DisembarkationPortCountryCode": "TST",
+  //   "NationalityCountryEEAFlag": "",
+  //   "PassengerIdentifier": "",
+  //   "DocumentType": "P",
+  //   "PoavKey": "3",
+  //   "NationalityCountryCode": "AUS"
+  // };
 
-  function manifest(passengerList) {
+  const manifest = (passengerList): object => {
     const schDateString = moment().format("YYYY-MM-DD");
     const schTimeString = "00:55:00";
 
@@ -103,7 +102,7 @@ describe('Arrivals page', () => {
       "FileId": "fileID",
       "PassengerList": passengerList
     }
-  };
+  }
 
   it('Displays a flight after it has been ingested via the live feed', () => {
     cy
@@ -206,7 +205,7 @@ describe('Arrivals page', () => {
 
   });
 
-  function ukPassportWithIdentifier(id) {
+  const ukPassportWithIdentifier = (id): object => {
     return {
       "DocumentIssuingCountryCode": "GBR",
       "PersonType": "P",
