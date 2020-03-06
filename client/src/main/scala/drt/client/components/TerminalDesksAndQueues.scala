@@ -39,6 +39,7 @@ object TerminalDesksAndQueues {
                    airportConfig: AirportConfig,
                    terminalPageTab: TerminalPageTabLoc,
                    showActuals: Boolean,
+                   showWaitTime: Boolean,
                    viewMode: ViewMode,
                    loggedInUser: LoggedInUser
                   ) extends UseValueEq
@@ -55,7 +56,7 @@ object TerminalDesksAndQueues {
     override val queryParamsValue: String = "deps"
   }
 
-  case class State(showActuals: Boolean, viewType: ViewType)
+  case class State(showActuals: Boolean, viewType: ViewType, showWaitColumn: Boolean)
 
   implicit val stateReuse: Reusability[State] = Reusability.by_==[State]
   implicit val propsReuse: Reusability[Props] = Reusability.by_==[Props]
@@ -99,8 +100,32 @@ object TerminalDesksAndQueues {
         else headings
       }
 
-      def subHeadingLevel2(queueNames: Seq[Queue]) = {
-        val queueSubHeadings = queueNames.flatMap(queueName => <.th(^.className := queueColour(queueName), "Pax") :: staffDeploymentSubheadings(queueName)).toTagMod
+
+      def staffDeploymentWithoutWaitColumnSubheadings(queueName: Queue): List[VdomTagOf[TableHeaderCell]] = {
+        val queueColumnClass = queueColour(queueName)
+        val queueColumnActualsClass = queueActualsColour(queueName)
+        val headings = state.viewType match {
+          case ViewDeps =>
+            List(
+              <.th(^.title := "Suggested deployment given available staff", s"Dep ${deskUnitLabel(queueName)}", ^.className := queueColumnClass))
+          case ViewRecs =>
+            List(
+              <.th(^.title := "Recommendations to best meet SLAs", s"Rec ${deskUnitLabel(queueName)}", ^.className := queueColumnClass))
+        }
+
+        if (props.airportConfig.hasActualDeskStats && state.showActuals)
+          headings ++ List(
+            <.th(^.title := "Actual desks used", s"Act ${deskUnitLabel(queueName)}", ^.className := queueColumnActualsClass)
+          )
+        else headings
+      }
+
+      def staffDeploymentSubheadingsSelect(queueName: Queue, showWaitColumn: Boolean) = {
+        if (showWaitColumn) staffDeploymentSubheadings(queueName) else staffDeploymentWithoutWaitColumnSubheadings(queueName)
+      }
+
+      def subHeadingLevel2(queueNames: Seq[Queue], showWaitColumn: Boolean) = {
+        val queueSubHeadings = queueNames.flatMap(queueName => <.th(^.className := queueColour(queueName), "Pax") :: staffDeploymentSubheadingsSelect(queueName, showWaitColumn)).toTagMod
 
         List(queueSubHeadings,
           <.th(^.className := "non-pcp", "Misc", ^.title := "Miscellaneous staff"),
@@ -114,7 +139,8 @@ object TerminalDesksAndQueues {
 
       val queueHeadings: List[TagMod] = queueNames.map(queue => {
         val colsToSpan = if (state.showActuals) 5 else 3
-        qth(queue, queueDisplayName(queue.toString), ^.colSpan := colsToSpan, ^.className := "top-heading")
+        val colSpanHide = if (state.showWaitColumn) colsToSpan else colsToSpan - 1
+        qth(queue, queueDisplayName(queue.toString), ^.colSpan := colSpanHide, ^.className := "top-heading")
       }).toList
 
       val headings: List[TagMod] = queueHeadings ++ List(
@@ -135,6 +161,12 @@ object TerminalDesksAndQueues {
         backendScope.modState(_.copy(showActuals = newValue))
       }
 
+      val toggleWaitColumn = (e: ReactEventFromInput) => {
+        val newValue: Boolean = e.target.checked
+        backendScope.modState(_.copy(showWaitColumn = newValue))
+      }
+
+
       def toggleViewType(newViewType: ViewType) = (_: ReactEventFromInput) => {
         GoogleEventTracker.sendEvent(s"$terminal", "Desks & Queues", newViewType.toString)
         props.router.set(
@@ -154,6 +186,15 @@ object TerminalDesksAndQueues {
           )).toTagMod
       }
 
+
+      def viewWaitTimeControls: TagMod = {
+        List(
+          <.div(^.className := s"selector-control view-type-control $viewRecsClass",
+            <.input.checkbox(^.checked := state.showWaitColumn, ^.onChange ==> toggleWaitColumn, ^.id := "toggle-showWaitingTime"),
+            <.label(^.`for` := "show-waitTime", "Toggle Wait Time")
+          )).toTagMod
+      }
+
       def showActualsClass = if (state.showActuals) "active-control" else ""
 
       def viewRecsClass = if (state.viewType == ViewRecs) "active-control" else ""
@@ -164,18 +205,18 @@ object TerminalDesksAndQueues {
 
       val classesAttr = ^.cls := s"table table-striped table-hover table-sm user-desk-recs"
 
-      def floatingHeader = {
+      def floatingHeader(showWaitColumn: Boolean) = {
         <.div(^.id := "toStick", ^.className := "container sticky",
           <.table(classesAttr,
             <.thead(
               <.tr(<.th("") :: headings: _*),
-              <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(queueNames): _*)),
+              <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(queueNames, showWaitColumn): _*)),
             <.tbody()
           ))
       }
 
       <.div(
-        floatingHeader,
+        floatingHeader(state.showWaitColumn),
         <.div(
           if (props.airportConfig.hasActualDeskStats) {
             <.div(^.className := s"selector-control deskstats-control $showActualsClass",
@@ -184,7 +225,8 @@ object TerminalDesksAndQueues {
             )
           } else "",
           StaffMissingWarningComponent(terminalStaffMinutes, props.loggedInUser, props.router, props.terminalPageTab),
-          viewTypeControls(viewDepsClass, viewRecsClass)
+          viewTypeControls(viewDepsClass, viewRecsClass),
+          viewWaitTimeControls
         ),
         <.table(
           ^.id := "sticky",
@@ -192,7 +234,7 @@ object TerminalDesksAndQueues {
           <.thead(
             dataStickyAttr,
             <.tr(<.th("") :: headings: _*),
-            <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(queueNames): _*)),
+            <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(queueNames, state.showWaitColumn): _*)),
           <.tbody(
             ^.id := "sticky-body",
             viewMinutes.map { millis =>
@@ -207,7 +249,8 @@ object TerminalDesksAndQueues {
                 props.airportConfig.hasActualDeskStats,
                 props.viewMode,
                 props.loggedInUser,
-                slotMinutes
+                slotMinutes,
+                state.showWaitColumn
               )
               TerminalDesksAndQueuesRow(rowProps)
             }.toTagMod))
@@ -218,7 +261,7 @@ object TerminalDesksAndQueues {
   }
 
   val component = ScalaComponent.builder[Props]("Loader")
-    .initialStateFromProps(p => State(showActuals = p.airportConfig.hasActualDeskStats && p.showActuals, p.terminalPageTab.viewType))
+    .initialStateFromProps(p => State(showActuals = p.airportConfig.hasActualDeskStats && p.showActuals, p.terminalPageTab.viewType, showWaitColumn = p.showWaitTime))
     .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
     .componentDidMount(_ => StickyTableHeader("[data-sticky]"))
