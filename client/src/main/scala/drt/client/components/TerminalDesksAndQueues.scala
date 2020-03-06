@@ -122,9 +122,13 @@ object TerminalDesksAndQueues {
       def qth(queue: Queue, xs: TagMod*) = <.th((^.className := queue.toString.toLowerCase + "-user-desk-rec") :: xs.toList: _*)
 
       val queueHeadings: List[TagMod] = queueNames.map(queue => {
-        val colsToSpan = if (state.showActuals) 5 else 3
-        val colSpanHide = if (state.showWaitColumn) colsToSpan else colsToSpan - 1
-        qth(queue, queueDisplayName(queue.toString), ^.colSpan := colSpanHide, ^.className := "top-heading")
+        val colsToSpan = (state.showWaitColumn , state.showActuals) match {
+          case (true,true) => 5
+          case (false,true) =>  4
+          case (true,false)  => 3
+          case (false,false)  => 2
+        }
+        qth(queue, queueDisplayName(queue.toString), ^.colSpan := colsToSpan, ^.className := "top-heading")
       }).toList
 
       val headings: List[TagMod] = queueHeadings ++ List(
