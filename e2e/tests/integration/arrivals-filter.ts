@@ -1,8 +1,7 @@
-let moment = require('moment-timezone');
-require('moment/locale/en-gb');
+import moment from 'moment-timezone'
 moment.locale("en-gb");
 
-let todayAtUtcString = require('../support/time-helpers').todayAtUtcString
+import { todayAtUtcString } from '../support/time-helpers'
 
 describe('Arrivals page filter', () => {
 

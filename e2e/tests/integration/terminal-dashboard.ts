@@ -1,9 +1,8 @@
-let moment = require('moment-timezone');
-require('moment/locale/en-gb');
+import moment from 'moment-timezone'
 moment.locale("en-gb");
-let todayAtString = require('../support/time-helpers').todayAtUtcString
+import { todayAtUtcString as todayAtString } from '../support/time-helpers'
 
-describe('Viewing the terminal dashboard page', function () {
+describe('Viewing the terminal dashboard page', () => {
 
   beforeEach(function () {
     cy.deleteData();
@@ -18,7 +17,7 @@ describe('Viewing the terminal dashboard page', function () {
       })
       .asABorderForceOfficer()
       .navigateHome()
-      .visit("/#terminal/T1/dashboard/15/?start=" + todayAtString(14,15))
+      .visit("/#terminal/T1/dashboard/15/?start=" + todayAtString(14, 15))
       .get(".pax-bar")
       .contains("51 passengers")
       .get(".time-label")
@@ -67,7 +66,7 @@ describe('Viewing the terminal dashboard page', function () {
       })
       .asABorderForceOfficer()
       .navigateHome()
-      .visit("/#terminal/T1/dashboard/15/?start=" + todayAtString(14,15))
+      .visit("/#terminal/T1/dashboard/15/?start=" + todayAtString(14, 15))
       .get("a.terminal-dashboard-side__sidebar_widget").click()
       .get(".dashboard-arrivals-popup tbody tr").contains("TS0123")
       .get(".dashboard-arrivals-popup tbody tr").should('have.length', 1)

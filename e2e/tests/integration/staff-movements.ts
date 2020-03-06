@@ -1,21 +1,19 @@
-let moment = require('moment-timezone');
-require('moment/locale/en-gb');
+import moment from 'moment-timezone'
 moment.locale("en-gb");
 
-describe('Staff movements', function () {
-  var userName = "Unknown";
+describe('Staff movements', () => {
 
   beforeEach(function () {
-    var schDT = new Date().toISOString().split("T")[0];
+    // const schDT = new Date().toISOString().split("T")[0];
     cy.deleteData()
-      .addFlight();
+      .addFlight({});
   });
 
-  function midnightThisMorning() {
+  const midnightThisMorning = (): moment => {
     return moment().tz('Europe/London').startOf('day');
   }
 
-  function shifts(numberOfStaff) {
+  const shifts = (numberOfStaff): object => {
     return {
       "shifts": [
         { "port_code": "test", "terminal": "T1", "staff": String(numberOfStaff), "shift_start": midnightThisMorning().toISOString() },
@@ -26,8 +24,8 @@ describe('Staff movements', function () {
     };
   }
 
-  describe('When adding staff movements on the desks and queues page', function () {
-    it("Should update the available staff when 1 staff member is added for 1 hour, and record the correct reason", function () {
+  describe('When adding staff movements on the desks and queues page', () => {
+    it("Should update the available staff when 1 staff member is added for 1 hour, and record the correct reason", () => {
       cy
         .asABorderForcePlanningOfficer()
         .navigateHome()
@@ -45,7 +43,7 @@ describe('Staff movements', function () {
         .removeXMovements(1);
     });
 
-    it("Should update the available staff when 1 staff member is removed for 1 hour", function () {
+    it("Should update the available staff when 1 staff member is removed for 1 hour", () => {
       cy
         .asABorderForcePlanningOfficer()
         .saveShifts(shifts(2))
@@ -64,7 +62,7 @@ describe('Staff movements', function () {
         .removeXMovements(1);
     });
 
-    it("Should update the available staff when 2 staff members are added for 1 hour, and record the reason", function () {
+    it("Should update the available staff when 2 staff members are added for 1 hour, and record the reason", () => {
       cy
         .asABorderForceOfficer()
         .navigateHome()
@@ -100,7 +98,7 @@ Cypress.Commands.add('selectAdditionalReason', (reason) => {
     .type(reason)
 });
 
-Cypress.Commands.add('incrementStaffInput', (reason) => {
+Cypress.Commands.add('incrementStaffInput', () => {
   cy
     .get('.staff-adjustment--num-staff__increase')
     .click()
@@ -112,13 +110,13 @@ Cypress.Commands.add('staffDeployedAtRow', (row) => {
 });
 
 Cypress.Commands.add('staffMovementsAtRow', (row) => {
-  const selector = 'td.non-pcp:nth($index)';
-  cy.get(selector.replace('$index', row * 2 + 1));
+  const selector = `td.non-pcp:nth(${row * 2 + 1})`
+  cy.get(selector);
 });
 
 Cypress.Commands.add('staffAvailableAtRow', (row) => {
-  const selector = ':nth-child($index) > .staff-adjustments > :nth-child(1) > .deployed';
-  cy.get(selector.replace('$index', row + 1));
+  const selector = `:nth-child(${row + 1}) > .staff-adjustments > :nth-child(1) > .deployed`;
+  cy.get(selector);
 });
 
 Cypress.Commands.add('staffOverTheDayAtSlot', (slot) => {
@@ -166,7 +164,7 @@ Cypress.Commands.add('removeXMovements', (numToRemove) => {
 Cypress.Commands.add('checkUserNameOnMovementsTab', (numMovements, userName) => {
   cy.get('.movement-display')
     .should('have.length', numMovements)
-    .each(($element, index, $lis) => {
+    .each(($element) => {
       cy.wrap($element).contains(userName);
       cy.wrap($element);
     });
