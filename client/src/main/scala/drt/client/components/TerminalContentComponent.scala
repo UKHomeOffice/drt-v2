@@ -149,6 +149,7 @@ object TerminalContentComponent {
                       props.airportConfig,
                       props.terminalPageTab,
                       props.showActuals,
+                      false,
                       props.viewMode,
                       props.loggedInUser
                     )
