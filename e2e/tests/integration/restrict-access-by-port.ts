@@ -1,19 +1,19 @@
-describe('Restrict access by port', function () {
+describe('Restrict access by port', () => {
 
   Cypress.Commands.add('assertAccessRestricted', () => {
     cy.get('#access-restricted').should('exist')
       .get('#email-for-access').should('exist');
   });
 
-  describe('Restrict access by port', function () {
+  describe('Restrict access by port', () => {
 
-    it("When I have the correct permission to view the port I see the app", function () {
+    it("When I have the correct permission to view the port I see the app", () => {
       cy
         .asATestPortUser()
         .navigateHome().then(() => cy.contains('.navbar-drt', 'DRT TEST'));
     });
 
-    it("During business hours I should see only the DRT Team contact address but Out of Hours I should see the Support phone number", function () {
+    it("During business hours I should see only the DRT Team contact address but Out of Hours I should see the Support phone number", () => {
       cy.server()
       cy
         .route({ method: 'GET', url: 'ooh-status', status: 200, response: { "localTime": "2019-08-12 16:58", "isOoh": true }, delay: 100, })
@@ -36,7 +36,7 @@ describe('Restrict access by port', function () {
     });
 
 
-    it("When I only have permission to view LHR I see access restricted page with a link to LHR only", function () {
+    it("When I only have permission to view LHR I see access restricted page with a link to LHR only", () => {
       cy
         .asAnLHRPortUser()
         .navigateHome()
@@ -48,7 +48,7 @@ describe('Restrict access by port', function () {
         .should('not.exist');
     });
 
-    it("When I have permission to view LHR and LGW I see access restricted page with a link to both ports", function () {
+    it("When I have permission to view LHR and LGW I see access restricted page with a link to both ports", () => {
       cy
         .setRoles(["LHR", "LGW"])
         .navigateHome()

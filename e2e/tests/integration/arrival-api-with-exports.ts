@@ -1,10 +1,8 @@
-let moment = require('moment-timezone');
-require('moment/locale/en-gb');
+import moment from 'moment-timezone'
 moment.locale("en-gb");
 
-let todayAtUtcString = require('../support/time-helpers').todayAtUtcString;
-let manifestForDateTime = require('../support/manifest-helpers').manifestForDateTime;
-let passengerList = require('../support/manifest-helpers').passengerList;
+import { manifestForDateTime, passengerList } from '../support/manifest-helpers'
+import { todayAtUtcString } from '../support/time-helpers'
 
 describe('Arrivals CSV Export', () => {
 
@@ -28,7 +26,7 @@ describe('Arrivals CSV Export', () => {
     cy.deleteData();
   });
 
-  const manifest = (passengerList) => manifestForDateTime(schDateString, schTimeString, passengerList)
+  const manifest = (passengerList): object => manifestForDateTime(schDateString, schTimeString, passengerList)
 
   const schTimeLocal = moment(schString).tz("Europe/London").format("HH:mm")
   const estTimeLocal = moment(estString).tz("Europe/London").format("HH:mm")

@@ -1,7 +1,7 @@
 
-describe('Port switcher menu', function () {
+describe('Port switcher menu', () => {
 
-  it("should not be visible when a user has access to one port only", function () {
+  it("should not be visible when a user has access to one port only", () => {
     cy
       .asABorderForceOfficer()
       .navigateHome()
@@ -10,7 +10,7 @@ describe('Port switcher menu', function () {
       .should('have.length', 3)
   });
 
-  it("should be visible as a single link if the user has access to 2 ports", function () {
+  it("should be visible as a single link if the user has access to 2 ports", () => {
     cy
       .asABorderForceOfficerWithRoles(["LHR"])
       .navigateHome()
@@ -21,9 +21,9 @@ describe('Port switcher menu', function () {
       .contains("LHR")
   });
 
-  it("should be a drop down menu for users with access to more than 2 ports", function () {
+  it("should be a drop down menu for users with access to more than 2 ports", () => {
     cy
-      .asABorderForceOfficerWithRoles(["LHR","STN", "LGW"])
+      .asABorderForceOfficerWithRoles(["LHR", "STN", "LGW"])
       .navigateHome()
       .get('.dropdown > a')
       .click()

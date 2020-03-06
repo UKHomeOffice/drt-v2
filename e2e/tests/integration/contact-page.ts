@@ -1,6 +1,6 @@
-describe('Contact page', function () {
+describe('Contact page', () => {
 
-  it("Clicking on the contact page out of hours should display the OOH support message", function () {
+  it("Clicking on the contact page out of hours should display the OOH support message", () => {
     cy.server()
     cy
       .route({ method: 'GET', url: 'ooh-status', status: 200, response: { "localTime": "2019-08-12 16:58", "isOoh": true }, delay: 100, })
@@ -16,7 +16,7 @@ describe('Contact page', function () {
       .contains("For urgent issues contact our out of hours support team on 012345.");
   });
 
-  it("Clicking on the contact page during office hours should display the office hours support message", function () {
+  it("Clicking on the contact page during office hours should display the office hours support message", () => {
     cy.server()
     cy
       .route({ method: 'GET', url: 'ooh-status', status: 200, response: { "localTime": "2019-08-12 16:58", "isOoh": false }, delay: 100, })
