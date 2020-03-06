@@ -49,9 +49,12 @@ object TerminalDesksAndQueuesRow {
     .render_P(props => {
       val crunchMinutesByQueue = props.queueMinutes.filter(qm => props.airportConfig.queuesByTerminal(props.terminal).contains(qm.queue)).map(
         qm => Tuple2(qm.queue, qm)).toMap
+
       val queueTds = crunchMinutesByQueue.flatMap {
         case (qn, cm) =>
           val paxLoadTd = <.td(^.className := queueColour(qn), s"${Math.round(cm.paxLoad)}")
+          def deployDeskTd(ragClass:String) = <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"Dep: ${cm.deployedDesks.getOrElse("-")}", s"${cm.deskRec}")
+          def deployRecsDeskTd(ragClass:String) = <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"Rec: ${cm.deskRec}", s"${cm.deployedDesks.getOrElse("-")}")
           val queueCells = props.viewType match {
             case ViewDeps =>
               val ragClass = cm.deployedWait.getOrElse(0).toDouble / props.airportConfig.slaByQueue(qn) match {
@@ -60,31 +63,28 @@ object TerminalDesksAndQueuesRow {
                 case _ => ""
               }
               if(props.showWaitColumn){
-                List(paxLoadTd,
-                  <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"Rec: ${cm.deskRec}", s"${cm.deployedDesks.getOrElse("-")}"),
-                  <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"With rec: ${cm.waitTime}", s"${cm.deployedWait.map(Math.round(_)).getOrElse("-")}"))
+                List(paxLoadTd, deployRecsDeskTd(ragClass), <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"With rec: ${cm.waitTime}", s"${cm.deployedWait.map(Math.round(_)).getOrElse("-")}"))
               }else {
-                List(paxLoadTd, <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"Rec: ${cm.deskRec}", s"${cm.deployedDesks.getOrElse("-")}"))
+                List(paxLoadTd,deployRecsDeskTd(ragClass))
               }
             case ViewRecs =>
-              val ragClass = slaRagStatus(cm.waitTime.toDouble, props.airportConfig.slaByQueue(qn))
+              val ragClass: String = slaRagStatus(cm.waitTime.toDouble, props.airportConfig.slaByQueue(qn))
               if(props.showWaitColumn) {
-                List(paxLoadTd,
-                  <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"Dep: ${cm.deployedDesks.getOrElse("-")}", s"${cm.deskRec}"),
-                  <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"With Dep: ${cm.waitTime}", s"${Math.round(cm.waitTime)}"))
+                List(paxLoadTd, deployDeskTd(ragClass), <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"With Dep: ${cm.waitTime}", s"${Math.round(cm.waitTime)}"))
               } else {
-                List(paxLoadTd, <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"Dep: ${cm.deployedDesks.getOrElse("-")}", s"${cm.deskRec}"))
+                List(paxLoadTd, deployDeskTd(ragClass))
               }
           }
 
+          def queueActualsTd(actDesks:String) = <.td(^.className := queueActualsColour(qn), actDesks)
 
           if (props.showActuals) {
             val actDesks: String = cm.actDesks.map(act => s"$act").getOrElse("-")
             val actWaits: String = cm.actWait.map(act => s"$act").getOrElse("-")
             if(props.showWaitColumn)
-            queueCells ++ Seq(<.td(^.className := queueActualsColour(qn), actDesks), <.td(^.className := queueActualsColour(qn), actWaits))
+            queueCells ++ Seq(queueActualsTd(actDesks), <.td(^.className := queueActualsColour(qn), actWaits))
             else
-              queueCells ++ Seq(<.td(^.className := queueActualsColour(qn), actDesks))
+              queueCells ++ Seq(queueActualsTd(actDesks))
           } else queueCells
       }
       val fixedPoints = props.staffMinute.fixedPoints

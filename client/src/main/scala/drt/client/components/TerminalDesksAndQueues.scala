@@ -79,53 +79,37 @@ object TerminalDesksAndQueues {
         props.airportConfig.nonTransferQueues(terminal)
       }
 
-      def staffDeploymentSubheadings(queueName: Queue): List[VdomTagOf[TableHeaderCell]] = {
+      def staffDeploymentSubheadings(queueName: Queue,showWaitColumn: Boolean): List[VdomTagOf[TableHeaderCell]] = {
         val queueColumnClass = queueColour(queueName)
         val queueColumnActualsClass = queueActualsColour(queueName)
-        val headings = state.viewType match {
-          case ViewDeps =>
-            List(
-              <.th(^.title := "Suggested deployment given available staff", s"Dep ${deskUnitLabel(queueName)}", ^.className := queueColumnClass),
-              <.th(^.title := "Wait times with suggested deployments", "Est wait", ^.className := queueColumnClass))
-          case ViewRecs =>
-            List(
-              <.th(^.title := "Recommendations to best meet SLAs", s"Rec ${deskUnitLabel(queueName)}", ^.className := queueColumnClass),
-              <.th(^.title := "Wait times with recommendations", "Est wait", ^.className := queueColumnClass))
+
+        def staffSubheadingsTh(title:String, viewType: String) = <.th(^.title := title, s"$viewType ${deskUnitLabel(queueName)}", ^.className := queueColumnClass)
+
+        val waitTimeSubheadingsTh = <.th(^.title := "Wait times with suggested deployments", "Est wait", ^.className := queueColumnClass)
+
+        val headings = (state.viewType,showWaitColumn) match {
+          case (ViewDeps,true) =>
+            List(staffSubheadingsTh("Suggested deployment given available staff",ViewDeps.queryParamsValue),waitTimeSubheadingsTh)
+          case (ViewRecs,true) =>
+            List(staffSubheadingsTh("Recommendations to best meet SLAs",ViewRecs.queryParamsValue),waitTimeSubheadingsTh)
+          case (ViewDeps,false) =>
+            List(staffSubheadingsTh("Suggested deployment given available staff",ViewDeps.queryParamsValue))
+          case (ViewRecs,false) =>
+            List(staffSubheadingsTh("Recommendations to best meet SLAs",ViewRecs.queryParamsValue))
         }
 
-        if (props.airportConfig.hasActualDeskStats && state.showActuals)
-          headings ++ List(
-            <.th(^.title := "Actual desks used", s"Act ${deskUnitLabel(queueName)}", ^.className := queueColumnActualsClass),
+        (props.airportConfig.hasActualDeskStats && state.showActuals,showWaitColumn) match {
+          case (true,true) => headings ++ List(
+            staffSubheadingsTh( "Actual desks used","Act"),
             <.th(^.title := "Actual wait times", "Act wait", ^.className := queueColumnActualsClass))
-        else headings
-      }
-
-
-      def staffDeploymentWithoutWaitColumnSubheadings(queueName: Queue): List[VdomTagOf[TableHeaderCell]] = {
-        val queueColumnClass = queueColour(queueName)
-        val queueColumnActualsClass = queueActualsColour(queueName)
-        val headings = state.viewType match {
-          case ViewDeps =>
-            List(
-              <.th(^.title := "Suggested deployment given available staff", s"Dep ${deskUnitLabel(queueName)}", ^.className := queueColumnClass))
-          case ViewRecs =>
-            List(
-              <.th(^.title := "Recommendations to best meet SLAs", s"Rec ${deskUnitLabel(queueName)}", ^.className := queueColumnClass))
+          case (true,false) => headings ++ List(staffSubheadingsTh( "Actual desks used","Act"))
+          case (false,_) => headings
         }
 
-        if (props.airportConfig.hasActualDeskStats && state.showActuals)
-          headings ++ List(
-            <.th(^.title := "Actual desks used", s"Act ${deskUnitLabel(queueName)}", ^.className := queueColumnActualsClass)
-          )
-        else headings
-      }
-
-      def staffDeploymentSubheadingsSelect(queueName: Queue, showWaitColumn: Boolean) = {
-        if (showWaitColumn) staffDeploymentSubheadings(queueName) else staffDeploymentWithoutWaitColumnSubheadings(queueName)
       }
 
       def subHeadingLevel2(queueNames: Seq[Queue], showWaitColumn: Boolean) = {
-        val queueSubHeadings = queueNames.flatMap(queueName => <.th(^.className := queueColour(queueName), "Pax") :: staffDeploymentSubheadingsSelect(queueName, showWaitColumn)).toTagMod
+        val queueSubHeadings = queueNames.flatMap(queueName => <.th(^.className := queueColour(queueName), "Pax") :: staffDeploymentSubheadings(queueName, showWaitColumn)).toTagMod
 
         List(queueSubHeadings,
           <.th(^.className := "non-pcp", "Misc", ^.title := "Miscellaneous staff"),
@@ -191,7 +175,7 @@ object TerminalDesksAndQueues {
         List(
           <.div(^.className := s"selector-control view-type-control $viewRecsClass",
             <.input.checkbox(^.checked := state.showWaitColumn, ^.onChange ==> toggleWaitColumn, ^.id := "toggle-showWaitingTime"),
-            <.label(^.`for` := "show-waitTime", "Toggle Wait Time")
+            <.label(^.`for` := "toggle-showWaitingTime", "Display wait times")
           )).toTagMod
       }
 
