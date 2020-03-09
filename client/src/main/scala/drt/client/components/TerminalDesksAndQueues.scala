@@ -83,7 +83,7 @@ object TerminalDesksAndQueues {
         val queueColumnClass = queueColour(queueName)
         val queueColumnActualsClass = queueActualsColour(queueName)
 
-        def staffSubheadingsTh(title:String, viewType: String) = <.th(^.title := title, s"$viewType ${deskUnitLabel(queueName)}", ^.className := queueColumnClass)
+        def staffSubheadingsTh(title:String, viewType: String) = <.th(^.title := title, s"$viewType ${deskUnitLabel(queueName)}", ^.className := queueColumnActualsClass)
 
         val waitTimeSubheadingsTh = <.th(^.title := "Wait times with suggested deployments", "Est wait", ^.className := queueColumnClass)
 
@@ -122,9 +122,12 @@ object TerminalDesksAndQueues {
       def qth(queue: Queue, xs: TagMod*) = <.th((^.className := queue.toString.toLowerCase + "-user-desk-rec") :: xs.toList: _*)
 
       val queueHeadings: List[TagMod] = queueNames.map(queue => {
-        val colsToSpan = if (state.showActuals) 5 else 3
-        val colSpanHide = if (state.showWaitColumn) colsToSpan else colsToSpan - 1
-        qth(queue, queueDisplayName(queue.toString), ^.colSpan := colSpanHide, ^.className := "top-heading")
+        val colsToSpan = (state.showWaitColumn , state.showActuals) match {
+          case (true,true) => 5
+          case (false,false)  => 2
+          case (_,_) => 3
+        }
+        qth(queue, queueDisplayName(queue.toString), ^.colSpan := colsToSpan, ^.className := "top-heading")
       }).toList
 
       val headings: List[TagMod] = queueHeadings ++ List(
