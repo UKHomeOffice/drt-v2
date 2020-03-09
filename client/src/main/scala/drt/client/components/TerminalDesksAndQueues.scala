@@ -83,7 +83,7 @@ object TerminalDesksAndQueues {
         val queueColumnClass = queueColour(queueName)
         val queueColumnActualsClass = queueActualsColour(queueName)
 
-        def staffSubheadingsTh(title:String, viewType: String) = <.th(^.title := title, s"$viewType ${deskUnitLabel(queueName)}", ^.className := queueColumnClass)
+        def staffSubheadingsTh(title:String, viewType: String) = <.th(^.title := title, s"$viewType ${deskUnitLabel(queueName)}", ^.className := queueColumnActualsClass)
 
         val waitTimeSubheadingsTh = <.th(^.title := "Wait times with suggested deployments", "Est wait", ^.className := queueColumnClass)
 
@@ -124,7 +124,7 @@ object TerminalDesksAndQueues {
       val queueHeadings: List[TagMod] = queueNames.map(queue => {
         val colsToSpan = (state.showWaitColumn , state.showActuals) match {
           case (true,true) => 5
-          case (false,true) =>  4
+          case (false,true) =>  3
           case (true,false)  => 3
           case (false,false)  => 2
         }
