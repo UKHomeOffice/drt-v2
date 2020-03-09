@@ -124,9 +124,8 @@ object TerminalDesksAndQueues {
       val queueHeadings: List[TagMod] = queueNames.map(queue => {
         val colsToSpan = (state.showWaitColumn , state.showActuals) match {
           case (true,true) => 5
-          case (false,true) =>  3
-          case (true,false)  => 3
           case (false,false)  => 2
+          case (_,_) => 3
         }
         qth(queue, queueDisplayName(queue.toString), ^.colSpan := colsToSpan, ^.className := "top-heading")
       }).toList
