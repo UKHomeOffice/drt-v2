@@ -106,16 +106,6 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
     }
   }
 
-  class SummaryActor extends Actor {
-    override def receive: Receive = {
-      case _ => sender() ! None
-    }
-  }
-
-  object SummaryActor {
-    def props: Props = Props(classOf[SummaryActor])
-  }
-
   def queryPortStateActor: (SDateLike, Any) => Future[Option[PortState]] = (from: SDateLike, message: Any) => {
     implicit val timeout: Timeout = new Timeout(5 seconds)
 
