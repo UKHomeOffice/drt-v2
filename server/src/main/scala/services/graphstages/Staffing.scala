@@ -3,6 +3,7 @@ package services.graphstages
 import java.util.UUID
 
 import drt.shared.CrunchApi._
+import drt.shared.MilliTimes.oneMinuteMillis
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
@@ -59,9 +60,9 @@ object Staffing {
       .flatMap {
         case (tn, tcms) =>
           val minutes = tcms.map(_.minute)
-          val startMinuteMillis = minutes.min + Crunch.oneMinuteMillis
+          val startMinuteMillis = minutes.min + oneMinuteMillis
           val endMinuteMillis = minutes.max
-          val minuteMillis = startMinuteMillis to endMinuteMillis by Crunch.oneMinuteMillis
+          val minuteMillis = startMinuteMillis to endMinuteMillis by oneMinuteMillis
           staffMinutesForPeriod(staff, tn, minuteMillis)
       }
   }

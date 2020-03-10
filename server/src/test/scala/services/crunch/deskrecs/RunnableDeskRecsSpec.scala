@@ -47,7 +47,6 @@ class MockPortStateActor(probe: TestProbe, responseDelayMillis: Long = 0L) exten
 
     case getFlights: GetFlights =>
       Thread.sleep(responseDelayMillis)
-      println(s"Sending ${flightsToReturn.length} flights")
       sender() ! FlightsWithSplits(flightsToReturn, List())
       probe.ref ! getFlights
 

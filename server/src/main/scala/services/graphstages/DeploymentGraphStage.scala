@@ -208,7 +208,7 @@ class DeploymentGraphStage(name: String = "",
                               lastMinute: MillisSinceEpoch,
                               terminalsToUpdate: Seq[Terminal]): Seq[StaffMinute] = for {
       terminal <- terminalsToUpdate
-      minute <- firstMinute until lastMinute by Crunch.oneMinuteMillis
+      minute <- firstMinute until lastMinute by MilliTimes.oneMinuteMillis
     } yield staffMinutes.getOrElse(MinuteHelper.key(terminal, minute), StaffMinute(terminal, minute, 0, 0, 0))
 
     def pullAll(): Unit = {

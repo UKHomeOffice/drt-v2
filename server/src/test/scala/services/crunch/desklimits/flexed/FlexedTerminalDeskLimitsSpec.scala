@@ -1,7 +1,7 @@
 package services.crunch.desklimits.flexed
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Queues
+import drt.shared.MilliTimes.oneHourMillis
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
 import org.specs2.mutable.Specification
 import services.SDate
@@ -18,8 +18,8 @@ class FlexedTerminalDeskLimitsSpec extends Specification {
   val bst20200601: MillisSinceEpoch = SDate("2020-06-01T00:00:00", Crunch.europeLondonTimeZone).millisSinceEpoch
   val bst20200602: MillisSinceEpoch = SDate("2020-06-02T00:00:00", Crunch.europeLondonTimeZone).millisSinceEpoch
 
-  val nonBstMidnightToMidnightByHour: NumericRange[MillisSinceEpoch] = nonBst20200101 until nonBst20200202 by Crunch.oneHourMillis
-  val bstMidnightToMidnightByHour: NumericRange[MillisSinceEpoch] = bst20200601 until bst20200602 by Crunch.oneHourMillis
+  val nonBstMidnightToMidnightByHour: NumericRange[MillisSinceEpoch] = nonBst20200101 until nonBst20200202 by oneHourMillis
+  val bstMidnightToMidnightByHour: NumericRange[MillisSinceEpoch] = bst20200601 until bst20200602 by oneHourMillis
 
   val minDesksByQueue: Map[Queue, IndexedSeq[Int]] = Map(
     EeaDesk -> minDesks,

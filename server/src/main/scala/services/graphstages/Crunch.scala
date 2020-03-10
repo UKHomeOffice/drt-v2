@@ -1,6 +1,7 @@
 package services.graphstages
 
 import drt.shared.CrunchApi._
+import drt.shared.MilliTimes._
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
@@ -84,11 +85,6 @@ object Crunch {
 
   case class CrunchRequest(flights: List[ApiFlightWithSplits], crunchStart: MillisSinceEpoch)
 
-  val oneMinuteMillis: Int = 60000
-  val oneHourMillis: Int = oneMinuteMillis * 60
-  val oneDayMillis: Int = oneHourMillis * 24
-  val minutesInADay: Int = 60 * 24
-
   val europeLondonId = "Europe/London"
   val europeLondonTimeZone: DateTimeZone = DateTimeZone.forID(europeLondonId)
 
@@ -154,7 +150,7 @@ object Crunch {
 
     (0 until days).foldLeft(Iterable[MillisSinceEpoch]()) {
       case (missingSoFar, day) =>
-        val dayMillis = fromMillisMidnight + (day * Crunch.oneDayMillis)
+        val dayMillis = fromMillisMidnight + (day * oneDayMillis)
         val isMissing = !minuteExistsTerminals(dayMillis, terminals)
         if (isMissing) Crunch.minuteMillisFor24hours(dayMillis) ++ missingSoFar
         else missingSoFar

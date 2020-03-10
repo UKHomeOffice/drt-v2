@@ -14,7 +14,6 @@ import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState._
 import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 import services.SDate
-import services.graphstages.Crunch
 
 
 object CrunchStateActor {
@@ -163,7 +162,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
     state.applyStaffDiff(cdm.staffMinuteUpdates, nowMillis)
 
     state.purgeOlderThanDate(nowMillis - expireAfterMillis)
-    state.purgeRecentUpdates(nowMillis - Crunch.oneMinuteMillis * 5)
+    state.purgeRecentUpdates(nowMillis - MilliTimes.oneMinuteMillis * 5)
   }
 
   def crunchDiffFromMessage(diffMessage: CrunchDiffMessage, maxMillis: MillisSinceEpoch): (Seq[UniqueArrival], Seq[ApiFlightWithSplits], Seq[CrunchMinute], Seq[StaffMinute]) = (

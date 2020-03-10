@@ -28,6 +28,7 @@ import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
+import drt.shared.MilliTimes._
 import drt.shared.Terminals._
 import drt.shared._
 import graphs.SinkToSourceBridge
@@ -47,7 +48,6 @@ import services._
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.{DesksAndWaitsPortProvider, DesksAndWaitsPortProviderLike, RunnableDeskRecs}
 import services.crunch.{CrunchProps, CrunchSystem}
-import services.graphstages.Crunch.{oneDayMillis, oneMinuteMillis}
 import services.graphstages._
 import slickdb.{ArrivalTable, Tables, VoyageManifestPassengerInfoTable}
 

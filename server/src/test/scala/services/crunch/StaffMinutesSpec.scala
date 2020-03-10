@@ -11,7 +11,6 @@ import drt.shared.Terminals.T1
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.{Optimiser, SDate}
-import services.graphstages.Crunch
 
 import scala.collection.immutable.{List, SortedMap}
 import scala.concurrent.duration._
@@ -326,7 +325,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       )
 
     val expectedStaff = List.fill(15)(1) ::: List.fill(15)(2)
-    val expectedMillis = (shiftStart.millisSinceEpoch to (shiftStart.millisSinceEpoch + 29 * Crunch.oneMinuteMillis) by Crunch.oneMinuteMillis).toList
+    val expectedMillis = (shiftStart.millisSinceEpoch to (shiftStart.millisSinceEpoch + 29 * oneMinuteMillis) by oneMinuteMillis).toList
 
     crunch.portStateTestProbe.fishForMessage(5 seconds) {
       case ps: PortState =>

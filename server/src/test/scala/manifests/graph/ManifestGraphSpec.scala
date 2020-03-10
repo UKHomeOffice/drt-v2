@@ -8,7 +8,7 @@ import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SplitRatiosNs.SplitSources.Historical
-import drt.shared.{Arrival, ArrivalKey, CarrierCode, PortCode, SDateLike, VoyageNumber}
+import drt.shared._
 import graphs.SinkToSourceBridge
 import manifests.actors.RegisteredArrivals
 import manifests.passengers.BestAvailableManifest
@@ -164,7 +164,7 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
                         initialRegisteredArrivals: Option[RegisteredArrivals],
                         isDueLookup: (MillisSinceEpoch, MillisSinceEpoch, SDateLike) => Boolean,
                         now: () => SDateLike): (UniqueKillSwitch, Sink[List[Arrival], NotUsed], Source[List[BestAvailableManifest], NotUsed]) = {
-    val expireAfterMillis = 3 * Crunch.oneHourMillis
+    val expireAfterMillis = 3 * MilliTimes.oneHourMillis
 
     val batchStage = new BatchStage(now, isDueLookup, 1, expireAfterMillis, initialRegisteredArrivals, 0, (_: MillisSinceEpoch) => true)
 

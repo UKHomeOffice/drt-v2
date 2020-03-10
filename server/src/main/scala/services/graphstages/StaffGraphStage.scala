@@ -73,7 +73,7 @@ class StaffGraphStage(name: String = "",
     }
 
     def minutesRequiringUpdate(fromMillis: MillisSinceEpoch): Set[MillisSinceEpoch] = {
-      val minutesMillis = (fromMillis until (fromMillis + (numberOfDays.toLong * Crunch.oneDayMillis)) by 60000).toArray
+      val minutesMillis = (fromMillis until (fromMillis + (numberOfDays.toLong * MilliTimes.oneDayMillis)) by 60000).toArray
 
       log.info(s"Checking $numberOfDays days worth of minutes (${minutesMillis.length} minutes starting at ${SDate(minutesMillis.head).toISOString()}")
       val maybeUpdates = for {
@@ -98,6 +98,7 @@ class StaffGraphStage(name: String = "",
       requiringUpdate.toSet
     }
 
+    @scala.annotation.tailrec
     def minuteExists(millis: MillisSinceEpoch, terminals: List[Terminal]): Boolean = terminals match {
       case Nil => false
       case t :: _ if staffMinutes.contains(TM(t, millis)) => true

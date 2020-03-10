@@ -105,7 +105,7 @@ object Exports {
   def queueSummariesFromPortState: (Seq[Queue], Int) => (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike] =
     (queues: Seq[Queue], summaryLengthMinutes: Int) =>
       (from: SDateLike, to: SDateLike, portState: PortState) => {
-        val queueSummaries = (from.millisSinceEpoch until to.millisSinceEpoch by summaryLengthMinutes * Crunch.oneMinuteMillis).map { millis =>
+        val queueSummaries = (from.millisSinceEpoch until to.millisSinceEpoch by summaryLengthMinutes * MilliTimes.oneMinuteMillis).map { millis =>
           Summaries.terminalSummaryForPeriod(portState.crunchMinutes, portState.staffMinutes, queues, SDate(millis), summaryLengthMinutes)
         }
         Option(TerminalQueuesSummary(queues, queueSummaries))

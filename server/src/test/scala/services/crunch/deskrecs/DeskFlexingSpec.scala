@@ -4,9 +4,8 @@ import drt.shared.AirportConfig
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues._
 import drt.shared.Terminals.T1
-import services.crunch.{CrunchTestLike, deskrecs}
 import services.crunch.desklimits.flexed.FlexedTerminalDeskLimits
-import services.graphstages.Crunch
+import services.crunch.{CrunchTestLike, deskrecs}
 import services.{OptimizerConfig, OptimizerCrunchResult, SDate}
 
 import scala.collection.immutable.NumericRange
@@ -22,7 +21,7 @@ class DeskFlexingSpec extends CrunchTestLike {
 
   val minutesToCrunch = 30
   val startMillis: MillisSinceEpoch = SDate("2020-01-01T00:00").millisSinceEpoch
-  val minuteMillis: NumericRange[MillisSinceEpoch] = startMillis until startMillis + (minutesToCrunch * Crunch.oneMinuteMillis) by Crunch.oneMinuteMillis
+  val minuteMillis: NumericRange[MillisSinceEpoch] = startMillis until startMillis + (minutesToCrunch * oneMinuteMillis) by oneMinuteMillis
 
   val totalDesks24: List[Int] = List.fill(minutesToCrunch)(totalDesks)
   val eeaMinDesks24: List[Int] = List.fill(minutesToCrunch)(eeaMinDesks)
