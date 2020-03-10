@@ -40,9 +40,9 @@ object Exports {
       val summaryForDay = (maybeSummaryActorProvider, isHistoric(now, from)) match {
         case (Some(actorProvider), true) =>
           val actorForDayAndTerminal = actorProvider(from, terminal)
-          val eventualThing = historicSummaryForDay(terminal, from, actorForDayAndTerminal, GetSummaries, queryPortState, portStateToSummaries)
-          eventualThing.onComplete(_ => actorForDayAndTerminal ! PoisonPill)
-          eventualThing
+          val eventualSummaryForDay = historicSummaryForDay(terminal, from, actorForDayAndTerminal, GetSummaries, queryPortState, portStateToSummaries)
+          eventualSummaryForDay.onComplete(_ => actorForDayAndTerminal ! PoisonPill)
+          eventualSummaryForDay
         case _ =>
           extractDayFromPortStateForTerminal(terminal, from, queryPortState, portStateToSummaries)
       }
