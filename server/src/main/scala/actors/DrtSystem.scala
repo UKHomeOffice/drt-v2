@@ -28,6 +28,7 @@ import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
+import drt.shared.MilliTimes._
 import drt.shared.Terminals._
 import drt.shared._
 import graphs.SinkToSourceBridge
@@ -44,10 +45,9 @@ import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedRes
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services.SplitsProvider.SplitProvider
 import services._
-import services.crunch.desklimits.PortDeskLimits
-import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeskRecs}
+import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
+import services.crunch.deskrecs.{DesksAndWaitsPortProvider, DesksAndWaitsPortProviderLike, RunnableDeskRecs}
 import services.crunch.{CrunchProps, CrunchSystem}
-import services.graphstages.Crunch.{oneDayMillis, oneMinuteMillis}
 import services.graphstages._
 import slickdb.{ArrivalTable, Tables, VoyageManifestPassengerInfoTable}
 
@@ -67,6 +67,10 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val alertsActor: ActorRef
   val arrivalsImportActor: ActorRef
   val params: DrtConfigParameters
+
+  val portDeskRecs: DesksAndWaitsPortProviderLike
+
+  val maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike]
 
   val aclFeed: AclFeed
 
@@ -239,7 +243,14 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       Roles.availableRoles
     } else userRolesFromHeader(headers)
 
-  def optimiser: TryCrunch = if (config.get[Boolean]("crunch.use-legacy-optimiser")) TryRenjin.crunch else Optimiser.crunch
+  lazy val optimiser: TryCrunch = if (config.get[Boolean]("crunch.use-legacy-optimiser")) TryRenjin.crunch else Optimiser.crunch
+
+  lazy val portDeskRecs: DesksAndWaitsPortProviderLike = DesksAndWaitsPortProvider(airportConfig, optimiser)
+
+  lazy val maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike] = if (config.get[Boolean]("crunch.flex-desks"))
+    PortDeskLimits.flexed(airportConfig)
+  else
+    PortDeskLimits.fixed(airportConfig)
 
   def run(): Unit = {
     val futurePortStates: Future[(Option[PortState], Option[PortState], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[RegisteredArrivals])] = {
@@ -259,20 +270,13 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       } yield (lps, fps, ba, fa, la, ra)
     }
 
-    val portDeskRecs = DesksAndWaitsPortProvider(airportConfig, optimiser)
-
     futurePortStates.onComplete {
       case Success((maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeRegisteredArrivals)) =>
         system.log.info(s"Successfully restored initial state for App")
         val initialPortState: Option[PortState] = mergePortStates(maybeForecastState, maybeLiveState)
         initialPortState.foreach(ps => portStateActor ! ps)
 
-        val maxDesksProvider = if (config.get[Boolean]("crunch.flex-desks"))
-          PortDeskLimits.flexed(airportConfig)
-        else
-          PortDeskLimits.fixed(airportConfig)
-
-        val (crunchSourceActor: ActorRef, _) = RunnableDeskRecs.start(portStateActor, portDeskRecs, now, params.recrunchOnStart, params.forecastMaxDays, maxDesksProvider)
+        val (crunchSourceActor: ActorRef, _) = RunnableDeskRecs.start(portStateActor, portDeskRecs, now, params.recrunchOnStart, params.forecastMaxDays, maxDesksProviders)
         portStateActor ! SetCrunchActor(crunchSourceActor)
 
         val (manifestRequestsSource, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]

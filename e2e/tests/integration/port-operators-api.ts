@@ -14,6 +14,12 @@ describe('Advanced Passenger Information Splits exposed to Port Operators', () =
   const month = now.month() + 1;
   const year = now.year();
 
+  Number.prototype.pad = function(size) {
+      var s = String(this);
+      while (s.length < (size || 2)) {s = "0" + s;}
+      return s;
+  }
+
   const header = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track";
 
   beforeEach(function () {
@@ -52,7 +58,7 @@ describe('Advanced Passenger Information Splits exposed to Port Operators', () =
         expect(response.status).to.eq(200);
         expect(response.body).to.contain(header);
         expect(response.body).to.contain(localTimeScheduledDate.format("YYYY-MM-DD") + ',' + localTimeScheduledDate.format("HH:mm"));
-        expect(response.headers['content-disposition']).to.eq("attachment; filename=export-splits-TEST-T1-" + year + "-" + month + "-" + day + ".csv")
+        expect(response.headers['content-disposition']).to.eq("attachment; filename=TEST-T1-export-splits-" + year + "-" + month.pad(2) + "-" + day.pad(2) + ".csv")
       });
   })
 });

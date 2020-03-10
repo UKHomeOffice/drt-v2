@@ -4,8 +4,9 @@ import actors.acking.AckingReceiver.StreamCompleted
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{ClosedShape, OverflowStrategy}
 import akka.testkit.TestProbe
+import drt.shared.MilliTimes.oneDayMillis
 import drt.shared.Terminals.T1
-import drt.shared.{Arrival, ArrivalStatus, ArrivalsDiff, PortCode, UniqueArrival}
+import drt.shared._
 import services.arrivals.ArrivalDataSanitiser
 import services.crunch.CrunchTestLike
 import services.{PcpArrival, SDate}
@@ -34,7 +35,7 @@ object TestableArrivalsGraphStage {
       forecastArrivalsSource.async,
       liveBaseArrivalsSource.async,
       liveArrivalsSource.async
-    )((_, _, _, _)) {
+      )((_, _, _, _)) {
 
       implicit builder =>
         (forecastBase, forecast, liveBase, live) =>
@@ -59,7 +60,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike {
   sequential
   isolated
 
-  val scheduled = SDate(2019, 10, 1, 16, 0)
+  val scheduled: SDateLike = SDate(2019, 10, 1, 16, 0)
 
   "Given a live arrival and a base live arrival I should get a merged arrival" >> {
     val probe = TestProbe("arrivals")
@@ -105,7 +106,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike {
     val probe = TestProbe("arrivals")
     val (forecastBaseSource, _, liveBaseSource, _) = TestableArrivalsGraphStage(
       probe, buildArrivalsGraphStageWithSanitiser(ArrivalDataSanitiser(Option(4), None))
-    ).run
+      ).run
 
     forecastBaseSource.offer(List(arrival()))
     liveBaseSource.offer(List(arrival(estimated = Option(scheduled.addHours(5).millisSinceEpoch))))
@@ -126,7 +127,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike {
     val probe = TestProbe("arrivals")
     val (forecastBaseSource, _, _, liveSource) = TestableArrivalsGraphStage(
       probe, buildArrivalsGraphStageWithSanitiser(ArrivalDataSanitiser(Option(4), None))
-    ).run
+      ).run
 
     forecastBaseSource.offer(List(arrival()))
     val lateEstimatedTime = scheduled.addHours(5)
@@ -150,7 +151,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike {
     val probe = TestProbe("arrivals")
     val (forecastBaseSource, _, liveBaseSource, liveSource) = TestableArrivalsGraphStage(
       probe, buildArrivalsGraphStageWithSanitiser(ArrivalDataSanitiser(Option(4), None))
-    ).run
+      ).run
 
     forecastBaseSource.offer(List(arrival()))
     val estTime = scheduled.addHours(5)
@@ -174,7 +175,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike {
     val probe = TestProbe("arrivals")
     val (forecastBaseSource, _, liveBaseSource, liveSource) = TestableArrivalsGraphStage(
       probe, buildArrivalsGraphStageWithSanitiser(ArrivalDataSanitiser(Option(4), None))
-    ).run
+      ).run
 
     forecastBaseSource.offer(List(arrival()))
     val estTime = scheduled.addHours(5)
@@ -223,7 +224,8 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike {
     success
   }
 
-  private def buildArrivalsGraphStageWithSanitiser(sanitiser: ArrivalDataSanitiser) = new ArrivalsGraphStage("",
+  private def buildArrivalsGraphStageWithSanitiser(sanitiser: ArrivalDataSanitiser) = new ArrivalsGraphStage(
+    "",
     mutable.SortedMap[UniqueArrival, Arrival](),
     mutable.SortedMap[UniqueArrival, Arrival](),
     mutable.SortedMap[UniqueArrival, Arrival](),
@@ -232,11 +234,12 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike {
     pcpTimeCalc,
     Set(T1),
     sanitiser,
-    Crunch.oneDayMillis,
+    oneDayMillis,
     () => scheduled
-  )
+    )
 
-  private def buildArrivalsGraphStage = new ArrivalsGraphStage("",
+  private def buildArrivalsGraphStage = new ArrivalsGraphStage(
+    "",
     mutable.SortedMap[UniqueArrival, Arrival](),
     mutable.SortedMap[UniqueArrival, Arrival](),
     mutable.SortedMap[UniqueArrival, Arrival](),
@@ -245,11 +248,11 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike {
     pcpTimeCalc,
     Set(T1),
     ArrivalDataSanitiser(None, None),
-    Crunch.oneDayMillis,
+    oneDayMillis,
     () => scheduled
-  )
+    )
 
-  def pcpTimeCalc(a: Arrival) = PcpArrival.pcpFrom(0, 0, _ => 0)(a)
+  def pcpTimeCalc(a: Arrival): MilliDate = PcpArrival.pcpFrom(0, 0, _ => 0)(a)
 
   "Given a base live arrival with an estimated time and a port live arrival with only scheduled time " +
     "Then PCP time should be calculated from the base live arrival time." >> {
@@ -317,5 +320,5 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike {
       scheduled.millisSinceEpoch,
       None,
       Set()
-    )
+      )
 }

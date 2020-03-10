@@ -118,10 +118,6 @@ trait ProdPassengerSplitProviders {
     Option(CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(csvSplitsProvider(apiFlight.flightCode, MilliDate(apiFlight.Scheduled)), 0d, 0d))
 }
 
-trait ImplicitTimeoutProvider {
-  implicit val timeout: Timeout = Timeout(1 second)
-}
-
 trait UserRoleProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -162,8 +158,7 @@ class Application @Inject()(implicit val config: Configuration,
     with WithPortState
     with WithStaffing
     with WithVersion
-    with ProdPassengerSplitProviders
-    with ImplicitTimeoutProvider {
+    with ProdPassengerSplitProviders {
 
   val googleTrackingCode: String = config.get[String]("googleTrackingCode")
 
@@ -238,8 +233,8 @@ class Application @Inject()(implicit val config: Configuration,
         portStateFuture.map {
           case Some(portState: PortState) =>
             log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString()} on $terminal")
-            val fp = application.Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
-            val hf = application.Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
+            val fp = services.exports.Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
+            val hf = services.exports.Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
             Option(ForecastPeriodWithHeadlines(fp, hf))
           case None =>
             log.info(s"No forecast available for week beginning ${SDate(startDay).toISOString()} on $terminal")

@@ -15,7 +15,7 @@ import services.{SDate, _}
 
 import scala.collection.immutable.{Map, NumericRange, SortedMap}
 import scala.collection.{immutable, mutable}
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 
 class LegacyDeploymentGraphStage(name: String = "",
@@ -311,7 +311,7 @@ class LegacyDeploymentGraphStage(name: String = "",
                               terminalsToUpdate: Seq[Terminal]): Seq[StaffMinute] = {
       val maybeThings = for {
         terminalName <- terminalsToUpdate
-        minute <- firstMinute until lastMinute by Crunch.oneMinuteMillis
+        minute <- firstMinute until lastMinute by MilliTimes.oneMinuteMillis
       } yield staffMinutes.get(MinuteHelper.key(terminalName, minute))
 
       maybeThings.collect { case Some(thing) => thing }

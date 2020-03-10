@@ -1,9 +1,7 @@
 package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import ujson.Js.Value
-import upickle.Js
-import upickle.default.{macroRW, readwriter, ReadWriter => RW}
+import upickle.default.{macroRW, ReadWriter => RW}
 
 sealed trait FeedStatus {
   val date: MillisSinceEpoch
@@ -39,7 +37,7 @@ case object Green extends RagStatus {
 }
 
 case class FeedSourceStatuses(feedSource: FeedSource, feedStatuses: FeedStatuses) {
-  def name = feedSource.name
+  def name: String = feedSource.name
 }
 
 object FeedSourceStatuses {
@@ -51,11 +49,9 @@ case class FeedStatuses(
                         lastSuccessAt: Option[MillisSinceEpoch],
                         lastFailureAt: Option[MillisSinceEpoch],
                         lastUpdatesAt: Option[MillisSinceEpoch]) {
-  val oneMinuteMillis: Int = 60 * 1000
-
   def ragStatus(now: MillisSinceEpoch): RagStatus = (lastSuccessAt, lastFailureAt) match {
     case (Some(s), Some(f)) if f > s => Red
-    case (Some(_), Some(f)) if f > now - (5 * oneMinuteMillis) => Amber
+    case (Some(_), Some(f)) if f > now - (5 * MilliTimes.oneMinuteMillis) => Amber
     case (None, Some(_)) => Red
     case _ => Green
   }

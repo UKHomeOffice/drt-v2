@@ -5,6 +5,7 @@ import java.util.UUID
 import drt.shared.CrunchApi._
 import drt.shared.EventTypes.{CI, DC, InvalidEventType}
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
+import drt.shared.MilliTimes.{oneDayMillis, oneMinuteMillis}
 import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
 import drt.shared.Terminals.Terminal
@@ -661,6 +662,8 @@ trait SDateLike {
   def compare(that: SDateLike): Int = millisSinceEpoch.compare(that.millisSinceEpoch)
 
   def <=(compareTo: SDateLike): Boolean = millisSinceEpoch <= compareTo.millisSinceEpoch
+
+  def daysBetweenInclusive(that: SDateLike): Int = ((millisSinceEpoch - that.millisSinceEpoch) / oneDayMillis).abs.toInt + 1
 }
 
 case class RemoveFlight(flightKey: UniqueArrival)
@@ -757,10 +760,15 @@ object PassengerSplits {
 
 }
 
+object MilliTimes {
+  val oneMinuteMillis: Int = 60000
+  val oneHourMillis: Int = oneMinuteMillis * 60
+  val oneDayMillis: Int = oneHourMillis * 24
+  val minutesInADay: Int = 60 * 24
+}
+
 object CrunchApi {
   type MillisSinceEpoch = Long
-
-  val oneMinuteMillis: MillisSinceEpoch = 60000L
 
   case class PortStateError(message: String)
 
@@ -947,8 +955,6 @@ object CrunchApi {
   }
 
   case class ActualDeskStats(portDeskSlots: IMap[Terminal, IMap[Queue, IMap[MillisSinceEpoch, DeskStat]]]) extends PortStateMinutes {
-    val oneMinuteMillis: Long = 60 * 1000
-
     def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
       val crunchMinutesDiff = minutes.foldLeft(List[CrunchMinute]()) { case (soFar, (key, dm)) =>
         addIfUpdated(portState.crunchMinutes.getByKey(key), now, soFar, dm, () => CrunchMinute(key, dm, now))
