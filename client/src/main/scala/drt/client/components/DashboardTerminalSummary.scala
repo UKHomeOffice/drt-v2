@@ -128,18 +128,19 @@ object DashboardTerminalSummary {
       } else {
 
         val pressurePoint = worstTimeslot(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal))
-        val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePoint.deployedDesks.getOrElse(0))
+        def pressureStaffMinute = props.staffMinutes.find(_.minute == pressurePoint.minute)
+
+        val pressurePointAvailableStaff = pressureStaffMinute.map(sm => sm.available).getOrElse(0)
+        val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePointAvailableStaff)
 
         val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(props.flights)
-
         val summary: Seq[DashboardSummary] = hourSummary(props.flights, props.crunchMinutes, props.timeWindowStart)
         val queueTotals = totalsByQueue(summary)
+
         val totalPaxAcrossQueues: Int = queueTotals.values.sum.toInt
-
         val pcpLowestTimeSlot = pcpLowest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal)).minute
-        val pcpHighestTimeSlot = pcpHighest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal)).minute
 
-        def pressureStaffMinute = props.staffMinutes.find(_.minute == pressurePoint.minute)
+        val pcpHighestTimeSlot = pcpHighest(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal)).minute
 
         <.div(^.className := "dashboard-summary container-fluid",
           <.div(^.className := s"$ragClass summary-box-container rag-summary col-sm-1",
@@ -153,7 +154,7 @@ object DashboardTerminalSummary {
                   <.td("Staff"), <.td("Desks")
                 ),
                 <.tr(
-                  <.td(s"${pressureStaffMinute.map(sm => sm.available).getOrElse(0)}"),
+                  <.td(s"${pressurePointAvailableStaff}"),
                   <.td(s"${pressurePoint.deskRec + pressureStaffMinute.map(_.fixedPoints).getOrElse(0)}")
                 )
               )
