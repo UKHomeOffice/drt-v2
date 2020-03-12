@@ -140,6 +140,7 @@ object TerminalContentComponent {
               <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
                 if (state.activeTab == "desksAndQueues") {
                   val (viewStart, _) = viewStartAndEnd(props.terminalPageTab.viewMode.time, timeRangeHours)
+                  props.featureFlags.render(features =>
                   TerminalDesksAndQueues(
                     TerminalDesksAndQueues.Props(
                       props.router,
@@ -149,11 +150,15 @@ object TerminalContentComponent {
                       props.airportConfig,
                       props.terminalPageTab,
                       props.showActuals,
-                      false,
+                      showWaitTime = features.get("enable-toggle-display-wait-times") match {
+                        case Some(true) => false
+                        case _ => true
+                      },
                       props.viewMode,
-                      props.loggedInUser
+                      props.loggedInUser,
+                      features
                     )
-                  )
+                  ))
                 } else ""
               ),
               <.div(^.id := "arrivals", ^.className := s"tab-pane in $arrivalsPanelActive", {

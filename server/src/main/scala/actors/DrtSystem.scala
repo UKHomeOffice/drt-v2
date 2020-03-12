@@ -165,6 +165,9 @@ case class DrtConfigParameters(config: Configuration) {
   val snapshotStaffOnStart: Boolean = config.get[Boolean]("feature-flags.snapshot-staffing-on-start")
 
   val useApiPaxNos: Boolean = config.getOptional[Boolean]("feature-flags.use-api-pax-nos").getOrElse(false)
+
+  val enableToggleDisplayWaitTimes: Boolean = config
+    .getOptional[Boolean]("feature-flags.enable-toggle-display-wait-times").getOrElse(false)
   val adjustEGateUseByUnder12s: Boolean = config.getOptional[Boolean]("feature-flags.adjust-egates-use-by-u12s").getOrElse(false)
 
 }
@@ -364,7 +367,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         maybeStatuses => maybeStatuses
           .collect { case Some(fs) => fs }
           .filter(fss => isValidFeedSource(fss.feedSource))
-        )
+      )
   }
 
   override def isValidFeedSource(fs: FeedSource): Boolean = airportConfig.feedSources.contains(fs)
@@ -419,7 +422,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         "live-base-arrivals" -> liveBaseArrivalsActor,
         "live-arrivals" -> liveArrivalsActor,
         "aggregated-arrivals" -> aggregatedArrivalsActor
-        ),
+      ),
       useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
       useLegacyManifests = params.useLegacyManifests,
       manifestsLiveSource = voyageManifestsLiveSource,
@@ -673,7 +676,7 @@ object ArrivalGenerator {
       PcpTime = pcpTime,
       Scheduled = if (schDt.nonEmpty) SDate(schDt).millisSinceEpoch else 0,
       FeedSources = feedSources
-      )
+    )
   }
 
   def arrivals(now: () => SDateLike, terminalNames: Iterable[Terminal]): Iterable[Arrival] = {

@@ -11,7 +11,8 @@ trait WithFeatureFlags {
     import upickle.default._
 
     val frontendFeatures = Map (
-      "use-api-pax-nos" -> ctrl.params.useApiPaxNos
+      "use-api-pax-nos" -> ctrl.params.useApiPaxNos,
+      "enable-toggle-display-wait-times" -> ctrl.params.enableToggleDisplayWaitTimes
     )
 
     Ok(write(frontendFeatures))
