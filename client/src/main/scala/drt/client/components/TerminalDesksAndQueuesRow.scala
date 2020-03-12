@@ -38,11 +38,11 @@ object TerminalDesksAndQueuesRow {
                    viewMode: ViewMode,
                    loggedInUser: LoggedInUser,
                    slotMinutes: Int,
-                   showWaitColumn:Boolean
+                   showWaitColumn: Boolean
                   )
 
   implicit val propsReuse: Reusability[Props] = Reusability.by(p =>
-    (p.queueMinutes.hashCode(), p.staffMinute.hashCode(), p.showActuals, p.viewType.hashCode(), p.viewMode.hashCode(),p.showWaitColumn)
+    (p.queueMinutes.hashCode(), p.staffMinute.hashCode(), p.showActuals, p.viewType.hashCode(), p.viewMode.hashCode(), p.showWaitColumn)
   )
 
   val component = ScalaComponent.builder[Props]("TerminalDesksAndQueuesRow")
@@ -53,8 +53,11 @@ object TerminalDesksAndQueuesRow {
       val queueTds = crunchMinutesByQueue.flatMap {
         case (qn, cm) =>
           val paxLoadTd = <.td(^.className := queueColour(qn), s"${Math.round(cm.paxLoad)}")
-          def deployDeskTd(ragClass:String) = <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"Dep: ${cm.deployedDesks.getOrElse("-")}", s"${cm.deskRec}")
-          def deployRecsDeskTd(ragClass:String) = <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"Rec: ${cm.deskRec}", s"${cm.deployedDesks.getOrElse("-")}")
+
+          def deployDeskTd(ragClass: String) = <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"Dep: ${cm.deployedDesks.getOrElse("-")}", s"${cm.deskRec}")
+
+          def deployRecsDeskTd(ragClass: String) = <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"Rec: ${cm.deskRec}", s"${cm.deployedDesks.getOrElse("-")}")
+
           val queueCells = props.viewType match {
             case ViewDeps =>
               val ragClass = cm.deployedWait.getOrElse(0).toDouble / props.airportConfig.slaByQueue(qn) match {
@@ -62,29 +65,28 @@ object TerminalDesksAndQueuesRow {
                 case pc if pc >= 0.7 => "amber"
                 case _ => ""
               }
-              if(props.showWaitColumn){
+              if (props.showWaitColumn) {
                 List(paxLoadTd, deployRecsDeskTd(ragClass), <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"With rec: ${cm.waitTime}", s"${cm.deployedWait.map(Math.round(_)).getOrElse("-")}"))
-              }else {
-                List(paxLoadTd,deployRecsDeskTd(ragClass))
+              } else {
+                List(paxLoadTd, deployRecsDeskTd(ragClass))
               }
             case ViewRecs =>
               val ragClass: String = slaRagStatus(cm.waitTime.toDouble, props.airportConfig.slaByQueue(qn))
-              if(props.showWaitColumn) {
+              if (props.showWaitColumn) {
                 List(paxLoadTd, deployDeskTd(ragClass), <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"With Dep: ${cm.waitTime}", s"${Math.round(cm.waitTime)}"))
               } else {
                 List(paxLoadTd, deployDeskTd(ragClass))
               }
           }
 
-          def queueActualsTd(actDesks:String) = <.td(^.className := queueActualsColour(qn), actDesks)
+          def queueActualsTd(actDesks: String) = <.td(^.className := queueActualsColour(qn), actDesks)
 
           if (props.showActuals) {
             val actDesks: String = cm.actDesks.map(act => s"$act").getOrElse("-")
             val actWaits: String = cm.actWait.map(act => s"$act").getOrElse("-")
-            if(props.showWaitColumn)
+
             queueCells ++ Seq(queueActualsTd(actDesks), <.td(^.className := queueActualsColour(qn), actWaits))
-            else
-              queueCells ++ Seq(queueActualsTd(actDesks))
+
           } else queueCells
       }
       val fixedPoints = props.staffMinute.fixedPoints
