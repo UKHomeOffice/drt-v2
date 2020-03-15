@@ -1,14 +1,14 @@
 package controllers.application.exports
 
+import actors.summaries.{FlightsSummaryActor, GetSummariesWithActualApi}
 import akka.actor.ActorRef
 import controllers.Application
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import play.api.mvc.{Action, AnyContent, Request}
+import play.api.mvc.{Action, AnyContent, Request, Result}
 import services.SDate
 import services.exports.Exports
-import services.exports.summaries.TerminalSummaryLike
-import services.graphstages.Crunch
+import services.exports.summaries.{GetSummaries, TerminalSummaryLike}
 import services.graphstages.Crunch.europeLondonTimeZone
 
 import scala.util.{Failure, Success, Try}
@@ -20,14 +20,17 @@ trait WithFlightsExport extends ExportToCsv {
                 month: Int,
                 year: Int,
                 terminalName: String): Action[AnyContent] = authByRole(ApiViewPortCsv) {
-    val terminal = Terminal(terminalName)
-    Try(SDate(year, month, day, 0, 0, europeLondonTimeZone)) match {
-      case Success(start) =>
-        val summaryFromPortState = Exports.flightSummariesWithActualApiFromPortState(terminal)
-        Action(exportToCsv(start, start, "export-splits", terminal, None, summaryFromPortState))
-      case Failure(t) =>
-        log.error(s"Bad date date $year/$month/$day", t)
-        Action(BadRequest(s"Bad date date $year/$month/$day"))
+    Action.apply {
+      implicit request =>
+        val terminal = Terminal(terminalName)
+        Try(SDate(year, month, day, 0, 0, europeLondonTimeZone)) match {
+          case Success(start) =>
+            val summaryFromPortState = Exports.flightSummariesWithActualApiFromPortState(terminal)
+            exportToCsv(start, start, "flights", terminal, Option(summaryActorProvider, summariesRequest), summaryFromPortState)
+          case Failure(t) =>
+            log.error(f"Bad date date $year%02d/$month%02d/$day%02d", t)
+            BadRequest(f"Bad date date $year%02d/$month%02d/$day%02d")
+        }
     }
   }
 
@@ -36,11 +39,7 @@ trait WithFlightsExport extends ExportToCsv {
                                               startHour: Int,
                                               endHour: Int): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
     Action.apply {
-      implicit request =>
-        val start = Crunch.getLocalLastMidnight(SDate(pointInTime.toLong))
-        val terminal = Terminal(terminalName)
-        val (summaryFromPortState, summaryActorProvider) = summaryProviderByRole(request, terminal)
-        exportToCsv(start, start, "flights", terminal, summaryActorProvider, summaryFromPortState)
+      implicit request => export(pointInTime, pointInTime, terminalName)
     }
   }
 
@@ -48,21 +47,32 @@ trait WithFlightsExport extends ExportToCsv {
                                                   endMillis: String,
                                                   terminalName: String): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
     Action.apply {
-      implicit request =>
-        val start = Crunch.getLocalLastMidnight(SDate(startMillis.toLong))
-        val end = Crunch.getLocalLastMidnight(SDate(endMillis.toLong))
-        val terminal = Terminal(terminalName)
-        val (summaryFromPortState, summaryActorProvider) = summaryProviderByRole(request, terminal)
-        exportToCsv(start, end, "flights", terminal, summaryActorProvider, summaryFromPortState)
+      implicit request => export(startMillis, endMillis, terminalName)
     }
   }
 
-  def summaryProviderByRole(request: Request[AnyContent],
-                            terminal: Terminal): ((SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike], Option[(SDateLike, Terminal) => ActorRef]) = {
-    if (ctrl.getRoles(config, request.headers, request.session).contains(ApiView)) {
-      (Exports.flightSummariesWithActualApiFromPortState(terminal), None)
-    } else {
-      (Exports.flightSummariesFromPortState(terminal), None)
-    }
+  private def summaryProviderByRole(terminal: Terminal)
+                           (implicit request: Request[AnyContent]): (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike] =
+    if (canAccessActualApi(request)) Exports.flightSummariesWithActualApiFromPortState(terminal)
+    else Exports.flightSummariesFromPortState(terminal)
+
+  private def canAccessActualApi(request: Request[AnyContent]) = {
+    ctrl.getRoles(config, request.headers, request.session).contains(ApiView)
+  }
+
+  private val summaryActorProvider: (SDateLike, Terminal) => ActorRef = (date: SDateLike, terminal: Terminal) => {
+    system.actorOf(FlightsSummaryActor.props(date, terminal, now))
+  }
+
+  private def summariesRequest(implicit request: Request[AnyContent]): Any =
+    if (canAccessActualApi(request)) GetSummariesWithActualApi
+    else GetSummaries
+
+  private def export(startMillis: String, endMillis: String, terminalName: String)
+                    (implicit request: Request[AnyContent]): Result = {
+    val start = localLastMidnight(startMillis)
+    val end = localLastMidnight(endMillis)
+    val summaryFromPortState = summaryProviderByRole(Terminal(terminalName))
+    exportToCsv(start, end, "flights", terminal(terminalName), Option(summaryActorProvider, summariesRequest), summaryFromPortState)
   }
 }

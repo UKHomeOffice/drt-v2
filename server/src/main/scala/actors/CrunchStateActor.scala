@@ -1,5 +1,6 @@
 package actors
 
+import actors.FlightMessageConversion.flightWithSplitsFromMessage
 import actors.PortStateMessageConversion._
 import actors.acking.AckingReceiver.{Ack, StreamCompleted}
 import actors.restore.RestorerWithLegacy

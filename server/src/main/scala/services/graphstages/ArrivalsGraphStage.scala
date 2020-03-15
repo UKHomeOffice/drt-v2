@@ -157,9 +157,7 @@ class ArrivalsGraphStage(name: String = "",
     def mergeUpdatesFromKeys(uniqueArrivals: Iterable[UniqueArrival]): Option[ArrivalsDiff] = {
       val updatedArrivals = getUpdatesFromNonBaseArrivals(uniqueArrivals)
 
-      updatedArrivals.foreach {
-        case (ak, updatedArrival) => merged += (ak -> updatedArrival)
-      }
+      merged ++= updatedArrivals
 
       updateDiffToPush(updatedArrivals)
     }

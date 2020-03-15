@@ -27,7 +27,7 @@ trait ExportToCsv {
                   end: SDateLike,
                   description: String,
                   terminal: Terminal,
-                  maybeSummaryActorProvider: Option[(SDateLike, Terminal) => ActorRef],
+                  maybeSummaryActorProvider: Option[((SDateLike, Terminal) => ActorRef, Any)],
                   summaryFromPortState: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike])
                  (implicit timeout: Timeout): Result = {
     if (airportConfig.terminals.toSet.contains(terminal)) {
@@ -52,7 +52,7 @@ trait ExportToCsv {
                          end: String,
                          terminal: Terminal,
                          description: String,
-                         maybeSummaryActorProvider: Option[(SDateLike, Terminal) => ActorRef],
+                         maybeSummaryActorProvider: Option[((SDateLike, Terminal) => ActorRef, Any)],
                          summaryFromPortStateProvider: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike])
                         (implicit timeout: Timeout): Source[String, NotUsed] = {
     val startPit = getLocalLastMidnight(SDate(start.toLong, europeLondonTimeZone))

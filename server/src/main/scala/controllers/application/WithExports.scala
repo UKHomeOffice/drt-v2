@@ -26,6 +26,10 @@ import scala.language.postfixOps
 trait WithExports extends WithDesksExport with WithFlightsExport {
   self: Application =>
 
+  def localLastMidnight(pointInTime: String): SDateLike = Crunch.getLocalLastMidnight(SDate(pointInTime.toLong))
+
+  def terminal(terminalName: String): Terminal = Terminal(terminalName)
+
   def exportUsers(): Action[AnyContent] = authByRole(ManageUsers) {
     Action.async { request =>
       val client = keyCloakClient(request.headers)

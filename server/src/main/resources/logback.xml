@@ -15,17 +15,21 @@
         </encoder>
     </appender>
 
-
-    <!--<logger name="services.AdvPaxSplitsProvider" level="DEBUG" />-->
+    <appender name="ASYNC" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>8192</queueSize>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="STDOUT" />
+    </appender>
 
     <root level="${ENV_LOG_LEVEL}">
-        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="ASYNC"/>
     </root>
-    <logger level="ERROR" name="p.core.SingleFlightActor">
-        <appender-ref ref="STDOUT"/>
+
+    <logger level="WARN" name="org.apache.commons.vfs2">
+        <appender-ref ref="ASYNC"/>
     </logger>
-    <logger level="WARN" name="org.apache.spark" />
-    <logger level="WARN" name="org.apache.commons.vfs2" />
-    <logger level="WARN" name="breeze.optimize" />
-    <logger level="WARN" name="org.spark_project" />
+
+    <logger level="WARN" name="breeze.optimize">
+        <appender-ref ref="ASYNC"/>
+    </logger>
 </configuration>

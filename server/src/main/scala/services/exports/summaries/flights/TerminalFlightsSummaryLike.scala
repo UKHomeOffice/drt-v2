@@ -61,5 +61,8 @@ trait TerminalFlightsSummaryLike extends TerminalSummaryLike {
       .map(splits => ApiSplitsToSplitRatio.flightPaxPerQueueUsingSplitsAsRatio(splits, fws.apiFlight))
       .getOrElse(Map())
 
-  def asCSV(csvData: Iterable[List[Any]]): String = csvData.map(_.mkString(",")).mkString(lineEnding)
+  def asCSV(csvData: Iterable[List[Any]]): String =
+    if (csvData.nonEmpty)
+      csvData.map(_.mkString(",")).mkString(lineEnding)
+    else lineEnding
 }

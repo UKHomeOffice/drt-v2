@@ -27,7 +27,7 @@ object Exports {
                               numberOfDays: Int,
                               now: () => SDateLike,
                               terminal: Terminal,
-                              maybeSummaryActorProvider: Option[(SDateLike, Terminal) => ActorRef],
+                              maybeSummaryActorProvider: Option[((SDateLike, Terminal) => ActorRef, Any)],
                               queryPortState: (SDateLike, Any) => Future[Option[PortState]],
                               portStateToSummaries: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike])
                              (implicit sys: ActorSystem,
@@ -38,10 +38,13 @@ object Exports {
       val addHeader = dayOffset == 0
 
       val summaryForDay = (maybeSummaryActorProvider, isHistoric(now, from)) match {
-        case (Some(actorProvider), true) =>
+        case (Some((actorProvider, request)), true) =>
           val actorForDayAndTerminal = actorProvider(from, terminal)
-          val eventualSummaryForDay = historicSummaryForDay(terminal, from, actorForDayAndTerminal, GetSummaries, queryPortState, portStateToSummaries)
-          eventualSummaryForDay.onComplete(_ => actorForDayAndTerminal ! PoisonPill)
+          val eventualSummaryForDay = historicSummaryForDay(terminal, from, actorForDayAndTerminal, request, queryPortState, portStateToSummaries)
+          eventualSummaryForDay.onComplete { _ =>
+            log.info(s"Got response from summary actor")
+            actorForDayAndTerminal ! PoisonPill
+          }
           eventualSummaryForDay
         case _ =>
           extractDayFromPortStateForTerminal(terminal, from, queryPortState, portStateToSummaries)
@@ -49,8 +52,14 @@ object Exports {
 
       summaryForDay.map {
         case None => ""
-        case Some(summaryLike) if addHeader => summaryLike.toCsvWithHeader
-        case Some(summaryLike) => summaryLike.toCsv
+        case Some(summaryLike) if addHeader =>
+          val withHeader = summaryLike.toCsvWithHeader
+          println(s"withHeader: $withHeader")
+          withHeader
+        case Some(summaryLike) =>
+          val withoutHeader = summaryLike.toCsv
+          println(s"withoutHeader: $withoutHeader")
+          withoutHeader
       }
     }
 
@@ -64,9 +73,7 @@ object Exports {
                             request: Any,
                             queryPortState: (SDateLike, Any) => Future[Option[PortState]],
                             fromPortState: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike])
-                           (implicit system: ActorSystem,
-                            ec: ExecutionContext,
-                            timeout: Timeout): Future[Option[TerminalSummaryLike]] = {
+                           (implicit ec: ExecutionContext, timeout: Timeout): Future[Option[TerminalSummaryLike]] = {
     val askableSummaryActor: AskableActorRef = summaryActor
     askableSummaryActor
       .ask(request)
@@ -84,6 +91,7 @@ object Exports {
               }
           }
         case someSummaries =>
+          log.info(s"Got summaries from summary actor for ${from.toISODateOnly}")
           Future(someSummaries)
       }
   }
@@ -135,9 +143,9 @@ object Exports {
     flights.filter(_.apiFlight.Terminal == terminal).toSeq
   }
 
-  def millisToLocalIsoDateOnly: MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate(millis, Crunch.europeLondonTimeZone).toISODateOnly
+  def millisToLocalIsoDateOnly: MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate.millisToLocalIsoDateOnly(Crunch.europeLondonTimeZone)(millis)
 
-  def millisToLocalHoursAndMinutes: MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate(millis, Crunch.europeLondonTimeZone).toHoursAndMinutes()
+  def millisToLocalHoursAndMinutes: MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate.millisToLocalHoursAndMinutes(Crunch.europeLondonTimeZone)(millis)
 
   def actualAPISplitsAndHeadingsFromFlight(flightWithSplits: ApiFlightWithSplits): Set[(String, Double)] = flightWithSplits
     .splits

@@ -50,8 +50,11 @@ object SDate {
     def getTimeZoneOffsetMillis(): Long = dateTime.getZone.getOffset(millisSinceEpoch)
 
     def startOfTheMonth(): SDateLike = SDate(dateTime.getFullYear(), dateTime.getMonth(), 1, 0, 0, Crunch.europeLondonTimeZone)
-
   }
+
+  def millisToLocalIsoDateOnly(timeZone: DateTimeZone): MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate(millis, timeZone).toISODateOnly
+
+  def millisToLocalHoursAndMinutes(timeZone: DateTimeZone): MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate(millis, timeZone).toHoursAndMinutes()
 
   object implicits {
 

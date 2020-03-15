@@ -1,0 +1,9 @@
+syntax = "proto2";
+
+package server.protobuf.messages;
+
+import "CrunchState.proto";
+
+message FlightsSummaryMessage {
+    repeated FlightWithSplitsMessage flights = 1;
+}

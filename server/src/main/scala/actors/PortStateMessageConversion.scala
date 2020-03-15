@@ -1,5 +1,6 @@
 package actors
 
+import actors.FlightMessageConversion.flightWithSplitsFromMessage
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
 import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
@@ -86,12 +87,6 @@ object PortStateMessageConversion {
       movements = smm.movements.getOrElse(0)
       )
   }
-
-  def flightWithSplitsFromMessage(fm: FlightWithSplitsMessage): ApiFlightWithSplits = ApiFlightWithSplits(
-    FlightMessageConversion.flightMessageToApiFlight(fm.flight.get),
-    fm.splits.map(sm => splitMessageToApiSplits(sm)).toSet,
-    None
-    )
 
   def staffMinuteToMessage(sm: StaffMinute): StaffMinuteMessage = StaffMinuteMessage(
     terminalName = Option(sm.terminal.toString),

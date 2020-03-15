@@ -1,5 +1,6 @@
 package actors
 
+import actors.PortStateMessageConversion.splitMessageToApiSplits
 import actors.restore.RestorerWithLegacy
 import drt.shared.Terminals.Terminal
 import drt.shared._
@@ -62,6 +63,12 @@ object FlightMessageConversion {
       Option(FlightMessageConversion.apiFlightToFlightMessage(f.apiFlight)),
       f.splits.map(apiSplitsToMessage).toList)
   }
+
+  def flightWithSplitsFromMessage(fm: FlightWithSplitsMessage): ApiFlightWithSplits = ApiFlightWithSplits(
+    FlightMessageConversion.flightMessageToApiFlight(fm.flight.get),
+    fm.splits.map(sm => splitMessageToApiSplits(sm)).toSet,
+    None
+    )
 
   def apiSplitsToMessage(s: Splits): SplitMessage = {
     SplitMessage(
