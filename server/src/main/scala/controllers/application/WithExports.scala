@@ -111,7 +111,7 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
   }
 
   def queryPortStateActor: (SDateLike, Any) => Future[Option[PortState]] = (from: SDateLike, message: Any) => {
-    implicit val timeout: Timeout = new Timeout(5 seconds)
+    implicit val timeout: Timeout = new Timeout(30 seconds)
 
     val start = Crunch.getLocalLastMidnight(from)
     val end = start.addDays(1)

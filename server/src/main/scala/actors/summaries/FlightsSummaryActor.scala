@@ -4,8 +4,8 @@ import actors.acking.AckingReceiver.Ack
 import actors.{FlightMessageConversion, RecoveryActorLike, Sizes}
 import akka.actor.Props
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{ApiFlightWithSplits, SDateLike}
 import drt.shared.Terminals.Terminal
+import drt.shared.{ApiFlightWithSplits, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.FlightsSummary.FlightsSummaryMessage
@@ -13,8 +13,6 @@ import services.SDate
 import services.exports.summaries.GetSummaries
 import services.exports.summaries.flights.{TerminalFlightsSummary, TerminalFlightsSummaryLike, TerminalFlightsWithActualApiSummary}
 import services.graphstages.Crunch
-
-import scala.util.{Failure, Success, Try}
 
 object FlightsSummaryActor {
   def props(date: SDateLike, terminal: Terminal, now: () => SDateLike): Props = {
