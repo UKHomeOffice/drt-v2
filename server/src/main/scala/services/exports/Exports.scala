@@ -27,7 +27,7 @@ object Exports {
                               numberOfDays: Int,
                               now: () => SDateLike,
                               terminal: Terminal,
-                              maybeSummaryActorProvider: Option[((SDateLike, Terminal) => ActorRef, Any)],
+                              maybeSummaryActorAndRequestProvider: Option[((SDateLike, Terminal) => ActorRef, Any)],
                               queryPortState: (SDateLike, Any) => Future[Option[PortState]],
                               portStateToSummaries: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike])
                              (implicit sys: ActorSystem,
@@ -37,7 +37,7 @@ object Exports {
       val from = startDate.addDays(dayOffset)
       val addHeader = dayOffset == 0
 
-      val summaryForDay = (maybeSummaryActorProvider, isHistoric(now, from)) match {
+      val summaryForDay = (maybeSummaryActorAndRequestProvider, isHistoric(now, from)) match {
         case (Some((actorProvider, request)), true) =>
           val actorForDayAndTerminal = actorProvider(from, terminal)
           val eventualSummaryForDay = historicSummaryForDay(terminal, from, actorForDayAndTerminal, request, queryPortState, portStateToSummaries)

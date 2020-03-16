@@ -27,13 +27,13 @@ trait ExportToCsv {
                   end: SDateLike,
                   description: String,
                   terminal: Terminal,
-                  maybeSummaryActorProvider: Option[((SDateLike, Terminal) => ActorRef, Any)],
+                  maybeSummaryActorAndRequestProvider: Option[((SDateLike, Terminal) => ActorRef, Any)],
                   summaryFromPortState: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike])
                  (implicit timeout: Timeout): Result = {
     if (airportConfig.terminals.toSet.contains(terminal)) {
       val startString = start.millisSinceEpoch.toString
       val endString = end.millisSinceEpoch.toString
-      val exportSource = exportBetweenDates(startString, endString, terminal, description, maybeSummaryActorProvider, summaryFromPortState)
+      val exportSource = exportBetweenDates(startString, endString, terminal, description, maybeSummaryActorAndRequestProvider, summaryFromPortState)
       val fileName = makeFileName(description, terminal, start, end, airportConfig.portCode)
 
       Try(sourceToCsvResponse(exportSource, fileName)) match {
@@ -52,7 +52,7 @@ trait ExportToCsv {
                          end: String,
                          terminal: Terminal,
                          description: String,
-                         maybeSummaryActorProvider: Option[((SDateLike, Terminal) => ActorRef, Any)],
+                         maybeSummaryActorAndRequestProvider: Option[((SDateLike, Terminal) => ActorRef, Any)],
                          summaryFromPortStateProvider: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike])
                         (implicit timeout: Timeout): Source[String, NotUsed] = {
     val startPit = getLocalLastMidnight(SDate(start.toLong, europeLondonTimeZone))
@@ -61,7 +61,7 @@ trait ExportToCsv {
 
     log.info(s"Export $description for terminal $terminal between ${SDate(start.toLong).toISOString()} & ${SDate(end.toLong).toISOString()} ($numberOfDays days)")
 
-    Exports.summaryForDaysCsvSource(startPit, numberOfDays, now, terminal, maybeSummaryActorProvider, queryPortStateActor, summaryFromPortStateProvider)
+    Exports.summaryForDaysCsvSource(startPit, numberOfDays, now, terminal, maybeSummaryActorAndRequestProvider, queryPortStateActor, summaryFromPortStateProvider)
   }
 
   def makeFileName(subject: String,
