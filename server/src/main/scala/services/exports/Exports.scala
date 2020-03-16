@@ -51,7 +51,7 @@ object Exports {
       }
 
       summaryForDay.map {
-        case None => ""
+        case None => "\n"
         case Some(summaryLike) if addHeader => summaryLike.toCsvWithHeader
         case Some(summaryLike) => summaryLike.toCsv
       }

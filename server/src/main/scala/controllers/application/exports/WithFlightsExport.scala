@@ -26,7 +26,7 @@ trait WithFlightsExport extends ExportToCsv {
         Try(SDate(year, month, day, 0, 0, europeLondonTimeZone)) match {
           case Success(start) =>
             val summaryFromPortState = Exports.flightSummariesWithActualApiFromPortState(terminal)
-            exportToCsv(start, start, "flights", terminal, Option(summaryActorProvider, summariesRequest), summaryFromPortState)
+            exportToCsv(start, start, "flights", terminal, Option(summaryActorProvider, GetSummariesWithActualApi), summaryFromPortState)
           case Failure(t) =>
             log.error(f"Bad date date $year%02d/$month%02d/$day%02d", t)
             BadRequest(f"Bad date date $year%02d/$month%02d/$day%02d")
