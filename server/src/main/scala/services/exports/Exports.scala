@@ -14,7 +14,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.exports.summaries.flights.{TerminalFlightsSummary, TerminalFlightsWithActualApiSummary}
 import services.exports.summaries.queues.TerminalQueuesSummary
-import services.exports.summaries.{GetSummaries, Summaries, TerminalSummaryLike}
+import services.exports.summaries.{Summaries, TerminalSummaryLike}
 import services.graphstages.Crunch
 
 import scala.concurrent.{ExecutionContext, Future}

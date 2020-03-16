@@ -1,19 +1,16 @@
 package actors.daily
 
 import actors.acking.AckingReceiver.Ack
-import actors.{FlightMessageConversion, RecoveryActorLike, Sizes}
+import actors.{GetState, RecoveryActorLike, Sizes}
 import akka.actor.Props
 import akka.persistence.SnapshotOffer
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
+import drt.shared.CrunchApi.{CrunchMinute, CrunchMinutes, MillisSinceEpoch}
 import drt.shared.Terminals.Terminal
-import drt.shared.{ApiFlightWithSplits, SDateLike, TQM}
+import drt.shared.{SDateLike, TQM}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
-import server.protobuf.messages.FlightsSummary.FlightsSummaryMessage
 import services.SDate
-import services.exports.summaries.GetSummaries
-import services.exports.summaries.flights.{TerminalFlightsSummary, TerminalFlightsSummaryLike, TerminalFlightsWithActualApiSummary}
 import services.graphstages.Crunch
 
 object TerminalQueuesActor {
@@ -66,39 +63,25 @@ class TerminalQueuesActor(year: Int,
   override def stateToMessage: GeneratedMessage = CrunchMinutesMessage(state.values.map(crunchMinuteToMessage).toSeq)
 
   override def receiveCommand: Receive = {
-    case tqs: TerminalFlightsSummaryLike if state.isEmpty =>
-      log.info(s"Received TerminalFlightsSummaryLike for persistence")
-      state = Option(tqs.flights)
-      persistAndMaybeSnapshot(stateToMessage)
+    case CrunchMinutes(minutes) =>
+      log.info(s"Received CrunchMinutes for persistence")
+      val diff = minutes.filter { cm =>
+        state.get(cm.key) match {
+          case Some(existingCm) if existingCm.equals(cm) => false
+          case _ => true
+        }
+      }
+      state = state ++ diff.map { cm => (cm.key, cm) }
+      persistAndMaybeSnapshot(CrunchMinutesMessage(diff.map(crunchMinuteToMessage).toSeq))
       sender() ! Ack
 
-    case _: TerminalFlightsSummaryLike if state.isDefined =>
-      log.warn(s"Received TerminalQueuesSummary, but we already have state so will ignore")
-      sender() ! Ack
-
-    case GetSummaries =>
-      log.info(s"Received GetSummaries")
-      val summaries = state.map(TerminalFlightsSummary(_, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes))
-      sender() ! summaries
-
-    case GetSummariesWithActualApi =>
-      log.info(s"Received GetSummariesWithActualApi")
-      val summaries = state.map(TerminalFlightsWithActualApiSummary(_, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes))
-      sender() ! summaries
+    case GetState =>
+      log.info(s"Received GetState")
+      sender() ! stateResponse
   }
 
-  private val millisToLocalIsoDateOnly: MillisSinceEpoch => String = SDate.millisToLocalIsoDateOnly(Crunch.europeLondonTimeZone)
-
-  private val millisToLocalHoursAndMinutes: MillisSinceEpoch => String = SDate.millisToLocalHoursAndMinutes(Crunch.europeLondonTimeZone)
-}
-
-object FlightsSummaryMessageConversion {
-  def flightsSummaryToMessage(flights: Seq[ApiFlightWithSplits]): FlightsSummaryMessage = {
-    val flightsSummaryMessages = flights.map(FlightMessageConversion.flightWithSplitsToMessage)
-    FlightsSummaryMessage(flightsSummaryMessages)
-  }
-
-  def flightsFromMessage(tqsm: FlightsSummaryMessage): Seq[ApiFlightWithSplits] = {
-    tqsm.flights.map(FlightMessageConversion.flightWithSplitsFromMessage)
+  private def stateResponse = {
+    if (state.nonEmpty) Option(CrunchMinutes(state.values.toSet)) else None
   }
 }
+
