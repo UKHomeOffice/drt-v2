@@ -52,14 +52,8 @@ object Exports {
 
       summaryForDay.map {
         case None => ""
-        case Some(summaryLike) if addHeader =>
-          val withHeader = summaryLike.toCsvWithHeader
-          println(s"withHeader: $withHeader")
-          withHeader
-        case Some(summaryLike) =>
-          val withoutHeader = summaryLike.toCsv
-          println(s"withoutHeader: $withoutHeader")
-          withoutHeader
+        case Some(summaryLike) if addHeader => summaryLike.toCsvWithHeader
+        case Some(summaryLike) => summaryLike.toCsv
       }
     }
 
@@ -82,17 +76,26 @@ object Exports {
         case None =>
           extractDayFromPortStateForTerminal(terminal, from, queryPortState, fromPortState).flatMap {
             case None => Future(None)
-            case Some(extract) => askableSummaryActor.ask(extract)
-              .map(_ => Option(extract))
-              .recoverWith {
-                case t =>
-                  log.error("Didn't get a summary from the summary actor", t)
-                  Future(None)
-              }
+            case Some(extract) if extract.isEmpty =>
+              log.warn(s"Empty summary from port state. Won't send to be persisted")
+              Future(None)
+            case Some(extract) => sendSummaryToBePersisted(askableSummaryActor, extract)
           }
         case someSummaries =>
           log.info(s"Got summaries from summary actor for ${from.toISODateOnly}")
           Future(someSummaries)
+      }
+  }
+
+  private def sendSummaryToBePersisted(askableSummaryActor: AskableActorRef,
+                                       extract: TerminalSummaryLike)
+                                      (implicit ec: ExecutionContext, timeout: Timeout) = {
+    askableSummaryActor.ask(extract)
+      .map(_ => Option(extract))
+      .recoverWith {
+        case t =>
+          log.error("Didn't get an ack from the summary actor for the data to be persisted", t)
+          Future(None)
       }
   }
 

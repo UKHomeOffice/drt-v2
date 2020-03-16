@@ -1,7 +1,6 @@
 package services.export
 
-import actors.GetPortStateForTerminal
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
@@ -308,11 +307,6 @@ class DesksAndQueuesExportSpec extends SpecificationLike {
         val value1 = exportStream.runWith(Sink.seq)(ActorMaterializer())
         val result = Await.result(value1, 1 second)
 
-        val firstIncHeader = persistedSummaries(queues, SDate("2020-01-01")).summaries.zipWithIndex.map {
-          case (summary, 0) => (TerminalQueuesSummary.queueHeadings(Seq(EeaDesk)) + "\r\n") + summary.toCsv
-          case (summary, _) => summary.toCsv
-        }
-
         val expected = List(
           persistedSummaries(queues, SDate("2020-01-01")).toCsvWithHeader,
           persistedSummaries(queues, SDate("2020-01-02")).toCsv,
@@ -322,23 +316,5 @@ class DesksAndQueuesExportSpec extends SpecificationLike {
         result === expected
       }
     }
-  }
-}
-
-class MockTerminalSummariesActor(optionalSummaries: Option[TerminalQueuesSummary],
-                                 maybeTestProbe: Option[ActorRef]) extends Actor {
-  override def receive: Receive = {
-    case GetSummaries =>
-      sender() ! optionalSummaries
-
-    case summaries: TerminalQueuesSummary =>
-      maybeTestProbe.foreach(_ ! summaries)
-      sender() ! "ok"
-  }
-}
-
-class MockPortStateActor(optionalPortState: Option[PortState]) extends Actor {
-  override def receive: Receive = {
-    case GetPortStateForTerminal(_, _, _) => sender() ! optionalPortState
   }
 }

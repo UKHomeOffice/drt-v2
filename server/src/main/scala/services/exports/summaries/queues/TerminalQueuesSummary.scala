@@ -5,6 +5,7 @@ import drt.shared.Queues.Queue
 import services.exports.summaries.TerminalSummaryLike
 
 case class TerminalQueuesSummary(queues: Seq[Queue], summaries: Iterable[QueuesSummary]) extends TerminalSummaryLike {
+  override def isEmpty: Boolean = summaries.isEmpty
 
   import TerminalQueuesSummary._
 

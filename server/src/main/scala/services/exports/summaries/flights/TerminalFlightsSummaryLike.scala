@@ -9,6 +9,8 @@ import drt.shared.splits.ApiSplitsToSplitRatio
 import services.exports.summaries.TerminalSummaryLike
 
 trait TerminalFlightsSummaryLike extends TerminalSummaryLike {
+  override def isEmpty: Boolean = flights.isEmpty
+
   def flights: Seq[ApiFlightWithSplits]
 
   def millisToDateOnly: MillisSinceEpoch => String
