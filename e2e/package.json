@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc",
     "lint": "eslint . --ext .ts",
-    "test": "npm run build && npx cypress run"
+    "test": "npm run build && npx cypress run",
+    "test-browser": "npm run build && npx cypress open"
   },
   "author": "UK Home Office",
   "license": "UNLICENSED",
