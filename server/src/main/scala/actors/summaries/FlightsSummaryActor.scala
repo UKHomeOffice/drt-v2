@@ -15,9 +15,8 @@ import services.exports.summaries.flights.{TerminalFlightsSummary, TerminalFligh
 import services.graphstages.Crunch
 
 object FlightsSummaryActor {
-  def props(date: SDateLike, terminal: Terminal, now: () => SDateLike): Props = {
+  def props(date: SDateLike, terminal: Terminal, now: () => SDateLike): Props =
     Props(classOf[FlightsSummaryActor], date.getFullYear(), date.getMonth(), date.getDate(), terminal, now)
-  }
 }
 
 case object GetSummariesWithActualApi
