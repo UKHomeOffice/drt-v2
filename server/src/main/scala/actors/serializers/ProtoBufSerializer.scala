@@ -6,6 +6,7 @@ import server.protobuf.messages.Alert.{Alert, AlertSnapshotMessage}
 import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchStateSnapshotMessage}
 import server.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
 import server.protobuf.messages.FlightsMessage._
+import server.protobuf.messages.FlightsSummary.FlightsSummaryMessage
 import server.protobuf.messages.RegisteredArrivalMessage.{RegisteredArrivalMessage, RegisteredArrivalsMessage}
 import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
 import server.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
@@ -44,6 +45,7 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
   final val RegisteredArrivals: String            = classOf[RegisteredArrivalsMessage].getName
   final val RegisteredArrival: String             = classOf[RegisteredArrivalMessage].getName
   final val TerminalQueuesSummary: String         = classOf[TerminalQueuesSummaryMessage].getName
+  final val FlightsSummary: String                = classOf[FlightsSummaryMessage].getName
 
   override def toBinary(objectToSerialize: AnyRef): Array[Byte] = {
     objectToSerialize match {
@@ -74,6 +76,7 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case m: RegisteredArrivalMessage => m.toByteArray
       case m: RegisteredArrivalsMessage => m.toByteArray
       case m: TerminalQueuesSummaryMessage => m.toByteArray
+      case m: FlightsSummaryMessage => m.toByteArray
     }
   }
 
@@ -108,6 +111,7 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case RegisteredArrival              => RegisteredArrivalMessage.parseFrom(bytes)
       case RegisteredArrivals             => RegisteredArrivalsMessage.parseFrom(bytes)
       case TerminalQueuesSummary          => TerminalQueuesSummaryMessage.parseFrom(bytes)
+      case FlightsSummary                 => FlightsSummaryMessage.parseFrom(bytes)
     }
   }
 }

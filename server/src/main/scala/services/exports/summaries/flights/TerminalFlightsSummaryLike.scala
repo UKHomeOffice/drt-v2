@@ -9,6 +9,8 @@ import drt.shared.splits.ApiSplitsToSplitRatio
 import services.exports.summaries.TerminalSummaryLike
 
 trait TerminalFlightsSummaryLike extends TerminalSummaryLike {
+  override def isEmpty: Boolean = flights.isEmpty
+
   def flights: Seq[ApiFlightWithSplits]
 
   def millisToDateOnly: MillisSinceEpoch => String
@@ -61,5 +63,8 @@ trait TerminalFlightsSummaryLike extends TerminalSummaryLike {
       .map(splits => ApiSplitsToSplitRatio.flightPaxPerQueueUsingSplitsAsRatio(splits, fws.apiFlight))
       .getOrElse(Map())
 
-  def asCSV(csvData: Iterable[List[Any]]): String = csvData.map(_.mkString(",")).mkString(lineEnding)
+  def asCSV(csvData: Iterable[List[Any]]): String =
+    if (csvData.nonEmpty)
+      csvData.map(_.mkString(",")).mkString(lineEnding)
+    else lineEnding
 }

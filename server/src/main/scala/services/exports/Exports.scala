@@ -27,7 +27,7 @@ object Exports {
                               numberOfDays: Int,
                               now: () => SDateLike,
                               terminal: Terminal,
-                              maybeSummaryActorProvider: Option[(SDateLike, Terminal) => ActorRef],
+                              maybeSummaryActorAndRequestProvider: Option[((SDateLike, Terminal) => ActorRef, Any)],
                               queryPortState: (SDateLike, Any) => Future[Option[PortState]],
                               portStateToSummaries: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike])
                              (implicit sys: ActorSystem,
@@ -37,11 +37,14 @@ object Exports {
       val from = startDate.addDays(dayOffset)
       val addHeader = dayOffset == 0
 
-      val summaryForDay = (maybeSummaryActorProvider, isHistoric(now, from)) match {
-        case (Some(actorProvider), true) =>
+      val summaryForDay = (maybeSummaryActorAndRequestProvider, isHistoric(now, from)) match {
+        case (Some((actorProvider, request)), true) =>
           val actorForDayAndTerminal = actorProvider(from, terminal)
-          val eventualSummaryForDay = historicSummaryForDay(terminal, from, actorForDayAndTerminal, GetSummaries, queryPortState, portStateToSummaries)
-          eventualSummaryForDay.onComplete(_ => actorForDayAndTerminal ! PoisonPill)
+          val eventualSummaryForDay = historicSummaryForDay(terminal, from, actorForDayAndTerminal, request, queryPortState, portStateToSummaries)
+          eventualSummaryForDay.onComplete { _ =>
+            log.info(s"Got response from summary actor")
+            actorForDayAndTerminal ! PoisonPill
+          }
           eventualSummaryForDay
         case _ =>
           extractDayFromPortStateForTerminal(terminal, from, queryPortState, portStateToSummaries)
@@ -64,9 +67,7 @@ object Exports {
                             request: Any,
                             queryPortState: (SDateLike, Any) => Future[Option[PortState]],
                             fromPortState: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike])
-                           (implicit system: ActorSystem,
-                            ec: ExecutionContext,
-                            timeout: Timeout): Future[Option[TerminalSummaryLike]] = {
+                           (implicit ec: ExecutionContext, timeout: Timeout): Future[Option[TerminalSummaryLike]] = {
     val askableSummaryActor: AskableActorRef = summaryActor
     askableSummaryActor
       .ask(request)
@@ -75,16 +76,26 @@ object Exports {
         case None =>
           extractDayFromPortStateForTerminal(terminal, from, queryPortState, fromPortState).flatMap {
             case None => Future(None)
-            case Some(extract) => askableSummaryActor.ask(extract)
-              .map(_ => Option(extract))
-              .recoverWith {
-                case t =>
-                  log.error("Didn't get a summary from the summary actor", t)
-                  Future(None)
-              }
+            case Some(extract) if extract.isEmpty =>
+              log.warn(s"Empty summary from port state. Won't send to be persisted")
+              Future(None)
+            case Some(extract) => sendSummaryToBePersisted(askableSummaryActor, extract)
           }
         case someSummaries =>
+          log.info(s"Got summaries from summary actor for ${from.toISODateOnly}")
           Future(someSummaries)
+      }
+  }
+
+  private def sendSummaryToBePersisted(askableSummaryActor: AskableActorRef,
+                                       extract: TerminalSummaryLike)
+                                      (implicit ec: ExecutionContext, timeout: Timeout) = {
+    askableSummaryActor.ask(extract)
+      .map(_ => Option(extract))
+      .recoverWith {
+        case t =>
+          log.error("Didn't get an ack from the summary actor for the data to be persisted", t)
+          Future(None)
       }
   }
 
@@ -135,9 +146,9 @@ object Exports {
     flights.filter(_.apiFlight.Terminal == terminal).toSeq
   }
 
-  def millisToLocalIsoDateOnly: MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate(millis, Crunch.europeLondonTimeZone).toISODateOnly
+  def millisToLocalIsoDateOnly: MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate.millisToLocalIsoDateOnly(Crunch.europeLondonTimeZone)(millis)
 
-  def millisToLocalHoursAndMinutes: MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate(millis, Crunch.europeLondonTimeZone).toHoursAndMinutes()
+  def millisToLocalHoursAndMinutes: MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate.millisToLocalHoursAndMinutes(Crunch.europeLondonTimeZone)(millis)
 
   def actualAPISplitsAndHeadingsFromFlight(flightWithSplits: ApiFlightWithSplits): Set[(String, Double)] = flightWithSplits
     .splits

@@ -61,7 +61,7 @@ describe('Advanced Passenger Information Splits exposed to Port Operators', () =
                 expect(response.status).to.eq(200);
                 expect(response.body).to.contain(header);
                 expect(response.body).to.contain(localTimeScheduledDate.format("YYYY-MM-DD") + ',' + localTimeScheduledDate.format("HH:mm"));
-                expect(response.headers['content-disposition']).to.eq("attachment; filename=TEST-T1-export-splits-" + year + "-" + month.pad(2) + "-" + day.pad(2) + ".csv")
+                expect(response.headers['content-disposition']).to.eq("attachment; filename=TEST-T1-flights-" + year + "-" + month.pad(2) + "-" + day.pad(2) + ".csv")
             });
     })
 });

@@ -1,6 +1,7 @@
 package actors.pointInTime
 
-import actors.PortStateMessageConversion.{crunchMinuteFromMessage, flightWithSplitsFromMessage, staffMinuteFromMessage}
+import actors.FlightMessageConversion.flightWithSplitsFromMessage
+import actors.PortStateMessageConversion.{crunchMinuteFromMessage, staffMinuteFromMessage}
 import actors.Sizes.oneMegaByte
 import actors._
 import akka.actor.Props

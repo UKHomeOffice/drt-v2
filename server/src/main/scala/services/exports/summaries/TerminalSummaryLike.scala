@@ -1,6 +1,8 @@
 package services.exports.summaries
 
 trait TerminalSummaryLike {
+  def isEmpty: Boolean
+
   val lineEnding = "\n"
 
   def toCsv: String

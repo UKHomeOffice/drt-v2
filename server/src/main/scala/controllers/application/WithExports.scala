@@ -26,6 +26,10 @@ import scala.language.postfixOps
 trait WithExports extends WithDesksExport with WithFlightsExport {
   self: Application =>
 
+  def localLastMidnight(pointInTime: String): SDateLike = Crunch.getLocalLastMidnight(SDate(pointInTime.toLong))
+
+  def terminal(terminalName: String): Terminal = Terminal(terminalName)
+
   def exportUsers(): Action[AnyContent] = authByRole(ManageUsers) {
     Action.async { request =>
       val client = keyCloakClient(request.headers)
@@ -107,7 +111,7 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
   }
 
   def queryPortStateActor: (SDateLike, Any) => Future[Option[PortState]] = (from: SDateLike, message: Any) => {
-    implicit val timeout: Timeout = new Timeout(5 seconds)
+    implicit val timeout: Timeout = new Timeout(30 seconds)
 
     val start = Crunch.getLocalLastMidnight(from)
     val end = start.addDays(1)
