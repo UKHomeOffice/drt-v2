@@ -19,7 +19,7 @@ abstract class TerminalDayLikeActor(year: Int,
 
   val typeForPersistenceId: String
 
-  override def persistenceId: String = s"terminal-$typeForPersistenceId-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
+  override def persistenceId: String = f"terminal-$typeForPersistenceId-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
 
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
 

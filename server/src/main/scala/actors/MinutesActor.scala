@@ -50,9 +50,9 @@ class MinutesActor(now: () => SDateLike,
   }
 
   def handleLookup(replyTo: ActorRef,
-                   maybeResult: Future[Option[MinutesContainer]],
+                   eventualMaybeResult: Future[Option[MinutesContainer]],
                    maybeFallback: Option[() => Future[Option[MinutesContainer]]]): Unit = {
-    maybeResult.map {
+    eventualMaybeResult.map {
       case Some(minutes) =>
         log.info(s"Got some minutes. Sending them")
         replyTo ! Option(minutes)

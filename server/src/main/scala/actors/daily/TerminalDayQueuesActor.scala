@@ -12,7 +12,7 @@ import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesM
 
 object TerminalDayQueuesActor {
   def props(date: SDateLike, terminal: Terminal, now: () => SDateLike): Props =
-    Props(classOf[TerminalDayQueuesActor], date.getFullYear(), date.getMonth(), date.getDate(), terminal, now)
+    Props(new TerminalDayQueuesActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now))
 }
 
 class TerminalDayQueuesActor(year: Int,
