@@ -23,7 +23,6 @@ class MinutesActorSpec extends Specification {
 
   "When I ask for CrunchMinutes" >> {
     val date = SDate("2020-01-01T00:00")
-    val now = () => date
     val lookupWithNoData: MinutesLookup = (_: Terminal, _: SDateLike) => Future(None)
     def lookupWithData(crunchMinutes: MinutesContainer): MinutesLookup = (_: Terminal, _: SDateLike) => Future(Option(crunchMinutes))
     val crunchMinute = CrunchMinute(terminal, queue, date.millisSinceEpoch, 1, 2, 3, 4, None, None, None, None)
