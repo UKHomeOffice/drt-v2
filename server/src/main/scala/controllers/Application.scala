@@ -15,6 +15,7 @@ import buildinfo.BuildInfo
 import com.typesafe.config.ConfigFactory
 import controllers.application._
 import controllers.model.ActorDataRequest
+import drt.auth.{BorderForceStaff, LoggedInUser, ManageUsers, Role, Roles, StaffEdit}
 import drt.http.ProdSendAndReceive
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}

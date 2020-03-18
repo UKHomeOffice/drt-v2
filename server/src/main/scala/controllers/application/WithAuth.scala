@@ -1,7 +1,7 @@
 package controllers.application
 
 import controllers.Application
-import drt.shared.{LoggedInUser, Role}
+import drt.auth.{LoggedInUser, Role}
 import play.api.libs.json.{JsObject, Json, Writes}
 import play.api.mvc.{Action, AnyContent, Result}
 

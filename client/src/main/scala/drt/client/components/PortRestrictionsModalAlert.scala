@@ -1,10 +1,10 @@
 package drt.client.components
 
+import drt.auth.LoggedInUser
 import drt.client.actions.Actions.UpdateShowAlertModalDialog
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
-import drt.shared.LoggedInUser
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
 

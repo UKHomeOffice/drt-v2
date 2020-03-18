@@ -5,8 +5,9 @@ import actors.{DrtStaticParameters, GetPortState, GetUpdatesSince}
 import akka.actor.PoisonPill
 import controllers.Application
 import controllers.model.ActorDataRequest
+import drt.auth.DesksAndQueuesView
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortStateError, PortStateUpdates}
-import drt.shared.{DesksAndQueuesView, PortState}
+import drt.shared.PortState
 import play.api.mvc.{Action, AnyContent, Request}
 import services.SDate
 import upickle.default.write

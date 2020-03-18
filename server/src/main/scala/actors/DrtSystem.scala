@@ -10,6 +10,7 @@ import akka.util.Timeout
 import com.amazonaws.auth.AWSCredentials
 import com.typesafe.config.ConfigFactory
 import controllers.{Deskstats, PaxFlow, UserRoleProviderLike}
+import drt.auth.{Role, Roles}
 import drt.chroma._
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveFlight}
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}

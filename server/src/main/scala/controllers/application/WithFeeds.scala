@@ -2,11 +2,11 @@ package controllers.application
 
 import java.util.UUID
 
-import actors.GetState
 import actors.pointInTime.ArrivalsReadActor
 import akka.actor.{ActorRef, PoisonPill}
 import akka.pattern.AskableActorRef
 import controllers.Application
+import drt.auth.ArrivalSource
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import play.api.mvc.{Action, AnyContent}

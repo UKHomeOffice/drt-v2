@@ -1,5 +1,6 @@
 package drt.shared
 
+import drt.auth.LHRAccess
 import drt.shared.Terminals.{T1, Terminal}
 import org.specs2.mutable.Specification
 

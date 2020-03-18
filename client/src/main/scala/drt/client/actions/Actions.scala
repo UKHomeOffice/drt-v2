@@ -3,6 +3,7 @@ package drt.client.actions
 import java.util.UUID
 
 import diode.Action
+import drt.auth.LoggedInUser
 import drt.client.components.StaffAdjustmentDialogueState
 import drt.client.services.ViewMode
 import drt.shared.CrunchApi._

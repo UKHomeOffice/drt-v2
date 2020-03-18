@@ -1,5 +1,6 @@
 package drt.shared.airportconfig
 
+import drt.auth.LHRAccess
 import drt.shared.PaxTypes._
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues._

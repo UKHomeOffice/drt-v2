@@ -1,5 +1,6 @@
 package serialization
 
+import drt.auth.{Role, Roles}
 import drt.shared.CrunchApi._
 import drt.shared.PaxTypes._
 import drt.shared.SplitRatiosNs.SplitSources.Historical

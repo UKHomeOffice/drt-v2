@@ -7,6 +7,7 @@ import drt.shared.Terminals.Terminal
 import ujson.Js.Value
 import upickle.Js
 import upickle.default.{ReadWriter, macroRW, readwriter}
+import drt.auth.{LoggedInUser, Role}
 
 import scala.collection.immutable.SortedMap
 

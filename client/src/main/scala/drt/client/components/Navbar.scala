@@ -1,9 +1,10 @@
 package drt.client.components
 
+import drt.auth.LoggedInUser
 import drt.client.SPAMain.{ContactUsLoc, Loc}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
-import drt.shared.{AirportConfig, LoggedInUser}
+import drt.shared.AirportConfig
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router.{BaseUrl, RouterCtl}
 import japgolly.scalajs.react.vdom.html_<^._

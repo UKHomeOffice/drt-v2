@@ -74,6 +74,7 @@ object Settings {
     val openSaml = "2.6.1"
     val drtBirminghamSchema = "1.2.0"
     val drtCirium = "48"
+    val drtLib = "13"
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
     val uPickle = "0.6.7"
@@ -91,6 +92,7 @@ object Settings {
   val sharedDependencies = Def.setting(Seq(
     "com.lihaoyi" %%% "autowire" % autowire,
     "com.lihaoyi" %%% "upickle" % uPickle,
+    "uk.gov.homeoffice" %% "drt-lib" % drtLib,
     "io.suzaku" %%% "boopickle" % booPickle
   ))
 
@@ -180,6 +182,7 @@ object Settings {
 
     "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
     "uk.gov.homeoffice" %% "drt-cirium" % drtCirium,
+    "uk.gov.homeoffice" %% "drt-lib" % drtLib,
     "uk.gov.homeoffice" %% "bluebus" % bluebus
   ))
 
@@ -188,6 +191,7 @@ object Settings {
     "com.github.japgolly.scalajs-react" %%% "core" % scalajsReact,
     "com.github.japgolly.scalajs-react" %%% "extra" % scalajsReact,
     "com.github.japgolly.scalajs-react" %%% "test" % scalajsReact % Test,
+    "uk.gov.homeoffice" %%% "drt-lib" % drtLib,
     "com.github.japgolly.scalacss" %%% "ext-react" % scalaCSS,
     "com.olvind" %%% "scalajs-react-components" % scalajsReactComponents,
     "io.suzaku" %%% "diode" % diode,

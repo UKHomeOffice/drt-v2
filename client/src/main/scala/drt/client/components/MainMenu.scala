@@ -1,5 +1,6 @@
 package drt.client.components
 
+import drt.auth._
 import drt.client.SPAMain._
 import drt.client.components.Icon._
 import drt.client.services.JSDateConversions.SDate

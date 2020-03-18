@@ -9,6 +9,7 @@ import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, OverflowStrategy, QueueOfferResult, UniqueKillSwitch}
 import akka.testkit.{TestKit, TestProbe}
+import drt.auth.STNAccess
 import drt.shared.CrunchApi._
 import drt.shared.PaxTypes._
 import drt.shared.PaxTypesAndQueues._
