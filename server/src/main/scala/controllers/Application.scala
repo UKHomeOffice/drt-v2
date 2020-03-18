@@ -31,7 +31,6 @@ import services.PcpArrival.{pcpFrom, _}
 import services.SplitsProvider.SplitProvider
 import services._
 import services.graphstages.Crunch
-import services.graphstages.Crunch._
 import services.metrics.Metrics
 import services.staffing.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
@@ -359,8 +358,8 @@ class Application @Inject()(implicit val config: Configuration,
 
   def healthCheck: Action[AnyContent] = Action.async { _ =>
     val requestStart = SDate.now()
-    val startMillis = getLocalLastMidnight(SDate.now()).millisSinceEpoch
-    val endMillis = getLocalNextMidnight(SDate.now()).millisSinceEpoch
+    val startMillis = SDate.now().getLocalLastMidnight.millisSinceEpoch
+    val endMillis = SDate.now().getLocalNextMidnight.millisSinceEpoch
     val portState = ActorDataRequest.portState[PortState](ctrl.portStateActor, GetPortState(startMillis, endMillis))
 
     portState.map {

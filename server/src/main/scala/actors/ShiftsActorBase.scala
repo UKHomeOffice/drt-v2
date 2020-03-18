@@ -20,6 +20,8 @@ import scala.util.Try
 
 case object GetState
 
+case object ClearState
+
 case object GetFeedStatuses
 
 case class GetPortState(from: MillisSinceEpoch, to: MillisSinceEpoch)

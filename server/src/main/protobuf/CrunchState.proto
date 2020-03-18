@@ -48,6 +48,10 @@ message CrunchMinuteMessage {
     optional int32 actWait = 11;
 }
 
+message StaffMinutesMessage {
+    repeated StaffMinuteMessage minutes = 1;
+}
+
 message StaffMinuteMessage {
     optional string terminalName = 1;
     optional int64 minute = 2;

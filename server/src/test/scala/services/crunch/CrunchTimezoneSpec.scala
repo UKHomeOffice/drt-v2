@@ -23,7 +23,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
       "Then I should get an SDateLike representing the previous midnight UTC" >> {
       val now = SDate("2010-01-02T11:39", europeLondonTimeZone)
 
-      val result = getLocalLastMidnight(now).millisSinceEpoch
+      val result = now.getLocalLastMidnight.millisSinceEpoch
       val expected = SDate("2010-01-02T00:00").millisSinceEpoch
 
       result === expected
@@ -33,7 +33,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
       "When I ask for a corresponding crunch start time " +
       "Then I should get an SDateLike representing the previous midnight UTC" >> {
       val now = SDate("2010-07-02T11:39", europeLondonTimeZone)
-      val result: MillisSinceEpoch = getLocalLastMidnight(now).millisSinceEpoch
+      val result: MillisSinceEpoch = now.getLocalLastMidnight.millisSinceEpoch
       val expected = SDate("2010-07-01T23:00").millisSinceEpoch
 
       result === expected
@@ -91,7 +91,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
             resultSummary == expected
         }
 
-        crunch.shutdown
+        crunch.shutdown()
 
         success
       }

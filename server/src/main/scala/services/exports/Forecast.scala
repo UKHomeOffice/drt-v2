@@ -5,7 +5,6 @@ import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared.{AirportConfig, PortState, SDateLike}
 import services.SDate
-import services.graphstages.Crunch.getLocalLastMidnight
 
 object Forecast {
   def headlineFigures(startOfForecast: SDateLike,
@@ -48,6 +47,6 @@ object Forecast {
         val deskStaff = if (cms.nonEmpty) cms.values.map(_.deskRec).sum else 0
         ForecastTimeSlot(millis, available, fixedPoints + deskStaff)
       }
-      .groupBy(forecastTimeSlot => getLocalLastMidnight(SDate(forecastTimeSlot.startMillis)).millisSinceEpoch)
+      .groupBy(forecastTimeSlot => SDate(forecastTimeSlot.startMillis).getLocalLastMidnight.millisSinceEpoch)
       .mapValues(_.toSeq)
 }

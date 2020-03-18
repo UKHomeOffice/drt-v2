@@ -7,7 +7,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared.{SDateLike, _}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.graphstages.Crunch.{getLocalLastMidnight, movementsUpdateCriteria, purgeExpired}
+import services.graphstages.Crunch.{movementsUpdateCriteria, purgeExpired}
 import services.metrics.{Metrics, StageTimer}
 
 import scala.collection.immutable.SortedMap
@@ -52,7 +52,7 @@ class StaffGraphStage(name: String = "",
       staffMinutes ++= initialStaffMinutes.minutes.map(sm => (TM(sm.terminal, sm.minute), sm))
 
       if (checkRequiredUpdatesOnStartup) {
-        val lastMidnightMillis = getLocalLastMidnight(now()).millisSinceEpoch
+        val lastMidnightMillis = now().getLocalLastMidnight.millisSinceEpoch
 
         val missing = Crunch.missingMinutesForDay(lastMidnightMillis, minuteExists, airportConfig.terminals.toList, numberOfDays)
         val requiringUpdate = minutesRequiringUpdate(lastMidnightMillis)
@@ -173,7 +173,7 @@ class StaffGraphStage(name: String = "",
         val minutes = date.getMinutes()
         hours * 60 + minutes
       })
-      val firstMinute = getLocalLastMidnight(now())
+      val firstMinute = now().getLocalLastMidnight
 
       val minuteMillis = (0 until numberOfDays)
         .flatMap(d =>

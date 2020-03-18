@@ -48,12 +48,12 @@ class LegacyDeploymentGraphStage(name: String = "",
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
     override def preStart(): Unit = {
-      val initialMinutesCount = optionalInitialCrunchMinutes.getOrElse(CrunchMinutes(Set())).crunchMinutes.size
+      val initialMinutesCount = optionalInitialCrunchMinutes.getOrElse(CrunchMinutes(Set())).minutes.size
       log.info(s"Received $initialMinutesCount initial crunch minutes")
 
       optionalInitialStaffMinutes.foreach(_.minutes.foreach(sm => staffMinutes += (sm.key -> sm)))
 
-      optionalInitialCrunchMinutes.foreach(_.crunchMinutes.foreach { cm =>
+      optionalInitialCrunchMinutes.foreach(_.minutes.foreach { cm =>
         val lm = LoadMinute(cm.terminal, cm.queue, cm.paxLoad, cm.workLoad, cm.minute)
         loadMinutes += (lm.uniqueId -> lm)
         deployments += (TQM(cm.terminal, cm.queue, cm.minute) -> cm.deployedDesks.getOrElse(0))

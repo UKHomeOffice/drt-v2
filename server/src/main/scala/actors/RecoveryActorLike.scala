@@ -28,7 +28,7 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
 
   def processSnapshotMessage: PartialFunction[Any, Unit]
 
-  def playEventMessage: PartialFunction[Any, Unit] = processRecoveryMessage orElse unknownMessage
+  def playRecoveryMessage: PartialFunction[Any, Unit] = processRecoveryMessage orElse unknownMessage
 
   def playSnapshotMessage: PartialFunction[Any, Unit] = processSnapshotMessage orElse unknownMessage
 
@@ -90,6 +90,6 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
       postRecoveryComplete()
 
     case event =>
-      playEventMessage(event)
+      playRecoveryMessage(event)
   }
 }

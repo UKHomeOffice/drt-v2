@@ -37,7 +37,7 @@ object Exports {
       val from = startDate.addDays(dayOffset)
       val addHeader = dayOffset == 0
 
-      val summaryForDay = (maybeSummaryActorAndRequestProvider, isHistoric(now, from)) match {
+      val summaryForDay = (maybeSummaryActorAndRequestProvider, MilliTimes.isHistoric(now, from)) match {
         case (Some((actorProvider, request)), true) =>
           val actorForDayAndTerminal = actorProvider(from, terminal)
           val eventualSummaryForDay = historicSummaryForDay(terminal, from, actorForDayAndTerminal, request, queryPortState, portStateToSummaries)
@@ -56,10 +56,6 @@ object Exports {
         case Some(summaryLike) => summaryLike.toCsv
       }
     }
-
-  private def isHistoric(now: () => SDateLike, from: SDateLike) = {
-    from.millisSinceEpoch <= Crunch.getLocalLastMidnight(now().addDays(-2)).millisSinceEpoch
-  }
 
   def historicSummaryForDay(terminal: Terminal,
                             from: SDateLike,

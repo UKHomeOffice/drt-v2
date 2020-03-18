@@ -1,9 +1,8 @@
 package services.crunch
 
 import drt.shared.CrunchApi._
-import drt.shared.{Forecast, MilliDate, Queues, SDateLike}
+import drt.shared.{Forecast, Queues, SDateLike}
 import org.specs2.mutable.Specification
-import services.graphstages.Crunch.getLocalLastMidnight
 import services.{CSVData, SDate}
 
 class ForecastPlanningToCSVDataTest extends Specification {
@@ -471,12 +470,12 @@ class ForecastPlanningToCSVDataTest extends Specification {
     result === expected
   }
 
-  def forecastForPeriodStartingOnDay(daysToAdd: Int, startDate: SDateLike) = {
-    val forecastStart = getLocalLastMidnight(startDate)
+  def forecastForPeriodStartingOnDay(daysToAdd: Int, startDate: SDateLike): ForecastPeriod = {
+    val forecastStart = startDate.getLocalLastMidnight
     val forecastEnd = forecastStart.addDays(daysToAdd)
 
     val range = forecastStart.millisSinceEpoch until forecastEnd.millisSinceEpoch by (15 * 60 * 1000)
-    val days = range.toList.groupBy(m => getLocalLastMidnight(MilliDate(m)).millisSinceEpoch)
+    val days = range.toList.groupBy(m => SDate(m).getLocalLastMidnight.millisSinceEpoch)
 
     ForecastPeriod(days.mapValues(_.map(ts => ForecastTimeSlot(ts, 1, 1))))
   }
