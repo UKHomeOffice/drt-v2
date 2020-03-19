@@ -30,6 +30,10 @@ message PaxTypeAndQueueCountMessage {
     optional double paxValue = 3;
 }
 
+message CrunchMinutesMessage {
+    repeated CrunchMinuteMessage minutes = 1;
+}
+
 message CrunchMinuteMessage {
     optional string terminalName = 1;
     optional string queueName = 2;
@@ -42,6 +46,10 @@ message CrunchMinuteMessage {
     optional int32 simWait = 9;
     optional int32 actDesks = 10;
     optional int32 actWait = 11;
+}
+
+message StaffMinutesMessage {
+    repeated StaffMinuteMessage minutes = 1;
 }
 
 message StaffMinuteMessage {

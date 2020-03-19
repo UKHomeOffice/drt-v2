@@ -3,11 +3,11 @@ package services.crunch
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.MilliTimes._
 import drt.shared.Terminals.T1
-import drt.shared.{MilliDate, SDateLike}
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import services.SDate
 import services.graphstages.Crunch
+import services.graphstages.Crunch.crunchStartWithOffset
 
 class CrunchSpec extends Specification {
   "When I ask for minuteInADay " +
@@ -149,11 +149,4 @@ class CrunchSpec extends Specification {
 
     crunchStart.toISOString === expected.toISOString
   }
-
-  def crunchStartWithOffset(offsetMinutes: Int)(minuteInQuestion: SDateLike): SDateLike = {
-    val adjustedMinute = minuteInQuestion.addMinutes(-1 * offsetMinutes)
-    println(s"Adjusted minute: ${adjustedMinute.toISOString}")
-    Crunch.getLocalLastMidnight(MilliDate(adjustedMinute.millisSinceEpoch)).addMinutes(offsetMinutes)
-  }
-
 }

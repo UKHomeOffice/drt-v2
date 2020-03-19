@@ -9,7 +9,6 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
-import services.graphstages.Crunch
 
 import scala.collection.immutable.{Seq, SortedMap}
 import scala.collection.mutable
@@ -19,7 +18,7 @@ import scala.concurrent.duration._
 class ApplicationRestartSpec extends CrunchTestLike {
 
   def emptyStaffMinutes(now: () => SDateLike, numDays: Int, terminals: List[Terminal]): Map[TM, StaffMinute] = {
-    val startMillis = Crunch.getLocalLastMidnight(now()).millisSinceEpoch
+    val startMillis = now().getLocalLastMidnight.millisSinceEpoch
     val minutesInADay = 1440
     val millisInAMinute = 60 * 1000
     val millisInADay = minutesInADay * millisInAMinute
@@ -76,7 +75,7 @@ class ApplicationRestartSpec extends CrunchTestLike {
 
     crunch.portStateTestProbe.expectNoMessage(2 second)
 
-    crunch.shutdown
+    crunch.shutdown()
 
     success
   }

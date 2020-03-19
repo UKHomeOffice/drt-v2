@@ -3,7 +3,7 @@ package actors.serializers
 import akka.serialization.SerializerWithStringManifest
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.Alert.{Alert, AlertSnapshotMessage}
-import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchStateSnapshotMessage}
+import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchMinutesMessage, CrunchStateSnapshotMessage, StaffMinutesMessage}
 import server.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
 import server.protobuf.messages.FlightsMessage._
 import server.protobuf.messages.FlightsSummary.FlightsSummaryMessage
@@ -46,6 +46,8 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
   final val RegisteredArrival: String             = classOf[RegisteredArrivalMessage].getName
   final val TerminalQueuesSummary: String         = classOf[TerminalQueuesSummaryMessage].getName
   final val FlightsSummary: String                = classOf[FlightsSummaryMessage].getName
+  final val CrunchMinutes: String                 = classOf[CrunchMinutesMessage].getName
+  final val StaffMinutes: String                  = classOf[StaffMinutesMessage].getName
 
   override def toBinary(objectToSerialize: AnyRef): Array[Byte] = {
     objectToSerialize match {
@@ -77,6 +79,8 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case m: RegisteredArrivalsMessage => m.toByteArray
       case m: TerminalQueuesSummaryMessage => m.toByteArray
       case m: FlightsSummaryMessage => m.toByteArray
+      case m: CrunchMinutesMessage => m.toByteArray
+      case m: StaffMinutesMessage => m.toByteArray
     }
   }
 
@@ -112,6 +116,8 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case RegisteredArrivals             => RegisteredArrivalsMessage.parseFrom(bytes)
       case TerminalQueuesSummary          => TerminalQueuesSummaryMessage.parseFrom(bytes)
       case FlightsSummary                 => FlightsSummaryMessage.parseFrom(bytes)
+      case CrunchMinutes                  => CrunchMinutesMessage.parseFrom(bytes)
+      case StaffMinutes                   => StaffMinutesMessage.parseFrom(bytes)
     }
   }
 }

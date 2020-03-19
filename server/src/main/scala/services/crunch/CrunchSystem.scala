@@ -79,11 +79,6 @@ object CrunchSystem {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def crunchStartWithOffset(offsetMinutes: Int)(minuteInQuestion: SDateLike): SDateLike = {
-    val adjustedMinute = minuteInQuestion.addMinutes(-offsetMinutes)
-    Crunch.getLocalLastMidnight(MilliDate(adjustedMinute.millisSinceEpoch)).addMinutes(offsetMinutes)
-  }
-
   def apply[FR](props: CrunchProps[FR])
                (implicit materializer: Materializer): CrunchSystem[FR] = {
 

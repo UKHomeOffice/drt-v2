@@ -233,11 +233,11 @@ object RunnableCrunch {
     removals.filterNot(_.flightKey.scheduled <= nowMillis)
   }
 
-  def liveStart(now: () => SDateLike): SDateLike = Crunch.getLocalLastMidnight(now()).addDays(-1)
+  def liveStart(now: () => SDateLike): SDateLike = now().getLocalLastMidnight.addDays(-1)
 
-  def liveEnd(now: () => SDateLike, liveStateDaysAhead: Int): SDateLike = Crunch.getLocalNextMidnight(now()).addDays(liveStateDaysAhead)
+  def liveEnd(now: () => SDateLike, liveStateDaysAhead: Int): SDateLike = now().getLocalNextMidnight.addDays(liveStateDaysAhead)
 
-  def forecastEnd(now: () => SDateLike): SDateLike = Crunch.getLocalNextMidnight(now()).addDays(360)
+  def forecastEnd(now: () => SDateLike): SDateLike = now().getLocalNextMidnight.addDays(360)
 
-  def forecastStart(now: () => SDateLike): SDateLike = Crunch.getLocalNextMidnight(now())
+  def forecastStart(now: () => SDateLike): SDateLike = now().getLocalNextMidnight
 }

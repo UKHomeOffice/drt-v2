@@ -12,8 +12,7 @@ import play.api.mvc.{ResponseHeader, Result}
 import services.SDate
 import services.exports.Exports
 import services.exports.summaries.TerminalSummaryLike
-import services.graphstages.Crunch
-import services.graphstages.Crunch.{europeLondonTimeZone, getLocalLastMidnight}
+import services.graphstages.Crunch.europeLondonTimeZone
 
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
@@ -55,8 +54,8 @@ trait ExportToCsv {
                          maybeSummaryActorAndRequestProvider: Option[((SDateLike, Terminal) => ActorRef, Any)],
                          summaryFromPortStateProvider: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike])
                         (implicit timeout: Timeout): Source[String, NotUsed] = {
-    val startPit = getLocalLastMidnight(SDate(start.toLong, europeLondonTimeZone))
-    val endPit = getLocalLastMidnight(SDate(end.toLong, europeLondonTimeZone))
+    val startPit = SDate(start.toLong, europeLondonTimeZone).getLocalLastMidnight
+    val endPit = SDate(end.toLong, europeLondonTimeZone).getLocalLastMidnight
     val numberOfDays = startPit.daysBetweenInclusive(endPit)
 
     log.info(s"Export $description for terminal $terminal between ${SDate(start.toLong).toISOString()} & ${SDate(end.toLong).toISOString()} ($numberOfDays days)")

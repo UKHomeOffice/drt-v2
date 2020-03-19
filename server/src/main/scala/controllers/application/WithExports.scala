@@ -2,7 +2,7 @@ package controllers.application
 
 import actors._
 import actors.pointInTime.CrunchStateReadActor
-import akka.actor.{Actor, PoisonPill, Props}
+import akka.actor.PoisonPill
 import akka.pattern._
 import akka.util.{ByteString, Timeout}
 import controllers.Application
@@ -14,8 +14,6 @@ import drt.users.KeyCloakGroups
 import play.api.http.HttpEntity
 import play.api.mvc._
 import services.exports.Forecast
-import services.graphstages.Crunch
-import services.graphstages.Crunch._
 import services.{CSVData, SDate}
 
 import scala.concurrent.Future
@@ -26,7 +24,7 @@ import scala.language.postfixOps
 trait WithExports extends WithDesksExport with WithFlightsExport {
   self: Application =>
 
-  def localLastMidnight(pointInTime: String): SDateLike = Crunch.getLocalLastMidnight(SDate(pointInTime.toLong))
+  def localLastMidnight(pointInTime: String): SDateLike = SDate(pointInTime.toLong).getLocalLastMidnight
 
   def terminal(terminalName: String): Terminal = Terminal(terminalName)
 
@@ -78,13 +76,13 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
     val terminal = Terminal(terminalName)
     Action.async {
       timedEndPoint(s"Export planning headlines", Option(s"$terminal")) {
-        val startOfWeekMidnight = getLocalLastMidnight(SDate(startDay.toLong))
+        val startOfWeekMidnight = SDate(startDay.toLong).getLocalLastMidnight
         val endOfForecast = startOfWeekMidnight.addDays(180)
         val now = SDate.now()
 
         val startOfForecast = if (startOfWeekMidnight.millisSinceEpoch < now.millisSinceEpoch) {
-          log.info(s"${startOfWeekMidnight.toLocalDateTimeString()} < ${now.toLocalDateTimeString()}, going to use ${getLocalNextMidnight(now)} instead")
-          getLocalNextMidnight(now)
+          log.info(s"${startOfWeekMidnight.toLocalDateTimeString()} < ${now.toLocalDateTimeString()}, going to use ${now.getLocalNextMidnight} instead")
+          now.getLocalNextMidnight
         } else startOfWeekMidnight
 
         val portStateFuture = ctrl.portStateActor.ask(
@@ -113,7 +111,7 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
   def queryPortStateActor: (SDateLike, Any) => Future[Option[PortState]] = (from: SDateLike, message: Any) => {
     implicit val timeout: Timeout = new Timeout(30 seconds)
 
-    val start = Crunch.getLocalLastMidnight(from)
+    val start = from.getLocalLastMidnight
     val end = start.addDays(1)
     val pointInTime = end.addHours(4)
 
@@ -136,14 +134,14 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
   }
 
   def startAndEndForDay(startDay: MillisSinceEpoch, numberOfDays: Int): (SDateLike, SDateLike) = {
-    val startOfWeekMidnight = getLocalLastMidnight(SDate(startDay))
+    val startOfWeekMidnight = SDate(startDay).getLocalLastMidnight
     val endOfForecast = startOfWeekMidnight.addDays(numberOfDays)
     val now = SDate.now()
 
-    val startOfForecast = if (startOfWeekMidnight.millisSinceEpoch < now.millisSinceEpoch) getLocalNextMidnight(now) else startOfWeekMidnight
+    val startOfForecast = if (startOfWeekMidnight.millisSinceEpoch < now.millisSinceEpoch) now.getLocalNextMidnight else startOfWeekMidnight
 
     (startOfForecast, endOfForecast)
   }
 
-  private def isHistoricDate(day: MillisSinceEpoch): Boolean = day < getLocalLastMidnight(SDate.now()).millisSinceEpoch
+  private def isHistoricDate(day: MillisSinceEpoch): Boolean = day < SDate.now().getLocalLastMidnight.millisSinceEpoch
 }

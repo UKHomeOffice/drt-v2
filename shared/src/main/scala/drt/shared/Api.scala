@@ -643,6 +643,12 @@ trait SDateLike {
 
   def startOfTheMonth(): SDateLike
 
+  def getLocalLastMidnight: SDateLike
+
+  def getLocalNextMidnight: SDateLike
+
+  def toIsoMidnight = s"${getFullYear()}-${getMonth()}-${getDate()}T00:00"
+
   def getLastSunday: SDateLike =
     if (getDayOfWeek() == 7)
       this
@@ -765,6 +771,10 @@ object MilliTimes {
   val oneHourMillis: Int = oneMinuteMillis * 60
   val oneDayMillis: Int = oneHourMillis * 24
   val minutesInADay: Int = 60 * 24
+
+  def isHistoric(now: () => SDateLike, from: SDateLike): Boolean = {
+    from.millisSinceEpoch <= now().getLocalLastMidnight.addDays(-1).millisSinceEpoch
+  }
 }
 
 object CrunchApi {
@@ -776,7 +786,7 @@ object CrunchApi {
     implicit val rw: ReadWriter[PortStateError] = macroRW
   }
 
-  trait Minute {
+  trait MinuteLike {
     val minute: MillisSinceEpoch
     val lastUpdated: Option[MillisSinceEpoch]
     val terminal: Terminal
@@ -798,7 +808,7 @@ object CrunchApi {
                          shifts: Int,
                          fixedPoints: Int,
                          movements: Int,
-                         lastUpdated: Option[MillisSinceEpoch] = None) extends Minute with TerminalMinute with WithLastUpdated with MinuteComparison[StaffMinute] {
+                         lastUpdated: Option[MillisSinceEpoch] = None) extends MinuteLike with TerminalMinute with WithLastUpdated with MinuteComparison[StaffMinute] {
     def equals(candidate: StaffMinute): Boolean =
       this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
 
@@ -827,7 +837,7 @@ object CrunchApi {
     implicit val rw: ReadWriter[StaffMinute] = macroRW
   }
 
-  case class StaffMinutes(minutes: Seq[StaffMinute]) extends PortStateMinutes {
+  case class StaffMinutes(minutes: Seq[StaffMinute]) extends PortStateMinutes with MinutesLike {
     def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
       val minutesDiff = minutes.foldLeft(List[StaffMinute]()) { case (soFar, sm) =>
         addIfUpdated(portState.staffMinutes.getByKey(sm.key), now, soFar, sm, () => sm.copy(lastUpdated = Option(now)))
@@ -854,7 +864,7 @@ object CrunchApi {
                           deployedWait: Option[Int] = None,
                           actDesks: Option[Int] = None,
                           actWait: Option[Int] = None,
-                          lastUpdated: Option[MillisSinceEpoch] = None) extends Minute with WithLastUpdated {
+                          lastUpdated: Option[MillisSinceEpoch] = None) extends MinuteLike with WithLastUpdated {
     def equals(candidate: CrunchMinute): Boolean = this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
 
     lazy val key: TQM = MinuteHelper.key(terminal, queue, minute)
@@ -973,7 +983,13 @@ object CrunchApi {
     } yield (TQM(tn, qn, minute), deskStat)
   }
 
-  case class CrunchMinutes(crunchMinutes: Set[CrunchMinute])
+  sealed trait MinutesLike {
+    def minutes: Iterable[MinuteLike]
+  }
+
+  case class MinutesContainer(minutes: Iterable[MinuteLike])
+
+  case class CrunchMinutes(minutes: Set[CrunchMinute]) extends MinutesLike
 
   case class PortStateUpdates(latest: MillisSinceEpoch,
                               flights: Set[ApiFlightWithSplits],
@@ -1030,7 +1046,7 @@ object CrunchApi {
     })
   }
 
-  def terminalMinutesByMinute[T <: Minute](minutes: List[T],
+  def terminalMinutesByMinute[T <: MinuteLike](minutes: List[T],
                                            terminalName: Terminal): Seq[(MillisSinceEpoch, List[T])] = minutes
     .filter(_.terminal == terminalName)
     .groupBy(_.minute)

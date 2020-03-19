@@ -93,7 +93,7 @@ object Crunch {
 
   def midnightThisMorning: MillisSinceEpoch = {
     val localNow = SDate(new DateTime(europeLondonTimeZone).getMillis)
-    val crunchStartDate = Crunch.getLocalLastMidnight(localNow.millisSinceEpoch).millisSinceEpoch
+    val crunchStartDate = SDate(localNow.millisSinceEpoch).getLocalLastMidnight.millisSinceEpoch
     crunchStartDate
   }
 
@@ -116,28 +116,8 @@ object Crunch {
 
   def changedDays(offsetMinutes: Int, staffMinutes: StaffMinutes): Map[MillisSinceEpoch, Seq[StaffMinute]] =
     staffMinutes.minutes.groupBy(minutes => {
-      getLocalLastMidnight(minutes.minute - offsetMinutes * 60000).millisSinceEpoch
+      SDate(minutes.minute - offsetMinutes * 60000).getLocalLastMidnight.millisSinceEpoch
     })
-
-  def getLocalLastMidnight(now: MilliDate): SDateLike = getLocalLastMidnight(now.millisSinceEpoch)
-
-  def getLocalLastMidnight(now: SDateLike): SDateLike = getLocalLastMidnight(now.millisSinceEpoch)
-
-  def getLocalLastMidnight(now: MillisSinceEpoch): SDateLike = {
-    val localNow = SDate(now, europeLondonTimeZone)
-    val localMidnight = s"${localNow.getFullYear()}-${localNow.getMonth()}-${localNow.getDate()}T00:00"
-    SDate(localMidnight, europeLondonTimeZone)
-  }
-
-  def getLocalNextMidnight(now: MilliDate): SDateLike = getLocalNextMidnight(now.millisSinceEpoch)
-
-  def getLocalNextMidnight(now: SDateLike): SDateLike = getLocalNextMidnight(now.millisSinceEpoch)
-
-  def getLocalNextMidnight(now: MillisSinceEpoch): SDateLike = {
-    val nextDay = getLocalLastMidnight(now).addDays(1)
-    val localMidnight = s"${nextDay.getFullYear()}-${nextDay.getMonth()}-${nextDay.getDate()}T00:00"
-    SDate(localMidnight, europeLondonTimeZone)
-  }
 
   def minuteMillisFor24hours(dayMillis: MillisSinceEpoch): Iterable[MillisSinceEpoch] =
     (0 until minutesInADay).map(m => dayMillis + (m * oneMinuteMillis))
@@ -146,7 +126,7 @@ object Crunch {
                            minuteExistsTerminals: (MillisSinceEpoch, List[Terminal]) => Boolean,
                            terminals: List[Terminal],
                            days: Int): Set[MillisSinceEpoch] = {
-    val fromMillisMidnight = getLocalLastMidnight(fromMillis).millisSinceEpoch
+    val fromMillisMidnight = SDate(fromMillis).getLocalLastMidnight.millisSinceEpoch
 
     (0 until days).foldLeft(Iterable[MillisSinceEpoch]()) {
       case (missingSoFar, day) =>
@@ -318,7 +298,7 @@ object Crunch {
 
   def crunchStartWithOffset(offsetMinutes: Int)(minuteInQuestion: SDateLike): SDateLike = {
     val adjustedMinute = minuteInQuestion.addMinutes(-1 * offsetMinutes)
-    Crunch.getLocalLastMidnight(MilliDate(adjustedMinute.millisSinceEpoch)).addMinutes(offsetMinutes)
+    adjustedMinute.getLocalLastMidnight.addMinutes(offsetMinutes)
   }
 
   @scala.annotation.tailrec

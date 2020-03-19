@@ -6,6 +6,7 @@ import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch
+import services.graphstages.Crunch.europeLondonTimeZone
 
 import scala.language.implicitConversions
 import scala.util.Try
@@ -50,6 +51,17 @@ object SDate {
     def getTimeZoneOffsetMillis(): Long = dateTime.getZone.getOffset(millisSinceEpoch)
 
     def startOfTheMonth(): SDateLike = SDate(dateTime.getFullYear(), dateTime.getMonth(), 1, 0, 0, Crunch.europeLondonTimeZone)
+
+    def getLocalLastMidnight: SDateLike = {
+      val localNow = SDate(dateTime, europeLondonTimeZone)
+      SDate(localNow.toIsoMidnight, europeLondonTimeZone)
+    }
+
+    def getLocalNextMidnight: SDateLike = {
+      val nextDay = getLocalLastMidnight.addDays(1)
+      SDate(nextDay.toIsoMidnight, europeLondonTimeZone)
+    }
+
   }
 
   def millisToLocalIsoDateOnly(timeZone: DateTimeZone): MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate(millis, timeZone).toISODateOnly
@@ -81,7 +93,8 @@ object SDate {
 
   def apply(dateTime: String, timeZone: DateTimeZone): SDateLike = JodaSDate(new DateTime(dateTime, timeZone))
 
-  def apply(dateTime: SDateLike, timeZone: DateTimeZone): SDateLike = JodaSDate(new DateTime(dateTime.millisSinceEpoch, timeZone))
+  def apply(dateTime: SDateLike,
+            timeZone: DateTimeZone): SDateLike = JodaSDate(new DateTime(dateTime.millisSinceEpoch, timeZone))
 
   def apply(millis: MillisSinceEpoch): SDateLike = JodaSDate(new DateTime(millis, DateTimeZone.UTC))
 
@@ -93,9 +106,11 @@ object SDate {
 
   def now(dtz: DateTimeZone): JodaSDate = JodaSDate(new DateTime(dtz))
 
-  def apply(y: Int, m: Int, d: Int, h: Int, mm: Int): SDateLike = implicits.jodaToSDate(new DateTime(y, m, d, h, mm, DateTimeZone.UTC))
+  def apply(y: Int, m: Int, d: Int, h: Int, mm: Int): SDateLike =
+    implicits.jodaToSDate(new DateTime(y, m, d, h, mm, DateTimeZone.UTC))
 
-  def apply(y: Int, m: Int, d: Int, h: Int, mm: Int, dateTimeZone: DateTimeZone): SDateLike = implicits.jodaToSDate(new DateTime(y, m, d, h, mm, dateTimeZone))
+  def apply(y: Int, m: Int, d: Int, h: Int, mm: Int, dateTimeZone: DateTimeZone): SDateLike =
+    implicits.jodaToSDate(new DateTime(y, m, d, h, mm, dateTimeZone))
 
-  def tryParseString(dateTime: String) = Try(apply(dateTime))
+  def tryParseString(dateTime: String): Try[SDateLike] = Try(apply(dateTime))
 }
