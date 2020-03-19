@@ -2,13 +2,13 @@ package drt.client.components
 
 import diode.UseValueEq
 import diode.data.Pot
+import drt.auth.LoggedInUser
 import drt.client.SPAMain._
 import drt.client.services.SPACircuit
-import drt.shared.LoggedInUser
-import japgolly.scalajs.react.{CtorType, _}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.{Resolution, RouterCtl}
 import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.{CtorType, _}
 
 object Layout {
 

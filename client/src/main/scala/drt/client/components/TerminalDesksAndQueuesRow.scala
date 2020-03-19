@@ -1,5 +1,6 @@
 package drt.client.components
 
+import drt.auth.LoggedInUser
 import drt.client.actions.Actions.UpdateStaffAdjustmentDialogueState
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType, queueActualsColour, queueColour}
 import drt.client.logger.{Logger, LoggerFactory}

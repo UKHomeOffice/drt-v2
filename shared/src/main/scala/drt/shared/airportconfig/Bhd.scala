@@ -1,5 +1,6 @@
 package drt.shared.airportconfig
 
+import drt.auth.BFSAccess
 import drt.shared.PaxTypes.{B5JPlusNational, EeaMachineReadable}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EeaDesk, NonEeaDesk}

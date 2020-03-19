@@ -1,10 +1,11 @@
 package drt.client.components
 
+import drt.auth.{LoggedInUser, Role}
 import drt.client.SPAMain.Loc
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{AirportConfig, AirportConfigs, LoggedInUser, PortCode, Role}
+import drt.shared.{AirportConfig, AirportConfigs, PortCode}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.{BaseUrl, RouterCtl}
 import japgolly.scalajs.react.vdom.html_<^.{^, _}

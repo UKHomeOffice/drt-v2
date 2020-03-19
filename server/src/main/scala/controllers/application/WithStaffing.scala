@@ -7,6 +7,7 @@ import actors.{GetState, SetFixedPoints, SetShifts}
 import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.pattern._
 import controllers.Application
+import drt.auth.{FixedPointsEdit, FixedPointsView, StaffEdit}
 import drt.shared._
 import drt.staff.ImportStaff
 import play.api.mvc.{Action, AnyContent, Request}

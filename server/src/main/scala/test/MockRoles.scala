@@ -1,7 +1,7 @@
 package test.roles
 
 import controllers.UserRoleProviderLike
-import drt.shared.{Role, Roles}
+import drt.auth.{Role, Roles}
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}

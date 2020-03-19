@@ -7,9 +7,10 @@ import akka.pattern._
 import akka.util.{ByteString, Timeout}
 import controllers.Application
 import controllers.application.exports.{WithDesksExport, WithFlightsExport}
+import drt.auth.{ForecastView, ManageUsers}
 import drt.shared.CrunchApi._
 import drt.shared.Terminals.Terminal
-import drt.shared.{ForecastView, ManageUsers, PortState, SDateLike}
+import drt.shared.{PortState, SDateLike}
 import drt.users.KeyCloakGroups
 import play.api.http.HttpEntity
 import play.api.mvc._

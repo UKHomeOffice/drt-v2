@@ -1,12 +1,13 @@
 package drt.client.components
 
+import drt.auth.{ArrivalsAndSplitsView, DesksAndQueuesView, LoggedInUser}
 import drt.client.SPAMain
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.SDateLike
 import drt.shared.Terminals.Terminal
-import drt.shared.{ArrivalsAndSplitsView, DesksAndQueuesView, LoggedInUser, SDateLike}
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}

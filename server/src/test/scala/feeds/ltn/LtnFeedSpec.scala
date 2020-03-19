@@ -4,23 +4,27 @@ import akka.actor.{ActorSystem, Cancellable}
 import akka.http.scaladsl.model.{HttpEntity, HttpResponse}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
-import akka.testkit.TestProbe
+import akka.testkit.{TestKit, TestProbe}
 import drt.server.feeds.ltn.{LtnFeedRequestLike, LtnLiveFeed}
 import org.joda.time.DateTimeZone
 import org.specs2.mutable.SpecificationLike
+import org.specs2.specification.AfterEach
 import server.feeds.ArrivalsFeedFailure
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
 case class MockLtnRequesterWithInvalidResponse()(implicit ec: ExecutionContext) extends LtnFeedRequestLike {
   override def getResponse: () => Future[HttpResponse] = () => Future(HttpResponse(entity = HttpEntity.apply("Some invalid response")))
 }
 
-class LtnFeedSpec extends SpecificationLike {
+class LtnFeedSpec extends SpecificationLike with AfterEach{
+
   implicit val system: ActorSystem = ActorSystem("ltn-test")
   implicit val ec: ExecutionContext = ExecutionContext.global
   implicit val materializer: ActorMaterializer = ActorMaterializer()
+
+  override def after: Unit = TestKit.shutdownActorSystem(system)
 
   "Given an invalid response " +
     "I should get an ArrivalsFeedFailure">> {
@@ -31,7 +35,7 @@ class LtnFeedSpec extends SpecificationLike {
       .to(Sink.actorRef(probe.ref, "done"))
       .run()
 
-    probe.expectMsgClass(1 second, classOf[ArrivalsFeedFailure])
+    probe.expectMsgClass(2 seconds, classOf[ArrivalsFeedFailure])
 
     cancellable.cancel()
 

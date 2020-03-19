@@ -1,9 +1,9 @@
 package drt.client.components
 
+import drt.auth.{BorderForceStaff, PortOperatorStaff}
 import drt.client.SPAMain.{Loc, PortDashboardLoc}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
-import drt.shared.{BorderForceStaff, PortOperatorStaff}
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}

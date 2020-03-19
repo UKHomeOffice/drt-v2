@@ -2,6 +2,7 @@ package drt.client.components
 
 import diode.data.{Pending, Pot}
 import diode.react.{ModelProxy, ReactConnectProxy}
+import drt.auth.{ArrivalSource, LoggedInUser}
 import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured

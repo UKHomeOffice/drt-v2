@@ -1,9 +1,9 @@
 package drt.client.components
 
+import drt.auth.LoggedInUser
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.shared.LoggedInUser
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
 

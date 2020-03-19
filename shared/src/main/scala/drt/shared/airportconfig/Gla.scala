@@ -1,5 +1,6 @@
 package drt.shared.airportconfig
 
+import drt.auth.GLAAccess
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}

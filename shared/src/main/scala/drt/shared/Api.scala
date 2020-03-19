@@ -17,6 +17,7 @@ import scala.collection.immutable.{NumericRange, Map => IMap, SortedMap => ISort
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 import scala.util.matching.Regex
+import drt.auth.LoggedInUser
 
 object DeskAndPaxTypeCombinations {
   val egate = "eGate"

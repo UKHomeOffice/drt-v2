@@ -2,10 +2,11 @@ package drt.client.services.handlers
 
 import diode.data.{Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW}
+import drt.auth.{LoggedInUser, Roles}
 import drt.client.SPAMain
 import drt.client.actions.Actions._
 import drt.client.logger.log
-import drt.shared.{LoggedInUser, Roles}
+
 import org.scalajs.dom
 import org.scalajs.dom.XMLHttpRequest
 import ujson.Js.Value

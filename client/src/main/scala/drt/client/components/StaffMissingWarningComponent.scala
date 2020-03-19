@@ -1,9 +1,9 @@
 package drt.client.components
 
+import drt.auth.{LoggedInUser, StaffEdit}
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.shared.CrunchApi.StaffMinute
-import drt.shared.{LoggedInUser, StaffEdit}
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._

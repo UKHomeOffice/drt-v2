@@ -6,8 +6,9 @@ import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{KillSwitch, Materializer, OverflowStrategy}
 import akka.util.Timeout
+import drt.auth.Role
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{AirportConfig, Arrival, PortCode, Role}
+import drt.shared.{AirportConfig, Arrival, PortCode}
 import graphs.SinkToSourceBridge
 import manifests.passengers.BestAvailableManifest
 import play.api.Configuration

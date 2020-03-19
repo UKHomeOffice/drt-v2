@@ -1,18 +1,19 @@
 package drt.client.components
 
+import drt.auth.LoggedInUser
 import drt.client.actions.Actions.{AddStaffMovements, UpdateStaffAdjustmentDialogueState}
 import drt.client.components.StaffAdjustmentDialogue.roundToNearest
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
+import drt.shared.SDateLike
 import drt.shared.Terminals.Terminal
-import drt.shared.{LoggedInUser, SDateLike}
-import japgolly.scalajs.react.{CtorType, _}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html
 import org.scalajs.dom.html.{Div, Select}
 
