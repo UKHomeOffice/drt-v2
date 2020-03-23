@@ -9,6 +9,7 @@ import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, OverflowStrategy, QueueOfferResult, UniqueKillSwitch}
 import akka.testkit.{TestKit, TestProbe}
+import akka.util.Timeout
 import drt.auth.STNAccess
 import drt.shared.CrunchApi._
 import drt.shared.PaxTypes._
@@ -246,6 +247,8 @@ class CrunchTestLike
     val (_, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
     val (manifestResponsesSource, _, _) = SinkToSourceBridge[List[BestAvailableManifest]]
 
+    val passengerDeltaActor = system.actorOf(PassengerDeltaActor.props(now)(new Timeout(2 seconds)))
+
     val crunchInputs = CrunchSystem(CrunchProps(
       logLabel = logLabel,
       airportConfig = airportConfig,
@@ -281,6 +284,7 @@ class CrunchTestLike
       arrivalsForecastSource = forecastArrivals,
       arrivalsLiveBaseSource = liveBaseArrivals,
       arrivalsLiveSource = liveArrivals,
+      passengerDeltaProvider = passengerDeltaActor,
       initialShifts = initialShifts,
       initialFixedPoints = initialFixedPoints,
       initialStaffMovements = initialStaffMovements,

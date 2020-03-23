@@ -1,0 +1,13 @@
+syntax = "proto2";
+
+package server.protobuf.messages;
+
+message PaxCountMessage {
+    optional int64 pointInTime = 1;
+    optional int64 day = 2;
+    optional int32 pax = 3;
+}
+
+message PaxCountsMessage {
+    repeated PaxCountMessage counts = 1;
+}

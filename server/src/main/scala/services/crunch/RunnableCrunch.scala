@@ -1,11 +1,14 @@
 package services.crunch
 
+import actors.GetOriginTerminalPaxDelta
 import actors.acking.AckingReceiver._
 import akka.NotUsed
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, ActorSystem}
+import akka.pattern.AskableActorRef
 import akka.stream._
 import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
 import akka.stream.stage.GraphStage
+import akka.util.Timeout
 import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
@@ -16,6 +19,7 @@ import server.feeds._
 import services.graphstages.Crunch.Loads
 import services.graphstages._
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
 object RunnableCrunch {
@@ -50,6 +54,7 @@ object RunnableCrunch {
                                        forecastArrivalsActor: ActorRef,
                                        liveBaseArrivalsActor: ActorRef,
                                        liveArrivalsActor: ActorRef,
+                                       passengerDeltaActor: AskableActorRef,
 
                                        manifestsActor: ActorRef,
                                        manifestRequestsSink: Sink[List[Arrival], NotUsed],
@@ -59,7 +64,8 @@ object RunnableCrunch {
 
                                        forecastMaxMillis: () => MillisSinceEpoch,
                                        throttleDurationPer: FiniteDuration
-                                      ): RunnableGraph[(FR, FR, FR, FR, MS, SS, SFP, SMM, ActorRef, SAD, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch)] = {
+                                      )
+                                      (implicit mat: Materializer, system: ActorSystem): RunnableGraph[(FR, FR, FR, FR, MS, SS, SFP, SMM, ActorRef, SAD, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch)] = {
 
     val arrivalsKillSwitch = KillSwitches.single[ArrivalsFeedResponse]
     val manifestsLiveKillSwitch = KillSwitches.single[ManifestsFeedResponse]
@@ -85,7 +91,7 @@ object RunnableCrunch {
       shiftsKillSwitch,
       fixedPointsKillSwitch,
       movementsKillSwitch
-    )((_, _, _, _, _, _, _, _, _, _, _, _, _, _, _)) {
+      )((_, _, _, _, _, _, _, _, _, _, _, _, _, _, _)) {
 
       implicit builder =>
         (
@@ -147,7 +153,31 @@ object RunnableCrunch {
               ArrivalsFeedSuccess(Flights(as.filter(_.Scheduled < maxScheduledMillis)), ca)
             case failure => failure
           } ~> forecastBaseArrivalsFanOut
-          forecastBaseArrivalsFanOut.collect { case ArrivalsFeedSuccess(Flights(as), _) => as.toList } ~> arrivals.in0
+
+          forecastBaseArrivalsFanOut
+            .collect { case ArrivalsFeedSuccess(Flights(as), _) => as.toList }
+            .mapAsync(1) { arrivals =>
+              Source(arrivals).mapAsync(1) { arrival =>
+                println(s"**************** here")
+                passengerDeltaActor.ask(GetOriginTerminalPaxDelta(arrival.Origin, arrival.Terminal, 7))(new Timeout(1 second))
+                  .map {
+                    case Some(delta: Int) =>
+                      println(s"****************** Some $delta")
+                      arrival.copy(ActPax = arrival.ActPax.map(pax => pax - delta))
+                    case None =>
+                      println(s"****************** None")
+                      arrival
+                    case u =>
+                      println(s"****************** unexpected")
+                      log.error(s"Got unexpected delta response: $u")
+                      arrival
+                  }
+                  .recover { case t =>
+                      log.error("Didn't get a passenger delta", t)
+                      arrival
+                  }
+              }.runWith(Sink.seq).map(_.toList)
+            } ~> arrivals.in0
           forecastBaseArrivalsFanOut ~> baseArrivalsSink
 
           forecastArrivalsSourceSync ~> fcstArrivalsDiffing ~> forecastArrivalsFanOut
@@ -235,7 +265,8 @@ object RunnableCrunch {
 
   def liveStart(now: () => SDateLike): SDateLike = now().getLocalLastMidnight.addDays(-1)
 
-  def liveEnd(now: () => SDateLike, liveStateDaysAhead: Int): SDateLike = now().getLocalNextMidnight.addDays(liveStateDaysAhead)
+  def liveEnd(now: () => SDateLike,
+              liveStateDaysAhead: Int): SDateLike = now().getLocalNextMidnight.addDays(liveStateDaysAhead)
 
   def forecastEnd(now: () => SDateLike): SDateLike = now().getLocalNextMidnight.addDays(360)
 

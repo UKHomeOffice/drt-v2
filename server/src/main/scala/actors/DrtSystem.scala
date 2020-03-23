@@ -210,6 +210,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val liveBaseArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveBaseArrivalsActor], params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis), name = "live-base-arrivals-actor")
   lazy val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor], params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis), name = "live-arrivals-actor")
 
+  lazy val passengerDeltaActor = system.actorOf(PassengerDeltaActor.props(now)(new Timeout(2 seconds)))
+
+
   lazy val arrivalsImportActor: ActorRef = system.actorOf(Props(classOf[ArrivalsImportActor]), name = "arrivals-import-actor")
 
   lazy val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(classOf[AggregatedArrivalsActor], ArrivalTable(airportConfig.portCode, PostgresTables)), name = "aggregated-arrivals-actor")
@@ -449,7 +452,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       useApiPaxNos = params.useApiPaxNos,
       adjustEGateUseByUnder12s = params.adjustEGateUseByUnder12s,
       optimiser = optimiser,
-      useLegacyDeployments = useLegacyDeployments))
+      useLegacyDeployments = useLegacyDeployments,
+      passengerDeltaProvider = passengerDeltaActor))
     crunchInputs
   }
 

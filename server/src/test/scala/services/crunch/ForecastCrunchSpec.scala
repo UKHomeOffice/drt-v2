@@ -135,15 +135,21 @@ class ForecastCrunchSpec extends CrunchTestLike {
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseFlights))
 
-    val expectedForecast = Map(SDate(base).millisSinceEpoch -> 20, SDate(base).addMinutes(1).millisSinceEpoch -> 1)
+    val expectedForecast = Map(
+      SDate(base).millisSinceEpoch -> 20,
+      SDate(base).addMinutes(1).millisSinceEpoch -> 1,
+      SDate(scheduled).millisSinceEpoch -> 20,
+      SDate(scheduled).addMinutes(1).millisSinceEpoch -> 1
+      )
 
     crunch.portStateTestProbe.fishForMessage(10 seconds) {
       case PortState(_, cms, _) =>
         val forecastSummary = interestingPaxLoads(cms)
+
         forecastSummary == expectedForecast
     }
 
-    crunch.shutdown
+    crunch.shutdown()
 
     success
   }

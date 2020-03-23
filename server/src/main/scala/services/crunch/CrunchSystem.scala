@@ -1,7 +1,7 @@
 package services.crunch
 
 import akka.NotUsed
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.AskableActorRef
 import akka.stream._
 import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
@@ -21,6 +21,7 @@ import services.graphstages.Crunch._
 import services.graphstages._
 
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 
@@ -64,6 +65,7 @@ case class CrunchProps[FR](logLabel: String = "",
                            arrivalsForecastSource: Source[ArrivalsFeedResponse, FR],
                            arrivalsLiveBaseSource: Source[ArrivalsFeedResponse, FR],
                            arrivalsLiveSource: Source[ArrivalsFeedResponse, FR],
+                           passengerDeltaProvider: AskableActorRef,
                            initialShifts: ShiftAssignments = ShiftAssignments(Seq()),
                            initialFixedPoints: FixedPointAssignments = FixedPointAssignments(Seq()),
                            initialStaffMovements: Seq[StaffMovement] = Seq(),
@@ -80,7 +82,7 @@ object CrunchSystem {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def apply[FR](props: CrunchProps[FR])
-               (implicit materializer: Materializer): CrunchSystem[FR] = {
+               (implicit materializer: Materializer, system: ActorSystem): CrunchSystem[FR] = {
 
     val shiftsSource: Source[ShiftAssignments, SourceQueueWithComplete[ShiftAssignments]] = Source.queue[ShiftAssignments](10, OverflowStrategy.backpressure)
     val fixedPointsSource: Source[FixedPointAssignments, SourceQueueWithComplete[FixedPointAssignments]] = Source.queue[FixedPointAssignments](10, OverflowStrategy.backpressure)
@@ -183,6 +185,7 @@ object CrunchSystem {
       staffGraphStage, staffBatcher, deploymentGraphStage,
       forecastArrivalsDiffingStage, liveBaseArrivalsDiffingStage, liveArrivalsDiffingStage,
       props.actors("forecast-base-arrivals").actorRef, props.actors("forecast-arrivals").actorRef, props.actors("live-base-arrivals").actorRef, props.actors("live-arrivals").actorRef,
+      props.passengerDeltaProvider,
       props.voyageManifestsActor, props.manifestRequestsSink,
       props.portStateActor,
       props.actors("aggregated-arrivals").actorRef,
