@@ -83,7 +83,7 @@ describe('Staff movements', () => {
         .removeXMovements(1);
     });
 
-    it("Should be able to adjust the staff movement", () => {
+    it("BorderForce user should be able to adjust the staff movement", () => {
           cy
             .asABorderForceOfficer()
             .navigateHome()
@@ -95,7 +95,7 @@ describe('Staff movements', () => {
             .get('.staff-deployment-adjustment-container').should('exist')
         });
 
-    it("Should not be able to adjust the staff movement", () => {
+    it("BorderForceReadOnly should not be able to adjust the staff movement", () => {
           cy
             .asABorderForceReadOnlyOfficer()
             .navigateHome()
