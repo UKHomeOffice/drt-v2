@@ -32,7 +32,6 @@ class PassengerDeltaActor(now: () => SDateLike)(implicit val timeout: Timeout) e
       originTerminalLastLookup += ((origin, terminal) -> now().millisSinceEpoch)
 
     case GetOriginTerminalPaxDelta(origin, terminal, numberOfDays) =>
-      log.info(s"****************** Got request: GetOriginTerminalPaxDelta($origin, $terminal, $numberOfDays)")
       val replyTo = sender()
 
       originTerminalLastLookup.get((origin, terminal)) match {
@@ -40,14 +39,14 @@ class PassengerDeltaActor(now: () => SDateLike)(implicit val timeout: Timeout) e
           originTerminalDeltas.get((origin, terminal)) match {
             case None => replyTo ! None
             case Some(cachedValue) =>
-              log.info(s"***************** Reusing cached value: $cachedValue")
+              log.debug(s"Reusing cached value $cachedValue for $origin/$terminal")
               replyTo ! cachedValue
           }
         case _ =>
           val askable: AskableActorRef = context.actorOf(OriginTerminalPassengersActor.props(origin.toString, terminal.toString))
           askable.ask(GetAverageDelta(numberOfDays)).asInstanceOf[Future[Option[Int]]]
             .map { maybeDelta =>
-              log.info(s"*************** Sending $maybeDelta")
+              log.debug(s"Sending new value $maybeDelta for $origin/$terminal")
               context.self ! SetOriginTerminalDelta(origin, terminal, maybeDelta)
               replyTo ! maybeDelta
               askable.ask(PoisonPill)
