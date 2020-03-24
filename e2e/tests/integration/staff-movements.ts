@@ -83,6 +83,18 @@ describe('Staff movements', () => {
         .removeXMovements(1);
     });
 
+    it("Should be able to adjust the staff movement", () => {
+          cy
+            .asABorderForceOfficer()
+            .navigateHome()
+            .navigateToMenuItem('T1')
+            .selectCurrentTab()
+            .choose24Hours()
+            .get('.staff-deployment-adjustment-container').should('exist')
+            .findAndClick('Recommendations')
+            .get('.staff-deployment-adjustment-container').should('exist')
+        });
+
     it("Should not be able to adjust the staff movement", () => {
           cy
             .asABorderForceReadOnlyOfficer()
