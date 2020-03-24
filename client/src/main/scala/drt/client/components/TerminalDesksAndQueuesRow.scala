@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.auth.LoggedInUser
+import drt.auth.{LoggedInUser, StaffMovementsEdit}
 import drt.client.actions.Actions.UpdateStaffAdjustmentDialogueState
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType, queueActualsColour, queueColour}
 import drt.client.logger.{Logger, LoggerFactory}
@@ -98,7 +98,7 @@ object TerminalDesksAndQueuesRow {
       val totalDeployed = DesksAndQueues.totalDeployed(props.staffMinute, crunchMinutes)
       val ragClass = ragStatus(totalRequired, available)
 
-      def allowAdjustments: Boolean = props.viewMode.time.millisSinceEpoch > SDate.midnightThisMorning().millisSinceEpoch
+      def allowAdjustments: Boolean = props.viewMode.time.millisSinceEpoch > SDate.midnightThisMorning().millisSinceEpoch && props.loggedInUser.hasRole(StaffMovementsEdit)
 
       val minus: TagMod = adjustmentLink(props, "-")
       val plus: TagMod = adjustmentLink(props, "+")

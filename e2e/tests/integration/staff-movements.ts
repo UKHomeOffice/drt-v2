@@ -82,6 +82,30 @@ describe('Staff movements', () => {
         .checkReasonOnMovementsTab('Case working: extra case work')
         .removeXMovements(1);
     });
+
+    it("BorderForce user should be able to adjust the staff movement", () => {
+          cy
+            .asABorderForceOfficer()
+            .navigateHome()
+            .navigateToMenuItem('T1')
+            .selectCurrentTab()
+            .choose24Hours()
+            .get('.staff-deployment-adjustment-container').should('exist')
+            .findAndClick('Recommendations')
+            .get('.staff-deployment-adjustment-container').should('exist')
+        });
+
+    it("BorderForceReadOnly should not be able to adjust the staff movement", () => {
+          cy
+            .asABorderForceReadOnlyOfficer()
+            .navigateHome()
+            .navigateToMenuItem('T1')
+            .selectCurrentTab()
+            .choose24Hours()
+            .get('.staff-deployment-adjustment-container').should('not.exist')
+            .findAndClick('Recommendations')
+            .get('.staff-deployment-adjustment-container').should('not.exist')
+        });
   });
 });
 
