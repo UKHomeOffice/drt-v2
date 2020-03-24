@@ -33,11 +33,11 @@ class OriginTerminalPassengersActor(origin: String, terminal: String) extends Pe
 
   override def receiveRecover: Receive = {
     case SnapshotOffer(md, PaxCountsMessage(countMessages)) =>
-      println(s"Got SnapshotOffer from ${SDate(md.timestamp).toISOString}")
+      log.info(s"Got SnapshotOffer from ${SDate(md.timestamp).toISOString}")
       paxNosState = messagesToUpdates(countMessages).map { case (pit, day, count) => ((pit, day), count) }.toMap
 
     case PaxCountsMessage(countMessages) =>
-      log.info(s"Got a paxCountsMessage with ${countMessages.size} counts. Applying")
+      log.debug(s"Got a paxCountsMessage with ${countMessages.size} counts. Applying")
       paxNosState = applyDiffToExisting(messagesToUpdates(countMessages), paxNosState)
 
     case RecoveryCompleted =>
@@ -48,18 +48,13 @@ class OriginTerminalPassengersActor(origin: String, terminal: String) extends Pe
   }
 
   override def receiveCommand: Receive = {
-    case GetAverageDelta(numberOfDays: Int) =>
-      log.info(s"Received request for $numberOfDays days average delta")
-      sendAverageDelta(numberOfDays, sender())
-
-    case u =>
-      log.info(s"Got unexpected command: $u")
+    case GetAverageDelta(numberOfDays: Int) => sendAverageDelta(numberOfDays, sender())
+    case u => log.info(s"Got unexpected command: $u")
   }
 
   private def sendAverageDelta(numberOfDays: Int, replyTo: ActorRef): Unit = {
     val maybeDeltas = PaxDeltas.maybeDeltas(paxNosState, numberOfDays, () => SDate.now())
     val maybeAverageDelta = PaxDeltas.maybeAverageDelta(maybeDeltas)
-    log.info(s"*************** Sending $maybeAverageDelta")
     replyTo ! maybeAverageDelta
   }
 
