@@ -15,11 +15,6 @@ import services.{PcpArrival, SDate}
 import scala.collection.mutable
 import scala.concurrent.duration._
 
-class MockPassengerDeltaActor extends Actor {
-  override def receive: Receive = {
-    case _ => sender() ! None
-  }
-}
 
 object TestableArrivalsGraphStage {
   def apply(testProbe: TestProbe,

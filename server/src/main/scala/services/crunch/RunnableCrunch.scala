@@ -20,6 +20,7 @@ import services.graphstages.Crunch.Loads
 import services.graphstages._
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 object RunnableCrunch {
@@ -54,7 +55,7 @@ object RunnableCrunch {
                                        forecastArrivalsActor: ActorRef,
                                        liveBaseArrivalsActor: ActorRef,
                                        liveArrivalsActor: ActorRef,
-                                       passengerDeltaActor: AskableActorRef,
+                                       applyPaxDeltas: List[Arrival] => Future[List[Arrival]],
 
                                        manifestsActor: ActorRef,
                                        manifestRequestsSink: Sink[List[Arrival], NotUsed],
@@ -156,28 +157,7 @@ object RunnableCrunch {
 
           forecastBaseArrivalsFanOut
             .collect { case ArrivalsFeedSuccess(Flights(as), _) => as.toList }
-            .mapAsync(1) { arrivals =>
-              Source(arrivals).mapAsync(1) { arrival =>
-                println(s"**************** here")
-                passengerDeltaActor.ask(GetOriginTerminalPaxDelta(arrival.Origin, arrival.Terminal, 7))(new Timeout(1 second))
-                  .map {
-                    case Some(delta: Int) =>
-                      println(s"****************** Some $delta")
-                      arrival.copy(ActPax = arrival.ActPax.map(pax => pax - delta))
-                    case None =>
-                      println(s"****************** None")
-                      arrival
-                    case u =>
-                      println(s"****************** unexpected")
-                      log.error(s"Got unexpected delta response: $u")
-                      arrival
-                  }
-                  .recover { case t =>
-                      log.error("Didn't get a passenger delta", t)
-                      arrival
-                  }
-              }.runWith(Sink.seq).map(_.toList)
-            } ~> arrivals.in0
+            .mapAsync(1)(applyPaxDeltas) ~> arrivals.in0
           forecastBaseArrivalsFanOut ~> baseArrivalsSink
 
           forecastArrivalsSourceSync ~> fcstArrivalsDiffing ~> forecastArrivalsFanOut

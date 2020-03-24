@@ -1,12 +1,20 @@
 package actors.daily
 
+import actors.GetOriginTerminalPaxDelta
 import akka.actor.{ActorRef, Props}
+import akka.pattern.AskableActorRef
 import akka.persistence._
-import drt.shared.SDateLike
+import akka.stream.Materializer
+import akka.stream.scaladsl.{Sink, Source}
+import akka.util.Timeout
+import drt.shared.{Arrival, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.PaxMessage.{PaxCountMessage, PaxCountsMessage}
 import services.SDate
+import services.crunch.RunnableCrunch.log
 
+import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
 
 case class GetAverageDelta(numberOfDays: Int)
 
@@ -90,4 +98,29 @@ object PaxDeltas {
       } yield forecast - actual
     }
   }
+
+  def applyPaxDeltas(passengerDeltaActor: AskableActorRef)
+                    (arrivals: List[Arrival])
+                    (implicit mat: Materializer, ec: ExecutionContext): Future[List[Arrival]] = Source(arrivals)
+    .mapAsync(1) { arrival =>
+      passengerDeltaActor.ask(GetOriginTerminalPaxDelta(arrival.Origin, arrival.Terminal, 7))(new Timeout(1 second))
+        .map {
+          case Some(delta: Int) =>
+            val updatedPax = arrival.ActPax.map(pax => pax - delta) match {
+              case Some(positiveWithDelta) if positiveWithDelta > 0 =>
+                log.info(s"Applying delta of $delta to ${arrival.flightCode} @ ${SDate(arrival.Scheduled).toISOString()} ${arrival.ActPax.getOrElse(0)} -> $positiveWithDelta")
+                Option(positiveWithDelta)
+              case _ => Option(0)
+            }
+            arrival.copy(ActPax = updatedPax)
+          case None => arrival
+          case u =>
+            log.error(s"Got unexpected delta response: $u")
+            arrival
+        }
+        .recover { case t =>
+          log.error("Didn't get a passenger delta", t)
+          arrival
+        }
+    }.runWith(Sink.seq).map(_.toList)
 }

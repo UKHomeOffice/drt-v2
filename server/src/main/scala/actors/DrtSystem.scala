@@ -210,7 +210,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val liveBaseArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveBaseArrivalsActor], params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis), name = "live-base-arrivals-actor")
   lazy val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor], params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis), name = "live-arrivals-actor")
 
-  lazy val passengerDeltaActor = system.actorOf(PassengerDeltaActor.props(now)(new Timeout(2 seconds)))
+  lazy val passengerDeltaActor: AskableActorRef = system.actorOf(PassengerDeltaActor.props(now)(new Timeout(2 seconds)))
 
 
   lazy val arrivalsImportActor: ActorRef = system.actorOf(Props(classOf[ArrivalsImportActor]), name = "arrivals-import-actor")
@@ -681,7 +681,7 @@ object ArrivalGenerator {
       PcpTime = pcpTime,
       Scheduled = if (schDt.nonEmpty) SDate(schDt).millisSinceEpoch else 0,
       FeedSources = feedSources
-    )
+      )
   }
 
   def arrivals(now: () => SDateLike, terminalNames: Iterable[Terminal]): Iterable[Arrival] = {

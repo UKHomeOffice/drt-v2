@@ -1,5 +1,6 @@
 package services.crunch
 
+import akka.actor.{Actor, Props}
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared.FlightsApi.Flights
@@ -14,6 +15,14 @@ import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.collection.mutable
 import scala.concurrent.duration._
 
+
+class MockPassengerDeltaActor(maybeDelta: Option[Int]) extends Actor {
+  override def receive: Receive = {
+    case u =>
+      println(s"*********** Received $u. Sending $maybeDelta")
+      sender() ! maybeDelta
+  }
+}
 
 class ForecastCrunchSpec extends CrunchTestLike {
   sequential
@@ -164,7 +173,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val baseArrivals = List(
       ArrivalGenerator.arrival(schDt = beforeMidnight, iata = "BA0001", terminal = T1, actPax = Option(20)),
       ArrivalGenerator.arrival(schDt = afterMidnight, iata = "BA0002", terminal = T1, actPax = Option(20))
-    )
+      )
     val baseFlights = Flights(baseArrivals)
 
     val startDate1 = MilliDate(SDate("2017-01-04T00:00").millisSinceEpoch)
@@ -179,12 +188,12 @@ class ForecastCrunchSpec extends CrunchTestLike {
         crunchOffsetMinutes = 240,
         queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk)),
         minutesToCrunch = 1440
-      ),
+        ),
       now = () => SDate(scheduled),
       initialShifts = ShiftAssignments(Seq(assignment1, assignment2)),
       cruncher = Optimiser.crunch,
       maxDaysToCrunch = 4
-    )
+      )
 
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseFlights))
 
@@ -405,7 +414,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val initialPortStateArrivals = Seq(
       ArrivalGenerator.arrival(schDt = base, iata = "FR0001", terminal = T1, actPax = Option(101)),
       ArrivalGenerator.arrival(schDt = base, iata = "EZ1100", terminal = T1, actPax = Option(250))
-    ).map(a => (a.unique, ApiFlightWithSplits(a, Set())))
+      ).map(a => (a.unique, ApiFlightWithSplits(a, Set())))
 
     val updatedBaseArrivals = mutable.SortedMap[UniqueArrival, Arrival]() ++ List(ArrivalGenerator.arrival(schDt = base, iata = "AA0099", terminal = T1, actPax = Option(55))).map(a => (a.unique, a))
 
@@ -414,7 +423,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
       initialForecastBaseArrivals = initialBaseArrivals,
       initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits]() ++ initialPortStateArrivals, SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())),
       maxDaysToCrunch = 4
-    )
+      )
 
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(updatedBaseArrivals.values.toSeq)))
 
@@ -426,7 +435,40 @@ class ForecastCrunchSpec extends CrunchTestLike {
         flightCodes == expectedFlightCodes
     }
 
-    crunch.shutdown
+    crunch.shutdown()
+
+    success
+  }
+
+  "Given an no initial arrivals " +
+    "When I send an updated base arrivals with a matching passenger delta of 10" +
+    "Then I should see the arrival in the port state with 90 passengers" >> {
+
+    val scheduled = "2017-01-01T00:00Z"
+
+    val aclPax = 100
+    val paxDelta = 10
+
+    val arrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(aclPax))
+    val baseArrivals = List(arrival)
+
+    val crunch = runCrunchGraph(
+      now = () => SDate(scheduled),
+      maybePassengerDeltaActorProps = Option(Props(new MockPassengerDeltaActor(Option(paxDelta))))
+      )
+
+    offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(baseArrivals)))
+
+    val expectedActPax = Option(aclPax - paxDelta)
+
+    crunch.portStateTestProbe.fishForMessage(2 seconds) {
+      case PortState(flightsWithSplits, _, _) =>
+        val actPax = flightsWithSplits.values.head.apiFlight.ActPax
+        println(s"actPax: $actPax")
+        actPax == expectedActPax
+    }
+
+    crunch.shutdown()
 
     success
   }

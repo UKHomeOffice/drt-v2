@@ -37,9 +37,12 @@ class PassengerDeltaActor(now: () => SDateLike)(implicit val timeout: Timeout) e
 
       originTerminalLastLookup.get((origin, terminal)) match {
         case Some(lastMillis) if now().millisSinceEpoch - lastMillis < cacheTimeMillis =>
-          val cachedDelta = originTerminalDeltas.get((origin, terminal))
-          log.info(s"***************** Reusing cached value: $cachedDelta")
-          replyTo ! cachedDelta
+          originTerminalDeltas.get((origin, terminal)) match {
+            case None => replyTo ! None
+            case Some(cachedValue) =>
+              log.info(s"***************** Reusing cached value: $cachedValue")
+              replyTo ! cachedValue
+          }
         case _ =>
           val askable: AskableActorRef = context.actorOf(OriginTerminalPassengersActor.props(origin.toString, terminal.toString))
           askable.ask(GetAverageDelta(numberOfDays)).asInstanceOf[Future[Option[Int]]]

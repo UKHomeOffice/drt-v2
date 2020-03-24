@@ -1,5 +1,6 @@
 package services.crunch
 
+import actors.daily.PaxDeltas
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.AskableActorRef
@@ -82,7 +83,7 @@ object CrunchSystem {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def apply[FR](props: CrunchProps[FR])
-               (implicit materializer: Materializer, system: ActorSystem): CrunchSystem[FR] = {
+               (implicit materializer: Materializer, system: ActorSystem, ec: ExecutionContext): CrunchSystem[FR] = {
 
     val shiftsSource: Source[ShiftAssignments, SourceQueueWithComplete[ShiftAssignments]] = Source.queue[ShiftAssignments](10, OverflowStrategy.backpressure)
     val fixedPointsSource: Source[FixedPointAssignments, SourceQueueWithComplete[FixedPointAssignments]] = Source.queue[FixedPointAssignments](10, OverflowStrategy.backpressure)
@@ -185,7 +186,7 @@ object CrunchSystem {
       staffGraphStage, staffBatcher, deploymentGraphStage,
       forecastArrivalsDiffingStage, liveBaseArrivalsDiffingStage, liveArrivalsDiffingStage,
       props.actors("forecast-base-arrivals").actorRef, props.actors("forecast-arrivals").actorRef, props.actors("live-base-arrivals").actorRef, props.actors("live-arrivals").actorRef,
-      props.passengerDeltaProvider,
+      PaxDeltas.applyPaxDeltas(props.passengerDeltaProvider),
       props.voyageManifestsActor, props.manifestRequestsSink,
       props.portStateActor,
       props.actors("aggregated-arrivals").actorRef,
