@@ -210,7 +210,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val liveBaseArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveBaseArrivalsActor], params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis), name = "live-base-arrivals-actor")
   lazy val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor], params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis), name = "live-arrivals-actor")
 
-  lazy val passengerDeltaActor: AskableActorRef = system.actorOf(PassengerDeltaActor.props(now)(new Timeout(2 seconds)))
+  lazy val passengerDeltaActor: AskableActorRef = system.actorOf(PassengerDeltaActor.props(now)(new Timeout(15 seconds)))
 
 
   lazy val arrivalsImportActor: ActorRef = system.actorOf(Props(classOf[ArrivalsImportActor]), name = "arrivals-import-actor")

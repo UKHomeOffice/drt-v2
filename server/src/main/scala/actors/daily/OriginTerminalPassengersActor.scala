@@ -98,7 +98,7 @@ object PaxDeltas {
                     (arrivals: List[Arrival])
                     (implicit mat: Materializer, ec: ExecutionContext): Future[List[Arrival]] = Source(arrivals)
     .mapAsync(1) { arrival =>
-      passengerDeltaActor.ask(GetOriginTerminalPaxDelta(arrival.Origin, arrival.Terminal, 7))(new Timeout(1 second))
+      passengerDeltaActor.ask(GetOriginTerminalPaxDelta(arrival.Origin, arrival.Terminal, 7))(new Timeout(15 second))
         .map {
           case Some(delta: Int) =>
             val updatedPax = arrival.ActPax.map(pax => pax - delta) match {
