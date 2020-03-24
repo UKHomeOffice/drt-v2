@@ -8,6 +8,7 @@ declare namespace Cypress {
         adjustMinutes(minutes: number): Chainable<Element>;
         adjustStaffBy(amount: number): Chainable<Element>;
         asABorderForceOfficer(): Chainable<Element>;
+        asABorderForceReadOnlyOfficer(): Chainable<Element>;
         asABorderForceOfficerWithRoles(roles: string[]): Chainable<Element>;
         asABorderForcePlanningOfficer(): Chainable<Element>;
         asADrtSuperUser(): Chainable<Element>;
