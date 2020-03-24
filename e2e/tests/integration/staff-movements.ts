@@ -82,6 +82,18 @@ describe('Staff movements', () => {
         .checkReasonOnMovementsTab('Case working: extra case work')
         .removeXMovements(1);
     });
+
+    it("Should not be able to adjust the staff movement", () => {
+          cy
+            .asABorderForceReadOnlyOfficer()
+            .navigateHome()
+            .navigateToMenuItem('T1')
+            .selectCurrentTab()
+            .choose24Hours()
+            .get('.staff-deployment-adjustment-container').should('not.exist')
+            .findAndClick('Recommendations')
+            .get('.staff-deployment-adjustment-container').should('not.exist')
+        });
   });
 });
 
