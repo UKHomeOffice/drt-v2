@@ -119,7 +119,7 @@ object CrunchSystem {
     val ptqa = if (props.airportConfig.hasTransfer)
       PaxTypeQueueAllocation(
         B5JPlusWithTransitTypeAllocator(),
-        TerminalQueueAllocatorWithFastTrack(props.airportConfig.terminalPaxTypeQueueAllocation))
+        TerminalQueueAllocator(props.airportConfig.terminalPaxTypeQueueAllocation))
     else
       PaxTypeQueueAllocation(
         B5JPlusTypeAllocator(),
