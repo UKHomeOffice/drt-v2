@@ -51,6 +51,7 @@ object Exports {
       }
 
       summaryForDay.map {
+        case None if addHeader => "\n"
         case None => "\n"
         case Some(summaryLike) if addHeader => summaryLike.toCsvWithHeader
         case Some(summaryLike) => summaryLike.toCsv
@@ -74,7 +75,7 @@ object Exports {
             case None => Future(None)
             case Some(extract) if extract.isEmpty =>
               log.warn(s"Empty summary from port state. Won't send to be persisted")
-              Future(None)
+              Future(Option(extract))
             case Some(extract) => sendSummaryToBePersisted(askableSummaryActor, extract)
           }
         case someSummaries =>
@@ -104,7 +105,7 @@ object Exports {
     val terminalRequest = GetPortStateForTerminal(startTime.millisSinceEpoch, endTime.millisSinceEpoch, terminal)
     val pointInTime = startTime.addHours(2)
     queryPortState(pointInTime, terminalRequest).map {
-      case None => None
+      case None => fromPortState(startTime, endTime, PortState.empty)
       case Some(portState) => fromPortState(startTime, endTime, portState)
     }
   }
