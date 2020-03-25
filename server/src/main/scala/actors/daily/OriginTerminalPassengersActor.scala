@@ -105,7 +105,9 @@ object PaxDeltas {
               case Some(positiveWithDelta) if positiveWithDelta > 0 =>
                 log.info(s"Applying delta of $delta to ${arrival.flightCode} @ ${SDate(arrival.Scheduled).toISOString()} ${arrival.ActPax.getOrElse(0)} -> $positiveWithDelta")
                 Option(positiveWithDelta)
-              case _ => Option(0)
+              case _ =>
+                log.info(s"Applying delta of $delta to ${arrival.flightCode} @ ${SDate(arrival.Scheduled).toISOString()} ${arrival.ActPax.getOrElse(0)} -> 1")
+                Option(1)
             }
             arrival.copy(ActPax = updatedPax)
           case None => arrival

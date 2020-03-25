@@ -26,10 +26,14 @@ class PassengerDeltaActor(now: () => SDateLike)(implicit val timeout: Timeout) e
   val originTerminalDeltas: mutable.Map[(PortCode, Terminal), Option[Int]] = mutable.Map()
   val originTerminalLastLookup: mutable.Map[(PortCode, Terminal), Long] = mutable.Map()
 
+  var portAverage: Int = 0
+
   override def receive: Receive = {
     case SetOriginTerminalDelta(origin, terminal, maybeDelta) =>
       originTerminalDeltas += ((origin, terminal) -> maybeDelta)
       originTerminalLastLookup += ((origin, terminal) -> now().millisSinceEpoch)
+      val numValues = originTerminalDeltas.values.count(_.isDefined)
+      portAverage = (originTerminalDeltas.values.map(_.getOrElse(0)).sum.toDouble / numValues).round.toInt
 
     case GetOriginTerminalPaxDelta(origin, terminal, numberOfDays) =>
       val replyTo = sender()
@@ -37,18 +41,24 @@ class PassengerDeltaActor(now: () => SDateLike)(implicit val timeout: Timeout) e
       originTerminalLastLookup.get((origin, terminal)) match {
         case Some(lastMillis) if now().millisSinceEpoch - lastMillis < cacheTimeMillis =>
           originTerminalDeltas.get((origin, terminal)) match {
-            case None => replyTo ! None
-            case Some(cachedValue) =>
+            case Some(Some(cachedValue)) =>
               log.debug(s"Reusing cached value $cachedValue for $origin/$terminal")
               replyTo ! cachedValue
+            case _ => replyTo ! Option(portAverage)
           }
         case _ =>
           val askable: AskableActorRef = context.actorOf(OriginTerminalPassengersActor.props(origin.toString, terminal.toString))
           askable.ask(GetAverageDelta(numberOfDays)).asInstanceOf[Future[Option[Int]]]
             .map { maybeDelta =>
-              log.debug(s"Sending new value $maybeDelta for $origin/$terminal")
               context.self ! SetOriginTerminalDelta(origin, terminal, maybeDelta)
-              replyTo ! maybeDelta
+              val response = if (maybeDelta.isDefined) {
+                log.info(s"Sending new value $maybeDelta for $origin/$terminal")
+                maybeDelta
+              } else {
+                log.info(s"Sending port average value $maybeDelta for $origin/$terminal")
+                Option(portAverage)
+              }
+              replyTo ! response
               askable.ask(PoisonPill)
             }
             .recoverWith {
