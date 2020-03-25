@@ -12,7 +12,7 @@ import services.{PcpArrival, SDate}
 
 import scala.collection.mutable
 import scala.concurrent.duration._
-
+import actors.ArrivalGenerator.arrival
 
 class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike with AfterEach {
   sequential
@@ -21,7 +21,7 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike with AfterEach {
   override def after: Unit = TestKit.shutdownActorSystem(system)
 
   val nowForThisTest: SDateLike = SDate(2019, 10, 1, 16, 0)
-  
+
   private def buildArrivalsGraphStage = new ArrivalsGraphStage(
     "",
     mutable.SortedMap[UniqueArrival, Arrival](),
@@ -44,16 +44,18 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike with AfterEach {
     val (aclSource, _, _, liveSource) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
 
     aclSource.offer(
-      List(arrival(actPax = Option(189), scheduledMillis = nowForThisTest.addHours(6).millisSinceEpoch))
+      List(arrival(actPax = Option(189), schDt = nowForThisTest.addHours(6).toISOString()))
     )
     liveSource.offer(
-      List(arrival(actPax = Option(0), scheduledMillis = nowForThisTest.addHours(6).millisSinceEpoch))
+      List(arrival(actPax = Option(0),
+        schDt = nowForThisTest.addHours(6).toISOString(),
+        gate = Option("G1")))
     )
 
     probe.fishForMessage(2 seconds) {
       case ArrivalsDiff(toUpdate, _) =>
         toUpdate.exists {
-          case (_, a) => a.ActPax == Option(189)
+          case (_, a) => a.ActPax == Option(189) && a.Gate == Option("G1")
         }
     }
     success
@@ -65,19 +67,22 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike with AfterEach {
     val (aclSource, forecastSource, _, liveSource) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
 
     aclSource.offer(
-      List(arrival(actPax = Option(189), scheduledMillis = nowForThisTest.addHours(6).millisSinceEpoch))
+      List(arrival(actPax = Option(189), schDt = nowForThisTest.addHours(6).toISOString()))
     )
     forecastSource.offer(
-      List(arrival(actPax = Option(100), scheduledMillis = nowForThisTest.addHours(6).millisSinceEpoch))
+      List(arrival(actPax = Option(100), schDt = nowForThisTest.addHours(6).toISOString()))
     )
     liveSource.offer(
-      List(arrival(actPax = Option(0), scheduledMillis = nowForThisTest.addHours(6).millisSinceEpoch))
+      List(arrival(
+        actPax = Option(0),
+        schDt = nowForThisTest.addHours(6).toISOString(),
+        gate = Option("G1")))
     )
 
     probe.fishForMessage(2 seconds) {
       case ArrivalsDiff(toUpdate, _) =>
         toUpdate.exists {
-          case (_, a) => a.ActPax == Option(100)
+          case (_, a) => a.ActPax == Option(100) && a.Gate == Option("G1")
         }
     }
     success
@@ -88,14 +93,14 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike with AfterEach {
     val probe = TestProbe("arrivals")
     val (aclSource, forecastSource, _, liveSource) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
 
-    aclSource.offer(List(arrival(actPax = Option(189), scheduledMillis = nowForThisTest.millisSinceEpoch)))
-    forecastSource.offer(List(arrival(actPax = Option(100), scheduledMillis = nowForThisTest.millisSinceEpoch)))
-    liveSource.offer(List(arrival(actPax = Option(0), scheduledMillis = nowForThisTest.millisSinceEpoch)))
+    aclSource.offer(List(arrival(actPax = Option(189), schDt = nowForThisTest.toISOString())))
+    forecastSource.offer(List(arrival(actPax = Option(100), schDt = nowForThisTest.toISOString())))
+    liveSource.offer(List(arrival(actPax = Option(0), schDt = nowForThisTest.toISOString(), gate = Option("G1"))))
 
     probe.fishForMessage(2 seconds) {
       case ArrivalsDiff(toUpdate, _) =>
         toUpdate.exists {
-          case (_, a) => a.ActPax == Option(0)
+          case (_, a) => a.ActPax == Option(0) && a.Gate == Option("G1")
         }
     }
     success
@@ -106,13 +111,13 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike with AfterEach {
     val probe = TestProbe("arrivals")
     val (aclSource, _, _, liveSource) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
 
-    aclSource.offer(List(arrival(actPax = Option(189), scheduledMillis = nowForThisTest.millisSinceEpoch)))
-    liveSource.offer(List(arrival(actPax = Option(0), scheduledMillis = nowForThisTest.millisSinceEpoch)))
+    aclSource.offer(List(arrival(actPax = Option(189), schDt = nowForThisTest.toISOString())))
+    liveSource.offer(List(arrival(actPax = Option(0), schDt = nowForThisTest.toISOString(), gate = Option("G1"))))
 
     probe.fishForMessage(2 seconds) {
       case ArrivalsDiff(toUpdate, _) =>
         toUpdate.exists {
-          case (_, a) => a.ActPax == Option(0)
+          case (_, a) => a.ActPax == Option(0) && a.Gate == Option("G1")
         }
     }
     success
@@ -124,20 +129,21 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike with AfterEach {
     val (aclSource, _, _, liveSource) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
 
     aclSource.offer(
-      List(arrival(actPax = Option(189), scheduledMillis = nowForThisTest.addHours(8).millisSinceEpoch))
+      List(arrival(actPax = Option(189), schDt = nowForThisTest.addHours(8).toISOString()))
     )
     liveSource.offer(
       List(arrival(
         actPax = Option(0),
-        scheduledMillis = nowForThisTest.addHours(8).millisSinceEpoch,
-        actual = Option(nowForThisTest.millisSinceEpoch)
+        schDt = nowForThisTest.addHours(8).toISOString(),
+        actChoxDt = nowForThisTest.toISOString(),
+        gate = Option("G1")
       ))
     )
 
     probe.fishForMessage(2 seconds) {
       case ArrivalsDiff(toUpdate, _) =>
         toUpdate.exists {
-          case (_, a) => a.ActPax == Option(0)
+          case (_, a) => a.ActPax == Option(0) && a.Gate == Option("G1")
         }
     }
     success
@@ -149,54 +155,24 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike with AfterEach {
     val (aclSource, _, _, liveSource) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
 
     aclSource.offer(
-      List(arrival(actPax = Option(189), scheduledMillis = nowForThisTest.addHours(8).millisSinceEpoch))
+      List(arrival(actPax = Option(189), schDt = nowForThisTest.addHours(8).toISOString()))
     )
     liveSource.offer(
       List(arrival(
         actPax = Option(0),
-        scheduledMillis = nowForThisTest.addHours(8).millisSinceEpoch,
-        actChox = Option(nowForThisTest.millisSinceEpoch)
+        schDt = nowForThisTest.addHours(8).toISOString(),
+        actChoxDt = nowForThisTest.toISOString(),
+        gate = Option("G1")
       ))
     )
 
     probe.fishForMessage(2 seconds) {
       case ArrivalsDiff(toUpdate, _) =>
         toUpdate.exists {
-          case (_, a) => a.ActPax == Option(0)
+          case (_, a) => a.ActPax == Option(0) && a.Gate == Option("G1")
         }
     }
     success
   }
 
-  def arrival(estimated: Option[Long] = None,
-              actual: Option[Long] = None,
-              estChox: Option[Long] = None,
-              actChox: Option[Long] = None,
-              gate: Option[String] = None,
-              status: ArrivalStatus = ArrivalStatus("test"),
-              actPax: Option[Int],
-              scheduledMillis: MillisSinceEpoch): Arrival =
-    Arrival(
-      None,
-      status,
-      estimated,
-      actual,
-      estChox,
-      actChox,
-      gate,
-      None,
-      None,
-      actPax,
-      None,
-      None,
-      None,
-      PortCode("STN"),
-      T1,
-      "TST100",
-      "TST100",
-      PortCode("TST"),
-      scheduledMillis,
-      None,
-      Set()
-    )
 }
