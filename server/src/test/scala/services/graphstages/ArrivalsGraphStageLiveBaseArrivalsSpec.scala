@@ -3,10 +3,11 @@ package services.graphstages
 import actors.acking.AckingReceiver.StreamCompleted
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{ClosedShape, OverflowStrategy}
-import akka.testkit.TestProbe
+import akka.testkit.{TestKit, TestProbe}
 import drt.shared.MilliTimes.oneDayMillis
 import drt.shared.Terminals.T1
 import drt.shared._
+import org.specs2.specification.AfterEach
 import services.arrivals.ArrivalDataSanitiser
 import services.crunch.CrunchTestLike
 import services.{PcpArrival, SDate}
@@ -56,11 +57,12 @@ object TestableArrivalsGraphStage {
   }
 }
 
-class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike {
+class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEach {
   sequential
   isolated
 
   val scheduled: SDateLike = SDate(2019, 10, 1, 16, 0)
+  override def after: Unit = TestKit.shutdownActorSystem(system)
 
   "Given a live arrival and a base live arrival I should get a merged arrival" >> {
     val probe = TestProbe("arrivals")

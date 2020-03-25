@@ -12,7 +12,7 @@ import services.metrics.{Metrics, StageTimer}
 
 import scala.collection.immutable.SortedMap
 import scala.collection.mutable
-
+import scala.concurrent.duration._
 
 sealed trait ArrivalsSourceType
 
@@ -295,7 +295,13 @@ class ArrivalsGraphStage(name: String = "",
       )
     }
 
+    def trustLiveDataThreshold: FiniteDuration = 3 hours
+
     def bestPaxNos(key: UniqueArrival): (Option[Int], Option[Int]) = (liveArrivals.get(key), forecastArrivals.get(key), forecastBaseArrivals.get(key)) match {
+      case (Some(liveArrival), _, _) if liveArrival.Scheduled < now().millisSinceEpoch + trustLiveDataThreshold.toMillis =>
+        (liveArrival.ActPax, liveArrival.TranPax)
+      case (Some(liveArrival), _, _) if liveArrival.Actual.isDefined  || liveArrival.ActualChox.isDefined =>
+        (liveArrival.ActPax, liveArrival.TranPax)
       case (Some(liveArrival), _, _) if liveArrival.ActPax.exists(_ > 0) => (liveArrival.ActPax, liveArrival.TranPax)
       case (_, Some(fcstArrival), _) if fcstArrival.ActPax.exists(_ > 0) => (fcstArrival.ActPax, fcstArrival.TranPax)
       case (_, _, Some(baseArrival)) if baseArrival.ActPax.exists(_ > 0) => (baseArrival.ActPax, baseArrival.TranPax)
