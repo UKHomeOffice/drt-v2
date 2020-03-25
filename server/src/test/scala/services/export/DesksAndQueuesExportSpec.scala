@@ -185,13 +185,14 @@ class DesksAndQueuesExportSpec extends SpecificationLike {
 
   "Given a desks summary actor for a given day which does not have any persisted data for that day and there is no port state available" >> {
     "When I ask for terminal summaries for that day" >> {
-      "I should get back a None, in reflection of the missing data" >> {
+      "I should still get back 96 summaries" >> {
         val mockTerminalSummariesActor = system.actorOf(Props(classOf[MockTerminalSummariesActor], None, None))
         val portStateToSummaries = queueSummariesFromPortState(Seq(EeaDesk), 15)
 
         val result = Await.result(historicSummaryForDay(terminal, from, mockTerminalSummariesActor, GetSummaries, eventualPortState(None), portStateToSummaries), 1 second)
+          .get.asInstanceOf[TerminalQueuesSummary].summaries
 
-        result === None
+        result.size === 96
       }
     }
   }
