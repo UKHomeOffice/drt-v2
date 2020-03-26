@@ -7,7 +7,7 @@ import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchMinutesMes
 import server.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
 import server.protobuf.messages.FlightsMessage._
 import server.protobuf.messages.FlightsSummary.FlightsSummaryMessage
-import server.protobuf.messages.PaxMessage.PaxCountsMessage
+import server.protobuf.messages.PaxMessage.{OriginTerminalPaxCountsMessage, PaxCountMessage, PaxCountsMessage}
 import server.protobuf.messages.RegisteredArrivalMessage.{RegisteredArrivalMessage, RegisteredArrivalsMessage}
 import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
 import server.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
@@ -50,6 +50,8 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
   final val CrunchMinutes: String                 = classOf[CrunchMinutesMessage].getName
   final val StaffMinutes: String                  = classOf[StaffMinutesMessage].getName
   final val PaxCounts: String                     = classOf[PaxCountsMessage].getName
+  final val PaxCount: String                      = classOf[PaxCountMessage].getName
+  final val OriginTerminalPaxCounts: String       = classOf[OriginTerminalPaxCountsMessage].getName
 
   override def toBinary(objectToSerialize: AnyRef): Array[Byte] = {
     objectToSerialize match {
@@ -84,6 +86,8 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case m: CrunchMinutesMessage => m.toByteArray
       case m: StaffMinutesMessage => m.toByteArray
       case m: PaxCountsMessage => m.toByteArray
+      case m: PaxCountMessage => m.toByteArray
+      case m: OriginTerminalPaxCountsMessage => m.toByteArray
     }
   }
 
@@ -122,6 +126,8 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case CrunchMinutes                  => CrunchMinutesMessage.parseFrom(bytes)
       case StaffMinutes                   => StaffMinutesMessage.parseFrom(bytes)
       case PaxCounts                      => PaxCountsMessage.parseFrom(bytes)
+      case PaxCount                       => PaxCountMessage.parseFrom(bytes)
+      case OriginTerminalPaxCounts        => OriginTerminalPaxCountsMessage.parseFrom(bytes)
     }
   }
 }

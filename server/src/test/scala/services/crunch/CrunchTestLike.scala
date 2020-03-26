@@ -3,6 +3,7 @@ package services.crunch
 import actors.Sizes.oneMegaByte
 import actors._
 import actors.acking.AckingReceiver.Ack
+import actors.daily.PassengersActor
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.AskableActorRef
 import akka.stream.QueueOfferResult.Enqueued
@@ -250,7 +251,7 @@ class CrunchTestLike
 
     val passengerDeltaActor = maybePassengerDeltaActorProps match {
       case Some(props) => system.actorOf(props)
-      case None => system.actorOf(PassengerDeltaActor.props(now)(new Timeout(2 seconds)))
+      case None => system.actorOf(Props(new PassengersActor()))
     }
 
     val crunchInputs = CrunchSystem(CrunchProps(

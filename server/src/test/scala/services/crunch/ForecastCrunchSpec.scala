@@ -16,7 +16,7 @@ import scala.collection.mutable
 import scala.concurrent.duration._
 
 
-class MockPassengerDeltaActor(maybeDelta: Option[Int]) extends Actor {
+class MockPassengerDeltaActor(maybeDelta: Option[Double]) extends Actor {
   override def receive: Receive = {
     case u =>
       println(s"*********** Received $u. Sending $maybeDelta")
@@ -78,7 +78,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
           deployedStaff == expected
       }
 
-      crunch.shutdown
+      crunch.shutdown()
 
       success
     }
@@ -120,11 +120,10 @@ class ForecastCrunchSpec extends CrunchTestLike {
           deployedStaff == expected
       }
 
-      crunch.shutdown
+      crunch.shutdown()
 
       success
     }
-
   }
 
   "Given a live flight and a base flight arriving 3 days later " +
@@ -145,16 +144,15 @@ class ForecastCrunchSpec extends CrunchTestLike {
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseFlights))
 
     val expectedForecast = Map(
-      SDate(base).millisSinceEpoch -> 20,
-      SDate(base).addMinutes(1).millisSinceEpoch -> 1,
-      SDate(scheduled).millisSinceEpoch -> 20,
-      SDate(scheduled).addMinutes(1).millisSinceEpoch -> 1
+      SDate(base).toISOString() -> 20,
+      SDate(base).addMinutes(1).toISOString() -> 1,
+      SDate(scheduled).toISOString() -> 20,
+      SDate(scheduled).addMinutes(1).toISOString() -> 1
       )
 
     crunch.portStateTestProbe.fishForMessage(10 seconds) {
       case PortState(_, cms, _) =>
         val forecastSummary = interestingPaxLoads(cms)
-
         forecastSummary == expectedForecast
     }
 
@@ -233,7 +231,9 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseFlights))
 
-    val expectedForecast = Map(SDate(baseScheduled).millisSinceEpoch -> 20, SDate(baseScheduled).addMinutes(1).millisSinceEpoch -> 1)
+    val expectedForecast = Map(
+      SDate(baseScheduled).toISOString() -> 20,
+      SDate(baseScheduled).addMinutes(1).toISOString() -> 1)
 
     crunch.portStateTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
@@ -241,7 +241,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
         forecastSummary == expectedForecast
     }
 
-    crunch.shutdown
+    crunch.shutdown()
 
     success
   }
@@ -258,13 +258,13 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(now = () => SDate(forecastScheduled).addDays(-1))
 
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals))
-    crunch.shutdown
+    crunch.shutdown()
 
     val gotAnyFlights = crunch.portStateTestProbe.receiveWhile(2 seconds) {
       case PortState(flights, _, _) => flights.size
     }.exists(_ > 0)
 
-    crunch.shutdown
+    crunch.shutdown()
 
     gotAnyFlights === false
   }
@@ -295,7 +295,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
         crunchForecastArrivals == expectedForecastArrivals
     }
 
-    crunch.shutdown
+    crunch.shutdown()
 
     success
   }
@@ -325,7 +325,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
         crunchForecastArrivals == expectedForecastArrivals
     }
 
-    crunch.shutdown
+    crunch.shutdown()
 
     success
   }
@@ -360,7 +360,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
         crunchForecastArrivals == expectedForecastArrivals
     }
 
-    crunch.shutdown
+    crunch.shutdown()
 
     success
   }
@@ -398,7 +398,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
         crunchForecastArrivals == expectedForecastArrivals
     }
 
-    crunch.shutdown
+    crunch.shutdown()
 
     success
   }
@@ -447,7 +447,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
 
     val aclPax = 100
-    val paxDelta = 10
+    val paxDelta = 0.1
 
     val arrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(aclPax))
     val baseArrivals = List(arrival)
@@ -459,7 +459,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(baseArrivals)))
 
-    val expectedActPax = Option(aclPax - paxDelta)
+    val expectedActPax = Option(aclPax * paxDelta)
 
     crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case PortState(flightsWithSplits, _, _) =>
@@ -473,8 +473,8 @@ class ForecastCrunchSpec extends CrunchTestLike {
     success
   }
 
-  def interestingPaxLoads(cms: Map[TQM, CrunchApi.CrunchMinute]): Map[MillisSinceEpoch, Double] = {
-    cms.values.filter(cm => cm.paxLoad != 0).map(cm => (cm.minute, cm.paxLoad)).toMap
+  def interestingPaxLoads(cms: Map[TQM, CrunchApi.CrunchMinute]): Map[String, Double] = {
+    cms.values.filter(cm => cm.paxLoad != 0).map(cm => (SDate(cm.minute).toISOString(), cm.paxLoad)).toMap
   }
 
   def interestingDeployments(cms: Map[TQM, CrunchApi.CrunchMinute]): scala.Seq[(MillisSinceEpoch, Terminal, Queue, Option[Int])] = {

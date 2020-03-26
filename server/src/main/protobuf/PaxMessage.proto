@@ -11,3 +11,9 @@ message PaxCountMessage {
 message PaxCountsMessage {
     repeated PaxCountMessage counts = 1;
 }
+
+message OriginTerminalPaxCountsMessage {
+    optional string origin = 1;
+    optional string terminal = 2;
+    repeated PaxCountMessage counts = 3;
+}

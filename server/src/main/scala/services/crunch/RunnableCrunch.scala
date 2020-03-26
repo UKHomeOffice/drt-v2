@@ -1,14 +1,11 @@
 package services.crunch
 
-import actors.GetOriginTerminalPaxDelta
 import actors.acking.AckingReceiver._
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem}
-import akka.pattern.AskableActorRef
 import akka.stream._
 import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
 import akka.stream.stage.GraphStage
-import akka.util.Timeout
 import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
@@ -19,8 +16,7 @@ import server.feeds._
 import services.graphstages.Crunch.Loads
 import services.graphstages._
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 object RunnableCrunch {
