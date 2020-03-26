@@ -19,7 +19,6 @@ import scala.concurrent.duration._
 class MockPassengerDeltaActor(maybeDelta: Option[Double]) extends Actor {
   override def receive: Receive = {
     case u =>
-      println(s"*********** Received $u. Sending $maybeDelta")
       sender() ! maybeDelta
   }
 }
@@ -440,7 +439,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     success
   }
 
-  "Given an no initial arrivals " +
+  "Given no initial arrivals " +
     "When I send an updated base arrivals with a matching passenger delta of 10" +
     "Then I should see the arrival in the port state with 90 passengers" >> {
 
@@ -464,7 +463,6 @@ class ForecastCrunchSpec extends CrunchTestLike {
     crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case PortState(flightsWithSplits, _, _) =>
         val actPax = flightsWithSplits.values.head.apiFlight.ActPax
-        println(s"actPax: $actPax")
         actPax == expectedActPax
     }
 

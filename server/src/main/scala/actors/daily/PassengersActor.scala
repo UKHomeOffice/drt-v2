@@ -36,7 +36,7 @@ class PassengersActor extends PersistentActor {
 
   override def receiveRecover: Receive = {
     case OriginTerminalPaxCountsMessage(Some(origin), Some(terminal), countMessages) =>
-      log.info(s"Got a OriginTerminalPaxCountsMessage with ${countMessages.size} counts. Applying")
+      log.debug(s"Got a OriginTerminalPaxCountsMessage with ${countMessages.size} counts. Applying")
       val updatesForOriginTerminal = messagesToUpdates(countMessages)
       val originAndTerminal = OriginAndTerminal(PortCode(origin), Terminal(terminal))
       val updatedOriginTerminal = originTerminalPaxNosState.getOrElse(originAndTerminal, Map()) ++ updatesForOriginTerminal
@@ -113,7 +113,7 @@ object PaxDeltas {
         actual <- maybeActualPax
         forecast <- maybeForecastPax
       } yield {
-        if (forecast != 0) Option(1d - ((forecast - actual).toDouble / forecast)) // 1 - (100 - 110 / 100)
+        if (forecast != 0) Option(1d - ((forecast - actual).toDouble / forecast))
         else None
       }
     }
@@ -129,10 +129,10 @@ object PaxDeltas {
           case Some(delta) =>
             val updatedPax = arrival.ActPax.map(pax => (pax * delta).round.toInt) match {
               case Some(positiveWithDelta) if positiveWithDelta > 0 =>
-                log.info(s"Applying delta of $delta to ${arrival.flightCode} @ ${SDate(arrival.Scheduled).toISOString()} ${arrival.ActPax.getOrElse(0)} -> $positiveWithDelta")
+                log.debug(s"Applying delta of $delta to ${arrival.flightCode} @ ${SDate(arrival.Scheduled).toISOString()} ${arrival.ActPax.getOrElse(0)} -> $positiveWithDelta")
                 Option(positiveWithDelta)
               case _ =>
-                log.info(s"Applying delta of $delta to ${arrival.flightCode} @ ${SDate(arrival.Scheduled).toISOString()} ${arrival.ActPax.getOrElse(0)} -> 1")
+                log.debug(s"Applying delta of $delta to ${arrival.flightCode} @ ${SDate(arrival.Scheduled).toISOString()} ${arrival.ActPax.getOrElse(0)} -> 1")
                 Option(1)
             }
             arrival.copy(ActPax = updatedPax)

@@ -8,10 +8,6 @@ message PaxCountMessage {
     optional int32 pax = 3;
 }
 
-message PaxCountsMessage {
-    repeated PaxCountMessage counts = 1;
-}
-
 message OriginTerminalPaxCountsMessage {
     optional string origin = 1;
     optional string terminal = 2;

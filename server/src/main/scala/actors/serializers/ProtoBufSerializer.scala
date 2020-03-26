@@ -49,7 +49,6 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
   final val FlightsSummary: String                = classOf[FlightsSummaryMessage].getName
   final val CrunchMinutes: String                 = classOf[CrunchMinutesMessage].getName
   final val StaffMinutes: String                  = classOf[StaffMinutesMessage].getName
-  final val PaxCounts: String                     = classOf[PaxCountsMessage].getName
   final val PaxCount: String                      = classOf[PaxCountMessage].getName
   final val OriginTerminalPaxCounts: String       = classOf[OriginTerminalPaxCountsMessage].getName
 
@@ -85,7 +84,6 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case m: FlightsSummaryMessage => m.toByteArray
       case m: CrunchMinutesMessage => m.toByteArray
       case m: StaffMinutesMessage => m.toByteArray
-      case m: PaxCountsMessage => m.toByteArray
       case m: PaxCountMessage => m.toByteArray
       case m: OriginTerminalPaxCountsMessage => m.toByteArray
     }
@@ -125,7 +123,6 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case FlightsSummary                 => FlightsSummaryMessage.parseFrom(bytes)
       case CrunchMinutes                  => CrunchMinutesMessage.parseFrom(bytes)
       case StaffMinutes                   => StaffMinutesMessage.parseFrom(bytes)
-      case PaxCounts                      => PaxCountsMessage.parseFrom(bytes)
       case PaxCount                       => PaxCountMessage.parseFrom(bytes)
       case OriginTerminalPaxCounts        => OriginTerminalPaxCountsMessage.parseFrom(bytes)
     }
