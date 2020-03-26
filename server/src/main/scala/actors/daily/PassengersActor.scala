@@ -25,14 +25,15 @@ case class GetAverageDelta(originAndTerminal: OriginAndTerminal, numberOfDays: I
 
 case object Ack
 
-class PassengersActor extends PersistentActor {
+class PassengersActor(numDaysInAverage: Int) extends PersistentActor {
   override val persistenceId = s"daily-pax"
 
   val log: Logger = LoggerFactory.getLogger(persistenceId)
 
-  val portAverageNumberOfDays = 7
   var originTerminalPaxNosState: Map[OriginAndTerminal, Map[(Long, Long), Int]] = Map()
   var portAverageDelta: Double = 1.0
+
+  log.info(s"Using $numDaysInAverage days to calculate the average difference in pax")
 
   override def receiveRecover: Receive = {
     case OriginTerminalPaxCountsMessage(Some(origin), Some(terminal), countMessages) =>
@@ -56,7 +57,7 @@ class PassengersActor extends PersistentActor {
   private def setPortAverage(state: Map[OriginAndTerminal, Map[(Long, Long), Int]]): Unit = {
     val portAverageDeltas = state.values
       .map { originTerminalCounts =>
-        val maybeDeltas = PaxDeltas.maybePctDeltas(originTerminalCounts, portAverageNumberOfDays, () => SDate.now())
+        val maybeDeltas = PaxDeltas.maybePctDeltas(originTerminalCounts, numDaysInAverage, () => SDate.now())
         PaxDeltas.maybeAveragePctDelta(maybeDeltas)
       }
       .collect { case Some(delta) => delta }
@@ -119,11 +120,11 @@ object PaxDeltas {
     }
   }
 
-  def applyPaxDeltas(passengerDeltaActor: AskableActorRef)
+  def applyPaxDeltas(passengerDeltaActor: AskableActorRef, numDaysInAverage: Int)
                     (arrivals: List[Arrival])
                     (implicit mat: Materializer, ec: ExecutionContext): Future[List[Arrival]] = Source(arrivals)
     .mapAsync(1) { arrival =>
-      val request = GetAverageDelta(OriginAndTerminal(arrival.Origin, arrival.Terminal), 7)
+      val request = GetAverageDelta(OriginAndTerminal(arrival.Origin, arrival.Terminal), numDaysInAverage)
       passengerDeltaActor.ask(request)(new Timeout(15 second)).asInstanceOf[Future[Option[Double]]]
         .map {
           case Some(delta) =>

@@ -76,7 +76,8 @@ case class CrunchProps[FR](logLabel: String = "",
                            useApiPaxNos: Boolean,
                            adjustEGateUseByUnder12s: Boolean,
                            optimiser: TryCrunch,
-                           useLegacyDeployments: Boolean)
+                           useLegacyDeployments: Boolean,
+                           aclPaxAdjustmentDays: Int)
 
 object CrunchSystem {
 
@@ -186,7 +187,7 @@ object CrunchSystem {
       staffGraphStage, staffBatcher, deploymentGraphStage,
       forecastArrivalsDiffingStage, liveBaseArrivalsDiffingStage, liveArrivalsDiffingStage,
       props.actors("forecast-base-arrivals").actorRef, props.actors("forecast-arrivals").actorRef, props.actors("live-base-arrivals").actorRef, props.actors("live-arrivals").actorRef,
-      PaxDeltas.applyPaxDeltas(props.passengerDeltaProvider),
+      PaxDeltas.applyPaxDeltas(props.passengerDeltaProvider, props.aclPaxAdjustmentDays),
       props.voyageManifestsActor, props.manifestRequestsSink,
       props.portStateActor,
       props.actors("aggregated-arrivals").actorRef,

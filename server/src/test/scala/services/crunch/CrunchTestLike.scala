@@ -237,6 +237,8 @@ class CrunchTestLike
     else
       PortDeskLimits.fixed(airportConfig)
 
+    val aclPaxAdjustmentDays = 7
+
     val (millisToCrunchActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDescRecs, now, recrunchOnStart, maxDaysToCrunch, deskLimitsProvider)
     portStateActor ! SetCrunchActor(millisToCrunchActor)
 
@@ -251,7 +253,7 @@ class CrunchTestLike
 
     val passengerDeltaActor = maybePassengerDeltaActorProps match {
       case Some(props) => system.actorOf(props)
-      case None => system.actorOf(Props(new PassengersActor()))
+      case None => system.actorOf(Props(new PassengersActor(aclPaxAdjustmentDays)))
     }
 
     val crunchInputs = CrunchSystem(CrunchProps(
@@ -299,7 +301,8 @@ class CrunchTestLike
       useApiPaxNos = true,
       adjustEGateUseByUnder12s = false,
       optimiser = cruncher,
-      useLegacyDeployments = useLegacyDeployments))
+      useLegacyDeployments = useLegacyDeployments,
+      aclPaxAdjustmentDays = aclPaxAdjustmentDays))
 
     portStateActor ! SetSimulationActor(crunchInputs.loadsToSimulate)
 
