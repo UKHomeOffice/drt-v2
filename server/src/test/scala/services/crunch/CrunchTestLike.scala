@@ -3,12 +3,14 @@ package services.crunch
 import actors.Sizes.oneMegaByte
 import actors._
 import actors.acking.AckingReceiver.Ack
+import actors.daily.PassengersActor
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.AskableActorRef
 import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, OverflowStrategy, QueueOfferResult, UniqueKillSwitch}
 import akka.testkit.{TestKit, TestProbe}
+import akka.util.Timeout
 import drt.auth.STNAccess
 import drt.shared.CrunchApi._
 import drt.shared.PaxTypes._
@@ -207,7 +209,8 @@ class CrunchTestLike
                      refreshArrivalsOnStart: Boolean = false,
                      recrunchOnStart: Boolean = false,
                      flexDesks: Boolean = false,
-                     useLegacyDeployments: Boolean = false
+                     useLegacyDeployments: Boolean = false,
+                     maybePassengerDeltaActorProps: Option[Props] = None
                     ): CrunchGraphInputsAndProbes = {
 
     airportConfig.assertValid()
@@ -234,6 +237,8 @@ class CrunchTestLike
     else
       PortDeskLimits.fixed(airportConfig)
 
+    val aclPaxAdjustmentDays = 7
+
     val (millisToCrunchActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDescRecs, now, recrunchOnStart, maxDaysToCrunch, deskLimitsProvider)
     portStateActor ! SetCrunchActor(millisToCrunchActor)
 
@@ -245,6 +250,11 @@ class CrunchTestLike
 
     val (_, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
     val (manifestResponsesSource, _, _) = SinkToSourceBridge[List[BestAvailableManifest]]
+
+    val passengerDeltaActor = maybePassengerDeltaActorProps match {
+      case Some(props) => system.actorOf(props)
+      case None => system.actorOf(Props(new PassengersActor(aclPaxAdjustmentDays)))
+    }
 
     val crunchInputs = CrunchSystem(CrunchProps(
       logLabel = logLabel,
@@ -281,6 +291,7 @@ class CrunchTestLike
       arrivalsForecastSource = forecastArrivals,
       arrivalsLiveBaseSource = liveBaseArrivals,
       arrivalsLiveSource = liveArrivals,
+      passengerDeltaProvider = passengerDeltaActor,
       initialShifts = initialShifts,
       initialFixedPoints = initialFixedPoints,
       initialStaffMovements = initialStaffMovements,
@@ -290,7 +301,8 @@ class CrunchTestLike
       useApiPaxNos = true,
       adjustEGateUseByUnder12s = false,
       optimiser = cruncher,
-      useLegacyDeployments = useLegacyDeployments))
+      useLegacyDeployments = useLegacyDeployments,
+      aclPaxAdjustmentDays = aclPaxAdjustmentDays))
 
     portStateActor ! SetSimulationActor(crunchInputs.loadsToSimulate)
 

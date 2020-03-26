@@ -1,6 +1,7 @@
 package actors
 
 import actors.Sizes.oneMegaByte
+import actors.daily.PassengersActor
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props, Scheduler}
 import akka.pattern.AskableActorRef
@@ -209,6 +210,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastPortArrivalsActor], params.snapshotMegaBytesFcstArrivals, now, expireAfterMillis), name = "forecast-arrivals-actor")
   lazy val liveBaseArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveBaseArrivalsActor], params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis), name = "live-base-arrivals-actor")
   lazy val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor], params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis), name = "live-arrivals-actor")
+
+  lazy val aclPaxAdjustmentDays: Int = config.get[Int]("acl.adjustment.number-of-days-in-average")
+  lazy val passengerDeltaActor: AskableActorRef = system.actorOf(Props(new PassengersActor(aclPaxAdjustmentDays)))
 
   lazy val arrivalsImportActor: ActorRef = system.actorOf(Props(classOf[ArrivalsImportActor]), name = "arrivals-import-actor")
 
@@ -449,7 +453,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       useApiPaxNos = params.useApiPaxNos,
       adjustEGateUseByUnder12s = params.adjustEGateUseByUnder12s,
       optimiser = optimiser,
-      useLegacyDeployments = useLegacyDeployments))
+      useLegacyDeployments = useLegacyDeployments,
+      passengerDeltaProvider = passengerDeltaActor,
+      aclPaxAdjustmentDays = aclPaxAdjustmentDays))
     crunchInputs
   }
 
@@ -677,7 +683,7 @@ object ArrivalGenerator {
       PcpTime = pcpTime,
       Scheduled = if (schDt.nonEmpty) SDate(schDt).millisSinceEpoch else 0,
       FeedSources = feedSources
-    )
+      )
   }
 
   def arrivals(now: () => SDateLike, terminalNames: Iterable[Terminal]): Iterable[Arrival] = {
