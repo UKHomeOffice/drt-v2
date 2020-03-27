@@ -1,6 +1,6 @@
 package actors.daily
 
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, PoisonPill}
 import akka.pattern.AskableActorRef
 import akka.persistence._
 import akka.stream.Materializer
@@ -14,6 +14,7 @@ import services.SDate
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
+import scala.language.postfixOps
 
 case class PointInTimeOriginTerminalDay(pointInTime: Long, origin: String, terminal: String, day: Long)
 
@@ -21,7 +22,7 @@ case class OriginAndTerminal(origin: PortCode, terminal: Terminal)
 
 case object ClearState
 
-case class GetAverageDelta(originAndTerminal: OriginAndTerminal, numberOfDays: Int)
+case class GetAverageAdjustment(originAndTerminal: OriginAndTerminal, numberOfDays: Int)
 
 case object Ack
 
@@ -67,11 +68,11 @@ class PassengersActor(numDaysInAverage: Int) extends PersistentActor {
   }
 
   override def receiveCommand: Receive = {
-    case gad: GetAverageDelta => sendAverageDelta(gad, sender())
+    case gad: GetAverageAdjustment => sendAverageDelta(gad, sender())
     case u => log.info(s"Got unexpected command: $u")
   }
 
-  private def sendAverageDelta(gad: GetAverageDelta, replyTo: ActorRef): Unit = {
+  private def sendAverageDelta(gad: GetAverageAdjustment, replyTo: ActorRef): Unit = {
     val maybeDeltas = PaxDeltas.maybePctDeltas(originTerminalPaxNosState.getOrElse(gad.originAndTerminal, Map()), gad.numberOfDays, () => SDate.now())
     val maybeAverageDelta = PaxDeltas.maybeAveragePctDelta(maybeDeltas) match {
       case Some(average) => Option(average)
@@ -120,31 +121,47 @@ object PaxDeltas {
     }
   }
 
-  def applyPaxDeltas(passengerDeltaActor: AskableActorRef, numDaysInAverage: Int)
-                    (arrivals: List[Arrival])
-                    (implicit mat: Materializer, ec: ExecutionContext): Future[List[Arrival]] = Source(arrivals)
-    .mapAsync(1) { arrival =>
-      val request = GetAverageDelta(OriginAndTerminal(arrival.Origin, arrival.Terminal), numDaysInAverage)
-      passengerDeltaActor.ask(request)(new Timeout(15 second)).asInstanceOf[Future[Option[Double]]]
-        .map {
-          case Some(delta) =>
-            val updatedPax = arrival.ActPax.map(pax => (pax * delta).round.toInt) match {
-              case Some(positiveWithDelta) if positiveWithDelta > 0 =>
-                log.debug(s"Applying delta of $delta to ${arrival.flightCode} @ ${SDate(arrival.Scheduled).toISOString()} ${arrival.ActPax.getOrElse(0)} -> $positiveWithDelta")
-                Option(positiveWithDelta)
-              case _ =>
-                log.debug(s"Applying delta of $delta to ${arrival.flightCode} @ ${SDate(arrival.Scheduled).toISOString()} ${arrival.ActPax.getOrElse(0)} -> 1")
-                Option(1)
-            }
-            arrival.copy(ActPax = updatedPax)
-          case None => arrival
-          case u =>
-            log.error(s"Got unexpected delta response: $u")
-            arrival
-        }
-        .recover { case t =>
-          log.error("Didn't get a passenger delta", t)
+  def applyAdjustmentsToArrivals(passengersActorProvider: () => AskableActorRef, numDaysInAverage: Int)
+                                (arrivals: List[Arrival])
+                                (implicit mat: Materializer, ec: ExecutionContext): Future[List[Arrival]] = {
+    val paxActor = passengersActorProvider()
+    val updatedArrivalsSource = Source(arrivals)
+      .mapAsync(1) { arrival =>
+        val request = GetAverageAdjustment(OriginAndTerminal(arrival.Origin, arrival.Terminal), numDaysInAverage)
+        lookupAndApplyAdjustment(paxActor, request, arrival)
+      }
+
+    val eventualUpdatedArrivals = updatedArrivalsSource
+      .runWith(Sink.seq)
+      .map(_.toList)
+
+    eventualUpdatedArrivals.onComplete(_ => paxActor.ask(PoisonPill)(new Timeout(1 second)))
+
+    eventualUpdatedArrivals
+  }
+
+  private def lookupAndApplyAdjustment(paxActor: AskableActorRef,
+                                       request: GetAverageAdjustment,
+                                       arrival: Arrival)(implicit ec: ExecutionContext): Future[Arrival] =
+    paxActor.ask(request)(new Timeout(15 second))
+      .asInstanceOf[Future[Option[Double]]]
+      .map {
+        case Some(adjustmentFactor) => applyAdjustment(arrival, adjustmentFactor)
+        case None => arrival
+        case u =>
+          log.error(s"Got unexpected delta response: $u")
           arrival
-        }
-    }.runWith(Sink.seq).map(_.toList)
+      }
+      .recover { case t =>
+        log.error("Didn't get a passenger delta", t)
+        arrival
+      }
+
+  private def applyAdjustment(arrival: Arrival, delta: Double) = {
+    val updatedPax = arrival.ActPax.map(pax => (pax * delta).round.toInt) match {
+      case Some(positiveWithDelta) if positiveWithDelta > 0 => Option(positiveWithDelta)
+      case _ => Option(1)
+    }
+    arrival.copy(ActPax = updatedPax)
+  }
 }

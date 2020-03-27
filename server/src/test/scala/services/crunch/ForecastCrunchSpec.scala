@@ -453,7 +453,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
-      maybePassengerDeltaActorProps = Option(Props(new MockPassengerDeltaActor(Option(paxDelta))))
+      maybePassengersActorProps = Option(Props(new MockPassengerDeltaActor(Option(paxDelta))))
       )
 
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(baseArrivals)))

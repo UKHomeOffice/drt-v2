@@ -210,7 +210,7 @@ class CrunchTestLike
                      recrunchOnStart: Boolean = false,
                      flexDesks: Boolean = false,
                      useLegacyDeployments: Boolean = false,
-                     maybePassengerDeltaActorProps: Option[Props] = None
+                     maybePassengersActorProps: Option[Props] = None
                     ): CrunchGraphInputsAndProbes = {
 
     airportConfig.assertValid()
@@ -251,9 +251,9 @@ class CrunchTestLike
     val (_, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
     val (manifestResponsesSource, _, _) = SinkToSourceBridge[List[BestAvailableManifest]]
 
-    val passengerDeltaActor = maybePassengerDeltaActorProps match {
-      case Some(props) => system.actorOf(props)
-      case None => system.actorOf(Props(new PassengersActor(aclPaxAdjustmentDays)))
+    val passengersActorProvider: () => AskableActorRef = maybePassengersActorProps match {
+      case Some(props) => () => system.actorOf(props)
+      case None => () => system.actorOf(Props(new PassengersActor(aclPaxAdjustmentDays)))
     }
 
     val crunchInputs = CrunchSystem(CrunchProps(
@@ -291,7 +291,7 @@ class CrunchTestLike
       arrivalsForecastSource = forecastArrivals,
       arrivalsLiveBaseSource = liveBaseArrivals,
       arrivalsLiveSource = liveArrivals,
-      passengerDeltaProvider = passengerDeltaActor,
+      passengersActorProvider = passengersActorProvider,
       initialShifts = initialShifts,
       initialFixedPoints = initialFixedPoints,
       initialStaffMovements = initialStaffMovements,

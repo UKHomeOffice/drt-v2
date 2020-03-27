@@ -212,7 +212,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor], params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis), name = "live-arrivals-actor")
 
   lazy val aclPaxAdjustmentDays: Int = config.get[Int]("acl.adjustment.number-of-days-in-average")
-  lazy val passengerDeltaActor: AskableActorRef = system.actorOf(Props(new PassengersActor(aclPaxAdjustmentDays)))
+  lazy val passengersActorProvider: () => AskableActorRef = () => system.actorOf(Props(new PassengersActor(aclPaxAdjustmentDays)))
 
   lazy val arrivalsImportActor: ActorRef = system.actorOf(Props(classOf[ArrivalsImportActor]), name = "arrivals-import-actor")
 
@@ -454,7 +454,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       adjustEGateUseByUnder12s = params.adjustEGateUseByUnder12s,
       optimiser = optimiser,
       useLegacyDeployments = useLegacyDeployments,
-      passengerDeltaProvider = passengerDeltaActor,
+      passengersActorProvider = passengersActorProvider,
       aclPaxAdjustmentDays = aclPaxAdjustmentDays))
     crunchInputs
   }
