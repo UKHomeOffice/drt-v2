@@ -148,9 +148,6 @@ object PaxDeltas {
       .map {
         case Some(adjustmentFactor) => applyAdjustment(arrival, adjustmentFactor)
         case None => arrival
-        case u =>
-          log.error(s"Got unexpected delta response: $u")
-          arrival
       }
       .recover { case t =>
         log.error("Didn't get a passenger delta", t)
