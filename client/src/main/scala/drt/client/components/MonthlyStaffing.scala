@@ -275,7 +275,7 @@ object MonthlyStaffing {
     })
 
     val dayForRowLabels = if (viewingDate.getMonth() != 10)
-      viewingDate
+      viewingDate.startOfTheMonth
     else
       SDate.lastDayOfMonth(viewingDate).getLastSunday
 
