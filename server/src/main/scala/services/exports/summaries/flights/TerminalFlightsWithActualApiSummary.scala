@@ -16,13 +16,14 @@ case class TerminalFlightsWithActualApiSummary(flights: Seq[ApiFlightWithSplits]
 
   override def toCsv: String =  {
     val csvData = flights.sortBy(_.apiFlight.PcpTime).map(fws => {
-      flightToCsvRow(queueNames, fws) ::: actualAPISplitsForFlightInHeadingOrder(fws, actualApiHeadings).toList
+      flightWithSplitsToCsvRow(queueNames, fws) ::: actualAPISplitsForFlightInHeadingOrder(fws, actualApiHeadings).toList
     })
     asCSV(csvData)
   }
 
+  val arrivalHeadings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax"
   lazy val standardCsvHeader: String =
-    "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax," +
+    arrivalHeadings + ",PCP Pax," +
       headingsForSplitSource(queueNames, "API") + "," +
       headingsForSplitSource(queueNames, "Historical") + "," +
       headingsForSplitSource(queueNames, "Terminal Average")

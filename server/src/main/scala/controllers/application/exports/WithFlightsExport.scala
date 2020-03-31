@@ -2,13 +2,17 @@ package controllers.application.exports
 
 import actors.summaries.{FlightsSummaryActor, GetSummariesWithActualApi}
 import akka.actor.ActorRef
+import akka.util.ByteString
 import controllers.Application
-import drt.auth.{ApiView, ApiViewPortCsv, ArrivalsAndSplitsView}
+import drt.auth.{ApiView, ApiViewPortCsv, ArrivalSource, ArrivalsAndSplitsView}
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import play.api.mvc.{Action, AnyContent, Request, Result}
+import play.api.http.{HttpChunk, HttpEntity, Writeable}
+import play.api.mvc._
 import services.SDate
 import services.exports.Exports
+import services.exports.summaries.flights.ArrivalFeedExport
 import services.exports.summaries.{GetSummaries, TerminalSummaryLike}
 import services.graphstages.Crunch.europeLondonTimeZone
 
@@ -52,8 +56,41 @@ trait WithFlightsExport extends ExportToCsv {
     }
   }
 
+  def exportArrivalsFromFeed(startPit: MillisSinceEpoch, endPit: MillisSinceEpoch, feedSourceString: String): Action[AnyContent] = authByRole(ArrivalSource) {
+
+    val feedSourceToPersistenceId: Map[FeedSource, String] = Map(
+      LiveBaseFeedSource -> "actors.LiveBaseArrivalsActor-live-base",
+      LiveFeedSource -> "actors.LiveArrivalsActor-live",
+      AclFeedSource -> "actors.ForecastBaseArrivalsActor-forecast-base",
+      ForecastFeedSource -> "actors.ForecastPortArrivalsActor-forecast-port"
+    )
+
+    Action(FeedSource(feedSourceString) match {
+
+      case Some(fs) =>
+        val persistenceId = feedSourceToPersistenceId(fs)
+        val arrivalsExport = ArrivalFeedExport()
+        val startDate = SDate(startPit)
+        val numberOfDays = startDate.daysBetweenInclusive(SDate(endPit))
+        val csvDataSource = arrivalsExport.flightsDataSource(startDate, numberOfDays, fs, persistenceId)
+
+
+        implicit val writeable: Writeable[String] = Writeable((str: String) => ByteString.fromString(str), Option("application/csv"))
+        val fileName = s"$feedSourceString-export"
+        Result(
+          header = ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
+          body = HttpEntity.Chunked(csvDataSource.collect {
+            case Some(s) => s }.map(c => HttpChunk.Chunk(writeable.transform(c))), writeable.contentType))
+
+
+      case None =>
+        NotFound(s"Unknown feed source $feedSourceString")
+    })
+  }
+
+
   private def summaryProviderByRole(terminal: Terminal)
-                           (implicit request: Request[AnyContent]): (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike] =
+                                   (implicit request: Request[AnyContent]): (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike] =
     if (canAccessActualApi(request)) Exports.flightSummariesWithActualApiFromPortState(terminal)
     else Exports.flightSummariesFromPortState(terminal)
 

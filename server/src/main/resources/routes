@@ -40,6 +40,7 @@ GET           /export/arrivals/:start/:end/:terminalName           controllers.A
 GET           /export/planning/:weekStarting/:terminalName         controllers.Application.exportForecastWeekToCSV(weekStarting, terminalName)
 GET           /export/headlines/:weekStarting/:terminalName        controllers.Application.exportForecastWeekHeadlinesToCSV(weekStarting, terminalName)
 GET           /export/users                                        controllers.Application.exportUsers
+GET           /export/arrivals-feed/:start/:end/:feedSource        controllers.Application.exportArrivalsFromFeed(start: Long, end: Long, feedSource: String)
 
 # Map static resources from the /public folder to the /assets URL path
 GET           /assets/fonts/*file                                  controllers.Assets.at(path="/public/lib/font-awesome/fonts", file)
