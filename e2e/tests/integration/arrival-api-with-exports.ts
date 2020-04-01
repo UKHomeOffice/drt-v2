@@ -3,24 +3,19 @@ moment.locale("en-gb");
 
 import { manifestForDateTime, passengerList } from '../support/manifest-helpers'
 import { todayAtUtcString } from '../support/time-helpers'
+import { todayAtUtc } from '../support/time-helpers';
 
 describe('Arrivals CSV Export', () => {
 
-  const schDateString = moment().format("YYYY-MM-DD");
+  const scheduledDateTime = todayAtUtc(0, 55);
+  const schDateString = scheduledDateTime.format("YYYY-MM-DD");
+  const schTimeString = scheduledDateTime.format('HH:mm:00');
+  const estTime = todayAtUtc(1, 5);
+  const actTime = todayAtUtc(1, 7);
+  const estChoxTime = todayAtUtc(1, 11);
+  const actChoxTime = todayAtUtc(1, 12);
 
-  const schTimeString = "00:55:00";
-  const estTimeString = "01:05:00";
-  const actTimeString = "01:07:00";
-  const estChoxTimeString = "01:11:00";
-  const actChoxTimeString = "01:12:00";
-
-  const schString = schDateString + "T" + schTimeString + "Z";
-  const estString = schDateString + "T" + estTimeString + "Z";
-  const actString = schDateString + "T" + actTimeString + "Z";
-  const estChoxString = schDateString + "T" + estChoxTimeString + "Z";
-  const actChoxString = schDateString + "T" + actChoxTimeString + "Z";
-
-  const millis = moment(schString).unix() * 1000;
+  const millis = scheduledDateTime.unix() * 1000;
 
   beforeEach(function () {
     cy.deleteData();
@@ -28,13 +23,13 @@ describe('Arrivals CSV Export', () => {
 
   const manifest = (passengerList): object => manifestForDateTime(schDateString, schTimeString, passengerList)
 
-  const schTimeLocal = moment(schString).tz("Europe/London").format("HH:mm")
-  const estTimeLocal = moment(estString).tz("Europe/London").format("HH:mm")
-  const actTimeLocal = moment(actString).tz("Europe/London").format("HH:mm")
-  const estChoxTimeLocal = moment(estChoxString).tz("Europe/London").format("HH:mm")
-  const actChoxTimeLocal = moment(actChoxString).tz("Europe/London").format("HH:mm")
-  const pcpTimeLocal = moment(actChoxString).add(13, "minutes").tz("Europe/London").format("HH:mm")
-
+  const schDateLocal = scheduledDateTime.tz("Europe/London").format("YYYY-MM-DD");
+  const schTimeLocal = scheduledDateTime.tz("Europe/London").format("HH:mm");
+  const estTimeLocal = estTime.tz("Europe/London").format("HH:mm");
+  const actTimeLocal = actTime.tz("Europe/London").format("HH:mm");
+  const estChoxTimeLocal = estChoxTime.tz("Europe/London").format("HH:mm");
+  const actChoxTimeLocal = actChoxTime.tz("Europe/London").format("HH:mm");
+  const pcpTimeLocal = actChoxTime.add(13, "minutes").tz("Europe/London").format("HH:mm");
   const headersWithoutActApi = "IATA,ICAO,Origin,Gate/Stand,Status," +
     "Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP," +
     "Total Pax,PCP Pax," +
@@ -42,15 +37,13 @@ describe('Arrivals CSV Export', () => {
     "Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track," +
     "Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track";
   const actApiHeaders = "API Actual - B5JSSK to Desk,API Actual - B5JSSK to eGates,API Actual - EEA (Machine Readable),API Actual - Non EEA (Non Visa),API Actual - Non EEA (Visa),API Actual - eGates";
-
   const headersWithActApi = headersWithoutActApi + "," + actApiHeaders;
-
   const totalPax = "51";
   const eGatePax = "25";
   const eeaDesk = "9";
   const nonEEADesk = "17";
   const dataWithoutActApi = "TS0123,TS0123,AMS,46/44R,On Chox," +
-    schDateString + "," + schTimeLocal + "," + estTimeLocal + "," + actTimeLocal + "," + estChoxTimeLocal + "," + actChoxTimeLocal + "," + pcpTimeLocal + "," +
+    schDateLocal + "," + schTimeLocal + "," + estTimeLocal + "," + actTimeLocal + "," + estChoxTimeLocal + "," + actChoxTimeLocal + "," + pcpTimeLocal + "," +
     totalPax + "," + totalPax + "," +
     eGatePax + "," + eeaDesk + "," + nonEEADesk + ",," +
     ",,,," +

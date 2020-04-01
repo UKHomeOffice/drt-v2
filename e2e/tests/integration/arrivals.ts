@@ -2,6 +2,7 @@ import moment from 'moment-timezone'
 moment.locale("en-gb");
 
 import { todayAtUtcString } from '../support/time-helpers'
+import { todayAtUtc } from '../support/time-helpers';
 
 describe('Arrivals page', () => {
 
@@ -38,52 +39,11 @@ describe('Arrivals page', () => {
     "PoavKey": "1",
     "NationalityCountryCode": "GBR"
   };
-  // const visaNational = {
-  //   "DocumentIssuingCountryCode": "ZWE",
-  //   "PersonType": "P",
-  //   "DocumentLevel": "Primary",
-  //   "Age": "30",
-  //   "DisembarkationPortCode": "TST",
-  //   "InTransitFlag": "N",
-  //   "DisembarkationPortCountryCode": "TST",
-  //   "NationalityCountryEEAFlag": "",
-  //   "PassengerIdentifier": "",
-  //   "DocumentType": "P",
-  //   "PoavKey": "2",
-  //   "NationalityCountryCode": "ZWE"
-  // };
-  // const nonVisaNational = {
-  //   "DocumentIssuingCountryCode": "MRU",
-  //   "PersonType": "P",
-  //   "DocumentLevel": "Primary",
-  //   "Age": "30",
-  //   "DisembarkationPortCode": "TST",
-  //   "InTransitFlag": "N",
-  //   "DisembarkationPortCountryCode": "TST",
-  //   "NationalityCountryEEAFlag": "",
-  //   "PassengerIdentifier": "",
-  //   "DocumentType": "P",
-  //   "PoavKey": "3",
-  //   "NationalityCountryCode": "MRU"
-  // };
-  // const b5JNational = {
-  //   "DocumentIssuingCountryCode": "AUS",
-  //   "PersonType": "P",
-  //   "DocumentLevel": "Primary",
-  //   "Age": "30",
-  //   "DisembarkationPortCode": "TST",
-  //   "InTransitFlag": "N",
-  //   "DisembarkationPortCountryCode": "TST",
-  //   "NationalityCountryEEAFlag": "",
-  //   "PassengerIdentifier": "",
-  //   "DocumentType": "P",
-  //   "PoavKey": "3",
-  //   "NationalityCountryCode": "AUS"
-  // };
 
   const manifest = (passengerList): object => {
-    const schDateString = moment().format("YYYY-MM-DD");
-    const schTimeString = "00:55:00";
+    const scheduledDateTime = todayAtUtc(0, 55);
+    const schDateString = scheduledDateTime.format("YYYY-MM-DD");
+    const schTimeString = scheduledDateTime.format('HH:mm:00');
 
     return {
       "EventCode": "DC",

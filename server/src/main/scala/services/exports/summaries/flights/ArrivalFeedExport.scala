@@ -85,6 +85,4 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
       .mapAsync(1)(day => {
         flightsForDay(startDate.addDays(day).millisSinceEpoch, terminal, fs, persistenceId)
       }).prepend(headingsSource)
-
-
 }
