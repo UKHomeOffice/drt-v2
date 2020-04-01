@@ -56,7 +56,7 @@ trait WithFlightsExport extends ExportToCsv {
     }
   }
 
-  def exportArrivalsFromFeed(startPit: MillisSinceEpoch, endPit: MillisSinceEpoch, feedSourceString: String): Action[AnyContent] = authByRole(ArrivalSource) {
+  def exportArrivalsFromFeed(terminalString: String, startPit: MillisSinceEpoch, endPit: MillisSinceEpoch, feedSourceString: String): Action[AnyContent] = authByRole(ArrivalSource) {
 
     val feedSourceToPersistenceId: Map[FeedSource, String] = Map(
       LiveBaseFeedSource -> "actors.LiveBaseArrivalsActor-live-base",
@@ -64,6 +64,7 @@ trait WithFlightsExport extends ExportToCsv {
       AclFeedSource -> "actors.ForecastBaseArrivalsActor-forecast-base",
       ForecastFeedSource -> "actors.ForecastPortArrivalsActor-forecast-port"
     )
+    val terminal = Terminal(terminalString)
 
     Action(FeedSource(feedSourceString) match {
 
@@ -72,16 +73,15 @@ trait WithFlightsExport extends ExportToCsv {
         val arrivalsExport = ArrivalFeedExport()
         val startDate = SDate(startPit)
         val numberOfDays = startDate.daysBetweenInclusive(SDate(endPit))
-        val csvDataSource = arrivalsExport.flightsDataSource(startDate, numberOfDays, fs, persistenceId)
-
+        val csvDataSource = arrivalsExport.flightsDataSource(startDate, numberOfDays, terminal, fs, persistenceId)
 
         implicit val writeable: Writeable[String] = Writeable((str: String) => ByteString.fromString(str), Option("application/csv"))
-        val fileName = s"$feedSourceString-export"
+        val fileName = s"${airportConfig.portCode}-$terminal-$feedSourceString-${startDate.toISODateOnly}-to-${SDate(endPit).toISODateOnly}"
         Result(
           header = ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
           body = HttpEntity.Chunked(csvDataSource.collect {
-            case Some(s) => s }.map(c => HttpChunk.Chunk(writeable.transform(c))), writeable.contentType))
-
+            case Some(s) => s
+          }.map(c => HttpChunk.Chunk(writeable.transform(c))), writeable.contentType))
 
       case None =>
         NotFound(s"Unknown feed source $feedSourceString")

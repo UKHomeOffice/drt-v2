@@ -4,11 +4,13 @@ import java.util.UUID
 
 import actors.pointInTime.ArrivalsReadActor
 import actors.{ArrivalsState, GetState}
+import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.Terminals.Terminal
 import drt.shared.{Arrival, FeedSource, SDateLike, UniqueArrival}
 import services.SDate
 import services.exports.Exports
@@ -26,7 +28,7 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
       csvData.map(_.mkString(",")).mkString(lineEnding) + lineEnding
     else lineEnding
 
-  def flightsForDay(day: MillisSinceEpoch, fs: FeedSource, persistenceId: String): Future[Option[String]] = {
+  def flightsForDay(day: MillisSinceEpoch, terminal: Terminal, fs: FeedSource, persistenceId: String): Future[Option[String]] = {
     val exportDay = SDate(day)
 
     val feedActor: ActorRef = system
@@ -48,8 +50,9 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
           system.log.info(s"Exporting $fs arrivals for ${exportDay.toISODateOnly}")
           val csvData = arrivals
             .values
-            .filter(_.Actual match {
-              case Some(act) => SDate(act).toISODateOnly == exportDay.toISODateOnly
+            .filter(a => a.Actual match {
+              case Some(act) =>
+                (SDate(act).toISODateOnly == exportDay.toISODateOnly) && a.Terminal == terminal
               case _ => false
             })
             .map(a =>
@@ -67,12 +70,20 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
       }
   }
 
-  def headingsSource = Source(List(Option(TerminalFlightsSummary.rawArrivalHeadingsWithTransfer + lineEnding)))
+  def headingsSource: Source[Option[String], NotUsed] = Source(
+    List(Option(TerminalFlightsSummary.rawArrivalHeadingsWithTransfer + lineEnding))
+  )
 
-  def flightsDataSource(startDate: SDateLike, numberOfDays: Int, fs: FeedSource, persistenceId: String) =
+  def flightsDataSource(
+                         startDate: SDateLike,
+                         numberOfDays: Int,
+                         terminal: Terminal,
+                         fs: FeedSource,
+                         persistenceId: String
+                       ): Source[Option[String], NotUsed] =
     Source(0 until numberOfDays)
       .mapAsync(1)(day => {
-        flightsForDay(startDate.addDays(day).millisSinceEpoch, fs, persistenceId)
+        flightsForDay(startDate.addDays(day).millisSinceEpoch, terminal, fs, persistenceId)
       }).prepend(headingsSource)
 
 
