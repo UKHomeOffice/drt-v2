@@ -48,26 +48,31 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
         case ArrivalsState(arrivals: mutable.Map[UniqueArrival, Arrival], _, _) =>
           feedActor ! PoisonPill
           system.log.info(s"Exporting $fs arrivals for ${exportDay.toISODateOnly}")
-          val csvData = arrivals
-            .values
-            .filter(a => a.Actual match {
-              case Some(act) =>
-                (SDate(act).toISODateOnly == exportDay.toISODateOnly) && a.Terminal == terminal
-              case _ => false
-            })
-            .map(a =>
-              TerminalFlightsSummary.arrivalAsRawCsvValuesWithTransfer(
-                a,
-                Exports.millisToLocalIsoDateOnly,
-                Exports.millisToLocalHoursAndMinutes
-              )
-            )
+          val csvData: Iterable[List[String]] = arrivalsToCsvRows(terminal, arrivals, exportDay)
           Option(asCSV(csvData))
 
         case _ =>
           feedActor ! PoisonPill
           None
       }
+  }
+
+  def arrivalsToCsvRows(terminal: Terminal, arrivals: mutable.SortedMap[UniqueArrival, Arrival], exportDay: SDateLike) = {
+    val csvData = arrivals
+      .values
+      .filter(a => a.Actual match {
+        case Some(act) =>
+          (SDate(act).toISODateOnly == exportDay.toISODateOnly) && a.Terminal == terminal
+        case _ => false
+      })
+      .map(a =>
+        TerminalFlightsSummary.arrivalAsRawCsvValuesWithTransfer(
+          a,
+          Exports.millisToLocalIsoDateOnly,
+          Exports.millisToLocalHoursAndMinutes
+        )
+      )
+    csvData
   }
 
   def headingsSource: Source[Option[String], NotUsed] = Source(
