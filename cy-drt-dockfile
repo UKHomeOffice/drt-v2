@@ -10,6 +10,9 @@ WORKDIR /app
 # https://github.com/cypress-io/cypress/issues/1243
 ENV CI=1
 
+ENV TZ=Europe/London
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 # install NPM dependencies and Cypress binary
 RUN npm install --save-dev cypress
 # check if the binary was installed successfully
