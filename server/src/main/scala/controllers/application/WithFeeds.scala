@@ -95,4 +95,5 @@ trait WithFeeds {
         .map(arrivalSources => Ok(write(arrivalSources.filter(_.isDefined))))
     }
   }
+
 }

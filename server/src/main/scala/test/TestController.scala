@@ -138,7 +138,7 @@ class TestController @Inject()(implicit val config: Configuration,
 
       request.body.asJson.map(s => s.toString.parseJson.convertTo[VoyageManifest]) match {
         case Some(vm) =>
-          log.info(s"Got a manifest to save ${vm.CarrierCode}${vm.VoyageNumber}")
+          log.info(s"Got a manifest to save ${vm.CarrierCode}${vm.VoyageNumber} ${vm.ScheduledDateOfArrival} ${vm.ScheduledTimeOfArrival}")
           saveVoyageManifest(vm)
           Created
         case None =>

@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.auth.{ArrivalsAndSplitsView, DesksAndQueuesView, LoggedInUser}
+import drt.auth.{ArrivalSource, ArrivalsAndSplitsView, DesksAndQueuesView, LoggedInUser}
 import drt.client.SPAMain
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
@@ -78,6 +78,7 @@ object MultiDayExportComponent {
                 }),
                 <.div(
                   <.div(^.className := "multi-day-export-links",
+
                     if (props.loggedInUser.hasRole(ArrivalsAndSplitsView))
                       <.a("Export Arrivals",
                         ^.className := "btn btn-default",
@@ -94,6 +95,15 @@ object MultiDayExportComponent {
                         ^.target := "_blank",
                         ^.onClick --> {
                           Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Desks", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
+                        }
+                      ) else EmptyVdom,
+                    if (props.loggedInUser.hasRole(ArrivalSource) && (state.endMillis <= SDate.now().millisSinceEpoch))
+                      <.a("Export Live Feed",
+                        ^.className := "btn btn-default",
+                        ^.href := SPAMain.absoluteUrl(s"export/arrivals-feed/${props.terminal}/${state.startMillis}/${state.endMillis}/LiveFeedSource"),
+                        ^.target := "_blank",
+                        ^.onClick --> {
+                          Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Arrivals", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
                         }
                       ) else EmptyVdom
                   )

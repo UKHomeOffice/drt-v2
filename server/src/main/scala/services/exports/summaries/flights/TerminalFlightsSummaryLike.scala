@@ -17,8 +17,6 @@ trait TerminalFlightsSummaryLike extends TerminalSummaryLike {
 
   def millisToHoursAndMinutes: MillisSinceEpoch => String
 
-  val queueNames: Seq[Queue] = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrder)
-
   def csvHeader: String
 
   def headingsForSplitSource(queueNames: Seq[Queue], source: String): String = queueNames
@@ -28,30 +26,17 @@ trait TerminalFlightsSummaryLike extends TerminalSummaryLike {
     })
     .mkString(",")
 
+  val queueNames: Seq[Queue] = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrder)
+
   val splitSources = List(ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage)
 
-  def flightToCsvRow(queueNames: Seq[Queue], fws: ApiFlightWithSplits): List[String] = {
+  def flightWithSplitsToCsvRow(queueNames: Seq[Queue], fws: ApiFlightWithSplits): List[String] = {
     val splitsForSources = splitSources.flatMap(ss => queueSplits(queueNames, fws, ss))
-
-    List(
-      fws.apiFlight.flightCode,
-      fws.apiFlight.flightCode,
-      fws.apiFlight.Origin.toString,
-      fws.apiFlight.Gate.getOrElse("") + "/" + fws.apiFlight.Stand.getOrElse(""),
-      fws.apiFlight.Status.description,
-      millisToDateOnly(fws.apiFlight.Scheduled),
-      millisToHoursAndMinutes(fws.apiFlight.Scheduled),
-      fws.apiFlight.Estimated.map(millisToHoursAndMinutes(_)).getOrElse(""),
-      fws.apiFlight.Actual.map(millisToHoursAndMinutes(_)).getOrElse(""),
-      fws.apiFlight.EstimatedChox.map(millisToHoursAndMinutes(_)).getOrElse(""),
-      fws.apiFlight.ActualChox.map(millisToHoursAndMinutes(_)).getOrElse(""),
-      fws.apiFlight.PcpTime.map(millisToHoursAndMinutes(_)).getOrElse(""),
-      fws.apiFlight.ActPax.getOrElse(0).toString,
-      ArrivalHelper.bestPax(fws.apiFlight).toString
-      ) ++ splitsForSources
+    TerminalFlightsSummary.arrivalAsRawCsvValues(fws.apiFlight, millisToDateOnly, millisToHoursAndMinutes) ++
+    List(ArrivalHelper.bestPax(fws.apiFlight).toString) ++ splitsForSources
   }
 
-  private def queueSplits(queueNames: Seq[Queue],
+  def queueSplits(queueNames: Seq[Queue],
                           fws: ApiFlightWithSplits,
                           splitSource: SplitSource): Seq[String] =
     queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, splitSource).getOrElse(q, "")}")

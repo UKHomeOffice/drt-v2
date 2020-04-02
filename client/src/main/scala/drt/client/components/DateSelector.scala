@@ -59,7 +59,7 @@ object DateSelector {
           <.div(
             formRow(s"${props.label}: ",
             <.div(^.className := "day date-field", drawSelect(names = List.range(1, daysInMonth(state.month, state.year) + 1).map(_.toString), values = days.map(_.toString), defaultValue = state.day, callback = (v: String) => (s: State) => s.copy(day = v.toInt))),
-            <.div(^.className := "month date-field", drawSelect(names = months.map(_._2.toString), values = months.map(_._1.toString), defaultValue = state.month, callback = (v: String) => (s: State) => s.copy(month = v.toInt))),
+            <.div(^.className := "month date-field", drawSelect(names = months.map(_._2.toString), values = months.map(_._1.toString), defaultValue = state.month, callback = (v: String) => (s: State) => s.copy(month = v.toInt, day = 1))),
             <.div(^.className := "year date-field", drawSelect(names = years.map(_.toString), values = years.map(_.toString), defaultValue = state.year, callback = (v: String) => (s: State) => s.copy(year = v.toInt)))
           ))
         ))
