@@ -22,18 +22,18 @@ class ArrivalsToCSVDataTest extends Specification {
         ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 4, None),
         ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 7, None),
         ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.FastTrack, 6, None)
-        ), SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC)),
-        Splits(
-          Set(
-            ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 8, None),
-            ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 9, None),
-            ApiPaxTypeAndQueueCount(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk, 10, None),
-            ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 12, None),
-            ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 11, None),
-            ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 14, None),
-            ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.FastTrack, 13, None)
-            ), SplitRatiosNs.SplitSources.Historical, None))
-    )
+      ), SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC)),
+      Splits(
+        Set(
+          ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 8, None),
+          ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 9, None),
+          ApiPaxTypeAndQueueCount(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk, 10, None),
+          ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 12, None),
+          ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 11, None),
+          ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 14, None),
+          ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.FastTrack, 13, None)
+        ), SplitRatiosNs.SplitSources.Historical, None))
+  )
   val flightWithoutFastTrackApiSplits = ApiFlightWithSplits(
     arrival(iata = "SA325", icao = "SA0325", schDt = "2017-01-01T20:00:00Z", actPax = Option(100), maxPax = Option(100), terminal = T1, origin = PortCode("JHC"), operator = Option(Operator("SA")), status = ArrivalStatus("UNK"), estDt = "2017-01-01T20:00:00Z"),
     Set(Splits(
@@ -42,8 +42,8 @@ class ArrivalsToCSVDataTest extends Specification {
         ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 3, None),
         ApiPaxTypeAndQueueCount(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk, 3, None),
         ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 1, None)
-        ), SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC)))
-    )
+      ), SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC)))
+  )
   val flights = List(
     flightWithAllTypesOfAPISplit,
     flightWithoutFastTrackApiSplits,
@@ -55,9 +55,9 @@ class ArrivalsToCSVDataTest extends Specification {
           ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 30, None),
           ApiPaxTypeAndQueueCount(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk, 30, None),
           ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 10, None)
-          ), SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC)))
-      )
+        ), SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC)))
     )
+  )
 
   val codeShareFlights = List(
     flightWithAllTypesOfAPISplit,
@@ -106,8 +106,8 @@ class ArrivalsToCSVDataTest extends Specification {
 
     val expected =
       """|SA0325,SA0325,JHC,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,
-        |SA0324,SA0324,JHB,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,7,15,32,46,12,23,30,35,,,,
-        |SA0326,SA0326,JHD,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,""".stripMargin
+         |SA0324,SA0324,JHB,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,7,15,32,46,12,23,30,35,,,,
+         |SA0326,SA0326,JHD,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,""".stripMargin
 
     result === expected
   }
@@ -137,7 +137,7 @@ class ArrivalsToCSVDataTest extends Specification {
         "API Actual - Non EEA (Non Visa)",
         "API Actual - Non EEA (Visa)",
         "API Actual - eGates"
-        )
+      )
 
       headings === expected
     }
@@ -151,7 +151,7 @@ class ArrivalsToCSVDataTest extends Specification {
         List(1.0, 3.0, 6.0, 7.0, 4.0, 5.0, 2.0),
         List(3.0, 3.0, 0, 0, 1.0, 0, 3.0),
         List(30.0, 30.0, 0, 0, 10.0, 0, 30.0)
-        )
+      )
 
       result === expected
     }
