@@ -1,26 +1,20 @@
 package services.`export`
 
-import actors.GetPortStateForTerminal
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
 import drt.shared.Queues.{EeaDesk, Queue}
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.{SDateLike, _}
 import org.specs2.mutable.SpecificationLike
 import services.SDate
-import services.exports.Exports
-import services.exports.summaries.Summaries.{optionalMax, queueSummariesForPeriod, staffSummaryForPeriod, terminalSummaryForPeriod}
 import services.exports.summaries.flights.TerminalFlightsSummary
-import services.exports.summaries.queues._
 import services.exports.summaries.{GetSummaries, TerminalSummaryLike}
 import services.graphstages.Crunch
 
-import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
 
@@ -154,7 +148,7 @@ class FlightsExportSpec extends SpecificationLike {
           persistedSummaries(queues, SDate("2020-01-01")).toCsvWithHeader,
           persistedSummaries(queues, SDate("2020-01-02")).toCsv,
           persistedSummaries(queues, SDate("2020-01-03")).toCsv
-          )
+        )
 
         result === expected
       }

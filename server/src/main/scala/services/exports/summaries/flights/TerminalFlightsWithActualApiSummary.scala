@@ -8,15 +8,17 @@ import services.exports.Exports
 case class TerminalFlightsWithActualApiSummary(flights: Seq[ApiFlightWithSplits],
                                                millisToDateOnly: MillisSinceEpoch => String,
                                                millisToHoursAndMinutes: MillisSinceEpoch => String) extends TerminalFlightsSummaryLike {
+
   import TerminalFlightsWithActualApiSummary._
 
   lazy val actualApiHeadings: Seq[String] = actualApiHeadingsForFlights(flights)
 
   override lazy val csvHeader: String = standardCsvHeader + "," + actualApiHeadings.mkString(",")
 
-  override def toCsv: String =  {
-    val csvData = flights.sortBy(_.apiFlight.PcpTime).map(fws => {
-      flightWithSplitsToCsvRow(queueNames, fws) ::: actualAPISplitsForFlightInHeadingOrder(fws, actualApiHeadings).toList
+  override def toCsv: String = {
+    val uniqueApiFlightWithSplits: Seq[(ApiFlightWithSplits, Set[Arrival])] = uniqueArrivalsWithCodeShares(flights)
+    val csvData = uniqueApiFlightWithSplits.sortBy(_._1.apiFlight.PcpTime).map(fws => {
+      flightWithSplitsToCsvRow(queueNames, fws._1) ::: actualAPISplitsForFlightInHeadingOrder(fws._1, actualApiHeadings).toList
     })
     asCSV(csvData)
   }
