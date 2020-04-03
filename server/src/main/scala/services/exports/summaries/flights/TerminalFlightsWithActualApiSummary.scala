@@ -15,8 +15,9 @@ case class TerminalFlightsWithActualApiSummary(flights: Seq[ApiFlightWithSplits]
   override lazy val csvHeader: String = standardCsvHeader + "," + actualApiHeadings.mkString(",")
 
   override def toCsv: String =  {
-    val csvData = flights.sortBy(_.apiFlight.PcpTime).map(fws => {
-      flightWithSplitsToCsvRow(queueNames, fws) ::: actualAPISplitsForFlightInHeadingOrder(fws, actualApiHeadings).toList
+    val uniqueApiFlightWithSplits: Seq[(ApiFlightWithSplits, Set[Arrival])] = uniqueArrivalsWithCodeShares(flights)
+    val csvData = uniqueApiFlightWithSplits.sortBy(_._1.apiFlight.PcpTime).map(fws => {
+      flightWithSplitsToCsvRow(queueNames, fws._1) ::: actualAPISplitsForFlightInHeadingOrder(fws._1, actualApiHeadings).toList
     })
     asCSV(csvData)
   }
