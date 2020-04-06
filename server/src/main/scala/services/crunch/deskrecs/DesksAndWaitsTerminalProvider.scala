@@ -38,23 +38,29 @@ case class DesksAndWaitsTerminalProvider(slas: Map[Queue, Int],
 
   def desksAndWaits(minuteMillis: NumericRange[MillisSinceEpoch],
                     loadsByQueue: Map[Queue, Seq[Double]],
-                    deskLimitsProvider: TerminalDeskLimitsLike): Map[Queue, (List[Int], List[Int])] = {
+                    deskLimitsProvider: TerminalDeskLimitsLike): Map[Queue, (Iterable[Int], Iterable[Int])] = {
     val queuesToProcess = loadsByQueue.keys.toSet
 
     queuePriority
       .filter(queuesToProcess.contains)
-      .foldLeft(Map[Queue, (List[Int], List[Int])]()) {
+      .foldLeft(Map[Queue, (Iterable[Int], Iterable[Int])]()) {
         case (queueRecsSoFar, queue) =>
           log.info(s"Optimising $queue")
           val queueWork = adjustedWork(queue, loadsByQueue(queue))
           val minDesks = deskLimitsProvider.minDesksForMinutes(minuteMillis, queue).toSeq
-          val queueDeskAllocations = queueRecsSoFar.mapValues(_._1)
+          val queueDeskAllocations = queueRecsSoFar.mapValues(_._1.toList)
           val maxDesks = deskLimitsProvider.maxDesksForMinutes(minuteMillis, queue, queueDeskAllocations).toSeq
-          cruncher(queueWork, minDesks, maxDesks, OptimizerConfig(slas(queue))) match {
-            case Success(OptimizerCrunchResult(desks, waits)) => queueRecsSoFar + (queue -> ((desks.toList, waits.toList)))
-            case Failure(t) =>
-              log.error(s"Crunch failed for $queue", t)
-              queueRecsSoFar
+          queueWork match {
+            case noWork if noWork.isEmpty || noWork.max == 0 =>
+              log.info(s"No workload to crunch. Filling with min desks and zero wait times")
+              queueRecsSoFar + (queue -> ((minDesks, List.fill(minDesks.size)(0))))
+            case someWork =>
+              cruncher(someWork, minDesks, maxDesks, OptimizerConfig(slas(queue))) match {
+                case Success(OptimizerCrunchResult(desks, waits)) => queueRecsSoFar + (queue -> ((desks.toList, waits.toList)))
+                case Failure(t) =>
+                  log.error(s"Crunch failed for $queue", t)
+                  queueRecsSoFar
+              }
           }
       }
   }

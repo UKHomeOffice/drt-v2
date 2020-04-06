@@ -48,34 +48,24 @@ object RunnableDeskRecs {
 
           bufferAsync
             .mapAsync(1) { crunchStartMillis =>
-              log.info(s"Asking for flights for ${SDate(crunchStartMillis).toISOString}")
+              log.info(s"Asking for flights for ${SDate(crunchStartMillis).toISOString()}")
               flightsToCrunch(askablePortStateActor)(portDeskRecs.minutesToCrunch, crunchStartMillis)
             }
             .map { case (crunchStartMillis, flights) =>
               val crunchEndMillis = SDate(crunchStartMillis).addMinutes(portDeskRecs.minutesToCrunch).millisSinceEpoch
               val minuteMillis = crunchStartMillis until crunchEndMillis by 60000
 
-              log.info(s"Crunching ${minuteMillis.length} minutes (${SDate(crunchStartMillis).toISOString} to ${SDate(crunchEndMillis).toISOString})")
+              log.info(s"Crunching ${flights.flightsToUpdate.size} flights, ${minuteMillis.length} minutes (${SDate(crunchStartMillis).toISOString} to ${SDate(crunchEndMillis).toISOString})")
 
               val loads = portDeskRecs.flightsToLoads(flights, crunchStartMillis)
-              val maxDesksByTerminal = deskLimitsForLoads(maxDesksProviders, flights.terminals, loads)
 
-              portDeskRecs.loadsToDesks(minuteMillis, loads, maxDesksByTerminal)
+              portDeskRecs.loadsToDesks(minuteMillis, loads, maxDesksProviders)
             } ~> killSwitch ~> deskRecsSink
 
           ClosedShape
     }
 
     RunnableGraph.fromGraph(graph).addAttributes(Attributes.inputBuffer(1, 1))
-  }
-
-  def deskLimitsForLoads(maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
-                         terminals: Set[Terminal],
-                         loads: Map[TQM, Crunch.LoadMinute]): Map[Terminal, TerminalDeskLimitsLike] = {
-    val loadTerminals = loads.keys.map(_.terminal).toSet
-    terminals.intersect(loadTerminals).map { terminal =>
-      (terminal, maxDesksProviders(terminal))
-    }.toMap
   }
 
   private def flightsToCrunch(askablePortStateActor: AskableActorRef)
