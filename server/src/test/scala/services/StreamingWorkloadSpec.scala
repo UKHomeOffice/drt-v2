@@ -1,7 +1,7 @@
 package services
 
 import akka.NotUsed
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, Props}
 import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
@@ -43,7 +43,7 @@ class StreamingWorkloadSpec extends CrunchTestLike {
 
   def newBuffer: Buffer = Buffer(Iterable())
 
-  val mockPortStateActor: ActorRef = system.actorOf(MockPortStateActor.props(portStateProbe, smallDelay))
+  val mockPortStateActor: ActorRef = system.actorOf(Props(new MockPortStateActor(portStateProbe, smallDelay)))
   mockPortStateActor ! SetFlights(List(ApiFlightWithSplits(ArrivalGenerator.arrival(terminal = T1, origin = PortCode("JFK"), actPax = Option(100)), Set())))
   val portDeskRecs: MockDesksAndWaitsPort = MockDesksAndWaitsPort(1440, defaultAirportConfig.crunchOffsetMinutes)
   val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = PortDeskLimits.flexed(defaultAirportConfig)

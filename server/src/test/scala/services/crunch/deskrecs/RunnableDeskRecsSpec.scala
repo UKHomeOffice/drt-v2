@@ -24,10 +24,6 @@ import scala.collection.immutable.{Map, Seq, SortedMap}
 import scala.concurrent.duration._
 
 
-object MockPortStateActor {
-  def props(probe: TestProbe,
-            responseDelayMillis: Long = 0L): Props = Props(new MockPortStateActor(probe, responseDelayMillis))
-}
 
 class MockPortStateActor(probe: TestProbe, responseDelayMillis: Long = 0L) extends Actor {
   var flightsToReturn: List[ApiFlightWithSplits] = List()
@@ -87,7 +83,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     "When I give it a millisecond of 2019-01-01T00:00 " +
     "I should see a request for flights for 2019-01-01 00:00 to 00:30" >> {
     val portStateProbe = TestProbe("port-state")
-    val mockPortStateActor = system.actorOf(Props(classOf[MockPortStateActor], portStateProbe, noDelay))
+    val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, noDelay)))
     val (millisToCrunchSourceActor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, DesksAndWaitsPortProvider(defaultAirportConfig, mockCrunch), newBuffer, maxDesksProvider).run()
     val askableSource: AskableActorRef = millisToCrunchSourceActor
 
@@ -108,7 +104,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     "When I give it a long response delay " +
     "I should not see a StreamComplete message (because the timeout exception is handled)" >> {
     val portStateProbe = TestProbe("port-state")
-    val mockPortStateActor = system.actorOf(Props(classOf[MockPortStateActor], portStateProbe, longDelay))
+    val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, longDelay)))
 
     val (millisToCrunchSourceActor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, DesksAndWaitsPortProvider(defaultAirportConfig, mockCrunch), newBuffer, maxDesksProvider).run()
     val askableSource: AskableActorRef = millisToCrunchSourceActor
@@ -141,7 +137,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val flight = List(ApiFlightWithSplits(arrival, Set(historicSplits), None))
 
     val portStateProbe = TestProbe("port-state")
-    val mockPortStateActor = system.actorOf(Props(classOf[MockPortStateActor], portStateProbe, noDelay))
+    val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, noDelay)))
     mockPortStateActor ! SetFlights(flight)
 
     val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
@@ -179,7 +175,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val flight = List(ApiFlightWithSplits(arrival, Set(historicSplits), None))
 
     val portStateProbe = TestProbe("port-state")
-    val mockPortStateActor = system.actorOf(Props(classOf[MockPortStateActor], portStateProbe, noDelay))
+    val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, noDelay)))
     mockPortStateActor ! SetFlights(flight)
 
     val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
@@ -219,7 +215,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val flight = List(ApiFlightWithSplits(arrival, Set(historicSplits), None), ApiFlightWithSplits(arrival2, Set(historicSplits), None))
 
     val portStateProbe = TestProbe("port-state")
-    val mockPortStateActor = system.actorOf(Props(classOf[MockPortStateActor], portStateProbe, noDelay))
+    val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, noDelay)))
     mockPortStateActor ! SetFlights(flight)
 
     val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
@@ -263,7 +259,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       SplitSources.Historical, None, Percentage)
 
     val portStateProbe = TestProbe("port-state")
-    val mockPortStateActor = system.actorOf(Props(classOf[MockPortStateActor], portStateProbe, noDelay))
+    val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, noDelay)))
 
     val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> 30d / 60))
     val testAirportConfig = defaultAirportConfig.copy(terminalProcessingTimes = procTimes)
@@ -427,7 +423,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val flight = List(ApiFlightWithSplits(arrival, Set(historicSplits), None))
 
     val portStateProbe = TestProbe("port-state")
-    val mockPortStateActor = system.actorOf(Props(classOf[MockPortStateActor], portStateProbe, noDelay))
+    val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, noDelay)))
     mockPortStateActor ! SetFlights(flight)
 
     val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
@@ -504,15 +500,15 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     success
   }
 
-  "Given loads for a set of minutes within a day for 2 queues at one terminal " +
+  "Given loads for a set of minutes within a day for 2 queues at 2 terminals " +
     "When I ask for crunch result " +
-    "Then I should see a full day's worth (1440) of crunch minutes per queue crunched - a total of 2880" >> {
+    "Then I should see a full day's worth (1440) of crunch minutes per queue crunched - a total of 5760" >> {
     val scheduled = "2018-01-01T00:05"
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(25))
     val flight = List(ApiFlightWithSplits(arrival, Set(historicSplits), None))
 
     val portStateProbe = TestProbe("port-state")
-    val mockPortStateActor = system.actorOf(Props(classOf[MockPortStateActor], portStateProbe, noDelay))
+    val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, noDelay)))
     mockPortStateActor ! SetFlights(flight)
 
     val minsInADay = 1440
@@ -524,7 +520,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     millisToCrunchSourceActor ? List(epoch)
 
     portStateProbe.fishForMessage(2 seconds) {
-      case DeskRecMinutes(drms) => drms.length === defaultAirportConfig.queuesByTerminal(T1).size * minsInADay
+      case DeskRecMinutes(drms) => drms.length === defaultAirportConfig.queuesByTerminal.flatMap(_._2).size * minsInADay
       case _ => false
     }
 
