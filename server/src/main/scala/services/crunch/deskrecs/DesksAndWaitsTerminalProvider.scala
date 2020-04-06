@@ -48,7 +48,7 @@ case class DesksAndWaitsTerminalProvider(slas: Map[Queue, Int],
           log.info(s"Optimising $queue")
           val queueWork = adjustedWork(queue, loadsByQueue(queue))
           val minDesks = deskLimitsProvider.minDesksForMinutes(minuteMillis, queue).toSeq
-          val queueDeskAllocations = queueRecsSoFar.mapValues(_._1.toList)
+          val queueDeskAllocations = queueRecsSoFar.mapValues { case (desks, _) => desks.toList }
           val maxDesks = deskLimitsProvider.maxDesksForMinutes(minuteMillis, queue, queueDeskAllocations).toSeq
           queueWork match {
             case noWork if noWork.isEmpty || noWork.max == 0 =>
