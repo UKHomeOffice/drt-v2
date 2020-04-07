@@ -4,10 +4,10 @@ import actors.Sizes.oneMegaByte
 import actors.acking.AckingReceiver.StreamCompleted
 import akka.persistence._
 import drt.shared.CrunchApi.MillisSinceEpoch
-import scalapb.GeneratedMessage
 import drt.shared.{Alert, SDateLike}
 import org.joda.time.DateTime
 import org.slf4j.{Logger, LoggerFactory}
+import scalapb.GeneratedMessage
 import server.protobuf.messages.Alert.{AlertSnapshotMessage, Alert => ProtobufAlert}
 
 case object DeleteAlerts
@@ -23,18 +23,13 @@ case class AlertsActor(now: () => SDateLike) extends RecoveryActorLike with Pers
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case alert: ProtobufAlert =>
-      log.info(s"ALERTS GOT alert $alert")
-      deserialise(alert).foreach(a => updateState(Seq(a)))
+    case alert: ProtobufAlert => deserialise(alert).foreach(a => updateState(Seq(a)))
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case smm: AlertSnapshotMessage =>
-      log.info(s"ALERTS GOT alert snapshot $smm")
-      updateState(smm.alerts.flatMap(deserialise))
+    case smm: AlertSnapshotMessage => updateState(smm.alerts.flatMap(deserialise))
   }
 
-  //noinspection SpellCheckingInspection
   def deserialise(alert: ProtobufAlert): Option[Alert] = for {
     title <- alert.title
     message <- alert.message
