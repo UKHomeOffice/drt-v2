@@ -48,16 +48,7 @@ object PaxDeltas {
     else {
       val day = startDay.addDays(-1 * dayOffset)
       val dayBefore = day.addDays(-1)
-      val maybeActualPax = dailyPaxNosByDay.get((day.millisSinceEpoch, day.millisSinceEpoch))
-      val maybeForecastPax = dailyPaxNosByDay.get((dayBefore.millisSinceEpoch, day.millisSinceEpoch))
-      val possibleMaybeDelta: Option[Option[Double]] = for {
-        actual <- maybeActualPax
-        forecast <- maybeForecastPax
-      } yield {
-        if (forecast != 0) Option(1d - ((forecast - actual).toDouble / forecast))
-        else None
-      }
-      possibleMaybeDelta.flatten match {
+      maybeDeltaForDays(dailyPaxNosByDay, day, dayBefore) match {
         case Some(delta) =>
           println(s"${dayBefore.toISOString()} - ${day.toISOString()} for ${day.toISOString()}: $delta")
           Option(delta) :: maybePctDeltasRecursive(maxDays, averageDays, dailyPaxNosByDay, startDay, dayOffset + 1, resultsCount + 1)
@@ -66,6 +57,21 @@ object PaxDeltas {
           maybePctDeltasRecursive(maxDays, averageDays, dailyPaxNosByDay, startDay, dayOffset + 1, resultsCount)
       }
     }
+
+  private def maybeDeltaForDays(dailyPaxNosByDay: Map[(MillisSinceEpoch, MillisSinceEpoch), Int],
+                                day: SDateLike,
+                                dayBefore: SDateLike): Option[Double] = {
+    val maybeActualPax = dailyPaxNosByDay.get((day.millisSinceEpoch, day.millisSinceEpoch))
+    val maybeForecastPax = dailyPaxNosByDay.get((dayBefore.millisSinceEpoch, day.millisSinceEpoch))
+    val possibleMaybeDelta: Option[Option[Double]] = for {
+      actual <- maybeActualPax
+      forecast <- maybeForecastPax
+    } yield {
+      if (forecast != 0) Option(1d - ((forecast - actual).toDouble / forecast))
+      else None
+    }
+    possibleMaybeDelta.flatten
+  }
 
   def applyAdjustmentsToArrivals(passengersActorProvider: () => AskableActorRef, numDaysInAverage: Int)
                                 (arrivals: List[Arrival])
