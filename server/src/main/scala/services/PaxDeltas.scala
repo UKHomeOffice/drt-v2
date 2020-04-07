@@ -50,10 +50,8 @@ object PaxDeltas {
       val dayBefore = day.addDays(-1)
       maybeDeltaForDays(dailyPaxNosByDay, day, dayBefore) match {
         case Some(delta) =>
-          println(s"${dayBefore.toISOString()} - ${day.toISOString()} for ${day.toISOString()}: $delta")
           Option(delta) :: maybePctDeltasRecursive(maxDays, averageDays, dailyPaxNosByDay, startDay, dayOffset + 1, resultsCount + 1)
         case None =>
-          println(s"${dayBefore.toISOString()} - ${day.toISOString()} for ${day.toISOString()}: n/a")
           maybePctDeltasRecursive(maxDays, averageDays, dailyPaxNosByDay, startDay, dayOffset + 1, resultsCount)
       }
     }
