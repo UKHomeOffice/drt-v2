@@ -68,7 +68,7 @@ class DeploymentGraphStage(name: String = "",
       override def onPush(): Unit = {
         val timer = StageTimer(stageName, inLoads)
         val incomingLoads = grab(inLoads)
-        log.debug(s"Received ${incomingLoads.loadMinutes.size} loads")
+        log.debug(s"Received ${incomingLoads.loadMinutes.size} load minutes")
 
         val affectedTerminals = incomingLoads.loadMinutes.map { case (TQM(t, _, _), _) => t }.toSet.toSeq
 
@@ -97,29 +97,26 @@ class DeploymentGraphStage(name: String = "",
     setHandler(inStaffMinutes, new InHandler {
       override def onPush(): Unit = {
         val timer = StageTimer(stageName, inStaffMinutes)
-        val incomingStaffMinutes: StaffMinutes = grab(inStaffMinutes)
-        log.info(s"Grabbed ${incomingStaffMinutes.minutes.length} staff minutes")
 
-        val affectedTerminals = incomingStaffMinutes.minutes.map(_.terminal).distinct
+        grab(inStaffMinutes) match {
+          case StaffMinutes(minutes) if minutes.nonEmpty =>
+            val affectedTerminals = minutes.map(_.terminal).distinct
+            log.info(s"Received ${minutes.length} staff minutes affecting ${affectedTerminals.mkString(", ")}")
 
-        log.info(s"Staff updates affect ${affectedTerminals.mkString(", ")}")
+            updateStaffMinutes(StaffMinutes(minutes))
+            purgeExpired(staffMinutes, TM.atTime, now, expireAfterMillis.toInt)
 
-        updateStaffMinutes(incomingStaffMinutes)
-        purgeExpired(staffMinutes, TM.atTime, now, expireAfterMillis.toInt)
+            val firstMinute = crunchPeriodStartMillis(SDate(minutes.map(_.minute).min))
+            val lastMinute = firstMinute.addMinutes(airportConfig.minutesToCrunch)
 
-        log.info(s"Purged expired staff minutes")
+            log.debug(s"Got first ${firstMinute.toLocalDateTimeString()} and last minutes ${lastMinute.toLocalDateTimeString()}")
 
-        val firstMinute = crunchPeriodStartMillis(SDate(incomingStaffMinutes.minutes.map(_.minute).min))
-        val lastMinute = firstMinute.addMinutes(airportConfig.minutesToCrunch)
+            val updates = updateSimulationsForPeriod(firstMinute, lastMinute, affectedTerminals)
 
-        log.info(s"Got first ${firstMinute.toLocalDateTimeString()} and last minutes ${lastMinute.toLocalDateTimeString()}")
+            setDeployments(updates)
 
-        log.info(s"Got deployments, updating simulations")
-        val updates = updateSimulationsForPeriod(firstMinute, lastMinute, affectedTerminals)
-
-        setDeployments(updates)
-
-        pushStateIfReady()
+            pushStateIfReady()
+        }
 
         pullAll()
         timer.stopAndReport()
@@ -144,10 +141,9 @@ class DeploymentGraphStage(name: String = "",
                                    lastMinute: SDateLike,
                                    terminalsToUpdate: Seq[Terminal]
                                   ): Map[TQM, SimulationMinute] = {
-      log.info(s"Simulation for ${firstMinute.toLocalDateTimeString()} - ${lastMinute.toLocalDateTimeString()} ${terminalsToUpdate.mkString(", ")}")
+      log.debug(s"Simulation for ${firstMinute.toLocalDateTimeString()} - ${lastMinute.toLocalDateTimeString()} ${terminalsToUpdate.mkString(", ")}")
 
       val newSimulationsForPeriod = simulateLoads(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, terminalsToUpdate)
-
       val existingMinutes = forPeriod(firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch, terminalsToUpdate, allSimulationMinutes)
 
       val diff = newSimulationsForPeriod.foldLeft(SortedMap[TQM, SimulationMinute]()) {
@@ -166,7 +162,6 @@ class DeploymentGraphStage(name: String = "",
 
       simulationMinutesToPush ++= diff
       purgeExpired(simulationMinutesToPush, TQM.atTime, now, expireAfterMillis.toInt)
-      log.info(s"Now have ${simulationMinutesToPush.size} simulation minutes to push")
 
       diff
     }
@@ -225,7 +220,7 @@ class DeploymentGraphStage(name: String = "",
     def pushStateIfReady(): Unit = {
       if (simulationMinutesToPush.isEmpty) log.debug(s"We have no simulation minutes. Nothing to push")
       else if (isAvailable(outSimulationMinutes)) {
-        Metrics.counter(s"$stageName.simulation-minutes", simulationMinutesToPush.size)
+        log.info(s"Pushing ${simulationMinutesToPush.size} deployments")
         push(outSimulationMinutes, SimulationMinutes(simulationMinutesToPush.values.toSeq))
         simulationMinutesToPush.clear()
       } else log.debug(s"outSimulationMinutes not available to push")
