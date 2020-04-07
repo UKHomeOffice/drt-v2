@@ -33,7 +33,8 @@ class SortedSetBuffer(initialValues: Iterable[Long]) extends BufferImpl[Long] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   val values: mutable.SortedSet[Long] = mutable.SortedSet[Long]() ++ initialValues
-  val lastSent: mutable.Map[Long, Long] = mutable.Map()
+
+  log.info(s"Initial values: ${values.map(m => SDate(m).toISODateOnly).mkString(", ")}")
 
   override def used: Int = values.size
 
@@ -42,14 +43,14 @@ class SortedSetBuffer(initialValues: Iterable[Long]) extends BufferImpl[Long] {
   override def nonEmpty: Boolean = !isEmpty
 
   override def enqueue(elem: Long): Unit = {
-    log.debug(s"Adding ${SDate(elem).toISOString()} to ${values.map(ms => SDate(ms).toISOString).mkString(", ")}")
+    log.debug(s"Adding ${SDate(elem).toISOString()} to ${values.map(ms => SDate(ms).toISOString()).mkString(", ")}")
     values += elem
   }
 
   override def dequeue(): Long = {
     val nextElement = values.head
     values -= nextElement
-    log.debug(s"Removed ${SDate(nextElement).toISOString} leaving ${values.map(ms => SDate(ms).toISOString).mkString(", ")}")
+    log.debug(s"Removed ${SDate(nextElement).toISOString()} leaving ${values.map(ms => SDate(ms).toISOString()).mkString(", ")}")
     nextElement
   }
 
@@ -59,7 +60,7 @@ class SortedSetBuffer(initialValues: Iterable[Long]) extends BufferImpl[Long] {
 case class Buffer(initialValues: Iterable[Long]) extends GraphStage[FlowShape[Iterable[Long], Long]] {
   val in: Inlet[Iterable[Long]] = Inlet[Iterable[Long]](Logging.simpleName(this) + ".in")
   val out: Outlet[Long] = Outlet[Long](Logging.simpleName(this) + ".out")
-  override val shape = FlowShape(in, out)
+  override val shape: FlowShape[Iterable[MillisSinceEpoch], MillisSinceEpoch] = FlowShape(in, out)
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
     new GraphStageLogic(shape) with InHandler with OutHandler with StageLogging {
       private val buffer: SortedSetBuffer = new SortedSetBuffer(initialValues)

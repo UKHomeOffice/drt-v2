@@ -237,8 +237,6 @@ class CrunchTestLike
     else
       PortDeskLimits.fixed(airportConfig)
 
-    val aclPaxAdjustmentDays = 7
-
     val (millisToCrunchActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDescRecs, now, recrunchOnStart, maxDaysToCrunch, deskLimitsProvider)
     portStateActor ! SetCrunchActor(millisToCrunchActor)
 
@@ -251,9 +249,13 @@ class CrunchTestLike
     val (_, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
     val (manifestResponsesSource, _, _) = SinkToSourceBridge[List[BestAvailableManifest]]
 
+    val aclPaxAdjustmentDays = 7
+    val maxDaysToConsider = 14
+
     val passengersActorProvider: () => AskableActorRef = maybePassengersActorProps match {
       case Some(props) => () => system.actorOf(props)
-      case None => () => system.actorOf(Props(new PassengersActor(aclPaxAdjustmentDays)))
+      case None => () =>
+        system.actorOf(Props(new PassengersActor(maxDaysToConsider, aclPaxAdjustmentDays)))
     }
 
     val crunchInputs = CrunchSystem(CrunchProps(
