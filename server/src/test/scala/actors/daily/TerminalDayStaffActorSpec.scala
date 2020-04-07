@@ -51,7 +51,7 @@ class TerminalDayStaffActorSpec extends CrunchTestLike {
       val eventual = sendMinuteQueryAndClear(staffMinutes, terminalSummariesActor)
       val result = Await.result(eventual, 1 second)
 
-      result === Option(staffMinutes)
+      result === Option(MinutesContainer(Set(staffMinuteForDate(date).copy(lastUpdated = Option(date.millisSinceEpoch)))))
     }
 
     "When I send minutes to persist which lie outside the day, and then ask for its state I should see None" >> {
@@ -75,16 +75,14 @@ class TerminalDayStaffActorSpec extends CrunchTestLike {
       val eventual = sendMinuteQueryAndClear(staffMinutes, terminalSummariesActor)
       val result = Await.result(eventual, 1 second)
 
-      result === Option(MinutesContainer(Set(inside)))
+      result === Option(MinutesContainer(Set(inside.copy(lastUpdated = Option(date.millisSinceEpoch)))))
     }
   }
 
-  private def sendMinuteQueryAndClear(minutesContainer: MinutesContainer,
-                                      terminalSummariesActor: AskableActorRef): Future[Option[MinutesContainer]] = {
+  private def sendMinuteQueryAndClear(minutesContainer: MinutesContainer[StaffMinute, TM],
+                                      terminalSummariesActor: AskableActorRef): Future[Option[MinutesContainer[StaffMinute, TM]]] = {
     terminalSummariesActor.ask(minutesContainer).flatMap { _ =>
-      terminalSummariesActor.ask(GetState).asInstanceOf[Future[Option[MinutesContainer]]].flatMap { r =>
-        terminalSummariesActor.ask(ClearState).map { _ => r }
-      }
+      terminalSummariesActor.ask(GetState).mapTo[Option[MinutesContainer[StaffMinute, TM]]]
     }
   }
 

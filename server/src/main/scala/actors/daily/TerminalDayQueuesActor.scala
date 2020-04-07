@@ -1,7 +1,6 @@
 package actors.daily
 
-import actors.acking.AckingReceiver.Ack
-import actors.{ClearState, GetState}
+import actors.GetState
 import akka.actor.Props
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
 import drt.shared.Terminals.Terminal
@@ -32,7 +31,7 @@ class TerminalDayQueuesActor(year: Int,
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case CrunchMinutesMessage(minuteMessages) =>
-      log.info(s"Got a recovery message with ${minuteMessages.size} minutes. Updating state")
+      log.debug(s"Got a recovery message with ${minuteMessages.size} minutes. Updating state")
       state = state ++ minuteMessagesToKeysAndMinutes(minuteMessages)
   }
 
@@ -48,40 +47,28 @@ class TerminalDayQueuesActor(year: Int,
 
   override def stateToMessage: GeneratedMessage = CrunchMinutesMessage(state.values.map(crunchMinuteToMessage).toSeq)
 
-  def collect[X]: PartialFunction[Any, X] = {
-    case cm: X => cm
-  }
-
   override def receiveCommand: Receive = {
-    case MinutesContainer(minutes) =>
-      log.info(s"Received MinutesContainer for persistence")
-      val diff = minutes
-        .collect { collect[CrunchMinute] }
-        .filter { cm =>
-          state.get(cm.key) match {
-            case Some(existingCm) if existingCm.equals(cm) => false
-            case _ => true
-          }
-        }
-      state = state ++ diff.collect {
-        case cm if firstMinuteMillis <= cm.minute && cm.minute < lastMinuteMillis => (cm.key, cm)
-      }
-      persistAndMaybeSnapshot(CrunchMinutesMessage(diff.map(crunchMinuteToMessage).toSeq))
-      sender() ! Ack
+    case container: MinutesContainer[CrunchMinute, TQM] =>
+      log.debug(s"Received MinutesContainer for persistence")
+      updateAndPersistDiff(container)
 
     case GetState =>
-      log.info(s"Received GetState")
+      log.debug(s"Received GetState")
       sender() ! stateResponse
-
-    case ClearState =>
-      log.info(s"Received ClearState")
-      state = Map()
-      sender() ! Ack
 
     case m => log.warn(s"Got unexpected message: $m")
   }
 
-  private def stateResponse: Option[MinutesContainer] = {
+  private def updateAndPersistDiff(container: MinutesContainer[CrunchMinute, TQM]): Unit =
+    diffFromMinutes(state, container.minutes) match {
+      case noDifferences if noDifferences.isEmpty => sender() ! true
+      case differences =>
+        state = updateStateFromDiff(state, differences)
+        val messageToPersist = CrunchMinutesMessage(differences.map(crunchMinuteToMessage).toSeq)
+        persistAndMaybeSnapshot(differences, messageToPersist)
+    }
+
+  private def stateResponse: Option[MinutesContainer[CrunchMinute, TQM]] = {
     if (state.nonEmpty) Option(MinutesContainer(state.values.toSet)) else None
   }
 }
