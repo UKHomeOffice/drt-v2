@@ -3,6 +3,7 @@ package actors
 import actors.Sizes.oneMegaByte
 import actors.acking.AckingReceiver.StreamCompleted
 import akka.persistence._
+import drt.shared.CrunchApi.MillisSinceEpoch
 import scalapb.GeneratedMessage
 import drt.shared.{Alert, SDateLike}
 import org.joda.time.DateTime
@@ -18,6 +19,8 @@ case class AlertsActor(now: () => SDateLike) extends RecoveryActorLike with Pers
 
   override val snapshotBytesThreshold: Int = oneMegaByte
   override val maybeSnapshotInterval: Option[Int] = None
+
+  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case alert: ProtobufAlert =>

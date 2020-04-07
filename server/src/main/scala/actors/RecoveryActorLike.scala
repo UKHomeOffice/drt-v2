@@ -13,7 +13,7 @@ object Sizes {
 trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   val log: Logger
   def now: () => SDateLike
-  var recoveryStartMillis: MillisSinceEpoch = 0L
+  val recoveryStartMillis: MillisSinceEpoch
 
   val snapshotBytesThreshold: Int
   val maybeSnapshotInterval: Option[Int] = None
@@ -61,7 +61,7 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   def snapshotIfNeeded(stateToSnapshot: GeneratedMessage): Unit = if (shouldTakeSnapshot) takeSnapshot(stateToSnapshot)
 
   def takeSnapshot(stateToSnapshot: GeneratedMessage): Unit = {
-    log.info(s"Snapshotting ${stateToSnapshot.serializedSize} bytes of ${stateToSnapshot.getClass}. Resetting counters to zero")
+    log.debug(s"Snapshotting ${stateToSnapshot.serializedSize} bytes of ${stateToSnapshot.getClass}. Resetting counters to zero")
     saveSnapshot(stateToSnapshot)
 
     bytesSinceSnapshotCounter = 0
@@ -73,15 +73,14 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
     val shouldSnapshotByCount = maybeSnapshotInterval.isDefined && messagesPersistedSinceSnapshotCounter >= maybeSnapshotInterval.get
     val shouldSnapshotByBytes = bytesSinceSnapshotCounter > snapshotBytesThreshold
 
-    if (shouldSnapshotByCount) log.info(f"Snapshot interval reached (${maybeSnapshotInterval.getOrElse(0)})")
-    if (shouldSnapshotByBytes) log.info(f"Snapshot bytes threshold reached (${snapshotBytesThreshold.toDouble / Sizes.oneMegaByte}%.2fMB)")
+    if (shouldSnapshotByCount) log.debug(f"Snapshot interval reached (${maybeSnapshotInterval.getOrElse(0)})")
+    if (shouldSnapshotByBytes) log.debug(f"Snapshot bytes threshold reached (${snapshotBytesThreshold.toDouble / Sizes.oneMegaByte}%.2fMB)")
 
     shouldSnapshotByBytes || shouldSnapshotByCount
   }
 
   override def receiveRecover: Receive = {
     case SnapshotOffer(md, ss) =>
-      recoveryStartMillis = now().millisSinceEpoch
       logSnapshotOffer(md)
       playSnapshotMessage(ss)
 

@@ -3,9 +3,10 @@ package services.persistence
 import actors.RecoveryActorLike
 import akka.actor.{ActorRef, Props}
 import akka.testkit.TestProbe
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SDateLike
-import scalapb.GeneratedMessage
 import org.slf4j.{Logger, LoggerFactory}
+import scalapb.GeneratedMessage
 import server.protobuf.messages.FlightsMessage.{FlightMessage, FlightsDiffMessage}
 import services.SDate
 import services.crunch.CrunchTestLike
@@ -13,8 +14,9 @@ import services.crunch.CrunchTestLike
 import scala.concurrent.duration._
 
 class TestSnapshottingActor(probe: ActorRef, snapshotMessage: GeneratedMessage, override val snapshotBytesThreshold: Int = 0, override val maybeSnapshotInterval: Option[Int] = None) extends RecoveryActorLike {
-  override val now: () => SDateLike = () => SDate.now
+  override val now: () => SDateLike = () => SDate.now()
   override val log: Logger = LoggerFactory.getLogger(getClass)
+  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case _ => Unit
@@ -44,7 +46,7 @@ class SnapshottingSpec extends CrunchTestLike {
     val snapshotMessage = new FlightsDiffMessage(None, Seq(), Seq())
 
     val snapshotBytesThreshold = 1
-    val testActor = system.actorOf(Props(classOf[TestSnapshottingActor], probe.ref, snapshotMessage, snapshotBytesThreshold, None))
+    val testActor = system.actorOf(Props(new TestSnapshottingActor(probe.ref, snapshotMessage, snapshotBytesThreshold, None)))
 
     testActor ! new FlightMessage(iATA = Option("BA1010"))
 
@@ -61,7 +63,7 @@ class SnapshottingSpec extends CrunchTestLike {
     val snapshotMessage = new FlightsDiffMessage(None, Seq(), Seq())
 
     val snapshotBytesThreshold = 10
-    val testActor = system.actorOf(Props(classOf[TestSnapshottingActor], probe.ref, snapshotMessage, snapshotBytesThreshold, None))
+    val testActor = system.actorOf(Props(new TestSnapshottingActor(probe.ref, snapshotMessage, snapshotBytesThreshold, None)))
 
     testActor ! new FlightMessage(iATA = Option("BA1010"))
 
@@ -79,7 +81,7 @@ class SnapshottingSpec extends CrunchTestLike {
 
     val snapshotInterval = Option(10)
     val snapshotBytesThreshold = 1024
-    val testActor = system.actorOf(Props(classOf[TestSnapshottingActor], probe.ref, snapshotMessage, snapshotBytesThreshold, snapshotInterval))
+    val testActor = system.actorOf(Props(new TestSnapshottingActor(probe.ref, snapshotMessage, snapshotBytesThreshold, snapshotInterval)))
 
     1 to 9 foreach (_ => testActor ! new FlightMessage(iATA = Option("BA1010")))
 
@@ -97,7 +99,7 @@ class SnapshottingSpec extends CrunchTestLike {
 
     val snapshotInterval = Option(10)
     val snapshotBytesThreshold = 1024
-    val testActor = system.actorOf(Props(classOf[TestSnapshottingActor], probe.ref, snapshotMessage, snapshotBytesThreshold, snapshotInterval))
+    val testActor = system.actorOf(Props(new TestSnapshottingActor(probe.ref, snapshotMessage, snapshotBytesThreshold, snapshotInterval)))
 
     1 to 10 foreach (_ => testActor ! new FlightMessage(iATA = Option("BA1010")))
 

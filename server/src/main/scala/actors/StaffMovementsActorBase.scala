@@ -7,6 +7,7 @@ import actors.acking.AckingReceiver.StreamCompleted
 import akka.actor.Scheduler
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared.{HasExpireables, MilliDate, SDateLike, StaffMovement}
@@ -92,10 +93,11 @@ class StaffMovementsActorBase(val now: () => SDateLike,
   val snapshotInterval = 5000
   override val snapshotBytesThreshold: Int = oneMegaByte
   override val maybeSnapshotInterval: Option[Int] = Option(snapshotInterval)
+  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   var state: StaffMovementsState = initialState
 
-  def initialState = StaffMovementsState(StaffMovements(List()))
+  def initialState: StaffMovementsState = StaffMovementsState(StaffMovements(List()))
 
   override def stateToMessage: GeneratedMessage = StaffMovementsStateSnapshotMessage(staffMovementsToStaffMovementMessages(state.staffMovements))
 

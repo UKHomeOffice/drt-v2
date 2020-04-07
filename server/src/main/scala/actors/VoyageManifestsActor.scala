@@ -4,6 +4,7 @@ import actors.FlightMessageConversion.{feedStatusFromFeedStatusMessage, feedStat
 import actors.acking.AckingReceiver.StreamCompleted
 import akka.persistence._
 import drt.server.feeds.api.S3ApiProvider
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
@@ -30,14 +31,15 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
                            val initialMaybeSnapshotInterval: Option[Int]) extends RecoveryActorLike with PersistentDrtActor[VoyageManifestState] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  val feedSource = ApiFeedSource
+  val feedSource: FeedSource = ApiFeedSource
 
   var state: VoyageManifestState = initialState
 
   override val maybeSnapshotInterval: Option[Int] = initialMaybeSnapshotInterval
   override val snapshotBytesThreshold: Int = initialSnapshotBytesThreshold
+  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
-  def initialState = VoyageManifestState(
+  def initialState: VoyageManifestState = VoyageManifestState(
     manifests = mutable.SortedMap[MilliDate, VoyageManifest](),
     latestZipFilename = S3ApiProvider.defaultApiLatestZipFilename(now, expireAfterMillis),
     feedSource = feedSource,
@@ -136,7 +138,7 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
     case SaveSnapshotFailure(md, cause) =>
       log.error(s"Save snapshot failure: $md", cause)
 
-    case StreamCompleted => log.warn("Received shutdown")
+    case StreamCompleted => log.warn("Stream completed")
 
     case unexpected => log.info(s"Received unexpected message ${unexpected.getClass}")
   }

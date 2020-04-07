@@ -50,6 +50,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
 
   override val maybeSnapshotInterval: Option[Int] = initialMaybeSnapshotInterval
   override val snapshotBytesThreshold: Int = initialSnapshotBytesThreshold
+  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   val log: Logger = LoggerFactory.getLogger(s"$name-$getClass")
 

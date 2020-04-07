@@ -5,6 +5,7 @@ import actors.acking.AckingReceiver.StreamCompleted
 import akka.actor.Scheduler
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.Terminal
 import drt.shared.{FixedPointAssignments, MilliDate, SDateLike, StaffAssignment}
 import org.slf4j.{Logger, LoggerFactory}
@@ -50,6 +51,7 @@ abstract class FixedPointsActorBase(now: () => SDateLike) extends RecoveryActorL
 
   override val snapshotBytesThreshold: Int = oneMegaByte
   override val maybeSnapshotInterval: Option[Int] = Option(250)
+  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   var state: FixedPointAssignments = initialState
 
