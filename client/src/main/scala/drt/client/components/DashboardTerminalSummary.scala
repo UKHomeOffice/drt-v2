@@ -118,7 +118,7 @@ object DashboardTerminalSummary {
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("SummaryBox")
     .render_P { props =>
       val crunchMinuteTimeSlots = groupCrunchMinutesByX(groupSize = 15)(
-        CrunchApi.terminalMinutesByMinute(props.crunchMinutes, props.terminal),
+        CrunchApi.terminalMinutesByMinute[CrunchMinute, CrunchMinute, TQM](props.crunchMinutes, props.terminal),
         props.terminal,
         Queues.queueOrder).flatMap(_._2
       )

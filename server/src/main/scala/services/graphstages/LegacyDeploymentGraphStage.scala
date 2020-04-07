@@ -8,7 +8,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.crunch.deskrecs.DeskRecs
-import services.graphstages.Crunch._
+import services.graphstages.Crunch.{allMinuteMillis, _}
 import services.graphstages.StaffDeploymentCalculator.deploymentWithinBounds
 import services.metrics.{Metrics, StageTimer}
 import services.{SDate, _}
@@ -66,25 +66,25 @@ class LegacyDeploymentGraphStage(name: String = "",
       override def onPush(): Unit = {
         val timer = StageTimer(stageName, inLoads)
         val incomingLoads = grab(inLoads)
-        log.debug(s"Received ${incomingLoads.loadMinutes.size} loads")
+        log.info(s"Received ${incomingLoads.loadMinutes.size} loads")
 
-        val affectedTerminals = incomingLoads.loadMinutes.map { case (TQM(t, _, _), _) => t }.toSet.toSeq
-
-        loadMinutes ++= incomingLoads.loadMinutes
-        purgeExpired(loadMinutes, TQM.atTime, now, expireAfterMillis.toInt)
-
-        val allMinuteMillis = incomingLoads.loadMinutes.keys.map(_.minute)
-        val firstMinute = crunchPeriodStartMillis(SDate(allMinuteMillis.min))
-        val lastMinute = firstMinute.addMinutes(airportConfig.minutesToCrunch)
-
-        terminalsWithNonZeroStaff(affectedTerminals, firstMinute, lastMinute) match {
-          case affectedTerminalsWithStaff if affectedTerminalsWithStaff.isEmpty =>
-            log.debug(s"No affected terminals with deployments. Skipping simulations")
-          case affectedTerminalsWithStaff =>
-            updateDeployments(affectedTerminalsWithStaff, firstMinute, lastMinute)
-            purgeExpired(deployments, TQM.atTime, now, expireAfterMillis.toInt)
-            updateSimulationsForPeriod(firstMinute, lastMinute, affectedTerminalsWithStaff)
-            pushStateIfReady()
+        incomingLoads.loadMinutes.keys.map(_.minute) match {
+          case emptyIncoming if emptyIncoming.isEmpty =>
+          case allMinuteMillis =>
+            val affectedTerminals = incomingLoads.loadMinutes.map { case (TQM(t, _, _), _) => t }.toSet.toSeq
+            loadMinutes ++= incomingLoads.loadMinutes
+            purgeExpired(loadMinutes, TQM.atTime, now, expireAfterMillis.toInt)
+            val firstMinute = crunchPeriodStartMillis(SDate(allMinuteMillis.min))
+            val lastMinute = firstMinute.addMinutes(airportConfig.minutesToCrunch)
+            terminalsWithNonZeroStaff(affectedTerminals, firstMinute, lastMinute) match {
+              case affectedTerminalsWithStaff if affectedTerminalsWithStaff.isEmpty =>
+                log.debug(s"No affected terminals with deployments. Skipping simulations")
+              case affectedTerminalsWithStaff =>
+                updateDeployments(affectedTerminalsWithStaff, firstMinute, lastMinute)
+                purgeExpired(deployments, TQM.atTime, now, expireAfterMillis.toInt)
+                updateSimulationsForPeriod(firstMinute, lastMinute, affectedTerminalsWithStaff)
+                pushStateIfReady()
+            }
         }
 
         pullAll()
@@ -443,24 +443,41 @@ class LegacyDeploymentGraphStage(name: String = "",
     .toMap
 }
 
-case class SimulationMinute(terminalName: Terminal,
+case class SimulationMinute(terminal: Terminal,
                             queueName: Queue,
                             minute: MillisSinceEpoch,
                             desks: Int,
-                            waitTime: Int) extends SimulationMinuteLike with MinuteComparison[CrunchMinute] {
-  lazy val key: TQM = MinuteHelper.key(terminalName, queueName, minute)
+                            waitTime: Int) extends SimulationMinuteLike with MinuteComparison[CrunchMinute] with MinuteLike[CrunchMinute, TQM] {
+  lazy val key: TQM = MinuteHelper.key(terminal, queueName, minute)
 
   override def maybeUpdated(existing: CrunchMinute, now: MillisSinceEpoch): Option[CrunchMinute] =
     if (existing.deployedDesks.isEmpty || existing.deployedDesks.get != desks || existing.deployedWait.isEmpty || existing.deployedWait.get != waitTime) Option(existing.copy(
       deployedDesks = Option(desks), deployedWait = Option(waitTime), lastUpdated = Option(now)
       ))
     else None
+
+  override val lastUpdated: Option[MillisSinceEpoch] = None
+
+  override def toUpdatedMinute(now: MillisSinceEpoch): CrunchMinute = toMinute.copy(lastUpdated = Option(now))
+
+  override def toMinute: CrunchMinute = CrunchMinute(
+    terminal = terminal,
+    queue = queueName,
+    minute = minute,
+    paxLoad = 0,
+    workLoad = 0,
+    deskRec = 0,
+    waitTime = 0,
+    deployedDesks = Option(desks),
+    deployedWait = Option(waitTime),
+    lastUpdated = None)
+
 }
 
 case class SimulationMinutes(minutes: Seq[SimulationMinute]) extends PortStateMinutes {
   def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
     val minutesDiff = minutes.foldLeft(List[CrunchMinute]()) { case (soFar, dm) =>
-      addIfUpdated(portState.crunchMinutes.getByKey(dm.key), now, soFar, dm, () => CrunchMinute(dm, now))
+      addIfUpdated(portState.crunchMinutes.getByKey(dm.key), now, soFar, dm, () => dm.toUpdatedMinute(now))
     }
     portState.crunchMinutes +++= minutesDiff
     PortStateDiff(Seq(), Seq(), Seq(), minutesDiff, Seq())
