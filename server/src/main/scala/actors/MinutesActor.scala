@@ -65,14 +65,14 @@ class MinutesActor[A, B](now: () => SDateLike,
 
     case container: MinutesContainer[A, B] =>
       val replyTo = sender()
-      val eventualAcks = updateByTerminalDay(container)
+      val eventualUpdatesDiff = updateByTerminalDayAndGetDiff(container)
       if (maybeUpdateSubscriber.isDefined) {
-        eventualAcks.foreach { diffMinutesContainer =>
+        eventualUpdatesDiff.foreach { diffMinutesContainer =>
           minutesBuffer ++= diffMinutesContainer.minutes.map(m => (m.key, m))
           handleSubscriberRequest()
         }
       }
-      eventualAcks.onComplete(_ => replyTo ! Ack)
+      eventualUpdatesDiff.onComplete(_ => replyTo ! Ack)
 
     case u => log.warn(s"Got an unexpected message: $u")
   }
@@ -135,22 +135,22 @@ class MinutesActor[A, B](now: () => SDateLike,
     future
   }
 
-  def updateByTerminalDay(container: MinutesContainer[A, B]): Future[MinutesContainer[A, B]] = {
-    val ackEventuals = container.minutes
+  def updateByTerminalDayAndGetDiff(container: MinutesContainer[A, B]): Future[MinutesContainer[A, B]] = {
+    val eventualUpdatedMinutesDiff = container.minutes
       .groupBy(simMin => (simMin.terminal, SDate(simMin.minute).getLocalLastMidnight))
       .map {
-        case ((terminal, day), terminalDayMinutes) => handleUpdate(terminal, day, terminalDayMinutes)
+        case ((terminal, day), terminalDayMinutes) => handleUpdateAndGetDiff(terminal, day, terminalDayMinutes)
       }
-    Future.sequence(ackEventuals).map {
+    Future.sequence(eventualUpdatedMinutesDiff).map {
       _.reduce[MinutesContainer[A, B]] {
         case (soFar, next) => MinutesContainer(soFar.minutes ++ next.minutes)
       }
     }
   }
 
-  def handleUpdate(terminal: Terminal,
-                   day: SDateLike,
-                   minutesForDay: Iterable[MinuteLike[A, B]]): Future[MinutesContainer[A, B]] =
+  def handleUpdateAndGetDiff(terminal: Terminal,
+                             day: SDateLike,
+                             minutesForDay: Iterable[MinuteLike[A, B]]): Future[MinutesContainer[A, B]] =
     updateMinutes(terminal, day, MinutesContainer(minutesForDay))
 
   private def daysToFetch(start: SDateLike, end: SDateLike): Seq[SDateLike] = {
