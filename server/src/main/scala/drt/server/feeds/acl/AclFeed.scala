@@ -22,7 +22,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.util.{Failure, Success, Try}
 
-case class AclFeed(ftpServer: String, username: String, path: String, portCode: PortCode, terminalMapping: Terminal => Terminal) {
+case class AclFeed(ftpServer: String, username: String, path: String, portCode: PortCode, terminalMapping: Terminal => Terminal, minBytes: Long) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def ssh: SSHClient = sshClient(ftpServer, username, path)
@@ -33,7 +33,7 @@ case class AclFeed(ftpServer: String, username: String, path: String, portCode: 
       sshClient <- Try(ssh)
       sftpClient <- Try(sftp(sshClient))
       responseTry = Try{
-        Flights(arrivalsFromCsvContent(contentFromFileName(sftpClient, latestFileForPort(sftpClient, portCode)), terminalMapping))
+        Flights(arrivalsFromCsvContent(contentFromFileName(sftpClient, latestFileForPort(sftpClient, portCode, minBytes)), terminalMapping))
       }
     } yield {
       sshClient.disconnect()
@@ -68,7 +68,7 @@ object AclFeed {
     sshClient.newSFTPClient
   }
 
-  def latestFileForPort(sftp: SFTPClient, portCode: PortCode): String = {
+  def latestFileForPort(sftp: SFTPClient, portCode: PortCode, minBytes: Long): String = {
     val portRegex = "([A-Z]{3})[SW][0-9]{2}_HOMEOFFICEROLL180_[0-9]{8}.zip".r
     val dateRegex = "[A-Z]{3}[SW][0-9]{2}_HOMEOFFICEROLL180_([0-9]{8}).zip".r
 
@@ -82,14 +82,15 @@ object AclFeed {
         case dateRegex(date) => date
       })
       .reverse
-    val oneHundredKbInBytes = 100000L
-    val latestFileOver100KB: RemoteResourceInfo = filesByDate
-      .find(_.getAttributes.getSize > oneHundredKbInBytes)
+
+    val latestFileOverMinBytes: RemoteResourceInfo = filesByDate
+      .find(_.getAttributes.getSize > minBytes)
       .getOrElse(filesByDate.head)
 
-    log.info(s"Latest File ${latestFileOver100KB}. Size: ${latestFileOver100KB.getAttributes.getSize}")
 
-    latestFileOver100KB.getPath
+    log.info(s"Latest File ${latestFileOverMinBytes}. Size: ${latestFileOverMinBytes.getAttributes.getSize}")
+
+    latestFileOverMinBytes.getPath
   }
 
   def arrivalsFromCsvContent(csvContent: String, terminalMapping: Terminal => Terminal): List[Arrival] = {

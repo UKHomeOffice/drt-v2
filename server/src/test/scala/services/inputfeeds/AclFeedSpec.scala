@@ -22,7 +22,7 @@ class AclFeedSpec extends CrunchTestLike {
   val regularTerminalMapping: Terminal => Terminal = (t: Terminal) => t
 
   "ACL feed failures" >> {
-    val aclFeed = AclFeed("nowhere.nowhere", "badusername", "badpath", PortCode("BAD"), (_: Terminal) => T1)
+    val aclFeed = AclFeed("nowhere.nowhere", "badusername", "badpath", PortCode("BAD"), (_: Terminal) => T1, 1000L)
 
     val result = aclFeed.requestArrivals.getClass
 
@@ -525,7 +525,7 @@ class AclFeedSpec extends CrunchTestLike {
     val path = ConfigFactory.load.getString("acl.keypath")
 
     val sftp = sftpClient(AclFeed.sshClient(ftpServer, username, path))
-    val latestFile = latestFileForPort(sftp, PortCode("MAN"))
+    val latestFile = latestFileForPort(sftp, PortCode("MAN"), 100000L)
     println(s"latestFile: $latestFile")
     val aclArrivals: List[Arrival] = arrivalsFromCsvContent(contentFromFileName(sftp, latestFile), regularTerminalMapping)
 
