@@ -3,6 +3,7 @@ package actors.summaries
 import actors.acking.AckingReceiver.Ack
 import actors.{RecoveryActorLike, Sizes}
 import akka.actor.Props
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
 import drt.shared.SDateLike
 import drt.shared.Terminals.Terminal
@@ -29,6 +30,7 @@ class TerminalQueuesSummaryActor(year: Int,
   override def persistenceId: String = s"terminal-queues-summary-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
 
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
+  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   var state: Option[TerminalQueuesSummary] = None
 

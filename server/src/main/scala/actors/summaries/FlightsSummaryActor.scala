@@ -31,6 +31,7 @@ class FlightsSummaryActor(year: Int,
   override def persistenceId: String = s"flights-summary-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
 
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
+  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   var state: Option[Seq[ApiFlightWithSplits]] = None
 

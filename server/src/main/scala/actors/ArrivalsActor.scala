@@ -4,6 +4,7 @@ import actors.FlightMessageConversion._
 import actors.acking.AckingReceiver.StreamCompleted
 import actors.restore.RestorerWithLegacy
 import akka.persistence._
+import drt.shared.CrunchApi.MillisSinceEpoch
 import scalapb.GeneratedMessage
 import drt.shared.FlightsApi.Flights
 import drt.shared._
@@ -115,6 +116,8 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
   val restorer = new RestorerWithLegacy[Int, UniqueArrival, Arrival]
   val state: ArrivalsState = initialState
+
+  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   override def initialState = ArrivalsState(mutable.SortedMap(), feedSource, None)
 

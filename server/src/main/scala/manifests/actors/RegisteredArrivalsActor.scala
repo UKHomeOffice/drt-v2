@@ -1,6 +1,7 @@
 package manifests.actors
 
 import actors.{GetState, PersistentDrtActor, RecoveryActorLike, Sizes}
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
@@ -26,8 +27,9 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
+  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
-  override val state = RegisteredArrivals(mutable.SortedMap())
+  override val state: RegisteredArrivals = RegisteredArrivals(mutable.SortedMap())
 
   override def stateToMessage: GeneratedMessage = arrivalsToMessage(state.arrivals)
 

@@ -22,6 +22,7 @@ abstract class TerminalDayLikeActor(year: Int,
   override def persistenceId: String = f"terminal-$typeForPersistenceId-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
 
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
+  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   val firstMinute: SDateLike = SDate(year, month, day, 0, 0, Crunch.europeLondonTimeZone)
   val firstMinuteMillis: MillisSinceEpoch = firstMinute.millisSinceEpoch
