@@ -119,6 +119,7 @@ case class DrtConfigParameters(config: Configuration) {
   val ftpServer: String = ConfigFactory.load.getString("acl.host")
   val username: String = ConfigFactory.load.getString("acl.username")
   val path: String = ConfigFactory.load.getString("acl.keypath")
+  val aclMinFileSizeInBytes: Long = config.getOptional[Long]("acl.min-file-size-in-bytes").getOrElse(10000L)
   val refreshArrivalsOnStart: Boolean = config.getOptional[Boolean]("crunch.refresh-arrivals-on-start").getOrElse(false)
   val recrunchOnStart: Boolean = config.getOptional[Boolean]("crunch.recrunch-on-start").getOrElse(false)
   val resetRegisteredArrivalOnStart: Boolean = if (refreshArrivalsOnStart) {
@@ -187,7 +188,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   import DrtStaticParameters._
 
-  val aclFeed = AclFeed(params.ftpServer, params.username, params.path, airportConfig.feedPortCode, AclFeed.aclToPortMapping(airportConfig.portCode))
+  val aclFeed = AclFeed(params.ftpServer, params.username, params.path, airportConfig.feedPortCode, AclFeed.aclToPortMapping(airportConfig.portCode), params.aclMinFileSizeInBytes)
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
 
