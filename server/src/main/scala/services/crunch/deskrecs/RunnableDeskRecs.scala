@@ -73,7 +73,7 @@ object RunnableDeskRecs {
                              (implicit executionContext: ExecutionContext,
                               timeout: Timeout): Future[(MillisSinceEpoch, FlightsWithSplits)] = askablePortStateActor
     .ask(GetFlights(crunchStartMillis, crunchStartMillis + (minutesToCrunch * 60000L)))
-    .asInstanceOf[Future[FlightsWithSplits]]
+    .mapTo[FlightsWithSplits]
     .map { fs => (crunchStartMillis, fs) }
     .recoverWith {
       case t =>

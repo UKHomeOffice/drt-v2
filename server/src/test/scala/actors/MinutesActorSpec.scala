@@ -3,7 +3,7 @@ package actors
 import akka.actor.{ActorSystem, Props}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
-import drt.shared.CrunchApi.{CrunchMinute, CrunchMinutes, MinutesContainer}
+import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
 import drt.shared.Queues.EeaDesk
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.{Queues, SDateLike, TQM}
@@ -27,7 +27,7 @@ class MinutesActorSpec extends Specification {
     val lookupWithNoData: MinutesLookup[CrunchMinute, TQM] = (_: Terminal, _: SDateLike) => Future(None)
     def lookupWithData(crunchMinutes: MinutesContainer[CrunchMinute, TQM]): MinutesLookup[CrunchMinute, TQM] = (_: Terminal, _: SDateLike) => Future(Option(crunchMinutes))
     val crunchMinute = CrunchMinute(terminal, queue, date.millisSinceEpoch, 1, 2, 3, 4, None, None, None, None)
-    val minutes = MinutesContainer(Set(crunchMinute))
+    val minutes = MinutesContainer(Iterable(crunchMinute))
 
     val noopUpdates: (Terminal, SDateLike, MinutesContainer[CrunchMinute, TQM]) => Future[MinutesContainer[CrunchMinute, TQM]] =
       (_: Terminal, _: SDateLike, _: MinutesContainer[CrunchMinute, TQM]) => Future(MinutesContainer(Iterable()))
@@ -35,30 +35,30 @@ class MinutesActorSpec extends Specification {
     "Given a primary & secondary lookups with no data" >> {
       "I should get None" >> {
         val cmActor: AskableActorRef = system.actorOf(Props(new MinutesActor(now, Seq(T1), lookupWithData(minutes), lookupWithNoData, noopUpdates)))
-        val eventualResult = cmActor.ask(GetStateByTerminalDateRange(terminal, date, date)).mapTo[Option[CrunchMinutes]]
+        val eventualResult = cmActor.ask(GetStateByTerminalDateRange(terminal, date, date)).mapTo[MinutesContainer[CrunchMinute, TQM]]
         val result = Await.result(eventualResult, 1 second)
 
-        result === Option(minutes)
+        result === minutes
       }
     }
 
     "Given a primary lookup with some data" >> {
       "I should get the data from the primary source" >> {
         val cmActor: AskableActorRef = system.actorOf(Props(new MinutesActor(now, Seq(T1), lookupWithData(minutes), lookupWithNoData, noopUpdates)))
-        val eventualResult = cmActor.ask(GetStateByTerminalDateRange(terminal, date, date)).mapTo[Option[CrunchMinutes]]
+        val eventualResult = cmActor.ask(GetStateByTerminalDateRange(terminal, date, date)).mapTo[MinutesContainer[CrunchMinute, TQM]]
         val result = Await.result(eventualResult, 1 second)
 
-        result === Option(minutes)
+        result === minutes
       }
     }
 
     "Given a primary lookup with no data and secondary lookup with data" >> {
       "I should get the data from the secondary source" >> {
         val cmActor: AskableActorRef = system.actorOf(Props(new MinutesActor(now, Seq(T1), lookupWithNoData, lookupWithNoData, noopUpdates)))
-        val eventualResult = cmActor.ask(GetStateByTerminalDateRange(terminal, date, date)).mapTo[Option[CrunchMinutes]]
+        val eventualResult = cmActor.ask(GetStateByTerminalDateRange(terminal, date, date)).mapTo[MinutesContainer[CrunchMinute, TQM]]
         val result = Await.result(eventualResult, 1 second)
 
-        result === None
+        result === MinutesContainer(Iterable())
       }
     }
   }

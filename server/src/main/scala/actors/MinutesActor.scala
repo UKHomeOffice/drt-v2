@@ -132,7 +132,7 @@ class MinutesActor[A, B](now: () => SDateLike,
 
     Future.sequence(eventualOptions).map {
       _.collect { case Some(minutes) => minutes }
-        .reduceLeft[MinutesContainer[A, B]] {
+        .foldLeft(MinutesContainer[A, B](Seq())) {
           case (soFar, next) => MinutesContainer(soFar.minutes ++ next.minutes)
         }
     }
@@ -180,7 +180,7 @@ class MinutesActor[A, B](now: () => SDateLike,
 
   private def combineEventualContainers(eventualUpdatedMinutesDiff: Iterable[Future[MinutesContainer[A, B]]]): Future[MinutesContainer[A, B]] =
     Future.sequence(eventualUpdatedMinutesDiff).map { containers =>
-      containers.reduce[MinutesContainer[A, B]] {
+      containers.foldLeft(MinutesContainer[A, B](Seq())) {
         case (soFar, next) => MinutesContainer(soFar.minutes ++ next.minutes)
       }
     }

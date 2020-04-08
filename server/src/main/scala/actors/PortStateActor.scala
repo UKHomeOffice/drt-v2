@@ -5,7 +5,7 @@ import akka.actor.{Actor, Props}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.FlightsWithSplitsDiff
+import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
@@ -120,8 +120,7 @@ class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: Askabl
       val start = SDate(startMillis)
       val end = SDate(endMillis)
       log.info(s"Got request for flights between ${start.toISOString()} - ${end.toISOString()}")
-      val flightsToSend = state.flights.range(start, end).values.toList
-      sender() ! FlightsWithSplitsDiff(flightsToSend, List())
+      sender() ! FlightsWithSplits(state.flights.range(start, end))
 
     case unexpected => log.warn(s"Got unexpected: $unexpected")
   }

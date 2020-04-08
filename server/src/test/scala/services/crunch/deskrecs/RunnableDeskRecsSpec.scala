@@ -7,7 +7,7 @@ import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, DeskRecMinutes}
-import drt.shared.FlightsApi.{Flights, FlightsWithSplitsDiff}
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.PaxTypes.{EeaMachineReadable, VisaNational}
 import drt.shared.PaxTypesAndQueues.{eeaMachineReadableToDesk, visaNationalToDesk}
 import drt.shared.SplitRatiosNs.SplitSources
@@ -43,7 +43,7 @@ class MockPortStateActor(probe: TestProbe, responseDelayMillis: Long = 0L) exten
 
     case getFlights: GetFlights =>
       Thread.sleep(responseDelayMillis)
-      sender() ! FlightsWithSplitsDiff(flightsToReturn, List())
+      sender() ! FlightsWithSplits(flightsToReturn.map(fws => (fws.unique, fws)))
       probe.ref ! getFlights
 
     case drm: DeskRecMinutes =>
