@@ -49,15 +49,16 @@ class PartitionedPortStateActor(flightsActor: AskableActorRef,
       val replyTo = sender()
       askThenAck(flightsWithSplits, replyTo, flightsActor)
 
-    case updates: PortStateMinutes[_, _] if updates.isEmpty => Unit
+    case noUpdates: PortStateMinutes[_, _] if noUpdates.isEmpty =>
+      sender() ! Ack
 
-    case updates: PortStateMinutes[CrunchMinute, TQM] =>
+    case someQueueUpdates: PortStateMinutes[CrunchMinute, TQM] =>
       val replyTo = sender()
-      queuesActor.ask(updates.asContainer).foreach(_ => replyTo ! Ack)
+      askThenAck(someQueueUpdates.asContainer, replyTo, queuesActor)
 
-    case updates: PortStateMinutes[StaffMinute, TM] =>
+    case someStaffUpdates: PortStateMinutes[StaffMinute, TM] =>
       val replyTo = sender()
-      staffActor.ask(updates.asContainer).foreach(_ => replyTo ! Ack)
+      askThenAck(someStaffUpdates.asContainer, replyTo, staffActor)
 
     case GetState =>
       log.warn("Ignoring GetState request (for entire state)")
