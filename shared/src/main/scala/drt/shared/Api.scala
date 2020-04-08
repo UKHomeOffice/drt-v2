@@ -681,7 +681,13 @@ trait MinuteComparison[A <: WithLastUpdated] {
   def maybeUpdated(existing: A, now: MillisSinceEpoch): Option[A]
 }
 
-trait PortStateMinutes {
+trait PortStateMinutes[MinuteType, IndexType] {
+  val asContainer: MinutesContainer[MinuteType, IndexType]
+
+  def isEmpty: Boolean
+
+  def nonEmpty: Boolean = !isEmpty
+
   def applyTo(portStateMutable: PortStateMutable, now: MillisSinceEpoch): PortStateDiff
 
   def addIfUpdated[A <: MinuteComparison[C], B <: WithTerminal[B], C <: WithLastUpdated](maybeExisting: Option[C],
@@ -724,8 +730,13 @@ object FlightsApi {
 
   case class Flights(flights: Seq[Arrival])
 
-  case class FlightsWithSplits(flightsToUpdate: List[ApiFlightWithSplits],
-                               arrivalsToRemove: List[Arrival]) extends PortStateMinutes {
+  case class FlightsWithSplits(flights: Iterable[(UniqueArrival, ApiFlightWithSplits)])
+
+  case class FlightsWithSplitsDiff(flightsToUpdate: List[ApiFlightWithSplits], arrivalsToRemove: List[Arrival]) {
+    def isEmpty: Boolean = flightsToUpdate.isEmpty && arrivalsToRemove.isEmpty
+
+    def nonEmpty: Boolean = !isEmpty
+
     def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
       val minutesFromRemovals = arrivalsToRemove.flatMap(_.pcpRange())
       val minutesFromRemovalsInExistingState: List[MillisSinceEpoch] = arrivalsToRemove
@@ -753,8 +764,6 @@ object FlightsApi {
       val removals = arrivalsToRemove.map(f => RemoveFlight(UniqueArrival(f)))
       PortStateDiff(removals, updatedFlights, flightMinuteUpdates, Seq(), Seq())
     }
-
-    lazy val nonEmpty: Boolean = flightsToUpdate.nonEmpty || arrivalsToRemove.nonEmpty
 
     lazy val terminals: Set[Terminal] = flightsToUpdate.map(_.apiFlight.Terminal).toSet ++ arrivalsToRemove.map(_.Terminal).toSet
   }
@@ -806,6 +815,7 @@ object CrunchApi {
     val key: B
 
     def toUpdatedMinute(now: MillisSinceEpoch): A
+
     def toMinute: A
   }
 
@@ -858,8 +868,12 @@ object CrunchApi {
     implicit val rw: ReadWriter[StaffMinute] = macroRW
   }
 
-  case class StaffMinutes(minutes: Seq[StaffMinute]) extends PortStateMinutes with MinutesLike[StaffMinute, TM] {
-    def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
+  case class StaffMinutes(minutes: Seq[StaffMinute]) extends PortStateMinutes[StaffMinute, TM] with MinutesLike[StaffMinute, TM] {
+    override val asContainer: MinutesContainer[StaffMinute, TM] = MinutesContainer(minutes)
+
+    override def isEmpty: Boolean = minutes.isEmpty
+
+    override def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
       val minutesDiff = minutes.foldLeft(List[StaffMinute]()) { case (soFar, sm) =>
         addIfUpdated(portState.staffMinutes.getByKey(sm.key), now, soFar, sm, () => sm.copy(lastUpdated = Option(now)))
       }
@@ -954,8 +968,12 @@ object CrunchApi {
       terminal, queueName, minute, paxLoad, workLoad, deskRec, waitTime, lastUpdated = None)
   }
 
-  case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateMinutes {
-    def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
+  case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateMinutes[CrunchMinute, TQM] {
+    override val asContainer: MinutesContainer[CrunchMinute, TQM] = MinutesContainer(minutes)
+
+    override def isEmpty: Boolean = minutes.isEmpty
+
+    override def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
       val crunchMinutesDiff = minutes.foldLeft(List[CrunchMinute]()) { case (soFar, dm) =>
         addIfUpdated(portState.crunchMinutes.getByKey(dm.key), now, soFar, dm, () => dm.toUpdatedMinute(now))
       }
@@ -1002,8 +1020,12 @@ object CrunchApi {
       terminal, queue, minute, 0d, 0d, 0, 0, None, None, deskStat.desks, deskStat.waitTime, None)
   }
 
-  case class ActualDeskStats(portDeskSlots: IMap[Terminal, IMap[Queue, IMap[MillisSinceEpoch, DeskStat]]]) extends PortStateMinutes {
-    def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
+  case class ActualDeskStats(portDeskSlots: IMap[Terminal, IMap[Queue, IMap[MillisSinceEpoch, DeskStat]]]) extends PortStateMinutes[CrunchMinute, TQM] {
+    override val asContainer: MinutesContainer[CrunchMinute, TQM] = MinutesContainer(deskStatMinutes)
+
+    override def isEmpty: Boolean = portDeskSlots.isEmpty
+
+    override def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
       val crunchMinutesDiff = minutes.foldLeft(List[CrunchMinute]()) { case (soFar, (key, dm)) =>
         addIfUpdated(portState.crunchMinutes.getByKey(key), now, soFar, dm, () => CrunchMinute(key, dm, now))
       }
@@ -1032,7 +1054,9 @@ object CrunchApi {
     def minutes: Iterable[MinuteLike[A, B]]
   }
 
-  case class MinutesContainer[A, B](minutes: Iterable[MinuteLike[A, B]])
+  case class MinutesContainer[A, B](minutes: Iterable[MinuteLike[A, B]]) {
+    def updatedSince(sinceMillis: MillisSinceEpoch): MinutesContainer[A, B] = MinutesContainer(minutes.filter(_.lastUpdated.getOrElse(0L) > sinceMillis))
+  }
 
   case class CrunchMinutes(minutes: Set[CrunchMinute]) extends MinutesLike[CrunchMinute, TQM]
 

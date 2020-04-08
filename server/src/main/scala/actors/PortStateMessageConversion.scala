@@ -95,6 +95,16 @@ object PortStateMessageConversion {
     fixedPoints = Option(sm.fixedPoints),
     movements = Option(sm.movements))
 
+  def snapshotMessageToFlightsState(sm: CrunchStateSnapshotMessage, state: PortStateMutable): Unit = {
+    state.clear()
+    state.flights ++= flightsFromMessages(sm.flightWithSplits)
+  }
+
+  def flightsFromMessages(flightMessages: Seq[FlightWithSplitsMessage]): Seq[(UniqueArrival, ApiFlightWithSplits)] = flightMessages.map(message => {
+    val fws = flightWithSplitsFromMessage(message)
+    (fws.unique, fws)
+  })
+
   def portStateToSnapshotMessage(portState: PortStateMutable): CrunchStateSnapshotMessage = {
     CrunchStateSnapshotMessage(
       Option(0L),

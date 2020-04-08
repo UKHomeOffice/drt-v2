@@ -1,7 +1,7 @@
 package actors
 
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
-import akka.actor.Actor
+import akka.actor.{Actor, ActorRef}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import drt.shared.CrunchApi._
@@ -12,8 +12,10 @@ import services.SDate
 import services.graphstages.Crunch
 
 import scala.collection.mutable
-import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.language.postfixOps
+import scala.util.{Failure, Success}
 
 
 case class GetStateByTerminalDateRange(terminal: Terminal, start: SDateLike, end: SDateLike)
@@ -26,6 +28,7 @@ object Actors {
 }
 
 class MinutesActor[A, B](now: () => SDateLike,
+                         terminals: Seq[Terminal],
                          lookupPrimary: MinutesLookup[A, B],
                          lookupSecondary: MinutesLookup[A, B],
                          updateMinutes: MinutesUpdate[A, B]) extends Actor {
@@ -57,19 +60,42 @@ class MinutesActor[A, B](now: () => SDateLike,
     case HandleSimulationRequest =>
       handleSubscriberRequest()
 
+    case GetPortState(startMillis, endMillis) =>
+      val replyTo = sender()
+      val eventualMinutes = terminals.map {
+        handleLookups(_, SDate(startMillis), SDate(endMillis))
+      }
+      combineAndSendOptionalResult(eventualMinutes, replyTo)
+
     case GetStateByTerminalDateRange(terminal, start, end) =>
       val replyTo = sender()
-      val eventualMinutes = handleLookups(terminal, start, end)
-      eventualMinutes.recover { case _ => replyTo ! None }
-      eventualMinutes.foreach(minutes => replyTo ! Option(minutes))
+      handleLookups(terminal, start, end).onComplete {
+        case Success(container) => replyTo ! container
+        case Failure(t) =>
+          log.error("Failed to get minutes", t)
+          replyTo ! MinutesContainer(Seq())
+      }
+
+    case GetUpdatesSince(sinceMillis, startMillis, endMillis) =>
+      val replyTo = sender()
+      val eventualMinutes = terminals.map {
+        handleLookups(_, SDate(startMillis), SDate(endMillis))
+      }
+      combineEventualContainers(eventualMinutes).onComplete {
+        case Success(container) => replyTo ! container.updatedSince(sinceMillis)
+        case Failure(t) =>
+          log.error("Failed to get minutes", t)
+          replyTo ! MinutesContainer(Seq())
+      }
 
     case container: MinutesContainer[A, B] =>
       val replyTo = sender()
       val eventualUpdatesDiff = updateByTerminalDayAndGetDiff(container)
       if (maybeUpdateSubscriber.isDefined) {
-        eventualUpdatesDiff.foreach { diffMinutesContainer =>
-          minutesBuffer ++= diffMinutesContainer.minutes.map(m => (m.key, m))
-          handleSubscriberRequest()
+        eventualUpdatesDiff.collect {
+          case Some(diffMinutesContainer) =>
+            minutesBuffer ++= diffMinutesContainer.minutes.map(m => (m.key, m))
+            handleSubscriberRequest()
         }
       }
       eventualUpdatesDiff.onComplete(_ => replyTo ! Ack)
@@ -135,18 +161,29 @@ class MinutesActor[A, B](now: () => SDateLike,
     future
   }
 
-  def updateByTerminalDayAndGetDiff(container: MinutesContainer[A, B]): Future[MinutesContainer[A, B]] = {
+  def updateByTerminalDayAndGetDiff(container: MinutesContainer[A, B]): Future[Option[MinutesContainer[A, B]]] = {
     val eventualUpdatedMinutesDiff = container.minutes
       .groupBy(simMin => (simMin.terminal, SDate(simMin.minute).getLocalLastMidnight))
       .map {
         case ((terminal, day), terminalDayMinutes) => handleUpdateAndGetDiff(terminal, day, terminalDayMinutes)
       }
-    Future.sequence(eventualUpdatedMinutesDiff).map {
-      _.reduce[MinutesContainer[A, B]] {
+    combineEventualContainers(eventualUpdatedMinutesDiff).map(Option(_))
+  }
+
+  private def combineAndSendOptionalResult(eventualUpdatedMinutesDiff: Iterable[Future[MinutesContainer[A, B]]],
+                                           replyTo: ActorRef): Unit =
+    combineEventualContainers(eventualUpdatedMinutesDiff).onComplete {
+      case Success(maybeMinutes) => replyTo ! maybeMinutes
+      case Failure(t) =>
+        log.error("Failed to get minutes", t)
+    }
+
+  private def combineEventualContainers(eventualUpdatedMinutesDiff: Iterable[Future[MinutesContainer[A, B]]]): Future[MinutesContainer[A, B]] =
+    Future.sequence(eventualUpdatedMinutesDiff).map { containers =>
+      containers.reduce[MinutesContainer[A, B]] {
         case (soFar, next) => MinutesContainer(soFar.minutes ++ next.minutes)
       }
     }
-  }
 
   def handleUpdateAndGetDiff(terminal: Terminal,
                              day: SDateLike,

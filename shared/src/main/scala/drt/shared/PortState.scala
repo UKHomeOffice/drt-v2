@@ -273,7 +273,7 @@ class PortStateMutable {
     } else None
   }
 
-  def applyFlightsWithSplitsDiff(flightRemovals: Seq[UniqueArrival], flightUpdates: SortedMap[UniqueArrival, ApiFlightWithSplits], nowMillis: MillisSinceEpoch): Unit = {
+  def applyFlightsWithSplitsDiff(flightRemovals: Seq[UniqueArrival], flightUpdates: Iterable[(UniqueArrival, ApiFlightWithSplits)], nowMillis: MillisSinceEpoch): Unit = {
     flights --= flightRemovals
     flights ++= flightUpdates
   }

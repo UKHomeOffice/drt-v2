@@ -55,7 +55,7 @@ object RunnableDeskRecs {
               val crunchEndMillis = SDate(crunchStartMillis).addMinutes(portDeskRecs.minutesToCrunch).millisSinceEpoch
               val minuteMillis = crunchStartMillis until crunchEndMillis by 60000
 
-              log.info(s"Crunching ${flights.flightsToUpdate.size} flights, ${minuteMillis.length} minutes (${SDate(crunchStartMillis).toISOString} to ${SDate(crunchEndMillis).toISOString})")
+              log.info(s"Crunching ${flights.flights.size} flights, ${minuteMillis.length} minutes (${SDate(crunchStartMillis).toISOString()} to ${SDate(crunchEndMillis).toISOString()})")
 
               val loads = portDeskRecs.flightsToLoads(flights, crunchStartMillis)
 
@@ -78,7 +78,7 @@ object RunnableDeskRecs {
     .recoverWith {
       case t =>
         log.error("Failed to fetch flights from PortStateActor", t)
-        Future((crunchStartMillis, FlightsWithSplits(List(), List())))
+        Future((crunchStartMillis, FlightsWithSplits(List())))
     }
 
   def start(portStateActor: ActorRef,

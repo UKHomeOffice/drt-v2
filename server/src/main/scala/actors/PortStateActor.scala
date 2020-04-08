@@ -5,7 +5,7 @@ import akka.actor.{Actor, Props}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
@@ -62,12 +62,23 @@ class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: Askabl
 
     case StreamFailure(t) => log.error(s"Stream failed", t)
 
-    case updates: PortStateMinutes =>
+    case flightsWithSplits: FlightsWithSplitsDiff =>
+      log.debug(s"Processing incoming FlightsWithSplits")
+
+      val diff = flightsWithSplits.applyTo(state, nowMillis)
+
+      if (diff.flightMinuteUpdates.nonEmpty) flightMinutesBuffer ++= diff.flightMinuteUpdates
+
+      handleCrunchRequest()
+      handleSimulationRequest()
+
+      splitDiffAndSend(diff)
+
+    case updates: PortStateMinutes[_, _] =>
       log.debug(s"Processing incoming PortStateMinutes ${updates.getClass}")
 
       val diff = updates.applyTo(state, nowMillis)
 
-      if (diff.flightMinuteUpdates.nonEmpty) flightMinutesBuffer ++= diff.flightMinuteUpdates
       if (diff.crunchMinuteUpdates.nonEmpty) loadMinutesBuffer ++= crunchMinutesToLoads(diff)
 
       handleCrunchRequest()
@@ -110,7 +121,7 @@ class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: Askabl
       val end = SDate(endMillis)
       log.info(s"Got request for flights between ${start.toISOString()} - ${end.toISOString()}")
       val flightsToSend = state.flights.range(start, end).values.toList
-      sender() ! FlightsWithSplits(flightsToSend, List())
+      sender() ! FlightsWithSplitsDiff(flightsToSend, List())
 
     case unexpected => log.warn(s"Got unexpected: $unexpected")
   }

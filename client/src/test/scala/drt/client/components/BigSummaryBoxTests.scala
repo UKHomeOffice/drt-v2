@@ -5,7 +5,7 @@ import drt.client.components.ArrivalGenerator.apiFlight
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
@@ -142,7 +142,7 @@ object BigSummaryBoxTests extends TestSuite {
                 ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 17, None))
                 , SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC), PaxNumbers)
 
-              val flights = FlightsWithSplits(
+              val flights = FlightsWithSplitsDiff(
                 List(ApiFlightWithSplits(apiFlight1, Set(splits1)),
                   ApiFlightWithSplits(apiFlight2, Set(splits2))), List())
 

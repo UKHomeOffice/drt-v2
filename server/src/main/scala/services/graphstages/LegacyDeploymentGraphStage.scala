@@ -474,8 +474,12 @@ case class SimulationMinute(terminal: Terminal,
 
 }
 
-case class SimulationMinutes(minutes: Seq[SimulationMinute]) extends PortStateMinutes {
-  def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
+case class SimulationMinutes(minutes: Seq[SimulationMinute]) extends PortStateMinutes[CrunchMinute, TQM] {
+  override val asContainer: MinutesContainer[CrunchMinute, TQM] = MinutesContainer(minutes)
+
+  override def isEmpty: Boolean = minutes.isEmpty
+
+  override def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
     val minutesDiff = minutes.foldLeft(List[CrunchMinute]()) { case (soFar, dm) =>
       addIfUpdated(portState.crunchMinutes.getByKey(dm.key), now, soFar, dm, () => dm.toUpdatedMinute(now))
     }

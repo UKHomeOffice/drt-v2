@@ -2,7 +2,7 @@ package services
 
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.Terminals.T1
 import drt.shared._
 import org.specs2.mutable.Specification
@@ -15,7 +15,7 @@ class PortStateMinutesSpec extends Specification {
 
   "When I apply a FlightsWithSplits " >> {
     "Containing only new arrivals " >> {
-      val newFlightsWithSplits = FlightsWithSplits(
+      val newFlightsWithSplits = FlightsWithSplitsDiff(
         (1 to 5).map(d => ApiFlightWithSplits(
           ArrivalGenerator.arrival(iata = "BA0001", schDt = s"2019-01-0${d}T12:00.00Z", terminal = T1), Set())
         ).toList, List())

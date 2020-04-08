@@ -7,7 +7,7 @@ import akka.stream._
 import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
 import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.{SDateLike, _}
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
@@ -50,7 +50,7 @@ case class CrunchProps[FR](logLabel: String = "",
                            useNationalityBasedProcessingTimes: Boolean,
                            useLegacyManifests: Boolean = false,
                            now: () => SDateLike = () => SDate.now(),
-                           initialFlightsWithSplits: Option[FlightsWithSplits] = None,
+                           initialFlightsWithSplits: Option[FlightsWithSplitsDiff] = None,
                            manifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]],
                            manifestResponsesSource: Source[List[BestAvailableManifest], NotUsed],
                            voyageManifestsActor: ActorRef,
@@ -218,7 +218,7 @@ object CrunchSystem {
 
   def initialLoadsFromPortState(initialPortState: Option[PortState]): Option[Loads] = initialPortState.map(ps => Loads.fromCrunchMinutes(ps.crunchMinutes))
 
-  def initialFlightsFromPortState(initialPortState: Option[PortState]): Option[FlightsWithSplits] = initialPortState.map { ps =>
-    FlightsWithSplits(ps.flights.values.toList, List())
+  def initialFlightsFromPortState(initialPortState: Option[PortState]): Option[FlightsWithSplitsDiff] = initialPortState.map { ps =>
+    FlightsWithSplitsDiff(ps.flights.values.toList, List())
   }
 }

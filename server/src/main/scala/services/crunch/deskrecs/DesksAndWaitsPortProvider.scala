@@ -1,7 +1,7 @@
 package services.crunch.deskrecs
 
 import drt.shared.CrunchApi.{DeskRecMinute, DeskRecMinutes, MillisSinceEpoch}
-import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Queues.{Queue, Transfer}
 import drt.shared.Terminals.Terminal
 import drt.shared.{AirportConfig, PaxTypeAndQueue, TQM}
