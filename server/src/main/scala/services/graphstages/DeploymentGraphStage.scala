@@ -78,7 +78,7 @@ class DeploymentGraphStage(name: String = "",
             loadMinutes ++= incomingLoads.loadMinutes
             purgeExpired(loadMinutes, TQM.atTime, now, expireAfterMillis.toInt)
 
-            val allMinuteMillis = incomingLoads.loadMinutes.keys.map(_.minute)
+            val allMinuteMillis: Iterable[MillisSinceEpoch] = incomingLoads.loadMinutes.keys.map(_.minute)
             val firstMinute = crunchPeriodStartMillis(SDate(allMinuteMillis.min))
             val lastMinute = firstMinute.addMinutes(airportConfig.minutesToCrunch)
 
