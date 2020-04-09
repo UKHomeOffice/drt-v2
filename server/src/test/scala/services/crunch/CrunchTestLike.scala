@@ -78,8 +78,7 @@ case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete
                                       forecastArrivalsTestProbe: TestProbe,
                                       liveArrivalsTestProbe: TestProbe,
                                       aggregatedArrivalsActor: ActorRef,
-                                      portStateActor: ActorRef,
-                                      deskRecsGraphKillSwitch: UniqueKillSwitch) {
+                                      portStateActor: ActorRef) {
   def shutdown(): Unit = {
     baseArrivalsInput.complete()
     forecastArrivalsInput.complete()
@@ -90,7 +89,6 @@ case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete
     liveStaffMovementsInput.complete()
     forecastStaffMovementsInput.complete()
     actualDesksAndQueuesInput.complete()
-    deskRecsGraphKillSwitch.shutdown()
   }
 }
 
@@ -237,8 +235,11 @@ class CrunchTestLike
     else
       PortDeskLimits.fixed(airportConfig)
 
-    val (millisToCrunchActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDescRecs, now, recrunchOnStart, maxDaysToCrunch, deskLimitsProvider)
-    portStateActor ! SetCrunchActor(millisToCrunchActor)
+    val startDeskRecs: () => UniqueKillSwitch = () => {
+      val (millisToCrunchActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDescRecs, now, recrunchOnStart, maxDaysToCrunch, deskLimitsProvider)
+      portStateActor ! SetCrunchActor(millisToCrunchActor)
+      deskRecsKillSwitch
+    }
 
     val manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
     val liveArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
@@ -304,7 +305,8 @@ class CrunchTestLike
       adjustEGateUseByUnder12s = false,
       optimiser = cruncher,
       useLegacyDeployments = useLegacyDeployments,
-      aclPaxAdjustmentDays = aclPaxAdjustmentDays))
+      aclPaxAdjustmentDays = aclPaxAdjustmentDays,
+      startDeskRecs = startDeskRecs))
 
     portStateActor ! SetSimulationActor(crunchInputs.loadsToSimulate)
 
@@ -323,8 +325,7 @@ class CrunchTestLike
       forecastArrivalsTestProbe = forecastArrivalsProbe,
       liveArrivalsTestProbe = liveArrivalsProbe,
       aggregatedArrivalsActor = aggregatedArrivalsActor,
-      portStateActor = portStateActor,
-      deskRecsGraphKillSwitch = deskRecsKillSwitch
+      portStateActor = portStateActor
       )
   }
 

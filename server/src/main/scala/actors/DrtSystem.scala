@@ -286,8 +286,11 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         val initialPortState: Option[PortState] = mergePortStates(maybeForecastState, maybeLiveState)
         initialPortState.foreach(ps => portStateActor ! ps)
 
-        val (crunchSourceActor: ActorRef, _) = RunnableDeskRecs.start(portStateActor, portDeskRecs, now, params.recrunchOnStart, params.forecastMaxDays, maxDesksProviders)
-        portStateActor ! SetCrunchActor(crunchSourceActor)
+        val startDeskRecs: () => UniqueKillSwitch = () => {
+          val (millisToCrunchActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDeskRecs, now, params.recrunchOnStart, params.forecastMaxDays, maxDesksProviders)
+          portStateActor ! SetCrunchActor(millisToCrunchActor)
+          deskRecsKillSwitch
+        }
 
         val (manifestRequestsSource, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
 
@@ -303,7 +306,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
           manifestResponsesSource,
           params.refreshArrivalsOnStart,
           checkRequiredStaffUpdatesOnStartup = true,
-          useLegacyDeployments)
+          useLegacyDeployments,
+          startDeskRecs)
 
         portStateActor ! SetSimulationActor(crunchInputs.loadsToSimulate)
 
@@ -411,7 +415,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
                         manifestResponsesSource: Source[List[BestAvailableManifest], NotUsed],
                         refreshArrivalsOnStart: Boolean,
                         checkRequiredStaffUpdatesOnStartup: Boolean,
-                        useLegacyDeployments: Boolean): CrunchSystem[Cancellable] = {
+                        useLegacyDeployments: Boolean,
+                        startDeskRecs: () => UniqueKillSwitch): CrunchSystem[Cancellable] = {
 
     val crunchInputs = CrunchSystem(CrunchProps(
       airportConfig = airportConfig,
@@ -457,7 +462,8 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
       optimiser = optimiser,
       useLegacyDeployments = useLegacyDeployments,
       passengersActorProvider = passengersActorProvider,
-      aclPaxAdjustmentDays = aclPaxAdjustmentDays))
+      aclPaxAdjustmentDays = aclPaxAdjustmentDays,
+      startDeskRecs = startDeskRecs))
     crunchInputs
   }
 

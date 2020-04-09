@@ -4,7 +4,7 @@ import actors._
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props}
 import akka.pattern.AskableActorRef
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
-import akka.stream.{KillSwitch, Materializer, OverflowStrategy}
+import akka.stream.{KillSwitch, Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import drt.auth.Role
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -87,6 +87,12 @@ class TestDrtSystem(override val actorSystem: ActorSystem,
       val (manifestRequestsSource, bridge1Ks, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
       val (manifestResponsesSource, bridge2Ks, manifestResponsesSink) = SinkToSourceBridge[List[BestAvailableManifest]]
 
+      val startDeskRecs: () => UniqueKillSwitch = () => {
+        val (millisToCrunchActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDeskRecs, now, params.recrunchOnStart, params.forecastMaxDays, maxDesksProviders)
+        portStateActor ! SetCrunchActor(millisToCrunchActor)
+        deskRecsKillSwitch
+      }
+
       val cs = startCrunchSystem(
         initialPortState = None,
         initialForecastBaseArrivals = None,
@@ -97,7 +103,8 @@ class TestDrtSystem(override val actorSystem: ActorSystem,
         manifestResponsesSource,
         refreshArrivalsOnStart = false,
         checkRequiredStaffUpdatesOnStartup = false,
-        useLegacyDeployments)
+        useLegacyDeployments,
+        startDeskRecs = startDeskRecs)
 
       val lookupRefreshDue: MillisSinceEpoch => Boolean = (lastLookupMillis: MillisSinceEpoch) => now().millisSinceEpoch - lastLookupMillis > 1000
       val manifestKillSwitch = startManifestsGraph(None, manifestResponsesSink, manifestRequestsSource, lookupRefreshDue)
@@ -105,8 +112,6 @@ class TestDrtSystem(override val actorSystem: ActorSystem,
       val portDescRecs = DesksAndWaitsPortProvider(airportConfig, Optimiser.crunch)
       val maxDesksProvider = PortDeskLimits.flexed(airportConfig)
 
-      val (millisToCrunchActor: ActorRef, crunchKillSwitch) = RunnableDeskRecs.start(portStateActor, portDescRecs, now, params.recrunchOnStart, params.forecastMaxDays, maxDesksProvider)
-      portStateActor ! SetCrunchActor(millisToCrunchActor)
       portStateActor ! SetSimulationActor(cs.loadsToSimulate)
 
       subscribeStaffingActors(cs)
@@ -114,7 +119,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem,
 
       testManifestsActor ! SubscribeResponseQueue(cs.manifestsLiveResponse)
 
-      List(bridge1Ks, bridge2Ks, manifestKillSwitch, crunchKillSwitch) ++ cs.killSwitches
+      List(bridge1Ks, bridge2Ks, manifestKillSwitch) ++ cs.killSwitches
     }
 
     val testActors = List(
