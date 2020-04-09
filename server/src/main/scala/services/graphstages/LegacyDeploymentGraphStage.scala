@@ -70,6 +70,7 @@ class LegacyDeploymentGraphStage(name: String = "",
 
         incomingLoads.loadMinutes.keys.map(_.minute) match {
           case emptyIncoming if emptyIncoming.isEmpty =>
+            log.debug("Received empty load minutes")
           case allMinuteMillis =>
             val affectedTerminals = incomingLoads.loadMinutes.map { case (TQM(t, _, _), _) => t }.toSet.toSeq
             loadMinutes ++= incomingLoads.loadMinutes
@@ -95,27 +96,31 @@ class LegacyDeploymentGraphStage(name: String = "",
     setHandler(inStaffMinutes, new InHandler {
       override def onPush(): Unit = {
         val timer = StageTimer(stageName, inStaffMinutes)
-        val incomingStaffMinutes: StaffMinutes = grab(inStaffMinutes)
-        log.info(s"Grabbed ${incomingStaffMinutes.minutes.length} staff minutes")
+        grab(inStaffMinutes) match {
+          case incomingStaffMinutes if incomingStaffMinutes.minutes.isEmpty =>
+            log.debug("Received empty staff minutes")
+          case incomingStaffMinutes =>
+            log.info(s"Received ${incomingStaffMinutes.minutes.length} staff minutes")
 
-        val affectedTerminals = incomingStaffMinutes.minutes.map(_.terminal).distinct
+            val affectedTerminals = incomingStaffMinutes.minutes.map(_.terminal).distinct
 
-        log.info(s"Staff updates affect ${affectedTerminals.mkString(", ")}")
+            log.info(s"Staff updates affect ${affectedTerminals.mkString(", ")}")
 
-        updateStaffMinutes(incomingStaffMinutes)
-        purgeExpired(staffMinutes, TM.atTime, now, expireAfterMillis.toInt)
+            updateStaffMinutes(incomingStaffMinutes)
+            purgeExpired(staffMinutes, TM.atTime, now, expireAfterMillis.toInt)
 
-        log.info(s"Purged expired staff minutes")
+            log.info(s"Purged expired staff minutes")
 
-        val firstMinute = crunchPeriodStartMillis(SDate(incomingStaffMinutes.minutes.map(_.minute).min))
-        val lastMinute = firstMinute.addDays(1)
+            val firstMinute = crunchPeriodStartMillis(SDate(incomingStaffMinutes.minutes.map(_.minute).min))
+            val lastMinute = firstMinute.addDays(1)
 
-        log.info(s"Got first ${firstMinute.toLocalDateTimeString()} and last minutes ${lastMinute.toLocalDateTimeString()}")
+            log.info(s"Got first ${firstMinute.toLocalDateTimeString()} and last minutes ${lastMinute.toLocalDateTimeString()}")
 
-        updateDeployments(affectedTerminals, firstMinute, lastMinute)
+            updateDeployments(affectedTerminals, firstMinute, lastMinute)
 
-        log.info(s"Got deployments, updating simulations")
-        updateSimulationsForPeriod(firstMinute, lastMinute, affectedTerminals)
+            log.info(s"Got deployments, updating simulations")
+            updateSimulationsForPeriod(firstMinute, lastMinute, affectedTerminals)
+        }
 
         pushStateIfReady()
 
