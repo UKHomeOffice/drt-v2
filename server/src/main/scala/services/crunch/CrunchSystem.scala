@@ -76,7 +76,8 @@ case class CrunchProps[FR](logLabel: String = "",
                            adjustEGateUseByUnder12s: Boolean,
                            optimiser: TryCrunch,
                            useLegacyDeployments: Boolean,
-                           aclPaxAdjustmentDays: Int)
+                           aclPaxAdjustmentDays: Int,
+                           startDeskRecs: () => UniqueKillSwitch)
 
 object CrunchSystem {
 
@@ -195,6 +196,8 @@ object CrunchSystem {
 
     val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, shiftsIn, fixedPointsIn, movementsIn, simloadsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS) = crunchSystem.run
 
+    val drKillSwitch = props.startDeskRecs()
+
     CrunchSystem(
       shifts = shiftsIn,
       fixedPoints = fixedPointsIn,
@@ -206,7 +209,7 @@ object CrunchSystem {
       liveArrivalsResponse = liveIn,
       manifestsLiveResponse = manifestsLiveIn,
       actualDeskStats = actDesksIn,
-      List(arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS)
+      List(arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS, drKillSwitch)
       )
   }
 

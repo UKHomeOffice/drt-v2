@@ -67,26 +67,30 @@ class DeploymentGraphStage(name: String = "",
     setHandler(inLoads, new InHandler {
       override def onPush(): Unit = {
         val timer = StageTimer(stageName, inLoads)
-        val incomingLoads = grab(inLoads)
-        log.debug(s"Received ${incomingLoads.loadMinutes.size} load minutes")
+        grab(inLoads) match {
+          case incomingLoads if incomingLoads.loadMinutes.isEmpty =>
+            log.debug("Received empty load minutes")
+          case incomingLoads =>
+            log.info(s"Received ${incomingLoads.loadMinutes.size} load minutes")
 
-        val affectedTerminals = incomingLoads.loadMinutes.map { case (TQM(t, _, _), _) => t }.toSet.toSeq
+            val affectedTerminals = incomingLoads.loadMinutes.map { case (TQM(t, _, _), _) => t }.toSet.toSeq
 
-        loadMinutes ++= incomingLoads.loadMinutes
-        purgeExpired(loadMinutes, TQM.atTime, now, expireAfterMillis.toInt)
+            loadMinutes ++= incomingLoads.loadMinutes
+            purgeExpired(loadMinutes, TQM.atTime, now, expireAfterMillis.toInt)
 
-        val allMinuteMillis = incomingLoads.loadMinutes.keys.map(_.minute)
-        val firstMinute = crunchPeriodStartMillis(SDate(allMinuteMillis.min))
-        val lastMinute = firstMinute.addMinutes(airportConfig.minutesToCrunch)
+            val allMinuteMillis: Iterable[MillisSinceEpoch] = incomingLoads.loadMinutes.keys.map(_.minute)
+            val firstMinute = crunchPeriodStartMillis(SDate(allMinuteMillis.min))
+            val lastMinute = firstMinute.addMinutes(airportConfig.minutesToCrunch)
 
-        terminalsWithNonZeroStaff(affectedTerminals, firstMinute, lastMinute) match {
-          case affectedTerminalsWithStaff if affectedTerminalsWithStaff.isEmpty =>
-            log.debug(s"No affected terminals with deployments. Skipping simulations")
-          case affectedTerminalsWithStaff =>
-            purgeExpired(deployments, TQM.atTime, now, expireAfterMillis.toInt)
-            val updates = updateSimulationsForPeriod(firstMinute, lastMinute, affectedTerminalsWithStaff)
-            setDeployments(updates)
-            pushStateIfReady()
+            terminalsWithNonZeroStaff(affectedTerminals, firstMinute, lastMinute) match {
+              case affectedTerminalsWithStaff: Seq[Terminal] =>
+                purgeExpired(deployments, TQM.atTime, now, expireAfterMillis.toInt)
+                val affectedTerminalsWithNoStaff: Seq[Terminal] = affectedTerminals.diff(affectedTerminalsWithStaff)
+                val updatedMinutes: Map[TQM, SimulationMinute] = updateSimulationsForPeriod(firstMinute, lastMinute, affectedTerminalsWithStaff)
+                val resetMinutes: Seq[(TQM, SimulationMinute)] = resetSimulationsForPeriod(affectedTerminalsWithNoStaff, firstMinute, lastMinute)
+                setDeployments(updatedMinutes ++ resetMinutes)
+                pushStateIfReady()
+            }
         }
 
         pullAll()
@@ -99,9 +103,11 @@ class DeploymentGraphStage(name: String = "",
         val timer = StageTimer(stageName, inStaffMinutes)
 
         grab(inStaffMinutes) match {
+          case StaffMinutes(minutes) if minutes.isEmpty =>
+            log.debug(s"Received empty staff minutes")
           case StaffMinutes(minutes) if minutes.nonEmpty =>
             val affectedTerminals = minutes.map(_.terminal).distinct
-            log.info(s"Received ${minutes.length} staff minutes affecting ${affectedTerminals.mkString(", ")}")
+            log.debug(s"Received ${minutes.length} staff minutes affecting ${affectedTerminals.mkString(", ")}")
 
             updateStaffMinutes(StaffMinutes(minutes))
             purgeExpired(staffMinutes, TM.atTime, now, expireAfterMillis.toInt)
@@ -253,6 +259,23 @@ class DeploymentGraphStage(name: String = "",
             if (staffByMillis.count(_._2 > 0) > 0) terminal :: nonZeroTerminals
             else nonZeroTerminals
         }
+    }
+
+    def resetSimulationsForPeriod(terminals: Seq[Terminal],
+                                  firstMinute: SDateLike,
+                                  lastMinute: SDateLike): Seq[(TQM, SimulationMinute)] = {
+      val resetMinutes = for {
+        terminal <- terminals
+        queue <- airportConfig.queuesByTerminal(terminal)
+        minute <- firstMinute.millisSinceEpoch to lastMinute.millisSinceEpoch by MilliTimes.oneMinuteMillis
+      } yield {
+        val sm = SimulationMinute(terminal, queue, minute, 0, 0)
+        (sm.key, sm)
+      }
+
+      simulationMinutesToPush ++= resetMinutes
+
+      resetMinutes
     }
   }
 }
