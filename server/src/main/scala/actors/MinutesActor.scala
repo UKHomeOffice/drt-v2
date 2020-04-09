@@ -10,6 +10,7 @@ import drt.shared.{MilliTimes, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch
+import services.graphstages.Crunch.{LoadMinute, Loads}
 
 import scala.collection.mutable
 import scala.concurrent.duration._
@@ -28,7 +29,7 @@ object Actors {
 }
 
 class MinutesActor[A, B](now: () => SDateLike,
-                         terminals: Seq[Terminal],
+                         terminals: Iterable[Terminal],
                          lookupPrimary: MinutesLookup[A, B],
                          lookupSecondary: MinutesLookup[A, B],
                          updateMinutes: MinutesUpdate[A, B]) extends Actor {
@@ -107,7 +108,7 @@ class MinutesActor[A, B](now: () => SDateLike,
     case (Some(simActor), true, true) =>
       subscriberIsReady = false
       simActor
-        .ask(MinutesContainer(minutesBuffer.values.toList))(new Timeout(10 minutes))
+        .ask(Loads(minutesBuffer.values.toList.collect { case lm: LoadMinute => lm }))(new Timeout(10 minutes))
         .recover {
           case t => log.error("Error sending loads to simulate", t)
         }

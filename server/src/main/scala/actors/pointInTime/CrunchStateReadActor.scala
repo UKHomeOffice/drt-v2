@@ -13,7 +13,9 @@ import drt.shared._
 import server.protobuf.messages.CrunchState._
 import services.SDate
 
-case object GetCrunchMinutes
+case class GetCrunchMinutes(terminal: Terminal)
+
+case class GetStaffMinutes(terminal: Terminal)
 
 object CrunchStateReadActor {
   def props(snapshotInterval: Int,

@@ -26,8 +26,7 @@ class PartitionedPortStateActor(flightsActor: AskableActorRef,
   implicit val ec: ExecutionContextExecutor = context.dispatcher
   implicit val timeout: Timeout = new Timeout(10 seconds)
 
-  override def receive: Receive = {
-
+  def processMessage: Receive = {
     case msg: SetCrunchActor =>
       log.info(s"Received crunchSourceActor")
       flightsActor.ask(msg)
@@ -35,9 +34,6 @@ class PartitionedPortStateActor(flightsActor: AskableActorRef,
     case msg: SetSimulationActor =>
       log.info(s"Received simulationSourceActor")
       queuesActor.ask(msg)
-
-    case _: PortState =>
-      log.info(s"Ignoring initial PortState")
 
     case StreamInitialized => sender() ! Ack
 
@@ -78,7 +74,9 @@ class PartitionedPortStateActor(flightsActor: AskableActorRef,
     case GetFlights(start, end) =>
       log.debug(s"Received GetFlights request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       flightsActor.ask(GetFlights(start, end)).mapTo[FlightsWithSplits].pipeTo(sender())
+  }
 
+  override def receive: Receive = processMessage orElse {
     case unexpected => log.warn(s"Got unexpected: $unexpected")
   }
 
@@ -126,6 +124,6 @@ class PartitionedPortStateActor(flightsActor: AskableActorRef,
       PortState(flights.flights.toMap.values, queueMinutes.minutes.map(_.toMinute), staffMinutes.minutes.map(_.toMinute))
     }
 
-  private def askThenAck(message: Any, replyTo: ActorRef, actor: AskableActorRef): Unit =
+  def askThenAck(message: Any, replyTo: ActorRef, actor: AskableActorRef): Unit =
     actor.ask(message).foreach(_ => replyTo ! Ack)
 }
