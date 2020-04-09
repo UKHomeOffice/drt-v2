@@ -83,12 +83,12 @@ class DeploymentGraphStage(name: String = "",
             val lastMinute = firstMinute.addMinutes(airportConfig.minutesToCrunch)
 
             terminalsWithNonZeroStaff(affectedTerminals, firstMinute, lastMinute) match {
-              case affectedTerminalsWithStaff =>
+              case affectedTerminalsWithStaff: Seq[Terminal] =>
                 purgeExpired(deployments, TQM.atTime, now, expireAfterMillis.toInt)
-                val affectedTerminalsWithNoStaff = affectedTerminals.diff(affectedTerminalsWithStaff)
-                val updates = updateSimulationsForPeriod(firstMinute, lastMinute, affectedTerminalsWithStaff)
-                val resets = resetSimulationsForPeriod(affectedTerminalsWithNoStaff, firstMinute, lastMinute)
-                setDeployments(updates ++ resets)
+                val affectedTerminalsWithNoStaff: Seq[Terminal] = affectedTerminals.diff(affectedTerminalsWithStaff)
+                val updatedMinutes: Map[TQM, SimulationMinute] = updateSimulationsForPeriod(firstMinute, lastMinute, affectedTerminalsWithStaff)
+                val resetMinutes: Seq[(TQM, SimulationMinute)] = resetSimulationsForPeriod(affectedTerminalsWithNoStaff, firstMinute, lastMinute)
+                setDeployments(updatedMinutes ++ resetMinutes)
                 pushStateIfReady()
             }
         }
