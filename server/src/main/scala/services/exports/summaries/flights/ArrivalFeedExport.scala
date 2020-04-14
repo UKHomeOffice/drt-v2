@@ -33,7 +33,7 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
 
     val feedActor: ActorRef = system
       .actorOf(
-        ArrivalsReadActor.props(SDate(day).getLocalNextMidnight,
+        ArrivalsReadActor.props(SDate(day).getLocalNextMidnight.addHours(3),
           persistenceId,
           fs
         ),
@@ -43,7 +43,7 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
     val askableActorRef: AskableActorRef = feedActor
 
     askableActorRef
-      .ask(GetState)(Timeout(5 seconds))
+      .ask(GetState)(Timeout(60 seconds))
       .map {
         case ArrivalsState(arrivals: mutable.Map[UniqueArrival, Arrival], _, _) =>
           feedActor ! PoisonPill
@@ -52,9 +52,14 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
           Option(asCSV(csvData))
 
         case _ =>
+          system.log.error(s"No flights found for ${SDate(day).toISODateOnly} in $fs")
           feedActor ! PoisonPill
           None
       }
+  }.recover {
+    case e: Throwable =>
+      system.log.error(s"Unable to recover flights for ${SDate(day).toISODateOnly} in $fs")
+      None
   }
 
   def arrivalsToCsvRows(terminal: Terminal, arrivals: mutable.SortedMap[UniqueArrival, Arrival], exportDay: SDateLike) = {
