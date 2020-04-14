@@ -93,12 +93,12 @@ class PartitionedPortStateActor(flightsActor: AskableActorRef,
   def replyWithUpdates(since: MillisSinceEpoch,
                        start: MillisSinceEpoch,
                        end: MillisSinceEpoch,
-                       replyTo: ActorRef): Future[Option[PortState]] = {
+                       replyTo: ActorRef): Future[Option[PortStateUpdates]] = {
     val updatesRequest = GetUpdatesSince(since, start, end)
     val eventualFlights = flightsActor.ask(updatesRequest).mapTo[FlightsWithSplits]
     val eventualQueueMinutes = queuesActor.ask(updatesRequest).mapTo[MinutesContainer[CrunchMinute, TQM]]
     val eventualStaffMinutes = staffActor.ask(updatesRequest).mapTo[MinutesContainer[StaffMinute, TM]]
-    val eventualPortState = combineToPortState(eventualFlights, eventualQueueMinutes, eventualStaffMinutes)
+    val eventualPortState = combineToPortStateUpdates(eventualFlights, eventualQueueMinutes, eventualStaffMinutes)
     eventualPortState.map(Option(_)).pipeTo(replyTo)
   }
 
@@ -113,9 +113,9 @@ class PartitionedPortStateActor(flightsActor: AskableActorRef,
     eventualPortState.map(Option(_)).pipeTo(replyTo)
   }
 
-  def combineToPortState(eventualFlights: Future[FlightsWithSplits],
-                         eventualQueueMinutes: Future[MinutesContainer[CrunchMinute, TQM]],
-                         eventualStaffMinutes: Future[MinutesContainer[StaffMinute, TM]]): Future[PortState] =
+  def stateAsTuple(eventualFlights: Future[FlightsWithSplits],
+                   eventualQueueMinutes: Future[MinutesContainer[CrunchMinute, TQM]],
+                   eventualStaffMinutes: Future[MinutesContainer[StaffMinute, TM]]): Future[(Iterable[ApiFlightWithSplits], Iterable[CrunchMinute], Iterable[StaffMinute])] =
     for {
       flights <- eventualFlights
       queueMinutes <- eventualQueueMinutes
@@ -124,7 +124,26 @@ class PartitionedPortStateActor(flightsActor: AskableActorRef,
       val fs = flights.flights.toMap.values
       val cms = queueMinutes.minutes.map(_.toMinute)
       val sms = staffMinutes.minutes.map(_.toMinute)
-      PortState(fs, cms, sms)
+      (fs, cms, sms)
+    }
+
+  def combineToPortState(eventualFlights: Future[FlightsWithSplits],
+                         eventualQueueMinutes: Future[MinutesContainer[CrunchMinute, TQM]],
+                         eventualStaffMinutes: Future[MinutesContainer[StaffMinute, TM]]): Future[PortState] =
+    stateAsTuple(eventualFlights, eventualQueueMinutes, eventualStaffMinutes).map {
+      case (fs, cms, sms) => PortState(fs, cms, sms)
+    }
+
+  def combineToPortStateUpdates(eventualFlights: Future[FlightsWithSplits],
+                                eventualQueueMinutes: Future[MinutesContainer[CrunchMinute, TQM]],
+                                eventualStaffMinutes: Future[MinutesContainer[StaffMinute, TM]]): Future[PortStateUpdates] =
+    stateAsTuple(eventualFlights, eventualQueueMinutes, eventualStaffMinutes).map {
+      case (fs, cms, sms) =>
+        val latestUpdateMillis = fs.map(_.lastUpdated.getOrElse(0L)) ++ cms.map(_.lastUpdated.getOrElse(0L)) ++ sms.map(_.lastUpdated.getOrElse(0L)) match {
+          case noUpdates if noUpdates.isEmpty => 0L
+          case millis => millis.max
+        }
+        PortStateUpdates(latestUpdateMillis, fs.toSet, cms.toSet, sms.toSet)
     }
 
   def askThenAck(message: Any, replyTo: ActorRef, actor: AskableActorRef): Unit =

@@ -1,21 +1,20 @@
 package services.crunch
 
-import actors.{FlightsStateActor, GetPortState, MinuteLookups, MinutesActor, PartitionedPortStateActor, Sizes}
+import actors._
 import akka.actor.Props
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, DeskRecMinutes, StaffMinute, StaffMinutes}
+import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Queues.EeaDesk
 import drt.shared.Terminals.{T1, Terminal}
-import drt.shared.{ApiFlightWithSplits, MilliTimes, PortState, SDateLike, TM, TQM, UniqueArrival}
+import drt.shared._
 import services.SDate
 import services.crunch.deskrecs.GetFlights
-import services.graphstages.Crunch.{LoadMinute, Loads}
 
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
 class PartitionedPortStateSpec extends CrunchTestLike {
   implicit val timeout: Timeout = new Timeout(1 second)
@@ -39,6 +38,18 @@ class PartitionedPortStateSpec extends CrunchTestLike {
         val result = Await.result(eventualFlights(eventualAck, now, ps), 1 second)
 
         result === FlightsWithSplits(flightsToMap(now, fws))
+      }
+    }
+
+    "When I send it a flight and then ask for updates since just before now" >> {
+      val fws = flightsWithSplits(List(("BA1000", scheduled, T1)))
+      val eventualAck = ps.ask(FlightsWithSplitsDiff(fws, List()))
+
+      "Then I should see the flight I sent it in the port state" >> {
+        val sinceMillis = now().addMinutes(-1).millisSinceEpoch
+        val result = Await.result(eventualPortStateUpdates(eventualAck, now, ps, sinceMillis), 1 second)
+
+        result === Option(PortStateUpdates(now().millisSinceEpoch, setUpdatedFlights(fws, now().millisSinceEpoch).toSet, Set(), Set()))
       }
     }
 
@@ -69,7 +80,21 @@ class PartitionedPortStateSpec extends CrunchTestLike {
         val result = Await.result(eventualPortState(eventualAck, now, ps), 1 second)
         val expectedCm = CrunchMinute(T1, EeaDesk, now().millisSinceEpoch, 1, 2, 3, 4)
 
-        result === Option(PortState(Seq(), Seq(expectedCm), Seq()))
+        result === Option(PortState(Seq(), setUpdatedCms(Seq(expectedCm), now().millisSinceEpoch), Seq()))
+      }
+    }
+
+    "When I send it a DeskRecMinute and then ask for updates since just before now" >> {
+      val lm = DeskRecMinute(T1, EeaDesk, now().millisSinceEpoch, 1, 2, 3, 4)
+
+      val eventualAck = ps.ask(DeskRecMinutes(Seq(lm)))
+
+      "Then I should the matching crunch minute in the port state" >> {
+        val sinceMillis = now().addMinutes(-1).millisSinceEpoch
+        val result = Await.result(eventualPortStateUpdates(eventualAck, now, ps, sinceMillis), 1 second)
+        val expectedCm = CrunchMinute(T1, EeaDesk, now().millisSinceEpoch, 1, 2, 3, 4)
+
+        result === Option(PortStateUpdates(now().millisSinceEpoch, Set(), setUpdatedCms(Seq(expectedCm), now().millisSinceEpoch).toSet, Set()))
       }
     }
 
@@ -85,7 +110,7 @@ class PartitionedPortStateSpec extends CrunchTestLike {
           CrunchMinute(T1, EeaDesk, now().millisSinceEpoch, 1, 2, 3, 4),
           CrunchMinute(T1, EeaDesk, now().addMinutes(1).millisSinceEpoch, 2, 3, 4, 5))
 
-        result === Option(PortState(Seq(), expectedCms, Seq()))
+        result === Option(PortState(Seq(), setUpdatedCms(expectedCms, now().millisSinceEpoch), Seq()))
       }
     }
 
@@ -97,7 +122,7 @@ class PartitionedPortStateSpec extends CrunchTestLike {
       "Then I should a matching staff minute" >> {
         val result = Await.result(eventualPortState(eventualAck, now, ps), 1 second)
 
-        result === Option(PortState(Seq(), Seq(), Seq(sm)))
+        result === Option(PortState(Seq(), Seq(), setUpdatedSms(Seq(sm), now().millisSinceEpoch)))
       }
     }
 
@@ -110,10 +135,19 @@ class PartitionedPortStateSpec extends CrunchTestLike {
       "Then I should a matching staff minute" >> {
         val result = Await.result(eventualPortState(eventualAck, now, ps), 1 second)
 
-        result === Option(PortState(Seq(), Seq(), Seq(sm1, sm2)))
+        result === Option(PortState(Seq(), Seq(), setUpdatedSms(Seq(sm1, sm2), now().millisSinceEpoch)))
       }
     }
   }
+
+  def setUpdatedFlights(fws: Iterable[ApiFlightWithSplits], updatedMillis: MillisSinceEpoch): Seq[ApiFlightWithSplits] =
+    fws.map(_.copy(lastUpdated = Option(updatedMillis))).toSeq
+
+  def setUpdatedCms(cms: Iterable[CrunchMinute], updatedMillis: MillisSinceEpoch): Seq[CrunchMinute] =
+    cms.map(_.copy(lastUpdated = Option(updatedMillis))).toSeq
+
+  def setUpdatedSms(sms: Iterable[StaffMinute], updatedMillis: MillisSinceEpoch): Seq[StaffMinute] =
+    sms.map(_.copy(lastUpdated = Option(updatedMillis))).toSeq
 
   def eventualFlights(eventualAck: Future[Any], now: () => SDateLike, ps: AskableActorRef): Future[FlightsWithSplits] = eventualAck.flatMap { _ =>
     val startMillis = now().getLocalLastMidnight.millisSinceEpoch
@@ -125,6 +159,12 @@ class PartitionedPortStateSpec extends CrunchTestLike {
     val startMillis = now().getLocalLastMidnight.millisSinceEpoch
     val endMillis = now().getLocalNextMidnight.millisSinceEpoch
     ps.ask(GetPortState(startMillis, endMillis)).mapTo[Option[PortState]]
+  }
+
+  def eventualPortStateUpdates(eventualAck: Future[Any], now: () => SDateLike, ps: AskableActorRef, sinceMillis: MillisSinceEpoch): Future[Option[PortState]] = eventualAck.flatMap { _ =>
+    val startMillis = now().getLocalLastMidnight.millisSinceEpoch
+    val endMillis = now().getLocalNextMidnight.millisSinceEpoch
+    ps.ask(GetUpdatesSince(sinceMillis, startMillis, endMillis)).mapTo[Option[PortState]]
   }
 
   def flightsToMap(now: () => SDateLike, flights: Seq[ApiFlightWithSplits]): Map[UniqueArrival, ApiFlightWithSplits] = flights.map { fws1 =>

@@ -28,7 +28,7 @@ import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
-import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared.FlightsApi.Flights
 import drt.shared.MilliTimes._
 import drt.shared.Terminals._
@@ -223,7 +223,13 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   lazy val liveCrunchStateActor: AskableActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
   lazy val forecastCrunchStateActor: AskableActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
-  lazy val portStateActor: ActorRef = system.actorOf(PortStateActor.props(liveCrunchStateActor, forecastCrunchStateActor, now, liveDaysAhead), name = "port-state-actor")
+//  lazy val portStateActor: ActorRef = system.actorOf(PortStateActor.props(liveCrunchStateActor, forecastCrunchStateActor, now, liveDaysAhead), name = "port-state-actor")
+
+  lazy val lookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+  lazy val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(None, Sizes.oneMegaByte, "crunch-live-state-actor", airportConfig.queuesByTerminal, now, expireAfterMillis)))
+  lazy val queuesActor: ActorRef = lookups.queueMinutesActor(classOf[MinutesActor[CrunchMinute, TQM]])
+  lazy val staffActor: ActorRef = lookups.staffMinutesActor(classOf[MinutesActor[StaffMinute, TM]])
+  lazy val portStateActor: ActorRef = system.actorOf(Props(new PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now)))
 
   lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, Option(params.snapshotIntervalVm)), name = "voyage-manifests-actor")
   lazy val lookup: ManifestLookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
