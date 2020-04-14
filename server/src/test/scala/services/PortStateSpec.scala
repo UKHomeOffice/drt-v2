@@ -2,7 +2,7 @@ package services
 
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
-import drt.shared.Queues.Queue
+import drt.shared.Queues.{EeaDesk, Queue}
 import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared._
 import services.crunch.CrunchTestLike
@@ -28,15 +28,18 @@ class PortStateSpec extends CrunchTestLike {
         val staffUpdated = ps.staffMinutes.exists {
           case (TM(T1, m), sm) =>
             m == millis && sm.shifts == 1
+          case _ => false
         }
         val paxLoadUnchanged = ps.crunchMinutes.exists {
           case (TQM(T1, Queues.EeaDesk, m), cm) =>
             m == millis && cm.paxLoad == 10
+          case _ => false
         }
+        println(s"\n\nGot ps.staffMinutes: ${ps.staffMinutes.get(TM(T1, millis))}")
+        println(s"\n\nGot ps.crunchMinutes: ${ps.crunchMinutes.get(TQM(T1, EeaDesk, millis))}")
 
         staffUpdated && paxLoadUnchanged
     }
-    crunch.shutdown
 
     success
   }

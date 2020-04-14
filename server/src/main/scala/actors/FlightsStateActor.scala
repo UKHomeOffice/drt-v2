@@ -118,6 +118,10 @@ class FlightsStateActor(initialMaybeSnapshotInterval: Option[Int],
       log.debug(s"Received GetState request. Replying with PortState containing ${state.crunchMinutes.count} crunch minutes")
       sender() ! Option(state.immutable)
 
+    case GetPortState(0L, Long.MaxValue) =>
+      log.debug(s"Received GetPortState request for all flights")
+      sender() ! Option(FlightsWithSplits(state.flights.all))
+
     case GetPortState(startMillis, endMillis) =>
       log.debug(s"Received GetPortState request from ${SDate(startMillis).toISOString()} to ${SDate(endMillis).toISOString()}")
       sender() ! Option(flightsForPeriod(startMillis, endMillis))

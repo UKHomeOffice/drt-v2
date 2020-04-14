@@ -106,9 +106,11 @@ class MinutesActor[A, B](now: () => SDateLike,
 
   private def handleSubscriberRequest(): Unit = (maybeUpdateSubscriber, minutesBuffer.nonEmpty, subscriberIsReady) match {
     case (Some(simActor), true, true) =>
+      log.info(s"Sending (${minutesBuffer.size}) minutes from buffer to subscriber")
       subscriberIsReady = false
+      val loads = minutesBuffer.values.toList.collect { case cm: CrunchMinute => LoadMinute(cm) }
       simActor
-        .ask(Loads(minutesBuffer.values.toList.collect { case lm: LoadMinute => lm }))(new Timeout(10 minutes))
+        .ask(Loads(loads))(new Timeout(10 minutes))
         .recover {
           case t => log.error("Error sending loads to simulate", t)
         }
@@ -117,6 +119,7 @@ class MinutesActor[A, B](now: () => SDateLike,
         }
       minutesBuffer.clear()
     case _ =>
+      log.info(s"Not sending (${minutesBuffer.size}) minutes from buffer to subscriber")
   }
 
   def handleLookups(terminal: Terminal,

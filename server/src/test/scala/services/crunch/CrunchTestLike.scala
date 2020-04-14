@@ -10,6 +10,7 @@ import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, OverflowStrategy, QueueOfferResult, UniqueKillSwitch}
 import akka.testkit.{TestKit, TestProbe}
+import akka.util.Timeout
 import drt.auth.STNAccess
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
@@ -21,8 +22,10 @@ import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared._
 import graphs.SinkToSourceBridge
 import manifests.passengers.BestAvailableManifest
+import org.scalatest.BeforeAndAfterAll
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
+import org.specs2.specification.AfterAll
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services._
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
@@ -64,16 +67,19 @@ class PartitionedPortStateTestActor(probe: ActorRef,
 
   override def receive: Receive = processMessage orElse {
     case ps: PortState =>
+      val replyTo = sender()
       log.info(s"Setting initial port state")
-      if (ps.flights.nonEmpty) self ! FlightsWithSplitsDiff(ps.flights.values.toList, List())
-      if (ps.crunchMinutes.nonEmpty) self ! ps.crunchMinutes
-      if (ps.staffMinutes.nonEmpty) self ! ps.staffMinutes
+      flightsActor.ask(FlightsWithSplitsDiff(ps.flights.values.toList, List())).flatMap { _ =>
+        queuesActor.ask(MinutesContainer(ps.crunchMinutes.values)).flatMap { _ =>
+          staffActor.ask(MinutesContainer(ps.staffMinutes.values))
+        }
+      }.foreach(_ => replyTo ! Ack)
   }
 
   override def askThenAck(message: Any, replyTo: ActorRef, actor: AskableActorRef): Unit = {
     actor.ask(message).foreach { _ =>
       message match {
-        case _: FlightsWithSplitsDiff =>
+        case fwsd@FlightsWithSplitsDiff(updates, removals) if fwsd.nonEmpty =>
           actor.ask(GetPortState(0L, Long.MaxValue)).mapTo[Option[FlightsWithSplits]].foreach {
             case None => sendStateToProbe()
             case Some(FlightsWithSplits(flights)) =>
@@ -86,7 +92,6 @@ class PartitionedPortStateTestActor(probe: ActorRef,
           mc.minutes.headOption match {
             case None => sendStateToProbe()
             case Some(minuteLike) if minuteLike.toMinute.isInstanceOf[CrunchMinute] =>
-              println(s"\n\n** got ${mc.minutes.size} crunch minutes")
               actor.ask(GetPortState(minuteMillis.min, minuteMillis.max)).mapTo[MinutesContainer[CrunchMinute, TQM]]
                 .foreach { container =>
                   val updatedMinutes = state.crunchMinutes ++ container.minutes.map(ml => (ml.key, ml.toMinute))
@@ -94,7 +99,6 @@ class PartitionedPortStateTestActor(probe: ActorRef,
                   sendStateToProbe()
                 }
             case Some(minuteLike) if minuteLike.toMinute.isInstanceOf[StaffMinute] =>
-              println(s"\n\n** got ${mc.minutes.size} staff minutes")
               actor.ask(GetPortState(minuteMillis.min, minuteMillis.max)).mapTo[MinutesContainer[StaffMinute, TM]]
                 .foreach { container =>
                   val updatedMinutes = state.staffMinutes ++ container.minutes.map(ml => (ml.key, ml.toMinute))
@@ -102,6 +106,7 @@ class PartitionedPortStateTestActor(probe: ActorRef,
                   sendStateToProbe()
                 }
           }
+        case _ => sendStateToProbe()
       }
       replyTo ! Ack
     }
@@ -147,9 +152,14 @@ object H2Tables extends {
 
 class CrunchTestLike
   extends TestKit(ActorSystem("StreamingCrunchTests"))
-    with SpecificationLike {
+    with SpecificationLike
+    with AfterAll {
   isolated
   sequential
+
+  override def afterAll: Unit = {
+    TestKit.shutdownActorSystem(system)
+  }
 
   implicit val actorSystem: ActorSystem = system
   implicit val materializer: ActorMaterializer = ActorMaterializer()
@@ -230,10 +240,13 @@ class CrunchTestLike
     system.actorOf(Props(new PortStateTestActor(crunchStateMockActor, crunchStateMockActor, testProbe.ref, now, 100)), name = "port-state-actor")
   }
 
-  def createPartitionedPortStateActor(testProbe: TestProbe, flightsActor: ActorRef, now: () => SDateLike, airportConfig: AirportConfig): ActorRef = {
+  def createPartitionedPortStateActor(testProbe: TestProbe,
+                                      flightsActor: ActorRef,
+                                      now: () => SDateLike,
+                                      airportConfig: AirportConfig): ActorRef = {
     val lookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
     val queuesActor = lookups.queueMinutesActor(classOf[MinutesActor[CrunchMinute, TQM]])
-    val staffActor = lookups.queueMinutesActor(classOf[MinutesActor[StaffMinute, TM]])
+    val staffActor = lookups.staffMinutesActor(classOf[MinutesActor[StaffMinute, TM]])
     system.actorOf(Props(new PartitionedPortStateTestActor(testProbe.ref, flightsActor, queuesActor, staffActor, now)))
   }
 
@@ -283,8 +296,9 @@ class CrunchTestLike
     val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(None, Sizes.oneMegaByte, "flights", airportConfig.queuesByTerminal, now, expireAfterMillis)))
 
     val portStateActor = createPartitionedPortStateActor(portStateProbe, flightsActor, now, airportConfig)
-//    val portStateActor = createPortStateActor(portStateProbe, now)
-    initialPortState.foreach(ps => portStateActor ! ps)
+    //        val portStateActor = createPortStateActor(portStateProbe, now)
+    val askablePortStateActor: AskableActorRef = portStateActor
+    if (initialPortState.isDefined) Await.ready(askablePortStateActor.ask(initialPortState.get)(new Timeout(1 second)), 1 second)
 
     val portDescRecs = DesksAndWaitsPortProvider(airportConfig, cruncher)
 

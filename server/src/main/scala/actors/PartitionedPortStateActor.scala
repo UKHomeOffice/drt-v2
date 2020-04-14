@@ -48,11 +48,11 @@ class PartitionedPortStateActor(flightsActor: AskableActorRef,
     case noUpdates: PortStateMinutes[_, _] if noUpdates.isEmpty =>
       sender() ! Ack
 
-    case someQueueUpdates: PortStateMinutes[CrunchMinute, TQM] =>
+    case someQueueUpdates: PortStateQueueMinutes =>
       val replyTo = sender()
       askThenAck(someQueueUpdates.asContainer, replyTo, queuesActor)
 
-    case someStaffUpdates: PortStateMinutes[StaffMinute, TM] =>
+    case someStaffUpdates: PortStateStaffMinutes =>
       val replyTo = sender()
       askThenAck(someStaffUpdates.asContainer, replyTo, staffActor)
 
@@ -121,7 +121,10 @@ class PartitionedPortStateActor(flightsActor: AskableActorRef,
       queueMinutes <- eventualQueueMinutes
       staffMinutes <- eventualStaffMinutes
     } yield {
-      PortState(flights.flights.toMap.values, queueMinutes.minutes.map(_.toMinute), staffMinutes.minutes.map(_.toMinute))
+      val fs = flights.flights.toMap.values
+      val cms = queueMinutes.minutes.map(_.toMinute)
+      val sms = staffMinutes.minutes.map(_.toMinute)
+      PortState(fs, cms, sms)
     }
 
   def askThenAck(message: Any, replyTo: ActorRef, actor: AskableActorRef): Unit =

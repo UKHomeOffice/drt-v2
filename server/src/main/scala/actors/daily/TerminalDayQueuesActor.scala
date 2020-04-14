@@ -49,7 +49,7 @@ class TerminalDayQueuesActor(year: Int,
 
   override def receiveCommand: Receive = {
     case container: MinutesContainer[CrunchMinute, TQM] =>
-      log.debug(s"Received MinutesContainer for persistence")
+      log.debug(s"Received MinutesContainer (CrunchMinute) for persistence")
       updateAndPersistDiff(container)
 
     case GetState =>

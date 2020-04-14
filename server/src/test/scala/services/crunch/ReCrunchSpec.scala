@@ -18,11 +18,13 @@ class ReCrunchSpec extends CrunchTestLike {
 
         val expected = CrunchMinute(T1, EeaDesk, minute.millisSinceEpoch, 0, 0, 1, 0, Option(0), Option(0))
 
+        println(s"expected: $expected")
         crunch.portStateTestProbe.fishForMessage(1 second) {
           case PortState(_, cms, _) =>
             val minute = cms(expected.key)
-            println(s"minute: ${minute}")
+            println(s"\n\nminute: ${minute}\n\n")
             minute.equals(expected)
+          case _ => false
         }
 
         success

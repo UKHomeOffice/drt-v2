@@ -103,8 +103,6 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     val expected = AggregatedArrival(liveArrival, defaultAirportConfig.portCode.iata)
 
-    crunch.shutdown
-
     arrivalsResult === AggregatedArrivals(Seq(expected))
   }
 
@@ -190,8 +188,6 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
     }
 
     val expected = Set()
-
-    crunch.shutdown
 
     arrivalsResult === expected
   }

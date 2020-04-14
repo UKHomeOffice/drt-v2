@@ -77,8 +77,6 @@ class ForecastCrunchSpec extends CrunchTestLike {
           deployedStaff == expected
       }
 
-      crunch.shutdown()
-
       success
     }
     "Given a flight a live flight update after a base crunch & simulation, followed by a staffing change " +
@@ -119,8 +117,6 @@ class ForecastCrunchSpec extends CrunchTestLike {
           deployedStaff == expected
       }
 
-      crunch.shutdown()
-
       success
     }
   }
@@ -154,8 +150,6 @@ class ForecastCrunchSpec extends CrunchTestLike {
         val forecastSummary = interestingPaxLoads(cms)
         forecastSummary == expectedForecast
     }
-
-    crunch.shutdown()
 
     success
   }
@@ -211,8 +205,6 @@ class ForecastCrunchSpec extends CrunchTestLike {
         waitTimeOneMinuteBeforeMidnight < waitTimeAtMidnight
     }
 
-    crunch.shutdown
-
     success
   }
 
@@ -239,8 +231,6 @@ class ForecastCrunchSpec extends CrunchTestLike {
         val forecastSummary = interestingPaxLoads(ps.crunchMinutes)
         forecastSummary == expectedForecast
     }
-
-    crunch.shutdown()
 
     success
   }
@@ -294,8 +284,6 @@ class ForecastCrunchSpec extends CrunchTestLike {
         crunchForecastArrivals == expectedForecastArrivals
     }
 
-    crunch.shutdown()
-
     success
   }
 
@@ -323,8 +311,6 @@ class ForecastCrunchSpec extends CrunchTestLike {
         val crunchForecastArrivals = ps.flights.values.map(_.apiFlight).toSet
         crunchForecastArrivals == expectedForecastArrivals
     }
-
-    crunch.shutdown()
 
     success
   }
@@ -358,8 +344,6 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
         crunchForecastArrivals == expectedForecastArrivals
     }
-
-    crunch.shutdown()
 
     success
   }
@@ -397,8 +381,6 @@ class ForecastCrunchSpec extends CrunchTestLike {
         crunchForecastArrivals == expectedForecastArrivals
     }
 
-    crunch.shutdown()
-
     success
   }
 
@@ -434,8 +416,6 @@ class ForecastCrunchSpec extends CrunchTestLike {
         flightCodes == expectedFlightCodes
     }
 
-    crunch.shutdown()
-
     success
   }
 
@@ -465,8 +445,6 @@ class ForecastCrunchSpec extends CrunchTestLike {
         val actPax = flightsWithSplits.values.head.apiFlight.ActPax
         actPax == expectedActPax
     }
-
-    crunch.shutdown()
 
     success
   }

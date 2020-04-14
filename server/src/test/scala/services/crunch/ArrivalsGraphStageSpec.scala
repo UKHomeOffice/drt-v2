@@ -57,8 +57,6 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
           arrivals == expectedArrivals
       }
 
-      crunch.shutdown
-
       success
     }
 
@@ -79,8 +77,6 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
           val portStateSources = ps.flights.values.flatMap(_.apiFlight.FeedSources).toSet
           portStateSources == expected
       }
-
-      crunch.shutdown
 
       success
     }
@@ -108,8 +104,6 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
           portStateSources == expected
       }
 
-      crunch.shutdown
-
       success
     }
 
@@ -130,8 +124,6 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
           val domDoesNotExist = !ps.flights.contains(UniqueArrival(arrivalDom))
           intExists && domDoesNotExist
       }
-
-      crunch.shutdown
 
       success
     }

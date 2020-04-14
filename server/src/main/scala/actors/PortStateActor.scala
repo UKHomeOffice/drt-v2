@@ -55,6 +55,7 @@ class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: Askabl
       state.staffMinutes ++= ps.staffMinutes
       state.flights ++= ps.flights
       log.info(s"Finished setting state (${state.crunchMinutes.all.size} crunch minutes, ${state.staffMinutes.all.size} staff minutes, ${state.flights.all.size} flights)")
+      sender() ! Ack
 
     case StreamInitialized => sender() ! Ack
 

@@ -352,8 +352,6 @@ class AclFeedSpec extends CrunchTestLike {
           flightsResult == expected
       }
 
-      crunch.shutdown
-
       success
     }
 
@@ -383,8 +381,6 @@ class AclFeedSpec extends CrunchTestLike {
           flightsResult == expected
       }
 
-      crunch.shutdown
-
       success
     }
 
@@ -410,13 +406,13 @@ class AclFeedSpec extends CrunchTestLike {
 
       val expected = initialLive.map(_.copy(FeedSources = Set(LiveFeedSource))) ++ newAcl.map(_.copy(FeedSources = Set(AclFeedSource)))
 
+      println(s"expected: $expected")
       crunch.portStateTestProbe.fishForMessage(3 seconds) {
         case ps: PortState =>
           val flightsResult = ps.flights.values.map(_.apiFlight).toSet
+          println(s"\n\ngot $flightsResult")
           flightsResult == expected
       }
-
-      crunch.shutdown
 
       success
     }
@@ -449,8 +445,6 @@ class AclFeedSpec extends CrunchTestLike {
           val flightsResult = ps.flights.values.map(_.apiFlight).toSet
           flightsResult == expected
       }
-
-      crunch.shutdown
 
       success
     }
@@ -485,8 +479,6 @@ class AclFeedSpec extends CrunchTestLike {
           voyageNos == expected
       }
 
-      crunch.shutdown()
-
       success
     }
 
@@ -511,8 +503,6 @@ class AclFeedSpec extends CrunchTestLike {
 
       val nonEmptyFlightsList = List(aclArrival.copy(FeedSources = Set(AclFeedSource)))
       val expected = List(nonEmptyFlightsList)
-
-      crunch.shutdown()
 
       portStateFlightLists.distinct === expected
     }
