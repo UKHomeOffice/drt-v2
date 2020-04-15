@@ -1,6 +1,7 @@
 package test.controllers
 
 import akka.actor.{ActorRef, ActorSystem}
+import akka.pattern.ask
 import akka.stream.Materializer
 import akka.util.Timeout
 import controllers.AirportConfProvider
@@ -18,7 +19,6 @@ import play.api.http.HeaderNames
 import play.api.mvc.{Action, AnyContent, InjectedController, Session}
 import services.SDate
 import spray.json._
-import test.ResetData
 import test.TestActors.ResetActor
 import test.feeds.test.CSVFixtures
 import test.roles.MockRoles
@@ -63,15 +63,16 @@ class TestController @Inject()(implicit val config: Configuration,
 
   def resetData(): Future[Unit] = {
     system.actorSelection(s"akka://${portCode.toString.toLowerCase}-drt-actor-system/user/TestActor-ResetData").resolveOne().map(actor => {
-
       log.info(s"Sending reset message")
 
-      actor ! ResetData
+      actor.ask(ResetActor)
     })
 
+    // Fix this
     liveArrivalsTestActor.map(_ ! ResetActor)
     apiManifestsTestActor.map(_ ! ResetActor)
     staffMovementsTestActor.map(_ ! ResetActor)
+
   }
 
   def addArrival(): Action[AnyContent] = Action {

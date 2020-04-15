@@ -64,7 +64,7 @@ class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: Askabl
     case StreamFailure(t) => log.error(s"Stream failed", t)
 
     case flightsWithSplits: FlightsWithSplitsDiff =>
-      log.debug(s"Processing incoming FlightsWithSplits")
+      log.info(s"Processing incoming FlightsWithSplits")
 
       val diff = flightsWithSplits.applyTo(state, nowMillis)
 

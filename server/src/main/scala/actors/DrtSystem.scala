@@ -223,13 +223,16 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   lazy val liveCrunchStateActor: AskableActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
   lazy val forecastCrunchStateActor: AskableActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
-//  lazy val portStateActor: ActorRef = system.actorOf(PortStateActor.props(liveCrunchStateActor, forecastCrunchStateActor, now, liveDaysAhead), name = "port-state-actor")
 
-  lazy val lookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
-  lazy val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(None, Sizes.oneMegaByte, "crunch-live-state-actor", airportConfig.queuesByTerminal, now, expireAfterMillis)))
-  lazy val queuesActor: ActorRef = lookups.queueMinutesActor(classOf[MinutesActor[CrunchMinute, TQM]])
-  lazy val staffActor: ActorRef = lookups.staffMinutesActor(classOf[MinutesActor[StaffMinute, TM]])
-  lazy val portStateActor: ActorRef = system.actorOf(Props(new PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now)))
+  override lazy val portStateActor: ActorRef = if (config.get[Boolean]("feature-flags.use-partitioned-state")) {
+    val lookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+    val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(None, Sizes.oneMegaByte, "crunch-live-state-actor", airportConfig.queuesByTerminal, now, expireAfterMillis)))
+    val queuesActor: ActorRef = lookups.queueMinutesActor(classOf[MinutesActor[CrunchMinute, TQM]])
+    val staffActor: ActorRef = lookups.staffMinutesActor(classOf[MinutesActor[StaffMinute, TM]])
+    system.actorOf(Props(new PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now)))
+  } else {
+    system.actorOf(PortStateActor.props(liveCrunchStateActor, forecastCrunchStateActor, now, liveDaysAhead), name = "port-state-actor")
+  }
 
   lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, Option(params.snapshotIntervalVm)), name = "voyage-manifests-actor")
   lazy val lookup: ManifestLookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
@@ -268,6 +271,12 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   else
     PortDeskLimits.fixed(airportConfig)
 
+  val startDeskRecs: () => UniqueKillSwitch = () => {
+    val (millisToCrunchActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDeskRecs, now, params.recrunchOnStart, params.forecastMaxDays, maxDesksProviders)
+    portStateActor ! SetCrunchActor(millisToCrunchActor)
+    deskRecsKillSwitch
+  }
+
   def run(): Unit = {
     val futurePortStates: Future[(Option[PortState], Option[PortState], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[RegisteredArrivals])] = {
       val maybeLivePortState = initialStateFuture[PortState](liveCrunchStateActor)
@@ -291,12 +300,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         system.log.info(s"Successfully restored initial state for App")
         val initialPortState: Option[PortState] = mergePortStates(maybeForecastState, maybeLiveState)
         initialPortState.foreach(ps => portStateActor ! ps)
-
-        val startDeskRecs: () => UniqueKillSwitch = () => {
-          val (millisToCrunchActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDeskRecs, now, params.recrunchOnStart, params.forecastMaxDays, maxDesksProviders)
-          portStateActor ! SetCrunchActor(millisToCrunchActor)
-          deskRecsKillSwitch
-        }
 
         val (manifestRequestsSource, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
 

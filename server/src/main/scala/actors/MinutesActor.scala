@@ -41,7 +41,7 @@ class MinutesActor[A, B](now: () => SDateLike,
 
   val minutesBuffer: mutable.Map[B, MinuteLike[A, B]] = mutable.Map[B, MinuteLike[A, B]]()
   var maybeUpdateSubscriber: Option[AskableActorRef] = None
-  var subscriberIsReady: Boolean = true
+  var subscriberIsReady: Boolean = false
 
   override def receive: Receive = {
     case StreamInitialized => sender() ! Ack
@@ -53,6 +53,7 @@ class MinutesActor[A, B](now: () => SDateLike,
     case SetSimulationActor(subscriber) =>
       log.info(s"Received subscriber actor")
       maybeUpdateSubscriber = Option(subscriber)
+      subscriberIsReady = true
 
     case SetSimulationSourceReady =>
       subscriberIsReady = true
@@ -91,17 +92,21 @@ class MinutesActor[A, B](now: () => SDateLike,
 
     case container: MinutesContainer[A, B] =>
       val replyTo = sender()
-      val eventualUpdatesDiff = updateByTerminalDayAndGetDiff(container)
-      if (maybeUpdateSubscriber.isDefined) {
-        eventualUpdatesDiff.collect {
-          case Some(diffMinutesContainer) =>
-            minutesBuffer ++= diffMinutesContainer.minutes.map(m => (m.key, m))
-            handleSubscriberRequest()
-        }
-      }
-      eventualUpdatesDiff.onComplete(_ => replyTo ! Ack)
+      handleUpdatesAndAck(container, replyTo)
 
     case u => log.warn(s"Got an unexpected message: $u")
+  }
+
+  def handleUpdatesAndAck(container: MinutesContainer[A, B], replyTo: ActorRef): Unit = {
+    val eventualUpdatesDiff = updateByTerminalDayAndGetDiff(container)
+    if (maybeUpdateSubscriber.isDefined) {
+      eventualUpdatesDiff.collect {
+        case Some(diffMinutesContainer) =>
+          minutesBuffer ++= diffMinutesContainer.minutes.map(m => (m.key, m))
+          handleSubscriberRequest()
+      }
+    }
+    eventualUpdatesDiff.onComplete(_ => replyTo ! Ack)
   }
 
   private def handleSubscriberRequest(): Unit = (maybeUpdateSubscriber, minutesBuffer.nonEmpty, subscriberIsReady) match {
@@ -166,13 +171,16 @@ class MinutesActor[A, B](now: () => SDateLike,
   }
 
   def updateByTerminalDayAndGetDiff(container: MinutesContainer[A, B]): Future[Option[MinutesContainer[A, B]]] = {
-    val eventualUpdatedMinutesDiff = container.minutes
-      .groupBy(simMin => (simMin.terminal, SDate(simMin.minute).getLocalLastMidnight))
+    val eventualUpdatedMinutesDiff = groupByTerminalAndDay(container)
       .map {
         case ((terminal, day), terminalDayMinutes) => handleUpdateAndGetDiff(terminal, day, terminalDayMinutes)
       }
     combineEventualContainers(eventualUpdatedMinutesDiff).map(Option(_))
   }
+
+  def groupByTerminalAndDay(container: MinutesContainer[A, B]): Map[(Terminal, SDateLike), Iterable[MinuteLike[A, B]]] =
+    container.minutes
+      .groupBy(simMin => (simMin.terminal, SDate(simMin.minute).getLocalLastMidnight))
 
   private def combineAndSendOptionalResult(eventualUpdatedMinutesDiff: Iterable[Future[MinutesContainer[A, B]]],
                                            replyTo: ActorRef): Unit =
