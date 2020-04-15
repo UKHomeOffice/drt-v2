@@ -20,7 +20,7 @@ import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services.SDate
 import services.graphstages.Crunch
 import test.TestActors.{TestStaffMovementsActor, _}
-import test.feeds.test.{CSVFixtures, TestFixtureFeed, TestManifestsActor}
+import test.feeds.test.{CSVFixtures, TestArrivalsActor, TestFixtureFeed, TestManifestsActor}
 import test.roles.TestUserRoleProvider
 
 import scala.concurrent.duration._
@@ -28,11 +28,17 @@ import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 import scala.util.Success
 
+trait TestDrtSystemInterface {
+  val restartActor: ActorRef
+  val testArrivalActor: ActorRef
+  val testManifestsActor: ActorRef
+}
+
 class TestDrtSystem(override val actorSystem: ActorSystem,
                     override val config: Configuration,
                     override val airportConfig: AirportConfig)
                    (implicit actorMaterializer: Materializer, ec: ExecutionContext)
-  extends DrtSystem(actorSystem, config, airportConfig) {
+  extends DrtSystem(actorSystem, config, airportConfig) with TestDrtSystemInterface {
 
   import DrtStaticParameters._
 
@@ -69,6 +75,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem,
   override lazy val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[TestFixedPointsActor], now))
   override lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[TestStaffMovementsActor], now, time48HoursAgo(now)), "TestActor-StaffMovements")
   override lazy val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(classOf[TestAggregatedArrivalsActor]))
+  val testArrivalActor: ActorRef = actorSystem.actorOf(Props(classOf[TestArrivalsActor]), s"TestActor-LiveArrivals")
 
   system.log.warning(s"Using test System")
 
@@ -76,8 +83,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem,
 
   override lazy val voyageManifestsHistoricSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = voyageManifestTestSourceGraph
 
-
-  val testFeed: Source[ArrivalsFeedResponse, Cancellable] = TestFixtureFeed(system)
+  val testFeed: Source[ArrivalsFeedResponse, Cancellable] = TestFixtureFeed(system, testArrivalActor)
 
   config.getOptional[String]("test.live_fixture_csv").foreach { file =>
     implicit val timeout: Timeout = Timeout(250 milliseconds)
@@ -109,7 +115,9 @@ class TestDrtSystem(override val actorSystem: ActorSystem,
     fixedPointsActor,
     staffMovementsActor,
     portStateActor,
-    aggregatedArrivalsActor
+    aggregatedArrivalsActor,
+    testManifestsActor,
+    testArrivalActor
     )
 
   val restartActor: ActorRef = system.actorOf(Props(RestartActor(startSystem, testActors)), name = "TestActor-ResetData")
