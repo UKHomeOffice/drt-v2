@@ -3,7 +3,7 @@ package services.exports.summaries.flights
 import java.util.UUID
 
 import actors.pointInTime.ArrivalsReadActor
-import actors.{ArrivalsState, GetState}
+import actors.{ArrivalsState, GetState, Ports}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import akka.pattern.AskableActorRef
@@ -31,7 +31,7 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
   def flightsForDay(day: MillisSinceEpoch, terminal: Terminal, fs: FeedSource, persistenceId: String): Future[Option[String]] = {
     val exportDay = SDate(day)
 
-    val snapshotDate = SDate(day).getLocalNextMidnight.addDays(3).addHours(3)
+    val snapshotDate = SDate(day).getLocalNextMidnight.addDays(2)
 
     val feedActor: ActorRef = system
       .actorOf(
@@ -72,7 +72,7 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
 
     val arrivalsForDay = arrivals
       .values
-      .filter(_.Terminal == terminal)
+      .filter(a => a.Terminal == terminal && !Ports.domesticPorts.contains(a.Origin))
       .filter(_.PcpTime
         .exists(
           t => t > exportDay.getLocalLastMidnight.millisSinceEpoch && t < exportDay.getLocalNextMidnight.millisSinceEpoch
