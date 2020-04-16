@@ -2,9 +2,8 @@ package services.crunch
 
 import actors.Sizes.oneMegaByte
 import actors._
-import actors.acking.AckingReceiver.Ack
 import actors.daily.PassengersActor
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.AskableActorRef
 import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
@@ -12,7 +11,6 @@ import akka.stream.{ActorMaterializer, OverflowStrategy, QueueOfferResult, Uniqu
 import akka.testkit.{TestKit, TestProbe}
 import akka.util.Timeout
 import drt.auth.STNAccess
-import drt.shared.CrunchApi._
 import drt.shared.PaxTypes._
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.Queue
@@ -23,6 +21,7 @@ import graphs.SinkToSourceBridge
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
+import org.specs2.specification.AfterAll
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services._
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
@@ -37,79 +36,26 @@ import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor}
 import scala.languageFeature.postfixOps
 
 
-class CrunchStateMockActor extends Actor {
-  override def receive: Receive = {
-    case _ => sender() ! Ack
-  }
-}
-
-class PortStateTestActor(liveActor: ActorRef,
-                         forecastActor: ActorRef,
-                         probe: ActorRef,
-                         now: () => SDateLike,
-                         liveDaysAhead: Int)
-  extends PortStateActor(liveActor, forecastActor, now, liveDaysAhead) {
-  override def splitDiffAndSend(diff: PortStateDiff): Unit = {
-    super.splitDiffAndSend(diff)
-    probe ! state.immutable
-  }
-}
-
-object PortStateTestActor {
-  def props(liveActor: ActorRef,
-            forecastActor: ActorRef,
-            probe: ActorRef,
-            now: () => SDateLike,
-            liveDaysAhead: Int): Props =
-    Props(new PortStateTestActor(liveActor, forecastActor, probe, now, liveDaysAhead))
-}
-
-case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
-                                      forecastArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
-                                      liveArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
-                                      manifestsLiveInput: SourceQueueWithComplete[ManifestsFeedResponse],
-                                      shiftsInput: SourceQueueWithComplete[ShiftAssignments],
-                                      fixedPointsInput: SourceQueueWithComplete[FixedPointAssignments],
-                                      liveStaffMovementsInput: SourceQueueWithComplete[Seq[StaffMovement]],
-                                      forecastStaffMovementsInput: SourceQueueWithComplete[Seq[StaffMovement]],
-                                      actualDesksAndQueuesInput: SourceQueueWithComplete[ActualDeskStats],
-                                      portStateTestProbe: TestProbe,
-                                      baseArrivalsTestProbe: TestProbe,
-                                      forecastArrivalsTestProbe: TestProbe,
-                                      liveArrivalsTestProbe: TestProbe,
-                                      aggregatedArrivalsActor: ActorRef,
-                                      portStateActor: ActorRef) {
-  def shutdown(): Unit = {
-    baseArrivalsInput.complete()
-    forecastArrivalsInput.complete()
-    liveArrivalsInput.complete()
-    manifestsLiveInput.complete()
-    shiftsInput.complete()
-    fixedPointsInput.complete()
-    liveStaffMovementsInput.complete()
-    forecastStaffMovementsInput.complete()
-    actualDesksAndQueuesInput.complete()
-  }
-}
-
-
 object H2Tables extends {
   val profile = slick.jdbc.H2Profile
 } with Tables
 
 class CrunchTestLike
   extends TestKit(ActorSystem("StreamingCrunchTests"))
-    with SpecificationLike {
+    with SpecificationLike
+    with AfterAll {
   isolated
   sequential
+
+  override def afterAll: Unit = {
+    TestKit.shutdownActorSystem(system)
+  }
 
   implicit val actorSystem: ActorSystem = system
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
   val log: Logger = LoggerFactory.getLogger(getClass)
-
-  val crunchStateMockActor: ActorRef = system.actorOf(Props(classOf[CrunchStateMockActor]), "crunch-state-mock")
 
   val oneMinuteMillis = 60000
   val uniquifyArrivals: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] =
@@ -178,10 +124,6 @@ class CrunchTestLike
     else MilliDate(SDate(a.Scheduled).millisSinceEpoch)
   }
 
-  def createPortStateActor(testProbe: TestProbe, now: () => SDateLike): ActorRef = {
-    system.actorOf(PortStateTestActor.props(crunchStateMockActor, crunchStateMockActor, testProbe.ref, now, 100), name = "port-state-actor")
-  }
-
   def testProbe(name: String): TestProbe = TestProbe(name = name)
 
   def runCrunchGraph(initialForecastBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap(),
@@ -225,8 +167,11 @@ class CrunchTestLike
     val snapshotInterval = 1
     val manifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], oneMegaByte, now, DrtStaticParameters.expireAfterMillis, Option(snapshotInterval)))
 
-    val portStateActor = createPortStateActor(portStateProbe, now)
-    initialPortState.foreach(ps => portStateActor ! ps)
+    //    val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(None, Sizes.oneMegaByte, "flights", airportConfig.queuesByTerminal, now, expireAfterMillis)))
+    //    val portStateActor = PartitionedPortStateTestActor(portStateProbe, flightsActor, now, airportConfig)
+    val portStateActor = PortStateTestActor(portStateProbe, now)
+    val askablePortStateActor: AskableActorRef = portStateActor
+    if (initialPortState.isDefined) Await.ready(askablePortStateActor.ask(initialPortState.get)(new Timeout(1 second)), 1 second)
 
     val portDescRecs = DesksAndWaitsPortProvider(airportConfig, cruncher)
 

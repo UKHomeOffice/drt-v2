@@ -28,7 +28,7 @@ import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
-import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared.FlightsApi.Flights
 import drt.shared.MilliTimes._
 import drt.shared.Terminals._
@@ -184,11 +184,11 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   implicit val system: ActorSystem = actorSystem
 
-  val params = DrtConfigParameters(config)
+  val params: DrtConfigParameters = DrtConfigParameters(config)
 
   import DrtStaticParameters._
 
-  val aclFeed = AclFeed(params.ftpServer, params.username, params.path, airportConfig.feedPortCode, AclFeed.aclToPortMapping(airportConfig.portCode), params.aclMinFileSizeInBytes)
+  val aclFeed: AclFeed = AclFeed(params.ftpServer, params.username, params.path, airportConfig.feedPortCode, AclFeed.aclToPortMapping(airportConfig.portCode), params.aclMinFileSizeInBytes)
 
   system.log.info(s"Path to splits file ${ConfigFactory.load.getString("passenger_splits_csv_url")}")
 
@@ -223,10 +223,15 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
 
   lazy val liveCrunchStateActor: AskableActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
   lazy val forecastCrunchStateActor: AskableActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
-  lazy val portStateActor: ActorRef = system.actorOf(PortStateActor.props(liveCrunchStateActor, forecastCrunchStateActor, now, liveDaysAhead), name = "port-state-actor")
+
+  override lazy val portStateActor: ActorRef = if (config.get[Boolean]("feature-flags.use-partitioned-state")) {
+    PartitionedPortStateActor(now, airportConfig)
+  } else {
+    PortStateActor(now, liveCrunchStateActor, forecastCrunchStateActor)
+  }
 
   lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, Option(params.snapshotIntervalVm)), name = "voyage-manifests-actor")
-  lazy val lookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
+  lazy val lookup: ManifestLookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
 
   lazy val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](100, OverflowStrategy.backpressure)
 
@@ -262,6 +267,12 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   else
     PortDeskLimits.fixed(airportConfig)
 
+  val startDeskRecs: () => UniqueKillSwitch = () => {
+    val (millisToCrunchActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDeskRecs, now, params.recrunchOnStart, params.forecastMaxDays, maxDesksProviders)
+    portStateActor ! SetCrunchActor(millisToCrunchActor)
+    deskRecsKillSwitch
+  }
+
   def run(): Unit = {
     val futurePortStates: Future[(Option[PortState], Option[PortState], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[RegisteredArrivals])] = {
       val maybeLivePortState = initialStateFuture[PortState](liveCrunchStateActor)
@@ -285,12 +296,6 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
         system.log.info(s"Successfully restored initial state for App")
         val initialPortState: Option[PortState] = mergePortStates(maybeForecastState, maybeLiveState)
         initialPortState.foreach(ps => portStateActor ! ps)
-
-        val startDeskRecs: () => UniqueKillSwitch = () => {
-          val (millisToCrunchActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDeskRecs, now, params.recrunchOnStart, params.forecastMaxDays, maxDesksProviders)
-          portStateActor ! SetCrunchActor(millisToCrunchActor)
-          deskRecsKillSwitch
-        }
 
         val (manifestRequestsSource, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
 
