@@ -1,34 +1,26 @@
 package services.graphstages
 
-import akka.testkit.{TestKit, TestProbe}
-import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.MilliTimes.oneDayMillis
-import drt.shared.Terminals.T1
-import drt.shared._
-import org.specs2.specification.AfterEach
-import services.arrivals.ArrivalDataSanitiser
-import services.crunch.CrunchTestLike
-import services.{PcpArrival, SDate}
-
-import scala.collection.mutable
-import scala.concurrent.duration._
-import actors.ArrivalGenerator.arrival
 import akka.stream.QueueOfferResult
 import akka.stream.scaladsl.SourceQueueWithComplete
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
+import drt.shared._
 import org.specs2.execute.Success
 import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import services.SDate
+import services.crunch.CrunchTestLike
+
+import scala.concurrent.duration._
 
 class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
   "Given an empty port state" >> {
     val nowString = "2020-04-01T00:00"
     val crunch = runCrunchGraph(now = () => SDate(nowString))
 
-    def fishForArrivalWithActPax(actPax: Option[Int]): Success = {
+    def fishForArrivalWithActPax(actPax: Option[Int], status: String = ""): Success = {
       crunch.portStateTestProbe.fishForMessage(1 second) {
         case PortState(flights, _, _) =>
-          flights.values.toList.exists(fws => fws.apiFlight.flightCode == "BA0001" && fws.apiFlight.ActPax == actPax)
+          flights.values.toList.exists(fws => fws.apiFlight.flightCode == "BA0001" && fws.apiFlight.ActPax == actPax && fws.apiFlight.Status == ArrivalStatus(status))
       }
 
       success
@@ -50,17 +42,17 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
 
     "When I send an ACL arrival with 100 pax and a forecast arrival with undefined pax" >> {
       offerArrivalAndWait(crunch.baseArrivalsInput, scheduled = nowString, actPax = Option(100))
-      offerArrivalAndWait(crunch.forecastArrivalsInput, scheduled = nowString, actPax = None)
+      offerArrivalAndWait(crunch.forecastArrivalsInput, scheduled = nowString, actPax = None, status = "updated")
       "I should see it with 100 ActPax in the port state" >> {
-        fishForArrivalWithActPax(Option(100))
+        fishForArrivalWithActPax(Option(100), "updated")
       }
     }
 
     "When I send an ACL arrival with 100 pax and a forecast arrival with 0 pax" >> {
       offerArrivalAndWait(crunch.baseArrivalsInput, scheduled = nowString, actPax = Option(100))
-      offerArrivalAndWait(crunch.forecastArrivalsInput, scheduled = nowString, actPax = Option(0))
+      offerArrivalAndWait(crunch.forecastArrivalsInput, scheduled = nowString, actPax = Option(0), "updated")
       "I should see it with 100 ActPax in the port state - ignoring the forecast feed's zero" >> {
-        fishForArrivalWithActPax(Option(100))
+        fishForArrivalWithActPax(Option(100), "updated")
       }
     }
 
@@ -74,18 +66,18 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
 
     "When I send an ACL arrival with 100 pax and a live arrival with undefined pax" >> {
       offerArrivalAndWait(crunch.baseArrivalsInput, scheduled = nowString, actPax = Option(100))
-      offerArrivalAndWait(crunch.liveArrivalsInput, scheduled = nowString, actPax = None)
+      offerArrivalAndWait(crunch.liveArrivalsInput, scheduled = nowString, actPax = None, "updated")
       "I should see it with 100 ActPax in the port state" >> {
-        fishForArrivalWithActPax(Option(100))
+        fishForArrivalWithActPax(Option(100), "updated")
       }
     }
 
     "When I send an ACL arrival with 100 pax and a live arrival with 0 pax, scheduled more than 3 hours after now" >> {
       val scheduled3Hrs5MinsAfterNow = SDate(nowString).addHours(3).addMinutes(5).toISOString()
       offerArrivalAndWait(crunch.baseArrivalsInput, scheduled = scheduled3Hrs5MinsAfterNow, actPax = Option(100))
-      offerArrivalAndWait(crunch.liveArrivalsInput, scheduled = scheduled3Hrs5MinsAfterNow, actPax = Option(0))
+      offerArrivalAndWait(crunch.liveArrivalsInput, scheduled = scheduled3Hrs5MinsAfterNow, actPax = Option(0), "updated")
       "I should see it with 100 ActPax in the port state" >> {
-        fishForArrivalWithActPax(Option(100))
+        fishForArrivalWithActPax(Option(100), "updated")
       }
     }
 
@@ -127,8 +119,9 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
   def offerArrivalAndWait(input: SourceQueueWithComplete[ArrivalsFeedResponse],
                           scheduled: String,
                           actPax: Option[Int],
+                          status: String = "",
                           actChoxDt: String = ""): QueueOfferResult = {
-    val arrivalLive = ArrivalGenerator.arrival("BA0001", schDt = scheduled, actPax = actPax, actChoxDt = actChoxDt)
+    val arrivalLive = ArrivalGenerator.arrival("BA0001", schDt = scheduled, actPax = actPax, status = ArrivalStatus(status), actChoxDt = actChoxDt)
     offerAndWait(input, ArrivalsFeedSuccess(Flights(Seq(arrivalLive))))
   }
 }
