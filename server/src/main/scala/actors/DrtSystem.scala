@@ -224,11 +224,7 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val liveCrunchStateActor: AskableActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
   lazy val forecastCrunchStateActor: AskableActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
 
-  override lazy val portStateActor: ActorRef = if (config.get[Boolean]("feature-flags.use-partitioned-state")) {
-    PartitionedPortStateActor(now, airportConfig)
-  } else {
-    PortStateActor(now, liveCrunchStateActor, forecastCrunchStateActor)
-  }
+  override lazy val portStateActor: ActorRef = PortStateActor(now, liveCrunchStateActor, forecastCrunchStateActor)
 
   lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, Option(params.snapshotIntervalVm)), name = "voyage-manifests-actor")
   lazy val lookup: ManifestLookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))

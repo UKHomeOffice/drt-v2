@@ -8,7 +8,7 @@ import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{DeskRecMinute, DeskRecMinutes, MillisSinceEpoch}
-import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.Queues.EeaDesk
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.{ApiFlightWithSplits, PortCode, Queues, SDateLike, TQM}
@@ -22,7 +22,7 @@ import scala.collection.immutable.{Map, NumericRange}
 import scala.concurrent.duration._
 
 case class MockDesksAndWaitsPort(minutesToCrunch: Int, crunchOffsetMinutes: Int) extends DesksAndWaitsPortProviderLike {
-  override def flightsToLoads(flights: FlightsWithSplits,
+  override def flightsToLoads(flights: FlightsWithSplitsDiff,
                               crunchStartMillis: MillisSinceEpoch): Map[TQM, LoadMinute] =
     Seq(LoadMinute(T1, Queues.EeaDesk, crunchStartMillis, 0, 0)).map(lm => (lm.uniqueId, lm)).toMap
 

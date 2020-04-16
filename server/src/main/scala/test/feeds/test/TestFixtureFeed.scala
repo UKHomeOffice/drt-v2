@@ -1,8 +1,8 @@
 package test.feeds.test
 
 import akka.NotUsed
-import akka.actor.{Actor, ActorLogging, ActorSystem, Cancellable, Props}
-import akka.pattern.AskableActorRef
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props}
+import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import drt.shared.Arrival
@@ -20,10 +20,9 @@ object TestFixtureFeed {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply(actorSystem: ActorSystem): Source[ArrivalsFeedResponse, Cancellable] = {
+  def apply(actorSystem: ActorSystem, testArrivalActor: ActorRef): Source[ArrivalsFeedResponse, Cancellable] = {
 
     log.info(s"About to create test Arrival")
-    val askableTestArrivalActor: AskableActorRef = actorSystem.actorOf(Props(classOf[TestArrivalsActor]), s"TestActor-LiveArrivals")
 
     implicit val timeout: Timeout = Timeout(1 seconds)
 
@@ -32,7 +31,7 @@ object TestFixtureFeed {
     val tickingSource = Source
       .tick(initialDelayImmediately, pollFrequency, NotUsed)
       .mapAsync(1) { _ =>
-        askableTestArrivalActor
+        testArrivalActor
           .ask(GetArrivals)
           .map { case Arrivals(arrivals) => arrivals }
           .recover { case _ => List() }

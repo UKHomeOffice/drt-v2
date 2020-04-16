@@ -2,23 +2,20 @@ package test
 
 import actors._
 import actors.acking.AckingReceiver.Ack
-import actors.daily.TerminalDayQueuesActor
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, PoisonPill, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props}
 import akka.pattern.{AskableActorRef, ask}
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{KillSwitch, Materializer, OverflowStrategy}
 import akka.util.Timeout
 import drt.auth.Role
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
-import drt.shared.Terminals.Terminal
-import drt.shared.{AirportConfig, Arrival, MilliTimes, PortCode, TM, TQM}
+import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.{AirportConfig, Arrival, PortCode}
 import graphs.SinkToSourceBridge
 import manifests.passengers.BestAvailableManifest
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services.SDate
-import services.graphstages.Crunch
 import test.TestActors.{TestStaffMovementsActor, _}
 import test.feeds.test.{CSVFixtures, TestArrivalsActor, TestFixtureFeed, TestManifestsActor}
 import test.roles.TestUserRoleProvider
@@ -53,22 +50,8 @@ class TestDrtSystem(override val actorSystem: ActorSystem,
   override lazy val liveCrunchStateActor: AskableActorRef = system.actorOf(testLiveCrunchStateProps, name = "crunch-live-state-actor")
   override lazy val forecastCrunchStateActor: AskableActorRef = system.actorOf(testForecastCrunchStateProps, name = "crunch-forecast-state-actor")
 
-  override lazy val portStateActor: ActorRef = if (config.get[Boolean]("feature-flags.use-partitioned-state")) {
-    println(s"\n\n*** using partitioned state\n\n")
-    val lookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
-    val flightsActor: ActorRef = system.actorOf(Props(new TestFlightsStateActor(None, Sizes.oneMegaByte, "crunch-live-state-actor", airportConfig.queuesByTerminal, now, expireAfterMillis)))
-    val reset: Class[_] => (Terminal, MillisSinceEpoch) => Future[Any] = (clazz: Class[_]) => (terminal: Terminal, day: MillisSinceEpoch) => {
-      val date = SDate(day, Crunch.europeLondonTimeZone)
-      val actor = system.actorOf(Props(clazz, date.getFullYear(), date.getMonth(), date.getDate(), terminal, now))
-      actor.ask(ResetActor)(new Timeout(5 seconds)).map { _ => actor ! PoisonPill }
-    }
-    val queuesActor: ActorRef = system.actorOf(Props(new TestMinutesActor[CrunchMinute, TQM](now, lookups.queuesByTerminal.keys, lookups.primaryCrunchLookup, lookups.secondaryCrunchLookup, lookups.updateCrunchMinutes, reset(classOf[TestTerminalDayQueuesActor]))))
-    val staffActor: ActorRef = system.actorOf(Props(new TestMinutesActor[StaffMinute, TM](now, lookups.queuesByTerminal.keys, lookups.primaryStaffLookup, lookups.secondaryStaffLookup, lookups.updateStaffMinutes, reset(classOf[TestTerminalDayStaffActor]))))
-    system.actorOf(Props(new TestPartitionedPortStateActor(flightsActor, queuesActor, staffActor, now)))
-  } else {
-    println(s"\n\n*** using non-partitioned state\n\n")
+  override lazy val portStateActor: ActorRef =
     system.actorOf(Props(new TestPortStateActor(liveCrunchStateActor, forecastCrunchStateActor, now, 2)), name = "port-state-actor")
-  }
 
   override lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[TestVoyageManifestsActor], now, expireAfterMillis, params.snapshotIntervalVm), name = "voyage-manifests-actor")
   override lazy val shiftsActor: ActorRef = system.actorOf(Props(classOf[TestShiftsActor], now, timeBeforeThisMonth(now)))

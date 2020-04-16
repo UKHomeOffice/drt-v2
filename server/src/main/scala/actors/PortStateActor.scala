@@ -6,13 +6,12 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
+import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.crunch.deskrecs.GetFlights
-import services.graphstages.Crunch
 import services.graphstages.Crunch.{LoadMinute, Loads}
 
 import scala.collection.mutable
@@ -133,7 +132,7 @@ class PortStateActor(liveStateActor: AskableActorRef,
       val start = SDate(startMillis)
       val end = SDate(endMillis)
       log.info(s"Got request for flights between ${start.toISOString()} - ${end.toISOString()}")
-      sender() ! FlightsWithSplits(state.flights.range(start, end))
+      sender() ! FlightsWithSplitsDiff(state.flights.range(start, end).values.toList, List())
 
     case unexpected => log.warn(s"Got unexpected: $unexpected")
   }

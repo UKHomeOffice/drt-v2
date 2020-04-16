@@ -1,7 +1,7 @@
 package services.crunch.deskrecs
 
 import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
-import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.TQM
 import drt.shared.Terminals.Terminal
 import services.crunch.desklimits.TerminalDeskLimitsLike
@@ -13,7 +13,7 @@ trait DesksAndWaitsPortProviderLike {
   val minutesToCrunch: Int
   val crunchOffsetMinutes: Int
 
-  def flightsToLoads(flights: FlightsWithSplits,
+  def flightsToLoads(flights: FlightsWithSplitsDiff,
                      crunchStartMillis: MillisSinceEpoch): Map[TQM, LoadMinute]
 
   def loadsToDesks(minuteMillis: NumericRange[MillisSinceEpoch],

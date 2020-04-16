@@ -7,7 +7,7 @@ import akka.stream._
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
-import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
@@ -71,14 +71,14 @@ object RunnableDeskRecs {
   private def flightsToCrunch(askablePortStateActor: AskableActorRef)
                              (minutesToCrunch: Int, crunchStartMillis: MillisSinceEpoch)
                              (implicit executionContext: ExecutionContext,
-                              timeout: Timeout): Future[(MillisSinceEpoch, FlightsWithSplits)] = askablePortStateActor
+                              timeout: Timeout): Future[(MillisSinceEpoch, FlightsWithSplitsDiff)] = askablePortStateActor
     .ask(GetFlights(crunchStartMillis, crunchStartMillis + (minutesToCrunch * 60000L)))
-    .asInstanceOf[Future[FlightsWithSplits]]
+    .asInstanceOf[Future[FlightsWithSplitsDiff]]
     .map { fs => (crunchStartMillis, fs) }
     .recoverWith {
       case t =>
         log.error("Failed to fetch flights from PortStateActor", t)
-        Future((crunchStartMillis, FlightsWithSplits(List(), List())))
+        Future((crunchStartMillis, FlightsWithSplitsDiff(List(), List())))
     }
 
   def start(portStateActor: ActorRef,
