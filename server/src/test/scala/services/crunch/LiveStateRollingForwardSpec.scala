@@ -41,8 +41,6 @@ class LiveStateRollingForwardSpec extends CrunchTestLike {
     stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival))
     stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival, futureArrival2))
 
-    crunch.shutdown
-
     success
   }
 
@@ -69,8 +67,6 @@ class LiveStateRollingForwardSpec extends CrunchTestLike {
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival2))))
 
     stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival, futureArrival2))
-
-    crunch.shutdown
 
     success
   }

@@ -23,6 +23,7 @@ import graphs.SinkToSourceBridge
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
+import org.specs2.specification.AfterAll
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services._
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
@@ -78,20 +79,7 @@ case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete
                                       forecastArrivalsTestProbe: TestProbe,
                                       liveArrivalsTestProbe: TestProbe,
                                       aggregatedArrivalsActor: ActorRef,
-                                      portStateActor: ActorRef) {
-  def shutdown(): Unit = {
-    baseArrivalsInput.complete()
-    forecastArrivalsInput.complete()
-    liveArrivalsInput.complete()
-    manifestsLiveInput.complete()
-    shiftsInput.complete()
-    fixedPointsInput.complete()
-    liveStaffMovementsInput.complete()
-    forecastStaffMovementsInput.complete()
-    actualDesksAndQueuesInput.complete()
-  }
-}
-
+                                      portStateActor: ActorRef)
 
 object H2Tables extends {
   val profile = slick.jdbc.H2Profile
@@ -99,9 +87,12 @@ object H2Tables extends {
 
 class CrunchTestLike
   extends TestKit(ActorSystem("StreamingCrunchTests"))
-    with SpecificationLike {
+    with SpecificationLike
+    with AfterAll {
   isolated
   sequential
+
+  override def afterAll: Unit = TestKit.shutdownActorSystem(system)
 
   implicit val actorSystem: ActorSystem = system
   implicit val materializer: ActorMaterializer = ActorMaterializer()

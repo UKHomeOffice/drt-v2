@@ -355,8 +355,6 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
         zeroAtNoon && nonZeroAtOnePm
     }
 
-    crunch.shutdown()
-
     success
   }
 
@@ -408,8 +406,6 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
         }
         zeroAtNoon && nonZeroAtOnePm
     }
-
-    crunch.shutdown()
 
     success
   }
@@ -495,8 +491,6 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
         fewerAtNoon
     }
 
-    crunch.shutdown()
-
     success
   }
 
@@ -548,8 +542,6 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
         val crunchDays = cms.map(cm => SDate(cm._1.minute).toISODateOnly).toSet
         crunchDays == expectedCrunchDays
     }
-
-    crunch.shutdown()
 
     success
   }

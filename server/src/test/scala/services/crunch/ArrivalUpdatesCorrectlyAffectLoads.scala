@@ -127,8 +127,6 @@ ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
       success
     }
 
-    crunch.shutdown
-
     success
   }
 

@@ -49,8 +49,6 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
           resultSummary == expected
       }
 
-      crunch.shutdown
-
       success
     }
 
@@ -88,8 +86,6 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
           val resultSummary = paxLoadsFromPortState(ps, 30)
           resultSummary == expected
       }
-
-      crunch.shutdown
 
       success
     }

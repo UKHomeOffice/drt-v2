@@ -352,8 +352,6 @@ class AclFeedSpec extends CrunchTestLike {
           flightsResult == expected
       }
 
-      crunch.shutdown
-
       success
     }
 
@@ -382,8 +380,6 @@ class AclFeedSpec extends CrunchTestLike {
           val flightsResult = ps.flights.values.map(_.apiFlight).toSet
           flightsResult == expected
       }
-
-      crunch.shutdown
 
       success
     }
@@ -416,8 +412,6 @@ class AclFeedSpec extends CrunchTestLike {
           flightsResult == expected
       }
 
-      crunch.shutdown
-
       success
     }
 
@@ -449,8 +443,6 @@ class AclFeedSpec extends CrunchTestLike {
           val flightsResult = ps.flights.values.map(_.apiFlight).toSet
           flightsResult == expected
       }
-
-      crunch.shutdown
 
       success
     }
@@ -485,8 +477,6 @@ class AclFeedSpec extends CrunchTestLike {
           voyageNos == expected
       }
 
-      crunch.shutdown()
-
       success
     }
 
@@ -511,8 +501,6 @@ class AclFeedSpec extends CrunchTestLike {
 
       val nonEmptyFlightsList = List(aclArrival.copy(FeedSources = Set(AclFeedSource)))
       val expected = List(nonEmptyFlightsList)
-
-      crunch.shutdown()
 
       portStateFlightLists.distinct === expected
     }

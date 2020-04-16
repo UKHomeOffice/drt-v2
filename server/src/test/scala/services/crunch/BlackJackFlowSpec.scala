@@ -58,8 +58,6 @@ class BlackJackFlowSpec extends CrunchTestLike {
         actDesks == expected
     }
 
-    crunch.shutdown
-
     success
   }
 
@@ -104,8 +102,6 @@ class BlackJackFlowSpec extends CrunchTestLike {
 
         actDesks == expected
     }
-
-    crunch.shutdown
 
     success
   }

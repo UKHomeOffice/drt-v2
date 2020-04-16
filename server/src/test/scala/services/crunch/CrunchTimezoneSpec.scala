@@ -91,8 +91,6 @@ class CrunchTimezoneSpec extends CrunchTestLike {
             resultSummary == expected
         }
 
-        crunch.shutdown()
-
         success
       }
 
