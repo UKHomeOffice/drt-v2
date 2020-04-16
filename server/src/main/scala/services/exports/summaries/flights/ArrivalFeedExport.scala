@@ -31,9 +31,11 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
   def flightsForDay(day: MillisSinceEpoch, terminal: Terminal, fs: FeedSource, persistenceId: String): Future[Option[String]] = {
     val exportDay = SDate(day)
 
+    val snapshotDate = SDate(day).getLocalNextMidnight.addDays(3).addHours(3)
+
     val feedActor: ActorRef = system
       .actorOf(
-        ArrivalsReadActor.props(SDate(day).getLocalNextMidnight.addHours(3),
+        ArrivalsReadActor.props(snapshotDate,
           persistenceId,
           fs
         ),
@@ -58,18 +60,26 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
       }
   }.recover {
     case e: Throwable =>
-      system.log.error(s"Unable to recover flights for ${SDate(day).toISODateOnly} in $fs")
+      system.log.error(e, s"Unable to recover flights for ${SDate(day).toISODateOnly} in $fs")
       None
   }
 
-  def arrivalsToCsvRows(terminal: Terminal, arrivals: mutable.SortedMap[UniqueArrival, Arrival], exportDay: SDateLike) = {
-    val csvData = arrivals
+  def arrivalsToCsvRows(
+                         terminal: Terminal,
+                         arrivals: mutable.SortedMap[UniqueArrival, Arrival],
+                         exportDay: SDateLike
+                       ): Iterable[List[String]] = {
+
+    val arrivalsForDay = arrivals
       .values
-      .filter(a => a.Actual match {
-        case Some(act) =>
-          (SDate(act).toISODateOnly == exportDay.toISODateOnly) && a.Terminal == terminal
-        case _ => false
-      })
+      .filter(_.Terminal == terminal)
+      .filter(_.PcpTime
+        .exists(
+          t => t > exportDay.getLocalLastMidnight.millisSinceEpoch && t < exportDay.getLocalNextMidnight.millisSinceEpoch
+        )
+      )
+
+    val csvData = arrivalsForDay
       .map(a =>
         TerminalFlightsSummary.arrivalAsRawCsvValuesWithTransfer(
           a,
