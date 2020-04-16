@@ -16,7 +16,7 @@ import services.crunch.deskrecs.GetFlights
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-class PartitionedPortStateSpec extends CrunchTestLike {
+class PortStateRequestsSpec extends CrunchTestLike {
   implicit val timeout: Timeout = new Timeout(1 second)
 
   "Given an empty PartitionedPortState" >> {
