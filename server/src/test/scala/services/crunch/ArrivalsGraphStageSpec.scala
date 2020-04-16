@@ -1,18 +1,21 @@
 package services.crunch
 
+import akka.stream.QueueOfferResult
+import akka.stream.scaladsl.SourceQueueWithComplete
 import controllers.ArrivalGenerator
 import controllers.ArrivalGenerator.arrival
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
-import drt.shared.FlightsApi.Flights
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.Queues.EeaDesk
 import drt.shared.SplitRatiosNs.SplitSources.TerminalAverage
 import drt.shared.Terminals.T1
 import drt.shared._
+import org.specs2.execute.Success
 import org.specs2.matcher.Scope
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser.{EeaFlag, InTransit, ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, PaxAge, VoyageManifest}
-import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
+import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
 
 import scala.collection.immutable.{List, SortedMap}
@@ -38,7 +41,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       now = () => dateNow,
       initialPortState = Option(PortState(SortedMap(arrival_v2_with_chox_time.unique -> ApiFlightWithSplits(arrival_v2_with_chox_time, Set(terminalSplits))), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())),
       initialLiveArrivals = mutable.SortedMap[UniqueArrival, Arrival]() ++ List(arrival_v2_with_chox_time).map(a => (a.unique, a))
-    )
+      )
 
     var messages: Set[Arrival] = Set()
   }
@@ -67,8 +70,8 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       val voyageManifests = ManifestsFeedSuccess(DqManifests("", Set(
         VoyageManifest(EventTypes.DC, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("10:25"), List(
           PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(22)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None)
-        ))
-      )))
+          ))
+        )))
 
       offerAndWait(crunch.manifestsLiveInput, voyageManifests)
 
@@ -90,7 +93,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
       val aclFlight = Flights(List(
         ArrivalGenerator.arrival(iata = "BA0002", schDt = forecastScheduled, actPax = Option(10), feedSources = Set(AclFeedSource))
-      ))
+        ))
 
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlight))
 
@@ -137,5 +140,4 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     }
 
   }
-
 }
