@@ -1,7 +1,7 @@
 package services.graphstages
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.FlightsWithSplitsDiff
+import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
@@ -14,9 +14,9 @@ import scala.collection.immutable.Map
 object WorkloadCalculator {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def flightLoadMinutes(flights: FlightsWithSplitsDiff, defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]]): SplitMinutes = {
+  def flightLoadMinutes(flights: FlightsWithSplits, defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]]): SplitMinutes = {
     val uniqueFlights: Iterable[ApiFlightWithSplits] = flights
-      .flightsToUpdate
+      .flights.toMap.values.toList
       .sortBy(_.apiFlight.ActPax.getOrElse(0))
       .map { fws => (CodeShareKeyOrderedBySchedule(fws), fws) }
       .toMap.values

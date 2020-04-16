@@ -1,7 +1,7 @@
 package services.crunch.deskrecs
 
 import drt.shared.CrunchApi.{DeskRecMinute, DeskRecMinutes, MillisSinceEpoch}
-import drt.shared.FlightsApi.FlightsWithSplitsDiff
+import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.{Queue, Transfer}
 import drt.shared.Terminals.Terminal
 import drt.shared.{AirportConfig, PaxTypeAndQueue, TQM}
@@ -51,7 +51,7 @@ case class DesksAndWaitsPortProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
   def terminalDescRecs(terminal: Terminal): DesksAndWaitsTerminalProvider =
     deskrecs.DesksAndWaitsTerminalProvider(slas, flexedQueuesPriority, tryCrunch, eGateBankSize)
 
-  def queueLoadsFromFlights(flights: FlightsWithSplitsDiff): Map[TQM, LoadMinute] = WorkloadCalculator
+  def queueLoadsFromFlights(flights: FlightsWithSplits): Map[TQM, LoadMinute] = WorkloadCalculator
     .flightLoadMinutes(flights, terminalProcessingTimes).minutes
     .groupBy {
       case (TQM(t, q, m), _) => val finalQueueName = divertedQueues.getOrElse(q, q)
@@ -82,7 +82,7 @@ case class DesksAndWaitsPortProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
     }
     .toMap
 
-  override def flightsToLoads(flights: FlightsWithSplitsDiff,
+  override def flightsToLoads(flights: FlightsWithSplits,
                               crunchStartMillis: MillisSinceEpoch): Map[TQM, LoadMinute] = queueLoadsFromFlights(flights)
 
   override def loadsToDesks(minuteMillis: NumericRange[MillisSinceEpoch],

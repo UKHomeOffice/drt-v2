@@ -7,7 +7,7 @@ import akka.stream._
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
-import drt.shared.FlightsApi.FlightsWithSplitsDiff
+import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
@@ -55,7 +55,7 @@ object RunnableDeskRecs {
               val crunchEndMillis = SDate(crunchStartMillis).addMinutes(portDeskRecs.minutesToCrunch).millisSinceEpoch
               val minuteMillis = crunchStartMillis until crunchEndMillis by 60000
 
-              log.info(s"Crunching ${flights.flightsToUpdate.size} flights, ${minuteMillis.length} minutes (${SDate(crunchStartMillis).toISOString} to ${SDate(crunchEndMillis).toISOString})")
+              log.info(s"Crunching ${flights.flights.size} flights, ${minuteMillis.length} minutes (${SDate(crunchStartMillis).toISOString()} to ${SDate(crunchEndMillis).toISOString()})")
 
               val loads = portDeskRecs.flightsToLoads(flights, crunchStartMillis)
 
@@ -71,14 +71,14 @@ object RunnableDeskRecs {
   private def flightsToCrunch(askablePortStateActor: AskableActorRef)
                              (minutesToCrunch: Int, crunchStartMillis: MillisSinceEpoch)
                              (implicit executionContext: ExecutionContext,
-                              timeout: Timeout): Future[(MillisSinceEpoch, FlightsWithSplitsDiff)] = askablePortStateActor
+                              timeout: Timeout): Future[(MillisSinceEpoch, FlightsWithSplits)] = askablePortStateActor
     .ask(GetFlights(crunchStartMillis, crunchStartMillis + (minutesToCrunch * 60000L)))
-    .asInstanceOf[Future[FlightsWithSplitsDiff]]
+    .mapTo[FlightsWithSplits]
     .map { fs => (crunchStartMillis, fs) }
     .recoverWith {
       case t =>
         log.error("Failed to fetch flights from PortStateActor", t)
-        Future((crunchStartMillis, FlightsWithSplitsDiff(List(), List())))
+        Future((crunchStartMillis, FlightsWithSplits(List())))
     }
 
   def start(portStateActor: ActorRef,
