@@ -148,8 +148,6 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
       AggregatedArrival(expiredArrival, defaultAirportConfig.portCode.iata)
     )
 
-    crunch.shutdown
-
     arrivalsResult === expected
   }
 

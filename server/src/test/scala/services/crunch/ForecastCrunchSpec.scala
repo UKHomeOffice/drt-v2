@@ -247,13 +247,10 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(now = () => SDate(forecastScheduled).addDays(-1))
 
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals))
-    crunch.shutdown()
 
     val gotAnyFlights = crunch.portStateTestProbe.receiveWhile(2 seconds) {
       case PortState(flights, _, _) => flights.size
     }.exists(_ > 0)
-
-    crunch.shutdown()
 
     gotAnyFlights === false
   }
