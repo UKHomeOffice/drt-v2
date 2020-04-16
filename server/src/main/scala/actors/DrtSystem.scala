@@ -225,13 +225,9 @@ case class DrtSystem(actorSystem: ActorSystem, config: Configuration, airportCon
   lazy val forecastCrunchStateActor: AskableActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
 
   override lazy val portStateActor: ActorRef = if (config.get[Boolean]("feature-flags.use-partitioned-state")) {
-    val lookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
-    val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(None, Sizes.oneMegaByte, "crunch-live-state-actor", airportConfig.queuesByTerminal, now, expireAfterMillis)))
-    val queuesActor: ActorRef = lookups.queueMinutesActor(classOf[MinutesActor[CrunchMinute, TQM]])
-    val staffActor: ActorRef = lookups.staffMinutesActor(classOf[MinutesActor[StaffMinute, TM]])
-    system.actorOf(Props(new PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now)))
+    PartitionedPortStateActor(now, airportConfig)
   } else {
-    system.actorOf(PortStateActor.props(liveCrunchStateActor, forecastCrunchStateActor, now, liveDaysAhead), name = "port-state-actor")
+    PortStateActor(now, liveCrunchStateActor, forecastCrunchStateActor)
   }
 
   lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, Option(params.snapshotIntervalVm)), name = "voyage-manifests-actor")

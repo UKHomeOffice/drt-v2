@@ -1,7 +1,8 @@
 package actors
 
+import actors.DrtStaticParameters.liveDaysAhead
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
-import akka.actor.{Actor, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import drt.shared.CrunchApi._
@@ -21,11 +22,22 @@ import scala.language.postfixOps
 
 
 object PortStateActor {
-  def props(liveStateActor: AskableActorRef, forecastStateActor: AskableActorRef, now: () => SDateLike, liveDaysAhead: Int): Props =
+  def apply(now: () => SDateLike, liveCrunchStateActor: AskableActorRef, forecastCrunchStateActor: AskableActorRef)
+           (implicit system: ActorSystem): ActorRef = {
+    system.actorOf(PortStateActor.props(liveCrunchStateActor, forecastCrunchStateActor, now, liveDaysAhead), name = "port-state-actor")
+  }
+
+  def props(liveStateActor: AskableActorRef,
+            forecastStateActor: AskableActorRef,
+            now: () => SDateLike,
+            liveDaysAhead: Int): Props =
     Props(new PortStateActor(liveStateActor, forecastStateActor, now, liveDaysAhead))
 }
 
-class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: AskableActorRef, now: () => SDateLike, liveDaysAhead: Int) extends Actor {
+class PortStateActor(liveStateActor: AskableActorRef,
+                     forecastStateActor: AskableActorRef,
+                     now: () => SDateLike,
+                     liveDaysAhead: Int) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
@@ -126,9 +138,12 @@ class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: Askabl
     case unexpected => log.warn(s"Got unexpected: $unexpected")
   }
 
-  def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = Option(state.window(SDate(start), SDate(end)))
+  def stateForPeriod(start: MillisSinceEpoch,
+                     end: MillisSinceEpoch): Option[PortState] = Option(state.window(SDate(start), SDate(end)))
 
-  def stateForPeriodForTerminal(start: MillisSinceEpoch, end: MillisSinceEpoch, terminal: Terminal): Option[PortState] = Option(state.windowWithTerminalFilter(SDate(start), SDate(end), Seq(terminal)))
+  def stateForPeriodForTerminal(start: MillisSinceEpoch,
+                                end: MillisSinceEpoch,
+                                terminal: Terminal): Option[PortState] = Option(state.windowWithTerminalFilter(SDate(start), SDate(end), Seq(terminal)))
 
   val flightMinutesBuffer: mutable.Set[MillisSinceEpoch] = mutable.Set[MillisSinceEpoch]()
   val loadMinutesBuffer: mutable.Map[TQM, LoadMinute] = mutable.Map[TQM, LoadMinute]()
@@ -142,7 +157,7 @@ class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: Askabl
           .sequence(Seq(
             askAndLogOnFailure(liveStateActor, live, "live crunch persistence request failed"),
             askAndLogOnFailure(forecastStateActor, forecast, "forecast crunch persistence request failed"))
-          )
+                    )
           .recover { case t => log.error("A future failed", t) }
           .onComplete { _ =>
             log.debug(s"Sending Ack")
@@ -203,7 +218,8 @@ class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: Askabl
 
   def liveStart(now: () => SDateLike): SDateLike = now().getLocalLastMidnight.addDays(-1)
 
-  def liveEnd(now: () => SDateLike, liveStateDaysAhead: Int): SDateLike = now().getLocalNextMidnight.addDays(liveStateDaysAhead)
+  def liveEnd(now: () => SDateLike,
+              liveStateDaysAhead: Int): SDateLike = now().getLocalNextMidnight.addDays(liveStateDaysAhead)
 
   def forecastEnd(now: () => SDateLike): SDateLike = now().getLocalNextMidnight.addDays(360)
 

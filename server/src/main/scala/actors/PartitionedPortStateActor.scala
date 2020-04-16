@@ -1,7 +1,8 @@
 package actors
 
+import actors.DrtStaticParameters.expireAfterMillis
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
-import akka.actor.{Actor, ActorRef}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.{AskableActorRef, pipe}
 import akka.util.Timeout
 import drt.shared.CrunchApi._
@@ -13,9 +14,18 @@ import services.SDate
 import services.crunch.deskrecs.GetFlights
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 
+object PartitionedPortStateActor {
+  def apply(now: () => SDateLike, airportConfig: AirportConfig)(implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
+    val lookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+    val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(None, Sizes.oneMegaByte, "crunch-live-state-actor", airportConfig.queuesByTerminal, now, expireAfterMillis)))
+    val queuesActor: ActorRef = lookups.queueMinutesActor(classOf[MinutesActor[CrunchMinute, TQM]])
+    val staffActor: ActorRef = lookups.staffMinutesActor(classOf[MinutesActor[StaffMinute, TM]])
+    system.actorOf(Props(new PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now)))
+  }
+}
 
 class PartitionedPortStateActor(flightsActor: AskableActorRef,
                                 queuesActor: AskableActorRef,

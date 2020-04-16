@@ -2,9 +2,8 @@ package services.crunch
 
 import actors.Sizes.oneMegaByte
 import actors._
-import actors.acking.AckingReceiver.Ack
 import actors.daily.PassengersActor
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.AskableActorRef
 import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
@@ -12,8 +11,6 @@ import akka.stream.{ActorMaterializer, OverflowStrategy, QueueOfferResult, Uniqu
 import akka.testkit.{TestKit, TestProbe}
 import akka.util.Timeout
 import drt.auth.STNAccess
-import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.PaxTypes._
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.Queue
@@ -22,7 +19,6 @@ import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared._
 import graphs.SinkToSourceBridge
 import manifests.passengers.BestAvailableManifest
-import org.scalatest.BeforeAndAfterAll
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterAll
@@ -38,112 +34,6 @@ import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor}
 import scala.languageFeature.postfixOps
-
-
-class CrunchStateMockActor extends Actor {
-  override def receive: Receive = {
-    case _ => sender() ! Ack
-  }
-}
-
-class PortStateTestActor(liveActor: ActorRef,
-                         forecastActor: ActorRef,
-                         probe: ActorRef,
-                         now: () => SDateLike,
-                         liveDaysAhead: Int)
-  extends PortStateActor(liveActor, forecastActor, now, liveDaysAhead) {
-  override def splitDiffAndSend(diff: PortStateDiff): Unit = {
-    super.splitDiffAndSend(diff)
-    probe ! state.immutable
-  }
-}
-
-class PartitionedPortStateTestActor(probe: ActorRef,
-                                    flightsActor: AskableActorRef,
-                                    queuesActor: AskableActorRef,
-                                    staffActor: AskableActorRef,
-                                    now: () => SDateLike) extends PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now) {
-  var state: PortState = PortState.empty
-
-  override def receive: Receive = processMessage orElse {
-    case ps: PortState =>
-      val replyTo = sender()
-      log.info(s"Setting initial port state")
-      flightsActor.ask(FlightsWithSplitsDiff(ps.flights.values.toList, List())).flatMap { _ =>
-        queuesActor.ask(MinutesContainer(ps.crunchMinutes.values)).flatMap { _ =>
-          staffActor.ask(MinutesContainer(ps.staffMinutes.values))
-        }
-      }.foreach(_ => replyTo ! Ack)
-  }
-
-  override def askThenAck(message: Any, replyTo: ActorRef, actor: AskableActorRef): Unit = {
-    actor.ask(message).foreach { _ =>
-      message match {
-        case fwsd@FlightsWithSplitsDiff(updates, removals) if fwsd.nonEmpty =>
-          actor.ask(GetPortState(0L, Long.MaxValue)).mapTo[Option[FlightsWithSplits]].foreach {
-            case None => sendStateToProbe()
-            case Some(FlightsWithSplits(flights)) =>
-              val updatedFlights: SortedMap[UniqueArrival, ApiFlightWithSplits] = SortedMap[UniqueArrival, ApiFlightWithSplits]() ++ flights
-              state = state.copy(flights = updatedFlights)
-              sendStateToProbe()
-          }
-        case mc: MinutesContainer[_, _] =>
-          val minuteMillis = mc.minutes.map(_.minute)
-          mc.minutes.headOption match {
-            case None => sendStateToProbe()
-            case Some(minuteLike) if minuteLike.toMinute.isInstanceOf[CrunchMinute] =>
-              actor.ask(GetPortState(minuteMillis.min, minuteMillis.max)).mapTo[MinutesContainer[CrunchMinute, TQM]]
-                .foreach { container =>
-                  val updatedMinutes = state.crunchMinutes ++ container.minutes.map(ml => (ml.key, ml.toMinute))
-                  state = state.copy(crunchMinutes = updatedMinutes)
-                  sendStateToProbe()
-                }
-            case Some(minuteLike) if minuteLike.toMinute.isInstanceOf[StaffMinute] =>
-              actor.ask(GetPortState(minuteMillis.min, minuteMillis.max)).mapTo[MinutesContainer[StaffMinute, TM]]
-                .foreach { container =>
-                  val updatedMinutes = state.staffMinutes ++ container.minutes.map(ml => (ml.key, ml.toMinute))
-                  state = state.copy(staffMinutes = updatedMinutes)
-                  sendStateToProbe()
-                }
-          }
-        case _ => sendStateToProbe()
-      }
-      replyTo ! Ack
-    }
-  }
-
-  def sendStateToProbe(): Unit = {
-    probe ! state
-  }
-}
-
-case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
-                                      forecastArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
-                                      liveArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
-                                      manifestsLiveInput: SourceQueueWithComplete[ManifestsFeedResponse],
-                                      shiftsInput: SourceQueueWithComplete[ShiftAssignments],
-                                      fixedPointsInput: SourceQueueWithComplete[FixedPointAssignments],
-                                      liveStaffMovementsInput: SourceQueueWithComplete[Seq[StaffMovement]],
-                                      forecastStaffMovementsInput: SourceQueueWithComplete[Seq[StaffMovement]],
-                                      actualDesksAndQueuesInput: SourceQueueWithComplete[ActualDeskStats],
-                                      portStateTestProbe: TestProbe,
-                                      baseArrivalsTestProbe: TestProbe,
-                                      forecastArrivalsTestProbe: TestProbe,
-                                      liveArrivalsTestProbe: TestProbe,
-                                      aggregatedArrivalsActor: ActorRef,
-                                      portStateActor: ActorRef) {
-  def shutdown(): Unit = {
-    baseArrivalsInput.complete()
-    forecastArrivalsInput.complete()
-    liveArrivalsInput.complete()
-    manifestsLiveInput.complete()
-    shiftsInput.complete()
-    fixedPointsInput.complete()
-    liveStaffMovementsInput.complete()
-    forecastStaffMovementsInput.complete()
-    actualDesksAndQueuesInput.complete()
-  }
-}
 
 
 object H2Tables extends {
@@ -166,8 +56,6 @@ class CrunchTestLike
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
   val log: Logger = LoggerFactory.getLogger(getClass)
-
-  val crunchStateMockActor: ActorRef = system.actorOf(Props(classOf[CrunchStateMockActor]), "crunch-state-mock")
 
   val oneMinuteMillis = 60000
   val uniquifyArrivals: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] =
@@ -236,20 +124,6 @@ class CrunchTestLike
     else MilliDate(SDate(a.Scheduled).millisSinceEpoch)
   }
 
-  def createPortStateActor(testProbe: TestProbe, now: () => SDateLike): ActorRef = {
-    system.actorOf(Props(new PortStateTestActor(crunchStateMockActor, crunchStateMockActor, testProbe.ref, now, 100)), name = "port-state-actor")
-  }
-
-  def createPartitionedPortStateActor(testProbe: TestProbe,
-                                      flightsActor: ActorRef,
-                                      now: () => SDateLike,
-                                      airportConfig: AirportConfig): ActorRef = {
-    val lookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
-    val queuesActor = lookups.queueMinutesActor(classOf[MinutesActor[CrunchMinute, TQM]])
-    val staffActor = lookups.staffMinutesActor(classOf[MinutesActor[StaffMinute, TM]])
-    system.actorOf(Props(new PartitionedPortStateTestActor(testProbe.ref, flightsActor, queuesActor, staffActor, now)))
-  }
-
   def testProbe(name: String): TestProbe = TestProbe(name = name)
 
   def runCrunchGraph(initialForecastBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap(),
@@ -293,10 +167,9 @@ class CrunchTestLike
     val snapshotInterval = 1
     val manifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], oneMegaByte, now, DrtStaticParameters.expireAfterMillis, Option(snapshotInterval)))
 
-    val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(None, Sizes.oneMegaByte, "flights", airportConfig.queuesByTerminal, now, expireAfterMillis)))
-
-    val portStateActor = createPartitionedPortStateActor(portStateProbe, flightsActor, now, airportConfig)
-    //        val portStateActor = createPortStateActor(portStateProbe, now)
+    //    val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(None, Sizes.oneMegaByte, "flights", airportConfig.queuesByTerminal, now, expireAfterMillis)))
+    //    val portStateActor = PartitionedPortStateTestActor(portStateProbe, flightsActor, now, airportConfig)
+    val portStateActor = PortStateTestActor(portStateProbe, now)
     val askablePortStateActor: AskableActorRef = portStateActor
     if (initialPortState.isDefined) Await.ready(askablePortStateActor.ask(initialPortState.get)(new Timeout(1 second)), 1 second)
 
