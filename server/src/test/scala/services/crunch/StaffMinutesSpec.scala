@@ -89,8 +89,6 @@ class StaffMinutesSpec extends CrunchTestLike {
           deployments == expectedCrunchDeployments
       }
 
-      crunch.shutdown
-
       success
     }
 
@@ -151,8 +149,6 @@ class StaffMinutesSpec extends CrunchTestLike {
 
           deployments == expectedCrunchDeployments
       }
-
-      crunch.shutdown
 
       success
     }
@@ -220,8 +216,6 @@ class StaffMinutesSpec extends CrunchTestLike {
           println(s"deployments: $deployments")
           deployments == expectedCrunchDeployments
       }
-
-      crunch.shutdown
 
       success
     }
@@ -297,8 +291,6 @@ class StaffMinutesSpec extends CrunchTestLike {
           deployments == expectedCrunchDeployments
       }
 
-      crunch.shutdown
-
       success
     }
   }
@@ -335,8 +327,6 @@ class StaffMinutesSpec extends CrunchTestLike {
 
         (staffMillis, staff) == Tuple2(expectedMillis, expectedStaff)
     }
-
-    crunch.shutdown
 
     success
   }
@@ -389,8 +379,6 @@ class StaffMinutesSpec extends CrunchTestLike {
         staffAvailable == expectedStaffAvailable
     }
 
-    crunch.shutdown
-
     success
   }
 
@@ -425,8 +413,6 @@ class StaffMinutesSpec extends CrunchTestLike {
 
         actualAvailableAndMovements == expectedStaffAvailableAndMovements
     }
-
-    crunch.shutdown
 
     success
   }
@@ -467,8 +453,6 @@ class StaffMinutesSpec extends CrunchTestLike {
 
         actualAvailableAndMovements == expectedStaffAvailableAndMovements
     }
-
-    crunch.shutdown
 
     success
   }
@@ -517,8 +501,6 @@ class StaffMinutesSpec extends CrunchTestLike {
         staffMovements == expectedStaffMovements
     }
 
-    crunch.shutdown
-
     success
   }
 
@@ -565,8 +547,6 @@ class StaffMinutesSpec extends CrunchTestLike {
         fixedPoints == expectedFixedPoints
     }
 
-    crunch.shutdown
-
     success
   }
 
@@ -601,8 +581,6 @@ class StaffMinutesSpec extends CrunchTestLike {
         }
         actualMinutes == expectedStaffMinutes
     }
-
-    crunch.shutdown
 
     success
   }
@@ -651,8 +629,6 @@ class StaffMinutesSpec extends CrunchTestLike {
         actualMinutes == expectedStaffMinutes
     }
 
-    crunch.shutdown
-
     success
   }
 
@@ -689,8 +665,6 @@ class StaffMinutesSpec extends CrunchTestLike {
         val isoMinutes = staffMinutes.values.toSeq.sortBy(_.minute).map(m => SDate(m.minute).toISOString())
         isoMinutes == expectedIsoMinutes
     }
-
-    crunch.shutdown
 
     success
   }
@@ -729,8 +703,6 @@ class StaffMinutesSpec extends CrunchTestLike {
         isoMinutes == expectedIsoMinutes
     }
 
-    crunch.shutdown
-
     success
   }
 
@@ -767,8 +739,6 @@ class StaffMinutesSpec extends CrunchTestLike {
         val isoMinutes = staffMinutes.values.toSeq.sortBy(_.minute).map(m => SDate(m.minute).toISOString())
         isoMinutes == expectedIsoMinutes
     }
-
-    crunch.shutdown
 
     success
   }

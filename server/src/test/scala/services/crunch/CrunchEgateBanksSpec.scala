@@ -65,8 +65,6 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
           resultSummary == expected
       }
 
-      crunch.shutdown
-
       success
     }
   }

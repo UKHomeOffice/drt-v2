@@ -75,8 +75,6 @@ class ApplicationRestartSpec extends CrunchTestLike {
 
     crunch.portStateTestProbe.expectNoMessage(2 second)
 
-    crunch.shutdown()
-
     success
   }
 }
