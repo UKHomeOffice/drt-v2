@@ -57,8 +57,6 @@ class ApiPaxNosCrunchSpecSpec extends CrunchTestLike {
         resultSummary == expected
     }
 
-    crunch.shutdown
-
     success
   }
 
@@ -83,8 +81,6 @@ class ApiPaxNosCrunchSpecSpec extends CrunchTestLike {
 
         resultSummary == expected
     }
-
-    crunch.shutdown
 
     success
   }

@@ -47,9 +47,7 @@ class CrunchTestLike
   isolated
   sequential
 
-  override def afterAll: Unit = {
-    TestKit.shutdownActorSystem(system)
-  }
+  override def afterAll: Unit = TestKit.shutdownActorSystem(system)
 
   implicit val actorSystem: ActorSystem = system
   implicit val materializer: ActorMaterializer = ActorMaterializer()

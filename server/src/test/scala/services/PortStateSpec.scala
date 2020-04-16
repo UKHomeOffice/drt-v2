@@ -36,7 +36,6 @@ class PortStateSpec extends CrunchTestLike {
 
         staffUpdated && paxLoadUnchanged
     }
-    crunch.shutdown
 
     success
   }

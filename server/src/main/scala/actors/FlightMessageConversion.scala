@@ -61,13 +61,14 @@ object FlightMessageConversion {
   def flightWithSplitsToMessage(f: ApiFlightWithSplits): FlightWithSplitsMessage = {
     FlightWithSplitsMessage(
       Option(FlightMessageConversion.apiFlightToFlightMessage(f.apiFlight)),
-      f.splits.map(apiSplitsToMessage).toList)
+      f.splits.map(apiSplitsToMessage).toList,
+      lastUpdated = f.lastUpdated)
   }
 
   def flightWithSplitsFromMessage(fm: FlightWithSplitsMessage): ApiFlightWithSplits = ApiFlightWithSplits(
     FlightMessageConversion.flightMessageToApiFlight(fm.flight.get),
     fm.splits.map(sm => splitMessageToApiSplits(sm)).toSet,
-    None
+    lastUpdated = fm.lastUpdated
     )
 
   def apiSplitsToMessage(s: Splits): SplitMessage = {

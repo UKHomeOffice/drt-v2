@@ -72,7 +72,8 @@ object PortStateMessageConversion {
       deployedDesks = cmm.simDesks,
       deployedWait = cmm.simWait,
       actDesks = cmm.actDesks,
-      actWait = cmm.actWait
+      actWait = cmm.actWait,
+      lastUpdated = cmm.lastUpdated
       )
   }
 
@@ -84,7 +85,8 @@ object PortStateMessageConversion {
       minute = roundedMinute,
       shifts = smm.shifts.getOrElse(0),
       fixedPoints = smm.fixedPoints.getOrElse(0),
-      movements = smm.movements.getOrElse(0)
+      movements = smm.movements.getOrElse(0),
+      lastUpdated = smm.lastUpdated
       )
   }
 
@@ -93,7 +95,18 @@ object PortStateMessageConversion {
     minute = Option(sm.minute),
     shifts = Option(sm.shifts),
     fixedPoints = Option(sm.fixedPoints),
-    movements = Option(sm.movements))
+    movements = Option(sm.movements),
+    lastUpdated = sm.lastUpdated)
+
+  def snapshotMessageToFlightsState(sm: CrunchStateSnapshotMessage, state: PortStateMutable): Unit = {
+    state.clear()
+    state.flights ++= flightsFromMessages(sm.flightWithSplits)
+  }
+
+  def flightsFromMessages(flightMessages: Seq[FlightWithSplitsMessage]): Seq[(UniqueArrival, ApiFlightWithSplits)] = flightMessages.map(message => {
+    val fws = flightWithSplitsFromMessage(message)
+    (fws.unique, fws)
+  })
 
   def portStateToSnapshotMessage(portState: PortStateMutable): CrunchStateSnapshotMessage = {
     CrunchStateSnapshotMessage(
@@ -135,6 +148,7 @@ object PortStateMessageConversion {
     simDesks = cm.deployedDesks,
     simWait = cm.deployedWait,
     actDesks = cm.actDesks,
-    actWait = cm.actWait
+    actWait = cm.actWait,
+    lastUpdated = cm.lastUpdated
     )
 }

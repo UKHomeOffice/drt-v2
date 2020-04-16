@@ -52,8 +52,6 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
           resultSummary == expected
       }
 
-      crunch.shutdown
-
       success
     }
   }
@@ -88,8 +86,6 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
         val resultSummary = paxLoadsFromPortState(ps, 1, SDate(scheduled))
         resultSummary == expected
     }
-
-    crunch.shutdown
 
     success
   }

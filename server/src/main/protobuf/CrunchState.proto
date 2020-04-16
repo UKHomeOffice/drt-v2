@@ -15,6 +15,7 @@ message CrunchStateSnapshotMessage {
 message FlightWithSplitsMessage {
     optional FlightMessage flight = 1;
     repeated SplitMessage splits = 2;
+    optional int64 lastUpdated = 3;
 }
 
 message SplitMessage {
@@ -46,6 +47,7 @@ message CrunchMinuteMessage {
     optional int32 simWait = 9;
     optional int32 actDesks = 10;
     optional int32 actWait = 11;
+    optional int64 lastUpdated = 12;
 }
 
 message StaffMinutesMessage {
@@ -58,6 +60,7 @@ message StaffMinuteMessage {
     optional int32 shifts = 4;
     optional int32 fixedPoints = 5;
     optional int32 movements = 6;
+    optional int64 lastUpdated = 7;
 
     optional int32 staff_OLD = 3;
 }
