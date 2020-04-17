@@ -35,11 +35,7 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
 
     val feedActor: ActorRef = system
       .actorOf(
-        ArrivalsReadActor.props(snapshotDate,
-          persistenceId,
-          fs
-        ),
-        name = s"arrival-read-$fs-${UUID.randomUUID()}"
+        ArrivalsReadActor.props(snapshotDate, persistenceId, fs), name = s"arrival-read-$fs-${UUID.randomUUID()}"
       )
 
     val askableActorRef: AskableActorRef = feedActor
@@ -73,11 +69,7 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
     val arrivalsForDay = arrivals
       .values
       .filter(a => a.Terminal == terminal && !Ports.domesticPorts.contains(a.Origin))
-      .filter(_.PcpTime
-        .exists(
-          t => t > exportDay.getLocalLastMidnight.millisSinceEpoch && t < exportDay.getLocalNextMidnight.millisSinceEpoch
-        )
-      )
+      .filter(a => pcpTimeIsOnDay(a, exportDay))
 
     val csvData = arrivalsForDay
       .map(a =>
@@ -89,6 +81,11 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
       )
     csvData
   }
+
+  def pcpTimeIsOnDay(arrival: Arrival, day: SDateLike): Boolean = arrival.PcpTime
+    .exists(
+      t => t > day.getLocalLastMidnight.millisSinceEpoch && t < day.getLocalNextMidnight.millisSinceEpoch
+    )
 
   def headingsSource: Source[Option[String], NotUsed] = Source(
     List(Option(TerminalFlightsSummary.rawArrivalHeadingsWithTransfer + lineEnding))
