@@ -341,15 +341,6 @@ object ArrivalHelper {
     }
   }
 
-  def bestPaxIncludingTransit(flight: Arrival): Int = {
-    (flight.ActPax.getOrElse(0), flight.MaxPax.getOrElse(0)) match {
-      case (actPaxIsLtE0, maxPaxValid) if actPaxIsLtE0 <= 0 && maxPaxValid > 0 => maxPaxValid
-      case (actPaxIsLt0, _) if actPaxIsLt0 <= 0 => defaultPax
-      case (actPax, _) => actPax
-      case _ => defaultPax
-    }
-  }
-
   def padTo4Digits(voyageNumber: String): String = {
     val prefix = voyageNumber.length match {
       case 4 => ""

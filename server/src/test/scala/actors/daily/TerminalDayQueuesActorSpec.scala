@@ -1,8 +1,8 @@
 package actors.daily
 
 import actors.GetState
-import akka.actor.Props
-import akka.pattern.AskableActorRef
+import akka.actor.{ActorRef, Props}
+import akka.pattern.ask
 import akka.util.Timeout
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, MinutesContainer}
 import drt.shared.Queues.{EeaDesk, Queue}
@@ -32,7 +32,7 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
   val myNow: () => SDateLike = () => date
 
   "Given an empty TerminalDayQueuesActor" >> {
-    val queuesActor: AskableActorRef = system.actorOf(Props(new TerminalDayQueuesActor(2020, 1, 1, terminal, myNow)))
+    val queuesActor: ActorRef = system.actorOf(Props(new TerminalDayQueuesActor(2020, 1, 1, terminal, myNow)))
 
     "When I send it a DeskRecMinute" >> {
       val drm = DeskRecMinute(terminal, queue, date.millisSinceEpoch, 1, 2, 3, 4)
@@ -62,7 +62,7 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
   }
 
   "Given a terminal-day queues actor for a day which does not any data" >> {
-    val terminalSummariesActor: AskableActorRef = actorForTerminalAndDate(terminal, date)
+    val terminalSummariesActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
     "When I ask for the state for that day" >> {
       "I should get back an empty map of crunch minutes" >> {
@@ -75,7 +75,7 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
     "When I send minutes to persist which lie within the day, and then ask for its state I should see the minutes sent" >> {
       val minutes = Set(crunchMinuteForDate(date))
       val container = MinutesContainer(minutes)
-      val terminalSummariesActor: AskableActorRef = actorForTerminalAndDate(terminal, date)
+      val terminalSummariesActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
       val eventual = sendMinuteQueryAndClear(container, terminalSummariesActor)
       val result = Await.result(eventual, 1 second)
@@ -86,7 +86,7 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
     "When I send minutes to persist which lie outside the day, and then ask for its state I should see None" >> {
       val otherDate = SDate("2020-01-02T00:00")
       val crunchMinutes = MinutesContainer(Set(crunchMinuteForDate(otherDate)))
-      val terminalSummariesActor: AskableActorRef = actorForTerminalAndDate(terminal, date)
+      val terminalSummariesActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
       val eventual = sendMinuteQueryAndClear(crunchMinutes, terminalSummariesActor)
       val result = Await.result(eventual, 1 second)
@@ -99,7 +99,7 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
       val inside = crunchMinuteForDate(date)
       val outside = crunchMinuteForDate(otherDate)
       val crunchMinutes = MinutesContainer(Set(inside, outside))
-      val terminalSummariesActor: AskableActorRef = actorForTerminalAndDate(terminal, date)
+      val terminalSummariesActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
       val eventual = sendMinuteQueryAndClear(crunchMinutes, terminalSummariesActor)
       val result = Await.result(eventual, 1 second)
@@ -109,7 +109,7 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
   }
 
   private def sendMinuteQueryAndClear(minutesContainer: MinutesContainer[CrunchMinute, TQM],
-                                      terminalSummariesActor: AskableActorRef): Future[Option[MinutesContainer[CrunchMinute, TQM]]] = {
+                                      terminalSummariesActor: ActorRef): Future[Option[MinutesContainer[CrunchMinute, TQM]]] = {
     terminalSummariesActor.ask(minutesContainer).flatMap { _ =>
       terminalSummariesActor.ask(GetState).mapTo[Option[MinutesContainer[CrunchMinute, TQM]]]
     }
@@ -119,7 +119,7 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
     CrunchMinute(terminal, EeaDesk, date.millisSinceEpoch, 1, 2, 3, 4, None, None, None, None)
   }
 
-  private def actorForTerminalAndDate(terminal: Terminal, date: SDateLike): AskableActorRef = {
+  private def actorForTerminalAndDate(terminal: Terminal, date: SDateLike): ActorRef = {
     system.actorOf(TerminalDayQueuesActor.props(date, terminal, () => date))
   }
 }

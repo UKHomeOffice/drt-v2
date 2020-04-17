@@ -2,7 +2,7 @@ package services.crunch.deskrecs
 
 import actors.acking.AckingReceiver._
 import akka.actor.ActorRef
-import akka.pattern.AskableActorRef
+import akka.pattern.ask
 import akka.stream._
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
 import akka.util.Timeout
@@ -31,7 +31,7 @@ object RunnableDeskRecs {
             timeout: Timeout = new Timeout(10 seconds)): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
-    val askablePortStateActor: AskableActorRef = portStateActor
+    val askablePortStateActor: ActorRef = portStateActor
 
     val crunchPeriodStartMillis: SDateLike => SDateLike = Crunch.crunchStartWithOffset(portDeskRecs.crunchOffsetMinutes)
 
@@ -68,7 +68,7 @@ object RunnableDeskRecs {
     RunnableGraph.fromGraph(graph).addAttributes(Attributes.inputBuffer(1, 1))
   }
 
-  private def flightsToCrunch(askablePortStateActor: AskableActorRef)
+  private def flightsToCrunch(askablePortStateActor: ActorRef)
                              (minutesToCrunch: Int, crunchStartMillis: MillisSinceEpoch)
                              (implicit executionContext: ExecutionContext,
                               timeout: Timeout): Future[(MillisSinceEpoch, FlightsWithSplits)] = askablePortStateActor

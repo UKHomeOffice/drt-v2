@@ -6,7 +6,7 @@ import akka.stream.scaladsl.SourceQueueWithComplete
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import server.feeds.{DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
 import services.OfferHandler
-import test.TestActors.ResetActor
+import test.TestActors.ResetData
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -33,7 +33,7 @@ class TestManifestsActor extends Actor with ActorLogging {
       }
 
 
-    case ResetActor =>
+    case ResetData =>
       maybeManifests = None
 
     case SubscribeResponseQueue(manifestsResponse) =>

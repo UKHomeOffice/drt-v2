@@ -5,7 +5,7 @@ import actors.Sizes.oneMegaByte
 import actors.daily.PassengersActor
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props, Scheduler}
-import akka.pattern.AskableActorRef
+import akka.pattern.ask
 import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
 import akka.util.Timeout
@@ -44,6 +44,7 @@ import services.crunch.{CrunchProps, CrunchSystem}
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.{DesksAndWaitsPortProvider, DesksAndWaitsPortProviderLike, RunnableDeskRecs}
 import services.graphstages.Crunch
+import slickdb.VoyageManifestPassengerInfoTable
 
 import scala.collection.mutable
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -55,45 +56,45 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   implicit val ec: ExecutionContext
   implicit val system: ActorSystem
 
+  println(s"\n\n*** running DrtSystemInterface\nn")
+
   val now: () => SDateLike = () => SDate.now()
   val purgeOldLiveSnapshots = false
   val purgeOldForecastSnapshots = true
 
   val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
   val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
-  val lookup: ManifestLookup
+  val lookup: ManifestLookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
 
   val config: Configuration
   val airportConfig: AirportConfig
   val params: DrtConfigParameters = DrtConfigParameters(config)
 
+  val alertsActor: ActorRef = system.actorOf(Props(AlertsActor(now)))
+  val liveBaseArrivalsActor: ActorRef = system.actorOf(Props(new LiveBaseArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-base-arrivals-actor")
+  val arrivalsImportActor: ActorRef = system.actorOf(Props(new ArrivalsImportActor()), name = "arrivals-import-actor")
+  val registeredArrivalsActor: ActorRef = system.actorOf(Props(new RegisteredArrivalsActor(oneMegaByte, Option(500), airportConfig.portCode, now, expireAfterMillis)), name = "registered-arrivals-actor")
+
   val portStateActor: ActorRef
   val shiftsActor: ActorRef
   val fixedPointsActor: ActorRef
   val staffMovementsActor: ActorRef
-  val alertsActor: ActorRef = system.actorOf(Props(classOf[AlertsActor], now))
+  val baseArrivalsActor: ActorRef
+  val forecastArrivalsActor: ActorRef
+  val liveArrivalsActor: ActorRef
 
-  val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveArrivalsActor], params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis), name = "live-arrivals-actor")
-  val liveBaseArrivalsActor: ActorRef = system.actorOf(Props(classOf[LiveBaseArrivalsActor], params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis), name = "live-base-arrivals-actor")
-  val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastPortArrivalsActor], params.snapshotMegaBytesFcstArrivals, now, expireAfterMillis), name = "forecast-arrivals-actor")
-  val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[ForecastBaseArrivalsActor], params.snapshotMegaBytesBaseArrivals, now, expireAfterMillis), name = "base-arrivals-actor")
-  val arrivalsImportActor: ActorRef = system.actorOf(Props(classOf[ArrivalsImportActor]), name = "arrivals-import-actor")
-  val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, Option(params.snapshotIntervalVm)), name = "voyage-manifests-actor")
+  val voyageManifestsActor: ActorRef
 
-  val feedActors: Seq[AskableActorRef] = Seq(liveArrivalsActor, liveBaseArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
-
-  val registeredArrivalsActor: ActorRef = system.actorOf(Props(classOf[RegisteredArrivalsActor], oneMegaByte, Option(500), airportConfig.portCode, now, expireAfterMillis), name = "registered-arrivals-actor")
+  def feedActors: Seq[ActorRef] = Seq(liveArrivalsActor, liveBaseArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
 
   val aclFeed: AclFeed = AclFeed(params.ftpServer, params.username, params.path, airportConfig.feedPortCode, AclFeed.aclToPortMapping(airportConfig.portCode), params.aclMinFileSizeInBytes)
 
   val maxDaysToConsider: Int = 14
-  val passengersActorProvider: () => AskableActorRef = () => system.actorOf(Props(new PassengersActor(maxDaysToConsider, aclPaxAdjustmentDays)))
+  val passengersActorProvider: () => ActorRef = () => system.actorOf(Props(new PassengersActor(maxDaysToConsider, aclPaxAdjustmentDays)))
 
-  val liveCrunchStateActor: AskableActorRef
-  val forecastCrunchStateActor: AskableActorRef
+  val liveCrunchStateActor: ActorRef
+  val forecastCrunchStateActor: ActorRef
   val aggregatedArrivalsActor: ActorRef
-
-  val voyageManifestsHistoricSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]]
 
   val aclPaxAdjustmentDays: Int = config.get[Int]("acl.adjustment.number-of-days-in-average")
 
@@ -132,7 +133,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
     val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
     val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
-//    val voyageManifestsHistoricSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
 
     val crunchInputs = CrunchSystem(CrunchProps(
       airportConfig = airportConfig,
@@ -315,9 +315,9 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   }
 
 
-  def initialState[A](askableActor: AskableActorRef): Option[A] = Await.result(initialStateFuture[A](askableActor), 2 minutes)
+  def initialState[A](askableActor: ActorRef): Option[A] = Await.result(initialStateFuture[A](askableActor), 2 minutes)
 
-  def initialStateFuture[A](askableActor: AskableActorRef): Future[Option[A]] = {
+  def initialStateFuture[A](askableActor: ActorRef): Future[Option[A]] = {
     val actorPath = askableActor.actorRef.path
     queryActorWithRetry[A](askableActor, GetState)
       .map {
@@ -335,7 +335,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       }
   }
 
-  def queryActorWithRetry[A](askableActor: AskableActorRef, toAsk: Any): Future[Option[A]] = {
+  def queryActorWithRetry[A](askableActor: ActorRef, toAsk: Any): Future[Option[A]] = {
     val future = askableActor.ask(toAsk)(new Timeout(2 minutes)).map {
       case Some(state: A) if state.isInstanceOf[A] => Option(state)
       case state: A if !state.isInstanceOf[Option[A]] => Option(state)

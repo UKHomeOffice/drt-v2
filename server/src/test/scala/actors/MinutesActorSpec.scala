@@ -1,7 +1,7 @@
 package actors
 
-import akka.actor.{ActorSystem, Props}
-import akka.pattern.AskableActorRef
+import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.pattern.ask
 import akka.util.Timeout
 import drt.shared.CrunchApi.{CrunchMinute, CrunchMinutes, MinutesContainer}
 import drt.shared.Queues.EeaDesk
@@ -34,7 +34,7 @@ class MinutesActorSpec extends Specification {
 
     "Given a primary & secondary lookups with no data" >> {
       "I should get None" >> {
-        val cmActor: AskableActorRef = system.actorOf(Props(new MinutesActor(now, lookupWithData(minutes), lookupWithNoData, noopUpdates)))
+        val cmActor: ActorRef = system.actorOf(Props(new MinutesActor(now, lookupWithData(minutes), lookupWithNoData, noopUpdates)))
         val eventualResult = cmActor.ask(GetStateByTerminalDateRange(terminal, date, date)).mapTo[Option[CrunchMinutes]]
         val result = Await.result(eventualResult, 1 second)
 
@@ -44,7 +44,7 @@ class MinutesActorSpec extends Specification {
 
     "Given a primary lookup with some data" >> {
       "I should get the data from the primary source" >> {
-        val cmActor: AskableActorRef = system.actorOf(Props(new MinutesActor(now, lookupWithData(minutes), lookupWithNoData, noopUpdates)))
+        val cmActor: ActorRef = system.actorOf(Props(new MinutesActor(now, lookupWithData(minutes), lookupWithNoData, noopUpdates)))
         val eventualResult = cmActor.ask(GetStateByTerminalDateRange(terminal, date, date)).mapTo[Option[CrunchMinutes]]
         val result = Await.result(eventualResult, 1 second)
 
@@ -54,7 +54,7 @@ class MinutesActorSpec extends Specification {
 
     "Given a primary lookup with no data and secondary lookup with data" >> {
       "I should get the data from the secondary source" >> {
-        val cmActor: AskableActorRef = system.actorOf(Props(new MinutesActor(now, lookupWithNoData, lookupWithNoData, noopUpdates)))
+        val cmActor: ActorRef = system.actorOf(Props(new MinutesActor(now, lookupWithNoData, lookupWithNoData, noopUpdates)))
         val eventualResult = cmActor.ask(GetStateByTerminalDateRange(terminal, date, date)).mapTo[Option[CrunchMinutes]]
         val result = Await.result(eventualResult, 1 second)
 

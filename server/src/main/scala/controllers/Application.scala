@@ -6,7 +6,7 @@ import java.util.{Calendar, TimeZone, UUID}
 import actors._
 import akka.actor._
 import akka.event.{Logging, LoggingAdapter}
-import akka.pattern.{AskableActorRef, _}
+import akka.pattern._
 import akka.stream._
 import akka.util.Timeout
 import api.{KeyCloakAuth, KeyCloakAuthError, KeyCloakAuthResponse, KeyCloakAuthToken}
@@ -15,7 +15,7 @@ import buildinfo.BuildInfo
 import com.typesafe.config.ConfigFactory
 import controllers.application._
 import controllers.model.ActorDataRequest
-import drt.auth.{BorderForceStaff, LoggedInUser, ManageUsers, Role, Roles, StaffEdit}
+import drt.auth._
 import drt.http.ProdSendAndReceive
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
@@ -39,7 +39,7 @@ import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import test.TestDrtSystem
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
@@ -93,7 +93,7 @@ trait AirportConfProvider extends AirportConfiguration {
 
   def getPortConfFromEnvVar: AirportConfig = AirportConfigs.confByPort(portCode)
 
-  def airportConfig: AirportConfig = {
+  lazy val airportConfig: AirportConfig = {
     val configForPort = getPortConfFromEnvVar.copy(
       contactEmail = contactEmail,
       outOfHoursContactPhone = oohPhone
@@ -138,12 +138,46 @@ trait UserRoleProviderLike {
   }
 }
 
+//case class DrtSystemProvider()(implicit system: ActorSystem, ec: ExecutionContext, mat: Materializer) extends AirportConfProvider {
+//  val config: Configuration = new Configuration(ConfigFactory.load)
+//  val drtSystem: DrtSystemInterface = if (isTestEnvironment) {
+//    println(s"\n\n** creating testdrt")
+//    drtTestSystem
+//  } else {
+//    println(s"\n\n** creating livedrt")
+//    DrtSystem(config, getPortConfFromEnvVar)
+//  }
+//
+//  lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(config, getPortConfFromEnvVar)
+//
+//  def isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("live") == "test"
+//}
+
+object DrtActorSystem extends AirportConfProvider {
+  implicit val actorSystem: ActorSystem = ActorSystem("DRT")
+  implicit val mat: ActorMaterializer = ActorMaterializer()
+  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
+  val config: Configuration = new Configuration(ConfigFactory.load)
+
+  val drtSystem: DrtSystemInterface = if (isTestEnvironment) {
+    println(s"\n\n** creating testdrt")
+    drtTestSystem
+  } else {
+    println(s"\n\n** creating livedrt")
+    DrtSystem(config, getPortConfFromEnvVar)
+  }
+
+  lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(config, getPortConfFromEnvVar)
+
+  def isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("live") == "test"
+}
+
 @Singleton
 class Application @Inject()(implicit val config: Configuration,
-                            implicit val mat: Materializer,
-                            env: Environment,
-                            val system: ActorSystem,
-                            implicit val ec: ExecutionContext)
+                            //implicit val mat: Materializer,
+                            env: Environment)
+                            //val system: ActorSystem,
+//                            implicit val ec: ExecutionContext)
   extends InjectedController
     with AirportConfProvider
     with WithAirportConfig
@@ -160,15 +194,20 @@ class Application @Inject()(implicit val config: Configuration,
     with WithVersion
     with ProdPassengerSplitProviders {
 
+  implicit val system: ActorSystem = DrtActorSystem.actorSystem
+  implicit val mat: ActorMaterializer = DrtActorSystem.mat
+  implicit val ec: ExecutionContext = DrtActorSystem.ec
+
   val googleTrackingCode: String = config.get[String]("googleTrackingCode")
 
-  val ctrl: DrtSystemInterface = if (isTestEnvironment) {
-    TestDrtSystem(config, getPortConfFromEnvVar)
-  } else {
-    DrtSystem(config, getPortConfFromEnvVar)
-  }
+  val ctrl: DrtSystemInterface = DrtActorSystem.drtSystem
+//  val ctrl: DrtSystemInterface = if (isTestEnvironment) {
+//    TestDrtSystem(config, getPortConfFromEnvVar)
+//  } else {
+//    DrtSystem(config, getPortConfFromEnvVar)
+//  }
 
-  def isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("live") == "test"
+//  def isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("live") == "test"
 
   ctrl.run()
 
@@ -197,7 +236,7 @@ class Application @Inject()(implicit val config: Configuration,
 
   log.info(s"Application using airportConfig $airportConfig")
 
-  val cacheActorRef: AskableActorRef = system.actorOf(Props(classOf[CachingCrunchReadActor]), name = "cache-actor")
+  val cacheActorRef: ActorRef = system.actorOf(Props(classOf[CachingCrunchReadActor]), name = "cache-actor")
 
   def previousDay(date: MilliDate): SDateLike = {
     val oneDayInMillis = 60 * 60 * 24 * 1000L
@@ -313,7 +352,7 @@ class Application @Inject()(implicit val config: Configuration,
           .map(kcGroups => kcGroups.filter(g => groups.contains(g.name))
             .foreach(g => keyCloakClient.removeUserFromGroup(userId, g.id)))
 
-      override def portStateActor: AskableActorRef = ctrl.portStateActor
+      override def portStateActor: ActorRef = ctrl.portStateActor
 
       def getShowAlertModalDialog(): Boolean = config
         .getOptional[Boolean]("feature-flags.display-modal-alert")

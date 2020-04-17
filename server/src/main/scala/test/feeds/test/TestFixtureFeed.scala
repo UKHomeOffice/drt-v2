@@ -10,7 +10,7 @@ import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
-import test.TestActors.ResetActor
+import test.TestActors.ResetData
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.{FiniteDuration, _}
@@ -69,7 +69,7 @@ class TestArrivalsActor extends Actor with ActorLogging {
       sender() ! toSend
       testArrivals = None
 
-    case ResetActor =>
+    case ResetData =>
       testArrivals = None
   }
 }

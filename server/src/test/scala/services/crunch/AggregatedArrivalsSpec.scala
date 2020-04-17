@@ -2,7 +2,6 @@ package services.crunch
 
 import actors.AggregatedArrivalsActor
 import akka.actor.{ActorRef, Props}
-import akka.pattern.AskableActorRef
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator
@@ -96,7 +95,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     testProbe.expectMsg(UpdateHandled)
 
-    val askableActor: AskableActorRef = crunch.aggregatedArrivalsActor
+    val askableActor: ask = crunch.aggregatedArrivalsActor
     val arrivalsResult = Await.result(askableActor.ask(GetArrivals)(new Timeout(5 seconds)), 5 seconds) match {
       case ag: AggregatedArrivals => ag
     }
@@ -138,7 +137,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     testProbe.expectMsg(UpdateHandled)
 
-    val askableActor: AskableActorRef = crunch.aggregatedArrivalsActor
+    val askableActor: ask = crunch.aggregatedArrivalsActor
     val arrivalsResult = Await.result(askableActor.ask(GetArrivals)(new Timeout(5 seconds)), 5 seconds) match {
       case ag: AggregatedArrivals => ag.arrivals.toSet
     }
@@ -180,7 +179,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     testProbe.expectMsg(RemovalHandled)
 
-    val askableActor: AskableActorRef = crunch.aggregatedArrivalsActor
+    val askableActor: ask = crunch.aggregatedArrivalsActor
     val arrivalsResult = Await.result(askableActor.ask(GetArrivals)(new Timeout(5 seconds)), 5 seconds) match {
       case ag: AggregatedArrivals => ag.arrivals.toSet
     }

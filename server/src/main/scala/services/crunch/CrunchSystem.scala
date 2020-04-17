@@ -2,7 +2,6 @@ package services.crunch
 
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem}
-import akka.pattern.AskableActorRef
 import akka.stream._
 import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
 import drt.chroma.ArrivalsDiffingStage
@@ -46,7 +45,7 @@ case class CrunchProps[FR](logLabel: String = "",
                            maxDaysToCrunch: Int,
                            expireAfterMillis: Int,
                            crunchOffsetMillis: MillisSinceEpoch = 0,
-                           actors: Map[String, AskableActorRef],
+                           actors: Map[String, ActorRef],
                            useNationalityBasedProcessingTimes: Boolean,
                            useLegacyManifests: Boolean = false,
                            now: () => SDateLike = () => SDate.now(),
@@ -65,7 +64,7 @@ case class CrunchProps[FR](logLabel: String = "",
                            arrivalsForecastSource: Source[ArrivalsFeedResponse, FR],
                            arrivalsLiveBaseSource: Source[ArrivalsFeedResponse, FR],
                            arrivalsLiveSource: Source[ArrivalsFeedResponse, FR],
-                           passengersActorProvider: () => AskableActorRef,
+                           passengersActorProvider: () => ActorRef,
                            initialShifts: ShiftAssignments = ShiftAssignments(Seq()),
                            initialFixedPoints: FixedPointAssignments = FixedPointAssignments(Seq()),
                            initialStaffMovements: Seq[StaffMovement] = Seq(),
@@ -186,11 +185,11 @@ object CrunchSystem {
       arrivalsStage, arrivalSplitsGraphStage,
       staffGraphStage, staffBatcher, deploymentGraphStage,
       forecastArrivalsDiffingStage, liveBaseArrivalsDiffingStage, liveArrivalsDiffingStage,
-      props.actors("forecast-base-arrivals").actorRef, props.actors("forecast-arrivals").actorRef, props.actors("live-base-arrivals").actorRef, props.actors("live-arrivals").actorRef,
+      props.actors("forecast-base-arrivals"), props.actors("forecast-arrivals"), props.actors("live-base-arrivals"), props.actors("live-arrivals"),
       PaxDeltas.applyAdjustmentsToArrivals(props.passengersActorProvider, props.aclPaxAdjustmentDays),
       props.voyageManifestsActor, props.manifestRequestsSink,
       props.portStateActor,
-      props.actors("aggregated-arrivals").actorRef,
+      props.actors("aggregated-arrivals"),
       forecastMaxMillis, props.stageThrottlePer
       )
 

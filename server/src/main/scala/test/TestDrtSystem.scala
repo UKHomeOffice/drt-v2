@@ -3,21 +3,19 @@ package test
 import actors._
 import actors.acking.AckingReceiver.Ack
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props}
-import akka.pattern.{AskableActorRef, ask}
-import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
-import akka.stream.{KillSwitch, Materializer, OverflowStrategy}
+import akka.pattern.ask
+import akka.stream.scaladsl.Source
+import akka.stream.{KillSwitch, Materializer}
 import akka.util.Timeout
 import drt.auth.Role
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{AirportConfig, Arrival, PortCode}
 import graphs.SinkToSourceBridge
-import manifests.ManifestLookup
 import manifests.passengers.BestAvailableManifest
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
+import server.feeds.ArrivalsFeedResponse
 import services.SDate
-import slickdb.VoyageManifestPassengerInfoTable
 import test.TestActors.{TestStaffMovementsActor, _}
 import test.feeds.test.{CSVFixtures, TestArrivalsActor, TestFixtureFeed, TestManifestsActor}
 import test.roles.TestUserRoleProvider
@@ -36,35 +34,31 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
 
   log.warn("Using test System")
 
-  override val lookup: ManifestLookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
+  override val baseArrivalsActor: ActorRef = system.actorOf(Props(new TestForecastBaseArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
+  override val forecastArrivalsActor: ActorRef = system.actorOf(Props(new TestForecastPortArrivalsActor(now, expireAfterMillis)), name = "forecast-arrivals-actor")
+  override val liveArrivalsActor: ActorRef = system.actorOf(Props(new TestLiveArrivalsActor(now, expireAfterMillis)), name = "live-arrivals-actor")
+  override val liveCrunchStateActor: ActorRef = system.actorOf(Props(new TestCrunchStateActor(airportConfig.portStateSnapshotInterval, "crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldLiveSnapshots)), name = "crunch-live-state-actor")
+  override val forecastCrunchStateActor: ActorRef = system.actorOf(Props(new TestCrunchStateActor(100, "forecast-crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldForecastSnapshots)), name = "crunch-forecast-state-actor")
+  override val portStateActor: ActorRef = system.actorOf(Props(new TestPortStateActor(liveCrunchStateActor, forecastCrunchStateActor, now, 2)), name = "port-state-actor")
+  override val voyageManifestsActor: ActorRef = system.actorOf(Props(new TestVoyageManifestsActor(now, expireAfterMillis, params.snapshotIntervalVm)), name = "voyage-manifests-actor")
+  override val shiftsActor: ActorRef = system.actorOf(Props(new TestShiftsActor(now, timeBeforeThisMonth(now))))
+  override val fixedPointsActor: ActorRef = system.actorOf(Props(new TestFixedPointsActor(now)))
+  override val staffMovementsActor: ActorRef = system.actorOf(Props(new TestStaffMovementsActor(now, time48HoursAgo(now))), "TestActor-StaffMovements")
+  override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new TestAggregatedArrivalsActor()))
 
-  override val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[TestForecastBaseArrivalsActor], now, expireAfterMillis), name = "base-arrivals-actor")
-  override val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[TestForecastPortArrivalsActor], now, expireAfterMillis), name = "forecast-arrivals-actor")
-  override val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[TestLiveArrivalsActor], now, expireAfterMillis), name = "live-arrivals-actor")
-
-  val testLiveCrunchStateProps: Props = TestCrunchStateActor.props(airportConfig.portStateSnapshotInterval, "crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldLiveSnapshots)
-  val testForecastCrunchStateProps: Props = TestCrunchStateActor.props(100, "forecast-crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldForecastSnapshots)
-  val testManifestsActor: ActorRef = system.actorOf(Props(classOf[TestManifestsActor]), s"TestActor-APIManifests")
-
-  override val liveCrunchStateActor: AskableActorRef = system.actorOf(testLiveCrunchStateProps, name = "crunch-live-state-actor")
-  override val forecastCrunchStateActor: AskableActorRef = system.actorOf(testForecastCrunchStateProps, name = "crunch-forecast-state-actor")
-
-  override val portStateActor: ActorRef =
-    system.actorOf(Props(new TestPortStateActor(liveCrunchStateActor, forecastCrunchStateActor, now, 2)), name = "port-state-actor")
-
-  override val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[TestVoyageManifestsActor], now, expireAfterMillis, params.snapshotIntervalVm), name = "voyage-manifests-actor")
-  override val shiftsActor: ActorRef = system.actorOf(Props(classOf[TestShiftsActor], now, timeBeforeThisMonth(now)))
-  override val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[TestFixedPointsActor], now))
-  override val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[TestStaffMovementsActor], now, time48HoursAgo(now)), "TestActor-StaffMovements")
-  override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(classOf[TestAggregatedArrivalsActor]))
-
-  val testArrivalActor: ActorRef = system.actorOf(Props(classOf[TestArrivalsActor]), s"TestActor-LiveArrivals")
-
-  val voyageManifestTestSourceGraph: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](100, OverflowStrategy.backpressure)
-
-  override val voyageManifestsHistoricSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = voyageManifestTestSourceGraph
-
+  val testManifestsActor: ActorRef = system.actorOf(Props(new TestManifestsActor()), s"TestActor-APIManifests")
+  val testArrivalActor: ActorRef = system.actorOf(Props(new TestArrivalsActor()), s"TestActor-LiveArrivals")
   val testFeed: Source[ArrivalsFeedResponse, Cancellable] = TestFixtureFeed(system, testArrivalActor)
+
+  val testActors = List(
+    baseArrivalsActor, forecastArrivalsActor, liveArrivalsActor,
+    liveCrunchStateActor, forecastArrivalsActor, portStateActor,
+    voyageManifestsActor,
+    shiftsActor, fixedPointsActor, staffMovementsActor,
+    aggregatedArrivalsActor,
+    testManifestsActor,
+    testArrivalActor
+    )
 
   config.getOptional[String]("test.live_fixture_csv").foreach { file =>
     implicit val timeout: Timeout = Timeout(250 milliseconds)
@@ -84,22 +78,6 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override def getRoles(config: Configuration,
                         headers: Headers,
                         session: Session): Set[Role] = TestUserRoleProvider.getRoles(config, headers, session)
-
-  val flexDesks: Boolean = config.get[Boolean]("crunch.flex-desks")
-
-  val testActors = List(
-    baseArrivalsActor,
-    forecastArrivalsActor,
-    liveArrivalsActor,
-    voyageManifestsActor,
-    shiftsActor,
-    fixedPointsActor,
-    staffMovementsActor,
-    portStateActor,
-    aggregatedArrivalsActor,
-    testManifestsActor,
-    testArrivalActor
-    )
 
   val restartActor: ActorRef = system.actorOf(Props(RestartActor(startSystem, testActors)), name = "TestActor-ResetData")
 
@@ -146,17 +124,17 @@ case class RestartActor(startSystem: () => List[KillSwitch],
   implicit val ec: ExecutionContextExecutor = context.dispatcher
 
   override def receive: Receive = {
-    case ResetActor =>
+    case ResetData =>
       val replyTo = sender()
 
       log.info(s"About to shut down everything. Pressing kill switches")
 
       currentKillSwitches.zipWithIndex.foreach { case (ks, idx) =>
-        log.info(s"Killswitch ${idx + 1}")
+        log.info(s"Kill switch ${idx + 1}")
         ks.shutdown()
       }
 
-      Future.sequence(testActors.map(_.ask(ResetActor)(new Timeout(1 second)))).onComplete { _ =>
+      Future.sequence(testActors.map(_.ask(ResetData)(new Timeout(1 second)))).onComplete { _ =>
         log.info(s"Shutdown triggered")
         startTestSystem()
         replyTo ! Ack
@@ -167,7 +145,5 @@ case class RestartActor(startSystem: () => List[KillSwitch],
 
   def startTestSystem(): Unit = currentKillSwitches = startSystem()
 }
-
-case object ResetData
 
 case object StartTestSystem

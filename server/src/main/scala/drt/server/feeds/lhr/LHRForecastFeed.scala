@@ -1,6 +1,7 @@
 package drt.server.feeds.lhr
 
-import akka.pattern.AskableActorRef
+import akka.actor.ActorRef
+import akka.pattern.ask
 import akka.util.Timeout
 import drt.server.feeds.Implicits._
 import drt.server.feeds.lhr.forecast.LHRForecastFlightRow
@@ -17,7 +18,7 @@ import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 import scala.util.Try
 
-case class LHRForecastFeed(arrivalsActor: AskableActorRef) {
+case class LHRForecastFeed(arrivalsActor: ActorRef) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def requestFeed: ArrivalsFeedResponse = {

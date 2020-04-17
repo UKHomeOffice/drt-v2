@@ -2,8 +2,8 @@ package test
 
 import actors.Sizes.oneMegaByte
 import actors._
-import akka.actor.Props
-import akka.pattern.AskableActorRef
+import actors.acking.AckingReceiver.Ack
+import akka.actor.{ActorRef, Props}
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared.{PortCode, SDateLike}
@@ -12,13 +12,15 @@ import slickdb.ArrivalTable
 
 object TestActors {
 
-  case object ResetActor
+  case object ResetData
 
-  case class TestForecastBaseArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
+  class TestForecastBaseArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
     extends ForecastBaseArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def reset: Receive = {
-      case ResetActor => state.clear()
+      case ResetData =>
+        state.clear()
+        sender() ! Ack
     }
 
     override def receiveRecover: Receive = {
@@ -28,11 +30,13 @@ object TestActors {
     override def receiveCommand: Receive = reset orElse super.receiveCommand
   }
 
-  case class TestForecastPortArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
+  class TestForecastPortArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
     extends ForecastPortArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def reset: Receive = {
-      case ResetActor => state.clear()
+      case ResetData =>
+        state.clear()
+        sender() ! Ack
     }
 
     override def receiveRecover: Receive = {
@@ -42,11 +46,13 @@ object TestActors {
     override def receiveCommand: Receive = reset orElse super.receiveCommand
   }
 
-  case class TestLiveArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
+  class TestLiveArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
     extends LiveArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def reset: Receive = {
-      case ResetActor => state.clear()
+      case ResetData =>
+        state.clear()
+        sender() ! Ack
     }
 
     override def receiveRecover: Receive = {
@@ -56,11 +62,13 @@ object TestActors {
     override def receiveCommand: Receive = reset orElse super.receiveCommand
   }
 
-  case class TestVoyageManifestsActor(override val now: () => SDateLike, expireAfterMillis: Int, snapshotInterval: Int)
+  class TestVoyageManifestsActor(override val now: () => SDateLike, expireAfterMillis: Int, snapshotInterval: Int)
     extends VoyageManifestsActor(oneMegaByte, now, expireAfterMillis, Option(snapshotInterval)) {
 
     def reset: Receive = {
-      case ResetActor => state = initialState
+      case ResetData =>
+        state = initialState
+        sender() ! Ack
     }
 
     override def receiveRecover: Receive = {
@@ -70,12 +78,14 @@ object TestActors {
     override def receiveCommand: Receive = reset orElse super.receiveCommand
   }
 
-  case class TestShiftsActor(override val now: () => SDateLike, override val expireBefore: () => SDateLike) extends ShiftsActor(now, expireBefore) {
+  class TestShiftsActor(override val now: () => SDateLike,
+                        override val expireBefore: () => SDateLike) extends ShiftsActor(now, expireBefore) {
 
     def reset: Receive = {
-      case ResetActor =>
+      case ResetData =>
         state = initialState
         subscribers = List()
+        sender() ! Ack
     }
 
     override def receiveRecover: Receive = {
@@ -85,12 +95,13 @@ object TestActors {
     override def receiveCommand: Receive = reset orElse super.receiveCommand
   }
 
-  case class TestFixedPointsActor(override val now: () => SDateLike) extends FixedPointsActor(now) {
+  class TestFixedPointsActor(override val now: () => SDateLike) extends FixedPointsActor(now) {
 
     def reset: Receive = {
-      case ResetActor =>
+      case ResetData =>
         state = initialState
         subscribers = List()
+        sender() ! Ack
     }
 
     override def receiveRecover: Receive = {
@@ -100,12 +111,14 @@ object TestActors {
     override def receiveCommand: Receive = reset orElse super.receiveCommand
   }
 
-  case class TestStaffMovementsActor(override val now: () => SDateLike, override val expireBefore: () => SDateLike) extends StaffMovementsActor(now, expireBefore) {
+  class TestStaffMovementsActor(override val now: () => SDateLike,
+                                override val expireBefore: () => SDateLike) extends StaffMovementsActor(now, expireBefore) {
 
     def reset: Receive = {
-      case ResetActor =>
+      case ResetData =>
         state = initialState
         subscribers = List()
+        sender() ! Ack
     }
 
     override def receiveRecover: Receive = {
@@ -115,54 +128,34 @@ object TestActors {
     override def receiveCommand: Receive = reset orElse super.receiveCommand
   }
 
-  case class TestAggregatedArrivalsActor() extends {
+  class TestAggregatedArrivalsActor() extends {
     private val portCode = PortCode("LHR")
   } with AggregatedArrivalsActor(ArrivalTable(portCode, PostgresTables)) {
     def reset: Receive = {
-      case ResetActor =>
+      case ResetData =>
+        sender() ! Ack
     }
 
     override def receive: Receive = reset orElse super.receive
   }
 
-  object TestPortStateActor {
-    def props(liveStateActor: AskableActorRef, forecastStateActor: AskableActorRef, now: () => SDateLike, liveDaysAhead: Int) =
-      Props(new TestPortStateActor(liveStateActor, forecastStateActor, now, liveDaysAhead))
-  }
-
-  case class TestPortStateActor(live: AskableActorRef, forecast: AskableActorRef, now: () => SDateLike, liveDaysAhead: Int)
+  class TestPortStateActor(live: ActorRef, forecast: ActorRef, now: () => SDateLike, liveDaysAhead: Int)
     extends PortStateActor(live, forecast, now, liveDaysAhead) {
     def reset: Receive = {
-      case ResetActor => state.clear()
+      case ResetData =>
+        state.clear()
+        sender() ! Ack
     }
 
     override def receive: Receive = reset orElse super.receive
   }
 
-  object TestCrunchStateActor {
-    def props(snapshotInterval: Int,
-              name: String,
-              portQueues: Map[Terminal, Seq[Queue]],
-              now: () => SDateLike,
-              expireAfterMillis: Int,
-              purgePreviousSnapshots: Boolean): Props = Props(
-      new TestCrunchStateActor(
-        snapshotInterval,
-        name,
-        portQueues,
-        now,
-        expireAfterMillis,
-        purgePreviousSnapshots
-      )
-    )
-  }
-
-  case class TestCrunchStateActor(snapshotInterval: Int,
-                                  name: String,
-                                  portQueues: Map[Terminal, Seq[Queue]],
-                                  override val now: () => SDateLike,
-                                  expireAfterMillis: Int,
-                                  purgePreviousSnapshots: Boolean)
+  class TestCrunchStateActor(snapshotInterval: Int,
+                             name: String,
+                             portQueues: Map[Terminal, Seq[Queue]],
+                             override val now: () => SDateLike,
+                             expireAfterMillis: Int,
+                             purgePreviousSnapshots: Boolean)
     extends CrunchStateActor(
       initialMaybeSnapshotInterval = None,
       initialSnapshotBytesThreshold = oneMegaByte,
@@ -174,7 +167,9 @@ object TestActors {
       forecastMaxMillis = () => now().addDays(2).millisSinceEpoch) {
 
     def reset: Receive = {
-      case ResetActor => state = initialState
+      case ResetData =>
+        state = initialState
+        sender() ! Ack
     }
 
     override def receiveRecover: Receive = {

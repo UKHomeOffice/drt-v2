@@ -1,9 +1,8 @@
 package test.controllers
 
-import akka.actor.{ActorRef, ActorSystem}
-import akka.stream.Materializer
+import akka.pattern.ask
 import akka.util.Timeout
-import controllers.AirportConfProvider
+import controllers.{AirportConfProvider, DrtActorSystem}
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
 import drt.server.feeds.Implicits._
@@ -18,60 +17,40 @@ import play.api.http.HeaderNames
 import play.api.mvc.{Action, AnyContent, InjectedController, Session}
 import services.SDate
 import spray.json._
-import test.ResetData
-import test.TestActors.ResetActor
+import test.TestActors.ResetData
+import test.TestDrtSystem
 import test.feeds.test.CSVFixtures
 import test.roles.MockRoles
 import test.roles.MockRoles.MockRolesProtocol._
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 @Singleton
-class TestController @Inject()(implicit val config: Configuration,
-                               implicit val mat: Materializer,
-                               val system: ActorSystem,
-                               ec: ExecutionContext) extends InjectedController with AirportConfProvider {
+class TestController @Inject()(val config: Configuration) extends InjectedController with AirportConfProvider {
   implicit val timeout: Timeout = Timeout(250 milliseconds)
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
+  val ctrl: TestDrtSystem = DrtActorSystem.drtTestSystem
+
   val baseTime: SDateLike = SDate.now()
 
-  val liveArrivalsTestActor: Future[ActorRef] = system.actorSelection(s"akka://${portCode.toString.toLowerCase}-drt-actor-system/user/TestActor-LiveArrivals").resolveOne()
-  val apiManifestsTestActor: Future[ActorRef] = system.actorSelection(s"akka://${portCode.toString.toLowerCase}-drt-actor-system/user/TestActor-APIManifests").resolveOne()
-  val staffMovementsTestActor: Future[ActorRef] = system.actorSelection(s"akka://${portCode.toString.toLowerCase}-drt-actor-system/user/TestActor-StaffMovements").resolveOne()
-  val mockRolesTestActor: Future[ActorRef] = system.actorSelection(s"akka://${portCode.toString.toLowerCase}-drt-actor-system/user/TestActor-MockRoles").resolveOne()
-
-  def saveArrival(arrival: Arrival): Future[Unit] = {
-    liveArrivalsTestActor.map(actor => {
-      log.info(s"Incoming test arrival")
-      actor ! arrival
-    })
+  def saveArrival(arrival: Arrival): Future[Any] = {
+    log.info(s"Incoming test arrival")
+    ctrl.testArrivalActor.ask(arrival)
   }
 
-  def saveVoyageManifest(voyageManifest: VoyageManifest): Future[Unit] = {
-    apiManifestsTestActor.map(actor => {
-
+  def saveVoyageManifest(voyageManifest: VoyageManifest): Future[Any] = {
       log.info(s"Sending Splits: ${voyageManifest.EventCode} to Test Actor")
-
-      actor ! VoyageManifests(Set(voyageManifest))
-    })
+      ctrl.testManifestsActor.ask(VoyageManifests(Set(voyageManifest)))
   }
 
-  def resetData(): Future[Unit] = {
-    system.actorSelection(s"akka://${portCode.toString.toLowerCase}-drt-actor-system/user/TestActor-ResetData").resolveOne().map(actor => {
-
-      log.info(s"Sending reset message")
-
-      actor ! ResetData
-    })
-
-    liveArrivalsTestActor.map(_ ! ResetActor)
-    apiManifestsTestActor.map(_ ! ResetActor)
-    staffMovementsTestActor.map(_ ! ResetActor)
+  def resetData(): Future[Any] = {
+    log.info(s"Sending reset message")
+    ctrl.restartActor.ask(ResetData)
   }
 
   def addArrival(): Action[AnyContent] = Action {
@@ -145,8 +124,6 @@ class TestController @Inject()(implicit val config: Configuration,
           BadRequest(s"Unable to parse JSON: ${request.body.asText}")
       }
   }
-
-  def saveMockRoles(roles: MockRoles): Future[Unit] = mockRolesTestActor.map(a => a ! roles)
 
   def setMockRoles(): Action[AnyContent] = Action {
     implicit request =>
