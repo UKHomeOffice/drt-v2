@@ -178,13 +178,6 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   val googleTrackingCode: String = config.get[String]("googleTrackingCode")
 
   val ctrl: DrtSystemInterface = DrtActorSystem.drtSystem
-//  val ctrl: DrtSystemInterface = if (isTestEnvironment) {
-//    TestDrtSystem(config, getPortConfFromEnvVar)
-//  } else {
-//    DrtSystem(config, getPortConfFromEnvVar)
-//  }
-
-//  def isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("live") == "test"
 
   ctrl.run()
 

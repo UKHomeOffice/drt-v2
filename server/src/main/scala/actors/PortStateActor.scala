@@ -173,7 +173,7 @@ class PortStateActor(liveStateActor: ActorRef,
         .recover {
           case e =>
             log.error("Error sending minutes to crunch - non recoverable error. Terminating App.", e)
-//            System.exit(1)
+            System.exit(1)
         }
         .onComplete { _ =>
           context.self ! SetCrunchSourceReady
