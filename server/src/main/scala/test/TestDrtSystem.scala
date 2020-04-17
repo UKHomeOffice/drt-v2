@@ -11,11 +11,13 @@ import drt.auth.Role
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{AirportConfig, Arrival, PortCode}
 import graphs.SinkToSourceBridge
+import manifests.ManifestLookup
 import manifests.passengers.BestAvailableManifest
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services.SDate
+import slickdb.VoyageManifestPassengerInfoTable
 import test.TestActors.{TestStaffMovementsActor, _}
 import test.feeds.test.{CSVFixtures, TestArrivalsActor, TestFixtureFeed, TestManifestsActor}
 import test.roles.TestUserRoleProvider
@@ -25,46 +27,42 @@ import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 import scala.util.Success
 
-trait TestDrtSystemInterface {
-  val restartActor: ActorRef
-  val testArrivalActor: ActorRef
-  val testManifestsActor: ActorRef
-}
-
-class TestDrtSystem(override val actorSystem: ActorSystem,
-                    override val config: Configuration,
-                    override val airportConfig: AirportConfig)
-                   (implicit actorMaterializer: Materializer, ec: ExecutionContext)
-  extends DrtSystem(actorSystem, config, airportConfig) with TestDrtSystemInterface {
+case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
+                        (implicit val materializer: Materializer,
+                         val ec: ExecutionContext,
+                         val system: ActorSystem) extends DrtSystemInterface {
 
   import DrtStaticParameters._
 
-  override lazy val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[TestForecastBaseArrivalsActor], now, expireAfterMillis), name = "base-arrivals-actor")
-  override lazy val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[TestForecastPortArrivalsActor], now, expireAfterMillis), name = "forecast-arrivals-actor")
-  override lazy val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[TestLiveArrivalsActor], now, expireAfterMillis), name = "live-arrivals-actor")
+  log.warn("Using test System")
+
+  override val lookup: ManifestLookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
+
+  override val baseArrivalsActor: ActorRef = system.actorOf(Props(classOf[TestForecastBaseArrivalsActor], now, expireAfterMillis), name = "base-arrivals-actor")
+  override val forecastArrivalsActor: ActorRef = system.actorOf(Props(classOf[TestForecastPortArrivalsActor], now, expireAfterMillis), name = "forecast-arrivals-actor")
+  override val liveArrivalsActor: ActorRef = system.actorOf(Props(classOf[TestLiveArrivalsActor], now, expireAfterMillis), name = "live-arrivals-actor")
 
   val testLiveCrunchStateProps: Props = TestCrunchStateActor.props(airportConfig.portStateSnapshotInterval, "crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldLiveSnapshots)
   val testForecastCrunchStateProps: Props = TestCrunchStateActor.props(100, "forecast-crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldForecastSnapshots)
-  val testManifestsActor: ActorRef = actorSystem.actorOf(Props(classOf[TestManifestsActor]), s"TestActor-APIManifests")
+  val testManifestsActor: ActorRef = system.actorOf(Props(classOf[TestManifestsActor]), s"TestActor-APIManifests")
 
-  override lazy val liveCrunchStateActor: AskableActorRef = system.actorOf(testLiveCrunchStateProps, name = "crunch-live-state-actor")
-  override lazy val forecastCrunchStateActor: AskableActorRef = system.actorOf(testForecastCrunchStateProps, name = "crunch-forecast-state-actor")
+  override val liveCrunchStateActor: AskableActorRef = system.actorOf(testLiveCrunchStateProps, name = "crunch-live-state-actor")
+  override val forecastCrunchStateActor: AskableActorRef = system.actorOf(testForecastCrunchStateProps, name = "crunch-forecast-state-actor")
 
-  override lazy val portStateActor: ActorRef =
+  override val portStateActor: ActorRef =
     system.actorOf(Props(new TestPortStateActor(liveCrunchStateActor, forecastCrunchStateActor, now, 2)), name = "port-state-actor")
 
-  override lazy val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[TestVoyageManifestsActor], now, expireAfterMillis, params.snapshotIntervalVm), name = "voyage-manifests-actor")
-  override lazy val shiftsActor: ActorRef = system.actorOf(Props(classOf[TestShiftsActor], now, timeBeforeThisMonth(now)))
-  override lazy val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[TestFixedPointsActor], now))
-  override lazy val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[TestStaffMovementsActor], now, time48HoursAgo(now)), "TestActor-StaffMovements")
-  override lazy val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(classOf[TestAggregatedArrivalsActor]))
-  val testArrivalActor: ActorRef = actorSystem.actorOf(Props(classOf[TestArrivalsActor]), s"TestActor-LiveArrivals")
+  override val voyageManifestsActor: ActorRef = system.actorOf(Props(classOf[TestVoyageManifestsActor], now, expireAfterMillis, params.snapshotIntervalVm), name = "voyage-manifests-actor")
+  override val shiftsActor: ActorRef = system.actorOf(Props(classOf[TestShiftsActor], now, timeBeforeThisMonth(now)))
+  override val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[TestFixedPointsActor], now))
+  override val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[TestStaffMovementsActor], now, time48HoursAgo(now)), "TestActor-StaffMovements")
+  override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(classOf[TestAggregatedArrivalsActor]))
 
-  system.log.warning(s"Using test System")
+  val testArrivalActor: ActorRef = system.actorOf(Props(classOf[TestArrivalsActor]), s"TestActor-LiveArrivals")
 
   val voyageManifestTestSourceGraph: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](100, OverflowStrategy.backpressure)
 
-  override lazy val voyageManifestsHistoricSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = voyageManifestTestSourceGraph
+  override val voyageManifestsHistoricSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = voyageManifestTestSourceGraph
 
   val testFeed: Source[ArrivalsFeedResponse, Cancellable] = TestFixtureFeed(system, testArrivalActor)
 
@@ -72,7 +70,7 @@ class TestDrtSystem(override val actorSystem: ActorSystem,
     implicit val timeout: Timeout = Timeout(250 milliseconds)
     log.info(s"Loading fixtures from $file")
     val testActor = system.actorSelection(s"akka://${airportConfig.portCode.iata.toLowerCase}-drt-actor-system/user/TestActor-LiveArrivals").resolveOne()
-    actorSystem.scheduler.schedule(1 second, 1 day)({
+    system.scheduler.schedule(1 second, 1 day)({
       val day = SDate.now().toISODateOnly
       CSVFixtures.csvPathToArrivalsOnDate(day, file).collect {
         case Success(arrival) =>

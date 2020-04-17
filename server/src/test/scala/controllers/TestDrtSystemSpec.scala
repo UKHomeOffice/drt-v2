@@ -23,7 +23,7 @@ class TestDrtSystemSpec extends CrunchTestLike {
   implicit val timeout: Timeout = new Timeout(1 second)
 
   "Given a test drt system" >> {
-    val drtSystem = new TestDrtSystem(system, configuration, defaultAirportConfig)
+    val drtSystem = TestDrtSystem(configuration, defaultAirportConfig)
 
     "When I send its port state actor an arrival" >> {
       val fws = ApiFlightWithSplits(ArrivalGenerator.arrival("BA0001", schDt = drtSystem.now().toISODateOnly), Set(), None)

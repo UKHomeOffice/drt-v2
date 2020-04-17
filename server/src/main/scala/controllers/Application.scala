@@ -97,7 +97,7 @@ trait AirportConfProvider extends AirportConfiguration {
     val configForPort = getPortConfFromEnvVar.copy(
       contactEmail = contactEmail,
       outOfHoursContactPhone = oohPhone
-    )
+      )
 
     configForPort.assertValid()
 
@@ -126,7 +126,7 @@ trait UserRoleProviderLike {
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role]
 
   def getLoggedInUser(config: Configuration, headers: Headers, session: Session): LoggedInUser = {
-    val baseRoles =  Set()
+    val baseRoles = Set()
     val roles: Set[Role] =
       getRoles(config, headers, session) ++ baseRoles
     LoggedInUser(
@@ -134,7 +134,7 @@ trait UserRoleProviderLike {
       id = headers.get("X-Auth-Userid").getOrElse("Unknown"),
       email = headers.get("X-Auth-Email").getOrElse("Unknown"),
       roles = roles
-    )
+      )
   }
 }
 
@@ -163,9 +163,9 @@ class Application @Inject()(implicit val config: Configuration,
   val googleTrackingCode: String = config.get[String]("googleTrackingCode")
 
   val ctrl: DrtSystemInterface = if (isTestEnvironment) {
-    new TestDrtSystem(system, config, getPortConfFromEnvVar)
+    TestDrtSystem(config, getPortConfFromEnvVar)
   } else {
-      DrtSystem(system, config, getPortConfFromEnvVar)
+    DrtSystem(config, getPortConfFromEnvVar)
   }
 
   def isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("live") == "test"
@@ -228,7 +228,7 @@ class Application @Inject()(implicit val config: Configuration,
 
         val portStateFuture = portStateActor.ask(
           GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
-        )(new Timeout(30 seconds))
+          )(new Timeout(30 seconds))
 
         portStateFuture.map {
           case Some(portState: PortState) =>
@@ -301,7 +301,7 @@ class Application @Inject()(implicit val config: Configuration,
               gps.foreach(group => {
                 val response = keyCloakClient.addUserToGroup(userId, group.id)
                 response.map(res => log.info(s"Added group and got: ${res.status}  $res")
-                )
+                             )
               })
             case _ => log.error(s"Unable to add $userId to $groups")
           }
@@ -333,7 +333,7 @@ class Application @Inject()(implicit val config: Configuration,
 
         router(
           autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))
-        ).map(buffer => {
+          ).map(buffer => {
           val data = Array.ofDim[Byte](buffer.remaining())
           buffer.get(data)
           Ok(data)
@@ -406,7 +406,7 @@ class Application @Inject()(implicit val config: Configuration,
 
     def missingPostFieldsResponse = Future(
       BadRequest(KeyCloakAuthError("invalid_form_data", "You must provide a username and password").toJson.toString)
-    )
+      )
 
     val result: Option[Future[Result]] = for {
       tokenUrl <- tokenUrlOption
@@ -425,8 +425,8 @@ class Application @Inject()(implicit val config: Configuration,
       KeyCloakAuthError(
         "feature_not_implemented",
         "This feature is not currently available for this port on DRT"
-      ).toJson.toString
-    ))
+        ).toJson.toString
+      ))
 
     result match {
       case Some(f) => f.map(t => t)
@@ -461,7 +461,7 @@ class Application @Inject()(implicit val config: Configuration,
           "logTime" -> SDate(millis).toISOString(),
           "url" -> postStringValOrElse("url", request.headers.get("referrer").getOrElse("unknown url")),
           "logLevel" -> logLevel
-        )
+          )
 
         log.log(Logging.levelFor(logLevel).getOrElse(Logging.ErrorLevel), s"Client Error: ${
           logMessage.map {
