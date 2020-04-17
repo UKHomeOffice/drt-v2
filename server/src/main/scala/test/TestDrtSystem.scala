@@ -60,6 +60,8 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
     testArrivalActor
     )
 
+  val restartActor: ActorRef = system.actorOf(Props(RestartActor(startSystem, testActors)), name = "TestActor-ResetData")
+
   config.getOptional[String]("test.live_fixture_csv").foreach { file =>
     implicit val timeout: Timeout = Timeout(250 milliseconds)
     log.info(s"Loading fixtures from $file")
@@ -78,8 +80,6 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override def getRoles(config: Configuration,
                         headers: Headers,
                         session: Session): Set[Role] = TestUserRoleProvider.getRoles(config, headers, session)
-
-  val restartActor: ActorRef = system.actorOf(Props(RestartActor(startSystem, testActors)), name = "TestActor-ResetData")
 
   override def run(): Unit = {
     restartActor ! StartTestSystem

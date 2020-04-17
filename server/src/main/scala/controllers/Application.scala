@@ -138,34 +138,15 @@ trait UserRoleProviderLike {
   }
 }
 
-//case class DrtSystemProvider()(implicit system: ActorSystem, ec: ExecutionContext, mat: Materializer) extends AirportConfProvider {
-//  val config: Configuration = new Configuration(ConfigFactory.load)
-//  val drtSystem: DrtSystemInterface = if (isTestEnvironment) {
-//    println(s"\n\n** creating testdrt")
-//    drtTestSystem
-//  } else {
-//    println(s"\n\n** creating livedrt")
-//    DrtSystem(config, getPortConfFromEnvVar)
-//  }
-//
-//  lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(config, getPortConfFromEnvVar)
-//
-//  def isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("live") == "test"
-//}
-
 object DrtActorSystem extends AirportConfProvider {
   implicit val actorSystem: ActorSystem = ActorSystem("DRT")
   implicit val mat: ActorMaterializer = ActorMaterializer()
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
   val config: Configuration = new Configuration(ConfigFactory.load)
 
-  val drtSystem: DrtSystemInterface = if (isTestEnvironment) {
-    println(s"\n\n** creating testdrt")
-    drtTestSystem
-  } else {
-    println(s"\n\n** creating livedrt")
-    DrtSystem(config, getPortConfFromEnvVar)
-  }
+  val drtSystem: DrtSystemInterface =
+    if (isTestEnvironment) drtTestSystem
+    else DrtSystem(config, getPortConfFromEnvVar)
 
   lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(config, getPortConfFromEnvVar)
 
@@ -173,11 +154,7 @@ object DrtActorSystem extends AirportConfProvider {
 }
 
 @Singleton
-class Application @Inject()(implicit val config: Configuration,
-                            //implicit val mat: Materializer,
-                            env: Environment)
-                            //val system: ActorSystem,
-//                            implicit val ec: ExecutionContext)
+class Application @Inject()(implicit val config: Configuration, env: Environment)
   extends InjectedController
     with AirportConfProvider
     with WithAirportConfig

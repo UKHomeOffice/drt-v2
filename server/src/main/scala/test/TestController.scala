@@ -23,7 +23,7 @@ import test.feeds.test.CSVFixtures
 import test.roles.MockRoles
 import test.roles.MockRoles.MockRolesProtocol._
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
@@ -31,6 +31,8 @@ import scala.util.{Failure, Success}
 @Singleton
 class TestController @Inject()(val config: Configuration) extends InjectedController with AirportConfProvider {
   implicit val timeout: Timeout = Timeout(250 milliseconds)
+
+  implicit val ec: ExecutionContextExecutor = DrtActorSystem.ec
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -44,8 +46,8 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
   }
 
   def saveVoyageManifest(voyageManifest: VoyageManifest): Future[Any] = {
-      log.info(s"Sending Splits: ${voyageManifest.EventCode} to Test Actor")
-      ctrl.testManifestsActor.ask(VoyageManifests(Set(voyageManifest)))
+    log.info(s"Sending Splits: ${voyageManifest.EventCode} to Test Actor")
+    ctrl.testManifestsActor.ask(VoyageManifests(Set(voyageManifest)))
   }
 
   def resetData(): Future[Any] = {
@@ -53,9 +55,8 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
     ctrl.restartActor.ask(ResetData)
   }
 
-  def addArrival(): Action[AnyContent] = Action {
-    implicit request =>
-
+  def addArrival(): Action[AnyContent] = Action.async {
+    request =>
       request.body.asJson.map(s => s.toString.parseJson.convertTo[ChromaLiveFlight]) match {
         case Some(flight) =>
           val walkTimeMinutes = 4
@@ -83,45 +84,39 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
             PcpTime = Some(pcpTime),
             FeedSources = Set(LiveFeedSource),
             Scheduled = SDate(flight.SchDT).millisSinceEpoch
-          )
-          saveArrival(arrival)
-          Created
+            )
+          saveArrival(arrival).map(_ => Created)
         case None =>
-          BadRequest(s"Unable to parse JSON: ${request.body.asText}")
+          Future(BadRequest(s"Unable to parse JSON: ${request.body.asText}"))
       }
   }
 
-  def addArrivals(forDate: String): Action[AnyContent] = Action {
-    implicit request =>
+  def addArrivals(forDate: String): Action[AnyContent] = Action.async {
+    _.body.asMultipartFormData.flatMap(_.files.find(_.key == "data")) match {
+      case Some(f) =>
+        val path = f.ref.path.toString
 
-      request.body.asMultipartFormData.flatMap(_.files.find(_.key == "data")) match {
-        case Some(f) =>
-          val path = f.ref.path.toString
+        val saveFutures = CSVFixtures
+          .csvPathToArrivalsOnDate(forDate, path)
+          .collect {
+            case Success(a) => saveArrival(a)
+          }
 
-          CSVFixtures
-            .csvPathToArrivalsOnDate(forDate, path)
-            .map {
-              case Failure(error) => Failure(error)
-              case Success(a) => saveArrival(a)
-            }
+        Future.sequence(saveFutures).map(_ => Created.withHeaders(HeaderNames.ACCEPT -> "application/csv"))
 
-          Created.withHeaders(HeaderNames.ACCEPT -> "application/csv")
-
-        case None =>
-          BadRequest("You must post a CSV file with name \"data\"")
-      }
+      case None =>
+        Future(BadRequest("You must post a CSV file with name \"data\""))
+    }
   }
 
-  def addManifest(): Action[AnyContent] = Action {
-    implicit request =>
-
+  def addManifest(): Action[AnyContent] = Action.async {
+    request =>
       request.body.asJson.map(s => s.toString.parseJson.convertTo[VoyageManifest]) match {
         case Some(vm) =>
           log.info(s"Got a manifest to save ${vm.CarrierCode}${vm.VoyageNumber} ${vm.ScheduledDateOfArrival} ${vm.ScheduledTimeOfArrival}")
-          saveVoyageManifest(vm)
-          Created
+          saveVoyageManifest(vm).map(_ => Created)
         case None =>
-          BadRequest(s"Unable to parse JSON: ${request.body.asText}")
+          Future(BadRequest(s"Unable to parse JSON: ${request.body.asText}"))
       }
   }
 
@@ -144,16 +139,13 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
     implicit request =>
       request.queryString.get("roles") match {
         case Some(rs) =>
-
           Redirect("/").withSession(Session(Map("mock-roles" -> rs.mkString(","))))
         case roles =>
           BadRequest(s"""Unable to parse roles: $roles from query string ${request.queryString}""")
       }
   }
 
-  def deleteAllData(): Action[AnyContent] = Action {
-    resetData()
-
-    Accepted
+  def deleteAllData(): Action[AnyContent] = Action.async { _ =>
+    resetData().map(_ => Accepted)
   }
 }
