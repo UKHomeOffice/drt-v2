@@ -107,7 +107,7 @@ object PaxDeltas {
   private def applyAdjustment(arrival: Arrival, delta: Double) = {
     val updatedPax = arrival.ActPax.map(pax => (pax * delta).round.toInt) match {
       case Some(positiveWithDelta) if positiveWithDelta > 0 => Option(positiveWithDelta)
-      case _ => Option(1)
+      case _ => Option(0)
     }
     arrival.copy(ActPax = updatedPax)
   }

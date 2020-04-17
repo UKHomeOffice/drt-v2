@@ -1,5 +1,6 @@
 package services
 
+import drt.shared.SDateLike
 import org.specs2.mutable.Specification
 import services.graphstages.Crunch
 
@@ -117,6 +118,50 @@ class ServerSDateSpec extends Specification {
       s"I should get $twentyNine" >> {
         daysDiff === twentyNine
       }
+    }
+  }
+
+  "When asking for localNextMidnight" >> {
+
+    val date = SDate("2020-03-31T23:00:00Z")
+    val expected = SDate("2020-04-01T23:00:00Z")
+
+    s"Given ${date.toISOString()} then I should get ${expected.toISOString()}" >> {
+      val result = date.getLocalNextMidnight
+      expected === result
+    }
+  }
+
+  "When asking for localNextMidnight" >> {
+
+    val date = SDate("2020-04-01T22:00:00Z")
+    val expected = SDate("2020-04-01T23:00:00Z")
+
+    s"Given ${date.toISOString()} then I should get ${expected.toISOString()}" >> {
+      val result = date.getLocalNextMidnight
+      expected === result
+    }
+  }
+
+  "When asking for getLocalLastMidnight" >> {
+
+    val date = SDate("2020-04-02T23:00:00Z")
+    val expected = SDate("2020-04-02T23:00:00Z")
+
+    s"Given ${date.toISOString()} then I should get ${expected.toISOString()}" >> {
+      val result = date.getLocalLastMidnight
+      expected === result
+    }
+  }
+
+  "When asking for getLocalLastMidnight" >> {
+
+    val date = SDate("2020-04-02T23:00:00Z")
+    val expected = SDate("2020-04-02T23:00:00Z")
+
+    s"Given ${date.toISOString()} then I should get ${expected.toISOString()}" >> {
+      val result = date.getLocalLastMidnight
+      expected === result
     }
   }
 }
