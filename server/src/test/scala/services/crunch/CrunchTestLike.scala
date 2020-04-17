@@ -168,8 +168,6 @@ class CrunchTestLike
     val snapshotInterval = 1
     val manifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], oneMegaByte, now, DrtStaticParameters.expireAfterMillis, Option(snapshotInterval)))
 
-    //    val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(None, Sizes.oneMegaByte, "flights", airportConfig.queuesByTerminal, now, expireAfterMillis)))
-    //    val portStateActor = PartitionedPortStateTestActor(portStateProbe, flightsActor, now, airportConfig)
     val portStateActor = PortStateTestActor(portStateProbe, now)
     val askablePortStateActor: ActorRef = portStateActor
     if (initialPortState.isDefined) Await.ready(askablePortStateActor.ask(initialPortState.get)(new Timeout(1 second)), 1 second)
