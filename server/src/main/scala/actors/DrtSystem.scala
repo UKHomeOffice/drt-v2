@@ -38,7 +38,6 @@ case class DrtSystem(config: Configuration, airportConfig: AirportConfig)
                      val system: ActorSystem) extends DrtSystemInterface {
 
   import DrtStaticParameters._
-  log.warn("Using live System")
 
   val maxBufferSize: Int = config.get[Int]("crunch.manifests.max-buffer-size")
   val minSecondsBetweenBatches: Int = config.get[Int]("crunch.manifests.min-seconds-between-batches")

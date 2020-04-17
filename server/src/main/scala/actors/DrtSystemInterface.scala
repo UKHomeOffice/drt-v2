@@ -56,8 +56,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   implicit val ec: ExecutionContext
   implicit val system: ActorSystem
 
-  println(s"\n\n*** running DrtSystemInterface\nn")
-
   val now: () => SDateLike = () => SDate.now()
   val purgeOldLiveSnapshots = false
   val purgeOldForecastSnapshots = true

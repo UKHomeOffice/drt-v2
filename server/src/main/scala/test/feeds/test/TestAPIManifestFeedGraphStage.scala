@@ -1,6 +1,7 @@
 package test.feeds.test
 
 import actors.SubscribeResponseQueue
+import actors.acking.AckingReceiver.Ack
 import akka.actor.{Actor, ActorLogging, Scheduler}
 import akka.stream.scaladsl.SourceQueueWithComplete
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
@@ -22,19 +23,23 @@ class TestManifestsActor extends Actor with ActorLogging {
 
   override def receive: PartialFunction[Any, Unit] = {
     case VoyageManifests(manifests) =>
+      val replyTo = sender()
       log.info(s"Got these VMS: ${manifests.map{m => s"${m.EventCode} ${m.CarrierCode}${m.flightCode}"}}")
 
       maybeSubscriber match {
         case Some(subscriber) =>
-          OfferHandler.offerWithRetries(subscriber, ManifestsFeedSuccess(DqManifests("", manifests)), 5)
+          val onCompletionSendAck = Option(() => replyTo ! Ack)
+          OfferHandler.offerWithRetries(subscriber, ManifestsFeedSuccess(DqManifests("", manifests)), 5, onCompletionSendAck)
           maybeManifests = None
         case None =>
           maybeManifests = Some(manifests)
+          replyTo ! Ack
       }
 
 
     case ResetData =>
       maybeManifests = None
+      sender() ! Ack
 
     case SubscribeResponseQueue(manifestsResponse) =>
       maybeSubscriber = Option(manifestsResponse)

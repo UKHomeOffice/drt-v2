@@ -1,5 +1,6 @@
 package test.feeds.test
 
+import actors.acking.AckingReceiver.Ack
 import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props}
 import akka.pattern.ask
@@ -62,6 +63,7 @@ class TestArrivalsActor extends Actor with ActorLogging {
       }
 
       log.info(s"TEST: Arrivals now equal $testArrivals")
+      sender() ! Ack
 
     case GetArrivals =>
       val toSend = Arrivals(testArrivals.getOrElse(List()))
@@ -71,5 +73,6 @@ class TestArrivalsActor extends Actor with ActorLogging {
 
     case ResetData =>
       testArrivals = None
+      sender() ! Ack
   }
 }
