@@ -37,7 +37,7 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  val ctrl: TestDrtSystem = DrtActorSystem.drtTestSystem
+  def ctrl: TestDrtSystem = DrtActorSystem.drtTestSystem
 
   val baseTime: SDateLike = SDate.now()
 

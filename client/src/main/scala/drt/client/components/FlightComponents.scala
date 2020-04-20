@@ -13,7 +13,7 @@ object FlightComponents {
   def paxComp(flightWithSplits: ApiFlightWithSplits): TagMod = <.div(
     ^.title := paxComponentTitle(flightWithSplits.apiFlight),
     ^.className := "right",
-    ArrivalHelper.bestPax(flightWithSplits.apiFlight)
+    PcpPax.bestPax(flightWithSplits.apiFlight)
   )
 
   def paxClassFromSplits(flightWithSplits: ApiFlightWithSplits): String = flightWithSplits.bestSplits match {
