@@ -9,12 +9,12 @@ import upickle.default.{ReadWriter, macroRW}
 import scala.collection.immutable.NumericRange
 import scala.util.matching.Regex
 
-case class ArrivalSuffix(suffix: String)
+case class FlightCodeSuffix(suffix: String)
 
 case class Arrival(Operator: Option[Operator],
                    CarrierCode: CarrierCode,
                    VoyageNumber: VoyageNumber,
-                   ArrivalSuffix: Option[ArrivalSuffix],
+                   ArrivalSuffix: Option[FlightCodeSuffix],
                    Status: ArrivalStatus,
                    Estimated: Option[MillisSinceEpoch],
                    Actual: Option[MillisSinceEpoch],
@@ -101,7 +101,7 @@ object Arrival {
 
   implicit val arrivalStatusRw: ReadWriter[ArrivalStatus] = macroRW
   implicit val voyageNumberRw: ReadWriter[VoyageNumber] = macroRW
-  implicit val arrivalSuffixRw: ReadWriter[ArrivalSuffix] = macroRW
+  implicit val arrivalSuffixRw: ReadWriter[FlightCodeSuffix] = macroRW
   implicit val operatorRw: ReadWriter[Operator] = macroRW
   implicit val portCodeRw: ReadWriter[PortCode] = macroRW
   implicit val arrivalRw: ReadWriter[Arrival] = macroRW
@@ -130,7 +130,7 @@ object Arrival {
             CarrierScheduled: Option[MillisSinceEpoch] = None,
             ApiPax: Option[Int] = None
            ): Arrival = {
-    val (carrierCode: CarrierCode, voyageNumber: VoyageNumber, maybeSuffix: Option[ArrivalSuffix]) = {
+    val (carrierCode: CarrierCode, voyageNumber: VoyageNumber, maybeSuffix: Option[FlightCodeSuffix]) = {
       val bestCode = (rawIATA, rawICAO) match {
         case (iata, _) if iata != "" => iata
         case (_, icao) if icao != "" => icao

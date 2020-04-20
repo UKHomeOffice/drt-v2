@@ -10,7 +10,7 @@ import drt.shared.MilliTimes.{oneDayMillis, oneMinuteMillis}
 import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
 import drt.shared.Terminals.Terminal
-import drt.shared.api.{Arrival, ArrivalSuffix}
+import drt.shared.api.{Arrival, FlightCodeSuffix}
 import ujson.Js.Value
 import upickle.Js
 import upickle.default._
@@ -49,16 +49,21 @@ object FlightParsing {
   val iataRe: Regex = "^([A-Z0-9]{2}?)([0-9]{1,4})([A-Z]*)$".r
   val icaoRe: Regex = "^([A-Z]{2,3}?)([0-9]{1,4})([A-Z]*)$".r
 
-  def flightCodeToParts(iata: String): (CarrierCode, VoyageNumberLike, Option[ArrivalSuffix]) = {
+  def flightCodeToParts(iata: String): (CarrierCode, VoyageNumberLike, Option[FlightCodeSuffix]) = {
     iata match {
-      case iataRe(cc, vn, suffix) =>
-        val carrierCode = CarrierCode(cc)
-        val voyageNumber = VoyageNumber(vn)
-        val arrivalSuffix = if (suffix.nonEmpty) Option(ArrivalSuffix(suffix)) else None
-        (carrierCode, voyageNumber, arrivalSuffix)
-      case icaoRe(cc, vn, suffix) =>  (CarrierCode(cc), VoyageNumber(vn), if (suffix.nonEmpty) Option(ArrivalSuffix(suffix)) else None)
+      case iataRe(cc, vn, suffix) => stringsToComponents(cc, vn, suffix)
+      case icaoRe(cc, vn, suffix) => stringsToComponents(cc, vn, suffix)
       case _ => (CarrierCode(""), VoyageNumber(0), None)
     }
+  }
+
+  private def stringsToComponents(cc: String,
+                                  vn: String,
+                                  suffix: String): (CarrierCode, VoyageNumberLike, Option[FlightCodeSuffix]) = {
+    val carrierCode = CarrierCode(cc)
+    val voyageNumber = VoyageNumber(vn)
+    val arrivalSuffix = if (suffix.nonEmpty) Option(FlightCodeSuffix(suffix)) else None
+    (carrierCode, voyageNumber, arrivalSuffix)
   }
 }
 
