@@ -32,8 +32,8 @@ object PostgresTables extends {
 
 case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsFeedResponse])
 
-case class DrtSystem(config: Configuration, airportConfig: AirportConfig)
-                    (implicit val materializer: Materializer,
+case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
+                        (implicit val materializer: Materializer,
                      val ec: ExecutionContext,
                      val system: ActorSystem) extends DrtSystemInterface {
 

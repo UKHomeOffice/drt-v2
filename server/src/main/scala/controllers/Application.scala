@@ -146,9 +146,10 @@ object DrtActorSystem extends AirportConfProvider {
 
   val drtSystem: DrtSystemInterface =
     if (isTestEnvironment) drtTestSystem
-    else DrtSystem(config, getPortConfFromEnvVar)
+    else drtProdSystem
 
   lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(config, getPortConfFromEnvVar)
+  lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(config, getPortConfFromEnvVar)
 
   def isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("live") == "test"
 }

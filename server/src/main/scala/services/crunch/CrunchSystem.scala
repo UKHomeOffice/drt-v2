@@ -178,19 +178,35 @@ object CrunchSystem {
         DesksAndWaitsPortProvider(props.airportConfig, props.optimiser))
 
     val crunchSystem = RunnableCrunch(
-      props.arrivalsForecastBaseSource, props.arrivalsForecastSource, props.arrivalsLiveBaseSource, props.arrivalsLiveSource,
-      props.manifestsLiveSource, props.manifestResponsesSource,
-      shiftsSource, fixedPointsSource, staffMovementsSource,
-      actualDesksAndQueuesSource,
-      arrivalsStage, arrivalSplitsGraphStage,
-      staffGraphStage, staffBatcher, deploymentGraphStage,
-      forecastArrivalsDiffingStage, liveBaseArrivalsDiffingStage, liveArrivalsDiffingStage,
-      props.actors("forecast-base-arrivals"), props.actors("forecast-arrivals"), props.actors("live-base-arrivals"), props.actors("live-arrivals"),
-      PaxDeltas.applyAdjustmentsToArrivals(props.passengersActorProvider, props.aclPaxAdjustmentDays),
-      props.voyageManifestsActor, props.manifestRequestsSink,
-      props.portStateActor,
-      props.actors("aggregated-arrivals"),
-      forecastMaxMillis, props.stageThrottlePer
+      forecastBaseArrivalsSource = props.arrivalsForecastBaseSource,
+      forecastArrivalsSource = props.arrivalsForecastSource,
+      liveBaseArrivalsSource = props.arrivalsLiveBaseSource,
+      liveArrivalsSource = props.arrivalsLiveSource,
+      manifestsLiveSource = props.manifestsLiveSource,
+      manifestResponsesSource = props.manifestResponsesSource,
+      shiftsSource = shiftsSource,
+      fixedPointsSource = fixedPointsSource,
+      staffMovementsSource = staffMovementsSource,
+      actualDesksAndWaitTimesSource = actualDesksAndQueuesSource,
+      arrivalsGraphStage = arrivalsStage,
+      arrivalSplitsStage = arrivalSplitsGraphStage,
+      staffGraphStage = staffGraphStage,
+      staffBatchUpdateGraphStage = staffBatcher,
+      deploymentGraphStage = deploymentGraphStage,
+      forecastArrivalsDiffStage = forecastArrivalsDiffingStage,
+      liveBaseArrivalsDiffStage = liveBaseArrivalsDiffingStage,
+      liveArrivalsDiffStage = liveArrivalsDiffingStage,
+      forecastBaseArrivalsActor = props.actors("forecast-base-arrivals"),
+      forecastArrivalsActor = props.actors("forecast-arrivals"),
+      liveBaseArrivalsActor = props.actors("live-base-arrivals"),
+      liveArrivalsActor = props.actors("live-arrivals"),
+      applyPaxDeltas = PaxDeltas.applyAdjustmentsToArrivals(props.passengersActorProvider, props.aclPaxAdjustmentDays),
+      manifestsActor = props.voyageManifestsActor,
+      manifestRequestsSink = props.manifestRequestsSink,
+      portStateActor = props.portStateActor,
+      aggregatedArrivalsStateActor = props.actors("aggregated-arrivals"),
+      forecastMaxMillis = forecastMaxMillis,
+      throttleDurationPer = props.stageThrottlePer
       )
 
     val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, shiftsIn, fixedPointsIn, movementsIn, simloadsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS) = crunchSystem.run
