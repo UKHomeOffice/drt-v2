@@ -16,7 +16,7 @@ object WorkloadCalculator {
 
   def flightLoadMinutes(flights: FlightsWithSplits, defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]]): SplitMinutes = {
     val uniqueFlights: Iterable[ApiFlightWithSplits] = flights
-      .flightsToUpdate
+      .flights.toMap.values.toList
       .sortBy(_.apiFlight.ActPax.getOrElse(0))
       .map { fws => (CodeShareKeyOrderedBySchedule(fws), fws) }
       .toMap.values

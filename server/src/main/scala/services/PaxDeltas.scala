@@ -1,8 +1,8 @@
 package services
 
 import actors.daily.{GetAverageAdjustment, OriginAndTerminal}
-import akka.actor.PoisonPill
-import akka.pattern.AskableActorRef
+import akka.actor.{ActorRef, PoisonPill}
+import akka.pattern.ask
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
@@ -10,8 +10,8 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{Arrival, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 
 
@@ -71,7 +71,7 @@ object PaxDeltas {
     possibleMaybeDelta.flatten
   }
 
-  def applyAdjustmentsToArrivals(passengersActorProvider: () => AskableActorRef, numDaysInAverage: Int)
+  def applyAdjustmentsToArrivals(passengersActorProvider: () => ActorRef, numDaysInAverage: Int)
                                 (arrivals: List[Arrival])
                                 (implicit mat: Materializer, ec: ExecutionContext): Future[List[Arrival]] = {
     val paxActor = passengersActorProvider()
@@ -90,7 +90,7 @@ object PaxDeltas {
     eventualUpdatedArrivals
   }
 
-  private def lookupAndApplyAdjustment(paxActor: AskableActorRef,
+  private def lookupAndApplyAdjustment(paxActor: ActorRef,
                                        request: GetAverageAdjustment,
                                        arrival: Arrival)(implicit ec: ExecutionContext): Future[Arrival] =
     paxActor.ask(request)(new Timeout(15 second))

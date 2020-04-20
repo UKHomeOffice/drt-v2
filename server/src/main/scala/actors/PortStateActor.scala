@@ -1,17 +1,17 @@
 package actors
 
+import actors.DrtStaticParameters.liveDaysAhead
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
-import akka.actor.{Actor, Props}
-import akka.pattern.AskableActorRef
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.pattern.ask
 import akka.util.Timeout
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.crunch.deskrecs.GetFlights
-import services.graphstages.Crunch
 import services.graphstages.Crunch.{LoadMinute, Loads}
 
 import scala.collection.mutable
@@ -21,11 +21,22 @@ import scala.language.postfixOps
 
 
 object PortStateActor {
-  def props(liveStateActor: AskableActorRef, forecastStateActor: AskableActorRef, now: () => SDateLike, liveDaysAhead: Int): Props =
+  def apply(now: () => SDateLike, liveCrunchStateActor: ActorRef, forecastCrunchStateActor: ActorRef)
+           (implicit system: ActorSystem): ActorRef = {
+    system.actorOf(PortStateActor.props(liveCrunchStateActor, forecastCrunchStateActor, now, liveDaysAhead), name = "port-state-actor")
+  }
+
+  def props(liveStateActor: ActorRef,
+            forecastStateActor: ActorRef,
+            now: () => SDateLike,
+            liveDaysAhead: Int): Props =
     Props(new PortStateActor(liveStateActor, forecastStateActor, now, liveDaysAhead))
 }
 
-class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: AskableActorRef, now: () => SDateLike, liveDaysAhead: Int) extends Actor {
+class PortStateActor(liveStateActor: ActorRef,
+                     forecastStateActor: ActorRef,
+                     now: () => SDateLike,
+                     liveDaysAhead: Int) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
@@ -34,9 +45,9 @@ class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: Askabl
 
   val state: PortStateMutable = PortStateMutable.empty
 
-  var maybeCrunchActor: Option[AskableActorRef] = None
+  var maybeCrunchActor: Option[ActorRef] = None
   var crunchSourceIsReady: Boolean = true
-  var maybeSimActor: Option[AskableActorRef] = None
+  var maybeSimActor: Option[ActorRef] = None
   var simulationActorIsReady: Boolean = true
 
   override def receive: Receive = {
@@ -55,6 +66,7 @@ class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: Askabl
       state.staffMinutes ++= ps.staffMinutes
       state.flights ++= ps.flights
       log.info(s"Finished setting state (${state.crunchMinutes.all.size} crunch minutes, ${state.staffMinutes.all.size} staff minutes, ${state.flights.all.size} flights)")
+      sender() ! Ack
 
     case StreamInitialized => sender() ! Ack
 
@@ -62,12 +74,23 @@ class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: Askabl
 
     case StreamFailure(t) => log.error(s"Stream failed", t)
 
-    case updates: PortStateMinutes =>
+    case flightsWithSplits: FlightsWithSplitsDiff =>
+      log.info(s"Processing incoming FlightsWithSplits")
+
+      val diff = flightsWithSplits.applyTo(state, nowMillis)
+
+      if (diff.flightMinuteUpdates.nonEmpty) flightMinutesBuffer ++= diff.flightMinuteUpdates
+
+      handleCrunchRequest()
+      handleSimulationRequest()
+
+      splitDiffAndSend(diff)
+
+    case updates: PortStateMinutes[_, _] =>
       log.debug(s"Processing incoming PortStateMinutes ${updates.getClass}")
 
       val diff = updates.applyTo(state, nowMillis)
 
-      if (diff.flightMinuteUpdates.nonEmpty) flightMinutesBuffer ++= diff.flightMinuteUpdates
       if (diff.crunchMinuteUpdates.nonEmpty) loadMinutesBuffer ++= crunchMinutesToLoads(diff)
 
       handleCrunchRequest()
@@ -109,15 +132,17 @@ class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: Askabl
       val start = SDate(startMillis)
       val end = SDate(endMillis)
       log.info(s"Got request for flights between ${start.toISOString()} - ${end.toISOString()}")
-      val flightsToSend = state.flights.range(start, end).values.toList
-      sender() ! FlightsWithSplits(flightsToSend, List())
+      sender() ! FlightsWithSplits(state.flights.range(start, end))
 
     case unexpected => log.warn(s"Got unexpected: $unexpected")
   }
 
-  def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = Option(state.window(SDate(start), SDate(end)))
+  def stateForPeriod(start: MillisSinceEpoch,
+                     end: MillisSinceEpoch): Option[PortState] = Option(state.window(SDate(start), SDate(end)))
 
-  def stateForPeriodForTerminal(start: MillisSinceEpoch, end: MillisSinceEpoch, terminal: Terminal): Option[PortState] = Option(state.windowWithTerminalFilter(SDate(start), SDate(end), Seq(terminal)))
+  def stateForPeriodForTerminal(start: MillisSinceEpoch,
+                                end: MillisSinceEpoch,
+                                terminal: Terminal): Option[PortState] = Option(state.windowWithTerminalFilter(SDate(start), SDate(end), Seq(terminal)))
 
   val flightMinutesBuffer: mutable.Set[MillisSinceEpoch] = mutable.Set[MillisSinceEpoch]()
   val loadMinutesBuffer: mutable.Map[TQM, LoadMinute] = mutable.Map[TQM, LoadMinute]()
@@ -131,7 +156,7 @@ class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: Askabl
           .sequence(Seq(
             askAndLogOnFailure(liveStateActor, live, "live crunch persistence request failed"),
             askAndLogOnFailure(forecastStateActor, forecast, "forecast crunch persistence request failed"))
-          )
+                    )
           .recover { case t => log.error("A future failed", t) }
           .onComplete { _ =>
             log.debug(s"Sending Ack")
@@ -172,7 +197,7 @@ class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: Askabl
     case _ =>
   }
 
-  private def askAndLogOnFailure[A](actor: AskableActorRef, question: Any, msg: String): Future[Any] = actor
+  private def askAndLogOnFailure[A](actor: ActorRef, question: Any, msg: String): Future[Any] = actor
     .ask(question)
     .recover {
       case t => log.error(msg, t)
@@ -192,7 +217,8 @@ class PortStateActor(liveStateActor: AskableActorRef, forecastStateActor: Askabl
 
   def liveStart(now: () => SDateLike): SDateLike = now().getLocalLastMidnight.addDays(-1)
 
-  def liveEnd(now: () => SDateLike, liveStateDaysAhead: Int): SDateLike = now().getLocalNextMidnight.addDays(liveStateDaysAhead)
+  def liveEnd(now: () => SDateLike,
+              liveStateDaysAhead: Int): SDateLike = now().getLocalNextMidnight.addDays(liveStateDaysAhead)
 
   def forecastEnd(now: () => SDateLike): SDateLike = now().getLocalNextMidnight.addDays(360)
 

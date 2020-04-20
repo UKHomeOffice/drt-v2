@@ -3,7 +3,7 @@ package services.exports
 import actors.GetPortStateForTerminal
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
-import akka.pattern.AskableActorRef
+import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -64,8 +64,7 @@ object Exports {
                             queryPortState: (SDateLike, Any) => Future[Option[PortState]],
                             fromPortState: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike])
                            (implicit ec: ExecutionContext, timeout: Timeout): Future[Option[TerminalSummaryLike]] = {
-    val askableSummaryActor: AskableActorRef = summaryActor
-    askableSummaryActor
+    summaryActor
       .ask(request)
       .asInstanceOf[Future[Option[TerminalSummaryLike]]]
       .flatMap {
@@ -75,7 +74,7 @@ object Exports {
             case Some(extract) if extract.isEmpty =>
               log.warn(s"Empty summary from port state. Won't send to be persisted")
               Future(Option(extract))
-            case Some(extract) => sendSummaryToBePersisted(askableSummaryActor, extract)
+            case Some(extract) => sendSummaryToBePersisted(summaryActor, extract)
           }
         case someSummaries =>
           log.info(s"Got summaries from summary actor for ${from.toISODateOnly}")
@@ -83,7 +82,7 @@ object Exports {
       }
   }
 
-  private def sendSummaryToBePersisted(askableSummaryActor: AskableActorRef,
+  private def sendSummaryToBePersisted(askableSummaryActor: ActorRef,
                                        extract: TerminalSummaryLike)
                                       (implicit ec: ExecutionContext, timeout: Timeout) = {
     askableSummaryActor.ask(extract)

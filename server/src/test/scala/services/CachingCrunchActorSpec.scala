@@ -2,7 +2,7 @@ package services
 
 import actors.{CachableActorQuery, CachingCrunchReadActor}
 import akka.actor._
-import akka.pattern.AskableActorRef
+import akka.pattern.ask
 import akka.stream._
 import akka.testkit.TestKit
 import akka.util.Timeout
@@ -34,7 +34,7 @@ class CachingCrunchActorSpec extends TestKit(ActorSystem("CacheTests")) with Spe
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val timeout: Timeout = Timeout(1 seconds)
 
-  val cacheActorRef: AskableActorRef = system.actorOf(Props(classOf[CachingCrunchReadActor]), name = "crunch-cache-actor")
+  val cacheActorRef: ActorRef = system.actorOf(Props(classOf[CachingCrunchReadActor]), name = "crunch-cache-actor")
   "Should pass a message onto the crunch actor and return the response" >> {
 
     def inc() = {}

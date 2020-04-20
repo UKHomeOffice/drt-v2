@@ -3,7 +3,7 @@ package services.graphstages
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import manifests.passengers.BestAvailableManifest
@@ -19,20 +19,20 @@ case class UpdateStats(updatesCount: Int, additionsCount: Int)
 
 
 class ArrivalSplitsGraphStage(name: String = "",
-                              optionalInitialFlights: Option[FlightsWithSplits],
+                              optionalInitialFlights: Option[FlightsWithSplitsDiff],
                               splitsCalculator: SplitsCalculator,
                               expireAfterMillis: Int,
                               now: () => SDateLike,
                               useApiPaxNos: Boolean
                              )
-  extends GraphStage[FanInShape3[ArrivalsDiff, List[BestAvailableManifest], List[BestAvailableManifest], FlightsWithSplits]] {
+  extends GraphStage[FanInShape3[ArrivalsDiff, List[BestAvailableManifest], List[BestAvailableManifest], FlightsWithSplitsDiff]] {
 
   val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
   val inArrivalsDiff: Inlet[ArrivalsDiff] = Inlet[ArrivalsDiff]("ArrivalsDiffIn.in")
   val inManifestsLive: Inlet[List[BestAvailableManifest]] = Inlet[List[BestAvailableManifest]]("ManifestsLiveIn.in")
   val inManifestsHistoric: Inlet[List[BestAvailableManifest]] = Inlet[List[BestAvailableManifest]]("ManifestsHistoricIn.in")
-  val outArrivalsWithSplits: Outlet[FlightsWithSplits] = Outlet[FlightsWithSplits]("FlightsWithSplitsOut.out")
+  val outArrivalsWithSplits: Outlet[FlightsWithSplitsDiff] = Outlet[FlightsWithSplitsDiff]("FlightsWithSplitsOut.out")
 
   val stageName = "arrival-splits"
 
@@ -48,7 +48,7 @@ class ArrivalSplitsGraphStage(name: String = "",
     override def preStart(): Unit = {
 
       optionalInitialFlights match {
-        case Some(FlightsWithSplits(flights, _)) =>
+        case Some(FlightsWithSplitsDiff(flights, _)) =>
           log.info(s"Received initial flights. Setting ${flights.size}")
           flights.foreach(fws => flightsByFlightId += (ArrivalKey(fws.apiFlight) -> fws))
           purgeExpired(flightsByFlightId, ArrivalKey.atTime, now, expireAfterMillis.toInt)
@@ -265,7 +265,7 @@ class ArrivalSplitsGraphStage(name: String = "",
           Metrics.counter(s"$stageName.arrivals-with-splits.updates", arrivalsWithSplitsDiff.values.size)
           Metrics.counter(s"$stageName.arrivals-with-splits.removals", arrivalsToRemove.size)
 
-          push(outArrivalsWithSplits, FlightsWithSplits(arrivalsWithSplitsDiff.values.toList, arrivalsToRemove.toList))
+          push(outArrivalsWithSplits, FlightsWithSplitsDiff(arrivalsWithSplitsDiff.values.toList, arrivalsToRemove.toList))
           arrivalsWithSplitsDiff = Map()
           arrivalsToRemove = Set()
         } else log.debug(s"No updated arrivals with splits to push")

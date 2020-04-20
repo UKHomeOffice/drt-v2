@@ -6,7 +6,7 @@ import actors.pointInTime.ArrivalsReadActor
 import actors.{ArrivalsState, GetState, Ports}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
-import akka.pattern.AskableActorRef
+import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -38,9 +38,7 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
         ArrivalsReadActor.props(snapshotDate, persistenceId, fs), name = s"arrival-read-$fs-${UUID.randomUUID()}"
       )
 
-    val askableActorRef: AskableActorRef = feedActor
-
-    askableActorRef
+    feedActor
       .ask(GetState)(Timeout(60 seconds))
       .map {
         case ArrivalsState(arrivals: mutable.Map[UniqueArrival, Arrival], _, _) =>
