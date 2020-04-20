@@ -6,8 +6,9 @@ import akka.util.Timeout
 import drt.server.feeds.Implicits._
 import drt.server.feeds.lhr.forecast.LHRForecastFlightRow
 import drt.shared.FlightsApi.Flights
+import drt.shared.{ForecastFeedSource, api}
 import drt.shared.Terminals.Terminal
-import drt.shared.{Arrival, ForecastFeedSource}
+import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, GetFeedImportArrivals}
 import services.SDate

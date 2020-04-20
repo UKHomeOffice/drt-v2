@@ -9,6 +9,7 @@ import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SplitRatiosNs.SplitSources.Historical
 import drt.shared._
+import drt.shared.api.Arrival
 import graphs.SinkToSourceBridge
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import manifests.actors.RegisteredArrivals
@@ -24,7 +25,7 @@ import scala.concurrent.duration._
 
 class ManifestGraphSpec extends CrunchTestLike {
 
-  val scheduled = SDate("2019-03-06T12:00:00Z")
+  val scheduled: SDateLike = SDate("2019-03-06T12:00:00Z")
 
   "Given an arrival is sent into the ManifestGraph then we should find the manifest for that flight in the sink" >> {
 

@@ -7,7 +7,8 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{Arrival, SDateLike}
+import drt.shared.SDateLike
+import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.duration._

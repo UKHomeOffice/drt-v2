@@ -2,12 +2,12 @@ package test.feeds.test
 
 import actors.acking.AckingReceiver.Ack
 import akka.NotUsed
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable}
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
-import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
+import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate

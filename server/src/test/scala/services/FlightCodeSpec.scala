@@ -1,23 +1,24 @@
 package services
 
-import drt.shared.ArrivalHelper
+import drt.shared.{ArrivalHelper, CarrierCode, VoyageNumber}
 import drt.shared.FlightParsing._
+import drt.shared.api.FlightCodeSuffix
 import services.crunch.CrunchTestLike
 
 
 class FlightCodeSpec extends CrunchTestLike {
   "Can parse an IATA to carrier code and voyage number" >> {
-    parseIataToCarrierCodeVoyageNumber("FR8364") === Some(("FR", "8364"))
-    parseIataToCarrierCodeVoyageNumber("FR836") === Some(("FR", "836"))
-    parseIataToCarrierCodeVoyageNumber("FR836F") === Some(("FR", "836"))
-    parseIataToCarrierCodeVoyageNumber("U2836F") === Some(("U2", "836"))
-    parseIataToCarrierCodeVoyageNumber("0B836F") === Some(("0B", "836"))
+    flightCodeToParts("FR8364") === ((CarrierCode("FR"), VoyageNumber("8364"), None))
+    flightCodeToParts("FR836") === ((CarrierCode("FR"), VoyageNumber("836"), None))
+    flightCodeToParts("FR836F") === ((CarrierCode("FR"), VoyageNumber("836"), Option(FlightCodeSuffix("F"))))
+    flightCodeToParts("U2836F") === ((CarrierCode("U2"), VoyageNumber("836"), Option(FlightCodeSuffix("F"))))
+    flightCodeToParts("0B836F") === ((CarrierCode("0B"), VoyageNumber("836"), Option(FlightCodeSuffix("F"))))
   }
 
   "Can parse an ICAO to carrier code and voyage number" >> {
-    parseIataToCarrierCodeVoyageNumber("RYR8364") === Some(("RYR", "8364"))
-    parseIataToCarrierCodeVoyageNumber("RYR836") === Some(("RYR", "836"))
-    parseIataToCarrierCodeVoyageNumber("RYR836F") === Some(("RYR", "836"))
+    flightCodeToParts("RYR8364") === ((CarrierCode("RYR"), VoyageNumber("8364"), None))
+    flightCodeToParts("RYR836") === ((CarrierCode("RYR"), VoyageNumber("836"), None))
+    flightCodeToParts("RYR836F") === ((CarrierCode("RYR"), VoyageNumber("836"), Option(FlightCodeSuffix("F"))))
   }
 
   "Voyage Number should be padded to 4 digits" >> {

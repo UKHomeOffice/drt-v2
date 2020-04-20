@@ -4,6 +4,7 @@ import actors.PortStateMessageConversion.splitMessageToApiSplits
 import actors.restore.RestorerWithLegacy
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import drt.shared.api.Arrival
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, PaxTypeAndQueueCountMessage, SplitMessage}

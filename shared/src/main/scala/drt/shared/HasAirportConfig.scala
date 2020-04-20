@@ -1,13 +1,14 @@
 package drt.shared
 
+import drt.auth.Role
 import drt.shared.PaxTypes._
-import drt.shared.Queues.{EGate, EeaDesk, FastTrack, NonEeaDesk, Queue, QueueDesk, Transfer}
+import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.Terminal
+import drt.shared.api.Arrival
 import ujson.Js.Value
 import upickle.Js
-import upickle.default.{ReadWriter, macroRW, readwriter}
-import drt.auth.{LoggedInUser, Role}
+import upickle.default._
 
 import scala.collection.immutable.SortedMap
 

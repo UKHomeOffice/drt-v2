@@ -5,6 +5,7 @@ import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.SplitSource
 import drt.shared.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
 import drt.shared._
+import drt.shared.api.Arrival
 import drt.shared.splits.ApiSplitsToSplitRatio
 import services.exports.summaries.TerminalSummaryLike
 

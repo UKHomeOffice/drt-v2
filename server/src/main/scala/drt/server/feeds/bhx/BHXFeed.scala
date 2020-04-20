@@ -12,8 +12,9 @@ import akka.stream.scaladsl.Source
 import drt.server.feeds.Implicits._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
+import drt.shared.LiveFeedSource
 import drt.shared.Terminals.Terminal
-import drt.shared.{Arrival, LiveFeedSource}
+import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
@@ -107,7 +108,7 @@ object BHXFlightStatus {
     "WAI" -> "WAIT IN LOUNGE"
   )
 
-  def apply(code: String) = statusCodes.getOrElse(code, code)
+  def apply(code: String): String = statusCodes.getOrElse(code, code)
 }
 
 
@@ -116,7 +117,7 @@ final class SoapActionHeader(action: String) extends ModeledCustomHeader[SoapAct
 
   override def renderInResponses = false
 
-  override val companion = SoapActionHeader
+  override val companion: ModeledCustomHeaderCompanion[SoapActionHeader] = SoapActionHeader
 
   override def value: String = action
 }
@@ -145,7 +146,7 @@ trait BHXClientLike extends ScalaXmlSupport {
     sendXMLRequest(updateXml(bhxLiveFeedUser))
   }
 
-  def sendXMLRequest(postXml: String)(implicit actorSystem: ActorSystem) = {
+  def sendXMLRequest(postXml: String)(implicit actorSystem: ActorSystem): Future[ArrivalsFeedResponse] = {
 
     implicit val xmlToResUM: Unmarshaller[NodeSeq, BHXFlightsResponse] = BHXFlight.unmarshaller
     implicit val resToBHXResUM: Unmarshaller[HttpResponse, BHXFlightsResponse] = BHXFlight.responseToAUnmarshaller
@@ -220,7 +221,7 @@ case class BHXFlightsResponseSuccess(flights: List[BHXFlight]) extends BHXFlight
 case class BHXFlightsResponseFailure(message: String) extends BHXFlightsResponse
 
 object BHXFlight extends NodeSeqUnmarshaller {
-  def operationTimeFromNodeSeq(timeType: String, qualifier: String)(nodeSeq: NodeSeq) = {
+  def operationTimeFromNodeSeq(timeType: String, qualifier: String)(nodeSeq: NodeSeq): Option[String] = {
     nodeSeq.find(p =>
       attributeFromNode(p, "OperationQualifier").contains(qualifier) &&
         attributeFromNode(p, "TimeType").contains(timeType)
@@ -330,7 +331,7 @@ object BHXFlight extends NodeSeqUnmarshaller {
     case _ => None
   }
 
-  def bhxFlightToArrival(f: BHXFlight) = {
+  def bhxFlightToArrival(f: BHXFlight): Arrival = {
     Arrival(
       f.airline,
       BHXFlightStatus(f.status),

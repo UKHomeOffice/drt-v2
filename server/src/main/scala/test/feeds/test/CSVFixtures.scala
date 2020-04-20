@@ -1,7 +1,8 @@
 package test.feeds.test
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{Arrival, ArrivalStatus, LiveFeedSource, PortCode, Terminals}
+import drt.shared.api.Arrival
+import drt.shared.{ArrivalStatus, LiveFeedSource, PortCode, Terminals}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 

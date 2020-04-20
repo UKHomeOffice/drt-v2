@@ -7,7 +7,8 @@ import akka.testkit.TestKit
 import com.typesafe.config.ConfigFactory
 import drt.server.feeds.legacy.bhx.BHXFeed
 import drt.shared.Terminals.T1
-import drt.shared.{Arrival, ForecastFeedSource, LiveFeedSource, PortCode}
+import drt.shared.api.Arrival
+import drt.shared.{ForecastFeedSource, LiveFeedSource, PortCode}
 import javax.xml.datatype.DatatypeFactory
 import javax.xml.ws.BindingProvider
 import org.joda.time.DateTimeZone
@@ -91,7 +92,7 @@ class BHXLegacyFeedSpec extends TestKit(
 
   "Given a BHX feed exists" should {
     "we can read live flight data" in new Context {
-      val feed = BHXFeed(serviceSoap)
+      val feed: BHXFeed = BHXFeed(serviceSoap)
       val arrivals: List[Arrival] = feed.getLiveArrivals
       verify(serviceSoap).bfGetFlights
       arrivals.size mustEqual 1
@@ -124,7 +125,7 @@ class BHXLegacyFeedSpec extends TestKit(
     }
 
     "we can read forecast flight data with seconds dropped from timestamps" in new Context {
-      val feed = BHXFeed(serviceSoap)
+      val feed: BHXFeed = BHXFeed(serviceSoap)
       val arrivals: List[Arrival] = feed.getForecastArrivals
       verify(serviceSoap).bfGetScheduledFlights()
       arrivals.size mustEqual 1

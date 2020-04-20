@@ -1,7 +1,8 @@
 package controllers
 
 import drt.shared.Terminals.{T1, Terminal}
-import drt.shared.{Arrival, ArrivalStatus, FeedSource, Operator, PortCode}
+import drt.shared.api.Arrival
+import drt.shared.{ArrivalStatus, FeedSource, Operator, PortCode}
 import org.springframework.util.StringUtils
 import services.SDate
 

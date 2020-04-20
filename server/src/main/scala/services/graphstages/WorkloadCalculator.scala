@@ -4,6 +4,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import services.PcpArrival
 import services.graphstages.Crunch.{FlightSplitMinute, SplitMinutes}
@@ -27,7 +28,7 @@ object WorkloadCalculator {
       .filter(fws => !fws.apiFlight.isCancelled && defaultProcTimes.contains(fws.apiFlight.Terminal))
       .foreach { incoming =>
         val procTimes = defaultProcTimes(incoming.apiFlight.Terminal)
-        val flightMinutes = flightToFlightSplitMinutes(incoming, procTimes, Map(), false)
+        val flightMinutes = flightToFlightSplitMinutes(incoming, procTimes, Map(), useNationalityBasedProcTimes = false)
         minutes ++= flightMinutes
       }
 

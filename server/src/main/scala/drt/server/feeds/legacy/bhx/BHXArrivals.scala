@@ -2,7 +2,8 @@ package drt.server.feeds.legacy.bhx
 
 import drt.server.feeds.Implicits._
 import drt.shared.Terminals.Terminal
-import drt.shared.{Arrival, ForecastFeedSource, LiveFeedSource, PortCode}
+import drt.shared.api.Arrival
+import drt.shared.{ForecastFeedSource, LiveFeedSource, PortCode}
 import javax.xml.datatype.XMLGregorianCalendar
 import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}

@@ -9,7 +9,7 @@ import akka.event.{Logging, LoggingAdapter}
 import akka.pattern._
 import akka.stream._
 import akka.util.Timeout
-import api.{KeyCloakAuth, KeyCloakAuthError, KeyCloakAuthResponse, KeyCloakAuthToken}
+import api.{KeyCloakAuth, KeyCloakAuthError, KeyCloakAuthResponse, KeyCloakAuthToken, KeyCloakAuthTokenParserProtocol}
 import boopickle.Default._
 import buildinfo.BuildInfo
 import com.typesafe.config.ConfigFactory
@@ -21,7 +21,8 @@ import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.Terminals.Terminal
-import drt.shared.{AirportConfig, Arrival, _}
+import drt.shared.api.Arrival
+import drt.shared.{AirportConfig, _}
 import drt.users.KeyCloakClient
 import javax.inject.{Inject, Singleton}
 import org.joda.time.chrono.ISOChronology
@@ -399,19 +400,16 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     val clientSecretOption = config.getOptional[String]("key-cloak.client_secret")
     val usernameOption = postStringValOrElse("username")
     val passwordOption = postStringValOrElse("password")
-    import api.KeyCloakAuthTokenParserProtocol._
+    import KeyCloakAuthTokenParserProtocol._
     import spray.json._
 
-    def tokenToHttpResponse(username: String)(token: KeyCloakAuthResponse) = {
-
-      token match {
-        case t: KeyCloakAuthToken =>
-          log.info(s"Successful login to API via keycloak for $username")
-          Ok(t.toJson.toString)
-        case e: KeyCloakAuthError =>
-          log.info(s"Failed login to API via keycloak for $username")
-          BadRequest(e.toJson.toString)
-      }
+    def tokenToHttpResponse(username: String)(token: KeyCloakAuthResponse) = token match {
+      case t: KeyCloakAuthToken =>
+        log.info(s"Successful login to API via keycloak for $username")
+        Ok(t.toJson.toString)
+      case e: KeyCloakAuthError =>
+        log.info(s"Failed login to API via keycloak for $username")
+        BadRequest(e.toJson.toString)
     }
 
     def missingPostFieldsResponse = Future(

@@ -12,5 +12,5 @@ trait ArrivalTableLike {
 
   def removeArrival(number: Int, terminalName: Terminal, scheduledTs: Timestamp): Future[Int]
 
-  def insertOrUpdateArrival(f: shared.Arrival): Future[Int]
+  def insertOrUpdateArrival(f: shared.api.Arrival): Future[Int]
 }

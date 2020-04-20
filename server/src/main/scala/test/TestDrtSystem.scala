@@ -9,7 +9,8 @@ import akka.stream.{KillSwitch, Materializer}
 import akka.util.Timeout
 import drt.auth.Role
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{AirportConfig, Arrival, PortCode}
+import drt.shared.api.Arrival
+import drt.shared.{AirportConfig, PortCode}
 import graphs.SinkToSourceBridge
 import manifests.passengers.BestAvailableManifest
 import play.api.Configuration

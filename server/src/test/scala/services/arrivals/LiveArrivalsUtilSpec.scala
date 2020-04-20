@@ -1,7 +1,8 @@
 package services.arrivals
 
 import drt.shared.Terminals.T1
-import drt.shared.{Arrival, ArrivalStatus, PortCode}
+import drt.shared.api.Arrival
+import drt.shared.{ArrivalStatus, PortCode}
 import org.specs2.mutable.Specification
 import services.SDate
 

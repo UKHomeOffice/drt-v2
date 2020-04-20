@@ -2,7 +2,8 @@ package services.workloadcalculator
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SplitRatiosNs.SplitRatios
-import drt.shared.{Arrival, _}
+import drt.shared._
+import drt.shared.api.Arrival
 
 import scala.collection.immutable.{List, _}
 

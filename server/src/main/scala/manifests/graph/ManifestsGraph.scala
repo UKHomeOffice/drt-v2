@@ -6,7 +6,8 @@ import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
 import akka.stream.stage.GraphStage
-import drt.shared.{Arrival, ArrivalKey, PortCode}
+import drt.shared.api.Arrival
+import drt.shared.{ArrivalKey, PortCode}
 import manifests.ManifestLookupLike
 import manifests.actors.RegisteredArrivals
 import manifests.passengers.BestAvailableManifest

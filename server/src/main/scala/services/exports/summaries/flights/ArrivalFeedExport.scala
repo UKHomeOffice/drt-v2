@@ -11,7 +11,8 @@ import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.Terminal
-import drt.shared.{Arrival, FeedSource, SDateLike, UniqueArrival}
+import drt.shared.api.Arrival
+import drt.shared.{FeedSource, SDateLike, UniqueArrival}
 import services.SDate
 import services.exports.Exports
 

@@ -7,6 +7,7 @@ import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
 import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
+import drt.shared.api.Arrival
 import drt.shared.{SDateLike, _}
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}

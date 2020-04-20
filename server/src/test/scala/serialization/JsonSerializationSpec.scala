@@ -6,6 +6,7 @@ import drt.shared.PaxTypes._
 import drt.shared.SplitRatiosNs.SplitSources.Historical
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
+import drt.shared.api.Arrival
 import org.specs2.mutable.Specification
 import services.AirportToCountry
 import upickle.default._

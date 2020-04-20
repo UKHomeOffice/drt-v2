@@ -12,7 +12,7 @@ import server.protobuf.messages.Alert.{AlertSnapshotMessage, Alert => ProtobufAl
 
 case object DeleteAlerts
 
-case class AlertsActor(now: () => SDateLike) extends RecoveryActorLike with PersistentDrtActor[Seq[Alert]] {
+class AlertsActor(val now: () => SDateLike) extends RecoveryActorLike with PersistentDrtActor[Seq[Alert]] {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def persistenceId: String = "alerts-store"

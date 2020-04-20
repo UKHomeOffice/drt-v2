@@ -17,6 +17,7 @@ import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared._
+import drt.shared.api.Arrival
 import graphs.SinkToSourceBridge
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
@@ -162,11 +163,11 @@ class CrunchTestLike
     val liveBaseArrivalsProbe = testProbe("live-base-arrivals")
     val liveArrivalsProbe = testProbe("live-arrivals")
 
-    val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], now, DrtStaticParameters.timeBeforeThisMonth(now)))
-    val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], now))
-    val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], now, DrtStaticParameters.time48HoursAgo(now)))
+    val shiftsActor: ActorRef = system.actorOf(Props(new ShiftsActor(now, DrtStaticParameters.timeBeforeThisMonth(now))))
+    val fixedPointsActor: ActorRef = system.actorOf(Props(new FixedPointsActor(now)))
+    val staffMovementsActor: ActorRef = system.actorOf(Props(new StaffMovementsActor(now, DrtStaticParameters.time48HoursAgo(now))))
     val snapshotInterval = 1
-    val manifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], oneMegaByte, now, DrtStaticParameters.expireAfterMillis, Option(snapshotInterval)))
+    val manifestsActor: ActorRef = system.actorOf(Props(new VoyageManifestsActor(oneMegaByte, now, DrtStaticParameters.expireAfterMillis, Option(snapshotInterval))))
 
     val portStateActor = PortStateTestActor(portStateProbe, now)
     val askablePortStateActor: ActorRef = portStateActor
