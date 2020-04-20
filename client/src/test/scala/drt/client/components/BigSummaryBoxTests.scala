@@ -286,7 +286,7 @@ object BigSummaryBoxTests extends TestSuite {
             "AND it has no splits " - {
               "AND it has not got act pax " - {
                 "Then we use max pax from the flight" - {
-                  val apiFlight1 = apiFlight(schDt = "2017-05-01T12:05Z", terminal = terminal1, actPax = Option(0), maxPax = Option(134), pcpTime = Option(mkMillis("2017-05-01T12:05Z")))
+                  val apiFlight1 = apiFlight(schDt = "2017-05-01T12:05Z", terminal = terminal1, actPax = None, maxPax = Option(134), pcpTime = Option(mkMillis("2017-05-01T12:05Z")))
                   val apiFlightWithSplits = ApiFlightWithSplits(apiFlight1, Set())
 
                   val pax = bestFlightSplitPax(ArrivalHelper.bestPax)(apiFlightWithSplits)
