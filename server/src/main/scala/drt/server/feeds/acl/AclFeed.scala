@@ -9,7 +9,8 @@ import drt.server.feeds.acl.AclFeed._
 import drt.shared
 import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals._
-import drt.shared.{Arrival, PortCode, Terminals}
+import drt.shared.api.Arrival
+import drt.shared.{PortCode, Terminals}
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.{RemoteResourceInfo, SFTPClient}
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier

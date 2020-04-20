@@ -7,9 +7,10 @@ import akka.stream._
 import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
 import akka.stream.stage.GraphStage
 import drt.chroma.ArrivalsDiffingStage
+import drt.shared.{ApiFlightWithSplits, ArrivalsDiff, FixedPointAssignments, RemoveFlight, SDateLike, ShiftAssignments, StaffMovement}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{Flights, FlightsWithSplitsDiff}
-import drt.shared._
+import drt.shared.api.Arrival
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds._

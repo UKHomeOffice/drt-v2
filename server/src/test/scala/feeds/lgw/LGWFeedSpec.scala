@@ -5,7 +5,8 @@ import akka.testkit.TestKit
 import com.typesafe.config.ConfigFactory
 import drt.server.feeds.lgw.ResponseToArrivals
 import drt.shared.Terminals.N
-import drt.shared.{Arrival, LiveFeedSource, PortCode}
+import drt.shared.api.Arrival
+import drt.shared.{LiveFeedSource, PortCode}
 import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecificationLike
 import services.SDate

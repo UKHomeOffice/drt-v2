@@ -6,6 +6,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
+import drt.shared.api.Arrival
 import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
@@ -23,8 +24,7 @@ class ArrivalSplitsGraphStage(name: String = "",
                               splitsCalculator: SplitsCalculator,
                               expireAfterMillis: Int,
                               now: () => SDateLike,
-                              useApiPaxNos: Boolean
-                             )
+                              useApiPaxNos: Boolean)
   extends GraphStage[FanInShape3[ArrivalsDiff, List[BestAvailableManifest], List[BestAvailableManifest], FlightsWithSplitsDiff]] {
 
   val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")

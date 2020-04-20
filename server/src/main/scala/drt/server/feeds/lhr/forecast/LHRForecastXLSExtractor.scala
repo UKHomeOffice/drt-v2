@@ -3,7 +3,8 @@ package drt.server.feeds.lhr.forecast
 import java.util.TimeZone
 
 import drt.server.feeds.lhr.LHRForecastFeed
-import drt.shared.{Arrival, SDateLike}
+import drt.shared.SDateLike
+import drt.shared.api.Arrival
 import info.folone.scala.poi._
 import info.folone.scala.poi.impure._
 import org.apache.poi.ss.usermodel.DateUtil

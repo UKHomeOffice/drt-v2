@@ -6,10 +6,11 @@ import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointI
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{SPACircuit, ViewLive, ViewMode}
+import drt.client.services.{SPACircuit, ViewMode}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
 import drt.shared._
+import drt.shared.api.Arrival
 import drt.shared.splits.ApiSplitsToSplitRatio
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.Reusability

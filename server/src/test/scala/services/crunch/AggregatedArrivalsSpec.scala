@@ -11,6 +11,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
+import drt.shared.api.Arrival
 import org.specs2.specification.BeforeEach
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate

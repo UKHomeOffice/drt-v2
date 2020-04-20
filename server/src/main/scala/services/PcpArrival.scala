@@ -1,8 +1,9 @@
 package services
 
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.MilliDate
 import drt.shared.Terminals.Terminal
-import drt.shared.{Arrival, MilliDate}
+import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.util.{Success, Try}

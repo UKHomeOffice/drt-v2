@@ -1,13 +1,13 @@
 package services.graphstages
 
 import actors.acking.AckingReceiver.StreamCompleted
-import akka.actor.{Actor, Props}
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{ClosedShape, OverflowStrategy}
 import akka.testkit.{TestKit, TestProbe}
 import drt.shared.MilliTimes.oneDayMillis
 import drt.shared.Terminals.T1
 import drt.shared._
+import drt.shared.api.Arrival
 import org.specs2.specification.AfterEach
 import services.arrivals.ArrivalDataSanitiser
 import services.crunch.CrunchTestLike

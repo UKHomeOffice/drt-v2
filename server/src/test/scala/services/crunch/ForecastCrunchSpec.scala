@@ -7,9 +7,10 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
+import drt.shared.api.Arrival
 import server.feeds.ArrivalsFeedSuccess
 import services.graphstages.CrunchMocks
-import services.{Optimiser, SDate, TryRenjin}
+import services.{Optimiser, SDate}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.collection.mutable
@@ -18,8 +19,7 @@ import scala.concurrent.duration._
 
 class MockPassengerDeltaActor(maybeDelta: Option[Double]) extends Actor {
   override def receive: Receive = {
-    case u =>
-      sender() ! maybeDelta
+    case _ => sender() ! maybeDelta
   }
 }
 

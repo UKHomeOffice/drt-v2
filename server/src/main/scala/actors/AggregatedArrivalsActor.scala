@@ -7,6 +7,7 @@ import akka.actor.Actor
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import slickdb.ArrivalTableLike
 

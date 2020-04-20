@@ -2,6 +2,7 @@ package drt.client.components
 
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
+import drt.shared.api.Arrival
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, VdomArray}
 import org.scalajs.dom.html.Div

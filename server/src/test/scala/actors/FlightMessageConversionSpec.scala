@@ -1,7 +1,8 @@
 package actors
 
-import drt.shared.Terminals.{T1, Terminal}
-import drt.shared.{Arrival, FeedSource, Operator, PortCode}
+import drt.shared.Terminals.T1
+import drt.shared.api.Arrival
+import drt.shared.{FeedSource, Operator, PortCode}
 import org.specs2.mutable.Specification
 import server.protobuf.messages.FlightsMessage.FlightMessage
 

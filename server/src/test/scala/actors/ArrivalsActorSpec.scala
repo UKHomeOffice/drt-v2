@@ -1,7 +1,8 @@
 package actors
 
 import drt.shared.Terminals.T1
-import drt.shared.{Arrival, PortCode, UniqueArrival}
+import drt.shared.api.Arrival
+import drt.shared.{PortCode, UniqueArrival}
 import org.specs2.mutable.Specification
 import services.graphstages.Crunch
 

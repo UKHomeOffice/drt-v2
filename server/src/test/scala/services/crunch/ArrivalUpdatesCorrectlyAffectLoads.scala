@@ -5,6 +5,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.{T1, T2}
 import drt.shared._
+import drt.shared.api.Arrival
 import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, VoyageManifest}
 import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
@@ -13,8 +14,7 @@ import services.crunch.VoyageManifestGenerator._
 import scala.collection.immutable.{List, SortedMap}
 import scala.concurrent.duration._
 
-class
-ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
+class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
   val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(
     now = () => SDate("2019-01-01T01:00"),
     pcpArrivalTime = pcpForFlightFromBest,

@@ -1,7 +1,8 @@
 package services.exports.summaries.flights
 
+import drt.shared.ApiFlightWithSplits
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{ApiFlightWithSplits, Arrival}
+import drt.shared.api.Arrival
 import services.exports.summaries.flights.TerminalFlightsSummary._
 
 case class TerminalFlightsSummary(flights: Seq[ApiFlightWithSplits],

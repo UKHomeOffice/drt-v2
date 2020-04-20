@@ -9,7 +9,8 @@ import akka.testkit.TestProbe
 import drt.server.feeds.gla.{GlaFeed, GlaFeedRequesterLike, ProdGlaFeedRequester}
 import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.T1
-import drt.shared.{Arrival, ArrivalStatus, LiveFeedSource, PortCode}
+import drt.shared.api.Arrival
+import drt.shared.{ArrivalStatus, LiveFeedSource, PortCode}
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.SpecificationLike
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
@@ -161,7 +162,7 @@ class GlaFeedSpec extends SpecificationLike {
     }
   }
 
-  val firstJsonExample: String =
+  def firstJsonExample: String =
     """[{
       |        "AIBT": "2019-11-13T13:30:00+00:00",
       |        "AirlineIATA": "TS",

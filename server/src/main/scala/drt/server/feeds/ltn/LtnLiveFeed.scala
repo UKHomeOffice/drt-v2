@@ -11,8 +11,9 @@ import akka.stream.scaladsl.Source
 import drt.server.feeds.Implicits._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
+import drt.shared.LiveFeedSource
 import drt.shared.Terminals.Terminal
-import drt.shared.{Arrival, LiveFeedSource}
+import drt.shared.api.Arrival
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
@@ -29,17 +30,18 @@ trait LtnFeedRequestLike {
   def getResponse: () => Future[HttpResponse]
 }
 
-case class LtnFeedRequester(endPoint: String, token: String, username: String, password: String)(implicit system: ActorSystem) extends LtnFeedRequestLike {
-  val request = HttpRequest(
+case class LtnFeedRequester(endPoint: String, token: String, username: String, password: String)
+                           (implicit system: ActorSystem) extends LtnFeedRequestLike {
+  val request: HttpRequest = HttpRequest(
     method = HttpMethods.GET,
     uri = Uri(endPoint),
     headers = List(
       RawHeader("token", token),
       RawHeader("username", username),
       RawHeader("password", password)
-    ),
+      ),
     entity = HttpEntity.Empty
-  )
+    )
 
   val getResponse: () => Future[HttpResponse] = () => Http().singleRequest(request)
 }
@@ -110,7 +112,7 @@ case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone
       Scheduled = sdateWithTimeZoneApplied(ltnFeedFlight.ScheduledDateTime.getOrElse(throw new Exception("Missing scheduled date time"))),
       PcpTime = None,
       FeedSources = Set(LiveFeedSource)
-    )
+      )
   }
 
   def sdateWithTimeZoneApplied(dt: String): MillisSinceEpoch = {

@@ -3,7 +3,8 @@ package drt.chroma
 import akka.stream._
 import akka.stream.stage._
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{Arrival, UniqueArrival}
+import drt.shared.UniqueArrival
+import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.metrics.{Metrics, StageTimer}

@@ -7,7 +7,8 @@ import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
 import drt.server.feeds.Implicits._
 import drt.shared.Terminals.Terminal
-import drt.shared.{Arrival, LiveFeedSource, PortCode, SDateLike}
+import drt.shared.api.Arrival
+import drt.shared.{LiveFeedSource, PortCode, SDateLike}
 import javax.inject.{Inject, Singleton}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.FlightPassengerInfoProtocol._
@@ -23,10 +24,10 @@ import test.feeds.test.CSVFixtures
 import test.roles.MockRoles
 import test.roles.MockRoles.MockRolesProtocol._
 
-import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
-import scala.util.{Failure, Success}
+import scala.util.Success
 
 @Singleton
 class TestController @Inject()(val config: Configuration) extends InjectedController with AirportConfProvider {

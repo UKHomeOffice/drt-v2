@@ -2,7 +2,8 @@ package services
 
 import com.typesafe.config.{Config, ConfigFactory}
 import drt.shared.SplitRatiosNs.SplitRatios
-import drt.shared.{Arrival, MilliDate}
+import drt.shared.api.Arrival
+import drt.shared.MilliDate
 import org.slf4j.{Logger, LoggerFactory}
 
 object SplitsProvider {

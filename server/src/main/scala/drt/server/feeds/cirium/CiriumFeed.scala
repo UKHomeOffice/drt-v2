@@ -10,7 +10,8 @@ import akka.stream.scaladsl.Source
 import drt.server.feeds.Implicits._
 import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.{InvalidTerminal, T1, Terminal}
-import drt.shared.{Arrival, LiveBaseFeedSource, PortCode, SDateLike}
+import drt.shared.api.Arrival
+import drt.shared.{LiveBaseFeedSource, PortCode, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate

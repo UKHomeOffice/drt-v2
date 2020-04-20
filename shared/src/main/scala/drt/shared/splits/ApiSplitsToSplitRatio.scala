@@ -2,6 +2,7 @@ package drt.shared.splits
 
 import drt.shared.Queues.Queue
 import drt.shared._
+import drt.shared.api.Arrival
 
 object ApiSplitsToSplitRatio {
 

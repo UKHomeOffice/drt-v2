@@ -8,7 +8,8 @@ import akka.testkit.{TestKit, TestProbe}
 import com.typesafe.config.ConfigFactory
 import drt.server.feeds.cirium.CiriumFeed
 import drt.shared.Terminals.T1
-import drt.shared.{Arrival, ArrivalStatus, LiveBaseFeedSource, Operator, PortCode}
+import drt.shared.api.Arrival
+import drt.shared.{ArrivalStatus, LiveBaseFeedSource, Operator, PortCode}
 import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecificationLike
 import server.feeds.ArrivalsFeedSuccess
