@@ -37,7 +37,7 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
     RegisteredArrivalsMessage(
       arrivalWithLastLookup
         .map { case (ArrivalKey(o, v, s), l) =>
-          val paddedVoyageNumber = ArrivalHelper.padTo4Digits(v.toString)
+          val paddedVoyageNumber = PcpPax.padTo4Digits(v.toString)
           RegisteredArrivalMessage(Option(o.toString), Option(portCode.toString), Option(paddedVoyageNumber), Option(s), l)
         }
         .toSeq

@@ -329,31 +329,6 @@ object OutOfHoursStatus {
   implicit val rw: ReadWriter[OutOfHoursStatus] = macroRW
 }
 
-object ArrivalHelper {
-  val defaultPax = 0
-
-  def bestPax(flight: Arrival): Int = {
-    (flight.ApiPax, flight.ActPax.getOrElse(0), flight.TranPax.getOrElse(0), flight.MaxPax.getOrElse(0)) match {
-      case (Some(apiPax), _, _, _) => apiPax
-      case (_, actPaxIsLtE0, _, maxPaxValid) if actPaxIsLtE0 <= 0 && maxPaxValid > 0 => maxPaxValid
-      case (_, actPaxIsLt0, _, _) if actPaxIsLt0 <= 0 => defaultPax
-      case (_, actPax, tranPax, _) => actPax - tranPax
-      case _ => defaultPax
-    }
-  }
-
-  def padTo4Digits(voyageNumber: String): String = {
-    val prefix = voyageNumber.length match {
-      case 4 => ""
-      case 3 => "0"
-      case 2 => "00"
-      case 1 => "000"
-      case _ => ""
-    }
-    prefix + voyageNumber
-  }
-}
-
 trait HasAirportConfig {
   val airportConfig: AirportConfig
 }

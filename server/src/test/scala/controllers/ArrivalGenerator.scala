@@ -1,6 +1,7 @@
 package controllers
 
 import drt.shared.Terminals.{T1, Terminal}
+
 import drt.shared.api.Arrival
 import drt.shared.{ArrivalStatus, FeedSource, Operator, PortCode}
 import org.springframework.util.StringUtils
@@ -28,7 +29,8 @@ object ArrivalGenerator {
               runwayId: Option[String] = None,
               baggageReclaimId: Option[String] = None,
               airportId: PortCode = PortCode(""),
-              feedSources: Set[FeedSource] = Set()
+              feedSources: Set[FeedSource] = Set(),
+              apiPax: Option[Int] = None
              ): Arrival = {
     val pcpTime = if (pcpDt.nonEmpty) Option(SDate(pcpDt).millisSinceEpoch) else if (schDt.nonEmpty) Option(SDate(schDt).millisSinceEpoch) else None
 
@@ -53,7 +55,8 @@ object ArrivalGenerator {
       AirportID = airportId,
       PcpTime = pcpTime,
       Scheduled = if (!StringUtils.isEmpty(schDt)) SDate(schDt).millisSinceEpoch else 0,
-      FeedSources = feedSources
+      FeedSources = feedSources,
+      ApiPax = apiPax
     )
   }
 }
