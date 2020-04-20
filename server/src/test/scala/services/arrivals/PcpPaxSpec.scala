@@ -1,7 +1,7 @@
 package services.arrivals
 
 import controllers.ArrivalGenerator._
-import drt.shared.ArrivalHelper
+import drt.shared.PcpPax
 import org.specs2.mutable.Specification
 
 class PcpPaxSpec extends Specification {
@@ -10,7 +10,7 @@ class PcpPaxSpec extends Specification {
     "Then I should expect 100 PCP pax" >> {
     val a = arrival(actPax = Option(50), apiPax = Option(100))
 
-    val result = ArrivalHelper.bestPax(a)
+    val result = PcpPax.bestPax(a)
     val expected = 100
 
     result === expected
@@ -20,7 +20,7 @@ class PcpPaxSpec extends Specification {
     "Then I should expect 100 PCP pax" >> {
     val a = arrival(actPax = Option(100), tranPax = None)
 
-    val result = ArrivalHelper.bestPax(a)
+    val result = PcpPax.bestPax(a)
     val expected = 100
 
     result === expected
@@ -30,7 +30,7 @@ class PcpPaxSpec extends Specification {
     "Then I should expect 150 PCP pax" >> {
     val a = arrival(actPax = Option(50), tranPax = Option(100), maxPax = Option(150))
 
-    val result = ArrivalHelper.bestPax(a)
+    val result = PcpPax.bestPax(a)
     val expected = 150
 
     result === expected
@@ -40,7 +40,7 @@ class PcpPaxSpec extends Specification {
     "Then I should expect 100 PCP pax" >> {
     val a = arrival(actPax = Option(100), tranPax = Option(0))
 
-    val result = ArrivalHelper.bestPax(a)
+    val result = PcpPax.bestPax(a)
     val expected = 100
 
     result === expected
@@ -50,7 +50,7 @@ class PcpPaxSpec extends Specification {
     "Then I should expect 0 PCP pax" >> {
     val a = arrival(actPax = Option(0), tranPax = Option(0), maxPax = Option(130))
 
-    val result = ArrivalHelper.bestPax(a)
+    val result = PcpPax.bestPax(a)
     val expected = 0
 
     result === expected
@@ -60,7 +60,7 @@ class PcpPaxSpec extends Specification {
     "Then I should expect 130 PCP pax" >> {
     val a = arrival(actPax = None, tranPax = None, maxPax = Option(130))
 
-    val result = ArrivalHelper.bestPax(a)
+    val result = PcpPax.bestPax(a)
     val expected = 130
 
     result === expected
@@ -70,7 +70,7 @@ class PcpPaxSpec extends Specification {
     "Then I should expect 130 PCP pax" >> {
     val a = arrival(actPax = None, tranPax = None, maxPax = Option(130))
 
-    val result = ArrivalHelper.bestPax(a)
+    val result = PcpPax.bestPax(a)
     val expected = 130
 
     result === expected

@@ -1,6 +1,7 @@
 package services
 
-import drt.shared.{ArrivalHelper, CarrierCode, VoyageNumber}
+import drt.shared.PcpPax
+import drt.shared.{CarrierCode, VoyageNumber}
 import drt.shared.FlightParsing._
 import drt.shared.api.FlightCodeSuffix
 import services.crunch.CrunchTestLike
@@ -23,13 +24,13 @@ class FlightCodeSpec extends CrunchTestLike {
 
   "Voyage Number should be padded to 4 digits" >> {
     "3 digits should pad to 4" in {
-      ArrivalHelper.padTo4Digits("123") === "0123"
+      PcpPax.padTo4Digits("123") === "0123"
     }
     "4 digits should remain 4 " in {
-      ArrivalHelper.padTo4Digits("0123") === "0123"
+      PcpPax.padTo4Digits("0123") === "0123"
     }
     "we think 5 is invalid, but we should return unharmed" in {
-      ArrivalHelper.padTo4Digits("45123") === "45123"
+      PcpPax.padTo4Digits("45123") === "45123"
     }
   }
 }

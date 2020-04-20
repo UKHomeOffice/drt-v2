@@ -102,7 +102,7 @@ object DashboardTerminalSummary {
     }
   }
 
-  val aggSplits: Seq[ApiFlightWithSplits] => Map[PaxTypeAndQueue, Int] = BigSummaryBoxes.aggregateSplits(ArrivalHelper.bestPax)
+  val aggSplits: Seq[ApiFlightWithSplits] => Map[PaxTypeAndQueue, Int] = BigSummaryBoxes.aggregateSplits(PcpPax.bestPax)
 
   def paxInPeriod(cms: Seq[CrunchMinute]): Double = cms.map(_.paxLoad).sum
 

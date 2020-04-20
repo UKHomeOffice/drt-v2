@@ -36,7 +36,7 @@ trait TerminalFlightsSummaryLike extends TerminalSummaryLike {
   def flightWithSplitsToCsvRow(queueNames: Seq[Queue], fws: ApiFlightWithSplits): List[String] = {
     val splitsForSources = splitSources.flatMap(ss => queueSplits(queueNames, fws, ss))
     TerminalFlightsSummary.arrivalAsRawCsvValues(fws.apiFlight, millisToDateOnly, millisToHoursAndMinutes) ++
-      List(ArrivalHelper.bestPax(fws.apiFlight).toString) ++ splitsForSources
+      List(PcpPax.bestPax(fws.apiFlight).toString) ++ splitsForSources
   }
 
   def queueSplits(queueNames: Seq[Queue],
