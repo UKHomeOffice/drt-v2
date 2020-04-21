@@ -25,8 +25,8 @@ object ForecastFileUploadPage {
         <.h3("Forecast Feed File Upload"),
         <.form(<.input(^.`type` := "file", ^.name := "filename"),
           <.input(^.`type` := "button", ^.value := "send", ^.onClick ==> onSubmit)),
-            <.br(),
-        ResultFileUploadComponent(),
+        <.br(),
+        FileUploadResultComponent(),
       )
     )
     .componentDidMount(_ => Callback {
@@ -35,28 +35,24 @@ object ForecastFileUploadPage {
     .build
 
 
-  object ResultFileUploadComponent {
+  object FileUploadResultComponent {
 
     case class Props()
 
-    val resultComponent: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ResultFileUpload")
+    val resultComponent: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("FileUploadResult")
       .render_P { _ =>
         val fileUploadStateRCP = SPACircuit.connect(m => FileUploadStateModel(m.fileUploadState))
         <.div(
           fileUploadStateRCP(fileUploadStateMP => {
             <.div(fileUploadStateMP().fileUploadState.render(details => {
-              if (details.state == "uploaded") {
-                <.div(
-                  <.div(s"Upload status : ${details.message}"),
-                  <.button(^.`type` := "button", "reset", ^.onClick ==> onReset)
-                )
-              } else if (details.state == "error") {
-                <.div(
-                  <.div(s"Upload status : ${details.message}"),
-                  <.button(^.`type` := "button", "reset", ^.onClick ==> onReset)
-                )
-              } else {
-                <.div()
+              details.state match {
+                case "uploaded" | "error" =>
+                  <.div(
+                    <.div(s"Upload status : ${details.message}"),
+                    <.button(^.`type` := "button", "reset", ^.onClick ==> onReset)
+                  )
+                case _ =>
+                  <.div()
               }
             })
             )

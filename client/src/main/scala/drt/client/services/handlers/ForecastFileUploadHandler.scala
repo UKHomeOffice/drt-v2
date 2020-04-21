@@ -37,31 +37,31 @@ class ForecastFileUploadHandler[M](modelRW: ModelRW[M, Pot[FileUploadState]]) ex
 
     case ForecastFileUploadAction(portCode: String, formData: FormData) =>
 
-      val tReq = new dom.XMLHttpRequest()
-      val tPromise = Promise[dom.XMLHttpRequest]()
+      val request = new dom.XMLHttpRequest()
+      val promisedRequest = Promise[dom.XMLHttpRequest]()
 
-      tReq.onreadystatechange = { (e: dom.Event) =>
-        if (tReq.readyState.toInt == 4) {
-          if ((tReq.status >= 200 && tReq.status < 300) || tReq.status == 304)
-            tPromise.success(tReq)
+      request.onreadystatechange = { (e: dom.Event) =>
+        if (request.readyState.toInt == 4) {
+          if ((request.status >= 200 && request.status < 300) || request.status == 304)
+            promisedRequest.success(request)
           else
-            tPromise.failure(AjaxException(tReq))
+            promisedRequest.failure(AjaxException(request))
         }
       }
 
-      tReq.open("POST", s"data/feed/forecast/lhr")
-      tReq.responseType = "text"
-      tReq.timeout = 1000000
-      tReq.withCredentials = false
-      tReq.send(formData)
+      request.open("POST", s"data/feed/forecast/$portCode")
+      request.responseType = "text"
+      request.timeout = 1000000
+      request.withCredentials = false
+      request.send(formData)
 
-      val apiCallEffect = Effect(tPromise.future.map { res =>
+      val apiCallEffect = Effect(promisedRequest.future.map { res =>
         val rMessage = read[ResponseMessage](res.responseText)
         log.info(s"Uploading file response ${rMessage.message}")
         FileUploadStatus(FileUploadState(state = "uploaded", message = rMessage.message))
       }.recoverWith {
         case e =>
-          log.error(s"fail to upload file to data/feed/fileUpload/$portCode / ${e.getMessage}")
+          log.error(s"failing to upload $e")
           Future(FileUploadStatus(FileUploadState(state = "error", message = e.getMessage)))
       })
 
