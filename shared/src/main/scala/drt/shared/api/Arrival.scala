@@ -38,7 +38,12 @@ case class Arrival(Operator: Option[Operator],
                   ) extends WithUnique[UniqueArrival] {
   val paxOffPerMinute = 20
 
-  def flightCode: String = s"$CarrierCode${VoyageNumber.toPaddedString}"
+  def suffixString: String = FlightCodeSuffix match {
+    case None => ""
+    case Some(s) => s.toString
+  }
+
+  def flightCode: String = s"$CarrierCode${VoyageNumber.toPaddedString}$suffixString"
 
   def basicForComparison: Arrival = copy(PcpTime = None)
 
