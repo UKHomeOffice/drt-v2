@@ -6,12 +6,13 @@ import diode._
 import diode.data._
 import diode.react.ReactConnector
 import drt.auth.LoggedInUser
-import drt.client.components.StaffAdjustmentDialogueState
+import drt.client.components.{FileUploadState, StaffAdjustmentDialogueState}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.handlers._
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
+import org.scalajs.dom.raw.FormData
 
 import scala.collection.immutable.Map
 import scala.concurrent.duration._
@@ -80,7 +81,8 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      maybeStaffDeploymentAdjustmentPopoverState: Option[StaffAdjustmentDialogueState] = None,
                      displayAlertDialog: Pot[Boolean] = Empty,
                      oohStatus: Pot[OutOfHoursStatus] = Empty,
-                     featureFlags: Pot[Map[String, Boolean]] = Empty
+                     featureFlags: Pot[Map[String, Boolean]] = Empty,
+                     fileUploadState:Pot[FileUploadState] = Empty,
                     )
 
 object PollDelay {
@@ -135,7 +137,8 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new MinuteTickerHandler(zoomRW(_.minuteTicker)((m, v) => m.copy(minuteTicker = v))),
       new FeedsStatusHandler(zoomRW(_.feedStatuses)((m, v) => m.copy(feedStatuses = v))),
       new AlertsHandler(zoomRW(_.alerts)((m, v) => m.copy(alerts = v))),
-      new StaffAdjustmentDialogueStateHandler(zoomRW(_.maybeStaffDeploymentAdjustmentPopoverState)((m, v) => m.copy(maybeStaffDeploymentAdjustmentPopoverState = v)))
+      new StaffAdjustmentDialogueStateHandler(zoomRW(_.maybeStaffDeploymentAdjustmentPopoverState)((m, v) => m.copy(maybeStaffDeploymentAdjustmentPopoverState = v))),
+      new ForecastFileUploadHandler(zoomRW(_.fileUploadState)((m, v) => m.copy(fileUploadState = v)))
     )
 
     composedHandlers

@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.auth._
+import drt.auth.{Role, _}
 import drt.client.SPAMain._
 import drt.client.components.Icon._
 import drt.client.services.JSDateConversions.SDate
@@ -31,6 +31,8 @@ object MainMenu {
 
   def portConfigMenuItem: Int => MenuItem = (position: Int) => MenuItem(position, _ => s"Port Config", Icon.cogs, PortConfigLoc)
 
+  def forecastUploadFile(position: Int): MenuItem = MenuItem(position, _ => "Forecast Upload", Icon.upload, ForecastFileUploadLoc)
+
   def feedsRag(feeds: Seq[FeedSourceStatuses]): String = {
     val rag = if (feeds.map(_.feedStatuses.ragStatus(SDate.now().millisSinceEpoch)).contains(Red)) Red
     else if (feeds.map(_.feedStatuses.ragStatus(SDate.now().millisSinceEpoch)).contains(Amber)) Amber
@@ -41,6 +43,9 @@ object MainMenu {
 
 
   def menuItems(airportConfig: AirportConfig, currentLoc: Loc, userRoles: Set[Role], feeds: Seq[FeedSourceStatuses]): List[MenuItem] = {
+
+    def addFileUpload: List[(Role, Int => MenuItem)] = if (List(PortCode("LHR"), PortCode("TEST")) contains airportConfig.portCode) List((PortFeedUpload, forecastUploadFile _)) else List.empty
+
     def terminalDepsMenuItem: List[(Role, Int => MenuItem)] = airportConfig.terminals.map { tn =>
       val terminalName = tn.toString
       val targetLoc = currentLoc match {
@@ -58,8 +63,8 @@ object MainMenu {
 
     val restrictedMenuItems: List[(Role, Int => MenuItem)] = List(
       (ManageUsers, usersMenuItem _),
-      (CreateAlerts, alertsMenuItem _)
-    ) ++ terminalDepsMenuItem :+ ((ViewConfig, portConfigMenuItem))
+      (CreateAlerts, alertsMenuItem _),
+    ) ++ addFileUpload ++ terminalDepsMenuItem :+ ((ViewConfig, portConfigMenuItem))
 
     val nonTerminalUnrestrictedMenuItems = dashboardMenuItem :: Nil
 
@@ -141,7 +146,7 @@ object PortSwitcher {
             ^.className := "dropdown",
             <.a(Icon.plane, " ", "Switch port"),
             ^.onClick --> scope.modState(_.copy(showDropDown = !state.showDropDown)),
-            if (state.showDropDown) <.div(^.className :="menu-overlay", ^.onClick --> scope.modState(_ => State())) else "",
+            if (state.showDropDown) <.div(^.className := "menu-overlay", ^.onClick --> scope.modState(_ => State())) else "",
             <.ul(^.className := s"main-menu__port-switcher dropdown-menu $showClass",
               otherPorts.toList.sorted.map(p => <.li(^.className := "dropdown-item",
                 <.a(^.href := RestrictedAccessByPortPage.url(p), p.iata))).toTagMod
