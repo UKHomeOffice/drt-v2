@@ -252,11 +252,11 @@ object TestActors {
   }
 
   class TestCrunchStateActor(snapshotInterval: Int,
-                                  name: String,
-                                  portQueues: Map[Terminal, Seq[Queue]],
-                                  override val now: () => SDateLike,
-                                  expireAfterMillis: Int,
-                                  purgePreviousSnapshots: Boolean)
+                             name: String,
+                             portQueues: Map[Terminal, Seq[Queue]],
+                             override val now: () => SDateLike,
+                             expireAfterMillis: Int,
+                             purgePreviousSnapshots: Boolean)
     extends CrunchStateActor(
       initialMaybeSnapshotInterval = None,
       initialSnapshotBytesThreshold = oneMegaByte,

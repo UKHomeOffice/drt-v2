@@ -117,8 +117,8 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
   }
 }
 
-case class RestartActor(startSystem: () => List[KillSwitch],
-                        testActors: List[ActorRef]) extends Actor with ActorLogging {
+class RestartActor(startSystem: () => List[KillSwitch],
+                   testActors: List[ActorRef]) extends Actor with ActorLogging {
 
   var currentKillSwitches: List[KillSwitch] = List()
 

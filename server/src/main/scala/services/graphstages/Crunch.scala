@@ -89,6 +89,9 @@ object Crunch {
   val europeLondonId = "Europe/London"
   val europeLondonTimeZone: DateTimeZone = DateTimeZone.forID(europeLondonId)
 
+  val utcId = "UTC"
+  val utcTimeZone: DateTimeZone = DateTimeZone.forID(utcId)
+
   def isInRangeOnDay(startDateTime: SDateLike, endDateTime: SDateLike)(minute: SDateLike): Boolean =
     startDateTime.millisSinceEpoch <= minute.millisSinceEpoch && minute.millisSinceEpoch <= endDateTime.millisSinceEpoch
 

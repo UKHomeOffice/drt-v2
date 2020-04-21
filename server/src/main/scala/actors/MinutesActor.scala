@@ -180,7 +180,7 @@ class MinutesActor[A, B](now: () => SDateLike,
 
   def groupByTerminalAndDay(container: MinutesContainer[A, B]): Map[(Terminal, SDateLike), Iterable[MinuteLike[A, B]]] =
     container.minutes
-      .groupBy(simMin => (simMin.terminal, SDate(simMin.minute).getLocalLastMidnight))
+      .groupBy(simMin => (simMin.terminal, SDate(simMin.minute).getUtcLastMidnight))
 
   private def combineAndSendOptionalResult(eventualUpdatedMinutesDiff: Iterable[Future[MinutesContainer[A, B]]],
                                            replyTo: ActorRef): Unit =
@@ -203,11 +203,11 @@ class MinutesActor[A, B](now: () => SDateLike,
     updateMinutes(terminal, day, MinutesContainer(minutesForDay))
 
   private def daysToFetch(start: SDateLike, end: SDateLike): Seq[SDateLike] = {
-    val localStart = SDate(start, Crunch.europeLondonTimeZone)
-    val localEnd = SDate(end, Crunch.europeLondonTimeZone)
+    val utcStart = SDate(start, Crunch.utcTimeZone)
+    val utcEnd = SDate(end, Crunch.utcTimeZone)
 
-    (localStart.millisSinceEpoch to localEnd.millisSinceEpoch by MilliTimes.oneHourMillis)
-      .map(SDate(_).getLocalLastMidnight)
+    (utcStart.millisSinceEpoch to utcEnd.millisSinceEpoch by MilliTimes.oneHourMillis)
+      .map(SDate(_).getUtcLastMidnight)
       .distinct
       .sortBy(_.millisSinceEpoch)
   }

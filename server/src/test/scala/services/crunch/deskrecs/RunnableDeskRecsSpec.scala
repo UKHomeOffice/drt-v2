@@ -7,7 +7,7 @@ import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, DeskRecMinutes}
-import drt.shared.FlightsApi.{Flights, FlightsWithSplits, FlightsWithSplitsDiff}
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared.PaxTypes.{EeaMachineReadable, VisaNational}
 import drt.shared.PaxTypesAndQueues.{eeaMachineReadableToDesk, visaNationalToDesk}
 import drt.shared.SplitRatiosNs.SplitSources
@@ -22,7 +22,6 @@ import services.{SDate, TryCrunch}
 
 import scala.collection.immutable.{Map, Seq, SortedMap}
 import scala.concurrent.duration._
-
 
 
 class MockPortStateActor(probe: TestProbe, responseDelayMillis: Long = 0L) extends Actor {

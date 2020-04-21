@@ -497,6 +497,8 @@ trait SDateLike {
 
   def startOfTheMonth(): SDateLike
 
+  def getUtcLastMidnight: SDateLike
+
   def getLocalLastMidnight: SDateLike
 
   def getLocalNextMidnight: SDateLike

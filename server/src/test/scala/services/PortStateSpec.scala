@@ -2,7 +2,7 @@ package services
 
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
-import drt.shared.Queues.{EeaDesk, Queue}
+import drt.shared.Queues.Queue
 import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
@@ -36,8 +36,6 @@ class PortStateSpec extends CrunchTestLike {
             m == millis && cm.paxLoad == 10
           case _ => false
         }
-        println(s"\n\nGot ps.staffMinutes: ${ps.staffMinutes.get(TM(T1, millis))}")
-        println(s"\n\nGot ps.crunchMinutes: ${ps.crunchMinutes.get(TQM(T1, EeaDesk, millis))}")
 
         staffUpdated && paxLoadUnchanged
     }

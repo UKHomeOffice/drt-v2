@@ -17,24 +17,6 @@ case class GetCrunchMinutes(terminal: Terminal)
 
 case class GetStaffMinutes(terminal: Terminal)
 
-object CrunchStateReadActor {
-  def props(snapshotInterval: Int,
-            pointInTime: SDateLike,
-            expireAfterMillis: Int,
-            queues: Map[Terminal, Seq[Queue]],
-            startMillis: MillisSinceEpoch,
-            endMillis: MillisSinceEpoch): Props = Props(
-    new CrunchStateReadActor(
-      snapshotInterval,
-      pointInTime,
-      expireAfterMillis,
-      queues,
-      startMillis,
-      endMillis
-    )
-  )
-}
-
 class CrunchStateReadActor(snapshotInterval: Int,
                            pointInTime: SDateLike,
                            expireAfterMillis: Int,

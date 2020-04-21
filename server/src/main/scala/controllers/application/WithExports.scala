@@ -2,7 +2,7 @@ package controllers.application
 
 import actors._
 import actors.pointInTime.CrunchStateReadActor
-import akka.actor.PoisonPill
+import akka.actor.{PoisonPill, Props}
 import akka.pattern._
 import akka.util.{ByteString, Timeout}
 import controllers.Application
@@ -117,7 +117,7 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
     val pointInTime = end.addHours(4)
 
     val eventualMaybePortState = if (isHistoricDate(start.millisSinceEpoch)) {
-      val tempActor = system.actorOf(CrunchStateReadActor.props(airportConfig.portStateSnapshotInterval, pointInTime, DrtStaticParameters.expireAfterMillis, airportConfig.queuesByTerminal, start.millisSinceEpoch, end.millisSinceEpoch))
+      val tempActor = system.actorOf(Props(new CrunchStateReadActor(airportConfig.portStateSnapshotInterval, pointInTime, DrtStaticParameters.expireAfterMillis, airportConfig.queuesByTerminal, start.millisSinceEpoch, end.millisSinceEpoch)))
       val eventualResponse = tempActor
         .ask(message)
         .asInstanceOf[Future[Option[PortState]]]
