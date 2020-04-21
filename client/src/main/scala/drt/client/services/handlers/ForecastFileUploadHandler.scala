@@ -61,7 +61,7 @@ class ForecastFileUploadHandler[M](modelRW: ModelRW[M, Pot[FileUploadState]]) ex
         FileUploadStatus(FileUploadState(state = "uploaded", message = rMessage.message))
       }.recoverWith {
         case e =>
-          log.error(s"failing to upload $e")
+          log.error(s"failed to upload $e")
           Future(FileUploadStatus(FileUploadState(state = "error", message = e.getMessage)))
       })
 
