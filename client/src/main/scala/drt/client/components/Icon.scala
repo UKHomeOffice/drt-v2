@@ -603,5 +603,6 @@ object Icon {
   def youtube = apply("youtube")
   def youtubePlay = apply("youtube-play")
   def youtubeSquare = apply("youtube-square")
+  def fileUpload = apply("file-upload")
 }
 
