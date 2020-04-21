@@ -2,7 +2,7 @@ package services
 
 import akka.NotUsed
 import akka.actor.{ActorRef, Props}
-import akka.pattern.AskableActorRef
+import akka.pattern.ask
 import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import akka.util.Timeout
@@ -49,7 +49,7 @@ class StreamingWorkloadSpec extends CrunchTestLike {
   val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = PortDeskLimits.flexed(defaultAirportConfig)
   val (millisToCrunchSourceActor: ActorRef, _) = RunnableDeskRecs(mockPortStateActor, portDeskRecs, newBuffer, maxDesksProvider).run()
 
-  val askableSource: AskableActorRef = millisToCrunchSourceActor
+  val askableSource: ActorRef = millisToCrunchSourceActor
 
   var days = List(List(0, 1, 2, 3, 4, 5, 6, 7), List(0))
 

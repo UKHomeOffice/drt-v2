@@ -1,5 +1,7 @@
 package drt.shared
 
+import drt.shared.api.Arrival
+
 object CodeShares {
   def uniqueArrivalsWithCodeShares[GenFlight](apiFlightFromGenFlight: (GenFlight) => Arrival)
                                              (flights: Seq[GenFlight]): List[(GenFlight, Set[Arrival])] = {

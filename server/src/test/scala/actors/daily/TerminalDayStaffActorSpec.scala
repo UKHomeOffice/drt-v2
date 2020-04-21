@@ -1,8 +1,8 @@
 package actors.daily
 
 import actors.{ClearState, GetState}
-import akka.actor.Props
-import akka.pattern.AskableActorRef
+import akka.actor.{ActorRef, Props}
+import akka.pattern.ask
 import akka.util.Timeout
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, StaffMinute}
 import drt.shared.Queues.EeaDesk
@@ -34,7 +34,7 @@ class TerminalDayStaffActorSpec extends CrunchTestLike {
   val myNow: () => SDateLike = () => date
 
   "Given a terminal-day queues actor for a day which does not any data" >> {
-    val terminalSummariesActor: AskableActorRef = actorForTerminalAndDate(terminal, date)
+    val terminalSummariesActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
     "When I ask for the state for that day" >> {
       "I should get back an empty map of staff minutes" >> {
@@ -46,7 +46,7 @@ class TerminalDayStaffActorSpec extends CrunchTestLike {
 
     "When I send minutes to persist which lie within the day, and then ask for its state I should see the minutes sent" >> {
       val staffMinutes = MinutesContainer(Set(staffMinuteForDate(date)))
-      val terminalSummariesActor: AskableActorRef = actorForTerminalAndDate(terminal, date)
+      val terminalSummariesActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
       val eventual = sendMinuteQueryAndClear(staffMinutes, terminalSummariesActor)
       val result = Await.result(eventual, 1 second)
@@ -57,7 +57,7 @@ class TerminalDayStaffActorSpec extends CrunchTestLike {
     "When I send minutes to persist which lie outside the day, and then ask for its state I should see None" >> {
       val otherDate = SDate("2020-01-02T00:00")
       val staffMinutes = MinutesContainer(Set(staffMinuteForDate(otherDate)))
-      val terminalSummariesActor: AskableActorRef = actorForTerminalAndDate(terminal, date)
+      val terminalSummariesActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
       val eventual = sendMinuteQueryAndClear(staffMinutes, terminalSummariesActor)
       val result = Await.result(eventual, 1 second)
@@ -70,7 +70,7 @@ class TerminalDayStaffActorSpec extends CrunchTestLike {
       val inside = staffMinuteForDate(date)
       val outside = staffMinuteForDate(otherDate)
       val staffMinutes = MinutesContainer(Set(inside, outside))
-      val terminalSummariesActor: AskableActorRef = actorForTerminalAndDate(terminal, date)
+      val terminalSummariesActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
       val eventual = sendMinuteQueryAndClear(staffMinutes, terminalSummariesActor)
       val result = Await.result(eventual, 1 second)
@@ -80,7 +80,7 @@ class TerminalDayStaffActorSpec extends CrunchTestLike {
   }
 
   private def sendMinuteQueryAndClear(minutesContainer: MinutesContainer[StaffMinute, TM],
-                                      terminalSummariesActor: AskableActorRef): Future[Option[MinutesContainer[StaffMinute, TM]]] = {
+                                      terminalSummariesActor: ActorRef): Future[Option[MinutesContainer[StaffMinute, TM]]] = {
     terminalSummariesActor.ask(minutesContainer).flatMap { _ =>
       terminalSummariesActor.ask(GetState).mapTo[Option[MinutesContainer[StaffMinute, TM]]]
     }
@@ -90,7 +90,7 @@ class TerminalDayStaffActorSpec extends CrunchTestLike {
     StaffMinute(terminal, date.millisSinceEpoch, 1, 2, 3)
   }
 
-  private def actorForTerminalAndDate(terminal: Terminal, date: SDateLike): AskableActorRef = {
+  private def actorForTerminalAndDate(terminal: Terminal, date: SDateLike): ActorRef = {
     system.actorOf(TerminalDayStaffActor.props(date, terminal, () => date))
   }
 }

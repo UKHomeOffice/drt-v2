@@ -6,8 +6,8 @@ import akka.stream.scaladsl.Source
 import akka.stream.{ActorAttributes, Supervision}
 import bluebus.client.ServiceBusClient
 import bluebus.configuration.SBusConfig
-import drt.shared.Arrival
 import drt.shared.FlightsApi.Flights
+import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
 

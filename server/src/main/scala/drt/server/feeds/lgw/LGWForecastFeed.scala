@@ -10,8 +10,9 @@ import akka.stream.{ActorAttributes, Supervision}
 import com.box.sdk.{BoxFile, BoxFolder, _}
 import drt.server.feeds.Implicits._
 import drt.shared.FlightsApi.Flights
+import drt.shared.ForecastFeedSource
 import drt.shared.Terminals.{N, S}
-import drt.shared.{Arrival, ForecastFeedSource}
+import drt.shared.api.Arrival
 import org.apache.commons.lang3.StringUtils
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter, ISODateTimeFormat}
 import org.slf4j.{Logger, LoggerFactory}

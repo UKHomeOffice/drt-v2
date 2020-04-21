@@ -5,6 +5,7 @@ import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.Terminals.{InvalidTerminal, Terminal}
 import drt.shared._
+import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.arrivals.{ArrivalDataSanitiser, LiveArrivalsUtil}
@@ -13,6 +14,7 @@ import services.metrics.{Metrics, StageTimer}
 import scala.collection.immutable.SortedMap
 import scala.collection.mutable
 import scala.concurrent.duration._
+import scala.language.postfixOps
 
 sealed trait ArrivalsSourceType
 
@@ -70,7 +72,8 @@ class ArrivalsGraphStage(name: String = "",
       super.preStart()
     }
 
-    def prepInitialArrivals(initialArrivals: mutable.SortedMap[UniqueArrival, Arrival], arrivals: mutable.SortedMap[UniqueArrival, Arrival]): Unit = {
+    def prepInitialArrivals(initialArrivals: mutable.SortedMap[UniqueArrival, Arrival],
+                            arrivals: mutable.SortedMap[UniqueArrival, Arrival]): Unit = {
       arrivals ++= relevantFlights(SortedMap[UniqueArrival, Arrival]() ++ initialArrivals)
       Crunch.purgeExpired(arrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt)
     }
@@ -143,7 +146,8 @@ class ArrivalsGraphStage(name: String = "",
       pushIfAvailable(toPush, outArrivalsDiff)
     }
 
-    def updateArrivalsSource(existingArrivals: mutable.SortedMap[UniqueArrival, Arrival], newArrivals: SortedMap[UniqueArrival, Arrival]): Unit = newArrivals.foreach {
+    def updateArrivalsSource(existingArrivals: mutable.SortedMap[UniqueArrival, Arrival],
+                             newArrivals: SortedMap[UniqueArrival, Arrival]): Unit = newArrivals.foreach {
       case (key, newArrival) =>
         if (!existingArrivals.contains(key) || !existingArrivals(key).equals(newArrival)) existingArrivals += (key -> newArrival)
     }
@@ -257,7 +261,6 @@ class ArrivalsGraphStage(name: String = "",
       mergeBestFieldsFromSources(baseArrival, mergeArrival(key).getOrElse(baseArrival))
     }
 
-
     def mergeArrival(key: UniqueArrival): Option[Arrival] = {
       val maybeLiveBaseArrivalWithSanitisedData = liveBaseArrivals.get(key).map(arrivalDataSanitiser.withSaneEstimates)
       val maybeBestArrival: Option[Arrival] = (
@@ -292,21 +295,24 @@ class ArrivalsGraphStage(name: String = "",
         Status = bestStatus(key),
         FeedSources = feedSources(key),
         PcpTime = Option(pcpArrivalTime(bestArrival).millisSinceEpoch)
-      )
+        )
     }
 
     def trustLiveDataThreshold: FiniteDuration = 3 hours
 
-    def bestPaxNos(key: UniqueArrival): (Option[Int], Option[Int]) = (liveArrivals.get(key), forecastArrivals.get(key), forecastBaseArrivals.get(key)) match {
-      case (Some(liveArrival), _, _) if liveArrival.Scheduled < now().millisSinceEpoch + trustLiveDataThreshold.toMillis =>
-        (liveArrival.ActPax, liveArrival.TranPax)
-      case (Some(liveArrival), _, _) if liveArrival.Actual.isDefined  || liveArrival.ActualChox.isDefined =>
-        (liveArrival.ActPax, liveArrival.TranPax)
-      case (Some(liveArrival), _, _) if liveArrival.ActPax.exists(_ > 0) => (liveArrival.ActPax, liveArrival.TranPax)
-      case (_, Some(fcstArrival), _) if fcstArrival.ActPax.exists(_ > 0) => (fcstArrival.ActPax, fcstArrival.TranPax)
-      case (_, _, Some(baseArrival)) if baseArrival.ActPax.exists(_ > 0) => (baseArrival.ActPax, baseArrival.TranPax)
-      case _ => (None, None)
+    private def paxDefinedAndCloseToScheduledTimeOrLanded(liveArrival: Arrival) = {
+      val closeToScheduled = liveArrival.Scheduled < now().millisSinceEpoch + trustLiveDataThreshold.toMillis
+      (paxDefined(liveArrival) && closeToScheduled) || liveArrival.ActualChox.isDefined
     }
+
+    def bestPaxNos(key: UniqueArrival): (Option[Int], Option[Int]) =
+      (liveArrivals.get(key), forecastArrivals.get(key), forecastBaseArrivals.get(key)) match {
+        case (Some(live), _, _) if paxDefinedAndCloseToScheduledTimeOrLanded(live) => (live.ActPax, live.TranPax)
+        case (Some(live), _, _) if paxDefinedAndNonZero(live) => (live.ActPax, live.TranPax)
+        case (_, Some(fcst), _) if paxDefinedAndNonZero(fcst) => (fcst.ActPax, fcst.TranPax)
+        case (_, _, Some(base)) if paxDefined(base) => (base.ActPax, base.TranPax)
+        case _ => (None, None)
+      }
 
     def bestStatus(key: UniqueArrival): ArrivalStatus =
       (liveArrivals.get(key), liveBaseArrivals.get(key), forecastArrivals.get(key), forecastBaseArrivals.get(key)) match {
@@ -324,7 +330,11 @@ class ArrivalsGraphStage(name: String = "",
         forecastArrivals.get(uniqueArrival).map(_ => ForecastFeedSource),
         forecastBaseArrivals.get(uniqueArrival).map(_ => AclFeedSource),
         liveBaseArrivals.get(uniqueArrival).map(_ => LiveBaseFeedSource)
-      ).flatten.toSet
+        ).flatten.toSet
     }
   }
+
+  private def paxDefined(baseArrival: Arrival): Boolean = baseArrival.ActPax.isDefined
+
+  private def paxDefinedAndNonZero(arrival: Arrival): Boolean = arrival.ActPax.exists(_ > 0)
 }

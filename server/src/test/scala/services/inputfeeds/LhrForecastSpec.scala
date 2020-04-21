@@ -2,7 +2,8 @@ package services.inputfeeds
 
 import drt.server.feeds.lhr.forecast.{LhrForecastArrival, LhrForecastArrivals}
 import drt.shared.Terminals.T3
-import drt.shared.{Arrival, ArrivalStatus, ForecastFeedSource, Operator, PortCode}
+import drt.shared.api.Arrival
+import drt.shared.{ArrivalStatus, ForecastFeedSource, Operator, PortCode}
 import org.specs2.mutable.Specification
 import services.SDate
 

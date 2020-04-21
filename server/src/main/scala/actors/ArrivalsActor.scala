@@ -8,6 +8,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import scalapb.GeneratedMessage
 import drt.shared.FlightsApi.Flights
 import drt.shared._
+import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds._
 import server.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage, FlightsDiffMessage, UniqueArrivalMessage}

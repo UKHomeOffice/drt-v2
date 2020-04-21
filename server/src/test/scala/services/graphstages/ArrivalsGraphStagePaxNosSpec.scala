@@ -1,178 +1,127 @@
 package services.graphstages
 
-import akka.testkit.{TestKit, TestProbe}
-import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.MilliTimes.oneDayMillis
-import drt.shared.Terminals.T1
+import akka.stream.QueueOfferResult
+import akka.stream.scaladsl.SourceQueueWithComplete
+import controllers.ArrivalGenerator
+import drt.shared.FlightsApi.Flights
 import drt.shared._
-import org.specs2.specification.AfterEach
-import services.arrivals.ArrivalDataSanitiser
+import org.specs2.execute.Success
+import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import services.SDate
 import services.crunch.CrunchTestLike
-import services.{PcpArrival, SDate}
 
-import scala.collection.mutable
 import scala.concurrent.duration._
-import actors.ArrivalGenerator.arrival
 
-class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike with AfterEach {
-  sequential
-  isolated
+class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
+  "Given an empty port state" >> {
+    val nowString = "2020-04-01T00:00"
+    val crunch = runCrunchGraph(now = () => SDate(nowString))
 
-  override def after: Unit = TestKit.shutdownActorSystem(system)
+    def fishForArrivalWithActPax(actPax: Option[Int], status: String = ""): Success = {
+      crunch.portStateTestProbe.fishForMessage(1 second) {
+        case PortState(flights, _, _) =>
+          flights.values.toList.exists(fws => fws.apiFlight.flightCode == "BA0001" && fws.apiFlight.ActPax == actPax && fws.apiFlight.Status == ArrivalStatus(status))
+      }
 
-  val nowForThisTest: SDateLike = SDate(2019, 10, 1, 16, 0)
-
-  private def buildArrivalsGraphStage = new ArrivalsGraphStage(
-    "",
-    mutable.SortedMap[UniqueArrival, Arrival](),
-    mutable.SortedMap[UniqueArrival, Arrival](),
-    mutable.SortedMap[UniqueArrival, Arrival](),
-    mutable.SortedMap[UniqueArrival, Arrival](),
-    mutable.SortedMap[UniqueArrival, Arrival](),
-    pcpTimeCalc,
-    Set(T1),
-    ArrivalDataSanitiser(None, None),
-    oneDayMillis,
-    () => nowForThisTest
-  )
-
-  def pcpTimeCalc(a: Arrival): MilliDate = PcpArrival.pcpFrom(0, 0, _ => 0)(a)
-
-  "Given a live arrival with 0 pax that is not landing for more than 6 hours " +
-    "Then we should use the ACL pax numbers" >> {
-    val probe = TestProbe("arrivals")
-    val (aclSource, _, _, liveSource) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
-
-    aclSource.offer(
-      List(arrival(actPax = Option(189), schDt = nowForThisTest.addHours(6).toISOString()))
-    )
-    liveSource.offer(
-      List(arrival(actPax = Option(0),
-        schDt = nowForThisTest.addHours(6).toISOString(),
-        gate = Option("G1")))
-    )
-
-    probe.fishForMessage(2 seconds) {
-      case ArrivalsDiff(toUpdate, _) =>
-        toUpdate.exists {
-          case (_, a) => a.ActPax == Option(189) && a.Gate == Option("G1")
-        }
+      success
     }
-    success
+
+    "When I send an ACL arrival with zero pax" >> {
+      offerArrivalAndWait(crunch.baseArrivalsInput, scheduled = nowString, actPax = Option(0))
+      "I should see it with 0 ActPax in the port state" >> {
+        fishForArrivalWithActPax(Option(0))
+      }
+    }
+
+    "When I send an ACL arrival with 100 pax" >> {
+      offerArrivalAndWait(crunch.baseArrivalsInput, scheduled = nowString, actPax = Option(100))
+      "I should see it with 100 ActPax in the port state" >> {
+        fishForArrivalWithActPax(Option(100))
+      }
+    }
+
+    "When I send an ACL arrival with 100 pax and a forecast arrival with undefined pax" >> {
+      offerArrivalAndWait(crunch.baseArrivalsInput, scheduled = nowString, actPax = Option(100))
+      offerArrivalAndWait(crunch.forecastArrivalsInput, scheduled = nowString, actPax = None, status = "updated")
+      "I should see it with 100 ActPax in the port state" >> {
+        fishForArrivalWithActPax(Option(100), "updated")
+      }
+    }
+
+    "When I send an ACL arrival with 100 pax and a forecast arrival with 0 pax" >> {
+      offerArrivalAndWait(crunch.baseArrivalsInput, scheduled = nowString, actPax = Option(100))
+      offerArrivalAndWait(crunch.forecastArrivalsInput, scheduled = nowString, actPax = Option(0), "updated")
+      "I should see it with 100 ActPax in the port state - ignoring the forecast feed's zero" >> {
+        fishForArrivalWithActPax(Option(100), "updated")
+      }
+    }
+
+    "When I send an ACL arrival with 100 pax and a forecast arrival with 50 pax" >> {
+      offerArrivalAndWait(crunch.baseArrivalsInput, scheduled = nowString, actPax = Option(100))
+      offerArrivalAndWait(crunch.forecastArrivalsInput, scheduled = nowString, actPax = Option(50))
+      "I should see it with 50 ActPax in the port state" >> {
+        fishForArrivalWithActPax(Option(50))
+      }
+    }
+
+    "When I send an ACL arrival with 100 pax and a live arrival with undefined pax" >> {
+      offerArrivalAndWait(crunch.baseArrivalsInput, scheduled = nowString, actPax = Option(100))
+      offerArrivalAndWait(crunch.liveArrivalsInput, scheduled = nowString, actPax = None, "updated")
+      "I should see it with 100 ActPax in the port state" >> {
+        fishForArrivalWithActPax(Option(100), "updated")
+      }
+    }
+
+    "When I send an ACL arrival with 100 pax and a live arrival with 0 pax, scheduled more than 3 hours after now" >> {
+      val scheduled3Hrs5MinsAfterNow = SDate(nowString).addHours(3).addMinutes(5).toISOString()
+      offerArrivalAndWait(crunch.baseArrivalsInput, scheduled = scheduled3Hrs5MinsAfterNow, actPax = Option(100))
+      offerArrivalAndWait(crunch.liveArrivalsInput, scheduled = scheduled3Hrs5MinsAfterNow, actPax = Option(0), "updated")
+      "I should see it with 100 ActPax in the port state" >> {
+        fishForArrivalWithActPax(Option(100), "updated")
+      }
+    }
+
+    "When I send an ACL arrival with 100 pax and a live arrival with 0 pax, scheduled more than 3 hours after now, but with an actChox time, ie it's landed" >> {
+      val scheduled3Hrs5MinsAfterNow = SDate(nowString).addHours(3).addMinutes(5).toISOString()
+      offerArrivalAndWait(crunch.baseArrivalsInput, scheduled = scheduled3Hrs5MinsAfterNow, actPax = Option(100))
+      offerArrivalAndWait(crunch.liveArrivalsInput, scheduled = scheduled3Hrs5MinsAfterNow, actPax = Option(0), actChoxDt = scheduled3Hrs5MinsAfterNow)
+      "I should see it with 0 ActPax in the port state" >> {
+        fishForArrivalWithActPax(Option(0))
+      }
+    }
+
+    "When I send an ACL arrival with 100 pax and a live arrival with 50 pax, scheduled more than 3 hours after now" >> {
+      val scheduled3Hrs5MinsAfterNow = SDate(nowString).addHours(3).addMinutes(5).toISOString()
+      offerArrivalAndWait(crunch.baseArrivalsInput, scheduled = scheduled3Hrs5MinsAfterNow, actPax = Option(100))
+      offerArrivalAndWait(crunch.liveArrivalsInput, scheduled = scheduled3Hrs5MinsAfterNow, actPax = Option(50))
+      "I should see it with 50 ActPax in the port state" >> {
+        fishForArrivalWithActPax(Option(50))
+      }
+    }
+
+    "When I send an ACL arrival with 100 pax and a live arrival with 0 pax, scheduled less than 3 hours after now" >> {
+      val scheduled2Hrs55MinsAfterNow = SDate(nowString).addHours(2).addMinutes(55).toISOString()
+      offerArrivalAndWait(crunch.baseArrivalsInput, scheduled = scheduled2Hrs55MinsAfterNow, actPax = Option(100))
+      offerArrivalAndWait(crunch.liveArrivalsInput, scheduled = scheduled2Hrs55MinsAfterNow, actPax = Option(0))
+      "I should see it with 0 ActPax in the port state" >> {
+        fishForArrivalWithActPax(Option(0))
+      }
+    }
+
+    "When I send a live arrival with undefined pax" >> {
+      offerArrivalAndWait(crunch.liveArrivalsInput, scheduled = nowString, actPax = None)
+      "I should see it with undefined pax in the port state" >> {
+        fishForArrivalWithActPax(None)
+      }
+    }
   }
 
-  "Given a live arrival with 0 pax that is not landing for more than 6 hours with a forecast record " +
-    "Then we should use the Forecast pax numbers" >> {
-    val probe = TestProbe("arrivals")
-    val (aclSource, forecastSource, _, liveSource) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
-
-    aclSource.offer(
-      List(arrival(actPax = Option(189), schDt = nowForThisTest.addHours(6).toISOString()))
-    )
-    forecastSource.offer(
-      List(arrival(actPax = Option(100), schDt = nowForThisTest.addHours(6).toISOString()))
-    )
-    liveSource.offer(
-      List(arrival(
-        actPax = Option(0),
-        schDt = nowForThisTest.addHours(6).toISOString(),
-        gate = Option("G1")))
-    )
-
-    probe.fishForMessage(2 seconds) {
-      case ArrivalsDiff(toUpdate, _) =>
-        toUpdate.exists {
-          case (_, a) => a.ActPax == Option(100) && a.Gate == Option("G1")
-        }
-    }
-    success
+  def offerArrivalAndWait(input: SourceQueueWithComplete[ArrivalsFeedResponse],
+                          scheduled: String,
+                          actPax: Option[Int],
+                          status: String = "",
+                          actChoxDt: String = ""): QueueOfferResult = {
+    val arrivalLive = ArrivalGenerator.arrival("BA0001", schDt = scheduled, actPax = actPax, status = ArrivalStatus(status), actChoxDt = actChoxDt)
+    offerAndWait(input, ArrivalsFeedSuccess(Flights(Seq(arrivalLive))))
   }
-
-  "Given a live arrival with 0 pax in the live feed that has landed " +
-    "Then we should assume that 0 is the correct number of pax regardless of forecast/acl numbers" >> {
-    val probe = TestProbe("arrivals")
-    val (aclSource, forecastSource, _, liveSource) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
-
-    aclSource.offer(List(arrival(actPax = Option(189), schDt = nowForThisTest.toISOString())))
-    forecastSource.offer(List(arrival(actPax = Option(100), schDt = nowForThisTest.toISOString())))
-    liveSource.offer(List(arrival(actPax = Option(0), schDt = nowForThisTest.toISOString(), gate = Option("G1"))))
-
-    probe.fishForMessage(2 seconds) {
-      case ArrivalsDiff(toUpdate, _) =>
-        toUpdate.exists {
-          case (_, a) => a.ActPax == Option(0) && a.Gate == Option("G1")
-        }
-    }
-    success
-  }
-
-  "Given a live arrival with 0 pax in the live feed that is scheduled for now " +
-    "Then we should assume that 0 is the correct number of pax" >> {
-    val probe = TestProbe("arrivals")
-    val (aclSource, _, _, liveSource) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
-
-    aclSource.offer(List(arrival(actPax = Option(189), schDt = nowForThisTest.toISOString())))
-    liveSource.offer(List(arrival(actPax = Option(0), schDt = nowForThisTest.toISOString(), gate = Option("G1"))))
-
-    probe.fishForMessage(2 seconds) {
-      case ArrivalsDiff(toUpdate, _) =>
-        toUpdate.exists {
-          case (_, a) => a.ActPax == Option(0) && a.Gate == Option("G1")
-        }
-    }
-    success
-  }
-
-  "Given a live arrival with 0 pax in the live feed that has landed regardless of schedule time " +
-    "Then we should assume that 0 is the correct number of pax" >> {
-    val probe = TestProbe("arrivals")
-    val (aclSource, _, _, liveSource) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
-
-    aclSource.offer(
-      List(arrival(actPax = Option(189), schDt = nowForThisTest.addHours(8).toISOString()))
-    )
-    liveSource.offer(
-      List(arrival(
-        actPax = Option(0),
-        schDt = nowForThisTest.addHours(8).toISOString(),
-        actChoxDt = nowForThisTest.toISOString(),
-        gate = Option("G1")
-      ))
-    )
-
-    probe.fishForMessage(2 seconds) {
-      case ArrivalsDiff(toUpdate, _) =>
-        toUpdate.exists {
-          case (_, a) => a.ActPax == Option(0) && a.Gate == Option("G1")
-        }
-    }
-    success
-  }
-
-  "Given a live arrival with 0 pax in the live feed that has an ActualChox regardless of schedule time " +
-    "Then we should assume that 0 is the correct number of pax" >> {
-    val probe = TestProbe("arrivals")
-    val (aclSource, _, _, liveSource) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
-
-    aclSource.offer(
-      List(arrival(actPax = Option(189), schDt = nowForThisTest.addHours(8).toISOString()))
-    )
-    liveSource.offer(
-      List(arrival(
-        actPax = Option(0),
-        schDt = nowForThisTest.addHours(8).toISOString(),
-        actChoxDt = nowForThisTest.toISOString(),
-        gate = Option("G1")
-      ))
-    )
-
-    probe.fishForMessage(2 seconds) {
-      case ArrivalsDiff(toUpdate, _) =>
-        toUpdate.exists {
-          case (_, a) => a.ActPax == Option(0) && a.Gate == Option("G1")
-        }
-    }
-    success
-  }
-
 }

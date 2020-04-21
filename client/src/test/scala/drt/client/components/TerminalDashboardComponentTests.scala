@@ -4,8 +4,7 @@ import drt.client.services.JSDateConversions._
 import utest.{TestSuite, _}
 
 object TerminalDashboardComponentTests extends TestSuite {
-
-  def tests = Tests {
+  def tests: Tests = Tests {
     "TerminalDashboardComponent" - {
       "When finding the timeslot for a timestamp using 15 minute timeslots" - {
 

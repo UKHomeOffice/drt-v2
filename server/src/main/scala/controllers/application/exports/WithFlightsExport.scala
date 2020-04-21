@@ -72,11 +72,19 @@ trait WithFlightsExport extends ExportToCsv {
         val persistenceId = feedSourceToPersistenceId(fs)
         val arrivalsExport = ArrivalFeedExport()
         val startDate = SDate(startPit)
-        val numberOfDays = startDate.daysBetweenInclusive(SDate(endPit))
+        val numberOfDays = startDate.getLocalLastMidnight.daysBetweenInclusive(SDate(endPit))
+
         val csvDataSource = arrivalsExport.flightsDataSource(startDate, numberOfDays, terminal, fs, persistenceId)
 
         implicit val writeable: Writeable[String] = Writeable((str: String) => ByteString.fromString(str), Option("application/csv"))
-        val fileName = s"${airportConfig.portCode}-$terminal-$feedSourceString-${startDate.toISODateOnly}-to-${SDate(endPit).toISODateOnly}"
+
+        val periodString = if(numberOfDays > 1)
+         s"${startDate.getLocalLastMidnight.toISODateOnly}-to-${SDate(endPit).getLocalLastMidnight.toISODateOnly}"
+        else
+          startDate.getLocalLastMidnight.toISODateOnly
+
+        val fileName = s"${airportConfig.portCode}-$terminal-$feedSourceString-$periodString"
+
         Result(
           header = ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
           body = HttpEntity.Chunked(csvDataSource.collect {

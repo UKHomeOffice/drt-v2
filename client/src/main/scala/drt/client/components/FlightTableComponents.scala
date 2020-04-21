@@ -4,6 +4,7 @@ import diode.data.{Pot, Ready}
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
+import drt.shared.api.Arrival
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagMod, TagOf}
 import org.scalajs.dom.html.{Div, Span}

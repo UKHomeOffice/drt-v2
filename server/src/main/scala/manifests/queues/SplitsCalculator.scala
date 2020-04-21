@@ -4,16 +4,15 @@ import drt.shared.SplitRatiosNs.SplitSources.InvalidSource
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import drt.shared.api.Arrival
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import queueus.{AdjustmentsNoop, PaxTypeQueueAllocation, QueueAdjustments}
 
 
-case class SplitsCalculator(
-                             queueAllocator: PaxTypeQueueAllocation,
-                             terminalDefaultSplitRatios: Map[Terminal, SplitRatios],
-                             adjustments: QueueAdjustments = AdjustmentsNoop()
-                           ) {
+case class SplitsCalculator(queueAllocator: PaxTypeQueueAllocation,
+                            terminalDefaultSplitRatios: Map[Terminal, SplitRatios],
+                            adjustments: QueueAdjustments = AdjustmentsNoop()) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def terminalDefaultSplits(terminalName: Terminal): Set[Splits] = {

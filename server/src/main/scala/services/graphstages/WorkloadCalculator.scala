@@ -4,6 +4,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import services.PcpArrival
 import services.graphstages.Crunch.{FlightSplitMinute, SplitMinutes}
@@ -16,11 +17,7 @@ object WorkloadCalculator {
 
   def flightLoadMinutes(flights: FlightsWithSplits, defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]]): SplitMinutes = {
     val uniqueFlights: Iterable[ApiFlightWithSplits] = flights
-      .flights
-      .map {
-        case (_, fws) => fws
-      }
-      .toSeq
+      .flights.toMap.values.toList
       .sortBy(_.apiFlight.ActPax.getOrElse(0))
       .map { fws => (CodeShareKeyOrderedBySchedule(fws), fws) }
       .toMap.values
@@ -31,7 +28,7 @@ object WorkloadCalculator {
       .filter(fws => !fws.apiFlight.isCancelled && defaultProcTimes.contains(fws.apiFlight.Terminal))
       .foreach { incoming =>
         val procTimes = defaultProcTimes(incoming.apiFlight.Terminal)
-        val flightMinutes = flightToFlightSplitMinutes(incoming, procTimes, Map(), false)
+        val flightMinutes = flightToFlightSplitMinutes(incoming, procTimes, Map(), useNationalityBasedProcTimes = false)
         minutes ++= flightMinutes
       }
 
@@ -49,7 +46,7 @@ object WorkloadCalculator {
     splitsToUseOption.map(splitsToUse => {
       val totalPax = splitsToUse.splitStyle match {
         case UndefinedSplitStyle => 0
-        case _ => ArrivalHelper.bestPax(flight)
+        case _ => PcpPax.bestPax(flight)
       }
       val splitRatios: Set[ApiPaxTypeAndQueueCount] = splitsToUse.splitStyle match {
         case UndefinedSplitStyle => splitsToUse.splits.map(qc => qc.copy(paxCount = 0))
@@ -101,7 +98,7 @@ object WorkloadCalculator {
 
     val splitWorkLoadInMinute = (apiSplitRatio.nationalities, useNationalityBasedProcTimes) match {
       case (Some(nats), true) if nats.values.sum > 0 =>
-        val bestPax = ArrivalHelper.bestPax(arrival)
+        val bestPax = PcpPax.bestPax(arrival)
         val natsToPaxRatio = totalPaxWithNationality / bestPax
         val natFactor = (flightPaxInMinute.toDouble / bestPax) / natsToPaxRatio
         log.debug(s"totalNats: $totalPaxWithNationality / bestPax: $bestPax, natFactor: $natFactor - ($flightPaxInMinute / $bestPax) / $natsToPaxRatio")

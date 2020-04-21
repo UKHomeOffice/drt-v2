@@ -3,7 +3,8 @@ package drt.server.feeds.lgw
 import drt.server.feeds.Implicits._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.{InvalidTerminal, N, S}
-import drt.shared.{Arrival, CarrierCode, LiveFeedSource, Operator, Terminals, VoyageNumber}
+import drt.shared._
+import drt.shared.api.Arrival
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -50,13 +51,14 @@ case class ResponseToArrivals(data: String) {
       Terminal = parseTerminal(n),
       CarrierCode = CarrierCode((n \\ "AirlineIATA" text)),
       VoyageNumber = VoyageNumber(parseFlightNumber(n)),
+      ArrivalSuffix = None,
       Origin = parseOrigin(n),
       Scheduled = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("SCT")).map(n => services.SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
       PcpTime = None,
       FeedSources = Set(LiveFeedSource),
       CarrierScheduled = None,
       ApiPax = None
-    )
+      )
     log.debug(s"parsed arrival: $arrival")
     arrival
   }

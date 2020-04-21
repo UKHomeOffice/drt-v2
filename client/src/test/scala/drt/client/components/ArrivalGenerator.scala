@@ -3,7 +3,8 @@ package drt.client.components
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.Terminal
-import drt.shared.{ApiFeedSource, Arrival, ArrivalStatus, Operator, PortCode}
+import drt.shared.api.Arrival
+import drt.shared.{ApiFeedSource, ArrivalStatus, Operator, PortCode}
 
 
 object ArrivalGenerator {

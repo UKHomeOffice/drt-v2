@@ -2,6 +2,7 @@ package drt.shared.splits
 
 import drt.shared.Queues.Queue
 import drt.shared._
+import drt.shared.api.Arrival
 
 object ApiSplitsToSplitRatio {
 
@@ -22,7 +23,7 @@ object ApiSplitsToSplitRatio {
   }
 
   def flightPaxPerQueueUsingSplitsAsRatio(splits: Splits, flight: Arrival): Map[Queue, Int] = queueTotals(
-    ApiSplitsToSplitRatio.applyPaxSplitsToFlightPax(splits, ArrivalHelper.bestPax(flight))
+    ApiSplitsToSplitRatio.applyPaxSplitsToFlightPax(splits, PcpPax.bestPax(flight))
       .splits
       .map(ptqc => PaxTypeAndQueue(ptqc.passengerType, ptqc.queueType) -> ptqc.paxCount.toInt)
       .toMap

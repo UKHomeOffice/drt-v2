@@ -4,7 +4,7 @@ import actors.Sizes.oneMegaByte
 import actors._
 import actors.daily.PassengersActor
 import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.pattern.AskableActorRef
+import akka.pattern.ask
 import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, OverflowStrategy, QueueOfferResult, UniqueKillSwitch}
@@ -17,6 +17,7 @@ import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared._
+import drt.shared.api.Arrival
 import graphs.SinkToSourceBridge
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
@@ -47,7 +48,10 @@ class CrunchTestLike
   isolated
   sequential
 
-  override def afterAll: Unit = TestKit.shutdownActorSystem(system)
+  override def afterAll: Unit = {
+    log.info("Shutting down actor system!!!")
+    TestKit.shutdownActorSystem(system)
+  }
 
   implicit val actorSystem: ActorSystem = system
   implicit val materializer: ActorMaterializer = ActorMaterializer()
@@ -159,16 +163,14 @@ class CrunchTestLike
     val liveBaseArrivalsProbe = testProbe("live-base-arrivals")
     val liveArrivalsProbe = testProbe("live-arrivals")
 
-    val shiftsActor: ActorRef = system.actorOf(Props(classOf[ShiftsActor], now, DrtStaticParameters.timeBeforeThisMonth(now)))
-    val fixedPointsActor: ActorRef = system.actorOf(Props(classOf[FixedPointsActor], now))
-    val staffMovementsActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsActor], now, DrtStaticParameters.time48HoursAgo(now)))
+    val shiftsActor: ActorRef = system.actorOf(Props(new ShiftsActor(now, DrtStaticParameters.timeBeforeThisMonth(now))))
+    val fixedPointsActor: ActorRef = system.actorOf(Props(new FixedPointsActor(now)))
+    val staffMovementsActor: ActorRef = system.actorOf(Props(new StaffMovementsActor(now, DrtStaticParameters.time48HoursAgo(now))))
     val snapshotInterval = 1
-    val manifestsActor: ActorRef = system.actorOf(Props(classOf[VoyageManifestsActor], oneMegaByte, now, DrtStaticParameters.expireAfterMillis, Option(snapshotInterval)))
+    val manifestsActor: ActorRef = system.actorOf(Props(new VoyageManifestsActor(oneMegaByte, now, DrtStaticParameters.expireAfterMillis, Option(snapshotInterval))))
 
-    //    val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(None, Sizes.oneMegaByte, "flights", airportConfig.queuesByTerminal, now, expireAfterMillis)))
-    //    val portStateActor = PartitionedPortStateTestActor(portStateProbe, flightsActor, now, airportConfig)
     val portStateActor = PortStateTestActor(portStateProbe, now)
-    val askablePortStateActor: AskableActorRef = portStateActor
+    val askablePortStateActor: ActorRef = portStateActor
     if (initialPortState.isDefined) Await.ready(askablePortStateActor.ask(initialPortState.get)(new Timeout(1 second)), 1 second)
 
     val portDescRecs = DesksAndWaitsPortProvider(airportConfig, cruncher)
@@ -196,7 +198,7 @@ class CrunchTestLike
     val aclPaxAdjustmentDays = 7
     val maxDaysToConsider = 14
 
-    val passengersActorProvider: () => AskableActorRef = maybePassengersActorProps match {
+    val passengersActorProvider: () => ActorRef = maybePassengersActorProps match {
       case Some(props) => () => system.actorOf(props)
       case None => () =>
         system.actorOf(Props(new PassengersActor(maxDaysToConsider, aclPaxAdjustmentDays)))
@@ -210,7 +212,7 @@ class CrunchTestLike
       portStateActor = portStateActor,
       maxDaysToCrunch = maxDaysToCrunch,
       expireAfterMillis = expireAfterMillis,
-      actors = Map[String, AskableActorRef](
+      actors = Map[String, ActorRef](
         "shifts" -> shiftsActor,
         "fixed-points" -> fixedPointsActor,
         "staff-movements" -> staffMovementsActor,

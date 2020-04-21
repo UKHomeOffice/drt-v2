@@ -3,7 +3,6 @@ package services
 import java.util.UUID
 
 import akka.actor.{ActorRef, ActorSystem}
-import akka.pattern.AskableActorRef
 import akka.util.Timeout
 import controllers.{ShiftPersistence, StaffMovementsPersistence}
 import drt.shared.CrunchApi._
@@ -72,7 +71,7 @@ abstract class ApiService(val airportConfig: AirportConfig,
 
   override val log: Logger = LoggerFactory.getLogger(this.getClass)
 
-  def portStateActor: AskableActorRef
+  def portStateActor: ActorRef
 
   def actorSystem: ActorSystem
 

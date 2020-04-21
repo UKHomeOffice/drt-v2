@@ -1,6 +1,6 @@
 package services.arrivals
 
-import drt.shared.Arrival
+import drt.shared.api.Arrival
 
 case class ArrivalDataSanitiser(
                                  maybeEstimatedThresholdHours: Option[Int],

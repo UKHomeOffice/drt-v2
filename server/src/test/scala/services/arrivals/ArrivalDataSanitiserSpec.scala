@@ -1,23 +1,21 @@
 package services.arrivals
 
 import drt.shared.Terminals.T1
-import drt.shared.{Arrival, ArrivalStatus, PortCode}
+import drt.shared.api.Arrival
+import drt.shared.{ArrivalStatus, PortCode, SDateLike}
 import org.specs2.mutable.Specification
 import services.SDate
 
 class ArrivalDataSanitiserSpec extends Specification {
 
-  val scheduled = SDate(2019, 9, 30, 16, 0)
+  val scheduled: SDateLike = SDate(2019, 9, 30, 16, 0)
 
-  def arrival(
-               estimated: Option[Long] = None,
-               actual: Option[Long] = None,
-               estChox: Option[Long] = None,
-               actChox: Option[Long] = None,
-               gate: Option[String] = None,
-               status: ArrivalStatus = ArrivalStatus("test")
-             ): Arrival = {
-
+  def arrival(estimated: Option[Long] = None,
+              actual: Option[Long] = None,
+              estChox: Option[Long] = None,
+              actChox: Option[Long] = None,
+              gate: Option[String] = None,
+              status: ArrivalStatus = ArrivalStatus("test")): Arrival =
     Arrival(
       None,
       status,
@@ -40,8 +38,7 @@ class ArrivalDataSanitiserSpec extends Specification {
       scheduled.millisSinceEpoch,
       None,
       Set()
-    )
-  }
+      )
 
   "Given a base live arrival with an estimated time that is outside the threshold " +
     "Then the estimated time should be ignored" >> {
@@ -66,7 +63,7 @@ class ArrivalDataSanitiserSpec extends Specification {
     val arrivalWithIrrationalEstimation = arrival(
       estChox = Option(scheduled.addHours(-1).millisSinceEpoch),
       estimated = Option(scheduled.millisSinceEpoch)
-    )
+      )
     val sanitiser = ArrivalDataSanitiser(Option(4), None)
     val saneArrival = sanitiser.withSaneEstimates(arrivalWithIrrationalEstimation)
 
@@ -78,7 +75,7 @@ class ArrivalDataSanitiserSpec extends Specification {
     val arrivalWithIrrationalEstimation = arrival(
       estChox = Option(scheduled.addMinutes(25).millisSinceEpoch),
       estimated = Option(scheduled.millisSinceEpoch)
-    )
+      )
     val sanitiser = ArrivalDataSanitiser(Option(4), Option(20))
     val saneArrival = sanitiser.withSaneEstimates(arrivalWithIrrationalEstimation)
 
@@ -90,7 +87,7 @@ class ArrivalDataSanitiserSpec extends Specification {
     val arrivalWithIrrationalEstimation = arrival(
       estChox = Option(scheduled.millisSinceEpoch),
       estimated = Option(scheduled.millisSinceEpoch)
-    )
+      )
 
     val sanitiser = ArrivalDataSanitiser(Option(4), Option(20))
     val saneArrival = sanitiser.withSaneEstimates(arrivalWithIrrationalEstimation)

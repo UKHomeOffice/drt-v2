@@ -3,7 +3,7 @@ package actors
 import actors.DrtStaticParameters.liveDaysAhead
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import akka.pattern.AskableActorRef
+import akka.pattern.ask
 import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
@@ -12,7 +12,6 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.crunch.deskrecs.GetFlights
-import services.graphstages.Crunch
 import services.graphstages.Crunch.{LoadMinute, Loads}
 
 import scala.collection.mutable
@@ -22,20 +21,20 @@ import scala.language.postfixOps
 
 
 object PortStateActor {
-  def apply(now: () => SDateLike, liveCrunchStateActor: AskableActorRef, forecastCrunchStateActor: AskableActorRef)
+  def apply(now: () => SDateLike, liveCrunchStateActor: ActorRef, forecastCrunchStateActor: ActorRef)
            (implicit system: ActorSystem): ActorRef = {
     system.actorOf(PortStateActor.props(liveCrunchStateActor, forecastCrunchStateActor, now, liveDaysAhead), name = "port-state-actor")
   }
 
-  def props(liveStateActor: AskableActorRef,
-            forecastStateActor: AskableActorRef,
+  def props(liveStateActor: ActorRef,
+            forecastStateActor: ActorRef,
             now: () => SDateLike,
             liveDaysAhead: Int): Props =
     Props(new PortStateActor(liveStateActor, forecastStateActor, now, liveDaysAhead))
 }
 
-class PortStateActor(liveStateActor: AskableActorRef,
-                     forecastStateActor: AskableActorRef,
+class PortStateActor(liveStateActor: ActorRef,
+                     forecastStateActor: ActorRef,
                      now: () => SDateLike,
                      liveDaysAhead: Int) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -46,9 +45,9 @@ class PortStateActor(liveStateActor: AskableActorRef,
 
   val state: PortStateMutable = PortStateMutable.empty
 
-  var maybeCrunchActor: Option[AskableActorRef] = None
+  var maybeCrunchActor: Option[ActorRef] = None
   var crunchSourceIsReady: Boolean = true
-  var maybeSimActor: Option[AskableActorRef] = None
+  var maybeSimActor: Option[ActorRef] = None
   var simulationActorIsReady: Boolean = true
 
   override def receive: Receive = {
@@ -198,7 +197,7 @@ class PortStateActor(liveStateActor: AskableActorRef,
     case _ =>
   }
 
-  private def askAndLogOnFailure[A](actor: AskableActorRef, question: Any, msg: String): Future[Any] = actor
+  private def askAndLogOnFailure[A](actor: ActorRef, question: Any, msg: String): Future[Any] = actor
     .ask(question)
     .recover {
       case t => log.error(msg, t)

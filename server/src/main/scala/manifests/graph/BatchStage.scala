@@ -4,7 +4,8 @@ import akka.actor.{ActorSystem, Cancellable}
 import akka.stream._
 import akka.stream.stage._
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{Arrival, ArrivalKey, SDateLike}
+import drt.shared.api.Arrival
+import drt.shared.{ArrivalKey, SDateLike}
 import manifests.actors.RegisteredArrivals
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch

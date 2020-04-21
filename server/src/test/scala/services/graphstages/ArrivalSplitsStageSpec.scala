@@ -10,6 +10,7 @@ import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.T1
 import drt.shared._
+import drt.shared.api.Arrival
 import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType

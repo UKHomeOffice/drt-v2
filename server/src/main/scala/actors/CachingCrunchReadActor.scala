@@ -5,7 +5,7 @@ import java.util.UUID
 import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
 import akka.http.caching.LfuCache
 import akka.http.caching.scaladsl.{Cache, CachingSettings, LfuCacheSettings}
-import akka.pattern.AskableActorRef
+import akka.pattern.ask
 import akka.util.Timeout
 import services.SDate
 import services.metrics.Metrics
@@ -51,8 +51,7 @@ class CachingCrunchReadActor extends Actor with ActorLogging {
 
         log.info(s"Starting actor for query ${caq.props}")
         val actorRef: ActorRef = context.actorOf(caq.props, actorName)
-        val askableActorRef: AskableActorRef = actorRef
-        val resToCache: Future[Any] = askableActorRef.ask(caq.query)
+        val resToCache: Future[Any] = actorRef.ask(caq.query)
 
         resToCache.onComplete {
           case Success(_) =>

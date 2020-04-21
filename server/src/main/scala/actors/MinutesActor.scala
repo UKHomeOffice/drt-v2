@@ -2,7 +2,7 @@ package actors
 
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import akka.actor.{Actor, ActorRef}
-import akka.pattern.AskableActorRef
+import akka.pattern.ask
 import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.Terminals.Terminal
@@ -40,7 +40,7 @@ class MinutesActor[A, B](now: () => SDateLike,
   def isHistoric(date: SDateLike): Boolean = MilliTimes.isHistoric(now, date)
 
   val minutesBuffer: mutable.Map[B, MinuteLike[A, B]] = mutable.Map[B, MinuteLike[A, B]]()
-  var maybeUpdateSubscriber: Option[AskableActorRef] = None
+  var maybeUpdateSubscriber: Option[ActorRef] = None
   var subscriberIsReady: Boolean = false
 
   override def receive: Receive = {

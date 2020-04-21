@@ -9,10 +9,11 @@ import drt.shared.Queues.EeaDesk
 import drt.shared.SplitRatiosNs.SplitSources.TerminalAverage
 import drt.shared.Terminals.T1
 import drt.shared._
+import drt.shared.api.Arrival
 import org.specs2.matcher.Scope
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
-import passengersplits.parsing.VoyageManifestParser.{EeaFlag, InTransit, ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, PaxAge, VoyageManifest}
-import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
+import passengersplits.parsing.VoyageManifestParser._
+import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
 import services.SDate
 
 import scala.collection.immutable.{List, SortedMap}
@@ -30,7 +31,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
     val dateNow: SDateLike = SDate("2017-01-01T00:00Z")
 
-    val terminalSplits = Splits(Set(
+    val terminalSplits: Splits = Splits(Set(
       ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 100.0, None)), TerminalAverage, None, Percentage)
 
     val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(
@@ -38,7 +39,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       now = () => dateNow,
       initialPortState = Option(PortState(SortedMap(arrival_v2_with_chox_time.unique -> ApiFlightWithSplits(arrival_v2_with_chox_time, Set(terminalSplits))), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())),
       initialLiveArrivals = mutable.SortedMap[UniqueArrival, Arrival]() ++ List(arrival_v2_with_chox_time).map(a => (a.unique, a))
-    )
+      )
 
     var messages: Set[Arrival] = Set()
   }
@@ -49,7 +50,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       val arrival_v3_with_an_update_to_chox_time: Arrival = arrival_v2_with_chox_time.copy(ActualChox = Option(SDate("2017-01-01T10:30Z").millisSinceEpoch), Stand = Option("I will update"))
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival_v3_with_an_update_to_chox_time))))
 
-      val expectedArrivals = List(arrival_v3_with_an_update_to_chox_time)
+      val expectedArrivals: List[Arrival] = List(arrival_v3_with_an_update_to_chox_time)
 
       crunch.portStateTestProbe.fishForMessage(5 seconds) {
         case ps: PortState =>
@@ -61,12 +62,11 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     }
 
     "once an API (advanced passenger information) input arrives for the flight, it will update the arrivals FeedSource so that it has a LiveFeed and a ApiFeed" in new Context {
-
-      val voyageManifests = ManifestsFeedSuccess(DqManifests("", Set(
+      val voyageManifests: ManifestsFeedResponse = ManifestsFeedSuccess(DqManifests("", Set(
         VoyageManifest(EventTypes.DC, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("10:25"), List(
           PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(22)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None)
-        ))
-      )))
+          ))
+        )))
 
       offerAndWait(crunch.manifestsLiveInput, voyageManifests)
 
@@ -84,14 +84,14 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     "once an acl and a forecast input arrives for the flight, it will update the arrivals FeedSource so that it has ACLFeed and ForecastFeed" in new Context {
       val forecastScheduled = "2017-01-01T10:25Z"
 
-      val aclFlight = Flights(List(
+      val aclFlight: Flights = Flights(List(
         ArrivalGenerator.arrival(iata = "BA0002", schDt = forecastScheduled, actPax = Option(10), feedSources = Set(AclFeedSource))
-      ))
+        ))
 
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlight))
 
-      val forecastArrival = arrival(schDt = forecastScheduled, iata = "BA0002", terminal = T1, actPax = Option(21), feedSources = Set(ForecastFeedSource))
-      val forecastArrivals = ArrivalsFeedSuccess(Flights(List(forecastArrival)))
+      val forecastArrival: Arrival = arrival(schDt = forecastScheduled, iata = "BA0002", terminal = T1, actPax = Option(21), feedSources = Set(ForecastFeedSource))
+      val forecastArrivals: ArrivalsFeedResponse = ArrivalsFeedSuccess(Flights(List(forecastArrival)))
 
       offerAndWait(crunch.forecastArrivalsInput, forecastArrivals)
 
@@ -114,7 +114,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       private val arrivalInt: Arrival = ArrivalGenerator.arrival(iata = "BA0002", origin = PortCode("JFK"), schDt = scheduled, actPax = Option(10), feedSources = Set(AclFeedSource))
       private val arrivalDom: Arrival = ArrivalGenerator.arrival(iata = "BA0003", origin = PortCode("BHX"), schDt = scheduled, actPax = Option(10), feedSources = Set(AclFeedSource))
 
-      val aclFlight = Flights(List(arrivalInt, arrivalDom))
+      val aclFlight: Flights = Flights(List(arrivalInt, arrivalDom))
 
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlight))
 
@@ -129,5 +129,4 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     }
 
   }
-
 }

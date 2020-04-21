@@ -5,6 +5,7 @@ import drt.shared.CrunchApi._
 import drt.shared.Queues.{EeaDesk, Queue}
 import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared._
+import drt.shared.api.Arrival
 import services.crunch.CrunchTestLike
 import services.graphstages.{SimulationMinute, SimulationMinutes}
 

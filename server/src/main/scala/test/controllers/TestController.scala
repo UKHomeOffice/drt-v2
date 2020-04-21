@@ -1,15 +1,14 @@
 package test.controllers
 
-import akka.actor.ActorSystem
 import akka.pattern.ask
-import akka.stream.Materializer
 import akka.util.Timeout
-import controllers.AirportConfProvider
+import controllers.{AirportConfProvider, DrtActorSystem}
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
 import drt.server.feeds.Implicits._
 import drt.shared.Terminals.Terminal
-import drt.shared.{Arrival, LiveFeedSource, PortCode, SDateLike}
+import drt.shared.api.Arrival
+import drt.shared.{LiveFeedSource, PortCode, SDateLike}
 import javax.inject.{Inject, Singleton}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.FlightPassengerInfoProtocol._
@@ -19,47 +18,46 @@ import play.api.http.HeaderNames
 import play.api.mvc.{Action, AnyContent, InjectedController, Session}
 import services.SDate
 import spray.json._
-import test.TestActors.ResetActor
-import test.TestDrtSystemInterface
+import test.TestActors.ResetData
+import test.TestDrtSystem
 import test.feeds.test.CSVFixtures
 import test.roles.MockRoles
 import test.roles.MockRoles.MockRolesProtocol._
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
-import scala.util.{Failure, Success}
+import scala.util.Success
 
 @Singleton
-class TestController @Inject()(implicit val config: Configuration,
-                               implicit val mat: Materializer,
-                               val system: ActorSystem,
-                               ec: ExecutionContext) extends InjectedController with AirportConfProvider {
-  self: TestDrtSystemInterface =>
-
+class TestController @Inject()(val config: Configuration) extends InjectedController with AirportConfProvider {
   implicit val timeout: Timeout = Timeout(250 milliseconds)
 
+  implicit val ec: ExecutionContextExecutor = DrtActorSystem.ec
+
   val log: Logger = LoggerFactory.getLogger(getClass)
+
+  def ctrl: TestDrtSystem = DrtActorSystem.drtTestSystem
 
   val baseTime: SDateLike = SDate.now()
 
   def saveArrival(arrival: Arrival): Future[Any] = {
     log.info(s"Incoming test arrival")
-    testArrivalActor.ask(arrival)
+    ctrl.testArrivalActor.ask(arrival)
   }
 
   def saveVoyageManifest(voyageManifest: VoyageManifest): Future[Any] = {
     log.info(s"Sending Splits: ${voyageManifest.EventCode} to Test Actor")
-    testManifestsActor.ask(VoyageManifests(Set(voyageManifest)))
+    ctrl.testManifestsActor.ask(VoyageManifests(Set(voyageManifest)))
   }
 
   def resetData(): Future[Any] = {
-    restartActor.ask(ResetActor)
+    log.info(s"Sending reset message")
+    ctrl.restartActor.ask(ResetData)
   }
 
-  def addArrival(): Action[AnyContent] = Action {
-    implicit request =>
-
+  def addArrival(): Action[AnyContent] = Action.async {
+    request =>
       request.body.asJson.map(s => s.toString.parseJson.convertTo[ChromaLiveFlight]) match {
         case Some(flight) =>
           val walkTimeMinutes = 4
@@ -88,44 +86,38 @@ class TestController @Inject()(implicit val config: Configuration,
             FeedSources = Set(LiveFeedSource),
             Scheduled = SDate(flight.SchDT).millisSinceEpoch
             )
-          saveArrival(arrival)
-          Created
+          saveArrival(arrival).map(_ => Created)
         case None =>
-          BadRequest(s"Unable to parse JSON: ${request.body.asText}")
+          Future(BadRequest(s"Unable to parse JSON: ${request.body.asText}"))
       }
   }
 
-  def addArrivals(forDate: String): Action[AnyContent] = Action {
-    implicit request =>
+  def addArrivals(forDate: String): Action[AnyContent] = Action.async {
+    _.body.asMultipartFormData.flatMap(_.files.find(_.key == "data")) match {
+      case Some(f) =>
+        val path = f.ref.path.toString
 
-      request.body.asMultipartFormData.flatMap(_.files.find(_.key == "data")) match {
-        case Some(f) =>
-          val path = f.ref.path.toString
+        val saveFutures = CSVFixtures
+          .csvPathToArrivalsOnDate(forDate, path)
+          .collect {
+            case Success(a) => saveArrival(a)
+          }
 
-          CSVFixtures
-            .csvPathToArrivalsOnDate(forDate, path)
-            .map {
-              case Failure(error) => Failure(error)
-              case Success(a) => saveArrival(a)
-            }
+        Future.sequence(saveFutures).map(_ => Created.withHeaders(HeaderNames.ACCEPT -> "application/csv"))
 
-          Created.withHeaders(HeaderNames.ACCEPT -> "application/csv")
-
-        case None =>
-          BadRequest("You must post a CSV file with name \"data\"")
-      }
+      case None =>
+        Future(BadRequest("You must post a CSV file with name \"data\""))
+    }
   }
 
-  def addManifest(): Action[AnyContent] = Action {
-    implicit request =>
-
+  def addManifest(): Action[AnyContent] = Action.async {
+    request =>
       request.body.asJson.map(s => s.toString.parseJson.convertTo[VoyageManifest]) match {
         case Some(vm) =>
           log.info(s"Got a manifest to save ${vm.CarrierCode}${vm.VoyageNumber} ${vm.ScheduledDateOfArrival} ${vm.ScheduledTimeOfArrival}")
-          saveVoyageManifest(vm)
-          Created
+          saveVoyageManifest(vm).map(_ => Created)
         case None =>
-          BadRequest(s"Unable to parse JSON: ${request.body.asText}")
+          Future(BadRequest(s"Unable to parse JSON: ${request.body.asText}"))
       }
   }
 
@@ -148,16 +140,13 @@ class TestController @Inject()(implicit val config: Configuration,
     implicit request =>
       request.queryString.get("roles") match {
         case Some(rs) =>
-
           Redirect("/").withSession(Session(Map("mock-roles" -> rs.mkString(","))))
         case roles =>
           BadRequest(s"""Unable to parse roles: $roles from query string ${request.queryString}""")
       }
   }
 
-  def deleteAllData(): Action[AnyContent] = Action {
-    resetData()
-
-    Accepted
+  def deleteAllData(): Action[AnyContent] = Action.async { _ =>
+    resetData().map(_ => Accepted)
   }
 }
