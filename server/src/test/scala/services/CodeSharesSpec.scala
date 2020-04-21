@@ -1,9 +1,10 @@
 package services
 
-import drt.shared.{Arrival, PortCode}
-import org.specs2.mutable.Specification
 import controllers.ArrivalGenerator.arrival
+import drt.shared.PortCode
 import drt.shared.Terminals.{T1, T2}
+import drt.shared.api.Arrival
+import org.specs2.mutable.Specification
 
 
 class CodeSharesSpec extends Specification {

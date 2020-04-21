@@ -3,9 +3,10 @@ package slickdb
 import java.sql.Timestamp
 
 import drt.shared
-import drt.shared.{Arrival, PortCode}
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.PortCode
 import drt.shared.Terminals.Terminal
+import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -55,7 +56,7 @@ case class ArrivalTable(portCode: PortCode, tables: Tables) extends ArrivalTable
     }
   }
 
-  def insertOrUpdateArrival(f: shared.Arrival): Future[Int] = {
+  def insertOrUpdateArrival(f: shared.api.Arrival): Future[Int] = {
     db.run(arrivalsTableQuery.insertOrUpdate(arrivalRow(f))) recover {
       case throwable =>
         log.error(s"insertOrUpdate failed", throwable)
@@ -69,7 +70,7 @@ case class ArrivalTable(portCode: PortCode, tables: Tables) extends ArrivalTable
       arrival.scheduled === scheduledTs &&
       arrival.destination === portCode.toString
 
-  def arrivalRow(f: shared.Arrival): tables.ArrivalRow = {
+  def arrivalRow(f: shared.api.Arrival): tables.ArrivalRow = {
     val sch = new Timestamp(f.Scheduled)
     val est = f.Estimated.map(new Timestamp(_))
     val act = f.Actual.map(new Timestamp(_))

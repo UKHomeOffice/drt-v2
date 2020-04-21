@@ -4,7 +4,8 @@ import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.T1
-import drt.shared.{Arrival, PortCode, PortState, SDateLike}
+import drt.shared.api.Arrival
+import drt.shared.{PortCode, PortState, SDateLike}
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 
@@ -71,7 +72,7 @@ class LiveStateRollingForwardSpec extends CrunchTestLike {
     success
   }
 
-  private def stateContainsArrivals(probe: TestProbe, arrivals: Seq[Arrival]) = probe.fishForMessage(2 seconds) {
+  private def stateContainsArrivals(probe: TestProbe, arrivals: Seq[Arrival]): Unit = probe.fishForMessage(2 seconds) {
     case ps: PortState => arrivals.foldLeft(true) { case (soFar, a) => soFar && ps.flights.contains(a.unique) }
   }
 }

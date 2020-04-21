@@ -4,7 +4,7 @@ import java.util.UUID
 
 import actors.pointInTime.ArrivalsReadActor
 import akka.actor.{ActorRef, PoisonPill}
-import akka.pattern.AskableActorRef
+import akka.pattern.ask
 import controllers.Application
 import drt.auth.ArrivalSource
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -76,10 +76,7 @@ trait WithFeeds {
     Action.async { _ =>
 
       val futureArrivalSources = pointInTimeActorSources.map((feedActor: ActorRef) => {
-
-        val askableActorRef: AskableActorRef = feedActor
-
-        askableActorRef
+        feedActor
           .ask(UniqueArrival(number, terminal, scheduled))
           .map {
             case Some(fsa: FeedSourceArrival) =>

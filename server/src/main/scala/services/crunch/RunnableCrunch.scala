@@ -7,9 +7,10 @@ import akka.stream._
 import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
 import akka.stream.stage.GraphStage
 import drt.chroma.ArrivalsDiffingStage
+import drt.shared.{ApiFlightWithSplits, ArrivalsDiff, FixedPointAssignments, RemoveFlight, SDateLike, ShiftAssignments, StaffMovement}
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
-import drt.shared._
+import drt.shared.FlightsApi.{Flights, FlightsWithSplitsDiff}
+import drt.shared.api.Arrival
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds._
@@ -38,7 +39,7 @@ object RunnableCrunch {
                                        actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
 
                                        arrivalsGraphStage: ArrivalsGraphStage,
-                                       arrivalSplitsStage: GraphStage[FanInShape3[ArrivalsDiff, List[BestAvailableManifest], List[BestAvailableManifest], FlightsWithSplits]],
+                                       arrivalSplitsStage: GraphStage[FanInShape3[ArrivalsDiff, List[BestAvailableManifest], List[BestAvailableManifest], FlightsWithSplitsDiff]],
                                        staffGraphStage: StaffGraphStage,
                                        staffBatchUpdateGraphStage: StaffBatchUpdateGraphStage,
                                        deploymentGraphStage: GraphStage[FanInShape2[Loads, StaffMinutes, SimulationMinutes]],
@@ -130,7 +131,7 @@ object RunnableCrunch {
           val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](2))
 
           val manifestsFanOut = builder.add(Broadcast[ManifestsFeedResponse](2))
-          val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplits](3))
+          val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplitsDiff](3))
           val staffFanOut = builder.add(Broadcast[StaffMinutes](2))
 
           val baseArrivalsSink = builder.add(Sink.actorRef(forecastBaseArrivalsActor, StreamCompleted))

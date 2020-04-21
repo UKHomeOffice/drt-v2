@@ -6,22 +6,23 @@ import java.util.{Calendar, TimeZone, UUID}
 import actors._
 import akka.actor._
 import akka.event.{Logging, LoggingAdapter}
-import akka.pattern.{AskableActorRef, _}
+import akka.pattern._
 import akka.stream._
 import akka.util.Timeout
-import api.{KeyCloakAuth, KeyCloakAuthError, KeyCloakAuthResponse, KeyCloakAuthToken}
+import api.{KeyCloakAuth, KeyCloakAuthError, KeyCloakAuthResponse, KeyCloakAuthToken, KeyCloakAuthTokenParserProtocol}
 import boopickle.Default._
 import buildinfo.BuildInfo
 import com.typesafe.config.ConfigFactory
 import controllers.application._
 import controllers.model.ActorDataRequest
-import drt.auth.{BorderForceStaff, LoggedInUser, ManageUsers, Role, Roles, StaffEdit}
+import drt.auth._
 import drt.http.ProdSendAndReceive
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.Terminals.Terminal
-import drt.shared.{AirportConfig, Arrival, _}
+import drt.shared.api.Arrival
+import drt.shared.{AirportConfig, _}
 import drt.users.KeyCloakClient
 import javax.inject.{Inject, Singleton}
 import org.joda.time.chrono.ISOChronology
@@ -39,7 +40,7 @@ import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import test.TestDrtSystem
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
@@ -93,11 +94,11 @@ trait AirportConfProvider extends AirportConfiguration {
 
   def getPortConfFromEnvVar: AirportConfig = AirportConfigs.confByPort(portCode)
 
-  def airportConfig: AirportConfig = {
+  lazy val airportConfig: AirportConfig = {
     val configForPort = getPortConfFromEnvVar.copy(
       contactEmail = contactEmail,
       outOfHoursContactPhone = oohPhone
-    )
+      )
 
     configForPort.assertValid()
 
@@ -126,7 +127,7 @@ trait UserRoleProviderLike {
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role]
 
   def getLoggedInUser(config: Configuration, headers: Headers, session: Session): LoggedInUser = {
-    val baseRoles =  Set()
+    val baseRoles = Set()
     val roles: Set[Role] =
       getRoles(config, headers, session) ++ baseRoles
     LoggedInUser(
@@ -134,16 +135,28 @@ trait UserRoleProviderLike {
       id = headers.get("X-Auth-Userid").getOrElse("Unknown"),
       email = headers.get("X-Auth-Email").getOrElse("Unknown"),
       roles = roles
-    )
+      )
   }
 }
 
+object DrtActorSystem extends AirportConfProvider {
+  implicit val actorSystem: ActorSystem = ActorSystem("DRT")
+  implicit val mat: ActorMaterializer = ActorMaterializer()
+  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
+  val config: Configuration = new Configuration(ConfigFactory.load)
+
+  val drtSystem: DrtSystemInterface =
+    if (isTestEnvironment) drtTestSystem
+    else drtProdSystem
+
+  lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(config, getPortConfFromEnvVar)
+  lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(config, getPortConfFromEnvVar)
+
+  def isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("live") == "test"
+}
+
 @Singleton
-class Application @Inject()(implicit val config: Configuration,
-                            implicit val mat: Materializer,
-                            env: Environment,
-                            val system: ActorSystem,
-                            implicit val ec: ExecutionContext)
+class Application @Inject()(implicit val config: Configuration, env: Environment)
   extends InjectedController
     with AirportConfProvider
     with WithAirportConfig
@@ -160,15 +173,13 @@ class Application @Inject()(implicit val config: Configuration,
     with WithVersion
     with ProdPassengerSplitProviders {
 
+  implicit val system: ActorSystem = DrtActorSystem.actorSystem
+  implicit val mat: ActorMaterializer = DrtActorSystem.mat
+  implicit val ec: ExecutionContext = DrtActorSystem.ec
+
   val googleTrackingCode: String = config.get[String]("googleTrackingCode")
 
-  val ctrl: DrtSystemInterface = if (isTestEnvironment) {
-    new TestDrtSystem(system, config, getPortConfFromEnvVar)
-  } else {
-      DrtSystem(system, config, getPortConfFromEnvVar)
-  }
-
-  def isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("live") == "test"
+  val ctrl: DrtSystemInterface = DrtActorSystem.drtSystem
 
   ctrl.run()
 
@@ -197,7 +208,7 @@ class Application @Inject()(implicit val config: Configuration,
 
   log.info(s"Application using airportConfig $airportConfig")
 
-  val cacheActorRef: AskableActorRef = system.actorOf(Props(classOf[CachingCrunchReadActor]), name = "cache-actor")
+  val cacheActorRef: ActorRef = system.actorOf(Props(classOf[CachingCrunchReadActor]), name = "cache-actor")
 
   def previousDay(date: MilliDate): SDateLike = {
     val oneDayInMillis = 60 * 60 * 24 * 1000L
@@ -228,7 +239,7 @@ class Application @Inject()(implicit val config: Configuration,
 
         val portStateFuture = portStateActor.ask(
           GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
-        )(new Timeout(30 seconds))
+          )(new Timeout(30 seconds))
 
         portStateFuture.map {
           case Some(portState: PortState) =>
@@ -301,7 +312,7 @@ class Application @Inject()(implicit val config: Configuration,
               gps.foreach(group => {
                 val response = keyCloakClient.addUserToGroup(userId, group.id)
                 response.map(res => log.info(s"Added group and got: ${res.status}  $res")
-                )
+                             )
               })
             case _ => log.error(s"Unable to add $userId to $groups")
           }
@@ -313,7 +324,7 @@ class Application @Inject()(implicit val config: Configuration,
           .map(kcGroups => kcGroups.filter(g => groups.contains(g.name))
             .foreach(g => keyCloakClient.removeUserFromGroup(userId, g.id)))
 
-      override def portStateActor: AskableActorRef = ctrl.portStateActor
+      override def portStateActor: ActorRef = ctrl.portStateActor
 
       def getShowAlertModalDialog(): Boolean = config
         .getOptional[Boolean]("feature-flags.display-modal-alert")
@@ -333,7 +344,7 @@ class Application @Inject()(implicit val config: Configuration,
 
         router(
           autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))
-        ).map(buffer => {
+          ).map(buffer => {
           val data = Array.ofDim[Byte](buffer.remaining())
           buffer.get(data)
           Ok(data)
@@ -389,24 +400,21 @@ class Application @Inject()(implicit val config: Configuration,
     val clientSecretOption = config.getOptional[String]("key-cloak.client_secret")
     val usernameOption = postStringValOrElse("username")
     val passwordOption = postStringValOrElse("password")
-    import api.KeyCloakAuthTokenParserProtocol._
+    import KeyCloakAuthTokenParserProtocol._
     import spray.json._
 
-    def tokenToHttpResponse(username: String)(token: KeyCloakAuthResponse) = {
-
-      token match {
-        case t: KeyCloakAuthToken =>
-          log.info(s"Successful login to API via keycloak for $username")
-          Ok(t.toJson.toString)
-        case e: KeyCloakAuthError =>
-          log.info(s"Failed login to API via keycloak for $username")
-          BadRequest(e.toJson.toString)
-      }
+    def tokenToHttpResponse(username: String)(token: KeyCloakAuthResponse) = token match {
+      case t: KeyCloakAuthToken =>
+        log.info(s"Successful login to API via keycloak for $username")
+        Ok(t.toJson.toString)
+      case e: KeyCloakAuthError =>
+        log.info(s"Failed login to API via keycloak for $username")
+        BadRequest(e.toJson.toString)
     }
 
     def missingPostFieldsResponse = Future(
       BadRequest(KeyCloakAuthError("invalid_form_data", "You must provide a username and password").toJson.toString)
-    )
+      )
 
     val result: Option[Future[Result]] = for {
       tokenUrl <- tokenUrlOption
@@ -425,8 +433,8 @@ class Application @Inject()(implicit val config: Configuration,
       KeyCloakAuthError(
         "feature_not_implemented",
         "This feature is not currently available for this port on DRT"
-      ).toJson.toString
-    ))
+        ).toJson.toString
+      ))
 
     result match {
       case Some(f) => f.map(t => t)
@@ -461,7 +469,7 @@ class Application @Inject()(implicit val config: Configuration,
           "logTime" -> SDate(millis).toISOString(),
           "url" -> postStringValOrElse("url", request.headers.get("referrer").getOrElse("unknown url")),
           "logLevel" -> logLevel
-        )
+          )
 
         log.log(Logging.levelFor(logLevel).getOrElse(Logging.ErrorLevel), s"Client Error: ${
           logMessage.map {

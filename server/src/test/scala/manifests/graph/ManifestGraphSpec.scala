@@ -9,22 +9,23 @@ import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SplitRatiosNs.SplitSources.Historical
 import drt.shared._
+import drt.shared.api.Arrival
 import graphs.SinkToSourceBridge
+import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import manifests.actors.RegisteredArrivals
 import manifests.passengers.BestAvailableManifest
 import services.SDate
+import services.crunch.CrunchTestLike
 import services.graphstages.Crunch
 
 import scala.collection.mutable
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
 
-class ManifestGraphSpec extends ManifestGraphTestLike {
-  sequential
-  isolated
+class ManifestGraphSpec extends CrunchTestLike {
 
-  val scheduled = SDate("2019-03-06T12:00:00Z")
+  val scheduled: SDateLike = SDate("2019-03-06T12:00:00Z")
 
   "Given an arrival is sent into the ManifestGraph then we should find the manifest for that flight in the sink" >> {
 
@@ -182,4 +183,14 @@ class ManifestGraphSpec extends ManifestGraphTestLike {
 
     (killSwitch, manifestRequestsSink, manifestResponsesSource)
   }
+}
+
+import scala.concurrent.ExecutionContext.Implicits.global
+
+case class MockManifestLookupService(bestAvailableManifest: BestAvailableManifest) extends ManifestLookupLike {
+  override def maybeBestAvailableManifest(arrivalPort: PortCode,
+                                          departurePort: PortCode,
+                                          voyageNumber: VoyageNumber,
+                                          scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
+    Future((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), Option(bestAvailableManifest)))
 }

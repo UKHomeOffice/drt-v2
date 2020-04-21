@@ -59,7 +59,6 @@ object KeyCloakAuthTokenParserProtocol extends KeyCloakAuthTokenParserProtocol
 
 
 trait KeyCloakAuthTokenParserProtocol extends SprayJsonSupport with DefaultJsonProtocol {
-
   implicit val responseFormat: RootJsonFormat[KeyCloakAuthResponse] = new RootJsonFormat[KeyCloakAuthResponse] {
     override def write(response: KeyCloakAuthResponse): JsValue = response match {
       case KeyCloakAuthToken(token, expires, _, _, tokenType, _, _, _) => JsObject(

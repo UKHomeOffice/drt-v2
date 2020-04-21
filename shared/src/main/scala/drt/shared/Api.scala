@@ -2,6 +2,7 @@ package drt.shared
 
 import java.util.UUID
 
+import drt.auth.LoggedInUser
 import drt.shared.CrunchApi._
 import drt.shared.EventTypes.{CI, DC, InvalidEventType}
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
@@ -9,17 +10,16 @@ import drt.shared.MilliTimes.{oneDayMillis, oneMinuteMillis}
 import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
 import drt.shared.Terminals.Terminal
+import drt.shared.api.{Arrival, FlightCodeSuffix}
 import ujson.Js.Value
 import upickle.Js
-import upickle.default.{ReadWriter, macroRW, readwriter}
+import upickle.default._
 
-import scala.collection.immutable.{NumericRange, Map => IMap, SortedMap => ISortedMap}
+import scala.collection.immutable.{Map => IMap, SortedMap => ISortedMap}
 import scala.concurrent.Future
-import scala.util.{Failure, Success, Try}
 import scala.util.matching.Regex
-import drt.auth.LoggedInUser
+import scala.util.{Failure, Success, Try}
 
-import scala.collection.immutable
 
 object DeskAndPaxTypeCombinations {
   val egate = "eGate"
@@ -46,15 +46,24 @@ object MilliDate {
 }
 
 object FlightParsing {
-  val iataRe: Regex = """([A-Z0-9]{2})(\d{1,4})(\w)?""".r
-  val icaoRe: Regex = """([A-Z]{2,3})(\d{1,4})(\w)?""".r
+  val iataRe: Regex = "^([A-Z0-9]{2}?)([0-9]{1,4})([A-Z]*)$".r
+  val icaoRe: Regex = "^([A-Z]{2,3}?)([0-9]{1,4})([A-Z]*)$".r
 
-  def parseIataToCarrierCodeVoyageNumber(iata: String): Option[(String, String)] = {
+  def flightCodeToParts(iata: String): (CarrierCode, VoyageNumberLike, Option[FlightCodeSuffix]) = {
     iata match {
-      case iataRe(carriercode, voyageNumber, _) => Option((carriercode, voyageNumber))
-      case icaoRe(carriercode, voyageNumber, _) => Option((carriercode, voyageNumber))
-      case what => None
+      case iataRe(cc, vn, suffix) => stringsToComponents(cc, vn, suffix)
+      case icaoRe(cc, vn, suffix) => stringsToComponents(cc, vn, suffix)
+      case _ => (CarrierCode(""), VoyageNumber(0), None)
     }
+  }
+
+  private def stringsToComponents(cc: String,
+                                  vn: String,
+                                  suffix: String): (CarrierCode, VoyageNumberLike, Option[FlightCodeSuffix]) = {
+    val carrierCode = CarrierCode(cc)
+    val voyageNumber = VoyageNumber(vn)
+    val arrivalSuffix = if (suffix.nonEmpty) Option(FlightCodeSuffix(suffix)) else None
+    (carrierCode, voyageNumber, arrivalSuffix)
   }
 }
 
@@ -336,164 +345,6 @@ case class ArrivalStatus(description: String) {
   override def toString: String = description
 }
 
-case class Arrival(Operator: Option[Operator],
-                   CarrierCode: CarrierCode,
-                   VoyageNumber: VoyageNumber,
-                   Status: ArrivalStatus,
-                   Estimated: Option[MillisSinceEpoch],
-                   Actual: Option[MillisSinceEpoch],
-                   EstimatedChox: Option[MillisSinceEpoch],
-                   ActualChox: Option[MillisSinceEpoch],
-                   Gate: Option[String],
-                   Stand: Option[String],
-                   MaxPax: Option[Int],
-                   ActPax: Option[Int],
-                   TranPax: Option[Int],
-                   RunwayID: Option[String],
-                   BaggageReclaimId: Option[String],
-                   AirportID: PortCode,
-                   Terminal: Terminal,
-                   Origin: PortCode,
-                   Scheduled: MillisSinceEpoch,
-                   PcpTime: Option[MillisSinceEpoch],
-                   FeedSources: Set[FeedSource],
-                   CarrierScheduled: Option[MillisSinceEpoch],
-                   ApiPax: Option[Int]
-                  ) extends WithUnique[UniqueArrival] {
-  val paxOffPerMinute = 20
-
-  def flightCode: String = s"$CarrierCode${VoyageNumber.toPaddedString}"
-
-  def basicForComparison: Arrival = copy(PcpTime = None)
-
-  def equals(arrival: Arrival): Boolean = arrival.basicForComparison == basicForComparison
-
-  lazy val uniqueId: Int = uniqueStr.hashCode
-  lazy val uniqueStr: String = s"$Terminal$Scheduled${VoyageNumber.numeric}"
-
-  def hasPcpDuring(start: SDateLike, end: SDateLike): Boolean = {
-    val firstPcpMilli = PcpTime.getOrElse(0L)
-    val lastPcpMilli = firstPcpMilli + millisToDisembark(ActPax.getOrElse(0))
-    val firstInRange = start.millisSinceEpoch <= firstPcpMilli && firstPcpMilli <= end.millisSinceEpoch
-    val lastInRange = start.millisSinceEpoch <= lastPcpMilli && lastPcpMilli <= end.millisSinceEpoch
-    firstInRange || lastInRange
-  }
-
-  def millisToDisembark(pax: Int): Long = {
-    val minutesToDisembark = (pax.toDouble / 20).ceil
-    val oneMinuteInMillis = 60 * 1000
-    (minutesToDisembark * oneMinuteInMillis).toLong
-  }
-
-  lazy val pax: Int = ActPax.getOrElse(0)
-
-  lazy val minutesOfPaxArrivals: Int =
-    if (pax == 0) 0
-    else (pax.toDouble / paxOffPerMinute).ceil.toInt - 1
-
-  def pcpRange(): NumericRange[MillisSinceEpoch] = {
-    val pcpStart = PcpTime.getOrElse(0L)
-    val pcpEnd = pcpStart + oneMinuteMillis * minutesOfPaxArrivals
-    pcpStart to pcpEnd by oneMinuteMillis
-  }
-
-  lazy val unique: UniqueArrival = UniqueArrival(VoyageNumber.numeric, Terminal, Scheduled)
-
-  def isCancelled: Boolean = Status.description match {
-    case st if st.toLowerCase.contains("cancelled") => true
-    case st if st.toLowerCase.contains("canceled") => true
-    case st if st.toLowerCase.contains("deleted") => true
-    case _ => false
-  }
-}
-
-object Arrival {
-  val flightCodeRegex: Regex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r
-
-  def summaryString(arrival: Arrival): String = arrival.AirportID + "/" + arrival.Terminal + "@" + arrival.Scheduled + "!" + arrival.flightCode
-
-  def standardiseFlightCode(flightCode: String): String = {
-    val flightCodeRegex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r
-
-    flightCode match {
-      case flightCodeRegex(operator, flightNumber, suffix) =>
-        val number = f"${flightNumber.toInt}%04d"
-        f"$operator$number$suffix"
-      case _ => flightCode
-    }
-  }
-
-  implicit val arrivalStatusRw: ReadWriter[ArrivalStatus] = macroRW
-  implicit val voyageNumberRw: ReadWriter[VoyageNumber] = macroRW
-  implicit val operatorRw: ReadWriter[Operator] = macroRW
-  implicit val portCodeRw: ReadWriter[PortCode] = macroRW
-  implicit val arrivalRw: ReadWriter[Arrival] = macroRW
-
-  def apply(Operator: Option[Operator],
-            Status: ArrivalStatus,
-            Estimated: Option[MillisSinceEpoch],
-            Actual: Option[MillisSinceEpoch],
-            EstimatedChox: Option[MillisSinceEpoch],
-            ActualChox: Option[MillisSinceEpoch],
-            Gate: Option[String],
-            Stand: Option[String],
-            MaxPax: Option[Int],
-            ActPax: Option[Int],
-            TranPax: Option[Int],
-            RunwayID: Option[String],
-            BaggageReclaimId: Option[String],
-            AirportID: PortCode,
-            Terminal: Terminal,
-            rawICAO: String,
-            rawIATA: String,
-            Origin: PortCode,
-            Scheduled: MillisSinceEpoch,
-            PcpTime: Option[MillisSinceEpoch],
-            FeedSources: Set[FeedSource],
-            CarrierScheduled: Option[MillisSinceEpoch] = None,
-            ApiPax: Option[Int] = None
-           ): Arrival = {
-    val (carrierCode: CarrierCode, voyageNumber: VoyageNumber) = {
-      val bestCode = (rawIATA, rawICAO) match {
-        case (iata, _) if iata != "" => iata
-        case (_, icao) if icao != "" => icao
-        case _ => ""
-      }
-
-      bestCode match {
-        case Arrival.flightCodeRegex(cc, vn, _) => (CarrierCode(cc), VoyageNumber(vn))
-        case _ => (CarrierCode(""), VoyageNumber(0))
-      }
-    }
-
-    Arrival(
-      Operator,
-      carrierCode,
-      voyageNumber,
-      Status,
-      Estimated,
-      Actual,
-      EstimatedChox,
-      ActualChox,
-      Gate,
-      Stand,
-      MaxPax,
-      ActPax,
-      TranPax,
-      RunwayID,
-      BaggageReclaimId,
-      AirportID,
-      Terminal,
-      Origin,
-      Scheduled,
-      PcpTime,
-      FeedSources,
-      CarrierScheduled,
-      ApiPax
-      )
-  }
-}
-
 case class FeedSourceArrival(feedSource: FeedSource, arrival: Arrival)
 
 object FeedSourceArrival {
@@ -681,7 +532,13 @@ trait MinuteComparison[A <: WithLastUpdated] {
   def maybeUpdated(existing: A, now: MillisSinceEpoch): Option[A]
 }
 
-trait PortStateMinutes {
+trait PortStateMinutes[MinuteType, IndexType] {
+  val asContainer: MinutesContainer[MinuteType, IndexType]
+
+  def isEmpty: Boolean
+
+  def nonEmpty: Boolean = !isEmpty
+
   def applyTo(portStateMutable: PortStateMutable, now: MillisSinceEpoch): PortStateDiff
 
   def addIfUpdated[A <: MinuteComparison[C], B <: WithTerminal[B], C <: WithLastUpdated](maybeExisting: Option[C],
@@ -699,9 +556,10 @@ trait PortStateMinutes {
   }
 }
 
-object CrunchResult {
-  def empty = CrunchResult(0, 0, Vector[Int](), List())
-}
+trait PortStateQueueMinutes extends PortStateMinutes[CrunchMinute, TQM]
+
+trait PortStateStaffMinutes extends PortStateMinutes[StaffMinute, TM]
+
 
 case class CrunchResult(firstTimeMillis: MillisSinceEpoch,
                         intervalMillis: MillisSinceEpoch,
@@ -724,13 +582,19 @@ object FlightsApi {
 
   case class Flights(flights: Seq[Arrival])
 
-  case class FlightsWithSplits(flightsToUpdate: List[ApiFlightWithSplits],
-                               arrivalsToRemove: List[Arrival]) extends PortStateMinutes {
+  case class FlightsWithSplits(flights: Iterable[(UniqueArrival, ApiFlightWithSplits)])
+
+  case class FlightsWithSplitsDiff(flightsToUpdate: List[ApiFlightWithSplits], arrivalsToRemove: List[Arrival]) {
+    def isEmpty: Boolean = flightsToUpdate.isEmpty && arrivalsToRemove.isEmpty
+
+    def nonEmpty: Boolean = !isEmpty
+
+    val removalMinutes: Seq[MillisSinceEpoch] = arrivalsToRemove.flatMap(_.pcpRange())
+    val updateMinutes: Seq[MillisSinceEpoch] = flightsToUpdate.flatMap(_.apiFlight.pcpRange())
+
     def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
-      val minutesFromRemovals = arrivalsToRemove.flatMap(_.pcpRange())
       val minutesFromRemovalsInExistingState: List[MillisSinceEpoch] = arrivalsToRemove
         .flatMap(r => portState.flights.getByKey(r.unique).map(_.apiFlight.pcpRange().toList).getOrElse(List()))
-      val minutesFromUpdates = flightsToUpdate.flatMap(_.apiFlight.pcpRange())
       val minutesFromExistingStateUpdatedFlights = flightsToUpdate
         .flatMap { fws =>
           portState.flights.getByKey(fws.unique) match {
@@ -738,14 +602,14 @@ object FlightsApi {
             case Some(f) => f.apiFlight.pcpRange()
           }
         }
-      val updatedMinutesFromFlights = minutesFromRemovals ++ minutesFromRemovalsInExistingState ++ minutesFromUpdates ++ minutesFromExistingStateUpdatedFlights
+      val updatedMinutesFromFlights = removalMinutes ++ minutesFromRemovalsInExistingState ++ updateMinutes ++ minutesFromExistingStateUpdatedFlights
 
       val updatedFlights = flightsToUpdate.map(_.copy(lastUpdated = Option(now)))
 
       portState.flights --= arrivalsToRemove.map(_.unique)
       portState.flights ++= updatedFlights.map(f => (f.apiFlight.unique, f))
 
-      portStateDiff(updatedFlights, updatedMinutesFromFlights)
+      portStateDiff(updatedFlights, updatedMinutesFromFlights.toList)
     }
 
     def portStateDiff(updatedFlights: Seq[ApiFlightWithSplits],
@@ -753,8 +617,6 @@ object FlightsApi {
       val removals = arrivalsToRemove.map(f => RemoveFlight(UniqueArrival(f)))
       PortStateDiff(removals, updatedFlights, flightMinuteUpdates, Seq(), Seq())
     }
-
-    lazy val nonEmpty: Boolean = flightsToUpdate.nonEmpty || arrivalsToRemove.nonEmpty
 
     lazy val terminals: Set[Terminal] = flightsToUpdate.map(_.apiFlight.Terminal).toSet ++ arrivalsToRemove.map(_.Terminal).toSet
   }
@@ -806,6 +668,7 @@ object CrunchApi {
     val key: B
 
     def toUpdatedMinute(now: MillisSinceEpoch): A
+
     def toMinute: A
   }
 
@@ -858,8 +721,12 @@ object CrunchApi {
     implicit val rw: ReadWriter[StaffMinute] = macroRW
   }
 
-  case class StaffMinutes(minutes: Seq[StaffMinute]) extends PortStateMinutes with MinutesLike[StaffMinute, TM] {
-    def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
+  case class StaffMinutes(minutes: Seq[StaffMinute]) extends PortStateStaffMinutes with MinutesLike[StaffMinute, TM] {
+    override val asContainer: MinutesContainer[StaffMinute, TM] = MinutesContainer(minutes)
+
+    override def isEmpty: Boolean = minutes.isEmpty
+
+    override def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
       val minutesDiff = minutes.foldLeft(List[StaffMinute]()) { case (soFar, sm) =>
         addIfUpdated(portState.staffMinutes.getByKey(sm.key), now, soFar, sm, () => sm.copy(lastUpdated = Option(now)))
       }
@@ -954,8 +821,12 @@ object CrunchApi {
       terminal, queueName, minute, paxLoad, workLoad, deskRec, waitTime, lastUpdated = None)
   }
 
-  case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateMinutes {
-    def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
+  case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateQueueMinutes {
+    override val asContainer: MinutesContainer[CrunchMinute, TQM] = MinutesContainer(minutes)
+
+    override def isEmpty: Boolean = minutes.isEmpty
+
+    override def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
       val crunchMinutesDiff = minutes.foldLeft(List[CrunchMinute]()) { case (soFar, dm) =>
         addIfUpdated(portState.crunchMinutes.getByKey(dm.key), now, soFar, dm, () => dm.toUpdatedMinute(now))
       }
@@ -1002,8 +873,12 @@ object CrunchApi {
       terminal, queue, minute, 0d, 0d, 0, 0, None, None, deskStat.desks, deskStat.waitTime, None)
   }
 
-  case class ActualDeskStats(portDeskSlots: IMap[Terminal, IMap[Queue, IMap[MillisSinceEpoch, DeskStat]]]) extends PortStateMinutes {
-    def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
+  case class ActualDeskStats(portDeskSlots: IMap[Terminal, IMap[Queue, IMap[MillisSinceEpoch, DeskStat]]]) extends PortStateQueueMinutes {
+    override val asContainer: MinutesContainer[CrunchMinute, TQM] = MinutesContainer(deskStatMinutes)
+
+    override def isEmpty: Boolean = portDeskSlots.isEmpty
+
+    override def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
       val crunchMinutesDiff = minutes.foldLeft(List[CrunchMinute]()) { case (soFar, (key, dm)) =>
         addIfUpdated(portState.crunchMinutes.getByKey(key), now, soFar, dm, () => CrunchMinute(key, dm, now))
       }
@@ -1032,7 +907,9 @@ object CrunchApi {
     def minutes: Iterable[MinuteLike[A, B]]
   }
 
-  case class MinutesContainer[A, B](minutes: Iterable[MinuteLike[A, B]])
+  case class MinutesContainer[A, B](minutes: Iterable[MinuteLike[A, B]]) {
+    def updatedSince(sinceMillis: MillisSinceEpoch): MinutesContainer[A, B] = MinutesContainer(minutes.filter(_.lastUpdated.getOrElse(0L) > sinceMillis))
+  }
 
   case class CrunchMinutes(minutes: Set[CrunchMinute]) extends MinutesLike[CrunchMinute, TQM]
 

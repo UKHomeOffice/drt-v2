@@ -2,7 +2,8 @@ package feeds.lhr.forecast
 
 import drt.server.feeds.lhr.forecast.{LHRForecastCSVExtractor, LHRForecastFlightRow}
 import drt.shared.Terminals.T2
-import drt.shared.{Arrival, ArrivalStatus, ForecastFeedSource, PortCode}
+import drt.shared.api.Arrival
+import drt.shared.{ArrivalStatus, ForecastFeedSource, PortCode}
 import org.specs2.mutable.Specification
 import services.SDate
 

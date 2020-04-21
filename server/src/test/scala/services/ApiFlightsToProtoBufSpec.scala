@@ -2,7 +2,8 @@ package services
 
 import actors.FlightMessageConversion._
 import drt.shared.Terminals.T2
-import drt.shared.{ApiFeedSource, Arrival, ArrivalStatus, Operator, PortCode}
+import drt.shared.api.Arrival
+import drt.shared.{ApiFeedSource, ArrivalStatus, Operator, PortCode}
 import org.specs2.mutable.Specification
 import server.protobuf.messages.FlightsMessage.FlightMessage
 

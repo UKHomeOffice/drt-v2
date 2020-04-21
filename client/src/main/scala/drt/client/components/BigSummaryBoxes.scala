@@ -7,6 +7,7 @@ import drt.client.services.RootModel
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import drt.shared.api.Arrival
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import org.scalajs.dom.raw.HTMLElement

@@ -5,11 +5,12 @@ import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueW
 import akka.stream.{ClosedShape, OverflowStrategy}
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
-import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.T1
 import drt.shared._
+import drt.shared.api.Arrival
 import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
@@ -105,7 +106,7 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
     arrivalDiffs.offer(ArrivalsDiff(toUpdate = SortedMap(arrival.unique -> arrival), toRemove = Set()))
 
     probe.fishForMessage(3 seconds) {
-      case FlightsWithSplits(flights, _) => flights.nonEmpty
+      case FlightsWithSplitsDiff(flights, _) => flights.nonEmpty
     }
 
     manifestsLiveInput.offer(manifests.map(BestAvailableManifest(_)).toList)
@@ -125,7 +126,7 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
     ))
 
     probe.fishForMessage(3 seconds) {
-      case fs: FlightsWithSplits =>
+      case fs: FlightsWithSplitsDiff =>
         val fws = fs.flightsToUpdate.map(f => f.copy(lastUpdated = None))
         fws === expected
     }

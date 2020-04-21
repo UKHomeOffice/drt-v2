@@ -7,6 +7,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import drt.shared.api.Arrival
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 
