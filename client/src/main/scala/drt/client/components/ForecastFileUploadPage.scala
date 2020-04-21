@@ -1,7 +1,7 @@
 package drt.client.components
 
 import diode.data.Pot
-import drt.client.actions.Actions.{FeedFileUploadAction, ResetFileUpload}
+import drt.client.actions.Actions.{ForecastFileUploadAction, ResetFileUpload}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
 import japgolly.scalajs.react.component.Scala.Component
@@ -15,26 +15,22 @@ case class FileUploadState(state: String, message: String)
 
 case class FileUploadStateModel(fileUploadState: Pot[FileUploadState])
 
-object FeedFileUploadPage {
+object ForecastFileUploadPage {
 
   case class Props()
 
-  val component = ScalaComponent.builder[Props]("FeedFileUpload")
+  val component = ScalaComponent.builder[Props]("ForecastFileUpload")
     .render_P(_ =>
       <.div(^.className := "fileUpload",
         <.h3("Forecast Feed File Upload"),
-        //        <.form(
-        //          ^.action := "data/feed/forecast/lhr", ^.method := "post", ^.encType := "multipart/form-data",
-        //          <.input(^.`type` := "file", ^.name := "filename"),
-        //          <.input(^.`type` := "submit", ^.value := "send")
-        //        )
         <.form(<.input(^.`type` := "file", ^.name := "filename"),
           <.input(^.`type` := "button", ^.value := "send", ^.onClick ==> onSubmit)),
+            <.br(),
         ResultFileUploadComponent(),
       )
     )
     .componentDidMount(_ => Callback {
-      GoogleEventTracker.sendPageView(s"feedFileUpload")
+      GoogleEventTracker.sendPageView(s"forecastFileUpload")
     })
     .build
 
@@ -43,7 +39,7 @@ object FeedFileUploadPage {
 
     case class Props()
 
-    val resultComponent: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ContactUs")
+    val resultComponent: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ResultFileUpload")
       .render_P { _ =>
         val fileUploadStateRCP = SPACircuit.connect(m => FileUploadStateModel(m.fileUploadState))
         <.div(
@@ -51,12 +47,12 @@ object FeedFileUploadPage {
             <.div(fileUploadStateMP().fileUploadState.render(details => {
               if (details.state == "uploaded") {
                 <.div(
-                  <.div(s"upload message :${details.message}"),
+                  <.div(s"Upload status : ${details.message}"),
                   <.button(^.`type` := "button", "reset", ^.onClick ==> onReset)
                 )
               } else if (details.state == "error") {
                 <.div(
-                  <.div(s"upload message :${details.message}"),
+                  <.div(s"Upload status : ${details.message}"),
                   <.button(^.`type` := "button", "reset", ^.onClick ==> onReset)
                 )
               } else {
@@ -86,7 +82,7 @@ object FeedFileUploadPage {
       val tFormElement = e.target.parentNode.domCast[HTMLFormElement]
       val tFormData: FormData = new dom.FormData(tFormElement)
 
-      SPACircuit.dispatch(FeedFileUploadAction("lhr", tFormData))
+      SPACircuit.dispatch(ForecastFileUploadAction("lhr", tFormData))
     }
   }
 

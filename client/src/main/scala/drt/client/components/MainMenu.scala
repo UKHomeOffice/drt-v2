@@ -3,7 +3,6 @@ package drt.client.components
 import drt.auth.{Role, _}
 import drt.client.SPAMain._
 import drt.client.components.Icon._
-import drt.client.logger
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
@@ -32,7 +31,7 @@ object MainMenu {
 
   def portConfigMenuItem: Int => MenuItem = (position: Int) => MenuItem(position, _ => s"Port Config", Icon.cogs, PortConfigLoc)
 
-  def feedUploadFile(position: Int): MenuItem = MenuItem(position, _ => "Forecast Upload", Icon.upload, FeedFileUploadLoc)
+  def forecastUploadFile(position: Int): MenuItem = MenuItem(position, _ => "Forecast Upload", Icon.upload, ForecastFileUploadLoc)
 
   def feedsRag(feeds: Seq[FeedSourceStatuses]): String = {
     val rag = if (feeds.map(_.feedStatuses.ragStatus(SDate.now().millisSinceEpoch)).contains(Red)) Red
@@ -45,13 +44,7 @@ object MainMenu {
 
   def menuItems(airportConfig: AirportConfig, currentLoc: Loc, userRoles: Set[Role], feeds: Seq[FeedSourceStatuses]): List[MenuItem] = {
 
-    def addFileUpload: List[(Role, Int => MenuItem)] = if (List(PortCode("LHR"), PortCode("TEST")) contains airportConfig.portCode) {
-      logger.log.info(s"portCode LHR match ${airportConfig.portCode}")
-      List((PortFeedUpload, feedUploadFile _))
-    } else {
-      logger.log.info(s"portCode LHR not match ${airportConfig.portCode}")
-      List.empty
-    }
+    def addFileUpload: List[(Role, Int => MenuItem)] = if (List(PortCode("LHR"), PortCode("TEST")) contains airportConfig.portCode) List((PortFeedUpload, forecastUploadFile _)) else List.empty
 
     def terminalDepsMenuItem: List[(Role, Int => MenuItem)] = airportConfig.terminals.map { tn =>
       val terminalName = tn.toString

@@ -138,7 +138,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new FeedsStatusHandler(zoomRW(_.feedStatuses)((m, v) => m.copy(feedStatuses = v))),
       new AlertsHandler(zoomRW(_.alerts)((m, v) => m.copy(alerts = v))),
       new StaffAdjustmentDialogueStateHandler(zoomRW(_.maybeStaffDeploymentAdjustmentPopoverState)((m, v) => m.copy(maybeStaffDeploymentAdjustmentPopoverState = v))),
-      new FeedFileUploadHandler(zoomRW(_.fileUploadState)((m, v) => m.copy(fileUploadState = v)))
+      new ForecastFileUploadHandler(zoomRW(_.fileUploadState)((m, v) => m.copy(fileUploadState = v)))
     )
 
     composedHandlers

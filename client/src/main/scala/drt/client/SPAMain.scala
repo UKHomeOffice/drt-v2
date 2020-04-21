@@ -5,7 +5,7 @@ import java.util.UUID
 import diode.Action
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType}
-import drt.client.components.{AlertsPage, ContactPage, EditKeyCloakUserPage, FeedFileUploadPage, GlobalStyles, KeyCloakUsersPage, Layout, PortConfigPage, PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, UserDashboardPage}
+import drt.client.components.{AlertsPage, ContactPage, EditKeyCloakUserPage, ForecastFileUploadPage, GlobalStyles, KeyCloakUsersPage, Layout, PortConfigPage, PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, UserDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -132,7 +132,7 @@ object SPAMain {
 
   case object KeyCloakUsersLoc extends Loc
 
-  case object FeedFileUploadLoc extends Loc
+  case object ForecastFileUploadLoc extends Loc
 
   case class KeyCloakUserEditLoc(userId: UUID) extends Loc
 
@@ -161,7 +161,7 @@ object SPAMain {
     .buildConfig { dsl =>
       import dsl._
 
-      val rule = homeRoute(dsl) | dashboardRoute(dsl) | terminalRoute(dsl) | statusRoute(dsl) | keyCloakUsersRoute(dsl) | keyCloakUserEditRoute(dsl) | alertRoute(dsl) | contactRoute(dsl) | portConfigRoute(dsl) | feedFileUploadRoute(dsl)
+      val rule = homeRoute(dsl) | dashboardRoute(dsl) | terminalRoute(dsl) | statusRoute(dsl) | keyCloakUsersRoute(dsl) | keyCloakUserEditRoute(dsl) | alertRoute(dsl) | contactRoute(dsl) | portConfigRoute(dsl) | forecastFileUploadRoute(dsl)
 
       rule.notFound(redirectToPage(PortDashboardLoc(None))(Redirect.Replace))
     }
@@ -229,10 +229,10 @@ object SPAMain {
     staticRoute("#contact", ContactUsLoc) ~> renderR(_ => ContactPage())
   }
 
-  def feedFileUploadRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def forecastFileUploadRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
     import dsl._
 
-    staticRoute("#feedFileUpload", FeedFileUploadLoc) ~> renderR(_ => FeedFileUploadPage())
+    staticRoute("#forecastFileUpload", ForecastFileUploadLoc) ~> renderR(_ => ForecastFileUploadPage())
   }
 
   def portConfigRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {

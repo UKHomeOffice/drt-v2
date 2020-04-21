@@ -23,7 +23,7 @@ object ResponseMessage {
   implicit val rw: RW[ResponseMessage] = macroRW
 }
 
-class FeedFileUploadHandler[M](modelRW: ModelRW[M, Pot[FileUploadState]]) extends LoggingActionHandler(modelRW) {
+class ForecastFileUploadHandler[M](modelRW: ModelRW[M, Pot[FileUploadState]]) extends LoggingActionHandler(modelRW) {
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
 
@@ -35,7 +35,7 @@ class FeedFileUploadHandler[M](modelRW: ModelRW[M, Pot[FileUploadState]]) extend
       updated(Ready(fileUploadState))
 
 
-    case FeedFileUploadAction(portCode: String, formData: FormData) =>
+    case ForecastFileUploadAction(portCode: String, formData: FormData) =>
 
       val tReq = new dom.XMLHttpRequest()
       val tPromise = Promise[dom.XMLHttpRequest]()
@@ -57,7 +57,7 @@ class FeedFileUploadHandler[M](modelRW: ModelRW[M, Pot[FileUploadState]]) extend
 
       val apiCallEffect = Effect(tPromise.future.map { res =>
         val rMessage = read[ResponseMessage](res.responseText)
-        log.info(s"Got StaffMovements from the server")
+        log.info(s"Uploading file response ${rMessage.message}")
         FileUploadStatus(FileUploadState(state = "uploaded", message = rMessage.message))
       }.recoverWith {
         case e =>
