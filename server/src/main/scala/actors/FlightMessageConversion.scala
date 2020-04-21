@@ -4,7 +4,7 @@ import actors.PortStateMessageConversion.splitMessageToApiSplits
 import actors.restore.RestorerWithLegacy
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import drt.shared.api.Arrival
+import drt.shared.api.{Arrival, FlightCodeSuffix}
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, PaxTypeAndQueueCountMessage, SplitMessage}
@@ -100,11 +100,11 @@ object FlightMessageConversion {
       tranPax = apiFlight.TranPax,
       runwayID = apiFlight.RunwayID,
       baggageReclaimId = apiFlight.BaggageReclaimId,
-      airportID = Option(StringUtils.trimToNull(apiFlight.AirportID.iata)),
-      terminal = Option(StringUtils.trimToNull(apiFlight.Terminal.toString)),
-      iCAO = Option(StringUtils.trimToNull(apiFlight.flightCode)),
-      iATA = Option(StringUtils.trimToNull(apiFlight.flightCode)),
-      origin = Option(StringUtils.trimToNull(apiFlight.Origin.toString)),
+      airportID = Option(apiFlight.AirportID.iata),
+      terminal = Option(apiFlight.Terminal.toString),
+      iCAO = Option(apiFlight.flightCode),
+      iATA = Option(apiFlight.flightCode),
+      origin = Option(apiFlight.Origin.toString),
       pcpTime = apiFlight.PcpTime.filter(_ != 0),
       feedSources = apiFlight.FeedSources.map(_.toString).toSeq,
       scheduled = Option(apiFlight.Scheduled).filter(_ != 0),
@@ -153,7 +153,7 @@ object FlightMessageConversion {
       FeedSources = flightMessage.feedSources.flatMap(FeedSource(_)).toSet,
       CarrierScheduled = flightMessage.carrierScheduled,
       ApiPax = flightMessage.apiPax
-    )
+      )
   }
 
   def apiFlightDateTime(millisOption: Option[Long]): String = millisOption match {

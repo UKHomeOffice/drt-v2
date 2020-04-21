@@ -218,8 +218,10 @@ class ArrivalsGraphStage(name: String = "",
       minusRemovals
     }
 
-    def isFlightRelevant(flight: Arrival): Boolean =
-      validPortTerminals.contains(flight.Terminal) && !Ports.domesticPorts.contains(flight.Origin)
+    def isFlightRelevant(flight: Arrival): Boolean = {
+      val isValidSuffix = !flight.FlightCodeSuffix.exists(fcs => fcs.suffix == "P" || fcs.suffix == "F")
+      validPortTerminals.contains(flight.Terminal) && !Ports.domesticPorts.contains(flight.Origin) && isValidSuffix
+    }
 
     def pushIfAvailable(arrivalsToPush: Option[ArrivalsDiff], outlet: Outlet[ArrivalsDiff]): Unit = {
       if (isAvailable(outlet)) {
