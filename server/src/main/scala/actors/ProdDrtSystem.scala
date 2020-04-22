@@ -35,8 +35,8 @@ case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsF
 
 case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
                         (implicit val materializer: Materializer,
-                     val ec: ExecutionContext,
-                     val system: ActorSystem) extends DrtSystemInterface {
+                         val ec: ExecutionContext,
+                         val system: ActorSystem) extends DrtSystemInterface {
 
   import DrtStaticParameters._
 
@@ -59,7 +59,10 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val liveCrunchStateActor: ActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
   override val forecastCrunchStateActor: ActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
 
-  override val portStateActor: ActorRef = PortStateActor(now, liveCrunchStateActor, forecastCrunchStateActor)
+  override val portStateActor: ActorRef = if (usePartitionedPortState)
+    PartitionedPortStateActor(now, airportConfig)
+  else
+    PortStateActor(now, liveCrunchStateActor, forecastCrunchStateActor)
 
   val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](100, OverflowStrategy.backpressure)
 

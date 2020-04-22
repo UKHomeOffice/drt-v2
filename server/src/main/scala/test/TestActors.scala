@@ -1,19 +1,20 @@
 package test
 
+import actors.DrtStaticParameters.expireAfterMillis
 import actors.Sizes.oneMegaByte
 import actors._
 import actors.acking.AckingReceiver.Ack
 import actors.daily.{TerminalDayQueuesActor, TerminalDayStaffActor}
-import akka.actor.{ActorRef, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.{ask, pipe}
-import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
-import drt.shared.{PortCode, SDateLike}
+import drt.shared.{AirportConfig, MilliTimes, PortCode, SDateLike, TM, TQM}
 import services.SDate
 import slickdb.ArrivalTable
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
 object TestActors {
@@ -156,26 +157,9 @@ object TestActors {
     override def receive: Receive = reset orElse super.receive
   }
 
-  class TestMinutesActor[A, B](now: () => SDateLike,
-                               terminals: Iterable[Terminal],
-                               lookupPrimary: MinutesLookup[A, B],
-                               lookupSecondary: MinutesLookup[A, B],
-                               updateMinutes: MinutesUpdate[A, B],
-                               resetData: (Terminal, MillisSinceEpoch) => Future[Any]) extends MinutesActor[A, B](now, terminals, lookupPrimary, lookupSecondary, updateMinutes) {
+  trait TestMinuteActorLike[A, B] extends MinutesActor[A, B] {
+    val resetData: (Terminal, MillisSinceEpoch) => Future[Any]
     var terminalDaysUpdated: Set[(Terminal, MillisSinceEpoch)] = Set()
-
-    def myReceive: Receive = {
-      case container: MinutesContainer[A, B] =>
-        val replyTo = sender()
-        addToTerminalDays(container)
-        handleUpdatesAndAck(container, replyTo)
-
-      case ResetData =>
-        Future
-          .sequence(terminalDaysUpdated.map { case (t, d) => resetData(t, d) })
-          .map(_ => Ack)
-          .pipeTo(sender())
-    }
 
     private def addToTerminalDays(container: MinutesContainer[A, B]): Unit = {
       groupByTerminalAndDay(container).keys.foreach {
@@ -183,7 +167,48 @@ object TestActors {
       }
     }
 
-    override def receive: Receive = myReceive orElse super.receive
+    def resetReceive: Receive = {
+      case ResetData =>
+        Future
+          .sequence(terminalDaysUpdated.map { case (t, d) => resetData(t, d) })
+          .map { _ =>
+            terminalDaysUpdated = Set()
+            Ack
+          }
+          .pipeTo(sender())
+    }
+
+  }
+
+  class TestStaffMinutesActor(now: () => SDateLike,
+                              terminals: Iterable[Terminal],
+                              lookupPrimary: MinutesLookup[StaffMinute, TM],
+                              lookupSecondary: MinutesLookup[StaffMinute, TM],
+                              updateMinutes: MinutesUpdate[StaffMinute, TM],
+                              val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
+    extends StaffMinutesActor(now, terminals, lookupPrimary, lookupSecondary, updateMinutes) with TestMinuteActorLike[StaffMinute, TM] {
+    override def receive: Receive = resetReceive orElse super.receive
+  }
+
+  class TestQueueMinutesActor(now: () => SDateLike,
+                              terminals: Iterable[Terminal],
+                              lookupPrimary: MinutesLookup[CrunchMinute, TQM],
+                              lookupSecondary: MinutesLookup[CrunchMinute, TQM],
+                              updateMinutes: MinutesUpdate[CrunchMinute, TQM],
+                              val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
+    extends QueueMinutesActor(now, terminals, lookupPrimary, lookupSecondary, updateMinutes) with TestMinuteActorLike[CrunchMinute, TQM] {
+    override def receive: Receive = resetReceive orElse super.receive
+  }
+
+  object TestPartitionedPortStateActor {
+    def apply(now: () => SDateLike, airportConfig: AirportConfig)
+             (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
+      val lookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+      val flightsActor: ActorRef = system.actorOf(Props(new TestFlightsStateActor(None, Sizes.oneMegaByte, "crunch-live-state-actor", airportConfig.queuesByTerminal, now, expireAfterMillis)))
+      val queuesActor: ActorRef = lookups.queueMinutesActor(classOf[TestQueueMinutesActor])
+      val staffActor: ActorRef = lookups.staffMinutesActor(classOf[TestStaffMinutesActor])
+      system.actorOf(Props(new PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now)))
+    }
   }
 
   class TestPartitionedPortStateActor(flightsActor: ActorRef,

@@ -40,12 +40,18 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val liveArrivalsActor: ActorRef = system.actorOf(Props(new TestLiveArrivalsActor(now, expireAfterMillis)), name = "live-arrivals-actor")
   override val liveCrunchStateActor: ActorRef = system.actorOf(Props(new TestCrunchStateActor(airportConfig.portStateSnapshotInterval, "crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldLiveSnapshots)), name = "crunch-live-state-actor")
   override val forecastCrunchStateActor: ActorRef = system.actorOf(Props(new TestCrunchStateActor(100, "forecast-crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldForecastSnapshots)), name = "crunch-forecast-state-actor")
-  override val portStateActor: ActorRef = system.actorOf(Props(new TestPortStateActor(liveCrunchStateActor, forecastCrunchStateActor, now, 2)), name = "port-state-actor")
   override val voyageManifestsActor: ActorRef = system.actorOf(Props(new TestVoyageManifestsActor(now, expireAfterMillis, params.snapshotIntervalVm)), name = "voyage-manifests-actor")
   override val shiftsActor: ActorRef = system.actorOf(Props(new TestShiftsActor(now, timeBeforeThisMonth(now))))
   override val fixedPointsActor: ActorRef = system.actorOf(Props(new TestFixedPointsActor(now)))
   override val staffMovementsActor: ActorRef = system.actorOf(Props(new TestStaffMovementsActor(now, time48HoursAgo(now))), "TestActor-StaffMovements")
   override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new TestAggregatedArrivalsActor()))
+
+  override val portStateActor: ActorRef =
+    if (usePartitionedPortState) {
+      val flightsActor = system.actorOf(Props(new TestFlightsStateActor(None, Sizes.oneMegaByte, "flights-state", airportConfig.queuesByTerminal, now, expireAfterMillis)), name = "flights-state-actor")
+      TestPartitionedPortStateActor(now, airportConfig)
+    } else
+      system.actorOf(Props(new TestPortStateActor(liveCrunchStateActor, forecastCrunchStateActor, now, 2)), name = "port-state-actor")
 
   val testManifestsActor: ActorRef = system.actorOf(Props(new TestManifestsActor()), s"TestActor-APIManifests")
   val testArrivalActor: ActorRef = system.actorOf(Props(new TestArrivalsActor()), s"TestActor-LiveArrivals")

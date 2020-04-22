@@ -74,6 +74,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val arrivalsImportActor: ActorRef = system.actorOf(Props(new ArrivalsImportActor()), name = "arrivals-import-actor")
   val registeredArrivalsActor: ActorRef = system.actorOf(Props(new RegisteredArrivalsActor(oneMegaByte, Option(500), airportConfig.portCode, now, expireAfterMillis)), name = "registered-arrivals-actor")
 
+  val usePartitionedPortState: Boolean = config.get[Boolean]("feature-flags.use-partitioned-state")
+
   val portStateActor: ActorRef
   val shiftsActor: ActorRef
   val fixedPointsActor: ActorRef
