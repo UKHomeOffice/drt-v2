@@ -29,13 +29,15 @@ object ForecastFileUploadPage {
               case "uploaded" | "error" =>
                 <.div(
                   <.div(s"Upload status : ${details.message}"),
-                  <.button(^.`type` := "button", "reset", ^.onClick ==> onReset)
+                  <.br(),
+                  <.button(^.`type` := "button", "Reset", ^.onClick ==> onReset)
                 )
               case _ =>
                 <.div(^.className := "fileUpload",
                   <.h3("Forecast Feed File Upload"),
                   <.form(<.input(^.`type` := "file", ^.name := "filename"),
-                    <.input(^.`type` := "button", ^.value := "upload", ^.onClick ==> onSubmit))
+                    <.br(),
+                    <.input(^.`type` := "button", ^.value := "Upload", ^.onClick ==> onSubmit))
                 )
             }
           })
