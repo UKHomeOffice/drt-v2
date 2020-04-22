@@ -7,6 +7,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared.{SDateLike, TQM}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
+import services.SDate
 
 
 object TerminalDayQueuesActor {
@@ -31,7 +32,7 @@ class TerminalDayQueuesActor(year: Int,
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case CrunchMinutesMessage(minuteMessages) =>
-      log.debug(s"Got a recovery message with ${minuteMessages.size} minutes. Updating state")
+      log.info(s"Got a recovery message with ${minuteMessages.size} minutes. Updating state")
       state = state ++ minuteMessagesToKeysAndMinutes(minuteMessages)
   }
 

@@ -27,7 +27,7 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
     }
 
     "When I send an ACL arrival with zero pax" >> {
-//      offerArrivalAndWait(crunch.baseArrivalsInput, scheduled = nowString, actPax = Option(0))
+      offerArrivalAndWait(crunch.baseArrivalsInput, scheduled = nowString, actPax = Option(0))
       "I should see it with 0 ActPax in the port state" >> {
         fishForArrivalWithActPax(Option(0))
       }

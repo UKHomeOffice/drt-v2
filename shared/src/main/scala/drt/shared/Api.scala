@@ -791,7 +791,7 @@ object CrunchApi {
 
   trait DeskRecMinuteLike {
     val terminal: Terminal
-    val queueName: Queue
+    val queue: Queue
     val minute: MillisSinceEpoch
     val paxLoad: Double
     val workLoad: Double
@@ -800,13 +800,13 @@ object CrunchApi {
   }
 
   case class DeskRecMinute(terminal: Terminal,
-                           queueName: Queue,
+                           queue: Queue,
                            minute: MillisSinceEpoch,
                            paxLoad: Double,
                            workLoad: Double,
                            deskRec: Int,
                            waitTime: Int) extends DeskRecMinuteLike with MinuteComparison[CrunchMinute] with MinuteLike[CrunchMinute, TQM] {
-    lazy val key: TQM = MinuteHelper.key(terminal, queueName, minute)
+    lazy val key: TQM = MinuteHelper.key(terminal, queue, minute)
 
     override def maybeUpdated(existing: CrunchMinute, now: MillisSinceEpoch): Option[CrunchMinute] =
       if (existing.paxLoad != paxLoad || existing.workLoad != workLoad || existing.deskRec != deskRec || existing.waitTime != waitTime)
@@ -820,7 +820,7 @@ object CrunchApi {
     override def toUpdatedMinute(now: MillisSinceEpoch): CrunchMinute = toMinute.copy(lastUpdated = Option(now))
 
     override def toMinute: CrunchMinute = CrunchMinute(
-      terminal, queueName, minute, paxLoad, workLoad, deskRec, waitTime, lastUpdated = None)
+      terminal, queue, minute, paxLoad, workLoad, deskRec, waitTime, lastUpdated = None)
   }
 
   case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateQueueMinutes {
@@ -911,6 +911,10 @@ object CrunchApi {
 
   case class MinutesContainer[A, B](minutes: Iterable[MinuteLike[A, B]]) {
     def updatedSince(sinceMillis: MillisSinceEpoch): MinutesContainer[A, B] = MinutesContainer(minutes.filter(_.lastUpdated.getOrElse(0L) > sinceMillis))
+    def contains(clazz: Class[_]): Boolean = minutes.headOption match {
+      case Some(x) if x.getClass == clazz => true
+      case _ => false
+    }
   }
 
   case class CrunchMinutes(minutes: Set[CrunchMinute]) extends MinutesLike[CrunchMinute, TQM]

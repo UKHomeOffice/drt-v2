@@ -7,6 +7,7 @@ import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, StaffMinute}
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.{AirportConfig, ApiFlightWithSplits, MilliTimes, PortState, SDateLike, TM, TQM, UniqueArrival}
+import services.SDate
 
 import scala.collection.immutable.SortedMap
 import scala.concurrent.ExecutionContext
@@ -15,8 +16,8 @@ object PartitionedPortStateTestActor {
   def apply(testProbe: TestProbe, flightsActor: ActorRef, now: () => SDateLike, airportConfig: AirportConfig)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
     val lookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
-    val queuesActor = lookups.queueMinutesActor(classOf[MinutesActor[CrunchMinute, TQM]])
-    val staffActor = lookups.staffMinutesActor(classOf[MinutesActor[StaffMinute, TM]])
+    val queuesActor = lookups.queueMinutesActor(classOf[QueueMinutesActor])
+    val staffActor = lookups.staffMinutesActor(classOf[StaffMinutesActor])
     system.actorOf(Props(new PartitionedPortStateTestActor(testProbe.ref, flightsActor, queuesActor, staffActor, now)))
   }
 }

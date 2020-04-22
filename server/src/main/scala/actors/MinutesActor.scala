@@ -6,7 +6,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.Terminals.Terminal
-import drt.shared.{MilliTimes, SDateLike}
+import drt.shared.{MilliTimes, SDateLike, TM, TQM}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch
@@ -28,18 +28,30 @@ object Actors {
   type MinutesUpdate[A, B] = (Terminal, SDateLike, MinutesContainer[A, B]) => Future[Boolean]
 }
 
-class MinutesActor[A, B](now: () => SDateLike,
-                         terminals: Iterable[Terminal],
-                         lookupPrimary: MinutesLookup[A, B],
-                         lookupSecondary: MinutesLookup[A, B],
-                         updateMinutes: MinutesUpdate[A, B]) extends Actor {
+class QueueMinutesActor(now: () => SDateLike,
+                        terminals: Iterable[Terminal],
+                        lookupPrimary: MinutesLookup[CrunchMinute, TQM],
+                        lookupSecondary: MinutesLookup[CrunchMinute, TQM],
+                        updateMinutes: MinutesUpdate[CrunchMinute, TQM]) extends MinutesActor(now, terminals, lookupPrimary, lookupSecondary, updateMinutes)
+
+class StaffMinutesActor(now: () => SDateLike,
+                        terminals: Iterable[Terminal],
+                        lookupPrimary: MinutesLookup[StaffMinute, TM],
+                        lookupSecondary: MinutesLookup[StaffMinute, TM],
+                        updateMinutes: MinutesUpdate[StaffMinute, TM]) extends MinutesActor(now, terminals, lookupPrimary, lookupSecondary, updateMinutes)
+
+abstract class MinutesActor[A, B](now: () => SDateLike,
+                                  terminals: Iterable[Terminal],
+                                  lookupPrimary: MinutesLookup[A, B],
+                                  lookupSecondary: MinutesLookup[A, B],
+                                  updateMinutes: MinutesUpdate[A, B]) extends Actor {
   implicit val dispatcher: ExecutionContextExecutor = context.dispatcher
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def isHistoric(date: SDateLike): Boolean = MilliTimes.isHistoric(now, date)
 
-  val minutesBuffer: mutable.Map[B, MinuteLike[A, B]] = mutable.Map[B, MinuteLike[A, B]]()
+  val minutesBuffer: mutable.Map[TQM, LoadMinute] = mutable.Map[TQM, LoadMinute]()
   var maybeUpdateSubscriber: Option[ActorRef] = None
   var subscriberIsReady: Boolean = false
 
@@ -99,10 +111,15 @@ class MinutesActor[A, B](now: () => SDateLike,
 
   def handleUpdatesAndAck(container: MinutesContainer[A, B], replyTo: ActorRef): Unit = {
     val eventualUpdatesDiff = updateByTerminalDayAndGetDiff(container)
-    if (maybeUpdateSubscriber.isDefined) {
+    val gotDeskRecs = container.contains(classOf[DeskRecMinute])
+
+    if (maybeUpdateSubscriber.isDefined && gotDeskRecs) {
       eventualUpdatesDiff.collect {
         case Some(diffMinutesContainer) =>
-          minutesBuffer ++= diffMinutesContainer.minutes.map(m => (m.key, m))
+          val updatedLoads = diffMinutesContainer.minutes.collect { case m: CrunchMinute =>
+            (m.key, LoadMinute(m))
+          }
+          minutesBuffer ++= updatedLoads
           handleSubscriberRequest()
       }
     }
@@ -113,9 +130,9 @@ class MinutesActor[A, B](now: () => SDateLike,
     case (Some(simActor), true, true) =>
       log.info(s"Sending (${minutesBuffer.size}) minutes from buffer to subscriber")
       subscriberIsReady = false
-      val loads = minutesBuffer.values.toList.collect { case cm: CrunchMinute => LoadMinute(cm) }
+      val loads = Loads(minutesBuffer.values.toList)
       simActor
-        .ask(Loads(loads))(new Timeout(10 minutes))
+        .ask(loads)(new Timeout(10 minutes))
         .recover {
           case t => log.error("Error sending loads to simulate", t)
         }
@@ -186,8 +203,7 @@ class MinutesActor[A, B](now: () => SDateLike,
                                            replyTo: ActorRef): Unit =
     combineEventualContainers(eventualUpdatedMinutesDiff).onComplete {
       case Success(maybeMinutes) => replyTo ! maybeMinutes
-      case Failure(t) =>
-        log.error("Failed to get minutes", t)
+      case Failure(t) => log.error("Failed to get minutes", t)
     }
 
   private def combineEventualContainers(eventualUpdatedMinutesDiff: Iterable[Future[MinutesContainer[A, B]]]): Future[MinutesContainer[A, B]] =

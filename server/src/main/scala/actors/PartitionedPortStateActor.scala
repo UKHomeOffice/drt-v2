@@ -21,8 +21,8 @@ object PartitionedPortStateActor {
   def apply(now: () => SDateLike, airportConfig: AirportConfig)(implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
     val lookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
     val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(None, Sizes.oneMegaByte, "crunch-live-state-actor", airportConfig.queuesByTerminal, now, expireAfterMillis)))
-    val queuesActor: ActorRef = lookups.queueMinutesActor(classOf[MinutesActor[CrunchMinute, TQM]])
-    val staffActor: ActorRef = lookups.staffMinutesActor(classOf[MinutesActor[StaffMinute, TM]])
+    val queuesActor: ActorRef = lookups.queueMinutesActor(classOf[QueueMinutesActor])
+    val staffActor: ActorRef = lookups.staffMinutesActor(classOf[StaffMinutesActor])
     system.actorOf(Props(new PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now)))
   }
 }

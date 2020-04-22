@@ -27,7 +27,7 @@ abstract class TerminalDayLikeActor(year: Int,
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
-  val firstMinute: SDateLike = SDate(year, month, day, 0, 0, Crunch.europeLondonTimeZone)
+  val firstMinute: SDateLike = SDate(year, month, day, 0, 0, Crunch.utcTimeZone)
   val firstMinuteMillis: MillisSinceEpoch = firstMinute.millisSinceEpoch
   val lastMinuteMillis: MillisSinceEpoch = firstMinute.addDays(1).addMinutes(-1).millisSinceEpoch
 
