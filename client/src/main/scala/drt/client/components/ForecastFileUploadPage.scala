@@ -19,50 +19,32 @@ object ForecastFileUploadPage {
 
   case class Props()
 
-  val component = ScalaComponent.builder[Props]("ForecastFileUpload")
-    .render_P(_ =>
-      <.div(^.className := "fileUpload",
-        <.h3("Forecast Feed File Upload"),
-        <.form(<.input(^.`type` := "file", ^.name := "filename"),
-          <.input(^.`type` := "button", ^.value := "send", ^.onClick ==> onSubmit)),
-        <.br(),
-        FileUploadResultComponent(),
-      )
-    )
-    .componentDidMount(_ => Callback {
-      GoogleEventTracker.sendPageView(s"forecastFileUpload")
-    })
-    .build
-
-
-  object FileUploadResultComponent {
-
-    case class Props()
-
-    val resultComponent: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("FileUploadResult")
-      .render_P { _ =>
-        val fileUploadStateRCP = SPACircuit.connect(m => FileUploadStateModel(m.fileUploadState))
-        <.div(
-          fileUploadStateRCP(fileUploadStateMP => {
-            <.div(fileUploadStateMP().fileUploadState.render(details => {
-              details.state match {
-                case "uploaded" | "error" =>
-                  <.div(
-                    <.div(s"Upload status : ${details.message}"),
-                    <.button(^.`type` := "button", "reset", ^.onClick ==> onReset)
-                  )
-                case _ =>
-                  <.div()
-              }
-            })
-            )
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ForecastFileUpload")
+    .render_P { _ =>
+      val fileUploadStateRCP = SPACircuit.connect(m => FileUploadStateModel(m.fileUploadState))
+      <.div(
+        fileUploadStateRCP(fileUploadStateMP => {
+          <.div(fileUploadStateMP().fileUploadState.render(details => {
+            details.state match {
+              case "uploaded" | "error" =>
+                <.div(
+                  <.div(s"Upload status : ${details.message}"),
+                  <.button(^.`type` := "button", "reset", ^.onClick ==> onReset)
+                )
+              case _ =>
+                <.div(^.className := "fileUpload",
+                  <.h3("Forecast Feed File Upload"),
+                  <.form(<.input(^.`type` := "file", ^.name := "filename"),
+                    <.input(^.`type` := "button", ^.value := "upload", ^.onClick ==> onSubmit))
+                )
+            }
           })
-        )
-      }.build
-
-    def apply(): VdomElement = resultComponent(Props())
-
-  }
+          )
+        })
+      )
+    }.componentDidMount(_ => Callback {
+    GoogleEventTracker.sendPageView(s"forecastFileUpload")
+  }).build
 
   def apply(): VdomElement = component(Props())
 
