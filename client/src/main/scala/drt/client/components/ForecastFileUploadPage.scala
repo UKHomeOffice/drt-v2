@@ -20,9 +20,12 @@ object ForecastFileUploadPage {
 
   case class Props()
 
+  val heading = <.h3("Forecast Feed File Upload")
+
   val upload: VdomTagOf[Div] =
     <.div(^.className := "fileUpload",
-      <.h3("Forecast Feed File Upload"),
+      heading,
+      <.br(),
       <.form(<.input(^.`type` := "file", ^.name := "filename"),
         <.br(),
         <.input(^.`type` := "button", ^.value := "Upload", ^.onClick ==> onSubmit))
@@ -30,7 +33,9 @@ object ForecastFileUploadPage {
 
   val uploadResult: String => VdomTagOf[Div] = (message: String) =>
     <.div(
-      <.div(s"Upload status : ${message}"),
+      heading,
+      <.br(),
+      <.div(s"Upload status : $message"),
       <.br(),
       <.button(^.`type` := "button", "Upload another file", ^.onClick ==> onReset)
     )
