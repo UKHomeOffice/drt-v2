@@ -49,8 +49,8 @@ case class LtnFeedRequester(endPoint: String, token: String, username: String, p
 case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone)(implicit materializer: Materializer) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source
-    .tick(0 millis, 30 seconds, NotUsed)
+  def tickingSource(interval: FiniteDuration): Source[ArrivalsFeedResponse, Cancellable] = Source
+    .tick(0 millis, interval, NotUsed)
     .mapAsync(1) { _ =>
       log.info(s"Requesting feed")
       requestFeed()

@@ -18,7 +18,7 @@ case class MockLtnRequesterWithInvalidResponse()(implicit ec: ExecutionContext) 
   override def getResponse: () => Future[HttpResponse] = () => Future(HttpResponse(entity = HttpEntity.apply("Some invalid response")))
 }
 
-class LtnFeedSpec extends SpecificationLike with AfterEach{
+class LtnFeedSpec extends SpecificationLike with AfterEach {
 
   implicit val system: ActorSystem = ActorSystem("ltn-test")
   implicit val ec: ExecutionContext = ExecutionContext.global
@@ -27,15 +27,15 @@ class LtnFeedSpec extends SpecificationLike with AfterEach{
   override def after: Unit = TestKit.shutdownActorSystem(system)
 
   "Given an invalid response " +
-    "I should get an ArrivalsFeedFailure">> {
+    "I should get an ArrivalsFeedFailure" >> {
     val probe = TestProbe("ltn-test-probe")
     val requester = MockLtnRequesterWithInvalidResponse()
     val cancellable: Cancellable = LtnLiveFeed(requester, DateTimeZone.forID("Europe/London"))
-      .tickingSource
+      .tickingSource(100 milliseconds)
       .to(Sink.actorRef(probe.ref, "done"))
       .run()
 
-    probe.expectMsgClass(2 seconds, classOf[ArrivalsFeedFailure])
+    probe.expectMsgClass(5 seconds, classOf[ArrivalsFeedFailure])
 
     cancellable.cancel()
 
