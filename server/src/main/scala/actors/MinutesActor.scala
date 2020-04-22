@@ -32,7 +32,66 @@ class QueueMinutesActor(now: () => SDateLike,
                         terminals: Iterable[Terminal],
                         lookupPrimary: MinutesLookup[CrunchMinute, TQM],
                         lookupSecondary: MinutesLookup[CrunchMinute, TQM],
-                        updateMinutes: MinutesUpdate[CrunchMinute, TQM]) extends MinutesActor(now, terminals, lookupPrimary, lookupSecondary, updateMinutes)
+                        updateMinutes: MinutesUpdate[CrunchMinute, TQM]) extends MinutesActor(now, terminals, lookupPrimary, lookupSecondary, updateMinutes) {
+
+  val minutesBuffer: mutable.Map[TQM, LoadMinute] = mutable.Map[TQM, LoadMinute]()
+  var maybeUpdateSubscriber: Option[ActorRef] = None
+  var subscriberIsReady: Boolean = false
+
+  override def handleUpdatesAndAck(container: MinutesContainer[CrunchMinute, TQM],
+                                   replyTo: ActorRef): Future[Option[MinutesContainer[CrunchMinute, TQM]]] = {
+    val eventualUpdatesDiff = super.handleUpdatesAndAck(container, replyTo)
+    val gotDeskRecs = container.contains(classOf[DeskRecMinute])
+
+    if (maybeUpdateSubscriber.isDefined && gotDeskRecs) addUpdatesToBufferAndSendToSubscriber(eventualUpdatesDiff)
+
+    eventualUpdatesDiff
+  }
+
+  private def addUpdatesToBufferAndSendToSubscriber(eventualUpdatesDiff: Future[Option[MinutesContainer[CrunchMinute, TQM]]]): Future[Unit] = eventualUpdatesDiff.collect {
+    case Some(diffMinutesContainer) =>
+      val updatedLoads = diffMinutesContainer.minutes.collect { case m: CrunchMinute =>
+        (m.key, LoadMinute(m))
+      }
+      minutesBuffer ++= updatedLoads
+      sendToSubscriber()
+  }
+
+  private def sendToSubscriber(): Unit = (maybeUpdateSubscriber, minutesBuffer.nonEmpty, subscriberIsReady) match {
+    case (Some(simActor), true, true) =>
+      log.info(s"Sending (${minutesBuffer.size}) minutes from buffer to subscriber")
+      subscriberIsReady = false
+      val loads = Loads(minutesBuffer.values.toList)
+      simActor
+        .ask(loads)(new Timeout(10 minutes))
+        .recover {
+          case t => log.error("Error sending loads to simulate", t)
+        }
+        .onComplete { _ =>
+          context.self ! SetSimulationSourceReady
+        }
+      minutesBuffer.clear()
+    case _ =>
+      log.info(s"Not sending (${minutesBuffer.size}) minutes from buffer to subscriber")
+  }
+
+  override def receive: Receive = simulationReceives orElse super.receive
+
+  def simulationReceives: Receive = {
+    case SetSimulationActor(subscriber) =>
+      log.info(s"Received subscriber actor")
+      maybeUpdateSubscriber = Option(subscriber)
+      subscriberIsReady = true
+
+    case SetSimulationSourceReady =>
+      subscriberIsReady = true
+      context.self ! HandleSimulationRequest
+
+    case HandleSimulationRequest =>
+      sendToSubscriber()
+
+  }
+}
 
 class StaffMinutesActor(now: () => SDateLike,
                         terminals: Iterable[Terminal],
@@ -51,28 +110,12 @@ abstract class MinutesActor[A, B](now: () => SDateLike,
 
   def isHistoric(date: SDateLike): Boolean = MilliTimes.isHistoric(now, date)
 
-  val minutesBuffer: mutable.Map[TQM, LoadMinute] = mutable.Map[TQM, LoadMinute]()
-  var maybeUpdateSubscriber: Option[ActorRef] = None
-  var subscriberIsReady: Boolean = false
-
   override def receive: Receive = {
     case StreamInitialized => sender() ! Ack
 
     case StreamCompleted => log.info(s"Stream completed")
 
     case StreamFailure(t) => log.error(s"Stream failed", t)
-
-    case SetSimulationActor(subscriber) =>
-      log.info(s"Received subscriber actor")
-      maybeUpdateSubscriber = Option(subscriber)
-      subscriberIsReady = true
-
-    case SetSimulationSourceReady =>
-      subscriberIsReady = true
-      context.self ! HandleSimulationRequest
-
-    case HandleSimulationRequest =>
-      handleSubscriberRequest()
 
     case GetPortState(startMillis, endMillis) =>
       val replyTo = sender()
@@ -109,39 +152,11 @@ abstract class MinutesActor[A, B](now: () => SDateLike,
     case u => log.warn(s"Got an unexpected message: $u")
   }
 
-  def handleUpdatesAndAck(container: MinutesContainer[A, B], replyTo: ActorRef): Unit = {
+  def handleUpdatesAndAck(container: MinutesContainer[A, B],
+                          replyTo: ActorRef): Future[Option[MinutesContainer[A, B]]] = {
     val eventualUpdatesDiff = updateByTerminalDayAndGetDiff(container)
-    val gotDeskRecs = container.contains(classOf[DeskRecMinute])
-
-    if (maybeUpdateSubscriber.isDefined && gotDeskRecs) {
-      eventualUpdatesDiff.collect {
-        case Some(diffMinutesContainer) =>
-          val updatedLoads = diffMinutesContainer.minutes.collect { case m: CrunchMinute =>
-            (m.key, LoadMinute(m))
-          }
-          minutesBuffer ++= updatedLoads
-          handleSubscriberRequest()
-      }
-    }
     eventualUpdatesDiff.onComplete(_ => replyTo ! Ack)
-  }
-
-  private def handleSubscriberRequest(): Unit = (maybeUpdateSubscriber, minutesBuffer.nonEmpty, subscriberIsReady) match {
-    case (Some(simActor), true, true) =>
-      log.info(s"Sending (${minutesBuffer.size}) minutes from buffer to subscriber")
-      subscriberIsReady = false
-      val loads = Loads(minutesBuffer.values.toList)
-      simActor
-        .ask(loads)(new Timeout(10 minutes))
-        .recover {
-          case t => log.error("Error sending loads to simulate", t)
-        }
-        .onComplete { _ =>
-          context.self ! SetSimulationSourceReady
-        }
-      minutesBuffer.clear()
-    case _ =>
-      log.info(s"Not sending (${minutesBuffer.size}) minutes from buffer to subscriber")
+    eventualUpdatesDiff
   }
 
   def handleLookups(terminal: Terminal,
