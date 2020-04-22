@@ -8,6 +8,7 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent, _}
 import org.scalajs.dom
+import org.scalajs.dom.html.Div
 import org.scalajs.dom.raw.{FormData, HTMLFormElement}
 
 
@@ -19,50 +20,47 @@ object ForecastFileUploadPage {
 
   case class Props()
 
-  val component = ScalaComponent.builder[Props]("ForecastFileUpload")
-    .render_P(_ =>
-      <.div(^.className := "fileUpload",
-        <.h3("Forecast Feed File Upload"),
-        <.form(<.input(^.`type` := "file", ^.name := "filename"),
-          <.input(^.`type` := "button", ^.value := "send", ^.onClick ==> onSubmit)),
+  val heading = <.h3("Forecast Feed File Upload")
+
+  val upload: VdomTagOf[Div] =
+    <.div(^.className := "fileUpload",
+      heading,
+      <.br(),
+      <.form(<.input(^.`type` := "file", ^.name := "filename"),
         <.br(),
-        FileUploadResultComponent(),
-      )
+        <.input(^.`type` := "button", ^.value := "Upload", ^.onClick ==> onSubmit))
     )
-    .componentDidMount(_ => Callback {
-      GoogleEventTracker.sendPageView(s"forecastFileUpload")
-    })
-    .build
 
+  val uploadResult: String => VdomTagOf[Div] = (message: String) =>
+    <.div(
+      heading,
+      <.br(),
+      <.div(s"Upload status : $message"),
+      <.br(),
+      <.button(^.`type` := "button", "Upload another file", ^.onClick ==> onReset)
+    )
 
-  object FileUploadResultComponent {
-
-    case class Props()
-
-    val resultComponent: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("FileUploadResult")
-      .render_P { _ =>
-        val fileUploadStateRCP = SPACircuit.connect(m => FileUploadStateModel(m.fileUploadState))
-        <.div(
-          fileUploadStateRCP(fileUploadStateMP => {
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ForecastFileUpload")
+    .render_P { _ =>
+      val fileUploadStateRCP = SPACircuit.connect(m => FileUploadStateModel(m.fileUploadState))
+      <.div(
+        fileUploadStateRCP(fileUploadStateMP => {
+          if (fileUploadStateMP().fileUploadState.isEmpty) {
+            upload
+          } else {
             <.div(fileUploadStateMP().fileUploadState.render(details => {
               details.state match {
-                case "uploaded" | "error" =>
-                  <.div(
-                    <.div(s"Upload status : ${details.message}"),
-                    <.button(^.`type` := "button", "reset", ^.onClick ==> onReset)
-                  )
-                case _ =>
-                  <.div()
+                case "uploaded" | "error" => uploadResult(details.message)
+                case _ => upload
               }
             })
             )
-          })
-        )
-      }.build
-
-    def apply(): VdomElement = resultComponent(Props())
-
-  }
+          }
+        })
+      )
+    }.componentDidMount(_ => Callback {
+    GoogleEventTracker.sendPageView(s"forecastFileUpload")
+  }).build
 
   def apply(): VdomElement = component(Props())
 

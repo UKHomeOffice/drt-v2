@@ -82,7 +82,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      displayAlertDialog: Pot[Boolean] = Empty,
                      oohStatus: Pot[OutOfHoursStatus] = Empty,
                      featureFlags: Pot[Map[String, Boolean]] = Empty,
-                     fileUploadState:Pot[FileUploadState] = Empty,
+                     fileUploadState:Pot[FileUploadState] = Empty
                     )
 
 object PollDelay {
