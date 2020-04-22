@@ -188,7 +188,7 @@ abstract class MinutesActor[A, B](now: () => SDateLike,
       case None =>
         maybeFallback match {
           case None =>
-            log.info(s"Got no minutes. Sending None")
+            log.debug(s"Got no minutes. Sending None")
             Future(None)
           case Some(fallback) =>
             log.info(s"Got no minutes. Querying the fallback")
