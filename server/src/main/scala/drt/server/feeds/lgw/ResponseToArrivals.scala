@@ -51,7 +51,7 @@ case class ResponseToArrivals(data: String) {
       Terminal = parseTerminal(n),
       CarrierCode = CarrierCode((n \\ "AirlineIATA" text)),
       VoyageNumber = VoyageNumber(parseFlightNumber(n)),
-      ArrivalSuffix = None,
+      FlightCodeSuffix = None,
       Origin = parseOrigin(n),
       Scheduled = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("SCT")).map(n => services.SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
       PcpTime = None,

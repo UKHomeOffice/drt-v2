@@ -4,12 +4,13 @@ import java.util.UUID
 
 import diode.Action
 import drt.auth.LoggedInUser
-import drt.client.components.StaffAdjustmentDialogueState
+import drt.client.components.{FileUploadState, StaffAdjustmentDialogueState}
 import drt.client.services.ViewMode
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import org.scalajs.dom.FormData
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -148,5 +149,11 @@ object Actions {
   case class SaveAlert(alert: Alert) extends Action
 
   case class UpdateStaffAdjustmentDialogueState(maybeNewState: Option[StaffAdjustmentDialogueState]) extends Action
+
+  case class FileUploadStatus(fileUploadState:FileUploadState) extends Action
+
+  case class ForecastFileUploadAction(portCode: String, formData:FormData) extends Action
+
+  case class ResetFileUpload() extends Action
 
 }

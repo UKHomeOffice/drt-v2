@@ -266,7 +266,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
           case None => DateTimeZone.UTC
         }
         val requester = LtnFeedRequester(url, token, username, password)
-        LtnLiveFeed(requester, timeZone).tickingSource
+        LtnLiveFeed(requester, timeZone).tickingSource(30 seconds)
       case "MAN" | "STN" | "EMA" =>
         if (config.get[Boolean]("feeds.mag.use-legacy")) {
           log.info(s"Using legacy MAG live feed")

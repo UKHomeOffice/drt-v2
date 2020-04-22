@@ -24,16 +24,16 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
   sequential
   isolated
 
+  val dateNow: SDateLike = SDate("2017-01-01T00:00Z")
+
+  val arrival_v1_with_no_chox_time: Arrival = arrival(iata = "BA0001", schDt = "2017-01-01T10:25Z", actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(LiveFeedSource))
+
+  val arrival_v2_with_chox_time: Arrival = arrival_v1_with_no_chox_time.copy(Stand = Option("Stand1"), ActualChox = Option(SDate("2017-01-01T10:25Z").millisSinceEpoch))
+
+  val terminalSplits: Splits = Splits(Set(
+    ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 100.0, None)), TerminalAverage, None, Percentage)
+
   trait Context extends Scope {
-    val arrival_v1_with_no_chox_time: Arrival = arrival(iata = "BA0001", schDt = "2017-01-01T10:25Z", actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(LiveFeedSource))
-
-    val arrival_v2_with_chox_time: Arrival = arrival_v1_with_no_chox_time.copy(Stand = Option("Stand1"), ActualChox = Option(SDate("2017-01-01T10:25Z").millisSinceEpoch))
-
-    val dateNow: SDateLike = SDate("2017-01-01T00:00Z")
-
-    val terminalSplits: Splits = Splits(Set(
-      ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 100.0, None)), TerminalAverage, None, Percentage)
-
     val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(
       airportConfig = defaultAirportConfig.copy(queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)),
       now = () => dateNow,
@@ -44,8 +44,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     var messages: Set[Arrival] = Set()
   }
 
-  "Arrivals Graph Stage" should {
-
+  "Given and Arrivals Graph Stage" should {
     "a third arrival with an update to the chox time will change the arrival" in new Context {
       val arrival_v3_with_an_update_to_chox_time: Arrival = arrival_v2_with_chox_time.copy(ActualChox = Option(SDate("2017-01-01T10:30Z").millisSinceEpoch), Stand = Option("I will update"))
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival_v3_with_an_update_to_chox_time))))
@@ -119,14 +118,48 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlight))
 
       crunch.portStateTestProbe.fishForMessage(5 seconds) {
-        case ps: PortState =>
-          val intExists = ps.flights.contains(UniqueArrival(arrivalInt))
-          val domDoesNotExist = !ps.flights.contains(UniqueArrival(arrivalDom))
-          intExists && domDoesNotExist
+        case ps: PortState => flightExists(arrivalInt, ps) && !flightExists(arrivalDom, ps)
       }
 
       success
     }
 
+    "I should only see arrivals without a suffix in the port state" >> {
+      val withSuffixP: Arrival = ArrivalGenerator.arrival(iata = "BA0001P", origin = PortCode("JFK"), schDt = "2017-01-01T10:25Z", actPax = Option(10), feedSources = Set(AclFeedSource))
+      val withSuffixF: Arrival = ArrivalGenerator.arrival(iata = "BA0002F", origin = PortCode("JFK"), schDt = "2017-01-01T11:25Z", actPax = Option(10), feedSources = Set(AclFeedSource))
+      val withoutSuffix: Arrival = ArrivalGenerator.arrival(iata = "BA0003", origin = PortCode("JFK"), schDt = "2017-01-01T12:25Z", actPax = Option(10), feedSources = Set(AclFeedSource))
+
+      val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(now = () => dateNow)
+
+      "Given 3 international ACL arrivals, one with suffix F, another with P, and another with no suffix" >> {
+        val aclFlight: Flights = Flights(List(withSuffixP, withSuffixF, withoutSuffix))
+
+        offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlight))
+
+        crunch.portStateTestProbe.fishForMessage(5 seconds) {
+          case ps: PortState =>
+            flightExists(withoutSuffix, ps) && !flightExists(withSuffixF, ps) && !flightExists(withSuffixP, ps)
+        }
+
+        success
+      }
+
+      "Given 3 international live arrivals, one with suffix F, another with P, and another with no suffix" >> {
+        val aclFlight: Flights = Flights(List(withSuffixP, withSuffixF, withoutSuffix))
+
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(aclFlight))
+
+        crunch.portStateTestProbe.fishForMessage(5 seconds) {
+          case ps: PortState =>
+            flightExists(withoutSuffix, ps) && !flightExists(withSuffixF, ps) && !flightExists(withSuffixP, ps)
+        }
+
+        success
+      }
+    }
+  }
+
+  private def flightExists(withoutSuffix: Arrival, ps: PortState) = {
+    ps.flights.contains(UniqueArrival(withoutSuffix))
   }
 }
