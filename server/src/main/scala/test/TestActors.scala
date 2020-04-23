@@ -7,7 +7,7 @@ import actors.acking.AckingReceiver.Ack
 import actors.daily.{TerminalDayQueuesActor, TerminalDayStaffActor}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.{ask, pipe}
-import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess}
+import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotSuccess, DeleteSnapshotsSuccess, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
@@ -244,7 +244,7 @@ object TestActors {
       case ResetData =>
         log.warn("Received ResetData request. Deleting all messages & snapshots")
         deleteMessages(Long.MaxValue)
-        deleteSnapshot(Long.MaxValue)
+        deleteSnapshots(SnapshotSelectionCriteria(minSequenceNr = 0L, maxSequenceNr = Long.MaxValue))
         sender() ! Ack
       case _: DeleteMessagesSuccess =>
       case _: DeleteSnapshotsSuccess =>
@@ -262,7 +262,7 @@ object TestActors {
       case ResetData =>
         log.warn("Received ResetData request. Deleting all messages & snapshots")
         deleteMessages(Long.MaxValue)
-        deleteSnapshot(Long.MaxValue)
+        deleteSnapshots(SnapshotSelectionCriteria(minSequenceNr = 0L, maxSequenceNr = Long.MaxValue))
         sender() ! Ack
       case _: DeleteMessagesSuccess =>
       case _: DeleteSnapshotsSuccess =>
@@ -281,7 +281,7 @@ object TestActors {
       case ResetData =>
         log.warn("Received ResetData request. Deleting all messages & snapshots")
         deleteMessages(Long.MaxValue)
-        deleteSnapshot(Long.MaxValue)
+        deleteSnapshots(SnapshotSelectionCriteria(minSequenceNr = 0L, maxSequenceNr = Long.MaxValue))
         state.clear()
         sender() ! Ack
       case _: DeleteMessagesSuccess =>

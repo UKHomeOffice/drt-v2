@@ -6,7 +6,7 @@ import actors.Sizes.oneMegaByte
 import actors._
 import akka.actor.Props
 import akka.persistence._
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
@@ -60,6 +60,10 @@ class CrunchStateReadActor(snapshotInterval: Int,
     case GetState =>
       logInfo(s"Received GetState Request (pit: ${pointInTime.toISOString()}")
       sender() ! Option(state)
+
+    case GetCrunchMinutes(terminal) =>
+      log.debug(s"Received GetState request. Replying with PortState containing ${state.crunchMinutes.count} crunch minutes")
+      sender() ! Option(MinutesContainer(state.immutable.crunchMinutes.filterKeys(tqm => tqm.terminal == terminal).values))
 
     case GetPortState(start, end) =>
       logInfo(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
