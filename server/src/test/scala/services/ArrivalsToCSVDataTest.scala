@@ -5,6 +5,7 @@ import drt.shared._
 import org.specs2.mutable.Specification
 import services.exports.Exports
 import services.exports.summaries.flights.{TerminalFlightsSummary, TerminalFlightsWithActualApiSummary}
+import drt.shared.PcpPax
 
 
 class ArrivalsToCSVDataTest extends Specification {
@@ -76,7 +77,7 @@ class ArrivalsToCSVDataTest extends Specification {
 
   "Given a list of arrivals with splits we should get back a CSV of arrival data" >> {
 
-    val result = TerminalFlightsSummary(flights, Exports.millisToLocalIsoDateOnly, Exports.millisToLocalHoursAndMinutes).toCsvWithHeader
+    val result = TerminalFlightsSummary(flights, Exports.millisToLocalIsoDateOnly, Exports.millisToLocalHoursAndMinutes, PcpPax.bestPaxEstimateWithApi).toCsvWithHeader
 
     val expected =
       """ |IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track
@@ -89,7 +90,7 @@ class ArrivalsToCSVDataTest extends Specification {
 
   "Given a list of arrivals with splits we should get back a CSV of arrival data with unique entry for code Share Arrival flight" >> {
 
-    val result = TerminalFlightsSummary(codeShareFlights, Exports.millisToLocalIsoDateOnly, Exports.millisToLocalHoursAndMinutes).toCsvWithHeader
+    val result = TerminalFlightsSummary(codeShareFlights, Exports.millisToLocalIsoDateOnly, Exports.millisToLocalHoursAndMinutes, PcpPax.bestPaxEstimateWithApi).toCsvWithHeader
 
     val expected =
       """ |IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track
@@ -102,7 +103,7 @@ class ArrivalsToCSVDataTest extends Specification {
 
   "Given a list of arrivals when getting csv without headings, we should get the list without headings" >> {
 
-    val result = TerminalFlightsSummary(flights, Exports.millisToLocalIsoDateOnly, Exports.millisToLocalHoursAndMinutes).toCsv
+    val result = TerminalFlightsSummary(flights, Exports.millisToLocalIsoDateOnly, Exports.millisToLocalHoursAndMinutes, PcpPax.bestPaxEstimateWithApi).toCsv
 
     val expected =
       """|SA0325,SA0325,JHC,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,
@@ -114,7 +115,7 @@ class ArrivalsToCSVDataTest extends Specification {
 
   "Given a list of arrivals when getting csv without headings, we should get with unique entry for code Share Arrival flight and the list without headings" >> {
 
-    val result = TerminalFlightsSummary(codeShareFlights, Exports.millisToLocalIsoDateOnly, Exports.millisToLocalHoursAndMinutes).toCsv
+    val result = TerminalFlightsSummary(codeShareFlights, Exports.millisToLocalIsoDateOnly, Exports.millisToLocalHoursAndMinutes, PcpPax.bestPaxEstimateWithApi).toCsv
 
     val expected =
       """|SA0325,SA0325,JHC,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,
@@ -157,7 +158,7 @@ class ArrivalsToCSVDataTest extends Specification {
     }
 
     "Given a list of Flights With Splits then I should get all the data for each flight including API numbers" >> {
-      val result = TerminalFlightsWithActualApiSummary(flights, Exports.millisToLocalIsoDateOnly, Exports.millisToLocalHoursAndMinutes).toCsvWithHeader
+      val result = TerminalFlightsWithActualApiSummary(flights, Exports.millisToLocalIsoDateOnly, Exports.millisToLocalHoursAndMinutes, PcpPax.bestPaxEstimateWithApi).toCsvWithHeader
 
       val actualAPIHeadings = "API Actual - EEA (Machine Readable),API Actual - EEA (Non Machine Readable)," +
         "API Actual - Fast Track (Non Visa),API Actual - Fast Track (Visa),API Actual - Non EEA (Non Visa)," +
@@ -172,7 +173,7 @@ class ArrivalsToCSVDataTest extends Specification {
     }
 
     "Given a list of Flights With Splits then I should get all the data with unique entry for code Share Arrival flight including API numbers" >> {
-      val result = TerminalFlightsWithActualApiSummary(codeShareFlights, Exports.millisToLocalIsoDateOnly, Exports.millisToLocalHoursAndMinutes).toCsvWithHeader
+      val result = TerminalFlightsWithActualApiSummary(codeShareFlights, Exports.millisToLocalIsoDateOnly, Exports.millisToLocalHoursAndMinutes, PcpPax.bestPaxEstimateWithApi).toCsvWithHeader
 
       val actualAPIHeadings = "API Actual - EEA (Machine Readable),API Actual - EEA (Non Machine Readable)," +
         "API Actual - Fast Track (Non Visa),API Actual - Fast Track (Visa),API Actual - Non EEA (Non Visa)," +

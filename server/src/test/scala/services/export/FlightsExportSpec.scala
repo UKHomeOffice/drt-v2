@@ -8,6 +8,7 @@ import akka.util.Timeout
 import controllers.ArrivalGenerator
 import drt.shared.Queues.{EeaDesk, Queue}
 import drt.shared.Terminals.{T1, Terminal}
+import drt.shared.api.Arrival
 import drt.shared.{SDateLike, _}
 import org.specs2.mutable.SpecificationLike
 import services.SDate
@@ -36,6 +37,8 @@ class FlightsExportSpec extends SpecificationLike {
 
   def eventualPortState(maybePortState: Option[PortState]): (SDateLike, Any) => Future[Option[PortState]] = (_, _) => Future(maybePortState)
 
+  def pcpPaxFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
+
   "Given a flights summary actor for a given day which does not have any persisted data for that day and there is a port state available" >> {
     "When I ask for terminal flight summaries for that day" >> {
       "I should get back the flights from the port state" >> {
@@ -44,7 +47,7 @@ class FlightsExportSpec extends SpecificationLike {
         val noStaffMinutes = Iterable()
         val portState = PortState(someFlights, noCrunchMinutes, noStaffMinutes)
 
-        val portStateToSummaries = flightSummariesFromPortState(terminal)
+        val portStateToSummaries = flightSummariesFromPortState(terminal, pcpPaxFn) _
 
         val result = Await.result(historicSummaryForDay(terminal, from, mockTerminalSummariesActor, GetSummaries, eventualPortState(Option(portState)), portStateToSummaries), 1 second)
           .get.asInstanceOf[TerminalFlightsSummary].flights
@@ -59,10 +62,10 @@ class FlightsExportSpec extends SpecificationLike {
   "Given a flights summary actor for a given day which does have some persisted data" >> {
     "When I ask for terminal summaries for that day" >> {
       "I should get back the persisted summaries" >> {
-        val persistedSummaries = TerminalFlightsSummary(someFlights, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes)
+        val persistedSummaries = TerminalFlightsSummary(someFlights, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes, pcpPaxFn)
         val mockTerminalSummariesActor = system.actorOf(Props(classOf[MockTerminalSummariesActor], Option(persistedSummaries), None))
 
-        val portStateToSummaries = flightSummariesFromPortState(terminal)
+        val portStateToSummaries = flightSummariesFromPortState(terminal, pcpPaxFn) _
         val result = Await.result(historicSummaryForDay(terminal, from, mockTerminalSummariesActor, GetSummaries, eventualPortState(None), portStateToSummaries), 1 second).get
 
         result === persistedSummaries
@@ -74,7 +77,7 @@ class FlightsExportSpec extends SpecificationLike {
     val portState = PortState(someFlights, Iterable(), Iterable())
 
     "When I ask for terminal flight summaries for that day" >> {
-      val portStateToSummaries = flightSummariesFromPortState(terminal)
+      val portStateToSummaries = flightSummariesFromPortState(terminal, pcpPaxFn) _
 
       def eventualMaybeSummaries(actorProbe: ActorRef): Future[Option[TerminalSummaryLike]] = {
         historicSummaryForDay(terminal, from, actorProbe, GetSummaries, eventualPortState(Option(portState)), portStateToSummaries)
@@ -83,7 +86,7 @@ class FlightsExportSpec extends SpecificationLike {
       "I should get back 96 summaries including one generated from the crunch & staff minutes in the port state" >> {
         val mockTerminalSummariesActor = system.actorOf(Props(classOf[MockTerminalSummariesActor], None, None))
         val result = Await.result(eventualMaybeSummaries(mockTerminalSummariesActor), 1 second).get.asInstanceOf[TerminalFlightsSummary]
-        val expected = TerminalFlightsSummary(someFlights, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes)
+        val expected = TerminalFlightsSummary(someFlights, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes, pcpPaxFn)
 
         result === expected
       }
@@ -104,7 +107,7 @@ class FlightsExportSpec extends SpecificationLike {
     val portState = PortState(Iterable(), Iterable(), Iterable())
 
     "When I ask for terminal flight summaries for that day" >> {
-      val portStateToSummaries = flightSummariesFromPortState(terminal)
+      val portStateToSummaries = flightSummariesFromPortState(terminal, pcpPaxFn) _
 
       def eventualMaybeSummaries(actorProbe: ActorRef): Future[Option[TerminalSummaryLike]] = {
         historicSummaryForDay(terminal, from, actorProbe, GetSummaries, eventualPortState(Option(portState)), portStateToSummaries)
@@ -127,7 +130,7 @@ class FlightsExportSpec extends SpecificationLike {
     def persistedSummaries(queues: Seq[Queue], from: SDateLike) = TerminalFlightsSummary(someFlights.map { fws =>
       val arrival = fws.apiFlight.copy(Scheduled = from.millisSinceEpoch)
       fws.copy(apiFlight = arrival)
-    }, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes)
+    }, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes, pcpPaxFn)
 
     def mockTerminalSummariesActor: (SDateLike, Terminal) => ActorRef = (from: SDateLike, _: Terminal) => system.actorOf(Props(classOf[MockTerminalSummariesActor], Option(persistedSummaries(Seq(EeaDesk), from)), None))
 
@@ -137,7 +140,7 @@ class FlightsExportSpec extends SpecificationLike {
 
         val now: () => SDateLike = () => SDate("2020-06-01")
         val startDate = SDate("2020-01-01T00:00", Crunch.europeLondonTimeZone)
-        val portStateToSummary = flightSummariesFromPortState(terminal)
+        val portStateToSummary = flightSummariesFromPortState(terminal, pcpPaxFn) _
 
         val exportStream = summaryForDaysCsvSource(startDate, 3, now, terminal, Option((summaryActorProvider, GetSummaries)), eventualPortState(None), portStateToSummary)
 

@@ -38,46 +38,46 @@ case class CrunchSystem[FR](shifts: SourceQueueWithComplete[ShiftAssignments],
                             killSwitches: List[UniqueKillSwitch]
                            )
 
-case class CrunchProps[FR](logLabel: String = "",
-                           airportConfig: AirportConfig,
-                           pcpArrival: Arrival => MilliDate,
-                           historicalSplitsProvider: SplitProvider,
-                           portStateActor: ActorRef,
-                           maxDaysToCrunch: Int,
-                           expireAfterMillis: Int,
-                           crunchOffsetMillis: MillisSinceEpoch = 0,
-                           actors: Map[String, ActorRef],
-                           useNationalityBasedProcessingTimes: Boolean,
-                           useLegacyManifests: Boolean = false,
-                           now: () => SDateLike = () => SDate.now(),
-                           initialFlightsWithSplits: Option[FlightsWithSplitsDiff] = None,
-                           manifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]],
-                           manifestResponsesSource: Source[List[BestAvailableManifest], NotUsed],
-                           voyageManifestsActor: ActorRef,
-                           manifestRequestsSink: Sink[List[Arrival], NotUsed],
-                           simulator: Simulator,
-                           initialPortState: Option[PortState] = None,
-                           initialForecastBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap[UniqueArrival, Arrival](),
-                           initialForecastArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap[UniqueArrival, Arrival](),
-                           initialLiveBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap[UniqueArrival, Arrival](),
-                           initialLiveArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap[UniqueArrival, Arrival](),
-                           arrivalsForecastBaseSource: Source[ArrivalsFeedResponse, FR],
-                           arrivalsForecastSource: Source[ArrivalsFeedResponse, FR],
-                           arrivalsLiveBaseSource: Source[ArrivalsFeedResponse, FR],
-                           arrivalsLiveSource: Source[ArrivalsFeedResponse, FR],
-                           passengersActorProvider: () => ActorRef,
-                           initialShifts: ShiftAssignments = ShiftAssignments(Seq()),
-                           initialFixedPoints: FixedPointAssignments = FixedPointAssignments(Seq()),
-                           initialStaffMovements: Seq[StaffMovement] = Seq(),
-                           refreshArrivalsOnStart: Boolean,
-                           checkRequiredStaffUpdatesOnStartup: Boolean,
-                           stageThrottlePer: FiniteDuration,
-                           useApiPaxNos: Boolean,
-                           adjustEGateUseByUnder12s: Boolean,
-                           optimiser: TryCrunch,
-                           useLegacyDeployments: Boolean,
-                           aclPaxAdjustmentDays: Int,
-                           startDeskRecs: () => UniqueKillSwitch)
+case class CrunchProps[FR](
+                            logLabel: String = "",
+                            airportConfig: AirportConfig,
+                            pcpArrival: Arrival => MilliDate,
+                            historicalSplitsProvider: SplitProvider,
+                            portStateActor: ActorRef,
+                            maxDaysToCrunch: Int,
+                            expireAfterMillis: Int,
+                            crunchOffsetMillis: MillisSinceEpoch = 0,
+                            actors: Map[String, ActorRef],
+                            useNationalityBasedProcessingTimes: Boolean,
+                            useLegacyManifests: Boolean = false,
+                            now: () => SDateLike = () => SDate.now(),
+                            initialFlightsWithSplits: Option[FlightsWithSplitsDiff] = None,
+                            manifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]],
+                            manifestResponsesSource: Source[List[BestAvailableManifest], NotUsed],
+                            voyageManifestsActor: ActorRef,
+                            manifestRequestsSink: Sink[List[Arrival], NotUsed],
+                            simulator: Simulator,
+                            initialPortState: Option[PortState] = None,
+                            initialForecastBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap[UniqueArrival, Arrival](),
+                            initialForecastArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap[UniqueArrival, Arrival](),
+                            initialLiveBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap[UniqueArrival, Arrival](),
+                            initialLiveArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap[UniqueArrival, Arrival](),
+                            arrivalsForecastBaseSource: Source[ArrivalsFeedResponse, FR], arrivalsForecastSource: Source[ArrivalsFeedResponse, FR],
+                            pcpPaxFn: Arrival => Int,
+                            arrivalsLiveBaseSource: Source[ArrivalsFeedResponse, FR],
+                            arrivalsLiveSource: Source[ArrivalsFeedResponse, FR],
+                            passengersActorProvider: () => ActorRef,
+                            initialShifts: ShiftAssignments = ShiftAssignments(Seq()),
+                            initialFixedPoints: FixedPointAssignments = FixedPointAssignments(Seq()),
+                            initialStaffMovements: Seq[StaffMovement] = Seq(),
+                            refreshArrivalsOnStart: Boolean,
+                            checkRequiredStaffUpdatesOnStartup: Boolean,
+                            stageThrottlePer: FiniteDuration,
+                            adjustEGateUseByUnder12s: Boolean,
+                            optimiser: TryCrunch,
+                            useLegacyDeployments: Boolean,
+                            aclPaxAdjustmentDays: Int,
+                            startDeskRecs: () => UniqueKillSwitch)
 
 object CrunchSystem {
 
@@ -114,7 +114,7 @@ object CrunchSystem {
       ArrivalDataSanitiser(
         props.airportConfig.maybeCiriumEstThresholdHours,
         props.airportConfig.maybeCiriumTaxiThresholdMinutes
-        ),
+      ),
       expireAfterMillis = props.expireAfterMillis,
       now = props.now)
 
@@ -141,9 +141,8 @@ object CrunchSystem {
       optionalInitialFlights = initialFlightsWithSplits,
       splitsCalculator = manifests.queues.SplitsCalculator(ptqa, props.airportConfig.terminalPaxSplits, splitAdjustments),
       expireAfterMillis = props.expireAfterMillis,
-      now = props.now,
-      useApiPaxNos = props.useApiPaxNos
-      )
+      now = props.now
+    )
 
     val staffGraphStage = new StaffGraphStage(
       name = props.logLabel,
@@ -178,7 +177,7 @@ object CrunchSystem {
         expireAfterMillis = props.expireAfterMillis,
         now = props.now,
         crunchPeriodStartMillis = crunchStartDateProvider,
-        DesksAndWaitsPortProvider(props.airportConfig, props.optimiser))
+        DesksAndWaitsPortProvider(props.airportConfig, props.optimiser, props.pcpPaxFn))
 
     val crunchSystem = RunnableCrunch(
       forecastBaseArrivalsSource = props.arrivalsForecastBaseSource,
@@ -210,7 +209,7 @@ object CrunchSystem {
       aggregatedArrivalsStateActor = props.actors("aggregated-arrivals"),
       forecastMaxMillis = forecastMaxMillis,
       throttleDurationPer = props.stageThrottlePer
-      )
+    )
 
     val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, shiftsIn, fixedPointsIn, movementsIn, simloadsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS) = crunchSystem.run
 
@@ -228,7 +227,7 @@ object CrunchSystem {
       manifestsLiveResponse = manifestsLiveIn,
       actualDeskStats = actDesksIn,
       List(arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS, drKillSwitch)
-      )
+    )
   }
 
   def initialStaffMinutesFromPortState(initialPortState: Option[PortState]): Option[StaffMinutes] = initialPortState.map(

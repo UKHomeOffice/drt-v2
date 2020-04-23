@@ -6,16 +6,18 @@ import drt.shared.PaxTypesAndQueues._
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
-import passengersplits.parsing.VoyageManifestParser.{EeaFlag, InTransit, ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, PaxAge, VoyageManifest}
+import passengersplits.parsing.VoyageManifestParser._
 import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._
 
-class ApiPaxNosCrunchSpecSpec extends CrunchTestLike {
+class PCPPaxNosSpec extends CrunchTestLike {
   sequential
   isolated
+
+  override def useApiPaxNos = false
 
   val tenMinutes: Double = 600d / 60
   val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaChildToDesk -> tenMinutes))
@@ -23,7 +25,7 @@ class ApiPaxNosCrunchSpecSpec extends CrunchTestLike {
   val scheduled = "2019-11-20T00:00Z"
 
   val flights = Flights(List(
-    ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(0), origin = PortCode("JFK"))
+    ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(1), origin = PortCode("JFK"))
   ))
 
   val manifests =
@@ -35,8 +37,7 @@ class ApiPaxNosCrunchSpecSpec extends CrunchTestLike {
         ))
     )))
 
-  "Given a flight with 0 pax numbers and a Manifest of 2 passengers " +
-    "Then we should get 2 passengers in PCP Pax" >> {
+  "Given the API Feature flag is turned off then we should use the live feed passenger numbers" >> {
 
     val crunch = runCrunchGraph(
       now = () => SDate(scheduled),
@@ -48,40 +49,18 @@ class ApiPaxNosCrunchSpecSpec extends CrunchTestLike {
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
     offerAndWait(crunch.manifestsLiveInput, manifests)
 
-    val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
+    val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
 
     crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case ps: PortState =>
         val resultSummary = paxLoadsFromPortState(ps, 15)
 
-        resultSummary == expected
-    }
-
-    success
-  }
-
-  "Given a flight with 0 pax numbers and a Manifest of 2 passengers " +
-    "Then we should get workload for the 2 passengers Port State" >> {
-
-    val crunch = runCrunchGraph(
-      now = () => SDate(scheduled),
-      airportConfig = defaultAirportConfig.copy(
-        terminalProcessingTimes = procTimes,
-        queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
-      ))
-
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
-    offerAndWait(crunch.manifestsLiveInput, manifests)
-
-    val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
-
-    crunch.portStateTestProbe.fishForMessage(2 seconds) {
-      case ps: PortState =>
-        val resultSummary = workLoadsFromPortState(ps, 15)
+        println(s"results::: $resultSummary")
 
         resultSummary == expected
     }
 
     success
   }
+
 }

@@ -85,6 +85,8 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      fileUploadState:Pot[FileUploadState] = Empty
                     )
 
+
+
 object PollDelay {
   val recoveryDelay: FiniteDuration = 10 seconds
   val loginCheckDelay: FiniteDuration = 30 seconds
@@ -99,6 +101,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   def timeProvider(): MillisSinceEpoch = SDate.now().millisSinceEpoch
 
   override protected def initialModel = RootModel()
+  
 
   def currentViewMode: () => ViewMode = () => zoom(_.viewMode).value
 

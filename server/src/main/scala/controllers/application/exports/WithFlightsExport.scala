@@ -8,11 +8,12 @@ import drt.auth.{ApiView, ApiViewPortCsv, ArrivalSource, ArrivalsAndSplitsView}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import drt.shared.api.Arrival
 import play.api.http.{HttpChunk, HttpEntity, Writeable}
 import play.api.mvc._
 import services.SDate
 import services.exports.Exports
-import services.exports.summaries.flights.ArrivalFeedExport
+import services.exports.summaries.flights.{ArrivalFeedExport, TerminalFlightsWithActualApiSummary}
 import services.exports.summaries.{GetSummaries, TerminalSummaryLike}
 import services.graphstages.Crunch.europeLondonTimeZone
 
@@ -30,13 +31,29 @@ trait WithFlightsExport extends ExportToCsv {
         val terminal = Terminal(terminalName)
         Try(SDate(year, month, day, 0, 0, europeLondonTimeZone)) match {
           case Success(start) =>
-            val summaryFromPortState = Exports.flightSummariesWithActualApiFromPortState(terminal)
-            exportToCsv(start, start, "flights", terminal, Option(summaryActorProvider, GetSummariesWithActualApi), summaryFromPortState)
+            val summaryFromPortState: (SDateLike, SDateLike, PortState) => Option[TerminalFlightsWithActualApiSummary] =
+              Exports.flightSummariesWithActualApiFromPortState(terminal, pcpPaxFn)
+            exportToCsv(
+              start,
+              start,
+              "flights",
+              terminal,
+              Option(summaryActorProvider, GetSummariesWithActualApi),
+              summaryFromPortState
+            )
           case Failure(t) =>
             log.error(f"Bad date date $year%02d/$month%02d/$day%02d", t)
             BadRequest(f"Bad date date $year%02d/$month%02d/$day%02d")
         }
     }
+  }
+
+  private def pcpPaxFn = {
+    val pcpPaxFn: Arrival => Int = if (ctrl.params.useApiPaxNos)
+      PcpPax.bestPaxEstimateWithApi
+    else
+      PcpPax.bestPaxEstimateExcludingApi
+    pcpPaxFn
   }
 
   def exportFlightsWithSplitsAtPointInTimeCSV(pointInTime: String,
@@ -78,8 +95,8 @@ trait WithFlightsExport extends ExportToCsv {
 
         implicit val writeable: Writeable[String] = Writeable((str: String) => ByteString.fromString(str), Option("application/csv"))
 
-        val periodString = if(numberOfDays > 1)
-         s"${startDate.getLocalLastMidnight.toISODateOnly}-to-${SDate(endPit).getLocalLastMidnight.toISODateOnly}"
+        val periodString = if (numberOfDays > 1)
+          s"${startDate.getLocalLastMidnight.toISODateOnly}-to-${SDate(endPit).getLocalLastMidnight.toISODateOnly}"
         else
           startDate.getLocalLastMidnight.toISODateOnly
 
@@ -98,16 +115,18 @@ trait WithFlightsExport extends ExportToCsv {
 
 
   private def summaryProviderByRole(terminal: Terminal)
-                                   (implicit request: Request[AnyContent]): (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike] =
-    if (canAccessActualApi(request)) Exports.flightSummariesWithActualApiFromPortState(terminal)
-    else Exports.flightSummariesFromPortState(terminal)
+                                   (implicit request: Request[AnyContent]): (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike] = {
+
+    if (canAccessActualApi(request)) Exports.flightSummariesWithActualApiFromPortState(terminal, pcpPaxFn)
+    else Exports.flightSummariesFromPortState(terminal, pcpPaxFn)
+  }
 
   private def canAccessActualApi(request: Request[AnyContent]) = {
     ctrl.getRoles(config, request.headers, request.session).contains(ApiView)
   }
 
   private val summaryActorProvider: (SDateLike, Terminal) => ActorRef = (date: SDateLike, terminal: Terminal) => {
-    system.actorOf(FlightsSummaryActor.props(date, terminal, now))
+    system.actorOf(FlightsSummaryActor.props(date, terminal, pcpPaxFn, now))
   }
 
   private def summariesRequest(implicit request: Request[AnyContent]): Any =

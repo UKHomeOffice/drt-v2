@@ -10,10 +10,10 @@ import org.scalajs.dom.html.Div
 
 object FlightComponents {
 
-  def paxComp(flightWithSplits: ApiFlightWithSplits): TagMod = <.div(
+  def paxComp(pcpPaxFn: Arrival => Int)(flightWithSplits: ApiFlightWithSplits): TagMod = <.div(
     ^.title := paxComponentTitle(flightWithSplits.apiFlight),
     ^.className := "right",
-    PcpPax.bestPax(flightWithSplits.apiFlight)
+    pcpPaxFn(flightWithSplits.apiFlight)
   )
 
   def paxClassFromSplits(flightWithSplits: ApiFlightWithSplits): String = flightWithSplits.bestSplits match {

@@ -59,6 +59,8 @@ class CrunchTestLike
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
+  def pcpPaxFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
+
   val oneMinuteMillis = 60000
   val uniquifyArrivals: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] =
     CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight)
@@ -173,7 +175,7 @@ class CrunchTestLike
     val askablePortStateActor: ActorRef = portStateActor
     if (initialPortState.isDefined) Await.ready(askablePortStateActor.ask(initialPortState.get)(new Timeout(1 second)), 1 second)
 
-    val portDescRecs = DesksAndWaitsPortProvider(airportConfig, cruncher)
+    val portDescRecs = DesksAndWaitsPortProvider(airportConfig, cruncher, pcpPaxFn)
 
     val deskLimitsProvider: Map[Terminal, TerminalDeskLimitsLike] = if (flexDesks)
       PortDeskLimits.flexed(airportConfig)
@@ -204,8 +206,7 @@ class CrunchTestLike
         system.actorOf(Props(new PassengersActor(maxDaysToConsider, aclPaxAdjustmentDays)))
     }
 
-    val crunchInputs = CrunchSystem(CrunchProps(
-      logLabel = logLabel,
+    val crunchInputs = CrunchSystem(CrunchProps(logLabel = logLabel,
       airportConfig = airportConfig,
       pcpArrival = pcpArrivalTime,
       historicalSplitsProvider = csvSplitsProvider,
@@ -213,15 +214,15 @@ class CrunchTestLike
       maxDaysToCrunch = maxDaysToCrunch,
       expireAfterMillis = expireAfterMillis,
       actors = Map[String, ActorRef](
-        "shifts" -> shiftsActor,
-        "fixed-points" -> fixedPointsActor,
-        "staff-movements" -> staffMovementsActor,
-        "forecast-base-arrivals" -> forecastBaseArrivalsProbe.ref,
-        "forecast-arrivals" -> forecastArrivalsProbe.ref,
-        "live-base-arrivals" -> liveBaseArrivalsProbe.ref,
-        "live-arrivals" -> liveArrivalsProbe.ref,
-        "aggregated-arrivals" -> aggregatedArrivalsActor
-        ),
+            "shifts" -> shiftsActor,
+            "fixed-points" -> fixedPointsActor,
+            "staff-movements" -> staffMovementsActor,
+            "forecast-base-arrivals" -> forecastBaseArrivalsProbe.ref,
+            "forecast-arrivals" -> forecastArrivalsProbe.ref,
+            "live-base-arrivals" -> liveBaseArrivalsProbe.ref,
+            "live-arrivals" -> liveArrivalsProbe.ref,
+            "aggregated-arrivals" -> aggregatedArrivalsActor
+            ),
       useNationalityBasedProcessingTimes = false,
       useLegacyManifests = useLegacyManifests,
       now = now,
@@ -246,12 +247,13 @@ class CrunchTestLike
       refreshArrivalsOnStart = refreshArrivalsOnStart,
       checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup,
       stageThrottlePer = 50 milliseconds,
-      useApiPaxNos = true,
+      pcpPaxFn = pcpPaxFn,
       adjustEGateUseByUnder12s = false,
       optimiser = cruncher,
       useLegacyDeployments = useLegacyDeployments,
       aclPaxAdjustmentDays = aclPaxAdjustmentDays,
-      startDeskRecs = startDeskRecs))
+      startDeskRecs = startDeskRecs
+    ))
 
     portStateActor ! SetSimulationActor(crunchInputs.loadsToSimulate)
 

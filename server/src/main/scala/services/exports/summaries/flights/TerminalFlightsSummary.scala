@@ -7,7 +7,9 @@ import services.exports.summaries.flights.TerminalFlightsSummary._
 
 case class TerminalFlightsSummary(flights: Seq[ApiFlightWithSplits],
                                   millisToDateOnly: MillisSinceEpoch => String,
-                                  millisToHoursAndMinutes: MillisSinceEpoch => String) extends TerminalFlightsSummaryLike {
+                                  millisToHoursAndMinutes: MillisSinceEpoch => String,
+                                  pcpPaxFn: Arrival => Int
+                                 ) extends TerminalFlightsSummaryLike {
 
   override lazy val csvHeader: String =
     rawArrivalHeadings + ",PCP Pax," +

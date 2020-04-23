@@ -40,11 +40,11 @@ import play.api.Configuration
 import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse}
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services.SplitsProvider.SplitProvider
+import services._
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.{DesksAndWaitsPortProvider, DesksAndWaitsPortProviderLike, RunnableDeskRecs}
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.Crunch
-import services._
 import slickdb.VoyageManifestPassengerInfoTable
 
 import scala.collection.mutable
@@ -68,6 +68,11 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val config: Configuration
   val airportConfig: AirportConfig
   val params: DrtConfigParameters = DrtConfigParameters(config)
+
+  def pcpPaxFn: Arrival => Int = if (params.useApiPaxNos)
+    PcpPax.bestPaxEstimateWithApi
+  else
+    PcpPax.bestPaxEstimateExcludingApi
 
   val alertsActor: ActorRef = system.actorOf(Props(new AlertsActor(now)))
   val liveBaseArrivalsActor: ActorRef = system.actorOf(Props(new LiveBaseArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-base-arrivals-actor")
@@ -99,7 +104,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   val optimiser: TryCrunch = if (config.get[Boolean]("crunch.use-legacy-optimiser")) TryRenjin.crunch else Optimiser.crunch
 
-  val portDeskRecs: DesksAndWaitsPortProviderLike = DesksAndWaitsPortProvider(airportConfig, optimiser)
+  val portDeskRecs: DesksAndWaitsPortProviderLike = DesksAndWaitsPortProvider(airportConfig, optimiser, pcpPaxFn)
 
   val maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike] = if (config.get[Boolean]("crunch.flex-desks"))
     PortDeskLimits.flexed(airportConfig)
@@ -149,7 +154,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         "live-base-arrivals" -> liveBaseArrivalsActor,
         "live-arrivals" -> liveArrivalsActor,
         "aggregated-arrivals" -> aggregatedArrivalsActor
-        ),
+      ),
       useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
       useLegacyManifests = params.useLegacyManifests,
       manifestsLiveSource = voyageManifestsLiveSource,
@@ -166,17 +171,17 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       arrivalsForecastSource = forecastArrivalsSource(airportConfig.feedPortCode),
       arrivalsLiveBaseSource = liveBaseArrivalsSource(airportConfig.feedPortCode),
       arrivalsLiveSource = liveArrivalsSource(airportConfig.feedPortCode),
+      passengersActorProvider = passengersActorProvider,
       initialShifts = initialState[ShiftAssignments](shiftsActor).getOrElse(ShiftAssignments(Seq())),
       initialFixedPoints = initialState[FixedPointAssignments](fixedPointsActor).getOrElse(FixedPointAssignments(Seq())),
       initialStaffMovements = initialState[StaffMovements](staffMovementsActor).map(_.movements).getOrElse(Seq[StaffMovement]()),
       refreshArrivalsOnStart = refreshArrivalsOnStart,
       checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup,
       stageThrottlePer = config.get[Int]("crunch.stage-throttle-millis") milliseconds,
-      useApiPaxNos = params.useApiPaxNos,
+      pcpPaxFn = pcpPaxFn,
       adjustEGateUseByUnder12s = params.adjustEGateUseByUnder12s,
       optimiser = optimiser,
       useLegacyDeployments = useLegacyDeployments,
-      passengersActorProvider = passengersActorProvider,
       aclPaxAdjustmentDays = aclPaxAdjustmentDays,
       startDeskRecs = startDeskRecs))
     crunchInputs
@@ -371,6 +376,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         maybeStatuses => maybeStatuses
           .collect { case Some(fs) => fs }
           .filter(fss => isValidFeedSource(fss.feedSource))
-        )
+      )
   }
 }
