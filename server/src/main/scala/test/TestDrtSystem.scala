@@ -48,7 +48,6 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
 
   override val portStateActor: ActorRef =
     if (usePartitionedPortState) {
-      val flightsActor = system.actorOf(Props(new TestFlightsStateActor(None, Sizes.oneMegaByte, "flights-state", airportConfig.queuesByTerminal, now, expireAfterMillis)), name = "flights-state-actor")
       TestPartitionedPortStateActor(now, airportConfig)
     } else
       system.actorOf(Props(new TestPortStateActor(liveCrunchStateActor, forecastCrunchStateActor, now, 2)), name = "port-state-actor")
@@ -58,10 +57,16 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
   val testFeed: Source[ArrivalsFeedResponse, Cancellable] = TestFixtureFeed(system, testArrivalActor)
 
   val testActors = List(
-    baseArrivalsActor, forecastArrivalsActor, liveArrivalsActor,
-    liveCrunchStateActor, forecastArrivalsActor, portStateActor,
+    baseArrivalsActor,
+    forecastArrivalsActor,
+    liveArrivalsActor,
+    liveCrunchStateActor,
+    forecastArrivalsActor,
+    portStateActor,
     voyageManifestsActor,
-    shiftsActor, fixedPointsActor, staffMovementsActor,
+    shiftsActor,
+    fixedPointsActor,
+    staffMovementsActor,
     aggregatedArrivalsActor,
     testManifestsActor,
     testArrivalActor

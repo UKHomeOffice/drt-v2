@@ -5,12 +5,13 @@ import actors.Sizes.oneMegaByte
 import actors._
 import actors.acking.AckingReceiver.Ack
 import actors.daily.{TerminalDayQueuesActor, TerminalDayStaffActor}
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.{ask, pipe}
+import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
-import drt.shared.{AirportConfig, MilliTimes, PortCode, SDateLike, TM, TQM}
+import drt.shared._
 import services.SDate
 import slickdb.ArrivalTable
 
@@ -168,9 +169,17 @@ object TestActors {
     }
 
     def resetReceive: Receive = {
+      case container: MinutesContainer[A, B] =>
+        val replyTo = sender()
+        addToTerminalDays(container)
+        handleUpdatesAndAck(container, replyTo)
+
       case ResetData =>
         Future
-          .sequence(terminalDaysUpdated.map { case (t, d) => resetData(t, d) })
+          .sequence(terminalDaysUpdated.map { case (t, d) =>
+            println(s"\n\n**Sending ResetData to $t / ${SDate(d).toISOString()}")
+            resetData(t, d)
+          })
           .map { _ =>
             terminalDaysUpdated = Set()
             Ack
@@ -203,11 +212,11 @@ object TestActors {
   object TestPartitionedPortStateActor {
     def apply(now: () => SDateLike, airportConfig: AirportConfig)
              (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
-      val lookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+      val lookups = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
       val flightsActor: ActorRef = system.actorOf(Props(new TestFlightsStateActor(None, Sizes.oneMegaByte, "crunch-live-state-actor", airportConfig.queuesByTerminal, now, expireAfterMillis)))
       val queuesActor: ActorRef = lookups.queueMinutesActor(classOf[TestQueueMinutesActor])
       val staffActor: ActorRef = lookups.staffMinutesActor(classOf[TestStaffMinutesActor])
-      system.actorOf(Props(new PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now)))
+      system.actorOf(Props(new TestPartitionedPortStateActor(flightsActor, queuesActor, staffActor, now)))
     }
   }
 
@@ -237,6 +246,8 @@ object TestActors {
         deleteMessages(Long.MaxValue)
         deleteSnapshot(Long.MaxValue)
         sender() ! Ack
+      case _: DeleteMessagesSuccess =>
+      case _: DeleteSnapshotsSuccess =>
     }
 
     override def receive: Receive = myReceive orElse super.receive
@@ -253,6 +264,8 @@ object TestActors {
         deleteMessages(Long.MaxValue)
         deleteSnapshot(Long.MaxValue)
         sender() ! Ack
+      case _: DeleteMessagesSuccess =>
+      case _: DeleteSnapshotsSuccess =>
     }
 
     override def receive: Receive = myReceive orElse super.receive
@@ -271,6 +284,8 @@ object TestActors {
         deleteSnapshot(Long.MaxValue)
         state.clear()
         sender() ! Ack
+      case _: DeleteMessagesSuccess =>
+      case _: DeleteSnapshotsSuccess =>
     }
 
     override def receive: Receive = myReceive orElse super.receive
