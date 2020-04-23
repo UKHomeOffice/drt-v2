@@ -159,45 +159,6 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     }
   }
 
-//  "Given a PortState with pre-existing invalid suffixed arrivals, I should only see arrivals without a suffix in the port state" >> {
-//    val withSuffixP: Arrival = ArrivalGenerator.arrival(iata = "BA0001P", origin = PortCode("JFK"), schDt = "2017-01-01T10:25Z", actPax = Option(10), feedSources = Set(AclFeedSource))
-//    val withSuffixF: Arrival = ArrivalGenerator.arrival(iata = "BA0002F", origin = PortCode("JFK"), schDt = "2017-01-01T11:25Z", actPax = Option(10), feedSources = Set(AclFeedSource))
-//    val withoutSuffix: Arrival = ArrivalGenerator.arrival(iata = "BA0003", origin = PortCode("JFK"), schDt = "2017-01-01T12:25Z", actPax = Option(10), feedSources = Set(AclFeedSource))
-//
-//    val initialPortState = PortState(Iterable(ApiFlightWithSplits(withSuffixP, Set())), Iterable(), Iterable())
-//
-//    "Given 3 international ACL arrivals, one with suffix F, another with P, and another with no suffix" >> {
-//      val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(now = () => dateNow, initialPortState = Option(initialPortState))
-//      val aclFlight: Flights = Flights(List(withSuffixP, withSuffixF, withoutSuffix))
-//
-//      offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlight))
-//
-//      crunch.portStateTestProbe.fishForMessage(5 seconds) {
-//        case ps: PortState =>
-//          val numberOfFlights = ps.flights.size
-//          numberOfFlights == 1 && flightExists(withoutSuffix, ps)
-//      }
-//
-//      success
-//    }
-//
-//    "Given 3 international live arrivals, one with suffix F, another with P, and another with no suffix" >> {
-//      val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(now = () => dateNow, initialPortState = Option(initialPortState))
-//      val aclFlight: Flights = Flights(List(withSuffixP, withSuffixF, withoutSuffix))
-//
-//      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(aclFlight))
-//
-//      crunch.portStateTestProbe.fishForMessage(5 seconds) {
-//        case ps: PortState =>
-//          val numberOfFlights = ps.flights.size
-//          numberOfFlights == 1 && flightExists(withoutSuffix, ps)
-//      }
-//
-//      success
-//    }
-//  }
-
-
   private def flightExists(withoutSuffix: Arrival, ps: PortState) = {
     ps.flights.contains(UniqueArrival(withoutSuffix))
   }
