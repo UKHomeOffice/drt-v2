@@ -40,7 +40,7 @@ case class Arrival(Operator: Option[Operator],
 
   def suffixString: String = FlightCodeSuffix match {
     case None => ""
-    case Some(s) => s.toString
+    case Some(s) => s.suffix
   }
 
   def flightCode: String = s"$CarrierCode${VoyageNumber.toPaddedString}$suffixString"
