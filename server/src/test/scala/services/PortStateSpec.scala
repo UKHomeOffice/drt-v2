@@ -2,13 +2,16 @@ package services
 
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
+import drt.shared.FlightsApi.Flights
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
+import server.feeds.ArrivalsFeedSuccess
 import services.crunch.CrunchTestLike
 import services.graphstages.{SimulationMinute, SimulationMinutes}
 
+import scala.collection.mutable
 import scala.concurrent.duration._
 
 class PortStateSpec extends CrunchTestLike {
@@ -254,6 +257,32 @@ class PortStateSpec extends CrunchTestLike {
     val windowedFlights = portStateMutable.window(SDate("2019-01-02T00:00"), SDate("2019-01-02T23:59")).flights.values.toSet
 
     windowedFlights === Set(flight)
+  }
+
+  "Given a PortState with an existing arrival" >> {
+    "When I start the system with the refresh arrivals flag turned on" >> {
+      "I should see that arrival get removed" >> {
+        val scheduled = "2020-04-23T12:00"
+        val now = () => SDate(scheduled)
+        val arrival = ArrivalGenerator.arrival("BA0001", schDt = scheduled, terminal = T1)
+        val fws = ApiFlightWithSplits(arrival, Set())
+        val existingPortState = PortState(Iterable(fws), Iterable(), Iterable())
+        val initialLiveArrivals = mutable.SortedMap[UniqueArrival, Arrival]() ++ Seq(arrival).map(a => (a.unique, a)).toMap
+        val crunch = runCrunchGraph(now = now, refreshArrivalsOnStart = true, initialPortState = Option(existingPortState), initialLiveArrivals = initialLiveArrivals)
+
+        val newArrival = ArrivalGenerator.arrival("BA0010", schDt = scheduled, terminal = T2, actPax = Option(100))
+
+        offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(newArrival))))
+
+        val expected = newArrival.copy(FeedSources = Set(AclFeedSource))
+
+        crunch.portStateTestProbe.fishForMessage(5 seconds) {
+          case PortState(flights, _, _) =>
+            flights.size == 1 && flights.values.head.apiFlight == expected
+        }
+        success
+      }
+    }
   }
 
   private def arrivalsToFlightsWithSplits(arrivals: List[Arrival]): List[ApiFlightWithSplits] = {
