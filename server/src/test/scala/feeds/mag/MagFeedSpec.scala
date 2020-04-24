@@ -77,6 +77,21 @@ class MagFeedSpec extends SpecificationLike {
     result.length === 1
   }
 
+  "Given a mock json response containing a single valid flight with 0 for passenger count and max pax " +
+    "I should see those values in the arrival " >> {
+    MockFeedRequester.mockResponse = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, jsonResponseSingleArrivalWith0Pax))
+
+    val actMax = Await.result(feed.requestArrivals(SDate.now()), 1 second) match {
+      case ArrivalsFeedSuccess(Flights(arrivals), _) => (arrivals.head.ActPax, arrivals.head.MaxPax)
+      case _ => List()
+    }
+
+    val expected = (Some(0), Some(0))
+
+    actMax === expected
+
+  }
+
   "Given a mock json response containing invalid json " +
     "I should get an ArrivalsFeedFailure" >> {
     MockFeedRequester.mockResponse = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, "bad json"))
@@ -144,6 +159,73 @@ class MagFeedSpec extends SpecificationLike {
       |        "passenger": {
       |            "count": 0,
       |            "maximum": 235,
+      |            "prmCount": 0
+      |        },
+      |        "offBlockTime": {
+      |            "scheduled": "2019-09-23T09:50:00+00:00"
+      |        },
+      |        "onBlockTime": {
+      |            "scheduled": "2019-09-23T09:50:00+00:00"
+      |        },
+      |        "touchDownTime": {
+      |            "scheduled": "2019-09-23T09:50:00+00:00"
+      |        },
+      |        "arrivalDate": "2019-09-23",
+      |        "arrival": {
+      |            "airport": {
+      |                "iata": "MAN",
+      |                "icao": "EGCC"
+      |            },
+      |            "scheduled": "2019-09-23T09:50:00+00:00",
+      |            "terminal": "T1"
+      |        },
+      |        "flightStatus": "Cancelled"
+      |    }
+      |]""".stripMargin
+
+val jsonResponseSingleArrivalWith0Pax: String =
+    """[
+      |    {
+      |        "uniqueRef": 16961558,
+      |        "uri": "https://api.prod.bi.magairports.com/v1/flight/MAN/arrival/LS/073W/2019-09-23/NCL",
+      |        "magAirport": "MAN",
+      |        "operatingAirline": {
+      |            "iata": "LS",
+      |            "icao": "LS"
+      |        },
+      |        "aircraftType": {
+      |            "iata": "75W"
+      |        },
+      |        "flightNumber": {
+      |            "airlineCode": "LS",
+      |            "trackNumber": "073",
+      |            "suffix": "W"
+      |        },
+      |        "departureAirport": {
+      |            "iata": "NCL",
+      |            "icao": "EGNT"
+      |        },
+      |        "arrivalAirport": {
+      |            "iata": "MAN",
+      |            "icao": "EGCC"
+      |        },
+      |        "arrivalDeparture": "Arrival",
+      |        "domesticInternational": "International",
+      |        "flightType": "Positioning",
+      |        "stand": {
+      |            "provisional": true,
+      |            "provisionalName": "Stand 233",
+      |            "provisionalNumber": "233"
+      |        },
+      |        "terminal": {
+      |            "name": "Terminal 1",
+      |            "short_name": "T1",
+      |            "number": "1"
+      |        },
+      |        "handlingAgent": "WFSUK",
+      |        "passenger": {
+      |            "count": 0,
+      |            "maximum": 0,
       |            "prmCount": 0
       |        },
       |        "offBlockTime": {

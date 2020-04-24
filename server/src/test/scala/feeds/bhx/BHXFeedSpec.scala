@@ -414,6 +414,21 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
     result === expected
   }
 
+  "Given a BHXFlight with 0 for passenger fields, I should see 0 pax, 0 max pax and 0 transfer pax." >> {
+    val client = BHXMockClient(bhxSoapResponseWith0PaxXml)
+
+    val result: Flights = Await
+      .result(client.initialFlights, 1 second).asInstanceOf[ArrivalsFeedSuccess].arrivals
+
+    val actMax = result match {
+      case Flights(f :: tail) => (f.ActPax, f.MaxPax)
+    }
+
+    val expected = (Some(0), Some(0))
+
+    actMax === expected
+  }
+
   val multiplePassengerTypesXML =
     """<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
       |    <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
@@ -483,6 +498,65 @@ class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       |                    <CabinClass Class="7">
       |                        <SeatCapacity>189</SeatCapacity>
       |                        <PaxCount Qualifier="A" Usage="Planned" DestinationType="Local">65</PaxCount>
+      |                    </CabinClass>
+      |                    <RemarkFreeText>ARR</RemarkFreeText>
+      |                    <AirportResources Usage="Planned">
+      |                        <Resource DepartureOrArrival="Arrival">
+      |                            <AirportZone xsi:nil="true"/>
+      |                            <AircraftParkingPosition>54L</AircraftParkingPosition>
+      |                            <PassengerGate>44</PassengerGate>
+      |                            <Runway xsi:nil="true"/>
+      |                            <AircraftTerminal>1</AircraftTerminal>
+      |                            <BaggageClaimUnit>3</BaggageClaimUnit>
+      |                            <DeIceLocation xsi:nil="true"/>
+      |                        </Resource>
+      |                    </AirportResources>
+      |                    <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="SCT">2018-09-01T23:00:00.000Z</OperationTime>
+      |                    <OperationTime OperationQualifier="TDN" CodeContext="2005" TimeType="ACT">2018-09-01T23:00:00.000Z</OperationTime>
+      |                    <OperationTime OperationQualifier="ONB" CodeContext="2005" TimeType="ACT">2018-09-01T23:05:00.000Z</OperationTime>
+      |                    <AircraftInfo>
+      |                        <AircraftType>73H</AircraftType>
+      |                        <AircraftSubType xsi:nil="true"/>
+      |                        <Registration xsi:nil="true"/>
+      |                        <TailNumber xsi:nil="true"/>
+      |                        <AgentInfo DepartureOrArrival="Arrival">S</AgentInfo>
+      |                        <FleetNumber xsi:nil="true"/>
+      |                        <CallSign xsi:nil="true"/>
+      |                    </AircraftInfo>
+      |                </LegData>
+      |                <TPA_Extension>
+      |                    <TPA_KeyValue Key="AirlineName">Thomson Airways</TPA_KeyValue>
+      |                    <TPA_KeyValue Key="DepartureAirportName">Paphos</TPA_KeyValue>
+      |                    <TPA_KeyValue Key="ArrivalAirportName">Birmingham</TPA_KeyValue>
+      |                </TPA_Extension>
+      |            </FlightLeg>
+      |        </IATA_AIDX_FlightLegRS>
+      |    </s:Body>
+      |</s:Envelope>
+    """.stripMargin
+
+  val bhxSoapResponseWith0PaxXml: String =
+    """<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+      |    <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+      |        <IATA_AIDX_FlightLegRS TimeStamp="2019-07-25T09:13:19.4014748+01:00" Version="16.1" xmlns="http://www.iata.org/IATA/2007/00">
+      |            <Success/>
+      |            <FlightLeg>
+      |                <LegIdentifier>
+      |                    <Airline CodeContext="3">TOM</Airline>
+      |                    <FlightNumber>7623</FlightNumber>
+      |                    <DepartureAirport CodeContext="3">PFO</DepartureAirport>
+      |                    <ArrivalAirport CodeContext="3">BHX</ArrivalAirport>
+      |                    <OriginDate>2018-09-01</OriginDate>
+      |                </LegIdentifier>
+      |                <LegData InternationalStatus="International">
+      |                    <PublicStatus xsi:nil="true"/>
+      |                    <OperatingAlliance xsi:nil="true"/>
+      |                    <ServiceType>C</ServiceType>
+      |                    <EstFlightDuration xsi:nil="true"/>
+      |                    <OwnerAirline xsi:nil="true"/>
+      |                    <CabinClass Class="7">
+      |                        <SeatCapacity>0</SeatCapacity>
+      |                        <PaxCount Qualifier="A" Usage="Planned" DestinationType="Local">0</PaxCount>
       |                    </CabinClass>
       |                    <RemarkFreeText>ARR</RemarkFreeText>
       |                    <AirportResources Usage="Planned">
