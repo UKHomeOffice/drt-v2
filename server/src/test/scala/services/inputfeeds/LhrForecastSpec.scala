@@ -33,6 +33,23 @@ class LhrForecastSpec extends Specification {
     arrival === expected
   }
 
+  "Given a forecast feed item with 0 passengers for max, direct and transfer. " +
+    "When I ask for a parsed Arrival " +
+    "Then I should see 0 in ActPax and TransPax " >> {
+    val csvContent =
+      """Terminal,Arr / Dep,DOW,Scheduled Date,Scheduled Time,Prefix,Flight No,Orig / Dest,Orig / Dest Market,Last / Next,Last / Next Market,Aircraft,Capacity,Total Pax,Transfer Pax,Direct Pax,Transfer Demand,Direct Demand
+        |3,A,Thu,2018-02-22,04:45:00,BA,BA 0058,CPT,Africa,CPT,Africa,744,0,0,0,191,131,201""".stripMargin
+
+    val arrivalLines = csvContent.split("\n").drop(1)
+
+    val arrival: Arrival = LhrForecastArrivals(arrivalLines).head
+    val actMaxTran = (arrival.ActPax, arrival.MaxPax, arrival.TranPax)
+
+    val expected = (Some(0),Some(0),Some(0) )
+
+    actMaxTran === expected
+  }
+
   "Given an entire CSV " +
     "When I ask for the Arrivals " +
     "Then I should see all the valid lines from the CSV as Arrivals" >> {

@@ -80,6 +80,78 @@ class AclFeedSpec extends CrunchTestLike {
       arrivals === expected
     }
 
+    "Given ACL csv content containing 0 for MaxPax and 0 for load factor " +
+      "When I ask for the arrivals " +
+      "Then I should see 0 being used for both Max and Act pax" >> {
+      val csvContent =
+        """A/C,ACReg,Airport,ArrDep,CreDate,Date,DOOP,EditDate,Icao Aircraft Type,Icao Last/Next Station,Icao Orig/Dest Station,LastNext,LastNextCountry,Ope,OpeGroup,OpeName,OrigDest,OrigDestCountry,Res,Season,Seats,ServNo,ST,ove.ind,Term,Time,TurnOpe,TurnServNo,OpeFlightNo,LoadFactor
+          |32A,,LHR,A,09SEP2016 0606,2017-10-13,0000500,29SEP2017 0959,A320,EDDK,EDDK,CGN,DE,4U,STAR ALLIANCE,GERMANWINGS GMBH,CGN,DE,T2-Intl & CTA,S17,0,0460,J,,2I,0710,4U,0461,4U0460,0
+        """.stripMargin
+
+      val arrivals = arrivalsFromCsvContent(csvContent, regularTerminalMapping)
+      val expected = List(
+        Arrival(
+          Operator = Option(Operator("4U")),
+          Status = ArrivalStatus("ACL Forecast"),
+          Estimated = None,
+          Actual = None,
+          EstimatedChox = None,
+          ActualChox = None,
+          Gate = None,
+          Stand = None,
+          MaxPax = Option(0),
+          ActPax = Option(0),
+          TranPax = None,
+          RunwayID = None,
+          BaggageReclaimId = None,
+          AirportID = PortCode("LHR"),
+          Terminal = T2,
+          rawICAO = "4U0460",
+          rawIATA = "4U0460",
+          Origin = PortCode("CGN"),
+          FeedSources = Set(shared.AclFeedSource),
+          Scheduled = 1507878600000L,
+          PcpTime = None))
+
+      arrivals === expected
+    }
+
+  "Given ACL csv content containing  200 for MaxPax but 0 for load factor " +
+      "When I ask for the arrivals " +
+      "Then I should see 0 being used for act pax and 200 for Max Pax" >> {
+      val csvContent =
+        """A/C,ACReg,Airport,ArrDep,CreDate,Date,DOOP,EditDate,Icao Aircraft Type,Icao Last/Next Station,Icao Orig/Dest Station,LastNext,LastNextCountry,Ope,OpeGroup,OpeName,OrigDest,OrigDestCountry,Res,Season,Seats,ServNo,ST,ove.ind,Term,Time,TurnOpe,TurnServNo,OpeFlightNo,LoadFactor
+          |32A,,LHR,A,09SEP2016 0606,2017-10-13,0000500,29SEP2017 0959,A320,EDDK,EDDK,CGN,DE,4U,STAR ALLIANCE,GERMANWINGS GMBH,CGN,DE,T2-Intl & CTA,S17,200,0460,J,,2I,0710,4U,0461,4U0460,0
+        """.stripMargin
+
+      val arrivals = arrivalsFromCsvContent(csvContent, regularTerminalMapping)
+      val expected = List(
+        Arrival(
+          Operator = Option(Operator("4U")),
+          Status = ArrivalStatus("ACL Forecast"),
+          Estimated = None,
+          Actual = None,
+          EstimatedChox = None,
+          ActualChox = None,
+          Gate = None,
+          Stand = None,
+          MaxPax = Option(200),
+          ActPax = Option(0),
+          TranPax = None,
+          RunwayID = None,
+          BaggageReclaimId = None,
+          AirportID = PortCode("LHR"),
+          Terminal = T2,
+          rawICAO = "4U0460",
+          rawIATA = "4U0460",
+          Origin = PortCode("CGN"),
+          FeedSources = Set(shared.AclFeedSource),
+          Scheduled = 1507878600000L,
+          PcpTime = None))
+
+      arrivals === expected
+    }
+
     "For BFS" >> {
       "Given ACL csv content containing a header line and an international flight " +
         "When I ask for the arrivals " +
@@ -110,7 +182,7 @@ class AclFeedSpec extends CrunchTestLike {
         val expected = Set(
           (VoyageNumber(151), T1),
           (VoyageNumber(102), T2)
-          )
+        )
 
         arrivals === expected
       }
@@ -233,7 +305,7 @@ class AclFeedSpec extends CrunchTestLike {
           (VoyageNumber(20), T3),
           (VoyageNumber(1080), T4),
           (VoyageNumber(6), T5)
-          )
+        )
 
         arrivals === expected
       }
@@ -432,7 +504,7 @@ class AclFeedSpec extends CrunchTestLike {
       val crunch = runCrunchGraph(
         now = () => SDate(scheduledLive),
         initialLiveArrivals = initialLive
-        )
+      )
 
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(initialAcl.toList)))
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(newLive.toList)))
@@ -465,7 +537,7 @@ class AclFeedSpec extends CrunchTestLike {
         now = () => SDate(scheduledLive),
         initialForecastBaseArrivals = initialAcl,
         initialLiveArrivals = initialLive
-        )
+      )
 
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(newAcl))
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(newLive))

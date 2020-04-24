@@ -31,7 +31,7 @@ case class ResponseToArrivals(data: String) {
   def nodeToArrival: Node => Arrival = (n: Node) => {
 
     val operator = (n \ "AirlineIATA") text
-    val actPax = parsePaxCount(n, "70A").filter(_ != 0).orElse(None)
+    val actPax = parsePaxCount(n, "70A").orElse(None)
     val transPax = parsePaxCount(n, "TIP")
     val arrival = new Arrival(
       Operator = if (operator.isEmpty) None else Option(Operator(operator)),

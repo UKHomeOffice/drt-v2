@@ -222,6 +222,16 @@ class GlaFeedSpec extends SpecificationLike {
     }
   }
 
+
+  "Given a GLA feed item with 0 for ActPax and MaxPax then we should 0 in the arrival" >> {
+    val mockFeed = mockFeedWithResponse(exampleWith0s)
+
+    Await.result(mockFeed.requestArrivals(), 1 second) match {
+      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) =>
+        (arrival.ActPax, arrival.MaxPax) === (Some(0), Some(0))
+    }
+  }
+
   val secondJsonExample: String =
     """[{
       |        "AIBT": "2019-11-14T14:40:00+00:00",
@@ -247,6 +257,33 @@ class GlaFeedSpec extends SpecificationLike {
       |        "StandCode": "STAND",
       |        "TerminalCode": "T1",
       |        "TotalPassengerCount": 55
+      |}]""".stripMargin
+
+  val exampleWith0s: String =
+    """[{
+      |        "AIBT": "2019-11-14T14:40:00+00:00",
+      |        "AirlineIATA": "TT",
+      |        "AirlineICAO": "TTT",
+      |        "ALDT": "2019-11-14T14:41:00+00:00",
+      |        "AODBProbableDateTime": null,
+      |        "CarouselCode": "2",
+      |        "CodeShareFlights": "",
+      |        "CodeShareInd": "N",
+      |        "DepartureArrivalType": "A",
+      |        "EIBT": "2019-11-14T12:44:00+00:00",
+      |        "FlightNumber": "244",
+      |        "FlightStatus": "C",
+      |        "FlightStatusDesc": "Flight is cancelled",
+      |        "GateCode": "GATE",
+      |        "MaxPax": 0,
+      |        "OriginDestAirportIATA": "TTT",
+      |        "OriginDestAirportICAO": "TTTT",
+      |        "PaxEstimated": null,
+      |        "Runway": "4",
+      |        "ScheduledDateTime": "2019-11-14T12:44:00+00:00",
+      |        "StandCode": "STAND",
+      |        "TerminalCode": "T1",
+      |        "TotalPassengerCount": 0
       |}]""".stripMargin
 
 

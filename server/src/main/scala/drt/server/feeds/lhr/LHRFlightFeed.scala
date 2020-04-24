@@ -96,7 +96,7 @@ case class LHRFlightFeed(csvRecords: Iterator[Int => String]) {
     successfulFlights.map(flight => {
       val pcpTime: Long = flight.scheduled.plusMinutes(walkTimeMinutes).getMillis
       val schDtIso = flight.scheduled.toDateTimeISO.toString()
-      val actPax = flight.actPax.filter(_ != 0)
+
       Arrival(
         Operator = flight.operator,
         Status = "UNK",
@@ -106,9 +106,9 @@ case class LHRFlightFeed(csvRecords: Iterator[Int => String]) {
         ActualChox = flight.actChox.map(_.toDate.getTime),
         Gate = None,
         Stand = flight.stand,
-        MaxPax = flight.maxPax.filter(_ != 0),
-        ActPax = actPax,
-        TranPax = if (actPax.isEmpty) None else flight.connPax,
+        MaxPax = flight.maxPax,
+        ActPax = flight.actPax,
+        TranPax = if (flight.actPax.isEmpty) None else flight.connPax,
         RunwayID = None,
         BaggageReclaimId = None,
         AirportID = "LHR",
