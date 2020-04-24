@@ -28,13 +28,21 @@ class LGWForecastFeedSpec extends Specification with Mockito {
         |,,,,,,,,,,,,,,,,,
         |
       """.stripMargin
+
+    val exampleDataWith0Pax: String =
+      """Date,Flight Number,POA Forecast Version,Seats,Aircraft Type,Terminal,ArrDep,Orig Dest,Airport Code,Scheduled Time,POA Pax,Transfer Pax,CSA Pax,Prefix,Time,Hour,Int/Dom,Date/Time
+        |19-May-18,3O0101,POA FCST 17-05-18,0,,South,Arrival,"Tangier (Ibn Batuta), Morocco",TNG,1105,0,0,0,3O,11:05,11,INTL,19/05/2018 11:05
+        |,,,,,,,,,,,,,,,,,
+        |,,,,,,,,,,,,,,,,,
+        |
+      """.stripMargin
   }
 
   import drt.server.feeds.Implicits._
 
-  "Can access a Box" should {
+  "The LGW Forecast Feed" should {
 
-    "Can parse the arrivals given a CSV" in new ExampleContext {
+    "parse the arrivals given a CSV" in new ExampleContext {
       val feed: LGWForecastFeed = new LGWForecastFeed(filePath, userId, ukBfGalForecastFolderId) {
         override def getBoxConfig: BoxConfig = mock[BoxConfig]
         override def getApiConnection: Try[BoxDeveloperEditionAPIConnection] = Try(mock[BoxDeveloperEditionAPIConnection])
@@ -53,6 +61,39 @@ class LGWForecastFeedSpec extends Specification with Mockito {
         Stand = None,
         MaxPax = Option(174),
         ActPax = Option(134),
+        TranPax = Some(0),
+        RunwayID = None,
+        BaggageReclaimId = None,
+        AirportID = PortCode("LGW"),
+        Terminal = S,
+        rawICAO = "3O0101",
+        rawIATA = "3O0101",
+        Origin = PortCode("TNG"),
+        Scheduled = SDate("2018-05-19T10:05:00Z").millisSinceEpoch,
+        PcpTime = None,
+        FeedSources = Set(ForecastFeedSource)
+      )
+    }
+
+    "Given 0 passengers for Act and Max and Trans should reflect this in the parsed arrival" in new ExampleContext {
+      val feed: LGWForecastFeed = new LGWForecastFeed(filePath, userId, ukBfGalForecastFolderId) {
+        override def getBoxConfig: BoxConfig = mock[BoxConfig]
+        override def getApiConnection: Try[BoxDeveloperEditionAPIConnection] = Try(mock[BoxDeveloperEditionAPIConnection])
+      }
+
+      val arrivals: List[Arrival] = feed.getArrivalsFromData("aFile.csv", exampleDataWith0Pax)
+      arrivals.length mustEqual 1
+      arrivals.head mustEqual Arrival(
+        Operator = None,
+        Status = "Port Forecast",
+        Estimated = None,
+        Actual = None,
+        EstimatedChox = None,
+        ActualChox = None,
+        Gate = None,
+        Stand = None,
+        MaxPax = Option(0),
+        ActPax = Option(0),
         TranPax = Some(0),
         RunwayID = None,
         BaggageReclaimId = None,

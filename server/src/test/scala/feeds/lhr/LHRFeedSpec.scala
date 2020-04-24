@@ -60,6 +60,55 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
       )
     }
 
+    "Should accept 0 as a valid Pax value for all Pax fields" in {
+      val csvString =
+        """|Term","Flight No","Operator","From","Airport name","Scheduled","Estimated","Touchdown","Est Chocks","Act Chocks","Stand","Max pax","Act Pax","Conn pax"
+           |"4","QR005","Qatar Airways","DOH","Doha","22:00 09/03/2017","21:32 09/03/2017","21:33 09/03/2017","21:43 09/03/2017","21:45 09/03/2017","10","0","0","0""""
+          .stripMargin
+      import akka.pattern.pipe
+      import system.dispatcher
+
+      implicit val materializer: ActorMaterializer = ActorMaterializer()
+      val csvGetters: Iterator[(Int) => String] = LHRFlightFeed.csvParserAsIteratorOfColumnGetter(csvString)
+      val lhrFeed = LHRFlightFeed(csvGetters)
+
+      val probe = TestProbe()
+
+      val flightsSource: Source[List[Arrival], NotUsed] = Source(List(lhrFeed.copiedToApiFlights))
+
+      val futureFlightsSeq: Future[Seq[List[Arrival]]] = flightsSource.runWith(Sink.seq).pipeTo(probe.ref)
+
+      val flights = Await.result(futureFlightsSeq, 3 seconds).asInstanceOf[Vector[Arrival]]
+
+      flights.toList === List(
+        List(
+          Arrival(
+            Operator = Option(Operator("Qatar Airways")),
+            Status = ArrivalStatus("UNK"),
+            Estimated = Option(SDate("2017-03-09T21:32:00.000Z").millisSinceEpoch),
+            Actual = Option(SDate("2017-03-09T21:33:00.000Z").millisSinceEpoch),
+            EstimatedChox = Option(SDate("2017-03-09T21:43:00.000Z").millisSinceEpoch),
+            ActualChox = Option(SDate("2017-03-09T21:45:00.000Z").millisSinceEpoch),
+            Gate = None,
+            Stand = Option("10"),
+            MaxPax = Option(0),
+            ActPax = Option(0),
+            TranPax = Option(0),
+            RunwayID = None,
+            BaggageReclaimId = None,
+            AirportID = PortCode("LHR"),
+            Terminal = T4,
+            rawICAO = "QR005",
+            rawIATA = "QR005",
+            Origin = PortCode("DOH"),
+            Scheduled = SDate("2017-03-09T22:00:00.000Z").millisSinceEpoch,
+            PcpTime = Option(SDate("2017-03-09T22:04:00.000Z").millisSinceEpoch),
+            FeedSources = Set(LiveFeedSource)
+          )
+        )
+      )
+    }
+
     "Produce an Arrival source with one flight based on a line with missing values from the LHR csv" in {
       val csvString =
         """|Term","Flight No","Operator","From","Airport name","Scheduled","Estimated","Touchdown","Est Chocks","Act Chocks","Stand","Max pax","Act Pax","Conn pax"
