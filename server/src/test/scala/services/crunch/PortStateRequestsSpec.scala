@@ -152,9 +152,27 @@ class PortStateRequestsSpec extends CrunchTestLike {
             result === Option(PortState(Seq(), Seq(), setUpdatedSms(Seq(sm1, sm2), now().millisSinceEpoch)))
           }
         }
+
+        "When I send it a flight, a queue & a staff minute, and ask for the terminal state" >> {
+          val fws = flightsWithSplits(List(("BA1000", scheduled, T1)))
+          val drm = DeskRecMinute(T1, EeaDesk, now().millisSinceEpoch, 1, 2, 3, 4)
+          val sm1 = StaffMinute(T1, now().millisSinceEpoch, 1, 2, 3)
+
+          val eventualAck1 = ps.ask(StaffMinutes(Seq(sm1)))
+          val eventualAck2 = ps.ask(DeskRecMinutes(Seq(drm)))
+          val eventualAck3 = ps.ask(FlightsWithSplitsDiff(fws, List()))
+          val eventualAck = Future.sequence(Seq(eventualAck1, eventualAck2, eventualAck3))
+
+          "Then I should see the flight, & corresponding crunch & staff minutes" >> {
+            val result = Await.result(eventualTerminalState(eventualAck, now, ps), 1 second)
+
+            val expectedCm = CrunchMinute(T1, EeaDesk, now().millisSinceEpoch, 1, 2, 3, 4)
+
+            result === Option(PortState(setUpdatedFlights(fws, now().millisSinceEpoch), setUpdatedCms(Seq(expectedCm), now().millisSinceEpoch), setUpdatedSms(Seq(sm1), now().millisSinceEpoch)))
+          }
+        }
       }
   }
-
 
   def setUpdatedFlights(fws: Iterable[ApiFlightWithSplits], updatedMillis: MillisSinceEpoch): Seq[ApiFlightWithSplits] =
     fws.map(_.copy(lastUpdated = Option(updatedMillis))).toSeq
@@ -179,6 +197,14 @@ class PortStateRequestsSpec extends CrunchTestLike {
     val startMillis = now().getLocalLastMidnight.millisSinceEpoch
     val endMillis = now().getLocalNextMidnight.millisSinceEpoch
     ps.ask(GetPortState(startMillis, endMillis)).mapTo[Option[PortState]]
+  }
+
+  def eventualTerminalState(eventualAck: Future[Any],
+                            now: () => SDateLike,
+                            ps: ActorRef): Future[Option[PortState]] = eventualAck.flatMap { _ =>
+    val startMillis = now().getLocalLastMidnight.millisSinceEpoch
+    val endMillis = now().getLocalNextMidnight.millisSinceEpoch
+    ps.ask(GetPortStateForTerminal(startMillis, endMillis, T1)).mapTo[Option[PortState]]
   }
 
   def eventualPortStateUpdates(eventualAck: Future[Any],

@@ -128,7 +128,7 @@ class FlightsStateActor(initialMaybeSnapshotInterval: Option[Int],
 
     case GetFlightsForTerminal(start, end, terminal) =>
       log.debug(s"Received GetFlightsForTerminal Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()} for $terminal")
-      sender() ! Option(flightsForPeriodForTerminal(start, end, terminal))
+      sender() ! flightsForPeriodForTerminal(start, end, terminal)
 
     case GetUpdatesSince(sinceMillis, start, end) =>
       val updates = state.flights.range(SDate(start), SDate(end)).filter(_._2.lastUpdated.getOrElse(0L) > sinceMillis)
