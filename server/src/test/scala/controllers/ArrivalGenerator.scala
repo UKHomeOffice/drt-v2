@@ -8,7 +8,6 @@ import org.springframework.util.StringUtils
 import services.SDate
 
 object ArrivalGenerator {
-
   def arrival(iata: String = "",
               icao: String = "",
               schDt: String = "",

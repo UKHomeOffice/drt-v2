@@ -302,16 +302,10 @@ class ArrivalsGraphStage(name: String = "",
 
     def trustLiveDataThreshold: FiniteDuration = 3 hours
 
-    private def paxDefinedAndCloseToScheduledTimeOrLanded(liveArrival: Arrival) = {
-      val closeToScheduled = liveArrival.Scheduled < now().millisSinceEpoch + trustLiveDataThreshold.toMillis
-      (paxDefined(liveArrival) && closeToScheduled) || liveArrival.ActualChox.isDefined
-    }
-
     def bestPaxNos(key: UniqueArrival): (Option[Int], Option[Int]) =
       (liveArrivals.get(key), forecastArrivals.get(key), forecastBaseArrivals.get(key)) match {
-        case (Some(live), _, _) if paxDefinedAndCloseToScheduledTimeOrLanded(live) => (live.ActPax, live.TranPax)
-        case (Some(live), _, _) if paxDefinedAndNonZero(live) => (live.ActPax, live.TranPax)
-        case (_, Some(fcst), _) if paxDefinedAndNonZero(fcst) => (fcst.ActPax, fcst.TranPax)
+        case (Some(live), _, _) if paxDefined(live) => (live.ActPax, live.TranPax)
+        case (_, Some(fcst), _) if paxDefined(fcst) => (fcst.ActPax, fcst.TranPax)
         case (_, _, Some(base)) if paxDefined(base) => (base.ActPax, base.TranPax)
         case _ => (None, None)
       }
@@ -337,6 +331,4 @@ class ArrivalsGraphStage(name: String = "",
   }
 
   private def paxDefined(baseArrival: Arrival): Boolean = baseArrival.ActPax.isDefined
-
-  private def paxDefinedAndNonZero(arrival: Arrival): Boolean = arrival.ActPax.exists(_ > 0)
 }
