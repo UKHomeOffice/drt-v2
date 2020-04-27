@@ -36,9 +36,7 @@ object PcpPax {
   }
 
   def pcpPaxFnFromFeatureFlags(ff: Map[String, Boolean]): Arrival => Int = if (ff.getOrElse("use-api-pax-nos", false))
-      PcpPax.bestPaxEstimateWithApi
-    else
-      PcpPax.bestPaxEstimateExcludingApi
-
-
+    PcpPax.bestPaxEstimateWithApi
+  else
+    PcpPax.bestPaxEstimateExcludingApi
 }

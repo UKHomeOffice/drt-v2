@@ -221,7 +221,7 @@ object FlightTableRow {
       val estCell = List(<.td(localDateTimeWithPopup(flight.EstimatedChox)))
       val lastCells = List[TagMod](
         <.td(localDateTimeWithPopup(flight.ActualChox)),
-        <.td(pcpTimeRange(flight, PcpPax.bestPaxEstimateWithApi)),
+        <.td(pcpTimeRange(flight, props.pcpPaxFn)),
         <.td(FlightComponents.paxComp(props.pcpPaxFn)(flightWithSplits))
       )
       val flightFields = if (props.hasEstChox) firstCells ++ estCell ++ lastCells else firstCells ++ lastCells
