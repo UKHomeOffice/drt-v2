@@ -7,7 +7,7 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.api.Arrival
-import drt.shared.{AirportConfig, PcpPax, PortState, Queues, SDateLike}
+import drt.shared._
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
@@ -84,18 +84,19 @@ object PortDashboardPage {
 
                         val pcpPaxFn: Arrival => Int = PcpPax.pcpPaxFnFromFeatureFlags(ff)
 
-                      DashboardTerminalSummary(
-                        DashboardTerminalSummary.Props(flightsInTerminal,
-                          terminalCrunchMinutes,
-                          terminalStaffMinutes,
-                          terminalName,
-                          paxTypeAndQueueOrder(terminalName).splits.map(_.paxType),
-                          terminalQueuesInOrder,
-                          displayPeriod.start,
-                          displayPeriod.end,
-                          pcpPaxFn
+                        DashboardTerminalSummary(
+                          DashboardTerminalSummary.Props(flightsInTerminal,
+                            terminalCrunchMinutes,
+                            terminalStaffMinutes,
+                            terminalName,
+                            paxTypeAndQueueOrder(terminalName).splits.map(_.paxType),
+                            terminalQueuesInOrder,
+                            displayPeriod.start,
+                            displayPeriod.end,
+                            pcpPaxFn
+                          )
                         )
-                      )}
+                      }
                       )
                     })
                   })

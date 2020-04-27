@@ -74,17 +74,17 @@ class CrunchTestLike
     terminalPaxSplits = List(T1, T2).map(t => (t, SplitRatios(
       SplitSources.TerminalAverage,
       SplitRatio(eeaMachineReadableToDesk, 1)
-      ))).toMap,
+    ))).toMap,
     terminalProcessingTimes = Map(
       T1 -> Map(
         eeaMachineReadableToDesk -> 25d / 60,
         eeaNonMachineReadableToDesk -> 25d / 60
-        ),
+      ),
       T2 -> Map(
         eeaMachineReadableToDesk -> 25d / 60,
         eeaNonMachineReadableToDesk -> 25d / 60
-        )
-      ),
+      )
+    ),
     minMaxDesksByTerminalQueue24Hrs = Map(
       T1 -> Map(
         Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
@@ -105,7 +105,7 @@ class CrunchTestLike
         VisaNational -> List(Queues.NonEeaDesk -> 1.0),
         B5JPlusNational -> List(Queues.EGate -> 0.6, Queues.EeaDesk -> 0.4),
         B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
-        ),
+      ),
       T2 -> Map(
         EeaMachineReadable -> List(Queues.EeaDesk -> 1),
         EeaBelowEGateAge -> List(Queues.EeaDesk -> 1.0),
@@ -114,10 +114,10 @@ class CrunchTestLike
         VisaNational -> List(Queues.NonEeaDesk -> 1.0),
         B5JPlusNational -> List(Queues.EeaDesk -> 1),
         B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
-        )
-      ),
+      )
+    ),
     desksByTerminal = Map(T1 -> 40, T2 -> 40)
-    )
+  )
 
   val pcpForFlightFromSch: Arrival => MilliDate = (a: Arrival) => MilliDate(SDate(a.Scheduled).millisSinceEpoch)
   val pcpForFlightFromBest: Arrival => MilliDate = (a: Arrival) => {
@@ -214,15 +214,15 @@ class CrunchTestLike
       maxDaysToCrunch = maxDaysToCrunch,
       expireAfterMillis = expireAfterMillis,
       actors = Map[String, ActorRef](
-            "shifts" -> shiftsActor,
-            "fixed-points" -> fixedPointsActor,
-            "staff-movements" -> staffMovementsActor,
-            "forecast-base-arrivals" -> forecastBaseArrivalsProbe.ref,
-            "forecast-arrivals" -> forecastArrivalsProbe.ref,
-            "live-base-arrivals" -> liveBaseArrivalsProbe.ref,
-            "live-arrivals" -> liveArrivalsProbe.ref,
-            "aggregated-arrivals" -> aggregatedArrivalsActor
-            ),
+        "shifts" -> shiftsActor,
+        "fixed-points" -> fixedPointsActor,
+        "staff-movements" -> staffMovementsActor,
+        "forecast-base-arrivals" -> forecastBaseArrivalsProbe.ref,
+        "forecast-arrivals" -> forecastArrivalsProbe.ref,
+        "live-base-arrivals" -> liveBaseArrivalsProbe.ref,
+        "live-arrivals" -> liveArrivalsProbe.ref,
+        "aggregated-arrivals" -> aggregatedArrivalsActor
+      ),
       useNationalityBasedProcessingTimes = false,
       useLegacyManifests = useLegacyManifests,
       now = now,
@@ -273,7 +273,7 @@ class CrunchTestLike
       liveArrivalsTestProbe = liveArrivalsProbe,
       aggregatedArrivalsActor = aggregatedArrivalsActor,
       portStateActor = portStateActor
-      )
+    )
   }
 
   def paxLoadsFromPortState(portState: PortState,

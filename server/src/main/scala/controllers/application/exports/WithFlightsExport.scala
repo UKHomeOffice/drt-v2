@@ -48,13 +48,11 @@ trait WithFlightsExport extends ExportToCsv {
     }
   }
 
-  private def pcpPaxFn = {
-    val pcpPaxFn: Arrival => Int = if (ctrl.params.useApiPaxNos)
-      PcpPax.bestPaxEstimateWithApi
-    else
-      PcpPax.bestPaxEstimateExcludingApi
-    pcpPaxFn
-  }
+  def pcpPaxFn: Arrival => Int = if (ctrl.params.useApiPaxNos)
+    PcpPax.bestPaxEstimateWithApi
+  else
+    PcpPax.bestPaxEstimateExcludingApi
+
 
   def exportFlightsWithSplitsAtPointInTimeCSV(pointInTime: String,
                                               terminalName: String,

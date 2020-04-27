@@ -64,10 +64,7 @@ class WorkloadSpec extends Specification {
       .flightToFlightSplitMinutes(
         ApiFlightWithSplits(arrival, splits, None),
         procTimes,
-        Map(
-
-
-        )
+        Map()
         , false, pcpPaxFn)
       .toList
 

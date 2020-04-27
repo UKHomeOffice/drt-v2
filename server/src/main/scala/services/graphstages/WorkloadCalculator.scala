@@ -17,8 +17,7 @@ object WorkloadCalculator {
 
   def flightLoadMinutes(
                          flights: FlightsWithSplits,
-                         defaultProcTimes: Map[Terminal,
-                           Map[PaxTypeAndQueue, Double]],
+                         defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],
                          pcpPaxFn: Arrival => Int
                        ): SplitMinutes = {
     val uniqueFlights: Iterable[ApiFlightWithSplits] = flights
