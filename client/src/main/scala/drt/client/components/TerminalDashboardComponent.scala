@@ -4,7 +4,6 @@ package drt.client.components
 import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
-import drt.client.components.FlightComponents.paxComp
 import drt.client.components.TerminalContentComponent.originMapper
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -16,8 +15,7 @@ import drt.shared._
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
-import japgolly.scalajs.react.ReactEventFromInput
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
 
 import scala.scalajs.js.URIUtils
 import scala.util.Try
@@ -74,19 +72,21 @@ object TerminalDashboardComponent {
             <.div(^.className := "dashboard-arrivals-popup",
               <.h2("Arrivals"),
               <.div(^.className := "terminal-dashboard__arrivals_popup_table",
-              FlightsWithSplitsTable.ArrivalsTable(
-                None,
-                originMapper,
-                splitsGraphComponentColoured)(paxComp)(
-                FlightsWithSplitsTable.Props(
-                  ps.flights.filter { case (ua, _) => ua.terminal == p.terminalPageTabLoc.terminal }.values.toList,
-                  p.airportConfig.queueTypeSplitOrder(p.terminalPageTabLoc.terminal),
-                  p.airportConfig.hasEstChox,
-                  None,
-                  false,
-                  ViewLive
-                )
-              )),
+                p.featureFlags.renderReady(ff =>
+                  FlightsWithSplitsTable.ArrivalsTable(
+                    None,
+                    originMapper,
+                    splitsGraphComponentColoured)(
+                    FlightsWithSplitsTable.Props(
+                      ps.flights.filter { case (ua, _) => ua.terminal == p.terminalPageTabLoc.terminal }.values.toList,
+                      p.airportConfig.queueTypeSplitOrder(p.terminalPageTabLoc.terminal),
+                      p.airportConfig.hasEstChox,
+                      None,
+                      false,
+                      ViewLive,
+                      PcpPax.pcpPaxFnFromFeatureFlags(ff)
+                    )
+                  ))),
               p.router.link(closeArrivalsPopupLink)(^.className := "close-arrivals-popup btn btn-default", "close")
             ))
 

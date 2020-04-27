@@ -10,6 +10,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.exports.summaries.flights.{TerminalFlightsSummary, TerminalFlightsWithActualApiSummary}
@@ -117,17 +118,29 @@ object Exports {
         Option(TerminalQueuesSummary(queues, queueSummaries))
       }
 
-  def flightSummariesFromPortState: Terminal => (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike] =
-    (terminal: Terminal) => (from: SDateLike, to: SDateLike, portState: PortState) => {
+  def flightSummariesFromPortState(
+                                    terminal: Terminal,
+                                    pcpPaxFn: Arrival => Int
+                                  )(
+                                    from: SDateLike,
+                                    to: SDateLike,
+                                    portState: PortState
+                                  ): Option[TerminalFlightsSummary] = {
       val terminalFlights = flightsForTerminal(terminal, portState, from, to)
-      Option(TerminalFlightsSummary(terminalFlights, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes))
+      Option(TerminalFlightsSummary(terminalFlights, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes, pcpPaxFn))
     }
 
-  def flightSummariesWithActualApiFromPortState: Terminal => (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike] =
-    (terminal: Terminal) => (from: SDateLike, to: SDateLike, portState: PortState) => {
-      val terminalFlights = flightsForTerminal(terminal, portState, from, to)
-      Option(TerminalFlightsWithActualApiSummary(terminalFlights, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes))
-    }
+  def flightSummariesWithActualApiFromPortState(
+                                                 terminal: Terminal,
+                                                 pcpPaxFn: Arrival => Int
+                                               )(
+                                                 from: SDateLike,
+                                                 to: SDateLike,
+                                                 portState: PortState
+                                               ): Option[TerminalFlightsWithActualApiSummary] = {
+    val terminalFlights = flightsForTerminal(terminal, portState, from, to)
+    Option(TerminalFlightsWithActualApiSummary(terminalFlights, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes, pcpPaxFn))
+  }
 
   def flightsForTerminal(terminal: Terminal,
                          portState: PortState,

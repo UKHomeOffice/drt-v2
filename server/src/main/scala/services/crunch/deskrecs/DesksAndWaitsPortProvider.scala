@@ -4,6 +4,7 @@ import drt.shared.CrunchApi.{DeskRecMinute, DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.{Queue, Transfer}
 import drt.shared.Terminals.Terminal
+import drt.shared.api.Arrival
 import drt.shared.{AirportConfig, PaxTypeAndQueue, TQM}
 import org.slf4j.{Logger, LoggerFactory}
 import services.TryCrunch
@@ -23,7 +24,9 @@ case class DesksAndWaitsPortProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                                      minutesToCrunch: Int,
                                      crunchOffsetMinutes: Int,
                                      eGateBankSize: Int,
-                                     tryCrunch: TryCrunch) extends DesksAndWaitsPortProviderLike {
+                                     tryCrunch: TryCrunch,
+                                     pcpPaxFn: Arrival => Int
+                                    ) extends DesksAndWaitsPortProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def loadsToDeskRecs(minuteMillis: NumericRange[MillisSinceEpoch],
@@ -52,7 +55,7 @@ case class DesksAndWaitsPortProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
     deskrecs.DesksAndWaitsTerminalProvider(slas, flexedQueuesPriority, tryCrunch, eGateBankSize)
 
   def queueLoadsFromFlights(flights: FlightsWithSplits): Map[TQM, LoadMinute] = WorkloadCalculator
-    .flightLoadMinutes(flights, terminalProcessingTimes).minutes
+    .flightLoadMinutes(flights, terminalProcessingTimes, pcpPaxFn).minutes
     .groupBy {
       case (TQM(t, q, m), _) => val finalQueueName = divertedQueues.getOrElse(q, q)
         TQM(t, finalQueueName, m)
@@ -102,15 +105,18 @@ case class DesksAndWaitsPortProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
 }
 
 object DesksAndWaitsPortProvider {
-  def apply(airportConfig: AirportConfig, tryCrunch: TryCrunch): DesksAndWaitsPortProvider =
-    DesksAndWaitsPortProvider(airportConfig.queuesByTerminal,
-                              airportConfig.divertedQueues,
-                              airportConfig.desksByTerminal,
-                              airportConfig.queuePriority,
-                              airportConfig.slaByQueue,
-                              airportConfig.terminalProcessingTimes,
-                              airportConfig.minutesToCrunch,
-                              airportConfig.crunchOffsetMinutes,
-                              airportConfig.eGateBankSize,
-                              tryCrunch)
+  def apply(airportConfig: AirportConfig, tryCrunch: TryCrunch, pcpPaxFn: Arrival => Int): DesksAndWaitsPortProvider =
+    DesksAndWaitsPortProvider(
+      airportConfig.queuesByTerminal,
+      airportConfig.divertedQueues,
+      airportConfig.desksByTerminal,
+      airportConfig.queuePriority,
+      airportConfig.slaByQueue,
+      airportConfig.terminalProcessingTimes,
+      airportConfig.minutesToCrunch,
+      airportConfig.crunchOffsetMinutes,
+      airportConfig.eGateBankSize,
+      tryCrunch,
+      pcpPaxFn
+    )
 }

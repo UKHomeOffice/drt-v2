@@ -8,7 +8,9 @@ import services.exports.Exports
 
 case class TerminalFlightsWithActualApiSummary(flights: Seq[ApiFlightWithSplits],
                                                millisToDateOnly: MillisSinceEpoch => String,
-                                               millisToHoursAndMinutes: MillisSinceEpoch => String) extends TerminalFlightsSummaryLike {
+                                               millisToHoursAndMinutes: MillisSinceEpoch => String,
+                                               pcpPaxFn: Arrival => Int
+                                              ) extends TerminalFlightsSummaryLike {
 
   import TerminalFlightsWithActualApiSummary._
 

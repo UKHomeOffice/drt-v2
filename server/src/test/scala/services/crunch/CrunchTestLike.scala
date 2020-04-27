@@ -59,6 +59,8 @@ class CrunchTestLike
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
+  def pcpPaxFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
+
   val oneMinuteMillis = 60000
   val uniquifyArrivals: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] =
     CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight)
@@ -72,17 +74,17 @@ class CrunchTestLike
     terminalPaxSplits = List(T1, T2).map(t => (t, SplitRatios(
       SplitSources.TerminalAverage,
       SplitRatio(eeaMachineReadableToDesk, 1)
-      ))).toMap,
+    ))).toMap,
     terminalProcessingTimes = Map(
       T1 -> Map(
         eeaMachineReadableToDesk -> 25d / 60,
         eeaNonMachineReadableToDesk -> 25d / 60
-        ),
+      ),
       T2 -> Map(
         eeaMachineReadableToDesk -> 25d / 60,
         eeaNonMachineReadableToDesk -> 25d / 60
-        )
-      ),
+      )
+    ),
     minMaxDesksByTerminalQueue24Hrs = Map(
       T1 -> Map(
         Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
@@ -103,7 +105,7 @@ class CrunchTestLike
         VisaNational -> List(Queues.NonEeaDesk -> 1.0),
         B5JPlusNational -> List(Queues.EGate -> 0.6, Queues.EeaDesk -> 0.4),
         B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
-        ),
+      ),
       T2 -> Map(
         EeaMachineReadable -> List(Queues.EeaDesk -> 1),
         EeaBelowEGateAge -> List(Queues.EeaDesk -> 1.0),
@@ -112,10 +114,10 @@ class CrunchTestLike
         VisaNational -> List(Queues.NonEeaDesk -> 1.0),
         B5JPlusNational -> List(Queues.EeaDesk -> 1),
         B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
-        )
-      ),
+      )
+    ),
     desksByTerminal = Map(T1 -> 40, T2 -> 40)
-    )
+  )
 
   val pcpForFlightFromSch: Arrival => MilliDate = (a: Arrival) => MilliDate(SDate(a.Scheduled).millisSinceEpoch)
   val pcpForFlightFromBest: Arrival => MilliDate = (a: Arrival) => {
@@ -173,7 +175,7 @@ class CrunchTestLike
     val askablePortStateActor: ActorRef = portStateActor
     if (initialPortState.isDefined) Await.ready(askablePortStateActor.ask(initialPortState.get)(new Timeout(1 second)), 1 second)
 
-    val portDescRecs = DesksAndWaitsPortProvider(airportConfig, cruncher)
+    val portDescRecs = DesksAndWaitsPortProvider(airportConfig, cruncher, pcpPaxFn)
 
     val deskLimitsProvider: Map[Terminal, TerminalDeskLimitsLike] = if (flexDesks)
       PortDeskLimits.flexed(airportConfig)
@@ -204,8 +206,7 @@ class CrunchTestLike
         system.actorOf(Props(new PassengersActor(maxDaysToConsider, aclPaxAdjustmentDays)))
     }
 
-    val crunchInputs = CrunchSystem(CrunchProps(
-      logLabel = logLabel,
+    val crunchInputs = CrunchSystem(CrunchProps(logLabel = logLabel,
       airportConfig = airportConfig,
       pcpArrival = pcpArrivalTime,
       historicalSplitsProvider = csvSplitsProvider,
@@ -221,7 +222,7 @@ class CrunchTestLike
         "live-base-arrivals" -> liveBaseArrivalsProbe.ref,
         "live-arrivals" -> liveArrivalsProbe.ref,
         "aggregated-arrivals" -> aggregatedArrivalsActor
-        ),
+      ),
       useNationalityBasedProcessingTimes = false,
       useLegacyManifests = useLegacyManifests,
       now = now,
@@ -246,12 +247,13 @@ class CrunchTestLike
       refreshArrivalsOnStart = refreshArrivalsOnStart,
       checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup,
       stageThrottlePer = 50 milliseconds,
-      useApiPaxNos = true,
+      pcpPaxFn = pcpPaxFn,
       adjustEGateUseByUnder12s = false,
       optimiser = cruncher,
       useLegacyDeployments = useLegacyDeployments,
       aclPaxAdjustmentDays = aclPaxAdjustmentDays,
-      startDeskRecs = startDeskRecs))
+      startDeskRecs = startDeskRecs
+    ))
 
     portStateActor ! SetSimulationActor(crunchInputs.loadsToSimulate)
 
@@ -271,7 +273,7 @@ class CrunchTestLike
       liveArrivalsTestProbe = liveArrivalsProbe,
       aggregatedArrivalsActor = aggregatedArrivalsActor,
       portStateActor = portStateActor
-      )
+    )
   }
 
   def paxLoadsFromPortState(portState: PortState,

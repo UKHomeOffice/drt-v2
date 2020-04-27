@@ -6,7 +6,6 @@ import drt.auth.{ArrivalSource, LoggedInUser}
 import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
-import drt.client.components.FlightComponents.paxComp
 import drt.client.logger.log
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -67,10 +66,11 @@ object TerminalContentComponent {
   }
 
   class Backend() {
+
     val arrivalsTableComponent: Component[FlightsWithSplitsTable.Props, Unit, Unit, CtorType.Props] = FlightsWithSplitsTable.ArrivalsTable(
       None,
       originMapper,
-      splitsGraphComponentColoured)(paxComp)
+      splitsGraphComponentColoured)
 
     def render(props: Props, state: State): TagOf[Div] = {
       val terminal = props.terminalPageTab.terminal
@@ -142,31 +142,41 @@ object TerminalContentComponent {
                 if (state.activeTab == "desksAndQueues") {
                   val (viewStart, _) = viewStartAndEnd(props.terminalPageTab.viewMode.time, timeRangeHours)
                   props.featureFlags.render(features =>
-                  TerminalDesksAndQueues(
-                    TerminalDesksAndQueues.Props(
-                      props.router,
-                      filteredPortState,
-                      viewStart,
-                      timeRangeHours.end - timeRangeHours.start,
-                      props.airportConfig,
-                      props.terminalPageTab,
-                      props.showActuals,
-                      showWaitTime = features.get("enable-toggle-display-wait-times") match {
-                        case Some(true) => false
-                        case _ => true
-                      },
-                      props.viewMode,
-                      props.loggedInUser,
-                      features
-                    )
-                  ))
+                    TerminalDesksAndQueues(
+                      TerminalDesksAndQueues.Props(
+                        props.router,
+                        filteredPortState,
+                        viewStart,
+                        timeRangeHours.end - timeRangeHours.start,
+                        props.airportConfig,
+                        props.terminalPageTab,
+                        props.showActuals,
+                        showWaitTime = features.get("enable-toggle-display-wait-times") match {
+                          case Some(true) => false
+                          case _ => true
+                        },
+                        props.viewMode,
+                        props.loggedInUser,
+                        features
+                      )
+                    ))
                 } else ""
               ),
               <.div(^.id := "arrivals", ^.className := s"tab-pane in $arrivalsPanelActive", {
                 if (state.activeTab == "arrivals") {
                   val flightsForTerminal = filteredPortState.flights.values.toList
-                  props.featureFlags.renderReady(_ =>
-                    arrivalsTableComponent(FlightsWithSplitsTable.Props(flightsForTerminal, queueOrder, props.airportConfig.hasEstChox, props.arrivalSources, props.loggedInUser.hasRole(ArrivalSource), props.viewMode)))
+                  props.featureFlags.renderReady(ff =>
+                    arrivalsTableComponent(
+                      FlightsWithSplitsTable.Props(
+                        flightsForTerminal,
+                        queueOrder,
+                        props.airportConfig.hasEstChox,
+                        props.arrivalSources,
+                        props.loggedInUser.hasRole(ArrivalSource),
+                        props.viewMode,
+                        PcpPax.pcpPaxFnFromFeatureFlags(ff)
+                      )
+                    ))
                 } else ""
               }),
               <.div(^.id := "available-staff", ^.className := s"tab-pane terminal-staffing-container $staffingPanelActive",

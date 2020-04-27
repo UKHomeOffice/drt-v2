@@ -27,7 +27,8 @@ object FlightsWithSplitsTable {
                    queueOrder: Seq[Queue], hasEstChox: Boolean,
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    hasArrivalSourcesAccess: Boolean,
-                   viewMode: ViewMode
+                   viewMode: ViewMode,
+                   pcpPaxFn: Arrival => Int
                   )
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
@@ -37,7 +38,7 @@ object FlightsWithSplitsTable {
   def ArrivalsTable(timelineComponent: Option[Arrival => VdomNode] = None,
                     originMapper: PortCode => VdomNode = portCode => portCode.toString,
                     splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
-                   )(paxComponent: ApiFlightWithSplits => TagMod): Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "ArrivalsTable")
+                   ): Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "ArrivalsTable")
     .render_P(props => {
 
       val flightsWithSplits = props.flightsWithSplits
@@ -79,7 +80,7 @@ object FlightsWithSplitsTable {
                     idx,
                     timelineComponent = timelineComponent,
                     originMapper = originMapper,
-                    paxComponent = paxComponent,
+                    pcpPaxFn = props.pcpPaxFn,
                     splitsGraphComponent = splitsGraphComponent,
                     splitsQueueOrder = props.queueOrder,
                     hasEstChox = props.hasEstChox,
@@ -148,7 +149,7 @@ object FlightTableRow {
                    idx: Int,
                    timelineComponent: Option[Arrival => html_<^.VdomNode],
                    originMapper: OriginMapperF = portCode => portCode.toString,
-                   paxComponent: ApiFlightWithSplits => TagMod,
+                   pcpPaxFn: Arrival => Int,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                    splitsQueueOrder: Seq[Queue],
                    hasEstChox: Boolean,
@@ -188,7 +189,7 @@ object FlightTableRow {
       val timeIndicatorClass = if (flight.PcpTime.getOrElse(0L) < SDate.now().millisSinceEpoch) "before-now" else "from-now"
 
       val queuePax: Map[Queue, Int] = ApiSplitsToSplitRatio
-        .paxPerQueueUsingBestSplitsAsRatio(flightWithSplits).getOrElse(Map())
+        .paxPerQueueUsingBestSplitsAsRatio(flightWithSplits, props.pcpPaxFn).getOrElse(Map())
 
       val flightCodeClass = if (props.hasArrivalSourcesAccess) "arrivals__table__flight-code arrivals__table__flight-code--clickable" else "arrivals__table__flight-code"
 
@@ -220,8 +221,8 @@ object FlightTableRow {
       val estCell = List(<.td(localDateTimeWithPopup(flight.EstimatedChox)))
       val lastCells = List[TagMod](
         <.td(localDateTimeWithPopup(flight.ActualChox)),
-        <.td(pcpTimeRange(flight, PcpPax.bestPax)),
-        <.td(props.paxComponent(flightWithSplits))
+        <.td(pcpTimeRange(flight, PcpPax.bestPaxEstimateWithApi)),
+        <.td(FlightComponents.paxComp(props.pcpPaxFn)(flightWithSplits))
       )
       val flightFields = if (props.hasEstChox) firstCells ++ estCell ++ lastCells else firstCells ++ lastCells
 
