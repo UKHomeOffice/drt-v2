@@ -300,4 +300,58 @@ class WorkloadSpec extends Specification {
       (PaxTypes.VisaNational, Queues.NonEeaDesk, nonEEADeskWorkloadInSeconds * 2 / 12)
     )
   }
+
+  "Given an arrival with 1 pax on the arrival and 1 split containing 6 pax with no nationality data " +
+    "When I ask for the workload for this arrival using the API passenger numbers " +
+    "Then I see the 6x the proc time provided" >> {
+
+    val arrival = ArrivalGenerator.arrival(actPax = Option(1), apiPax = Option(6))
+    val splits = Set(
+      Splits(
+        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 6, None)),
+        SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
+        Option(EventTypes.DC),
+        PaxNumbers))
+    val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
+    val emptyNatProcTimes: Map[Nationality, Double] = Map()
+    val workloads = WorkloadCalculator
+      .flightToFlightSplitMinutes(
+        ApiFlightWithSplits(arrival, splits, None),
+        procTimes,
+        emptyNatProcTimes,
+        true,
+        PcpPax.bestPaxEstimateWithApi
+      )
+      .toList
+      .map(_.workLoad)
+
+    workloads === List(1.5 * 6)
+  }
+
+  "Given an arrival with 1 pax on the arrival and 1 split containing 6 pax with no nationality data " +
+    "When I ask for the workload for this arrival excluding the API passenger numbers " +
+    "Then I see the 1x the proc time provided" >> {
+
+    val arrival = ArrivalGenerator.arrival(actPax = Option(1), apiPax = Option(6))
+    val splits = Set(
+      Splits(
+        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 6, None)),
+        SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
+        Option(EventTypes.DC),
+        PaxNumbers))
+    val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
+    val emptyNatProcTimes: Map[Nationality, Double] = Map()
+    val workloads = WorkloadCalculator
+      .flightToFlightSplitMinutes(
+        ApiFlightWithSplits(arrival, splits, None),
+        procTimes,
+        emptyNatProcTimes,
+        true,
+        PcpPax.bestPaxEstimateExcludingApi
+      )
+      .toList
+      .map(_.workLoad)
+
+    workloads === List(1.5 * 1)
+  }
 }

@@ -87,7 +87,8 @@ object WorkloadCalculator {
                   apiSplit,
                   nationalityProcessingTimes,
                   totalPaxWithNationality,
-                  useNationalityBasedProcTimes
+                  useNationalityBasedProcTimes,
+                  pcpPaxFn
                 )
               })
         }
@@ -101,7 +102,8 @@ object WorkloadCalculator {
                         apiSplitRatio: ApiPaxTypeAndQueueCount,
                         nationalityProcessingTimes: Map[Nationality, Double],
                         totalPaxWithNationality: Double,
-                        useNationalityBasedProcTimes: Boolean
+                        useNationalityBasedProcTimes: Boolean,
+                        pcpPaxFn: Arrival => Int
                        ): FlightSplitMinute = {
     val splitPaxInMinute = apiSplitRatio.paxCount * flightPaxInMinute
     val paxTypeQueueProcTime = procTimes.getOrElse(PaxTypeAndQueue(apiSplitRatio.passengerType, apiSplitRatio.queueType), 0d)
@@ -109,7 +111,7 @@ object WorkloadCalculator {
 
     val splitWorkLoadInMinute = (apiSplitRatio.nationalities, useNationalityBasedProcTimes) match {
       case (Some(nats), true) if nats.values.sum > 0 =>
-        val bestPax = PcpPax.bestPaxEstimateWithApi(arrival)
+        val bestPax = pcpPaxFn(arrival)
         val natsToPaxRatio = totalPaxWithNationality / bestPax
         val natFactor = (flightPaxInMinute.toDouble / bestPax) / natsToPaxRatio
         log.debug(s"totalNats: $totalPaxWithNationality / bestPax: $bestPax, natFactor: $natFactor - ($flightPaxInMinute / $bestPax) / $natsToPaxRatio")
