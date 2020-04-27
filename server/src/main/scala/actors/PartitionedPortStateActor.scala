@@ -3,7 +3,7 @@ package actors
 import actors.DrtStaticParameters.expireAfterMillis
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import akka.pattern.{AskableActorRef, pipe}
+import akka.pattern.{ask, pipe}
 import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
@@ -27,9 +27,9 @@ object PartitionedPortStateActor {
   }
 }
 
-class PartitionedPortStateActor(flightsActor: AskableActorRef,
-                                queuesActor: AskableActorRef,
-                                staffActor: AskableActorRef,
+class PartitionedPortStateActor(flightsActor: ActorRef,
+                                queuesActor: ActorRef,
+                                staffActor: ActorRef,
                                 now: () => SDateLike) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -81,13 +81,13 @@ class PartitionedPortStateActor(flightsActor: AskableActorRef,
       log.debug(s"Received GetUpdatesSince request since ${SDate(since).toISOString()} from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       replyWithUpdates(since, start, end, sender())
 
-    case GetFlights(start, end) =>
-      log.debug(s"Received GetFlights request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
-      flightsActor.ask(GetFlights(start, end)).mapTo[FlightsWithSplits].pipeTo(sender())
+    case getFlights: GetFlights =>
+      log.debug(s"Received GetFlights request from ${SDate(getFlights.from).toISOString()} to ${SDate(getFlights.to).toISOString()}")
+      flightsActor forward getFlights
   }
 
   override def receive: Receive = processMessage orElse {
-    case unexpected => log.warn(s"Got unexpected: $unexpected")
+    case unexpected => log.warn(s"Got unexpected: ${unexpected.getClass}")
   }
 
   def replyWithPortState(start: MillisSinceEpoch,
@@ -116,7 +116,7 @@ class PartitionedPortStateActor(flightsActor: AskableActorRef,
                              end: MillisSinceEpoch,
                              terminal: Terminal,
                              replyTo: ActorRef): Future[Option[PortState]] = {
-    val eventualFlights = flightsActor.ask(GetPortStateForTerminal(start, end, terminal)).mapTo[FlightsWithSplits]
+    val eventualFlights = flightsActor.ask(GetFlightsForTerminal(start, end, terminal)).mapTo[FlightsWithSplits]
     val eventualQueueMinutes = queuesActor.ask(GetStateByTerminalDateRange(terminal, SDate(start), SDate(end))).mapTo[MinutesContainer[CrunchMinute, TQM]]
     val eventualStaffMinutes = staffActor.ask(GetStateByTerminalDateRange(terminal, SDate(start), SDate(end))).mapTo[MinutesContainer[StaffMinute, TM]]
     val eventualPortState = combineToPortState(eventualFlights, eventualQueueMinutes, eventualStaffMinutes)
@@ -156,6 +156,6 @@ class PartitionedPortStateActor(flightsActor: AskableActorRef,
         PortStateUpdates(latestUpdateMillis, fs.toSet, cms.toSet, sms.toSet)
     }
 
-  def askThenAck(message: Any, replyTo: ActorRef, actor: AskableActorRef): Unit =
+  def askThenAck(message: Any, replyTo: ActorRef, actor: ActorRef): Unit =
     actor.ask(message).foreach(_ => replyTo ! Ack)
 }

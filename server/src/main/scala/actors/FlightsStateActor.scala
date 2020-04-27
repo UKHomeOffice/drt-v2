@@ -5,7 +5,7 @@ import actors.PortStateMessageConversion._
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.restore.RestorerWithLegacy
 import akka.actor._
-import akka.pattern.AskableActorRef
+import akka.pattern.ask
 import akka.persistence._
 import akka.util.Timeout
 import drt.shared.CrunchApi._
@@ -48,7 +48,7 @@ class FlightsStateActor(initialMaybeSnapshotInterval: Option[Int],
 
   val flightMinutesBuffer: mutable.Set[MillisSinceEpoch] = mutable.Set[MillisSinceEpoch]()
   var crunchSourceIsReady: Boolean = true
-  var maybeCrunchActor: Option[AskableActorRef] = None
+  var maybeCrunchActor: Option[ActorRef] = None
 
   def initialState: PortStateMutable = PortStateMutable.empty
 
@@ -126,8 +126,8 @@ class FlightsStateActor(initialMaybeSnapshotInterval: Option[Int],
       log.debug(s"Received GetPortState request from ${SDate(startMillis).toISOString()} to ${SDate(endMillis).toISOString()}")
       sender() ! Option(flightsForPeriod(startMillis, endMillis))
 
-    case GetPortStateForTerminal(start, end, terminal) =>
-      log.debug(s"Received GetPortStateForTerminal Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()} for $terminal")
+    case GetFlightsForTerminal(start, end, terminal) =>
+      log.debug(s"Received GetFlightsForTerminal Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()} for $terminal")
       sender() ! Option(flightsForPeriodForTerminal(start, end, terminal))
 
     case GetUpdatesSince(sinceMillis, start, end) =>

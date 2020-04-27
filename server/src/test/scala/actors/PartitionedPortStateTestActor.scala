@@ -2,12 +2,11 @@ package actors
 
 import actors.acking.AckingReceiver.Ack
 import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.pattern.AskableActorRef
+import akka.pattern.ask
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, StaffMinute}
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
-import drt.shared.{AirportConfig, ApiFlightWithSplits, MilliTimes, PortState, SDateLike, TM, TQM, UniqueArrival}
-import services.SDate
+import drt.shared._
 
 import scala.collection.immutable.SortedMap
 import scala.concurrent.ExecutionContext
@@ -23,9 +22,9 @@ object PartitionedPortStateTestActor {
 }
 
 class PartitionedPortStateTestActor(probe: ActorRef,
-                                    flightsActor: AskableActorRef,
-                                    queuesActor: AskableActorRef,
-                                    staffActor: AskableActorRef,
+                                    flightsActor: ActorRef,
+                                    queuesActor: ActorRef,
+                                    staffActor: ActorRef,
                                     now: () => SDateLike) extends PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now) {
   var state: PortState = PortState.empty
 
@@ -40,7 +39,7 @@ class PartitionedPortStateTestActor(probe: ActorRef,
       }.foreach(_ => replyTo ! Ack)
   }
 
-  override def askThenAck(message: Any, replyTo: ActorRef, actor: AskableActorRef): Unit = {
+  override def askThenAck(message: Any, replyTo: ActorRef, actor: ActorRef): Unit = {
     actor.ask(message).foreach { _ =>
       message match {
         case fwsd@FlightsWithSplitsDiff(updates, removals) if fwsd.nonEmpty =>
