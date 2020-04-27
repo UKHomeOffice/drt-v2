@@ -135,8 +135,7 @@ object DashboardTerminalSummary {
 
         val pressurePointAvailableStaff = pressureStaffMinute.map(sm => sm.available).getOrElse(0)
         val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePointAvailableStaff)
-
-        //feature flag applied here
+        
         val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(props.pcpPaxFn)(props.flights)
         val summary: Seq[DashboardSummary] = hourSummary(props.flights, props.crunchMinutes, props.timeWindowStart)
         val queueTotals = totalsByQueue(summary)

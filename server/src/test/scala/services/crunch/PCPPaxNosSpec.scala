@@ -5,6 +5,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
+import drt.shared.api.Arrival
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
 import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
@@ -17,7 +18,7 @@ class PCPPaxNosSpec extends CrunchTestLike {
   sequential
   isolated
 
-  override def useApiPaxNos = false
+  override def pcpPaxFn: Arrival => Int = PcpPax.bestPaxEstimateExcludingApi
 
   val tenMinutes: Double = 600d / 60
   val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaChildToDesk -> tenMinutes))

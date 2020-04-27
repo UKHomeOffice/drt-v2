@@ -1,11 +1,10 @@
 package services
 
 import drt.shared.Terminals.T1
-import drt.shared._
+import drt.shared.{PcpPax, _}
 import org.specs2.mutable.Specification
 import services.exports.Exports
 import services.exports.summaries.flights.{TerminalFlightsSummary, TerminalFlightsWithActualApiSummary}
-import drt.shared.PcpPax
 
 
 class ArrivalsToCSVDataTest extends Specification {
@@ -13,7 +12,7 @@ class ArrivalsToCSVDataTest extends Specification {
   import controllers.ArrivalGenerator.arrival
 
   private val flightWithAllTypesOfAPISplit = ApiFlightWithSplits(
-    arrival(iata = "SA324", icao = "SA0324", schDt = "2017-01-01T20:00:00Z", actPax = Option(100), maxPax = Option(100), terminal = T1, origin = PortCode("JHB"), operator = Option(Operator("SA")), status = ArrivalStatus("UNK"), estDt = "2017-01-01T20:00:00Z"),
+    arrival(iata = "SA324", icao = "SA0324", schDt = "2017-01-01T20:00:00Z", actPax = Option(98), apiPax = Option(100), maxPax = Option(100), terminal = T1, origin = PortCode("JHB"), operator = Option(Operator("SA")), status = ArrivalStatus("UNK"), estDt = "2017-01-01T20:00:00Z"),
     Set(Splits(
       Set(
         ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 2, None),
@@ -82,7 +81,7 @@ class ArrivalsToCSVDataTest extends Specification {
     val expected =
       """ |IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track
         |SA0325,SA0325,JHC,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,
-        |SA0324,SA0324,JHB,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,7,15,32,46,12,23,30,35,,,,
+        |SA0324,SA0324,JHB,/,UNK,2017-01-01,20:00,20:00,,,,20:00,98,100,7,15,32,46,12,23,30,35,,,,
         |SA0326,SA0326,JHD,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,""".stripMargin
 
     result === expected
@@ -107,7 +106,7 @@ class ArrivalsToCSVDataTest extends Specification {
 
     val expected =
       """|SA0325,SA0325,JHC,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,
-         |SA0324,SA0324,JHB,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,7,15,32,46,12,23,30,35,,,,
+         |SA0324,SA0324,JHB,/,UNK,2017-01-01,20:00,20:00,,,,20:00,98,100,7,15,32,46,12,23,30,35,,,,
          |SA0326,SA0326,JHD,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,""".stripMargin
 
     result === expected
@@ -120,6 +119,23 @@ class ArrivalsToCSVDataTest extends Specification {
     val expected =
       """|SA0325,SA0325,JHC,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,
          |SA0326,SA0326,JHB,/,UNK,2017-01-01,20:00,20:00,,,,20:00,105,105,32,62,11,,,,,,,,,""".stripMargin
+
+    result === expected
+  }
+
+  "Given a list of arrivals with splits when API PaxNos feature is turned off, we should use live passenger PCP numbers" >> {
+
+    val result = TerminalFlightsSummary(
+      List(flightWithAllTypesOfAPISplit),
+      Exports.millisToLocalIsoDateOnly,
+      Exports.millisToLocalHoursAndMinutes,
+      PcpPax.bestPaxEstimateExcludingApi
+    )
+      .toCsvWithHeader
+
+    val expected =
+      """ |IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track
+          |SA0324,SA0324,JHB,/,UNK,2017-01-01,20:00,20:00,,,,20:00,98,98,7,15,32,44,11,23,29,35,,,,""".stripMargin
 
     result === expected
   }
@@ -166,7 +182,7 @@ class ArrivalsToCSVDataTest extends Specification {
       val expected =
         s"""|IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track,$actualAPIHeadings
             |SA0325,SA0325,JHC,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,,3.0,3.0,0.0,0.0,1.0,0.0,3.0
-            |SA0324,SA0324,JHB,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,7,15,32,46,12,23,30,35,,,,,1.0,3.0,6.0,7.0,4.0,5.0,2.0
+            |SA0324,SA0324,JHB,/,UNK,2017-01-01,20:00,20:00,,,,20:00,98,100,7,15,32,46,12,23,30,35,,,,,1.0,3.0,6.0,7.0,4.0,5.0,2.0
             |SA0326,SA0326,JHD,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,,30.0,30.0,0.0,0.0,10.0,0.0,30.0""".stripMargin
 
       result === expected
@@ -185,5 +201,6 @@ class ArrivalsToCSVDataTest extends Specification {
 
       result === expected
     }
+
   }
 }
