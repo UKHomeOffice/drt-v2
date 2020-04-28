@@ -23,7 +23,7 @@ case class TerminalFlightsWithActualApiSummary(flights: Seq[ApiFlightWithSplits]
     val csvData = uniqueApiFlightWithSplits.sortBy(_._1.apiFlight.PcpTime).map(fws => {
       flightWithSplitsToCsvRow(queueNames, fws._1) ::: actualAPISplitsForFlightInHeadingOrder(fws._1, actualApiHeadings).toList
     })
-    asCSV(csvData)
+    asCSV(csvData) + lineEnding
   }
 
   val arrivalHeadings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax"

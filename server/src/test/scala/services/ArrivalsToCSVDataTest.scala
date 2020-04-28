@@ -80,9 +80,10 @@ class ArrivalsToCSVDataTest extends Specification {
 
     val expected =
       """ |IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track
-        |SA0325,SA0325,JHC,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,
-        |SA0324,SA0324,JHB,/,UNK,2017-01-01,20:00,20:00,,,,20:00,98,100,7,15,32,46,12,23,30,35,,,,
-        |SA0326,SA0326,JHD,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,""".stripMargin
+          |SA0325,SA0325,JHC,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,
+          |SA0324,SA0324,JHB,/,UNK,2017-01-01,20:00,20:00,,,,20:00,98,100,7,15,32,46,12,23,30,35,,,,
+          |SA0326,SA0326,JHD,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,
+          |""".stripMargin
 
     result === expected
   }
@@ -94,7 +95,8 @@ class ArrivalsToCSVDataTest extends Specification {
     val expected =
       """ |IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track
         |SA0325,SA0325,JHC,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,
-        |SA0326,SA0326,JHB,/,UNK,2017-01-01,20:00,20:00,,,,20:00,105,105,32,62,11,,,,,,,,,""".stripMargin
+        |SA0326,SA0326,JHB,/,UNK,2017-01-01,20:00,20:00,,,,20:00,105,105,32,62,11,,,,,,,,,
+        |""".stripMargin
 
     result === expected
   }
@@ -107,7 +109,8 @@ class ArrivalsToCSVDataTest extends Specification {
     val expected =
       """|SA0325,SA0325,JHC,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,
          |SA0324,SA0324,JHB,/,UNK,2017-01-01,20:00,20:00,,,,20:00,98,100,7,15,32,46,12,23,30,35,,,,
-         |SA0326,SA0326,JHD,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,""".stripMargin
+         |SA0326,SA0326,JHD,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,
+         |""".stripMargin
 
     result === expected
   }
@@ -118,7 +121,8 @@ class ArrivalsToCSVDataTest extends Specification {
 
     val expected =
       """|SA0325,SA0325,JHC,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,
-         |SA0326,SA0326,JHB,/,UNK,2017-01-01,20:00,20:00,,,,20:00,105,105,32,62,11,,,,,,,,,""".stripMargin
+         |SA0326,SA0326,JHB,/,UNK,2017-01-01,20:00,20:00,,,,20:00,105,105,32,62,11,,,,,,,,,
+         |""".stripMargin
 
     result === expected
   }
@@ -135,7 +139,8 @@ class ArrivalsToCSVDataTest extends Specification {
 
     val expected =
       """ |IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track
-          |SA0324,SA0324,JHB,/,UNK,2017-01-01,20:00,20:00,,,,20:00,98,98,7,15,32,44,11,23,29,35,,,,""".stripMargin
+        |SA0324,SA0324,JHB,/,UNK,2017-01-01,20:00,20:00,,,,20:00,98,98,7,15,32,44,11,23,29,35,,,,
+        |""".stripMargin
 
     result === expected
   }
@@ -183,7 +188,8 @@ class ArrivalsToCSVDataTest extends Specification {
         s"""|IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track,$actualAPIHeadings
             |SA0325,SA0325,JHC,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,,3.0,3.0,0.0,0.0,1.0,0.0,3.0
             |SA0324,SA0324,JHB,/,UNK,2017-01-01,20:00,20:00,,,,20:00,98,100,7,15,32,46,12,23,30,35,,,,,1.0,3.0,6.0,7.0,4.0,5.0,2.0
-            |SA0326,SA0326,JHD,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,,30.0,30.0,0.0,0.0,10.0,0.0,30.0""".stripMargin
+            |SA0326,SA0326,JHD,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,,30.0,30.0,0.0,0.0,10.0,0.0,30.0
+            |""".stripMargin
 
       result === expected
     }
@@ -197,7 +203,8 @@ class ArrivalsToCSVDataTest extends Specification {
       val expected =
         s"""|IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track,$actualAPIHeadings
             |SA0325,SA0325,JHC,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,,3.0,3.0,0.0,0.0,1.0,0.0,3.0
-            |SA0326,SA0326,JHB,/,UNK,2017-01-01,20:00,20:00,,,,20:00,105,105,32,62,11,,,,,,,,,,30.0,30.0,0.0,0.0,10.0,0.0,30.0""".stripMargin
+            |SA0326,SA0326,JHB,/,UNK,2017-01-01,20:00,20:00,,,,20:00,105,105,32,62,11,,,,,,,,,,30.0,30.0,0.0,0.0,10.0,0.0,30.0
+            |""".stripMargin
 
       result === expected
     }

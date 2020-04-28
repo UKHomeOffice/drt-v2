@@ -38,7 +38,8 @@ object Exports {
       val from = startDate.addDays(dayOffset)
       val addHeader = dayOffset == 0
 
-      val summaryForDay = (maybeSummaryActorAndRequestProvider, MilliTimes.isHistoric(now, from)) match {
+      val summaryForDay: Future[Option[TerminalSummaryLike]] =
+        (maybeSummaryActorAndRequestProvider, MilliTimes.isHistoric(now, from)) match {
         case (Some((actorProvider, request)), true) =>
           val actorForDayAndTerminal = actorProvider(from, terminal)
           val eventualSummaryForDay = historicSummaryForDay(terminal, from, actorForDayAndTerminal, request, queryPortState, portStateToSummaries)

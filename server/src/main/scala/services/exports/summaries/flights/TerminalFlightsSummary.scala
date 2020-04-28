@@ -22,10 +22,9 @@ case class TerminalFlightsSummary(flights: Seq[ApiFlightWithSplits],
     val csvData = uniqueApiFlightWithSplits.sortBy(_._1.apiFlight.PcpTime).map(fws =>
       flightWithSplitsToCsvRow(queueNames, fws._1)
     )
-    asCSV(csvData)
+    asCSV(csvData) + lineEnding
   }
 }
-
 
 case object TerminalFlightsSummary {
 
