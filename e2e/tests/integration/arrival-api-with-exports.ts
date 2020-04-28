@@ -52,8 +52,8 @@ describe('Arrivals CSV Export', () => {
 
   const dataWithActApi = dataWithoutActApi + "," + actApiData;
 
-  const csvWithNoApiSplits = headersWithoutActApi + "\n" + dataWithoutActApi;
-  const csvWithAPISplits = headersWithActApi + "\n" + dataWithActApi;
+  const csvWithNoApiSplits = headersWithoutActApi + "\n" + dataWithoutActApi + "\n";
+  const csvWithAPISplits = headersWithActApi + "\n" + dataWithActApi + "\n";
 
   it('Does not show API splits in the flights export for regular users', () => {
     cy
