@@ -22,6 +22,8 @@ class TerminalDayQueuesActor(year: Int,
                              val now: () => SDateLike) extends TerminalDayLikeActor(year, month, day, terminal, now) {
   override val typeForPersistenceId: String = "queues"
 
+  log.info(s"PersistenceId: ${persistenceId}")
+
   var state: Map[TQM, CrunchMinute] = Map()
 
   import actors.PortStateMessageConversion._
@@ -50,7 +52,7 @@ class TerminalDayQueuesActor(year: Int,
 
   override def receiveCommand: Receive = {
     case container: MinutesContainer[CrunchMinute, TQM] =>
-      log.debug(s"Received MinutesContainer (CrunchMinute) for persistence")
+      log.info(s"Received MinutesContainer (CrunchMinute) for persistence")
       updateAndPersistDiff(container)
 
     case GetState =>
@@ -62,7 +64,9 @@ class TerminalDayQueuesActor(year: Int,
 
   private def updateAndPersistDiff(container: MinutesContainer[CrunchMinute, TQM]): Unit =
     diffFromMinutes(state, container.minutes) match {
-      case noDifferences if noDifferences.isEmpty => sender() ! true
+      case noDifferences if noDifferences.isEmpty =>
+        log.info("No differences. Nothing to persist")
+        sender() ! true
       case differences =>
         state = updateStateFromDiff(state, differences)
         val messageToPersist = CrunchMinutesMessage(differences.map(crunchMinuteToMessage).toSeq)

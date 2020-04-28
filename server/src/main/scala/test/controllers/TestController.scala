@@ -31,7 +31,7 @@ import scala.util.Success
 
 @Singleton
 class TestController @Inject()(val config: Configuration) extends InjectedController with AirportConfProvider {
-  implicit val timeout: Timeout = Timeout(1 second)
+  implicit val timeout: Timeout = Timeout(5 second)
 
   implicit val ec: ExecutionContextExecutor = DrtActorSystem.ec
 

@@ -146,7 +146,7 @@ class RestartActor(startSystem: () => List[KillSwitch],
         ks.shutdown()
       }
 
-      Future.sequence(testActors.map(_.ask(ResetData)(new Timeout(1 second)))).onComplete { _ =>
+      Future.sequence(testActors.map(_.ask(ResetData)(new Timeout(5 second)))).onComplete { _ =>
         log.info(s"Shutdown triggered")
         startTestSystem()
         replyTo ! Ack

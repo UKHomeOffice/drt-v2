@@ -18,8 +18,6 @@ case object ClearState
 
 case class GetAverageAdjustment(originAndTerminal: OriginAndTerminal, numberOfDays: Int)
 
-case object Ack
-
 class PassengersActor(maxDaysToConsider: Int, numDaysInAverage: Int) extends PersistentActor {
   override val persistenceId = s"daily-pax"
 
