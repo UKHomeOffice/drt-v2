@@ -17,7 +17,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 
-class RequestAndTerminateActorSpec extends TestKit(ActorSystem("drt", ConfigFactory.load("leveldb")))
+class RequestAndTerminateActorSpec extends TestKit(ActorSystem("drt", LevelDbConfig.config))
   with SpecificationLike {
   implicit val timeout: Timeout = new Timeout(5 seconds)
 
