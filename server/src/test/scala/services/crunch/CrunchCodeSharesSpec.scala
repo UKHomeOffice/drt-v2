@@ -21,7 +21,6 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
     T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes),
     T2 -> Map(eeaMachineReadableToDesk -> fiveMinutes))
 
-  "Code shares " >> {
     "Given 2 flights which are codeshares with each other " +
       "When I ask for a crunch " +
       "Then I should see workload representing only the flight with the highest passenger numbers" >> {
@@ -89,6 +88,4 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
 
       success
     }
-  }
-
 }

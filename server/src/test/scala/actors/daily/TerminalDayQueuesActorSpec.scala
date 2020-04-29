@@ -120,6 +120,6 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
   }
 
   private def actorForTerminalAndDate(terminal: Terminal, date: SDateLike): ActorRef = {
-    system.actorOf(TerminalDayQueuesActor.props(date, terminal, () => date))
+    system.actorOf(TerminalDayQueuesActor.props(terminal, date, () => date))
   }
 }

@@ -10,7 +10,7 @@ import server.protobuf.messages.CrunchState.{StaffMinuteMessage, StaffMinutesMes
 
 
 object TerminalDayStaffActor {
-  def props(date: SDateLike, terminal: Terminal, now: () => SDateLike): Props =
+  def props(terminal: Terminal, date: SDateLike, now: () => SDateLike): Props =
     Props(new TerminalDayStaffActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now))
 }
 
@@ -61,7 +61,9 @@ class TerminalDayStaffActor(year: Int,
 
   private def updateAndPersistDiff(container: MinutesContainer[StaffMinute, TM]): Unit =
     diffFromMinutes(state, container.minutes) match {
-      case noDifferences if noDifferences.isEmpty => sender() ! true
+      case noDifferences if noDifferences.isEmpty =>
+        log.info("No differences. Nothing to persist")
+        sender() ! MinutesContainer.empty[StaffMinute, TM]
       case differences =>
         state = updateStateFromDiff(state, differences)
         val messageToPersist = StaffMinutesMessage(differences.map(staffMinuteToMessage).toSeq)

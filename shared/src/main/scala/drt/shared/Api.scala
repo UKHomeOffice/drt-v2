@@ -909,6 +909,10 @@ object CrunchApi {
     def minutes: Iterable[MinuteLike[A, B]]
   }
 
+  object MinutesContainer {
+    def empty[A, B]: MinutesContainer[A, B] = MinutesContainer[A, B](Iterable())
+  }
+
   case class MinutesContainer[A, B](minutes: Iterable[MinuteLike[A, B]]) {
     def updatedSince(sinceMillis: MillisSinceEpoch): MinutesContainer[A, B] = MinutesContainer(minutes.filter(_.lastUpdated.getOrElse(0L) > sinceMillis))
     def contains(clazz: Class[_]): Boolean = minutes.headOption match {

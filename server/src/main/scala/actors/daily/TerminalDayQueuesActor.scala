@@ -11,7 +11,7 @@ import services.SDate
 
 
 object TerminalDayQueuesActor {
-  def props(date: SDateLike, terminal: Terminal, now: () => SDateLike): Props =
+  def props(terminal: Terminal, date: SDateLike, now: () => SDateLike): Props =
     Props(new TerminalDayQueuesActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now))
 }
 
@@ -66,7 +66,7 @@ class TerminalDayQueuesActor(year: Int,
     diffFromMinutes(state, container.minutes) match {
       case noDifferences if noDifferences.isEmpty =>
         log.info("No differences. Nothing to persist")
-        sender() ! true
+        sender() ! MinutesContainer.empty[CrunchMinute, TQM]
       case differences =>
         state = updateStateFromDiff(state, differences)
         val messageToPersist = CrunchMinutesMessage(differences.map(crunchMinuteToMessage).toSeq)

@@ -224,8 +224,13 @@ abstract class MinutesActor[A, B](now: () => SDateLike,
   private def combineEventualContainers(eventualUpdatedMinutesDiff: Iterable[Future[MinutesContainer[A, B]]]): Future[MinutesContainer[A, B]] =
     Future.sequence(eventualUpdatedMinutesDiff).map { containers =>
       containers.foldLeft(MinutesContainer[A, B](Seq())) {
-        case (soFar, next) => MinutesContainer(soFar.minutes ++ next.minutes)
+        case (soFar, next) =>
+          MinutesContainer(soFar.minutes ++ next.minutes)
       }
+    }.recoverWith {
+      case t =>
+        log.error("Failed to combine containers", t)
+        Future(MinutesContainer.empty[A, B])
     }
 
   def handleUpdateAndGetDiff(terminal: Terminal,

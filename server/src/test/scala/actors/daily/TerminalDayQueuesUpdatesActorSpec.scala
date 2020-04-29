@@ -1,6 +1,8 @@
 package actors.daily
 
-import actors.{GetUpdatesSince, PortStateMessageConversion}
+import java.util.UUID
+
+import actors.PortStateMessageConversion
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamInitialized}
 import actors.daily.ReadJournalTypes.ReadJournalWithEvents
 import akka.NotUsed
@@ -8,12 +10,12 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.persistence.query.journal.leveldb.scaladsl.LeveldbReadJournal
 import akka.persistence.query.scaladsl.{EventsByPersistenceIdQuery, ReadJournal}
-import akka.persistence.query.{EventEnvelope, PersistenceQuery, scaladsl}
+import akka.persistence.query.{EventEnvelope, PersistenceQuery}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.{TestKit, TestProbe}
 import akka.util.Timeout
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer}
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.{MilliTimes, Queues, SDateLike, TQM}
@@ -26,10 +28,15 @@ import test.TestActors.{ResetData, TestTerminalDayQueuesActor}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 
+object LevelDbConfig {
+  val tempStoreDir: String = s"/tmp/drt-${UUID.randomUUID().toString}"
+  val config: Config = ConfigFactory.load("leveldb").withValue("akka.persistence.journal.leveldb.dir", ConfigValueFactory.fromAnyRef(tempStoreDir))
+}
 
 class TerminalDayQueuesUpdatesActorSpec
-  extends TestKit(ActorSystem("StreamingCrunchTests", ConfigFactory.load("leveldb")))
+  extends TestKit(ActorSystem("drt", LevelDbConfig.config))
     with SpecificationLike {
+
   implicit val mat: ActorMaterializer = ActorMaterializer()
   implicit val timeout: Timeout = new Timeout(1 second)
 
@@ -41,34 +48,12 @@ class TerminalDayQueuesUpdatesActorSpec
   val crunchMinute: CrunchMinute = CrunchMinute(terminal, queue, day.millisSinceEpoch, 1, 2, 3, 4)
   val crunchMinuteMessage: CrunchMinuteMessage = CrunchMinuteMessage(Option(terminal.toString), Option(queue.toString), Option(day.millisSinceEpoch), Option(1.0), Option(2.0), Option(3), Option(4), None, None, None, None, Option(day.millisSinceEpoch))
 
-  //  "Given a terminal and a day, and queues actor for them" >> {
-  //    val persistenceId = s"terminal-queues-t1-2020-01-01"
-  //
-  //    val tdqActor = system.actorOf(Props(new TerminalDayQueuesActor(2020, 1, 1, terminal, () => day)))
-  //    "When I create source of events for the actor's persistence ID, and send the actor a crunch minute" >> {
-  //      val queries = PersistenceQuery(system).readJournalFor[LeveldbReadJournal](LeveldbReadJournal.Identifier)
-  //
-  //      val eventualMessages: Future[Seq[Any]] = queries.currentEventsByPersistenceId(persistenceId, 0L, Long.MaxValue)
-  //        .map(_.event)
-  //        .runWith(Sink.seq)
-  //      Await.ready(tdqActor.ask(MinutesContainer(Iterable(crunchMinute))), 1 second)
-  //
-  //      "I should see the crunch minute message in the message stream" >> {
-  //        val result = Await.result(eventualMessages, 2 seconds)
-  //
-  //        val expected = CrunchMinutesMessage(List(crunchMinuteMessage))
-  //
-  //        result === Seq(expected)
-  //      }
-  //    }
-  //  }
-
   "Given a TerminalDayQueueMinuteUpdatesActor" >> {
     implicit val ec: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
     val queuesActor = system.actorOf(Props(new TestTerminalDayQueuesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => day)))
     Await.ready(queuesActor.ask(ResetData), 1 second)
     val probe = TestProbe()
-    val queuesUpdatesActor = system.actorOf(Props(new TestTerminalDayQueuesUpdatesActor[LeveldbReadJournal](day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => day, LeveldbReadJournal.Identifier, 0L, probe.ref)))
+    system.actorOf(Props(new TestTerminalDayQueuesUpdatesActor[LeveldbReadJournal](day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => day, LeveldbReadJournal.Identifier, 0L, probe.ref)))
     val minute2 = day.addMinutes(1).millisSinceEpoch
 
     "When I send it a crunch minute" >> {
@@ -76,9 +61,10 @@ class TerminalDayQueuesUpdatesActorSpec
         queuesActor.ask(MinutesContainer(Iterable(crunchMinute))),
         queuesActor.ask(MinutesContainer(Iterable(crunchMinute.copy(minute = minute2))))))
       Await.ready(eventualAcks, 1 second)
+
       "I should see it received as an update" >> {
         val expected = List(crunchMinute.copy(lastUpdated = Option(day.millisSinceEpoch)), crunchMinute.copy(minute = minute2, lastUpdated = Option(day.millisSinceEpoch))).map(cm => (cm.key, cm)).toMap
-        probe.fishForMessage(35 seconds) {
+        probe.fishForMessage(5 seconds) {
           case updates => updates == expected
         }
 
@@ -86,8 +72,6 @@ class TerminalDayQueuesUpdatesActorSpec
       }
     }
   }
-
-
 }
 
 case class GetAllUpdatesSince(sinceMillis: MillisSinceEpoch)

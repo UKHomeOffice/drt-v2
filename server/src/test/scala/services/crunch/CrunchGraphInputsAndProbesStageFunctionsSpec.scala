@@ -11,7 +11,7 @@ import services.graphstages.Crunch._
 import scala.collection.immutable.List
 
 
-class CrunchGraphInputsAndProbesStageFunctionsSpec extends TestKit(ActorSystem("StreamingCrunchTests")) with SpecificationLike {
+class CrunchGraphInputsAndProbesStageFunctionsSpec extends TestKit(ActorSystem("drt")) with SpecificationLike {
   isolated
   sequential
 

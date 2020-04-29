@@ -42,7 +42,7 @@ object H2Tables extends {
 } with Tables
 
 class CrunchTestLike
-  extends TestKit(ActorSystem("StreamingCrunchTests"))
+  extends TestKit(ActorSystem("drt"))
     with SpecificationLike
     with AfterAll {
   isolated
