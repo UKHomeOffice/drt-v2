@@ -184,10 +184,13 @@ class FlightsStateActor(initialMaybeSnapshotInterval: Option[Int],
 
   def flightsForPeriodForTerminal(start: MillisSinceEpoch,
                                   end: MillisSinceEpoch,
-                                  terminalName: Terminal): FlightsWithSplits =
-    FlightsWithSplits(state
-      .windowWithTerminalFilter(SDate(start), SDate(end), portQueues.keys.filter(_ == terminalName).toSeq)
-      .flights)
+                                  terminal: Terminal): FlightsWithSplits =
+    FlightsWithSplits(state.flights.all.filter {
+      case (_, fws) => fws.apiFlight.hasPcpDuring(SDate(start), SDate(end)) && fws.apiFlight.Terminal == terminal
+    })
+//    FlightsWithSplits(state
+//      .windowWithTerminalFilter(SDate(start), SDate(end), portQueues.keys.filter(_ == terminalName).toSeq)
+//      .flights)
 
   def setStateFromSnapshot(snapshot: CrunchStateSnapshotMessage): Unit = snapshotMessageToFlightsState(snapshot, state)
 

@@ -1,6 +1,6 @@
 package actors
 
-import actors.daily.{RequestAndTerminate, RequestAndTerminateActor, TerminalDayQueuesActor, TerminalDayStaffActor}
+import actors.daily.{MinutesState, RequestAndTerminate, RequestAndTerminateActor, TerminalDayQueuesActor, TerminalDayStaffActor}
 import actors.pointInTime.{CrunchStateReadActor, GetCrunchMinutes, GetStaffMinutes}
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.pattern.ask
@@ -36,24 +36,24 @@ trait MinuteLookupsLike {
     requestAndTerminateActor.ask(RequestAndTerminate(actor, container)).mapTo[MinutesContainer[StaffMinute, TM]]
   }
 
-  val primaryCrunchLookup: (Terminal, SDateLike) => Future[Option[MinutesContainer[CrunchMinute, TQM]]] = (terminal: Terminal, date: SDateLike) => {
+  val primaryQueuesLookup: (Terminal, SDateLike) => Future[Option[MinutesState[CrunchMinute, TQM]]] = (terminal: Terminal, date: SDateLike) => {
     val actor = system.actorOf(TerminalDayQueuesActor.props(terminal, date, now))
-    requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[Option[MinutesContainer[CrunchMinute, TQM]]]
+    requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[Option[MinutesState[CrunchMinute, TQM]]]
   }
 
-  val secondaryCrunchLookup: (Terminal, SDateLike) => Future[Option[MinutesContainer[CrunchMinute, TQM]]] = (terminal: Terminal, date: SDateLike) => {
+  val secondaryQueuesLookup: (Terminal, SDateLike) => Future[Option[MinutesState[CrunchMinute, TQM]]] = (terminal: Terminal, date: SDateLike) => {
     val actor = crunchStateReadActor(date)
-    requestAndTerminateActor.ask(RequestAndTerminate(actor, GetCrunchMinutes(terminal))).mapTo[Option[MinutesContainer[CrunchMinute, TQM]]]
+    requestAndTerminateActor.ask(RequestAndTerminate(actor, GetCrunchMinutes(terminal))).mapTo[Option[MinutesState[CrunchMinute, TQM]]]
   }
 
-  val primaryStaffLookup: (Terminal, SDateLike) => Future[Option[MinutesContainer[StaffMinute, TM]]] = (terminal: Terminal, date: SDateLike) => {
+  val primaryStaffLookup: (Terminal, SDateLike) => Future[Option[MinutesState[StaffMinute, TM]]] = (terminal: Terminal, date: SDateLike) => {
     val actor = system.actorOf(TerminalDayStaffActor.props(terminal, date, now))
-    requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[Option[MinutesContainer[StaffMinute, TM]]]
+    requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[Option[MinutesState[StaffMinute, TM]]]
   }
 
-  val secondaryStaffLookup: (Terminal, SDateLike) => Future[Option[MinutesContainer[StaffMinute, TM]]] = (terminal: Terminal, date: SDateLike) => {
+  val secondaryStaffLookup: (Terminal, SDateLike) => Future[Option[MinutesState[StaffMinute, TM]]] = (terminal: Terminal, date: SDateLike) => {
     val actor = crunchStateReadActor(date)
-    requestAndTerminateActor.ask(RequestAndTerminate(actor, GetStaffMinutes(terminal))).mapTo[Option[MinutesContainer[StaffMinute, TM]]]
+    requestAndTerminateActor.ask(RequestAndTerminate(actor, GetStaffMinutes(terminal))).mapTo[Option[MinutesState[StaffMinute, TM]]]
   }
 
   def crunchStateReadActor(date: SDateLike): ActorRef = {
@@ -70,7 +70,7 @@ case class MinuteLookups(system: ActorSystem,
                          expireAfterMillis: Int,
                          queuesByTerminal: Map[Terminal, Seq[Queue]])
                         (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
-  override def queueMinutesActor(clazz: Class[_]): ActorRef = system.actorOf(Props(clazz, now, queuesByTerminal.keys, primaryCrunchLookup, secondaryCrunchLookup, updateCrunchMinutes))
+  override def queueMinutesActor(clazz: Class[_]): ActorRef = system.actorOf(Props(clazz, now, queuesByTerminal.keys, primaryQueuesLookup, secondaryQueuesLookup, updateCrunchMinutes))
 
   override def staffMinutesActor(clazz: Class[_]): ActorRef = system.actorOf(Props(clazz, now, queuesByTerminal.keys, primaryStaffLookup, secondaryStaffLookup, updateStaffMinutes))
 }
@@ -92,7 +92,7 @@ case class TestMinuteLookups(system: ActorSystem,
     actor.ask(ResetData).map(_ => actor ! PoisonPill)
   }
 
-  override def queueMinutesActor(clazz: Class[_]): ActorRef = system.actorOf(Props(clazz, now, queuesByTerminal.keys, primaryCrunchLookup, secondaryCrunchLookup, updateCrunchMinutes, resetQueuesData))
+  override def queueMinutesActor(clazz: Class[_]): ActorRef = system.actorOf(Props(clazz, now, queuesByTerminal.keys, primaryQueuesLookup, secondaryQueuesLookup, updateCrunchMinutes, resetQueuesData))
 
   override def staffMinutesActor(clazz: Class[_]): ActorRef = system.actorOf(Props(clazz, now, queuesByTerminal.keys, primaryStaffLookup, secondaryStaffLookup, updateStaffMinutes, resetStaffData))
 }

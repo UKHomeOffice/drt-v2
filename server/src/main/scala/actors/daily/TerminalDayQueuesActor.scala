@@ -2,7 +2,7 @@ package actors.daily
 
 import actors.GetState
 import akka.actor.Props
-import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer}
 import drt.shared.Terminals.Terminal
 import drt.shared.{SDateLike, TQM}
 import scalapb.GeneratedMessage
@@ -12,14 +12,15 @@ import services.SDate
 
 object TerminalDayQueuesActor {
   def props(terminal: Terminal, date: SDateLike, now: () => SDateLike): Props =
-    Props(new TerminalDayQueuesActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now))
+    Props(new TerminalDayQueuesActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now, None))
 }
 
 class TerminalDayQueuesActor(year: Int,
                              month: Int,
                              day: Int,
                              terminal: Terminal,
-                             val now: () => SDateLike) extends TerminalDayLikeActor(year, month, day, terminal, now) {
+                             val now: () => SDateLike,
+                             maybePointInTime: Option[MillisSinceEpoch]) extends TerminalDayLikeActor(year, month, day, terminal, now, maybePointInTime) {
   override val typeForPersistenceId: String = "queues"
 
   log.info(s"PersistenceId: ${persistenceId}")
@@ -38,15 +39,16 @@ class TerminalDayQueuesActor(year: Int,
       state = state ++ minuteMessagesToKeysAndMinutes(minuteMessages)
   }
 
-  private def minuteMessagesToKeysAndMinutes(messages: Seq[CrunchMinuteMessage]): Iterable[(TQM, CrunchMinute)] = messages
-    .filter { cmm =>
-      val minuteMillis = cmm.minute.getOrElse(0L)
-      firstMinuteMillis <= minuteMillis && minuteMillis <= lastMinuteMillis
-    }
-    .map { cmm =>
-      val cm = crunchMinuteFromMessage(cmm)
-      (cm.key, cm)
-    }
+  private def minuteMessagesToKeysAndMinutes(messages: Seq[CrunchMinuteMessage]): Iterable[(TQM, CrunchMinute)] =
+    messages
+      .filter { cmm =>
+        val minuteMillis = cmm.minute.getOrElse(0L)
+        firstMinuteMillis <= minuteMillis && minuteMillis <= lastMinuteMillis
+      }
+      .map { cmm =>
+        val cm = crunchMinuteFromMessage(cmm)
+        (cm.key, cm)
+      }
 
   override def stateToMessage: GeneratedMessage = CrunchMinutesMessage(state.values.map(crunchMinuteToMessage).toSeq)
 
@@ -73,7 +75,7 @@ class TerminalDayQueuesActor(year: Int,
         persistAndMaybeSnapshot(differences, messageToPersist)
     }
 
-  private def stateResponse: Option[MinutesContainer[CrunchMinute, TQM]] = {
-    if (state.nonEmpty) Option(MinutesContainer(state.values.toSet)) else None
+  private def stateResponse: Option[MinutesState[CrunchMinute, TQM]] = {
+    if (state.nonEmpty) Option(MinutesState(MinutesContainer(state.values.toSet), lastSequenceNr)) else None
   }
 }

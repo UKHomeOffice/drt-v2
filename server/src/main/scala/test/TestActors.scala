@@ -1,13 +1,14 @@
 package test
 
 import actors.DrtStaticParameters.expireAfterMillis
+import actors.MinutesActor.{MinutesLookup, MinutesUpdate}
 import actors.Sizes.oneMegaByte
 import actors._
 import actors.acking.AckingReceiver.Ack
 import actors.daily.{TerminalDayQueuesActor, TerminalDayStaffActor}
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.{ask, pipe}
-import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}
+import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
@@ -199,14 +200,16 @@ object TestActors {
       val flightsActor: ActorRef = system.actorOf(Props(new TestFlightsStateActor(None, Sizes.oneMegaByte, "crunch-live-state-actor", airportConfig.queuesByTerminal, now, expireAfterMillis)))
       val queuesActor: ActorRef = lookups.queueMinutesActor(classOf[TestQueueMinutesActor])
       val staffActor: ActorRef = lookups.staffMinutesActor(classOf[TestStaffMinutesActor])
-      system.actorOf(Props(new TestPartitionedPortStateActor(flightsActor, queuesActor, staffActor, now)))
+      system.actorOf(Props(new TestPartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, airportConfig.terminals.toList, ProdStreamingJournal)))
     }
   }
 
   class TestPartitionedPortStateActor(flightsActor: ActorRef,
                                       queuesActor: ActorRef,
                                       staffActor: ActorRef,
-                                      now: () => SDateLike) extends PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now) {
+                                      now: () => SDateLike,
+                                      terminals: List[Terminal],
+                                      journalType: StreamingJournalLike) extends PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, terminals, journalType) {
     def myReceive: Receive = {
       case ResetData =>
         Future
@@ -222,7 +225,7 @@ object TestActors {
                                    month: Int,
                                    day: Int,
                                    terminal: Terminal,
-                                   now: () => SDateLike) extends TerminalDayQueuesActor(year, month, day, terminal, now) with Resettable {
+                                   now: () => SDateLike) extends TerminalDayQueuesActor(year, month, day, terminal, now, None) with Resettable {
     override def resetState(): Unit = state = Map()
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
@@ -231,7 +234,7 @@ object TestActors {
                                   month: Int,
                                   day: Int,
                                   terminal: Terminal,
-                                  now: () => SDateLike) extends TerminalDayStaffActor(year, month, day, terminal, now) with Resettable {
+                                  now: () => SDateLike) extends TerminalDayStaffActor(year, month, day, terminal, now, None) with Resettable {
     override def resetState(): Unit = state = Map()
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
@@ -246,8 +249,7 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestCrunchStateActor(snapshotInterval: Int,
-                             name: String,
+  class TestCrunchStateActor(name: String,
                              portQueues: Map[Terminal, Seq[Queue]],
                              override val now: () => SDateLike,
                              expireAfterMillis: Int,

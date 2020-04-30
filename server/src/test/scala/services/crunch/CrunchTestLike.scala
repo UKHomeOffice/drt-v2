@@ -41,29 +41,8 @@ object H2Tables extends {
   val profile = slick.jdbc.H2Profile
 } with Tables
 
-class CrunchTestLike
-  extends TestKit(ActorSystem("drt"))
-    with SpecificationLike
-    with AfterAll {
-  isolated
-  sequential
-
-  override def afterAll: Unit = {
-    log.info("Shutting down actor system!!!")
-    TestKit.shutdownActorSystem(system)
-  }
-
-  implicit val actorSystem: ActorSystem = system
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
-  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-
-  val log: Logger = LoggerFactory.getLogger(getClass)
-
-  val oneMinuteMillis = 60000
-  val uniquifyArrivals: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] =
-    CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight)
-
-  val defaultAirportConfig: AirportConfig = AirportConfig(
+object TestDefaults {
+  val airportConfig: AirportConfig = AirportConfig(
     portCode = PortCode("STN"),
     queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk), T2 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk)),
     slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 20, Queues.NonEeaDesk -> 45),
@@ -116,7 +95,31 @@ class CrunchTestLike
       ),
     desksByTerminal = Map(T1 -> 40, T2 -> 40)
     )
+}
 
+class CrunchTestLike
+  extends TestKit(ActorSystem("drt"))
+    with SpecificationLike
+    with AfterAll {
+  isolated
+  sequential
+
+  override def afterAll: Unit = {
+    log.info("Shutting down actor system!!!")
+    TestKit.shutdownActorSystem(system)
+  }
+
+  implicit val actorSystem: ActorSystem = system
+  implicit val materializer: ActorMaterializer = ActorMaterializer()
+  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
+
+  val log: Logger = LoggerFactory.getLogger(getClass)
+
+  val oneMinuteMillis = 60000
+  val uniquifyArrivals: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] =
+    CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight)
+
+  val defaultAirportConfig: AirportConfig = TestDefaults.airportConfig
   val pcpForFlightFromSch: Arrival => MilliDate = (a: Arrival) => MilliDate(SDate(a.Scheduled).millisSinceEpoch)
   val pcpForFlightFromBest: Arrival => MilliDate = (a: Arrival) => {
     if (a.ActualChox.isDefined) MilliDate(SDate(a.ActualChox.get).millisSinceEpoch)

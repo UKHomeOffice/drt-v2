@@ -1,5 +1,7 @@
 package actors.daily
 
+import java.util.UUID
+
 import akka.actor.{ActorSystem, Props}
 import akka.pattern.ask
 import akka.testkit.TestKit
@@ -17,14 +19,14 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 
-class RequestAndTerminateActorSpec extends TestKit(ActorSystem("drt", LevelDbConfig.config))
+class RequestAndTerminateActorSpec extends TestKit(ActorSystem("drt", LevelDbConfig.config("RequestAndTerminateActorSpec")))
   with SpecificationLike {
   implicit val timeout: Timeout = new Timeout(5 seconds)
 
   val myNow: () => SDateLike = () => SDate("2020-04-28")
 
   def resetData(terminal: Terminal, day: SDateLike): Unit = {
-    val actor = system.actorOf(Props(new TestTerminalDayQueuesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, myNow)))
+    val actor = system.actorOf(Props(new TestTerminalDayQueuesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => SDate.now())))
     Await.ready(actor.ask(ResetData), 1 second)
   }
 
@@ -35,7 +37,7 @@ class RequestAndTerminateActorSpec extends TestKit(ActorSystem("drt", LevelDbCon
 
     "When I send it some updates to persist" >> {
       val container = MinutesContainer(Iterable(CrunchMinute(terminal, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4)))
-      val actor = system.actorOf(Props(new TerminalDayQueuesActor(myNow().getFullYear(), myNow().getMonth(), myNow().getDate(), terminal, myNow)))
+      val actor = system.actorOf(Props(new TerminalDayQueuesActor(myNow().getFullYear(), myNow().getMonth(), myNow().getDate(), terminal, myNow, None)))
       val result = Await.result(requestsActor.ask(RequestAndTerminate(actor, container)), 5 seconds)
 
       "I should get a diff of updated minutes back as an acknowledgement" >> {

@@ -914,6 +914,7 @@ object CrunchApi {
   }
 
   case class MinutesContainer[A, B](minutes: Iterable[MinuteLike[A, B]]) {
+    def ++(that: MinutesContainer[A, B]): MinutesContainer[A, B] = MinutesContainer(minutes ++ that.minutes)
     def updatedSince(sinceMillis: MillisSinceEpoch): MinutesContainer[A, B] = MinutesContainer(minutes.filter(_.lastUpdated.getOrElse(0L) > sinceMillis))
     def contains(clazz: Class[_]): Boolean = minutes.headOption match {
       case Some(x) if x.getClass == clazz => true

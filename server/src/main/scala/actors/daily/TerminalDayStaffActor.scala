@@ -2,7 +2,7 @@ package actors.daily
 
 import actors.GetState
 import akka.actor.Props
-import drt.shared.CrunchApi.{MinutesContainer, StaffMinute}
+import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared.Terminals.Terminal
 import drt.shared.{SDateLike, TM}
 import scalapb.GeneratedMessage
@@ -11,14 +11,15 @@ import server.protobuf.messages.CrunchState.{StaffMinuteMessage, StaffMinutesMes
 
 object TerminalDayStaffActor {
   def props(terminal: Terminal, date: SDateLike, now: () => SDateLike): Props =
-    Props(new TerminalDayStaffActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now))
+    Props(new TerminalDayStaffActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now, None))
 }
 
 class TerminalDayStaffActor(year: Int,
                             month: Int,
                             day: Int,
                             terminal: Terminal,
-                            val now: () => SDateLike) extends TerminalDayLikeActor(year, month, day, terminal, now) {
+                            val now: () => SDateLike,
+                            maybePointInTime: Option[MillisSinceEpoch]) extends TerminalDayLikeActor(year, month, day, terminal, now, maybePointInTime) {
   override val typeForPersistenceId: String = "staff"
 
   var state: Map[TM, StaffMinute] = Map()
@@ -70,7 +71,7 @@ class TerminalDayStaffActor(year: Int,
         persistAndMaybeSnapshot(differences, messageToPersist)
     }
 
-  private def stateResponse: Option[MinutesContainer[StaffMinute, TM]] = {
-    if (state.nonEmpty) Option(MinutesContainer(state.values.toSet)) else None
+  private def stateResponse: Option[MinutesState[StaffMinute, TM]] = {
+    if (state.nonEmpty) Option(MinutesState(MinutesContainer(state.values.toSet), lastSequenceNr)) else None
   }
 }
