@@ -86,8 +86,8 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
 
   def run(): Unit = {
     val futurePortStates: Future[(Option[PortState], Option[PortState], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[RegisteredArrivals])] = {
-      val maybeLivePortState = initialStateFuture[PortState](liveCrunchStateActor)
-      val maybeForecastPortState = initialStateFuture[PortState](forecastCrunchStateActor)
+      val maybeLivePortState = if (usePartitionedPortState) Future(None) else initialStateFuture[PortState](liveCrunchStateActor)
+      val maybeForecastPortState = if (usePartitionedPortState) Future(None) else initialStateFuture[PortState](forecastCrunchStateActor)
       val maybeInitialBaseArrivals = initialStateFuture[ArrivalsState](baseArrivalsActor).map(_.map(_.arrivals))
       val maybeInitialFcstArrivals = initialStateFuture[ArrivalsState](forecastArrivalsActor).map(_.map(_.arrivals))
       val maybeInitialLiveArrivals = initialStateFuture[ArrivalsState](liveArrivalsActor).map(_.map(_.arrivals))
@@ -120,7 +120,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
           manifestRequestsSink,
           manifestResponsesSource,
           params.refreshArrivalsOnStart,
-          checkRequiredStaffUpdatesOnStartup = true,
+          checkRequiredStaffUpdatesOnStartup = false,
           useLegacyDeployments,
           startDeskRecs)
 

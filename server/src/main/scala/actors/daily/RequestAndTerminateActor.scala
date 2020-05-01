@@ -1,17 +1,15 @@
 package actors.daily
 
-import java.util.UUID
-
-import akka.actor.{Actor, ActorRef, PoisonPill, Props, Terminated}
+import actors.acking.AckingReceiver.Ack
+import akka.actor.{Actor, ActorRef, PoisonPill, Terminated}
 import akka.pattern.ask
 import akka.util.Timeout
-import drt.shared.CrunchApi.MinutesContainer
-import drt.shared.Terminals.Terminal
-import drt.shared.{SDateLike, Terminals}
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.ExecutionContextExecutor
 
+
+case class Terminate(actor: ActorRef)
 
 case class RequestAndTerminate(actor: ActorRef, request: Any)
 
@@ -21,6 +19,10 @@ class RequestAndTerminateActor(implicit timeout: Timeout) extends Actor {
   var deathWatchReplyToAndResponse: Map[ActorRef, (ActorRef, Any)] = Map[ActorRef, (ActorRef, Any)]()
 
   override def receive: Receive = {
+    case Terminate(actor) =>
+      val replyTo = sender()
+      self ! ActorReplyToResponse(actor, replyTo, Ack)
+
     case RequestAndTerminate(actor, request) =>
       val replyTo = sender()
       val eventualDiff = actor.ask(request)

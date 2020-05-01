@@ -5,7 +5,7 @@ import actors.MinutesActor.{MinutesLookup, MinutesUpdate}
 import actors.Sizes.oneMegaByte
 import actors._
 import actors.acking.AckingReceiver.Ack
-import actors.daily.{TerminalDayQueuesActor, TerminalDayStaffActor}
+import actors.daily.{PurgeAll, TerminalDayQueuesActor, TerminalDayStaffActor}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.{ask, pipe}
 import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}
@@ -210,10 +210,20 @@ object TestActors {
                                       now: () => SDateLike,
                                       terminals: List[Terminal],
                                       journalType: StreamingJournalLike) extends PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, terminals, journalType) {
+    val actorClearRequests = Map(
+      flightsActor -> ResetData,
+      queuesActor -> ResetData,
+      staffActor -> ResetData,
+      queueUpdatesSupervisor -> PurgeAll,
+      staffUpdatesSupervisor -> PurgeAll
+      )
+
     def myReceive: Receive = {
       case ResetData =>
         Future
-          .sequence(Seq(flightsActor, queuesActor, staffActor).map(_.ask(ResetData)))
+          .sequence(actorClearRequests.map {
+            case (actor, request) => actor.ask(request)
+          })
           .map(_ => Ack)
           .pipeTo(sender())
     }

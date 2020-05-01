@@ -21,6 +21,8 @@ import scala.util.{Failure, Success}
 
 case object PurgeExpired
 
+case object PurgeAll
+
 case class GetAllUpdatesSince(sinceMillis: MillisSinceEpoch)
 
 case class StartUpdatesStream(terminal: Terminal, day: SDateLike, startingSequenceNr: Long)
@@ -33,6 +35,7 @@ class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
   implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
   implicit val timeout: Timeout = new Timeout(5 seconds)
   val cancellableTick: Cancellable = context.system.scheduler.schedule(10 seconds, 10 seconds, self, PurgeExpired)
+  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()))
 
   var streamingUpdateActors: Map[(Terminal, MillisSinceEpoch), ActorRef] = Map[(Terminal, MillisSinceEpoch), ActorRef]()
   var lastRequests: Map[(Terminal, MillisSinceEpoch), MillisSinceEpoch] = Map[(Terminal, MillisSinceEpoch), MillisSinceEpoch]()
@@ -48,13 +51,22 @@ class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
                          startingSequenceNr: Long): Unit = streamingUpdateActors.get((terminal, day.millisSinceEpoch)) match {
     case Some(_) => Unit
     case None =>
-      log.info(s"Starting supervised updates stream for $terminal / ${day.toISODateOnly}")
+      log.info(s"****** Starting supervised updates stream for $terminal / ${day.toISODateOnly} from seqNr: $startingSequenceNr")
       val actor = context.system.actorOf(updatesActorFactory(terminal, day, startingSequenceNr))
       streamingUpdateActors = streamingUpdateActors + ((terminal, day.millisSinceEpoch) -> actor)
       lastRequests = lastRequests + ((terminal, day.millisSinceEpoch) -> now().millisSinceEpoch)
   }
 
   override def receive: Receive = {
+    case PurgeAll =>
+      val replyTo = sender()
+      log.info(s"Received PurgeAll")
+      Future.sequence(streamingUpdateActors.values.map(actor => killActor.ask(Terminate(actor)))).foreach { _ =>
+        streamingUpdateActors = Map()
+        lastRequests = Map()
+        replyTo ! Ack
+      }
+
     case PurgeExpired =>
       log.info("Received PurgeExpired")
       val expiredToRemove = lastRequests.collect {
