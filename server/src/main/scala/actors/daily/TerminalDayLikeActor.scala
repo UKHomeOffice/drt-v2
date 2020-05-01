@@ -5,7 +5,7 @@ import actors.{RecoveryActorLike, Sizes}
 import akka.actor.ActorRef
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinuteLike, MinutesContainer, StaffMinute}
-import drt.shared.{SDateLike, TM, TQM}
+import drt.shared.{SDateLike, TM, TQM, WithTimeAccessor}
 import drt.shared.Terminals.Terminal
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
@@ -14,7 +14,9 @@ import services.graphstages.Crunch
 
 case object GetSummariesWithActualApi
 
-case class MinutesState[A, B](minutes: MinutesContainer[A, B], bookmarkSeqNr: Long)
+case class MinutesState[A, B <: WithTimeAccessor](minutes: MinutesContainer[A, B], bookmarkSeqNr: Long) {
+  def window(start: SDateLike, end: SDateLike): MinutesState[A, B] = this.copy(minutes = minutes.window(start, end))
+}
 
 object TerminalDay {
   type TerminalDayBookmarks = Map[(Terminal, MillisSinceEpoch), Long]
@@ -48,7 +50,7 @@ abstract class TerminalDayLikeActor(year: Int,
       recovery
   }
 
-  def persistAndMaybeSnapshot[A, B](differences: Iterable[MinuteLike[A, B]],
+  def persistAndMaybeSnapshot[A, B <: WithTimeAccessor](differences: Iterable[MinuteLike[A, B]],
                                     messageToPersist: GeneratedMessage): Unit = {
     val replyTo = sender()
     persist(messageToPersist) { message =>

@@ -142,7 +142,7 @@ object TestActors {
     override def receive: Receive = reset orElse super.receive
   }
 
-  trait TestMinuteActorLike[A, B] extends MinutesActor[A, B] {
+  trait TestMinuteActorLike[A, B <: WithTimeAccessor] extends MinutesActor[A, B] {
     val resetData: (Terminal, MillisSinceEpoch) => Future[Any]
     var terminalDaysUpdated: Set[(Terminal, MillisSinceEpoch)] = Set()
 

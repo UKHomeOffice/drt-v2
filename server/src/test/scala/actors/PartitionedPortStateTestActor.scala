@@ -34,6 +34,7 @@ class PartitionedPortStateTestActor(probe: ActorRef,
     case ps: PortState =>
       val replyTo = sender()
       log.info(s"Setting initial port state")
+      state = ps
       flightsActor.ask(FlightsWithSplitsDiff(ps.flights.values.toList, List())).flatMap { _ =>
         queuesActor.ask(MinutesContainer(ps.crunchMinutes.values)).flatMap { _ =>
           staffActor.ask(MinutesContainer(ps.staffMinutes.values))
@@ -65,7 +66,7 @@ class PartitionedPortStateTestActor(probe: ActorRef,
                 }
             case Some(minuteLike) if minuteLike.toMinute.isInstanceOf[StaffMinute] =>
               actor.ask(GetPortState(minuteMillis.min, minuteMillis.max)).mapTo[MinutesWithBookmarks[StaffMinute, TM]]
-                .foreach { case MinutesWithBookmarks(container, terminalDayBookmarks) =>
+                .foreach { case MinutesWithBookmarks(container, _) =>
                   val updatedMinutes = state.staffMinutes ++ container.minutes.map(ml => (ml.key, ml.toMinute))
                   state = state.copy(staffMinutes = updatedMinutes)
                   sendStateToProbe()

@@ -534,7 +534,7 @@ trait MinuteComparison[A <: WithLastUpdated] {
   def maybeUpdated(existing: A, now: MillisSinceEpoch): Option[A]
 }
 
-trait PortStateMinutes[MinuteType, IndexType] {
+trait PortStateMinutes[MinuteType, IndexType <: WithTimeAccessor] {
   val asContainer: MinutesContainer[MinuteType, IndexType]
 
   def isEmpty: Boolean
@@ -910,10 +910,15 @@ object CrunchApi {
   }
 
   object MinutesContainer {
-    def empty[A, B]: MinutesContainer[A, B] = MinutesContainer[A, B](Iterable())
+    def empty[A, B <: WithTimeAccessor]: MinutesContainer[A, B] = MinutesContainer[A, B](Iterable())
   }
 
-  case class MinutesContainer[A, B](minutes: Iterable[MinuteLike[A, B]]) {
+  case class MinutesContainer[A, B <: WithTimeAccessor](minutes: Iterable[MinuteLike[A, B]]) {
+    def window(start: SDateLike, end: SDateLike):MinutesContainer[A, B] = {
+      val startMillis = start.millisSinceEpoch
+      val endMillis = end.millisSinceEpoch
+      MinutesContainer(minutes.filter(i => startMillis <= i.minute && i.minute <= endMillis))
+    }
     def ++(that: MinutesContainer[A, B]): MinutesContainer[A, B] = MinutesContainer(minutes ++ that.minutes)
     def updatedSince(sinceMillis: MillisSinceEpoch): MinutesContainer[A, B] = MinutesContainer(minutes.filter(_.lastUpdated.getOrElse(0L) > sinceMillis))
     def contains(clazz: Class[_]): Boolean = minutes.headOption match {

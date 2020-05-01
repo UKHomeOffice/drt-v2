@@ -5,6 +5,7 @@ import diode._
 import diode.data._
 import drt.client.actions.Actions._
 import drt.client.logger._
+import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi._
 import drt.shared.PortState
@@ -40,7 +41,7 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
       noChange
 
     case SetPortState(viewMode, portState) =>
-      log.info(s"Got a crunch state!")
+      log.info(s"Got a crunch state! ${portState.flights.size} flights, ${portState.crunchMinutes.size} crunch minutes, ${portState.staffMinutes.size} staff minutes. Latest crunch minute: ${SDate(portState.crunchMinutes.takeRight(1).head._1.minute).toISOString()}")
       val originCodes = portState.flights
         .map { case (_, fws) => fws.apiFlight.Origin }
         .toSet
@@ -60,7 +61,9 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
 
   def processRequest(viewMode: ViewMode, call: Future[dom.XMLHttpRequest]): Future[Action] = {
     call
-      .map(r => read[Either[PortStateError, Option[PortState]]](r.responseText))
+      .map { r =>
+        read[Either[PortStateError, Option[PortState]]](r.responseText)
+      }
       .map {
         case Right(Some(portState)) => SetPortState(viewMode, portState)
         case Right(None) =>

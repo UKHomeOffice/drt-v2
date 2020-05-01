@@ -9,7 +9,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer}
 import drt.shared.Terminals.Terminal
-import drt.shared.{MilliTimes, SDateLike}
+import drt.shared.{MilliTimes, SDateLike, WithTimeAccessor}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 
@@ -25,9 +25,9 @@ case class GetAllUpdatesSince(sinceMillis: MillisSinceEpoch)
 
 case class StartUpdatesStream(terminal: Terminal, day: SDateLike, startingSequenceNr: Long)
 
-class UpdatesSupervisor[A, B](now: () => SDateLike,
-                              terminals: List[Terminal],
-                              updatesActorFactory: (Terminal, SDateLike, MillisSinceEpoch) => Props) extends Actor {
+class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
+                                                  terminals: List[Terminal],
+                                                  updatesActorFactory: (Terminal, SDateLike, MillisSinceEpoch) => Props) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
   implicit val ex: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
   implicit val mat: ActorMaterializer = ActorMaterializer.create(context)

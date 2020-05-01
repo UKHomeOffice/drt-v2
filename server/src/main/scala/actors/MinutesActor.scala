@@ -6,6 +6,8 @@ import actors.daily.MinutesState
 import actors.daily.TerminalDay.TerminalDayBookmarks
 import akka.actor.{Actor, ActorRef}
 import akka.pattern.ask
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.{MinutesContainer, _}
 import drt.shared.Terminals.Terminal
@@ -15,7 +17,7 @@ import services.SDate
 import services.graphstages.Crunch
 import services.graphstages.Crunch.{LoadMinute, Loads}
 
-import scala.collection.mutable
+import scala.collection.{immutable, mutable}
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
@@ -97,27 +99,28 @@ class StaffMinutesActor(now: () => SDateLike,
                         lookupSecondary: MinutesLookup[StaffMinute, TM],
                         updateMinutes: MinutesUpdate[StaffMinute, TM]) extends MinutesActor(now, terminals, lookupPrimary, lookupSecondary, updateMinutes)
 
-object MinutesActor {
-  type MinutesLookup[A, B] = (Terminals.Terminal, SDateLike) => Future[Option[MinutesState[A, B]]]
-  type MinutesUpdate[A, B] = (Terminals.Terminal, SDateLike, MinutesContainer[A, B]) => Future[MinutesContainer[A, B]]
-}
-
 object MinutesWithBookmarks {
-  def empty[A, B]: MinutesWithBookmarks[A, B] = MinutesWithBookmarks(MinutesContainer.empty[A, B], Map())
+  def empty[A, B <: WithTimeAccessor]: MinutesWithBookmarks[A, B] = MinutesWithBookmarks(MinutesContainer.empty[A, B], Map())
 }
 
-case class MinutesWithBookmarks[A, B](container: MinutesContainer[A, B],
-                                      terminalDayBookmarks: TerminalDayBookmarks) {
+case class MinutesWithBookmarks[A, B <: WithTimeAccessor](container: MinutesContainer[A, B],
+                                                          terminalDayBookmarks: TerminalDayBookmarks) {
   def ++(that: MinutesWithBookmarks[A, B]): MinutesWithBookmarks[A, B] =
     MinutesWithBookmarks(container ++ that.container, terminalDayBookmarks ++ that.terminalDayBookmarks)
 }
 
-abstract class MinutesActor[A, B](now: () => SDateLike,
-                                  terminals: Iterable[Terminal],
-                                  lookupPrimary: MinutesLookup[A, B],
-                                  lookupSecondary: MinutesLookup[A, B],
-                                  updateMinutes: MinutesUpdate[A, B]) extends Actor {
+object MinutesActor {
+  type MinutesLookup[A, B <: WithTimeAccessor] = (Terminals.Terminal, SDateLike) => Future[Option[MinutesState[A, B]]]
+  type MinutesUpdate[A, B <: WithTimeAccessor] = (Terminals.Terminal, SDateLike, MinutesContainer[A, B]) => Future[MinutesContainer[A, B]]
+}
+
+abstract class MinutesActor[A, B <: WithTimeAccessor](now: () => SDateLike,
+                                                      terminals: Iterable[Terminal],
+                                                      lookupPrimary: MinutesLookup[A, B],
+                                                      lookupSecondary: MinutesLookup[A, B],
+                                                      updateMinutes: MinutesUpdate[A, B]) extends Actor {
   implicit val dispatcher: ExecutionContextExecutor = context.dispatcher
+  implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -146,18 +149,6 @@ abstract class MinutesActor[A, B](now: () => SDateLike,
           replyTo ! MinutesContainer(Seq())
       }
 
-//    case GetUpdatesSince(sinceMillis, startMillis, endMillis) =>
-//      val replyTo = sender()
-//      val eventualMinutes: Iterable[Future[MinutesWithBookmarks[A, B]]] = terminals.map {
-//        handleLookups(_, SDate(startMillis), SDate(endMillis))
-//      }
-//      combineEventualContainers(eventualMinutes).onComplete {
-//        case Success(container) => replyTo ! container.updatedSince(sinceMillis)
-//        case Failure(t) =>
-//          log.error("Failed to get minutes", t)
-//          replyTo ! MinutesContainer(Seq())
-//      }
-
     case container: MinutesContainer[A, B] =>
       val replyTo = sender()
       handleUpdatesAndAck(container, replyTo)
@@ -175,29 +166,31 @@ abstract class MinutesActor[A, B](now: () => SDateLike,
   def handleLookups(terminal: Terminal,
                     start: SDateLike,
                     end: SDateLike): Future[MinutesWithBookmarks[A, B]] = {
-    val eventualDayStates: Seq[Future[(SDateLike, Option[MinutesState[A, B]])]] = daysToFetch(start, end)
-      .map {
-        case day if isHistoric(day) =>
-          log.info(s"${day.toISOString()} is historic. Looking up historic data from CrunchStateReadActor")
-          (day, handleLookup(lookupPrimary(terminal, day), Option(() => lookupSecondary(terminal, day))))
-        case day =>
-          log.debug(s"${day.toISOString()} is live. Look up live data from TerminalDayQueuesActor")
-          (day, handleLookup(lookupPrimary(terminal, day), None))
-      }
-      .map {
-        case (day, eventual) => eventual.map(e => (day, e))
-      }
-
-    Future.sequence(eventualDayStates).map { dayMaybeStates =>
-      val (minutes, bookmarks): (MinutesContainer[A, B], TerminalDayBookmarks) = dayMaybeStates
-        .collect { case (day, Some(state)) => (day, state) }
-        .foldLeft((MinutesContainer[A, B](Seq()), Map[(Terminal, Long), Long]())) {
+    val eventualContainerWithBookmarks: Future[immutable.Seq[(MinutesContainer[A, B], TerminalDayBookmarks)]] =
+      Source(daysToFetch(start, end).toList)
+        .mapAsync(1) {
+          case day if isHistoric(day) =>
+            log.info(s"${day.toISOString()} is historic. Will use CrunchStateReadActor as secondary source")
+            handleLookup(lookupPrimary(terminal, day), Option(() => lookupSecondary(terminal, day))).map(r => (day, r))
+          case day =>
+            log.debug(s"${day.toISOString()} is live. Look up live data from TerminalDayQueuesActor")
+            handleLookup(lookupPrimary(terminal, day), None).map(r => (day, r))
+        }
+        .collect { case (day, Some(state)) => (day, state.window(start, end)) }
+        .fold((MinutesContainer[A, B](Seq()), Map[(Terminal, Long), Long]())) {
           case ((soFarContainer, soFarDaySeqNrs), (day, state)) =>
             val container = soFarContainer ++ state.minutes
             val daySeqNrs = soFarDaySeqNrs + ((terminal, day.millisSinceEpoch) -> state.bookmarkSeqNr)
             (container, daySeqNrs)
         }
-      MinutesWithBookmarks(minutes, bookmarks)
+        .runWith(Sink.seq)
+
+    eventualContainerWithBookmarks.map { containerBookmarks =>
+      val (container, bookmarks) = containerBookmarks.headOption match {
+        case Some(cb) => cb
+        case None => (MinutesContainer.empty[A, B], Map[(Terminal, MillisSinceEpoch), Long]())
+      }
+      MinutesWithBookmarks(container, bookmarks)
     }
   }
 
