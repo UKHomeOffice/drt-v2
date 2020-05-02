@@ -67,7 +67,7 @@ abstract class ApiService(val airportConfig: AirportConfig,
     with ShiftPersistence
     with StaffMovementsPersistence {
 
-  override implicit val timeout: akka.util.Timeout = Timeout(5 seconds)
+  override implicit val timeout: akka.util.Timeout = Timeout(15 seconds)
 
   override val log: Logger = LoggerFactory.getLogger(this.getClass)
 

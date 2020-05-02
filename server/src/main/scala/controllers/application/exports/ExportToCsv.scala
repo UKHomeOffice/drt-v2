@@ -20,7 +20,7 @@ import scala.util.{Failure, Success, Try}
 trait ExportToCsv {
   self: Application =>
 
-  implicit val timeout: Timeout = new Timeout(5 seconds)
+  implicit val timeout: Timeout = new Timeout(15 seconds)
 
   def exportToCsv(start: SDateLike,
                   end: SDateLike,
