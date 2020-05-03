@@ -4,6 +4,7 @@ import java.util.UUID
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern._
+import akka.testkit.TestKit
 import akka.util.Timeout
 import drt.shared.Alert
 import org.joda.time.DateTime
@@ -27,7 +28,7 @@ class AlertsActorSpec extends Specification {
   implicit val timeout: Timeout = Timeout(5 seconds)
 
   def getTestKit = {
-    new AkkaTestkitSpecs2SupportForPersistence("target/test") {
+    new TestKit(ActorSystem("drt")) {
       def getActor: ActorRef = alertsActor(system)
 
       def getState(actor: ActorRef) = {
@@ -36,7 +37,7 @@ class AlertsActorSpec extends Specification {
 
       def getStateAndShutdown(actor: ActorRef): Any = {
         val s = getState(actor)
-        shutDownActorSystem
+        TestKit.shutdownActorSystem(system)
         s
       }
     }
