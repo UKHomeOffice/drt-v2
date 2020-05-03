@@ -141,7 +141,7 @@ trait UserRoleProviderLike {
 
 object DrtActorSystem extends AirportConfProvider {
   implicit val actorSystem: ActorSystem = ActorSystem("DRT")
-  implicit val mat: ActorMaterializer = ActorMaterializer()
+  implicit val mat: ActorMaterializer = ActorMaterializer.create(actorSystem)
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
   val config: Configuration = new Configuration(ConfigFactory.load)
 
