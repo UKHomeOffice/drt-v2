@@ -7,11 +7,10 @@ import com.typesafe.config.{Config, ConfigFactory}
 import drt.server.feeds.mag.{FeedRequesterLike, MagFeed}
 import drt.shared.FlightsApi.Flights
 import drt.shared.PortCode
-import org.slf4j.{Logger, LoggerFactory}
-import org.specs2.mutable.SpecificationLike
 import pdi.jwt.JwtAlgorithm
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import services.SDate
+import services.crunch.CrunchTestLike
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
@@ -38,8 +37,7 @@ case class MockExceptionThrowingFeedRequester(causeException: () => Unit) extend
   }
 }
 
-class MagFeedSpec extends SpecificationLike {
-  val log: Logger = LoggerFactory.getLogger(getClass)
+class MagFeedSpec extends CrunchTestLike {
   val config: Config = ConfigFactory.load()
 
   val privateKey: String = config.getString("feeds.mag.private-key")
@@ -48,11 +46,9 @@ class MagFeedSpec extends SpecificationLike {
   val claimSub: String = config.getString("feeds.mag.claim.sub")
 
 
-  implicit val system: ActorSystem = ActorSystem("mag-test")
-  implicit val materialiser: ActorMaterializer = ActorMaterializer()
-  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
+  implicit val mat: ActorMaterializer = ActorMaterializer()
 
-  val feed = MagFeed(privateKey, claimIss, claimRole, claimSub, () => SDate.now(), PortCode("MAN"), MockFeedRequester)
+  val feed: MagFeed = MagFeed(privateKey, claimIss, claimRole, claimSub, () => SDate.now(), PortCode("MAN"), MockFeedRequester)
 
   "Given a jwt client " +
     "I can generate an encoded token" >> {
