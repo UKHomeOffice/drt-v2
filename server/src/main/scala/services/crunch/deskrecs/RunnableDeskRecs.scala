@@ -31,8 +31,6 @@ object RunnableDeskRecs {
             timeout: Timeout = new Timeout(10 seconds)): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
-    val askablePortStateActor: ActorRef = portStateActor
-
     val crunchPeriodStartMillis: SDateLike => SDateLike = Crunch.crunchStartWithOffset(portDeskRecs.crunchOffsetMinutes)
 
     val graph = GraphDSL.create(
@@ -49,7 +47,7 @@ object RunnableDeskRecs {
           bufferAsync
             .mapAsync(1) { crunchStartMillis =>
               log.info(s"Asking for flights for ${SDate(crunchStartMillis).toISOString()}")
-              flightsToCrunch(askablePortStateActor)(portDeskRecs.minutesToCrunch, crunchStartMillis)
+              flightsToCrunch(portStateActor)(portDeskRecs.minutesToCrunch, crunchStartMillis)
             }
             .map { case (crunchStartMillis, flights) =>
               val crunchEndMillis = SDate(crunchStartMillis).addMinutes(portDeskRecs.minutesToCrunch).millisSinceEpoch
@@ -68,18 +66,19 @@ object RunnableDeskRecs {
     RunnableGraph.fromGraph(graph).addAttributes(Attributes.inputBuffer(1, 1))
   }
 
-  private def flightsToCrunch(askablePortStateActor: ActorRef)
+  private def flightsToCrunch(portStateActor: ActorRef)
                              (minutesToCrunch: Int, crunchStartMillis: MillisSinceEpoch)
                              (implicit executionContext: ExecutionContext,
-                              timeout: Timeout): Future[(MillisSinceEpoch, FlightsWithSplits)] = askablePortStateActor
-    .ask(GetFlights(crunchStartMillis, crunchStartMillis + (minutesToCrunch * 60000L)))
-    .mapTo[FlightsWithSplits]
-    .map { fs => (crunchStartMillis, fs) }
-    .recoverWith {
-      case t =>
-        log.error("Failed to fetch flights from PortStateActor", t)
-        Future((crunchStartMillis, FlightsWithSplits(List())))
-    }
+                              timeout: Timeout): Future[(MillisSinceEpoch, FlightsWithSplits)] =
+    portStateActor
+      .ask(GetFlights(crunchStartMillis, crunchStartMillis + (minutesToCrunch * 60000L)))
+      .mapTo[FlightsWithSplits]
+      .map(fs => (crunchStartMillis, fs))
+      .recoverWith {
+        case t =>
+          log.error("Failed to fetch flights from PortStateActor", t)
+          Future((crunchStartMillis, FlightsWithSplits(List())))
+      }
 
   def start(portStateActor: ActorRef,
             portDeskRecs: DesksAndWaitsPortProviderLike,
