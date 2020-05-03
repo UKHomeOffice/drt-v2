@@ -1,6 +1,6 @@
 package actors
 
-import actors.acking.AckingReceiver.Ack
+import actors.acking.AckingReceiver.{Ack, StreamFailure}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.testkit.TestProbe
@@ -31,6 +31,9 @@ class PartitionedPortStateTestActor(probe: ActorRef,
   var state: PortState = PortState.empty
 
   override def receive: Receive = processMessage orElse {
+    case StreamFailure(_) =>
+      log.info(s"Stream shut down")
+
     case ps: PortState =>
       val replyTo = sender()
       log.info(s"Setting initial port state")
