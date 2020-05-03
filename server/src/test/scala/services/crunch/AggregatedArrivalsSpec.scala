@@ -54,7 +54,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
     clearDatabase()
   }
 
-  val table = ArrivalTable(defaultAirportConfig.portCode, H2Tables)
+  val table: ArrivalTable = ArrivalTable(defaultAirportConfig.portCode, H2Tables)
 
   def clearDatabase(): Unit = {
     Try(dropTables())
@@ -88,10 +88,10 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     val testProbe = TestProbe("arrivals-probe")
 
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       now = () => SDate(scheduled),
-      aggregatedArrivalsActor = aggregatedArrivalsTestActor(testProbe.ref, table)
-    )
+      maybeAggregatedArrivalsActor = Option(aggregatedArrivalsTestActor(testProbe.ref, table))
+    ))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
 
@@ -126,13 +126,13 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     val testProbe = TestProbe("arrivals-probe")
 
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       initialForecastBaseArrivals = mutable.SortedMap[UniqueArrival, Arrival](expiredArrival.unique -> expiredArrival),
       initialPortState = Option(initialPortState),
       now = () => SDate(scheduled),
       expireAfterMillis = 250,
-      aggregatedArrivalsActor = aggregatedArrivalsTestActor(testProbe.ref, table)
-    )
+      maybeAggregatedArrivalsActor = Option(aggregatedArrivalsTestActor(testProbe.ref, table))
+    ))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
 
@@ -167,13 +167,13 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     val testProbe = TestProbe("arrivals-probe")
 
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       initialForecastBaseArrivals = mutable.SortedMap[UniqueArrival, Arrival](descheduledArrival.unique -> descheduledArrival),
       initialPortState = Option(initialPortState),
       now = () => SDate(scheduled),
       expireAfterMillis = 250,
-      aggregatedArrivalsActor = aggregatedArrivalsTestActor(testProbe.ref, table)
-    )
+      maybeAggregatedArrivalsActor = Option(aggregatedArrivalsTestActor(testProbe.ref, table))
+    ))
 
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(List())))
 

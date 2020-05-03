@@ -12,7 +12,7 @@ import drt.shared._
 import drt.shared.api.Arrival
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import services.SDate
-import services.crunch.CrunchTestLike
+import services.crunch.{CrunchTestLike, TestConfig}
 
 import scala.collection.immutable.List
 import scala.collection.mutable
@@ -411,9 +411,9 @@ class AclFeedSpec extends CrunchTestLike {
 
       val fiveMinutes = 600d / 60
 
-      val crunch = runCrunchGraph(
+      val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduled),
-        airportConfig = defaultAirportConfig.copy(terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes))))
+        airportConfig = defaultAirportConfig.copy(terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)))))
 
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlight))
 
@@ -439,9 +439,9 @@ class AclFeedSpec extends CrunchTestLike {
 
       val fiveMinutes = 600d / 60
 
-      val crunch = runCrunchGraph(
+      val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduled),
-        airportConfig = defaultAirportConfig.copy(terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes))))
+        airportConfig = defaultAirportConfig.copy(terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)))))
 
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlights))
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
@@ -471,7 +471,7 @@ class AclFeedSpec extends CrunchTestLike {
       val newAcl = Set(
         ArrivalGenerator.arrival(iata = "BA0011", schDt = "2017-01-01T00:10Z", actPax = Option(105), status = ArrivalStatus("forecast")))
 
-      val crunch = runCrunchGraph(now = () => SDate(scheduledLive))
+      val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduledLive)))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(initialLive.toList)))
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(initialAcl.toList)))
@@ -501,10 +501,10 @@ class AclFeedSpec extends CrunchTestLike {
       val newLive = Set(
         ArrivalGenerator.arrival(iata = "BAW0001", schDt = "2017-01-01T00:05Z", actPax = Option(105), status = ArrivalStatus("estimated"), estDt = "2017-01-01T00:06Z"))
 
-      val crunch = runCrunchGraph(
+      val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduledLive),
         initialLiveArrivals = initialLive
-      )
+      ))
 
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(initialAcl.toList)))
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(newLive.toList)))
@@ -533,11 +533,11 @@ class AclFeedSpec extends CrunchTestLike {
       val newAcl = Flights(Seq(ArrivalGenerator.arrival(iata = "BA0004", schDt = "2017-01-01T00:04Z", actPax = Option(100))))
       val newLive = Flights(Seq(ArrivalGenerator.arrival(iata = "BAW0005", schDt = "2017-01-01T00:05Z", actPax = Option(101))))
 
-      val crunch = runCrunchGraph(
+      val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduledLive),
         initialForecastBaseArrivals = initialAcl,
         initialLiveArrivals = initialLive
-      )
+      ))
 
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(newAcl))
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(newLive))
@@ -563,7 +563,7 @@ class AclFeedSpec extends CrunchTestLike {
       val aclInput1 = Flights(Seq(aclArrival))
       val aclInput2 = Flights(Seq(aclArrival))
 
-      val crunch = runCrunchGraph(now = () => SDate(scheduledLive))
+      val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduledLive)))
 
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclInput1))
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclInput2))

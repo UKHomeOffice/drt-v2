@@ -8,14 +8,14 @@ import drt.shared._
 import org.specs2.execute.Success
 import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
-import services.crunch.CrunchTestLike
+import services.crunch.{CrunchTestLike, TestConfig}
 
 import scala.concurrent.duration._
 
 class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
   "Given an empty port state" >> {
     val nowString = "2020-04-01T00:00"
-    val crunch = runCrunchGraph(now = () => SDate(nowString))
+    val crunch = runCrunchGraph(TestConfig(now = () => SDate(nowString)))
 
     def fishForArrivalWithActPax(actPax: Option[Int], status: String = ""): Success = {
       crunch.portStateTestProbe.fishForMessage(1 second) {

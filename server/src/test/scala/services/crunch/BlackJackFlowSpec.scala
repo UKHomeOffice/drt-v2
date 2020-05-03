@@ -31,14 +31,14 @@ class BlackJackFlowSpec extends CrunchTestLike {
           SDate(scheduled).addMinutes(15).millisSinceEpoch -> DeskStat(Option(2), Option(10))
         ))))
 
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       now = () => SDate(scheduled),
       airportConfig = defaultAirportConfig.copy(
         terminalProcessingTimes = Map(T1 -> Map(
           eeaMachineReadableToDesk -> 25d / 60
         )),
         queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk)))
-    )
+    ))
 
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(initialBaseArrivals.toSeq)))
     Thread.sleep(1500)
@@ -75,7 +75,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
           SDate(scheduled).addMinutes(15).millisSinceEpoch -> DeskStat(None, Option(10))
         ))))
 
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       now = () => SDate(scheduled),
       airportConfig = defaultAirportConfig.copy(
         terminalProcessingTimes = Map(T1 -> Map(
@@ -83,7 +83,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
           eeaMachineReadableToEGate -> 25d / 60
         )),
         queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk)))
-    )
+    ))
 
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(initialBaseArrivals.toSeq)))
     Thread.sleep(1500)

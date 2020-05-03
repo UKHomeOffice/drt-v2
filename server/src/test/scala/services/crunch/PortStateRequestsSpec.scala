@@ -3,7 +3,6 @@ package services.crunch
 import actors._
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
-import akka.util.Timeout
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
@@ -17,8 +16,6 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 class PortStateRequestsSpec extends CrunchTestLike {
-  implicit val timeout: Timeout = new Timeout(1 second)
-
   "Given an empty PartitionedPortState" >> {
     val scheduled = "2020-01-01T00:00"
     val now = () => SDate(scheduled)
@@ -52,7 +49,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
       }
     }
 
-    def flightsWithSplits(params: Iterable[(String, String, Terminal)]): List[ApiFlightWithSplits] = params.map { case (flightNumber, scheduled, terminal) =>
+    def flightsWithSplits(params: Iterable[(String, String, Terminal)]): List[ApiFlightWithSplits] = params.map { case (_, scheduled, _) =>
       val flight = ArrivalGenerator.arrival("BA1000", schDt = scheduled, terminal = T1)
       ApiFlightWithSplits(flight, Set())
     }.toList
@@ -167,6 +164,6 @@ class PortStateRequestsSpec extends CrunchTestLike {
   }
 
   def flightsToMap(now: () => SDateLike, flights: Seq[ApiFlightWithSplits]): Map[UniqueArrival, ApiFlightWithSplits] = flights.map { fws1 =>
-    (fws1.unique -> fws1.copy(lastUpdated = Option(now().millisSinceEpoch)))
+    fws1.unique -> fws1.copy(lastUpdated = Option(now().millisSinceEpoch))
   }.toMap
 }

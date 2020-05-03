@@ -169,11 +169,11 @@ class PortStateActor(liveStateActor: ActorRef,
     case (Some(crunchActor), true, true) =>
       crunchSourceIsReady = false
       crunchActor
-        .ask(flightMinutesBuffer.toList)(new Timeout(10 minutes))
+        .ask(flightMinutesBuffer.toList)(new Timeout(15 seconds))
         .recover {
           case e =>
             log.error("Error sending minutes to crunch - non recoverable error. Terminating App.", e)
-            System.exit(1)
+//            System.exit(1)
         }
         .onComplete { _ =>
           context.self ! SetCrunchSourceReady

@@ -53,10 +53,10 @@ class TransferPaxInApiSpec extends CrunchTestLike {
         tranPax = Option(1))
     ))
 
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       now = () => SDate(scheduled),
       airportConfig = lhrAirportConfig
-    )
+    ))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
@@ -109,10 +109,10 @@ class TransferPaxInApiSpec extends CrunchTestLike {
         ))
     )
 
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       now = () => SDate(scheduled),
       airportConfig = lhrAirportConfig
-    )
+    ))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
     offerAndWait(crunch.manifestsLiveInput, inputManifests)
