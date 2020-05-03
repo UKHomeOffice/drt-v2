@@ -16,17 +16,16 @@ import drt.shared.{ArrivalStatus, LiveFeedSource, Operator, PortCode}
 import org.specs2.mutable.SpecificationLike
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
+import services.crunch.CrunchTestLike
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.xml.{NodeSeq, XML}
 
-class BHXFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike {
+class BHXFeedSpec extends CrunchTestLike with SpecificationLike {
   sequential
   isolated
-
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
 
   implicit val xmlToResUM: Unmarshaller[NodeSeq, BHXFlightsResponse] = BHXFlight.unmarshaller
   implicit val resToBHXResUM: Unmarshaller[HttpResponse, BHXFlightsResponse] = BHXFlight.responseToAUnmarshaller
