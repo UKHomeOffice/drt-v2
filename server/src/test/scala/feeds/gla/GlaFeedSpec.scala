@@ -11,10 +11,9 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.T1
 import drt.shared.api.Arrival
 import drt.shared.{ArrivalStatus, LiveFeedSource, PortCode}
-import org.slf4j.{Logger, LoggerFactory}
-import org.specs2.mutable.SpecificationLike
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import services.SDate
+import services.crunch.CrunchTestLike
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
@@ -38,12 +37,8 @@ case class MockExceptionThrowingFeedRequester() extends GlaFeedRequesterLike {
   }
 }
 
-class GlaFeedSpec extends SpecificationLike {
-  val log: Logger = LoggerFactory.getLogger(getClass)
-
-  implicit val system: ActorSystem = ActorSystem("gla-test")
-  implicit val materialiser: ActorMaterializer = ActorMaterializer()
-  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
+class GlaFeedSpec extends CrunchTestLike {
+  implicit val mat: ActorMaterializer = ActorMaterializer()
 
   "Given a GLA Feed I should be able to connect to it and get arrivals back" >> {
     skipped(s"Exploratory test.")
