@@ -1,6 +1,6 @@
 package services.`export`
 
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, Props}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
@@ -9,20 +9,18 @@ import controllers.ArrivalGenerator
 import drt.shared.Queues.{EeaDesk, Queue}
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.{SDateLike, _}
-import org.specs2.mutable.SpecificationLike
 import services.SDate
+import services.crunch.CrunchTestLike
 import services.exports.summaries.flights.TerminalFlightsSummary
 import services.exports.summaries.{GetSummaries, TerminalSummaryLike}
 import services.graphstages.Crunch
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
+import scala.concurrent.{Await, Future}
 
-class FlightsExportSpec extends SpecificationLike {
+class FlightsExportSpec extends CrunchTestLike {
   val terminal: Terminal = T1
 
-  implicit val system: ActorSystem = ActorSystem("queues-summary")
-  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
   implicit val timeout: Timeout = new Timeout(5 seconds)
 
   val year = 2020
