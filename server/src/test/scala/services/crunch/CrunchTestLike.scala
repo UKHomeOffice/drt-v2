@@ -7,6 +7,7 @@ import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
+import akka.stream.testkit.TestSubscriber.Probe
 import akka.stream.{ActorMaterializer, OverflowStrategy, QueueOfferResult, UniqueKillSwitch}
 import akka.testkit.{TestKit, TestProbe}
 import akka.util.Timeout
@@ -21,6 +22,7 @@ import drt.shared.api.Arrival
 import graphs.SinkToSourceBridge
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
+import org.specs2.execute.Result
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.AfterAll
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
@@ -95,6 +97,15 @@ object TestDefaults {
       ),
     desksByTerminal = Map(T1 -> 40, T2 -> 40)
     )
+  val pcpForFlightFromSch: Arrival => MilliDate = (a: Arrival) => MilliDate(SDate(a.Scheduled).millisSinceEpoch)
+  val pcpForFlightFromBest: Arrival => MilliDate = (a: Arrival) => {
+    if (a.ActualChox.isDefined) MilliDate(SDate(a.ActualChox.get).millisSinceEpoch)
+    else if (a.EstimatedChox.isDefined) MilliDate(SDate(a.EstimatedChox.get).millisSinceEpoch)
+    else if (a.Actual.isDefined) MilliDate(SDate(a.Actual.get).millisSinceEpoch)
+    else if (a.Estimated.isDefined) MilliDate(SDate(a.Estimated.get).millisSinceEpoch)
+    else MilliDate(SDate(a.Scheduled).millisSinceEpoch)
+  }
+  def testProbe(name: String)(implicit system: ActorSystem): TestProbe = TestProbe(name = name)
 }
 
 class CrunchTestLike
@@ -104,13 +115,14 @@ class CrunchTestLike
   isolated
   sequential
 
+  implicit def probe2Success[R <: Probe[_]](r: R): Result = success
+
   override def afterAll: Unit = {
     log.info("Shutting down actor system!!!")
     TestKit.shutdownActorSystem(system)
   }
 
-  implicit val actorSystem: ActorSystem = system
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
+  implicit val materializer: ActorMaterializer = ActorMaterializer.create(system)
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
   val log: Logger = LoggerFactory.getLogger(getClass)
