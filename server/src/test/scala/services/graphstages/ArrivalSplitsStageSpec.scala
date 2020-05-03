@@ -34,8 +34,7 @@ object TestableArrivalSplits {
       optionalInitialFlights = None,
       splitsCalculator = splitsCalculator,
       expireAfterMillis = oneDayMillis,
-      now = now,
-      useApiPaxNos = true
+      now = now
     )
 
     val arrivalsDiffSource = Source.queue[ArrivalsDiff](1, OverflowStrategy.backpressure)

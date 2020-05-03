@@ -32,3 +32,4 @@ object LiveArrivalsUtil {
   }
 
 }
+

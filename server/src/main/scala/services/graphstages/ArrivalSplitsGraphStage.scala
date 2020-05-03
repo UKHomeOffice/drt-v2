@@ -23,8 +23,7 @@ class ArrivalSplitsGraphStage(name: String = "",
                               optionalInitialFlights: Option[FlightsWithSplitsDiff],
                               splitsCalculator: SplitsCalculator,
                               expireAfterMillis: Int,
-                              now: () => SDateLike,
-                              useApiPaxNos: Boolean)
+                              now: () => SDateLike)
   extends GraphStage[FanInShape3[ArrivalsDiff, List[BestAvailableManifest], List[BestAvailableManifest], FlightsWithSplitsDiff]] {
 
   val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
@@ -130,13 +129,10 @@ class ArrivalSplitsGraphStage(name: String = "",
 
       val flightWithAvailableApiData = liveApiSplits match {
         case Some(splits) =>
-          if (useApiPaxNos)
-            flight.copy(
-              FeedSources = flight.FeedSources + ApiFeedSource,
-              ApiPax = Option(Math.round(splits.totalExcludingTransferPax).toInt)
-            )
-          else
-            flight.copy(FeedSources = flight.FeedSources + ApiFeedSource)
+          flight.copy(
+            FeedSources = flight.FeedSources + ApiFeedSource,
+            ApiPax = Option(Math.round(splits.totalExcludingTransferPax).toInt)
+          )
         case _ => flight
       }
 
@@ -273,7 +269,7 @@ class ArrivalSplitsGraphStage(name: String = "",
     }
 
     def isNewManifestForFlight(flightWithSplits: ApiFlightWithSplits, newSplits: Splits): Boolean =
-        !flightWithSplits.splits.contains(newSplits)
+      !flightWithSplits.splits.contains(newSplits)
 
     def updateCodeSharesFromDiff(arrivalsDiff: ArrivalsDiff): Unit = arrivalsDiff.toUpdate
       .foreach { case (_, arrival) =>

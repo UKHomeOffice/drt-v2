@@ -13,7 +13,7 @@ import services.SDate
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._
 
-class ApiPaxNosCrunchSpecSpec extends CrunchTestLike {
+class ApiPaxNosCrunchSpec extends CrunchTestLike {
   sequential
   isolated
 

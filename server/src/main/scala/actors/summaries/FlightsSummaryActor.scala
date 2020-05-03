@@ -5,6 +5,7 @@ import actors.{FlightMessageConversion, RecoveryActorLike, Sizes}
 import akka.actor.Props
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.Terminal
+import drt.shared.api.Arrival
 import drt.shared.{ApiFlightWithSplits, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
@@ -15,8 +16,8 @@ import services.exports.summaries.flights.{TerminalFlightsSummary, TerminalFligh
 import services.graphstages.Crunch
 
 object FlightsSummaryActor {
-  def props(date: SDateLike, terminal: Terminal, now: () => SDateLike): Props =
-    Props(classOf[FlightsSummaryActor], date.getFullYear(), date.getMonth(), date.getDate(), terminal, now)
+  def props(date: SDateLike, terminal: Terminal, pcpPaxFn: Arrival => Int, now: () => SDateLike): Props =
+    Props(classOf[FlightsSummaryActor], date.getFullYear(), date.getMonth(), date.getDate(), terminal, pcpPaxFn, now)
 }
 
 case object GetSummariesWithActualApi
@@ -25,6 +26,7 @@ class FlightsSummaryActor(year: Int,
                           month: Int,
                           day: Int,
                           terminal: Terminal,
+                          pcpPaxFn: Arrival => Int,
                           val now: () => SDateLike) extends RecoveryActorLike {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -67,12 +69,24 @@ class FlightsSummaryActor(year: Int,
 
     case GetSummaries =>
       log.info(s"Received GetSummaries")
-      val summaries = state.map(TerminalFlightsSummary(_, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes))
+      val summaries = state.map(
+        TerminalFlightsSummary(
+          _,
+          millisToLocalIsoDateOnly,
+          millisToLocalHoursAndMinutes,
+          pcpPaxFn
+        ))
       sender() ! summaries
 
     case GetSummariesWithActualApi =>
       log.info(s"Received GetSummariesWithActualApi")
-      val summaries = state.map(TerminalFlightsWithActualApiSummary(_, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes))
+      val summaries = state.map(
+        TerminalFlightsWithActualApiSummary(
+          _,
+          millisToLocalIsoDateOnly,
+          millisToLocalHoursAndMinutes,
+          pcpPaxFn
+        ))
       sender() ! summaries
   }
 

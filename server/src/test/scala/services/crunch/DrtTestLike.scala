@@ -219,7 +219,8 @@ case class TestConfig(initialForecastBaseArrivals: mutable.SortedMap[UniqueArriv
                       recrunchOnStart: Boolean = false,
                       flexDesks: Boolean = false,
                       useLegacyDeployments: Boolean = false,
-                      maybePassengersActorProps: Option[Props] = None
+                      maybePassengersActorProps: Option[Props] = None,
+                      pcpPaxFn: Arrival => Int = TestDefaults.pcpPaxFn
                      )
 
 class TestDrtActor extends Actor {
@@ -255,7 +256,7 @@ class TestDrtActor extends Actor {
       val askablePortStateActor: ActorRef = portStateActor
       if (tc.initialPortState.isDefined) Await.ready(askablePortStateActor.ask(tc.initialPortState.get)(new Timeout(1 second)), 1 second)
 
-      val portDescRecs = DesksAndWaitsPortProvider(tc.airportConfig, tc.cruncher)
+      val portDescRecs = DesksAndWaitsPortProvider(tc.airportConfig, tc.cruncher, tc.pcpPaxFn)
 
       val deskLimitsProvider: Map[Terminal, TerminalDeskLimitsLike] = if (tc.flexDesks)
         PortDeskLimits.flexed(tc.airportConfig)
@@ -330,7 +331,7 @@ class TestDrtActor extends Actor {
         refreshArrivalsOnStart = tc.refreshArrivalsOnStart,
         checkRequiredStaffUpdatesOnStartup = tc.checkRequiredStaffUpdatesOnStartup,
         stageThrottlePer = 50 milliseconds,
-        useApiPaxNos = true,
+        pcpPaxFn = tc.pcpPaxFn,
         adjustEGateUseByUnder12s = false,
         optimiser = tc.cruncher,
         useLegacyDeployments = tc.useLegacyDeployments,

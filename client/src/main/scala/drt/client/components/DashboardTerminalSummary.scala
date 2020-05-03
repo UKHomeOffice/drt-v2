@@ -5,6 +5,7 @@ import drt.shared.CrunchApi._
 import drt.shared.Queues.{InvalidQueue, Queue}
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import drt.shared.api.Arrival
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.{CtorType, ScalaComponent}
@@ -102,7 +103,7 @@ object DashboardTerminalSummary {
     }
   }
 
-  val aggSplits: Seq[ApiFlightWithSplits] => Map[PaxTypeAndQueue, Int] = BigSummaryBoxes.aggregateSplits(PcpPax.bestPax)
+  def aggSplits(pcpPaxFn: Arrival => Int): Seq[ApiFlightWithSplits] => Map[PaxTypeAndQueue, Int] = BigSummaryBoxes.aggregateSplits(pcpPaxFn)
 
   def paxInPeriod(cms: Seq[CrunchMinute]): Double = cms.map(_.paxLoad).sum
 
@@ -113,7 +114,9 @@ object DashboardTerminalSummary {
                    paxTypeAndQueues: Seq[PaxTypeAndQueue],
                    queues: Seq[Queue],
                    timeWindowStart: SDateLike,
-                   timeWindowEnd: SDateLike)
+                   timeWindowEnd: SDateLike,
+                   pcpPaxFn: Arrival => Int
+                  )
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("SummaryBox")
     .render_P { props =>
@@ -132,8 +135,8 @@ object DashboardTerminalSummary {
 
         val pressurePointAvailableStaff = pressureStaffMinute.map(sm => sm.available).getOrElse(0)
         val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePointAvailableStaff)
-
-        val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(props.flights)
+        
+        val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(props.pcpPaxFn)(props.flights)
         val summary: Seq[DashboardSummary] = hourSummary(props.flights, props.crunchMinutes, props.timeWindowStart)
         val queueTotals = totalsByQueue(summary)
 
