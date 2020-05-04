@@ -110,7 +110,7 @@ object TestDefaults {
 }
 
 class CrunchTestLike
-  extends TestKit(ActorSystem("drt"))
+  extends TestKit(ActorSystem("DRT-TEST"))
     with SpecificationLike
     with AfterAll
     with AfterEach {
