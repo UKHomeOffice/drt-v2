@@ -95,11 +95,7 @@ lazy val server = (project in file("server"))
     libraryDependencies ++= Settings.jvmDependencies.value,
     libraryDependencies += specs2 % Test,
     libraryDependencies += guice,
-    excludeDependencies ++= Seq(
-      ExclusionRule("org.slf4j", "slf4j-simple"),
-      ExclusionRule("org.slf4j", "slf4j-jdk12"),
-      ExclusionRule("org.slf4j", "slf4j-log4j12"),
-      ),
+    excludeDependencies += ExclusionRule("org.slf4j", "slf4j-log4j12"),
     dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-core" % "2.8.7",
     dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-databind" % "2.8.7",
     dependencyOverrides += "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.8.7",
