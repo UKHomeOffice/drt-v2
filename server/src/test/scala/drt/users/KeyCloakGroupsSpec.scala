@@ -2,18 +2,15 @@ package drt.users
 
 import java.util.UUID
 
-import akka.actor.ActorSystem
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
-import akka.stream.ActorMaterializer
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
-import org.specs2.mutable.Specification
+import services.crunch.CrunchTestLike
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
 
-class KeyCloakGroupsSpec extends Specification {
+class KeyCloakGroupsSpec extends CrunchTestLike {
   val staticUuid: UUID = UUID.randomUUID()
 
   def usernameToUser(username: String): KeyCloakUser = KeyCloakUser(
@@ -46,9 +43,6 @@ class KeyCloakGroupsSpec extends Specification {
     KeyCloakGroup("", "LHR", ""),
     KeyCloakGroup("", "LGW", "")
   )
-
-  implicit val system: ActorSystem = ActorSystem("keycloak-test")
-  implicit val mat: ActorMaterializer = ActorMaterializer()
 
   class TestKeyCloakClient(groupUsers: Map[String, List[KeyCloakUser]], allUsers: Map[Int, List[KeyCloakUser]])
     extends KeyCloakClient("", "") {

@@ -33,10 +33,6 @@ case class MockDesksAndWaitsPort(minutesToCrunch: Int, crunchOffsetMinutes: Int)
 }
 
 class StreamingWorkloadSpec extends CrunchTestLike {
-  sequential
-
-  implicit val timeout: Timeout = new Timeout(10 seconds)
-
   val mockCrunch: TryCrunch = CrunchMocks.mockCrunch
   val noDelay: Long = 0L
   val smallDelay: Long = 66L

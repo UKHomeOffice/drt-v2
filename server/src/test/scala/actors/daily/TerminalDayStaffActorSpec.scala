@@ -1,13 +1,11 @@
 package actors.daily
 
-import actors.{ClearState, GetState}
+import actors.GetState
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
-import akka.util.Timeout
-import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, StaffMinute}
-import drt.shared.Queues.EeaDesk
+import drt.shared.CrunchApi.{MinutesContainer, StaffMinute}
 import drt.shared.Terminals.{T1, Terminal}
-import drt.shared.{SDateLike, TM, TQM}
+import drt.shared.{SDateLike, TM}
 import services.SDate
 import services.crunch.CrunchTestLike
 
@@ -27,8 +25,6 @@ class MockTerminalDayStaffActor(day: SDateLike,
 
 class TerminalDayStaffActorSpec extends CrunchTestLike {
   val terminal: Terminal = T1
-
-  implicit val timeout: Timeout = new Timeout(5 seconds)
 
   val date: SDateLike = SDate("2020-01-01")
   val myNow: () => SDateLike = () => date

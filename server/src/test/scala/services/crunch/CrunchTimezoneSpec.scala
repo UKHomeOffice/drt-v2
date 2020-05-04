@@ -61,14 +61,14 @@ class CrunchTimezoneSpec extends CrunchTestLike {
             val fiveMinutes = 600d / 60
             val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes))
 
-            val crunch = runCrunchGraph(
-              now = () => SDate(scheduled),
-              airportConfig = defaultAirportConfig.copy(
-                minMaxDesksByTerminalQueue24Hrs = minMaxDesks,
-                terminalProcessingTimes = procTimes,
-                queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1),
-                minutesToCrunch = 120
-                ))
+        val crunch = runCrunchGraph(TestConfig(
+          now = () => SDate(scheduled),
+          airportConfig = defaultAirportConfig.copy(
+            minMaxDesksByTerminalQueue24Hrs = minMaxDesks,
+            terminalProcessingTimes = procTimes,
+            queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1),
+            minutesToCrunch = 120
+            )))
 
             offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 

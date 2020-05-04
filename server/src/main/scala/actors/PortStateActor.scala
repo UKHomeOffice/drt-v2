@@ -30,13 +30,10 @@ object PortStateActor {
             forecastStateActor: ActorRef,
             now: () => SDateLike,
             liveDaysAhead: Int): Props =
-    Props(new PortStateActor(liveStateActor, forecastStateActor, now, liveDaysAhead))
+    Props(new PortStateActor(liveStateActor, forecastStateActor, now, liveDaysAhead, exitOnQueueException = true))
 }
 
-class PortStateActor(liveStateActor: ActorRef,
-                     forecastStateActor: ActorRef,
-                     now: () => SDateLike,
-                     liveDaysAhead: Int) extends Actor {
+class PortStateActor(liveStateActor: ActorRef, forecastStateActor: ActorRef, now: () => SDateLike, liveDaysAhead: Int, exitOnQueueException: Boolean) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
@@ -172,8 +169,11 @@ class PortStateActor(liveStateActor: ActorRef,
         .ask(flightMinutesBuffer.toList)(new Timeout(10 minutes))
         .recover {
           case e =>
-            log.error("Error sending minutes to crunch - non recoverable error. Terminating App.", e)
-            System.exit(1)
+            log.error("Error sending minutes to crunch - non recoverable error", e)
+            if (exitOnQueueException) {
+              log.info("Terminating App")
+              System.exit(1)
+            }
         }
         .onComplete { _ =>
           context.self ! SetCrunchSourceReady

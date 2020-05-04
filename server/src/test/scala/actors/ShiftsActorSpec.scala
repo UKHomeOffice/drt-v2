@@ -1,17 +1,13 @@
 package actors
 
 import actors.pointInTime.ShiftsReadActor
-import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
-import akka.testkit.{ImplicitSender, TestKit}
-import com.typesafe.config.ConfigFactory
+import akka.actor.{ActorRef, PoisonPill, Props}
+import akka.testkit.ImplicitSender
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
-import org.specs2.mutable.SpecificationLike
-import org.specs2.specification.AfterEach
 import services.SDate
 import services.crunch.CrunchTestLike
 
-import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
 
@@ -23,15 +19,9 @@ object StaffAssignmentGenerator {
   }
 }
 
-class ShiftsActorSpec extends CrunchTestLike  with SpecificationLike
-  with AfterEach
-  with ImplicitSender {
+class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
   sequential
   isolated
-
-  override def after: Unit = {
-    TestKit.shutdownActorSystem(system)
-  }
 
   import StaffAssignmentGenerator._
 

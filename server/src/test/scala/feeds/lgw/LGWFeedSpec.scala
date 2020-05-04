@@ -1,20 +1,17 @@
 package feeds.lgw
 
-import akka.actor.ActorSystem
-import akka.testkit.TestKit
-import com.typesafe.config.ConfigFactory
 import drt.server.feeds.lgw.ResponseToArrivals
 import drt.shared.Terminals.N
 import drt.shared.api.Arrival
 import drt.shared.{LiveFeedSource, PortCode}
 import org.specs2.mock.Mockito
-import org.specs2.mutable.SpecificationLike
 import services.SDate
+import services.crunch.CrunchTestLike
 
 import scala.collection.immutable.Seq
 import scala.io.Source
 
-class LGWFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike with Mockito {
+class LGWFeedSpec extends CrunchTestLike with Mockito {
   sequential
   isolated
 

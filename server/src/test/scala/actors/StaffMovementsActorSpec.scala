@@ -4,17 +4,13 @@ package actors
 import java.util.UUID
 
 import actors.pointInTime.StaffMovementsReadActor
-import akka.actor.{ActorSystem, PoisonPill, Props}
-import akka.testkit.{ImplicitSender, TestKit}
-import com.typesafe.config.ConfigFactory
+import akka.actor.{PoisonPill, Props}
+import akka.testkit.ImplicitSender
 import drt.shared.Terminals.T1
 import drt.shared.{MilliDate, SDateLike, StaffMovement}
-import org.specs2.mutable.SpecificationLike
-import org.specs2.specification.AfterEach
 import services.SDate
 import services.crunch.CrunchTestLike
 
-import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
 
@@ -22,15 +18,9 @@ object PersistenceHelper {
   val dbLocation = "target/test"
 }
 
-class StaffMovementsActorSpec extends CrunchTestLike  with SpecificationLike
-  with AfterEach
-  with ImplicitSender {
+class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
   sequential
   isolated
-
-  override def after: Unit = {
-    TestKit.shutdownActorSystem(system)
-  }
 
   "StaffMovementsActor" should {
     "remember a movement added before a shutdown" in {

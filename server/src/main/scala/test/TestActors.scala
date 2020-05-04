@@ -132,7 +132,7 @@ object TestActors {
   }
 
   class TestPortStateActor(live: ActorRef, forecast: ActorRef, now: () => SDateLike, liveDaysAhead: Int)
-    extends PortStateActor(live, forecast, now, liveDaysAhead) {
+    extends PortStateActor(live, forecast, now, liveDaysAhead, true) {
     def reset: Receive = {
       case ResetData =>
         state.clear()

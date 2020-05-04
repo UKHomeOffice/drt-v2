@@ -26,12 +26,12 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
         val endDate1 = MilliDate(SDate("2017-01-02T23:59").millisSinceEpoch)
         val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 20, None)
 
-        val crunch = runCrunchGraph(
+        val crunch = runCrunchGraph(TestConfig(
           now = () => SDate(weekBeginning).addDays(-1),
           initialShifts = ShiftAssignments(Seq(assignment1)),
           cruncher = Optimiser.crunch,
           checkRequiredStaffUpdatesOnStartup = true
-          )
+          ))
 
         val expected = List(
           ForecastTimeSlot(SDate("2017-01-02T00:00Z").millisSinceEpoch, 20, 0),

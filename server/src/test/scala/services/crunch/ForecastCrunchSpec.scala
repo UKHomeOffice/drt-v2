@@ -50,7 +50,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
       val endDate2 = MilliDate(SDate("2017-01-04T00:29").millisSinceEpoch)
       val assignment2 = StaffAssignment("shift s", T1, startDate2, endDate2, 2, None)
 
-      val crunch = runCrunchGraph(
+      val crunch = runCrunchGraph(TestConfig(
         airportConfig = defaultAirportConfig.copy(
           queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
           ),
@@ -59,7 +59,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
         maxDaysToCrunch = 4,
         checkRequiredStaffUpdatesOnStartup = true,
         useLegacyDeployments = true
-        )
+        ))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseFlights))
@@ -89,13 +89,13 @@ class ForecastCrunchSpec extends CrunchTestLike {
       val baseArrival = ArrivalGenerator.arrival(schDt = base, iata = "BA0001", terminal = T1, actPax = Option(20))
       val baseFlights = Flights(List(baseArrival))
 
-      val crunch = runCrunchGraph(
+      val crunch = runCrunchGraph(TestConfig(
         airportConfig = defaultAirportConfig.copy(
           queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
           ),
         now = () => SDate(scheduled),
         useLegacyDeployments = true
-        )
+        ))
 
       val forecastStaffNumber = 5
 
@@ -133,7 +133,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val baseArrival = ArrivalGenerator.arrival(schDt = base, iata = "BA0001", terminal = T1, actPax = Option(21))
     val baseFlights = Flights(List(baseArrival))
 
-    val crunch = runCrunchGraph(now = () => SDate(scheduled), maxDaysToCrunch = 4, cruncher = CrunchMocks.mockCrunch)
+    val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled), maxDaysToCrunch = 4, cruncher = CrunchMocks.mockCrunch))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseFlights))
@@ -174,7 +174,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val endDate2 = MilliDate(SDate("2017-01-04T00:29").millisSinceEpoch)
     val assignment2 = StaffAssignment("shift s", T1, startDate2, endDate2, 2, None)
 
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       airportConfig = defaultAirportConfig.copy(
         crunchOffsetMinutes = 240,
         queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk)),
@@ -184,7 +184,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
       initialShifts = ShiftAssignments(Seq(assignment1, assignment2)),
       cruncher = Optimiser.crunch,
       maxDaysToCrunch = 4
-      )
+      ))
 
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseFlights))
 
@@ -218,7 +218,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val baseArrival = ArrivalGenerator.arrival(schDt = baseScheduled, iata = "BA0001", terminal = T1, actPax = Option(21))
     val baseFlights = Flights(List(baseArrival))
 
-    val crunch = runCrunchGraph(now = () => SDate(today))
+    val crunch = runCrunchGraph(TestConfig(now = () => SDate(today)))
 
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseFlights))
 
@@ -244,7 +244,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val forecastArrival = ArrivalGenerator.arrival(schDt = forecastScheduled, iata = "BA0001", terminal = T1, actPax = Option(21))
     val forecastArrivals = Flights(List(forecastArrival))
 
-    val crunch = runCrunchGraph(now = () => SDate(forecastScheduled).addDays(-1))
+    val crunch = runCrunchGraph(TestConfig(now = () => SDate(forecastScheduled).addDays(-1)))
 
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals))
 
@@ -267,7 +267,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val baseArrivals = Flights(List(baseArrival))
     val forecastArrivals = Flights(List(forecastArrival))
 
-    val crunch = runCrunchGraph(now = () => SDate(baseScheduled).addDays(-1))
+    val crunch = runCrunchGraph(TestConfig(now = () => SDate(baseScheduled).addDays(-1)))
 
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals))
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseArrivals))
@@ -296,7 +296,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val baseArrivals = Flights(List(baseArrival))
     val forecastArrivals = Flights(List(forecastArrival))
 
-    val crunch = runCrunchGraph(now = () => SDate(baseScheduled).addDays(-1))
+    val crunch = runCrunchGraph(TestConfig(now = () => SDate(baseScheduled).addDays(-1)))
 
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals))
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseArrivals))
@@ -327,7 +327,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val forecastArrivals = Flights(List(forecastArrival))
     val liveArrivals = Flights(List(liveArrival))
 
-    val crunch = runCrunchGraph(now = () => SDate(baseScheduled).addDays(-1))
+    val crunch = runCrunchGraph(TestConfig(now = () => SDate(baseScheduled).addDays(-1)))
 
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseArrivals))
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals))
@@ -360,7 +360,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val forecastArrivals1st = Flights(List(forecastArrival1))
     val forecastArrivals2nd = Flights(List(forecastArrival2))
 
-    val crunch = runCrunchGraph(now = () => SDate(baseScheduled).addDays(-1))
+    val crunch = runCrunchGraph(TestConfig(now = () => SDate(baseScheduled).addDays(-1)))
 
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseArrivals))
     crunch.portStateTestProbe.receiveOne(2 seconds)
@@ -396,12 +396,12 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     val updatedBaseArrivals = mutable.SortedMap[UniqueArrival, Arrival]() ++ List(ArrivalGenerator.arrival(schDt = base, iata = "AA0099", terminal = T1, actPax = Option(55))).map(a => (a.unique, a))
 
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       now = () => SDate(scheduled),
       initialForecastBaseArrivals = initialBaseArrivals,
       initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits]() ++ initialPortStateArrivals, SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())),
       maxDaysToCrunch = 4
-      )
+      ))
 
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(updatedBaseArrivals.values.toSeq)))
 
@@ -428,10 +428,10 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val arrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(aclPax))
     val baseArrivals = List(arrival)
 
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       now = () => SDate(scheduled),
       maybePassengersActorProps = Option(Props(new MockPassengerDeltaActor(Option(paxDelta))))
-      )
+      ))
 
     offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(baseArrivals)))
 

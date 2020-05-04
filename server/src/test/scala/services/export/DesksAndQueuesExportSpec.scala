@@ -4,7 +4,6 @@ import akka.actor.{ActorRef, Props}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
-import akka.util.Timeout
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
 import drt.shared.Queues.{EeaDesk, Queue}
 import drt.shared.Terminals.{T1, Terminal}
@@ -168,8 +167,6 @@ class DesksAndQueuesExportSpec extends CrunchTestLike {
       }
     }
   }
-
-  implicit val timeout: Timeout = new Timeout(5 seconds)
 
   val year = 2020
   val month = 1

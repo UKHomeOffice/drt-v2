@@ -3,7 +3,6 @@ package feeds.gla
 import actors.acking.AckingReceiver.StreamCompleted
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
 import drt.server.feeds.gla.{GlaFeed, GlaFeedRequesterLike, ProdGlaFeedRequester}
@@ -38,8 +37,6 @@ case class MockExceptionThrowingFeedRequester() extends GlaFeedRequesterLike {
 }
 
 class GlaFeedSpec extends CrunchTestLike {
-  implicit val mat: ActorMaterializer = ActorMaterializer()
-
   "Given a GLA Feed I should be able to connect to it and get arrivals back" >> {
     skipped(s"Exploratory test.")
     val prodFeed = GlaFeed(

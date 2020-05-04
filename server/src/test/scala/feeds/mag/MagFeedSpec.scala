@@ -2,7 +2,6 @@ package feeds.mag
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
-import akka.stream.ActorMaterializer
 import com.typesafe.config.{Config, ConfigFactory}
 import drt.server.feeds.mag.{FeedRequesterLike, MagFeed}
 import drt.shared.FlightsApi.Flights
@@ -19,7 +18,10 @@ object MockFeedRequester extends FeedRequesterLike {
   private val defaultResponse = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, "[]"))
   var mockResponse: HttpResponse = defaultResponse
 
-  override def sendTokenRequest(header: String, claim: String, key: String, algorithm: JwtAlgorithm): String = "Fake token"
+  override def sendTokenRequest(header: String,
+                                claim: String,
+                                key: String,
+                                algorithm: JwtAlgorithm): String = "Fake token"
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
@@ -27,7 +29,10 @@ object MockFeedRequester extends FeedRequesterLike {
 }
 
 case class MockExceptionThrowingFeedRequester(causeException: () => Unit) extends FeedRequesterLike {
-  override def sendTokenRequest(header: String, claim: String, key: String, algorithm: JwtAlgorithm): String = "Fake token"
+  override def sendTokenRequest(header: String,
+                                claim: String,
+                                key: String,
+                                algorithm: JwtAlgorithm): String = "Fake token"
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
@@ -44,9 +49,6 @@ class MagFeedSpec extends CrunchTestLike {
   val claimIss: String = config.getString("feeds.mag.claim.iss")
   val claimRole: String = config.getString("feeds.mag.claim.role")
   val claimSub: String = config.getString("feeds.mag.claim.sub")
-
-
-  implicit val mat: ActorMaterializer = ActorMaterializer()
 
   val feed: MagFeed = MagFeed(privateKey, claimIss, claimRole, claimSub, () => SDate.now(), PortCode("MAN"), MockFeedRequester)
 
@@ -102,7 +104,7 @@ class MagFeedSpec extends CrunchTestLike {
 
   "Given a mock feed requester that throws an exception " +
     "I should get an ArrivalsFeedFailure response" >> {
-    val exceptionFeed = MagFeed(privateKey, claimIss, claimRole, claimSub, () => SDate.now(), PortCode("MAN"), MockExceptionThrowingFeedRequester(()=> new Exception("I'm throwing an exception")))
+    val exceptionFeed = MagFeed(privateKey, claimIss, claimRole, claimSub, () => SDate.now(), PortCode("MAN"), MockExceptionThrowingFeedRequester(() => new Exception("I'm throwing an exception")))
 
     val isFeedFailure = Await.result(exceptionFeed.requestArrivals(SDate.now()), 1 second) match {
       case ArrivalsFeedFailure(_, _) => true
@@ -112,7 +114,7 @@ class MagFeedSpec extends CrunchTestLike {
     isFeedFailure must_== true
   }
 
-  val jsonResponseSingleArrival: String =
+  def jsonResponseSingleArrival: String =
     """[
       |    {
       |        "uniqueRef": 16961558,
@@ -179,7 +181,7 @@ class MagFeedSpec extends CrunchTestLike {
       |    }
       |]""".stripMargin
 
-val jsonResponseSingleArrivalWith0Pax: String =
+  def jsonResponseSingleArrivalWith0Pax: String =
     """[
       |    {
       |        "uniqueRef": 16961558,

@@ -4,7 +4,6 @@ import akka.actor.{ActorRef, Props}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
-import akka.util.Timeout
 import controllers.ArrivalGenerator
 import drt.shared.Queues.{EeaDesk, Queue}
 import drt.shared.Terminals.{T1, Terminal}
@@ -22,8 +21,6 @@ import scala.concurrent.{Await, Future}
 class FlightsExportSpec extends CrunchTestLike {
   val terminal: Terminal = T1
 
-  implicit val timeout: Timeout = new Timeout(5 seconds)
-
   val year = 2020
   val month = 1
   val day = 1
@@ -35,7 +32,7 @@ class FlightsExportSpec extends CrunchTestLike {
 
   def eventualPortState(maybePortState: Option[PortState]): (SDateLike, Any) => Future[Option[PortState]] = (_, _) => Future(maybePortState)
 
-  override val pcpPaxFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
+  val pcpPaxFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
 
   "Given a flights summary actor for a given day which does not have any persisted data for that day and there is a port state available" >> {
     "When I ask for terminal flight summaries for that day" >> {

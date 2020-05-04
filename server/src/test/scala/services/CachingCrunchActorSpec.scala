@@ -3,14 +3,10 @@ package services
 import actors.{CachableActorQuery, CachingCrunchReadActor}
 import akka.actor._
 import akka.pattern.ask
-import akka.stream._
-import akka.testkit.TestKit
-import akka.util.Timeout
 import controllers.GetTerminalCrunch
 import drt.shared.SDateLike
 import drt.shared.Terminals.T1
-import org.specs2.control.LanguageFeatures
-import org.specs2.mutable.SpecificationLike
+import services.crunch.CrunchTestLike
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -18,7 +14,6 @@ import scala.concurrent.duration._
 case object WasCalled
 
 class TestActorProbe(pointInTime: SDateLike, incrementer: () => Unit) extends Actor {
-
   def receive: Receive = {
     case _: GetTerminalCrunch =>
       incrementer()
@@ -26,19 +21,15 @@ class TestActorProbe(pointInTime: SDateLike, incrementer: () => Unit) extends Ac
   }
 }
 
-class CachingCrunchActorSpec extends TestKit(ActorSystem("CacheTests")) with SpecificationLike with LanguageFeatures {
+class CachingCrunchActorSpec extends CrunchTestLike {
   isolated
   sequential
-
-  implicit val actorSystem: ActorSystem = system
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
-  implicit val timeout: Timeout = Timeout(1 seconds)
 
   val cacheActorRef: ActorRef = system.actorOf(Props(classOf[CachingCrunchReadActor]), name = "crunch-cache-actor")
   "Should pass a message onto the crunch actor and return the response" >> {
 
-    def inc() = {}
-    val query = CachableActorQuery(Props(classOf[TestActorProbe], SDate("2017-06-01T20:00:00Z"), inc _), GetTerminalCrunch(T1))
+    def inc(): Unit = {}
+    val query = CachableActorQuery(Props(new TestActorProbe(SDate("2017-06-01T20:00:00Z"), inc _)), GetTerminalCrunch(T1))
     val resultFuture = cacheActorRef.ask(query)
 
     val result = Await.result(resultFuture, 1 second)
@@ -53,7 +44,7 @@ class CachingCrunchActorSpec extends TestKit(ActorSystem("CacheTests")) with Spe
       called +=1
     }
 
-    val query = CachableActorQuery(Props(classOf[TestActorProbe], SDate("2017-06-01T20:00:00Z"), inc _), GetTerminalCrunch(T1))
+    val query = CachableActorQuery(Props(new TestActorProbe(SDate("2017-06-01T20:00:00Z"), inc _)), GetTerminalCrunch(T1))
 
     val resF2 = cacheActorRef.ask(query)
 
@@ -74,11 +65,11 @@ class CachingCrunchActorSpec extends TestKit(ActorSystem("CacheTests")) with Spe
       called +=1
     }
 
-    val query1 = CachableActorQuery(Props(classOf[TestActorProbe], SDate("2017-06-01T20:00:00Z"), inc _), GetTerminalCrunch(T1))
+    val query1 = CachableActorQuery(Props(new TestActorProbe(SDate("2017-06-01T20:00:00Z"), inc _)), GetTerminalCrunch(T1))
     val resF1 = cacheActorRef.ask(query1)
     val res1 = Await.result(resF1, 1 second)
 
-    val query2 = CachableActorQuery(Props(classOf[TestActorProbe], SDate("2017-06-01T20:05:00Z"), inc _), GetTerminalCrunch(T1))
+    val query2 = CachableActorQuery(Props(new TestActorProbe(SDate("2017-06-01T20:05:00Z"), inc _)), GetTerminalCrunch(T1))
     val resF2 = cacheActorRef.ask(query2)
     val res2 = Await.result(resF2, 1 second)
 

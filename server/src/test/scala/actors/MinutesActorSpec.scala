@@ -4,8 +4,7 @@ import actors.MinutesActor.MinutesLookup
 import actors.daily.MinutesState
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
-import akka.util.Timeout
-import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
+import drt.shared.CrunchApi.{CrunchMinute, CrunchMinutes, MinutesContainer}
 import drt.shared.Queues.EeaDesk
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.{Queues, SDateLike, TQM}
@@ -16,8 +15,6 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 class MinutesActorSpec extends CrunchTestLike {
-  implicit val timeout: Timeout = new Timeout(5 seconds)
-
   val terminal: Terminal = T1
   val queue: Queues.Queue = EeaDesk
   val date: SDateLike = SDate("2020-01-01T00:00")

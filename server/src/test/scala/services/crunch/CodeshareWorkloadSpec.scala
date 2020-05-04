@@ -18,10 +18,10 @@ class CodeshareWorkloadSpec extends CrunchTestLike {
     val arrival2 = ArrivalGenerator.arrival(iata="AA0002", schDt = sch, actPax = Option(10), origin = PortCode("AAA"))
 
     val schSdate = SDate(sch)
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       now = () => schSdate,
-      pcpArrivalTime = pcpForFlightFromBest
-    )
+      pcpArrivalTime = TestDefaults.pcpForFlightFromBest
+    ))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival1, arrival2))))
 

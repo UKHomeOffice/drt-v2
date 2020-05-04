@@ -1,15 +1,13 @@
 package feeds.ltn
 
-import akka.actor.{ActorSystem, Cancellable}
+import akka.actor.Cancellable
 import akka.http.scaladsl.model.{HttpEntity, HttpResponse}
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
-import akka.testkit.{TestKit, TestProbe}
+import akka.testkit.TestProbe
 import drt.server.feeds.ltn.{LtnFeedRequestLike, LtnLiveFeed}
 import org.joda.time.DateTimeZone
-import org.specs2.mutable.SpecificationLike
-import org.specs2.specification.AfterEach
 import server.feeds.ArrivalsFeedFailure
+import services.crunch.CrunchTestLike
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -18,14 +16,7 @@ case class MockLtnRequesterWithInvalidResponse()(implicit ec: ExecutionContext) 
   override def getResponse: () => Future[HttpResponse] = () => Future(HttpResponse(entity = HttpEntity.apply("Some invalid response")))
 }
 
-class LtnFeedSpec extends SpecificationLike with AfterEach {
-
-  implicit val system: ActorSystem = ActorSystem("ltn-test")
-  implicit val ec: ExecutionContext = ExecutionContext.global
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
-
-  override def after: Unit = TestKit.shutdownActorSystem(system)
-
+class LtnFeedSpec extends CrunchTestLike {
   "Given an invalid response " +
     "I should get an ArrivalsFeedFailure" >> {
     val probe = TestProbe("ltn-test-probe")

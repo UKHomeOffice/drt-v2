@@ -33,7 +33,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(21))
             ))
 
-          val crunch = runCrunchGraph(
+          val crunch = runCrunchGraph(TestConfig(
             now = () => SDate(scheduled),
             airportConfig = defaultAirportConfig.copy(
               queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.EGate)),
@@ -45,7 +45,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               terminalProcessingTimes = Map(T1 -> Map(
                 eeaMachineReadableToDesk -> 20d / 60,
                 eeaMachineReadableToEGate -> 35d / 60))
-              ))
+              )))
 
           offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
@@ -76,7 +76,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             ArrivalGenerator.arrival(schDt = scheduled2, iata = "SA123", terminal = T1, actPax = Option(1))
             ))
 
-          val crunch = runCrunchGraph(now = () => SDate(scheduled))
+          val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled)))
 
           offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
@@ -108,7 +108,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(100))
             ))
 
-          val crunch = runCrunchGraph(
+          val crunch = runCrunchGraph(TestConfig(
             now = () => SDate(scheduled),
             airportConfig = defaultAirportConfig.copy(
               queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate)),
@@ -124,7 +124,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
                      SplitRatio(eeaNonMachineReadableToDesk, 0.5)
                      )
                 ))
-              ))
+              )))
           offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
           val expected = Map(T1 -> Map(
@@ -154,7 +154,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(20))
             val flights = Flights(List(flight))
 
-            val crunch = runCrunchGraph(
+            val crunch = runCrunchGraph(TestConfig(
               now = () => SDate(scheduled),
               airportConfig = defaultAirportConfig.copy(
                 terminalProcessingTimes = Map(T1 -> Map(
@@ -165,7 +165,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
                   SplitRatio(eeaMachineReadableToDesk, 0.25)
                   ))
                 )
-              )
+              ))
 
             offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
@@ -200,8 +200,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
             val arrival = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(10), airportId = PortCode("LHR"))
 
-            val crunch = runCrunchGraph(
-
+            val crunch = runCrunchGraph(TestConfig(
               now = () => SDate(scheduled),
               airportConfig = defaultAirportConfig.copy(
                 queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.EGate)),
@@ -210,7 +209,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
                   eeaMachineReadableToEGate -> 35d / 60))
                 ),
               initialPortState = Option(PortState(SortedMap(arrival.unique -> ApiFlightWithSplits(arrival, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
-              )
+              ))
 
             val voyageManifests = ManifestsFeedSuccess(DqManifests("", Set(
               VoyageManifest(EventTypes.CI, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"),

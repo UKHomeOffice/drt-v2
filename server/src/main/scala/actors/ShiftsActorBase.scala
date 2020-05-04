@@ -134,8 +134,12 @@ class ShiftsActorBase(val now: () => SDateLike,
 
         val createdAt = now()
         val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(ShiftAssignments(newShiftAssignments), createdAt), Option(createdAt.millisSinceEpoch))
-        persistAndMaybeSnapshotWithAck(shiftsMessage, sender(), SetShiftsAck(newShiftAssignments))
-      } else log.info(s"No change. Nothing to persist")
+        persistAndMaybeSnapshotWithAck(shiftsMessage,sender(), SetShiftsAck(newShiftAssignments))
+      } else {
+        log.info(s"No change. Nothing to persist")
+        sender() ! SetShiftsAck(newShiftAssignments)
+      }
+
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")

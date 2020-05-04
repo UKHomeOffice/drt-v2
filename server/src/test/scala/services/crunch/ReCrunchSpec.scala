@@ -14,7 +14,7 @@ class ReCrunchSpec extends CrunchTestLike {
       "Then then i should see the pax and waits fall to zero, and the desks fall to the minimum" >> {
         val minute = SDate("2020-04-09T23:00")
         val crunchMinute = CrunchMinute(T1, EeaDesk, minute.millisSinceEpoch, 10, 10, 10, 10, Option(10), Option(10))
-        val crunch = runCrunchGraph(now = () => minute, recrunchOnStart = true, initialPortState = Option(PortState(Seq(), Seq(crunchMinute), Seq())))
+        val crunch = runCrunchGraph(TestConfig(now = () => minute, recrunchOnStart = true, initialPortState = Option(PortState(Seq(), Seq(crunchMinute), Seq()))))
 
         val expected = CrunchMinute(T1, EeaDesk, minute.millisSinceEpoch, 0, 0, 1, 0, Option(0), Option(0))
 

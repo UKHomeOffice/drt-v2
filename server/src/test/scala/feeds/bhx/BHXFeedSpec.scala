@@ -4,26 +4,21 @@ import akka.actor.{ActorSystem, Cancellable}
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
-import akka.testkit.TestKit
-import com.typesafe.config.ConfigFactory
 import drt.server.feeds.bhx._
 import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.T1
 import drt.shared.api.Arrival
 import drt.shared.{ArrivalStatus, LiveFeedSource, Operator, PortCode}
-import org.specs2.mutable.SpecificationLike
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import services.crunch.CrunchTestLike
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.xml.{NodeSeq, XML}
 
-class BHXFeedSpec extends CrunchTestLike with SpecificationLike {
+class BHXFeedSpec extends CrunchTestLike {
   sequential
   isolated
 

@@ -2,7 +2,6 @@ package controllers
 
 import actors.GetPortState
 import akka.pattern.ask
-import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import drt.shared.CrunchApi.{DeskRecMinute, DeskRecMinutes, StaffMinute, StaffMinutes}
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
@@ -23,7 +22,6 @@ class TestDrtSystemSpec extends CrunchTestLike {
 
   val config: Config = ConfigFactory.load.withValue("feature-flags.use-partitioned-state", ConfigValueFactory.fromAnyRef(true))
   val configuration: Configuration = Configuration(config)
-  implicit val timeout: Timeout = new Timeout(1 second)
 
   "Given a test drt system" >> {
     val drtSystem = TestDrtSystem(configuration, defaultAirportConfig)
