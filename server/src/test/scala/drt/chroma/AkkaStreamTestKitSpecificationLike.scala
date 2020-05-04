@@ -17,9 +17,3 @@ abstract class AkkaStreamTestKitSpecificationLike extends
   implicit def probe2Success[R <: Probe[_]](r: R): Result = success
 }
 
-object MatcherHelper {
-  def matcherhelper(c: blackbox.Context)(r: c.Tree): Unit = {
-    c.error(c.enclosingPosition, "test should finish with a Matcher or a Probe[T]")
-    c.abort(c.enclosingPosition, "blah")
-  }
-}

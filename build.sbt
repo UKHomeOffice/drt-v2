@@ -1,5 +1,6 @@
 import com.typesafe.config._
-import sbt.Keys._
+import sbt.Credentials
+import sbt.Keys.{credentials, _}
 import sbt.Project.projectToRef
 import sbtcrossproject.CrossPlugin.autoImport.{CrossType, crossProject}
 
@@ -13,8 +14,9 @@ lazy val shared = (crossProject(JSPlatform, JVMPlatform).crossType(CrossType.Pur
   .settings(
     scalaVersion := Settings.versions.scala,
     libraryDependencies ++= Settings.sharedDependencies.value,
-    resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release/"
-  )
+    resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release/",
+    credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
+    )
   // set up settings specific to the JS project
   .jsConfigure(_ enablePlugins ScalaJSWeb)
 
@@ -65,7 +67,7 @@ lazy val client: Project = (project in file("client"))
     scalaJSUseMainModuleInitializer := true,
     parallelExecution in Test := false,
     sources in doc in Compile := List()
-  )
+    )
   .enablePlugins(ScalaJSPlugin)
   .enablePlugins(ScalaJSBundlerPlugin)
   .enablePlugins(ScalaJSWeb)
@@ -93,6 +95,11 @@ lazy val server = (project in file("server"))
     libraryDependencies ++= Settings.jvmDependencies.value,
     libraryDependencies += specs2 % Test,
     libraryDependencies += guice,
+    excludeDependencies ++= Seq(
+      ExclusionRule("org.slf4j", "slf4j-simple"),
+      ExclusionRule("org.slf4j", "slf4j-jdk12"),
+      ExclusionRule("org.slf4j", "slf4j-log4j12"),
+      ),
     dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-core" % "2.8.7",
     dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-databind" % "2.8.7",
     dependencyOverrides += "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.8.7",
@@ -121,12 +128,12 @@ lazy val server = (project in file("server"))
     LessKeys.compress in Assets := true,
     PB.targets in Compile := Seq(
       scalapb.gen() -> (sourceManaged in Compile).value / "protobuf"
-    ),
+      ),
     PB.deleteTargetDirectory := false,
     TwirlKeys.templateImports += "buildinfo._",
     parallelExecution in Test := false,
     sources in doc in Compile := List()
-  )
+    )
   .aggregate(clients.map(projectToRef): _*)
   .dependsOn(sharedJVM)
 
