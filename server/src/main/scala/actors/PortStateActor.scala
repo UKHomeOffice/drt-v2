@@ -166,7 +166,7 @@ class PortStateActor(liveStateActor: ActorRef, forecastStateActor: ActorRef, now
     case (Some(crunchActor), true, true) =>
       crunchSourceIsReady = false
       crunchActor
-        .ask(flightMinutesBuffer.toList)(new Timeout(15 seconds))
+        .ask(flightMinutesBuffer.toList)(new Timeout(10 minutes))
         .recover {
           case e =>
             log.error("Error sending minutes to crunch - non recoverable error", e)
