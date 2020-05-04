@@ -9,10 +9,14 @@ import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.testkit.TestSubscriber.Probe
 import akka.stream.{ActorMaterializer, OverflowStrategy, QueueOfferResult, UniqueKillSwitch}
-import akka.testkit.TestKit
+import akka.testkit.{TestKit, TestProbe}
 import akka.util.Timeout
+import drt.auth.STNAccess
+import drt.shared.PaxTypes.{B5JPlusNational, B5JPlusNationalBelowEGateAge, EeaBelowEGateAge, EeaMachineReadable, EeaNonMachineReadable, NonVisaNational, VisaNational}
+import drt.shared.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaNonMachineReadableToDesk}
 import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
+import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
+import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
 import graphs.SinkToSourceBridge
@@ -26,13 +30,84 @@ import services._
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeskRecs}
 import services.graphstages.CrunchMocks
+import slickdb.Tables
 
-import scala.collection.immutable.Map
+import scala.collection.immutable.{Map, SortedMap}
 import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor}
 import scala.languageFeature.postfixOps
 
+
+object H2Tables extends {
+  val profile = slick.jdbc.H2Profile
+} with Tables
+
+object TestDefaults {
+  val airportConfig: AirportConfig = AirportConfig(
+    portCode = PortCode("STN"),
+    queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk), T2 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk)),
+    slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 20, Queues.NonEeaDesk -> 45),
+    minutesToCrunch = 30,
+    defaultWalkTimeMillis = Map(),
+    terminalPaxSplits = List(T1, T2).map(t => (t, SplitRatios(
+      SplitSources.TerminalAverage,
+      SplitRatio(eeaMachineReadableToDesk, 1)
+      ))).toMap,
+    terminalProcessingTimes = Map(
+      T1 -> Map(
+        eeaMachineReadableToDesk -> 25d / 60,
+        eeaNonMachineReadableToDesk -> 25d / 60
+        ),
+      T2 -> Map(
+        eeaMachineReadableToDesk -> 25d / 60,
+        eeaNonMachineReadableToDesk -> 25d / 60
+        )
+      ),
+    minMaxDesksByTerminalQueue24Hrs = Map(
+      T1 -> Map(
+        Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
+        Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
+        Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(20)))),
+      T2 -> Map(
+        Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
+        Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
+        Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))))),
+    timeToChoxMillis = 120000L,
+    role = STNAccess,
+    terminalPaxTypeQueueAllocation = Map(
+      T1 -> Map(
+        EeaMachineReadable -> List(Queues.EGate -> 0.8, Queues.EeaDesk -> 0.2),
+        EeaBelowEGateAge -> List(Queues.EeaDesk -> 1.0),
+        EeaNonMachineReadable -> List(Queues.EeaDesk -> 1.0),
+        NonVisaNational -> List(Queues.NonEeaDesk -> 1.0),
+        VisaNational -> List(Queues.NonEeaDesk -> 1.0),
+        B5JPlusNational -> List(Queues.EGate -> 0.6, Queues.EeaDesk -> 0.4),
+        B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
+        ),
+      T2 -> Map(
+        EeaMachineReadable -> List(Queues.EeaDesk -> 1),
+        EeaBelowEGateAge -> List(Queues.EeaDesk -> 1.0),
+        EeaNonMachineReadable -> List(Queues.EeaDesk -> 1.0),
+        NonVisaNational -> List(Queues.NonEeaDesk -> 1.0),
+        VisaNational -> List(Queues.NonEeaDesk -> 1.0),
+        B5JPlusNational -> List(Queues.EeaDesk -> 1),
+        B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
+        )
+      ),
+    desksByTerminal = Map(T1 -> 40, T2 -> 40)
+    )
+  val pcpForFlightFromSch: Arrival => MilliDate = (a: Arrival) => MilliDate(SDate(a.Scheduled).millisSinceEpoch)
+  val pcpForFlightFromBest: Arrival => MilliDate = (a: Arrival) => {
+    if (a.ActualChox.isDefined) MilliDate(SDate(a.ActualChox.get).millisSinceEpoch)
+    else if (a.EstimatedChox.isDefined) MilliDate(SDate(a.EstimatedChox.get).millisSinceEpoch)
+    else if (a.Actual.isDefined) MilliDate(SDate(a.Actual.get).millisSinceEpoch)
+    else if (a.Estimated.isDefined) MilliDate(SDate(a.Estimated.get).millisSinceEpoch)
+    else MilliDate(SDate(a.Scheduled).millisSinceEpoch)
+  }
+  def testProbe(name: String)(implicit system: ActorSystem): TestProbe = TestProbe(name = name)
+  val pcpPaxFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
+}
 
 class CrunchTestLike
   extends TestKit(ActorSystem("drt"))

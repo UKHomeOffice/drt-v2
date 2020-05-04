@@ -1,5 +1,6 @@
 package actors
 
+import akka.actor.ActorRef
 import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotOffer}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SDateLike
@@ -52,6 +53,27 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
           logCounters(bytesSinceSnapshotCounter, messagesPersistedSinceSnapshotCounter, snapshotBytesThreshold, maybeSnapshotInterval)
 
           snapshotIfNeeded(stateToMessage)
+        case _ =>
+          log.error("Message was not of type AnyRef and so could not be persisted")
+      }
+    }
+  }
+
+  def persistAndMaybeSnapshotWithAck(messageToPersist: GeneratedMessage, replyTo: ActorRef, ackMsg: Any): Unit = {
+    persist(messageToPersist) { message =>
+      val messageBytes = message.serializedSize
+      log.info(s"Persisting $messageBytes bytes of ${message.getClass}")
+
+      message match {
+        case m: AnyRef =>
+          context.system.eventStream.publish(m)
+          bytesSinceSnapshotCounter += messageBytes
+          messagesPersistedSinceSnapshotCounter += 1
+          logCounters(bytesSinceSnapshotCounter, messagesPersistedSinceSnapshotCounter, snapshotBytesThreshold, maybeSnapshotInterval)
+
+          snapshotIfNeeded(stateToMessage)
+
+          replyTo ! ackMsg
         case _ =>
           log.error("Message was not of type AnyRef and so could not be persisted")
       }
