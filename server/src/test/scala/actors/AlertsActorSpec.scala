@@ -1,56 +1,25 @@
 package actors
 
-import java.util.UUID
-
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, Props}
 import akka.pattern._
-import akka.util.Timeout
+import akka.testkit.TestKit
 import drt.shared.Alert
 import org.joda.time.DateTime
-import org.specs2.matcher.Scope
-import org.specs2.mutable.Specification
 import services.SDate
+import services.crunch.CrunchTestLike
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.language.reflectiveCalls
 
-class AlertsActorSpec extends Specification {
+class AlertsActorSpec extends CrunchTestLike {
   sequential
   isolated
 
-  private def alertsActor(system: ActorSystem) = {
-    val actor = system.actorOf(Props(classOf[AlertsActor], () => SDate.now), "alertsActor")
-    actor
-  }
-
-  implicit val timeout: Timeout = Timeout(5 seconds)
-
-  def getTestKit = {
-    new AkkaTestkitSpecs2SupportForPersistence("target/test") {
-      def getActor: ActorRef = alertsActor(system)
-
-      def getState(actor: ActorRef) = {
-        Await.result(actor ? GetState, 1 second)
-      }
-
-      def getStateAndShutdown(actor: ActorRef): Any = {
-        val s = getState(actor)
-        shutDownActorSystem
-        s
-      }
-    }
-  }
-
-  trait Context extends Scope {
-    val testKit2 = getTestKit
-    val actor: ActorRef = testKit2.getActor
-    val date = "2017-01-01"
-    val movementUuid: UUID = UUID.randomUUID()
-  }
+  val actor: ActorRef = system.actorOf(Props(classOf[AlertsActor], () => SDate.now), "alertsActor")
 
   "AlertsActor" should {
-    "return the message it that was set if only one message is sent" in new Context {
+    "return the message it that was set if only one message is sent" >> {
 
       val alert = Alert("alert title", "this is the alert message", "notice", DateTime.now.plusDays(1).getMillis, DateTime.now.getMillis)
 
@@ -59,10 +28,10 @@ class AlertsActorSpec extends Specification {
 
       actor ! alert
 
-      val result = testKit2.getStateAndShutdown(actor)
+      val result = Await.result(actor ? GetState, 1 second)
+      TestKit.shutdownActorSystem(system)
 
       result mustEqual List(alert)
     }
   }
-
 }

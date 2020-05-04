@@ -1,17 +1,13 @@
 package services
 
-import akka.actor.ActorSystem
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, HttpResponse}
-import akka.testkit.TestKit
-import com.typesafe.config.ConfigFactory
-import org.specs2.mutable.SpecificationLike
+import services.crunch.CrunchTestLike
 import services.graphstages.Crunch
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-class OOHCheckerSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike {
+class OOHCheckerSpec extends CrunchTestLike {
   sequential
   isolated
 

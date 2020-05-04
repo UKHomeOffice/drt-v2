@@ -299,6 +299,7 @@ case class TestConfig(initialForecastBaseArrivals: mutable.SortedMap[UniqueArriv
                      )
 
 class TestDrtActor extends Actor {
+  val log: Logger = LoggerFactory.getLogger(getClass)
   implicit val system: ActorSystem = context.system
   implicit val ec: ExecutionContextExecutor = context.dispatcher
   implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
@@ -306,7 +307,7 @@ class TestDrtActor extends Actor {
   import TestDefaults.testProbe
 
   override def postStop(): Unit = {
-    println(s"\n\nTestDrtActor stopped")
+    log.info(s"TestDrtActor stopped")
   }
 
   override def receive: Receive = {

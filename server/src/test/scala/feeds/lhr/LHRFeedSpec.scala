@@ -1,25 +1,24 @@
 package feeds.lhr
 
 import akka.NotUsed
-import akka.actor.ActorSystem
+import akka.pattern.pipe
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
-import akka.testkit.{TestKit, TestProbe}
-import com.typesafe.config.ConfigFactory
+import akka.testkit.TestProbe
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRLiveFlight}
 import drt.shared.Terminals.{T1, T4}
 import drt.shared.api.Arrival
 import drt.shared.{ArrivalStatus, LiveFeedSource, Operator, PortCode}
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
-import org.specs2.mutable.SpecificationLike
 import services.SDate
+import services.crunch.CrunchTestLike
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike {
+class LHRFeedSpec extends CrunchTestLike {
 
   "lhrCsvToApiFlights" should {
     "Produce an Arrival source with one flight based on a line from the LHR csv" in {
@@ -27,10 +26,7 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
         """|Term","Flight No","Operator","From","Airport name","Scheduled","Estimated","Touchdown","Est Chocks","Act Chocks","Stand","Max pax","Act Pax","Conn pax"
            |"4","QR005","Qatar Airways","DOH","Doha","22:00 09/03/2017","21:32 09/03/2017","21:33 09/03/2017","21:43 09/03/2017","21:45 09/03/2017","10","795","142","1""""
           .stripMargin
-      import akka.pattern.pipe
-      import system.dispatcher
 
-      implicit val materializer: ActorMaterializer = ActorMaterializer()
       val csvGetters: Iterator[(Int) => String] = LHRFlightFeed.csvParserAsIteratorOfColumnGetter(csvString)
       val lhrFeed = LHRFlightFeed(csvGetters)
 
@@ -65,8 +61,6 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
         """|Term","Flight No","Operator","From","Airport name","Scheduled","Estimated","Touchdown","Est Chocks","Act Chocks","Stand","Max pax","Act Pax","Conn pax"
            |"4","QR005","Qatar Airways","DOH","Doha","22:00 09/03/2017","21:32 09/03/2017","21:33 09/03/2017","21:43 09/03/2017","21:45 09/03/2017","10","0","0","0""""
           .stripMargin
-      import akka.pattern.pipe
-      import system.dispatcher
 
       implicit val materializer: ActorMaterializer = ActorMaterializer()
       val csvGetters: Iterator[(Int) => String] = LHRFlightFeed.csvParserAsIteratorOfColumnGetter(csvString)
@@ -114,8 +108,6 @@ class LHRFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.e
         """|Term","Flight No","Operator","From","Airport name","Scheduled","Estimated","Touchdown","Est Chocks","Act Chocks","Stand","Max pax","Act Pax","Conn pax"
            |"4","KL1033","KLM Royal Dutch Airlines","AMS","Amsterdam","20:50 09/03/2017","20:50 09/03/2017","","","","","","","""""
           .stripMargin
-      import akka.pattern.pipe
-      import system.dispatcher
 
       implicit val materializer: ActorMaterializer = ActorMaterializer()
 

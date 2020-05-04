@@ -2,27 +2,20 @@ package drt.users
 
 import java.util.UUID
 
-import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
-import akka.stream.ActorMaterializer
-import akka.testkit.TestKit
-import com.typesafe.config.ConfigFactory
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.users.KeyCloakUserParserProtocol._
-import org.specs2.mutable.SpecificationLike
+import services.crunch.CrunchTestLike
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-class KeyCloakApiSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike {
+class KeyCloakApiSpec extends CrunchTestLike {
 
   val keyCloakUrl = "https://keycloak"
 
   val userId1: UUID = UUID.fromString("e25f2a14-bdaa-11e8-a355-529269fb1459")
   val userId2: UUID = UUID.fromString("e25f2dfc-bdaa-11e8-a355-529269fb1459")
-
-  implicit val mat: ActorMaterializer =  ActorMaterializer()
 
   val usersJson: String =
     s"""[{

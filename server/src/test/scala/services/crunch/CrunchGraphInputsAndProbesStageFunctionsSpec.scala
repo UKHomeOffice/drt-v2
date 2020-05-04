@@ -1,17 +1,14 @@
 package services.crunch
 
-import akka.actor._
-import akka.testkit.TestKit
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.Terminals.T1
 import drt.shared._
-import org.specs2.mutable.SpecificationLike
 import services.graphstages.Crunch._
 
 import scala.collection.immutable.List
 
 
-class CrunchGraphInputsAndProbesStageFunctionsSpec extends TestKit(ActorSystem("StreamingCrunchTests")) with SpecificationLike {
+class CrunchGraphInputsAndProbesStageFunctionsSpec extends CrunchTestLike {
   isolated
   sequential
 
