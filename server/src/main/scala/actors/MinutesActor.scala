@@ -3,6 +3,8 @@ package actors
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import akka.actor.{Actor, ActorRef}
 import akka.pattern.ask
+import akka.stream.{ActorMaterializer, Materializer}
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.Terminals.Terminal
@@ -11,7 +13,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch
 
-import scala.collection.mutable
+import scala.collection.{immutable, mutable}
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.concurrent.duration._
 
@@ -30,6 +32,7 @@ class MinutesActor[A, B](now: () => SDateLike,
                          lookupSecondary: MinutesLookup[A, B],
                          updateMinutes: MinutesUpdate[A, B]) extends Actor {
   implicit val dispatcher: ExecutionContextExecutor = context.dispatcher
+  implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -92,25 +95,22 @@ class MinutesActor[A, B](now: () => SDateLike,
     case _ =>
   }
 
-  def handleLookups(terminal: Terminal,
-                    start: SDateLike,
-                    end: SDateLike): Future[MinutesContainer[A, B]] = {
-    val eventualOptions = daysToFetch(start, end).map {
-      case day if isHistoric(day) =>
-        log.info(s"${day.toISOString()} is historic. Looking up historic data from CrunchStateReadActor")
-        handleLookup(lookupPrimary(terminal, day), Option(() => lookupSecondary(terminal, day)))
-      case day =>
-        log.debug(s"${day.toISOString()} is live. Look up live data from TerminalDayQueuesActor")
-        handleLookup(lookupPrimary(terminal, day), None)
-    }
-
-    Future.sequence(eventualOptions).map {
-      _.collect { case Some(minutes) => minutes }
-        .reduceLeft[MinutesContainer[A, B]] {
-          case (soFar, next) => MinutesContainer(soFar.minutes ++ next.minutes)
-        }
-    }
-  }
+  def handleLookups(terminal: Terminal, start: SDateLike, end: SDateLike)
+                   (implicit mat: Materializer): Future[MinutesContainer[A, B]] =
+    Source(daysToFetch(start, end))
+      .mapAsync(1) {
+        case day if isHistoric(day) =>
+          log.info(s"${day.toISOString()} is historic. Looking up historic data from CrunchStateReadActor")
+          handleLookup(lookupPrimary(terminal, day), Option(() => lookupSecondary(terminal, day)))
+        case day =>
+          log.debug(s"${day.toISOString()} is live. Look up live data from TerminalDayQueuesActor")
+          handleLookup(lookupPrimary(terminal, day), None)
+      }
+      .collect {
+        case Some(minutes) => minutes
+      }
+      .runWith(Sink.seq)
+      .map(combineContainers)
 
   def handleLookup(eventualMaybeResult: Future[Option[MinutesContainer[A, B]]],
                    maybeFallback: Option[() => Future[Option[MinutesContainer[A, B]]]]): Future[Option[MinutesContainer[A, B]]] = {
@@ -136,24 +136,30 @@ class MinutesActor[A, B](now: () => SDateLike,
   }
 
   def updateByTerminalDayAndGetDiff(container: MinutesContainer[A, B]): Future[MinutesContainer[A, B]] = {
-    val eventualUpdatedMinutesDiff = container.minutes
+    val minutesByTerminalDay = container.minutes
       .groupBy(simMin => (simMin.terminal, SDate(simMin.minute).getLocalLastMidnight))
-      .map {
+
+    Source(minutesByTerminalDay)
+      .mapAsync(1) {
         case ((terminal, day), terminalDayMinutes) => handleUpdateAndGetDiff(terminal, day, terminalDayMinutes)
       }
-    Future.sequence(eventualUpdatedMinutesDiff).map {
-      _.reduce[MinutesContainer[A, B]] {
-        case (soFar, next) => MinutesContainer(soFar.minutes ++ next.minutes)
-      }
-    }
+      .runWith(Sink.seq)
+      .map(combineContainers)
   }
+
+  def combineContainers(containers: immutable.Seq[MinutesContainer[A, B]]): MinutesContainer[A, B] = containers
+    .reduceLeft[MinutesContainer[A, B]] {
+      case (soFar, next) => MinutesContainer(soFar.minutes ++ next.minutes)
+    }
 
   def handleUpdateAndGetDiff(terminal: Terminal,
                              day: SDateLike,
                              minutesForDay: Iterable[MinuteLike[A, B]]): Future[MinutesContainer[A, B]] =
     updateMinutes(terminal, day, MinutesContainer(minutesForDay))
 
-  private def daysToFetch(start: SDateLike, end: SDateLike): Seq[SDateLike] = {
+  private def daysToFetch(start: SDateLike, end: SDateLike): List[SDateLike]
+
+  = {
     val localStart = SDate(start, Crunch.europeLondonTimeZone)
     val localEnd = SDate(end, Crunch.europeLondonTimeZone)
 
@@ -161,5 +167,6 @@ class MinutesActor[A, B](now: () => SDateLike,
       .map(SDate(_).getLocalLastMidnight)
       .distinct
       .sortBy(_.millisSinceEpoch)
+      .toList
   }
 }
