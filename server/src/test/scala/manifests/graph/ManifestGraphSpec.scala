@@ -2,7 +2,7 @@ package manifests.graph
 
 import akka.NotUsed
 import akka.pattern.pipe
-import akka.stream.UniqueKillSwitch
+import akka.stream.{ActorMaterializer, Materializer, UniqueKillSwitch}
 import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
@@ -37,7 +37,7 @@ class ManifestGraphSpec extends CrunchTestLike {
       CarrierCode("TST"),
       scheduled,
       List()
-    )
+      )
     val manifestSinkProbe = TestProbe("manifest-test-probe")
     val registeredArrivalSinkProbe = TestProbe(name = "registered-arrival-test-probe")
 
@@ -69,7 +69,7 @@ class ManifestGraphSpec extends CrunchTestLike {
       CarrierCode("TST"),
       scheduled,
       List()
-    )
+      )
 
     val testArrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-03-06T12:00:00Z")
 
@@ -105,7 +105,7 @@ class ManifestGraphSpec extends CrunchTestLike {
       CarrierCode("TST"),
       scheduled,
       List()
-    )
+      )
 
     val testArrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-03-06T12:00:00Z")
 
@@ -179,7 +179,7 @@ class ManifestGraphSpec extends CrunchTestLike {
       registeredArrivalSinkProbe.ref,
       PortCode("STN"),
       MockManifestLookupService(testManifest)
-    ).run()
+      ).run()
 
     (killSwitch, manifestRequestsSink, manifestResponsesSource)
   }
@@ -191,6 +191,7 @@ case class MockManifestLookupService(bestAvailableManifest: BestAvailableManifes
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
                                           departurePort: PortCode,
                                           voyageNumber: VoyageNumber,
-                                          scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
+                                          scheduled: SDateLike)
+                                         (implicit mat: Materializer): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
     Future((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), Option(bestAvailableManifest)))
 }

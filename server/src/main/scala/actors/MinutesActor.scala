@@ -269,5 +269,6 @@ abstract class MinutesActor[A, B <: WithTimeAccessor](now: () => SDateLike,
       .map(SDate(_).getUtcLastMidnight)
       .distinct
       .sortBy(_.millisSinceEpoch)
+      .toList
   }
 }
