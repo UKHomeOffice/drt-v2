@@ -157,9 +157,7 @@ class MinutesActor[A, B](now: () => SDateLike,
                              minutesForDay: Iterable[MinuteLike[A, B]]): Future[MinutesContainer[A, B]] =
     updateMinutes(terminal, day, MinutesContainer(minutesForDay))
 
-  private def daysToFetch(start: SDateLike, end: SDateLike): List[SDateLike]
-
-  = {
+  private def daysToFetch(start: SDateLike, end: SDateLike): List[SDateLike] = {
     val localStart = SDate(start, Crunch.europeLondonTimeZone)
     val localEnd = SDate(end, Crunch.europeLondonTimeZone)
 
