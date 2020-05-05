@@ -9,6 +9,8 @@ import org.specs2.mutable.Specification
 import services.SDate
 import services.exports.Exports
 
+import scala.concurrent.Future
+
 class CrunchMinutesToCSVDataTest extends Specification {
 
   trait Context extends Scope {
@@ -29,7 +31,8 @@ class CrunchMinutesToCSVDataTest extends Specification {
       StaffMinute(T1, startDateTime.millisSinceEpoch, 5, fixedPoints = 1, movements = -1)
     )
 
-    val summary: String = Exports.queueSummariesFromPortStateLegacy(Seq(EeaDesk, NonEeaDesk, EGate), 15)(startDateTime, endDateTime, PortState(Iterable(), cms, sms)).get.toCsv
+    val portState: PortState = PortState(Iterable(), cms, sms)
+    val summary: String = Exports.queueSummariesFromPortState(Seq(EeaDesk, NonEeaDesk, EGate), 15, T1, (_, _) => Future(Option(portState)))(startDateTime, endDateTime).get.toCsv
 
     val expected =
       s"""2017-11-10,00:00,1,1,1,,,1,1,1,,,1,1,1,,,1,-1,4,4
@@ -58,7 +61,8 @@ class CrunchMinutesToCSVDataTest extends Specification {
       StaffMinute(T1, startDateTime.addMinutes(min).millisSinceEpoch, 5, fixedPoints = 1, movements = -1)
     })
 
-    val summary: String = Exports.queueSummariesFromPortStateLegacy(Seq(EeaDesk, NonEeaDesk, EGate), 15)(startDateTime, endDateTime, PortState(Iterable(), cms, sms)).get.toCsv
+    val portState: PortState = PortState(Iterable(), cms, sms)
+    val summary: String = Exports.queueSummariesFromPortState(Seq(EeaDesk, NonEeaDesk, EGate), 15, T1, (_, _) => Future(Option(portState)))(startDateTime, endDateTime).get.toCsv
 
     val expected =
       s"""2017-11-10,00:00,15,1,1,,,15,1,1,,,15,1,1,,,1,-1,4,4
@@ -85,7 +89,8 @@ class CrunchMinutesToCSVDataTest extends Specification {
       """2017-11-10,00:00,1,100,1,100,2,1,100,1,100,2,1,100,1,100,2,1,-1,4,4
         |""".stripMargin
 
-    val summary: String = Exports.queueSummariesFromPortStateLegacy(Seq(EeaDesk, NonEeaDesk, EGate), 15)(startDateTime, endDateTime, PortState(Iterable(), cms, sms)).get.toCsv
+    val portState = PortState(Iterable(), cms, sms)
+    val summary: String = Exports.queueSummariesFromPortState(Seq(EeaDesk, NonEeaDesk, EGate), 15, T1, (_, _) => Future(Option(portState)))(startDateTime, endDateTime).get.toCsv
 
     summary === expected
   }
@@ -107,7 +112,8 @@ class CrunchMinutesToCSVDataTest extends Specification {
       """2017-11-10,00:00,1,100,1,100,2,1,100,1,100,2,1,100,1,100,2,1,-1,4,4
         |""".stripMargin
 
-    val summary: String = Exports.queueSummariesFromPortStateLegacy(Seq(EeaDesk, NonEeaDesk, EGate), 15)(startDateTime, endDateTime, PortState(Iterable(), cms, sms)).get.toCsv
+    val portState = PortState(Iterable(), cms, sms)
+    val summary: String = Exports.queueSummariesFromPortState(Seq(EeaDesk, NonEeaDesk, EGate), 15, T1, (_, _) => Future(Option(portState)))(startDateTime, endDateTime).get.toCsv
 
     summary === expected
   }

@@ -26,41 +26,6 @@ import scala.concurrent.{ExecutionContext, Future}
 object Exports {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def summaryForDaysCsvSourceLegacy(startDate: SDateLike,
-                                    numberOfDays: Int,
-                                    now: () => SDateLike,
-                                    terminal: Terminal,
-                                    maybeSummaryActorAndRequestProvider: Option[((SDateLike, Terminal) => ActorRef, Any)],
-                                    queryPortState: (SDateLike, Any) => Future[Option[PortState]],
-                                    portStateToSummaries: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike])
-                                   (implicit sys: ActorSystem,
-                                    ec: ExecutionContext,
-                                    ti: Timeout): Source[String, NotUsed] = Source(0 until numberOfDays)
-    .mapAsync(1) { dayOffset =>
-      val from = startDate.addDays(dayOffset)
-      val addHeader = dayOffset == 0
-
-      val summaryForDay: Future[Option[TerminalSummaryLike]] =
-        (maybeSummaryActorAndRequestProvider, MilliTimes.isHistoric(now, from)) match {
-          case (Some((actorProvider, request)), true) =>
-            val actorForDayAndTerminal = actorProvider(from, terminal)
-            val eventualSummaryForDay = historicSummaryForDayLegacy(terminal, from, actorForDayAndTerminal, request, queryPortState, portStateToSummaries)
-            eventualSummaryForDay.onComplete { _ =>
-              log.info(s"Got response from summary actor")
-              actorForDayAndTerminal ! PoisonPill
-            }
-            eventualSummaryForDay
-          case _ =>
-            extractDayFromPortStateForTerminalLegacy(terminal, from, queryPortState, portStateToSummaries)
-        }
-
-      summaryForDay.map {
-        case None => "\n"
-        case Some(summaryLike) if addHeader => summaryLike.toCsvWithHeader
-        case Some(summaryLike) => summaryLike.toCsv
-      }
-    }
-
   def summaryForDaysCsvSource(startDate: SDateLike,
                               numberOfDays: Int,
                               now: () => SDateLike,
@@ -170,11 +135,11 @@ object Exports {
     }
   }
 
-  def queueSummariesFromPortStateLegacy(queues: Seq[Queue],
-                                        summaryLengthMinutes: Int,
-                                        terminal: Terminal,
-                                        portStateProvider: (SDateLike, Any) => Future[Option[Any]])
-                                       (implicit ec: ExecutionContext): (SDateLike, SDateLike) => Future[Option[TerminalSummaryLike]] =
+  def queueSummariesFromPortState(queues: Seq[Queue],
+                                  summaryLengthMinutes: Int,
+                                  terminal: Terminal,
+                                  portStateProvider: (SDateLike, Any) => Future[Option[Any]])
+                                 (implicit ec: ExecutionContext): (SDateLike, SDateLike) => Future[Option[TerminalSummaryLike]] =
     (from: SDateLike, to: SDateLike) => {
       portStateProvider(from, GetPortStateForTerminal(from.millisSinceEpoch, to.millisSinceEpoch, terminal)).map {
         case Some(PortState(_, crunchMinutes, staffMinutes)) =>

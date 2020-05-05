@@ -109,31 +109,6 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
     }
   }
 
-  def queryPortStateActor: (SDateLike, Any) => Future[Option[PortState]] = (from: SDateLike, message: Any) => {
-    implicit val timeout: Timeout = new Timeout(30 seconds)
-
-    val start = from.getLocalLastMidnight
-    val end = start.addDays(1)
-    val pointInTime = end.addHours(4)
-
-    val eventualMaybePortState = if (isHistoricDate(start.millisSinceEpoch)) {
-      val tempActor = system.actorOf(CrunchStateReadActor.props(airportConfig.portStateSnapshotInterval, pointInTime, DrtStaticParameters.expireAfterMillis, airportConfig.queuesByTerminal, start.millisSinceEpoch, end.millisSinceEpoch))
-      val eventualResponse = tempActor
-        .ask(message)
-        .asInstanceOf[Future[Option[PortState]]]
-      eventualResponse.onComplete(_ => tempActor ! PoisonPill)
-      eventualResponse
-    } else {
-      ctrl.portStateActor.ask(message).asInstanceOf[Future[Option[PortState]]]
-    }
-
-    eventualMaybePortState.recoverWith {
-      case t =>
-        log.error(s"Failed to get a PortState for ${pointInTime.toISOString()}", t)
-        Future(None)
-    }
-  }
-
   def queryFromPortState: (SDateLike, Any) => Future[Option[Any]] = (from: SDateLike, message: Any) => {
     implicit val timeout: Timeout = new Timeout(30 seconds)
 

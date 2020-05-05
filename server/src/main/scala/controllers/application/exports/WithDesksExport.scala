@@ -35,7 +35,7 @@ trait WithDesksExport extends ExportToCsv {
     val start = localLastMidnight(startMillis)
     val end = localLastMidnight(endMillis)
     val portStateProvider = queryFromPortState
-    val summaryFromPortState = Exports.queueSummariesFromPortStateLegacy(airportConfig.queuesByTerminal(terminal(terminalName)), 15, Terminal(terminalName), portStateProvider)
+    val summaryFromPortState = Exports.queueSummariesFromPortState(airportConfig.queuesByTerminal(terminal(terminalName)), 15, Terminal(terminalName), portStateProvider)
 
     Action(exportToCsv(start, end, "desks and queues", terminal(terminalName), Option((summaryActorProvider, GetSummaries)), summaryFromPortState))
   }
