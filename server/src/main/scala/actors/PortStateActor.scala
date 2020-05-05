@@ -124,6 +124,10 @@ class PortStateActor(liveStateActor: ActorRef,
       log.debug(s"Received GetPortStateForTerminal Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()} for $terminal")
       sender() ! stateForPeriodForTerminal(start, end, terminal)
 
+    case GetFlightsForTerminal(start, end, terminal) =>
+      log.debug(s"Received GetFlightsForTerminal Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()} for $terminal")
+      sender() ! FlightsWithSplits(stateForPeriodForTerminal(start, end, terminal).flights)
+
     case GetUpdatesSince(millis, start, end) =>
       val updates: Option[PortStateUpdates] = state.updates(millis, start, end)
       sender() ! updates
@@ -142,7 +146,7 @@ class PortStateActor(liveStateActor: ActorRef,
 
   def stateForPeriodForTerminal(start: MillisSinceEpoch,
                                 end: MillisSinceEpoch,
-                                terminal: Terminal): Option[PortState] = Option(state.windowWithTerminalFilter(SDate(start), SDate(end), Seq(terminal)))
+                                terminal: Terminal): PortState = state.windowWithTerminalFilter(SDate(start), SDate(end), Seq(terminal))
 
   val flightMinutesBuffer: mutable.Set[MillisSinceEpoch] = mutable.Set[MillisSinceEpoch]()
   val loadMinutesBuffer: mutable.Map[TQM, LoadMinute] = mutable.Map[TQM, LoadMinute]()

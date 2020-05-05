@@ -4,6 +4,7 @@ import drt.shared.ApiFlightWithSplits
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.api.Arrival
 import services.exports.summaries.flights.TerminalFlightsSummary._
+import services.exports.summaries.flights.TerminalFlightsSummaryLike.TerminalFlightsSummaryLikeGenerator
 
 case class TerminalFlightsSummary(flights: Seq[ApiFlightWithSplits],
                                   millisToDateOnly: MillisSinceEpoch => String,
@@ -26,13 +27,12 @@ case class TerminalFlightsSummary(flights: Seq[ApiFlightWithSplits],
   }
 }
 
-case object TerminalFlightsSummary {
-
+object TerminalFlightsSummary {
   val rawArrivalHeadings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax"
-  val rawArrivalHeadingsWithTransfer = rawArrivalHeadings + ",Transfer Pax"
+  val rawArrivalHeadingsWithTransfer: String = rawArrivalHeadings + ",Transfer Pax"
 
   def arrivalAsRawCsvValues(arrival: Arrival, millisToDateOnly: MillisSinceEpoch => String,
-                            millisToHoursAndMinutes: MillisSinceEpoch => String) = {
+                            millisToHoursAndMinutes: MillisSinceEpoch => String): List[String] = {
     List(arrival.flightCode,
       arrival.flightCode,
       arrival.Origin.toString,
@@ -51,5 +51,11 @@ case object TerminalFlightsSummary {
   def arrivalAsRawCsvValuesWithTransfer(arrival: Arrival, millisToDateOnly: MillisSinceEpoch => String,
                                         millisToHoursAndMinutes: MillisSinceEpoch => String): List[String] =
     arrivalAsRawCsvValues(arrival, millisToDateOnly, millisToHoursAndMinutes) :+ arrival.TranPax.getOrElse(0).toString
+
+  val generator: TerminalFlightsSummaryLikeGenerator =
+    (flights: Seq[ApiFlightWithSplits],
+     millisToDateOnly: MillisSinceEpoch => String,
+     millisToHoursAndMinutes: MillisSinceEpoch => String,
+     pcpPaxFn: Arrival => Int) => TerminalFlightsSummary(flights, millisToDateOnly, millisToHoursAndMinutes, pcpPaxFn)
 
 }

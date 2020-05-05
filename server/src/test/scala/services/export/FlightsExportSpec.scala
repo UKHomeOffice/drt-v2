@@ -49,7 +49,7 @@ class FlightsExportSpec extends SpecificationLike {
 
         val portStateToSummaries = flightSummariesFromPortState(terminal, pcpPaxFn) _
 
-        val result = Await.result(historicSummaryForDay(terminal, from, mockTerminalSummariesActor, GetSummaries, eventualPortState(Option(portState)), portStateToSummaries), 1 second)
+        val result = Await.result(historicSummaryForDayLegacy(terminal, from, mockTerminalSummariesActor, GetSummaries, eventualPortState(Option(portState)), portStateToSummaries), 1 second)
           .get.asInstanceOf[TerminalFlightsSummary].flights
 
         val expected = someFlights
@@ -66,7 +66,7 @@ class FlightsExportSpec extends SpecificationLike {
         val mockTerminalSummariesActor = system.actorOf(Props(classOf[MockTerminalSummariesActor], Option(persistedSummaries), None))
 
         val portStateToSummaries = flightSummariesFromPortState(terminal, pcpPaxFn) _
-        val result = Await.result(historicSummaryForDay(terminal, from, mockTerminalSummariesActor, GetSummaries, eventualPortState(None), portStateToSummaries), 1 second).get
+        val result = Await.result(historicSummaryForDayLegacy(terminal, from, mockTerminalSummariesActor, GetSummaries, eventualPortState(None), portStateToSummaries), 1 second).get
 
         result === persistedSummaries
       }
@@ -80,7 +80,7 @@ class FlightsExportSpec extends SpecificationLike {
       val portStateToSummaries = flightSummariesFromPortState(terminal, pcpPaxFn) _
 
       def eventualMaybeSummaries(actorProbe: ActorRef): Future[Option[TerminalSummaryLike]] = {
-        historicSummaryForDay(terminal, from, actorProbe, GetSummaries, eventualPortState(Option(portState)), portStateToSummaries)
+        historicSummaryForDayLegacy(terminal, from, actorProbe, GetSummaries, eventualPortState(Option(portState)), portStateToSummaries)
       }
 
       "I should get back 96 summaries including one generated from the crunch & staff minutes in the port state" >> {
@@ -110,7 +110,7 @@ class FlightsExportSpec extends SpecificationLike {
       val portStateToSummaries = flightSummariesFromPortState(terminal, pcpPaxFn) _
 
       def eventualMaybeSummaries(actorProbe: ActorRef): Future[Option[TerminalSummaryLike]] = {
-        historicSummaryForDay(terminal, from, actorProbe, GetSummaries, eventualPortState(Option(portState)), portStateToSummaries)
+        historicSummaryForDayLegacy(terminal, from, actorProbe, GetSummaries, eventualPortState(Option(portState)), portStateToSummaries)
       }
 
       "I should not see the generated summaries sent to the summary actor for persistence" >> {
@@ -142,7 +142,7 @@ class FlightsExportSpec extends SpecificationLike {
         val startDate = SDate("2020-01-01T00:00", Crunch.europeLondonTimeZone)
         val portStateToSummary = flightSummariesFromPortState(terminal, pcpPaxFn) _
 
-        val exportStream = summaryForDaysCsvSource(startDate, 3, now, terminal, Option((summaryActorProvider, GetSummaries)), eventualPortState(None), portStateToSummary)
+        val exportStream = summaryForDaysCsvSourceLegacy(startDate, 3, now, terminal, Option((summaryActorProvider, GetSummaries)), eventualPortState(None), portStateToSummary)
 
         val value1 = exportStream.runWith(Sink.seq)(ActorMaterializer())
         val result = Await.result(value1, 1 second)
