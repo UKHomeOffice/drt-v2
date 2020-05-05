@@ -28,6 +28,7 @@ object LiveArrivalsUtil {
        |ActChox: ${a.ActualChox.map(d => SDate(d).toISOString())}
        |Status: ${a.Status.description}
        |Gate: ${a.Gate}
+       |PCP: ${a.PcpTime.map(d => SDate(d).toISOString())}
        |""".stripMargin
   }
 

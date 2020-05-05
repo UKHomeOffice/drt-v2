@@ -14,6 +14,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
 import drt.shared.{FeedSource, SDateLike, UniqueArrival}
 import services.SDate
+import services.arrivals.LiveArrivalsUtil
 import services.exports.Exports
 
 import scala.collection.mutable
@@ -32,7 +33,7 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
   def flightsForDay(day: MillisSinceEpoch, terminal: Terminal, fs: FeedSource, persistenceId: String): Future[Option[String]] = {
     val exportDay = SDate(day)
 
-    val snapshotDate = SDate(day).getLocalNextMidnight.addDays(2)
+    val snapshotDate = SDate(day).getLocalNextMidnight.addDays(1).addHours(12)
 
     val feedActor: ActorRef = system
       .actorOf(
@@ -68,7 +69,7 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
     val arrivalsForDay = arrivals
       .values
       .filter(a => a.Terminal == terminal && !Ports.domesticPorts.contains(a.Origin))
-      .filter(a => pcpTimeIsOnDay(a, exportDay))
+      .filter(a => isScheduledForExportDay(a, exportDay))
 
     val csvData = arrivalsForDay
       .map(a =>
@@ -81,10 +82,9 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
     csvData
   }
 
-  def pcpTimeIsOnDay(arrival: Arrival, day: SDateLike): Boolean = arrival.PcpTime
-    .exists(
-      t => t > day.getLocalLastMidnight.millisSinceEpoch && t < day.getLocalNextMidnight.millisSinceEpoch
-    )
+  def isScheduledForExportDay(arrival: Arrival, day: SDateLike): Boolean =
+    arrival.Scheduled > day.getLocalLastMidnight.millisSinceEpoch && arrival.Scheduled < day.getLocalNextMidnight.millisSinceEpoch
+
 
   def headingsSource: Source[Option[String], NotUsed] = Source(
     List(Option(TerminalFlightsSummary.rawArrivalHeadingsWithTransfer + lineEnding))
