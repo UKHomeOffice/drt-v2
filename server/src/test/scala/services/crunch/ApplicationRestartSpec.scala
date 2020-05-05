@@ -64,13 +64,13 @@ class ApplicationRestartSpec extends CrunchTestLike {
     val initialLiveArrivals = mutable.SortedMap[UniqueArrival, Arrival](arrivalLive.unique -> arrivalLive)
 
     val initialBaseArrivals = mutable.SortedMap[UniqueArrival, Arrival](arrivalBase.unique -> arrivalBase)
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       now = now,
       initialPortState = Option(portState),
       initialLiveArrivals = initialLiveArrivals,
       initialForecastBaseArrivals = initialBaseArrivals,
       maxDaysToCrunch = daysToCrunch
-    )
+    ))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrivalLive)), SDate.now()))
 

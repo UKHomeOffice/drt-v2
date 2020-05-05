@@ -15,13 +15,13 @@ import scala.collection.immutable.{List, SortedMap}
 import scala.concurrent.duration._
 
 class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
-  val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(
+  val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(
     now = () => SDate("2019-01-01T01:00"),
-    pcpArrivalTime = pcpForFlightFromBest,
+    pcpArrivalTime = TestDefaults.pcpForFlightFromBest,
     airportConfig = defaultAirportConfig.copy(
       queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate), T2 -> Seq())
     )
-  )
+  ))
   val arrivalOne: Arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("JFK"), schDt = "2019-01-01T00:00", actPax = Option(100))
 
   val arrivalTwo: Arrival = ArrivalGenerator.arrival(iata = "BA0002", terminal = T1, origin = PortCode("JFK"), schDt = "2019-01-01T00:05", actPax = Option(117))
@@ -166,7 +166,7 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
     }
 
     val earliestPcpMinuteAcrossArrivals = arrivals.foldLeft(Long.MaxValue) {
-      case (earliestSoFar, a) => pcpForFlightFromBest(a).millisSinceEpoch match {
+      case (earliestSoFar, a) => TestDefaults.pcpForFlightFromBest(a).millisSinceEpoch match {
         case pcp if pcp < earliestSoFar => pcp
         case _ => earliestSoFar
       }

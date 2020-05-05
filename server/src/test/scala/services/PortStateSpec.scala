@@ -8,7 +8,7 @@ import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
 import server.feeds.ArrivalsFeedSuccess
-import services.crunch.CrunchTestLike
+import services.crunch.{CrunchTestLike, TestConfig}
 import services.graphstages.{SimulationMinute, SimulationMinutes}
 
 import scala.collection.mutable
@@ -23,7 +23,7 @@ class PortStateSpec extends CrunchTestLike {
     val cm = CrunchMinute(T1, Queues.EeaDesk, millis, 10, 50, 10, 50)
     val portState = PortState(List(), List(cm), List())
 
-    val crunch = runCrunchGraph(initialPortState = Option(portState), now = () => SDate(minute).addMinutes(-60))
+    val crunch = runCrunchGraph(TestConfig(initialPortState = Option(portState), now = () => SDate(minute).addMinutes(-60)))
 
     offerAndWait(crunch.shiftsInput, ShiftAssignments(Seq(StaffAssignment("", T1, MilliDate(SDate(minute).addMinutes(-15).millisSinceEpoch), MilliDate(SDate(minute).addMinutes(15).millisSinceEpoch), 1, None))))
 
@@ -268,7 +268,7 @@ class PortStateSpec extends CrunchTestLike {
         val fws = ApiFlightWithSplits(arrival, Set())
         val existingPortState = PortState(Iterable(fws), Iterable(), Iterable())
         val initialLiveArrivals = mutable.SortedMap[UniqueArrival, Arrival]() ++ Seq(arrival).map(a => (a.unique, a)).toMap
-        val crunch = runCrunchGraph(now = now, refreshArrivalsOnStart = true, initialPortState = Option(existingPortState), initialLiveArrivals = initialLiveArrivals)
+        val crunch = runCrunchGraph(TestConfig(now = now, refreshArrivalsOnStart = true, initialPortState = Option(existingPortState), initialLiveArrivals = initialLiveArrivals))
 
         val newArrival = ArrivalGenerator.arrival("BA0010", schDt = scheduled, terminal = T2, actPax = Option(100))
 

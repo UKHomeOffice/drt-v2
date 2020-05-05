@@ -2,9 +2,6 @@ package feeds.bhx
 
 import java.util.{Calendar, GregorianCalendar, TimeZone}
 
-import akka.actor.ActorSystem
-import akka.testkit.TestKit
-import com.typesafe.config.ConfigFactory
 import drt.server.feeds.legacy.bhx.BHXFeed
 import drt.shared.Terminals.T1
 import drt.shared.api.Arrival
@@ -15,15 +12,11 @@ import org.joda.time.DateTimeZone
 import org.mockito.Mockito.verify
 import org.specs2.matcher.Scope
 import org.specs2.mock.Mockito
-import org.specs2.mutable.SpecificationLike
 import services.SDate
+import services.crunch.CrunchTestLike
 import uk.co.bhx.online.flightinformation._
 
-import scala.collection.JavaConverters._
-
-class BHXLegacyFeedSpec extends TestKit(
-  ActorSystem("testActorSystem", ConfigFactory.parseMap(Map("feeds.bhx.soap.endPointUrl" -> "").asJava)))
-  with SpecificationLike with Mockito {
+class BHXLegacyFeedSpec extends CrunchTestLike with Mockito {
   sequential
   isolated
 

@@ -31,7 +31,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
 
       val fiveMinutes = 600d / 60
 
-      val crunch = runCrunchGraph(
+      val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduled),
         airportConfig = defaultAirportConfig.copy(
           queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.EGate)),
@@ -50,7 +50,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
           slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 25)
           ),
         cruncher = Optimiser.crunch
-      )
+      ))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 

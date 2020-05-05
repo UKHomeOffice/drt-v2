@@ -38,7 +38,7 @@ class StaffMinutesSpec extends CrunchTestLike {
 
       val flight = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(100))
 
-      val crunch = runCrunchGraph(
+      val crunch = runCrunchGraph(TestConfig(
         airportConfig = defaultAirportConfig.copy(
           queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1),
           terminalPaxSplits = Map(T1 -> SplitRatios(
@@ -55,7 +55,7 @@ class StaffMinutesSpec extends CrunchTestLike {
           ),
         useLegacyDeployments = true,
         now = () => shiftStart
-        )
+        ))
 
       offerAndWait(crunch.shiftsInput, initialShifts)
 
@@ -107,7 +107,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       val initialFixedPoints = FixedPointAssignments(Seq(assignment2))
       val flight = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(100))
 
-      val crunch = runCrunchGraph(
+      val crunch = runCrunchGraph(TestConfig(
         airportConfig = defaultAirportConfig.copy(
           queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.EGate)),
           terminalPaxSplits = Map(T1 -> SplitRatios(
@@ -124,7 +124,7 @@ class StaffMinutesSpec extends CrunchTestLike {
           ),
         useLegacyDeployments = true,
         now = () => shiftStart
-        )
+        ))
 
       offerAndWait(crunch.shiftsInput, initialShifts)
       offerAndWait(crunch.fixedPointsInput, initialFixedPoints)
@@ -163,7 +163,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 50, None)
       val initialShifts = ShiftAssignments(Seq(assignment1))
 
-      val crunch = runCrunchGraph(
+      val crunch = runCrunchGraph(TestConfig(
         airportConfig = defaultAirportConfig.copy(
           queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.FastTrack, Queues.NonEeaDesk)),
           slaByQueue = Map(Queues.EeaDesk -> 25, Queues.FastTrack -> 30, Queues.NonEeaDesk -> 20),
@@ -189,7 +189,7 @@ class StaffMinutesSpec extends CrunchTestLike {
           ),
         useLegacyDeployments = true,
         now = () => shiftStart
-        )
+        ))
 
       offerAndWait(crunch.shiftsInput, initialShifts)
 
@@ -240,7 +240,7 @@ class StaffMinutesSpec extends CrunchTestLike {
 
       val flight = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(100))
 
-      val crunch = runCrunchGraph(
+      val crunch = runCrunchGraph(TestConfig(
         airportConfig = defaultAirportConfig.copy(
           queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1),
           terminalPaxSplits = Map(T1 -> SplitRatios(
@@ -257,7 +257,7 @@ class StaffMinutesSpec extends CrunchTestLike {
           ),
         now = () => shiftStart,
         cruncher = Optimiser.crunch
-        )
+        ))
 
       offerAndWait(crunch.shiftsInput, initialShifts)
 
@@ -307,14 +307,14 @@ class StaffMinutesSpec extends CrunchTestLike {
     val endDate2 = MilliDate(SDate("2017-01-01T00:29").millisSinceEpoch)
     val assignment2 = StaffAssignment("shift b", T1, startDate2, endDate2, 2, None)
     val initialShifts = ShiftAssignments(Seq(assignment1, assignment2))
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       airportConfig = defaultAirportConfig.copy(
         queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
         ),
       now = () => shiftStart,
       initialShifts = initialShifts,
       checkRequiredStaffUpdatesOnStartup = true
-      )
+      ))
 
     val expectedStaff = List.fill(15)(1) ::: List.fill(15)(2)
     val expectedMillis = (shiftStart.millisSinceEpoch to (shiftStart.millisSinceEpoch + 29 * oneMinuteMillis) by oneMinuteMillis).toList
@@ -348,12 +348,12 @@ class StaffMinutesSpec extends CrunchTestLike {
       StaffMovement(T1, "lunch end", MilliDate(shiftStart.addMinutes(15).millisSinceEpoch), 1, uuid, createdBy = None)
       )
 
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       airportConfig = defaultAirportConfig.copy(
         queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
         ),
       now = () => shiftStart
-      )
+      ))
 
     offerAndWait(crunch.shiftsInput, initialShifts)
     offerAndWait(crunch.liveStaffMovementsInput, initialMovements)
@@ -394,14 +394,14 @@ class StaffMinutesSpec extends CrunchTestLike {
       StaffMovement(T1, "lunch end", MilliDate(endDate.millisSinceEpoch), 1, uuid, createdBy = None)
       )
 
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       airportConfig = defaultAirportConfig.copy(
         queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
         ),
       now = () => startDate,
       checkRequiredStaffUpdatesOnStartup = true,
       initialStaffMovements = initialMovements
-      )
+      ))
 
     val minutesToCheck = 5
     val expectedStaffAvailableAndMovements = List.fill(minutesToCheck)((0, -1))
@@ -433,12 +433,12 @@ class StaffMinutesSpec extends CrunchTestLike {
       StaffMovement(T1, "lunch end", MilliDate(endDate.addMinutes(1).millisSinceEpoch), 1, uuid, createdBy = None)
       )
 
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       airportConfig = defaultAirportConfig.copy(
         queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
         ),
       now = () => startDate
-      )
+      ))
 
     offerAndWait(crunch.shiftsInput, initialShifts)
     offerAndWait(crunch.liveStaffMovementsInput, initialMovements)
@@ -471,12 +471,12 @@ class StaffMinutesSpec extends CrunchTestLike {
       StaffMovement(T1, "lunch end", MilliDate(shiftStart.addMinutes(15).millisSinceEpoch), 5, uuid2, createdBy = None)
       )
 
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       airportConfig = defaultAirportConfig.copy(
         queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
         ),
       now = () => shiftStart
-      )
+      ))
 
     offerAndWait(crunch.liveStaffMovementsInput, initialMovements)
 
@@ -515,12 +515,12 @@ class StaffMinutesSpec extends CrunchTestLike {
     val assignment1 = StaffAssignment("egate monitor", T1, startDate1, endDate1, 2, None)
     val initialFixedPoints = FixedPointAssignments(Seq(assignment1))
 
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       airportConfig = defaultAirportConfig.copy(
         queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
         ),
       now = () => shiftStart
-      )
+      ))
 
     offerAndWait(crunch.fixedPointsInput, initialFixedPoints)
 
@@ -561,12 +561,12 @@ class StaffMinutesSpec extends CrunchTestLike {
     val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 50, None)
     val fixedPoints = FixedPointAssignments(Seq(assignment1))
 
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       now = () => now,
       initialFixedPoints = fixedPoints,
       maxDaysToCrunch = 5,
       checkRequiredStaffUpdatesOnStartup = true
-      )
+      ))
 
     val expectedStaffMinutes = (0 until 5).map { day =>
       val date = SDate(scheduled).addDays(day).toISODateOnly
@@ -607,13 +607,13 @@ class StaffMinutesSpec extends CrunchTestLike {
       }
     }
 
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       now = () => now,
       initialFixedPoints = fixedPoints,
       maxDaysToCrunch = daysToCrunch,
       initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), staffMinutes(daysToCrunch, 15, scheduled))),
       checkRequiredStaffUpdatesOnStartup = true
-      )
+      ))
 
     val expectedStaffMinutes = (0 until 5).map { day =>
       val date = SDate(scheduled).addDays(day).toISODateOnly
@@ -645,12 +645,12 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     val daysToCrunch = 1
 
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       now = () => now,
       airportConfig = defaultAirportConfig.copy(queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)),
       maxDaysToCrunch = daysToCrunch,
       initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
-      )
+      ))
 
     offerAndWait(crunch.shiftsInput, shifts)
 
@@ -682,12 +682,12 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     val daysToCrunch = 1
 
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       now = () => now,
       airportConfig = defaultAirportConfig.copy(queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)),
       maxDaysToCrunch = daysToCrunch,
       initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
-      )
+      ))
 
     offerAndWait(crunch.fixedPointsInput, fixedPoints)
 
@@ -720,12 +720,12 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     val daysToCrunch = 1
 
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       now = () => now,
       airportConfig = defaultAirportConfig.copy(queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)),
       maxDaysToCrunch = daysToCrunch,
       initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
-      )
+      ))
 
     offerAndWait(crunch.liveStaffMovementsInput, Seq(staffMovement1, staffMovement2))
 

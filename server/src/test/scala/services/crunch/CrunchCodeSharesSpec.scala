@@ -32,12 +32,12 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
         ArrivalGenerator.arrival(iata = "FR8819", schDt = scheduled, actPax = Option(10), origin = PortCode("JFK"))
       ))
 
-      val crunch = runCrunchGraph(
+      val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduled),
         airportConfig = defaultAirportConfig.copy(
           terminalProcessingTimes = procTimes,
           queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
-        ))
+        )))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
@@ -65,11 +65,12 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
         ArrivalGenerator.arrival(schDt = scheduled15, iata = "EZ1010", terminal = T2, actPax = Option(12))
       ))
 
-      val crunch = runCrunchGraph(
+      val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduled),
         airportConfig = defaultAirportConfig.copy(
           terminalProcessingTimes = procTimes,
-          queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk), T2 -> Seq(Queues.EeaDesk))))
+          queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk), T2 -> Seq(Queues.EeaDesk)))
+        ))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 

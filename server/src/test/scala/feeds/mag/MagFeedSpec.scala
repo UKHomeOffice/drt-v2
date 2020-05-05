@@ -2,16 +2,14 @@ package feeds.mag
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
-import akka.stream.ActorMaterializer
 import com.typesafe.config.{Config, ConfigFactory}
 import drt.server.feeds.mag.{FeedRequesterLike, MagFeed}
 import drt.shared.FlightsApi.Flights
 import drt.shared.PortCode
-import org.slf4j.{Logger, LoggerFactory}
-import org.specs2.mutable.SpecificationLike
 import pdi.jwt.JwtAlgorithm
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import services.SDate
+import services.crunch.CrunchTestLike
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
@@ -20,7 +18,10 @@ object MockFeedRequester extends FeedRequesterLike {
   private val defaultResponse = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, "[]"))
   var mockResponse: HttpResponse = defaultResponse
 
-  override def sendTokenRequest(header: String, claim: String, key: String, algorithm: JwtAlgorithm): String = "Fake token"
+  override def sendTokenRequest(header: String,
+                                claim: String,
+                                key: String,
+                                algorithm: JwtAlgorithm): String = "Fake token"
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
@@ -28,7 +29,10 @@ object MockFeedRequester extends FeedRequesterLike {
 }
 
 case class MockExceptionThrowingFeedRequester(causeException: () => Unit) extends FeedRequesterLike {
-  override def sendTokenRequest(header: String, claim: String, key: String, algorithm: JwtAlgorithm): String = "Fake token"
+  override def sendTokenRequest(header: String,
+                                claim: String,
+                                key: String,
+                                algorithm: JwtAlgorithm): String = "Fake token"
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
@@ -38,8 +42,7 @@ case class MockExceptionThrowingFeedRequester(causeException: () => Unit) extend
   }
 }
 
-class MagFeedSpec extends SpecificationLike {
-  val log: Logger = LoggerFactory.getLogger(getClass)
+class MagFeedSpec extends CrunchTestLike {
   val config: Config = ConfigFactory.load()
 
   val privateKey: String = config.getString("feeds.mag.private-key")
@@ -47,12 +50,7 @@ class MagFeedSpec extends SpecificationLike {
   val claimRole: String = config.getString("feeds.mag.claim.role")
   val claimSub: String = config.getString("feeds.mag.claim.sub")
 
-
-  implicit val system: ActorSystem = ActorSystem("mag-test")
-  implicit val materialiser: ActorMaterializer = ActorMaterializer()
-  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-
-  val feed = MagFeed(privateKey, claimIss, claimRole, claimSub, () => SDate.now(), PortCode("MAN"), MockFeedRequester)
+  val feed: MagFeed = MagFeed(privateKey, claimIss, claimRole, claimSub, () => SDate.now(), PortCode("MAN"), MockFeedRequester)
 
   "Given a jwt client " +
     "I can generate an encoded token" >> {
@@ -106,7 +104,7 @@ class MagFeedSpec extends SpecificationLike {
 
   "Given a mock feed requester that throws an exception " +
     "I should get an ArrivalsFeedFailure response" >> {
-    val exceptionFeed = MagFeed(privateKey, claimIss, claimRole, claimSub, () => SDate.now(), PortCode("MAN"), MockExceptionThrowingFeedRequester(()=> new Exception("I'm throwing an exception")))
+    val exceptionFeed = MagFeed(privateKey, claimIss, claimRole, claimSub, () => SDate.now(), PortCode("MAN"), MockExceptionThrowingFeedRequester(() => new Exception("I'm throwing an exception")))
 
     val isFeedFailure = Await.result(exceptionFeed.requestArrivals(SDate.now()), 1 second) match {
       case ArrivalsFeedFailure(_, _) => true
@@ -116,7 +114,7 @@ class MagFeedSpec extends SpecificationLike {
     isFeedFailure must_== true
   }
 
-  val jsonResponseSingleArrival: String =
+  def jsonResponseSingleArrival: String =
     """[
       |    {
       |        "uniqueRef": 16961558,
@@ -183,7 +181,7 @@ class MagFeedSpec extends SpecificationLike {
       |    }
       |]""".stripMargin
 
-val jsonResponseSingleArrivalWith0Pax: String =
+  def jsonResponseSingleArrivalWith0Pax: String =
     """[
       |    {
       |        "uniqueRef": 16961558,

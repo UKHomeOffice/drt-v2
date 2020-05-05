@@ -7,12 +7,13 @@ import drt.chroma.chromafetcher.ChromaParserProtocol._
 import drt.shared.FlightsApi.Flights
 import server.feeds.{ArrivalsFeedSuccess, FeedResponse}
 import services.SDate
+import services.crunch.CrunchTestLike
 import spray.json._
 
 import scala.collection.immutable.Seq
 import scala.collection.mutable
 
-class DiffingAkkaStreamSpec extends AkkaStreamTestKitSpecificationLike with SampleData {
+class DiffingAkkaStreamSpec extends CrunchTestLike with SampleData {
 
   "Given a our initial response we emit all entries" >> {
     val source = Source(Seq(response0))

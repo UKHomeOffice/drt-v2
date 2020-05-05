@@ -11,6 +11,7 @@ import drt.http.WithSendAndReceive
 import drt.server.feeds.chroma.ChromaLiveFeed
 import org.specs2.matcher.MatchResult
 import server.feeds.ArrivalsFeedFailure
+import services.crunch.CrunchTestLike
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
@@ -18,9 +19,8 @@ import scala.concurrent.{Await, Future}
 import scala.language.reflectiveCalls
 import scala.util.{Success, Try}
 
-class MockChromaConnectorSpec extends AkkaStreamTestKitSpecificationLike {
+class MockChromaConnectorSpec extends CrunchTestLike {
   test =>
-  val log: LoggingAdapter = system.log
 
   val mockConfig: Config = ConfigFactory.parseMap(Map(
     "chroma.url.live" -> "http://someserver/somepath",
@@ -28,8 +28,6 @@ class MockChromaConnectorSpec extends AkkaStreamTestKitSpecificationLike {
     "chroma.username" -> "magicuser",
     "chroma.password" -> "pass"
   ).asJava)
-
-  import system.dispatcher
 
   "When we request a chroma token, if it returns success for token and result we parse successfully" >> {
     val sut = new ChromaFetcher(ChromaLive, ChromaFlightMarshallers.live) with WithSendAndReceive {

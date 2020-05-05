@@ -29,7 +29,7 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
         val inputFlightsBefore = Flights(List(flight))
         val updatedArrival = flight.copy(ActPax = Some(50))
         val inputFlightsAfter = Flights(List(updatedArrival))
-        val crunch = runCrunchGraph(
+        val crunch = runCrunchGraph(TestConfig(
           now = () => SDate(scheduled),
           airportConfig = defaultAirportConfig.copy(
             terminalProcessingTimes = Map(T1 -> Map(
@@ -37,7 +37,7 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
               eeaMachineReadableToEGate -> 25d / 60
               )),
             queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate))
-            ))
+            )))
 
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore))
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsAfter))
@@ -67,7 +67,7 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
         val inputFlightsBefore = Flights(List(flight))
         val updatedArrival = flight.copy(ActPax = Some(50))
         val inputFlightsAfter = Flights(List(updatedArrival))
-        val crunch = runCrunchGraph(
+        val crunch = runCrunchGraph(TestConfig(
           now = () => SDate(scheduled),
           airportConfig = defaultAirportConfig.copy(
             terminalProcessingTimes = Map(T1 -> Map(
@@ -75,7 +75,7 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
               eeaMachineReadableToEGate -> 25d / 60
               )),
             queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate))
-            ))
+            )))
 
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore))
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore))
@@ -106,7 +106,7 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
         val oneFlight = Flights(List(flight))
         val zeroFlights = Flights(List())
 
-        val crunch = runCrunchGraph(
+        val crunch = runCrunchGraph(TestConfig(
           now = () => SDate(scheduled),
           airportConfig = defaultAirportConfig.copy(
             terminalProcessingTimes = Map(T1 -> Map(
@@ -114,7 +114,7 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
               eeaMachineReadableToEGate -> 25d / 60
               )),
             queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate))
-            ))
+            )))
 
         offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(oneFlight))
 

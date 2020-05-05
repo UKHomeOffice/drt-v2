@@ -1,21 +1,14 @@
 package api
 
-import akka.actor.ActorSystem
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, HttpResponse}
-import akka.stream.ActorMaterializer
-import akka.testkit.TestKit
-import com.typesafe.config.ConfigFactory
-import org.specs2.mutable.SpecificationLike
+import services.crunch.CrunchTestLike
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-class KeyCloakAuthSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike {
+class KeyCloakAuthSpec extends CrunchTestLike {
 
   val keyCloakUrl = "https://keycloak"
-
-  implicit val mat: ActorMaterializer = ActorMaterializer()
 
   val tokenResponseJson: String =
     s"""{

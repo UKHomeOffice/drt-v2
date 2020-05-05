@@ -39,7 +39,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         PassengerInfoGenerator.passengerInfoJson(Nationality("ZAF"), DocumentType("P"), Nationality("ZAF"))
       ))
     )))
-    val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       now = () => SDate(scheduled),
       airportConfig = defaultAirportConfig.copy(
         terminalProcessingTimes = Map(T1 -> Map(
@@ -50,7 +50,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
       ),
       initialPortState = Option(PortState(SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
-    )
+    ))
 
     offerAndWait(crunch.manifestsLiveInput, inputManifestsCi)
     Thread.sleep(1500)
@@ -78,7 +78,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
       VoyageManifest(EventTypes.CI, portCode, PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"), manifestPax(10, euPassport))
     )))
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       now = () => SDate(scheduled),
       airportConfig = defaultAirportConfig.copy(
         portCode = portCode,
@@ -89,7 +89,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate))
       ),
       initialPortState = Option(PortState(SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
-    )
+    ))
 
     offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
@@ -121,7 +121,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         manifestPax(5, euPassport) ++ manifestPax(2, inTransitFlag) ++ manifestPax(3, inTransitCountry)
       )
     )))
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       now = () => SDate(scheduled),
       airportConfig = defaultAirportConfig.copy(
         portCode = portCode,
@@ -133,7 +133,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         hasTransfer = true
       ),
       initialPortState = Option(PortState(SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
-    )
+    ))
 
     offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
@@ -232,7 +232,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         visa
       ))
     )))
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       now = () => SDate(scheduled),
       airportConfig = defaultAirportConfig.copy(
         portCode = portCode,
@@ -246,7 +246,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         hasTransfer = true
       ),
       initialPortState = Option(PortState(SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
-    )
+    ))
 
     offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
@@ -280,7 +280,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         euPassportWithIdentifier("ID2")
       ))
     )))
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       now = () => SDate(scheduled),
       airportConfig = defaultAirportConfig.copy(
         portCode = portCode,
@@ -298,7 +298,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()
         )
       )
-    )
+    ))
 
     offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
@@ -332,7 +332,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         euPassport,
       ))
     )))
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       now = () => SDate(scheduled),
       airportConfig = defaultAirportConfig.copy(
         portCode = portCode,
@@ -350,7 +350,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()
         )
       )
-    )
+    ))
 
     offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
@@ -384,7 +384,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         euPassport,
       ))
     )))
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       now = () => SDate(scheduled),
       airportConfig = defaultAirportConfig.copy(
         portCode = portCode,
@@ -402,7 +402,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()
         )
       )
-    )
+    ))
 
     offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
