@@ -28,6 +28,11 @@ case class TerminalFlightsSummary(flights: Seq[ApiFlightWithSplits],
 }
 
 object TerminalFlightsSummary {
+  def empty(millisToLocalIsoDateOnly: MillisSinceEpoch => String,
+            millisToLocalHoursAndMinutes: MillisSinceEpoch => String,
+            pcpPaxFn: Arrival => Int): TerminalFlightsSummary = TerminalFlightsSummary(Seq(), millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes, pcpPaxFn)
+
+
   val rawArrivalHeadings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax"
   val rawArrivalHeadingsWithTransfer: String = rawArrivalHeadings + ",Transfer Pax"
 

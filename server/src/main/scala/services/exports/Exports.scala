@@ -6,7 +6,7 @@ import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
-import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
@@ -14,12 +14,14 @@ import drt.shared._
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
+import services.exports.summaries.flights.TerminalFlightsSummary
 import services.exports.summaries.flights.TerminalFlightsSummaryLike.TerminalFlightsSummaryLikeGenerator
-import services.exports.summaries.flights.{TerminalFlightsSummary, TerminalFlightsSummaryLike, TerminalFlightsWithActualApiSummary}
 import services.exports.summaries.queues.TerminalQueuesSummary
 import services.exports.summaries.{Summaries, TerminalSummaryLike}
 import services.graphstages.Crunch
 
+import scala.collection.immutable
+import scala.collection.immutable.{NumericRange, SortedMap}
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -31,7 +33,7 @@ object Exports {
                               now: () => SDateLike,
                               terminal: Terminal,
                               maybeSummaryActorAndRequestProvider: Option[((SDateLike, Terminal) => ActorRef, Any)],
-                              generateNewSummary: (SDateLike, SDateLike) => Future[Option[TerminalSummaryLike]])
+                              generateNewSummary: (SDateLike, SDateLike) => Future[TerminalSummaryLike])
                              (implicit sys: ActorSystem,
                               ec: ExecutionContext,
                               ti: Timeout): Source[String, NotUsed] = Source(0 until numberOfDays)
@@ -40,7 +42,7 @@ object Exports {
       val to = from.addDays(1)
       val addHeader = dayOffset == 0
 
-      val summaryForDay: Future[Option[TerminalSummaryLike]] =
+      val summaryForDay: Future[TerminalSummaryLike] =
         (maybeSummaryActorAndRequestProvider, MilliTimes.isHistoric(now, from)) match {
           case (Some((actorProvider, request)), true) =>
             val actorForDayAndTerminal = actorProvider(from, terminal)
@@ -54,70 +56,42 @@ object Exports {
         }
 
       summaryForDay.map {
-        case None => "\n"
-        case Some(summaryLike) if addHeader => summaryLike.toCsvWithHeader
-        case Some(summaryLike) => summaryLike.toCsv
+        case summaryLike if addHeader => summaryLike.toCsvWithHeader
+        case summaryLike => summaryLike.toCsv
       }
     }
-
-  def historicSummaryForDayLegacy(terminal: Terminal,
-                                  from: SDateLike,
-                                  summaryActor: ActorRef,
-                                  request: Any,
-                                  queryPortState: (SDateLike, Any) => Future[Option[PortState]],
-                                  fromPortState: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike])
-                                 (implicit ec: ExecutionContext,
-                                  timeout: Timeout): Future[Option[TerminalSummaryLike]] = {
-    summaryActor
-      .ask(request)
-      .asInstanceOf[Future[Option[TerminalSummaryLike]]]
-      .flatMap {
-        case None =>
-          extractDayFromPortStateForTerminalLegacy(terminal, from, queryPortState, fromPortState).flatMap {
-            case None => Future(None)
-            case Some(extract) if extract.isEmpty =>
-              log.warn(s"Empty summary from port state. Won't send to be persisted")
-              Future(Option(extract))
-            case Some(extract) => sendSummaryToBePersisted(summaryActor, extract)
-          }
-        case someSummaries =>
-          log.info(s"Got summaries from summary actor for ${from.toISODateOnly}")
-          Future(someSummaries)
-      }
-  }
 
   def historicSummaryForDay(from: SDateLike,
                             summaryActor: ActorRef,
                             request: Any,
-                            generateNewSummary: (SDateLike, SDateLike) => Future[Option[TerminalSummaryLike]])
-                           (implicit ec: ExecutionContext, timeout: Timeout): Future[Option[TerminalSummaryLike]] = {
+                            generateNewSummary: (SDateLike, SDateLike) => Future[TerminalSummaryLike])
+                           (implicit ec: ExecutionContext, timeout: Timeout): Future[TerminalSummaryLike] = {
     summaryActor
       .ask(request)
       .asInstanceOf[Future[Option[TerminalSummaryLike]]]
       .flatMap {
+        case Some(summaries) =>
+          log.info(s"Got summaries from summary actor for ${from.toISODateOnly}")
+          Future(summaries)
         case None =>
           generateNewSummary(from, from.addDays(1)).flatMap {
-            case None => Future(None)
-            case Some(extract) if extract.isEmpty =>
+            case extract if extract.isEmpty =>
               log.warn(s"Empty summary from port state. Won't send to be persisted")
-              Future(Option(extract))
-            case Some(extract) => sendSummaryToBePersisted(summaryActor, extract)
+              Future(extract)
+            case extract => sendSummaryToBePersisted(summaryActor, extract)
           }
-        case someSummaries =>
-          log.info(s"Got summaries from summary actor for ${from.toISODateOnly}")
-          Future(someSummaries)
       }
   }
 
   private def sendSummaryToBePersisted(askableSummaryActor: ActorRef,
                                        extract: TerminalSummaryLike)
-                                      (implicit ec: ExecutionContext, timeout: Timeout) = {
+                                      (implicit ec: ExecutionContext, timeout: Timeout): Future[TerminalSummaryLike] = {
     askableSummaryActor.ask(extract)
-      .map(_ => Option(extract))
+      .map(_ => extract)
       .recoverWith {
         case t =>
           log.error("Didn't get an ack from the summary actor for the data to be persisted", t)
-          Future(None)
+          Future(extract)
       }
   }
 
@@ -139,29 +113,43 @@ object Exports {
                                   summaryLengthMinutes: Int,
                                   terminal: Terminal,
                                   portStateProvider: (SDateLike, Any) => Future[Option[Any]])
-                                 (implicit ec: ExecutionContext): (SDateLike, SDateLike) => Future[Option[TerminalSummaryLike]] =
+                                 (implicit ec: ExecutionContext): (SDateLike, SDateLike) => Future[TerminalSummaryLike] =
     (from: SDateLike, to: SDateLike) => {
-      portStateProvider(from, GetPortStateForTerminal(from.millisSinceEpoch, to.millisSinceEpoch, terminal)).map {
-        case Some(PortState(_, crunchMinutes, staffMinutes)) =>
-          val queueSummaries = (from.millisSinceEpoch until to.millisSinceEpoch by summaryLengthMinutes * MilliTimes.oneMinuteMillis).map { millis =>
-            Summaries.terminalSummaryForPeriod(crunchMinutes, staffMinutes, queues, SDate(millis), summaryLengthMinutes)
-          }
-          Option(TerminalQueuesSummary(queues, queueSummaries))
-        case _ => None
-      }
+      val minutes = from.millisSinceEpoch until to.millisSinceEpoch by summaryLengthMinutes * MilliTimes.oneMinuteMillis
+      portStateProvider(from, GetPortStateForTerminal(from.millisSinceEpoch, to.millisSinceEpoch, terminal))
+        .map {
+          case Some(PortState(_, crunchMinutes, staffMinutes)) => (crunchMinutes, staffMinutes)
+          case _ => (SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())
+        }
+        .map{ case (cms, sms) =>
+
+          TerminalQueuesSummary(queues, queueSummaries(queues, summaryLengthMinutes, minutes, cms, sms))
+        }
     }
+
+  private def queueSummaries(queues: Seq[Queue],
+                             summaryLengthMinutes: Int,
+                             minutes: NumericRange[MillisSinceEpoch],
+                             crunchMinutes: immutable.SortedMap[TQM, CrunchApi.CrunchMinute],
+                             staffMinutes: immutable.SortedMap[TM, CrunchApi.StaffMinute]) = {
+    minutes.map { millis =>
+      Summaries.terminalSummaryForPeriod(crunchMinutes, staffMinutes, queues, SDate(millis), summaryLengthMinutes)
+    }
+  }
+
 
   def flightSummariesFromPortState(terminalFlightsSummaryGenerator: TerminalFlightsSummaryLikeGenerator)
                                   (terminal: Terminal,
                                    pcpPaxFn: Arrival => Int,
                                    flightsProvider: (SDateLike, Any) => Future[Option[Any]])
                                   (from: SDateLike, to: SDateLike)
-                                  (implicit ec: ExecutionContext): Future[Option[TerminalFlightsSummaryLike]] =
-    flightsProvider(from, GetFlightsForTerminal(from.millisSinceEpoch, to.millisSinceEpoch, terminal)).map { maybeFlights =>
-      maybeFlights.collect { case flights: FlightsWithSplits =>
+                                  (implicit ec: ExecutionContext): Future[TerminalSummaryLike] =
+    flightsProvider(from, GetFlightsForTerminal(from.millisSinceEpoch, to.millisSinceEpoch, terminal)).map {
+      case Some(flights: FlightsWithSplits) =>
         val terminalFlights = flightsForTerminal(flights, from, to)
         terminalFlightsSummaryGenerator(terminalFlights, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes, pcpPaxFn)
-      }
+      case None =>
+        TerminalFlightsSummary.empty(millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes, pcpPaxFn)
     }
 
   def flightsForTerminal(flights: FlightsWithSplits, from: SDateLike, to: SDateLike): Seq[ApiFlightWithSplits] =

@@ -5,6 +5,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
+import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.{EeaDesk, Queue}
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.api.Arrival
@@ -42,10 +43,9 @@ class FlightsExportSpec extends CrunchTestLike {
         val noStaffMinutes = Iterable()
         val portState = PortState(someFlights, noCrunchMinutes, noStaffMinutes)
 
-        val portStateToSummaries = flightSummariesFromPortState(terminal, pcpPaxFn) _
-
-        val result = Await.result(historicSummaryForDayLegacy(terminal, from, mockTerminalSummariesActor, GetSummaries, eventualPortState(Option(portState)), portStateToSummaries), 1 second)
-          .get.asInstanceOf[TerminalFlightsSummary].flights
+        val portStateToSummaries = flightSummariesFromPortState(TerminalFlightsSummary.generator)(terminal, pcpPaxFn, (_, _) => Future(Option(FlightsWithSplits(portState.flights)))) _
+        val result = Await.result(historicSummaryForDay(from, mockTerminalSummariesActor, GetSummaries, portStateToSummaries), 1 second)
+          .asInstanceOf[TerminalFlightsSummary].flights
 
         val expected = someFlights
 
@@ -60,8 +60,8 @@ class FlightsExportSpec extends CrunchTestLike {
         val persistedSummaries = TerminalFlightsSummary(someFlights, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes, pcpPaxFn)
         val mockTerminalSummariesActor = system.actorOf(Props(classOf[MockTerminalSummariesActor], Option(persistedSummaries), None))
 
-        val portStateToSummaries = flightSummariesFromPortState(terminal, pcpPaxFn) _
-        val result = Await.result(historicSummaryForDayLegacy(terminal, from, mockTerminalSummariesActor, GetSummaries, eventualPortState(None), portStateToSummaries), 1 second).get
+        val portStateToSummaries = flightSummariesFromPortState(TerminalFlightsSummary.generator)(terminal, pcpPaxFn, (_, _) => Future(None)) _
+        val result = Await.result(historicSummaryForDay(from, mockTerminalSummariesActor, GetSummaries, portStateToSummaries), 1 second)
 
         result === persistedSummaries
       }
@@ -72,15 +72,15 @@ class FlightsExportSpec extends CrunchTestLike {
     val portState = PortState(someFlights, Iterable(), Iterable())
 
     "When I ask for terminal flight summaries for that day" >> {
-      val portStateToSummaries = flightSummariesFromPortState(terminal, pcpPaxFn) _
+      val portStateToSummaries = flightSummariesFromPortState(TerminalFlightsSummary.generator)(terminal, pcpPaxFn, (_, _) => Future(Option(FlightsWithSplits(portState.flights)))) _
 
-      def eventualMaybeSummaries(actorProbe: ActorRef): Future[Option[TerminalSummaryLike]] = {
-        historicSummaryForDayLegacy(terminal, from, actorProbe, GetSummaries, eventualPortState(Option(portState)), portStateToSummaries)
+      def eventualMaybeSummaries(actorProbe: ActorRef): Future[TerminalSummaryLike] = {
+        historicSummaryForDay(from, actorProbe, GetSummaries, portStateToSummaries)
       }
 
       "I should get back 96 summaries including one generated from the crunch & staff minutes in the port state" >> {
         val mockTerminalSummariesActor = system.actorOf(Props(classOf[MockTerminalSummariesActor], None, None))
-        val result = Await.result(eventualMaybeSummaries(mockTerminalSummariesActor), 1 second).get.asInstanceOf[TerminalFlightsSummary]
+        val result = Await.result(eventualMaybeSummaries(mockTerminalSummariesActor), 1 second).asInstanceOf[TerminalFlightsSummary]
         val expected = TerminalFlightsSummary(someFlights, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes, pcpPaxFn)
 
         result === expected
@@ -102,10 +102,10 @@ class FlightsExportSpec extends CrunchTestLike {
     val portState = PortState(Iterable(), Iterable(), Iterable())
 
     "When I ask for terminal flight summaries for that day" >> {
-      val portStateToSummaries = flightSummariesFromPortState(terminal, pcpPaxFn) _
+      val portStateToSummaries = flightSummariesFromPortState(TerminalFlightsSummary.generator)(terminal, pcpPaxFn, (_, _) => Future(Option(FlightsWithSplits(portState.flights)))) _
 
-      def eventualMaybeSummaries(actorProbe: ActorRef): Future[Option[TerminalSummaryLike]] = {
-        historicSummaryForDayLegacy(terminal, from, actorProbe, GetSummaries, eventualPortState(Option(portState)), portStateToSummaries)
+      def eventualMaybeSummaries(actorProbe: ActorRef): Future[TerminalSummaryLike] = {
+        historicSummaryForDay(from, actorProbe, GetSummaries, portStateToSummaries)
       }
 
       "I should not see the generated summaries sent to the summary actor for persistence" >> {
@@ -121,7 +121,6 @@ class FlightsExportSpec extends CrunchTestLike {
   }
 
   "Given a range of dates, and some mock summary actors containing data for those dates" >> {
-
     def persistedSummaries(queues: Seq[Queue], from: SDateLike) = TerminalFlightsSummary(someFlights.map { fws =>
       val arrival = fws.apiFlight.copy(Scheduled = from.millisSinceEpoch)
       fws.copy(apiFlight = arrival)
@@ -135,9 +134,9 @@ class FlightsExportSpec extends CrunchTestLike {
 
         val now: () => SDateLike = () => SDate("2020-06-01")
         val startDate = SDate("2020-01-01T00:00", Crunch.europeLondonTimeZone)
-        val portStateToSummary = flightSummariesFromPortState(terminal, pcpPaxFn) _
+        val portStateToSummaries = flightSummariesFromPortState(TerminalFlightsSummary.generator)(terminal, pcpPaxFn, (_, _) => Future(None)) _
 
-        val exportStream = summaryForDaysCsvSourceLegacy(startDate, 3, now, terminal, Option((summaryActorProvider, GetSummaries)), eventualPortState(None), portStateToSummary)
+        val exportStream = summaryForDaysCsvSource(startDate, 3, now, terminal, Option((summaryActorProvider, GetSummaries)), portStateToSummaries)
 
         val value1 = exportStream.runWith(Sink.seq)(ActorMaterializer())
         val result = Await.result(value1, 1 second)

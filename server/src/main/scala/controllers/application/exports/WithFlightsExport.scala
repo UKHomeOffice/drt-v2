@@ -32,7 +32,7 @@ trait WithFlightsExport extends ExportToCsv {
         val terminal = Terminal(terminalName)
         Try(SDate(year, month, day, 0, 0, europeLondonTimeZone)) match {
           case Success(start) =>
-            val summaryFromPortState: (SDateLike, SDateLike) => Future[Option[TerminalFlightsSummaryLike]] =
+            val summaryFromPortState: (SDateLike, SDateLike) => Future[TerminalSummaryLike] =
               Exports.flightSummariesFromPortState(TerminalFlightsWithActualApiSummary.generator)(terminal, ctrl.pcpPaxFn, queryFromPortState)
             exportToCsv(
               start = start,
@@ -108,7 +108,7 @@ trait WithFlightsExport extends ExportToCsv {
 
 
   private def summaryProviderByRole(terminal: Terminal, flightsProvider: (SDateLike, Any) => Future[Option[Any]])
-                                   (implicit request: Request[AnyContent]): (SDateLike, SDateLike) => Future[Option[TerminalFlightsSummaryLike]] = {
+                                   (implicit request: Request[AnyContent]): (SDateLike, SDateLike) => Future[TerminalSummaryLike] = {
     val flightSummariesFromPortState =
       if (canAccessActualApi(request))
         Exports.flightSummariesFromPortState(TerminalFlightsWithActualApiSummary.generator) _
