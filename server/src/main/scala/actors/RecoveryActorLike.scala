@@ -13,7 +13,9 @@ object Sizes {
 
 trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   val log: Logger
+
   def now: () => SDateLike
+
   val recoveryStartMillis: MillisSinceEpoch
 
   val snapshotBytesThreshold: Int
@@ -40,42 +42,20 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
 
   def stateToMessage: GeneratedMessage
 
-  def persistAndMaybeSnapshot(messageToPersist: GeneratedMessage): Unit = {
-    persist(messageToPersist) { message =>
-      val messageBytes = message.serializedSize
-      log.debug(s"Persisting $messageBytes bytes of ${message.getClass}")
-
-      message match {
-        case m: AnyRef =>
-          context.system.eventStream.publish(m)
-          bytesSinceSnapshotCounter += messageBytes
-          messagesPersistedSinceSnapshotCounter += 1
-          logCounters(bytesSinceSnapshotCounter, messagesPersistedSinceSnapshotCounter, snapshotBytesThreshold, maybeSnapshotInterval)
-
-          snapshotIfNeeded(stateToMessage)
-        case _ =>
-          log.error("Message was not of type AnyRef and so could not be persisted")
-      }
-    }
-  }
-
-  def persistAndMaybeSnapshotWithAck(messageToPersist: GeneratedMessage, replyTo: ActorRef, ackMsg: Any): Unit = {
+  def persistAndMaybeSnapshot(messageToPersist: GeneratedMessage, maybeAck: Option[(ActorRef, Any)] = None): Unit = {
     persist(messageToPersist) { message =>
       val messageBytes = message.serializedSize
       log.info(s"Persisting $messageBytes bytes of ${message.getClass}")
 
-      message match {
-        case m: AnyRef =>
-          context.system.eventStream.publish(m)
-          bytesSinceSnapshotCounter += messageBytes
-          messagesPersistedSinceSnapshotCounter += 1
-          logCounters(bytesSinceSnapshotCounter, messagesPersistedSinceSnapshotCounter, snapshotBytesThreshold, maybeSnapshotInterval)
+      context.system.eventStream.publish(message)
+      bytesSinceSnapshotCounter += messageBytes
+      messagesPersistedSinceSnapshotCounter += 1
+      logCounters(bytesSinceSnapshotCounter, messagesPersistedSinceSnapshotCounter, snapshotBytesThreshold, maybeSnapshotInterval)
 
-          snapshotIfNeeded(stateToMessage)
+      snapshotIfNeeded(stateToMessage)
 
-          replyTo ! ackMsg
-        case _ =>
-          log.error("Message was not of type AnyRef and so could not be persisted")
+      maybeAck.foreach {
+        case (replyTo, ackMsg) => replyTo ! ackMsg
       }
     }
   }

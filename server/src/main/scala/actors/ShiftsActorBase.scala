@@ -123,7 +123,7 @@ class ShiftsActorBase(val now: () => SDateLike,
 
       val createdAt = now()
       val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(ShiftAssignments(shiftsToUpdate), createdAt), Option(createdAt.millisSinceEpoch))
-      persistAndMaybeSnapshotWithAck(shiftsMessage, sender(), UpdateShiftsAck(shiftsToUpdate))
+      persistAndMaybeSnapshot(shiftsMessage, Option(sender(), UpdateShiftsAck(shiftsToUpdate)))
 
     case SetShifts(newShiftAssignments) =>
       if (newShiftAssignments != state) {
@@ -132,7 +132,7 @@ class ShiftsActorBase(val now: () => SDateLike,
 
         val createdAt = now()
         val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(ShiftAssignments(newShiftAssignments), createdAt), Option(createdAt.millisSinceEpoch))
-        persistAndMaybeSnapshotWithAck(shiftsMessage,sender(), SetShiftsAck(newShiftAssignments))
+        persistAndMaybeSnapshot(shiftsMessage, Option(sender(), SetShiftsAck(newShiftAssignments)))
       } else {
         log.info(s"No change. Nothing to persist")
         sender() ! SetShiftsAck(newShiftAssignments)
