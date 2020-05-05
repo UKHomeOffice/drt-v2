@@ -134,8 +134,7 @@ trait WithFlightsExport extends ExportToCsv {
                     (implicit request: Request[AnyContent]): Result = {
     val start = localLastMidnight(startMillis)
     val end = localLastMidnight(endMillis)
-    val flightsProvider = queryFromPortState
-    val summaryFromPortState = summaryProviderByRole(Terminal(terminalName), flightsProvider)
-    exportToCsv(start, end, "flights", terminal(terminalName), Option(summaryActorProvider, summariesRequest), summaryFromPortState)
+    val summaryForDate = summaryProviderByRole(Terminal(terminalName), queryFromPortState)
+    exportToCsv(start, end, "flights", terminal(terminalName), Option(summaryActorProvider, summariesRequest), summaryForDate)
   }
 }

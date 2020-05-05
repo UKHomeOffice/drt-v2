@@ -160,8 +160,9 @@ class ShiftsActorBase(val now: () => SDateLike,
                          shiftsToUpdate: Seq[StaffAssignment]): Seq[StaffAssignment] = shiftsToUpdate
     .foldLeft(existingAssignments) {
       case (assignmentsSoFar, updatedAssignment) =>
-        assignmentsSoFar.filterNot(existing =>
-                                     existing.startDt == updatedAssignment.startDt && existing.terminal == updatedAssignment.terminal)
+        assignmentsSoFar.filterNot { existing =>
+          existing.startDt == updatedAssignment.startDt && existing.terminal == updatedAssignment.terminal
+        }
     } ++ shiftsToUpdate
 }
 

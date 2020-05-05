@@ -34,8 +34,7 @@ trait WithDesksExport extends ExportToCsv {
     implicit val ec: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
     val start = localLastMidnight(startMillis)
     val end = localLastMidnight(endMillis)
-    val portStateProvider = queryFromPortState
-    val summaryFromPortState = Exports.queueSummariesFromPortState(airportConfig.queuesByTerminal(terminal(terminalName)), 15, Terminal(terminalName), portStateProvider)
+    val summaryFromPortState = Exports.queueSummariesFromPortState(airportConfig.queuesByTerminal(terminal(terminalName)), 15, Terminal(terminalName), queryFromPortState)
 
     Action(exportToCsv(start, end, "desks and queues", terminal(terminalName), Option((summaryActorProvider, GetSummaries)), summaryFromPortState))
   }

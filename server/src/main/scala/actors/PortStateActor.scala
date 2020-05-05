@@ -143,7 +143,8 @@ class PortStateActor(liveStateActor: ActorRef, forecastStateActor: ActorRef, now
 
   def stateForPeriodForTerminal(start: MillisSinceEpoch,
                                 end: MillisSinceEpoch,
-                                terminal: Terminal): PortState = state.windowWithTerminalFilter(SDate(start), SDate(end), Seq(terminal))
+                                terminal: Terminal): PortState =
+    state.windowWithTerminalFilter(SDate(start), SDate(end), Seq(terminal))
 
   val flightMinutesBuffer: mutable.Set[MillisSinceEpoch] = mutable.Set[MillisSinceEpoch]()
   val loadMinutesBuffer: mutable.Map[TQM, LoadMinute] = mutable.Map[TQM, LoadMinute]()
