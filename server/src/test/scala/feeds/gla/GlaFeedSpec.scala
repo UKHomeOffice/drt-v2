@@ -3,7 +3,6 @@ package feeds.gla
 import actors.acking.AckingReceiver.StreamCompleted
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
 import drt.server.feeds.gla.{GlaFeed, GlaFeedRequesterLike, ProdGlaFeedRequester}
@@ -11,10 +10,9 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.T1
 import drt.shared.api.Arrival
 import drt.shared.{ArrivalStatus, LiveFeedSource, PortCode}
-import org.slf4j.{Logger, LoggerFactory}
-import org.specs2.mutable.SpecificationLike
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import services.SDate
+import services.crunch.CrunchTestLike
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
@@ -38,13 +36,7 @@ case class MockExceptionThrowingFeedRequester() extends GlaFeedRequesterLike {
   }
 }
 
-class GlaFeedSpec extends SpecificationLike {
-  val log: Logger = LoggerFactory.getLogger(getClass)
-
-  implicit val system: ActorSystem = ActorSystem("gla-test")
-  implicit val materialiser: ActorMaterializer = ActorMaterializer()
-  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-
+class GlaFeedSpec extends CrunchTestLike {
   "Given a GLA Feed I should be able to connect to it and get arrivals back" >> {
     skipped(s"Exploratory test.")
     val prodFeed = GlaFeed(

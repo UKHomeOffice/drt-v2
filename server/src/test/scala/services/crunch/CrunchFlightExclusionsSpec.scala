@@ -30,13 +30,13 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
 
     val fiveMinutes = 600d / 60
 
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       now = () => SDate(scheduled),
       airportConfig = defaultAirportConfig.copy(
         terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
         queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk)),
         minutesToCrunch = 120
-        ))
+        )))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
@@ -73,14 +73,14 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
 
     val fiveMinutes = 600d / 60
 
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       now = () => SDate(scheduled),
       airportConfig = defaultAirportConfig.copy(
         terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
         queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk)),
         minutesToCrunch = 120
         )
-      )
+      ))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 

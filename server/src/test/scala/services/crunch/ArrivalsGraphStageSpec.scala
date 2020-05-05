@@ -40,7 +40,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     val airportConfig = defaultAirportConfig.copy(queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1))
 
     "a third arrival with an update to the chox time will change the arrival" >> {
-      val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(airportConfig = airportConfig, now = () => dateNow, initialPortState = initialPortState, initialLiveArrivals = initialLiveArrivals)
+      val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(airportConfig = airportConfig, now = () => dateNow, initialPortState = initialPortState, initialLiveArrivals = initialLiveArrivals))
       val arrival_v3_with_an_update_to_chox_time: Arrival = arrival_v2_with_chox_time.copy(ActualChox = Option(SDate("2017-01-01T10:30Z").millisSinceEpoch), Stand = Option("I will update"))
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival_v3_with_an_update_to_chox_time))))
 
@@ -56,7 +56,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     }
 
     "once an API (advanced passenger information) input arrives for the flight, it will update the arrivals FeedSource so that it has a LiveFeed and a ApiFeed" >> {
-      val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(airportConfig = airportConfig, now = () => dateNow, initialPortState = initialPortState, initialLiveArrivals = initialLiveArrivals)
+      val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(airportConfig = airportConfig, now = () => dateNow, initialPortState = initialPortState, initialLiveArrivals = initialLiveArrivals))
       val voyageManifests: ManifestsFeedResponse = ManifestsFeedSuccess(DqManifests("", Set(
         VoyageManifest(EventTypes.DC, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("10:25"), List(
           PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(22)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None)
@@ -77,7 +77,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     }
 
     "once an acl and a forecast input arrives for the flight, it will update the arrivals FeedSource so that it has ACLFeed and ForecastFeed" >> {
-      val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(airportConfig = airportConfig, now = () => dateNow, initialPortState = initialPortState, initialLiveArrivals = initialLiveArrivals)
+      val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(airportConfig = airportConfig, now = () => dateNow, initialPortState = initialPortState, initialLiveArrivals = initialLiveArrivals))
       val forecastScheduled = "2017-01-01T10:25Z"
 
       val aclFlight: Flights = Flights(List(
@@ -105,7 +105,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
     "Given 2 arrivals, one international and the other domestic " +
       "I should only see the international arrival in the port state" >> {
-      val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(airportConfig = airportConfig, now = () => dateNow)
+      val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(airportConfig = airportConfig, now = () => dateNow))
       val scheduled = "2017-01-01T10:25Z"
 
       val arrivalInt: Arrival = ArrivalGenerator.arrival(iata = "BA0002", origin = PortCode("JFK"), schDt = scheduled, actPax = Option(10), feedSources = Set(AclFeedSource))
@@ -129,7 +129,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     val withoutSuffix: Arrival = ArrivalGenerator.arrival(iata = "BA0003", origin = PortCode("JFK"), schDt = "2017-01-01T12:25Z", actPax = Option(10), feedSources = Set(AclFeedSource))
 
     "Given 3 international ACL arrivals, one with suffix F, another with P, and another with no suffix" >> {
-      val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(now = () => dateNow)
+      val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(now = () => dateNow))
       val aclFlight: Flights = Flights(List(withSuffixP, withSuffixF, withoutSuffix))
 
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlight))
@@ -144,7 +144,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     }
 
     "Given 3 international live arrivals, one with suffix F, another with P, and another with no suffix" >> {
-      val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(now = () => dateNow)
+      val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(now = () => dateNow))
       val aclFlight: Flights = Flights(List(withSuffixP, withSuffixF, withoutSuffix))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(aclFlight))

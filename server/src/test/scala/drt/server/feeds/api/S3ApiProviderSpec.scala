@@ -14,10 +14,9 @@ import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.Scope
 import services.SDate
+import services.crunch.CrunchTestLike
 
-class S3ApiProviderSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike with Mockito {
-
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
+class S3ApiProviderSpec extends CrunchTestLike with Mockito {
 
   trait Context extends Scope {
     val s3ClientMock: AmazonS3Client = mock[AmazonS3Client]

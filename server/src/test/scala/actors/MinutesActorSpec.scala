@@ -1,23 +1,18 @@
 package actors
 
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
-import akka.util.Timeout
 import drt.shared.CrunchApi.{CrunchMinute, CrunchMinutes, MinutesContainer}
 import drt.shared.Queues.EeaDesk
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.{Queues, SDateLike, TQM}
-import org.specs2.mutable.Specification
 import services.SDate
+import services.crunch.CrunchTestLike
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
+import scala.concurrent.{Await, Future}
 
-class MinutesActorSpec extends Specification {
-  implicit val system: ActorSystem = ActorSystem("queues-summary")
-  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-  implicit val timeout: Timeout = new Timeout(5 seconds)
-
+class MinutesActorSpec extends CrunchTestLike {
   val terminal: Terminal = T1
   val queue: Queues.Queue = EeaDesk
 

@@ -90,10 +90,12 @@ abstract class FixedPointsActorBase(now: () => SDateLike) extends RecoveryActorL
 
         val createdAt = now()
         val fixedPointsMessage = FixedPointsMessage(fixedPointsToFixedPointsMessages(state, createdAt), Option(createdAt.millisSinceEpoch))
-        persistAndMaybeSnapshot(fixedPointsMessage)
-      } else log.info(s"No change. Nothing to persist")
+        persistAndMaybeSnapshot(fixedPointsMessage, Option(sender(), SetFixedPointsAck(fixedPointStaffAssignments)))
+      } else {
+        log.info(s"No change. Nothing to persist")
+        sender() ! SetFixedPointsAck(fixedPointStaffAssignments)
+      }
 
-      sender() ! SetFixedPointsAck(fixedPointStaffAssignments)
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")

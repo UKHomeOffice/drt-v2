@@ -1,26 +1,22 @@
 package feeds.cirium
 
 import actors.acking.AckingReceiver.StreamCompleted
-import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
-import akka.testkit.{TestKit, TestProbe}
-import com.typesafe.config.ConfigFactory
+import akka.testkit.TestProbe
 import drt.server.feeds.cirium.CiriumFeed
 import drt.shared.Terminals.T1
 import drt.shared.api.Arrival
 import drt.shared.{ArrivalStatus, LiveBaseFeedSource, Operator, PortCode}
 import org.specs2.mock.Mockito
-import org.specs2.mutable.SpecificationLike
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
+import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.cirium.services.entities._
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactory.empty())) with SpecificationLike with Mockito {
+class CiriumFeedSpec extends CrunchTestLike with Mockito {
   sequential
   isolated
 
@@ -223,8 +219,6 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
   }
 
   "When successfully polling for CiriumArrivals I should get a stream of ArrivalFeedSuccess" >> {
-    implicit val mat: ActorMaterializer = ActorMaterializer()
-
     val ciriumFeed = new CiriumFeed("", PortCode("LHR")) with MockClientWithSuccess
 
     val probe = TestProbe()
@@ -241,8 +235,6 @@ class CiriumFeedSpec extends TestKit(ActorSystem("testActorSystem", ConfigFactor
 
 
   "When an error occurs polling for cirium then it should continue to receive a later update" >> {
-    implicit val mat: ActorMaterializer = ActorMaterializer()
-
     val ciriumFeed = new CiriumFeed("", PortCode("LHR")) with MockClientWithFailure
 
     val probe = TestProbe()

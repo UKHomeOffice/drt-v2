@@ -16,7 +16,7 @@ class PortStateTestActor(liveActor: ActorRef,
                          probe: ActorRef,
                          now: () => SDateLike,
                          liveDaysAhead: Int)
-  extends PortStateActor(liveActor, forecastActor, now, liveDaysAhead) {
+  extends PortStateActor(liveActor, forecastActor, now, liveDaysAhead, exitOnQueueException = false) {
   override def splitDiffAndSend(diff: PortStateDiff): Unit = {
     super.splitDiffAndSend(diff)
     probe ! state.immutable

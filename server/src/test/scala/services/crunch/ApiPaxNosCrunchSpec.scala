@@ -38,12 +38,12 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
   "Given a flight with 0 pax numbers and a Manifest of 2 passengers " +
     "Then we should get 2 passengers in PCP Pax" >> {
 
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       now = () => SDate(scheduled),
       airportConfig = defaultAirportConfig.copy(
         terminalProcessingTimes = procTimes,
         queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
-      ))
+      )))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
     offerAndWait(crunch.manifestsLiveInput, manifests)
@@ -63,12 +63,12 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
   "Given a flight with 0 pax numbers and a Manifest of 2 passengers " +
     "Then we should get workload for the 2 passengers Port State" >> {
 
-    val crunch = runCrunchGraph(
+    val crunch = runCrunchGraph(TestConfig(
       now = () => SDate(scheduled),
       airportConfig = defaultAirportConfig.copy(
         terminalProcessingTimes = procTimes,
         queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
-      ))
+      )))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
     offerAndWait(crunch.manifestsLiveInput, manifests)

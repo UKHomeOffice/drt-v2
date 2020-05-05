@@ -1,37 +1,29 @@
 package services.crunch
 
-import actors.Sizes.oneMegaByte
-import actors._
-import actors.daily.PassengersActor
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props, Terminated}
 import akka.pattern.ask
 import akka.stream.QueueOfferResult.Enqueued
-import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
-import akka.stream.{ActorMaterializer, OverflowStrategy, QueueOfferResult, UniqueKillSwitch}
+import akka.stream.scaladsl.SourceQueueWithComplete
+import akka.stream.testkit.TestSubscriber.Probe
+import akka.stream.{ActorMaterializer, QueueOfferResult}
 import akka.testkit.{TestKit, TestProbe}
 import akka.util.Timeout
 import drt.auth.STNAccess
 import drt.shared.PaxTypes._
-import drt.shared.PaxTypesAndQueues._
+import drt.shared.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaNonMachineReadableToDesk}
 import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
-import graphs.SinkToSourceBridge
-import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
+import org.specs2.execute.Result
 import org.specs2.mutable.SpecificationLike
-import org.specs2.specification.AfterAll
-import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
+import org.specs2.specification.{AfterAll, AfterEach}
 import services._
-import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
-import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeskRecs}
-import services.graphstages.CrunchMocks
 import slickdb.Tables
 
 import scala.collection.immutable.{Map, SortedMap}
-import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor}
 import scala.languageFeature.postfixOps
@@ -41,31 +33,8 @@ object H2Tables extends {
   val profile = slick.jdbc.H2Profile
 } with Tables
 
-class CrunchTestLike
-  extends TestKit(ActorSystem("StreamingCrunchTests"))
-    with SpecificationLike
-    with AfterAll {
-  isolated
-  sequential
-
-  override def afterAll: Unit = {
-    log.info("Shutting down actor system!!!")
-    TestKit.shutdownActorSystem(system)
-  }
-
-  implicit val actorSystem: ActorSystem = system
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
-  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-
-  val log: Logger = LoggerFactory.getLogger(getClass)
-
-  def pcpPaxFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
-
-  val oneMinuteMillis = 60000
-  val uniquifyArrivals: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] =
-    CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight)
-
-  val defaultAirportConfig: AirportConfig = AirportConfig(
+object TestDefaults {
+  val airportConfig: AirportConfig = AirportConfig(
     portCode = PortCode("STN"),
     queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk), T2 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk)),
     slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 20, Queues.NonEeaDesk -> 45),
@@ -74,17 +43,17 @@ class CrunchTestLike
     terminalPaxSplits = List(T1, T2).map(t => (t, SplitRatios(
       SplitSources.TerminalAverage,
       SplitRatio(eeaMachineReadableToDesk, 1)
-    ))).toMap,
+      ))).toMap,
     terminalProcessingTimes = Map(
       T1 -> Map(
         eeaMachineReadableToDesk -> 25d / 60,
         eeaNonMachineReadableToDesk -> 25d / 60
-      ),
+        ),
       T2 -> Map(
         eeaMachineReadableToDesk -> 25d / 60,
         eeaNonMachineReadableToDesk -> 25d / 60
-      )
-    ),
+        )
+      ),
     minMaxDesksByTerminalQueue24Hrs = Map(
       T1 -> Map(
         Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
@@ -105,7 +74,7 @@ class CrunchTestLike
         VisaNational -> List(Queues.NonEeaDesk -> 1.0),
         B5JPlusNational -> List(Queues.EGate -> 0.6, Queues.EeaDesk -> 0.4),
         B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
-      ),
+        ),
       T2 -> Map(
         EeaMachineReadable -> List(Queues.EeaDesk -> 1),
         EeaBelowEGateAge -> List(Queues.EeaDesk -> 1.0),
@@ -114,11 +83,10 @@ class CrunchTestLike
         VisaNational -> List(Queues.NonEeaDesk -> 1.0),
         B5JPlusNational -> List(Queues.EeaDesk -> 1),
         B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
-      )
-    ),
+        )
+      ),
     desksByTerminal = Map(T1 -> 40, T2 -> 40)
-  )
-
+    )
   val pcpForFlightFromSch: Arrival => MilliDate = (a: Arrival) => MilliDate(SDate(a.Scheduled).millisSinceEpoch)
   val pcpForFlightFromBest: Arrival => MilliDate = (a: Arrival) => {
     if (a.ActualChox.isDefined) MilliDate(SDate(a.ActualChox.get).millisSinceEpoch)
@@ -127,153 +95,55 @@ class CrunchTestLike
     else if (a.Estimated.isDefined) MilliDate(SDate(a.Estimated.get).millisSinceEpoch)
     else MilliDate(SDate(a.Scheduled).millisSinceEpoch)
   }
+  def testProbe(name: String)(implicit system: ActorSystem): TestProbe = TestProbe(name = name)
+  val pcpPaxFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
+}
 
-  def testProbe(name: String): TestProbe = TestProbe(name = name)
+class CrunchTestLike
+  extends TestKit(ActorSystem("DRT-TEST"))
+    with SpecificationLike
+    with AfterAll
+    with AfterEach {
+  isolated
+  sequential
 
-  def runCrunchGraph(initialForecastBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap(),
-                     initialForecastArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap(),
-                     initialLiveBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap(),
-                     initialLiveArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap(),
-                     initialPortState: Option[PortState] = None,
-                     airportConfig: AirportConfig = defaultAirportConfig,
-                     csvSplitsProvider: SplitsProvider.SplitProvider = (_, _) => None,
-                     pcpArrivalTime: Arrival => MilliDate = pcpForFlightFromSch,
-                     expireAfterMillis: Int = DrtStaticParameters.expireAfterMillis,
-                     now: () => SDateLike,
-                     initialShifts: ShiftAssignments = ShiftAssignments.empty,
-                     initialFixedPoints: FixedPointAssignments = FixedPointAssignments.empty,
-                     initialStaffMovements: Seq[StaffMovement] = Seq(),
-                     logLabel: String = "",
-                     cruncher: TryCrunch = CrunchMocks.mockCrunch,
-                     simulator: Simulator = CrunchMocks.mockSimulator,
-                     aggregatedArrivalsActor: ActorRef = testProbe("aggregated-arrivals").ref,
-                     useLegacyManifests: Boolean = false,
-                     maxDaysToCrunch: Int = 2,
-                     checkRequiredStaffUpdatesOnStartup: Boolean = false,
-                     refreshArrivalsOnStart: Boolean = false,
-                     recrunchOnStart: Boolean = false,
-                     flexDesks: Boolean = false,
-                     useLegacyDeployments: Boolean = false,
-                     maybePassengersActorProps: Option[Props] = None
-                    ): CrunchGraphInputsAndProbes = {
+  implicit def probe2Success[R <: Probe[_]](r: R): Result = success
 
-    airportConfig.assertValid()
+  var maybeDrtActor: Option[ActorRef] = None
 
-    val portStateProbe = testProbe("portstate")
-    val forecastBaseArrivalsProbe = testProbe("forecast-base-arrivals")
-    val forecastArrivalsProbe = testProbe("forecast-arrivals")
-    val liveBaseArrivalsProbe = testProbe("live-base-arrivals")
-    val liveArrivalsProbe = testProbe("live-arrivals")
+  override def afterAll: Unit = {
+    maybeDrtActor.foreach(shutDownDrtActor)
+  }
 
-    val shiftsActor: ActorRef = system.actorOf(Props(new ShiftsActor(now, DrtStaticParameters.timeBeforeThisMonth(now))))
-    val fixedPointsActor: ActorRef = system.actorOf(Props(new FixedPointsActor(now)))
-    val staffMovementsActor: ActorRef = system.actorOf(Props(new StaffMovementsActor(now, DrtStaticParameters.time48HoursAgo(now))))
-    val snapshotInterval = 1
-    val manifestsActor: ActorRef = system.actorOf(Props(new VoyageManifestsActor(oneMegaByte, now, DrtStaticParameters.expireAfterMillis, Option(snapshotInterval))))
+  override def after: Unit = {
+    log.info("\n\nShutting down actor system!!!")
+    TestKit.shutdownActorSystem(system)
+  }
 
-    val portStateActor = PortStateTestActor(portStateProbe, now)
-    val askablePortStateActor: ActorRef = portStateActor
-    if (initialPortState.isDefined) Await.ready(askablePortStateActor.ask(initialPortState.get)(new Timeout(1 second)), 1 second)
+  implicit val materializer: ActorMaterializer = ActorMaterializer.create(system)
+  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
+  implicit val timeout: Timeout = new Timeout(5 seconds)
 
-    val portDescRecs = DesksAndWaitsPortProvider(airportConfig, cruncher, pcpPaxFn)
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
-    val deskLimitsProvider: Map[Terminal, TerminalDeskLimitsLike] = if (flexDesks)
-      PortDeskLimits.flexed(airportConfig)
-    else
-      PortDeskLimits.fixed(airportConfig)
+  val oneMinuteMillis = 60000
+  val uniquifyArrivals: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] =
+    CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight)
 
-    val startDeskRecs: () => UniqueKillSwitch = () => {
-      val (millisToCrunchActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDescRecs, now, recrunchOnStart, maxDaysToCrunch, deskLimitsProvider)
-      portStateActor ! SetCrunchActor(millisToCrunchActor)
-      deskRecsKillSwitch
-    }
+  val defaultAirportConfig: AirportConfig = TestDefaults.airportConfig
 
-    val manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
-    val liveArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
-    val liveBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
-    val forecastArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
-    val forecastBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
+  def runCrunchGraph(config: TestConfig): CrunchGraphInputsAndProbes = {
+    maybeDrtActor.foreach(shutDownDrtActor)
+    val actor = system.actorOf(Props(new TestDrtActor()))
+    maybeDrtActor = Option(actor)
+    Await.result(actor.ask(config).mapTo[CrunchGraphInputsAndProbes], 1 seconds)
+  }
 
-    val (_, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
-    val (manifestResponsesSource, _, _) = SinkToSourceBridge[List[BestAvailableManifest]]
-
-    val aclPaxAdjustmentDays = 7
-    val maxDaysToConsider = 14
-
-    val passengersActorProvider: () => ActorRef = maybePassengersActorProps match {
-      case Some(props) => () => system.actorOf(props)
-      case None => () =>
-        system.actorOf(Props(new PassengersActor(maxDaysToConsider, aclPaxAdjustmentDays)))
-    }
-
-    val crunchInputs = CrunchSystem(CrunchProps(logLabel = logLabel,
-      airportConfig = airportConfig,
-      pcpArrival = pcpArrivalTime,
-      historicalSplitsProvider = csvSplitsProvider,
-      portStateActor = portStateActor,
-      maxDaysToCrunch = maxDaysToCrunch,
-      expireAfterMillis = expireAfterMillis,
-      actors = Map[String, ActorRef](
-        "shifts" -> shiftsActor,
-        "fixed-points" -> fixedPointsActor,
-        "staff-movements" -> staffMovementsActor,
-        "forecast-base-arrivals" -> forecastBaseArrivalsProbe.ref,
-        "forecast-arrivals" -> forecastArrivalsProbe.ref,
-        "live-base-arrivals" -> liveBaseArrivalsProbe.ref,
-        "live-arrivals" -> liveArrivalsProbe.ref,
-        "aggregated-arrivals" -> aggregatedArrivalsActor
-      ),
-      useNationalityBasedProcessingTimes = false,
-      useLegacyManifests = useLegacyManifests,
-      now = now,
-      manifestsLiveSource = manifestsSource,
-      manifestResponsesSource = manifestResponsesSource,
-      voyageManifestsActor = manifestsActor,
-      manifestRequestsSink = manifestRequestsSink,
-      simulator = simulator,
-      initialPortState = initialPortState,
-      initialForecastBaseArrivals = initialForecastBaseArrivals,
-      initialForecastArrivals = initialForecastArrivals,
-      initialLiveBaseArrivals = initialLiveBaseArrivals,
-      initialLiveArrivals = initialLiveArrivals,
-      arrivalsForecastBaseSource = forecastBaseArrivals,
-      arrivalsForecastSource = forecastArrivals,
-      arrivalsLiveBaseSource = liveBaseArrivals,
-      arrivalsLiveSource = liveArrivals,
-      passengersActorProvider = passengersActorProvider,
-      initialShifts = initialShifts,
-      initialFixedPoints = initialFixedPoints,
-      initialStaffMovements = initialStaffMovements,
-      refreshArrivalsOnStart = refreshArrivalsOnStart,
-      checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup,
-      stageThrottlePer = 50 milliseconds,
-      pcpPaxFn = pcpPaxFn,
-      adjustEGateUseByUnder12s = false,
-      optimiser = cruncher,
-      useLegacyDeployments = useLegacyDeployments,
-      aclPaxAdjustmentDays = aclPaxAdjustmentDays,
-      startDeskRecs = startDeskRecs
-    ))
-
-    portStateActor ! SetSimulationActor(crunchInputs.loadsToSimulate)
-
-    CrunchGraphInputsAndProbes(
-      baseArrivalsInput = crunchInputs.forecastBaseArrivalsResponse,
-      forecastArrivalsInput = crunchInputs.forecastArrivalsResponse,
-      liveArrivalsInput = crunchInputs.liveArrivalsResponse,
-      manifestsLiveInput = crunchInputs.manifestsLiveResponse,
-      shiftsInput = crunchInputs.shifts,
-      fixedPointsInput = crunchInputs.fixedPoints,
-      liveStaffMovementsInput = crunchInputs.staffMovements,
-      forecastStaffMovementsInput = crunchInputs.staffMovements,
-      actualDesksAndQueuesInput = crunchInputs.actualDeskStats,
-      portStateTestProbe = portStateProbe,
-      baseArrivalsTestProbe = forecastBaseArrivalsProbe,
-      forecastArrivalsTestProbe = forecastArrivalsProbe,
-      liveArrivalsTestProbe = liveArrivalsProbe,
-      aggregatedArrivalsActor = aggregatedArrivalsActor,
-      portStateActor = portStateActor
-    )
+  def shutDownDrtActor(drtActor: ActorRef): Terminated = {
+    log.info("\n\nShutting down drt actor")
+    watch(drtActor)
+    drtActor ! PoisonPill
+    expectMsgClass(classOf[Terminated])
   }
 
   def paxLoadsFromPortState(portState: PortState,
@@ -345,7 +215,8 @@ class CrunchTestLike
         (tn, terminalLoads)
     }
 
-  def workLoadsFromPortState(portState: PortState, minsToTake: Int): Map[Terminal, Map[Queue, List[Double]]] = portState
+  def workLoadsFromPortState(portState: PortState,
+                             minsToTake: Int): Map[Terminal, Map[Queue, List[Double]]] = portState
     .crunchMinutes
     .values
     .groupBy(_.terminal)
@@ -388,4 +259,3 @@ class CrunchTestLike
     }
   }
 }
-

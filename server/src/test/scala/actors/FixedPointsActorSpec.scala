@@ -1,37 +1,19 @@
 package actors
 
 import actors.pointInTime.FixedPointsReadActor
-import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
-import akka.testkit.{ImplicitSender, TestKit}
-import com.typesafe.config.ConfigFactory
+import akka.actor.{ActorRef, PoisonPill, Props}
+import akka.testkit.ImplicitSender
 import drt.shared.Terminals.T1
 import drt.shared._
-import org.specs2.mutable.SpecificationLike
-import org.specs2.specification.AfterEach
 import services.SDate
+import services.crunch.CrunchTestLike
 
-import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
 
-class FixedPointsActorSpec extends TestKit(ActorSystem("FixedPointsActorSpec", ConfigFactory.parseMap(Map(
-  "akka.log-dead-letters" -> 0,
-  "akka.actor.warn-about-java-serializer-usage" -> false,
-  "akka.persistence.journal.plugin" -> "akka.persistence.journal.leveldb",
-  "akka.persistence.journal.leveldb.dir" -> PersistenceHelper.dbLocation,
-  "akka.persistence.snapshot-store.plugin" -> "akka.persistence.snapshot-store.local",
-  "akka.persistence.snapshot-store.local.dir" -> s"${PersistenceHelper.dbLocation}/snapshot"
-).asJava)))
-  with SpecificationLike
-  with AfterEach
-  with ImplicitSender {
+class FixedPointsActorSpec extends CrunchTestLike with ImplicitSender {
   sequential
   isolated
-
-  override def after: Unit = {
-    TestKit.shutdownActorSystem(system)
-    PersistenceCleanup.deleteJournal(PersistenceHelper.dbLocation)
-  }
 
   import StaffAssignmentGenerator._
 
