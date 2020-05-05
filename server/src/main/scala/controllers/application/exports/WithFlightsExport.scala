@@ -107,7 +107,7 @@ trait WithFlightsExport extends ExportToCsv {
   }
 
 
-  private def summaryProviderByRole(terminal: Terminal, flightsProvider: (SDateLike, Any) => Future[Option[Any]])
+  private def summaryProviderByRole(terminal: Terminal, flightsProvider: (SDateLike, Any) => Future[Any])
                                    (implicit request: Request[AnyContent]): (SDateLike, SDateLike) => Future[TerminalSummaryLike] = {
     val flightSummariesFromPortState =
       if (canAccessActualApi(request))

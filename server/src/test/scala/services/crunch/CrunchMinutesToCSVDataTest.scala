@@ -115,7 +115,7 @@ class CrunchMinutesToCSVDataTest extends Specification {
                         sms: List[StaffMinute]): String = {
     val portState: PortState = PortState(Iterable(), cms, sms)
     val eventualSummary: Future[TerminalSummaryLike] =
-      Exports.queueSummariesFromPortState(Seq(EeaDesk, NonEeaDesk, EGate), 15, T1, (_, _) => Future(Option(portState)))(ec)(startDateTime, endDateTime)
+      Exports.queueSummariesFromPortState(Seq(EeaDesk, NonEeaDesk, EGate), 15, T1, (_, _) => Future(portState))(ec)(startDateTime, endDateTime)
     Await.result(eventualSummary, 1 second).toCsv
   }
 }

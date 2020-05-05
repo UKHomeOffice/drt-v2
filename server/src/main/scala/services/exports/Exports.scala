@@ -95,35 +95,24 @@ object Exports {
       }
   }
 
-  def extractDayFromPortStateForTerminalLegacy(terminal: Terminal,
-                                               startTime: SDateLike,
-                                               queryPortState: (SDateLike, Any) => Future[Option[PortState]],
-                                               fromPortState: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike])
-                                              (implicit ec: ExecutionContext): Future[Option[TerminalSummaryLike]] = {
-    val endTime = startTime.addDays(1)
-    val terminalRequest = GetPortStateForTerminal(startTime.millisSinceEpoch, endTime.millisSinceEpoch, terminal)
-    val pointInTime = startTime.addHours(2)
-    queryPortState(pointInTime, terminalRequest).map {
-      case None => fromPortState(startTime, endTime, PortState.empty)
-      case Some(portState) => fromPortState(startTime, endTime, portState)
-    }
-  }
-
   def queueSummariesFromPortState(queues: Seq[Queue],
                                   summaryLengthMinutes: Int,
                                   terminal: Terminal,
-                                  portStateProvider: (SDateLike, Any) => Future[Option[Any]])
+                                  portStateProvider: (SDateLike, Any) => Future[Any])
                                  (implicit ec: ExecutionContext): (SDateLike, SDateLike) => Future[TerminalSummaryLike] =
     (from: SDateLike, to: SDateLike) => {
       val minutes = from.millisSinceEpoch until to.millisSinceEpoch by summaryLengthMinutes * MilliTimes.oneMinuteMillis
       portStateProvider(from, GetPortStateForTerminal(from.millisSinceEpoch, to.millisSinceEpoch, terminal))
-        .map {
-          case Some(PortState(_, crunchMinutes, staffMinutes)) => (crunchMinutes, staffMinutes)
-          case _ => (SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())
+        .mapTo[PortState]
+        .recoverWith {
+          case t =>
+            log.error("Failed to get PortState", t)
+            Future(PortState.empty)
         }
-        .map{ case (cms, sms) =>
-
-          TerminalQueuesSummary(queues, queueSummaries(queues, summaryLengthMinutes, minutes, cms, sms))
+        .map {
+          case PortState(_, crunchMinutes, staffMinutes) =>
+            println(s"\n\nqueueSummariesFromPortState")
+            TerminalQueuesSummary(queues, queueSummaries(queues, summaryLengthMinutes, minutes, crunchMinutes, staffMinutes))
         }
     }
 
@@ -141,18 +130,16 @@ object Exports {
   def flightSummariesFromPortState(terminalFlightsSummaryGenerator: TerminalFlightsSummaryLikeGenerator)
                                   (terminal: Terminal,
                                    pcpPaxFn: Arrival => Int,
-                                   flightsProvider: (SDateLike, Any) => Future[Option[Any]])
+                                   flightsProvider: (SDateLike, Any) => Future[Any])
                                   (from: SDateLike, to: SDateLike)
                                   (implicit ec: ExecutionContext): Future[TerminalSummaryLike] =
     flightsProvider(from, GetFlightsForTerminal(from.millisSinceEpoch, to.millisSinceEpoch, terminal)).map {
-      case Some(flights: FlightsWithSplits) =>
-        val terminalFlights = flightsForTerminal(flights, from, to)
+      case flights: FlightsWithSplits =>
+        val terminalFlights = flightsForTimeRange(flights, from, to)
         terminalFlightsSummaryGenerator(terminalFlights, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes, pcpPaxFn)
-      case None =>
-        TerminalFlightsSummary.empty(millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes, pcpPaxFn)
     }
 
-  def flightsForTerminal(flights: FlightsWithSplits, from: SDateLike, to: SDateLike): Seq[ApiFlightWithSplits] =
+  def flightsForTimeRange(flights: FlightsWithSplits, from: SDateLike, to: SDateLike): Seq[ApiFlightWithSplits] =
     flights.flights
       .filter { case (_, fws) =>
         val minPcp = fws.apiFlight.pcpRange().min

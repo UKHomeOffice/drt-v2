@@ -4,8 +4,8 @@ import actors.GetPortStateForTerminal
 import akka.actor.Actor
 import drt.shared.PortState
 
-class MockPortStateActor(optionalPortState: Option[PortState]) extends Actor {
+class MockPortStateActor(portState: PortState) extends Actor {
   override def receive: Receive = {
-    case GetPortStateForTerminal(_, _, _) => sender() ! optionalPortState
+    case GetPortStateForTerminal(_, _, _) => sender() ! portState
   }
 }

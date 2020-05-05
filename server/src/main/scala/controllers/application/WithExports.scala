@@ -2,7 +2,7 @@ package controllers.application
 
 import actors._
 import actors.pointInTime.CrunchStateReadActor
-import akka.actor.{ActorRef, PoisonPill}
+import akka.actor.PoisonPill
 import akka.pattern._
 import akka.util.{ByteString, Timeout}
 import controllers.Application
@@ -48,25 +48,15 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
       timedEndPoint(s"Export planning", Option(s"$terminal")) {
         val (startOfForecast, endOfForecast) = startAndEndForDay(startDay.toLong, 180)
 
-        val portStateFuture = ctrl.portStateActor.ask(
-          GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
-          )(new Timeout(30 seconds))
+        val portStateFuture = portStateForTerminal(terminal, endOfForecast, startOfForecast)
 
         val portCode = airportConfig.portCode
-
         val fileName = f"$portCode-$terminal-forecast-export-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}%02d-${startOfForecast.getDate()}%02d"
-        portStateFuture.map {
-          case Some(portState: PortState) =>
-            val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
-            val csvData = CSVData.forecastPeriodToCsv(fp)
-            Result(
-              ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
-              HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
-              )
 
-          case None =>
-            log.error(s"Forecast CSV Export: Missing planning data for ${startOfForecast.ddMMyyString} for Terminal $terminal")
-            NotFound(s"Sorry, no planning summary available for week starting ${startOfForecast.ddMMyyString}")
+        portStateFuture.map { portState =>
+          val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
+          val csvData = CSVData.forecastPeriodToCsv(fp)
+          streamedFile(fileName, csvData)
         }
       }
     }
@@ -86,30 +76,34 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
           now.getLocalNextMidnight
         } else startOfWeekMidnight
 
-        val portStateFuture = ctrl.portStateActor.ask(
-          GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
-          )(new Timeout(30 seconds))
-
+        val portStateFuture = portStateForTerminal(terminal, endOfForecast, startOfForecast)
         val fileName = f"${airportConfig.portCode}-$terminal-forecast-export-headlines-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}%02d-${startOfForecast.getDate()}%02d"
-        portStateFuture.map {
-          case Some(portState: PortState) =>
-            val hf: ForecastHeadlineFigures = Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
-            val csvData = CSVData.forecastHeadlineToCSV(hf, airportConfig.exportQueueOrder)
-            Result(
-              ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
-              HttpEntity.Strict(ByteString(csvData), Option("application/csv")
-                                )
-              )
 
-          case None =>
-            log.error(s"Missing headline data for ${startOfWeekMidnight.ddMMyyString} for Terminal $terminal")
-            NotFound(s"Sorry, no headlines available for week starting ${startOfWeekMidnight.ddMMyyString}")
+        portStateFuture.map { portState =>
+          val hf: ForecastHeadlineFigures = Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
+          val csvData = CSVData.forecastHeadlineToCSV(hf, airportConfig.exportQueueOrder)
+          streamedFile(fileName, csvData)
         }
       }
     }
   }
 
-  def queryFromPortState: (SDateLike, Any) => Future[Option[Any]] = (from: SDateLike, message: Any) => {
+  private def streamedFile(fileName: String, csvData: String) = {
+    Result(
+      ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
+      HttpEntity.Strict(ByteString(csvData), Option("application/csv")))
+  }
+
+  def portStateForTerminal(terminal: Terminal,
+                           endOfForecast: SDateLike,
+                           startOfForecast: SDateLike): Future[PortState] =
+    ctrl.portStateActor
+      .ask(
+        GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
+        )(new Timeout(30 seconds))
+      .mapTo[PortState]
+
+  def queryFromPortState: (SDateLike, Any) => Future[Any] = (from: SDateLike, message: Any) => {
     implicit val timeout: Timeout = new Timeout(30 seconds)
 
     val start = from.getLocalLastMidnight
@@ -118,20 +112,17 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
 
     val eventualMaybePortState = if (isHistoricDate(start.millisSinceEpoch)) {
       val tempActor = system.actorOf(CrunchStateReadActor.props(airportConfig.portStateSnapshotInterval, pointInTime, DrtStaticParameters.expireAfterMillis, airportConfig.queuesByTerminal, start.millisSinceEpoch, end.millisSinceEpoch))
-      val eventualResponse = tempActor.ask(message).map(r => Option(r))//askToOption[T](message, tempActor)
+      val eventualResponse = tempActor.ask(message)
       eventualResponse.onComplete(_ => tempActor ! PoisonPill)
       eventualResponse
-    } else ctrl.portStateActor.ask(message).map(r => Option(r))//askToOption[T](message, ctrl.portStateActor)
+    } else ctrl.portStateActor.ask(message)
 
     eventualMaybePortState.recoverWith {
       case t =>
         log.error(s"Failed to get a PortState for ${pointInTime.toISOString()}", t)
-        Future(None)
+        Future(PortState.empty)
     }
   }
-
-//  private def askToOption[T](message: Any, actor: ActorRef): Future[Option[T]] =
-//    actor.ask(message).mapTo[T].map(r => Option(r))
 
   def startAndEndForDay(startDay: MillisSinceEpoch, numberOfDays: Int): (SDateLike, SDateLike) = {
     val startOfWeekMidnight = SDate(startDay).getLocalLastMidnight
