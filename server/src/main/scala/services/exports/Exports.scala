@@ -111,7 +111,6 @@ object Exports {
         }
         .map {
           case PortState(_, crunchMinutes, staffMinutes) =>
-            println(s"\n\nqueueSummariesFromPortState")
             TerminalQueuesSummary(queues, queueSummaries(queues, summaryLengthMinutes, minutes, crunchMinutes, staffMinutes))
         }
     }
@@ -125,7 +124,6 @@ object Exports {
       Summaries.terminalSummaryForPeriod(crunchMinutes, staffMinutes, queues, SDate(millis), summaryLengthMinutes)
     }
   }
-
 
   def flightSummariesFromPortState(terminalFlightsSummaryGenerator: TerminalFlightsSummaryLikeGenerator)
                                   (terminal: Terminal,
