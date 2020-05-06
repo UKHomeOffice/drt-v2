@@ -6,16 +6,18 @@ import akka.util.ByteString
 import controllers.Application
 import drt.auth.{ApiView, ApiViewPortCsv, ArrivalSource, ArrivalsAndSplitsView}
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
-import drt.shared._
+import drt.shared.{SDateLike, _}
 import play.api.http.{HttpChunk, HttpEntity, Writeable}
 import play.api.mvc._
 import services.SDate
 import services.exports.Exports
-import services.exports.summaries.flights.{ArrivalFeedExport, TerminalFlightsWithActualApiSummary}
+import services.exports.summaries.flights.{ArrivalFeedExport, TerminalFlightsSummary, TerminalFlightsSummaryLike, TerminalFlightsWithActualApiSummary}
 import services.exports.summaries.{GetSummaries, TerminalSummaryLike}
 import services.graphstages.Crunch.europeLondonTimeZone
 
+import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
 trait WithFlightsExport extends ExportToCsv {
@@ -30,16 +32,16 @@ trait WithFlightsExport extends ExportToCsv {
         val terminal = Terminal(terminalName)
         Try(SDate(year, month, day, 0, 0, europeLondonTimeZone)) match {
           case Success(start) =>
-            val summaryFromPortState: (SDateLike, SDateLike, PortState) => Option[TerminalFlightsWithActualApiSummary] =
-              Exports.flightSummariesWithActualApiFromPortState(terminal, ctrl.pcpPaxFn)
+            val summaryFromPortState: (SDateLike, SDateLike) => Future[TerminalSummaryLike] =
+              Exports.flightSummariesFromPortState(TerminalFlightsWithActualApiSummary.generator)(terminal, ctrl.pcpPaxFn, queryFromPortStateFn)
             exportToCsv(
-              start,
-              start,
-              "flights",
-              terminal,
-              Option(summaryActorProvider, GetSummariesWithActualApi),
-              summaryFromPortState
-            )
+              start = start,
+              end = start,
+              description = "flights",
+              terminal = terminal,
+              maybeSummaryActorAndRequestProvider = Option(summaryActorProvider, GetSummariesWithActualApi),
+              generateNewSummary = summaryFromPortState
+              )
           case Failure(t) =>
             log.error(f"Bad date date $year%02d/$month%02d/$day%02d", t)
             BadRequest(f"Bad date date $year%02d/$month%02d/$day%02d")
@@ -105,11 +107,15 @@ trait WithFlightsExport extends ExportToCsv {
   }
 
 
-  private def summaryProviderByRole(terminal: Terminal)
-                                   (implicit request: Request[AnyContent]): (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike] = {
+  private def summaryProviderByRole(terminal: Terminal, flightsProvider: (SDateLike, Any) => Future[Any])
+                                   (implicit request: Request[AnyContent]): (SDateLike, SDateLike) => Future[TerminalSummaryLike] = {
+    val flightSummariesFromPortState =
+      if (canAccessActualApi(request))
+        Exports.flightSummariesFromPortState(TerminalFlightsWithActualApiSummary.generator) _
+      else
+        Exports.flightSummariesFromPortState(TerminalFlightsSummary.generator) _
 
-    if (canAccessActualApi(request)) Exports.flightSummariesWithActualApiFromPortState(terminal, ctrl.pcpPaxFn)
-    else Exports.flightSummariesFromPortState(terminal, ctrl.pcpPaxFn)
+    flightSummariesFromPortState(terminal, ctrl.pcpPaxFn, flightsProvider)
   }
 
   private def canAccessActualApi(request: Request[AnyContent]) = {
@@ -128,7 +134,7 @@ trait WithFlightsExport extends ExportToCsv {
                     (implicit request: Request[AnyContent]): Result = {
     val start = localLastMidnight(startMillis)
     val end = localLastMidnight(endMillis)
-    val summaryFromPortState = summaryProviderByRole(Terminal(terminalName))
-    exportToCsv(start, end, "flights", terminal(terminalName), Option(summaryActorProvider, summariesRequest), summaryFromPortState)
+    val summaryForDate = summaryProviderByRole(Terminal(terminalName), queryFromPortStateFn)
+    exportToCsv(start, end, "flights", terminal(terminalName), Option(summaryActorProvider, summariesRequest), summaryForDate)
   }
 }

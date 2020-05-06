@@ -584,6 +584,10 @@ object FlightsApi {
 
   case class FlightsWithSplits(flights: Iterable[(UniqueArrival, ApiFlightWithSplits)])
 
+  object FlightsWithSplits {
+    val empty: FlightsWithSplits = FlightsWithSplits(Iterable())
+  }
+
   case class FlightsWithSplitsDiff(flightsToUpdate: List[ApiFlightWithSplits], arrivalsToRemove: List[Arrival]) {
     def isEmpty: Boolean = flightsToUpdate.isEmpty && arrivalsToRemove.isEmpty
 

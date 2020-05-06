@@ -25,6 +25,8 @@ case class TerminalQueuesSummary(queues: Seq[Queue], summaries: Iterable[QueuesS
 }
 
 object TerminalQueuesSummary {
+  def empty(queues: Seq[Queue]): TerminalSummaryLike = TerminalQueuesSummary(queues, Iterable())
+
   val colHeadings = List("Pax", "Wait", "Desks req", "Act. wait time", "Act. desks")
   val eGatesHeadings = List("Pax", "Wait", "Staff req", "Act. wait time", "Act. desks")
 
