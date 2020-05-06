@@ -53,11 +53,17 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
         val portCode = airportConfig.portCode
         val fileName = f"$portCode-$terminal-forecast-export-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}%02d-${startOfForecast.getDate()}%02d"
 
-        portStateFuture.map { portState =>
-          val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
-          val csvData = CSVData.forecastPeriodToCsv(fp)
-          csvFileResult(fileName, csvData)
-        }
+        portStateFuture
+          .map { portState =>
+            val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
+            val csvData = CSVData.forecastPeriodToCsv(fp)
+            csvFileResult(fileName, csvData)
+          }
+          .recover {
+            case t =>
+              log.error("Failed to get PortState to produce csv", t)
+              ServiceUnavailable
+          }
       }
     }
   }
@@ -79,11 +85,17 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
         val portStateFuture = portStateForTerminal(terminal, endOfForecast, startOfForecast)
         val fileName = f"${airportConfig.portCode}-$terminal-forecast-export-headlines-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}%02d-${startOfForecast.getDate()}%02d"
 
-        portStateFuture.map { portState =>
-          val hf: ForecastHeadlineFigures = Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
-          val csvData = CSVData.forecastHeadlineToCSV(hf, airportConfig.exportQueueOrder)
-          csvFileResult(fileName, csvData)
-        }
+        portStateFuture
+          .map { portState =>
+            val hf: ForecastHeadlineFigures = Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
+            val csvData = CSVData.forecastHeadlineToCSV(hf, airportConfig.exportQueueOrder)
+            csvFileResult(fileName, csvData)
+          }
+          .recover {
+            case t =>
+              log.error("Failed to get PortState to produce csv", t)
+              ServiceUnavailable
+          }
       }
     }
   }
@@ -104,7 +116,7 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
           PortState.empty
       }
 
-  def queryFromPortState: (SDateLike, Any) => Future[Any] = (from: SDateLike, message: Any) => {
+  val queryFromPortStateFn: (SDateLike, Any) => Future[Any] = (from: SDateLike, message: Any) => {
     implicit val timeout: Timeout = new Timeout(30 seconds)
 
     val start = from.getLocalLastMidnight

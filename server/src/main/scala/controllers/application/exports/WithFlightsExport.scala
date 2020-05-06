@@ -33,7 +33,7 @@ trait WithFlightsExport extends ExportToCsv {
         Try(SDate(year, month, day, 0, 0, europeLondonTimeZone)) match {
           case Success(start) =>
             val summaryFromPortState: (SDateLike, SDateLike) => Future[TerminalSummaryLike] =
-              Exports.flightSummariesFromPortState(TerminalFlightsWithActualApiSummary.generator)(terminal, ctrl.pcpPaxFn, queryFromPortState)
+              Exports.flightSummariesFromPortState(TerminalFlightsWithActualApiSummary.generator)(terminal, ctrl.pcpPaxFn, queryFromPortStateFn)
             exportToCsv(
               start = start,
               end = start,
@@ -134,7 +134,7 @@ trait WithFlightsExport extends ExportToCsv {
                     (implicit request: Request[AnyContent]): Result = {
     val start = localLastMidnight(startMillis)
     val end = localLastMidnight(endMillis)
-    val summaryForDate = summaryProviderByRole(Terminal(terminalName), queryFromPortState)
+    val summaryForDate = summaryProviderByRole(Terminal(terminalName), queryFromPortStateFn)
     exportToCsv(start, end, "flights", terminal(terminalName), Option(summaryActorProvider, summariesRequest), summaryForDate)
   }
 }
