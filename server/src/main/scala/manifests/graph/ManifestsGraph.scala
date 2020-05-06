@@ -8,7 +8,7 @@ import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
 import akka.stream.stage.GraphStage
 import drt.shared.api.Arrival
 import drt.shared.{ArrivalKey, PortCode}
-import manifests.ManifestLookupLike
+import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import manifests.actors.RegisteredArrivals
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
@@ -23,7 +23,7 @@ object ManifestsGraph {
             registeredArrivalsActor: ActorRef,
             portCode: PortCode,
             manifestLookup: ManifestLookupLike
-           ): RunnableGraph[UniqueKillSwitch] = {
+           )(implicit mat: Materializer): RunnableGraph[UniqueKillSwitch] = {
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
     val killSwitch = KillSwitches.single[List[Arrival]]
