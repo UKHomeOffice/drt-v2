@@ -5,6 +5,7 @@ import java.util.UUID
 import actors.pointInTime.ArrivalsReadActor
 import akka.actor.{ActorRef, PoisonPill}
 import akka.pattern.ask
+import akka.stream.scaladsl.{Sink, Source}
 import controllers.Application
 import drt.auth.ArrivalSource
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -36,20 +37,20 @@ trait WithFeeds {
     }
   }
 
-  def getArrival(number: Int, terminal: String, scheduled: MillisSinceEpoch): Action[AnyContent] = authByRole(ArrivalSource) {
+  def getArrival(number: Int,
+                 terminal: String,
+                 scheduled: MillisSinceEpoch): Action[AnyContent] = authByRole(ArrivalSource) {
     Action.async { _ =>
-      val futureArrivalSources = ctrl.feedActors
-        .map(feed =>
-          feed
-            .ask(UniqueArrival(number, terminal, scheduled))
-            .map {
-              case Some(fsa: FeedSourceArrival) if ctrl.isValidFeedSource(fsa.feedSource) => Option(fsa)
-              case _ => None
-            }
-        )
-
-      Future
-        .sequence(futureArrivalSources)
+      Source(ctrl.feedActors)
+        .mapAsync(1)(feed =>
+                       feed
+                         .ask(UniqueArrival(number, terminal, scheduled))
+                         .map {
+                           case Some(fsa: FeedSourceArrival) if ctrl.isValidFeedSource(fsa.feedSource) => Option(fsa)
+                           case _ => None
+                         }
+                     )
+        .runWith(Sink.seq)
         .map(arrivalSources => Ok(write(arrivalSources.filter(_.isDefined))))
     }
   }
@@ -64,31 +65,30 @@ trait WithFeeds {
       ("actors.LiveArrivalsActor-live", LiveFeedSource),
       ("actors.ForecastBaseArrivalsActor-forecast-base", AclFeedSource),
       ("actors.ForecastPortArrivalsActor-forecast-port", ForecastFeedSource)
-    )
+      )
 
     val pointInTimeActorSources: Seq[ActorRef] = arrivalActorPersistenceIds.map {
       case (id, source) =>
         system.actorOf(
           ArrivalsReadActor.props(SDate(pointInTime), id, source),
           name = s"arrival-read-$id-${UUID.randomUUID()}"
-        )
+          )
     }
     Action.async { _ =>
-
-      val futureArrivalSources = pointInTimeActorSources.map((feedActor: ActorRef) => {
-        feedActor
-          .ask(UniqueArrival(number, terminal, scheduled))
-          .map {
-            case Some(fsa: FeedSourceArrival) =>
-              feedActor ! PoisonPill
-              Option(fsa)
-            case _ =>
-              feedActor ! PoisonPill
-              None
-          }
-      })
-      Future
-        .sequence(futureArrivalSources)
+      Source(pointInTimeActorSources.toList)
+        .mapAsync(1)((feedActor: ActorRef) => {
+          feedActor
+            .ask(UniqueArrival(number, terminal, scheduled))
+            .map {
+              case Some(fsa: FeedSourceArrival) =>
+                feedActor ! PoisonPill
+                Option(fsa)
+              case _ =>
+                feedActor ! PoisonPill
+                None
+            }
+        })
+        .runWith(Sink.seq)
         .map(arrivalSources => Ok(write(arrivalSources.filter(_.isDefined))))
     }
   }

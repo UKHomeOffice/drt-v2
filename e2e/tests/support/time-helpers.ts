@@ -25,8 +25,15 @@ const todayAtUtc = (hours: number, minutes: number): moment =>
         .seconds(0)
         .utc()
 
+const currentTimeString = (): moment =>
+    moment()
+        .seconds(0)
+        .utc()
+        .format()
+
 export {
     todayAtUtc,
     todayAtUtcString,
     inDaysAtTimeUtcString,
+    currentTimeString,
 }

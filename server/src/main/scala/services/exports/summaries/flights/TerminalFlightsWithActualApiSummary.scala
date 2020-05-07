@@ -4,6 +4,7 @@ import drt.shared.ApiFlightWithSplits
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.api.Arrival
 import services.exports.Exports
+import services.exports.summaries.flights.TerminalFlightsSummaryLike.TerminalFlightsSummaryLikeGenerator
 
 
 case class TerminalFlightsWithActualApiSummary(flights: Seq[ApiFlightWithSplits],
@@ -41,4 +42,10 @@ object TerminalFlightsWithActualApiSummary {
   def actualAPISplitsForFlightInHeadingOrder(flight: ApiFlightWithSplits, headings: Seq[String]): Seq[Double] =
     headings.map(h => Exports.actualAPISplitsAndHeadingsFromFlight(flight).toMap.getOrElse(h, 0.0))
       .map(n => Math.round(n).toDouble)
+
+  val generator: TerminalFlightsSummaryLikeGenerator =
+    (flights: Seq[ApiFlightWithSplits],
+     millisToDateOnly: MillisSinceEpoch => String,
+     millisToHoursAndMinutes: MillisSinceEpoch => String,
+     pcpPaxFn: Arrival => Int) => TerminalFlightsWithActualApiSummary(flights, millisToDateOnly, millisToHoursAndMinutes, pcpPaxFn)
 }

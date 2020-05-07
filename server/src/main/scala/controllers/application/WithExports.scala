@@ -48,26 +48,22 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
       timedEndPoint(s"Export planning", Option(s"$terminal")) {
         val (startOfForecast, endOfForecast) = startAndEndForDay(startDay.toLong, 180)
 
-        val portStateFuture = ctrl.portStateActor.ask(
-          GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
-          )(new Timeout(30 seconds))
+        val portStateFuture = portStateForTerminal(terminal, endOfForecast, startOfForecast)
 
         val portCode = airportConfig.portCode
-
         val fileName = f"$portCode-$terminal-forecast-export-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}%02d-${startOfForecast.getDate()}%02d"
-        portStateFuture.map {
-          case Some(portState: PortState) =>
+
+        portStateFuture
+          .map { portState =>
             val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
             val csvData = CSVData.forecastPeriodToCsv(fp)
-            Result(
-              ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
-              HttpEntity.Strict(ByteString(csvData), Option("application/csv"))
-              )
-
-          case None =>
-            log.error(s"Forecast CSV Export: Missing planning data for ${startOfForecast.ddMMyyString} for Terminal $terminal")
-            NotFound(s"Sorry, no planning summary available for week starting ${startOfForecast.ddMMyyString}")
-        }
+            csvFileResult(fileName, csvData)
+          }
+          .recover {
+            case t =>
+              log.error("Failed to get PortState to produce csv", t)
+              ServiceUnavailable
+          }
       }
     }
   }
@@ -86,51 +82,64 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
           now.getLocalNextMidnight
         } else startOfWeekMidnight
 
-        val portStateFuture = ctrl.portStateActor.ask(
-          GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
-          )(new Timeout(30 seconds))
-
+        val portStateFuture = portStateForTerminal(terminal, endOfForecast, startOfForecast)
         val fileName = f"${airportConfig.portCode}-$terminal-forecast-export-headlines-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}%02d-${startOfForecast.getDate()}%02d"
-        portStateFuture.map {
-          case Some(portState: PortState) =>
+
+        portStateFuture
+          .map { portState =>
             val hf: ForecastHeadlineFigures = Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
             val csvData = CSVData.forecastHeadlineToCSV(hf, airportConfig.exportQueueOrder)
-            Result(
-              ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
-              HttpEntity.Strict(ByteString(csvData), Option("application/csv")
-                                )
-              )
-
-          case None =>
-            log.error(s"Missing headline data for ${startOfWeekMidnight.ddMMyyString} for Terminal $terminal")
-            NotFound(s"Sorry, no headlines available for week starting ${startOfWeekMidnight.ddMMyyString}")
-        }
+            csvFileResult(fileName, csvData)
+          }
+          .recover {
+            case t =>
+              log.error("Failed to get PortState to produce csv", t)
+              ServiceUnavailable
+          }
       }
     }
   }
 
-  def queryPortStateActor: (SDateLike, Any) => Future[Option[PortState]] = (from: SDateLike, message: Any) => {
+  def csvFileResult(fileName: String, data: String): Result = Result(
+    ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
+    HttpEntity.Strict(ByteString(data), Option("application/csv")))
+
+  def portStateForTerminal(terminal: Terminal,
+                           endOfForecast: SDateLike,
+                           startOfForecast: SDateLike): Future[PortState] =
+    ctrl.portStateActor
+      .ask(GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal))(new Timeout(30 seconds))
+      .mapTo[PortState]
+      .recover {
+        case t =>
+          log.error("Failed to get PortState", t)
+          PortState.empty
+      }
+
+  val queryFromPortStateFn: (SDateLike, Any) => Future[Any] = (from: SDateLike, message: Any) => {
     implicit val timeout: Timeout = new Timeout(30 seconds)
 
     val start = from.getLocalLastMidnight
     val end = start.addDays(1)
     val pointInTime = end.addHours(4)
 
-    val eventualMaybePortState = if (isHistoricDate(start.millisSinceEpoch)) {
-      val tempActor = system.actorOf(CrunchStateReadActor.props(airportConfig.portStateSnapshotInterval, pointInTime, DrtStaticParameters.expireAfterMillis, airportConfig.queuesByTerminal, start.millisSinceEpoch, end.millisSinceEpoch))
-      val eventualResponse = tempActor
-        .ask(message)
-        .asInstanceOf[Future[Option[PortState]]]
-      eventualResponse.onComplete(_ => tempActor ! PoisonPill)
+    val eventualMaybeResponse = if (isHistoricDate(start.millisSinceEpoch)) {
+      val historicActor = system.actorOf(CrunchStateReadActor.props(
+        airportConfig.portStateSnapshotInterval,
+        pointInTime,
+        DrtStaticParameters.expireAfterMillis,
+        airportConfig.queuesByTerminal,
+        start.millisSinceEpoch,
+        end.millisSinceEpoch))
+      val eventualResponse = historicActor.ask(message)
+      eventualResponse.onComplete(_ => historicActor ! PoisonPill)
       eventualResponse
-    } else {
-      ctrl.portStateActor.ask(message).asInstanceOf[Future[Option[PortState]]]
-    }
+    } else ctrl.portStateActor.ask(message)
 
-    eventualMaybePortState.recoverWith {
+    eventualMaybeResponse.recoverWith {
       case t =>
-        log.error(s"Failed to get a PortState for ${pointInTime.toISOString()}", t)
-        Future(None)
+        log.error(s"Failed to get response for $message message for ${pointInTime.toISOString()}", t)
+        Future(PortState.empty)
     }
   }
 

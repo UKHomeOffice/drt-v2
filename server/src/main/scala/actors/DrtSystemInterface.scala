@@ -92,7 +92,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   val voyageManifestsActor: ActorRef
 
-  def feedActors: Seq[ActorRef] = Seq(liveArrivalsActor, liveBaseArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
+  def feedActors: List[ActorRef] = List(liveArrivalsActor, liveBaseArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
 
   val aclFeed: AclFeed = AclFeed(params.ftpServer, params.username, params.path, airportConfig.feedPortCode, AclFeed.aclToPortMapping(airportConfig.portCode), params.aclMinFileSizeInBytes)
 
@@ -157,7 +157,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         "live-base-arrivals" -> liveBaseArrivalsActor,
         "live-arrivals" -> liveArrivalsActor,
         "aggregated-arrivals" -> aggregatedArrivalsActor
-      ),
+        ),
       useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
       useLegacyManifests = params.useLegacyManifests,
       manifestsLiveSource = voyageManifestsLiveSource,
@@ -383,15 +383,11 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         fps.staffMinutes ++ lps.staffMinutes))
   }
 
-  def getFeedStatus: Future[Seq[FeedSourceStatuses]] = {
-    val futureMaybeStatuses = feedActors.map(a => queryActorWithRetry[FeedSourceStatuses](a, GetFeedStatuses))
-
-    Future
-      .sequence(futureMaybeStatuses)
-      .map(
-        maybeStatuses => maybeStatuses
-          .collect { case Some(fs) => fs }
-          .filter(fss => isValidFeedSource(fss.feedSource))
-      )
-  }
+  def getFeedStatus: Future[Seq[FeedSourceStatuses]] = Source(feedActors)
+      .mapAsync(1) { actor =>
+        queryActorWithRetry[FeedSourceStatuses](actor, GetFeedStatuses)
+      }
+      .collect { case Some(fs) => fs }
+      .filter(fss => isValidFeedSource(fss.feedSource))
+      .runWith(Sink.seq)
 }
