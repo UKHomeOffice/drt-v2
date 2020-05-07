@@ -81,6 +81,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val liveBaseArrivalsActor: ActorRef = system.actorOf(Props(new LiveBaseArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-base-arrivals-actor")
   val arrivalsImportActor: ActorRef = system.actorOf(Props(new ArrivalsImportActor()), name = "arrivals-import-actor")
   val registeredArrivalsActor: ActorRef = system.actorOf(Props(new RegisteredArrivalsActor(oneMegaByte, Option(500), airportConfig.portCode, now, expireAfterMillis)), name = "registered-arrivals-actor")
+  val crunchQueueActor = system.actorOf(Props(new CrunchQueueReadActor(journalType, airportConfig.crunchOffsetMinutes)))
 
   val portStateActor: ActorRef
   val shiftsActor: ActorRef
@@ -204,7 +205,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   val startDeskRecs: () => UniqueKillSwitch = () => {
     val (daysQueueSource, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDeskRecs, maxDesksProviders)
-    val crunchQueueActor = system.actorOf(Props(new CrunchQueueReadActor(journalType, daysQueueSource)))
+
+    crunchQueueActor ! SetDaysQueueSource(daysQueueSource)
 
     if (params.recrunchOnStart) queueDaysToReCrunch(crunchQueueActor)
 

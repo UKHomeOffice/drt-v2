@@ -1,6 +1,6 @@
 package actors.queues
 
-import actors.StreamingJournalLike
+import actors.{SetDaysQueueSource, StreamingJournalLike}
 import actors.acking.AckingReceiver.Ack
 import actors.queues.CrunchQueueReadActor.{ReadyToEmit, Tick, UpdatedMillis}
 import akka.actor.Cancellable
@@ -8,6 +8,7 @@ import akka.persistence._
 import akka.stream.Supervision.Stop
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState.DaysSnapshotMessage
 import services.SDate
@@ -28,8 +29,7 @@ object CrunchQueueReadActor {
 
 }
 
-class CrunchQueueReadActor(val journalType: StreamingJournalLike,
-                           sourceQueue: SourceQueueWithComplete[MillisSinceEpoch]) extends PersistentActor {
+class CrunchQueueReadActor(val journalType: StreamingJournalLike, crunchOffsetMinutes: Int) extends PersistentActor {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override val persistenceId: String = "crunch-queue"
@@ -38,8 +38,11 @@ class CrunchQueueReadActor(val journalType: StreamingJournalLike,
 
   val cancellableTick: Cancellable = context.system.scheduler.schedule(1 second, 1 second, self, Tick)
 
+  val crunchStartFn: SDateLike => SDateLike = Crunch.crunchStartWithOffset(crunchOffsetMinutes)
+
+  var maybeDaysQueueSource: Option[SourceQueueWithComplete[MillisSinceEpoch]] = None
   var queuedDays: SortedSet[MillisSinceEpoch] = SortedSet[MillisSinceEpoch]()
-  var readyToEmit: Boolean = true
+  var readyToEmit: Boolean = false
 
   override def postStop(): Unit = {
     log.info(s"I've stopped so I'll cancel my tick now")
@@ -71,6 +74,12 @@ class CrunchQueueReadActor(val journalType: StreamingJournalLike,
       log.info(s"Got a ReadyToEmit. Will emit if I have something in the queue")
       emitNextDayIfReady()
 
+    case SetDaysQueueSource(source) =>
+      log.info(s"Received daysQueueSource")
+      maybeDaysQueueSource = Option(source)
+      readyToEmit = true
+      emitNextDayIfReady()
+
     case UpdatedMillis(millis) =>
       log.info(s"Received ${millis.size} UpdatedMillis")
       val days = uniqueDays(millis)
@@ -94,15 +103,17 @@ class CrunchQueueReadActor(val journalType: StreamingJournalLike,
   }
 
   def uniqueDays(millis: Iterable[MillisSinceEpoch]): Set[MillisSinceEpoch] =
-    millis.map(m => SDate(m).getLocalLastMidnight.millisSinceEpoch).toSet
+    millis.map(m => crunchStartFn(SDate(m)).millisSinceEpoch).toSet
 
   def emitNextDayIfReady(): Unit = if (readyToEmit)
     queuedDays.headOption match {
       case Some(day) =>
         log.info(s"Emitting ${SDate(day, Crunch.europeLondonTimeZone).toISODateOnly}")
         readyToEmit = false
-        sourceQueue.offer(day).foreach { _ =>
-          self ! ReadyToEmit
+        maybeDaysQueueSource.foreach { sourceQueue =>
+          sourceQueue.offer(day).foreach { _ =>
+            self ! ReadyToEmit
+          }
         }
         queuedDays = queuedDays.drop(1)
       case None =>

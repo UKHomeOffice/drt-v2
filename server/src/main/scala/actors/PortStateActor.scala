@@ -52,11 +52,7 @@ class PortStateActor(liveStateActor: ActorRef, forecastStateActor: ActorRef, now
 
     case SetCrunchQueueActor(crunchActor) =>
       log.info(s"Received crunchSourceActor")
-      maybeCrunchQueueActor.foreach { existingActor =>
-        log.info(s"Stopping the existing crunch queue actor")
-        existingActor ! Stop
-      }
-      maybeCrunchQueueActor = Option(crunchActor)
+      if (maybeCrunchQueueActor.isEmpty) maybeCrunchQueueActor = Option(crunchActor)
 
     case SetSimulationActor(simActor) =>
       log.info(s"Received simulationSourceActor")

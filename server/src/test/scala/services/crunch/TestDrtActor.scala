@@ -1,9 +1,9 @@
 package services.crunch
 
 import actors.Sizes.oneMegaByte
+import actors._
 import actors.daily.PassengersActor
 import actors.queues.CrunchQueueReadActor
-import actors._
 import actors.queues.CrunchQueueReadActor.UpdatedMillis
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
@@ -61,6 +61,7 @@ class TestDrtActor extends Actor {
       val staffMovementsActor: ActorRef = system.actorOf(Props(new StaffMovementsActor(tc.now, DrtStaticParameters.time48HoursAgo(tc.now))))
       val snapshotInterval = 1
       val manifestsActor: ActorRef = system.actorOf(Props(new VoyageManifestsActor(oneMegaByte, tc.now, DrtStaticParameters.expireAfterMillis, Option(snapshotInterval))))
+      val crunchQueueActor = system.actorOf(Props(new CrunchQueueReadActor(journalType, tc.airportConfig.crunchOffsetMinutes)))
 
       //      val flightsStateActor: ActorRef = system.actorOf(Props(new FlightsStateActor(None, Sizes.oneMegaByte, "flights-state", tc.airportConfig.queuesByTerminal, tc.now, tc.expireAfterMillis)))
       //      val portStateActor = PartitionedPortStateTestActor(portStateProbe, flightsStateActor, tc.now, tc.airportConfig)
@@ -85,8 +86,9 @@ class TestDrtActor extends Actor {
 
       val startDeskRecs: () => UniqueKillSwitch = () => {
         val (daysQueueSource, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDeskRecs, deskLimitsProvider)
-        val crunchQueueActor = system.actorOf(Props(new CrunchQueueReadActor(journalType, daysQueueSource)))
         maybeCrunchQueueActor = Option(crunchQueueActor)
+        crunchQueueActor ! SetDaysQueueSource(daysQueueSource)
+
         if (tc.recrunchOnStart) queueDaysToReCrunch(crunchQueueActor)
 
         portStateActor ! SetCrunchQueueActor(crunchQueueActor)
