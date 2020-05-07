@@ -143,6 +143,7 @@ object TestActors {
     extends PortStateActor(live, forecast, now, liveDaysAhead, true) {
     def reset: Receive = {
       case ResetData =>
+        maybeCrunchQueueActor
         state.clear()
         sender() ! Ack
     }

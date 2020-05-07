@@ -16,7 +16,7 @@ class AlertsActorSpec extends CrunchTestLike {
   sequential
   isolated
 
-  val actor: ActorRef = system.actorOf(Props(classOf[AlertsActor], () => SDate.now), "alertsActor")
+  val actor: ActorRef = system.actorOf(Props(classOf[AlertsActor], () => SDate.now()), "alertsActor")
 
   "AlertsActor" should {
     "return the message it that was set if only one message is sent" >> {
