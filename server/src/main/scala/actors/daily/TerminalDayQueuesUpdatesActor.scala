@@ -42,6 +42,7 @@ class TerminalDayQueuesUpdatesActor(year: Int,
       log.warn("Stream completed")
 
     case EventEnvelope(_, _, _, CrunchMinutesMessage(minuteMessages)) =>
+      log.info(s"Got a $minuteMessages")
       updateState(minuteMessages)
       sender() ! Ack
 
@@ -52,7 +53,7 @@ class TerminalDayQueuesUpdatesActor(year: Int,
       }
       sender() ! response
 
-    case x => println(s"got $x")
+    case x => log.warn(s"Received unexpected message ${x.getClass}")
   }
 
   def updateState(minuteMessages: Seq[CrunchMinuteMessage]): Unit = {

@@ -2,10 +2,10 @@ package actors
 
 import actors.DrtStaticParameters.liveDaysAhead
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
+import actors.daily.StartUpdatesStream
 import actors.queues.CrunchQueueReadActor.UpdatedMillis
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
-import akka.stream.Supervision.Stop
 import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
@@ -34,7 +34,11 @@ object PortStateActor {
     Props(new PortStateActor(liveStateActor, forecastStateActor, now, liveDaysAhead, exitOnQueueException = true))
 }
 
-class PortStateActor(liveStateActor: ActorRef, forecastStateActor: ActorRef, now: () => SDateLike, liveDaysAhead: Int, exitOnQueueException: Boolean) extends Actor {
+class PortStateActor(liveStateActor: ActorRef,
+                     forecastStateActor: ActorRef,
+                     now: () => SDateLike,
+                     liveDaysAhead: Int,
+                     exitOnQueueException: Boolean) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
@@ -110,6 +114,8 @@ class PortStateActor(liveStateActor: ActorRef, forecastStateActor: ActorRef, now
     case HandleSimulationRequest =>
       handleSimulationRequest()
 
+    case _: StartUpdatesStream => sender() ! Ack
+
     case GetState =>
       log.debug(s"Received GetState request. Replying with PortState containing ${state.crunchMinutes.count} crunch minutes")
       sender() ! Option(state.immutable)
@@ -139,8 +145,7 @@ class PortStateActor(liveStateActor: ActorRef, forecastStateActor: ActorRef, now
     case unexpected => log.warn(s"Got unexpected: $unexpected")
   }
 
-  def stateForPeriod(start: MillisSinceEpoch,
-                     end: MillisSinceEpoch): Option[PortState] = Option(state.window(SDate(start), SDate(end)))
+  def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): PortState = state.window(SDate(start), SDate(end))
 
   def stateForPeriodForTerminal(start: MillisSinceEpoch,
                                 end: MillisSinceEpoch,

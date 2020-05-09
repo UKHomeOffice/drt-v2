@@ -2,13 +2,12 @@ package actors
 
 import actors.DrtStaticParameters.expireAfterMillis
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
-import actors.daily.ReadJournalTypes.ReadJournalWithEvents
 import actors.daily.TerminalDay.TerminalDayBookmarks
 import actors.daily.{StartUpdatesStream, TerminalDayQueuesUpdatesActor, TerminalDayStaffUpdatesActor, UpdatesSupervisor}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.{ask, pipe}
-import akka.persistence.jdbc.query.scaladsl.JdbcReadJournal
-import akka.persistence.query.journal.leveldb.scaladsl.LeveldbReadJournal
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
@@ -34,21 +33,6 @@ object PartitionedPortStateActor {
   }
 }
 
-trait StreamingJournalLike {
-  type ReadJournalType <: ReadJournalWithEvents
-  val id: String
-}
-
-object ProdStreamingJournal extends StreamingJournalLike {
-  override type ReadJournalType = JdbcReadJournal
-  override val id: String = JdbcReadJournal.Identifier
-}
-
-object TestStreamingJournal extends StreamingJournalLike {
-  override type ReadJournalType = LeveldbReadJournal
-  override val id: String = LeveldbReadJournal.Identifier
-}
-
 class PartitionedPortStateActor(flightsActor: ActorRef,
                                 queuesActor: ActorRef,
                                 staffActor: ActorRef,
@@ -58,6 +42,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
+  implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
   implicit val timeout: Timeout = new Timeout(10 seconds)
 
   val queueUpdatesProps: (Terminal, SDateLike, MillisSinceEpoch) => Props =
@@ -74,7 +59,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
   val staffUpdatesSupervisor: ActorRef = context.system.actorOf(Props(new UpdatesSupervisor[StaffMinute, TM](now, terminals, staffUpdatesProps)))
 
   def processMessage: Receive = {
-    case msg: SetCrunchActor =>
+    case msg: SetCrunchQueueActor =>
       log.info(s"Received crunchSourceActor")
       flightsActor.ask(msg)
 
@@ -112,7 +97,8 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
 
     case StartUpdatesStream(terminal, day, seqNr) =>
       val replyTo = sender()
-      Future.sequence(startUpdateStreams(Map((terminal, day.millisSinceEpoch) -> seqNr), queueUpdatesSupervisor)).foreach(_ => replyTo ! Ack)
+      startUpdateStreams(Map((terminal, day.millisSinceEpoch) -> seqNr), queueUpdatesSupervisor)
+        .onComplete(_ => replyTo ! Ack)
 
     case GetPortStateForTerminal(start, end, terminal) =>
       log.debug(s"Received GetPortStateForTerminal request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()} for $terminal")
@@ -133,7 +119,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
 
   def replyWithPortState(start: MillisSinceEpoch,
                          end: MillisSinceEpoch,
-                         replyTo: ActorRef): Future[Option[PortState]] = {
+                         replyTo: ActorRef): Future[PortState] = {
     val eventualFlights = flightsActor.ask(GetFlights(start, end)).mapTo[FlightsWithSplits]
     val eventualQueueMinutes = queuesActor.ask(GetPortState(start, end)).mapTo[MinutesWithBookmarks[CrunchMinute, TQM]]
     val eventualStaffMinutes = staffActor.ask(GetPortState(start, end)).mapTo[MinutesWithBookmarks[StaffMinute, TM]]
@@ -142,13 +128,17 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
       case (ps, (queueBookmarks, staffBookmarks)) =>
         startUpdateStreams(queueBookmarks, queueUpdatesSupervisor)
         startUpdateStreams(staffBookmarks, staffUpdatesSupervisor)
-        Option(ps)
+        ps
     }.pipeTo(replyTo)
   }
 
-  def startUpdateStreams(bookmarks: TerminalDayBookmarks, supervisor: ActorRef): immutable.Iterable[Future[Any]] = bookmarks.map {
-    case ((t, d), bookmarkSeqNr) => supervisor.ask(StartUpdatesStream(t, SDate(d), bookmarkSeqNr))
-  }
+  def startUpdateStreams(bookmarks: TerminalDayBookmarks,
+                          supervisor: ActorRef): Future[immutable.Seq[Any]] = Source(bookmarks)
+    .mapAsync(1) {
+      case ((t, d), bookmarkSeqNr) =>
+        supervisor.ask(StartUpdatesStream(t, SDate(d), bookmarkSeqNr))
+    }
+    .runWith(Sink.seq)
 
   def replyWithUpdates(since: MillisSinceEpoch,
                        start: MillisSinceEpoch,
@@ -165,12 +155,12 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
   def replyWithTerminalState(start: MillisSinceEpoch,
                              end: MillisSinceEpoch,
                              terminal: Terminal,
-                             replyTo: ActorRef): Future[Option[PortState]] = {
+                             replyTo: ActorRef): Future[PortState] = {
     val eventualFlights = flightsActor.ask(GetFlightsForTerminal(start, end, terminal)).mapTo[FlightsWithSplits]
     val eventualQueueMinutes = queuesActor.ask(GetStateByTerminalDateRange(terminal, SDate(start), SDate(end))).mapTo[MinutesContainer[CrunchMinute, TQM]]
     val eventualStaffMinutes = staffActor.ask(GetStateByTerminalDateRange(terminal, SDate(start), SDate(end))).mapTo[MinutesContainer[StaffMinute, TM]]
     val eventualPortState = combineToPortState(eventualFlights, eventualQueueMinutes, eventualStaffMinutes)
-    eventualPortState.map(Option(_)).pipeTo(replyTo)
+    eventualPortState.pipeTo(replyTo)
   }
 
   def stateAsTuple(eventualFlights: Future[FlightsWithSplits],

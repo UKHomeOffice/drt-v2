@@ -27,7 +27,7 @@ class PartitionedPortStateTestActor(probe: ActorRef,
                                     queuesActor: ActorRef,
                                     staffActor: ActorRef,
                                     now: () => SDateLike,
-                                    terminals: List[Terminal]) extends PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, terminals, TestStreamingJournal) {
+                                    terminals: List[Terminal]) extends PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, terminals, InMemoryStreamingJournal) {
   var state: PortState = PortState.empty
 
   override def receive: Receive = processMessage orElse {

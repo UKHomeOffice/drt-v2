@@ -124,13 +124,13 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
     val pointInTime = end.addHours(4)
 
     val eventualMaybeResponse = if (isHistoricDate(start.millisSinceEpoch)) {
-      val historicActor = system.actorOf(CrunchStateReadActor.props(
+      val historicActor = system.actorOf(Props(new CrunchStateReadActor(
         airportConfig.portStateSnapshotInterval,
         pointInTime,
         DrtStaticParameters.expireAfterMillis,
         airportConfig.queuesByTerminal,
         start.millisSinceEpoch,
-        end.millisSinceEpoch))
+        end.millisSinceEpoch)))
       val eventualResponse = historicActor.ask(message)
       eventualResponse.onComplete(_ => historicActor ! PoisonPill)
       eventualResponse

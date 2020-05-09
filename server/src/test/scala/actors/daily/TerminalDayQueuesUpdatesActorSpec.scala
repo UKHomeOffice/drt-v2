@@ -3,11 +3,10 @@ package actors.daily
 import java.io.File
 import java.util.UUID
 
-import actors.{StreamingJournalLike, TestStreamingJournal}
 import actors.daily.ReadJournalTypes.ReadJournalWithEvents
+import actors.{InMemoryStreamingJournal, StreamingJournalLike}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
-import akka.persistence.query.journal.leveldb.scaladsl.LeveldbReadJournal
 import akka.stream.ActorMaterializer
 import akka.testkit.{TestKit, TestProbe}
 import akka.util.Timeout
@@ -16,7 +15,6 @@ import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.{Queues, SDateLike}
 import org.specs2.mutable.SpecificationLike
-import org.specs2.specification.BeforeEach
 import server.protobuf.messages.CrunchState.CrunchMinuteMessage
 import services.SDate
 import test.TestActors.{ResetData, TestTerminalDayQueuesActor}
@@ -60,7 +58,8 @@ class TerminalDayQueuesUpdatesActorSpec
     val queuesActor = system.actorOf(Props(new TestTerminalDayQueuesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => day)))
     Await.ready(queuesActor.ask(ResetData), 1 second)
     val probe = TestProbe()
-    system.actorOf(Props(new TestTerminalDayQueuesUpdatesActor[LeveldbReadJournal](day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => day, TestStreamingJournal, 0L, probe.ref)))
+    val journal = InMemoryStreamingJournal
+    system.actorOf(Props(new TestTerminalDayQueuesUpdatesActor[journal.ReadJournalType](day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => day, journal, 0L, probe.ref)))
     val minute2 = day.addMinutes(1).millisSinceEpoch
 
     "When I send it a crunch minute" >> {

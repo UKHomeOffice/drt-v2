@@ -81,7 +81,7 @@ class FlightsStateActor(initialMaybeSnapshotInterval: Option[Int],
   override def stateToMessage: GeneratedMessage = portStateToSnapshotMessage(state)
 
   override def receiveCommand: Receive = {
-    case SetCrunchActor(crunchActor) =>
+    case SetCrunchQueueActor(crunchActor) =>
       log.info(s"Received crunchSourceActor")
       maybeCrunchActor = Option(crunchActor)
 

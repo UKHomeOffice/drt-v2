@@ -51,7 +51,7 @@ class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
                          startingSequenceNr: Long): Unit = streamingUpdateActors.get((terminal, day.millisSinceEpoch)) match {
     case Some(_) => Unit
     case None =>
-      log.info(s"****** Starting supervised updates stream for $terminal / ${day.toISODateOnly} from seqNr: $startingSequenceNr")
+      log.info(s"Starting supervised updates stream for $terminal / ${day.toISODateOnly} from seqNr: $startingSequenceNr")
       val actor = context.system.actorOf(updatesActorFactory(terminal, day, startingSequenceNr))
       streamingUpdateActors = streamingUpdateActors + ((terminal, day.millisSinceEpoch) -> actor)
       lastRequests = lastRequests + ((terminal, day.millisSinceEpoch) -> now().millisSinceEpoch)
