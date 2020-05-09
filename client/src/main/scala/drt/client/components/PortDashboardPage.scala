@@ -6,8 +6,8 @@ import drt.client.SPAMain.{Loc, PortDashboardLoc}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.shared.api.Arrival
 import drt.shared._
+import drt.shared.api.Arrival
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
@@ -75,7 +75,11 @@ object PortDashboardPage {
                         displayPeriod.end,
                         portConfig.queuesByTerminal.filterKeys(_ == terminalName)
                       )
-                      val flightsInTerminal = portStateForDashboard.flights.values.toList
+                      val scheduledFlightsInTerminal = portStateForDashboard
+                        .flights
+                        .values
+                        .filterNot(_.apiFlight.isCancelled)
+                        .toList
                       val terminalCrunchMinutes = portStateForDashboard.crunchMinutes.values.toList
                       val terminalStaffMinutes = portStateForDashboard.staffMinutes.values.toList
                       val terminalQueuesInOrder = Queues.inOrder(queues.getOrElse(terminalName, Seq()))
@@ -85,7 +89,7 @@ object PortDashboardPage {
                         val pcpPaxFn: Arrival => Int = PcpPax.pcpPaxFnFromFeatureFlags(ff)
 
                         DashboardTerminalSummary(
-                          DashboardTerminalSummary.Props(flightsInTerminal,
+                          DashboardTerminalSummary.Props(scheduledFlightsInTerminal,
                             terminalCrunchMinutes,
                             terminalStaffMinutes,
                             terminalName,

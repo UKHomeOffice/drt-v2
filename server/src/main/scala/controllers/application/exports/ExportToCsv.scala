@@ -14,6 +14,7 @@ import services.exports.Exports
 import services.exports.summaries.TerminalSummaryLike
 import services.graphstages.Crunch.europeLondonTimeZone
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
@@ -27,12 +28,12 @@ trait ExportToCsv {
                   description: String,
                   terminal: Terminal,
                   maybeSummaryActorAndRequestProvider: Option[((SDateLike, Terminal) => ActorRef, Any)],
-                  summaryFromPortState: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike])
+                  generateNewSummary: (SDateLike, SDateLike) => Future[TerminalSummaryLike])
                  (implicit timeout: Timeout): Result = {
     if (airportConfig.terminals.toSet.contains(terminal)) {
       val startString = start.millisSinceEpoch.toString
       val endString = end.millisSinceEpoch.toString
-      val exportSource = exportBetweenDates(startString, endString, terminal, description, maybeSummaryActorAndRequestProvider, summaryFromPortState)
+      val exportSource = exportBetweenDates(startString, endString, terminal, description, maybeSummaryActorAndRequestProvider, generateNewSummary)
       val fileName = makeFileName(description, terminal, start, end, airportConfig.portCode)
 
       Try(sourceToCsvResponse(exportSource, fileName)) match {
@@ -52,7 +53,7 @@ trait ExportToCsv {
                          terminal: Terminal,
                          description: String,
                          maybeSummaryActorAndRequestProvider: Option[((SDateLike, Terminal) => ActorRef, Any)],
-                         summaryFromPortStateProvider: (SDateLike, SDateLike, PortState) => Option[TerminalSummaryLike])
+                         generateNewSummary: (SDateLike, SDateLike) => Future[TerminalSummaryLike])
                         (implicit timeout: Timeout): Source[String, NotUsed] = {
     val startPit = SDate(start.toLong, europeLondonTimeZone).getLocalLastMidnight
     val endPit = SDate(end.toLong, europeLondonTimeZone).getLocalLastMidnight
@@ -60,7 +61,7 @@ trait ExportToCsv {
 
     log.info(s"Export $description for terminal $terminal between ${SDate(start.toLong).toISOString()} & ${SDate(end.toLong).toISOString()} ($numberOfDays days)")
 
-    Exports.summaryForDaysCsvSource(startPit, numberOfDays, now, terminal, maybeSummaryActorAndRequestProvider, queryPortStateActor, summaryFromPortStateProvider)
+    Exports.summaryForDaysCsvSource(startPit, numberOfDays, now, terminal, maybeSummaryActorAndRequestProvider, generateNewSummary)
   }
 
   def makeFileName(subject: String,

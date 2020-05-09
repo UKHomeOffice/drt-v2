@@ -1,12 +1,17 @@
 package feeds.lgw
 
-import drt.server.feeds.lgw.ResponseToArrivals
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Sink
+import akka.testkit.TestProbe
+import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed, ResponseToArrivals}
 import drt.shared.Terminals.N
 import drt.shared.api.Arrival
 import drt.shared.{LiveFeedSource, PortCode}
 import org.specs2.mock.Mockito
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import services.SDate
 import services.crunch.CrunchTestLike
+import scala.concurrent.duration._
 
 import scala.collection.immutable.Seq
 import scala.io.Source
@@ -96,6 +101,29 @@ class LGWFeedSpec extends CrunchTestLike with Mockito {
 
     arrivals mustEqual List()
 
+  }
+
+  "Exploratory test" >> {
+    skipped("Exploratory")
+    val lgwNamespace = ""
+    val lgwSasToKey = ""
+    val lgwServiceBusUri = ""
+    val azureClient = LGWAzureClient(LGWFeed.serviceBusClient(lgwNamespace, lgwSasToKey, lgwServiceBusUri))
+
+    val probe = TestProbe()
+    LGWFeed(azureClient)(system).source().map{
+      case s: ArrivalsFeedSuccess =>
+        println(s.arrivals)
+      case f: ArrivalsFeedFailure =>
+        println(f.responseMessage)
+    }.runWith(Sink.foreach(probe.ref ! _ ))
+
+    probe.fishForMessage(5 minutes){
+      case x => println(x)
+        false
+    }
+
+    true
   }
 
 }

@@ -9,6 +9,10 @@ import drt.shared.api.Arrival
 import drt.shared.splits.ApiSplitsToSplitRatio
 import services.exports.summaries.TerminalSummaryLike
 
+object TerminalFlightsSummaryLike {
+  type TerminalFlightsSummaryLikeGenerator = (Seq[ApiFlightWithSplits], MillisSinceEpoch => String, MillisSinceEpoch => String, Arrival => Int) => TerminalSummaryLike
+}
+
 trait TerminalFlightsSummaryLike extends TerminalSummaryLike {
   override def isEmpty: Boolean = flights.isEmpty
 

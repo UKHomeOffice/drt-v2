@@ -156,11 +156,13 @@ class ShiftsActorBase(val now: () => SDateLike,
     case unexpected => log.info(s"unhandled message: $unexpected")
   }
 
-  def applyUpdatedShifts(existingAssignments: Seq[StaffAssignment], shiftsToUpdate: Seq[StaffAssignment]): Seq[StaffAssignment] = shiftsToUpdate
+  def applyUpdatedShifts(existingAssignments: Seq[StaffAssignment],
+                         shiftsToUpdate: Seq[StaffAssignment]): Seq[StaffAssignment] = shiftsToUpdate
     .foldLeft(existingAssignments) {
       case (assignmentsSoFar, updatedAssignment) =>
-        assignmentsSoFar.filterNot(existing =>
-          existing.startDt == updatedAssignment.startDt && existing.terminal == updatedAssignment.terminal)
+        assignmentsSoFar.filterNot { existing =>
+          existing.startDt == updatedAssignment.startDt && existing.terminal == updatedAssignment.terminal
+        }
     } ++ shiftsToUpdate
 }
 
@@ -174,7 +176,7 @@ object ShiftsMessageParser {
     startTimestamp = Option(assignment.startDt.millisSinceEpoch),
     endTimestamp = Option(assignment.endDt.millisSinceEpoch),
     createdAt = Option(createdAt.millisSinceEpoch)
-  )
+    )
 
   def shiftMessageToStaffAssignmentv1(shiftMessage: ShiftMessage): Option[StaffAssignment] = {
     val maybeSt: Option[SDateLike] = parseDayAndTimeToSdate(shiftMessage.startDayOLD, shiftMessage.startTimeOLD)
@@ -217,7 +219,7 @@ object ShiftsMessageParser {
     endDt = MilliDate(shiftMessage.endTimestamp.getOrElse(0L)),
     numberOfStaff = shiftMessage.numberOfStaff.getOrElse("0").toInt,
     createdBy = None
-  ))
+    ))
 
   def staffAssignmentsToShiftsMessages(shiftStaffAssignments: ShiftAssignments,
                                        createdAt: SDateLike): Seq[ShiftMessage] =
