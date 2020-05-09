@@ -17,6 +17,7 @@ import drt.shared.{Queues, SDateLike}
 import org.specs2.mutable.SpecificationLike
 import server.protobuf.messages.CrunchState.CrunchMinuteMessage
 import services.SDate
+import services.crunch.CrunchTestLike
 import test.TestActors.{ResetData, TestTerminalDayQueuesActor}
 
 import scala.concurrent.duration._
@@ -38,12 +39,8 @@ object LevelDbConfig {
   }
 }
 
-class TerminalDayQueuesUpdatesActorSpec
-  extends TestKit(ActorSystem("drt", LevelDbConfig.config("TerminalDayQueuesUpdatesActorSpec")))
-    with SpecificationLike {
-
+class TerminalDayQueuesUpdatesActorSpec extends CrunchTestLike {
   implicit val mat: ActorMaterializer = ActorMaterializer()
-  implicit val timeout: Timeout = new Timeout(1 second)
 
   val terminal: Terminal = T1
   val queue: Queues.Queue = Queues.EeaDesk
@@ -56,7 +53,6 @@ class TerminalDayQueuesUpdatesActorSpec
   "Given a TerminalDayQueueMinuteUpdatesActor" >> {
     implicit val ec: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
     val queuesActor = system.actorOf(Props(new TestTerminalDayQueuesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => day)))
-    Await.ready(queuesActor.ask(ResetData), 1 second)
     val probe = TestProbe()
     val journal = InMemoryStreamingJournal
     system.actorOf(Props(new TestTerminalDayQueuesUpdatesActor[journal.ReadJournalType](day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => day, journal, 0L, probe.ref)))
@@ -74,7 +70,7 @@ class TerminalDayQueuesUpdatesActorSpec
           crunchMinute.copy(minute = minute2, lastUpdated = Option(day.millisSinceEpoch)))
           .map(cm => (cm.key, cm)).toMap
 
-        probe.fishForMessage(5 seconds) {
+        probe.fishForMessage(1 seconds) {
           case updates => updates == expected
         }
 

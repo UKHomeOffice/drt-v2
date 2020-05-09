@@ -33,19 +33,19 @@ class TestDrtSystemSpec extends CrunchTestLike {
       "Then I should see the arrival when I check its port state" >> {
         val lastMidnight = drtSystem.now().getLocalLastMidnight
         val nextMidnight = lastMidnight.addDays(1)
-        val ps = Await.result(drtSystem.portStateActor.ask(GetPortState(lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[Option[PortState]], 1 second)
-        ps.get.flights.values.map(_.copy(lastUpdated = None)) === Iterable(fws)
+        val ps = Await.result(drtSystem.portStateActor.ask(GetPortState(lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[PortState], 1 second)
+        ps.flights.values.map(_.copy(lastUpdated = None)) === Iterable(fws)
       }
 
       "Then I should see no arrivals after sending a Reset message to the reset actor" >> {
         Await.ready(drtSystem.restartActor.ask(ResetData), 5 seconds)
         val lastMidnight = drtSystem.now().getLocalLastMidnight
         val nextMidnight = lastMidnight.addDays(1)
-        val ps = Await.result(drtSystem.portStateActor.ask(GetPortState(lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[Option[PortState]], 1 second)
+        val ps = Await.result(drtSystem.portStateActor.ask(GetPortState(lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[PortState], 1 second)
 
-        println(s"Got ${ps.get.flights}")
+        println(s"Got ${ps.flights}")
 
-        ps.get.flights.isEmpty
+        ps.flights.isEmpty
       }
     }
 
@@ -57,19 +57,19 @@ class TestDrtSystemSpec extends CrunchTestLike {
       "Then I should see the corresponding CrunchMinute when I check its port state" >> {
         val lastMidnight = drtSystem.now().getLocalLastMidnight
         val nextMidnight = lastMidnight.addDays(1)
-        val ps = Await.result(drtSystem.portStateActor.ask(GetPortState(lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[Option[PortState]], 1 second)
-        ps.get.crunchMinutes.values.toSeq.exists(cm => cm.terminal == T1 && cm.queue == EeaDesk && cm.minute == minute.millisSinceEpoch)
+        val ps = Await.result(drtSystem.portStateActor.ask(GetPortState(lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[PortState], 1 second)
+        ps.crunchMinutes.values.toSeq.exists(cm => cm.terminal == T1 && cm.queue == EeaDesk && cm.minute == minute.millisSinceEpoch)
       }
 
       "Then I should see no crunch minutes after sending a Reset message to the reset actor" >> {
         Await.ready(drtSystem.restartActor.ask(ResetData), 5 seconds)
         val lastMidnight = drtSystem.now().getLocalLastMidnight
         val nextMidnight = lastMidnight.addDays(1)
-        val ps = Await.result(drtSystem.portStateActor.ask(GetPortState(lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[Option[PortState]], 1 second)
+        val ps = Await.result(drtSystem.portStateActor.ask(GetPortState(lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[PortState], 1 second)
 
-        println(s"Got ${ps.get.crunchMinutes}")
+        println(s"Got ${ps.crunchMinutes}")
 
-        ps.get.crunchMinutes.isEmpty
+        ps.crunchMinutes.isEmpty
       }
     }
 
@@ -81,19 +81,19 @@ class TestDrtSystemSpec extends CrunchTestLike {
       "Then I should see the corresponding StaffMinute when I check its port state" >> {
         val lastMidnight = drtSystem.now().getLocalLastMidnight
         val nextMidnight = lastMidnight.addDays(1)
-        val ps = Await.result(drtSystem.portStateActor.ask(GetPortState(lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[Option[PortState]], 1 second)
-        ps.get.staffMinutes.values.toSeq.exists(sm => sm.copy(lastUpdated = None) == staffMinute)
+        val ps = Await.result(drtSystem.portStateActor.ask(GetPortState(lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[PortState], 1 second)
+        ps.staffMinutes.values.toSeq.exists(sm => sm.copy(lastUpdated = None) == staffMinute)
       }
 
       "Then I should see no crunch minutes after sending a Reset message to the reset actor" >> {
         Await.ready(drtSystem.restartActor.ask(ResetData), 5 seconds)
         val lastMidnight = drtSystem.now().getLocalLastMidnight
         val nextMidnight = lastMidnight.addDays(1)
-        val ps = Await.result(drtSystem.portStateActor.ask(GetPortState(lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[Option[PortState]], 1 second)
+        val ps = Await.result(drtSystem.portStateActor.ask(GetPortState(lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[PortState], 1 second)
 
-        println(s"Got ${ps.get.staffMinutes}")
+        println(s"Got ${ps.staffMinutes}")
 
-        ps.get.staffMinutes.isEmpty
+        ps.staffMinutes.isEmpty
       }
     }
   }
