@@ -3,7 +3,7 @@ package actors.serializers
 import akka.serialization.SerializerWithStringManifest
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.Alert.{Alert, AlertSnapshotMessage}
-import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchMinutesMessage, CrunchStateSnapshotMessage, StaffMinutesMessage}
+import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchMinutesMessage, CrunchStateSnapshotMessage, DaysSnapshotMessage, StaffMinutesMessage}
 import server.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
 import server.protobuf.messages.FlightsMessage._
 import server.protobuf.messages.FlightsSummary.FlightsSummaryMessage
@@ -51,6 +51,7 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
   final val StaffMinutes: String                  = classOf[StaffMinutesMessage].getName
   final val PaxCount: String                      = classOf[PaxCountMessage].getName
   final val OriginTerminalPaxCounts: String       = classOf[OriginTerminalPaxCountsMessage].getName
+  final val DaysSnapshot: String                  = classOf[DaysSnapshotMessage].getName
 
   override def toBinary(objectToSerialize: AnyRef): Array[Byte] = {
     objectToSerialize match {
@@ -86,6 +87,7 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case m: StaffMinutesMessage => m.toByteArray
       case m: PaxCountMessage => m.toByteArray
       case m: OriginTerminalPaxCountsMessage => m.toByteArray
+      case m: DaysSnapshotMessage => m.toByteArray
     }
   }
 
@@ -125,6 +127,7 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case StaffMinutes                   => StaffMinutesMessage.parseFrom(bytes)
       case PaxCount                       => PaxCountMessage.parseFrom(bytes)
       case OriginTerminalPaxCounts        => OriginTerminalPaxCountsMessage.parseFrom(bytes)
+      case DaysSnapshot                   => DaysSnapshotMessage.parseFrom(bytes)
     }
   }
 }

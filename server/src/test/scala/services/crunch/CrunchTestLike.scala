@@ -3,6 +3,7 @@ package services.crunch
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props, Terminated}
 import akka.pattern.ask
 import akka.stream.QueueOfferResult.Enqueued
+import akka.stream.Supervision.Stop
 import akka.stream.scaladsl.SourceQueueWithComplete
 import akka.stream.testkit.TestSubscriber.Probe
 import akka.stream.{ActorMaterializer, QueueOfferResult}
@@ -142,7 +143,7 @@ class CrunchTestLike
   def shutDownDrtActor(drtActor: ActorRef): Terminated = {
     log.info("\n\nShutting down drt actor")
     watch(drtActor)
-    drtActor ! PoisonPill
+    drtActor ! Stop
     expectMsgClass(classOf[Terminated])
   }
 

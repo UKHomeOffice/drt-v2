@@ -4,6 +4,10 @@ package server.protobuf.messages;
 
 import "FlightsMessage.proto";
 
+message DaysSnapshotMessage {
+    repeated int64 days = 1;
+}
+
 message CrunchStateSnapshotMessage {
     optional int64 crunchStart = 1;
     optional int32 numberOfMinutes = 2;

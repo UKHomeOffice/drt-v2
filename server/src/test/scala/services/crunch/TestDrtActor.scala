@@ -1,12 +1,15 @@
 package services.crunch
 
 import actors.Sizes.oneMegaByte
-import actors.{DrtStaticParameters, FixedPointsActor, PortStateTestActor, SetCrunchActor, SetSimulationActor, ShiftsActor, StaffMovementsActor, VoyageManifestsActor}
+import actors._
 import actors.daily.PassengersActor
+import actors.queues.CrunchQueueReadActor
+import actors.queues.CrunchQueueReadActor.UpdatedMillis
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
-import akka.stream.{ActorMaterializer, OverflowStrategy, UniqueKillSwitch}
+import akka.stream.Supervision.Stop
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
+import akka.stream.{ActorMaterializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
@@ -16,10 +19,11 @@ import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeskRecs}
+import services.graphstages.Crunch
 
 import scala.collection.immutable.Map
-import scala.concurrent.{Await, ExecutionContextExecutor}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContextExecutor}
 
 class TestDrtActor extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -29,11 +33,19 @@ class TestDrtActor extends Actor {
 
   import TestDefaults.testProbe
 
+  val journalType: StreamingJournalLike = InMemoryStreamingJournal
+
+  var maybeCrunchQueueActor: Option[ActorRef] = None
+
   override def postStop(): Unit = {
     log.info(s"TestDrtActor stopped")
   }
 
   override def receive: Receive = {
+    case Stop =>
+      maybeCrunchQueueActor.foreach(_ ! Stop)
+      context.stop(self)
+
     case tc: TestConfig =>
       val replyTo = sender()
       tc.airportConfig.assertValid()
@@ -49,22 +61,37 @@ class TestDrtActor extends Actor {
       val staffMovementsActor: ActorRef = system.actorOf(Props(new StaffMovementsActor(tc.now, DrtStaticParameters.time48HoursAgo(tc.now))))
       val snapshotInterval = 1
       val manifestsActor: ActorRef = system.actorOf(Props(new VoyageManifestsActor(oneMegaByte, tc.now, DrtStaticParameters.expireAfterMillis, Option(snapshotInterval))))
+      val crunchQueueActor = system.actorOf(Props(new CrunchQueueReadActor(journalType, tc.airportConfig.crunchOffsetMinutes)))
 
       //      val flightsStateActor: ActorRef = system.actorOf(Props(new FlightsStateActor(None, Sizes.oneMegaByte, "flights-state", tc.airportConfig.queuesByTerminal, tc.now, tc.expireAfterMillis)))
       //      val portStateActor = PartitionedPortStateTestActor(portStateProbe, flightsStateActor, tc.now, tc.airportConfig)
       val portStateActor = PortStateTestActor(portStateProbe, tc.now)
       if (tc.initialPortState.isDefined) Await.ready(portStateActor.ask(tc.initialPortState.get)(new Timeout(1 second)), 1 second)
 
-      val portDescRecs = DesksAndWaitsPortProvider(tc.airportConfig, tc.cruncher, tc.pcpPaxFn)
+      val portDeskRecs = DesksAndWaitsPortProvider(tc.airportConfig, tc.cruncher, tc.pcpPaxFn)
 
       val deskLimitsProvider: Map[Terminal, TerminalDeskLimitsLike] = if (tc.flexDesks)
         PortDeskLimits.flexed(tc.airportConfig)
       else
         PortDeskLimits.fixed(tc.airportConfig)
 
+      def queueDaysToReCrunch(crunchQueueActor: ActorRef): Unit = {
+        val today = tc.now()
+        val millisToCrunchStart = Crunch.crunchStartWithOffset(portDeskRecs.crunchOffsetMinutes) _
+        val daysToReCrunch = (0 until tc.maxDaysToCrunch).map(d => {
+          millisToCrunchStart(today.addDays(d)).millisSinceEpoch
+        })
+        crunchQueueActor ! UpdatedMillis(daysToReCrunch)
+      }
+
       val startDeskRecs: () => UniqueKillSwitch = () => {
-        val (millisToCrunchActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDescRecs, tc.now, tc.recrunchOnStart, tc.maxDaysToCrunch, deskLimitsProvider)
-        portStateActor ! SetCrunchActor(millisToCrunchActor)
+        val (daysQueueSource, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDeskRecs, deskLimitsProvider)
+        maybeCrunchQueueActor = Option(crunchQueueActor)
+        crunchQueueActor ! SetDaysQueueSource(daysQueueSource)
+
+        if (tc.recrunchOnStart) queueDaysToReCrunch(crunchQueueActor)
+
+        portStateActor ! SetCrunchQueueActor(crunchQueueActor)
         deskRecsKillSwitch
       }
 

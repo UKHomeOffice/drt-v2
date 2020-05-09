@@ -58,7 +58,7 @@ object Settings {
     val csvCommons = "1.4"
     val pprint = "0.5.4"
     val scalaCheck = "1.13.4"
-    val akkaPersistenceInmemory = "2.4.18.1"
+    val akkaPersistenceInMemory = "2.5.15.2"
     val akkaPersistenceJdbc = "3.5.0"
     val bluebus = "0.3.1-DRT"
     val postgres = "42.2.2"
@@ -109,7 +109,7 @@ object Settings {
   /** Dependencies only used by the JVM project */
   val jvmDependencies = Def.setting(List(
     "com.amazonaws" % "aws-java-sdk" % awsSdk,
-    "com.github.dnvriend" %% "akka-persistence-inmemory" % akkaPersistenceInmemory % "test",
+    "com.github.dnvriend" %% "akka-persistence-inmemory" % akkaPersistenceInMemory,
     "com.github.gphat" % "censorinus_2.12" % censorinus,
     "com.pauldijou" %% "jwt-core" % "4.0.0",
     "com.hierynomus" % "sshj" % sshJ,
@@ -184,7 +184,7 @@ object Settings {
     "uk.gov.homeoffice" %% "drt-cirium" % drtCirium,
     "uk.gov.homeoffice" %% "drt-lib" % drtLib,
     "uk.gov.homeoffice" %% "bluebus" % bluebus
-  ))
+    ))
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */
   val scalajsDependencies = Def.setting(Seq(

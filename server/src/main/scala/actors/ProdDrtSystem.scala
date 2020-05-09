@@ -189,7 +189,9 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
 
 case class SetSimulationActor(loadsToSimulate: ActorRef)
 
-case class SetCrunchActor(millisToCrunchActor: ActorRef)
+case class SetCrunchQueueActor(millisToCrunchActor: ActorRef)
+
+case class SetDaysQueueSource(daysQueueSource: SourceQueueWithComplete[MillisSinceEpoch])
 
 object ArrivalGenerator {
   def arrival(iata: String = "",
