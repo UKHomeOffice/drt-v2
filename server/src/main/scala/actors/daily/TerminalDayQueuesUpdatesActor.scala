@@ -15,7 +15,7 @@ class TerminalDayQueuesUpdatesActor(year: Int,
                                     month: Int,
                                     day: Int,
                                     terminal: Terminal,
-                                    now: () => SDateLike,
+                                    val now: () => SDateLike,
                                     val journalType: StreamingJournalLike,
                                     val startingSequenceNr: Long) extends StreamingUpdatesLike {
   val persistenceId = f"terminal-queues-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"

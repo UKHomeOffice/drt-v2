@@ -2,8 +2,9 @@ package test
 
 import actors._
 import actors.acking.AckingReceiver.Ack
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props, Status}
 import akka.pattern.ask
+import akka.persistence.inmemory.extension.{InMemoryJournalStorage, InMemorySnapshotStorage, StorageExtension}
 import akka.stream.scaladsl.Source
 import akka.stream.{KillSwitch, Materializer}
 import akka.util.Timeout
@@ -48,7 +49,7 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
 
   override val portStateActor: ActorRef =
     if (usePartitionedPortState) {
-      TestPartitionedPortStateActor(now, airportConfig)
+      TestPartitionedPortStateActor(now, airportConfig, StreamingJournal.forConfig(config))
     } else
       system.actorOf(Props(new TestPortStateActor(liveCrunchStateActor, forecastCrunchStateActor, now, 2)), name = "port-state-actor")
 
@@ -139,6 +140,8 @@ class RestartActor(startSystem: () => List[KillSwitch],
     case ResetData =>
       val replyTo = sender()
 
+      resetInMemoryData()
+
       log.info(s"About to shut down everything. Pressing kill switches")
 
       currentKillSwitches.zipWithIndex.foreach { case (ks, idx) =>
@@ -152,10 +155,22 @@ class RestartActor(startSystem: () => List[KillSwitch],
         replyTo ! Ack
       }
 
+    case Status.Success(_) =>
+      log.info(s"Got a Status acknowledgement from InMemoryJournalStorage")
+
+    case Status.Failure(t) =>
+      log.error("Got a failure message", t)
+
     case StartTestSystem => startTestSystem()
+    case u => log.error(s"Received unexpected message: ${u.getClass}")
   }
 
   def startTestSystem(): Unit = currentKillSwitches = startSystem()
+
+  def resetInMemoryData(): Unit = {
+    StorageExtension(context.system).journalStorage ! InMemoryJournalStorage.ClearJournal
+    StorageExtension(context.system).snapshotStorage ! InMemorySnapshotStorage.ClearSnapshots
+  }
 }
 
 case object StartTestSystem

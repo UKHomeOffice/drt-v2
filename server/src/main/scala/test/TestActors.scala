@@ -195,13 +195,13 @@ object TestActors {
   }
 
   object TestPartitionedPortStateActor {
-    def apply(now: () => SDateLike, airportConfig: AirportConfig)
+    def apply(now: () => SDateLike, airportConfig: AirportConfig, streamingJournal: StreamingJournalLike)
              (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
       val lookups = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
       val flightsActor: ActorRef = system.actorOf(Props(new TestFlightsStateActor(None, Sizes.oneMegaByte, "crunch-live-state-actor", airportConfig.queuesByTerminal, now, expireAfterMillis)))
       val queuesActor: ActorRef = lookups.queueMinutesActor(classOf[TestQueueMinutesActor])
       val staffActor: ActorRef = lookups.staffMinutesActor(classOf[TestStaffMinutesActor])
-      system.actorOf(Props(new TestPartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, airportConfig.terminals.toList, InMemoryStreamingJournal)))
+      system.actorOf(Props(new TestPartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, airportConfig.terminals.toList, streamingJournal)))
     }
   }
 

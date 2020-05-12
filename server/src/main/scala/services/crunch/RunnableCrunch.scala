@@ -167,8 +167,7 @@ object RunnableCrunch {
             .collect { case ArrivalsFeedSuccess(Flights(as), _) if as.nonEmpty => as.toList }
             .conflate[List[Arrival]] { case (acc, incoming) =>
                 log.info(s"${acc.length + incoming.length} conflated live base arrivals")
-                acc ++ incoming }
-            .throttle(1, throttleDurationPer) ~> arrivals.in2
+                acc ++ incoming } ~> arrivals.in2
           liveBaseArrivalsFanOut ~> liveBaseArrivalsSink
 
           liveArrivalsSourceSync ~> arrivalsKillSwitchSync ~> liveArrivalsDiffing ~> liveArrivalsFanOut
@@ -176,8 +175,7 @@ object RunnableCrunch {
             .collect { case ArrivalsFeedSuccess(Flights(as), _) => as.toList }
             .conflate[List[Arrival]] { case (acc, incoming) =>
                 log.info(s"${acc.length + incoming.length} conflated live arrivals")
-                acc ++ incoming }
-            .throttle(1, throttleDurationPer) ~> arrivals.in3
+                acc ++ incoming } ~> arrivals.in3
           liveArrivalsFanOut ~> liveArrivalsSink
 
           manifestsLiveSourceSync ~> manifestsLiveKillSwitchSync ~> manifestsFanOut
@@ -186,16 +184,14 @@ object RunnableCrunch {
             .collect { case ManifestsFeedSuccess(DqManifests(_, manifests), _) if manifests.nonEmpty => manifests.map(BestAvailableManifest(_)).toList }
             .conflate[List[BestAvailableManifest]] { case (acc, incoming) =>
                 log.info(s"${acc.length + incoming.length} conflated API manifests")
-                acc ++ incoming }
-            .throttle(1, throttleDurationPer) ~> arrivalSplits.in1
+                acc ++ incoming } ~> arrivalSplits.in1
 
           manifestsFanOut.out(1) ~> manifestsSink
 
           manifestResponsesSource
             .conflate[List[BestAvailableManifest]] { case (acc, incoming) =>
                 log.info(s"${acc.length + incoming.length} conflated historic manifests")
-                acc ++ incoming }
-            .throttle(1, throttleDurationPer) ~> arrivalSplits.in2
+                acc ++ incoming } ~> arrivalSplits.in2
 
           shiftsSourceAsync          ~> shiftsKillSwitchSync ~> staff.in0
           fixedPointsSourceAsync     ~> fixedPointsKillSwitchSync ~> staff.in1

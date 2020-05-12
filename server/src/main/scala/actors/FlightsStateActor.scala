@@ -3,7 +3,7 @@ package actors
 import actors.FlightMessageConversion.flightWithSplitsFromMessage
 import actors.PortStateMessageConversion._
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
-import actors.queues.CrunchQueueReadActor.UpdatedMillis
+import actors.queues.CrunchQueueActor.UpdatedMillis
 import actors.restore.RestorerWithLegacy
 import akka.actor._
 import akka.pattern.ask
@@ -22,7 +22,6 @@ import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 import services.SDate
 import services.crunch.deskrecs.GetFlights
 
-import scala.collection.mutable
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -47,7 +46,7 @@ class FlightsStateActor(initialMaybeSnapshotInterval: Option[Int],
 
   var state: PortStateMutable = initialState
 
-  val flightMinutesBuffer: mutable.Set[MillisSinceEpoch] = mutable.Set[MillisSinceEpoch]()
+  var flightMinutesBuffer: Set[MillisSinceEpoch] = Set[MillisSinceEpoch]()
   var crunchSourceIsReady: Boolean = true
   var maybeCrunchActor: Option[ActorRef] = None
 
@@ -100,20 +99,20 @@ class FlightsStateActor(initialMaybeSnapshotInterval: Option[Int],
     case StreamFailure(t) => log.error(s"Stream failed", t)
 
     case flightUpdates@FlightsWithSplitsDiff(updates, removals) =>
+      val replyTo = sender()
       if (updates.nonEmpty || removals.nonEmpty) {
         applyDiff(updates, removals)
 
         val diff: PortStateDiff = flightUpdates.applyTo(state, now().millisSinceEpoch)
 
-        if (diff.flightMinuteUpdates.nonEmpty) flightMinutesBuffer ++= diff.flightMinuteUpdates
+        if (diff.flightMinuteUpdates.nonEmpty) {
+          flightMinutesBuffer ++= diff.flightMinuteUpdates
+          self ! HandleCrunchRequest
+        }
 
         val diffMsg = diffMessageForFlights(updates, removals)
-        persistAndMaybeSnapshot(diffMsg)
-
-        handlePaxMinuteChangeNotification()
-      }
-
-      sender() ! Ack
+        persistAndMaybeSnapshot(diffMsg, Option((replyTo, Ack)))
+      } else replyTo ! Ack
 
     case GetState =>
       log.debug(s"Received GetState request. Replying with PortState containing ${state.crunchMinutes.count} crunch minutes")
@@ -159,17 +158,18 @@ class FlightsStateActor(initialMaybeSnapshotInterval: Option[Int],
   private def handlePaxMinuteChangeNotification(): Unit = (maybeCrunchActor, flightMinutesBuffer.nonEmpty, crunchSourceIsReady) match {
     case (Some(crunchActor), true, true) =>
       crunchSourceIsReady = false
+      val updatedMillisToSend = flightMinutesBuffer
+      flightMinutesBuffer = Set()
       crunchActor
-        .ask(UpdatedMillis(flightMinutesBuffer))(new Timeout(10 minutes))
+        .ask(UpdatedMillis(updatedMillisToSend))(new Timeout(15 seconds))
         .recover {
           case e =>
-            log.error("Error sending minutes to crunch - non recoverable error. Terminating App.", e)
-            System.exit(1)
+            log.error("Error updated minutes to crunch queue actor. Putting the minutes back in the buffer to try again", e)
+            flightMinutesBuffer = flightMinutesBuffer ++ updatedMillisToSend
         }
         .onComplete { _ =>
           context.self ! SetCrunchSourceReady
         }
-      flightMinutesBuffer.clear()
     case _ =>
   }
 

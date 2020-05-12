@@ -54,7 +54,9 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
       snapshotIfNeeded(stateToMessage)
 
       maybeAck.foreach {
-        case (replyTo, ackMsg) => replyTo ! ackMsg
+        case (replyTo, ackMsg) =>
+          println(s"\n\n++ replying to actor")
+          replyTo ! ackMsg
       }
     }
   }

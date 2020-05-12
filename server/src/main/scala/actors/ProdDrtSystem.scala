@@ -60,7 +60,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val forecastCrunchStateActor: ActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
 
   override val portStateActor: ActorRef = if (usePartitionedPortState)
-    PartitionedPortStateActor(now, airportConfig, ProdStreamingJournal)
+    PartitionedPortStateActor(now, airportConfig, StreamingJournal.forConfig(config))
   else
     PortStateActor(now, liveCrunchStateActor, forecastCrunchStateActor)
 

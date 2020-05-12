@@ -130,7 +130,6 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
     val eventualPortState = combineToPortStateAndBookmarks(eventualFlights, eventualQueueMinutes, eventualStaffMinutes)
     eventualPortState.map {
       case (ps, (queueBookmarks, staffBookmarks)) =>
-        println(s"queuebookmarks: $queueBookmarks")
         startUpdateStreams(queueBookmarks, queueUpdatesSupervisor)
         startUpdateStreams(staffBookmarks, staffUpdatesSupervisor)
         ps
@@ -227,5 +226,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
     }
 
   def askThenAck(message: Any, replyTo: ActorRef, actor: ActorRef): Unit =
-    actor.ask(message).foreach(_ => replyTo ! Ack)
+    actor.ask(message).foreach { _ =>
+      replyTo ! Ack
+    }
 }

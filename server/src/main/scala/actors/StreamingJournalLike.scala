@@ -4,6 +4,8 @@ import akka.persistence.inmemory.query.scaladsl.InMemoryReadJournal
 import akka.persistence.jdbc.query.scaladsl.JdbcReadJournal
 import akka.persistence.query.journal.leveldb.scaladsl.LeveldbReadJournal
 import akka.persistence.query.scaladsl.{EventsByPersistenceIdQuery, ReadJournal}
+import com.typesafe.config.Config
+import play.api.Configuration
 
 trait StreamingJournalLike {
   type ReadJournalWithEvents = ReadJournal with EventsByPersistenceIdQuery
@@ -11,7 +13,15 @@ trait StreamingJournalLike {
   val id: String
 }
 
-object ProdStreamingJournal extends StreamingJournalLike {
+object StreamingJournal {
+  def forConfig(config: Configuration): StreamingJournalLike =
+    if (config.get[Boolean]("persistence.use-in-memory"))
+      InMemoryStreamingJournal
+    else
+      DbStreamingJournal
+}
+
+object DbStreamingJournal extends StreamingJournalLike {
   override type ReadJournalType = JdbcReadJournal
   override val id: String = JdbcReadJournal.Identifier
 }

@@ -149,4 +149,16 @@ class FlightsExportSpec extends CrunchTestLike {
       }
     }
   }
+
+  "Given a flight with no passenger numbers set, then I should see an empty cell for the total pax column" >> {
+    val f = Seq(ApiFlightWithSplits(ArrivalGenerator.arrival("BA0001", schDt = "2020-01-01T00:00", actPax = None), Set()))
+
+    val s = TerminalFlightsSummary(f, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes, pcpPaxFn)
+
+    val result = s.toCsv
+
+    val expected = "BA0001,BA0001,,/,,2020-01-01,00:00,,,,,00:00,,0,,,,,,,,,,,,\n"
+
+    result === expected
+  }
 }
