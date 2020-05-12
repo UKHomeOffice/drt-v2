@@ -2,7 +2,7 @@ package actors
 
 import actors.DrtStaticParameters.liveDaysAhead
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
-import actors.queues.CrunchQueueReadActor.UpdatedMillis
+import actors.queues.CrunchQueueActor.UpdatedMillis
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.stream.Supervision.Stop

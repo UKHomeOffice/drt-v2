@@ -1,7 +1,7 @@
 package actors.queues
 
 import actors.{InMemoryStreamingJournal, SetDaysQueueSource}
-import actors.queues.CrunchQueueReadActor.UpdatedMillis
+import actors.queues.CrunchQueueActor.UpdatedMillis
 import akka.actor.{ActorRef, Props, Terminated}
 import akka.stream.OverflowStrategy
 import akka.stream.Supervision.Stop
@@ -24,7 +24,7 @@ class CrunchQueueSpec extends CrunchTestLike {
       .throttle(1, 1 second)
       .toMat(Sink.foreach(probe.ref ! _))(Keep.left)
       .run()
-    val actor = system.actorOf(Props(new CrunchQueueReadActor(InMemoryStreamingJournal, defaultAirportConfig.crunchOffsetMinutes)), "crunch-queue")
+    val actor = system.actorOf(Props(new CrunchQueueActor(InMemoryStreamingJournal, defaultAirportConfig.crunchOffsetMinutes)), "crunch-queue")
     actor ! SetDaysQueueSource(source)
     actor
   }
