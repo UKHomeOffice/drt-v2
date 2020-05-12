@@ -5,8 +5,8 @@ import actors.{PortStateMessageConversion, StreamingJournalLike}
 import akka.NotUsed
 import akka.actor.Actor
 import akka.persistence.query.{EventEnvelope, PersistenceQuery}
-import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.Sink
+import akka.stream.{ActorMaterializer, KillSwitches, UniqueKillSwitch}
+import akka.stream.scaladsl.{Keep, RunnableGraph, Sink, Source}
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared.Terminals.Terminal
 import drt.shared.{MilliTimes, SDateLike, TM}
@@ -20,19 +20,11 @@ class TerminalDayStaffUpdatesActor(year: Int,
                                    terminal: Terminal,
                                    now: () => SDateLike,
                                    val journalType: StreamingJournalLike,
-                                   startingSequenceNr: Long) extends Actor {
+                                   val startingSequenceNr: Long) extends StreamingUpdatesLike {
   val persistenceId = f"terminal-staff-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
-
   val log: Logger = LoggerFactory.getLogger(s"$persistenceId-updates")
 
-  implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
-
-  val queries: journalType.ReadJournalType = PersistenceQuery(context.system).readJournalFor[journalType.ReadJournalType](journalType.id)
-
   var updates: Map[TM, StaffMinute] = Map[TM, StaffMinute]()
-
-  val cancellable: NotUsed = queries.eventsByPersistenceId(persistenceId, startingSequenceNr, Long.MaxValue)
-    .runWith(Sink.actorRefWithAck(self, StreamInitialized, Ack, StreamCompleted))
 
   override def receive: Receive = {
     case StreamInitialized =>
@@ -52,13 +44,13 @@ class TerminalDayStaffUpdatesActor(year: Int,
       }
       sender() ! response
 
-    case x => println(s"got $x")
+    case u =>
+      log.error(s"Received unexpected ${u.getClass}")
   }
 
   def updateState(minuteMessages: Seq[StaffMinuteMessage]): Unit = {
     updates = updates ++ minuteMessages.map(PortStateMessageConversion.staffMinuteFromMessage).map(cm => (cm.key, cm))
-    updates = updates.filter(_._2.lastUpdated.getOrElse(0L) >= expireBeforeMillis)
+    val thresholdExpiryMillis = expireBeforeMillis
+    updates = updates.filter(_._2.lastUpdated.getOrElse(0L) >= thresholdExpiryMillis)
   }
-
-  private def expireBeforeMillis: MillisSinceEpoch = now().millisSinceEpoch - MilliTimes.oneMinuteMillis
 }

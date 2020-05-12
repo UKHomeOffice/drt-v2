@@ -16,11 +16,6 @@ object ProdStreamingJournal extends StreamingJournalLike {
   override val id: String = JdbcReadJournal.Identifier
 }
 
-object TestStreamingJournal extends StreamingJournalLike {
-  override type ReadJournalType = LeveldbReadJournal
-  override val id: String = LeveldbReadJournal.Identifier
-}
-
 object InMemoryStreamingJournal extends StreamingJournalLike {
   override type ReadJournalType = InMemoryReadJournal
   override val id: String = InMemoryReadJournal.Identifier
