@@ -57,10 +57,8 @@ class CrunchQueueSpec extends CrunchTestLike {
 
         startReadActor(daysSourceProbe)
         daysSourceProbe.expectMsg(tomorrow)
-        Thread.sleep(1000)
         success
       }
     }
-
   }
 }
