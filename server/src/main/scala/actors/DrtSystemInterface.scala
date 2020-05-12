@@ -3,6 +3,8 @@ package actors
 import actors.DrtStaticParameters.expireAfterMillis
 import actors.Sizes.oneMegaByte
 import actors.daily.PassengersActor
+import actors.queues.CrunchQueueActor
+import actors.queues.CrunchQueueActor.UpdatedMillis
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props, Scheduler}
 import akka.pattern.ask
@@ -68,6 +70,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val config: Configuration
   val airportConfig: AirportConfig
   val params: DrtConfigParameters = DrtConfigParameters(config)
+  val journalType: StreamingJournalLike = ProdStreamingJournal
 
   def pcpPaxFn: Arrival => Int = if (params.useApiPaxNos)
     PcpPax.bestPaxEstimateWithApi
@@ -78,6 +81,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val liveBaseArrivalsActor: ActorRef = system.actorOf(Props(new LiveBaseArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-base-arrivals-actor")
   val arrivalsImportActor: ActorRef = system.actorOf(Props(new ArrivalsImportActor()), name = "arrivals-import-actor")
   val registeredArrivalsActor: ActorRef = system.actorOf(Props(new RegisteredArrivalsActor(oneMegaByte, Option(500), airportConfig.portCode, now, expireAfterMillis)), name = "registered-arrivals-actor")
+  val crunchQueueActor = system.actorOf(Props(new CrunchQueueActor(journalType, airportConfig.crunchOffsetMinutes)))
 
   val portStateActor: ActorRef
   val shiftsActor: ActorRef
@@ -200,9 +204,23 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   private def isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("live") == "test"
 
   val startDeskRecs: () => UniqueKillSwitch = () => {
-    val (millisToCrunchActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDeskRecs, now, params.recrunchOnStart, params.forecastMaxDays, maxDesksProviders)
-    portStateActor ! SetCrunchActor(millisToCrunchActor)
+    val (daysQueueSource, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDeskRecs, maxDesksProviders)
+
+    crunchQueueActor ! SetDaysQueueSource(daysQueueSource)
+
+    if (params.recrunchOnStart) queueDaysToReCrunch(crunchQueueActor)
+
+    portStateActor ! SetCrunchQueueActor(crunchQueueActor)
     deskRecsKillSwitch
+  }
+
+  def queueDaysToReCrunch(crunchQueueActor: ActorRef): Unit = {
+    val today = now()
+    val millisToCrunchStart = Crunch.crunchStartWithOffset(portDeskRecs.crunchOffsetMinutes) _
+    val daysToReCrunch = (0 until params.forecastMaxDays).map(d => {
+      millisToCrunchStart(today.addDays(d)).millisSinceEpoch
+    })
+    crunchQueueActor ! UpdatedMillis(daysToReCrunch)
   }
 
   def startManifestsGraph(maybeRegisteredArrivals: Option[RegisteredArrivals],

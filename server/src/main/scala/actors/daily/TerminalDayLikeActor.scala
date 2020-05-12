@@ -1,10 +1,8 @@
 package actors.daily
 
-import actors.acking.AckingReceiver.Ack
 import actors.{RecoveryActorLike, Sizes}
-import akka.actor.ActorRef
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinuteLike, MinutesContainer}
-import drt.shared.{SDateLike, TQM}
+import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
+import drt.shared.SDateLike
 import drt.shared.Terminals.Terminal
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage

@@ -2,8 +2,10 @@ package actors
 
 import actors.DrtStaticParameters.liveDaysAhead
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
+import actors.queues.CrunchQueueActor.UpdatedMillis
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
+import akka.stream.Supervision.Stop
 import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
@@ -14,7 +16,6 @@ import services.SDate
 import services.crunch.deskrecs.GetFlights
 import services.graphstages.Crunch.{LoadMinute, Loads}
 
-import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
@@ -42,16 +43,16 @@ class PortStateActor(liveStateActor: ActorRef, forecastStateActor: ActorRef, now
 
   val state: PortStateMutable = PortStateMutable.empty
 
-  var maybeCrunchActor: Option[ActorRef] = None
+  var maybeCrunchQueueActor: Option[ActorRef] = None
   var crunchSourceIsReady: Boolean = true
   var maybeSimActor: Option[ActorRef] = None
   var simulationActorIsReady: Boolean = true
 
   override def receive: Receive = {
 
-    case SetCrunchActor(crunchActor) =>
+    case SetCrunchQueueActor(crunchActor) =>
       log.info(s"Received crunchSourceActor")
-      maybeCrunchActor = Option(crunchActor)
+      if (maybeCrunchQueueActor.isEmpty) maybeCrunchQueueActor = Option(crunchActor)
 
     case SetSimulationActor(simActor) =>
       log.info(s"Received simulationSourceActor")
@@ -88,7 +89,7 @@ class PortStateActor(liveStateActor: ActorRef, forecastStateActor: ActorRef, now
 
       val diff = updates.applyTo(state, nowMillis)
 
-      if (diff.crunchMinuteUpdates.nonEmpty) loadMinutesBuffer ++= crunchMinutesToLoads(diff)
+      if (diff.crunchMinuteUpdates.nonEmpty) loadMinutesBuffer = loadMinutesBuffer ++ crunchMinutesToLoads(diff)
 
       handleCrunchRequest()
       handleSimulationRequest()
@@ -146,8 +147,8 @@ class PortStateActor(liveStateActor: ActorRef, forecastStateActor: ActorRef, now
                                 terminal: Terminal): PortState =
     state.windowWithTerminalFilter(SDate(start), SDate(end), Seq(terminal))
 
-  val flightMinutesBuffer: mutable.Set[MillisSinceEpoch] = mutable.Set[MillisSinceEpoch]()
-  val loadMinutesBuffer: mutable.Map[TQM, LoadMinute] = mutable.Map[TQM, LoadMinute]()
+  var flightMinutesBuffer: Set[MillisSinceEpoch] = Set[MillisSinceEpoch]()
+  var loadMinutesBuffer: Map[TQM, LoadMinute] = Map[TQM, LoadMinute]()
 
   def splitDiffAndSend(diff: PortStateDiff): Unit = {
     val replyTo = sender()
@@ -167,38 +168,40 @@ class PortStateActor(liveStateActor: ActorRef, forecastStateActor: ActorRef, now
     }
   }
 
-  private def handleCrunchRequest(): Unit = (maybeCrunchActor, flightMinutesBuffer.nonEmpty, crunchSourceIsReady) match {
+  private def handleCrunchRequest(): Unit = (maybeCrunchQueueActor, flightMinutesBuffer.nonEmpty, crunchSourceIsReady) match {
     case (Some(crunchActor), true, true) =>
       crunchSourceIsReady = false
+      val updatedMillisToSend = flightMinutesBuffer
+      flightMinutesBuffer = Set()
+      log.info(s"Sending ${updatedMillisToSend.size} UpdatedMillis to the crunch queue actor")
       crunchActor
-        .ask(flightMinutesBuffer.toList)(new Timeout(10 minutes))
+        .ask(UpdatedMillis(updatedMillisToSend))(new Timeout(15 seconds))
         .recover {
           case e =>
-            log.error("Error sending minutes to crunch - non recoverable error", e)
-            if (exitOnQueueException) {
-              log.info("Terminating App")
-              System.exit(1)
-            }
+            log.error("Error updated minutes to crunch queue actor. Putting the minutes back in the buffer to try again", e)
+            flightMinutesBuffer = flightMinutesBuffer ++ updatedMillisToSend
         }
         .onComplete { _ =>
           context.self ! SetCrunchSourceReady
         }
-      flightMinutesBuffer.clear()
     case _ =>
   }
 
   private def handleSimulationRequest(): Unit = (maybeSimActor, loadMinutesBuffer.nonEmpty, simulationActorIsReady) match {
     case (Some(simActor), true, true) =>
       simulationActorIsReady = false
+      val loadsToSend = loadMinutesBuffer.values.toList
+      loadMinutesBuffer = Map()
       simActor
-        .ask(Loads(loadMinutesBuffer.values.toList))(new Timeout(10 minutes))
+        .ask(Loads(loadsToSend))(new Timeout(15 seconds))
         .recover {
-          case t => log.error("Error sending loads to simulate", t)
+          case t =>
+            log.error("Error sending loads to simulate. Putting loads back in the buffer to send later", t)
+            loadMinutesBuffer = loadMinutesBuffer ++ loadsToSend.map(lm => (lm.uniqueId, lm))
         }
         .onComplete { _ =>
           context.self ! SetSimulationSourceReady
         }
-      loadMinutesBuffer.clear()
     case _ =>
   }
 
