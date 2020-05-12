@@ -50,7 +50,7 @@ object TerminalFlightsSummary {
       arrival.EstimatedChox.map(millisToHoursAndMinutes(_)).getOrElse(""),
       arrival.ActualChox.map(millisToHoursAndMinutes(_)).getOrElse(""),
       arrival.PcpTime.map(millisToHoursAndMinutes(_)).getOrElse(""),
-      arrival.ActPax.getOrElse(0).toString)
+      arrival.ActPax.getOrElse("").toString)
   }
 
   def arrivalAsRawCsvValuesWithTransfer(arrival: Arrival, millisToDateOnly: MillisSinceEpoch => String,
