@@ -173,10 +173,17 @@ abstract class MinutesActor[A, B <: WithTimeAccessor](now: () => SDateLike,
             log.info(s"${day.toISOString()} is historic. Will use CrunchStateReadActor as secondary source")
             handleLookup(lookupPrimary(terminal, day), Option(() => lookupSecondary(terminal, day))).map(r => (day, r))
           case day =>
-            log.debug(s"${day.toISOString()} is live. Look up live data from TerminalDayQueuesActor")
+            log.info(s"${day.toISOString()} is live. Look up live data from TerminalDayQueuesActor")
             handleLookup(lookupPrimary(terminal, day), None).map(r => (day, r))
         }
-        .collect { case (day, Some(state)) => (day, state.window(start, end)) }
+        .collect {
+          case (day, Some(state)) =>
+            println(s"terminal $terminal / day: ${day.toISOString()}")
+            (day, state.window(start, end))
+          case (day, None) =>
+            println(s"NO STATE: terminal $terminal / day: ${day.toISOString()}")
+            (day, MinutesState(MinutesContainer.empty[A, B], 0L))
+        }
         .fold((MinutesContainer[A, B](Seq()), Map[(Terminal, Long), Long]())) {
           case ((soFarContainer, soFarDaySeqNrs), (day, state)) =>
             val container = soFarContainer ++ state.minutes
@@ -265,10 +272,12 @@ abstract class MinutesActor[A, B <: WithTimeAccessor](now: () => SDateLike,
     val utcStart = SDate(start, Crunch.utcTimeZone)
     val utcEnd = SDate(end, Crunch.utcTimeZone)
 
-    (utcStart.millisSinceEpoch to utcEnd.millisSinceEpoch by MilliTimes.oneHourMillis)
+    val x = (utcStart.millisSinceEpoch to utcEnd.millisSinceEpoch by MilliTimes.oneHourMillis)
       .map(SDate(_).getUtcLastMidnight)
       .distinct
       .sortBy(_.millisSinceEpoch)
       .toList
+    println(s"** daysToFetch: ${x.map(_.toISOString())}")
+    x
   }
 }

@@ -935,8 +935,8 @@ object CrunchApi {
 
   case class PortStateUpdates(latest: MillisSinceEpoch,
                               flights: Set[ApiFlightWithSplits],
-                              minutes: Set[CrunchMinute],
-                              staff: Set[StaffMinute])
+                              queueMinutes: Set[CrunchMinute],
+                              staffMinutes: Set[StaffMinute])
 
   object PortStateUpdates {
     implicit val rw: ReadWriter[PortStateUpdates] = macroRW

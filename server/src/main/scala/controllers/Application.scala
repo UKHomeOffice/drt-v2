@@ -373,20 +373,20 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     val requestStart = SDate.now()
     val startMillis = SDate.now().getLocalLastMidnight.millisSinceEpoch
     val endMillis = SDate.now().getLocalNextMidnight.millisSinceEpoch
-    val portState = ActorDataRequest.portState[PortState](ctrl.portStateActor, GetPortState(startMillis, endMillis))
+    val portState = ActorDataRequest.portState(ctrl.portStateActor, GetPortState(startMillis, endMillis))
 
-    portState.map {
-      case Left(liveError) =>
-        log.error(s"Healthcheck failed to get live response, ${liveError.message}")
+    portState.map { _ =>
+      val requestEnd = SDate.now().millisSinceEpoch
+      log.info(s"Health check request started at ${requestStart.toISOString()} and lasted ${(requestStart.millisSinceEpoch - requestEnd) / 1000} seconds ")
+      NoContent
+    }.recover {
+      case throwable =>
+        log.error(s"Healthcheck failed to get live response", throwable)
         BadGateway(
           """{
             |   "error": "Unable to retrieve live state
             |}
           """)
-      case _ =>
-        val requestEnd = SDate.now().millisSinceEpoch
-        log.info(s"Health check request started at ${requestStart.toISOString()} and lasted ${(requestStart.millisSinceEpoch - requestEnd) / 1000} seconds ")
-        NoContent
     }
   }
 

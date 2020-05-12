@@ -3,6 +3,7 @@ package actors
 import actors.FlightMessageConversion.flightWithSplitsFromMessage
 import actors.PortStateMessageConversion._
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
+import actors.queues.CrunchQueueReadActor.UpdatedMillis
 import actors.restore.RestorerWithLegacy
 import akka.actor._
 import akka.pattern.ask
@@ -159,7 +160,7 @@ class FlightsStateActor(initialMaybeSnapshotInterval: Option[Int],
     case (Some(crunchActor), true, true) =>
       crunchSourceIsReady = false
       crunchActor
-        .ask(flightMinutesBuffer.toList)(new Timeout(10 minutes))
+        .ask(UpdatedMillis(flightMinutesBuffer))(new Timeout(10 minutes))
         .recover {
           case e =>
             log.error("Error sending minutes to crunch - non recoverable error. Terminating App.", e)

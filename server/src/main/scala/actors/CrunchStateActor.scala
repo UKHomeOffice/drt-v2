@@ -136,7 +136,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
     staffMinutesToUpdate = diff.staffMinuteUpdates.values.map(staffMinuteToMessage).toList
   )
 
-  def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = Option(state.window(SDate(start), SDate(end)))
+  def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): PortState = state.window(SDate(start), SDate(end))
 
   def setStateFromSnapshot(snapshot: CrunchStateSnapshotMessage, timeWindowEnd: Option[SDateLike] = None): Unit = {
     snapshotMessageToState(snapshot, timeWindowEnd, state)

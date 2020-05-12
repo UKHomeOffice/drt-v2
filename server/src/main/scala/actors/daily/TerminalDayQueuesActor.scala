@@ -72,6 +72,7 @@ class TerminalDayQueuesActor(year: Int,
       case differences =>
         state = updateStateFromDiff(state, differences)
         val messageToPersist = CrunchMinutesMessage(differences.map(crunchMinuteToMessage).toSeq)
+        println(s"+++++message to persist: $messageToPersist")
         persistAndMaybeSnapshot(differences, messageToPersist)
     }
 

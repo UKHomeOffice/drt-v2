@@ -8,6 +8,7 @@ import upickle.default.{readwriter, ReadWriter => RW}
 import scala.collection.immutable.{Map => IMap, SortedMap => ISortedMap}
 import scala.collection.{Map, SortedMap}
 
+
 case class PortState(flights: ISortedMap[UniqueArrival, ApiFlightWithSplits],
                      crunchMinutes: ISortedMap[TQM, CrunchMinute],
                      staffMinutes: ISortedMap[TM, StaffMinute]) extends PortStateLike {

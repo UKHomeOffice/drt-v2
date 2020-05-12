@@ -41,7 +41,7 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
       noChange
 
     case SetPortState(viewMode, portState) =>
-      log.info(s"Got a crunch state! ${portState.flights.size} flights, ${portState.crunchMinutes.size} crunch minutes, ${portState.staffMinutes.size} staff minutes. Latest crunch minute: ${SDate(portState.crunchMinutes.takeRight(1).head._1.minute).toISOString()}")
+      log.info(s"Got a crunch state! ${portState.flights.size} flights, ${portState.crunchMinutes.size} crunch minutes, ${portState.staffMinutes.size} staff minutes")
       val originCodes = portState.flights
         .map { case (_, fws) => fws.apiFlight.Origin }
         .toSet
@@ -62,23 +62,20 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
   def processRequest(viewMode: ViewMode, call: Future[dom.XMLHttpRequest]): Future[Action] = {
     call
       .map { r =>
-        read[Either[PortStateError, Option[PortState]]](r.responseText)
+        read[PortState](r.responseText)
       }
-      .map {
-        case Right(Some(portState)) => SetPortState(viewMode, portState)
-        case Right(None) =>
-          log.info(s"Got no crunch state for date")
-          SetPortState(viewMode, PortState.empty)
-        case Left(error) =>
-          log.error(s"Failed to GetInitialPortState ${error.message}")
-
-          if (viewMode.isDifferentTo(getCurrentViewMode())) {
-            log.info(s"No need to request as view has changed")
-            NoAction
-          } else {
-            log.info(s"Re-requesting after ${PollDelay.recoveryDelay}")
-            RetryActionAfter(GetInitialPortState(viewMode), PollDelay.recoveryDelay)
-          }
+      .map { portState =>
+          log.info(s"Got and set an initial PortState")
+          SetPortState(viewMode, portState)
+//        case Left(error) =>
+//          log.error(s"Failed to GetInitialPortState ${error.message}")
+//          if (viewMode.isDifferentTo(getCurrentViewMode())) {
+//            log.info(s"No need to request as view has changed")
+//            NoAction
+//          } else {
+//            log.info(s"Re-requesting initial PortState after ${PollDelay.recoveryDelay}")
+//            RetryActionAfter(GetInitialPortState(viewMode), PollDelay.recoveryDelay)
+//          }
       }
       .recoverWith {
         case throwable =>

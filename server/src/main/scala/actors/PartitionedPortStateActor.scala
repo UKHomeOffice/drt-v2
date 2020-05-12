@@ -105,12 +105,16 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
       replyWithTerminalState(start, end, terminal, sender())
 
     case GetUpdatesSince(since, start, end) =>
-      log.debug(s"Received GetUpdatesSince request since ${SDate(since).toISOString()} from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
+      log.info(s"Received GetUpdatesSince request since ${SDate(since).toISOString()} from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       replyWithUpdates(since, start, end, sender())
 
     case getFlights: GetFlights =>
       log.debug(s"Received GetFlights request from ${SDate(getFlights.from).toISOString()} to ${SDate(getFlights.to).toISOString()}")
       flightsActor forward getFlights
+
+    case getFlightsForTerminal: GetFlightsForTerminal =>
+      log.debug(s"Received GetFlightsForTerminal request from ${SDate(getFlightsForTerminal.from).toISOString()} to ${SDate(getFlightsForTerminal.to).toISOString()}")
+      flightsActor forward getFlightsForTerminal
   }
 
   override def receive: Receive = processMessage orElse {
@@ -126,6 +130,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
     val eventualPortState = combineToPortStateAndBookmarks(eventualFlights, eventualQueueMinutes, eventualStaffMinutes)
     eventualPortState.map {
       case (ps, (queueBookmarks, staffBookmarks)) =>
+        println(s"queuebookmarks: $queueBookmarks")
         startUpdateStreams(queueBookmarks, queueUpdatesSupervisor)
         startUpdateStreams(staffBookmarks, staffUpdatesSupervisor)
         ps
@@ -133,7 +138,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
   }
 
   def startUpdateStreams(bookmarks: TerminalDayBookmarks,
-                          supervisor: ActorRef): Future[immutable.Seq[Any]] = Source(bookmarks)
+                         supervisor: ActorRef): Future[immutable.Seq[Any]] = Source(bookmarks)
     .mapAsync(1) {
       case ((t, d), bookmarkSeqNr) =>
         supervisor.ask(StartUpdatesStream(t, SDate(d), bookmarkSeqNr))
@@ -145,6 +150,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
                        end: MillisSinceEpoch,
                        replyTo: ActorRef): Future[Option[PortStateUpdates]] = {
     val updatesRequest = GetUpdatesSince(since, start, end)
+    log.info(s"Sending GetUpdatesSince to flights, queue & staff actors")
     val eventualFlights = flightsActor.ask(updatesRequest).mapTo[FlightsWithSplits]
     val eventualQueueMinutes = queueUpdatesSupervisor.ask(updatesRequest).mapTo[MinutesContainer[CrunchMinute, TQM]]
     val eventualStaffMinutes = staffUpdatesSupervisor.ask(updatesRequest).mapTo[MinutesContainer[StaffMinute, TM]]
