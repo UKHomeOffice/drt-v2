@@ -13,7 +13,6 @@ import org.slf4j.Logger
 trait StreamingUpdatesLike extends Actor {
   val persistenceId: String
   val journalType: StreamingJournalLike
-  val startingSequenceNr: Long
   val log: Logger
   val now: () => SDateLike
 
@@ -21,19 +20,14 @@ trait StreamingUpdatesLike extends Actor {
 
   var maybeKillSwitch: Option[UniqueKillSwitch] = None
 
-  def startUpdatesStream: () => UniqueKillSwitch = () => {
+  val startUpdatesStream: MillisSinceEpoch => Unit = (nr: MillisSinceEpoch) => if (maybeKillSwitch.isEmpty) {
     val (_, killSwitch) = PersistenceQuery(context.system)
       .readJournalFor[journalType.ReadJournalType](journalType.id)
-      .eventsByPersistenceId(persistenceId, startingSequenceNr, Long.MaxValue)
+      .eventsByPersistenceId(persistenceId, nr, Long.MaxValue)
       .viaMat(KillSwitches.single)(Keep.both)
       .toMat(Sink.actorRefWithAck(self, StreamInitialized, Ack, StreamCompleted))(Keep.left)
       .run()
-    killSwitch
-  }
-
-  override def preStart(): Unit = {
-    maybeKillSwitch = Option(startUpdatesStream())
-    super.preStart()
+    maybeKillSwitch = Option(killSwitch)
   }
 
   override def postStop(): Unit = {

@@ -17,7 +17,7 @@ case class MinutesState[A, B <: WithTimeAccessor](minutes: MinutesContainer[A, B
 }
 
 object TerminalDay {
-  type TerminalDayBookmarks = Map[(Terminal, MillisSinceEpoch), Long]
+  type TerminalDayBookmarks = Map[(Terminal, MillisSinceEpoch), MillisSinceEpoch]
 }
 
 abstract class TerminalDayLikeActor(year: Int,

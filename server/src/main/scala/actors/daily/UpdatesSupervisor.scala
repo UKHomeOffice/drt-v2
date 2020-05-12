@@ -25,7 +25,7 @@ case object PurgeAll
 
 case class GetAllUpdatesSince(sinceMillis: MillisSinceEpoch)
 
-case class StartUpdatesStream(terminal: Terminal, day: SDateLike, startingSequenceNr: Long)
+case class StartUpdatesStream(terminal: Terminal, day: SDateLike, updatesFromMillis: MillisSinceEpoch)
 
 class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
                                                   terminals: List[Terminal],
@@ -48,11 +48,11 @@ class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
 
   def startUpdatesStream(terminal: Terminal,
                          day: SDateLike,
-                         startingSequenceNr: Long): Unit = streamingUpdateActors.get((terminal, day.millisSinceEpoch)) match {
+                         updatesFromMillis: Long): Unit = streamingUpdateActors.get((terminal, day.millisSinceEpoch)) match {
     case Some(_) => Unit
     case None =>
-      log.info(s"Starting supervised updates stream for $terminal / ${day.toISODateOnly} from seqNr: $startingSequenceNr")
-      val actor = context.system.actorOf(updatesActorFactory(terminal, day, startingSequenceNr))
+      log.info(s"Starting supervised updates stream for $terminal / ${day.toISODateOnly} from ${SDate(updatesFromMillis).toISOString()}")
+      val actor = context.system.actorOf(updatesActorFactory(terminal, day, updatesFromMillis))
       streamingUpdateActors = streamingUpdateActors + ((terminal, day.millisSinceEpoch) -> actor)
       lastRequests = lastRequests + ((terminal, day.millisSinceEpoch) -> now().millisSinceEpoch)
   }
@@ -78,8 +78,8 @@ class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
       streamingUpdateActors = streamingUpdateActors -- expiredToRemove
       lastRequests = lastRequests -- expiredToRemove
 
-    case StartUpdatesStream(terminal, day, seqNr) =>
-      startUpdatesStream(terminal, day, seqNr)
+    case StartUpdatesStream(terminal, day, updatesFromMillis) =>
+      startUpdatesStream(terminal, day, updatesFromMillis)
       sender() ! Ack
 
     case GetUpdatesSince(since, from, to) =>

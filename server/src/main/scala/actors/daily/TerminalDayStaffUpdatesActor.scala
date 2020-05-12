@@ -2,31 +2,47 @@ package actors.daily
 
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamInitialized}
 import actors.{PortStateMessageConversion, StreamingJournalLike}
-import akka.NotUsed
-import akka.actor.Actor
-import akka.persistence.query.{EventEnvelope, PersistenceQuery}
-import akka.stream.{ActorMaterializer, KillSwitches, UniqueKillSwitch}
-import akka.stream.scaladsl.{Keep, RunnableGraph, Sink, Source}
+import akka.persistence.query.EventEnvelope
+import akka.persistence._
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared.Terminals.Terminal
-import drt.shared.{MilliTimes, SDateLike, TM}
+import drt.shared.{SDateLike, TM}
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState.{StaffMinuteMessage, StaffMinutesMessage}
 
+class TerminalDayStaffBookmarkLookupActor(year: Int,
+                                          month: Int,
+                                          day: Int,
+                                          terminal: Terminal,
+                                          now: () => SDateLike,
+                                          journalType: StreamingJournalLike,
+                                          pointInTime: MillisSinceEpoch)
+  extends TerminalDayStaffUpdatesActorLike(year, month, day, terminal, now, journalType) {
 
-class TerminalDayStaffUpdatesActor(year: Int,
-                                   month: Int,
-                                   day: Int,
-                                   terminal: Terminal,
-                                   val now: () => SDateLike,
-                                   val journalType: StreamingJournalLike,
-                                   val startingSequenceNr: Long) extends StreamingUpdatesLike {
+  override def recovery: Recovery = Recovery(SnapshotSelectionCriteria(maxTimestamp = pointInTime))
+
+  override def receiveRecover: Receive = {
+    case RecoveryCompleted =>
+      startUpdatesStream(lastSequenceNr)
+
+    case SnapshotOffer(SnapshotMetadata(_, seqNr, _), _) =>
+      log.info(s"Starting updates stream from a SnapshotOffer with seqNr: $seqNr")
+      startUpdatesStream(seqNr)
+  }
+}
+
+abstract class TerminalDayStaffUpdatesActorLike(year: Int,
+                                                month: Int,
+                                                day: Int,
+                                                terminal: Terminal,
+                                                val now: () => SDateLike,
+                                                val journalType: StreamingJournalLike) extends PersistentActor with StreamingUpdatesLike {
   val persistenceId = f"terminal-staff-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
   val log: Logger = LoggerFactory.getLogger(s"$persistenceId-updates")
 
   var updates: Map[TM, StaffMinute] = Map[TM, StaffMinute]()
 
-  override def receive: Receive = {
+  override def receiveCommand: Receive = {
     case StreamInitialized =>
       sender() ! Ack
 
@@ -44,8 +60,7 @@ class TerminalDayStaffUpdatesActor(year: Int,
       }
       sender() ! response
 
-    case u =>
-      log.error(s"Received unexpected ${u.getClass}")
+    case u => log.error(s"Received unexpected ${u.getClass}")
   }
 
   def updateState(minuteMessages: Seq[StaffMinuteMessage]): Unit = {

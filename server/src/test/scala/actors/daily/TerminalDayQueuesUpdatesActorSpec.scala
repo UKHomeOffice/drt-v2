@@ -87,7 +87,7 @@ class TestTerminalDayQueuesUpdatesActor[T <: ReadJournalWithEvents](year: Int,
                                                                     now: () => SDateLike,
                                                                     journalType: StreamingJournalLike,
                                                                     startingSequenceNr: Long,
-                                                                    probe: ActorRef) extends TerminalDayQueuesUpdatesActor(year, month, day, terminal, now, journalType, startingSequenceNr) {
+                                                                    probe: ActorRef) extends TerminalDayQueuesBookmarkLookupActor(year, month, day, terminal, now, journalType, startingSequenceNr) {
   override def updateState(minuteMessages: Seq[CrunchMinuteMessage]): Unit = {
     super.updateState(minuteMessages)
     probe ! updates

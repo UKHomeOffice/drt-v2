@@ -3,7 +3,7 @@ package actors
 import actors.DrtStaticParameters.expireAfterMillis
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily.TerminalDay.TerminalDayBookmarks
-import actors.daily.{StartUpdatesStream, TerminalDayQueuesUpdatesActor, TerminalDayStaffUpdatesActor, UpdatesSupervisor}
+import actors.daily.{StartUpdatesStream, TerminalDayQueuesBookmarkLookupActor, TerminalDayStaffBookmarkLookupActor, UpdatesSupervisor}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.{ask, pipe}
 import akka.stream.ActorMaterializer
@@ -46,13 +46,13 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
   implicit val timeout: Timeout = new Timeout(10 seconds)
 
   val queueUpdatesProps: (Terminal, SDateLike, MillisSinceEpoch) => Props =
-    (terminal: Terminal, day: SDateLike, startingSequenceNr: MillisSinceEpoch) => {
-      Props(new TerminalDayQueuesUpdatesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, now, journalType, startingSequenceNr))
+    (terminal: Terminal, day: SDateLike, lastUpdatedMillis: MillisSinceEpoch) => {
+      Props(new TerminalDayQueuesBookmarkLookupActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, now, journalType, lastUpdatedMillis))
     }
 
   val staffUpdatesProps: (Terminal, SDateLike, MillisSinceEpoch) => Props =
-    (terminal: Terminal, day: SDateLike, startingSequenceNr: MillisSinceEpoch) => {
-      Props(new TerminalDayStaffUpdatesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, now, journalType, startingSequenceNr))
+    (terminal: Terminal, day: SDateLike, lastUpdatedMillis: MillisSinceEpoch) => {
+      Props(new TerminalDayStaffBookmarkLookupActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, now, journalType, lastUpdatedMillis))
     }
 
   val queueUpdatesSupervisor: ActorRef = context.system.actorOf(Props(new UpdatesSupervisor[CrunchMinute, TQM](now, terminals, queueUpdatesProps)))
@@ -95,9 +95,9 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
       log.debug(s"Received GetPortState request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       replyWithPortState(start, end, sender())
 
-    case StartUpdatesStream(terminal, day, seqNr) =>
+    case StartUpdatesStream(terminal, day, updatesFromMillis) =>
       val replyTo = sender()
-      startUpdateStreams(Map((terminal, day.millisSinceEpoch) -> seqNr), queueUpdatesSupervisor)
+      startUpdateStreams(Map((terminal, day.millisSinceEpoch) -> updatesFromMillis), queueUpdatesSupervisor)
         .onComplete(_ => replyTo ! Ack)
 
     case GetPortStateForTerminal(start, end, terminal) =>
@@ -139,8 +139,8 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
   def startUpdateStreams(bookmarks: TerminalDayBookmarks,
                          supervisor: ActorRef): Future[immutable.Seq[Any]] = Source(bookmarks)
     .mapAsync(1) {
-      case ((t, d), bookmarkSeqNr) =>
-        supervisor.ask(StartUpdatesStream(t, SDate(d), bookmarkSeqNr))
+      case ((t, d), _) =>
+        supervisor.ask(StartUpdatesStream(t, SDate(d), now().addMinutes(-10).millisSinceEpoch))
     }
     .runWith(Sink.seq)
 

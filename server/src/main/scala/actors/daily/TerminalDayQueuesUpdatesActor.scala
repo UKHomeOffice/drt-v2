@@ -2,6 +2,7 @@ package actors.daily
 
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamInitialized}
 import actors.{PortStateMessageConversion, StreamingJournalLike}
+import akka.persistence.{PersistentActor, Recovery, RecoveryCompleted, SnapshotMetadata, SnapshotOffer, SnapshotSelectionCriteria}
 import akka.persistence.query.EventEnvelope
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer}
 import drt.shared.Terminals.Terminal
@@ -11,19 +12,39 @@ import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesM
 import services.SDate
 
 
-class TerminalDayQueuesUpdatesActor(year: Int,
-                                    month: Int,
-                                    day: Int,
-                                    terminal: Terminal,
-                                    val now: () => SDateLike,
-                                    val journalType: StreamingJournalLike,
-                                    val startingSequenceNr: Long) extends StreamingUpdatesLike {
+class TerminalDayQueuesBookmarkLookupActor(year: Int,
+                                          month: Int,
+                                          day: Int,
+                                          terminal: Terminal,
+                                          now: () => SDateLike,
+                                          journalType: StreamingJournalLike,
+                                          pointInTime: MillisSinceEpoch)
+  extends TerminalDayQueuesUpdatesActorLike(year, month, day, terminal, now, journalType) {
+
+  override def recovery: Recovery = Recovery(SnapshotSelectionCriteria(maxTimestamp = pointInTime))
+
+  override def receiveRecover: Receive = {
+    case RecoveryCompleted =>
+      startUpdatesStream(lastSequenceNr)
+
+    case SnapshotOffer(SnapshotMetadata(_, seqNr, _), _) =>
+      log.info(s"Starting updates stream from a SnapshotOffer with seqNr: $seqNr")
+      startUpdatesStream(seqNr)
+  }
+}
+
+abstract class TerminalDayQueuesUpdatesActorLike(year: Int,
+                                                 month: Int,
+                                                 day: Int,
+                                                 terminal: Terminal,
+                                                 val now: () => SDateLike,
+                                                 val journalType: StreamingJournalLike) extends PersistentActor with StreamingUpdatesLike {
   val persistenceId = f"terminal-queues-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
   val log: Logger = LoggerFactory.getLogger(s"$persistenceId-updates")
 
   var updates: Map[TQM, CrunchMinute] = Map[TQM, CrunchMinute]()
 
-  override def receive: Receive = {
+  override def receiveCommand: Receive = {
     case StreamInitialized =>
       sender() ! Ack
 
@@ -39,7 +60,6 @@ class TerminalDayQueuesUpdatesActor(year: Int,
         case someMinutes if someMinutes.nonEmpty => MinutesContainer(someMinutes)
         case _ => MinutesContainer.empty[CrunchMinute, TQM]
       }
-      log.info(s"Received GetAllUpdatesSince(${SDate(sinceMillis).toISOString()}. Responding with ${response.minutes.size} minutes")
       sender() ! response
 
     case x => log.warn(s"Received unexpected message ${x.getClass}")
