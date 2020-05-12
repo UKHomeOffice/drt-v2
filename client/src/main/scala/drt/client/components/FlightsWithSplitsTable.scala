@@ -6,7 +6,7 @@ import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointI
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{SPACircuit, ViewMode}
+import drt.client.services.{SPACircuit, ViewDay, ViewMode, ViewPointInTime}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
 import drt.shared._
@@ -195,10 +195,14 @@ object FlightTableRow {
 
       val flightCodeCell = if (props.hasArrivalSourcesAccess) <.div(
         ^.onClick --> Callback(SPACircuit.dispatch {
-          if (props.viewMode.isHistoric)
-            GetArrivalSourcesForPointInTime(props.viewMode.time, props.flightWithSplits.unique)
-          else
-            GetArrivalSources(props.flightWithSplits.unique)
+          props.viewMode match {
+            case vm: ViewDay if vm.isHistoric =>
+              GetArrivalSourcesForPointInTime(props.viewMode.time.addHours(28), props.flightWithSplits.unique)
+            case vm: ViewPointInTime  =>
+              GetArrivalSourcesForPointInTime(props.viewMode.time, props.flightWithSplits.unique)
+            case _ =>
+              GetArrivalSources(props.flightWithSplits.unique)
+          }
         }),
         allCodes.mkString(" - "))
       else <.div(allCodes.mkString(" - "))
