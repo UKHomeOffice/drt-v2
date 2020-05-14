@@ -1,5 +1,6 @@
 package actors
 
+import actors.Actors.MinutesLookup
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import drt.shared.CrunchApi.{CrunchMinute, CrunchMinutes, MinutesContainer}

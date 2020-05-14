@@ -1,8 +1,7 @@
 package actors.daily
 
-import actors.GetState
 import akka.actor.Props
-import drt.shared.CrunchApi.{MinutesContainer, StaffMinute}
+import drt.shared.CrunchApi.StaffMinute
 import drt.shared.Terminals.Terminal
 import drt.shared.{SDateLike, TM}
 import scalapb.GeneratedMessage
@@ -18,10 +17,8 @@ class TerminalDayStaffActor(year: Int,
                             month: Int,
                             day: Int,
                             terminal: Terminal,
-                            val now: () => SDateLike) extends TerminalDayLikeActor(year, month, day, terminal, now) {
+                            val now: () => SDateLike) extends TerminalDayLikeActor[StaffMinute, TM](year, month, day, terminal, now) {
   override val typeForPersistenceId: String = "staff"
-
-  var state: Map[TM, StaffMinute] = Map()
 
   import actors.PortStateMessageConversion._
 
@@ -47,28 +44,6 @@ class TerminalDayStaffActor(year: Int,
 
   override def stateToMessage: GeneratedMessage = StaffMinutesMessage(state.values.map(staffMinuteToMessage).toSeq)
 
-  override def receiveCommand: Receive = {
-    case container: MinutesContainer[StaffMinute, TM] =>
-      log.debug(s"Received MinutesContainer for persistence")
-      updateAndPersistDiff(container)
-
-    case GetState =>
-      log.debug(s"Received GetState")
-      sender() ! stateResponse
-
-    case m => log.warn(s"Got unexpected message: $m")
-  }
-
-  private def updateAndPersistDiff(container: MinutesContainer[StaffMinute, TM]): Unit =
-    diffFromMinutes(state, container.minutes) match {
-      case noDifferences if noDifferences.isEmpty => sender() ! true
-      case differences =>
-        state = updateStateFromDiff(state, differences)
-        val messageToPersist = StaffMinutesMessage(differences.map(staffMinuteToMessage).toSeq)
-        persistAndMaybeSnapshot(differences, messageToPersist)
-    }
-
-  private def stateResponse: Option[MinutesContainer[StaffMinute, TM]] = {
-    if (state.nonEmpty) Option(MinutesContainer(state.values.toSet)) else None
-  }
+  override def containerToMessage(differences: Iterable[StaffMinute]): GeneratedMessage =
+    StaffMinutesMessage(differences.map(m => staffMinuteToMessage(m.toMinute)).toSeq)
 }

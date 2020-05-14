@@ -295,9 +295,7 @@ case class CodeShareKeyOrderedByDupes[A](scheduled: Long,
 }
 
 object MinuteHelper {
-  def key(terminalName: Terminal,
-          queueName: Queue,
-          minute: MillisSinceEpoch): TQM = TQM(terminalName, queueName, minute)
+  def key(terminalName: Terminal, queue: Queue, minute: MillisSinceEpoch): TQM = TQM(terminalName, queue, minute)
 
   def key(terminalName: Terminal, minute: MillisSinceEpoch): TM = TM(terminalName, minute)
 }
@@ -497,6 +495,8 @@ trait SDateLike {
 
   def startOfTheMonth(): SDateLike
 
+  def getUtcLastMidnight: SDateLike
+
   def getLocalLastMidnight: SDateLike
 
   def getLocalNextMidnight: SDateLike
@@ -532,7 +532,7 @@ trait MinuteComparison[A <: WithLastUpdated] {
   def maybeUpdated(existing: A, now: MillisSinceEpoch): Option[A]
 }
 
-trait PortStateMinutes[MinuteType, IndexType] {
+trait PortStateMinutes[MinuteType, IndexType <: WithTimeAccessor] {
   val asContainer: MinutesContainer[MinuteType, IndexType]
 
   def isEmpty: Boolean
@@ -678,7 +678,7 @@ object CrunchApi {
 
   trait TerminalQueueMinute {
     val terminal: Terminal
-    val queueName: Queue
+    val queue: Queue
     val minute: MillisSinceEpoch
   }
 
@@ -793,7 +793,7 @@ object CrunchApi {
 
   trait DeskRecMinuteLike {
     val terminal: Terminal
-    val queueName: Queue
+    val queue: Queue
     val minute: MillisSinceEpoch
     val paxLoad: Double
     val workLoad: Double
@@ -802,13 +802,13 @@ object CrunchApi {
   }
 
   case class DeskRecMinute(terminal: Terminal,
-                           queueName: Queue,
+                           queue: Queue,
                            minute: MillisSinceEpoch,
                            paxLoad: Double,
                            workLoad: Double,
                            deskRec: Int,
                            waitTime: Int) extends DeskRecMinuteLike with MinuteComparison[CrunchMinute] with MinuteLike[CrunchMinute, TQM] {
-    lazy val key: TQM = MinuteHelper.key(terminal, queueName, minute)
+    lazy val key: TQM = MinuteHelper.key(terminal, queue, minute)
 
     override def maybeUpdated(existing: CrunchMinute, now: MillisSinceEpoch): Option[CrunchMinute] =
       if (existing.paxLoad != paxLoad || existing.workLoad != workLoad || existing.deskRec != deskRec || existing.waitTime != waitTime)
@@ -822,7 +822,7 @@ object CrunchApi {
     override def toUpdatedMinute(now: MillisSinceEpoch): CrunchMinute = toMinute.copy(lastUpdated = Option(now))
 
     override def toMinute: CrunchMinute = CrunchMinute(
-      terminal, queueName, minute, paxLoad, workLoad, deskRec, waitTime, lastUpdated = None)
+      terminal, queue, minute, paxLoad, workLoad, deskRec, waitTime, lastUpdated = None)
   }
 
   case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateQueueMinutes {
@@ -843,7 +843,7 @@ object CrunchApi {
 
   trait SimulationMinuteLike {
     val terminal: Terminal
-    val queueName: Queue
+    val queue: Queue
     val minute: MillisSinceEpoch
     val desks: Int
     val waitTime: Int
@@ -911,16 +911,30 @@ object CrunchApi {
     def minutes: Iterable[MinuteLike[A, B]]
   }
 
-  case class MinutesContainer[A, B](minutes: Iterable[MinuteLike[A, B]]) {
+  object MinutesContainer {
+    def empty[A, B <: WithTimeAccessor]: MinutesContainer[A, B] = MinutesContainer[A, B](Iterable())
+  }
+
+  case class MinutesContainer[A, B <: WithTimeAccessor](minutes: Iterable[MinuteLike[A, B]]) {
+    def window(start: SDateLike, end: SDateLike):MinutesContainer[A, B] = {
+      val startMillis = start.millisSinceEpoch
+      val endMillis = end.millisSinceEpoch
+      MinutesContainer(minutes.filter(i => startMillis <= i.minute && i.minute <= endMillis))
+    }
+    def ++(that: MinutesContainer[A, B]): MinutesContainer[A, B] = MinutesContainer(minutes ++ that.minutes)
     def updatedSince(sinceMillis: MillisSinceEpoch): MinutesContainer[A, B] = MinutesContainer(minutes.filter(_.lastUpdated.getOrElse(0L) > sinceMillis))
+    def contains(clazz: Class[_]): Boolean = minutes.headOption match {
+      case Some(x) if x.getClass == clazz => true
+      case _ => false
+    }
   }
 
   case class CrunchMinutes(minutes: Set[CrunchMinute]) extends MinutesLike[CrunchMinute, TQM]
 
   case class PortStateUpdates(latest: MillisSinceEpoch,
                               flights: Set[ApiFlightWithSplits],
-                              minutes: Set[CrunchMinute],
-                              staff: Set[StaffMinute])
+                              queueMinutes: Set[CrunchMinute],
+                              staffMinutes: Set[StaffMinute])
 
   object PortStateUpdates {
     implicit val rw: ReadWriter[PortStateUpdates] = macroRW

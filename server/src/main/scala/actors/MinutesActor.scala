@@ -1,5 +1,6 @@
 package actors
 
+import actors.Actors.{MinutesLookup, MinutesUpdate}
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import akka.actor.{Actor, ActorRef}
 import akka.pattern.ask
@@ -8,7 +9,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.Terminals.Terminal
-import drt.shared.{MilliTimes, SDateLike}
+import drt.shared.{MilliTimes, SDateLike, WithTimeAccessor}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch
@@ -23,14 +24,14 @@ case class GetStateByTerminalDateRange(terminal: Terminal, start: SDateLike, end
 case class UpdateStateByTerminal(terminal: Terminal, updates: Any)
 
 object Actors {
-  type MinutesLookup[A, B] = (Terminal, SDateLike) => Future[Option[MinutesContainer[A, B]]]
-  type MinutesUpdate[A, B] = (Terminal, SDateLike, MinutesContainer[A, B]) => Future[Boolean]
+  type MinutesLookup[A, B <: WithTimeAccessor] = (Terminal, SDateLike) => Future[Option[MinutesContainer[A, B]]]
+  type MinutesUpdate[A, B <: WithTimeAccessor] = (Terminal, SDateLike, MinutesContainer[A, B]) => Future[MinutesContainer[A,B]]
 }
 
-class MinutesActor[A, B](now: () => SDateLike,
-                         lookupPrimary: MinutesLookup[A, B],
-                         lookupSecondary: MinutesLookup[A, B],
-                         updateMinutes: MinutesUpdate[A, B]) extends Actor {
+class MinutesActor[A, B <: WithTimeAccessor](now: () => SDateLike,
+                                             lookupPrimary: MinutesLookup[A, B],
+                                             lookupSecondary: MinutesLookup[A, B],
+                                             updateMinutes: MinutesUpdate[A, B]) extends Actor {
   implicit val dispatcher: ExecutionContextExecutor = context.dispatcher
   implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
 
