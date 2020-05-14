@@ -1,6 +1,6 @@
 package actors
 
-import actors.Actors.{MinutesLookup, MinutesUpdate}
+import actors.MinutesActor.{MinutesLookup, MinutesUpdate}
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily.MinutesState
 import actors.daily.TerminalDay.TerminalDayBookmarks
@@ -11,7 +11,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.{MinutesContainer, _}
 import drt.shared.Terminals.Terminal
-import drt.shared.{MilliTimes, SDateLike, TQM, WithTimeAccessor}
+import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch
@@ -28,10 +28,11 @@ case class GetStateByTerminalDateRange(terminal: Terminal, start: SDateLike, end
 
 case class UpdateStateByTerminal(terminal: Terminal, updates: Any)
 
-object Actors {
-  type MinutesLookup[A, B <: WithTimeAccessor] = (Terminal, SDateLike) => Future[Option[MinutesContainer[A, B]]]
-  type MinutesUpdate[A, B <: WithTimeAccessor] = (Terminal, SDateLike, MinutesContainer[A, B]) => Future[MinutesContainer[A,B]]
-}
+//object Actors {
+//  type MinutesLookup[A, B <: WithTimeAccessor] = (Terminal, SDateLike) => Future[Option[MinutesContainer[A, B]]]
+//  type MinutesUpdate[A, B <: WithTimeAccessor] = (Terminal, SDateLike, MinutesContainer[A, B]) => Future[MinutesContainer[A,B]]
+//}
+
 class QueueMinutesActor(now: () => SDateLike,
                         terminals: Iterable[Terminal],
                         lookupPrimary: MinutesLookup[CrunchMinute, TQM],
@@ -52,10 +53,6 @@ class QueueMinutesActor(now: () => SDateLike,
     eventualUpdatesDiff
   }
 
-class MinutesActor[A, B <: WithTimeAccessor](now: () => SDateLike,
-                                             lookupPrimary: MinutesLookup[A, B],
-                                             lookupSecondary: MinutesLookup[A, B],
-                                             updateMinutes: MinutesUpdate[A, B]) extends Actor {
   private def addUpdatesToBufferAndSendToSubscriber(eventualUpdatesDiff: Future[Option[MinutesContainer[CrunchMinute, TQM]]]): Future[Unit] = eventualUpdatesDiff.collect {
     case Some(diffMinutesContainer) =>
       val updatedLoads = diffMinutesContainer.minutes.collect { case m: CrunchMinute =>

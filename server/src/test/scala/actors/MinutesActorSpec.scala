@@ -2,10 +2,9 @@ package actors
 
 import actors.MinutesActor.MinutesLookup
 import actors.daily.MinutesState
-import actors.Actors.MinutesLookup
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
-import drt.shared.CrunchApi.{CrunchMinute, CrunchMinutes, MinutesContainer}
+import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
 import drt.shared.Queues.EeaDesk
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.{Queues, SDateLike, TQM}
