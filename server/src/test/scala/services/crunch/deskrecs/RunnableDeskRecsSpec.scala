@@ -149,7 +149,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
     portStateProbe.fishForMessage(2 seconds) {
       case DeskRecMinutes(drms) =>
-        val result = drms.filterNot(_.paxLoad == 0).map(drm => (drm.queueName, drm.paxLoad, drm.minute)).toSet
+        val result = drms.filterNot(_.paxLoad == 0).map(drm => (drm.queue, drm.paxLoad, drm.minute)).toSet
         result == expectedLoads
       case _ => false
     }
@@ -186,7 +186,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
     portStateProbe.fishForMessage(2 seconds) {
       case DeskRecMinutes(drms) =>
-        val result = drms.filterNot(_.paxLoad == 0).map(drm => (drm.queueName, drm.paxLoad, drm.minute)).toSet
+        val result = drms.filterNot(_.paxLoad == 0).map(drm => (drm.queue, drm.paxLoad, drm.minute)).toSet
         result == expectedLoads
       case _ => false
     }
@@ -227,7 +227,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
     portStateProbe.fishForMessage(2 seconds) {
       case DeskRecMinutes(drms) =>
-        val result = drms.filterNot(_.paxLoad == 0).map(drm => (drm.queueName, drm.paxLoad, drm.minute)).toSet
+        val result = drms.filterNot(_.paxLoad == 0).map(drm => (drm.queue, drm.paxLoad, drm.minute)).toSet
         result == expectedLoads
       case _ => false
     }
@@ -428,7 +428,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
     portStateProbe.fishForMessage(2 seconds) {
       case DeskRecMinutes(drms) =>
-        val result = drms.filterNot(_.paxLoad == 0).map(drm => (drm.queueName, drm.paxLoad, drm.minute)).toSet
+        val result = drms.filterNot(_.paxLoad == 0).map(drm => (drm.queue, drm.paxLoad, drm.minute)).toSet
         result == expectedLoads
       case _ => false
     }

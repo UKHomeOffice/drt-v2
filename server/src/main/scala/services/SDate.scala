@@ -6,7 +6,7 @@ import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch
-import services.graphstages.Crunch.europeLondonTimeZone
+import services.graphstages.Crunch.{europeLondonTimeZone, utcTimeZone}
 
 import scala.language.implicitConversions
 import scala.util.Try
@@ -51,6 +51,11 @@ object SDate {
     def getTimeZoneOffsetMillis(): Long = dateTime.getZone.getOffset(millisSinceEpoch)
 
     def startOfTheMonth(): SDateLike = SDate(dateTime.getFullYear(), dateTime.getMonth(), 1, 0, 0, Crunch.europeLondonTimeZone)
+
+    def getUtcLastMidnight: SDateLike = {
+      val utcNow = SDate(dateTime, utcTimeZone)
+      SDate(utcNow.toIsoMidnight, utcTimeZone)
+    }
 
     def getLocalLastMidnight: SDateLike = {
       val localNow = SDate(dateTime, europeLondonTimeZone)

@@ -96,7 +96,7 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
     val relevantMinutes = existingState.crunchMinutes.dropWhile {
       case (TQM(_, _, m), _) => m < keepFromMillis
     }
-    crunchUpdates.minutes.foldLeft(relevantMinutes) {
+    crunchUpdates.queueMinutes.foldLeft(relevantMinutes) {
       case (soFar, newCm) => soFar.updated(TQM(newCm), newCm)
     }
   }
@@ -105,7 +105,7 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
     val relevantMinutes = existingState.staffMinutes.dropWhile {
       case (TM(_, m), _) => m < keepFromMillis
     }
-    crunchUpdates.staff.foldLeft(relevantMinutes) {
+    crunchUpdates.staffMinutes.foldLeft(relevantMinutes) {
       case (soFar, newSm) => soFar.updated(TM(newSm), newSm)
     }
   }

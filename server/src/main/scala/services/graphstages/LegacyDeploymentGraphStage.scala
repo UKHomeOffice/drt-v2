@@ -449,11 +449,11 @@ class LegacyDeploymentGraphStage(name: String = "",
 }
 
 case class SimulationMinute(terminal: Terminal,
-                            queueName: Queue,
+                            queue: Queue,
                             minute: MillisSinceEpoch,
                             desks: Int,
                             waitTime: Int) extends SimulationMinuteLike with MinuteComparison[CrunchMinute] with MinuteLike[CrunchMinute, TQM] {
-  lazy val key: TQM = MinuteHelper.key(terminal, queueName, minute)
+  lazy val key: TQM = MinuteHelper.key(terminal, queue, minute)
 
   override def maybeUpdated(existing: CrunchMinute, now: MillisSinceEpoch): Option[CrunchMinute] =
     if (existing.deployedDesks.isEmpty || existing.deployedDesks.get != desks || existing.deployedWait.isEmpty || existing.deployedWait.get != waitTime) Option(existing.copy(
@@ -467,7 +467,7 @@ case class SimulationMinute(terminal: Terminal,
 
   override def toMinute: CrunchMinute = CrunchMinute(
     terminal = terminal,
-    queue = queueName,
+    queue = queue,
     minute = minute,
     paxLoad = 0,
     workLoad = 0,

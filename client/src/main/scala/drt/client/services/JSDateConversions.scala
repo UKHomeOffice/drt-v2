@@ -12,6 +12,8 @@ object JSDateConversions {
 
   Moment.locale("en_GB")
 
+  val utc: String = "UTC"
+
   val europeLondon: String = "Europe/London"
 
   implicit def jsDateToMillis(jsDate: Date): MillisSinceEpoch = jsDate.getTime().toLong
@@ -70,6 +72,8 @@ object JSDateConversions {
       override def getTimeZoneOffsetMillis(): MillisSinceEpoch = date.utcOffset().toLong * 60000L
 
       def startOfTheMonth(): SDateLike = SDate(date.getFullYear(), date.getMonth(), 1, 0, 0)
+
+      def getUtcLastMidnight: SDateLike = Moment.tz(date.millisSinceEpoch, utc)
 
       def getLocalLastMidnight: SDateLike = SDate(getFullYear(), getMonth(), getDate())
 
