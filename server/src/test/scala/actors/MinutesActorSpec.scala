@@ -2,6 +2,7 @@ package actors
 
 import actors.MinutesActor.MinutesLookup
 import actors.daily.MinutesState
+import actors.Actors.MinutesLookup
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import drt.shared.CrunchApi.{CrunchMinute, CrunchMinutes, MinutesContainer}

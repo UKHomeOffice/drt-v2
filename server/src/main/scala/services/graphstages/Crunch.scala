@@ -55,11 +55,11 @@ object Crunch {
                              minute: MillisSinceEpoch)
 
   case class LoadMinute(terminal: Terminal,
-                        queueName: Queue,
+                        queue: Queue,
                         paxLoad: Double,
                         workLoad: Double,
                         minute: MillisSinceEpoch) extends TerminalQueueMinute {
-    lazy val uniqueId: TQM = TQM(terminal, queueName, minute)
+    lazy val uniqueId: TQM = TQM(terminal, queue, minute)
 
     def +(other: LoadMinute): LoadMinute = this.copy(
       paxLoad = this.paxLoad + other.paxLoad,
@@ -76,7 +76,7 @@ object Crunch {
   }
 
   object Loads {
-    def apply(lms: Seq[LoadMinute]): Loads = Loads(SortedMap[TQM, LoadMinute]() ++ lms.map(cm => (TQM(cm.terminal, cm.queueName, cm.minute), cm)))
+    def apply(lms: Seq[LoadMinute]): Loads = Loads(SortedMap[TQM, LoadMinute]() ++ lms.map(cm => (TQM(cm.terminal, cm.queue, cm.minute), cm)))
 
     def fromCrunchMinutes(cms: SortedMap[TQM, CrunchMinute]): Loads = Loads(cms.mapValues(LoadMinute(_)))
   }
@@ -177,7 +177,7 @@ object Crunch {
 
   def collapseQueueLoadMinutesToSet(queueLoadMinutes: List[LoadMinute]): Set[LoadMinute] = {
     queueLoadMinutes
-      .groupBy(qlm => (qlm.terminal, qlm.queueName, qlm.minute))
+      .groupBy(qlm => (qlm.terminal, qlm.queue, qlm.minute))
       .map {
         case ((t, q, m), qlm) =>
           val summedPaxLoad = qlm.map(_.paxLoad).sum

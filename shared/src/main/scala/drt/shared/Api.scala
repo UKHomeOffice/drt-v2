@@ -295,9 +295,7 @@ case class CodeShareKeyOrderedByDupes[A](scheduled: Long,
 }
 
 object MinuteHelper {
-  def key(terminalName: Terminal,
-          queueName: Queue,
-          minute: MillisSinceEpoch): TQM = TQM(terminalName, queueName, minute)
+  def key(terminalName: Terminal, queue: Queue, minute: MillisSinceEpoch): TQM = TQM(terminalName, queue, minute)
 
   def key(terminalName: Terminal, minute: MillisSinceEpoch): TM = TM(terminalName, minute)
 }
@@ -680,7 +678,7 @@ object CrunchApi {
 
   trait TerminalQueueMinute {
     val terminal: Terminal
-    val queueName: Queue
+    val queue: Queue
     val minute: MillisSinceEpoch
   }
 
@@ -845,7 +843,7 @@ object CrunchApi {
 
   trait SimulationMinuteLike {
     val terminal: Terminal
-    val queueName: Queue
+    val queue: Queue
     val minute: MillisSinceEpoch
     val desks: Int
     val waitTime: Int

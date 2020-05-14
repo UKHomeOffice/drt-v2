@@ -1,6 +1,5 @@
 package actors.daily
 
-import actors.GetState
 import akka.actor.Props
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared.Terminals.Terminal
@@ -19,10 +18,8 @@ class TerminalDayStaffActor(year: Int,
                             day: Int,
                             terminal: Terminal,
                             val now: () => SDateLike,
-                            maybePointInTime: Option[MillisSinceEpoch]) extends TerminalDayLikeActor(year, month, day, terminal, now, maybePointInTime) {
+                            maybePointInTime: Option[MillisSinceEpoch]) extends TerminalDayLikeActor[StaffMinute, TM](year, month, day, terminal, now, maybePointInTime) {
   override val typeForPersistenceId: String = "staff"
-
-  var state: Map[TM, StaffMinute] = Map()
 
   import actors.PortStateMessageConversion._
 
@@ -48,30 +45,6 @@ class TerminalDayStaffActor(year: Int,
 
   override def stateToMessage: GeneratedMessage = StaffMinutesMessage(state.values.map(staffMinuteToMessage).toSeq)
 
-  override def receiveCommand: Receive = {
-    case container: MinutesContainer[StaffMinute, TM] =>
-      log.debug(s"Received MinutesContainer for persistence")
-      updateAndPersistDiff(container)
-
-    case GetState =>
-      log.debug(s"Received GetState")
-      sender() ! stateResponse
-
-    case m => log.warn(s"Got unexpected message: $m")
-  }
-
-  private def updateAndPersistDiff(container: MinutesContainer[StaffMinute, TM]): Unit =
-    diffFromMinutes(state, container.minutes) match {
-      case noDifferences if noDifferences.isEmpty =>
-        log.info("No differences. Nothing to persist")
-        sender() ! MinutesContainer.empty[StaffMinute, TM]
-      case differences =>
-        state = updateStateFromDiff(state, differences)
-        val messageToPersist = StaffMinutesMessage(differences.map(staffMinuteToMessage).toSeq)
-        persistAndMaybeSnapshot(differences, messageToPersist)
-    }
-
-  private def stateResponse: Option[MinutesState[StaffMinute, TM]] = {
-    if (state.nonEmpty) Option(MinutesState(MinutesContainer(state.values.toSet), lastSequenceNr)) else None
-  }
+  override def containerToMessage(differences: Iterable[StaffMinute]): GeneratedMessage =
+    StaffMinutesMessage(differences.map(m => staffMinuteToMessage(m.toMinute)).toSeq)
 }

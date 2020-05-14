@@ -1,13 +1,11 @@
 package actors.daily
 
-import actors.GetState
 import akka.actor.Props
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
 import drt.shared.Terminals.Terminal
 import drt.shared.{SDateLike, TQM}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
-import services.SDate
 
 
 object TerminalDayQueuesActor {
@@ -20,12 +18,10 @@ class TerminalDayQueuesActor(year: Int,
                              day: Int,
                              terminal: Terminal,
                              val now: () => SDateLike,
-                             maybePointInTime: Option[MillisSinceEpoch]) extends TerminalDayLikeActor(year, month, day, terminal, now, maybePointInTime) {
+                             maybePointInTime: Option[MillisSinceEpoch]) extends TerminalDayLikeActor[CrunchMinute, TQM](year, month, day, terminal, now, maybePointInTime) {
   override val typeForPersistenceId: String = "queues"
 
   log.info(s"PersistenceId: ${persistenceId}")
-
-  var state: Map[TQM, CrunchMinute] = Map()
 
   import actors.PortStateMessageConversion._
 
@@ -52,30 +48,6 @@ class TerminalDayQueuesActor(year: Int,
 
   override def stateToMessage: GeneratedMessage = CrunchMinutesMessage(state.values.map(crunchMinuteToMessage).toSeq)
 
-  override def receiveCommand: Receive = {
-    case container: MinutesContainer[CrunchMinute, TQM] =>
-      log.info(s"Received MinutesContainer (CrunchMinute) for persistence")
-      updateAndPersistDiff(container)
-
-    case GetState =>
-      log.debug(s"Received GetState")
-      sender() ! stateResponse
-
-    case m => log.warn(s"Got unexpected message: $m")
-  }
-
-  private def updateAndPersistDiff(container: MinutesContainer[CrunchMinute, TQM]): Unit =
-    diffFromMinutes(state, container.minutes) match {
-      case noDifferences if noDifferences.isEmpty =>
-        log.info("No differences. Nothing to persist")
-        sender() ! MinutesContainer.empty[CrunchMinute, TQM]
-      case differences =>
-        state = updateStateFromDiff(state, differences)
-        val messageToPersist = CrunchMinutesMessage(differences.map(crunchMinuteToMessage).toSeq)
-        persistAndMaybeSnapshot(differences, messageToPersist)
-    }
-
-  private def stateResponse: Option[MinutesState[CrunchMinute, TQM]] = {
-    if (state.nonEmpty) Option(MinutesState(MinutesContainer(state.values.toSet), lastSequenceNr)) else None
-  }
+  override def containerToMessage(differences: Iterable[CrunchMinute]): GeneratedMessage =
+    CrunchMinutesMessage(differences.map(m => crunchMinuteToMessage(m.toMinute)).toSeq)
 }
