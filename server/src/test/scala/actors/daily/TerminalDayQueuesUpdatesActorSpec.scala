@@ -5,20 +5,19 @@ import java.util.UUID
 
 import actors.daily.ReadJournalTypes.ReadJournalWithEvents
 import actors.{InMemoryStreamingJournal, StreamingJournalLike}
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import akka.stream.ActorMaterializer
-import akka.testkit.{TestKit, TestProbe}
-import akka.util.Timeout
+import akka.testkit.TestProbe
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.{Queues, SDateLike}
-import org.specs2.mutable.SpecificationLike
+import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.CrunchMinuteMessage
 import services.SDate
 import services.crunch.CrunchTestLike
-import test.TestActors.{ResetData, TestTerminalDayQueuesActor}
+import test.TestActors.TestTerminalDayQueuesActor
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
@@ -86,8 +85,8 @@ class TestTerminalDayQueuesUpdatesActor[T <: ReadJournalWithEvents](year: Int,
                                                                     terminal: Terminal,
                                                                     now: () => SDateLike,
                                                                     journalType: StreamingJournalLike,
-                                                                    probe: ActorRef) extends TerminalDayQueuesBookmarkLookupActor(year, month, day, terminal, now, journalType) {
-  override def updateState(minuteMessages: Seq[CrunchMinuteMessage]): Unit = {
+                                                                    probe: ActorRef) extends TerminalDayQueuesUpdatesActor(year, month, day, terminal, now, journalType) {
+  override def updateState(minuteMessages: Seq[GeneratedMessage]): Unit = {
     super.updateState(minuteMessages)
     probe ! updates
   }

@@ -2,7 +2,7 @@ package actors
 
 import actors.DrtStaticParameters.expireAfterMillis
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
-import actors.daily.{StartUpdatesStream, TerminalDayQueuesBookmarkLookupActor, TerminalDayStaffBookmarkLookupActor, UpdatesSupervisor}
+import actors.daily.{StartUpdatesStream, TerminalDayQueuesUpdatesActor, TerminalDayStaffUpdatesActor, UpdatesSupervisor}
 import actors.minutes.{QueueMinutesActor, StaffMinutesActor}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.{ask, pipe}
@@ -48,12 +48,12 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
 
   val queueUpdatesProps: (Terminal, SDateLike) => Props =
     (terminal: Terminal, day: SDateLike) => {
-      Props(new TerminalDayQueuesBookmarkLookupActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, now, journalType))
+      Props(new TerminalDayQueuesUpdatesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, now, journalType))
     }
 
   val staffUpdatesProps: (Terminal, SDateLike) => Props =
     (terminal: Terminal, day: SDateLike) => {
-      Props(new TerminalDayStaffBookmarkLookupActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, now, journalType))
+      Props(new TerminalDayStaffUpdatesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, now, journalType))
     }
 
   val queueUpdatesSupervisor: ActorRef = context.system.actorOf(Props(new UpdatesSupervisor[CrunchMinute, TQM](now, terminals, queueUpdatesProps)))
