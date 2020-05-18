@@ -108,7 +108,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
           val lm = DeskRecMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4)
 
           resetData(T1, myNow().getUtcLastMidnight)
-          val eventualAck = ps.ask(StartUpdatesStream(T1, myNow(), 0L))
+          val eventualAck = ps.ask(StartUpdatesStream(T1, myNow()))
             .flatMap { _ =>
               ps.ask(DeskRecMinutes(Seq(lm)))
             }

@@ -55,7 +55,7 @@ class TerminalDayQueuesUpdatesActorSpec extends CrunchTestLike {
     val queuesActor = system.actorOf(Props(new TestTerminalDayQueuesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => day)))
     val probe = TestProbe()
     val journal = InMemoryStreamingJournal
-    system.actorOf(Props(new TestTerminalDayQueuesUpdatesActor[journal.ReadJournalType](day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => day, journal, 0L, probe.ref)))
+    system.actorOf(Props(new TestTerminalDayQueuesUpdatesActor[journal.ReadJournalType](day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => day, journal, probe.ref)))
     val minute2 = day.addMinutes(1).millisSinceEpoch
 
     "When I send it a crunch minute" >> {
@@ -86,8 +86,7 @@ class TestTerminalDayQueuesUpdatesActor[T <: ReadJournalWithEvents](year: Int,
                                                                     terminal: Terminal,
                                                                     now: () => SDateLike,
                                                                     journalType: StreamingJournalLike,
-                                                                    startingSequenceNr: Long,
-                                                                    probe: ActorRef) extends TerminalDayQueuesBookmarkLookupActor(year, month, day, terminal, now, journalType, startingSequenceNr) {
+                                                                    probe: ActorRef) extends TerminalDayQueuesBookmarkLookupActor(year, month, day, terminal, now, journalType) {
   override def updateState(minuteMessages: Seq[CrunchMinuteMessage]): Unit = {
     super.updateState(minuteMessages)
     probe ! updates

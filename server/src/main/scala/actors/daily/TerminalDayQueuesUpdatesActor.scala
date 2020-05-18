@@ -2,11 +2,11 @@ package actors.daily
 
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamInitialized}
 import actors.{PortStateMessageConversion, StreamingJournalLike}
-import akka.persistence.{PersistentActor, Recovery, RecoveryCompleted, SnapshotMetadata, SnapshotOffer, SnapshotSelectionCriteria}
 import akka.persistence.query.EventEnvelope
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer}
+import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotMetadata, SnapshotOffer}
+import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
 import drt.shared.Terminals.Terminal
-import drt.shared.{MilliTimes, SDateLike, TQM}
+import drt.shared.{SDateLike, TQM}
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
 import services.SDate
@@ -17,19 +17,23 @@ class TerminalDayQueuesBookmarkLookupActor(year: Int,
                                           day: Int,
                                           terminal: Terminal,
                                           now: () => SDateLike,
-                                          journalType: StreamingJournalLike,
-                                          pointInTime: MillisSinceEpoch)
+                                          journalType: StreamingJournalLike)
   extends TerminalDayQueuesUpdatesActorLike(year, month, day, terminal, now, journalType) {
 
-  override def recovery: Recovery = Recovery(SnapshotSelectionCriteria(maxTimestamp = pointInTime))
-
   override def receiveRecover: Receive = {
+    case SnapshotOffer(SnapshotMetadata(_, _, ts), CrunchMinutesMessage(minuteMessages)) =>
+      log.debug(s"Processing snapshot offer from ${SDate(ts).toISOString()}")
+      updateState(minuteMessages)
+
+    case CrunchMinutesMessage(minuteMessages) =>
+      updateState(minuteMessages)
+
     case RecoveryCompleted =>
+      log.info(s"Recovered. Starting updates stream")
       startUpdatesStream(lastSequenceNr)
 
-    case SnapshotOffer(SnapshotMetadata(_, seqNr, _), _) =>
-      log.info(s"Starting updates stream from a SnapshotOffer with seqNr: $seqNr")
-      startUpdatesStream(seqNr)
+    case unexpected =>
+      log.error(s"Unexpected message: ${unexpected.getClass}")
   }
 }
 

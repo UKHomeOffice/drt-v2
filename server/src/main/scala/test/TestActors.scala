@@ -1,11 +1,12 @@
 package test
 
 import actors.DrtStaticParameters.expireAfterMillis
-import actors.MinutesActor.{MinutesLookup, MinutesUpdate}
 import actors.Sizes.oneMegaByte
 import actors._
 import actors.acking.AckingReceiver.Ack
 import actors.daily.{PurgeAll, TerminalDayQueuesActor, TerminalDayStaffActor}
+import actors.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
+import actors.minutes.{MinutesActorLike, QueueMinutesActor, StaffMinutesActor}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.{ask, pipe}
 import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}
@@ -143,7 +144,7 @@ object TestActors {
     override def receive: Receive = reset orElse super.receive
   }
 
-  trait TestMinuteActorLike[A, B <: WithTimeAccessor] extends MinutesActor[A, B] {
+  trait TestMinuteActorLike[A, B <: WithTimeAccessor] extends MinutesActorLike[A, B] {
     val resetData: (Terminal, MillisSinceEpoch) => Future[Any]
     var terminalDaysUpdated: Set[(Terminal, MillisSinceEpoch)] = Set()
 

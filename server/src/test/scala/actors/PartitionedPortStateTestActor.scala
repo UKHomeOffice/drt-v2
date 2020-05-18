@@ -1,6 +1,7 @@
 package actors
 
 import actors.acking.AckingReceiver.{Ack, StreamFailure}
+import actors.minutes.{QueueMinutesActor, StaffMinutesActor}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.testkit.TestProbe
@@ -61,15 +62,15 @@ class PartitionedPortStateTestActor(probe: ActorRef,
           mc.minutes.headOption match {
             case None => sendStateToProbe()
             case Some(minuteLike) if minuteLike.toMinute.isInstanceOf[CrunchMinute] =>
-              actor.ask(GetPortState(minuteMillis.min, minuteMillis.max)).mapTo[MinutesWithBookmarks[CrunchMinute, TQM]]
-                .foreach { case MinutesWithBookmarks(container, _) =>
+              actor.ask(GetPortState(minuteMillis.min, minuteMillis.max)).mapTo[MinutesContainer[CrunchMinute, TQM]]
+                .foreach { container =>
                   val updatedMinutes = state.crunchMinutes ++ container.minutes.map(ml => (ml.key, ml.toMinute))
                   state = state.copy(crunchMinutes = updatedMinutes)
                   sendStateToProbe()
                 }
             case Some(minuteLike) if minuteLike.toMinute.isInstanceOf[StaffMinute] =>
-              actor.ask(GetPortState(minuteMillis.min, minuteMillis.max)).mapTo[MinutesWithBookmarks[StaffMinute, TM]]
-                .foreach { case MinutesWithBookmarks(container, _) =>
+              actor.ask(GetPortState(minuteMillis.min, minuteMillis.max)).mapTo[MinutesContainer[StaffMinute, TM]]
+                .foreach { container =>
                   val updatedMinutes = state.staffMinutes ++ container.minutes.map(ml => (ml.key, ml.toMinute))
                   state = state.copy(staffMinutes = updatedMinutes)
                   sendStateToProbe()

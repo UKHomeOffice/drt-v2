@@ -4,8 +4,6 @@ import actors.FlightMessageConversion.flightWithSplitsFromMessage
 import actors.PortStateMessageConversion.{crunchMinuteFromMessage, staffMinuteFromMessage}
 import actors.Sizes.oneMegaByte
 import actors._
-import actors.daily.MinutesState
-import akka.actor.Props
 import akka.persistence._
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared.FlightsApi.FlightsWithSplits
@@ -65,11 +63,11 @@ class CrunchStateReadActor(snapshotInterval: Int,
 
     case GetCrunchMinutes(terminal) =>
       log.debug(s"Received GetCrunchMinutes request")
-      sender() ! Option(MinutesState(MinutesContainer(state.immutable.crunchMinutes.filterKeys(tqm => tqm.terminal == terminal).values), Long.MaxValue))
+      sender() ! Option(MinutesContainer(state.immutable.crunchMinutes.filterKeys(tqm => tqm.terminal == terminal).values), Long.MaxValue)
 
     case GetStaffMinutes(terminal) =>
       log.debug(s"Received GetStaffMinutes request")
-      sender() ! Option(MinutesState(MinutesContainer(state.immutable.staffMinutes.filterKeys(tm => tm.terminal == terminal).values), Long.MaxValue))
+      sender() ! Option(MinutesContainer(state.immutable.staffMinutes.filterKeys(tm => tm.terminal == terminal).values), Long.MaxValue)
 
     case GetPortState(start, end) =>
       logInfo(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")

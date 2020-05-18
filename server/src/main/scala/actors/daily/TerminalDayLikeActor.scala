@@ -62,14 +62,14 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
     case GetState =>
       log.debug(s"Received GetState")
+
       sender() ! stateResponse
 
     case m => log.warn(s"Got unexpected message: $m")
   }
 
-  private def stateResponse: Option[MinutesContainer[VAL, INDEX]] = {
+  private def stateResponse: Option[MinutesContainer[VAL, INDEX]] =
     if (state.nonEmpty) Option(MinutesContainer(state.values.toSet)) else None
-  }
 
   def diffFromMinutes(state: Map[INDEX, VAL], minutes: Iterable[MinuteLike[VAL, INDEX]]): Iterable[VAL] = {
     val nowMillis = now().millisSinceEpoch

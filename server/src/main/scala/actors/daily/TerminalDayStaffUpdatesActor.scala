@@ -2,32 +2,37 @@ package actors.daily
 
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamInitialized}
 import actors.{PortStateMessageConversion, StreamingJournalLike}
-import akka.persistence.query.EventEnvelope
 import akka.persistence._
-import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, StaffMinute}
+import akka.persistence.query.EventEnvelope
+import drt.shared.CrunchApi.{MinutesContainer, StaffMinute}
 import drt.shared.Terminals.Terminal
 import drt.shared.{SDateLike, TM}
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState.{StaffMinuteMessage, StaffMinutesMessage}
+import services.SDate
 
 class TerminalDayStaffBookmarkLookupActor(year: Int,
                                           month: Int,
                                           day: Int,
                                           terminal: Terminal,
                                           now: () => SDateLike,
-                                          journalType: StreamingJournalLike,
-                                          pointInTime: MillisSinceEpoch)
+                                          journalType: StreamingJournalLike)
   extends TerminalDayStaffUpdatesActorLike(year, month, day, terminal, now, journalType) {
 
-  override def recovery: Recovery = Recovery(SnapshotSelectionCriteria(maxTimestamp = pointInTime))
-
   override def receiveRecover: Receive = {
+    case SnapshotOffer(SnapshotMetadata(_, _, ts), StaffMinutesMessage(minuteMessages)) =>
+      log.debug(s"Processing snapshot offer from ${SDate(ts).toISOString()}")
+      updateState(minuteMessages)
+
+    case StaffMinutesMessage(minuteMessages) =>
+      updateState(minuteMessages)
+
     case RecoveryCompleted =>
+      log.info(s"Recovered. Starting updates stream")
       startUpdatesStream(lastSequenceNr)
 
-    case SnapshotOffer(SnapshotMetadata(_, seqNr, _), _) =>
-      log.info(s"Starting updates stream from a SnapshotOffer with seqNr: $seqNr")
-      startUpdatesStream(seqNr)
+    case unexpected =>
+      log.error(s"Unexpected message: ${unexpected.getClass}")
   }
 }
 

@@ -25,11 +25,11 @@ case object PurgeAll
 
 case class GetAllUpdatesSince(sinceMillis: MillisSinceEpoch)
 
-case class StartUpdatesStream(terminal: Terminal, day: SDateLike, updatesFromMillis: MillisSinceEpoch)
+case class StartUpdatesStream(terminal: Terminal, day: SDateLike)
 
 class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
                                                   terminals: List[Terminal],
-                                                  updatesActorFactory: (Terminal, SDateLike, MillisSinceEpoch) => Props) extends Actor {
+                                                  updatesActorFactory: (Terminal, SDateLike) => Props) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
   implicit val ex: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
   implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
@@ -47,12 +47,11 @@ class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
   }
 
   def startUpdatesStream(terminal: Terminal,
-                         day: SDateLike,
-                         updatesFromMillis: Long): Unit = streamingUpdateActors.get((terminal, day.millisSinceEpoch)) match {
+                         day: SDateLike): Unit = streamingUpdateActors.get((terminal, day.millisSinceEpoch)) match {
     case Some(_) => Unit
     case None =>
-      log.info(s"Starting supervised updates stream for $terminal / ${day.toISODateOnly} from ${SDate(updatesFromMillis).toISOString()}")
-      val actor = context.system.actorOf(updatesActorFactory(terminal, day, updatesFromMillis))
+      log.info(s"Starting supervised updates stream for $terminal / ${day.toISODateOnly}")
+      val actor = context.system.actorOf(updatesActorFactory(terminal, day))
       streamingUpdateActors = streamingUpdateActors + ((terminal, day.millisSinceEpoch) -> actor)
       lastRequests = lastRequests + ((terminal, day.millisSinceEpoch) -> now().millisSinceEpoch)
   }
@@ -78,8 +77,8 @@ class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
       streamingUpdateActors = streamingUpdateActors -- expiredToRemove
       lastRequests = lastRequests -- expiredToRemove
 
-    case StartUpdatesStream(terminal, day, updatesFromMillis) =>
-      startUpdatesStream(terminal, day, updatesFromMillis)
+    case StartUpdatesStream(terminal, day) =>
+      startUpdatesStream(terminal, day)
       sender() ! Ack
 
     case GetUpdatesSince(since, from, to) =>
