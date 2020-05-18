@@ -4,13 +4,11 @@ import actors.summaries.TerminalQueuesSummaryActor
 import akka.actor.ActorRef
 import controllers.Application
 import drt.auth.DesksAndQueuesView
+import drt.shared.SDateLike
 import drt.shared.Terminals.Terminal
-import drt.shared.{PortState, SDateLike}
 import play.api.mvc.{Action, AnyContent}
 import services.exports.Exports
-import services.exports.summaries.{GetSummaries, TerminalSummaryLike}
-
-import scala.concurrent.{ExecutionContextExecutor, Future}
+import services.exports.summaries.GetSummaries
 
 trait WithDesksExport extends ExportToCsv {
   self: Application =>
@@ -31,10 +29,9 @@ trait WithDesksExport extends ExportToCsv {
     authByRole(DesksAndQueuesView)(export(startMillis, endMillis, terminalName))
 
   private def export(startMillis: String, endMillis: String, terminalName: String): Action[AnyContent] = {
-    implicit val ec: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
     val start = localLastMidnight(startMillis)
     val end = localLastMidnight(endMillis)
-    val summaryForPeriodFn = Exports.queueSummariesFromPortState(airportConfig.queuesByTerminal(terminal(terminalName)), 15, Terminal(terminalName), queryFromPortStateFn)
+    val summaryForPeriodFn = Exports.queueSummariesFromPortState(airportConfig.nonTransferQueues(terminal(terminalName)), 15, Terminal(terminalName), queryFromPortStateFn)
 
     Action(exportToCsv(start, end, "desks and queues", terminal(terminalName), Option((summaryActorProvider, GetSummaries)), summaryForPeriodFn))
   }
