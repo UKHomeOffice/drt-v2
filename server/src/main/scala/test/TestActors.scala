@@ -11,6 +11,7 @@ import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.{ask, pipe}
 import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
+import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
@@ -199,7 +200,7 @@ object TestActors {
     def apply(now: () => SDateLike, airportConfig: AirportConfig, streamingJournal: StreamingJournalLike)
              (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
       val lookups = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
-      val flightsActor: ActorRef = system.actorOf(Props(new TestFlightsStateActor(None, Sizes.oneMegaByte, "crunch-live-state-actor", airportConfig.queuesByTerminal, now, expireAfterMillis)))
+      val flightsActor: ActorRef = system.actorOf(Props(new TestFlightsStateActor(None, Sizes.oneMegaByte, "crunch-live-state-actor", now, expireAfterMillis)))
       val queuesActor: ActorRef = lookups.queueMinutesActor(classOf[TestQueueMinutesActor])
       val staffActor: ActorRef = lookups.staffMinutesActor(classOf[TestStaffMinutesActor])
       system.actorOf(Props(new TestPartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, airportConfig.terminals.toList, streamingJournal)))
@@ -254,10 +255,9 @@ object TestActors {
   class TestFlightsStateActor(initialMaybeSnapshotInterval: Option[Int],
                               initialSnapshotBytesThreshold: Int,
                               name: String,
-                              portQueues: Map[Terminal, Seq[Queue]],
                               now: () => SDateLike,
-                              expireAfterMillis: Int) extends FlightsStateActor(initialMaybeSnapshotInterval, initialSnapshotBytesThreshold, name, portQueues, now, expireAfterMillis) with Resettable {
-    override def resetState(): Unit = state = PortStateMutable.empty
+                              expireAfterMillis: Int) extends FlightsStateActor(initialMaybeSnapshotInterval, initialSnapshotBytesThreshold, name, now, expireAfterMillis) with Resettable {
+    override def resetState(): Unit = state = FlightsWithSplits.empty
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
