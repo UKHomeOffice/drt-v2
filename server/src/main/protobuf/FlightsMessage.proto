@@ -2,8 +2,6 @@ syntax = "proto2";
 
 package server.protobuf.messages;
 
-
-
 message FlightStateSnapshotMessage {
     repeated FlightMessage flightMessages = 1;
     optional FeedStatusesMessage statuses = 2;
