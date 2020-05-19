@@ -87,6 +87,6 @@ class TerminalDayStaffActorSpec extends CrunchTestLike {
   }
 
   private def actorForTerminalAndDate(terminal: Terminal, date: SDateLike): ActorRef = {
-    system.actorOf(TerminalDayStaffActor.props(date, terminal, () => date))
+    system.actorOf(TerminalDayStaffActor.props(terminal, date, () => date))
   }
 }

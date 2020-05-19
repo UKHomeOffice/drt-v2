@@ -3,16 +3,55 @@ package test
 import actors.Sizes.oneMegaByte
 import actors._
 import actors.acking.AckingReceiver.Ack
-import akka.actor.{ActorRef, Props}
+import actors.daily.{TerminalDayQueuesActor, TerminalDayStaffActor}
+import akka.actor.ActorRef
+import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared.{PortCode, SDateLike}
+import org.slf4j.Logger
 import slickdb.ArrivalTable
 
 
 object TestActors {
 
   case object ResetData
+
+  trait Resettable extends PersistentActor {
+    val log: Logger
+    var replyTo: Option[ActorRef] = None
+    var deletedMessages: Boolean = false
+    var deletedSnapshots: Boolean = false
+
+    def resetState(): Unit
+
+    def deletionFinished: Boolean = deletedMessages && deletedSnapshots
+
+    def resetBehaviour: Receive = {
+      case ResetData =>
+        replyTo = Option(sender())
+        log.warn("Received ResetData request. Deleting all messages & snapshots")
+        deleteMessages(Long.MaxValue)
+        deleteSnapshots(SnapshotSelectionCriteria(minSequenceNr = 0L, maxSequenceNr = Long.MaxValue))
+      case _: DeleteMessagesSuccess =>
+        deletedMessages = true
+        ackIfDeletionFinished()
+      case _: DeleteSnapshotsSuccess =>
+        deletedSnapshots = true
+        ackIfDeletionFinished()
+    }
+
+    def ackIfDeletionFinished(): Unit = replyTo.foreach { r =>
+      if (deletionFinished) {
+        log.info("Finished deletions")
+        resetState()
+        deletedMessages = false
+        deletedSnapshots = false
+        replyTo = None
+        r ! Ack
+      }
+    }
+  }
 
   class TestForecastBaseArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
     extends ForecastBaseArrivalsActor(oneMegaByte, now, expireAfterMillis) {
@@ -149,6 +188,24 @@ object TestActors {
     }
 
     override def receive: Receive = reset orElse super.receive
+  }
+
+  class TestTerminalDayQueuesActor(year: Int,
+                                   month: Int,
+                                   day: Int,
+                                   terminal: Terminal,
+                                   now: () => SDateLike) extends TerminalDayQueuesActor(year, month, day, terminal, now) with Resettable {
+    override def resetState(): Unit = state = Map()
+    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
+  }
+
+  class TestTerminalDayStaffActor(year: Int,
+                                  month: Int,
+                                  day: Int,
+                                  terminal: Terminal,
+                                  now: () => SDateLike) extends TerminalDayStaffActor(year, month, day, terminal, now) with Resettable {
+    override def resetState(): Unit = state = Map()
+    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
   class TestCrunchStateActor(snapshotInterval: Int,
