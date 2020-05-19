@@ -16,6 +16,10 @@ message CrunchStateSnapshotMessage {
     repeated StaffMinuteMessage staffMinutes = 5;
 }
 
+message FlightsWithSplitsMessage {
+    repeated FlightWithSplitsMessage flightWithSplits = 1;
+}
+
 message FlightWithSplitsMessage {
     optional FlightMessage flight = 1;
     repeated SplitMessage splits = 2;
@@ -67,6 +71,12 @@ message StaffMinuteMessage {
     optional int64 lastUpdated = 7;
 
     optional int32 staff_OLD = 3;
+}
+
+message FlightsWithSplitsDiffMessage {
+    optional int64 createdAt = 1;
+    repeated UniqueArrivalMessage removals = 2;
+    repeated FlightWithSplitsMessage updates = 3;
 }
 
 message CrunchDiffMessage {

@@ -7,7 +7,7 @@ import drt.shared._
 import drt.shared.api.{Arrival, FlightCodeSuffix}
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.{Logger, LoggerFactory}
-import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, PaxTypeAndQueueCountMessage, SplitMessage}
+import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, FlightsWithSplitsMessage, PaxTypeAndQueueCountMessage, SplitMessage}
 import server.protobuf.messages.FlightsMessage.{FeedStatusMessage, FeedStatusesMessage, FlightMessage, FlightStateSnapshotMessage}
 import services.SDate
 
@@ -22,7 +22,7 @@ object FlightMessageConversion {
     FlightStateSnapshotMessage(
       state.arrivals.values.map(apiFlightToFlightMessage).toSeq,
       maybeStatusMessages
-    )
+      )
   }
 
   def feedStatusesToMessage(statuses: FeedStatuses): Option[FeedStatusesMessage] = {
@@ -50,7 +50,7 @@ object FlightMessageConversion {
     lastSuccessAt = message.lastSuccessAt,
     lastFailureAt = message.lastFailureAt,
     lastUpdatesAt = message.lastUpdatesAt
-  )
+    )
 
   def feedStatusFromFeedStatusMessage(message: FeedStatusMessage): FeedStatus = {
     if (message.updates.isDefined)
@@ -78,7 +78,7 @@ object FlightMessageConversion {
       source = Option(s.source.toString),
       eventType = s.maybeEventType.map(_.toString),
       style = Option(s.splitStyle.name)
-    )
+      )
   }
 
   def paxTypeAndQueueCountToMessage(ptqc: ApiPaxTypeAndQueueCount): PaxTypeAndQueueCountMessage = {
@@ -86,7 +86,7 @@ object FlightMessageConversion {
       Option(ptqc.passengerType.name),
       Option(ptqc.queueType.toString),
       Option(ptqc.paxCount)
-    )
+      )
   }
 
   def apiFlightToFlightMessage(apiFlight: Arrival): FlightMessage = {
@@ -114,7 +114,7 @@ object FlightMessageConversion {
       actualChox = apiFlight.ActualChox.filter(_ != 0),
       carrierScheduled = apiFlight.CarrierScheduled,
       apiPax = apiFlight.ApiPax
-    )
+      )
   }
 
   def millisOptionFromArrivalDateString(datetime: String): Option[Long] = datetime match {
@@ -160,4 +160,7 @@ object FlightMessageConversion {
     case Some(millis: Long) => SDate.jodaSDateToIsoString(SDate(millis))
     case _ => ""
   }
+
+  def flightsToMessage(flights: Iterable[ApiFlightWithSplits]): FlightsWithSplitsMessage =
+    FlightsWithSplitsMessage(flights.map(FlightMessageConversion.flightWithSplitsToMessage).toSeq)
 }
