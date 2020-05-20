@@ -4,7 +4,7 @@ import actors.DrtStaticParameters.expireAfterMillis
 import actors.Sizes.oneMegaByte
 import actors._
 import actors.acking.AckingReceiver.Ack
-import actors.daily.{PurgeAll, TerminalDayQueuesActor, TerminalDayStaffActor}
+import actors.daily._
 import actors.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
 import actors.minutes.{MinutesActorLike, QueueMinutesActor, StaffMinutesActor}
 import akka.actor.{ActorRef, ActorSystem, Props}
@@ -65,6 +65,7 @@ object TestActors {
   class TestForecastBaseArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
     extends ForecastBaseArrivalsActor(oneMegaByte, now, expireAfterMillis) with Resettable {
     override def resetState(): Unit = state.clear()
+
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
@@ -87,12 +88,14 @@ object TestActors {
   class TestLiveArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
     extends LiveArrivalsActor(oneMegaByte, now, expireAfterMillis) with Resettable {
     override def resetState(): Unit = state.clear()
+
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
   class TestVoyageManifestsActor(override val now: () => SDateLike, expireAfterMillis: Int, snapshotInterval: Int)
     extends VoyageManifestsActor(oneMegaByte, now, expireAfterMillis, Option(snapshotInterval)) with Resettable {
     override def resetState(): Unit = state = initialState
+
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
@@ -102,6 +105,7 @@ object TestActors {
       state = initialState
       subscribers = List()
     }
+
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
@@ -110,6 +114,7 @@ object TestActors {
       state = initialState
       subscribers = List()
     }
+
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
@@ -119,6 +124,7 @@ object TestActors {
       state = initialState
       subscribers = List()
     }
+
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
@@ -207,12 +213,17 @@ object TestActors {
     }
   }
 
+  trait TestPartitionedPortStateActorLike extends PartitionedPortStateActorLike {
+    override val queueUpdatesSupervisor: ActorRef = context.system.actorOf(Props(new TestUpdatesSupervisor[CrunchMinute, TQM](now, terminals, queueUpdatesProps)))
+    override val staffUpdatesSupervisor: ActorRef = context.system.actorOf(Props(new TestUpdatesSupervisor[StaffMinute, TM](now, terminals, staffUpdatesProps)))
+  }
+
   class TestPartitionedPortStateActor(flightsActor: ActorRef,
                                       queuesActor: ActorRef,
                                       staffActor: ActorRef,
                                       now: () => SDateLike,
                                       terminals: List[Terminal],
-                                      journalType: StreamingJournalLike) extends PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, terminals, journalType) {
+                                      journalType: StreamingJournalLike) extends PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, terminals, journalType) with TestPartitionedPortStateActorLike {
     val actorClearRequests = Map(
       flightsActor -> ResetData,
       queuesActor -> ResetData,
@@ -240,6 +251,7 @@ object TestActors {
                                    terminal: Terminal,
                                    now: () => SDateLike) extends TerminalDayQueuesActor(year, month, day, terminal, now, None) with Resettable {
     override def resetState(): Unit = state = Map()
+
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
@@ -249,6 +261,7 @@ object TestActors {
                                   terminal: Terminal,
                                   now: () => SDateLike) extends TerminalDayStaffActor(year, month, day, terminal, now, None) with Resettable {
     override def resetState(): Unit = state = Map()
+
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
@@ -258,6 +271,7 @@ object TestActors {
                               now: () => SDateLike,
                               expireAfterMillis: Int) extends FlightsStateActor(initialMaybeSnapshotInterval, initialSnapshotBytesThreshold, name, now, expireAfterMillis) with Resettable {
     override def resetState(): Unit = state = FlightsWithSplits.empty
+
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
@@ -276,6 +290,24 @@ object TestActors {
       purgePreviousSnapshots = purgePreviousSnapshots,
       forecastMaxMillis = () => now().addDays(2).millisSinceEpoch) with Resettable {
     override def resetState(): Unit = state = PortStateMutable.empty
+
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
+  }
+
+  class TestUpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
+                                                        terminals: List[Terminal],
+                                                        updatesActorFactory: (Terminal, SDateLike) => Props) extends UpdatesSupervisor(now, terminals, updatesActorFactory) {
+    def testReceive: Receive = {
+      case PurgeAll =>
+        val replyTo = sender()
+        log.info(s"Received PurgeAll")
+        Future.sequence(streamingUpdateActors.values.map(actor => killActor.ask(Terminate(actor)))).foreach { _ =>
+          streamingUpdateActors = Map()
+          lastRequests = Map()
+          replyTo ! Ack
+        }
+    }
+
+    override def receive: Receive = testReceive orElse super.receive
   }
 }

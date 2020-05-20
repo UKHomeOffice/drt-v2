@@ -4,7 +4,7 @@ import actors.DrtStaticParameters.expireAfterMillis
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily.{StartUpdatesStream, TerminalDayQueuesUpdatesActor, TerminalDayStaffUpdatesActor, UpdatesSupervisor}
 import actors.minutes.{QueueMinutesActor, StaffMinutesActor}
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.actor.{Actor, ActorContext, ActorRef, ActorSystem, Props}
 import akka.pattern.{ask, pipe}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
@@ -17,6 +17,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.crunch.deskrecs.GetFlights
 import services.graphstages.Crunch
+import test.TestActors.TestUpdatesSupervisor
 
 import scala.collection.immutable
 import scala.concurrent.duration._
@@ -34,17 +35,11 @@ object PartitionedPortStateActor {
   }
 }
 
-class PartitionedPortStateActor(flightsActor: ActorRef,
-                                queuesActor: ActorRef,
-                                staffActor: ActorRef,
-                                now: () => SDateLike,
-                                terminals: List[Terminal],
-                                journalType: StreamingJournalLike) extends Actor {
-  val log: Logger = LoggerFactory.getLogger(getClass)
-
-  implicit val ec: ExecutionContextExecutor = context.dispatcher
-  implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
-  implicit val timeout: Timeout = new Timeout(10 seconds)
+trait PartitionedPortStateActorLike {
+  val now: () => SDateLike
+  val context: ActorContext
+  val journalType: StreamingJournalLike
+  val terminals: List[Terminal]
 
   val queueUpdatesProps: (Terminal, SDateLike) => Props =
     (terminal: Terminal, day: SDateLike) => {
@@ -56,8 +51,26 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
       Props(new TerminalDayStaffUpdatesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, now, journalType))
     }
 
-  val queueUpdatesSupervisor: ActorRef = context.system.actorOf(Props(new UpdatesSupervisor[CrunchMinute, TQM](now, terminals, queueUpdatesProps)))
-  val staffUpdatesSupervisor: ActorRef = context.system.actorOf(Props(new UpdatesSupervisor[StaffMinute, TM](now, terminals, staffUpdatesProps)))
+  val queueUpdatesSupervisor: ActorRef
+  val staffUpdatesSupervisor: ActorRef
+}
+
+trait ProdPartitionedPortStateActor extends PartitionedPortStateActorLike {
+  override val queueUpdatesSupervisor: ActorRef = context.system.actorOf(Props(new UpdatesSupervisor[CrunchMinute, TQM](now, terminals, queueUpdatesProps)))
+  override val staffUpdatesSupervisor: ActorRef = context.system.actorOf(Props(new UpdatesSupervisor[StaffMinute, TM](now, terminals, staffUpdatesProps)))
+}
+
+class PartitionedPortStateActor(flightsActor: ActorRef,
+                                queuesActor: ActorRef,
+                                staffActor: ActorRef,
+                                val now: () => SDateLike,
+                                val terminals: List[Terminal],
+                                val journalType: StreamingJournalLike) extends Actor with ProdPartitionedPortStateActor {
+  val log: Logger = LoggerFactory.getLogger(getClass)
+
+  implicit val ec: ExecutionContextExecutor = context.dispatcher
+  implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
+  implicit val timeout: Timeout = new Timeout(10 seconds)
 
   def processMessage: Receive = {
     case msg: SetCrunchQueueActor =>

@@ -29,7 +29,7 @@ class RequestAndTerminateActorSpec extends CrunchTestLike {
 
     "When I send it some updates to persist" >> {
       val container = MinutesContainer(Iterable(CrunchMinute(terminal, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4)))
-      val actor = system.actorOf(Props(new TerminalDayQueuesActor(myNow().getFullYear(), myNow().getMonth(), myNow().getDate(), terminal, myNow)))
+      val actor = system.actorOf(Props(new TerminalDayQueuesActor(myNow().getFullYear(), myNow().getMonth(), myNow().getDate(), terminal, myNow, None)))
       val result = Await.result(requestsActor.ask(RequestAndTerminate(actor, container)), 5 seconds)
 
       "I should get a diff of updated minutes back as an acknowledgement" >> {

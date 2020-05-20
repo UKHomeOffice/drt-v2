@@ -7,15 +7,15 @@ import akka.pattern.ask
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
-import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer}
+import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
 import drt.shared.Terminals.Terminal
 import drt.shared.{MilliTimes, SDateLike, WithTimeAccessor}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 
-import scala.language.postfixOps
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 
@@ -26,6 +26,13 @@ case object PurgeAll
 case class GetAllUpdatesSince(sinceMillis: MillisSinceEpoch)
 
 case class StartUpdatesStream(terminal: Terminal, day: SDateLike)
+
+object UpdatesSupervisor {
+  def props[A <: MinuteLike[A, B], B <: WithTimeAccessor](now: () => SDateLike,
+                                                          terminals: List[Terminal],
+                                                          updatesActorFactory: (Terminal, SDateLike) => Props): Props =
+    Props(new UpdatesSupervisor[A, B](now, terminals, updatesActorFactory))
+}
 
 class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
                                                   terminals: List[Terminal],
@@ -57,15 +64,6 @@ class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
   }
 
   override def receive: Receive = {
-    case PurgeAll =>
-      val replyTo = sender()
-      log.info(s"Received PurgeAll")
-      Future.sequence(streamingUpdateActors.values.map(actor => killActor.ask(Terminate(actor)))).foreach { _ =>
-        streamingUpdateActors = Map()
-        lastRequests = Map()
-        replyTo ! Ack
-      }
-
     case PurgeExpired =>
       log.info("Received PurgeExpired")
       val expiredToRemove = lastRequests.collect {
