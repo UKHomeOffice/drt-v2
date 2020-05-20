@@ -23,20 +23,6 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.reflect.io.Directory
 
-object LevelDbConfig {
-  val tempStoreDir: String = s"/tmp/drt-${UUID.randomUUID().toString}"
-
-  def config(uuid: String): Config = ConfigFactory.load("leveldb").withValue("akka.persistence.journal.leveldb.dir", ConfigValueFactory.fromAnyRef(tempStoreDir + uuid))
-
-  def clearData(uuid: String): Boolean = {
-    val path = tempStoreDir + uuid
-    println(s"Attempting to delete $path")
-    val directory = new Directory(new File(path))
-    if (directory.exists) {
-      directory.deleteRecursively()
-    } else true
-  }
-}
 
 class TerminalDayQueuesUpdatesActorSpec extends CrunchTestLike {
   implicit val mat: ActorMaterializer = ActorMaterializer()
