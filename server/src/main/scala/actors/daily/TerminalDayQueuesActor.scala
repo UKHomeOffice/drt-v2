@@ -21,7 +21,7 @@ class TerminalDayQueuesActor(year: Int,
                              maybePointInTime: Option[MillisSinceEpoch]) extends TerminalDayLikeActor[CrunchMinute, TQM](year, month, day, terminal, now, maybePointInTime) {
   override val typeForPersistenceId: String = "queues"
 
-  log.info(s"PersistenceId: ${persistenceId}")
+  log.info(s"PersistenceId: $persistenceId")
 
   import actors.PortStateMessageConversion._
 

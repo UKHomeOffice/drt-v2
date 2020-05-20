@@ -1,7 +1,7 @@
 package actors.daily
 
 import akka.actor.Props
-import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, StaffMinute}
+import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute}
 import drt.shared.Terminals.Terminal
 import drt.shared.{SDateLike, TM}
 import scalapb.GeneratedMessage
