@@ -55,4 +55,15 @@ class FlightMessageConversionSpec extends Specification {
       }
     }
   }
+
+  "Given an arrival with 0 Passengers" >> {
+    val arrivalWith0Pax = arrival.copy(ActPax = Option(0), TranPax = Option(0), MaxPax = Option(0))
+    "When I convert it to a protobuf message and then back to an Arrival" >> {
+      val arrivalMessage = FlightMessageConversion.apiFlightToFlightMessage(arrivalWith0Pax)
+      val restoredArrival = FlightMessageConversion.flightMessageToApiFlight(arrivalMessage)
+      "Then the converted Arrival should match the original" >> {
+        restoredArrival === arrivalWith0Pax
+      }
+    }
+  }
 }
