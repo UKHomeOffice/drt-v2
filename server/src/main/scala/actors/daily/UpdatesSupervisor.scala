@@ -4,7 +4,7 @@ import actors.GetUpdatesSince
 import actors.acking.AckingReceiver.Ack
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Cancellable, PoisonPill, Props}
-import akka.pattern.ask
+import akka.pattern.{ask, pipe}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
@@ -86,12 +86,7 @@ class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
 
       terminalsAndDaysUpdatesSource(terminalDays, sinceMillis)
         .runWith(Sink.fold(MinutesContainer.empty[A, B])(_ ++ _))
-        .onComplete {
-          case Success(container) => replyTo ! container
-          case Failure(t) =>
-            log.error("Failed to get updates", t)
-            replyTo ! MinutesContainer.empty[A, B]
-        }
+        .pipeTo(replyTo)
   }
 
   def terminalDaysForPeriod(fromMillis: MillisSinceEpoch,

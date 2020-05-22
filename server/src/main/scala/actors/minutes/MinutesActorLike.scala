@@ -4,6 +4,7 @@ import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, Stream
 import actors.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
 import actors.{GetPortState, GetStateByTerminalDateRange}
 import akka.actor.{Actor, ActorRef}
+import akka.pattern.pipe
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import drt.shared.CrunchApi.{MinuteLike, MinutesContainer}
@@ -44,19 +45,13 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
 
     case GetPortState(startMillis, endMillis) =>
       val replyTo = sender()
-      val eventualMinutes = terminals.map { terminal =>
+      val eventualMinutesForAllTerminals = terminals.map { terminal =>
         handleLookups(terminal, SDate(startMillis), SDate(endMillis))
       }
-      combineAndSendOptionalResult(eventualMinutes, replyTo)
+      combineEventualMinutesContainers(eventualMinutesForAllTerminals).pipeTo(replyTo)
 
     case GetStateByTerminalDateRange(terminal, start, end) =>
-      val replyTo = sender()
-      handleLookups(terminal, start, end).onComplete {
-        case Success(container) => replyTo ! container
-        case Failure(t) =>
-          log.error("Failed to get minutes", t)
-          replyTo ! MinutesContainer.empty[A, B]
-      }
+      handleLookups(terminal, start, end).pipeTo(sender())
 
     case container: MinutesContainer[A, B] =>
       val replyTo = sender()
@@ -88,7 +83,7 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
         .collect {
           case (_, Some(container)) => container.window(start, end)
           case (day, None) =>
-            log.error(s"Failed to get minutes for ${day.toISOString()}")
+            log.error(s"No minutes found for for ${day.toISOString()}")
             MinutesContainer.empty[A, B]
         }
         .fold(MinutesContainer[A, B](Seq())) {
@@ -103,8 +98,8 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
   }
 
   def handleLookup(eventualMaybeResult: Future[Option[MinutesContainer[A, B]]],
-                   maybeFallback: Option[() => Future[Option[MinutesContainer[A, B]]]]): Future[Option[MinutesContainer[A, B]]] = {
-    val future = eventualMaybeResult.flatMap {
+                   maybeFallback: Option[() => Future[Option[MinutesContainer[A, B]]]]): Future[Option[MinutesContainer[A, B]]] =
+    eventualMaybeResult.flatMap {
       case Some(minutes) =>
         log.debug(s"Got some minutes. Sending them")
         Future(Option(minutes))
@@ -118,12 +113,6 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
             handleLookup(fallback(), None)
         }
     }
-    future.recover { case t =>
-      log.error("Failed to get a response from primary lookup source", t)
-      None
-    }
-    future
-  }
 
   def updateByTerminalDayAndGetDiff(container: MinutesContainer[A, B]): Future[Option[MinutesContainer[A, B]]] = {
     val eventualUpdatedMinutesDiff = groupByTerminalAndDay(container)
@@ -136,13 +125,6 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
   def groupByTerminalAndDay(container: MinutesContainer[A, B]): Map[(Terminal, SDateLike), Iterable[MinuteLike[A, B]]] =
     container.minutes
       .groupBy(simMin => (simMin.terminal, SDate(simMin.minute).getUtcLastMidnight))
-
-  private def combineAndSendOptionalResult(eventualUpdatedMinutesDiff: Iterable[Future[MinutesContainer[A, B]]],
-                                           replyTo: ActorRef): Unit =
-    combineEventualMinutesContainers(eventualUpdatedMinutesDiff).onComplete {
-      case Success(maybeMinutesWithBookmarks) => replyTo ! maybeMinutesWithBookmarks
-      case Failure(t) => log.error("Failed to get minutes", t)
-    }
 
   private def combineEventualMinutesContainers(eventualUpdatedMinutesDiff: Iterable[Future[MinutesContainer[A, B]]]): Future[MinutesContainer[A, B]] =
     Future
