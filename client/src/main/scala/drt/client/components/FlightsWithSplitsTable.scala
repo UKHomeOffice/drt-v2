@@ -28,7 +28,8 @@ object FlightsWithSplitsTable {
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    hasArrivalSourcesAccess: Boolean,
                    viewMode: ViewMode,
-                   pcpPaxFn: Arrival => Int
+                   pcpPaxFn: Arrival => Int,
+                   portCode: PortCode
                   )
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
@@ -85,7 +86,8 @@ object FlightsWithSplitsTable {
                     splitsQueueOrder = props.queueOrder,
                     hasEstChox = props.hasEstChox,
                     props.hasArrivalSourcesAccess,
-                    props.viewMode
+                    props.viewMode,
+                    props.portCode
                   ))
               }.toTagMod)
           )
@@ -123,15 +125,25 @@ object FlightsWithSplitsTable {
       }
       .toTagMod
 
+    val queueDisplayNames = queues.map(q => <.th(Queues.queueDisplayNames(q))).toTagMod
+
+    val transferPaxTh = <.th("Transfer Pax")
+
     <.thead(
-      <.tr(
-        timelineTh,
-        portColumnThs,
-        queues.map(
-          q => <.th(Queues.queueDisplayNames(q))
-        ).toTagMod,
-        <.th("Transfer Pax")
-      )
+      if (props.portCode == PortCode("LHR")) {
+        <.tr(
+          timelineTh,
+          portColumnThs,
+          queueDisplayNames,
+          transferPaxTh
+        )
+      } else {
+        <.tr(
+          timelineTh,
+          portColumnThs,
+          queueDisplayNames
+        )
+      }
     )
   }
 }
@@ -155,7 +167,8 @@ object FlightTableRow {
                    splitsQueueOrder: Seq[Queue],
                    hasEstChox: Boolean,
                    hasArrivalSourcesAccess: Boolean,
-                   viewMode: ViewMode
+                   viewMode: ViewMode,
+                   portCode: PortCode
                   )
 
   case class RowState(hasChanged: Boolean)
@@ -199,7 +212,7 @@ object FlightTableRow {
           props.viewMode match {
             case vm: ViewDay if vm.isHistoric =>
               GetArrivalSourcesForPointInTime(props.viewMode.time.addHours(28), props.flightWithSplits.unique)
-            case vm: ViewPointInTime  =>
+            case vm: ViewPointInTime =>
               GetArrivalSourcesForPointInTime(props.viewMode.time, props.flightWithSplits.unique)
             case _ =>
               GetArrivalSources(props.flightWithSplits.unique)
@@ -233,15 +246,35 @@ object FlightTableRow {
 
       val paxClass = FlightComponents.paxClassFromSplits(flightWithSplits)
 
-      <.tr(
-        ^.key := flight.uniqueId.toString,
-        ^.className := s"${offScheduleClass(flight)} $timeIndicatorClass${if (flight.isCancelled) " arrival-cancelled" else ""}",
-        hasChangedStyle,
-        props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
-        flightFields.toTagMod,
-        props.splitsQueueOrder.map(q => <.td(<.span(s"${queuePax.getOrElse(q, 0)}"), ^.className := s"queue-split $paxClass ${q.toString.toLowerCase()}-queue-pax right")).toTagMod,
-        <.td(FlightComponents.paxTransferComponent(flight))
-      )
+      val flightId = flight.uniqueId.toString
+
+      val timeLineTagMod = props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod
+
+      val trClassName = s"${offScheduleClass(flight)} $timeIndicatorClass${if (flight.isCancelled) " arrival-cancelled" else ""}"
+
+      val queueTagMod = props.splitsQueueOrder.map(q => <.td(<.span(s"${queuePax.getOrElse(q, 0)}"), ^.className := s"queue-split $paxClass ${q.toString.toLowerCase()}-queue-pax right")).toTagMod
+
+      if (props.portCode == PortCode("LHR")) {
+        <.tr(
+          ^.key := flightId,
+          ^.className := trClassName,
+          hasChangedStyle,
+          timeLineTagMod,
+          flightFields.toTagMod,
+          queueTagMod,
+          <.td(FlightComponents.paxTransferComponent(flight))
+        )
+      } else {
+        <.tr(
+          ^.key := flightId,
+          ^.className := trClassName,
+          hasChangedStyle,
+          timeLineTagMod,
+          flightFields.toTagMod,
+          queueTagMod
+        )
+      }
+
     })
     .configure(Reusability.shouldComponentUpdate)
     .build

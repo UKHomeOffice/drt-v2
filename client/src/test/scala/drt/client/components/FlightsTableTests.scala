@@ -34,6 +34,30 @@ object FlightsTableTests extends TestSuite {
 
     def flightDate(dt: String): VdomTagOf[Span] = <.span(^.title := dt.replace("T", " "), dt.split("T")(1))
 
+    val testLTNFlight = Arrival(
+      Operator = Option(Operator("Op")),
+      Status = ArrivalStatus("scheduled"),
+      Estimated = Option(SDate("2016-01-01T13:05").millisSinceEpoch),
+      Actual = Option(SDate("2016-01-01T13:10").millisSinceEpoch),
+      EstimatedChox = Option(SDate("2016-01-01T13:15").millisSinceEpoch),
+      ActualChox = Option(SDate("2016-01-01T13:20").millisSinceEpoch),
+      Gate = Option("10"),
+      Stand = Option("10A"),
+      MaxPax = Option(200),
+      ActPax = Option(150),
+      TranPax = Option(10),
+      RunwayID = Option("1"),
+      BaggageReclaimId = Option("A"),
+      AirportID = PortCode("ltn"),
+      Terminal = Terminal("T2"),
+      rawICAO = "BA0001",
+      rawIATA = "BAA0001",
+      Origin = PortCode("JFK"),
+      PcpTime = Option(1451655000000L), // 2016-01-01 13:30:00 UTC
+      Scheduled = SDate("2016-01-01T13:00").millisSinceEpoch,
+      FeedSources = Set(ApiFeedSource)
+    )
+
     val testFlight = Arrival(
       Operator = Option(Operator("Op")),
       Status = ArrivalStatus("scheduled"),
@@ -80,7 +104,8 @@ object FlightsTableTests extends TestSuite {
           <.th("Pax"),
           <.th("e-Gates"),
           <.th("EEA"),
-          <.th("Non-EEA")
+          <.th("Non-EEA"),
+          <.th("Transfer Pax")
         ))
 
       val classesAttr = ^.className := "table table-responsive table-striped table-hover table-sm"
@@ -116,10 +141,11 @@ object FlightsTableTests extends TestSuite {
                 <.td(<.div(^.title := "Pax: 140 (150 - 10 transfer)\nMax: 200 ", ^.className := "right", 140)),
                 <.td(<.span(0), ^.className := "queue-split pax-unknown egate-queue-pax right"),
                 <.td(<.span(0), ^.className := "queue-split pax-unknown eeadesk-queue-pax right"),
-                <.td(<.span(0), ^.className := "queue-split pax-unknown noneeadesk-queue-pax right")))))
+                <.td(<.span(0), ^.className := "queue-split pax-unknown noneeadesk-queue-pax right"),
+                <.td(<.div(testFlight.TranPax.get,^.className := "right"))))))
 
         assertRenderedComponentsAreEqual(
-          ArrivalsTable(timelineComponent = None)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, false, ViewLive, PcpPax.bestPaxEstimateWithApi)),
+          ArrivalsTable(timelineComponent = None)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, false, ViewLive, PcpPax.bestPaxEstimateWithApi,PortCode("LHR"))),
           staticComponent(expected)())
       }
 
@@ -155,10 +181,11 @@ object FlightsTableTests extends TestSuite {
                   <.td(<.div(^.title := "Pax: 140 (150 - 10 transfer)\nMax: 200 ", ^.className := "right", 140)),
                   <.td(<.span(0), ^.className := "queue-split pax-unknown egate-queue-pax right"),
                   <.td(<.span(0), ^.className := "queue-split pax-unknown eeadesk-queue-pax right"),
-                  <.td(<.span(0), ^.className := "queue-split pax-unknown noneeadesk-queue-pax right")))))
+                  <.td(<.span(0), ^.className := "queue-split pax-unknown noneeadesk-queue-pax right"),
+                  <.td(<.div(testFlight.TranPax.get,^.className := "right"))))))
 
         assertRenderedComponentsAreEqual(
-          ArrivalsTable(Option(timelineComponent))(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, false, ViewLive, PcpPax.bestPaxEstimateWithApi)),
+          ArrivalsTable(Option(timelineComponent))(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, false, ViewLive, PcpPax.bestPaxEstimateWithApi,PortCode("LHR"))),
           staticComponent(expected)())
       }
 
@@ -191,13 +218,14 @@ object FlightsTableTests extends TestSuite {
                   <.td(<.div(^.title := "Pax: 140 (150 - 10 transfer)\nMax: 200 ", ^.className := "right", 140)),
                   <.td(<.span(0), ^.className := "queue-split pax-unknown egate-queue-pax right"),
                   <.td(<.span(0), ^.className := "queue-split pax-unknown eeadesk-queue-pax right"),
-                  <.td(<.span(0), ^.className := "queue-split pax-unknown noneeadesk-queue-pax right")))))
+                  <.td(<.span(0), ^.className := "queue-split pax-unknown noneeadesk-queue-pax right"),
+                  <.td(<.div(testFlight.TranPax.get,^.className := "right"))))))
 
           def originMapperComponent(portCode: PortCode): VdomNode = <.span(^.title := "JFK, New York, USA", portCode.toString)
 
           val table = ArrivalsTable(timelineComponent = None,
             originMapper = port => originMapperComponent(port)
-          )(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, false, ViewLive, PcpPax.bestPaxEstimateWithApi))
+          )(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, false, ViewLive, PcpPax.bestPaxEstimateWithApi,PortCode("LHR")))
 
           assertRenderedComponentsAreEqual(table, staticComponent(expected)())
         }
@@ -225,6 +253,70 @@ object FlightsTableTests extends TestSuite {
           assertRenderedComponentsAreEqual(staticComponent(actual)(), staticComponent(expected)())
         }
       }
+    }
+
+
+    "FlightsLTNTables" - {
+      def thead(timeline: Boolean = false): TagOf[TableSection] = <.thead(
+        <.tr(
+          if (timeline) <.th("Timeline") else TagMod(""),
+          <.th("Flight"),
+          <.th("Origin"),
+          <.th("Country", ^.className := "country"),
+          <.th("Gate / Stand", ^.className := "gate-stand"),
+          <.th("Status", ^.className := "status"),
+          <.th("Sch"),
+          <.th("Est"),
+          <.th("Act"),
+          <.th("Est Chox"),
+          <.th("Act Chox"),
+          <.th("Est PCP", ^.className := "pcp"),
+          <.th("Pax"),
+          <.th("e-Gates"),
+          <.th("EEA"),
+          <.th("Non-EEA")
+        ))
+
+      val classesAttr = ^.className := "table table-responsive table-striped table-hover table-sm"
+      val dataStickyAttr = VdomAttr("data-sticky") := "data-sticky"
+
+      "Given a single flight then we see the FlightCode, " +
+        "Origin, Gate/Stand, Status, Sch and other dates, and PCP Pax" - {
+        val expected = <.div(
+          <.div(),
+          <.div(^.id := "toStick", ^.className := "container sticky",
+            <.table(
+              ^.id := "sticky",
+              classesAttr,
+              thead())),
+          <.table(
+            ^.id := "sticky-body",
+            dataStickyAttr,
+            classesAttr,
+            thead(),
+            <.tbody(
+              <.tr(^.className := " before-now",
+                <.td(^.className := "arrivals__table__flight-code", <.div(testLTNFlight.flightCode)),
+                <.td(testLTNFlight.Origin.toString),
+                <.td(<.span(<.span())),
+                <.td(s"${testLTNFlight.Gate.getOrElse("")}/${testLTNFlight.Stand.getOrElse("")}"),
+                <.td(testLTNFlight.Status.description),
+                <.td(<.span(^.title := "2016-01-01 13:00", "13:00")), //sch
+                <.td(<.span(^.title := "2016-01-01 13:05", "13:05")),
+                <.td(<.span(^.title := "2016-01-01 13:10", "13:10")),
+                <.td(<.span(^.title := "2016-01-01 13:15", "13:15")),
+                <.td(<.span(^.title := "2016-01-01 13:20", "13:20")),
+                <.td(<.div(<.span(^.title := "2016-01-01 13:30", "13:30"), " \u2192 ", <.span(^.title := "2016-01-01 13:37", "13:37"))),
+                <.td(<.div(^.title := "Pax: 140 (150 - 10 transfer)\nMax: 200 ", ^.className := "right", 140)),
+                <.td(<.span(0), ^.className := "queue-split pax-unknown egate-queue-pax right"),
+                <.td(<.span(0), ^.className := "queue-split pax-unknown eeadesk-queue-pax right"),
+                <.td(<.span(0), ^.className := "queue-split pax-unknown noneeadesk-queue-pax right")))))
+
+        assertRenderedComponentsAreEqual(
+          ArrivalsTable(timelineComponent = None)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, false, ViewLive, PcpPax.bestPaxEstimateWithApi,PortCode("LTN"))),
+          staticComponent(expected)())
+      }
+
     }
 
   }
