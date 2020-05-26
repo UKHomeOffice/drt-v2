@@ -109,19 +109,11 @@ class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
           streamingUpdateActors.get((t, d)) match {
             case Some(actor) =>
               lastRequests = lastRequests + ((t, d) -> now().millisSinceEpoch)
-              allUpdatesSince(sinceMillis, actor)
+              actor
+                .ask(GetAllUpdatesSince(sinceMillis))
+                .mapTo[MinutesContainer[A, B]]
             case None =>
-              log.error(s"Being asked for updates for $t@${SDate(d).toISOString()}, but we're missing the updates actor for that terminal and day")
-              Future(MinutesContainer.empty[A, B])
+              throw new Exception(s"Missing updates actor for $t@${SDate(d).toISOString()}")
           }
-      }
-
-  def allUpdatesSince(sinceMillis: MillisSinceEpoch, actor: ActorRef): Future[MinutesContainer[A, B]] =
-    actor
-      .ask(GetAllUpdatesSince(sinceMillis)).mapTo[MinutesContainer[A, B]]
-      .recoverWith {
-        case t =>
-          log.error("Failed to get a response from the updates actor", t)
-          Future(MinutesContainer.empty[A, B])
       }
 }
