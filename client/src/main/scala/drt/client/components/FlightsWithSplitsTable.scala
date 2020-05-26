@@ -14,7 +14,7 @@ import drt.shared.api.Arrival
 import drt.shared.splits.ApiSplitsToSplitRatio
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.Reusability
-import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, TableSection}
@@ -129,7 +129,8 @@ object FlightsWithSplitsTable {
         portColumnThs,
         queues.map(
           q => <.th(Queues.queueDisplayNames(q))
-        ).toTagMod
+        ).toTagMod,
+        <.th("Transfer Pax")
       )
     )
   }
@@ -238,7 +239,8 @@ object FlightTableRow {
         hasChangedStyle,
         props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
         flightFields.toTagMod,
-        props.splitsQueueOrder.map(q => <.td(<.span(s"${queuePax.getOrElse(q, 0)}"), ^.className := s"queue-split $paxClass ${q.toString.toLowerCase()}-queue-pax right")).toTagMod
+        props.splitsQueueOrder.map(q => <.td(<.span(s"${queuePax.getOrElse(q, 0)}"), ^.className := s"queue-split $paxClass ${q.toString.toLowerCase()}-queue-pax right")).toTagMod,
+        <.td(FlightComponents.paxTransferComponent(flight))
       )
     })
     .configure(Reusability.shouldComponentUpdate)
