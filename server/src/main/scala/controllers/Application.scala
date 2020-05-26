@@ -14,7 +14,6 @@ import boopickle.Default._
 import buildinfo.BuildInfo
 import com.typesafe.config.ConfigFactory
 import controllers.application._
-import controllers.model.ActorDataRequest
 import drt.auth._
 import drt.http.ProdSendAndReceive
 import drt.shared.CrunchApi._
@@ -375,21 +374,19 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     val requestStart = SDate.now()
     val startMillis = SDate.now().getLocalLastMidnight.millisSinceEpoch
     val endMillis = SDate.now().getLocalNextMidnight.millisSinceEpoch
-    val portState = ActorDataRequest.portState[PortState](ctrl.portStateActor, GetPortState(startMillis, endMillis))
+    val portState = ctrl.portStateActor.ask(GetPortState(startMillis, endMillis))(30 seconds).mapTo[Option[PortState]]
 
-    portState.map {
-      case Left(liveError) =>
-        log.error(s"Healthcheck failed to get live response, ${liveError.message}")
-        BadGateway(
-          """{
-            |   "error": "Unable to retrieve live state
-            |}
-          """)
-      case _ =>
+    portState
+      .map { _ =>
         val requestEnd = SDate.now().millisSinceEpoch
         log.info(s"Health check request started at ${requestStart.toISOString()} and lasted ${(requestStart.millisSinceEpoch - requestEnd) / 1000} seconds ")
         NoContent
-    }
+      }
+      .recoverWith {
+        case t =>
+          log.error(s"Health check failed to get live response", t)
+          Future(InternalServerError("Failed to retrieve port state"))
+      }
   }
 
   def apiLogin(): Action[Map[String, Seq[String]]] = Action.async(parse.tolerantFormUrlEncoded) { request =>

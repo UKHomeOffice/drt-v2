@@ -63,20 +63,10 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
 
   def processUpdatesRequest(viewMode: ViewMode, call: Future[dom.XMLHttpRequest]): Future[Action] = {
     call
-      .map(r => read[Either[PortStateError, Option[PortStateUpdates]]](r.responseText))
+      .map(r => read[Option[PortStateUpdates]](r.responseText))
       .map {
-        case Right(Some(cu)) => UpdatePortStateFromUpdates(viewMode, cu)
-        case Right(None) => SchedulePortStateUpdateRequest(viewMode)
-        case Left(error) =>
-          log.error(s"Failed to GetPortStateUpdates ${error.message}.")
-
-          if (viewMode.isDifferentTo(getCurrentViewMode())) {
-            log.info(s"The view appears to have changed. No need to retry")
-            NoAction
-          } else {
-            log.info(s"Re-requesting after ${PollDelay.recoveryDelay}")
-            RetryActionAfter(GetPortStateUpdates(viewMode), PollDelay.recoveryDelay)
-          }
+        case Some(cu) => UpdatePortStateFromUpdates(viewMode, cu)
+        case None => SchedulePortStateUpdateRequest(viewMode)
       }
       .recoverWith {
         case throwable =>

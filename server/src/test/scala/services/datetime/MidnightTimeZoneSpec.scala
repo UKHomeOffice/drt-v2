@@ -1,7 +1,7 @@
-package services
+package services.datetime
 
 import org.specs2.mutable.Specification
-import services.graphstages.Crunch
+import services.SDate
 import services.graphstages.Crunch.europeLondonTimeZone
 
 class MidnightTimeZoneSpec extends Specification {

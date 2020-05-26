@@ -4,8 +4,8 @@ import actors.Actors.{MinutesLookup, MinutesUpdate}
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import akka.actor.{Actor, ActorRef}
 import akka.pattern.ask
-import akka.stream.{ActorMaterializer, Materializer}
 import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.{ActorMaterializer, Materializer}
 import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.Terminals.Terminal
@@ -15,8 +15,8 @@ import services.SDate
 import services.graphstages.Crunch
 
 import scala.collection.{immutable, mutable}
-import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContextExecutor, Future}
 
 
 case class GetStateByTerminalDateRange(terminal: Terminal, start: SDateLike, end: SDateLike)
