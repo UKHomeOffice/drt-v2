@@ -280,8 +280,8 @@ object FlightsTableTests extends TestSuite {
       val classesAttr = ^.className := "table table-responsive table-striped table-hover table-sm"
       val dataStickyAttr = VdomAttr("data-sticky") := "data-sticky"
 
-      "Given a single flight then we see the FlightCode, " +
-        "Origin, Gate/Stand, Status, Sch and other dates, and PCP Pax" - {
+      "Given a LTN flight then we see the FlightCode, " +
+        "Origin, Gate/Stand, Status, Sch and other dates, and PCP Pax and no Transfer Pax column" - {
         val expected = <.div(
           <.div(),
           <.div(^.id := "toStick", ^.className := "container sticky",
