@@ -2,8 +2,9 @@ package actors.daily
 
 import actors.GetUpdatesSince
 import actors.acking.AckingReceiver.Ack
+import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Cancellable, PoisonPill, Props}
-import akka.pattern.ask
+import akka.pattern.{ask, pipe}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
@@ -13,10 +14,9 @@ import drt.shared.{MilliTimes, SDateLike, WithTimeAccessor}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 
+import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
-import scala.util.{Failure, Success}
 
 
 case object PurgeExpired
@@ -79,39 +79,40 @@ class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
       startUpdatesStream(terminal, day)
       sender() ! Ack
 
-    case GetUpdatesSince(since, from, to) =>
+    case GetUpdatesSince(sinceMillis, fromMillis, toMillis) =>
       val replyTo = sender()
-      val daysMillis: Seq[MillisSinceEpoch] = (from to to by MilliTimes.oneHourMillis)
-        .map(m => SDate(m).getUtcLastMidnight.millisSinceEpoch)
-        .distinct
+      val terminalDays = terminalDaysForPeriod(fromMillis, toMillis)
 
-      val terminalDays = for {
-        terminal <- terminals
-        day <- daysMillis
-      } yield (terminal, day)
-
-      Source(terminalDays)
-        .mapAsync(1) {
-          case (t, d) =>
-            streamingUpdateActors.get((t, d)) match {
-              case Some(actor) =>
-                lastRequests = lastRequests + ((t, d) -> now().millisSinceEpoch)
-                actor
-                  .ask(GetAllUpdatesSince(since)).mapTo[MinutesContainer[A, B]]
-                  .recoverWith {
-                    case t =>
-                      log.error("Failed to get a response from the updates actor", t)
-                      Future(MinutesContainer.empty[A, B])
-                  }
-              case None => Future(MinutesContainer.empty[A, B])
-            }
-        }
+      terminalsAndDaysUpdatesSource(terminalDays, sinceMillis)
         .runWith(Sink.fold(MinutesContainer.empty[A, B])(_ ++ _))
-        .onComplete {
-          case Success(container) => replyTo ! container
-          case Failure(t) =>
-            log.error("Failed to get updates", t)
-            replyTo ! MinutesContainer.empty[A, B]
-        }
+        .pipeTo(replyTo)
   }
+
+  def terminalDaysForPeriod(fromMillis: MillisSinceEpoch,
+                            toMillis: MillisSinceEpoch): List[(Terminal, MillisSinceEpoch)] = {
+    val daysMillis: Seq[MillisSinceEpoch] = (fromMillis to toMillis by MilliTimes.oneHourMillis)
+      .map(m => SDate(m).getUtcLastMidnight.millisSinceEpoch)
+      .distinct
+
+    for {
+      terminal <- terminals
+      day <- daysMillis
+    } yield (terminal, day)
+  }
+
+  def terminalsAndDaysUpdatesSource(terminalDays: List[(Terminal, MillisSinceEpoch)],
+                                    sinceMillis: MillisSinceEpoch): Source[MinutesContainer[A, B], NotUsed] =
+    Source(terminalDays)
+      .mapAsync(1) {
+        case (t, d) =>
+          streamingUpdateActors.get((t, d)) match {
+            case Some(actor) =>
+              lastRequests = lastRequests + ((t, d) -> now().millisSinceEpoch)
+              actor
+                .ask(GetAllUpdatesSince(sinceMillis))
+                .mapTo[MinutesContainer[A, B]]
+            case None =>
+              throw new Exception(s"Missing updates actor for $t@${SDate(d).toISOString()}")
+          }
+      }
 }

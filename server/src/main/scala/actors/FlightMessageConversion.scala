@@ -4,8 +4,7 @@ import actors.PortStateMessageConversion.splitMessageToApiSplits
 import actors.restore.RestorerWithLegacy
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import drt.shared.api.{Arrival, FlightCodeSuffix}
-import org.apache.commons.lang3.StringUtils
+import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, FlightsWithSplitsMessage, PaxTypeAndQueueCountMessage, SplitMessage}
 import server.protobuf.messages.FlightsMessage.{FeedStatusMessage, FeedStatusesMessage, FlightMessage, FlightStateSnapshotMessage}
@@ -95,8 +94,8 @@ object FlightMessageConversion {
       gate = apiFlight.Gate,
       stand = apiFlight.Stand,
       status = Option(apiFlight.Status.description),
-      maxPax = apiFlight.MaxPax.filter(_ != 0),
-      actPax = apiFlight.ActPax.filter(_ != 0),
+      maxPax = apiFlight.MaxPax,
+      actPax = apiFlight.ActPax,
       tranPax = apiFlight.TranPax,
       runwayID = apiFlight.RunwayID,
       baggageReclaimId = apiFlight.BaggageReclaimId,
