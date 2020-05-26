@@ -145,7 +145,7 @@ object FlightsTableTests extends TestSuite {
                 <.td(<.div(testFlight.TranPax.get,^.className := "right"))))))
 
         assertRenderedComponentsAreEqual(
-          ArrivalsTable(timelineComponent = None)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, false, ViewLive, PcpPax.bestPaxEstimateWithApi,PortCode("LHR"))),
+          ArrivalsTable(timelineComponent = None)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, false, ViewLive, PcpPax.bestPaxEstimateWithApi,true)),
           staticComponent(expected)())
       }
 
@@ -185,7 +185,7 @@ object FlightsTableTests extends TestSuite {
                   <.td(<.div(testFlight.TranPax.get,^.className := "right"))))))
 
         assertRenderedComponentsAreEqual(
-          ArrivalsTable(Option(timelineComponent))(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, false, ViewLive, PcpPax.bestPaxEstimateWithApi,PortCode("LHR"))),
+          ArrivalsTable(Option(timelineComponent))(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, false, ViewLive, PcpPax.bestPaxEstimateWithApi,true)),
           staticComponent(expected)())
       }
 
@@ -225,7 +225,7 @@ object FlightsTableTests extends TestSuite {
 
           val table = ArrivalsTable(timelineComponent = None,
             originMapper = port => originMapperComponent(port)
-          )(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, false, ViewLive, PcpPax.bestPaxEstimateWithApi,PortCode("LHR")))
+          )(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, false, ViewLive, PcpPax.bestPaxEstimateWithApi,true))
 
           assertRenderedComponentsAreEqual(table, staticComponent(expected)())
         }
@@ -313,7 +313,7 @@ object FlightsTableTests extends TestSuite {
                 <.td(<.span(0), ^.className := "queue-split pax-unknown noneeadesk-queue-pax right")))))
 
         assertRenderedComponentsAreEqual(
-          ArrivalsTable(timelineComponent = None)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, false, ViewLive, PcpPax.bestPaxEstimateWithApi,PortCode("LTN"))),
+          ArrivalsTable(timelineComponent = None)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, false, ViewLive, PcpPax.bestPaxEstimateWithApi,false)),
           staticComponent(expected)())
       }
 

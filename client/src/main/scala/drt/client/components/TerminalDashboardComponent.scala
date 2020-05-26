@@ -85,7 +85,7 @@ object TerminalDashboardComponent {
                       false,
                       ViewLive,
                       PcpPax.pcpPaxFnFromFeatureFlags(ff),
-                      p.airportConfig.portCode
+                      p.airportConfig.hasTransfer
                     )
                   ))),
               p.router.link(closeArrivalsPopupLink)(^.className := "close-arrivals-popup btn btn-default", "close")

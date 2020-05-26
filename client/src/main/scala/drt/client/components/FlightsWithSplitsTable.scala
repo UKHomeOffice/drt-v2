@@ -29,7 +29,7 @@ object FlightsWithSplitsTable {
                    hasArrivalSourcesAccess: Boolean,
                    viewMode: ViewMode,
                    pcpPaxFn: Arrival => Int,
-                   portCode: PortCode
+                   hasTransfer: Boolean
                   )
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
@@ -87,7 +87,7 @@ object FlightsWithSplitsTable {
                     hasEstChox = props.hasEstChox,
                     props.hasArrivalSourcesAccess,
                     props.viewMode,
-                    props.portCode
+                    props.hasTransfer
                   ))
               }.toTagMod)
           )
@@ -130,7 +130,7 @@ object FlightsWithSplitsTable {
     val transferPaxTh = <.th("Transfer Pax")
 
     <.thead(
-      if (props.portCode == PortCode("LHR")) {
+      if (props.hasTransfer) {
         <.tr(
           timelineTh,
           portColumnThs,
@@ -168,7 +168,7 @@ object FlightTableRow {
                    hasEstChox: Boolean,
                    hasArrivalSourcesAccess: Boolean,
                    viewMode: ViewMode,
-                   portCode: PortCode
+                   hasTransfer: Boolean
                   )
 
   case class RowState(hasChanged: Boolean)
@@ -254,7 +254,7 @@ object FlightTableRow {
 
       val queueTagMod = props.splitsQueueOrder.map(q => <.td(<.span(s"${queuePax.getOrElse(q, 0)}"), ^.className := s"queue-split $paxClass ${q.toString.toLowerCase()}-queue-pax right")).toTagMod
 
-      if (props.portCode == PortCode("LHR")) {
+      if (props.hasTransfer) {
         <.tr(
           ^.key := flightId,
           ^.className := trClassName,

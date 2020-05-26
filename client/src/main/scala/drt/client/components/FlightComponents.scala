@@ -38,7 +38,7 @@ object FlightComponents {
 
   def paxTransferComponent(flight: Arrival) = <.div(
     ^.className := "right",
-    s"${flight.TranPax.getOrElse(0)}"
+    s"${flight.TranPax.getOrElse("-")}"
   )
 
   def maxCapacityLine(maxFlightPax: Int, flight: Arrival): TagMod = {
