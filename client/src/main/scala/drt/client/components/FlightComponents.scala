@@ -36,6 +36,11 @@ object FlightComponents {
         |Max: $max $apiPax""".stripMargin
   }
 
+  def paxTransferComponent(flight: Arrival) = <.div(
+    ^.className := "right",
+    s"${flight.TranPax.getOrElse("-")}"
+  )
+
   def maxCapacityLine(maxFlightPax: Int, flight: Arrival): TagMod = {
     flight.MaxPax.filter(_ > 0).map { maxPaxMillis =>
       <.div(^.className := "pax-capacity", ^.width := paxBarWidth(maxFlightPax, maxPaxMillis))

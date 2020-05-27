@@ -123,8 +123,7 @@ object DashboardTerminalSummary {
       val crunchMinuteTimeSlots = groupCrunchMinutesByX(groupSize = 15)(
         CrunchApi.terminalMinutesByMinute[CrunchMinute, CrunchMinute, TQM](props.crunchMinutes, props.terminal),
         props.terminal,
-        Queues.queueOrder).flatMap(_._2
-      )
+        Queues.queueOrder).flatMap(_._2)
 
       if (crunchMinuteTimeSlots.isEmpty) {
         <.div(^.className := "dashboard-summary container-fluid", "No data available to display")
