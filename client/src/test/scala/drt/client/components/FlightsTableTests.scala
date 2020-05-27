@@ -101,7 +101,7 @@ object FlightsTableTests extends TestSuite {
           <.th("Est Chox"),
           <.th("Act Chox"),
           <.th("Est PCP", ^.className := "pcp"),
-          <.th("Pax"),
+          <.th("Est PCP Pax"),
           <.th("e-Gates"),
           <.th("EEA"),
           <.th("Non-EEA"),
@@ -271,7 +271,7 @@ object FlightsTableTests extends TestSuite {
           <.th("Est Chox"),
           <.th("Act Chox"),
           <.th("Est PCP", ^.className := "pcp"),
-          <.th("Pax"),
+          <.th("Est PCP Pax"),
           <.th("e-Gates"),
           <.th("EEA"),
           <.th("Non-EEA")
