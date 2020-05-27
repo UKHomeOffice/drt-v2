@@ -1,7 +1,6 @@
 package actors.daily
 
 import actors.GetUpdatesSince
-import actors.acking.AckingReceiver.Ack
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Cancellable, PoisonPill, Props}
 import akka.pattern.{ask, pipe}
@@ -54,13 +53,14 @@ class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
   }
 
   def startUpdatesStream(terminal: Terminal,
-                         day: SDateLike): Unit = streamingUpdateActors.get((terminal, day.millisSinceEpoch)) match {
-    case Some(_) => Unit
+                         day: SDateLike): ActorRef = streamingUpdateActors.get((terminal, day.millisSinceEpoch)) match {
+    case Some(existing) => existing
     case None =>
       log.info(s"Starting supervised updates stream for $terminal / ${day.toISODateOnly}")
       val actor = context.system.actorOf(updatesActorFactory(terminal, day))
       streamingUpdateActors = streamingUpdateActors + ((terminal, day.millisSinceEpoch) -> actor)
       lastRequests = lastRequests + ((terminal, day.millisSinceEpoch) -> now().millisSinceEpoch)
+      actor
   }
 
   override def receive: Receive = {
@@ -74,10 +74,6 @@ class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
       }
       streamingUpdateActors = streamingUpdateActors -- expiredToRemove
       lastRequests = lastRequests -- expiredToRemove
-
-    case StartUpdatesStream(terminal, day) =>
-      startUpdatesStream(terminal, day)
-      sender() ! Ack
 
     case GetUpdatesSince(sinceMillis, fromMillis, toMillis) =>
       val replyTo = sender()
@@ -100,19 +96,20 @@ class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
     } yield (terminal, day)
   }
 
+  def updatesActor(terminal: Terminal, day: MillisSinceEpoch): ActorRef =
+    streamingUpdateActors.get((terminal, day)) match {
+      case Some(existingActor) => existingActor
+      case None => startUpdatesStream(terminal, SDate(day))
+    }
+
   def terminalsAndDaysUpdatesSource(terminalDays: List[(Terminal, MillisSinceEpoch)],
                                     sinceMillis: MillisSinceEpoch): Source[MinutesContainer[A, B], NotUsed] =
     Source(terminalDays)
       .mapAsync(1) {
-        case (t, d) =>
-          streamingUpdateActors.get((t, d)) match {
-            case Some(actor) =>
-              lastRequests = lastRequests + ((t, d) -> now().millisSinceEpoch)
-              actor
-                .ask(GetAllUpdatesSince(sinceMillis))
-                .mapTo[MinutesContainer[A, B]]
-            case None =>
-              throw new Exception(s"Missing updates actor for $t@${SDate(d).toISOString()}")
-          }
+        case (terminal, day) =>
+          lastRequests = lastRequests + ((terminal, day) -> now().millisSinceEpoch)
+          updatesActor(terminal, day)
+              .ask(GetAllUpdatesSince(sinceMillis))
+              .mapTo[MinutesContainer[A, B]]
       }
 }

@@ -3,7 +3,6 @@ package actors
 import actors.DrtStaticParameters.liveDaysAhead
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.queues.CrunchQueueActor.UpdatedMillis
-import actors.daily.StartUpdatesStream
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
@@ -113,8 +112,6 @@ class PortStateActor(liveStateActor: ActorRef,
 
     case HandleSimulationRequest =>
       handleSimulationRequest()
-
-    case _: StartUpdatesStream => sender() ! Ack
 
     case GetState =>
       log.debug(s"Received GetState request. Replying with PortState containing ${state.crunchMinutes.count} crunch minutes")

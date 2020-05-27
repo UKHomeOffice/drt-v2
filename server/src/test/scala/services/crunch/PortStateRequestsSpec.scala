@@ -1,7 +1,6 @@
 package services.crunch
 
 import actors._
-import actors.daily.StartUpdatesStream
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import controllers.ArrivalGenerator
@@ -108,12 +107,9 @@ class PortStateRequestsSpec extends CrunchTestLike {
           val lm = DeskRecMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4)
 
           resetData(T1, myNow().getUtcLastMidnight)
-          val eventualAck = ps.ask(StartUpdatesStream(T1, myNow()))
-            .flatMap { _ =>
-              ps.ask(DeskRecMinutes(Seq(lm)))
-            }
+          val eventualAck = ps.ask(DeskRecMinutes(Seq(lm)))
 
-          "Then I should the matching crunch minute in the updates" >> {
+          "Then I should get the matching crunch minute in the updates" >> {
             val sinceMillis = myNow().addMinutes(-1).millisSinceEpoch
             Thread.sleep(250)
             val result = Await.result(eventualPortStateUpdates(eventualAck, myNow, ps, sinceMillis), 1 second)

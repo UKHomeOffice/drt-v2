@@ -2,12 +2,11 @@ package actors
 
 import actors.DrtStaticParameters.expireAfterMillis
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
-import actors.daily.{StartUpdatesStream, TerminalDayQueuesUpdatesActor, TerminalDayStaffUpdatesActor, UpdatesSupervisor}
+import actors.daily.{TerminalDayQueuesUpdatesActor, TerminalDayStaffUpdatesActor, UpdatesSupervisor}
 import actors.minutes.{QueueMinutesActor, StaffMinutesActor}
 import akka.actor.{Actor, ActorContext, ActorRef, ActorSystem, Props}
 import akka.pattern.{ask, pipe}
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
@@ -16,10 +15,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.crunch.deskrecs.GetFlights
-import services.graphstages.Crunch
-import test.TestActors.TestUpdatesSupervisor
 
-import scala.collection.immutable
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
@@ -109,11 +105,6 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
       log.debug(s"Received GetPortState request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       replyWithPortState(start, end, sender())
 
-    case StartUpdatesStream(terminal, day) =>
-      val replyTo = sender()
-      startUpdateStream(terminal, day, queueUpdatesSupervisor)
-        .onComplete(_ => replyTo ! Ack)
-
     case GetPortStateForTerminal(start, end, terminal) =>
       log.debug(s"Received GetPortStateForTerminal request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()} for $terminal")
       replyWithTerminalState(start, end, terminal, sender())
@@ -142,30 +133,8 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
     val eventualQueueMinutes = queuesActor.ask(GetPortState(startMillis, endMillis)).mapTo[MinutesContainer[CrunchMinute, TQM]]
     val eventualStaffMinutes = staffActor.ask(GetPortState(startMillis, endMillis)).mapTo[MinutesContainer[StaffMinute, TM]]
     val eventualPortState = combineToPortState(eventualFlights, eventualQueueMinutes, eventualStaffMinutes)
-    eventualPortState.map { ps =>
-      val start = SDate(startMillis)
-      val end = SDate(endMillis)
-      startUpdateStreams(start, end, queueUpdatesSupervisor)
-      startUpdateStreams(start, end, staffUpdatesSupervisor)
-      ps
-    }.pipeTo(replyTo)
+    eventualPortState.pipeTo(replyTo)
   }
-
-  def startUpdateStreams(start: SDateLike, end: SDateLike, supervisor: ActorRef): Future[immutable.Seq[Any]] = {
-    val terminalDays = for {
-      day <- Crunch.utcDaysInPeriod(start, end)
-      terminal <- terminals
-    } yield (terminal, day)
-
-    Source(terminalDays.toList)
-      .mapAsync(1) {
-        case (t, d) => startUpdateStream(t, d, supervisor)
-      }
-      .runWith(Sink.seq)
-  }
-
-  private def startUpdateStream(terminal: Terminal, day: SDateLike, supervisor: ActorRef) =
-    supervisor.ask(StartUpdatesStream(terminal, day))
 
   def replyWithUpdates(since: MillisSinceEpoch,
                        start: MillisSinceEpoch,

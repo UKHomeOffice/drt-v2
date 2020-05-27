@@ -76,13 +76,13 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
             log.info(s"${day.toISOString()} is historic. Will use CrunchStateReadActor as secondary source")
             handleLookup(lookupPrimary(terminal, day), Option(() => lookupSecondary(terminal, day))).map(r => (day, r))
           case day =>
-            log.info(s"${day.toISOString()} is live. Look up live data from TerminalDayQueuesActor")
+            log.info(s"${day.toISOString()} is live. Look up live data from terminal/day actor")
             handleLookup(lookupPrimary(terminal, day), None).map(r => (day, r))
         }
         .collect {
           case (_, Some(container)) => container.window(start, end)
           case (day, None) =>
-            log.error(s"No minutes found for for ${day.toISOString()}")
+            log.info(s"No minutes found for for ${day.toISOString()}")
             MinutesContainer.empty[A, B]
         }
         .fold(MinutesContainer[A, B](Seq())) {

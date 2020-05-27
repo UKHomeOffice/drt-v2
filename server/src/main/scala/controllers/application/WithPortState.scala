@@ -2,12 +2,11 @@ package controllers.application
 
 import actors.pointInTime.CrunchStateReadActor
 import actors.{DrtStaticParameters, GetPortState, GetUpdatesSince}
-import akka.actor.PoisonPill
-import akka.pattern.ask
 import akka.actor.{PoisonPill, Props}
+import akka.pattern.ask
 import controllers.Application
 import drt.auth.DesksAndQueuesView
-import drt.shared.CrunchApi.{MillisSinceEpoch, PortStateError, PortStateUpdates}
+import drt.shared.CrunchApi.{MillisSinceEpoch, PortStateUpdates}
 import drt.shared.PortState
 import play.api.mvc.{Action, AnyContent, Request}
 import services.SDate
@@ -34,17 +33,19 @@ trait WithPortState {
 
       val eventualUpdates = maybeSinceMillis match {
         case None =>
-          futureCrunchState[PortState](maybePointInTime, startMillis, endMillis, GetPortState(startMillis, endMillis))
+          futureCrunchState(maybePointInTime, startMillis, endMillis, GetPortState(startMillis, endMillis))
+            .mapTo[PortState]
             .map { updates => Ok(write(updates)) }
         case Some(sinceMillis) =>
-          futureCrunchState[PortStateUpdates](maybePointInTime, startMillis, endMillis, GetUpdatesSince(sinceMillis, startMillis, endMillis))
+          futureCrunchState(maybePointInTime, startMillis, endMillis, GetUpdatesSince(sinceMillis, startMillis, endMillis))
+            .mapTo[Option[PortStateUpdates]]
             .map { updates => Ok(write(updates)) }
       }
 
       eventualUpdates
         .recoverWith {
           case t =>
-            log.error("Error processing request for port state or port state updates", t)
+            log.error("Error processing request for port state or port state updates", t.getMessage)
             Future(InternalServerError)
         }
     }
@@ -56,7 +57,7 @@ trait WithPortState {
       val endMillis = request.queryString.get("end").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
 
       val message = GetPortState(startMillis, endMillis)
-      val futureState = futureCrunchState(Option(pointInTime), startMillis, endMillis, message)
+      val futureState = futureCrunchState(Option(pointInTime), startMillis, endMillis, message).mapTo[PortState]
 
       futureState
         .map { updates => Ok(write(updates)) }
@@ -68,16 +69,19 @@ trait WithPortState {
     }
   }
 
-  def futureCrunchState[X](maybePointInTime: Option[MillisSinceEpoch], startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, request: Any): Future[Option[X]] = {
+  def futureCrunchState(maybePointInTime: Option[MillisSinceEpoch],
+                        startMillis: MillisSinceEpoch,
+                        endMillis: MillisSinceEpoch,
+                        request: Any): Future[Any] = {
     maybePointInTime match {
       case Some(pit) =>
         log.debug(s"Snapshot crunch state query ${SDate(pit).toISOString()}")
         val tempActor = system.actorOf(Props(new CrunchStateReadActor(airportConfig.portStateSnapshotInterval, SDate(pit), DrtStaticParameters.expireAfterMillis, airportConfig.queuesByTerminal, startMillis, endMillis)))
-        val futureResult = tempActor.ask(request)(30 seconds).mapTo[Option[X]]
+        val futureResult = tempActor.ask(request)(30 seconds)
         futureResult.foreach(_ => tempActor ! PoisonPill)
         futureResult
       case _ =>
-        ctrl.portStateActor.ask(request).mapTo[Option[X]]
+        ctrl.portStateActor.ask(request)
     }
-
+  }
 }

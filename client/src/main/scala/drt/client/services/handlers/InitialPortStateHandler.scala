@@ -61,13 +61,8 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
 
   def processRequest(viewMode: ViewMode, call: Future[dom.XMLHttpRequest]): Future[Action] = {
     call
-      .map(r => read[Option[PortState]](r.responseText))
-      .map {
-        case Some(portState) => SetPortState(viewMode, portState)
-        case None =>
-          log.info(s"Got no crunch state for date")
-          SetPortState(viewMode, PortState.empty)
-      }
+      .map(r => read[PortState](r.responseText))
+      .map(portState => SetPortState(viewMode, portState))
       .recoverWith {
         case throwable =>
           log.error(s"Call to crunch-state failed (${throwable.getMessage}. Re-requesting after ${PollDelay.recoveryDelay}")

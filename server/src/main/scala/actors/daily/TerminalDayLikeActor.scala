@@ -88,7 +88,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
   def updateAndPersistDiff(container: MinutesContainer[VAL, INDEX]): Unit =
     diffFromMinutes(state, container.minutes) match {
-      case noDifferences if noDifferences.isEmpty => sender() ! true
+      case noDifferences if noDifferences.isEmpty => sender() ! MinutesContainer.empty[VAL, INDEX]
       case differences =>
         state = updateStateFromDiff(state, differences)
         val messageToPersist = containerToMessage(differences)
