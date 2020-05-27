@@ -154,8 +154,8 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
                              terminal: Terminal,
                              replyTo: ActorRef): Future[PortState] = {
     val eventualFlights = flightsActor.ask(GetFlightsForTerminal(start, end, terminal)).mapTo[FlightsWithSplits]
-    val eventualQueueMinutes = queuesActor.ask(GetStateByTerminalDateRange(terminal, SDate(start), SDate(end))).mapTo[MinutesContainer[CrunchMinute, TQM]]
-    val eventualStaffMinutes = staffActor.ask(GetStateByTerminalDateRange(terminal, SDate(start), SDate(end))).mapTo[MinutesContainer[StaffMinute, TM]]
+    val eventualQueueMinutes = queuesActor.ask(GetPortStateForTerminal(start, end, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
+    val eventualStaffMinutes = staffActor.ask(GetPortStateForTerminal(start, end, terminal)).mapTo[MinutesContainer[StaffMinute, TM]]
     val eventualPortState = combineToPortState(eventualFlights, eventualQueueMinutes, eventualStaffMinutes)
     eventualPortState.pipeTo(replyTo)
   }

@@ -18,27 +18,6 @@ import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 import services.SDate
 
 
-object CrunchStateActor {
-  def props(initialMaybeSnapshotInterval: Option[Int],
-            initialSnapshotBytesThreshold: Int,
-            name: String,
-            portQueues: Map[Terminal, Seq[Queue]],
-            now: () => SDateLike,
-            expireAfterMillis: Int,
-            purgePreviousSnapshots: Boolean,
-            forecastMaxMillis: () => MillisSinceEpoch) = Props(
-    new CrunchStateActor(
-      initialMaybeSnapshotInterval,
-      initialSnapshotBytesThreshold,
-      name,
-      portQueues,
-      now,
-      expireAfterMillis,
-      purgePreviousSnapshots,
-      forecastMaxMillis
-    ))
-}
-
 class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
                        initialSnapshotBytesThreshold: Int,
                        name: String,

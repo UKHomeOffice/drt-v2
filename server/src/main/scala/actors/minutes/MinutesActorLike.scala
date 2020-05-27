@@ -2,7 +2,7 @@ package actors.minutes
 
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
-import actors.{GetPortState, GetStateByTerminalDateRange}
+import actors.{GetPortState, GetPortStateForTerminal}
 import akka.actor.{Actor, ActorRef}
 import akka.pattern.pipe
 import akka.stream.ActorMaterializer
@@ -49,8 +49,8 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
       }
       combineEventualMinutesContainers(eventualMinutesForAllTerminals).pipeTo(replyTo)
 
-    case GetStateByTerminalDateRange(terminal, start, end) =>
-      handleLookups(terminal, start, end).pipeTo(sender())
+    case GetPortStateForTerminal(startMillis, endMillis, terminal) =>
+      handleLookups(terminal, SDate(startMillis), SDate(endMillis)).pipeTo(sender())
 
     case container: MinutesContainer[A, B] =>
       val replyTo = sender()

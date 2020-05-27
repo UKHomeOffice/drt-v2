@@ -28,6 +28,8 @@ case class GetPortState(from: MillisSinceEpoch, to: MillisSinceEpoch)
 
 case class GetPortStateForTerminal(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal)
 
+//case class GetStateByTerminalDateRange(terminal: Terminal, start: SDateLike, end: SDateLike)
+
 case class GetFlightsForTerminal(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal)
 
 case class GetUpdatesSince(millis: MillisSinceEpoch, from: MillisSinceEpoch, to: MillisSinceEpoch)

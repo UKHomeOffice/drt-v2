@@ -1,6 +1,6 @@
 package actors.minutes
 
-import actors.GetStateByTerminalDateRange
+import actors.GetPortStateForTerminal
 import actors.minutes.MinutesActorLike.MinutesLookup
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
@@ -34,7 +34,7 @@ class QueueMinutesActorSpec extends CrunchTestLike {
     "Given a primary & secondary lookups with no data" >> {
       "I should get None" >> {
         val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(myNow, Seq(T1), lookupWithData(minutesContainer), lookupWithNoData, noopUpdates)))
-        val eventualResult = cmActor.ask(GetStateByTerminalDateRange(terminal, date, date)).mapTo[MinutesContainer[CrunchMinute, TQM]]
+        val eventualResult = cmActor.ask(GetPortStateForTerminal(date.millisSinceEpoch, date.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
         val result = Await.result(eventualResult, 1 second)
 
         result === minutesContainer
@@ -44,7 +44,7 @@ class QueueMinutesActorSpec extends CrunchTestLike {
     "Given a primary lookup with some data" >> {
       "I should get the data from the primary source" >> {
         val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(myNow, Seq(T1), lookupWithData(minutesContainer), lookupWithNoData, noopUpdates)))
-        val eventualResult = cmActor.ask(GetStateByTerminalDateRange(terminal, date, date)).mapTo[MinutesContainer[CrunchMinute, TQM]]
+        val eventualResult = cmActor.ask(actors.GetPortStateForTerminal(date.millisSinceEpoch, date.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
         val result = Await.result(eventualResult, 1 second)
 
         result === minutesContainer
@@ -54,7 +54,7 @@ class QueueMinutesActorSpec extends CrunchTestLike {
     "Given a primary lookup with no data and secondary lookup with data" >> {
       "I should get the data from the secondary source" >> {
         val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(myNow, Seq(T1), lookupWithNoData, lookupWithNoData, noopUpdates)))
-        val eventualResult = cmActor.ask(GetStateByTerminalDateRange(terminal, date, date)).mapTo[MinutesContainer[CrunchMinute, TQM]]
+        val eventualResult = cmActor.ask(actors.GetPortStateForTerminal(date.millisSinceEpoch, date.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
         val result = Await.result(eventualResult, 1 second)
 
         result === MinutesContainer(Iterable())
@@ -75,7 +75,7 @@ class QueueMinutesActorSpec extends CrunchTestLike {
 
       "I should get the one minute back" >> {
         val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(myNow, Seq(T1), lookupWithData(minutesState), lookupWithNoData, noopUpdates)))
-        val eventualResult = cmActor.ask(GetStateByTerminalDateRange(terminal, startMinute, endMinute)).mapTo[MinutesContainer[CrunchMinute, TQM]]
+        val eventualResult = cmActor.ask(actors.GetPortStateForTerminal(startMinute.millisSinceEpoch, endMinute.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
         val result = Await.result(eventualResult, 1 second)
 
         result === MinutesContainer(Iterable(crunchMinuteInsideRange1, crunchMinuteInsideRange2))

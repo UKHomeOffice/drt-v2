@@ -41,7 +41,7 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
       noChange
 
     case SetPortState(viewMode, portState) =>
-      log.info(s"Got a crunch state! ${portState.flights.size} flights, ${portState.crunchMinutes.size} crunch minutes, ${portState.staffMinutes.size} staff minutes")
+      log.info(s"Received a PortState")
       val originCodes = portState.flights
         .map { case (_, fws) => fws.apiFlight.Origin }
         .toSet
